@@ -1,0 +1,330 @@
+# 19.07
+
+  -- Geometry/CoordSys: Static class members have been removed.
+     Functions such as `isPeriodic`, `isAnyPeriodic`, `isAllPeriodic`,
+     `ProbLo`, `ProbHi`, `IsCartesian`, `IsRZ`, and `IsSPHERICAL` are
+     now non-static.  The default Geometry can been obtained via
+     `DefaultGeometry()` function.
+
+  -- Funciton amrex::Loop and amrex:LoopConcurrent are added to help
+     looping over cells in a Box.
+
+  -- Nodal solver: A bug in nodal owner mask that could affect
+     covergence was fixed.
+
+  -- Fortran amrex_amrcore_module: add amrex_set_boxarray,
+     amrex_set_distromap, and amrex_set_finest_level.
+
+  -- Option to allocate MultiFab data in arenas different from
+     The_Arena().
+
+  -- Option to tag MultiFabs and query their memory usages.
+
+  -- AsyncFab has been deleted.
+
+# 19.06
+
+  -- Geometry/CoordSys: New constructor and define function are added.
+     We plan to remove static data from Geometry and its base CoordSys
+     in the next release.  This means most of the static functions in
+     Geometry class will become non-static.  These include
+     `isPeriodic`, `isAnyPeriodic`, `isAllPeriodic`, `ProbLo`,
+     `ProbHi`, `IsCartesian`, `IsRZ`, and `IsSPHERICAL`.  You can
+     prepare codes now for the upcoming changes.  In almost all cases,
+     all you have to do is replace `Geometry::function` with
+     `DefaultGeometry().function`.
+
+  -- Add tensor linear solvers for viscous flows with and without EB.
+
+  -- Algoim: A modified version of Algoim is added.  This removes the
+     dependence of 3d EB nodal MLMG solver on the official Algoim code
+     and Blitz.
+
+  -- EB: Fix the potential ownership issue is IndexSpace.
+
+  -- Add a new FillPatchTwoLevels for EB.
+
+# 19.05
+
+  -- Interface of virtual function Interpolater::interp has changed.
+
+  -- Add Fortran funcntions for shared memory reductions.
+
+  -- EB nodal linear solver: The default bottom solver is now bicgcg.
+     It starts with bicgstab and switches cg if bicgstab fails.
+
+  -- EB nodal linear solver: Finished the implementation of matrix
+     coarsening with RAP.
+
+  -- Particle: Option for adding runtime struct of array components.
+
+  -- Add a trilinear interpolation option for 3D.
+
+  -- Add more support for non-uniform grow vectors to MultiFab and
+     FabArray.
+
+  -- AmrMesh: n_error_buf is now IntVect.  This allows for different
+     number of error buffer cells in different directions.
+
+  -- Using PETSc as bottom solver no longer requires Hypre.
+ 
+# 19.04
+
+  -- SUNDIALS 4 support.
+
+  -- Option to disable device sync in MFIter.
+
+  -- Functions for prefetch unified memory.
+
+  -- GNU Make system: It is now an error if a function with return
+     type does not return.
+
+  -- GNU Make system: Pass C++ flags to nvcc when compiling C codes.
+
+  -- Allocate 3/4 of gpu memory upfront in The_Arena.
+
+  -- BaseFab now has Allocator template parameter.
+
+  -- Random number generation on gpu.
+
+# 19.03
+
+  -- Deprecated Fortran framework F_BaseLib and linear solver F_MG
+     have been removed.  A number of tools written in F_BaseLib have
+     been migrated to Tools/Plotfile/.  Note that the Fortran wrappers
+     to C++ (F_Interfaces) are still there.
+
+  -- In addition to launch macros, there are now functions for
+     lauching, amrex::launch, amrex::For and amrex::ParallelFor.
+     These improves debuggability. 
+
+  -- If compiled with BASEFAB_IS_PINNED, pinned memory will be used
+     for BaseFab meta-data.  On systems with nvlink, this improves the
+     performance a little bit.
+
+  -- Performance improvement in particle redistribution.
+
+  -- Particle NeighborList has been moved from tutorial to AMReX
+     proper.
+
+  -- Cell-centered MLMG linear solver have been ported to GPU.
+
+# 19.02
+
+  -- Array4 class that contains the important information in BaseFab
+     class.  It can be captured by lambda and used on gpu.
+
+  -- A number of new macros for launching for loops: AMREX_FOR_1D,
+     AMREX_FOR_3D, AMREX_FOR_4D, AMREX_PARALLEL_FOR_1D,
+     AMREX_PARALLEL_FOR_3D, and AMREX_PARALLEL_FOR_4D.
+
+  -- Disable cuda aware MPI by default.  It can be enabled with
+     parameter amrex.use_gpu_aware_mpi.
+
+# 19.01
+
+  -- Documentation and Tutorials on GPU
+
+  -- EB implicit function using spline
+
+  -- FabArray::fabPtr() function takes MFIter and returns a device
+     pointer to BaseFab.
+
+# 18.12
+
+  -- More GPU supports
+
+# 18.11
+
+  -- GPU support in Base and Particle
+
+  -- BaseFab is no longer polymorphic
+
+  -- EB now supports ghost cells outside physical domain
+
+# 18.10
+
+  -- MacProjector class for MAC projection
+
+  -- Support for Dirichlet EB in linear solver
+
+  -- Option to use PETSc as bottom solver
+
+  -- Multi-level linear solver with EB not crossing coarse/fine
+     boundary. 
+
+  -- Sundials 3 support
+
+# 18.09
+
+  -- Cell-centered linear solver with homogeneous Neumann embedded
+     boundary. 
+
+  -- Hypre as a bottom solver has a IJ matrix interface and supports
+     homogeneous Neumann boundary condition on embedded boundary.
+
+  -- Old embedded boundary codes have been removed.
+
+# 18.08
+
+  -- Faster geometry generation is available at Src/EB2.
+     Tutorials/EB/CNS is now based on EB2.
+
+  -- AMReX is now fully compliant with xSDK.
+
+  -- Fortran interface for particles.  See Tutorials/Amr/Advection_F/
+     for an example.
+
+# 18.07
+
+  -- Pre- and post-interpolation hooks in FillPatch.
+
+  -- NDEBUG is no longer defined in xSDK mode.
+
+# 18.06
+
+  -- When amrex::Initialize is called, optional std::ostream arguments
+     can be passed in and their defaults are std::cout and std::cerr.
+
+  -- ParmParse inputs files can now contain Fortran namelist that can
+     be accessed from Fortan (and Frotran only).  These Fortran inputs
+     are stored in amrex_namelist character variable in
+     amrex_parmparse_module, and can be read with standard Fortran
+     I/O.
+     
+  -- There is a new non-blocking parallel copy function in
+     MultiFab/FabArray called ParallelCopy_nowait.  It returns a
+     CopierHandle object and can later be used to finish the
+     communication with CopierHandle::finish().
+
+# 18.05
+
+  -- FillBoundary and ParallelCopy functions can now take IntVect
+     arguments as the number of ghost cells.  That is the number of
+     ghost cells could be different for different directions.
+
+  -- MultiFab, iMultiFab and FabArray can have different number of
+     ghost cells in different directions.
+
+  -- Fortran module mempool_module has been renamed amrex_mempool_module.
+
+  -- Many macros have been renamed.
+     * USE_PARTICLES and PARTICLES have been renamed AMREX_PARTICLES
+     * DIMENSION_AGNOSTIC has been renamed AMREX_DIMENSION_AGNOSTIC
+     * USE_CVODE has been renamed AMREX_USE_CVODE
+     * DEBUG has been renamed AMREX_DEBUG
+
+ -- amrex::Array is now an alias to std::array in stead of amrex::Vector.
+
+# 18.04
+
+  -- New BoxList constructors making a given number of Boxes from a
+     single Box.
+
+  -- Optimization of particle redistribution
+
+  -- MLMG nodal linear solver: add solvability fix
+
+  -- Modification to amrex::Initialize and Finalize to make it
+     suitable as a library in an application that does not use AMReX
+     as a framework.
+
+# 18.03
+
+  -- STL support for EB
+
+# 18.02
+
+  -- Fortran interface: added new functions amrex_multifab_build_alias
+     and amrex_imultifab_build_alias.
+
+  -- Documentation in reST/Sphinx.  See Docs/Readme.sphinx for more
+     details.
+
+  -- Src/LinearSolvers/MLMG now supports nodal based data.
+
+  -- Fortran module AMReX_fillpatch_module takes a user provided
+     callback function for filling physical boundary conditions.  That
+     function used to use 0-based index for component (i.e., the last
+     index).  For consistence with 1-based index for component in
+     other Fortran modules, this has been changed to 1-based index for
+     component.
+
+# 18.01
+
+  -- New linear solver MLMG at Src/LinearSolvers/MLMG/.  Currently it
+     supports cell-centered single level and multi-level composite
+     solve.  Fortran interface is also available at
+     Src/F_Interfaces/LinearSolvers/.  See Tutorials/LinearSolvers for
+     tutorials.
+
+# 17.12
+
+  -- Ported more features (including dynamic scheduling and explicit
+     tile size) of MFIter from C++ to Fortran.
+
+  -- Added procedures to Fortran amrex_multifab_module to add,
+     subtract, multiply, divide, saxpy and lincomb (linear
+     combination).  Note that we call it saxpy, but it doesn't mean
+     single precision.
+
+  -- The `configure; make; make install` build approach enables linear
+     solvers by default now.
+
+  -- MultiFab and iMultiFab now support move assignment operator.
+     This allows for swapping two MultiFabs without deep copying.  For
+     instance, std::swap(mf1, mf2);
+
+  -- Tutorials/Amr/Advection_AmrCore changes from using
+     `Vector<unique_ptr<MultiFab>>` to `Vector<MultiFab>`.
+
+# 17.11
+
+  -- AMREX_ASSERT_WITH_MESSAGE and AMREX_ALWAYS_ASSERT_WITH_MESSAGE
+     are new macros for assertion when it fails additional message
+     will be printed.   For example:
+
+         AMREX_ASSERT_WITH_MESSAGE(x > y, "reason why x > y must be true");
+
+  -- amrex::Array is deprecated and replaced by amrex::Vector.
+     Currently Array is an alias to Vector.  So this should not break
+     any codes.  In the future, we will remove Array completely.
+     Therefore it is recommended that application codes should start
+     replacing Array with Vector.  There is a script,
+     amrex/Tools/Migration/amrex_array_to_vector.sh, to help.  But use
+     it with caution.   If it is completely gibberish to you, you
+     probably shouldn't use the script. 
+
+  -- functions for printing to a file in a parallel and thread-safe manner
+     have been added. For example:
+
+        amrex::AllPrintToFile("output") << "Hello from rank " << rank << 
+                                           " and thread " << thread << "\n";
+
+     will print out the requested information to separate files for each 
+     rank and thread.
+
+# 17.10
+
+  -- Added a load balance approach to Amr/AmrLevel.  The runtime
+     parameters for this is amr.loadbalance_with_workestimates and
+     amr.loadbalance_level0_int.  The latter is for single level
+     (i.e., amr.max_level=0) only.  For multi-level runs, load balance
+     is done during regrid and thus the load balance interval is
+     controlled by amr.regrid_int.  To use this approach, AmrLevel
+     derivative must has a StateData for work estimates and its index
+     is returned by virtual function int WorkEstType().
+
+  -- MFIter now supports dynamic scheduling of OpenMP threads.  For
+     example,
+ 
+       for (MFIter mfi(mf, MFItInfo().SetDynamic(true).EnableTiling(tile_size);
+            mfi.isValid(); ++mfi)
+       { ... }
+
+  -- Added EBFluxRegister to Src/EB for refluxing and
+     re-redistribution in EB.
+
+  -- amrex.signal_handling = 1 is a new runtime parameter that can be
+     used to control whether AMReX should handle signals like SIGSEGV
+     etc. 
