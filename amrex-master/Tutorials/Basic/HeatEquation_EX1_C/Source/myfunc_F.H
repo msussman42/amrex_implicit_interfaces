@@ -20,7 +20,11 @@ extern "C"
 #if (BL_SPACEDIM == 3)   
                       amrex_real* fluxz, const int* fzlo, const int* fzhi,
 #endif
-                      const amrex_real* dx);
+                      const amrex_real* dx,
+                      int* bc_vector,amrex_real* bc_value,
+                      int* dirichlet_condition,
+                      int* neumann_condition,
+                      int* periodic_condition);
 
     void update_phi(const int* lo, const int* hi,
                     amrex_real* pold, const int* polo, const int* pohi,

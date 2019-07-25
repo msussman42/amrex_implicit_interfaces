@@ -11,6 +11,11 @@ void advance (amrex::MultiFab& phi_old,
               amrex::MultiFab& phi_new,
 	      amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& flux,
 	      amrex::Real dt,
-              const amrex::Geometry& geom);
+              const amrex::Geometry& geom,
+              amrex::Vector<int> bc_vector,
+              amrex::Vector<amrex::Real> bc_value,
+              int dirichlet_condition,
+              int neumann_condition,
+              int periodic_condition);
 
 #endif

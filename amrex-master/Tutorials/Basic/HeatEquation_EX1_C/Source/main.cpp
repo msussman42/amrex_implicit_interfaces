@@ -27,6 +27,14 @@ void main_main ()
     int n_cell, max_grid_size, nsteps, plot_int;
     Vector<int> is_periodic(AMREX_SPACEDIM,1);  // periodic in all direction by default
 
+    int dirichlet_condition=1;
+    int neumann_condition=2;
+    int periodic_condition=3;
+    
+    Vector<int> bc_vector(AMREX_SPACEDIM*2,periodic_condition);
+    // default is Real=double  (also known as REAL*8 in fortran)
+    Vector<Real> bc_value(AMREX_SPACEDIM*2,0.0); // default homogeneous
+
     // inputs parameters
     {
         // ParmParse is way of reading inputs from the inputs file
@@ -50,6 +58,25 @@ void main_main ()
 
         pp.queryarr("is_periodic", is_periodic);
     }
+
+    int probtype=0; // all periodic conditions
+    probtype=1;  // all dirichlet conditions
+
+    if (probtype==0) {
+      // all periodic
+    } else if (probtype==1) {
+      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+	for (int side=0;side<=1;side++) {
+	  int index=2*dir+side;
+          bc_vector[index]=dirichlet_condition;
+	}
+       }
+       int dir=0;
+       int side=0;
+       int index=2*dir+side;
+       bc_value[index]=1.0;
+    } else
+      amrex::Error("probtype invalid");
 
     // make BoxArray and Geometry
     BoxArray ba;
@@ -126,7 +153,9 @@ void main_main ()
         MultiFab::Copy(phi_old, phi_new, 0, 0, 1, 0);
 
         // new_phi = old_phi + dt * (something)
-        advance(phi_old, phi_new, flux, dt, geom); 
+        advance(phi_old, phi_new, flux, dt, geom,
+		bc_vector,bc_value,dirichlet_condition,
+                neumann_condition,periodic_condition); 
         time = time + dt;
         
         // Tell the I/O Processor to write out which step we're doing

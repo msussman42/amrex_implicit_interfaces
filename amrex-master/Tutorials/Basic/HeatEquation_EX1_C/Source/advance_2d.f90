@@ -1,7 +1,10 @@
 
 subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
                          fluxx, fxlo, fxhi, fluxy, fylo, fyhi, &
-                         dx) bind(C, name="compute_flux")
+                         dx,bc_vector,bc_value, &
+                         dirichlet_condition, &
+                         neumann_condition, &
+                         periodic_condition) bind(C, name="compute_flux")
 
   use amrex_fort_module, only : amrex_real
   implicit none
@@ -12,6 +15,11 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   real(amrex_real), intent(inout) :: fluxx( fxlo(1): fxhi(1), fxlo(2): fxhi(2))
   real(amrex_real), intent(inout) :: fluxy( fylo(1): fyhi(1), fylo(2): fyhi(2))
   real(amrex_real), intent(in)    :: dx(2)
+  integer, intent(in) :: bc_vector(4)
+  real(amrex_real), intent(in) :: bc_value(4)
+  integer, intent(in) :: dirichlet_condition
+  integer, intent(in) :: neumann_condition
+  integer, intent(in) :: periodic_condition
 
   ! local variables
   integer i,j

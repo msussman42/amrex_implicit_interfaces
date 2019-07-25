@@ -8,7 +8,12 @@ void advance (MultiFab& phi_old,
               MultiFab& phi_new,
 	      Array<MultiFab, AMREX_SPACEDIM>& flux,
 	      Real dt,
-              const Geometry& geom)
+              const Geometry& geom,
+              Vector<int> bc_vector,
+              Vector<Real> bc_value,
+              int dirichlet_condition,
+              int neumann_condition,
+              int periodic_condition)
 {
     // Fill the ghost cells of each grid from the other grids
     // includes periodic domain boundaries
@@ -41,7 +46,12 @@ void advance (MultiFab& phi_old,
 #if (AMREX_SPACEDIM == 3)   
                      BL_TO_FORTRAN_ANYD(flux[2][mfi]),
 #endif
-                     dx);
+                     dx,
+                     bc_vector.dataPtr(),
+                     bc_value.dataPtr(),
+                     &dirichlet_condition,
+                     &neumann_condition,
+                     &periodic_condition);
     }
     
     // Advance the solution one grid at a time
