@@ -19,7 +19,8 @@ subroutine init_phi(lo, hi, phi, philo, phihi, dx, prob_lo, prob_hi) bind(C, nam
         x = prob_lo(1) + (dble(i)+0.5d0) * dx(1)
 
 !        r2 = ((x-0.25d0)**2 + (y-0.25d0)**2) / 0.01d0
-         r2 = (((x-0.25d0)/4.0d0)**2 + (y-0.25d0)**2)/0.01d0
+!         r2 = (((x-0.25d0)/4.0d0)**2 + (y-0.25d0)**2)/0.01d0
+         r2 = x
         phi(i,j) = 1.d0 + exp(-r2)
 
      end do
