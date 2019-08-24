@@ -1,0 +1,126 @@
+max_step  =  999999   # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time =  2.0  # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  0.25 1.0
+geometry.is_periodic = 0  0          # MS 0  1 if periodic, 0  0 if not
+ns.minimum_relative_error=1.0e-18
+ns.initial_project_cycles=0
+ns.initial_cg_cycles=10
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 200
+mg.usecg=0
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+diffuse.max_order=2
+
+amr.n_cell    = 32 128 
+amr.max_level =  2
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2    # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 500     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 100
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 512
+#amr.restart         = chk001000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+mac.use_cg_solve   = 1
+
+#amr.plotfile_on_restart=1
+ns.visual_option=-2 # -2 zonal tecplot, -1 plotfile,
+                    # 2=matlab visual file: x,y,u,v,l1,l2,p
+
+ns.redist_on_init=0
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0   # 1
+ns.gravity        = 0.0    # body force  -980.0
+ns.tension        = 0.0   # 70.0
+#ns.fixed_dt	  = 0.04       # hardwire dt
+ns.sum_interval   = 10        # timesteps between computing mass 
+ns.usekluge       = 0
+
+ns.axis_dir=0  
+ns.vorterr=999999.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0        
+ns.twall=0.1
+ns.advbot=0.133333      # Q in L/s
+ns.adv_vel=0.0           # should always be 0.0
+ns.adv_dir=2             # should always be 2
+ns.viscunburn=0.01  # 0.01
+ns.viscburn=0.00018
+ns.viscvapor=0.00018
+ns.tcenter=2.0
+ns.denwater=1.0  # 1.0
+ns.denair=0.001225
+ns.denvapor=0.001225   # was 0.001225
+ns.xblob=0.0  
+ns.yblob=0.2        # primary liquid nozzle length
+ns.radblob=0.005    # liquid nozzle radius 50E-6=.5E-4=0.005E-2
+ns.radblob2=0.0125  # secondary liquid nozzle radius
+ns.yblob2=0.2       # secondary liquid nozzle length
+ns.radblob3=0.084375  # gas nozzle radius 5mm from end of gas nozzle
+ns.radblob4=0.075     # gas nozzle radius at exit of gas nozzle
+ns.yblob3=0.5       # gas nozzle length
+ns.radblob5=0.025   # liquid nozzle outer wall radius
+ns.radblob6=0.025   # outer gas nozzle thickness
+ns.radblob7=0.15    # radius of gas nozzle before compression
+ns.yblob4=9.8       # extent of liquid nozzle from back side of domain.
+ns.yblob5=0.1       # extent of domain from end of computational domain.
+ns.velfact=0.0
+ns.zblob=0.0
+
+ns.denfact=1.0
+ns.probtype=102
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 2  # MS 3 1 if inflow, 3 0 if periodic 
+ns.hi_bc          = 4 2  # MS 5 2 if outflow, 5 0 if periodic 
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
+

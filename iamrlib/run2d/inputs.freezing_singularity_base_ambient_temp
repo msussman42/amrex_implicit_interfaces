@@ -1,0 +1,230 @@
+# Figures 4 and 5 from Vu, Tryggvason, Homma, Wells, Takakura,
+# JCEJ 46 (11) 726-731 (2013)
+# Figure 1 from Enriquez et al: Physics of Fluids 24,091102 (2012)
+max_step  =  999999    # maximum timestep
+#max_step  =  2    # maximum timestep
+# if we rescale, then tau=rho CP R^2/K=(1)4.1855e+7(0.2)^2/58000
+# tau=28.9
+# U=R/tau=.2/28.9=0.007
+# PR=CP mu/K=4.1855e+7 0.02/58000=14.4
+# ST=(TSAT-TCOLD)CP/L=20(4.1855e+7)/3.34e+9=.25
+# BO=rho g R^2/sigma=1(980)(.2^2)/72.8=0.54
+# WE=rho U^2 R/sigma=.007^2 (.2)/72.8=1.4e-7
+# U=R/(rho CP R^2/K)=K/(rho CP R)
+# WE=(1/sigma) rho R K^2 /(rho CP R)^2 = K^2/(sigma rho R CP^2)
+
+stop_time = 1.0  # 20 if dimensional, 1 if dimensionless
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+# effective radius is 1.4926mm
+# initial contact radius is 0.2 mm
+# dimensionless contact radius 1.0
+geometry.prob_hi   =  1.25 2.5  # r=0.2 r^* 
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+
+# 1  => tag cell if this material is primary material in the cell stencil.
+# 0  => tag cell if this material and another *qualified* 
+#       material are both primary materials in this cell stencil.
+# -1 => do not tag a cell in which this material is the primary
+#       material in the cell stencil and a triple point is not nearby.
+# If laten_heat(im1,im2)<>0, then the im1,im2 interface is always adapted.
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=20
+ns.initial_cg_cycles=10
+ns.solvability_projection=0 # 0 since must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=1.0e+6
+ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
+ns.num_species_var=0
+ns.post_init_pressure_solve=1 
+ns.MOFITERMAX=15
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-1  # -2,-3 zonal tecplot, -1 plot files
+
+amr.n_cell    = 32 64 # 1.25x2.5  
+amr.max_level = 1
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 1000      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 100
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 1024
+#amr.restart         = chk12000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1 
+# 1.0 if dimensional; Prandtl=CPL muL/kL=14.4 if dimensionless
+ns.visc_coef      = 14.4
+mac.visc_abs_tol   = 1.0e-10
+# 980 if dimensional; Bo/We=0.54/1.4e-7=3.9e+6 if dimensionless
+# The Weber number is artificially increased by a factor of 100,
+# so new dimensionless gravity is 3.9e+4
+#ns.gravity        = 3.9e+4
+ns.gravity        = 1.0e+4
+ns.use_lsa=0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# material 1=liquid 2=gas  3=ice 4=solid
+# 12,13,14,23,24,34
+# 1/We=1/5E-5=20000 corresponds to tension12
+# dimensional values:
+# sigma12=72.8 (air-water)
+# sigma13=25.9 (KEP) or 0.04 (CAP) (water-ice)
+# sigma14=sigma13 (liquid-solid same as liquid-ice)
+# sigma23=97.0 (KEP) or 69.2 (CAP) (air-ice)
+# sigma24=sigma14 (gas-solid = liquid-solid =>90 degree angle)
+# sigma34=sigma24 (ice-solid=gas-solid=> 90 degree angle)
+# 12,13,14,23,24,34
+# gas/water=72.8 water/ice=25.9 water/solid=25.9
+# gas/ice=97.0 gas/solid=25.9 ice/solid=25.9
+# gas/solid - liquid/solid = liquid/gas cos(29 deg)
+# gas/solid=liquid/gas=72.8  1-x/72.8=cos(54deg) 
+# x=72.8 (1-cos(54deg))=30.0
+# air/water water/ice water/solid air/ice air/solid ice/solid
+#ns.tension = 72.8 25.9 30.0 72.8 72.8 25.9  # dimensional
+# Weber number is 1.4e-7 but we increase by factor of 100.
+# 
+#ns.tension=71430.0 25410.0 29430.0 71430.0 71430.0 25410.0 # dimensionless
+ns.tension=17857.0 6352.0 7353.0 17857.0 17857.0 6352.0 # dimensionless
+# material 1=liquid 2=gas  3=ice 4=solid
+# default is 4.1855e+7
+#ns.stiffCP = 4.1855e+7 1.0e+7 2.0e+7 2.0e+7  # dimensional
+ns.stiffCP=1.0 0.24 0.5 0.5 # dimensionless
+# units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
+# L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
+#ns.latent_heat = -3.34e+9 0.0 # 12,21 liquid-> ice, ice -> liquid FREEZING
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# latent_heat[2*max_num_tension]
+# ST=0.025=CP Delta T/L
+# in the beginning: k_ice grad T/L = 4 (1/0.1) 0.025=1 and dt=2.3E-6
+#  dx=2/128=1/64 volume changes by 2.3E-6 each step?
+#  volume fraction changes by 2.3E-6/(1/64)=1.5E-5
+#12 13 14 23 24 34 then reverse
+# dimensional:
+#ns.latent_heat = 0.0 -3.34e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+# dimensionless:
+ns.latent_heat = 0.0 -4.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+# 1->2 liquid-> gas
+# 1->3 liquid->ice 
+# ....
+#12 13 14 23 24 34 then reverse
+ns.saturation_temp = 0.0 273.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+# 
+ns.temperature_primitive_variable=1 1 1 1
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 20        # timesteps between computing mass 
+
+# initial droplet with small layer of ice at its bottom, on a solid substrate.
+# probtype=55
+ns.axis_dir=5   
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=263  # not used
+ns.advbot=0.0  # initial falling (downward) speed of liquid drop if axis_dir=1
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.use_StewartLay=1
+ns.material_type=0 0 0 999
+# Latent heat: 1 J/kg = 10^7 erg/kg=10^4 erg/g
+# 1 Watt=10^7 ERG/S
+# 1 W/(M K)=10^5 ERG/(S CM K)
+# 1 ERG= 1 (gram cm^2/s^2)
+# air: k=0.024 W/(M K)
+# water: k=0.58 W/(M K)
+# cp default to be 4.1855E+7 erg/(g K) (all incompressible materials)
+# MKS: cp=4.1855 J/((kg/1000)K)=4.1855E+3 J/(kg K)
+#ns.heatviscconst=58000.0 2400.0 218000.0 218000.0 # liquid/air/ice/solid 
+#ns.heatviscconst=58000.0 2400.0 218000.0 218000.0 # dimensional
+ns.heatviscconst=1.0 0.04 3.8 3.8 # dimensionless
+#ns.viscconst=0.02 0.0001 0.02 0.02 # dimensional
+ns.viscconst=1.0 0.005 1.0 1.0 # dimensionless
+ns.denconst=1.0 0.001 0.934 0.934
+ns.FSI_flag=0 0 3 1
+# remember saturation temp is 273 and we scale
+# by Delta T=T_m - T_c
+# initial temperature of liquid/gas/ice/solid
+# solid is kept at 272.0
+ns.solidheat_flag=1  # Solid boundary is Dirichlet 
+                     # (must have heatvisc(im_solid)>0)
+#ns.tempconst=273.0 273.0 253.0 253.0  # dimensional
+ns.tempconst=273.0 273.0 272.0 272.0  # dimensionless
+ns.xblob=0.0  # center of water drop
+#ns.yblob=0.02 #dimensional
+ns.yblob=0.1 #dimensionless
+ns.zblob=0.0
+ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
+#ns.yblob2=0.02 #dimensional
+ns.yblob2=0.1 #dimensionless
+ns.zblob2=0.0
+ns.radblob2=0.0 # zero degrees incline (radians)
+# thickness of underside of droplet that is already frozen
+#ns.radblob3=0.01 #dimensional
+ns.radblob3=0.05 #dimensionless
+# effective radius of water/ice drop: volume=(1/2)  (4/3)pi r^3
+#ns.radblob=0.14926 #dimensional
+ns.radblob=0.7463 #dimensionless
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=55
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+# boundary conditions 
+#ns.prescribe_temperature_outflow=0 # =0 for stefan problem
+#ns.prescribe_temperature_outflow=1 # =1 for sucking problem
+ns.prescribe_temperature_outflow=1 # =1 for sucking problem
+ns.lo_bc          = 3 5
+ns.hi_bc          = 2 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

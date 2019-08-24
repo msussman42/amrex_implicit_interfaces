@@ -1,0 +1,14 @@
+    #@ job_name=amr2d
+    #@ job_type=parallel  
+    #@ class=large
+    #@ notification=always 
+    #@ error = ./jet.err 
+    #@ output =./jet.log 
+    #@ blocking = unlimited
+    #@ total_tasks = 16
+    #@ node_usage = shared 
+    #@ network.mpi = csss,shared,us
+    # use css0 on the SP3
+    #@ queue 
+
+    poe ./amr2d.AIX.mpCC_r.f77.DEBUG.MPI.ex inputs.liquidjet2nd >> run.out

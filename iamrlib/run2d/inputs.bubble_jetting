@@ -1,0 +1,169 @@
+#  FOR 0<t<.67 ms,
+#   cfl=0.5
+#   shock_timestep=1 1 2
+#   stop_time=0.00067
+#   no restart
+#  FOR t>0.67 ms,
+#   cfl=0.25
+#   shock_timestep=2 2 2
+#   stop_time=0.015
+#   restart file specified
+#
+# in: Jemison, Sussman, Arienti (2014), max_level=4
+#
+max_step  =  99999    # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time = 0.00067  # 0.00067 or 0.015
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  400.0 400.0
+# continuous_mof=0 regular MOF
+# continuous_mof=2 CMOF
+# continuous_mof=3 CLSVOF + MOF hybrid
+# continuous_mof=4 CLSVOF + CMOF hybrid
+ns.continuous_mof=3
+ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
+ns.face_flag=0
+ns.make_interface_incomp=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-13
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+ns.num_materials=3
+ns.num_species_var=0
+ns.num_divu_outer_sweeps=2
+
+ns.MOFITERMAX=15
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+# was 1.0e+6 changed to 1.0e+10 October 21, 2017
+ns.projection_pressure_scale=1.0e+10
+ns.minimum_relative_error=1.0e-24
+ns.initial_project_cycles=10  # number of initial jacobi iterations for
+                              # pressure solve
+ns.initial_viscosity_cycles=1 # number of initial jacobi iterations for
+                              # viscous solve.
+ns.initial_thermal_cycles=1   # number of initial jacobi iterations for
+                              # thermal solve.
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.  The bicgstab algorithm
+                         # is restarted after "initial_cg_cycles" steps.
+# 0=GSRB 1=ICRB 2=ILU
+# Lp.smooth_type=2
+# Lp.bottom_smooth_type=2
+#
+ns.visual_option=-2
+
+amr.n_cell    = 128 128  # in paper, convergence study using base=128^2
+amr.max_level =  4  # in paper, convergence study with maxlev=2,3,4
+                    # plots are maxlev=4
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8       # block factor in grid generation
+amr.check_int       = 40     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 20
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16 
+#amr.restart         = chk00315
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+
+mac.mac_abs_tol    = 1.0e-11
+mac.use_cg_solve   = 1
+
+ns.xblob2=88.9  # radius of plate
+ns.yblob2=13.0  # distance between center of jwl and bottom of plate
+ns.radblob2=2.54  # thickness of plate (2.54 in Wardlaws description)
+
+# 1=always take sound speed into account
+# 2=never take sound speed into account
+# 0=take sound speed into account at t=0 only if compressible material
+# 1 1 2 t<0.00067
+# 2 2 2 t>0.00067
+ns.shock_timestep=1 1 2
+ns.cfl            = 0.5      # cfl=0.5 if t<0.00067; cfl=0.25 t>0.00067 
+ns.init_shrink    = 0.1      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 0.0    # coef of viscosity
+ns.gravity        = -981.0  # must be nonzero, otherwise not used.
+ns.tension        = 0.0 0.0 0.0 
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 10        # timesteps between computing mass 
+
+ns.axis_dir=1
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=2
+# e=cv T   T=e/cv=4.2945E+10/4.1855E+7=1026.0423
+ns.tempconst=293.0 1026.0423 293.0
+ns.pressure_error_cutoff=10.0 10.0 0.0
+ns.FSI_flag=0 0 1
+ns.material_type=1 3 999      # 2 = adiabatic JWL 3=non-adiabatic JWL
+ns.heatviscconst=0.0 0.0 0.0
+ns.viscconst=0.0 0.0 1.0 
+ns.denconst=1.0 0.1 1.0 
+ns.advection_order=2 2 1 # liquid, JWL, solid
+ns.density_advection_order=2 2 1 # liquid, JWL, solid
+ns.slope_limiter_option=1  # minmod (if advection_order=2)
+ns.xblob=0.0
+# y=0 corresponds to domain bottom
+# physical y=0 corresponds to free surface.
+# physical y=-9850 corresponds to y=yblob
+# y=physical_y+9850+yblob=physical_y+zblob+yblob
+# free surface y=0+zblob+yblob
+#
+ns.yblob=200.0  # y coordinate of charge relative to domain BOTTOM
+ns.zblob=9850.0 # depth of charge
+ns.radblob=1.36  # radius of charge
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=42
+
+#ns.mem_debug = 1
+# DEBUGGING
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 2
+ns.hi_bc          = 2 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

@@ -1,0 +1,50 @@
+#
+# $Id: Make.package,v 1.2 1999/04/01 21:43:11 car Exp $
+#
+
+include $(MOF_HOME)/Vicar3D/distFSI/Make.package
+
+
+F90EXE_sources += \
+				AMODULES.PAR.F90 \
+				UTIL_BOUNDARY_FORCE_FSI.F90 
+F90EXE_headers +=  \
+				AMODULES.PAR.F90 \
+				UTIL_BOUNDARY_FORCE_FSI.F90 
+
+lowercase_comp := $(shell echo $(COMP) | tr A-Z a-z)
+ifeq ($(lowercase_comp),$(filter $(lowercase_comp),gcc gnu g++))
+  FFLAGS        += -zero -fdefault-double-8 -fdefault-real-8 -m64
+  F90FLAGS      += -zero -fdefault-double-8 -fdefault-real-8 -m64
+else ifeq ($(lowercase_comp),intel)
+  LDFLAGS       += -mkl
+  FFLAGS        += -zero -r8
+  F90FLAGS      += -zero -r8
+else
+  $(error Unknown compiler $(COMP) in $(MOF_HOME)/Vicar3D/Make.package. Tested compilers are gnu, intel)
+endif
+
+# for intel compiler set
+# LDFLAGS	+= -mkl
+# FFLAGS	+= -zero -r8
+# F90FLAGS 	+= -zero -r8
+
+#####################################
+# for gnu compiler set
+#FFLAGS 	+= -zero -fdefault-double-8 -fdefault-real-8 -m64
+#F90FLAGS 	+= -zero -fdefault-double-8 -fdefault-real-8 -m64
+
+# for using MKL while compiling with gnu compiler set
+#INCLUDE_LOCATIONS +=/gpfs/home/mvahab/local/mkl_int_lapack/include/intel64/ilp64
+#INCLUDE_LOCATIONS +=/gpfs/research/software/intel-2016-2/mkl/include
+
+#LDFLAGS += -Wl,--start-group /gpfs/research/software/intel-2016-2/mkl/lib/intel64/libmkl_gf_lp64.a /gpfs/research/software/intel-2016-2/mkl/lib/intel64/libmkl_sequential.a /gpfs/research/software/intel-2016-2/mkl/lib/intel64/libmkl_core.a /gpfs/research/software/intel-2016-2/mkl/lib/intel64/libmkl_blacs_openmpi_lp64.a -Wl,--end-group -lpthread -lm -ldl
+#LDFLAGS += -Wl,--no-as-needed -lmkl_blacs_openmpi_lp64 -lpthread -lm -ldl
+#LDFLAGS += -L /gpfs/research/software/intel-2016-2/mkl/lib/intel64/  -Wl,--no-as-needed -lmkl_rt -lpthread -lm -ldl -llapack
+
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/research/software/intel-2016-2/mkl/lib/intel64/
+
+#######################################
+
+VPATH_LOCATIONS += $(MOF_HOME)/Vicar3D
+INCLUDE_LOCATIONS += $(MOF_HOME)/Vicar3D

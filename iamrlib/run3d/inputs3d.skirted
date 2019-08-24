@@ -1,0 +1,170 @@
+max_step  =  99999    # maximum timestep
+max_step  =  600    # maximum timestep
+#max_step  =  10    # maximum timestep
+stop_time =  30.0  # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   =  20.0 20.0 40.0  
+geometry.is_periodic = 0 0 0 
+
+ns.projection_pressure_scale=1.0e+6
+
+# 0MGPCG 1PCG 2MG
+ns.project_solver_type=0
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+Lp.gpucount=1
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 200
+mg.usecg=1
+mg.bot_atol = 1.0e-10
+mg.visc_bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+#Lp.v = 1
+Lp.harmavg = 0
+
+ns.face_flag=1
+ns.ns_tiling=false
+ns.MOFITERMAX=15
+ns.continuous_mof=5
+ns.conservative_tension_force=1
+ns.MOF_TURN_OFF_LS=0
+ns.num_materials=2
+ns.num_materials_vel=1
+ns.num_species_var=0
+
+ns.EILE_flag=-1  # -1=INCOMP  1=COMP
+ns.post_init_pressure_solve=1 # 1=INCOMP 0=COMP
+
+ns.advection_order=2 2  # 2 2=INCOMP 1 1=COMP
+ns.density_advection_order=1 1
+ns.slope_limiter_option=2  # 0 or 3=no limiting  1 or 2=minmod
+
+ns.minimum_relative_error=1.0e-18
+ns.initial_project_cycles=3  # number of initial jacobi iterations
+ns.initial_cg_cycles=3   # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+amr.n_cell    = 16 16 32
+amr.max_level = 1
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2   # number of buffer cells in error est
+amr.grid_eff        = 0.95   # what constitutes an efficient grid
+ns.enable_spectral=1
+ns.viscous_enable_spectral=0
+amr.space_blocking_factor = 4 2 2
+amr.time_blocking_factor=2
+amr.blocking_factor = 8 4 4
+
+amr.check_int       = 100     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 10 
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+#amr.restart         = chk00100
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_tol        = 1.0e-8  # tolerence for mac projections
+mac.mac_abs_tol    = 1.0e-8
+mac.visc_abs_tol    = 1.0e-8
+mac.use_cg_solve   = 1
+
+ns.visual_option=-2
+
+ns.cfl            = 0.1667   # 0.5 INCOMP 0.1667 COMP
+ns.init_shrink    = 0.1      # 1.0 INCOMP 0.1 COMP
+ns.change_max     = 1.1      # scale back initial timestep
+# 0.038=mu/(rho L U)
+# mu=0.038*1*5.19222*62.06=12.2447
+ns.visc_coef      = 1.0    # coef of viscosity 0.038
+# 1.321=L g/U^2
+# 1.321=L g/(50/(1 x L x 0.0025))=L^2 980 0.0025/50  
+# L=5.19222
+ns.gravity        = -980.0   # -1.321
+ns.use_lsa=0
+# 0.0025=sigma/(rho U^2 L)  U^2=50/(1 x L x 0.0025)
+# U=sqrt(50/(1 x L x 0.0025))=62.06
+ns.tension        = 50.0
+ns.min_velocity_for_dt=10.0
+#ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.sum_interval   = 5        # timesteps between computing mass 
+ns.output_drop_distribution=1
+
+ns.axis_dir=0
+ns.vorterr=0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.yblob9=0.0  # vertical velocity at xlo  1.0
+ns.yblob10=-0.0  # vertical velocity at xhi -1.0
+ns.adv_dir=3
+ns.solvability_projection=0
+# 1 Watt=10^7 ERG/S
+# 1 W/(M K)=10^5 ERG/(S CM K)
+# 1 ERG= 1 (gram cm^2/s^2)
+# air: k=0.024 W/(M K)
+# water: k=0.58 W/(M K)
+#ns.heatviscconst=58000.0 2400.0 0.0 0.0 # COMP
+ns.heatviscconst=0.0 0.0 0.0 0.0 # INCOMP
+ns.viscconst=12.2447 2.0E-4 0.0 0.0
+ns.denconst=1.0 0.001221 1.0 1.0
+ns.tempconst=293.0 293.0 293.0 293.0
+ns.viscous_maxiter=1
+ns.use_StewartLay=1 
+
+ns.shock_timestep=2 2 # 2 2 INCOMP; 2 2 COMP
+ns.material_type=0 0  # 0 0 if INCOMP; 13 14 COMP 
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.xblob=10.0
+ns.yblob=10.0
+ns.zblob=5.0
+ns.radblob=2.59611
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=36
+
+proj.bogus_value = 5.0e+5
+proj.Pcode = 0
+#proj.Pcode = 2
+
+#ns.mem_debug = 1
+ns.v = 1
+ns.check_nan=0
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 2 2 2
+ns.hi_bc          = 2 2 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+fab.do_initval=1
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

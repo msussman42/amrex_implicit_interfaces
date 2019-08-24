@@ -1,0 +1,8 @@
+          if ( (j+joff.eq.lof(2)).and.(bc(2,1).eq.INT_DIR).and.
+     &         (mask(ic,jc-1).eq.zero).and.(mask(ic,jc).ne.zero)) then
+           iedge=1
+          endif
+          if ( (j+joff.eq.hif(2)+1).and.(bc(2,2).eq.INT_DIR).and.
+     &         (mask(ic,jc-1).ne.zero).and.(mask(ic,jc).eq.zero)) then
+           iedge=1
+          endif

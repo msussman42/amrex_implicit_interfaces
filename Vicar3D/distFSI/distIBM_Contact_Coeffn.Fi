@@ -1,0 +1,89 @@
+! Function for time changing of the stiffness of contact elements
+! INPUTS:
+! ibdyg : global id  of the body
+! i     : local id of the body
+! Pnormal_Ext(ibdyg): External pressure for the current body
+!GLOBAL RELATED PARAMTERS
+!n_TDpt_Pnormal_Ext(1:Nr_IBM)
+!flag_TDpt_Pnormal_Ext(1:Nr_IBM)
+!data_TDpt_Pnormal_Ext(1:Nr_IBM,1:1000,1:2) 
+
+!time2 :time
+!delta_t :dt
+! pi1 : pi
+
+!TEMPORAL VARIABLES
+! itmpusrfn(50) : temporal integer work var
+! rtmpusrfn(50) : temporal real work var
+      if(Genalpha_timesolver(ibdyg) .le. 1) then
+          rtmpusrfn(29)=time2
+      else
+          rtmpusrfn(29)=time_alphaf
+      endif
+      
+!OUTPUT: temp_ibm2 
+      temp_ibm2=0.0
+      if (bodytype(ibdyg) .eq. shell ) then
+      if(rtmpusrfn(29) .lt. delta_t*1.999) then
+
+        if(1==0) then !previous version  !.or. (Genalpha_timesolver(ibdyg) .ne. 5)
+
+        contact_time_esh(i,1)=0.25  !*delta_t
+        contact_time_esh(i,2)=0.05  !*delta_t
+        contact_coef_esh=1.0
+        do ibkt2=1,Ncontactplanes(ibdyg) 
+                contactplane_point(1:3)= 
+     &                       contactplanesPara(ibdyg,ibkt2,1:3)
+                contactplane_n(1:3)=
+     &                       contactplanesPara(ibdyg,ibkt2,4:6)
+
+                dncont=0.0
+                do j=1,3
+                   dncont=dncont+contactplane_n(j) 
+     &                          *contactplane_point(j)
+                enddo
+                contactplane_n(4)=-dncont  !plane defined as ax+by+cz+d=0, here we save d
+                if(Genalpha_timesolver(ibdyg) .le. 1) then
+                do j=1,ns_ibm_r_esh(i)
+                  ksh_tmp=contactplane_n(1) 
+     &                   *gx_ibm_massive_esh(i,j) 
+     &                   +contactplane_n(2) 
+     &                   *gy_ibm_massive_esh(i,j) 
+     &                   +contactplane_n(3) 
+     &                   *gz_ibm_massive_esh(i,j) 
+     &                   +contactplane_n(4) 
+                  ksh_tmp=ksh_tmp/ddcont  
+                  rtmpusrfn(6)= 5.0  ! starting the contact coef
+                  rtmpusrfn(7)= 4.0  !ramp of contact coef
+                  contact_coef_esh(i,1,j)=min(contact_coef_esh(i,1,j),
+     &               s_function(
+     &                 (ksh_tmp-rtmpusrfn(6))/rtmpusrfn(7)))
+                enddo 
+                else
+                do j=1,ns_ibm_r_esh(i)
+                  ksh_tmp=contactplane_n(1) 
+     &                   *X_na_esh(j,1) 
+     &                   +contactplane_n(2) 
+     &                   *X_na_esh(j,2) 
+     &                   +contactplane_n(3) 
+     &                   *X_na_esh(j,3) 
+     &                   +contactplane_n(4) 
+                  ksh_tmp=ksh_tmp/ddcont  
+                  rtmpusrfn(6)= 5.0  ! starting the contact coef
+                  rtmpusrfn(7)= 4.0  !ramp of contact coef
+                  contact_coef_esh(i,1,j)=min(contact_coef_esh(i,1,j),
+     &               s_function(
+     &                 (ksh_tmp-rtmpusrfn(6))/rtmpusrfn(7)))
+                enddo 
+                endif    
+         enddo
+
+        else !new version
+
+        contact_time_esh(i,1)=-0.25  !*delta_t
+        contact_time_esh(i,2)=0.05  !*delta_t
+        endif 
+        rtmpusrfn=0.0
+      endif
+      endif
+

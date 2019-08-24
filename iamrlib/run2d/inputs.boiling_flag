@@ -1,0 +1,264 @@
+# Non-dimensional variables, check accompanying .xlsx file
+max_step  =  200000    # maximum timestep
+#max_step  =  10    # maximum timestep
+stop_time = 1
+
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   = 0.0  0.0
+geometry.prob_hi   = 8.0  8.0   # MKS
+ns.EILE_flag=-1
+ns.continuous_mof=2
+ns.MOFITERMAX=15
+ns.temperatureface_flag=0   # 0=use LS  1=use VOF
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+ns.solvability_projection=0 # 0 since must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=1.0  # ?????
+#ns.projection_pressure_scale=1.0e+6  # non-dimensional
+#ns.projection_pressure_scale=1.0  # dimensional
+ns.num_materials=3 # 1: liquid 2: vapor 3: solid
+ns.num_species_var=0
+ns.post_init_pressure_solve=1
+
+# FSI_flag for present phase/material
+# 0 fluid (default)
+# 1 solid (PROB_[23]D.F90)
+# 2 solid (lagrangian)
+# 3 ice
+ns.FSI_flag=0 0 1
+
+# elastic_flag for force-feedback coupled geometry
+# 0 rigid or no link
+# 1 link w/Kourosh Shoele
+ns.elastic_flag=0 0 0
+
+ns.FSI_level=3
+ns.FSI_numsolids=1
+ns.FSI_ngrow=2
+# Materials that interact with solid geometry
+ns.FSI_active_material = 1 0 0
+# initilal location of FSI level refinement
+# solid_1(x_lo y_lo z_lo x_hi y_hi z_hi) solid_2(...)
+ns.FSI_initialbox=1.5 1.0 3.5 3.0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+#MS May 5, 2018
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
+
+amr.n_cell    = 64 64
+amr.max_level =  3
+ns.ns_tiling=false
+fabarray.mfiter_tile_size=16 16
+#amr.max_level =  0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.n_error_buf     = 2 2 2 2 2 2 2  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4 4 4 4 4 4 4    # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.num_SDC_outer_sweeps=1
+ns.enable_spectral=0
+ns.diffusion_enable_spectral=0
+amr.regrid_int      = 1       # how often to regrid
+amr.check_int       = 100000  # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 500
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+#amr.restart         = chk36000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1    # scale back initial timestep
+# viscous force term: rho u_t = visc_coef * div ( 2 mu D)
+# mu corresponds to "viscconst"
+ns.visc_coef      = 1.0  
+ns.visc_abs_tol   = 1.0e-10
+ns.gravity        = -0.98
+ns.use_lsa=0
+# rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
+ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
+ns.DrhoDz = 0.0 0.0 0.0
+# override_density=1 => rho=rho(T,z)
+# "default_hydrostatic_pressure_density" called if override_density=1.
+# since DrhoDz=0.0,
+# gravity force is grad (-|g| denconst(1) y)/denconst(1) = -|g| 
+# rho_liq=denconst(1)+denconst(1)*DrhoDT(1)*(T-tempconst(1))
+ns.override_density=1 0 0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SL}=sigma_{LV}
+# sigma_{SV}=(1+cos(theta)) sigma_{LV}
+# theta=80 sigma_{SV}/sigma_{LV}=1.17  
+# theta=140 sigma_{SV}/sigma{LV}=0.23
+# theta=45 sigma_{SV}/sigma_{LV}=1+1/sqrt{2}
+# 12 13 23  (LV SL SV)
+# N/m
+
+# 40 degrees contact angle
+ns.tension=5.8800e+00 5.8800e+00 1.0038e+01
+# Joule/(kg Kelvin)
+ns.stiffCP=4.2170e+05 2.0290e+05 4.2170e+05
+
+# 12 13 23 21 31 32  (12 liquid->vapor (boiling) 21 vapor->liquid condensate)
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# latent_heat[2*max_num_tension]
+# Joule/kg
+ns.latent_heat=2.2570e+08 0.0 0.0 0.0 0.0 0.0  
+ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
+ns.temperature_primitive_variable=1 1 1
+ns.fixed_dt	  = 1.0e-4  # hardwire dt
+ns.sum_interval   = 400     # timesteps between computing mass 
+
+# 6 instead of 5 signals nucleate boiling
+ns.axis_dir=6
+ns.xblob3=0.0  # unused
+# see subroutine outside_temperature in PROB.F90
+#ns.yblob3=3.75e-3  # initial thermal layer (meters)
+#ns.yblob3=1.0e-10  # initial thermal layer (meters)
+ns.yblob3=2.4370e+00  # initial thermal layer 
+ns.yblob10=3.0017e+00  # initial velocity boundary layer
+# see subroutine get_internal_heat_source in PROB.F90
+# see subroutine microcell_heat_model in PROB.F90
+# if zblob3>0, heatcoeff=heatcoeff*dx/zblob3 (where LS_SOLID changes sign)
+# if zblob3<0, then heat source in solid cells that adjoin fluid.
+# if zblob3<0, then solidheat_flag should be 0. (diffuse in solid)
+# if zblob3=0, then Dirichlet BC at z=zlo (no internal heat flux or 
+#  other internal BC)
+#  solidheat_flag=1 (dirichlet in solid),zblob3>0:
+#  microlayer flux is (T-TSOLID)/zblob3 
+#
+# heat flux in the solid cells that adjoin a fluid cell:
+# page 30, Sato Niceno (2015): "heater power maintained at 30kW/m^2"
+# rho cp DT/dt=-div q + Q
+# Q=(area) * |zblob3|/(volume)=(m^2)(W/m^2)/(m^3)=W/m^3
+# for Tryggvason problem: T=383 degrees at the wall.
+ns.zblob3=0.0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0  # not used
+ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
+ns.adv_vel=1.0 # inflow velocity
+ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.use_StewartLay=1
+ns.material_type=0 0 999
+# thermal conductivity: Watts/(meter Kelvin)
+ns.heatviscconst=6.80000e+02 2.48000e+01 6.80000e+02
+# liquid-vapor, liquid-solid, vapor-solid
+# 0.0 means do not use.
+ns.heatviscconst_interface=0.0 0.0 0.0
+# dynamic viscosity Pa * s = N s / m^2
+ns.viscconst=2.79000e-03 1.20200e-04 2.79000e-03
+# density: kg/m^3
+ns.denconst=1.0000e+00 5.9560e-04 1.0000e+00 
+# 0=diffuse in solid, 1=dirichlet, 2=neumann
+# if solidheat_flag=2, then "tempfluxsolid" is called.
+ns.solidheat_flag=1
+#ns.solidheat_flag=0
+
+# February 21, 2018: parameters for new microlayer model:
+# material id for the substrate material that neighbors the thin film
+# microlayer liquid:
+ns.microlayer_substrate=3 0 0
+
+# microlayer contact angle (radians): 38 degrees            
+ns.microlayer_angle=0.663 0.0 0.0
+
+# minimum thickness of thin liquid film (MKS)
+# make this zero in order to disable the microlayer model.
+# diameter of water molecule is about 2.9e-10
+# 2.9e-10/l_0
+ns.microlayer_size=1.0000e-06  0.0 0.0                      
+# ns.microlayer_size=  0.0 0.0 0.0  
+
+# resolvable scale size (2 * dx for a representative dx):
+# 3.75e-3/(32*2^3) *2
+ns.macrolayer_size=1.5000e-02 0.0 0.0                        
+
+ns.tempconst=373.0 373.0 380.0  # Delta T=380-373
+#ns.initial_temperature=373.0 373.0 373.0
+#ns.initial_temperature_diffuse_duration=6.0
+ns.tempcutoff=373.0 373.0 373.0 
+ns.tempcutoffmax=500.0 500.0 500.0 
+#(xblob,yblob)=center of vapor bubble
+ns.xblob=5.0  
+ns.yblob=0.3561  # r*cos(theta)+h_sub
+ns.zblob=0.0
+ns.radblob=0.15  # radius of nucleated seed.
+
+ns.n_sites=1
+ns.pos_sites=5.0 0.3561 0.0 0.15
+
+# if latent_heat<>0,
+# if nucleation_period==0.0, only nucleate one bubble, 
+# if nucleation_period>0.0, periodically nucleate bubbles.
+ns.nucleation_period=10
+ns.nucleation_init_time=5.0
+
+
+# x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
+ns.xblob2=0.0 
+ns.yblob2=0.25 # 2 * dxcoarsest=2 * 8e-3/64= 0.25e-3
+ns.zblob2=0.0
+ns.radblob2=0.0 # zero degrees incline (radians)
+ns.radblob3=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=55
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=3
+
+#ns.lo_bc          = 3 3  # this option if heat source
+ns.lo_bc          = 1 5
+ns.hi_bc          = 1 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

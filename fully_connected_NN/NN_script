@@ -1,0 +1,4 @@
+gfortran -g -c -fimplicit-none -DBL_LANG_FORT -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE -DBL_LINUX normal.f90 -I. -o normal.o
+gfortran -g -c -fimplicit-none -DBL_LANG_FORT -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE -DBL_LINUX fully_connected.F90 -I. -o fully_connected.o
+gfortran -g -c -fimplicit-none -DBL_LANG_FORT -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE -DBL_LINUX main_NN.F90 -I. -o main_NN.o
+gfortran main_NN.o fully_connected.o normal.o -o NN.ex

@@ -1,0 +1,12 @@
+Instructions:
+1. create geometry6.0 directory
+2. put geometry60.tar.gz in that directory and enter that directory
+3. gunzip geometry60.tar.gz
+4. tar -xf geometry60.tar
+5. cd iamrlib/run2d  (or cd iamrlib/run3d)
+6. edit GNUmakefile (set DEBUG, COMP, USE_MPI, GCC_MAJOR_VERSION)
+
+7. make
+8. you can use "run2d/inputs.testbubble" or "run2d/inputs.dambreak"
+   as a 2d test file.  use "run3d/inputs3d-shear" as a 3d
+   test file.  There are others included if interested.

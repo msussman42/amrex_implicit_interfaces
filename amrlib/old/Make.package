@@ -1,0 +1,23 @@
+#
+# $Id: Make.package,v 1.10 2000/05/03 03:36:40 propp Exp $
+#
+
+AMRLIB_BASE=EXE
+ifeq ($(LBASE),amr)
+  AMRLIB_BASE=LIB
+endif
+
+C$(AMRLIB_BASE)_sources += Amr.cpp AmrLevel.cpp BCRec.cpp Cluster.cpp \
+                Derive.cpp StateData.cpp \
+                StateDescriptor.cpp TagBox.cpp
+
+C$(AMRLIB_BASE)_headers += Amr.H AmrLevel.H BCRec.H BC_TYPES.H \
+                Cluster.H Derive.H \
+                LevelBld.H StateData.H \
+                StateDescriptor.H TagBox.H 
+
+
+#F$(AMRLIB_BASE)_sources += FILCC_$(DIM)D.F ARRAYLIM_$(DIM)D.F
+
+F90$(AMRLIB_BASE)_sources += FILCC_$(DIM)D.F90 ARRAYLIM_$(DIM)D.F90
+

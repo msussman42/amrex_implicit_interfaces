@@ -1,0 +1,54 @@
+!distIBM_FabricMesh_Tension.Fi
+!i2g : global id  of the body
+!i2l : local id of the body
+!i2   : Line number
+!jq   : Link number in Line i2 of fabric body of
+! i2l 
+! pi1 : pi
+! itmpusrfn(50) : temporal integer work var
+! rtmpusrfn(50) : temporal real work var
+!time2 :time
+!delta_t :dt
+!
+! k :number of total attributes of the line
+! FabricML_att(1:k) : attribute temp save
+! FabricML_dx(1:3)  :x2-x1
+! tensionDerivFlag_fbc :/true or false/: flag for calculation of derivative 
+! dncont=|x2-x1|
+!
+! iDX0 : place for initial length
+! iKS0 :place for static tension force
+! N_iPARA0: number of parameters for user defined function
+! iPARA0: place for user defined function parameters
+! i_FABRICLINE0: 1 if it is for line and 0 if it is for mesh
+!
+!
+!!OUTPUT: FabricML_tension,FabricML_Dtension {as function dncont}
+c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
+       FabricML_Dtension=0.0
+       FabricML_tension =0.0
+       if(i_FABRICLINE0 .eq. 1) then  !!Mesh and Line calculation hardcoded flag
+       rtmpusrfn(1)=(dncont/FabricML_att(iDX0))         !(dx/dx0)
+       rtmpusrfn(2)= rtmpusrfn(1)**2                    !(dx/dx0)^2
+
+       rtmpusrfn(5)= rtmpusrfn(2)-1                     !(dx/dx0)^2-1
+       rtmpusrfn(6)=exp(FabricML_att(iPARA0(1))*rtmpusrfn(5)**2)
+
+       FabricML_tension=FabricML_att(iKS0)*rtmpusrfn(2)
+     &                   *rtmpusrfn(5)
+     &                   *rtmpusrfn(6)
+
+       if(tensionDerivFlag_fbc) then
+       rtmpusrfn(3)= rtmpusrfn(1)*rtmpusrfn(2)          !(dx/dx0)^3
+       rtmpusrfn(4)= rtmpusrfn(3)*rtmpusrfn(2)          !(dx/dx0)^5
+
+       rtmpusrfn(7)=( rtmpusrfn(4)*FabricML_att(iPARA0(1))
+     &               -rtmpusrfn(3)*FabricML_att(iPARA0(1))
+     &               -rtmpusrfn(1)
+     &               +rtmpusrfn(3)*2.0)/FabricML_att(iDX0)
+       FabricML_Dtension=2.0*FabricML_att(iKS0)
+     &                    *rtmpusrfn(6)*rtmpusrfn(7)
+       endif !tensionDerivFlag_fbc 
+       endif
+
+

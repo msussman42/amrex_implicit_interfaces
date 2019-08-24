@@ -1,0 +1,139 @@
+
+
+# ------------------  INPUTS TO MAIN PROGRAM  -------------------
+# CHANGES FROM PAST VERSION:
+# smg.useCG becomes mg.usecg, no more smg.eps
+# no more raster stuff (hdf), add mac.mac_abs_tol
+# blob.* now becomes ns.*
+#
+max_step  =  99999    # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time = 4.0  # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   = -1.5  -1.0
+geometry.prob_hi   =  2.5  1.0
+#geometry.is_periodic = 1 0
+ns.FSI_flag= 0 0 2
+
+ns.num_materials=3
+ns.num_species_var=0
+
+ns.advection_order=1  # slope=0 at boundary, linear reconstruction elsewhere
+ns.slope_limiter_option=1  # 0=no limiting
+
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 200
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 1
+Lp.harmavg = 0
+diffuse.max_order=2
+
+# 0MGPCG 1PCG 2MG
+ns.project_solver_type=0
+Lp.smooth_type=2  # 0 GSRB 1 ICRB 2 ILU
+Lp.bottom_smooth_type=2
+ns.minimum_relative_error=1.0e-18
+Lp.gpucount=1
+ns.initial_project_cycles=10  # number of initial jacobi iterations
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+
+
+amr.n_cell    = 128 64
+amr.max_level = 3   # 3 or more on SUPERCOMPUTER
+
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 50
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 64     # 32 on SUPERCOMPUTER (3D)
+#amr.restart         = chk2000 # SUPERCOMPUTER
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+mac.mac_abs_tol    = 1.0e-10
+mac.use_cg_solve   = 1
+
+ns.visual_option=-2 # AMR tecplot  (zonal files)
+#ns.visual_option=-1 #  (-1=plt files and isosurface files)
+#amr.plotfile_on_restart=1     
+#SUPERCOMPUTER
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1      # 
+ns.visc_coef      = 5.7e-8   # water=0.01poise  mu/(rho L U)=5.7e-8 
+mac.visc_abs_tol   = 1.0e-7   # above: 1/17697680 (max_level=3, 0.0001)
+ns.gravity        = 5.95     # Fr^2=U^2/gL g=980 L=572 U=309.4cm/s (6.02knots)
+ns.tension        = 0.0 0.0 0.0 
+#ns.fixed_dt	  = 0.0005  # SUPERCOMPUTER (0.0005 max_level=3)
+ns.dt_cutoff      = 1.0e-8   # 0.0005 for max_level=2
+ns.sum_interval   = 100      # timesteps between computing mass 
+
+ns.axis_dir=1  ! waterdepth=0
+ns.vorterr=999999.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=1.0
+ns.adv_dir=1
+ns.heatviscconst=0.0 0.0 0.0 
+ns.viscconst=1.0 0.01 1.0
+ns.denconst=1.0 0.001 1.0
+ns.tempconst=293.0 293.0 293.0 
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.material_type=0 0 999
+ns.solvability_projection=1
+ns.xblob=0.5
+ns.yblob=0.0
+ns.zblob=0.0
+ns.radblob=1.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=9
+
+proj.bogus_value = 5.0e+5
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 1 4
+ns.hi_bc          = 1 4
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

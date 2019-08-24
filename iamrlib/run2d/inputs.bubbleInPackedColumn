@@ -1,0 +1,150 @@
+max_step  =  1000      # maximum timestep 
+stop_time = 60.0     # maximum problem time
+ns.FSI_flag=0 0 1 # 1=solid prescribed in PROB_[23]D.F90, 2=sci_clsvof.F90
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+# XY
+geometry.prob_lo   =  -1.27 -1 
+# OCTOBER 23 make dx=dy=dz just in case there is a bug otherwise.
+geometry.prob_hi   =  1.27  6.62  
+geometry.is_periodic = 0 0 0
+# OCTOBER 23 => 3 is ok for these two parameters.
+#ns.use_LS_height=1 OCTOBER 23: LS height always used
+
+# OCTOBER 23 => face_flag=1 should be better at the inflow boundary.
+#ns.solid_staircase=0  OCTOBER 23: always staircase representation
+# (working on high order representation now)
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 9000
+mg.usecg=0
+mg.bot_atol = 1.0e-12  # error tolerance at the bottom of the V-cycle
+mg.rtol_b = -0.01
+Lp.smooth_type=2
+Lp.v = 0
+Lp.harmavg = 0
+ns.minimum_relative_error=1.0e-18
+diffuse.max_order=2
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+ns.initial_project_cycles=10  # number of initial jacobi iterations
+
+ns.num_materials=3
+ns.num_species_var=0
+#ns.coarse_boundary_order=1  OCTOBER 23: always coarse_boundary_order=1
+ns.advection_order=2 2 1  # slope=0 at boundary, linear reconstruction elsewhere
+ns.slope_limiter_option=1  # 0=no limiting  1=minmod
+#ns.coarse_fine_conservation=0 OCTOBER 23: always =1 I think.
+
+# OCTOBER 23: projection_pressure_scale=1.0e+2
+ns.projection_pressure_scale=1.0e+2
+# OCTOBER 23: EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
+ns.EILE_flag=-1  
+
+fab.do_initval=0  # default is 1
+
+ns.visual_option=-2  # -1 for VISIT plt files
+
+# XY
+amr.n_cell    = 48 144 
+amr.max_level = 0
+ns.use_LS_height=1
+ns.MOFITERMAX=15
+
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 20 
+amr.plot_file       = plt 
+#amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 24 
+#amr.restart         = chk05400
+#amr.trace   =1
+#DistributionMapping.strategy        = ROUNDROBIN
+#DistributionMapping.strategy        = SFC
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 4.0e-12 # level 0 timestep below which we halt
+mac.mac_tol        = 1.0e-10
+mac.mac_abs_tol    = 1.0e-10
+mac.use_cg_solve   = 1
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.1      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-7
+ns.gravity        = 0.0  
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SV}=sigma_{LV}
+ns.tension        = 71.7  71.7  41.7 #  VS VL VS LS   contact angle=70
+# OCTOBER 23: surface tension was causing the inlet instability.
+#ns.tension        = 0.0 0.0 0.0
+ns.use_lsa=0
+ns.shock_timestep=0 0 0      # 0=use "c" at t=0, 1=always use "c", 2=never
+#ns.fixed_dt	  = 2.0e-8   # hardwire dt
+ns.sum_interval   = 10      # timesteps between computing mass 
+
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+
+ns.axis_dir=0  # 0=1 wing   1=2 wings
+ns.advbot=0   # inflow velocity at nozzle at the bottom (cm/s)
+ns.adv_vel=3.0   # inlet velocity
+ns.adv_dir=2
+ns.material_type=0 0 999         # material 5 is air
+ns.tempconst=293.0 293.0 293.0        # nominal initial values
+# OCTOBER 23: Back to real values.
+ns.viscconst=0.001915 0.01 1.0 #  vapor liquid  solid
+ns.denconst=0.001226 0.9981 1.0 # vapor liquid  solid 
+ns.heatviscconst=0.0 0.0 0.0
+ns.vorterr=20.0 0.0 0.0
+ns.pressure_error_cutoff=0.0 0.0 0.0
+
+ns.xblob=0.0 # cm
+ns.yblob=0.0
+ns.zblob=999.0  # height of free surface
+ns.radblob=0.0  
+ns.denfact=1.0
+ns.velfact=0.0
+# the 2 wing procedure follows probtype=538 procedure (but not exactly)
+# remember to make axis_dir=1 for 2 wing case.
+# sci_clsvof.F90 has cross section of wing in the x-z plane so that
+# for 2D, x3d -> x2d  z3d -> y2d  y3d -> 0.05
+# see initflapping and for probtype=538, see initinjector   
+ns.probtype=1001   # bubble in packed column 
+ns.v=1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 5 1
+ns.hi_bc          = 5 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

@@ -1,0 +1,191 @@
+!
+! $Id: MG_3D.F,v 1.2 1998/12/14 20:23:47 lijewski Exp $
+!
+#undef  BL_LANG_CC
+#ifndef BL_LANG_FORT
+#define BL_LANG_FORT
+#endif
+
+#include "SPACE.H"
+#include <REAL.H>
+#include <CONSTANTS.H>
+#include "MG_F.H"
+#include "ArrayLim.H"
+
+!-----------------------------------------------------------------------
+      subroutine FORT_AVERAGE ( &
+           c,  &
+           DIMS(c) &
+           , &
+           f,  &
+           DIMS(f) &
+           , &
+           lo, hi, &
+           iaverage, &
+           bfact_coarse, &
+           bfact_fine,bfact_top)
+      use global_utility_module
+
+      IMPLICIT NONE
+      INTEGER_T iaverage,bfact_coarse,bfact_fine,bfact_top
+      INTEGER_T DIMDEC(c)
+      INTEGER_T DIMDEC(f)
+      INTEGER_T lo(BL_SPACEDIM)
+      INTEGER_T hi(BL_SPACEDIM)
+      INTEGER_T growlo(3),growhi(3)
+      REAL_T f(DIMV(f))
+      REAL_T c(DIMV(c))
+!
+      INTEGER_T i, i2, i2p1
+      INTEGER_T j, j2, j2p1
+      INTEGER_T k, k2, k2p1
+      REAL_T denom
+!
+      if (iaverage.eq.1) then
+       if (BL_SPACEDIM.eq.3) then
+        denom=eighth
+       else if (BL_SPACEDIM.eq.2) then
+        denom=fourth
+       else
+        print *,"dimension bust"
+        stop
+       endif
+      else if (iaverage.eq.0) then
+       denom=one
+      else
+       print *,"iaverage invalid"
+       stop
+      endif
+      if (bfact_coarse.lt.1) then
+       print *,"bfact_coarse invalid"
+       stop
+      endif
+      if (bfact_fine.lt.1) then
+       print *,"bfact_fine invalid"
+       stop
+      endif
+      if (bfact_top.lt.1) then
+       print *,"bfact_top invalid"
+       stop
+      endif
+      call checkbound(lo,hi, &
+       DIMS(c), &
+       0,-1,130)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+      do k=growlo(3),growhi(3)
+       k2 = 2*k
+       k2p1 = k2 + 1
+       do j=growlo(2),growhi(2)
+        j2 = 2*j
+        j2p1 = j2 + 1
+        do i=growlo(1),growhi(1)
+         i2 = 2*i
+         i2p1 = i2 + 1
+         if (BL_SPACEDIM.eq.3) then
+          c(D_DECL(i,j,k)) =  ( &
+            + f(D_DECL(i2p1,j2p1,k2))  &
+            + f(D_DECL(i2,j2p1,k2)) &
+            + f(D_DECL(i2p1,j2,k2)) &
+            + f(D_DECL(i2,j2,k2)) &
+            + f(D_DECL(i2p1,j2p1,k2p1)) &
+            + f(D_DECL(i2,j2p1,k2p1)) &
+            + f(D_DECL(i2p1,j2,k2p1)) &
+            + f(D_DECL(i2,j2,k2p1)) )*denom
+         else if (BL_SPACEDIM.eq.2) then
+          c(D_DECL(i,j,k)) =  ( &
+            + f(D_DECL(i2p1,j2p1,k2))  &
+            + f(D_DECL(i2,j2p1,k2)) &
+            + f(D_DECL(i2p1,j2,k2)) &
+            + f(D_DECL(i2,j2,k2)) )*denom
+         else
+          print *,"dimension bust"
+          stop
+         endif
+        end do
+       end do
+      end do
+
+      end subroutine FORT_AVERAGE
+
+!-----------------------------------------------------------------------
+      subroutine FORT_INTERP ( &
+       bfact,bfact_f,bfact_top, &
+       f,  &
+       DIMS(f), &
+       c,  &
+       DIMS(c), &
+       lo, hi )
+      use global_utility_module
+      IMPLICIT NONE
+      INTEGER_T DIMDEC(f)
+      INTEGER_T DIMDEC(c)
+      INTEGER_T lo(BL_SPACEDIM)
+      INTEGER_T hi(BL_SPACEDIM)
+      INTEGER_T growlo(3),growhi(3)
+      REAL_T f(DIMV(f))
+      REAL_T c(DIMV(c))
+      INTEGER_T bfact,bfact_f,bfact_top
+!
+      INTEGER_T i, i2, i2p1
+      INTEGER_T j, j2, j2p1
+      INTEGER_T k, k2, k2p1
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid"
+       stop
+      endif
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid"
+       stop
+      endif
+      if (bfact_top.lt.1) then
+       print *,"bfact_top invalid"
+       stop
+      endif
+      
+!
+      call checkbound(lo,hi, &
+       DIMS(c), &
+       0,-1,140)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+      do k=growlo(3),growhi(3)
+       k2 = 2*k
+       k2p1 = k2 + 1
+       do j=growlo(2),growhi(2)
+        j2 = 2*j
+        j2p1 = j2 + 1
+        do i=growlo(1),growhi(1)
+         i2 = 2*i
+         i2p1 = i2 + 1
+ 
+         f(D_DECL(i2p1,j2p1,k2)) = c(D_DECL(i,j,k)) + &
+             f(D_DECL(i2p1,j2p1,k2))
+         f(D_DECL(i2,j2p1,k2)) = c(D_DECL(i,j,k)) + &
+             f(D_DECL(i2,j2p1,k2))
+         f(D_DECL(i2p1,j2,k2)) = c(D_DECL(i,j,k)) + &
+             f(D_DECL(i2p1,j2,k2))
+         f(D_DECL(i2,j2,k2)) = c(D_DECL(i,j,k)) + &
+             f(D_DECL(i2,j2,k2))
+
+         if (BL_SPACEDIM.eq.3) then
+          f(D_DECL(i2p1,j2p1,k2p1)) = c(D_DECL(i,j,k)) + &
+             f(D_DECL(i2p1,j2p1,k2p1))
+          f(D_DECL(i2,j2p1,k2p1)) = c(D_DECL(i,j,k)) + &
+             f(D_DECL(i2,j2p1,k2p1))
+          f(D_DECL(i2p1,j2,k2p1)) = c(D_DECL(i,j,k)) + &
+             f(D_DECL(i2p1,j2,k2p1))
+          f(D_DECL(i2,j2,k2p1)) = c(D_DECL(i,j,k)) + &
+             f(D_DECL(i2,j2,k2p1))
+         else if (BL_SPACEDIM.eq.2) then
+          ! do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+        end do
+       end do
+      end do
+
+      end subroutine FORT_INTERP

@@ -1,0 +1,13 @@
+
+PARTICLE=EXE
+
+C$(PARTICLE)_sources += TracerParticles.cpp
+C$(PARTICLE)_headers += Particles.H ParGDB.H TracerParticles.H
+C$(PARTICLE)_headers += ParticleI.H ParticleInit.H ParticleContainerI.H
+C$(PARTICLE)_headers += ParIterI.H
+F$(PARTICLE)_headers += Particles_F.H
+F$(PARTICLE)_sources += Particles_$(DIM)D.F
+F90$(PARTICLE)_sources += Particle_mod_$(DIM)d.F90
+
+VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/Particle
+INCLUDE_LOCATIONS += $(BOXLIB_HOME)/Src/Particle

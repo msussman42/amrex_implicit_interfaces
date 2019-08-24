@@ -1,0 +1,187 @@
+# This is an example of inputs file that would go with a user defined
+# problem defined in PROB.F90.
+#
+# The steps for creating ones' own new problem setup:
+# 1. pick a probtype that is not used (in this example: probtype.eq.533)
+# 2. create a fortran module that has routines for initial level set functions,
+#    temperature, velocity, ..., boundary conditions, source terms
+#    (in this example: rigid_FSI.F90)
+# 3. add the module file name to iamrlib/Make.package (put it 
+#    immediately following rigid_FSI.F90 wherever it appears in the file)
+# 4. modify PROB.F90 to call the new user defined routines when 
+#    probtype.eq.<selected probtype>  (search for keyword rigid_FSI in PROB.F90
+#    for examples)
+#
+# in future: it will be possible to take a CAD file from AUTODESK (for example)
+# and have it automatically converted into a levelset function.
+max_step  =  4000    # maximum timestep
+stop_time = 1.0
+
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   =  1.0 1.0 4.0      # cgs
+ns.EILE_flag=-1
+ns.continuous_mof=2  # 0=MOF 2=CMOF 3,4,5=CLSVOF
+ns.MOFITERMAX=15
+ns.temperatureface_flag=0   # 0=use LS  1=use VOF
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+ns.solvability_projection=0
+ns.outflow_pressure=0.0
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=100.0 
+ns.num_materials=3 # 1: liquid 2: vapor 3: solid 
+ns.num_species_var=0
+ns.configuration_tensor_var=0
+ns.post_init_pressure_solve=1
+ns.output_drop_distribution=1
+ns.face_flag=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+godunov.printMinMax=0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
+ns.visual_tessellate_vfrac=1
+
+amr.n_cell    = 16 16 64
+amr.max_level =  1
+ns.max_level_two_materials=1
+# 0=never adapt   1=if radius< 1 * dx then adapt
+# -1=always adapt
+# An interface changing phase will always be adapted
+# to the finest possible level.
+# Triple junctions will always be adapted to the finest possible level.
+ns.radius_cutoff=4 4 0
+
+ns.ns_tiling=false
+fabarray.mfiter_tile_size=16 16 16
+#amr.max_level =  0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.n_error_buf     = 2 2 2 2 2 2 2  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4 4 4 4 4 4 4    # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.num_SDC_outer_sweeps=1
+ns.enable_spectral=0
+ns.diffusion_enable_spectral=0
+amr.regrid_int      = 1       # how often to regrid
+amr.check_int       = 50    # number of timesteps between checkpoints
+amr.check_file      = chk    # root name of checkpoint file
+amr.plot_int        = 50  # 500 for production runs
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+#amr.restart         = chk55200
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1    # scale back initial timestep
+# viscous force term: rho u_t = visc_coef * div ( 2 mu D)
+# mu corresponds to "viscconst"
+ns.visc_coef      = 1.0  
+ns.visc_abs_tol   = 1.0e-10
+ns.gravity        = -980.0 
+ns.use_lsa=0
+ns.override_density=0 0 0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SL}=sigma_{LV}
+# sigma_{SV}=(1+cos(theta)) sigma_{LV}
+# theta=80 sigma_{SV}/sigma_{LV}=1.17  
+# theta=140 sigma_{SV}/sigma{LV}=0.23
+# theta=45 sigma_{SV}/sigma_{LV}=1+1/sqrt{2}
+# 12,13,23
+ns.tension=72.0 72.0 72.0 
+ns.temperature_primitive_variable=1 1 1
+#ns.fixed_dt	  = 0.1     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+ns.viscosity_state_model=0 0 0
+
+ns.axis_dir=0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=0.0 # not used
+ns.vinletgas=-1.0  # initial downward velocity of the rigid object cm/s
+ns.twall=0.0  # not used
+ns.advbot=0.0 # keep 0.0
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
+# NOV 2018 (3 or 4 materials)
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.use_StewartLay=1
+ns.material_type=0 0 0
+# thermal conductivity: erg/(s cm Kelvin)
+ns.heatviscconst=58000.0 2400.0 58000.0
+# 0.0 means do not use.
+ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
+ns.viscconst=0.01 1.0e-4 100.0
+# density: g/cm^3
+ns.denconst=1.0 0.00125 0.1
+ns.FSI_flag=0 0 5
+# 0=diffuse in solid, 1=dirichlet, 2=neumann
+# this flag only applicable if FSI_flag=1,2,3,4
+ns.solidheat_flag=0  # diffuse in solid (substrate)
+
+ns.tempconst=293.0 293.0 293.0
+#(xblob,yblob)=initial center of rigid object
+ns.xblob=0.0  
+ns.yblob=0.0
+ns.zblob=1.35
+ns.radblob=0.25  
+ns.radblob2=1.0 # position of air/water surface
+
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=533
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=0
+
+ns.lo_bc          = 3 3 5
+ns.hi_bc          = 3 3 2
+ns.temperature_lo_bc          = 3 3 5
+ns.temperature_hi_bc          = 3 3 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

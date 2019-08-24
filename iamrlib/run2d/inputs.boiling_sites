@@ -1,0 +1,186 @@
+# L=sqrt(sigma/(g rho))=sqrt(73/(980*0.96))=0.28
+# U=sqrt(gL)=sqrt(980*0.28)=16.6
+# T=L/U=0.017
+# RE=rho L U/mu=0.96*0.28*16.6/.0089=501
+# PR=cp mu/alpha=(4.22e+7 * 0.0089/6.79E+4)=5.53
+# ST=cp Delta T/latentheat=(4.22e+7)*6.2/(2257e+7)=0.012
+# after scaling:
+# gravity coefficient is 1.
+# surface tension coefficient is 1.
+# liquid viscosity is 1/RE=1/501=0.002
+# liquid heat conduction is 1/(RE PR)=1/(501 * 5.53)=0.0004
+# latent heat=1/ST=1/0.012=83
+# dimensional: TWALL-TSAT=Delta T=6.2
+# non-dimensional: TSAT=373 TWALL=374
+# liquid density: rho - rho0 = -rho0 beta (T-T0)
+# dimensional beta: beta=0.0007 1/deg K
+# non-dimensional: T=T0+(Tstar-T0) * Delta T
+#                  rho-rho0=-rho0 beta (Tstar-T0)*Delta T
+#                  beta_star=beta*Delta T=6.2*0.0007=0.004
+# NOTE: it is beta which corresponds to DrhoDT.
+# dimensionless vapor density: 0.0005795
+#
+max_step  =  99999    # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time =  4.0  # enough for 2 bubbles.
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  4.0 2.0
+ns.ns_tiling=false
+ns.EILE_flag=-1
+ns.continuous_mof=2
+ns.MOFITERMAX=15
+ns.temperatureface_flag=0   # 0=use LS  1=use VOF
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+ns.solvability_projection=0 # 0 since must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=1.0e+6
+ns.num_materials=3 # 1: liquid 2: vapor 3: solid
+ns.num_species_var=0
+ns.post_init_pressure_solve=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
+
+amr.n_cell    = 64 32
+amr.max_level =  2
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 500    # number of timesteps between checkpoints
+amr.check_file      = chk    # root name of checkpoint file
+amr.plot_int        = 100 
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 1024
+#amr.restart         = ch64k1000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1    # scale back initial timestep
+ns.visc_coef      = 0.002  # Re=rho LU/mu=0.96*16.6*.28/0.0089=501
+mac.visc_abs_tol   = 1.0e-10
+ns.gravity        = -1.0 #  U^2=gL
+ns.use_lsa=0
+ns.DrhoDT = -0.004 0.0 0.0   # (-700E-6)(6.2)
+ns.DrhoDz = 0.0 0.0 0.0
+ns.override_density=1 0 0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SL}=1  sigma_{SV}=1+cos(theta)
+# theta=80 sigma_{SV}=1.17  theta=140 sigma_{SV}=0.23
+# 12 13 23  (LV SL SV)
+ns.tension        = 1.0 1.0 1.0 # We=sigma/(rho U^2 L) = 1
+# default is 4.1855e+7
+# for vapor, 2.05/4.19=
+ns.stiffCP=1.0 0.49 1.0 # dimensionless
+# units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
+# freezing L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
+# boiling  L=2257E+7 erg/g
+# 12 13 23 21 31 32  (12 liquid->vapor (boiling) 21 vapor->liquid condensate)
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# latent_heat[2*max_num_tension]
+# ST=CP Delta T/L  1/ST=83
+ns.latent_heat=83.0 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
+ns.temperature_primitive_variable=1 1 1
+#ns.fixed_dt	  = 0.1     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+# 6 instead of 5 signals nucleate boiling
+ns.axis_dir=6
+ns.yblob3=0.2  # initial thermal layer 
+# if zblob3>0, heatcoeff=heatcoeff*dx/zblob3 (where LS_SOLID changes sign)
+ns.zblob3=0.1  # thickness of microlayer  flux is (T-TSOLID)/zblob3 
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0  # not used
+ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.use_StewartLay=1
+ns.material_type=0 0 999
+# 1/(PR RE)=0.0004  alpha_v/alpha_l=24/580
+ns.heatviscconst=0.0004 0.000017 0.0004
+# vapor viscosity should be 0.01, but make 0 until proper jump conditions
+# implemented.
+ns.viscconst=1.0 0.0 1.0
+ns.denconst=1.0 0.0006 1.0
+ns.FSI_flag=0 0 1
+# 0=diffuse in solid, 1=dirichlet, 2=neumann
+ns.solidheat_flag=1  # Solid boundary is Dirichlet 
+                     # (must have heatvisc(im_solid)>0)
+ns.tempconst=373.0 373.0 374.0
+ns.xblob=2.0  # center of vapor bubble
+ns.yblob=0.1  # yblob=0.1 coincides with yblob2=0.1 (y pos. of plate)
+ns.zblob=0.0
+ns.radblob=0.04 # radius of nucleated seed 
+
+ns.nucleation_period=0.0
+ns.n_sites=3
+ns.pos_sites=2.0 0.1 0.0 0.04 1.0 0.1 0.0 0.04 3.0 0.1 0.0 0.04
+
+ns.xblob2=0.0 # x center of surface of HOT plate (xblob2,yblob2) (inclined)
+ns.yblob2=0.1 # y  "                                  "
+ns.zblob2=0.0
+ns.radblob2=0.0 # zero degrees incline (radians)
+ns.radblob3=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=55
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+ns.prescribe_temperature_outflow=1 # =1 for sucking problem
+
+ns.lo_bc          = 2 5
+ns.hi_bc          = 2 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

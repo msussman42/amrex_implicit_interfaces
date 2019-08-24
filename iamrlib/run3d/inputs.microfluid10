@@ -1,0 +1,180 @@
+
+
+# ------------------  INPUTS TO MAIN PROGRAM  -------------------
+# CHANGES FROM PAST VERSION:
+# smg.useCG becomes mg.usecg, no more smg.eps
+# no more raster stuff (hdf), add mac.mac_abs_tol
+# blob.* now becomes ns.*
+#
+max_step  =  999999   # maximum timestep
+stop_time =  999999  # maximum problem time
+ns.FSI_flag=0 0 2
+ns.implicit_surface_tension=0
+ns.advection_order=1
+ns.minimum_relative_error=1.0e-18
+ns.initial_project_cycles=0  # number of initial jacobi iterations
+ns.project_solver_type=0
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+# 0=GSRB 1=ICRB 2=ILU
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+# L=0.01  l=L l^*
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  -2.0 -1.0 -0.1
+geometry.prob_hi   =  8.0 4.0 0.525   # units of cm
+geometry.is_periodic = 0 0 0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 9000
+mg.usecg=0
+mg.bot_atol = 1.0e-13
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+ns.pcav=220.2726
+ns.dencav=0.999958
+ns.pchopp=220.2726
+ns.denchopp=0.999958
+ns.soundchopp=100.0
+ns.bubble_density=0.001
+ns.bubble_pressure=0.0
+
+ns.hydrostatic_pressure=0.0
+ns.visual_header=1
+ns.visual_hide_option=1
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plt files for Visit
+ns.visual_lo = -1 -1 -1
+ns.visual_hi = 512 512 512
+
+ns.conserve_vof=1  # do not truncate small vfrac to 0.
+
+amr.n_cell    = 64 32 4
+amr.max_level = 1
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2 2 2 2   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 4000    # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 2000      # 1000
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 512
+#amr.restart         = chk72000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-11
+
+ns.is_twophase = 1
+ns.is_compressible=0
+ns.shock_capture=0
+ns.shock_eta=1.0
+ns.shock_timestep=0
+ns.cfl            = 1.0      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0   
+ns.gravity        = -9.8   # Fr=U^2/gL L=0.01
+ns.gravityangle = 0.0
+ns.tension        = 5660.0  # 56.6 cgs We=rho L U^2/sigma
+#ns.fixed_dt	  = 1.0e-5   # hardwire dt
+ns.sum_interval   = 100      # timesteps between computing mass 
+
+ns.overlap=0.0
+
+ns.axis_dir=0
+ns.vorterr=999999.0
+ns.rgasinlet=1.57
+ns.twall=0.1
+# cross section area is about 0.02x0.0037
+# 1 liter=1000cm^3
+# 1microliter=0.001 cm^3
+# water rate=0.3 microL/mi=(0.3)(0.001)cm^3/mi=(0.3)(0.001)/(60) cm^3/s
+# water velocity=(0.3)(0.001)/((60)(0.02)(0.0037))=0.068cm/s
+# oil rate=1.3 microL/mi=(1.3)(0.001)cm^3/mi=(1.3)(0.001)/(60) cm^3/s
+# oil velocity=(1.3)(0.001)/((60)(0.02)(0.0037))=0.29cm/s
+ns.advbot=-0.68 # inflow velocity of water from yhi position 
+                 # actual lab condition ns.advbot=0.068
+ns.adv_vel=0.0    # make this zero otherwise all 6 walls will have this.
+ns.vinletgas=2.9 # inflow velocity of oil from the xlo position
+                  # actual lab condition ns.vinletgas=0.29  
+ns.adv_dir=1       # inflow in x-direction
+ns.viscunburn=1.0 # viscosity of water g/(cm s)  Re=rho L U/mu
+ns.viscburn=5.1 # viscosity of perfluorodecalin
+ns.viscvapor=5.1 # viscosity of perfluorodecalin
+ns.contactangle=2.36 # mostly wetted by the perfluorodecalin? 135 (not 2.62)
+ns.tcenter=-1.0
+ns.denspread=2.0
+ns.denwater=1.0  # density of water
+ns.denair=1.917   # density of perfluorodecalin (oil)
+ns.denvapor=1.917  # density of perfluorodecalin (oil)
+ns.xblob=0.0
+ns.yblob=2.1  # initial location of oil/water interface L=0.01
+ns.zblob=0.0
+ns.radblob=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=5700
+ns.v=1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 1 2 5
+ns.hi_bc          = 2 1 5
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
+# --------------------------------------------------------------------
+# -----       CONTOUR PLOTTING ONLY AVAILABLE IN 2-D           -------
+# --------------------------------------------------------------------
+# uncomment the next line to set a default level for contour plotting
+# contour.level = 1
+#
+# These variables control interactive contour plotting on UNIX systems
+# file_name   = root name of postscript file (will be appended with ".ps")
+# var_name    = name of thermodynamic variable to plot
+# device      = 1  => XWINDOW, 2 = POSTSCRIPT, 3 = both
+# freq        = intervals between plots (-1 = off)
+# n_cont      = number of contour lines per plot
+# sho_grd     = 0 => don't show grid placement, 1 => show grid placement
+#               2 => show grid placement and overlay velocity vector plot
+# win_siz     = number of pixels in max window direction
+#
+#file_name  var_name   device  freq  n_cont  sho_grd win_siz sval sdir sstr
+#contour.verbose = 1
+contour.maxpoints=32
+contour.arrow_factor=15.0
+# center z=0.18385
+# center x=0.0
+contour.plot = triple triple 1   1  -1       2      1000 0.28385  2 xy
+contour.plot = triple triple 1   1  -1       2      1000   2.0    0 yz

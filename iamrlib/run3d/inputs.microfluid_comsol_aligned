@@ -1,0 +1,145 @@
+max_step  =  999999   # maximum timestep
+stop_time =  999999  # maximum problem time
+
+ns.advection_order=1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+
+ns.num_materials=3
+ns.num_species_var=0
+
+ns.use_StewartLay=1 # biased derivatives at interfaces
+
+ns.FSI_flag=0 0 2
+ns.minimum_relative_error=1.0e-18
+ns.projection_pressure_scale=100.0
+ns.initial_project_cycles=10  # number of initial jacobi iterations
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+# 0=GSRB 1=ICRB 2=ILU
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo  =  -0.01 0.0 0.0
+geometry.prob_hi  =  0.07 0.02 0.005  # units of cm
+geometry.is_periodic = 0 0 0
+
+ns.MOFITERMAX=15
+ns.post_init_pressure_solve=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 9000
+mg.usecg=0
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plt files for Visit
+
+amr.n_cell    = 64 16 4  
+amr.max_level =  1
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2    # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 2       # block factor in grid generation
+amr.check_int       = 1000    # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 500    # change to 1000
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 256
+#amr.restart         = chk05000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0      # 1.0
+ns.gravity        = 0.0   
+# contact angle 135 degrees
+# sigma_23-sigma_13=sigma_12 costheta=-sigma_12/sqrt(2)
+# 5-sigma_13=-5/sqrt(2)
+# sigma_13=5(1+1/sqrt(2))
+# contact angle 90 degrees
+# sigma_23-sigma_13=sigma_12 costheta=0
+# 5-sigma_13=0
+# sigma_13=5
+# oil (drop phase) is material 1
+ns.tension        = 5.0 8.54 5.0 # 5.0 cgs
+ns.sum_interval   = 10       # timesteps between computing mass 
+
+ns.use_lsa=0
+ns.axis_dir=4  # 0 Roper's geometry  1 Comsol's dimensions 4=hardwired geom.
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.twall=0.1
+# cross section area is about 1.0E-4
+# 1 liter=1000cm^3
+# 1ml=1 cm^3
+# oil rate=0.2 mL/h=0.2cm^3/h=(0.2)/(3600) cm^3/s
+# oil velocity=(0.2)/((3600)(1E-4))=0.556cm/s
+# water rate=5.56 cm/s (2 mL/h) (max velocity 8.33 cm/s)
+ns.advbot=-0.5     # inflow velocity of oil from yhi position
+ns.adv_vel=0.0       # make this zero otherwise all 6 walls will have this.
+ns.vinletgas=5.0    # inflow velocity of water from the xlo position
+ns.adv_dir=1       # inflow in x-direction
+ns.material_type=0 0 999
+ns.viscconst=0.0671 0.0195 0.0671 # viscosity of oil, water g/(cm s)
+ns.denconst=1.0 1.0 1.0 # density of oil (1.02),water
+ns.heatviscconst=0.0 0.0 0.0
+ns.tempconst=293.0 293.0 293.0
+ns.pressure_error_cutoff=0.0 0.0 0.0
+ns.xblob=0.0
+ns.yblob=0.015  # initial location of oil/water interface
+ns.zblob=0.0
+
+ns.yblob2=0.0  # ylo,yhi,zlo,zhi of continuous (oil) inflow.
+ns.yblob3=0.01  
+ns.zblob2=-0.005
+ns.zblob3=0.005
+ns.xblob2=0.01  # xlo,xhi of dispersed (water) inflow
+ns.xblob3=0.02
+
+ns.radblob=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=5700
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 1 5 3
+ns.hi_bc          = 2 1 5
+ns.v=1
+ns.output_drop_distribution=1
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+#Run a script before and during SGE submit 
+#to guarantee that your environment is set up
+#for openmpi
+
+# bash 
+# source /etc/mpivars/openmpi_gcc-1.2.5.sh
+
+# Specify all environment variables active within the qsub
+# utility to be exported to the context of the job.
+#$ -V
+
+#
+# specify openmpi with N nodes
+# -pe openmpi_2 2
+# -pe openmpi_4 4
+# -pe openmpi_8 8
+
+# use current directory
+#$ -cwd
+
+#export PATH=/usr/local/openmpi/gcc/bin:$PATH
+#export LD_LIBRARY_PATH=/usr/local/openmpi/gcc/lib:$LD_LIBRARY_PATH
+
+# qsub -pe make_gts_fu <NSLOTS> -l slots=4 qsubannulus.job
+# qsub -pe make_gts_fu <NSLOTS> qsubannulus.job
+# qsub -pe make_fu <NSLOTS> qsubannulus.job
+# qsub -pe make <NSLOTS> qsubannulus.job
+mpirun -np $NSLOTS ../amrPAR inputs.annulus

@@ -1,0 +1,53 @@
+           
+! Function for time changing of the stiffness of target links
+! INPUTS:
+! i2l: local number of the body
+! i2g: global number of the body
+! j  : target link type number
+! k  : surface position along the direction 1
+! k2 : surface position along the direction 2 for fibrous shell only
+!time2 :time
+!delta_t :dt
+!OUTPUT: target_timefn
+
+!=================================================
+
+      if(Genalpha_timesolver(ibdyg) .le. 1) then
+          rtmpusrfn(29)=time2
+      else
+          rtmpusrfn(29)=time_alphaf
+      endif
+
+      if(1 .eq. 0) then  !for inverted flag
+       if(rtmpusrfn(29) .le. 4.0*alphabetaRise) then
+        target_timefn=1.0d0
+       else 
+        target_timefn=
+     &      exp(-(rtmpusrfn(29)-4.0*alphabetaRise)/(alphabetaRise))
+       endif
+!=================================================
+      elseif(1 .eq. 0) then   !for flapping wing
+       real_distibm(1)=dble(ns_ibm_r_fsh(i2l)-k)/dble(ns_ibm_r_fsh(i2l))
+       if(real_distibm(1).le. 0.25) then 
+        target_timefn=1.0d0
+       else
+        if(rtmpusrfn(29) .le. 2.0*alphabetaRise) then
+          target_timefn=1.0d0
+        else 
+          target_timefn=
+     &      exp(-(rtmpusrfn(29)-2.0*alphabetaRise)/alphabetaRise)
+        endif
+        real_distibm(2)=1.0d0
+        real_distibm(3)=target_timefn
+      
+        if(real_distibm(1).le. 0.6) then
+          target_timefn=(real_distibm(1)-0.25)*real_distibm(3)
+     &                 +(0.6 -real_distibm(1))*real_distibm(2)
+        else
+          target_timefn=real_distibm(3)
+        endif
+       endif
+!=================================================
+      else
+       target_timefn=1.0d0
+      endif

@@ -1,0 +1,215 @@
+# Lewis and Nagata Geophysical and Astrophysical Fluid Dynamics
+#   Vol. 98, No. 2, April 2004, pp. 129–152
+# Table II - experiment from Fein (1973)
+#
+# Carlowen Smith, Kevin Speer, Ross Griffiths
+# Multiple Zonal Jets in a Differentially Heated Rotating Annulus
+# number 6
+#
+# Taylor number=4 Omega^2 (rb-ra)^4/nu^2=
+#  4 (0.8169)^2 (6.02-3.48)^4/(0.01/0.998)^2=
+#  4 (0.8169)^2 (2.54)^4 / (0.01)^2 = 1.1E+6
+# units: (radians^2/s^2) (m^4) / (m^4/s^2)=radians^2 
+#
+# Smith et al:
+# Taylor number=4 Omega^2 L^5/(nu^2 d)=
+# 4 (3.161)^2 (49-20)^5/( (0.01)^2 12 ) = 6.8e+11
+#
+# Thermal Rossby number=alpha g D Delta T/(Omega^2 R^2)=
+#  (2.1E-4)(980)12 (20)/( (3.161)^2 29^2 )=5.9e-3
+#
+# Thermal Rossby number=alpha g D Delta T/(Omega^2 R^2)=
+#  (2.1E-4)(980) (5) (0.3820)/( (0.8169)^2 (2.54)^2 )= 
+#  (2.1E-4)(980) (5) (0.3820)/(4.31)=0.091=9.1E-2
+#  units: (1/degree) (m/s^2) (m) (degree) / (m^2 radians^2/s^2 )=
+#   m^2/(s^2) / (m^2 radians^2/s^2 )=1/radians^2
+#
+#  Delta T     Omega     Taylor    Rossby
+#  3.820       2.583     1.1E+7     9.1E-2
+#  0.3820      0.8169    1.1E+6     9.1E-2
+#  0.03820     0.2583    1.1E+5     9.1E-2
+#
+# velocity of particle on outer radius:
+# rate x time = 2 pi r
+# rate x 2 pi / omega = 2 pi r
+# rate = r * omega
+#
+# twall-tempconst=Delta T
+# angular_velocity=Omega
+#
+max_step  =  9999999    # maximum timestep
+max_step  =  100    # maximum timestep
+stop_time =  3000.0  
+
+geometry.coord_sys = 3
+geometry.prob_lo   =  3.48 0.0 0.0
+geometry.prob_hi   =  6.02 6.28318530718 5.0 
+#geometry.prob_lo   =  20.0 0.0 0.0  #SMITH
+#geometry.prob_hi   =  49.0 6.28318530718 12.0 
+
+ns.min_velocity_for_dt = 2.0  # rmax x omega
+
+ns.angular_velocity=0.2583 # radians/s
+#ns.angular_velocity=2.583 # radians/s
+#ns.angular_velocity=3.161 # radians/s SMITH
+
+geometry.is_periodic = 0 1 0 
+
+ns.MOFITERMAX=15
+ns.continuous_mof=0
+ns.temperature_primitive_variable=1 1 1 1 1
+ns.num_materials_vel=1
+
+# 0=GSRB 1=ICRB 2=ILU
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-13
+mg.visc_bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+
+ns.num_materials=2
+Lp.harmavg = 0
+
+ns.num_materials=2
+# num_species_var=3 for diagnostics
+ns.num_species_var=0
+ns.EILE_flag=-1 # Weymouth and Yue
+amr.n_cell    = 8 8 8
+#amr.n_cell    = 16 16 16
+amr.max_level = 0
+
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2 2  
+amr.grid_eff        = 0.75 
+
+ns.ns_tiling=false
+#fabarray.mfiter_tile_size=16 16 16
+amr.blocking_factor = 4 4 4
+#amr.space_blocking_factor=1 1 1
+amr.space_blocking_factor=4 4 4
+amr.time_blocking_factor=2
+#amr.time_blocking_factor=4
+ns.enable_spectral=1
+#ns.enable_spectral=0
+ns.viscous_enable_spectral=0
+ns.projection_enable_spectral=1
+
+amr.plotfile_on_restart=1
+ns.perturbation_on_restart=0
+# sin(2 pi k x/L)
+ns.perturbation_mode=12
+# a fraction of delta T or the radial velocity rmax omega.
+ns.perturbation_eps_temp=0.1
+ns.perturbation_eps_vel=0.1
+#amr.restart=chk01660
+amr.check_int       = 20      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 5       # 20
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+# change this if tiling vs. no tiling.
+amr.max_grid_size   = 1024
+ns.dt_cutoff      = 0.0000001 # level 0 timestep below which we halt
+mac.mac_tol        = 1.0e-11  # tolerence for mac projections
+mac.mac_abs_tol    = 1.0e-11
+mac.use_cg_solve   = 1
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=2
+ns.initial_cg_cycles=2
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.solvability_projection=1
+ns.projection_pressure_scale=1000.0
+
+ns.visual_option=-2
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system 0.5
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-10
+ns.use_StewartLay=1
+
+ns.gravity        = -980.0
+ns.tension        = 0.0 0.0 
+#ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.advection_order=2 2
+
+ns.axis_dir=0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=20.03820  # twall-tempconst=Delta T
+#ns.twall=23.82  # twall-tempconst=Delta T
+#ns.twall=40.0 # twall-tempconst=Delta T SMITH
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=2
+ns.constant_viscosity=1
+# Re=rho U L/mu  units of mu=(kg/m^3) (m/s) (m) = kg/(m s)
+# units of nu are kg/(m s)  (m^3/kg) = m^2/s
+ns.viscconst= 0.0100798 0.0100798 
+#ns.viscconst= 1.0e-10 1.0e-10
+ns.denconst=0.998 0.998
+ns.DrhoDT=-2.06e-4 0.0 # DrhoDT (alpha) has units of 1/degrees Kelvin
+ns.speciesconst=0.0 0.0 0.0
+ns.speciesviscconst=0.0 0.0 0.0
+# 1 watt=10^7 erg/s
+# water: 0.58 W/(m K)=0.58 10^7/(100)=58000 cgs
+# CP water=4.18 J/(g K)=4.18 10^7/(g K)
+# 58000/(4.18 10^7 0.998)=0.0014
+ns.heatviscconst= 0.00140718 0.00140718
+#ns.heatviscconst= 1.0e-10 1.0e-10
+ns.stiffCP=1.0 1.0
+ns.pressure_error_cutoff=0.0 0.0
+ns.tempconst=20.0 20.0
+ns.material_type=0 0  
+
+ns.override_density=2 2  # Boussenesq approx for temperature part of the
+                         # centrifugal and gravity force.
+
+ns.xblob=0.0
+ns.yblob=0.0
+ns.zblob=0.0
+ns.radblob=0.0
+ns.denfact=0.0
+ns.velfact=0.0
+ns.probtype=82
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 0 3 
+ns.hi_bc          = 3 0 3 
+ns.temperature_lo_bc = 1 0 3 
+ns.temperature_hi_bc = 1 0 3 
+ns.species_lo_bc     = 3 0 3 
+ns.species_hi_bc     = 3 0 3 
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
+

@@ -1,0 +1,160 @@
+max_step  =  9999999    # maximum timestep
+#max_step  =  3    # maximum timestep
+stop_time = 36000  # 10 minutes
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   =  1000.0 1000.0 1000.0  #  10^3 meters
+ns.advection_order=1 1 1 1  # unburnt, burnt, air, obstacle
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=10
+ns.initial_cg_cycles=10
+ns.solvability_projection=0 # 0 since must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=1.0e+6
+ns.num_materials=4  # 1: unburnt 2: burnt 3: air 4: obstacle
+ns.num_species_var=1
+ns.speciesconst=0.2 0.2 0.2 0.2 # oxygen concentration
+ns.speciesviscconst=1.0e-7 1.0e-7 0.01 1.0e-7
+ns.EILE_flag=-1 # weymouth and Yue
+ns.post_init_pressure_solve=1 
+ns.MOFITERMAX=15
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-1  # -2,-3 zonal tecplot, -1 plot files
+
+amr.n_cell    = 16 16 16
+amr.max_level = 0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2   # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 1000      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 10
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 256
+#amr.restart         = chk0160
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.dt_max=60
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1 
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-10
+ns.gravity        = -980 # -980.0
+ns.use_lsa=0
+# 12 13 14 23 24 34
+ns.tension = 0.0 0.0 0.0 0.0 0.0 0.0
+# default is 4.1855e+7
+ns.stiffCP = 4.1855e+7 4.1855e+7 4.1855e+7 4.1855e+7
+# 12 13 14 23 24 34
+# 1=unburnt 2=burnt 3=gas 4=obstacle
+ns.latent_heat=-3.915e7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.reaction_rate=1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+# 2=hydrate  3=wildfire combustion
+ns.freezing_model=3 0 0 0 0 0 
+# wood burns at 451 degrees fahrenheit which is 506 degrees kelvin
+ns.saturation_temp = 506.0 0.0 0.0 0.0 0.0 0.0
+# E=(1/2) u^2 + e(rho,T)
+ns.temperature_primitive_variable=1 1 1 1
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+
+ns.axis_dir=0
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1  # not used
+ns.advbot=0.0
+ns.adv_vel=670.0 # heading fire 670 cm/s = 15 mph
+ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction   
+# 0=cell based advection (approx projection) 
+# 1=face based advection (exact projection)
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.use_StewartLay=1
+# fuel, product, air, obstacle (neither solid fuel nor solid product)
+# the air must be reconstructed first!
+ns.material_type=101 102 0 103
+# 1 Watt=10^7 ERG/S
+# 1 W/(M K)=10^5 ERG/(S CM K)
+# 1 ERG= 1 (gram cm^2/s^2)
+# air: k=0.024 W/(M K)
+# water: k=0.58 W/(M K)
+# cp hardwired to be 4.1855E+7 (all incompressible materials)
+#ns.heatviscconst=58000.0 2400.0 0.0 0.0 
+#ns.heatviscconst=58000.0 218000.0 0.0 0.0  FREEZING
+#ns.heatviscconst=0.0 2400.0 0.0 0.0  # stefan problem (liquid T=constant)
+#ns.heatviscconst=0.0 218000.0 0.0 0.0  # stefan (liquid T=constant) FREEZING
+#ns.heatviscconst=58000.0 0.0 0.0 0.0 # sucking problem (vapor T=constant)
+#ns.heatviscconst=58000.0 0.0 0.0 0.0 # sucking (ice T=constant) FREEZING
+ns.heatviscconst=58000.0 58000.0 2500.0 58000.0
+ns.viscconst=0.001 0.001 0.00012 0.001
+ns.denconst=1.0 1.0 0.001225 1.0
+ns.FSI_flag=0 0 0 0
+ns.tempconst=300.0 506.0 300.0 300.0
+# burning patch will be nucleated behind the obstacle.
+ns.xblob=500.0  # center of obstacle 
+ns.yblob=250.0 
+ns.zblob=10.0 # height of fuel bed
+ns.radblob=50.0 # radius of obstacle
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=199
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+# boundary conditions (axis_dir=0)
+#ns.prescribe_temperature_outflow=0 # =0 for stefan problem
+#ns.prescribe_temperature_outflow=1 # =1 for sucking problem
+ns.prescribe_temperature_outflow=3
+ns.lo_bc          = 3 4
+ns.hi_bc          = 4 2
+ns.species_lo_bc  = 3 4
+ns.species_hi_bc  = 4 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

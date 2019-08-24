@@ -1,0 +1,69 @@
+      subroutine BILINEARGridInterp(data,x0,dx,x,H)
+      IMPLICIT NONE
+
+      REAL_T data(3,3,3)
+      REAL_T x0(SDIM)
+      REAL_T dx(SDIM)
+      REAL_T x(SDIM)
+      REAL_T H
+      INTEGER_T i1,j1,k1,inode,jnode,knode
+      INTEGER_T ifound
+      REAL_T xnode(SDIM)
+      REAL_T xcell(SDIM)
+      REAL_T dist,distmin,eps,wtsum,wt
+      
+
+        ! find closest node
+      ifound=0
+      do i1=0,1
+      do j1=0,1
+      do k1=0,1
+       xnode(1)=x0(1)+dx(1)*(i1-half) 
+       xnode(2)=x0(2)+dx(2)*(j1-half) 
+       xnode(3)=x0(3)+dx(3)*(k1-half) 
+       dist=sqrt( (xnode(1)-x(1))**2 + &
+        (xnode(2)-x(2))**2+(xnode(3)-x(3))**2 )
+       if (ifound.eq.0) then
+        ifound=1
+        distmin=dist
+        inode=i1
+        jnode=j1
+        knode=k1
+       else if (dist.lt.distmin) then
+        distmin=dist
+        inode=i1
+        jnode=j1
+        knode=k1
+       endif
+      enddo
+      enddo
+      enddo
+
+      eps=dx(1)*1.0E-6
+
+       ! find weighted interpolant
+      wtsum=zero
+      H=zero 
+      do i1=1+inode,1+inode+1
+      do j1=1+jnode,1+jnode+1
+      do k1=1+knode,1+knode+1
+       xcell(1)=x0(1)+dx(1)*(i1-two) 
+       xcell(2)=x0(2)+dx(2)*(j1-two) 
+       xcell(3)=x0(3)+dx(3)*(k1-two) 
+       dist=sqrt( (xcell(1)-x(1))**2 + &
+        (xcell(2)-x(2))**2+(xcell(3)-x(3))**2 )
+       wt=one/(dist+eps)
+       wtsum=wtsum+wt
+       H=H+wt*data(i1,j1,k1)
+      enddo 
+      enddo 
+      enddo 
+      if (wtsum.le.zero) then
+       print *,"wtsum invalid"
+       stop
+      else
+       H=H/wtsum
+      endif
+
+      return 
+      end

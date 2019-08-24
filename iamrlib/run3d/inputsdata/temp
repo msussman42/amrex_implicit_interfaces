@@ -1,0 +1,6 @@
+contour.plot =  triple triple    2   25     -1       2      400    2.38  0  yz
+contour.plot =  triple triple    2   25     -1       2      400    2.38  1  xz
+contour.plot =  triple triple    2   25     -1       2      400    4.76  2  xy
+contour.plot =  viscosity viscosity 2 25    20       2      400    2.38  0  yz
+contour.plot =  viscosity viscosity 2 25    20       2      400    2.38  1  xz
+contour.plot =  viscosity viscosity 2 25    20       2      400    4.76  2  xy

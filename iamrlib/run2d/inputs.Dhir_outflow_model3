@@ -1,0 +1,339 @@
+# MODEL 3: 
+#          This model assumes constant heat flux across the substrate-fluid
+#          interface: [k grad T dot n]=0.
+#          ns.microlayer_size=0.0 ... 0.0
+#          ns.macrolayer_size=0.0 ... 0.0
+#          ns.microlayer_substrate=0 0 0 0
+#          ns.microlayer_temperature_substrate=0.0 0.0 0.0 0.0
+#          ns_initial_temperature_diffuse_duration>0.0
+#            (artificial time to solve just the heat equation at t=0.0)
+#          ns_initial_temperature=373.0 373.0 373.0
+#          ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
+#          ns.tempconst=373.0 373.0 380.0
+#          ns.solidheat_flag=0  ( diffuse in solid)
+#          ns.yblob3=1.0e-15 (initial thermal layer is negligible)
+           
+#
+# BEFORE:
+# Figure 2:
+# "Direct Numerical Simulations of Flows with Phase Change"
+# Tryggvason and Lu, Procedia IUTAM volume 15, 2015, 2-13
+#
+# NOW: Earth Gravity, Water boiling, from Dhir 2001.
+max_step  =  99999999    # maximum timestep
+stop_time = 1.0
+
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  5.0e-3 7.5e-3   # MKS
+ns.EILE_flag=-1
+# OCT 2018  continuous_mof=2 CMOF everywhere 
+#           continuous_mof=4 CLSVOF in 2 material cells, CMOF in >2 mat cells
+ns.continuous_mof=2 
+ns.MOFITERMAX=15
+ns.temperatureface_flag=0   # 0=use LS  1=use VOF
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+ns.solvability_projection=0 # 0 since must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=1.0e+6  # non-dimensional
+#ns.projection_pressure_scale=1.0  # dimensional ?
+# OCT 2018 (4 materials)
+#ns.num_materials=4 # 1: liquid 2: vapor 3: gas 4: solid
+# NOV 2018 (3 materials)
+ns.num_materials=3 # 1: liquid 2: vapor 3: solid
+ns.num_species_var=0
+ns.configuration_tensor_var=0
+ns.post_init_pressure_solve=1
+ns.output_drop_distribution=1
+ns.face_flag=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+godunov.printMinMax=0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
+ns.visual_tessellate_vfrac=1
+
+amr.n_cell    = 48 72
+amr.max_level =  2
+# NOV 2018 (3 or 4 materials)
+# liquid, vapor, gas, substrate 4 mat
+# liquid, vapor, substrate 3 mat
+ns.max_level_two_materials=0
+# 0=never adapt   1=if radius< 1 * dx then adapt
+# -1=always adapt
+# An interface changing phase will always be adapted
+# to the finest possible level.
+# Triple junctions will always be adapted to the finest possible level.
+ns.radius_cutoff=0 0 0 0
+
+ns.ns_tiling=false
+fabarray.mfiter_tile_size=16 16
+#amr.max_level =  0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.n_error_buf     = 2 2 2 2 2 2 2  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4 4 4 4 4 4 4    # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.num_SDC_outer_sweeps=1
+ns.enable_spectral=0
+ns.diffusion_enable_spectral=0
+amr.regrid_int      = 1       # how often to regrid
+amr.check_int       = 500    # number of timesteps between checkpoints
+amr.check_file      = chk    # root name of checkpoint file
+amr.plot_int        = 500  # 500 for production runs
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+#amr.restart         = chk55200
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1    # scale back initial timestep
+# viscous force term: rho u_t = visc_coef * div ( 2 mu D)
+# mu corresponds to "viscconst"
+ns.visc_coef      = 1.0  
+ns.visc_abs_tol   = 1.0e-10
+# NOV 2018 (3 or 4 materials)
+ns.gravity_dir = 2  # 1,2, or 3  (2 in 2D is default)
+ns.gravity        = -9.8 #  dimensional  MKS
+ns.use_lsa=0
+# NOV 2018 (3 or 4 materials)
+# rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
+ns.DrhoDT = -0.0007 0.0 0.0 0.0   # units: 1/degree K
+ns.DrhoDz = 0.0 0.0 0.0 0.0
+# override_density=1 => rho=rho(T,z)
+# override_density=2 => P_hydro=P_hydro(rho(T,z)) (like Boussinesq) 
+# "default_hydrostatic_pressure_density" called if override_density=1.
+# since DrhoDz=0.0,
+# gravity force is grad (-|g| denconst(1) y)/denconst(1) = -|g| 
+# rho_liq=denconst(1)+denconst(1)*DrhoDT(1)*(T-tempconst(1))
+# NOV 2018 (3 or 4 materials)
+ns.override_density=2 0 0 0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SL}=sigma_{LV}
+# sigma_{SV}=(1+cos(theta)) sigma_{LV}
+# theta=80 sigma_{SV}/sigma_{LV}=1.17  
+# theta=140 sigma_{SV}/sigma{LV}=0.23
+# theta=45 sigma_{SV}/sigma_{LV}=1+1/sqrt{2}
+# 12 13 14 23 24 34 (LV LG SL VG VS GS)
+# N/m
+# OCT 2018 (4 materials)
+# 49.995 degrees contact angle (Liquid-vapor-solid)
+# 90 degrees contact angle (Liquid-gas-solid)
+#ns.tension=58.8e-3 58.8e-3 58.8e-3 0.0 96.6e-3 58.8e-3 
+# NOV 2018 (3 materials)
+ns.tension=58.8e-3 58.8e-3 96.6e-3
+# Joule/(kg Kelvin)
+# OCT 2018 (4 materials)
+#ns.stiffCP=4217.0 2029.0 2029.0 385.0
+# NOV 2018 (3 materials)
+ns.stiffCP=4217.0 2029.0 385.0
+
+# 12 13 14 23 24 34 21 31 41 32 42 43 
+# (12 liquid->vapor (boiling) 21 vapor->liquid condensate)
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# latent_heat[2*max_num_tension]
+# Joule/kg
+# NOV 2018 (3 or 4 materials)
+ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+# if latent_heat<>0,
+# if nucleation_period==0.0, only nucleate one bubble, 
+# if nucleation_period>0.0, periodically nucleate bubbles.
+ns.nucleation_period=0.09	#Every 90ms
+# NOV 2018 (3 or 4 materials)
+ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.temperature_primitive_variable=1 1 1 1
+#ns.fixed_dt	  = 0.1     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+ns.viscosity_state_model=0 0 0 0
+
+# 6 instead of 5 signals nucleate boiling
+ns.axis_dir=6
+ns.xblob3=0.0  # unused
+# see subroutine outside_temperature in PROB.F90
+ns.yblob3=1.0e-15  # initial thermal layer (meters) (was 6.95e-4)
+# see subroutine get_internal_heat_source in PROB.F90
+# see subroutine microcell_heat_model in PROB.F90
+# if zblob3>0, heatcoeff=heatcoeff*dx/zblob3 (where LS_SOLID changes sign)
+# if zblob3<0, then heat source in solid cells that adjoin fluid.
+# if zblob3<0, then solidheat_flag should be 0. (diffuse in solid)
+# if zblob3=0, then Dirichlet BC at z=zlo (no internal heat flux or 
+#  other internal BC)
+#  solidheat_flag=1 (dirichlet in solid),zblob3>0:
+#  microlayer flux is (T-TSOLID)/zblob3 
+#
+# heat flux in the solid cells that adjoin a fluid cell:
+# page 30, Sato Niceno (2015): "heater power maintained at 30kW/m^2"
+# rho cp DT/dt=-div q + Q
+# Q=(area) * |zblob3|/(volume)=(m^2)(W/m^2)/(m^3)=W/m^3
+# for Tryggvason problem: T=383 degrees at the wall.
+ns.zblob3=0.0
+# NOV 2018 (3 or 4 materials)
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0  # not used
+ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
+# NOV 2018 (3 or 4 materials)
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.use_StewartLay=1
+# OCT 2018 (4 materials)
+#ns.material_type=0 0 0 999
+# NOV 2018 (3 materials)
+ns.material_type=0 0 999
+# thermal conductivity: Watts/(meter Kelvin)
+# OCT 2018 (4 materials)
+#ns.heatviscconst=0.680 0.0248 0.0248 37.7
+# NOV 2018 (3 materials)
+ns.heatviscconst=0.680 0.0248 37.7
+# liquid-vapor, liquid-solid, vapor-solid
+# 0.0 means do not use.
+# OCT 2018 (4 materials)
+# 12 13 14 23 24 34 (LV LG SL VG VS GS)
+# NOV 2018 (3 materials)
+ns.heatviscconst_interface=0.0 0.0 0.0
+# dynamic viscosity Pa * s = N s / m^2
+# OCT 2018 (4 materials)
+#ns.viscconst=279E-6 12.02e-6 12.02e-6 279E-6
+# NOV 2018 (3 materials)
+ns.viscconst=279E-6 12.02e-6 279E-6
+# density: kg/m^3
+# OCT 2018 (4 materials)
+#ns.denconst=958 0.5956 0.5956 8960
+# NOV 2018 (3 materials)
+ns.denconst=958 0.5956 8960
+ns.FSI_flag=0 0 1
+# 0=diffuse in solid, 1=dirichlet, 2=neumann
+# if solidheat_flag=2, then "tempfluxsolid" is called.
+ns.solidheat_flag=0  # diffuse in solid (substrate)
+
+# February 21, 2018: parameters for new microlayer model:
+# material id for the substrate material that neighbors the thin film
+# microlayer liquid:
+# NOV 2018 (3 materials)
+ns.microlayer_substrate=0 0 0 0
+
+# microlayer contact angle (radians): 38 degrees
+# microscale contact angle between liquid and substrate    
+ns.microlayer_angle=0.0 0.0 0.0 0.0
+
+# minimum thickness of thin liquid film (MKS)
+# make this zero in order to disable the microlayer model.
+# diameter of water molecule is about 2.9e-10
+# 2.9e-10/l_0
+#size of thin liquid film (size of a few liquid molecules)
+ns.microlayer_size=  0.0 0.0 0.0 0.0 
+
+# NOV 2018 (3 or 4 materials) 
+ns.macrolayer_size=0.0 0.0 0.0 0.0
+
+#JULY 17
+# no Temp BC at substrate/vapor interface
+# NOV 2018 (3 or 4 materials)
+ns.microlayer_temperature_substrate=0.0 0.0 0.0 0.0
+ns.tempconst=373.0 373.0 380.0
+# initial temperature should be smooth
+ns.initial_temperature=373.0 373.0 373.0
+#JULY 17
+# make this positive in order to initialize the bubble/liquid/substrate
+# system with a smoothed temperature that obeys the appropriate
+# boundary conditions.
+ns.initial_temperature_diffuse_duration=1.0
+# NOV 2018 (3 or 4 materials)
+ns.tempcutoff=373.0 373.0 373.0 373.0
+ns.tempcutoffmax=380.0 380.0 380.0 380.0
+#(xblob,yblob)=center of vapor bubble
+ns.xblob=0.0  
+#JULY 17: WARNING: results are sensitive to the initial contact angle;
+# if initial angle far from static condition, then bubble can
+# prematurely lift off.
+# yblob=yblob2+R cos(contact_angle)=2.08333e-4+2E-4 cos(49.995 deg)=3.369e-4
+ns.yblob=3.369e-4  
+ns.zblob=0.0
+ns.radblob=0.2e-3  # radius of nucleated seed.
+# OCT 2018 (4 materials)
+# thickness of initial gas layer at outflow (orientation determined by
+# ns.gravity_dir)
+#ns.radblob10=1.0e-3 
+# NOV 2018 3 materials, no gas layer at outflow
+ns.radblob10=0.0
+# NOV 2018 use outflow_velocity_buffer_size
+# (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)   3D
+# (1,1),(2,1),(1,2),(2,2)   2D
+ns.outflow_velocity_buffer_size=0.0 0.0 0.0 5.0e-4
+
+#JULY 17: WARNING: results are sensitive to the initial contact angle;
+# if initial angle far from static condition, then bubble can
+# prematurely lift off.
+# yblob=yblob2+R cos(contact_angle)=2.08333e-4+2E-4 cos(49.995 deg)=3.369e-4
+ns.n_sites=1
+ns.pos_sites=0.0 3.369e-4 0.0 0.2e-3 
+
+# x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
+ns.xblob2=0.0 
+ns.yblob2=2.08333e-4 # 2 * dxcoarsest=2 * 5.0e-3/48=2.08333e-4
+ns.zblob2=0.0
+ns.radblob2=0.0 # zero degrees incline (radians)
+ns.radblob3=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=55
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=3
+
+#ns.lo_bc          = 3 3  # this option if heat source
+ns.lo_bc          = 3 2
+ns.hi_bc          = 3 2
+ns.temperature_lo_bc          = 3 2
+ns.temperature_hi_bc          = 3 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

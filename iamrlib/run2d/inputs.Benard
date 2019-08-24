@@ -1,0 +1,180 @@
+max_step  =  99999    # maximum timestep
+#max_step  =  600    # maximum timestep
+stop_time =  4.32e+5  # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0 
+geometry.prob_lo   =  0.0 0.0   
+geometry.prob_hi   =  2.0 2.0  
+geometry.is_periodic = 1 0      
+ns.projection_pressure_scale=1.0e+6
+
+# 0MGPCG 1PCG 2MG
+ns.project_solver_type=0
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+Lp.gpucount=1
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 200
+mg.usecg=1
+mg.bot_atol = 1.0e-10
+mg.visc_bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+#Lp.v = 1
+Lp.harmavg = 0
+
+ns.MOFITERMAX=15
+ns.num_materials=2
+ns.num_species_var=0
+
+ns.post_init_pressure_solve=0 
+
+ns.advection_order=2 2 
+ns.slope_limiter_option=1  # 0=no limiting  1=minmod
+
+ns.minimum_relative_error=1.0e-18
+ns.initial_project_cycles=10  # number of initial jacobi iterations
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+amr.n_cell    = 64 64
+amr.max_level = 0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.85   # what constitutes an efficient grid
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 100     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 100
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 256
+#amr.restart         = chk00200
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+
+mac.mac_tol        = 1.0e-8  # tolerence for mac projections
+mac.visc_abs_tol    = 1.0e-8
+mac.mac_abs_tol    = 1.0e-8
+mac.use_cg_solve   = 1
+
+# 1. ls plt*/Header > file.visit
+#    replace "Header " with "Header" in the file.
+# 2. /usr/local/visit/bin/visit
+# 3. sources -> open  ... click on file.visit
+# 4. contours vof1,vof3 transparent different colors
+# 5. Add  *Operators*  geometry/Revolve
+# 6. frame 0, File , Save Movie, New simple movie, right arrow
+#    (sudo apt-get xterm)
+#    ffmpeg -r 5 -i movie%04d.jpeg -r 30 out.mp4
+#
+ns.visual_option=-1  # -2 zonal tecplot,-1 plot files
+
+
+ns.cfl            = 0.5
+ns.init_shrink    = 0.1   
+ns.change_max     = 1.1  
+ns.visc_coef      = 1.0   
+ns.gravity        = -980.0  # MIKE  
+ns.use_lsa=0
+ns.tension        = 0.0
+# delta_t=20 in MIT test
+ns.min_velocity_for_dt=1.0
+#ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.sum_interval   = 5        # timesteps between computing mass 
+
+ns.axis_dir=0
+ns.vorterr=999999.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=1  # 1,.., sdim
+ns.solvability_projection=1  # 1=INCOMP 0=COMP
+# a=(2 omega sin(phi) v  -2 omega sin(phi) u  0)=(f v  -f u  0)
+# 2 omega sin(phi)=f
+# angular_velocity=f/2=1E-4/2=0.5E-4=5E-5
+#ns.angular_velocity=5.0e-5
+# 1 Watt=10^7 ERG/S
+# 1 W/(M K)=10^5 ERG/(S CM K)
+# 1 ERG= 1 (gram cm^2/s^2)
+# air: k=0.024 W/(M K)
+# water: k=0.58 W/(M K)=58000 ERG/(S CM K)
+# water: cv=4.1855E+7 ERG/(g K) = 4.1855 J/(g K)=4.1855E+3 J/(kg K)
+# for MIT test, k=0.04 W/(M K) instead of k=0.6  why?
+ns.heatviscconst=58000.0 58000.0
+# Pa s = kg/(m s)=10 g/(cm s)
+# for MIT test mu=0.04 kg/(m s) instead of 0.001  why?
+ns.viscconst=0.01 0.01  # g/(cm s)  MIKE: mu
+ns.denconst=1.0 1.0  # g/cm^3
+ns.tempconst=293.0 293.0 
+ns.override_density=1 1
+# MIT beta=-2E-4 1/K  
+# for MIT:
+# rho=rho0(1+beta(T-T0))  drho/dT=rho0 beta  drho/dT=-2E-1 (kg/m^3)/K
+# rho=1000  T=0
+# rho=960   T=100
+# drho/dT=-40/100=-4.0E-1 (kg/m^3) /K=-4.0E-4 (g/cm^3)/K
+# more precisely,
+# rho=999.7026 T=10
+# rho=998.2071 T=20
+# drho/dT=-1.5E-1 (kg/m^3)/K = -1.5E-4 (g/cm^3)/K
+ns.DrhoDT=-2.0e-4 -2.0e-4
+ns.DrhoDz= -1.0 -1.0
+ns.shock_timestep=2 2 
+ns.material_type=0 0  # 0 0 INCOMP (13 13 COMP)
+ns.pressure_error_cutoff=0.0 0.0 
+ns.temperature_error_cutoff=0.0 0.0
+ns.xblob=2.0  # wavelength of perturbation
+ns.yblob=0.25  # thickness of perturbed area
+ns.zblob=0.25  # artificial interface material 1 below zblob, material 2 above
+ns.radblob=0.02  # amplitude of perturbation
+ns.radblob2=5.0  # Delta T=T_HOT-T_COLD  (MIKE)
+# Q0=800 k grad T dot n
+# units: W/(M K)  * (K/M) =10^5 ERG/(S CM K) * (1/100) (K/cm)
+# 8E2 MKS = 8E+5 CGS
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=603 # MIKE 603
+
+proj.bogus_value = 5.0e+5
+proj.Pcode = 0
+#proj.Pcode = 2
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.prescribe_temperature_outflow=2  # dirichlet at inflow and walls.
+ns.lo_bc          = 0 5  
+ns.hi_bc          = 0 5 
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+fab.do_initval=1
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

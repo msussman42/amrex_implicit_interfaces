@@ -1,0 +1,141 @@
+           
+! Function for time changing of the stiffness of target links
+! INPUTS:
+! ibdyg : global id  of the body
+! Pnormal_Ext(ibdyg): External pressure for the current body
+!GLOBAL RELATED PARAMTERS
+!n_TDpt_Pnormal_Ext(1:Nr_IBM)
+!flag_TDpt_Pnormal_Ext(1:Nr_IBM)
+!data_TDpt_Pnormal_Ext(1:Nr_IBM,1:1000,1:2) 
+
+!time2 :time
+!delta_t :dt
+! pi1 : pi
+
+!TEMPORAL VARIABLES
+! itmpusrfn(50) : temporal integer work var
+! rtmpusrfn(50) : temporal real work var
+
+!OUTPUT: temp_ibm2 
+      temp_ibm2=0.0
+      if ((bodytype(ibdyg) .eq. shell       ).or.
+     &    (bodytype(ibdyg) .eq. fibrousshell)     ) then
+
+      if(Genalpha_timesolver(ibdyg) .le. 1) then
+          rtmpusrfn(29)=time2
+      else
+          rtmpusrfn(29)=time_alphaf
+      endif
+
+      timetemp2=(1.d0-exp(-rtmpusrfn(29)/0.001))
+      itmpusrfn(1)=0
+      if(flag_TDpt_Pnormal_Ext(ibdyg) .eq. 0) then
+
+         temp_ibm2=Pnormal_Ext(ibdyg)*timetemp2
+         itmpusrfn(1)=1
+      else
+
+         rtmpusrfn(1)=
+     &      data_TDpt_Pnormal_Ext(ibdyg,n_TDpt_Pnormal_Ext(ibdyg),1)
+     &     -data_TDpt_Pnormal_Ext(ibdyg,1                        ,1)
+         rtmpusrfn(10)=
+     &     mod(rtmpusrfn(29)
+     &     +data_TDpt_Pnormal_Ext(ibdyg,1,1),rtmpusrfn(1))
+     &     -data_TDpt_Pnormal_Ext(ibdyg,1,1)
+
+         do j=n_TDpt_Pnormal_Ext(ibdyg),1,-1
+
+            if(
+     &       rtmpusrfn(10) .ge. data_TDpt_Pnormal_Ext(ibdyg,j,1)
+     &         ) then
+
+                rtmpusrfn(3)=data_TDpt_Pnormal_Ext(ibdyg,j,2)
+                rtmpusrfn(11)=data_TDpt_Pnormal_Ext(ibdyg,j,1)
+
+                if(j.eq. n_TDpt_Pnormal_Ext(ibdyg) ) then
+                   rtmpusrfn(4)=data_TDpt_Pnormal_Ext(ibdyg,1,2)
+                  rtmpusrfn(12)=
+     &                          data_TDpt_Pnormal_Ext
+     &                              (ibdyg,n_TDpt_Pnormal_Ext(ibdyg),1)
+                else
+                   rtmpusrfn(4)=data_TDpt_Pnormal_Ext(ibdyg, j+1,2)
+                   rtmpusrfn(12)=data_TDpt_Pnormal_Ext(ibdyg,j+1,1)
+                endif
+
+                rtmpusrfn(5)=rtmpusrfn(3)
+     &                      +  (rtmpusrfn(10)-rtmpusrfn(11))
+     &                         /(rtmpusrfn(12)-rtmpusrfn(11))
+     &                         *(rtmpusrfn(4)-rtmpusrfn(3))
+                itmpusrfn(1)=1
+                exit
+
+             endif
+
+          enddo !of j=1,n_TDpt_Pnormal_Ext(ibdyg)
+          itmpusrfn(1)=1
+          
+          temp_ibm2=Pnormal_Ext(ibdyg)*rtmpusrfn(5)*timetemp2       
+      endif !of (flag_TDpt_Pnormal_Ext(ibdyg) .eq. 0)
+
+          if(itmpusrfn(1).eq. 0) then
+            write(*,*) 'Error in Pressure data interpolation'
+            write(*,*) 'Look at distIBM_normalPressure_fn.fi'
+            stop
+          endif
+
+      elseif (bodytype(ibdyg) .eq. fiber) then
+
+        timetemp2=(1.d0-exp(-time2/0.001))
+        itmpusrfn(1)=0
+        if(flag_TDpt_Pnormal_Ext(ibdyg) .eq. 0) then
+
+         temp_ibm2=Pnormal_Ext(ibdyg)*timetemp2
+         itmpusrfn(1)=1
+        else
+
+          rtmpusrfn(1)=
+     &      data_TDpt_Pnormal_Ext(ibdyg,n_TDpt_Pnormal_Ext(ibdyg),1)
+     &     -data_TDpt_Pnormal_Ext(ibdyg,1                        ,1)
+          rtmpusrfn(10)=
+     &     mod(time2+data_TDpt_Pnormal_Ext(ibdyg,1,1),rtmpusrfn(1))
+     &     -data_TDpt_Pnormal_Ext(ibdyg,1,1)
+
+          do j=n_TDpt_Pnormal_Ext(ibdyg),1,-1
+
+            if(
+     &       rtmpusrfn(10) .ge. data_TDpt_Pnormal_Ext(ibdyg,j,1)
+     &         ) then
+
+                rtmpusrfn(3)=data_TDpt_Pnormal_Ext(ibdyg,j,2)
+                rtmpusrfn(11)=data_TDpt_Pnormal_Ext(ibdyg,j,1)
+
+                if(j.eq. n_TDpt_Pnormal_Ext(ibdyg) ) then
+                   rtmpusrfn(4)=data_TDpt_Pnormal_Ext(ibdyg,1,2)
+                  rtmpusrfn(12)=
+     &                          data_TDpt_Pnormal_Ext
+     &                              (ibdyg,n_TDpt_Pnormal_Ext(ibdyg),1)
+                else
+                   rtmpusrfn(4)=data_TDpt_Pnormal_Ext(ibdyg, j+1,2)
+                   rtmpusrfn(12)=data_TDpt_Pnormal_Ext(ibdyg,j+1,1)
+                endif
+
+                rtmpusrfn(5)=rtmpusrfn(3)
+     &                      +  (rtmpusrfn(10)-rtmpusrfn(11))
+     &                         /(rtmpusrfn(12)-rtmpusrfn(11))
+     &                         *(rtmpusrfn(4)-rtmpusrfn(3))
+                itmpusrfn(1)=1
+                exit
+
+             endif
+
+            enddo !of j=1,n_TDpt_Pnormal_Ext(ibdyg)
+            temp_ibm2=Pnormal_Ext(ibdyg)*rtmpusrfn(5)*timetemp2        
+       endif !of (flag_TDpt_Pnormal_Ext(ibdyg) .eq. 0)
+
+       if(itmpusrfn(1).eq. 0) then
+            write(*,*) 'Error in Pressure data interpolation'
+            write(*,*) 'Look at distIBM_normalPressure_fn.fi'
+            stop
+       endif
+
+      endif !of (bodytype(ibdyg) .eq. shell/fibershell/fiber) 

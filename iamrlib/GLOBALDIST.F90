@@ -1,0 +1,4268 @@
+#undef BL_LANG_CC
+#define BL_LANG_FORT
+
+#include "REAL.H"
+#include "CONSTANTS.H"
+#include "SPACE.H"
+#include "BC_TYPES.H"
+#include "PROB_AMR_F.H"
+#include "PROB_F.H"
+#include "LEVEL_F.H"
+#include "ArrayLim.H"
+
+#if (BL_SPACEDIM==3)
+#define SDIM 3
+#elif (BL_SPACEDIM==2)
+#define SDIM 2
+#else  
+print *,"dimension bust"
+stop
+#endif
+
+#define maxnumline 10
+
+module global_distance_module
+use probcommon_module
+
+implicit none
+
+contains
+
+! ----------
+! YANG LIU
+! ----------
+! From paper:  
+!  Mu YT, Chen L, He YL, Kang QJ, Tao WQ. 
+! Nucleate boiling performance evaluation of cavities at mesoscale level. 
+! International Journal of Heat and Mass Transfer. 2017 Mar 31;106:708-19.
+! 
+! internal length unit ( mm )
+! external length unit ( m )
+! 
+!  MATERIAL NUMBER
+!  1:liquid   2: vapor   3: solid 
+
+!  COORDIANTE TYPE
+!  1 3D cartisian
+!  2 R-Z   
+
+!  SHAPE 
+!  1--> rectangular
+!  2--> trapzoidal
+!  3--> vshape
+!  4--> semicircle
+!  5--> spherical reentrant
+
+subroutine cavity_distf_13(cavity_type, coord_type, x_in, dist)
+implicit none
+
+! liquid +  solid - 
+
+INTEGER_T,intent(in)      :: coord_type
+INTEGER_T, intent(in)     :: cavity_type
+REAL_T,intent(in) :: x_in(SDIM)
+REAL_T            :: x(SDIM)
+
+INTEGER_T         :: dist_sign
+REAL_T            :: dist
+REAL_T            :: dist1,dist2,dist3
+REAL_T            :: x1(SDIM),x2(SDIM),x3(SDIM)
+REAL_T            :: x4(SDIM),x5(SDIM)
+REAL_T            :: trap,vshape,radius,lcinter,radius3d,bb
+INTEGER_T i
+
+REAL_T            :: pl1(SDIM),pl2(SDIM)
+REAL_T            :: d1,d2
+REAL_T            :: val1,val2 
+REAL_T            :: tp(SDIM)
+REAL_T            :: v1(SDIM),v2(SDIM),v3(SDIM)
+REAL_T            :: plg1(4,SDIM),plg2(4,SDIM)
+REAL_T            :: plg3(3,SDIM),plg4(3,SDIM)
+REAL_T            :: x1temp(SDIM)
+REAL_T            :: x2temp(SDIM)
+REAL_T            :: x3temp(SDIM)
+INTEGER_T dir
+
+INTEGER_T,parameter :: debugflag = 0
+REAL_T,   parameter :: scale_factor=100.0d0
+dist_sign = 1.0d0
+dist = 0.0d0
+dist1 = 0.0d0
+dist2 = 0.0d0
+dist3 = 0.0d0
+do dir=1,SDIM
+ x1(dir) = 0.0d0
+ x2(dir) = 0.0d0
+ x3(dir) = 0.0d0
+ x4(dir) = 0.0d0
+enddo
+ 
+! convert from m to mm 
+! April, 2018: convert from m to cm 
+do i = 1,SDIM
+  x(i) = x_in(i)*scale_factor
+enddo
+if (1.eq.0) then
+ do i = 1,SDIM
+  x(i) = x_in(i)
+ enddo
+endif
+
+ if(debugflag .eq. 1)then
+  print *,"case", cavity_type
+  print *,"coord_type", coord_type
+ endif
+
+
+!  dimension sanity check
+if(coord_type .eq. 1) then   ! 3D cartisian
+ if(SDIM .ne. 3)then
+  print *, "coord_type is not consistent with dimension"
+  stop
+ endif
+elseif(coord_type .eq. 2) then ! R-Z axis symmetric
+ if(SDIM .ne. 2) then
+  print *,"coord_type is not consistent with dimension"
+  stop
+ endif
+else
+ print *,"invalid coord_type"
+ stop
+endif
+
+
+
+if(cavity_type .eq. 1)then       ! 1--> rectangular
+!  *                 * 
+!  *       *********** 
+!  *       *         * 
+!  *       *         * 
+!  *********         * 
+!  
+!*******************************************************************
+
+ 
+ if(coord_type .eq. 2)then   !  R-Z  axis symmetric
+ if(x(1) .ge. 0.25d0) then   ! r >= 0.25
+  dist1 = x(2) - 0.3d0        ! dist = z - 0.3   
+  if(x(2) .le. 0.05d0)then
+   dist2 = sqrt( (x(1)- 0.25d0)**2.0d0 + (x(2) - 0.05d0)**2.0d0)
+   dist = -1.0d0*min(abs(dist1), abs(dist2))
+  elseif(x(2) .lt. 0.3d0) then
+   dist2 = 0.25d0 - x(1)
+   dist = -1.0d0*min(abs(dist1),abs(dist2))
+  else
+   dist = dist1
+  endif
+ else  !   0 < r < 0.25
+  dist1 = x(2) - 0.05
+  if(x(2) .gt. 0.3d0)then
+   dist2 = sqrt( (x(1)- 0.25d0)**2.0d0 + (x(2) - 0.3d0)**2.0d0)
+   dist = min(dist1, dist2)
+  elseif(x(2) .gt. 0.05d0)then
+   dist2 = 0.25 - x(1) 
+   dist = min(dist1,dist2)
+  else
+   dist = dist1
+  endif
+ endif
+ endif
+
+
+ if(coord_type .eq. 1)then   ! 3D cartisian
+ if(x(1) .ge. 0.25d0 .or. x(2) .ge. 0.25d0) then
+  dist1 = x(SDIM) - 0.3d0 
+  if(x(SDIM) .gt. 0.3d0)then         ! x(SDIM) > 0.3
+   dist = dist1
+  elseif(x(SDIM) .lt. 0.05d0) then   !    x(SDIM) < 0.05
+    if(x(1) .ge. 0.25d0 .and. x(2) .le. 0.25d0)then
+    x1(1) = 0.25d0
+    x1(2) = 0.0d0
+    x1(SDIM) = 0.05d0
+    x2(1) = 0.25d0
+    x2(2) = 0.25d0
+    x2(SDIM) = 0.05d0
+    call dist_point_to_line(x1,x2,x,dist2)
+    dist = -1.0d0*min(abs(dist1),abs(dist2))
+   elseif(x(1) .le. 0.25d0 .and. x(2) .ge. 0.25d0)then
+    x1(1) = 0.0d0
+    x1(2) = 0.25d0
+    x1(SDIM) = 0.05d0
+    x2(1) = 0.25d0
+    x2(2) = 0.25d0
+    x2(SDIM) = 0.05d0
+    call dist_point_to_line(x1,x2,x,dist2)
+    dist = -1.0d0*min(abs(dist1),abs(dist2))
+   else
+    x1(1) = 0.25d0
+    x1(2) = 0.25d0
+    x1(SDIM) = 0.05d0
+    call l2norm(x,x1,dist2)
+    dist = -1.0d0*min(abs(dist1),abs(dist2))    
+   endif
+  else   !  0.05 <  x(SDIM)  < 0.3
+   if(x(1) .ge. 0.25d0 .and. x(2) .le. 0.25d0)then
+    dist2 = 0.25d0 - x(1)
+    dist = -1.0d0*min(abs(dist1),abs(dist2))
+   elseif(x(1) .le. 0.25d0 .and. x(2) .ge. 0.25d0)then
+    dist2 = 0.25d0 - x(2) 
+    dist = -1.0d0*min(abs(dist1),abs(dist2))
+   else
+    x1(1) = 0.25d0
+    x1(2) = 0.25d0
+    x1(SDIM) = 0.3d0
+    x2(1) = 0.25d0
+    x2(2) = 0.25d0
+    x2(SDIM) = 0.05d0
+    call dist_point_to_line(x1,x2,x,dist2)
+    dist = -1.0d0*min(abs(dist1),abs(dist2))    
+   endif   
+  endif
+ else    ! x(1) .lt. 0.25d0 .and. x(2) .lt. 0.25d0
+  dist1 = x(SDIM) - 0.05d0
+  if(x(SDIM) .lt. 0.05d0 )then
+   dist = dist1
+  elseif(x(SDIM) .gt. 0.3d0)then
+    x1(1) = 0.25d0
+    x1(2) = 0.0d0
+    x1(SDIM) = 0.3d0
+    x2(1) = 0.25d0
+    x2(2) = 0.25d0
+    x2(SDIM) = 0.3d0
+    call dist_point_to_line(x1,x2,x,dist2) 
+    x3(1) = 0.0d0
+    x3(2) = 0.25d0
+    x3(SDIM) = 0.3d0
+    x4(1) = 0.25d0
+    x4(2) = 0.25d0
+    x4(SDIM) = 0.3d0
+    call dist_point_to_line(x3,x4,x,dist3) 
+    if(dist2 .lt. 0.0d0 .or. dist3 .lt. 0.0d0) then
+     print *,"dist2 and dist3 should be positive"
+     stop 
+    endif  
+    dist = min(abs(dist1),abs(dist2),abs(dist3))
+  else  !   0.05 <= x(SDIM) <= 0.3
+    dist2 = 0.25d0 - x(1)   
+    dist3 = 0.25d0 - x(2)
+    if(dist2 .lt. 0.0d0 .or. dist3 .lt. 0.0d0) then
+     print *,"dist2 and dist3 should be positive"
+     stop 
+    endif
+    dist = min(abs(dist1),abs(dist2),abs(dist3))  
+  endif
+ endif
+ endif   
+!---------------------------------------------------------------
+
+
+
+elseif(cavity_type .eq. 2)then    ! 2--> trapzoidal
+!**************************************************************
+!             *                 *  
+!             *         x3      x4
+!             *         *********
+!             *       *
+!             *     *
+!             *****
+!            x1   x2
+!**************************************************************
+
+if(coord_type .eq. 2)then   !  R-Z  axis symmetric
+ ! determine sign
+ if(x(1) .ge. 0.25d0)then
+  if(x(2) .ge. 0.3d0)then
+   dist_sign = 1.0d0
+  else
+   dist_sign = -1.0d0
+  endif 
+ elseif(x(1) .le. 0.125d0)then
+  if(x(2) .ge. 0.05d0)then
+   dist_sign = 1.0d0
+  else
+   dist_sign = -1.0d0
+  endif
+ else
+   trap = 2.0d0*(x(1)-0.125d0) + 0.05d0 - x(2)
+   if(trap .gt. 0.0d0)then
+    dist_sign = -1.0d0
+   else
+    dist_sign = +1.0d0
+   endif
+ endif
+ ! determine distance
+  x1(1) = 0.0d0
+  x1(2) = 0.05d0 
+  x2(1) = 0.125d0
+  x2(2) = 0.05d0
+  x3(1) = 0.25d0
+  x3(2) = 0.3d0
+  x4(1) = 0.6d0
+  x4(2) = 0.3d0
+  call dist_point_to_line(x1,x2,x,dist1)
+  call dist_point_to_line(x2,x3,x,dist2) 
+  call dist_point_to_line(x3,x4,x,dist3)  
+  dist = dist_sign * min(dist1,dist2,dist3)
+
+endif
+
+if(coord_type .eq. 1)then   !  3D cartisian
+ ! determine sign
+ ! slant plane 1: x1 x2 x3
+ ! slant plane 2: x2 x4 x5  
+ x1(1) = 0.25d0 
+ x1(2) = 0.0d0
+ x1(SDIM) = 0.3d0
+ x2(1) = 0.25d0
+ x2(2) = 0.25d0
+ x2(SDIM) = 0.3d0
+ x3(1) = 0.125d0 
+ x3(2) = 0.0d0
+ x3(SDIM) = 0.05d0
+ x4(1) = 0.0d0
+ x4(2) = 0.25d0
+ x4(SDIM) = 0.3d0
+ x5(1) = 0.125d0
+ x5(2) = 0.125d0
+ x5(SDIM) = 0.05d0
+ call make_3points_plane(x1,x2,x3,pl1,d1)
+ call make_3points_plane(x2,x4,x5,pl2,d2)
+ if(1 .eq. 0)then
+ tp(1) = 0.0d0
+ tp(2) = 0.0d0
+ tp(SDIM) = 0.3d0
+ call adjust_plane_sign(+1,tp,pl1,d1)
+ call adjust_plane_sign(+1,tp,pl2,d2)
+ endif
+ call plane_distf(x,pl1,d1,val1)    ! val1 and val2 could be + or -
+ call plane_distf(x,pl2,d2,val2)
+
+ if(x(SDIM) .ge. 0.3d0)then
+  dist_sign = +1.0d0
+ elseif(x(SDIM) .ge. 0.05d0 .and. &
+       val1 .ge. 0.0d0 .and. &
+       val2 .ge. 0.0d0)then
+  dist_sign = +1.0d0  
+ else
+  dist_sign = -1.0d0
+ endif
+ 
+ ! determine distance
+ if(x(SDIM) .ge. 0.3d0 )then
+  if(x(1) .ge. 0.25d0 .or. x(2) .ge. 0.25d0)then
+   dist = x(SDIM) - 0.3d0
+  else
+   call dist_point_to_line(x1,x2,x,dist1)
+   call dist_point_to_line(x2,x4,x,dist2)
+   if(dist1 .lt. 0.0d0 .or. dist2 .lt. 0.0d0)then
+    print *,"invalid dist1 or dist2"
+    stop
+   endif
+   dist = min(dist1,dist2) 
+  endif
+ else
+  plg1(1,1) = 0.25d0
+  plg1(1,2) = 0.0d0
+  plg1(1,SDIM)= 0.3d0
+  plg1(2,1) = 0.25d0
+  plg1(2,2) = 0.25d0
+  plg1(2,SDIM)= 0.3d0
+  plg1(3,1) = 0.125d0
+  plg1(3,2) = 0.125d0
+  plg1(3,SDIM)= 0.05d0
+  plg1(4,1) = 0.125d0
+  plg1(4,2) = 0.0d0
+  plg1(4,SDIM)= 0.05d0
+  ! x1 -> x2 -> x5 -> x3 
+  ! from (0,0,0) its counterclockwise
+  call find_p_plane_dist_wb(+1, 4, plg1, x, dist1)
+
+  plg2(1,1) = 0.25d0
+  plg2(1,2) = 0.25d0
+  plg2(1,SDIM)= 0.3d0
+  plg2(4,1) = 0.125d0
+  plg2(4,2) = 0.125d0
+  plg2(4,SDIM)= 0.05d0
+  plg2(2,1) = 0.0d0
+  plg2(2,2) = 0.25d0
+  plg2(2,SDIM)= 0.3d0
+  plg2(3,1) = 0.0d0
+  plg2(3,2) = 0.125d0
+  plg2(3,SDIM)= 0.05d0
+  ! from (0,0,0) it's conterclockwise
+  call find_p_plane_dist_wb(+1, 4, plg2, x, dist2) 
+  
+  if(x(1) .ge. 0.25d0 .or. x(2) .ge. 0.25d0)then
+   dist3 = x(SDIM) - 0.3d0
+   dist = dist_sign*min(abs(dist1),abs(dist2),abs(dist3)) 
+  elseif(x(1) .le. 0.125d0 .and. x(2) .le. 0.125d0)then
+   dist3 = x(SDIM) - 0.05d0
+   dist = dist_sign*min(abs(dist1),abs(dist2),abs(dist3))
+  else
+   dist = dist_sign*min(abs(dist1),abs(dist2))   
+  endif
+
+ endif
+endif
+!------------------------------------------------------------
+
+!  
+! 
+elseif(cavity_type .eq. 3) then   ! 3--> vshape
+!**************************************************************
+!             *            *  
+!             *    x3      x4 
+!             *    ********* 
+!             *   *
+!             * *
+!             *
+!            x1    
+!**************************************************************
+
+
+if(coord_type .eq. 2)then   !  R-Z  axis symmetric
+ ! determine sign
+ if(x(1) .ge. 0.25d0)then
+  if(x(2) .ge. 0.3d0)then
+   dist_sign = 1.0d0
+  else
+   dist_sign = -1.0d0
+  endif 
+ else
+  vshape = x(1)-x(2)+0.05d0
+  if(vshape .gt. 0.0d0)then
+   dist_sign = -1.0d0
+  else
+   dist_sign = 1.0d0
+  endif
+ endif
+ ! determine distance
+  x1(1) = 0.0d0
+  x1(2) = 0.05d0 
+  x3(1) = 0.25d0
+  x3(2) = 0.3d0
+  x4(1) = 0.6d0
+  x4(2) = 0.3d0
+  call dist_point_to_line(x1,x3,x,dist1) 
+  call dist_point_to_line(x3,x4,x,dist3)  
+  dist = dist_sign * min(dist1,dist3)
+
+endif
+
+if(coord_type .eq. 1)then   !  3D cartisian  
+ ! determine sign
+ if(x(SDIM) .ge. 0.3d0)then
+  dist_sign = +1.0d0
+ elseif(x(SDIM) .lt.0.05d0)then
+  dist_sign = -1.0d0
+ else
+  !vshape is the radius of the circle section cut through the cone
+  radius = x(SDIM) - 0.05d0
+  vshape =  sqrt(x(1)**2.0d0+x(2)**2.d0)
+  if( (vshape-radius) .ge. 0.0d0)then
+   dist_sign = -1.0d0
+  else
+   dist_sign = +1.0d0
+  endif
+ endif
+
+! determine distance
+ vshape = sqrt(x(1)**2.0d0 + x(2)**2.0d0)
+
+ if(x(SDIM) .ge. 0.3d0 )then
+  if(vshape .ge. 0.25d0)then
+   dist = x(SDIM) - 0.3d0
+  elseif(vshape .ge. 0.0d0)then
+   bb = -x(1)-x(2)+0.55d0
+   if(bb .gt. 0.0d0)then
+    dist = (0.25d0 - vshape + x(SDIM) - 0.3d0)/sqrt(2.0d0)
+    if(dist .lt. 0.0d0)then
+     print *,"invalid sign of dist"
+     stop
+    endif
+   else
+    dist = sqrt((0.25d0-vshape)**2.0d0+(x(SDIM)-0.3d0)**2.0d0)
+   endif   
+  else
+   print *,"invalid vshape"
+  endif
+ else  ! x(SDIM) < 0.3
+  v1(1) = 0.0d0
+  v1(2) = 0.05d0
+  v1(SDIM) = 0.0d0
+  v2(1) = 0.25d0
+  v2(2) = 0.3d0 
+  v2(SDIM) = 0.0d0
+  v3(1) = vshape
+  v3(2) = x(SDIM)
+  v3(SDIM) = 0.0d0
+  call dist_point_to_line(v1,v2,v3,dist1)
+  dist = dist_sign*dist1
+  if(vshape .ge. 0.25d0)then
+   dist2 =  0.3d0 - x(SDIM)
+   dist = dist_sign*min(abs(dist1),abs(dist2))
+  endif
+
+ endif
+endif
+
+!------------------------------------------------------------
+
+!  
+! 
+elseif(cavity_type .eq. 4) then   ! 4--> semicircle
+!**************************************************************
+!             *                 *  
+!             *         x1      x2
+!             *         ********* 
+!             *        *
+!             *       *
+!             *    *
+!             *   
+!**************************************************************
+
+
+
+if(coord_type .eq. 2)then   !  R-Z  axis symmetric
+ ! determine sign
+ if(x(2) .ge. 0.3d0)then
+   dist_sign = +1.0d0
+ else
+   radius = 0.25d0 - sqrt((x(1) - 0.0d0)**2.0d0 + (x(2) - 0.3d0)**2.0d0)
+   if(radius .ge. 0.0d0)then
+    dist_sign = +1.0d0
+   else
+    dist_sign = -1.0d0
+   endif  
+ endif
+
+ ! determine distance
+  x1(1) = 0.25d0
+  x1(2) = 0.3d0 
+  x2(1) = 0.6d0
+  x2(2) = 0.3d0
+  if(x(2) .gt. 0.3d0)then
+   call dist_point_to_line(x1,x2,x,dist1)
+   dist = dist_sign*dist1
+  else
+   dist2 = 0.25d0 - sqrt((x(1))**2.0d0 + (x(2) - 0.3d0)**2.0d0)   
+   call dist_point_to_line(x1,x2,x,dist3)  
+   dist = dist_sign * min(abs(dist2),abs(dist3))
+  endif
+endif
+
+if(coord_type .eq. 1)then   !  3D cartisian
+ ! sign and distance at the same time
+ radius = sqrt(x(1)**2.0d0 + x(2)**2.0d0) 
+ if(x(SDIM) .ge. 0.3d00)then
+  if(radius .ge. 0.25d0)then
+   dist = x(SDIM) - 0.3d0
+  else
+   dist = sqrt((0.25d0 - radius)**2.0d0 + (x(SDIM)-0.3d0)**2.0d0)
+  endif
+ else
+  radius3d = sqrt(x(1)**2.0d0 + x(2)**2.0d0 + (x(SDIM)-0.3d0)**2.0d0) 
+  if(radius .le. 0.25d0)then
+   dist = 0.25d0 - radius3d
+  else 
+   dist1 = 0.25d0 -radius3d
+   dist2 = x(SDIM) - 0.3d0
+   dist =  -1.0d0*min(abs(dist1),abs(dist2))
+  endif 
+ endif
+endif
+
+
+!------------------------------------------------------------
+
+!  
+! 
+elseif(cavity_type .eq. 5) then   ! 5--> spherical reentrant
+!**************************************************************
+!             *  x1                          x2
+!             *  *****************************
+!             * * 
+!             * * x3
+!             *   * 
+!             *     *
+!             *       *
+!             *        *         
+!             *         *
+!             *         * 
+!             *       *
+!             *     *
+!             *   *
+!             * *  
+!**************************************************************
+
+
+
+if(coord_type .eq. 2)then   !  R-Z  axis symmetric
+ ! determine sign
+  lcinter = sqrt(0.25d0**2.0d0 - 0.15d0**2.0d0) + 0.3
+ if(x(2) .ge. 0.6d0)then
+   dist_sign = +1.0d0
+ elseif(x(2) .lt. lcinter)then
+   radius = 0.25d0 - sqrt((x(1) - 0.0d0)**2.0d0 + (x(2) - 0.3d0)**2.0d0)
+   if(radius .ge. 0.0d0)then
+    dist_sign = +1.0d0
+   else
+    dist_sign = -1.0d0
+   endif  
+ else
+   if(x(1) .le. 0.15d0)then
+    dist_sign = +1.0d0
+   else
+    dist_sign = -1.0d0
+   endif
+ endif
+
+ ! determine distance
+  x1(1) = 0.15d0
+  x1(2) = 0.6d0 
+  x2(1) = 0.6d0
+  x2(2) = 0.6d0
+  x3(1) = 0.15d0
+  x3(2) = lcinter
+
+ if(x(2) .ge. 0.6d0)then
+  call dist_point_to_line(x1,x2,x,dist1)
+  dist = dist_sign*dist1 
+ elseif(x(2) .lt. lcinter)then
+   dist2 = 0.25d0 - sqrt((x(1) - 0.0d0)**2.0d0 + (x(2) - 0.3d0)**2.0d0)
+   call dist_point_to_line(x1,x2,x,dist3)  
+   dist = dist_sign * min(abs(dist2),abs(dist3)) 
+ else
+   call dist_point_to_line(x1,x3,x,dist1)
+   dist = dist_sign*dist1
+
+   if(x(1) .ge. 0.15d0)then
+    dist2 = 0.25d0 - sqrt((x(1) - 0.0d0)**2.0d0 + (x(2) - 0.3d0)**2.0d0) 
+    call dist_point_to_line(x1,x2,x,dist3)  
+    dist = dist_sign * min(abs(dist2),abs(dist3),abs(dist1))
+   endif 
+ endif
+
+endif
+
+if(coord_type .eq. 1)then   !  3D cartisian
+ ! determine sign
+ lcinter = sqrt(0.25d0**2.0d0 - 0.15d0**2.0d0) + 0.3
+ radius = sqrt((x(1))**2.0d0 + (x(2))**2.0d0)
+ if(x(SDIM) .ge. 0.6d0)then
+  if(radius .ge. 0.15d0)then
+   dist = x(SDIM) - 0.6d0
+  elseif(radius .ge. 0.0d0)then
+   dist = sqrt((0.15d0 - radius)**2.0d0 + (x(SDIM)-0.6d0)**2.0d0)
+  else
+   print *,"invalid radius"
+   stop
+  endif 
+ elseif(x(SDIM) .ge. lcinter)then
+  dist = 0.15d0 - radius
+  if(radius .gt. 0.15d0)then
+   dist1 = x(SDIM) - 0.6d0
+   radius3d = sqrt(x(1)**2.0d0 + x(2)**2.0d0 + (x(SDIM)-0.3d0)**2.0d0) 
+   dist2 = 0.25d0 - radius3d
+   dist  = -1.0d0*min(abs(dist),abs(dist1),abs(dist2))
+  endif
+ elseif(x(SDIM) .ge. 0.0d0)then
+  bb = (lcinter - 0.3d0)/0.15d0*radius + 0.3d0 - x(SDIM)
+  radius3d = sqrt(x(1)**2.0d0 + x(2)**2.0d0 + (x(SDIM)-0.3d0)**2.0d0) 
+  if(radius .lt. 0.15d0)then
+   dist = 0.25d0 - radius3d
+   if(bb .lt. 0.0)then
+    dist1 = sqrt((radius-0.15d0)**2.0d0 + (x(SDIM) - lcinter)**2.0d0)
+    dist = min(abs(dist),abs(dist1))
+   endif
+  else
+   dist1 = 0.25d0 - radius3d
+   dist2 = x(SDIM) - 0.6d0
+   if(dist1 .ge. 0.0d0)then
+    dist = dist1
+   else
+    dist = -1.0d0*min(abs(dist1),abs(dist2))
+   endif
+  endif
+ else
+  print *,"out of domain"
+  stop
+ endif
+endif
+
+elseif(cavity_type .eq. 6) then   ! 6--> 3D pyramid
+ if(SDIM .ne. 3)then
+  print *,"can't have 2d pyramid"
+  stop
+ endif
+ plg3(1,1) = 0.25d0
+ plg3(1,2) = 0.0d0
+ plg3(1,SDIM)= 0.3d0
+ plg3(2,1) = 0.25d0
+ plg3(2,2) = 0.25d0
+ plg3(2,SDIM)= 0.3d0
+ plg3(3,1) = 0.0d0
+ plg3(3,2) = 0.0d0
+ plg3(3,SDIM)= 0.05d0
+ 
+ call make_3points_plane(plg3(1,:),plg3(2,:),plg3(3,:),pl1,d1)
+ call find_p_plane_dist_wb(+1, 3, plg3, x, dist1)
+
+ plg4(1,1) = 0.0d0
+ plg4(1,2) = 0.25d0
+ plg4(1,SDIM)= 0.3d0
+ plg4(2,1) = 0.0d0
+ plg4(2,2) = 0.0d0
+ plg4(2,SDIM)= 0.05d0
+ plg4(3,1) = 0.25d0
+ plg4(3,2) = 0.25d0
+ plg4(3,SDIM)= 0.3d0
+
+ do dir=1,SDIM
+  x1temp(dir)=plg4(1,dir) 
+  x2temp(dir)=plg4(2,dir) 
+  x3temp(dir)=plg4(3,dir) 
+ enddo
+ call make_3points_plane(x1temp,x2temp,x3temp,pl2,d2)
+ call find_p_plane_dist_wb(+1, 3, plg4, x, dist2) 
+ 
+ 
+ if(x(SDIM) .ge. 0.3d0)then
+  if(x(1) .ge. 0.25d0 .or. x(2) .ge. 0.25d0)then
+   dist = x(SDIM) - 0.3d0
+  else
+   if(dist1 .lt. 0.0d0 .or. dist2 .lt. 0.0d0)then
+    print *,"wrong sign of dist1 or dist2"
+    stop
+   endif
+   dist = min(abs(dist1),abs(dist2))
+  endif
+ else   ! x(3) < 0.3d0
+  if(x(1) .le. 0.25d0 .and. x(2) .le. 0.25d0)then
+   call plane_distf(x,pl1,d1,val1)    
+   call plane_distf(x,pl2,d2,val2)    
+   if(val1 .ge. 0.0d0 .and. &
+      val2 .ge. 0.0d0)then
+    dist_sign  = +1.0d0
+   else
+    dist_sign = -1.0d0
+   endif
+   dist = dist_sign*min(abs(dist1),abs(dist2))
+  else
+   dist3 = x(SDIM) - 0.3d0
+   dist = -1.0d0*min(abs(dist1),abs(dist2),abs(dist3))
+  endif
+ endif
+else
+ print *, "invalid cavity type flag"
+ stop
+endif
+
+
+
+! from cm to m
+dist = dist/scale_factor
+
+end subroutine cavity_distf_13
+
+
+
+
+! --------------------------------------------------
+! vapor +   liquid -
+
+subroutine cavity_distf_12(coord_type, x_in, dist)
+implicit none
+
+INTEGER_T,intent(in) :: coord_type
+REAL_T,intent(in) :: x_in(SDIM)
+REAL_T            :: x(SDIM)
+
+REAL_T            :: dist,dist_temp
+REAL_T            :: dist2
+REAL_T            :: center(SDIM)
+REAL_T            :: film_thickness     ! thickness of the film
+REAL_T, parameter :: scale_factor=100.0d0
+INTEGER_T i
+
+film_thickness=radblob4
+
+! convert from m to cm 
+do i = 1,SDIM
+  x(i) = x_in(i)*scale_factor
+enddo
+
+
+if(coord_type .eq. 1) then   ! 3D cartisian
+ if(SDIM .ne. 3)then
+  print *, "coord_type is not consistent with dimension"
+  stop
+ endif
+elseif(coord_type .eq. 2) then ! R-Z axis symmetric
+ if(SDIM .ne. 2) then
+  print *,"coord_type is not consistent with dimension"
+  stop
+ endif
+else
+ print *,"invalid coord_type"
+ stop
+endif
+
+
+if(coord_type .eq. 2)then 
+  center(1) = 0.0d0
+  center(2) = 0.05d0+film_thickness
+
+  call l2norm(center, x , dist_temp)
+  dist = 0.1d0 - dist_temp
+  if(film_thickness .lt. 0.0d0)then
+   print *,"film_thickness cannot be zero"
+   stop
+  elseif(film_thickness .lt. 1.0e-12)then
+   ! do nothing
+  else
+   if(x(1) .gt. 0.1d0)then
+    dist2 = 0.05d0+film_thickness - x(2)
+    dist = sign(min(abs(dist2),abs(dist)), dist2)
+   else
+     ! do nothing
+   endif
+  endif
+endif
+
+if(coord_type .eq. 1)then 
+  center(1) = 0.0d0
+  center(2) = 0.0d0
+  center(SDIM) = 0.05d0+film_thickness
+  call l2norm(center, x , dist_temp)
+  dist = 0.1d0 - dist_temp
+  if(film_thickness .lt. 0.0d0)then
+   print *,"film_thickness cannot be zero"
+   stop
+  elseif(film_thickness .lt. 1.0e-12)then
+   ! do nothing
+  else
+   if(sqrt(x(1)**2.0d0 + x(2)**2.0d0) .gt. 0.1d0)then
+    dist2 = 0.05d0+film_thickness - x(SDIM)
+    dist = sign(min(abs(dist2),abs(dist)), dist2)
+   else
+     !  do nothing
+   endif
+  endif
+endif
+
+! from cm to m         
+ dist = dist/scale_factor
+! m      cm  
+end subroutine cavity_distf_12
+
+!---------------------------------------------
+subroutine find_p_plane_dist_wb(flag,nv,vts,p,dist)
+! check a point if its projection of a plane fall inside the 
+! close domain surrounded by the boudary 
+! if it is, then dist = find_p_phase_dist
+! if not, find the closest point of on the boundary 
+implicit none
+
+INTEGER_T,intent(in)  :: nv ! number of vertices 
+REAL_T,intent(in) :: vts(nv,SDIM)                          
+     !vertices corrd in clockwise or counterclockwise
+REAL_T,intent(in) :: p(SDIM)
+REAL_T        :: pp(SDIM)
+INTEGER_T             :: i,j
+INTEGER_T,intent(in)  :: flag
+! if flag = +1, then counter clockwise
+! if flag = -1, then clockwise
+! the normal of the plane always point to positive material.
+REAL_T         :: sign1,sign2,sign3
+REAL_T         :: s1(SDIM),s2(SDIM)
+INTEGER_T              :: isd_flag
+REAL_T         :: dist
+REAL_T         :: dist1(nv)
+REAL_T         :: normal(SDIM)
+REAL_T         :: d
+REAL_T         :: x1temp(SDIM)
+REAL_T         :: x2temp(SDIM)
+REAL_T         :: x3temp(SDIM)
+INTEGER_T      :: dir
+
+if(SDIM .ne. 3)then
+ print *,"invalid dimension"
+ stop
+endif
+if ((nv.ne.3).and.(nv.ne.4)) then
+ print *,"nv invalid"
+ stop
+endif
+
+isd_flag = 1 ! inside the domain
+
+do dir=1,SDIM
+ x1temp(dir)=vts(1,dir)
+ x2temp(dir)=vts(2,dir)
+ x3temp(dir)=vts(3,dir)
+enddo
+
+! use the first three point in vts to make a plane
+call make_3points_plane(x1temp,x2temp,x3temp,normal,d)
+
+
+! find the projection point pp
+call find_pp_plane(p,normal,d,pp)
+
+! determine if the pp is inside the vts(nv)
+ do i = 1, nv-1
+  do j = 1,SDIM
+   if(flag .eq. +1) then  ! vts in counter clockwise direction
+    s1(j) = vts(i+1,j) - vts(i,j)
+    s2(j) = pp(j) -vts(i,j)   
+   elseif(flag .eq. -1)then
+    s2(j) = vts(i+1,j) - vts(i,j)
+    s1(j) = pp(j) -vts(i,j)
+   else
+    print *,"invalid flag"
+    stop
+   endif
+  enddo
+  sign1 = s1(2)*s2(SDIM) - s1(SDIM)*s2(2)
+  sign2 = -s1(1)*s2(SDIM) + s1(SDIM)*s2(1)
+  sign3 = s1(1)*s2(2) - s1(2)*s2(1)
+  if(sign1*normal(1) .lt. 0.0d0 .or. &
+     sign2*normal(2) .lt. 0.0d0 .or. &
+     sign3*normal(SDIM) .lt. 0.0d0)then
+   isd_flag = 0
+   exit
+  endif
+ enddo
+ if(isd_flag .eq. 1)then
+  do j = 1,SDIM
+   if(flag .eq. 1)then
+    s1(j) = vts(1,j) - vts(nv,j)
+    s2(j) = pp(j) -vts(nv,j)
+   elseif(flag .eq. -1)then
+    s2(j) = vts(1,j) - vts(nv,j)
+    s1(j) = pp(j) -vts(nv,j)
+   else
+    print *,"invalid flag"
+    stop
+   endif
+  enddo
+  sign1 = s1(2)*s2(SDIM) - s1(SDIM)*s2(2)
+  sign2 = -s1(1)*s2(SDIM) + s1(SDIM)*s2(1)
+  sign3 = s1(1)*s2(2) - s1(2)*s2(1)
+  if(sign1*normal(1) .lt. 0.0d0 .or. &
+     sign2*normal(2) .lt. 0.0d0 .or. &
+     sign3*normal(SDIM) .lt. 0.0d0)then
+   isd_flag = 0
+  endif
+ endif
+
+
+if(isd_flag .eq. 1)then
+ call find_p_plane_dist(p,normal,d,dist) 
+elseif(isd_flag .eq. 0)then
+ do i = 1,nv-1
+  do dir=1,SDIM
+   x1temp(dir)=vts(i,dir)
+   x2temp(dir)=vts(i+1,dir)
+  enddo
+  call dist_point_to_line(x1temp,x2temp,p,dist1(i))
+ enddo
+ do dir=1,SDIM
+  x1temp(dir)=vts(nv,dir)
+  x2temp(dir)=vts(1,dir)
+ enddo
+ call dist_point_to_line(x1temp,x2temp,p,dist1(nv))
+ dist = minval(abs(dist1))
+else
+ print *,"invalid isd_flag"
+ stop
+endif
+
+
+end subroutine find_p_plane_dist_wb
+!----------------------------------------------
+! find the shortest distance from a point to plane(normal,d)
+subroutine find_p_plane_dist(p,normal,d,dist)
+implicit none
+
+REAL_T, intent(in) :: p(SDIM)
+REAL_T, intent(in) :: normal(SDIM)
+REAL_T, intent(in) :: d
+REAL_T,intent(out)  :: dist
+REAL_T             :: nn
+
+if(SDIM .ne. 3)then
+ print *,"invalid dimension"
+ stop
+endif
+
+dist = 0.0d0
+nn = sqrt(normal(1)**2.0d0 + normal(2)**2.0d0 &
+          + normal(SDIM)**2.0d0)
+if(nn .le. 0.0d0)then
+ print *,"warning, the denomintor is zero"
+ stop
+endif
+
+dist = abs(p(1)*normal(1) + p(2)*normal(2) + &
+          p(SDIM)*normal(SDIM) + d)/nn
+
+end subroutine find_p_plane_dist
+
+!----------------------------------------------
+subroutine plane_distf(p,normal,d,val)
+implicit none
+
+! plane level set function 
+REAL_T, intent(in) :: p(SDIM)
+REAL_T, intent(in) :: normal(SDIM)
+REAL_T, intent(in) :: d
+
+REAL_T             :: val
+
+if(SDIM .ne. 3)then
+ print *,"invalid dimension"
+ stop
+endif
+
+VAL=normal(1)*p(1)+normal(2)*p(2)+normal(SDIM)*p(SDIM)+d
+
+end subroutine plane_distf
+!---------------------------------------------
+! find the projection pp of a point p on a given plane (normal,d)
+subroutine find_pp_plane(p,normal,d,pp)
+implicit none
+
+REAL_T,intent(in)   :: p(SDIM),normal(SDIM)
+REAL_T,intent(in)   :: d
+REAL_T              :: pp(SDIM)
+
+INTEGER_T                   :: i
+REAL_T              :: s
+
+if(SDIM .ne. 3)then
+ print *,"invalid dimension"
+ stop
+endif
+if(normal(1) .eq. 0.0d0 .and. normal(2) .eq. 0.0d0 & 
+   .and. normal(SDIM) .eq. 0.0d0 )then
+ print *,"warning, 0 normal"
+ stop
+endif
+
+s = (-d - normal(1)*pp(1) - normal(2)*pp(2) - &
+    normal(SDIM)*pp(SDIM))/ &
+    (normal(1)**2.0d0 + normal(2)**2.0d0 + &
+     normal(SDIM)**2.0d0)
+
+do i = 1,SDIM
+ pp(i) = s*normal(i) + pp(i)
+enddo
+
+end subroutine find_pp_plane
+!-----------------------------------------------
+subroutine adjust_plane_sign(flag,p,normal,d)
+implicit none
+! for test point p
+! if \phi(p) >= 0,  flag = 1
+! if \phi(p) < 0,   flag = -1
+INTEGER_T    ,intent(in)   :: flag
+REAL_T, intent(in) :: p(SDIM)
+REAL_T             :: normal(SDIM)
+REAL_T             :: d
+
+INTEGER_T                  :: i
+REAL_T             :: val
+
+if(SDIM .ne. 3)then
+ print *,"invalid dimension"
+ stop
+endif
+
+if(flag .ne. 1 .and. flag .ne. -1)then
+ print *,"invalid test flag in adjust_plane_sign"
+ stop
+endif
+
+VAL=normal(1)*p(1)+normal(2)*p(2)+normal(SDIM)*p(SDIM)+d
+
+if(flag .eq. 1)then
+ if(val .ge. 0.0d0)then
+  ! do nothing
+ else
+  do i = 1,SDIM
+   normal(i) = -1.0d0*normal(i)
+   d = -1.0d0*d
+  enddo
+ endif
+elseif(flag .eq. -1)then
+ if(val .lt. 0.0d0) then
+  ! do nothing
+ else
+  do i = 1,SDIM
+   normal(i) = -1.0d0*normal(i)
+   d = -1.0d0*d
+  enddo
+ endif
+endif
+
+end subroutine
+!---------------------------------------------------------
+subroutine make_3points_plane(p1,p2,p3,normal,d)
+implicit none
+! find a plane (normal,d) with 3 points p1,p2,p3
+
+REAL_T, intent(in)     :: p1(SDIM),P2(SDIM),p3(SDIM)
+
+REAL_T                 :: normal(SDIM)
+REAL_T                 :: d
+
+if(SDIM .ne. 3)then
+ print *,"invalid call make_3points_plane"
+ stop
+endif
+
+call crossproduct(p1,p2,p3,normal)
+d = -normal(1)*p1(1) - normal(2)*p1(2) - normal(SDIM)*p1(SDIM)
+
+
+end subroutine make_3points_plane
+!------------------------------------------------------------
+!       p1-------------------------p2
+!               *
+!               *  
+!               x
+!----------------------------------------------------------
+subroutine dist_point_to_line(p1,p2,x,dist)
+implicit none
+! represent the line in parametric form,(v = f(s))
+! v^x = x1 + (x2-x1)s
+! v^y = y1 + (y2-y1)s
+! v^z = z1 + (z2-z1)s
+! 
+! if the closest point on the line to point x  is outside p1 -- p2, 
+! --------> return the distance from x either to p1 or p2 which is shorter.
+! otherwise
+! --------> return the distance from x to the cloest point
+
+REAL_T,intent(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
+REAL_T                 ::  dist,dist1,dist2
+
+REAL_T                 :: diff10,diff21
+REAL_T                 :: x10(SDIM), x21(SDIM)
+INTEGER_T              :: i
+REAL_T                 :: s
+
+
+dist = 0.0d0
+
+do i = 1,SDIM
+ x10(i) = p1(i) - x(i)
+ x21(i) = p2(i) - p1(i)
+
+ if(abs(x10(i)) .lt. 10e-10)then
+  x10(i) = 0.0d0
+ endif
+ if(abs(x21(i)) .lt. 10e-10)then
+  x21(i) = 0.0d0
+ endif
+
+enddo
+
+if (maxval(abs(x21)) .lt. 10d-8)then
+ print *,"p1 and p2 are coincide with each other",p1,p2
+ stop
+endif
+if (maxval(abs(x10)) .lt. 10d-8)then
+ dist=zero
+else
+
+ call l2norm(p1, x, diff10)
+ call l2norm(p2, p1, diff21)
+
+ s = -1.0d0*(dot_product(x10,x21))/(diff21**2.0d0)
+
+ if(s .le. 1.0d0 .and. s .ge. 0.0)then
+
+  do i = 1,SDIM
+   dist = dist + (x10(i) + x21(i)*s)**2.0d0
+  enddo
+  dist = sqrt(dist)
+ else
+  call l2norm(p1,x,dist1)
+  call l2norm(p2,x,dist2)
+  dist = min(dist1,dist2)
+ endif
+
+endif
+
+end subroutine dist_point_to_line
+!---------------------------------------------------------
+subroutine crossproduct(p1,p2,p3,oter)
+implicit none
+
+REAL_T,intent(in)       :: p1(SDIM),p2(SDIM),p3(SDIM)
+REAL_T,intent(out)      :: oter(SDIM)
+
+INTEGER_T                      :: i
+REAL_T                 :: p1p2(SDIM),p1p3(SDIM)
+
+if(SDIM .ne. 3)then
+ print *,"invalid call outerproduct"
+ stop
+endif
+
+oter = 0.0d0
+
+do i = 1,SDIM
+ p1p2(i)=p2(i)-p1(i)
+ p1p3(i)=p3(i)-p1(i)
+enddo 
+
+oter(1) = p1p2(2)*p1p3(SDIM) - p1p2(SDIM)*p1p3(2) 
+oter(2) = -p1p2(1)*p1p3(SDIM)+ p1p2(SDIM)*p1p3(1)
+oter(SDIM) = p1p2(1)*p1p3(2) - p1p2(2)*p1p3(1)
+
+end subroutine crossproduct
+!------------------------------------------------------------
+subroutine l2norm(x1,x2, x1x2norm)
+implicit none
+
+REAL_T,intent(in)  :: x1(SDIM),x2(SDIM)
+REAL_T             :: x1x2norm
+
+INTEGER_T                  :: i
+REAL_T,allocatable :: diff(:)
+
+x1x2norm = 0.0d0
+allocate(diff(SDIM))
+do i = 1,SDIM
+ diff(i) = x1(i)-x2(i)
+enddo
+
+do i = 1,SDIM
+ x1x2norm = x1x2norm + diff(i)**2.0d0
+enddo
+
+x1x2norm = sqrt(x1x2norm)
+
+deallocate(diff)
+
+end subroutine l2norm
+
+! negative outside the object, positive inside.
+subroutine melting_ls(x1,x2,y1,y2, x_in,dist)
+! 2d distant function
+!             :------                    y1
+!             :      |    
+!             :      |
+!             :      |
+!             :      |----------|        y2
+!             :                 | 
+!             :                 |
+!             :-----------------|                      
+!  
+!           (0,-y1)     x1       x2
+
+
+
+! x_in(2):  the input x
+! dist:  output signed distance
+
+implicit none
+
+REAL_T,intent(in)  :: x1,x2,y1,y2
+! x1 x2 y1 y2 shape parameter
+REAL_T,intent(in)  ::  x_in(SDIM)
+REAL_T,intent(out) :: dist
+
+REAL_T             :: x(SDIM)
+REAL_T             :: dist1,dist2,dist3
+REAL_T             :: dist4,dist5
+REAL_T             :: p1(SDIM),p2(SDIM),p3(SDIM)
+REAL_T             :: p4(SDIM),p5(SDIM),p6(SDIM)
+REAL_T             :: ss    ! sign
+INTEGER_T                  :: i
+
+p1(1)=0.0d0
+p1(2)=y1
+p2(1)=x1
+p2(2)=y1
+p3(1)=x1
+p3(2)=y2
+p4(1)=x2
+p4(2)=y2
+p5(1)=x2
+p5(2)=-y1
+p6(1)=0.0d0
+p6(2)=-y1
+
+if(x_in(1) .ge. 0.0d0)then
+  do i=1,2
+   x(i) = x_in(i)
+  enddo
+else
+  x(1)=-1.0d0*x_in(1)
+  x(2)=x_in(2)
+endif
+
+! calculate the abs distance
+  call dist_point_to_lined(p1,p2,x,dist1)
+  call dist_point_to_lined(p2,p3,x,dist2)  
+  call dist_point_to_lined(p3,p4,x,dist3)  
+  call dist_point_to_lined(p4,p5,x,dist4)  
+  call dist_point_to_lined(p5,p6,x,dist5)  
+! find the sign
+  if( x(1) .ge. 0.0d0 .and. x(1) .le. x2  .and. &
+      x(2) .ge. -y1 .and. x(2) .le. y2)then
+     ss = 1.0d0
+  elseif( x(1) .ge. 0.0d0 .and. x(1) .le. x1  .and. &
+      x(2) .ge. y2 .and. x(2) .le. y1)then
+     ss = 1.0d0
+  else
+    ss = -1.0d0
+  endif
+ 
+  dist = ss*min(dist1,dist2,dist3,dist4,dist5)
+
+
+end subroutine melting_ls
+
+subroutine dist_point_to_lined(p1,p2,x,dist)
+implicit none
+! represent the line in parametric form,(v = f(s))
+! v^x = x1 + (x2-x1)s
+! v^y = y1 + (y2-y1)s
+! v^z = z1 + (z2-z1)s
+! 
+! if the closest point on the line to point x  is outside p1 -- p2, 
+! --------> return the distance from x either to p1 or p2 which is shorter.
+! otherwise
+! --------> return the distance from x to the cloest point
+
+REAL_T,intent(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
+REAL_T                 ::  dist
+
+
+REAL_T                 :: diff10,diff21
+REAL_T,allocatable     :: x10(:), x21(:)
+INTEGER_T                      :: i
+REAL_T                 :: s
+
+
+dist = 0.0d0
+
+allocate(x10(SDIM),x21(SDIM))
+do i = 1,SDIM
+ x10(i) = p1(i) - x(i)
+ x21(i) = p2(i) - p1(i)
+enddo
+
+if (maxval(abs(x21)) .lt. 10d-8)then
+ print *,"p1 and p2 are coincide with each other",p1,p2
+ stop
+endif
+
+call l2norm(p1, x, diff10)
+call l2norm(p2, p1, diff21)
+
+
+s = -1.0d0*(dot_product(x10,x21))/(diff21**2.0d0)
+
+
+if(s .gt. 1.0d0)then
+ call l2norm(p2, x,dist)
+elseif(s .lt. 0.0d0)then
+ call l2norm(p1,x,dist)
+else
+ if(abs((diff10**2.0d0 )*(diff21**2.0d0) - & 
+        (dot_product(x10,x21))**2.0d0) .lt. 1.0e-10)then
+   dist= 0.0d0
+ else
+  dist = sqrt(((diff10**2.0d0 )*(diff21**2.0d0) - & 
+        (dot_product(x10,x21))**2.0d0)/ &
+        (diff21**2.0d0))
+ endif
+endif
+
+deallocate(x10,x21) 
+
+end subroutine dist_point_to_lined
+
+
+!-----------------------------------------------------------
+! end YANG LIU
+!----------------------------------------------------------
+
+
+! ----------
+! CODY ESTEBE
+! ----------
+
+! from: nozzle2D.f90
+! Phi>0 in the solid
+subroutine nozzle2d(x_cm,y_cm,Phi) !return nozzle signed distance function Phi
+ !2d nozzle test case, lower half (Brusiani et al 2013)
+ implicit none
+ !spatial coordinates, domain: x=[0:7000],y=[-300:2000] microns
+ !  0<=x<=0.7cm
+ ! -0.03 cm <= y <= 0.2 cm
+ REAL_T, intent(in) :: x_cm, y_cm 
+ REAL_T, intent(out) :: Phi !init to 0
+ 
+ INTEGER :: nozzletype, insideflag
+ REAL_T :: nl_width, nr_width, r, nl, nr !for nozzle entrance/exit
+ REAL_T :: l1, l2, a, bottom !for rounded corner and tangent nozzle line
+ REAL_T :: m, m2, phi1, phi2, vertDisplace !for inner slope of nozzle
+ REAL_T :: round_l, round_r !for nozzle corners
+ REAL_T :: x_um,y_um
+
+ x_um=x_cm*1.0e+4
+ y_um=(0.2-y_cm)*1.0e+4
+
+ !nozzle configuration
+ nozzletype = 2; !J:0, U:1, W:2
+ if (nozzletype.eq.0) then
+  nl_width=299
+  nr_width=299
+ elseif (nozzletype.eq.1) then
+  nl_width=301
+  nr_width=284
+ elseif (nozzletype.eq.2) then
+  nl_width=301
+  nr_width=270
+ else
+  print *,"nozzletype invalid"
+  stop
+ endif
+ r=20; !inlet radius
+
+ !vertical height of nozzle entrance/exit
+ nl = 2000-nl_width/2.0-r
+ nr = 2000-nr_width/2.0
+
+
+ !line tangent to circle at point a,b (for nozzle inlet)
+ !
+ !                            .(l1,l2)
+ !                          /
+ !                        /
+ !                      /
+ !                    /
+ !                  /
+ !                /
+ !              / _-----_
+ !            /-          \
+ !    (a,b).//              \
+ !           |               |
+ !          |                 |
+ !          |       .(0,0)    |
+ !          |                |
+ !           \              /
+ !             -          /
+ !               -------
+ 
+ l1=4000-(3000+r)
+ l2=nr-(nl)
+ a=(2*l1*(r**2)-sqrt(4*(l1**2)*(r**4)-4*((l1**2)+(l2**2))* &
+   ((r**4)-(r**2)*(l2**2))))/(2*(l1**2+l2**2)) !-sqrt if slope pos and tangent to upper side of circle, else +sqrt
+ bottom=(r**2-l1*a)/l2
+ a=a+(3000+r)
+ bottom=bottom+(nl)
+
+ !        | \
+ !        | 
+ !        :  ...  
+ !        | <vertDisplace
+ !        |          \
+ !    \\  |          /\
+ !     \\ |      1/    \
+ !      \\|phi1/        \
+ !       \\ / phi2       \
+ !        \\-------       \
+ !         \\              \
+
+ m = (nr-bottom)/(4000-a) !slope nozzle
+ m2 = -1.0/m
+ phi1 = abs(atan(m2))
+ phi2 = Pi/2.0-phi1
+ vertDisplace = 1.0/cos(phi2)
+
+
+ insideflag = 0
+ if (((y_um.ge.((-1/m)*(x_um-a)+bottom)).and. &
+     (x_um.le.4000).and. &
+     (y_um.le.(m*(x_um-a)+bottom))).or. &
+    ((x_um.ge.3000).and. &
+     (x_um.le.4000).and. &
+     (y_um.le.nl))) then
+  Phi = MIN(x_um-3000, 4000-x_um) !inside,column vert
+  insideflag = 1
+ endif
+ if (((y_um.ge.((-1/m)*(x_um-a)+bottom)).and. &
+      (x_um.le.4000).and.  &
+      (y_um.le.(m*(x_um-a)+bottom))) .or. &
+     ((x_um.ge.3000).and. &
+      (x_um.le.4000).and. &
+      (y_um.le.nl))) then
+  Phi = MIN(Phi, ((m*(x_um-a)+bottom)-y_um)/vertDisplace) !inside,column horiz
+  insideflag = 1
+ endif
+ if ((x_um.ge.3000).and. &
+     (x_um.le.3000+r).and. &
+     (y_um.ge.nl).and. &
+     (y_um.le.nl+r).and. &
+     (y_um.le.((-1/m)*(x_um-a)+bottom))) then
+  Phi = r-sqrt((x_um-(3000+r))**2+(y_um-nl)**2) !inside, circle
+  insideflag = 1
+ endif
+ if ((y_um.le.0).and. &
+     (x_um.ge.3000).and. &
+     (x_um.le.4000)) then
+  round_l = sqrt((x_um-3000)**2+(y_um-0)**2) !inside bottom left corner
+  round_r = sqrt((x_um-4000)**2+(y_um-0)**2) !inside bottom right corner
+  Phi = MIN(round_l,round_r)
+ endif
+ if (y_um.le.0) then
+  Phi = MAX(Phi,0-y_um) !inside,bottom
+  insideflag = 1
+ endif
+
+ if (insideflag.eq.0) then
+  !outside
+  !left region,vert
+  if ((y_um.gt.0).and. &
+      (x_um.lt.3000).and. &
+      (y_um.lt.nl)) then
+   Phi = x_um-3000
+  endif
+  !right region,vert
+  if ((y_um.gt.0).and. &
+      (x_um.gt.4000).and. &
+      (y_um.lt.nr)) then
+   Phi = 4000-x_um
+  endif
+  !nozzle corners
+  round_l=0
+  round_r=0
+  if ((x_um.le.4000).and. &
+      (y_um.gt.nl).and. &
+      (y_um.le.((-1/m)*(x_um-4000)+nr))) then
+   round_l = r-sqrt((x_um-(3000+r))**2+(y_um-nl)**2)
+  endif
+  if ((y_um.gt.((-1/m)*(x_um-4000)+nr)).and. &
+      (y_um.gt.nr)) then 
+   round_r = 0-sqrt((x_um-4000)**2+(y_um-nr)**2)
+  endif
+  Phi = MIN(Phi,round_l,round_r)  
+  !nozzle
+  if ((y_um.gt.(m*(x_um-a)+bottom)).and. &
+      (x_um.le.4000).and. &
+      (y_um.gt.((-1/m)*(x_um-a)+bottom)).and. &
+      (y_um.le.((-1/m)*(x_um-4000)+nr))) then
+   Phi = MAX(Phi, ((m*(x_um-a)+bottom)-y_um)/vertDisplace)
+  endif
+  !left region,horiz
+  if ((y_um.gt.0).and.(x_um.lt.3000)) then
+   Phi = MAX(Phi,0-y_um)
+  endif
+  !right region,horiz
+  if ((y_um.gt.0).and.(x_um.gt.4000)) then
+   Phi = MAX(Phi,0-y_um)
+  endif
+ endif
+
+ Phi=Phi*(10.0**(-4.0))
+
+end subroutine nozzle2d
+
+! ------------------------
+! END CODY ESTEBE
+! ----------------------
+
+
+        ! negative in the sphere
+      subroutine spheredist(x,y,z,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,dist
+
+      if (SDIM.eq.2) then
+       if (abs(y-z).gt.1.0E-8) then
+        print *,"expecting y=z"
+        stop
+       endif
+       dist=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob
+      else if (SDIM.eq.3) then
+       dist=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      return
+      end subroutine spheredist
+
+        ! dist>0 in the sphere
+      subroutine stainless_steel_dist_rate( &
+       x,y,z,time,dist,rate)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time,dist,rate
+      REAL_T IMPACT_DIST,IMPACT_RATE,IMPACT_TIME
+      REAL_T T_DELAY,TPART1,UPART1,UPART2,ycen
+
+
+      IMPACT_DIST=yblob-radblob
+      if (IMPACT_DIST.le.zero) then
+       print *,"IMPACT_DIST invalid"
+       stop
+      endif
+      IMPACT_RATE=230.0D0
+      IMPACT_TIME=IMPACT_DIST/IMPACT_RATE
+      if (IMPACT_TIME.le.zero) then
+       print *,"IMPACT_TIME invalid"
+       stop
+      endif
+      T_DELAY=3.76688776419980306D-004
+      TPART1=4.10014276627081750D-004
+      UPART1=179.92175975809258D0
+      UPART2=34.086095584802656D0
+      if (time.le.IMPACT_TIME) then
+       ycen=yblob-time*IMPACT_RATE
+       rate=-IMPACT_RATE
+      else if ((time.ge.IMPACT_TIME).and. &
+               (time.le.IMPACT_TIME+T_DELAY)) then
+       ycen=radblob
+       rate=zero
+      else if ((time.ge.IMPACT_TIME+T_DELAY).and. &
+               (time.le.IMPACT_TIME+T_DELAY+TPART1)) then
+       ycen=radblob+(time-IMPACT_TIME-T_DELAY)*UPART1
+       rate=UPART1
+      else if (time.ge.IMPACT_TIME+T_DELAY+TPART1) then
+       ycen=radblob+TPART1*UPART1+ &
+         (time-(IMPACT_TIME+T_DELAY+TPART1))*UPART2
+       rate=UPART2
+      endif
+      if (ycen.lt.radblob) then
+       print *,"ycen invalid"
+       print *,"time=",time
+       print *,"IMPACT_TIME=",IMPACT_TIME
+       print *,"yblob=",yblob
+       print *,"IMPACT_RATE=",IMPACT_RATE
+       print *,"T_DELAY=",T_DELAY
+       print *,"UPART1=",UPART1
+       print *,"UPART2=",UPART2
+       print *,"TPART1=",TPART1
+       stop
+      endif
+
+      dist=radblob-sqrt((x-xblob)**2+(y-ycen)**2)
+
+      return
+      end subroutine stainless_steel_dist_rate
+
+! positive in the solid
+      subroutine materialdistsolid(x,y,z,dist,time,im)
+      use global_utility_module
+      use USERDEF_module
+      use CAV2Dstep_module
+      use CAV3D_module
+      use CONE3D_module
+      use WAVY_Channel_module
+
+      IMPLICIT NONE
+
+      REAL_T x,y,z,dist,time,tadv,xprime,yprime,zprime
+      REAL_T distz,disty,steel_rate
+      INTEGER_T im
+      REAL_T xvec(SDIM)
+      REAL_T dist_array(num_materials)
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid10"
+       stop
+      endif
+
+      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+       ! do nothing
+      else if (time.ge.1.0E+20) then
+       print *,"WARNING time.ge.1.0E+20 in materialdistsolid"
+      else if (time.lt.zero) then
+       print *,"time invalid in materialdistsolid"
+       stop
+      else
+       print *,"time bust in materialdistsolid"
+       stop
+      endif
+
+      if (is_rigid(num_materials,im).ne.1) then
+       print *,"is_rigid invalid"
+       stop
+      endif
+
+      if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
+       print *,"adv_dir invalid materialdistsolid (1)"
+       stop
+      endif
+
+      xprime=x
+      yprime=y
+      zprime=z
+      xvec(1)=x
+      xvec(2)=y
+      if (SDIM.eq.3) then
+       xvec(SDIM)=z
+      endif
+
+      if (FSI_flag(im).eq.1) then  ! no external FSI
+
+       if (probtype.eq.411) then ! user defined cavitation problem
+        call CAV3D_LS(xvec,time,dist_array)
+        dist=dist_array(im)
+
+       else if (probtype.eq.412) then ! cone3D
+        call CAV2Dstep_LS(xvec,time,dist_array)
+        dist=dist_array(im)
+
+       else if (probtype.eq.222) then ! cone3D
+        call CONE3D_LS(xvec,time,dist_array)
+        dist=dist_array(im)
+
+       else if (probtype.eq.915) then ! wavy channel
+        call WAVY_INIT_LS(xvec,time,dist_array)
+        dist=dist_array(im)
+
+       else if (probtype.eq.311) then ! user defined
+        call USERDEF_LS(xvec,time,dist_array)
+        dist=dist_array(im)
+
+        ! cavitation (in materialdistsolid)
+       else if ((probtype.eq.46).and.(axis_dir.eq.10)) then
+          ! dist>0 in the steel sphere
+        call stainless_steel_dist_rate(xprime,yprime,zprime,time, &
+         dist,steel_rate)
+
+       else if ((probtype.eq.46).and.(axis_dir.eq.20)) then
+
+          ! dist>0 in the substrate (solid) region.
+        call nozzle2d(xprime,yprime,dist)  
+
+        ! materialdistsolid: flapping wing, FSI_flag=0
+       else if (probtype.eq.701) then
+  
+         ! dist>0 in the airfoil
+        call naca_dist(x,y,z,time,dist)
+
+        ! materialdistsolid: cases that use soliddist.
+       else  
+
+        if (probtype.eq.32) then
+
+         tadv=time
+
+         if (adv_dir.eq.1) then
+          if (advbot.ne.zero) then
+           xprime=xprime-advbot*tadv
+          else if ((xblob3.ne.zero).and.(xblob4.ne.zero)) then
+           xprime=xprime-xblob3*(one-cos(two*Pi*tadv/xblob4))
+          endif
+         else if (adv_dir.eq.2) then
+          if (advbot.ne.zero) then
+           yprime=yprime-advbot*tadv
+          else if ((xblob3.ne.zero).and.(xblob4.ne.zero)) then
+           yprime=yprime-xblob3*(one-cos(two*Pi*tadv/xblob4))
+          endif
+         else if ((adv_dir.eq.SDIM).and.(SDIM.eq.3)) then
+          if (advbot.ne.zero) then
+           zprime=zprime-advbot*tadv
+          else if ((xblob3.ne.zero).and.(xblob4.ne.zero)) then
+           zprime=zprime-xblob3*(one-cos(two*Pi*tadv/xblob4))
+          endif
+         else
+          print *,"adv_dir invalid probtype=32"
+          stop
+         endif
+         ! sphere impact free surface - materialdistsolid
+        else if ((probtype.eq.531).and.(SDIM.eq.2)) then 
+         if (axis_dir.eq.0) then
+          tadv=time
+          yprime=yprime-tadv*advbot
+         else if ((axis_dir.eq.1).or.(axis_dir.eq.2).or. &
+                  (axis_dir.eq.3)) then
+          ! do nothing
+         else 
+          print *,"axis_dir invalid probtype=531"
+          stop
+         endif
+         ! FSI_flag=0
+        elseif (probtype.eq.bubbleInPackedColumn) then ! in materialdistsolid
+         continue
+        endif
+
+        ! positive in fluid (now in materialdistsolid)
+        call soliddist(xprime,yprime,zprime,dist,im)  
+        ! now make dist>0 in the solid.
+        dist=-dist
+       endif ! cases in which soliddist is called.
+
+      else if ((FSI_flag(im).eq.2).or. &
+               (FSI_flag(im).eq.4)) then  
+
+! dist>0 in the solid
+! in future: FSI_MF multifab copied to fortran.
+! closest value(s) on same processor are used.
+
+       dist=-99999.0
+
+      else
+       print *,"FSI_flag invalid"
+       stop
+      endif
+
+! microfluidics problem (in materialdistsolid)
+! dist is positive in the solid
+      if ((probtype.eq.5700).and.(SDIM.eq.3)) then
+
+       if ((axis_dir.eq.0).or.(axis_dir.eq.1).or. &
+           (axis_dir.eq.3)) then
+
+        if (zprime.gt.half*(probloz+probhiz)) then
+         distz=zprime-probhiz
+        else
+         distz=probloz-zprime
+        endif
+        if (distz.gt.dist) then
+         dist=distz
+        endif 
+         ! comsol problem
+        if (axis_dir.eq.1) then
+         if (yprime.lt.probloy) then
+          disty=probloy-yprime
+          if (disty.gt.dist) then
+           dist=disty
+          endif
+         endif
+        endif
+       else if (axis_dir.eq.4) then
+        ! do nothing
+       else if (axis_dir.eq.5) then
+        ! do nothing
+       else
+        print *,"axis_dir invalid for 5700 probtype"
+        stop
+       endif
+
+      endif
+
+      return
+      end subroutine materialdistsolid
+
+
+      subroutine naca_velocity(x,y,z,time,vel)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time
+      REAL_T vel(SDIM)
+      INTEGER_T dir
+      REAL_T amp
+
+      if (probtype.eq.701) then
+       amp=yblob
+       do dir=1,SDIM
+        vel(dir)=zero
+       enddo
+       vel(2)=-amp*two*Pi*sin(two*Pi*time)
+      else
+       print *,"probtype invalid"
+       stop
+      endif
+
+      return
+      end subroutine naca_velocity
+
+       ! dist>0 in the airfoil
+      subroutine naca_dist(x,y,z,time,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time,dist
+      REAL_T xprime,yprime,thick,c,H,amp,offset
+
+      if (probtype.eq.701) then
+       amp=yblob
+       offset=amp*(cos(two*Pi*time)-one)
+       yprime=y-offset
+       if (x.le.zero) then
+        dist=-sqrt(x*x+yprime**2) 
+       else if (x.ge.one) then
+        dist=-sqrt((x-one)**2+yprime**2)
+       else
+        thick=12.0/100.0  ! naca0012
+        c=one
+        xprime=x/c
+        H=5.0*thick*c*(0.2969*sqrt(xprime)-0.1260*xprime- &
+         0.3516*(xprime**2)+0.2843*(xprime**3)-0.1015*(xprime**4))
+        if (yprime.ge.zero) then
+         dist=H-yprime
+        else
+         dist=H+yprime
+        endif
+       endif
+      else
+       print *,"probtype invalid"
+       stop
+      endif
+
+      return
+      end subroutine naca_dist
+
+       ! dist>0 in the crystal
+      subroutine crystal_distance(x,y,z,dist,dx,bfact,im_project)
+      IMPLICIT NONE
+   
+      INTEGER_T bfact
+      INTEGER_T nPoly
+      parameter(nPoly=4)
+      REAL_T xp(nPoly),yp(nPoly)
+
+      REAL_T dx(SDIM)
+      REAL_T x,y,z,dist
+      REAL_T tmp,dist0,dist12,x1,x2,y1,y2,xproj,yproj
+      INTEGER_T i,j,isSolid,im_project,nmat
+      REAL_T xcen1,ycen1,zcen1
+      REAL_T xcen2,ycen2,zcen2
+
+      print *,"crystal_distance needs to be updated"
+      stop
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid"
+       stop
+      endif
+      nmat=num_materials
+      if ((im_project.lt.1).or.(im_project.gt.nmat)) then
+       print *,"im_project invalid"
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.1.0E-8) then
+        print *,"expecting z=y if 2d"
+        stop
+       endif
+      endif
+
+       ! in: crystal_distance
+      if ((probtype.eq.46).and.(SDIM.eq.2)) then 
+       if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+        print *,"no rigid body expected"
+        stop
+       else if (axis_dir.eq.10) then
+        if (im_project.eq.nmat) then
+         call spheredist(x,y,z,dist) ! dist<0 in the sphere
+         dist=-dist
+        else
+         print *,"expecting im_project=3"
+         stop
+        endif
+       else
+        print *,"axis_dir invalid"
+        stop
+       endif
+       ! crystal_distance
+      else if ((probtype.eq.36).and.(axis_dir.eq.0)) then
+       if (im_project.eq.1) then 
+        print *,"not expecting im_project=1"
+        stop
+       else if (im_project.eq.2) then
+        call spheredist(x,y,z,dist) ! dist<0 in the sphere
+        dist=-dist
+       else
+        print *,"im_project invalid"
+        stop
+       endif
+
+       ! radblob2=distance between 2 ends=2.5mm
+       ! radblob=radius of barbell = 250 microns=250E-6m=250E-4cm
+       ! 250E-3 mm=.25mm
+       ! radblob3=radius of connecting cylinder=.23mm
+       ! radblob4=frequency=2.8 hertz = 2.8 cycles/s
+       ! =2.8 * 180 degrees/s = 2.8 pi radians/s 
+       ! T=1/2.8 seconds
+       ! cycle is 45 degrees up, 45 down, 45 down 45 up
+      else if ((probtype.eq.531).and.(axis_dir.eq.3).and.(SDIM.eq.2)) then
+       xcen1=xblob-half*radblob2
+       xcen2=xcen1+radblob2
+       ycen1=zero
+       ycen2=zero
+       zcen1=yblob
+       zcen2=yblob
+#if (BL_SPACEDIM==2)
+       call barbelldist(x,ycen1,y,xcen1,ycen1,zcen1, &
+        xcen2,ycen2,zcen2,radblob,radblob,radblob3,dist)
+       dist=-dist
+#endif
+      else if ((probtype.eq.531).and.(axis_dir.eq.2).and.(SDIM.eq.2)) then
+       xp(1)=xblob-radblob*0.5
+       yp(1)=yblob-radblob*0.5
+       xp(2)=xblob-radblob*0.5
+       yp(2)=yblob+radblob*0.5
+       xp(3)=xblob+radblob*0.5
+       yp(3)=yblob+radblob*0.5
+       xp(4)=xblob+radblob*0.5
+       yp(4)=yblob-radblob*0.5
+       dist=1.0e9     ! hold a position
+       do i=1,nPoly       ! find the distance to the polygon
+        x1=xp(i)
+        y1=yp(i)
+        if (i.eq.nPoly) then
+           x2=xp(1)
+           y2=yp(1)
+        else
+           x2=xp(i+1)
+           y2=yp(i+1)
+        endif
+        dist12=(x1-x2)*(x1-x2)+(y1-y2)*(y1-y2)
+        tmp=((x-x1)*(x2-x1)+(y-y1)*(y2-y1))/dist12
+        if (tmp.lt.0.0) then
+         dist0=sqrt((x-x1)*(x-x1)+(y-y1)*(y-y1))
+        elseif (tmp.gt.1.0) then
+         dist0=sqrt((x-x2)*(x-x2)+(y-y2)*(y-y2))
+        else
+         xproj=x1+tmp*(x2-x1)
+         yproj=y1+tmp*(y2-y1)
+         dist0=sqrt((x-xproj)*(x-xproj)+ &
+            (y-yproj)*(y-yproj))
+        endif
+        dist=min(dist,dist0)
+       enddo
+
+       isSolid= -1
+       do i=1,nPoly
+        if (i.eq.nPoly) then
+           j=1
+        else
+           j=i+1
+        endif
+        if (((yp(i).ge.y) .neqv. (yp(j).ge.y)).and. &
+         (x.le.(xp(j)-xp(i))*(y-yp(i))/(yp(j)-yp(i))+xp(i)))then
+           isSolid=-isSolid
+        endif
+       enddo
+ 
+       if (isSolid.eq.-1) then ! outside 
+        dist=-dist
+       endif
+      else if ((probtype.eq.531).and.(axis_dir.eq.1).and.(SDIM.eq.2)) then
+       dist=radblob-sqrt( (x-xblob)**2+(y-yblob)**2 )
+      else
+       print *,"invalid crystal_distance option"
+       stop
+      endif
+
+      return
+      end subroutine crystal_distance
+
+
+      subroutine crystal_centroid(rigid_centroid,im_project)
+      IMPLICIT NONE
+
+      INTEGER_T nPoly,im_project,nmat
+      parameter(nPoly=4)
+
+      REAL_T rigid_centroid(SDIM)
+      REAL_T xp(nPoly),yp(nPoly)
+      INTEGER_T i,dir
+
+      print *,"crystal_centroid needs to be updated"
+      stop
+
+      nmat=num_materials
+      if ((im_project.lt.1).or.(im_project.gt.nmat)) then
+       print *,"im_project invalid"
+       stop
+      endif
+
+       ! in: crystal centroid
+      if ((probtype.eq.46).and.(SDIM.eq.2)) then 
+       if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+        print *,"no rigid body expected"
+        stop
+       else if (axis_dir.eq.10) then
+        rigid_centroid(1)=xblob
+        rigid_centroid(2)=yblob
+        if (SDIM.eq.3) then
+         rigid_centroid(SDIM)=zblob
+        endif
+       else
+        print *,"axis_dir invalid"
+        stop
+       endif 
+       ! in: crystal centroid
+      else if ((probtype.eq.36).and.(axis_dir.eq.0)) then
+
+       rigid_centroid(1)=xblob
+       rigid_centroid(2)=yblob
+       if (SDIM.eq.3) then
+        rigid_centroid(SDIM)=zblob
+       endif
+
+      else if ((probtype.eq.531).and.(axis_dir.eq.3).and.(SDIM.eq.2)) then
+
+       rigid_centroid(1)=xblob
+       rigid_centroid(2)=yblob
+
+        ! falling crystal
+      else if ((probtype.eq.531).and.(axis_dir.eq.2).and.(SDIM.eq.2)) then 
+       xp(1)=xblob-radblob*0.5
+       yp(1)=yblob-radblob*0.5
+       xp(2)=xblob-radblob*0.5
+       yp(2)=yblob+radblob*0.5
+       xp(3)=xblob+radblob*0.5
+       yp(3)=yblob+radblob*0.5
+       xp(4)=xblob+radblob*0.5
+       yp(4)=yblob-radblob*0.5
+
+       do dir=1,SDIM
+        rigid_centroid(dir)=zero
+       enddo
+       do i=1,nPoly
+        dir=1
+        rigid_centroid(dir)=rigid_centroid(dir)+xp(i)
+        dir=2
+        rigid_centroid(dir)=rigid_centroid(dir)+yp(i)
+       enddo
+       do dir=1,SDIM
+        rigid_centroid(dir)=rigid_centroid(dir)/(nPoly+1.-1.0)
+       enddo
+ 
+      else if ((probtype.eq.531).and.(axis_dir.eq.1).and.(SDIM.eq.2)) then
+       dir=1
+       rigid_centroid(dir)=xblob
+       dir=2
+       rigid_centroid(dir)=yblob
+      else
+       print *,"invalid crystal_centroid option"
+       stop
+      endif
+
+      return
+      end subroutine crystal_centroid
+
+
+       ! ycen1=zcen1=ycen2=zcen2=1/2
+       ! phi<0 in the object
+      subroutine barbelldist(x,y,z, &
+         xcen1,ycen1,zcen1, &
+         xcen2,ycen2,zcen2, &
+         r1,r2,r3,phi)
+      IMPLICIT NONE
+
+      REAL_T x,y,z
+      REAL_T xcen1,ycen1,zcen1
+      REAL_T xcen2,ycen2,zcen2
+      REAL_T r,r1,r2,r3,phi
+      REAL_T phi1,phi2,phi3
+
+      phi1=sqrt( (x-xcen1)**2+(y-ycen1)**2+(z-zcen1)**2 ) - r1
+      phi2=sqrt( (x-xcen2)**2+(y-ycen2)**2+(z-zcen2)**2 ) - r2
+      phi3=sqrt( (y-ycen1)**2+(z-zcen1)**2 ) - r3
+
+      if (x.lt.xcen1) then
+       phi=phi1
+      else if (x.ge.xcen2) then 
+       phi=phi2
+      else if ((xcen1.le.x).and.(x.le.half*(xcen1+xcen2))) then
+       r=sqrt((y-ycen1)**2+(z-zcen1)**2)
+       if ((r.gt.r3).and.(x.le.xcen1+r1)) then
+        phi=phi1
+       else if (phi1.le.0) then
+        phi = -sqrt(phi1**2+phi3**2)
+       else 
+        phi = phi3
+       endif
+      else if ((half*(xcen1+xcen2).le.x).and.(x.le.xcen2)) then
+       r=sqrt((y-ycen2)**2+(z-zcen2)**2)
+       if ((r.gt.r3).and.(x.ge.xcen2-r2)) then
+        phi=phi2
+       else if (phi2.lt.0) then
+        phi = -sqrt(phi2**2+phi3**2)
+       else 
+        phi = phi3
+       endif
+      endif
+
+      return
+      end subroutine barbelldist
+
+
+        ! ice behaves like rigid solid where dist>0
+      subroutine ice_substrate_distance(x,y,z,dist)
+      IMPLICIT NONE
+      
+      REAL_T x,y,z,dist
+      INTEGER_T nmat
+      REAL_T aspect,yprime,zprime,aspect2
+
+      if (SDIM.eq.2) then
+       if (abs(y-z).gt.VOFTOL) then
+        print *,"y=z in 2d expected"
+        stop
+       endif
+      endif
+
+      nmat=num_materials
+
+      aspect=tan(radblob2)
+      if (SDIM.eq.2) then
+        yprime=aspect*(x-xblob2)+yblob2
+        dist=y-yprime  ! vertical distance
+      else if (SDIM.eq.3) then
+        aspect2=tan(radblob3)
+        zprime=aspect*(x-xblob2)+aspect2*(y-yblob2)+zblob2
+        dist=z-zprime  ! vertical distance
+      else
+        print *,"dimension bust"
+        stop
+      endif
+      dist=-dist
+
+      end subroutine ice_substrate_distance
+
+      subroutine jetting_plate_dist(x,y,z,dist)
+      IMPLICIT NONE
+      REAL_T x,y,z,dist,aspect,offset,distplate,hugedist
+
+      hugedist=99999.0
+
+       ! underwater explosion, growth, and collapse of explosion bubble
+       ! near a flat plate.
+      if (probtype.eq.42) then
+       aspect=xblob2
+!      offset=2.54d0
+       offset=radblob2
+       distplate=yblob2
+
+       if (radblob2.eq.zero) then
+        dist=hugedist
+       else if (radblob2.gt.zero) then
+          ! negative in the square
+        call squaredist(x,y,-aspect,aspect,yblob+distplate, &
+         yblob+distplate+offset,dist)
+       else
+        print *,"radblob2 invalid for bubble jetting problem"
+        stop
+       endif
+      else
+       print *,"probtype invalid in jetting_plate_dist"
+       stop
+      endif
+
+      return
+      end subroutine jetting_plate_dist
+
+       ! probtype.eq.299
+      subroutine INIT_LS_SOLID_MELT(x,y,z,time,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time,dist,dist2
+      INTEGER_T nSphere
+      REAL_T xSphere
+      REAL_T ySphere
+      REAL_T delta_sphere,hugedist
+      INTEGER_T i,nmat
+ 
+      hugedist=1.0E+10
+ 
+      nmat=num_materials
+      if (nmat.ne.3) then
+       print *,"nmat invalid in INIT_LS_SOLID_MELT"
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"z=y required in INIT_LS_SOLID_MELT"
+        print *,"x,y,z = ",x,y,z
+        print *,"probtype,axis_dir ",probtype,axis_dir
+        stop
+       endif
+      endif
+
+      nSphere=3
+
+      if (axis_dir.eq.0) then
+       delta_sphere=two
+      else if (axis_dir.eq.1) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.2) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.3) then
+       delta_sphere=two
+      else
+       print *,"axis_dir invalid init ls solid melt"
+       stop
+      endif
+
+      dist=-hugedist
+
+      do i=1,nSphere
+       xSphere=xblob+(i-one)*delta_sphere
+       ySphere=yblob
+       dist2=radblob-sqrt((x-xSphere)**2+(y-ySphere)**2) 
+       dist=max(dist,dist2)
+      enddo
+
+      return
+      end subroutine INIT_LS_SOLID_MELT
+
+       ! probtype.eq.299
+      subroutine INIT_LS_LIQUID_MELT(x,y,z,time,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time,dist,dist2,dist3,dist4
+      INTEGER_T nSphere
+      REAL_T xSphere
+      REAL_T ySphere
+      REAL_T delta_sphere,hugedist
+      INTEGER_T i,nmat
+ 
+      hugedist=1.0E+10
+ 
+      nmat=num_materials
+      if (nmat.ne.3) then
+       print *,"nmat invalid in INIT_LS_LIQUID_MELT"
+       stop
+      endif
+      if (radblob2.le.radblob) then
+       print *,"radblob2 invalid"
+       stop
+      endif
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"z=y required in INIT_LS_LIQUID_MELT"
+        print *,"x,y,z = ",x,y,z
+        print *,"probtype,axis_dir ",probtype,axis_dir
+        stop
+       endif
+      endif
+
+      nSphere=3
+
+      if (axis_dir.eq.0) then
+       delta_sphere=two
+      else if (axis_dir.eq.1) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.2) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.3) then
+       delta_sphere=two
+      else
+       print *,"axis_dir invalid init ls liquid melt"
+       stop
+      endif
+
+      dist=-hugedist
+
+      do i=1,nSphere
+       xSphere=xblob+(i-one)*delta_sphere
+       ySphere=yblob
+       dist2=radblob-sqrt((x-xSphere)**2+(y-ySphere)**2)  ! metal
+       dist3=radblob2-sqrt((x-xSphere)**2+(y-ySphere)**2) ! air
+       if (dist2.ge.zero) then ! in the metal
+        dist4=-dist2
+       else if (dist3.le.zero) then ! in the air
+        dist4=dist3
+       else if ((dist2.le.zero).and.(dist3.ge.zero)) then ! in the melt>0
+        if (abs(dist2).lt.abs(dist3)) then
+         dist4=abs(dist2)
+        else
+         dist4=abs(dist3)
+        endif
+       else
+        print *,"dist bust"
+        stop
+       endif
+       dist=max(dist,dist4) !find the shortest distance to the melt
+      enddo ! i=1..nSphere
+
+      return
+      end subroutine INIT_LS_LIQUID_MELT
+
+
+       ! probtype.eq.299
+      subroutine INIT_LS_GAS_MELT(x,y,z,time,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time,dist,dist2
+      INTEGER_T nSphere
+      REAL_T xSphere
+      REAL_T ySphere
+      REAL_T delta_sphere,hugedist
+      INTEGER_T i,nmat
+ 
+      hugedist=1.0E+10
+ 
+      nmat=num_materials
+      if (nmat.ne.3) then
+       print *,"nmat invalid in INIT_LS_GAS_MELT"
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"z=y required in INIT_LS_GAS_MELT"
+        print *,"x,y,z = ",x,y,z
+        print *,"probtype,axis_dir ",probtype,axis_dir
+        stop
+       endif
+      endif
+
+      nSphere=3
+
+      if (axis_dir.eq.0) then
+       delta_sphere=two
+      else if (axis_dir.eq.1) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.2) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.3) then
+       delta_sphere=two
+      else
+       print *,"axis_dir invalid init ls gas melt"
+       stop
+      endif
+
+      dist=-hugedist
+      do i=1,nSphere
+       xSphere=xblob+(i-one)*delta_sphere
+       ySphere=yblob
+       dist2=radblob2-sqrt((x-xSphere)**2+(y-ySphere)**2) 
+       dist=max(dist,dist2)
+      enddo
+      dist=-dist
+
+      return
+      end subroutine INIT_LS_GAS_MELT
+
+
+       ! probtype==301
+      subroutine INIT_LS_SOLID_AM(x,y,z,time,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time,dist,dist2
+      INTEGER_T nSphere
+      REAL_T xSphere
+      REAL_T ySphere
+      REAL_T delta_sphere,hugedist
+      INTEGER_T i,nmat
+ 
+      hugedist=1.0E+10
+ 
+      nmat=num_materials
+      if (nmat.ne.3) then
+       print *,"nmat invalid in INIT_LS_SOLID_AM"
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"z=y required in INIT_LS_SOLID_AM"
+        print *,"x,y,z = ",x,y,z
+        print *,"probtype,axis_dir ",probtype,axis_dir
+        stop
+       endif
+      endif
+
+      nSphere=3
+
+      if (axis_dir.eq.0) then
+       delta_sphere=two
+      else if (axis_dir.eq.1) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.2) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.3) then
+       delta_sphere=two
+      else
+       print *,"axis_dir invalid init ls solid AM"
+       stop
+      endif
+
+      dist=-hugedist
+
+      do i=1,nSphere
+       xSphere=xblob+(i-one)*delta_sphere
+       ySphere=yblob
+       dist2=radblob-sqrt((x-xSphere)**2+(y-ySphere)**2) 
+       dist=max(dist,dist2)
+      enddo
+
+      return
+      end subroutine INIT_LS_SOLID_AM
+
+       ! probtype.eq.301
+      subroutine INIT_LS_LIQUID_AM(x,y,z,time,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time,dist
+      INTEGER_T nSphere
+      REAL_T delta_sphere,hugedist
+      INTEGER_T nmat
+ 
+      hugedist=1.0E+10
+ 
+      nmat=num_materials
+      if (nmat.ne.3) then
+       print *,"nmat invalid in INIT_LS_LIQUID_AM"
+       stop
+      endif
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"z=y required in INIT_LS_LIQUID_AM"
+        print *,"x,y,z = ",x,y,z
+        print *,"probtype,axis_dir ",probtype,axis_dir
+        stop
+       endif
+      endif
+
+      nSphere=3
+
+      if (axis_dir.eq.0) then
+       delta_sphere=two
+      else if (axis_dir.eq.1) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.2) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.3) then
+       delta_sphere=two
+      else
+       print *,"axis_dir invalid init ls liquid melt"
+       stop
+      endif
+
+      dist=-hugedist
+
+      return
+      end subroutine INIT_LS_LIQUID_AM
+
+
+       ! probtype.eq.301
+      subroutine INIT_LS_GAS_AM(x,y,z,time,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,z,time,dist,dist2
+      INTEGER_T nSphere
+      REAL_T xSphere
+      REAL_T ySphere
+      REAL_T delta_sphere,hugedist
+      INTEGER_T i,nmat
+ 
+      hugedist=1.0E+10
+ 
+      nmat=num_materials
+      if (nmat.ne.3) then
+       print *,"nmat invalid in INIT_LS_GAS_AM"
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"z=y required in INIT_LS_GAS_AM"
+        print *,"x,y,z = ",x,y,z
+        print *,"probtype,axis_dir ",probtype,axis_dir
+        stop
+       endif
+      endif
+
+      nSphere=3
+
+      if (axis_dir.eq.0) then
+       delta_sphere=two
+      else if (axis_dir.eq.1) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.2) then
+       delta_sphere=32.0e-6
+      else if (axis_dir.eq.3) then
+       delta_sphere=two
+      else
+       print *,"axis_dir invalid init ls gas AM"
+       stop
+      endif
+
+      dist=-hugedist
+      do i=1,nSphere
+       xSphere=xblob+(i-one)*delta_sphere
+       ySphere=yblob
+       dist2=radblob-sqrt((x-xSphere)**2+(y-ySphere)**2) 
+       dist=max(dist,dist2)
+      enddo
+      dist=-dist
+
+      return
+      end subroutine INIT_LS_GAS_AM
+
+
+
+
+ 
+        ! dist<0 in the solid
+        ! dist>0 in the fluid 
+      subroutine soliddist(x,y,z,dist,im)
+      use bubbleControl_module
+
+      IMPLICIT NONE
+
+      INTEGER_T im
+      REAL_T xcavity(SDIM)
+      REAL_T x,y,z,dist,dist1,temprad
+      REAL_T rr,xx,yy,zz,aspect,offset
+      REAL_T xlarge
+      INTEGER_T igeom
+      REAL_T costheta,sintheta
+      REAL_T xprime,yprime
+      REAL_T zprime
+      REAL_T radcross,dist2,radpt
+      REAL_T hugedist,dist3,dist4
+      REAL_T radx,radshrink
+      REAL_T pipexlo,pipexhi
+      REAL_T zmin,zmax
+      INTEGER_T i,j,iSphere,nmat
+
+      nmat=num_materials
+      if (nmat.lt.1) then
+       print *,"nmat invalid in soliddist"
+       stop
+      endif
+
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid11"
+       stop
+      endif
+
+      if (FSI_flag(im).ne.1) then
+       print *,"FSI_flag(im) invalid"
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"z=y required in soliddist"
+        print *,"x,y,z = ",x,y,z
+        print *,"probtype,axis_dir ",probtype,axis_dir
+        stop
+       endif
+      endif
+
+      igeom=1
+
+      hugedist=99999.0
+
+      dist=hugedist
+
+     
+      if (probtype.eq.540) then  ! Rieber simulation no solid
+       dist=99999.0
+! airblast without nozzle: set soliddist
+      else if (probtype.eq.529) then 
+       dist=99999.0
+      else if (((probtype.eq.531).or. &   ! soliddist
+                (probtype.eq.390).or. &
+                (probtype.eq.536).or. &
+                (probtype.eq.537).or. &
+                (probtype.eq.538).or. &
+                (probtype.eq.541)).and. &
+               (SDIM.eq.3)) then
+       dist=99999.0
+
+      else if (probtype.eq.102) then
+! yblob3 = gas nozzle len
+       if (yblob3.le.zero) then
+        print *,"yblob3 invalid"
+        stop
+       endif
+       if (radblob5.le.radblob2) then
+        print *,"radblob5 invalid"
+        stop
+       endif
+       if (radblob.gt.radblob2) then
+        print *,"radblob2 invalid"
+        stop
+       endif
+       if (y.gt.yblob3) then  ! expansion region
+        radshrink=radblob7**2-radblob5**2
+        if (radshrink.le.zero) then
+         print *,"radshrink invalid"
+         stop
+        endif
+        radshrink=sqrt(radshrink)
+        radx=radblob4+(y-yblob3)*(radshrink-radblob4)/(probhiy-yblob3)
+        dist=abs(x-(radx+half*radblob6))-half*radblob6
+       else
+        radx=radblob3+y*(radblob4-radblob3)/yblob3  ! radblob3=entry gas rad
+        dist=abs(x-(radx+half*radblob6))-half*radblob6
+         ! yblob=primary liquid nozzle len  yblob2=secondary len
+        if (y.gt.yblob+yblob2) then 
+          ! radblob2=secondary radius
+         if (x.lt.radblob2) then
+          dist1=sqrt( (x-radblob2)**2+(y-yblob-yblob2)**2 )
+          ! radblob5=outer liquid nozzle radius
+         else if (x.gt.radblob5) then
+          dist1=sqrt( (x-radblob5)**2+(y-yblob-yblob2)**2 )
+         else
+          dist1=abs(y-yblob-yblob2)
+         endif
+        else if (y.gt.yblob) then
+         dist1=abs(x-half*(radblob5+radblob2))-half*(radblob5-radblob2)
+        else
+         dist1=abs(x-half*(radblob5+radblob))-half*(radblob5-radblob)
+        endif
+        if (abs(dist1).lt.abs(dist)) then
+         dist=dist1
+        endif  
+       endif
+      else if (probtype.eq.42) then ! bubble jetting (soliddist)
+
+       call jetting_plate_dist(x,y,z,dist)
+
+       ! soliddist
+      else if (probtype.eq.bubbleInPackedColumn) then
+
+       !open(11,file="sphere2d.dat",form="formatted")
+       !read(11,*) nSphere
+       nSphere=0
+       do i=1,nSphere
+          read(11,*) j, xSphere(i),ySphere(i),rSphere(i)
+       enddo
+       !close(11)
+
+       dist=hugedist
+       do iSphere=1,nSphere
+          dist2=sqrt((x-xSphere(iSphere))**2+(y-ySphere(iSphere))**2) &
+                     -rSphere(iSphere)
+          dist=min(dist,dist2)
+       enddo 
+       ! in soliddist
+      else if ((probtype.eq.46).and.(radblob2.gt.zero)) then
+       print *,"the airgun problem needs to be redefined"
+       stop
+      else if ((probtype.eq.63).and.(SDIM.eq.3)) then
+       call nozzlerad(z,radcross,zero)
+       radpt=sqrt(x**two+y**two)
+       if (z.le.(two*xblob10)) then
+        dist=radcross-radpt
+       else if (radpt.ge.(half*xblob10)) then
+        dist=z-two*xblob10
+       else if (radpt.le.(half*xblob10)) then
+        dist=sqrt((radcross-radpt)**two+(z-two*xblob10)**two)
+       endif
+
+      else if ((probtype.eq.63).and.(SDIM.eq.2)) then
+        call nozzlerad(z,radcross,zero)
+  
+        if (z.LE.2*xblob10) THEN
+         dist=radcross-x
+        elseif (x.LE.xblob10/2) THEN
+         dist=dsqrt((x-xblob10/2)**two+(z-2*xblob10)**two)
+        else 
+         dist=z-2*xblob10
+        endif
+           
+      else if (probtype.eq.64) then
+       call nozzlerad(z,radcross,radblob)
+  
+       if (z.LE.(two*xblob10-radblob)) then
+        dist=radcross-x
+       elseif (x.LE.(xblob10/two+radblob)) then
+        dist=dsqrt((x-(xblob10/two+radblob))**two+ &
+        (z-(two*xblob10-radblob))**two)-radblob
+       else 
+        dist=z-two*xblob10
+       endif
+
+      else if ((probtype.eq.43).and.(zblob.gt.zero)) then ! soliddist
+       call squaredist(x,y,-xblob,xblob,yblob/two,yblob/two+zblob,dist) 
+      else if ((probtype.eq.43).and.(radblob.gt.zero)) then
+       offset=yblob/two+xblob/two
+!      offset=1.1*yblob/two
+       call squaredist(x,y,-radblob,radblob,-offset,offset,dist)
+      else if (probtype.eq.48) then
+       xlarge=1.0e+10
+       call squaredist(x,y,xblob,xlarge,-yblob,yblob,dist)
+        ! nozzle for bubble formation
+      else if ((probtype.eq.25).and.(axis_dir.gt.0)) then ! soliddist
+       if (zblob.le.zero) then
+        print *,"zblob (nozzle ht) must be positive"
+        stop
+       endif
+       aspect=radblob+radblob2
+        ! dist<0 in solid
+       call squaredist(x,y,radblob,aspect,-1000.0*zblob,zblob,dist)
+      else if (probtype.eq.62) then
+       costheta=cos(xblob2)
+       sintheta=sin(xblob2)
+       xprime=costheta*(x-xblob)-sintheta*(y-yblob)
+       yprime=sintheta*(x-xblob)+costheta*(y-yblob)
+       call squaredist(xprime,yprime,radblob,radblob2, &
+         -half*zblob2,half*zblob2,dist) 
+       call squaredist(xprime,yprime,-radblob2,-radblob, &
+         -half*zblob2,half*zblob2,dist1) 
+       if (dist1.lt.dist) then
+        dist=dist1
+       endif
+      else if (probtype.eq.22) then
+       call jetgeom(x,y,z,dist)
+      else if (probtype.eq.35) then
+       if (SDIM.eq.3) then
+        rr=sqrt( (x-half*xblob)**2+(y-half*xblob)**2 )
+        zz=z
+       else
+        rr=abs(x)
+        zz=y
+       endif
+       aspect=Pi*30.0/180.0
+       offset=zz*tan(aspect)
+       dist=(radblob-offset)-rr
+      else if ((probtype.eq.44).and.(axis_dir.eq.2)) then
+        ! in 2d, y=z
+       call damdist(x,z,dist,igeom)
+      else if ((probtype.eq.30).or.(probtype.eq.32).or. &
+               (probtype.eq.33).or.(probtype.eq.34).or. &
+               (probtype.eq.21).or. &
+               (probtype.eq.bubbleInPackedColumn)) then
+       call selectgeom(x,y,z,dist)  ! in soliddist
+      else if (probtype.eq.50) then
+       print *,"this option obsolete"
+       stop
+      else if (probtype.eq.52) then
+       print *,"obsolete"
+       stop
+        ! flapping wing, soliddist
+      else if (probtype.eq.701) then 
+       print *,"soliddist should not be called when probtype=701"
+       stop
+
+       ! 2D or 3D
+      else if ((probtype.eq.538).or.(probtype.eq.541)) then
+       dist=99999.0
+      else if (probtype.eq.539) then  ! soliddist
+       dist=99999.0
+      else if (probtype.eq.53) then  ! dist>0 in fluid  soliddist
+       if (axis_dir.eq.0) then ! no nozzle
+        dist=9999.0
+       else if ((axis_dir.eq.1).and.(SDIM.eq.2)) then
+        dist1=sqrt( (x-xblob2)**2 + (y-yblob2)**2) -radblob2-radblob4
+        dist2=sqrt( (x-xblob2)**2 + (y-yblob2)**2) -radblob2
+        dist3=sqrt( (x-xblob2)**2 + (y-yblob2)**2) -radblob3
+        dist4=sqrt( (x-xblob2)**2 + (y-yblob2)**2) -radblob3+radblob4
+
+        if (x.ge.xblob2) then
+         if (y.ge.radblob2+radblob4) then
+          dist=sqrt( (x-xblob2)**2+(y-radblob2-radblob4)**2)
+         else if (y.ge.radblob2) then
+          dist=x-xblob2
+         else if (y.ge.radblob3) then
+          dist=sqrt( (x-xblob2)**2+(y-radblob3)**2)
+         else if (y.ge.radblob3-radblob4) then
+          dist=x-xblob2
+         else
+          dist=sqrt( (x-xblob2)**2+(y-radblob3+radblob4)**2)
+         endif
+        else if (dist1.ge.zero) then
+         dist=dist1
+        else if (dist2.ge.zero) then
+         if (abs(dist1).lt.abs(dist2)) then
+          dist=dist1
+         else
+          dist=-dist2
+         endif
+        else if (dist3.ge.zero) then
+         if (abs(dist2).lt.abs(dist3)) then
+          dist=-dist2
+         else
+          dist=dist3
+         endif
+        else if (dist4.ge.zero) then
+         if (abs(dist3).lt.abs(dist4)) then
+          dist=dist3
+         else
+          dist=-dist4
+         endif
+        else
+         dist=-dist4
+        endif
+
+         ! pressure bc, cylindrical nozzle
+         ! want dist>0 in fluid
+       else if ((axis_dir.eq.2).and.(SDIM.eq.2)) then 
+        zmin=-100.0*radblob
+        zmax=3.0*radblob
+
+! dist>0 outside square
+        call squaredist(x,y,xblob-radblob,xblob+radblob,zmin,zmax,dist)
+        call squaredist(x,y,xblob-two*radblob,xblob+two*radblob, &
+         zmin,zmax,dist1)
+        if (dist.le.zero) then
+         dist=-dist
+        else if (dist1.ge.zero) then
+         dist=dist1
+        else if (abs(dist).lt.abs(dist1)) then
+         dist=-abs(dist)
+        else
+         dist=-abs(dist1)
+        endif
+       else if ((axis_dir.eq.1).or. &
+                (axis_dir.eq.2)) then
+        zmin=-100.0*radblob
+        zmax=3.0*radblob
+
+! dist>0 outside cylinder
+        call cylinderdist(x,y,z,xblob,yblob,radblob,zmin,zmax,dist)
+        call cylinderdist(x,y,z,xblob,yblob,two*radblob,zmin,zmax,dist1)
+        if (dist.le.zero) then
+         dist=-dist
+        else if (dist1.ge.zero) then
+         dist=dist1
+        else if (abs(dist).lt.abs(dist1)) then
+         dist=-abs(dist)
+        else
+         dist=-abs(dist1)
+        endif
+       else if (axis_dir.eq.100) then  ! fan nozzle
+        dist=99999.0
+       else
+        print *,"axis_dir invalid probtype=53"
+        stop
+       endif
+         
+      else if (probtype.eq.56) then
+       print *,"obsolete"
+       stop
+      else if (probtype.eq.54) then
+       print *,"obsolete"
+       stop
+        ! ship wave no solid prescribed here
+      else if (probtype.eq.9) then  
+       dist=99999.0
+      else if ((probtype.eq.45).and.(axis_dir.eq.1)) then
+       print *,"obsolete"
+       stop
+      else if ((probtype.eq.39).and.(radblob2.gt.zero).and. &
+               (zblob2.gt.zero).and.(radblob2.lt.half*xblob)) then
+       xx=abs(x)
+       if (y.ge.zblob2) then
+        dist=sqrt(xx**2+(y-zblob2)**2)
+       else
+        yy=radblob2*(zblob2-y)/zblob2
+        dist=xx-yy
+       endif
+! natural convection in triangular enclosure (soliddist)
+      else if (probtype.eq.81) then
+       dist=y+yblob3-yblob*(one-x/xblob)
+! rotating annulus (cylindrical coordinates now) (soliddist)
+      else if (probtype.eq.82) then
+       dist=hugedist
+! sphere impact on flat surface (dist >0 in fluid)
+! soliddist - falling sphere
+      else if ((probtype.eq.531).and.(SDIM.eq.2)) then  
+       if (axis_dir.eq.0) then
+        dist=sqrt( (x-xblob)**2+(y-yblob)**2 ) -radblob
+       else if (axis_dir.eq.1) then ! it should never come to this
+        dist=99999.0
+       else if (axis_dir.eq.2) then ! it should never come to this
+        dist=99999.0
+       else if (axis_dir.eq.3) then ! it should never come to this
+        dist=99999.0
+       else
+        print *,"axis_dir invalid probtype=531"
+        stop
+       endif
+       ! dist<0 in the solid
+       ! dist>0 in the fluid 
+       ! in: soliddist, turbulent cylindrical pipe
+      else if ((probtype.eq.41).and.(axis_dir.eq.5)) then
+       if (SDIM.eq.2) then
+        dist=radblob-sqrt((y-yblob)**2)
+       else if (SDIM.eq.3) then
+        dist=radblob-sqrt((y-yblob)**2+(z-zblob)**2) 
+       else
+        print *,"dimension bust"
+        stop
+       endif 
+      else if ((probtype.eq.41).and. &
+               (axis_dir.eq.0).and.(SDIM.eq.3)) then
+! x is free stream direction
+       if (levelrz.eq.0) then 
+        dist=zblob2-sqrt(y**2+z**2)
+       else
+        print *,"levelrz invalid soliddist"
+        stop
+       endif
+
+! pipe problem  soliddist: dist>0 fluid
+      else if ((probtype.eq.41).and. &
+               (SDIM.eq.2)) then  
+
+         ! axis_dir=4 comparison with LSA
+       if (axis_dir.eq.4) then
+        dist=99999.0
+       else
+        pipexlo=problox
+        pipexhi=probhix
+        if ((axis_dir.eq.1).or.(axis_dir.eq.2)) then
+         pipexlo=zero
+         pipexhi=two*radblob3
+        endif
+ 
+        if (x.lt.pipexlo) then
+         dist=pipexlo-x
+        else if (x.gt.pipexhi) then
+         dist=x-pipexhi
+        else
+         dist=-min( x-pipexlo, pipexhi-x )
+        endif
+        dist=-dist
+       endif  ! axis_dir<> 4
+! soliddist: dist>0 in fluid 2d or 3d
+      else if (probtype.eq.710) then
+       xcavity(1)=x
+       xcavity(2)=y
+       xcavity(SDIM)=z
+       call cavity_distf_13(axis_dir,levelrz+1,xcavity,dist)
+
+! soliddist: dist>0 in fluid 2d or 3d
+      else if (probtype.eq.59) then  ! inputs.block_ice_melt
+
+       ! dist>0 in the substrate
+       call ice_substrate_distance(x,y,z,dist)
+       ! now make dist<0 in the substrate.
+       dist=-dist
+
+! soliddist: dist>0 in fluid 2d or 3d
+      else if (probtype.eq.55) then 
+
+       if ((axis_dir.eq.0).or. &
+           (axis_dir.eq.5).or. &  ! freezing
+           (axis_dir.eq.6).or. &  ! boiling (incomp)
+           (axis_dir.eq.7).or. &  ! boiling (comp)
+           (axis_dir.eq.1)) then
+
+        if ((radblob5.gt.zero).and. &
+            (axis_dir.eq.0)) then ! ellipse
+ 
+! Professor Yongsheng Lian was here: 
+         if (SDIM.eq.2) then
+          dist=sqrt((x-xblob2)*(x-xblob2)/(radblob3**2)+ &
+               (y-yblob2)*(y-yblob2)/(radblob4**2))-radblob5
+         else
+          dist=sqrt((x-xblob2)*(x-xblob2)/(radblob3**2)+ &
+               (y-yblob2)*(y-yblob2)/(radblob4**2)+ &
+               (z-zblob2)*(z-zblob2)/(radblob9**2))-radblob5
+         endif
+
+        else if ((axis_dir.eq.1).and.(nmat.eq.3)) then
+         ! do nothing: solid replaced by ice.
+
+         ! axis_dir=6: boiling sites
+         ! axis_dir=1: falling drop on substrate and then freezing.
+        else if ((radblob5.eq.zero).or. &
+                 (axis_dir.eq.5).or. &
+                 (axis_dir.eq.6).or. &
+                 ((axis_dir.eq.1).and. &
+                  (nmat.eq.4))) then
+
+           ! dist>0 in the substrate
+         call ice_substrate_distance(x,y,z,dist)
+           ! now make dist<0 in the substrate.
+         dist=-dist
+
+        endif
+
+       else 
+        print *,"axis_dir invalid"
+        stop
+       endif
+
+      else if ((probtype.eq.54).and.(SDIM.eq.3)) then
+       zmin=zblob
+       zmax=zblob+half*zblob
+       temprad=(one+half)*radblob
+       call cylinderdist(x,y,z,xblob,yblob,temprad,zmin,zmax,dist)
+      else if ((probtype.eq.65).and. &
+               (SDIM.eq.3)) then     
+       costheta=cos(xblob2)
+       sintheta=sin(xblob2)
+       xprime=costheta*(x-xblob)-sintheta*(z-zblob)
+       yprime=y-yblob
+       zprime=sintheta*(x-xblob)+costheta*(z-zblob)
+       call tcylinderdist(xprime,yprime,zprime,zero,zero,radblob, &
+        -half*zblob2,half*zblob2,dist)
+       call tcylinderdist(xprime,yprime,zprime,zero,zero,radblob2, &
+        -half*zblob2,half*zblob2,dist1)
+       if (dist1.ge.zero) then
+        dist=dist1
+       else if ((dist.ge.zero).and.(dist1.le.zero)) then
+        if (-dist1.lt.dist) then
+         dist=dist1
+        else
+         dist=-dist
+        endif
+       else
+         dist=-dist
+       endif
+!       lower cylinder first, center at (5,5,5)
+       call cylinderdist(x,y,z,five,five,radblob4,-one,ten+one,dist1)
+       dist1 = -dist1
+       if (dist.gt.dist1) then
+        dist = dist1
+       endif
+
+      else if ((probtype.eq.62).and.(SDIM.eq.3)) then
+       costheta=cos(xblob2)
+       sintheta=sin(xblob2)
+       xprime=costheta*(x-xblob)-sintheta*(z-zblob)
+       yprime=y-yblob
+       zprime=sintheta*(x-xblob)+costheta*(z-zblob)
+       call cylinderdist(xprime,yprime,zprime,zero,zero,radblob, &
+        -half*zblob2,half*zblob2,dist)
+       call cylinderdist(xprime,yprime,zprime,zero,zero,radblob2, &
+        -half*zblob2,half*zblob2,dist1)
+       if (dist1.ge.zero) then
+        dist=dist1
+       else if ((dist.ge.zero).and.(dist1.le.zero)) then
+        if (-dist1.lt.dist) then
+         dist=dist1
+        else
+         dist=-dist
+        endif
+       else
+         dist=-dist
+       endif
+
+      else if (probtype.eq.110) then ! pos distance in fluid
+       call get_bottom_distIOWA(x,y,dist)
+      else if (probtype.eq.5700) then  ! in soliddist
+       if ((axis_dir.eq.0).or.(axis_dir.eq.1).or. &
+           (axis_dir.eq.2).or.(axis_dir.eq.3)) then
+        print *,"must have FSI_flag=1"
+        stop
+       else if (axis_dir.eq.4) then
+        call square_Tchannel_dist(x,y,z,dist)  ! dist>0 in solid
+        dist=-dist
+       else if (axis_dir.eq.5) then
+        call squeeze_channel_dist(x,y,z,dist)  ! dist>0 in solid
+        dist=-dist
+       else
+        print *,"axis_dir invalid probtype=5700"
+        stop
+       endif
+      endif
+   
+      return
+      end subroutine soliddist
+
+
+       ! negative on the inside of the square
+      subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
+      IMPLICIT NONE
+
+      REAL_T x,y,xlo,xhi,ylo,yhi,dist,dist1
+      REAL_T xmid,ymid
+ 
+      if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
+       print *,"invalid parameters squaredist",xlo,xhi,ylo,yhi
+       stop
+      endif
+      if ((x.le.xlo).and.(y.ge.ylo).and.(y.le.yhi)) then
+       dist=xlo-x
+      else if ((x.le.xlo).and.(y.ge.yhi)) then
+       dist=sqrt( (x-xlo)**2 + (y-yhi)**2 )
+      else if ((x.le.xlo).and.(y.le.ylo)) then
+       dist=sqrt( (x-xlo)**2 + (y-ylo)**2 )
+      else if ((x.ge.xhi).and.(y.ge.ylo).and.(y.le.yhi)) then
+       dist=x-xhi
+      else if ((x.ge.xhi).and.(y.ge.yhi)) then
+       dist=sqrt( (x-xhi)**2 + (y-yhi)**2 )
+      else if ((x.ge.xhi).and.(y.le.ylo)) then
+       dist=sqrt( (x-xhi)**2 + (y-ylo)**2 )
+      else if (y.ge.yhi) then
+       dist=y-yhi
+      else if (y.le.ylo) then
+       dist=ylo-y
+      else 
+       xmid=half*(xlo+xhi)
+       ymid=half*(ylo+yhi)
+
+       if ((x.ge.xlo).and.(x.le.xmid)) then
+        dist=x-xlo
+       else if ((x.ge.xmid).and.(x.le.xhi)) then
+        dist=xhi-x
+       else
+        print *,"dist invalid in squaredist"
+        stop
+       endif
+
+       if ((y.ge.ylo).and.(y.le.ymid)) then
+        dist1=y-ylo
+       else if ((y.ge.ymid).and.(y.le.yhi)) then
+        dist1=yhi-y
+       else
+        print *,"dist1 invalid in squaredist"
+        stop
+       endif
+       if (dist.lt.dist1) then
+        dist=-dist
+       else
+        dist=-dist1
+       endif
+      endif
+
+      return
+      end subroutine squaredist
+
+      subroutine nozzlerad(zval,radcross,rounded)
+      IMPLICIT NONE
+
+      REAL_T zval,radcross,rounded
+
+      if (zval.le.xblob10) then
+       radcross=xblob10
+      else if (zval.le.(three*xblob10/two)) then
+       radcross=-zval+two*xblob10
+      else if (zval.le.two*xblob10-rounded) then
+       radcross=xblob10/two
+      else
+       radcross=xblob10/two
+      endif
+
+      return
+      end subroutine nozzlerad
+
+
+      subroutine jetgeom(x,y,z,dist)
+      IMPLICIT NONE
+      REAL_T x,y,z,dist
+      REAL_T NPT,HSB,NID,NOD,CHH,scaleCHH
+      REAL_T xx1(maxnumline),yy1(maxnumline)
+      REAL_T xx2(maxnumline),yy2(maxnumline)
+      INTEGER_T dd(maxnumline),lessflag(maxnumline),numline
+
+
+      call initjetparms(HSB,NOD,NPT,NID,CHH,scaleCHH)
+
+      xx1(1)=half*NOD
+      xx2(1)=1.0D+10
+      yy1(1)=HSB+NPT
+      yy2(1)=HSB+NPT
+      dd(1)=0
+      lessflag(1)=1
+
+      yy1(2)=HSB
+      yy2(2)=HSB+NPT
+      xx1(2)=half*NID
+      xx2(2)=half*NOD
+      dd(2)=1
+      lessflag(2)=0
+
+      xx1(3)=half*NID
+      xx2(3)=half*scaleCHH
+      yy1(3)=HSB
+      yy2(3)=HSB
+      dd(3)=0
+      lessflag(3)=0
+      if (xx1(3).gt.xx2(3)) then
+       xx1(3)=half*scaleCHH
+       xx2(3)=half*NID
+       lessflag(3)=1
+      endif
+      
+      yy1(4)=zero
+      yy2(4)=HSB
+      xx1(4)=half*scaleCHH
+      xx2(4)=half*scaleCHH
+      dd(4)=1
+      lessflag(4)=0
+    
+      numline=4
+
+      if ((axis_dir.ge.8).and.(axis_dir.le.10)) then
+       print *,"this option disabled"
+       stop
+      else if ((axis_dir.eq.11).or.(axis_dir.eq.12).or. &
+               (axis_dir.eq.13)) then
+       call microfabgeom(x,y,dist)
+      else
+       call construct(x,y,xx1,yy1,xx2,yy2,dd,lessflag,numline,dist)
+       if ((x.le.half*NOD).and.(x.le.half*NID)) then
+        dist=abs(dist)
+       endif
+       if (y.ge.HSB+NPT) then
+        dist=abs(dist)
+       endif
+       if ((x.ge.half*scaleCHH).and.(y.le.HSB)) then
+        dist=-abs(dist)
+       endif
+       if ((x.ge.half*NOD).and.(x.ge.half*NID).and. &
+           (y.le.HSB+NPT).and.(y.ge.HSB)) then
+        dist=-abs(dist)
+       endif
+      endif
+
+      return
+      end subroutine jetgeom
+
+
+      subroutine initjetparms(HSB,NOD,NPT,NID,CHH,scaleCHH)
+      IMPLICIT NONE
+      REAL_T NPT,HSB,NID,NOD,CHH,scaleCHH
+
+
+! get rid of floating exceptions !
+      HSB=zero
+      NOD=zero
+      NPT=zero
+      NID=zero
+      CHH=zero
+      scaleCHH=zero
+
+      if (axis_dir.eq.0) then
+       NPT=55.0
+       NOD=23.5
+       NID=41.0
+       CHH=30.0
+       scaleCHH=CHH*sqrt(four/Pi)
+       HSB=50.0
+      else if (axis_dir.eq.1) then
+       NPT=30.0
+       NOD=21.5
+       NID=31.0
+       CHH=30.0
+       scaleCHH=CHH*sqrt(four/Pi)
+       HSB=50.0
+      else if (axis_dir.eq.2) then
+       NPT=18.0
+       NOD=21.0
+       NID=26.7
+       CHH=30.0
+       scaleCHH=CHH*sqrt(four/Pi)
+       HSB=50.0
+      else if (axis_dir.eq.3) then
+       NPT=18.0
+       NOD=20.0
+       NID=32.0
+       CHH=30.0
+       scaleCHH=CHH*sqrt(four/Pi)
+       HSB=50.0
+      else if (axis_dir.eq.4) then
+       NPT=18.0
+       NOD=28.0
+       NID=19.0
+       CHH=30.0
+       scaleCHH=CHH*sqrt(four/Pi)
+       HSB=50.0
+      else if (axis_dir.eq.5) then
+       NPT=18.0
+       NOD=34.0
+       NID=19.0
+       CHH=30.0
+       scaleCHH=CHH*sqrt(four/Pi)
+       HSB=50.0
+      else if ((axis_dir.eq.6).or.(axis_dir.eq.14)) then
+       NPT=20.0
+       HSB=30.0
+       CHH=40.0
+       scaleCHH=40.0
+       NOD=25.0
+       NID=40.0
+      else if (axis_dir.gt.13) then
+       print *,"axis_dir out of range in initjetparms!!!"
+       stop
+      endif
+
+      return
+      end subroutine initjetparms
+
+
+      subroutine damdist(x,z,dist,igeom)
+      IMPLICIT NONE
+
+      REAL_T x,z,dist,y1,y2,xctr,yswap,xswap
+      INTEGER_T igeom
+      REAL_T x1,x2
+
+
+      if (axis_dir.eq.4) then ! water if x<xblob y<yblob
+       x1=-1.0D+10
+       x2=xblob
+       y1=-1.0D+10
+       y2=yblob
+       call squaredist(x,z,x1,x2,y1,y2,dist)
+       dist=-dist
+      else if (axis_dir.eq.3) then
+       dist=-x
+      else if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+       xswap=x
+       if (axis_dir.eq.0) then
+        xctr=half*xblob
+        y1=yblob/four
+        y2=three*yblob/four
+       else if (axis_dir.eq.1) then
+        xctr=xblob/four
+        y1=-999999.0
+        y2=half*yblob
+       else if (axis_dir.eq.2) then
+        if (igeom.eq.0) then
+         xctr=xblob/two
+         y1=two*yblob
+         y2=four*yblob 
+        else if (igeom.eq.1) then
+         xctr=xblob/two
+         y1=yblob
+         y2=-999999.0
+        else
+         print *,"igeom invalid"
+         stop
+        endif
+       else
+         print *,"axis_dir out of range for dambreak problem"
+         stop
+       endif
+   
+       if (y1.gt.y2) then
+        yswap=y1
+        y1=y2
+        y2=yswap
+        xctr=xblob-xctr
+        xswap=xblob-xswap
+       endif
+ 
+       if ((z.le.y1).or.((z.le.y2).and.(xswap.le.xctr))) then
+        if (xswap.gt.xctr) then
+         dist=z-y1
+        else if (z.gt.y1) then
+         dist=z-y2
+         if (dist.lt.xswap-xctr) then
+          dist=xswap-xctr
+         endif        
+        else
+         dist=-sqrt((xswap-xctr)**2+(z-y1)**2)
+         if (dist.lt.z-y2) then
+          dist=z-y2
+         endif
+        endif
+       else if (xswap.lt.xctr) then
+        dist=z-y2
+       else if (z.lt.y2) then
+        dist=z-y1
+        if (dist.gt.xswap-xctr) then
+         dist=xswap-xctr
+        endif  
+       else
+        dist=sqrt((xswap-xctr)**2+(z-y2)**2)
+        if (dist.gt.z-y1) then
+         dist=z-y1
+        endif
+       endif
+       if (igeom.eq.0) then
+        dist=-dist
+       endif
+      else
+       print *,"axis_dir invalid damdist"
+       stop
+      endif
+
+      return
+      end subroutine damdist
+
+      subroutine getslopeparms(xstart,ystart,zstart,xend,yend,zend)
+      IMPLICIT NONE
+      REAL_T xstart,xend,ystart,yend,zstart,zend
+
+      xstart=0.0
+      xend=4.0
+      ystart=1.0
+      yend=1.0
+      zstart=0.0
+      zend=4.0
+
+      return
+      end subroutine getslopeparms
+
+
+! dist>0 outside of cylinder
+      subroutine cylinderdist(x,y,z,xcen,ycen,rad,zmin,zmax,dist)
+      IMPLICIT NONE
+    
+  
+      REAL_T x,y,z,xcen,ycen,rad,dist
+      REAL_T zmin,zmax
+
+      if (zmin.ge.zmax-1.0E-10) then 
+       print *,"invalid parameters ",zmin,zmax
+       stop
+      endif
+      dist=sqrt((x-xcen)**2+(y-ycen)**2)-rad
+      if (z.ge.zmax) then
+       if (dist.le.zero) then
+        dist=z-zmax
+       else
+        dist=sqrt(dist**2+(z-zmax)**2)
+       endif
+      else if (z.le.zmin) then
+       if (dist.le.zero) then
+        dist=zmin-z
+       else
+        dist=sqrt(dist**2+(zmin-z)**2)
+       endif
+      endif
+
+      return 
+      end subroutine cylinderdist
+
+!       tapered cylinder
+      subroutine tcylinderdist(x,y,z,xcen,ycen,rad,zmin,zmax,dist)
+      IMPLICIT NONE
+
+
+      REAL_T x,y,z,xcen,ycen,rad,dist
+      REAL_T zmin,zmax
+
+      if (zmin.ge.zmax-1.0E-10) then
+       print *,"invalid parameters ",zmin,zmax
+       stop
+      endif
+      dist=sqrt((x-xcen)**2+(y-ycen)**2/9.0)-rad
+      if (z.ge.zmax) then
+       if (dist.le.zero) then
+        dist=z-zmax
+       else
+        dist=sqrt(dist**2+(z-zmax)**2)
+       endif
+      else if (z.le.zmin) then
+       if (dist.le.zero) then
+        dist=zmin-z
+       else
+        dist=sqrt(dist**2+(zmin-z)**2)
+       endif
+      endif
+
+      return
+      end subroutine tcylinderdist
+
+
+! dist is positive in the fluid
+      subroutine get_bottom_distIOWA(x,y,dist)
+
+      IMPLICIT NONE
+
+      REAL_T x,y,height,dist
+      REAL_T h,l
+
+
+      if (probtype.ne.110) then
+       print *,"probtype invalid get_bottom_distIOWA"
+       stop
+      endif
+
+       ! inlet x/H=-52 outlet x/H=44
+       ! inlet x=-52H=594.36 cm  outlet x=44H=502.92 cm
+       ! zhi=5H=57.15 cm
+       ! (x/l)=(x/(2.5 h))=2/5 (x/h)
+       ! at inlet, (x/l)=-52 * 2/5 = -20.8
+       ! at outlet, (x/l)=44 * 2/5 = 17.6
+       ! 0<z/h<5
+       ! dx_min=0.3mm  dz_min=0.2mm ?
+       ! -1<x/l<1
+      h=11.43  ! h=H  maximum bump height in centimeters
+      l=2.5*h
+      if (abs(x/l).le.one) then
+       height=h*(one-two*((x/l)**2)+(x/l)**4)
+       dist=y-height
+      else if (x/l.lt.zero) then
+       dist=sqrt((x+l)**2+y**2)
+      else if (x/l.gt.zero) then
+       dist=sqrt((x-l)**2+y**2)
+      else
+       print *,"bust"
+       stop
+      endif
+
+      return
+      end subroutine get_bottom_distIOWA
+
+         ! dist>0 outside the channel
+      subroutine square_Tchannel_dist(x,y,z,dist)
+      IMPLICIT NONE
+ 
+      REAL_T x,y,z,zmid,dist,distz
+      REAL_T radchannel,xcen1,xcen2,xcen3,ychannel,ycen
+
+
+      if ((probtype.eq.5700).and.(axis_dir.eq.4)) then
+       if ((xblob2.lt.xblob3).and.(yblob2.lt.yblob3).and. &
+           (zblob2.lt.zblob3)) then
+       
+        if (SDIM.eq.3) then
+         zmid=z
+        else if (SDIM.eq.2) then
+         zmid=half*(zblob2+zblob3)
+        else
+         print *,"dimension bust"
+         stop
+        endif
+ 
+        ! first find 2d distance in x-y plane
+
+        if ((xblob4.le.zero).or.(x.le.xblob4)) then
+
+         if (y.le.yblob2) then
+          dist=yblob2-y
+         else if (y.le.half*(yblob2+yblob3)) then
+          dist=yblob2-y
+         else if (y.le.yblob3) then
+          if (x.le.xblob2) then
+           dist=y-yblob3
+          else if (x.ge.xblob3) then
+           dist=y-yblob3
+          else if (x.le.half*(xblob2+xblob3)) then
+           dist=-sqrt( (y-yblob3)**2+(x-xblob2)**2 )
+          else if (x.ge.half*(xblob2+xblob3)) then
+           dist=-sqrt( (y-yblob3)**2+(x-xblob3)**2 )
+          else
+           print *,"x bust"
+           stop
+          endif
+         else if ((x.ge.xblob2).and.(x.le.half*(xblob2+xblob3)).and. &
+                  (y.ge.yblob3)) then
+          dist=xblob2-x
+         else if ((x.le.xblob3).and.(x.ge.half*(xblob2+xblob3)).and. &
+                  (y.ge.yblob3)) then
+          dist=x-xblob3
+         else if ((x.le.xblob2).and.(y.ge.yblob3)) then
+ 
+          if (y-yblob3.le.xblob2-x) then
+           dist=y-yblob3
+          else
+           dist=xblob2-x
+          endif
+ 
+         else if ((x.ge.xblob3).and.(y.ge.yblob3)) then
+
+          if (y-yblob3.le.x-xblob3) then
+           dist=y-yblob3
+          else
+           dist=x-xblob3
+          endif
+
+         else
+          print *,"parameter bust"
+          stop
+         endif 
+
+          ! dist>0 outside channel
+        else if (x.ge.xblob4) then
+         radchannel=half*(yblob3-yblob2)
+         xcen1=xblob4
+         xcen2=xblob4+two*radblob4
+         xcen3=xblob4+four*radblob4
+         ychannel=yblob2+radchannel
+         ycen=ychannel-radblob4
+         if ((x.le.xcen2).and.(y.ge.ycen)) then
+          dist=sqrt( (x-xcen1)**2+(y-ycen)**2 )
+          if (dist.ge.radblob4) then
+           dist=dist-radblob4-radchannel
+          else
+           dist=radblob4-radchannel-dist
+          endif
+         else if ((x.le.xcen3).and.(y.le.ycen)) then
+          dist=sqrt( (x-xcen2)**2+(y-ycen)**2 )
+          if (dist.ge.radblob4) then
+           dist=dist-radblob4-radchannel
+          else
+           dist=radblob4-radchannel-dist
+          endif
+         else if ((x.le.xcen3).and.(y.ge.ycen)) then
+          dist=sqrt( (x-xcen3)**2+(y-ycen)**2 )
+          if (dist.ge.radblob4) then
+           dist=dist-radblob4-radchannel
+          else
+           dist=radblob4-radchannel-dist
+          endif
+         else if (x.ge.xcen3) then
+          if (y.le.ychannel) then
+           dist=ychannel-y-radchannel
+          else
+           dist=y-ychannel-radchannel
+          endif
+         else
+          print *,"channel dimension bust"
+          stop
+         endif
+
+        else
+         print *,"xblob4 invalid"
+         stop
+        endif
+
+        if (zmid.le.zblob2) then
+         distz=zblob2-zmid
+        else if (zmid.ge.zblob3) then
+         distz=zmid-zblob3
+        else if (zmid.le.half*(zblob2+zblob3)) then
+         distz=zblob2-zmid
+        else if (zmid.ge.half*(zblob2+zblob3)) then
+         distz=zmid-zblob3
+        else
+         print *,"bust for distz"
+         stop
+        endif
+        
+        if (distz.ge.zero) then
+         if (dist.ge.zero) then
+          dist=sqrt( dist**2 +distz**2 )
+         else if (dist.le.zero) then
+          dist=distz
+         else
+          print *,"dist invalid square_Tchannel_dist"
+          stop
+         endif
+        else if (distz.le.zero) then
+         if (dist.ge.zero) then
+          ! do nothing
+         else if (dist.le.zero) then
+          if (abs(dist).le.abs(distz)) then
+           ! do nothing
+          else if (abs(dist).ge.abs(distz)) then
+           dist=distz
+          else
+           print *,"dist invalid square_Tchannel_dist"
+           stop
+          endif
+         else
+          print *,"dist invalid square_Tchannel_dist"
+          stop
+         endif
+        else
+         print *,"distz invalid"
+         stop
+        endif
+ 
+       else
+        print *,"dimensions incorrect"
+        stop
+       endif
+      else
+       print *,"probtype or axis_dir incorrect"
+       stop
+      endif
+
+      return
+      end subroutine square_Tchannel_dist
+
+      subroutine selectgeom(x,y,z,dist)
+      use bubbleControl_module
+
+      IMPLICIT NONE
+      REAL_T x,y,z,dist,dist1,dist2
+      REAL_T xstart,xend,ystart,yend,slope,intercept,xint,yint
+      REAL_T zstart,zend
+      REAL_T ylen,frontrad
+      INTEGER_T igeom,iSphere
+
+      if (SDIM.eq.2) then
+       if (abs(y-z).gt.VOFTOL) then
+        print *,"y=z expected in 2D"
+        stop
+       endif
+      endif
+
+
+      igeom=1
+
+      if ((probtype.eq.21).and.(SDIM.eq.2)) then
+       ylen=yblob/5.0
+
+       xstart=-xblob/two
+       ystart=yblob/two-ylen/four
+       xend=xstart+xblob*three/four
+       yend=ystart+ylen
+       frontrad=zero
+
+!      xstart=xblob/four
+!      ystart=yblob/two-ylen/four
+!      xend=xstart+xblob/two
+!      yend=ystart+ylen
+!      frontrad=zero
+
+       if ((x.le.xstart+frontrad).and.(x.ge.xstart).and. &
+           (frontrad.gt.zero)) then
+        ystart=ystart+(xstart+frontrad-x)*ylen/frontrad
+       endif
+       if ((x.ge.xend).and.(y.ge.ystart).and.(y.le.yend)) then
+        dist=x-xend
+       else if ((x.ge.xend).and.(y.le.ystart)) then
+        dist=sqrt((x-xend)**2+(y-ystart)**2)
+       else if ((x.ge.xend).and.(y.ge.yend)) then
+        dist=sqrt((x-xend)**2+(y-yend)**2)
+       else if ((y.ge.yend).and.(x.ge.xstart)) then
+        dist=y-yend
+       else if ((y.ge.yend).and.(x.le.xstart)) then
+        dist=sqrt((x-xstart)**2+(y-yend)**2)
+       else if ((y.le.ystart).and.(x.ge.xstart)) then
+        dist=ystart-y
+       else if (x.le.xstart) then
+        dist=sqrt((x-xstart)**2+(y-yend)**2)
+       else if ((xend-x.lt.x-xstart).and.(xend-x.lt.y-ystart).and. &
+                (xend-x.lt.yend-y)) then
+        dist=x-xend
+       else if ((x-xstart.lt.y-ystart).and.(x-xstart.lt.yend-y)) then
+        dist=xstart-x
+       else if (y-ystart.lt.yend-y) then
+        dist=ystart-y
+       else 
+        dist=y-yend
+       endif
+
+        ! selectgeom, dist<0 in the solid
+      else if ((probtype.eq.32).and.(SDIM.eq.2)) then  
+       if (levelrz.eq.0) then
+        if (radblob.gt.zero) then
+         dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
+        else if (radblob.lt.zero) then
+         dist=x-xblob
+        else
+         print *,"radblob cannot be zero for probtype=32"
+         stop
+        endif
+       else
+        print *,"levelrz invalid probtype 32"
+        stop
+       endif
+
+       ! selectgeom
+      else if ((probtype.eq.bubbleInPackedColumn).and.(SDIM.eq.2)) then
+       ! there are nSize different size of solid particles in nSize zones
+       !print*, " bubbleInPackedColumn"
+       dist=1.0e9
+       do iSphere=1,nSphere
+          dist2=sqrt((x-xSphere(iSphere))**2+(y-ySphere(iSphere))**2) & 
+                -rSphere(iSphere)
+          dist=min(dist,dist2) 
+       enddo
+      else if ((probtype.eq.30).and.(SDIM.eq.2)) then
+       dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
+       dist1=x-xblob
+       if ((dist.le.zero).and.(dist1.le.zero)) then
+        if (dist1.gt.dist) then
+         dist=dist1
+        endif
+       else if ((dist.ge.zero).and.(dist1.le.zero)) then
+        dist=dist
+       else if (abs(y-yblob).le.radblob) then
+        dist=dist1
+       else if (y.ge.yblob) then
+        dist=sqrt((x-xblob)**2+(y-yblob-radblob)**2)
+       else
+        dist=sqrt((x-xblob)**2+(y-yblob+radblob)**2)
+       endif
+      else if ((probtype.eq.33).and.(SDIM.eq.2)) then
+       call getslopeparms(xstart,ystart,zstart, &
+        xend,yend,zend)
+
+       slope=(yend-ystart)/(xend-xstart)
+       intercept=ystart-slope*xstart
+       xint=(x+slope*(y-intercept))/(one+slope*slope)  
+       yint=slope*xint+intercept
+       dist=sqrt( (x-xint)**2 + (y-yint)**2 )
+       if (y.lt.slope*x+intercept) then
+        dist=-dist
+       endif
+      else if ((probtype.eq.34).and.(SDIM.eq.2)) then
+! xblob=yblob=zero,radblob=3/4 is used in 2d case
+       dist=radblob-abs(x)
+!      dist1=0.9-abs(y-1.0)
+!      dist=min(dist,dist1)
+      else
+       print *,"probtype out of range in selectgeom"
+      endif
+
+      return
+      end subroutine selectgeom
+
+
+      subroutine microfabgeom(rr,z,dist)
+      IMPLICIT NONE
+      REAL_T x,y,z,rr,dist
+
+
+      REAL_T NOD,NID,NPT,CHH,CHW,JLEN,incline,dist1,xdiff,ydiff
+
+      call microfabparm(NOD,NID,NPT,CHH,CHW,JLEN)
+
+      if (SDIM.eq.2) then
+
+      if ((rr.ge.half*NOD).and.(z.ge.JLEN)) then
+       dist=z-JLEN
+      else if (z.ge.JLEN) then
+       dist=sqrt( (z-JLEN)**2 + (half*NOD-rr)**2 )
+      else if ((z.ge.JLEN-NPT).and.(z.le.JLEN)) then
+       incline=half*NOD+half*(NID-NOD)*(JLEN-z)/NPT
+       dist=incline-rr
+       if (rr.ge.incline) then
+         if (dist.le.z-JLEN) then
+          dist=z-JLEN
+         endif
+         if (dist.le.JLEN-NPT-z) then
+          dist=JLEN-NPT-z
+         endif
+       endif
+      else
+       xdiff=half*CHH-rr
+
+       if (xdiff.ge.zero) then
+        dist=xdiff
+        if (rr.ge.half*NID) then
+         dist1=JLEN-NPT-z
+        else
+         dist1=sqrt( (JLEN-NPT-z)**2 + (rr-half*NID)**2 )
+        endif 
+        if (dist1.lt.dist) then
+         dist=dist1
+        endif
+       else if (xdiff.le.zero) then
+        dist=xdiff
+       endif
+      endif
+
+! walls of domain coincide with nozzle here!!
+      if (axis_dir.eq.13) then
+       if ((rr.gt.NID*half).and.(z.lt.JLEN-NPT)) then
+        dist=JLEN-NPT-z
+       endif
+      endif 
+
+      else if (SDIM.eq.3) then
+
+! we force the axis of symmetry at the origin for large geometry
+      if (axis_dir.eq.13) then
+       xblob=zero
+       yblob=zero
+      endif
+
+      rr=sqrt( (x-xblob)**2 + (y-yblob)**2 )
+      if ((rr.ge.half*NOD).and.(z.ge.JLEN)) then
+       dist=z-JLEN
+      else if (z.ge.JLEN) then
+       dist=sqrt( (z-JLEN)**2 + (half*NOD-rr)**2 )
+      else if ((z.ge.JLEN-NPT).and.(z.le.JLEN)) then
+       incline=half*NOD+half*(NID-NOD)*(JLEN-z)/NPT
+       dist=incline-rr
+       if (rr.ge.incline) then
+         if (dist.le.z-JLEN) then
+          dist=z-JLEN
+         endif
+         if (dist.le.JLEN-NPT-z) then
+          dist=JLEN-NPT-z
+         endif
+       endif
+      else
+       xdiff=half*CHH-abs(x-xblob)
+       ydiff=half*CHW-abs(y-yblob)
+
+       if ((xdiff.ge.zero).and.(ydiff.ge.zero)) then
+        if (xdiff.lt.ydiff) then
+         dist=xdiff
+        else 
+         dist=ydiff
+        endif
+        if (rr.ge.half*NID) then
+         dist1=JLEN-NPT-z
+        else
+         dist1=sqrt( (JLEN-NPT-z)**2 + (rr-half*NID)**2 )
+        endif 
+        if (dist1.lt.dist) then
+         dist=dist1
+        endif
+       else if ((xdiff.le.zero).and.(ydiff.ge.zero)) then
+        dist=xdiff
+       else if ((xdiff.ge.zero).and.(ydiff.le.zero)) then
+        dist=ydiff
+       else
+        dist=-sqrt(xdiff**2 + ydiff**2)
+       endif
+      endif
+
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+
+      return
+      end subroutine microfabgeom
+
+
+      subroutine construct(x,y,xx1,yy1,xx2,yy2,dd,lessflag,numline,dist)
+      IMPLICIT NONE
+      INTEGER_T numline
+      REAL_T x,y
+      REAL_T xx1(maxnumline),yy1(maxnumline)
+      REAL_T xx2(maxnumline),yy2(maxnumline)
+      INTEGER_T dd(maxnumline)
+      INTEGER_T lessflag(maxnumline)
+      REAL_T dist,slope,intercept,localdist,xc,yc
+      REAL_T xmin,xmax,ymin,ymax,xtemp,ytemp
+      REAL_T xdiff,ydiff,linenorm,xdiff2,ydiff2
+
+      INTEGER_T iline,hitflag
+
+      dist=1.0D+10
+      do iline=1,numline
+       hitflag=0
+
+!      print *,"i,x1,y1,x2,y2,dd,ls ",iline,xx1(iline),yy1(iline),
+!    &   xx2(iline),yy2(iline),dd(iline),lessflag(iline)
+       ydiff=yy2(iline)-yy1(iline)
+       xdiff=xx2(iline)-xx1(iline)
+       linenorm=sqrt(xdiff**2 + ydiff**2)
+       if (linenorm.gt.1.0D-10) then
+
+       if (dd(iline).eq.0) then
+        slope=ydiff/xdiff
+        intercept=yy2(iline)-slope*xx2(iline)
+
+        ytemp=slope*x+intercept
+        call getminmax(ytemp,yy1(iline),yy2(iline),ymin,ymax)
+
+        xc=(x+slope*(y-intercept))/(slope*slope+one)
+        yc=slope*x+intercept
+        if ((xc.ge.xx1(iline)).and.(xc.le.xx2(iline))) then
+         localdist=sqrt( (x-xc)**2 + (y-yc)**2 )
+         hitflag=1
+        else if (xc.le.xx1(iline)) then
+         xdiff2=x-xx1(iline)
+         ydiff2=y-yy1(iline)
+         localdist=sqrt( xdiff2**2 + ydiff2**2 )
+         hitflag=1
+        else 
+         xdiff2=x-xx2(iline)
+         ydiff2=y-yy2(iline)
+         localdist=sqrt( xdiff2**2 + ydiff2**2 )
+         hitflag=1
+        endif
+        if ( ((lessflag(iline).eq.1).and.(y.le.slope*x+intercept)).or. &
+             ((lessflag(iline).eq.0).and.(y.ge.slope*x+intercept)) ) then
+         localdist=-localdist
+        endif
+       else 
+        slope=xdiff/ydiff
+        intercept=xx2(iline)-slope*yy2(iline)
+
+        xtemp=slope*y+intercept
+        call getminmax(xtemp,xx1(iline),xx2(iline),xmin,xmax)
+
+        yc=(y+slope*(x-intercept))/(slope*slope+one)
+        xc=slope*yc+intercept
+        if ((yc.ge.yy1(iline)).and.(yc.le.yy2(iline))) then
+         localdist=sqrt( (x-xc)**2 + (y-yc)**2 )
+         hitflag=1
+        else if (yc.le.yy1(iline)) then
+         xdiff2=x-xx1(iline)
+         ydiff2=y-yy1(iline)
+         localdist=sqrt( xdiff2**2 + ydiff2**2 )
+         hitflag=1
+        else 
+         xdiff2=x-xx2(iline)
+         ydiff2=y-yy2(iline)
+         localdist=sqrt( xdiff2**2 + ydiff2**2 )
+         hitflag=1
+        endif
+        if ( ((lessflag(iline).eq.1).and.(x.le.slope*y+intercept)).or. &
+             ((lessflag(iline).eq.0).and.(x.ge.slope*y+intercept)) ) then
+         localdist=-localdist
+        endif
+       endif
+       endif
+
+       if (hitflag.eq.1) then
+       if (abs(localdist).lt.abs(dist)) then
+        dist=localdist
+       endif
+       endif
+      enddo
+
+      return
+      end subroutine construct
+
+
+      subroutine microfabparm(NOD,NID,NPT,CHH,CHW,JLEN)
+      IMPLICIT NONE
+      REAL_T NOD,NID,NPT,CHH,CHW,JLEN
+
+
+      NOD=32.0
+      NID=52.0
+      NPT=50.0
+      CHH=74.0
+      CHW=74.0
+      JLEN=70.0
+
+      if (axis_dir.eq.13) then
+       NOD=30.0
+! CHH=84 CHW=360 JLEN=8000
+! choose CHH,CHW,JLEN so that ratio of surface area with velbc to volume
+! is same as 3d
+       CHH=168.0
+       CHW=168.0
+       JLEN=10913.5
+      endif
+
+      return
+      end subroutine microfabparm
+
+
+       ! squeezing channel: inlet width: 30 microns height: 10 microns
+       ! outlet width: 30 microns outlet height: 10 microns
+       ! xblob2=0.0  xblob3=0.003
+       ! yblob2=-0.0015  yblob3=0.0015
+       ! zblob2=-0.0005  zblob3=0.0005
+       ! dist>0 outside the channel
+      subroutine squeeze_channel_dist(x,y,z,dist)
+      IMPLICIT NONE
+ 
+      REAL_T x,y,z,zmid,dist,distz
+
+
+      if ((probtype.eq.5700).and.(axis_dir.eq.5)) then
+       if ((xblob2.lt.xblob3).and.(yblob2.lt.yblob3).and. &
+           (zblob2.lt.zblob3)) then
+       
+        if (SDIM.eq.3) then
+         zmid=z
+        else if (SDIM.eq.2) then
+         zmid=half*(zblob2+zblob3)
+        else
+         print *,"dimension bust"
+         stop
+        endif
+ 
+        ! first find 2d distance in x-y plane
+        if (x.le.xblob2) then
+         dist=xblob2-x
+        else if (x.le.half*(xblob2+xblob3)) then
+         dist=xblob2-x
+        else if (x.le.xblob3) then
+         if (y.ge.yblob3) then
+          dist=x-xblob3
+         else if (y.le.yblob2) then
+          dist=x-xblob3
+         else if (y.ge.zero) then
+          dist=-sqrt((x-xblob3)**2+(y-yblob3)**2)
+         else
+          dist=-sqrt((x-xblob3)**2+(y-yblob2)**2)
+         endif
+        else if (y.ge.yblob3) then
+         if (y-yblob3.le.x-xblob3) then
+          dist=y-yblob3
+         else
+          dist=x-xblob3
+         endif
+        else if (y.le.yblob2) then
+         if (yblob2-y.le.x-xblob3) then
+          dist=yblob2-y
+         else
+          dist=x-xblob3
+         endif
+        else if (y.ge.zero) then
+         dist=y-yblob3
+        else
+         dist=yblob2-y
+        endif
+
+        if (zmid.le.zblob2) then
+         distz=zblob2-zmid
+        else if (zmid.ge.zblob3) then
+         distz=zmid-zblob3
+        else if (zmid.le.half*(zblob2+zblob3)) then
+         distz=zblob2-zmid
+        else if (zmid.ge.half*(zblob2+zblob3)) then
+         distz=zmid-zblob3
+        else
+         print *,"bust for distz"
+         stop
+        endif
+ 
+        if (distz.ge.zero) then
+         if (dist.ge.zero) then
+          dist=sqrt( dist**2 +distz**2 )
+         else if (dist.le.zero) then
+          dist=distz
+         else
+          print *,"dist invalid squeeze_channel_dist"
+          stop
+         endif
+        else if (distz.le.zero) then
+         if (dist.ge.zero) then
+          ! do nothing
+         else if (dist.le.zero) then
+          if (abs(dist).le.abs(distz)) then
+           ! do nothing
+          else if (abs(dist).ge.abs(distz)) then
+           dist=distz
+          else
+           print *,"dist invalid squeeze_channel_dist"
+           stop
+          endif
+         else
+          print *,"dist invalid squeeze_channel_dist"
+          stop
+         endif
+        else
+         print *,"distz invalid"
+         stop
+        endif
+ 
+       else
+        print *,"dimensions incorrect"
+        stop
+       endif
+      else
+       print *,"probtype or axis_dir incorrect"
+       stop
+      endif
+
+      return
+      end subroutine squeeze_channel_dist
+
+
+! lessflag=1 if y>mx+b => dist>0
+! dd=0 if horizontal line y=mx+b, xx1<xx2
+! dd=1 if vertical line x=my+b  , yy1<yy2
+
+      subroutine getminmax(x1,x2,x3,xmin,xmax)
+      IMPLICIT NONE
+      REAL_T x1,x2,x3,xmin,xmax
+
+      if ((x1.ge.x2).and.(x1.ge.x3)) then
+       xmax=x1
+      else if ((x2.ge.x1).and.(x2.ge.x3)) then
+       xmax=x2
+      else
+       xmax=x3
+      endif
+      if ((x1.le.x2).and.(x1.le.x3)) then
+       xmin=x1
+      else if ((x2.le.x1).and.(x2.le.x3)) then
+       xmin=x2
+      else
+       xmin=x3
+      endif
+ 
+      return
+      end subroutine getminmax
+
+end module global_distance_module
+
+
+

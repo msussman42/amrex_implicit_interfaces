@@ -1,0 +1,55 @@
+#
+# $Id: Make.package,v 1.2 1999/04/01 21:43:11 car Exp $
+#
+
+
+FEXE_sources += \
+				HeaderFSI.F \
+				DistFSI_allocate_memory.F \
+				write_restart_DISRIBM.F \
+				eval_n_dn_ddn.F \
+				FSI_Utilities.F \
+				quad2d3n.F \
+				quad1d.F \
+				matread.F \
+				BucketSorting.F \
+				adjustsub.F \
+				shapeinitialize.F \
+				create_grid2.F \
+				initialize_ibm.F \
+				boundary_ibm.F \
+				boundary_ibm_generalalpha_esh.F \
+				boundary_ibm_generalalpha_fbc.F \
+				boundary_ibm_generalalpha_fsh.F \
+				FSI_Fabric_EnergyFns.F \
+				PiezoforceFSimple.F \
+				PiezoforceF.F \
+				ddKapaCalculation.F \
+				USRDEFINED_materialModel.F \
+				matreadContact.F \
+				cal_tension.F \
+				r_stang.F \
+				compute_force.F \
+				outputstr.F \
+				restartInput_esh.F \
+				tick.F
+				
+ifeq ($(CTML_FSH),TRUE)
+ FEXE_sources += \
+     				matfibrous_Huang.F \
+				matfibrous_Huang_GALPHA.F \
+				matfibrous_Huang_GALPHAPiezo.F \
+				matfibrous_Yue.F \
+				matfibrous_Yue_GALPHA.F \
+				matfibrous_Yue_GALPHAPiezo.F
+endif
+
+F90EXE_sources += \
+				mgmresVER3.F90 \
+
+F90EXE_headers +=  \
+				mgmresVER3.F90 \
+
+VPATH_LOCATIONS += $(MOF_HOME)/Vicar3D/distFSI
+INCLUDE_LOCATIONS += $(MOF_HOME)/Vicar3D/distFSI
+

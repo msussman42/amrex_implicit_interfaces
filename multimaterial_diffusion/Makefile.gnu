@@ -1,0 +1,30 @@
+test_debug:
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g tetrahedron_keast_rule.F90 -c -o tetrahedron_keast_rule.o
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g triangle_fekete_rule.F90 -c -o triangle_fekete_rule.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g PROBCOMMON.F90 -c -o PROBCOMMON.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g PROBMAIN.F90 -c -o PROBMAIN.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g GLOBALUTIL.F90 -c -o GLOBALUTIL.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g TECPLOTUTIL.F90 -c -o TECPLOTUTIL.o 
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g supercooled_exact_sol.F90 -c -o supercooled_exact_sol.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g variable_temperature_drop.F90 -c -o variable_temperature_drop.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g mof2d_analytic_centroid.F90 -c -o mof2d_analytic_centroid.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g mof3d_analytic_centroid.F90 -c -o mof3d_analytic_centroid.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g MOF.F90 -c -o MOF.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g STACKVOLUME.F90 -c -o STACKVOLUME.o  
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g MASS_TRANSFER_3D.F90 -c -o MASS_TRANSFER_3D.o 
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g vof_cisl.F90 -c -o vof_cisl.o
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g vfrac_pair.F90 -c -o vfrac_pair.o
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g multimat_FVM.F90 -c -o multimat_FVM.o
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g BICGSTAB_Yang_MULTI.F90 -c -o BICGSTAB_Yang_MULTI.o 
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g MOF_REDIST_3D.F90 -c -o MOF_REDIST_3D.o 
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g PLIC_3D.F90 -c -o PLIC_3D.o 
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g MOVE_INTERFACE_3D.F90 -c -o MOVE_INTERFACE_3D.o 
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DBL_FORT_USE_UNDERSCORE  -g main.F90 -c -o main.o 
+	gfortran  -o test_debug tetrahedron_keast_rule.o triangle_fekete_rule.o PROBCOMMON.o PROBMAIN.o GLOBALUTIL.o TECPLOTUTIL.o supercooled_exact_sol.o variable_temperature_drop.o mof2d_analytic_centroid.o mof3d_analytic_centroid.o MOF.o STACKVOLUME.o BICGSTAB_Yang_MULTI.o vof_cisl.o vfrac_pair.o multimat_FVM.o MOF_REDIST_3D.o PLIC_3D.o MASS_TRANSFER_3D.o MOVE_INTERFACE_3D.o main.o
+
+run:
+	./test_debug
+clean:
+	rm *.mod core.* test_debug *.jpg *.o *.tec nodedata* cendata*
+clear:	
+	rm *.dat

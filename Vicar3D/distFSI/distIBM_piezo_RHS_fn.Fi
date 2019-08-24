@@ -1,0 +1,25 @@
+! Voltage source in RHS of piezo elquation
+! INPUTS:
+! i2g   : global id  of the body
+! i     : local id of the body
+! j&jq  : location of the point
+!itmpusrfn(1)=0 or1  !1:implicit piezo
+!itmpusrfn(2)=0 or1  !1:Piezo_Dist
+
+!time2 :time
+!delta_t :dt
+! pi1 : pi
+
+!OUTPUT: Elect_RHS
+
+!TEMPORAL VARIABLES
+! itmpusrfn(50) : temporal integer work var
+! rtmpusrfn(50) : temporal real work var
+      if(itmpusrfn(1) .le. 1) then
+          rtmpusrfn(29)=time2
+      else
+          rtmpusrfn(29)=time_alphaf
+      endif
+
+      Elect_RHS=0.0
+       

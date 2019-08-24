@@ -1,0 +1,2213 @@
+#undef  BL_LANG_CC
+#ifndef BL_LANG_FORT
+#define BL_LANG_FORT
+#endif
+
+#include "REAL.H"
+#include "CONSTANTS.H"
+#include "SPACE.H"
+#include "BC_TYPES.H"
+#include "PLIC_F.H"
+#include "TECPLOTUTIL_F.H"
+#include "MASS_TRANSFER_F.H"
+#include "MOF_REDIST_F.H"
+#include "ArrayLim.H"
+
+
+#if (BL_SPACEDIM==3)
+#define SDIM 3
+#elif (BL_SPACEDIM==2)
+#define SDIM 2
+#else
+print *,"dimension bust"
+stop
+#endif
+
+      subroutine set_dimdec(DIMS(fabdim), &
+                      fablo,fabhi,ngrow)
+      IMPLICIT NONE
+
+      INTEGER_T DIMDEC(fabdim)
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T ngrow
+      INTEGER_T dir
+
+      dir=1
+      ARG_L1(fabdim)=fablo(dir)-ngrow
+      ARG_H1(fabdim)=fabhi(dir)+ngrow
+      dir=2
+      ARG_L2(fabdim)=fablo(dir)-ngrow
+      ARG_H2(fabdim)=fabhi(dir)+ngrow
+#if (BL_SPACEDIM==3)
+      ARG_L3(fabdim)=fablo(dir)-ngrow
+      ARG_H3(fabdim)=fabhi(dir)+ngrow
+      print *,"prototype code only for 2d"
+      stop
+#elif (BL_SPACEDIM==2)
+      ! do nothing
+#else
+      print *,"dimension bust"
+      stop
+#endif
+      return
+      end subroutine set_dimdec
+
+      subroutine set_boundary_recon( &
+        recon,DIMS(recon), &
+        fablo,fabhi, &
+        nmat,ngrow)
+      USE probcommon_module 
+      USE global_utility_module 
+      IMPLICIT NONE
+
+      INTEGER_T nmat,ngrow
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T DIMDEC(recon)
+      REAL_T recon(DIMV(recon),nmat*ngeom_recon) ! F,X,order,SL,I x nmat
+      INTEGER_T i,j,iofs,jofs,imof,dir,dirtan
+
+      if (ngrow.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow invalid"
+       stop
+      endif
+      if (ngeom_recon.eq.2*SDIM+3) then
+       ! do nothing
+      else
+       print *,"ngeom_recon invalid"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,1221)
+
+      if (SDIM.eq.2) then
+
+        ! top and bottom
+       dir=1
+       dirtan=2
+       do i=fablo(dir),fabhi(dir)
+        do imof=1,ngeom_recon*nmat
+         do jofs=-1,-ngrow,-1
+          j=fablo(dirtan)
+          recon(i,j+jofs,imof) = recon(i,j,imof)
+         enddo
+         do jofs=1,ngrow,1
+          j=fabhi(dirtan)
+          recon(i,j+jofs,imof) = recon(i,j,imof)
+         enddo
+        enddo ! imof=1..ngeom_recon*nmat
+       enddo ! i=fablo,fabhi
+
+        ! left and right
+       dir=2
+       dirtan=1
+       do j=fablo(dir)-ngrow,fabhi(dir)+ngrow
+        do imof=1,ngeom_recon*nmat
+         do iofs=-1,-ngrow,-1
+          i=fablo(dirtan)
+          recon(i+iofs,j,imof) = recon(i,j,imof)
+         enddo
+         do iofs=1,ngrow,1
+          i=fabhi(dirtan)
+          recon(i+iofs,j,imof) = recon(i,j,imof)
+         enddo
+        enddo ! imof=1..ngeom_recon*nmat
+       enddo ! j=fablo-ngrow,fabhi+ngrow
+
+      else
+       print *,"only sdim==2 supported"
+       stop
+      endif
+
+      end subroutine set_boundary_recon
+
+      subroutine set_boundary_burning( &
+        vel,DIMS(vel), &
+        fablo,fabhi, &
+        nten,nmat,nburning,ngrow)
+      USE probcommon_module 
+      USE global_utility_module 
+      IMPLICIT NONE
+
+      INTEGER_T nten,nmat,nburning,ngrow
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T DIMDEC(vel)
+      REAL_T vel(DIMV(vel),nburning) ! status first nten comp
+      INTEGER_T i,j,iofs,jofs,ivel,dir,dirtan
+
+      if (ngrow.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow invalid"
+       stop
+      endif
+      if (nten.eq.(((nmat-1)*(nmat-1)+nmat-1)/2)) then
+       ! do nothing
+      else
+       print *,"nten invalid"
+       stop
+      endif
+      if (nburning.eq.nten*(SDIM+1)) then
+       ! do nothing
+      else
+       print *,"nburning invalid"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(vel),ngrow,-1,1221)
+
+      if (SDIM.eq.2) then
+
+        ! top and bottom
+       dir=1
+       dirtan=2
+       do i=fablo(dir),fabhi(dir)
+        do ivel=1,nburning
+         do jofs=-1,-ngrow,-1
+          j=fablo(dirtan)
+          vel(i,j+jofs,ivel) = vel(i,j,ivel)
+         enddo
+         do jofs=1,ngrow,1
+          j=fabhi(dirtan)
+          vel(i,j+jofs,ivel) = vel(i,j,ivel)
+         enddo
+        enddo ! ivel=1..nburning
+       enddo ! i=fablo,fabhi
+
+        ! left and right
+       dir=2
+       dirtan=1
+       do j=fablo(dir)-ngrow,fabhi(dir)+ngrow
+        do ivel=1,nburning
+         do iofs=-1,-ngrow,-1
+          i=fablo(dirtan)
+          vel(i+iofs,j,ivel) = vel(i,j,ivel)
+         enddo
+         do iofs=1,ngrow,1
+          i=fabhi(dirtan)
+          vel(i+iofs,j,ivel) = vel(i,j,ivel)
+         enddo
+        enddo ! ivel=1..nburning
+       enddo ! j=fablo-ngrow,fabhi+ngrow
+
+      else
+       print *,"only sdim==2 supported"
+       stop
+      endif
+
+      end subroutine set_boundary_burning
+
+      subroutine set_boundary_EOS( &
+        EOS,DIMS(EOS), &
+        fablo,fabhi, &
+        nmat,ngrow)
+      USE probcommon_module 
+      USE global_utility_module 
+      IMPLICIT NONE
+
+      INTEGER_T nmat,ngrow
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T DIMDEC(EOS)
+      REAL_T EOS(DIMV(EOS),nmat*2) ! density, temperature x nmat
+      INTEGER_T i,j,iofs,jofs,i_eos,dir,dirtan
+
+      if (ngrow.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow invalid"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(EOS),ngrow,-1,1221)
+
+      if (SDIM.eq.2) then
+
+        ! top and bottom
+       dir=1
+       dirtan=2
+       do i=fablo(dir),fabhi(dir)
+        do i_eos=1,2*nmat
+         do jofs=-1,-ngrow,-1
+          j=fablo(dirtan)
+          EOS(i,j+jofs,i_eos) = EOS(i,j,i_eos)
+         enddo
+         do jofs=1,ngrow,1
+          j=fabhi(dirtan)
+          EOS(i,j+jofs,i_eos) = EOS(i,j,i_eos)
+         enddo
+        enddo ! i_eos=1..2*nmat
+       enddo ! i=fablo,fabhi
+
+        ! left and right
+       dir=2
+       dirtan=1
+       do j=fablo(dir)-ngrow,fabhi(dir)+ngrow
+        do i_eos=1,2*nmat
+         do iofs=-1,-ngrow,-1
+          i=fablo(dirtan)
+          EOS(i+iofs,j,i_eos) = EOS(i,j,i_eos)
+         enddo
+         do iofs=1,ngrow,1
+          i=fabhi(dirtan)
+          EOS(i+iofs,j,i_eos) = EOS(i,j,i_eos)
+         enddo
+        enddo ! i_eos=1..2*nmat
+       enddo ! j=fablo-ngrow,fabhi+ngrow
+
+      else
+       print *,"only sdim==2 supported"
+       stop
+      endif
+
+      end subroutine set_boundary_EOS
+
+
+      subroutine set_boundary_LS( &
+        LS,DIMS(LS), &
+        fablo,fabhi, &
+        nmat,ngrow)
+      USE probcommon_module 
+      USE global_utility_module 
+      IMPLICIT NONE
+
+      INTEGER_T nmat,ngrow
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T DIMDEC(LS)
+      REAL_T LS(DIMV(LS),nmat*(SDIM+1)) ! LS x nmat + slope x nmat
+      INTEGER_T i,j,iofs,jofs,i_ls,dir,dirtan
+
+      if (ngrow.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow invalid"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(LS),ngrow,-1,1221)
+
+      if (SDIM.eq.2) then
+
+        ! top and bottom
+       dir=1
+       dirtan=2
+       do i=fablo(dir),fabhi(dir)
+        do i_ls=1,nmat*(SDIM+1)
+         do jofs=-1,-ngrow,-1
+          j=fablo(dirtan)
+          LS(i,j+jofs,i_ls) = LS(i,j,i_ls)
+         enddo
+         do jofs=1,ngrow,1
+          j=fabhi(dirtan)
+          LS(i,j+jofs,i_ls) = LS(i,j,i_ls)
+         enddo
+        enddo ! i_ls=1..nmat*(sdim+1)
+       enddo ! i=fablo,fabhi
+
+        ! left and right
+       dir=2
+       dirtan=1
+       do j=fablo(dir)-ngrow,fabhi(dir)+ngrow
+        do i_ls=1,nmat*(SDIM+1)
+         do iofs=-1,-ngrow,-1
+          i=fablo(dirtan)
+          LS(i+iofs,j,i_ls) = LS(i,j,i_ls)
+         enddo
+         do iofs=1,ngrow,1
+          i=fabhi(dirtan)
+          LS(i+iofs,j,i_ls) = LS(i,j,i_ls)
+         enddo
+        enddo ! i_ls=1..nmat*(sdim+1)
+       enddo ! j=fablo-ngrow,fabhi+ngrow
+
+      else
+       print *,"only sdim==2 supported"
+       stop
+      endif
+
+      end subroutine set_boundary_LS
+
+
+      subroutine set_boundary_VOF( &
+        VOF,DIMS(VOF), &
+        fablo,fabhi, &
+        nmat,ngrow)
+      USE probcommon_module 
+      USE global_utility_module 
+      IMPLICIT NONE
+
+      INTEGER_T nmat,ngrow
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T DIMDEC(VOF)
+      REAL_T VOF(DIMV(VOF),nmat*ngeom_raw) 
+      INTEGER_T i,j,iofs,jofs,i_vof,dir,dirtan
+
+      if (ngrow.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow invalid"
+       stop
+      endif
+      if (ngeom_raw.eq.SDIM+1) then
+       ! do nothing
+      else
+       print *,"ngeom_raw invalid"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(VOF),ngrow,-1,1221)
+
+      if (SDIM.eq.2) then
+
+        ! top and bottom
+       dir=1
+       dirtan=2
+       do i=fablo(dir),fabhi(dir)
+        do i_vof=1,nmat*ngeom_raw
+         do jofs=-1,-ngrow,-1
+          j=fablo(dirtan)
+          VOF(i,j+jofs,i_vof) = VOF(i,j,i_vof)
+         enddo
+         do jofs=1,ngrow,1
+          j=fabhi(dirtan)
+          VOF(i,j+jofs,i_vof) = VOF(i,j,i_vof)
+         enddo
+        enddo ! i_vof=1..nmat*(sdim+1)
+       enddo ! i=fablo,fabhi
+
+        ! left and right
+       dir=2
+       dirtan=1
+       do j=fablo(dir)-ngrow,fabhi(dir)+ngrow
+        do i_vof=1,nmat*ngeom_raw
+         do iofs=-1,-ngrow,-1
+          i=fablo(dirtan)
+          VOF(i+iofs,j,i_vof) = VOF(i,j,i_vof)
+         enddo
+         do iofs=1,ngrow,1
+          i=fabhi(dirtan)
+          VOF(i+iofs,j,i_vof) = VOF(i,j,i_vof)
+         enddo
+        enddo ! i_vof=1..nmat*(sdim+1)
+       enddo ! j=fablo-ngrow,fabhi+ngrow
+
+      else
+       print *,"only sdim==2 supported"
+       stop
+      endif
+
+      end subroutine set_boundary_VOF
+
+      subroutine get_exact_LS(xgrid,time,im,LS)
+      USE probcommon_module 
+      USE probmain_module 
+      USE global_utility_module 
+      USE supercooled_exact_sol
+      USE variable_temperature_drop
+      USE mmat_FVM, only: dist_concentric
+
+      IMPLICIT NONE
+
+      REAL_T xgrid(SDIM)
+      REAL_T time
+      INTEGER_T im
+      REAL_T LS,stefan_time,test_radblob
+
+      if (probtype.eq.3) then
+       stefan_time=fort_time_radblob(2)+time
+       call solidification_front_radius_driver(stefan_time,test_radblob)
+       LS=sqrt((xgrid(1)-xblob)**2+(xgrid(2)-yblob)**2)-test_radblob
+       if (im.eq.1) then
+        LS=-LS
+       else if (im.eq.2) then
+        ! do nothing
+       else
+        print *,"im invalid"
+        stop
+       endif
+      else if (probtype.eq.4) then
+       test_radblob=axisymmetric_disk_radblob(2)
+       LS=sqrt((xgrid(1)-xblob)**2+(xgrid(2)-yblob)**2)-test_radblob
+       if (im.eq.1) then
+        LS=-LS
+       else if (im.eq.2) then
+        ! do nothing
+       else
+        print *,"im invalid"
+        stop
+       endif
+      else if (probtype.eq.19) then
+       call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
+      else if (probtype.eq.13) then
+       call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
+      else if (probtype.eq.1) then
+       call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
+      else
+       print *,"probtype invalid in get_exact_LS"
+       stop
+      endif
+
+      end subroutine get_exact_LS
+
+      subroutine get_exact_NRM(xgrid,time,im,NRM)
+      USE probcommon_module 
+      USE probmain_module 
+      USE global_utility_module 
+      USE supercooled_exact_sol
+      USE variable_temperature_drop
+      USE mmat_FVM, only: dist_concentric
+
+      IMPLICIT NONE
+
+      REAL_T xgrid(SDIM)
+      REAL_T time
+      INTEGER_T im
+      REAL_T NRM(SDIM)
+      REAL_T mag
+      REAL_T stefan_time,test_radblob
+      REAL_T h_opt,LSp1,LSm1
+      INTEGER_T dir
+
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"im invalid get_exact_NRM"
+       stop
+      endif
+
+      do dir=1,SDIM
+       NRM(dir)=zero
+      enddo
+      if (probtype.eq.3) then
+       stefan_time=fort_time_radblob(2)+time
+       call solidification_front_radius_driver(stefan_time,test_radblob)
+       mag=sqrt((xgrid(1)-xblob)**2+(xgrid(2)-yblob)**2)
+       if (mag.gt.zero) then
+        NRM(1)=(xgrid(1)-xblob)/mag
+        NRM(2)=(xgrid(2)-yblob)/mag
+       endif
+       if (im.eq.1) then
+        do dir=1,SDIM
+         NRM(dir)=-NRM(dir)
+        enddo
+       else if (im.eq.2) then
+        ! do nothing
+       else
+        print *,"im invalid"
+        stop
+       endif
+      else if (probtype.eq.4) then
+       test_radblob=axisymmetric_disk_radblob(2)
+       mag=sqrt((xgrid(1)-xblob)**2+(xgrid(2)-yblob)**2)
+       if (mag.gt.zero) then
+        NRM(1)=(xgrid(1)-xblob)/mag
+        NRM(2)=(xgrid(2)-yblob)/mag
+       endif
+       if (im.eq.1) then
+        do dir=1,SDIM
+         NRM(dir)=-NRM(dir)
+        enddo
+       else if (im.eq.2) then
+        ! do nothing
+       else
+        print *,"im invalid"
+        stop
+       endif
+      else if ((probtype.eq.19).or. &
+               (probtype.eq.13).or. &
+               (probtype.eq.1)) then
+       h_opt=1.0D-6
+       dir=1
+       call dist_concentric(im,xgrid(1)+h_opt,xgrid(2),LSp1,probtype)
+       call dist_concentric(im,xgrid(1)-h_opt,xgrid(2),LSm1,probtype)
+       NRM(dir)=(LSp1-LSm1)/(2.0d0*h_opt)
+       dir=2
+       call dist_concentric(im,xgrid(1),xgrid(2)+h_opt,LSp1,probtype)
+       call dist_concentric(im,xgrid(1),xgrid(2)-h_opt,LSm1,probtype)
+       NRM(dir)=(LSp1-LSm1)/(2.0d0*h_opt)
+       mag=0.0d0
+       do dir=1,SDIM
+        mag=mag+NRM(dir)**2
+       enddo
+       mag=sqrt(mag)
+       if (mag.gt.0.0d0) then
+        do dir=1,SDIM
+         NRM(dir)=NRM(dir)/mag
+        enddo
+       else if (mag.eq.0.0d0) then
+        ! do nothing
+       else
+        print *,"mag invalid"
+        stop
+       endif
+      else
+       print *,"probtype invalid in get_exact_NRM"
+       stop
+      endif
+
+      end subroutine get_exact_NRM
+
+
+      subroutine get_exact_VEL(xgrid,dx,time,iten,VEL)
+      USE probcommon_module 
+      USE probmain_module 
+      USE global_utility_module 
+      USE supercooled_exact_sol
+      USE variable_temperature_drop
+      USE GeneralClass
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: xgrid(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: iten
+      REAL_T LS
+      REAL_T, intent(out) :: VEL(SDIM)
+      REAL_T NRM(SDIM)
+      REAL_T xgrid_probe(SDIM)
+      REAL_T T_grid,T_probe
+      REAL_T h_opt
+      REAL_T stefan_time,front_vel,test_front_vel
+      REAL_T rgrid,dux
+      INTEGER_T diflag
+      INTEGER_T dir
+      INTEGER_T im
+      REAL_T radial_slope
+      REAL_T r1,r2
+        ! declared in multimat_FVM.F90
+      REAL_T, external   :: exact_temperature
+
+      if (probtype.eq.3) then
+       if (iten.eq.1) then
+        stefan_time=fort_time_radblob(2)+time
+        call solidification_front_speed_driver(stefan_time,front_vel)
+        LS=sqrt((xgrid(1)-xblob)**2+(xgrid(2)-yblob)**2)
+        if (LS.gt.0.0d0) then
+         VEL(1)=front_vel*(xgrid(1)-xblob)/LS
+         VEL(2)=front_vel*(xgrid(2)-yblob)/LS
+        else if (LS.eq.0.0d0) then
+         VEL(1)=0.0d0
+         VEL(2)=0.0d0
+        else
+         print *,"LS invalid"
+         stop
+        endif
+       else
+        print *,"iten invalid"
+        stop
+       endif
+      else if (probtype.eq.4) then
+       if (iten.eq.1) then
+        call interp_LS_vel_to_grid(xgrid,2,LS,VEL)
+        test_front_vel=0.0d0
+        do dir=1,SDIM
+         test_front_vel=test_front_vel+VEL(dir)**2
+        enddo
+        test_front_vel=sqrt(test_front_vel)
+        call disk_get_speed(2,front_vel)
+        if (1.eq.0) then
+         print *,"front_vel,test_front_vel ",front_vel,test_front_vel
+        endif
+       else
+        print *,"iten invalid"
+        stop
+       endif
+      else if (probtype.eq.19) then
+       rgrid=sqrt((xgrid(1)-pcenter(1))**2+(xgrid(2)-pcenter(2))**2)
+       if (abs(rgrid-rlo).le.abs(rgrid-rhi)) then
+        diflag=1  ! inner boundary
+       else if (abs(rgrid-rlo).ge.abs(rgrid-rhi)) then
+        diflag=2  ! outer boundary
+       else
+        print *,"rgrid invalid"
+        stop
+       endif
+
+       if ((iten.eq.1).or.(iten.eq.3)) then
+        im=2
+        ! Np,Mp,upolar,pcenter,rlo,rhi defined in vof_cisl.F90
+        call find_polar_cart_inter(Np,Mp,upolar,pcenter,rlo,rhi, &
+         xgrid,diflag,dux)
+        call get_exact_NRM(xgrid,time,im,NRM)
+        do dir=1,SDIM
+         VEL(dir)=abs(dux)*NRM(dir)
+        enddo
+       else if (iten.eq.2) then
+        do dir=1,SDIM
+         VEL(dir)=zero
+        enddo
+       else
+        print *,"iten invalid"
+        stop
+       endif
+      else if ((probtype.eq.1).or.(probtype.eq.13)) then
+       im=2
+       if (probtype.eq.1) then
+        dux=0.0d0
+        r1=radcen-radeps
+        r2=radcen+radeps
+        if (r2.gt.r1) then
+         ! do nothing
+        else
+         print *,"r2 or r1 invalid"
+         stop
+        endif
+        radial_slope=1.0d0/(r2-r1)
+
+        if (radial_variation.eq.1) then
+         ! do nothing
+        else if (radial_variation.eq.0) then
+         radial_slope=0.0d0
+        else
+         print *,"radial_variation invalid"
+         stop
+        endif
+
+        dux=radial_slope
+
+       else if (probtype.eq.13) then
+        call get_exact_NRM(xgrid,time,im,NRM)
+        h_opt=1.0D-6
+        if (h_opt.gt.0.0d0) then
+         do dir=1,SDIM
+          xgrid_probe(dir)=xgrid(dir)+h_opt*NRM(dir)
+         enddo
+         T_grid=exact_temperature(xgrid,time,im,probtype,num_materials, &
+                fort_heatviscconst)
+         T_probe=exact_temperature(xgrid_probe,time,im,probtype, &
+                num_materials,fort_heatviscconst)
+         dux=abs(T_grid-T_probe)/h_opt
+        else
+         print *,"h_opt invalid"
+         stop
+        endif
+       else
+        print *,"probtype invalid"
+        stop
+       endif
+
+       call get_exact_NRM(xgrid,time,im,NRM)
+       do dir=1,SDIM
+        VEL(dir)=abs(dux)*NRM(dir)
+       enddo
+      else
+       print *,"probtype invalid in get_exact_VEL"
+       stop
+      endif
+
+      end subroutine get_exact_VEL
+
+
+      ! input: UOLD
+      ! output: UNEW
+      subroutine update_interface(UOLD,UNEW,NCELL,state_ncomp, &
+            dx,prev_time,dt,nsteps,nten_in,stefan_flag)
+      USE probcommon_module 
+      USE probmain_module 
+      USE global_utility_module 
+      use MOF_routines_module
+      use tecplotutil_cpp_module
+      use mass_transfer_cpp_module
+      use mof_redist_cpp_module
+      use plic_cpp_module
+      IMPLICIT NONE
+
+      INTEGER_T nten_in,stefan_flag
+      INTEGER_T NCELL,state_ncomp,nsteps
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      REAL_T dx(SDIM)
+      REAL_T prev_time,dt
+      REAL_T UOLD(-1:NCELL,-1:NCELL,1:state_ncomp)
+      REAL_T UNEW(-1:NCELL,-1:NCELL,1:state_ncomp)
+      INTEGER_T nten
+      INTEGER_T nmat
+      INTEGER_T nburning
+      INTEGER_T DIMDEC(maskcov)
+      INTEGER_T DIMDEC(masknbr)
+      INTEGER_T DIMDEC(burnvel)
+      INTEGER_T DIMDEC(nodevel)
+      INTEGER_T DIMDEC(deltaVOF)
+      INTEGER_T DIMDEC(LS)
+      INTEGER_T DIMDEC(LSnew)
+      INTEGER_T DIMDEC(LS_slopes_FD)
+      INTEGER_T DIMDEC(VOFnew)
+      INTEGER_T DIMDEC(Snew)
+      INTEGER_T DIMDEC(EOS)
+      INTEGER_T DIMDEC(recon)
+      INTEGER_T DIMDEC(pres)
+      INTEGER_T DIMDEC(jump_strength)
+      INTEGER_T DIMDEC(swept)
+      INTEGER_T DIMDEC(dist_touch)
+      INTEGER_T DIMDEC(stencil)
+      INTEGER_T DIMDEC(facefrac)
+      INTEGER_T DIMDEC(facetest)
+      INTEGER_T DIMDEC(slopes)
+      REAL_T, dimension(:,:), allocatable :: maskcov
+      REAL_T, dimension(:,:,:), allocatable :: masknbr
+      REAL_T, dimension(:,:,:), allocatable :: burnvel
+      REAL_T, dimension(:,:,:), allocatable :: nodevel
+      REAL_T, dimension(:,:,:), allocatable :: deltaVOF
+      REAL_T, dimension(:,:,:), allocatable :: LS
+      REAL_T, dimension(:,:,:), allocatable :: LSnew
+      REAL_T, dimension(:,:,:), allocatable :: LS_slopes_FD
+      REAL_T, dimension(:,:,:), allocatable :: VOFnew
+      REAL_T, dimension(:,:,:), allocatable :: Snew
+      REAL_T, dimension(:,:,:), allocatable :: EOS
+      REAL_T, dimension(:,:,:), allocatable :: recon
+      REAL_T, dimension(:,:), allocatable :: pres
+        ! 2*nten, ngrow_expansion
+      REAL_T, dimension(:,:,:), allocatable :: jump_strength 
+        ! ncomp=1, ngrow=0
+      REAL_T, dimension(:,:), allocatable :: swept
+        ! ncomp=nmat, ngrow=0
+      REAL_T, dimension(:,:,:), allocatable :: dist_touch
+        ! ncomp=9, ngrow=ngrow_distance
+      REAL_T, dimension(:,:,:), allocatable :: stencil
+        ! ncomp=nface, ngrow=ngrow_distance
+      REAL_T, dimension(:,:,:), allocatable :: facefrac
+        ! ncomp=nmat*sdim, ngrow=ngrow_distance
+      REAL_T, dimension(:,:,:), allocatable :: facetest
+        ! ncomp=nmat*ngeom_recon, ngrow=ngrow_distance
+      REAL_T, dimension(:,:,:), allocatable :: slopes
+
+      REAL_T DVOF(num_materials)
+      REAL_T DVOF_local(num_materials)
+      REAL_T delta_mass(2*num_materials)
+      REAL_T delta_mass_local(2*num_materials)
+
+      REAL_T blob_array(2)
+      INTEGER_T arraysize
+      INTEGER_T radius_cutoff(num_materials)
+      INTEGER_T update_flag
+      INTEGER_T total_calls(num_materials)
+      INTEGER_T total_iterations(num_materials)
+      INTEGER_T continuous_mof
+      INTEGER_T nstar
+      INTEGER_T bfact
+      INTEGER_T color_count
+      REAL_T cur_time
+      INTEGER_T scomp
+      INTEGER_T dcomp
+      INTEGER_T i,j,k
+      INTEGER_T ii,jj
+      INTEGER_T dir
+      INTEGER_T veldir
+      INTEGER_T side
+      INTEGER_T do_face_decomp
+      INTEGER_T maxlevel,level,finest_level
+      INTEGER_T gridno
+      INTEGER_T im
+      INTEGER_T im_opp
+      INTEGER_T im_primary
+      INTEGER_T im_primary_side
+      INTEGER_T is_phase_change
+      INTEGER_T isweep
+      INTEGER_T iten
+      INTEGER_T nhalf
+      REAL_T max_problen
+      REAL_T maxLS(num_materials)
+      REAL_T minLS(num_materials)
+      REAL_T LSerr,LSexact,VELerr,NRMerr,NRM_FD_err,SPEEDerr
+      REAL_T NRM_FD(SDIM)
+      REAL_T NRM_FD_mag
+      INTEGER_T nden,nface,nface_decomp
+      INTEGER_T ngrow,ngrow_distance,ngrow_recon
+      INTEGER_T nprocessed
+      INTEGER_T nstate
+      INTEGER_T num_elements_blobclass
+      INTEGER_T rzflag
+      INTEGER_T solvability_projection
+      INTEGER_T tessellate
+      INTEGER_T tid
+      INTEGER_T tid_data
+      INTEGER_T vofbc(SDIM,2)
+      INTEGER_T velbc(SDIM,2,SDIM)
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T xgrid(SDIM)
+      REAL_T xclosest(SDIM)
+      REAL_T rgrid
+      REAL_T xlo(SDIM)
+      REAL_T problo(SDIM)
+      REAL_T probhi(SDIM)
+      REAL_T problen(SDIM)
+      REAL_T VELexact(SDIM)
+      REAL_T NRMexact(SDIM)
+      REAL_T SPEEDexact
+      REAL_T SPEEDapprox
+      REAL_T LScen(num_materials)
+      REAL_T LSsten(num_materials)
+
+      INTEGER_T microlayer_substrate(num_materials)
+      REAL_T microlayer_angle(num_materials)
+      REAL_T microlayer_size(num_materials)
+      REAL_T macrolayer_size(num_materials)
+      REAL_T max_contact_line_size(num_materials)
+      REAL_T microlayer_temperature_substrate(num_materials)
+      INTEGER_T distribute_from_target(2*nten_in)
+      INTEGER_T mass_fraction_id(2*nten_in)
+      REAL_T species_evaporation_density(num_materials)
+
+      REAL_T l1_interface(nten_in)
+      REAL_T l2_interface(nten_in)
+      REAL_T linf_interface(nten_in)
+      REAL_T l1_speed(nten_in)
+      REAL_T l2_speed(nten_in)
+      REAL_T linf_speed(nten_in)
+      REAL_T max_speed_approx(nten_in)
+      REAL_T max_speed_exact(nten_in)
+
+      REAL_T l1_nrm(nten_in)
+      REAL_T l2_nrm(nten_in)
+      REAL_T linf_nrm(nten_in)
+
+      REAL_T l1_nrmFD(nten_in)
+      REAL_T l2_nrmFD(nten_in)
+      REAL_T linf_nrmFD(nten_in)
+
+      INTEGER_T num_error(nten_in)
+      INTEGER_T signchange(nten_in)
+      INTEGER_T i_inf(nten_in)
+      INTEGER_T j_inf(nten_in)
+
+      INTEGER_T i_inf_nrm(nten_in)
+      INTEGER_T j_inf_nrm(nten_in)
+
+      INTEGER_T DEBUG_LS
+      INTEGER_T debug_plot_dir,interior_only,diagnostic_output
+
+      diagnostic_output=0
+      DEBUG_LS=1
+      nhalf=3
+
+      if (SDIM.eq.2) then
+       ! do nothing
+      else
+       print *,"only SDIM==2 supported here"
+       stop
+      endif 
+      if (NCELL.ge.4) then
+       bfact=1
+       nmat=num_materials
+       nten=((nmat-1)*(nmat-1)+(nmat-1))/2
+       if (nten.eq.nten_in) then
+        ! do nothing
+       else
+        print *,"nten_in or nten invalid"
+        stop
+       endif
+       nburning=nten*(SDIM+1)
+       nstar=9
+      else
+       print *,"NCELL invalid"
+       stop
+      endif
+      if (ngeom_recon.eq.2*SDIM+3) then
+       ! do nothing
+      else
+       print *,"ngeom_recon invalid"
+       stop
+      endif
+      if (ngeom_raw.eq.1+SDIM) then
+       ! do nothing
+      else
+       print *,"ngeom_raw invalid"
+       stop
+      endif
+      if (nten.ne.global_nten) then
+       print *,"nten invalid"
+       stop
+      endif
+
+      do_face_decomp=0
+      nface=nmat*SDIM*2*(1+SDIM)
+      nface_decomp=0
+
+      problo(1)=problox
+      problo(2)=probloy
+      probhi(1)=probhix
+      probhi(2)=probhiy
+      max_problen=0.0d0
+      do dir=1,SDIM
+       problen(dir)=probhi(dir)-problo(dir)
+       if (problen(dir).gt.0.0d0) then
+        max_problen=max_problen+problen(dir)**2
+       else
+        print *,"problen invalid"
+        stop
+       endif
+       do side=1,2
+        if (physbc(dir,side).eq.INT_DIR) then
+         vofbc(dir,side)=INT_DIR
+         do veldir=1,SDIM
+          velbc(dir,side,veldir)=INT_DIR
+         enddo
+        else if (physbc(dir,side).eq.EXT_DIR) then
+         vofbc(dir,side)=FOEXTRAP
+         do veldir=1,SDIM
+          velbc(dir,side,veldir)=FOEXTRAP
+         enddo
+        else if (physbc(dir,side).eq.REFLECT_EVEN) then
+         vofbc(dir,side)=FOEXTRAP
+         do veldir=1,SDIM
+          velbc(dir,side,veldir)=FOEXTRAP
+         enddo
+        else
+         print *,"physbc invalid"
+         stop
+        endif
+       enddo ! side=1..2
+      enddo ! dir=1..sdim
+
+      max_problen=sqrt(max_problen);
+
+      if (max_problen.gt.0.0d0) then
+       ! do nothing
+      else
+       print *,"max_problen invalid"
+       stop
+      endif
+
+      nstate=SDIM+1+nmat*(2+ngeom_raw)+1
+
+      if (state_ncomp.eq.nmat+nten*SDIM+ngeom_recon*nmat+nmat*(SDIM+1)) then
+       ! do nothing
+      else
+       print *,"state_ncomp invalid"
+       stop
+      endif
+      is_phase_change=0
+      do iten=1,2*nten
+       if (latent_heat(iten).ne.0.0d0) then
+        is_phase_change=1
+       else if (latent_heat(iten).eq.0.0d0) then
+        ! do nothing
+       else
+        print *,"latent_heat bust"
+        stop
+       endif
+      enddo
+
+      if (is_phase_change.eq.1) then
+       do dir=1,SDIM
+        fablo(dir)=0
+        fabhi(dir)=NCELL-1
+        xlo(dir)=0.0d0
+       enddo
+
+       level=0
+       finest_level=0
+       ngrow_distance=4
+       if (ngrow_make_distance.eq.3) then
+        ! do nothing
+       else
+        print *,"ngrow_make_distance invalid"
+        stop
+       endif
+       ngrow=ngrow_distance
+       ngrow_expansion=2
+
+       nden=nmat*2
+
+       do im=1,nmat
+        radius_cutoff(im)=0
+        microlayer_substrate(im)=0
+        microlayer_angle(im)=0.0d0
+        microlayer_size(im)=0.0d0
+        macrolayer_size(im)=0.0d0
+        max_contact_line_size(im)=0.0d0
+        microlayer_temperature_substrate(im)=0.0d0
+       enddo
+       do iten=1,2*nten
+        distribute_from_target(iten)=0
+        mass_fraction_id(iten)=0
+       enddo
+       do im=1,nmat
+        species_evaporation_density(im)=1.0d0
+       enddo
+       num_elements_blobclass= &
+          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
+          2*(2*SDIM)+1+ &
+          3+1+2*SDIM+1+nmat+nmat*nmat
+
+       arraysize=num_elements_blobclass
+       color_count=0
+
+       call set_dimdec(DIMS(maskcov),fablo,fabhi,ngrow_distance)
+       call set_dimdec(DIMS(masknbr),fablo,fabhi,ngrow_distance)
+       call set_dimdec(DIMS(burnvel),fablo,fabhi,ngrow_make_distance)
+       call set_dimdec(DIMS(nodevel),fablo,fabhi,1)
+       call set_dimdec(DIMS(deltaVOF),fablo,fabhi,0)
+       call set_dimdec(DIMS(LS),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(LSnew),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(LS_slopes_FD),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(VOFnew),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(Snew),fablo,fabhi,1)
+       call set_dimdec(DIMS(EOS),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(recon),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(pres),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(jump_strength),fablo,fabhi,ngrow_expansion)
+       call set_dimdec(DIMS(swept),fablo,fabhi,0)
+       call set_dimdec(DIMS(dist_touch),fablo,fabhi,0)
+       call set_dimdec(DIMS(stencil),fablo,fabhi,ngrow_distance)
+       call set_dimdec(DIMS(facefrac),fablo,fabhi,ngrow_distance)
+       call set_dimdec(DIMS(facetest),fablo,fabhi,ngrow_distance)
+       call set_dimdec(DIMS(slopes),fablo,fabhi,ngrow_distance)
+
+       allocate(maskcov(DIMV(maskcov)))
+       allocate(masknbr(DIMV(masknbr),4))
+       allocate(burnvel(DIMV(burnvel),nburning))
+       allocate(nodevel(DIMV(nodevel),nten*SDIM))
+       allocate(deltaVOF(DIMV(deltaVOF),nmat))
+       allocate(LS(DIMV(LS),nmat*(SDIM+1)))
+       allocate(LSnew(DIMV(LSnew),nmat*(SDIM+1)))
+       allocate(LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM))
+       allocate(VOFnew(DIMV(VOFnew),nmat*ngeom_raw))
+       allocate(Snew(DIMV(Snew),nstate))
+       allocate(EOS(DIMV(EOS),nden))
+       allocate(recon(DIMV(recon),nmat*ngeom_recon)) ! F,X,order,SL,I x nmat
+       allocate(pres(DIMV(pres)))
+       allocate(jump_strength(DIMV(jump_strength),2*nten))
+       allocate(swept(DIMV(swept)))
+       allocate(dist_touch(DIMV(dist_touch),nmat))
+       allocate(stencil(DIMV(stencil),nstar))
+       allocate(facefrac(DIMV(facefrac),nface))
+       allocate(facetest(DIMV(facetest),nmat*SDIM))
+       allocate(slopes(DIMV(slopes),nmat*ngeom_recon))
+
+       do im=1,nmat
+        DVOF(im)=0.0d0
+        DVOF_local(im)=0.0d0
+       enddo
+       do im=1,2*nmat
+        delta_mass(im)=0.0d0
+        delta_mass_local(im)=0.0d0
+       enddo
+
+       do i=fablo(1)-ngrow_distance,fabhi(1)+ngrow_distance
+       do j=fablo(2)-ngrow_distance,fabhi(2)+ngrow_distance
+        maskcov(i,j)=1.0d0
+        masknbr(i,j,1)=0.0d0
+        masknbr(i,j,2)=0.0d0
+        masknbr(i,j,3)=0.0d0
+        masknbr(i,j,4)=1.0d0
+       enddo
+       enddo
+       do i=fablo(1),fabhi(1)
+       do j=fablo(2),fabhi(2)
+        masknbr(i,j,1)=1.0d0
+        masknbr(i,j,2)=1.0d0
+       enddo
+       enddo
+       do i=fablo(1)-ngrow_distance+1,fabhi(1)+ngrow_distance-1
+       do j=fablo(2)-ngrow_distance+1,fabhi(2)+ngrow_distance-1
+        masknbr(i,j,3)=1.0d0
+       enddo
+       enddo
+       do i=fablo(1),fabhi(1)
+       do j=fablo(2),fabhi(2)
+        swept(i,j)=0.0d0
+       enddo
+       enddo
+       do i=fablo(1),fabhi(1)
+       do j=fablo(2),fabhi(2)
+       do im=1,nmat
+        dist_touch(i,j,im)=0.0d0
+       enddo
+       enddo
+       enddo
+       do i=fablo(1)-ngrow_distance,fabhi(1)+ngrow_distance
+       do j=fablo(2)-ngrow_distance,fabhi(2)+ngrow_distance
+        do im=1,nstar
+         stencil(i,j,im)=0.0d0
+        enddo
+        do im=1,nface
+         facefrac(i,j,im)=0.0d0
+        enddo
+        do im=1,nmat*SDIM
+         facetest(i,j,im)=0.0d0
+        enddo
+        do im=1,nmat*ngeom_recon
+         slopes(i,j,im)=0.0d0
+        enddo
+       enddo
+       enddo
+       do i=fablo(1)-ngrow_make_distance,fabhi(1)+ngrow_make_distance
+       do j=fablo(2)-ngrow_make_distance,fabhi(2)+ngrow_make_distance
+       do im=1,nburning
+        burnvel(i,j,im)=0.0d0
+       enddo
+       enddo
+       enddo
+       do i=fablo(1)-1,fabhi(1)+1
+       do j=fablo(2)-1,fabhi(2)+1
+       do im=1,nten*SDIM
+        nodevel(i,j,im)=0.0d0
+       enddo
+       enddo
+       enddo
+       do i=fablo(1)-ngrow_expansion,fabhi(1)+ngrow_expansion
+       do j=fablo(2)-ngrow_expansion,fabhi(2)+ngrow_expansion
+       do im=1,2*nten
+        jump_strength(i,j,im)=0.0d0
+       enddo
+       enddo
+       enddo
+       do i=fablo(1)-ngrow,fabhi(1)+ngrow
+       do j=fablo(2)-ngrow,fabhi(2)+ngrow
+         pres(i,j)=0.0d0
+       enddo
+       enddo
+
+       do i=fablo(1),fabhi(1)
+       do j=fablo(2),fabhi(2)
+        do im=1,nmat*(1+SDIM)
+         scomp=nmat+nten*SDIM+ngeom_recon*nmat
+         LS(i,j,im)=UOLD(i,j,scomp+im)
+         LSnew(i,j,im)=UOLD(i,j,scomp+im)
+        enddo
+        do im=1,nmat
+         do dir=1,ngeom_raw
+          dcomp=(im-1)*ngeom_raw+dir
+          scomp=nmat+nten*SDIM+(im-1)*ngeom_recon+dir
+          VOFnew(i,j,dcomp)=UOLD(i,j,scomp)
+         enddo
+        enddo
+        do im=1,nmat
+         scomp=(im-1)*2
+         EOS(i,j,scomp+1)=fort_denconst(im)
+         EOS(i,j,scomp+2)=UOLD(i,j,im)
+        enddo
+        do im=1,nmat*ngeom_recon
+         scomp=nmat+nten*SDIM
+         recon(i,j,im)=UOLD(i,j,scomp+im)
+        enddo
+       enddo
+       enddo
+       call set_boundary_VOF( &
+        VOFnew,DIMS(VOFnew), &
+        fablo,fabhi, &
+        nmat,ngrow)
+       call set_boundary_recon( &
+        recon,DIMS(recon), &
+        fablo,fabhi, &
+        nmat,ngrow)
+       call set_boundary_EOS( &
+        EOS,DIMS(EOS), &
+        fablo,fabhi, &
+        nmat,ngrow)
+       call set_boundary_LS( &
+        LSnew,DIMS(LSnew), &
+        fablo,fabhi, &
+        nmat,ngrow)
+       call set_boundary_LS( &
+        LS,DIMS(LS), &
+        fablo,fabhi, &
+        nmat,ngrow)
+
+       do i=fablo(1)-ngrow,fabhi(1)+ngrow
+       do j=fablo(2)-ngrow,fabhi(2)+ngrow
+        do im=1,nmat*SDIM
+         LS_slopes_FD(i,j,im)=LS(i,j,nmat+im)
+        enddo
+       enddo
+       enddo
+
+       call FORT_FD_NORMAL( &
+         level, &
+         finest_level, &
+         LS, &
+         DIMS(LS), &
+         LS_slopes_FD, &
+         DIMS(LS_slopes_FD), &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         bfact, &
+         xlo,dx, &
+         nmat)
+
+
+       if (DEBUG_LS.eq.1) then
+        k=0
+        do i=fablo(1)-ngrow,fabhi(1)+ngrow
+        do j=fablo(2)-ngrow,fabhi(2)+ngrow
+         call gridsten_level(xsten,i,j,k,level,nhalf)
+         do dir=1,SDIM
+          xgrid(dir)=xsten(0,dir)
+         enddo
+         do im=1,nmat
+          call get_exact_LS(xgrid,cur_time,im,LSexact)
+          call get_exact_NRM(xgrid,cur_time,im,NRMexact)
+          LS(i,j,im)=LSexact
+          LSnew(i,j,im)=LSexact
+          do dir=1,SDIM
+           LS(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+           LSnew(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+           LS_slopes_FD(i,j,(im-1)*SDIM+dir)=NRMexact(dir)
+          enddo
+         enddo
+        enddo
+        enddo
+       else if (DEBUG_LS.eq.0) then
+        ! do nothing
+       else
+        print *,"DEBUG_LS invalid"
+        stop
+       endif
+
+
+       do i=fablo(1)-1,fabhi(1)+1
+       do j=fablo(2)-1,fabhi(2)+1
+        do im=1,nstate
+         Snew(i,j,im)=0.0d0
+        enddo
+        do im=1,nmat
+         dcomp=SDIM+1+(im-1)*2
+         scomp=(im-1)*2
+         Snew(i,j,dcomp+1)=EOS(i,j,scomp+1) 
+         Snew(i,j,dcomp+2)=EOS(i,j,scomp+2) 
+         dcomp=SDIM+1+nmat*2+(im-1)*ngeom_raw
+         scomp=(im-1)*ngeom_recon
+         do dir=1,ngeom_raw
+          Snew(i,j,dcomp+dir)=recon(i,j,scomp+dir)
+         enddo
+        enddo ! im=1..nmat
+       enddo
+       enddo
+       
+       if (1.eq.1) then 
+        ! burnvel flag==1 if valid rate of phase change.
+        call FORT_RATEMASSCHANGE( &
+         stefan_flag, & ! do not update LSnew if stefan_flag==0
+         level, &
+         finest_level, &
+         normal_probe_size, &
+         ngrow_distance, &
+         nmat, &
+         nten, &
+         nburning, &
+         nden, &
+         fort_density_floor, &
+         fort_density_ceiling, &
+         microlayer_substrate, &
+         microlayer_angle, &
+         microlayer_size, &
+         macrolayer_size, &
+         max_contact_line_size, &
+         latent_heat, &
+         use_exact_temperature, &
+         reaction_rate, &
+         saturation_temp, &
+         freezing_model, &
+         distribute_from_target, &
+         mass_fraction_id, &
+         species_evaporation_density, &
+         fablo,fabhi, &
+         fablo,fabhi,bfact, &
+         xlo,dx, &
+         prev_time, &
+         dt, &
+         arraysize, &
+         blob_array, &
+         num_elements_blobclass, &
+         color_count, &
+         maskcov,DIMS(maskcov), & ! colorfab 1 grow unused
+         maskcov,DIMS(maskcov), & ! ! typefab 1 grow unused
+         maskcov,DIMS(maskcov), & ! 1 grow
+         burnvel,DIMS(burnvel), & ! ngrow_make_distance
+         LS,DIMS(LS),  & ! ngrow
+         LSnew,DIMS(LSnew), &  ! ngrow
+         LS_slopes_FD, &
+         DIMS(LS_slopes_FD), &  ! ngrow
+         EOS,DIMS(EOS), & ! ngrow
+         recon,DIMS(recon), & ! ngrow
+         pres,DIMS(pres) ) ! ngrow
+       endif
+
+
+       if (DEBUG_LS.eq.1) then
+        k=0
+        do i=fablo(1)-ngrow,fabhi(1)+ngrow
+        do j=fablo(2)-ngrow,fabhi(2)+ngrow
+         call gridsten_level(xsten,i,j,k,level,nhalf)
+         do dir=1,SDIM
+          xgrid(dir)=xsten(0,dir)
+         enddo
+         do im=1,nmat
+          call get_exact_LS(xgrid,cur_time,im,LSexact)
+          call get_exact_NRM(xgrid,cur_time,im,NRMexact)
+          LS(i,j,im)=LSexact
+          LSnew(i,j,im)=LSexact
+          do dir=1,SDIM
+           LS(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+           LSnew(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+           LS_slopes_FD(i,j,(im-1)*SDIM+dir)=NRMexact(dir)
+          enddo
+         enddo
+        enddo
+        enddo
+       else if (DEBUG_LS.eq.0) then
+        ! do nothing
+       else
+        print *,"DEBUG_LS invalid"
+        stop
+       endif
+
+       ngrow=normal_probe_size+3
+       if (ngrow.eq.4) then
+        ! do nothing
+       else
+        print *,"ngrow invalid"
+        stop
+       endif
+
+        ! first nten components are the status
+       call set_boundary_burning( &
+        burnvel, &
+        DIMS(burnvel), &
+        fablo,fabhi, &
+        nten,nmat,nburning, &
+        ngrow_make_distance)
+
+       debug_plot_dir=-1
+       interior_only=1
+
+       if (diagnostic_output.eq.1) then
+        call FORT_TECPLOTFAB( &
+         prev_time, &
+         burnvel, &
+         DIMS(burnvel), &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         bfact, &
+         xlo,dx, &
+         debug_plot_dir,nburning,interior_only,nsteps)
+        print *,"burnvel afer ratemasschange"
+        pause
+       endif
+
+       !burnvel is cell centered.
+       !burnvel flag set from 0 to 2 if
+       !foot of characteristic within range.
+       call FORT_EXTEND_BURNING_VEL( &
+         level, &
+         finest_level, &
+         xlo,dx, &
+         nmat, &
+         nten, &
+         nburning, &
+         ngrow, &
+         latent_heat, &
+         fablo,fabhi, &
+         fablo,fabhi,bfact, &
+         burnvel,DIMS(burnvel), & ! ngrow_make_distance
+         LS,DIMS(LS))
+
+       if (diagnostic_output.eq.1) then
+        call FORT_TECPLOTFAB( &
+         prev_time, &
+         burnvel, &
+         DIMS(burnvel), &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         bfact, &
+         xlo,dx, &
+         debug_plot_dir,nburning,interior_only,nsteps)
+        print *,"burnvel afer extend burning vel"
+        pause
+       endif
+
+
+        ! first nten components are the status
+       call set_boundary_burning( &
+        burnvel, &
+        DIMS(burnvel), &
+        fablo,fabhi, &
+        nten,nmat,nburning, &
+        ngrow_make_distance)
+
+       do isweep=0,1
+
+        if (isweep.eq.0) then
+         call FORT_NODEDISPLACE( &
+          nmat, &
+          nten, &
+          nburning, &
+          fablo,fabhi, &
+          fablo,fabhi, &
+          bfact, &
+          velbc, &
+          dt, &
+          nodevel, &
+          DIMS(nodevel), &
+          burnvel, &
+          DIMS(burnvel), &
+          xlo,dx, &
+          level,finest_level)
+        else if (isweep.eq.1) then
+         ! do nothing
+        else
+         print *,"isweep invalid"
+         stop
+        endif
+
+        if (isweep.eq.0) then
+                ! do nothing
+        else if (isweep.eq.1) then
+         do im=1,nmat
+          DVOF_local(im)=DVOF(im)
+         enddo
+        else
+         print *,"isweep invalid"
+         stop
+        endif
+
+        tid=0
+        tid_data=0
+        solvability_projection=0
+
+        if (stefan_flag.eq.1) then
+         ! do nothing
+        else if (stefan_flag.eq.0) then
+         do i=fablo(1)-1,fabhi(1)+1
+         do j=fablo(2)-1,fabhi(2)+1
+         do im=1,nten*SDIM
+          nodevel(i,j,im)=0.0d0
+         enddo
+         enddo
+         enddo
+        else
+         print *,"stefan_flag invalid"
+         stop
+        endif
+
+        call FORT_CONVERTMATERIAL( &
+         tid_data, &
+         isweep, &
+         solvability_projection, &
+         ngrow_expansion, &
+         level,finest_level, &
+         normal_probe_size, &
+         nmat, &
+         nten, &
+         nden, &
+         nstate, &
+         fort_density_floor, &
+         fort_density_ceiling, &
+         latent_heat, &
+         saturation_temp, &
+         freezing_model, &
+         mass_fraction_id, &
+         species_evaporation_density, &
+         distribute_from_target, &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         bfact,  &
+         vofbc, &
+         xlo,dx, &
+         dt, &
+         delta_mass_local, &
+         DVOF_local, &
+         maskcov,DIMS(maskcov), &
+         deltaVOF,DIMS(deltaVOF), &
+         nodevel,DIMS(nodevel), &
+         jump_strength, &
+         DIMS(jump_strength), &
+         LS,DIMS(LS), &
+         LSnew,DIMS(LSnew), &
+         recon,DIMS(recon), &
+         Snew,DIMS(Snew), &
+         EOS,DIMS(EOS), &
+         swept,DIMS(swept))
+
+        if (isweep.eq.0) then
+         do im=1,nmat
+          DVOF(im)=DVOF(im)+DVOF_local(im)
+         enddo
+        else if (isweep.eq.1) then
+         do im=1,2*nmat
+          delta_mass(im)=delta_mass(im)+delta_mass_local(im)
+         enddo
+        else
+         print *,"isweep invalid"
+         stop
+        endif
+
+       enddo ! isweep=0..1
+
+
+       if (diagnostic_output.eq.1) then
+        call FORT_TECPLOTFAB( &
+         prev_time, &
+         burnvel, &
+         DIMS(burnvel), &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         bfact, &
+         xlo,dx, &
+         debug_plot_dir,nburning,interior_only,nsteps)
+        print *,"burnvel afer convertmaterial"
+        pause
+       endif
+
+       if (DEBUG_LS.eq.1) then
+        k=0
+        do i=fablo(1)-ngrow,fabhi(1)+ngrow
+        do j=fablo(2)-ngrow,fabhi(2)+ngrow
+         call gridsten_level(xsten,i,j,k,level,nhalf)
+         do dir=1,SDIM
+          xgrid(dir)=xsten(0,dir)
+         enddo
+         do im=1,nmat
+          call get_exact_LS(xgrid,cur_time,im,LSexact)
+          call get_exact_NRM(xgrid,cur_time,im,NRMexact)
+          LS(i,j,im)=LSexact
+          LSnew(i,j,im)=LSexact
+          do dir=1,SDIM
+           LS(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+           LSnew(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+           LS_slopes_FD(i,j,(im-1)*SDIM+dir)=NRMexact(dir)
+          enddo
+         enddo
+        enddo
+        enddo
+       else if (DEBUG_LS.eq.0) then
+        ! do nothing
+       else
+        print *,"DEBUG_LS invalid"
+        stop
+       endif
+
+
+       do i=fablo(1),fabhi(1)
+       do j=fablo(2),fabhi(2)
+        do im=1,nmat*(SDIM+1)
+         LS(i,j,im)=LSnew(i,j,im)
+        enddo
+        do im=1,nmat*ngeom_raw
+         scomp=SDIM+1+nmat*2+im
+         VOFnew(i,j,im)=Snew(i,j,scomp)
+        enddo
+       enddo
+       enddo
+       call set_boundary_VOF( &
+        VOFnew,DIMS(VOFnew), &
+        fablo,fabhi, &
+        nmat,ngrow)
+       call set_boundary_LS( &
+        LSnew,DIMS(LSnew), &
+        fablo,fabhi, &
+        nmat,ngrow)
+       call set_boundary_LS( &
+        LS,DIMS(LS), &
+        fablo,fabhi, &
+        nmat,ngrow)
+
+       tid=0
+       gridno=0
+       level=0
+       finest_level=0
+       maxlevel=0
+       ngrow_recon=1
+       update_flag=0
+       total_calls=0
+       total_iterations=0
+       continuous_mof=0
+
+       print *,"first sloperecon"
+
+       call FORT_SLOPERECON( &
+        tid, &
+        gridno, &
+        level, &
+        finest_level, &
+        maxlevel, &
+        ngrow_recon, &
+        fablo,fabhi, &
+        fablo,fabhi,bfact, &
+        xlo,dx, &
+        masknbr,DIMS(masknbr), &
+        Snew,DIMS(Snew), &
+        VOFnew,DIMS(VOFnew), & ! nmat x ngeom_raw
+        LS,DIMS(LS), &  ! nmat
+        slopes,DIMS(slopes), & ! nmat x ngeom_recon
+        nsteps, &
+        prev_time, &
+        nmat,nten, &
+        latent_heat, &
+        update_flag, &
+        total_calls, &
+        total_iterations, &
+        continuous_mof, &
+        radius_cutoff)
+
+       call set_boundary_recon( &
+        slopes,DIMS(slopes), &
+        fablo,fabhi, &
+        nmat,ngrow)
+
+       do im=1,nmat
+        minLS(im)=max_problen
+        maxLS(im)=-max_problen
+       enddo
+
+       rzflag=0
+
+       tessellate=0
+       cur_time=prev_time+dt
+
+       call FORT_FACEINIT( &
+        tid, &
+        tessellate, &
+        nten, &
+        level, &
+        finest_level, &
+        facefrac, &
+        DIMS(facefrac), &
+        masknbr, &
+        DIMS(masknbr), &
+        slopes, &
+        DIMS(slopes), &
+        fablo,fabhi, &
+        fablo,fabhi, &
+        bfact, &
+        rzflag, &
+        xlo,dx, &
+        cur_time, &
+        ngrow_distance, &
+        nmat, &
+        nface, &
+        nface_decomp)
+
+       call FORT_FACEINITTEST(  &
+        tid, &
+        tessellate, &
+        level, &
+        finest_level, &
+        facefrac, &
+        DIMS(facefrac), &
+        facetest, &
+        DIMS(facetest), &
+        masknbr, &
+        DIMS(masknbr), &
+        slopes, &
+        DIMS(slopes), &
+        fablo,fabhi, &
+        fablo,fabhi,bfact, &
+        rzflag, &
+        xlo,dx, &
+        cur_time, &
+        ngrow_distance, &
+        nmat, &
+        nface)
+
+       call FORT_STENINIT( & 
+        level, &
+        finest_level, &
+        stencil, &
+        DIMS(stencil), &
+        masknbr, &
+        DIMS(masknbr), &
+        slopes, &
+        DIMS(slopes), &
+        fablo,fabhi, &
+        fablo,fabhi,bfact, &
+        rzflag, &
+        xlo,dx, &
+        cur_time, &
+        ngrow_distance, &
+        nmat,nstar)
+
+       nprocessed=0
+
+       call FORT_LEVELSTRIP(  &
+        nprocessed, &
+        minLS, &
+        maxLS, &
+        max_problen, &
+        level, &
+        finest_level, &
+        latent_heat, &
+        masknbr, &
+        DIMS(masknbr), &
+        facefrac, &
+        DIMS(facefrac), &
+        facetest, &
+        DIMS(facetest), &
+        stencil, &
+        DIMS(stencil), &
+        slopes, &
+        DIMS(slopes), &
+        LS, &
+        DIMS(LS), &
+        LSnew, &
+        DIMS(LSnew), &
+        dist_touch, &
+        DIMS(dist_touch), &
+        dist_touch, &
+        DIMS(dist_touch), &
+        LSnew, &
+        DIMS(LSnew), &
+        fablo,fabhi, &
+        fablo,fabhi,bfact, &
+        vofbc, &
+        rzflag, &
+        xlo,dx, &
+        cur_time, &
+        ngrow_distance, &
+        nmat,nten,nstar,nface)
+
+       call FORT_CORRECT_UNINIT(  &
+        minLS, &
+        maxLS, &
+        max_problen, &
+        level, &
+        finest_level, &
+        LSnew, &
+        DIMS(LSnew), &
+        dist_touch, &
+        DIMS(dist_touch), &
+        fablo,fabhi, &
+        fablo,fabhi,bfact, &
+        xlo,dx, &
+        cur_time, &
+        nmat)
+
+       call set_boundary_LS( &
+        LSnew,DIMS(LSnew), &
+        fablo,fabhi, &
+        nmat,ngrow)
+
+       tid=0
+       gridno=0
+       level=0
+       finest_level=0
+       maxlevel=0
+       ngrow_recon=1
+       update_flag=0
+       total_calls=0
+       total_iterations=0
+       continuous_mof=0
+
+       print *,"second sloperecon"
+
+       call FORT_SLOPERECON( &
+        tid, &
+        gridno, &
+        level, &
+        finest_level, &
+        maxlevel, &
+        ngrow_recon, &
+        fablo,fabhi, &
+        fablo,fabhi,bfact, &
+        xlo,dx, &
+        masknbr,DIMS(masknbr), &
+        Snew,DIMS(Snew), &
+        VOFnew,DIMS(VOFnew), & ! nmat x ngeom_raw
+        LSnew,DIMS(LSnew), &  ! nmat
+        slopes,DIMS(slopes), & ! nmat x ngeom_recon
+        nsteps, &
+        prev_time, &
+        nmat,nten, &
+        latent_heat, &
+        update_flag, &
+        total_calls, &
+        total_iterations, &
+        continuous_mof, &
+        radius_cutoff)
+
+       call set_boundary_recon( &
+        slopes,DIMS(slopes), &
+        fablo,fabhi, &
+        nmat,ngrow)
+
+       if (DEBUG_LS.eq.1) then
+        k=0
+        do i=fablo(1)-ngrow,fabhi(1)+ngrow
+        do j=fablo(2)-ngrow,fabhi(2)+ngrow
+         call gridsten_level(xsten,i,j,k,level,nhalf)
+         do dir=1,SDIM
+          xgrid(dir)=xsten(0,dir)
+         enddo
+         do im=1,nmat
+          call get_exact_LS(xgrid,cur_time,im,LSexact)
+          call get_exact_NRM(xgrid,cur_time,im,NRMexact)
+          LS(i,j,im)=LSexact
+          LSnew(i,j,im)=LSexact
+          do dir=1,SDIM
+           LS(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+           LSnew(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+           LS_slopes_FD(i,j,(im-1)*SDIM+dir)=NRMexact(dir)
+          enddo
+         enddo
+        enddo
+        enddo
+       else if (DEBUG_LS.eq.0) then
+        ! do nothing
+       else
+        print *,"DEBUG_LS invalid"
+        stop
+       endif
+
+       do i=fablo(1)-1,fabhi(1)+1
+       do j=fablo(2)-1,fabhi(2)+1
+        do im=1,nmat*(1+SDIM)
+         dcomp=nmat+nten*SDIM+ngeom_recon*nmat
+         UNEW(i,j,dcomp+im)=LSnew(i,j,im)
+        enddo
+        do im=1,nmat
+         do dir=1,ngeom_raw
+          scomp=(im-1)*ngeom_raw+dir
+          dcomp=nmat+nten*SDIM+(im-1)*ngeom_recon+dir
+          UNEW(i,j,dcomp)=VOFnew(i,j,scomp)
+         enddo
+         do dir=ngeom_raw+1,ngeom_recon
+          scomp=(im-1)*ngeom_recon+dir
+          dcomp=nmat+nten*SDIM+(im-1)*ngeom_recon+dir
+          UNEW(i,j,dcomp)=slopes(i,j,scomp)
+         enddo
+        enddo ! im=1..nmat
+         ! temperature
+        do im=1,nmat
+         dcomp=im
+         scomp=SDIM+1+(im-1)*2+2
+         UNEW(i,j,dcomp)=Snew(i,j,scomp)
+        enddo
+         ! phase change velocity
+        do im=1,nten*SDIM
+         dcomp=nmat+im
+         scomp=nten+im
+         UNEW(i,j,dcomp)=burnvel(i,j,scomp)
+        enddo
+       enddo
+       enddo
+
+       do iten=1,nten
+        l1_interface(iten)=0.0d0
+        l2_interface(iten)=0.0d0
+        linf_interface(iten)=0.0d0
+        i_inf(iten)=fablo(1)-1
+        j_inf(iten)=fablo(2)-1
+
+        l1_nrm(iten)=0.0d0
+        l2_nrm(iten)=0.0d0
+        linf_nrm(iten)=0.0d0
+
+        i_inf_nrm(iten)=fablo(1)-1
+        j_inf_nrm(iten)=fablo(2)-1
+
+        l1_nrmFD(iten)=0.0d0
+        l2_nrmFD(iten)=0.0d0
+        linf_nrmFD(iten)=0.0d0
+
+        l1_speed(iten)=0.0d0
+        l2_speed(iten)=0.0d0
+        linf_speed(iten)=0.0d0
+        max_speed_approx(iten)=0.0d0
+        max_speed_exact(iten)=0.0d0
+        num_error(iten)=0
+       enddo
+
+       k=0
+       do i=fablo(1),fabhi(1)
+       do j=fablo(2),fabhi(2)
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+        do dir=1,SDIM
+         xgrid(dir)=xsten(0,dir)
+        enddo
+        do im=1,nmat
+         LScen(im)=LSnew(i,j,im)
+        enddo
+        call get_primary_material(LScen,nmat,im_primary)
+        if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
+         do iten=1,nten
+          signchange(iten)=0
+         enddo
+         do ii=-1,1
+         do jj=-1,1
+          if (abs(ii)+abs(jj).eq.1) then
+           do im=1,nmat
+            LSsten(im)=LSnew(i+ii,j+jj,im)
+           enddo
+           call get_primary_material(LSsten,nmat,im_primary_side)
+           if (im_primary_side.ne.im_primary) then
+            call get_iten(im_primary,im_primary_side,iten,nmat)
+            signchange(iten)=1
+           endif
+          else if (abs(ii)+abs(jj).eq.2) then
+           ! do nothing
+          else if (abs(ii)+abs(jj).eq.0) then
+           ! do nothing
+          else
+           print *,"ii or jj invalid"
+           stop
+          endif 
+         enddo 
+         enddo 
+         do iten=1,nten
+          if (signchange(iten).eq.1) then
+           call get_exact_LS(xgrid,cur_time,im_primary,LSexact)
+           call get_exact_NRM(xgrid,cur_time,im_primary,NRMexact)
+           call get_exact_VEL(xgrid,dx,cur_time,iten,VELexact)
+           SPEEDexact=0.0d0
+           SPEEDapprox=0.0d0
+           do dir=1,SDIM
+            scomp=nten+(iten-1)*SDIM+dir
+            SPEEDexact=SPEEDexact+VELexact(dir)**2
+            SPEEDapprox=SPEEDapprox+burnvel(i,j,scomp)**2
+           enddo
+           SPEEDexact=sqrt(SPEEDexact)
+           SPEEDapprox=sqrt(SPEEDapprox)
+
+           rgrid=sqrt((xgrid(1)-xblob)**2+(xgrid(2)-yblob)**2)
+           if (1.eq.0) then
+            print *,"rgrid,speed_exact,speed_approx ",rgrid, &
+             SPEEDexact,SPEEDapprox
+           endif
+
+           num_error(iten)=num_error(iten)+1
+           LSerr=abs(LSexact-LScen(im_primary))
+
+           VELerr=0.0d0
+           do dir=1,SDIM
+            scomp=nten+(iten-1)*SDIM+dir
+            VELerr=VELerr+(VELexact(dir)-burnvel(i,j,scomp))**2
+           enddo
+           VELerr=sqrt(VELerr)
+
+           NRMerr=0.0d0
+           NRM_FD_err=0.0d0
+           do dir=1,SDIM
+            NRM_FD(dir)=LS_slopes_FD(i,j,(im_primary-1)*SDIM+dir)
+           enddo
+           NRM_FD_mag=zero
+           do dir=1,SDIM
+            NRM_FD_mag=NRM_FD_mag+NRM_FD(dir)**2
+           enddo
+           NRM_FD_mag=sqrt(NRM_FD_mag)
+           if (NRM_FD_mag.gt.zero) then
+            do dir=1,SDIM
+             NRM_FD(dir)=NRM_FD(dir)/NRM_FD_mag
+            enddo
+           endif
+           do dir=1,SDIM
+            scomp=nmat+(im_primary-1)*SDIM+dir
+            NRMerr=NRMerr+(NRMexact(dir)-LSnew(i,j,scomp))**2
+            NRM_FD_err=NRM_FD_err+(NRMexact(dir)-NRM_FD(dir))**2
+           enddo
+           NRMerr=sqrt(NRMerr)
+           NRM_FD_err=sqrt(NRM_FD_err)
+
+           SPEEDerr=abs(SPEEDexact-SPEEDapprox)
+
+           if (SPEEDexact.gt.max_speed_exact(iten)) then
+            max_speed_exact(iten)=SPEEDexact
+           endif
+           if (SPEEDapprox.gt.max_speed_approx(iten)) then
+            max_speed_approx(iten)=SPEEDapprox
+           endif
+           l1_interface(iten)=l1_interface(iten)+LSerr
+           l2_interface(iten)=l2_interface(iten)+LSerr**2
+           if (LSerr.gt.linf_interface(iten)) then
+            linf_interface(iten)=LSerr
+           endif
+
+           l1_nrm(iten)=l1_nrm(iten)+NRMerr
+           l2_nrm(iten)=l2_nrm(iten)+NRMerr**2
+           if (NRMerr.gt.linf_nrm(iten)) then
+            linf_nrm(iten)=NRMerr
+            i_inf_nrm(iten)=i
+            j_inf_nrm(iten)=j
+           endif
+
+           l1_nrmFD(iten)=l1_nrmFD(iten)+NRM_FD_err
+           l2_nrmFD(iten)=l2_nrmFD(iten)+NRM_FD_err**2
+           if (NRM_FD_err.gt.linf_nrmFD(iten)) then
+            linf_nrmFD(iten)=NRM_FD_err
+           endif
+
+           l1_speed(iten)=l1_speed(iten)+SPEEDerr
+           l2_speed(iten)=l2_speed(iten)+SPEEDerr**2
+           if (SPEEDerr.gt.linf_speed(iten)) then
+            linf_speed(iten)=SPEEDerr
+            i_inf(iten)=i
+            j_inf(iten)=j
+           endif
+          else if (signchange(iten).eq.0) then
+           ! do nothing
+          else
+           print *,"signchange invalid"
+           stop
+          endif
+         enddo ! iten=1..nten
+        else
+         print *,"im_primary invalid"
+         stop
+        endif
+       enddo
+       enddo
+
+       do iten=1,nten
+        if (num_error(iten).gt.0) then
+         print *,"TIME=",cur_time," iten=",iten," num_error=", &
+                 num_error(iten)
+         print *,"TIME=",cur_time," iten=",iten," l1_int=", &
+                 l1_interface(iten)/num_error(iten)
+         print *,"TIME=",cur_time," iten=",iten," l2_int=", &
+                 sqrt(l2_interface(iten)/num_error(iten))
+         print *,"TIME=",cur_time," iten=",iten," linf_int=", &
+                 linf_interface(iten)
+
+         print *,"TIME=",cur_time," iten=",iten," l1_nrm=", &
+                 l1_nrm(iten)/num_error(iten)
+         print *,"TIME=",cur_time," iten=",iten," l2_nrm=", &
+                 sqrt(l2_nrm(iten)/num_error(iten))
+         print *,"TIME=",cur_time," iten=",iten," linf_nrm=", &
+                 linf_nrm(iten)
+
+         print *,"TIME=",cur_time," iten=",iten," l1_nrmFD=", &
+                 l1_nrmFD(iten)/num_error(iten)
+         print *,"TIME=",cur_time," iten=",iten," l2_nrmFD=", &
+                 sqrt(l2_nrmFD(iten)/num_error(iten))
+         print *,"TIME=",cur_time," iten=",iten," linf_nrmFD=", &
+                 linf_nrmFD(iten)
+
+         print *,"TIME=",cur_time," iten=",iten," l1_speed=", &
+                 l1_speed(iten)/num_error(iten)
+         print *,"TIME=",cur_time," iten=",iten," l2_speed=", &
+                 sqrt(l2_speed(iten)/num_error(iten))
+         print *,"TIME=",cur_time," iten=",iten," linf_speed=", &
+                 linf_speed(iten)
+         print *,"TIME=",cur_time," iten=",iten," max_speed_approx=", &
+                 max_speed_approx(iten)
+         print *,"TIME=",cur_time," iten=",iten," max_speed_exact=", &
+                 max_speed_exact(iten)
+
+          ! on 256 x 256 grid, cell (44,67) normal has an error because
+          ! the interface in cell (45,68) was improperly ignored.
+          ! also, the facetest criteria should be reconsidered.
+          ! x,y =  0.17382812500000000       0.26367187500000000
+          ! x,y (closest)=  0.17578125000000000       0.26562500000000000
+         if (i_inf_nrm(iten).ge.fablo(1)) then
+          i=i_inf_nrm(iten)
+          j=j_inf_nrm(iten)
+          print *,"TIME=",cur_time," iten=",iten," i,j (normal inf)=",i,j
+          call get_inverse_iten(im,im_opp,iten,nmat)
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+          do dir=1,SDIM
+           xgrid(dir)=xsten(0,dir)
+           scomp=nmat+(im-1)*SDIM+dir
+           xclosest(dir)=xgrid(dir)-LSnew(i,j,im)*LSnew(i,j,scomp)
+          enddo
+          print *,"TIME=",cur_time," iten=",iten," x,y (normal inf)=", &
+             xgrid(1),xgrid(2)
+          print *,"TIME=",cur_time," iten=",iten," x,y (closest)=", &
+             xclosest(1),xclosest(2)
+
+          print *,"TIME=",cur_time," iten=",iten," im,im_opp (inf)=", &
+            im,im_opp
+          do ii=-1,1
+          do jj=-1,1
+           call gridsten_level(xsten,i+ii,j+jj,k,level,nhalf)
+           do dir=1,SDIM
+            xgrid(dir)=xsten(0,dir)
+           enddo
+           call get_exact_VEL(xgrid,dx,cur_time,iten,VELexact)
+           print *,"ii,jj,LS(im),LS(im_opp) ",ii,jj, &
+              LSnew(i+ii,j+jj,im),LSnew(i+ii,j+jj,im_opp)
+           dcomp=nmat+nten*SDIM+(im-1)*ngeom_recon+1
+           print *,"ii,jj,vof(im) ",ii,jj, &
+              UNEW(i+ii,j+jj,dcomp)
+           dcomp=nmat+nten*SDIM+(im_opp-1)*ngeom_recon+1
+           print *,"ii,jj,vof(im_opp) ",ii,jj, &
+              UNEW(i+ii,j+jj,dcomp)
+           scomp=nten+(iten-1)*SDIM
+           print *,"ii,jj,u,v ",ii,jj, &
+              burnvel(i+ii,j+jj,scomp+1), &
+              burnvel(i+ii,j+jj,scomp+2)
+           print *,"ii,jj,uexact,vexact ",ii,jj, &
+              VELexact(1),VELexact(2)
+          enddo ! jj
+          enddo ! ii
+
+         endif
+
+         if (i_inf(iten).ge.fablo(1)) then
+          i=i_inf(iten)
+          j=j_inf(iten)
+          k=0
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+          print *,"TIME=",cur_time," iten=",iten," i,j (inf_spd)=",i,j, &
+           " x,y (inf_spd)= ",xsten(0,1),xsten(0,2)
+
+          call get_inverse_iten(im,im_opp,iten,nmat)
+          print *,"TIME=",cur_time," iten=",iten," im,im_opp (inf)=", &
+            im,im_opp
+          do ii=-1,1
+          do jj=-1,1
+           call gridsten_level(xsten,i+ii,j+jj,k,level,nhalf)
+           do dir=1,SDIM
+            xgrid(dir)=xsten(0,dir)
+           enddo
+           call get_exact_VEL(xgrid,dx,cur_time,iten,VELexact)
+           print *,"ii,jj,LS(im),LS(im_opp) ",ii,jj, &
+              LSnew(i+ii,j+jj,im),LSnew(i+ii,j+jj,im_opp)
+           dcomp=nmat+nten*SDIM+(im-1)*ngeom_recon+1
+           print *,"ii,jj,vof(im) ",ii,jj, &
+              UNEW(i+ii,j+jj,dcomp)
+           dcomp=nmat+nten*SDIM+(im_opp-1)*ngeom_recon+1
+           print *,"ii,jj,vof(im_opp) ",ii,jj, &
+              UNEW(i+ii,j+jj,dcomp)
+           scomp=nten+(iten-1)*SDIM
+           print *,"ii,jj,u,v ",ii,jj, &
+              burnvel(i+ii,j+jj,scomp+1), &
+              burnvel(i+ii,j+jj,scomp+2)
+           print *,"ii,jj,uexact,vexact ",ii,jj, &
+              VELexact(1),VELexact(2)
+          enddo ! jj
+          enddo ! ii
+         endif
+        else if (num_error(iten).eq.0) then
+         ! do nothing
+        else
+         print *,"num_error invalid"
+         stop
+        endif
+       enddo ! iten=1..nten
+ 
+       deallocate(maskcov)
+       deallocate(masknbr)
+       deallocate(burnvel)
+       deallocate(nodevel)
+       deallocate(deltaVOF)
+       deallocate(LS)
+       deallocate(LSnew)
+       deallocate(LS_slopes_FD)
+       deallocate(VOFnew)
+       deallocate(Snew)
+       deallocate(EOS)
+       deallocate(recon)
+       deallocate(pres)
+       deallocate(jump_strength)
+       deallocate(swept)
+       deallocate(dist_touch)
+       deallocate(stencil)
+       deallocate(facefrac)
+       deallocate(facetest)
+       deallocate(slopes)
+
+      else if (is_phase_change.eq.0) then
+       ! do nothing
+      else
+       print *,"is_phase_change invalid"
+       stop
+      endif
+
+      return
+      end subroutine update_interface

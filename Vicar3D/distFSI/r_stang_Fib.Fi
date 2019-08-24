@@ -1,0 +1,1134 @@
+!========================================================================
+!                  F I B E R   S T R U C T U R E
+!=======================================================================
+             ibdy=Iglbloc_fib(ibdyg)
+	     if(fiberbdry(ibdyg) .eq. 100) then
+		     fix_bc = .false.; free_bc=.true.
+		     fix_bcb= .false.; free_bcb=.true.
+	     elseif(fiberbdry(ibdyg) .eq. 101) then
+		     fix_bc = .false.; free_bc=.false.
+		     fix_bcb= .false.; free_bcb=.true.
+	     elseif(fiberbdry(ibdyg) .eq. 102) then
+		    fix_bc = .true.; free_bc=.false.
+		    fix_bcb= .false.; free_bcb=.true.
+	     elseif(fiberbdry(ibdyg) .eq. 110) then
+		     fix_bc = .false.; free_bc=.true.
+		     fix_bcb= .false.; free_bcb=.false.
+	     elseif(fiberbdry(ibdyg) .eq. 111) then
+		     fix_bc = .false.; free_bc=.false.
+		     fix_bcb= .false.; free_bcb=.false.
+	     elseif(fiberbdry(ibdyg) .eq. 112) then
+		    fix_bc = .true.; free_bc=.false.
+		    fix_bcb= .false.; free_bcb=.false.
+	     elseif(fiberbdry(ibdyg) .eq. 120) then
+		     fix_bc = .false.; free_bc=.true.
+		     fix_bcb= .true.; free_bcb=.false.
+	     elseif(fiberbdry(ibdyg) .eq. 121) then
+		     fix_bc = .false.; free_bc=.false.
+  		     fix_bcb= .true.; free_bcb=.false.
+	     elseif(fiberbdry(ibdyg) .eq. 122) then
+		    fix_bc = .true.; free_bc=.false.
+		    fix_bcb= .true.; free_bcb=.false.
+             else
+                write(*,*)'Error INPUTFILE============>'
+                write(*,*)'This option of fiberbdry is not recognized'
+                write(*,*) ' fiberbdry=',fiberbdry(ibdyg)
+                write(*,*) ' fr body number =',ibdyg
+                stop
+	     end if
+c         
+c initialize the bending force in ibm
+        i=ibdy
+        do j=1,ns_ibm_r_fib(i)
+         fb_1_ibm_fib(i,j)=0.0d0
+         fb_2_ibm_fib(i,j)=0.0d0
+         fb_3_ibm_fib(i,j)=0.0d0
+        end do
+c 
+c compute bending force in ibm
+c here we assume ( small deformation + neglecting 2nd order )
+
+      if( ibdyg .le. nr_ibm_f)  then !goto 440
+
+        kb_ibm=kb_ibm_r(ibdyg)
+
+        do j=1,ns_ibm_r_fib(i)
+          if (j .eq. 1) then
+c depending on fixed boundary condition we have different formulation
+            if(.not.(free_bc)) then  
+
+        temp_ibm3=0.0
+        temp_ibm1=(target_points_fib(i,2,1)-target_points_fib(i,1,1))
+        temp_ibm2=(target_points_fib(i,2,2)-target_points_fib(i,1,2))
+        if(ndim .gt. 2) 
+     &    temp_ibm3=(target_points_fib(i,2,3)-target_points_fib(i,1,3))
+        temp2_ibm=
+     & ( temp_ibm1 ** 2. + temp_ibm2 ** 2. + temp_ibm3 ** 2. )**0.5
+        temp_ibm1=temp_ibm1/temp2_ibm
+
+        temp_ibm2=temp_ibm2/temp2_ibm
+        temp_ibm3=temp_ibm3/temp2_ibm
+
+               if ( fix_bc ) then
+c (d_ssx)_1=[ dx_{1+1/2} - (1,0) } / 0.5 dsf_1
+c also  dx_{1+1/2}=[x_2-x_1]/dsf_1
+                  temp4_1_ibm_fib(i,j)=
+     &          ( (gx_ibm_massive_fib(i,j+1)-gx_ibm_massive_fib(i,j))
+     &            /dsf_ibm_fib(i,j)-temp_ibm1 )
+     &            / ( 0.50d0 * dsf_ibm_fib(i,j) )
+                  temp4_2_ibm_fib(i,j)=
+     &          ( (gy_ibm_massive_fib(i,j+1)-gy_ibm_massive_fib(i,j))
+     &            /dsf_ibm_fib(i,j)-temp_ibm2 )
+     &            / ( 0.50d0 * dsf_ibm_fib(i,j) )
+                  if(ndim .gt. 2) then
+                   temp4_3_ibm_fib(i,j)=
+     &          ( (gz_ibm_massive_fib(i,j+1)-gz_ibm_massive_fib(i,j))
+     &            /dsf_ibm_fib(i,j)-temp_ibm3 )
+     &            / ( 0.50d0 * dsf_ibm_fib(i,j) )
+                  else
+                  temp4_3_ibm_fib(i,j)=0.0d0
+                  endif
+               else                 
+                  temp4_1_ibm_fib(i,j)=0.0d0
+                  temp4_2_ibm_fib(i,j)=0.0d0
+                  temp4_3_ibm_fib(i,j)=0.0d0
+               end if
+            else
+               temp4_1_ibm_fib(i,j)=0.d0
+               temp4_2_ibm_fib(i,j)=0.d0
+               temp4_3_ibm_fib(i,j)=0.d0
+            endif
+          elseif (j .eq. ns_ibm_r_fib(i)) then 
+                 if(.not.(free_bcb)) then  
+!end point
+        j2=target_num(i)
+        temp_ibm3b=0.0
+        temp_ibm1b= 
+     &    (target_points_fib(i,j2,1)-target_points_fib(i,j2-1,1))
+        temp_ibm2b= 
+     &    (target_points_fib(i,j2,2)-target_points_fib(i,j2-1,2))
+        if(ndim .gt. 2) 
+     &    temp_ibm3b= 
+     &     (target_points_fib(i,j2,3)-target_points_fib(i,j2-1,3))
+
+        temp2_ibm=
+     & ( temp_ibm1b** 2. + temp_ibm2b** 2. + temp_ibm3b** 2. )**0.5
+        temp_ibm1b=temp_ibm1b/temp2_ibm
+        temp_ibm2b=temp_ibm2b/temp2_ibm
+        temp_ibm3b=temp_ibm3b/temp2_ibm
+
+               if ( fix_bcb ) then
+c (d_ssx)_N=[ (1,0)-dx_{N-1/2} } / 0.5 dsf_N-1
+c also  dx_{N-1/2}=[x_N-x_N-1]/dsf_N-1
+                  temp4_1_ibm_fib(i,j)=
+     &          (-(gx_ibm_massive_fib(i,j)-gx_ibm_massive_fib(i,j-1))
+     &            /dsf_ibm_fib(i,j-1)-temp_ibm1b )
+     &            / ( 0.50d0 * dsf_ibm_fib(i,j-1) )
+                  temp4_2_ibm_fib(i,j)=
+     &          (-(gy_ibm_massive_fib(i,j)-gy_ibm_massive_fib(i,j-1))
+     &            /dsf_ibm_fib(i,j-1)-temp_ibm2b )
+     &            / ( 0.50d0 * dsf_ibm_fib(i,j-1) )
+                  if(ndim .gt. 2) then
+                   temp4_3_ibm_fib(i,j)=
+     &          (-(gz_ibm_massive_fib(i,j)-gz_ibm_massive_fib(i,j-1))
+     &            /dsf_ibm_fib(i,j-1)-temp_ibm3b )
+     &            / ( 0.50d0 * dsf_ibm_fib(i,j-1) )
+                  else
+                  temp4_3_ibm_fib(i,j)=0.0d0
+                  endif
+               else                 
+                  temp4_1_ibm_fib(i,j)=0.0d0
+                  temp4_2_ibm_fib(i,j)=0.0d0
+                  temp4_3_ibm_fib(i,j)=0.0d0
+               end if
+            else
+               temp4_1_ibm_fib(i,j)=0.d0
+               temp4_2_ibm_fib(i,j)=0.d0
+               temp4_3_ibm_fib(i,j)=0.d0
+            endif
+          else            
+            temp4_1_ibm_fib(i,j)=
+     &    ( (gx_ibm_massive_fib(i,j+1)-gx_ibm_massive_fib(i,j))
+     &          /dsf_ibm_fib(i,j)
+     &     -(gx_ibm_massive_fib(i,j)-gx_ibm_massive_fib(i,j-1))
+     &          /dsf_ibm_fib(i,j-1) )
+     &      / ds_ibm_fib(i,j)
+            temp4_2_ibm_fib(i,j)=           
+     &    ( (gy_ibm_massive_fib(i,j+1)-gy_ibm_massive_fib(i,j))
+     &          /dsf_ibm_fib(i,j)
+     &     -(gy_ibm_massive_fib(i,j)-gy_ibm_massive_fib(i,j-1))
+     &          /dsf_ibm_fib(i,j-1) )
+     &      / ds_ibm_fib(i,j)
+            if(ndim .gt. 2) then
+            temp4_3_ibm_fib(i,j)=           
+     &    ( (gz_ibm_massive_fib(i,j+1)-gz_ibm_massive_fib(i,j))
+     &          /dsf_ibm_fib(i,j)
+     &     -(gz_ibm_massive_fib(i,j)-gz_ibm_massive_fib(i,j-1))
+     &          /dsf_ibm_fib(i,j-1) )
+     &      / ds_ibm_fib(i,j)
+            else
+            temp4_3_ibm_fib(i,j)=0.0d0
+            endif
+          end if
+
+        end do !ns_ibm
+        tdx0_1_fib(i)= kb_ibm*temp4_1_ibm_fib(i,2)/dsf_ibm_fib(i,1)
+        tdx0_2_fib(i)= kb_ibm*temp4_2_ibm_fib(i,2)/dsf_ibm_fib(i,1)
+        tdx0_3_fib(i)= kb_ibm*temp4_3_ibm_fib(i,2)/dsf_ibm_fib(i,1)
+
+        tdxnm1_1_fib(i)= -kb_ibm*temp4_1_ibm_fib(i,ns_ibm_r_fib(i)-1)           
+     &    /dsf_ibm_fib(i,ns_ibm_r_fib(i)-1)
+        tdxnm1_2_fib(i)=-kb_ibm*temp4_2_ibm_fib(i,ns_ibm_r_fib(i)-1)           
+     &    /dsf_ibm_fib(i,ns_ibm_r_fib(i)-1)
+        tdxnm1_3_fib(i)= -kb_ibm*temp4_3_ibm_fib(i,ns_ibm_r_fib(i)-1)           
+     &    /dsf_ibm_fib(i,ns_ibm_r_fib(i)-1)
+
+        do j=2,ns_ibm_r_fib(i)-1
+           fb_1_ibm_fib(i,j)= - kb_ibm *
+     &    ( (temp4_1_ibm_fib(i,j+1)-temp4_1_ibm_fib(i,j))
+     &          /dsf_ibm_fib(i,j)
+     &     -(temp4_1_ibm_fib(i,j)-temp4_1_ibm_fib(i,j-1))
+     &          /dsf_ibm_fib(i,j-1) )
+     &      / ds_ibm_fib(i,j)
+           fb_2_ibm_fib(i,j)= - kb_ibm *
+     &    ( (temp4_2_ibm_fib(i,j+1)-temp4_2_ibm_fib(i,j))
+     &          /dsf_ibm_fib(i,j)
+     &     -(temp4_2_ibm_fib(i,j)-temp4_2_ibm_fib(i,j-1))
+     &          /dsf_ibm_fib(i,j-1) )
+     &      / ds_ibm_fib(i,j)
+          if(ndim .gt. 2) then
+           fb_3_ibm_fib(i,j)= - kb_ibm *
+     &    ( (temp4_3_ibm_fib(i,j+1)-temp4_3_ibm_fib(i,j))
+     &          /dsf_ibm_fib(i,j)
+     &     -(temp4_3_ibm_fib(i,j)-temp4_3_ibm_fib(i,j-1))
+     &          /dsf_ibm_fib(i,j-1) )
+     &      / ds_ibm_fib(i,j)
+          else
+           fb_3_ibm_fib(i,j)=0.0
+          endif
+         end do !ns_ibm
+         j = ns_ibm_r_fib(i)
+         if(free_bcb) then
+         fb_1_ibm_fib(i,j)= kb_ibm *
+     &     (2.0*temp4_1_ibm_fib(i,j-1)-temp4_1_ibm_fib(i,j-2))
+     &      /dsf_ibm_fib(i,j-1)
+     &      / dsf_ibm_fib(i,j-2)
+         fb_2_ibm_fib(i,j)= kb_ibm *
+     &     (2.0*temp4_2_ibm_fib(i,j-1)-temp4_2_ibm_fib(i,j-2))
+     &      /dsf_ibm_fib(i,j-1)
+     &      / dsf_ibm_fib(i,j-2)
+          if(ndim .gt. 2) then
+            fb_3_ibm_fib(i,j)= kb_ibm *
+     &       (2.0*temp4_3_ibm_fib(i,j-1)-temp4_3_ibm_fib(i,j-2))
+     &        /dsf_ibm_fib(i,j-1)
+     &        /dsf_ibm_fib(i,j-2)
+          else
+            fb_3_ibm_fib(i,j)=0.0
+          endif
+         else
+             fb_1_ibm_fib(i,j)= 0.0d0
+             fb_2_ibm_fib(i,j)= 0.0d0
+             fb_3_ibm_fib(i,j)= 0.0d0
+        endif
+
+         if(free_bc) then
+             j = 1
+             fb_1_ibm_fib(i,j)= kb_ibm *
+     &       (2.0*temp4_1_ibm_fib(i,j+1)-temp4_1_ibm_fib(i,j+2))
+     &          /dsf_ibm_fib(i,j+1)
+     &          / dsf_ibm_fib(i,j+2)
+             fb_2_ibm_fib(i,j)= kb_ibm *
+     &       (2.0*temp4_2_ibm_fib(i,j+1)-temp4_2_ibm_fib(i,j+2))
+     &         /dsf_ibm_fib(i,j+1)
+     &         / dsf_ibm_fib(i,j+2)
+             if(ndim .gt. 2) then
+               fb_3_ibm_fib(i,j)= kb_ibm *
+     &         (2.0*temp4_3_ibm_fib(i,j+1)-temp4_3_ibm_fib(i,j+2))
+     &         /dsf_ibm_fib(i,j+1)
+     &         /dsf_ibm_fib(i,j+2)
+             else
+               fb_3_ibm_fib(i,j)=0.0
+             endif
+         else
+             fb_1_ibm_fib(i,1)= 0.0d0
+             fb_2_ibm_fib(i,1)= 0.0d0
+             fb_3_ibm_fib(i,1)= 0.0d0
+        endif
+
+        if(ContactForceFlag(ibdyg)) then
+
+        if ((ibdyg .le. nr_ibm_f).and.(ibdyg .ge. 1)) then
+           do ibkt2=1,NBucketnum
+
+             ibktmp1=mod(ibkt2,IBucketnum(1)*IBucketnum(2))
+             if(ibktmp1 .eq. 0) ibktmp1=IBucketnum(1)*IBucketnum(2)
+
+             ibktx=mod(ibktmp1,IBucketnum(1))
+             if(ibktx .eq. 0) ibktx=IBucketnum(1)
+
+             ibkty=int((ibktmp1-1)/IBucketnum(1))+1
+             ibktz=int((ibkt2-1)/(IBucketnum(1)*IBucketnum(2)))+1
+
+             ibktmin(1)=max(1,ibktx-1)
+             ibktmax(1)=min(IBucketnum(1),ibktx+1)
+
+             ibktmin(2)=max(1,ibkty-1)
+             ibktmax(2)=min(IBucketnum(2),ibkty+1)
+
+             ibktmin(3)=max(1,ibktz-1)
+             ibktmax(3)=min(IBucketnum(3),ibktz+1)
+
+             do ibkt_i=1,NBucket(i2g,ibkt2)
+                j2 =sBucket_fib(i,ibkt2,ibkt_i)
+
+               do i2=1,nFixcontact
+                        if((
+     &                     abs((gy_ibm_massive_fib(i,j2)-
+     &                          xFixcontact(i2,2))/min_grid_y)
+     &                    .le.12.0) .and.
+     &                    (abs((gx_ibm_massive_fib(i,j2)-
+     &                          xFixcontact(i2,1))/min_grid_x)
+     &                    .le.12.0) .and.
+     &                    (abs((gz_ibm_massive_fib(i,j2)-
+     &                          xFixcontact(i2,3))/min_grid_z)
+     &                    .le.12.0) ) then
+                              ksh_tmp=gx_ibm_massive_fib(i,j2)
+
+                              temp_ibm1= 
+     &                            ((gy_ibm_massive_fib(i,j2)
+     &                               -xFixcontact(i2,2))
+     &                           /(2.0*min_grid_y) )
+                              call delta_fun(delta_typey,temp_ibm1,fn2)
+
+                              temp_ibm2= 
+     &                             ((ksh_tmp
+     &                               -xFixcontact(i2,1))
+     &                           /(2.0*min_grid_x) )
+                              call delta_fun(delta_typex,temp_ibm2,fn1)
+                              if(ndim .gt. 2)  then 
+                                 temp_ibm3= 
+     &                             ((gz_ibm_massive_fib(i,j2)
+     &                               -xFixcontact(i2,3))
+     &                              /(2.0*min_grid_z) )
+                                  call 
+     &                              delta_fun(delta_typez,temp_ibm3,fn3)
+                              else
+                                   temp_ibm3=0.0
+                                   fn3=1.0
+                              endif
+                              temp3_ibm=
+     &                        sqrt((temp_ibm1*min_grid_y)**2
+     &                            +(temp_ibm2*min_grid_x)**2
+     &                            +(temp_ibm3*min_grid_z)**2)*2.00
+     &                            +1.0d-9
+                              f_impuls1_fib(i,j2)= 
+     &                               f_impuls1_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                               *ds_ibm_fib(i,j2)*impactpen(1)
+     &                               /(min_grid_x*min_grid_y*min_grid_z)
+     &                               *(ksh_tmp
+     &                               -xFixcontact(i2,1))
+     &                               /temp3_ibm
+                              f_impuls2_fib(i,j2)= 
+     &                               f_impuls2_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                              *ds_ibm_fib(i,j2)*impactpen(1)
+     &                              /(min_grid_x*min_grid_y*min_grid_z)
+     &                              *(gy_ibm_massive_fib(i,j2)
+     &                               -xFixcontact(i2,2))
+     &                               /temp3_ibm
+                              if(ndim .gt. 2)  
+     &                           f_impuls3_fib(i,j2)=
+     &                               f_impuls3_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                              *ds_ibm_fib(i,j2)*impactpen(1)
+     &                              /(min_grid_x*min_grid_y*min_grid_z)
+     &                              *(gz_ibm_massive_fib(i,j2)
+     &                               -xFixcontact(i2,3))
+     &                               /temp3_ibm
+                         endif
+               enddo   !i2i
+
+
+               do i2=1,nr_ibm_fib
+                  i3g=Ilocglb_fib(i2)
+                  if(i3g .le. nr_ibm_fb) then
+                  if(i2 .ne. i) then
+                    do ibkts1=ibktmin(1),ibktmax(1)
+                    do ibkts2=ibktmin(2),ibktmax(2)
+                    do ibkts3=ibktmin(3),ibktmax(3)
+                      ibkt=
+     &                       ibkts1
+     &                     +(ibkts2-1)*IBucketnum(1)
+     &                     +(ibkts3-1)*IBucketnum(1)*IBucketnum(2)
+                      do ibkt2_i=PBucket(i3g,ibkt),PBucket(i3g,ibkt+1)-1
+                         j =sBucket_fib(i2,ibkt,ibkt2_i)                             
+                        if((
+     &                     abs((gy_ibm_massive_fib(i,j2)-
+     &                          gy_ibm_massive_fib(i2,j))/min_grid_y)
+     &                    .le.12.0) .and.
+     &                    (abs((gx_ibm_massive_fib(i,j2)-
+     &                          gx_ibm_massive_fib(i2,j))/min_grid_x)
+     &                    .le.12.0) .and.
+     &                    (abs((gz_ibm_massive_fib(i,j2)-
+     &                          gz_ibm_massive_fib(i2,j))/min_grid_z)
+     &                    .le.12.0) ) then
+                              ksh_tmp=gx_ibm_massive_fib(i,j2)
+
+                              temp_ibm1= 
+     &                             ((gy_ibm_massive_fib(i,j2)
+     &                               -gy_ibm_massive_fib(i2,j))
+     &                           /(2.0*min_grid_y) )
+                              call delta_fun(delta_typey,temp_ibm1,fn2)
+
+                              temp_ibm2= 
+     &                             ((ksh_tmp
+     &                               -gx_ibm_massive_fib(i2,j))
+     &                           /(2.0*min_grid_x) )
+                              call delta_fun(delta_typex,temp_ibm2,fn1)
+                              if(ndim .gt. 2)  then 
+                                 temp_ibm3= 
+     &                             ((gz_ibm_massive_fib(i,j2)
+     &                               -gz_ibm_massive_fib(i2,j))
+     &                              /(2.0*min_grid_z) )
+                                  call 
+     &                              delta_fun(delta_typez,temp_ibm3,fn3)
+                              else
+                                   temp_ibm3=0.0
+                                   fn3=1.0
+                              endif
+                              temp3_ibm=
+     &                        sqrt((temp_ibm1*min_grid_y)**2
+     &                            +(temp_ibm2*min_grid_x)**2
+
+     &                            +(temp_ibm3*min_grid_z)**2)*2.00
+     &                            +1.0d-9
+                              f_impuls1_fib(i,j2)= 
+     &                               f_impuls1_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                               *ds_ibm_fib(i,j2)*impactpen(1)
+     &                               /(min_grid_x*min_grid_y*min_grid_z)
+     &                               *(ksh_tmp
+     &                               -gx_ibm_massive_fib(i2,j))
+     &                               /temp3_ibm
+                              f_impuls2_fib(i,j2)= 
+     &                               f_impuls2_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                              *ds_ibm_fib(i,j2)*impactpen(1)
+     &                              /(min_grid_x*min_grid_y*min_grid_z)
+     &                              *(gy_ibm_massive_fib(i,j2)
+     &                               -gy_ibm_massive_fib(i2,j))
+     &                               /temp3_ibm
+                              if(ndim .gt. 2)  
+     &                           f_impuls3_fib(i,j2)=
+     &                               f_impuls3_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                              *ds_ibm_fib(i,j2)*impactpen(1)
+     &                              /(min_grid_x*min_grid_y*min_grid_z)
+     &                              *(gz_ibm_massive_fib(i,j2)
+     &                               -gz_ibm_massive_fib(i2,j))
+     &                               /temp3_ibm
+                         endif
+                     end do  !ibkt2_i
+                     enddo   !ibkts1
+                     enddo   !ibkts2
+                     enddo   !ibkts3
+                  endif
+                  endif
+               enddo   !i2i
+
+
+               i2=i
+               i2g=Ilocglb_fib(i2)
+                    do ibkts1=ibktmin(1),ibktmax(1)
+                    do ibkts2=ibktmin(2),ibktmax(2)
+                    do ibkts3=ibktmin(3),ibktmax(3)
+                      ibkt=
+     &                       ibkts1
+     &                     +(ibkts2-1)*IBucketnum(1)
+     &                     +(ibkts3-1)*IBucketnum(1)*IBucketnum(2)
+                      do ibkt2_i=PBucket(i2g,ibkt),PBucket(i2g,ibkt+1)-1
+                         j =sBucket_fib(i,ibkt,ibkt2_i)   
+                        if(abs(j2-j) .gt. 10) then
+                        if((
+     &    abs((gy_ibm_massive_fib(i,j2)-gy_ibm_massive_fib(i2,j))
+     &    /min_grid_y)
+     &    .le.6.0) .and.
+     &    (abs((gx_ibm_massive_fib(i,j2)-gx_ibm_massive_fib(i2,j))
+     &    /min_grid_x)
+     &    .le.6.0) .and.
+     &    (abs((gz_ibm_massive_fib(i,j2)-gz_ibm_massive_fib(i2,j))
+     &    /min_grid_z)
+     &    .le.6.0) ) then
+                     ksh_tmp=gx_ibm_massive_fib(i,j2)
+
+                     temp_ibm1= 
+     &                 ((gy_ibm_massive_fib(i,j2)
+     &                    -gy_ibm_massive_fib(i2,j))
+     &                /(2.0*min_grid_y) )
+                      call delta_fun(delta_typey,temp_ibm1,fn2)
+
+                     temp_ibm2= 
+     &                 ((ksh_tmp-gx_ibm_massive_fib(i2,j))
+     &               /(2.0*min_grid_x) )
+                      call delta_fun(delta_typex,temp_ibm2,fn1)
+
+                      if(ndim .gt. 2) then
+                        temp_ibm3= 
+     &                     ((gz_ibm_massive_fib(i,j2)
+     &                       -gz_ibm_massive_fib(i2,j))
+     &                      /(2.0*min_grid_z) )
+                           call delta_fun(delta_typez,temp_ibm3,fn3)
+                      else
+                         temp_ibm3=0.0;fn3=1.0
+                      endif
+
+                        temp3_ibm=
+     &                  sqrt((temp_ibm1*min_grid_y)**2
+     &                      +(temp_ibm2*min_grid_x)**2
+     &                      +(temp_ibm3*min_grid_z)**2)*2.00+1.0d-9
+
+                 f_impuls1_fib(i,j2)= f_impuls1_fib(i,j2)+
+     &                                fn1*fn2*fn3
+     &                               *ds_ibm_fib(i,j2)*impactpen(1)
+     &                               /(min_grid_x*min_grid_y*min_grid_z)
+     &                               *(ksh_tmp
+     &                                -gx_ibm_massive_fib(i2,j))
+     &                                /temp3_ibm
+                 f_impuls2_fib(i,j2)= f_impuls2_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                               *ds_ibm_fib(i,j2)*impactpen(1)
+     &                               /(min_grid_x*min_grid_y*min_grid_z)
+     &                               *(gy_ibm_massive_fib(i,j2)
+     &                                -gy_ibm_massive_fib(i2,j))
+     &                               /temp3_ibm
+                 if(ndim .gt. 2)  
+     &               f_impuls3_fib(i,j2)= f_impuls3_fib(i,j2)+
+     &                                    fn1*fn2*fn3
+     &                                    *ds_ibm_fib(i,j2)*impactpen(1)
+     &                                     /(min_grid_x
+     &                                      *min_grid_y   
+     &                                      *min_grid_z)
+     &                                    *(gz_ibm_massive_fib(i,j2)
+     &                                     -gz_ibm_massive_fib(i2,j))
+     &                                     /temp3_ibm
+
+                         endif
+                     endif !j2-j>20
+                     end do  !ibkt2_i
+                     enddo   !ibkts1
+                     enddo   !ibkts2
+                     enddo   !ibkts3
+             enddo !ibkt_i
+             enddo !ibkt2
+
+             if(channelcontacty) then
+             do j2=1,ns_ibm_r_fib(i)
+
+               do i2=1,2  !with channel bndry in y
+                     if(i2 .eq. 1) then
+                        h_channel=gy(nygrid_ibm)
+                       if (gy_ibm_massive_fib(i,j2).lt. h_channel) then
+                            ksh_tmp=gy_ibm_massive_fib(i,j2)
+                        else
+                           ksh_tmp=h_channel-1.0d-9
+                        endif
+                     else
+                        h_channel=gy(2)
+                       if (gy_ibm_massive_fib(i,j2).gt. h_channel) then
+                            ksh_tmp=gy_ibm_massive_fib(i,j2)
+                        else
+                           ksh_tmp=h_channel+1.0d-9
+                        endif
+                     endif
+                     do j=1,nxgrid_ibm
+                       do k=1,nzgrid_ibm
+                        if((
+     &                  abs((gy_ibm_massive_fib(i,j2)-h_channel)
+     &                       /min_grid_y)
+     &                 .le.12.0) .and.
+     &                 (abs((gx_ibm_massive_fib(i,j2)-gx(j))
+     &                       /min_grid_x)
+     &                 .le.12.0) .and.
+     &                 (abs((gz_ibm_massive_fib(i,j2)-gz(k))
+     &                       /min_grid_z)
+     &                 .le.12.0) ) then
+
+                         temp_ibm1= 
+     &                        ((ksh_tmp-h_channel)
+     &                     /(min_grid_y))
+
+                           call delta_fun(delta_typey,temp_ibm1,fn2)
+
+                          temp_ibm2= 
+     &                       ((gx_ibm_massive_fib(i,j2)-gx(j))
+     &                     /(min_grid_x))
+
+                           call delta_fun(delta_typex,temp_ibm2,fn1)
+
+                          if(ndim .gt. 2) then
+                             temp_ibm3= 
+     &                         ((gz_ibm_massive_fib(i,j2)-gz(k))
+     &                       /(min_grid_z) )
+                           call delta_fun(delta_typez,temp_ibm3,fn3)
+                          else
+                             temp_ibm3=0.0
+                             fn3=1.0
+                          endif
+
+                         temp3_ibm=
+     &                   sqrt((temp_ibm1*min_grid_y)**2
+     &                      +(temp_ibm2*min_grid_x)**2
+     &                      +(temp_ibm3*min_grid_z)**2)+1.0d-9
+
+                          f_impuls1_fib(i,j2)= 
+     &                        f_impuls1_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                        *ds_ibm_fib(i,j2)*impactpen(1)
+     &                        /(min_grid_x*min_grid_y*min_grid_z)
+     &                        *(gx_ibm_massive_fib(i,j2)-gx(j))
+     &                          /temp3_ibm
+                          f_impuls2_fib(i,j2)= 
+     &                        f_impuls2_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                        *ds_ibm_fib(i,j2)*impactpen(1)
+     &                        /(min_grid_x*min_grid_y*min_grid_z)
+     &                        *(ksh_tmp-h_channel)/temp3_ibm
+                          if(ndim .gt. 2) 
+     &                    f_impuls3_fib(i,j2)= 
+     &                        f_impuls3_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                        *ds_ibm_fib(i,j2)*impactpen(1)
+     &                        /(min_grid_x*min_grid_y*min_grid_z)
+     &                        *(gz_ibm_massive_fib(i,j2)-gz(k))
+     &                        /temp3_ibm
+                        endif
+                    
+                   end do !k=1,nz 
+                 end do !j=1,nx
+               enddo  !i2=1,2
+             end do    !j2
+             endif !channelcontacty
+
+             if((channelcontactz) .and. (ndim .gt. 2)) then
+
+             do j2=1,ns_ibm_r_fib(i)
+
+               do i2=1,2  !with channel bndry in z
+                     if(i2 .eq. 1) then
+                        h_channel=gz(nzgrid_ibm)
+                       if (gz_ibm_massive_fib(i,j2).lt. h_channel) then
+                            ksh_tmp=gz_ibm_massive_fib(i,j2)
+                        else
+                            ksh_tmp=h_channel-1.0d-9
+                        endif
+                     else
+                        h_channel=gz(2)
+                       if (gz_ibm_massive_fib(i,j2).gt. h_channel) then
+                            ksh_tmp=gz_ibm_massive_fib(i,j2)
+                        else
+                           ksh_tmp=h_channel+1.0d-9
+                        endif
+                     endif
+                     do j=1,nxgrid_ibm
+                       do k=1,nygrid_ibm
+                        if((
+     &                  abs((gy_ibm_massive_fib(i,j2)-gy(k))
+     &                  /min_grid_y)
+     &                 .le.12.0) .and.
+     &                 (abs((gx_ibm_massive_fib(i,j2)-gx(j))
+     &                  /min_grid_x)
+     &                 .le.12.0) .and.
+     &                 (abs((gz_ibm_massive_fib(i,j2)-h_channel)
+     &                  /min_grid_z)
+     &                 .le.12.0) ) then
+
+                        temp_ibm1= 
+     &                        ((gy_ibm_massive_fib(i,j2)-gy(k))
+     &                       /(min_grid_y) )
+                           call delta_fun(delta_typey,temp_ibm1,fn2)
+
+                        temp_ibm2= 
+     &                        ((gx_ibm_massive_fib(i,j2)-gx(j))
+     &                     /(min_grid_x))
+                           call delta_fun(delta_typex,temp_ibm2,fn1)
+
+                        temp_ibm3= 
+     &                          ((ksh_tmp-h_channel)
+     &                       /(min_grid_z) )
+                           call delta_fun(delta_typez,temp_ibm3,fn3)
+
+
+                         temp3_ibm=
+     &                   sqrt((temp_ibm1*min_grid_y)**2
+     &                      +(temp_ibm2*min_grid_x)**2
+     &                      +(temp_ibm3*min_grid_z)**2)+1.0d-9
+
+                          f_impuls1_fib(i,j2)= 
+     &                        f_impuls1_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                        *ds_ibm_fib(i,j2)*impactpen(1)
+     &                        /(min_grid_x*min_grid_y*min_grid_z)
+     &                        *(gx_ibm_massive_fib(i,j2)-gx(j))
+     &                        /temp3_ibm
+
+                          f_impuls2_fib(i,j2)= 
+     &                        f_impuls2_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                        *ds_ibm_fib(i,j2)*impactpen(1)
+     &                        /(min_grid_x*min_grid_y*min_grid_z)
+     &                        *(gy_ibm_massive_fib(i,j2)-gy(k))
+     &                        /temp3_ibm
+
+                          f_impuls3_fib(i,j2)= 
+     &                        f_impuls3_fib(i,j2)+
+     &                               fn1*fn2*fn3
+     &                        *ds_ibm_fib(i,j2)*impactpen(1)
+     &                        /(min_grid_x*min_grid_y*min_grid_z)
+     &                        *(ksh_tmp-h_channel)/temp3_ibm
+                        endif
+                    
+                   end do !k=1,nz 
+                 end do !j=1,nx
+               enddo  !i2=1,2
+             end do    !j2
+             endif !channelcontactz
+          endif   !for if ((i .le. nr_ibm_f)
+          endif  !contactForceFlag
+        i=ibdy
+        i2l=i
+        i2g=ibdyg
+        do j=1,ns_ibm_r_fib(i)
+           finer_1_ibm_fib(i,j)= density_coefp(i2g) *
+     &    ( gx_ibmo1_fib(i,j)-gx_ibm_massiveo_fib(i,j) )/dt2
+           finer_2_ibm_fib(i,j)= density_coefp(i2g) *
+     &    ( gy_ibmo1_fib(i,j)-gy_ibm_massiveo_fib(i,j) )/dt2
+           if(ndim .gt. 2)  
+     &     finer_3_ibm_fib(i,j)= density_coefp(i2g) *
+     &    ( gz_ibmo1_fib(i,j)-gz_ibm_massiveo_fib(i,j) )/dt2
+         end do
+
+! link forces
+         do j=1,target_num(i)
+             k=target_point_num_fib(i,j)
+             temp_ibm1=(gx_ibm_massive_fib(i,k)
+     &                -target_points_fib(i,j,1))
+             temp_ibm2=(gy_ibm_massive_fib(i,k)
+     &                -target_points_fib(i,j,2))
+             temp_ibm3=(gz_ibm_massive_fib(i,k)
+     &                -target_points_fib(i,j,3))
+             include "distIBM_target_k_rampfn.Fi"             
+             if(time2 .le. target_t_link_fib(i,j)) then
+                 ksh_tmp=target_k_link_fib(i,j)*target_timefn
+             else
+                 ksh_tmp=0.0
+             endif
+             force_points_fib(i,j,1)=k_link*temp_ibm1*ksh_tmp
+             force_points_fib(i,j,2)=k_link*temp_ibm2*ksh_tmp
+             if(ndim .gt. 2)  
+     &          force_points_fib(i,j,3)=k_link*temp_ibm3*ksh_tmp
+
+             temp_ibm1=target_points_v_fib(i,j,1)
+             temp_ibm2=target_points_v_fib(i,j,2)
+             temp_ibm3=target_points_v_fib(i,j,3)
+
+             temp_ibm1=vibm1_pre_fib(i,k)-temp_ibm1
+             temp_ibm2=vibm2_pre_fib(i,k)-temp_ibm2
+             temp_ibm3=vibm3_pre_fib(i,k)-temp_ibm3
+
+             force_points_fib(i,j,1)=force_points_fib(i,j,1)+
+     &              cs_ibm_target(i2g)*k_link*temp_ibm1*ksh_tmp
+             force_points_fib(i,j,2)=force_points_fib(i,j,2)+
+     &              cs_ibm_target(i2g)*k_link*temp_ibm2*ksh_tmp
+             if(ndim .gt. 2)  
+     &          force_points_fib(i,j,3)=force_points_fib(i,j,3)+
+     &              cs_ibm_target(i2g)*k_link*temp_ibm3*ksh_tmp
+
+             do j2=1,ns_ibm_r_fib(i)
+                 if ((k .le. 1) .or. (k .gt. ns_ibm_r_fib(i))) then
+                          fn1=0.d0
+			    if (k .eq. j2) then
+				    fn1=1.d0/ds_ibm_fib(i,j2)
+                           endif
+                 else
+                         temp3_ibm=    (dble(k-j2)/(1.d0))
+                           call delta_fun(delta_typex,temp3_ibm,fn1)
+                            fn1=fn1/ds_ibm_fib(i,j2)
+                 endif
+                 
+
+                 f_link1_fib(i,j2)= f_link1_fib(i,j2)+
+     &                               fn1*force_points_fib(i,j,1)
+                 f_link2_fib(i,j2)= f_link2_fib(i,j2)+
+     &                               fn1*force_points_fib(i,j,2)
+                 if(ndim .gt. 2)  
+     &              f_link3_fib(i,j2)= f_link3_fib(i,j2)+
+     &                               fn1*force_points_fib(i,j,3)
+             end do 
+         enddo
+         tdx0_1_fib(i)= tdx0_1_fib(i)+f_link1_fib(i,1)*ds_ibm_fib(i,1)
+         tdx0_2_fib(i)= tdx0_2_fib(i)+f_link2_fib(i,1)*ds_ibm_fib(i,1)
+         if(ndim .gt. 2)  
+     &   tdx0_3_fib(i)= tdx0_3_fib(i)+f_link3_fib(i,1)*ds_ibm_fib(i,1)
+
+         tdxnm1_1_fib(i)= tdxnm1_1_fib(i)-f_link1_fib(i,ns_ibm_r_fib(i))           
+     &    *ds_ibm_fib(i,ns_ibm_r_fib(i))
+         tdxnm1_2_fib(i)= tdxnm1_2_fib(i)-f_link2_fib(i,ns_ibm_r_fib(i))           
+     &    *ds_ibm_fib(i,ns_ibm_r_fib(i))
+         if(ndim .gt. 2)  
+     &   tdxnm1_3_fib(i)= tdxnm1_3_fib(i)-f_link3_fib(i,ns_ibm_r_fib(i))           
+     &    *ds_ibm_fib(i,ns_ibm_r_fib(i))
+      
+c calculation of tension forces to impose inextensibility
+        call cal_tension(dt2,free_bc,free_bcb
+     &                 ,tdx0_1_fib,tdx0_2_fib,tdx0_3_fib
+     &                 ,tdxnm1_1_fib,tdxnm1_2_fib,tdxnm1_3_fib
+     &                 ,ibdy,i2g)
+      
+
+
+        if(implicitflag(i2g).eq. 1) then
+          KB_ibmt=0.0
+        else
+          KB_ibmt=1.0
+        endif
+
+        i=ibdy
+        i2g=ibdyg 
+       do j=1,ns_ibm_r_fib(i) 
+           if( (j.le.1) .or. (j .ge. ns_ibm_r_fib(i)) )then
+              fibm1_fib(i,j)=(density_coef(i2g))
+     &        *gx_ibm_massiveo_fib(i,j)
+     &        +density_coefp(i2g)*gx_ibm_massiveo_fib(i,j)
+     &        +cs_ibm(i2g)*gx_ibm_fib(i,j)*dt
+     &        + dt2*(-fibm1_fib(i,j)
+     &                 + finer_1_ibm_fib(i,j)  + f_impuls1_fib(i,j) 
+     &                 - 1.0*f_link1_fib(i,j)*ds_ibm_fib(i,1)+  KB_ibmt* 
+     &                  fb_1_ibm_fib(i,j) 
+     &                  +density_coef(i2g)
+     &                  *fr*sin(phi_grav)*cos(the_grav))
+
+              fibm2_fib(i,j)=(density_coef(i2g))
+     &        *gy_ibm_massiveo_fib(i,j)
+     &        +density_coefp(i2g)*gy_ibm_massiveo_fib(i,j)
+     &        +cs_ibm(i2g)*gy_ibm_fib(i,j)*dt
+     &        + dt2*(-fibm2_fib(i,j) 
+     &                 + finer_2_ibm_fib(i,j) + f_impuls2_fib(i,j)
+     &                 - 1.0*f_link2_fib(i,j)*ds_ibm_fib(i,1)+  KB_ibmt*
+     &                  fb_2_ibm_fib(i,j) 
+     &                  +density_coef(i2g)
+     &                  *fr*sin(phi_grav)*sin(the_grav))
+
+              if(ndim .gt. 2)  
+     &         fibm3_fib(i,j)=(density_coef(i2g))
+     &        *gz_ibm_massiveo_fib(i,j)
+     &        +density_coefp(i2g)*gz_ibm_massiveo_fib(i,j)
+     &        +cs_ibm(i2g)*gz_ibm_fib(i,j)*dt
+     &        + dt2*(-fibm3_fib(i,j) 
+     &                 + finer_3_ibm_fib(i,j) + f_impuls3_fib(i,j)
+     &                 - 1.0*f_link3_fib(i,j)*ds_ibm_fib(i,1)+  KB_ibmt*
+     &                  fb_3_ibm_fib(i,j)
+     &                 +density_coef(i2g)*fr*cos(phi_grav))
+
+           else
+              fibm1_fib(i,j)=(density_coef(i2g))
+     &        *gx_ibm_massiveo_fib(i,j)
+     &        +density_coefp(i2g)*gx_ibm_massiveo_fib(i,j)
+     &        +cs_ibm(i2g)*gx_ibm_fib(i,j)*dt
+     &        + dt2*(-fibm1_fib(i,j) - f_link1_fib(i,j)
+     &                 + finer_1_ibm_fib(i,j) + f_impuls1_fib(i,j)
+     &                 +  KB_ibmt*
+     &                 fb_1_ibm_fib(i,j) 
+     &                 +density_coef(i2g)
+     &                 *fr*sin(phi_grav)*cos(the_grav))
+
+              fibm2_fib(i,j)=(density_coef(i2g))
+     &        *gy_ibm_massiveo_fib(i,j)
+     &        +density_coefp(i2g)*gy_ibm_massiveo_fib(i,j)
+     &        +cs_ibm(i2g)*gy_ibm_fib(i,j)*dt
+     &        + dt2*(-fibm2_fib(i,j) - f_link2_fib(i,j)
+     &                 + finer_2_ibm_fib(i,j) + f_impuls2_fib(i,j) 
+     &                 +  KB_ibmt*
+
+     &                  fb_2_ibm_fib(i,j) 
+     &                  +density_coef(i2g)
+     &                  *fr*sin(phi_grav)*sin(the_grav))
+
+              if(ndim .gt. 2)  
+     &         fibm3_fib(i,j)=(density_coef(i2g))
+     &        *gz_ibm_massiveo_fib(i,j)
+     &        +density_coefp(i2g)*gz_ibm_massiveo_fib(i,j)
+     &        +cs_ibm(i2g)*gz_ibm_fib(i,j)*dt
+     &        + dt2*(-fibm3_fib(i,j) - f_link3_fib(i,j)
+     &                 + finer_3_ibm_fib(i,j) + f_impuls3_fib(i,j) 
+     &                 +  KB_ibmt*
+     &                  fb_3_ibm_fib(i,j)
+     &                 +density_coef(i2g)
+     &                 *fr*cos(phi_grav))
+            endif          
+ 
+       end do
+
+
+c prepare tridiagnal matrix for solving for x*
+          kb_ibm=kb_ibm_r(i2g)
+      if(implicitflag(i2g) .eq. 1) then
+          KB_ibmt=kb_ibm
+      else
+          KB_ibmt=0.0
+      endif
+       a_fib=0.0
+       do j=1,ns_ibm_r_fib(i)
+         if (j .eq. 1) then
+          if(free_bc) then
+           j2=j+2
+            mat(1,1)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2-1))
+            mat(1,2)=-1.0/ds_ibm_fib(i,j2)*(1.0/dsf_ibm_fib(i,j2-1)
+     &        +1.0/dsf_ibm_fib(i,j2))
+            mat(1,3)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2)) 
+           j2=j+1
+            mat(2,1)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2-1))
+            mat(2,2)=-1.0/ds_ibm_fib(i,j2)*(1.0/dsf_ibm_fib(i,j2-1)
+     &        +1.0/dsf_ibm_fib(i,j2))
+            mat(2,3)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2)) 
+            temp3=fs_2_ibm_fib(i,j)
+     &            /dsf_ibm_fib(i,j)/(dsf_ibm_fib(i,j)*0.5d0)
+            a_fib(j,-1)=0.d0
+            a_fib(j,0)=(density_coef(i2g)+density_coefp(i2g)
+     &            +cs_ibm(i2g)*dt2**0.5)+temp3  
+     &             +dt2*kb_ibmt*(-mat(2,1))/dsf_ibm_fib(i,j+1)
+     &        /dsf_ibm_fib(i,j)
+            a_fib(j,1)=-temp3  +dt2*kb_ibmt*(mat(1,1)-mat(2,2))
+     &        /dsf_ibm_fib(i,j+1)/dsf_ibm_fib(i,j)
+            a_fib(j,2)= dt2*kb_ibmt*(mat(1,2)-mat(2,3))/
+     &        dsf_ibm_fib(i,j+1)/dsf_ibm_fib(i,j)
+            a_fib(j,3)= dt2*kb_ibmt*(mat(1,3))
+     &        /dsf_ibm_fib(i,j+1)/dsf_ibm_fib(i,j)
+
+            fibm1_fib(i,j)=fibm1_fib(i,j)
+     &        -dt2*2.0/dsf_ibm_fib(i,j)*tdx0_1_fib(i)
+            fibm2_fib(i,j)=fibm2_fib(i,j)
+     &        -dt2*2.0/dsf_ibm_fib(i,j)*tdx0_2_fib(i)
+            if(ndim .gt. 2)  
+     &        fibm3_fib(i,j)=fibm3_fib(i,j)
+     &        -dt2*2.0/dsf_ibm_fib(i,j)*tdx0_3_fib(i)
+          else
+            a_fib(j,-1)=0.0d0
+            a_fib(j,0)=1.0d0/(dsf_ibm_fib(i,3)*dsf_ibm_fib(i,3))
+            a_fib(j,1)=0.0d0
+          endif
+        elseif(j .eq. 2) then
+          if(fix_bc) then
+            a_fib(j,-1)=0.0d0
+            a_fib(j,0)=1.0d0/(dsf_ibm_fib(i,3)*dsf_ibm_fib(i,3))
+            a_fib(j,1)=0.0d0
+          else
+          temp2=fs_2_ibm_fib(i,j)/dsf_ibm_fib(i,j)/ds_ibm_fib(i,j)
+          temp3=fs_2_ibm_fib(i,j-1)/dsf_ibm_fib(i,j-1)/ds_ibm_fib(i,j)
+         a_fib(j,-1)=-2.0/dsf_ibm_fib(i,j)**4*dt2*kb_ibmt -temp3
+         a_fib(j,0 )= 5.0/dsf_ibm_fib(i,j)**4*dt2*kb_ibmt 
+     &          +(temp2+temp3)
+     &         +(density_coef(i2g)+density_coefp(i2g)
+     &           +cs_ibm(i2g)*dt2**0.5)
+         a_fib( j,1)=-4.0/dsf_ibm_fib(i,j)**4*dt2*kb_ibmt -temp2
+         a_fib( j,2)= 1.0/dsf_ibm_fib(i,j)**4*dt2*kb_ibmt 
+          endif 
+
+        elseif(j .eq. ns_ibm_r_fib(i)-1) then
+          if(fix_bcb) then
+            a_fib(j,-1)=0.0d0
+            a_fib(j,0)=1.0d0/(dsf_ibm_fib(i,j-1)*dsf_ibm_fib(i,j-1))
+            a_fib(j,1)=0.0d0
+          else
+          temp2=fs_2_ibm_fib(i,j)/dsf_ibm_fib(i,j)/ds_ibm_fib(i,j)
+          temp3=fs_2_ibm_fib(i,j-1)/dsf_ibm_fib(i,j-1)/ds_ibm_fib(i,j)
+         a_fib(j,-2)= 1.0/dsf_ibm_fib(i,j)**4*dt2*kb_ibmt
+         a_fib(j,-1)=-4.0/dsf_ibm_fib(i,j)**4*dt2*kb_ibmt -temp3
+         a_fib(j, 0)= 5.0/dsf_ibm_fib(i,j)**4*dt2*kb_ibmt 
+     &          +(temp2+temp3)
+     &         +(density_coef(i2g)+density_coefp(i2g)
+     &           +cs_ibm(i2g)*dt2**0.5)
+         a_fib(j, 1)=-2.0/dsf_ibm_fib(i,j)**4*dt2*kb_ibmt -temp2
+         endif
+
+         elseif (j .eq. ns_ibm_r_fib(i)) then
+          if(free_bcb) then
+           j2=j-2
+            mat(1,1)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2-1))
+            mat(1,2)=-1.0/ds_ibm_fib(i,j2)*(1.0/dsf_ibm_fib(i,j2-1)
+     &        +1.0/dsf_ibm_fib(i,j2))
+            mat(1,3)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2)) 
+           j2=j-1
+            mat(2,1)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2-1))
+            mat(2,2)=-1.0/ds_ibm_fib(i,j2)*(1.0/dsf_ibm_fib(i,j2-1)
+     &        +1.0/dsf_ibm_fib(i,j2))
+            mat(2,3)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2))
+
+            temp3=fs_2_ibm_fib(i,j-1)
+     &        /dsf_ibm_fib(i,j-1)/(dsf_ibm_fib(i,j-1)*0.5d0)
+            a_fib(j,-3)= dt2*kb_ibmt*(mat(1,3))
+     &        /dsf_ibm_fib(i,j-1)/dsf_ibm_fib(i,j)
+            a_fib(j,-2)= dt2*kb_ibmt*(mat(1,2)-mat(2,3))
+     &        /dsf_ibm_fib(i,j-1)/dsf_ibm_fib(i,j)
+            a_fib(j,-1)=-temp3 +dt2*kb_ibmt*(mat(1,1)-mat(2,2))
+
+     &        /dsf_ibm_fib(i,j-1)/dsf_ibm_fib(i,j)
+            a_fib(j,0)=
+     &           (density_coef(i2g)+density_coefp(i2g)
+     &            +cs_ibm(i2g)*dt2**0.5)
+     &            +temp3
+     &            -dt2*kb_ibmt*(mat(2,1))
+     &        /dsf_ibm_fib(i,j-1)/dsf_ibm_fib(i,j)
+            a_fib(j,1)=0.0d0
+            fibm1_fib(i,j)=fibm1_fib(i,j)
+     &        +dt2*2.0/dsf_ibm_fib(i,j-1)*tdxnm1_1_fib(i)
+            fibm2_fib(i,j)=fibm2_fib(i,j)
+     &        +dt2*2.0/dsf_ibm_fib(i,j-1)*tdxnm1_2_fib(i)
+            if(ndim .gt. 2)  
+     &        fibm3_fib(i,j)=fibm3_fib(i,j)
+     &        +dt2*2.0/dsf_ibm_fib(i,j-1)*tdxnm1_3_fib(i)
+          else
+            a_fib(j,-1)=0.0d0
+            a_fib(j,0)=1.0d0/(dsf_ibm_fib(i,j-2)*dsf_ibm_fib(i,j-2))
+            a_fib(j,1)=0.0d0
+          endif
+
+         else 
+           j2=j+1
+            mat(1,1)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2-1))
+            mat(1,2)=-1.0/ds_ibm_fib(i,j2)*(1.0/dsf_ibm_fib(i,j2-1)
+     &        +1.0/dsf_ibm_fib(i,j2))
+            mat(1,3)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2)) 
+
+           j2=j
+            mat(2,1)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2-1))
+            mat(2,2)=-1.0/ds_ibm_fib(i,j2)*(1.0/dsf_ibm_fib(i,j2-1)
+     &        +1.0/dsf_ibm_fib(i,j2))
+            mat(2,3)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2))  
+           j2=j-1
+            mat(3,1)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2-1))
+            mat(3,2)=-1.0/ds_ibm_fib(i,j2)*(1.0/dsf_ibm_fib(i,j2-1)
+     &        +1.0/dsf_ibm_fib(i,j2))
+            mat(3,3)=1.0/(ds_ibm_fib(i,j2)*dsf_ibm_fib(i,j2)) 
+          temp2=fs_2_ibm_fib(i,j)/dsf_ibm_fib(i,j)/ds_ibm_fib(i,j)
+          temp3=fs_2_ibm_fib(i,j-1)/dsf_ibm_fib(i,j-1)/ds_ibm_fib(i,j)
+          a_fib(j,-2)= dt2*kb_ibmt*(mat(3,1)/dsf_ibm_fib(i,j-1))
+     &        /dsf_ibm_fib(i,j)
+          a_fib(j,-1)=-temp3 
+     &        + dt2*kb_ibmt*(mat(3,2)/dsf_ibm_fib(i,j-1)
+     &        -mat(2,1)/dsf_ibm_fib(i,j-1)-mat(2,1)/dsf_ibm_fib(i,j))
+     &        /dsf_ibm_fib(i,j)
+          a_fib(j,0)=(density_coef(i2g)+density_coefp(i2g)
+     &                +cs_ibm(i2g)*dt2**0.5)
+     &         +(temp2+temp3)
+     &         +dt2*kb_ibmt*(mat(1,1)/dsf_ibm_fib(i,j+1)+mat(3,3)
+     &        /dsf_ibm_fib(i,j-1)-mat(2,2)/dsf_ibm_fib(i,j-1)
+     &        -mat(2,2)/dsf_ibm_fib(i,j))/dsf_ibm_fib(i,j)
+          a_fib(j,1)=-temp2 + dt2*kb_ibmt*(mat(1,2)/dsf_ibm_fib(i,j+1)
+     &        -mat(2,3)/dsf_ibm_fib(i,j-1)-mat(2,3)/dsf_ibm_fib(i,j))
+     &        /dsf_ibm_fib(i,j)
+          a_fib(j,2)= dt2*kb_ibmt*(mat(1,3)/dsf_ibm_fib(i,j+1))
+     &        /dsf_ibm_fib(i,j)
+
+          end if
+
+        end do
+        do j=1,ns_ibm_r_fib(i) 
+          do i2=-3,3
+           a_fib(j,i2)=dsf_ibm_fib(i,3)*dsf_ibm_fib(i,3)*a_fib(j,i2)
+          enddo
+          fibm1_fib(i,j)=dsf_ibm_fib(i,3)*dsf_ibm_fib(i,3)
+     &    *fibm1_fib(i,j)
+          fibm2_fib(i,j)=dsf_ibm_fib(i,3)*dsf_ibm_fib(i,3)
+     &    *fibm2_fib(i,j)
+          if(ndim .gt. 2)
+     &    fibm3_fib(i,j)=dsf_ibm_fib(i,3)*dsf_ibm_fib(i,3)
+     &    *fibm3_fib(i,j)
+        enddo
+       if(.not.(free_bc)) then
+          if(fix_bc) then
+             fibm1_fib(i,1)=target_points_fib(i,1,1)        
+             fibm2_fib(i,1)=target_points_fib(i,1,2)        
+             if(ndim .gt. 2)
+     &       fibm3_fib(i,1)=target_points_fib(i,1,3)        
+
+             fibm1_fib(i,2)=target_points_fib(i,2,1)        
+             fibm2_fib(i,2)=target_points_fib(i,2,2)        
+             if(ndim .gt. 2)
+     &       fibm3_fib(i,2)=target_points_fib(i,2,3)        
+           else
+             fibm1_fib(i,1)=target_points_fib(i,1,1)        
+             fibm2_fib(i,1)=target_points_fib(i,1,2)        
+             if(ndim .gt. 2)
+     &      fibm3_fib(i,1)=target_points_fib(i,1,3)        
+           endif
+      endif
+       if(.not.(free_bcb)) then
+             j=ns_ibm_r_fib(i)
+             j2=target_num(i2g)
+          if(fix_bcb) then
+             fibm1_fib(i,j)=target_points_fib(i,j2,1)        
+             fibm2_fib(i,j)=target_points_fib(i,j2,2)        
+             if(ndim .gt. 2)
+     &       fibm3_fib(i,j)=target_points_fib(i,j2,3)        
+
+             fibm1_fib(i,j-1)=target_points_fib(i,j2-1,1)        
+             fibm2_fib(i,j-1)=target_points_fib(i,j2-1,2)        
+             if(ndim .gt. 2)
+     &       fibm3_fib(i,j-1)=target_points_fib(i,j2-1,3)        
+           else
+             fibm1_fib(i,j)=target_points_fib(i,j2,1)        
+             fibm2_fib(i,j)=target_points_fib(i,j2,2)        
+             if(ndim .gt. 2)
+     &      fibm3_fib(i,j)=target_points_fib(i,j2,3)        
+           endif
+      endif
+
+          fibm1_fib=fibm1_fib+1.d-14
+          fibm2_fib=fibm2_fib+1.d-14
+          fibm3_fib=fibm3_fib+1.d-14
+       if(iksh1 .eq. 0) then
+       call bicgstab            
+     &    (3,3,ns_ibm_r_fib(i),a_fib(1:ns_ibm_r_fib(i),-3:3)
+     &    ,fibm1_fib(i,1:ns_ibm_r_fib(i))
+     &    ,gx_ibm_massive_fib(i,1:ns_ibm_r_fib(i))           
+     &    ,gx_ibm_massive_fib(i,1:ns_ibm_r_fib(i)),
+     &       itmax,tol,precond,success,itconverge)
+
+         
+       call bicgstab           
+     &     (3,3,ns_ibm_r_fib(i),a_fib(1:ns_ibm_r_fib(i),-3:3)
+     &      ,fibm2_fib(i,1:ns_ibm_r_fib(i))
+     &      ,gy_ibm_massive_fib(i,1:ns_ibm_r_fib(i))          
+     &      ,gy_ibm_massive_fib(i,1:ns_ibm_r_fib(i)),
+     &       itmax,tol,precond,success,itconverge)
+
+       if(ndim .gt. 2)  
+     & call bicgstab           
+     &     (3,3,ns_ibm_r_fib(i),a_fib(1:ns_ibm_r_fib(i),-3:3)
+     &      ,fibm3_fib(i,1:ns_ibm_r_fib(i))
+     &      ,gz_ibm_massive_fib(i,1:ns_ibm_r_fib(i))          
+     &      ,gz_ibm_massive_fib(i,1:ns_ibm_r_fib(i)),
+     &       itmax,tol,precond,success,itconverge)
+
+        iksh1b=abs(success)
+       endif
+
+       if(iksh1 .ne. 0) then
+         aamat_fib=0.0
+         do iksh1c=1,ns_ibm_r_fib(i)
+             do iksh2= -3,3
+                iksh3=iksh2+iksh1c
+                aamat_fib(iksh1c,iksh3)=a_fib(iksh1c,iksh2)
+             enddo
+         enddo
+
+       endif
+      
+       else  !440   continue
+          do j=1,ns_ibm_r_fib(ibdy)
+             gx_ibm_massive_fib(ibdy,j) = gx_bp_fib(ibdy,j)
+             gy_ibm_massive_fib(ibdy,j) = gy_bp_fib(ibdy,j)
+             gz_ibm_massive_fib(ibdy,j) = gz_bp_fib(ibdy,j)
+          enddo
+       endif !440   continue

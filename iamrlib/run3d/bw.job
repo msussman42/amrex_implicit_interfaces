@@ -1,0 +1,15 @@
+    #!/bin/bash       
+    #@ job_name=amr3d
+    #@ job_type=parallel  
+    #@ class=medium
+    #@ notification=always 
+    #@ error = ./bw.err 
+    #@ output =./bw.log 
+    #@ blocking = unlimited
+    #@ total_tasks = 8
+    #@ node_usage = shared 
+    #@ network.mpi = csss,shared,us
+    # use css0 on the SP3
+    #@ queue 
+
+    poe ./amr3d.AIX.mpCC_r.f77.MPI.ex inputs.bw >> run.out

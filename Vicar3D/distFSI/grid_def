@@ -1,0 +1,85 @@
+
+      INTEGER   Nr_IBM
+      INTEGER   Nr_IBM_fib,Nr_IBM_fsh,Nr_IBM_esh,Nr_IBM_fbc
+      INTEGER   Ns_IBM_fib,Ns_IBM_fsh,Ns_IBM_esh,Ns_IBM_fbc
+      INTEGER   Ns_IBMB_fib,Ns_IBMB_esh,Ns_IBMB_fsh,Ns_IBMB_fbc
+      INTEGER   Nmat_IBM_fsh
+      INTEGER   Nq_IBM_fsh,Nq_IBMB_fsh,Ns_IBM_img_esh,Ns_IBM_img_fbc
+      INTEGER   Ns_IBMEle_esh, Ns_IBMEle_fbc, Nr_IBM_mas
+      INTEGER   ngaumax,ngaumaxh, igauCont, igau, igauh
+      INTEGER   maxordern,jTypeMax
+      INTEGER   Ns_IBMmax_esh,Ns_IBMmax_fbc
+      INTEGER   NMaxnumbuck
+      INTEGER   Nsec_IBMmax
+      INTEGER   fiber,shell,fibrousshell,fabric
+      INTEGER   NPlanesIBM
+      INTEGER   Ns_IBM_Fbr_esh,Ns_IBM_Fbr_fbc
+      INTEGER   numeFacePairMAX_fbc,numedgeMAX_fbc
+!----*|--.---------.---------.---------.---------.---------.---------.-|-------|
+! Fixed array sizes 
+!----*|--.---------.---------.---------.---------.---------.---------.-|-------|
+      PARAMETER (Nr_IBM_fib=1)      ! Number of bodies
+      PARAMETER (Nr_IBM_fsh=0)      ! Number of bodies
+      PARAMETER (Nr_IBM_esh=0)      ! Number of bodies
+      PARAMETER (Nr_IBM_fbc=0)      ! Number of bodies
+      PARAMETER (Nr_IBM=Nr_IBM_fib+Nr_IBM_fsh+Nr_IBM_esh+Nr_IBM_fbc)      ! Number of bodies
+!master inputs
+      PARAMETER (Nr_IBM_mas=0)  ! number of body patches (for now only one master)
+!contact virtual planes      
+      PARAMETER (NPlanesIBM =1 ) !number of contact plane for each body
+!contact buckets
+      PARAMETER (NMaxnumbuck=2)  ! Number of buckets
+
+!==Fiber paramters
+      PARAMETER (Nsec_IBMmax=1)      ! Number of sections
+      PARAMETER (Ns_IBM_fib=200)    ! maximum number of points in each bdy
+      PARAMETER (Ns_IBMB_fib=2)    ! boundary points always more than 1
+
+!==fibrous shell parameters
+      PARAMETER (Ns_IBM_fsh=1)    ! maximum number of points in each bdy
+      PARAMETER (Ns_IBMB_fsh=0)    ! boundary points always more than 1
+
+      PARAMETER (Nq_IBM_fsh=0)    ! maximum number of points in spanwise direction ONLY FOR 3D FD FIBROUSSHELL otherwise put 1
+      PARAMETER (Nq_IBMB_fsh=1)    ! boundary points in q more than 1 if Nq_IBM .ne. 1
+
+      PARAMETER (Nmat_IBM_fsh =1) !maximum number of spatial material parameters for inplane forces
+
+!==finite element shell parameters
+      PARAMETER (Ns_IBM_esh=1)    ! maximum number of points in each bdy
+      PARAMETER (Ns_IBMB_esh=1)    ! boundary points always more than 1
+
+      PARAMETER (Ns_IBMEle_esh=1) ! number of elements (real+imaginary)
+      PARAMETER (Ns_IBM_img_esh=1) ! number of imaginary poins
+      PARAMETER (Ns_IBM_Fbr_esh=1) ! number of fiber dimension (material paramter per point)
+
+      PARAMETER (maxordern=12)  ! maximum order of irregular points
+      PARAMETER (jTypeMax=1)
+
+!==MVB=>  ngaumax is used for allocation of variables in quad2d3n.f
+      PARAMETER (ngaumax=3)     !>3 for igaus=2 and >1 igaus=1 (SHOULD BE LARGER THAN 3)
+      PARAMETER (ngaumaxh=1)    !maximum gauss points in thickness   
+      PARAMETER (igau=1)   ! 2->3 point  1 ->1point GL point 
+      PARAMETER (igauh=1)   ! GL point in thickness
+      PARAMETER (igauCont=1)   ! 2->3 point  1 ->1point GL point  (current version should be fixed to be 1)
+
+!== discrete fabric shell paramter
+      PARAMETER (Ns_IBM_fbc=1)    ! maximum number of points in each bdy
+      PARAMETER (Ns_IBMB_fbc=1)    ! boundary points always more than 1
+
+      PARAMETER (Ns_IBMEle_fbc=1) ! number of elements !good guess is 3*Ns_IBM_fbc
+      PARAMETER (Ns_IBM_img_fbc=1) ! number of imaginary poins
+      PARAMETER (Ns_IBM_Fbr_fbc=1) ! number of fiber dimension (material paramter per point)
+
+      PARAMETER (numedgeMAX_fbc=1) !maximum number of edges  !good guess is 3*Ns_IBM_fbc
+      PARAMETER (numeFacePairMAX_fbc=1) !maximum number of elementpairs  ! good guess is numedgeMAX_fbc
+
+      PARAMETER (fiber=0)
+      PARAMETER (shell=1)
+      PARAMETER (fibrousshell=2)
+      PARAMETER (fabric=3)
+
+!!eliminated variables
+!!      PARAMETER (Ns_IBMmax_esh=2)  !max num of node and element
+!!      PARAMETER (Ns_IBMmax_fbc=2)  !max num of node and element
+
+

@@ -1,0 +1,153 @@
+#wait_for_key = 1
+max_step  =  99999    # maximum timestep
+#max_step  =  1    # maximum timestep
+stop_time =  2.0  # T=L/U=5.19/62.1=0.0836 10(0.0836)=0.836
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+#L=5.2
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   =  0.25 0.25 0.25
+geometry.is_periodic=0 0 0
+ns.MOFITERMAX=15
+ns.temperature_primitive_variable=1 1 1 1 1
+ns.num_materials_vel=1
+
+# 0=GSRB 1=ICRB 2=ILU
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-15
+mg.visc_bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+#Lp.v = 1
+Lp.harmavg = 0
+
+ns.projection_pressure_scale=1.0e+6
+ns.num_materials=2
+ns.num_species_var=0
+ns.post_init_pressure_solve=1 
+ns.EILE_flag=-1
+# 1/c^2  assume mach number 0.01
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=1
+#ns.solvability_projection=1
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+amr.n_cell    = 32 32 32
+amr.max_level = 0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4    # MO improve efficiency (was 4)
+amr.grid_eff        = 0.8   #  MO improve efficiency
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # 8 for GPU
+amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 100
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 32
+#amr.restart         = chk00300
+amr.plotfile_on_restart=1
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-13
+mac.visc_abs_tol    = 1.0e-5
+mac.use_cg_solve   = 1
+
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
+
+ns.cfl            = 0.5    
+ns.init_shrink    = 0.1  
+ns.change_max     = 1.1      
+ns.visc_coef      = 1.0    # 0.038=mu/(rho L U)
+# mu=0.038 * 1* 5.19 * 62.1=12.25
+# 1.321=L^2 980 0.0025/50   L^2=1.321 * 50/(980*0.0025)=26.959 L=5.19
+# U^2=Lg/1.321=5.19 * 980/1.321   U=62.1
+ns.gravity        = 0.0   # 1.321=L g/U^2
+ns.use_lsa=0
+# U^2=50/(1 L 0.0025)
+ns.tension        = 0.001  # 0.0025=sigma/(rho U^2 L)
+#ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.sum_interval   = 10        # timesteps between computing mass 
+ns.usekluge       = 0
+
+ns.axis_dir=15
+ns.vorterr=0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.1
+ns.adv_dir=1
+
+ns.advection_order=2 1
+ns.density_advection_order=1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+
+# 1 Watt=10^7 ERG/S
+# 1 W/(M K)=10^5 ERG/(S CM K)
+# 1 ERG= 1 (gram cm^2/s^2)
+# air: k=0.024 W/(M K)
+# water: k=0.58 W/(M K)
+#ns.heatviscconst=58000.0 2400.0 0.0 0.0 
+ns.heatviscconst=0.0 0.0 0.0 0.0 
+ns.viscconst=0.001 0.001 0.0 0.0
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.denconst=2.0 1.0 1.0 1.0
+ns.tempconst=293.0 292.0 293.0 293.0
+ns.include_viscous_heating=0
+ns.use_StewartLay=1 
+# shock_timestep=2 2 option => never consider sound speed.
+ns.shock_timestep=2 2  
+ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE
+ns.xblob=0.075
+ns.yblob=0.125
+ns.zblob=0.125
+ns.radblob=0.025 # 0.05 in the article
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=1
+
+proj.bogus_value = 5.0e+5
+proj.Pcode = 0
+#proj.Pcode = 2
+
+#ns.mem_debug = 1
+ns.v = 1
+ns.output_drop_distribution=1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 1 4 4
+ns.hi_bc          = 2 4 4
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+#fab.initval=0.0
+#fab.do_initval=1
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

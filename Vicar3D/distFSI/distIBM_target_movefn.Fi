@@ -1,0 +1,49 @@
+           
+! Function for time changing of the stiffness of target links
+! INPUTS:
+! i2 : global id  of the body
+!i2l : local id of the body
+! i  :current target number
+! i_fix  : surface position along the direction 1
+! jg     : surface position along the direction 2 for fibrous shell only
+! g{xyz}_bp_fsh0(i2l,jq,i_fix) : initila position of the structure
+! kin_X0({123}) : the center of rotation
+! stramp : start rampfn 
+! ttramp : ramping period
+! pi1 : pi
+! itmpusrfn(50) : temporal integer work var
+! rtmpusrfn(50) : temporal real work var
+!time2 :time
+!delta_t :dt
+!OUTPUT: usrmovefn(6) ! {1-3} postion, {4-6} velocity
+
+      if(Genalpha_timesolver(ibdyg) .le. 1) then
+          rtmpusrfn(29)=time2
+      else
+          rtmpusrfn(29)=time_alphaf
+      endif
+
+      usrmovefn=0.d0
+      if(rtmpusrfn(29) .le. stramp)then  
+      rtmpusrfn(1)=0.d0
+      rtmpusrfn(2)=0.d0
+      elseif(rtmpusrfn(29) .le. stramp+ttramp) then
+      rtmpusrfn(1)=(rtmpusrfn(29)-stramp)/(ttramp)*0.0/180*pi1  ! 
+      rtmpusrfn(2)=1.0/(ttramp)*0.0/180*pi1 
+      else
+      rtmpusrfn(1)=0.0/180*pi1
+      rtmpusrfn(2)=0.d0
+      endif 
+      rtmpusrfn(3)=cos(rtmpusrfn(1))
+      rtmpusrfn(4)=sin(rtmpusrfn(1))
+  
+      rtmpusrfn(5)=gx_bp_fsh0(i2l,jq,i_fix)-(kin_X0(1)+1.0)  !L
+
+      usrmovefn(1)=0.0!rtmpusrfn(5)*(1.0d0- rtmpusrfn(3))  !L*(1-cos(theta))  
+      usrmovefn(2)=0.d0
+      usrmovefn(3)=0.0!rtmpusrfn(5)*rtmpusrfn(4)   !L*sin(theta) 
+   
+      usrmovefn(4)=0.0!rtmpusrfn(5)*rtmpusrfn(4)*rtmpusrfn(2)  !L*dot{theta}*sin(theta)
+      usrmovefn(5)=0.d0
+      usrmovefn(6)=0.0!rtmpusrfn(5)*rtmpusrfn(3)*rtmpusrfn(2)  !L*dot{theta}*cos(theta)
+

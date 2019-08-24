@@ -1,0 +1,154 @@
+max_step  =  99999    # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time = 1.0e+5  # seconds
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  1024.0 1024.0  # centimeters
+geometry.is_periodic=1 0  # 1 TRAINING 0 NON-TRAINING
+ns.use_training_data=0  # 0 TRAINING 1 NON-TRAINING
+ns.advection_order=2 1  # material 1 is water, material 2 is solute
+ns.density_advection_order=1 1
+ns.slope_limiter_option=0  # 0=no limiter 1=minmod
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=10
+ns.initial_cg_cycles=10
+ns.solvability_projection=1 # 1=TRAINING RUN 0=outflow condition
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=1.0
+ns.num_materials=2
+ns.num_species_var=0
+ns.post_init_pressure_solve=1 
+ns.MOFITERMAX=15
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
+
+amr.n_cell    = 256 256
+amr.max_level =  0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2   # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 100  # CHANGE ME
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 128
+#amr.restart         = chk0160  # use restart if not TRAINING
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1 
+ns.visc_coef      = 1.0     # coef of viscosity
+mac.visc_abs_tol   = 1.0e-10
+ns.gravity        = 0.0     
+ns.use_lsa=0
+ns.tension        = 0.0  # 12 - liquid/vapor
+# D=2e-5 cm^2/s=k/(rho cp)
+# cp hardwired to be 4.1855E+7 (all incompressible materials)
+# rho=1 k=D * cp * rho = 8.371e+2
+# D=k/L  L=k/D=cp*rho=4.1855E+7
+ns.latent_heat = 0.0 -4.1855e+7 # 12,21 21 => solute -> solvent
+ns.saturation_temp = 0.0 2.0 # 12,21 
+ns.temperature_primitive_variable=1
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=0   
+ns.vorterr=0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.0
+ns.advbot=0.0
+# int_{-r}^{r} A(1-(x/r)^2)=A(x-x^3/(3r^2))=4/3 Ar=2 U r  A=(3/2)U
+ns.adv_vel=100.0 #  U=100 cm/s ~ 2 miles/hour
+ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
+ns.pressure_error_cutoff=0.0 0.0
+ns.use_StewartLay=1
+ns.material_type=0 0
+# 1 Watt=10^7 ERG/S
+# 1 W/(M K)=10^5 ERG/(S CM K)
+# 1 ERG= 1 (gram cm^2/s^2)
+# cp hardwired to be 4.1855E+7 (all incompressible materials)
+# D=2e-5 cm^2/s=k/(rho cp)
+# D=300.0 covers about 1/2 year (2e-5 * 3600 *24 * 365/2) 
+# k=cp * D
+# 837.1 TRAINING, 1.26e+10 non-TRAINING
+# if D=4 then k=837 * 4/(2E-5)=1.7e+8
+ns.heatviscconst=1.7e+8 0.0   
+ns.viscconst=0.01 0.0 # if ice is material 2, we should make it not deform.
+ns.denconst=1.0 1.0  # if ice is material 2, we have to keep it from moving.
+ns.tempconst=1.0 2.0 
+ns.xblob=0.0
+ns.yblob=512.0  # centerline
+ns.zblob=0.0
+ns.radblob=256.0 # initial radius of the channel
+# amplitude of velocity perturbation 
+# u=A(1+eps*cos(2 pi k y/(2r)))(1-(y/r)^2)*
+#    (1+eps*cos(2 pi k x/(2r)))
+# v=A*eps*cos(2 pi k y/(2r))*cos(2 pi k x/(2r))
+ns.radblob2=0.0
+ns.yblob2=32.0 # number of wavelengths per 2*r
+# amplitude of interface perturbation y=yblob+eps*radblob*cos(2 pi k x/(2r))
+ns.radblob3=0.075 
+ns.yblob3=0.5 # number of wavelenghts per 2*r
+# initial concentration profile:
+# scale time by T,
+# C_t = (DT) C_yy 0<t<1
+# D=2e-5 cm^2/s  T=1 hour=3600 seconds
+# denfact=2e-5 * 3600=0.072 
+# 1 year = 24*365*.072=631
+ns.denfact=1.0  # denfact=300 => about 1/2 year
+ns.velfact=0.0
+ns.probtype=802  # dissolution 
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.prescribe_temperature_outflow=0
+# 0 xlo,xhi TRAINING
+# xlo=1 xhi=2 non-TRAINING
+ns.lo_bc          = 0 3
+ns.hi_bc          = 0 3
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
