@@ -1,12 +1,14 @@
 
+#include <AMReX_Utility.H>
 #include <FillPatchUtil.H>
 #include <cmath>
+#include <limits>
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-namespace BoxLib
+namespace amrex
 {
 
     void FillPatchSingleLevel (
@@ -27,7 +29,7 @@ namespace BoxLib
      BL_ASSERT(scomp+ncomp <= smf.nComp());
      BL_ASSERT(dcomp+ncomp <= mf.nComp());
      if (scompBC_map.size()!=ncomp)
-      BoxLib::Error("scompBC_map has invalid size");
+      amrex::Error("scompBC_map has invalid size");
 
       // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
      mf.copy(smf, scomp, dcomp, ncomp, 0, mf.nGrow(), geom.periodicity());
@@ -68,9 +70,9 @@ namespace BoxLib
      BL_PROFILE("FillPatchTwoLevels");
 
      if ((levelc<0)||(levelc!=levelf-1))
-      BoxLib::Error("levelc or levelf invalid");
+      amrex::Error("levelc or levelf invalid");
      if (scompBC_map.size()!=ncomp)
-      BoxLib::Error("scompBC_map has invalid size");
+      amrex::Error("scompBC_map has invalid size");
      if (global_bcs.size()<ncomp) {
       std::cout << "time= " << time << '\n';
       std::cout << "scomp,dcomp,ncomp= " << scomp << ' ' << dcomp <<
@@ -78,7 +80,7 @@ namespace BoxLib
       std::cout << "levelc, levelf, bfactc, bfactf = " << levelc << ' ' << 
        levelf << ' ' << bfactc << ' ' << bfactf << '\n';
       std::cout << "global_bcs.size() " << global_bcs.size() << '\n';
-      BoxLib::Error("global_bcs has invalid size");
+      amrex::Error("global_bcs has invalid size");
      }
 
      int ngrow = mf.nGrow();
@@ -103,8 +105,7 @@ namespace BoxLib
        FabArrayBase::TheFPinfo(fmf, mf, fdomain_g, ngrow, coarsener);
 
       if ( ! fpc.ba_crse_patch.empty()) {
-       MultiFab mf_crse_patch(fpc.ba_crse_patch, ncomp, 0, 
-        fpc.dm_crse_patch);
+       MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_crse_patch,ncomp,0);
 		
        FillPatchSingleLevel(
         levelc,
@@ -126,7 +127,7 @@ namespace BoxLib
 	
        bool cc = fpc.ba_crse_patch.ixType().cellCentered();
        if ((cc!=true)&&(cc!=false))
-        BoxLib::Error("cc bust");
+        amrex::Error("cc bust");
 
 #ifdef _OPENMP
 #pragma omp parallel if (cc)
@@ -139,7 +140,7 @@ namespace BoxLib
         Array<BCRec> bcr(ncomp);
         int src_comp_bcs=0;
         int dest_comp_bcr=0;
-        BoxLib::setBC(dbx,fdomain,src_comp_bcs,dest_comp_bcr,ncomp,
+        amrex::setBC(dbx,fdomain,src_comp_bcs,dest_comp_bcr,ncomp,
           local_bcs,bcr);
 		    
         mapper->interp(time,
@@ -171,4 +172,5 @@ namespace BoxLib
       bfactf);
 
     }  //FillPatchTwoLevels
-}
+
+}  // namespace amrex

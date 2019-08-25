@@ -1,7 +1,10 @@
 
 #include <iostream>
-#include <BLassert.H>
+#include <AMReX_BLassert.H>
 #include <ErrorList.H>
+#include <AMReX_SPACE.H>
+
+namespace amrex {
 
 ErrorRec::ErrorRec (const std::string& nm,
                     int                ng,
@@ -112,3 +115,5 @@ operator << (std::ostream&    os,
     }
     return os;
 }
+
+} // namespace amrex

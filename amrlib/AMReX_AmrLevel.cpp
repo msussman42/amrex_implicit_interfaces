@@ -1,21 +1,25 @@
 
-#include <winstd.H>
 #include <sstream>
 
-#include <AmrLevel.H>
+#include <unistd.h>
+#include <memory>
+#include <limits>
+
+#include <AMReX_AmrLevel.H>
 #include <Derive.H>
-#include <ParallelDescriptor.H>
-#include <Utility.H>
-#include <ParmParse.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_Utility.H>
 #include <FillPatchUtil.H>
+#include <AMReX_ParmParse.H>
 
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 DeriveList     AmrLevel::derive_lst;
 
+namespace amrex {
 
 DeriveList&
-AmrLevel::get_derive_lst ()
+AmrLevel::get_derive_lst () noexcept
 {
     return derive_lst;
 }
@@ -25,7 +29,7 @@ AmrLevel::manual_tags_placement (TagBoxArray&    tags,
                                  Array<int>& bf_lev)
 {}
 
-AmrLevel::AmrLevel ()
+AmrLevel::AmrLevel () noexcept
 {
    parent = 0;
    level = -1;
@@ -46,7 +50,7 @@ AmrLevel::AmrLevel (Amr&            papa,
 
     if (grids.size()<1) {
      std::cout << "lev= " << lev << " time= " << time << '\n';
-     BoxLib::Error("AmrLevel: grids.size<1");
+     amrex::Error("AmrLevel: grids.size<1");
     }
 
     level  = lev;
@@ -58,15 +62,15 @@ AmrLevel::AmrLevel (Amr&            papa,
     Real dt=parent->getDt();
     if (dt<=0.0) {
      std::cout << "dt= " << dt << '\n';
-     BoxLib::Error("dt invalid");
+     amrex::Error("dt invalid");
     }
 
     int level_MAX_NUM_SLAB=parent->get_MAX_NUM_SLAB();
     int level_slab_dt_type=parent->get_slab_dt_type();
     if (level_MAX_NUM_SLAB<33)
-     BoxLib::Error("level_MAX_NUM_SLAB too small");
+     amrex::Error("level_MAX_NUM_SLAB too small");
     if ((level_slab_dt_type!=0)&&(level_slab_dt_type!=1))
-     BoxLib::Error("level_slab_dt_type invalid");
+     amrex::Error("level_slab_dt_type invalid");
 
     for (int i = 0; i < state.size(); i++)
     {
@@ -110,7 +114,7 @@ AmrLevel::restart (Amr&          papa,
     } 
 
     if (nstate!=ndesc_checkpoint)
-     BoxLib::Error("nstate and ndesc_checkpoint do not match");
+     amrex::Error("nstate and ndesc_checkpoint do not match");
 
     dmap.define(grids);
 
@@ -153,7 +157,7 @@ AmrLevel::restart (Amr&          papa,
         level_slab_dt_type,
         level_MAX_NUM_SLAB);
      } else
-      BoxLib::Error("store_in_checkpoint invalid"); 
+      amrex::Error("store_in_checkpoint invalid"); 
     }
 
     finishConstructor();
@@ -229,7 +233,7 @@ AmrLevel::checkPoint (const std::string& dir,
     // Build directory to hold the MultiFabs in the StateData at this level.
     // The directory is relative the the directory containing the Header file.
     //
-    std::string Level = BoxLib::Concatenate("Level_", level, 1);
+    std::string Level = amrex::Concatenate("Level_", level, 1);
     //
     // Now for the full pathname of that directory.
     //
@@ -243,8 +247,8 @@ AmrLevel::checkPoint (const std::string& dir,
     // Only the I/O processor makes the directory if it doesn't already exist.
     //
     if (ParallelDescriptor::IOProcessor())
-        if (!BoxLib::UtilCreateDirectory(FullPath, 0755))
-            BoxLib::CreateDirectoryFailed(FullPath);
+        if (!amrex::UtilCreateDirectory(FullPath, 0755))
+            amrex::CreateDirectoryFailed(FullPath);
     //
     // Force other processors to wait till directory is built.
     //
@@ -271,9 +275,9 @@ AmrLevel::checkPoint (const std::string& dir,
         //
         if (desc_lst[i].store_in_checkpoint()==true) {
          std::string PathNameInHdr = 
-           BoxLib::Concatenate(Level    + "/SD_", i, 1);
+           amrex::Concatenate(Level    + "/SD_", i, 1);
          std::string FullPathName  = 
-           BoxLib::Concatenate(FullPath + "/SD_", i, 1);
+           amrex::Concatenate(FullPath + "/SD_", i, 1);
 
           // os=HeaderFile 
          state[i].checkPoint(PathNameInHdr, FullPathName, os);
@@ -301,7 +305,7 @@ AmrLevel::FillPatch (AmrLevel & old,
  // Must fill this region on crse level and interpolate.
  //
  if (level<0)
-  BoxLib::Error("level invalid in FillPatch");
+  amrex::Error("level invalid in FillPatch");
  BL_ASSERT(ncomp <= (mf.nComp()-dcomp));
  BL_ASSERT(0 <= index && index < desc_lst.size());
 
@@ -342,7 +346,7 @@ AmrLevel::FillPatch (AmrLevel & old,
 
   if (level==0) {
 
-   BoxLib::FillPatchSingleLevel(
+   amrex::FillPatchSingleLevel(
     level,
     mf,
     nudge_time,
@@ -363,7 +367,7 @@ AmrLevel::FillPatch (AmrLevel & old,
    MultiFab& cmf=cstatedata.newData(best_index);
    StateDataPhysBCFunct cbc(cstatedata,cgeom);
 
-   BoxLib::FillPatchTwoLevels(
+   amrex::FillPatchTwoLevels(
     mf,
     nudge_time,
     cmf,
@@ -382,7 +386,7 @@ AmrLevel::FillPatch (AmrLevel & old,
     bfact_coarse,bfact_fine);  
      
   } else 
-   BoxLib::Error("level invalid");
+   amrex::Error("level invalid");
 
   DComp += ncomp_range;
 
@@ -404,23 +408,23 @@ AmrLevel::FillCoarsePatchGHOST (
  BL_PROFILE("AmrLevel::FillCoarsePatchGHOST()");
 
  if (level<=0)
-  BoxLib::Error("level invalid in FillCoarsePatchGHOST");
+  amrex::Error("level invalid in FillCoarsePatchGHOST");
 
  if (ncomp+scomp>mf.nComp())
-  BoxLib::Error("ncomp+scomp>mf.nComp()");
+  amrex::Error("ncomp+scomp>mf.nComp()");
  if (ncomp+scomp>cmf.nComp())
-  BoxLib::Error("ncomp+scomp>cmf.nComp()");
+  amrex::Error("ncomp+scomp>cmf.nComp()");
  if ((index<0)||(index>=desc_lst.size()))
-  BoxLib::Error("(index<0)||(index>=desc_lst.size())");
+  amrex::Error("(index<0)||(index>=desc_lst.size())");
  if ((index<0)||(index>=desc_lstGHOST.size()))
-  BoxLib::Error("(index<0)||(index>=desc_lstGHOST.size())");
+  amrex::Error("(index<0)||(index>=desc_lstGHOST.size())");
  if (scompBC_map.size()!=ncomp)
-  BoxLib::Error("scompBC_map has invalid size");
+  amrex::Error("scompBC_map has invalid size");
 
  int ngrow=mf.nGrow();
  const BoxArray& mf_BA = mf.boxArray();
  if (ngrow<0)
-  BoxLib::Error("ngrow<0 in FillCoarsePatchGHOST");
+  amrex::Error("ngrow<0 in FillCoarsePatchGHOST");
 
  DistributionMapping dm=mf.DistributionMap();
 
@@ -430,7 +434,7 @@ AmrLevel::FillCoarsePatchGHOST (
   // because of the proper nesting requirement, no ghost
   // values are needed for cmf_part.
   // cmf_part: 0..ncomp-1
- MultiFab* cmf_part=new MultiFab(cmf_BA,ncomp,0,cdm);
+ MultiFab* cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0);
  MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
 
  int                     DComp   = scomp;
@@ -464,7 +468,7 @@ AmrLevel::FillCoarsePatchGHOST (
   const int     ncomp_range  = ranges[i].second;
   if (i==0) {
    if (scomp_range!=0)
-    BoxLib::Error("scomp_range!=0");
+    amrex::Error("scomp_range!=0");
   }
   Interpolater* mapper = descGHOST.interp(scompBC_map[scomp_range]);
 
@@ -483,7 +487,7 @@ AmrLevel::FillCoarsePatchGHOST (
   int dcomp_data=scomp+scomp_data;
 
   if (dcomp_data!=DComp)
-   BoxLib::Error("dcomp_data!=DComp");
+   amrex::Error("dcomp_data!=DComp");
 
   Array<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
@@ -494,7 +498,7 @@ AmrLevel::FillCoarsePatchGHOST (
 
   const MultiFab& cmf_part_mf=*cmf_part;
 
-  BoxLib::FillPatchSingleLevel(
+  amrex::FillPatchSingleLevel(
     level-1,
     crseMF, // data to be filled 0..ncomp_range-1
     c_nudge_time,
@@ -524,7 +528,7 @@ AmrLevel::FillCoarsePatchGHOST (
    int src_comp_bcs=0;
    int dest_comp_bcr=0;
      // source: local_bcs  dest: bcr
-   BoxLib::setBC(dbx,pdomain,src_comp_bcs,dest_comp_bcr,ncomp_range,
+   amrex::setBC(dbx,pdomain,src_comp_bcs,dest_comp_bcr,ncomp_range,
      local_bcs,bcr);
 	   
    mapper->interp(nudge_time,
@@ -562,23 +566,23 @@ AmrLevel::InterpBordersGHOST (
  BL_PROFILE("AmrLevel::InterpBordersGHOST()");
 
  if (level<0)
-  BoxLib::Error("level invalid in InterpBordersGHOST");
+  amrex::Error("level invalid in InterpBordersGHOST");
 
  BL_ASSERT(ncomp <= (mf.nComp()-scomp));
  BL_ASSERT(0 <= index && index < desc_lst.size());
  BL_ASSERT(0 <= index && index < desc_lstGHOST.size());
  if (scompBC_map.size()!=ncomp)
-  BoxLib::Error("scompBC_map has invalid size");
+  amrex::Error("scompBC_map has invalid size");
 
  int ngrow=mf.nGrow();
  const BoxArray& mf_BA = mf.boxArray();
 
  if (ngrow<=0)
-  BoxLib::Error("ngrow<=0 in InterpBordersGHOST");
+  amrex::Error("ngrow<=0 in InterpBordersGHOST");
 
  DistributionMapping dm=mf.DistributionMap();
 
- MultiFab fmf(mf_BA,ncomp,0,dm);
+ MultiFab fmf(mf_BA,dm,ncomp,0);
 
   // dstmf,srcmf,srccomp,dstcomp,ncomp,ngrow
  MultiFab::Copy(fmf,mf,scomp,0,ncomp,0);
@@ -588,7 +592,7 @@ AmrLevel::InterpBordersGHOST (
  if (level>0) {
   const BoxArray& cmf_BA=cmf.boxArray();
   DistributionMapping cdm=cmf.DistributionMap();
-  cmf_part=new MultiFab(cmf_BA,ncomp,0,cdm);
+  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0);
   MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
  }  // level>0
  
@@ -617,7 +621,7 @@ AmrLevel::InterpBordersGHOST (
   int dcomp_data=scomp+scomp_data;
 
   if (dcomp_data!=DComp)
-   BoxLib::Error("dcomp_data!=DComp");
+   amrex::Error("dcomp_data!=DComp");
 
   Array<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
@@ -625,7 +629,7 @@ AmrLevel::InterpBordersGHOST (
    local_scompBC_map[i]=scompBC_map[scomp_range+i];
 
   if (level==0) {
-   BoxLib::FillPatchSingleLevel(
+   amrex::FillPatchSingleLevel(
     level,
     mf,
     nudge_time,
@@ -645,7 +649,7 @@ AmrLevel::InterpBordersGHOST (
    StateData& cstatedata = clev.state[index];
    StateDataPhysBCFunctGHOST cbc(cstatedata,cgeom);
 
-   BoxLib::FillPatchTwoLevels(
+   amrex::FillPatchTwoLevels(
     mf,
     nudge_time,
     *cmf_part,
@@ -664,7 +668,7 @@ AmrLevel::InterpBordersGHOST (
     bfact_coarse,bfact_fine);  
      
   } else 
-   BoxLib::Error("level invalid");
+   amrex::Error("level invalid");
 
   DComp += ncomp_range;
 
@@ -689,23 +693,23 @@ AmrLevel::InterpBorders (
  BL_PROFILE("AmrLevel::InterpBorders()");
 
  if (level<0)
-  BoxLib::Error("level invalid in InterpBorders");
+  amrex::Error("level invalid in InterpBorders");
 
  BL_ASSERT(ncomp <= (mf.nComp()-scomp));
  BL_ASSERT(0 <= index && index < desc_lst.size());
  BL_ASSERT(0 <= index && index < desc_lstGHOST.size());
  if (scompBC_map.size()!=ncomp)
-  BoxLib::Error("scompBC_map has invalid size");
+  amrex::Error("scompBC_map has invalid size");
 
  int ngrow=mf.nGrow();
  const BoxArray& mf_BA = mf.boxArray();
 
  if (ngrow<=0)
-  BoxLib::Error("ngrow<=0 in InterpBorders");
+  amrex::Error("ngrow<=0 in InterpBorders");
 
  DistributionMapping dm=mf.DistributionMap();
 
- MultiFab fmf(mf_BA,ncomp,0,dm);
+ MultiFab fmf(mf_BA,dm,ncomp,0);
 
   // dstmf,srcmf,srccomp,dstcomp,ncomp,ngrow
  MultiFab::Copy(fmf,mf,scomp,0,ncomp,0);
@@ -715,7 +719,7 @@ AmrLevel::InterpBorders (
  if (level>0) {
   const BoxArray& cmf_BA=cmf.boxArray();
   DistributionMapping cdm=cmf.DistributionMap();
-  cmf_part=new MultiFab(cmf_BA,ncomp,0,cdm);
+  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0);
   MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
  }  // level>0
  
@@ -744,7 +748,7 @@ AmrLevel::InterpBorders (
   int dcomp_data=scomp+scomp_data;
 
   if (dcomp_data!=DComp)
-   BoxLib::Error("dcomp_data!=DComp");
+   amrex::Error("dcomp_data!=DComp");
 
   Array<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
@@ -752,7 +756,7 @@ AmrLevel::InterpBorders (
    local_scompBC_map[i]=scompBC_map[scomp_range+i];
 
   if (level==0) {
-   BoxLib::FillPatchSingleLevel(
+   amrex::FillPatchSingleLevel(
     level,
     mf,
     nudge_time,
@@ -772,7 +776,7 @@ AmrLevel::InterpBorders (
    StateData& cstatedata = clev.state[index];
    StateDataPhysBCFunct cbc(cstatedata,cgeom);
 
-   BoxLib::FillPatchTwoLevels(
+   amrex::FillPatchTwoLevels(
     mf,
     nudge_time,
     *cmf_part,
@@ -791,7 +795,7 @@ AmrLevel::InterpBorders (
     bfact_coarse,bfact_fine);  
      
   } else 
-   BoxLib::Error("level invalid");
+   amrex::Error("level invalid");
 
   DComp += ncomp_range;
  } // i=0..ranges.size()-1
@@ -816,11 +820,11 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  // Must fill this region on crse level and interpolate.
  //
  if (level<=0)
-  BoxLib::Error("level invalid in FillCoarsePatch");
+  amrex::Error("level invalid in FillCoarsePatch");
  if (ncomp>(mf.nComp()-dcomp))
-  BoxLib::Error("ncomp>(mf.nComp()-dcomp)");
+  amrex::Error("ncomp>(mf.nComp()-dcomp)");
  if ((index<0)||(index>=desc_lst.size()))
-  BoxLib::Error("(index<0)||(index>=desc_lst.size())");
+  amrex::Error("(index<0)||(index>=desc_lst.size())");
 
  Array<int> scompBC_map;
  scompBC_map.resize(ncomp);
@@ -873,7 +877,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
   int scomp_local=scomp_range+scomp;
 
-  BoxLib::FillPatchSingleLevel(
+  amrex::FillPatchSingleLevel(
     level-1,
     crseMF, // data to be filled 0..ncomp_range-1
     nudge_time,
@@ -904,7 +908,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
    int src_comp_bcs=0;
    int dest_comp_bcr=0;
      // source: local_bcs  dest: bcr
-   BoxLib::setBC(dbx,pdomain,src_comp_bcs,dest_comp_bcr,ncomp_range,
+   amrex::setBC(dbx,pdomain,src_comp_bcs,dest_comp_bcr,ncomp_range,
      local_bcs,bcr);
 	   
    mapper->interp(nudge_time,
@@ -930,13 +934,13 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
 }   // FillCoarsePatch
 
-MultiFab*
+std::unique_ptr<MultiFab>
 AmrLevel::derive (const std::string& name,
                   int                ngrow)
 {
     BL_ASSERT(ngrow >= 0);
 
-    MultiFab* mf = 0;
+    std::unique_ptr<MultiFab> mf;
 
     int index, scomp, ncomp;
 
@@ -944,7 +948,7 @@ AmrLevel::derive (const std::string& name,
 
     if (isStateVariable(name, index, scomp))
     {
-        mf = new MultiFab(state[index].boxArray(),1,ngrow,dmap);
+        mf.reset(new MultiFab(state[index].boxArray(),dmap,1,ngrow));
 
         Real nudge_time=state[index].slabTime(time_order);
 
@@ -965,7 +969,7 @@ AmrLevel::derive (const std::string& name,
         srcBA.convert(rec->boxMap());  // e.g. might grow by 1
         dstBA.convert(rec->deriveType());
 
-        MultiFab srcMF(srcBA,rec->numState(),ngrow,dmap);
+        MultiFab srcMF(srcBA,dmap,rec->numState(),ngrow);
 
         for (int k = 0, dc = 0; k < rec->numRange(); k++, dc += ncomp)
         {
@@ -974,7 +978,7 @@ AmrLevel::derive (const std::string& name,
             FillPatch(*this,srcMF,0,nudge_time,index,scomp,ncomp);
         }
 
-        mf = new MultiFab(dstBA,rec->numDerive(),ngrow,dmap);
+        mf = new MultiFab(dstBA,dmap,rec->numDerive(),ngrow);
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -1018,7 +1022,7 @@ AmrLevel::derive (const std::string& name,
         //
         std::string msg("AmrLevel::derive(MultiFab*): unknown variable: ");
         msg += name;
-        BoxLib::Error(msg.c_str());
+        amrex::Error(msg.c_str());
     }
 
     return mf;
@@ -1115,5 +1119,7 @@ AmrLevel::setPlotVariables ()
         //
         parent->clearDerivePlotVarList();
     }
-}
+} // subroutine setPlotVariables
+
+} // namespace amrex
 

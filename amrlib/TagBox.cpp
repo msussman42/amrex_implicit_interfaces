@@ -1,16 +1,17 @@
-#include <winstd.H>
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
 #include <climits>
 
 #include <TagBox.H>
-#include <Geometry.H>
-#include <ParallelDescriptor.H>
-#include <BLProfiler.H>
-#include <ccse-mpi.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_BLProfiler.H>
+#include <AMReX_ccse-mpi.H>
 
-TagBox::TagBox () {}
+namespace amrex {
+
+TagBox::TagBox () noexcept {}
 
 TagBox::TagBox (const Box& bx,
                 int        n,
@@ -35,7 +36,7 @@ TagBox::coarsen (const int ratio)
     const int* fhi      = hiv.getVect();
     const int* flen     = d_length.getVect();
 
-    const Box& cbox = BoxLib::coarsen(domain,ratio);
+    const Box& cbox = amrex::coarsen(domain,ratio);
 
     this->resize(cbox);
 
@@ -43,7 +44,7 @@ TagBox::coarsen (const int ratio)
     IntVect    cbox_len = cbox.size();
     const int* clen     = cbox_len.getVect();
 
-    Box b1(BoxLib::refine(cbox,ratio));
+    Box b1(amrex::refine(cbox,ratio));
     const int* lo       = b1.loVect();
     int        longlen  = b1.longside();
 
@@ -53,14 +54,14 @@ TagBox::coarsen (const int ratio)
     Array<TagType> t(longlen,TagBox::CLEAR);
 
     int klo = 0, khi = 0, jlo = 0, jhi = 0, ilo, ihi;
-    D_TERM(ilo=flo[0]; ihi=fhi[0]; ,
+    AMREX_D_TERM(ilo=flo[0]; ihi=fhi[0]; ,
            jlo=flo[1]; jhi=fhi[1]; ,
            klo=flo[2]; khi=fhi[2];)
 
 #define IXPROJ(i,r) (((i)+(r)*std::abs(i))/(r) - std::abs(i))
    
    int ratiox = 1, ratioy = 1, ratioz = 1;
-   D_TERM(ratiox = ratio;,
+   AMREX_D_TERM(ratiox = ratio;,
           ratioy = ratio;,
           ratioz = ratio;)
 
@@ -79,7 +80,7 @@ TagBox::coarsen (const int ratio)
             cdat_off+=(kc-clo[BL_SPACEDIM-1])*clen[0]*clen[BL_SPACEDIM-2];
             fdat_off+=(k-flo[BL_SPACEDIM-1])*flen[0]*flen[BL_SPACEDIM-2];
            } else
-            BoxLib::Error("dimension bust");
+            amrex::Error("dimension bust");
 
 
            TagType*       c = cdat + cdat_off;
@@ -121,7 +122,7 @@ TagBox::buffer (int nbuff,
     const int* inlo = inside.loVect();
     const int* inhi = inside.hiVect();
     int klo = 0, khi = 0, jlo = 0, jhi = 0, ilo, ihi;
-    D_TERM(ilo=inlo[0]; ihi=inhi[0]; ,
+    AMREX_D_TERM(ilo=inlo[0]; ihi=inhi[0]; ,
            jlo=inlo[1]; jhi=inhi[1]; ,
            klo=inlo[2]; khi=inhi[2];)
 
@@ -129,10 +130,10 @@ TagBox::buffer (int nbuff,
     const int* len = d_length.getVect();
     const int* lo = domain.loVect();
     int ni = 0, nj = 0, nk = 0;
-    D_TERM(ni, =nj, =nk) = nbuff;
+    AMREX_D_TERM(ni, =nj, =nk) = nbuff;
     TagType* d = dataPtr();
 
-#define OFF(i,j,k,lo,len) D_TERM(i-lo[0], +(j-lo[1])*len[0] , +(k-lo[2])*len[0]*len[1])
+#define OFF(i,j,k,lo,len) AMREX_D_TERM(i-lo[0], +(j-lo[1])*len[0] , +(k-lo[2])*len[0]*len[1])
    
     for (int k = klo; k <= khi; k++)
     {
@@ -149,7 +150,7 @@ TagBox::buffer (int nbuff,
                         {
                             for (int i = -ni; i <= ni; i++)
                             {
-                                TagType* dn = d_check+ D_TERM(i, +j*len[0], +k*len[0]*len[1]);
+                                TagType* dn = d_check+ AMREX_D_TERM(i, +j*len[0], +k*len[0]*len[1]);
                                 if (*dn !=TagBox::SET)
                                     *dn = TagBox::BUF;
                             }
@@ -184,11 +185,11 @@ TagBox::merge (const TagBox& src)
         TagType*       dd0        = dataPtr();
 
         int klo = 0, khi = 0, jlo = 0, jhi = 0, ilo, ihi;
-        D_TERM(ilo=lo[0]; ihi=hi[0]; ,
+        AMREX_D_TERM(ilo=lo[0]; ihi=hi[0]; ,
                jlo=lo[1]; jhi=hi[1]; ,
                klo=lo[2]; khi=hi[2];)
 
-#define OFF(i,j,k,lo,len) D_TERM(i-lo[0], +(j-lo[1])*len[0] , +(k-lo[2])*len[0]*len[1])
+#define OFF(i,j,k,lo,len) AMREX_D_TERM(i-lo[0], +(j-lo[1])*len[0] , +(k-lo[2])*len[0]*len[1])
       
         for (int k = klo; k <= khi; k++)
         {
@@ -245,7 +246,7 @@ TagBox::collate (std::vector<IntVect>& ar, int start) const
     const int* lo    = domain.loVect();
     const TagType* d = dataPtr();
     int ni = 1, nj = 1, nk = 1;
-    D_TERM(ni = len[0]; , nj = len[1]; , nk = len[2];)
+    AMREX_D_TERM(ni = len[0]; , nj = len[1]; , nk = len[2];)
 
     for (int k = 0; k < nk; k++)
     {
@@ -253,7 +254,7 @@ TagBox::collate (std::vector<IntVect>& ar, int start) const
         {
             for (int i = 0; i < ni; i++)
             {
-                const TagType* dn = d + D_TERM(i, +j*len[0], +k*len[0]*len[1]);
+                const TagType* dn = d + AMREX_D_TERM(i, +j*len[0], +k*len[0]*len[1]);
                 if (*dn != TagBox::CLEAR)
                 {
                     ar[start++] = IntVect(D_DECL(lo[0]+i,lo[1]+j,lo[2]+k));
@@ -643,7 +644,7 @@ TagBoxArray::coarsen (const int ratio)
     // If team is used, all team workers need to go through all the fabs, including ones they don't own.
     int teamsize = ParallelDescriptor::TeamSize();
     if (teamsize!=1)
-     BoxLib::Error("teamsize!=1 not supported");
+     amrex::Error("teamsize!=1 not supported");
 
 #ifdef _OPENMP
 #pragma omp parallel 
@@ -659,5 +660,4 @@ TagBoxArray::coarsen (const int ratio)
     n_grow = 0;
 }
 
-
-
+} // namespace amrex

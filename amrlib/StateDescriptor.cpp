@@ -1,12 +1,13 @@
 
-#include <winstd.H>
 #include <algorithm>
 #include <string>
 #include <iostream>
 
 #include <StateDescriptor.H>
 #include <Interpolater.H>
-#include <BCRec.H>
+#include <AMReX_BCRec.H>
+
+namespace amrex {
 
 StateDescriptor::BndryFunc::BndryFunc ()
     :
@@ -324,11 +325,11 @@ void
 StateDescriptor::check_inRange (Array<int> scompBC_map, int nc) const
 {
  if (scompBC_map.size()!=nc)
-  BoxLib::Error("scompBC_map has invalid size");
+  amrex::Error("scompBC_map has invalid size");
  
  for (int i=0;i<nc;i++) {
   if ((scompBC_map[i]<0)||(scompBC_map[i]>=ncomp))
-   BoxLib::Error("scompBC_map is corrupt");
+   amrex::Error("scompBC_map is corrupt");
  }
 }
 
@@ -544,10 +545,10 @@ StateDescriptor::sameInterps (Array<int> scompBC_map,
                               int ncomp) const
 {
     if (ncomp<1)
-     BoxLib::Error("ncomp<1");
+     amrex::Error("ncomp<1");
 
     if (scompBC_map.size()!=ncomp)
-     BoxLib::Error("scompBC_map has invalid size");
+     amrex::Error("scompBC_map has invalid size");
 
     std::vector< std::pair<int,int> > range;
 
@@ -583,3 +584,5 @@ StateDescriptor::sameInterps (Array<int> scompBC_map,
 
     return range;
 }
+
+} // namespace amrex

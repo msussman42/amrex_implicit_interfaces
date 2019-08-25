@@ -1,12 +1,13 @@
-#ifndef _FillPatchUtil_H_
-#define _FillPatchUtil_H_
+#ifndef AMREX_FillPatchUtil_H_
+#define AMREX_FillPatchUtil_H_
 
-#include <MultiFab.H>
-#include <Geometry.H>
-#include <PhysBCFunct.H>
+#include <AMReX_MultiFab.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_PhysBCFunct.H>
 #include <Interpolater.H>
+#include <AMReX_Array.H>
 
-namespace BoxLib
+namespace amrex
 {
 
     void FillPatchSingleLevel (
@@ -35,6 +36,6 @@ namespace BoxLib
       int levelc,int levelf,
       int bfactc,int bfactf);
 
-}
+} // namespace amrex
 
 #endif

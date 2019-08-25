@@ -177,7 +177,7 @@ int
 Amr::AMR_recalesce_flag(int im) const {
 
  if ((im<1)||(im>AMR_num_materials))
-  BoxLib::Error("im out of range");
+  amrex::Error("im out of range");
 
  return recalesce_flag[im-1];
 
@@ -208,10 +208,18 @@ Amr::numGrids (int lev) noexcept
     return amr_level[lev]->numGrids();
 }
 
+std::unique_ptr<MultiFab>
+Amr::derive (const std::string& name,
+             int                lev,
+             int                ngrow)
+{
+    return amr_level[lev]->derive(name,ngrow);
+}
 
-#ifdef USE_PARTICLES
+
+#ifdef AMREX_PARTICLES
 void 
-Amr::RedistributeParticles () noexcept
+Amr::RedistributeParticles () 
 {
     amr_level[0]->particle_redistribute(0,true);
 }
@@ -280,7 +288,7 @@ Amr::InitAmr () {
 
     ppns.get("num_materials",AMR_num_materials);
     if (AMR_num_materials<1)
-     BoxLib::Error("AMR_num_materials invalid");
+     amrex::Error("AMR_num_materials invalid");
 
     recalesce_flag.resize(AMR_num_materials);
     for (int im=0;im<AMR_num_materials;im++) {
@@ -291,7 +299,7 @@ Amr::InitAmr () {
      if ((recalesce_flag[im]!=0)&&
          (recalesce_flag[im]!=1)&&
          (recalesce_flag[im]!=2))
-      BoxLib::Error("recalesce_flag invalid");
+      amrex::Error("recalesce_flag invalid");
     }
 
     AMR_FSI_flag.resize(AMR_num_materials);
@@ -306,12 +314,12 @@ Amr::InitAmr () {
          (AMR_FSI_flag[im]!=3)&&
          (AMR_FSI_flag[im]!=4)&&
 	 (AMR_FSI_flag[im]!=5))
-      BoxLib::Error("AMR_FSI_flag invalid in Amr.cpp");
+      amrex::Error("AMR_FSI_flag invalid in Amr.cpp");
     }
 
     pp.query("regrid_on_restart",regrid_on_restart);
     if ((regrid_on_restart!=0)&&(regrid_on_restart!=1))
-     BoxLib::Error("regrid_on_restart invalid");
+     amrex::Error("regrid_on_restart invalid");
 
     pp.query("plotfile_on_restart",plotfile_on_restart);
     pp.query("checkpoint_on_restart",checkpoint_on_restart);
@@ -430,7 +438,7 @@ Amr::InitAmr () {
 
     if (got_check_int == 1 && got_check_per == 1)
     {
-        BoxLib::Error("Must only specify amr.check_int OR amr.check_per");
+        amrex::Error("Must only specify amr.check_int OR amr.check_per");
     }
 
     plot_file_root = "plt";
@@ -444,7 +452,7 @@ Amr::InitAmr () {
 
     if (got_plot_int == 1 && got_plot_per == 1)
     {
-        BoxLib::Error("Must only specify amr.plot_int OR amr.plot_per");
+        amrex::Error("Must only specify amr.plot_int OR amr.plot_per");
     }
     slice_int=-1;
     if (got_plot_int==1) {
@@ -452,10 +460,10 @@ Amr::InitAmr () {
 
      int got_slice_int=pp.query("slice_int",slice_int);
      if ((got_slice_int!=0)&&(got_slice_int!=1))
-      BoxLib::Error("got_slice_int invalid");
+      amrex::Error("got_slice_int invalid");
 
      if (slice_int>plot_int)
-      BoxLib::Error("slice_int should be less than or equal to plot_int");
+      amrex::Error("slice_int should be less than or equal to plot_int");
     }
 
     pp.query("n_proper",n_proper);
@@ -518,12 +526,12 @@ Amr::InitAmr () {
     pp.query("time_blocking_factor",time_blocking_factor);
     pp.query("MAX_NUM_SLAB",MAX_NUM_SLAB);
     if (time_blocking_factor+1>MAX_NUM_SLAB)
-     BoxLib::Error("MAX_NUM_SLAB too small");
+     amrex::Error("MAX_NUM_SLAB too small");
 
     pp.query("slab_dt_type",slab_dt_type);
     if ((slab_dt_type!=0)&&
         (slab_dt_type!=1))
-     BoxLib::Error("slab_dt_type invalid");
+     amrex::Error("slab_dt_type invalid");
 
     //
     // Read in the regrid interval if max_level > 0.
@@ -545,7 +553,7 @@ Amr::InitAmr () {
        }
        else if (numvals < max_level)
        {
-           BoxLib::Error("You did not specify enough values of regrid_int");
+           amrex::Error("You did not specify enough values of regrid_int");
        }
        else 
        {
@@ -996,23 +1004,35 @@ Amr::writePlotFile (const std::string& root,
      runlog << "PLOTFILE: file = " << pltfile << '\n';
 
   int stream_max_tries=4;
+  amrex::StreamRetry sretry(pltfile, abort_on_stream_retry_failure,
+                             stream_max_tries);
 
   const std::string pltfileTemp(pltfile + ".temp");
 
   bool abort_on_stream_retry_failure=false;
 
-  BoxLib::StreamRetry sretry(pltfile, abort_on_stream_retry_failure,
-                             stream_max_tries);
-
   while(sretry.TryFileOutput()) {
 
-   BoxLib::UtilRenameDirectoryToOld(pltfile, false);  // no barrier
-   if(ParallelDescriptor::IOProcessor()) {
-    std::cout << "IOIOIOIO:  precreating directories for " << 
-      pltfileTemp << std::endl;
+   //
+   //  if either the pltfile or pltfileTemp exists, rename them
+   //  to move them out of the way.  then create pltfile
+   //  with the temporary name, then rename it back when
+   //  it is finished writing.  then stream retry can rename
+   //  it to a bad suffix if there were stream errors.
+   //
+
+   if(precreateDirectories) {    // ---- make all directories at once
+    amrex::UtilRenameDirectoryToOld(pltfile, false);      // dont call barrier
+    if ((verbose > 1)||(1==1)) {
+     amrex::Print() << "IOIOIOIO:  precreating directories for " << 
+	     pltfileTemp << "\n";
+    }
+    amrex::PreBuildDirectorHierarchy(pltfileTemp, "Level_", 
+	finest_level + 1, true);  // call barrier
+   } else {
+    amrex::UtilRenameDirectoryToOld(pltfile, false);     // dont call barrier
+    amrex::UtilCreateCleanDirectory(pltfileTemp, true);  // call barrier
    }
-   BoxLib::PreBuildDirectorHierarchy(pltfileTemp, "Level_", 
-     finest_level + 1, true);  // call barrier
 
    std::string HeaderFileName(pltfileTemp + "/Header");
 
@@ -1025,46 +1045,51 @@ Amr::writePlotFile (const std::string& root,
    int old_prec(0);
 
    if (ParallelDescriptor::IOProcessor()) {
-
+     //
+     // Only the IOProcessor() writes to the header file.
+     //
     HeaderFile.open(HeaderFileName.c_str(), 
-     std::ios::out | std::ios::trunc | std::ios::binary);
+	std::ios::out | std::ios::trunc | std::ios::binary);
     if ( ! HeaderFile.good()) {
-     BoxLib::FileOpenFailed(HeaderFileName);
+     amrex::FileOpenFailed(HeaderFileName);
     }
     old_prec = HeaderFile.precision(15);
    }
 
-   for (int k=0; k <= finest_level; ++k) {
+   for (int k(0); k <= finest_level; ++k) {
     amr_level[k]->writePlotFile(
-     pltfileTemp, HeaderFile,
-     do_plot,do_slice,
-     SDC_outer_sweeps,slab_step);
+	pltfileTemp, HeaderFile,
+	do_plot,do_slice,
+        SDC_outer_sweeps,slab_step);
    }
 
    if (ParallelDescriptor::IOProcessor()) {
     HeaderFile.precision(old_prec);
     if ( ! HeaderFile.good()) {
-     BoxLib::Error("Amr::writePlotFile() failed");
+     amrex::Error("Amr::writePlotFile() failed");
     }
    }
 
+    //last_plotfile = level_steps[0]; (set outside this routine)
+
    if (verbose > 0) {
-    const int IOProc = ParallelDescriptor::IOProcessorNumber();
+    const int IOProc        = ParallelDescriptor::IOProcessorNumber();
     Real dPlotFileTime = ParallelDescriptor::second() - dPlotFileTime0;
 
     ParallelDescriptor::ReduceRealMax(dPlotFileTime,IOProc);
 
-    if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "Write plotfile time = " << dPlotFileTime << 
-      "  seconds" << "\n\n";
-    }
+    amrex::Print() << "Write plotfile time = " << dPlotFileTime << 
+		"  seconds" << "\n\n";
    }
    ParallelDescriptor::Barrier("Amr::writePlotFile::end");
 
    if(ParallelDescriptor::IOProcessor()) {
-    std::rename(pltfileTemp.c_str(), pltfile.c_str());
+     std::rename(pltfileTemp.c_str(), pltfile.c_str());
    }
    ParallelDescriptor::Barrier("Renaming temporary plotfile.");
+   //
+   // the plotfile file now has the regular name
+   //
   }  // end while
 
   VisMF::SetHeaderVersion(currentVersion);
@@ -1072,7 +1097,7 @@ Amr::writePlotFile (const std::string& root,
   BL_PROFILE_REGION_STOP("Amr::writePlotFile()");
 
  } else if ((do_plot==0)&&(do_slice==1)) {
-  const std::string pltfile = BoxLib::Concatenate(root,num,file_name_digits);
+  const std::string pltfile = amrex::Concatenate(root,num,file_name_digits);
   std::ofstream HeaderFile;
   for (int k = 0; k <= finest_level; k++)
    amr_level[k]->writePlotFile(pltfile,HeaderFile,
@@ -1081,9 +1106,9 @@ Amr::writePlotFile (const std::string& root,
  } else if ((do_plot==0)&&(do_slice==0)) {
   // do nothing
  } else
-  BoxLib::Error("do_plot or do_slice invalid");
+  amrex::Error("do_plot or do_slice invalid");
   
-}  // writePlotFile
+}  // subroutine writePlotFile
 
 
 void
@@ -1218,7 +1243,7 @@ Amr::checkInput ()
     FabArrayBase::Initialize();
 
     if (max_level < 0)
-        BoxLib::Error("checkInput: max_level not set");
+        amrex::Error("checkInput: max_level not set");
     //
     // Check that blocking_factor is a power of 2 and no smaller than 4.
     // Also check that blocking_factor[i+1]<=blocking_factor[i]
@@ -1227,48 +1252,48 @@ Amr::checkInput ()
         int k = blocking_factor[i];
 	if (i<max_level) {
 	 if (k<blocking_factor[i+1])
-	  BoxLib::Error("blocking_factor[i]<blocking_factor[i+1]");
+	  amrex::Error("blocking_factor[i]<blocking_factor[i+1]");
 	}
         if (k<4)
-         BoxLib::Error("blocking factor must be 4 or larger");
+         amrex::Error("blocking factor must be 4 or larger");
 
         while ( k > 0 && (k%2 == 0) )
             k /= 2;
         if (k != 1)
-            BoxLib::Error("Amr::checkInputs: blocking_factor not power of 2");
+            amrex::Error("Amr::checkInputs: blocking_factor not power of 2");
     } // i=0 .. max_level
 
     for (int i = 0; i <= max_level; i++) {
         int k = space_blocking_factor[i];
 
         if (k>blocking_factor[i])
-         BoxLib::Error("space_blocking_factor too big");
+         amrex::Error("space_blocking_factor too big");
 	if (i<max_level) {
 	 if (k<space_blocking_factor[i+1])
-	  BoxLib::Error("space_blocking_factor[i]<space_blocking_factor[i+1]");
+	  amrex::Error("space_blocking_factor[i]<space_blocking_factor[i+1]");
 	}
 
          // the number of coarse grid proper nesting cells for level i+1
          // is blocking_factor[i]/2
         if (i<max_level) {
          if (blocking_factor[i]<2*k)
-          BoxLib::Error("bfact_grid>=2*space_blocking_Factor required");
+          amrex::Error("bfact_grid>=2*space_blocking_Factor required");
         }
 
         while ( k > 0 && (k%2 == 0) )
             k /= 2;
         if (k != 1)
-            BoxLib::Error("space_blocking_factor not power of 2");
+            amrex::Error("space_blocking_factor not power of 2");
     } // i=0..max_level
 
     for (int i = 0; i < max_level; i++) {
         int k = time_blocking_factor;
         if (k>blocking_factor[0])
-         BoxLib::Error("time_blocking_factor too big");
+         amrex::Error("time_blocking_factor too big");
         while ( k > 0 && (k%2 == 0) )
             k /= 2;
         if (k != 1)
-            BoxLib::Error("time_blocking_factor not power of 2");
+            amrex::Error("time_blocking_factor not power of 2");
     }
 
 
@@ -1279,24 +1304,24 @@ Amr::checkInput ()
 
     const Box& domain = geom[0].Domain();
     if (!domain.ok())
-        BoxLib::Error("level 0 domain bad or not set");
+        amrex::Error("level 0 domain bad or not set");
     //
     // Check that domain size is a multiple of blocking_factor[0].
     //
     for (i = 0; i < BL_SPACEDIM; i++) {
         int len = domain.length(i);
         if (len%blocking_factor[0] != 0)
-            BoxLib::Error("domain size not divisible by blocking_factor");
+            amrex::Error("domain size not divisible by blocking_factor");
     }
     for (i = 0; i < BL_SPACEDIM; i++) {
         int len = domain.length(i);
         if (len%space_blocking_factor[0] != 0)
-         BoxLib::Error("domain size not divisible by space_blocking_factor");
+         amrex::Error("domain size not divisible by space_blocking_factor");
     }
     for (i = 0; i < BL_SPACEDIM; i++) {
         int len = domain.length(i);
         if (len%time_blocking_factor != 0)
-         BoxLib::Error("domain size not divisible by time_blocking_factor");
+         amrex::Error("domain size not divisible by time_blocking_factor");
     }
     //
     // Check that max_grid_size is even.
@@ -1304,7 +1329,7 @@ Amr::checkInput ()
     for (i = 0; i < max_level; i++)
     {
         if (max_grid_size[i]%2 != 0)
-            BoxLib::Error("max_grid_size is not even");
+            amrex::Error("max_grid_size is not even");
     }
 
     //
@@ -1312,23 +1337,23 @@ Amr::checkInput ()
     //
     for (i = 0; i < max_level; i++) {
      if (max_grid_size[i]%blocking_factor[i] != 0)
-      BoxLib::Error("max_grid_size not divisible by blocking_factor");
+      amrex::Error("max_grid_size not divisible by blocking_factor");
     }
     for (i = 0; i < max_level; i++) {
      if (max_grid_size[i]%space_blocking_factor[i] != 0)
-      BoxLib::Error("max_grid_size not divisible by space_blocking_factor");
+      amrex::Error("max_grid_size not divisible by space_blocking_factor");
     }
     for (i = 0; i < max_level; i++) {
      if (max_grid_size[i]%time_blocking_factor != 0)
-      BoxLib::Error("max_grid_size not divisible by time_blocking_factor");
+      amrex::Error("max_grid_size not divisible by time_blocking_factor");
     }
 
     if (!Geometry::ProbDomain().ok())
-        BoxLib::Error("checkInput: bad physical problem size");
+        amrex::Error("checkInput: bad physical problem size");
 
     if (max_level > 0) 
        if (regrid_int[0] <= 0)
-          BoxLib::Error("checkinput: regrid_int not defined and max_level > 0");
+          amrex::Error("checkinput: regrid_int not defined and max_level > 0");
 
     if (verbose > 0 && ParallelDescriptor::IOProcessor())
        std::cout << "Successfully read inputs file ... " << '\n';
@@ -1473,7 +1498,7 @@ Amr::restart (const std::string& filename)
 
     if (spdim != BL_SPACEDIM) {
      std::cerr << "Amr::restart(): bad spacedim = " << spdim << '\n';
-     BoxLib::Abort();
+     amrex::Abort();
     }
 
     is >> cumtime;
@@ -1493,13 +1518,13 @@ Amr::restart (const std::string& filename)
     int num_materials=0;
     is >> num_materials;
     if (num_materials<=0)
-     BoxLib::Error("num_materials invalid in restart");
+     amrex::Error("num_materials invalid in restart");
     is >> AMR_volume_history_recorded;
     AMR_volume_history.resize(num_materials);
     for (int j=0;j<num_materials;j++) {
      is >> AMR_volume_history[j];
      if (AMR_volume_history[j]<0.0)
-      BoxLib::Error("cannot have negative volume_history");
+      amrex::Error("cannot have negative volume_history");
     }
 
     int checkpoint_recalesce_data=0;
@@ -1524,7 +1549,7 @@ Amr::restart (const std::string& filename)
       is >> recalesce_state_new[j];
 
     } else
-        BoxLib::Error("checkpoint_recalesce_data invalid");
+        amrex::Error("checkpoint_recalesce_data invalid");
 
 
 // END SUSSMAN KLUGE RESTART
@@ -1579,7 +1604,7 @@ Amr::restart (const std::string& filename)
     } else if ((max_level>=0)&&(max_level<mx_lev)) {
 
        if (ParallelDescriptor::IOProcessor())
-          BoxLib::Warning("Amr::restart(): max_level is lower than before");
+          amrex::Warning("Amr::restart(): max_level is lower than before");
 
        int new_finest_level = std::min(max_level,finest_level);
 
@@ -1621,7 +1646,7 @@ Amr::restart (const std::string& filename)
        int lev;
        for (lev = 0; lev <= new_finest_level; lev++)
        {
-           amr_level.reset(lev,(*levelbld)());
+           amr_level[lev].reset((*levelbld)());
            amr_level[lev]->restart(*this, is);
            this->SetBoxArray(lev, amr_level[lev]->boxArray());
            this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
@@ -1633,7 +1658,7 @@ Amr::restart (const std::string& filename)
            amr_level[lev]->post_restart();
 
     } else
-     BoxLib::Error("max_level or mx_lev invalid");
+     amrex::Error("max_level or mx_lev invalid");
 
     for (int lev = 0; lev <= finest_level; lev++)
     {
@@ -1647,7 +1672,7 @@ Amr::restart (const std::string& filename)
              std::cout << "Domain according to checkpoint file is " << restart_domain      << '\n';
              std::cout << "Amr::restart() failed -- box from inputs file does not equal box from restart file" << std::endl;
           }
-          BoxLib::Abort();
+          amrex::Abort();
        }
     }
 
@@ -1680,7 +1705,7 @@ Amr::checkPoint ()
 
     Real dCheckPointTime0 = ParallelDescriptor::second();
 
-    const std::string ckfile = BoxLib::Concatenate(check_file_root,level_steps[0],file_name_digits);
+    const std::string ckfile = amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
 
     if (verbose > 0 && ParallelDescriptor::IOProcessor())
         std::cout << "CHECKPOINT: file = " << ckfile << std::endl;
@@ -1691,8 +1716,8 @@ Amr::checkPoint ()
     // Only the I/O processor makes the directory if it doesn't already exist.
     //
     if (ParallelDescriptor::IOProcessor())
-        if (!BoxLib::UtilCreateDirectory(ckfile, 0755))
-            BoxLib::CreateDirectoryFailed(ckfile);
+        if (!amrex::UtilCreateDirectory(ckfile, 0755))
+            amrex::CreateDirectoryFailed(ckfile);
     //
     // Force other processors to wait till directory is built.
     //
@@ -1716,7 +1741,7 @@ Amr::checkPoint ()
         HeaderFile.open(HeaderFileName.c_str(), std::ios::out|std::ios::trunc|std::ios::binary);
 
         if (!HeaderFile.good())
-            BoxLib::FileOpenFailed(HeaderFileName);
+            amrex::FileOpenFailed(HeaderFileName);
 
         old_prec = HeaderFile.precision(15);
 
@@ -1730,13 +1755,13 @@ Amr::checkPoint ()
 
         int num_materials=AMR_volume_history.size();
         if (num_materials<=0)
-         BoxLib::Error("num_materials invalid in checkpoint");
+         amrex::Error("num_materials invalid in checkpoint");
         HeaderFile << num_materials << '\n';
         HeaderFile << AMR_volume_history_recorded << '\n';
         for (int j=0;j<num_materials;j++) {
          HeaderFile << AMR_volume_history[j] << '\n';
          if (AMR_volume_history[j]<0.0) 
-          BoxLib::Error("AMR_volume_history cannot be negative");
+          amrex::Error("AMR_volume_history cannot be negative");
         }
 
         int checkpoint_recalesce_data=0;
@@ -1757,7 +1782,7 @@ Amr::checkPoint ()
           HeaderFile << recalesce_state_new[j] << '\n';
 
         } else
-         BoxLib::Error("checkpoint_recalesce_data invalid");
+         amrex::Error("checkpoint_recalesce_data invalid");
 
 
 
@@ -1791,7 +1816,7 @@ Amr::checkPoint ()
         HeaderFile.precision(old_prec);
 
         if (!HeaderFile.good())
-            BoxLib::Error("Amr::checkpoint() failed");
+            amrex::Error("Amr::checkpoint() failed");
     }
 
     //
@@ -1819,7 +1844,7 @@ Amr::timeStep (Real time,
 {
 
  if (fabs(time-cumtime)>1.0e-13)
-  BoxLib::Error("time<>cumtime");
+  amrex::Error("time<>cumtime");
 
  if ((finest_level==0)&&(regrid_on_restart==1)) {
 
@@ -1831,10 +1856,10 @@ Amr::timeStep (Real time,
 
   for (int idir = 0; idir < BL_SPACEDIM; idir++)
    if (d_len[idir]%2 != 0)
-    BoxLib::Error("timeStep: must have even number of cells");
+    amrex::Error("timeStep: must have even number of cells");
 
   BoxArray lev0(1);
-  lev0.set(0,BoxLib::coarsen(domain,2));
+  lev0.set(0,amrex::coarsen(domain,2));
   lev0.maxSize(max_grid_size[0]/2);
   lev0.refine(2);
 
@@ -1865,7 +1890,7 @@ Amr::timeStep (Real time,
  } else if ((finest_level>0)||(regrid_on_restart==0)) {
   // do nothing
  } else
-  BoxLib::Error("finest_level or regrid_on_restart invalid");
+  amrex::Error("finest_level or regrid_on_restart invalid");
 
 
  int max_coarsest = std::min(finest_level, max_level-1);
@@ -1879,7 +1904,7 @@ Amr::timeStep (Real time,
    regrid(level,time); // new levels might be created here.
  
    if (finest_level>old_finest+1)
-    BoxLib::Error("cannot create more than one new level at a time");
+    amrex::Error("cannot create more than one new level at a time");
 
    for (int k = level; k <= finest_level; k++)
     level_count[k] = 0;
@@ -1918,7 +1943,7 @@ Amr::timeStep (Real time,
   } else if (level>0) {
    // do nothing
   } else
-   BoxLib::Error("level invalid");
+   amrex::Error("level invalid");
 
   level_steps[level]++;
   level_count[level]++;
@@ -1944,13 +1969,13 @@ Amr::timeStep (Real time,
 void Amr::recalesce_copy_new_to_old(int nmat) {
 
  if (nmat!=AMR_num_materials)
-  BoxLib::Error("nmat invalid");
+  amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
 
  if ((recalesce_state_old.size()!=nmat*recalesce_num_state)||
      (recalesce_state_new.size()!=nmat*recalesce_num_state)) {
-   BoxLib::Error("recalesce sizes incorrect");
+   amrex::Error("recalesce sizes incorrect");
  } else {
 
   for (int im=0;im<nmat*recalesce_num_state;im++) {
@@ -1966,13 +1991,13 @@ void Amr::recalesce_copy_new_to_old(int nmat) {
 void Amr::recalesce_copy_old_to_new(int nmat) {
 
  if (nmat!=AMR_num_materials)
-  BoxLib::Error("nmat invalid");
+  amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
 
  if ((recalesce_state_old.size()!=nmat*recalesce_num_state)||
      (recalesce_state_new.size()!=nmat*recalesce_num_state)) {
-   BoxLib::Error("recalesce sizes incorrect");
+   amrex::Error("recalesce sizes incorrect");
  } else {
   for (int im=0;im<nmat*recalesce_num_state;im++) {
 
@@ -1987,7 +2012,7 @@ void Amr::recalesce_copy_old_to_new(int nmat) {
 void Amr::recalesce_init(int nmat) {
 
  if (nmat!=AMR_num_materials)
-  BoxLib::Error("nmat invalid");
+  amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
 
@@ -2005,14 +2030,14 @@ void Amr::recalesce_init(int nmat) {
 void Amr::recalesce_get_state(Array<Real>& recalesce_state_out,int nmat) { 
 
  if (nmat!=AMR_num_materials)
-  BoxLib::Error("nmat invalid");
+  amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
 
  if (recalesce_state_out.size()!=recalesce_num_state*nmat)
-  BoxLib::Error("recalesce_state_out has incorrect size");
+  amrex::Error("recalesce_state_out has incorrect size");
  if (recalesce_state_old.size()!=recalesce_num_state*nmat)
-  BoxLib::Error("recalesce_state_old has incorrect size");
+  amrex::Error("recalesce_state_old has incorrect size");
 
  for (int im=0;im<recalesce_num_state*nmat;im++)
   recalesce_state_out[im]=recalesce_state_old[im];
@@ -2023,14 +2048,14 @@ void Amr::recalesce_get_state(Array<Real>& recalesce_state_out,int nmat) {
 void Amr::recalesce_put_state(Array<Real>& recalesce_state_in,int nmat) {
 
  if (nmat!=AMR_num_materials)
-  BoxLib::Error("nmat invalid");
+  amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
 
  if (recalesce_state_new.size()!=recalesce_num_state*nmat)
-  BoxLib::Error("recalesce_state_new has incorrect size");
+  amrex::Error("recalesce_state_new has incorrect size");
  if (recalesce_state_in.size()!=recalesce_num_state*nmat)
-  BoxLib::Error("recalesce_state_in has incorrect size");
+  amrex::Error("recalesce_state_in has incorrect size");
 
  for (int im=0;im<recalesce_num_state*nmat;im++)
   recalesce_state_new[im]=recalesce_state_in[im];
@@ -2053,7 +2078,7 @@ Amr::coarseTimeStep (Real stop_time)
     } else if (level_steps[0]==0) {
      // do nothing since initial dt already calculated NavierStokes::computeInitialDt
     } else
-      BoxLib::Error("level_steps invalid");
+      amrex::Error("level_steps invalid");
 
      // dt_AMR might be modified within "timeStep"
     timeStep(cumtime,stop_time);
@@ -2188,11 +2213,11 @@ Amr::coarseTimeStep (Real stop_time)
         ParallelDescriptor::Barrier();
         if (to_checkpoint)
         {
-            BoxLib::Abort("Stopped by user w/ checkpoint");
+            amrex::Abort("Stopped by user w/ checkpoint");
         }
         else
         {
-            BoxLib::Abort("Stopped by user w/o checkpoint");
+            amrex::Abort("Stopped by user w/o checkpoint");
         }
     }
 } // end subroutine coarseTimeStep
@@ -2206,10 +2231,10 @@ Amr::defBaseLevel (Real strt_time)
 
     for (int idir = 0; idir < BL_SPACEDIM; idir++)
      if (d_len[idir]%2 != 0)
-      BoxLib::Error("defBaseLevel: must have even number of cells");
+      amrex::Error("defBaseLevel: must have even number of cells");
 
     BoxArray lev0(1);
-    lev0.set(0,BoxLib::coarsen(domain,2));
+    lev0.set(0,amrex::coarsen(domain,2));
     lev0.maxSize(max_grid_size[0]/2);
     lev0.refine(2);
 
@@ -2221,11 +2246,8 @@ Amr::defBaseLevel (Real strt_time)
     //
     amr_level[0].reset((*levelbld)(*this,0,geom[0],grids[0],dmap[0],strt_time));
 
-     FIX ME
-    lev0.clear();
-
     amr_level[0]->initData();
-}
+} // subroutine defBaseLevel
 
 // called from timeStep and bldFineLevels.
 // bldFineLevels is called from initialInit.
@@ -2238,7 +2260,7 @@ Amr::regrid (int  lbase,
 {
 
  if (fabs(time-cumtime)>1.0e-13)
-  BoxLib::Error("time<>cumtime in regrid");
+  amrex::Error("time<>cumtime in regrid");
 
  if (verbose > 0 && ParallelDescriptor::IOProcessor())
   std::cout << "REGRID: at level lbase = " << lbase << std::endl;
@@ -2248,7 +2270,7 @@ Amr::regrid (int  lbase,
 
  int max_coarsest=std::min(finest_level,max_level-1);
  if (lbase>max_coarsest)
-  BoxLib::Error("cannot have lbase>max_coarsest");
+  amrex::Error("cannot have lbase>max_coarsest");
 
  int new_finest;
  Array<BoxArray> new_grids(max_level+1);
@@ -2256,16 +2278,18 @@ Amr::regrid (int  lbase,
 
  grid_places(lbase,new_finest,new_grids);
  if (new_finest>finest_level+1)
-  BoxLib::Error("cannot create more than one new level at a time");
+  amrex::Error("cannot create more than one new level at a time");
 
  int regrid_level_zero=0;
  if (lbase==0) {
   if (new_grids[0] != amr_level[0]->boxArray())
    regrid_level_zero=1;
  }
- 
+
+  //
+  // Reclaim all remaining storage for levels > new_finest.
+  //
  for (int lev = new_finest+1; lev <= finest_level; lev++) {
-   //amr_level.clear(lev);
   amr_level[lev].reset();
   this->ClearBoxArray(lev);
   this->ClearDistributionMap(lev);
@@ -2286,12 +2310,6 @@ Amr::regrid (int  lbase,
    // do nothing
   }
  }  // lev=start ... min(finest_level,new_finest)
-
- for(int lev = new_finest + 1; lev <= finest_level; ++lev) {
-  amr_level[lev].reset();
-  this->ClearBoxArray(lev);
-  this->ClearDistributionMap(lev);
- }
 
  finest_level = new_finest;
  FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
@@ -2329,10 +2347,9 @@ Amr::regrid (int  lbase,
 
    amr_level[lev]->initData();
 
-   FIX ME
-  } else if (amr_level.defined(lev)) {
+  } else if (amr_level[lev]) {
 
-   a->init(amr_level[lev],new_grids[lev],new_dmap[lev]);
+   a->init(*amr_level[lev],new_grids[lev],new_dmap[lev]);
    amr_level[lev].reset(a);
    this->SetBoxArray(lev, amr_level[lev]->boxArray());
    this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
@@ -2536,10 +2553,10 @@ Amr::grid_places (int              lbase,
 
   for (int idir = 0; idir < BL_SPACEDIM; idir++)
    if (d_len[idir]%2 != 0)
-    BoxLib::Error("grid_places: must have even number of cells");
+    amrex::Error("grid_places: must have even number of cells");
 
   BoxArray lev0(1);
-  lev0.set(0,BoxLib::coarsen(domain,2));
+  lev0.set(0,amrex::coarsen(domain,2));
   lev0.maxSize(max_grid_size[0]/2);
   lev0.refine(2);
 
@@ -2559,18 +2576,18 @@ Amr::grid_places (int              lbase,
  for (i = 0; i <= max_crse; i++) {
    bf_lev[i] = blocking_factor[i]/2;
    if (2*bf_lev[i]!=blocking_factor[i])
-    BoxLib::Error("2*bf_lev[i]!=blocking_factor[i]");
+    amrex::Error("2*bf_lev[i]!=blocking_factor[i]");
  }
 
  for (i = lbase; i < max_crse; i++) {
    rr_lev[i] = (2*bf_lev[i])/bf_lev[i+1];
    if (rr_lev[i]<2)
-    BoxLib::Error("rr_lev[i]<2");
+    amrex::Error("rr_lev[i]<2");
  }
 
   //2*bf_lev[i]==blocking_factor[i]
  for (i = lbase; i <= max_crse; i++) {
-  pc_domain[i] = BoxLib::coarsen(geom[i].Domain(),bf_lev[i]);
+  pc_domain[i] = amrex::coarsen(geom[i].Domain(),bf_lev[i]);
  }
 
  Array<BoxList> p_n(max_level);      // Proper nesting domain.
@@ -2592,9 +2609,9 @@ Amr::grid_places (int              lbase,
 
  if (lbase==0) {
   if (p_n_comp[lbase].size()!=0)
-   BoxLib::Error("p_n_comp[lbase].size()!=0");
+   amrex::Error("p_n_comp[lbase].size()!=0");
   if (p_n[lbase]!=pc_domain[lbase])
-   BoxLib::Error("p_n[lbase]!=pc_domain[lbase]");
+   amrex::Error("p_n[lbase]!=pc_domain[lbase]");
  } // lbase==0
 
  bl.clear();
@@ -2616,9 +2633,9 @@ Amr::grid_places (int              lbase,
 
   if (lbase==0) {
    if (p_n_comp[i].size()!=0)
-    BoxLib::Error("p_n_comp[i].size()!=0");
+    amrex::Error("p_n_comp[i].size()!=0");
    if (p_n[i]!=pc_domain[i])
-    BoxLib::Error("p_n[i]!=pc_domain[i]");
+    amrex::Error("p_n[i]!=pc_domain[i]");
   } // lbase==0
 
  } // i=lbase+1 ... max_crse
@@ -2672,7 +2689,7 @@ Amr::grid_places (int              lbase,
     }
    } // blt
 
-   Box mboxF = BoxLib::grow(bl_tagged.minimalBox(),1);
+   Box mboxF = amrex::grow(bl_tagged.minimalBox(),1);
    BoxList blFcomp;
    blFcomp.complementIn(mboxF,bl_tagged);
    blFcomp.simplify();
@@ -2702,7 +2719,7 @@ Amr::grid_places (int              lbase,
   if (bl_max>=2) {
    tags.coarsen(bf_lev[levc]); // guarantee proper nesting of n_proper*bf_lev
   } else
-   BoxLib::Error("blocking_factor>=4 required => bf_lev>=2");
+   amrex::Error("blocking_factor>=4 required => bf_lev>=2");
 
   amr_level[levc]->manual_tags_placement(tags, bf_lev);
   tags.mapPeriodic(Geometry(pc_domain[levc]));
@@ -2773,7 +2790,7 @@ Amr::grid_places (int              lbase,
  }  // verbose>0
 
  if (new_finest>finest_level+1)
-  BoxLib::Error("cannot create more than one new level at a time");
+  amrex::Error("cannot create more than one new level at a time");
 
 }  // subroutine grid_places
 
@@ -2782,7 +2799,7 @@ void
 Amr::bldFineLevels (Real strt_time)
 {
  if (max_level<=0)
-  BoxLib::Error("max_level invalid in bldFineLevels");
+  amrex::Error("max_level invalid in bldFineLevels");
 
  finest_level = 0;
  FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
@@ -2801,7 +2818,7 @@ Amr::bldFineLevels (Real strt_time)
   if (new_finest>finest_level) {
 
    if (new_finest>finest_level+1)
-    BoxLib::Error("cannot create more than one new level at a time");
+    amrex::Error("cannot create more than one new level at a time");
 
    finest_level = new_finest;
    FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
@@ -2812,7 +2829,7 @@ Amr::bldFineLevels (Real strt_time)
     std::cout << "new_finest= " << new_finest << '\n';
     std::cout << "new_grids[0] \n";
     std::cout << new_grids[0] << '\n';
-    BoxLib::Error("new_grids[new_finest] invalid");
+    amrex::Error("new_grids[new_finest] invalid");
    }
 
    DistributionMapping new_dm(new_grids[new_finest]);
@@ -2834,10 +2851,10 @@ Amr::bldFineLevels (Real strt_time)
   } else if ((new_finest>=0)&&(new_finest<=finest_level)) {
    // do nothing
   } else
-   BoxLib::Error("new_finest invalid");
+   amrex::Error("new_finest invalid");
 
   if (finest_level>max_level)
-   BoxLib::Error("finest_level is corrupt");
+   amrex::Error("finest_level is corrupt");
   
   if (finest_level==max_level)
    grid_places_done=1;
@@ -2861,7 +2878,7 @@ Amr::bldFineLevels (Real strt_time)
  int count = 0;
 
  if (max_level<=0)
-  BoxLib::Error("max_level invalid in bldFineLevels");
+  amrex::Error("max_level invalid in bldFineLevels");
 
  do {
    for (int i = 0; i <= finest_level; i++)
@@ -2880,3 +2897,6 @@ Amr::bldFineLevels (Real strt_time)
 
 
 }  // subroutine bldFineLevels
+
+} // namespace amrex
+

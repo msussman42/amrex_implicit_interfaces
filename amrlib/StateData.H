@@ -1,18 +1,25 @@
 
-#ifndef _StateData_H_
-#define _StateData_H_ 
+#ifndef AMREX_StateData_H_
+#define AMREX_StateData_H_ 
 
-#include <Box.H>
-#include <BoxArray.H>
-#include <MultiFab.H>
-#include <BCRec.H>
-#include <Array.H>
-#include <VisMF.H>
-#include <DistributionMapping.H>
-#include <PhysBCFunct.H>
-#include <Geometry.H>
-#include <RealBox.H>
+#include <memory>
+
+#include <AMReX_Box.H>
+#include <AMReX_BoxArray.H>
+#include <AMReX_MultiFab.H>
+#include <AMReX_MFCopyDescriptor.H>
+#include <AMReX_BCRec.H>
+#include <AMReX_Array.H>
+#include <AMReX_Vector.H>
+#include <AMReX_VisMF.H>
+#include <AMReX_DistributionMapping.H>
+#include <AMReX_PhysBCFunct.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_RealBox.H>
+
 #include <StateDescriptor.H>
+
+namespace amrex {
 
 //
 // Current and previous level-time data.
@@ -258,6 +265,6 @@ private:
 
 }; // StateDataPhysBCFunctGHOST
 
+} //namespace amrex
 
-
-#endif /*_StateData_H_*/
+#endif /*AMREX_StateData_H_*/

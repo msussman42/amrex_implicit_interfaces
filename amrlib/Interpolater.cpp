@@ -1,11 +1,12 @@
 
-#include <winstd.H>
 #include <climits>
 
-#include <FArrayBox.H>
-#include <Geometry.H>
+#include <AMReX_FArrayBox.H>
+#include <AMReX_Geometry.H>
 #include <Interpolater.H>
 #include <INTERP_F.H>
+
+namespace amrex {
 
 //
 // CONSTRUCT A GLOBAL OBJECT OF EACH VERSION.
@@ -82,20 +83,20 @@ Box
 multiMOFInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
 {
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
  
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;       
 }
@@ -136,16 +137,16 @@ multiMOFInterp::interp (Real time,
     int ngeom_recon=multiMOFInterp_ngeom_recon;
 
     if (ngeom_raw!=BL_SPACEDIM+1)
-     BoxLib::Error("ngeom_raw invalid");
+     amrex::Error("ngeom_raw invalid");
     if (ngeom_recon!=2*BL_SPACEDIM+3)
-     BoxLib::Error("ngeom_recon invalid");
+     amrex::Error("ngeom_recon invalid");
 
     if (nmat<1)
-     BoxLib::Error("nmat invalid in multi mof interp");
+     amrex::Error("nmat invalid in multi mof interp");
 
     if (ncomp!=nmat*ngeom_raw) {
      std::cout << "ncomp " << ncomp << '\n';
-     BoxLib::Error("must interpolate all multiMOF data at once");
+     amrex::Error("must interpolate all multiMOF data at once");
     }
 
     Box reconbox(crse.box());
@@ -178,20 +179,20 @@ Box
 multiEXTMOFInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
 {
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
  
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;       
 }
@@ -232,16 +233,16 @@ multiEXTMOFInterp::interp (Real time,
     int ngeom_recon=multiMOFInterp_ngeom_recon;
 
     if (ngeom_raw!=BL_SPACEDIM+1)
-     BoxLib::Error("ngeom_raw invalid");
+     amrex::Error("ngeom_raw invalid");
     if (ngeom_recon!=2*BL_SPACEDIM+3)
-     BoxLib::Error("ngeom_recon invalid");
+     amrex::Error("ngeom_recon invalid");
 
     if (nmat<1)
-     BoxLib::Error("nmat invalid in multi ext mof interp");
+     amrex::Error("nmat invalid in multi ext mof interp");
 
     if (ncomp!=nmat*ngeom_recon) {
      std::cout << "ncomp " << ncomp << '\n';
-     BoxLib::Error("must interpolate all multiEXTMOF data at once");
+     amrex::Error("must interpolate all multiEXTMOF data at once");
     }
     // in NavierStokes::VOF_Recon
     // 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
@@ -268,20 +269,20 @@ Box
 BurnVelInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
 {
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
  
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;       
 }
@@ -316,7 +317,7 @@ BurnVelInterp::interp (Real time,
     if ((crse_comp>=0)&&(fine_comp>=0)) {
      // do nothing
     } else
-     BoxLib::Error("crse_comp or fine_comp invalid");
+     amrex::Error("crse_comp or fine_comp invalid");
 
     const Real* prob_lo=fine_geom.ProbLo();
     const Real* dxf = fine_geom.CellSize();
@@ -330,17 +331,17 @@ BurnVelInterp::interp (Real time,
         (fine.nComp()>=nburning+fine_comp)) {
      // do nothing
     } else
-     BoxLib::Error("crse.nComp() or fine.nComp() invalid");
+     amrex::Error("crse.nComp() or fine.nComp() invalid");
 
     if (nten!=((nmat-1)*(nmat-1)+nmat-1)/2) 
-     BoxLib::Error("nten invalid");
+     amrex::Error("nten invalid");
 
     if (nmat<1)
-     BoxLib::Error("nmat invalid in burnvel interp");
+     amrex::Error("nmat invalid in burnvel interp");
 
     if (ncomp!=nburning) {
      std::cout << "ncomp " << ncomp << '\n';
-     BoxLib::Error("must interpolate all burnvel data at once");
+     amrex::Error("must interpolate all burnvel data at once");
     }
      // first nmat components are the status.
      // next sdim * nmat components are the burning velocities.
@@ -368,20 +369,20 @@ Box
 PCInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
 {
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
 
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;
 }
@@ -432,20 +433,20 @@ Box
 LSHOInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
 {
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
 
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;
 }
@@ -485,13 +486,13 @@ LSHOInterp::interp (
     int nmat=LSHOInterp_nmat;
 
     if ((LSHOInterp_LO!=0)&&(LSHOInterp_LO!=1))
-     BoxLib::Error("LSHOInterp_LO invalid");
+     amrex::Error("LSHOInterp_LO invalid");
 
     if (nmat<1)
-     BoxLib::Error("nmat invalid in ls ho interp");
+     amrex::Error("nmat invalid in ls ho interp");
     if (ncomp!=(BL_SPACEDIM+1)*nmat) {
      std::cout << "ncomp " << ncomp << '\n';
-     BoxLib::Error("must interpolate all ls ho data at once");
+     amrex::Error("must interpolate all ls ho data at once");
     }
 
     FORT_LSHOINTERP (
@@ -517,20 +518,20 @@ Box
 SEMInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
 {
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
 
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;
 }
@@ -587,21 +588,21 @@ Box
 maskSEMInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
 {
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
   // the smallest coarse box whose refinement contains "fine"
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
 
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;
 }
@@ -655,20 +656,20 @@ Box
 PCInterpNull::CoarseBox (const Box& fine,int bfactc,int bfactf)
 {
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
- Box crse=BoxLib::coarsen(fine,2);
+ Box crse=amrex::coarsen(fine,2);
 
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;
 }
@@ -720,25 +721,25 @@ UMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf)
 {
 
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
  if (fine.ixType()!=IndexType::TheUMACType())
-  BoxLib::Error("error in CoarseBox");
+  amrex::Error("error in CoarseBox");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
  if (crse.ixType()!=IndexType::TheUMACType())
-  BoxLib::Error("error in CoarseBox: crse");
+  amrex::Error("error in CoarseBox: crse");
 
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;
 }
@@ -757,7 +758,7 @@ UMACInterp::interp(
  int bfactc,int bfactf)
 {
  if ((ncomp<1)||(ncomp>9999))
-  BoxLib::Error("invalid ncomp umac interp");
+  amrex::Error("invalid ncomp umac interp");
 
  BL_ASSERT(bcr.size() >= ncomp);
 
@@ -766,18 +767,18 @@ UMACInterp::interp(
  IndexType typ(fine_region.ixType());
 
  if (typ!=IndexType::TheUMACType())
-  BoxLib::Error("fine_region has incorrect type");
+  amrex::Error("fine_region has incorrect type");
 
  if (fine.box().ixType()!=typ)
-  BoxLib::Error("fine box invalid");
+  amrex::Error("fine box invalid");
  if (crse.box().ixType()!=typ)
-  BoxLib::Error("crse box invalid");
+  amrex::Error("crse box invalid");
 
  Box fine_bx = fine_region & fine.box();
 
  Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf));
  if (crse_bx.ixType()!=typ)
-  BoxLib::Error("crse_bx invalid");
+  amrex::Error("crse_bx invalid");
 
  const Real* prob_lo=fine_geom.ProbLo();
  const Real* dxf = fine_geom.CellSize();
@@ -817,25 +818,25 @@ VMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf)
 
 
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
  if (fine.ixType()!=IndexType::TheVMACType())
-  BoxLib::Error("error in VMAC CoarseBox");
+  amrex::Error("error in VMAC CoarseBox");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
  if (crse.ixType()!=IndexType::TheVMACType())
-  BoxLib::Error("error in VMAC CoarseBox: crse");
+  amrex::Error("error in VMAC CoarseBox: crse");
 
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;
 
@@ -855,7 +856,7 @@ VMACInterp::interp(
  int bfactc,int bfactf)
 {
  if ((ncomp<1)||(ncomp>9999))
-  BoxLib::Error("invalid ncomp vmac interp");
+  amrex::Error("invalid ncomp vmac interp");
 
  BL_ASSERT(bcr.size() >= ncomp);
 
@@ -864,17 +865,17 @@ VMACInterp::interp(
  IndexType typ(fine_region.ixType());
 
  if (typ!=IndexType::TheVMACType())
-  BoxLib::Error("fine_region has incorrect type");
+  amrex::Error("fine_region has incorrect type");
 
  if (fine.box().ixType()!=typ)
-  BoxLib::Error("fine box invalid");
+  amrex::Error("fine box invalid");
  if (crse.box().ixType()!=typ)
-  BoxLib::Error("crse box invalid");
+  amrex::Error("crse box invalid");
 
  Box fine_bx = fine_region & fine.box();
  Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf));
  if (crse_bx.ixType()!=typ)
-  BoxLib::Error("crse_bx invalid");
+  amrex::Error("crse_bx invalid");
 
  const Real* prob_lo=fine_geom.ProbLo();
  const Real* dxf = fine_geom.CellSize();
@@ -911,25 +912,25 @@ WMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf)
 {
 
  if ((bfactc<1)||(bfactf<1))
-  BoxLib::Error("bfactc or bfactf invalid");
+  amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
-  BoxLib::Error("cannot have bfactf>bfactc");
+  amrex::Error("cannot have bfactf>bfactc");
 
  if (fine.ixType()!=IndexType::TheWMACType())
-  BoxLib::Error("error in WMAC CoarseBox");
+  amrex::Error("error in WMAC CoarseBox");
 
- Box crse = BoxLib::coarsen(fine,2);
+ Box crse = amrex::coarsen(fine,2);
  if (crse.ixType()!=IndexType::TheWMACType())
-  BoxLib::Error("error in WMAC CoarseBox: crse");
+  amrex::Error("error in WMAC CoarseBox: crse");
 
  if (bfactc>1) {
-  Box e_crse = BoxLib::coarsen(crse,bfactc);
+  Box e_crse = amrex::coarsen(crse,bfactc);
   e_crse.refine(bfactc);
   crse=e_crse;
  } else if (bfactc==1) {
   // do nothing
  } else
-  BoxLib::Error("bfactc invalid");
+  amrex::Error("bfactc invalid");
 
  return crse;
 
@@ -949,7 +950,7 @@ WMACInterp::interp(
  int bfactc,int bfactf)
 {
  if ((ncomp<1)||(ncomp>9999))
-  BoxLib::Error("invalid ncomp wmac interp");
+  amrex::Error("invalid ncomp wmac interp");
 
  BL_ASSERT(bcr.size() >= ncomp);
 
@@ -958,17 +959,17 @@ WMACInterp::interp(
  IndexType typ(fine_region.ixType());
 
  if (typ!=IndexType::TheWMACType())
-  BoxLib::Error("fine_region has incorrect type");
+  amrex::Error("fine_region has incorrect type");
 
  if (fine.box().ixType()!=typ)
-  BoxLib::Error("fine box invalid");
+  amrex::Error("fine box invalid");
  if (crse.box().ixType()!=typ)
-  BoxLib::Error("crse box invalid");
+  amrex::Error("crse box invalid");
 
  Box fine_bx = fine_region & fine.box();
  Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf));
  if (crse_bx.ixType()!=typ)
-  BoxLib::Error("crse_bx invalid");
+  amrex::Error("crse_bx invalid");
 
  const Real* prob_lo=fine_geom.ProbLo();
  const Real* dxf = fine_geom.CellSize();
@@ -996,4 +997,4 @@ WMACInterp::interp(
    &bfactc,&bfactf);
 }
 
-
+} // namespace amrex

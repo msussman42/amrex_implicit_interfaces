@@ -1,29 +1,33 @@
-#ifndef _ErrorList_H_
-#define _ErrorList_H_
+#ifndef AMREX_ErrorList_H_
+#define AMREX_ErrorList_H_
 
 #include <string>
-#include <vector>
+#include <memory>
 
-#include <REAL.H>
-#include <ArrayLim.H>
+#include <AMReX_Array.H>
+#include <AMReX_Vector.H>
+#include <AMReX_REAL.H>
+#include <AMReX_ArrayLim.H>
+
+namespace amrex {
 
 extern "C"
 {
     //
     // Type of extern "C" function called by ErrorRec to do tagging of cells for refinement.
     //
-    typedef void (*ErrorFunc)(int* tag, ARLIM_P(tlo), ARLIM_P(thi),
+    typedef void (*ErrorFunc)(int* tag, AMREX_ARLIM_P(tlo), AMREX_ARLIM_P(thi),
                               const int* tagval, const int* clearval,
-                              Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+                              Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
                               const int* lo, const int * hi, const int* nvar,
                               const int* domain_lo, const int* domain_hi,
                               const Real* dx, const Real* xlo,
                               const Real* prob_lo, const Real* time,
                               const int* level);
 
-    typedef void (*ErrorFunc2)(int* tag, ARLIM_P(tlo), ARLIM_P(thi),
+    typedef void (*ErrorFunc2)(int* tag, AMREX_ARLIM_P(tlo), AMREX_ARLIM_P(thi),
                                const int* tagval, const int* clearval,
-                               Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+                               Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
                                const int* lo, const int * hi, const int* nvar,
                                const int* domain_lo, const int* domain_hi,
                                const Real* dx, const int* level, const Real* avg);
@@ -132,6 +136,8 @@ private:
 };
 
 std::ostream& operator << (std::ostream& os, const ErrorList& elst);
+
+} // namespace amrex
 
 #endif
 

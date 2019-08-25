@@ -1,13 +1,19 @@
 
-#ifndef _Amr_H_
-#define _Amr_H_ 
+#ifndef AMREX_Amr_H_
+#define AMREX_Amr_H_ 
 
 #include <fstream>
+#include <memory>
+#include <list>
 
-#include <Box.H>
-#include <Geometry.H>
-#include <BoxArray.H>
-#include <Array.H>
+#include <AMReX_Box.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_BoxArray.H>
+#include <AMReX_Array.H>
+#include <AMReX_Vector.H>
+#include <AMReX_BCRec.H>
+
+namespace amrex {
 
 class AmrLevel;
 class LevelBld;
@@ -175,7 +181,7 @@ public:
     void print_cells_advanced();
 
 
-#ifdef USE_PARTICLES
+#ifdef AMREX_PARTICLES
     //! Redistribute particles
     void RedistributeParticles ();
 #endif
@@ -476,4 +482,6 @@ Amr::theRestartFile () const
     return restart_file;
 }
 
-#endif /*_Amr_H_*/
+} /* namespace amrex */
+
+#endif /*AMREX_Amr_H_*/

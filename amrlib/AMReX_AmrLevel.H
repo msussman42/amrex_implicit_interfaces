@@ -1,24 +1,29 @@
 
-#ifndef _AmrLevel_H_
-#define _AmrLevel_H_ 
+#ifndef AMREX_AmrLevel_H_
+#define AMREX_AmrLevel_H_ 
 
-#include <REAL.H>
+#include <AMReX_REAL.H>
 #include <Box.H>
 #include <RealBox.H>
-#include <Geometry.H>
-#include <FArrayBox.H>
-#include <BoxArray.H>
-#include <Array.H>
-#include <FabArray.H>
-#include <MultiFab.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_FArrayBox.H>
+#include <AMReX_BoxArray.H>
+#include <AMReX_Array.H>
+#include <AMReX_FabArray.H>
+#include <AMReX_MultiFab.H>
 #include <Derive.H>
-#include <BCRec.H>
+#include <AMReX_BCRec.H>
 #include <Interpolater.H>
-#include <Amr.H>
+#include <AMReX_Amr.H>
 #include <SlabStat.H>
 #include <StateDescriptor.H>
 #include <StateData.H>
-#include <VisMF.H>
+#include <AMReX_VisMF.H>
+
+#include <memory>
+#include <map>
+
+namespace amrex {
 
 class TagBox;
 class TagBoxArray;
@@ -228,8 +233,8 @@ public:
                           int       scomp,
                           int       ncomp);
 
-    virtual MultiFab* derive (const std::string& name,
-                              int                ngrow);
+    virtual std::unique_ptr<MultiFab> derive (const std::string& name,
+                              int ngrow);
 
     //
     // State data object.
@@ -270,7 +275,7 @@ public:
     virtual void setPlotVariables ();
 
 
-#ifdef USE_PARTICLES
+#ifdef AMREX_PARTICLES
     //! This function can be called from the parent 
     virtual void particle_redistribute (int lbase = 0, bool init = false) {;}
 #endif
@@ -383,5 +388,6 @@ AmrLevel::get_desc_lstGHOST ()
     return desc_lstGHOST;
 }
 
+} // namespace amrex
 
-#endif /*_AmrLevel_H_*/
+#endif /*AMREX_AmrLevel_H_*/

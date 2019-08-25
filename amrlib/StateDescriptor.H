@@ -1,15 +1,18 @@
 
-#ifndef _StateDescriptor_H_
-#define _StateDescriptor_H_ 
+#ifndef AMREX_StateDescriptor_H_
+#define AMREX_StateDescriptor_H_ 
 
 #include <utility>
-#include <vector>
+#include <memory>
 
-#include <Array.H>
-#include <REAL.H>
-#include <Box.H>
+#include <AMReX_Array.H>
+#include <AMReX_Vector.H>
+#include <AMReX_REAL.H>
+#include <AMReX_Box.H>
 #include <BCRec.H>
 #include <ArrayLim.H>
+
+namespace amrex {
 
 class Interpolater;
 
@@ -345,4 +348,6 @@ private:
     Vector<std::unique_ptr<StateDescriptor> > desc;
 };
 
-#endif /*_StateDescriptor_H_*/
+} // namespace amrex
+
+#endif /*AMREX_StateDescriptor_H_*/

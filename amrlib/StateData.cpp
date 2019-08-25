@@ -1,17 +1,22 @@
 
-#include <winstd.H>
 #include <iostream>
 #include <algorithm>
 
-#include <RealBox.H>
+#include <unistd.h>
+
+#include <AMReX_RealBox.H>
 #include <StateData.H>
 #include <StateDescriptor.H>
-#include <ParallelDescriptor.H>
-#include <iostream>
-#include <sstream>
-#include <fstream>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_Utility.H>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include <INTERP_F.H>
+
+namespace amrex {
 
 const Real INVALID_TIME = -1.0e200;
 
@@ -67,27 +72,27 @@ StateData::define (
 
     if (dt<=0.0) {
      std::cout << "dt = " << dt << '\n';
-     BoxLib::Error("dt invalid in StateData define");
+     amrex::Error("dt invalid in StateData define");
     }
     if (time<0.0) {
      std::cout << "time = " << time << '\n';
-     BoxLib::Error("time invalid in StateData define");
+     amrex::Error("time invalid in StateData define");
     }
     
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
     if (StateData_MAX_NUM_SLAB<33)
-     BoxLib::Error("StateData_MAX_NUM_SLAB too small");
+     amrex::Error("StateData_MAX_NUM_SLAB too small");
 
     StateData_slab_dt_type=slab_dt_type;
     if ((StateData_slab_dt_type!=0)&&
         (StateData_slab_dt_type!=1))
-     BoxLib::Error("StateData_slab_dt_type invalid");
+     amrex::Error("StateData_slab_dt_type invalid");
  
     bfact_time_order=time_order;
     if ((bfact_time_order>StateData_MAX_NUM_SLAB)||
         (bfact_time_order<1)) {
      std::cout << "bfact_time_order= " << bfact_time_order << '\n';
-     BoxLib::Error("bfact_time_order invalid in define");
+     amrex::Error("bfact_time_order invalid in define");
     }
     time_array.resize(StateData_MAX_NUM_SLAB);
     new_data.resize(StateData_MAX_NUM_SLAB);
@@ -119,7 +124,7 @@ StateData::define (
     } else if ((dt>0.0)&&(dt<1.0)) {
      // do nothing
     } else {
-     BoxLib::Error("dt invalid");
+     amrex::Error("dt invalid");
     }
 
     FORT_GL_SLAB(time_array.dataPtr(),&StateData_slab_dt_type,
@@ -131,21 +136,21 @@ StateData::define (
     } else if (do_scale_time==0) {
      // do nothing
     } else {
-     BoxLib::Error("do_scale_time invalid");
+     amrex::Error("do_scale_time invalid");
     }
 
     for (int i=0;i<=bfact_time_order-1;i++) {
      if (time_array[i]>time_array[i+1]) {
       std::cout << "i= " << i << " time_array " << time_array[i];
       std::cout << "i+1= " << i+1 << " time_array " << time_array[i+1];
-      BoxLib::Error("time_array corruption");
+      amrex::Error("time_array corruption");
      }
     }
  
     int ncomp = desc->nComp();
 
     for (int i=0;i<=bfact_time_order;i++)
-     new_data[i] = new MultiFab(grids,ncomp,desc->nExtra(),dmap,Fab_allocate);
+     new_data[i].reset(new MultiFab(grids,dmap,ncomp,desc->nExtra(),Fab_allocate));
 
     buildBC();
 }
@@ -166,12 +171,12 @@ StateData::restart (
 {
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
     if (StateData_MAX_NUM_SLAB<33)
-     BoxLib::Error("StateData_MAX_NUM_SLAB too small");
+     amrex::Error("StateData_MAX_NUM_SLAB too small");
 
     StateData_slab_dt_type=slab_dt_type;
     if ((StateData_slab_dt_type!=0)&&
         (StateData_slab_dt_type!=1))
-     BoxLib::Error("StateData_slab_dt_type invalid");
+     amrex::Error("StateData_slab_dt_type invalid");
 
     time_array.resize(StateData_MAX_NUM_SLAB);
     new_data.resize(StateData_MAX_NUM_SLAB);
@@ -181,7 +186,7 @@ StateData::restart (
     if ((bfact_time_order<1)||
         (bfact_time_order>StateData_MAX_NUM_SLAB)) {
      std::cout << "bfact_time_order= " << bfact_time_order << '\n';
-     BoxLib::Error("bfact_time_order invalid in restart");
+     amrex::Error("bfact_time_order invalid in restart");
     }
 
     desc = &d;
@@ -207,11 +212,11 @@ StateData::restart (
     if (domain_in!=domain) {
      std::cout << "domain: " << domain;
      std::cout << "domain_in: " << domain_in;
-     BoxLib::Error("domain_in invalid");
+     amrex::Error("domain_in invalid");
     }
 
-    if (! BoxLib::match(grids_in,grids))
-     BoxLib::Error("grids_in invalid");     
+    if (! amrex::match(grids_in,grids))
+     amrex::Error("grids_in invalid");     
 
     for (int i=0;i<=bfact_time_order;i++) {
      is >> time_array[i];
@@ -220,7 +225,7 @@ StateData::restart (
     int nsets;
     is >> nsets;
     if (nsets!=bfact_time_order)
-     BoxLib::Error("all slab data should be checkpointed");
+     amrex::Error("all slab data should be checkpointed");
 
     for (int i=0;i<StateData_MAX_NUM_SLAB;i++)
      new_data[i]=0;
@@ -230,7 +235,7 @@ StateData::restart (
 
     for (int i=0;i<=bfact_time_order;i++) {
 
-     new_data[i] = new MultiFab(grids,desc->nComp(),desc->nExtra(),dmap);
+     new_data[i].reset(new MultiFab(grids,dmap,desc->nComp(),desc->nExtra()));
 
        // read the file name from the header file.
      is >> mf_name;
@@ -261,7 +266,7 @@ StateData::buildBC ()
         for (int j = 0; j < grids.size(); j++)
         {
             BCRec bcr;
-            BoxLib::setBC(grids[j],domain,desc->getBC(i),bcr);
+            amrex::setBC(grids[j],domain,desc->getBC(i),bcr);
             bc[i][j]=bcr;
         }
     }
@@ -274,7 +279,7 @@ StateData::buildBC ()
         for (int j = 0; j < grids.size(); j++)
         {
             BCRec bcr;
-            BoxLib::setBC(grids[j],domain,descGHOST->getBC(i),bcr);
+            amrex::setBC(grids[j],domain,descGHOST->getBC(i),bcr);
             bcGHOST[i][j]=bcr;
         }
     }
@@ -317,7 +322,7 @@ Real
 StateData::slabTime (int slab_index) const
 {
  if ((slab_index<0)||(slab_index>bfact_time_order))
-  BoxLib::Error("slab_index invalid");
+  amrex::Error("slab_index invalid");
 
  return time_array[slab_index];
 }
@@ -335,7 +340,7 @@ StateData::newData (int slab_index)
      (project_slab_index>bfact_time_order)) {
   std::cout << "bfact_time_order= " << bfact_time_order << '\n';
   std::cout << "project_slab_index= " << project_slab_index << '\n';
-  BoxLib::Error("project_slab_index invalid1");
+  amrex::Error("project_slab_index invalid1");
  }
  BL_ASSERT(new_data[project_slab_index] != 0);
  return *new_data[project_slab_index];
@@ -353,7 +358,7 @@ StateData::newData (int slab_index) const
      (project_slab_index>bfact_time_order)) {
   std::cout << "bfact_time_order= " << bfact_time_order << '\n';
   std::cout << "project_slab_index= " << project_slab_index << '\n';
-  BoxLib::Error("project_slab_index invalid2");
+  amrex::Error("project_slab_index invalid2");
  }
  BL_ASSERT(new_data[project_slab_index] != 0);
  return *new_data[project_slab_index];
@@ -390,7 +395,7 @@ bool
 StateData::hasNewData (int slab_index) const
 {
  if ((slab_index<0)||(slab_index>bfact_time_order))
-  BoxLib::Error("slab_index invalid");
+  amrex::Error("slab_index invalid");
  return new_data[slab_index] != 0;
 }
 
@@ -408,22 +413,22 @@ StateData::setTimeLevel (Real time,Real& dt)
  } else if ((time>0.0)&&(time-dt>=0.0)) {
   // do nothing
  } else
-  BoxLib::Error("time or dt bust");
+  amrex::Error("time or dt bust");
 
  if (dt<1.0e-12) {
   std::cout << "dt= " << dt << '\n';
-  BoxLib::Error("dt<1e-12 in setTimeLevel StateData");
+  amrex::Error("dt<1e-12 in setTimeLevel StateData");
  }
  if (dt<1.0e-99) {
   std::cout << "dt= " << dt << '\n';
-  BoxLib::Error("dt<1e-99 in setTimeLevel StateData");
+  amrex::Error("dt<1e-99 in setTimeLevel StateData");
  }
  if (time<0.0)
-  BoxLib::Error("time<0 in setTimeLevel StateData");
+  amrex::Error("time<0 in setTimeLevel StateData");
 
  if ((StateData_slab_dt_type!=0)&&
      (StateData_slab_dt_type!=1)) 
-  BoxLib::Error("StateData_slab_dt_type invalid");
+  amrex::Error("StateData_slab_dt_type invalid");
 
  Real slablow=time-dt;
  Real slabhigh=time;
@@ -436,7 +441,7 @@ StateData::setTimeLevel (Real time,Real& dt)
  } else if ((dt>0.0)&&(dt<1.0)) {
   // do nothing
  } else {
-  BoxLib::Error("dt invalid");
+  amrex::Error("dt invalid");
  }
 
  FORT_GL_SLAB(time_array.dataPtr(),&StateData_slab_dt_type,
@@ -448,21 +453,21 @@ StateData::setTimeLevel (Real time,Real& dt)
  } else if (do_scale_time==0) {
   // do nothing
  } else {
-  BoxLib::Error("do_scale_time invalid");
+  amrex::Error("do_scale_time invalid");
  }
 
  if (do_scale_time==1) {
   if (fabs(time_array[0]/dt-slablow)>1.0e-10)
-   BoxLib::Error("time_array[0] inv in setTimeLevel StateData");
+   amrex::Error("time_array[0] inv in setTimeLevel StateData");
   if (fabs(time_array[bfact_time_order]/dt-slabhigh)>1.0e-10)
-   BoxLib::Error("time_array[bfact_time_order] inv setTimeLevel StateData");
+   amrex::Error("time_array[bfact_time_order] inv setTimeLevel StateData");
  } else if (do_scale_time==0) {
   if (fabs(time_array[0]-slablow)>1.0e-10*dt)
-   BoxLib::Error("time_array[0] inv in setTimeLevel StateData");
+   amrex::Error("time_array[0] inv in setTimeLevel StateData");
   if (fabs(time_array[bfact_time_order]-slabhigh)>1.0e-10*dt)
-   BoxLib::Error("time_array[bfact_time_order] inv setTimeLevel StateData");
+   amrex::Error("time_array[bfact_time_order] inv setTimeLevel StateData");
  } else {
-  BoxLib::Error("dt invalid");
+  amrex::Error("dt invalid");
  }
   
 } // subroutine setTimeLevel
@@ -524,7 +529,7 @@ StateData::FillBoundary (
                 {
                     dc_offset+=1;
 
-                    BoxLib::setBC(bx,domain,desc->getBC(sc+j),bcr);
+                    amrex::setBC(bx,domain,desc->getBC(sc+j),bcr);
 
                     const int* bc = bcr.vect();
 
@@ -547,7 +552,7 @@ StateData::FillBoundary (
                 int single_ncomp=1;
                 dc_offset+=1;
 
-                BoxLib::setBC(bx,domain,desc->getBC(sc),bcr);
+                amrex::setBC(bx,domain,desc->getBC(sc),bcr);
                 desc->bndryFill(sc)( 
                   &level,dat,dlo,dhi,plo,phi,dx,xlo,
                   &time,bcr.vect(),&sc,&single_ncomp,&bfact);
@@ -559,7 +564,7 @@ StateData::FillBoundary (
             int single_ncomp=1;
             dc_offset+=1;
 
-            BoxLib::setBC(bx,domain,desc->getBC(sc),bcr);
+            amrex::setBC(bx,domain,desc->getBC(sc),bcr);
             desc->bndryFill(sc)(
               &level,dat,dlo,dhi,plo,phi,dx,xlo,
               &time,bcr.vect(),&sc,&single_ncomp,&bfact);
@@ -628,7 +633,7 @@ StateData::FillBoundaryGHOST (
                 {
                     dc_offset+=1;
 
-                    BoxLib::setBC(bx,domain,descGHOST->getBC(sc+j),bcr);
+                    amrex::setBC(bx,domain,descGHOST->getBC(sc+j),bcr);
 
                     const int* bc = bcr.vect();
 
@@ -651,7 +656,7 @@ StateData::FillBoundaryGHOST (
                 int single_ncomp=1;
                 dc_offset+=1;
 
-                BoxLib::setBC(bx,domain,descGHOST->getBC(sc),bcr);
+                amrex::setBC(bx,domain,descGHOST->getBC(sc),bcr);
                 descGHOST->bndryFill(sc)(
                   &level,dat,dlo,dhi,plo,phi,dx,xlo,
                   &time,bcr.vect(),&sc,&single_ncomp,&bfact);
@@ -663,7 +668,7 @@ StateData::FillBoundaryGHOST (
             int single_ncomp=1;
             dc_offset+=1;
 
-            BoxLib::setBC(bx,domain,descGHOST->getBC(sc),bcr);
+            amrex::setBC(bx,domain,descGHOST->getBC(sc),bcr);
             descGHOST->bndryFill(sc)(
               &level,dat,dlo,dhi,plo,phi,dx,xlo,
               &time,bcr.vect(),&sc,&single_ncomp,&bfact);
@@ -678,7 +683,7 @@ StateData::get_time_index(Real time,Real &nudge_time,int& best_index) {
 
  nudge_time=time;
  if (bfact_time_order<1)
-  BoxLib::Error("bfact_time_order invalid");
+  amrex::Error("bfact_time_order invalid");
 
  if ((time_array[0]<=0.0)&&(time_array[bfact_time_order]==0.0)) {
   best_index=bfact_time_order;
@@ -703,13 +708,13 @@ StateData::get_time_index(Real time,Real &nudge_time,int& best_index) {
 
    std::cout << "desc->nExtra() " << desc->nExtra() << '\n';
 
-   BoxLib::Error("eps invalid (a)");
+   amrex::Error("eps invalid (a)");
   }
   time_scale=time/time_array[bfact_time_order];
   if (time_scale<time_scale_begin-eps)
-   BoxLib::Error("time_scale too small");
+   amrex::Error("time_scale too small");
   if (time_scale>1.0+eps)
-   BoxLib::Error("time_scale too big");
+   amrex::Error("time_scale too big");
 
   best_index=bfact_time_order;
   nudge_time=time_array[bfact_time_order];
@@ -731,7 +736,7 @@ StateData::get_time_index(Real time,Real &nudge_time,int& best_index) {
    std::cout << "itime= " << itime << "time_array[itime]= " <<
     time_array[itime] << '\n';
   }
-  BoxLib::Error("time_array bust");
+  amrex::Error("time_array bust");
  }
 
 } // get_time_index
@@ -742,7 +747,7 @@ StateData::get_time_bounding_box(Real time,Real &nudge_time,
 
  nudge_time=time;
  if (bfact_time_order<1)
-  BoxLib::Error("bfact_time_order invalid");
+  amrex::Error("bfact_time_order invalid");
 
  if ((time_array[0]<=0.0)&&(time_array[bfact_time_order]==0.0)) {
   start_index=bfact_time_order-1;
@@ -767,14 +772,14 @@ StateData::get_time_bounding_box(Real time,Real &nudge_time,
 
    std::cout << "desc->nExtra() " << desc->nExtra() << '\n';
 
-   BoxLib::Error("eps invalid (b)");
+   amrex::Error("eps invalid (b)");
   }
 
   time_scale=time/time_array[bfact_time_order];
   if (time_scale<time_scale_begin-eps)
-   BoxLib::Error("time_scale too small");
+   amrex::Error("time_scale too small");
   if (time_scale>1.0+eps)
-   BoxLib::Error("time_scale too big");
+   amrex::Error("time_scale too big");
 
   Real time_scale_current=time_array[1]/time_array[bfact_time_order];
   Real time_scale_current_alt=
@@ -795,7 +800,7 @@ StateData::get_time_bounding_box(Real time,Real &nudge_time,
    while (time_scale>time_scale_loop) {
     start_index++;
     if (start_index>=bfact_time_order)
-     BoxLib::Error("start_index invalid");
+     amrex::Error("start_index invalid");
     time_scale_loop= 
       time_array[start_index+1]/time_array[bfact_time_order];
    }
@@ -857,7 +862,7 @@ StateData::checkPoint (const std::string& name,
 
      for (int i=0;i<=bfact_time_order;i++) 
       if (new_data[i]==0)
-       BoxLib::Error("new_data not allocated");
+       amrex::Error("new_data not allocated");
 
      if (ParallelDescriptor::IOProcessor()) {
 
@@ -889,9 +894,9 @@ StateData::checkPoint (const std::string& name,
    
 
     } else if (! desc->store_in_checkpoint()) {
-     BoxLib::Error("should never reach this point");
+     amrex::Error("should never reach this point");
     } else
-     BoxLib::Error("store in checkpoint invalid");
+     amrex::Error("store in checkpoint invalid");
 }
 
 void
@@ -1184,3 +1189,4 @@ StateDataPhysBCFunctGHOST::FillBoundary (
 
 } // StateDataPhysBCFunctGHOST::FillBoundary
 
+} // namespace amrex

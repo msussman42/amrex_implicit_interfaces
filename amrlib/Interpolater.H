@@ -1,9 +1,11 @@
-#ifndef _INTERPOLATER_H_
-#define _INTERPOLATER_H_ 
+#ifndef AMREX_INTERPOLATER_H_
+#define AMREX_INTERPOLATER_H_ 
 
-#include <Box.H>
-#include <BCRec.H>
-#include <REAL.H>
+#include <AMReX_Box.H>
+#include <AMReX_BCRec.H>
+#include <AMReX_REAL.H>
+
+namespace amrex {
 
 class Geometry;
 class FArrayBox;
@@ -361,4 +363,6 @@ private:
     int bfactc;
 };
 
-#endif /*_INTERPOLATER_H_*/
+} // namespace amrex
+
+#endif /*AMREX_INTERPOLATER_H_*/
