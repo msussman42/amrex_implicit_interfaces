@@ -1,0 +1,192 @@
+max_step  = 100000   # maximum timestep
+#max_step  =  10    # maximum timestep
+stop_time = 300  # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   = 12.0 3.0 3.0 
+geometry.is_periodic = 1 1 0 
+ns.tempconst=293.0 293.0 # default values for incomp flows
+ns.pressure_error_cutoff=0.0 0.0  # used only for compressible flows
+
+# 0MGPCG 1PCG 2MG
+ns.project_solver_type=0
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+Lp.gpucount=1
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 200
+mg.usecg=1
+mg.bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+#Lp.v = 1
+Lp.harmavg = 0
+godunov.printMinMax=0
+
+ns.EILE_flag=-1
+ns.continuous_mof=4  # CLSVOF
+ns.num_materials=2
+ns.num_materials_vel=1
+ns.face_flag=1
+
+ns.num_species_var=0
+ns.minimum_relative_error=1.0e-18
+# M.OHTA: scale set in order that initial residual O(1)
+ns.projection_pressure_scale=1.0
+
+ns.advection_order=1 1
+
+ns.initial_project_cycles=3  # number of initial jacobi iterations
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+
+amr.n_cell    = 96 24 24
+amr.max_level = 2
+#amr.max_level = 0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2   # number of buffer cells in error est
+# M.OHTA 0.85 a more conservative choice than 0.95, but 0.95 works too.
+amr.grid_eff        = 0.85   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+# blocking_factor=4 is best
+amr.blocking_factor = 8       # block factor in grid generation
+amr.check_int       = 50     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+#amr.plot_int        = 100      
+amr.plot_int        = -1
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+# M.OHTA 32 is more optimal than 16 I think.
+amr.max_grid_size   = 32
+#amr.restart         = chk10700
+amr.n_cycle         = 1 1 1 1 1 1 1
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_tol        = 1.0e-8  # tolerence for mac projections
+mac.mac_abs_tol    = 1.0e-8
+mac.use_cg_solve   = 1
+
+ns.visual_option=-2
+ns.output_drop_distribution=1
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0        # 1/Re
+ns.visc_abs_tol   = 1.0e-10
+ns.gravity        = 0.0      # 1/Fr
+ns.use_lsa=0
+ns.tension        = 3.03030303    # 1/We
+ns.ignition       = -30000.0
+ns.anelastic      = 0        # 0 => no anelastic approx
+#ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass
+ns.version_A      = 1        # 1 => ver A, 0 => ver B
+ns.kinematicfixed = 0
+ns.do_radiation   = 0        # 1 => do discrete-ordinates radiation
+ns.dump_time = -1.2
+
+# 1 Pascal = 1 N/m^2 = 1 kg/(m s^2)=10 g/(cm s^2)
+# liquid viscosity= visc_coef * (eta_S + 
+#   eta_P(1+(beta gammadot)^alpha)^( (n-1)/alpha ) )
+# eta_S = viscconst - elastic_viscosity = etaL-etaP
+# eta_P = elastic_viscosity = c0 etaS  units=g/(cm s)
+# c0=elastic_viscosity/(viscconst-elastic_viscosity)
+# since visc_coef==1,
+# the coefficient for the viscoelastic force is:
+# eta_P (1+(beta gammadot)^alpha)^((n-1)/alpha)/mod_time
+#
+# M.OHTA: For the liquid, since beta>0,
+#   liquid viscosity coefficient is,
+#    visc_coef*( etaL-etaP+etaP*[1+(beta*gamma_dot)**alpha]**( (n-1)/alpha ) )
+#   (etaL=viscconst, etaP=elastic_viscosity, etaS=etaL-etaP)
+#
+# M.OHTA: relaxation time for gas (drop)=0
+# M.OHTA: relaxation time for liquid (outside drop)=1
+ns.elastic_time=0.227272727 0.0     # relaxation time or Deborah number
+# c*eta_solvent or c*eta_solvent/(eta_total*Re)
+# M.OHTA: elastic_viscosity for gas=0
+# M.OHTA: viscoelastic force is mu2 * div Q / rho  where
+# mu2=visc_coef*etaP*[1+(beta*gamma_dot)**alpha]**( (n-1)/alpha )/mod_time
+# elastic_viscosity=0 in drop; elastic_viscosity=0.49 outside drop.
+ns.elastic_viscosity=9.99 0.0 
+# M.OHTA: polymer_factor=0 for gas.
+# mod_time=elastic_time*(1-trace(A)/L^2)  A=Q+I
+ns.polymer_factor=0.4 0.0       # parameter, 1/L
+# M.OHTA: Carreau_alpha=0 for gas.
+ns.Carreau_alpha=2.0 0.0
+# M.OHTA: Carreau_beta=0 for gas (2nd material-inside drop).
+# The first material will be a shear thinning material here (outside drop).
+ns.Carreau_beta=0.00001 0.0
+# M.OHTA: Carreau_n=0 for gas (inside drop).
+# M.OHTA: Carreau_n=0.5 for liquid (outside drop).
+ns.Carreau_n=0.999999999 0.0
+
+# probtype=1, axis_dir=11
+ns.axis_dir=11 # LS<0 inside of drop ("gas")  LS>0 outside drop ("liquid")
+# M.OHTA vorterr meaning has changed a little - make sure values are all 0.0.
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+# if xblob10=0, then u(zhi)=vinletgas, u(0)=-vinletgas
+#   ( u(z)=vinletgas*(z/zblob-1)  if zblob>0 ) 
+#   ( u(z)=vinletgas*(z/probhiz)  if zblob=0 ) 
+# if xblob10=1.0, zblob=zhi/2, then u(zhi)=vinletgas, u(0)=radblob10
+ns.vinletgas=66
+ns.xblob10=0.0   # set xblob10=1 inorder to override bc at the bottom
+                 # i.e. set xblob10=1 and radblob10=0 so that
+                 # top wall moves and bottom wall is fixed.
+ns.radblob10=0.0 # this will be the overridden velocity at the bottom
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=3
+ns.material_type=0 0 
+
+ns.heatviscconst=0.0 0.0
+ns.viscconst=10 10 
+ns.denconst=1.0 1.0
+ns.xblob=6.0
+ns.yblob=1.5
+ns.zblob=1.5  # zhi=2*zblob
+ns.radblob=0.5
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=1
+
+proj.bogus_value = 5.0e+5
+proj.Pcode = 0
+#proj.Pcode = 2
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 0 0 5
+ns.hi_bc          = 0 0 5
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE

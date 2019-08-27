@@ -1,0 +1,191 @@
+
+max_step  =  999999   # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time =  8.0  # period about 0.6 for dripping
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ  2=>R theta Z
+geometry.prob_lo   =  0.0 0.0
+# D=0.16  radius=.08
+geometry.prob_hi   =  0.8 3.2  # units are cm 20D (transition at 10D)
+geometry.is_periodic = 0 0
+ns.advection_order=1
+
+ns.minimum_relative_error=1.0e-18
+ns.initial_project_cycles=10
+ns.project_solver_type=0
+ns.initial_cg_cycles=10
+
+#ns.xactive=0.0
+#ns.yactive=0.0
+#ns.zactive=0.0
+#ns.ractivex=1.0
+#ns.ractivey=0.6  # do not need AMR after droplets exceed a certain distance
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 200
+mg.usecg=0
+mg.bot_atol = 1.0e-15
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+diffuse.max_order=2
+
+amr.n_cell    = 40 160  # coarsest grid has cells along nozzle radius
+amr.max_level =  0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 4 4    # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8       # block factor in grid generation
+amr.check_int       = 2000    # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 2000
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 512
+#amr.restart         = chk010000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-13
+mac.use_cg_solve   = 1
+
+ns.pcav=0.0
+ns.dencav=0.0
+ns.pchopp=0.0
+ns.denchopp=0.0
+ns.soundchopp=100.0
+ns.bubble_pressure=0.0
+ns.bubble_density=1.0              
+
+#amr.plotfile_on_restart=1
+ns.hydrostatic_pressure=1.013
+ns.visual_option=-2
+# coarse box for contour plotter (>128 to see majority of domain)
+ns.visual_lo = 0 0
+ns.visual_hi = 160 160
+
+ns.is_viscoelastic=0
+ns.elastic_time=1.0
+ns.elastic_viscosity=1.0
+ns.LCP_a=1.0
+ns.LCP_viscosity=0.0
+ns.LCP_N=0.0
+ns.polymer_factor=0.0
+
+ns.is_twophase=0 # is_twophase=0=>assume gas is constant pressure void
+ns.is_compressible=0
+ns.redist_on_init=0
+ns.overlap=1.0
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0
+ns.gravity        = -980.0    # body force  -980.0 (-800 ?)
+ns.gravityangle = 3.1415927  # force=-|g|cos(gangle)
+ns.tension        = 73.0     # denionized water 0.073 kg/s^2
+#ns.tension=0.0
+#ns.fixed_dt	  = 0.04       # hardwire dt
+ns.sum_interval   = 10       # timesteps between computing mass 
+ns.usekluge       = 0
+
+ns.axis_dir=5  # axis_dir=1 standard pipe problem, =2 inflow for liquid only
+               # axis_dir=3 inflow for gas only 
+               # axis_dir=4 standard liquid x<x_interface
+ns.vorterr=999999.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0           # liquid velocity (x<x_interface) 
+ns.twall=0.1
+ns.advbot=0.0          # gas velocity (x>x_interface)
+#ns.adv_vel=0.0
+ns.adv_vel=27.0  # We=rho*U^2*D/sigma, U=sqrt(We*sigma/(rho*D))
+# We=1.6, rho=1g/cm^3, D=0.16cm, sigma=73 g/s^2 ==> U=27.0 cm/s
+# 1.6= rho V_0^2 D/sigma  V_0=sqrt(sigma*1.6/(rho D))=
+# sqrt(73*1.6/(1*0.16))=27.0 cm/s
+ns.adv_dir=2  # vertical (y) direction u(r)=2*adv_vel*(1-(r/r_nz)^2)
+# (int_0^r_nz u(r) r dr)/(int_0^r_nz r dr) = adv_vel
+ns.viscunburn=0.01  # mu=1E-3 N s/m^2=1E-3 Pa s=1E-2 poise
+                    # 1 N s/m^2 = 1 kg/(m s)=1000g/(100cm s)=10 g/(cm s)
+ns.viscburn=0.000193
+ns.viscvapor=0.000193
+ns.tcenter=2.0
+ns.solidradius=2.0
+ns.denspread=2.0
+ns.denwater=1.0  # density 1000kg/m^3
+ns.denair=0.001 
+ns.denvapor=0.001
+ns.xblob=0.0           
+ns.yblob=3.2
+ns.zblob9=0.08 # outflow buffer size
+ns.yblob3=0.08 # length of nozzle (was 0.08)
+ns.zblob=3.2
+ns.yblob2=0.0 # interface position within the nozzle 
+              # (yblob2=0 if nozzle flow is specified)
+ns.radblob=0.08  # nozzle radius 0.08 cm (diam=1.6mm)
+ns.xblob3=0.08
+ns.xblob2=0.12   # outer nozzle radius 0.1055 cm  (diam=2.11mm)
+                 # but we want this aligned with the grid.
+                 # 3.2/160=0.02  
+ns.denfact=1.0
+ns.velfact=0.0  
+ns.probtype=41
+
+#ns.mem_debug = 1
+#ns.v = 1
+#amr.v=1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 1  # MS 3 1 if inflow, 3 0 if periodic 
+ns.hi_bc          = 4 2  # MS 5 2 if outflow, 5 0 if periodic 
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
+# --------------------------------------------------------------------
+# -----       CONTOUR PLOTTING ONLY AVAILABLE IN 2-D           -------
+# --------------------------------------------------------------------
+# uncomment the next line to set a default level for contour plotting
+# contour.level = 1
+#
+# These variables control interactive contour plotting on UNIX systems
+# file_name   = root name of postscript file (will be appended with ".ps")
+# var_name    = name of thermodynamic variable to plot
+# device      = 1  => XWINDOW, 2 = POSTSCRIPT, 3 = both
+# freq        = intervals between plots (-1 = off)
+# n_cont      = number of contour lines per plot
+# sho_grd     = 0 => don't show grid placement, 1 => show grid placement
+#               2 => show grid placement and overlay velocity vector plot
+#               3 => same as 2 except show Umac and not Ucell
+# win_siz     = number of pixels in max window direction
+#
+#file_name  var_name   device  freq  n_cont  sho_grd win_siz sval sdir sstr
+contour.verbose = 1
+contour.plot = triple triple 1     10     -1       2      600    0.0   -1  xz
+contour.plot = level2 level2 1     10     -20       2      600    0.0   -1  xz
+#contour.plot = presliquid presliquid 1  1 20    2      400    -1   -1  0
+

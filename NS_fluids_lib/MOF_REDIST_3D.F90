@@ -1,0 +1,3007 @@
+#undef  BL_LANG_CC
+#ifndef BL_LANG_FORT
+#define BL_LANG_FORT
+#endif
+
+#define STANDALONE 0
+
+#include "REAL.H"
+#include "CONSTANTS.H"
+#include "SPACE.H"
+#include "BC_TYPES.H"
+#include "MOF_REDIST_F.H"
+#include "ArrayLim.H"
+
+#define nsum 64
+#define nsum2 32
+#define VISCINVTOL (1.0D-8)
+#define CURVWT (1.0D-3)
+
+#if (BL_SPACEDIM==3)
+#define SDIM 3
+#elif (BL_SPACEDIM==2)
+#define SDIM 2
+#else  
+print *,"dimension bust"
+stop
+#endif
+
+        module mof_redist_module
+        use probcommon_module
+
+        contains
+
+      subroutine update_closest( &
+        xsten_accept,xsten_donate,nhalf, &
+        dx,xlo,bfact,level,fablo, &
+        mofdata,nmat,nstar, &
+        idon,jdon,kdon, & ! donate index
+        i1,j1,k1, &  ! accept index: idon+i1,jdon+j1,kdon+k1
+        newLS, &
+        touch_hold, &
+        minLS, &
+        maxLS, &
+        donateflag, &
+        time)
+      use global_utility_module
+      use MOF_routines_module
+      IMPLICIT NONE
+
+      INTEGER_T level
+      INTEGER_T nhalf
+      INTEGER_T bfact,nmat,nstar
+      INTEGER_T idon,jdon,kdon
+      INTEGER_T i1,j1,k1
+      INTEGER_T fablo(SDIM)
+      REAL_T time
+      REAL_T xsten_accept(-nhalf:nhalf,SDIM)
+      REAL_T xsten_donate(-nhalf:nhalf,SDIM)
+      REAL_T xsten_vert(-nhalf:nhalf,SDIM)
+      REAL_T xdonate_vert(SDIM)
+      REAL_T xdonate_point(SDIM)
+      REAL_T xaccept_point(SDIM)
+      REAL_T dx(SDIM)
+      REAL_T xlo(SDIM)
+      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T newLS(nmat*(1+SDIM))
+      INTEGER_T touch_hold(nmat)
+      REAL_T minLS(nmat)
+      REAL_T maxLS(nmat)
+      INTEGER_T donateflag(nmat+1+nstar)
+      INTEGER_T center_stencil,im0,imslope
+
+      INTEGER_T nstar_test
+      INTEGER_T istar_array(3)
+      INTEGER_T istar,i2,j2,k2,donateIND
+      INTEGER_T klosten,khisten
+      INTEGER_T dir
+      REAL_T LSslope(SDIM)
+      INTEGER_T n_im
+      INTEGER_T im_test(6)
+      INTEGER_T i_DEB_DIST
+      INTEGER_T j_DEB_DIST
+      INTEGER_T k_DEB_DIST
+
+      if (1.eq.0) then    
+       i_DEB_DIST=45
+       j_DEB_DIST=68
+       k_DEB_DIST=0
+      else
+       i_DEB_DIST=-9999
+       j_DEB_DIST=-9999
+       k_DEB_DIST=-9999
+      endif
+
+      if (nhalf.lt.3) then
+       print *,"nhalf invalid update closest"
+       stop
+      endif
+      do dir=1,SDIM
+       LSslope(dir)=zero
+      enddo
+      imslope=0
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid"
+       stop
+      endif
+      nstar_test=9
+      if (SDIM.eq.3) then
+       nstar_test=nstar_test*3
+      endif
+      if (nstar_test.ne.nstar) then
+       print *,"nstar invalid updated nstar nstar_test ",nstar,nstar_test
+       stop
+      endif
+
+      center_stencil=0
+      if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+       center_stencil=1
+        ! get the slope of the fluid material whose interface is closest to
+        ! the center of the cell.
+       call get_primary_slope( &
+        bfact,dx,xsten_donate,nhalf, &
+        mofdata, &
+        LSslope,imslope,nmat,SDIM) 
+      else if ((i1.ne.0).or.(j1.ne.0).or.(k1.ne.0)) then
+       ! do nothing
+      else
+       print *,"i1,j1, or k1 bust"
+       stop
+      endif
+
+      do dir=1,SDIM
+       xaccept_point(dir)=xsten_accept(0,dir)
+       xdonate_point(dir)=xsten_donate(0,dir)
+      enddo
+
+      do dir=1,3
+       istar_array(dir)=0
+      enddo
+      call put_istar(istar,istar_array) 
+      im0=donateflag(nmat+1+istar)
+
+      if (SDIM.eq.2) then
+       klosten=0
+       khisten=0
+      else if (SDIM.eq.3) then
+       klosten=-1
+       khisten=1
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      call gridsten_level(xsten_vert,idon,jdon,kdon,level,nhalf)
+      do i2=-1,1
+      do j2=-1,1
+      do k2=klosten,khisten
+        dir=1
+        xdonate_vert(dir)=xsten_vert(i2,dir)
+        dir=2
+        xdonate_vert(dir)=xsten_vert(j2,dir)
+        if (SDIM.eq.3) then
+         dir=SDIM
+         xdonate_vert(dir)=xsten_vert(k2,dir)
+        endif
+
+        istar_array(1)=i2
+        istar_array(2)=j2
+        istar_array(3)=k2
+        call put_istar(istar,istar_array) 
+        donateIND=donateflag(nmat+1+istar)
+
+        if (donateIND.eq.0) then
+         ! do nothing (corner is on FAB boundary or corner is
+         ! occupied by flotsam that should be ignored)
+        else if ((donateIND.ge.1).and.(donateIND.le.nmat)) then
+
+         ! this routine will not update solid components.
+         ! LSslope only used if xaccept=xdonate=xcell
+         ! slope points into the imsource (phi(imsource)>0) region.
+         ! phi= n dot (x-xcell) + intercept
+         n_im=1
+         im_test(1)=donateIND
+         if (center_stencil.eq.1) then
+          n_im=n_im+1
+          im_test(n_im)=im0
+         endif
+         call compare_distance( &
+          bfact,dx,xsten_donate,nhalf, &
+          nmat, &
+          xaccept_point, &
+          xdonate_vert, &
+          newLS, &
+          touch_hold, &
+          minLS, &
+          maxLS, &
+          im_test,n_im,LSslope, &
+          imslope, &
+          im0,SDIM, &
+          center_stencil, &
+          donateflag,6)
+
+        else
+         print *,"donateIND invalid donateIND=",donateIND
+         print *,"istar= ",istar
+         print *,"idon,jdon,kdon ",idon,jdon,kdon
+         print *,"i1,j1,k1 ",i1,j1,k1
+         print *,"i2,j2,k2 ",i2,j2,k2
+         print *,"center_stencil=",center_stencil
+         stop
+        endif
+
+      enddo
+      enddo
+      enddo ! i2,j2,k2
+
+       ! only uses donateflag(1..nmat+1)
+      call multi_get_distance( &
+        bfact,dx,xsten_donate,nhalf,xaccept_point, &
+        mofdata, &
+        newLS, &
+        touch_hold, &
+        minLS, &
+        maxLS, &
+        nmat,SDIM, &
+        center_stencil, &
+        donateflag)
+
+      return
+      end subroutine update_closest
+
+      end module mof_redist_module
+
+#if (STANDALONE==1)
+      module mof_redist_cpp_module
+      contains
+#endif
+
+       ! prior to calling this routine, copy LS_new normal information
+       ! to LS_NRM_FD.
+      subroutine FORT_FD_NORMAL( &
+       level, &
+       finest_level, &
+       LS_new, &
+       DIMS(LS_new), &
+       LS_NRM_FD, &
+       DIMS(LS_NRM_FD), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       nmat)
+      use global_utility_module
+      use probcommon_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T level,finest_level
+      INTEGER_T nmat
+      INTEGER_T DIMDEC(LS_new)
+      INTEGER_T DIMDEC(LS_NRM_FD)
+      REAL_T LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T LS_NRM_FD(DIMV(LS_NRM_FD),nmat*SDIM)
+      INTEGER_T tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T bfact
+      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T dir
+      INTEGER_T im
+      REAL_T ls_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      REAL_T lsnormal(nmat,SDIM)
+      INTEGER_T lsnormal_valid(nmat)
+      REAL_T ls_intercept(nmat)
+      REAL_T dxmaxLS
+      INTEGER_T k1lo,k1hi
+      INTEGER_T i,j,k
+      INTEGER_T i1,j1,k1
+      INTEGER_T dcomp
+      REAL_T local_LS(nmat)
+      INTEGER_T im_primary,im_secondary,triple_point_flag
+
+      nhalf=3 
+
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid"
+       stop
+      endif
+      if ((level.le.finest_level).and.(level.ge.0)) then
+       ! do nothing
+      else
+       print *,"level invalid in FORT_FD_NORMAL"
+       stop
+      endif
+      call checkbound(fablo,fabhi,DIMS(LS_new),1,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),0,-1,2870)
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.eq.2*SDIM+3) then
+       ! do nothing
+      else
+       print *,"ngeom_recon invalid FORT_FD_NORMAL"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.eq.SDIM+1) then
+       ! do nothing
+      else
+       print *,"ngeom_raw invalid FORT_FD_NORMAL"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      if (levelrz.eq.0) then
+       ! do nothing
+      else if (levelrz.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (levelrz.eq.3) then
+       ! do nothing
+      else
+       print *,"levelrz invalid in FORT_FD_NORMAL"
+       stop
+      endif
+      k1lo=0
+      k1hi=0
+      if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else if (SDIM.eq.2) then
+       ! do nothing
+      else
+       print *,"dimension bust"
+       stop
+      endif
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,0)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       do i1=-1,1
+       do j1=-1,1
+       do k1=k1lo,k1hi
+       do im=1,nmat
+        ls_stencil(D_DECL(i1,j1,k1),im)= &
+                LS_new(D_DECL(i+i1,j+j1,k+k1),im)
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do im=1,nmat
+        local_LS(im)=ls_stencil(D_DECL(0,0,0),im)
+       enddo
+       call get_primary_material(local_LS,nmat,im_primary)
+       call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+       triple_point_flag=0
+       do im=1,nmat
+        if ((im.ne.im_primary).and.(im.ne.im_secondary)) then
+         if (abs(local_LS(im)).le.dxmaxLS) then
+          triple_point_flag=1
+         else if (abs(local_LS(im)).ge.dxmaxLS) then
+          ! do nothing
+         else
+          print *,"local_LS bust"
+          stop
+         endif
+        else if ((im.ge.1).and.(im.le.nmat)) then
+         ! do nothing
+        else
+         print *,"im bust"
+         stop
+        endif
+       enddo ! im=1..nmat
+      
+       if (triple_point_flag.eq.0) then 
+        do im=1,nmat
+         if (is_rigid(nmat,im).eq.0) then
+          if (abs(local_LS(im)).le.two*dxmaxLS) then
+           if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
+            call find_cut_geom_slope_CLSVOF( &
+             ls_stencil, & ! (-1,1)^3,nmat
+             lsnormal, &  ! (nmat,sdim)
+             lsnormal_valid, &  ! nmat
+             ls_intercept, & ! nmat
+             bfact,dx, &
+             xsten,nhalf, &
+             im, &
+             dxmaxLS, &
+             nmat,SDIM)
+
+            if (lsnormal_valid(im).eq.1) then
+             do dir=1,SDIM
+              dcomp=(im-1)*SDIM+dir
+              LS_NRM_FD(D_DECL(i,j,k),dcomp)=lsnormal(im,dir)
+             enddo
+            else if (lsnormal_valid(im).eq.0) then
+             ! do nothing
+            else
+             print *,"lsnormal_valid invalid"
+             stop
+            endif
+           else if ((im.ge.1).and.(im.le.nmat)) then
+            ! do nothing
+           else
+            print *,"im invalid"
+            stop
+           endif
+
+          else if (abs(local_LS(im)).ge.two*dxmaxLS) then
+           ! do nothing
+          else
+           print *,"local_LS invalid"
+           stop
+          endif
+         else if (is_rigid(nmat,im).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
+       else if (triple_point_flag.eq.1) then
+        ! do nothing
+       else
+        print *,"triple_point_flag invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+      return
+      end subroutine FORT_FD_NORMAL
+
+        ! vofrecon=vof,ref centroid,order,slope,intercept
+        ! newfab has nmat*(sdim+1) components
+        !
+      subroutine FORT_LEVELSTRIP( &
+         nprocessed, &
+         minLS, &
+         maxLS, &
+         max_problen, &
+         level, &
+         finest_level, &
+         latent_heat, &
+         maskfab,DIMS(maskfab), &
+         facefab,DIMS(facefab), &
+         facetest,DIMS(facetest), &
+         stenfab,DIMS(stenfab), &
+         vofrecon,DIMS(vofrecon), &
+         origdist,DIMS(origdist), &
+         newfab,DIMS(newfab), &
+         touchfab,DIMS(touchfab), &
+         crsetouch,DIMS(crsetouch), &
+         crsedist,DIMS(crsedist), &
+         tilelo,tilehi, &
+         fablo,fabhi, &
+         bfact, &
+         bc, &
+         rz_flag, &
+         xlo,dx, &
+         time, &
+         ngrow_distance, &
+         nmat,nten,nstar,nface)
+
+      use global_utility_module
+      use probcommon_module
+      use MOF_routines_module
+      use mof_redist_module
+
+      IMPLICIT NONE
+
+      INTEGER_T nprocessed
+      INTEGER_T level,finest_level
+      INTEGER_T nten,nstar,nface
+      INTEGER_T nmat
+      INTEGER_T ngrow_distance
+      REAL_T minLS(nmat)
+      REAL_T maxLS(nmat)
+      REAL_T max_problen
+      REAL_T latent_heat(2*nten)
+      INTEGER_T DIMDEC(maskfab)
+      INTEGER_T DIMDEC(facefab)
+      INTEGER_T DIMDEC(facetest)
+      INTEGER_T DIMDEC(stenfab)
+      INTEGER_T DIMDEC(vofrecon)
+      INTEGER_T DIMDEC(origdist)
+      INTEGER_T DIMDEC(newfab)
+      INTEGER_T DIMDEC(touchfab)
+      INTEGER_T DIMDEC(crsetouch)
+      INTEGER_T DIMDEC(crsedist)
+
+      REAL_T maskfab(DIMV(maskfab),4)
+      REAL_T facefab(DIMV(facefab),nface)
+      REAL_T facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T stenfab(DIMV(stenfab),nstar)
+
+      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T origdist(DIMV(origdist),nmat*(1+SDIM))
+      REAL_T newfab(DIMV(newfab),nmat*(1+SDIM))
+      REAL_T touchfab(DIMV(touchfab),nmat)
+      REAL_T crsetouch(DIMV(crsetouch),nmat)
+      REAL_T crsedist(DIMV(crsedist),nmat*(1+SDIM))
+
+      INTEGER_T tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T bfact
+      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T rz_flag
+      INTEGER_T bc(SDIM,2)
+      REAL_T time
+
+      INTEGER_T i,j,k,i1,j1,k1
+      REAL_T vcenter(nmat)
+      REAL_T VFRAC_TEMP
+      INTEGER_T nhalf
+      REAL_T xsten_accept(-3:3,SDIM)
+      REAL_T xsten_donate(-3:3,SDIM)
+      INTEGER_T dir,dir2,side
+      INTEGER_T local_facetest
+
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T iside,jside,kside
+      INTEGER_T klosten,khisten
+      INTEGER_T fluid_materials_in_cell_stencil
+      INTEGER_T im
+      INTEGER_T vofcomp
+      REAL_T newfab_hold(nmat*(1+SDIM))
+      INTEGER_T touch_hold(nmat)
+      INTEGER_T ilocut(3),ihicut(3)
+      INTEGER_T icur(3)
+      INTEGER_T istar_array(3)
+      INTEGER_T istar_array_offset(3)
+      INTEGER_T sorted_list(nmat)
+      INTEGER_T nten_test,nstar_test,nface_test
+      INTEGER_T FSI_exclude
+      REAL_T mofdata(nmat*ngeom_recon)
+      INTEGER_T istar
+      INTEGER_T im_crit
+      INTEGER_T stencil_test(nmat)
+      INTEGER_T cell_test(nmat)
+      INTEGER_T face_test(nmat)
+      INTEGER_T stringent_test_passed(nmat)
+      INTEGER_T full_neighbor(nmat)
+      INTEGER_T ii,jj,kk
+      INTEGER_T i3,j3,k3
+      INTEGER_T i4,j4,k4
+      INTEGER_T i4low(3)
+      INTEGER_T i4high(3)
+      INTEGER_T i4_array(3)
+      INTEGER_T im_corner
+      INTEGER_T im_test
+      REAL_T FSUM(nmat)
+      INTEGER_T on_border
+       ! 1..nmat,fluid materials in cell,nstar
+      INTEGER_T donateflag(nmat+1+nstar)
+      INTEGER_T crse_dist_valid
+      INTEGER_T ctouch
+      REAL_T init_dist
+      INTEGER_T rigid_in_stencil
+      REAL_T VFRAC_STENCIL_CUTOFF
+      REAL_T VFRAC_INTERP,theta_nbr,theta_cen
+      REAL_T xnbr(SDIM)
+      REAL_T xmid(SDIM)
+      INTEGER_T i_DEB_DIST
+      INTEGER_T j_DEB_DIST
+      INTEGER_T k_DEB_DIST
+
+      if (1.eq.0) then    
+       i_DEB_DIST=45 
+       j_DEB_DIST=68
+       k_DEB_DIST=0
+      else
+       i_DEB_DIST=-9999
+       j_DEB_DIST=-9999
+       k_DEB_DIST=-9999
+      endif
+
+      nhalf=3 
+     
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid"
+       stop
+      endif
+
+      if (max_problen.le.zero) then
+       print *,"max_problen invalid"
+       stop
+      endif
+
+       ! areas and centroids on face
+      nface_test=nmat*SDIM*2*(1+SDIM)
+      if (nface_test.ne.nface) then
+       print *,"nface invalid levelstrip nface nface_test ",nface,nface_test
+       stop
+      endif
+
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid levelstrip nten nten_test ",nten,nten_test
+       stop
+      endif
+
+      nstar_test=9
+      if (SDIM.eq.3) then
+       nstar_test=nstar_test*3
+      endif
+      if (nstar_test.ne.nstar) then
+       print *,"nstar invalid levelstrip nstar nstar_test ",nstar,nstar_test
+       stop
+      endif
+
+      if ((level.le.finest_level).and.(level.ge.0)) then
+       ! do nothing
+      else
+       print *,"level invalid in levelstrip"
+       stop
+      endif
+
+      if (ngrow_distance.ne.4) then
+       print *,"ngrow_distance<>4 error in levelstrip"
+       stop
+      endif
+      if (ngrow_make_distance.ne.3) then
+       print *,"ngrow_make_distance<>3 error in levelstrip"
+       stop
+      endif
+      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(facefab),ngrow_distance,-1,2871)
+      call checkbound(fablo,fabhi,DIMS(facetest),ngrow_distance,-1,2872)
+      call checkbound(fablo,fabhi,DIMS(stenfab),ngrow_distance,-1,2873)
+      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow_distance,-1,2874)
+      call checkbound(fablo,fabhi,DIMS(origdist),ngrow_distance,-1,2875)
+      call checkbound(fablo,fabhi,DIMS(newfab),1,-1,2876)
+      call checkbound(fablo,fabhi,DIMS(touchfab),0,-1,2876)
+      call checkbound(fablo,fabhi,DIMS(crsetouch),0,-1,2876)
+      call checkbound(fablo,fabhi,DIMS(crsedist),0,-1,2876)
+      
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.eq.2*SDIM+3) then
+       ! do nothing
+      else
+       print *,"ngeom_recon invalid level strip"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.eq.SDIM+1) then
+       ! do nothing
+      else
+       print *,"ngeom_raw invalid level strip"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      if (rz_flag.eq.0) then
+       ! do nothing
+      else if (rz_flag.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (rz_flag.eq.3) then
+       ! do nothing
+      else
+       print *,"rz_flag invalid in levelstrip"
+       stop
+      endif
+     
+      if (SDIM.eq.3) then
+       klosten=-1
+       khisten=1
+      else if (SDIM.eq.2) then
+       klosten=0
+       khisten=0
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+       ! the maximum distance error that is created by using a number
+       ! less than 1/2 here is VOFTOL^{1/d} where d=2 or 3.
+      VFRAC_STENCIL_CUTOFF=half-VOFTOL
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,0)
+ 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridsten_level(xsten_donate,i,j,k,level,nhalf)
+
+        ! im_crit fluid material occupies the center of the cell.
+       do dir=1,3
+        istar_array(dir)=0
+       enddo
+       call put_istar(istar,istar_array) 
+       im_crit=NINT(stenfab(D_DECL(i,j,k),istar))
+
+       if ((i.eq.i_DEB_DIST).and. &
+           (j.eq.j_DEB_DIST).and. &
+           (k.eq.k_DEB_DIST)) then
+        print *,"DEB_DIST: i,j,k=",i,j,k
+        print *,"DEB_DIST: x,y,z=",xsten_donate(0,1),xsten_donate(0,2), &
+         xsten_donate(0,SDIM)
+        print *,"DEB_DIST: im_crit=",im_crit
+       endif 
+
+       do im=1,nmat
+
+        if (is_rigid(nmat,im).eq.0) then
+
+         crse_dist_valid=1
+         if (level.eq.0) then
+          crse_dist_valid=0
+         else if ((level.gt.0).and.(level.le.finest_level)) then
+          init_dist=crsedist(D_DECL(i,j,k),im)
+          if ((im.eq.im_crit).and.(init_dist.lt.zero)) then
+           crse_dist_valid=0
+          endif 
+          if ((im.ne.im_crit).and.(init_dist.ge.zero)) then
+           crse_dist_valid=0
+          endif 
+          ctouch=NINT(crsetouch(D_DECL(i,j,k),im))
+          if (ctouch.eq.0) then
+           crse_dist_valid=0
+          else if ((ctouch.eq.1).or.(ctouch.eq.2)) then
+           ! do nothing
+          else
+           print *,"ctouch invalid"
+           stop
+          endif
+         else
+          print *,"level invalid"
+          stop
+         endif
+        
+         if (crse_dist_valid.eq.1) then
+          do dir=1,SDIM
+           dir2=nmat+(im-1)*SDIM+dir
+           newfab(D_DECL(i,j,k),dir2)=crsedist(D_DECL(i,j,k),dir2)
+          enddo
+          init_dist=crsedist(D_DECL(i,j,k),im)
+          touchfab(D_DECL(i,j,k),im)=one
+          if (init_dist.lt.minLS(im)) then
+           minLS(im)=init_dist
+          endif
+          if (init_dist.gt.maxLS(im)) then
+           maxLS(im)=init_dist
+          endif
+         else if (crse_dist_valid.eq.0) then
+          if (im.eq.im_crit) then
+           init_dist=max_problen
+          else
+           init_dist=-max_problen
+          endif
+         else
+          print *,"crse_dist_valid invalid"
+          stop
+         endif
+ 
+         newfab(D_DECL(i,j,k),im)=init_dist
+
+         if ((i.eq.i_DEB_DIST).and. &
+             (j.eq.j_DEB_DIST).and. &
+             (k.eq.k_DEB_DIST)) then
+          print *,"DEB_DIST: im,init_dist=",im,init_dist
+         endif 
+
+        else if (is_rigid(nmat,im).eq.1) then
+
+         init_dist=newfab(D_DECL(i,j,k),im)
+         touchfab(D_DECL(i,j,k),im)=two
+         if (init_dist.lt.minLS(im)) then
+          minLS(im)=init_dist
+         endif
+         if (init_dist.gt.maxLS(im)) then
+          maxLS(im)=init_dist
+         endif
+
+        else
+         print *,"is_rigid invalid"
+         stop
+        endif
+
+       enddo ! im=1..nmat
+
+      enddo
+      enddo
+      enddo  ! initialize + or -
+
+      call growntilebox_TILE(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_make_distance)
+ 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       on_border=1-NINT(maskfab(D_DECL(i,j,k),3))
+
+       nprocessed=nprocessed+1
+
+       call gridsten_level(xsten_donate,i,j,k,level,nhalf)
+
+       do im=1,nmat+1+nstar
+        donateflag(im)=0
+       enddo
+
+       fluid_materials_in_cell_stencil=0
+
+       do im=1,nmat*ngeom_recon
+        mofdata(im)=vofrecon(D_DECL(i,j,k),im)
+       enddo
+
+       do im=1,nmat
+        vofcomp=(im-1)*ngeom_recon+1
+        vcenter(im)=mofdata(vofcomp)
+       enddo
+
+       FSI_exclude=1
+       call sort_volume_fraction(vcenter,FSI_exclude,sorted_list,nmat)
+       im_crit=sorted_list(1)
+       if ((im_crit.lt.1).or.(im_crit.gt.nmat)) then
+        print *,"im_crit invalid"
+        stop
+       endif
+       if (is_rigid(nmat,im_crit).ne.0) then
+        print *,"is_rigid invalid"
+        stop
+       endif
+         
+       do im=1,nmat
+        cell_test(im)=0 !F>facetol ?
+        face_test(im)=0 !face areafrac between cells consistent?
+        full_neighbor(im)=0 !neighbor F(im)>1-facetol ?
+        stencil_test(im)=0 ! F(im)>1/2-eps on cell bdry?
+        stringent_test_passed(im)=0 ! stenfab consistent between cells?
+       enddo
+
+         ! initialize: cell_test
+       do im=1,nmat
+        if (is_rigid(nmat,im).eq.0) then
+         if (vcenter(im).gt.VOFTOL_REDIST) then
+          cell_test(im)=1
+         endif
+        else if (is_rigid(nmat,im).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid invalid"
+         stop
+        endif
+
+        if ((i.eq.i_DEB_DIST).and. &
+            (j.eq.j_DEB_DIST).and. &
+            (k.eq.k_DEB_DIST)) then
+         print *,"DEB_DIST: im,cell_test=",im,cell_test(im)
+        endif 
+
+       enddo  ! im=1..nmat
+
+       do dir=1,3
+        istar_array(dir)=0
+       enddo
+       call put_istar(istar,istar_array)
+       im_test=NINT(stenfab(D_DECL(i,j,k),istar))
+       if ((im_test.lt.1).or.(im_test.gt.nmat)) then
+        print *,"im_test out of range (0)"
+        stop
+       endif
+       if (is_rigid(nmat,im_test).ne.0) then
+        print *,"is_rigid(nmat,im_test).ne.0 (0)"
+        stop
+       endif
+        ! 1..nmat,fluid materials in cell, nstar
+       donateflag(nmat+1+istar)=im_test
+
+       if ((i.eq.i_DEB_DIST).and. &
+           (j.eq.j_DEB_DIST).and. &
+           (k.eq.k_DEB_DIST)) then
+        print *,"DEB_DIST: im_test=",im_test
+       endif 
+
+       rigid_in_stencil=0
+
+       if (on_border.eq.0) then
+
+         ! stencil_test and rigid_in_stencil
+         ! stencil_test(im)=1 if the interpolated volume fraction
+         ! on one of the 27 cell boundary points exceeds a threshold.
+        do i1=1,3
+        do j1=1,3
+        do k1=klosten+2,khisten+2
+         isten=i+i1-2
+         jsten=j+j1-2
+         ksten=k+k1-2
+
+         icur(1)=i1-2 
+         icur(2)=j1-2 
+         icur(3)=k1-2 
+         theta_nbr=zero
+         theta_cen=zero
+         do dir=1,SDIM
+          xnbr(dir)=xsten_donate(2*icur(dir),dir)
+          xmid(dir)=xsten_donate(icur(dir),dir)
+          theta_nbr=theta_nbr+(xnbr(dir)-xmid(dir))**2
+          theta_cen=theta_cen+(xmid(dir)-xsten_donate(0,dir))**2
+         enddo
+         theta_nbr=sqrt(theta_nbr)
+         theta_cen=sqrt(theta_cen)
+
+         do im=1,nmat
+          vofcomp=(im-1)*ngeom_recon+1
+          VFRAC_TEMP=vofrecon(D_DECL(isten,jsten,ksten),vofcomp)
+          if (is_rigid(nmat,im).eq.0) then
+           if ((icur(1).eq.0).and.(icur(2).eq.0).and.(icur(3).eq.0)) then
+            VFRAC_INTERP=vcenter(im)
+           else if ((theta_nbr.gt.zero).and.(theta_cen.gt.zero)) then
+            VFRAC_INTERP=(theta_nbr*vcenter(im)+theta_cen*VFRAC_TEMP)/ &
+                         (theta_nbr+theta_cen)
+           else
+            print *,"theta_nbr or theta_cen invalid"
+            stop
+           endif
+           if (VFRAC_INTERP.ge.VFRAC_STENCIL_CUTOFF) then
+            stencil_test(im)=1
+           endif
+          else if (is_rigid(nmat,im).eq.1) then
+           if (VFRAC_TEMP.ge.VOFTOL_REDIST) then
+            rigid_in_stencil=1
+           endif
+          else
+           print *,"is_rigid(nmat,im) invalid"
+           stop
+          endif
+         enddo  ! im=1..nmat
+
+        enddo
+        enddo
+        enddo  ! i1,j1,k1 (test VFRAC_INTERP>=VFRAC_STENCIL_CUTOFF)
+
+        if ((i.eq.i_DEB_DIST).and. &
+            (j.eq.j_DEB_DIST).and. &
+            (k.eq.k_DEB_DIST)) then
+         do im=1,nmat
+          print *,"DEB_DIST: im,stencil_test=",im,stencil_test(im)
+         enddo
+        endif
+
+         ! face_test
+        do im=1,nmat
+         if (is_rigid(nmat,im).eq.0) then
+
+          if (cell_test(im).eq.1) then
+
+           if ((stencil_test(im).eq.1).or. &
+               (rigid_in_stencil.eq.0)) then
+ 
+            face_test(im)=1
+            do dir=1,SDIM
+             ii=0
+             jj=0
+             kk=0
+             if (dir.eq.1) then
+              ii=1
+             else if (dir.eq.2) then
+              jj=1
+             else if ((dir.eq.3).and.(SDIM.eq.3)) then
+              kk=1
+             else
+              print *,"dir invalid levelstrip"
+              stop
+             endif
+
+             do side=1,2
+
+              if (side.eq.1) then
+               iside=i
+               jside=j
+               kside=k
+              else if (side.eq.2) then
+               iside=i+ii
+               jside=j+jj
+               kside=k+kk
+              else
+               print *,"side invalid"
+               stop
+              endif
+
+              local_facetest= &
+               NINT(facetest(D_DECL(iside,jside,kside),(dir-1)*nmat+im))
+              if (local_facetest.eq.0) then
+               face_test(im)=0
+              else if (local_facetest.eq.1) then
+               ! do nothing
+              else
+               print *,"local_facetest invalid"
+               stop
+              endif
+
+             enddo ! side=1,2
+
+            enddo ! dir=1..sdim
+
+           else if ((stencil_test(im).eq.0).and. &
+                    (rigid_in_stencil.eq.1)) then
+            ! do nothing
+           else
+            print *,"stencil_test or rigid_in_stencil invalid"
+            stop
+           endif
+
+          else if (cell_test(im).eq.0) then
+           ! do nothing
+          else
+           print *,"cell_test invalid"
+           stop
+          endif
+         else if (is_rigid(nmat,im).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
+
+
+         ! stringent_test_passed
+        do i3=-1,1
+        do j3=-1,1
+        do k3=klosten,khisten
+         istar_array(1)=i3
+         istar_array(2)=j3
+         istar_array(3)=k3
+         do dir=1,3
+          if (istar_array(dir).eq.0) then
+           i4low(dir)=0
+           i4high(dir)=0
+          else if (istar_array(dir).eq.-1) then
+           i4low(dir)=-1
+           i4high(dir)=0
+          else if (istar_array(dir).eq.1) then
+           i4low(dir)=0
+           i4high(dir)=1
+          else
+           print *,"istar_array bust"
+           stop
+          endif
+         enddo ! dir=1..3
+         im_corner=0
+         do im=1,nmat
+          FSUM(im)=zero
+         enddo
+         ! (i4,j4,k4)=(0,0,0) if (i3,j3,k3)=(0,0,0)
+         do i4=i4low(1),i4high(1)
+         do j4=i4low(2),i4high(2)
+         do k4=i4low(3),i4high(3)
+          isten=i4+i
+          jsten=j4+j
+          ksten=k4+k
+          
+          i4_array(1)=i4
+          i4_array(2)=j4
+          i4_array(3)=k4
+          do dir=1,3
+           if (i4_array(dir).eq.0) then
+            istar_array_offset(dir)=istar_array(dir)
+           else if (i4_array(dir).eq.1) then
+            istar_array_offset(dir)=-1
+           else if (i4_array(dir).eq.-1) then
+            istar_array_offset(dir)=1
+           else
+            print *,"i4_array invalid"
+            stop
+           endif
+          enddo ! dir
+
+           ! STENINIT called with tessellate==0 prior to LEVELSTRIP.
+           ! im_test is the material that occupies the
+           ! node in question.
+          call put_istar(istar,istar_array_offset)
+          im_test=NINT(stenfab(D_DECL(isten,jsten,ksten),istar))
+          if ((im_test.ge.1).and.(im_test.le.nmat)) then
+           ! do nothing
+          else
+           print *,"im_test out of range 1"
+           stop
+          endif
+          if (is_rigid(nmat,im_test).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid(nmat,im_test).ne.0 (1)"
+           stop
+          endif
+
+          if ((i.eq.i_DEB_DIST).and. &
+              (j.eq.j_DEB_DIST).and. &
+              (k.eq.k_DEB_DIST)) then
+           print *,"DEB_DIST: i3,j3,k3 ",i3,j3,k3
+           print *,"DEB_DIST: i4,j4,k4 ",i4,j4,k4
+           print *,"DEB_DIST: im_test ",im_test
+          endif
+
+          if (im_corner.eq.0) then
+           im_corner=im_test
+          else if ((im_corner.ge.1).and.(im_corner.le.nmat)) then
+           if (im_corner.eq.im_test) then
+            ! do nothing
+           else
+            im_corner=-1
+           endif
+          else if (im_corner.eq.-1) then
+           ! do nothing
+          else
+           print *,"im_corner invalid"
+           stop
+          endif
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+           VFRAC_TEMP=vofrecon(D_DECL(isten,jsten,ksten),vofcomp)
+           FSUM(im)=FSUM(im)+VFRAC_TEMP
+          enddo
+         enddo ! k4
+         enddo ! j4
+         enddo ! i4
+
+            ! if im_corner=-1, then there is a jump in the material
+            ! type at the node, so the material type is assigned
+            ! to be the material with the dominant "nodal volume fraction"
+         if (im_corner.eq.-1) then
+          FSI_exclude=1
+          call sort_volume_fraction(FSUM,FSI_exclude,sorted_list,nmat)
+          im_corner=sorted_list(1)
+          if (is_rigid(nmat,im_corner).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid(nmat,im_corner).ne.0"
+           stop
+          endif
+         else if (im_corner.eq.0) then
+          print *,"im_corner invalid"
+          stop
+         else if ((im_corner.ge.1).and.(im_corner.le.nmat)) then
+          ! do nothing
+         else
+          print *,"im_corner invalid"
+          stop
+         endif
+         if ((im_corner.ge.1).and. &
+             (im_corner.le.nmat)) then
+
+           ! a tougher test for flotsam near contact lines.
+          if ((stencil_test(im_corner).eq.1).or. &
+              (rigid_in_stencil.eq.0)) then
+           call put_istar(istar,istar_array) 
+           donateflag(nmat+1+istar)=im_corner
+           stringent_test_passed(im_corner)=1
+          else if ((stencil_test(im_corner).eq.0).and. &
+                   (rigid_in_stencil.eq.1)) then
+           ! do nothing
+          else
+           print *,"stencil_test or rigid_in_stencil invalid"
+           stop
+          endif
+
+         else
+          print *,"im_corner invalid"
+          stop
+         endif
+
+         if ((i.eq.i_DEB_DIST).and. &
+             (j.eq.j_DEB_DIST).and. &
+             (k.eq.k_DEB_DIST)) then
+          call put_istar(istar,istar_array) 
+          print *,"DEB_DIST: i3,j3,k3,istar,donateflag(nmat+1+istar) ", &
+           i3,j3,k3,istar,donateflag(nmat+1+istar)
+         endif
+
+        enddo
+        enddo
+        enddo  ! i3,j3,k3
+
+         ! full_neighbor
+        do i3=-1,1
+        do j3=-1,1
+        do k3=klosten,khisten
+         if ((i3.eq.0).and.(j3.eq.0).and.(k3.eq.0)) then
+          ! do nothing
+         else if ((abs(i3).eq.1).or.(abs(j3).eq.1).or.(abs(k3).eq.1)) then
+          iside=i+i3
+          jside=j+j3
+          kside=k+k3
+          istar_array(1)=i3
+          istar_array(2)=j3
+          istar_array(3)=k3
+
+          do im=1,nmat
+           if (is_rigid(nmat,im).eq.0) then
+            vofcomp=(im-1)*ngeom_recon+1
+            VFRAC_TEMP=vofrecon(D_DECL(iside,jside,kside),vofcomp)
+            if (VFRAC_TEMP.ge.one-VOFTOL) then
+             full_neighbor(im)=1
+             call put_istar(istar,istar_array) 
+             donateflag(nmat+1+istar)=im
+            endif
+           else if (is_rigid(nmat,im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+          enddo ! im=1..nmat 
+
+         else
+          print *,"i3,j3,k3 bust"
+          stop
+         endif
+        enddo
+        enddo
+        enddo ! i3,j3,k3
+
+       else if (on_border.eq.1) then
+
+        ! do nothing 
+
+       else
+        print *,"on_border invalid"
+        stop
+       endif
+
+       do im=1,nmat
+
+        if ((i.eq.i_DEB_DIST).and. &
+            (j.eq.j_DEB_DIST).and. &
+            (k.eq.k_DEB_DIST)) then
+         print *,"DEB_DIST: im,stringent_test_passed,face_test ", &
+          im,stringent_test_passed(im),face_test(im)
+        endif
+
+        if (is_rigid(nmat,im).eq.0) then
+         if ((vcenter(im).ge.half).or. &
+             (im.eq.im_crit).or. &
+             (stringent_test_passed(im).eq.1).or. &
+             (face_test(im).eq.1).or. &
+             (full_neighbor(im).eq.1)) then
+          fluid_materials_in_cell_stencil= &
+           fluid_materials_in_cell_stencil+1
+          donateflag(im)=1
+         endif ! one of vcenter>1/2,im=im_crit,stringent=1,face=1, neighbor
+        else if (is_rigid(nmat,im).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid invalid"
+         stop
+        endif
+       enddo ! im=1..nmat
+
+       donateflag(nmat+1)=fluid_materials_in_cell_stencil
+
+       if ((i.eq.i_DEB_DIST).and. &
+           (j.eq.j_DEB_DIST).and. &
+           (k.eq.k_DEB_DIST)) then
+        print *,"DEB_DIST: fluid_materials_in_cell_stencil=", &
+         fluid_materials_in_cell_stencil
+       endif
+
+       if ((fluid_materials_in_cell_stencil.lt.1).or. &
+           (fluid_materials_in_cell_stencil.gt.nmat)) then
+        print *,"fluid_materials_in_cell_stencil invalid:", &
+          fluid_materials_in_cell_stencil
+        stop
+       else if (fluid_materials_in_cell_stencil.eq.1) then
+         ! do nothing
+       else if ((fluid_materials_in_cell_stencil.ge.2).and. &
+                (fluid_materials_in_cell_stencil.le.nmat)) then
+
+        ilocut(3)=0
+        ihicut(3)=0
+        icur(1)=i
+        icur(2)=j
+        icur(3)=k
+
+         ! we do not have to check outside the tile since tiles
+         ! outside the present tile might traverse interface segments which
+         ! are in the present tile.
+        do dir=1,SDIM
+         ilocut(dir)=-ngrow_make_distance
+         ihicut(dir)=ngrow_make_distance
+         if (icur(dir)+ilocut(dir).lt.tilelo(dir)) then
+          ilocut(dir)=tilelo(dir)-icur(dir)
+         endif
+         if (icur(dir)+ihicut(dir).gt.tilehi(dir)) then
+          ihicut(dir)=tilehi(dir)-icur(dir)
+         endif
+        enddo ! dir
+
+        do i1=ilocut(1),ihicut(1)
+        do j1=ilocut(2),ihicut(2)
+        do k1=ilocut(3),ihicut(3)
+
+         call gridsten_level(xsten_accept,i+i1,j+j1,k+k1,level,nhalf)
+
+         do im=1,nmat*(1+SDIM)
+          newfab_hold(im)=newfab(D_DECL(i+i1,j+j1,k+k1),im)
+         enddo  ! im
+         do im=1,nmat
+          touch_hold(im)=NINT(touchfab(D_DECL(i+i1,j+j1,k+k1),im))
+         enddo
+
+         call update_closest( &
+          xsten_accept,xsten_donate,nhalf, &
+          dx,xlo,bfact,level,fablo, &
+          mofdata,nmat,nstar, &
+          i,j,k, &  ! donate index
+          i1,j1,k1, & ! accept index: i+i1,j+j1,k+k1
+          newfab_hold, &
+          touch_hold, &
+          minLS, &
+          maxLS, &
+          donateflag, &
+          time)
+
+         do im=1,nmat*(1+SDIM)
+          newfab(D_DECL(i+i1,j+j1,k+k1),im)=newfab_hold(im)
+         enddo  ! im
+         do im=1,nmat
+          touchfab(D_DECL(i+i1,j+j1,k+k1),im)=touch_hold(im)
+         enddo
+
+        enddo
+        enddo
+        enddo ! i1,j1,k1
+
+       else
+        print *,"parameter bust in FORT_LEVELSTRIP"
+        print *,"fluid_materials_in_cell_stencil=", &
+          fluid_materials_in_cell_stencil
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+      return
+      end subroutine FORT_LEVELSTRIP
+
+
+      subroutine FORT_CORRECT_UNINIT( &
+         minLS, &
+         maxLS, &
+         max_problen, &
+         level, &
+         finest_level, &
+         newfab,DIMS(newfab), &
+         touchfab,DIMS(touchfab), &
+         tilelo,tilehi, &
+         fablo,fabhi, &
+         bfact, &
+         xlo,dx, &
+         time, &
+         nmat)
+
+      use global_utility_module
+      use probcommon_module
+      use mof_redist_module
+
+      IMPLICIT NONE
+
+      INTEGER_T level,finest_level
+      INTEGER_T nmat
+      REAL_T minLS(nmat)
+      REAL_T maxLS(nmat)
+      REAL_T max_problen
+      INTEGER_T DIMDEC(newfab)
+      INTEGER_T DIMDEC(touchfab)
+
+      REAL_T newfab(DIMV(newfab),nmat*(1+SDIM))
+      REAL_T touchfab(DIMV(touchfab),nmat)
+
+      INTEGER_T tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T bfact
+      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T time
+
+      INTEGER_T i,j,k
+      INTEGER_T im
+      INTEGER_T ctouch
+      REAL_T init_dist
+     
+      if (bfact.lt.1) then
+       print *,"bfact invalid"
+       stop
+      endif
+      if (max_problen.le.zero) then
+       print *,"max_problen invalid"
+       stop
+      endif
+
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid in levelstrip"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(newfab),1,-1,2876)
+      call checkbound(fablo,fabhi,DIMS(touchfab),0,-1,2876)
+      
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,0)
+ 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       do im=1,nmat
+
+        ctouch=NINT(touchfab(D_DECL(i,j,k),im))
+
+        if (is_rigid(nmat,im).eq.0) then
+
+         if (ctouch.eq.0) then
+          init_dist=newfab(D_DECL(i,j,k),im)
+          if (init_dist.lt.zero) then
+           if (minLS(im).ge.zero) then
+            init_dist=-max_problen
+           else
+            init_dist=minLS(im)
+           endif
+          else if (init_dist.ge.zero) then
+           if (maxLS(im).lt.zero) then
+            init_dist=max_problen
+           else
+            init_dist=maxLS(im)
+           endif
+          else
+           print *,"init_dist bust"
+           stop
+          endif
+          newfab(D_DECL(i,j,k),im)=init_dist
+         else if ((ctouch.eq.1).or.(ctouch.eq.2)) then
+          ! do nothing
+         else
+          print *,"ctouch invalid"
+          stop
+         endif
+ 
+        else if (is_rigid(nmat,im).eq.1) then
+
+         if (ctouch.ne.2) then
+          print *,"ctouch invalid"
+          stop
+         endif
+
+        else
+         print *,"is_rigid invalid"
+         stop
+        endif
+
+       enddo ! im=1..nmat
+
+      enddo
+      enddo
+      enddo  ! replace uninit with minLS or maxLS
+
+      return
+      end subroutine FORT_CORRECT_UNINIT
+
+
+      subroutine FORT_STENINIT( &
+       level, &
+       finest_level, &
+       stenfab,DIMS(stenfab), &
+       maskfab,DIMS(maskfab), &
+       vofrecon,DIMS(vofrecon), &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       rz_flag, &
+       xlo,dx, &
+       time,ngrow_distance, &
+       nmat,nstar)
+
+      use global_utility_module
+      use probcommon_module
+      use MOF_routines_module
+      use mof_redist_module
+
+      IMPLICIT NONE
+
+      INTEGER_T level
+      INTEGER_T finest_level
+      INTEGER_T nstar
+      INTEGER_T nmat,ngrow_distance
+      INTEGER_T DIMDEC(stenfab)
+      INTEGER_T DIMDEC(maskfab)
+      INTEGER_T DIMDEC(vofrecon)
+
+      REAL_T stenfab(DIMV(stenfab),nstar)
+      REAL_T maskfab(DIMV(maskfab),2)
+      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+
+      INTEGER_T tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T bfact
+      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T rz_flag
+      REAL_T time
+
+      INTEGER_T i,j,k
+      REAL_T vcenter(nmat)
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+
+      INTEGER_T klosten,khisten
+      INTEGER_T im
+      INTEGER_T vofcomp
+      INTEGER_T istar_array(3)
+      INTEGER_T nstar_test
+      REAL_T mofdata(nmat*ngeom_recon)
+      INTEGER_T istar
+      INTEGER_T im_crit
+      INTEGER_T i3,j3,k3
+      REAL_T xcorner(SDIM)
+      INTEGER_T im_test
+      INTEGER_T dir
+      INTEGER_T mask1,mask2
+      INTEGER_T tessellate
+ 
+      nhalf=3      
+    
+      tessellate=0
+ 
+      if (bfact.lt.1) then
+       print *,"bfact invalid"
+       stop
+      endif
+
+      nstar_test=9
+      if (SDIM.eq.3) then
+       nstar_test=nstar_test*3
+      endif
+      if (nstar_test.ne.nstar) then
+       print *,"nstar invalid steninit nstar nstar_test ",nstar,nstar_test
+       stop
+      endif
+
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid in steninit"
+       stop
+      endif
+
+      if (ngrow_distance.ne.4) then
+       print *,"ngrow_distance<>4 error in steninit"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(stenfab),ngrow_distance,-1,2877)
+      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2878)
+      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow_distance,-1,2879)
+      
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid steninit"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.ne.SDIM+1) then
+       print *,"ngeom_raw invalid steninit"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      if (rz_flag.eq.0) then
+       ! do nothing
+      else if (rz_flag.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (rz_flag.eq.3) then
+       ! do nothing
+      else
+       print *,"rz_flag invalid in steninit"
+       stop
+      endif
+
+      if (SDIM.eq.3) then
+       klosten=-1
+       khisten=1
+      else if (SDIM.eq.2) then
+       klosten=0
+       khisten=0
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_distance) 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       ! mask1=1 at interior cells or fine/fine ghost cells
+       ! mask1=0 at coarse/fine ghost cells or outside domain.
+       ! mask2=1 at interior cells
+       mask1=NINT(maskfab(D_DECL(i,j,k),1))
+       mask2=NINT(maskfab(D_DECL(i,j,k),2))
+
+       if ((mask2.eq.1).or.(mask1.eq.0)) then
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        do im=1,nmat*ngeom_recon
+         mofdata(im)=vofrecon(D_DECL(i,j,k),im)
+        enddo
+
+         ! vcenter = volume fraction 
+        do im=1,nmat
+         vofcomp=(im-1)*ngeom_recon+1
+         vcenter(im)=mofdata(vofcomp)
+        enddo ! im
+
+         ! uses VOFTOL
+        call check_full_cell_vfrac(vcenter,tessellate,nmat,im_crit)
+
+        if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+
+         do istar=1,nstar
+          stenfab(D_DECL(i,j,k),istar)=im_crit
+         enddo
+
+        else if (im_crit.eq.0) then
+
+         do i3=-1,1
+         do j3=-1,1
+         do k3=klosten,khisten
+
+          dir=1
+          xcorner(dir)=xsten(i3,dir)
+          dir=2
+          xcorner(dir)=xsten(j3,dir)
+          if (SDIM.eq.3) then
+           dir=SDIM
+           xcorner(dir)=xsten(k3,dir)
+          endif
+
+          istar_array(1)=i3
+          istar_array(2)=j3
+          istar_array(3)=k3
+
+          call multi_get_volumePOINT( &
+           tessellate, &
+           bfact,dx,xsten,nhalf, &
+           mofdata,xcorner, &
+           im_test,nmat,SDIM)
+          if ((im_test.ge.1).and.(im_test.le.nmat)) then
+           call put_istar(istar,istar_array) 
+           stenfab(D_DECL(i,j,k),istar)=im_test
+          else
+           print *,"im_test invalid"
+           stop
+          endif
+         enddo
+         enddo
+         enddo  ! i3,j3,k3
+ 
+        else
+         print *,"im_crit invalid"
+         stop
+        endif
+
+       else if ((mask2.eq.0).and.(mask1.eq.1)) then
+        ! do nothing
+       else
+        print *,"mask invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+
+      return
+      end subroutine FORT_STENINIT
+
+
+       ! for finding areas internal to a cell, perturb each internal 
+       ! interface, find areas and volumes, then check for the difference 
+       ! in volumes divided by eps times the area.
+       ! 
+      subroutine FORT_FACEINIT( &
+         tid, &
+         tessellate, &
+         nten, &
+         level, &
+         finest_level, &
+         facefab,DIMS(facefab), &
+         maskfab,DIMS(maskfab), &
+         vofrecon,DIMS(vofrecon), &
+         tilelo,tilehi, &
+         fablo,fabhi,bfact, &
+         rz_flag, &
+         xlo,dx, &
+         time, &
+         ngrow, &
+         nmat, &
+         nface, &
+         nface_decomp)
+
+      use global_utility_module
+      use probcommon_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      use mof_redist_module
+
+      IMPLICIT NONE
+
+      INTEGER_T tid
+      INTEGER_T tessellate
+      INTEGER_T nten
+      INTEGER_T level
+      INTEGER_T finest_level
+      INTEGER_T nface
+      INTEGER_T nface_decomp
+      INTEGER_T nface_decomp_test
+      INTEGER_T nmat
+      INTEGER_T ngrow
+      INTEGER_T DIMDEC(facefab)
+      INTEGER_T DIMDEC(maskfab)
+      INTEGER_T DIMDEC(vofrecon)
+
+      REAL_T facefab(DIMV(facefab),nface+nface_decomp)
+      REAL_T maskfab(DIMV(maskfab),2)
+      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+
+      INTEGER_T tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T bfact
+      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T rz_flag
+      REAL_T time
+
+      INTEGER_T i,j,k
+      INTEGER_T im,im_opp
+      INTEGER_T im1,im2
+      INTEGER_T im_crit
+      INTEGER_T im_crit_thin
+      INTEGER_T iface
+      INTEGER_T dir,side
+
+      INTEGER_T nface_test
+      INTEGER_T vofcomp
+      REAL_T vcenter(nmat)
+      REAL_T vcenter_thin(nmat)
+      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdatavalid(nmat*ngeom_recon)
+      REAL_T mofdataproject(nmat*ngeom_recon)
+      REAL_T localface(nmat,SDIM,2,SDIM+1)
+      REAL_T localface_line(nmat,nmat,SDIM+1,SDIM,2)
+      REAL_T totalface_line(nmat,SDIM,2)
+      REAL_T totalface(SDIM,2,SDIM+1)
+
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten_thin(-1:1,SDIM)
+      REAL_T dxthin
+      INTEGER_T nhalf,nhalf_thin,isten
+      REAL_T dummy_tri(SDIM+1,SDIM)
+      INTEGER_T nmax,ivert
+      INTEGER_T dir2
+      INTEGER_T shapeflag
+      REAL_T multi_volume(nmat)
+      REAL_T multi_cen(SDIM,nmat)
+      REAL_T multi_area(nmat)
+      REAL_T multi_area_line(nmat)
+      REAL_T multi_volume_offset(nmat)
+      REAL_T multi_cen_offset(SDIM,nmat)
+      REAL_T total_vol
+      REAL_T total_line
+      INTEGER_T mask1,mask2
+      REAL_T areacen(SDIM)
+      REAL_T uncaptured_volume_fraction
+      REAL_T vfrac_fluid_sum
+      REAL_T vfrac_solid_sum
+      INTEGER_T loop_counter
+      INTEGER_T num_processed_fluid
+      INTEGER_T num_processed_solid
+      INTEGER_T nmat_fluid
+      INTEGER_T nmat_rigid
+      INTEGER_T testflag
+      INTEGER_T iten
+      INTEGER_T nten_test
+      INTEGER_T is_processed(nten)
+      REAL_T slope(SDIM)
+      REAL_T intercept
+      REAL_T local_linefrac(nmat)
+      REAL_T F1,F2,FSTRIP
+      REAL_T X1(SDIM)
+      REAL_T X2(SDIM)
+      REAL_T XSTRIP(SDIM)
+  
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+
+      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
+       print *,"tessellate invalid"
+       stop
+      endif
+
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid FACEINIT nten nten_test ",nten,nten_test
+       stop
+      endif
+ 
+      nhalf=3 
+      nhalf_thin=1 
+      nmax=POLYGON_LIST_MAX ! in: FACEINIT
+
+      do ivert=1,SDIM+1
+      do dir2=1,SDIM
+       dummy_tri(ivert,dir2)=zero
+      enddo
+      enddo
+      if (bfact.lt.1) then
+       print *,"bfact invalid"
+       stop
+      endif
+
+       ! area+centroid for all faces of a cell.
+       ! (nmat,sdim,2,sdim+1)
+      nface_test=nmat*SDIM*2*(1+SDIM)
+      if (nface_test.ne.nface) then
+       print *,"nface invalid faceinit nface nface_test ",nface,nface_test
+       stop
+      endif
+
+       ! areas and centroids after projecting surface to cell faces.
+       ! inside,outside,area+centroid,dir,side 
+       ! (nmat,nmat,sdim+1,sdim,2)
+      nface_decomp_test=nmat*nmat*(SDIM+1)*SDIM*2
+
+      if ((nface_decomp.ne.0).and. &
+          (nface_decomp.ne.nface_decomp_test)) then
+       print *,"nface_decomp invalid"
+       stop
+      endif
+
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid in faceinit"
+       stop
+      endif
+
+      if (ngrow.lt.1) then
+       print *,"ngrow<1 error in faceinit"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(facefab),ngrow,-1,2883)
+      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow,-1,2884)
+      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow,-1,2885)
+      
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid faceinit"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.ne.SDIM+1) then
+       print *,"ngeom_raw invalid faceinit"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      if (rz_flag.eq.0) then
+       ! do nothing
+      else if (rz_flag.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (rz_flag.eq.3) then 
+       ! do nothing
+      else
+       print *,"rz_flag invalid in faceinit"
+       stop
+      endif
+ 
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+        ! mask1=1 at interior cells or fine/fine ghost cells
+        ! mask2=1 at interior cells
+       mask1=NINT(maskfab(D_DECL(i,j,k),1))
+       mask2=NINT(maskfab(D_DECL(i,j,k),2))
+
+       if ((mask2.eq.1).or.(mask1.eq.0)) then
+
+         ! xsten(0,dir)  dir=1,2  is center of cell
+         ! xsten(1,dir)  is right coordinate in dir direction
+         ! xsten(-1,dir) is left coordinate in dir direction.
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        do im=1,nmat*ngeom_recon
+         mofdata(im)=vofrecon(D_DECL(i,j,k),im)
+        enddo
+
+          ! vcenter = volume fraction 
+        do im=1,nmat
+         vofcomp=(im-1)*ngeom_recon+1
+         vcenter(im)=mofdata(vofcomp)
+        enddo ! im
+
+        call check_full_cell_vfrac(vcenter,tessellate,nmat,im_crit)
+
+        do dir=1,SDIM
+         do side=1,2
+          do dir2=1,SDIM+1
+           totalface(dir,side,dir2)=zero
+          enddo
+         enddo
+        enddo
+
+        iface=0
+        do im=1,nmat
+         do dir=1,SDIM
+          do side=1,2
+           do dir2=1,SDIM+1
+            iface=iface+1
+            localface(im,dir,side,dir2)=zero
+           enddo ! dir2
+          enddo ! side
+         enddo ! dir
+        enddo ! im
+
+        if (iface.ne.nface) then
+         print *,"iface invalid"
+         stop
+        endif
+
+        if (nface_decomp.eq.0) then
+         ! do nothing
+        else if (nface_decomp.eq.nface_decomp_test) then
+
+         do im1=1,nmat
+          do dir=1,SDIM
+           do side=1,2
+            totalface_line(im1,dir,side)=zero
+           enddo
+          enddo
+         enddo
+
+         iface=0
+         do im1=1,nmat
+          do im2=1,nmat
+           do dir2=1,SDIM+1
+            do dir=1,SDIM
+             do side=1,2
+              iface=iface+1
+              localface_line(im1,im2,dir2,dir,side)=zero
+             enddo ! side
+            enddo ! dir
+           enddo ! dir2
+          enddo ! im2
+         enddo ! im1
+         if (nface_decomp.ne.iface) then
+          print *,"nface_decomp invalid"
+          stop
+         endif
+        else
+         print *,"nface_decomp invalid"
+         stop
+        endif 
+
+        do dir=1,SDIM
+        do side=1,2
+         call gridarea(xsten,nhalf,levelrz,dir-1,side-1, &
+          totalface(dir,side,1),areacen)
+         do dir2=1,SDIM
+          totalface(dir,side,1+dir2)=areacen(dir2)
+         enddo
+        enddo
+        enddo ! dir,side
+
+        if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+
+         do dir=1,SDIM
+         do side=1,2
+          localface(im_crit,dir,side,1)=one ! area fraction
+           ! centroid of face
+          do dir2=1,SDIM
+           localface(im_crit,dir,side,1+dir2)=totalface(dir,side,1+dir2)
+          enddo
+         enddo
+         enddo  ! dir,side
+
+         if (nface_decomp.gt.0) then
+          ! do nothing, there are no interfaces along faces.
+         else if (nface_decomp.eq.0) then
+          ! do nothing
+         else
+          print *,"nface_decomp invalid"
+          stop
+         endif
+
+        else if (im_crit.eq.0) then
+
+         ! sum F_fluid=1  sum F_solid<=1
+         call make_vfrac_sum_ok_copy(mofdata,mofdatavalid, &
+           nmat,SDIM,3000)
+
+         shapeflag=0
+
+         do dir=1,SDIM
+         do side=1,2
+
+          do isten=-1,1
+           do dir2=1,SDIM
+            xsten_thin(isten,dir2)=xsten(isten,dir2)
+           enddo
+          enddo ! isten
+
+          dxthin=FACETOL_DVOL*(xsten(1,dir)-xsten(-1,dir))
+          if (side.eq.1) then
+           xsten_thin(1,dir)=xsten(-1,dir)+dxthin
+          else if (side.eq.2) then
+           xsten_thin(-1,dir)=xsten(1,dir)-dxthin
+          else
+           print *,"side invalid"
+           stop
+          endif
+          xsten_thin(0,dir)=half*(xsten_thin(-1,dir)+xsten_thin(1,dir))
+           ! find volumes and areas (not scaled) of materials in
+           ! xsten_thin box: xsten_thin(0,dir) = center of thin box
+           ! xsten_thin(1,dir) right side in dir direction
+           ! xsten_thin(-1,dir) left side
+           ! multi_cen(sdim,nmat) is "absolute" 
+          call project_slopes_to_face( &
+           bfact,dx,xsten,nhalf, &
+           mofdatavalid,mofdataproject, &
+           nmat,SDIM,dir,side)
+
+           ! base case (also area fractions)
+           ! in: FORT_FACEINIT
+          call multi_get_volume_grid( &
+            tessellate, &
+            bfact,dx,xsten,nhalf, &
+            mofdataproject, &
+            xsten_thin,nhalf_thin, &
+            dummy_tri, &
+            multi_volume, &
+            multi_cen, &
+            multi_area, &
+            geom_xtetlist_uncapt(1,1,1,tid+1), &
+            nmax, &
+            nmax, &
+            nmat,SDIM, &
+            shapeflag,3) 
+
+          total_vol=zero
+          do im=1,nmat
+           if (tessellate.eq.1) then
+            total_vol=total_vol+multi_volume(im)
+           else if (tessellate.eq.0) then
+            if (is_rigid(nmat,im).eq.0) then
+             total_vol=total_vol+multi_volume(im)
+            else if (is_rigid(nmat,im).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid invalid"
+             stop
+            endif
+           else
+            print *,"tessellate invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+
+          if (total_vol.gt.zero) then
+           do im=1,nmat
+            vcenter_thin(im)=multi_volume(im)/total_vol
+            localface(im,dir,side,1)=vcenter_thin(im)
+            do dir2=1,SDIM
+             localface(im,dir,side,1+dir2)=multi_cen(dir2,im)
+            enddo
+             ! centroid in normal direction to face=centroid of face.
+            localface(im,dir,side,1+dir)=totalface(dir,side,1+dir)
+           enddo ! im=1..nmat
+          else
+           print *,"total_vol invalid"
+           stop
+          endif 
+
+          if (nface_decomp.gt.0) then
+
+           call check_full_cell_vfrac(vcenter_thin,tessellate, &
+             nmat,im_crit_thin)
+
+           if ((im_crit_thin.ge.1).and.(im_crit_thin.le.nmat)) then
+            ! do nothing, there are no internal interfaces
+           else if (im_crit_thin.eq.0) then
+
+            do iten=1,nten
+             is_processed(iten)=0
+            enddo
+
+            uncaptured_volume_fraction=one
+
+            nmat_rigid=0
+            nmat_fluid=0
+            vfrac_fluid_sum=zero
+            vfrac_solid_sum=zero
+
+            do im=1,nmat
+             if (is_rigid(nmat,im).eq.0) then
+              nmat_fluid=nmat_fluid+1
+              vfrac_fluid_sum=vfrac_fluid_sum+vcenter_thin(im)
+             else if (is_rigid(nmat,im).eq.1) then
+              nmat_rigid=nmat_rigid+1
+              vfrac_solid_sum=vfrac_solid_sum+vcenter_thin(im)
+             else
+              print *,"is_rigid invalid"
+              stop
+             endif
+            enddo ! im=1..nmat
+
+            if (abs(one-vfrac_fluid_sum).gt.VOFTOL) then
+             print *,"vfrac_fluid_sum invalid"
+             stop
+            endif
+            if ((vfrac_solid_sum.gt.one+VOFTOL).or. &
+                (vfrac_solid_sum.lt.zero)) then
+             print *,"vfrac_solid_sum invalid"
+             stop
+            endif
+
+            if (nmat_fluid+nmat_rigid.ne.nmat) then
+             print *,"nmat_fluid or nmat_rigid invalid"
+             stop
+            endif
+            num_processed_solid=0
+            num_processed_fluid=0
+
+            if (tessellate.eq.1) then
+ 
+             loop_counter=0
+             do while ((loop_counter.lt.nmat_rigid).and. &
+                       (num_processed_solid.lt.nmat_rigid).and. &
+                       (uncaptured_volume_fraction.gt. &
+                        one-vfrac_solid_sum)) 
+
+               ! F,CEN,ORDER,SLOPE,INTERCEPT
+              do im=1,nmat
+               if (is_rigid(nmat,im).eq.1) then
+                vofcomp=(im-1)*ngeom_recon+1
+                testflag=NINT(mofdataproject(vofcomp+SDIM+1))
+
+                if (testflag.eq.1) then
+
+                 num_processed_solid=num_processed_solid+1
+
+                 uncaptured_volume_fraction= &
+                  uncaptured_volume_fraction-vcenter_thin(im)
+                 if (uncaptured_volume_fraction.lt.FACETOL_DVOL) then
+                  uncaptured_volume_fraction=zero
+                 endif
+
+                  ! vcenter_thin(im)=multi_volume(im)/total_vol
+                 if ((vcenter_thin(im).gt.FACETOL_DVOL).and. &
+                     (uncaptured_volume_fraction.gt.zero)) then
+
+                  do dir2=1,SDIM
+                   slope(dir2)=mofdataproject(vofcomp+SDIM+1+dir2)
+                  enddo
+                  intercept=mofdataproject(vofcomp+2*SDIM+2)
+
+                  ! dist=intercept+n dot (x-x0)
+                  ! n points into im
+                  ! perturb interface into the other materials
+                  ! for shifting interface in direction of normal:
+                  ! x0'=x0-eps n
+                  ! dist=intercept+n dot (x-x0')=intercept+eps+n dot(x-x0)
+                  ! for shifting in direction of n':
+                  ! dist=intercept+n dot (x-x0)+eps n dot n'
+                  if (slope(dir).eq.zero) then
+
+                   mofdataproject(vofcomp+2*SDIM+2)= &
+                    intercept+half*FACETOL_DVOL*dx(dir)
+
+                    ! rigid material
+                    ! in: FORT_FACEINIT
+                   call multi_get_volume_grid_simple( &
+                    tessellate, &
+                    bfact,dx,xsten,nhalf, &
+                    mofdataproject, &
+                    xsten_thin,nhalf_thin, &
+                    multi_volume_offset, &
+                    multi_cen_offset, &
+                    geom_xtetlist_uncapt(1,1,1,tid+1), &
+                    nmax, &
+                    nmax, &
+                    nmat,SDIM,3)
+
+                   mofdataproject(vofcomp+2*SDIM+2)=intercept
+
+                   if (multi_volume_offset(im).gt.multi_volume(im)) then
+
+                    if (multi_area(im).gt.zero) then
+
+                     if (dxthin.gt.zero) then
+                      multi_area_line(im)=multi_area(im)/dxthin
+                     else
+                      print *,"dxthin invalid"
+                      stop
+                     endif
+
+                     do im_opp=1,nmat
+                      local_linefrac(im_opp)=zero
+                     enddo
+                     total_line=zero
+                     do im_opp=1,nmat
+                      if (im_opp.ne.im) then
+                       call get_iten(im,im_opp,iten,nmat)
+                       if (is_processed(iten).eq.0) then
+                        is_processed(iten)=1
+                        F1=multi_volume(im_opp)
+                        F2=multi_volume_offset(im_opp)
+                        do dir2=1,SDIM
+                         X1(dir2)=multi_cen(dir2,im)
+                         X2(dir2)=multi_cen_offset(dir2,im)
+                        enddo
+                        if (F2.ne.F1) then
+                         FSTRIP=F2-F1
+                         do dir2=1,SDIM
+                          XSTRIP(dir2)=(F2*X2(dir2)-F1*X1(dir2))/FSTRIP
+                         enddo
+                        else if (F2.eq.F1) then
+                         do dir2=1,SDIM
+                          XSTRIP(dir2)=zero
+                         enddo
+                        else
+                         print *,"F2 and F1 are invalid"
+                         stop
+                        endif
+                        if (side.eq.1) then
+                         XSTRIP(dir)=xsten(-1,dir)
+                        else if (side.eq.2) then
+                         XSTRIP(dir)=xsten(1,dir)
+                        else
+                         print *,"side invalid"
+                         stop
+                        endif
+                        do dir2=1,SDIM
+                         localface_line(im,im_opp,1+dir2,dir,side)=XSTRIP(dir2)
+                        enddo
+   
+                        local_linefrac(im_opp)=abs(F1-F2)
+                        total_line=total_line+local_linefrac(im_opp)
+                       else if (is_processed(iten).eq.1) then
+                        ! do nothing
+                       else
+                        print *,"is_processed invalid"
+                        stop
+                       endif
+                      else if (im_opp.eq.im) then
+                       ! do nothing
+                      else
+                       print *,"im_opp or im bust"
+                       stop
+                      endif
+                     enddo !im_opp=1..nmat
+   
+                     if (total_line.gt.zero) then
+                      do im_opp=1,nmat
+                       if (im_opp.ne.im) then
+                        local_linefrac(im_opp)=local_linefrac(im_opp)/total_line
+                        localface_line(im,im_opp,1,dir,side)= &
+                         local_linefrac(im_opp)
+                       else if (im_opp.eq.im) then
+                        ! do nothing
+                       else
+                        print *,"im_opp or im bust"
+                        stop
+                       endif
+                      enddo ! im_opp
+
+                      totalface_line(im,dir,side)=multi_area_line(im)
+                     else
+                      print *,"total_line bust: total_face=",total_line
+                      stop
+                     endif
+                    else
+                     print *,"im boundary disappeared 1"
+                     print *,"loop_counter=",loop_counter
+                     print *,"num_processed_solid=",num_processed_solid
+                     print *,"uncaptured_volume_fraction ", &
+                       uncaptured_volume_fraction
+                     print *,"vfrac_solid_sum ",vfrac_solid_sum
+                     print *,"im=",im
+                     print *,"multi_volume(im)=",multi_volume(im)
+                     print *,"multi_volume_offset(im)=",multi_volume_offset(im)
+                     print *,"multi_area(im)=",multi_area(im)
+                     stop
+                    endif
+
+                   else
+                    print *,"im region should grow 1"
+                    stop
+                   endif
+
+                  else if ((abs(slope(dir)-one).le.VOFTOL).or. &
+                           (abs(slope(dir)+one).le.VOFTOL)) then
+                   ! do nothing
+                  else
+                   print *,"slope invalid"
+                   stop
+                  endif
+
+                 else if ((uncaptured_volume_fraction.eq.zero).or. &
+                          (vcenter_thin(im).le.FACETOL_DVOL)) then
+                  ! do nothing
+                 else
+                  print *,"uncaptured_volume_fraction or vcenter_thin bad"
+                  stop 
+                 endif 
+
+                else if (testflag.eq.0) then
+                 ! do nothing
+                else
+                 print *,"testflag invalid"
+                 stop
+                endif  
+               else if (is_rigid(nmat,im).eq.0) then
+                ! do nothing
+               else
+                print *,"is_rigid invalid"
+                stop
+               endif
+              enddo ! im=1..nmat
+              loop_counter=loop_counter+1
+             enddo  ! while 
+                    ! loop_counter<nmat_rigid and
+                    ! num_processed_solid<nmat_rigid and
+                    ! uncaptured_volume_fraction>1-vfrac_solid_sum
+
+            else if (tessellate.eq.0) then
+             ! do nothing
+            else
+             print *,"tessellate invalid"
+             stop
+            endif
+
+
+            loop_counter=0
+            do while ((loop_counter.lt.nmat_fluid).and. &
+                      (num_processed_fluid.lt.nmat_fluid).and. &
+                      (uncaptured_volume_fraction.gt.zero))
+
+              ! F,CEN,ORDER,SLOPE,INTERCEPT
+             do im=1,nmat
+              if (is_rigid(nmat,im).eq.0) then
+               vofcomp=(im-1)*ngeom_recon+1
+               testflag=NINT(mofdataproject(vofcomp+SDIM+1))
+
+               if (testflag.eq.num_processed_fluid+1) then
+
+                num_processed_fluid=num_processed_fluid+1
+
+                uncaptured_volume_fraction= &
+                  uncaptured_volume_fraction-vcenter_thin(im)
+                if (uncaptured_volume_fraction.lt.FACETOL_DVOL) then
+                 uncaptured_volume_fraction=zero
+                endif
+
+                  ! vcenter_thin(im)=multi_volume(im)/total_vol
+                if ((vcenter_thin(im).gt.FACETOL_DVOL).and. &
+                    (uncaptured_volume_fraction.gt.zero)) then
+
+                 do dir2=1,SDIM
+                  slope(dir2)=mofdataproject(vofcomp+SDIM+1+dir2)
+                 enddo
+                 intercept=mofdataproject(vofcomp+2*SDIM+2)
+
+                 ! dist=intercept+n dot (x-x0)
+                 ! n points into im
+                 ! perturb interface into the other materials
+                 ! for shifting interface in direction of normal:
+                 ! x0'=x0-eps n
+                 ! dist=intercept+n dot (x-x0')=intercept+eps+n dot(x-x0)
+                 ! for shifting in direction of n':
+                 ! dist=intercept+n dot (x-x0)+eps n dot n'
+                 if (slope(dir).eq.zero) then
+
+                  mofdataproject(vofcomp+2*SDIM+2)= &
+                    intercept+half*FACETOL_DVOL*dx(dir)
+
+                   ! fluid material
+                   ! in: FORT_FACEINIT
+                  call multi_get_volume_grid_simple( &
+                   tessellate, &
+                   bfact,dx,xsten,nhalf, &
+                   mofdataproject, &
+                   xsten_thin,nhalf_thin, &
+                   multi_volume_offset, &
+                   multi_cen_offset, &
+                   geom_xtetlist_uncapt(1,1,1,tid+1), &
+                   nmax, &
+                   nmax, &
+                   nmat,SDIM,3)
+
+                  mofdataproject(vofcomp+2*SDIM+2)=intercept
+
+                   ! vcenter_thin(im)=multi_volume(im)/total_vol>FACETOL_DVOL
+                  if (multi_volume_offset(im).gt.multi_volume(im)) then
+
+                   if (multi_area(im).gt.zero) then
+
+                    if (dxthin.gt.zero) then
+                     multi_area_line(im)=multi_area(im)/dxthin
+                    else
+                     print *,"dxthin invalid"
+                     stop
+                    endif
+
+                    do im_opp=1,nmat
+                     local_linefrac(im_opp)=zero
+                    enddo
+                    total_line=zero
+
+                    do im_opp=1,nmat
+
+                     if ((is_rigid(nmat,im_opp).eq.0).or. &
+                         (tessellate.eq.1)) then
+
+                      if (im_opp.ne.im) then
+                       call get_iten(im,im_opp,iten,nmat)
+                       if (is_processed(iten).eq.0) then
+                        is_processed(iten)=1
+                        F1=multi_volume(im_opp)
+                        F2=multi_volume_offset(im_opp)
+                        do dir2=1,SDIM
+                         X1(dir2)=multi_cen(dir2,im)
+                         X2(dir2)=multi_cen_offset(dir2,im)
+                        enddo
+                        if (F2.ne.F1) then
+                         FSTRIP=F2-F1
+                         do dir2=1,SDIM
+                          XSTRIP(dir2)=(F2*X2(dir2)-F1*X1(dir2))/FSTRIP
+                         enddo
+                        else if (F2.eq.F1) then
+                         do dir2=1,SDIM
+                          XSTRIP(dir2)=zero
+                         enddo
+                        else
+                         print *,"F2 and F1 are invalid"
+                         stop
+                        endif
+                        if (side.eq.1) then
+                         XSTRIP(dir)=xsten(-1,dir)
+                        else if (side.eq.2) then
+                         XSTRIP(dir)=xsten(1,dir)
+                        else
+                         print *,"side invalid"
+                         stop
+                        endif
+                        do dir2=1,SDIM
+                         localface_line(im,im_opp,1+dir2,dir,side)=XSTRIP(dir2)
+                        enddo
+
+                        local_linefrac(im_opp)=abs(F1-F2)
+                        total_line=total_line+local_linefrac(im_opp)
+                       else if (is_processed(iten).eq.1) then
+                        ! do nothing
+                       else
+                        print *,"is_processed invalid"
+                        stop
+                       endif
+                      else if (im_opp.eq.im) then
+                       ! do nothing
+                      else
+                       print *,"im_opp or im bust"
+                       stop
+                      endif
+                     else if ((is_rigid(nmat,im_opp).eq.1).and. &
+                              (tessellate.eq.0)) then
+                      ! do nothing
+                     else
+                      print *,"is_rigid or tessellate invalid"
+                      stop
+                     endif
+                    enddo !im_opp
+
+                    if (total_line.gt.zero) then
+                     do im_opp=1,nmat
+                      if (im_opp.ne.im) then
+                       local_linefrac(im_opp)=local_linefrac(im_opp)/total_line
+                       localface_line(im,im_opp,1,dir,side)= &
+                         local_linefrac(im_opp)
+                      else if (im_opp.eq.im) then
+                       ! do nothing
+                      else
+                       print *,"im_opp or im bust"
+                       stop
+                      endif
+                     enddo ! im_opp
+
+                     totalface_line(im,dir,side)=multi_area_line(im)
+                    else
+                     print *,"total_line bust: total_face=",total_line
+                     stop
+                    endif
+                   else
+                    print *,"im boundary disappeared 2"
+                    print *,"loop_counter=",loop_counter
+                    print *,"num_processed_solid=",num_processed_solid
+                    print *,"num_processed_fluid=",num_processed_fluid
+                    print *,"uncaptured_volume_fraction ", &
+                       uncaptured_volume_fraction
+                    print *,"vfrac_solid_sum ",vfrac_solid_sum
+                    print *,"im=",im
+                    print *,"multi_volume(im)=",multi_volume(im)
+                    print *,"multi_volume_offset(im)=",multi_volume_offset(im)
+                    print *,"multi_area(im)=",multi_area(im)
+                    stop
+                   endif
+
+                  else
+                   print *,"im region should grow 2"
+                   stop
+                  endif
+
+                 else if ((abs(slope(dir)-one).le.VOFTOL).or. &
+                          (abs(slope(dir)+one).le.VOFTOL)) then
+                  ! do nothing
+                 else
+                  print *,"slope invalid"
+                  stop
+                 endif
+
+                else if ((uncaptured_volume_fraction.eq.zero).or. &
+                         (vcenter_thin(im).le.FACETOL_DVOL)) then
+                 ! do nothing
+                else
+                 print *,"uncaptured_volume or vcenter_thin invalid"
+                 stop 
+                endif 
+
+               endif  ! testflag==num_processed_fluid+1
+           
+              else if (is_rigid(nmat,im).eq.1) then
+               ! do nothing
+              else
+               print *,"is_rigid invalid"
+               stop
+              endif
+
+             enddo ! im=1..nmat
+
+             loop_counter=loop_counter+1
+            enddo  ! while 
+                   ! loop_counter<nmat_fluid and
+                   ! num_processed_fluid<nmat_fluid and
+                   ! uncaptured_volume_fraction>0
+
+           else
+            print *,"im_crit_thin out of range"
+            stop
+           endif
+
+          else if (nface_decomp.eq.0) then
+           ! do nothing
+          else
+           print *,"nface_decomp invalid"
+           stop
+          endif
+
+         enddo
+         enddo ! dir,side
+    
+        else
+         print *,"im_crit out of range"
+         stop
+        endif
+
+        dir2=1
+        do im=1,nmat
+         do dir=1,SDIM
+          do side=1,2
+           localface(im,dir,side,dir2)= &
+            localface(im,dir,side,dir2)*totalface(dir,side,1)
+          enddo
+         enddo
+        enddo 
+
+        iface=0
+        do im=1,nmat
+         do dir=1,SDIM
+          do side=1,2
+           do dir2=1,SDIM+1
+            iface=iface+1
+            facefab(D_DECL(i,j,k),iface)=localface(im,dir,side,dir2)
+           enddo ! dir2
+          enddo ! side
+         enddo ! dir
+        enddo ! im
+
+        if (iface.ne.nface) then
+         print *,"iface invalid"
+         stop
+        endif
+
+        iface=0
+
+        if (nface_decomp.eq.1) then
+
+         dir2=1
+         do im1=1,nmat
+          do im2=1,nmat
+           do dir=1,SDIM
+            do side=1,2
+             localface_line(im1,im2,dir2,dir,side)= &
+              localface_line(im1,im2,dir2,dir,side)* &
+              totalface_line(im1,dir,side)
+            enddo ! side
+           enddo ! dir
+          enddo ! im2
+         enddo ! im1
+
+         do im1=1,nmat
+          do im2=1,nmat
+           do dir2=1,SDIM+1
+            do dir=1,SDIM
+             do side=1,2
+              iface=iface+1
+              facefab(D_DECL(i,j,k),nface+iface)= &
+                localface_line(im1,im2,dir2,dir,side)
+             enddo ! side
+            enddo ! dir
+           enddo ! dir2
+          enddo ! im2
+         enddo ! im1
+ 
+        else if (nface_decomp.eq.0) then
+         ! do nothing
+        else
+         print *,"nface_decomp invalid"
+         stop
+        endif
+
+        if (iface.ne.nface_decomp) then
+         print *,"iface invalid"
+         stop
+        endif
+
+       else if ((mask2.eq.0).and.(mask1.eq.1)) then
+        ! do nothing
+       else
+        print *,"mask invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+      return
+      end subroutine FORT_FACEINIT
+
+
+      subroutine FORT_FACEINITTEST( &
+       tid, &
+       tessellate, &
+       level, &
+       finest_level, &
+       facefab,DIMS(facefab), &
+       facetest,DIMS(facetest), &
+       maskfab,DIMS(maskfab), &
+       vofrecon,DIMS(vofrecon), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       rz_flag, &
+       xlo,dx, &
+       time, &
+       ngrow, &
+       nmat, &
+       nface)
+
+      use global_utility_module
+      use probcommon_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      use mof_redist_module
+
+      IMPLICIT NONE
+
+      INTEGER_T tid
+      INTEGER_T tessellate
+      INTEGER_T level
+      INTEGER_T finest_level
+      INTEGER_T nface
+      INTEGER_T nmat,ngrow
+      INTEGER_T DIMDEC(facefab)
+      INTEGER_T DIMDEC(facetest)
+      INTEGER_T DIMDEC(maskfab)
+      INTEGER_T DIMDEC(vofrecon)
+
+      REAL_T facefab(DIMV(facefab),nface)
+      REAL_T facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T maskfab(DIMV(maskfab),2)
+      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+
+      INTEGER_T tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T bfact
+      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T rz_flag
+      REAL_T time
+
+      INTEGER_T i,j,k
+      INTEGER_T icell,jcell,kcell
+      INTEGER_T ii,jj,kk
+      INTEGER_T im
+      INTEGER_T dir
+      INTEGER_T side
+      INTEGER_T side_cell
+      INTEGER_T iface
+      REAL_T total_face
+      REAL_T facefrac(nmat)
+      REAL_T faceleft(nmat)
+      REAL_T faceright(nmat)
+      REAL_T local_face_test(nmat)
+      INTEGER_T nface_test
+      REAL_T xstenMAC(-1:1,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T at_RZ_face
+ 
+      nhalf=1
+ 
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+
+      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
+       print *,"tessellate invalid"
+       stop
+      endif
+ 
+      if (bfact.lt.1) then
+       print *,"bfact invalid"
+       stop
+      endif
+
+       ! (nmat,sdim,2,sdim+1)
+      nface_test=nmat*SDIM*2*(1+SDIM)
+      if (nface_test.ne.nface) then
+       print *,"nface invalid faceinittest nface nface_test ",nface,nface_test
+       stop
+      endif
+
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid in faceinittest"
+       stop
+      endif
+
+      if (ngrow.lt.1) then
+       print *,"ngrow<1 error in faceinittest"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(facetest),ngrow,-1,2886)
+      call checkbound(fablo,fabhi,DIMS(facefab),ngrow,-1,2887)
+      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow,-1,2888)
+      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow,-1,2889)
+      
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid faceinittest"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.ne.SDIM+1) then
+       print *,"ngeom_raw invalid faceinittest"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      if (rz_flag.eq.0) then
+       ! do nothing
+      else if (rz_flag.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (rz_flag.eq.3) then 
+       ! do nothing
+      else
+       print *,"rz_flag invalid in faceinittest"
+       stop
+      endif
+
+       ! facetest is initialized to zero in NavierStokes::makeFaceTest.
+      do dir=1,SDIM
+ 
+       if ((level.ge.0).and.(level.le.finest_level)) then
+
+        ii=0
+        jj=0
+        kk=0
+        if (dir.eq.1) then
+         ii=1
+        else if (dir.eq.2) then
+         jj=1
+        else if ((dir.eq.3).and.(SDIM.eq.3)) then
+         kk=1
+        else
+         print *,"dir invalid in faceinittest"
+         stop
+        endif
+
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+         growlo,growhi,ngrow-1,dir-1) 
+
+        do i=growlo(1),growhi(1)
+        do j=growlo(2),growhi(2)
+        do k=growlo(3),growhi(3)
+
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+
+         at_RZ_face=0
+         if (levelrz.eq.0) then
+          ! do nothing
+         else if (levelrz.eq.1) then
+          if (SDIM.ne.2) then
+           print *,"dimension bust"
+           stop
+          endif
+          if (dir.eq.1) then
+           if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+            at_RZ_face=1
+           endif
+          endif
+         else if (levelrz.eq.3) then
+          if (dir.eq.1) then
+           if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+            at_RZ_face=1
+           endif
+          endif
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+
+         if (at_RZ_face.eq.1) then
+          do im=1,nmat
+           local_face_test(im)=1
+          enddo
+         else if (at_RZ_face.eq.0) then
+
+          do side=1,2
+
+           if (side.eq.1) then
+            icell=i-ii
+            jcell=j-jj
+            kcell=k-kk
+            side_cell=2
+           else if (side.eq.2) then
+            icell=i
+            jcell=j
+            kcell=k
+            side_cell=1
+           else
+            print *,"side invalid"
+            stop
+           endif
+
+           total_face=zero
+           do im=1,nmat
+            ! (im,dir,side,dir2)
+            iface=(im-1)*SDIM*2*(SDIM+1)+(dir-1)*2*(SDIM+1)+ &
+                  (side_cell-1)*(SDIM+1)+1
+            facefrac(im)=facefab(D_DECL(icell,jcell,kcell),iface)
+            if (tessellate.eq.1) then
+             total_face=total_face+facefrac(im)
+            else if (tessellate.eq.0) then
+             if (is_rigid(nmat,im).eq.0) then
+              total_face=total_face+facefrac(im)
+             else if (is_rigid(nmat,im).eq.1) then
+              ! do nothing
+             else
+              print *,"is_rigid invalid"
+              stop
+             endif
+            else
+             print *,"tessellate invalid"
+             stop
+            endif
+           enddo !im=1..nmat 
+
+           if (total_face.le.zero) then
+            print *,"total_face invalid"
+            stop
+           endif
+           do im=1,nmat
+            if (side.eq.1) then
+             faceleft(im)=facefrac(im)/total_face
+            else if (side.eq.2) then
+             faceright(im)=facefrac(im)/total_face
+            else
+             print *,"side invalid"
+             stop
+            endif
+           enddo ! im
+          enddo ! side
+        
+          do im=1,nmat
+           if (abs(faceleft(im)-faceright(im)).le.FACETOL_REDIST) then
+            local_face_test(im)=1
+           else if (abs(faceleft(im)-faceright(im)).ge.FACETOL_REDIST) then
+            local_face_test(im)=0
+           else
+            print *,"faceleft or faceright bust"
+            stop
+           endif
+          enddo ! im=1..nmat
+         else 
+          print *,"at_RZ_face invalid"
+          stop
+         endif
+
+         do im=1,nmat
+          facetest(D_DECL(i,j,k),nmat*(dir-1)+im)=local_face_test(im)
+         enddo ! im
+
+        enddo ! k
+        enddo ! j
+        enddo ! i
+
+       else
+        print *,"level invalid faceinittest 2"
+        stop
+       endif
+
+      enddo ! dir
+
+      return
+      end subroutine FORT_FACEINITTEST
+
+#if (STANDALONE==1)
+      end module mof_redist_cpp_module
+#endif
+
+#undef STANDALONE
+

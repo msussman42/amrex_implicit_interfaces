@@ -1,0 +1,210 @@
+# In Duan et al (a Sato and Niceno test case):
+# sapphire thick: 250E-6m
+# heating area: 20x10mm^2=200mm^2
+# effective radius: 8mm
+# cp_liquid=4.22e+3 J/(kg Kelvin)
+# dimensional beta: beta=0.0007 1/deg K
+# NOTE: it is beta which corresponds to DrhoDT.
+#
+max_step  =  2000   
+#max_step  =  2    # maximum timestep
+stop_time =  0.4  # enough for 2 bubbles. 
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  2.0e-3 2.0e-3   # MKS 
+ns.EILE_flag=-1
+ns.continuous_mof=2
+ns.MOFITERMAX=15
+ns.temperatureface_flag=0   # 0=use LS  1=use VOF
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+# 1  => tag cell if this material is primary material in the cell stencil.
+# 0  => tag cell if this material and another *qualified* 
+#       material are both primary materials in this cell stencil.
+# -1 => do not tag a cell in which this material is the primary
+#       material in the cell stencil and a triple point is not nearby.
+# If laten_heat(im1,im2)<>0, then the im1,im2 interface is always adapted.
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+ns.solvability_projection=0 # 0 since must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=1.0e+6  # non-dimensional
+#ns.projection_pressure_scale=1.0  # dimensional ?
+ns.num_materials=3 # 1: liquid 2: vapor 3: solid
+ns.num_species_var=0
+ns.post_init_pressure_solve=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
+
+amr.n_cell    = 32 32
+amr.max_level =  1
+ns.ns_tiling=false
+#amr.max_level =  0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 4 4 4  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4     # block factor in grid generation
+amr.check_int       = 600    
+amr.check_file      = chk    # root name of checkpoint file
+amr.plot_int        = 50    
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 1024
+#amr.restart         = ch64k1000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1    # scale back initial timestep
+# viscous force term: rho u_t = visc_coef * div ( 2 mu D)
+# mu corresponds to "viscconst"
+ns.visc_coef      = 1.0  
+mac.visc_abs_tol   = 1.0e-10
+ns.gravity        = -9.8 #  dimensional  MKS
+ns.use_lsa=0
+# rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
+ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
+ns.DrhoDz = 0.0 0.0 0.0
+ns.override_density=1 0 0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SL}=sigma_{LV}
+# sigma_{SV}=(1+cos(theta)) sigma_{LV}
+# theta=80 sigma_{SV}/sigma_{LV}=1.17  
+# theta=140 sigma_{SV}/sigma{LV}=0.23
+# theta=45 sigma_{SV}/sigma_{LV}=1+1/sqrt{2}
+# theta=58 sigma_{SV}/sigma_{LV}=1.53
+# 12 13 23  (LV SL SV)
+# N/m
+ns.tension=58.8e-3 58.8e-3 90.0e-3 # 58 degrees contact angle.
+# Joule/(kg Kelvin)
+ns.stiffCP=4217.0 2029.0 4217.0
+# 12 13 23 21 31 32  (12 liquid->vapor (boiling) 21 vapor->liquid condensate)
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# latent_heat[2*max_num_tension]
+# Joule/kg
+ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0  
+# if latent_heat<>0,
+# if nucleation_period==0.0, only nucleate one bubble, 
+# if nucleation_period>0.0, periodically nucleate bubbles.
+ns.nucleation_period=0.0 
+ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
+ns.temperature_primitive_variable=1 1 1
+#ns.fixed_dt	  = 0.1     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+# 6 instead of 5 signals nucleate boiling
+ns.axis_dir=6
+# xblob3 is unused.
+ns.xblob3=1.0e-2  # heater diameter meters
+ns.yblob3=5.0e-4  # initial thermal layer thickness (meters) 
+# if zblob3>0, heatcoeff=heatcoeff*dx/zblob3 (where LS_SOLID changes sign)
+# if zblob3<0, then heat source in solid cells that adjoin fluid.
+# if zblob3<0, then solidheat_flag should be 0. (diffuse in solid)
+# if zblob3=0, then Dirichlet BC at z=zlo (no internal heat flux or 
+#  other internal BC)
+#  solidheat_flag=1 (dirichlet in solid),zblob3>0:
+#  microlayer flux is (T-TSOLID)/zblob3 
+#
+# heat flux in the solid cells that adjoin a fluid cell:
+# page 30, Sato Niceno (2015): "heater power maintained at 30kW/m^2"
+# rho cp DT/dt=-div q + Q
+# Q=(area) * |zblob3|/(volume)=(m^2)(W/m^2)/(m^3)=W/m^3
+ns.zblob3=-28.7e+3  # W/m^2
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0  # not used
+ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.use_StewartLay=1
+ns.material_type=0 0 999
+# thermal conductivity: Watts/(meter Kelvin)
+ns.heatviscconst=0.680 0.0248 0.680
+# dynamic viscosity Pa * s = N s / m^2
+ns.viscconst=279E-6 12.02e-6 279E-6
+# density: kg/m^3
+ns.denconst=958 0.5956 958
+ns.FSI_flag=0 0 1
+# 0=diffuse in solid, 1=dirichlet, 2=neumann
+# if solidheat_flag=2, then "tempfluxsolid" is called.
+# Diffuse in solid:
+ns.solidheat_flag=0  
+ns.tempconst=373.0 373.0 383.0 
+ns.xblob=0.0  # center of vapor bubble
+#(xblob,yblob)=center of bubble
+ns.yblob=2.5e-4  
+ns.zblob=0.0
+ns.radblob=2.0e-4  # radius of nucleated seed. 
+
+ns.n_sites=1
+ns.pos_sites=0.0 2.5e-4 0.0 2.0e-4
+
+# x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
+# dx=2e-3/32=6.25e-5
+# 4 dx = 2e-3/8=2.5e-4
+ns.xblob2=0.0 
+ns.yblob2=2.5e-4  
+ns.zblob2=0.0
+ns.radblob2=0.0 # zero degrees incline (radians)
+ns.radblob3=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=55
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=3
+
+#ns.lo_bc          = 3 3  # this option if heat source
+ns.lo_bc          = 3 5
+ns.hi_bc          = 5 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

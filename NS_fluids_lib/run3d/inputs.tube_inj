@@ -1,0 +1,128 @@
+
+
+# ------------------  INPUTS TO MAIN PROGRAM  -------------------
+# CHANGES FROM PAST VERSION:
+# smg.useCG becomes mg.usecg, no more smg.eps
+# no more raster stuff (hdf), add mac.mac_abs_tol
+# blob.* now becomes ns.*
+#
+max_step  =  99999  # maximum timestep
+stop_time =  10.0  # maximum problem time
+ns.FSI_flag=0 0 1
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  -0.062 -0.062 -0.005
+geometry.prob_hi   =   0.062  0.062 1.607   # units of cm
+geometry.is_periodic = 0 0 0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 1000
+mg.usecg=0
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+diffuse.max_order=2
+
+ns.initial_project_cycles=1  # default is 3
+fab.do_initval=0  # default is 1
+mg.bot_atol = 5.0e-7  # the coarsest coarsening of level 0 in old version;
+                       # level 0 in the new version.
+mac.mac_abs_tol    = 5.0e-6
+
+ns.visual_option=-2  # -2 = tecplot -1 = visit
+
+amr.n_cell    = 8 8 104   # 64 64 832
+amr.max_level =  3 # 3 for production runs MS
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.80   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = -1 # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 1
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+#amr.restart         = chk002000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 4.0e-5  # level 0 timestep below which we halt
+
+ns.shock_capture=0
+ns.shock_eta=1.0
+ns.shock_timestep=0
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0e-3   # coef of viscosityx10^-3
+mac.visc_abs_tol   = 1.0e-7
+ns.gravity        = 0.0   # body force  (gravity in MKS units)
+ns.gravityangle = 0.0
+ns.tension        = 24.0e-6  # cgsx10^-6 (scale velocity by 10^-3)
+#ns.fixed_dt	  = 1.0e-4   # hardwire dt
+ns.sum_interval   = 150     # timesteps between computing mass 
+ns.usekluge       = 0
+
+ns.axis_dir=1
+ns.vorterr=999999.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0716 # inflow velocity at nozzle at the bottom (cm/s)x10^-3
+ns.adv_vel=0.0
+ns.adv_dir=1       # inflow in x-direction
+ns.viscunburn=0.010 # g/(cm s)
+ns.viscburn=0.0002
+ns.viscvapor=0.0002
+
+ns.tcenter=-1.0
+ns.denspread=1.0
+ns.denwater=0.998
+ns.denair=0.0012
+ns.denvapor=0.0012
+ns.xblob= 0.0 # cm
+ns.yblob= 0.0
+ns.zblob= 0.0
+ns.radblob=0.035  # cm
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=537
+
+ns.UseLagrangianModel=0;
+ns.droplet_size_factor=4.0
+ns.droplet_sphericity=2.0
+ns.is_twowaycoupling=1
+ns.x_measure_plane=21.6
+ns.n_radblob_critical_plane=999999
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 1 2 1
+ns.hi_bc          = 2 2 2
+
+ns.v=1
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

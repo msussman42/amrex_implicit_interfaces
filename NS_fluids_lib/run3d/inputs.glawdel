@@ -1,0 +1,187 @@
+max_step  =  999999   # maximum timestep
+stop_time =  999999  # maximum problem time
+
+ns.use_StewartLay=1  
+
+ns.advection_order=1 1 1
+ns.num_materials=3
+ns.num_species_var=0
+
+ns.FSI_flag=0 0 2
+ns.minimum_relative_error=1.0e-18
+ns.projection_pressure_scale=1000.0
+ns.initial_project_cycles=10  # number of initial jacobi iterations
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+# 0=GSRB 1=ICRB 2=ILU
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# L=1  l=L l^*
+# continuous channel cross section 100 microns wide by 43.2 microns high.
+# dispersed channel cross section 90 microns wide by 43.2 microns high.
+# Corresponds to Figure 2B in GlawdelElbukenRen_experiment2012.pdf
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  -0.02 0.0 0.0
+geometry.prob_hi   =   0.06 0.02 0.005   # x=L x^* L=1 cm
+geometry.is_periodic = 0 0 0
+
+ns.MOFITERMAX=15
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 9000
+mg.usecg=0
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plt files for Visit
+
+amr.n_cell    = 64 16 4
+amr.max_level = 1  # max_level=1 standard resolution  max_level=2 fine case
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 2000    # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 1000    # change to 1000
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 32     # 32 for parallel computing
+#amr.restart         = chk08000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.1      
+ns.change_max     = 1.1     
+ns.visc_coef      = 1.0      # Re=rho L U/mu  L=1  U=1
+ns.gravity        = 0.0   # Fr=U^2/gL L=1  
+# water is material 1 and it is dispersed phase (comes from bottom - ylo)
+# mineral oil is material 2 and it is continuous phase (left to right)
+# We=rho L U^2/sigma  L=0.01 multiply tension x 100
+# 1 mN/m=1E-3 N/m=1E-3 kg /s^2 =1 g/s^2=1 dyne/cm
+# sigma_og=28 dyne/cm
+# sigma_gs-sigma_os=sigma_og cos(40)=21.4
+# sigma_gs-sigma_ws=sigma_wg cos(110)=-25.0
+# sigma_os-sigma_ws=sigma_ow cos(theta)
+# -25.0-21.4=50 cos(theta) theta=180-22=158
+# sigma_os-sigma_ws=50 cos(158)=-46
+# assume sigma_ws=50
+# sigma_os=50-46=4
+# sigma_ow sigma_ws sigma_os
+# costheta=(ten23-ten13)/ten12=(4-50)/50=-0.92
+# 50=no surfactant   5=surfactant
+# 20=Schneider's paper.
+# cos(155)=(ten23-37.2)/37.2=ten23/37.2 -1  ten2d=37.2(1+cos(155))=3.5
+# cos(170)=(ten23-37.2)/37.2=ten23/37.2 -1  ten2d=37.2(1+cos(170))=0.57
+# CA=mu U/gamma=(0.10)(1.13)/37.2  *  (43.2/30) =0.0043
+ns.tension        = 37.2 37.2 0.57  # 4.0=157 2.0=164 1.0=169
+ns.capillary_artificial_viscosity=0.0 0.0 0.0  
+ns.Lref=0.0  
+ns.Uref=0.0  
+ns.use_lsa=0
+#ns.fixed_dt	  = 1.0e-5   # hardwire dt
+ns.sum_interval   = 20      # timesteps between computing mass 
+
+ns.axis_dir=4  # 0 = prism (Roper) 3=simple (Roper)  4=simple (Roper 2013)
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.twall=0.1
+# cross section area is 0.072mm x 0.062 mm
+# 1 liter=1000cm^3  1 kg/L=1000 g/L=1 g/cm^3
+# 1microliter=0.001 cm^3
+# water is dispersed phase, oil is continuous phase.
+# water velocity=0.933,1.87,2.80,3.73,5.60,7.47,9.33,11.2 mm/s
+# oil velocity=0.933,1.87,2.80,3.73,5.60,7.47,9.33,11.2 mm/s
+# 3.73 mm/s is the "fixed" velocity.
+# capillary number=mu_c U_c/sigma
+# phi=y-yblob
+# advbot=-0.047 surfactants, advbot=-0.373 no surfactants
+# advbot=-0.056 Schneider
+# for Glawdel:
+# dispersed phase: Q=1.21 microliter/min w=90 microns h=43.2 microns
+#  1 microliter=10^-3 cm^3
+#  u=Q/(10^3 60 w h 10^-8)=0.52 cm/s
+# continuous phase: Q=2.92 microliter/min w=100 microns h=43.2 microns
+#  u=Q 10^5/(60 w h)=1.13 cm/s
+# CA=(0.10)(1.13)/37=0.003
+# if h=30microns, then CA=CA * (43.2/30.0)=.0043
+ns.advbot=-0.52  # inflow velocity of water from yhi position 
+                 # U=1  ( do not scale velocity, just length)
+                 # -0.52 is the dispersed phase velocity for Glawdel et al.
+ns.adv_vel=0.0    # make this zero otherwise all 6 walls will have this.
+# vinletgas=0.047 surfactant case, vinletgas=0.373 no surfactants.
+# vinletgas=0.049  Schneider
+# vinletgas=1.13  Glawdel et al (continuous phase velocity)
+ns.vinletgas=1.13 # inflow velocity of oil from the xlo position
+                  # do not scale velocity (U=1) just length
+ns.adv_dir=1       # inflow in x-direction
+ns.material_type=0 0 999
+# 1 N s/m^2 = 1 Pa s = 10 Poise
+# 1 dyne s/cm^2 = 1 (g cm/s^2) s/cm^2=1 g/(s cm)=(1/1000) kg/(cm s)
+# = (1/10) N s/m^2    1 N s/m^2=10 Poise=10 dyne s/cm^2  1poise=1dyne s/cm^2 
+# 0.051 viscosity of perfluorodecalin (continuous phase) (5.1 mPa/s)
+# 0.153 viscosity of mineral oil (continuous phase) (15.3 cP)
+# 0.49 Schneider
+# 0.10 Glawdel et al (eta=0.12 Table I of GlawdelElbukenRen_experiment2012.pdf)
+ns.min_velocity_for_dt=200.0
+ns.viscconst=0.012 0.1 0.1  # viscosity of water g/(cm s)  Re=rho L U/mu
+# 1.917 density of perfluorodecalin (oil, continuous)
+# 0.82-0.88 kg/L density of mineral oil (oil, continuous)
+ns.denconst=1.0 0.98 1.0 # density of water (dispersed)
+ns.pressure_error_cutoff=0.0 0.0 0.0
+ns.heatviscconst=0.0 0.0 0.0
+ns.tempconst=293.0 293.0 293.0
+ns.xblob=0.0
+# phi=y-yblob
+ns.yblob=0.0125  # initial location of oil/water interface L=1
+ns.zblob=0.0
+ns.radblob=0.0
+# dx=0.02/32=0.000625
+ns.yblob2=0.0  # ylo,yhi,zlo,zhi of continuous (oil) inflow.
+ns.yblob3=0.01  # 0.01  (exactly 16 cells)
+ns.zblob2=-0.001875  # exactly 3 cells
+ns.zblob3=0.001875    # 0.0043/2=0.00215
+# exactly 14 cells:
+ns.xblob2=-0.00875  # -0.0090 xlo,xhi of dispersed (water) inflow
+ns.xblob3=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=5700
+ns.v=1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 1 5 3
+ns.hi_bc          = 2 1 5
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE

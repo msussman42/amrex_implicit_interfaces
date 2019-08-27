@@ -1,0 +1,10 @@
+3.d0 0.d0 3.d0 
+-1
+A
+test
+
+# Inputs above are: 
+#
+# rho (density), velocity, pressure 
+# dir (-1 = right facing wave; +1 = left facing wave)
+# SideCh (A/a = ahead, B/b = behind)

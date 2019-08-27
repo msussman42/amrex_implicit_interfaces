@@ -1,0 +1,163 @@
+max_step  =  999999   # maximum timestep
+#stop_time =  0.05  # maximum problem time Yongsheng
+stop_time=0.0013 # Kensuke 1.3 ms
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0 
+#geometry.prob_hi   =  0.8 0.8 0.8  # Yongsheng
+# Figure 15, JCP 2013, 252-271  Kensuke
+# 2 * 0.3936864 = 0.7873728
+# dz_fine=0.3936864/128=0.003075675
+geometry.prob_hi   =  0.3936864 0.3936864 0.2952648  # Kensuke
+geometry.is_periodic = 0 0 0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 9000
+mg.usecg=1
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 1
+Lp.harmavg = 0
+diffuse.max_order=2
+
+ns.num_materials=3
+ns.num_species_var=0
+# 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
+# 3=no limiter with slope=0 at interface
+ns.slope_limiter_option=1
+ns.advection_order=2 2 1
+ns.continuous_mof=0
+ns.FD_curv_interp=1
+ns.FD_curv_select=0
+ns.EILE_flag=-1
+ns.projection_pressure_scale=1.0e+4 # Kensuke 1.0e+4  Yongsheng 1.0
+#ns.show_mem=1
+ns.MOFITERMAX=15
+#amr.n_cell    = 24 24 24 # Yongsheng
+amr.n_cell=32 32 24 # Kensuke 
+#amr.max_level =  1   # Yongsheng 2= 43.2 points per diameter
+amr.max_level=2 # Kensuke
+ns.truncate_thickness=2.0
+
+ns.minimum_relative_error=1.0e-18
+ns.initial_cg_cycles=10
+ns.initial_project_cycles=3
+ns.initial_viscosity_cycles=1
+ns.initial_thermal_cycles=1
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+# 0=GSRB 1=ICRB 2=ILU
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+
+ns.visual_option=-2
+ns.shock_timestep=2 2 2
+
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 100     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 50      # CHANGE TO 50
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+#amr.restart         = chk0500
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
+
+mac.mac_tol=1.0e-10
+mac.mac_abs_tol    = 1.0e-10
+mac.use_cg_solve   = 1
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+#ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
+ns.visc_coef=1.0 # Kensuke
+#ns.gravity=0.0  # Yongsheng
+ns.gravity        = -980.0  # Kensuke
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# 45 degrees=>sigma_{SV}=sigma_{LV}  and
+# sigma_{SL}/sigma_{LV}=1-2^{-1/2}
+#ns.tension        = 71.7 68.2 71.7   # LV SL SV Yongsheng
+#ns.tension        = 71.7 71.7 71.7   # LV SL SV Yongsheng
+# Kensuke: sigmaSV-sigmaSL=72 cos(163)
+# sigma_SL/sigma_SV=1-cos(163)
+# sigma_SV=72
+# sigma_SL=140.9
+# if hydrophobic,
+# sigma_SL/sigma_SV=2
+# sigma_SL=2 * 72
+#   -----
+#  | 13 | 23 
+ns.tension=72.0 140.9 72.0  #Kensuke 163 degrees
+#ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface
+ns.use_lsa=0
+#ns.fixed_dt	  = 5.0e-5   # hardwire dt
+ns.sum_interval   = 10       # timesteps between computing mass 
+ns.twall=0.0
+
+ns.axis_dir=0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=0.0
+ns.vinletgas=0.0
+#ns.advbot=77.0 # Yongsheng
+ns.advbot=298.0 # Kensuke
+ns.adv_vel=0.0
+ns.adv_dir=1       # inflow in x-direction
+# 0.0 0.0 0.4 Yongsheng
+# 0.0 0.0 0.1053027 Kensuke
+ns.xblob=0.0  # center of falling droplet
+ns.yblob=0.0
+ns.zblob=0.1053027  # 0.0123027+0.093=0.1053027
+# 0.18 Yongsheng
+# 0.186/2=0.093 Kensuke
+ns.radblob=0.093
+ns.xblob2=0.0
+ns.yblob2=0.0
+ns.zblob2=0.0123027  # thickness of substrate=1 coarse cell
+ns.radblob2=0.0  # 18 degrees in x direction
+ns.radblob3=0.0  # 0 degrees in y direction
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=55
+ns.material_type=0 0 999
+ns.FSI_flag=0 0 1
+ns.heatviscconst=0.0 0.0 0.0
+#ns.viscconst=1.0 0.0156552 1.0 # Yongsheng
+ns.viscconst=0.01 0.000182 0.01 # Kensuke 
+#ns.denconst=1.0 0.001226 1.0 #Yongsheng
+ns.denconst=1.0 0.00125 1.0 #Kensuke
+ns.pressure_error_cutoff=0.0 0.0 0.0
+ns.tempconst=293.0 293.0 293.0
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 3 5
+ns.hi_bc          = 2 2 2
+ns.v=1
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE

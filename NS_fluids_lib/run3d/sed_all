@@ -1,0 +1,7 @@
+#!/bin/bash
+for file in inputs.welch1.xdir*
+do
+sed '/pattern to match/d' ${file} > ${file}_mod_
+cp ${file}_mod_ ${file}
+rm ${file}_mod_
+done

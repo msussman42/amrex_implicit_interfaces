@@ -1,0 +1,14 @@
+    #!/bin/bash       
+    #@ job_name=amr3d
+    #@ job_type=parallel  
+    #@ class=medium
+    #@ notification=always 
+    #@ error = ./collapse.err 
+    #@ output =./collapse.log 
+    #@ node = 8
+    #@ tasks_per_node = 4 
+    #@ node_usage = shared 
+    #@ network.mpi = css0,shared,us
+    #@ queue 
+
+    poe ./amr3d.AIX.mpCC.f77.MPI.ex inputs.3d.slowcollapse >> run.out

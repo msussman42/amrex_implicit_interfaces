@@ -1,0 +1,144 @@
+max_step  = 100000     # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time =  300  # maximum problem time
+thickness = 0.1
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   = 36.0 3.0 3.0
+geometry.is_periodic = 1 1 0
+
+ns.tempconst=293.0 293.0 # default values for incomp flows
+ns.pressure_error_cutoff=0.0 0.0  # used only for compressible flows
+ns.solvability_projection=1 # 1 if all bc wall or periodic
+ns.use_lsa=1 # 1=use linear stability analysis to determined capillary speed.
+ns.num_materials=2
+ns.num_species_var=0
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 200
+mg.usecg=1
+mg.bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+#Lp.v = 1
+Lp.harmavg = 0
+diffuse.max_order=2
+# MITSUHIRO: use AMR ?  1152 96 96=288 24 24 x 4
+amr.n_cell    = 288 24 24 
+amr.max_level = 2
+
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+# MITSUHIRO: use 4 instead of 2
+amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.85   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 500      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 100  # CHANGE TO 100 
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+#amr.restart         = chk13200
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_tol        = 1.0e-8  # tolerence for mac projections
+mac.mac_abs_tol    = 1.0e-8
+mac.use_cg_solve   = 1
+
+ns.visual_option=-2
+
+#probtype=1 axis_dir=11 => LS<0 inside of drop LS>0 outside of drop
+# material 1 corresponds to material where LS>0 (outside drop)
+# material 2 corresponds to material where LS<0 (inside drop)
+ns.transposegradu=0
+ns.elastic_time=0.0 0.0     # relaxation time or Deborah number
+ns.elastic_viscosity=0.0 0.0  # c*eta_solvent, c*eta_solvent/(eta_total*Re)
+ns.polymer_factor=0.1 0.0        # parameter, 1/L
+ns.Carreau_alpha=2.0 0.0  # material outside drop is shear thinning
+ns.Carreau_beta=0.5773502667 0.0   # material outside drop is shear thinning
+ns.Carreau_n=1.5 0.0      # material outside drop is shear thinning
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 1.0     # coef of viscosity
+mac.visc_abs_tol   = 1.0e-8
+ns.gravity        = -980.0  # body force  (gravity in MKS units)
+ns.gravityangle = 0.0
+ns.tension        = 25.0 
+#ns.fixed_dt	  = 0.0025   # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+ns.usekluge       = 0
+
+# probtype=1, axis_dir=11
+ns.axis_dir=11 # LS<0 inside of drop ("gas")  LS>0 outside drop ("liquid")
+ns.vorterr=999999.0
+ns.rgasinlet=1.57
+# if xblob10=0, then u(zhi)=vinletgas, u(0)=-vinletgas
+#   ( u(z)=vinletgas*(z/zblob-1)  if zblob>0 ) 
+#   ( u(z)=vinletgas*(z/probhiz)  if zblob=0 ) 
+# if xblob10=1.0, zblob=zhi/2, then u(zhi)=vinletgas, u(0)=radblob10
+ns.vinletgas=25.98076223
+ns.xblob10=0.0   # set xblob10=1 inorder to override bc at the bottom
+ns.radblob10=0.0 # this will be the overridden velocity at the bottom
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=3
+ns.material_type=0 0 0 0
+
+ns.minimum_relative_error=1.0e-18
+# MITSUHIRO: use 1000.0 instead of 1.0
+ns.projection_pressure_scale=1000.0
+ns.heatviscconst=0.0 0.0
+ns.viscconst=0.4330127 0.4330127 
+ns.denconst=1.0 1.0 
+ns.xblob=18.0
+ns.yblob=1.5
+ns.zblob=1.5  # zhi=2*zblob
+ns.radblob=0.5
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=1
+
+proj.bogus_value = 5.0e+5
+proj.Pcode = 0
+#proj.Pcode = 2
+
+#ns.mem_debug = 1
+# MITSUHIRO: uncomment this line for lots of output
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 0 0 5
+ns.hi_bc          = 0 0 5
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

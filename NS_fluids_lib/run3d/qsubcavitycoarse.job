@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#Run a script before and during SGE submit 
+#to guarantee that your environment is set up
+#for openmpi
+ 
+# . /usr/common/clusters/phoenix/openmpi.sh
+
+# Specify all environment variables active within the qsub
+# utility to be exported to the context of the job.
+#$ -V
+
+# specify openmpi with N nodes
+# -pe openmpi_2 2
+# -pe openmpi_4 4
+# -pe openmpi_8 8
+
+# we choose 4
+## -pe openmpi_4 4
+
+# use current directory
+#$ -cwd
+
+#export PATH=/usr/local/openmpi/gcc/bin:$PATH
+#export LD_LIBRARY_PATH=/usr/local/openmpi/gcc/lib:$LD_LIBRARY_PATH
+
+#mpirun -np $NSLOTS Hello
+
+../amrCPU inputs.cavity

@@ -1,0 +1,155 @@
+max_step  = 200000   # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time = 200  # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   = 6.0 6.0 6.0 
+geometry.is_periodic = 0 0 0
+
+# 0MGPCG 1PCG 2MG
+ns.project_solver_type=0
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+Lp.gpucount=1
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 60
+mg.maxiter = 100
+cg.maxiter = 200
+mg.usecg=1
+mg.bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+#Lp.v = 1
+Lp.harmavg = 0
+
+ns.num_materials=2
+ns.num_materials_vel=2
+ns.num_species_var=0
+ns.minimum_relative_error=1.0e-18
+# M.OHTA: scale set in order that initial residual O(1)
+ns.projection_pressure_scale=100.0
+# M.OHTA 2 should be ok, 3 is conservative choice
+ns.use_StewartLay=1
+
+# OCTOBER 22
+# OCTOBER 22 - EILE_flag=-1 performs best
+ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
+ns.mass_relaxation_factor=0.0
+# water is 1st order, gas is 1st order 
+# OCTOBER 22 - advection_order=1 1 performs best for bubble
+ns.advection_order=2 2
+
+# OCTOBER 22 - face_flag=1 performs best for bubble.
+# recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
+ns.slope_limiter_option=2
+
+ns.minimum_relative_error=1.0e-18
+ns.initial_project_cycles=10  # number of initial jacobi iterations
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+
+# 48^3 max_level=2
+amr.n_cell    = 48 48 48
+amr.max_level = 2
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2   # number of buffer cells in error est
+# M.OHTA 0.85 a more conservative choice than 0.95, but 0.95 works too.
+amr.grid_eff        = 0.85   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+# blocking_factor=4 is best
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 1000     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+# JULY 30 - made this smaller to speed up testing
+amr.plot_int        = 1000      # 1000
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+# M.OHTA 32 is more optimal than 16 I think.
+amr.max_grid_size   = 32
+#amr.restart         = chk07000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_tol        = 1.0e-8  # tolerence for mac projections
+mac.mac_abs_tol    = 1.0e-8
+mac.use_cg_solve   = 1
+
+ns.visual_option=-2
+# M.OHTA this option not used in 3d since output files already
+# binary format.
+
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+ns.visc_coef      = 0.075188        # 1/Re
+mac.visc_abs_tol   = 1.0e-8
+ns.gravity        = -3.011913      # 1/Fr
+ns.use_lsa=0
+ns.tension        = 0.025939    # 1/We
+ns.ignition       = -30000.0
+#ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass
+
+ns.axis_dir=0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=-0.980
+ns.adv_dir=3
+ns.solvability_projection=0  # outflow at bottom of domain
+ns.heatviscconst=0.0 0.0 0.0
+ns.viscconst=1.0 1.00E-3 0.0 
+ns.denconst=1.0 1.00E-3 1.0 
+ns.tempconst=293.0 293.0 293.0 
+ns.material_type=0 0 0 
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.xblob=3.0
+ns.yblob=3.0
+ns.zblob=4.5
+ns.radblob=0.5
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=36
+
+proj.bogus_value = 5.0e+5
+proj.Pcode = 0
+#proj.Pcode = 2
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+
+ns.lo_bc          = 2 2 2
+ns.hi_bc          = 2 2 1
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+fab.do_initval=1
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

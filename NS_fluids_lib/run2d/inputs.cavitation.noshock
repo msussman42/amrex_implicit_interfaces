@@ -1,0 +1,177 @@
+
+
+# ------------------  INPUTS TO MAIN PROGRAM  -------------------
+# CHANGES FROM PAST VERSION:
+# smg.useCG becomes mg.usecg, no more smg.eps
+# no more raster stuff (hdf), add mac.mac_abs_tol
+# blob.* now becomes ns.*
+#
+max_step  =  99999    # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time =  130.0  # maximum problem time
+thickness = 0.1
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+#geometry.prob_hi   =  1000.0 20000.0
+geometry.prob_hi   =  12000.0 16000.0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 400
+mg.usecg=1
+mg.bot_atol = 1.0e-6
+mg.rtol_b = -0.01
+Lp.v = 0
+Lp.harmavg = 0
+ns.be_cn_theta=1.0
+ns.rk_theta=1.0
+diffuse.max_order=2
+
+ns.pcav=220.2726
+ns.dencav=0.999958
+ns.pchopp=220.0
+ns.denchopp=0.9
+ns.soundchopp=1500.0
+ns.bubble_pressure=83837.0
+ns.bubble_density=1.63
+
+ns.hydrostatic_pressure=1.013
+ns.visual_option=2
+ns.visual_lo = 0 720
+ns.visual_hi = 128 1028
+ns.visual_side_max = 512
+
+#amr.n_cell    = 32 640
+amr.n_cell    = 96 128
+amr.max_level =  3
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8       # block factor in grid generation
+amr.check_int       = 5       # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 5 
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 256
+#amr.restart         = chk0160
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_tol        = 1.0e-4   # tolerence for mac projections
+mac.mac_abs_tol    = 1.0e-4
+mac.use_cg_solve   = 1
+
+ns.is_compressible=1
+ns.is_twophase=0
+ns.shock_capture=0
+ns.shock_eta=1.0
+ns.shock_timestep=0
+ns.cfl            = 0.25      # cfl number for hyperbolic system
+ns.init_shrink    = 0.2      # scale back initial timestep
+ns.change_max     = 1.025    # scale back initial timestep
+ns.visc_coef      = 0.00    # coef of viscosity
+mac.visc_abs_tol   = 1.0e-4
+ns.init_iter      = 1       # number of init iters to def pressure
+ns.gravity        = -981e-6 # body force  (gravity in cgs units biased PSCALE)
+ns.gravityangle = 0.0
+ns.tension        = 0.00
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+ns.RUNGAKUTTA = 0
+ns.visctimestep=1
+
+#axis_dir = 1 -> live stress
+ns.axis_dir=1
+#JPW ns.vorterr=4.0
+ns.vorterr=1.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=2
+ns.viscunburn=1.0
+ns.viscburn=0.01
+ns.viscvapor=0.01
+ns.tcenter=-1.0
+ns.denspread=1.0
+ns.denwater=1.0
+ns.denair=1.0
+ns.denvapor=1.0
+ns.xblob=0.0
+#ns.yblob=5000.0
+#ns.zblob=9850.0
+ns.yblob=12000.0
+ns.zblob=2000.0
+ns.radblob=29.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=46
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 2
+ns.hi_bc          = 2 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
+# --------------------------------------------------------------------
+# -----       CONTOUR PLOTTING ONLY AVAILABLE IN 2-D           -------
+# --------------------------------------------------------------------
+# uncomment the next line to set a default level for contour plotting
+#contour.level = 0
+#
+# These variables control interactive contour plotting on UNIX systems
+# file_name   = root name of postscript file (will be appended with ".ps")
+# var_name    = name of thermodynamic variable to plot
+# device      = 1  => XWINDOW, 2 = POSTSCRIPT, 3 = both
+# freq        = intervals between plots (-1 = off)
+# n_cont      = number of contour lines per plot
+# sho_grd     = 0 => don't show grid placement, 1 => show grid placement
+#               2 => show grid placement and overlay velocity vector plot
+#               3 => same as 2 except show Up and not Ud
+# win_siz     = number of pixels in max window direction
+#
+#file_name  var_name   device  freq  n_cont  sho_grd win_siz sval sdir sstr
+contour.verbose = 1
+#contour.plot = level2 level2 1   1    -20        2      400   -1   -1   0
+#contour.plot = triple triple 1   1    -1         2      400   -1   -1   0
+#contour.plot = presliquid  presliquid 1  1  20   1      400   1.0E-10 0  x
+#contour.plot = denliquid  denliquid 1  1  20   1      400   1.0E-10 0  x
+#contour.plot = levcav levcav 1   5    -1         2      400   -1   -1   0
+#contour.plot = levcav levcav 2   5    -1         2      400   -1   -1   0
+contour.plot = triple triple          2  5  -1   2    400   -1   -1   0
+contour.plot = presliquid  presliquid 2  5  20   1    400   1.0E-10 0  a
+contour.plot = presliquid  presliquid 2  5  20   1    400   1000    0  b
+contour.plot = presliquid  presliquid 2  5  20   1    400   2000    0  c
+#contour.plot = denliquid  denliquid 2  5  20   1      400   1.0E-10 0  a
+#contour.plot = denliquid  denliquid 2  5  20   1      400   1000    0  b
+#contour.plot = denliquid  denliquid 2  5  20   1      400   2000    0  c
