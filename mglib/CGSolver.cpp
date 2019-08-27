@@ -111,7 +111,7 @@ CGSolver::pcg_solve(MultiFab* z,MultiFab* r,
 } // subroutine pcg_solve
 
 void 
-CGSolver::check_for_convergence(Real rnorm,Real rnorm0,Real eps_abs,
+CGSolver::check_for_convergence(Real rnorm,Real rnorm_init,Real eps_abs,
 		Real relative_error,int nit,int& error_close_to_zero) {
 
 	int critical_nit=30;
@@ -123,17 +123,17 @@ CGSolver::check_for_convergence(Real rnorm,Real rnorm0,Real eps_abs,
 		critical_rel_tol=relative_error;
 	if (nit>critical_nit) {
          error_close_to_zero=((rnorm<=eps_abs)||
-                              (rnorm<=relative_error*rnorm0));
+                              (rnorm<=relative_error*rnorm_init));
 	} else if ((nit>=0)&&(nit<=critical_nit)) {
          error_close_to_zero=((rnorm<=critical_abs_tol)||
-                              (rnorm<=critical_rel_tol*rnorm0));
+                              (rnorm<=critical_rel_tol*rnorm_init));
 	} else
  	 BoxLib::Error("nit invalid");
 
 } // check_for_convergence
 
 void 
-CGSolver::dump_params(Real rnorm,Real rnorm0,
+CGSolver::dump_params(Real rnorm,Real rnorm_init,
 		Real eps_abs,Real relative_error,
                 int is_bottom,Real bot_atol,
                 int usecg_at_bottom,int smooth_type,
@@ -143,8 +143,8 @@ CGSolver::dump_params(Real rnorm,Real rnorm0,
 
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "lev= " << lev << '\n';
-  std::cout << "rnorm0,rnorm,eps_abs,relative_error " <<
-   rnorm0 << ' ' << rnorm << ' ' <<  eps_abs << 
+  std::cout << "rnorm_init,rnorm,eps_abs,relative_error " <<
+   rnorm_init << ' ' << rnorm << ' ' <<  eps_abs << 
    ' ' << relative_error << '\n';
   std::cout << "is_bottom= " << is_bottom << '\n';
   std::cout << "bot_atol= " << bot_atol << '\n';
@@ -182,7 +182,7 @@ CGSolver::solve(
     int& meets_tol,
     int smooth_type,int bottom_smooth_type,
     int presmooth,int postsmooth,
-    Real& error0)
+    Real& error_init)
 {
  //
  // algorithm:
@@ -257,16 +257,22 @@ CGSolver::solve(
  delta_sol->setVal(0.0,0,ncomp,1);
  MultiFab::Copy(*rhs_resid_cor_form,*r,0,0,ncomp,nghostRHS);
 
- Real rnorm = sqrt(Lp.norm(*r, lev));
- Real rnorm0=rnorm;
- error0=rnorm0;
+ Real rnorm = Lp.norm(*r, lev);
+ if (rnorm>=0.0) {
+  rnorm=sqrt(rnorm);
+ } else {
+  BoxLib::Error("rnorm invalid");
+ }
+	 
+ Real rnorm_init=rnorm;
+ error_init=rnorm_init;
 
  if ((verbose>0)||(nsverbose>0)) {
   if (ParallelDescriptor::IOProcessor()) {
    if (is_bottom==1)
-    std::cout << "CGsolver(BOTTOM):Initial error(error0)="<<rnorm << '\n';
+    std::cout << "CGsolver(BOTTOM):Initial error(error_init)="<<rnorm << '\n';
    else
-    std::cout << "CGsolver(NOBOT):Initial error(error0)="<<rnorm << '\n';
+    std::cout << "CGsolver(NOBOT):Initial error(error_init)="<<rnorm << '\n';
   }
  }
 
@@ -299,17 +305,17 @@ CGSolver::solve(
  Real restart_tol=eps_abs*eps_abs*1.0e-4;
 
  int error_close_to_zero=0;
- check_for_convergence(rnorm,rnorm0,eps_abs,relative_error,nit,
+ check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
 		 error_close_to_zero);
 
  if (ParallelDescriptor::IOProcessor()) {
   if (verbose>1) {
    if (is_bottom==1)
-    std::cout << "CGSolver(BOT): rnorm0,eps_abs,relative_error " <<
-     rnorm0 << ' ' << eps_abs << ' ' << relative_error << '\n';
+    std::cout << "CGSolver(BOT): rnorm_init,eps_abs,relative_error " <<
+     rnorm_init << ' ' << eps_abs << ' ' << relative_error << '\n';
    else
-    std::cout << "CGSolver(NOBOT): rnorm0,eps_abs,relative_error " <<
-     rnorm0 << ' ' << eps_abs << ' ' << relative_error << '\n';
+    std::cout << "CGSolver(NOBOT): rnorm_init,eps_abs,relative_error " <<
+     rnorm_init << ' ' << eps_abs << ' ' << relative_error << '\n';
   }
  }
 
@@ -332,11 +338,16 @@ CGSolver::solve(
 
   rho_old=rho;
 
-  rnorm=sqrt(Lp.norm(*r,lev));
+  rnorm=Lp.norm(*r,lev);
+  if (rnorm>=0.0) {
+   rnorm=sqrt(rnorm);
+  } else {
+   BoxLib::Error("rnorm invalid mglib");
+  }
   if (nit==0)
-   rnorm0=rnorm;
+   rnorm_init=rnorm;
 
-  check_for_convergence(rnorm,rnorm0,eps_abs,relative_error,nit,
+  check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
 		 error_close_to_zero);
 
   force_restart=0;
@@ -374,7 +385,7 @@ CGSolver::solve(
       force_restart=1;
      } else {
       std::cout << "rho_old= " << rho_old << '\n';
-      dump_params(rnorm,rnorm0,eps_abs,relative_error,
+      dump_params(rnorm,rnorm_init,eps_abs,relative_error,
        is_bottom,bot_atol,usecg_at_bottom,smooth_type,
        bottom_smooth_type,presmooth,postsmooth,
        *z,*r);
@@ -383,7 +394,7 @@ CGSolver::solve(
 
     } else {
      std::cout << "rho= " << rho << '\n';
-     dump_params(rnorm,rnorm0,eps_abs,relative_error,
+     dump_params(rnorm,rnorm_init,eps_abs,relative_error,
       is_bottom,bot_atol,usecg_at_bottom,smooth_type,
       bottom_smooth_type,presmooth,postsmooth,
       *z,*r);
@@ -405,7 +416,13 @@ CGSolver::solve(
       BoxLib::Error("vAv invalid");
      
      if (force_restart==0) {
+
       alpha = rho/vAv;
+      if (alpha>=0.0) {
+       // do nothing
+      } else
+       BoxLib::Error("alpha invalid");
+
        // x=x+alpha v_search
       Lp.LP_update( (*delta_sol), alpha, (*delta_sol),(*v_search),lev );
       Lp.project_null_space((*delta_sol),lev);
@@ -422,24 +439,31 @@ CGSolver::solve(
      BoxLib::Error("force_restart invalid");
 
    } else if (bicgstab_flag==1) {
-
+ 
+     // rho=r0 dot r
     Lp.LP_dot(*rhs_resid_cor_form,*r,lev,rho); 
-    if ((rho_old>restart_tol)&&(omega>restart_tol)) {
-     beta=rho*alpha/(rho_old*omega);
-      // p=p - omega v
-     advance( (*p_search),-omega,(*p_search),(*v_search) );
-      // p=r + beta p
-     advance( (*p_search),beta,(*r),(*p_search) );
-      // z=K^{-1} p
-     pcg_solve(z,p_search,eps_abs,bot_atol,pbdryhom,bcpres_array,
-      usecg_at_bottom,smooth_type,bottom_smooth_type,
-      presmooth,postsmooth,use_PCG,ncomp,nghost,nghostRHS);
-      // v_search=A*z 
-     Lp.apply(*v_search,*z,lev,*pbdryhom,bcpres_array);
-    } else if ((rho_old<=restart_tol)||(omega<=restart_tol)) {
+
+    if (rho>=0.0) {
+     if ((rho_old>restart_tol)&&(omega>restart_tol)) {
+      beta=rho*alpha/(rho_old*omega);
+       // p=p - omega v
+      advance( (*p_search),-omega,(*p_search),(*v_search) );
+       // p=r + beta p
+      advance( (*p_search),beta,(*r),(*p_search) );
+       // z=K^{-1} p
+      pcg_solve(z,p_search,eps_abs,bot_atol,pbdryhom,bcpres_array,
+       usecg_at_bottom,smooth_type,bottom_smooth_type,
+       presmooth,postsmooth,use_PCG,ncomp,nghost,nghostRHS);
+       // v_search=A*z 
+      Lp.apply(*v_search,*z,lev,*pbdryhom,bcpres_array);
+     } else if ((rho_old<=restart_tol)||(omega<=restart_tol)) {
+      force_restart=1;
+     } else
+      BoxLib::Error("rho_old or omega invalid");
+    } else if (rho<0.0) {
      force_restart=1;
     } else
-     BoxLib::Error("rho_old or omega invalid");
+     BoxLib::Error("rho invalid mglib");
 
     if (force_restart==0) {
      Lp.LP_dot(*rhs_resid_cor_form,*v_search,lev,alpha);
@@ -453,9 +477,15 @@ CGSolver::solve(
       Lp.residual((*r),(*rhs_resid_cor_form),(*delta_sol),
 	lev,*pbdryhom,bcpres_array); 
       Lp.project_null_space((*r),lev);
-      rnorm=sqrt(Lp.norm(*r,lev));
 
-      check_for_convergence(rnorm,rnorm0,eps_abs,relative_error,nit,
+      rnorm=Lp.norm(*r,lev);
+      if (rnorm>=0.0) {
+       rnorm=sqrt(rnorm);
+      } else {
+       BoxLib::Error("rnorm invalid mglib");
+      }
+
+      check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
 		 error_close_to_zero);
       if (error_close_to_zero==0) {
        // z=K^{-1} r
@@ -473,7 +503,12 @@ CGSolver::solve(
         Lp.LP_dot(*Av_search,*Av_search,lev,zAAz);
 	//Az dot Az >=0 if A SPD
         if (zAAz>restart_tol) {
+
          omega=rAz/zAAz;
+	 if (omega>=0.0) {
+	  // do nothing
+	 } else
+	  BoxLib::Error("omega invalid mglib");
 
          // x=x+omega z
          Lp.LP_update( (*delta_sol), omega, (*delta_sol),(*z),lev );
@@ -568,7 +603,7 @@ CGSolver::solve(
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Warning: CGSolver:: failed to converge! \n";
   }
-  dump_params(rnorm,rnorm0,eps_abs,relative_error,
+  dump_params(rnorm,rnorm_init,eps_abs,relative_error,
     is_bottom,bot_atol,usecg_at_bottom,smooth_type,
     bottom_smooth_type,presmooth,postsmooth,
     sol,rhs);
@@ -579,7 +614,14 @@ CGSolver::solve(
 
  if ((verbose>0)||(nsverbose>0)) {
   Lp.residual((*r),rhs,sol,lev,pbdry,bcpres_array);
-  Real testnorm = sqrt(Lp.norm(*r,lev));
+
+  Real testnorm=Lp.norm(*r,lev);
+  if (testnorm>=0.0) {
+   testnorm=sqrt(testnorm);
+  } else {
+   BoxLib::Error("testnorm invalid mglib");
+  }
+
   if (ParallelDescriptor::IOProcessor()) {
    if (is_bottom==1)
     std::cout << "residual non-homogeneous bc (BOT) " << testnorm << '\n';  

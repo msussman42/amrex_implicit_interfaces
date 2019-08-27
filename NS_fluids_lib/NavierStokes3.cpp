@@ -7963,7 +7963,11 @@ void NavierStokes::multiphase_project(int project_option) {
        }  // verbose>0
 
        dot_productALL(project_option,CGRESID_MF,CGRESID_MF,error_n,nsolve);
-       error_n=sqrt(error_n);
+       if (error_n>=0.0) {
+        error_n=sqrt(error_n);
+       } else
+        BoxLib::Error("error_n invalid");
+
        if (error_n<save_mac_abs_tol)
         meets_tol=1;
        else
@@ -8032,15 +8036,22 @@ void NavierStokes::multiphase_project(int project_option) {
       error_history.resize(vcycle_max+1);
 
       for (vcycle=0;((vcycle<=vcycle_max)&&(meets_tol==0));vcycle++) {
+
          // CGRESID(R0) is the residual when using U0
          // MAC_PHI_CRSE(U1) and U0 are the same at this point.
        dot_productALL(project_option,CGRESID_MF,CGRESID_MF,error_n,nsolve);
-       error_n=sqrt(error_n);
+       if (error_n>=0.0) {
+        error_n=sqrt(error_n);
+       } else
+        BoxLib::Error("error_n invalid");
 
        error_history[vcycle]=error_n;
 
        adjust_tolerance(error_n,error0_max,save_mac_abs_tol,save_atol_b,
         save_min_rel_error,project_option);
+
+       Real restart_tol=save_mac_abs_tol*save_mac_abs_tol*1.0e-4;
+
        if (error_n<save_mac_abs_tol)
         meets_tol=1;
 
@@ -8065,29 +8076,52 @@ void NavierStokes::multiphase_project(int project_option) {
          // rho1=R0hat dot CGRESID(R0)
         dot_productALL(project_option,bicg_R0hat_MF,CGRESID_MF,rho1,nsolve);
 
-        if (vcycle==0) {
-         if (rho1<=0.0) {
-          BoxLib::Error("rho1 invalid");
-         } else if (rho1>0.0) {
+        if (vcycle==0) { // R0hat=R when vcycle==0
+
+	 if (rho1>0.0) {
           Real sanity_error=sqrt(rho1);
           if (sanity_error>0.9*save_mac_abs_tol) {
            // do nothing
           } else
            BoxLib::Error("sanity_error invalid");
-         } else
+	 } else
           BoxLib::Error("rho1 invalid");
+
         } else if (vcycle>0) {
          // check nothing
         } else
          BoxLib::Error("vcycle invalid");
 
         restart_flag=0;
-        if ((sqrt(fabs(rho0))<save_mac_abs_tol*0.01)||
-            (sqrt(fabs(w0))<save_mac_abs_tol*0.01))
-         restart_flag=1;
-      
+	if (rho0<=restart_tol) {
+ 	 restart_flag=1;
+	} else if (rho0>=restart_tol) {
+	 // do nothing
+	} else
+	 BoxLib::Error("rho0 failed Nav3");
+
+	if (w0<=restart_tol) {
+	 restart_flag=1;
+	} else if (w0>=restart_tol) {
+	 // do nothing
+	} else
+	 BoxLib::Error("w0 failed Nav3");
+
+	if (rho1<0.0) {
+ 	 restart_flag=1;
+	} else if (rho1>=0.0) {
+	 // do nothing
+	} else
+	 BoxLib::Error("rho1 invalid mglib");
+
         if (restart_flag==0) {
          beta=(rho1/rho0)*(alpha/w0);
+
+	 if (beta>=0.0) {
+	  // do nothing
+	 } else
+	  BoxLib::Error("beta invalid Nav3");
+
          a1=1.0;
          a2=-w0;
 
@@ -8104,11 +8138,17 @@ void NavierStokes::multiphase_project(int project_option) {
           bicg_Y_MF,bicg_P1_MF,nsolve);
           // V1=A Y
          applyALL(project_option,bicg_Y_MF,bicg_V1_MF,nsolve);
-          // alpha=rho1/R0hat dot V1
+
+          // alpha=R0hat dot V1=R0hat dot A M^-1 P1=
+	  //       R0hat dot A M^-1 (R0+beta(P-w0 V0))
          dot_productALL(project_option,bicg_R0hat_MF,bicg_V1_MF,alpha,nsolve);
 
-         if (sqrt(fabs(alpha))<save_mac_abs_tol*0.01) 
-          restart_flag=1;
+	 if (alpha<=restart_tol) {
+	  restart_flag=1;
+	 } else if (alpha>=restart_tol) {
+ 	  // do nothing
+	 } else
+	  BoxLib::Error("alpha failed Nav3");
 
          if (restart_flag==0) {
           alpha=rho1/alpha;
@@ -8124,8 +8164,12 @@ void NavierStokes::multiphase_project(int project_option) {
           residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
             MAC_PHI_CRSE_MF,nsolve);
 
+	   // dnorm=R1 dot R1
           dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
-          dnorm=sqrt(dnorm);
+	  if (dnorm>=0.0) {
+           dnorm=sqrt(dnorm);
+	  } else
+           BoxLib::Error("dnorm invalid Nav3");
 
           if (dnorm>save_mac_abs_tol) {
            // S=CGRESID(R0)-alpha V1
@@ -8143,18 +8187,24 @@ void NavierStokes::multiphase_project(int project_option) {
            // T=A Z
            applyALL(project_option,Z_MF,bicg_T_MF,nsolve);
 
-	   // T dot S = AZ dot MZ >=0.0 if A and M are SPD
+	   // a1 = T dot S = AZ dot MZ >=0.0 if A and M are SPD
            dot_productALL(project_option,bicg_T_MF,bicg_S_MF,a1,nsolve);
-	   // T dot T = AZ dot AZ >=0.0 if A is SPD
+	   // a2 = T dot T = AZ dot AZ >=0.0 
            dot_productALL(project_option,bicg_T_MF,bicg_T_MF,a2,nsolve);
 
-	   if ((a1<=0.0)||(a2<=0.0)) {
+	   if (a2>=restart_tol) {
+ 	    // do nothing
+	   } else if ((a2>=0.0)&&(a2<=restart_tol)) {
 	    restart_flag=1;
-	   } else if ((a1>0.0)&&(a2>0.0)) {
-            if (sqrt(a2)<save_mac_abs_tol*0.01) 
-             restart_flag=1;
 	   } else
-  	    BoxLib::Error("a1 or a2 bust");
+	    BoxLib::Error("a2 invalid Nav3");
+
+	   if (a1>0.0) {
+	    // do nothing
+	   } else if (a1<=0.0) {
+	    restart_flag=1;
+	   } else
+	    BoxLib::Error("a1 invalid");
 
            if (restart_flag==0) {
             w1=a1/a2;
@@ -8164,7 +8214,11 @@ void NavierStokes::multiphase_project(int project_option) {
             mf_combine(project_option,
 	     bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
             project_right_hand_side(MAC_PHI_CRSE_MF,project_option);
-           }
+           } else if (restart_flag==1) {
+ 	    // do nothing
+	   } else
+	    BoxLib::Error("restart_flag invalid");
+
           } else if ((dnorm>=0.0)&&(dnorm<=save_mac_abs_tol)) {
 	   // do nothing
           } else
@@ -8174,8 +8228,12 @@ void NavierStokes::multiphase_project(int project_option) {
           residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
             MAC_PHI_CRSE_MF,nsolve);
 
+	   // dnorm=R1 dot R1
           dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
-          dnorm=sqrt(dnorm);
+	  if (dnorm>=0.0) {
+           dnorm=sqrt(dnorm);
+	  } else
+	   BoxLib::Error("dnorm invalid Nav3");
 
           rho0=rho1;
           w0=w1;
@@ -8185,17 +8243,23 @@ void NavierStokes::multiphase_project(int project_option) {
           copyALL(0,nsolveMM,bicg_V0_MF,bicg_V1_MF);
           // U0=MAC_PHI_CRSE(U1)
           copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
-         } // restart_flag==0
-        } // restart_flag==0
+         } else if (restart_flag==1) {
+          // do nothing
+         } else
+          BoxLib::Error("restart_flag invalid");
+
+        } else if (restart_flag==1) {
+         // do nothing
+	} else
+	 BoxLib::Error("restart_flag invalid");
 
         if (restart_flag==0) {
          // do nothing
         } else if (restart_flag==1) {
 
-         if (verbose>0) {
-          if (ParallelDescriptor::IOProcessor()) {
-           std::cout << "restarting bicgstab vcycle " << vcycle << '\n';
-          }
+         if (ParallelDescriptor::IOProcessor()) {
+          std::cout << "WARNING:restarting bicgstab vcycle " << vcycle << '\n';
+          std::cout << "project_option= " << project_option << '\n';
          }
          // CGRESID(R0)=RHS-A U0
          residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
@@ -8207,8 +8271,13 @@ void NavierStokes::multiphase_project(int project_option) {
          rho0=1.0;
          alpha=1.0;
          w0=1.0;
+	  // dnorm=RESID dot RESID
          dot_productALL(project_option,CGRESID_MF,CGRESID_MF,dnorm,nsolve);
-         dnorm=sqrt(dnorm);
+	 if (dnorm>=0.0) {
+          dnorm=sqrt(dnorm);
+	 } else
+          BoxLib::Error("dnorm invalid Nav3");
+
          zeroALL(0,nsolveMM,bicg_V0_MF);
          zeroALL(0,nsolveMM,P_MF);
         } else
@@ -8366,7 +8435,10 @@ void NavierStokes::multiphase_project(int project_option) {
      Real outer_error;
      dot_productALL(project_option,
 	OUTER_RESID_MF,OUTER_RESID_MF,outer_error,nsolve);
-     outer_error=sqrt(outer_error);
+     if (outer_error>=0.0) {
+      outer_error=sqrt(outer_error);
+     } else
+      BoxLib::Error("outer_error invalid");
 
      delete_array(OUTER_MAC_RHS_CRSE_MF);
      delete_array(OUTER_MAC_PHI_CRSE_MF);
