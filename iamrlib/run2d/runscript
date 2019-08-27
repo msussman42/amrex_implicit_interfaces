@@ -1,1 +1,0 @@
-(nohup time ../amr2d.Linux.g++.f77.ex inputs.* > run.out) >> run.out &

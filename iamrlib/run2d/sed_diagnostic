@@ -1,9 +1,0 @@
-#!/bin/bash
-rm rad
-grep "EFFECTIVE RAD" run.out > rad
-sed 's/TIME=//' rad > rad_mod_
-cp rad_mod_ rad
-rm rad_mod_
-sed 's/EFFECTIVE RAD=//' rad > rad_mod_
-cp rad_mod_ rad
-rm rad_mod_

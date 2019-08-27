@@ -1,4 +1,0 @@
-#!/bin/bash
-ls -l amr2d.Linux.g++.f77.DEBUG.ex >amr2d.version
-nohup ./amr2d.Linux.g++.f77.DEBUG.ex inputs.jwl.2C >stdout 2>stderr &
-# (end of commands)

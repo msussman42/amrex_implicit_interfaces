@@ -1,9 +1,0 @@
-#!/bin/bash
-rm *.plt
-rm den*
-rm -r pre*
-rm -r chk*
-rm -r plt*
-rm vis*
-rm grdlog
-nohup /home/rubin/CLSVOF_calcs/bin/amr2d.Linux.g++.f77.ex inputs.* >stdout 2>stderr &

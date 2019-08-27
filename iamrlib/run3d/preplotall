@@ -1,9 +1,0 @@
-#!/bin/bash
-for file in *.tec
-do
-#preplot ${file}
-#~/tec360/bin/preplot ${file}
-#~/tecplot360ex/bin/preplot ${file}
-#/usr/local/tecplot/360ex_2017r2/bin/preplot ${file}
-/usr/local/tecplot/360ex_2018r2/bin/preplot ${file}
-done

@@ -1,1 +1,0 @@
-awk '/^[0-9]/{print $2}' amr2d.CYGWIN_NT.g++.f77.DEBUG.ex.stackdump | addr2line -f -e ./amr2d.CYGWIN_NT.g++.f77.DEBUG.ex
