@@ -9,8 +9,8 @@
 #include <AMReX_Vector.H>
 #include <AMReX_REAL.H>
 #include <AMReX_Box.H>
-#include <BCRec.H>
-#include <ArrayLim.H>
+#include <AMReX_BCRec.H>
+#include <AMReX_ArrayLim.H>
 
 namespace amrex {
 
@@ -21,7 +21,7 @@ extern "C"
 {
     typedef void (*BndryFuncDefault)(
       int* level,
-      Real* data, ARLIM_P(lo), ARLIM_P(hi),
+      Real* data, AMReX_ARLIM_P(lo), AMReX_ARLIM_P(hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,

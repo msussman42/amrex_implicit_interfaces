@@ -49,7 +49,7 @@ StateDescriptor::BndryFunc::operator () (
     BL_ASSERT(m_func != 0);
 
     m_func(level,
-      data,ARLIM(lo),ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc,
+      data,AMReX_ARLIM(lo),AMReX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc,
       scomp,ncomp,bfact);
 }
 
@@ -67,7 +67,7 @@ StateDescriptor::BndryFunc::operator () (
 
     m_gfunc(
       level,
-      data,ARLIM(lo),ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc,
+      data,AMReX_ARLIM(lo),AMReX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc,
       scomp,ncomp,bfact);
 }
 

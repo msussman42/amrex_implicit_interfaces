@@ -1008,8 +1008,8 @@ AmrLevel::derive (const std::string& name,
 
 // was dlo,dhi now lo,hi,ngrow
 
-            rec->derFunc()(ddat,ARLIM(dlo),ARLIM(dhi),&n_der,
-                           cdat,ARLIM(clo),ARLIM(chi),&n_state,
+            rec->derFunc()(ddat,AMReX_ARLIM(dlo),AMReX_ARLIM(dhi),&n_der,
+                           cdat,AMReX_ARLIM(clo),AMReX_ARLIM(chi),&n_state,
                            lo,hi,&ngrow,dom_lo,dom_hi,dx,xlo,
                            &nudge_time,&dt,bcr,
                            &level,&grid_no);

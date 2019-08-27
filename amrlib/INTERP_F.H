@@ -50,7 +50,7 @@
 #  endif
 #  endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
 extern "C"
 {
@@ -65,8 +65,8 @@ extern "C"
 
     void FORT_PCINTERP (
      int* zapflag,
-     const Real* crse, ARLIM_P(clo), ARLIM_P(chi),
-     Real*  fine, ARLIM_P(flo), ARLIM_P(fhi),
+     const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
+     Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
      const int* fblo, const int* fbhi,
      const int* nvar, 
      int* levelc,int* levelf,
@@ -80,16 +80,16 @@ extern "C"
     void FORT_SEMINTERP (
      int* enable_spectral,
      const Real* dxc,const Real* dxf,
-     const Real* crse, ARLIM_P(clo), ARLIM_P(chi),
-     Real*  fine, ARLIM_P(flo), ARLIM_P(fhi),
+     const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
+     Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
      const int* fblo, const int* fbhi,
      const int* nvar,
      int* levelc,int* levelf,
      int* bfactc,int* bfactf);
 
     void FORT_MASKINTERPPC (
-     const Real* crse, ARLIM_P(clo), ARLIM_P(chi),
-     Real*  fine, ARLIM_P(flo), ARLIM_P(fhi),
+     const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
+     Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
      const int* fblo, const int* fbhi,
      const int* nvar, 
      int* levelc,int* levelf,
@@ -97,9 +97,9 @@ extern "C"
 
     void FORT_LSHOINTERP(
        int* LSHOInterp_LO,
-       const Real* crse, ARLIM_P(clo), ARLIM_P(chi),
+       const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
        const int* clo, const int* chi,
-       Real*  fine, ARLIM_P(flo), ARLIM_P(fhi),
+       Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
        const int* fblo, const int* fbhi,
        const Real* prob_lo,
        const Real* dxf, const Real* dxc,
@@ -110,11 +110,11 @@ extern "C"
 
     void FORT_MULTIMOFINTERP(
        Real* time,
-       const Real* crse, ARLIM_P(clo), ARLIM_P(chi),
+       const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
        const int* clo, const int* chi,
-       Real*  fine, ARLIM_P(flo), ARLIM_P(fhi),
+       Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
        const int* fblo, const int* fbhi,
-       Real*  recon, ARLIM_P(reconlo), ARLIM_P(reconhi),
+       Real*  recon, AMREX_ARLIM_P(reconlo), AMREX_ARLIM_P(reconhi),
        const Real* prob_lo,
        const Real* dxf, const Real* dxc,
        int* nmat,
@@ -125,8 +125,8 @@ extern "C"
 
     void FORT_MULTIEXTMOFINTERP(
        Real* time,
-       const Real* crse, ARLIM_P(clo), ARLIM_P(chi),
-       Real*  fine, ARLIM_P(flo), ARLIM_P(fhi),
+       const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
+       Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
        const int* fblo, const int* fbhi,
        const Real* prob_lo,
        const Real* dxf, const Real* dxc,
@@ -137,8 +137,8 @@ extern "C"
 
     void FORT_EXT_BURNVEL_INTERP(
        Real* time,
-       const Real* crse, ARLIM_P(clo), ARLIM_P(chi),
-       Real*  fine, ARLIM_P(flo), ARLIM_P(fhi),
+       const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
+       Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
        const int* fblo, const int* fbhi,
        const Real* prob_lo,
        const Real* dxf, const Real* dxc,
@@ -157,9 +157,9 @@ extern "C"
     void FORT_EDGEINTERP(
       int* enable_spectral,
       int* dir,
-      const Real* crse, ARLIM_P(clo), ARLIM_P(chi),
+      const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
       const int* cloMAC, const int* chiMAC,
-      Real*  fine, ARLIM_P(flo), ARLIM_P(fhi),
+      Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
       const int* fblo, const int* fbhi,
       const Real* prob_lo,
       const Real* dxf, const Real* dxc,int* ncomp,
