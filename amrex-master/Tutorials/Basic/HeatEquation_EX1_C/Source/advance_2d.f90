@@ -17,6 +17,12 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   real(amrex_real), intent(in)    :: dx(2)
   integer, intent(in) :: bc_vector(4)
   real(amrex_real), intent(in) :: bc_value(4)
+   ! bc_vector can be one of three values:
+   ! "dirichlet_condition", "neumann_condition", "periodic_condition"
+   ! bc_vector(1) => xlo wall  (dir=0 side=0)
+   ! bc_vector(2) => xhi wall  (dir=0 side=1)
+   ! bc_vector(3) => ylo wall  (dir=1 side=0)
+   ! bc_vector(4) => yhi wall  (dir=1 side=1)
   integer, intent(in) :: dirichlet_condition
   integer, intent(in) :: neumann_condition
   integer, intent(in) :: periodic_condition
@@ -28,6 +34,14 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   do j = lo(2), hi(2)
   do i = lo(1), hi(1)+1
      fluxx(i,j) = ( phi(i,j) - phi(i-1,j) ) / dx(1)
+     if ((bc_vector(1).eq.dirichlet_condition).and. &
+         (i.eq.lo(1))) then
+      fluxx(i,j)= (phi(i,j)-0.0d0)/(0.5d0*dx(1))
+     endif
+     if ((bc_vector(2).eq.dirichlet_condition).and. &
+         (i.eq.hi(1)+1)) then
+      fluxx(i,j)= (1.0d0-phi(i-1,j))/(0.5d0*dx(1))
+     endif
   end do
   end do
 
@@ -35,6 +49,14 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   do j = lo(2), hi(2)+1
   do i = lo(1), hi(1)
      fluxy(i,j) = ( phi(i,j) - phi(i,j-1) ) / dx(2)
+     if ((bc_vector(3).eq.dirichlet_condition).and. &
+         (j.eq.lo(2))) then
+      fluxy(i,j)= (phi(i,j)-0.0d0)/(0.5d0*dx(2))
+     endif
+     if ((bc_vector(4).eq.dirichlet_condition).and. &
+         (j.eq.hi(2)+1)) then
+      fluxy(i,j)= (1.0d0-phi(i,j-1))/(0.5d0*dx(2))
+     endif
   end do
   end do
 
