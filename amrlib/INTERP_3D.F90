@@ -11,7 +11,7 @@
 #include "INTERP_F.H"
 #include "ArrayLim.H"
 
-#define POLYGON_LIST_MAX (400)
+#define POLYGON_LIST_MAX (1000)
 
 
 #if (BL_SPACEDIM==3)
