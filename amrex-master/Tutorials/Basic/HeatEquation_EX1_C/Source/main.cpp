@@ -71,10 +71,27 @@ void main_main ()
           bc_vector[index]=dirichlet_condition;
 	}
        }
+        // xlo
        int dir=0;
        int side=0;
        int index=2*dir+side;
+       bc_value[index]=0.0;
+        // xhi
+       dir=0;
+       side=1;
+       index=2*dir+side;
        bc_value[index]=1.0;
+        // ylo
+       dir=1;
+       side=0;
+       index=2*dir+side;
+       bc_value[index]=0.0;
+        // yhi
+       dir=1;
+       side=1;
+       index=2*dir+side;
+       bc_value[index]=1.0;
+
     } else
       amrex::Error("probtype invalid");
 

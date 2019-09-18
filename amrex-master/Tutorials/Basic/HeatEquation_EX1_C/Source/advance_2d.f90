@@ -36,11 +36,11 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
      fluxx(i,j) = ( phi(i,j) - phi(i-1,j) ) / dx(1)
      if ((bc_vector(1).eq.dirichlet_condition).and. &
          (i.eq.lo(1))) then
-      fluxx(i,j)= (phi(i,j)-0.0d0)/(0.5d0*dx(1))
+      fluxx(i,j)= (phi(i,j)-bc_value(1))/(0.5d0*dx(1))
      endif
      if ((bc_vector(2).eq.dirichlet_condition).and. &
          (i.eq.hi(1)+1)) then
-      fluxx(i,j)= (1.0d0-phi(i-1,j))/(0.5d0*dx(1))
+      fluxx(i,j)= (bc_value(2)-phi(i-1,j))/(0.5d0*dx(1))
      endif
   end do
   end do
@@ -51,11 +51,11 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
      fluxy(i,j) = ( phi(i,j) - phi(i,j-1) ) / dx(2)
      if ((bc_vector(3).eq.dirichlet_condition).and. &
          (j.eq.lo(2))) then
-      fluxy(i,j)= (phi(i,j)-0.0d0)/(0.5d0*dx(2))
+      fluxy(i,j)= (phi(i,j)-bc_value(3))/(0.5d0*dx(2))
      endif
      if ((bc_vector(4).eq.dirichlet_condition).and. &
          (j.eq.hi(2)+1)) then
-      fluxy(i,j)= (1.0d0-phi(i,j-1))/(0.5d0*dx(2))
+      fluxy(i,j)= (bc_value(4)-phi(i,j-1))/(0.5d0*dx(2))
      endif
   end do
   end do
