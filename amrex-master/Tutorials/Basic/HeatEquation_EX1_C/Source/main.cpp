@@ -71,15 +71,20 @@ void main_main ()
           bc_vector[index]=dirichlet_condition;
 	}
        }
+        // For Neumann boundary condition: grad u dot n = g where n
+        // is the outward facing normal.  i.e. if dir=0, side=0 (xlo), then
+        // n=(-1 0)^T 
         // xlo
        int dir=0;
        int side=0;
        int index=2*dir+side;
+       bc_vector[index]=neumann_condition;
        bc_value[index]=0.0;
         // xhi
        dir=0;
        side=1;
        index=2*dir+side;
+       bc_vector[index]=neumann_condition;
        bc_value[index]=1.0;
         // ylo
        dir=1;

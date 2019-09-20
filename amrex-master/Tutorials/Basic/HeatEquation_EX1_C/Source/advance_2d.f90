@@ -34,14 +34,32 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   do j = lo(2), hi(2)
   do i = lo(1), hi(1)+1
      fluxx(i,j) = ( phi(i,j) - phi(i-1,j) ) / dx(1)
-     if ((bc_vector(1).eq.dirichlet_condition).and. &
-         (i.eq.lo(1))) then
-      fluxx(i,j)= (phi(i,j)-bc_value(1))/(0.5d0*dx(1))
+     if (i.eq.lo(1)) then
+      if (bc_vector(1).eq.dirichlet_condition) then
+       fluxx(i,j)= (phi(i,j)-bc_value(1))/(0.5d0*dx(1))
+      else if (bc_vector(1).eq.neumann_condition) then
+       fluxx(i,j)=-bc_value(1)
+      else if (bc_vector(1).eq.periodic_condition) then
+       ! do nothing
+      else
+       print *,"bc_vector(1) invalid"
+       stop
+      endif
      endif
-     if ((bc_vector(2).eq.dirichlet_condition).and. &
-         (i.eq.hi(1)+1)) then
-      fluxx(i,j)= (bc_value(2)-phi(i-1,j))/(0.5d0*dx(1))
+
+     if (i.eq.hi(1)+1) then
+      if (bc_vector(2).eq.dirichlet_condition) then
+       fluxx(i,j)= (bc_value(2)-phi(i-1,j))/(0.5d0*dx(1))
+      else if (bc_vector(2).eq.neumann_condition) then
+       fluxx(i,j)=bc_value(2)
+      else if (bc_vector(2).eq.periodic_condition) then
+       ! do nothing
+      else
+       print *,"bc_vector(2) invalid"
+       stop
+      endif
      endif
+
   end do
   end do
 
@@ -49,14 +67,33 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   do j = lo(2), hi(2)+1
   do i = lo(1), hi(1)
      fluxy(i,j) = ( phi(i,j) - phi(i,j-1) ) / dx(2)
-     if ((bc_vector(3).eq.dirichlet_condition).and. &
-         (j.eq.lo(2))) then
-      fluxy(i,j)= (phi(i,j)-bc_value(3))/(0.5d0*dx(2))
+
+     if (j.eq.lo(2)) then
+      if (bc_vector(3).eq.dirichlet_condition) then
+       fluxy(i,j)= (phi(i,j)-bc_value(3))/(0.5d0*dx(2))
+      else if (bc_vector(3).eq.neumann_condition) then
+       fluxy(i,j)=-bc_value(3)
+      else if (bc_vector(3).eq.periodic_condition) then
+       ! do nothing
+      else
+       print *,"bc_vector(3) invalid"
+       stop
+      endif
      endif
-     if ((bc_vector(4).eq.dirichlet_condition).and. &
-         (j.eq.hi(2)+1)) then
-      fluxy(i,j)= (bc_value(4)-phi(i,j-1))/(0.5d0*dx(2))
+
+     if (j.eq.hi(2)+1) then
+      if (bc_vector(4).eq.dirichlet_condition) then
+       fluxy(i,j)= (bc_value(4)-phi(i,j-1))/(0.5d0*dx(2))
+      else if (bc_vector(4).eq.neumann_condition) then
+       fluxy(i,j)=bc_value(4)
+      else if (bc_vector(4).eq.periodic_condition) then
+       ! do nothing
+      else
+       print *,"bc_vector(4) invalid"
+       stop
+      endif
      endif
+
   end do
   end do
 
