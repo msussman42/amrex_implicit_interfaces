@@ -150,7 +150,8 @@ StateData::define (
     int ncomp = desc->nComp();
 
     for (int i=0;i<=bfact_time_order;i++)
-     new_data[i].reset(new MultiFab(grids,dmap,ncomp,desc->nExtra(),Fab_allocate));
+     new_data[i].reset(new MultiFab(grids,dmap,ncomp,desc->nExtra(),
+			     Fab_allocate));
 
     buildBC();
 }
@@ -235,7 +236,8 @@ StateData::restart (
 
     for (int i=0;i<=bfact_time_order;i++) {
 
-     new_data[i].reset(new MultiFab(grids,dmap,desc->nComp(),desc->nExtra()));
+     new_data[i].reset(new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
+			     Fab_allocate));
 
        // read the file name from the header file.
      is >> mf_name;

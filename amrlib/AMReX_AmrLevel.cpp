@@ -434,7 +434,7 @@ AmrLevel::FillCoarsePatchGHOST (
   // because of the proper nesting requirement, no ghost
   // values are needed for cmf_part.
   // cmf_part: 0..ncomp-1
- MultiFab* cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0);
+ MultiFab* cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,Fab_allocate);
  MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
 
  int                     DComp   = scomp;
@@ -592,7 +592,7 @@ AmrLevel::InterpBordersGHOST (
  if (level>0) {
   const BoxArray& cmf_BA=cmf.boxArray();
   DistributionMapping cdm=cmf.DistributionMap();
-  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0);
+  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,Fab_allocate);
   MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
  }  // level>0
  
@@ -719,7 +719,7 @@ AmrLevel::InterpBorders (
  if (level>0) {
   const BoxArray& cmf_BA=cmf.boxArray();
   DistributionMapping cdm=cmf.DistributionMap();
-  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0);
+  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,Fab_allocate);
   MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
  }  // level>0
  
@@ -948,7 +948,8 @@ AmrLevel::derive (const std::string& name,
 
     if (isStateVariable(name, index, scomp))
     {
-        mf.reset(new MultiFab(state[index].boxArray(),dmap,1,ngrow));
+        mf.reset(new MultiFab(state[index].boxArray(),dmap,1,ngrow,
+				Fab_allocate));
 
         Real nudge_time=state[index].slabTime(time_order);
 
@@ -978,7 +979,7 @@ AmrLevel::derive (const std::string& name,
             FillPatch(*this,srcMF,0,nudge_time,index,scomp,ncomp);
         }
 
-        mf = new MultiFab(dstBA,dmap,rec->numDerive(),ngrow);
+        mf = new MultiFab(dstBA,dmap,rec->numDerive(),ngrow,Fab_allocate);
 
 #ifdef _OPENMP
 #pragma omp parallel
