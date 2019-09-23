@@ -105,7 +105,8 @@ namespace amrex
        FabArrayBase::TheFPinfo(fmf, mf, fdomain_g, ngrow, coarsener);
 
       if ( ! fpc.ba_crse_patch.empty()) {
-       MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_crse_patch,ncomp,0);
+       MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_crse_patch,ncomp,0,
+		       Fab_allocate);
 		
        FillPatchSingleLevel(
         levelc,

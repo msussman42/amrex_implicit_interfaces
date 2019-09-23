@@ -481,7 +481,7 @@ AmrLevel::FillCoarsePatchGHOST (
 
    // ghost cells do not have to be initialized.
    // call InterpBordersGHOST after FillCoarsePatchGHOST.
-  MultiFab crseMF(crseBA,ncomp_range,0);
+  MultiFab crseMF(crseBA,dm,ncomp_range,0,Fab_allocate);
 
   int scomp_data=scomp_range;
   int dcomp_data=scomp+scomp_data;
@@ -582,7 +582,7 @@ AmrLevel::InterpBordersGHOST (
 
  DistributionMapping dm=mf.DistributionMap();
 
- MultiFab fmf(mf_BA,dm,ncomp,0);
+ MultiFab fmf(mf_BA,dm,ncomp,0,Fab_allocate);
 
   // dstmf,srcmf,srccomp,dstcomp,ncomp,ngrow
  MultiFab::Copy(fmf,mf,scomp,0,ncomp,0);
@@ -709,7 +709,7 @@ AmrLevel::InterpBorders (
 
  DistributionMapping dm=mf.DistributionMap();
 
- MultiFab fmf(mf_BA,dm,ncomp,0);
+ MultiFab fmf(mf_BA,dm,ncomp,0,Fab_allocate);
 
   // dstmf,srcmf,srccomp,dstcomp,ncomp,ngrow
  MultiFab::Copy(fmf,mf,scomp,0,ncomp,0);
@@ -847,6 +847,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  const StateDescriptor&  desc    = desc_lst[index];
  const Box&              pdomain = state[index].getDomain();
  const BoxArray&         mf_BA   = mf.boxArray();
+ DistributionMapping dm=mf.DistributionMap();
+
  int bfact_fine=parent->Space_blockingFactor(level);
 
  desc.check_inRange(scompBC_map, ncomp);
@@ -868,7 +870,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   }
 
     // ngrow=0
-  MultiFab crseMF(crseBA,ncomp_range,0);
+  MultiFab crseMF(crseBA,dm,ncomp_range,0,Fab_allocate);
 
   Array<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
@@ -970,7 +972,7 @@ AmrLevel::derive (const std::string& name,
         srcBA.convert(rec->boxMap());  // e.g. might grow by 1
         dstBA.convert(rec->deriveType());
 
-        MultiFab srcMF(srcBA,dmap,rec->numState(),ngrow);
+        MultiFab srcMF(srcBA,dmap,rec->numState(),ngrow,Fab_allocate);
 
         for (int k = 0, dc = 0; k < rec->numRange(); k++, dc += ncomp)
         {
