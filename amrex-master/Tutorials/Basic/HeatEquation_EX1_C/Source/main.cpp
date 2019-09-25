@@ -30,7 +30,20 @@ void main_main ()
     int dirichlet_condition=1;
     int neumann_condition=2;
     int periodic_condition=3;
-    
+
+    Vector<Real> a_vector(AMREX_SPACEDIM);
+    a_vector[0]=2.0;
+    a_vector[1]=1.0;
+
+    // u_{t} + divergence F(u) =0
+    // flux_type==0 => heat equation =>
+    //   F(u)=-grad u
+    // flux_type==1 => linear advection equation =>
+    //   F(u)=a_vector u
+    // flux_type==2 => inviscid Burger's equation
+    //   F(u)=a_vector u^{2}/2     
+    int flux_type=1;
+
     Vector<int> bc_vector(AMREX_SPACEDIM*2,periodic_condition);
     // default is Real=double  (also known as REAL*8 in fortran)
     Vector<Real> bc_value(AMREX_SPACEDIM*2,0.0); // default homogeneous
@@ -141,13 +154,25 @@ void main_main ()
         const Box& bx = mfi.validbox();
 
         init_phi(BL_TO_FORTRAN_BOX(bx),
-                 BL_TO_FORTRAN_ANYD(phi_new[mfi]),
+                 BL_TO_FORTRAN_ANYD(phi_new[mfi]),           
                  geom.CellSize(), geom.ProbLo(), geom.ProbHi());
     }
+    ParallelDescriptor::Barrier();    
 
     // compute the time step
     const Real* dx = geom.CellSize();
-    Real dt = 0.9*dx[0]*dx[0] / (2.0*AMREX_SPACEDIM);
+    Real dt=1.0e+20;
+    for ( MFIter mfi(phi_new); mfi.isValid(); ++mfi )
+    {
+      const Box& bx = mfi.validbox();
+
+      compute_dt(BL_TO_FORTRAN_BOX(bx),
+                 BL_TO_FORTRAN_ANYD(phi_new[mfi]),
+                 a_vector.dataPtr(),&flux_type,&dt,
+                 geom.CellSize(), geom.ProbLo(), geom.ProbHi());
+    } 
+    ParallelDescriptor::Barrier();
+    ParallelDescriptor::ReduceRealMax(dt);
 
     // time = starting time in the simulation
     Real time = 0.0;
@@ -189,7 +214,22 @@ void main_main ()
             const std::string& pltfile = amrex::Concatenate("plt",n,5);
             WriteSingleLevelPlotfile(pltfile, phi_new, {"phi"}, geom, time, n);
         }
-    }
+
+        // compute the time step
+        dt=1.0e+20;
+        for ( MFIter mfi(phi_new); mfi.isValid(); ++mfi )
+        {
+          const Box& bx = mfi.validbox();
+
+          compute_dt(BL_TO_FORTRAN_BOX(bx),
+                 BL_TO_FORTRAN_ANYD(phi_new[mfi]),
+		 a_vector.dataPtr(),&flux_type,&dt,
+                 geom.CellSize(), geom.ProbLo(), geom.ProbHi());
+        } 
+        ParallelDescriptor::Barrier();
+        ParallelDescriptor::ReduceRealMax(dt);
+
+    }  // n=1 .. nsteps
 
     // Call the timer again and compute the maximum difference between the start time and stop time
     //   over all processors
