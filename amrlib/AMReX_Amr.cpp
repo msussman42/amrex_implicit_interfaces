@@ -992,7 +992,7 @@ Amr::writePlotFile (const std::string& root,
      amr_level[0]->setPlotVariables();
   }
 
-  Real dPlotFileTime0 = ParallelDescriptor::second();
+  double dPlotFileTime0 = ParallelDescriptor::second();
 
   const std::string pltfile = amrex::Concatenate(root,num,file_name_digits);
 
@@ -1073,8 +1073,8 @@ Amr::writePlotFile (const std::string& root,
     //last_plotfile = level_steps[0]; (set outside this routine)
 
    if (verbose > 0) {
-    const int IOProc        = ParallelDescriptor::IOProcessorNumber();
-    Real dPlotFileTime = ParallelDescriptor::second() - dPlotFileTime0;
+    const int IOProc     = ParallelDescriptor::IOProcessorNumber();
+    double dPlotFileTime = ParallelDescriptor::second() - dPlotFileTime0;
 
     ParallelDescriptor::ReduceRealMax(dPlotFileTime,IOProc);
 
@@ -1136,7 +1136,7 @@ Amr::writeSmallPlotFile ()
       return;
     }
 
-    Real dPlotFileTime0 = amrex::second();
+    double dPlotFileTime0 = amrex::second();
 
     const std::string& pltfile = amrex::Concatenate(small_plot_file_root,
                                                      level_steps[0],
@@ -1213,7 +1213,7 @@ Amr::writeSmallPlotFile ()
 
     if (verbose > 0) {
         const int IOProc        = ParallelDescriptor::IOProcessorNumber();
-        Real      dPlotFileTime = amrex::second() - dPlotFileTime0;
+        double      dPlotFileTime = amrex::second() - dPlotFileTime0;
 
         ParallelDescriptor::ReduceRealMax(dPlotFileTime,IOProc);
 
@@ -1448,7 +1448,7 @@ Amr::initialInit (Real strt_time,
 void
 Amr::restart (const std::string& filename)
 {
-    Real dRestartTime0 = ParallelDescriptor::second();
+    double dRestartTime0 = ParallelDescriptor::second();
 
     VisMF::SetMFFileInStreams(mffile_nstreams);
 
@@ -1679,7 +1679,7 @@ Amr::restart (const std::string& filename)
 
     if (verbose > 0)
     {
-        Real dRestartTime = ParallelDescriptor::second() - dRestartTime0;
+        double dRestartTime = ParallelDescriptor::second() - dRestartTime0;
 
         ParallelDescriptor::ReduceRealMax(dRestartTime,ParallelDescriptor::IOProcessorNumber());
 
@@ -1703,7 +1703,7 @@ Amr::checkPoint ()
 
     FArrayBox::setFormat(FABio::FAB_NATIVE);
 
-    Real dCheckPointTime0 = ParallelDescriptor::second();
+    double dCheckPointTime0 = ParallelDescriptor::second();
 
     const std::string ckfile = amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
 
@@ -1825,7 +1825,7 @@ Amr::checkPoint ()
     FArrayBox::setFormat(thePrevFormat);
 
     if (verbose > 0) {
-     Real dCheckPointTime = ParallelDescriptor::second() - dCheckPointTime0;
+     double dCheckPointTime = ParallelDescriptor::second() - dCheckPointTime0;
 
      ParallelDescriptor::ReduceRealMax(dCheckPointTime,
           ParallelDescriptor::IOProcessorNumber());
@@ -2066,7 +2066,7 @@ void Amr::recalesce_put_state(Array<Real>& recalesce_state_in,int nmat) {
 void
 Amr::coarseTimeStep (Real stop_time)
 {
-    const Real run_strt = ParallelDescriptor::second() ;
+    const double run_strt = ParallelDescriptor::second() ;
 
      // check dt on all the levels.
     if (level_steps[0] > 0) {
@@ -2088,7 +2088,7 @@ Amr::coarseTimeStep (Real stop_time)
     if (verbose > 0)
     {
         const int IOProc   = ParallelDescriptor::IOProcessorNumber();
-        Real      run_stop = ParallelDescriptor::second() - run_strt;
+        double    run_stop = ParallelDescriptor::second() - run_strt;
 
         ParallelDescriptor::ReduceRealMax(run_stop,IOProc);
 
@@ -2544,7 +2544,7 @@ Amr::grid_places (int              lbase,
  int i;
  int max_crse = std::min(finest_level,max_level-1);
 
- const Real strttime = ParallelDescriptor::second();
+ const double strttime = ParallelDescriptor::second();
 
  if (lbase == 0) {
   const Box& domain = geom[0].Domain();
@@ -2779,7 +2779,7 @@ Amr::grid_places (int              lbase,
  }
 
  if (verbose > 0) {
-  Real stoptime = ParallelDescriptor::second() - strttime;
+  double stoptime = ParallelDescriptor::second() - strttime;
 
   ParallelDescriptor::ReduceRealMax(stoptime,
         ParallelDescriptor::IOProcessorNumber());
