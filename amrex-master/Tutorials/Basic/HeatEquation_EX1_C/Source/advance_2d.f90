@@ -1,10 +1,25 @@
 
+subroutine H_epsilon(x,epsilon,H_epsilon_output)
+
+  use amrex_fort_module, only : amrex_real
+  implicit none
+  real(amrex_real), intent(in) :: x
+  real(amrex_real), intent(in) :: epsilon
+  real(amrex_real), intent(out) :: H_epsilon_output
+
+  H_epsilon_output=1.0d0/(1.0d0+exp(-x/epsilon))
+
+  return
+  end subroutine H_epsilon
+
 subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
                          fluxx, fxlo, fxhi, fluxy, fylo, fyhi, &
                          dx,bc_vector,bc_value, &
                          dirichlet_condition, &
                          neumann_condition, &
-                         periodic_condition) bind(C, name="compute_flux")
+                         periodic_condition, &
+                         a_vector, &
+                         flux_type) bind(C, name="compute_flux")
 
   use amrex_fort_module, only : amrex_real
   implicit none
@@ -26,6 +41,11 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   integer, intent(in) :: dirichlet_condition
   integer, intent(in) :: neumann_condition
   integer, intent(in) :: periodic_condition
+  real(amrex_real), intent(in) :: a_vector(2)
+   ! flux_type==0  F(u)=-grad u
+   ! flux_type==1  F(u)=a_vector u
+   ! flux_type==2  F(u)=a_vector u^2/2
+  integer, intent(in) :: flux_type
 
   ! local variables
   integer i,j

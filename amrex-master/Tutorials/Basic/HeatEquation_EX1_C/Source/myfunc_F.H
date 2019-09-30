@@ -32,7 +32,9 @@ extern "C"
                       int* bc_vector,amrex_real* bc_value,
                       int* dirichlet_condition,
                       int* neumann_condition,
-                      int* periodic_condition);
+                      int* periodic_condition,
+                      amrex_real* a_vector,
+                      int* flux_type);
 
     void update_phi(const int* lo, const int* hi,
                     amrex_real* pold, const int* polo, const int* pohi,

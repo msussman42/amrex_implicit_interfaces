@@ -201,6 +201,7 @@ void main_main ()
 
         // new_phi = old_phi + dt * (something)
         advance(phi_old, phi_new, flux, dt, geom,
+		a_vector,flux_type,
 		bc_vector,bc_value,dirichlet_condition,
                 neumann_condition,periodic_condition); 
         time = time + dt;
@@ -223,7 +224,8 @@ void main_main ()
 
           compute_dt(BL_TO_FORTRAN_BOX(bx),
                  BL_TO_FORTRAN_ANYD(phi_new[mfi]),
-		 a_vector.dataPtr(),&flux_type,&dt,
+		 a_vector.dataPtr(),&flux_type,
+                 &dt,
                  geom.CellSize(), geom.ProbLo(), geom.ProbHi());
         } 
         ParallelDescriptor::Barrier();

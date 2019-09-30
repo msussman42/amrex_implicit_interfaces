@@ -9,12 +9,14 @@ void advance (MultiFab& phi_old,
 	      Array<MultiFab, AMREX_SPACEDIM>& flux,
 	      Real dt,
               const Geometry& geom,
+              Vector<Real> a_vector,
+              int flux_type,
               Vector<int> bc_vector,
               Vector<Real> bc_value,
               int dirichlet_condition,
               int neumann_condition,
               int periodic_condition)
-{
+{  
     // Fill the ghost cells of each grid from the other grids
     // includes periodic domain boundaries
     phi_old.FillBoundary(geom.periodicity());
@@ -51,7 +53,9 @@ void advance (MultiFab& phi_old,
                      bc_value.dataPtr(),
                      &dirichlet_condition,
                      &neumann_condition,
-                     &periodic_condition);
+                     &periodic_condition,
+                     a_vector.dataPtr(),
+                     &flux_type);
     }
     
     // Advance the solution one grid at a time
