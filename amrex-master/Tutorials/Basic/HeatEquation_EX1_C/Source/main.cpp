@@ -35,14 +35,14 @@ void main_main ()
     a_vector[0]=2.0;
     a_vector[1]=1.0;
 
-    // u_{t} + divergence F(u) =0
+    // u_{t} - divergence F(u) =0
     // flux_type==0 => heat equation =>
-    //   F(u)=-grad u
+    //   F(u)=grad u
     // flux_type==1 => linear advection equation =>
-    //   F(u)=a_vector u
+    //   F(u)=-a_vector u
     // flux_type==2 => inviscid Burger's equation
-    //   F(u)=a_vector u^{2}/2     
-    int flux_type=1;
+    //   F(u)=-a_vector u^{2}/2     
+    int flux_type=0;
 
     Vector<int> bc_vector(AMREX_SPACEDIM*2,periodic_condition);
     // default is Real=double  (also known as REAL*8 in fortran)

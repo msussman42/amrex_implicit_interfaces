@@ -12,6 +12,53 @@ subroutine H_epsilon(x,epsilon,H_epsilon_output)
   return
   end subroutine H_epsilon
 
+  subroutine custom_flux(flux,uleft,uright,Delta,a,flux_type)
+  use amrex_fort_module, only : amrex_real
+  implicit none
+  
+  real(amrex_real), intent(out) :: flux
+  real(amrex_real), intent(in) :: uleft
+  real(amrex_real), intent(in) :: uright
+  real(amrex_real), intent(in) :: Delta
+  real(amrex_real), intent(in) :: a
+  real(amrex_real) :: eps1,eps2,eps3,eps4
+
+   ! u_t = div(F(u)
+   ! flux_type==0  F(u)=grad u
+   ! flux_type==1  F(u)=-a_vector u
+   ! flux_type==2  F(u)=-a_vector u^2/2
+  integer, intent(in) :: flux_type
+
+  real(amrex_real) :: du,sleft,sright,H1,H2,H3,H4
+
+  eps1=1.0D-3
+  eps2=eps1
+  eps3=eps2
+  eps4=eps3
+
+  if (flux_type.eq.0) then
+   flux=(uright-uleft)/Delta
+  else if (flux_type.eq.1) then
+   call H_epsilon(a,eps1,H1)
+   flux=-( H1*uleft*a + (1.0d0-H1)*uright*a )
+  else if (flux_type.eq.2) then
+   du=a*(uleft-uright)
+   call H_epsilon(du,eps1,H1)
+   sleft=H1*0.5d0*a*(uleft+uright)+(1.0d0-H1)*a*uleft
+   call H_epsilon(du,eps2,H2)
+   sright=H2*0.5d0*a*(uleft+uright)+(1.0d0-H2)*a*uright
+   call H_epsilon(sleft,eps3,H3)
+   call H_epsilon(sright,eps4,H4)
+   flux=-( H3*a*uleft*uleft*0.5d0+ &
+           (1.0d0-H3)*( (1.0d0-H4)*a*uright*uright*0.5d0 ) )
+  else
+   print *,"flux_type invalid"
+   stop
+  endif
+
+  return
+  end subroutine custom_flux
+   
 subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
                          fluxx, fxlo, fxhi, fluxy, fylo, fyhi, &
                          dx,bc_vector,bc_value, &
@@ -42,23 +89,32 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   integer, intent(in) :: neumann_condition
   integer, intent(in) :: periodic_condition
   real(amrex_real), intent(in) :: a_vector(2)
-   ! flux_type==0  F(u)=-grad u
-   ! flux_type==1  F(u)=a_vector u
-   ! flux_type==2  F(u)=a_vector u^2/2
+   ! u_t = div F(u)
+   ! flux_type==0  F(u)=grad u
+   ! flux_type==1  F(u)=-a_vector u
+   ! flux_type==2  F(u)=-a_vector u^2/2
   integer, intent(in) :: flux_type
 
   ! local variables
   integer i,j
+  real(amrex_real) :: phi_left,phi_right,Delta
 
   ! x-fluxes
   do j = lo(2), hi(2)
   do i = lo(1), hi(1)+1
-     fluxx(i,j) = ( phi(i,j) - phi(i-1,j) ) / dx(1)
+     phi_left=phi(i-1,j)
+     phi_right=phi(i,j)
+     Delta=dx(1)
+
      if (i.eq.lo(1)) then
       if (bc_vector(1).eq.dirichlet_condition) then
-       fluxx(i,j)= (phi(i,j)-bc_value(1))/(0.5d0*dx(1))
-      else if (bc_vector(1).eq.neumann_condition) then
-       fluxx(i,j)=-bc_value(1)
+       Delta=0.5d0*dx(1)
+       phi_left=bc_value(1)
+      else if  (bc_vector(1).eq.neumann_condition) then
+       Delta=0.5d0*dx(1)
+        ! (phi_right-phi_left)/Delta=-bc_value(1)
+        ! phi_left=Delta*bc_value(1)+phi_right
+       phi_left=Delta*bc_value(1)+phi_right
       else if (bc_vector(1).eq.periodic_condition) then
        ! do nothing
       else
@@ -69,9 +125,13 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
 
      if (i.eq.hi(1)+1) then
       if (bc_vector(2).eq.dirichlet_condition) then
-       fluxx(i,j)= (bc_value(2)-phi(i-1,j))/(0.5d0*dx(1))
-      else if (bc_vector(2).eq.neumann_condition) then
-       fluxx(i,j)=bc_value(2)
+       Delta=0.5d0*dx(1)
+       phi_right=bc_value(2)
+      else if  (bc_vector(2).eq.neumann_condition) then
+       Delta=0.5d0*dx(1)
+        ! (phi_right-phi_left)/Delta=bc_value(2)
+        ! phi_right=Delta*bc_value(2)+phi_left
+       phi_right=Delta*bc_value(2)+phi_left
       else if (bc_vector(2).eq.periodic_condition) then
        ! do nothing
       else
@@ -80,19 +140,29 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
       endif
      endif
 
+     call custom_flux(fluxx(i,j),phi_left,phi_right,Delta, &
+       a_vector(1),flux_type)
+
   end do
   end do
 
   ! y-fluxes
   do j = lo(2), hi(2)+1
   do i = lo(1), hi(1)
-     fluxy(i,j) = ( phi(i,j) - phi(i,j-1) ) / dx(2)
+
+     phi_left=phi(i,j-1)
+     phi_right=phi(i,j)
+     Delta=dx(2)
 
      if (j.eq.lo(2)) then
       if (bc_vector(3).eq.dirichlet_condition) then
-       fluxy(i,j)= (phi(i,j)-bc_value(3))/(0.5d0*dx(2))
-      else if (bc_vector(3).eq.neumann_condition) then
-       fluxy(i,j)=-bc_value(3)
+       Delta=0.5d0*dx(2)
+       phi_left=bc_value(3)
+      else if  (bc_vector(3).eq.neumann_condition) then
+       Delta=0.5d0*dx(2)
+        ! (phi_right-phi_left)/Delta=-bc_value(3)
+        ! phi_left=Delta*bc_value(1)+phi_right
+       phi_left=Delta*bc_value(3)+phi_right
       else if (bc_vector(3).eq.periodic_condition) then
        ! do nothing
       else
@@ -101,11 +171,15 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
       endif
      endif
 
-     if (j.eq.hi(2)+1) then
+     if (i.eq.hi(2)+1) then
       if (bc_vector(4).eq.dirichlet_condition) then
-       fluxy(i,j)= (bc_value(4)-phi(i,j-1))/(0.5d0*dx(2))
-      else if (bc_vector(4).eq.neumann_condition) then
-       fluxy(i,j)=bc_value(4)
+       Delta=0.5d0*dx(2)
+       phi_right=bc_value(4)
+      else if  (bc_vector(4).eq.neumann_condition) then
+       Delta=0.5d0*dx(2)
+        ! (phi_right-phi_left)/Delta=bc_value(4)
+        ! phi_right=Delta*bc_value(4)+phi_left
+       phi_right=Delta*bc_value(4)+phi_left
       else if (bc_vector(4).eq.periodic_condition) then
        ! do nothing
       else
@@ -113,6 +187,9 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
        stop
       endif
      endif
+
+     call custom_flux(fluxy(i,j),phi_left,phi_right,Delta, &
+       a_vector(2),flux_type)
 
   end do
   end do

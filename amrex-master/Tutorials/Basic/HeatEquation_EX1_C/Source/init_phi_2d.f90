@@ -1,9 +1,11 @@
-subroutine init_phi(lo, hi, phi, philo, phihi, dx, prob_lo, prob_hi) bind(C, name="init_phi")
+subroutine init_phi(lo, hi, phi, philo, phihi, dx, prob_lo, prob_hi, &
+ probtype) bind(C, name="init_phi")
 
   use amrex_fort_module, only : amrex_real
 
   implicit none
 
+  integer, intent(in) :: probtype
   integer, intent(in) :: lo(2), hi(2), philo(2), phihi(2)
   real(amrex_real), intent(inout) :: phi(philo(1):phihi(1),philo(2):phihi(2))
   real(amrex_real), intent(in   ) :: dx(2) 
@@ -20,9 +22,16 @@ subroutine init_phi(lo, hi, phi, philo, phihi, dx, prob_lo, prob_hi) bind(C, nam
 
 !        r2 = ((x-0.25d0)**2 + (y-0.25d0)**2) / 0.01d0
 !         r2 = (((x-0.25d0)/4.0d0)**2 + (y-0.25d0)**2)/0.01d0
-         r2 = x
+       if (probtype.eq.1) then
+        r2 = x
         phi(i,j) = 1.d0 + exp(-r2)
-
+       else if (probtype.eq.2) then
+        r2 = ((x-0.25d0)**2 + (y-0.25d0)**2) / 0.01d0
+        phi(i,j) =1.0d0+exp(-r2)
+       else
+        print *,"probtype out of range in init_phi"
+        stop
+       endif
      end do
   end do
 
