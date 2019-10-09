@@ -25,7 +25,9 @@ void main_main ()
 
     // AMREX_SPACEDIM: number of dimensions
     int n_cell, max_grid_size, nsteps, plot_int;
-    Vector<int> is_periodic(AMREX_SPACEDIM,1);  // periodic in all direction by default
+     
+     // is_periodic(dir)=1 in all direction by default (dir=0,1,.., sdim-1)
+    Vector<int> is_periodic(AMREX_SPACEDIM,1);  
 
     int dirichlet_condition=1;
     int neumann_condition=2;
@@ -44,6 +46,7 @@ void main_main ()
     //   F(u)=-a_vector u^{2}/2     
     int flux_type=0;
 
+      // bc_vector(dir)=periodic_condition
     Vector<int> bc_vector(AMREX_SPACEDIM*2,periodic_condition);
     // default is Real=double  (also known as REAL*8 in fortran)
     Vector<Real> bc_value(AMREX_SPACEDIM*2,0.0); // default homogeneous
@@ -72,12 +75,25 @@ void main_main ()
         pp.queryarr("is_periodic", is_periodic);
     }
 
-    int probtype=0; // all periodic conditions
-    probtype=1;  // all dirichlet conditions
+    int probtype=0; // all periodic conditions (heat equation)
+    probtype=1;  // all dirichlet conditions (heat equation)
+    probtype=2;  // linear advection in the x direction u_t + u_x =0
 
     if (probtype==0) {
-      // all periodic
+      // NOTE: periodic boundary conditions must be indicated in the inputs
+      //  file too.
+      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+	for (int side=0;side<=1;side++) {
+	  int index=2*dir+side;
+          bc_vector[index]=periodic_condition;
+	}
+       }
+      flux_type=0;
+      a_vector[0]=1.0;
+      a_vector[1]=1.0;
+
     } else if (probtype==1) {
+
       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 	for (int side=0;side<=1;side++) {
 	  int index=2*dir+side;
@@ -110,6 +126,29 @@ void main_main ()
        index=2*dir+side;
        bc_value[index]=1.0;
 
+       flux_type=0;
+       a_vector[0]=1.0;
+       a_vector[1]=1.0;
+
+    } else if (probtype==2) {
+
+        // periodic boundary conditions (default) ylo and yhi
+       int dir=0;
+       int side=0;
+       int index=2*dir+side;
+       bc_vector[index]=dirichlet_condition;
+       bc_value[index]=2.0;
+        // xhi
+       dir=0;
+       side=1;
+       index=2*dir+side;
+       bc_vector[index]=neumann_condition;
+       bc_value[index]=0.0;
+   
+       flux_type=1;
+       a_vector[0]=1.0;
+       a_vector[1]=0.0;
+    
     } else
       amrex::Error("probtype invalid");
 
@@ -155,7 +194,8 @@ void main_main ()
 
         init_phi(BL_TO_FORTRAN_BOX(bx),
                  BL_TO_FORTRAN_ANYD(phi_new[mfi]),           
-                 geom.CellSize(), geom.ProbLo(), geom.ProbHi());
+                 geom.CellSize(), geom.ProbLo(), geom.ProbHi(),
+                 &probtype);
     }
     ParallelDescriptor::Barrier();    
 
