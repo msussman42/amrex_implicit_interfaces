@@ -13,7 +13,7 @@ subroutine init_phi(lo, hi, phi, philo, phihi, dx, prob_lo, prob_hi, &
   real(amrex_real), intent(in   ) :: prob_hi(2) 
 
   integer          :: i,j
-  double precision :: x,y,r2
+  double precision :: x,y,r2,local_pi
 
   do j = lo(2), hi(2)
      y = prob_lo(2) + (dble(j)+0.5d0) * dx(2)
@@ -28,6 +28,9 @@ subroutine init_phi(lo, hi, phi, philo, phihi, dx, prob_lo, prob_hi, &
        else if (probtype.eq.2) then
         r2 = ((x-0.25d0)**2 + (y-0.25d0)**2) / 0.01d0
         phi(i,j) =1.0d0+exp(-r2)
+       else if (probtype.eq.3) then
+        local_pi=4.0d0*atan(1.0d0)
+        phi(i,j) =sin(local_pi*x)
        else
         print *,"probtype out of range in init_phi"
         stop
