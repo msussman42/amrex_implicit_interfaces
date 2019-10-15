@@ -1275,10 +1275,15 @@ Amr::checkInput ()
 
          // the number of coarse grid proper nesting cells for level i+1
          // is blocking_factor[i]/2
-        if (i<max_level) {
+        if ((i>=0)&&(i<max_level)) {
+         if (blocking_factor[i]<k)
+          amrex::Error("bfact_grid>=space_blocking_Factor required");
          if (blocking_factor[i]<2*k)
           amrex::Error("bfact_grid>=2*space_blocking_Factor required");
-        }
+        } else if (i==max_level) {
+ 	 // do nothing
+	} else
+	 BoxLib::Error("i invalid");
 
         while ( k > 0 && (k%2 == 0) )
             k /= 2;
