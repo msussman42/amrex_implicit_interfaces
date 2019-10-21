@@ -71,6 +71,12 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   use amrex_fort_module, only : amrex_real
   implicit none
 
+   ! THESE VARIABLES HAVE TO BE PASSED IN AS PARAMETERS.
+  real(amrex_real), intent(in) :: problo(2)  ! Lower Left corner of domain..
+  real(amrex_real), intent(in) :: time_n     ! time at beginning of step.
+  real(amrex_real), intent(in) :: time_np1   ! time at end of step
+  integer, intent(in) :: probtype
+ 
   integer lo(2), hi(2), domlo(2), domhi(2)
   integer philo(2), phihi(2), fxlo(2), fxhi(2), fylo(2), fyhi(2)
   real(amrex_real), intent(in)    :: phi  (philo(1):phihi(1),philo(2):phihi(2))
@@ -203,6 +209,12 @@ subroutine update_phi (lo, hi, phiold, polo, pohi, phinew, pnlo, pnhi, &
 
   use amrex_fort_module, only : amrex_real
   implicit none
+
+   ! THESE VARIABLES HAVE TO BE PASSED IN AS PARAMETERS.
+  real(amrex_real), intent(in) :: problo(2)  ! Lower Left corner of domain..
+  real(amrex_real), intent(in) :: time_n     ! time at beginning of step.
+  real(amrex_real), intent(in) :: time_np1   ! time at end of step
+  integer, intent(in) :: probtype
 
   integer lo(2), hi(2), polo(2), pohi(2), pnlo(2), pnhi(2), fxlo(2), fxhi(2), fylo(2), fyhi(2)
   real(amrex_real), intent(in)    :: phiold(polo(1):pohi(1),polo(2):pohi(2))
