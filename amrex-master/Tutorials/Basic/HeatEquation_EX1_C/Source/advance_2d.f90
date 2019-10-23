@@ -59,6 +59,20 @@ subroutine H_epsilon(x,epsilon,H_epsilon_output)
   return
   end subroutine custom_flux
    
+subroutine set_boundary_condition(x,y,tn,tnp1,probtype, &
+  default_bc_value,dir,side,gfunction)
+ use amrex_fort_module, only : amrex_real
+ IMPLICIT NONE
+
+ real(amrex_real), intent(in) :: x,y,tn,tnp1,default_bc_value
+ real(amrex_real), intent(out) :: gfunction
+ integer, intent(in) :: probtype,dir,side
+
+ gfunction=default_bc_value
+
+ return
+ end subroutine set_boundary_condition
+
 subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
                          fluxx, fxlo, fxhi, fluxy, fylo, fyhi, &
                          dx,bc_vector,bc_value, &
@@ -66,7 +80,9 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
                          neumann_condition, &
                          periodic_condition, &
                          a_vector, &
-                         flux_type) bind(C, name="compute_flux")
+                         flux_type, &
+                         problo,time_n,time_np1, &
+                         probtype) bind(C, name="compute_flux")
 
   use amrex_fort_module, only : amrex_real
   implicit none
@@ -104,23 +120,31 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   ! local variables
   integer i,j
   real(amrex_real) :: phi_left,phi_right,Delta
+  integer dir,side
 
   ! x-fluxes
+  dir=1
   do j = lo(2), hi(2)
   do i = lo(1), hi(1)+1
      phi_left=phi(i-1,j)
      phi_right=phi(i,j)
      Delta=dx(1)
+     x=problo(1)+(i-lo(1))*dx(1)
+     y=problo(2)+(j-lo(2)+0.5d0)*dx(2)
 
      if (i.eq.lo(1)) then
+      side=1
+      call get_boundary_condition(x,y,time_n,time_np1, &
+         probtype,bc_value(1),dir,side,gfunction)
+
       if (bc_vector(1).eq.dirichlet_condition) then
        Delta=0.5d0*dx(1)
-       phi_left=bc_value(1)
+       phi_left=gfunction
       else if  (bc_vector(1).eq.neumann_condition) then
        Delta=0.5d0*dx(1)
         ! (phi_right-phi_left)/Delta=-bc_value(1)
         ! phi_left=Delta*bc_value(1)+phi_right
-       phi_left=Delta*bc_value(1)+phi_right
+       phi_left=Delta*gfunction+phi_right
       else if (bc_vector(1).eq.periodic_condition) then
        ! do nothing
       else
@@ -130,14 +154,18 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
      endif
 
      if (i.eq.hi(1)+1) then
+      side=2
+      call get_boundary_condition(x,y,time_n,time_np1, &
+         probtype,bc_value(2),dir,side,gfunction)
+
       if (bc_vector(2).eq.dirichlet_condition) then
        Delta=0.5d0*dx(1)
-       phi_right=bc_value(2)
+       phi_right=gfunction
       else if  (bc_vector(2).eq.neumann_condition) then
        Delta=0.5d0*dx(1)
         ! (phi_right-phi_left)/Delta=bc_value(2)
         ! phi_right=Delta*bc_value(2)+phi_left
-       phi_right=Delta*bc_value(2)+phi_left
+       phi_right=Delta*gfunction+phi_left
       else if (bc_vector(2).eq.periodic_condition) then
        ! do nothing
       else
@@ -153,6 +181,7 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
   end do
 
   ! y-fluxes
+  dir=2
   do j = lo(2), hi(2)+1
   do i = lo(1), hi(1)
 
@@ -161,9 +190,13 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
      Delta=dx(2)
 
      if (j.eq.lo(2)) then
+      side=1
+      call get_boundary_condition(x,y,time_n,time_np1, &
+         probtype,bc_value(3),dir,side,gfunction)
+
       if (bc_vector(3).eq.dirichlet_condition) then
        Delta=0.5d0*dx(2)
-       phi_left=bc_value(3)
+       phi_left=gfunction
       else if  (bc_vector(3).eq.neumann_condition) then
        Delta=0.5d0*dx(2)
         ! (phi_right-phi_left)/Delta=-bc_value(3)
@@ -178,14 +211,18 @@ subroutine compute_flux (lo, hi, domlo, domhi, phi, philo, phihi, &
      endif
 
      if (i.eq.hi(2)+1) then
+      side=2
+      call get_boundary_condition(x,y,time_n,time_np1, &
+         probtype,bc_value(4),dir,side,gfunction)
+
       if (bc_vector(4).eq.dirichlet_condition) then
        Delta=0.5d0*dx(2)
-       phi_right=bc_value(4)
+       phi_right=gunction
       else if  (bc_vector(4).eq.neumann_condition) then
        Delta=0.5d0*dx(2)
         ! (phi_right-phi_left)/Delta=bc_value(4)
         ! phi_right=Delta*bc_value(4)+phi_left
-       phi_right=Delta*bc_value(4)+phi_left
+       phi_right=Delta*gfunction+phi_left
       else if (bc_vector(4).eq.periodic_condition) then
        ! do nothing
       else

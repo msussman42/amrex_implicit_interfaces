@@ -269,7 +269,7 @@ void main_main ()
         advance(phi_old, phi_new, flux, dt, geom,
 		a_vector,flux_type,
 		bc_vector,bc_value,dirichlet_condition,
-                neumann_condition,periodic_condition); 
+                neumann_condition,periodic_condition,time,probtype); 
         time = time + dt;
         
         // Tell the I/O Processor to write out which step we're doing

@@ -15,7 +15,9 @@ void advance (MultiFab& phi_old,
               Vector<Real> bc_value,
               int dirichlet_condition,
               int neumann_condition,
-              int periodic_condition)
+              int periodic_condition,
+              Real time_n,
+              int probtype)
 {  
     // Fill the ghost cells of each grid from the other grids
     // includes periodic domain boundaries
@@ -26,6 +28,7 @@ void advance (MultiFab& phi_old,
     int ng_f = flux[0].nGrow();
 
     const Real* dx = geom.CellSize();
+    Real time_np1=time_n+dt;
 
     //
     // Note that this simple example is not optimized.
@@ -55,7 +58,9 @@ void advance (MultiFab& phi_old,
                      &neumann_condition,
                      &periodic_condition,
                      a_vector.dataPtr(),
-                     &flux_type);
+                     &flux_type,
+                     geom.ProbLo(),&time_n,&time_np1,
+                     &probtype);
     }
     
     // Advance the solution one grid at a time
