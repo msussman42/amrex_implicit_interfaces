@@ -7,7 +7,7 @@ using namespace amrex;
 void advance (MultiFab& phi_old,
               MultiFab& phi_new,
 	      Array<MultiFab, AMREX_SPACEDIM>& flux,
-	      Real dt,
+	      amrex::Real dt,
               const Geometry& geom,
               Vector<Real> a_vector,
               int flux_type,
@@ -16,7 +16,7 @@ void advance (MultiFab& phi_old,
               int dirichlet_condition,
               int neumann_condition,
               int periodic_condition,
-              Real time_n,
+              amrex::Real time_n,
               int probtype)
 {  
     // Fill the ghost cells of each grid from the other grids
@@ -27,8 +27,8 @@ void advance (MultiFab& phi_old,
     int ng_p = phi_old.nGrow();
     int ng_f = flux[0].nGrow();
 
-    const Real* dx = geom.CellSize();
-    Real time_np1=time_n+dt;
+    const amrex::Real* dx = geom.CellSize();
+    amrex::Real time_np1=time_n+dt;
 
     //
     // Note that this simple example is not optimized.
@@ -59,7 +59,9 @@ void advance (MultiFab& phi_old,
                      &periodic_condition,
                      a_vector.dataPtr(),
                      &flux_type,
-                     geom.ProbLo(),&time_n,&time_np1,
+                     geom.ProbLo(),
+                     &time_n,
+                     &time_np1,
                      &probtype);
     }
     
@@ -76,6 +78,8 @@ void advance (MultiFab& phi_old,
 #if (AMREX_SPACEDIM == 3)   
                    BL_TO_FORTRAN_ANYD(flux[2][mfi]),
 #endif
-                   dx, &dt);
+                   dx, &dt,
+                   geom.ProbLo(),&time_n,&time_np1,
+                   &probtype);
     }
 }

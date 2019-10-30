@@ -17,7 +17,8 @@ extern "C"
     void compute_dt(const int* lo, const int* hi,
                   amrex_real* data, const int* dlo, const int* dhi,
 		  amrex_real* a_vector,int* flux_type,amrex_real* dt,
-                  const amrex_real* dx, const amrex_real* prob_lo, const amrex_real* prob_hi);
+                  const amrex_real* dx, const amrex_real* prob_lo, 
+                  const amrex_real* prob_hi);
     
 
 
@@ -37,9 +38,9 @@ extern "C"
                       int* periodic_condition,
                       amrex_real* a_vector,
                       int* flux_type,
-                      amrex real* problo,
-                      amrex real* time_n,amrex real* time_np1,
-                      int probtype);
+                      const amrex_real* problo,
+                      amrex_real* time_n,amrex_real* time_np1,
+                      int* probtype);
 
     void update_phi(const int* lo, const int* hi,
                     amrex_real* pold, const int* polo, const int* pohi,
@@ -49,7 +50,9 @@ extern "C"
 #if (BL_SPACEDIM == 3)   
                     amrex_real* fluxz, const int* fzlo, const int* fzhi,
 #endif
-                    const amrex_real* dx, const amrex_real* dt);
+                    const amrex_real* dx, const amrex_real* dt,
+                    const amrex_real* problo,amrex_real* time_n,
+                    amrex_real* time_np1,int* probtype);
 
 #ifdef __cplusplus
 }

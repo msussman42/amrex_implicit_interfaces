@@ -20,6 +20,8 @@ void advance (amrex::MultiFab& phi_old,
               amrex::Vector<amrex::Real> bc_value,
               int dirichlet_condition,
               int neumann_condition,
-              int periodic_condition);
+              int periodic_condition,
+              amrex::Real time,
+              int probtype);
 
 #endif
