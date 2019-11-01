@@ -1,3 +1,5 @@
+# in bash:
+# git rm $(git ls-files --deleted)
 # git clone https://github.com/AMReX-Codes/amrex.git
 AMREX_HOME = ../amrex-master
 MOF_HOME = ..
