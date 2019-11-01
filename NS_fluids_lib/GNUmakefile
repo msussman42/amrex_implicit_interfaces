@@ -1,4 +1,6 @@
 # in bash:
+# git add -u  --> deletes all removed files, updates modifications, and adds 
+#     new files.
 # git rm $(git ls-files --deleted)
 # git clone https://github.com/AMReX-Codes/amrex.git
 AMREX_HOME = ../amrex-master
