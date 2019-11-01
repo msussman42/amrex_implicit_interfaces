@@ -1428,13 +1428,13 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T FSI_prescribed_flag
-      INTEGER_T color,dir,blob_array_size,num_colors
-      INTEGER_T num_elements_blobclass
-      REAL_T xrigid(SDIM)
+      INTEGER_T, intent(out) :: FSI_prescribed_flag
+      INTEGER_T, intent(in) :: color,dir,blob_array_size,num_colors
+      INTEGER_T, intent(in) :: num_elements_blobclass
+      REAL_T, intent(in) :: xrigid(SDIM)
       REAL_T xrigid3D(3)
-      REAL_T vel
-      REAL_T blob_array(blob_array_size)
+      REAL_T, intent(out) :: vel
+      REAL_T, intent(in) :: blob_array(blob_array_size)
       INTEGER_T nmat
       INTEGER_T cen_comp,vel_comp,vol_comp
       INTEGER_T ibase
@@ -2303,9 +2303,9 @@ contains
        ngrow,dir,id)
       IMPLICIT NONE
 
-      INTEGER_T    lo(SDIM), hi(SDIM)
-      INTEGER_T    DIMDEC(data)
-      INTEGER_T    ngrow,dir,id
+      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
+      INTEGER_T, intent(in) ::  DIMDEC(data)
+      INTEGER_T, intent(in) ::  ngrow,dir,id
 
       INTEGER_T ii(SDIM)
 
@@ -2725,9 +2725,10 @@ contains
       use probcommon_module
       use LegendreNodes
 
-      REAL_T dx(SDIM)
-      INTEGER_T bfact,dir
-      REAL_T dxmin
+      REAL_T,intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T dir
+      REAL_T, intent(out) :: dxmin
       REAL_T delta
       REAL_T delta_gauss
       REAL_T RR
@@ -2783,9 +2784,11 @@ contains
       use probcommon_module
       use LegendreNodes
 
-      REAL_T dx(SDIM)
-      INTEGER_T bfact,dir
-      REAL_T dxmax,delta,RR,xL,xR
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T dir
+      REAL_T, intent(out) :: dxmax
+      REAL_T delta,RR,xL,xR
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -2836,9 +2839,11 @@ contains
       use probcommon_module
       use LegendreNodes
 
-      REAL_T dx(SDIM)
-      INTEGER_T bfact,dir
-      REAL_T dxmax,delta,xL,xR
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T dir
+      REAL_T, intent(out) :: dxmax
+      REAL_T delta,xL,xR
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -2876,9 +2881,9 @@ contains
 
       IMPLICIT NONE
 
-      REAL_T x(SDIM)
-      REAL_T vel(SDIM)
-      REAL_T velT(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: vel(SDIM)
+      REAL_T, intent(out) :: velT(SDIM)
       INTEGER_T dir
      
       do dir=1,SDIM
@@ -2983,7 +2988,8 @@ contains
       subroutine get_iten(im1,im2,iten,nmat)
       IMPLICIT NONE
 
-      INTEGER_T im1,im2,iten,nmat
+      INTEGER_T, intent(in) :: im1,im2,nmat
+      INTEGER_T, intent(out) :: iten
       INTEGER_T im,im_opp
       INTEGER_T im_iter
       INTEGER_T previous_count
@@ -3077,9 +3083,10 @@ contains
 
 
       subroutine get_furthest_material(m_crit,dist_crit, &
-        vfrac,x_cen,x_uncapt,nmat,tessellate)
+        vfrac,x_cen,x_uncapt,nmat,tessellate,face_dir)
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: face_dir
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(out) :: m_crit
@@ -3090,6 +3097,13 @@ contains
       INTEGER_T :: m,dir
       REAL_T :: dist
 
+      if ((face_dir.ge.1).and.(face_dir.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"face_dir invalid"
+       stop
+      endif
+
       m_crit=0
       dist_crit=0.0d0
       do m=1,nmat
@@ -3099,7 +3113,14 @@ contains
         if (vfrac(m).gt.0.0d0) then
          dist=0.0d0
          do dir=1,SDIM
-          dist=dist+(x_uncapt(dir)-x_cen(dir,m))**2
+          if (dir.eq.face_dir) then
+           ! do nothing
+          else if (dir.ne.face_dir) then
+           dist=dist+(x_uncapt(dir)-x_cen(dir,m))**2
+          else
+           print *,"face_dir bust"
+           stop
+          endif
          enddo
          dist=sqrt(dist)
          
@@ -3136,10 +3157,11 @@ contains
         x_uncapt_in,x_uncapt_out, &
         F_uncapt_in,F_uncapt_out, &
         F_in,F_out,x_in,x_out,L_face, &
-        tessellate)
+        tessellate,face_dir)
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: face_dir
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(out) :: x_uncapt_in(SDIM) 
@@ -3152,7 +3174,15 @@ contains
       REAL_T, intent(in) :: x_out(SDIM,nmat)
       REAL_T, intent(in) :: L_face
       INTEGER_T dir,m
+      INTEGER_T all_fluids_flag
       REAL_T dist
+
+      if ((face_dir.ge.1).and.(face_dir.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"face_dir invalid"
+       stop
+      endif
 
       do dir=1,SDIM
        x_uncapt_in(dir)=0.0d0
@@ -3160,7 +3190,19 @@ contains
       enddo
       F_uncapt_in=0.0d0
       F_uncapt_out=0.0d0
+
+      all_fluids_flag=1
+
       do m=1,nmat
+
+       if (is_rigid(nmat,m).eq.0) then
+        ! do nothing
+       else if (is_rigid(nmat,m).eq.1) then
+        all_fluids_flag=0
+       else
+        print *,"is_rigid invalid"
+        stop
+       endif
 
        if ((tessellate.eq.1).or.(is_rigid(nmat,m).eq.0)) then
         F_uncapt_in=F_uncapt_in+F_in(m)
@@ -3189,13 +3231,38 @@ contains
         print *,"levelrz or SDIM invalid"
         stop
        endif
-       dist=dist+(x_uncapt_in(dir)-x_uncapt_out(dir))**2
-      enddo
+       if (dir.eq.face_dir) then
+        ! do nothing
+       else if (dir.ne.face_dir) then
+        dist=dist+(x_uncapt_in(dir)-x_uncapt_out(dir))**2
+       else
+        print *,"face_dir bust"
+        stop
+       endif
+      enddo ! dir=1..sdim
       dist=sqrt(dist)
-      if (dist.le.L_face*1.0D-3) then
+      if ((dist.ge.zero).and.(dist.le.L_face*1.0D-3)) then
        ! do nothing
+      else if (dist.ge.zero) then
+       if ((SDIM.eq.2).and.(all_fluids_flag.eq.1)) then
+        print *,"face_dir= ",face_dir
+        print *,"x_uncapt_in(dir)-x_uncapt_out(dir) bad"
+        do m=1,nmat
+         print *,"m,F_in(m),F_out(m) ",m,F_in(m),F_out(m)
+         do dir=1,SDIM
+          print *,"m,dir,x_in(dir,m),x_out(dir,m) ", &
+              m,dir,x_in(dir,m),x_out(dir,m)
+         enddo
+        enddo
+        stop
+       else if ((SDIM.eq.3).or.(all_fluids_flag.eq.0)) then
+        ! do nothing
+       else
+        print *,"sdim or all_fluids_flag invalid"
+        stop
+       endif
       else
-       print *,"x_uncapt_in(dir)-x_uncapt_out(dir) bad"
+       print *,"dist bust"
        stop
       endif 
 
@@ -3322,10 +3389,12 @@ contains
 
        ! fill in frac_pair(m_outside,m_inside),x_pair(m_outside,m_inside)
       subroutine vfrac_pair_along_side(nmat,frac_outside,frac_inside, &
-           x_outside,x_inside,frac_pair,x_pair,L_face,tessellate)
+           x_outside,x_inside,frac_pair,x_pair,L_face,tessellate, &
+           face_dir)
         use probcommon_module
         implicit none
 
+        INTEGER_T, intent(in) :: face_dir
         INTEGER_T, intent(in) :: tessellate
         INTEGER_T,intent(in) :: nmat
         REAL_T, intent(in)   :: L_face
@@ -3350,6 +3419,12 @@ contains
         REAL_T  :: local_frac_pair
         REAL_T  :: local_x_pair(SDIM)
 
+        if ((face_dir.ge.1).and.(face_dir.le.SDIM)) then
+         ! do nothing
+        else
+         print *,"face_dir invalid"
+         stop
+        endif
 
         do m=1,nmat
          local_frac_outside(m)=frac_outside(m)
@@ -3426,7 +3501,7 @@ contains
           F_uncaptured_inside,F_uncaptured_outside, &
           local_frac_inside,local_frac_outside, &
           local_x_inside,local_x_outside,L_face, &
-          tessellate)
+          tessellate,face_dir)
 
         if ((abs(F_uncaptured_inside-1.0d0).le.VOFTOL).and. &
             (abs(F_uncaptured_outside-1.0d0).le.VOFTOL)) then
@@ -3451,11 +3526,11 @@ contains
        
          call get_furthest_material(m_in_crit,dist_in_crit, &
           local_frac_inside,local_x_inside,x_uncaptured_inside,nmat, &
-          tessellate)
+          tessellate,face_dir)
 
          call get_furthest_material(m_out_crit,dist_out_crit, &
           local_frac_outside,local_x_outside,x_uncaptured_outside,nmat, &
-          tessellate)
+          tessellate,face_dir)
 
          if ((m_in_crit.ge.1).and.(m_in_crit.le.nmat).and. &
              (m_out_crit.ge.1).and.(m_out_crit.le.nmat)) then
@@ -3499,7 +3574,7 @@ contains
            F_uncaptured_inside,F_uncaptured_outside, &
            local_frac_inside,local_frac_outside, &
            local_x_inside,local_x_outside,L_face, &
-           tessellate)
+           tessellate,face_dir)
 
           change=1 
 
@@ -4614,10 +4689,10 @@ contains
        tilelo,tilehi,fablo,fabhi,growlo,growhi,ng)
       IMPLICIT NONE
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T ng
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(out) :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: ng
       INTEGER_T dir2
 
       growlo(3)=0
@@ -4654,10 +4729,10 @@ contains
        tilelo,tilehi,fablo,fabhi,growlo,growhi,ng)
       IMPLICIT NONE
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T ng
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(out) :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: ng
       INTEGER_T dir2
 
       growlo(3)=0
@@ -5702,11 +5777,11 @@ contains
        tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,dir)
       IMPLICIT NONE
 
-      INTEGER_T dir
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T ng
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(out) :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: ng
       INTEGER_T dir2
 
       growlo(3)=0
@@ -5752,10 +5827,10 @@ contains
        tilelo,tilehi,fablo,fabhi,growlo,growhi,ng)
       IMPLICIT NONE
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T ng
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(out) :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: ng
       INTEGER_T dir2
 
       growlo(3)=0
@@ -5945,7 +6020,8 @@ contains
       subroutine strip_status(i,j,k,bfact,stripstat)
       IMPLICIT NONE
 
-      INTEGER_T i,j,k,bfact,stripstat
+      INTEGER_T, intent(in) :: i,j,k,bfact
+      INTEGER_T, intent(out) :: stripstat
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -5972,9 +6048,10 @@ contains
       subroutine elementbox(i,j,k,bfact,dir,elemlo,elemhi)
       IMPLICIT NONE
 
-      INTEGER_T i,j,k,bfact,dir,dir2
-      INTEGER_T elemlo(3)
-      INTEGER_T elemhi(3)
+      INTEGER_T, intent(in) :: i,j,k,bfact,dir
+      INTEGER_T dir2
+      INTEGER_T, intent(out) :: elemlo(3)
+      INTEGER_T, intent(out) :: elemhi(3)
 
       if ((dir.lt.0).or.(dir.ge.SDIM)) then
        print *,"dir invalid in elementbox"
@@ -6000,7 +6077,8 @@ contains
       subroutine strip_status_dir(i,j,k,bfact,dir,stripstat)
       IMPLICIT NONE
 
-      INTEGER_T i,j,k,bfact,stripstat,dir
+      INTEGER_T, intent(in)  :: i,j,k,bfact,dir
+      INTEGER_T, intent(out) :: stripstat
 
       if (bfact.lt.2) then
        print *,"bfact invalid"
@@ -6329,13 +6407,14 @@ contains
 
 
       subroutine lineGRAD( &
+       conservative_div_uu, &
        levelrz_in, &
        dir, &
        nc, &
        RRface, &
        bctype, &
        bcvalue, &
-       vel, &
+       vel, &  ! MAC variable
        source, &
        source_side, &
        dest_grad, &
@@ -6349,23 +6428,24 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T bfact
-      INTEGER_T levelrz_in
-      INTEGER_T dir,nc
-      REAL_T RRface(0:bfact)
+      INTEGER_T, intent(in) :: conservative_div_uu
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: levelrz_in
+      INTEGER_T, intent(in) :: dir,nc
+      REAL_T, intent(in) :: RRface(0:bfact)
     
-      INTEGER_T operation_flag
-      REAL_T dx
-      INTEGER_T bctype(2)
+      INTEGER_T, intent(in) :: operation_flag
+      REAL_T, intent(in) :: dx
+      INTEGER_T, intent(in) :: bctype(2)
       INTEGER_T local_bctype(2)
-      REAL_T x_sep(2)
-      REAL_T bcvalue(2)
-      REAL_T vel(0:bfact)
-      REAL_T source_side(2)
+      REAL_T, intent(in) :: x_sep(2)
+      REAL_T, intent(in) :: bcvalue(2)
+      REAL_T, intent(in) :: vel(0:bfact)
+      REAL_T, intent(in) :: source_side(2)
       REAL_T local_source_side(2)
-      REAL_T source(0:bfact-1) 
-      REAL_T dest_grad(0:bfact)
-      REAL_T dest_interp(0:bfact)
+      REAL_T, intent(in) :: source(0:bfact-1) 
+      REAL_T, intent(out) :: dest_grad(0:bfact)
+      REAL_T, intent(out) ::  dest_interp(0:bfact)
 
       INTEGER_T i1,j1,isten
       REAL_T y(0:bfact-1)
@@ -6822,7 +6902,15 @@ contains
 
        do i1=0,bfact
         if ((nc.ge.1).and.(nc.le.SDIM)) then
-         dest_interp(i1)=dest_interp(i1)*vel(i1)
+         if ((conservative_div_uu.eq.1).or. &
+             (conservative_div_uu.eq.2)) then
+          dest_interp(i1)=dest_interp(i1)*vel(i1)
+         else if (conservative_div_uu.eq.0) then
+          ! do nothing
+         else
+          print *,"conservative_div_uu invalid"
+          stop
+         endif
         else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
          ! do nothing
         else if (nc.eq.SDIM+2) then ! temperature: NONCONSERVATIVE
@@ -6922,12 +7010,12 @@ contains
 
       IMPLICIT NONE
 
-      REAL_T dx
-      INTEGER_T maskSEM
-      INTEGER_T bfact
-      REAL_T source(0:bfact) 
-      REAL_T dest(0:bfact-1)
-      REAL_T destdiv(0:bfact-1)
+      REAL_T, intent(in) :: dx
+      INTEGER_T, intent(in) :: maskSEM
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: source(0:bfact) 
+      REAL_T, intent(out) :: dest(0:bfact-1)
+      REAL_T, intent(out) :: destdiv(0:bfact-1)
 
       INTEGER_T i1,j1
       REAL_T y(0:bfact-1)
@@ -7683,7 +7771,8 @@ contains
       subroutine abs_array_index4(i,j,k,l,Ni,Nj,Nk,Nl,abs_index)
       IMPLICIT NONE
 
-      INTEGER_T i,j,k,l,Ni,Nj,Nk,Nl,abs_index
+      INTEGER_T, intent(in) :: i,j,k,l,Ni,Nj,Nk,Nl
+      INTEGER_T, intent(out) :: abs_index
 
       if ((i.lt.1).or.(i.gt.Ni).or. &
           (j.lt.1).or.(j.gt.Nj).or. &
@@ -7702,12 +7791,13 @@ contains
        bfact,dx,xlo,lo,x,cell_index)
       IMPLICIT NONE
 
-      INTEGER_T bfact
-      INTEGER_T lo(SDIM)
-      REAL_T x(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T xlo(SDIM)
-      INTEGER_T cell_index(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: lo(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      INTEGER_T, intent(out) :: cell_index(SDIM)
+
       INTEGER_T lo_e,i1,e_index,dir
       REAL_T xnodes(bfact+1)
 

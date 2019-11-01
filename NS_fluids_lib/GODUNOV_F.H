@@ -947,6 +947,7 @@ extern "C"
      int* override_density,
      int* velbc,
      int* EILE_flag,
+     int* VOF_reflux,
      int* dir_counter,
      int* normdir,
      const int* tilelo,const int* tilehi,
@@ -1248,6 +1249,7 @@ extern "C"
      int* spectral_loop,
      int* ncfluxreg,
      Real* semflux,ARLIM_P(semfluxlo),ARLIM_P(semfluxhi),
+     Real* amrsync,ARLIM_P(amrsynclo),ARLIM_P(amrsynchi),
      Real* mask0,ARLIM_P(mask0lo),ARLIM_P(mask0hi),
      Real* mask3,ARLIM_P(mask3lo),ARLIM_P(mask3hi),
      Real* maskSEM,ARLIM_P(maskSEMlo),ARLIM_P(maskSEMhi),
@@ -1277,7 +1279,8 @@ extern "C"
      int* ntensor,
      int* ntensorMM,
      int* SEM_upwind,
-     int* SEM_advection_algorithm);
+     int* SEM_advection_algorithm,
+     int* simple_AMR_BC_flag_viscosity);
 
 
    void FORT_VISCTENSORHEAT(

@@ -59,6 +59,9 @@
 #define AREA_MF 35
 
 #define MASKCOEF_MF 38
+
+#define POLDHOLD_DUAL_MF 39
+
 #define SLOPE_RECON_MF 40
 #define MASKSEM_MF 41
 
@@ -71,6 +74,8 @@
 // used in update_SEM_forces
 #define GP_DEST_FACE_MF 50
 #define GP_DEST_CELL_MF 53
+
+#define ALPHACOEF_DUAL_MF 54
 
 #define SEM_FLUXREG_MF 55
 
@@ -246,9 +251,17 @@
 
 #define LOCAL_ICEFACECUT_MF 244
 
-#define NEXT_MF 247
+#define MAX_GMRES_BUFFER 256
 
-#define MAX_NUM_LOCAL_MF 250
+#define GMRES_BUFFER0_V_MF 247
+#define GMRES_BUFFER_LAST_V_MF (GMRES_BUFFER0_V_MF+MAX_GMRES_BUFFER-1)
+#define GMRES_BUFFER0_Z_MF (GMRES_BUFFER_LAST_V_MF+1)
+#define GMRES_BUFFER_LAST_Z_MF (GMRES_BUFFER0_Z_MF+MAX_GMRES_BUFFER-1)
+#define GMRES_BUFFER_W_MF (GMRES_BUFFER_LAST_Z_MF+1)
+
+#define NEXT_MF (GMRES_BUFFER_W_MF+1)
+
+#define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
 // State_Type:
 // velocity, pressure, state x nmat, interface vars x nmat, error ind
@@ -459,7 +472,8 @@ public:
     void dot_productALL_ones(int project_option,int index_MF,Real& result);
     void dot_productALL_ones_size(int project_option,Real& result);
 
-    void project_right_hand_side(int index_MF,int project_option);
+    void project_right_hand_side(int index_MF,int project_option,
+		    int& change_flag);
 
     void init_boundary();
     void init_boundary_list(Array<int> scomp,Array<int> ncomp);
@@ -529,7 +543,12 @@ public:
 
     void restore_active_pressure(int save_mf);
 
-    void allocate_maccoef(int project_option,int nsolve);
+    void allocate_maccoefALL(int project_option,int nsolve,
+		    int create_hierarchy);
+    void allocate_maccoef(int project_option,int nsolve,
+		    int create_hierarchy);
+     
+    void deallocate_maccoefALL(int project_option);
     void deallocate_maccoef(int project_option);
 
     void prepare_mask_nbr(int ngrow);
@@ -589,6 +608,8 @@ protected:
 
     void avgDown_localMF(int idxMF,int scomp,int ncomp,
      int spectral_override);
+    void Plus_localMF(int idx_dest,Real val,
+     int dcomp,int ncomp,int ngrow);
     void Mult_localMF(int idx_dest,int idx_source,
      int scomp,int dcomp,int ncomp,int ngrow);
     void Copy_localMF(int idx_dest,int idx_source,
@@ -611,6 +632,12 @@ protected:
 
     void getState_localMF_list(
      int idx_MF,int ngrow,
+     int state_index,
+     Array<int> scomp,
+     Array<int> ncomp);
+
+    void putState_localMF_list(
+     int idx_MF,
      int state_index,
      Array<int> scomp,
      Array<int> ncomp);
@@ -638,12 +665,16 @@ protected:
     void AllinterpScalarMAC(
       MultiFab* coarsedata,MultiFab* finedata,
       BoxArray& cgridscen,BoxArray& fgridscen,
+      DistributionMapping& fdmap,
       MultiFab* cdiagsing,MultiFab* fdiagsing,
       int nsolve,int project_option);
     void interpScalarMAC(MultiFab* coarsedata,MultiFab* finedata,
       int nsolve,int project_option);
-    void Allaverage(MultiFab* coarsedata,MultiFab* finedata,
-      BoxArray& cgridscen,BoxArray& fgridscen,int iaverage,
+    void Allaverage(
+      MultiFab* coarsedata,MultiFab* finedata,
+      BoxArray& cgridscen,BoxArray& fgridscen,
+      DistributionMapping& fdmap,
+      int iaverage,
       int scomp,int dcomp);
     void averageRhs(int idx_MF,int nsolve,int project_option);
     int NSnumLevels();
@@ -733,14 +764,17 @@ protected:
     void init_splitting_force_SDC();
 
     void init_gradu_tensor(int homflag,int idx_vel,
-     int idx_cell,int idx_face);
+     int idx_cell,int idx_face,
+     int simple_AMR_BC_flag_viscosity);
 
     void doit_gradu_tensor(int homflag,int idx_vel,
      int idx_cell,int idx_face,int spectral_loop,
-     int itensor_iter,MultiFab* mask3);
+     int itensor_iter,MultiFab* mask3,
+     int simple_AMR_BC_flag_viscosity);
 
     void init_gradu_tensorALL(int idx,int do_alloc,
-     int idx_cell,int idx_face);
+     int idx_cell,int idx_face,
+     int simple_AMR_BC_flag_viscosity);
 
     void make_viscoelastic_tensor(int im);
     void make_viscoelastic_force(int im);
@@ -757,6 +791,10 @@ protected:
 
     void show_norm2(MultiFab* mf,int scomp,int ncomp,int id);
     void show_norm2_id(int mf_id,int id);
+    void check_value_max(int id,int mf_id,int scomp, 
+		int ncomp,int ngrow,Real max_value);
+    void check_value_max_level(int id,MultiFab* mf,
+		int scomp,int ncomp,int ngrow,Real max_value);
 
     void aggressive_debug(
       int datatype,
@@ -928,8 +966,7 @@ protected:
       int do_plot,int do_slice);
 
     void adjust_tolerance(Real& error0,Real& error0_max,
-      Real& parm_eps_abs,Real& parm_bot_atol,
-      Real& parm_min_rel_error,int project_option);
+      int project_option);
 
 void JacobiALL(
  int idx_resid,int idx_rhs,int idx_xnew,
@@ -956,6 +993,7 @@ void applyBC_LEVEL(int project_option,int idx_phi,int nsolve);
 void apply_div(
   int project_option,int homflag,
   int idx_phi,
+  int idx_phi_dual,
   MultiFab* rhsmf,
   MultiFab* mdotcell,
   int idx_gphi,
@@ -983,6 +1021,7 @@ void thermal_transform_force(int idx_vel,int idx_thermal,
 
 void apply_pressure_grad(
  int simple_AMR_BC_flag,
+ int simple_AMR_BC_flag_viscosity,
  int homflag,
  int energyflag,
  int gp_mf,
@@ -992,23 +1031,24 @@ void apply_pressure_grad(
     void relaxLEVEL(
      MultiFab* rhsmf,
      int idx_rhs,int idx_phi,
-     Real bottom_tol,int presmooth,
+     int presmooth,
      int project_option,int nsolve);
 
     void mg_cycleALL(int presmooth,
       int project_option,
       int idx_rhs,int idx_phi,
-      Real& save_atol_b,int nsolve);
+      int nsolve);
 
 
-    void jacobi_cycles(int ncycles,
+    void jacobi_cycles(
+     int call_adjust_tolerance,
+     int ncycles,
      int update_vel,int project_option,
      int idx_mac_rhs_crse,
      int idx_mac_phi_crse,
      Real& error_at_the_beginning,
      Real& error_after_all_jacobi_sweeps,
-     Real& error0,Real& error0_max,Real& save_mac_abs_tol,
-     Real& save_atol_b,Real& save_min_rel_error,
+     Real& error0,Real& error0_max,
      int bicgstab_num_outer_iterSOLVER,int nsolve);
 
     void updatevelALL(
@@ -1016,10 +1056,18 @@ void apply_pressure_grad(
      int idx_mac_phi_crse,int nsolve);
 
     void extend_pressure_to_solidALL();
+
     void multiphase_project(int project_option);
 
+    void set_local_tolerances(int project_option);
+
     void multiphase_preconditioner(
-     Real bottom_tol,
+     int project_option,int project_timings,
+     int presmooth,int postsmooth,
+     int idx_Z,int idx_R,int nsolve);
+
+    void multiphase_GMRES_preconditioner(
+     int gmres_precond_iter,
      int project_option,int project_timings,
      int presmooth,int postsmooth,
      int idx_Z,int idx_R,int nsolve);
@@ -1136,6 +1184,9 @@ void apply_pressure_grad(
     MultiFab* getState_list(int ngrow,Array<int> strt_comp,
        Array<int> num_comp,Real time);
 
+    void putState_list(Array<int> strt_comp,
+       Array<int> num_comp,int idx_MF);
+
     MultiFab* getState(int ngrow,int strt_comp,
        int num_comp,Real time);
 
@@ -1188,6 +1239,8 @@ void apply_pressure_grad(
     MultiFab* getStateDist(int ngrow,Real time,int caller_id);
     MultiFab* getStateDIV_DATA(int ngrow,int scomp,int ncomp,Real time);
 
+    void putStateDIV_DATA(int scomp,int ncomp,int idx_MF);
+
     void getStateALL(int ngrow,Real time,int scomp,
       int ncomp,int idx_localMF);
 
@@ -1227,6 +1280,8 @@ void apply_pressure_grad(
 
     void create_fortran_grid_struct(Real time,Real dt);
 
+    void CPP_OVERRIDEPBC(int homflag_in,int project_option_in);
+
     static int ns_is_rigid(int im);
 
     void copy_velocity_on_sign(int partid);
@@ -1262,6 +1317,12 @@ protected:
     static Real dt_slab;
     static int advect_iter;
     static int hydrate_flag;
+
+    static Array<int> number_vcycles_all_solver_calls;
+    static Array<int> max_lev0_cycles_all_solver_calls;
+    static Array<int> median_lev0_cycles_all_solver_calls;
+    static Array<int> lev0_cycles_list;
+    static Array<int> number_solver_calls;
 
     static Array<int> map_forward_direct_split;
     static Array<int> normdir_direct_split;
@@ -1331,13 +1392,18 @@ protected:
       // default is 1 
     static Array<int> truncate_volume_fractions;  
     static Real truncate_thickness;  // default is 2.0
-     // 0 or 1
+
+    // 0  low order space and time
+    // 1  SEM space and time
+    // 2  SEM space 
+    // 3  SEM time
     static int  enable_spectral;
     static int  viscous_enable_spectral; // def 0
     static int  projection_enable_spectral;
     static int  SEM_upwind;
      //0=div(uS)-S div(u)    1=u dot grad S  def=0
     static int  SEM_advection_algorithm;
+    static int  VOF_reflux; // default is 0
     static int  continuous_mof; // default is 0
     static Real change_max;    // maximum change in dt over a timestep
     static Real change_max_init; // maximum change in dt over a timestep
@@ -1375,14 +1441,11 @@ protected:
     static int        NUM_SCALARS;      // number of non-velocity components
     static Real       visc_coef; 
 
+    static int gmres_precond_iter_base; // default=4
     static int include_viscous_heating; // default=0
     static int smooth_type; // Lp.smooth_type def=2 ILU
     static int bottom_smooth_type; // Lp.bottom_smooth_type def=2 ILU
     static int use_mg_precond_in_mglib; //def=1 Lp.use_mg_precon_in_mglib
-     //def=0 Lp.use_bicgstab_in_mglib_pressure
-    static int use_bicgstab_in_mglib_pressure;
-     //def=1 Lp.use_bicgstab_in_mglib_diffusion
-    static int use_bicgstab_in_mglib_diffusion;
     static Real bottom_bottom_tol_factor;//def=0.1 Lp.bottom_bottom_tol_factor
 
     static Array<int>  FSI_touch_flag;
@@ -1422,6 +1485,11 @@ protected:
       // n-1  + n-2 + n-3 .. = (1/2) ( (n-1)^2 + (n-1) )
       // if n=4 => (1/2)(9+3)=6
     static int conservative_tension_force; // def=0
+     // def=1
+     // 0=> I(u_GL) dot grad u_GG, no sync project
+     // 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+     // 2=> grad dot (u_GL u_GG) - u_GG div u_GL, sync project
+    static int conservative_div_uu; 
     static Array<Real> tension_min;
     static Array<Real> tension_T0;
     static Array<Real> tension_slope;
@@ -1433,6 +1501,41 @@ protected:
     static Array<Real> outflow_velocity_buffer_size;
 
     static Array<Real> cap_wave_speed; // nten components
+
+    static Real real_number_of_cells;
+
+      // dual time stepping:
+      // see e.g. KunzETAL2000DualTimeStepping.pdf or
+      // Martinelli and A. Jameson?
+      // p_tau = (1/rho_max) div grad p
+      // p=e^(w tau+ikx)
+      // w = -k^2/rho_max   k=2 pi m/L
+      // min |w|=w'=(2 pi/L)^2/rho_max
+      // e^(-w' tau)=10^-2
+      // -w' tau = -2 log(10)
+      // tau = 2 log(10)/w' = 2 rho_max log(10)/(2 pi/L)^2 
+      // Above expression is bounded by:
+      // 2 * 3 * rho_max * L^2/(4 * 9) =
+      // rho_max * L^2/6
+    static int dual_time_activate; // default is 0
+    static Real dual_time_stepping_tau;
+     // solver coefficient is volume(i,j,k)*dual_time_stepping_coefficient
+    static Real dual_time_stepping_coefficient;
+
+    static int dual_time_error_met;
+    static int dual_time_stepping_iter;
+    static Real dual_time_error;
+    static Real dual_time_abstol;
+    static Real dual_time_reltol;
+    static Real dual_time_error0;
+
+    static int prescribed_velocity_iter;
+    static int prescribed_error_met;
+    static Real prescribed_error_old;
+    static Real prescribed_error;
+    static Real prescribed_abstol;
+    static Real prescribed_reltol;
+    static Real prescribed_error0;
 
     static int custom_nucleation_model;
 
@@ -1690,6 +1793,8 @@ protected:
      // 0=velocity stored at cells  
      // 1=velocity stored at faces
     static int face_flag;
+    static int disable_advection;
+    static int disable_pressure_solve;
 
     static Array<Real> etaL; //def=0
     static Array<Real> etaP; //def=0
@@ -1735,10 +1840,11 @@ protected:
      // 1=EILE (default), -1=Weymouth Yue
      // 2=always EI   3=always LE
     static int EILE_flag; 
-     // 0=directionally split
+     // 0=unsplit at coarse/fine boundaries.
      // 1=unsplit everywhere
-     // 2=unsplit in incompressible zones
-     // 3=unsplit in fluid cells that neighbor a prescribed solid cell
+     // 2=unsplit in incompressible zones + coarse/fine boundaries
+     // 3=unsplit in fluid cells that neighbor a prescribed solid cell + 
+     //   coarse/fine boundaries
     static int unsplit_flag;
      // 0=no limiter 1=minmod 2=minmod with slope=0 at interface
      // 3=no limit, but slope=0 at interface
@@ -1810,6 +1916,11 @@ protected:
 // mg.bot_atol
 // mg.visc_bot_atol
 // mg.thermal_bot_atol
+//
+    static Real save_atol_b;
+    static Real save_mac_abs_tol;
+    static Real save_min_rel_error;
+
     static Real minimum_relative_error;
     static Real diffusion_minimum_relative_error;
     static Real mac_abs_tol;
@@ -1820,7 +1931,7 @@ protected:
     static int  initial_project_cycles;
     static int  initial_viscosity_cycles;
     static int  initial_thermal_cycles;
-     // 0 - MGPCG  1-PCG 2-MG
+     // 0 - MGPCG  1-PCG 2-MINV=I
     static int  project_solver_type;
     static int  initial_cg_cycles;
     static int  num_divu_outer_sweeps;

@@ -200,7 +200,7 @@
       else if (probtype.eq.2) then ! strong shock tube
        denl=1.0
        vell=0.0
-       presl=1.0E+10
+       presl=1.0D+10
        denr=0.125
        velr=0.0
        presr=0.1

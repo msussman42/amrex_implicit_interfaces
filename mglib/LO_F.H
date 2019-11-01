@@ -64,13 +64,17 @@ extern "C"
 {
 
     void FORT_RESIDL (
-        int* nsolve,
-	Real* res      , ARLIM_P(res_lo), ARLIM_P(res_hi),
-	const Real* rhs, ARLIM_P(rhs_lo), ARLIM_P(rhs_hi),
-	const Real* phi, ARLIM_P(phi_lo), ARLIM_P(phi_hi),
-	const int* tilelo,const int* tilehi,
-        const int* fablo,const int* fabhi,
-        int* bfact,int* bfact_top);
+     int* level,
+     int* mg_coarsest_level,
+     int* nsolve,
+     const Real* masksing , 
+     ARLIM_P(masksing_lo), ARLIM_P(masksing_hi),
+     Real* res      , ARLIM_P(res_lo), ARLIM_P(res_hi),
+     const Real* rhs, ARLIM_P(rhs_lo), ARLIM_P(rhs_hi),
+     const Real* phi, ARLIM_P(phi_lo), ARLIM_P(phi_hi),
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,
+     int* bfact,int* bfact_top);
 
     void FORT_BUILDMAT (
         int* level,

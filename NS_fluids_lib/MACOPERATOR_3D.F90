@@ -41,9 +41,12 @@ stop
          bfact, &
          level, &
          finest_level, &
-         visc_coef,angular_velocity, &
+         visc_coef, &
+         angular_velocity, &
          dt, &
-         project_option,rzflag, &
+         dual_time_stepping_coefficient, &
+         project_option, &
+         rzflag, &
          solidheat_flag)
        use probf90_module
        use global_utility_module
@@ -72,6 +75,7 @@ stop
        INTEGER_T DIMDEC(mu)
        REAL_T visc_coef,angular_velocity
        REAL_T dt
+       REAL_T dual_time_stepping_coefficient
        INTEGER_T project_option,rzflag
 
        REAL_T  mu(DIMV(mu),nmat+1)
@@ -140,6 +144,12 @@ stop
        endif
        if ((num_materials_face.ne.1).and.(num_materials_face.ne.nmat)) then
         print *,"num_materials_face invalid"
+        stop
+       endif
+       if (dual_time_stepping_coefficient.ge.zero) then
+        ! do nothing
+       else
+        print *,"dual_time_stepping_coefficient invalid"
         stop
        endif
 
@@ -295,16 +305,22 @@ stop
           print *,"nsolve invalid21"
           stop
          endif
-         if (num_materials_vel.ne.1) then
+         if (num_materials_vel.eq.1) then
+          ! do nothing
+         else
           print *,"num_materials_vel invalid"
           stop
          endif
-         if (num_materials_face.ne.1) then
+         if (num_materials_face.eq.1) then
+          ! do nothing
+         else
           print *,"num_materials_face invalid"
           stop
          endif
 
-         if (dt.le.zero) then
+         if (dt.gt.zero) then
+          ! do nothing
+         else
           print *,"dt invalid"
           stop
          endif
@@ -816,6 +832,7 @@ stop
        maskdivres, &
        DIMS(maskdivres), &
        maskres,DIMS(maskres), &
+       mdot,DIMS(mdot), &
        bx,DIMS(bx), &
        by,DIMS(by), &
        bz,DIMS(bz), &
@@ -830,66 +847,70 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T num_materials_face
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nsolve
-      INTEGER_T nsolveMM
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
-      INTEGER_T nfacefrac
-      INTEGER_T ncellfrac
-      INTEGER_T nmat
-      INTEGER_T project_option
-      INTEGER_T ncphys
-      INTEGER_T DIMDEC(cellmm)
-      INTEGER_T DIMDEC(xfacemm)
-      INTEGER_T DIMDEC(yfacemm)
-      INTEGER_T DIMDEC(zfacemm)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(yface)
-      INTEGER_T DIMDEC(zface)
-      INTEGER_T DIMDEC(masksolv)
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(alpha)
-      INTEGER_T DIMDEC(offdiagcheck)
-      INTEGER_T DIMDEC(diag_non_sing)
-      INTEGER_T DIMDEC(diag_sing)
-      INTEGER_T DIMDEC(maskdivres)
-      INTEGER_T DIMDEC(maskres)
-      INTEGER_T DIMDEC(bx)
-      INTEGER_T DIMDEC(by)
-      INTEGER_T DIMDEC(bz)
-      INTEGER_T DIMDEC(fwtx)
-      INTEGER_T DIMDEC(fwty)
-      INTEGER_T DIMDEC(fwtz)
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bc(SDIM,2,nsolveMM)
+      INTEGER_T, intent(in) :: num_materials_face
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: nsolveMM
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T             :: nsolveMM_FACE_test
+      INTEGER_T, intent(in) :: nfacefrac
+      INTEGER_T, intent(in) :: ncellfrac
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: DIMDEC(cellmm)
+      INTEGER_T, intent(in) :: DIMDEC(xfacemm)
+      INTEGER_T, intent(in) :: DIMDEC(yfacemm)
+      INTEGER_T, intent(in) :: DIMDEC(zfacemm)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(yface)
+      INTEGER_T, intent(in) :: DIMDEC(zface)
+      INTEGER_T, intent(in) :: DIMDEC(masksolv)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(alpha)
+      INTEGER_T, intent(in) :: DIMDEC(offdiagcheck)
+      INTEGER_T, intent(in) :: DIMDEC(diag_non_sing)
+      INTEGER_T, intent(in) :: DIMDEC(diag_sing)
+      INTEGER_T, intent(in) :: DIMDEC(maskdivres)
+      INTEGER_T, intent(in) :: DIMDEC(maskres)
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(bx)
+      INTEGER_T, intent(in) :: DIMDEC(by)
+      INTEGER_T, intent(in) :: DIMDEC(bz)
+      INTEGER_T, intent(in) :: DIMDEC(fwtx)
+      INTEGER_T, intent(in) :: DIMDEC(fwty)
+      INTEGER_T, intent(in) :: DIMDEC(fwtz)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T             :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bc(SDIM,2,nsolveMM)
 
-      REAL_T cellmm(DIMV(cellmm),ncellfrac) 
-      REAL_T xfacemm(DIMV(xfacemm),nfacefrac) 
-      REAL_T yfacemm(DIMV(yfacemm),nfacefrac) 
-      REAL_T zfacemm(DIMV(zfacemm),nfacefrac) 
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T yface(DIMV(yface),ncphys)
-      REAL_T zface(DIMV(zface),ncphys)
-      REAL_T masksolv(DIMV(masksolv),num_materials_face)
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T alpha(DIMV(alpha),nsolveMM)
-      REAL_T offdiagcheck(DIMV(offdiagcheck),nsolveMM)
-      REAL_T diag_non_sing(DIMV(diag_non_sing),nsolveMM)
-      REAL_T diag_sing(DIMV(diag_sing),nsolveMM)
-      REAL_T maskdivres(DIMV(maskdivres))
-      REAL_T maskres(DIMV(maskres))
-      REAL_T bx(DIMV(bx),nsolveMM) ! coeff * areafrac * areaface / (dxfrac*dx)
-      REAL_T by(DIMV(by),nsolveMM)
-      REAL_T bz(DIMV(bz),nsolveMM)
-      REAL_T fwtx(DIMV(fwtx),nsolveMM_FACE)  ! coeff * areafrac / dxfrac
-      REAL_T fwty(DIMV(fwty),nsolveMM_FACE)
-      REAL_T fwtz(DIMV(fwtz),nsolveMM_FACE)
+      REAL_T, intent(in) :: cellmm(DIMV(cellmm),ncellfrac) 
+      REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
+      REAL_T, intent(in) :: yfacemm(DIMV(yfacemm),nfacefrac) 
+      REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(out) :: masksolv(DIMV(masksolv),num_materials_face)
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: alpha(DIMV(alpha),nsolveMM)
+      REAL_T, intent(in) :: offdiagcheck(DIMV(offdiagcheck),nsolveMM)
+      REAL_T, intent(out) :: diag_non_sing(DIMV(diag_non_sing),nsolveMM)
+      REAL_T, intent(out) :: diag_sing(DIMV(diag_sing),nsolveMM)
+      REAL_T, intent(out) :: maskdivres(DIMV(maskdivres))
+      REAL_T, intent(out) :: maskres(DIMV(maskres))
+      REAL_T, intent(in) :: mdot(DIMV(mdot),nsolveMM)
+       ! coeff * areafrac * areaface / (dxfrac*dx)
+      REAL_T, intent(in) :: bx(DIMV(bx),nsolveMM) 
+      REAL_T, intent(in) :: by(DIMV(by),nsolveMM)
+      REAL_T, intent(in) :: bz(DIMV(bz),nsolveMM)
+       ! coeff * areafrac / dxfrac
+      REAL_T, intent(in) :: fwtx(DIMV(fwtx),nsolveMM_FACE)  
+      REAL_T, intent(in) :: fwty(DIMV(fwty),nsolveMM_FACE)
+      REAL_T, intent(in) :: fwtz(DIMV(fwtz),nsolveMM_FACE)
 
       INTEGER_T i,j,k
       INTEGER_T inormal
@@ -983,6 +1004,7 @@ stop
        DIMS(maskdivres), &
        0,-1,140)
       call checkbound(fablo,fabhi,DIMS(maskres),0,-1,140)
+      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,140)
       call checkbound(fablo,fabhi,DIMS(bx),0,0,140)
       call checkbound(fablo,fabhi,DIMS(by),0,1,140)
       call checkbound(fablo,fabhi,DIMS(bz),0,BL_SPACEDIM-1,140)
@@ -1179,6 +1201,12 @@ stop
            maskres(D_DECL(i,j,k))=one
           else if (alpha(D_DECL(i,j,k),veldir).eq.zero) then
            maskres(D_DECL(i,j,k))=zero
+           if (mdot(D_DECL(i,j,k),veldir).eq.zero) then
+            ! do nothing
+           else
+            print *,"mdot invalid in nsgenerate"
+            stop
+           endif
           else
            print *,"alpha invalid"
            print *,"i,j,k= ",i,j,k

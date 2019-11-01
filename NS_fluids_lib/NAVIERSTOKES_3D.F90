@@ -2812,7 +2812,7 @@ END SUBROUTINE SIMP
           endif
          enddo
          do n=1,vis_ncomp
-          if (abs(local_data(n)).le.1.0E+20) then
+          if (abs(local_data(n)).le.1.0D+20) then
            fabin(D_DECL(i,j,k),n)=local_data(n)
           else
            print *,"local_data(n) overflow"
@@ -2911,7 +2911,7 @@ END SUBROUTINE SIMP
          endif
         enddo
         do n=1,vis_ncomp
-         if (abs(local_data(n)).le.1.0E+20) then
+         if (abs(local_data(n)).le.1.0D+20) then
           if ((n.ge.1).and.(n.lt.vis_ncomp)) then
            write(11,'(D25.16)',ADVANCE="NO") local_data(n)
           else if (n.eq.vis_ncomp) then
@@ -2961,12 +2961,12 @@ END SUBROUTINE SIMP
          do n=1,vis_ncomp
           local_data_in(n)=fabin(D_DECL(i,j,k),n)
           local_data_out(n)=fabout(D_DECL(i,j,k),n)
-          if ((abs(local_data_in(n)).le.1.0E+20).and. &
-              (abs(local_data_out(n)).le.1.0E+20)) then
+          if ((abs(local_data_in(n)).le.1.0D+20).and. &
+              (abs(local_data_out(n)).le.1.0D+20)) then
 
            local_data(n)=local_data_in(n)-local_data_out(n)
            
-           if (abs(local_data(n)).le.1.0E+20) then
+           if (abs(local_data(n)).le.1.0D+20) then
             L1norm_local(n)=abs(local_data(n))
             L2norm_local(n)=abs(local_data(n))**2
            else
@@ -2988,7 +2988,7 @@ END SUBROUTINE SIMP
          enddo
          local_data(n)=sqrt(local_data(n))
 
-         if (abs(local_data(n)).le.1.0E+20) then
+         if (abs(local_data(n)).le.1.0D+20) then
           L1norm_local(n)=abs(local_data(n))
           L2norm_local(n)=abs(local_data(n))**2
          else
@@ -3845,7 +3845,7 @@ END SUBROUTINE SIMP
 
           do dir2=1,SDIM
 
-           if (abs(xsten_corner(0,dir2)).le.1.0E+20) then
+           if (abs(xsten_corner(0,dir2)).le.1.0D+20) then
             xcrit(dir2)=xcrit(dir2)-xsten_corner(0,dir2)
 
             if ((xcrit(dir2).ge.-INTERP_TOL*dx(dir2)).and. &
@@ -3885,7 +3885,7 @@ END SUBROUTINE SIMP
            klocal=kSEM-stenlo(3)
            do dir=1,SDIM
             local_data=vel(D_DECL(iSEM,jSEM,kSEM),dir)
-            if (abs(local_data).lt.1.0E+20) then
+            if (abs(local_data).lt.1.0D+20) then
              SEMloc(D_DECL(ilocal,jlocal,klocal),dir)=local_data
             else
              print *,"abs(local_data) overflow1"
@@ -3894,7 +3894,7 @@ END SUBROUTINE SIMP
            enddo ! dir=1..sdim
            local_data=trace(D_DECL(iSEM,jSEM,kSEM),(local_maskSEM-1)*5+5)
            if (VORT_comp_SEM.eq.SDIM+1) then
-            if (abs(local_data).lt.1.0E+20) then
+            if (abs(local_data).lt.1.0D+20) then
              SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)=local_data
             else
              print *,"abs(local_data) overflow2"
@@ -3908,7 +3908,7 @@ END SUBROUTINE SIMP
             ! value.
            do im=1,nmat
             local_data=lsdist(D_DECL(iSEM,jSEM,kSEM),im)
-            if (abs(local_data).lt.1.0E+20) then
+            if (abs(local_data).lt.1.0D+20) then
              SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)=local_data
             else
              print *,"abs(local_data) overflow25"
@@ -3927,7 +3927,7 @@ END SUBROUTINE SIMP
           deallocate(SEMloc)
 
           do dir=1,SDIM
-           if (abs(SEM_value(dir)).lt.1.0E+20) then
+           if (abs(SEM_value(dir)).lt.1.0D+20) then
             velnd(dir)=SEM_value(dir)
            else 
             print *,"abs(SEM_value(dir)) overflow"
@@ -3949,7 +3949,7 @@ END SUBROUTINE SIMP
            print *,"incorrect ncomp_SEM"
            stop
           endif
-          if (abs(SEM_value(VORT_comp_SEM)).lt.1.0E+20) then
+          if (abs(SEM_value(VORT_comp_SEM)).lt.1.0D+20) then
            tracend((local_maskSEM-1)*5+5)=SEM_value(VORT_comp_SEM)
           else 
            print *,"abs(SEM_value(sdim+1)) overflow"
@@ -5511,29 +5511,29 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T enable_spectral
-      INTEGER_T finest_level
-      INTEGER_T spectral_override
-      INTEGER_T level_c
-      INTEGER_T level_f
-      INTEGER_T bfact_c
-      INTEGER_T bfact_f
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      REAL_T xlo_fine(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T ncomp
-      INTEGER_T DIMDEC(crse)
-      INTEGER_T DIMDEC(fine)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: spectral_override
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T mstenlo(3), mstenhi(3)
-      REAL_T   mask(DIMV(mask))
-      REAL_T   crse(DIMV(crse),ncomp)
-      REAL_T   fine(DIMV(fine),ncomp)
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
       INTEGER_T flochi(SDIM)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -5623,23 +5623,52 @@ END SUBROUTINE SIMP
 
       do dir2=1,SDIM
        elem_test=lo(dir2)/bfact_c
+
        if (elem_test*bfact_c.ne.lo(dir2)) then
-        print *,"elem_test invalid (loc)"
-        stop
+         print *,"elem_test invalid (loc) 1"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"lo(dir2)=",lo(dir2)
+         print *,"hi(dir2)=",hi(dir2)
+         print *,"lof(dir2)=",lof(dir2)
+         print *,"hif(dir2)=",hif(dir2)
+         stop
        endif
        elem_test=(hi(dir2)+1)/bfact_c
        if (elem_test*bfact_c.ne.hi(dir2)+1) then
-        print *,"elem_test invalid (hic)"
-        stop
+         print *,"elem_test invalid (hic) 1"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"lo(dir2)=",lo(dir2)
+         print *,"hi(dir2)=",hi(dir2)
+         print *,"lof(dir2)=",lof(dir2)
+         print *,"hif(dir2)=",hif(dir2)
+         stop
        endif
        elem_test=lof(dir2)/bfact_f
        if (elem_test*bfact_f.ne.lof(dir2)) then
-        print *,"elem_test invalid (lof)"
+        print *,"elem_test invalid (lof) 1"
+        print *,"elem_test=",elem_test
+        print *,"bfact_f=",bfact_f
+        print *,"dir2=",dir2
+        print *,"lo(dir2)=",lo(dir2)
+        print *,"hi(dir2)=",hi(dir2)
+        print *,"lof(dir2)=",lof(dir2)
+        print *,"hif(dir2)=",hif(dir2)
         stop
        endif
        elem_test=(hif(dir2)+1)/bfact_f
        if (elem_test*bfact_f.ne.hif(dir2)+1) then
-        print *,"elem_test invalid (hif)"
+        print *,"elem_test invalid (hif) 1"
+        print *,"elem_test=",elem_test
+        print *,"bfact_f=",bfact_f
+        print *,"dir2=",dir2
+        print *,"lo(dir2)=",lo(dir2)
+        print *,"hi(dir2)=",hi(dir2)
+        print *,"lof(dir2)=",lof(dir2)
+        print *,"hif(dir2)=",hif(dir2)
         stop
        endif
       enddo ! dir2=1..sdim
@@ -5663,7 +5692,7 @@ END SUBROUTINE SIMP
         stenhi(dir2)=stenlo(dir2)+bfact_f-1
         if ((stenlo(dir2).lt.lof(dir2)).or. &
             (stenhi(dir2).gt.hif(dir2))) then
-         print *,"stenlo or stenhi invalid"
+         print *,"stenlo or stenhi invalid 1"
          stop
         endif
        enddo ! dir2
@@ -5845,38 +5874,38 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T enable_spectral
-      INTEGER_T finest_level
-      INTEGER_T operation_flag
-      INTEGER_T dir
-      INTEGER_T level_c
-      INTEGER_T level_f
-      INTEGER_T bfact_c
-      INTEGER_T bfact_f
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      REAL_T xlo_fine(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T ncomp_flux
-      INTEGER_T ncomp_den
-      INTEGER_T ncomp_vel
-      INTEGER_T DIMDEC(crse)
-      INTEGER_T DIMDEC(fine)
-      INTEGER_T DIMDEC(den_fine)
-      INTEGER_T DIMDEC(vel_fine)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(fine_LS)
-      INTEGER_T lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: operation_flag
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp_flux
+      INTEGER_T, intent(in) :: ncomp_den
+      INTEGER_T, intent(in) :: ncomp_vel
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: DIMDEC(den_fine)
+      INTEGER_T, intent(in) :: DIMDEC(vel_fine)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(fine_LS)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T mstenlo(3),mstenhi(3)
-      REAL_T   fine_LS(DIMV(fine_LS),num_materials)
-      REAL_T   mask(DIMV(mask))
-      REAL_T   crse(DIMV(crse),ncomp_flux)
-      REAL_T   fine(DIMV(fine),ncomp_flux)
-      REAL_T   den_fine(DIMV(den_fine),ncomp_den)
-      REAL_T   vel_fine(DIMV(vel_fine),ncomp_vel)
+      REAL_T, intent(in) :: fine_LS(DIMV(fine_LS),num_materials)
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp_flux)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp_flux)
+      REAL_T, intent(in) :: den_fine(DIMV(den_fine),ncomp_den)
+      REAL_T, intent(in) :: vel_fine(DIMV(vel_fine),ncomp_vel)
       INTEGER_T flochi(SDIM)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -5987,8 +6016,21 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid"
         stop
        endif
+      else if (operation_flag.eq.8) then ! viscosity
+       if (ncomp_vel.ne.SDIM) then
+        print *,"ncomp_vel invalid visc"
+        stop
+       endif
+       if (ncomp_den.ne.SDIM) then
+        print *,"ncomp_den invalid visc"
+        stop
+       endif
+       if (ncomp_flux.ne.SDIM) then
+        print *,"ncomp_flux invalid visc"
+        stop
+       endif
       else
-       print *,"operation_flag invalid"
+       print *,"operation_flag invalid visc"
        stop
       endif
 
@@ -6056,22 +6098,38 @@ END SUBROUTINE SIMP
       do dir2=1,SDIM
        elem_test=lo(dir2)/bfact_c
        if (elem_test*bfact_c.ne.lo(dir2)) then
-        print *,"elem_test invalid (loc)"
-        stop
+         print *,"elem_test invalid (loc) 2"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"lo(dir2)=",lo(dir2)
+         stop
        endif
        elem_test=(hi(dir2)+1)/bfact_c
        if (elem_test*bfact_c.ne.hi(dir2)+1) then
-        print *,"elem_test invalid (hic)"
-        stop
+         print *,"elem_test invalid (hic) 2"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"hi(dir2)=",hi(dir2)
+         stop
        endif
        elem_test=lof(dir2)/bfact_f
        if (elem_test*bfact_f.ne.lof(dir2)) then
-        print *,"elem_test invalid (lof)"
+        print *,"elem_test invalid (lof) 2"
+        print *,"elem_test=",elem_test
+        print *,"bfact_f=",bfact_f
+        print *,"dir2=",dir2
+        print *,"lof(dir2)=",lof(dir2)
         stop
        endif
        elem_test=(hif(dir2)+1)/bfact_f
        if (elem_test*bfact_f.ne.hif(dir2)+1) then
-        print *,"elem_test invalid (hif)"
+        print *,"elem_test invalid (hif) 2"
+        print *,"elem_test=",elem_test
+        print *,"bfact_f=",bfact_f
+        print *,"dir2=",dir2
+        print *,"hif(dir2)=",hif(dir2)
         stop
        endif
       enddo ! dir2=1..sdim
@@ -6129,18 +6187,19 @@ END SUBROUTINE SIMP
         stenhi(3)=0
         do dir2=1,SDIM
          dxelem_f=dxf(dir2)*bfact_f
+          ! in: AVGDOWN_COPY
           ! xsten is target location of where to interpolate to.
           ! In the normal direction, xsten corresponds to the 
-          ! covering fine level coordinate.  In the tangential
+          ! covering fine level coordinate (copy).  In the tangential
           ! direction, xsten corresponds to a coarse level
-          ! coordinate. 
+          ! coordinate (avgdown). 
          xcoarse(dir2)=xsten(0,dir2)
          finelo_index=NINT( (xcoarse(dir2)-problo(dir2))/dxelem_f-half )
          stenlo(dir2)=bfact_f*finelo_index
          stenhi(dir2)=stenlo(dir2)+bfact_f-1
          if ((stenlo(dir2).lt.lof(dir2)).or. &
              (stenhi(dir2).gt.hif(dir2))) then
-          print *,"stenlo or stenhi invalid"
+          print *,"stenlo or stenhi invalid 2"
           stop
          endif
         enddo ! dir2=1..sdim
@@ -6336,7 +6395,15 @@ END SUBROUTINE SIMP
            endif
 
            do n=1,ncomp_flux
-            if (operation_flag.eq.7) then ! advection
+
+            if (operation_flag.eq.8) then ! viscosity
+             if ((n.ge.1).and.(n.le.SDIM)) then
+              fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
+             else
+              print *,"n invalid"
+              stop
+             endif
+            else if (operation_flag.eq.7) then ! advection
              if ((n.ge.1).and.(n.le.SDIM)) then
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
              else if ((n.gt.SDIM).and.(n.le.SDIM+num_state_base)) then
@@ -6397,7 +6464,7 @@ END SUBROUTINE SIMP
 
          else if ((bfact_f.eq.1).or. &
                   (enable_spectral.eq.0).or. &
-                  (enable_spectral.eq.3).or. &
+                  (enable_spectral.eq.3).or. & ! SEM time only
                   (testmask.eq.0)) then
 
           call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
@@ -6469,7 +6536,14 @@ END SUBROUTINE SIMP
 
                 do n = 1, ncomp_flux
 
-                 if (operation_flag.eq.7) then ! advection
+                 if (operation_flag.eq.8) then ! viscosity
+                  if ((n.ge.1).and.(n.le.SDIM)) then
+                   fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
+                  else
+                   print *,"n invalid"
+                   stop
+                  endif
+                 else if (operation_flag.eq.7) then ! advection
                   if ((n.ge.1).and.(n.le.SDIM)) then
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
                   else if ((n.gt.SDIM).and.(n.le.SDIM+num_state_base)) then
@@ -6591,42 +6665,44 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T enable_spectral
-      REAL_T dxc(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T finest_level
-      INTEGER_T operation_flag
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T dir
-      REAL_T problo(SDIM)
-      INTEGER_T level_c
-      INTEGER_T level
-      INTEGER_T bfact_c
-      INTEGER_T bfact
-      REAL_T xlo(SDIM)
-      INTEGER_T ncomp_flux
-      INTEGER_T ncomp_den
-      INTEGER_T ncomp_vel
-      INTEGER_T DIMDEC(fine)
-      INTEGER_T DIMDEC(den_crse)
-      INTEGER_T DIMDEC(vel_crse)
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(masksem)
-      INTEGER_T DIMDEC(cmasksem)
-      INTEGER_T DIMDEC(coarseLS)
-      INTEGER_T velbc(SDIM,2,SDIM)
-      INTEGER_T loc(SDIM),hic(SDIM) ! coarse grid dimensions
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T mstenlo(3),mstenhi(3)
-      REAL_T   fine(DIMV(fine),ncomp_flux)
-      REAL_T   den_crse(DIMV(den_crse),ncomp_den)
-      REAL_T   vel_crse(DIMV(vel_crse),ncomp_vel)
-      REAL_T   masknbr(DIMV(masknbr))  ! =1 if fine-fine  =0 coarse-fine
-      REAL_T   masksem(DIMV(masksem))
-      REAL_T   cmasksem(DIMV(cmasksem))
-      REAL_T   coarseLS(DIMV(coarseLS),num_materials)
+      INTEGER_T, intent(in) :: enable_spectral
+      REAL_T, intent(in) :: dxc(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: operation_flag
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: problo(SDIM)
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      INTEGER_T, intent(in) :: ncomp_flux
+      INTEGER_T, intent(in) :: ncomp_den
+      INTEGER_T, intent(in) :: ncomp_vel
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: DIMDEC(den_crse)
+      INTEGER_T, intent(in) :: DIMDEC(vel_crse)
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+      INTEGER_T, intent(in) :: DIMDEC(masksem)
+      INTEGER_T, intent(in) :: DIMDEC(cmasksem)
+      INTEGER_T, intent(in) :: DIMDEC(coarseLS)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: loc(SDIM),hic(SDIM) ! coarse grid dimensions
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T :: stenlo(3),stenhi(3)
+      INTEGER_T :: mstenlo(3),mstenhi(3)
+      REAL_T, intent(out) :: fine(DIMV(fine),ncomp_flux)
+      REAL_T, intent(in) :: den_crse(DIMV(den_crse),ncomp_den)
+      REAL_T, intent(in) :: vel_crse(DIMV(vel_crse),ncomp_vel)
+       ! =1 if fine-fine  =0 coarse-fine
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr))  
+      REAL_T, intent(in) :: masksem(DIMV(masksem))
+      REAL_T, intent(in) :: cmasksem(DIMV(cmasksem))
+      REAL_T, intent(in) :: coarseLS(DIMV(coarseLS),num_materials)
+
       INTEGER_T clochi(SDIM)
       INTEGER_T ifine,jfine,kfine
       INTEGER_T icoarse,jcoarse,kcoarse
@@ -6669,7 +6745,20 @@ END SUBROUTINE SIMP
 
       nmat=num_materials
 
-      if (operation_flag.eq.7) then ! advection
+      if (operation_flag.eq.8) then ! viscosity
+       if (ncomp_vel.ne.SDIM) then
+        print *,"ncomp_vel invalid viscosity"
+        stop
+       endif
+       if (ncomp_den.ne.SDIM) then
+        print *,"ncomp_den invalid viscosity"
+        stop
+       endif
+       if (ncomp_flux.ne.SDIM) then
+        print *,"ncomp_flux invalid viscosity"
+        stop
+       endif
+      else if (operation_flag.eq.7) then ! advection
        if (ncomp_vel.ne.SDIM) then
         print *,"ncomp_vel invalid"
         stop
@@ -6807,22 +6896,38 @@ END SUBROUTINE SIMP
       do dir2=1,SDIM
        elem_test=loc(dir2)/bfact_c
        if (elem_test*bfact_c.ne.loc(dir2)) then
-        print *,"elem_test invalid (loc)"
-        stop
+         print *,"elem_test invalid (loc) 3"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"loc(dir2)=",loc(dir2)
+         stop
        endif
        elem_test=(hic(dir2)+1)/bfact_c
        if (elem_test*bfact_c.ne.hic(dir2)+1) then
-        print *,"elem_test invalid (hic)"
-        stop
+         print *,"elem_test invalid (hic) 4"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"hic(dir2)=",hic(dir2)
+         stop
        endif
        elem_test=fablo(dir2)/bfact
        if (elem_test*bfact.ne.fablo(dir2)) then
-        print *,"elem_test invalid (fablo)"
+        print *,"elem_test invalid (fablo) 5"
+        print *,"elem_test=",elem_test
+        print *,"bfact=",bfact
+        print *,"dir2=",dir2
+        print *,"fablo(dir2)=",fablo(dir2)
         stop
        endif
        elem_test=(fabhi(dir2)+1)/bfact
        if (elem_test*bfact.ne.fabhi(dir2)+1) then
-        print *,"elem_test invalid (fabhi)"
+        print *,"elem_test invalid (fabhi) 6"
+        print *,"elem_test=",elem_test
+        print *,"bfact=",bfact
+        print *,"dir2=",dir2
+        print *,"fabhi(dir2)=",fabhi(dir2)
         stop
        endif
       enddo ! dir2=1..sdim
@@ -6895,7 +7000,7 @@ END SUBROUTINE SIMP
              endif
              if ((stenlo(dir2).lt.loc(dir2)-bfact_c).or. &
                  (stenhi(dir2).ge.loc(dir2))) then
-              print *,"stenlo or stenhi invalid"
+              print *,"stenlo or stenhi invalid 3"
               stop
              endif
             else if (side.eq.2) then
@@ -6905,7 +7010,7 @@ END SUBROUTINE SIMP
              endif
              if ((stenlo(dir2).le.hic(dir2)).or. &
                  (stenhi(dir2).gt.hic(dir2)+bfact_c)) then
-              print *,"stenlo or stenhi invalid"
+              print *,"stenlo or stenhi invalid 4"
               stop
              endif
             else
@@ -6915,7 +7020,7 @@ END SUBROUTINE SIMP
            else if (dir2.ne.dir+1) then
             if ((stenlo(dir2).lt.loc(dir2)).or. &
                 (stenhi(dir2).gt.hic(dir2))) then
-             print *,"stenlo or stenhi invalid"
+             print *,"stenlo or stenhi invalid 5"
              stop
             endif
            else
@@ -7091,7 +7196,15 @@ END SUBROUTINE SIMP
              endif
 
              do n=1,ncomp_flux
-              if (operation_flag.eq.7) then ! advection
+
+              if (operation_flag.eq.8) then ! viscosity
+               if ((n.ge.1).and.(n.le.SDIM)) then
+                crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
+               else
+                print *,"n invalid viscosity"
+                stop
+               endif
+              else if (operation_flag.eq.7) then ! advection
                if ((n.ge.1).and.(n.le.SDIM)) then
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
                else if ((n.gt.SDIM).and.(n.le.SDIM+num_state_base)) then
@@ -7222,7 +7335,14 @@ END SUBROUTINE SIMP
 
                   do n = 1, ncomp_flux
 
-                   if (operation_flag.eq.7) then ! advection
+                   if (operation_flag.eq.8) then ! viscosity
+                    if ((n.ge.1).and.(n.le.SDIM)) then
+                     crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
+                    else
+                     print *,"n invalid"
+                     stop
+                    endif
+                   else if (operation_flag.eq.7) then ! advection
                     if ((n.ge.1).and.(n.le.SDIM)) then
                      crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
                     else if ((n.gt.SDIM).and.(n.le.SDIM+num_state_base)) then
@@ -7491,22 +7611,38 @@ END SUBROUTINE SIMP
       do dir2=1,SDIM
        elem_test=loc(dir2)/bfact_c
        if (elem_test*bfact_c.ne.loc(dir2)) then
-        print *,"elem_test invalid (loc)"
-        stop
+         print *,"elem_test invalid (loc) 7"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"loc(dir2)=",loc(dir2)
+         stop
        endif
        elem_test=(hic(dir2)+1)/bfact_c
        if (elem_test*bfact_c.ne.hic(dir2)+1) then
-        print *,"elem_test invalid (hic)"
-        stop
+         print *,"elem_test invalid (hic) 8"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"hic(dir2)=",hic(dir2)
+         stop
        endif
        elem_test=fablo(dir2)/bfact
        if (elem_test*bfact.ne.fablo(dir2)) then
-        print *,"elem_test invalid (fablo)"
+        print *,"elem_test invalid (fablo) 10"
+        print *,"elem_test=",elem_test
+        print *,"bfact=",bfact
+        print *,"dir2=",dir2
+        print *,"fablo(dir2)=",fablo(dir2)
         stop
        endif
        elem_test=(fabhi(dir2)+1)/bfact
        if (elem_test*bfact.ne.fabhi(dir2)+1) then
-        print *,"elem_test invalid (fabhi)"
+        print *,"elem_test invalid (fabhi) 11"
+        print *,"elem_test=",elem_test
+        print *,"bfact=",bfact
+        print *,"dir2=",dir2
+        print *,"fabhi(dir2)=",fabhi(dir2)
         stop
        endif
       enddo ! dir2=1..sdim
@@ -7579,7 +7715,7 @@ END SUBROUTINE SIMP
              endif
              if ((stenlo(dir2).lt.loc(dir2)-bfact_c).or. &
                  (stenhi(dir2).ge.loc(dir2))) then
-              print *,"stenlo or stenhi invalid"
+              print *,"stenlo or stenhi invalid 6"
               stop
              endif
             else if (side.eq.2) then
@@ -7589,7 +7725,7 @@ END SUBROUTINE SIMP
              endif
              if ((stenlo(dir2).le.hic(dir2)).or. &
                  (stenhi(dir2).gt.hic(dir2)+bfact_c)) then
-              print *,"stenlo or stenhi invalid"
+              print *,"stenlo or stenhi invalid 7"
               stop
              endif
             else
@@ -7599,7 +7735,7 @@ END SUBROUTINE SIMP
            else if (dir2.ne.dir+1) then
             if ((stenlo(dir2).lt.loc(dir2)).or. &
                 (stenhi(dir2).gt.hic(dir2))) then
-             print *,"stenlo or stenhi invalid"
+             print *,"stenlo or stenhi invalid 8"
              stop
             endif
            else
@@ -8048,7 +8184,7 @@ END SUBROUTINE SIMP
              endif
             else if ((maskcov_in.eq.0).and.(maskcov_out.eq.1)) then
              flux_copy=fluxhold(D_DECL(i_out,j_out,k_out),nc)
-             if (abs(flux_copy).lt.1.0E+20) then
+             if (abs(flux_copy).lt.1.0D+20) then
               fluxtarg(D_DECL(iface,jface,kface),nc)=flux_copy
              else
               print *,"flux_copy overflow"
@@ -8104,23 +8240,23 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T level_c
-      INTEGER_T level_f
-      INTEGER_T bfact_c
-      INTEGER_T bfact_f
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      REAL_T xlo_fine(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T ncomp
-      INTEGER_T DIMDEC(crse)
-      INTEGER_T DIMDEC(fine)
-      INTEGER_T lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T   crse(DIMV(crse),ncomp)
-      REAL_T   fine(DIMV(fine),ncomp)
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
       INTEGER_T n
@@ -8236,23 +8372,23 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T level_c
-      INTEGER_T level_f
-      INTEGER_T bfact_c
-      INTEGER_T bfact_f
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      REAL_T xlo_fine(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T ncomp
-      INTEGER_T DIMDEC(crse)
-      INTEGER_T DIMDEC(fine)
-      INTEGER_T lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T   crse(DIMV(crse),ncomp)
-      REAL_T   fine(DIMV(fine),ncomp)
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
       INTEGER_T n
@@ -8408,25 +8544,25 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T level_c
-      INTEGER_T level_f
-      INTEGER_T bfact_c
-      INTEGER_T bfact_f
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      REAL_T xlo_fine(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T ncomp
-      INTEGER_T nmat
-      INTEGER_T nten
-      INTEGER_T DIMDEC(crse)
-      INTEGER_T DIMDEC(fine)
-      INTEGER_T lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T   crse(DIMV(crse),ncomp)
-      REAL_T   fine(DIMV(fine),ncomp)
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
       INTEGER_T dir2
@@ -8619,23 +8755,24 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T level_c
-      INTEGER_T level_f
-      INTEGER_T bfact_c
-      INTEGER_T bfact_f
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      REAL_T xlo_fine(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T ncomp,nmat,nten,nten_test
-      INTEGER_T DIMDEC(crse)
-      INTEGER_T DIMDEC(fine)
-      INTEGER_T lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp,nmat,nten
+      INTEGER_T nten_test
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T   crse(DIMV(crse),ncomp)
-      REAL_T   fine(DIMV(fine),ncomp)
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
       INTEGER_T dir2
@@ -8821,22 +8958,22 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      REAL_T time
-      INTEGER_T nmat
-      INTEGER_T bfact_c,bfact_f
-      INTEGER_T  DIMDEC(crse)
-      INTEGER_T  DIMDEC(fine)
-      INTEGER_T  lo(SDIM),hi(SDIM)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: bfact_c,bfact_f
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T  growlo(3),growhi(3)
       INTEGER_T  stenlo(3),stenhi(3)
-      REAL_T   crse(DIMV(crse),nmat*ngeom_raw)
-      REAL_T   fine(DIMV(fine),nmat*ngeom_raw)
+      REAL_T, intent(out) :: crse(DIMV(crse),nmat*ngeom_raw)
+      REAL_T, intent(in) :: fine(DIMV(fine),nmat*ngeom_raw)
       INTEGER_T ifine,jfine,kfine
       INTEGER_T ic,jc,kc
       INTEGER_T dir
-      REAL_T problo(SDIM)
-      REAL_T dxc(SDIM)
-      REAL_T dxf(SDIM)
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxc(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
       INTEGER_T domlo(SDIM)
       INTEGER_T nhalf
       INTEGER_T nhalfgrid
@@ -9193,17 +9330,16 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-
-      INTEGER_T bfact_c,bfact_f
-      INTEGER_T  DIMDEC(crse)
-      INTEGER_T  DIMDEC(fine)
-      INTEGER_T  lo(SDIM),hi(SDIM)
-      INTEGER_T  growlo(3),growhi(3)
-      INTEGER_T  stenlo(3),stenhi(3)
-      REAL_T   crse(DIMV(crse))
-      REAL_T   fine(DIMV(fine))
-      INTEGER_T  i,j,k,ic,jc,kc
-      REAL_T problo(SDIM),dxf(SDIM)
+      INTEGER_T, intent(in) :: bfact_c,bfact_f
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      REAL_T, intent(out) :: crse(DIMV(crse))
+      REAL_T, intent(in) :: fine(DIMV(fine))
+      INTEGER_T i,j,k,ic,jc,kc
+      REAL_T, intent(in) :: problo(SDIM),dxf(SDIM)
  
       REAL_T wt(SDIM)
 
@@ -10752,26 +10888,29 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      INTEGER_T ngrow
-      INTEGER_T override_density,level
-      INTEGER_T gravity_dir_parm,isweep
-      REAL_T dt
-      REAL_T gravity_normalized  
-      REAL_T angular_velocity
-      INTEGER_T DIMDEC(presden)
-      INTEGER_T DIMDEC(state)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: override_density,level
+      INTEGER_T, intent(in) :: gravity_dir_parm,isweep
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: gravity_normalized  
+      REAL_T, intent(in) :: angular_velocity
+      INTEGER_T, intent(in) :: DIMDEC(presden)
+      INTEGER_T, intent(in) :: DIMDEC(state)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      INTEGER_T dombcpres(SDIM,2)   ! pressure bc at exterior walls
-      INTEGER_T presbc_arr(SDIM,2,num_materials_vel) ! presbc at int or ext.
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+       ! pressure bc at exterior walls
+      INTEGER_T, intent(in) :: dombcpres(SDIM,2) 
+       ! presbc at int or ext.
+      INTEGER_T, intent(in) :: presbc_arr(SDIM,2,num_materials_vel) 
 
-      REAL_T presden(DIMV(presden),2) !HYDROSTATIC_PRESSURE,HYDROSTATIC_DENSITY
-      REAL_T state(DIMV(state),nmat*num_state_material) 
-      REAL_T xlo(SDIM),dx(SDIM)
+       !HYDROSTATIC_PRESSURE,HYDROSTATIC_DENSITY
+      REAL_T, intent(inout) :: presden(DIMV(presden),2) 
+      REAL_T, intent(in) :: state(DIMV(state),nmat*num_state_material) 
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       REAL_T xcell(SDIM)
       REAL_T xwall_normal
       REAL_T xsten(-1:1,SDIM)
@@ -11029,38 +11168,38 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T facecut_index
-      INTEGER_T icefacecut_index
-      INTEGER_T vofface_index
-      INTEGER_T ncphys
-      INTEGER_T nmat
-      INTEGER_T nstate
-      INTEGER_T dir
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T denconst_gravity(nmat)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(recon)
-      INTEGER_T DIMDEC(lsnew)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(macnew)
-      INTEGER_T DIMDEC(cellgrav)
-      INTEGER_T DIMDEC(facegrav)
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T :: nsolveMM_FACE_test
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: facecut_index
+      INTEGER_T, intent(in) :: icefacecut_index
+      INTEGER_T, intent(in) :: vofface_index
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nstate
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: denconst_gravity(nmat)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      INTEGER_T, intent(in) :: DIMDEC(lsnew)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(macnew)
+      INTEGER_T, intent(in) :: DIMDEC(cellgrav)
+      INTEGER_T, intent(in) :: DIMDEC(facegrav)
 
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T recon(DIMV(recon),nmat*ngeom_recon) 
-      REAL_T lsnew(DIMV(lsnew),nmat*(SDIM+1))
-      REAL_T snew(DIMV(snew),nstate)
-      REAL_T macnew(DIMV(macnew),nsolveMM_FACE)
-      REAL_T cellgrav(DIMV(cellgrav),SDIM)
-      REAL_T facegrav(DIMV(facegrav))
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
+      REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+      REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
+      REAL_T, intent(inout) :: macnew(DIMV(macnew),nsolveMM_FACE)
+      REAL_T, intent(in) :: cellgrav(DIMV(cellgrav),SDIM)
+      REAL_T, intent(in) :: facegrav(DIMV(facegrav))
  
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
@@ -11347,63 +11486,63 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T level,finest_level
-      INTEGER_T velcomp
-      INTEGER_T veldir
-      INTEGER_T nsolve
-      INTEGER_T nsolveMM
-      INTEGER_T nsolveMM_face
-      INTEGER_T facecut_index
-      INTEGER_T icefacecut_index
-      INTEGER_T ncphys
-      INTEGER_T nmat
-      INTEGER_T project_option
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(yface)
-      INTEGER_T DIMDEC(zface)
-      INTEGER_T DIMDEC(alt_xface)
-      INTEGER_T DIMDEC(alt_yface)
-      INTEGER_T DIMDEC(alt_zface)
-      INTEGER_T DIMDEC(xgp)
-      INTEGER_T DIMDEC(ygp)
-      INTEGER_T DIMDEC(zgp)
-      INTEGER_T DIMDEC(xsrc)
-      INTEGER_T DIMDEC(ysrc)
-      INTEGER_T DIMDEC(zsrc)
-      INTEGER_T DIMDEC(xdest)
-      INTEGER_T DIMDEC(ydest)
-      INTEGER_T DIMDEC(zdest)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: velcomp
+      INTEGER_T :: veldir
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: nsolveMM
+      INTEGER_T, intent(in) :: nsolveMM_face
+      INTEGER_T, intent(in) :: facecut_index
+      INTEGER_T, intent(in) :: icefacecut_index
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(yface)
+      INTEGER_T, intent(in) :: DIMDEC(zface)
+      INTEGER_T, intent(in) :: DIMDEC(alt_xface)
+      INTEGER_T, intent(in) :: DIMDEC(alt_yface)
+      INTEGER_T, intent(in) :: DIMDEC(alt_zface)
+      INTEGER_T, intent(in) :: DIMDEC(xgp)
+      INTEGER_T, intent(in) :: DIMDEC(ygp)
+      INTEGER_T, intent(in) :: DIMDEC(zgp)
+      INTEGER_T, intent(in) :: DIMDEC(xsrc)
+      INTEGER_T, intent(in) :: DIMDEC(ysrc)
+      INTEGER_T, intent(in) :: DIMDEC(zsrc)
+      INTEGER_T, intent(in) :: DIMDEC(xdest)
+      INTEGER_T, intent(in) :: DIMDEC(ydest)
+      INTEGER_T, intent(in) :: DIMDEC(zdest)
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      INTEGER_T dir
-      INTEGER_T presbc_in(SDIM,2,nsolveMM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T :: dir
+      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nsolveMM)
 
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T yface(DIMV(yface),ncphys)
-      REAL_T zface(DIMV(zface),ncphys)
-      REAL_T alt_xface(DIMV(alt_xface))
-      REAL_T alt_yface(DIMV(alt_yface))
-      REAL_T alt_zface(DIMV(alt_zface))
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in) :: alt_xface(DIMV(alt_xface))
+      REAL_T, intent(in) :: alt_yface(DIMV(alt_yface))
+      REAL_T, intent(in) :: alt_zface(DIMV(alt_zface))
 
-      REAL_T xgp(DIMV(xgp))
-      REAL_T ygp(DIMV(ygp))
-      REAL_T zgp(DIMV(zgp))
+      REAL_T, intent(in) :: xgp(DIMV(xgp))
+      REAL_T, intent(in) :: ygp(DIMV(ygp))
+      REAL_T, intent(in) :: zgp(DIMV(zgp))
 
-      REAL_T xsrc(DIMV(xsrc))
-      REAL_T ysrc(DIMV(ysrc))
-      REAL_T zsrc(DIMV(zsrc))
+      REAL_T, intent(in) :: xsrc(DIMV(xsrc))
+      REAL_T, intent(in) :: ysrc(DIMV(ysrc))
+      REAL_T, intent(in) :: zsrc(DIMV(zsrc))
 
-      REAL_T xdest(DIMV(xdest))
-      REAL_T ydest(DIMV(ydest))
-      REAL_T zdest(DIMV(zdest))
+      REAL_T, intent(out) :: xdest(DIMV(xdest))
+      REAL_T, intent(out) :: ydest(DIMV(ydest))
+      REAL_T, intent(out) :: zdest(DIMV(zdest))
 
-      REAL_T xlo(SDIM),dx(SDIM)
-      REAL_T cur_time
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: cur_time
  
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
@@ -12079,6 +12218,8 @@ END SUBROUTINE SIMP
 ! time scale is : 1/V
 ! pressure scale: V^2
 ! scale for "cell_sound" is 1
+! called from:
+! NavierStokes::init_advective_pressure
 !
       subroutine FORT_ADVECTIVE_PRESSURE( &
         level, &
@@ -12106,33 +12247,34 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T project_option
-      REAL_T pgrad_dt_factor
-      INTEGER_T pressure_select_criterion
-      INTEGER_T nmat,nden
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dt
-      INTEGER_T make_interface_incomp
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: project_option
+      REAL_T, intent(in) :: pgrad_dt_factor
+      INTEGER_T, intent(in) :: pressure_select_criterion
+      INTEGER_T, intent(in) :: nmat,nden
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: make_interface_incomp
 
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(lsnew)
-      INTEGER_T DIMDEC(csnd)
-      INTEGER_T DIMDEC(cvof)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(mdot)
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T lsnew(DIMV(lsnew),nmat*(1+SDIM))
-      REAL_T csnd(DIMV(csnd),2) 
-      REAL_T cvof(DIMV(cvof),nmat) 
-      REAL_T den(DIMV(den),nden) ! den,temp
-      REAL_T mdot(DIMV(mdot),num_materials_vel) 
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(lsnew)
+      INTEGER_T, intent(in) :: DIMDEC(csnd)
+      INTEGER_T, intent(in) :: DIMDEC(cvof)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
+      REAL_T, intent(inout) :: csnd(DIMV(csnd),2) 
+      REAL_T, intent(in) :: cvof(DIMV(cvof),nmat) 
+      REAL_T, intent(in) :: den(DIMV(den),nden) ! den,temp
+      REAL_T, intent(inout) :: mdot(DIMV(mdot),num_materials_vel) 
+
       INTEGER_T i,j,k
       INTEGER_T im,imcrit,im_weight,im_opp
       INTEGER_T ibase
@@ -12155,32 +12297,46 @@ END SUBROUTINE SIMP
       REAL_T rmaskcov
       INTEGER_T local_mask
 
-      if (bfact.lt.1) then
+      if (bfact.ge.1) then
+       ! do nothing
+      else
        print *,"bfact invalid"
        stop
       endif
-      if (nmat.ne.num_materials) then
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
        print *,"nmat invalid advective pressure"
        stop
       endif
-      if (num_materials_vel.ne.1) then
+      if (num_materials_vel.eq.1) then
+       ! do nothing
+      else
        print *,"num_materials_vel invalid"
        stop
       endif
-      if (num_state_base.ne.2) then
+      if (num_state_base.eq.2) then
+       ! do nothing
+      else
        print *,"num_state_base invalid"
        stop
       endif
-      if (pgrad_dt_factor.lt.one) then
+      if (pgrad_dt_factor.ge.one) then
+       ! do nothing
+      else
        print *,"pgrad_dt_factor too small"
        stop
       endif
-      if (nden.ne.nmat*num_state_material) then
+      if (nden.eq.nmat*num_state_material) then
+       ! do nothing
+      else
        print *,"nden invalid"
        stop
       endif
-      if ((pressure_select_criterion.lt.0).or. &
-          (pressure_select_criterion.gt.2)) then
+      if ((pressure_select_criterion.ge.0).and. &
+          (pressure_select_criterion.le.2)) then
+       ! do nothing
+      else
        print *,"pressure_select_criterion invalid"
        stop
       endif
@@ -12228,7 +12384,9 @@ END SUBROUTINE SIMP
 
         do im=1,nmat
          vfrac(im)=cvof(D_DECL(i,j,k),im)
-         if ((vfrac(im).lt.-VOFTOL).or.(vfrac(im).gt.one+VOFTOL)) then
+         if ((vfrac(im).ge.-VOFTOL).and.(vfrac(im).le.one+VOFTOL)) then
+          ! do nothing
+         else
           print *,"vfrac invalid"
           stop
          endif
@@ -12255,12 +12413,16 @@ END SUBROUTINE SIMP
          endif
         enddo ! im=1..nmat
 
-        if ((imcrit.lt.1).or.(imcrit.gt.nmat)) then
+        if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
+         ! do nothing
+        else
          print *,"imcrit invalid"
          stop
         endif
 
-        if (abs(vfrac_solid_sum+vfrac_fluid_sum-one).gt.1.0E-4) then
+        if (abs(vfrac_solid_sum+vfrac_fluid_sum-one).le.1.0E-4) then
+         ! do nothing
+        else
          print *,"vfrac_solid_sum+vfrac_fluid_sum invalid"
          stop
         endif
@@ -12279,8 +12441,8 @@ END SUBROUTINE SIMP
          if ((project_option.eq.0).or. &
              (project_option.eq.13)) then
           div_hold(1)=zero
-         else if ((project_option.eq.10).or. &
-                  (project_option.eq.11)) then
+         else if ((project_option.eq.10).or. & !sync project prior to advection
+                  (project_option.eq.11)) then !FSI_material_exists 2nd project
            ! coeff_avg,p_avg
           div_hold(1)=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
                                               ! of DIV_TYPE)
@@ -12289,7 +12451,10 @@ END SUBROUTINE SIMP
            ! init_advective_pressure called from
            !   NavierStokes::multiphase_project
            ! mdot passed from localMF[DIFFUSIONRHS_MF]
-          if (mdot(D_DECL(i,j,k),1).ne.zero) then
+           ! project_option==11 => FSI_material_exists (2nd project)
+          if (mdot(D_DECL(i,j,k),1).eq.zero) then
+           ! do nothing
+          else
            print *,"mdot(D_DECL(i,j,k),1).ne.zero in advective_pressure"
            print *,"i,j,k,mdot ",i,j,k,mdot(D_DECL(i,j,k),1)
            print *,"level,finest_level ",level,finest_level
@@ -12352,13 +12517,15 @@ END SUBROUTINE SIMP
               ! returns c^2(e*scale)/scale
             call SOUNDSQR_material(rho(im),internal_energy, &
                soundsqr,fort_material_type(im),im)
-            if (soundsqr.le.zero) then
-              print *,"cannot have non-positive sound speed"
-              print *,"im= ",im
-              print *,"mattype= ",fort_material_type(im)
-              print *,"sound speed sqr ",soundsqr
-              print *,"vfrac= ",vfrac(im)
-              stop
+            if (soundsqr.gt.zero) then
+             ! do nothing
+            else
+             print *,"cannot have non-positive sound speed"
+             print *,"im= ",im
+             print *,"mattype= ",fort_material_type(im)
+             print *,"sound speed sqr ",soundsqr
+             print *,"vfrac= ",vfrac(im)
+             stop
             endif
 
             one_over_c2(im)=one/soundsqr
@@ -12406,7 +12573,9 @@ END SUBROUTINE SIMP
           else if (is_rigid(nmat,im).eq.1) then
 
            rho(im)=fort_denconst(im)
-           if (rho(im).le.zero) then
+           if (rho(im).gt.zero) then
+            ! do nothing
+           else
             print *,"rho(im)=0 ",im,rho(im)
             stop
            endif
@@ -12744,32 +12913,32 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T enable_spectral
-      INTEGER_T finest_level
-      INTEGER_T spectral_override
-      INTEGER_T level_c
-      INTEGER_T level_f
-      INTEGER_T bfact_c
-      INTEGER_T bfact_f
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T xlo_fine(SDIM)
-      INTEGER_T ncomp
-      INTEGER_T DIMDEC(c)
-      INTEGER_T DIMDEC(f)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T loc(SDIM), hic(SDIM)  ! cell centered
-      INTEGER_T lof(SDIM), hif(SDIM)  ! cell centered
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: spectral_override
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: DIMDEC(c)
+      INTEGER_T, intent(in) :: DIMDEC(f)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: loc(SDIM), hic(SDIM)  ! cell centered
+      INTEGER_T, intent(in) :: lof(SDIM), hif(SDIM)  ! cell centered
       INTEGER_T growlo(3), growhi(3)
       INTEGER_T stenlo(3), stenhi(3)
       INTEGER_T mstenlo(3), mstenhi(3)
       INTEGER_T edge_dir
       INTEGER_T gridtype
       INTEGER_T dir2
-      REAL_T crse(DIMV(c),ncomp)
-      REAL_T fine(DIMV(f),ncomp)
-      REAL_T mask(DIMV(mask))
+      REAL_T, intent(out) :: crse(DIMV(c),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(f),ncomp)
+      REAL_T, intent(in) :: mask(DIMV(mask))
       INTEGER_T flochi(SDIM)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine

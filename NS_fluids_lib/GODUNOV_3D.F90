@@ -604,26 +604,27 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T ntensor
-      INTEGER_T ntensorMM
-      INTEGER_T use_StewartLay
-      INTEGER_T nmat
-      INTEGER_T DIMDEC(levelpc)
-      INTEGER_T DIMDEC(faceLS)
-      INTEGER_T DIMDEC(mdata)
-      INTEGER_T DIMDEC(tdata)
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: ntensorMM
+      INTEGER_T, intent(in) :: use_StewartLay
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: DIMDEC(levelpc)
+      INTEGER_T, intent(in) :: DIMDEC(faceLS)
+      INTEGER_T, intent(in) :: DIMDEC(mdata)
+      INTEGER_T, intent(in) :: DIMDEC(tdata)
 
-      REAL_T faceLS(DIMV(faceLS),SDIM)
-      REAL_T mdata(DIMV(mdata),SDIM)
-      REAL_T tdata(DIMV(tdata),ntensorMM)
-      REAL_T levelpc(DIMV(levelpc),nmat)
-      REAL_T massfrac(nmat)
-      REAL_T total_mass
+      REAL_T, intent(in) :: faceLS(DIMV(faceLS),SDIM)
+      REAL_T, intent(in) :: mdata(DIMV(mdata),SDIM)
+      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensorMM)
+      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
+      REAL_T, intent(in) :: massfrac(nmat)
+      REAL_T, intent(in) :: total_mass
 
-      INTEGER_T ii,jj,kk
-      INTEGER_T i,j,k,dir,dirtan,tcomp
-      INTEGER_T is,ie,js,je,ks,ke
-      REAL_T slopeterm
+      INTEGER_T, intent(in) :: ii,jj,kk
+      INTEGER_T, intent(in) :: i,j,k,dir,dirtan,tcomp
+      INTEGER_T, intent(in) :: is,ie,js,je,ks,ke
+      REAL_T, intent(out) :: slopeterm
+
       INTEGER_T im1,jm1,km1,i1,j1,k1
       INTEGER_T im,im_primary,im_face,imL,imR
       REAL_T weight_total,sumslope
@@ -1559,8 +1560,10 @@ stop
        print *,"bfact invalid"
        stop
       endif
-      if (ngrow.lt.2) then
-       print *,"ngrow out of range"
+       ! for the unsplit algorithm, the cell centered state variable
+       ! slopes are zero.
+      if (ngrow.lt.1) then
+       print *,"ngrow out of range in BUILD_CONSERVE ngrow=",ngrow
        stop
       endif
       if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
@@ -5468,7 +5471,7 @@ stop
                    ! Marangoni force:
                    ! (I-nn^T)(grad sigma) delta=
                    ! (grad sigma - (grad sigma dot n)n ) delta
-                   if (abs(fort_tension_slope(hoop_force_iten)).le.1.0E+20) then
+                   if (abs(fort_tension_slope(hoop_force_iten)).le.1.0D+20) then
                     dotprod=zero
 
                     if (fort_tension_slope(hoop_force_iten).ne.zero) then
@@ -7617,29 +7620,29 @@ stop
       IMPLICIT NONE
 
 
-      INTEGER_T nmat,nstate
-      INTEGER_T nfluxSEM
-      INTEGER_T nstate_SDC
-      INTEGER_T project_option
-      INTEGER_T level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T veldir
-      INTEGER_T DIMDEC(deltafab)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T DIMDEC(rhoinverse)
-      INTEGER_T DIMDEC(DeDTinverse)
-      INTEGER_T DIMDEC(velnew)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T deltafab(DIMV(deltafab),nstate_SDC)
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T rhoinverse(DIMV(rhoinverse),nmat+1)
-      REAL_T DeDTinverse(DIMV(DeDTinverse),nmat+1)
-      REAL_T velnew(DIMV(velnew),nstate)
-      REAL_T dt
+      INTEGER_T, intent(in) :: nmat,nstate
+      INTEGER_T, intent(in) :: nfluxSEM
+      INTEGER_T, intent(in) :: nstate_SDC
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T :: i,j,k
+      INTEGER_T :: veldir
+      INTEGER_T, intent(in) :: DIMDEC(deltafab)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: DIMDEC(rhoinverse)
+      INTEGER_T, intent(in) :: DIMDEC(DeDTinverse)
+      INTEGER_T, intent(in) :: DIMDEC(velnew)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: deltafab(DIMV(deltafab),nstate_SDC)
+      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
+      REAL_T, intent(in) :: DeDTinverse(DIMV(DeDTinverse),nmat+1)
+      REAL_T, intent(inout) :: velnew(DIMV(velnew),nstate)
+      REAL_T, intent(in) :: dt
       INTEGER_T idst,isrc,im
       INTEGER_T local_maskSEM
 
@@ -7790,27 +7793,26 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-
-      INTEGER_T dir
-      INTEGER_T faceden_index
-      INTEGER_T ncphys
-      INTEGER_T level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T ii,jj,kk
-      INTEGER_T DIMDEC(deltafab)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(xmac)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T deltafab(DIMV(deltafab))
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T xmac(DIMV(xmac),num_materials_vel)
-      REAL_T dt
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: faceden_index
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T :: i,j,k
+      INTEGER_T :: ii,jj,kk
+      INTEGER_T, intent(in) :: DIMDEC(deltafab)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(xmac)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: deltafab(DIMV(deltafab))
+      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(inout) :: xmac(DIMV(xmac),num_materials_vel)
+      REAL_T, intent(in) :: dt
       INTEGER_T maskleft,maskright
       INTEGER_T nmat
       INTEGER_T im
@@ -11067,7 +11069,7 @@ stop
              dt_heat=one
 
              C_w0=fort_denconst(1)  ! density of water
-             PHYDWATER=2.0E+19
+             PHYDWATER=2.0D+19
              Cmethane_in_hydrate=Cdst ! hydrate is destination material.
        
              for_estdt=1
@@ -11498,7 +11500,7 @@ stop
       INTEGER_T DIMDEC(ucell)
      
       REAL_T  utemp(DIMV(utemp)) 
-      REAL_T  unode(DIMV(unode),SDIM) 
+      REAL_T  unode(DIMV(unode),SDIM+1) 
       REAL_T  ucell(DIMV(ucell),num_materials_vel*SDIM) 
       INTEGER_T velbc(SDIM,2)
 
@@ -11508,7 +11510,7 @@ stop
       INTEGER_T ii,jj,kk
       INTEGER_T iii,jjj,kkk
       INTEGER_T idx,side
-      INTEGER_T dirtan,dirtan_comp
+      INTEGER_T dirtan
       REAL_T delta,delta_test
       REAL_T hx,hx_plus,hx_minus
       REAL_T dplus,dminus,dminmod
@@ -11628,6 +11630,15 @@ stop
        stop
       endif
 
+        !first sweep:
+        ! 1. multiply velocity by dt.
+        ! 2. adjust velocity if RZ.
+        ! 3. override velocity if it is a passive advection problem.
+        ! 4. copy into mac_velocity
+        ! 5. repeat for cell_velocity
+        !second sweep:
+        ! 1. calculate mac velocity slopes.
+
       if (isweep.eq.0) then
        local_mac_grow=mac_grow+1
       else if (isweep.eq.1) then
@@ -11746,57 +11757,52 @@ stop
          print *,"levelrz=",levelrz
          stop
         endif
-       
+      
+         ! find displacements 
         if (isweep.eq.0) then 
          unode(D_DECL(i,j,k),1)=delta
+
+         ! find derivatives of the displacements:
+         ! the derivative of u_normdir with respect to x_dirtan
         else if (isweep.eq.1) then
          delta_test=unode(D_DECL(i,j,k),1)
          if ((abs(delta-delta_test).le.VOFTOL*delta).or. &
              (abs(delta-delta_test).le.VOFTOL)) then
-          dirtan_comp=1
           do dirtan=1,SDIM
-           if (dirtan.ne.normdir+1) then
-            iii=0
-            jjj=0
-            kkk=0
-            if (dirtan.eq.1) then
-             iii=1
-            else if (dirtan.eq.2) then
-             jjj=1
-            else if ((dirtan.eq.3).and.(SDIM.eq.3)) then
-             kkk=1
-            else
-             print *,"dirtan invalid"
-             stop
-            endif
-            hx_plus=xstenMAC(1,dirtan)-xstenMAC(0,dirtan)
-            hx_minus=xstenMAC(0,dirtan)-xstenMAC(-1,dirtan)
-            if ((hx_plus.gt.zero).and.(hx_minus.gt.zero)) then
-             dplus=(unode(D_DECL(i+iii,j+jjj,k+kkk),1)-delta)/hx_plus
-             dminus=(delta-unode(D_DECL(i-iii,j-jjj,k-kkk),1))/hx_minus
-             if (dplus*dminus.le.zero) then
-              dminmod=zero
-             else if (abs(dplus).le.abs(dminus)) then
-              dminmod=dplus
-             else if (abs(dplus).ge.abs(dminus)) then
-              dminmod=dminus
-             else
-              print *,"dplus or dminus bust"
-              stop
-             endif
-             unode(D_DECL(i,j,k),1+dirtan_comp)=dminmod
-            else
-             print *,"hs_plus or hx_minus invalid"
-             stop
-            endif
-
-            dirtan_comp=dirtan_comp+1
-           else if (dirtan.eq.normdir+1) then
-            ! do nothing
+           iii=0
+           jjj=0
+           kkk=0
+           if (dirtan.eq.1) then
+            iii=1
+           else if (dirtan.eq.2) then
+            jjj=1
+           else if ((dirtan.eq.3).and.(SDIM.eq.3)) then
+            kkk=1
            else
-            print *,"dirtan bust"
+            print *,"dirtan invalid"
             stop
            endif
+           hx_plus=xstenMAC(1,dirtan)-xstenMAC(0,dirtan)
+           hx_minus=xstenMAC(0,dirtan)-xstenMAC(-1,dirtan)
+           if ((hx_plus.gt.zero).and.(hx_minus.gt.zero)) then
+            dplus=(unode(D_DECL(i+iii,j+jjj,k+kkk),1)-delta)/hx_plus
+            dminus=(delta-unode(D_DECL(i-iii,j-jjj,k-kkk),1))/hx_minus
+            if (dplus*dminus.le.zero) then
+             dminmod=zero
+            else if (abs(dplus).le.abs(dminus)) then
+             dminmod=dplus
+            else if (abs(dplus).ge.abs(dminus)) then
+             dminmod=dminus
+            else
+             print *,"dplus or dminus bust"
+             stop
+            endif
+            unode(D_DECL(i,j,k),1+dirtan)=dminmod
+           else
+            print *,"hs_plus or hx_minus invalid"
+            stop
+           endif
+
           enddo ! dirtan=1..sdim
          else
           print *,"delta or delta_test invalid"
@@ -15639,6 +15645,7 @@ stop
        override_density, &
        velbc, &
        EILE_flag, &
+       VOF_reflux, &
        dir_counter, &
        normdir, &
        tilelo,tilehi, &
@@ -15726,6 +15733,7 @@ stop
       INTEGER_T domlo(SDIM),domhi(SDIM)
       INTEGER_T dombc(SDIM,2)
       INTEGER_T EILE_flag
+      INTEGER_T VOF_reflux
       REAL_T passive_veltime
       INTEGER_T dir_counter,normdir
       INTEGER_T verbose
@@ -15801,7 +15809,7 @@ stop
       REAL_T conscor(DIMV(conscor),nmat)
       REAL_T mask(DIMV(mask))
       REAL_T masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
-      REAL_T unode(DIMV(unode))
+      REAL_T unode(DIMV(unode),SDIM+1)
        ! local variables
       REAL_T conserve(DIMV(conserve),nc_conserve)
       REAL_T xvel(DIMV(xvel)) 
@@ -16145,6 +16153,13 @@ stop
        stop
       endif
 
+      if ((VOF_reflux.eq.0).or.(VOF_reflux.eq.1)) then
+       ! do nothing
+      else
+       print *,"VOF_reflux invalid"
+       stop
+      endif
+
       if ((EILE_flag.lt.-1).or.(EILE_flag.gt.3)) then
        print *,"EILE_flag invalid"
        stop
@@ -16484,7 +16499,7 @@ stop
             ! veldata(momcomp)  momcomp=(im-1)*sdim+veldir
             ! veldata(iden_mom_base+im)
 
-            usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart))
+            usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart),1)
             nhalf=1
             call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
               level,nhalf,normdir+1)
@@ -16501,7 +16516,7 @@ stop
              print *,"levelrz invalid add to bucket mac"
              stop
             endif
-            usten_accept(1)=unode(D_DECL(ipart+ii,jpart+jj,kpart+kk))
+            usten_accept(1)=unode(D_DECL(ipart+ii,jpart+jj,kpart+kk),1)
 
             if (usten_accept(-1).gt.zero) then
              idonatelow=-1
@@ -16603,7 +16618,7 @@ stop
 
               if (check_intersection.eq.1) then 
 
-               usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate))
+               usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate),1)
 
                nhalf=1
                call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
@@ -16622,7 +16637,7 @@ stop
                 stop
                endif
 
-               usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
+               usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk),1)
 
                if (veldir.eq.normdir+1) then
 
@@ -16924,7 +16939,7 @@ stop
          enddo
          enddo
 
-         usten_accept(-1)=unode(D_DECL(icrse,jcrse,kcrse))
+         usten_accept(-1)=unode(D_DECL(icrse,jcrse,kcrse),1)
 
          nhalf=1
          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
@@ -16943,7 +16958,7 @@ stop
           stop
          endif
 
-         usten_accept(1)=unode(D_DECL(icrse+ii,jcrse+jj,kcrse+kk))
+         usten_accept(1)=unode(D_DECL(icrse+ii,jcrse+jj,kcrse+kk),1)
 
          if (usten_accept(-1).gt.zero) then
           idonatelow=-1
@@ -17012,7 +17027,7 @@ stop
 
           if (check_intersection.eq.1) then 
 
-           usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate))
+           usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate),1)
 
            nhalf=1
            call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
@@ -17033,7 +17048,7 @@ stop
             stop
            endif
 
-           usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
+           usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk),1)
 
            usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
 
@@ -17408,7 +17423,7 @@ stop
 
            if ((iside.eq.1).or.(iside.eq.2)) then
 
-            face_displace=unode(D_DECL(ipart,jpart,kpart))
+            face_displace=unode(D_DECL(ipart,jpart,kpart),1)
             if (abs(face_displace).ge.VOFTOL*dx(normdir+1)) then
              idonate=icrse
              jdonate=jcrse
@@ -17554,10 +17569,12 @@ stop
              print *,"maskleft or maskright invalid"
              stop
             endif
- 
+
+             ! the current active (coarse) cell has a 
+             ! covered (inactive) neighbor. 
             if ((iside_coarse.eq.1).or.(iside_coarse.eq.2)) then
 
-             face_displace=unode(D_DECL(ipart,jpart,kpart))
+             face_displace=unode(D_DECL(ipart,jpart,kpart),1)
              if (abs(face_displace).ge.VOFTOL*dx(normdir+1)) then
               idonate=icrse
               jdonate=jcrse
@@ -17664,14 +17681,21 @@ stop
                multi_volume_grid(im)*sign_face_displace
               if (abs(flux_cor).ge.VOFTOL*volcell_donate) then
 
-               if (iside_coarse.eq.1) then
-                volmat_target_cor(im)=volmat_target_cor(im)+flux_cor
-                volmat_depart_cor(im)=volmat_depart_cor(im)+flux_cor
-               else if (iside_coarse.eq.2) then
-                volmat_target_cor(im)=volmat_target_cor(im)-flux_cor
-                volmat_depart_cor(im)=volmat_depart_cor(im)-flux_cor
+               if (VOF_reflux.eq.1) then
+                if (iside_coarse.eq.1) then
+                 volmat_target_cor(im)=volmat_target_cor(im)+flux_cor
+                 volmat_depart_cor(im)=volmat_depart_cor(im)+flux_cor
+                else if (iside_coarse.eq.2) then
+                 volmat_target_cor(im)=volmat_target_cor(im)-flux_cor
+                 volmat_depart_cor(im)=volmat_depart_cor(im)-flux_cor
+                else
+                 print *,"iside_coarse invalid"
+                 stop
+                endif
+               else if (VOF_reflux.eq.0) then
+                ! do nothing
                else
-                print *,"iside_coarse invalid"
+                print *,"VOF_reflux invalid"
                 stop
                endif
 
@@ -18546,9 +18570,9 @@ stop
       REAL_T mask(DIMV(mask))
       REAL_T masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
       REAL_T maskunsplit(DIMV(maskunsplit))
-      REAL_T unode(DIMV(unode),BL_SPACEDIM)
-      REAL_T vnode(DIMV(vnode),BL_SPACEDIM)
-      REAL_T wnode(DIMV(wnode),BL_SPACEDIM)
+      REAL_T unode(DIMV(unode),BL_SPACEDIM+1)
+      REAL_T vnode(DIMV(vnode),BL_SPACEDIM+1)
+      REAL_T wnode(DIMV(wnode),BL_SPACEDIM+1)
        ! local variables
       REAL_T conserve(DIMV(conserve),nc_conserve)
       REAL_T xvel(DIMV(xvel)) 
@@ -18636,7 +18660,7 @@ stop
       INTEGER_T ileft_sten,jleft_sten,kleft_sten
       INTEGER_T iright,jright,kright
       INTEGER_T iright_sten,jright_sten,kright_sten
-      INTEGER_T inode
+      INTEGER_T ijk_node
       INTEGER_T inode1,jnode1,knode1
       INTEGER_T imac,jmac,kmac
       INTEGER_T imac_sten,jmac_sten,kmac_sten
@@ -18684,9 +18708,11 @@ stop
       INTEGER_T k1lo,k1hi
       REAL_T velnode(D_DECL(-1:1,-1:1,-1:1),SDIM)
       REAL_T velnode_local(SDIM)
+      REAL_T velnode_cor(SDIM)
+      REAL_T dvel_local(SDIM,SDIM)
 
-      INTEGER_T dirtan1,dirtan2
-      REAL_T dxtan1,dxtan2
+      INTEGER_T dirtan
+      REAL_T dxtan
       REAL_T xlow,xhigh,xmid
       REAL_T ulow,uhigh
       INTEGER_T symmetry_flag
@@ -19177,6 +19203,24 @@ stop
              stop
             endif
 
+            !  --------N------N
+            !  |       |      |  C=CELL (ileft,jleft,kleft)=(ipart,jpart,kpart)
+            !  |              |  M=MAC  (icrse,jleft,kleft)
+            !  |       C      M  N=NODE
+            !  |              |
+            !  |       |      |
+            !  --------N------N
+            !
+            !  STEP 1:
+            !  N--------------N
+            !  |       |      |  C=CELL (ileft,jleft,kleft)=(ipart,jpart,kpart)
+            !  |              |  M=MAC  (icrse,jleft,kleft)
+            !  |       C      M  N=NODE
+            !  |              |
+            !  |       |      |
+            !  N--------------N
+
+             
             nhalf=1
             call CISBOXHALF(u_xsten_accept,nhalf, &
              xlo,dx,ipart,jpart,kpart,iside_part,veldir, &
@@ -19188,48 +19232,52 @@ stop
              stop
             endif
 
-            inode=1
+            ijk_node=1
 
             ! index order must be knode1,jnode1,inode1
             do knode1=k1lo,k1hi,2
             do jnode1=-1,1,2
             do inode1=-1,1,2
 
+              ! nodes of half-box
              do udir=1,SDIM
               if (udir.eq.1) then
-               xtargetnode(inode,udir)=u_xsten_accept(inode1,udir)
+               xtargetnode(ijk_node,udir)=u_xsten_accept(inode1,udir)
               else if (udir.eq.2) then
-               xtargetnode(inode,udir)=u_xsten_accept(jnode1,udir)
+               xtargetnode(ijk_node,udir)=u_xsten_accept(jnode1,udir)
               else if ((udir.eq.3).and.(SDIM.eq.3)) then
-               xtargetnode(inode,udir)=u_xsten_accept(knode1,udir)
+               xtargetnode(ijk_node,udir)=u_xsten_accept(knode1,udir)
               else
                print *,"udir invalid"
                stop
               endif
              enddo ! udir=1..sdim
-             inode=inode+1
+             ijk_node=ijk_node+1
 
             enddo
             enddo
             enddo
 
-            if (inode-1.eq.4*(SDIM-1)) then
+            if (ijk_node-1.eq.4*(SDIM-1)) then
              ! do nothing
             else
-             print *,"inode invalid"
+             print *,"ijk_node invalid"
              stop
             endif
 
+             ! u_xsten_contain: full box containing the half-box
             nhalf=1
             call gridsten_level(u_xsten_contain,ipart,jpart,kpart, &
               level,nhalf)
 
-            inode=1
+            ijk_node=1
 
+            ! full box containing the half-box.
             ! index order must be knode1,jnode1,inode1
             do knode1=k1lo,k1hi,2
             do jnode1=-1,1,2
             do inode1=-1,1,2
+
              if (inode1.eq.-1) then
               imac=ipart
              else if (inode1.eq.1) then
@@ -19261,120 +19309,123 @@ stop
               print *,"dimension bust"
               stop
              endif
-             udir=1
-             dirtan1=2
-             dirtan2=SDIM
-             dxtan1=u_xsten_contain(jnode1,dirtan1)-u_xsten_contain(0,dirtan1)
 
-             if (dxtan1*jnode1.gt.zero) then
-              velnode_local(udir)= &
-               unode(D_DECL(imac,jpart,kpart),1)+ &
-               unode(D_DECL(imac,jpart,kpart),2)*dxtan1
-              if (SDIM.eq.3) then
-               dxtan2=u_xsten_contain(knode1,dirtan2)-u_xsten_contain(0,dirtan2)
-               if (dxtan2*knode1.gt.zero) then
-                velnode_local(udir)=velnode_local(udir)+ &
-                 unode(D_DECL(imac,jpart,kpart),SDIM)*dxtan2
+             do udir=1,SDIM
+
+              if (udir.eq.1) then
+               velnode_local(udir)=unode(D_DECL(imac,jpart,kpart),1)
+               do dirtan=1,SDIM
+                dvel_local(udir,dirtan)=unode(D_DECL(imac,jpart,kpart),1+dirtan)
+               enddo
+              else if (udir.eq.2) then
+               velnode_local(udir)=vnode(D_DECL(ipart,jmac,kpart),1)
+               do dirtan=1,SDIM
+                dvel_local(udir,dirtan)=vnode(D_DECL(ipart,jmac,kpart),1+dirtan)
+               enddo
+              else if ((udir.eq.3).and.(SDIM.eq.3)) then
+               velnode_local(udir)=wnode(D_DECL(ipart,jpart,kmac),1)
+               do dirtan=1,SDIM
+                dvel_local(udir,dirtan)=wnode(D_DECL(ipart,jpart,kmac),1+dirtan)
+               enddo
+              else
+               print *,"udir invalid"
+               stop
+              endif
+
+              do dirtan=1,SDIM
+               if (dirtan.ne.udir) then
+                if (dirtan.eq.1) then
+                 dxtan=u_xsten_contain(inode1,dirtan)- &
+                       u_xsten_contain(0,dirtan)
+                 if (dxtan*inode1.gt.zero) then
+                  velnode_local(udir)=velnode_local(udir)+ &
+                          dxtan*dvel_local(udir,dirtan)
+                 else
+                  print *,"dxtan or inode1 invalid"
+                  stop
+                 endif
+                else if (dirtan.eq.2) then
+                 dxtan=u_xsten_contain(jnode1,dirtan)- &
+                       u_xsten_contain(0,dirtan)
+                 if (dxtan*jnode1.gt.zero) then
+                  velnode_local(udir)=velnode_local(udir)+ &
+                          dxtan*dvel_local(udir,dirtan)
+                 else
+                  print *,"dxtan or jnode1 invalid"
+                  stop
+                 endif
+                else if ((dirtan.eq.3).and.(SDIM.eq.3)) then
+                 dxtan=u_xsten_contain(knode1,dirtan)- &
+                       u_xsten_contain(0,dirtan)
+                 if (dxtan*knode1.gt.zero) then
+                  velnode_local(udir)=velnode_local(udir)+ &
+                          dxtan*dvel_local(udir,dirtan)
+                 else
+                  print *,"dxtan or knode1 invalid"
+                  stop
+                 endif
+                else
+                 print *,"dirtan invalid"
+                 stop
+                endif
+               else if (dirtan.eq.udir) then
+                ! do nothing
                else
-                print *,"dxtan2 invalid"
+                print *,"dirtan or udir bust"
                 stop
                endif
-              else if (SDIM.eq.2) then
-               ! do nothing
-              else
-               print *,"dimension bust"
-               stop
-              endif
-             else
-              print *,"dxtan1 invalid"
-              stop
-             endif
-             udir=2
-             dirtan1=1
-             dirtan2=SDIM
-             dxtan1=u_xsten_contain(inode1,dirtan1)-u_xsten_contain(0,dirtan1)
-             if (dxtan1*inode1.gt.zero) then
-              velnode_local(udir)= &
-               vnode(D_DECL(ipart,jmac,kpart),1)+ &
-               vnode(D_DECL(ipart,jmac,kpart),2)*dxtan1
-              if (SDIM.eq.3) then
-               dxtan2=u_xsten_contain(knode1,dirtan2)-u_xsten_contain(0,dirtan2)
-               if (dxtan2*knode1.gt.zero) then
-                velnode_local(udir)=velnode_local(udir)+ &
-                 vnode(D_DECL(ipart,jmac,kpart),SDIM)*dxtan2
-               else
-                print *,"dxtan2 invalid"
-                stop
-               endif
-              else if (SDIM.eq.2) then
-               ! do nothing
-              else
-               print *,"dimension bust"
-               stop
-              endif
-             else
-              print *,"dxtan1 invalid"
-              stop
-             endif
-             if (SDIM.eq.3) then
-              udir=SDIM
-              dirtan1=1
-              dirtan2=2
-              dxtan1=u_xsten_contain(inode1,dirtan1)-u_xsten_contain(0,dirtan1)
-              dxtan2=u_xsten_contain(jnode1,dirtan2)-u_xsten_contain(0,dirtan2)
-              if ((dxtan1*inode1.gt.zero).and. &
-                  (dxtan2*jnode1.gt.zero)) then
-               velnode_local(udir)= &
-                wnode(D_DECL(ipart,jpart,kmac),1)+ &
-                wnode(D_DECL(ipart,jpart,kmac),2)*dxtan1+ &
-                wnode(D_DECL(ipart,jpart,kmac),SDIM)*dxtan2
-              else
-               print *,"dxtan1 or dxtan2 invalid"
-               stop
-              endif
-             else if (SDIM.eq.2) then
-              ! do nothing
-             else
-              print *,"dimension bust"
-              stop
-             endif
+              enddo ! dirtan=1..sdim
+             enddo ! udir=1..sdim
+
              if (levelrz.eq.0) then
               ! check nothing
              else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-              if (xtargetnode(inode,1).lt.-dx(1)*VOFTOL) then
+              if (xtargetnode(ijk_node,1).lt.-dx(1)*VOFTOL) then
                print *,"cannot have target node for r<0"
                stop
-              else if (xtargetnode(inode,1).le.dx(1)*VOFTOL) then
+              else if (xtargetnode(ijk_node,1).le.dx(1)*VOFTOL) then
                if (abs(velnode_local(1)).lt.dx(1)*VOFTOL) then
                 velnode_local(1)=zero
                else
                 print *,"velnode_local(1) invalid"
                 stop
                endif
-              else if (xtargetnode(inode,1).ge.dx(1)*VOFTOL) then
+              else if (xtargetnode(ijk_node,1).ge.dx(1)*VOFTOL) then
                ! do nothing
               else
-               print *,"xtargetnode(inode,1) invalid"
+               print *,"xtargetnode(ijk_node,1) invalid"
                stop
               endif 
              else
               print *,"levelrz invalid"
               stop
              endif
-               
+              
+              ! dx/dt = -u(x,y)
+              ! d2x/dt2=-u_x xt -uy yt=u_x u + uy v
+              ! xnew = xold + dt dx/dt + dt^2/2 xtt
+              ! xnew = xold - dt u + dt^2/2 (u ux + v uy)
              do udir=1,SDIM
-              velnode(D_DECL(inode1,jnode1,knode1),udir)=velnode_local(udir)
+              velnode_cor(udir)=velnode_local(udir)
+              do dirtan=1,SDIM
+               velnode_cor(udir)=velnode_cor(udir)- &
+                   half*dt*velnode_local(dirtan)*dvel_local(udir,dirtan)
+              enddo 
              enddo
 
-             inode=inode+1
+             do udir=1,SDIM
+              velnode(D_DECL(inode1,jnode1,knode1),udir)=velnode_cor(udir)
+             enddo
+
+             ijk_node=ijk_node+1
             enddo
             enddo
             enddo ! inode1,jnode1,knode1
 
-            if (inode-1.eq.4*(SDIM-1)) then
+            if (ijk_node-1.eq.4*(SDIM-1)) then
              ! do nothing
             else
-             print *,"inode invalid"
+             print *,"ijk_node invalid"
              stop
             endif
 
@@ -19508,7 +19559,7 @@ stop
                stop
               endif
 
-              inode=1
+              ijk_node=1
 
               ! index order must be knode1,jnode1,inode1
               do knode1=k1lo,k1hi,2
@@ -19516,21 +19567,21 @@ stop
               do inode1=-1,1,2
 
                do udir=1,SDIM
-                xdepartnode(inode,udir)=xtargetnode(inode,udir)- &
+                xdepartnode(ijk_node,udir)=xtargetnode(ijk_node,udir)- &
                  velnode(D_DECL(inode1,jnode1,knode1),udir)
                enddo ! udir=1..sdim
  
-               tempdatanode(inode)=one
+               tempdatanode(ijk_node)=one
 
-               inode=inode+1
+               ijk_node=ijk_node+1
               enddo
               enddo
               enddo ! inode1,jnode1,knode1
 
-              if (inode-1.eq.4*(SDIM-1)) then
+              if (ijk_node-1.eq.4*(SDIM-1)) then
                ! do nothing
               else
-               print *,"inode invalid"
+               print *,"ijk_node invalid"
                stop
               endif
 
@@ -19940,7 +19991,7 @@ stop
            stop
           endif
 
-          inode=1
+          ijk_node=1
 
           ! index order must be knode1,jnode1,inode1
           do knode1=k1lo,k1hi,2
@@ -19949,35 +20000,36 @@ stop
 
            do udir=1,SDIM
             if (udir.eq.1) then
-             xtargetnode(inode,udir)=u_xsten_accept(inode1,udir)
+             xtargetnode(ijk_node,udir)=u_xsten_accept(inode1,udir)
             else if (udir.eq.2) then
-             xtargetnode(inode,udir)=u_xsten_accept(jnode1,udir)
+             xtargetnode(ijk_node,udir)=u_xsten_accept(jnode1,udir)
             else if ((udir.eq.3).and.(SDIM.eq.3)) then
-             xtargetnode(inode,udir)=u_xsten_accept(knode1,udir)
+             xtargetnode(ijk_node,udir)=u_xsten_accept(knode1,udir)
             else
              print *,"udir invalid"
              stop
             endif
            enddo ! udir=1..sdim
-           inode=inode+1
+           ijk_node=ijk_node+1
 
           enddo
           enddo
           enddo
 
-          if (inode-1.eq.4*(SDIM-1)) then
+          if (ijk_node-1.eq.4*(SDIM-1)) then
            ! do nothing
           else
-           print *,"inode invalid"
+           print *,"ijk_node invalid"
            stop
           endif
 
-          inode=1
+          ijk_node=1
 
           ! index order must be knode1,jnode1,inode1
           do knode1=k1lo,k1hi,2
           do jnode1=-1,1,2
           do inode1=-1,1,2
+
            if (inode1.eq.-1) then
             imac=icrse
            else if (inode1.eq.1) then
@@ -20009,121 +20061,123 @@ stop
             print *,"dimension bust"
             stop
            endif
-           udir=1
-           dirtan1=2
-           dirtan2=SDIM
-           dxtan1=u_xsten_accept(jnode1,dirtan1)-u_xsten_accept(0,dirtan1)
 
-           if (dxtan1*jnode1.gt.zero) then
-            velnode_local(udir)= &
-             unode(D_DECL(imac,jcrse,kcrse),1)+ &
-             unode(D_DECL(imac,jcrse,kcrse),2)*dxtan1
-            if (SDIM.eq.3) then
-             dxtan2=u_xsten_accept(knode1,dirtan2)-u_xsten_accept(0,dirtan2)
-             if (dxtan2*knode1.gt.zero) then
-              velnode_local(udir)=velnode_local(udir)+ &
-               unode(D_DECL(imac,jcrse,kcrse),SDIM)*dxtan2
+           do udir=1,SDIM
+
+            if (udir.eq.1) then
+             velnode_local(udir)=unode(D_DECL(imac,jcrse,kcrse),1)
+             do dirtan=1,SDIM
+              dvel_local(udir,dirtan)=unode(D_DECL(imac,jcrse,kcrse),1+dirtan)
+             enddo
+            else if (udir.eq.2) then
+             velnode_local(udir)=vnode(D_DECL(icrse,jmac,kcrse),1)
+             do dirtan=1,SDIM
+              dvel_local(udir,dirtan)=vnode(D_DECL(icrse,jmac,kcrse),1+dirtan)
+             enddo
+            else if ((udir.eq.3).and.(SDIM.eq.3)) then
+             velnode_local(udir)=wnode(D_DECL(icrse,jcrse,kmac),1)
+             do dirtan=1,SDIM
+              dvel_local(udir,dirtan)=wnode(D_DECL(icrse,jcrse,kmac),1+dirtan)
+             enddo
+            else
+             print *,"udir invalid"
+             stop
+            endif
+
+            do dirtan=1,SDIM
+             if (dirtan.ne.udir) then
+              if (dirtan.eq.1) then
+               dxtan=u_xsten_accept(inode1,dirtan)- &
+                     u_xsten_accept(0,dirtan)
+               if (dxtan*inode1.gt.zero) then
+                velnode_local(udir)=velnode_local(udir)+ &
+                          dxtan*dvel_local(udir,dirtan)
+               else
+                print *,"dxtan or inode1 invalid"
+                stop
+               endif
+              else if (dirtan.eq.2) then
+               dxtan=u_xsten_accept(jnode1,dirtan)- &
+                     u_xsten_accept(0,dirtan)
+               if (dxtan*jnode1.gt.zero) then
+                velnode_local(udir)=velnode_local(udir)+ &
+                        dxtan*dvel_local(udir,dirtan)
+               else
+                print *,"dxtan or jnode1 invalid"
+                stop
+               endif
+              else if ((dirtan.eq.3).and.(SDIM.eq.3)) then
+               dxtan=u_xsten_accept(knode1,dirtan)- &
+                     u_xsten_accept(0,dirtan)
+               if (dxtan*knode1.gt.zero) then
+                velnode_local(udir)=velnode_local(udir)+ &
+                        dxtan*dvel_local(udir,dirtan)
+               else
+                print *,"dxtan or knode1 invalid"
+                stop
+               endif
+              else
+               print *,"dirtan invalid"
+               stop
+              endif
+             else if (dirtan.eq.udir) then
+              ! do nothing
              else
-              print *,"dxtan2 invalid"
+              print *,"dirtan or udir bust"
               stop
              endif
-            else if (SDIM.eq.2) then
-             ! do nothing
-            else
-             print *,"dimension bust"
-             stop
-            endif
-           else
-            print *,"dxtan1 invalid"
-            stop
-           endif
-           udir=2
-           dirtan1=1
-           dirtan2=SDIM
-           dxtan1=u_xsten_accept(inode1,dirtan1)-u_xsten_accept(0,dirtan1)
-           if (dxtan1*inode1.gt.zero) then
-            velnode_local(udir)= &
-             vnode(D_DECL(icrse,jmac,kcrse),1)+ &
-             vnode(D_DECL(icrse,jmac,kcrse),2)*dxtan1
-            if (SDIM.eq.3) then
-             dxtan2=u_xsten_accept(knode1,dirtan2)-u_xsten_accept(0,dirtan2)
-             if (dxtan2*knode1.gt.zero) then
-              velnode_local(udir)=velnode_local(udir)+ &
-               vnode(D_DECL(icrse,jmac,kcrse),SDIM)*dxtan2
-             else
-              print *,"dxtan2 invalid"
-              stop
-             endif
-            else if (SDIM.eq.2) then
-             ! do nothing
-            else
-             print *,"dimension bust"
-             stop
-            endif
-           else
-            print *,"dxtan1 invalid"
-            stop
-           endif
-           if (SDIM.eq.3) then
-            udir=SDIM
-            dirtan1=1
-            dirtan2=2
-            dxtan1=u_xsten_accept(inode1,dirtan1)-u_xsten_accept(0,dirtan1)
-            dxtan2=u_xsten_accept(jnode1,dirtan2)-u_xsten_accept(0,dirtan2)
-            if ((dxtan1*inode1.gt.zero).and. &
-                (dxtan2*jnode1.gt.zero)) then
-             velnode_local(udir)= &
-              wnode(D_DECL(icrse,jcrse,kmac),1)+ &
-              wnode(D_DECL(icrse,jcrse,kmac),2)*dxtan1+ &
-              wnode(D_DECL(icrse,jcrse,kmac),SDIM)*dxtan2
-            else
-             print *,"dxtan1 or dxtan2 invalid"
-             stop
-            endif
-           else if (SDIM.eq.2) then
-            ! do nothing
-           else
-            print *,"dimension bust"
-            stop
-           endif
+            enddo ! dirtan=1..sdim
+           enddo ! udir=1..sdim
 
            if (levelrz.eq.0) then
             ! check nothing
            else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-            if (xtargetnode(inode,1).lt.-dx(1)*VOFTOL) then
+            if (xtargetnode(ijk_node,1).lt.-dx(1)*VOFTOL) then
              print *,"cannot have target node for r<0"
              stop
-            else if (xtargetnode(inode,1).le.dx(1)*VOFTOL) then
+            else if (xtargetnode(ijk_node,1).le.dx(1)*VOFTOL) then
              if (abs(velnode_local(1)).lt.dx(1)*VOFTOL) then
               velnode_local(1)=zero
              else
               print *,"velnode_local(1) invalid"
               stop
              endif
-            else if (xtargetnode(inode,1).ge.dx(1)*VOFTOL) then
+            else if (xtargetnode(ijk_node,1).ge.dx(1)*VOFTOL) then
              ! do nothing
             else
-             print *,"xtargetnode(inode,1) invalid"
+             print *,"xtargetnode(ijk_node,1) invalid"
              stop
             endif 
            else
             print *,"levelrz invalid"
             stop
            endif
-               
+           
+            ! dx/dt = -u(x,y)
+            ! d2x/dt2=-u_x xt -uy yt=u_x u + uy v
+            ! xnew = xold + dt dx/dt + dt^2/2 xtt
+            ! xnew = xold - dt u + dt^2/2 (u ux + v uy)
            do udir=1,SDIM
-            velnode(D_DECL(inode1,jnode1,knode1),udir)=velnode_local(udir)
+            velnode_cor(udir)=velnode_local(udir)
+            do dirtan=1,SDIM
+             velnode_cor(udir)=velnode_cor(udir)- &
+                 half*dt*velnode_local(dirtan)*dvel_local(udir,dirtan)
+            enddo 
            enddo
 
-           inode=inode+1
+           do udir=1,SDIM
+            velnode(D_DECL(inode1,jnode1,knode1),udir)=velnode_cor(udir)
+           enddo
+
+           ijk_node=ijk_node+1
           enddo
           enddo
           enddo ! inode1,jnode1,knode1
 
-          if (inode-1.eq.4*(SDIM-1)) then
+          if (ijk_node-1.eq.4*(SDIM-1)) then
            ! do nothing
           else
-           print *,"inode invalid"
+           print *,"ijk_node invalid"
            stop
           endif
 
@@ -20148,7 +20202,7 @@ stop
             stop
            endif
 
-           inode=1
+           ijk_node=1
 
            ! index order must be knode1,jnode1,inode1
            do knode1=k1lo,k1hi,2
@@ -20156,21 +20210,21 @@ stop
            do inode1=-1,1,2
 
             do udir=1,SDIM
-             xdepartnode(inode,udir)=xtargetnode(inode,udir)- &
+             xdepartnode(ijk_node,udir)=xtargetnode(ijk_node,udir)- &
               velnode(D_DECL(inode1,jnode1,knode1),udir)
             enddo ! udir=1..sdim
  
-            tempdatanode(inode)=one
+            tempdatanode(ijk_node)=one
 
-            inode=inode+1
+            ijk_node=ijk_node+1
            enddo
            enddo
            enddo ! inode1,jnode1,knode1
 
-           if (inode-1.eq.4*(SDIM-1)) then
+           if (ijk_node-1.eq.4*(SDIM-1)) then
             ! do nothing
            else
-            print *,"inode invalid"
+            print *,"ijk_node invalid"
             stop
            endif
 
@@ -21646,8 +21700,8 @@ stop
         partid_vel=0
         im_solid_vel_plus=0
         im_solid_vel=0
-        LSCRIT_solid_plus=-1.0E+99
-        LSCRIT_solid=-1.0E+99
+        LSCRIT_solid_plus=-1.0D+99
+        LSCRIT_solid=-1.0D+99
         
         do im=1,nmat
          if (is_rigid(nmat,im).eq.1) then
@@ -23123,7 +23177,27 @@ stop
       return
       end subroutine FORT_COMBINEVELFACE
 
-
+       ! PART I (low order):
+       !
+       ! itensor_iter==0 => face grad u
+       !    tileloop==0  => low order
+       !       spectral_loop==0 => low order
+       !       spectral_loop==1 => do nothing
+       !    tileloop==1  => do nothing
+       ! itensor_iter==1 => cell grad u
+       !    tileloop==0  => low order
+       !
+       ! PART II (high order)
+       !
+       ! tileloop==0 => do nothing
+       !
+       ! tileloop==1
+       !   itensor_iter==0 => face grad u
+       !     spectral_loop==0 initialize semflux
+       !     spectral_loop==1 flux=average of values shared at face.
+       !   itensor_iter==1 => cell grad u  
+       !   (only called when spectral_loop==0)
+       !     
       subroutine FORT_FACE_GRADIENTS( &
        ns_time_order, &
        divu_outer_sweeps, &
@@ -23141,6 +23215,7 @@ stop
        spectral_loop, &
        ncfluxreg, &
        semflux,DIMS(semflux), &
+       amrsync,DIMS(amrsync), &
        mask0,DIMS(mask0), &  ! mask0=1 if not cov. by finer level or outside. 
        mask3,DIMS(mask3), &  ! 1 at fine-fine ghost cells 0 at other ghost.
        maskSEM,DIMS(maskSEM), &
@@ -23167,7 +23242,8 @@ stop
        ntensor, &
        ntensorMM, &
        SEM_upwind, &
-       SEM_advection_algorithm)
+       SEM_advection_algorithm, &
+       simple_AMR_BC_flag_viscosity)
       use probcommon_module
       use global_utility_module
       use probf90_module
@@ -23177,74 +23253,80 @@ stop
 
       REAL_T def_dt
 
-      INTEGER_T ntensor
-      INTEGER_T ntensorMM
-      INTEGER_T ns_time_order
-      INTEGER_T divu_outer_sweeps
-      INTEGER_T num_divu_outer_sweeps
-      INTEGER_T SDC_outer_sweeps
-      INTEGER_T tileloop
-      INTEGER_T dir
-      INTEGER_T itensor_iter
-      INTEGER_T spectral_loop
-      INTEGER_T slab_step
-      INTEGER_T enable_spectral
-      INTEGER_T level
-      INTEGER_T finest_level
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: ntensorMM
+      INTEGER_T, intent(in) :: ns_time_order
+      INTEGER_T, intent(in) :: divu_outer_sweeps
+      INTEGER_T, intent(in) :: num_divu_outer_sweeps
+      INTEGER_T, intent(in) :: SDC_outer_sweeps
+      INTEGER_T, intent(in) :: tileloop
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: itensor_iter
+      INTEGER_T, intent(in) :: spectral_loop
+      INTEGER_T, intent(in) :: slab_step
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
 
-      INTEGER_T SEM_upwind
-      INTEGER_T SEM_advection_algorithm
+      INTEGER_T, intent(in) :: SEM_upwind
+      INTEGER_T, intent(in) :: SEM_advection_algorithm
+      INTEGER_T, intent(in) :: simple_AMR_BC_flag_viscosity
 
-      INTEGER_T nmat
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-      INTEGER_T ncfluxreg
-      INTEGER_T rzflag 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact,bfact_c,bfact_f
-      INTEGER_T DIMDEC(semflux)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T DIMDEC(mask0)
-      INTEGER_T DIMDEC(mask3) !1 at fine-fine ghost cells 0 at other ghost.
-      INTEGER_T DIMDEC(faceLS)
-      INTEGER_T DIMDEC(mdata)
-      INTEGER_T DIMDEC(tdata)
-      INTEGER_T DIMDEC(c_tdata)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(solid)
-      INTEGER_T DIMDEC(levelpc)
-      INTEGER_T DIMDEC(recon)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: ncfluxreg
+      INTEGER_T, intent(in) :: rzflag 
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_c,bfact_f
+      INTEGER_T, intent(in) :: DIMDEC(semflux)
+      INTEGER_T, intent(in) :: DIMDEC(amrsync)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: DIMDEC(mask0)
+      !1 at fine-fine ghost cells 0 at other ghost.
+      INTEGER_T, intent(in) :: DIMDEC(mask3) 
+      INTEGER_T, intent(in) :: DIMDEC(faceLS)
+      INTEGER_T, intent(in) :: DIMDEC(mdata)
+      INTEGER_T, intent(in) :: DIMDEC(tdata)
+      INTEGER_T, intent(in) :: DIMDEC(c_tdata)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(solid)
+      INTEGER_T, intent(in) :: DIMDEC(levelpc)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
  
-      INTEGER_T velbc(SDIM,2,SDIM*num_materials_vel)
-      REAL_T time
-      INTEGER_T temperature_primitive_variable(nmat) 
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM*num_materials_vel)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
  
-      REAL_T xlo(SDIM),dx(SDIM) 
-      REAL_T semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
+      REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
+       ! intent(inout) instead of intent(in) since
+       ! this parameter doubles as "xp" in SEM_CELL_TO_MAC
+      REAL_T, intent(inout) :: amrsync(DIMV(amrsync),SDIM)
 
-      REAL_T maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
        ! mask0=tag if not covered by level+1 or outside the domain.
-      REAL_T mask0(DIMV(mask0))
+      REAL_T, intent(in) :: mask0(DIMV(mask0))
        ! mask3=tag at exterior fine/fine border.
        ! mask3=1-tag at other exterior boundaries.
-      REAL_T mask3(DIMV(mask3))
-      REAL_T faceLS(DIMV(faceLS),SDIM)
-      REAL_T mdata(DIMV(mdata),SDIM)
-      REAL_T tdata(DIMV(tdata),ntensorMM)
-      REAL_T c_tdata(DIMV(c_tdata),ntensorMM)
-      REAL_T vel(DIMV(vel),num_materials_vel*SDIM)
-      REAL_T solid(DIMV(solid),nparts_def*SDIM)
-      REAL_T levelpc(DIMV(levelpc),nmat)
-      REAL_T recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in) :: mask3(DIMV(mask3))
+      REAL_T, intent(inout) :: faceLS(DIMV(faceLS),SDIM)
+      REAL_T, intent(out) :: mdata(DIMV(mdata),SDIM)
+      REAL_T, intent(inout) :: tdata(DIMV(tdata),ntensorMM)
+      REAL_T, intent(out) :: c_tdata(DIMV(c_tdata),ntensorMM)
+      REAL_T, intent(in) :: vel(DIMV(vel),num_materials_vel*SDIM)
+      REAL_T, intent(in) :: solid(DIMV(solid),nparts_def*SDIM)
+      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
   
       INTEGER_T i,j,k,dir2,mask_boundary
       INTEGER_T local_maskSEM
       INTEGER_T maskcov
       INTEGER_T index_adjoin(2,3)
-      INTEGER_T masktest,mask0test,bctest,icrit
+      INTEGER_T masktest,bctest,icrit
       INTEGER_T ii,jj,kk,im1,jm1,km1,ip1,jp1,kp1
       INTEGER_T nc
       REAL_T delta
@@ -23271,7 +23353,9 @@ stop
       INTEGER_T ncomp_source
       INTEGER_T ncomp_dest
       INTEGER_T ncomp_xvel
+      INTEGER_T ncomp_denold
       INTEGER_T ncomp_veldest
+      INTEGER_T ncomp_dendest
       INTEGER_T ncomp_cterm
       INTEGER_T operation_flag
       INTEGER_T energyflag 
@@ -23290,10 +23374,11 @@ stop
       INTEGER_T tensorcomponent
       INTEGER_T update_right_flux
       INTEGER_T ncomp_xgp
+      INTEGER_T ncomp_xp
       INTEGER_T nsolveMM_FACE_test
       INTEGER_T left_rigid,right_rigid
       INTEGER_T partidL,partidR
-      INTEGER_T simple_AMR_BC_flag
+      INTEGER_T conservative_div_uu
 
       nhalf=1
       nhalfcell=3
@@ -23342,6 +23427,13 @@ stop
         print *,"ncfluxreg invalid17 ",ncfluxreg
         stop
        endif
+       if (spectral_loop.eq.0) then
+        ! do nothing
+       else
+        print *,"spectral_loop invalid"
+        print *,"unnecessary to average cell based gradients"
+        stop
+       endif
       else
        print *,"itensor_iter invalid"
        stop
@@ -23350,6 +23442,14 @@ stop
       if ((enable_spectral.lt.0).or. &
           (enable_spectral.gt.3)) then
        print *,"enable_spectral invalid face gradients"
+       stop
+      endif
+ 
+      if ((simple_AMR_BC_flag_viscosity.eq.0).or. &
+          (simple_AMR_BC_flag_viscosity.eq.1)) then
+       ! do nothing
+      else
+       print *,"simple_AMR_BC_flag_viscosity invalid"
        stop
       endif
 
@@ -23456,6 +23556,8 @@ stop
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(amrsync),0,dir-1,231)
+
       if ((dir.eq.1).and.(tileloop.eq.0)) then
 
        call checkbound(fablo,fabhi,DIMS(semflux),1,-1,231)
@@ -23500,6 +23602,8 @@ stop
 
         if (spectral_loop.eq.0) then
 
+          ! same as growntileboxMAC, except includes one layer of ghost
+          ! cells in the tangential directions.
          call growntileboxTENSOR(tilelo,tilehi,fablo,fabhi, &
            growlo,growhi,dir-1)
 
@@ -23527,23 +23631,24 @@ stop
           do dir2=1,SDIM
            do side=1,2
             if (side.eq.1) then
-               ! mask3=tag at exterior fine/fine border.
-               ! mask3=1-tag at other exterior boundaries.
+             ! mask3=tag at exterior fine/fine border.
+             ! mask3=1-tag at other exterior boundaries.
+             ! mask0=tag if not covered by level+1 or outside the domain.
              masktest=NINT(mask3(D_DECL(im1,jm1,km1)))
-             mask0test=NINT(mask0(D_DECL(im1,jm1,km1)))
+             maskcov=NINT(mask0(D_DECL(im1,jm1,km1)))
             else if (side.eq.2) then
              masktest=NINT(mask3(D_DECL(i,j,k)))
-             mask0test=NINT(mask0(D_DECL(i,j,k)))
+             maskcov=NINT(mask0(D_DECL(i,j,k)))
             else
              print *,"side invalid"
              stop
             endif
-            if (mask0test.eq.1) then
+            if (maskcov.eq.1) then
              ! do nothing
-            else if (mask0test.eq.0) then
+            else if (maskcov.eq.0) then
              mask_boundary=1 ! do not include covered cells in the stencil.
             else
-             print *,"mask0test invalid"
+             print *,"maskcov invalid"
              stop
             endif
 
@@ -23877,13 +23982,17 @@ stop
 
       else if (itensor_iter.eq.1) then  ! cell grad U
 
-       if (spectral_loop.ne.0) then
+       if (spectral_loop.eq.0) then
+        ! do nothing
+       else
         print *,"spectral_loop invalid"
         stop
        endif
 
        if (tileloop.eq.0) then ! low order gradients at cells
 
+         ! same as growntilebox, except includes one layer of ghost
+         ! cells in the tangential directions.
         call growntileboxTENSOR_SEM( &
          tilelo,tilehi,fablo,fabhi,growlo,growhi,dir-1) 
 
@@ -23979,8 +24088,8 @@ stop
       endif
 
        ! in: FACE_GRADIENTS
-      if ((enable_spectral.eq.1).or. &
-          (enable_spectral.eq.2)) then
+      if ((enable_spectral.eq.1).or. &  ! SEM space and time
+          (enable_spectral.eq.2)) then  ! SEM space only
 
        if (bfact.ge.2) then
 
@@ -24011,6 +24120,8 @@ stop
             call strip_status_dir(i,j,k,bfact,dir-1,stripstat)
 
              ! stripstat==1 if (idx_dir/bfact)*bfact == idx_dir
+             ! In otherwords, one can have stripstat==1 even if
+             ! one of the tangential indexes is outside of the box.
             if (stripstat.eq.1) then
 
               ielem=i
@@ -24026,19 +24137,22 @@ stop
               ncomp_source=num_materials_vel*SDIM
               ncomp_dest=SDIM
               ncomp_xgp=ntensorMM
+              ncomp_xp=SDIM ! number of amrsync components
               scomp_bc=1
               operation_flag=6  ! evaluate tensor values
               energyflag=0
               project_option_vel=3
               def_dt=one
               update_right_flux=0
-              simple_AMR_BC_flag=1
+              conservative_div_uu=0
 
+               ! in: FORT_FACE_GRADIENTS
                ! the boundary conditions for "vel" are already set in the
                ! ghost cell.  e.g. homogeneous versus inhomogeneous.
               call SEM_CELL_TO_MAC( &
-               ncomp_xgp, &  ! ncomp_xp
-               simple_AMR_BC_flag, &
+               conservative_div_uu, &
+               ncomp_xp, &  ! number of amrsync components
+               simple_AMR_BC_flag_viscosity, &
                nsolveMM_FACE_test, &
                num_materials_vel, &
                level, &
@@ -24067,7 +24181,7 @@ stop
                update_right_flux, &
                ncomp_dest, &
                ncomp_source, &
-               ncomp_xgp, & 
+               ncomp_xgp, &     ! =ntensorMM
                ncomp_dest, &    ! ncphys
                spectral_loop, &
                ncfluxreg, &
@@ -24080,7 +24194,7 @@ stop
                tdata,DIMS(tdata), &  !xface
                tdata,DIMS(tdata), &  !xgp (destination)
                tdata,DIMS(tdata), &  !xcut
-               tdata,DIMS(tdata), &  !xp
+               amrsync,DIMS(amrsync), & !xp
                tdata,DIMS(tdata), &  !xvel
                maskSEM,DIMS(maskSEM))
 
@@ -24107,10 +24221,13 @@ stop
 
          else if (itensor_iter.eq.1) then ! cell grad U
 
-          if (spectral_loop.ne.0) then
+          if (spectral_loop.eq.0) then
+           ! do nothing
+          else
            print *,"spectral_loop invalid"
            stop
           endif
+
           if ((dir.lt.1).or.(dir.gt.SDIM)) then
            print *,"dir invalid face gradients 4"
            stop
@@ -24151,15 +24268,22 @@ stop
               scomp_bc=1
               ncomp_dest=SDIM ! ncomp
               ncomp_xvel=ntensorMM
+              ncomp_denold=ntensorMM
               ncomp_veldest=ntensorMM
+              ncomp_dendest=ntensorMM
               ncomp_cterm=ntensorMM
               operation_flag=5  ! interpolate grad u from MAC to CELL
               project_option_vel=3
               energyflag=0
               def_dt=one
+              conservative_div_uu=0
 
                ! 1<=dir<=sdim
               call SEM_MAC_TO_CELL( &
+               ncomp_denold, &
+               ncomp_veldest, &
+               ncomp_dendest, &
+               conservative_div_uu, &
                nsolveMM_FACE_test, &
                num_materials_vel, &
                ns_time_order, &
@@ -24191,7 +24315,6 @@ stop
                dcomp, &
                ncomp_dest, & ! ncomp
                ncomp_xvel, &
-               ncomp_veldest, &
                ncomp_cterm, &
                tdata,DIMS(tdata), & ! vol
                tdata,DIMS(tdata), & ! xface
@@ -24245,8 +24368,8 @@ stop
         stop
        endif
 
-      else if ((enable_spectral.eq.0).or. &
-               (enable_spectral.eq.3)) then
+      else if ((enable_spectral.eq.0).or. &  ! low order
+               (enable_spectral.eq.3)) then  ! SEM time only
        ! do nothing
       else
        print *,"enable_spectral invalid"
@@ -24256,9 +24379,38 @@ stop
       return 
       end subroutine FORT_FACE_GRADIENTS
 
-
+! Prior to calling this routine:
+!  a) init_gradu_tensor(...,LOCAL_CELLTENSOR_MF,LOCAL_FACETENSOR_MF)
+!     i)  doit_gradu_tensor  spectral_loop==0  itensor_iter==0
+!     ii) doit_gradu_tensor  spectral_loop==1  itensor_iter==0
+!     ii) doit_gradu_tensor  spectral_loop==0  itensor_iter==1
+!     in doit_gradu_tensor:
+!         FORT_FACE_GRADIENTS, tileloop==0 (low order), tileloop==1 (SEM)
+!  b) spectral_loop=0,1
+!     dir=1..sdim
+!     tileloop=0...3
+!       FORT_CROSSTERM
+!
+! in CROSSTERM:
+!  if tileloop==0  spectral_loop==0 
+!   low order fluxes (slopecrossterm)
+!  if tileloop==0  spectral_loop==1
+!   do nothing 
+!  if tileloop==1  spectral_loop==0
+!   high order fluxes
+!  if tileloop==1  spectral_loop==1
+!   do nothing 
+!  if tileloop==2  spectral_loop==0
+!   xflux=visc_coef*xface(facevisc_index+1)*(xflux+divterm)
+!  if tileloop==2  spectral_loop==1
+!   do nothing 
+!  if tileloop==3  spectral_loop==0
+!   semflux=xflux
+!  if tileloop==3  spectral_loop==1
+!   xflux=(semflux_in + semflux_out)/2
+!
 ! radial velocity is negated if r<0
-! -dt * visc_coef * viscfrac * (grad U + grad U^T)
+! -dt * visc_coef * viscface * (grad U + grad U^T)
 ! fluxes found on "dir" faces
       subroutine FORT_CROSSTERM( &
        nsolveMM_FACE, &
@@ -24312,76 +24464,77 @@ stop
  
       IMPLICIT NONE
 
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
-      INTEGER_T ntensor
-      INTEGER_T ntensorMM
-      INTEGER_T nfacefrac
-      INTEGER_T ncellfrac
-      INTEGER_T tileloop
-      INTEGER_T spectral_loop
-      INTEGER_T ncfluxreg
-      INTEGER_T operation_flag
-      INTEGER_T enable_spectral
-      INTEGER_T level
-      INTEGER_T facevisc_index
-      INTEGER_T massface_index
-      INTEGER_T vofface_index
-      INTEGER_T ncphys
-      INTEGER_T nc,homflag
-      INTEGER_T use_StewartLay
-      INTEGER_T constant_viscosity
-      INTEGER_T nmat,nden
-      INTEGER_T velbc(SDIM,2,SDIM) 
-      INTEGER_T rzflag 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T indexlo(SDIM),indexhi(SDIM)
-      INTEGER_T sideidx(SDIM)
-      INTEGER_T indexmid(SDIM)
-      INTEGER_T index_flux(SDIM)
-      INTEGER_T index_edge(SDIM)
-      INTEGER_T index_opp(SDIM)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(semflux)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(maskcoef)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T DIMDEC(faceLS)
-      INTEGER_T DIMDEC(mdata)
-      INTEGER_T DIMDEC(tdata)
-      INTEGER_T DIMDEC(c_tdata)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(levelpc)
-      INTEGER_T DIMDEC(xflux)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(xfacemm)
-      INTEGER_T DIMDEC(xcellmm)
-      INTEGER_T DIMDEC(recon)
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T :: nsolveMM_FACE_test
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: ntensorMM
+      INTEGER_T, intent(in) :: nfacefrac
+      INTEGER_T, intent(in) :: ncellfrac
+      INTEGER_T, intent(in) :: tileloop
+      INTEGER_T, intent(in) :: spectral_loop
+      INTEGER_T, intent(in) :: ncfluxreg
+      INTEGER_T, intent(in) :: operation_flag
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: facevisc_index
+      INTEGER_T, intent(in) :: massface_index
+      INTEGER_T, intent(in) :: vofface_index
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: homflag
+      INTEGER_T :: nc
+      INTEGER_T, intent(in) :: use_StewartLay
+      INTEGER_T, intent(in) :: constant_viscosity
+      INTEGER_T, intent(in) :: nmat,nden
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM) 
+      INTEGER_T, intent(in) :: rzflag 
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T :: indexlo(SDIM),indexhi(SDIM)
+      INTEGER_T :: sideidx(SDIM)
+      INTEGER_T :: indexmid(SDIM)
+      INTEGER_T :: index_flux(SDIM)
+      INTEGER_T :: index_edge(SDIM)
+      INTEGER_T :: index_opp(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(semflux)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: DIMDEC(faceLS)
+      INTEGER_T, intent(in) :: DIMDEC(mdata)
+      INTEGER_T, intent(in) :: DIMDEC(tdata)
+      INTEGER_T, intent(in) :: DIMDEC(c_tdata)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(levelpc)
+      INTEGER_T, intent(in) :: DIMDEC(xflux)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(xfacemm)
+      INTEGER_T, intent(in) :: DIMDEC(xcellmm)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
   
-      REAL_T dt 
-      REAL_T xlo(SDIM),dx(SDIM) 
-      REAL_T mask(DIMV(mask))
-      REAL_T maskcoef(DIMV(maskcoef))
-      REAL_T semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, intent(in) :: dt 
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
 
-      REAL_T faceLS(DIMV(faceLS),SDIM)
-      REAL_T mdata(DIMV(mdata),SDIM)
-      REAL_T tdata(DIMV(tdata),ntensorMM)
-      REAL_T c_tdata(DIMV(c_tdata),ntensorMM)
+      REAL_T, intent(in) :: faceLS(DIMV(faceLS),SDIM)
+      REAL_T, intent(in) :: mdata(DIMV(mdata),SDIM)
+      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensorMM)
+      REAL_T, intent(in) :: c_tdata(DIMV(c_tdata),ntensorMM)
 
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T vel(DIMV(vel),SDIM*num_materials_vel)
-      REAL_T levelpc(DIMV(levelpc),nmat)
-      REAL_T xflux(DIMV(xflux),nsolveMM_FACE)  ! u
-      REAL_T xface(DIMV(xface),ncphys)
+      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM*num_materials_vel)
+      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
+      REAL_T, intent(out) :: xflux(DIMV(xflux),nsolveMM_FACE)  ! u
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
 
-      REAL_T xfacemm(DIMV(xfacemm),nfacefrac)
-      REAL_T xcellmm(DIMV(xfacemm),ncellfrac)
-      REAL_T recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac)
+      REAL_T, intent(in) :: xcellmm(DIMV(xfacemm),ncellfrac)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
-      REAL_T visc_coef
+      REAL_T, intent(in) :: visc_coef
  
       INTEGER_T ilo,ihi 
       INTEGER_T jlo,jhi 
@@ -24450,13 +24603,24 @@ stop
       INTEGER_T inorm
       INTEGER_T inorm_elem
       INTEGER_T local_bc
+      INTEGER_T conservative_div_uu
+
+      REAL_T local_flux_val
+      REAL_T local_flux_val_in
+      REAL_T local_flux_val_out
+      INTEGER_T project_option
 
       nhalf=1
 
-      if (bfact.lt.1) then
+      project_option=3
+
+      if (bfact.ge.1) then
+       ! do nothing
+      else
        print *,"bfact invalid"
        stop
       endif
+
       if ((enable_spectral.lt.0).or. &
           (enable_spectral.gt.3)) then
        print *,"enable_spectral invalid crossterm"
@@ -24488,11 +24652,15 @@ stop
        stop
       endif
 
-      if ((homflag.ne.0).and.(homflag.ne.1)) then
+      if ((homflag.eq.0).or.(homflag.eq.1)) then
+       ! do nothing
+      else
        print *,"homflag invalid 2"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt must be positive"
        stop
       endif
@@ -24830,7 +24998,16 @@ stop
            ! uy,vy, wy  or
            ! uz,vz, wz  
           tcompMM=nbase+nc
-          gradterm=alpha*tdata(D_DECL(i,j,k),tcompMM)
+
+          local_flux_val=tdata(D_DECL(i,j,k),tcompMM)
+
+           ! use_dt=0
+           ! use_HO=0
+          call SEM_VISC_SANITY(101,dt,xstenMAC,nhalf,local_flux_val, &
+            dir,nc,0,0,project_option,bfact,enable_spectral, &
+            constant_viscosity)
+
+          gradterm=alpha*local_flux_val
 
           if (side_face.eq.0) then
            ! do nothing
@@ -24851,8 +25028,20 @@ stop
            print *,"side_face invalid"
            stop
           endif
-     
-          diff_flux(nc)=diff_flux(nc)+gradterm
+    
+          if (constant_viscosity.eq.0) then 
+           diff_flux(nc)=diff_flux(nc)+gradterm
+          else if (constant_viscosity.eq.1) then
+           if (diff_flux(nc).eq.zero) then
+            diff_flux(nc)=gradterm
+           else
+            print *,"diff_flux should be zero"
+            stop
+           endif
+          else
+           print *,"constant_viscosity invalid"
+           stop
+          endif
 
          enddo  ! nc=1..sdim
 
@@ -24877,8 +25066,8 @@ stop
 
          ! overwrite fluxes in spectral elements 
          ! CROSSTERM -> TO_MAC  (interpolate CELL_TO_MAC)
-        if ((enable_spectral.eq.1).or. &
-            (enable_spectral.eq.2)) then
+        if ((enable_spectral.eq.1).or. &  ! SEM space and time
+            (enable_spectral.eq.2)) then  ! SEM space
 
          if (bfact.ge.2) then
 
@@ -24905,19 +25094,6 @@ stop
             stop
            endif
 
-           side_cell=0
-           if (inorm.eq.fablo(dir)) then
-            side_cell=1
-           else if (inorm.eq.fabhi(dir)) then
-            side_cell=2
-           else if ((inorm.gt.fablo(dir)).and. &
-                    (inorm.lt.fabhi(dir))) then
-            ! do nothing
-           else
-            print *,"inorm invalid"
-            stop
-           endif
-
            call strip_status(i,j,k,bfact,stripstat)
 
            if (stripstat.eq.1) then
@@ -24929,6 +25105,7 @@ stop
                 (local_maskSEM.le.nmat).and. &
                 (maskcov.eq.1)) then
 
+              ! elemhi(dir)=elemlo(dir)
              call elementbox(i,j,k,bfact,dir-1,elemlo,elemhi)
              do ielem=elemlo(1),elemhi(1)
              do jelem=elemlo(2),elemhi(2)
@@ -25112,16 +25289,19 @@ stop
                  jc=indexmid(2)
                  kc=indexmid(SDIM)
 
-                 call gridstenMAC(xsten,xlo, &
+                 call gridstenMAC(xstenMAC,xlo, &
                   ic,jc,kc, &
                   fablo,bfact,dx,nhalf,dir)
 
-                 RRface(isten)=xsten(0,1)
+                 RRface(isten)=xstenMAC(0,1)
 
                  local_vel(isten)=zero
                 enddo ! isten=0..bfact
 
+                conservative_div_uu=0
+
                 call lineGRAD( &
+                 conservative_div_uu, &
                  levelrz, &
                  dir, &
                  nc, &
@@ -25139,6 +25319,20 @@ stop
                  operation_flag)
 
                 do isten=0,bfact
+
+                 side_cell=0
+                 if (inorm+isten.eq.fablo(dir)) then
+                  side_cell=1
+                 else if (inorm+isten.eq.fabhi(dir)+1) then
+                  side_cell=2
+                 else if ((inorm+isten.gt.fablo(dir)).and. &
+                          (inorm+isten.lt.fabhi(dir)+1)) then
+                  ! do nothing
+                 else
+                  print *,"inorm or isten invalid"
+                  stop
+                 endif
+
                  constant_viscosity_override=0
                 
                  do velcomp_alt=1,SDIM
@@ -25161,7 +25355,7 @@ stop
                   else if ((isten.gt.0).and.(isten.lt.bfact)) then
                    ! do nothing
                   else
-                   print *,"side_cell invalid"
+                   print *,"side_cell invalid1"
                    stop
                   endif
                  enddo ! velcomp_alt=1..sdim
@@ -25188,7 +25382,23 @@ stop
                  
               do isten=0,bfact
 
-               shared_face=0 ! in: crossterm; prevent race condition
+               side_cell=0
+               if (inorm+isten.eq.fablo(dir)) then
+                side_cell=1
+               else if (inorm+isten.eq.fabhi(dir)+1) then
+                side_cell=2
+               else if ((inorm+isten.gt.fablo(dir)).and. &
+                        (inorm+isten.lt.fabhi(dir)+1)) then
+                ! do nothing
+               else
+                print *,"inorm or isten invalid"
+                stop
+               endif
+
+               ! in: crossterm; prevent race condition when doing tiling.
+               ! shared_face==1 => two threads would compete for same
+               ! point without intervention.
+               shared_face=0 
 
                do dir2=1,SDIM
                 indexmid(dir2)=indexlo(dir2)
@@ -25198,6 +25408,9 @@ stop
                ic=indexmid(1)
                jc=indexmid(2)
                kc=indexmid(SDIM)
+
+               call gridstenMAC_level(xstenMAC, &
+                ic,jc,kc,level,nhalf,dir)
 
                if (isten.eq.bfact) then ! right side of element
 
@@ -25244,8 +25457,16 @@ stop
                 ! uy,vy, wy  or
                 ! uz,vz, wz  
                 tcompMM=nbase+nc
+        
+                local_flux_val=tdata(D_DECL(ic,jc,kc),tcompMM)
 
-                gradterm=alpha*tdata(D_DECL(ic,jc,kc),tcompMM)
+                 ! use_dt=0
+                 ! use_HO=1
+                call SEM_VISC_SANITY(1,dt,xstenMAC,nhalf,local_flux_val, &
+                  dir,nc,0,1,project_option,bfact,enable_spectral, &
+                  constant_viscosity)
+
+                gradterm=alpha*local_flux_val
 
                 if (side_cell.eq.0) then
                  ! do nothing
@@ -25266,11 +25487,40 @@ stop
                 else if ((isten.gt.0).and.(isten.lt.bfact)) then
                  ! do nothing
                 else
-                 print *,"side_cell invalid"
+                 print *,"side_cell invalid2"
+                 print *,"side_cell=",side_cell
+                 print *,"isten,bfact= ",isten,bfact
+                 print *,"dir=",dir
+                 print *,"nc=",nc
+                 print *,"local_bc=",local_bc
+                 print *,"int dir= ",INT_DIR
+                 print *,"ref odd= ",REFLECT_ODD
+                 print *,"ext dir= ",EXT_DIR
+                 print *,"ref evn= ",REFLECT_EVEN
+                 print *,"fo ext=",FOEXTRAP
+                 print *,"i,j,k=",i,j,k
+                 print *,"inorm=",inorm
+                 print *,"growlo=",growlo(1),growlo(2),growlo(3)
+                 print *,"growhi=",growhi(1),growhi(2),growhi(3)
+                 print *,"fablo(dir),fabhi(dir) ",fablo(dir),fabhi(dir)
+                 print *,"ielem,jelem,kelem ",ielem,jelem,kelem
+                 print *,"inorm_elem ",inorm_elem
                  stop
                 endif
-                
-                lineflux(isten,nc)=lineflux(isten,nc)+gradterm
+               
+                if (constant_viscosity.eq.0) then 
+                 lineflux(isten,nc)=lineflux(isten,nc)+gradterm
+                else if (constant_viscosity.eq.1) then
+                 if (lineflux(isten,nc).eq.zero) then
+                  lineflux(isten,nc)=gradterm
+                 else
+                  print *,"lineflux should be zero"
+                  stop
+                 endif
+                else
+                 print *,"constant_viscosity invalid"
+                 stop
+                endif
 
                enddo  ! nc=1..sdim
             
@@ -25290,7 +25540,7 @@ stop
                 stop
                endif
 
-              enddo ! isten
+              enddo ! isten=0..bfact
 
              enddo
              enddo
@@ -25322,8 +25572,8 @@ stop
           stop
          endif
 
-        else if ((enable_spectral.eq.0).or. &
-                 (enable_spectral.eq.3)) then
+        else if ((enable_spectral.eq.0).or. &  ! No SEM
+                 (enable_spectral.eq.3)) then  ! SEM time only.
          ! do nothing
         else
          print *,"enable_spectral invalid"
@@ -25342,6 +25592,8 @@ stop
 
        if (spectral_loop.eq.0) then 
 
+          ! does not include the right face of the tile unless
+          ! tilehi==fabhi
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
          growlo,growhi,0,dir-1)
 
@@ -25350,6 +25602,9 @@ stop
         do i=growlo(1),growhi(1)
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+
+         call gridstenMAC_level(xstenMAC, &
+           i,j,k,level,nhalf,dir)
 
          im1=i-ii
          jm1=j-jj
@@ -25496,8 +25751,15 @@ stop
 
          do velcomp=1,SDIM
 
-          xflux(D_DECL(i,j,k),velcomp)= &
-           visc_constant*(xflux(D_DECL(i,j,k),velcomp)+divterm)
+          local_flux_val=xflux(D_DECL(i,j,k),velcomp)+divterm
+
+           ! use_dt=0
+           ! use_HO=1
+          call SEM_VISC_SANITY(2,dt,xstenMAC,nhalf,local_flux_val, &
+            dir,velcomp,0,1,project_option,bfact,enable_spectral, &
+            constant_viscosity)
+
+          xflux(D_DECL(i,j,k),velcomp)=visc_constant*local_flux_val
 
          enddo  ! velcomp
 
@@ -25516,8 +25778,8 @@ stop
        ! 2 spectral elements.
       else if (tileloop.eq.3) then 
 
-       if ((enable_spectral.eq.1).or. &
-           (enable_spectral.eq.2)) then
+       if ((enable_spectral.eq.1).or. & ! SEM space and time
+           (enable_spectral.eq.2)) then ! SEM space only
 
         if (bfact.ge.2) then
 
@@ -25579,7 +25841,10 @@ stop
 
              do side=1,2
 
-              shared_face=0 ! in: crossterm  avoid race conditions.
+              ! in: crossterm  avoid race conditions when doing tiling.
+              ! shared_face==1 => two threads would compete for same
+              ! point without intervention.
+              shared_face=0 
 
               if (side.eq.1) then
                index_flux(dir)=indexlo(dir)
@@ -25605,6 +25870,9 @@ stop
               iflux=index_flux(1)
               jflux=index_flux(2)
               kflux=index_flux(SDIM)
+
+              call gridstenMAC_level(xstenMAC, &
+               iflux,jflux,kflux,level,nhalf,dir)
 
               test_maskSEM=NINT(maskSEM(D_DECL(i_out,j_out,k_out)))
               maskcov=NINT(maskcoef(D_DECL(i_out,j_out,k_out)))
@@ -25681,6 +25949,13 @@ stop
 
                do nc=1,SDIM
                 xflux_temp=xflux(D_DECL(iflux,jflux,kflux),nc)
+              
+                 ! use_dt=1
+                 ! use_HO=1
+                call SEM_VISC_SANITY(3,dt,xstenMAC,nhalf,xflux_temp, &
+                  dir,nc,1,1,project_option,bfact,enable_spectral, &
+                  constant_viscosity)
+
                 semflux(D_DECL(i_in,j_in,k_in),nbase+nc)=xflux_temp
                enddo ! nc
 
@@ -25689,9 +25964,20 @@ stop
                if (mask_out.eq.1) then
 
                 do nc=1,SDIM
-                 avgflux(nc)=half*( &
-                  semflux(D_DECL(i_in,j_in,k_in),nbase+nc)+ &
-                  semflux(D_DECL(i_out,j_out,k_out),nbase+nc))
+
+                 local_flux_val_in=semflux(D_DECL(i_in,j_in,k_in),nbase+nc)
+                 local_flux_val_out=semflux(D_DECL(i_out,j_out,k_out),nbase+nc)
+                  ! use_dt=1
+                  ! use_HO=1
+                 call SEM_VISC_SANITY(4,dt,xstenMAC,nhalf,local_flux_val_in, &
+                         dir,nc,1,1,project_option,bfact,enable_spectral, &
+                         constant_viscosity)
+                 call SEM_VISC_SANITY(5,dt,xstenMAC,nhalf,local_flux_val_out, &
+                         dir,nc,1,1,project_option,bfact,enable_spectral, &
+                         constant_viscosity)
+
+                 avgflux(nc)=half*(local_flux_val_in+local_flux_val_out)
+
                 enddo ! nc=1..sdim
 
                 do nc=1,SDIM

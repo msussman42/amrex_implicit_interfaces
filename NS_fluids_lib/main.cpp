@@ -30,15 +30,19 @@ main (int   argc,
 
     std::cout.imbue(std::locale("C"));
     BoxLib::Initialize(argc,argv);  // mpi initialization.
+    std::fflush(NULL);
     ParallelDescriptor::Barrier();
-    std::cout << "Multimaterial SPECTRAL, 8/24/19, 11:00 on proc " << 
+    std::cout << "Multimaterial SPECTRAL, 11/01/19, 2:00pm on proc " << 
 	    ParallelDescriptor::MyProc() << "\n";
+    std::cout << "PROC= " << ParallelDescriptor::MyProc() << 
+	    " thread_class::nthreads= " << thread_class::nthreads << '\n';
+    std::fflush(NULL);
     ParallelDescriptor::Barrier();
     if (ParallelDescriptor::IOProcessor())
      std::cout << "after the barrier on IO processor " << 
 	    ParallelDescriptor::MyProc() << "\n";
 
-    const Real run_strt = ParallelDescriptor::second();
+    const double run_strt = ParallelDescriptor::second();
 
     int  wait_for_key=0;
     int  max_step;  // int is 4 bytes
@@ -51,10 +55,14 @@ main (int   argc,
     strt_time =  0.0;  
     stop_time = -1.0;  
 
+    double sleepsec=0.0;
+
     pp.query("wait_for_key",wait_for_key);
     pp.query("max_step",max_step);
     pp.query("strt_time",strt_time);
     pp.query("stop_time",stop_time);
+
+    pp.query("sleepsec",sleepsec);
 
     if (strt_time < 0.0)
         BoxLib::Abort("MUST SPECIFY a non-negative strt_time");
@@ -84,10 +92,21 @@ main (int   argc,
            (amrptr->cumTime() < stop_time || stop_time < 0.0) )
     {
         ParallelDescriptor::Barrier();
+        std::fflush(NULL);
+	BL_PROFILE_INITIALIZE();
+        std::fflush(NULL);
 
          // coarseTimeStep is in amrlib/Amr.cpp
         amrptr->coarseTimeStep(stop_time); // synchronizes internally
 
+        ParallelDescriptor::Barrier();
+        std::fflush(NULL);
+	BL_PROFILE_FINALIZE();
+        std::fflush(NULL);
+        std::cout << "TIME= " << amrptr->cumTime() << " PROC= " <<
+          ParallelDescriptor::MyProc() << " sleepsec= " << sleepsec << '\n';
+        std::fflush(NULL);
+	BoxLib::USleep(sleepsec);
         ParallelDescriptor::Barrier();
     }
     ParallelDescriptor::Barrier();
@@ -112,7 +131,7 @@ main (int   argc,
     }
 
     const int IOProc   = ParallelDescriptor::IOProcessorNumber();
-    Real      run_stop = ParallelDescriptor::second() - run_strt;
+    double    run_stop = ParallelDescriptor::second() - run_strt;
 
     ParallelDescriptor::ReduceRealMax(run_stop,IOProc);
 

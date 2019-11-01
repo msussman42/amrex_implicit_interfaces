@@ -1700,10 +1700,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  ParallelDescriptor::Barrier();
 
+ std::fflush(NULL);
  if (ParallelDescriptor::IOProcessor()) {
-  std::fflush(NULL);
-  int old_prec = std::cout.precision(12);
-  std::cout << "old_prec = " << old_prec << '\n';
 
   Real smallest_dx=fine_dx[0];
   for (int dir=0;dir<BL_SPACEDIM;dir++) {
@@ -2254,8 +2252,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    std::cout << "TIME= " << upper_slab_time << " EFFECTIVE RAD=  " << 
     radbubble << '\n';
   }
-  std::fflush(NULL);
  }  // io processor
+ std::fflush(NULL);
  ParallelDescriptor::Barrier();
 
  delete_array(MASKCOEF_MF);

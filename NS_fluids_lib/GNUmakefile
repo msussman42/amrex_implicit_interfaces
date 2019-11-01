@@ -3,8 +3,11 @@ AMREX_HOME = ../amrex-master
 MOF_HOME = ..
 
 PRECISION = DOUBLE
-DEBUG	  = FALSE
-DIM       = 3
+DEBUG	  = TRUE
+USE_ASSERTION = TRUE
+PROFILE = FALSE
+MEM_PROFILE = FALSE
+DIM       = 2
 CYGWIN    = FALSE
 CYGWIN_ZENBOOK = FALSE
 MEHDI_VAHAB_FSI = FALSE
@@ -75,7 +78,7 @@ FCOMP = gfortran
 # engineering_long
 # hpc-login.rcc.fsu.edu  "module load intel"
 # sussman + old password
-# Bromwich GNU MPI:
+# bromwich or compute1 GNU MPI:
 #  "module load mpi/openmpi-x86_64"
 # csh: command >& out_and_err_file &
 # if "ImportError: no module named site" then give command:
@@ -90,7 +93,7 @@ FCOMP = gfortran
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI   = FALSE
+#USE_MPI   = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
@@ -152,6 +155,7 @@ include $(MOF_HOME)/mglib/Make.package
 include $(MOF_HOME)/amrlib/Make.package
 
 include $(AMREX_HOME)/Src/Base/Make.package
+#include $(AMREX_HOME)/Src/C_ParticleLib/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 

@@ -6518,7 +6518,7 @@ end subroutine volume_sanity_check
       if (nmax.eq.geom_nmax) then
        ! do nothing
       else
-       print *,"nmax<>geom_nmax"
+       print *,"tets_box_planes_super: nmax<>geom_nmax"
        print *,"nmax= ",nmax
        print *,"geom_nmax= ",geom_nmax
        stop
@@ -8733,8 +8733,8 @@ contains
       endif
 
       intercept=zero
-      minphi=1.0E+10
-      maxphi=-1.0E+10
+      minphi=1.0D+10
+      maxphi=-1.0D+10
       do n=1,nlist
        do i=1,sdim+1
         do dir=1,sdim
@@ -9641,8 +9641,8 @@ contains
         cencut(dir)=cencell(dir)
        enddo
 
-       minphi=1.0E+10
-       maxphi=-1.0E+10
+       minphi=1.0D+10
+       maxphi=-1.0D+10
        null_intercept=zero
 
        if ((continuous_mof.eq.0).or. &
@@ -10015,8 +10015,8 @@ contains
        cencut(dir)=cencell(dir)
       enddo
 
-      minphi=1.0E+10
-      maxphi=-1.0E+10
+      minphi=1.0D+10
+      maxphi=-1.0D+10
       null_intercept=zero
 
       do k=klo_stencil,khi_stencil,2
@@ -13029,6 +13029,15 @@ contains
        ! do nothing
       else
        print *,"nlist_alloc invalid"
+       stop
+      endif
+
+      if (nmax.eq.geom_nmax) then
+       ! do nothing
+      else
+       print *,"multimaterial_MOF: nmax<>geom_nmax"
+       print *,"nmax= ",nmax
+       print *,"geom_nmax= ",geom_nmax
        stop
       endif
 
@@ -16055,6 +16064,15 @@ contains
        ! do nothing
       else
        print *,"nlist_alloc invalid"
+       stop
+      endif
+
+      if (nmax.eq.geom_nmax) then
+       ! do nothing
+      else
+       print *,"multi_get_volume_grid_simple: nmax<>geom_nmax"
+       print *,"nmax= ",nmax
+       print *,"geom_nmax= ",geom_nmax
        stop
       endif
 
@@ -20312,7 +20330,7 @@ end module MOF_routines_module
       if (1.eq.0) then
        sdim=2
        nmat_test=2
-       nmax_test=400
+       nmax_test=1000
        call diagnostic_MOF(sdim,nmat_test,nmax_test)
        stop
       endif

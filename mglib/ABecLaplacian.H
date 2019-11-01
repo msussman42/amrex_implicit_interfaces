@@ -1,13 +1,15 @@
 #ifndef _ABecLAPLACIAN_H_
 #define _ABecLAPLACIAN_H_
 
+// BEGIN: BOXLIB FILES NEED AMReX_ prefix
 #include <Geometry.H>
 #include <Array.H>
 #include <Tuple.H>
 #include <Pointers.H>
-#include <REAL.H>
 #include <BoxArray.H>
 #include <MultiFab.H>
+// END: BOXLIB FILES NEED AMReX_ prefix
+#include <REAL.H>
 
 class ABecLaplacian
 {
@@ -20,30 +22,23 @@ public:
     int check_for_singular;  // 0=> diag<>0  1=> diag can be 0
     Real diag_regularization;
 
-    ABecLaplacian (const BoxArray& grids,const Geometry& geom,
-     int bfact,int cfd_level_in,int cfd_project_option_in,
+    ABecLaplacian (
+     const BoxArray& grids,
+     const Geometry& geom,
+     const DistributionMapping& dmap,
+     int bfact,
+     int cfd_level_in,
+     int cfd_project_option_in,
      int nsolve,
-     bool ns_tiling_in);
-    ABecLaplacian (const ABecLaplacian& _Lp,int level);
+     bool ns_tiling_in,
+     int _use_mg_precond_at_top);
+
     virtual ~ABecLaplacian ();
 
-    const MultiFab& aCoefficients (int level);
-    const MultiFab& bCoefficients (int dir,int level);
-    const MultiFab& matCoefficients (int level);
-     // =1 if diagonal <> 0
-     // =0 otherwise
-    const MultiFab& onesCoefficients (int level);
     void aCoefficients (MultiFab& _a);
     void generateCoefficients();
     void bCoefficients (MultiFab& _b, int dir);
     void non_sing_coefficients(Real offdiag_coeff_);
-
-    virtual void prepareForLevel (int level);
-    virtual void clearToLevel (int level);
-
-    void invalidate_a_to_level (int lev);
-    void invalidate_b_to_level (int lev);
-    void invalidate_non_sing_to_level (int lev);
 
     void apply (MultiFab& out, MultiFab& in,
      int level,MultiFab& pbdry,Array<int> bcpres_array);
@@ -62,13 +57,66 @@ public:
                   MultiFab& rhsL,
                   int level,
                   int smooth_type);
-    Real norm(MultiFab &in, int level = 0) const;
+
+    void pcg_solve(MultiFab* z,MultiFab* r,
+     Real eps_abs,Real bot_atol,
+     MultiFab* pbdryhom,
+     Array<int> bcpres_array,
+     int usecg_at_bottom,
+     int smooth_type,int bottom_smooth_type,
+     int presmooth,int postsmooth,
+     int use_PCG,
+     int level);
+
+    void pcg_GMRES_solve(
+     int gmres_precond_iter,
+     MultiFab* z,MultiFab* r,
+     Real eps_abs,Real bot_atol,
+     MultiFab* pbdryhom,
+     Array<int> bcpres_array,
+     int usecg_at_bottom,
+     int smooth_type,int bottom_smooth_type,
+     int presmooth,int postsmooth,
+     int use_PCG,
+     int level);
+
+    void CG_solve(
+      int& cg_cycles_out,
+      int nsverbose,int is_bottom,
+      MultiFab& solnL,MultiFab& rhsL,
+      Real eps_abs,Real bot_atol,
+      MultiFab& pbdry,Array<int> bcpres_array,
+      int usecg_at_bottom,
+      int& meets_tol,int smooth_type,
+      int bottom_smooth_type,int presmooth,
+      int postsmooth,Real& error0,
+      int level);
+
+    void CG_dump_params(Real rnorm,Real rnorm0,
+      Real eps_abs,Real relative_error,
+      int is_bottom,Real bot_atol,
+      int usecg_at_bottom,int smooth_type,
+      int bottom_smooth_type,int presmooth,
+      int postsmooth,MultiFab& mf1,
+      MultiFab& mf2,
+      int level);
+
+
+    void MG_solve (int nsverbose,
+     MultiFab& _sol, MultiFab& _rhs, 
+     Real _eps_abs,Real _atol_b,
+     int usecg_at_bottom,MultiFab& pbdry,
+     Array<int> bcpres_array,
+     int smooth_type,
+     int bottom_smooth_type,int presmooth,
+     int postsmooth);
+
+    Real LPnorm(MultiFab &in, int level = 0) const;
+
     const Geometry& getGeom (int level) const;
-    const BoxArray& boxArray (int level) const;
+    const BoxArray& LPboxArray (int level) const;
+    const DistributionMapping& dmapLevel (int level) const;
     int get_bfact_array (int level) const;
-    int get_nsolve () const;
-    int numGrids () const;
-    int numLevels () const;
 
     void LP_dot(MultiFab& w,const MultiFab& p,int level,Real& result);
      // sol=y+alpha p
@@ -77,16 +125,85 @@ public:
 
 protected:
 
- void makeCoefficients (MultiFab&       crs,
-                        const MultiFab& fine,
-                        int             level,
-                        int             avg);
- void buildMatrix(MultiFab& ones_mf,MultiFab& work,
-  Real offdiag_coeff_level,
-  MultiFab& a,MultiFab& bx,MultiFab& by,MultiFab& bz,
-  int define_flag,int level);
+    void CG_advance (
+       MultiFab& p,
+       Real beta,
+       const MultiFab& z,
+       MultiFab& y,
+       int level);
 
- void initCoefficients (const BoxArray &_ba);
+    void CG_check_for_convergence(
+      Real rnorm,Real rnorm0,Real eps_abs,
+      Real relative_error,int nit,int& error_close_to_zero,
+      int level);
+
+    static int CG_def_maxiter;
+    static double CG_def_unstable_criterion;
+    static int CG_def_verbose;
+
+    //
+    // The data.
+    //
+    int        CG_maxiter;  // Current maximum number of allowed iterations.
+    int        CG_verbose;  // Current verbosity level.
+    int CG_use_mg_precond_at_top; // Use multigrid as a preconditioner.
+
+    void MG_solve_ (int nsverbose,MultiFab& _sol,
+     Real eps_abs,Real atol_b,MultiFab& pbdry,Array<int> bcpres_array,
+     int usecg_at_bottom,
+     int smooth_type,int bottom_smooth_type,int presmooth,int postsmooth);
+
+    void MG_residualCorrectionForm (MultiFab& newrhs,
+      MultiFab& oldrhs,MultiFab& solnL,
+      MultiFab& inisol,MultiFab& pbdry,Array<int> bcpres_array,
+      int level);
+
+    int MG_numLevels (const BoxArray& grids) const;
+    virtual Real MG_errorEstimate (int level,
+        MultiFab& pbdry,Array<int> bcpres_array);
+    void MG_average (MultiFab& c,MultiFab& f,int clevel,int flevel);
+    void MG_interpolate (MultiFab& f,MultiFab& c,int clevel,int flevel);
+    void MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
+      int level,Real eps_abs,Real atol_b,
+      int usecg_at_bottom,
+      MultiFab& pbdry,Array<int> bcpres_array,
+      int smooth_type,int bottom_smooth_type,
+      int presmooth,int postsmooth);
+
+    void MG_relax (MultiFab& solL,MultiFab& rhsL,
+      int level,Real eps_abs,
+      Real atol_b,int usecg_at_bottom,
+      MultiFab& pbdry,Array<int> bcpres_array,
+      int smooth_type,
+      int bottom_smooth_type,int presmooth,int postsmooth);
+
+    static int MG_def_nu_0;
+    static int MG_def_nu_f;
+    static int MG_def_nu_b;
+    static int MG_def_verbose;
+    static int MG_def_maxiter_b;
+    int MG_verbose;
+    int MG_numlevels_var;
+    int CG_numlevels_var;
+    int MG_nu_0, MG_nu_f;
+    int MG_nu_b;
+    int MG_maxiter_b;
+
+    MultiFab* MG_initialsolution;
+    Array< MultiFab* > MG_res;
+    Array< MultiFab* > MG_rhs;
+    Array< MultiFab* > MG_cor;
+    Array< MultiFab* > MG_pbdrycoarser;
+
+
+ void makeCoefficients (
+	MultiFab& crs,
+        const MultiFab& fine,
+        int             level,
+        int             avg);
+		 
+ void buildMatrix();
+
  virtual void Fapply (MultiFab& out,
                       MultiFab& in,
                       int level);
@@ -98,13 +215,32 @@ protected:
 // bxleft,byleft,bzleft,bxright,byright,bzright,icbx,icby,icbz,diag,diagsing
 // mask,icdiag,icdiagrb,ax,solnsave,rhssave,redsoln,blacksoln
  Array< MultiFab* > workcoefs;
+
  Array< MultiFab* > laplacian_ones;
 
  Array< Real > offdiag_coeff;
 
  Array< Tuple< MultiFab*, BL_SPACEDIM> > bcoefs;
 
+ Array< Tuple< MultiFab*, 2> > GMRES_V_MF;
+ Array< Tuple< MultiFab*, 2> > GMRES_Z_MF;
+ Tuple< MultiFab*, 2> GMRES_W_MF;
+ Tuple< MultiFab*, 2> CG_delta_sol;
+ Tuple< MultiFab*, 2> CG_r;
+ Tuple< MultiFab*, 2> CG_z;
+ Tuple< MultiFab*, 2> CG_Av_search;
+ Tuple< MultiFab*, 2> CG_p_search;
+ Tuple< MultiFab*, 2> CG_v_search;
+ Tuple< MultiFab*, 2> CG_rhs_resid_cor_form;
+ Tuple< MultiFab*, 2> CG_pbdryhom;
+
+  // MG_pdryhom only needed by multigrid on the finest level
+ MultiFab* MG_pbdryhom;
+ Array< MultiFab* > MG_CG_diagsumL;
+ Array< MultiFab* > MG_CG_ones_mf_copy;
+
  std::vector< BoxArray > gbox;
+ std::vector< DistributionMapping > dmap_array;
  std::vector< int > bfact_array;
  Array<MultiFab*> maskvals;
  std::vector< Geometry > geomarray;
@@ -112,16 +248,19 @@ protected:
  int nsolve_bicgstab;
 
 private:
-    std::vector<bool> a_valid;
-    std::vector<bool> b_valid;
-    std::vector<bool> non_sing_valid;
+
+    static int gmres_max_iter;
+    static int gmres_precond_iter_base_mg;
+    static int nghostRHS;
+    static int nghostSOLN;
 
     static Real a_def;
     static Real b_def;
 
-    ABecLaplacian (const ABecLaplacian& rhs);
-    ABecLaplacian& operator= (const ABecLaplacian& rhs);
+    static int use_local_dmap;
+
 };
+
 
 inline
 void
@@ -135,24 +274,15 @@ ABecLaplacian::aCoefficients (MultiFab& _a)
     if (_a.nComp()!=nsolve_bicgstab) 
      BoxLib::Error("_a has wrong ncomp");
 
-    invalidate_a_to_level(0);
-    ParallelDescriptor::Barrier();
     MultiFab::Copy(*acoefs[0],_a,0,0,nsolve_bicgstab,0);
-    ParallelDescriptor::Barrier();
 }
 
-// generate coefficients on the finest level.
+// 1. generate coefficients on the finest level.
+// 2. average down coefficients and generate on the coarser levels.
 inline
 void
-ABecLaplacian::generateCoefficients ()
-{
- int define_flag=0;
- int lev=0; // lev==0 is the finest level
-
- buildMatrix(*laplacian_ones[lev],*workcoefs[lev],
-   offdiag_coeff[lev],
-   *acoefs[lev],*bcoefs[lev][0],*bcoefs[lev][1],
-   *bcoefs[lev][BL_SPACEDIM-1],define_flag,lev);
+ABecLaplacian::generateCoefficients () {
+ buildMatrix();
 }
 
 
@@ -161,7 +291,6 @@ void
 ABecLaplacian::bCoefficients (MultiFab& _b,
                               int dir) {
 
-    
     if (! _b.ok())
      BoxLib::Error("_b not ok");
 
@@ -171,10 +300,7 @@ ABecLaplacian::bCoefficients (MultiFab& _b,
     if (_b.nComp()!=nsolve_bicgstab) 
      BoxLib::Error("_b has wrong ncomp");
 
-    invalidate_b_to_level(0);
-    ParallelDescriptor::Barrier();
     MultiFab::Copy(*bcoefs[0][dir],_b,0,0,nsolve_bicgstab,0);
-    ParallelDescriptor::Barrier();
 }
 
 
@@ -187,96 +313,55 @@ ABecLaplacian::non_sing_coefficients(Real offdiag_coeff_) {
  } else
   BoxLib::Error("offdiag_coeff_ not ok");
 
- invalidate_non_sing_to_level(0);
  offdiag_coeff[0]=offdiag_coeff_;
 
 }  // end subroutine non_sing_coefficients
 
 
 inline
-const MultiFab&
-ABecLaplacian::aCoefficients (int level)
-{
-    prepareForLevel(level);
-    ParallelDescriptor::Barrier();
-    return *acoefs[level];
-}
-
-inline
-const MultiFab&
-ABecLaplacian::bCoefficients (int dir,int level)
-{
-    prepareForLevel(level);
-    ParallelDescriptor::Barrier();
-    return *bcoefs[level][dir];
-}
-
-
-inline
-const MultiFab&
-ABecLaplacian::onesCoefficients (int level) {
-
-    prepareForLevel(level);
-    ParallelDescriptor::Barrier();
-    return *laplacian_ones[level];
-}
-
-
-
-inline
-const MultiFab&
-ABecLaplacian::matCoefficients (int level) {
-
-    prepareForLevel(level);
-    ParallelDescriptor::Barrier();
-    return *workcoefs[level];
-}
-
-inline
-int
-ABecLaplacian::numLevels () const
-{
-    return gbox.size();
-}
-
-inline
 const BoxArray&
-ABecLaplacian::boxArray (int level) const
+ABecLaplacian::LPboxArray (int level) const
 {
-    if (level>=numLevels())
-     BoxLib::Error("level invalid");
-    return gbox[level];
+ if ((level>=0)&&(level<MG_numlevels_var)) {
+  // do nothing
+ } else {
+  BoxLib::Error("level invalid");
+ }
+ return gbox[level];
 }
 
-inline int
-ABecLaplacian::get_nsolve() const
+inline
+const DistributionMapping&
+ABecLaplacian::dmapLevel (int level) const
 {
- return nsolve_bicgstab;
+ if ((level>=0)&&(level<MG_numlevels_var)) {
+  // do nothing
+ } else
+  BoxLib::Error("level invalid");
+ return dmap_array[level];
 }
 
 inline int
 ABecLaplacian::get_bfact_array (int level) const
 {   
-    if (level>=numLevels())
-     BoxLib::Error("level invalid");
-    return bfact_array[level];
+ if ((level>=0)&&(level<MG_numlevels_var)) {
+  // do nothing 
+ } else
+  BoxLib::Error("level invalid");
+ return bfact_array[level];
 }   
 
 inline
 const Geometry&
 ABecLaplacian::getGeom (int level) const
 {
-    if (level>=numLevels())
-     BoxLib::Error("level invalid");
-    return geomarray[level];
+ if ((level>=0)&&(level<MG_numlevels_var)) {
+  // do nothing
+ } else
+  BoxLib::Error("level invalid");
+ return geomarray[level];
 }
 
 
-inline
-int
-ABecLaplacian::numGrids () const
-{
-    return gbox[0].size();
-}
 
 #endif /*_ABecLAPLACIAN_H_*/

@@ -762,12 +762,12 @@ stop
 
       if (is_rigid(nmat,im_primary).eq.1) then
 
-       USOUND_local=1.0E+20  ! these materials do not compress
+       USOUND_local=1.0D+20  ! these materials do not compress
 
       else if (is_rigid(nmat,im_primary).eq.0) then
 
        if (fort_material_type(im_primary).eq.0) then
-        USOUND_local=1.0E+20  ! these materials do not compress
+        USOUND_local=1.0D+20  ! these materials do not compress
        else if ((fort_material_type(im_primary).ge.1).and. &
                 (fort_material_type(im_primary).le.fort_max_num_eos)) then
         den_local=den((im_primary-1)*num_state_material+1)
@@ -794,6 +794,372 @@ stop
 
       return
       end subroutine get_mach_number 
+
+      subroutine SEM_VISC_SANITY(caller_id,dt,xsten,nhalf, &
+         flux_in,dir,velcomp,use_dt,use_HO,project_option,bfact, &
+         enable_spectral,constant_viscosity)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: velcomp
+      INTEGER_T, intent(in) :: use_dt
+      INTEGER_T, intent(in) :: use_HO
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: constant_viscosity
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: flux_in
+      REAL_T :: x,y,z
+      REAL_T :: f_sinx,f_siny,f_cosx,f_cosy
+      REAL_T :: ux(SDIM),uy(SDIM),uxx(SDIM)
+      REAL_T :: flux_exact
+      REAL_T :: flux_exact_tensor
+      REAL_T :: flux_err,flux_tol
+
+      x=xsten(0,1)
+      y=xsten(0,2)
+      z=xsten(0,SDIM)
+
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid"
+       stop
+      endif
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid SEM_VISC_SANITY"
+       stop
+      endif
+      if (nhalf.ge.1) then
+       ! do nothing
+      else
+       print *,"nhalf invalid SEM_VISC_SANITY"
+       stop
+      endif
+      if (abs(x)+abs(y)+abs(z).le.1.0D+21) then
+       ! do nothing
+      else
+       print *,"x,y,z overflow in SEM_VISC_SANITY"
+       stop
+      endif
+      if (abs(flux_in).le.1.0D+20) then
+       ! do nothing
+      else
+       print *,"flux_in overflow SEM_VISC_SANITY"
+       stop
+      endif
+      if ((dir.eq.-1).or. &
+          (dir.eq.1).or. &
+          (dir.eq.2).or. &
+          (dir.eq.SDIM)) then
+       ! do nothing
+      else 
+       print *,"dir invalid in SEM_VISC_SANITY"
+       stop
+      endif
+      if ((use_HO.eq.0).or.(use_HO.eq.1)) then
+       ! do nothing
+      else
+       print *,"use_HO invalid"
+       stop
+      endif
+
+      if ((enable_spectral.eq.1).or. &
+          (enable_spectral.eq.2)) then
+       ! do nothing (HO space)
+      else if ((enable_spectral.eq.0).or. &
+               (enable_spectral.eq.3)) then
+       ! do nothing (LO space)
+      else
+       print *,"enable_spectral invalid"
+       stop
+      endif
+
+      if ((constant_viscosity.eq.0).or.(constant_viscosity.eq.1)) then
+       if (dir.eq.-1) then
+        if (constant_viscosity.eq.1) then
+         ! do nothing
+        else
+         print *,"constant_viscosity invalid"
+         stop
+        endif
+       else if ((dir.ge.1).and.(dir.le.SDIM)) then
+        ! do nothing
+       else
+        print *,"dir invalid"
+        stop
+       endif
+      else
+       print *,"constant_viscosity invalid"
+       stop
+      endif
+
+      if ((velcomp.ge.1).and.(velcomp.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"velcomp invalid"
+       stop
+      endif
+      if ((use_dt.eq.0).or.(use_dt.eq.1)) then
+       ! do nothing
+      else
+       print *,"use_dt invalid in SEM_VISC_SANITY"
+       stop
+      endif
+
+      if ((project_option.eq.0).or. &
+          (project_option.eq.1).or. &
+          (project_option.eq.10).or. &
+          (project_option.eq.11).or. &
+          (project_option.eq.12).or. &
+          (project_option.eq.13).or. &
+          (project_option.eq.3).or. &
+          (project_option.eq.2).or. &
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var))) then
+         ! do nothing
+      else
+       print *,"project_option invalid in SEM_VISC_SANITY"
+       stop
+      endif
+
+      if (1.eq.0) then
+       if ((probtype.eq.26).and. &
+           (axis_dir.eq.11).and. &
+           (project_option.eq.3).and. &
+           (SDIM.eq.2)) then
+         ! u=-f_sinx * f_cosy
+         ! v=f_cosx  * f_siny
+        f_sinx=sin(two*Pi*x)
+        f_siny=sin(two*Pi*y)
+        f_cosx=cos(two*Pi*x)
+        f_cosy=cos(two*Pi*y)
+        ux(1)=-two*Pi*f_cosx*f_cosy
+        uy(1)=two*Pi*f_sinx*f_siny
+        ux(2)=-two*Pi*f_sinx*f_siny
+        uy(2)=two*Pi*f_cosx*f_cosy
+        uxx(1)=eight*(Pi**2)*f_sinx*f_cosy
+        uxx(2)=-eight*(Pi**2)*f_cosx*f_siny
+          ! 2D=( 2 ux     uy+vx
+          !      uy+vx    2 vy  )
+        if (dir.eq.1) then
+         flux_exact=ux(velcomp)
+         if (velcomp.eq.1) then
+          flux_exact_tensor=two*ux(velcomp)
+         else if (velcomp.eq.2) then
+          flux_exact_tensor=ux(2)+uy(1)
+         else
+          print *,"velcomp invalid"
+          stop
+         endif
+        else if (dir.eq.2) then
+         flux_exact=uy(velcomp)
+         if (velcomp.eq.2) then
+          flux_exact_tensor=two*uy(velcomp)
+         else if (velcomp.eq.1) then
+          flux_exact_tensor=ux(2)+uy(1)
+         else
+          print *,"velcomp invalid"
+          stop
+         endif
+        else if (dir.eq.-1) then
+         flux_exact=uxx(velcomp)
+         flux_exact_tensor=flux_exact
+        else
+         print *,"dir invalid"
+         stop
+        endif
+        if (use_dt.eq.0) then
+         ! do nothing
+        else if (use_dt.eq.1) then
+         flux_exact=-dt*fort_viscconst(1)*flux_exact
+         flux_exact_tensor=-dt*fort_viscconst(1)*flux_exact_tensor
+        else
+         print *,"use_dt invalid"
+         stop
+        endif
+        if ((caller_id.eq.2).or. &
+            (caller_id.eq.3).or. &
+            (caller_id.eq.4).or. &
+            (caller_id.eq.5)) then
+         if (constant_viscosity.eq.1) then
+          flux_err=abs(flux_exact-flux_in)
+         else if (constant_viscosity.eq.0) then
+          flux_err=abs(flux_exact_tensor-flux_in)
+         else
+          print *,"constant_viscosity invalid"
+          stop
+         endif
+        else
+         flux_err=abs(flux_exact-flux_in)
+        endif
+
+        print *,"caller_id, dir, velcomp, use_dt ", &
+         caller_id,dir,velcomp,use_dt
+        print *,"dt,x,y,z,visc ",dt,x,y,z,fort_viscconst(1)
+        print *,"flux_in, flux_exact, flux_err ", &
+         flux_in,flux_exact,flux_err
+        if ((bfact.eq.1).or. &
+            (use_HO.eq.0).or. &
+            (enable_spectral.eq.0).or. &
+            (enable_spectral.eq.3)) then
+         flux_tol=1.0D-2
+        else if (bfact.eq.2) then
+         flux_tol=1.0D-2
+        else if (bfact.eq.4) then
+         flux_tol=1.0D-2
+        else if (bfact.eq.8) then
+         flux_tol=1.0D-4
+        else if (bfact.eq.16) then
+         flux_tol=1.0D-5
+        else
+         print *,"bfact invalid"
+         stop
+        endif
+
+        if (flux_err.gt.flux_tol) then
+         print *,"flux_err too large: err,tol ",flux_err,flux_tol
+         stop
+        endif
+       endif
+      endif
+
+      return
+      end subroutine SEM_VISC_SANITY
+
+
+      subroutine SEM_VISC_SANITY_CC(caller_id,dt,CC,MSKDV,MSKRES,MDOT, &
+        VOLTERM,project_option,xsten,nhalf,velcomp)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, intent(in) :: velcomp
+      INTEGER_T, intent(in) :: project_option
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: CC
+      REAL_T, intent(in) :: MSKDV
+      REAL_T, intent(in) :: MSKRES
+      REAL_T, intent(in) :: MDOT
+      REAL_T, intent(in) :: VOLTERM
+      REAL_T :: VOLTERM_check
+      REAL_T :: CC_check
+      INTEGER_T :: dir
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid SEM_VISC_SANITY_CC:",dt
+       stop
+      endif
+      if (nhalf.ge.1) then
+       ! do nothing
+      else
+       print *,"nhalf invalid SEM_VISC_SANITY_CC:",nhalf
+       stop
+      endif
+      if ((velcomp.ge.1).and.(velcomp.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"velcomp invalid SEM_VISC_SANITY_CC:",velcomp
+       stop
+      endif
+      if ((project_option.eq.0).or. &
+          (project_option.eq.1).or. &
+          (project_option.eq.10).or. &
+          (project_option.eq.11).or. &
+          (project_option.eq.12).or. &
+          (project_option.eq.13).or. &
+          (project_option.eq.3).or. &
+          (project_option.eq.2).or. &
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var))) then
+         ! do nothing
+      else
+       print *,"project_option invalid in SEM_VISC_SANITY_CC"
+       stop
+      endif
+      if (CC.ge.zero) then
+       ! do nothing
+      else
+       print *,"CC invalid in SEM_VISC_SANITY_CC:",CC
+       stop
+      endif
+      if ((MSKDV.eq.zero).or.(MSKDV.eq.one)) then
+       ! do nothing
+      else
+       print *,"MSKDV invalid: SEM_VISC_SANITY_CC:",MSKDV
+       stop
+      endif
+      if ((MSKRES.eq.zero).or.(MSKRES.eq.one)) then
+       ! do nothing
+      else
+       print *,"MSKRES invalid: SEM_VISC_SANITY_CC:",MSKRES
+       stop
+      endif
+      if (abs(MDOT).le.1.0D+20) then
+       ! do nothing
+      else
+       print *,"MDOT overflow: SEM_VISC_SANITY_CC:",MDOT
+       stop
+      endif
+      if (VOLTERM.gt.zero) then
+       ! do nothing
+      else
+       print *,"VOLTERM invalid: SEM_VISC_SANITY_CC:",VOLTERM
+       stop
+      endif
+
+      if (1.eq.0) then
+       if ((probtype.eq.26).and. &
+           (axis_dir.eq.11).and. &
+           (fort_viscconst(1).gt.zero).and. &
+           (SDIM.eq.2)) then
+         ! u=-f_sinx * f_cosy
+         ! v=f_cosx  * f_siny
+        VOLTERM_check=one
+        do dir=1,SDIM
+         VOLTERM_check=VOLTERM_check*(xsten(1,dir)-xsten(-1,dir))
+        enddo
+        if (abs(VOLTERM-VOLTERM_check).le.1.0D-10*VOLTERM_check) then
+         ! do nothing
+        else
+         print *,"VOLTERM invalid"
+         stop
+        endif
+        if (project_option.eq.3) then
+         CC_check=VOLTERM/dt
+         if (abs(CC-CC_check).le.1.0D-10*CC_check) then
+          ! do nothing
+         else
+          print *,"CC invalid"
+          stop
+         endif
+         if ((MSKDV.eq.one).and. &
+             (MSKRES.eq.one)) then
+          ! do nothing
+         else
+          print *,"MSKDV or MSKRES invalid"
+          print *,"MSKDV= ",MSKDV
+          print *,"MSKRES= ",MSKRES
+          stop
+         endif
+        endif
+
+       endif
+
+      endif
+
+      return
+      end subroutine SEM_VISC_SANITY_CC
 
 
       subroutine get_flux_factor(operator_id,im1,im2,coef)
@@ -849,14 +1215,15 @@ stop
        vapor_mass_source)
       IMPLICIT NONE
 
-      REAL_T liq_viscosity
-      REAL_T liq_vap_tension
-      REAL_T total_density
-      REAL_T liquid_density,vapor_density
-      REAL_T liquid_pressure,saturation_pressure
-      REAL_T vapor_mass_frac
-      REAL_T vapor_vol_frac
-      REAL_T vapor_mass_source
+      REAL_T, intent(in) :: liq_viscosity
+      REAL_T, intent(in) :: liq_vap_tension
+      REAL_T, intent(in) :: total_density
+      REAL_T, intent(in) :: liquid_density,vapor_density
+      REAL_T, intent(in) :: liquid_pressure,saturation_pressure
+      REAL_T, intent(in) :: vapor_mass_frac
+      REAL_T, intent(in) :: vapor_vol_frac
+      REAL_T, intent(out) :: vapor_mass_source
+
       REAL_T R_e,R_c
 
       if ((liquid_density.gt.zero).and.(vapor_density.gt.zero)) then
@@ -1909,10 +2276,10 @@ stop
       INTEGER_T im_solid_temperature
       REAL_T zprime
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in outside_temperature"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in outside_temperature"
       else if (time.lt.zero) then
        print *,"time invalid in outside_temperature"
        stop
@@ -2967,10 +3334,10 @@ stop
        stop
       endif
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in get_user_temperature"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in get_user_temperature"
       else if (time.lt.zero) then
        print *,"time invalid in get_user_temperature"
        stop
@@ -3202,13 +3569,14 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T xpos(SDIM)
-      REAL_T time
-      INTEGER_T nten,nten_test
-      REAL_T temperature(nmat)
-      REAL_T tension(nten)
-      REAL_T new_tension(nten)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T nten_test
+      REAL_T, intent(in) :: temperature(nmat)
+      REAL_T, intent(in) :: tension(nten)
+      REAL_T, intent(out) :: new_tension(nten)
       REAL_T avgtemp
       INTEGER_T iten,im,im_opp,ibase,stage
 
@@ -3313,7 +3681,8 @@ stop
        subroutine get_scaled_tension(tension_in,tension_out)
        IMPLICIT NONE
 
-       REAL_T tension_out,tension_in
+       REAL_T, intent(in) :: tension_in
+       REAL_T, intent(out) :: tension_out
 
 
        tension_out=tension_in/global_pressure_scale
@@ -3324,7 +3693,7 @@ stop
        subroutine get_scaled_pforce(pforce_scaled)
        IMPLICIT NONE
 
-       REAL_T pforce_scaled
+       REAL_T, intent(out) :: pforce_scaled
 
 
        pforce_scaled=one/global_pressure_scale
@@ -3335,19 +3704,27 @@ stop
       subroutine get_vortex_info(x,time,neg_force,vel,vort,energy_moment)
       IMPLICIT NONE
 
-      REAL_T x(SDIM)
-      REAL_T xprime(SDIM)
-      REAL_T time
-      REAL_T neg_force(SDIM)
-      REAL_T vel(SDIM)
-      REAL_T vort
-      REAL_T energy_moment
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T :: xprime(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: neg_force(SDIM)
+      REAL_T, intent(out) :: vel(SDIM)
+      REAL_T, intent(out) :: vort
+      REAL_T, intent(out) :: energy_moment
       REAL_T problo(SDIM)
       REAL_T probhi(SDIM)
       REAL_T problen(SDIM)
       REAL_T rr,alpha,alpha_t,alpha_r,r_x,r_y,uy,vx
       REAL_T fx,gy,fy,gx,fxp,gyp,fyp,gxp
       INTEGER_T dir,dir_x,dir_y
+      REAL_T decay_term
+
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid"
+       stop
+      endif
 
       if ((probtype.eq.26).and. &
           ((axis_dir.eq.2).or.(axis_dir.eq.3))) then
@@ -3513,7 +3890,21 @@ stop
        enddo ! dir=1..sdim
 
        energy_moment=zero
-       alpha=cos(two*Pi*radblob*time)
+       decay_term=exp(-fort_viscconst(1)*eight*Pi*Pi*time)
+       alpha=cos(two*Pi*radblob*time)*decay_term
+
+       if ((radblob.eq.zero).and.(fort_viscconst(1).eq.zero)) then
+        ! do nothing, ok set of parameters
+       else if ((radblob.gt.zero).and. &
+                (fort_viscconst(1).eq.zero)) then
+        ! do nothing, ok set of parameters
+       else if ((radblob.eq.zero).and. &
+                (fort_viscconst(1).gt.zero)) then
+        ! do nothing, ok set of parameters
+       else
+        print *,"radblob and/or fort_viscconst(1) must be changed"
+        stop
+       endif
 
        if (SDIM.eq.2) then
         dir_x=1
@@ -3559,7 +3950,7 @@ stop
        gy=cos(two*Pi*xprime(dir_y))
        fy=sin(two*Pi*xprime(dir_y))
        gx=cos(two*Pi*xprime(dir_x))
-       vel(dir_x)=-alpha*fx*gy 
+       vel(dir_x)=-alpha*fx*gy
        vel(dir_y)=alpha*fy*gx
        if (SDIM.eq.2) then
         if ((adv_dir.eq.1).or.(adv_dir.eq.3)) then
@@ -3587,12 +3978,13 @@ stop
         stop
        endif
 
-       alpha_t=-sin(two*Pi*radblob*time)*two*Pi*radblob
+       alpha_t=-sin(two*Pi*radblob*time)*two*Pi*radblob*decay_term
+         
        fxp=gx*two*Pi
        gyp=-fy*two*Pi 
        fyp=gy*two*Pi
        gxp=-fx*two*Pi 
-       
+      
        neg_force(dir_x)=alpha_t*fx*gy
        neg_force(dir_y)=-alpha_t*fy*gx
 
@@ -3610,16 +4002,16 @@ stop
           vort_expect,vel_expect,energy_moment)
       IMPLICIT NONE
 
-      REAL_T time
-      REAL_T x(SDIM)
-      REAL_T vort
-      REAL_T vel(SDIM)
-      REAL_T vort_err
-      REAL_T vel_err
-      REAL_T vort_expect
-      REAL_T energy_moment
-      REAL_T vel_expect(SDIM)
-      REAL_T neg_force(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: vort
+      REAL_T, intent(in) :: vel(SDIM)
+      REAL_T, intent(out) :: vort_err
+      REAL_T, intent(out) :: vel_err
+      REAL_T, intent(out) :: vort_expect
+      REAL_T, intent(out) :: energy_moment
+      REAL_T, intent(out) :: vel_expect(SDIM)
+      REAL_T :: neg_force(SDIM)
       INTEGER_T dir
 
       do dir=1,SDIM
@@ -4487,7 +4879,7 @@ stop
        stop
       endif
 
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=cv*temperature
 
       return
@@ -4507,7 +4899,7 @@ stop
        stop
       endif
 
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -4753,7 +5145,7 @@ stop
        water_molar_mass=18.01528 ! g/mol
        rhoMKS=1000.0*rho  ! kg/m^3
        rho_molar=rhoMKS/(0.001*water_molar_mass)  ! mol/m^3
-        ! if rho=1g/cm^3 then rhoMKS=1000 kg/m^3 , rho_molar=1E+6/18 mol/m^3
+        ! if rho=1g/cm^3 then rhoMKS=1000 kg/m^3 , rho_molar=1D+6/18 mol/m^3
         !  Vm=18E-6 m^3/mole 
        Vm=one/rho_molar     ! m^3/mole
 
@@ -4864,7 +5256,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=cv*temperature
 
       return
@@ -4883,7 +5275,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -5029,7 +5421,7 @@ stop
       REAL_T rho,temperature,internal_energy,cv
 
       if ((rho.gt.zero).and.(temperature.gt.zero)) then
-       cv=4.1855E+7
+       cv=4.1855D+7
        internal_energy=cv*temperature
       else
        print *,"rho or temperature invalid"
@@ -5046,7 +5438,7 @@ stop
       REAL_T rho,temperature,internal_energy,cv
 
       if ((rho.gt.zero).and.(internal_energy.gt.zero)) then
-       cv=4.1855E+7
+       cv=4.1855D+7
        temperature=internal_energy/cv
       else
        print *,"rho or internal_energy invalid"
@@ -5191,7 +5583,7 @@ stop
       REAL_T rho,temperature,internal_energy,cv
 
       if ((rho.gt.zero).and.(temperature.gt.zero)) then
-       cv=4.1855E+7
+       cv=4.1855D+7
        internal_energy=cv*temperature
       else
        print *,"rho or temperature invalid"
@@ -5208,7 +5600,7 @@ stop
       REAL_T rho,temperature,internal_energy,cv
 
       if ((rho.gt.zero).and.(internal_energy.gt.zero)) then
-       cv=4.1855E+7
+       cv=4.1855D+7
        temperature=internal_energy/cv
       else
        print *,"rho or internal_energy invalid"
@@ -5232,7 +5624,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=cv*temperature
 
       return
@@ -5252,7 +5644,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=cv*temperature
 
       return
@@ -5272,7 +5664,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -5292,7 +5684,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -5486,7 +5878,7 @@ stop
       rmin = 0.500 ! at 0.1 MPa, T = 433
       rmax = 0.850 ! at 400 MPa, T = 298
       Tc = 658.2  ! critical temperature
-      cv = 2.116E+7 ! for dodecane at 106 MPa and 363 K
+      cv = 2.116D+7 ! for dodecane at 106 MPa and 363 K
 
       if (rho.le.1e-6) then
        print *,"DeDT_dodecane: density negative or near zero ",rho
@@ -5545,7 +5937,7 @@ stop
       rmin = 0.500 ! at 0.1 MPa, T = 433
       rmax = 0.850 ! at 400 MPa, T = 298
       Tc = 658.2  ! critical temperature
-      cv = 2.116E+7 ! for dodecane at 106 MPa and 363 K
+      cv = 2.116D+7 ! for dodecane at 106 MPa and 363 K
 
       if (rho.le.1e-6) then
        print *,"INTERNAL_dodecane: density negative or near zero ",rho
@@ -5577,7 +5969,7 @@ stop
       internal_energy=(ca*T4+cb*T3+cc*T2+cd*T+ce)*1e7 ! in erg/cm3
 
       if (OLD_DODECANE.eq.1) then
-       cv=2.116E+7 ! for dodecane at 106 MPa and 363 K
+       cv=2.116D+7 ! for dodecane at 106 MPa and 363 K
        internal_energy=T*cv
       endif
 
@@ -5596,7 +5988,7 @@ stop
       rho=rho_in
 
       Tc = 658.2  ! critical temperature
-      cv = 2.116E+7 ! at 106 MPa and 363 K
+      cv = 2.116D+7 ! at 106 MPa and 363 K
       rmin = 0.500 ! at 0.1 MPa, T = 433
       rmax = 0.850 ! at 400 MPa, T = 298
 
@@ -5658,7 +6050,7 @@ stop
 !     call INTERNAL_dodecane(rho,T,internal_energy)
 
       if (OLD_DODECANE.eq.1) then
-       cv=2.116E+7 ! for dodecane at 106 MPa and 363 K
+       cv=2.116D+7 ! for dodecane at 106 MPa and 363 K
        T=internal_energy/cv
       endif
 
@@ -5697,7 +6089,7 @@ stop
 
       if (OLD_DODECANE.eq.1) then
        pcav=PCAV_TAIT
-       cv=2.116E+7 ! for dodecane at 106 MPa and 363 K
+       cv=2.116D+7 ! for dodecane at 106 MPa and 363 K
        P0 = 1D+6    ! dyne/cm^2 reference pressure
        rho0= 0.6973 ! dodecane at 0.1 MPa and 363 K
        A = 0.0881
@@ -5877,7 +6269,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=temperature*cv
 
       return
@@ -5897,7 +6289,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -6036,7 +6428,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=temperature*cv
 
       return
@@ -6056,7 +6448,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -6197,7 +6589,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=temperature*cv
 
       return
@@ -6217,7 +6609,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -6374,7 +6766,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=temperature*cv
 
       return
@@ -6394,7 +6786,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -6549,7 +6941,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=temperature*cv
 
       return
@@ -6569,7 +6961,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -6737,7 +7129,7 @@ stop
        print *,"temperature <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       internal_energy=temperature*cv
 
       return
@@ -6757,7 +7149,7 @@ stop
        print *,"internal energy <=0"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       temperature=internal_energy/cv
 
       return
@@ -9087,7 +9479,7 @@ stop
        stop
       endif
 
-!      cv=4.1855E+7
+!      cv=4.1855D+7
       cv=get_user_stiffCP(im)
       if (cv.le.zero) then
        print *,"cv invalid in internal default"
@@ -9135,9 +9527,10 @@ stop
         imattype,im)
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,temperature,internal_energy
-
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho,temperature
+      REAL_T, intent(out) :: internal_energy
+      REAL_T local_internal_energy
 
       if (rho.le.zero) then
        print *,"rho invalid"
@@ -9149,61 +9542,61 @@ stop
       endif
 
       if (imattype.eq.999) then
-       call INTERNAL_default(rho,temperature,internal_energy,imattype,im)
+       call INTERNAL_default(rho,temperature,local_internal_energy,imattype,im)
       else if (imattype.eq.0) then
-       call INTERNAL_default(rho,temperature,internal_energy,imattype,im)
+       call INTERNAL_default(rho,temperature,local_internal_energy,imattype,im)
       else if (imattype.eq.1) then
-       call INTERNAL_tait(rho,temperature,internal_energy)
+       call INTERNAL_tait(rho,temperature,local_internal_energy)
       else if (imattype.eq.2) then
-       call INTERNAL_jwl(rho,temperature,internal_energy)
+       call INTERNAL_jwl(rho,temperature,local_internal_energy)
       else if (imattype.eq.3) then
-       call INTERNAL_jwl(rho,temperature,internal_energy)
+       call INTERNAL_jwl(rho,temperature,local_internal_energy)
       else if (imattype.eq.4) then
-       call INTERNAL_SF6(rho,temperature,internal_energy)
+       call INTERNAL_SF6(rho,temperature,local_internal_energy)
       else if (imattype.eq.5) then
-       call INTERNAL_air(rho,temperature,internal_energy)
+       call INTERNAL_air(rho,temperature,local_internal_energy)
       else if (imattype.eq.14) then
-       call INTERNAL_air_rho2(rho,temperature,internal_energy)
+       call INTERNAL_air_rho2(rho,temperature,local_internal_energy)
       else if (imattype.eq.6) then
-       call INTERNAL_Marquina(rho,temperature,internal_energy)
+       call INTERNAL_Marquina(rho,temperature,local_internal_energy)
       else if (imattype.eq.7) then
-       call INTERNAL_tait_rho(rho,temperature,internal_energy)
+       call INTERNAL_tait_rho(rho,temperature,local_internal_energy)
       else if (imattype.eq.13) then
-       call INTERNAL_tait_rhohydro(rho,temperature,internal_energy)
+       call INTERNAL_tait_rhohydro(rho,temperature,local_internal_energy)
       else if (imattype.eq.8) then
-       call INTERNAL_airADIABAT(rho,temperature,internal_energy)
+       call INTERNAL_airADIABAT(rho,temperature,local_internal_energy)
       else if (imattype.eq.9) then
-       call INTERNAL_tait_rho3(rho,temperature,internal_energy)
+       call INTERNAL_tait_rho3(rho,temperature,local_internal_energy)
       else if (imattype.eq.10) then
-       call INTERNAL_tait_rho2(rho,temperature,internal_energy)
+       call INTERNAL_tait_rho2(rho,temperature,local_internal_energy)
       else if (imattype.eq.11) then
-       call INTERNAL_koren_rho1(rho,temperature,internal_energy)
+       call INTERNAL_koren_rho1(rho,temperature,local_internal_energy)
       else if (imattype.eq.12) then
-       call INTERNAL_koren_rho2(rho,temperature,internal_energy)
+       call INTERNAL_koren_rho2(rho,temperature,local_internal_energy)
       else if (imattype.eq.15) then
-       call INTERNAL_dodecane(rho,temperature,internal_energy)
+       call INTERNAL_dodecane(rho,temperature,local_internal_energy)
       else if (imattype.eq.16) then
-       call INTERNAL_SF6ADIABAT(rho,temperature,internal_energy)
+       call INTERNAL_SF6ADIABAT(rho,temperature,local_internal_energy)
       else if (imattype.eq.17) then
-       call INTERNAL_stiffened(rho,temperature,internal_energy,im)
+       call INTERNAL_stiffened(rho,temperature,local_internal_energy,im)
       else if (imattype.eq.18) then
-       call INTERNAL_simple_air(rho,temperature,internal_energy)
+       call INTERNAL_simple_air(rho,temperature,local_internal_energy)
       else if (imattype.eq.19) then
-       call INTERNAL_vacuum(rho,temperature,internal_energy)
+       call INTERNAL_vacuum(rho,temperature,local_internal_energy)
       else if (imattype.eq.20) then
-       call INTERNAL_tait_vacuum(rho,temperature,internal_energy)
+       call INTERNAL_tait_vacuum(rho,temperature,local_internal_energy)
       else if (imattype.eq.21) then
-       call INTERNAL_cav_nozzle(rho,temperature,internal_energy)
+       call INTERNAL_cav_nozzle(rho,temperature,local_internal_energy)
       else if (imattype.eq.22) then
-       call INTERNAL_tillotson(rho,temperature,internal_energy)
+       call INTERNAL_tillotson(rho,temperature,local_internal_energy)
       else if (imattype.eq.23) then
-       call INTERNAL_peng_robinson(rho,temperature,internal_energy)
+       call INTERNAL_peng_robinson(rho,temperature,local_internal_energy)
       else
        print *,"imattype invalid INTERNAL_material"
        stop
       endif
 
-      internal_energy=internal_energy/global_pressure_scale
+      internal_energy=local_internal_energy/global_pressure_scale
 
       return
       end subroutine INTERNAL_material
@@ -9336,7 +9729,7 @@ stop
        print *,"im invalid70"
        stop
       endif
-      cv=4.1855E+7
+      cv=4.1855D+7
       if (imattype.eq.999) then
        if (is_rigid(nmat,im).eq.0) then
         print *,"is_rigid invalid"
@@ -9359,9 +9752,10 @@ stop
         imattype,im)
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,temperature,internal_energy,internal_energy_in
-
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho,internal_energy_in
+      REAL_T internal_energy
+      REAL_T, intent(out) :: temperature
 
       internal_energy=internal_energy_in*global_pressure_scale
 
@@ -10212,10 +10606,10 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in find_ls_stencil_slope"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in find_ls_stencil_slope"
       else if (time.lt.zero) then
        print *,"time invalid in find_ls_stencil_slope"
        stop
@@ -10335,10 +10729,10 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in find_ls_stencil_volume_coarse"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in find_ls_stencil_volume_coarse"
       else if (time.lt.zero) then
        print *,"time invalid in find_ls_stencil_volume_coarse"
        stop
@@ -11525,7 +11919,7 @@ END SUBROUTINE Adist
 
       if (tension(i12).gt.zero) then
 
-       err=1.0E+20
+       err=1.0D+20
        do while ((err.gt.VOFTOL).and.(iter.lt.maxiter))
         t3=two*Pi-t1-t2
         t1old=t1
@@ -11839,17 +12233,17 @@ END SUBROUTINE Adist
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T facecut_solid      ! surface tension coefficient is zero
-      REAL_T facecut_prescribed ! grad p coefficient is zero
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(out) :: facecut_solid !surface tension coefficient is zero
+      REAL_T, intent(out) :: facecut_prescribed ! grad p coefficient is zero
+      REAL_T, intent(in) :: LSleft(nmat)
+      REAL_T, intent(in) :: LSright(nmat)
       REAL_T LScrit_solid,LScrit_prescribed,LStest
-      INTEGER_T is_solid_face,is_prescribed_face
+      INTEGER_T, intent(out) :: is_solid_face,is_prescribed_face
       INTEGER_T im
-      INTEGER_T im_solid,im_prescribed
-      INTEGER_T im_solid_valid,im_prescribed_valid
-      INTEGER_T partid_solid,partid_prescribed
+      INTEGER_T, intent(out) :: im_solid,im_prescribed
+      INTEGER_T, intent(out) :: im_solid_valid,im_prescribed_valid
+      INTEGER_T, intent(out) :: partid_solid,partid_prescribed
       INTEGER_T nparts
 
       is_solid_face=0
@@ -12008,10 +12402,13 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
 
-      INTEGER_T im_opp,im,nmat,nten,nten_test
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
-      REAL_T gradh,psiL,psiR,HLEFT,HRIGHT
+      INTEGER_T, intent(in) :: nmat,nten
+      INTEGER_T nten_test
+      INTEGER_T, intent(out) :: im_opp,im
+      REAL_T, intent(in) :: LSleft(nmat)
+      REAL_T, intent(in) :: LSright(nmat)
+      REAL_T, intent(out) :: gradh
+      REAL_T psiL,psiR,HLEFT,HRIGHT
       INTEGER_T imL,imR
       INTEGER_T iten
 
@@ -13723,10 +14120,10 @@ END SUBROUTINE Adist
        xvec(SDIM)=z
       endif      
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in velsolid"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in velsolid"
       else if (time.lt.zero) then
        print *,"time invalid in velsolid"
        stop
@@ -14499,10 +14896,10 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if ((initial_time.ge.zero).and.(initial_time.le.1.0E+20)) then
+      if ((initial_time.ge.zero).and.(initial_time.le.1.0D+20)) then
        ! do nothing
-      else if (initial_time.ge.1.0E+20) then
-       print *,"WARNING initial_time.ge.1.0E+20 in materialdistbatch"
+      else if (initial_time.ge.1.0D+20) then
+       print *,"WARNING initial_time.ge.1.0D+20 in materialdistbatch"
       else if (initial_time.lt.zero) then
        print *,"initial_time invalid in materialdistbatch"
        stop
@@ -16471,7 +16868,7 @@ END SUBROUTINE Adist
         else
          wave_number=xblob
         endif
-        if ((xblob.ge.1.0E+5).and.(radblob.le.0.001*dx(1))) then
+        if ((xblob.ge.1.0D+5).and.(radblob.le.0.001*dx(1))) then
          dist=y-(yblob+half*dx(2))
         else 
          dist=y-(yblob+ &
@@ -19370,15 +19767,18 @@ END SUBROUTINE Adist
               
       IMPLICIT NONE
 
-      INTEGER_T caller_id
-      INTEGER_T level,finest_level
-      REAL_T cc,cc_ice,cc_group
-      REAL_T dd,dd_group,ddfactor
-      REAL_T visc_coef
-      INTEGER_T nsolve,nsolveMM,im_vel,dir,veldir,project_option
-      INTEGER_T constant_viscosity,side,local_presbc
-      REAL_T local_wt(nsolve)
-      INTEGER_T at_RZ_boundary
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: level,finest_level
+      REAL_T, intent(in) :: cc,cc_ice
+      REAL_T, intent(out) :: cc_group
+      REAL_T, intent(in) :: dd
+      REAL_T :: ddfactor
+      REAL_T, intent(out) :: dd_group
+      REAL_T, intent(in) :: visc_coef
+      INTEGER_T, intent(in) :: nsolve,nsolveMM,im_vel,dir,veldir,project_option
+      INTEGER_T, intent(in) :: constant_viscosity,side,local_presbc
+      REAL_T, intent(out) :: local_wt(nsolve)
+      INTEGER_T :: at_RZ_boundary
 
       if ((cc.ge.zero).and. &
           (cc.le.one).and. &
@@ -19680,7 +20080,8 @@ END SUBROUTINE Adist
 ! operation_flag=10 unew^MAC=unew^CELL,MAC -> MAC
 ! operation_flag=11 unew^MAC=unew^CELL DIFF,MAC -> MAC
       subroutine SEM_CELL_TO_MAC( &
-       ncomp_xp, &
+       conservative_div_uu, &
+       ncomp_xp, &  ! number of amrsync components if op=0,3,5,6,7,9,10,11
        simple_AMR_BC_flag_in, &
        nsolveMM_FACE, &
        num_materials_face, &
@@ -19722,74 +20123,78 @@ END SUBROUTINE Adist
        pres,DIMS(pres), & 
        den,DIMS(den), & 
        xface,DIMS(xface), & 
-       xgp,DIMS(xgp), & 
+       xgp,DIMS(xgp), &  ! holds Umac_old if operation_flag==5 or 11.
        xcut,DIMS(xcut), & 
-       xp,DIMS(xp), & 
+       xp,DIMS(xp), &  ! holds amrsync if op==0,3,5,6,7,9,10,11
        xvel,DIMS(xvel), & 
        maskSEM,DIMS(maskSEM) )
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T ncomp_xp
-      INTEGER_T simple_AMR_BC_flag_in
-      INTEGER_T simple_AMR_BC_flag
-      INTEGER_T num_materials_face
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nmat
-      INTEGER_T nsolveMM_FACE
-      REAL_T time
-      REAL_T dt
-      REAL_T beta,visc_coef
-      INTEGER_T operation_flag
-      INTEGER_T energyflag
-      INTEGER_T temperature_primitive_variable(nmat)
-      INTEGER_T project_option
-      INTEGER_T SEM_upwind
-      INTEGER_T SEM_advection_algorithm
-      INTEGER_T i,j,k
-      INTEGER_T dir
-      INTEGER_T bfact,bfact_c,bfact_f
-      INTEGER_T scomp,scomp_bc
-      INTEGER_T dcomp
-      INTEGER_T update_right_flux
-      INTEGER_T ncomp_dest
-      INTEGER_T ncomp_source
-      INTEGER_T ncomp_xgp
-      INTEGER_T ncphys
-      INTEGER_T spectral_loop
-      INTEGER_T ncfluxreg
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T presbc_in(SDIM,2,nmat*num_state_material)
-      INTEGER_T velbc_in(SDIM,2,SDIM*num_materials_face)
-      INTEGER_T DIMDEC(semflux)
-      INTEGER_T DIMDEC(maskCF)
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(pres)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(xcut)
-      INTEGER_T DIMDEC(xgp)
-      INTEGER_T DIMDEC(xp)
-      INTEGER_T DIMDEC(xvel)
-      REAL_T semflux(DIMV(semflux),ncfluxreg)
-      REAL_T maskCF(DIMV(maskCF)) ! 1=fine-fine  0=coarse-fine
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T vel(DIMV(vel),SDIM*num_materials_face)
-      REAL_T pres(DIMV(pres),num_materials_face)
-      REAL_T den(DIMV(den),nmat*num_state_material)
-      REAL_T xface(DIMV(xface),ncphys) 
-      REAL_T xgp(DIMV(xgp),ncomp_xgp) !dest usually (holds umac_old if op==11)
-      REAL_T xcut(DIMV(xcut)) 
-      REAL_T xp(DIMV(xp),ncomp_xp) 
-      REAL_T xvel(DIMV(xvel),nsolveMM_FACE) 
+      INTEGER_T, intent(in) :: conservative_div_uu
+      INTEGER_T, intent(in) :: ncomp_xp
+      INTEGER_T, intent(in) :: simple_AMR_BC_flag_in
+      INTEGER_T :: simple_AMR_BC_flag
+      INTEGER_T :: local_AMR_BC_flag
+      INTEGER_T, intent(in) :: num_materials_face
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: beta,visc_coef
+      INTEGER_T, intent(in) :: operation_flag
+      INTEGER_T, intent(in) :: energyflag
+      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: SEM_upwind
+      INTEGER_T, intent(in) :: SEM_advection_algorithm
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: bfact,bfact_c,bfact_f
+      INTEGER_T, intent(in) :: scomp,scomp_bc
+      INTEGER_T, intent(in) :: dcomp
+      INTEGER_T, intent(in) :: update_right_flux
+      INTEGER_T, intent(in) :: ncomp_dest
+      INTEGER_T, intent(in) :: ncomp_source
+      INTEGER_T, intent(in) :: ncomp_xgp
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: spectral_loop
+      INTEGER_T, intent(in) :: ncfluxreg
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nmat*num_state_material)
+      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM*num_materials_face)
+      INTEGER_T, intent(in) :: DIMDEC(semflux)
+      INTEGER_T, intent(in) :: DIMDEC(maskCF)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(xcut)
+      INTEGER_T, intent(in) :: DIMDEC(xgp)
+      INTEGER_T, intent(in) :: DIMDEC(xp)
+      INTEGER_T, intent(in) :: DIMDEC(xvel)
+      REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, intent(in) :: maskCF(DIMV(maskCF)) ! 1=fine-fine  0=coarse-fine
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM*num_materials_face)
+      REAL_T, intent(in) :: pres(DIMV(pres),num_materials_face)
+      REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, intent(inout) :: xface(DIMV(xface),ncphys) 
+       !xgp is usually a dest variable except that it holds umac_old if 
+       !op==11 or op 5
+      REAL_T, intent(inout) :: xgp(DIMV(xgp),ncomp_xgp) 
+      REAL_T, intent(inout) :: xcut(DIMV(xcut)) 
+      REAL_T, intent(inout) :: xp(DIMV(xp),ncomp_xp) 
+      REAL_T, intent(inout) :: xvel(DIMV(xvel),nsolveMM_FACE) 
 
       INTEGER_T local_bctype(2)
       INTEGER_T local_bctype_den(2)
@@ -19818,6 +20223,7 @@ END SUBROUTINE Adist
        ! -1=fine (current) -coarse neighbor -2=coarse (current) -fine neighbor
       INTEGER_T nbr_outside_domain_flag(2)
       INTEGER_T cen_outside_domain_flag
+      INTEGER_T strip_outside_fab_flag
       INTEGER_T isten
       INTEGER_T dir2
       INTEGER_T sideidx(SDIM)
@@ -19890,7 +20296,8 @@ END SUBROUTINE Adist
        domlo(dir2)=0
       enddo ! dir2=1..sdim
 
-      if ((simple_AMR_BC_flag.eq.0).or.(simple_AMR_BC_flag.eq.1)) then
+      if ((simple_AMR_BC_flag.eq.0).or. &
+          (simple_AMR_BC_flag.eq.1)) then
        ! do nothing
       else
        print *,"simple_AMR_BC_flag invalid"
@@ -19999,6 +20406,10 @@ END SUBROUTINE Adist
         print *,"ncomp_xgp invalid1"
         stop
        endif
+       if (ncomp_xp.ne.SDIM) then
+        print *,"ncomp_xp invalid (it is supposed to be sdim)"
+        stop
+       endif
        if (update_right_flux.ne.0) then
         print *,"update_right_flux invalid"
         stop
@@ -20044,6 +20455,7 @@ END SUBROUTINE Adist
        endif
 
       else if (operation_flag.eq.7) then ! advection
+
        if (ncomp_xp.ne.SDIM+2) then
         print *,"ncomp_xp invalid"
         stop
@@ -20079,6 +20491,7 @@ END SUBROUTINE Adist
         print *,"cen_maskSEM invalid"
         stop
        endif
+
       else if (operation_flag.eq.0) then ! grad p
 
        if (ncomp_xgp.ne.nsolveMM_FACE) then
@@ -20337,8 +20750,10 @@ END SUBROUTINE Adist
        endif
       endif  ! debugging
 
+       ! local_incomp presently not used.
       local_incomp=0
 
+       ! do nothing unless the strip is a spectral element strip.
       if ((cen_maskSEM.ge.1).and. &
           (cen_maskSEM.le.nmat)) then
 
@@ -20377,8 +20792,10 @@ END SUBROUTINE Adist
        stop
       endif
 
+       ! ncomp_dest=SDIM if operation_flag==6  (du/dn, dv/dn, dw/dn)
       do nc=1,ncomp_dest
 
+        ! do nothing if element is not a spectral element
        if ((cen_maskSEM.ge.1).and. &
            (cen_maskSEM.le.nmat)) then
 
@@ -20393,6 +20810,8 @@ END SUBROUTINE Adist
         enddo ! dir2
         indexhi(dir)=indexlo(dir)+bfact-1
 
+        strip_outside_fab_flag=0
+
         cen_outside_domain_flag=0
 
         do dir2=1,SDIM
@@ -20400,9 +20819,13 @@ END SUBROUTINE Adist
          side=1
          if (indexlo(dir2).lt.fablo(dir2)) then
           if (dir2.eq.dir) then
-           print *,"indexlo(dir) invalid"
+           print *,"indexlo(dir) invalid; strip must at least"
+           print *,"be alongside a strip that is in the domain"
            stop
           endif
+
+          strip_outside_fab_flag=1
+
           if (velbc_in(dir2,side,dir2).ne.INT_DIR) then
            cen_outside_domain_flag=1
           endif
@@ -20411,9 +20834,13 @@ END SUBROUTINE Adist
          side=2
          if (indexhi(dir2).gt.fabhi(dir2)) then
           if (dir2.eq.dir) then
-           print *,"indexhi(dir) invalid"
+           print *,"indexhi(dir) invalid; strip must at least"
+           print *,"be alongside a strip that is in the domain"
            stop
           endif
+
+          strip_outside_fab_flag=1
+
           if (velbc_in(dir2,side,dir2).ne.INT_DIR) then
            cen_outside_domain_flag=1
           endif
@@ -20438,6 +20865,7 @@ END SUBROUTINE Adist
           enddo
 
           if (side.eq.1) then
+
            sideidx(dir)=indexlo(dir)-1
 
            local_maskcov= &
@@ -20581,7 +21009,7 @@ END SUBROUTINE Adist
            jc=j_out
            kc=k_out
 
-           if (operation_flag.eq.7) then ! advection
+           if (operation_flag.eq.7) then ! advection (values outside elem)
 
             denlocal=den(D_DECL(ic,jc,kc),ibase+1)
             templocal=den(D_DECL(ic,jc,kc),ibase+2)
@@ -20596,16 +21024,32 @@ END SUBROUTINE Adist
               stop
              endif
              velcomp=nc
-             local_data_side(side)= &
+             ! u_{i+1/2}S_{i+1/2}-u_{i-1/2}S_{i-1/2}=
+             ! (S_{i+1/2}+S_{i-1/2})(u_{i+1/2}-u_{i-1/2})/2 +
+             ! (u_{i+1/2}+u_{i-1/2})(S_{i+1/2}-S_{i-1/2})/2
+             ! u dot grad u = div(umac u)-I(umac) div umac
+             if ((conservative_div_uu.eq.0).or. &
+                 (conservative_div_uu.eq.1).or. &
+                 (conservative_div_uu.eq.2)) then
+              local_data_side(side)= &
                vel(D_DECL(ic,jc,kc),velcomp) ! NONCONSERVATIVE
+             else
+              print *,"conservative_div_uu invalid"
+              stop
+             endif
+
+             ! I(umac) dot grad rho
             else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
              local_data_side(side)=denlocal
+
+             ! I(umac) dot grad T
             else if (nc.eq.SDIM+2) then 
              local_data_side(side)=templocal ! temperature: NONCONSERVATIVE
             else
              print *,"nc invalid"
              stop
             endif
+
            else if (operation_flag.eq.6) then ! tensor derivatives
 
             if (num_materials_vel.ne.1) then
@@ -20652,9 +21096,9 @@ END SUBROUTINE Adist
              if (scomp.eq.1) then
               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
               local_data_side_den(side)=den(D_DECL(ic,jc,kc),1)
-              if ((abs(local_data_side(side)).lt.1.0E+20).and. &
+              if ((abs(local_data_side(side)).lt.1.0D+20).and. &
                   (local_data_side_den(side).gt.zero).and. &
-                  (abs(local_data_side_den(side)).lt.1.0E+20)) then
+                  (abs(local_data_side_den(side)).lt.1.0D+20)) then
                ! do nothing
               else
                print *,"local_data_side or local_data_side_den invalid"
@@ -20673,7 +21117,7 @@ END SUBROUTINE Adist
              if (scomp.eq.(cen_maskSEM-1)*num_state_material+1) then
               local_data_side(side)=den(D_DECL(ic,jc,kc),scomp)
               if ((local_data_side(side).gt.zero).and. &
-                  (abs(local_data_side(side)).lt.1.0E+20)) then
+                  (abs(local_data_side(side)).lt.1.0D+20)) then
                ! do nothing
               else
                print *,"local_data_side invalid"
@@ -20770,6 +21214,7 @@ END SUBROUTINE Adist
 
            else if (operation_flag.eq.7) then ! advection (bc's)
 
+             ! normal points out of the computational domain.
             if (side.eq.1) then
              udotn_boundary=-vel(D_DECL(i_out,j_out,k_out),dir)
             else if (side.eq.2) then
@@ -20792,6 +21237,8 @@ END SUBROUTINE Adist
               local_bcval(side)=zero
              else if (velbc_in(dir,side,nc).eq.EXT_DIR) then
 
+               ! normal points out of the computational domain.
+               ! udotn<0 => characteristics enter into the domain.
               if (udotn_boundary.lt.zero) then
                local_bctype(side)=1 ! dirichlet
                denlocal=den(D_DECL(i_out,j_out,k_out),ibase+1)
@@ -20802,8 +21249,15 @@ END SUBROUTINE Adist
                endif
 
                velcomp=nc
-               local_bcval(side)= &
-                vel(D_DECL(i_out,j_out,k_out),velcomp) !NONCONSERVATIVE
+               if ((conservative_div_uu.eq.0).or. &
+                   (conservative_div_uu.eq.1).or. &
+                   (conservative_div_uu.eq.2)) then
+                local_bcval(side)= &
+                 vel(D_DECL(i_out,j_out,k_out),velcomp) !NONCONSERVATIVE
+               else
+                print *,"conservative_div_uu invalid"
+                stop
+               endif
               else if (udotn_boundary.ge.zero) then
                local_bctype(side)=2 ! neumann
                local_bcval(side)=zero
@@ -21072,8 +21526,15 @@ END SUBROUTINE Adist
                stop
               endif
               velcomp=nc
-              local_data_side(side)= &
+              if ((conservative_div_uu.eq.0).or. &
+                  (conservative_div_uu.eq.1).or. &
+                  (conservative_div_uu.eq.2)) then
+               local_data_side(side)= &
                 xp(D_DECL(iface_out,jface_out,kface_out),velcomp)
+              else
+               print *,"conservative_div_uu invalid"
+               stop
+              endif
              else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
               local_data_side(side)=denlocal
              else if (nc.eq.SDIM+2) then ! temperature: NONCONSERVATIVE
@@ -21113,9 +21574,9 @@ END SUBROUTINE Adist
              stop
             endif
 
-            if ((abs(local_data_side(side)).lt.1.0E+20).and. &
-                (abs(denlocal).lt.1.0E+20).and. &
-                (abs(templocal).lt.1.0E+20)) then
+            if ((abs(local_data_side(side)).lt.1.0D+20).and. &
+                (abs(denlocal).lt.1.0D+20).and. &
+                (abs(templocal).lt.1.0D+20)) then
              ! do nothing
             else
              print *,"data overflow SEM nc=",nc
@@ -21147,7 +21608,36 @@ END SUBROUTINE Adist
              print *,"num_materials_vel invalid"
              stop
             endif
-            if (simple_AMR_BC_flag.eq.1) then
+
+            local_AMR_BC_flag=simple_AMR_BC_flag
+
+            if (cen_outside_domain_flag.eq.0) then
+
+             if (strip_outside_fab_flag.eq.0) then
+              ! do nothing
+             else if (strip_outside_fab_flag.eq.1) then
+              local_AMR_BC_flag=1
+             else
+              print *,"strip_outside_fab_flag invalid"
+              stop
+             endif
+
+            else 
+             print *,"cen_outside_domain_flag invalid"
+             stop
+            endif
+
+            if (local_AMR_BC_flag.eq.0) then
+             local_bctype(side)=bctype_tag
+             if ((nc.ge.1).and.(nc.le.SDIM)) then
+              velcomp=nc
+              local_data_side(side)= &
+               xp(D_DECL(iface_out,jface_out,kface_out),velcomp)
+             else
+              print *,"nc invalid"
+              stop
+             endif
+            else if (local_AMR_BC_flag.eq.1) then
              if ((nc.ge.1).and.(nc.le.SDIM)) then
               velcomp=nc
               local_data_side(side)=vel(D_DECL(ic,jc,kc),velcomp)
@@ -21156,9 +21646,10 @@ END SUBROUTINE Adist
               stop
              endif
             else
-             print *,"simple_AMR_BC_flag invalid"
+             print *,"local_AMR_BC_flag invalid"
              stop
             endif
+
            else if (operation_flag.eq.0) then ! MAC pressure gradient
 
             if (simple_AMR_BC_flag.eq.0) then
@@ -21200,7 +21691,7 @@ END SUBROUTINE Adist
               if (dcomp.eq.3) then
                local_data_side(side)= &
                 xgp(D_DECL(iface_out,jface_out,kface_out),nc) 
-               if (abs(local_data_side(side)).lt.1.0E+20) then
+               if (abs(local_data_side(side)).lt.1.0D+20) then
                 ! do nothing
                else
                 print *,"SEM data overflow"
@@ -21232,7 +21723,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-            if (abs(local_data_side(side)).lt.1.0E+20) then
+            if (abs(local_data_side(side)).lt.1.0D+20) then
              ! do nothing
             else
              print *,"SEM data overflow"
@@ -21262,9 +21753,9 @@ END SUBROUTINE Adist
              stop
             endif
 
-            if ((abs(local_data_side(side)).lt.1.0E+20).and. &
+            if ((abs(local_data_side(side)).lt.1.0D+20).and. &
                 (local_data_side_den(side).gt.zero).and. &
-                (abs(local_data_side_den(side)).lt.1.0E+20)) then
+                (abs(local_data_side_den(side)).lt.1.0D+20)) then
              ! do nothing
             else
              print *,"local_data_side or local_data_side_den invalid"
@@ -21300,7 +21791,7 @@ END SUBROUTINE Adist
              endif
 
              if ((local_data_side(side).gt.zero).and. &
-                 (abs(local_data_side(side)).lt.1.0E+20)) then
+                 (abs(local_data_side(side)).lt.1.0D+20)) then
               ! do nothing
              else
               print *,"local_data_side invalid"
@@ -21345,7 +21836,7 @@ END SUBROUTINE Adist
              print *,"simple_AMR_BC_flag invalid"
              stop
             endif
-            if (abs(local_data_side(side)).lt.1.0E+20) then
+            if (abs(local_data_side(side)).lt.1.0D+20) then
              ! do nothing
             else
              print *,"SEM data overflow"
@@ -21448,7 +21939,7 @@ END SUBROUTINE Adist
             if (scomp.eq.(cen_maskSEM-1)*num_state_material+1) then
              local_data(isten+1)=den(D_DECL(ic,jc,kc),scomp)
              if ((local_data(isten+1).gt.zero).and. &
-                 (abs(local_data(isten+1)).lt.1.0E+20)) then
+                 (abs(local_data(isten+1)).lt.1.0D+20)) then
               ! do nothing
              else
               print *,"local_data invalid"
@@ -21463,11 +21954,12 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.7) then ! advection
+          else if (operation_flag.eq.7) then ! advection (values inside elem)
 
            denlocal=den(D_DECL(ic,jc,kc),ibase+1)
            templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
+            ! u dot grad u = div(umac u)-u div umac
            if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
 
             if (num_materials_vel.ne.1) then
@@ -21476,8 +21968,15 @@ END SUBROUTINE Adist
             endif
             velcomp=nc
 
-            local_data(isten+1)= &
-             vel(D_DECL(ic,jc,kc),velcomp) !NONCONSERVATIVE
+            if ((conservative_div_uu.eq.0).or. &
+                (conservative_div_uu.eq.1).or. &
+                (conservative_div_uu.eq.2)) then
+             local_data(isten+1)= &
+              vel(D_DECL(ic,jc,kc),velcomp) !NONCONSERVATIVE
+            else
+             print *,"conservative_div_uu invalid"
+             stop
+            endif
 
            else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
 
@@ -21522,9 +22021,13 @@ END SUBROUTINE Adist
 
          if (spectral_loop.eq.0) then
 
-          ! if operation_flag.eq.7 then flux is multiplied by velocity in
-          ! lineGRAD (except for density and temperature).
+          ! if operation_flag.eq.7 (advection),
+          ! then velocity flux might be multiplied by umac (local_vel) in
+          ! lineGRAD (not density and temperature though).
+          ! u u_x + v u_y + w u_z = (u umac)_x + (u vmac)_y + (u wmac)_z -
+          !                         u umac_x - u vmac_y - u wmac_z
           call lineGRAD( &
+           conservative_div_uu, &
            levelrz, &
            dir, &
            nc, &
@@ -21549,6 +22052,7 @@ END SUBROUTINE Adist
             endif
            enddo
            call lineGRAD( &
+            conservative_div_uu, &
             levelrz, &
             dir, &
             nc, &
@@ -21790,7 +22294,7 @@ END SUBROUTINE Adist
 
             if (shared_face.eq.0) then
 
-             if ((nc.ge.1).and.(nc.le.SDIM)) then ! u * velocity
+             if ((nc.ge.1).and.(nc.le.SDIM)) then ! u * velocity (if cons)
 
               xface(D_DECL(ic,jc,kc),nc)=local_interp(isten+1)
 
@@ -21846,8 +22350,8 @@ END SUBROUTINE Adist
               endif
               inside_flux=semflux(D_DECL(i_in,j_in,k_in),fluxbase+nc)
 
-              if ((abs(inside_flux).lt.1.0E+20).and. &
-                  (abs(outside_flux).lt.1.0E+20)) then
+              if ((abs(inside_flux).lt.1.0D+20).and. &
+                  (abs(outside_flux).lt.1.0D+20)) then
 
                if (SEM_upwind.eq.1) then
 
@@ -22065,7 +22569,7 @@ END SUBROUTINE Adist
            if (spectral_loop.eq.0) then
 
             if ((local_interp(isten+1).gt.zero).and. &
-                (abs(local_interp(isten+1)).lt.1.0E+20)) then
+                (abs(local_interp(isten+1)).lt.1.0D+20)) then
              ! do nothing
             else
              print *,"local_interp invalid den:cell->mac"
@@ -22098,7 +22602,7 @@ END SUBROUTINE Adist
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+nc)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+nc))
               if ((local_interp(isten+1).gt.zero).and. &
-                  (abs(local_interp(isten+1)).lt.1.0E+20)) then
+                  (abs(local_interp(isten+1)).lt.1.0D+20)) then
                ! do nothing
               else
                print *,"local_interp invalid den:cell->mac"
@@ -22369,7 +22873,7 @@ END SUBROUTINE Adist
            endif
            if (spectral_loop.eq.0) then
 
-            shared_face_value=xvel(D_DECL(ic,jc,kc),dcomp)+ &
+            shared_face_value=xgp(D_DECL(ic,jc,kc),dcomp)+ &
               beta*local_interp(isten+1)
 
             if (shared_face.eq.0) then
@@ -22447,6 +22951,10 @@ END SUBROUTINE Adist
        ! operation_flag=6 advection
        ! mask>0 SEM; mask=0 piecewise finite volume
       subroutine SEM_MAC_TO_CELL( &
+       ncomp_denold, &
+       ncomp_veldest, &
+       ncomp_dendest, &
+       conservative_div_uu, &
        nsolveMM_FACE, &
        num_materials_face, &
        ns_time_order, &
@@ -22470,7 +22978,9 @@ END SUBROUTINE Adist
        i,j,k, &
        tilelo,tilehi, &
        fablo,fabhi, &
-       xlo,dx,dir,bfact, &
+       xlo,dx, &
+       dir_main, &
+       bfact, &
        velbc_in, &
        presbc_in, &
        scomp, &
@@ -22478,7 +22988,6 @@ END SUBROUTINE Adist
        dcomp, &
        ncomp, &
        ncomp_xvel, &
-       ncomp_veldest, &
        ncomp_cterm, &
        vol,DIMS(vol), & 
        xface,DIMS(xface), & 
@@ -22486,7 +22995,7 @@ END SUBROUTINE Adist
        xvel,DIMS(xvel), & 
        maskcoef,DIMS(maskcoef), & 
        cterm,DIMS(cterm), & 
-       mdotcell,DIMS(mdotcell), & 
+       mdotcell,DIMS(mdotcell), &  ! holds velocity if operation_flag==6
        pold,DIMS(pold), & 
        denold,DIMS(denold), & 
        ustar,DIMS(ustar), & 
@@ -22497,79 +23006,85 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
 
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T num_materials_face
-      INTEGER_T ns_time_order
-      INTEGER_T divu_outer_sweeps
-      INTEGER_T num_divu_outer_sweeps
-      INTEGER_T SDC_outer_sweeps
-      INTEGER_T SEM_advection_algorithm
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nmat
-      INTEGER_T slab_step
-      INTEGER_T operation_flag
-      INTEGER_T homflag
-      INTEGER_T project_option
-      INTEGER_T energyflag
-      INTEGER_T face_flag
-      INTEGER_T temperature_primitive_variable(nmat)
-      INTEGER_T advect_iter
-      INTEGER_T source_term
-      INTEGER_T maskSEM
-      REAL_T time,dt
-      INTEGER_T i,j,k
-      INTEGER_T dir
-      INTEGER_T bfact
-      INTEGER_T scomp
-      INTEGER_T scompMM_L
-      INTEGER_T scompMM_R
-      INTEGER_T scomp_bc
-      INTEGER_T dcomp
-      INTEGER_T ncomp
-      INTEGER_T ncomp_xvel
-      INTEGER_T ncomp_veldest
-      INTEGER_T ncomp_cterm
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T velbc_in(SDIM,2,SDIM)
-      INTEGER_T presbc_in(SDIM,2)
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(xp)
-      INTEGER_T DIMDEC(xvel)
-      INTEGER_T DIMDEC(maskcoef)
-      INTEGER_T DIMDEC(cterm)
-      INTEGER_T DIMDEC(mdotcell)
-      INTEGER_T DIMDEC(pold)
-      INTEGER_T DIMDEC(denold)
-      INTEGER_T DIMDEC(dendest)
-      INTEGER_T DIMDEC(ustar)
-      INTEGER_T DIMDEC(veldest)
-      INTEGER_T DIMDEC(divdest)
-      REAL_T vol(DIMV(vol))
-      REAL_T xface(DIMV(xface),ncomp)  ! flux data for I-scheme
-      REAL_T xp(DIMV(xp),2+nsolveMM_FACE)
-      REAL_T xvel(DIMV(xvel),ncomp_xvel)
-      REAL_T maskcoef(DIMV(maskcoef))
-      REAL_T cterm(DIMV(cterm),ncomp_cterm)
-      REAL_T mdotcell(DIMV(mdotcell),ncomp*num_materials_face)
-      REAL_T pold(DIMV(pold),ncomp*num_materials_face)
-      REAL_T denold(DIMV(denold),nmat*num_state_material)
-      REAL_T dendest(DIMV(dendest),nmat*num_state_material)
-      REAL_T ustar(DIMV(ustar),SDIM*num_materials_vel)
-      REAL_T veldest(DIMV(veldest),ncomp_veldest)
-      REAL_T divdest(DIMV(divdest),ncomp*num_materials_face)
+      INTEGER_T, intent(in) :: ncomp_denold
+      INTEGER_T, intent(in) :: ncomp_veldest
+      INTEGER_T, intent(in) :: ncomp_dendest
+      INTEGER_T, intent(in) :: conservative_div_uu
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T, intent(in) :: num_materials_face
+      INTEGER_T, intent(in) :: ns_time_order
+      INTEGER_T, intent(in) :: divu_outer_sweeps
+      INTEGER_T, intent(in) :: num_divu_outer_sweeps
+      INTEGER_T, intent(in) :: SDC_outer_sweeps
+      INTEGER_T, intent(in) :: SEM_advection_algorithm
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: slab_step
+      INTEGER_T, intent(in) :: operation_flag
+      INTEGER_T, intent(in) :: homflag
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: energyflag
+      INTEGER_T, intent(in) :: face_flag
+      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
+      INTEGER_T :: advect_iter
+      INTEGER_T :: source_term
+      INTEGER_T, intent(in) :: maskSEM
+      REAL_T, intent(in) :: time,dt
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: dir_main
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: scomp
+      INTEGER_T :: scompMM_L
+      INTEGER_T :: scompMM_R
+      INTEGER_T, intent(in) :: scomp_bc
+      INTEGER_T, intent(in) :: dcomp
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: ncomp_xvel
+      INTEGER_T, intent(in) :: ncomp_cterm
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: presbc_in(SDIM,2)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(xp)
+      INTEGER_T, intent(in) :: DIMDEC(xvel)
+      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
+      INTEGER_T, intent(in) :: DIMDEC(cterm)
+      INTEGER_T, intent(in) :: DIMDEC(mdotcell)
+      INTEGER_T, intent(in) :: DIMDEC(pold)
+      INTEGER_T, intent(in) :: DIMDEC(denold)
+      INTEGER_T, intent(in) :: DIMDEC(dendest)
+      INTEGER_T, intent(in) :: DIMDEC(ustar)
+      INTEGER_T, intent(in) :: DIMDEC(veldest)
+      INTEGER_T, intent(in) :: DIMDEC(divdest)
+      REAL_T, intent(in) :: vol(DIMV(vol))
+      REAL_T, intent(in) :: xface(DIMV(xface),ncomp)  ! flux data for I-scheme
+      REAL_T, intent(in) :: xp(DIMV(xp),2+nsolveMM_FACE)
+      REAL_T, intent(in) :: xvel(DIMV(xvel),ncomp_xvel)
+      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(inout) :: cterm(DIMV(cterm),ncomp_cterm)
+      REAL_T, intent(in) :: mdotcell(DIMV(mdotcell),ncomp*num_materials_face)
+      REAL_T, intent(in) :: pold(DIMV(pold),ncomp*num_materials_face)
+      REAL_T, intent(in) :: denold(DIMV(denold),ncomp_denold)
+      REAL_T, intent(inout) :: dendest(DIMV(dendest),ncomp_dendest)
+      REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM*num_materials_vel)
+      REAL_T, intent(inout) :: veldest(DIMV(veldest),ncomp_veldest)
+      REAL_T, intent(inout) :: divdest(DIMV(divdest),ncomp*num_materials_face)
       REAL_T local_data(bfact+1)
       REAL_T local_vel_data(bfact+1)
+      REAL_T local_vel_data_div(bfact+1)
       REAL_T local_data_up(bfact+1)
       REAL_T local_cell(bfact)
       REAL_T local_vel_cell(bfact)
+      REAL_T local_vel_cell_div(bfact)
       REAL_T local_cell_up(bfact)
       REAL_T prescell
       REAL_T local_vel_div(bfact)
+      REAL_T local_vel_div_div(bfact)
       REAL_T local_div(bfact)
       REAL_T local_div_up(bfact)
       INTEGER_T ii,jj,kk
@@ -22578,16 +23093,19 @@ END SUBROUTINE Adist
       INTEGER_T nc,side
       INTEGER_T nbr_outside_domain_flag(2)
       INTEGER_T cen_outside_domain_flag
-      INTEGER_T isten,dir2
+      INTEGER_T isten
+      INTEGER_T dir2
       INTEGER_T sideidx(SDIM)
       INTEGER_T indexlo(SDIM)
       INTEGER_T indexhi(SDIM)
       INTEGER_T indexmid(SDIM)
       REAL_T xstenMAC(-3:3,SDIM)
       REAL_T xsten(-3:3,SDIM)
-      REAL_T RR,RRTHETA
+      REAL_T RR,RRTHETA,RR_DIVIDE
       INTEGER_T nhalf,ibase,imattype,nc2
-      REAL_T divu,CC,MDOT,RHS,dp,dencell
+      REAL_T divu,CC,CC_DUAL,MDOT,RHS,dp,dencell
+      REAL_T local_POLD
+      REAL_T local_POLD_DUAL
       REAL_T TEMPERATURE,Eforce,internal_e
       REAL_T divflux(ncomp)
       REAL_T den_new,den_old,vel_old,mom_new,T_old,T_new
@@ -22600,14 +23118,17 @@ END SUBROUTINE Adist
       INTEGER_T nsolveMM_FACE_test
       REAL_T xflux_R
       INTEGER_T local_incomp
+      REAL_T local_div_val
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
       endif
 
-      if ((dir.lt.1).or.(dir.gt.SDIM)) then
-       print *,"dir invalid sem mac to cell"
+      if ((dir_main.ge.1).and.(dir_main.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_main invalid sem mac to cell"
        stop
       endif
 
@@ -22750,10 +23271,14 @@ END SUBROUTINE Adist
         print *,"ncomp invalid1"
         stop
        endif
-       if ((ncomp_xvel.ne.ntensorMM).or. &
-           (ncomp_veldest.ne.ntensorMM).or. &
-           (ncomp_cterm.ne.ntensorMM)) then
-        print *,"ncomp_xvel,ncomp_veldest, or ncomp_cterm invalid"
+       if ((ncomp_xvel.eq.ntensorMM).and. &
+           (ncomp_veldest.eq.ntensorMM).and. &
+           (ncomp_dendest.eq.ntensorMM).and. &
+           (ncomp_denold.eq.ntensorMM).and. &
+           (ncomp_cterm.eq.ntensorMM)) then
+        ! do nothing
+       else
+        print *,"nc_xvel,nc_veldest,nc_dendest,nc_denold or nc_cterm invalid"
         stop
        endif
 
@@ -22771,7 +23296,7 @@ END SUBROUTINE Adist
        else if (project_option.eq.12) then ! extension project
         print *,"extension project should be low order"
         stop
-       else if (project_option.eq.3) then
+       else if (project_option.eq.3) then ! viscosity
         if (ncomp.ne.SDIM) then
          print *,"ncomp invalid3"
          stop
@@ -22817,10 +23342,25 @@ END SUBROUTINE Adist
         print *,"ncomp_xvel invalid"
         stop
        endif
-       if (ncomp_veldest.ne.SDIM*num_materials_vel) then
+       if (ncomp_veldest.eq.ncomp) then
+        ! do nothing
+       else
         print *,"ncomp_veldest invalid"
         stop
        endif
+       if (ncomp_dendest.eq.ncomp) then
+        ! do nothing
+       else
+        print *,"ncomp_dendest invalid"
+        stop
+       endif
+       if (ncomp_denold.eq.ncomp*num_materials_face) then
+        ! do nothing
+       else
+        print *,"ncomp_denold invalid"
+        stop
+       endif
+
        if (ncomp_cterm.ne.ncomp*num_materials_face) then
         print *,"ncomp_cterm invalid"
         stop
@@ -22864,8 +23404,23 @@ END SUBROUTINE Adist
         print *,"ncomp_xvel invalid"
         stop
        endif
-       if (ncomp_veldest.ne.SDIM*num_materials_vel) then
+
+       if (ncomp_veldest.eq.num_materials_vel) then
+        ! do nothing
+       else
         print *,"ncomp_veldest invalid"
+        stop
+       endif
+       if (ncomp_dendest.eq.num_materials_vel) then
+        ! do nothing
+       else
+        print *,"ncomp_dendest invalid"
+        stop
+       endif
+       if (ncomp_denold.eq.1) then
+        ! do nothing
+       else
+        print *,"ncomp_denold invalid"
         stop
        endif
        if (ncomp_cterm.ne.1) then
@@ -22889,11 +23444,13 @@ END SUBROUTINE Adist
         print *,"scomp_bc invalid"
         stop
        endif
-       if ((dcomp.lt.1).or.(dcomp.gt.SDIM)) then
+       if ((dcomp.ge.1).and.(dcomp.le.SDIM)) then
+        ! do nothing
+       else
         print *,"dcomp invalid"
         stop
        endif
-       if (dcomp.ne.dir) then
+       if (dcomp.ne.dir_main) then
         print *,"dcomp invalid"
         stop
        endif
@@ -22911,10 +23468,28 @@ END SUBROUTINE Adist
         print *,"ncomp_xvel invalid"
         stop
        endif
-       if (ncomp_veldest.ne.SDIM*num_materials_vel) then
+
+       if (ncomp_veldest.ge. &
+           num_materials_vel*SDIM+num_state_material*nmat) then
+        ! do nothing
+       else
         print *,"ncomp_veldest invalid"
         stop
        endif
+       if (ncomp_dendest.ge.num_state_material*nmat) then
+        ! do nothing
+       else
+        print *,"ncomp_dendest invalid"
+        stop
+       endif
+       if ((ncomp_denold.eq.ncomp*num_materials_face).or. &
+           (ncomp_denold.eq.1)) then
+        ! do nothing
+       else
+        print *,"ncomp_denold invalid"
+        stop
+       endif
+
        if (ncomp_cterm.ne.1) then
         print *,"ncomp_cterm invalid"
         stop
@@ -22924,6 +23499,27 @@ END SUBROUTINE Adist
 
       else if (operation_flag.eq.3) then ! (grad p)^CELL, div(u)p
 
+       nsolveMM_FACE_test=ncomp*num_materials_face
+
+       if (ncomp_veldest.ge. &
+           num_materials_vel*SDIM+num_state_material*nmat) then
+        ! do nothing
+       else
+        print *,"ncomp_veldest invalid"
+        stop
+       endif
+       if (ncomp_dendest.ge.num_state_material*nmat) then
+        ! do nothing
+       else
+        print *,"ncomp_dendest invalid"
+        stop
+       endif
+       if (ncomp_denold.eq.nsolveMM_FACE_test) then
+        ! do nothing
+       else
+        print *,"ncomp_denold invalid"
+        stop
+       endif
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
         stop
@@ -22932,11 +23528,15 @@ END SUBROUTINE Adist
         print *,"scomp_bc invalid"
         stop
        endif
-       if ((dcomp.lt.1).or.(dcomp.gt.SDIM)) then
+       if ((dcomp.ge.1).and.(dcomp.le.SDIM)) then
+        ! do nothing
+       else
         print *,"dcomp invalid"
         stop
        endif
-       if (dcomp.ne.dir) then
+       if (dcomp.eq.dir_main) then
+        ! do nothing
+       else
         print *,"dcomp invalid"
         stop
        endif
@@ -22954,10 +23554,6 @@ END SUBROUTINE Adist
         print *,"ncomp_xvel invalid"
         stop
        endif
-       if (ncomp_veldest.ne.SDIM*num_materials_vel) then
-        print *,"ncomp_veldest invalid"
-        stop
-       endif
        if (ncomp_cterm.ne.1) then
         print *,"ncomp_cterm invalid"
         stop
@@ -22967,10 +23563,26 @@ END SUBROUTINE Adist
         stop
        endif
 
-       nsolveMM_FACE_test=ncomp*num_materials_face
-
       else if (operation_flag.eq.4) then ! (grad pot)^CELL
 
+       if (ncomp_veldest.eq.SDIM) then
+        ! do nothing
+       else
+        print *,"ncomp_veldest invalid"
+        stop
+       endif
+       if (ncomp_dendest.eq.SDIM) then
+        ! do nothing
+       else
+        print *,"ncomp_dendest invalid"
+        stop
+       endif
+       if (ncomp_denold.eq.1) then
+        ! do nothing
+       else
+        print *,"ncomp_denold invalid"
+        stop
+       endif
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
         stop
@@ -22979,11 +23591,15 @@ END SUBROUTINE Adist
         print *,"scomp_bc invalid"
         stop
        endif
-       if ((dcomp.lt.1).or.(dcomp.gt.SDIM)) then
+       if ((dcomp.ge.1).and.(dcomp.le.SDIM)) then
+        ! do nothing
+       else
         print *,"dcomp invalid"
         stop
        endif
-       if (dcomp.ne.dir) then
+       if (dcomp.eq.dir_main) then
+        ! do nothing
+       else
         print *,"dcomp invalid"
         stop
        endif
@@ -22997,10 +23613,6 @@ END SUBROUTINE Adist
        endif
        if (ncomp_xvel.ne.nsolveMM_FACE) then
         print *,"ncomp_xvel invalid"
-        stop
-       endif
-       if (ncomp_veldest.ne.SDIM) then
-        print *,"ncomp_veldest invalid"
         stop
        endif
        if (ncomp_cterm.ne.1) then
@@ -23023,7 +23635,29 @@ END SUBROUTINE Adist
         stop
        endif 
 
-       if (ncomp.ne.SDIM+num_state_base) then
+       if (ncomp_veldest.ge. &
+           num_materials_vel*SDIM+num_state_material*nmat) then
+        ! do nothing
+       else
+        print *,"ncomp_veldest invalid"
+        stop
+       endif
+       if (ncomp_dendest.ge.num_state_material*nmat) then
+        ! do nothing
+       else
+        print *,"ncomp_dendest invalid"
+        stop
+       endif
+       if (ncomp_denold.eq.nmat*num_state_material) then
+        ! do nothing
+       else
+        print *,"ncomp_denold invalid"
+        stop
+       endif
+
+       if (ncomp.eq.SDIM+num_state_base) then
+        ! do nothing
+       else
         print *,"ncomp invalid7"
         stop
        endif
@@ -23049,10 +23683,6 @@ END SUBROUTINE Adist
        endif
        if (ncomp_xvel.ne.nsolveMM_FACE) then
         print *,"ncomp_xvel invalid"
-        stop
-       endif
-       if (ncomp_veldest.ne.num_materials_vel*SDIM) then
-        print *,"ncomp_veldest invalid"
         stop
        endif
        if (ncomp_cterm.ne.ncomp) then
@@ -23082,7 +23712,7 @@ END SUBROUTINE Adist
       jj=0
       kk=0
 
-      if (dir.eq.1) then
+      if (dir_main.eq.1) then
        ii=1
        if ((i/bfact)*bfact.ne.i) then
         print *,"i invalid"
@@ -23092,7 +23722,7 @@ END SUBROUTINE Adist
         print *,"i invalid"
         stop
        endif
-      else if (dir.eq.2) then
+      else if (dir_main.eq.2) then
        jj=1
        if ((j/bfact)*bfact.ne.j) then
         print *,"j invalid"
@@ -23102,7 +23732,7 @@ END SUBROUTINE Adist
         print *,"j invalid"
         stop
        endif
-      else if ((dir.eq.3).and.(SDIM.eq.3)) then
+      else if ((dir_main.eq.3).and.(SDIM.eq.3)) then
        kk=1
        if ((k/bfact)*bfact.ne.k) then
         print *,"k invalid"
@@ -23113,16 +23743,18 @@ END SUBROUTINE Adist
         stop
        endif
       else
-       print *,"dir invalid sem mac to cell2"
+       print *,"dir_main invalid sem mac to cell2"
        stop
       endif
 
       do dir2=1,SDIM
-       if (fablo(dir2).lt.0) then
+       if (fablo(dir2).ge.0) then
+        ! do nothing
+       else
         print *,"fablo invalid"
         stop
        endif
-      enddo ! dir2
+      enddo ! dir2=1..sdim
 
       if (dt.le.zero) then
        print *,"dt invalid dt=",dt
@@ -23138,8 +23770,12 @@ END SUBROUTINE Adist
 
       ibase=(maskSEM-1)*num_state_material
 
-      if ((dir.lt.1).or.(dir.gt.SDIM).or.(bfact.lt.1)) then
-       print *,"dir or bfact invalid in SEM_MAC_TO_CELL"
+      if ((dir_main.ge.1).and. &
+          (dir_main.le.SDIM).and. &
+          (bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"dir_main or bfact invalid in SEM_MAC_TO_CELL"
        stop
       endif
 
@@ -23152,14 +23788,14 @@ END SUBROUTINE Adist
       do dir2=1,SDIM
        indexhi(dir2)=indexlo(dir2)
       enddo
-      indexhi(dir)=indexlo(dir)+bfact-1
+      indexhi(dir_main)=indexlo(dir_main)+bfact-1
 
       cen_outside_domain_flag=0
 
       do dir2=1,SDIM
        if (indexlo(dir2).lt.fablo(dir2)) then
-        if (dir2.eq.dir) then
-         print *,"indexlo(dir) invalid"
+        if (dir2.eq.dir_main) then
+         print *,"indexlo(dir_main) invalid"
          stop
         endif
         if (velbc_in(dir2,1,dir2).ne.INT_DIR) then
@@ -23167,15 +23803,15 @@ END SUBROUTINE Adist
         endif
        endif 
        if (indexhi(dir2).gt.fabhi(dir2)) then
-        if (dir2.eq.dir) then
-         print *,"indexhi(dir) invalid"
+        if (dir2.eq.dir_main) then
+         print *,"indexhi(dir_main) invalid"
          stop
         endif
         if (velbc_in(dir2,2,dir2).ne.INT_DIR) then
          cen_outside_domain_flag=1
         endif
        endif
-      enddo ! dir2
+      enddo ! dir2=1..sdim
 
 
       if (1.eq.0) then
@@ -23184,9 +23820,9 @@ END SUBROUTINE Adist
          if (level.eq.3) then
           if ((j.eq.0).and.(i.eq.120).and.(k.eq.18)) then
            print *,"TO_CELL: i,j,k,maskSEM,homflag ",i,j,k,maskSEM,homflag
-           print *,"dir ",dir
-           print *,"presbc(dir,1) ",presbc_in(dir,1)  
-           print *,"presbc(dir,2) ",presbc_in(dir,2)  
+           print *,"dir_main ",dir_main
+           print *,"presbc(dir_main,1) ",presbc_in(dir_main,1)  
+           print *,"presbc(dir_main,2) ",presbc_in(dir_main,2)  
            print *,"vol01 ", &
             vol(D_DECL(i,j,k)), &
             vol(D_DECL(i+ii,j+jj,k+kk))
@@ -23221,7 +23857,7 @@ END SUBROUTINE Adist
          do dir2=1,SDIM
           indexmid(dir2)=indexlo(dir2)
          enddo
-         indexmid(dir)=indexlo(dir)+isten
+         indexmid(dir_main)=indexlo(dir_main)+isten
  
          ic=indexmid(1)
          jc=indexmid(2)
@@ -23231,17 +23867,17 @@ END SUBROUTINE Adist
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scomp+nc-1)
          else if (operation_flag.eq.6) then ! advection
           if ((nc.ge.1).and.(nc.le.SDIM)) then
-           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u u
+           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u umac or u
           else if (nc.eq.SDIM+1) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! rho 
-           local_vel_data(isten+1)=xvel(D_DECL(ic,jc,kc),1) ! umac
           else if (nc.eq.SDIM+2) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! temperature
-           local_vel_data(isten+1)=xvel(D_DECL(ic,jc,kc),1) ! umac
           else
            print *,"nc invalid"
            stop
           endif
+          local_vel_data(isten+1)=xvel(D_DECL(ic,jc,kc),1) ! umac
+          local_vel_data_div(isten+1)=xvel(D_DECL(ic,jc,kc),1) ! umac
 
          else if (operation_flag.eq.0) then ! RHS
 
@@ -23340,11 +23976,11 @@ END SUBROUTINE Adist
 
          RR=one
 
-         if (dir.eq.1) then  ! r direction
+         if (dir_main.eq.1) then  ! r direction
 
           call gridstenMAC(xstenMAC,xlo, &
            ic,jc,kc, &
-           fablo,bfact,dx,nhalf,dir)
+           fablo,bfact,dx,nhalf,dir_main)
 
           if (levelrz.eq.0) then
            ! do nothing
@@ -23361,10 +23997,10 @@ END SUBROUTINE Adist
            stop
           endif
 
-         else if ((dir.eq.2).or.(dir.eq.SDIM)) then
+         else if ((dir_main.eq.2).or.(dir_main.eq.SDIM)) then
           ! do nothing
          else
-          print *,"dir invalid sem mac to cell 3"
+          print *,"dir_main invalid sem mac to cell 3"
           stop
          endif 
 
@@ -23374,6 +24010,7 @@ END SUBROUTINE Adist
           local_data(isten+1)=local_data(isten+1)*RR
          else if (operation_flag.eq.6) then !advection
           local_data(isten+1)=local_data(isten+1)*RR
+          local_vel_data_div(isten+1)=local_vel_data_div(isten+1)*RR
          else if (operation_flag.eq.1) then !divergence
           local_data(isten+1)=local_data(isten+1)*RR
          else if (operation_flag.eq.2) then !mac->cell solver or VELMAC_TO_CELL
@@ -23398,14 +24035,14 @@ END SUBROUTINE Adist
          enddo
 
          if (side.eq.1) then
-          sideidx(dir)=indexlo(dir)-1
+          sideidx(dir_main)=indexlo(dir_main)-1
           do dir2=1,SDIM
            if (sideidx(dir2).lt.fablo(dir2)) then
             if (velbc_in(dir2,side,dir2).ne.INT_DIR) then
              nbr_outside_domain_flag(side)=1
             endif
            endif
-          enddo ! dir2
+          enddo ! dir2=1..sdim
 
           i_out=indexlo(1)-ii
           j_out=indexlo(2)-jj
@@ -23413,14 +24050,14 @@ END SUBROUTINE Adist
 
          else if (side.eq.2) then
 
-          sideidx(dir)=indexhi(dir)+1
+          sideidx(dir_main)=indexhi(dir_main)+1
           do dir2=1,SDIM
            if (sideidx(dir2).gt.fabhi(dir2)) then
             if (velbc_in(dir2,side,dir2).ne.INT_DIR) then
              nbr_outside_domain_flag(side)=1
             endif
            endif
-          enddo ! dir2
+          enddo ! dir2=1..sdim
 
           i_out=indexhi(1)+ii
           j_out=indexhi(2)+jj
@@ -23437,7 +24074,7 @@ END SUBROUTINE Adist
  
          else if (nbr_outside_domain_flag(side).eq.1) then 
 
-          if (velbc_in(dir,side,dir).eq.INT_DIR) then
+          if (velbc_in(dir_main,side,dir_main).eq.INT_DIR) then
            print *,"velbc_in bust "
            print *,"cen_outside_domain_flag= ",cen_outside_domain_flag
            print *,"nbr_outside_domain_flag= ",nbr_outside_domain_flag(side)
@@ -23447,8 +24084,8 @@ END SUBROUTINE Adist
           if (operation_flag.eq.5) then ! grad u^T: MAC->CELL
          
              ! u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-           if ((velbc_in(dir,side,scomp_bc+nc-1).eq.REFLECT_EVEN).or. &
-               (velbc_in(dir,side,scomp_bc+nc-1).eq.FOEXTRAP)) then
+           if ((velbc_in(dir_main,side,scomp_bc+nc-1).eq.REFLECT_EVEN).or. &
+               (velbc_in(dir_main,side,scomp_bc+nc-1).eq.FOEXTRAP)) then
             if (side.eq.1) then
              local_data(1)=zero
             else if (side.eq.2) then
@@ -23457,9 +24094,9 @@ END SUBROUTINE Adist
              print *,"side invalid"
              stop
             endif
-           else if (velbc_in(dir,side,scomp_bc+nc-1).eq.REFLECT_ODD) then
+           else if (velbc_in(dir_main,side,scomp_bc+nc-1).eq.REFLECT_ODD) then
             ! do nothing
-           else if (velbc_in(dir,side,scomp_bc+nc-1).eq.EXT_DIR) then
+           else if (velbc_in(dir_main,side,scomp_bc+nc-1).eq.EXT_DIR) then
             ! do nothing
            else
             print *,"velbc_in is corrupt"
@@ -23491,20 +24128,18 @@ END SUBROUTINE Adist
 
          ! mask=0 piecewise FV  mask>0 SEM
         call line_MAC_TO_CELL(local_data,local_cell,local_div, &
-         bfact,maskSEM,dx(dir))
+         bfact,maskSEM,dx(dir_main))
 
         if (operation_flag.eq.3) then
          call line_MAC_TO_CELL(local_data_up,local_cell_up,local_div_up, &
-          bfact,maskSEM,dx(dir))
+          bfact,maskSEM,dx(dir_main))
         else if (operation_flag.eq.6) then
-         if ((nc.ge.1).and.(nc.le.SDIM)) then
-          ! do nothing
-         else if (nc.eq.SDIM+1) then
+         if ((nc.ge.1).and.(nc.le.SDIM+2)) then
           call line_MAC_TO_CELL(local_vel_data,local_vel_cell,local_vel_div, &
-           bfact,maskSEM,dx(dir))
-         else if (nc.eq.SDIM+2) then
-          call line_MAC_TO_CELL(local_vel_data,local_vel_cell,local_vel_div, &
-           bfact,maskSEM,dx(dir))
+           bfact,maskSEM,dx(dir_main))
+          call line_MAC_TO_CELL(local_vel_data_div, &
+           local_vel_cell_div,local_vel_div_div, &
+           bfact,maskSEM,dx(dir_main))
          else
           print *,"nc invalid"
           stop
@@ -23522,7 +24157,7 @@ END SUBROUTINE Adist
           indexmid(dir2)=indexlo(dir2)
          enddo ! dir2
 
-         indexmid(dir)=indexlo(dir)+isten
+         indexmid(dir_main)=indexlo(dir_main)+isten
 
          ic=indexmid(1)
          jc=indexmid(2)
@@ -23535,13 +24170,14 @@ END SUBROUTINE Adist
           ic,jc,kc, &
           fablo,bfact,dx,nhalf)
 
-         if (dir.eq.1) then ! r direction
+         if (dir_main.eq.1) then ! r direction
 
           if (levelrz.eq.0) then
            RR=one
           else if (levelrz.eq.1) then
-           RR=xsten(0,1)
-           if (SDIM.ne.2) then
+           if (SDIM.eq.2) then
+            RR=xsten(0,1)
+           else
             print *,"dimension bust"
             stop
            endif
@@ -23552,14 +24188,14 @@ END SUBROUTINE Adist
            stop
           endif
 
-         else if ((dir.eq.2).or.(dir.eq.SDIM)) then
+         else if ((dir_main.eq.2).or.(dir_main.eq.SDIM)) then
           RR=one
          else
-          print *,"dir invalid sem mac to cell 4"
+          print *,"dir_main invalid sem mac to cell 4"
           stop
          endif 
 
-         if ((dir.eq.2).and.(levelrz.eq.3)) then ! theta direction
+         if ((dir_main.eq.2).and.(levelrz.eq.3)) then ! theta direction
           RRTHETA=xsten(0,1)
          endif
 
@@ -23571,8 +24207,30 @@ END SUBROUTINE Adist
 
           if ((nc.ge.1).and.(nc.le.ncomp)) then
 
+           if (dir_main.eq.1) then
+            RR_divide=RR
+           else if ((dir_main.eq.2).or.(dir_main.eq.SDIM)) then
+            RR_divide=RRTHETA
+           else
+            print *,"dir_main invalid"
+            stop
+           endif
+
+            ! local_data (the MAC data) is multiplied by RR above.
+
+            ! velocity = div (umac u) - u div(u)
+            ! mdotcell corresponds to VELADVECT_MF in the caller.
            if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
-            ! do nothing
+            if ((conservative_div_uu.eq.1).or. &
+                (conservative_div_uu.eq.2)) then
+             local_div(isten+1)=local_div(isten+1)- &
+                mdotcell(D_DECL(ic,jc,kc),nc)*local_vel_div_div(isten+1)
+            else if (conservative_div_uu.eq.0) then
+             local_div(isten+1)=local_div(isten+1)*local_vel_cell(isten+1)
+            else
+             print *,"conservative_div_uu invalid"
+             stop
+            endif
            else if (nc.eq.SDIM+1) then ! density
             local_div(isten+1)=local_div(isten+1)*local_vel_cell(isten+1)
            else if (nc.eq.SDIM+2) then ! temperature
@@ -23581,21 +24239,21 @@ END SUBROUTINE Adist
             print *,"nc invalid"
             stop
            endif
+           local_div(isten+1)=local_div(isten+1)/RR_divide
 
             ! divdest corresponds to rhs
             ! rhs corresponds to (*rhs)[mfi]
-           if (dir.eq.1) then ! r direction
-            divdest(D_DECL(ic,jc,kc),nc)=local_div(isten+1)/RR
-           else if ((dir.eq.2).or.(dir.eq.SDIM)) then
+           if (dir_main.eq.1) then ! r direction
+            divdest(D_DECL(ic,jc,kc),nc)=local_div(isten+1)
+           else if ((dir_main.eq.2).or.(dir_main.eq.SDIM)) then
             divdest(D_DECL(ic,jc,kc),nc)= &
-             divdest(D_DECL(ic,jc,kc),nc)+ &
-             local_div(isten+1)/RRTHETA
+             divdest(D_DECL(ic,jc,kc),nc)+local_div(isten+1)
            else
-            print *,"dir invalid mac to cell 5"
+            print *,"dir_main invalid mac to cell 5"
             stop
            endif
 
-           if ((dir.eq.SDIM).and.(nc.eq.ncomp)) then
+           if ((dir_main.eq.SDIM).and.(nc.eq.ncomp)) then
       
             if (source_term.eq.1) then 
              ! do nothing
@@ -23730,10 +24388,11 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if ((dir.lt.SDIM).or.(nc.lt.ncomp)) then
+           else if (((dir_main.ge.1).and.(dir_main.lt.SDIM)).or. &
+                    ((nc.ge.1).and.(nc.lt.ncomp))) then
             ! do nothing
            else
-            print *,"dir or nc invalid"
+            print *,"dir_main or nc invalid"
             stop    
            endif 
 
@@ -23754,26 +24413,37 @@ END SUBROUTINE Adist
             print *,"num_materials_face invalid"
             stop
            endif
-           if (dir.eq.1) then
+           if (dir_main.eq.1) then
             divdest(D_DECL(ic,jc,kc),velcomp)= &
              local_div(isten+1)/RR
-           else if ((dir.ge.2).and.(dir.le.SDIM)) then
+           else if ((dir_main.ge.2).and. &
+                    (dir_main.le.SDIM)) then
             divdest(D_DECL(ic,jc,kc),velcomp)= &
              divdest(D_DECL(ic,jc,kc),velcomp)+ &
              local_div(isten+1)/RRTHETA
            else
-            print *,"dir invalid mac to cell 6"
+            print *,"dir_main invalid mac to cell 6"
             stop
            endif
 
-           if (dir.eq.SDIM) then
+           if (dir_main.eq.SDIM) then
             VOLTERM=vol(D_DECL(ic,jc,kc))
-            if (VOLTERM.le.zero) then
+            if (VOLTERM.gt.zero) then
+             ! do nothing
+            else
              print *,"VOLTERM invalid"
              stop
             endif
             divu=divdest(D_DECL(ic,jc,kc),velcomp)*VOLTERM
             CC=cterm(D_DECL(ic,jc,kc),velcomp) ! already x VOLTERM
+            CC_DUAL=veldest(D_DECL(ic,jc,kc),velcomp) ! already x VOLTERM
+            if (CC_DUAL.ge.CC) then
+             ! do nothing
+            else
+             print *,"CC_DUAL invalid"
+             stop
+            endif
+
             MDOT=mdotcell(D_DECL(ic,jc,kc),velcomp)
 
             if (CC.lt.zero) then
@@ -23793,24 +24463,97 @@ END SUBROUTINE Adist
              endif
             endif
 
-            RHS=pold(D_DECL(ic,jc,kc),velcomp)*CC
-            if ((homflag.eq.0).or.(homflag.eq.3)) then
-             RHS=RHS-divu/dt+MDOT
+             ! divu=-dt VOLTERM * div(k grad T)  project_option==2
+             ! divu=-dt VOLTERM * visc_coef div(2 mu D) project_option==3
+             ! use_dt=1 dir=-1
+             ! use_HO=1
+             ! enable_spectral=1
+             ! constant_viscosity=1
+            local_div_val=divu/VOLTERM
+            call SEM_VISC_SANITY(10,dt,xsten,nhalf,local_div_val, &
+              -1,velcomp,1,1,project_option,bfact,1,1)
+
+             ! MSKDV=1.0d0
+             ! MSKRES=1.0d0
+            call SEM_VISC_SANITY_CC(2,dt,CC,1.0d0,1.0d0,MDOT, &
+              VOLTERM,project_option,xsten,nhalf,velcomp)
+
+            local_POLD=pold(D_DECL(ic,jc,kc),velcomp)
+            local_POLD_DUAL=dendest(D_DECL(ic,jc,kc),velcomp)
+
+            if (homflag.eq.0) then
+             RHS=local_POLD*CC+local_POLD_DUAL*CC_DUAL
             else if (homflag.eq.1) then
-             RHS=RHS+divu/dt
+             if (local_POLD.eq.local_POLD_DUAL) then
+              RHS=local_POLD_DUAL*CC_DUAL
+             else
+              print *,"local_POLD invalid"
+              stop
+             endif
             else if (homflag.eq.2) then
-             RHS=-RHS-divu/dt+MDOT
+             if (local_POLD.eq.local_POLD_DUAL) then
+              RHS=-local_POLD_DUAL*CC_DUAL
+             else
+              print *,"local_POLD invalid"
+              stop
+             endif
+            else if (homflag.eq.3) then
+             if ((local_POLD.eq.zero).and.(local_POLD_DUAL.eq.zero)) then
+              RHS=zero
+             else
+              print *,"local_POLD or local_POLD_DUAL invalid"
+              stop
+             endif
             else if (homflag.eq.4) then
-             RHS=divu/VOLTERM
+             if (local_POLD.eq.local_POLD_DUAL) then
+              RHS=zero
+             else
+              print *,"local_POLD invalid"
+              stop
+             endif
             else
              print *,"homflag invalid 10"
              stop
             endif
+
+            if (homflag.eq.0) then
+             RHS=RHS-divu/dt+MDOT
+            else if (homflag.eq.1) then
+             RHS=RHS+divu/dt
+            else if (homflag.eq.2) then
+             RHS=RHS-divu/dt+MDOT
+            else if (homflag.eq.3) then
+             RHS=-divu/dt+MDOT
+             if (level.eq.finest_level) then
+              if (divu.eq.zero) then
+               ! do nothing
+              else 
+               print *,"divu invalid"
+               stop
+              endif
+             else if ((level.ge.0).and.(level.lt.finest_level)) then
+              ! do nothing
+             else
+              print *,"level invalid"
+              stop
+             endif
+            else if (homflag.eq.4) then
+             if (RHS.eq.zero) then
+              RHS=divu/VOLTERM
+             else
+              print *,"RHS invalid"
+              stop
+             endif
+            else
+             print *,"homflag invalid"
+             stop
+            endif
+
             divdest(D_DECL(ic,jc,kc),velcomp)=RHS
-           else if ((dir.ge.1).and.(dir.lt.SDIM)) then
+           else if ((dir_main.ge.1).and.(dir_main.lt.SDIM)) then
             ! do nothing
            else
-            print *,"dir invalid mac_to_cell 7"
+            print *,"dir_main invalid mac_to_cell 7"
             stop
            endif 
 
@@ -23824,21 +24567,22 @@ END SUBROUTINE Adist
          else if (operation_flag.eq.1) then ! div
 
           velcomp=1
-          if (dir.eq.1) then
+          if (dir_main.eq.1) then
            divdest(D_DECL(ic,jc,kc),velcomp)= &
             local_div(isten+1)/RR
-          else if ((dir.eq.2).or.(dir.eq.SDIM)) then
+          else if ((dir_main.eq.2).or. &
+                   (dir_main.eq.SDIM)) then
            divdest(D_DECL(ic,jc,kc),velcomp)= &
             divdest(D_DECL(ic,jc,kc),velcomp)+ &
             local_div(isten+1)/RRTHETA
           else
-           print *,"dir invalid sem mac to cell 9"
+           print *,"dir_main invalid sem mac to cell 9"
            stop
           endif
 
          else if (operation_flag.eq.2) then !mac->cell solver or VELMAC_TO_CELL
-
-          velcomp=dir
+           ! local_data (the MAC data) is multiplied by RR above.
+          velcomp=dir_main
           veldest(D_DECL(ic,jc,kc),velcomp)= &
            local_cell(isten+1)/RR
 
@@ -23858,7 +24602,7 @@ END SUBROUTINE Adist
            stop
           endif
 
-          velcomp=dir
+          velcomp=dir_main
 
           if ((energyflag.eq.0).or. &
               (energyflag.eq.1)) then
@@ -23889,19 +24633,19 @@ END SUBROUTINE Adist
           velcomp=1
 
            ! p (div u) 
-          if (dir.eq.1) then
+          if (dir_main.eq.1) then
            divdest(D_DECL(ic,jc,kc),velcomp)= &
             prescell*local_div_up(isten+1)/RR
-          else if ((dir.eq.2).or.(dir.eq.SDIM)) then
+          else if ((dir_main.eq.2).or.(dir_main.eq.SDIM)) then
            divdest(D_DECL(ic,jc,kc),velcomp)= &
             divdest(D_DECL(ic,jc,kc),velcomp)+ &
             prescell*local_div_up(isten+1)/RRTHETA
           else
-           print *,"dir invalid sem mac to cell 11"
+           print *,"dir_main invalid sem mac to cell 11"
            stop
           endif
 
-          if (dir.eq.SDIM) then
+          if (dir_main.eq.SDIM) then
 
            if ((project_option.eq.0).or. &
                (project_option.eq.13)) then !FSI_material_exists 1st project
@@ -23981,10 +24725,10 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
+          else if ((dir_main.eq.1).or.(dir_main.eq.SDIM-1)) then
            ! do nothing
           else
-           print *,"dir invalid sem mac to cell 13"
+           print *,"dir_main invalid sem mac to cell 13"
            stop
           endif 
 
@@ -23994,19 +24738,20 @@ END SUBROUTINE Adist
            print *,"hydrostatic density must be positive"
            stop
           endif
-          veldest(D_DECL(ic,jc,kc),dir)= &
+          veldest(D_DECL(ic,jc,kc),dir_main)= &
            local_div(isten+1)/(dencell*RRTHETA)
          else
           print *,"operation_flag invalid30"
           stop
          endif
          
-        enddo ! isten
+        enddo ! isten=0...bfact-1
 
        else
         print *,"cen_outside_domain_flag invalid"
         stop
        endif 
+
       enddo ! nc=1..ncomp
 
       return
@@ -24096,13 +24841,14 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
 
-      REAL_T dx(SDIM)
-      INTEGER_T dir,side,veldir,bfact
-      INTEGER_T nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: dir,side,veldir,bfact
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T vel
-      REAL_T vel_in
-      REAL_T x,y,z,r,time
+      REAL_T, intent(inout) :: vel_in
+      REAL_T x,y,z,r
+      REAL_T, intent(in) ::time
       REAL_T x_vel,y_vel,z_vel
       REAL_T dist
       INTEGER_T error
@@ -24194,6 +24940,7 @@ END SUBROUTINE Adist
         call WAVY_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
 
+        ! velbc_override
        else if ((probtype.eq.26).and. &
                 ((axis_dir.eq.10).or. &  ! BCG test
                  (axis_dir.eq.11))) then ! BCG_periodic test  
@@ -28888,29 +29635,32 @@ end subroutine RatePhaseChange
 
       IMPLICIT NONE
 
-      INTEGER_T for_estdt
-      REAL_T xI(SDIM)
-      INTEGER_T freezing_mod
-      INTEGER_T distribute_from_target
-      INTEGER_T im_source,im_dest
-      INTEGER_T nmat,start_freezing
-      REAL_T vel
-      REAL_T densrc,dendst
-      REAL_T time,dt,alpha,beta
-      REAL_T expansion_fact
-      REAL_T ksrc,kdst
-      REAL_T Tsrc,Tdst,Tsat
-      REAL_T LL
-      REAL_T source_perim_factor,dest_perim_factor
-      INTEGER_T microlayer_substrate_source,microlayer_substrate_dest
-      REAL_T microlayer_angle_source,microlayer_angle_dest
-      REAL_T microlayer_size_source,microlayer_size_dest
-      REAL_T macrolayer_size_source,macrolayer_size_dest
-      REAL_T dxprobe
-      REAL_T Tsrc_INT,Tdst_INT
-      REAL_T K_f
-      REAL_T Cmethane_in_hydrate,C_w0,PHYDWATER
-      REAL_T VOFsrc,VOFdst
+      INTEGER_T, intent(in) :: for_estdt
+      REAL_T, intent(in) :: xI(SDIM)
+      INTEGER_T, intent(in) :: freezing_mod
+      INTEGER_T, intent(in) :: distribute_from_target
+      INTEGER_T, intent(in) :: im_source,im_dest
+      INTEGER_T :: start_freezing
+      INTEGER_T :: nmat
+      REAL_T, intent(out) :: vel
+      REAL_T, intent(in) :: densrc,dendst
+      REAL_T, intent(in) :: time,dt,alpha,beta
+      REAL_T, intent(in) :: expansion_fact
+      REAL_T, intent(in) :: ksrc,kdst
+      REAL_T, intent(in) :: Tsrc,Tdst,Tsat
+      REAL_T, intent(in) :: LL
+      REAL_T, intent(in) :: source_perim_factor,dest_perim_factor
+      INTEGER_T, intent(in) :: microlayer_substrate_source
+      INTEGER_T, intent(in) :: microlayer_substrate_dest
+      REAL_T, intent(in) :: microlayer_angle_source,microlayer_angle_dest
+      REAL_T, intent(in) :: microlayer_size_source,microlayer_size_dest
+      REAL_T, intent(in) :: macrolayer_size_source,macrolayer_size_dest
+      REAL_T, intent(in) :: dxprobe
+      REAL_T, intent(in) :: Tsrc_INT,Tdst_INT
+      REAL_T, intent(in) :: K_f
+      REAL_T, intent(in) :: Cmethane_in_hydrate,C_w0,PHYDWATER
+      REAL_T, intent(in) :: VOFsrc,VOFdst
+
       REAL_T DTsrc,DTdst
       REAL_T velsrc,veldst
       REAL_T velsrc_micro,veldst_micro
@@ -29049,9 +29799,7 @@ end subroutine RatePhaseChange
               sqrt(one+micro_slope**2)/ &
               (micro_slope*(psi_upper-psi_lower))
              velsrc_micro=source_perim_factor*abs(ksrc*velsrc_micro/LL)
-             if (velsrc_micro.gt.velsrc) then
-              velsrc=velsrc_micro
-             endif 
+             velsrc=velsrc_micro
             else
              print *,"microlayer_angle_source invalid"
              stop
@@ -29092,9 +29840,7 @@ end subroutine RatePhaseChange
               sqrt(one+micro_slope**2)/ &
               (micro_slope*(psi_upper-psi_lower))
              veldst_micro=dest_perim_factor*abs(kdst*veldst_micro/LL)
-             if (veldst_micro.gt.veldst) then
-              veldst=veldst_micro
-             endif 
+             veldst=veldst_micro
             else
              print *,"microlayer_angle_dest invalid"
              stop
@@ -29183,7 +29929,7 @@ end subroutine RatePhaseChange
         fluid_molar_mass=0.07215  ! kg/mol
         fluid_molar_mass=1000.0*fluid_molar_mass  ! g/mol
         universal_gas=8.314   ! J/(mol K)
-        universal_gas=1.0E+7*universal_gas  ! erg/(mol K)
+        universal_gas=1.0D+7*universal_gas  ! erg/(mol K)
 
         velsrc=zero
         veldst=zero
@@ -29312,19 +30058,21 @@ end subroutine RatePhaseChange
 
       IMPLICIT NONE
 
-      REAL_T nucleate_pos(4*n_sites)
+      REAL_T, intent(in) :: nucleate_pos(4*n_sites)
 
-      INTEGER_T nmat,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T im_source,im_dest
-      REAL_T source_temperature
-      REAL_T min_temperature
-      REAL_T latent_heat
-      REAL_T saturation_temp
-      REAL_T nucleation_temp
-      REAL_T vfracsrc,vfracdst
-      REAL_T time,LS,LS_SOLID_MAXSTEN
+      INTEGER_T, intent(in) :: nmat,nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: im_source,im_dest
+      REAL_T, intent(in) :: source_temperature
+      REAL_T, intent(in) :: min_temperature
+      REAL_T, intent(in) :: latent_heat
+      REAL_T, intent(in) :: saturation_temp
+      REAL_T, intent(in) :: nucleation_temp
+      REAL_T, intent(in) :: vfracsrc,vfracdst
+      REAL_T, intent(in) :: time,LS_SOLID_MAXSTEN
+      REAL_T, intent(out) :: LS
+
       REAL_T dist(nmat)
       REAL_T dxmaxLS
 
@@ -29481,10 +30229,10 @@ end subroutine RatePhaseChange
 
       initial_time=zero
 
-      if ((initial_time.ge.zero).and.(initial_time.le.1.0E+20)) then
+      if ((initial_time.ge.zero).and.(initial_time.le.1.0D+20)) then
        ! do nothing
-      else if (initial_time.ge.1.0E+20) then
-       print *,"WARNING initial_time.ge.1.0E+20 in nucleation_sites_batch" 
+      else if (initial_time.ge.1.0D+20) then
+       print *,"WARNING initial_time.ge.1.0D+20 in nucleation_sites_batch" 
       else if (initial_time.lt.zero) then
        print *,"initial_time invalid in nucleation_sites_batch"
        stop
@@ -29559,18 +30307,19 @@ end subroutine RatePhaseChange
       use geometry_intersect_module
       IMPLICIT NONE
 
-      REAL_T nucleate_pos(4*n_sites)
-      INTEGER_T im_source,im_dest,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T dx(SDIM)
-      REAL_T time
-      REAL_T VOF
-      REAL_T CEN(SDIM)
-      INTEGER_T nmat
-      REAL_T source_temperature,latent_heat,min_temperature
-      REAL_T LS_SOLID_MAXSTEN
-      REAL_T nucleation_temp,saturation_temp
-      REAL_T vfracsrc,vfracdst
+      REAL_T, intent(in) :: nucleate_pos(4*n_sites)
+      INTEGER_T, intent(in) :: im_source,im_dest,nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: VOF
+      REAL_T, intent(out) :: CEN(SDIM)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: source_temperature,latent_heat,min_temperature
+      REAL_T, intent(in) :: LS_SOLID_MAXSTEN
+      REAL_T, intent(in) :: nucleation_temp,saturation_temp
+      REAL_T, intent(in) :: vfracsrc,vfracdst
+
       REAL_T vfrac(nmat)
       REAL_T volcell
       REAL_T cenall(SDIM)
@@ -29865,13 +30614,14 @@ end subroutine RatePhaseChange
        problo,probhi)
       IMPLICIT NONE
 
-      REAL_T problo(SDIM),probhi(SDIM)
-      REAL_T x(SDIM)
-      REAL_T vel,time
-      INTEGER_T dir
+      REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(inout) :: vel
+      INTEGER_T, intent(in) :: dir
       INTEGER_T dirloc
-      INTEGER_T presbc_array(SDIM,2,num_materials_vel)
-      REAL_T outflow_velocity_buffer_size(2*SDIM)
+      INTEGER_T, intent(in) :: presbc_array(SDIM,2,num_materials_vel)
+      REAL_T, intent(in) :: outflow_velocity_buffer_size(2*SDIM)
       REAL_T local_buffer(2*SDIM)
       REAL_T buf,dist
       INTEGER_T dirbc,side,ibuf
@@ -31727,11 +32477,12 @@ end subroutine initialize2d
 
        IMPLICIT NONE
 
-       REAL_T pressure_scale,velocity_scale
+       REAL_T, intent(in) :: pressure_scale,velocity_scale
 
-
-       if ((pressure_scale.le.zero).or. &
-           (velocity_scale.le.zero)) then
+       if ((pressure_scale.gt.zero).and. &
+           (velocity_scale.gt.zero)) then
+        ! do nothing
+       else
         print *,"scales invalid in set fort scales "
         print *,"pressure scale = ",pressure_scale
         print *,"velocity scale = ",velocity_scale
@@ -32368,7 +33119,7 @@ end subroutine initialize2d
         fort_tempconst(im)=cctempconst(im)
         fort_initial_temperature(im)=ccinitial_temperature(im)
         fort_tempcutoff(im)=cctempcutoff(im) ! default 1.0E-8
-        fort_tempcutoffmax(im)=cctempcutoffmax(im) ! default 1.0E+99
+        fort_tempcutoffmax(im)=cctempcutoffmax(im) ! default 1.0D+99
         fort_stiffPINF(im)=ccstiffPINF(im)
         fort_stiffCP(im)=ccstiffCP(im)
         fort_stiffGAMMA(im)=ccstiffGAMMA(im)
@@ -32777,10 +33528,10 @@ end subroutine initialize2d
        stop
       endif
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in initdata_solid"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in initdata_solid"
       else if (time.lt.zero) then
        print *,"time invalid in initdata_solid"
        stop
@@ -32909,10 +33660,10 @@ end subroutine initialize2d
        stop
       endif
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in initsolidtemp"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in initsolidtemp"
       else if (time.lt.zero) then
        print *,"time invalid in initsolidtemp"
        stop
@@ -36616,7 +37367,7 @@ end subroutine initialize2d
          rho_source=fort_denconst(im_source) ! kg/m^3 
          rho_dest=fort_denconst(im_dest) ! kg/m^3 
          den_ratio=max(rho_dest,rho_source)/min(rho_dest,rho_source)
-         if ((den_ratio.gt.1.0E+5).or.(den_ratio.lt.one)) then
+         if ((den_ratio.gt.1.0D+5).or.(den_ratio.lt.one)) then
           print *,"den_ratio invalid"
           stop
          endif
@@ -37011,10 +37762,10 @@ end subroutine initialize2d
         stop
        endif
 
-       if ((time.ge.zero).and.(time.le.1.0E+20)) then
+       if ((time.ge.zero).and.(time.le.1.0D+20)) then
         ! do nothing
-       else if (time.ge.1.0E+20) then
-        print *,"WARNING time.ge.1.0E+20 in initdata"
+       else if (time.ge.1.0D+20) then
+        print *,"WARNING time.ge.1.0D+20 in initdata"
        else if (time.lt.zero) then
         print *,"time invalid in initdata"
         stop
@@ -37263,6 +38014,7 @@ end subroutine initialize2d
            scalc(ibase+2)=fort_initial_temperature(1)
           endif
 
+           ! in: INITDATA
           if (probtype.eq.26) then ! swirl
 
            if (axis_dir.eq.10) then ! BCG test
@@ -37905,7 +38657,7 @@ end subroutine initialize2d
 
          ! Rayleigh-Taylor, checkerboard test
         if (probtype.eq.602) then
-         if ((xblob.ge.1.0E+5).and.(radblob.le.0.001*dx(1))) then
+         if ((xblob.ge.1.0D+5).and.(radblob.le.0.001*dx(1))) then
           if (nmat.ne.2) then
            print *,"nmat invalid"
            stop
@@ -38531,6 +39283,7 @@ end subroutine initialize2d
       yy_vel=zero 
       zz_vel=zero 
 
+       ! in: INITVELOCITY
       if ((probtype.eq.26).and.(axis_dir.eq.11)) then
        ! do nothing 
       else if (adv_dir.eq.1) then  ! init velocity
@@ -39430,7 +40183,7 @@ end subroutine initialize2d
             y_vel = -abs(advbot)
            endif
           endif
-! swirl 2D
+! swirl 2D, in: INITVELOCITY
          else if (probtype.eq.26) then
 
           if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
@@ -40198,23 +40951,23 @@ end subroutine initialize2d
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T nsolveMM_FACE
+      INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T nsolveMM_FACE_test
-      INTEGER_T bfact
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(velmac)
-      INTEGER_T dir
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T time
-      REAL_T problo(SDIM),probhi(SDIM)
-      REAL_T vel(DIMV(vel),SDIM*num_materials_vel)
-      REAL_T velmac(DIMV(velmac),nsolveMM_FACE)
-      INTEGER_T presbc_array(SDIM,2,num_materials_vel)
-      REAL_T outflow_velocity_buffer_size(2*SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(velmac)
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
+      REAL_T, intent(inout) :: vel(DIMV(vel),SDIM*num_materials_vel)
+      REAL_T, intent(inout) :: velmac(DIMV(velmac),nsolveMM_FACE)
+      INTEGER_T, intent(in) :: presbc_array(SDIM,2,num_materials_vel)
+      REAL_T, intent(in) :: outflow_velocity_buffer_size(2*SDIM)
       REAL_T vel_in
 
       INTEGER_T i,j,k,ii,jj,kk
@@ -40354,51 +41107,52 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T custom_nucleation_model
-      REAL_T time,cur_time
-      INTEGER_T level,finest_level
-      INTEGER_T nmat,nten,nden,nstate
-      REAL_T latent_heat(2*nten)
-      REAL_T saturation_temp(2*nten)
-      INTEGER_T do_the_nucleate
-      INTEGER_T nucleate_pos_size
-      REAL_T delta_mass(2*nmat)
-      REAL_T nucleate_pos(nucleate_pos_size)
-      REAL_T nucleation_temp(2*nten)
-      REAL_T nucleation_pressure(2*nten)
-      REAL_T nucleation_pmg(2*nten)
-      REAL_T nucleation_mach(2*nten)
-      REAL_T cavitation_pressure(nmat)
-      REAL_T cavitation_vapor_density(nmat)
-      REAL_T cavitation_tension(nmat)
-      INTEGER_T cavitation_species(nmat)
-      INTEGER_T cavitation_model(nmat)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      INTEGER_T vofbc(SDIM,2)
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dt
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(LSold)
-      INTEGER_T DIMDEC(LSnew)
-      INTEGER_T DIMDEC(VOFold)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(EOS)
-      INTEGER_T DIMDEC(mdot)
-      INTEGER_T DIMDEC(pres)
-      INTEGER_T DIMDEC(preseos)
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T LSold(DIMV(LSold),nmat)
-      REAL_T LSnew(DIMV(LSnew),nmat)
-      REAL_T VOFold(DIMV(VOFold),nmat*ngeom_raw)
-      REAL_T snew(DIMV(snew),nstate)
-      REAL_T EOS(DIMV(EOS),nden)
-      REAL_T mdot(DIMV(mdot))
-      REAL_T pres(DIMV(pres))
-      REAL_T preseos(DIMV(preseos))
+      INTEGER_T, intent(in) :: custom_nucleation_model
+      REAL_T, intent(in) :: time,cur_time
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat,nten,nden,nstate
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: do_the_nucleate
+      INTEGER_T, intent(in) :: nucleate_pos_size
+      REAL_T, intent(inout) :: delta_mass(2*nmat)
+      REAL_T, intent(in) :: nucleate_pos(nucleate_pos_size)
+      REAL_T, intent(in) :: nucleation_temp(2*nten)
+      REAL_T, intent(in) :: nucleation_pressure(2*nten)
+      REAL_T, intent(in) :: nucleation_pmg(2*nten)
+      REAL_T, intent(in) :: nucleation_mach(2*nten)
+      REAL_T, intent(in) :: cavitation_pressure(nmat)
+      REAL_T, intent(in) :: cavitation_vapor_density(nmat)
+      REAL_T, intent(in) :: cavitation_tension(nmat)
+      INTEGER_T, intent(in) :: cavitation_species(nmat)
+      INTEGER_T, intent(in) :: cavitation_model(nmat)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: vofbc(SDIM,2)
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(LSold)
+      INTEGER_T, intent(in) :: DIMDEC(LSnew)
+      INTEGER_T, intent(in) :: DIMDEC(VOFold)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(EOS)
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(preseos)
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: LSold(DIMV(LSold),nmat)
+      REAL_T, intent(out) :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, intent(in) :: VOFold(DIMV(VOFold),nmat*ngeom_raw)
+      REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
+      REAL_T, intent(in) :: EOS(DIMV(EOS),nden)
+      REAL_T, intent(inout) :: mdot(DIMV(mdot))
+      REAL_T, intent(in) :: pres(DIMV(pres))
+      REAL_T, intent(in) :: preseos(DIMV(preseos))
+
       INTEGER_T i,j,k,i1,j1,k1
       INTEGER_T kssten,kesten
       INTEGER_T kssten2,kesten2

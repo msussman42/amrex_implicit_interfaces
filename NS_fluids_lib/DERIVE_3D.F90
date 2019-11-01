@@ -1425,10 +1425,10 @@ stop
 
       nhalf=3
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in getdrag"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in getdrag"
       else if (time.lt.zero) then
        print *,"time invalid in getdrag"
        stop

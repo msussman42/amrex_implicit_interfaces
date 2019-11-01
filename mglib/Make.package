@@ -7,13 +7,11 @@ ifeq ($(LBASE),mg)
     MGLIB_BASE=LIB
 endif
 
-C$(MGLIB_BASE)_sources += ABecLaplacian.cpp CGSolver.cpp \
-                          MultiGrid.cpp 
+C$(MGLIB_BASE)_sources += ABecLaplacian.cpp 
 
 #c$(MGLIB_BASE)_sources += cudasimulate.c 
 
-C$(MGLIB_BASE)_headers += ABecLaplacian.H CGSolver.H  \
-                          MultiGrid.H 
+C$(MGLIB_BASE)_headers += ABecLaplacian.H 
 
 F$(MGLIB_BASE)_headers += ABec_F.H CG_F.H LO_F.H MG_F.H 
 

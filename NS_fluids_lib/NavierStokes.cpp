@@ -14,14 +14,17 @@
 #include <string>
 #include <stdlib.h>
 
+// BEGIN BOXLIB files NOW AMReX
 #include <CoordSys.H>
 #include <Geometry.H>
 #include <BoxDomain.H>
 #include <ParmParse.H>
 #include <FArrayBox.H>
-#include <NavierStokes.H>
 #include <ArrayLim.H>
 #include <Utility.H>
+// END BOXLIB files NOW AMReX
+
+#include <NavierStokes.H>
 #include <INTERP_F.H>
 #include <MACOPERATOR_F.H>
 #include <NAVIERSTOKES_F.H>
@@ -45,6 +48,7 @@
 #define bogus_value 1.e20
 #define Pi      3.14159265358979
 #define show_norm2_flag 0
+#define mf_check_inf_bounds 1
 
 #define DEFAULT_MOFITERMAX 15
 //
@@ -147,7 +151,9 @@ certain basic benchmark tests give the expected results. (e.g. drag
 on an interface, growth rate of perturbations, pressure drop)
 */
 
+int  NavierStokes::VOF_reflux=0;
 int  NavierStokes::continuous_mof=0;
+
 // 0  low order space and time
 // 1  SEM space and time
 // 2  SEM space 
@@ -256,6 +262,12 @@ Array<int> NavierStokes::visual_ncell;
 int NavierStokes::slice_dir=0;
 Array<Real> NavierStokes::xslice;
 
+Array<int> NavierStokes::number_vcycles_all_solver_calls;
+Array<int> NavierStokes::max_lev0_cycles_all_solver_calls;
+Array<int> NavierStokes::median_lev0_cycles_all_solver_calls;
+Array<int> NavierStokes::lev0_cycles_list;
+Array<int> NavierStokes::number_solver_calls;
+
 Array< Array<Real> > NavierStokes::min_face_wt;
 Array< Array<Real> > NavierStokes::max_face_wt;
 
@@ -340,6 +352,10 @@ int  NavierStokes::NUM_STATE_TYPE=BL_SPACEDIM+5;
 // 0=velocity stored at cells  
 // 1=velocity stored at faces
 int  NavierStokes::face_flag=0;
+
+int  NavierStokes::disable_advection=0;
+int  NavierStokes::disable_pressure_solve=0;
+
 Array<Real> NavierStokes::elastic_time; // def=0
 
 Array<int> NavierStokes::viscosity_state_model; // def=0
@@ -398,10 +414,10 @@ Array<int> NavierStokes::density_advection_order;
 // 1=EILE (default), -1=Weymouth Yue
 // 2=always EI   3=always LE
 int NavierStokes::EILE_flag=1;
-// 0=directionally split
-// 1=unsplit everywhere
-// 2=unsplit in incompressible zones
-// 3=unsplit in fluid cells that neighbor a prescribed solid cell
+
+// this should always be 0.  Directionally split is better.
+// In future: implement super mesh algorithm and extend the projected velocity
+// to the faces.
 int NavierStokes::unsplit_flag=0;
 
 // 0=no limiter 1=minmod 2=minmod with slope=0 at interface
@@ -438,7 +454,25 @@ int NavierStokes::use_StewartLay=1;
 Array<Real> NavierStokes::prescribed_solid_scale; // def=0.0
 //0=stair-step 1=2nd order 2=mod stair-step 3=modified normal
 int NavierStokes::prescribed_solid_method=0; 
+
 int NavierStokes::min_prescribed_opt_iter=10; 
+
+int NavierStokes::prescribed_velocity_iter=0; 
+int NavierStokes::prescribed_error_met=0; 
+Real NavierStokes::prescribed_error_old=0.0; 
+Real NavierStokes::prescribed_error=0.0; 
+Real NavierStokes::prescribed_abstol=0.0; 
+Real NavierStokes::prescribed_reltol=0.0; 
+Real NavierStokes::prescribed_error0=0.0; 
+
+Real NavierStokes::real_number_of_cells=0.0; 
+
+int NavierStokes::dual_time_stepping_iter=0; 
+int NavierStokes::dual_time_error_met=0; 
+Real NavierStokes::dual_time_error=0.0; 
+Real NavierStokes::dual_time_abstol=0.0; 
+Real NavierStokes::dual_time_reltol=0.0; 
+Real NavierStokes::dual_time_error0=0.0; 
 
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::singular_possible=0; 
@@ -447,6 +481,10 @@ int NavierStokes::local_solvability_projection=0;
 int NavierStokes::post_init_pressure_solve=1; 
 
 int NavierStokes::conservative_tension_force=0;
+// 0=> I(u_GL) dot grad u_GG, no sync project
+// 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+// 2=> grad dot (u_GL u_GG) - u_GG div u_GL, sync project
+int NavierStokes::conservative_div_uu=1;
 
 Array<Real> NavierStokes::tension_slope;
 Array<Real> NavierStokes::tension_min;
@@ -458,6 +496,10 @@ Array<Real> NavierStokes::recalesce_model_parameters;
 Array<Real> NavierStokes::outflow_velocity_buffer_size;
 
 Array<Real> NavierStokes::cap_wave_speed;
+
+int NavierStokes::dual_time_activate=0;
+Real NavierStokes::dual_time_stepping_tau=0.0;
+Real NavierStokes::dual_time_stepping_coefficient=0.0;
 
 Array<Real> NavierStokes::saturation_temp;
 
@@ -625,7 +667,7 @@ Real NavierStokes::inflow_pressure=0.0;
 Real NavierStokes::outflow_pressure=0.0;
 Real NavierStokes::period_time=0.0;
 
-     // 0 - MGPCG  1-PCG 
+     // 0 - MGPCG  1-PCG  2-MINV=I
 int  NavierStokes::project_solver_type=0;
 // number of Jacobi method cycles elliptic solver initially does.
 int  NavierStokes::initial_project_cycles=3;
@@ -640,11 +682,11 @@ int  NavierStokes::initial_thermal_cycles=3;
 int  NavierStokes::initial_cg_cycles=5;
 int  NavierStokes::debug_dot_product=0;
 
+int NavierStokes::gmres_precond_iter_base=4; 
+
 int NavierStokes::smooth_type = 2; // 0=GSRB 1=ICRB 2=ILU  3=Jacobi
 int NavierStokes::bottom_smooth_type = 2; // 0=GSRB 1=ICRB 2=ILU 3=Jacobi
 int NavierStokes::use_mg_precond_in_mglib=1;
-int NavierStokes::use_bicgstab_in_mglib_pressure=0;
-int NavierStokes::use_bicgstab_in_mglib_diffusion=1;
 Real NavierStokes::bottom_bottom_tol_factor=0.1;
 
 // 0=> u=u_solid if phi_solid>=0
@@ -687,6 +729,11 @@ int NavierStokes::multilevel_maxcycle=200;
 // mg.thermal_bot_atol
 Real NavierStokes::minimum_relative_error = 1.0e-11;
 Real NavierStokes::diffusion_minimum_relative_error = 1.0e-11;
+
+Real NavierStokes::save_atol_b=1.0e-14;
+Real NavierStokes::save_mac_abs_tol=1.0e-10;
+Real NavierStokes::save_min_rel_error=1.0e-11;
+
 Real NavierStokes::mac_abs_tol = 1.0e-10;
 Real NavierStokes::visc_abs_tol = 1.0e-10;
 Real NavierStokes::thermal_abs_tol = 1.0e-10;
@@ -1649,6 +1696,16 @@ NavierStokes::read_params ()
     } else
      BoxLib::Error("cnt_max_grid_size invalid");
 
+    int def_n_proper=1;
+    ppamr.query("n_proper",def_n_proper);
+
+    int local_plotfile_on_restart=0;
+    ppamr.query("plotfile_on_restart",local_plotfile_on_restart);
+    int local_checkpoint_on_restart=0;
+    ppamr.query("checkpoint_on_restart",local_checkpoint_on_restart);
+    int local_regrid_on_restart=0;
+    ppamr.query("regrid_on_restart",local_regrid_on_restart);
+
     tecplot_max_level=ns_max_level;
     max_level_two_materials=ns_max_level;
     pp.query("tecplot_max_level",tecplot_max_level);
@@ -1763,6 +1820,9 @@ NavierStokes::read_params ()
     for (int dir = 0; dir < BL_SPACEDIM; dir++) {
      periodic_flag[dir]=0;
     }
+
+    int local_all_periodic=1;
+
     if (Geometry::isAnyPeriodic()) {
      for (int dir = 0; dir < BL_SPACEDIM; dir++) {
       if (Geometry::isPeriodic(dir)) {
@@ -1779,9 +1839,15 @@ NavierStokes::read_params ()
             << dir << " but high BC is not Interior\n";
         BoxLib::Abort("NavierStokes::read_params()");
        }
-      } 
-     }
-    }
+      } else if (! Geometry::isPeriodic(dir)) {
+       local_all_periodic=0;
+      } else
+       BoxLib::Error("Geometry::isPeriodic(dir) invalid"); 
+     } // dir=0..sdim-1
+    } else if (!Geometry::isAnyPeriodic()) {
+     // do nothing
+    } else
+     BoxLib::Error("Geometry::isAnyPeriodic() invalid");
 
     FORT_SET_PERIODIC_VAR(periodic_flag.dataPtr());
 
@@ -1837,11 +1903,18 @@ NavierStokes::read_params ()
     pp.query("viscous_enable_spectral",viscous_enable_spectral);
     pp.query("projection_enable_spectral",projection_enable_spectral);
 
-    if ((viscous_enable_spectral==1)||
-        (viscous_enable_spectral==2)) {
-     BoxLib::Error("no slip BC not implemented for space order>2");
-    } else if ((viscous_enable_spectral==0)||
-	       (viscous_enable_spectral==3)) {
+    if ((viscous_enable_spectral==1)||  //SEM space and time
+        (viscous_enable_spectral==2)) { //SEM space
+
+     if (local_all_periodic==1) {
+      // do nothing
+     } else if (local_all_periodic==0) {
+      BoxLib::Error("no slip BC not implemented for space order>2");
+     } else
+      BoxLib::Error("local_all_periodic invalid");
+
+    } else if ((viscous_enable_spectral==0)||  //2nd space, 1st time
+	       (viscous_enable_spectral==3)) { // 2nd order space, SEM time
      // do nothing
     } else
      BoxLib::Error("viscous_enable_spectral invalid");
@@ -1863,6 +1936,7 @@ NavierStokes::read_params ()
      BoxLib::Error("SEM_advection_algorithm invalid");
 
     pp.query("continuous_mof",continuous_mof);
+    pp.query("VOF_reflux",VOF_reflux);
 
     pp.query("init_shrink",init_shrink);
     pp.query("dt_max",dt_max);
@@ -1887,7 +1961,11 @@ NavierStokes::read_params ()
      BoxLib::Error("profile_debug invalid");
 
     pp.query("ns_tiling",ns_tiling);
-    if ((ns_tiling!=true)&&(ns_tiling!=false))
+    if (ns_tiling==true) {
+     BoxLib::Error("bug in code for tiling");
+    } else if (ns_tiling==false) {
+     // do nothing
+    } else
      BoxLib::Error("ns_tiling invalid");
 
     if (thread_class::nthreads<1)
@@ -1913,8 +1991,15 @@ NavierStokes::read_params ()
     if ((include_viscous_heating<0)||
         (include_viscous_heating>1))
      BoxLib::Error("include_viscous_heating invalid");
-    
+   
     if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "local_plotfile_on_restart (NS) = " << 
+	     local_plotfile_on_restart << '\n';
+     std::cout << "local_checkpoint_on_restart (NS) = " << 
+	     local_checkpoint_on_restart << '\n';
+     std::cout << "local_regrid_on_restart (NS) = " << 
+	     local_regrid_on_restart << '\n';
+     std::cout << "def_n_proper (NS) = " << def_n_proper << '\n';
      std::cout << "profile_debug= " << profile_debug << '\n';
      std::cout << "ns_tiling= " << ns_tiling << '\n';
      std::cout << "thread_class::nthreads= " << 
@@ -1945,6 +2030,7 @@ NavierStokes::read_params ()
      std::cout << "SEM_advection_algorithm " << 
        SEM_advection_algorithm << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
+     std::cout << "VOF_reflux " << VOF_reflux << '\n';
     }
 
     pp.query("FD_curv_interp",FD_curv_interp);
@@ -2144,26 +2230,22 @@ NavierStokes::read_params ()
 
     } // i=0..nmat-1
 
+    pp.query("gmres_precond_iter_base",gmres_precond_iter_base);
+
     ParmParse pplp("Lp");
     pplp.query("smooth_type",smooth_type);
     pplp.query("bottom_smooth_type",bottom_smooth_type);
     if (smooth_type!=2)
      BoxLib::Warning("WARNING: ILU smoother is best");
     pplp.query("use_mg_precond_in_mglib",use_mg_precond_in_mglib);
-    pplp.query("use_bicgstab_in_mglib_pressure",
-               use_bicgstab_in_mglib_pressure);
-    pplp.query("use_bicgstab_in_mglib_diffusion",
-	       use_bicgstab_in_mglib_diffusion);
+
     pplp.query("bottom_bottom_tol_factor",bottom_bottom_tol_factor);
 
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "smooth_type " << smooth_type << '\n';
      std::cout << "bottom_smooth_type " << bottom_smooth_type << '\n';
      std::cout << "use_mg_precond_in_mglib " <<use_mg_precond_in_mglib<<'\n';
-     std::cout << "use_bicgstab_in_mglib_pressure " <<
-	     use_bicgstab_in_mglib_pressure<<'\n';
-     std::cout << "use_bicgstab_in_mglib_diffusion " <<
-	     use_bicgstab_in_mglib_diffusion<<'\n';
+
      std::cout << "bottom_bottom_tol_factor " <<
        bottom_bottom_tol_factor<<'\n';
      for (int i=0;i<nmat;i++) {
@@ -2213,16 +2295,6 @@ NavierStokes::read_params ()
      // do nothing
     } else
      BoxLib::Error("EILE_flag invalid");
-
-    pp.query("unsplit_flag",unsplit_flag);
-
-    if ((unsplit_flag==0)|| // directionally split
-        (unsplit_flag==1)|| // unsplit everywhere
-        (unsplit_flag==2)|| // unsplit in incompressible zones
-        (unsplit_flag==3)) {//unsplit fluid cells neighboring prescribed solid 
-     // do nothing
-    } else
-     BoxLib::Error("unsplit_flag invalid");
 
     num_species_var=0;
 
@@ -2590,6 +2662,9 @@ NavierStokes::read_params ()
     pp.queryarr("prerecalesce_stiffCP",prerecalesce_stiffCP,0,nmat);
 
     pp.query("conservative_tension_force",conservative_tension_force);
+    pp.query("conservative_div_uu",conservative_div_uu);
+
+    pp.query("dual_time_activate",dual_time_activate);
 
     pp.getarr("tension",tension,0,nten);
     for (int i=0;i<nten;i++) 
@@ -2779,8 +2854,18 @@ NavierStokes::read_params ()
      BoxLib::Error("post_init_pressure_solve out of range");
 
     pp.query("solvability_projection",solvability_projection);
-    if ((solvability_projection<0)||(solvability_projection>1))
-     BoxLib::Error("solvability_projection out of range");
+
+    if (solvability_projection==0) {
+     // do nothing
+    } else if (solvability_projection==1) {
+     if (dual_time_activate==0) {
+      // do nothing
+     } else if (dual_time_activate==1) {
+      BoxLib::Error("cant have dual time stepping and solvability projection");
+     } else
+      BoxLib::Error("dual_time_activate invalid");
+    } else
+     BoxLib::Error("solvability_projection invalid");
 
     pp.query("use_lsa",use_lsa);
     if ((use_lsa<0)||(use_lsa>1))
@@ -2817,6 +2902,20 @@ NavierStokes::read_params ()
      // do nothing
     } else
      BoxLib::Error("face_flag invalid 1");
+
+    pp.query("disable_advection",disable_advection);
+
+    if ((disable_advection==0)||(disable_advection==1)) {
+     // do nothing
+    } else
+     BoxLib::Error("disable_advection invalid 1");
+
+    pp.query("disable_pressure_solve",disable_pressure_solve);
+
+    if ((disable_pressure_solve==0)||(disable_pressure_solve==1)) {
+     // do nothing
+    } else
+     BoxLib::Error("disable_pressure_solve invalid 1");
 
     for (int i=0;i<nmat;i++) {
      temperature_primitive_variable[i]=0;
@@ -3016,7 +3115,7 @@ NavierStokes::read_params ()
      } else
       BoxLib::Error("num_materials_viscoelastic  invalid");
 
-    } // i
+    } // i=0..nmat-1
 
     if ((face_flag<0)||(face_flag>1))
      BoxLib::Error("face_flag invalid 2");
@@ -3125,7 +3224,7 @@ NavierStokes::read_params ()
     pp.query("ractivey",ractivey);
     pp.query("ractivez",ractivez);
 
-     // 0 - MGPCG  1-PCG 2-MG
+     // 0 - MGPCG  1-PCG 2-MINV=I
     pp.query("project_solver_type",project_solver_type);
     pp.query("initial_cg_cycles",initial_cg_cycles);
 
@@ -3141,7 +3240,9 @@ NavierStokes::read_params ()
     if (initial_thermal_cycles<1)
      BoxLib::Error("must do at least 1 jacobi sweep at the beginning (therm)");
 
-    if ((project_solver_type<0)||(project_solver_type>2))
+    if ((project_solver_type>=0)&&(project_solver_type<=2)) {
+     // do nothing
+    } else
      BoxLib::Error("project_solver_type invalid");
 
     prescribe_temperature_outflow=0;
@@ -3341,6 +3442,9 @@ NavierStokes::read_params ()
     if (ParallelDescriptor::IOProcessor()) {
 
      std::cout << "temperature_source=" << temperature_source << '\n';
+
+     std::cout << "dual_time_activate=" << 
+        dual_time_activate << '\n';
      for (int i=0;i<BL_SPACEDIM;i++) {
       std::cout << "i,temperature_source_cen=" << i << ' ' <<
          temperature_source_cen[i] << '\n';
@@ -3393,6 +3497,8 @@ NavierStokes::read_params ()
      std::cout << "temperatureface_flag= " << temperatureface_flag << '\n';
      std::cout << "truncate_thickness= " << truncate_thickness << '\n';
      std::cout << "face_flag= " << face_flag << '\n';
+     std::cout << "disable_advection= " << disable_advection << '\n';
+     std::cout << "disable_pressure_solve= " << disable_pressure_solve << '\n';
      std::cout << "nparts (im_solid_map.size())= " << 
       im_solid_map.size() << '\n';
      std::cout << "Solid_State_Type= " << Solid_State_Type << '\n';
@@ -3495,6 +3601,8 @@ NavierStokes::read_params ()
      std::cout << "custom_nucleation_model " << 
        custom_nucleation_model << '\n';
 
+     std::cout << "conservative_div_uu " << 
+       conservative_div_uu << '\n';
      std::cout << "conservative_tension_force " << 
        conservative_tension_force << '\n';
      std::cout << "FD_curv_select " << FD_curv_select << '\n';
@@ -3657,6 +3765,23 @@ NavierStokes::read_params ()
      Real initval=FArrayBox::get_initval();
      std::cout << "initval= " << initval << '\n';
 
+       // SFC == Space Filling Curve
+     DistributionMapping::Strategy local_strategy=
+         DistributionMapping::strategy();
+     if (local_strategy==DistributionMapping::ROUNDROBIN) {
+      std::cout << "DistributionMapping::strategy=ROUNDROBIN\n";
+     } else if (local_strategy==DistributionMapping::RRDEBUG) {
+      std::cout << "DistributionMapping::strategy=RRDEBUG\n";
+     } else if (local_strategy==DistributionMapping::KNAPSACK) {
+      std::cout << "DistributionMapping::strategy=KNAPSACK\n";
+     } else if (local_strategy==DistributionMapping::SFC) {
+      std::cout << "DistributionMapping::strategy=SFC\n";
+     } else if (local_strategy==DistributionMapping::PFC) {
+      std::cout << "DistributionMapping::strategy=PFC\n";
+     } else if (local_strategy==DistributionMapping::RRSFC) {
+      std::cout << "DistributionMapping::strategy=RRSFC\n";
+     } else
+      BoxLib::Error("local_strategy invalid");
 
      std::cout << "bicgstab_max_num_outer_iter " << 
        bicgstab_max_num_outer_iter << '\n';
@@ -4392,7 +4517,6 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
   } else
    BoxLib::Error("gridno invalid");
  } // mfi
- ParallelDescriptor::Barrier();
  ParallelDescriptor::ReduceIntSum(num_grids_on_level_check);
 
  if ((num_grids_on_level_proc<0)||
@@ -4730,7 +4854,6 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
      ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()) );
    } // mfi
 } // omp
-   ParallelDescriptor::Barrier();
 
    delete LS_mf;
    delete state_var_mf;
@@ -5521,8 +5644,8 @@ void NavierStokes::ns_header_msg_level(
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
        std::cout << "check_for_NAN(S_new_coarse,200)\n";
-       std::fflush(NULL);
       }
+      std::fflush(NULL);
       check_for_NAN(S_new_coarse,200);
      }
 
@@ -5535,8 +5658,8 @@ void NavierStokes::ns_header_msg_level(
      if ((verbose>0)&&(1==0)) {
       if (ParallelDescriptor::IOProcessor()) {
        std::cout << "FillCoarsePatch(*Solid_new_coarse)\n";
-       std::fflush(NULL);
       }
+      std::fflush(NULL);
      }
 
      FillCoarsePatch(*Solid_new_coarse,dcomp,time,Solid_State_Type,scomp,
@@ -5545,8 +5668,8 @@ void NavierStokes::ns_header_msg_level(
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
        std::cout << "check_for_NAN(Solid_new_coarse,200)\n";
-       std::fflush(NULL);
       }
+      std::fflush(NULL);
       check_for_NAN(Solid_new_coarse,201);
      }
 
@@ -5561,8 +5684,8 @@ void NavierStokes::ns_header_msg_level(
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
        std::cout << "check_for_NAN(LS_new_coarse,200)\n";
-       std::fflush(NULL);
       }
+      std::fflush(NULL);
       check_for_NAN(LS_new_coarse,202);
      }
 
@@ -5763,7 +5886,6 @@ void NavierStokes::ns_header_msg_level(
     } else
      BoxLib::Error("FSI_touch_flag[tid] invalid");
    } 
-   ParallelDescriptor::Barrier();
    ParallelDescriptor::ReduceIntMax(FSI_touch_flag[0]);
 
    if (num_materials_vel!=1)
@@ -6824,7 +6946,7 @@ void NavierStokes::Number_CellsALL(Real& rcells) {
   }
  }
    
-}  
+} // subroutine Number_CellsALL  
 
 // called from:
 //  NavierStokes::do_the_advance  (near beginning)
@@ -6936,6 +7058,8 @@ NavierStokes::SDC_setup() {
 
 void 
 NavierStokes::Geometry_setup() {
+
+ std::cout.precision(20);
 
  for (int i=0;i<MAX_NUM_LOCAL_MF;i++) {
   localMF_grow[i]=-1;
@@ -7095,7 +7219,6 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
       &rzflag,&ngrow,&nmat);
     }  // mfi  
 }//omp
-    ParallelDescriptor::Barrier(); 
    } else
     BoxLib::Error("partid could not be found: make_viscoelastic_tensor");
 
@@ -7275,7 +7398,6 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      &dt_slab,&rzflag,&im,&nmat,&nden);
    }  // mfi  
 }//omp
-   ParallelDescriptor::Barrier(); 
   } else if ((elastic_time[im]==0.0)||
              (elastic_viscosity[im]==0.0)) {
 
@@ -7410,7 +7532,6 @@ void NavierStokes::make_viscoelastic_force(int im) {
      &dt_slab,&rzflag,&im,&nmat,&nden);
    }  // mfi  
 } // omp
-   ParallelDescriptor::Barrier(); 
 
   } else if ((elastic_time[im]==0.0)||
              (elastic_viscosity[im]==0.0)) {
@@ -7662,7 +7783,6 @@ void NavierStokes::make_marangoni_force(int isweep) {
    &nmat,&nden);
  }  // mfi  
 } // omp
- ParallelDescriptor::Barrier(); 
 
  if (isweep==0) {
   delete CL_velocity;
@@ -7778,6 +7898,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
   FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
   FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
 
+   // in: GODUNOV_3D.F90
   FORT_SEMDELTAFORCE(
    &nstate,
    &nfluxSEM,
@@ -7800,7 +7921,6 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
    &dt_slab);
  }  // mfi  
 } // omp
- ParallelDescriptor::Barrier(); 
 
   // pressure gradient at faces.
  if (project_option==0) {
@@ -7850,7 +7970,6 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
      &dt_slab);
    }  // mfi  
 } // omp
-   ParallelDescriptor::Barrier(); 
   } // dir=0..sdim-1
 
  } else if ((project_option==2)|| // thermal conduction
@@ -7971,7 +8090,6 @@ void NavierStokes::make_heat_source() {
    &prev_time_slab);
  }  // mfi  
 } // omp
- ParallelDescriptor::Barrier(); 
 
 }   // subroutine make_heat_source
 
@@ -8049,7 +8167,6 @@ void NavierStokes::add_perturbation() {
   }  // dir
  }  // mfi  
 } // omp
- ParallelDescriptor::Barrier(); 
 
 }   // subroutine add_perturbation
 
@@ -8278,7 +8395,8 @@ void NavierStokes::update_SEM_delta_force(
    // do nothing
   } else
    BoxLib::Error("update_stable invalid");
-
+ 
+   // in: GODUNOV_3D.F90
   FORT_UPDATESEMFORCE(
    &ns_time_order,
    &slab_step,
@@ -8308,7 +8426,6 @@ void NavierStokes::update_SEM_delta_force(
    &dt_slab);
  }  // mfi  
 } // omp
- ParallelDescriptor::Barrier(); 
 
  if (project_option==0) {
 
@@ -8383,7 +8500,6 @@ void NavierStokes::update_SEM_delta_force(
      &dt_slab);
    }  // mfi  
 } // omp
-   ParallelDescriptor::Barrier(); 
 
   } // dir=0..sdim-1
 
@@ -8395,7 +8511,7 @@ void NavierStokes::update_SEM_delta_force(
   BoxLib::Error("project_option invalid9");
  } 
 
-}   // subroutine update_SEM_delta_force
+} // subroutine update_SEM_delta_force
 
 
 void NavierStokes::tensor_advection_update() {
@@ -8532,7 +8648,6 @@ void NavierStokes::tensor_advection_update() {
        &nmat);
      } // mfi  
 } // omp
-     ParallelDescriptor::Barrier(); 
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -8588,7 +8703,6 @@ void NavierStokes::tensor_advection_update() {
        &rzflag,velbc.dataPtr(),&transposegradu);
      }  // mfi
 } // omp
-     ParallelDescriptor::Barrier(); 
 
      if ((BL_SPACEDIM==2)&&(rzflag==1)) {
 
@@ -8627,7 +8741,6 @@ void NavierStokes::tensor_advection_update() {
         &rzflag);
       }  // mfi
 } // omp
-      ParallelDescriptor::Barrier(); 
 
      } else if ((BL_SPACEDIM==3)||
                 (rzflag==0)||
@@ -8745,7 +8858,6 @@ void NavierStokes::tensor_extrapolate() {
        fablo,fabhi,&bfact);
      }  // mfi
 } //omp
-     ParallelDescriptor::Barrier(); 
 
      delete tensor_source_mf;
 
@@ -8866,7 +8978,6 @@ NavierStokes::correct_density() {
       &nmat,&level,&finest_level);
    }  // mfi
 }  // omp
-   ParallelDescriptor::Barrier();
   
  } else
    BoxLib::Error("non_conservative_density invalid");
@@ -8891,6 +9002,9 @@ void NavierStokes::check_grid_places() {
   // coarse elements must align with fine grid patches.
  if (level>0) {
   bfact_SEM_coarse=parent->Space_blockingFactor(level-1);
+  if (bfact_SEM_coarse>bfact_fine_min)
+   bfact_fine_min=bfact_SEM_coarse;
+
   if (2*bfact_SEM_coarse>bfact_fine_min)
    bfact_fine_min=2*bfact_SEM_coarse;
  }
@@ -8949,6 +9063,8 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
 
 } // subroutine prepare_mask_nbr()
 
+// unsplit_displacement=0 if called from split_scalar_advection
+// unsplit_displacement=1 if called from unsplit_scalar_advection
 void 
 NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
  
@@ -8993,8 +9109,8 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
    // MAC_VELOCITY_MF deleted towards the end of 
    //   NavierStokes::nonlinear_advection
    // component 1: the velocity
-   // component(s) 2..sdim: tangential derivatives
-  new_localMF(MAC_VELOCITY_MF+normdir,nsolveMM_FACE*BL_SPACEDIM,
+   // component(s) 2..sdim+1: derivatives
+  new_localMF(MAC_VELOCITY_MF+normdir,nsolveMM_FACE*(BL_SPACEDIM+1),
 		  mac_grow+1,normdir);
 
   const Real* dx = geom.CellSize();
@@ -9007,7 +9123,7 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
   // 4. copy into mac_velocity
   // 5. repeat for cell_velocity
   // second sweep:
-  // 1. calculate mac velocity slopes tangent to given face.
+  // 1. calculate mac velocity slopes.
 
   for (int isweep=0;isweep<=1;isweep++) {
 #ifdef _OPENMP
@@ -9035,6 +9151,7 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
 
     prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
+     // in: GODUNOV_3D.F90
     FORT_VELMAC_OVERRIDE(
      &isweep,
      &unsplit_displacement,
@@ -9063,7 +9180,6 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
 
    }  // mfi
 } // omp
-   ParallelDescriptor::Barrier();
   } // isweep=0..1
 
   delete temp_mac_velocity;
@@ -10017,7 +10133,6 @@ NavierStokes::level_phase_change_redistribute(
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    mdot_sum_local[0]+=mdot_sum_local[tid];
   }
-  ParallelDescriptor::Barrier();
   ParallelDescriptor::ReduceRealSum(mdot_sum_local[0]);
   mdot_sum[0]+=mdot_sum_local[0];
 
@@ -10159,7 +10274,6 @@ NavierStokes::level_phase_change_redistribute(
    mdot_sum2_local[0]+=mdot_sum2_local[tid];
    mdot_lost_local[0]+=mdot_lost_local[tid];
   } // tid
-  ParallelDescriptor::Barrier();
   ParallelDescriptor::ReduceRealSum(mdot_sum2_local[0]);
   ParallelDescriptor::ReduceRealSum(mdot_lost_local[0]);
   mdot_sum2[0]+=mdot_sum2_local[0];
@@ -10238,7 +10352,6 @@ NavierStokes::level_phase_change_redistribute(
    mdotminus_local[0]+=mdotminus_local[tid];
    mdotcount_local[0]+=mdotcount_local[tid];
   }
-  ParallelDescriptor::Barrier();
   ParallelDescriptor::ReduceRealSum(mdotplus_local[0]);
   ParallelDescriptor::ReduceRealSum(mdotminus_local[0]);
   ParallelDescriptor::ReduceRealSum(mdotcount_local[0]);
@@ -10382,7 +10495,6 @@ NavierStokes::level_init_icemask() {
 
   } // mfi
 } // omp
-  ParallelDescriptor::Barrier();
 
   delete_localMF(LSNEW_MF,1);
 
@@ -11023,7 +11135,6 @@ NavierStokes::heat_source_term() {
     areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()) );
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
 
  delete LSmf;
  
@@ -11038,7 +11149,7 @@ void NavierStokes::show_norm2_id(int mf_id,int id) {
    MultiFab* mf=ns_level.localMF[mf_id];
    int scomp=0;
    int ncomp=mf->nComp();
-   show_norm2(mf,scomp,ncomp,id);
+   ns_level.show_norm2(mf,scomp,ncomp,id);
   } // ilev
  } else if (show_norm2_flag==0) {
   // do nothing
@@ -11061,6 +11172,57 @@ void NavierStokes::show_norm2(MultiFab* mf,int scomp,int ncomp,int id) {
   BoxLib::Error("show_norm2_flag invalid");
   
 } // subroutine show_norm2
+
+
+void NavierStokes::check_value_max(int id,int mf_id,int scomp, 
+		int ncomp,int ngrow,Real max_value) {
+
+ if (mf_check_inf_bounds==1) {
+  int finest_level=parent->finestLevel();
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   MultiFab* mf=ns_level.localMF[mf_id];
+   if ((scomp>=0)&&(scomp+ncomp<=mf->nComp())&&
+       (ngrow>=0)&&(ngrow<=mf->nGrow())&&
+       (max_value>=0.0)) {
+    ns_level.check_value_max_level(id,mf,scomp,ncomp,ngrow,max_value);
+   } else
+    BoxLib::Error("scomp,ncomp, ngrow or max_value invalid");
+
+  } // ilev=finest_level ... level
+ } else if (mf_check_inf_bounds==0) {
+  // do nothing
+ } else
+  BoxLib::Error("mf_check_inf_bounds invalid");
+ 
+} // subroutine check_value_max
+
+void NavierStokes::check_value_max_level(int id,MultiFab* mf,
+		int scomp,int ncomp,int ngrow,Real max_value) {
+
+ int finest_level=parent->finestLevel();
+
+ if (mf_check_inf_bounds==1) {
+  for (int nc=0;nc<ncomp;nc++) {
+   Real nm_max=mf->norm0(scomp+nc,ngrow);
+   if (nm_max>max_value) {
+    std::cout << "id= " << id << " scomp+nc= " <<
+     scomp+nc << " ncomp= " << ncomp <<
+     " ngrow= " << ngrow << " nm_max= " <<
+     nm_max << " max_value= " <<
+     max_value << '\n';
+    std::cout << "level= " << level << " finest_level= " << 
+	    finest_level << '\n';
+    BoxLib::Error("nm_max>max_value");
+   }
+  } // nc
+ } else if (mf_check_inf_bounds==0) {
+  // do nothing
+ } else
+  BoxLib::Error("mf_check_inf_bounds invalid");
+  
+} // subroutine check_value_max_level
+
 
 // datatype=0 scalar or vector
 // datatype=1 tensor face
@@ -11228,10 +11390,14 @@ NavierStokes::end_spectral_loop() {
  
 } // end_spectral_loop
 
-// called after NavierStokes::nonlinear_advection()
-// called from  NavierStokes::SEM_advectALL
+// first: NavierStokes::nonlinear_advection() is called
+// second: NavierStokes::SEM_advectALL is called
+// This routine is called from  NavierStokes::SEM_advectALL
+//
 // for advect_iter=0 ... 1 (source_term==0)
 //
+//  DEN_RECON_MF, VELADVECT_MF init at time advect_time_slab
+// 
 //  AMRSYNC_PRES_MF+dir, 
 //  CONSERVE_FLUXES_MF+dir, 
 //  COARSE_FINE_FLUX_MF+dir init to 1.0E+40
@@ -11246,6 +11412,7 @@ NavierStokes::end_spectral_loop() {
 //  init_fluxes=0
 //  for ilev=finest_level ... level
 //   call this routine.
+// 
 // end advect_iter loop
 //
 // spectral_loop==0 => fine data transferred to coarse in a special way
@@ -11331,6 +11498,13 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   debug_ngrow(SLOPE_RECON_MF,1,37);
   debug_ngrow(delta_MF,0,37);
   debug_ngrow(MASKCOEF_MF,1,36);
+  debug_ngrow(DEN_RECON_MF,1,37);
+  debug_ngrow(VELADVECT_MF,1,37);
+
+  if (localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material)
+   BoxLib::Error("localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material");
+  if (localMF[VELADVECT_MF]->nComp()!=num_materials_vel*BL_SPACEDIM)
+   BoxLib::Error("localMF[VELADVECT_MF]->nComp()!=materials_vel*BL_SPACEDIM");
 
   int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
   int nstate=num_materials_vel*(BL_SPACEDIM+1)+
@@ -11384,7 +11558,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
    for (int dirloc=0;dirloc<BL_SPACEDIM;dirloc++)
     debug_ngrow(mm_areafrac_index+dirloc,0,111);
-   debug_ngrow(mm_cell_areafrac_index,0,113);
+   debug_ngrow(mm_cell_areafrac_index,0,114);
 
 // flux variables: average down in the tangential direction 
 // to the box face, copy in
@@ -11439,7 +11613,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
    for (int dir=0;dir<BL_SPACEDIM;dir++) {
 
-    debug_ngrow(UMAC_MF+dir,0,113);
+    debug_ngrow(UMAC_MF+dir,0,115);
   
 #ifdef _OPENMP
 #pragma omp parallel
@@ -11521,6 +11695,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &icefacecut_index,
       &curv_index,
       &conservative_tension_force,
+      &conservative_div_uu,
       &pforce_index,
       &faceden_index,
       &icemask_index,
@@ -11600,9 +11775,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
    if (bfact>=1) {
 
-    debug_ngrow(UMAC_MF,0,113);
-    debug_ngrow(UMAC_MF+1,0,113);
-    debug_ngrow(UMAC_MF+BL_SPACEDIM-1,0,113);
+    debug_ngrow(UMAC_MF,0,116);
+    debug_ngrow(UMAC_MF+1,0,117);
+    debug_ngrow(UMAC_MF+BL_SPACEDIM-1,0,118);
 
     MultiFab& S_new=get_new_data(State_Type,slab_step+1);
     MultiFab& S_old=get_new_data(State_Type,slab_step);
@@ -11650,6 +11825,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      FArrayBox& snewfab = S_new[mfi];
      FArrayBox& S_old_fab = S_old[mfi];
 
+     FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
+
      FArrayBox& solfab=(*localMF[FSI_GHOST_MF])[mfi];
      FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
      FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
@@ -11680,6 +11857,11 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      int num_materials_face=1;
      int use_VOF_weight=0;
 
+     int ncomp_denold=nmat*num_state_material;
+     int ncomp_veldest=snewfab.nComp();
+     int ncomp_dendest=snewfab.nComp()-dcomp;
+
+      // called from: NavierStokes::SEM_scalar_advection
      FORT_MAC_TO_CELL(
       &nsolveMM_FACE,
       &num_materials_face,
@@ -11710,6 +11892,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &icefacecut_index,
       &curv_index,
       &conservative_tension_force,
+      &conservative_div_uu,
       &pforce_index,
       &faceden_index,
       &icemask_index,
@@ -11763,8 +11946,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
       slopefab.dataPtr(), // recon
       ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
-      S_old_fab.dataPtr(), // mdot
-      ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
+      velfab.dataPtr(), // mdot
+      ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       S_old_fab.dataPtr(), // maskdivres
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
       S_old_fab.dataPtr(), // maskres
@@ -11773,6 +11956,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &homflag,
       &use_VOF_weight,
       &nsolve,
+      &ncomp_denold,
+      &ncomp_veldest,
+      &ncomp_dendest,
       &SEM_advection_algorithm);
 
      if (1==0) {
@@ -12059,7 +12245,6 @@ NavierStokes::split_scalar_advection() {
    &den_recon_ncomp);
  }  // mfi
 } // omp
- ParallelDescriptor::Barrier();
 
  MultiFab* momslope=new MultiFab(grids,nc_conserve,1,dmap,Fab_allocate);
 
@@ -12109,7 +12294,6 @@ NavierStokes::split_scalar_advection() {
 
  }  // mfi
 }// omp
- ParallelDescriptor::Barrier();
 
  MultiFab* xvof[BL_SPACEDIM];
  MultiFab* xvel[BL_SPACEDIM]; // xvel
@@ -12199,7 +12383,6 @@ NavierStokes::split_scalar_advection() {
     &level,&finest_level);
   }  // mfi
 }// omp
-  ParallelDescriptor::Barrier();
 
   for (int dir=0;dir<BL_SPACEDIM;dir++) {
    xvof[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),nmat,
@@ -12272,7 +12455,6 @@ NavierStokes::split_scalar_advection() {
      &ngrow_mac_old,&veldir);
    }  // mfi
 }// omp
-   ParallelDescriptor::Barrier();
 
 
 #ifdef _OPENMP
@@ -12325,7 +12507,6 @@ NavierStokes::split_scalar_advection() {
 
    }  // mfi
 } // omp
-   ParallelDescriptor::Barrier();
 
   } // veldir=1..sdim
 
@@ -12343,7 +12524,7 @@ NavierStokes::split_scalar_advection() {
  }
 
 
- Real profile_time_start=0.0;
+ double profile_time_start=0.0;
  if (profile_debug==1) {
   profile_time_start=ParallelDescriptor::second();
  }
@@ -12455,7 +12636,7 @@ NavierStokes::split_scalar_advection() {
   FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
 
   FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
-  if (unode.nComp()!=nsolveMM_FACE*BL_SPACEDIM)
+  if (unode.nComp()!=nsolveMM_FACE*(BL_SPACEDIM+1))
    BoxLib::Error("unode has invalid ncomp");
 
     // this is the original data
@@ -12530,6 +12711,7 @@ NavierStokes::split_scalar_advection() {
    override_density.dataPtr(),
    velbc.dataPtr(),
    &EILE_flag,
+   &VOF_reflux,
    &dir_absolute_direct_split,
    &normdir_here,
    tilelo,tilehi,
@@ -12613,11 +12795,10 @@ NavierStokes::split_scalar_advection() {
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   nprocessed[0]+=nprocessed[tid];
  }
- ParallelDescriptor::Barrier();
  ParallelDescriptor::ReduceIntSum(nprocessed[0]);
 
  if (profile_debug==1) {
-  Real profile_time_end=ParallelDescriptor::second();
+  double profile_time_end=ParallelDescriptor::second();
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "level= " << level << '\n';
    std::cout << "nprocessed= " << nprocessed[0] << '\n';
@@ -12690,7 +12871,6 @@ NavierStokes::split_scalar_advection() {
 
   }  // mfi
 } // omp
-  ParallelDescriptor::Barrier();
 
   delete mask_unsplit;
  } else
@@ -12977,7 +13157,6 @@ NavierStokes::unsplit_scalar_advection() {
    &den_recon_ncomp);
  }  // mfi
 } // omp
- ParallelDescriptor::Barrier();
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -12998,11 +13177,6 @@ NavierStokes::unsplit_scalar_advection() {
   FArrayBox& maskfab=(*mask_unsplit)[mfi];
   FArrayBox& vofls0fab=(*localMF[VOF_LS_PREV_TIME_MF])[mfi];
 
-  // in: LEVELSET_3D.F90
-  // 0=directionally split
-  // 1=unsplit everywhere
-  // 2=unsplit in incompressible zones
-  // 3=unsplit in fluid cells that neighbor a prescribed solid cell
   FORT_BUILD_MASK_UNSPLIT( 
    &unsplit_flag,
    &make_interface_incomp,
@@ -13104,7 +13278,6 @@ NavierStokes::unsplit_scalar_advection() {
     &level,&finest_level);
   }  // mfi
 }// omp
-  ParallelDescriptor::Barrier();
 
   for (int dir=0;dir<BL_SPACEDIM;dir++) {
    xvof[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),nmat,
@@ -13175,7 +13348,6 @@ NavierStokes::unsplit_scalar_advection() {
      &ngrow_mac_old,&veldir);
    }  // mfi
 }// omp
-   ParallelDescriptor::Barrier();
 
   } // veldir=1..sdim
 
@@ -13192,7 +13364,7 @@ NavierStokes::unsplit_scalar_advection() {
   nprocessed[tid]=0.0;
  }
 
- Real profile_time_start=0.0;
+ double profile_time_start=0.0;
  if (profile_debug==1) {
   profile_time_start=ParallelDescriptor::second();
  }
@@ -13230,13 +13402,13 @@ NavierStokes::unsplit_scalar_advection() {
   FArrayBox& maskunsplitfab=(*mask_unsplit)[mfi];
 
   FArrayBox& unode=(*localMF[MAC_VELOCITY_MF])[mfi];
-  if (unode.nComp()!=nsolveMM_FACE*BL_SPACEDIM)
+  if (unode.nComp()!=nsolveMM_FACE*(1+BL_SPACEDIM))
    BoxLib::Error("unode has invalid ncomp");
   FArrayBox& vnode=(*localMF[MAC_VELOCITY_MF+1])[mfi];
-  if (vnode.nComp()!=nsolveMM_FACE*BL_SPACEDIM)
+  if (vnode.nComp()!=nsolveMM_FACE*(1+BL_SPACEDIM))
    BoxLib::Error("vnode has invalid ncomp");
   FArrayBox& wnode=(*localMF[MAC_VELOCITY_MF+BL_SPACEDIM-1])[mfi];
-  if (wnode.nComp()!=nsolveMM_FACE*BL_SPACEDIM)
+  if (wnode.nComp()!=nsolveMM_FACE*(1+BL_SPACEDIM))
    BoxLib::Error("wnode has invalid ncomp");
 
     // this is the original data
@@ -13375,11 +13547,10 @@ NavierStokes::unsplit_scalar_advection() {
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   nprocessed[0]+=nprocessed[tid];
  }
- ParallelDescriptor::Barrier();
  ParallelDescriptor::ReduceIntSum(nprocessed[0]);
 
  if (profile_debug==1) {
-  Real profile_time_end=ParallelDescriptor::second();
+  double profile_time_end=ParallelDescriptor::second();
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "level= " << level << '\n';
    std::cout << "nprocessed= " << nprocessed[0] << '\n';
@@ -13453,7 +13624,6 @@ NavierStokes::unsplit_scalar_advection() {
 
   }  // mfi
 } // omp
-  ParallelDescriptor::Barrier();
  } else
   BoxLib::Error("face_flag invalid 6");
 
@@ -13648,9 +13818,11 @@ NavierStokes::GetDragALL(Array<Real>& integrated_quantities) {
   // in: NavierStokes::GetDragALL
  allocate_levelsetLO_ALL(2,LEVELPC_MF);
 
+ int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1;
  init_gradu_tensorALL(HOLD_VELOCITY_DATA_MF,do_alloc,CELLTENSOR_MF,
-  FACETENSOR_MF);
+  FACETENSOR_MF,
+  simple_AMR_BC_flag_viscosity);
 
  for (int isweep=0;isweep<2;isweep++) {
   for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -14020,8 +14192,9 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
 } // subroutine GetDrag
 
 void NavierStokes::project_right_hand_side(
-  int index_MF,int project_option) {
+  int index_MF,int project_option,int& change_flag) {
 
+ change_flag=0;
 
  if ((project_option==0)||
      (project_option==1)||
@@ -14040,6 +14213,7 @@ void NavierStokes::project_right_hand_side(
      if (local_solvability_projection==0) {
       if (singular_possible==1) {
        zap_resid_where_singular(index_MF);
+       change_flag=1;
       } else if (singular_possible==0) {
        // do nothing
       } else
@@ -14056,6 +14230,7 @@ void NavierStokes::project_right_hand_side(
        coef=-coef/ones_sum_global;
        mf_combine_ones(project_option,index_MF,coef);
        zap_resid_where_singular(index_MF);
+       change_flag=1;
       } else
        BoxLib::Error("singular_possible invalid"); 
 
@@ -14109,7 +14284,8 @@ void NavierStokes::dot_productALL_ones(int project_option,
   ns_level.dotSum(
     project_option,
     ns_level.localMF[index_MF],
-    ns_level.localMF[ONES_MF], tempsum,nsolve);
+    ns_level.localMF[ONES_MF], 
+    tempsum,nsolve);
 
   total_sum+=tempsum;
  }
@@ -14307,7 +14483,6 @@ NavierStokes::dotSum(int project_option,
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   sum[0]+=sum[tid];
  }
- ParallelDescriptor::Barrier();
  ParallelDescriptor::ReduceRealSum(sum[0]);
 
  result=sum[0];
@@ -14429,7 +14604,6 @@ void NavierStokes::levelCombine(
  } // mfi
 } // omp
 
- ParallelDescriptor::Barrier();
 } // subroutine levelCombine
 
 
@@ -14948,9 +15122,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
   BoxLib::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
 
+ int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
  init_gradu_tensorALL(HOLD_VELOCITY_DATA_MF,do_alloc,
-   CELLTENSOR_MF,FACETENSOR_MF);
+   CELLTENSOR_MF,FACETENSOR_MF,
+   simple_AMR_BC_flag_viscosity);
 
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
   BoxLib::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
@@ -15918,7 +16094,6 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
 
   } // tid
 
-  ParallelDescriptor::Barrier();
   for (int iten=0;iten<nten;iten++)
    ParallelDescriptor::ReduceRealMax(local_cap_wave_speed[0][iten]);
 
@@ -16289,7 +16464,240 @@ NavierStokes::post_init (Real stop_time)
   }
  }
 
-}  // post_init
+}  // subroutine post_init
+
+// HH is m+1 x m
+// yy is m x 1
+// solve H^T H y = H^T beta e1 
+//  ( min_y ||Hy - beta e1|| )
+// status==1 success
+// status==0 failure
+// HT is m x m+1
+// HH=  h11 h12 h13 ... h1m
+//      h21 h22 h23 ... h2m
+//          h32 h33 ... h3m
+//              h43 ... h4m
+//                  .
+//                  .
+//               hm,m-1 hmm
+//                      hm+1,m
+//
+// HT= h11 h21
+//     h12 h22 h32
+//     h13 h23 h33 h43
+//         .
+//         .
+//         .
+//     h1m h2m h3m h4m ... hmm hm+1,m
+void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
+		int caller_id,int& status) {
+
+#define profile_gmres 0
+
+#if (profile_gmres==1)
+ std::string subname="GMRES_MIN_CPP";
+ std::stringstream id_string_stream(std::stringstream::in |
+   std::stringstream::out);
+ id_string_stream << caller_id;
+ std::string profname=subname+id_string_stream.str();
+
+ BLProfiler bprof(profname);
+#endif
+
+ Real residual_verify=0.0;
+
+ status=1;
+
+ Real** HCOPY=new Real*[m+1];
+ for (int i=0;i<m+1;i++) 
+  HCOPY[i]=new Real[m];
+
+ Real** HT=new Real*[m];
+ for (int i=0;i<m;i++) 
+  HT[i]=new Real[m+1];
+
+ for (int i=0;i<m;i++) { 
+  for (int j=0;j<m+1;j++) {
+   if (HH[j][i]<0.0) {
+    // do nothing
+   } else if (HH[j][i]>0.0) {
+    // do nothing
+   } else if (HH[j][i]==0.0) {
+    // do nothing
+   } else {
+    status=0;
+    BoxLib::Error("HH[j][i] corrupt");
+   }
+   if (j>=i+2) {
+    if (HH[j][i]==0.0) {
+     // do nothing
+    } else
+     BoxLib::Error("HH should be 0");
+   } else if (j<i+2) {
+    // check nothing
+   } else
+    BoxLib::Error("i or j became corrupt");
+
+   HT[i][j]=HH[j][i];
+   HCOPY[j][i]=HH[j][i];
+  } // j=0;j<m+1
+ } // i=0;i<m
+ if (beta>0.0) {
+  // do nothing
+ } else {
+  status=0;
+  std::cout << "beta= " << beta << '\n';
+  BoxLib::Error("beta invalid");
+ }
+
+ Real* sn=new Real[m];
+ Real* cs=new Real[m];
+ Real* e1=new Real[m+1];
+ Real* h=new Real[m+1];
+ Real* beta_vec=new Real[m+1];
+
+ for (int i=0;i<m;i++) {
+  sn[i]=0.0;
+  cs[i]=0.0;
+ }
+ for (int i=0;i<m+1;i++) {
+  e1[i]=0.0;
+  h[i]=0.0;
+  beta_vec[i]=0.0;
+ }
+ e1[0]=1.0;
+ beta_vec[0]=beta;
+
+ for (int k=1;k<=m;k++) {
+
+  for (int i=1;i<=m+1;i++)
+   h[i-1]=0.0;
+  for (int i=1;i<=k+1;i++)
+   h[i-1]=HCOPY[i-1][k-1];
+
+  for (int i=1;i<=k-1;i++) {
+   Real temp=cs[i-1]*h[i-1]+sn[i-1]*h[i];
+   h[i]=-sn[i-1]*h[i-1]+cs[i-1]*h[i];
+   h[i-1]=temp;
+  }
+  Real cs_k=0.0;
+  Real sn_k=0.0;
+  Real v1=h[k-1];
+  Real v2=h[k];
+  if (v1==0.0) {
+   cs_k=0.0;
+   sn_k=1.0;
+  } else if (v1!=0.0) {
+   Real t=sqrt(v1*v1+v2*v2);
+   if (t>0.0) {
+    cs_k=fabs(v1)/t;
+    sn_k=cs_k*v2/v1; 
+   } else {
+    std::cout << "t= " << t << '\n';
+    BoxLib::Error("t invalid");
+   }
+  } else
+   BoxLib::Error("v1 is corrupt");
+ 
+  h[k-1]=cs_k*h[k-1]+sn_k*h[k];
+  h[k]=0.0;
+
+  for (int i=1;i<=k+1;i++)
+   HCOPY[i-1][k-1]=h[i-1];
+
+  cs[k-1]=cs_k;
+  sn[k-1]=sn_k;
+
+  beta_vec[k]=-sn[k-1]*beta_vec[k-1];
+  beta_vec[k-1]=cs[k-1]*beta_vec[k-1];
+
+ } // k=1..m
+
+ Real min_diag=fabs(HCOPY[0][0]);
+
+ for (int k=m;k>=1;k--) {
+
+  yy[k-1]=beta_vec[k-1];
+  for (int j=k+1;j<=m;j++)
+   yy[k-1]-=HCOPY[k-1][j-1]*yy[j-1];
+  Real hdiag=HCOPY[k-1][k-1];
+  if (fabs(hdiag)<min_diag)
+   min_diag=fabs(hdiag);
+  if (fabs(hdiag)>0.0) 
+   yy[k-1]/=hdiag;
+  else
+   BoxLib::Error("hdiag became 0");
+
+ } // k=m ... 1 
+
+ if (1==1) {
+  Real** HTH=new Real*[m];
+  for (int i=0;i<m;i++) { 
+   HTH[i]=new Real[m];
+   for (int j=0;j<m;j++) {
+    HTH[i][j]=0.0;
+    for (int k=0;k<m+1;k++)
+     HTH[i][j]+=HH[k][i]*HH[k][j];
+   }
+  }
+  residual_verify=0.0;
+  Real* HTHy=new Real[m];
+  for (int i=0;i<m;i++) {
+   HTHy[i]=0.0;
+   for (int j=0;j<m;j++) {
+    HTHy[i]+=HTH[i][j]*yy[j];
+   }
+   Real res_comp=HTHy[i]-HH[0][i]*beta;
+   residual_verify+=res_comp*res_comp;
+  }
+  residual_verify=sqrt(residual_verify);
+  if ((residual_verify>1.0e-4*min_diag)&&
+      (residual_verify>1.0e-11)) {
+   std::cout << "residual_verify= " << residual_verify << '\n';
+   std::cout << "min_diag= " << min_diag << '\n';
+   std::cout << "beta= " << beta << '\n';
+   for (int j=0;j<m;j++) {
+    std::cout << "j= " << j << " yy= " << yy[j] << '\n';
+    std::cout << "j= " << j << " HTHy= " << HTHy[j] << '\n';
+    std::cout << "j= " << j << " HH[0][j]*beta= " << 
+      HH[0][j]*beta << '\n';
+   }
+   for (int i=0;i<m+1;i++) {
+    for (int j=0;j<m;j++) {
+     std::cout << "i= " << i << " j= " << j << " HH= " << HH[i][j] << '\n';
+    }
+   }
+   BoxLib::Error("residual too large HTH, do dual time stepping");
+//  BoxLib::Warning("residual too large HTH");
+  }
+  delete [] HTHy;
+
+  for (int i=0;i<m;i++) 
+   delete [] HTH[i];
+  delete [] HTH;
+ } // sanity check
+
+ delete [] sn;
+ delete [] cs;
+ delete [] e1;
+ delete [] h;
+ delete [] beta_vec;
+
+ for (int i=0;i<m;i++) 
+  delete [] HT[i];
+ delete [] HT;
+
+ for (int i=0;i<m+1;i++) 
+  delete [] HCOPY[i];
+ delete [] HCOPY;
+
+#if (profile_gmres==1)
+ bprof.stop();
+#endif 
+
+#undef profile_gmres
+
+} // subroutine GMRES_MIN_CPP
 
 // status==1 success
 // status==0 failure
@@ -16363,8 +16771,10 @@ NavierStokes::volWgtSumALL(
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
- } else
+ } else {
+  std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
   BoxLib::Error("SDC_outer_sweeps invalid");
+ }
 
     // vof,ref cen, order,slope,int
  int update_flag=0;  // do not update the error
@@ -16393,8 +16803,10 @@ NavierStokes::volWgtSumALL(
  GetDragALL(integrated_quantities);
 
  int do_alloc=1;
+ int simple_AMR_BC_flag_viscosity=1;
  init_gradu_tensorALL(HOLD_VELOCITY_DATA_MF,do_alloc,
-   CELLTENSOR_MF,FACETENSOR_MF);
+   CELLTENSOR_MF,FACETENSOR_MF,
+   simple_AMR_BC_flag_viscosity);
 
  for (int ilev = 0; ilev <= finest_level; ilev++) {
 
@@ -16513,7 +16925,6 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel) {
   if (maxvel<maxvelA[tid])
    maxvel=maxvelA[tid];
  }
- ParallelDescriptor::Barrier();
  ParallelDescriptor::ReduceRealMin(minpres);
  ParallelDescriptor::ReduceRealMax(maxpres);
  ParallelDescriptor::ReduceRealMax(maxvel);
@@ -16641,6 +17052,8 @@ NavierStokes::post_init_state () {
  dt_slab=1.0;
  delta_slab_time=1.0;
 
+ Number_CellsALL(real_number_of_cells);
+
  int project_option_combine=-1;
  int prescribed_noslip=1;
  int combine_flag=2;  
@@ -16743,7 +17156,7 @@ NavierStokes::post_init_state () {
  if ((post_init_pressure_solve==1)&&
      (!is_zalesak())) { 
 
-  Real start_pressure_solve = ParallelDescriptor::second();
+  double start_pressure_solve = ParallelDescriptor::second();
 
    // U^CELL and U^MAC; assimilates the solid velocity (MAC and CELL)
    // and  ice velocity (MAC)
@@ -16796,7 +17209,7 @@ NavierStokes::post_init_state () {
    ns_level.make_MAC_velocity_consistent();
   }
 
-  Real end_pressure_solve = ParallelDescriptor::second();
+  double end_pressure_solve = ParallelDescriptor::second();
   if (verbose>0)
    if (ParallelDescriptor::IOProcessor())
     std::cout << "initial pressure solve time " << end_pressure_solve-
@@ -16834,6 +17247,7 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
  const BoxArray& fgrids=fine_lev.grids;
+ const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
   BoxLib::Error("S_crse invalid");
@@ -16848,7 +17262,8 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
  for (int i = 0; i < fgrids.size(); ++i) {
   crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
  }
- MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,Fab_allocate);
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
 
  ParallelDescriptor::Barrier();
 
@@ -16922,6 +17337,7 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine) {
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
  const BoxArray& fgrids=fine_lev.grids;
+ const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
   BoxLib::Error("S_crse invalid");
@@ -16936,7 +17352,8 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine) {
  for (int i = 0; i < fgrids.size(); ++i) {
   crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
  }
- MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,Fab_allocate);
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
 
  ParallelDescriptor::Barrier();
 
@@ -17013,6 +17430,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
  const BoxArray& fgrids=fine_lev.grids;
+ const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
   BoxLib::Error("S_crse invalid");
@@ -17027,7 +17445,8 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
  for (int i = 0; i < fgrids.size(); ++i) {
   crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
  }
- MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,Fab_allocate);
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
 
  ParallelDescriptor::Barrier();
 
@@ -17099,6 +17518,7 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
  const BoxArray& fgrids=fine_lev.grids;
+ const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
   BoxLib::Error("S_crse invalid");
@@ -17111,7 +17531,8 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
  for (int i = 0; i < fgrids.size(); ++i) {
   crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
  }
- MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,Fab_allocate);
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
 
  ParallelDescriptor::Barrier();
 
@@ -17254,6 +17675,7 @@ void NavierStokes::MOFavgDown() {
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
  const BoxArray& fgrids=fine_lev.grids;
+ const DistributionMapping& fdmap=fine_lev.dmap;
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,0,80);
  fine_lev.resize_metrics(1);
@@ -17282,7 +17704,8 @@ void NavierStokes::MOFavgDown() {
  int scomp_mofvars=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*num_state_material;
 
- MultiFab crse_S_fine(crse_S_fine_BA,nmat*ngeom_raw,0,Fab_allocate);
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,nmat*ngeom_raw,0,crse_dmap,Fab_allocate);
 
  ParallelDescriptor::Barrier();
 
@@ -17339,6 +17762,7 @@ void NavierStokes::avgDownError() {
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
  const BoxArray& fgrids=fine_lev.grids;
+ const DistributionMapping& fdmap=fine_lev.dmap;
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,0,80);
  fine_lev.resize_metrics(1);
@@ -17368,7 +17792,8 @@ void NavierStokes::avgDownError() {
  if (S_crse.nComp()!=scomp_error+1)
   BoxLib::Error("scomp_error invalid");
 
- MultiFab crse_S_fine(crse_S_fine_BA,1,0,Fab_allocate);
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,1,0,crse_dmap,Fab_allocate);
 
  ParallelDescriptor::Barrier();
 
@@ -17472,6 +17897,34 @@ MultiFab* NavierStokes::getState_list(
  return mf;
 
 } // subroutine getState_list
+
+// copy localMF[idx_MF] to s_new
+void NavierStokes::putState_list(
+ Array<int> scomp,Array<int> ncomp,
+ int idx_MF) {
+
+ int ncomp_list=0;
+ for (int ilist=0;ilist<scomp.size();ilist++)
+  ncomp_list+=ncomp[ilist];
+
+ if (ncomp_list>=1) {
+  // do nothing
+ } else
+  BoxLib::Error("ncomp_list invalid");
+ 
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
+ int scomp_localMF=0;
+ for (int ilist=0;ilist<scomp.size();ilist++) {
+   // dst,src,scomp,dcomp,ncomp,ngrow
+  MultiFab::Copy(S_new,*localMF[idx_MF],scomp_localMF,scomp[ilist],
+		 ncomp[ilist],0); 
+  scomp_localMF+=ncomp[ilist];
+ }
+ if (scomp_localMF!=ncomp_list)
+  BoxLib::Error("scomp_localMF invalid");
+
+} // subroutine putState_list
 
 
 MultiFab* NavierStokes::getState (
@@ -17615,6 +18068,15 @@ MultiFab* NavierStokes::getStateDist (int ngrow,Real time,int caller_id) {
  return mf;
 } // subroutine getStateDist
 
+void NavierStokes::CPP_OVERRIDEPBC(int homflag_in,int project_option_in) {
+
+ if ((homflag_in==0)||(homflag_in==1)) {
+  override_bc_to_homogeneous=homflag_in;
+  FORT_OVERRIDEPBC(&homflag_in,&project_option_in);
+ } else
+  BoxLib::Error("homflag_in invalid");
+
+}  // subroutine CPP_OVERRIDEPBC
 
 MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 		int scomp,int ncomp,Real time) {
@@ -17624,8 +18086,7 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 
  int project_option=10;
  int save_bc_status=override_bc_to_homogeneous;
- override_bc_to_homogeneous=1;
- FORT_OVERRIDEPBC(&override_bc_to_homogeneous,&project_option);
+ CPP_OVERRIDEPBC(1,project_option);
 
  MultiFab& S_new=get_new_data(DIV_Type,slab_step+1);
  int ntotal=S_new.nComp();
@@ -17639,11 +18100,30 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 
  ParallelDescriptor::Barrier();
 
- override_bc_to_homogeneous=save_bc_status;
- FORT_OVERRIDEPBC(&override_bc_to_homogeneous,&project_option);
+ CPP_OVERRIDEPBC(save_bc_status,project_option);
 
  return mf;
 } // subroutine getStateDIV_DATA
+
+
+void NavierStokes::putStateDIV_DATA(
+ int scomp,int ncomp,int idx_MF) {
+
+ if (num_materials_vel!=1)
+  BoxLib::Error("num_materials_vel!=1");
+
+ MultiFab& S_new=get_new_data(DIV_Type,slab_step+1);
+ int ntotal=S_new.nComp();
+ if (ntotal!=num_materials_vel)
+  BoxLib::Error("ntotal invalid");
+
+ int scomp_localMF=0;
+   // dst,src,scomp,dcomp,ncomp,ngrow
+ MultiFab::Copy(S_new,*localMF[idx_MF],scomp_localMF,scomp,
+  	        ncomp,0); 
+
+} // subroutine putStateDIV_DATA
+
 
 
 // called from:
@@ -17795,12 +18275,19 @@ NavierStokes::makeStateDist() {
 
  int profile_dist=0;
 
- int dist_timings=1;
+ int dist_timings=0;
 
- Real before_dist;
- Real after_dist;
- Real before_profile;
- Real after_profile;
+ if (verbose>0) {
+  dist_timings=1;
+ } else if (verbose==0) {
+  // do nothing
+ } else
+  BoxLib::Error("verbose invalid");
+
+ double before_dist;
+ double after_dist;
+ double before_profile;
+ double after_profile;
 
  if (dist_timings==1)
   before_dist = ParallelDescriptor::second();
@@ -18089,7 +18576,6 @@ NavierStokes::makeStateDist() {
   } // im=0..nmat-1
   nprocessed[0]+=nprocessed[tid];
  }
- ParallelDescriptor::Barrier();
  ParallelDescriptor::ReduceIntSum(nprocessed[0]);
  for (int im=0;im<nmat;im++) {
   ParallelDescriptor::ReduceRealMax(maxLS[0][im]);
@@ -18105,7 +18591,7 @@ NavierStokes::makeStateDist() {
   BoxLib::Error("level invalid 7");
  
  if ((profile_debug==1)||(profile_dist==1)) {
-  Real profile_time_end=ParallelDescriptor::second();
+  double profile_time_end=ParallelDescriptor::second();
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "level= " << level << '\n';
    std::cout << "nprocessed= " << nprocessed[0] << '\n';
@@ -18256,6 +18742,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
 
    int tid=ns_thread();
 
+    // in: LEVELSET_3D.F90
    FORT_FACEPROCESS( 
     &tid,
     &dir,
@@ -18276,7 +18763,6 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
     &nmat,&nface_src,&nface_dst);
   } // mfi
 } // omp
-  ParallelDescriptor::Barrier();
 
   localMF[idxdst+dir]->FillBoundary(geom.periodicity());
  } //dir
@@ -18356,7 +18842,7 @@ NavierStokes::makeFaceFrac(
    FArrayBox& facefab=(*localMF[idx])[mfi];
 
    int tid=ns_thread();
-
+    // in: MOF_REDIST_3D.F90
    FORT_FACEINIT( 
     &tid,
     &tessellate,
@@ -18380,7 +18866,6 @@ NavierStokes::makeFaceFrac(
     &nface_decomp);
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
 
  localMF[idx]->FillBoundary(geom.periodicity());
 
@@ -18640,6 +19125,7 @@ NavierStokes::makeCellFrac(int tessellate,int ngrow,int idx) {
 
    int tid=ns_thread();
 
+    // in: LEVELSET_3D.F90
    FORT_CELLFACEINIT( 
     &tid,
     &tessellate,
@@ -18662,7 +19148,6 @@ NavierStokes::makeCellFrac(int tessellate,int ngrow,int idx) {
     &ncellfrac);
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
 
  localMF[idx]->FillBoundary(geom.periodicity());
 
@@ -18852,7 +19337,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
     if (curv_max_local[tid]>curv_max_local[0])
      curv_max_local[0]=curv_max_local[tid];
   } // tid
-  ParallelDescriptor::Barrier();
 
   ParallelDescriptor::ReduceRealMin(curv_min_local[0]);
   ParallelDescriptor::ReduceRealMax(curv_max_local[0]);

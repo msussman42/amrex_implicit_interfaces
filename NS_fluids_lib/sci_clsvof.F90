@@ -20,7 +20,7 @@
 #define injG 1
 #define MAX_PARTS 100
 #define flags_per_element 3
-#define CTMLoverflow (1.0E+20)
+#define CTMLoverflow (1.0D+20)
 
 #ifdef BL_USE_MPI
 #define mpi_activate 1
@@ -7551,8 +7551,8 @@ IMPLICIT NONE
    call checkbound3D(FSI_lo,FSI_hi,DIMS3D(FSIdata3D),ngrowFSI,-1,521)
 
    mask_debug=0
-   LSMIN_debug=1.0E+10
-   LSMAX_debug=-1.0E+10
+   LSMIN_debug=1.0D+10
+   LSMAX_debug=-1.0D+10
 
     ! in NavierStokes::initData ():
     !  state solid velocity for FSI_flag=2,4 is init to 0.0

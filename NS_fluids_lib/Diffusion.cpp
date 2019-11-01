@@ -92,9 +92,11 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
 // No coupling terms.
 // Diagonal terms not multiplied by 2.
 
- 
+
+ int simple_AMR_BC_flag_viscosity=1; 
  int do_alloc=0;
- init_gradu_tensorALL(idx_vel,do_alloc,CELLTENSOR_MF,FACETENSOR_MF);
+ init_gradu_tensorALL(idx_vel,do_alloc,CELLTENSOR_MF,FACETENSOR_MF,
+	 simple_AMR_BC_flag_viscosity);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -269,7 +271,6 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &nsolveMM);
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
 
 }  // diffuse_hoop
 
@@ -376,7 +377,6 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
    &nsolveMM);
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
 
 }  // mom_force
 
@@ -505,7 +505,6 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
    &nsolveMM);
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
 
 }  // thermal_transform_force
 
@@ -937,7 +936,8 @@ void NavierStokes::combine_state_variable(
        num_materials_vel*BL_SPACEDIM);
 
      int tid=ns_thread();
-
+ 
+      // in: GODUNOV_3D.F90
      FORT_COMBINEVELFACE(
       &tid,
       &num_materials_combine,
@@ -1075,6 +1075,7 @@ void NavierStokes::combine_state_variable(
 
    int tid=ns_thread();
 
+    // in: GODUNOV_3D.F90
    FORT_COMBINEVEL(
     &tid,
     &hflag,
@@ -1208,9 +1209,11 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  int homflag=0;
  int energyflag=0;
  int project_option=3; // viscosity
- int simple_AMR_BC_flag=1; // HO AMR not fully developed yet for viscosity
+ int simple_AMR_BC_flag=1; 
+ int simple_AMR_BC_flag_viscosity=1; 
  apply_pressure_grad(
   simple_AMR_BC_flag, 
+  simple_AMR_BC_flag_viscosity, 
   homflag,energyflag,CONSERVE_FLUXES_MF,
   source_idx,
   project_option,nsolve);

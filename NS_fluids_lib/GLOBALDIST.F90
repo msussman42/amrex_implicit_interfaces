@@ -1685,10 +1685,10 @@ end subroutine nozzle2d
        stop
       endif
 
-      if ((time.ge.zero).and.(time.le.1.0E+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (time.ge.1.0E+20) then
-       print *,"WARNING time.ge.1.0E+20 in materialdistsolid"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in materialdistsolid"
       else if (time.lt.zero) then
        print *,"time invalid in materialdistsolid"
        stop
@@ -2273,7 +2273,7 @@ end subroutine nozzle2d
       REAL_T delta_sphere,hugedist
       INTEGER_T i,nmat
  
-      hugedist=1.0E+10
+      hugedist=1.0D+10
  
       nmat=num_materials
       if (nmat.ne.3) then
@@ -2328,7 +2328,7 @@ end subroutine nozzle2d
       REAL_T delta_sphere,hugedist
       INTEGER_T i,nmat
  
-      hugedist=1.0E+10
+      hugedist=1.0D+10
  
       nmat=num_materials
       if (nmat.ne.3) then
@@ -2402,7 +2402,7 @@ end subroutine nozzle2d
       REAL_T delta_sphere,hugedist
       INTEGER_T i,nmat
  
-      hugedist=1.0E+10
+      hugedist=1.0D+10
  
       nmat=num_materials
       if (nmat.ne.3) then
@@ -2458,7 +2458,7 @@ end subroutine nozzle2d
       REAL_T delta_sphere,hugedist
       INTEGER_T i,nmat
  
-      hugedist=1.0E+10
+      hugedist=1.0D+10
  
       nmat=num_materials
       if (nmat.ne.3) then
@@ -2511,7 +2511,7 @@ end subroutine nozzle2d
       REAL_T delta_sphere,hugedist
       INTEGER_T nmat
  
-      hugedist=1.0E+10
+      hugedist=1.0D+10
  
       nmat=num_materials
       if (nmat.ne.3) then
@@ -2559,7 +2559,7 @@ end subroutine nozzle2d
       REAL_T delta_sphere,hugedist
       INTEGER_T i,nmat
  
-      hugedist=1.0E+10
+      hugedist=1.0D+10
  
       nmat=num_materials
       if (nmat.ne.3) then

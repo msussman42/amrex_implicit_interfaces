@@ -309,7 +309,7 @@ contains
 
 ! Checking the hydrate formation condition
     if ( ((p.ge.p_eq).and.(time.gt.zero)).or. &
-     ((p.ge.1.0E+19).and.(time.eq.zero))) then
+     ((p.ge.1.0D+19).and.(time.eq.zero))) then
      H = 1 / (MOLAR_MASS_GAS * HBP_GAS(T)) ! [Ba]
      C_eq = p_eq * HCP_GAS(T)
 !       dndt = K_f * A * H * (C_i - C_eq) / C_w0 

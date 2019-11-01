@@ -301,6 +301,7 @@
         int* icefacecut_index,
         int* curv_index,
         int* conservative_tension_force,
+        int* conservative_div_uu,
         int* pforce_index,
         int* faceden_index,
         int* icemask_index,
@@ -423,6 +424,7 @@
         int* icefacecut_index,
         int* curv_index,
         int* conservative_tension_force,
+        int* conservative_div_uu,
         int* pforce_index,
         int* faceden_index,
         int* icemask_index,
@@ -473,6 +475,9 @@
         int* homflag,
         int* use_VOF_weight,
         int* nsolve,
+        int* ncomp_denold,
+        int* ncomp_veldest,
+        int* ncomp_dendest,
         int* SEM_advection_algorithm);
 
 

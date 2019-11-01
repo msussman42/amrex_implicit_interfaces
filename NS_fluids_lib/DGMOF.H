@@ -7,6 +7,7 @@
 #include <Geometry.H>
 #include <BoxArray.H>
 #include <Array.H>
+#include <PArray.H>
 
 class Polyhedra {
 
