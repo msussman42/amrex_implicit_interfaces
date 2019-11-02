@@ -17,24 +17,23 @@
 #include <unistd.h>
 
 #include <AMReX_Geometry.H>
-#include <AMReX_TagBox.H>
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>
 #include <AMReX_CoordSys.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_BoxDomain.H>
-#include <AMReX_Cluster.H>
-#include <AMReX_LevelBld.H>
-#include <AMReX_AmrLevel.H>
-#include <AMReX_PROB_AMR_F.H>
-#include <AMReX_Amr.H>
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_Utility.H>
 #include <AMReX_DistributionMapping.H>
 #include <AMReX_FabSet.H>
-#include <AMReX_StateData.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_Print.H>
+#include <TagBox.H>
+#include <Cluster.H>
+#include <LevelBld.H>
+#include <AmrLevel.H>
+#include <Amr.H>
+#include <StateData.H>
 
 #include <INTERP_F.H>
 
@@ -1868,7 +1867,11 @@ Amr::timeStep (Real time,
   lev0.maxSize(max_grid_size[0]/2);
   lev0.refine(2);
 
-  DistributionMapping dm(lev0);
+   // SUSSMAN
+  int nprocs=ParallelDescriptor::NProcs();
+  ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
+  DistributionMapping dm(lev0,nprocs,color);
+
   AmrLevel* a = (*levelbld)(*this,0,geom[0],lev0,dm,cumtime);
 
    // calls setTimeLevel for level=0 using old level dt.
@@ -1968,6 +1971,10 @@ Amr::timeStep (Real time,
  for (int level=finest_level;level>=0;level--) {
   amr_level[level]->post_timestep(stop_time);
  }
+
+  // SUSSMAN
+ DistributionMapping::FlushCache();
+ FabArrayBase::flushAllCache();
 
 }  // subroutine timeStep
 
@@ -2164,15 +2171,38 @@ Amr::coarseTimeStep (Real stop_time)
             fclose(fp);
         }
     }
-    ParallelDescriptor::Bcast(&to_checkpoint, 1, ParallelDescriptor::IOProcessorNumber());
-    ParallelDescriptor::Bcast(&to_stop,       1, ParallelDescriptor::IOProcessorNumber());
 
-    if ((check_int > 0 && level_steps[0] % check_int == 0) || check_test == 1
-	|| to_checkpoint)
-    {
-        last_checkpoint = level_steps[0];
-        checkPoint();
-    }
+    //SUSSMAN
+    ParallelDescriptor::Bcast(&to_checkpoint, 1, 
+	ParallelDescriptor::IOProcessorNumber());
+    ParallelDescriptor::Bcast(&to_stop,       1, 
+        ParallelDescriptor::IOProcessorNumber());
+
+    ParallelDescriptor::Barrier();
+
+    //SUSSMAN
+    int check_int_trigger=0;
+    if (check_int>0) {
+     if (level_steps[0] % check_int == 0)
+      check_int_trigger=1;
+    } else if (check_int==0) {
+     // do nothing
+    } else if (check_int==-1) {
+     // do nothing
+    } else
+     BoxLib::Error("check_int invalid");
+
+    if ((check_int_trigger==1) || 
+        (check_test == 1) || 
+        (to_checkpoint==1)) {
+     last_checkpoint = level_steps[0];
+     checkPoint();
+    } else if ((check_int_trigger==0)&&
+	       (check_test==0)&&
+	       (to_checkpoint==0)) {
+     // do nothing
+    } else
+     BoxLib::Error("check_int_trigger,check_test,or to_checkpoint bad");
 
     int plot_test = 0;
     if (plot_per > 0.0)
@@ -2244,7 +2274,11 @@ Amr::defBaseLevel (Real strt_time)
     lev0.refine(2);
 
     this->SetBoxArray(0, lev0);
-    this->SetDistributionMap(0, DistributionMapping(lev0));
+
+     // SUSSMAN
+    int nprocs=ParallelDescriptor::NProcs();
+    ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
+    this->SetDistributionMap(0, DistributionMapping(lev0,nprocs,color));
 
     //
     // Now build level 0 grids.
@@ -2837,7 +2871,11 @@ Amr::bldFineLevels (Real strt_time)
     amrex::Error("new_grids[new_finest] invalid");
    }
 
-   DistributionMapping new_dm(new_grids[new_finest]);
+    // SUSSMAN
+   int nprocs=ParallelDescriptor::NProcs();
+   ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
+   DistributionMapping new_dm(new_grids[new_finest],nprocs,color);
+
     // see the constructor in AmrLevel.cpp:
     // AmrLevel::AmrLevel ( ....  )
    AmrLevel* a_level = (*levelbld)(*this,

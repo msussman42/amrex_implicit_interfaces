@@ -4,8 +4,8 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_PhysBCFunct.H>
-#include <Interpolater.H>
 #include <AMReX_Array.H>
+#include <Interpolater.H>
 
 namespace amrex
 {

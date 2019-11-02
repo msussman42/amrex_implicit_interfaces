@@ -3,9 +3,9 @@
 #include <string>
 #include <iostream>
 
+#include <AMReX_BCRec.H>
 #include <StateDescriptor.H>
 #include <Interpolater.H>
-#include <AMReX_BCRec.H>
 
 namespace amrex {
 

@@ -3,11 +3,11 @@
 #include <cmath>
 #include <climits>
 
-#include <TagBox.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_BLProfiler.H>
 #include <AMReX_ccse-mpi.H>
+#include <TagBox.H>
 
 namespace amrex {
 

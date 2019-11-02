@@ -1,8 +1,8 @@
 
 #include <cstring>
 
-#include <AMReX_Derive.H>
-#include <AMReX_StateDescriptor.H>
+#include <Derive.H>
+#include <StateDescriptor.H>
 
 namespace amrex {
 

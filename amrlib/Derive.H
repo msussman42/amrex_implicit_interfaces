@@ -7,7 +7,7 @@
 #include <AMReX_ArrayLim.H>
 #include <AMReX_REAL.H>
 #include <AMReX_Box.H>
-#include <AMReX_Interpolater.H>
+#include <Interpolater.H>
 
 namespace amrex {
 

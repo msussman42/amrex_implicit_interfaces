@@ -1,7 +1,7 @@
 
 #include <algorithm>
-#include <AMReX_Cluster.H>
 #include <AMReX_BoxDomain.H>
+#include <Cluster.H>
 
 namespace amrex {
 

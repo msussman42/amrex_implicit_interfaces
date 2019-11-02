@@ -5,12 +5,12 @@
 #include <memory>
 #include <limits>
 
-#include <AMReX_AmrLevel.H>
-#include <Derive.H>
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_Utility.H>
-#include <FillPatchUtil.H>
 #include <AMReX_ParmParse.H>
+#include <AmrLevel.H>
+#include <Derive.H>
+#include <FillPatchUtil.H>
 
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
@@ -233,7 +233,8 @@ AmrLevel::checkPoint (const std::string& dir,
     // Build directory to hold the MultiFabs in the StateData at this level.
     // The directory is relative the the directory containing the Header file.
     //
-    std::string Level = amrex::Concatenate("Level_", level, 1);
+    // SUSSMAN
+    std::string Level_string = amrex::Concatenate("Level_", level, 1);
     //
     // Now for the full pathname of that directory.
     //
@@ -242,7 +243,8 @@ AmrLevel::checkPoint (const std::string& dir,
     {
         FullPath += '/';
     }
-    FullPath += Level;
+     //SUSSMAN
+    FullPath += Level_string;
     //
     // Only the I/O processor makes the directory if it doesn't already exist.
     //
@@ -275,7 +277,7 @@ AmrLevel::checkPoint (const std::string& dir,
         //
         if (desc_lst[i].store_in_checkpoint()==true) {
          std::string PathNameInHdr = 
-           amrex::Concatenate(Level    + "/SD_", i, 1);
+           amrex::Concatenate(Level_string + "/SD_", i, 1);
          std::string FullPathName  = 
            amrex::Concatenate(FullPath + "/SD_", i, 1);
 

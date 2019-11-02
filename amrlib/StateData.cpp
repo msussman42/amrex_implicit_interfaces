@@ -5,10 +5,10 @@
 #include <unistd.h>
 
 #include <AMReX_RealBox.H>
-#include <StateData.H>
-#include <StateDescriptor.H>
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_Utility.H>
+#include <StateData.H>
+#include <StateDescriptor.H>
 
 #ifdef _OPENMP
 #include <omp.h>
