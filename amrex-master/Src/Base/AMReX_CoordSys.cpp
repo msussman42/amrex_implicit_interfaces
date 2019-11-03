@@ -6,6 +6,7 @@
 #include <AMReX_FArrayBox.H>
 #include <AMReX_ParallelDescriptor.H>
 
+
 namespace {
     constexpr double  TWOPI = 2.*3.14159265358979323846264338327950288;
     constexpr double FOURPI = 4.*3.14159265358979323846264338327950288;
