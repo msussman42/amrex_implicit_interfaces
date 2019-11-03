@@ -1,11 +1,13 @@
 #ifndef _NavierStokes_H_
 #define _NavierStokes_H_
 
-#include <Geometry.H>
+#include <AMReX_Geometry.H>
 #include <AmrLevel.H>
 #include <LevelBld.H>
-#include <BC_TYPES.H>
 #include <ABecLaplacian.H>
+
+
+namespace amrex{
 
 #define MAX_NUM_MATERIALS 20
 #define MAX_NUM_SPECIES 20
@@ -555,7 +557,8 @@ public:
     void resize_mask_nbr(int ngrow);
     void prepare_displacement(int mac_grow,int unsplit_displacement);
 
-    void nucleate_bubbles();
+    void nucleate_bubbles(Array<blobclass> blobdata,
+                    int color_count);
     void heat_source_term();
     void stefan_solver_init(MultiFab* coeffMF,int adjust_temperature);
 
@@ -747,8 +750,8 @@ protected:
     void build_NRM_FD_MF(int fd_mf,int ls_mf, int ngrow);
 
     void level_phase_change_convert(int isweep);
-    void level_phase_change_rate(int get_statistics,
-     Array<blobclass> blobdata,int color_count);
+    void level_phase_change_rate(Array<blobclass> blobdata,
+		    int color_count);
     void level_phase_change_rate_extend();
    
     void allocate_SDC();
@@ -1952,5 +1955,7 @@ protected:
     static int ncphys;
 
 };
+
+}/* namespace amrex */
 
 #endif /*_NavierStokes_H_*/

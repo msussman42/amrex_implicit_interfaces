@@ -2432,13 +2432,30 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     debug_memory();
 
+    int mass_transfer_active=0;
+
+    if ((is_phasechange==1)||
+        (is_cavitation==1)||
+        (is_cavitation_mixture_model==1)) {
+     mass_transfer_active=1;
+    } else if ((is_phasechange==0)&&
+               (is_cavitation==0)&&
+	       (is_cavitation_mixture_model==0)) {
+     mass_transfer_active=0;
+    } else
+     amrex::Error("is_phasechange or is_cav or is_cav_mix_model invalid");
+
+    Array<blobclass> blobdata;
+    blobdata.resize(1);
+    int color_count=0;
+    int coarsest_level=0;
+
+
       // 2. (a) LEVELSET REINITIALIZATION
       //    (b) PHASE CHANGE or cavitation
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
-      if ((is_phasechange==1)||
-          (is_cavitation==1)||
-          (is_cavitation_mixture_model==1)) {
+      if (mass_transfer_active==1) {
 
        int at_least_one_ice=0;
        for (int im=0;im<nmat;im++) {
@@ -2460,7 +2477,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           amrex::Error("expecting at least one material FSI_flag==3");
          at_least_one=1;
         } 
-       } //im
+       } //im=1..nmat
        if (at_least_one==1) {
         Array<Real> recalesce_state_old;
         Array<Real> recalesce_state_new;
@@ -2497,9 +2514,16 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         std::cin >> n_input;
        }
 
+       ParallelDescriptor::Barrier();
+
+       // tessellate==1
+       ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
+
+       ParallelDescriptor::Barrier();
+
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-        ns_level.nucleate_bubbles();
+        ns_level.nucleate_bubbles(blobdata,color_count);
 
         ns_level.avgDown(LS_Type,0,nmat,0);
         ns_level.MOFavgDown();
@@ -2524,16 +2548,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         }
        } 
 
-      } else if ((is_phasechange==0)&&
-                 (is_cavitation==0)&&
-                 (is_cavitation_mixture_model==0)) {
-       // do nothing
-      } else {
-       amrex::Error("is_phasechange,is_cavitation, or is_cav_mm invalid");
-      }  
-
-      if (is_phasechange==1) {
-
        // generates SLOPE_RECON_MF
        update_flag=0;
        int init_vof_ls_prev_time=0;
@@ -2555,7 +2569,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        advance_MAC_velocity(project_option);
   
-      } else if (is_phasechange==0) {
+      } else if (mass_transfer_actve==0) {
 
        update_flag=1;  // update the error in S_new
        int init_vof_ls_prev_time=0;
@@ -2563,17 +2577,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         SLOPE_RECON_MF);
        makeStateDistALL();
       } else
-       amrex::Error("is_phasechange invalid");
-
-    } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
-      update_flag=0;  // do not update the error in S_new
-      int init_vof_ls_prev_time=0;
-      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
-        SLOPE_RECON_MF);
-    } else
-     amrex::Error("slab_step invalid");
-
-    if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+       amrex::Error("mass_transfer_active invalid");
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
@@ -2598,12 +2602,19 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        }
 
        ns_level.correct_density();  
-      } // ilev
+
+      } // ilev=finest_level ... level
 
     } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
-      // do nothing
+
+      update_flag=0;  // do not update the error in S_new
+      int init_vof_ls_prev_time=0;
+      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
+        SLOPE_RECON_MF);
+
     } else
       amrex::Error("slab_step invalid");
+
 
       // velocity and pressure
     avgDownALL(State_Type,0,num_materials_vel*(BL_SPACEDIM+1),1);
@@ -2618,7 +2629,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
-      if (is_phasechange==1) {
+      if (mass_transfer_active==1) {
 
        if (ngrow_expansion!=2)
         amrex::Error("ngrow_expansion!=2");
@@ -2665,46 +2676,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	ns_level.build_NRM_FD_MF(LS_NRM_FD_MF,HOLD_LS_DATA_MF,1);
        }
 
-       int get_statistics=0;
-       for (int im=0;im<nmat;im++) {
-        if (max_contact_line_size[im]>0.0) {
-         get_statistics=1;
-        } else if (max_contact_line_size[im]==0.0) {
-         // do nothing
-        } else
-         amrex::Error("max_contact_line_size[im] invalid");
-       } // im=0..nmat-1
-
-       ParallelDescriptor::Barrier();
-
-       Array<blobclass> blobdata;
-       blobdata.resize(1);
-       int color_count=0;
-       int coarsest_level=0;
-
-       if (get_statistics==1) {
-        // tessellate==1
-        ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
-       } else if (get_statistics==0) {
-        // do nothing
-       } else
-        amrex::Error("get_statistics invalid");
-
-       ParallelDescriptor::Barrier();
-
         // BURNING_VELOCITY_MF flag==1 if valid rate of phase change.
        for (int ilev=level;ilev<=finest_level;ilev++) {
         NavierStokes& ns_level=getLevel(ilev);
-        ns_level.level_phase_change_rate(get_statistics,blobdata,color_count);
+        ns_level.level_phase_change_rate(blobdata,color_count);
        }
 
-       if (get_statistics==1) {
-        delete_array(TYPE_MF);
-        delete_array(COLOR_MF);
-       } else if (get_statistics==0) {
-        // do nothing
-       } else
-        amrex::Error("get_statistics invalid");
+       delete_array(TYPE_MF);
+       delete_array(COLOR_MF);
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
@@ -2813,10 +2792,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        makeStateDistALL();
 
-      } else if (is_phasechange==0) {
+      } else if (mass_transfer_active==0) {
        // do nothing
       } else
-       amrex::Error("is_phasechange invalid");
+       amrex::Error("mass_transfer_active invalid");
 
     } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
       // do nothing
@@ -2944,17 +2923,17 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        }
       }
   
-      if (is_phasechange==1) {
+      if (mass_transfer_active==1) {
 
        // mdot is incremented. 
        phase_change_redistributeALL();
 
        delete_array(JUMP_STRENGTH_MF);
    
-      } else if (is_phasechange==0) {
+      } else if (mass_transfer_active==0) {
        // do nothing
       } else
-       amrex::Error("is_phasechange invalid");
+       amrex::Error("mass_transfer_active invalid");
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
@@ -2981,11 +2960,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int interp_option=0;
        int idx_velcell=-1;
        Real beta=0.0;
-       Array<blobclass> blobdata;
+       Array<blobclass> local_blobdata;
        increment_face_velocityALL(
          prescribed_noslip,
          interp_option,project_option,
-         idx_velcell,beta,blobdata);
+         idx_velcell,beta,local_blobdata);
 
       } else if (is_zalesak()==0) {
 

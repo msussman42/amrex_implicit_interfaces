@@ -1,4 +1,4 @@
-#include <winstd.H>
+//#include <winstd.H>
 
 #include <algorithm>
 #include <vector>
@@ -14,15 +14,14 @@
 #include <string>
 #include <stdlib.h>
 
-// BEGIN BOXLIB files NOW AMReX
-#include <CoordSys.H>
-#include <Geometry.H>
-#include <BoxDomain.H>
-#include <ParmParse.H>
-#include <FArrayBox.H>
-#include <ArrayLim.H>
-#include <Utility.H>
-// END BOXLIB files NOW AMReX
+#include <AMReX_CoordSys.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_BoxDomain.H>
+#include <AMReX_ParmParse.H>
+#include <AMReX_FArrayBox.H>
+#include <AMReX_ArrayLim.H>
+#include <AMReX_Utility.H>
+#include <TagBox.H>
 
 #include <NavierStokes.H>
 #include <INTERP_F.H>
@@ -32,21 +31,20 @@
 #include <MASS_TRANSFER_F.H>
 #include <PROB_F.H>
 #include <MOF_F.H>
-#include <TagBox.H>
 #include <LEVEL_F.H>
 #include <MOF_REDIST_F.H>
 #include <ShallowWater_F.H>
 #include <SOLIDFLUID_F.H>
-#include <COORDSYS_F.H>
 #include <DERIVE_F.H>
-#include <LO_BCTYPES.H>
 
 #ifdef MVAHABFSI
 #include <CTMLFSI_F.H>
 #endif
 
+namespace amrex{
+
 #define bogus_value 1.e20
-#define Pi      3.14159265358979
+#define local_Pi 3.14159265358979
 #define show_norm2_flag 0
 #define mf_check_inf_bounds 1
 
@@ -820,11 +818,11 @@ void mof_ordering_override(Array<int>& mof_ordering_local,
  Array<int> FSI_flag_temp) {
 
  if (nmat!=mof_ordering_local.size())
-  BoxLib::Error("mof_ordering_local invalid size");
+  amrex::Error("mof_ordering_local invalid size");
  if (nmat!=FSI_flag_temp.size())
-  BoxLib::Error("FSI_flag_temp invalid size");
+  amrex::Error("FSI_flag_temp invalid size");
  if (nmat<1)
-  BoxLib::Error("nmat out of range");
+  amrex::Error("nmat out of range");
 
  for (int im=0;im<nmat;im++) {
   mof_ordering_local[im]=0;
@@ -842,7 +840,7 @@ void mof_ordering_override(Array<int>& mof_ordering_local,
   } else if (FSI_flag_temp[im]==5) { // FSI rigid solid (PROB.F90)
    mof_ordering_local[im]=1;
   } else
-   BoxLib::Error("FSI_flag_temp invalid");
+   amrex::Error("FSI_flag_temp invalid");
 
  }
 
@@ -864,7 +862,7 @@ void mof_ordering_override(Array<int>& mof_ordering_local,
    } else if (FSI_flag_temp[im]==5) { // FSI rigid solid (PROB.F90)
     mof_ordering_local[im]=1;
    } else
-    BoxLib::Error("FSI_flag_temp invalid");
+    amrex::Error("FSI_flag_temp invalid");
 
   } // im
 
@@ -873,7 +871,7 @@ void mof_ordering_override(Array<int>& mof_ordering_local,
    if (axis_dir==1)
     mof_ordering_local[1]=nmat+1;  // make gas have low priority
    else if (axis_dir!=0)
-    BoxLib::Error("axis_dir invalid probtype=530");
+    amrex::Error("axis_dir invalid probtype=530");
   }
 
    // ns.mof_ordering overrides this.
@@ -899,12 +897,12 @@ void mof_ordering_override(Array<int>& mof_ordering_local,
    } else if (axis_dir==7) {  // nucleate boiling compressible
     mof_ordering_local[nmat-1]=1;
    } else
-    BoxLib::Error("axis_dir invalid probtype==55");
+    amrex::Error("axis_dir invalid probtype==55");
   }
 
   if (probtype==540) {
    if ((radblob4>0.0)&&(radblob3>0.0)) {
-    BoxLib::Error("conflict of parametrs for 540");
+    amrex::Error("conflict of parametrs for 540");
    } else if (radblob3>0.0) {  
     mof_ordering_local[1]=nmat+1;  // make gas have low priority
    } else if (radblob4>0.0) {
@@ -925,7 +923,7 @@ void mof_ordering_override(Array<int>& mof_ordering_local,
   // do nothing, order=0 (except if FSI_flag_temp[im]==1,2,4,5)
 
  } else
-  BoxLib::Error("mof_error_ordering invalid");
+  amrex::Error("mof_error_ordering invalid");
 
 } // end subroutine mof_ordering_override
 
@@ -1114,7 +1112,7 @@ void fortran_parameters() {
 
  pp.get("adv_dir",adv_dir);
  if ((adv_dir<1)||(adv_dir>2*BL_SPACEDIM+1))
-  BoxLib::Error("adv_dir invalid");
+  amrex::Error("adv_dir invalid");
 
  pp.get("adv_vel",adv_vel);
  pp.get("rgasinlet",rgasinlet);
@@ -1128,7 +1126,7 @@ void fortran_parameters() {
  int invert_solid_levelset=0;
  pp.query("invert_solid_levelset",invert_solid_levelset);
  if (!((invert_solid_levelset==1)||(invert_solid_levelset==0)))
-  BoxLib::Error("invert_solid_levelset invalid");
+  amrex::Error("invert_solid_levelset invalid");
 
  int num_species_var=0;
  int num_materials=0;
@@ -1143,40 +1141,40 @@ void fortran_parameters() {
 
  pp.get("num_materials",num_materials);
  if ((num_materials<2)||(num_materials>MAX_NUM_MATERIALS))
-  BoxLib::Error("num materials invalid");
+  amrex::Error("num materials invalid");
 
  int nmat=num_materials;
 
  pp.query("num_materials_vel",num_materials_vel);
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel==1 required");
+  amrex::Error("num_materials_vel==1 required");
 
  pp.query("num_materials_scalar_solve",num_materials_scalar_solve);
  if ((num_materials_scalar_solve!=1)&&(num_materials_scalar_solve!=nmat))
-  BoxLib::Error("num_materials_scalar_solve invalid");
+  amrex::Error("num_materials_scalar_solve invalid");
 
   // this is local variable, not static variable
  int MOFITERMAX=DEFAULT_MOFITERMAX;  
  pp.query("MOFITERMAX",MOFITERMAX);
  if ((MOFITERMAX<0)||(MOFITERMAX>50))
-  BoxLib::Error("mof iter max invalid in navierstokes");
+  amrex::Error("mof iter max invalid in navierstokes");
 
  int MOF_TURN_OFF_LS=0;  // this is local variable, not static variable
  pp.query("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
  if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
-  BoxLib::Error("mof turn off ls invalid in navierstokes");
+  amrex::Error("mof turn off ls invalid in navierstokes");
 
  int MOF_DEBUG_RECON=0;  // this is local variable, not static variable
  pp.query("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
  if ((MOF_DEBUG_RECON!=0)&&(MOF_DEBUG_RECON!=1)&&
      (MOF_DEBUG_RECON!=2))
-  BoxLib::Error("mof debug recon invalid in navierstokes");
+  amrex::Error("mof debug recon invalid in navierstokes");
 
  int fortran_max_num_materials=MAX_NUM_MATERIALS;
 
  pp.get("num_species_var",num_species_var);
  if (num_species_var<0)
-  BoxLib::Error("num species var invalid");
+  amrex::Error("num species var invalid");
 
  num_state_base=SpeciesVar;  // den,Temperature
  num_state_material=SpeciesVar;  // den,Temperature
@@ -1195,7 +1193,7 @@ void fortran_parameters() {
   } else if (elastic_viscosity_temp[im]==0.0) {
    // do nothing
   } else
-   BoxLib::Error("elastic_viscosity_temp invalid");
+   amrex::Error("elastic_viscosity_temp invalid");
  } // im=0..nmat-1 
 
  Array<Real> denconst_temp(nmat);
@@ -1331,28 +1329,28 @@ void fortran_parameters() {
    if ((FSI_flag_temp[im]!=1)&& // prescribed PROB.F90 rigid solid
        (FSI_flag_temp[im]!=2)&& // prescribed sci_clsvof.F90 rigid solid
        (FSI_flag_temp[im]!=4))  // FSI CTML solid
-    BoxLib::Error("FSI_flag_temp invalid");
+    amrex::Error("FSI_flag_temp invalid");
 
   } else if (material_type_temp[im]==0) {
 
    if ((FSI_flag_temp[im]!=0)&& // fluid
        (FSI_flag_temp[im]!=3)&& // ice
        (FSI_flag_temp[im]!=5))  // FSI PROB.F90 rigid solid.
-    BoxLib::Error("FSI_flag_temp invalid");
+    amrex::Error("FSI_flag_temp invalid");
 
   } else if ((material_type_temp[im]>0)&& 
              (material_type_temp[im]<=MAX_NUM_EOS)) {
 
    if (FSI_flag_temp[im]!=0) // fluid
-    BoxLib::Error("FSI_flag_temp invalid");
+    amrex::Error("FSI_flag_temp invalid");
 
   } else {
-   BoxLib::Error("material type invalid");
+   amrex::Error("material type invalid");
   }
  }
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid 9");
+  amrex::Error("num_state_base invalid 9");
 
  int rz_flag=0;
  if (CoordSys::IsRZ())
@@ -1362,7 +1360,7 @@ void fortran_parameters() {
  else if (CoordSys::IsCYLINDRICAL())
   rz_flag=3;
  else
-  BoxLib::Error("CoordSys bust 1");
+  amrex::Error("CoordSys bust 1");
 
  Real problox=Geometry::ProbLo(0);
  Real probloy=Geometry::ProbLo(1);
@@ -1379,7 +1377,7 @@ void fortran_parameters() {
  pp.query("prescribe_temperature_outflow",prescribe_temperature_outflow);
  if ((prescribe_temperature_outflow<0)||
      (prescribe_temperature_outflow>3))
-  BoxLib::Error("prescribe_temperature_outflow invalid (fortran_parameters)");
+  amrex::Error("prescribe_temperature_outflow invalid (fortran_parameters)");
 
  Real MUSHY_THICK=2.0;
  pp.query("MUSHY_THICK",MUSHY_THICK);
@@ -1391,7 +1389,7 @@ void fortran_parameters() {
  pp.query("gravity_dir",gravity_dir);
  pp.query("invert_gravity",invert_gravity);
  if ((gravity_dir<1)||(gravity_dir>BL_SPACEDIM))
-  BoxLib::Error("gravity dir invalid");
+  amrex::Error("gravity dir invalid");
 
  int n_sites=0;
  pp.query("n_sites",n_sites);
@@ -1408,7 +1406,7 @@ void fortran_parameters() {
  } else if (n_sites==0) {
   // do nothing
  } else
-  BoxLib::Error("n_sites invalid");
+  amrex::Error("n_sites invalid");
 
  int cpp_max_num_eos=MAX_NUM_EOS;
 
@@ -1494,7 +1492,7 @@ void fortran_parameters() {
  pp.query("mof_error_ordering",mof_error_ordering_local);
  if ((mof_error_ordering_local!=0)&&
      (mof_error_ordering_local!=1))
-  BoxLib::Error("mof_error_ordering_local invalid");
+  amrex::Error("mof_error_ordering_local invalid");
  Array<int> mof_ordering_local;
  mof_ordering_local.resize(nmat);
 
@@ -1509,7 +1507,7 @@ void fortran_parameters() {
  for (int i=0;i<nmat;i++) {
   if ((mof_ordering_local[i]<0)||
       (mof_ordering_local[i]>nmat+1))
-   BoxLib::Error("mof_ordering_local invalid");
+   amrex::Error("mof_ordering_local invalid");
  }
 
  int temp_POLYGON_LIST_MAX=1000;
@@ -1554,7 +1552,7 @@ NavierStokes::read_geometry ()
 
     if ((CoordSys::CoordType) coord == CoordSys::RZ)  
      if (BL_SPACEDIM==3)
-      BoxLib::Error("No RZ in 3d");
+      amrex::Error("No RZ in 3d");
 
     if (((CoordSys::CoordType) coord == CoordSys::RZ) && 
         (phys_bc.lo(0) != Symmetry)) {
@@ -1589,7 +1587,7 @@ NavierStokes::read_params ()
       xslice[i]=0.0;
      pp.queryarr("xslice",xslice,0,BL_SPACEDIM);
     } else
-     BoxLib::Error("slice_dir invalid");
+     amrex::Error("slice_dir invalid");
 
 
     if (ParallelDescriptor::IOProcessor()) {
@@ -1632,26 +1630,26 @@ NavierStokes::read_params ()
       }
      }
     } else if (nblocks!=0)
-     BoxLib::Error("nblocks out of range");
+     amrex::Error("nblocks out of range");
 
     num_materials=0;
     num_materials_vel=1;
     num_materials_scalar_solve=1;
     pp.get("num_materials",num_materials);
     if ((num_materials<2)||(num_materials>MAX_NUM_MATERIALS))
-     BoxLib::Error("num materials invalid");
+     amrex::Error("num materials invalid");
 
     int nmat=num_materials;
     int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
     pp.query("num_materials_vel",num_materials_vel);
     if (num_materials_vel!=1)
-     BoxLib::Error("num_materials_vel==1 required");
+     amrex::Error("num_materials_vel==1 required");
 
     pp.query("num_materials_scalar_solve",num_materials_scalar_solve);
     if ((num_materials_scalar_solve!=1)&&
         (num_materials_scalar_solve!=nmat))
-     BoxLib::Error("num_materials_scalar_solve invalid");
+     amrex::Error("num_materials_scalar_solve invalid");
 
     // blob_matrix,blob_RHS,blob_velocity,
     // blob_integral_momentum,blob_energy,
@@ -1694,7 +1692,7 @@ NavierStokes::read_params ()
      ns_max_grid_size.resize(cnt_max_grid_size);
      ppamr.getarr("max_grid_size",ns_max_grid_size,0,cnt_max_grid_size);
     } else
-     BoxLib::Error("cnt_max_grid_size invalid");
+     amrex::Error("cnt_max_grid_size invalid");
 
     int def_n_proper=1;
     ppamr.query("n_proper",def_n_proper);
@@ -1720,15 +1718,15 @@ NavierStokes::read_params ()
     pp.queryarr("radius_cutoff",radius_cutoff,0,nmat);
     for (int i=0;i<nmat;i++)
      if (radius_cutoff[i]<-1)
-      BoxLib::Error("radius_cutoff invalid");
+      amrex::Error("radius_cutoff invalid");
 
     if ((tecplot_max_level<0)||
         (tecplot_max_level>ns_max_level))
-     BoxLib::Error("tecplot_max_level invalid"); 
+     amrex::Error("tecplot_max_level invalid"); 
 
     if ((max_level_two_materials<0)||
         (max_level_two_materials>ns_max_level))
-     BoxLib::Error("max_level_two_materials invalid"); 
+     amrex::Error("max_level_two_materials invalid"); 
 
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "tecplot_max_level " << 
@@ -1774,7 +1772,7 @@ NavierStokes::read_params ()
       }
      }
     } else if (ncoarseblocks!=0)
-     BoxLib::Error("ncoarseblocks out of range");
+     amrex::Error("ncoarseblocks out of range");
      
     Array<int> lo_bc(BL_SPACEDIM);
     Array<int> hi_bc(BL_SPACEDIM);
@@ -1831,23 +1829,23 @@ NavierStokes::read_params ()
            (temperature_lo_bc[dir]!=Interior)) {
         std::cerr << "NavierStokes::variableSetUp:periodic in direction "
             << dir << " but low BC is not Interior\n";
-        BoxLib::Abort("NavierStokes::read_params()");
+        amrex::Abort("NavierStokes::read_params()");
        }
        if ((hi_bc[dir] != Interior)||
            (temperature_hi_bc[dir]!=Interior)) {
         std::cerr << "NavierStokes::variableSetUp:periodic in direction "
             << dir << " but high BC is not Interior\n";
-        BoxLib::Abort("NavierStokes::read_params()");
+        amrex::Abort("NavierStokes::read_params()");
        }
       } else if (! Geometry::isPeriodic(dir)) {
        local_all_periodic=0;
       } else
-       BoxLib::Error("Geometry::isPeriodic(dir) invalid"); 
+       amrex::Error("Geometry::isPeriodic(dir) invalid"); 
      } // dir=0..sdim-1
     } else if (!Geometry::isAnyPeriodic()) {
      // do nothing
     } else
-     BoxLib::Error("Geometry::isAnyPeriodic() invalid");
+     amrex::Error("Geometry::isAnyPeriodic() invalid");
 
     FORT_SET_PERIODIC_VAR(periodic_flag.dataPtr());
 
@@ -1857,13 +1855,13 @@ NavierStokes::read_params ()
           (temperature_lo_bc[dir]==Interior)) {
        std::cerr << "NavierStokes::variableSetUp:Interior bc in direction "
                  << dir << " but not defined as periodic\n";
-       BoxLib::Abort("NavierStokes::read_params()");
+       amrex::Abort("NavierStokes::read_params()");
       }
       if ((hi_bc[dir] == Interior)||
           (temperature_hi_bc[dir]==Interior)) {
        std::cerr << "NavierStokes::variableSetUp:Interior bc in direction "
                  << dir << " but not defined as periodic\n";
-       BoxLib::Abort("NavierStokes::read_params()");
+       amrex::Abort("NavierStokes::read_params()");
       }
      }
     }
@@ -1883,7 +1881,7 @@ NavierStokes::read_params ()
     //
     pp.get("cfl",cfl);
     if (cfl>0.9)
-     BoxLib::Warning("WARNING: cfl should be less than or equal to 0.9");
+     amrex::Warning("WARNING: cfl should be less than or equal to 0.9");
 
     pp.query("enable_spectral",enable_spectral);
 
@@ -1896,7 +1894,7 @@ NavierStokes::read_params ()
     } else if (enable_spectral==3) {
      viscous_enable_spectral=0;
     } else
-     BoxLib::Error("enable_spectral invalid");
+     amrex::Error("enable_spectral invalid");
 	
     projection_enable_spectral=enable_spectral;
 
@@ -1909,15 +1907,15 @@ NavierStokes::read_params ()
      if (local_all_periodic==1) {
       // do nothing
      } else if (local_all_periodic==0) {
-      BoxLib::Error("no slip BC not implemented for space order>2");
+      amrex::Error("no slip BC not implemented for space order>2");
      } else
-      BoxLib::Error("local_all_periodic invalid");
+      amrex::Error("local_all_periodic invalid");
 
     } else if ((viscous_enable_spectral==0)||  //2nd space, 1st time
 	       (viscous_enable_spectral==3)) { // 2nd order space, SEM time
      // do nothing
     } else
-     BoxLib::Error("viscous_enable_spectral invalid");
+     amrex::Error("viscous_enable_spectral invalid");
 
     pp.query("SEM_upwind",SEM_upwind);
     if (SEM_upwind==1) {
@@ -1925,7 +1923,7 @@ NavierStokes::read_params ()
     } else if (SEM_upwind==0) {
      // do nothing
     } else
-     BoxLib::Error("SEM_upwind invalid");
+     amrex::Error("SEM_upwind invalid");
 
     pp.query("SEM_advection_algorithm",SEM_advection_algorithm);
     if (SEM_advection_algorithm==1) {
@@ -1933,7 +1931,7 @@ NavierStokes::read_params ()
     } else if (SEM_advection_algorithm==0) {
      // do nothing
     } else
-     BoxLib::Error("SEM_advection_algorithm invalid");
+     amrex::Error("SEM_advection_algorithm invalid");
 
     pp.query("continuous_mof",continuous_mof);
     pp.query("VOF_reflux",VOF_reflux);
@@ -1951,25 +1949,25 @@ NavierStokes::read_params ()
 
     pp.query("min_velocity_for_dt",min_velocity_for_dt);
     if (min_velocity_for_dt<0.0)
-     BoxLib::Error("min_velocity_for_dt invalid");
+     amrex::Error("min_velocity_for_dt invalid");
 
     pp.query("fixed_dt_velocity",fixed_dt_velocity);
     pp.query("sum_interval",sum_interval);
 
     pp.query("profile_debug",profile_debug);
     if ((profile_debug!=0)&&(profile_debug!=1))
-     BoxLib::Error("profile_debug invalid");
+     amrex::Error("profile_debug invalid");
 
     pp.query("ns_tiling",ns_tiling);
     if (ns_tiling==true) {
-     BoxLib::Error("bug in code for tiling");
+     amrex::Error("bug in code for tiling");
     } else if (ns_tiling==false) {
      // do nothing
     } else
-     BoxLib::Error("ns_tiling invalid");
+     amrex::Error("ns_tiling invalid");
 
     if (thread_class::nthreads<1)
-     BoxLib::Error("thread_class::nthreads invalid ns init");
+     amrex::Error("thread_class::nthreads invalid ns init");
 
 
     MUSHY_THICK=2.0;
@@ -1980,17 +1978,17 @@ NavierStokes::read_params ()
     pp.query("terminal_velocity_dt",terminal_velocity_dt);
     pp.query("invert_gravity",invert_gravity);
     if ((gravity_dir<1)||(gravity_dir>BL_SPACEDIM))
-     BoxLib::Error("gravity dir invalid");
+     amrex::Error("gravity dir invalid");
     if ((terminal_velocity_dt<0)||
         (terminal_velocity_dt>1))
-     BoxLib::Error("terminal_velocity_dt invalid");
+     amrex::Error("terminal_velocity_dt invalid");
 
     pp.get("visc_coef",visc_coef);
 
     pp.query("include_viscous_heating",include_viscous_heating);
     if ((include_viscous_heating<0)||
         (include_viscous_heating>1))
-     BoxLib::Error("include_viscous_heating invalid");
+     amrex::Error("include_viscous_heating invalid");
    
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "local_plotfile_on_restart (NS) = " << 
@@ -2036,18 +2034,18 @@ NavierStokes::read_params ()
     pp.query("FD_curv_interp",FD_curv_interp);
     if ((FD_curv_interp!=0)&&
         (FD_curv_interp!=1))
-     BoxLib::Error("FD_curv_interp invalid");
+     amrex::Error("FD_curv_interp invalid");
 
     pp.query("FD_curv_select",FD_curv_select);
     if ((FD_curv_select!=0)&&
         (FD_curv_select!=1))
-     BoxLib::Error("FD_curv_select invalid");
+     amrex::Error("FD_curv_select invalid");
 
     custom_nucleation_model=0;
     pp.query("custom_nucleation_model",custom_nucleation_model);
     if ((custom_nucleation_model!=0)&&
         (custom_nucleation_model!=1))
-     BoxLib::Error("custom_nucleation_model invalid");
+     amrex::Error("custom_nucleation_model invalid");
 
     n_sites=0;
     pp.query("n_sites",n_sites);
@@ -2060,7 +2058,7 @@ NavierStokes::read_params ()
     } else if (n_sites==0) {
      // do nothing
     } else
-     BoxLib::Error("n_sites invalid");
+     amrex::Error("n_sites invalid");
    
     pp.get("denfact",denfact);
     pp.get("velfact",velfact);
@@ -2083,14 +2081,14 @@ NavierStokes::read_params ()
 
     if ((visual_tessellate_vfrac!=0)&&
         (visual_tessellate_vfrac!=1))
-     BoxLib::Error("visual_tessellate_vfrac invalid");
+     amrex::Error("visual_tessellate_vfrac invalid");
 
     if (visual_revolve<0) {
      std::cout << "visual_revolve: " << visual_revolve << '\n';
-     BoxLib::Error("visual_revolve invalid");
+     amrex::Error("visual_revolve invalid");
     }
     if ((visual_option<-2)||(visual_option>-1))
-     BoxLib::Error("visual_option invalid try -1 or -2");
+     amrex::Error("visual_option invalid try -1 or -2");
 
     if (BL_SPACEDIM==2) {
      adapt_quad_depth=2;
@@ -2101,18 +2099,18 @@ NavierStokes::read_params ()
      if ((probtype==28)||(probtype==29)||(probtype==31))
       adapt_quad_depth=3;
     } else
-     BoxLib::Error("dimension bust");
+     amrex::Error("dimension bust");
 
     pp.query("adapt_quad_depth",adapt_quad_depth);
 
     pp.query("invert_solid_levelset",invert_solid_levelset);
     if (!((invert_solid_levelset==1)||(invert_solid_levelset==0)))
-     BoxLib::Error("invert_solid_levelset invalid");
+     amrex::Error("invert_solid_levelset invalid");
 
     pp.query("law_of_the_wall",law_of_the_wall);
     if ((law_of_the_wall!=0)&&
         (law_of_the_wall!=1))
-     BoxLib::Error("law_of_the_wall invalid");
+     amrex::Error("law_of_the_wall invalid");
 
     FSI_flag.resize(nmat);
     FSI_refine_factor.resize(nmat);
@@ -2133,7 +2131,7 @@ NavierStokes::read_params ()
     pp.query("CTML_FSI_numsolids",CTML_FSI_numsolids);
     pp.query("CTML_force_model",CTML_force_model);
     if ((CTML_force_model!=0)&&(CTML_force_model!=1))
-     BoxLib::Error("CTML_force_model invalid");
+     amrex::Error("CTML_force_model invalid");
 
     int nparts=0;
     int CTML_FSI_numsolids_test=0;
@@ -2147,12 +2145,12 @@ NavierStokes::read_params ()
      } else if (ns_is_rigid(i)==0) {
       // do nothing
      } else
-      BoxLib::Error("ns_is_rigid invalid");
+      amrex::Error("ns_is_rigid invalid");
     }  // i=0..nmat-1
     im_solid_map.resize(nparts);
 
     if (CTML_FSI_numsolids!=CTML_FSI_numsolids_test)
-     BoxLib::Error("CTML_FSI_numsolids!=CTML_FSI_numsolids_test");
+     amrex::Error("CTML_FSI_numsolids!=CTML_FSI_numsolids_test");
 
     nparts=0;
     for (int i=0;i<nmat;i++) {
@@ -2162,10 +2160,10 @@ NavierStokes::read_params ()
      } else if (ns_is_rigid(i)==0) {
       // do nothing
      } else
-      BoxLib::Error("ns_is_rigid invalid");
+      amrex::Error("ns_is_rigid invalid");
     }  // i=0..nmat-1
     if (nparts!=im_solid_map.size())
-     BoxLib::Error("nparts!=im_solid_map.size()");
+     amrex::Error("nparts!=im_solid_map.size()");
 
     elastic_viscosity.resize(nmat);
     for (int i=0;i<nmat;i++) {
@@ -2180,7 +2178,7 @@ NavierStokes::read_params ()
      } else if (elastic_viscosity[i]==0.0) {
       // do nothing
      } else
-      BoxLib::Error("elastic_viscosity invalid");
+      amrex::Error("elastic_viscosity invalid");
     } // im=0..nmat-1 
     im_elastic_map.resize(num_materials_viscoelastic);
 
@@ -2192,7 +2190,7 @@ NavierStokes::read_params ()
      } else if (elastic_viscosity[i]==0.0) {
       // do nothing
      } else
-      BoxLib::Error("elastic_viscosity invalid");
+      amrex::Error("elastic_viscosity invalid");
     } // im=0..nmat-1 
 
     NUM_STATE_TYPE=DIV_Type+1;
@@ -2203,7 +2201,7 @@ NavierStokes::read_params ()
      Solid_State_Type=NUM_STATE_TYPE;
      NUM_STATE_TYPE++;
     } else
-     BoxLib::Error("nparts invalid");
+     amrex::Error("nparts invalid");
   
     if (num_materials_viscoelastic==0) {
      Tensor_Type=-1;
@@ -2212,21 +2210,21 @@ NavierStokes::read_params ()
      Tensor_Type=NUM_STATE_TYPE;
      NUM_STATE_TYPE++;
     } else
-     BoxLib::Error("num_materials_viscoelastic invalid");
+     amrex::Error("num_materials_viscoelastic invalid");
 
     for (int i=0;i<nmat;i++) {
      if (material_type[i]==0) {
       if (ns_is_rigid(i)!=0)
-       BoxLib::Error("ns_is_rigid invalid");
+       amrex::Error("ns_is_rigid invalid");
      } else if (material_type[i]==999) {
       if (ns_is_rigid(i)!=1)
-       BoxLib::Error("ns_is_rigid invalid");
+       amrex::Error("ns_is_rigid invalid");
      } else if ((material_type[i]>0)&&
                 (material_type[i]<=MAX_NUM_EOS)) {
       if (ns_is_rigid(i)!=0)
-       BoxLib::Error("ns_is_rigid invalid");
+       amrex::Error("ns_is_rigid invalid");
      } else
-      BoxLib::Error("material_type invalid");
+      amrex::Error("material_type invalid");
 
     } // i=0..nmat-1
 
@@ -2236,7 +2234,7 @@ NavierStokes::read_params ()
     pplp.query("smooth_type",smooth_type);
     pplp.query("bottom_smooth_type",bottom_smooth_type);
     if (smooth_type!=2)
-     BoxLib::Warning("WARNING: ILU smoother is best");
+     amrex::Warning("WARNING: ILU smoother is best");
     pplp.query("use_mg_precond_in_mglib",use_mg_precond_in_mglib);
 
     pplp.query("bottom_bottom_tol_factor",bottom_bottom_tol_factor);
@@ -2275,11 +2273,11 @@ NavierStokes::read_params ()
     if ((use_StewartLay==0)||(use_StewartLay==1)) {
      // do nothing
     } else
-     BoxLib::Error("use_StewartLay invalid");
+     amrex::Error("use_StewartLay invalid");
 
     pp.query("curv_stencil_height",curv_stencil_height);
     if (curv_stencil_height!=4)
-     BoxLib::Error("must have curv_stencil_height==4");
+     amrex::Error("must have curv_stencil_height==4");
 
 
     pp.query("bicgstab_max_num_outer_iter",bicgstab_max_num_outer_iter);
@@ -2294,13 +2292,13 @@ NavierStokes::read_params ()
         (EILE_flag==-1)) { // Weymouth and Yue
      // do nothing
     } else
-     BoxLib::Error("EILE_flag invalid");
+     amrex::Error("EILE_flag invalid");
 
     num_species_var=0;
 
     pp.get("num_species_var",num_species_var);
     if ((num_species_var<0)||(num_species_var>MAX_NUM_SPECIES))
-     BoxLib::Error("num species var invalid");
+     amrex::Error("num species var invalid");
 
     massface_index=facespecies_index+num_species_var;
     vofface_index=massface_index+2*num_materials;
@@ -2309,18 +2307,18 @@ NavierStokes::read_params ()
     MOFITERMAX=DEFAULT_MOFITERMAX;
     pp.query("MOFITERMAX",MOFITERMAX);
     if ((MOFITERMAX<0)||(MOFITERMAX>50))
-     BoxLib::Error("mof iter max invalid in navierstokes");
+     amrex::Error("mof iter max invalid in navierstokes");
 
     MOF_TURN_OFF_LS=0;  
     pp.query("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
     if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
-     BoxLib::Error("mof turn off ls invalid in navierstokes");
+     amrex::Error("mof turn off ls invalid in navierstokes");
 
     MOF_DEBUG_RECON=0; 
     pp.query("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
     if ((MOF_DEBUG_RECON!=0)&&(MOF_DEBUG_RECON!=1)&&
         (MOF_DEBUG_RECON!=2))
-     BoxLib::Error("mof debug recon invalid in navierstokes");
+     amrex::Error("mof debug recon invalid in navierstokes");
 
     int fortran_max_num_materials=MAX_NUM_MATERIALS;
 
@@ -2332,7 +2330,7 @@ NavierStokes::read_params ()
     if ((make_interface_incomp!=0)&&
         (make_interface_incomp!=1)&&
         (make_interface_incomp!=2))
-     BoxLib::Error("make_interface_incomp invalid");
+     amrex::Error("make_interface_incomp invalid");
 
     advection_order.resize(nmat);
     density_advection_order.resize(nmat);
@@ -2345,13 +2343,13 @@ NavierStokes::read_params ()
      density_advection_order[i]=advection_order[i];
      if (!((advection_order[i]==1)||
            (advection_order[i]==2)))
-      BoxLib::Error("advection_order invalid");
+      amrex::Error("advection_order invalid");
     }
     pp.queryarr("density_advection_order",density_advection_order,0,nmat);
     for (int i=0;i<nmat;i++) {
      if (!((density_advection_order[i]==1)||
            (density_advection_order[i]==2)))
-      BoxLib::Error("density_advection_order invalid");
+      amrex::Error("density_advection_order invalid");
     }
 
     stiffPINF.resize(nmat);
@@ -2522,16 +2520,16 @@ NavierStokes::read_params ()
 
     for (int i=0;i<nmat;i++) {
      if (density_ceiling[i]<=0.0) {
-      BoxLib::Error("density_ceiling[i]<=0.0");
+      amrex::Error("density_ceiling[i]<=0.0");
      } else if (density_ceiling[i]<=denconst[i]) {
-      BoxLib::Error("density_ceiling[i]<=denconst[i]");
+      amrex::Error("density_ceiling[i]<=denconst[i]");
      }
      if (density_floor[i]<0.0) {
-      BoxLib::Error("density_floor[i]<0.0");
+      amrex::Error("density_floor[i]<0.0");
      } else if (density_floor[i]==0.0) {
       // do nothing
      } else if (density_floor[i]>=denconst[i]) {
-      BoxLib::Error("density_floor[i]>=denconst[i]");
+      amrex::Error("density_floor[i]>=denconst[i]");
      }
      density_ceiling_expansion[i]=denconst[i];
      density_floor_expansion[i]=denconst[i];
@@ -2542,14 +2540,14 @@ NavierStokes::read_params ()
 
     for (int i=0;i<nmat;i++) {
      if (density_ceiling_expansion[i]<=0.0) {
-      BoxLib::Error("density_ceiling_expansion[i]<=0.0");
+      amrex::Error("density_ceiling_expansion[i]<=0.0");
      } else if (density_ceiling_expansion[i]<denconst[i]) {
-      BoxLib::Error("density_ceiling_expansion[i]<denconst[i]");
+      amrex::Error("density_ceiling_expansion[i]<denconst[i]");
      }
      if (density_floor_expansion[i]<=0.0) {
-      BoxLib::Error("density_floor_expansion[i]<=0.0");
+      amrex::Error("density_floor_expansion[i]<=0.0");
      } else if (density_floor_expansion[i]>denconst[i]) {
-      BoxLib::Error("density_floor_expansion[i]>denconst[i]");
+      amrex::Error("density_floor_expansion[i]>denconst[i]");
      }
     } // i=0..nmat-1
 
@@ -2621,7 +2619,7 @@ NavierStokes::read_params ()
     pp.query("initial_temperature_diffuse_duration",
      initial_temperature_diffuse_duration);
     if (initial_temperature_diffuse_duration<0.0)
-     BoxLib::Error("initial_temperature_diffuse_duration<0.0");
+     amrex::Error("initial_temperature_diffuse_duration<0.0");
 
     pp.getarr("viscconst",viscconst,0,nmat);
 
@@ -2702,7 +2700,7 @@ NavierStokes::read_params ()
    
     pp.query("solidheat_flag",solidheat_flag);
     if ((solidheat_flag<0)||(solidheat_flag>2))
-     BoxLib::Error("solidheat_flag invalid"); 
+     amrex::Error("solidheat_flag invalid"); 
  
     pp.queryarr("microlayer_substrate",microlayer_substrate,0,nmat);
     pp.queryarr("microlayer_angle",microlayer_angle,0,nmat);
@@ -2714,20 +2712,20 @@ NavierStokes::read_params ()
      microlayer_temperature_substrate,0,nmat);
     for (int i=0;i<nmat;i++) {
      if (microlayer_temperature_substrate[i]<0.0)
-      BoxLib::Error("microlayer_temperature_substrate[i]<0.0");
+      amrex::Error("microlayer_temperature_substrate[i]<0.0");
      if ((microlayer_substrate[i]<0)||
          (microlayer_substrate[i]>nmat))
-      BoxLib::Error("microlayer_substrate invalid");
+      amrex::Error("microlayer_substrate invalid");
      if ((microlayer_angle[i]<0.0)|| 
-         (microlayer_angle[i]>=Pi))
-      BoxLib::Error("microlayer_angle invalid");
+         (microlayer_angle[i]>=local_Pi))
+      amrex::Error("microlayer_angle invalid");
      if ((microlayer_size[i]<0.0)||
          (macrolayer_size[i]<microlayer_size[i]))
-      BoxLib::Error("microlayer_size invalid");
+      amrex::Error("microlayer_size invalid");
      if (max_contact_line_size[i]<0.0)
-      BoxLib::Error("max_contact_line_size invalid");
+      amrex::Error("max_contact_line_size invalid");
      if ((microlayer_size[i]>0.0)&&(solidheat_flag==0))
-      BoxLib::Error("cannot have microlayer_size>0.0&&solidheat_flag==0");
+      amrex::Error("cannot have microlayer_size>0.0&&solidheat_flag==0");
     }  // i=0..nmat-1
 
     pp.queryarr("nucleation_temp",nucleation_temp,0,2*nten);
@@ -2745,54 +2743,54 @@ NavierStokes::read_params ()
      if ((override_density[im]!=0)&&
          (override_density[im]!=1)&&
          (override_density[im]!=2))
-      BoxLib::Error("override_density invalid");
+      amrex::Error("override_density invalid");
      if (DrhoDT[im]>0.0)
-      BoxLib::Error("DrhoDT cannot be positive");
+      amrex::Error("DrhoDT cannot be positive");
      if ((DrhoDz[im]!=-1.0)&&(DrhoDz[im]<0.0))
-      BoxLib::Error("DrhoDz invalid"); 
+      amrex::Error("DrhoDz invalid"); 
 
      if (constant_viscosity==0) {
       // do nothing
      } else if (constant_viscosity==1) {
       if (fabs(viscconst[im]-viscconst[0])>1.0e-12)
-       BoxLib::Warning("variable visc but constant_viscosity==1");
+       amrex::Warning("variable visc but constant_viscosity==1");
      } else
-      BoxLib::Error("constant_viscosity invalid");
+      amrex::Error("constant_viscosity invalid");
 
      if (material_type[im]==999) {
       if (viscconst[im]<=0.0)
-       BoxLib::Error("solid cannot have 0 viscosity");
+       amrex::Error("solid cannot have 0 viscosity");
       if (ns_is_rigid(im)!=1)
-       BoxLib::Error("ns_is_rigid invalid");
+       amrex::Error("ns_is_rigid invalid");
      } else if (material_type[im]==0) {
       if (ns_is_rigid(im)!=0)
-       BoxLib::Error("ns_is_rigid invalid");
+       amrex::Error("ns_is_rigid invalid");
      } else if ((material_type[im]>0)&& 
                 (material_type[im]<=MAX_NUM_EOS)) {
       if (ns_is_rigid(im)!=0)
-       BoxLib::Error("ns_is_rigid invalid");
+       amrex::Error("ns_is_rigid invalid");
      } else {
-      BoxLib::Error("material type invalid");
+      amrex::Error("material type invalid");
      }
 
     }  // im=0, im<nmat
 
     if (num_state_base!=2)
-     BoxLib::Error("num_state_base invalid 10");
+     amrex::Error("num_state_base invalid 10");
 
     for (int i=0;i<nten;i++) {
      if ((freezing_model[i]<0)||(freezing_model[i]>5))
-      BoxLib::Error("freezing_model invalid in read_params (i)");
+      amrex::Error("freezing_model invalid in read_params (i)");
      if ((freezing_model[i+nten]<0)||(freezing_model[i+nten]>5))
-      BoxLib::Error("freezing_model invalid in read_params (i+nten)");
+      amrex::Error("freezing_model invalid in read_params (i+nten)");
      if ((distribute_from_target[i]<0)||(distribute_from_target[i]>1))
-      BoxLib::Error("distribute_from_target invalid in read_params (i)");
+      amrex::Error("distribute_from_target invalid in read_params (i)");
      if ((distribute_from_target[i+nten]<0)||(distribute_from_target[i+nten]>1))
-      BoxLib::Error("distribute_from_target invalid in read_params (i+nten)");
+      amrex::Error("distribute_from_target invalid in read_params (i+nten)");
      if (mass_fraction_id[i]<0)
-      BoxLib::Error("mass_fraction_id invalid in read_params (i)");
+      amrex::Error("mass_fraction_id invalid in read_params (i)");
      if (mass_fraction_id[i+nten]<0)
-      BoxLib::Error("mass_fraction_id invalid in read_params (i+nten)");
+      amrex::Error("mass_fraction_id invalid in read_params (i+nten)");
     }  // i=0..nten-1
 
     shock_timestep.resize(nmat);
@@ -2805,13 +2803,13 @@ NavierStokes::read_params ()
     for (int i=0;i<nmat;i++) {
      if (!((shock_timestep[i]==1)||(shock_timestep[i]==0)||
            (shock_timestep[i]==2)))
-      BoxLib::Error("shock_timestep invalid");
+      amrex::Error("shock_timestep invalid");
 
      if (shock_timestep[i]==1)
       all_advective=0;
     }
     if ((cfl>1.0)&&(all_advective==1))
-     BoxLib::Error("cfl should be less than or equal to 1");
+     amrex::Error("cfl should be less than or equal to 1");
 
     projection_pressure_scale=1.0;
 
@@ -2821,7 +2819,7 @@ NavierStokes::read_params ()
 
     pp.query("projection_pressure_scale",projection_pressure_scale);
     if (projection_pressure_scale<=0.0)
-     BoxLib::Error("projection pressure scale invalid");
+     amrex::Error("projection pressure scale invalid");
 
     projection_velocity_scale=sqrt(projection_pressure_scale);
 
@@ -2831,7 +2829,7 @@ NavierStokes::read_params ()
     } else if (some_materials_compressible()==0) {
      // do nothing
     } else {
-     BoxLib::Error("some_materials_compressible invalid");
+     amrex::Error("some_materials_compressible invalid");
     }
     pp.query("num_divu_outer_sweeps",num_divu_outer_sweeps);
      
@@ -2844,14 +2842,14 @@ NavierStokes::read_params ()
 	 (prescribed_solid_scale[i]<0.5)) {
       // do nothing
      } else
-      BoxLib::Error("prescribed_solid_scale[i] out of range");
+      amrex::Error("prescribed_solid_scale[i] out of range");
     }
     pp.query("prescribed_solid_method",prescribed_solid_method);
     pp.query("min_prescribed_opt_iter",min_prescribed_opt_iter);
 
     pp.query("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
-     BoxLib::Error("post_init_pressure_solve out of range");
+     amrex::Error("post_init_pressure_solve out of range");
 
     pp.query("solvability_projection",solvability_projection);
 
@@ -2861,30 +2859,30 @@ NavierStokes::read_params ()
      if (dual_time_activate==0) {
       // do nothing
      } else if (dual_time_activate==1) {
-      BoxLib::Error("cant have dual time stepping and solvability projection");
+      amrex::Error("cant have dual time stepping and solvability projection");
      } else
-      BoxLib::Error("dual_time_activate invalid");
+      amrex::Error("dual_time_activate invalid");
     } else
-     BoxLib::Error("solvability_projection invalid");
+     amrex::Error("solvability_projection invalid");
 
     pp.query("use_lsa",use_lsa);
     if ((use_lsa<0)||(use_lsa>1))
-     BoxLib::Error("use_lsa out of range");
+     amrex::Error("use_lsa out of range");
     pp.query("Uref",Uref);
     pp.query("Lref",Lref);
     if (Uref<0.0)
-     BoxLib::Error("Uref invalid");
+     amrex::Error("Uref invalid");
     if (Lref<0.0)
-     BoxLib::Error("Lref invalid");
+     amrex::Error("Lref invalid");
 
     pp.query("pgrad_dt_factor",pgrad_dt_factor);
     if (pgrad_dt_factor<1.0)
-     BoxLib::Error("pgrad_dt_factor too small");
+     amrex::Error("pgrad_dt_factor too small");
 
     pp.query("pressure_select_criterion",pressure_select_criterion);
     if ((pressure_select_criterion<0)||
         (pressure_select_criterion>2))
-     BoxLib::Error("pressure_select_criterion invalid");
+     amrex::Error("pressure_select_criterion invalid");
 
     temperature_primitive_variable.resize(nmat);
     elastic_time.resize(nmat);
@@ -2901,21 +2899,21 @@ NavierStokes::read_params ()
     if ((face_flag==0)||(face_flag==1)) {
      // do nothing
     } else
-     BoxLib::Error("face_flag invalid 1");
+     amrex::Error("face_flag invalid 1");
 
     pp.query("disable_advection",disable_advection);
 
     if ((disable_advection==0)||(disable_advection==1)) {
      // do nothing
     } else
-     BoxLib::Error("disable_advection invalid 1");
+     amrex::Error("disable_advection invalid 1");
 
     pp.query("disable_pressure_solve",disable_pressure_solve);
 
     if ((disable_pressure_solve==0)||(disable_pressure_solve==1)) {
      // do nothing
     } else
-     BoxLib::Error("disable_pressure_solve invalid 1");
+     amrex::Error("disable_pressure_solve invalid 1");
 
     for (int i=0;i<nmat;i++) {
      temperature_primitive_variable[i]=0;
@@ -2940,7 +2938,7 @@ NavierStokes::read_params ()
      } else if (material_type[i]>0) {
       // do nothing
      } else {
-      BoxLib::Error("parameter bust");
+      amrex::Error("parameter bust");
      }
 
      elastic_time[i]=0.0;
@@ -2960,19 +2958,19 @@ NavierStokes::read_params ()
 
      if (temperature_primitive_variable[i]==0) {
       if (ns_is_rigid(i)==1) {
-       BoxLib::Error("make temperature_primitive_variable=1 for solids");
+       amrex::Error("make temperature_primitive_variable=1 for solids");
       } else if (is_ice_matC(i)==1) {
-       BoxLib::Error("make temperature_primitive_variable=1 for ice");
+       amrex::Error("make temperature_primitive_variable=1 for ice");
       } else if (is_FSI_rigid_matC(i)==1) {
-       BoxLib::Error("make temperature_primitive_variable=1 for FSI_rigid");
+       amrex::Error("make temperature_primitive_variable=1 for FSI_rigid");
       } else if (CTML_FSI_matC(i)==1) {
-       BoxLib::Error("make temperature_primitive_variable=1 for CTML");
+       amrex::Error("make temperature_primitive_variable=1 for CTML");
       } else if (visc_coef*viscconst[i]>0.0) {
-       BoxLib::Error("make temperature_primitive_variable=1 for visc. fluids");
+       amrex::Error("make temperature_primitive_variable=1 for visc. fluids");
       } else if (material_type[i]==0) {
-       BoxLib::Error("make temperature_primitive_variable=1 for incomp fluids");
+       amrex::Error("make temperature_primitive_variable=1 for incomp fluids");
       } else if (material_type[i]==999) {
-       BoxLib::Error("make temperature_primitive_variable=1 for solids");
+       amrex::Error("make temperature_primitive_variable=1 for solids");
       } else if (ns_is_rigid(i)==0) {
        // do nothing
       } else if (visc_coef*viscconst[i]==0.0) {
@@ -2980,7 +2978,7 @@ NavierStokes::read_params ()
       } else if (material_type[i]>0) {
        // do nothing
       } else {
-       BoxLib::Error("parameter bust");
+       amrex::Error("parameter bust");
       }
      } else if (temperature_primitive_variable[i]==1) {
       if ((ns_is_rigid(i)==0)&& 
@@ -2990,10 +2988,10 @@ NavierStokes::read_params ()
           (visc_coef*viscconst[i]==0)&& 
           (material_type[i]>=1)&&
           (material_type[i]<=MAX_NUM_EOS)) {
-       BoxLib::Error("make temperature_primitive_variable=1 for inv gases");
+       amrex::Error("make temperature_primitive_variable=1 for inv gases");
       }
      } else {
-      BoxLib::Error("temperature_primitive_variable[i] invalid");
+      amrex::Error("temperature_primitive_variable[i] invalid");
      }
 
     }  // i=0..nmat-1
@@ -3014,28 +3012,28 @@ NavierStokes::read_params ()
     for (int i=0;i<nmat;i++) {
 
      if (Carreau_n[i]>1.0)
-      BoxLib::Error("Carreau_n[i] invalid");
+      amrex::Error("Carreau_n[i] invalid");
      if (Carreau_mu_inf[i]<0.0)
-      BoxLib::Error("Carreau_mu_inf[i] invalid");
+      amrex::Error("Carreau_mu_inf[i] invalid");
 
      if (viscosity_state_model[i]<0)
-      BoxLib::Error("viscosity state model invalid");
+      amrex::Error("viscosity state model invalid");
 
      if ((viscoelastic_model[i]>=0)&&(viscoelastic_model[i]<=2)) {
       // do nothing
      } else
-      BoxLib::Error("viscoelastic_model invalid");
+      amrex::Error("viscoelastic_model invalid");
 
      if (les_model[i]<0)
-      BoxLib::Error("les model invalid");
+      amrex::Error("les model invalid");
 
      if ((elastic_time[i]<0.0)||(elastic_viscosity[i]<0.0))
-      BoxLib::Error("elastic_time/elastic_viscosity invalid read_params");
+      amrex::Error("elastic_time/elastic_viscosity invalid read_params");
      if (polymer_factor[i]<0.0)
-      BoxLib::Error("polymer_factor invalid");
+      amrex::Error("polymer_factor invalid");
 
      if ((Carreau_beta[i]!=0.0)&&(visc_coef==0.0))
-      BoxLib::Error("Cannot have Carreau_beta!=0 and visc_coef==0 ");
+      amrex::Error("Cannot have Carreau_beta!=0 and visc_coef==0 ");
 
       // if first material, Carreau_beta==0 for first material,
       //  probtype==2, axis_dir>0, then 
@@ -3090,7 +3088,7 @@ NavierStokes::read_params ()
      if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
 
       if (visc_coef<=0.0)
-       BoxLib::Error("cannot have no viscosity if viscoelastic");
+       amrex::Error("cannot have no viscosity if viscoelastic");
 
       if (ParallelDescriptor::IOProcessor()) {
        std::cout << "for material " << i << '\n';
@@ -3113,12 +3111,12 @@ NavierStokes::read_params ()
      } else if (num_materials_viscoelastic==0) {
       // do nothing
      } else
-      BoxLib::Error("num_materials_viscoelastic  invalid");
+      amrex::Error("num_materials_viscoelastic  invalid");
 
     } // i=0..nmat-1
 
     if ((face_flag<0)||(face_flag>1))
-     BoxLib::Error("face_flag invalid 2");
+     amrex::Error("face_flag invalid 2");
 
     pp.query("wait_time",wait_time);
 
@@ -3131,7 +3129,7 @@ NavierStokes::read_params ()
     ParmParse ppmac("mac");
     pp.query( "viscous_maxiter",viscous_maxiter);
     if ((viscous_maxiter<1)||(viscous_maxiter>2)) 
-     BoxLib::Error("viscous_maxiter should be 1 or 2");
+     amrex::Error("viscous_maxiter should be 1 or 2");
 
     ppmac.query( "mac_abs_tol",mac_abs_tol);
     ppmac.query( "visc_abs_tol",visc_abs_tol);
@@ -3141,11 +3139,11 @@ NavierStokes::read_params ()
     pp.query( "diffusion_minimum_relative_error",
       diffusion_minimum_relative_error);
     if (mac_abs_tol<=0.0)
-     BoxLib::Error("mac_abs_tol must be positive");
+     amrex::Error("mac_abs_tol must be positive");
     if (visc_abs_tol<=0.0)
-     BoxLib::Error("visc_abs_tol must be positive");
+     amrex::Error("visc_abs_tol must be positive");
     if (thermal_abs_tol<=0.0)
-     BoxLib::Error("thermal_abs_tol must be positive");
+     amrex::Error("thermal_abs_tol must be positive");
 
     extra_circle_parameters(
        xblob2,yblob2,zblob2,radblob2,
@@ -3230,39 +3228,39 @@ NavierStokes::read_params ()
 
     pp.query("initial_project_cycles",initial_project_cycles);
     if (initial_project_cycles<1)
-     BoxLib::Error("must do at least 1 jacobi sweep at the beginning");
+     amrex::Error("must do at least 1 jacobi sweep at the beginning");
     initial_viscosity_cycles=initial_project_cycles;
     pp.query("initial_viscosity_cycles",initial_viscosity_cycles);
     if (initial_viscosity_cycles<1)
-     BoxLib::Error("must do at least 1 jacobi sweep at the beginning (visc)");
+     amrex::Error("must do at least 1 jacobi sweep at the beginning (visc)");
     initial_thermal_cycles=initial_viscosity_cycles;
     pp.query("initial_thermal_cycles",initial_thermal_cycles);
     if (initial_thermal_cycles<1)
-     BoxLib::Error("must do at least 1 jacobi sweep at the beginning (therm)");
+     amrex::Error("must do at least 1 jacobi sweep at the beginning (therm)");
 
     if ((project_solver_type>=0)&&(project_solver_type<=2)) {
      // do nothing
     } else
-     BoxLib::Error("project_solver_type invalid");
+     amrex::Error("project_solver_type invalid");
 
     prescribe_temperature_outflow=0;
     pp.query("prescribe_temperature_outflow",prescribe_temperature_outflow);
     if ((prescribe_temperature_outflow<0)||
         (prescribe_temperature_outflow>3))
-     BoxLib::Error("prescribe_temperature_outflow invalid");
+     amrex::Error("prescribe_temperature_outflow invalid");
 
     pp.query("diffusionface_flag",diffusionface_flag);
     if ((diffusionface_flag<0)||(diffusionface_flag>1))
-     BoxLib::Error("diffusionface_flag invalid"); 
+     amrex::Error("diffusionface_flag invalid"); 
 
     pp.query("elasticface_flag",elasticface_flag);
     if ((elasticface_flag<0)||(elasticface_flag>1))
-     BoxLib::Error("elasticface_flag invalid"); 
+     amrex::Error("elasticface_flag invalid"); 
 
     pp.query("temperatureface_flag",temperatureface_flag);
     if ((temperatureface_flag!=0)&&
         (temperatureface_flag!=1))
-     BoxLib::Error("temperatureface_flag invalid"); 
+     amrex::Error("temperatureface_flag invalid"); 
 
     is_phasechange=0;
     is_cavitation=0;
@@ -3274,7 +3272,7 @@ NavierStokes::read_params ()
      } else if ((ispec>=1)&&(ispec<=num_species_var)) {
       is_cavitation_mixture_model=1;
      } else
-      BoxLib::Error("ispec invalid");
+      amrex::Error("ispec invalid");
     }
     for (int i=0;i<2*nten;i++) {
      if ((nucleation_pressure[i]!=0.0)&&
@@ -3287,15 +3285,15 @@ NavierStokes::read_params ()
       if ((freezing_model[i]==0)||   // Stefan model for phase change
           (freezing_model[i]==5)) {  // Stefan model for evap/cond.
        if (temperatureface_flag!=0)
-        BoxLib::Error("must have temperatureface_flag==0");
+        amrex::Error("must have temperatureface_flag==0");
       } else if ((freezing_model[i]==1)||
                  (freezing_model[i]==2)||  // hydrate
                  (freezing_model[i]==3)||
                  (freezing_model[i]==4)) { // Tannasawa model
        if (temperatureface_flag!=1)
-        BoxLib::Error("must have temperatureface_flag==1");
+        amrex::Error("must have temperatureface_flag==1");
       } else
-       BoxLib::Error("freezing_model[i] invalid");
+       amrex::Error("freezing_model[i] invalid");
 
      } // latent_heat<>0
     }  // i=0;i<2*nten
@@ -3311,11 +3309,11 @@ NavierStokes::read_params ()
      for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
       for (int ireverse=0;ireverse<=1;ireverse++) {
        if ((im>nmat)||(im_opp>nmat))
-        BoxLib::Error("im or im_opp bust 200cpp");
+        amrex::Error("im or im_opp bust 200cpp");
        int iten;
        get_iten_cpp(im,im_opp,iten,nmat);
        if ((iten<1)||(iten>nten))
-        BoxLib::Error("iten invalid");
+        amrex::Error("iten invalid");
        int im_source=im;
        int im_dest=im_opp;
        if (ireverse==1) {
@@ -3330,13 +3328,13 @@ NavierStokes::read_params ()
         if (LL!=0.0) {
          int massfrac_id=mass_fraction_id[indexEXP];
          if ((massfrac_id<1)||(massfrac_id>num_species_var))
-          BoxLib::Error("massfrac_id invalid");
+          amrex::Error("massfrac_id invalid");
          if (LL>0.0)  //evaporation
           spec_material_id[massfrac_id-1]=im_source;
          else if (LL<0.0)  // condensation
           spec_material_id[massfrac_id-1]=im_dest;
          else
-          BoxLib::Error("LL invalid");
+          amrex::Error("LL invalid");
         } // LL!=0.0
        } // if (freezing_model[indexEXP]==5)
       } // ireverse
@@ -3358,41 +3356,41 @@ NavierStokes::read_params ()
      else if (is_FSI_rigid_matC(i)==1) // FSI rigid solid
       truncate_volume_fractions[i]=0;
      else
-      BoxLib::Error("FSI_flag invalid");
+      amrex::Error("FSI_flag invalid");
     }
 
     pp.queryarr("truncate_volume_fractions",truncate_volume_fractions,0,nmat);
     for (int i=0;i<nmat;i++) {
      if ((truncate_volume_fractions[i]<0)||
          (truncate_volume_fractions[i]>1))
-      BoxLib::Error("truncate_volume_fractions invalid");
+      amrex::Error("truncate_volume_fractions invalid");
     }
 
     pp.query("truncate_thickness",truncate_thickness);
     if (truncate_thickness<1.0)
-     BoxLib::Error("truncate_thickness too small");
+     amrex::Error("truncate_thickness too small");
 
     pp.query("normal_probe_size",normal_probe_size);
     if (normal_probe_size!=1)
-     BoxLib::Error("normal_probe_size invalid");
+     amrex::Error("normal_probe_size invalid");
    
     pp.query("ngrow_distance",ngrow_distance);
     if (ngrow_distance!=4)
-     BoxLib::Error("ngrow_distance invalid");
+     amrex::Error("ngrow_distance invalid");
 
     pp.query("ngrowFSI",ngrowFSI);
     if (ngrowFSI!=3)
-     BoxLib::Error("ngrowFSI invalid");
+     amrex::Error("ngrowFSI invalid");
 
     pp.query("ngrow_expansion",ngrow_expansion);
     if (ngrow_expansion!=2)
-     BoxLib::Error("ngrow_expansion invalid");
+     amrex::Error("ngrow_expansion invalid");
 
     mof_error_ordering=0; 
     pp.query("mof_error_ordering",mof_error_ordering);
     if ((mof_error_ordering!=0)&&
         (mof_error_ordering!=1))
-     BoxLib::Error("mof_error_ordering invalid");
+     amrex::Error("mof_error_ordering invalid");
     mof_ordering.resize(nmat);
 
     mof_ordering_override(mof_ordering,
@@ -3406,27 +3404,27 @@ NavierStokes::read_params ()
     for (int i=0;i<nmat;i++) {
      if ((mof_ordering[i]<0)||
          (mof_ordering[i]>nmat+1))
-      BoxLib::Error("mof_ordering invalid");
+      amrex::Error("mof_ordering invalid");
     }
 
 
     for (int i=0;i<nmat;i++) {
 
        if (visc_coef*viscconst[i]<0.0) {
-        BoxLib::Error("viscosity coefficients invalid");
+        amrex::Error("viscosity coefficients invalid");
        } else if (visc_coef*viscconst[i]==0.0) {
         // do nothing
        } else if (visc_coef*viscconst[i]>0.0) {
         // do nothing
        } else
-        BoxLib::Error("viscconst bust");
+        amrex::Error("viscconst bust");
  
        if (heatviscconst[i]==0.0) {
         // do nothing
        } else if (heatviscconst[i]>0.0) {
         // do nothing
        } else
-        BoxLib::Error("heatviscconst invalid");
+        amrex::Error("heatviscconst invalid");
 
        for (int imspec=0;imspec<num_species_var;imspec++) {
         if (speciesviscconst[imspec*nmat+i]==0.0) {
@@ -3434,7 +3432,7 @@ NavierStokes::read_params ()
         } else if (speciesviscconst[imspec*nmat+i]>0.0) {
          // do nothing
         } else
-         BoxLib::Error("speciesviscconst invalid");
+         amrex::Error("speciesviscconst invalid");
        } // imspec
 
     } // i=0..nmat-1
@@ -3781,7 +3779,7 @@ NavierStokes::read_params ()
      } else if (local_strategy==DistributionMapping::RRSFC) {
       std::cout << "DistributionMapping::strategy=RRSFC\n";
      } else
-      BoxLib::Error("local_strategy invalid");
+      amrex::Error("local_strategy invalid");
 
      std::cout << "bicgstab_max_num_outer_iter " << 
        bicgstab_max_num_outer_iter << '\n';
@@ -3841,26 +3839,26 @@ NavierStokes::read_params ()
 
     if (some_materials_compressible()==1) {
      if (num_divu_outer_sweeps<2)
-      BoxLib::Warning("WARNING:divu_outer_sweeps>=2 for comp materials");
+      amrex::Warning("WARNING:divu_outer_sweeps>=2 for comp materials");
      if (face_flag==0) {
       if ((make_interface_incomp==0)||
           (make_interface_incomp==1)||
           (make_interface_incomp==2)) {
        // do nothing
       } else 
-       BoxLib::Error("make_interface_incomp invalid 1");
+       amrex::Error("make_interface_incomp invalid 1");
      } else if (face_flag==1) {
       if ((make_interface_incomp==1)||
           (make_interface_incomp==2)) {
        // do nothing
       } else
-       BoxLib::Error("make_interface_incomp invalid 2");
+       amrex::Error("make_interface_incomp invalid 2");
      } else
-      BoxLib::Error("face_flag invalid");
+      amrex::Error("face_flag invalid");
     } else if (some_materials_compressible()==0) {
      // do nothing
     } else
-     BoxLib::Error("compressible flag bust");
+     amrex::Error("compressible flag bust");
 
 } // subroutine read_params()
 
@@ -3891,7 +3889,7 @@ NavierStokes::~NavierStokes ()
      if (localMF_grow[i]>=0) {
       std::cout << "i= " << i << " localMF_grow= " <<
        localMF_grow[i] << '\n';
-      BoxLib::Error("forgot to delete localMF variables");
+      amrex::Error("forgot to delete localMF variables");
      }
 
 }
@@ -3899,7 +3897,7 @@ NavierStokes::~NavierStokes ()
 int NavierStokes::ns_is_rigid(int im) {
 
  if ((im<0)|(im>=num_materials))
-  BoxLib::Error("im invalid50");
+  amrex::Error("im invalid50");
 
  int local_flag=-1;
 
@@ -3912,7 +3910,7 @@ int NavierStokes::ns_is_rigid(int im) {
             (FSI_flag[im]==4)) { // FSI CTML solid
   local_flag=1;
  } else
-  BoxLib::Error("FSI_flag invalid");
+  amrex::Error("FSI_flag invalid");
 
  return local_flag;
 
@@ -3939,14 +3937,14 @@ NavierStokes::get_mm_scomp_solver(
   nsolve=1;
   nlist=1;
   if (num_materials_combine!=num_materials_vel)
-   BoxLib::Error("num_materials_combine invalid");
+   amrex::Error("num_materials_combine invalid");
  } else if ((project_option==10)||  // divu pressure
             (project_option==11)||  // FSI_material_exists (2nd project)
 	    (project_option==12)) { // pressure extension
   nsolve=1;
   nlist=1;
   if (num_materials_combine!=num_materials_vel)
-   BoxLib::Error("num_materials_combine invalid");
+   amrex::Error("num_materials_combine invalid");
  } else if (project_option==2) { // temperature
   nsolve=1;
   nlist=num_materials_combine;
@@ -3958,16 +3956,16 @@ NavierStokes::get_mm_scomp_solver(
   nsolve=BL_SPACEDIM;
   nlist=1;
   if (num_materials_combine!=num_materials_vel)
-   BoxLib::Error("num_materials_combine invalid");
+   amrex::Error("num_materials_combine invalid");
  } else
-  BoxLib::Error("project_option invalid1");
+  amrex::Error("project_option invalid1");
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_combine!=1)&&
      (num_materials_combine!=nmat)) 
-  BoxLib::Error("num_materials_combine invalid");
+  amrex::Error("num_materials_combine invalid");
 
  scomp.resize(nlist);
  ncomp.resize(nlist);
@@ -4018,14 +4016,14 @@ NavierStokes::get_mm_scomp_solver(
   state_index=State_Type;
 
  } else
-  BoxLib::Error("project_option invalid get_mm_scomp_solver");
+  amrex::Error("project_option invalid get_mm_scomp_solver");
 
  ncomp_check=0;
  for (int im=0;im<nlist;im++)
   ncomp_check+=ncomp[im];
 
  if (ncomp_check!=nsolveMM)
-  BoxLib::Error("ncomp_check invalid");
+  amrex::Error("ncomp_check invalid");
 
 } // get_mm_scomp_solver
 
@@ -4034,12 +4032,12 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level corrupt");
+  amrex::Error("level corrupt");
 
  int nmat=num_materials;
 
  if ((nsolve!=1)&&(nsolve!=BL_SPACEDIM))
-  BoxLib::Error("nsolve invalid36");
+  amrex::Error("nsolve invalid36");
 
  int num_materials_face=num_materials_vel;
 
@@ -4051,20 +4049,20 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
      (project_option==12)||
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
-   BoxLib::Error("num_materials_face invalid");
+   amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
              (project_option<100+num_species_var))) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  BoxLib::Error("project_option invalid2");
+  amrex::Error("project_option invalid2");
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_face!=1)&&
      (num_materials_face!=nmat))
-  BoxLib::Error("num_materials_face invalid");
+  amrex::Error("num_materials_face invalid");
 
  int nsolveMM_FACE=nsolve*num_materials_face;
  if (num_materials_face==1) {
@@ -4072,11 +4070,11 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
  } else if (num_materials_face==nmat) { 
   nsolveMM_FACE*=2;
  } else
-  BoxLib::Error("num_materials_face invalid");
+  amrex::Error("num_materials_face invalid");
 
  for (int dir=0;dir<BL_SPACEDIM;dir++) {
   if (localMF[idx+dir]->nComp()!=nsolveMM_FACE)
-   BoxLib::Error("localMF[idx+dir] has invalid ncomp");
+   amrex::Error("localMF[idx+dir] has invalid ncomp");
   setVal_localMF(idx+dir,0.0,0,nsolveMM_FACE,0);
  } // dir
 
@@ -4087,11 +4085,11 @@ void
 NavierStokes::zero_independent_variable(int project_option,int nsolve) {
 
  if (num_state_base!=2) 
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  if ((nsolve!=1)&&
      (nsolve!=BL_SPACEDIM))
-  BoxLib::Error("nsolve invalid36");
+  amrex::Error("nsolve invalid36");
 
  int nmat=num_materials;
 
@@ -4105,26 +4103,26 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
      (project_option==12)||
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
-   BoxLib::Error("num_materials_face invalid");
+   amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
              (project_option<100+num_species_var))) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  BoxLib::Error("project_option invalid3");
+  amrex::Error("project_option invalid3");
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_face!=1)&&
      (num_materials_face!=nmat))
-  BoxLib::Error("num_materials_face invalid");
+  amrex::Error("num_materials_face invalid");
 
  int nsolveMM=nsolve*num_materials_face;
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level corrupt");
+  amrex::Error("level corrupt");
 
  Array<int> scomp;
  Array<int> ncomp;
@@ -4139,7 +4137,7 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
    ncomp_check);
 
  if (ncomp_check!=nsolveMM)
-  BoxLib::Error("nsolveMM invalid 2732");
+  amrex::Error("nsolveMM invalid 2732");
 
  MultiFab& S_new = get_new_data(state_index,slab_step+1);
  for (int icomp=0;icomp<scomp.size();icomp++) 
@@ -4172,7 +4170,7 @@ NavierStokes::setTimeLevel (Real time,Real& dt)
 {
  int nstate=state.size();
  if (nstate!=NUM_STATE_TYPE)
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
  for (int k=0;k<nstate;k++) 
   state[k].setTimeLevel(time,dt);
 }
@@ -4181,7 +4179,7 @@ NavierStokes::setTimeLevel (Real time,Real& dt)
 void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
 
  if ((idxMF<0)||(idxMF>=MAX_NUM_LOCAL_MF))
-  BoxLib::Error("idxMF invalid");
+  amrex::Error("idxMF invalid");
 
  if (1==0) {
   std::cout << "full check of localMF integrity \n";
@@ -4190,7 +4188,7 @@ void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
    if (localMF_grow[i]>=0) {
     MultiFab* mf_temp=localMF[i];
     if (! mf_temp->ok()) {
-     BoxLib::Error("! mf_temp->ok()");
+     amrex::Error("! mf_temp->ok()");
     }
    } else if (localMF_grow[i]==-1) {
     if (localMF[i]==0) {
@@ -4198,10 +4196,10 @@ void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
     } else {
      std::cout << "level = " << level << '\n';
      std::cout << "i = " << i << '\n';
-     BoxLib::Error("localMF[i] invalid");
+     amrex::Error("localMF[i] invalid");
     }
    } else {
-    BoxLib::Error("localMF_grow[i] invalid");
+    amrex::Error("localMF_grow[i] invalid");
    }
   } // i=0 ... MAX_NUM_LOCAL_MF-1   
  } // full check of localMF integrity
@@ -4219,7 +4217,7 @@ void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
  if (! mf->ok()) {
   std::cout << "counter= " << counter << '\n';
   std::cout << "idxMF= " << idxMF << '\n';
-  BoxLib::Error("mf not ok");
+  amrex::Error("mf not ok");
  } else if ((mf->nGrow()<ngrow)||(mfgrow<ngrow)) {
   std::cout << "counter= " << counter << '\n';
   std::cout << "idxMF= " << idxMF << '\n';
@@ -4227,7 +4225,7 @@ void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
    ngrow << '\n';
   std::cout << "mfgrow= " << mfgrow << " expected grow= " <<
    ngrow << '\n';
-  BoxLib::Error("grow invalid in debug_ngrow");
+  amrex::Error("grow invalid in debug_ngrow");
  }
 
 } // subroutine debug_ngrow
@@ -4245,7 +4243,7 @@ int NavierStokes::some_materials_compressible() {
   } else if ((imat>=1)&&(imat<=MAX_NUM_EOS)) {
    comp_flag=1;
   } else
-   BoxLib::Error("material type invalid");
+   amrex::Error("material type invalid");
  }
  return comp_flag;
 }
@@ -4296,7 +4294,7 @@ int NavierStokes::do_FSI() {
              (is_ice_matC(im)==1)) { // FSI ice rigid material
    // do nothing
   } else
-   BoxLib::Error("FSI_flag invalid");
+   amrex::Error("FSI_flag invalid");
  } // im=0..nmat-1
 
  return local_do_FSI;
@@ -4318,9 +4316,9 @@ int NavierStokes::is_ice_matC(int im) {
 	     (FSI_flag[im]==5)) { // FSI PROB.F90 rigid material
    // do nothing
   } else
-   BoxLib::Error("FSI_flag invalid");
+   amrex::Error("FSI_flag invalid");
  } else
-  BoxLib::Error("im invalid");
+  amrex::Error("im invalid");
 
  return local_is_ice;
 
@@ -4340,7 +4338,7 @@ int NavierStokes::FSI_material_exists() {
              (is_FSI_rigid_matC(im)==1)) {
    local_flag=1;
   } else
-   BoxLib::Error("is_ice_matC or is_FSI_rigid_matC invalid");
+   amrex::Error("is_ice_matC or is_FSI_rigid_matC invalid");
  } // im=0..nmat-1
  return local_flag;
 
@@ -4361,9 +4359,9 @@ int NavierStokes::is_FSI_rigid_matC(int im) {
              (FSI_flag[im]==3)) { // ice
    // do nothing
   } else
-   BoxLib::Error("FSI_flag invalid");
+   amrex::Error("FSI_flag invalid");
  } else
-  BoxLib::Error("im invalid");
+  amrex::Error("im invalid");
 
  return local_is_FSI_rigid;
 
@@ -4387,9 +4385,9 @@ int NavierStokes::is_singular_coeff(int im) {
   } else if (FSI_flag[im]==4) { // FSI CTML sci_clsvof.F90 material
    local_is_singular_coeff=0;
   } else
-   BoxLib::Error("FSI_flag invalid");
+   amrex::Error("FSI_flag invalid");
  } else
-  BoxLib::Error("im invalid");
+  amrex::Error("im invalid");
 
  return local_is_singular_coeff;
 
@@ -4405,7 +4403,7 @@ int NavierStokes::CTML_FSI_flagC() {
 #ifdef MVAHABFSI
    local_CTML_FSI_flag=1;
 #else
-   BoxLib::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
+   amrex::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
 #endif
   } else if ((FSI_flag[im]==0)||  // fluid
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
@@ -4414,7 +4412,7 @@ int NavierStokes::CTML_FSI_flagC() {
              (is_ice_matC(im)==1)) { // FSI ice material
    // do nothing
   } else
-   BoxLib::Error("FSI_flag invalid");
+   amrex::Error("FSI_flag invalid");
  } // im=0..nmat-1
 
  return local_CTML_FSI_flag;
@@ -4431,7 +4429,7 @@ int NavierStokes::CTML_FSI_matC(int im) {
 #ifdef MVAHABFSI
    local_CTML_FSI_flag=1;
 #else
-   BoxLib::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
+   amrex::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
 #endif
   } else if ((FSI_flag[im]==0)||  // fluid material
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
@@ -4440,9 +4438,9 @@ int NavierStokes::CTML_FSI_matC(int im) {
              (is_ice_matC(im)==1)) { // FSI ice material
    // do nothing
   } else
-   BoxLib::Error("FSI_flag invalid");
+   amrex::Error("FSI_flag invalid");
  } else
-  BoxLib::Error("im invalid51");
+  amrex::Error("im invalid51");
 
  return local_CTML_FSI_flag;
 
@@ -4459,12 +4457,12 @@ int NavierStokes::CTML_FSI_matC(int im) {
 void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 
  if (do_FSI()!=1)
-  BoxLib::Error("do_FSI()!=1");
+  amrex::Error("do_FSI()!=1");
 
  const int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>max_level))
-  BoxLib::Error("level invalid in create_fortran_grid_struct");
+  amrex::Error("level invalid in create_fortran_grid_struct");
 
  Real problo[BL_SPACEDIM];
  Real probhi[BL_SPACEDIM];
@@ -4515,7 +4513,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
    num_grids_on_level_proc++;
    num_grids_on_level_check++;
   } else
-   BoxLib::Error("gridno invalid");
+   amrex::Error("gridno invalid");
  } // mfi
  ParallelDescriptor::ReduceIntSum(num_grids_on_level_check);
 
@@ -4526,7 +4524,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
   std::cout << "num_grids_on_level_check= " << 
     num_grids_on_level_check << '\n';
   std::cout << "level= " << level << '\n';
-  BoxLib::Error("num_grids_on_level_proc invalid");
+  amrex::Error("num_grids_on_level_proc invalid");
  }
 
  if (num_grids_on_level_check!=num_grids_on_level) {
@@ -4535,7 +4533,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
   std::cout << "num_grids_on_level_check= " << 
     num_grids_on_level_check << '\n';
   std::cout << "level= " << level << '\n';
-  BoxLib::Error("num_grids_on_level_check invalid");
+  amrex::Error("num_grids_on_level_check invalid");
  }
 
  for (int grid_sweep=0;grid_sweep<2;grid_sweep++) {
@@ -4548,20 +4546,20 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 
     if (num_tiles_on_thread_proc[tid]!=
 	num_tiles_on_thread_proc_check[tid])
-     BoxLib::Error("num_tiles_on_thread_proc[tid] failed check");
+     amrex::Error("num_tiles_on_thread_proc[tid] failed check");
 
     if (num_grids_on_level_proc==0) {
      if (num_tiles_on_thread_proc[tid]!=0)
-      BoxLib::Error("num_tiles_on_thread_proc[tid] invalid");
+      amrex::Error("num_tiles_on_thread_proc[tid] invalid");
      if (max_num_tiles_on_thread_proc!=0)
-      BoxLib::Error("max_num_tiles_on_thread_proc invalid");
+      amrex::Error("max_num_tiles_on_thread_proc invalid");
     } else if (num_grids_on_level_proc>0) {
 
      if (num_tiles_on_thread_proc[tid]>max_num_tiles_on_thread_proc)
       max_num_tiles_on_thread_proc=num_tiles_on_thread_proc[tid];
 
     } else
-     BoxLib::Error("num_grids_on_level_proc invalid");
+     amrex::Error("num_grids_on_level_proc invalid");
 
    } // tid=0..thread_class::nthreads-1
 
@@ -4569,7 +4567,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 
    if (num_grids_on_level_proc==0) {
     if (tile_dim!=0)
-     BoxLib::Error("tile_dim invalid");
+     amrex::Error("tile_dim invalid");
     int tile_dim_virtual=1;
     tilelo_array.resize(tile_dim_virtual*BL_SPACEDIM);   
     tilehi_array.resize(tile_dim_virtual*BL_SPACEDIM);   
@@ -4577,7 +4575,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
     xlo_array.resize(tile_dim_virtual*BL_SPACEDIM);   
     for (int tid=0;tid<thread_class::nthreads;tid++) {
      if (num_tiles_on_thread_proc[tid]!=0)
-      BoxLib::Error("num_tiles_on_thread_proc[tid] invalid");
+      amrex::Error("num_tiles_on_thread_proc[tid] invalid");
     }
    } else if (num_grids_on_level_proc>0) {
 
@@ -4587,19 +4585,19 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
      gridno_array.resize(tile_dim);   // gridno for a given tile
      xlo_array.resize(tile_dim*BL_SPACEDIM);   
     } else
-     BoxLib::Error("tile_dim invalid");
+     amrex::Error("tile_dim invalid");
    } else
-    BoxLib::Error("num_grids_on_level_proc invalid");
+    amrex::Error("num_grids_on_level_proc invalid");
 
   } else
-   BoxLib::Error("grid_sweep invalid"); 
+   amrex::Error("grid_sweep invalid"); 
 
   if ((grid_sweep==0)||(grid_sweep==1)) {
    for (int tid=0;tid<thread_class::nthreads;tid++) {
     num_tiles_on_thread_proc[tid]=0;
    }
   } else
-   BoxLib::Error("grid_sweep invalid");
+   amrex::Error("grid_sweep invalid");
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -4610,7 +4608,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 
    int tid=ns_thread();
    if ((tid<0)||(tid>=thread_class::nthreads))
-    BoxLib::Error("tid invalid");
+    amrex::Error("tid invalid");
  
    if (grid_sweep==0) {
     // do nothing
@@ -4639,22 +4637,22 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
       if ((gridno>=0)&&(gridno<num_grids_on_level)) {
        gridno_array[ibase]=gridno;
       } else
-       BoxLib::Error("gridno invalid");
+       amrex::Error("gridno invalid");
      } else
-      BoxLib::Error("max_num_tiles_on_thread_proc invalid");
+      amrex::Error("max_num_tiles_on_thread_proc invalid");
     } else
-     BoxLib::Error("num_grids_on_level_proc invalid");
+     amrex::Error("num_grids_on_level_proc invalid");
    } else
-    BoxLib::Error("grid_sweep invalid");
+    amrex::Error("grid_sweep invalid");
 
    num_tiles_on_thread_proc[tid]++;
    if (grid_sweep==0) {
     // check nothing
    } else if (grid_sweep==1) {
     if (num_tiles_on_thread_proc[tid]>max_num_tiles_on_thread_proc)
-     BoxLib::Error("num_tiles_on_thread_proc[tid] invalid");
+     amrex::Error("num_tiles_on_thread_proc[tid] invalid");
    } else
-    BoxLib::Error("grid_sweep invalid");
+    amrex::Error("grid_sweep invalid");
 
   } // mfi
 }//omp
@@ -4666,27 +4664,27 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
    } else if (grid_sweep==1) {
     if (num_tiles_on_thread_proc_check[tid]!=
 	num_tiles_on_thread_proc[tid])
-     BoxLib::Error("num_tiles_on_thread_proc[tid] failed check");
+     amrex::Error("num_tiles_on_thread_proc[tid] failed check");
    } else
-    BoxLib::Error("grid_sweep invalid");
+    amrex::Error("grid_sweep invalid");
   }
 
  } // grid_sweep=0..1
 
  if (num_grids_on_level_proc==0) {
   if (max_num_tiles_on_thread_proc!=0)
-   BoxLib::Error("max_num_tiles_on_thread_proc invalid");
+   amrex::Error("max_num_tiles_on_thread_proc invalid");
  } else if (num_grids_on_level_proc>0) {
   if (max_num_tiles_on_thread_proc>0) {
    // do nothing
   } else
-   BoxLib::Error("max_num_tiles_on_thread_proc invalid");
+   amrex::Error("max_num_tiles_on_thread_proc invalid");
  } else
-  BoxLib::Error("num_grids_on_level_proc invalid"); 
+  amrex::Error("num_grids_on_level_proc invalid"); 
 
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>=nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
 
  FORT_FILLCONTAINER(
   &level,
@@ -4722,10 +4720,10 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level invalid init_FSI_GHOST_MF_ALL");
+  amrex::Error("level invalid init_FSI_GHOST_MF_ALL");
 
  if ((ngrow<1)||(ngrow>ngrowFSI))
-  BoxLib::Error("ngrow invalid");
+  amrex::Error("ngrow invalid");
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -4745,7 +4743,7 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow) {
 void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
 
  if ((ngrow<1)||(ngrow>ngrowFSI))
-  BoxLib::Error("ngrow invalid");
+  amrex::Error("ngrow invalid");
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -4760,7 +4758,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
  } else if ((nparts>=1)&&(nparts<nmat)) {
   // do nothing
  } else {
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  }
  
  if (localMF_grow[FSI_GHOST_MF]>=0)
@@ -4772,7 +4770,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  if (nparts==0) {
 
@@ -4783,11 +4781,11 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
   if (law_of_the_wall==0) {
    MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
    if (nparts*BL_SPACEDIM!=Solid_new.nComp())
-    BoxLib::Error("nparts*BL_SPACEDIM!=Solid_new.nComp()");
+    amrex::Error("nparts*BL_SPACEDIM!=Solid_new.nComp()");
    MultiFab::Copy(*localMF[FSI_GHOST_MF],Solid_new,0,0,nparts*BL_SPACEDIM,0);
   } else if (law_of_the_wall>0) {
    if (num_materials_vel!=1)
-    BoxLib::Error("num_materials_vel invalid");
+    amrex::Error("num_materials_vel invalid");
 
    int ngrow_law_of_wall=3;
    MultiFab* solid_vel_mf=getStateSolid(ngrow_law_of_wall,0,
@@ -4799,12 +4797,12 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
    int nden=nmat*num_state_material;
    MultiFab* state_var_mf=getStateDen(ngrow_law_of_wall,cur_time_slab);
    if (state_var_mf->nComp()!=nden)
-    BoxLib::Error("state_var_mf->nComp()!=nden");
+    amrex::Error("state_var_mf->nComp()!=nden");
    MultiFab* LS_mf=getStateDist(ngrow_distance,cur_time_slab,1);
    if (LS_mf->nGrow()!=ngrow_distance)
-    BoxLib::Error("LS_mf->nGrow()!=ngrow_distance");
+    amrex::Error("LS_mf->nGrow()!=ngrow_distance");
    if (LS_mf->nComp()!=nmat*(BL_SPACEDIM+1))
-    BoxLib::Error("LS_mf->nComp()!=nmat*(BL_SPACEDIM+1)");
+    amrex::Error("LS_mf->nComp()!=nmat*(BL_SPACEDIM+1)");
 
    const Real* dx = geom.CellSize();
 
@@ -4860,10 +4858,10 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
    delete fluid_vel_mf;
    delete solid_vel_mf;
   } else
-   BoxLib::Error("law_of_the_wall invalid");
+   amrex::Error("law_of_the_wall invalid");
 
  } else {
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  }
 
   // idx,ngrow,scomp,ncomp,index,scompBC_map
@@ -4887,7 +4885,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
 void NavierStokes::resize_FSI_GHOST_MF(int ngrow) {
 
  if ((ngrow<1)||(ngrow>ngrowFSI))
-  BoxLib::Error("ngrow invalid");
+  amrex::Error("ngrow invalid");
 
  int nmat=num_materials;
  int nparts=im_solid_map.size();
@@ -4900,11 +4898,11 @@ void NavierStokes::resize_FSI_GHOST_MF(int ngrow) {
  } else if ((nparts>=1)&&(nparts<nmat)) {
   // do nothing
  } else {
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  }
 
  if (localMF[FSI_GHOST_MF]->nComp()!=nparts_ghost*BL_SPACEDIM)
-  BoxLib::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_ghost*BL_SPACEDIM");
+  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_ghost*BL_SPACEDIM");
 
  if (localMF[FSI_GHOST_MF]->nGrow()==ngrow) {
   // do nothing
@@ -4937,7 +4935,7 @@ void NavierStokes::resize_FSI_GHOST_MF(int ngrow) {
 
   delete save_ghost;
  } else
-  BoxLib::Error("localMF[FSI_GHOST_MF]->nGrow() invalid");
+  amrex::Error("localMF[FSI_GHOST_MF]->nGrow() invalid");
 
 } // end subroutine resize_FSI_GHOST_MF
 
@@ -4951,10 +4949,10 @@ void NavierStokes::resize_FSI_MF() {
   // do nothing
  } else if ((nparts>=1)&&(nparts<nmat)) {
   if (nFSI_sub!=12)
-   BoxLib::Error("nFSI_sub invalid");
+   amrex::Error("nFSI_sub invalid");
   int nFSI=nparts*nFSI_sub;
   if (localMF[FSI_MF]->nComp()!=nFSI)
-   BoxLib::Error("localMF[FSI_MF]->nComp()!=nFSI");
+   amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
   if (localMF[FSI_MF]->nGrow()==0) {
    // do nothing
   } else if (localMF[FSI_MF]->nGrow()>0) {
@@ -4966,10 +4964,10 @@ void NavierStokes::resize_FSI_MF() {
    MultiFab::Copy(*localMF[FSI_MF],*save_FSI,0,0,nFSI,0);
    delete save_FSI;
   } else
-   BoxLib::Error("localMF[FSI_MF]->nGrow() invalid");
+   amrex::Error("localMF[FSI_MF]->nGrow() invalid");
 
  } else {
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  }
 
 } // end subroutine resize_FSI_MF
@@ -4991,10 +4989,10 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
 
   // nmat x (velocity + LS + temperature + flag+stress)   3D
   if (nFSI_sub!=12)
-   BoxLib::Error("nFSI_sub invalid");
+   amrex::Error("nFSI_sub invalid");
   int nFSI=nparts*nFSI_sub;
   if (ngrowFSI!=3)
-   BoxLib::Error("ngrowFSI invalid");
+   amrex::Error("ngrowFSI invalid");
 
   if (localMF_grow[FSI_MF]>=0)
    delete_localMF(FSI_MF,1);
@@ -5044,7 +5042,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
   } else if (do_FSI()==0) {
    // do nothing
   } else
-   BoxLib::Error("do_FSI invalid");
+   amrex::Error("do_FSI invalid");
  
   bool use_tiling=ns_tiling;
 
@@ -5091,7 +5089,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
    // Solid velocity
   MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
   if (Solid_new.nComp()!=nparts*BL_SPACEDIM)
-   BoxLib::Error("Solid_new.nComp()!=nparts*BL_SPACEDIM");
+   amrex::Error("Solid_new.nComp()!=nparts*BL_SPACEDIM");
   for (int partid=0;partid<nparts;partid++) {
    int ibase=partid*nFSI_sub;
    MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase,partid*BL_SPACEDIM,
@@ -5099,7 +5097,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
   } // partid=0..nparts-1
 
  } else {
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  }
 
 }  // subroutine FSI_make_distance
@@ -5111,14 +5109,14 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
  int nmat=num_materials;
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>=nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  if ((partid<0)||(partid>=nparts))
-  BoxLib::Error("partid invalid");
+  amrex::Error("partid invalid");
  debug_ngrow(FSI_MF,ngrowFSI,1);
 
  int im_part=im_solid_map[partid];
  if ((im_part<0)||(im_part>=nmat))
-  BoxLib::Error("im_part invalid");
+  amrex::Error("im_part invalid");
 
  if (FSI_flag[im_part]==2) { //prescribed sci_clsvof.F90 rigid solid 
 
@@ -5126,15 +5124,15 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
   int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
   if (nstate!=S_new.nComp())
-   BoxLib::Error("nstate invalid");
+   amrex::Error("nstate invalid");
 
    // nmat x (velocity + LS + temperature + flag)
   if (nFSI_sub!=12)
-   BoxLib::Error("nFSI_sub invalid");
+   amrex::Error("nFSI_sub invalid");
 
   int nFSI=nparts*nFSI_sub;
   if (localMF[FSI_MF]->nComp()!=nFSI)
-   BoxLib::Error("localMF[FSI_MF]->nComp()!=nFSI");
+   amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
   
   bool use_tiling=ns_tiling;
 
@@ -5180,13 +5178,13 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
    ParallelDescriptor::Barrier(); 
 
   } else {
-   BoxLib::Error("ns_is_rigid invalid");
+   amrex::Error("ns_is_rigid invalid");
   }
 
  } else if (FSI_flag[im_part]==4) { // FSI CTML material
   // do nothing (CTML)
  } else
-  BoxLib::Error("FSI_flag[im_part] invalid");
+  amrex::Error("FSI_flag[im_part] invalid");
 
 } // subroutine copy_velocity_on_sign
 
@@ -5195,33 +5193,33 @@ void NavierStokes::build_moment_from_FSILS() {
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid 1");
+  amrex::Error("level invalid 1");
 
  int nmat=num_materials;
 
  if (do_FSI()!=1)
-  BoxLib::Error("do_FSI invalid");
+  amrex::Error("do_FSI invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
  if (LS_new.nComp()!=nmat*(1+BL_SPACEDIM))
-  BoxLib::Error("LS_new.nComp()!=nmat*(1+BL_SPACEDIM)");
+  amrex::Error("LS_new.nComp()!=nmat*(1+BL_SPACEDIM)");
 
    // nparts x (velocity + LS + temperature + flag+stress)
  if (nFSI_sub!=12)
-  BoxLib::Error("nFSI_sub invalid");
+  amrex::Error("nFSI_sub invalid");
  if (ngrowFSI!=3)
-  BoxLib::Error("ngrowFSI!=3");
+  amrex::Error("ngrowFSI!=3");
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>=nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  int nFSI=nparts*nFSI_sub;
  if (localMF[FSI_MF]->nComp()!=nFSI)
-  BoxLib::Error("localMF[FSI_MF]->nComp()!=nFSI");
+  amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
  debug_ngrow(FSI_MF,ngrowFSI,1);
   
  bool use_tiling=ns_tiling;
@@ -5277,12 +5275,12 @@ void NavierStokes::Transfer_FSI_To_STATE() {
  int nmat=num_materials;
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
 
  if (do_FSI()==1) {
 
   if ((nparts<1)||(nparts>=nmat))
-   BoxLib::Error("nparts invalid");
+   amrex::Error("nparts invalid");
   debug_ngrow(FSI_MF,ngrowFSI,1);
 
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -5290,26 +5288,26 @@ void NavierStokes::Transfer_FSI_To_STATE() {
    nmat*(num_state_material+ngeom_raw)+1;
   int dencomp=num_materials_vel*(BL_SPACEDIM+1);     
   if (nstate!=S_new.nComp())
-   BoxLib::Error("nstate invalid");
+   amrex::Error("nstate invalid");
 
   MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
   if (Solid_new.nComp()!=nparts*BL_SPACEDIM)
-   BoxLib::Error("Solid_new.nComp()!=nparts*BL_SPACEDIM");
+   amrex::Error("Solid_new.nComp()!=nparts*BL_SPACEDIM");
 
   MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
   if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1))
-   BoxLib::Error("LS_new invalid ncomp");
+   amrex::Error("LS_new invalid ncomp");
   if (nFSI_sub!=12)
-   BoxLib::Error("nFSI_sub invalid");
+   amrex::Error("nFSI_sub invalid");
   int nFSI=nparts*nFSI_sub;
   if (localMF[FSI_MF]->nComp()!=nFSI)
-   BoxLib::Error("localMF[FSI_MF]->nComp()!=nFSI");
+   amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
 
   for (int partid=0;partid<nparts;partid++) {
 
    int im_part=im_solid_map[partid];
    if ((im_part<0)||(im_part>=nmat))
-    BoxLib::Error("im_part invalid");
+    amrex::Error("im_part invalid");
 
    if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
        (FSI_flag[im_part]==4)) { //FSI CTML sci_clsvof.F90 solid
@@ -5331,18 +5329,18 @@ void NavierStokes::Transfer_FSI_To_STATE() {
      MultiFab::Copy(S_new,*localMF[FSI_MF],ibase+4,
       dencomp+im_part*num_state_material+1,1,0);
     } else
-     BoxLib::Error("solidheat_flag invalid"); 
+     amrex::Error("solidheat_flag invalid"); 
    } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid
     // do nothing
    } else
-    BoxLib::Error("FSI_flag invalid");
+    amrex::Error("FSI_flag invalid");
 
   } // partid=0..nparts-1
 
  } else if (do_FSI()==0) {
   // do nothing
  } else
-  BoxLib::Error("do_FSI invalid");
+  amrex::Error("do_FSI invalid");
 
 }  // subroutine Transfer_FSI_To_STATE
 
@@ -5369,41 +5367,41 @@ void NavierStokes::ns_header_msg_level(
 
  if (FSI_operation==0) { //initialize node locations; generate_new_triangles
   if (iter!=0)
-   BoxLib::Error("iter invalid");
+   amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
-   BoxLib::Error("FSI_sub_operation!=0");
+   amrex::Error("FSI_sub_operation!=0");
  } else if (FSI_operation==1) { //update node locations
   if (iter!=0)
-   BoxLib::Error("iter invalid");
+   amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
-   BoxLib::Error("FSI_sub_operation!=0");
+   amrex::Error("FSI_sub_operation!=0");
   if (CTML_FSI_flagC()==1) {
    if (num_divu_outer_sweeps!=1)
-    BoxLib::Error("num_divu_outer_sweeps!=1");
+    amrex::Error("num_divu_outer_sweeps!=1");
    if (ns_time_order!=1)
-    BoxLib::Error("ns_time_order!=1");
+    amrex::Error("ns_time_order!=1");
   } else if (CTML_FSI_flagC()==0) {
    // do nothing
   } else
-   BoxLib::Error("CTML_FSI_flagC() invalid");
+   amrex::Error("CTML_FSI_flagC() invalid");
  } else if (FSI_operation==2) { //make distance in narrow band
   if (iter!=0)
-   BoxLib::Error("iter invalid");
+   amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
-   BoxLib::Error("FSI_sub_operation!=0");
+   amrex::Error("FSI_sub_operation!=0");
  } else if (FSI_operation==3) { //update the sign.
   if (iter<0)
-   BoxLib::Error("iter invalid");
+   amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
-   BoxLib::Error("FSI_sub_operation!=0");
+   amrex::Error("FSI_sub_operation!=0");
  } else if (FSI_operation==4) { //copy Eulerian velocity to Lagrangian velocity
   if (iter!=0)
-   BoxLib::Error("iter invalid");
+   amrex::Error("iter invalid");
   if ((FSI_sub_operation<0)||
       (FSI_sub_operation>2)) 
-   BoxLib::Error("FSI_sub_operation invalid");
+   amrex::Error("FSI_sub_operation invalid");
  } else
-  BoxLib::Error("FSI_operation out of range");
+  amrex::Error("FSI_operation out of range");
 
  if (iter==0) {
   FSI_touch_flag.resize(thread_class::nthreads);
@@ -5415,7 +5413,7 @@ void NavierStokes::ns_header_msg_level(
    FSI_touch_flag[tid]=0;
   }
  } else {
-  BoxLib::Error("iter invalid");
+  amrex::Error("iter invalid");
  }
 
  int nmat=num_materials;
@@ -5427,7 +5425,7 @@ void NavierStokes::ns_header_msg_level(
  int finest_level=parent->finestLevel();
 
  if ((level>max_level)||(finest_level>max_level))
-  BoxLib::Error("(level>max_level)||(finest_level>max_level)");
+  amrex::Error("(level>max_level)||(finest_level>max_level)");
 
  const Real* dx = geom.CellSize();
  Real h_small=dx[0];
@@ -5456,7 +5454,7 @@ void NavierStokes::ns_header_msg_level(
  } else if (verbose==0) {
   // do nothing
  } else
-  BoxLib::Error("verbose invalid");
+  amrex::Error("verbose invalid");
 
  int ioproc;
  if (ParallelDescriptor::IOProcessor())
@@ -5481,7 +5479,7 @@ void NavierStokes::ns_header_msg_level(
  } else if (FSI_operation==4) { // copy Eul. fluid vel to Lag. fluid vel.
   elements_generated=1;
  } else
-  BoxLib::Error("FSI_operation invalid");
+  amrex::Error("FSI_operation invalid");
 
  int current_step = nStep();
  int plot_interval=parent->plotInt();
@@ -5491,16 +5489,16 @@ void NavierStokes::ns_header_msg_level(
    // nparts x (velocity + LS + temperature + flag)
   int nparts=im_solid_map.size();
   if ((nparts<1)||(nparts>=nmat))
-   BoxLib::Error("nparts invalid");
+   amrex::Error("nparts invalid");
 
   MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
   if (Solid_new.nComp()!=nparts*BL_SPACEDIM)
-   BoxLib::Error("Solid_new.nComp()!=nparts*BL_SPACEDIM");
+   amrex::Error("Solid_new.nComp()!=nparts*BL_SPACEDIM");
 
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
   MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
   if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1))
-   BoxLib::Error("LS_new invalid ncomp");
+   amrex::Error("LS_new invalid ncomp");
 
   bool use_tiling=ns_tiling;
   int bfact=parent->Space_blockingFactor(level);
@@ -5513,18 +5511,18 @@ void NavierStokes::ns_header_msg_level(
    probhi[dir]=Geometry::ProbHi(dir);
    problen[dir]=probhi[dir]-problo[dir];
    if (problen[dir]<=0.0)
-    BoxLib::Error("problen[dir]<=0.0");
+    amrex::Error("problen[dir]<=0.0");
   }
 
   if (nFSI_sub!=12)
-   BoxLib::Error("nFSI_sub invalid");
+   amrex::Error("nFSI_sub invalid");
   int nFSI=nparts*nFSI_sub;
 
   if ((FSI_operation==0)||  // initialize nodes
       (FSI_operation==1)) { // update node locations
 
    if (FSI_sub_operation!=0)
-    BoxLib::Error("FSI_sub_operation!=0");
+    amrex::Error("FSI_sub_operation!=0");
 
    if (elements_generated==0) {
     int ngrowFSI_fab=0;
@@ -5541,7 +5539,7 @@ void NavierStokes::ns_header_msg_level(
     FArrayBox FSIfab(unitbox,nFSI);
 
     if (num_materials_vel!=1)
-     BoxLib::Error("num_materials_vel invalid");
+     amrex::Error("num_materials_vel invalid");
 
     Array<int> velbc;
     velbc.resize(num_materials_vel*BL_SPACEDIM*2*BL_SPACEDIM);
@@ -5605,7 +5603,7 @@ void NavierStokes::ns_header_msg_level(
    } else if (elements_generated==1) {
     // do nothing
    } else 
-    BoxLib::Error("elements_generated invalid");
+    amrex::Error("elements_generated invalid");
 
    elements_generated=1;
 
@@ -5615,21 +5613,21 @@ void NavierStokes::ns_header_msg_level(
              (FSI_operation==3)) { // update the sign
 
    if (FSI_sub_operation!=0)
-    BoxLib::Error("FSI_sub_operation!=0");
+    amrex::Error("FSI_sub_operation!=0");
 
    elements_generated=1;
 
     // FSI_MF allocated in FSI_make_distance
    if (ngrowFSI!=3)
-    BoxLib::Error("ngrowFSI invalid");
+    amrex::Error("ngrowFSI invalid");
    debug_ngrow(FSI_MF,ngrowFSI,1);
    if (localMF[FSI_MF]->nComp()!=nFSI)
-    BoxLib::Error("localMF[FSI_MF]->nComp() invalid");
+    amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
    if (FSI_operation==2) { // make distance in narrow band.
 
     if (num_materials_vel!=1)
-     BoxLib::Error("num_materials_vel invalid");
+     amrex::Error("num_materials_vel invalid");
 
      // fill coarse patch 
     if (level>0) {
@@ -5694,7 +5692,7 @@ void NavierStokes::ns_header_msg_level(
       int im_part=im_solid_map[partid];
 
       if ((im_part<0)||(im_part>=nmat))
-       BoxLib::Error("im_part invalid");
+       amrex::Error("im_part invalid");
  
       if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
           (FSI_flag[im_part]==4)) { //FSI CTML sci_clsvof.F90 solid
@@ -5729,14 +5727,14 @@ void NavierStokes::ns_header_msg_level(
          //ngrow==0
         MultiFab::Copy(S_new,*new_coarse_thermal,0,scomp_thermal,1,0);
        } else
-        BoxLib::Error("solidheat_flag invalid");
+        amrex::Error("solidheat_flag invalid");
 
        delete new_coarse_thermal;
 
       } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid 
        // do nothing
       } else
-       BoxLib::Error("FSI_flag invalid");
+       amrex::Error("FSI_flag invalid");
      } // partid=0..nparts-1
 
      delete S_new_coarse;
@@ -5746,19 +5744,19 @@ void NavierStokes::ns_header_msg_level(
     } else if (level==0) {
      // do nothing
     } else
-     BoxLib::Error("level invalid 3");
+     amrex::Error("level invalid 3");
 
    } else if (FSI_operation==3) { // update sign
     // do not fill coarse patch.
    } else
-    BoxLib::Error("FSI_operation invalid");
+    amrex::Error("FSI_operation invalid");
 
    MultiFab* solidmf=getStateSolid(ngrowFSI,0,
      nparts*BL_SPACEDIM,time);
    MultiFab* denmf=getStateDen(ngrowFSI,time);  
    MultiFab* LSMF=getStateDist(ngrowFSI,time,2);
    if (LSMF->nGrow()!=ngrowFSI)
-    BoxLib::Error("LSMF->nGrow()!=ngrow_distance");
+    amrex::Error("LSMF->nGrow()!=ngrow_distance");
 
    // FSI_MF allocated in FSI_make_distance
    // all components of FSI_MF are initialized to zero except for LS.
@@ -5768,7 +5766,7 @@ void NavierStokes::ns_header_msg_level(
 
     int im_part=im_solid_map[partid];
     if ((im_part<0)||(im_part>=nmat))
-     BoxLib::Error("im_part invalid");
+     amrex::Error("im_part invalid");
 
     int ibase=partid*nFSI_sub;
      // velocity
@@ -5790,12 +5788,12 @@ void NavierStokes::ns_header_msg_level(
      } else if ((level==0)&&(time==0.0)) {
       // do nothing
      } else
-      BoxLib::Error("level or time invalid");
+      amrex::Error("level or time invalid");
 
     } else if (FSI_operation==3) {
      // do nothing
     } else
-     BoxLib::Error("FSI_operation invalid");
+     amrex::Error("FSI_operation invalid");
 
    } // partid=0..nparts-1
 
@@ -5827,7 +5825,7 @@ void NavierStokes::ns_header_msg_level(
 
     int tid=ns_thread();
     if ((tid<0)||(tid>=thread_class::nthreads))
-     BoxLib::Error("tid invalid");
+     amrex::Error("tid invalid");
 
     FORT_HEADERMSG(
      &tid,
@@ -5884,12 +5882,12 @@ void NavierStokes::ns_header_msg_level(
     } else if (FSI_touch_flag[tid]==0) {
      // do nothing
     } else
-     BoxLib::Error("FSI_touch_flag[tid] invalid");
+     amrex::Error("FSI_touch_flag[tid] invalid");
    } 
    ParallelDescriptor::ReduceIntMax(FSI_touch_flag[0]);
 
    if (num_materials_vel!=1)
-    BoxLib::Error("num_materials_vel invalid");
+    amrex::Error("num_materials_vel invalid");
 
    // idx,ngrow,scomp,ncomp,index,scompBC_map
    // InterpBordersGHOST is ultimately called.
@@ -5932,13 +5930,13 @@ void NavierStokes::ns_header_msg_level(
 
    elements_generated=1;
    if (ngrowFSI!=3)
-    BoxLib::Error("ngrowFSI invalid");
+    amrex::Error("ngrowFSI invalid");
    if (num_materials_vel!=1)
-    BoxLib::Error("num_materials_vel invalid");
+    amrex::Error("num_materials_vel invalid");
    if ((FSI_sub_operation!=0)&&
        (FSI_sub_operation!=1)&&
        (FSI_sub_operation!=2))
-    BoxLib::Error("FSI_sub_operation invalid");
+    amrex::Error("FSI_sub_operation invalid");
 
    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
    // (2) =1 interior  =0 otherwise
@@ -5964,7 +5962,7 @@ void NavierStokes::ns_header_msg_level(
     } else if (FSI_sub_operation==2) {
      delete_localMF(VELADVECT_MF,1);
     } else
-     BoxLib::Error("FSI_sub_operation invalid");
+     amrex::Error("FSI_sub_operation invalid");
 
     int ngrowFSI_fab=0;
     IntVect unitlo(D_DECL(0,0,0));
@@ -5980,7 +5978,7 @@ void NavierStokes::ns_header_msg_level(
     FArrayBox FSIfab(unitbox,nFSI);
 
     if (num_materials_vel!=1)
-     BoxLib::Error("num_materials_vel invalid");
+     amrex::Error("num_materials_vel invalid");
 
     Array<int> velbc;
     velbc.resize(num_materials_vel*BL_SPACEDIM*2*BL_SPACEDIM);
@@ -6067,7 +6065,7 @@ void NavierStokes::ns_header_msg_level(
 
      int tid=ns_thread();
      if ((tid<0)||(tid>=thread_class::nthreads))
-      BoxLib::Error("tid invalid");
+      amrex::Error("tid invalid");
 
      FORT_HEADERMSG(
       &tid,
@@ -6120,15 +6118,15 @@ void NavierStokes::ns_header_msg_level(
 }//omp
 
    } else 
-    BoxLib::Error("FSI_sub_operation invalid");
+    amrex::Error("FSI_sub_operation invalid");
 
   } else
-   BoxLib::Error("FSI_operation invalid");
+   amrex::Error("FSI_operation invalid");
 
  } else if (do_FSI()==0) {
   // do nothing
  } else
-  BoxLib::Error("do_FSI invalid");
+  amrex::Error("do_FSI invalid");
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
@@ -6142,7 +6140,7 @@ void NavierStokes::ns_header_msg_level(
  } else if (verbose==0) {
   // do nothing
  } else
-  BoxLib::Error("verbose invalid");
+  amrex::Error("verbose invalid");
 
 } // end subroutine ns_header_msg_level
 
@@ -6209,7 +6207,7 @@ void NavierStokes::post_restart() {
  } else if ((level>0)&&(level<=max_level)) {
   // do nothing
  } else {
-  BoxLib::Error("level invalid post_restart() ");
+  amrex::Error("level invalid post_restart() ");
  }
 
  metrics_data(2);  
@@ -6236,7 +6234,7 @@ void NavierStokes::post_restart() {
  } else if (level>0) {
   // do nothing
  } else {
-  BoxLib::Error("level invalid20");
+  amrex::Error("level invalid20");
  } 
 
 }  // subroutine post_restart
@@ -6275,7 +6273,7 @@ NavierStokes::initData () {
 
  int nmat=num_materials;
  if (ngeom_raw!=BL_SPACEDIM+1)
-  BoxLib::Error("ngeom_raw bust");
+  amrex::Error("ngeom_raw bust");
 
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
@@ -6294,7 +6292,7 @@ NavierStokes::initData () {
  }
 
  if (upper_slab_time!=0.0)
-  BoxLib::Error("upper_slab_time should be zero at the very beginning");
+  amrex::Error("upper_slab_time should be zero at the very beginning");
 
  if (level==0) {
 
@@ -6315,7 +6313,7 @@ NavierStokes::initData () {
  } else if ((level>0)&&(level<=max_level)) {
   // do nothing
  } else {
-  BoxLib::Error("level invalid 4");
+  amrex::Error("level invalid 4");
  }
 
  metrics_data(1);
@@ -6336,7 +6334,7 @@ NavierStokes::initData () {
    recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
    if (parent->AMR_recalesce_flag(im)>0) {
     if (at_least_one_ice!=1)
-     BoxLib::Error("expecting FSI_flag==3");
+     amrex::Error("expecting FSI_flag==3");
     at_least_one=1;
    }
   }
@@ -6352,7 +6350,7 @@ NavierStokes::initData () {
     recalesce_state_old[im]=-1.0;
    }
   } else
-   BoxLib::Error("at_least_one invalid");
+   amrex::Error("at_least_one invalid");
 
     // this must be done before the volume fractions, centroids, and
     // level set function are initialized.
@@ -6364,7 +6362,7 @@ NavierStokes::initData () {
  } else if ((level>0)&&(level<=max_level)) {
   // do nothing
  } else {
-  BoxLib::Error("level invalid 5");
+  amrex::Error("level invalid 5");
  } 
 
  Real dt_amr=parent->getDt(); // returns dt_AMR
@@ -6375,39 +6373,39 @@ NavierStokes::initData () {
  int dencomp=num_materials_vel*(BL_SPACEDIM+1);
  int nc_expect=dencomp+nmat*num_state_material+nmat*ngeom_raw+1;
  if (nc!=nc_expect)
-  BoxLib::Error("nc invalid in initdata");
+  amrex::Error("nc invalid in initdata");
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1))
-  BoxLib::Error("LS_new invalid ncomp");
+  amrex::Error("LS_new invalid ncomp");
 
  MultiFab& DIV_new = get_new_data(DIV_Type,slab_step+1);
  if (DIV_new.nComp()!=num_materials_vel)
-  BoxLib::Error("DIV_new.nComp()!=num_materials_vel");
+  amrex::Error("DIV_new.nComp()!=num_materials_vel");
 
  int nparts=im_solid_map.size();
 
  if ((nparts>=1)&&(nparts<=nmat-1)) {  
   MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
   if (Solid_new.nComp()!=nparts*BL_SPACEDIM)
-   BoxLib::Error("Solid_new.nComp()!=nparts*BL_SPACEDIM");
+   amrex::Error("Solid_new.nComp()!=nparts*BL_SPACEDIM");
   Solid_new.setVal(0.0,0,nparts*BL_SPACEDIM,1);
  } else if (nparts==0) {
   // do nothing
  } else 
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
 
  int nparts_tensor=im_elastic_map.size();
 
  if ((nparts_tensor>=1)&&(nparts_tensor<=nmat)) {  
   MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
   if (Tensor_new.nComp()!=nparts_tensor*NUM_TENSOR_TYPE)
-   BoxLib::Error("Tensor_new.nComp()!=nparts_tensor*NUM_TENSOR_TYPE");
+   amrex::Error("Tensor_new.nComp()!=nparts_tensor*NUM_TENSOR_TYPE");
   Tensor_new.setVal(0.0,0,nparts_tensor*NUM_TENSOR_TYPE,1);
  } else if (nparts_tensor==0) {
   // do nothing
  } else 
-  BoxLib::Error("nparts_tensor invalid");
+  amrex::Error("nparts_tensor invalid");
 
  DIV_new.setVal(0.0);
 
@@ -6422,13 +6420,13 @@ NavierStokes::initData () {
   int nsolveMM_FACE=nsolve*num_materials_vel;
 
   if (num_materials_vel!=1)
-   BoxLib::Error("num_materials_vel invalid");
+   amrex::Error("num_materials_vel invalid");
 
   if (Smac_new.nComp()!=nsolveMM_FACE) {
    std::cout << "nmat = " << nmat << '\n';
    std::cout << "num_materials_vel = " << num_materials_vel << '\n';
    std::cout << "nsolveMM_FACE = " << nsolveMM_FACE << '\n';
-   BoxLib::Error("Smac_new.nComp() invalid in initData");
+   amrex::Error("Smac_new.nComp() invalid in initData");
   }
   Smac_new.setVal(0.0,0,nsolveMM_FACE,0);
  }  // dir=0..sdim-1
@@ -6551,7 +6549,7 @@ NavierStokes::initData () {
   if (xblob>0.0) RGASRWATER/=xblob;
 
   if (num_materials_vel!=1)
-   BoxLib::Error("num_materials_vel invalid");
+   amrex::Error("num_materials_vel invalid");
 
   FORT_INITVELOCITY(
    &level,&upper_slab_time,
@@ -6583,7 +6581,7 @@ NavierStokes::initData () {
 
  int nstate=state.size();
  if (nstate!=NUM_STATE_TYPE)
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
  for (int k=0;k<nstate;k++) {
   state[k].CopyNewToOld();  // olddata=newdata 
    // time_array[0]=strt_time-dt_amr  
@@ -6606,18 +6604,18 @@ void NavierStokes::init_boundary_list(Array<int> scomp,
   ncomp_list+=ncomp[ilist];
  }
  if (ncomp_list<=0)
-  BoxLib::Error("ncomp_list invalid");
+  amrex::Error("ncomp_list invalid");
 
 } // subroutine init_boundary_list
 
 void NavierStokes::init_boundary() {
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int nstate=state.size();
  if (nstate!=NUM_STATE_TYPE)
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  int nmat=num_materials;
  int mofcomp=num_materials_vel*(BL_SPACEDIM+1)+
@@ -6656,7 +6654,7 @@ void NavierStokes::init_boundary() {
   } else if (k==Solid_State_Type) {
    int nparts=im_solid_map.size();
    if ((nparts<1)||(nparts>nmat-1))
-    BoxLib::Error("nparts invalid");
+    amrex::Error("nparts invalid");
    MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
    MultiFab* velmf=getStateSolid(1,0,nparts*BL_SPACEDIM,cur_time_slab);
    MultiFab::Copy(Solid_new,*velmf,0,0,nparts*BL_SPACEDIM,1);
@@ -6664,15 +6662,15 @@ void NavierStokes::init_boundary() {
   } else if (k==Tensor_Type) {
    int nparts=im_elastic_map.size();
    if ((nparts<1)||(nparts>nmat))
-    BoxLib::Error("nparts invalid");
+    amrex::Error("nparts invalid");
    if (nparts!=num_materials_viscoelastic)
-    BoxLib::Error("nparts!=num_materials_viscoelastic");
+    amrex::Error("nparts!=num_materials_viscoelastic");
    MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
    MultiFab* tensormf=getStateTensor(1,0,nparts*NUM_TENSOR_TYPE,cur_time_slab);
    MultiFab::Copy(Tensor_new,*tensormf,0,0,nparts*NUM_TENSOR_TYPE,1);
    delete tensormf;
   } else 
-   BoxLib::Error("k invalid");
+   amrex::Error("k invalid");
 
  } // k=0..nstate-1
 
@@ -6711,15 +6709,15 @@ NavierStokes::init (AmrLevel &old,
  setTimeLevel(upper_slab_time,delta_slab_time); 
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int nmat=num_materials;
  if (ngeom_raw!=BL_SPACEDIM+1)
-  BoxLib::Error("ngeom_raw bust");
+  amrex::Error("ngeom_raw bust");
 
  int nstate=state.size();  // cell centered, vel MAC, LS, etc
  if (nstate!=NUM_STATE_TYPE)
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  for (int k=0;k<nstate;k++) {
 
@@ -6748,7 +6746,7 @@ NavierStokes::init (AmrLevel &old,
    ncomp_part[3]=1;
    test_ncomp+=ncomp_part[3];
    if (test_ncomp!=ncomp)
-    BoxLib::Error("test ncomp invalid");
+    amrex::Error("test ncomp invalid");
 
   } else {
    numparts=1;
@@ -6764,7 +6762,7 @@ NavierStokes::init (AmrLevel &old,
   }
  }  // k
 
- old_intersect_new = BoxLib::intersect(grids,oldns->boxArray());
+ old_intersect_new = amrex::intersect(grids,oldns->boxArray());
  is_first_step_after_regrid = 1;
 
 }  // subroutine init(old)
@@ -6776,14 +6774,14 @@ NavierStokes::init (const BoxArray& ba_in,
          const DistributionMapping& dmap_in) {
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int nmat=num_materials;
  if (ngeom_raw!=BL_SPACEDIM+1)
-  BoxLib::Error("ngeom_raw bust");
+  amrex::Error("ngeom_raw bust");
 
  if (level==0)
-  BoxLib::Error("this init only called for level>0");
+  amrex::Error("this init only called for level>0");
 
  Real dt_amr=parent->getDt();
  Real dt_new=dt_amr;
@@ -6818,7 +6816,7 @@ NavierStokes::init (const BoxArray& ba_in,
 
  int nstate=state.size();
  if (nstate!=NUM_STATE_TYPE)
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  for (int k=0;k<nstate;k++) {
 
@@ -6847,7 +6845,7 @@ NavierStokes::init (const BoxArray& ba_in,
    ncomp_part[3]=1;
    test_ncomp+=ncomp_part[3];
    if (test_ncomp!=ncomp)
-    BoxLib::Error("test ncomp invalid");
+    amrex::Error("test ncomp invalid");
 
   } else {
    numparts=1;
@@ -6870,13 +6868,13 @@ void NavierStokes::CopyNewToOldALL() {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level invalid CopyNewToOldALL");
+  amrex::Error("level invalid CopyNewToOldALL");
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
    // oldtime=newtime newtime+=dt
   int nstate=ns_level.state.size();
   if (nstate!=NUM_STATE_TYPE)
-   BoxLib::Error("nstate invalid");
+   amrex::Error("nstate invalid");
   for (int k = 0; k < nstate; k++) {
    ns_level.state[k].CopyNewToOld();  
   }
@@ -6893,7 +6891,7 @@ void NavierStokes::CopyNewToOldALL() {
  } else if (at_least_one==0) {
   // do nothing
  } else
-  BoxLib::Error("at_least_one invalid");
+  amrex::Error("at_least_one invalid");
 
 }  // subroutine CopyNewToOldALL
 
@@ -6902,13 +6900,13 @@ void NavierStokes::CopyOldToNewALL() {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level invalid CopyOldToNewALL");
+  amrex::Error("level invalid CopyOldToNewALL");
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
    // oldtime=newtime=start_time newtime+=dt
   int nstate=ns_level.state.size();
   if (nstate!=NUM_STATE_TYPE)
-   BoxLib::Error("nstate invalid");
+   amrex::Error("nstate invalid");
   for (int k = 0; k < nstate; k++) {
    ns_level.state[k].CopyOldToNew();  
   }
@@ -6926,7 +6924,7 @@ void NavierStokes::CopyOldToNewALL() {
  } else if (at_least_one==0) {
   // do nothing
  } else
-  BoxLib::Error("at_least_one invalid");
+  amrex::Error("at_least_one invalid");
 
 } // subroutine CopyOldToNewALL
 
@@ -6935,7 +6933,7 @@ void NavierStokes::Number_CellsALL(Real& rcells) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level invalid Number_CellsALL");
+  amrex::Error("level invalid Number_CellsALL");
  rcells=0.0;
  for (int ilev=0;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -6954,7 +6952,7 @@ void NavierStokes::Number_CellsALL(Real& rcells) {
 void NavierStokes::allocate_mdot() {
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nsolve=1;
 
@@ -6973,11 +6971,11 @@ void
 NavierStokes::SDC_setup_step() {
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int nmat=num_materials;
  if ((nmat<1)||(nmat>1000))
-  BoxLib::Error("nmat out of range");
+  amrex::Error("nmat out of range");
 
  nfluxSEM=BL_SPACEDIM+num_state_base;
   // I-scheme,thermal conduction,viscosity,div(up),gp,-force
@@ -6987,7 +6985,7 @@ NavierStokes::SDC_setup_step() {
 
  if ((SDC_outer_sweeps<0)||
      (SDC_outer_sweeps>=ns_time_order))
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
 
  divu_outer_sweeps=0;
 
@@ -6998,13 +6996,13 @@ NavierStokes::SDC_setup_step() {
   std::cout << "lower_slab_time= " << lower_slab_time << '\n';
   std::cout << "upper_slab_time= " << upper_slab_time << '\n';
   std::cout << "delta_slab_time= " << delta_slab_time << '\n';
-  BoxLib::Error("delta_slab_time invalid");
+  amrex::Error("delta_slab_time invalid");
  }
  if ((delta_slab_time==0.0)&&(upper_slab_time>0.0)) {
   std::cout << "lower_slab_time= " << lower_slab_time << '\n';
   std::cout << "upper_slab_time= " << upper_slab_time << '\n';
   std::cout << "delta_slab_time= " << delta_slab_time << '\n';
-  BoxLib::Error("delta_slab_time invalid");
+  amrex::Error("delta_slab_time invalid");
  }
 
  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
@@ -7017,9 +7015,9 @@ NavierStokes::SDC_setup_step() {
    // in: NavierStokes::SDC_setup_step()
   dt_slab=cur_time_slab-prev_time_slab;
   if (dt_slab<0.0)
-   BoxLib::Error("dt_slab invalid1");
+   amrex::Error("dt_slab invalid1");
   if ((dt_slab==0.0)&&(cur_time_slab>0.0))
-   BoxLib::Error("dt_slab invalid2");
+   amrex::Error("dt_slab invalid2");
 
  } else if ((slab_step==-1)&&(ns_time_order>=2)) {
   prev_time_slab=lower_slab_time;
@@ -7034,7 +7032,7 @@ NavierStokes::SDC_setup_step() {
   vel_time_slab=cur_time_slab;
   prescribed_vel_time_slab=cur_time_slab;
  } else
-  BoxLib::Error("slab_step invalid"); 
+  amrex::Error("slab_step invalid"); 
 
 } // SDC_setup_step()
 
@@ -7084,10 +7082,10 @@ NavierStokes::Geometry_cleanup() {
    if (localMF[i]==0) {
     // do nothing
    } else {
-    BoxLib::Error("localMF[i] invalid");
+    amrex::Error("localMF[i] invalid");
    }
   } else {
-   BoxLib::Error("localMF_grow[i] invalid");
+   amrex::Error("localMF_grow[i] invalid");
   }
  } // i=0 ... MAX_NUM_LOCAL_MF-1   
 
@@ -7121,10 +7119,10 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic  invalid");
+  amrex::Error("num_materials_viscoelastic  invalid");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  if (localMF_grow[VISCOTEN_MF]!=-1)
   delete_localMF(VISCOTEN_MF,1);
@@ -7137,17 +7135,17 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
-  BoxLib::Error("cell_visc_material ncomp invalid");
+  amrex::Error("cell_visc_material ncomp invalid");
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow)
-  BoxLib::Error("cell_visc_material ngrow invalid");
+  amrex::Error("cell_visc_material ngrow invalid");
 
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  if ((im<0)||(im>=nmat))
-  BoxLib::Error("im invalid52");
+  amrex::Error("im invalid52");
 
  if (ns_is_rigid(im)==0) {
 
@@ -7163,7 +7161,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
     int scomp_tensor=partid*NUM_TENSOR_TYPE;
 
     if (NUM_TENSOR_TYPE!=2*BL_SPACEDIM)
-     BoxLib::Error("NUM_TENSOR_TYPE invalid");
+     amrex::Error("NUM_TENSOR_TYPE invalid");
 
     getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,NUM_TENSOR_TYPE,
      cur_time_slab);
@@ -7176,7 +7174,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
     else if (CoordSys::IsCYLINDRICAL())
      rzflag=3;
     else
-     BoxLib::Error("CoordSys bust 2");
+     amrex::Error("CoordSys bust 2");
 
     const Real* dx = geom.CellSize();
 
@@ -7220,22 +7218,22 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
     }  // mfi  
 }//omp
    } else
-    BoxLib::Error("partid could not be found: make_viscoelastic_tensor");
+    amrex::Error("partid could not be found: make_viscoelastic_tensor");
 
   } else if ((elastic_time[im]==0.0)||
              (elastic_viscosity[im]==0.0)) {
 
    if (viscoelastic_model[im]!=0)
-    BoxLib::Error("viscoelastic_model[im]!=0");
+    amrex::Error("viscoelastic_model[im]!=0");
 
   } else
-   BoxLib::Error("elastic_time/elastic_viscosity invalid");
+   amrex::Error("elastic_time/elastic_viscosity invalid");
 
 
  } else if (ns_is_rigid(im)==1) {
   // do nothing
  } else
-  BoxLib::Error("ns_is_rigid invalid");
+  amrex::Error("ns_is_rigid invalid");
 
 }  // subroutine make_viscoelastic_tensor
 
@@ -7248,7 +7246,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  int nden=nmat*num_state_material;
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int ntensor=BL_SPACEDIM*BL_SPACEDIM;
  int ntensorMM=ntensor*num_materials_vel;
@@ -7256,10 +7254,10 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int ngrow=1;  // number of grow cells for the tensor
 
@@ -7268,11 +7266,11 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
  debug_ngrow(idx,0,4);
  if (localMF[idx]->nComp()!=num_materials_vel)
-  BoxLib::Error("localMF[idx]->nComp() invalid");
+  amrex::Error("localMF[idx]->nComp() invalid");
 
  debug_ngrow(CELLTENSOR_MF,1,6);
  if (localMF[CELLTENSOR_MF]->nComp()!=ntensorMM)
-  BoxLib::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
+  amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,ngrow,3);
 
@@ -7280,9 +7278,9 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  debug_ngrow(CELL_DEDT_MF,1,28); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  // 1. viscosity coefficient - 1..nmat
  // 2. viscoelastic coefficient - 1..nmat
@@ -7290,18 +7288,18 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  // the viscous and viscoelastic forces should both be multiplied by
  // visc_coef.  
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
-  BoxLib::Error("cell_visc_material ncomp invalid");
+  amrex::Error("cell_visc_material ncomp invalid");
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow)
-  BoxLib::Error("cell_visc_material ngrow invalid");
+  amrex::Error("cell_visc_material ngrow invalid");
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  if ((im<0)||(im>=nmat))
-  BoxLib::Error("im invalid53");
+  amrex::Error("im invalid53");
 
  if (ns_is_rigid(im)==0) {
 
@@ -7309,11 +7307,11 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
    debug_ngrow(VISCOTEN_MF,1,5);
    if (localMF[VISCOTEN_MF]->nComp()!=NUM_TENSOR_TYPE)
-    BoxLib::Error("localMF[VISCOTEN_MF] invalid");
+    amrex::Error("localMF[VISCOTEN_MF] invalid");
 
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
    if (ncomp_visc!=3*nmat)
-    BoxLib::Error("cell_visc_material ncomp invalid");
+    amrex::Error("cell_visc_material ncomp invalid");
 
    resize_levelsetLO(2,LEVELPC_MF);
    debug_ngrow(LEVELPC_MF,2,5);
@@ -7326,7 +7324,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
    else if (CoordSys::IsCYLINDRICAL())
     rzflag=3;
    else
-    BoxLib::Error("CoordSys bust 2");
+    amrex::Error("CoordSys bust 2");
 
    const Real* dx = geom.CellSize();
 
@@ -7349,24 +7347,24 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
     FArrayBox& tenfab=(*localMF[VISCOTEN_MF])[mfi];
     if (tenfab.nComp()!=NUM_TENSOR_TYPE)
-     BoxLib::Error("tenfab.nComp invalid");
+     amrex::Error("tenfab.nComp invalid");
 
     FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
     if (DeDTinversefab.nComp()!=nmat+1)
-     BoxLib::Error("DeDTinversefab.nComp() invalid");
+     amrex::Error("DeDTinversefab.nComp() invalid");
 
     FArrayBox& gradufab=(*localMF[CELLTENSOR_MF])[mfi];
     if (gradufab.nComp()!=ntensorMM)
-     BoxLib::Error("gradufab.nComp() invalid");
+     amrex::Error("gradufab.nComp() invalid");
 
     FArrayBox& heatfab=(*localMF[idx])[mfi];
     if (heatfab.nComp()!=num_materials_vel)
-     BoxLib::Error("heatfab.nComp() invalid");
+     amrex::Error("heatfab.nComp() invalid");
 
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
     if (viscfab.nComp()<nmat)
-     BoxLib::Error("viscfab.nComp() invalid");
+     amrex::Error("viscfab.nComp() invalid");
 
     FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
     FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
@@ -7402,15 +7400,15 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
              (elastic_viscosity[im]==0.0)) {
 
    if (viscoelastic_model[im]!=0)
-    BoxLib::Error("viscoelastic_model[im]!=0");
+    amrex::Error("viscoelastic_model[im]!=0");
 
   } else
-   BoxLib::Error("elastic_time/elastic_viscosity invalid");
+   amrex::Error("elastic_time/elastic_viscosity invalid");
 
  } else if (ns_is_rigid(im)==1) {
   // do nothing
  } else
-  BoxLib::Error("ns_is_rigid invalid");
+  amrex::Error("ns_is_rigid invalid");
 
 }   // subroutine make_viscoelastic_heating
 
@@ -7426,10 +7424,10 @@ void NavierStokes::make_viscoelastic_force(int im) {
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int ngrow=1;
 
@@ -7443,17 +7441,17 @@ void NavierStokes::make_viscoelastic_force(int im) {
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
-  BoxLib::Error("cell_visc_material ncomp invalid");
+  amrex::Error("cell_visc_material ncomp invalid");
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow)
-  BoxLib::Error("cell_visc_material ngrow invalid");
+  amrex::Error("cell_visc_material ngrow invalid");
 
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  if ((im<0)||(im>=nmat))
-  BoxLib::Error("im invalid54");
+  amrex::Error("im invalid54");
 
  if (ns_is_rigid(im)==0) {
 
@@ -7462,12 +7460,12 @@ void NavierStokes::make_viscoelastic_force(int im) {
    debug_ngrow(VISCOTEN_MF,1,5);
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
    if (ncomp_visc!=3*nmat)
-    BoxLib::Error("cell_visc_material ncomp invalid");
+    amrex::Error("cell_visc_material ncomp invalid");
 
    resize_levelsetLO(2,LEVELPC_MF);
    debug_ngrow(LEVELPC_MF,2,5);
    if (localMF[LEVELPC_MF]->nComp()!=nmat*(BL_SPACEDIM+1))
-    BoxLib::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(BL_SPACEDIM+1)");
+    amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(BL_SPACEDIM+1)");
 
    int rzflag=0;
    if (CoordSys::IsRZ())
@@ -7477,7 +7475,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
    else if (CoordSys::IsCYLINDRICAL())
     rzflag=3;
    else
-    BoxLib::Error("CoordSys bust 2");
+    amrex::Error("CoordSys bust 2");
 
    const Real* dx = geom.CellSize();
 
@@ -7504,7 +7502,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
     if (viscfab.nComp()<nmat)
-     BoxLib::Error("viscfab.nComp() invalid");
+     amrex::Error("viscfab.nComp() invalid");
 
     FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
     FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
@@ -7537,16 +7535,16 @@ void NavierStokes::make_viscoelastic_force(int im) {
              (elastic_viscosity[im]==0.0)) {
 
    if (viscoelastic_model[im]!=0)
-    BoxLib::Error("viscoelastic_model[im]!=0");
+    amrex::Error("viscoelastic_model[im]!=0");
 
   } else
-   BoxLib::Error("elastic_time/elastic_viscosity invalid");
+   amrex::Error("elastic_time/elastic_viscosity invalid");
 
 
  } else if (ns_is_rigid(im)==1) {
   // do nothing
  } else
-  BoxLib::Error("ns_is_rigid invalid");
+  amrex::Error("ns_is_rigid invalid");
 
 }   // subroutine make_viscoelastic_force
 
@@ -7557,19 +7555,19 @@ void NavierStokes::make_marangoni_force(int isweep) {
  int finest_level=parent->finestLevel();
 
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid make_marangoni_force");
+  amrex::Error("level invalid make_marangoni_force");
 
  int nmat=num_materials;
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,5);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(BL_SPACEDIM+1))
-  BoxLib::Error("localMF[LEVELPC_MF]->nComp() invalid");
+  amrex::Error("localMF[LEVELPC_MF]->nComp() invalid");
 
  for (int dir=0;dir<BL_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -7579,7 +7577,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
  debug_ngrow(DIST_CURV_MF,1,3);
  debug_ngrow(CELL_DEN_MF,1,5);
  if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
   // mask=1 if not covered or if outside the domain.
   // NavierStokes::maskfiner_localMF
@@ -7596,7 +7594,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
  for (int dir=0;dir<BL_SPACEDIM;dir++) {
   debug_ngrow(CONSERVE_FLUXES_MF+dir,0,7);
   if (localMF[CONSERVE_FLUXES_MF+dir]->nComp()!=BL_SPACEDIM)
-   BoxLib::Error("localMF[CONSERVE_FLUXES_MF+dir]->nComp() invalid");
+   amrex::Error("localMF[CONSERVE_FLUXES_MF+dir]->nComp() invalid");
  }   
 
  if (isweep==0) {
@@ -7606,7 +7604,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
 
   CL_velocity=getState(2,0,num_materials_vel*(BL_SPACEDIM+1),prev_time_slab);
   if (CL_velocity->nComp()!=BL_SPACEDIM+1)
-   BoxLib::Error("CL_velocity->nComp()!=BL_SPACEDIM+1");
+   amrex::Error("CL_velocity->nComp()!=BL_SPACEDIM+1");
 
   for (int dir=0;dir<BL_SPACEDIM;dir++) {
    setVal_localMF(CONSERVE_FLUXES_MF+dir,0.0,0,BL_SPACEDIM,0);
@@ -7616,19 +7614,19 @@ void NavierStokes::make_marangoni_force(int isweep) {
  } else if (isweep==1) {
   CL_velocity=localMF[GHOSTDIST_MF];
   if (CL_velocity->nComp()!=localMF[GHOSTDIST_MF]->nComp())
-   BoxLib::Error("CL_velocity->nComp()!=localMF[GHOSTDIST_MF]->nComp()");
+   amrex::Error("CL_velocity->nComp()!=localMF[GHOSTDIST_MF]->nComp()");
  } else {
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
  }
  if (CL_velocity->nGrow()!=2)
-  BoxLib::Error("CL_velocity->nGrow()!=2");
+  amrex::Error("CL_velocity->nGrow()!=2");
 
  debug_ngrow(GHOSTDIST_MF,2,5);
  if (localMF[GHOSTDIST_MF]->nComp()!=nmat*(BL_SPACEDIM+1))
-  BoxLib::Error("localMF[GHOSTDIST_MF]->nComp() invalid");
+  amrex::Error("localMF[GHOSTDIST_MF]->nComp() invalid");
  debug_ngrow(DEN_RECON_MF,2,5);
  if (localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material)
-  BoxLib::Error("den_recon has invalid ncomp");
+  amrex::Error("den_recon has invalid ncomp");
 
  int nden=nmat*num_state_material;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -7638,7 +7636,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  int scomp_mofvars=num_materials_vel*(BL_SPACEDIM+1)+
   nmat*num_state_material;
@@ -7654,7 +7652,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
   // x nten
  int num_curv=nten*(5+BL_SPACEDIM);
  if (localMF[DIST_CURV_MF]->nComp()!=num_curv)
-  BoxLib::Error("DIST_CURV invalid ncomp");
+  amrex::Error("DIST_CURV invalid ncomp");
   
  MultiFab& Umac_new=get_new_data(Umac_Type,slab_step+1);
  MultiFab& Vmac_new=get_new_data(Umac_Type+1,slab_step+1);
@@ -7799,7 +7797,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
   delete_localMF(DEN_RECON_MF,1);
   delete_localMF(POTENTIAL_EDGE_MF,BL_SPACEDIM);
  } else {
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
  }
 
 }   // make_marangoni_force
@@ -7811,7 +7809,7 @@ int NavierStokes::ns_thread() {
  tid = omp_get_thread_num();
 #endif
  if ((tid<0)||(tid>=thread_class::nthreads))
-  BoxLib::Error("tid invalid");
+  amrex::Error("tid invalid");
 
  return tid;
 }
@@ -7825,19 +7823,19 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
  bool use_tiling=ns_tiling;
 
  if ((slab_step<0)||(slab_step>=ns_time_order))
-  BoxLib::Error("slab_step invalid");
+  amrex::Error("slab_step invalid");
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  if ((SDC_outer_sweeps<=0)||
      (SDC_outer_sweeps>=ns_time_order))
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
  if (ns_time_order<=1)
-  BoxLib::Error("ns_time_order invalid");
+  amrex::Error("ns_time_order invalid");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int nmat=num_materials;
 
@@ -7849,16 +7847,16 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
  if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  const Real* dx = geom.CellSize();
  int bfact=parent->Space_blockingFactor(level);
@@ -7892,7 +7890,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
      // advection, thermal conduction,viscosity,div(up),gp
    deltacomp=slab_step*nstate_SDC+nfluxSEM+1+BL_SPACEDIM;
   } else
-   BoxLib::Error("project_option invalid4");
+   amrex::Error("project_option invalid4");
 
   FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
   FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
@@ -7977,7 +7975,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
 	    (project_option==4)) { // -momentum force at t^n+1
 	 // do nothing
  } else {
-  BoxLib::Error("project_option invalid");
+  amrex::Error("project_option invalid");
  } 
 
 }   // subroutine make_SEM_delta_force
@@ -7992,10 +7990,10 @@ void NavierStokes::make_heat_source() {
  int nmat=num_materials;
 
  if ((slab_step<0)||(slab_step>=ns_time_order))
-  BoxLib::Error("slab_step invalid");
+  amrex::Error("slab_step invalid");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  for (int dir=0;dir<BL_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -8005,24 +8003,24 @@ void NavierStokes::make_heat_source() {
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,5);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(BL_SPACEDIM+1))
-  BoxLib::Error("localMF[LEVELPC_MF]->nComp() invalid");
+  amrex::Error("localMF[LEVELPC_MF]->nComp() invalid");
 
  resize_metrics(1);  
  debug_ngrow(VOLUME_MF,1,28); 
 
  debug_ngrow(CELL_DEN_MF,1,5);
  if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  debug_ngrow(CELL_DEDT_MF,1,5);
  if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  int dencomp=num_materials_vel*(BL_SPACEDIM+1);
  int nden=nmat*num_state_material;
@@ -8102,10 +8100,10 @@ void NavierStokes::add_perturbation() {
  int finest_level=parent->finestLevel();
 
  if (slab_step!=ns_time_order-1)
-  BoxLib::Error("slab_step invalid");
+  amrex::Error("slab_step invalid");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
@@ -8115,7 +8113,7 @@ void NavierStokes::add_perturbation() {
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  const Real* dx = geom.CellSize();
  int bfact=parent->Space_blockingFactor(level);
@@ -8188,7 +8186,7 @@ void NavierStokes::update_SEM_delta_force(
  if ((ns_time_order>=2)&&(ns_time_order<=32)) {
   // do nothing
  } else
-  BoxLib::Error("ns_time_order invalid");
+  amrex::Error("ns_time_order invalid");
 
  if ((enable_spectral==1)||(enable_spectral==3)) {
   // do nothing
@@ -8197,27 +8195,27 @@ void NavierStokes::update_SEM_delta_force(
   std::cout << "project_option= " << project_option << '\n';
   std::cout << "update_spectral= " << update_spectral << '\n';
   std::cout << "update_stable= " << update_stable << '\n';
-  BoxLib::Error("enable_spectral invalid in update_SEM_delta_force");
+  amrex::Error("enable_spectral invalid in update_SEM_delta_force");
  }
 
  if ((nsolve!=1)&&(nsolve!=BL_SPACEDIM))
-  BoxLib::Error("nsolve invalid37");
+  amrex::Error("nsolve invalid37");
 
  int num_materials_face=num_materials_vel;
 
  if (project_option==0) {
   if (num_materials_face!=1)
-   BoxLib::Error("num_materials_face invalid");
+   amrex::Error("num_materials_face invalid");
  } else if (project_option==2) { // thermal diffusion
   num_materials_face=num_materials_scalar_solve;
  } else if (project_option==3) { // viscosity
   if (num_materials_face!=1)
-   BoxLib::Error("num_materials_face invalid");
+   amrex::Error("num_materials_face invalid");
  } else if (project_option==4) { // -momentum force
   if (num_materials_face!=1)
-   BoxLib::Error("num_materials_face invalid");
+   amrex::Error("num_materials_face invalid");
  } else
-  BoxLib::Error("project_option invalid5");
+  amrex::Error("project_option invalid5");
 
  int nsolveMM=nsolve*num_materials_face;
 
@@ -8227,18 +8225,18 @@ void NavierStokes::update_SEM_delta_force(
  } else if (num_materials_face==nmat) {
   nsolveMM_FACE*=2;
  } else
-  BoxLib::Error("num_materials_face invalid");
+  amrex::Error("num_materials_face invalid");
 
  if (update_stable==1) {
   if ((slab_step<0)||(slab_step>=ns_time_order))
-   BoxLib::Error("slab_step invalid");
+   amrex::Error("slab_step invalid");
  } else if (update_stable==0) {
   // do nothing
  } else
-  BoxLib::Error("update_stable invalid update sem delta force");
+  amrex::Error("update_stable invalid update sem delta force");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  debug_ngrow(idx_div,0,3);
  debug_ngrow(idx_gp,0,3);
@@ -8248,15 +8246,15 @@ void NavierStokes::update_SEM_delta_force(
  if (project_option==0) { // grad p, div(up)
   idx_hoop=idx_div;
   if (nsolve!=1)
-   BoxLib::Error("nsolve invalid");
+   amrex::Error("nsolve invalid");
   if (localMF[idx_gp]->nComp()!=nsolveMM*BL_SPACEDIM)
-   BoxLib::Error("localMF[idx_gp]->nComp() invalid");
+   amrex::Error("localMF[idx_gp]->nComp() invalid");
   if (localMF[idx_div]->nComp()!=nsolveMM)
-   BoxLib::Error("localMF[idx_div]->nComp() invalid");
+   amrex::Error("localMF[idx_div]->nComp() invalid");
  } else if (project_option==2) { // -div(k grad T)-THERMAL_FORCE_MF
   idx_hoop=THERMAL_FORCE_MF;
   if (nsolve!=1)
-   BoxLib::Error("nsolve invalid");
+   amrex::Error("nsolve invalid");
   if (localMF[idx_div]->nComp()!=nsolveMM) {
    std::cout << "project_option = " << project_option << '\n';
    std::cout << "idx_div = " << idx_div << '\n';
@@ -8264,7 +8262,7 @@ void NavierStokes::update_SEM_delta_force(
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
      localMF[idx_div]->nComp() << '\n';
-   BoxLib::Error("localMF[idx_div]->nComp() invalid");
+   amrex::Error("localMF[idx_div]->nComp() invalid");
   }
   if (localMF[idx_hoop]->nComp()!=nsolveMM) {
    std::cout << "project_option = " << project_option << '\n';
@@ -8273,12 +8271,12 @@ void NavierStokes::update_SEM_delta_force(
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " << 
      localMF[idx_hoop]->nComp() << '\n';
-   BoxLib::Error("localMF[idx_hoop]->nComp() invalid");
+   amrex::Error("localMF[idx_hoop]->nComp() invalid");
   }
  } else if (project_option==3) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
   idx_hoop=HOOP_FORCE_MARK_MF;
   if (nsolve!=BL_SPACEDIM)
-   BoxLib::Error("nsolve invalid");
+   amrex::Error("nsolve invalid");
   if (localMF[idx_div]->nComp()!=nsolveMM) {
    std::cout << "project_option = " << project_option << '\n';
    std::cout << "idx_div = " << idx_div << '\n';
@@ -8286,7 +8284,7 @@ void NavierStokes::update_SEM_delta_force(
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
      localMF[idx_div]->nComp() << '\n';
-   BoxLib::Error("localMF[idx_div]->nComp() invalid");
+   amrex::Error("localMF[idx_div]->nComp() invalid");
   }
   if (localMF[idx_hoop]->nComp()!=nsolveMM) {
    std::cout << "project_option = " << project_option << '\n';
@@ -8295,22 +8293,22 @@ void NavierStokes::update_SEM_delta_force(
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
      localMF[idx_hoop]->nComp() << '\n';
-   BoxLib::Error("localMF[idx_hoop]->nComp() invalid");
+   amrex::Error("localMF[idx_hoop]->nComp() invalid");
   }
  } else if (project_option==4) { // -momentum force
   idx_hoop=idx_div;
   if (idx_div!=idx_gp)
-   BoxLib::Error("expecting idx_div==idx_gp");
+   amrex::Error("expecting idx_div==idx_gp");
   if (nsolve!=BL_SPACEDIM)
-   BoxLib::Error("nsolve invalid");
+   amrex::Error("nsolve invalid");
   if (localMF[idx_hoop]->nComp()!=nsolveMM)
-   BoxLib::Error("localMF[idx_hoop]->nComp() invalid");
+   amrex::Error("localMF[idx_hoop]->nComp() invalid");
  } else
-  BoxLib::Error("project_option invalid6");
+  amrex::Error("project_option invalid6");
 
  debug_ngrow(idx_hoop,0,3);
  if (localMF[idx_hoop]->nComp()!=localMF[idx_div]->nComp())
-  BoxLib::Error("localMF[idx_hoop]->nComp() invalid");
+  amrex::Error("localMF[idx_hoop]->nComp() invalid");
 
  if ((project_option==0)||
      (project_option==2)||
@@ -8321,12 +8319,12 @@ void NavierStokes::update_SEM_delta_force(
 
    if (project_option==0) {
     if (localMF[idx_gpmac]->nComp()!=nsolveMM_FACE)
-     BoxLib::Error("localMF[idx_gpmac]->nComp() invalid");
+     amrex::Error("localMF[idx_gpmac]->nComp() invalid");
    } else if ((project_option==2)||
               (project_option==3)) {
     // do nothing
    } else
-    BoxLib::Error("project_option invalid7");
+    amrex::Error("project_option invalid7");
  
    debug_ngrow(spectralF_GP_MF+dir,0,3);
    debug_ngrow(stableF_GP_MF+dir,0,3);
@@ -8336,7 +8334,7 @@ void NavierStokes::update_SEM_delta_force(
  } else if (project_option==4) { // -momentum force
   // check nothing
  } else
-  BoxLib::Error("project_option invalid8");
+  amrex::Error("project_option invalid8");
 
  debug_ngrow(spectralF_MF,0,3);
  debug_ngrow(stableF_MF,0,3);
@@ -8349,7 +8347,7 @@ void NavierStokes::update_SEM_delta_force(
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  const Real* dx = geom.CellSize();
  int bfact=parent->Space_blockingFactor(level);
@@ -8384,17 +8382,17 @@ void NavierStokes::update_SEM_delta_force(
   else if ((slab_step>=0)&&(slab_step<ns_time_order))
    HOcomp=nstate_SDC*(slab_step+1);
   else
-   BoxLib::Error("slab_step invalid");
+   amrex::Error("slab_step invalid");
 
   if (update_stable==1) {
    if ((slab_step>=0)&&(slab_step<ns_time_order))
     LOcomp=nstate_SDC*slab_step;
    else
-    BoxLib::Error("slab_step invalid");
+    amrex::Error("slab_step invalid");
   } else if (update_stable==0) {
    // do nothing
   } else
-   BoxLib::Error("update_stable invalid");
+   amrex::Error("update_stable invalid");
  
    // in: GODUNOV_3D.F90
   FORT_UPDATESEMFORCE(
@@ -8460,21 +8458,21 @@ void NavierStokes::update_SEM_delta_force(
      else if ((slab_step>=0)&&(slab_step<ns_time_order))
       HOcomp=(slab_step+1);
      else
-      BoxLib::Error("slab_step invalid");
+      amrex::Error("slab_step invalid");
     } else if (update_spectral==0) {
      // do nothing
     } else
-     BoxLib::Error("update_spectral invalid");
+     amrex::Error("update_spectral invalid");
 
     if (update_stable==1) {
      if ((slab_step>=0)&&(slab_step<ns_time_order))
       LOcomp=slab_step;
      else
-      BoxLib::Error("slab_step invalid");
+      amrex::Error("slab_step invalid");
     } else if (update_stable==0) {
      // do nothing
     } else
-     BoxLib::Error("update_stable invalid");
+     amrex::Error("update_stable invalid");
 
     FORT_UPDATESEMFORCE_FACE(
      &project_option,
@@ -8508,7 +8506,7 @@ void NavierStokes::update_SEM_delta_force(
             (project_option==4)) {
   // do nothing
  } else {
-  BoxLib::Error("project_option invalid9");
+  amrex::Error("project_option invalid9");
  } 
 
 } // subroutine update_SEM_delta_force
@@ -8524,15 +8522,15 @@ void NavierStokes::tensor_advection_update() {
  int nmat=num_materials;
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  for (int dir=0;dir<BL_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -8540,7 +8538,7 @@ void NavierStokes::tensor_advection_update() {
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,8);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(BL_SPACEDIM+1))
-  BoxLib::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(BL_SPACEDIM+1))");
+  amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(BL_SPACEDIM+1))");
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,1,9);
@@ -8556,7 +8554,7 @@ void NavierStokes::tensor_advection_update() {
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 3");
+  amrex::Error("CoordSys bust 3");
 
  const Real* dx = geom.CellSize();
 
@@ -8577,7 +8575,7 @@ void NavierStokes::tensor_advection_update() {
 
      int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
      if (ncomp_visc!=3*nmat)
-      BoxLib::Error("cell_visc_material ncomp invalid");
+      amrex::Error("cell_visc_material ncomp invalid");
 
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
@@ -8609,12 +8607,12 @@ void NavierStokes::tensor_advection_update() {
       int ntensorMM=ntensor*num_materials_vel;
 
       if (cellten.nComp()!=ntensorMM)
-       BoxLib::Error("cellten invalid ncomp");
+       amrex::Error("cellten invalid ncomp");
 
       FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
       FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
       if (viscfab.nComp()<nmat)
-       BoxLib::Error("viscfab.nComp() invalid");
+       amrex::Error("viscfab.nComp() invalid");
 
       FArrayBox& velfab=(*velmf)[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
@@ -8747,26 +8745,26 @@ void NavierStokes::tensor_advection_update() {
                 (rzflag==3)) {
       // do nothing
      } else
-      BoxLib::Error("bl_spacedim or rzflag invalid");
+      amrex::Error("bl_spacedim or rzflag invalid");
       
      delete tendata_mf;
      delete tensor_source_mf;
      delete velmf;
     } else
-     BoxLib::Error("partid could not be found: tensor_advection_update");
+     amrex::Error("partid could not be found: tensor_advection_update");
 
    } else if ((elastic_time[im]==0.0)||(elastic_viscosity[im]==0.0)) {
     if (viscoelastic_model[im]!=0)
-     BoxLib::Error("viscoelastic_model[im]!=0");
+     amrex::Error("viscoelastic_model[im]!=0");
    } else
-    BoxLib::Error("viscoelastic parameter bust");
+    amrex::Error("viscoelastic parameter bust");
 
   } else if (ns_is_rigid(im)==1) {
 
    // do nothing
 
   } else
-   BoxLib::Error("ns_is_rigid invalid");
+   amrex::Error("ns_is_rigid invalid");
 
  } // im
 
@@ -8785,10 +8783,10 @@ void NavierStokes::tensor_extrapolate() {
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int ngrow_extrap=2;
 
@@ -8862,19 +8860,19 @@ void NavierStokes::tensor_extrapolate() {
      delete tensor_source_mf;
 
     } else
-     BoxLib::Error("partid could not be found: tensor_extrapolate");
+     amrex::Error("partid could not be found: tensor_extrapolate");
 
    } else if ((elastic_time[im]==0.0)||(elastic_viscosity[im]==0.0)) {
 
     if (viscoelastic_model[im]!=0)
-     BoxLib::Error("viscoelastic_model[im]!=0");
+     amrex::Error("viscoelastic_model[im]!=0");
 
    } else
-    BoxLib::Error("viscoelastic parameter bust");
+    amrex::Error("viscoelastic parameter bust");
   } else if (ns_is_rigid(im)==1) {
    // do nothing
   } else
-   BoxLib::Error("ns_is_rigid bust");
+   amrex::Error("ns_is_rigid bust");
  } // im
 
 }   // subroutine tensor_extrapolate
@@ -8886,9 +8884,9 @@ NavierStokes::correct_density() {
  bool use_tiling=ns_tiling;
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
  if (dt_slab<=0.0)
-  BoxLib::Error("dt_slab invalid3");
+  amrex::Error("dt_slab invalid3");
 
  int nmat=num_materials;
 
@@ -8896,9 +8894,9 @@ NavierStokes::correct_density() {
 
  for (int im=0;im<nmat;im++) {
   if ((DrhoDT[im]!=0.0)&&(override_density[im]==0))
-   BoxLib::Error("DrhoDT mismatch"); 
+   amrex::Error("DrhoDT mismatch"); 
   if ((DrhoDz[im]!=0.0)&&(override_density[im]==0))
-   BoxLib::Error("DrhoDz mismatch"); 
+   amrex::Error("DrhoDz mismatch"); 
   if (override_density[im]==1) {
    non_conservative_density=1;
   } else if (override_density[im]==0) {
@@ -8906,7 +8904,7 @@ NavierStokes::correct_density() {
   } else if (override_density[im]==2) {
    // do nothing
   } else
-   BoxLib::Error("override density invalid");
+   amrex::Error("override density invalid");
  } // im
 
  if (non_conservative_density==0) {
@@ -8934,7 +8932,7 @@ NavierStokes::correct_density() {
    else if (invert_gravity==0) {
     // do nothing
    } else
-    BoxLib::Error("invert_gravity invalid");
+    amrex::Error("invert_gravity invalid");
  
 #ifdef _OPENMP
 #pragma omp parallel
@@ -8980,7 +8978,7 @@ NavierStokes::correct_density() {
 }  // omp
   
  } else
-   BoxLib::Error("non_conservative_density invalid");
+   amrex::Error("non_conservative_density invalid");
 
 } // subroutine correct_density
 
@@ -8993,7 +8991,7 @@ void NavierStokes::check_grid_places() {
  int bfact_SEM=parent->Space_blockingFactor(level);
  int bfact_grid=parent->blockingFactor(level);
  if (bfact_grid<4)
-  BoxLib::Error("we must have blocking factor at least 4");
+  amrex::Error("we must have blocking factor at least 4");
 
  int bfact_fine_min=((bfact_SEM<4) ? 4 : bfact_SEM);
  if (bfact_fine_min<bfact_grid)
@@ -9010,7 +9008,7 @@ void NavierStokes::check_grid_places() {
  }
 
  if (bfact_fine_min<4)
-  BoxLib::Error("bfact_fine_min<4");
+  amrex::Error("bfact_fine_min<4");
 
  for (int gridno=0;gridno<grids.size();gridno++) {
   const Box& fabgrid = grids[gridno];
@@ -9018,14 +9016,14 @@ void NavierStokes::check_grid_places() {
   const int* fabhi=fabgrid.hiVect();
   for (int dir=0;dir<BL_SPACEDIM;dir++) {
    if ((fablo[dir]/bfact_fine_min)*bfact_fine_min!=fablo[dir])
-    BoxLib::Error("fablo index failed bfact_fine_min test");
+    amrex::Error("fablo index failed bfact_fine_min test");
    if ((fablo[dir]/bfact_grid)*bfact_grid!=fablo[dir])
-    BoxLib::Error("fablo index failed bfact_grid test");
+    amrex::Error("fablo index failed bfact_grid test");
    int testhi=fabhi[dir]+1;
    if ((testhi/bfact_fine_min)*bfact_fine_min!=testhi)
-    BoxLib::Error("fabhi index failed bfact_fine_min test");
+    amrex::Error("fabhi index failed bfact_fine_min test");
    if ((testhi/bfact_grid)*bfact_grid!=testhi)
-    BoxLib::Error("fabhi index failed bfact_grid test");
+    amrex::Error("fabhi index failed bfact_grid test");
   } // dir=0..sdim-1
 
  } // gridno
@@ -9037,12 +9035,12 @@ void
 NavierStokes::prepare_mask_nbr(int ngrow) {
 
  if (ngrow_distance!=4)
-  BoxLib::Error("ngrow_distance invalid");
+  amrex::Error("ngrow_distance invalid");
  if (curv_stencil_height!=ngrow_distance)
-  BoxLib::Error("curv_stencil_height invalid");
+  amrex::Error("curv_stencil_height invalid");
 
  if ((ngrow<1)||(ngrow>ngrow_distance))
-  BoxLib::Error("ngrow invalid");
+  amrex::Error("ngrow invalid");
 
  if (localMF_grow[MASK_NBR_MF]>=0) {
   delete_localMF(MASK_NBR_MF,1);
@@ -9075,7 +9073,7 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
  else if (divu_outer_sweeps>0)
   vel_time_slab=cur_time_slab;
  else
-  BoxLib::Error("divu_outer_sweeps invalid");
+  amrex::Error("divu_outer_sweeps invalid");
 
  int mac_grow_expect=1;
  if (face_flag==0) {
@@ -9083,16 +9081,16 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
  } else if (face_flag==1) {
   mac_grow_expect++;
  } else
-  BoxLib::Error("face_flag invalid 3");
+  amrex::Error("face_flag invalid 3");
 
  if (mac_grow!=mac_grow_expect)
-  BoxLib::Error("mac_grow invalid in prepare_displacement");
+  amrex::Error("mac_grow invalid in prepare_displacement");
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nsolveMM_FACE=num_materials_vel;
 
@@ -9191,13 +9189,13 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
 }  // prepare_displacement
 
 void
-NavierStokes::level_phase_change_rate(int get_statistics,
-     Array<blobclass> blobdata,int color_count) {
+NavierStokes::level_phase_change_rate(Array<blobclass> blobdata,
+		int color_count) {
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid level_phase_change_rate");
+  amrex::Error("level invalid level_phase_change_rate");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -9209,18 +9207,13 @@ NavierStokes::level_phase_change_rate(int get_statistics,
  getStateDen_localMF(DEN_RECON_MF,normal_probe_size+3,cur_time_slab);
 
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
-  BoxLib::Error("DEN_RECON_MF invalid ncomp");
+  amrex::Error("DEN_RECON_MF invalid ncomp");
 
  int blob_arraysize=num_elements_blobclass;
 
- if (get_statistics==1) {
-  if (color_count!=blobdata.size())
-   BoxLib::Error("color_count!=blobdata.size()");
-  blob_arraysize=color_count*num_elements_blobclass;
- } else if (get_statistics==0) {
-  // do nothing
- } else
-  BoxLib::Error("get_statistics invalid");
+ if (color_count!=blobdata.size())
+  amrex::Error("color_count!=blobdata.size()");
+ blob_arraysize=color_count*num_elements_blobclass;
 
  Array<Real> blob_array;
  blob_array.resize(blob_arraysize);
@@ -9228,29 +9221,21 @@ NavierStokes::level_phase_change_rate(int get_statistics,
  MultiFab* levelcolor;
  MultiFab* leveltype;
 
- if (get_statistics==1) {
+ int counter=0;
+ for (int i=0;i<color_count;i++) {
+  copy_from_blobdata(i,counter,blob_array,blobdata);
+ } // i=0..color_count-1
 
-  int counter=0;
-  for (int i=0;i<color_count;i++) {
-   copy_from_blobdata(i,counter,blob_array,blobdata);
-  } // i=0..color_count-1
+ if (counter!=blob_arraysize)
+  amrex::Error("counter invalid");
 
-  if (counter!=blob_arraysize)
-   BoxLib::Error("counter invalid");
+ levelcolor=localMF[COLOR_MF];
+ leveltype=localMF[TYPE_MF];
 
-  levelcolor=localMF[COLOR_MF];
-  leveltype=localMF[TYPE_MF];
-
-  if (levelcolor->nGrow()!=1)
-   BoxLib::Error("levelcolor->nGrow()!=1");
-  if (leveltype->nGrow()!=1)
-   BoxLib::Error("leveltype->nGrow()!=1");
-
- } else if (get_statistics==0) {
-  levelcolor=localMF[DEN_RECON_MF];
-  leveltype=localMF[DEN_RECON_MF];
- } else
-  BoxLib::Error("get_statistics invalid");
+ if (levelcolor->nGrow()!=1)
+  amrex::Error("levelcolor->nGrow()!=1");
+ if (leveltype->nGrow()!=1)
+  amrex::Error("leveltype->nGrow()!=1");
 
  MultiFab* presmf;
  if (hydrate_flag==1) {
@@ -9259,7 +9244,7 @@ NavierStokes::level_phase_change_rate(int get_statistics,
  } else if (hydrate_flag==0) {
   presmf=localMF[DEN_RECON_MF];
  } else {
-  BoxLib::Error("hydrate_flag invalid");
+  amrex::Error("hydrate_flag invalid");
  }
 
  resize_maskfiner(1,MASKCOEF_MF);
@@ -9267,20 +9252,20 @@ NavierStokes::level_phase_change_rate(int get_statistics,
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(1+BL_SPACEDIM)) 
-  BoxLib::Error("LS_new invalid ncomp");
+  amrex::Error("LS_new invalid ncomp");
 
  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
-  BoxLib::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
+  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
  if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
-  BoxLib::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
+  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
 
  debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+BL_SPACEDIM)) 
-  BoxLib::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+  amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
  debug_ngrow(LS_NRM_FD_MF,1,30);
  if (localMF[LS_NRM_FD_MF]->nComp()!=nmat*BL_SPACEDIM) 
-  BoxLib::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
+  amrex::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
 
  VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
 
@@ -9309,7 +9294,7 @@ NavierStokes::level_phase_change_rate(int get_statistics,
 
    FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
    if (burnvelfab.nComp()!=nburning)
-    BoxLib::Error("burnvelfab.nComp() incorrect");
+    amrex::Error("burnvelfab.nComp() incorrect");
 
    FArrayBox& lsnewfab=LS_new[mfi];
    FArrayBox& colorfab=(*levelcolor)[mfi];
@@ -9394,7 +9379,7 @@ NavierStokes::level_phase_change_rate_extend() {
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid level_phase_change_rate_extend");
+  amrex::Error("level invalid level_phase_change_rate_extend");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -9404,19 +9389,19 @@ NavierStokes::level_phase_change_rate_extend() {
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1)) 
-  BoxLib::Error("LS_new invalid ncomp");
+  amrex::Error("LS_new invalid ncomp");
 
  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
-  BoxLib::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
+  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
 
  if (ngrow_make_distance!=3)
-  BoxLib::Error("expecting ngrow_make_distance==3");
+  amrex::Error("expecting ngrow_make_distance==3");
  if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
-  BoxLib::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
+  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
 
  debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+BL_SPACEDIM)) 
-  BoxLib::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+  amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
  Array<int> scompBC_map;
  scompBC_map.resize(nburning);
@@ -9469,12 +9454,12 @@ NavierStokes::level_phase_change_rate_extend() {
    if (burnvelfab.nComp()==nburning) {
     // do nothing
    } else {
-    BoxLib::Error("burnvelfab.nComp() invalid");
+    amrex::Error("burnvelfab.nComp() invalid");
    }
 
    int ngrow=normal_probe_size+3;
    if (ngrow!=4)
-    BoxLib::Error("expecting ngrow==4");
+    amrex::Error("expecting ngrow==4");
 
     // burnvelfab=BURNING_VELOCITY_MF is cell centered.
     // sets the burning velocity flag from 0 to 2 if
@@ -9542,7 +9527,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid level_phase_change_convert");
+  amrex::Error("level invalid level_phase_change_convert");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -9560,37 +9545,37 @@ NavierStokes::level_phase_change_convert(int isweep) {
  debug_ngrow(MASKCOEF_MF,1,28); 
 
  if (localMF[JUMP_STRENGTH_MF]->nGrow()!=ngrow_expansion)
-  BoxLib::Error("jump strength invalid ngrow level_phase_change_conv");
+  amrex::Error("jump strength invalid ngrow level_phase_change_conv");
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten)
-  BoxLib::Error("localMF[JUMP_STRENGTH_MF]->nComp() invalid");
+  amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp() invalid");
 
  if (localMF[nodevel_MF]->nGrow()!=1)
-  BoxLib::Error("localMF[nodevel_MF]->nGrow()  invalid");
+  amrex::Error("localMF[nodevel_MF]->nGrow()  invalid");
  if (localMF[nodevel_MF]->nComp()!=nten*BL_SPACEDIM)
-  BoxLib::Error("localMF[nodevel_MF]->nComp()  invalid");
+  amrex::Error("localMF[nodevel_MF]->nComp()  invalid");
 
  if (localMF[deltaVOF_MF]->nComp()!=nmat)
-  BoxLib::Error("localMF[deltaVOF_MF]->nComp()  invalid");
+  amrex::Error("localMF[deltaVOF_MF]->nComp()  invalid");
 
  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
-  BoxLib::Error("burning vel invalid ncomp");
+  amrex::Error("burning vel invalid ncomp");
 
   // in: level_phase_change_convert
   // DEN_RECON_MF is initialized prior to isweep==0
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
-  BoxLib::Error("DEN_RECON_MF invalid ncomp");
+  amrex::Error("DEN_RECON_MF invalid ncomp");
 
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+BL_SPACEDIM)) 
-  BoxLib::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+  amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1)) 
-  BoxLib::Error("LS_new invalid ncomp");
+  amrex::Error("LS_new invalid ncomp");
 
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  const Real* dx = geom.CellSize();
 
@@ -9636,12 +9621,12 @@ NavierStokes::level_phase_change_convert(int isweep) {
    if (burnvelfab.nComp()==nburning) {
     // do nothing
    } else 
-    BoxLib::Error("burnvelfab.nComp() invalid");
+    amrex::Error("burnvelfab.nComp() invalid");
 
    if (nodevelfab.nComp()==nten*BL_SPACEDIM) {
     // do nothing
    } else 
-    BoxLib::Error("nodevelfab.nComp() invalid");
+    amrex::Error("nodevelfab.nComp() invalid");
 
    int bfact=parent->Space_blockingFactor(level);
 
@@ -9687,7 +9672,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
  } else if (isweep==1) {
   // do nothing
  } else
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
 
  if (isweep==0) {
   // do nothing
@@ -9695,7 +9680,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
   for (int im=0;im<nmat;im++)
    DVOF_local[0][im]=DVOF[0][im];
  } else
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
 
  VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
 
@@ -9726,7 +9711,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    if (nodevelfab.nComp()==nten*BL_SPACEDIM) {
     // do nothing
    } else 
-    BoxLib::Error("nodevelfab.nComp() invalid");
+    amrex::Error("nodevelfab.nComp() invalid");
 
    FArrayBox& olddistfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
    FArrayBox& sweptfab=(*localMF[SWEPT_CROSSING_MF])[mfi];
@@ -9746,7 +9731,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    } else if (isweep==1) {
     tid=0; // only use 0th component for 2nd sweep
    } else
-    BoxLib::Error("isweep invalid");
+    amrex::Error("isweep invalid");
 
    int tid_data=ns_thread();
 
@@ -9811,7 +9796,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    }
   } // tid
  } else {
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
  }
 
  ParallelDescriptor::Barrier();
@@ -9827,7 +9812,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    delta_mass[0][im]+=delta_mass_local[0][im];
   }
  } else
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
 
  localMF[JUMP_STRENGTH_MF]->FillBoundary(geom.periodicity());
  avgDown_localMF(JUMP_STRENGTH_MF,0,2*nten,0);
@@ -9838,7 +9823,7 @@ void
 NavierStokes::phase_change_redistributeALL() {
 
  if (level!=0)
-  BoxLib::Error("level invalid phase_change_redistributeALL");
+  amrex::Error("level invalid phase_change_redistributeALL");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -9860,11 +9845,11 @@ NavierStokes::phase_change_redistributeALL() {
   for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
    for (int ireverse=0;ireverse<=1;ireverse++) {
     if ((im>nmat)||(im_opp>nmat))
-     BoxLib::Error("im or im_opp bust 200cpp");
+     amrex::Error("im or im_opp bust 200cpp");
     int iten;
     get_iten_cpp(im,im_opp,iten,nmat);
     if ((iten<1)||(iten>nten))
-     BoxLib::Error("iten invalid");
+     amrex::Error("iten invalid");
 
     int indexEXP=iten+ireverse*nten-1;
 
@@ -9884,7 +9869,7 @@ NavierStokes::phase_change_redistributeALL() {
      } else if (ireverse==1) {
       im_source=im_opp;im_dest=im;
      } else
-      BoxLib::Error("ireverse invalid");
+      amrex::Error("ireverse invalid");
 
      Real expect_mdot_sign=0.0;
      if ((distribute_from_targ==0)||
@@ -9892,7 +9877,7 @@ NavierStokes::phase_change_redistributeALL() {
       expect_mdot_sign=( 
        (denconst[im_source-1]>denconst[im_dest-1]) ? 1.0 : -1.0 );
      } else
-      BoxLib::Error("distribute_from_targ invalid");
+      amrex::Error("distribute_from_targ invalid");
 
      for (int tid=0;tid<thread_class::nthreads;tid++) {
       mdotplus[tid]=0.0;
@@ -9929,7 +9914,7 @@ NavierStokes::phase_change_redistributeALL() {
         im_source << ' ' << im_dest << ' ' <<   
         mdot_sum2[0]+mdot_lost[0] << '\n';
       } else
-       BoxLib::Error("isweep invalid");
+       amrex::Error("isweep invalid");
 
      } // isweep=0,1,2
 
@@ -9990,7 +9975,7 @@ NavierStokes::phase_change_redistributeALL() {
  } else if (solvability_projection==0) {
   // do nothing
  } else
-  BoxLib::Error("solvability_projection invalid");
+  amrex::Error("solvability_projection invalid");
 
  delete_array(LSNEW_MF);
  delete_array(HOLD_LS_DATA_MF);
@@ -10006,7 +9991,7 @@ NavierStokes::level_phase_change_redistribute(
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid level_phase_change_redistribute");
+  amrex::Error("level invalid level_phase_change_redistribute");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -10015,13 +10000,13 @@ NavierStokes::level_phase_change_redistribute(
 
  debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,355);
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten)
-  BoxLib::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten level_phase ...");
+  amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten level_phase ...");
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
  
  if (localMF[LSNEW_MF]->nComp()!=nmat*(1+BL_SPACEDIM))
-  BoxLib::Error("localMF[LSNEW_MF]->nComp() invalid");
+  amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
  debug_ngrow(LSNEW_MF,2*ngrow_expansion,6001);
 
  const Real* dx = geom.CellSize();
@@ -10033,39 +10018,39 @@ NavierStokes::level_phase_change_redistribute(
 
  if ((isweep==0)||(isweep==1)||(isweep==2)) {
   if (localMF[donorflag_MF]->nGrow()!=2*ngrow_expansion)
-   BoxLib::Error("localMF[donorflag_MF]->ngrow() invalid");
+   amrex::Error("localMF[donorflag_MF]->ngrow() invalid");
   if (localMF[donorflag_MF]->nComp()!=1)
-   BoxLib::Error("localMF[donorflag_MF]->nComp() invalid");
+   amrex::Error("localMF[donorflag_MF]->nComp() invalid");
 
   if ((indexEXP>=0)&&(indexEXP<2*nten)) {
    LL=latent_heat[indexEXP];
   } else
-   BoxLib::Error("indexEXP invalid");
+   amrex::Error("indexEXP invalid");
 
  } else if ((isweep==3)||(isweep==4)) {
 
   if (indexEXP==-1) {
    LL=0.0;
   } else
-   BoxLib::Error("indexEXP invalid");
+   amrex::Error("indexEXP invalid");
 
  } else
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
   
  if (isweep==0) {
  
   if (LL==0.0)
-   BoxLib::Error("LL invalid");
+   amrex::Error("LL invalid");
   if (fabs(expect_mdot_sign)!=1.0)
-   BoxLib::Error("expect_mdot_sign invalid");
+   amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
-   BoxLib::Error("im_source invalid");
+   amrex::Error("im_source invalid");
   if ((im_dest<1)||(im_dest>nmat))
-   BoxLib::Error("im_dest invalid");
+   amrex::Error("im_dest invalid");
   if ((indexEXP<0)||(indexEXP>=2*nten))
-   BoxLib::Error("indexEXP invalid");
+   amrex::Error("indexEXP invalid");
   
   Array< Real > mdot_sum_local;
   mdot_sum_local.resize(thread_class::nthreads);
@@ -10144,15 +10129,15 @@ NavierStokes::level_phase_change_redistribute(
    // redistribution.
 
   if (LL==0.0)
-   BoxLib::Error("LL invalid");
+   amrex::Error("LL invalid");
   if (fabs(expect_mdot_sign)!=1.0)
-   BoxLib::Error("expect_mdot_sign invalid");
+   amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
-   BoxLib::Error("im_source invalid");
+   amrex::Error("im_source invalid");
   if ((im_dest<1)||(im_dest>nmat))
-   BoxLib::Error("im_dest invalid");
+   amrex::Error("im_dest invalid");
   if ((indexEXP<0)||(indexEXP>=2*nten))
-   BoxLib::Error("indexEXP invalid");
+   amrex::Error("indexEXP invalid");
 
 
 #ifdef _OPENMP
@@ -10207,15 +10192,15 @@ NavierStokes::level_phase_change_redistribute(
    // clear out mdot in the donor cells.
 
   if (LL==0.0)
-   BoxLib::Error("LL invalid");
+   amrex::Error("LL invalid");
   if (fabs(expect_mdot_sign)!=1.0)
-   BoxLib::Error("expect_mdot_sign invalid");
+   amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
-   BoxLib::Error("im_source invalid");
+   amrex::Error("im_source invalid");
   if ((im_dest<1)||(im_dest>nmat))
-   BoxLib::Error("im_dest invalid");
+   amrex::Error("im_dest invalid");
   if ((indexEXP<0)||(indexEXP>=2*nten))
-   BoxLib::Error("indexEXP invalid");
+   amrex::Error("indexEXP invalid");
 
   Array< Real > mdot_lost_local;
   Array< Real > mdot_sum2_local;
@@ -10363,7 +10348,7 @@ NavierStokes::level_phase_change_redistribute(
  } else if (isweep==4) {
 
   if (solvability_projection!=1)
-   BoxLib::Error("solvability_projection!=1");
+   amrex::Error("solvability_projection!=1");
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -10407,7 +10392,7 @@ NavierStokes::level_phase_change_redistribute(
   ParallelDescriptor::Barrier();
 
  } else
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
 
 } // subroutine level_phase_change_redistribute
 
@@ -10418,7 +10403,7 @@ NavierStokes::level_init_icemask() {
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid level_init_icemask");
+  amrex::Error("level invalid level_init_icemask");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -10437,7 +10422,7 @@ NavierStokes::level_init_icemask() {
 
  debug_ngrow(LSNEW_MF,1,6001);
  if (localMF[LSNEW_MF]->nComp()!=nmat*(1+BL_SPACEDIM))
-  BoxLib::Error("localMF[LSNEW_MF]->nComp() invalid");
+  amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
 
  const Real* dx = geom.CellSize();
 
@@ -10506,19 +10491,19 @@ NavierStokes::nucleate_bubbles() {
  int finest_level=parent->finestLevel();
 
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid nucleate_bubbles");
+  amrex::Error("level invalid nucleate_bubbles");
 
  bool use_tiling=ns_tiling;
 
  if ((is_phasechange!=1)&&
      (is_cavitation!=1)&&
      (is_cavitation_mixture_model!=1))
-  BoxLib::Error("is_phasech, is_cav, or is_cav_mm invalid: nucleate_bubbles");
+  amrex::Error("is_phasech, is_cav, or is_cav_mm invalid: nucleate_bubbles");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -10545,26 +10530,26 @@ NavierStokes::nucleate_bubbles() {
  else if (CoordSys::IsCYLINDRICAL())
   rz_flag=3;
  else
-  BoxLib::Error("CoordSys bust 1");
+  amrex::Error("CoordSys bust 1");
 
  MultiFab* presmf=getState(1,num_materials_vel*BL_SPACEDIM,
    num_materials_vel,cur_time_slab);
  MultiFab* pres_eos_mf=derive_EOS_pressure();
  if (pres_eos_mf->nGrow()!=1)
-  BoxLib::Error("pres_eos_mf->nGrow()!=1");
+  amrex::Error("pres_eos_mf->nGrow()!=1");
 
  MultiFab* LSMF=getStateDist(2,cur_time_slab,6);
  MultiFab* EOSMF=getStateDen(1,cur_time_slab);
  if (EOSMF->nComp()!=nmat*num_state_material)
-  BoxLib::Error("EOSMF invalid ncomp");
+  amrex::Error("EOSMF invalid ncomp");
  MultiFab* VOFMF=getState(1,scomp_mofvars,nmat*ngeom_raw,cur_time_slab);
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1)) 
-  BoxLib::Error("LS_new invalid ncomp");
+  amrex::Error("LS_new invalid ncomp");
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
@@ -10572,7 +10557,7 @@ NavierStokes::nucleate_bubbles() {
  if ((prev_time_slab<0.0)||
      (cur_time_slab<=0.0)||
      (cur_time_slab<=prev_time_slab))
-  BoxLib::Error("prev_time_slab or cur_time_slab invalid");
+  amrex::Error("prev_time_slab or cur_time_slab invalid");
 
  int do_the_nucleate;
  Array<Real> nucleate_pos;
@@ -10597,7 +10582,7 @@ NavierStokes::nucleate_bubbles() {
        (cur_time_slab>nucleation_init_time)) 
     first_time_nucleate=1;
   } else
-   BoxLib::Error("nucleation_init_time invalid");
+   amrex::Error("nucleation_init_time invalid");
  
   if (nucleation_period==0.0) {
    if (first_time_nucleate==1) {
@@ -10648,11 +10633,11 @@ NavierStokes::nucleate_bubbles() {
 
        if (ParallelDescriptor::IOProcessor()) {
         for (int dir=0;dir<BL_SPACEDIM;dir++) {
-         Real save_random=BoxLib::Random();
+         Real save_random=amrex::Random();
          if ((save_random<0.0)||(save_random>1.0)) {
           std::cout << "save_random invalid save_random= " << 
            save_random << '\n';
-          BoxLib::Error("save_random bust");
+          amrex::Error("save_random bust");
          }
          
          xnucleate[dir]=problo[dir]+save_random*(probhi[dir]-problo[dir]);
@@ -10683,16 +10668,16 @@ NavierStokes::nucleate_bubbles() {
     } else if ((level>=0)&&(level<finest_level)) {
      // do nothing
     } else
-     BoxLib::Error("level invalid nucleate_bubbles 2");
+     amrex::Error("level invalid nucleate_bubbles 2");
 
    } else if (prev_time_slab<=nucleation_init_time) {
     // do nothing
    } else
-    BoxLib::Error("prev_time_slab invalid");
+    amrex::Error("prev_time_slab invalid");
   } else 
-   BoxLib::Error("nucleation_period invalid");
+   amrex::Error("nucleation_period invalid");
  } else
-  BoxLib::Error("n_sites invalid");
+  amrex::Error("n_sites invalid");
 
  Array< Array<Real> > delta_mass_local;
  delta_mass_local.resize(thread_class::nthreads);
@@ -10833,10 +10818,10 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
  } else if (adjust_temperature==-1) {
   use_tiling=false;
  } else
-  BoxLib::Error("adjust_temperature invalid");
+  amrex::Error("adjust_temperature invalid");
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -10857,21 +10842,21 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
 
  debug_ngrow(SLOPE_RECON_MF,1,31);
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
-  BoxLib::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
-  BoxLib::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
+  amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
 
  if (dt_slab<=0.0)
-  BoxLib::Error("dt_slab must be positive");
+  amrex::Error("dt_slab must be positive");
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int GFM_flag=0;
  if (is_phasechange==1) {
@@ -10882,24 +10867,24 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
      GFM_flag=1;
   }
  } else if (is_phasechange==0) {
-  BoxLib::Error("is_phasechange invalid in stefan_solver_init (1)");
+  amrex::Error("is_phasechange invalid in stefan_solver_init (1)");
  } else
-  BoxLib::Error("is_phasechange invalid in stefan_solver_init (2)");
+  amrex::Error("is_phasechange invalid in stefan_solver_init (2)");
 
  if (GFM_flag!=1)
-  BoxLib::Error("Gibou et al algorithm only used for GFM");
+  amrex::Error("Gibou et al algorithm only used for GFM");
 
  const Real* dx = geom.CellSize();
 
  MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
  if (LSmf->nComp()!=nmat*(1+BL_SPACEDIM))
-  BoxLib::Error("LSmf invalid ncomp");
+  amrex::Error("LSmf invalid ncomp");
  if (LSmf->nGrow()!=1)
-  BoxLib::Error("LSmf->nGrow()!=1");
+  amrex::Error("LSmf->nGrow()!=1");
 
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  if (S_new.nComp()!=nstate)
-  BoxLib::Error("S_new invalid ncomp");
+  amrex::Error("S_new invalid ncomp");
 
  int mm_areafrac_index=FACE_VAR_MF;
  int mm_cell_areafrac_index=SLOPE_RECON_MF;
@@ -10909,7 +10894,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
  } else if (num_materials_scalar_solve==1) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_scalar_solve invalid");
+  amrex::Error("num_materials_scalar_solve invalid");
 
  // (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)  
  int nfacefrac=nmat*nmat*2;
@@ -10934,7 +10919,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
    scomp,ncomp,ncomp_check);
 
  if ((ncomp_check!=nmat)||(state_index!=State_Type))
-  BoxLib::Error("(ncomp_check!=nmat)||(state_index!=State_Type)");
+  amrex::Error("(ncomp_check!=nmat)||(state_index!=State_Type)");
 
  MultiFab* thermal_list_mf=getState_list(1,scomp,ncomp,cur_time_slab);
  
@@ -10969,17 +10954,17 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
      std::cout << "coefffab.nComp()= " << coefffab.nComp() << '\n';
      std::cout << "nsolveMM= " << nsolveMM << '\n';
      std::cout << "adjust_temperature= " << adjust_temperature << '\n';
-     BoxLib::Error("coefffab.nComp() invalid");
+     amrex::Error("coefffab.nComp() invalid");
     }
    } else if (adjust_temperature==-1) {
     if (coefffab.nComp()<1) {
      std::cout << "coefffab.nComp()= " << coefffab.nComp() << '\n';
      std::cout << "nsolveMM= " << nsolveMM << '\n';
      std::cout << "adjust_temperature= " << adjust_temperature << '\n';
-     BoxLib::Error("coefffab.nComp() invalid");
+     amrex::Error("coefffab.nComp() invalid");
     }
    } else
-    BoxLib::Error("adjust_temperature invalid");
+    amrex::Error("adjust_temperature invalid");
 
    FArrayBox& heatx=(*localMF[FACE_VAR_MF])[mfi];
    FArrayBox& heaty=(*localMF[FACE_VAR_MF+1])[mfi];
@@ -11058,9 +11043,9 @@ NavierStokes::heat_source_term() {
   debug_ngrow(FACE_VAR_MF+dir,0,2);
 
  if (dt_slab<=0.0)
-  BoxLib::Error("dt_slab must be positive");
+  amrex::Error("dt_slab must be positive");
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -11071,13 +11056,13 @@ NavierStokes::heat_source_term() {
 
  MultiFab* LSmf=getStateDist(1,cur_time_slab,8);  
  if (LSmf->nComp()!=nmat*(1+BL_SPACEDIM))
-  BoxLib::Error("LSmf invalid ncomp");
+  amrex::Error("LSmf invalid ncomp");
  if (LSmf->nGrow()!=1)
-  BoxLib::Error("LSmf->nGrow()!=1");
+  amrex::Error("LSmf->nGrow()!=1");
 
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  if (S_new.nComp()!=nstate)
-  BoxLib::Error("S_new invalid ncomp");
+  amrex::Error("S_new invalid ncomp");
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -11099,11 +11084,11 @@ NavierStokes::heat_source_term() {
    FArrayBox& snewfab=S_new[mfi];
    FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  // 1/(rho cv)
    if (DeDTfab.nComp()!=nmat+1)
-    BoxLib::Error("DeDTfab.nComp() invalid");
+    amrex::Error("DeDTfab.nComp() invalid");
 
    FArrayBox& denfab=(*localMF[CELL_DEN_MF])[mfi];  // 1/rho
    if (denfab.nComp()!=nmat+1)
-    BoxLib::Error("denfab.nComp() invalid");
+    amrex::Error("denfab.nComp() invalid");
 
    FArrayBox& heatx=(*localMF[FACE_VAR_MF])[mfi];
    FArrayBox& heaty=(*localMF[FACE_VAR_MF+1])[mfi];
@@ -11154,7 +11139,7 @@ void NavierStokes::show_norm2_id(int mf_id,int id) {
  } else if (show_norm2_flag==0) {
   // do nothing
  } else
-  BoxLib::Error("show_norm2_flag invalid");
+  amrex::Error("show_norm2_flag invalid");
  
 } // subroutine show_norm2_id
 
@@ -11169,7 +11154,7 @@ void NavierStokes::show_norm2(MultiFab* mf,int scomp,int ncomp,int id) {
  } else if (show_norm2_flag==0) {
   // do nothing
  } else
-  BoxLib::Error("show_norm2_flag invalid");
+  amrex::Error("show_norm2_flag invalid");
   
 } // subroutine show_norm2
 
@@ -11187,13 +11172,13 @@ void NavierStokes::check_value_max(int id,int mf_id,int scomp,
        (max_value>=0.0)) {
     ns_level.check_value_max_level(id,mf,scomp,ncomp,ngrow,max_value);
    } else
-    BoxLib::Error("scomp,ncomp, ngrow or max_value invalid");
+    amrex::Error("scomp,ncomp, ngrow or max_value invalid");
 
   } // ilev=finest_level ... level
  } else if (mf_check_inf_bounds==0) {
   // do nothing
  } else
-  BoxLib::Error("mf_check_inf_bounds invalid");
+  amrex::Error("mf_check_inf_bounds invalid");
  
 } // subroutine check_value_max
 
@@ -11213,13 +11198,13 @@ void NavierStokes::check_value_max_level(int id,MultiFab* mf,
      max_value << '\n';
     std::cout << "level= " << level << " finest_level= " << 
 	    finest_level << '\n';
-    BoxLib::Error("nm_max>max_value");
+    amrex::Error("nm_max>max_value");
    }
   } // nc
  } else if (mf_check_inf_bounds==0) {
   // do nothing
  } else
-  BoxLib::Error("mf_check_inf_bounds invalid");
+  amrex::Error("mf_check_inf_bounds invalid");
   
 } // subroutine check_value_max_level
 
@@ -11244,9 +11229,9 @@ void NavierStokes::aggressive_debug(
   const Real* dx = geom.CellSize();
   int ndefined=mf->nComp();
   if (ndefined<scomp+ncomp) 
-   BoxLib::Error("scomp,ncomp invalid in aggressive debug");
+   amrex::Error("scomp,ncomp invalid in aggressive debug");
   if (mf->nGrow()<ngrow)
-   BoxLib::Error("ngrow invalid in aggressive debug");
+   amrex::Error("ngrow invalid in aggressive debug");
 
   if (verbose==2) {
    std::cout << "AGGRESSIVE DEBUG scomp= " << scomp << '\n';
@@ -11270,7 +11255,7 @@ void NavierStokes::aggressive_debug(
    const Box& fabgrid = mfi.validbox();
 
    if (fabgrid!=mfBA[gridno])
-    BoxLib::Error("fabgrid!=mfBA[gridno]");
+    amrex::Error("fabgrid!=mfBA[gridno]");
 
    const int* tilelo=tilegrid.loVect();
    const int* tilehi=tilegrid.hiVect();
@@ -11302,7 +11287,7 @@ void NavierStokes::aggressive_debug(
   ParallelDescriptor::Barrier();
   std::fflush(NULL);
  } else
-  BoxLib::Error("verbose or force_check invalid");
+  amrex::Error("verbose or force_check invalid");
 
 } // subroutine aggressive_debug
 
@@ -11311,14 +11296,14 @@ NavierStokes::synchronize_flux_register(int operation_flag,
  int spectral_loop) {
 
  if ((operation_flag<0)||(operation_flag>11))
-  BoxLib::Error("operation_flag invalid2");
+  amrex::Error("operation_flag invalid2");
  
  if (spectral_loop+1==end_spectral_loop()) {
   delete_localMF(SEM_FLUXREG_MF,1);
  } else if (spectral_loop==0) {
   localMF[SEM_FLUXREG_MF]->FillBoundary(geom.periodicity());
  } else
-  BoxLib::Error("spectral_loop invalid");
+  amrex::Error("spectral_loop invalid");
 
 } // subroutine synchronize_flux_register
 
@@ -11357,7 +11342,7 @@ NavierStokes::allocate_flux_register(int operation_flag) {
  } else if (operation_flag==8) { // grad U (for crossterm)
   ncfluxreg=BL_SPACEDIM*BL_SPACEDIM;
  } else
-  BoxLib::Error("operation_flag invalid3");
+  amrex::Error("operation_flag invalid3");
 
  new_localMF(SEM_FLUXREG_MF,ncfluxreg,1,-1);
  setVal_localMF(SEM_FLUXREG_MF,0.0,0,ncfluxreg,1); 
@@ -11369,7 +11354,7 @@ NavierStokes::end_spectral_loop() {
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid end_spectral_loop");
+  amrex::Error("level invalid end_spectral_loop");
 
  int local_end=1;
  int bfact=parent->Space_blockingFactor(level);
@@ -11382,9 +11367,9 @@ NavierStokes::end_spectral_loop() {
   else if (bfact>=2)
    local_end=2;
   else
-   BoxLib::Error("bfact invalid");
+   amrex::Error("bfact invalid");
  } else
-  BoxLib::Error("enable_spectral invalid end_spectral_loop() ");
+  amrex::Error("enable_spectral invalid end_spectral_loop() ");
 
  return local_end;
  
@@ -11432,39 +11417,39 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  int blob_array_size=blob_array.size();
 
  if (nfluxSEM!=BL_SPACEDIM+num_state_base)
-  BoxLib::Error("nfluxSEM!=BL_SPACEDIM+num_state_base");
+  amrex::Error("nfluxSEM!=BL_SPACEDIM+num_state_base");
 
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
 
  if (source_term==1) {
 
   if (advect_iter!=0)
-   BoxLib::Error("advect_iter invalid");
+   amrex::Error("advect_iter invalid");
 
  } else if (source_term==0) {
 
   // do nothing
   
  } else
-  BoxLib::Error("source_term invalid");
+  amrex::Error("source_term invalid");
 
  int nmat=num_materials;
 
  int nsolveMM_FACE=num_materials_vel;
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  if ((ns_time_order==1)&&
      (enable_spectral==3))
-  BoxLib::Error("(ns_time_order==1)&&(enable_spectral==3)");
+  amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
  if ((ns_time_order>=2)&&
      ((enable_spectral==0)||
       (enable_spectral==2)))
-  BoxLib::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
+  amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
 
  if ((enable_spectral==1)||
      (enable_spectral==2)||
@@ -11472,7 +11457,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
   int nparts=im_solid_map.size();
   if ((nparts<0)||(nparts>=nmat))
-   BoxLib::Error("nparts invalid");
+   amrex::Error("nparts invalid");
   Array<int> im_solid_map_null;
   im_solid_map_null.resize(1);
 
@@ -11484,15 +11469,15 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   } else if ((nparts>=1)&&(nparts<=nmat-1)) {
    im_solid_map_ptr=im_solid_map.dataPtr();
   } else
-   BoxLib::Error("nparts invalid");
+   amrex::Error("nparts invalid");
 
   if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-   BoxLib::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
+   amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
   if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM)
-   BoxLib::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM");
+   amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM");
 
   if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+BL_SPACEDIM))
-   BoxLib::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(1+BL_SPACEDIM)");
+   amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(1+BL_SPACEDIM)");
 
   debug_ngrow(LEVELPC_MF,1,37);
   debug_ngrow(SLOPE_RECON_MF,1,37);
@@ -11502,9 +11487,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   debug_ngrow(VELADVECT_MF,1,37);
 
   if (localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material)
-   BoxLib::Error("localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material");
+   amrex::Error("localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material");
   if (localMF[VELADVECT_MF]->nComp()!=num_materials_vel*BL_SPACEDIM)
-   BoxLib::Error("localMF[VELADVECT_MF]->nComp()!=materials_vel*BL_SPACEDIM");
+   amrex::Error("localMF[VELADVECT_MF]->nComp()!=materials_vel*BL_SPACEDIM");
 
   int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
   int nstate=num_materials_vel*(BL_SPACEDIM+1)+
@@ -11512,7 +11497,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
   MultiFab& S_new_test=get_new_data(State_Type,slab_step+1);
   if (S_new_test.nComp()!=nstate)
-   BoxLib::Error("nstate invalid");
+   amrex::Error("nstate invalid");
 
   int bfact=parent->Space_blockingFactor(level);
   int bfact_c=bfact;
@@ -11540,13 +11525,13 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   else if (CoordSys::IsCYLINDRICAL())
    rzflag=3;
   else
-   BoxLib::Error("CoordSys bust 20");
+   amrex::Error("CoordSys bust 20");
 
   if (init_fluxes==1) {
 
    int operation_flag=7;
    if (localMF[SEM_FLUXREG_MF]->nComp()!=BL_SPACEDIM*nfluxSEM)
-    BoxLib::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid8");
+    amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid8");
 
    int mm_areafrac_index=CONSERVE_FLUXES_MF;
    int mm_cell_areafrac_index=SLOPE_RECON_MF;
@@ -11575,7 +11560,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
     } else if (level==finest_level) {
      // do nothing
     } else
-     BoxLib::Error("level invalid21");
+     amrex::Error("level invalid21");
 
     if ((level>=1)&&(level<=finest_level)) {
      interp_and_Copy_localMF(
@@ -11586,7 +11571,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
     } else if (level==0) {
      // do nothing
     } else
-     BoxLib::Error("level invalid22");
+     amrex::Error("level invalid22");
 
    } else if ((spectral_loop==1)&&(tileloop==0)) {
 
@@ -11602,14 +11587,14 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
     } else if (level==0) {
      // do nothing
     } else
-     BoxLib::Error("level invalid22");
+     amrex::Error("level invalid22");
 
    } else if ((spectral_loop==0)&&(tileloop==1)) {
     // do nothing
    } else if ((spectral_loop==1)&&(tileloop==1)) {
     // do nothing
    } else
-    BoxLib::Error("spectral_loop or tileloop invalid");
+    amrex::Error("spectral_loop or tileloop invalid");
 
    for (int dir=0;dir<BL_SPACEDIM;dir++) {
 
@@ -11839,9 +11824,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
        deltacomp=slab_step*nstate_SDC;
       } else
-       BoxLib::Error("slab_step invalid");
+       amrex::Error("slab_step invalid");
      } else
-      BoxLib::Error("source_term invalid");
+      amrex::Error("source_term invalid");
 
      Array<int> velbc=getBCArray(State_Type,gridno,0,
       num_materials_vel*BL_SPACEDIM);
@@ -11985,38 +11970,38 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       } else if (advect_iter==0) {
        // do nothing
       } else
-       BoxLib::Error("advect_iter invalid");
+       amrex::Error("advect_iter invalid");
 
      } else
-      BoxLib::Error("source_term invalid");
+      amrex::Error("source_term invalid");
 
     } else if (source_term==1) {
 
      if ((slab_step==0)&&(SDC_outer_sweeps==0)) {
       // this is ok: F_advect(t^n)
      } else if ((slab_step==0)&&(SDC_outer_sweeps!=0)) {
-      BoxLib::Error("F_advect(t^n) already init when SDC_outer_sweeps==0");
+      amrex::Error("F_advect(t^n) already init when SDC_outer_sweeps==0");
      } 
 
      if ((slab_step>=0)&&(slab_step<=ns_time_order)) {
       int deltacomp=slab_step*nstate_SDC;
       MultiFab::Copy(*localMF[spectralF_MF],*rhs,0,deltacomp,nfluxSEM,0);
      } else
-      BoxLib::Error("slab_step invalid");
+      amrex::Error("slab_step invalid");
 
     } else 
-     BoxLib::Error("source_term invalid");
+     amrex::Error("source_term invalid");
  
     delete rhs;
 
    } else
-    BoxLib::Error("bfact invalid");
+    amrex::Error("bfact invalid");
 
   } else
-   BoxLib::Error("init_fluxes invalid");
+   amrex::Error("init_fluxes invalid");
 
  } else
-  BoxLib::Error("enable_specral or ns_time_order invalid");
+  amrex::Error("enable_specral or ns_time_order invalid");
 
 } // subroutine SEM_scalar_advection
 
@@ -12033,7 +12018,7 @@ NavierStokes::split_scalar_advection() {
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
  int normdir_here=normdir_direct_split[dir_absolute_direct_split];
  if ((normdir_here<0)||(normdir_here>=BL_SPACEDIM))
-  BoxLib::Error("normdir_here invalid");
+  amrex::Error("normdir_here invalid");
 
  int bfact=parent->Space_blockingFactor(level);
  int bfact_f=bfact;
@@ -12041,30 +12026,30 @@ NavierStokes::split_scalar_advection() {
   bfact_f=parent->Space_blockingFactor(level+1);
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nsolve=1;
  int nsolveMM=nsolve;
  int nsolveMM_FACE=nsolveMM;
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  if ((order_direct_split!=0)&&
      (order_direct_split!=1))
-  BoxLib::Error("order_direct_split invalid");
+  amrex::Error("order_direct_split invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else {
   std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
  }
 
  if ((dir_absolute_direct_split<0)||
      (dir_absolute_direct_split>=BL_SPACEDIM))
-  BoxLib::Error("dir_absolute_direct_split invalid");
+  amrex::Error("dir_absolute_direct_split invalid");
 
  int ngrow=2;
  int mac_grow=1; 
@@ -12077,7 +12062,7 @@ NavierStokes::split_scalar_advection() {
   ngrow_mac_old=2;
   mac_grow=2;
  } else
-  BoxLib::Error("face_flag invalid 4");
+  amrex::Error("face_flag invalid 4");
 
   // vof,ref centroid,order,slope,intercept  x nmat
  VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
@@ -12086,17 +12071,17 @@ NavierStokes::split_scalar_advection() {
  debug_ngrow(MASKCOEF_MF,ngrow,36);
  debug_ngrow(VOF_LS_PREV_TIME_MF,1,38);
  if (localMF[VOF_LS_PREV_TIME_MF]->nComp()!=2*nmat)
-  BoxLib::Error("vof ls prev time invalid ncomp");
+  amrex::Error("vof ls prev time invalid ncomp");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int ncomp_state=S_new.nComp();
  if (ncomp_state!=num_materials_vel*(BL_SPACEDIM+1)+
      nmat*(num_state_material+ngeom_raw)+1)
-  BoxLib::Error("ncomp_state invalid");
+  amrex::Error("ncomp_state invalid");
 
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1))
-  BoxLib::Error("LS_new ncomp invalid");
+  amrex::Error("LS_new ncomp invalid");
 
  const Real* dx = geom.CellSize();
  const Box& domain = geom.Domain();
@@ -12116,7 +12101,7 @@ NavierStokes::split_scalar_advection() {
  else if (divu_outer_sweeps>0)
   vel_time_slab=cur_time_slab;
  else
-  BoxLib::Error("divu_outer_sweeps invalid");
+  amrex::Error("divu_outer_sweeps invalid");
 
   // in: split_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
@@ -12132,7 +12117,7 @@ NavierStokes::split_scalar_advection() {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  MultiFab& Tensor_new=get_new_data(local_tensor_type,slab_step+1);
 
@@ -12164,7 +12149,7 @@ NavierStokes::split_scalar_advection() {
 
  if ((dir_absolute_direct_split<0)||
      (dir_absolute_direct_split>=BL_SPACEDIM))
-  BoxLib::Error("dir_absolute_direct_split invalid");
+  amrex::Error("dir_absolute_direct_split invalid");
 
  if (dir_absolute_direct_split==0) {
 
@@ -12175,19 +12160,19 @@ NavierStokes::split_scalar_advection() {
             (dir_absolute_direct_split<BL_SPACEDIM)) {
   // do nothing
  } else
-  BoxLib::Error("dir_absolute_direct_split invalid");
+  amrex::Error("dir_absolute_direct_split invalid");
 
  int vofrecon_ncomp=localMF[SLOPE_RECON_MF]->nComp();
  if (vofrecon_ncomp!=nmat*ngeom_recon)
-   BoxLib::Error("recon ncomp bust");
+   amrex::Error("recon ncomp bust");
 
  int den_recon_ncomp=localMF[DEN_RECON_MF]->nComp();
  if (den_recon_ncomp!=num_state_material*nmat)
-   BoxLib::Error("den_recon invalid");
+   amrex::Error("den_recon invalid");
 
  int LS_recon_ncomp=localMF[LS_RECON_MF]->nComp();
  if (LS_recon_ncomp!=nmat*(1+BL_SPACEDIM))
-   BoxLib::Error("LS_recon invalid");
+   amrex::Error("LS_recon invalid");
 
  debug_ngrow(LS_RECON_MF,1,40);
 
@@ -12515,7 +12500,7 @@ NavierStokes::split_scalar_advection() {
   delete massF;
 
  } else
-  BoxLib::Error("face_flag invalid 5");
+  amrex::Error("face_flag invalid 5");
 
  Array<int> nprocessed;
  nprocessed.resize(thread_class::nthreads);
@@ -12557,9 +12542,9 @@ NavierStokes::split_scalar_advection() {
    } else if (solidheat_flag==1) { // dirichlet
     // do nothing
    } else
-    BoxLib::Error("solidheat_flag invalid");
+    amrex::Error("solidheat_flag invalid");
   } else
-   BoxLib::Error("ns_is_rigid(im) invalid");
+   amrex::Error("ns_is_rigid(im) invalid");
  } // im=0..nmat-1
 
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
@@ -12567,7 +12552,7 @@ NavierStokes::split_scalar_advection() {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  int ntensor=Tensor_new.nComp();
 
@@ -12580,7 +12565,7 @@ NavierStokes::split_scalar_advection() {
             (EILE_flag==3)) {  // always LE
   cons_cor=localMF[DEN_RECON_MF];
  } else
-  BoxLib::Error("EILE_flag invalid");
+  amrex::Error("EILE_flag invalid");
 
  if (dir_absolute_direct_split==0) {
    // initialize the error indicator to be 0.0
@@ -12588,9 +12573,9 @@ NavierStokes::split_scalar_advection() {
 
   if (EILE_flag==0) {
    if (cons_cor->nComp()!=nmat)
-    BoxLib::Error("cons_cor->nComp()!=nmat");
+    amrex::Error("cons_cor->nComp()!=nmat");
    if (cons_cor->nGrow()!=1)
-    BoxLib::Error("cons_cor->nGrow()!=1");
+    amrex::Error("cons_cor->nGrow()!=1");
    cons_cor->setVal(0.0,0,nmat,1);
   } else if ((EILE_flag==-1)||
              (EILE_flag==1)||
@@ -12598,13 +12583,13 @@ NavierStokes::split_scalar_advection() {
              (EILE_flag==3)) {
    // do nothing
   } else
-   BoxLib::Error("EILE_flag invalid");
+   amrex::Error("EILE_flag invalid");
     
  } else if ((dir_absolute_direct_split==1)||
             (dir_absolute_direct_split==BL_SPACEDIM-1)) {
   // do nothing
  } else {
-  BoxLib::Error("dir_absolute_direct_split invalid");
+  amrex::Error("dir_absolute_direct_split invalid");
  }
 
 #ifdef _OPENMP
@@ -12637,7 +12622,7 @@ NavierStokes::split_scalar_advection() {
 
   FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
   if (unode.nComp()!=nsolveMM_FACE*(BL_SPACEDIM+1))
-   BoxLib::Error("unode has invalid ncomp");
+   amrex::Error("unode has invalid ncomp");
 
     // this is the original data
   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
@@ -12874,7 +12859,7 @@ NavierStokes::split_scalar_advection() {
 
   delete mask_unsplit;
  } else
-  BoxLib::Error("face_flag invalid 6");
+  amrex::Error("face_flag invalid 6");
 
  delete conserve;
  delete momslope;
@@ -12890,7 +12875,7 @@ NavierStokes::split_scalar_advection() {
    delete side_bucket_mass[dir];
   }
  } else
-  BoxLib::Error("face_flag invalid 7");
+  amrex::Error("face_flag invalid 7");
 
  delete_localMF(VELADVECT_MF,1);
  delete_localMF(DEN_RECON_MF,1);
@@ -12900,7 +12885,7 @@ NavierStokes::split_scalar_advection() {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
  
  delete_localMF(LS_RECON_MF,1);
  
@@ -12913,7 +12898,7 @@ NavierStokes::split_scalar_advection() {
    MultiFab::Copy(*umac_new[dir],*localMF[UMACOLD_MF+dir],0,0,1,0);
   }
  } else
-  BoxLib::Error("stokes_flow invalid");
+  amrex::Error("stokes_flow invalid");
 
  delete_localMF(UMACOLD_MF,BL_SPACEDIM);
  
@@ -12926,7 +12911,7 @@ NavierStokes::split_scalar_advection() {
   } else if (face_flag==0) {
    // do nothing
   } else
-   BoxLib::Error("face_flag invalid 8");
+   amrex::Error("face_flag invalid 8");
  
   avgDown(LS_Type,0,nmat,0);
   MOFavgDown();
@@ -12940,12 +12925,12 @@ NavierStokes::split_scalar_advection() {
   } else if (num_materials_viscoelastic==0) {
    // do nothing
   } else
-   BoxLib::Error("num_materials_viscoelastic invalid");
+   amrex::Error("num_materials_viscoelastic invalid");
 
  } else if (level==finest_level) {
   // do nothing
  } else
-  BoxLib::Error("level invalid23");
+  amrex::Error("level invalid23");
 
 }  // subroutine split_scalar_advection
 
@@ -12969,33 +12954,33 @@ NavierStokes::unsplit_scalar_advection() {
   bfact_f=parent->Space_blockingFactor(level+1);
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nsolve=1;
  int nsolveMM=nsolve;
  int nsolveMM_FACE=nsolveMM;
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  if ((order_direct_split==0)||
      (order_direct_split==1)) {
   // do nothing
  } else
-  BoxLib::Error("order_direct_split invalid");
+  amrex::Error("order_direct_split invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else {
   std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
  }
 
  if (dir_absolute_direct_split==0) {
   // do nothing
  } else
-  BoxLib::Error("dir_absolute_direct_split invalid");
+  amrex::Error("dir_absolute_direct_split invalid");
 
  int ngrow=1;
  int mac_grow=1; 
@@ -13008,7 +12993,7 @@ NavierStokes::unsplit_scalar_advection() {
   mac_grow++;
   ngrow_mac_old++;
  } else
-  BoxLib::Error("face_flag invalid 4");
+  amrex::Error("face_flag invalid 4");
 
   // vof,ref centroid,order,slope,intercept  x nmat
  VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
@@ -13017,17 +13002,17 @@ NavierStokes::unsplit_scalar_advection() {
  debug_ngrow(MASKCOEF_MF,ngrow,36);
  debug_ngrow(VOF_LS_PREV_TIME_MF,1,38);
  if (localMF[VOF_LS_PREV_TIME_MF]->nComp()!=2*nmat)
-  BoxLib::Error("vof ls prev time invalid ncomp");
+  amrex::Error("vof ls prev time invalid ncomp");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int ncomp_state=S_new.nComp();
  if (ncomp_state!=num_materials_vel*(BL_SPACEDIM+1)+
      nmat*(num_state_material+ngeom_raw)+1)
-  BoxLib::Error("ncomp_state invalid");
+  amrex::Error("ncomp_state invalid");
 
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1))
-  BoxLib::Error("LS_new ncomp invalid");
+  amrex::Error("LS_new ncomp invalid");
 
  const Real* dx = geom.CellSize();
  const Box& domain = geom.Domain();
@@ -13047,7 +13032,7 @@ NavierStokes::unsplit_scalar_advection() {
  else if (divu_outer_sweeps>0)
   vel_time_slab=cur_time_slab;
  else
-  BoxLib::Error("divu_outer_sweeps invalid");
+  amrex::Error("divu_outer_sweeps invalid");
 
   // in: unsplit_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
@@ -13063,7 +13048,7 @@ NavierStokes::unsplit_scalar_advection() {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  MultiFab& Tensor_new=get_new_data(local_tensor_type,slab_step+1);
 
@@ -13087,15 +13072,15 @@ NavierStokes::unsplit_scalar_advection() {
 
  int vofrecon_ncomp=localMF[SLOPE_RECON_MF]->nComp();
  if (vofrecon_ncomp!=nmat*ngeom_recon)
-   BoxLib::Error("recon ncomp bust");
+   amrex::Error("recon ncomp bust");
 
  int den_recon_ncomp=localMF[DEN_RECON_MF]->nComp();
  if (den_recon_ncomp!=num_state_material*nmat)
-   BoxLib::Error("den_recon invalid");
+   amrex::Error("den_recon invalid");
 
  int LS_recon_ncomp=localMF[LS_RECON_MF]->nComp();
  if (LS_recon_ncomp!=nmat*(1+BL_SPACEDIM))
-   BoxLib::Error("LS_recon invalid");
+   amrex::Error("LS_recon invalid");
 
  debug_ngrow(LS_RECON_MF,1,40);
 
@@ -13356,7 +13341,7 @@ NavierStokes::unsplit_scalar_advection() {
   delete massF;
 
  } else
-  BoxLib::Error("face_flag invalid 5");
+  amrex::Error("face_flag invalid 5");
 
  Array<int> nprocessed;
  nprocessed.resize(thread_class::nthreads);
@@ -13403,13 +13388,13 @@ NavierStokes::unsplit_scalar_advection() {
 
   FArrayBox& unode=(*localMF[MAC_VELOCITY_MF])[mfi];
   if (unode.nComp()!=nsolveMM_FACE*(1+BL_SPACEDIM))
-   BoxLib::Error("unode has invalid ncomp");
+   amrex::Error("unode has invalid ncomp");
   FArrayBox& vnode=(*localMF[MAC_VELOCITY_MF+1])[mfi];
   if (vnode.nComp()!=nsolveMM_FACE*(1+BL_SPACEDIM))
-   BoxLib::Error("vnode has invalid ncomp");
+   amrex::Error("vnode has invalid ncomp");
   FArrayBox& wnode=(*localMF[MAC_VELOCITY_MF+BL_SPACEDIM-1])[mfi];
   if (wnode.nComp()!=nsolveMM_FACE*(1+BL_SPACEDIM))
-   BoxLib::Error("wnode has invalid ncomp");
+   amrex::Error("wnode has invalid ncomp");
 
     // this is the original data
   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
@@ -13625,7 +13610,7 @@ NavierStokes::unsplit_scalar_advection() {
   }  // mfi
 } // omp
  } else
-  BoxLib::Error("face_flag invalid 6");
+  amrex::Error("face_flag invalid 6");
 
  delete conserve;
  delete mask_unsplit;
@@ -13640,7 +13625,7 @@ NavierStokes::unsplit_scalar_advection() {
    delete side_bucket_mass[dir];
   }
  } else
-  BoxLib::Error("face_flag invalid 7");
+  amrex::Error("face_flag invalid 7");
 
  delete_localMF(VELADVECT_MF,1);
  delete_localMF(DEN_RECON_MF,1);
@@ -13650,7 +13635,7 @@ NavierStokes::unsplit_scalar_advection() {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
  
  delete_localMF(LS_RECON_MF,1);
  
@@ -13663,7 +13648,7 @@ NavierStokes::unsplit_scalar_advection() {
    MultiFab::Copy(*umac_new[dir],*localMF[UMACOLD_MF+dir],0,0,1,0);
   }
  } else
-  BoxLib::Error("stokes_flow invalid");
+  amrex::Error("stokes_flow invalid");
 
  delete_localMF(UMACOLD_MF,BL_SPACEDIM);
  
@@ -13676,7 +13661,7 @@ NavierStokes::unsplit_scalar_advection() {
   } else if (face_flag==0) {
    // do nothing
   } else
-   BoxLib::Error("face_flag invalid 8");
+   amrex::Error("face_flag invalid 8");
  
   avgDown(LS_Type,0,nmat,0);
   MOFavgDown();
@@ -13690,12 +13675,12 @@ NavierStokes::unsplit_scalar_advection() {
   } else if (num_materials_viscoelastic==0) {
    // do nothing
   } else
-   BoxLib::Error("num_materials_viscoelastic invalid");
+   amrex::Error("num_materials_viscoelastic invalid");
 
  } else if (level==finest_level) {
   // do nothing
  } else
-  BoxLib::Error("level invalid23");
+  amrex::Error("level invalid23");
 
 }  // subroutine unsplit_scalar_advection
 
@@ -13707,12 +13692,12 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  
  const int max_level = parent->maxLevel();
  if (level>=max_level)
-  BoxLib::Error("level too big in errorEst");
+  amrex::Error("level too big in errorEst");
 
  int bfact=parent->Space_blockingFactor(level);
 
  if (n_error_buf<2)
-  BoxLib::Error("amr.n_error_buf<2");
+  amrex::Error("amr.n_error_buf<2");
 
  const int*  domain_lo = geom.Domain().loVect();
  const int*  domain_hi = geom.Domain().hiVect();
@@ -13807,10 +13792,10 @@ NavierStokes::GetDragALL(Array<Real>& integrated_quantities) {
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
 
  if (integrated_quantities.size()!=13)
-  BoxLib::Error("invalid size for integrated_quantities");
+  amrex::Error("invalid size for integrated_quantities");
 
  for (int iq=0;iq<13;iq++)
   integrated_quantities[iq]=0.0;
@@ -13870,17 +13855,17 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 4");
+  amrex::Error("CoordSys bust 4");
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  debug_ngrow(CELLTENSOR_MF,1,45);
  debug_ngrow(FACETENSOR_MF,1,45);
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,45);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+BL_SPACEDIM))
-  BoxLib::Error("levelpc mf has incorrect ncomp");
+  amrex::Error("levelpc mf has incorrect ncomp");
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,1,46);
  debug_ngrow(CELL_VISC_MATERIAL_MF,0,47);
@@ -13894,7 +13879,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  Array<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
@@ -13906,23 +13891,23 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
  } else if ((nparts>=1)&&(nparts<=nmat-1)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
 
  int ntensor=BL_SPACEDIM*BL_SPACEDIM;
  int ntensorMM=ntensor*num_materials_vel;
 
  if (localMF[CELLTENSOR_MF]->nComp()!=ntensorMM)
-  BoxLib::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
+  amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
  if (localMF[FACETENSOR_MF]->nComp()!=ntensorMM)
-  BoxLib::Error("localMF[FACETENSOR_MF]->nComp() invalid");
+  amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
  int nstate=num_materials_vel*(BL_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
-  BoxLib::Error("nstate invalid");
+  amrex::Error("nstate invalid");
 
  if (integrated_quantities.size()!=13)
-  BoxLib::Error("integrated_quantities invalid size");
+  amrex::Error("integrated_quantities invalid size");
  
  Array< Array<Real> > local_integrated_quantities;
  local_integrated_quantities.resize(thread_class::nthreads);
@@ -13938,7 +13923,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
 
 
  if (localMF[DRAG_MF]->nComp()!=4*BL_SPACEDIM+1)
-  BoxLib::Error("drag ncomp invalid");
+  amrex::Error("drag ncomp invalid");
 
  const Real* dx = geom.CellSize();
 
@@ -13965,7 +13950,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
  MultiFab* pres=getStatePres(1,cur_time_slab); 
 
  if (pres->nComp()!=num_materials_vel)
-  BoxLib::Error("pres->nComp() invalid");
+  amrex::Error("pres->nComp() invalid");
  
  MultiFab* vel=getState(2,0,BL_SPACEDIM*num_materials_vel,cur_time_slab);
   // mask=tag if not covered by level+1 or outside the domain.
@@ -13984,9 +13969,9 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
 
  resize_FSI_GHOST_MF(2);
  if (localMF[FSI_GHOST_MF]->nGrow()!=2)
-  BoxLib::Error("localMF[FSI_GHOST_MF]->nGrow()!=ngrowFSI");
+  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=ngrowFSI");
  if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM)
-  BoxLib::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM");
+  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM");
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
@@ -14013,26 +13998,26 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
       MultiFab::Copy(*elastic_tensor_mf,*localMF[VISCOTEN_MF],0,
        partid*NUM_TENSOR_TYPE,NUM_TENSOR_TYPE,1);
      } else
-      BoxLib::Error("partid could not be found: GetDrag");
+      amrex::Error("partid could not be found: GetDrag");
     } else if ((elastic_time[im]==0.0)||
                (elastic_viscosity[im]==0.0)) {
 
      if (viscoelastic_model[im]!=0)
-      BoxLib::Error("viscoelastic_model[im]!=0");
+      amrex::Error("viscoelastic_model[im]!=0");
 
     } else
-     BoxLib::Error("elastic_time/elastic_viscosity invalid");
+     amrex::Error("elastic_time/elastic_viscosity invalid");
 
    } else if (ns_is_rigid(im)==1) {
     // do nothing
    } else
-    BoxLib::Error("ns_is_rigid invalid");
+    amrex::Error("ns_is_rigid invalid");
 
   } // im=0..nmat-1
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -14081,7 +14066,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
   else if (invert_gravity==0) {
    // do nothing
   } else
-   BoxLib::Error("invert_gravity invalid");
+   amrex::Error("invert_gravity invalid");
 
   int tid=ns_thread();
 
@@ -14142,7 +14127,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
  else if (isweep==1)
   iqend=9;
  else
-  BoxLib::Error("isweep invalid");
+  amrex::Error("isweep invalid");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int iq=iqstart;iq<iqend;iq++) {
@@ -14181,7 +14166,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  delete pres; 
  delete vel; 
@@ -14217,7 +14202,7 @@ void NavierStokes::project_right_hand_side(
       } else if (singular_possible==0) {
        // do nothing
       } else
-       BoxLib::Error("singular_possible invalid"); 
+       amrex::Error("singular_possible invalid"); 
      } else if (local_solvability_projection==1) {
 
       if (singular_possible==1) {
@@ -14232,39 +14217,39 @@ void NavierStokes::project_right_hand_side(
        zap_resid_where_singular(index_MF);
        change_flag=1;
       } else
-       BoxLib::Error("singular_possible invalid"); 
+       amrex::Error("singular_possible invalid"); 
 
      } else
-      BoxLib::Error("local_solvability_projection invalid");
+      amrex::Error("local_solvability_projection invalid");
 
     } else {
      std::cout << "index_MF = " << index_MF << '\n';
      std::cout << "project_option = " << project_option << '\n';
      std::cout << "ones_sum_global = " << ones_sum_global << '\n';
-     BoxLib::Error("ones_sum_global invalid");
+     amrex::Error("ones_sum_global invalid");
     }
    } else
-    BoxLib::Error("level invalid");
+    amrex::Error("level invalid");
   } else
-   BoxLib::Error("finest_level invalid");
+   amrex::Error("finest_level invalid");
 
  } else if (project_option==2) {
   if (singular_possible==0) {
    // do nothing
   } else
-   BoxLib::Error("singular_possible invalid");
+   amrex::Error("singular_possible invalid");
  } else if (project_option==3) {
   if (singular_possible==0) {
    // do nothing
   } else
-   BoxLib::Error("singular_possible invalid");
+   amrex::Error("singular_possible invalid");
  } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
   if (singular_possible==0) {
    // do nothing
   } else
-   BoxLib::Error("singular_possible invalid");
+   amrex::Error("singular_possible invalid");
  } else
-  BoxLib::Error("project_option invalid project_right_hand_side");
+  amrex::Error("project_option invalid project_right_hand_side");
 
 } // subroutine project_right_hand_side
 
@@ -14273,7 +14258,7 @@ void NavierStokes::dot_productALL_ones(int project_option,
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level=0 in dot_productALL_ones");
+  amrex::Error("level=0 in dot_productALL_ones");
 
  Real tempsum=0.0;
  Real total_sum=0.0;
@@ -14298,7 +14283,7 @@ void NavierStokes::zap_resid_where_singular(int index_MF) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level=0 in dot_productALL_ones");
+  amrex::Error("level=0 in dot_productALL_ones");
 
  for (int k = 0; k <= finest_level; k++) {
   NavierStokes& ns_level = getLevel(k);
@@ -14312,7 +14297,7 @@ void NavierStokes::dot_productALL_ones_size(int project_option,Real& result) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level=0 in dot_productALL_ones");
+  amrex::Error("level=0 in dot_productALL_ones");
 
  Real tempsum=0.0;
  Real total_sum=0.0;
@@ -14361,7 +14346,7 @@ void NavierStokes::dot_productALL(int project_option,
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level=0 in dot_productALL");
+  amrex::Error("level=0 in dot_productALL");
 
  Real tempsum=0.0;
  Real total_sum=0.0;
@@ -14387,7 +14372,7 @@ NavierStokes::dotSum(int project_option,
  int num_materials_face=num_materials_vel;
 
  if ((nsolve!=1)&&(nsolve!=BL_SPACEDIM))
-  BoxLib::Error("nsolve invalid");
+  amrex::Error("nsolve invalid");
 
  if ((project_option==0)||
      (project_option==1)||
@@ -14397,20 +14382,20 @@ NavierStokes::dotSum(int project_option,
      (project_option==12)||
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
-   BoxLib::Error("num_materials_face invalid");
+   amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
              (project_option<100+num_species_var))) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  BoxLib::Error("project_option invalid2");
+  amrex::Error("project_option invalid2");
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_face!=1)&&
      (num_materials_face!=num_materials))
-  BoxLib::Error("num_materials_face invalid");
+  amrex::Error("num_materials_face invalid");
 
  for (int dir=0;dir<BL_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -14419,16 +14404,16 @@ NavierStokes::dotSum(int project_option,
  debug_ngrow(MASKCOEF_MF,0,51);
  debug_ngrow(DOTMASK_MF,0,51);
  if (localMF[DOTMASK_MF]->nComp()!=num_materials_face)
-  BoxLib::Error("localMF[DOTMASK_MF]->nComp()!=num_materials_face");
+  amrex::Error("localMF[DOTMASK_MF]->nComp()!=num_materials_face");
 
  int nsolveMM=nsolve*num_materials_face;
 
  if (mf1->nComp()!=nsolveMM) {
   std::cout << "mf1_ncomp nsolveMM " << mf1->nComp() << ' ' << nsolveMM << '\n';
-  BoxLib::Error("dotSum: mf1 invalid ncomp");
+  amrex::Error("dotSum: mf1 invalid ncomp");
  }
  if (mf2->nComp()!=nsolveMM)
-  BoxLib::Error("mf2 invalid ncomp");
+  amrex::Error("mf2 invalid ncomp");
 
  Array<Real> sum;
  sum.resize(thread_class::nthreads);
@@ -14438,7 +14423,7 @@ NavierStokes::dotSum(int project_option,
 
  int finest_level=parent->finestLevel();
  if (level>finest_level)
-  BoxLib::Error("level too big");
+  amrex::Error("level too big");
 
 #ifdef _OPENMP
 #pragma omp parallel 
@@ -14520,7 +14505,7 @@ void NavierStokes::levelCombine(
  int num_materials_face=num_materials_vel;
 
  if ((nsolve!=1)&&(nsolve!=BL_SPACEDIM))
-  BoxLib::Error("nsolve invalid");
+  amrex::Error("nsolve invalid");
 
  if ((project_option==0)||
      (project_option==1)||
@@ -14530,24 +14515,24 @@ void NavierStokes::levelCombine(
      (project_option==12)||
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
-   BoxLib::Error("num_materials_face invalid");
+   amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
              (project_option<100+num_species_var))) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  BoxLib::Error("project_option invalid2");
+  amrex::Error("project_option invalid2");
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_face!=1)&&
      (num_materials_face!=num_materials))
-  BoxLib::Error("num_materials_face invalid");
+  amrex::Error("num_materials_face invalid");
 
  int finest_level=parent->finestLevel();
  if (level > finest_level)
-  BoxLib::Error("level too big");
+  amrex::Error("level too big");
 
  for (int dir=0;dir<BL_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -14556,16 +14541,16 @@ void NavierStokes::levelCombine(
  debug_ngrow(MASKCOEF_MF,0,51);
  debug_ngrow(DOTMASK_MF,0,51);
  if (localMF[DOTMASK_MF]->nComp()!=num_materials_face)
-  BoxLib::Error("localMF[DOTMASK_MF]->nComp()!=num_materials_face");
+  amrex::Error("localMF[DOTMASK_MF]->nComp()!=num_materials_face");
 
  int nsolveMM=nsolve*num_materials_face;
 
  if (mfx->nComp()!= nsolveMM)
-  BoxLib::Error("mfx invalid ncomp");
+  amrex::Error("mfx invalid ncomp");
  if (mfy->nComp()!= nsolveMM)
-  BoxLib::Error("mfy invalid ncomp");
+  amrex::Error("mfy invalid ncomp");
  if (mfz->nComp()!= nsolveMM)
-  BoxLib::Error("mfz invalid ncomp");
+  amrex::Error("mfz invalid ncomp");
 
 #ifdef _OPENMP
 #pragma omp parallel 
@@ -14684,19 +14669,19 @@ void NavierStokes::volWgtSum(
  int total_comp=enstrophy+nmat; 
 
  if (total_comp!=result.size())
-  BoxLib::Error("result size invalid");
+  amrex::Error("result size invalid");
  if (total_comp!=sumdata_type.size())
-  BoxLib::Error("sumdata_type size invalid");
+  amrex::Error("sumdata_type size invalid");
  if (total_comp!=sumdata_sweep.size())
-  BoxLib::Error("sumdata_sweep size invalid");
+  amrex::Error("sumdata_sweep size invalid");
 
  int finest_level=parent->finestLevel();
 
  if (num_state_base!=2)
-  BoxLib::Error("num_state_base invalid");
+  amrex::Error("num_state_base invalid");
 
  if (localMF[CELLTENSOR_MF]->nComp()!=ntensorMM)
-  BoxLib::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
+  amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  MultiFab* den_recon=getStateDen(1,upper_slab_time);  
  int den_ncomp=den_recon->nComp();
@@ -14740,11 +14725,11 @@ void NavierStokes::volWgtSum(
 
  int resultsize=result.size();
  if (resultsize!=total_comp)
-  BoxLib::Error("resultsize invalid");
+  amrex::Error("resultsize invalid");
 
  int NN=ZZ.size()-1;
  if (NN!=FF.size()-1)
-  BoxLib::Error("FF and ZZ fail size sanity check");
+  amrex::Error("FF and ZZ fail size sanity check");
 
  Array< Array<Real> > local_result;
  Array< Array<Real> > local_ZZ;
@@ -14766,7 +14751,7 @@ void NavierStokes::volWgtSum(
    else if (sumdata_type[isum]==1)
     local_result[tid][isum]=0.0;
    else
-    BoxLib::Error("sumdata_type invalid");
+    amrex::Error("sumdata_type invalid");
   } // isum
 
   local_ZZ[tid].resize(NN+1);
@@ -14803,7 +14788,7 @@ void NavierStokes::volWgtSum(
 
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
    if (cellten.nComp()!=ntensorMM)
-    BoxLib::Error("cellten invalid ncomp");
+    amrex::Error("cellten invalid ncomp");
 
    FArrayBox& dragfab=(*dragmf)[mfi];
    Real problo[BL_SPACEDIM];
@@ -14870,14 +14855,14 @@ void NavierStokes::volWgtSum(
      if (local_result[tid][idest]>local_result[0][idest])
       local_result[0][idest]=local_result[tid][idest];
     } else
-     BoxLib::Error("sumdata_type invalid");
+     amrex::Error("sumdata_type invalid");
 
    } else if (sumdata_sweep[idest]==0) {
     // do nothing
    } else if (sumdata_sweep[idest]==1) {
     // do nothing
    } else
-    BoxLib::Error("sumdata_sweep invalid");
+    amrex::Error("sumdata_sweep invalid");
 
   } // idest
  
@@ -14930,14 +14915,14 @@ void NavierStokes::volWgtSum(
     if (local_result[0][idest]>result[idest])
      result[idest]=local_result[0][idest];
    } else
-    BoxLib::Error("sumdata_type invalid");
+    amrex::Error("sumdata_type invalid");
 
   } else if (sumdata_sweep[idest]==0) {
    // do nothing
   } else if (sumdata_sweep[idest]==1) {
    // do nothing
   } else
-   BoxLib::Error("sumdata_sweep invalid");
+   amrex::Error("sumdata_sweep invalid");
 
  } // idest
  
@@ -15000,7 +14985,7 @@ void
 NavierStokes::debug_memory() {
 
  if (level!=0)
-  BoxLib::Error("level invalid debug_memory");
+  amrex::Error("level invalid debug_memory");
 
  if (show_mem==1) {
   std::fflush(NULL);
@@ -15012,7 +14997,7 @@ NavierStokes::debug_memory() {
   std::fflush(NULL);
   ParallelDescriptor::Barrier();
  } else if (show_mem!=0)
-  BoxLib::Error("show_mem invalid");
+  amrex::Error("show_mem invalid");
 
 }
 
@@ -15020,7 +15005,7 @@ void NavierStokes::writeInterfaceReconstruction() {
 
  debug_ngrow(SLOPE_RECON_MF,1,55);
  if (level!=0)
-  BoxLib::Error("level should be zero");
+  amrex::Error("level should be zero");
 
  int finest_level = parent->finestLevel();
  Array<int> grids_per_level;
@@ -15057,16 +15042,16 @@ void NavierStokes::writeInterfaceReconstruction() {
 void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  if (level!=0)
-  BoxLib::Error("level invalid writeTECPLOT_File");
+  amrex::Error("level invalid writeTECPLOT_File");
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel != 1");
+  amrex::Error("num_materials_vel != 1");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
 
  int nsteps=parent->levelSteps(0);
 
@@ -15080,7 +15065,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  debug_ngrow(SLOPE_RECON_MF,1,65);
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
-  BoxLib::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
   // uses "slope_recon" 
  if (do_plot==1) {
@@ -15088,7 +15073,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else if (do_plot==0) {
   // do nothing
  } else
-  BoxLib::Error("do_plot invalid");
+  amrex::Error("do_plot invalid");
 
  Array<int> grids_per_level_array;
  grids_per_level_array.resize(finest_level+1);
@@ -15120,7 +15105,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 // so "init_gradu_tensorALL" needs to allocate HOLD_VELOCITY_DATA_MF
 // internally for its' own uses then delete it after this call.
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
-  BoxLib::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
+  amrex::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
@@ -15129,20 +15114,20 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    simple_AMR_BC_flag_viscosity);
 
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
-  BoxLib::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
+  amrex::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
 
  if (localMF[CELLTENSOR_MF]->nComp()!=ntensorMM)
-  BoxLib::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
+  amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
  if (localMF[FACETENSOR_MF]->nComp()!=ntensorMM)
-  BoxLib::Error("localMF[FACETENSOR_MF]->nComp() invalid");
+  amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
  getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
-  BoxLib::Error("viscmf invalid ncomp");
+  amrex::Error("viscmf invalid ncomp");
 
  getStateDIV_ALL(MACDIV_MF,1);
  if (localMF[MACDIV_MF]->nComp()!=num_materials_vel)
-  BoxLib::Error("localMF[MACDIV_MF]->nComp() invalid");
+  amrex::Error("localMF[MACDIV_MF]->nComp() invalid");
 
    // if FENE-CR+Carreau,
    // liquid viscosity=etaS+etaP ( 1+ (beta gamma_dot)^alpha )^((n-1)/alpha)
@@ -15162,7 +15147,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  int ntrace=5*nmat;
  getState_tracemag_ALL(MAGTRACE_MF,1);
  if (localMF[MAGTRACE_MF]->nComp()!=ntrace)
-  BoxLib::Error("localMF[MAGTRACE_MF]->nComp() invalid");
+  amrex::Error("localMF[MAGTRACE_MF]->nComp() invalid");
 
   // idx,ngrow,scomp,ncomp,index,scompBC_map
  Array<int> scompBC_map;
@@ -15273,7 +15258,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else if (visual_compare==0) {
   // do nothing
  } else
-  BoxLib::Error("visual_compare invalid");
+  amrex::Error("visual_compare invalid");
 
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -15284,7 +15269,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     num_materials_vel*(BL_SPACEDIM+1),cur_time_slab);
   MultiFab* presmf=ns_level.derive_EOS_pressure(); 
   if (presmf->nComp()!=num_materials_vel)
-   BoxLib::Error("presmf has invalid ncomp");
+   amrex::Error("presmf has invalid ncomp");
 
   MultiFab* denmf=ns_level.getStateDen(1,cur_time_slab); 
   MultiFab* lsdist=ns_level.getStateDist(1,cur_time_slab,12);
@@ -15303,7 +15288,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else if (num_materials_viscoelastic==0) {
    // do nothing
   } else
-   BoxLib::Error("num_materials_viscoelastic invalid");
+   amrex::Error("num_materials_viscoelastic invalid");
 
   ns_level.output_zones(
    visual_fab_output,
@@ -15327,14 +15312,14 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    for (int i=0;i<nslice*nstate_slice;i++)
     ParallelDescriptor::ReduceRealMax(slice_data[i]);
   } else
-   BoxLib::Error("slice_dir invalid");
+   amrex::Error("slice_dir invalid");
 
   if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
    delete viscoelasticmf;
   } else if (num_materials_viscoelastic==0) {
    // do nothing
   } else
-   BoxLib::Error("num_materials_viscoelastic invalid");
+   amrex::Error("num_materials_viscoelastic invalid");
 
   delete div_data;
   delete velmf;
@@ -15405,7 +15390,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } // ilev
 
   if (temp_number_grids!=total_number_grids)
-   BoxLib::Error("temp_number_grids invalid");
+   amrex::Error("temp_number_grids invalid");
   
   int num_levels=tecplot_finest_level+1;
   int plotint=parent->plotInt();
@@ -15413,7 +15398,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   int nparts=im_solid_map.size();
   if ((nparts<0)||(nparts>=nmat))
-   BoxLib::Error("nparts invalid");
+   amrex::Error("nparts invalid");
   Array<int> im_solid_map_null;
   im_solid_map_null.resize(1);
   im_solid_map_null[0]=0;
@@ -15426,7 +15411,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else if ((nparts>=1)&&(nparts<=nmat-1)) {
    im_solid_map_ptr=im_solid_map.dataPtr();
   } else
-   BoxLib::Error("nparts invalid");
+   amrex::Error("nparts invalid");
 
   if (do_plot==1) {
    FORT_COMBINEZONES(
@@ -15451,7 +15436,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else if (do_plot==0) {
    // do nothing
   } else
-   BoxLib::Error("do_plot invalid");
+   amrex::Error("do_plot invalid");
 
   if (do_slice==1) {
    if ((slice_dir>=0)&&(slice_dir<BL_SPACEDIM)) {
@@ -15459,11 +15444,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      slice_data.dataPtr(),&nslice,&nstate_slice,
      &visual_option);
    } else
-    BoxLib::Error("slice_dir invalid");
+    amrex::Error("slice_dir invalid");
   } else if (do_slice==0) {
    // do nothing
   } else
-   BoxLib::Error("do_slice invalid");
+   amrex::Error("do_slice invalid");
 
   int do_input=0;
   FORT_IO_COMPARE(
@@ -15485,7 +15470,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else if (!ParallelDescriptor::IOProcessor()) {
   // do nothing
  } else
-  BoxLib::Error("ParallelDescriptor::IOProcessor() corrupt");
+  amrex::Error("ParallelDescriptor::IOProcessor() corrupt");
 
  ParallelDescriptor::Barrier();
 
@@ -15521,7 +15506,7 @@ NavierStokes::writePlotFile (
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
 
  slab_step=slab_step_in; 
 
@@ -15609,7 +15594,7 @@ NavierStokes::writePlotFile (
      os << thePlotFileType() << '\n';
 
      if (n_data_items == 0)
-         BoxLib::Error("Must specify at least one valid data item to plot");
+         amrex::Error("Must specify at least one valid data item to plot");
 
      os << n_data_items << '\n';
 
@@ -15673,8 +15658,8 @@ NavierStokes::writePlotFile (
    // Only the I/O processor makes the directory if it doesn't already exist.
    //
    if (ParallelDescriptor::IOProcessor())
-     if (!BoxLib::UtilCreateDirectory(FullPath, 0755))
-         BoxLib::CreateDirectoryFailed(FullPath);
+     if (!amrex::UtilCreateDirectory(FullPath, 0755))
+         amrex::CreateDirectoryFailed(FullPath);
    //
    // Force other processors to wait till directory is built.
    //
@@ -15732,68 +15717,68 @@ NavierStokes::writePlotFile (
       if (comp!=0) {
        std::cout << "comp=" << comp << " ncomp= " <<
         desc_lst[typ].nComp() << '\n';
-       BoxLib::Error("comp invalid for Solid_State_Type");
+       amrex::Error("comp invalid for Solid_State_Type");
       }
       int nmat=num_materials;
       int nparts=im_solid_map.size();
       if ((nparts<1)||(nparts>=nmat))
-       BoxLib::Error("nparts invalid");
+       amrex::Error("nparts invalid");
       if (comp==0) {
        ncomp=nparts*BL_SPACEDIM;
       } else
-       BoxLib::Error("comp invalid");
+       amrex::Error("comp invalid");
 
       this_dat=getStateSolid(nGrow,comp,ncomp,cur_time_slab);
 
       if (this_dat->nComp()!=ncomp)
-       BoxLib::Error("this_dat->nComp() invalid");
+       amrex::Error("this_dat->nComp() invalid");
 
      } else if ((typ==Tensor_Type)&&(im_elastic_map.size()!=0)) {
 
       if (comp!=0) {
        std::cout << "comp=" << comp << " ncomp= " <<
         desc_lst[typ].nComp() << '\n';
-       BoxLib::Error("comp invalid for Tensor_Type");
+       amrex::Error("comp invalid for Tensor_Type");
       }
       int nmat=num_materials;
       int nparts=im_elastic_map.size();
       if ((nparts<1)||(nparts>nmat)||
           (nparts!=num_materials_viscoelastic))
-       BoxLib::Error("nparts invalid");
+       amrex::Error("nparts invalid");
       if (comp==0) {
        ncomp=nparts*NUM_TENSOR_TYPE;
       } else
-       BoxLib::Error("comp invalid");
+       amrex::Error("comp invalid");
 
       this_dat=getStateTensor(nGrow,comp,ncomp,cur_time_slab);
 
       if (this_dat->nComp()!=ncomp) 
-       BoxLib::Error("this_dat->nComp() invalid");
+       amrex::Error("this_dat->nComp() invalid");
 
      } else if (typ==LS_Type) {
       if (comp!=0) {
        std::cout << "comp=" << comp << " ncomp= " <<
         desc_lst[typ].nComp() << '\n';
-       BoxLib::Error("comp invalid for LS_Type");
+       amrex::Error("comp invalid for LS_Type");
       }
 
       int nmat=num_materials;
       if (comp==0) {
        ncomp=nmat*(BL_SPACEDIM+1);
       } else
-       BoxLib::Error("comp invalid");
+       amrex::Error("comp invalid");
 
       this_dat=getStateDist(nGrow,cur_time_slab,13);
       if (this_dat->nComp()!=ncomp)
-       BoxLib::Error("this_dat->nComp() invalid");
+       amrex::Error("this_dat->nComp() invalid");
 
      } else if (typ==DIV_Type) {
       if (comp!=0)
-       BoxLib::Error("comp invalid for DIV_Type");
+       amrex::Error("comp invalid for DIV_Type");
       ncomp=num_materials_vel;
       this_dat=getStateDIV_DATA(1,comp,ncomp,cur_time_slab);
      } else
-      BoxLib::Error("typ invalid");
+      amrex::Error("typ invalid");
 
      MultiFab::Copy(plotMF,*this_dat,0,cnt,ncomp,nGrow);
      delete this_dat;
@@ -15825,10 +15810,10 @@ NavierStokes::writePlotFile (
   } else if (do_plot==0) {
    // do nothing
   } else
-   BoxLib::Error("do_plot invalid");
+   amrex::Error("do_plot invalid");
 
  } else
-  BoxLib::Error("visual_option invalid try -1 or -2");
+  amrex::Error("visual_option invalid try -1 or -2");
 
 }
 
@@ -15858,7 +15843,7 @@ void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level invalid MaxAdvectSpeedALL");
+  amrex::Error("level invalid MaxAdvectSpeedALL");
 
  last_finest_level=finest_level; 
  
@@ -15912,11 +15897,11 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
  int nsolveMM_FACE=nsolve*num_materials_vel;
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  Array<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
@@ -15928,13 +15913,13 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
  } else if ((nparts>=1)&&(nparts<=nmat-1)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
 
  resize_FSI_GHOST_MF(1);
  if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  BoxLib::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
+  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
  if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM)
-  BoxLib::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM");
+  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM");
 
  MultiFab* distmf=getStateDist(2,cur_time_slab,14);
  MultiFab* denmf=getStateDen(1,cur_time_slab);  // nmat*num_state_material
@@ -15948,7 +15933,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 5");
+  amrex::Error("CoordSys bust 5");
 
  const Real* dx = geom.CellSize();
 
@@ -16129,7 +16114,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
  Real return_dt=0.0;
 
  if (level!=0)
-  BoxLib::Error("estTimeStep only called at level=0");
+  amrex::Error("estTimeStep only called at level=0");
 
  const int finest_level = parent->finestLevel();
  NavierStokes& ns_fine = getLevel(finest_level);
@@ -16167,7 +16152,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
 
   } else {
 
-   BoxLib::Error("fixed_dt_velocity invalid");
+   amrex::Error("fixed_dt_velocity invalid");
 
   }
 
@@ -16184,12 +16169,12 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
   for (int i=0;i<ns_time_order;i++) {
    Real test_sub_dt=time_array[i+1]-time_array[i];
    if (test_sub_dt<=0.0)
-    BoxLib::Error("test_sub_dt invalid");
+    amrex::Error("test_sub_dt invalid");
    if (test_sub_dt>max_sub_dt)
     max_sub_dt=test_sub_dt;
   } // i
   if ((max_sub_dt<=0.0)||(max_sub_dt>1.0))
-   BoxLib::Error("max_sub_dt invalid");
+   amrex::Error("max_sub_dt invalid");
 
   if (verbose>0)
    if (ParallelDescriptor::IOProcessor())
@@ -16199,7 +16184,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
   return_dt=return_dt/max_sub_dt;
 
  } else {
-  BoxLib::Error("local_fixed_dt invalid");
+  amrex::Error("local_fixed_dt invalid");
  }
 
  if (return_dt>dt_max)
@@ -16214,7 +16199,7 @@ void NavierStokes::post_regrid (int lbase,int new_finest,Real time) {
   Real dt_amr=parent->getDt(); // returns dt_AMR
   int nstate=state.size();
   if (nstate!=NUM_STATE_TYPE)
-   BoxLib::Error("nstate invalid");
+   amrex::Error("nstate invalid");
    // olddata=newdata  
   for (int k=0;k<nstate;k++) {
    state[k].CopyNewToOld(); 
@@ -16238,7 +16223,7 @@ void NavierStokes::computeNewDt (int finest_level,
    local_fixed_dt=fixed_dt;
    local_change_max=change_max;
   } else
-   BoxLib::Error("nsteps invalid");
+   amrex::Error("nsteps invalid");
    
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
@@ -16260,7 +16245,7 @@ void NavierStokes::computeNewDt (int finest_level,
    } else if ((local_fixed_dt>0.0)||(fixed_dt_velocity>0.0)) {
     // do nothing
    } else {
-    BoxLib::Error("local_fixed_dt or fixed_dt_velocity invalid");
+    amrex::Error("local_fixed_dt or fixed_dt_velocity invalid");
    }
 
    Real dt_0=newdt;
@@ -16293,7 +16278,7 @@ void NavierStokes::computeNewDt (int finest_level,
   } else if ((level>0)&&(level<=max_level)) {
    // do nothing
   } else
-   BoxLib::Error("level invalid computeNewDt");
+   amrex::Error("level invalid computeNewDt");
 
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
@@ -16302,7 +16287,7 @@ void NavierStokes::computeNewDt (int finest_level,
   }
 
  } else
-  BoxLib::Error("nsteps invalid");
+  amrex::Error("nsteps invalid");
 
 }
 
@@ -16316,7 +16301,7 @@ void NavierStokes::computeInitialDt (int finest_level,
  }
 
  if (level!=0)
-  BoxLib::Error("level invalid computeInitialDt");
+  amrex::Error("level invalid computeInitialDt");
 
   // The first time step does not have grad p initialized, so we
   // must take a very small initial time step in order to maintain
@@ -16328,7 +16313,7 @@ void NavierStokes::computeInitialDt (int finest_level,
  } else if (ns_time_order==1) {
   // do nothing
  } else {
-  BoxLib::Error("ns_time_order invalid");
+  amrex::Error("ns_time_order invalid");
  }
 
  Real newdt=init_shrink*estTimeStep(fixed_dt_init)/shrink_factor;
@@ -16526,17 +16511,17 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
     // do nothing
    } else {
     status=0;
-    BoxLib::Error("HH[j][i] corrupt");
+    amrex::Error("HH[j][i] corrupt");
    }
    if (j>=i+2) {
     if (HH[j][i]==0.0) {
      // do nothing
     } else
-     BoxLib::Error("HH should be 0");
+     amrex::Error("HH should be 0");
    } else if (j<i+2) {
     // check nothing
    } else
-    BoxLib::Error("i or j became corrupt");
+    amrex::Error("i or j became corrupt");
 
    HT[i][j]=HH[j][i];
    HCOPY[j][i]=HH[j][i];
@@ -16547,7 +16532,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
  } else {
   status=0;
   std::cout << "beta= " << beta << '\n';
-  BoxLib::Error("beta invalid");
+  amrex::Error("beta invalid");
  }
 
  Real* sn=new Real[m];
@@ -16594,10 +16579,10 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
     sn_k=cs_k*v2/v1; 
    } else {
     std::cout << "t= " << t << '\n';
-    BoxLib::Error("t invalid");
+    amrex::Error("t invalid");
    }
   } else
-   BoxLib::Error("v1 is corrupt");
+   amrex::Error("v1 is corrupt");
  
   h[k-1]=cs_k*h[k-1]+sn_k*h[k];
   h[k]=0.0;
@@ -16626,7 +16611,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   if (fabs(hdiag)>0.0) 
    yy[k-1]/=hdiag;
   else
-   BoxLib::Error("hdiag became 0");
+   amrex::Error("hdiag became 0");
 
  } // k=m ... 1 
 
@@ -16667,8 +16652,8 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
      std::cout << "i= " << i << " j= " << j << " HH= " << HH[i][j] << '\n';
     }
    }
-   BoxLib::Error("residual too large HTH, do dual time stepping");
-//  BoxLib::Warning("residual too large HTH");
+   amrex::Error("residual too large HTH, do dual time stepping");
+//  amrex::Warning("residual too large HTH");
   }
   delete [] HTHy;
 
@@ -16766,14 +16751,14 @@ NavierStokes::volWgtSumALL(
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level=0 in volWgtSumALL");
+  amrex::Error("level=0 in volWgtSumALL");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else {
   std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
-  BoxLib::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid");
  }
 
     // vof,ref cen, order,slope,int
@@ -16792,7 +16777,7 @@ NavierStokes::volWgtSumALL(
  } else if (post_init_flag==2) {
   post_restart_flag=1;
  } else
-  BoxLib::Error("post_init_flag invalid");
+  amrex::Error("post_init_flag invalid");
 
  make_physics_varsALL(project_option,post_restart_flag);
 
@@ -16833,7 +16818,7 @@ NavierStokes::MaxPressureVelocityALL(
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  BoxLib::Error("level=0 in MaxPressureVelocityALL");
+  amrex::Error("level=0 in MaxPressureVelocityALL");
 
  Real local_minpres;
  Real local_maxpres;
@@ -16941,7 +16926,7 @@ void
 NavierStokes::prepare_post_process(int post_init_flag) {
 
  if (level!=0)
-  BoxLib::Error("level invalid prepare_post_process");
+  amrex::Error("level invalid prepare_post_process");
 
  const int finest_level = parent->finestLevel();
 
@@ -16970,7 +16955,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
     // in: NavierStokes::prepare_post_process
    ns_level.allocate_levelsetLO(1,LEVELPC_MF);
   } else
-   BoxLib::Error("post_init_flag invalid");
+   amrex::Error("post_init_flag invalid");
    
  } // ilev
 
@@ -17000,7 +16985,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  } else if (post_init_flag==2) {
   error_update_flag=1;  // called from post_restart, update S_old
  } else
-  BoxLib::Error("post_init_flag invalid");
+  amrex::Error("post_init_flag invalid");
 	
  if (post_init_flag==1) { // called from post_init_state
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
@@ -17029,7 +17014,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   int post_restart_flag=1;
   make_physics_varsALL(project_option,post_restart_flag);
  } else
-  BoxLib::Error("post_init_flag invalid");
+  amrex::Error("post_init_flag invalid");
 
 }  // subroutine prepare_post_process
 
@@ -17041,7 +17026,7 @@ void
 NavierStokes::post_init_state () {
     
  if (level>0)
-  BoxLib::Error("level>0 in post_init_state");
+  amrex::Error("level>0 in post_init_state");
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -17113,7 +17098,7 @@ NavierStokes::post_init_state () {
   // tessellate==1
  ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
  if (color_count!=blobdata.size())
-  BoxLib::Error("color_count!=blobdata.size()");
+  amrex::Error("color_count!=blobdata.size()");
 
  if (is_zalesak()) {
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -17124,7 +17109,7 @@ NavierStokes::post_init_state () {
  } else if (! is_zalesak()) {
    // do nothing
  } else
-  BoxLib::Error("is_zalesak() invalid");
+  amrex::Error("is_zalesak() invalid");
 
   // unew^{f} = unew^{c->f}
   // in post_init_state (project_option==1)
@@ -17208,7 +17193,7 @@ NavierStokes::post_init_state () {
  } else if ((post_init_pressure_solve==0)||(is_zalesak())) {
   // do nothing
  } else {
-  BoxLib::Error("post_init_pressure_solve or is_zalesak() invalid");
+  amrex::Error("post_init_pressure_solve or is_zalesak() invalid");
  } 
 
  int scomp_pres=num_materials_vel*BL_SPACEDIM;
@@ -17232,7 +17217,7 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
 
  int finest_level=parent->finestLevel();
  if (level>=finest_level)
-  BoxLib::Error("level invalid in level_avgDown_tag");
+  amrex::Error("level invalid in level_avgDown_tag");
 
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
@@ -17240,17 +17225,17 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
  const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
-  BoxLib::Error("S_crse invalid");
+  amrex::Error("S_crse invalid");
  if (fgrids!=S_fine.boxArray())
-  BoxLib::Error("S_fine invalid");
+  amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
-  BoxLib::Error("nComp mismatch");
+  amrex::Error("nComp mismatch");
  if (S_crse.nComp()<scomp+ncomp)
-  BoxLib::Error("S_crse.nComp() invalid level_avgDown_tag");
+  amrex::Error("S_crse.nComp() invalid level_avgDown_tag");
 
  BoxArray crse_S_fine_BA(fgrids.size());
  for (int i = 0; i < fgrids.size(); ++i) {
-  crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
@@ -17322,7 +17307,7 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine) {
 
  int finest_level=parent->finestLevel();
  if (level>=finest_level)
-  BoxLib::Error("level invalid in level_avgDownBURNING");
+  amrex::Error("level invalid in level_avgDownBURNING");
 
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
@@ -17330,17 +17315,17 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine) {
  const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
-  BoxLib::Error("S_crse invalid");
+  amrex::Error("S_crse invalid");
  if (fgrids!=S_fine.boxArray())
-  BoxLib::Error("S_fine invalid");
+  amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
-  BoxLib::Error("nComp mismatch");
+  amrex::Error("nComp mismatch");
  if (S_crse.nComp()!=scomp+ncomp)
-  BoxLib::Error("S_crse.nComp() invalid level_avgDownBurning");
+  amrex::Error("S_crse.nComp() invalid level_avgDownBurning");
 
  BoxArray crse_S_fine_BA(fgrids.size());
  for (int i = 0; i < fgrids.size(); ++i) {
-  crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
@@ -17415,7 +17400,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
 
  int finest_level=parent->finestLevel();
  if (level>=finest_level)
-  BoxLib::Error("level invalid in level_avgDownCURV");
+  amrex::Error("level invalid in level_avgDownCURV");
 
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
@@ -17423,17 +17408,17 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
  const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
-  BoxLib::Error("S_crse invalid");
+  amrex::Error("S_crse invalid");
  if (fgrids!=S_fine.boxArray())
-  BoxLib::Error("S_fine invalid");
+  amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
-  BoxLib::Error("nComp mismatch");
+  amrex::Error("nComp mismatch");
  if (S_crse.nComp()!=scomp+ncomp)
-  BoxLib::Error("S_crse.nComp() invalid level_avgDownCURV");
+  amrex::Error("S_crse.nComp() invalid level_avgDownCURV");
 
  BoxArray crse_S_fine_BA(fgrids.size());
  for (int i = 0; i < fgrids.size(); ++i) {
-  crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
@@ -17503,7 +17488,7 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
 
  int finest_level=parent->finestLevel();
  if (level>=finest_level)
-  BoxLib::Error("level invalid in avgDown");
+  amrex::Error("level invalid in avgDown");
 
  int f_level=level+1;
  NavierStokes&   fine_lev = getLevel(f_level);
@@ -17511,15 +17496,15 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
  const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
-  BoxLib::Error("S_crse invalid");
+  amrex::Error("S_crse invalid");
  if (fgrids!=S_fine.boxArray())
-  BoxLib::Error("S_fine invalid");
+  amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
-  BoxLib::Error("nComp mismatch");
+  amrex::Error("nComp mismatch");
 
  BoxArray crse_S_fine_BA(fgrids.size());
  for (int i = 0; i < fgrids.size(); ++i) {
-  crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
@@ -17596,7 +17581,7 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
     fine_fablo,fine_fabhi);
 
   } else
-   BoxLib::Error("spectral_override invalid");
+   amrex::Error("spectral_override invalid");
 
  }// mfi
 } //omp
@@ -17617,7 +17602,7 @@ NavierStokes::avgDown_list(int stateidx,Array<int> scomp,
   ncomp_list+=ncomp[ilist];
  }
  if (ncomp_list<=0)
-  BoxLib::Error("ncomp_list invalid");
+  amrex::Error("ncomp_list invalid");
 
 } // subroutine avgDown_list
 
@@ -17634,7 +17619,7 @@ NavierStokes::avgDown(int stateidx,int startcomp,int numcomp,
   std::cout << "stateidx= " << stateidx << '\n';
   std::cout << "startcomp= " << startcomp << '\n';
   std::cout << "numcomp= " << numcomp << '\n';
-  BoxLib::Error("stateidx invalid");
+  amrex::Error("stateidx invalid");
  }
 
  int finest_level=parent->finestLevel();
@@ -17649,7 +17634,7 @@ NavierStokes::avgDown(int stateidx,int startcomp,int numcomp,
   avgDown(S_crse,S_fine,startcomp,numcomp,spectral_override);
 
  } else
-  BoxLib::Error("level invalid");
+  amrex::Error("level invalid");
 
 } // subroutine avgDown
 
@@ -17679,15 +17664,15 @@ void NavierStokes::MOFavgDown() {
  const Real* prob_lo   = geom.ProbLo();
 
  if (grids!=S_crse.boxArray())
-  BoxLib::Error("S_crse invalid");
+  amrex::Error("S_crse invalid");
  if (fgrids!=S_fine.boxArray())
-  BoxLib::Error("S_fine invalid");
+  amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
-  BoxLib::Error("nComp mismatch");
+  amrex::Error("nComp mismatch");
 
  BoxArray crse_S_fine_BA(fgrids.size());
  for (int i = 0; i < fgrids.size(); ++i) {
-  crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
 
  int nmat=num_materials;
@@ -17765,22 +17750,22 @@ void NavierStokes::avgDownError() {
  const Real* prob_lo   = geom.ProbLo();
 
  if (grids!=S_crse.boxArray())
-  BoxLib::Error("S_crse invalid");
+  amrex::Error("S_crse invalid");
  if (fgrids!=S_fine.boxArray())
-  BoxLib::Error("S_fine invalid");
+  amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
-  BoxLib::Error("nComp mismatch");
+  amrex::Error("nComp mismatch");
 
  BoxArray crse_S_fine_BA(fgrids.size());
  for (int i = 0; i < fgrids.size(); ++i) {
-  crse_S_fine_BA.set(i,BoxLib::coarsen(fgrids[i],2));
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
 
  int nmat=num_materials;
  int scomp_error=num_materials_vel*(BL_SPACEDIM+1)+
    nmat*num_state_material+nmat*ngeom_raw;
  if (S_crse.nComp()!=scomp_error+1)
-  BoxLib::Error("scomp_error invalid");
+  amrex::Error("scomp_error invalid");
 
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine(crse_S_fine_BA,1,0,crse_dmap,Fab_allocate);
@@ -17835,7 +17820,7 @@ void NavierStokes::getBCArray_list(Array<int>& listbc,int state_index,
  for (int ilist=0;ilist<scomp.size();ilist++)
   ncomp_list+=ncomp[ilist];
  if (ncomp_list<=0)
-  BoxLib::Error("ncomp_list invalid");
+  amrex::Error("ncomp_list invalid");
 
  listbc.resize(ncomp_list*BL_SPACEDIM*2);
 
@@ -17856,7 +17841,7 @@ void NavierStokes::getBCArray_list(Array<int>& listbc,int state_index,
   } // nn
  } // ilist
  if (dcomp!=ncomp_list*BL_SPACEDIM*2)
-  BoxLib::Error("dcomp invalid");
+  amrex::Error("dcomp invalid");
 
 }  // subroutine getBCArray_list
 
@@ -17869,7 +17854,7 @@ MultiFab* NavierStokes::getState_list(
   ncomp_list+=ncomp[ilist];
 
  if (ncomp_list<=0)
-  BoxLib::Error("ncomp_list invalid");
+  amrex::Error("ncomp_list invalid");
  
  MultiFab* mf = new MultiFab(state[State_Type].boxArray(),ncomp_list,
    ngrow,dmap,Fab_allocate);
@@ -17882,7 +17867,7 @@ MultiFab* NavierStokes::getState_list(
   delete mf_single;
  }
  if (dcomp!=ncomp_list)
-  BoxLib::Error("dcomp invalid");
+  amrex::Error("dcomp invalid");
 
  return mf;
 
@@ -17900,7 +17885,7 @@ void NavierStokes::putState_list(
  if (ncomp_list>=1) {
   // do nothing
  } else
-  BoxLib::Error("ncomp_list invalid");
+  amrex::Error("ncomp_list invalid");
  
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
@@ -17912,7 +17897,7 @@ void NavierStokes::putState_list(
   scomp_localMF+=ncomp[ilist];
  }
  if (scomp_localMF!=ncomp_list)
-  BoxLib::Error("scomp_localMF invalid");
+  amrex::Error("scomp_localMF invalid");
 
 } // subroutine putState_list
 
@@ -17932,7 +17917,7 @@ MultiFab* NavierStokes::getState (
    // do nothing
   } else {
    std::cout << "VOF: scomp,ncomp " << scomp << ' ' << ncomp << '\n';
-   BoxLib::Error("must get all vof data at once getState");
+   amrex::Error("must get all vof data at once getState");
   }
 
  }
@@ -17940,11 +17925,11 @@ MultiFab* NavierStokes::getState (
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int ntotal=S_new.nComp();
  if (scomp<0)
-  BoxLib::Error("scomp invalid getState"); 
+  amrex::Error("scomp invalid getState"); 
  if (ncomp<=0)
-  BoxLib::Error("ncomp invalid in get state"); 
+  amrex::Error("ncomp invalid in get state"); 
  if (scomp+ncomp>ntotal)
-  BoxLib::Error("scomp,ncomp invalid");
+  amrex::Error("scomp,ncomp invalid");
 
  MultiFab* mf = new MultiFab(state[State_Type].boxArray(),ncomp,
    ngrow,dmap,Fab_allocate);
@@ -17965,21 +17950,21 @@ MultiFab* NavierStokes::getStateSolid (
   // nparts x (velocity + LS + temperature + flag)
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>=nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  if (ncomp%BL_SPACEDIM!=0)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
  int partid=scomp/BL_SPACEDIM;
  if ((partid<0)||(partid>=nparts))
-  BoxLib::Error("partid invalid");
+  amrex::Error("partid invalid");
 
  MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
  int ntotal=Solid_new.nComp();
  if (scomp<0)
-  BoxLib::Error("scomp invalid getStateSolid"); 
+  amrex::Error("scomp invalid getStateSolid"); 
  if (ncomp<=0)
-  BoxLib::Error("ncomp invalid in getstateSolid"); 
+  amrex::Error("ncomp invalid in getstateSolid"); 
  if (scomp+ncomp>ntotal)
-  BoxLib::Error("scomp,ncomp invalid");
+  amrex::Error("scomp,ncomp invalid");
 
  MultiFab* mf = new MultiFab(state[Solid_State_Type].boxArray(),ncomp,
    ngrow,dmap,Fab_allocate);
@@ -18002,21 +17987,21 @@ MultiFab* NavierStokes::getStateTensor (
   // nparts x NUM_TENSOR_TYPE
  int nparts=im_elastic_map.size();
  if ((nparts<1)||(nparts>nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
  if (ncomp%NUM_TENSOR_TYPE!=0)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
  int partid=scomp/NUM_TENSOR_TYPE;
  if ((partid<0)||(partid>=nparts))
-  BoxLib::Error("partid invalid");
+  amrex::Error("partid invalid");
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
  int ntotal=Tensor_new.nComp();
  if (scomp<0)
-  BoxLib::Error("scomp invalid getStateTensor"); 
+  amrex::Error("scomp invalid getStateTensor"); 
  if (ncomp<=0)
-  BoxLib::Error("ncomp invalid in getstateTensor"); 
+  amrex::Error("ncomp invalid in getstateTensor"); 
  if (scomp+ncomp>ntotal)
-  BoxLib::Error("scomp,ncomp invalid");
+  amrex::Error("scomp,ncomp invalid");
 
  MultiFab* mf = new MultiFab(state[Tensor_Type].boxArray(),ncomp,
    ngrow,dmap,Fab_allocate);
@@ -18037,14 +18022,14 @@ MultiFab* NavierStokes::getStateDist (int ngrow,Real time,int caller_id) {
      caller_id <<'\n';
 
  if ((ngrow<0)||(ngrow>ngrow_distance))
-  BoxLib::Error("ngrow invalid");
+  amrex::Error("ngrow invalid");
 
  int nmat=num_materials;
  
  MultiFab& S_new=get_new_data(LS_Type,slab_step+1);
  int ntotal=S_new.nComp();
  if (ntotal!=nmat*(BL_SPACEDIM+1))
-  BoxLib::Error("ntotal invalid");
+  amrex::Error("ntotal invalid");
 
  MultiFab* mf = new MultiFab(state[State_Type].boxArray(),
    nmat*(BL_SPACEDIM+1),
@@ -18064,7 +18049,7 @@ void NavierStokes::CPP_OVERRIDEPBC(int homflag_in,int project_option_in) {
   override_bc_to_homogeneous=homflag_in;
   FORT_OVERRIDEPBC(&homflag_in,&project_option_in);
  } else
-  BoxLib::Error("homflag_in invalid");
+  amrex::Error("homflag_in invalid");
 
 }  // subroutine CPP_OVERRIDEPBC
 
@@ -18072,7 +18057,7 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 		int scomp,int ncomp,Real time) {
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel!=1");
+  amrex::Error("num_materials_vel!=1");
 
  int project_option=10;
  int save_bc_status=override_bc_to_homogeneous;
@@ -18081,7 +18066,7 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
  MultiFab& S_new=get_new_data(DIV_Type,slab_step+1);
  int ntotal=S_new.nComp();
  if (ntotal!=num_materials_vel)
-  BoxLib::Error("ntotal invalid");
+  amrex::Error("ntotal invalid");
 
  MultiFab* mf = new MultiFab(state[DIV_Type].boxArray(),ncomp,
    ngrow,dmap,Fab_allocate);
@@ -18100,12 +18085,12 @@ void NavierStokes::putStateDIV_DATA(
  int scomp,int ncomp,int idx_MF) {
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel!=1");
+  amrex::Error("num_materials_vel!=1");
 
  MultiFab& S_new=get_new_data(DIV_Type,slab_step+1);
  int ntotal=S_new.nComp();
  if (ntotal!=num_materials_vel)
-  BoxLib::Error("ntotal invalid");
+  amrex::Error("ntotal invalid");
 
  int scomp_localMF=0;
    // dst,src,scomp,dcomp,ncomp,ngrow
@@ -18123,7 +18108,7 @@ void
 NavierStokes::makeStateDistALL() {
 
  if (level!=0)
-  BoxLib::Error("level invalid in makeStateDistALL");
+  amrex::Error("level invalid in makeStateDistALL");
 
  int finest_level=parent->finestLevel();
 
@@ -18138,13 +18123,13 @@ NavierStokes::makeStateDistALL() {
   if (problen[dir]>0.0) {
    max_problen+=(problen[dir]*problen[dir]);
   } else
-   BoxLib::Error("problen[dir] invalid");
+   amrex::Error("problen[dir] invalid");
  }
  max_problen=sqrt(max_problen);
  if (max_problen>0.0) {
   // do nothing
  } else
-  BoxLib::Error("max_problen invalid");
+  amrex::Error("max_problen invalid");
 
  int nmat=num_materials;
  minLS.resize(thread_class::nthreads);
@@ -18248,11 +18233,11 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
     ParallelDescriptor::Barrier();
 
    } else
-    BoxLib::Error("fd_mf or ls_mf nComp() invalid");
+    amrex::Error("fd_mf or ls_mf nComp() invalid");
   } else
-   BoxLib::Error("fd_mf or ls_mf nGrow() invalid");
+   amrex::Error("fd_mf or ls_mf nGrow() invalid");
  } else
-  BoxLib::Error("ngrow invalid");
+  amrex::Error("ngrow invalid");
 			 
 } // subroutine build_NRM_FD_MF
 
@@ -18272,7 +18257,7 @@ NavierStokes::makeStateDist() {
  } else if (verbose==0) {
   // do nothing
  } else
-  BoxLib::Error("verbose invalid");
+  amrex::Error("verbose invalid");
 
  double before_dist;
  double after_dist;
@@ -18290,7 +18275,7 @@ NavierStokes::makeStateDist() {
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 6");
+  amrex::Error("CoordSys bust 6");
 
  const Real* dx = geom.CellSize();
  int nmat=num_materials;
@@ -18305,12 +18290,12 @@ NavierStokes::makeStateDist() {
  resize_mask_nbr(ngrow_distance);
  debug_ngrow(MASK_NBR_MF,ngrow_distance,90);
  if (localMF[MASK_NBR_MF]->nComp()!=4)
-  BoxLib::Error("invalid ncomp for mask nbr");
+  amrex::Error("invalid ncomp for mask nbr");
  VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,ngrow_distance,90);
  debug_ngrow(ORIGDIST_MF,ngrow_distance,90);
  if (localMF[ORIGDIST_MF]->nComp()!=nmat*(1+BL_SPACEDIM))
-  BoxLib::Error("invalid ncomp for origdist");
+  amrex::Error("invalid ncomp for origdist");
 
  if (profile_dist==1)
   before_profile = ParallelDescriptor::second();
@@ -18351,7 +18336,7 @@ NavierStokes::makeStateDist() {
   dist_touch_coarse_mf=localMF[DIST_TOUCH_MF];
 
  } else
-  BoxLib::Error("level invalid 6"); 
+  amrex::Error("level invalid 6"); 
 
  if (profile_dist==1) {
   after_profile = ParallelDescriptor::second();
@@ -18461,11 +18446,11 @@ NavierStokes::makeStateDist() {
 
  debug_ngrow(FACETEST_MF,ngrow_distance,90);
  if (localMF[FACETEST_MF]->nComp()!=nmat*BL_SPACEDIM)
-  BoxLib::Error("localMF[FACETEST_MF]->nComp() invalid");
+  amrex::Error("localMF[FACETEST_MF]->nComp() invalid");
 
  debug_ngrow(FACEFRAC_MF,ngrow_distance,90);
  if (localMF[FACEFRAC_MF]->nComp()!=nface)
-  BoxLib::Error("localMF[FACEFRAC_MF]->nComp() invalid");
+  amrex::Error("localMF[FACEFRAC_MF]->nComp() invalid");
 
  debug_ngrow(STENCIL_MF,ngrow_distance,90);
 
@@ -18578,7 +18563,7 @@ NavierStokes::makeStateDist() {
  } else if (level==0) {
   // do nothing
  } else
-  BoxLib::Error("level invalid 7");
+  amrex::Error("level invalid 7");
  
  if ((profile_debug==1)||(profile_dist==1)) {
   double profile_time_end=ParallelDescriptor::second();
@@ -18613,7 +18598,7 @@ NavierStokes::correct_dist_uninit() {
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  if (localMF[DIST_TOUCH_MF]->nComp()!=nmat)
-  BoxLib::Error("localMF[DIST_TOUCH_MF]->nComp()!=nmat");
+  amrex::Error("localMF[DIST_TOUCH_MF]->nComp()!=nmat");
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -18673,10 +18658,10 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
  int finest_level=parent->finestLevel();
 
  if ((tessellate!=0)&&(tessellate!=1))
-  BoxLib::Error("tessellate invalid");
+  amrex::Error("tessellate invalid");
 
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid ProcessFaceFrac");
+  amrex::Error("level invalid ProcessFaceFrac");
 
  for (int dir=0;dir<BL_SPACEDIM;dir++) {
   if (localMF_grow[idxdst+dir]>=0) {
@@ -18688,7 +18673,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
 
  debug_ngrow(idxsrc,1,90);
  if (localMF[idxsrc]->nComp()!=nface_src)
-  BoxLib::Error("idxsrc has invalid ncomp");
+  amrex::Error("idxsrc has invalid ncomp");
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,1,90);
@@ -18703,7 +18688,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 7");
+  amrex::Error("CoordSys bust 7");
 
  const Real* dx = geom.CellSize();
 
@@ -18783,7 +18768,7 @@ NavierStokes::makeFaceFrac(
  } else if (do_face_decomp==0) {
   // do nothing
  } else
-  BoxLib::Error("do_face_decomp invalid"); 
+  amrex::Error("do_face_decomp invalid"); 
 
  int finest_level=parent->finestLevel();
 
@@ -18806,7 +18791,7 @@ NavierStokes::makeFaceFrac(
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 7");
+  amrex::Error("CoordSys bust 7");
 
  const Real* dx = geom.CellSize();
 
@@ -18876,10 +18861,10 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  int finest_level=parent->finestLevel();
 
  if ((tessellate!=0)&&(tessellate!=1))
-  BoxLib::Error("tessellate invalid");
+  amrex::Error("tessellate invalid");
 
  if (localMF_grow[idx]>=0)
-  BoxLib::Error("makeFaceTest: forgot to delete");
+  amrex::Error("makeFaceTest: forgot to delete");
 
  new_localMF(idx,nmat*BL_SPACEDIM,ngrow,-1);
  localMF[idx]->setVal(0.0);
@@ -18891,7 +18876,7 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  debug_ngrow(MASK_NBR_MF,ngrow,90);
 
  if (localMF[FACEFRAC_MF]->nComp()!=nface)
-  BoxLib::Error("localMF[FACEFRAC_MF]->nComp() invalid");
+  amrex::Error("localMF[FACEFRAC_MF]->nComp() invalid");
 
  int rzflag=0;
  if (CoordSys::IsRZ())
@@ -18901,7 +18886,7 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 7");
+  amrex::Error("CoordSys bust 7");
 
  const Real* dx = geom.CellSize();
 
@@ -18967,7 +18952,7 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
  int finest_level=parent->finestLevel();
 
  if (localMF_grow[DOTMASK_MF]>=0)
-  BoxLib::Error("makeDotMask: forgot to delete");
+  amrex::Error("makeDotMask: forgot to delete");
 
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
@@ -18978,13 +18963,13 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
      (project_option==12)||  // pressure extension
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
-   BoxLib::Error("num_materials_face invalid");
+   amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
              (project_option<100+num_species_var))) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  BoxLib::Error("project_option invalid9");
+  amrex::Error("project_option invalid9");
 
  new_localMF(DOTMASK_MF,num_materials_face,0,-1);
  setVal_localMF(DOTMASK_MF,1.0,0,num_materials_face,0);
@@ -19046,7 +19031,7 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
  } else if (num_materials_face==1) {
   // do nothing
  } else
-  BoxLib::Error("num_materials_face invalid");
+  amrex::Error("num_materials_face invalid");
 
 } // subroutine makeDotMask
 
@@ -19088,7 +19073,7 @@ NavierStokes::makeCellFrac(int tessellate,int ngrow,int idx) {
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 8");
+  amrex::Error("CoordSys bust 8");
 
  const Real* dx = geom.CellSize();
 
@@ -19152,7 +19137,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  BoxLib::Error("level invalid makeStateCurv");
+  amrex::Error("level invalid makeStateCurv");
 
  int rzflag=0;
  if (CoordSys::IsRZ())
@@ -19162,13 +19147,13 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  else if (CoordSys::IsCYLINDRICAL())
   rzflag=3;
  else
-  BoxLib::Error("CoordSys bust 9");
+  amrex::Error("CoordSys bust 9");
 
  if (curv_stencil_height!=4)
-  BoxLib::Error("curv_stencil_height invalid");
+  amrex::Error("curv_stencil_height invalid");
 
  if (ngrow_distance!=4)
-  BoxLib::Error("ngrow_distance invalid");
+  amrex::Error("ngrow_distance invalid");
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -19197,9 +19182,9 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  resize_levelsetLO(ngrow_distance,LEVELPC_MF);
 
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+BL_SPACEDIM))
-  BoxLib::Error("localMF[LEVELPC_MF]->nComp() invalid");
+  amrex::Error("localMF[LEVELPC_MF]->nComp() invalid");
  if (localMF[LEVELPC_MF]->nGrow()!=ngrow_distance)
-  BoxLib::Error("localMF[LEVELPC_MF]->nGrow() invalid");
+  amrex::Error("localMF[LEVELPC_MF]->nGrow() invalid");
 
  if (localMF_grow[DIST_CURV_MF]>=0) {
   delete_localMF(DIST_CURV_MF,1);
@@ -19210,7 +19195,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  getStateDist_localMF(GHOSTDIST_MF,ngrow_distance,cur_time_slab,16);
  debug_ngrow(GHOSTDIST_MF,ngrow_distance,906);
  if (localMF[GHOSTDIST_MF]->nComp()!=(1+BL_SPACEDIM)*nmat)
-  BoxLib::Error("localMF[GHOSTDIST_MF]->nComp() invalid");
+  amrex::Error("localMF[GHOSTDIST_MF]->nComp() invalid");
 
  if ((project_option==0)||
      (project_option==1)) {
@@ -19225,16 +19210,16 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
   else if (project_option==10) // sync project
    cl_time=prev_time_slab;
   else
-   BoxLib::Error("project_option invalid makeStateCurv");
+   amrex::Error("project_option invalid makeStateCurv");
 
   if (num_materials_vel!=1)
-   BoxLib::Error("num_materials_vel invalid");
+   amrex::Error("num_materials_vel invalid");
 
   MultiFab* CL_velocity=getState(2,0,
     num_materials_vel*(BL_SPACEDIM+1),cl_time);
   MultiFab* den=getStateDen(2,cl_time);
   if (den->nComp()!=nmat*num_state_material)
-   BoxLib::Error("invalid ncomp for den");
+   amrex::Error("invalid ncomp for den");
 
    // mask=1 if not covered or if outside the domain.
    // NavierStokes::maskfiner_localMF
@@ -19381,7 +19366,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
    // do nothing
 
  } else
-   BoxLib::Error("project_option invalid10");
+   amrex::Error("project_option invalid10");
 
  delete_localMF(GHOSTDIST_MF,1);
 
@@ -19392,20 +19377,20 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,
  int scomp,int ncomp,Real time) {
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nsolve=1;
  int nsolveMM_FACE=nsolve*num_materials_vel;
  
  if ((dir<0)||(dir>=BL_SPACEDIM))
-  BoxLib::Error("dir invalid get state mac");
+  amrex::Error("dir invalid get state mac");
 
  MultiFab& S_new=get_new_data(Umac_Type+dir,slab_step+1);
  int ntotal=S_new.nComp();
  if (ntotal!=nsolveMM_FACE)
-  BoxLib::Error("ntotal bust");
+  amrex::Error("ntotal bust");
  if (scomp+ncomp>ntotal)
-  BoxLib::Error("scomp invalid getStateMAC");
+  amrex::Error("scomp invalid getStateMAC");
 
  MultiFab* mf = new MultiFab(state[Umac_Type+dir].boxArray(),ncomp,
    ngrow,dmap,Fab_allocate);
@@ -19435,17 +19420,17 @@ NavierStokes::ctml_fsi_transfer_force() {
   // nparts x (velocity + LS + temperature + flag + stress)
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>=nmat))
-  BoxLib::Error("nparts invalid");
+  amrex::Error("nparts invalid");
 
  if (nFSI_sub!=12)
-  BoxLib::Error("nFSI_sub invalid");
+  amrex::Error("nFSI_sub invalid");
  if (ngrowFSI!=3)
-  BoxLib::Error("ngrowFSI invalid");
+  amrex::Error("ngrowFSI invalid");
  int nFSI=nparts*nFSI_sub;
 
  debug_ngrow(FSI_MF,0,1);
  if (localMF[FSI_MF]->nComp()!=nFSI)
-  BoxLib::Error("localMF[FSI_MF]->nComp() invalid");
+  amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
  for (int partid=0;partid<nparts;partid++) {
 
@@ -19483,7 +19468,7 @@ NavierStokes::ctml_fsi_transfer_force() {
       forcefab.dataPtr(ibase), 
       ARLIM(forcefab.loVect()), ARLIM(forcefab.hiVect()));
 #else
-     BoxLib::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
+     amrex::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
 #endif
     }  // mfi  
 } // omp
@@ -19492,11 +19477,14 @@ NavierStokes::ctml_fsi_transfer_force() {
    } else if (CTML_FSI_matC(im_part)==0) {
     // do nothing
    } else 
-    BoxLib::Error("CTML_FSI_matC(im_part) invalid");
+    amrex::Error("CTML_FSI_matC(im_part) invalid");
 
   } else
-   BoxLib::Error("ns_is_rigid(im_part) invalid");
+   amrex::Error("ns_is_rigid(im_part) invalid");
 
  } // partid=0 ... nparts-1
 
 } // subroutine ctml_fsi_transfer_force()
+
+}/* namespace amrex */
+
