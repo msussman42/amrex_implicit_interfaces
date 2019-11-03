@@ -1,4 +1,4 @@
-#include <winstd.H>
+//#include <winstd.H>
 #if defined(BL_OLD_STL)
 #include <stdlib.h>
 #else
@@ -7,11 +7,11 @@
 
 #include <algorithm>
 
-// BEGIN: BOXLIB FILES NEED AMReX_ prefix
-#include <ParmParse.H>
-#include <Utility.H>
-#include <ParallelDescriptor.H>
-// END: BOXLIB FILES NEED AMReX_ prefix
+#include <AMReX_ParmParse.H>
+#include <AMReX_Utility.H>
+#include <AMReX_ParallelDescriptor.H>
+
+namespace amrex{
 
 #include <ABecLaplacian.H>
 #include <LO_F.H>
@@ -98,15 +98,15 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   std::cout << "inout ngrow= " << inout.nGrow() << '\n';
   std::cout << "level= " << level << '\n';
   std::cout << "bfact_top= " << bfact_top << '\n';
-  BoxLib::Error("inout ngrow<>1");
+  amrex::Error("inout ngrow<>1");
  }
  if (pbdry.nGrow()!=1)
-  BoxLib::Error("pbdry ngrow<>1");
+  amrex::Error("pbdry ngrow<>1");
  
  if (inout.nComp()!=nsolve_bicgstab)
-  BoxLib::Error("inout.nComp invalid");
+  amrex::Error("inout.nComp invalid");
  if (pbdry.nComp()!=nsolve_bicgstab)
-  BoxLib::Error("pbdry.nComp invalid");
+  amrex::Error("pbdry.nComp invalid");
 
  inout.FillBoundary(geomarray[level].periodicity());
 
@@ -115,10 +115,10 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   //
 
  if (bcpres_array.size()!=gbox[0].size()*BL_SPACEDIM*2*nsolve_bicgstab)
-  BoxLib::Error("bcpres_array size invalid");
+  amrex::Error("bcpres_array size invalid");
 
  if (maskvals[level]->nGrow()!=1)
-  BoxLib::Error("maskvals invalid ngrow");
+  amrex::Error("maskvals invalid ngrow");
 
 #if (profile_solver==1)
  bprof.stop();
@@ -210,19 +210,19 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
  if (rhsL.boxArray()==laplacian_ones[level]->boxArray()) {
   // do nothing
  } else
-  BoxLib::Error("rhsL.boxArray()!=laplacian_ones[level]->boxArray()");
+  amrex::Error("rhsL.boxArray()!=laplacian_ones[level]->boxArray()");
 
  if (laplacian_ones[level]->nComp()==1) {
   // do nothing
  } else
-  BoxLib::Error("laplacian_ones[level]->nComp()!=1");
+  amrex::Error("laplacian_ones[level]->nComp()!=1");
 
 #if (profile_solver==1)
  bprof.stop();
 #endif
 
  if (residL.nGrow()!=0)
-  BoxLib::Error("residL invalid ngrow");
+  amrex::Error("residL invalid ngrow");
   
  apply(residL,solnL,level,pbdry,bcpres_array);
  Fdiagsum(*MG_CG_diagsumL[level],level);
@@ -252,7 +252,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
 
    int nc = residL.nComp();
    if (nc!=nsolve_bicgstab)
-    BoxLib::Error("nc invalid in residual");
+    amrex::Error("nc invalid in residual");
    BL_ASSERT(gbox[level][mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid=mfi.tilebox();
@@ -300,13 +300,13 @@ ABecLaplacian::smooth(MultiFab& solnL,MultiFab& rhsL,
 
     int nc = solnL.nComp();
     if (nc!=nsolve_bicgstab)
-     BoxLib::Error("nc invalid in smooth");
+     amrex::Error("nc invalid in smooth");
     int ngrow_soln=solnL.nGrow();
     int ngrow_rhs=rhsL.nGrow();
     if (ngrow_soln<1)
-     BoxLib::Error("ngrow_soln invalid");
+     amrex::Error("ngrow_soln invalid");
     if (ngrow_rhs!=0)
-     BoxLib::Error("ngrow_rhs invalid");
+     amrex::Error("ngrow_rhs invalid");
 
     applyBC(solnL,level,pbdry,bcpres_array);
     Fsmooth(solnL, rhsL, level, smooth_type);
@@ -336,7 +336,7 @@ ABecLaplacian::LPnorm(MultiFab &in, int level) const
 
  int nc = in.nComp();
  if (nc!=nsolve_bicgstab)
-  BoxLib::Error("nc invalid in norm");
+  amrex::Error("nc invalid in norm");
 
  Real mf_norm=0.0;
  for (int n=0;n<nc;n++) {
@@ -386,7 +386,7 @@ ABecLaplacian::makeCoefficients (
  } else if ((iType == zType)&&(BL_SPACEDIM==3)) {
   cdir = 2;
  } else {
-  BoxLib::Error("ABecLaplacian::makeCoeffients: Bad index type");
+  amrex::Error("ABecLaplacian::makeCoeffients: Bad index type");
  }
 
 #if (profile_solver==1)
@@ -412,7 +412,7 @@ ABecLaplacian::makeCoefficients (
  if (level>0) {
   // do nothing
  } else
-  BoxLib::Error("level invalid");
+  amrex::Error("level invalid");
 
  int flevel=level-1;
  int clevel=level;
@@ -426,12 +426,12 @@ ABecLaplacian::makeCoefficients (
  } else if (avg==2) {
   nComp_expect=1;
  } else
-  BoxLib::Error("avg invalid");
+  amrex::Error("avg invalid");
 
  if (nComp_expect==fine.nComp()) {
   // do nothing
  } else
-  BoxLib::Error("nComp_expect!=fine.nComp()");
+  amrex::Error("nComp_expect!=fine.nComp()");
 
  BoxArray d(gbox[level]);
  if ((cdir>=0)&&(cdir<BL_SPACEDIM)) {
@@ -439,7 +439,7 @@ ABecLaplacian::makeCoefficients (
  } else if (cdir==-1) {
   // do nothing
  } else
-  BoxLib::Error("cdir invalid");
+  amrex::Error("cdir invalid");
 
    //
    // Only single-component solves supported (verified) by this class.
@@ -455,36 +455,36 @@ ABecLaplacian::makeCoefficients (
   if (cdir==-1) {
    // do nothing
   } else
-   BoxLib::Error("cdir invalid");
+   amrex::Error("cdir invalid");
  } else
-  BoxLib::Error("avg invalid");
+  amrex::Error("avg invalid");
 
  if (nGrow==ngrow_expect) {
   // do nothing
  } else
-  BoxLib::Error("ngrow invalid in makecoeff");
+  amrex::Error("ngrow invalid in makecoeff");
 
  if (crs.boxArray()==d) {
   // do nothing
  } else
-  BoxLib::Error("crs.boxArray() invalid");
+  amrex::Error("crs.boxArray() invalid");
 
  if (crs.nComp()==nComp_expect) {
   // do nothing
  } else
-  BoxLib::Error("crs.nComp() invalid");
+  amrex::Error("crs.nComp() invalid");
 
  if (crs.nGrow()==nGrow) {
   // do nothing
  } else
-  BoxLib::Error("crs.nGrow() invalid");
+  amrex::Error("crs.nGrow() invalid");
 
  if ((avg==0)||(avg==1)) {
   crs.setVal(0.0,0,nComp_expect,nGrow); 
  } else if (avg==2) {
   crs.setVal(1.0,0,nComp_expect,nGrow); 
  } else
-  BoxLib::Error("avg invalid");
+  amrex::Error("avg invalid");
 
  const BoxArray& grids = gbox[level]; // coarse grids
 
@@ -549,7 +549,7 @@ ABecLaplacian::makeCoefficients (
      &cdir,&avg,
      &bfact_coarse,&bfact_fine,&bfact_top);
   } else
-   BoxLib::Error("ABecLaplacian:: bad coefficient coarsening direction!");
+   amrex::Error("ABecLaplacian:: bad coefficient coarsening direction!");
 
 #if (profile_solver==1)
   bprof.stop();
@@ -562,7 +562,7 @@ ABecLaplacian::makeCoefficients (
  } else if (avg==2) {
   crs.FillBoundary(geomarray[level].periodicity());
  } else
-  BoxLib::Error("avg invalid");
+  amrex::Error("avg invalid");
 
 } // subroutine makeCoefficients
 
@@ -618,11 +618,11 @@ ABecLaplacian::buildMatrix() {
 
     int ncomp=bmf.nComp();
     if (ncomp!=nsolve_bicgstab)
-     BoxLib::Error("ncomp invalid");
+     amrex::Error("ncomp invalid");
 
     int ngrow=bmf.nGrow();
     if (ngrow!=0)
-     BoxLib::Error("bcoefs should have ngrow=0");
+     amrex::Error("bcoefs should have ngrow=0");
 
      // after this step: bcoefs[level] ~ (area_coarse/dx_coarse)/2^d
     bmf.mult(0.25);
@@ -636,36 +636,36 @@ ABecLaplacian::buildMatrix() {
    } else if (BL_SPACEDIM==3) {
     denom=0.125;
    } else
-    BoxLib::Error("dimension bust");
+    amrex::Error("dimension bust");
 
    offdiag_coeff[level]=denom*offdiag_coeff[level-1];
    if (offdiag_coeff[level]>0.0) {
     // do nothing
    } else
-    BoxLib::Error("offdiag_coeff[level] invalid");
+    amrex::Error("offdiag_coeff[level] invalid");
 
   } else if (level==0) {
    // do nothing
   } else
-   BoxLib::Error("level invalid");
+   amrex::Error("level invalid");
 
   if (acoefs[level]->nGrow()!=nghostRHS)
-   BoxLib::Error("acoefs[level]->nGrow() invalid");
+   amrex::Error("acoefs[level]->nGrow() invalid");
 
   if (offdiag_coeff[level]>0.0) {
    // do nothing
   } else
-   BoxLib::Error("offdiag_coeff[level] invalid");
+   amrex::Error("offdiag_coeff[level] invalid");
 
   if (workcoefs[level]->nComp()==ncwork*nsolve_bicgstab) {
    // do nothing
   } else
-   BoxLib::Error("workcoefs[level]->nComp() invalid");
+   amrex::Error("workcoefs[level]->nComp() invalid");
 
   if (workcoefs[level]->nGrow()==nghostSOLN) {
    // do nothing
   } else 
-   BoxLib::Error("workcoefs[level]->nGrow() invalid");
+   amrex::Error("workcoefs[level]->nGrow() invalid");
 
   workcoefs[level]->setVal(0.0,0,ncwork*nsolve_bicgstab,nghostSOLN);
 
@@ -692,7 +692,7 @@ ABecLaplacian::buildMatrix() {
   int blacksolncomp=redsolncomp+1;
 
   if (workcoefs[level]->nComp()<=blacksolncomp*nsolve_bicgstab)
-   BoxLib::Error("workcoefs[level] invalid");
+   amrex::Error("workcoefs[level] invalid");
 
   int bfact=bfact_array[level];
   int bfact_top=bfact_array[0];
@@ -851,15 +851,15 @@ ABecLaplacian::ABecLaplacian (
   } else if (MG_numlevels_var>=2) {
    CG_numlevels_var=2;
   } else
-   BoxLib::Error("MG_numlevels_var invalid");
+   amrex::Error("MG_numlevels_var invalid");
 
   if (cfd_level_in==0) {
    // do nothing
   } else
-   BoxLib::Error("cfd_level_in invalid");
+   amrex::Error("cfd_level_in invalid");
 
  } else
-  BoxLib::Error("CG_use_mg_precond_at_top invalid");
+  amrex::Error("CG_use_mg_precond_at_top invalid");
 
  laplacian_solvability=0;
  check_for_singular=0;
@@ -933,7 +933,7 @@ ABecLaplacian::ABecLaplacian (
     ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
     dmap_array[level].define(grids,ParallelDescriptor::NProcs(),color);
    } else
-    BoxLib::Error("use_local_dmap invalid");
+    amrex::Error("use_local_dmap invalid");
 
    geomarray[level] = geom;
    bfact_array[level] = bfact;
@@ -950,7 +950,7 @@ ABecLaplacian::ABecLaplacian (
    gbox[level] = gbox[level-1];
    gbox[level].coarsen(2);
    if (gbox[level].size()!=gbox[level-1].size())
-    BoxLib::Error("gbox[level].size()!=gbox[level-1].size()");
+    amrex::Error("gbox[level].size()!=gbox[level-1].size()");
 
    if (use_local_dmap==0) {
     dmap_array[level] = dmap_array[level-1];
@@ -958,9 +958,9 @@ ABecLaplacian::ABecLaplacian (
     ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
     dmap_array[level].define(gbox[level],ParallelDescriptor::NProcs(),color);
    } else
-    BoxLib::Error("use_local_dmap invalid");
+    amrex::Error("use_local_dmap invalid");
 
-   geomarray[level].define(BoxLib::coarsen(geomarray[level-1].Domain(),2));
+   geomarray[level].define(amrex::coarsen(geomarray[level-1].Domain(),2));
    bfact_array[level] = bfact_array[level-1];
 
    // mask=0 at fine/fine interfaces
@@ -971,7 +971,7 @@ ABecLaplacian::ABecLaplacian (
    maskvals[level]->FillBoundary(geomarray[level].periodicity());
 
   } else
-   BoxLib::Error("level invalid");
+   amrex::Error("level invalid");
 
   MG_CG_ones_mf_copy[level]=new MultiFab(gbox[level],1,nghostSOLN,
     dmap_array[level],Fab_allocate);
@@ -1042,7 +1042,7 @@ ABecLaplacian::ABecLaplacian (
   } else if ((coarsefine==1)&&(coarsefine<CG_numlevels_var)) {
    level=MG_numlevels_var-1;
   } else
-   BoxLib::Error("coarsefine invalid");
+   amrex::Error("coarsefine invalid");
 
   for (int j=0;j<gmres_precond_iter_base_mg*nsolve_bicgstab;j++) {
    GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
@@ -1238,7 +1238,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  if (offdiag_coeff_level>0.0) {
   // do nothing
  } else
-  BoxLib::Error("offdiag_coeff_level invalid");
+  amrex::Error("offdiag_coeff_level invalid");
 
 #if (profile_solver==1)
  bprof.stop();
@@ -1254,17 +1254,17 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
  int nctest = work.nComp();
  if (nctest!=ncwork*nsolve_bicgstab)
-  BoxLib::Error("ncwork invalid");
+  amrex::Error("ncwork invalid");
 
  int nc = solnL.nComp();
  if (nc!=nsolve_bicgstab)
-  BoxLib::Error("nc bust");
+  amrex::Error("nc bust");
  int ngrow=solnL.nGrow();
  if (ngrow<1)
-  BoxLib::Error("ngrow solnL invalid");
+  amrex::Error("ngrow solnL invalid");
  int ngrow_rhs=rhsL.nGrow();
  if (ngrow_rhs!=0)
-  BoxLib::Error("ngrow rhsL invalid");
+  amrex::Error("ngrow rhsL invalid");
 
 #if (profile_solver==1)
  bprof.stop();
@@ -1275,7 +1275,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  if ((temp_ba_test==bxa)&&(ones_mf.nComp()==1)) {
   // do nothing
  } else {
-  BoxLib::Error("ones_mf invalid in fsmooth");
+  amrex::Error("ones_mf invalid in fsmooth");
  }
 
  int bxleftcomp=0;
@@ -1315,7 +1315,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  else if (smooth_type==1) // ICRB
   num_sweeps=6;
  else
-  BoxLib::Error("smooth_type invalid");
+  amrex::Error("smooth_type invalid");
 
 
  for (int isweep=0;isweep<num_sweeps;isweep++) {
@@ -1328,7 +1328,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
    BL_ASSERT(bxa[mfi.index()] == mfi.validbox());
    int gridno = mfi.index();
    if (gridno>=number_grids)
-    BoxLib::Error("gridno invalid");
+    amrex::Error("gridno invalid");
    const Box& tilegrid=mfi.tilebox();
    const Box& fabgrid=gbox[level][gridno];
    const int* tilelo=tilegrid.loVect();
@@ -1440,33 +1440,33 @@ ABecLaplacian::Fapply (MultiFab& y,
  if (offdiag_coeff_level>0.0) {
   // do nothing
  } else
-  BoxLib::Error("offdiag_coeff_level invalid");
+  amrex::Error("offdiag_coeff_level invalid");
 
  const MultiFab & work=*workcoefs[level];
  int ncwork=BL_SPACEDIM*3+10;
 
  int nctest = work.nComp();
  if (nctest!=ncwork*nsolve_bicgstab)
-  BoxLib::Error("ncwork invalid");
+  amrex::Error("ncwork invalid");
 
  int nc = y.nComp();
  if (nc!=nsolve_bicgstab)
-  BoxLib::Error("nc bust");
+  amrex::Error("nc bust");
  int ngrow_y=y.nGrow();
  if (ngrow_y!=0) {
   std::cout << "ngrow_y= " << ngrow_y << '\n';
-  BoxLib::Error("ngrow y invalid");
+  amrex::Error("ngrow y invalid");
  }
  int ngrow_x=x.nGrow();
  if (ngrow_x<1)
-  BoxLib::Error("ngrow x invalid");
+  amrex::Error("ngrow x invalid");
 
  const MultiFab& ones_mf=*laplacian_ones[level];
  const BoxArray& temp_ba_test=ones_mf.boxArray();
  if ((temp_ba_test==bxa)&&(ones_mf.nComp()==1)) {
   // do nothing
  } else {
-  BoxLib::Error("ones_mf invalid in fapply");
+  amrex::Error("ones_mf invalid in fapply");
  }
 
  int bxleftcomp=0;
@@ -1492,7 +1492,7 @@ ABecLaplacian::Fapply (MultiFab& y,
  int blacksolncomp=redsolncomp+1;
 
  if (work.nComp()<=blacksolncomp*nsolve_bicgstab)
-  BoxLib::Error("work.nComp() invalid");
+  amrex::Error("work.nComp() invalid");
 
  int number_grids=gbox[level].size();
  int bfact=bfact_array[level];
@@ -1506,7 +1506,7 @@ ABecLaplacian::Fapply (MultiFab& y,
   BL_ASSERT(bxa[mfi.index()] == mfi.validbox());
   int gridno=mfi.index();
   if (gridno>=number_grids)
-   BoxLib::Error("gridno invalid");
+   amrex::Error("gridno invalid");
   const Box& tilegrid=mfi.tilebox();
   const Box& fabgrid=gbox[level][gridno];
   const int* tilelo=tilegrid.loVect();
@@ -1602,14 +1602,14 @@ ABecLaplacian::LP_update (MultiFab& sol,
  bool use_tiling=cfd_tiling;
 
  if (level>=MG_numlevels_var)
-  BoxLib::Error("level invalid in LP_update");
+  amrex::Error("level invalid in LP_update");
 
  const BoxArray& gboxlev = gbox[level];
  int ncomp = sol.nComp();
  if (ncomp==nsolve_bicgstab) {
   // do nothing
  } else
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
 
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
@@ -1698,17 +1698,17 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
  bool use_tiling=cfd_tiling;
 
  if (level>=MG_numlevels_var)
-  BoxLib::Error("level invalid in LP_dot");
+  amrex::Error("level invalid in LP_dot");
 
  if (level>=gbox.size()) {
   std::cout << "level= " << level << '\n';
   std::cout << "gboxsize= " << gbox.size() << '\n';
   std::cout << "num levels = " << MG_numlevels_var << '\n';
-  BoxLib::Error("level exceeds gbox size");
+  amrex::Error("level exceeds gbox size");
  }
 
  if (thread_class::nthreads<1)
-  BoxLib::Error("thread_class::nthreads invalid");
+  amrex::Error("thread_class::nthreads invalid");
 
 #if (profile_dot==1)
   bprof.stop();
@@ -1741,9 +1741,9 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
  const BoxArray& gboxlev = gbox[level];
  int ncomp = p.nComp();
  if (ncomp!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid p");
+  amrex::Error("ncomp invalid p");
  if (w.nComp()!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid w");
+  amrex::Error("ncomp invalid w");
 
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
@@ -1791,7 +1791,7 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
   tid = omp_get_thread_num();
 #endif
   if ((tid<0)||(tid>=thread_class::nthreads))
-   BoxLib::Error("tid invalid");
+   amrex::Error("tid invalid");
 
 #if (profile_dot==1)
    bprof5.stop();
@@ -1875,17 +1875,17 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
      laplacian_solvability << '\n';
     std::cout << "check_for_singular= " << 
      check_for_singular << '\n';
-    BoxLib::Error("rhsL or ones_mf invalid nComp");
+    amrex::Error("rhsL or ones_mf invalid nComp");
    }
   } else if (check_for_singular==0) {
    // do nothing
   } else
-   BoxLib::Error("check_for_singular invalid");
+   amrex::Error("check_for_singular invalid");
 
  } else if (laplacian_solvability==1) {
 
   if (nsolve_bicgstab!=1)
-   BoxLib::Error("nsolve_bicgstab invalid");
+   amrex::Error("nsolve_bicgstab invalid");
 
   if (check_for_singular==1) {
    if ((rhsL.nComp()==1)&&
@@ -1896,7 +1896,7 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
      laplacian_solvability << '\n';
     std::cout << "check_for_singular= " << 
      check_for_singular << '\n';
-    BoxLib::Error("rhsL or ones_mf invalid nComp");
+    amrex::Error("rhsL or ones_mf invalid nComp");
    }
    if ((laplacian_ones[level]->nComp()==1)&&
        (laplacian_ones[level]->nGrow()==1)) {
@@ -1916,7 +1916,7 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
      std::cout << "domainsum= " << domainsum << '\n';
      std::cout << "total_cells= " << total_cells << '\n';
-     BoxLib::Error("domainsum too big");
+     amrex::Error("domainsum too big");
     }
     if (1==0) {
      std::cout << "cfd_level= " << cfd_level << '\n';
@@ -1934,7 +1934,7 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
     } else if (domainsum==0.0) {
      // do nothing
     } else
-     BoxLib::Error("domainsum invalid");
+     amrex::Error("domainsum invalid");
 
     MultiFab::Multiply(rhsL,*laplacian_ones[level],0,0,1,0);
 
@@ -1946,13 +1946,13 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
     }
 
    } else
-    BoxLib::Error("laplacian_ones[level]: ncomp or ngrow invalid");
+    amrex::Error("laplacian_ones[level]: ncomp or ngrow invalid");
 
   } else
-   BoxLib::Error("check_for_singular invalid");
+   amrex::Error("check_for_singular invalid");
 
  } else
-  BoxLib::Error("laplacian solvability incorrect");
+  amrex::Error("laplacian solvability incorrect");
 
 } // subroutine project_null_space
 
@@ -1971,7 +1971,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
  const MultiFab& bZ  = *bcoefs[level][BL_SPACEDIM-1];
  int nc = y.nComp();
  if (nc!=nsolve_bicgstab)
-  BoxLib::Error("nc bust");
+  amrex::Error("nc bust");
 
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
@@ -2089,7 +2089,7 @@ ABecLaplacian::pcg_solve(
       smooth_type,bottom_smooth_type,
       presmooth,postsmooth);
    } else
-    BoxLib::Error("CG_numlevels_var invalid");
+    amrex::Error("CG_numlevels_var invalid");
 
   } else if ((CG_use_mg_precond_at_top==0)||
 	     (level==MG_numlevels_var-1)) {
@@ -2100,9 +2100,9 @@ ABecLaplacian::pcg_solve(
 	   *pbdryhom_in,bcpres_array,smooth_type);
    }
   } else
-   BoxLib::Error("use_mg_precond invalid");
+   amrex::Error("use_mg_precond invalid");
  } else
-  BoxLib::Error("use_PCG invalid");
+  amrex::Error("use_PCG invalid");
 
  project_null_space(*z_in,level);
 
@@ -2127,7 +2127,7 @@ ABecLaplacian::pcg_GMRES_solve(
  if (nsolve_bicgstab>=1) {
   // do nothing
  } else
-  BoxLib::Error("nsolve_bicgstab invalid");
+  amrex::Error("nsolve_bicgstab invalid");
 
  int coarsefine=0;
  if (level==0) {
@@ -2135,7 +2135,7 @@ ABecLaplacian::pcg_GMRES_solve(
  } else if ((level==MG_numlevels_var-1)&&(CG_numlevels_var==2)) {
   coarsefine=1;
  } else
-  BoxLib::Error("level invalid");
+  amrex::Error("level invalid");
 
  project_null_space((*r_in),level);
 
@@ -2240,12 +2240,12 @@ ABecLaplacian::pcg_GMRES_solve(
      } else if (j==m-1) {
       // do nothing
      } else
-      BoxLib::Error("j invalid");
+      amrex::Error("j invalid");
     } else if (HH[j+1][j]==0.0) {
      m_small=j;
     } else {
      std::cout << "HH[j+1][j]= " << HH[j+1][j] << '\n';
-     BoxLib::Error("HH[j+1][j] invalid");
+     amrex::Error("HH[j+1][j] invalid");
     }
 
    } // j=0..m-1
@@ -2284,7 +2284,7 @@ ABecLaplacian::pcg_GMRES_solve(
      level);
    } else {
     std::cout << "m_small= " << m_small << '\n';
-    BoxLib::Error("CGSolver.cpp m_small invalid");
+    amrex::Error("CGSolver.cpp m_small invalid");
    }
  
    if (status==1) {
@@ -2295,7 +2295,7 @@ ABecLaplacian::pcg_GMRES_solve(
                 (*GMRES_Z_MF[j][coarsefine]),level);
     }
    } else
-    BoxLib::Error("status invalid");
+    amrex::Error("status invalid");
 
    for (int j=gmres_precond_iter_base_mg*nsolve_bicgstab;j<m;j++) {
     delete GMRES_V_MF[j][coarsefine];
@@ -2319,7 +2319,7 @@ ABecLaplacian::pcg_GMRES_solve(
     level);
 
   } else
-   BoxLib::Error("beta invalid");
+   amrex::Error("beta invalid");
 
   for (int i=0;i<m+1;i++) 
    delete [] HH[i];
@@ -2332,7 +2332,7 @@ ABecLaplacian::pcg_GMRES_solve(
   std::cout << "level= " << level << '\n';
   std::cout << "MG_numlevels_var= " << MG_numlevels_var << '\n';
   std::cout << "CG_numlevels_var= " << CG_numlevels_var << '\n';
-  BoxLib::Error("ABecLaplacian.cpp: gmres_precond_iter invalid");
+  amrex::Error("ABecLaplacian.cpp: gmres_precond_iter invalid");
  }
 
   // if v in nullspace(A) then we require that the solution satisfies:
@@ -2370,7 +2370,7 @@ ABecLaplacian::CG_check_for_convergence(
    error_close_to_zero=2;
 
  } else
-  BoxLib::Error("nit invalid");
+  amrex::Error("nit invalid");
 
  if (ParallelDescriptor::IOProcessor()) {
   if (CG_verbose>1) {
@@ -2456,7 +2456,7 @@ ABecLaplacian::CG_solve(
  } else if ((level==MG_numlevels_var-1)&&(CG_numlevels_var==2)) {
   coarsefine=1;
  } else
-  BoxLib::Error("level invalid CG_solve");
+  amrex::Error("level invalid CG_solve");
 
  //
  // algorithm:
@@ -2482,7 +2482,7 @@ ABecLaplacian::CG_solve(
 
  int ncomp = sol.nComp();
  if (ncomp!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
 
  CG_pbdryhom[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
@@ -2520,7 +2520,7 @@ ABecLaplacian::CG_solve(
  if (rnorm>=0.0) {
   rnorm=sqrt(rnorm);
  } else {
-  BoxLib::Error("rnorm invalid");
+  amrex::Error("rnorm invalid");
  }
 	 
  Real rnorm_init=rnorm;
@@ -2548,11 +2548,11 @@ ABecLaplacian::CG_solve(
  } else {
   std::cout << "CG_use_mg_precond_at_top=" << 
 	  CG_use_mg_precond_at_top << '\n';
-  BoxLib::Error("CG_use_mg_precond_at_top invalid");
+  amrex::Error("CG_use_mg_precond_at_top invalid");
  }
 
  if (CG_z[coarsefine]->nComp()!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
 
  Real beta=0.0;
  Real rho=1.0;
@@ -2596,7 +2596,7 @@ ABecLaplacian::CG_solve(
   if (rnorm>=0.0) {
    rnorm=sqrt(rnorm);
   } else {
-   BoxLib::Error("rnorm invalid mglib");
+   amrex::Error("rnorm invalid mglib");
   }
   if (nit==0)
    rnorm_init=rnorm;
@@ -2615,7 +2615,7 @@ ABecLaplacian::CG_solve(
    } else if (nit>0) {
     // do nothing
    } else
-    BoxLib::Error("nit invalid");
+    amrex::Error("nit invalid");
 
     // rho=r0 dot r
    LP_dot(*CG_rhs_resid_cor_form[coarsefine],*CG_r[coarsefine],level,rho); 
@@ -2650,11 +2650,11 @@ ABecLaplacian::CG_solve(
      } else if ((rho_old<=restart_tol)||(omega<=restart_tol)) {
       restart_flag=1;
      } else
-      BoxLib::Error("rho_old or omega invalid");
+      amrex::Error("rho_old or omega invalid");
    } else if (rho<0.0) {
      restart_flag=1;
    } else
-     BoxLib::Error("rho invalid mglib");
+     amrex::Error("rho invalid mglib");
 
    if (restart_flag==0) {
      LP_dot(*CG_rhs_resid_cor_form[coarsefine],
@@ -2679,7 +2679,7 @@ ABecLaplacian::CG_solve(
       if (rnorm>=0.0) {
        rnorm=sqrt(rnorm);
       } else {
-       BoxLib::Error("rnorm invalid mglib");
+       amrex::Error("rnorm invalid mglib");
       }
 
       CG_check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
@@ -2718,7 +2718,7 @@ ABecLaplacian::CG_solve(
 	 if (omega>=0.0) {
 	  // do nothing
 	 } else
-	  BoxLib::Error("omega invalid mglib");
+	  amrex::Error("omega invalid mglib");
 
          // x=x+omega z
          LP_update( (*CG_delta_sol[coarsefine]), omega, 
@@ -2736,25 +2736,25 @@ ABecLaplacian::CG_solve(
         } else if ((zAAz>=0.0)&&(zAAz<=restart_tol)) {
          restart_flag=1;
         } else
- 	 BoxLib::Error("zAAz invalid");
+ 	 amrex::Error("zAAz invalid");
 
        } else if (rAz<0.0) {
         restart_flag=1;
        } else
-        BoxLib::Error("rAz invalid");
+        amrex::Error("rAz invalid");
 
       } else if (error_close_to_zero==1) {
        // do nothing
       } else
-       BoxLib::Error("error_close_to_zero invalid");
+       amrex::Error("error_close_to_zero invalid");
      } else if (alpha<=restart_tol) {
       restart_flag=1;
      } else
-      BoxLib::Error("alpha invalid");
+      amrex::Error("alpha invalid");
    } else if (restart_flag==1) {
      // do nothing
    } else 
-     BoxLib::Error("restart_flag invalid");
+     amrex::Error("restart_flag invalid");
 
    if (restart_flag==1) {
 
@@ -2772,7 +2772,7 @@ ABecLaplacian::CG_solve(
     } else if ((CG_verbose==0)&&(nsverbose==0)) {
      // do nothing
     } else
-     BoxLib::Error("CG_verbose or nsverbose invalid");
+     amrex::Error("CG_verbose or nsverbose invalid");
 
 
     if (error_close_to_zero!=1) {
@@ -2789,9 +2789,9 @@ ABecLaplacian::CG_solve(
      MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
        *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
     } else if (error_close_to_zero==1) {
-     BoxLib::Error("cannot have both restart_flag and error_close_to_zero");
+     amrex::Error("cannot have both restart_flag and error_close_to_zero");
     } else
-     BoxLib::Error("error_close_to_zero invalid");
+     amrex::Error("error_close_to_zero invalid");
 
    } else if (restart_flag==0) {
     if (error_close_to_zero!=1) {
@@ -2799,14 +2799,14 @@ ABecLaplacian::CG_solve(
     } else if (error_close_to_zero==1) {
      // do nothing
     } else
-     BoxLib::Error("error_close_to_zero invalid");
+     amrex::Error("error_close_to_zero invalid");
    } else 
-    BoxLib::Error("restart_flag invalid");
+    amrex::Error("restart_flag invalid");
 
   } else if (error_close_to_zero==1) {
    // do nothing
   } else
-   BoxLib::Error("error_close_to_zero invalid");
+   amrex::Error("error_close_to_zero invalid");
 
   if ((prev_restart_flag==1)&&(restart_flag==1)) {
 
@@ -2816,7 +2816,7 @@ ABecLaplacian::CG_solve(
    } else if (error_close_to_zero==0) {
     gmres_precond_iter=2*gmres_precond_iter;
    } else
-    BoxLib::Error("error_close_to_zero invalid");
+    amrex::Error("error_close_to_zero invalid");
 
   } else if ((prev_restart_flag==0)&&(restart_flag==1)) {
    gmres_precond_iter=2*gmres_precond_iter_base_mg;
@@ -2825,7 +2825,7 @@ ABecLaplacian::CG_solve(
   } else if ((prev_restart_flag==0)&&(restart_flag==0)) {
    gmres_precond_iter=gmres_precond_iter_base_mg;
   } else
-   BoxLib::Error("prev_restart_flag or restart_flag invalid");
+   amrex::Error("prev_restart_flag or restart_flag invalid");
         
   prev_restart_flag=restart_flag;
 
@@ -2848,7 +2848,7 @@ ABecLaplacian::CG_solve(
      std::cout << "pcg (mac) nit (NOBOT)" << nit << '\n';
     }
    } else
-    BoxLib::Error("CG_use_mg_precond_at_top invalid");
+    amrex::Error("CG_use_mg_precond_at_top invalid");
   }
  }
 
@@ -2868,11 +2868,11 @@ ABecLaplacian::CG_solve(
  } else if (error_close_to_zero==1) {
   // do nothing
  } else {
-  BoxLib::Error("error_close_to_zero invalid");
+  amrex::Error("error_close_to_zero invalid");
  }
 
  if (ncomp!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
 
  if ((CG_verbose>0)||(nsverbose>0)) {
   residual((*CG_r[coarsefine]),rhs,sol,level,pbdry,bcpres_array);
@@ -2881,7 +2881,7 @@ ABecLaplacian::CG_solve(
   if (testnorm>=0.0) {
    testnorm=sqrt(testnorm);
   } else {
-   BoxLib::Error("testnorm invalid mglib");
+   amrex::Error("testnorm invalid mglib");
   }
 
   if (ParallelDescriptor::IOProcessor()) {
@@ -2908,17 +2908,17 @@ void ABecLaplacian::CG_advance (
     const BoxArray& gbox = LPboxArray(level);
     int ncomp = p.nComp();
     if (ncomp!=nsolve_bicgstab)
-     BoxLib::Error("p ncomp invalid");
+     amrex::Error("p ncomp invalid");
     if (z.nComp()!=nsolve_bicgstab)
-     BoxLib::Error("z ncomp invalid");
+     amrex::Error("z ncomp invalid");
     if (y.nComp()!=nsolve_bicgstab)
-     BoxLib::Error("y ncomp invalid");
+     amrex::Error("y ncomp invalid");
     if ((p.nGrow()!=0)&&(p.nGrow()!=1))
-     BoxLib::Error("p ngrow invalid");
+     amrex::Error("p ngrow invalid");
     if ((z.nGrow()!=0)&&(z.nGrow()!=1))
-     BoxLib::Error("z ngrow invalid");
+     amrex::Error("z ngrow invalid");
     if ((y.nGrow()!=0)&&(y.nGrow()!=1))
-     BoxLib::Error("y ngrow invalid");
+     amrex::Error("y ngrow invalid");
 
     const BoxArray& zbox = z.boxArray();
 
@@ -2992,7 +2992,7 @@ ABecLaplacian::MG_errorEstimate(int level,
  MultiFab& resid = *(MG_res[level]);
  int ncomp=resid.nComp();
  if (ncomp!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
 
  Real local_error=sqrt(LPnorm(resid,level));
      
@@ -3020,9 +3020,9 @@ void ABecLaplacian::MG_residualCorrectionForm (MultiFab& newrhs,
 #endif
 
  if (solnL.nComp()!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
  if (solnL.nGrow()!=1)
-  BoxLib::Error("solution should have ngrow=1");
+  amrex::Error("solution should have ngrow=1");
 
  MG_initialsolution->copy(inisol);
  solnL.copy(inisol);
@@ -3106,7 +3106,7 @@ ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
   //
  int ncomp=_sol.nComp();
  if (ncomp!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
 
  const Real error0 = MG_errorEstimate(level,pbdry,bcpres_array);
  Real error = error0;
@@ -3197,7 +3197,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
 
  int ncomp=solL.nComp();
  if (ncomp!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
 
  int is_bottom=1;
 
@@ -3267,7 +3267,7 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
 
  int ncomp=solL.nComp();
  if (ncomp!=nsolve_bicgstab)
-  BoxLib::Error("ncomp invalid");
+  amrex::Error("ncomp invalid");
 
 #if (profile_solver==1)
  bprof.stop();
@@ -3276,7 +3276,7 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
  if (level < MG_numlevels_var - 1 ) {
  
   if (presmooth!=postsmooth)
-   BoxLib::Error("presmooth must equal postsmooth for mgpcg");
+   amrex::Error("presmooth must equal postsmooth for mgpcg");
 
   project_null_space(rhsL,level);
 
@@ -3289,7 +3289,7 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
   MG_cor[level+1]->setVal(0.0);
 
   if (!((usecg_at_bottom==0)||(usecg_at_bottom==1)))
-   BoxLib::Error("usecg_at_bottom invalid");
+   amrex::Error("usecg_at_bottom invalid");
 
   MG_pbdrycoarser[level+1]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN); 
   for (int i = MG_def_nu_0; i > 0 ; i--) {
@@ -3332,9 +3332,9 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
 #endif
 
  if (clevel!=flevel+1)
-  BoxLib::Error("clevel invalid");
+  amrex::Error("clevel invalid");
  if (flevel<0)
-  BoxLib::Error("flevel invalid"); 
+  amrex::Error("flevel invalid"); 
 
  int bfact_coarse=get_bfact_array(clevel);
  int bfact_fine=get_bfact_array(flevel);
@@ -3353,7 +3353,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
   if (nc!=nsolve_bicgstab) {
    std::cout << "nc,nsolve_bicgstab = " << nc << ' ' << 
     nsolve_bicgstab << '\n';
-   BoxLib::Error("nc invalid in average");
+   amrex::Error("nc invalid in average");
   }
    // divide by 4 in 2D and 8 in 3D
   int iaverage=1;
@@ -3393,9 +3393,9 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
 #endif
 
  if (clevel!=flevel+1)
-  BoxLib::Error("clevel invalid");
+  amrex::Error("clevel invalid");
  if (flevel<0)
-  BoxLib::Error("flevel invalid"); 
+  amrex::Error("flevel invalid"); 
 
  int bfact_coarse=get_bfact_array(clevel);
  int bfact_fine=get_bfact_array(flevel);
@@ -3416,7 +3416,7 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
   if (nc!=nsolve_bicgstab) {
    std::cout << "nc,nsolve_bicgstab = " << nc << ' ' << 
     nsolve_bicgstab << '\n';
-   BoxLib::Error("nc invalid in interpolate");
+   amrex::Error("nc invalid in interpolate");
   }
 
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
@@ -3438,3 +3438,6 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
 
 
 #undef profile_solver
+
+}/* namespace amrex */
+

@@ -1,15 +1,15 @@
 #ifndef _ABecLAPLACIAN_H_
 #define _ABecLAPLACIAN_H_
 
-// BEGIN: BOXLIB FILES NEED AMReX_ prefix
-#include <Geometry.H>
-#include <Array.H>
-#include <Tuple.H>
-#include <Pointers.H>
-#include <BoxArray.H>
-#include <MultiFab.H>
-// END: BOXLIB FILES NEED AMReX_ prefix
-#include <REAL.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_Array.H>
+#include <AMReX_Tuple.H>
+#include <AMReX_Pointers.H>
+#include <AMReX_REAL.H>
+#include <AMReX_BoxArray.H>
+#include <AMReX_MultiFab.H>
+
+namespace amrex{
 
 class ABecLaplacian
 {
@@ -267,12 +267,12 @@ void
 ABecLaplacian::aCoefficients (MultiFab& _a)
 {
     if (! _a.ok())
-     BoxLib::Error("_a not ok");
+     amrex::Error("_a not ok");
 
     if (_a.boxArray() != (acoefs[0])->boxArray())
-     BoxLib::Error("_a and acoefs boxarrays do not match");
+     amrex::Error("_a and acoefs boxarrays do not match");
     if (_a.nComp()!=nsolve_bicgstab) 
-     BoxLib::Error("_a has wrong ncomp");
+     amrex::Error("_a has wrong ncomp");
 
     MultiFab::Copy(*acoefs[0],_a,0,0,nsolve_bicgstab,0);
 }
@@ -292,13 +292,13 @@ ABecLaplacian::bCoefficients (MultiFab& _b,
                               int dir) {
 
     if (! _b.ok())
-     BoxLib::Error("_b not ok");
+     amrex::Error("_b not ok");
 
     if (_b.boxArray() != (bcoefs[0][dir])->boxArray())
-     BoxLib::Error("_b box arrays do not match");
+     amrex::Error("_b box arrays do not match");
 
     if (_b.nComp()!=nsolve_bicgstab) 
-     BoxLib::Error("_b has wrong ncomp");
+     amrex::Error("_b has wrong ncomp");
 
     MultiFab::Copy(*bcoefs[0][dir],_b,0,0,nsolve_bicgstab,0);
 }
@@ -311,7 +311,7 @@ ABecLaplacian::non_sing_coefficients(Real offdiag_coeff_) {
  if (offdiag_coeff_>0.0) {
   // do nothing
  } else
-  BoxLib::Error("offdiag_coeff_ not ok");
+  amrex::Error("offdiag_coeff_ not ok");
 
  offdiag_coeff[0]=offdiag_coeff_;
 
@@ -325,7 +325,7 @@ ABecLaplacian::LPboxArray (int level) const
  if ((level>=0)&&(level<MG_numlevels_var)) {
   // do nothing
  } else {
-  BoxLib::Error("level invalid");
+  amrex::Error("level invalid");
  }
  return gbox[level];
 }
@@ -337,7 +337,7 @@ ABecLaplacian::dmapLevel (int level) const
  if ((level>=0)&&(level<MG_numlevels_var)) {
   // do nothing
  } else
-  BoxLib::Error("level invalid");
+  amrex::Error("level invalid");
  return dmap_array[level];
 }
 
@@ -347,7 +347,7 @@ ABecLaplacian::get_bfact_array (int level) const
  if ((level>=0)&&(level<MG_numlevels_var)) {
   // do nothing 
  } else
-  BoxLib::Error("level invalid");
+  amrex::Error("level invalid");
  return bfact_array[level];
 }   
 
@@ -358,10 +358,11 @@ ABecLaplacian::getGeom (int level) const
  if ((level>=0)&&(level<MG_numlevels_var)) {
   // do nothing
  } else
-  BoxLib::Error("level invalid");
+  amrex::Error("level invalid");
  return geomarray[level];
 }
 
 
+}/* namespace amrex */
 
 #endif /*_ABecLAPLACIAN_H_*/

@@ -1,33 +1,8 @@
-/*
-** (c) 1996-2000 The Regents of the University of California (through
-** E.O. Lawrence Berkeley National Laboratory), subject to approval by
-** the U.S. Department of Energy.  Your use of this software is under
-** license -- the license agreement is attached and included in the
-** directory as license.txt or you may contact Berkeley Lab's Technology
-** Transfer Department at TTD@lbl.gov.  NOTICE OF U.S. GOVERNMENT RIGHTS.
-** The Software was developed under funding from the U.S. Government
-** which consequently retains certain rights as follows: the
-** U.S. Government has been granted for itself and others acting on its
-** behalf a paid-up, nonexclusive, irrevocable, worldwide license in the
-** Software to reproduce, prepare derivative works, and perform publicly
-** and display publicly.  Beginning five (5) years after the date
-** permission to assert copyright is obtained from the U.S. Department of
-** Energy, and subject to any subsequent five (5) year renewals, the
-** U.S. Government is granted for itself and others acting on its behalf
-** a paid-up, nonexclusive, irrevocable, worldwide license in the
-** Software to reproduce, prepare derivative works, distribute copies to
-** the public, perform publicly and display publicly, and to permit
-** others to do so.
-*/
 
 #ifndef _LO_F_H_
 #define _LO_F_H_
 
-/*
-** $Id: LO_F.H,v 1.2 1999/08/25 18:04:10 propp Exp $
-*/
-
-#include <REAL.H>
+#include <AMReX_REAL.H>
 
 #ifdef BL_LANG_FORT
 #define FORT_AVERAGECC          averagecc
@@ -58,7 +33,7 @@
 #endif
 #endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
 extern "C"
 {
@@ -68,10 +43,10 @@ extern "C"
      int* mg_coarsest_level,
      int* nsolve,
      const Real* masksing , 
-     ARLIM_P(masksing_lo), ARLIM_P(masksing_hi),
-     Real* res      , ARLIM_P(res_lo), ARLIM_P(res_hi),
-     const Real* rhs, ARLIM_P(rhs_lo), ARLIM_P(rhs_hi),
-     const Real* phi, ARLIM_P(phi_lo), ARLIM_P(phi_hi),
+     AMREX_ARLIM_P(masksing_lo), AMREX_ARLIM_P(masksing_hi),
+     Real* res      , AMREX_ARLIM_P(res_lo), AMREX_ARLIM_P(res_hi),
+     const Real* rhs, AMREX_ARLIM_P(rhs_lo), AMREX_ARLIM_P(rhs_hi),
+     const Real* phi, AMREX_ARLIM_P(phi_lo), AMREX_ARLIM_P(phi_hi),
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,int* bfact_top);
@@ -85,14 +60,14 @@ extern "C"
         int* check_for_singular,
         Real* diag_regularization,
 	Real* solvemask, 
-        ARLIM_P(solvemasklo), ARLIM_P(solvemaskhi),
+        AMREX_ARLIM_P(solvemasklo), AMREX_ARLIM_P(solvemaskhi),
 	Real* a, 
-        ARLIM_P(alo), ARLIM_P(ahi),
-	Real* bx, ARLIM_P(bxlo), ARLIM_P(bxhi),
-	Real* by, ARLIM_P(bylo), ARLIM_P(byhi),
-	Real* bz, ARLIM_P(bzlo), ARLIM_P(bzhi),
+        AMREX_ARLIM_P(alo), AMREX_ARLIM_P(ahi),
+	Real* bx, AMREX_ARLIM_P(bxlo), AMREX_ARLIM_P(bxhi),
+	Real* by, AMREX_ARLIM_P(bylo), AMREX_ARLIM_P(byhi),
+	Real* bz, AMREX_ARLIM_P(bzlo), AMREX_ARLIM_P(bzhi),
         Real* diagnonsing,
-        ARLIM_P(worklo), ARLIM_P(workhi),
+        AMREX_ARLIM_P(worklo), AMREX_ARLIM_P(workhi),
         Real* diagsing,
         Real* bxleft,Real* bxright,
         Real* byleft,Real* byright,
@@ -100,16 +75,16 @@ extern "C"
         Real* icbx,Real* icby,Real* icbz,Real* icdiag,
         Real* icdiagrb,
         Real* mask,
-        ARLIM_P(masklo), ARLIM_P(maskhi),
+        AMREX_ARLIM_P(masklo), AMREX_ARLIM_P(maskhi),
 	const int* tilelo, const int* tilehi,
         const int* fablo, const int* fabhi,
         int* bfact,int* bfact_top);
 
     void FORT_APPLYBC(
         int* nsolve,
-	Real *phi, ARLIM_P(phi_lo), ARLIM_P(phi_hi),
-	Real *bfab, ARLIM_P(bfablo), ARLIM_P(bfabhi),
-	Real *mfab, ARLIM_P(mfablo), ARLIM_P(mfabhi),
+	Real *phi, AMREX_ARLIM_P(phi_lo), AMREX_ARLIM_P(phi_hi),
+	Real *bfab, AMREX_ARLIM_P(bfablo), AMREX_ARLIM_P(bfabhi),
+	Real *mfab, AMREX_ARLIM_P(mfablo), AMREX_ARLIM_P(mfabhi),
 	int* bcpres,
         const int *tilelo, const int *tilehi,
         const int *fablo, const int *fabhi,
@@ -118,16 +93,16 @@ extern "C"
     void FORT_AVERAGECC (
         int* nsolve,
         int* ncomp_expect,
-	Real* crseX,       ARLIM_P(crseX_lo), ARLIM_P(crseX_hi),
-	const Real* fineX, ARLIM_P(fineX_lo), ARLIM_P(fineX_hi),
+	Real* crseX,       AMREX_ARLIM_P(crseX_lo), AMREX_ARLIM_P(crseX_hi),
+	const Real* fineX, AMREX_ARLIM_P(fineX_lo), AMREX_ARLIM_P(fineX_hi),
 	const int *tlo, const int *thi, int* avg,
         int* ngrow,
         int* bfact_coarse,int* bfact_fine,int* bfact_top);
 
     void FORT_AVERAGEEC (
         int* nsolve,
-	Real* crseX,       ARLIM_P(crseX_lo), ARLIM_P(crseX_hi),
-	const Real* fineX, ARLIM_P(fineX_lo), ARLIM_P(fineX_hi),
+	Real* crseX,       AMREX_ARLIM_P(crseX_lo), AMREX_ARLIM_P(crseX_hi),
+	const Real* fineX, AMREX_ARLIM_P(fineX_lo), AMREX_ARLIM_P(fineX_hi),
 	const int *tlo, const int *thi, 
 	const int *axis,int* avg,
         int* bfact_coarse,int* bfact_fine,int* bfact_top);

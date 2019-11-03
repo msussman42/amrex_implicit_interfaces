@@ -1,33 +1,7 @@
-/*
-** (c) 1996-2000 The Regents of the University of California (through
-** E.O. Lawrence Berkeley National Laboratory), subject to approval by
-** the U.S. Department of Energy.  Your use of this software is under
-** license -- the license agreement is attached and included in the
-** directory as license.txt or you may contact Berkeley Lab's Technology
-** Transfer Department at TTD@lbl.gov.  NOTICE OF U.S. GOVERNMENT RIGHTS.
-** The Software was developed under funding from the U.S. Government
-** which consequently retains certain rights as follows: the
-** U.S. Government has been granted for itself and others acting on its
-** behalf a paid-up, nonexclusive, irrevocable, worldwide license in the
-** Software to reproduce, prepare derivative works, and perform publicly
-** and display publicly.  Beginning five (5) years after the date
-** permission to assert copyright is obtained from the U.S. Department of
-** Energy, and subject to any subsequent five (5) year renewals, the
-** U.S. Government is granted for itself and others acting on its behalf
-** a paid-up, nonexclusive, irrevocable, worldwide license in the
-** Software to reproduce, prepare derivative works, distribute copies to
-** the public, perform publicly and display publicly, and to permit
-** others to do so.
-*/
-
 #ifndef _AABBEC_F_H_
 #define _AABBEC_F_H_
 
-/*
-** $Id: ABec_F.H,v 1.4 2000/08/24 20:28:28 car Exp $
-*/
-
-#include <REAL.H>
+#include <AMReX_REAL.H>
 
 #ifdef BL_LANG_FORT
 #define FORT_GSRB          gsrb
@@ -50,7 +24,7 @@
 #endif
 #endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
 extern "C"
 {
@@ -64,11 +38,11 @@ extern "C"
      int* check_for_singular, 
      Real* diag_regularization, 
      const Real* masksing , 
-     ARLIM_P(masksing_lo), ARLIM_P(masksing_hi),
-     Real* phi,ARLIM_P(philo), ARLIM_P(phihi),
-     const Real* rhs, ARLIM_P(rhslo), ARLIM_P(rhshi),
+     AMREX_ARLIM_P(masksing_lo), AMREX_ARLIM_P(masksing_hi),
+     Real* phi,AMREX_ARLIM_P(philo), AMREX_ARLIM_P(phihi),
+     const Real* rhs, AMREX_ARLIM_P(rhslo), AMREX_ARLIM_P(rhshi),
      const Real* diagnonsing, 
-     ARLIM_P(diagnonsinglo),  ARLIM_P(diagnonsinghi),
+     AMREX_ARLIM_P(diagnonsinglo),  AMREX_ARLIM_P(diagnonsinghi),
      const Real* diagsing, 
      const Real* bXleft,
      const Real* bXright,
@@ -99,11 +73,11 @@ extern "C"
      int* check_for_singular, 
      Real* diag_regularization, 
      const Real* masksing , 
-     ARLIM_P(masksing_lo), ARLIM_P(masksing_hi),
-     Real *y, ARLIM_P(ylo), ARLIM_P(yhi),
-     const Real *x, ARLIM_P(xlo), ARLIM_P(xhi),
+     AMREX_ARLIM_P(masksing_lo), AMREX_ARLIM_P(masksing_hi),
+     Real *y, AMREX_ARLIM_P(ylo), AMREX_ARLIM_P(yhi),
+     const Real *x, AMREX_ARLIM_P(xlo), AMREX_ARLIM_P(xhi),
      const Real *diagnonsing,
-     ARLIM_P(diagnonsinglo),ARLIM_P(diagnonsinghi),
+     AMREX_ARLIM_P(diagnonsinglo),AMREX_ARLIM_P(diagnonsinghi),
      const Real *diagsing,
      const Real* bXleft,
      const Real* bXright,
@@ -116,11 +90,11 @@ extern "C"
      int* bfact,int* bfact_top);
    
     void FORT_DIAGSUM(
-        Real *y      , ARLIM_P(y_lo), ARLIM_P(y_hi),
-        const Real* a , ARLIM_P(a_lo),  ARLIM_P(a_hi),
-        const Real* bX, ARLIM_P(bX_lo), ARLIM_P(bX_hi),
-        const Real* bY, ARLIM_P(bY_lo), ARLIM_P(bY_hi),
-        const Real* bZ, ARLIM_P(bZ_lo), ARLIM_P(bZ_hi),
+        Real *y      , AMREX_ARLIM_P(y_lo), AMREX_ARLIM_P(y_hi),
+        const Real* a , AMREX_ARLIM_P(a_lo),  AMREX_ARLIM_P(a_hi),
+        const Real* bX, AMREX_ARLIM_P(bX_lo), AMREX_ARLIM_P(bX_hi),
+        const Real* bY, AMREX_ARLIM_P(bY_lo), AMREX_ARLIM_P(bY_hi),
+        const Real* bZ, AMREX_ARLIM_P(bZ_lo), AMREX_ARLIM_P(bZ_hi),
         const int *tilelo, const int *tilehi,
         const int *fablo, const int *fabhi,
         int* bfact,int* bfact_top);
