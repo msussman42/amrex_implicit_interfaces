@@ -11,13 +11,13 @@
 #include <AMReX_Utility.H>
 #include <AMReX_ParallelDescriptor.H>
 
-namespace amrex{
-
 #include <ABecLaplacian.H>
 #include <LO_F.H>
 #include <ABec_F.H>
 #include <CG_F.H>
 #include <MG_F.H>
+
+namespace amrex{
 
 #define profile_solver 0
 

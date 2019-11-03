@@ -1677,16 +1677,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  if (output_drop_distribution==1) {
   int color_count;
   int coarsest_level=0;
-   // type_flag[im]=1 if material im exists in the domain.
-   // type_mf(i,j,k)=im if material im dominates cell (i,j,k)
-  Array<int> type_flag;
-   // updates one ghost cell of TYPE_MF
-   // fluid(s) and solid(s) tessellate the domain.
-  TypeALL(TYPE_MF,type_flag);
-   // color_count=number of colors
-   // ngrow=1, FORT_EXTRAPFILL, pc_interp for COLOR_MF
-  color_variable(coarsest_level, 
-    COLOR_MF,TYPE_MF,&color_count,type_flag);
    // tessellate==1
   ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
   if (color_count!=blobdata.size())

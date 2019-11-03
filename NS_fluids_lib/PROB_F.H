@@ -159,7 +159,7 @@
 #  endif
 #  endif
 
-#include "ArrayLim.H"
+#include "AMReX_ArrayLim.H"
 
   extern "C" {
      void FORT_SET_PERIODIC_VAR(int* periodic_flag);
@@ -276,7 +276,7 @@
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
       int* bfact,
-      Real* vel,ARLIM_P(vello),ARLIM_P(velhi),
+      Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
       const Real* dx,const Real* xlo, const Real* xhi,
       Real* Re,Real* We,Real* RGASRWATER,int* use_lsa);
 
@@ -301,8 +301,8 @@
       Real* latent_heat,
       Real* saturation_temp,
       int* radius_cutoff,
-      Real* scal,ARLIM_P(scallo),ARLIM_P(scalhi),
-      Real* LS,ARLIM_P(LSlo),ARLIM_P(LShi),
+      Real* scal,AMREX_ARLIM_P(scallo),AMREX_ARLIM_P(scalhi),
+      Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
       const Real* dx,const Real* xlo, const Real* xhi);
 
      void FORT_ADDNOISE(
@@ -314,9 +314,9 @@
       int* nstate,
       int* nmat,
       const Real* xlo,const Real* dx,
-      Real* Snew,ARLIM_P(Snewlo),ARLIM_P(Snewhi), 
-      Real* LSnew,ARLIM_P(LSnewlo),ARLIM_P(LSnewhi), 
-      Real* MAC,ARLIM_P(MAClo),ARLIM_P(MAChi), 
+      Real* Snew,AMREX_ARLIM_P(Snewlo),AMREX_ARLIM_P(Snewhi), 
+      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
+      Real* MAC,AMREX_ARLIM_P(MAClo),AMREX_ARLIM_P(MAChi), 
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
       int* bfact,
@@ -343,7 +343,7 @@
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
       int* bfact,
-      Real* solid,ARLIM_P(solidlo),ARLIM_P(solidhi),
+      Real* solid,AMREX_ARLIM_P(solidlo),AMREX_ARLIM_P(solidhi),
       const Real* dx,const Real* xlo, const Real* xhi);
 
      void FORT_INITSOLIDTEMP (
@@ -353,14 +353,14 @@
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
       int* bfact,
-      Real* snew,ARLIM_P(snewlo),ARLIM_P(snewhi),
-      Real* lsnew,ARLIM_P(lsnewlo),ARLIM_P(lsnewhi),
+      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
+      Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
       const Real* dx,const Real* xlo);
 
      void FORT_VFRACERROR  (
-      int* tag, ARLIM_P(tlo), ARLIM_P(thi),
+      int* tag, AMREX_ARLIM_P(tlo), AMREX_ARLIM_P(thi),
       const int* tagval, const int* clearval,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* tilelo, const int* tilehi, 
       const int* fablo, const int* fabhi,int* bfact, 
       const int* nvar,
@@ -381,8 +381,8 @@
      void FORT_FORCEVELOCITY(
       int* nsolveMM_FACE,
       const Real* prob_lo,const Real* prob_hi,
-      Real* vel, ARLIM_P(vel_lo), ARLIM_P(vel_hi),
-      Real* velmac, ARLIM_P(velmac_lo), ARLIM_P(velmac_hi),
+      Real* vel, AMREX_ARLIM_P(vel_lo), AMREX_ARLIM_P(vel_hi),
+      Real* velmac, AMREX_ARLIM_P(velmac_lo), AMREX_ARLIM_P(velmac_hi),
       const int* dir,
       const Real* xlo,const Real* dx,
       const int* tilelo, const int* tilehi,
@@ -397,7 +397,7 @@
 
      void FORT_STATEFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -405,7 +405,7 @@
 
      void FORT_TENSORFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -413,7 +413,7 @@
 
      void FORT_PRESSUREFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -421,7 +421,7 @@
 
      void FORT_GROUP_STATEFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -429,7 +429,7 @@
 
      void FORT_GROUP_TENSORFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -437,7 +437,7 @@
 
      void FORT_SCALARFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -445,7 +445,7 @@
 
      void FORT_EXTRAPFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -453,7 +453,7 @@
 
      void FORT_GROUP_EXTRAPFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -461,7 +461,7 @@
 
      void FORT_LS_HO_FILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -469,7 +469,7 @@
 
      void FORT_GROUP_LS_HO_FILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -477,7 +477,7 @@
 
      void FORT_MOFFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -485,7 +485,7 @@
 
      void FORT_EXTMOFFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -493,7 +493,7 @@
 
      void FORT_GROUP_MOFFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -501,7 +501,7 @@
 
      void FORT_GROUP_EXTMOFFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -509,7 +509,7 @@
 
      void FORT_VELFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -517,7 +517,7 @@
 
      void FORT_GROUP_VELFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -526,7 +526,7 @@
 
      void FORT_SOLVFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -534,7 +534,7 @@
 
      void FORT_GROUP_SOLVFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -556,11 +556,11 @@
       int* tempbc,
       int* domtempbc,
       Real* LS, 
-      ARLIM_P(LSlo), ARLIM_P(LShi),
+      AMREX_ARLIM_P(LSlo), AMREX_ARLIM_P(LShi),
       Real* area, 
-      ARLIM_P(arealo), ARLIM_P(areahi),
+      AMREX_ARLIM_P(arealo), AMREX_ARLIM_P(areahi),
       Real* xflux, 
-      ARLIM_P(xfluxlo), ARLIM_P(xfluxhi),
+      AMREX_ARLIM_P(xfluxlo), AMREX_ARLIM_P(xfluxhi),
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
       int* bfact,
@@ -574,7 +574,7 @@
 
      void FORT_UMACFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -583,7 +583,7 @@
 
      void FORT_VMACFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -591,7 +591,7 @@
 
      void FORT_WMACFILL (
       int* level,
-      Real* data, ARLIM_P(data_lo), ARLIM_P(data_hi),
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -623,15 +623,15 @@
       int* bfact,
       int* vofbc,
       const Real* xlo,const Real* dx,Real* dt,
-      Real* maskcov,ARLIM_P(maskcovlo),ARLIM_P(maskcovhi),
-      Real* LSold,ARLIM_P(LSoldlo),ARLIM_P(LSoldhi),
-      Real* LSnew,ARLIM_P(LSnewlo),ARLIM_P(LSnewhi),      
-      Real* VOFold,ARLIM_P(VOFoldlo),ARLIM_P(VOFoldhi),      
-      Real* snew,ARLIM_P(snewlo),ARLIM_P(snewhi),      
-      Real* EOS,ARLIM_P(EOSlo),ARLIM_P(EOShi),
-      Real* mdot,ARLIM_P(mdotlo),ARLIM_P(mdothi),
-      Real* pres,ARLIM_P(preslo),ARLIM_P(preshi),
-      Real* preseos,ARLIM_P(preseoslo),ARLIM_P(preseoshi) );
+      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+      Real* LSold,AMREX_ARLIM_P(LSoldlo),AMREX_ARLIM_P(LSoldhi),
+      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),      
+      Real* VOFold,AMREX_ARLIM_P(VOFoldlo),AMREX_ARLIM_P(VOFoldhi),      
+      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),      
+      Real* EOS,AMREX_ARLIM_P(EOSlo),AMREX_ARLIM_P(EOShi),
+      Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+      Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
+      Real* preseos,AMREX_ARLIM_P(preseoslo),AMREX_ARLIM_P(preseoshi) );
   }
 #endif
 #endif 
