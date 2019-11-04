@@ -6,11 +6,12 @@
 #define BL_LANG_FORT
 #endif
 
-#include "SPACE.H"
-#include <REAL.H>
-#include <CONSTANTS.H>
+#include "AMReX_SPACE.H"
+#include <AMReX_REAL.H>
+#include <AMReX_CONSTANTS.H>
+#include "AMReX_ArrayLim.H"
+
 #include "MG_F.H"
-#include "ArrayLim.H"
 
 !-----------------------------------------------------------------------
       subroutine FORT_AVERAGE ( &
@@ -30,8 +31,8 @@
       INTEGER_T iaverage,bfact_coarse,bfact_fine,bfact_top
       INTEGER_T DIMDEC(c)
       INTEGER_T DIMDEC(f)
-      INTEGER_T lo(BL_SPACEDIM)
-      INTEGER_T hi(BL_SPACEDIM)
+      INTEGER_T lo(AMREX_SPACEDIM)
+      INTEGER_T hi(AMREX_SPACEDIM)
       INTEGER_T growlo(3),growhi(3)
       REAL_T f(DIMV(f))
       REAL_T c(DIMV(c))
@@ -42,9 +43,9 @@
       REAL_T denom
 !
       if (iaverage.eq.1) then
-       if (BL_SPACEDIM.eq.3) then
+       if (AMREX_SPACEDIM.eq.3) then
         denom=eighth
-       else if (BL_SPACEDIM.eq.2) then
+       else if (AMREX_SPACEDIM.eq.2) then
         denom=fourth
        else
         print *,"dimension bust"
@@ -82,7 +83,7 @@
         do i=growlo(1),growhi(1)
          i2 = 2*i
          i2p1 = i2 + 1
-         if (BL_SPACEDIM.eq.3) then
+         if (AMREX_SPACEDIM.eq.3) then
           c(D_DECL(i,j,k)) =  ( &
             + f(D_DECL(i2p1,j2p1,k2))  &
             + f(D_DECL(i2,j2p1,k2)) &
@@ -92,7 +93,7 @@
             + f(D_DECL(i2,j2p1,k2p1)) &
             + f(D_DECL(i2p1,j2,k2p1)) &
             + f(D_DECL(i2,j2,k2p1)) )*denom
-         else if (BL_SPACEDIM.eq.2) then
+         else if (AMREX_SPACEDIM.eq.2) then
           c(D_DECL(i,j,k)) =  ( &
             + f(D_DECL(i2p1,j2p1,k2))  &
             + f(D_DECL(i2,j2p1,k2)) &
@@ -120,8 +121,8 @@
       IMPLICIT NONE
       INTEGER_T DIMDEC(f)
       INTEGER_T DIMDEC(c)
-      INTEGER_T lo(BL_SPACEDIM)
-      INTEGER_T hi(BL_SPACEDIM)
+      INTEGER_T lo(AMREX_SPACEDIM)
+      INTEGER_T hi(AMREX_SPACEDIM)
       INTEGER_T growlo(3),growhi(3)
       REAL_T f(DIMV(f))
       REAL_T c(DIMV(c))
@@ -169,7 +170,7 @@
          f(D_DECL(i2,j2,k2)) = c(D_DECL(i,j,k)) + &
              f(D_DECL(i2,j2,k2))
 
-         if (BL_SPACEDIM.eq.3) then
+         if (AMREX_SPACEDIM.eq.3) then
           f(D_DECL(i2p1,j2p1,k2p1)) = c(D_DECL(i,j,k)) + &
              f(D_DECL(i2p1,j2p1,k2p1))
           f(D_DECL(i2,j2p1,k2p1)) = c(D_DECL(i,j,k)) + &
@@ -178,7 +179,7 @@
              f(D_DECL(i2p1,j2,k2p1))
           f(D_DECL(i2,j2,k2p1)) = c(D_DECL(i,j,k)) + &
              f(D_DECL(i2,j2,k2p1))
-         else if (BL_SPACEDIM.eq.2) then
+         else if (AMREX_SPACEDIM.eq.2) then
           ! do nothing
          else
           print *,"dimension bust"

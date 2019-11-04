@@ -3,19 +3,20 @@
 #define BL_LANG_FORT
 #endif
 
-#if (BL_SPACEDIM == 2)
+#if (AMREX_SPACEDIM == 2)
 #define SDIM 2
 #endif
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
 #define SDIM 3
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
 #include "SOLIDFLUID_F.H"
-#include "ArrayLim.H"
 
       subroutine init_3D_map(xmap3D,xslice3D,problo3D,probhi3D, &
          problo,probhi,dx_maxlevel)

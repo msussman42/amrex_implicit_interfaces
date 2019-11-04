@@ -3,16 +3,17 @@
 #define BL_LANG_FORT
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
-#include "ShallowWater_F.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#include "ShallowWater_F.H"
+
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else
 print *,"dimension bust"
@@ -196,9 +197,9 @@ stop
        print *,"nstate invalid"
        stop
       endif 
-      igeom=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material
-      ithermal=num_materials_vel*(BL_SPACEDIM+1)
-      ils=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material+ &
+      igeom=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material
+      ithermal=num_materials_vel*(AMREX_SPACEDIM+1)
+      ils=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
 
       total_mass=zero
@@ -262,7 +263,7 @@ stop
         conserve(vofcomp+dir)= &
          (primitive(vofcomp+dir)+xcell_cen(dir))*primitive(vofcomp)
        enddo
-       lscomp=ils+(im-1)*(BL_SPACEDIM+1)+1
+       lscomp=ils+(im-1)*(AMREX_SPACEDIM+1)+1
        conserve(lscomp)=primitive(lscomp)
        do dir=1,SDIM
         conserve(lscomp+dir)=primitive(lscomp+dir)
@@ -324,9 +325,9 @@ stop
        stop
       endif
  
-      igeom=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material
-      ithermal=num_materials_vel*(BL_SPACEDIM+1)
-      ils=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material+ &
+      igeom=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material
+      ithermal=num_materials_vel*(AMREX_SPACEDIM+1)
+      ils=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
 
       total_mass=zero
@@ -401,7 +402,7 @@ stop
          stop
         endif
        enddo ! dir=1..sdim
-       lscomp=ils+(im-1)*(BL_SPACEDIM+1)+1
+       lscomp=ils+(im-1)*(AMREX_SPACEDIM+1)+1
        primitive(lscomp)=conserve(lscomp)
        do dir=1,SDIM
         primitive(lscomp+dir)=conserve(lscomp+dir)
@@ -470,9 +471,9 @@ stop
        flux(dir)=zero
       enddo
 
-      igeom=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material
-      ithermal=num_materials_vel*(BL_SPACEDIM+1)
-      ils=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material+ &
+      igeom=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material
+      ithermal=num_materials_vel*(AMREX_SPACEDIM+1)
+      ils=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
 
       call convert_to_conserve(state,conserve,total_mass, &
@@ -528,7 +529,7 @@ stop
        do dir=1,SDIM
         flux(vofcomp+dir)=conserve(vofcomp+dir)*normal_vel ! centroid
        enddo
-       lscomp=ils+(im-1)*(BL_SPACEDIM+1)+1
+       lscomp=ils+(im-1)*(AMREX_SPACEDIM+1)+1
        flux(lscomp)=conserve(lscomp)*normal_vel
        do dir=1,SDIM
         flux(lscomp+dir)=conserve(lscomp+dir)*normal_vel ! slope
@@ -565,7 +566,7 @@ stop
       INTEGER_T n
 
     
-      nstate_test=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material+ &
+      nstate_test=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
       nflux_test=nstate_test+nmat*(SDIM+1)
       if (nflux.ne.nflux_test) then
@@ -784,9 +785,9 @@ stop
       call checkbound(fablo,fabhi,DIMS(lsold),1,-1,234)
       call checkbound(fablo,fabhi,DIMS(xmacnew),0,normdir,264)
 
-      igeom=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material
-      ithermal=num_materials_vel*(BL_SPACEDIM+1)
-      ils=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material+ &
+      igeom=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material
+      ithermal=num_materials_vel*(AMREX_SPACEDIM+1)
+      ils=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
 
       ii=0
@@ -957,7 +958,7 @@ stop
             fluxdiff(vofcomp)
           endif
          enddo ! veldir
-         lscomp=ils+(im-1)*(BL_SPACEDIM+1)+1
+         lscomp=ils+(im-1)*(AMREX_SPACEDIM+1)+1
          lsnew(D_DECL(i,j,k),lscomp-ils)= &
           lsnew(D_DECL(i,j,k),lscomp-ils)- &
           fluxdiff(lscomp)+divu*conserve(lscomp)

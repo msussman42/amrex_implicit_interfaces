@@ -1,10 +1,10 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "BC_TYPES.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 
 module CISL_SANITY_VARS_MODULE
 IMPLICIT NONE

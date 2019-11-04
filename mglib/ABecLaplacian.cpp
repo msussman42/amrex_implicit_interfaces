@@ -114,7 +114,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   // Fill boundary cells.
   //
 
- if (bcpres_array.size()!=gbox[0].size()*BL_SPACEDIM*2*nsolve_bicgstab)
+ if (bcpres_array.size()!=gbox[0].size()*AMREX_SPACEDIM*2*nsolve_bicgstab)
   amrex::Error("bcpres_array size invalid");
 
  if (maskvals[level]->nGrow()!=1)
@@ -157,9 +157,9 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   const int* fabhi=fabgrid.hiVect();        
 
   Array<int> bcpres;
-  bcpres.resize(2*BL_SPACEDIM*nsolve_bicgstab);
-  int ibase=2*BL_SPACEDIM*gridno*nsolve_bicgstab;
-  for (int i=0;i<2*BL_SPACEDIM*nsolve_bicgstab;i++)
+  bcpres.resize(2*AMREX_SPACEDIM*nsolve_bicgstab);
+  int ibase=2*AMREX_SPACEDIM*gridno*nsolve_bicgstab;
+  for (int i=0;i<2*AMREX_SPACEDIM*nsolve_bicgstab;i++)
    bcpres[i]=bcpres_array[i+ibase];
   FArrayBox& mfab=(*maskvals[level])[gridno];
   FArrayBox& bfab=pbdry[gridno];
@@ -383,7 +383,7 @@ ABecLaplacian::makeCoefficients (
   cdir = 0;
  } else if (iType == yType) {
   cdir = 1;
- } else if ((iType == zType)&&(BL_SPACEDIM==3)) {
+ } else if ((iType == zType)&&(AMREX_SPACEDIM==3)) {
   cdir = 2;
  } else {
   amrex::Error("ABecLaplacian::makeCoeffients: Bad index type");
@@ -434,7 +434,7 @@ ABecLaplacian::makeCoefficients (
   amrex::Error("nComp_expect!=fine.nComp()");
 
  BoxArray d(gbox[level]);
- if ((cdir>=0)&&(cdir<BL_SPACEDIM)) {
+ if ((cdir>=0)&&(cdir<AMREX_SPACEDIM)) {
   d.surroundingNodes(cdir);
  } else if (cdir==-1) {
   // do nothing
@@ -536,7 +536,7 @@ ABecLaplacian::makeCoefficients (
      &avg,
      &nGrow,
      &bfact_coarse,&bfact_fine,&bfact_top);
-  } else if ((cdir>=0)&&(cdir<BL_SPACEDIM)) {
+  } else if ((cdir>=0)&&(cdir<AMREX_SPACEDIM)) {
    FORT_AVERAGEEC(
      &nComp_expect,
      crs[mfi].dataPtr(), 
@@ -585,7 +585,7 @@ ABecLaplacian::buildMatrix() {
  bool use_tiling=cfd_tiling;
  use_tiling=false;  // two different tile instances might mod the same data.
 
- int ncwork=BL_SPACEDIM*3+10;
+ int ncwork=AMREX_SPACEDIM*3+10;
 
  for (int level=0;level<MG_numlevels_var;level++) {
 #if (profile_solver==1)
@@ -607,7 +607,7 @@ ABecLaplacian::buildMatrix() {
    avg=2;
    makeCoefficients(*laplacian_ones[level],*laplacian_ones[level-1],level,avg);
 
-   for (int dir = 0; dir < BL_SPACEDIM; ++dir) {
+   for (int dir = 0; dir < AMREX_SPACEDIM; ++dir) {
     // divide by 2 in 2D and 4 in 3D.
     // bcoefs[level-1] ~ area_fine/dx_fine  
     // bcoefs[level] ~ (area_coarse/dx_fine)/2^(d-1) =
@@ -631,9 +631,9 @@ ABecLaplacian::buildMatrix() {
    offdiag_coeff[level] = 0.0;
 
    Real denom=0.0;
-   if (BL_SPACEDIM==2) {
+   if (AMREX_SPACEDIM==2) {
     denom=0.25;
-   } else if (BL_SPACEDIM==3) {
+   } else if (AMREX_SPACEDIM==3) {
     denom=0.125;
    } else
     amrex::Error("dimension bust");
@@ -671,13 +671,13 @@ ABecLaplacian::buildMatrix() {
 
   int bxleftcomp=0;
   int byleftcomp=bxleftcomp+1;
-  int bzleftcomp=byleftcomp+BL_SPACEDIM-2;
+  int bzleftcomp=byleftcomp+AMREX_SPACEDIM-2;
   int bxrightcomp=bzleftcomp+1;
   int byrightcomp=bxrightcomp+1;
-  int bzrightcomp=byrightcomp+BL_SPACEDIM-2;
+  int bzrightcomp=byrightcomp+AMREX_SPACEDIM-2;
   int icbxcomp=bzrightcomp+1;
   int icbycomp=icbxcomp+1;
-  int icbzcomp=icbycomp+BL_SPACEDIM-2;
+  int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
   int diag_non_singcomp=icbzcomp+1;
   int diag_singcomp=diag_non_singcomp+1;
@@ -751,7 +751,7 @@ ABecLaplacian::buildMatrix() {
      FArrayBox& aFAB=(*acoefs[level])[mfi];
      FArrayBox& bxFAB=(*bcoefs[level][0])[mfi];
      FArrayBox& byFAB=(*bcoefs[level][1])[mfi];
-     FArrayBox& bzFAB=(*bcoefs[level][BL_SPACEDIM-1])[mfi];
+     FArrayBox& bzFAB=(*bcoefs[level][AMREX_SPACEDIM-1])[mfi];
 
      FORT_BUILDMAT(
       &level, // level==0 is finest
@@ -882,7 +882,7 @@ ABecLaplacian::ABecLaplacian (
  acoefs.resize(MG_numlevels_var,(MultiFab*)0);
  bcoefs.resize(MG_numlevels_var);
  for (int lev=0;lev<MG_numlevels_var;lev++) {
-  for (int dir=0;dir<BL_SPACEDIM;dir++)
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
    bcoefs[lev][dir]=(MultiFab*)0;
  }
  offdiag_coeff.resize(MG_numlevels_var,0.0);
@@ -985,7 +985,7 @@ ABecLaplacian::ABecLaplacian (
     dmap_array[level],Fab_allocate);
   acoefs[level]->setVal(a_def,0,nsolve_bicgstab,nghostRHS);
 
-  int ncomp_work=(BL_SPACEDIM*3)+10;
+  int ncomp_work=(AMREX_SPACEDIM*3)+10;
   workcoefs[level]=new MultiFab(gbox[level],ncomp_work*nsolve_bicgstab,
     nghostSOLN,dmap_array[level],Fab_allocate);
   workcoefs[level]->setVal(0.0,0,ncomp_work*nsolve_bicgstab,nghostSOLN);
@@ -1012,7 +1012,7 @@ ABecLaplacian::ABecLaplacian (
   MG_pbdrycoarser[level]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
   // no ghost cells for edge or node coefficients
-  for (int dir = 0; dir < BL_SPACEDIM; ++dir) {
+  for (int dir = 0; dir < AMREX_SPACEDIM; ++dir) {
    BoxArray edge_boxes(gbox[level]);
    edge_boxes.surroundingNodes(dir);
    bcoefs[level][dir]=new MultiFab(edge_boxes,nsolve_bicgstab,0,
@@ -1123,7 +1123,7 @@ ABecLaplacian::ABecLaplacian (
    for (int k = 0; k < tmp.size(); k++) {
     const Box& b = tmp[k];
     std::cout << "  [" << k << "]: " << b << "   ";
-    for (int j = 0; j < BL_SPACEDIM; j++)
+    for (int j = 0; j < AMREX_SPACEDIM; j++)
      std::cout << b.length(j) << ' ';
     std::cout << '\n';
    }
@@ -1160,7 +1160,7 @@ ABecLaplacian::~ABecLaplacian ()
   MG_cor[level]=(MultiFab*)0;
   delete MG_pbdrycoarser[level];
   MG_pbdrycoarser[level]=(MultiFab*)0;
-  for (int dir = 0; dir < BL_SPACEDIM; ++dir) {
+  for (int dir = 0; dir < AMREX_SPACEDIM; ++dir) {
    delete bcoefs[level][dir];
    bcoefs[level][dir]=(MultiFab*)0;
   }
@@ -1250,7 +1250,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  bprof.start();
 #endif
 
- int ncwork=BL_SPACEDIM*3+10;
+ int ncwork=AMREX_SPACEDIM*3+10;
 
  int nctest = work.nComp();
  if (nctest!=ncwork*nsolve_bicgstab)
@@ -1280,13 +1280,13 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
  int bxleftcomp=0;
  int byleftcomp=bxleftcomp+1;
- int bzleftcomp=byleftcomp+BL_SPACEDIM-2;
+ int bzleftcomp=byleftcomp+AMREX_SPACEDIM-2;
  int bxrightcomp=bzleftcomp+1;
  int byrightcomp=bxrightcomp+1;
- int bzrightcomp=byrightcomp+BL_SPACEDIM-2;
+ int bzrightcomp=byrightcomp+AMREX_SPACEDIM-2;
  int icbxcomp=bzrightcomp+1;
  int icbycomp=icbxcomp+1;
- int icbzcomp=icbycomp+BL_SPACEDIM-2;
+ int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
  int diag_non_singcomp=icbzcomp+1;
  int diag_singcomp=diag_non_singcomp+1;
@@ -1443,7 +1443,7 @@ ABecLaplacian::Fapply (MultiFab& y,
   amrex::Error("offdiag_coeff_level invalid");
 
  const MultiFab & work=*workcoefs[level];
- int ncwork=BL_SPACEDIM*3+10;
+ int ncwork=AMREX_SPACEDIM*3+10;
 
  int nctest = work.nComp();
  if (nctest!=ncwork*nsolve_bicgstab)
@@ -1471,13 +1471,13 @@ ABecLaplacian::Fapply (MultiFab& y,
 
  int bxleftcomp=0;
  int byleftcomp=bxleftcomp+1;
- int bzleftcomp=byleftcomp+BL_SPACEDIM-2;
+ int bzleftcomp=byleftcomp+AMREX_SPACEDIM-2;
  int bxrightcomp=bzleftcomp+1;
  int byrightcomp=bxrightcomp+1;
- int bzrightcomp=byrightcomp+BL_SPACEDIM-2;
+ int bzrightcomp=byrightcomp+AMREX_SPACEDIM-2;
  int icbxcomp=bzrightcomp+1;
  int icbycomp=icbxcomp+1;
- int icbzcomp=icbycomp+BL_SPACEDIM-2;
+ int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
  int diag_non_singcomp=icbzcomp+1;
  int diag_singcomp=diag_non_singcomp+1;
@@ -1968,7 +1968,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
  const MultiFab& a   = *acoefs[level];
  const MultiFab& bX  = *bcoefs[level][0];
  const MultiFab& bY  = *bcoefs[level][1];
- const MultiFab& bZ  = *bcoefs[level][BL_SPACEDIM-1];
+ const MultiFab& bZ  = *bcoefs[level][AMREX_SPACEDIM-1];
  int nc = y.nComp();
  if (nc!=nsolve_bicgstab)
   amrex::Error("nc bust");

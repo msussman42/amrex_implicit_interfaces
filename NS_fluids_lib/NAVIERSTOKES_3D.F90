@@ -3,16 +3,17 @@
 #define BL_LANG_FORT
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
-#include "NAVIERSTOKES_F.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#include "NAVIERSTOKES_F.H"
+
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else
 print *,"dimension bust"
@@ -41,13 +42,13 @@ stop
       if (abs(gridval(IV0)-valu).le.1.0D-10) then
        XX(icomp)=gridx(IV0)
        YY(icomp)=gridy(IV0)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        ZZ(icomp)=gridz(IV0)
 #endif
       else if (abs(gridval(IV1)-valu).le.1.0D-10) then
        XX(icomp)=gridx(IV1)
        YY(icomp)=gridy(IV1)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        ZZ(icomp)=gridz(IV1)
 #endif
       else
@@ -59,7 +60,7 @@ stop
  
        XX(icomp)=tt*gridx(IV1)+(one-tt)*gridx(IV0)
        YY(icomp)=tt*gridy(IV1)+(one-tt)*gridy(IV0)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        ZZ(icomp)=tt*gridz(IV1)+(one-tt)*gridz(IV0)
 #endif
       endif
@@ -79,11 +80,11 @@ stop
       REAL_T XX(SDIM),YY(SDIM),ZZ(SDIM),NORMAL(SDIM)
       REAL_T CPROD(SDIM),VEC1(3),VEC2(3),DOTPROD
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       VEC1(1)=XX(SDIM)-XX(1)
       VEC1(2)=YY(SDIM)-YY(1)
       VEC1(3)=ZZ(SDIM)-ZZ(1)
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       VEC1(1)=zero
       VEC1(2)=zero
       VEC1(3)=one
@@ -94,9 +95,9 @@ stop
 
       VEC2(1)=XX(2)-XX(1)
       VEC2(2)=YY(2)-YY(1)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       VEC2(3)=ZZ(2)-ZZ(1)
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       VEC2(3)=zero
 #else
       print *,"dimension bust"
@@ -104,11 +105,11 @@ stop
 #endif
       CPROD(1)=VEC1(2)*VEC2(3)-VEC1(3)*VEC2(2)
       CPROD(2)=-VEC1(1)*VEC2(3)+VEC1(3)*VEC2(1)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       CPROD(SDIM)=VEC1(1)*VEC2(2)-VEC1(2)*VEC2(1)
 #endif
       DOTPROD=CPROD(1)*NORMAL(1)+CPROD(2)*NORMAL(2)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       DOTPROD=DOTPROD+CPROD(SDIM)*NORMAL(SDIM)
 #endif
 
@@ -119,10 +120,10 @@ stop
 
       geom(1,itri+1)=XX(1)
       geom(2,itri+1)=YY(1)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       geom(SDIM,itri+1)=ZZ(1)
 #endif
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       if (DOTPROD.gt.0.0) then
        geom(1,itri+2)=XX(2)
        geom(2,itri+2)=YY(2)
@@ -138,7 +139,7 @@ stop
        geom(2,itri+SDIM)=YY(2)
        geom(SDIM,itri+SDIM)=ZZ(2)
       endif
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       geom(1,itri+2)=XX(2)
       geom(2,itri+2)=YY(2)
 #else
@@ -4222,9 +4223,9 @@ END SUBROUTINE SIMP
           KEslice=KEslice+half*denslice*(velnd(iw)**2)
          enddo ! dir
 
-         plotfab(D_DECL(i,j,k),2*BL_SPACEDIM+4)=denslice
-         plotfab(D_DECL(i,j,k),2*BL_SPACEDIM+5)=tempslice
-         plotfab(D_DECL(i,j,k),2*BL_SPACEDIM+6)=KEslice
+         plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+4)=denslice
+         plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+5)=tempslice
+         plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+6)=KEslice
         enddo ! k
         enddo ! j
         enddo ! i
@@ -5978,11 +5979,11 @@ END SUBROUTINE SIMP
                (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
                (operation_flag.eq.10).or. &
                (operation_flag.eq.11)) then 
-       if (ncomp_vel.ne.BL_SPACEDIM) then
+       if (ncomp_vel.ne.AMREX_SPACEDIM) then
         print *,"ncomp_vel invalid"
         stop
        endif
-       if (ncomp_den.ne.BL_SPACEDIM) then
+       if (ncomp_den.ne.AMREX_SPACEDIM) then
         print *,"ncomp_den invalid"
         stop
        endif
@@ -6424,7 +6425,7 @@ END SUBROUTINE SIMP
                      (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
                      (operation_flag.eq.10).or. &
                      (operation_flag.eq.11)) then 
-             if ((dir.ge.0).and.(dir.lt.BL_SPACEDIM)) then
+             if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
              else
               print *,"dir invalid"
@@ -6564,7 +6565,7 @@ END SUBROUTINE SIMP
                           (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
                           (operation_flag.eq.10).or. &
                           (operation_flag.eq.11)) then 
-                  if ((dir.ge.0).and.(dir.lt.BL_SPACEDIM)) then
+                  if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
                   else
                    print *,"dir invalid"
@@ -6788,11 +6789,11 @@ END SUBROUTINE SIMP
                (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
                (operation_flag.eq.10).or. &
                (operation_flag.eq.11)) then 
-       if (ncomp_vel.ne.BL_SPACEDIM) then
+       if (ncomp_vel.ne.AMREX_SPACEDIM) then
         print *,"ncomp_vel invalid"
         stop
        endif
-       if (ncomp_den.ne.BL_SPACEDIM) then
+       if (ncomp_den.ne.AMREX_SPACEDIM) then
         print *,"ncomp_den invalid"
         stop
        endif
@@ -7225,7 +7226,7 @@ END SUBROUTINE SIMP
                        (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
                        (operation_flag.eq.10).or. &
                        (operation_flag.eq.11)) then 
-               if ((dir.ge.0).and.(dir.lt.BL_SPACEDIM)) then
+               if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
                else
                 print *,"dir invalid"
@@ -7363,7 +7364,7 @@ END SUBROUTINE SIMP
                             (operation_flag.eq.5).or. &!UMAC=UMAC+beta diff_reg
                             (operation_flag.eq.10).or. &
                             (operation_flag.eq.11)) then 
-                    if ((dir.ge.0).and.(dir.lt.BL_SPACEDIM)) then
+                    if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                      crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
                     else
                      print *,"dir invalid"

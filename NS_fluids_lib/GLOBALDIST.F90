@@ -1,18 +1,19 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
 #include "PROB_AMR_F.H"
 #include "PROB_F.H"
 #include "LEVEL_F.H"
-#include "ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -1998,7 +1999,7 @@ end subroutine nozzle2d
        ycen2=zero
        zcen1=yblob
        zcen2=yblob
-#if (BL_SPACEDIM==2)
+#if (AMREX_SPACEDIM==2)
        call barbelldist(x,ycen1,y,xcen1,ycen1,zcen1, &
         xcen2,ycen2,zcen2,radblob,radblob,radblob3,dist)
        dist=-dist

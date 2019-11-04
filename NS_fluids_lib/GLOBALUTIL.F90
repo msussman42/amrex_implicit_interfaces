@@ -1,15 +1,16 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
 
-#if (BL_SPACEDIM==3)
+#include "AMReX_ArrayLim.H"
+
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -1283,9 +1284,9 @@ contains
 
 ! e2 is tangent to the contact line.
 ! in 2d, e2 comes into/out of the paper.
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       call crossprod(nsolid_new,nfree,e2)
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       call crossprod2d(nsolid_new,nfree,e2)
 #else
       print *,"dimension bust"
@@ -2317,7 +2318,7 @@ contains
       hidata(2)=ARG_H2(data)
       lodata(1)=ARG_L1(data)
       lodata(2)=ARG_L2(data)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       hidata(SDIM)=ARG_H3(data)
       lodata(SDIM)=ARG_L3(data)
 #endif
@@ -3947,7 +3948,7 @@ contains
       datahi(1)=ARG_H1(data)
       datalo(2)=ARG_L2(data)
       datahi(2)=ARG_H2(data)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       datalo(SDIM)=ARG_L3(data)
       datahi(SDIM)=ARG_H3(data)
 #endif
@@ -3975,7 +3976,7 @@ contains
       ARG_H1(data)=datahi(1)
       ARG_L2(data)=datalo(2)
       ARG_H2(data)=datahi(2)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       ARG_L3(data)=datalo(SDIM)
       ARG_H3(data)=datahi(SDIM)
 #endif

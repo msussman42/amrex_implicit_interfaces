@@ -3,16 +3,18 @@
 #define BL_LANG_FORT
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
-#include "MACOPERATOR_F.H"
-#include "ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
+#include "MACOPERATOR_F.H"
+
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -696,8 +698,8 @@ stop
       INTEGER_T DIMDEC(c)
       INTEGER_T DIMDEC(cdiag)
       INTEGER_T DIMDEC(fdiag)
-      INTEGER_T lo(BL_SPACEDIM)
-      INTEGER_T hi(BL_SPACEDIM)
+      INTEGER_T lo(AMREX_SPACEDIM)
+      INTEGER_T hi(AMREX_SPACEDIM)
       INTEGER_T lof(SDIM),hif(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
@@ -1007,10 +1009,10 @@ stop
       call checkbound(fablo,fabhi,DIMS(mdot),0,-1,140)
       call checkbound(fablo,fabhi,DIMS(bx),0,0,140)
       call checkbound(fablo,fabhi,DIMS(by),0,1,140)
-      call checkbound(fablo,fabhi,DIMS(bz),0,BL_SPACEDIM-1,140)
+      call checkbound(fablo,fabhi,DIMS(bz),0,AMREX_SPACEDIM-1,140)
       call checkbound(fablo,fabhi,DIMS(fwtx),0,0,140)
       call checkbound(fablo,fabhi,DIMS(fwty),0,1,140)
-      call checkbound(fablo,fabhi,DIMS(fwtz),0,BL_SPACEDIM-1,140)
+      call checkbound(fablo,fabhi,DIMS(fwtz),0,AMREX_SPACEDIM-1,140)
 
       if (bfact.lt.1) then
        print *,"bfact too small"

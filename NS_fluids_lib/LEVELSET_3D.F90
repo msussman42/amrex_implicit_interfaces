@@ -3,21 +3,22 @@
 #define BL_LANG_FORT
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
 #include "LEVEL_F.H"
-#include "ArrayLim.H"
 
 #define nsum 64
 #define nsum2 32
 #define VISCINVTOL (1.0D-8)
 #define CURVWT (1.0D-3)
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -15920,7 +15921,7 @@ stop
        print *,"visc_coef invalid"
        stop
       endif
-      if ((nsolve.ne.1).and.(nsolve.ne.BL_SPACEDIM)) then
+      if ((nsolve.ne.1).and.(nsolve.ne.AMREX_SPACEDIM)) then
        print *,"nsolve invalid8"
        stop
       endif 

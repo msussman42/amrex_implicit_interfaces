@@ -6,12 +6,12 @@
 #define BL_LANG_FORT
 #endif
 
-#include "SPACE.H"
-#include <REAL.H>
-#include <CONSTANTS.H>
+#include "AMReX_SPACE.H"
+#include <AMReX_REAL.H>
+#include <AMReX_CONSTANTS.H>
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 #include "LO_F.H"
-#include "BC_TYPES.H"
-#include "ArrayLim.H"
 
 
 
@@ -51,10 +51,10 @@
       INTEGER_T check_for_singular
       REAL_T offdiag_coeff
       REAL_T diag_regularization
-      INTEGER_T tilelo(BL_SPACEDIM)
-      INTEGER_T tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM)
-      INTEGER_T fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM)
+      INTEGER_T tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM)
+      INTEGER_T fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T bfact,bfact_top
@@ -147,7 +147,7 @@
       call checkbound(fablo,fabhi,DIMS(mask),1,-1,81)
       call checkbound(fablo,fabhi,DIMS(bx),0,0,81)
       call checkbound(fablo,fabhi,DIMS(by),0,1,81)
-      call checkbound(fablo,fabhi,DIMS(bz),0,BL_SPACEDIM-1,81)
+      call checkbound(fablo,fabhi,DIMS(bz),0,AMREX_SPACEDIM-1,81)
 
 
       if (isweep.eq.0) then
@@ -182,7 +182,7 @@
            bx(D_DECL(i+1,j,k))=zero
            by(D_DECL(i,j,k))=zero
            by(D_DECL(i,j+1,k))=zero
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
            bz(D_DECL(i,j,k))=zero
            bz(D_DECL(i,j,k+1))=zero
 #endif
@@ -219,7 +219,7 @@
             print *,"maskYM invalid"
             stop
            endif
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
            if (maskZP.eq.zero) then
             bz(D_DECL(i,j,k+1))=zero
            else if (maskZP.eq.one) then
@@ -277,13 +277,13 @@
         bxright(D_DECL(i,j,k))=bx(D_DECL(i+1,j,k))
         byleft(D_DECL(i,j,k))=by(D_DECL(i,j,k))
         byright(D_DECL(i,j,k))=by(D_DECL(i,j+1,k))
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         bzleft(D_DECL(i,j,k))=bz(D_DECL(i,j,k))
         bzright(D_DECL(i,j,k))=bz(i,j,k+1)
 #endif
         offdiagsum= &
           bxleft(D_DECL(i,j,k))+bxright(D_DECL(i,j,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))+bzright(D_DECL(i,j,k)) &
 #endif
           +byleft(D_DECL(i,j,k))+byright(D_DECL(i,j,k))
@@ -390,8 +390,8 @@
          DD=DD-byleft(D_DECL(i,j,k))* &
           byleft(D_DECL(i,j,k))/icdiag(D_DECL(i,j-1,k))
         endif
-#if (BL_SPACEDIM==3)
-        if (k.gt.tilelo(BL_SPACEDIM)) then
+#if (AMREX_SPACEDIM==3)
+        if (k.gt.tilelo(AMREX_SPACEDIM)) then
          DD=DD-bzleft(D_DECL(i,j,k))* &
           bzleft(D_DECL(i,j,k))/icdiag(i,j,k-1)
         endif
@@ -405,8 +405,8 @@
          icby(D_DECL(i,j,k))=-byleft(D_DECL(i,j,k))/ &
           icdiag(D_DECL(i,j-1,k)) 
         endif
-#if (BL_SPACEDIM==3)
-        if (k.gt.tilelo(BL_SPACEDIM)) then
+#if (AMREX_SPACEDIM==3)
+        if (k.gt.tilelo(AMREX_SPACEDIM)) then
          icbz(D_DECL(i,j,k))=-bzleft(D_DECL(i,j,k))/ &
           icdiag(i,j,k-1) 
         endif
@@ -496,8 +496,8 @@
           byleft(D_DECL(i,j,k))/local_diag
 
         endif
-#if (BL_SPACEDIM==3)
-        if (k.gt.tilelo(BL_SPACEDIM)) then
+#if (AMREX_SPACEDIM==3)
+        if (k.gt.tilelo(AMREX_SPACEDIM)) then
 
          local_diag=diag_sing(D_DECL(i,j,k-1))
          if (local_diag.eq.zero) then
@@ -565,8 +565,8 @@
           byright(D_DECL(i,j,k))/local_diag
 
         endif
-#if (BL_SPACEDIM==3)
-        if (k.lt.tilehi(BL_SPACEDIM)) then
+#if (AMREX_SPACEDIM==3)
+        if (k.lt.tilehi(AMREX_SPACEDIM)) then
 
          local_diag=diag_sing(D_DECL(i,j,k+1))
          if (local_diag.eq.zero) then
@@ -614,10 +614,10 @@
 
       IMPLICIT NONE
       INTEGER_T nsolve
-      INTEGER_T tilelo(BL_SPACEDIM)
-      INTEGER_T tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM)
-      INTEGER_T fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM)
+      INTEGER_T tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM)
+      INTEGER_T fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T bfact,bfact_top
@@ -676,8 +676,8 @@
       INTEGER_T nsolve
       INTEGER_T bfact_coarse,bfact_fine,bfact_top
       INTEGER_T avg
-      INTEGER_T lo(BL_SPACEDIM)
-      INTEGER_T hi(BL_SPACEDIM)
+      INTEGER_T lo(AMREX_SPACEDIM)
+      INTEGER_T hi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T cdir
@@ -710,9 +710,9 @@
       ,0,cdir,201)
 
       if (avg.eq.1) then
-       if (BL_SPACEDIM.eq.3) then
+       if (AMREX_SPACEDIM.eq.3) then
         denom=0.25d0
-       else if (BL_SPACEDIM.eq.2) then
+       else if (AMREX_SPACEDIM.eq.2) then
         denom=half
        else
         print *,"dimension bust"
@@ -731,13 +731,13 @@
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
         do veldir=1,nsolve
-         if (BL_SPACEDIM.eq.3) then
+         if (AMREX_SPACEDIM.eq.3) then
           c(D_DECL(i,j,k),veldir) = denom*( &
            + f(D_DECL(2*i,2*j,2*k),veldir) &
            + f(D_DECL(2*i,2*j+1,2*k),veldir) &
            + f(D_DECL(2*i,2*j,2*k+1),veldir) &
            + f(D_DECL(2*i,2*j+1,2*k+1),veldir))
-         else if (BL_SPACEDIM.eq.2) then
+         else if (AMREX_SPACEDIM.eq.2) then
           c(D_DECL(i,j,k),veldir) = denom*( &
            + f(D_DECL(2*i,2*j,2*k),veldir) &
            + f(D_DECL(2*i,2*j+1,2*k),veldir))
@@ -755,13 +755,13 @@
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
         do veldir=1,nsolve
-         if (BL_SPACEDIM.eq.3) then
+         if (AMREX_SPACEDIM.eq.3) then
           c(D_DECL(i,j,k),veldir) = denom*( &
            + f(D_DECL(2*i,2*j,2*k),veldir) &
            + f(D_DECL(2*i+1,2*j,2*k),veldir) &
            + f(D_DECL(2*i,2*j,2*k+1),veldir) &
            + f(D_DECL(2*i+1,2*j,2*k+1),veldir))
-         else if (BL_SPACEDIM.eq.2) then
+         else if (AMREX_SPACEDIM.eq.2) then
           c(D_DECL(i,j,k),veldir) = denom*( &
            + f(D_DECL(2*i,2*j,2*k),veldir) &
            + f(D_DECL(2*i+1,2*j,2*k),veldir))
@@ -773,13 +773,13 @@
        enddo
        enddo
        enddo
-      else if ((cdir .eq. 2 ).and.(BL_SPACEDIM.eq.3)) then
+      else if ((cdir .eq. 2 ).and.(AMREX_SPACEDIM.eq.3)) then
        call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
         do veldir=1,nsolve
-         if (BL_SPACEDIM.eq.3) then
+         if (AMREX_SPACEDIM.eq.3) then
           c(D_DECL(i,j,k),veldir) = denom*( &
            + f(D_DECL(2*i,2*j,2*k),veldir) &
            + f(D_DECL(2*i+1,2*j,2*k),veldir) &
@@ -821,8 +821,8 @@
       INTEGER_T avg
       INTEGER_T DIMDEC(f)
       INTEGER_T DIMDEC(c)
-      INTEGER_T lo(BL_SPACEDIM)
-      INTEGER_T hi(BL_SPACEDIM)
+      INTEGER_T lo(AMREX_SPACEDIM)
+      INTEGER_T hi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       REAL_T f(DIMV(f),ncomp_expect)
@@ -876,9 +876,9 @@
       ngrow,-1,301)
 
       if (avg.eq.1) then
-       if (BL_SPACEDIM.eq.3) then
+       if (AMREX_SPACEDIM.eq.3) then
         denom=0.125d0
-       else if (BL_SPACEDIM.eq.2) then
+       else if (AMREX_SPACEDIM.eq.2) then
         denom=0.25d0
        else
         print *,"dimension bust"
@@ -900,7 +900,7 @@
 
        do veldir=1,ncomp_expect
 
-        if (BL_SPACEDIM.eq.3) then
+        if (AMREX_SPACEDIM.eq.3) then
          c(D_DECL(i,j,k),veldir) =  denom*( &
           + f(D_DECL(2*i+1,2*j+1,2*k),veldir) &
           + f(D_DECL(2*i,2*j+1,2*k),veldir) &
@@ -910,7 +910,7 @@
           + f(D_DECL(2*i,2*j+1,2*k+1),veldir) &
           + f(D_DECL(2*i+1,2*j,2*k+1),veldir) &
           + f(D_DECL(2*i,2*j,2*k+1),veldir) )
-        else if (BL_SPACEDIM.eq.2) then
+        else if (AMREX_SPACEDIM.eq.2) then
          c(D_DECL(i,j,k),veldir) =  denom*( &
           + f(D_DECL(2*i+1,2*j+1,2*k),veldir) &
           + f(D_DECL(2*i,2*j+1,2*k),veldir) &
@@ -922,9 +922,9 @@
         endif
         if (avg.eq.2) then
          sum_mask=NINT(c(D_DECL(i,j,k),veldir))
-         if (BL_SPACEDIM.eq.3) then
+         if (AMREX_SPACEDIM.eq.3) then
           max_sum=8
-         else if (BL_SPACEDIM.eq.2) then
+         else if (AMREX_SPACEDIM.eq.2) then
           max_sum=4
          else
           print *,"dimension bust"
@@ -978,17 +978,17 @@
 !
       INTEGER_T nsolve
       INTEGER_T dir,side
-      INTEGER_T tilelo(BL_SPACEDIM)
-      INTEGER_T tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM)
-      INTEGER_T fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM)
+      INTEGER_T tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM)
+      INTEGER_T fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T bfact,bfact_top
       INTEGER_T DIMDEC(phi)
       INTEGER_T DIMDEC(bfab)
       INTEGER_T DIMDEC(mfab)
-      INTEGER_T bcpres(BL_SPACEDIM,2,nsolve)
+      INTEGER_T bcpres(AMREX_SPACEDIM,2,nsolve)
       REAL_T phi(DIMV(phi),nsolve)
       REAL_T bfab(DIMV(bfab),nsolve)
       REAL_T mfab(DIMV(mfab))
@@ -1025,7 +1025,7 @@
 
       do veldir=1,nsolve
 
-       do dir=1,BL_SPACEDIM
+       do dir=1,AMREX_SPACEDIM
         ii=0
         jj=0
         kk=0
@@ -1033,7 +1033,7 @@
          ii=1
         else if (dir.eq.2) then
          jj=1
-        else if ((dir.eq.3).and.(BL_SPACEDIM.eq.3)) then
+        else if ((dir.eq.3).and.(AMREX_SPACEDIM.eq.3)) then
          kk=1
         else
          print *,"dir invalid apply bc"
@@ -1060,7 +1060,7 @@
           print *,"side invalid"
           stop
          endif
-         do dir_bc=1,BL_SPACEDIM
+         do dir_bc=1,AMREX_SPACEDIM
           if (dir_bc.ne.dir) then
            growlo(dir_bc)=growlo(dir_bc)-1
            growhi(dir_bc)=growhi(dir_bc)+1

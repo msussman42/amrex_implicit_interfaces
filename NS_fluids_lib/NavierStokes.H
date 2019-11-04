@@ -278,7 +278,7 @@ enum StateNames {
   DenVar=0, TemperatureVar, SpeciesVar };
 
  
-#if (BL_SPACEDIM == 2)
+#if (AMREX_SPACEDIM == 2)
 
 enum TensorNames {T11=0,T12,T22,T33,NUM_TENSOR_TYPE};
 
@@ -328,8 +328,8 @@ public:
    // Aij=sum phi_i(X_k) dot phi_j(X_k) w_k
    // Bi=sum phi_i(X_k) dot u_k w_k
    // ux,uy,uz fluid_interior,fluid,solid
-  Real blob_matrix[3*(2*BL_SPACEDIM)*(2*BL_SPACEDIM)]; 
-  Real blob_RHS[3*(2*BL_SPACEDIM)]; 
+  Real blob_matrix[3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)]; 
+  Real blob_RHS[3*(2*AMREX_SPACEDIM)]; 
    // alphax,alphay,alphaz,alphaxy alphaxz alphayz  
    //  fluid interior,fluid,solid
    // u=alphaxy(y-y0)+alphaxz(z-z0)+alphax  
@@ -339,7 +339,7 @@ public:
    // phixy=( (y-y0)  -(x-x0)   0   )
    // phixz=( (z-z0)     0  -(x-x0) )
    // phiyz=(   0    (z-z0) -(y-y0) )
-  Real blob_velocity[3*(2*BL_SPACEDIM)]; 
+  Real blob_velocity[3*(2*AMREX_SPACEDIM)]; 
    // translational momentum integral rho u dv
    // angular momentum integral (x-x0) cross rho u dv
    // | i    j    k  |
@@ -357,13 +357,13 @@ public:
    //               alphaxz sum phixz dot phixz wmomk
    // momentum_ihat=-alphayz sum (zk-z0)^2 + (yk-y0)^2 wmomk=
    //               -alphayz sum phiyz dot phiyz wmomk
-  Real blob_integral_momentum[2*(2*BL_SPACEDIM)];
+  Real blob_integral_momentum[2*(2*AMREX_SPACEDIM)];
   Real blob_energy;
    // fluid_interior,fluid,solid
   Real blob_mass_for_velocity[3];
   Real blob_volume;
-  Real blob_center_integral[BL_SPACEDIM];
-  Real blob_center_actual[BL_SPACEDIM];
+  Real blob_center_integral[AMREX_SPACEDIM];
+  Real blob_center_actual[AMREX_SPACEDIM];
   Real blob_perim;  // surface area of the blob
    // surface area of region separating the blob from a given material im.
   Array<Real> blob_perim_mat;  

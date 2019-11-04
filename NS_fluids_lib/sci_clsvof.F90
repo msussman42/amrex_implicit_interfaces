@@ -1,11 +1,11 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "BC_TYPES.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #include "LEVEL_F.H"
 #include "NAVIERSTOKES_F.H"
 #endif
@@ -131,9 +131,9 @@ REAL_T whale_counter_real
 REAL_T CLSVOF_whale_time
 INTEGER_T exclusive_doubly_wetted
 
-REAL_T problo_ref(BL_SPACEDIM)
-REAL_T probhi_ref(BL_SPACEDIM)
-REAL_T problen_ref(BL_SPACEDIM)
+REAL_T problo_ref(AMREX_SPACEDIM)
+REAL_T probhi_ref(AMREX_SPACEDIM)
+REAL_T problen_ref(AMREX_SPACEDIM)
 
 REAL_T problo_act(3)
 REAL_T probhi_act(3)
@@ -345,7 +345,7 @@ REAL_T dilated_time
      dilated_time=timeB
      dilated_time = dilated_time*51.
     else if (probtype.eq.541) then
-     if (BL_SPACEDIM.eq.3) then
+     if (AMREX_SPACEDIM.eq.3) then
       dilated_time=timeB-1.460e-3 ! skip first 200 mus
      else
       dilated_time=timeB ! skip first 200 mus
@@ -423,7 +423,7 @@ REAL_T dilated_time
      endif
 
 
-     if ((BL_SPACEDIM.eq.2).and.(probtype.eq.541)) then
+     if ((AMREX_SPACEDIM.eq.2).and.(probtype.eq.541)) then
       FSI(part_id)%solid_displ(dir)=0.0
       FSI(part_id)%solid_speed(dir)=0.0
      endif
@@ -1384,7 +1384,7 @@ INTEGER_T :: ctml_part_id
 
    do inode=1,FSI(part_id)%NumNodes
 
-    if (BL_SPACEDIM.eq.2) then
+    if (AMREX_SPACEDIM.eq.2) then
      if ((inode.ge.1).and. &
          (inode.le.ctml_n_fib_active_nodes(ctml_part_id))) then
       inode_fiber=inode
@@ -1395,20 +1395,20 @@ INTEGER_T :: ctml_part_id
       print *,"node invalid"
       stop
      endif
-    else if (BL_SPACEDIM.eq.3) then
+    else if (AMREX_SPACEDIM.eq.3) then
      inode_fiber=inode
     else
      print *,"dimension bust"
      stop
     endif  
-    do dir=1,BL_SPACEDIM
+    do dir=1,AMREX_SPACEDIM
      xval(dir)=ctml_fib_pst(ctml_part_id,inode_fiber,dir)
      vel_local(dir)=ctml_fib_vel(ctml_part_id,inode_fiber,dir)
     enddo
     do dir=1,6
      stress_local(dir)=zero
     enddo
-    do dir=1,2*BL_SPACEDIM
+    do dir=1,2*AMREX_SPACEDIM
      stress_local(dir)=ctml_fib_frc(ctml_part_id,inode_fiber,dir)
     enddo
     mass_local=ctml_fib_mass(ctml_part_id,inode_fiber)
@@ -1419,9 +1419,9 @@ INTEGER_T :: ctml_part_id
      stop
     endif
 
-    if (BL_SPACEDIM.eq.3) then
+    if (AMREX_SPACEDIM.eq.3) then
      ! do nothing
-    else if (BL_SPACEDIM.eq.2) then
+    else if (AMREX_SPACEDIM.eq.2) then
      vel_local(3)=zero
      if (inode.eq.inode_fiber) then
       xval(3)=problo_act(3)+problen_act(3)/ten
@@ -1599,10 +1599,10 @@ INTEGER_T :: inode_crit,inode
     stop
    endif
 
-   if (BL_SPACEDIM.eq.3) then
+   if (AMREX_SPACEDIM.eq.3) then
     node_factor=1
     print *,"3D not supported yet"
-   else if (BL_SPACEDIM.eq.2) then
+   else if (AMREX_SPACEDIM.eq.2) then
     node_factor=2
    else
     print *,"dimension bust"
@@ -1633,10 +1633,10 @@ INTEGER_T :: inode_crit,inode
    call CTML_init_sci_node(ioproc,part_id,isout)
 
    do iface=1,FSI(part_id)%NumIntElems
-    if (BL_SPACEDIM.eq.3) then
+    if (AMREX_SPACEDIM.eq.3) then
      print *,"3d not ready yet"
      stop
-    else if (BL_SPACEDIM.eq.2) then
+    else if (AMREX_SPACEDIM.eq.2) then
      if (iface.le.ctml_n_fib_active_nodes(ctml_part_id)-1) then
       inode_base=iface
       FSI(part_id)%IntElem(1,iface)=inode_base
@@ -1796,9 +1796,9 @@ REAL_T :: radradblob1,radradblob2
 
      if ((probtype.eq.538).or.(probtype.eq.541)) then
       if (FSI(part_id)%partID.eq.2) then !want the whole needle in the domain.
-       if ((BL_SPACEDIM.eq.3).or.(probtype.eq.538)) then
+       if ((AMREX_SPACEDIM.eq.3).or.(probtype.eq.538)) then
         newxxblob1(3)=0.01
-       else if ((BL_SPACEDIM.eq.2).and.(probtype.eq.541)) then
+       else if ((AMREX_SPACEDIM.eq.2).and.(probtype.eq.541)) then
         newxxblob1(3)=0.0
        endif
       else if (FSI(part_id)%partID.eq.1) then
@@ -1873,9 +1873,9 @@ REAL_T :: radradblob1,radradblob2
     enddo
 
     do inode=1,FSI(part_id)%NumNodes/2
-     if ((probtype.ne.541).or.(BL_SPACEDIM.eq.3)) then
+     if ((probtype.ne.541).or.(AMREX_SPACEDIM.eq.3)) then
       READ(14,*) xval(1),xval(2),xval(3)
-     else if ((probtype.eq.541).and.(BL_SPACEDIM.eq.2)) then
+     else if ((probtype.eq.541).and.(AMREX_SPACEDIM.eq.2)) then
       READ(14,*) xval(1),xval(3),xval(2)
      endif
 
@@ -5251,7 +5251,7 @@ REAL_T dist_scale,df,support_size,line_mass
 
    if ((xmap3D(dir).eq.1).or. &
        (xmap3D(dir).eq.2).or. &
-       (xmap3D(dir).eq.BL_SPACEDIM)) then
+       (xmap3D(dir).eq.AMREX_SPACEDIM)) then
     dist_scale=abs(xc(dir)-xtarget(dir))/dx(dir)
     if (CTML_FSI_flagF(nmat).eq.1) then
 #ifdef MVAHABFSI
@@ -5273,7 +5273,7 @@ REAL_T dist_scale,df,support_size,line_mass
      print *,"df invalid"
      stop
     endif
-   else if ((xmap3D(dir).eq.0).and.(BL_SPACEDIM.eq.2)) then
+   else if ((xmap3D(dir).eq.0).and.(AMREX_SPACEDIM.eq.2)) then
     ! do nothing
    else
     print *,"xmap3D(dir) invalid"
@@ -5875,10 +5875,10 @@ INTEGER_T :: dir,inode,num_nodes
     if ((ctml_part_id.gt.0).and. &
         (ctml_part_id.le.CTML_NPARTS)) then
      do inode=1,ctml_n_fib_nodes(ctml_part_id)
-      do dir=1,BL_SPACEDIM
+      do dir=1,AMREX_SPACEDIM
        ctml_fib_vel(ctml_part_id,inode,dir)=zero
       enddo
-      do dir=1,2*BL_SPACEDIM
+      do dir=1,2*AMREX_SPACEDIM
        ctml_fib_frc(ctml_part_id,inode,dir)=zero
       enddo
       ctml_fib_mass(ctml_part_id,inode)=one
@@ -6009,7 +6009,7 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
         (ctml_part_id.le.CTML_NPARTS)) then
      do inode_fiber=1,ctml_n_fib_active_nodes(ctml_part_id)
       inode=inode_fiber
-      do dir=1,BL_SPACEDIM
+      do dir=1,AMREX_SPACEDIM
        ctml_fib_vel(ctml_part_id,inode_fiber,dir)= &
         FSI(part_id)%NodeVel(dir,inode)
       enddo
@@ -6076,7 +6076,7 @@ INTEGER_T :: nparts_in
 INTEGER_T im_solid_map_in(nparts_in)
 INTEGER_T :: initflag,ioproc,isout
 INTEGER_T :: CTML_FSI_INIT
-REAL_T :: dx_maxlevel(BL_SPACEDIM)
+REAL_T :: dx_maxlevel(AMREX_SPACEDIM)
 REAL_T :: h_small
 REAL_T :: CLSVOFtime
 REAL_T problo(3),probhi(3)
@@ -6157,7 +6157,7 @@ INTEGER_T im_sanity_check
     stop
    endif
   enddo ! dir=1..3
-  do dir=1,BL_SPACEDIM
+  do dir=1,AMREX_SPACEDIM
    problo_ref(dir)=problo(dir)
    probhi_ref(dir)=probhi(dir)
    problen_ref(dir)=probhi(dir)-problo(dir)
@@ -6169,7 +6169,7 @@ INTEGER_T im_sanity_check
     print *,"dx_maxlevel(dir).le.zero"
     stop
    endif
-  enddo ! dir=1..BL_SPACEDIM
+  enddo ! dir=1..AMREX_SPACEDIM
 
   use_temp=0
 
@@ -6185,10 +6185,10 @@ INTEGER_T im_sanity_check
      call CTML_GET_FIB_NODE_COUNT( &
       ctml_n_fib_bodies, &
       ctml_n_fib_nodes)
-     allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes,BL_SPACEDIM))
-     allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes,BL_SPACEDIM))
+     allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes,AMREX_SPACEDIM))
+     allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes,AMREX_SPACEDIM))
      allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-       2*BL_SPACEDIM))
+       2*AMREX_SPACEDIM))
      allocate(ctml_fib_mass(ctml_n_fib_bodies,ctml_max_n_fib_nodes))
     else
      print *,"ctml_n_fib_bodies out of range"
@@ -10605,10 +10605,10 @@ IMPLICIT NONE
      if ((ctml_part_id.gt.0).and. &
          (ctml_part_id.le.CTML_NPARTS)) then
 
-      if (BL_SPACEDIM.eq.3) then
+      if (AMREX_SPACEDIM.eq.3) then
        node_factor=1
        print *,"3D not supported yet"
-      else if (BL_SPACEDIM.eq.2) then
+      else if (AMREX_SPACEDIM.eq.2) then
        node_factor=2
       else
        print *,"dimension bust"

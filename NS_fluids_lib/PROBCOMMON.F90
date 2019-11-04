@@ -1,12 +1,12 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"

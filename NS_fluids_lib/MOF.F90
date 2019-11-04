@@ -5,9 +5,9 @@
 
 #define STANDALONE 0
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
 
 #if (STANDALONE==0)
 #include "MOF_F.H"
@@ -7701,7 +7701,7 @@ end subroutine volume_sanity_check
        print *,"levelrz invalid get volume 2"
        stop
       endif
-      if (BL_SPACEDIM.ne.sdim) then
+      if (AMREX_SPACEDIM.ne.sdim) then
        print *,"dimension mismatch"
        stop
       endif
@@ -7789,7 +7789,7 @@ end subroutine volume_sanity_check
        print *,"levelrz invalid get volume batch"
        stop
       endif 
-      if (BL_SPACEDIM.ne.sdim) then
+      if (AMREX_SPACEDIM.ne.sdim) then
        print *,"dimension mismatch"
        stop
       endif

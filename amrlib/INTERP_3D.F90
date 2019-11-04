@@ -14,9 +14,9 @@
 #define POLYGON_LIST_MAX (1000)
 
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -1156,7 +1156,7 @@ stop
        print *,"nten invalid"
        stop
       endif
-      if (nburning.eq.nten*(BL_SPACEDIM+1)) then
+      if (nburning.eq.nten*(AMREX_SPACEDIM+1)) then
        ! do nothing
       else
        print *,"nburning invalid"
@@ -1739,7 +1739,7 @@ stop
       cdlo(2)=ARG_L2(crse)
       cdhi(1)=ARG_H1(crse)
       cdhi(2)=ARG_H2(crse)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       cdlo(SDIM)=ARG_L3(crse)
       cdhi(SDIM)=ARG_H3(crse)
 #endif

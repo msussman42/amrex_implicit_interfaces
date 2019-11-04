@@ -1,18 +1,19 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
 #include "PROB_AMR_F.H"
 #include "PROB_F.H"
 #include "LEVEL_F.H"
-#include "ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -11683,7 +11684,7 @@ END SUBROUTINE Adist
           jstar=j
          endif
         enddo
-        if (BL_SPACEDIM.eq.2) then
+        if (AMREX_SPACEDIM.eq.2) then
          zval=half*zpos_velbc(ipos_velbc)
         endif
         if (zval.ge.zpos_velbc(ipos_velbc)) then
@@ -33821,12 +33822,12 @@ end subroutine initialize2d
 
       fablo(1)=ARG_L1(u)
       fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       fablo(SDIM)=ARG_L3(u)
 #endif
       fabhi(1)=ARG_H1(u)
       fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       fabhi(SDIM)=ARG_H3(u)
 #endif
       do dir2=1,SDIM
@@ -33955,12 +33956,12 @@ end subroutine initialize2d
 
       fablo(1)=ARG_L1(u)
       fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       fablo(SDIM)=ARG_L3(u)
 #endif
       fabhi(1)=ARG_H1(u)
       fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       fabhi(SDIM)=ARG_H3(u)
 #endif
       do dir2=1,SDIM
@@ -34127,12 +34128,12 @@ end subroutine initialize2d
 
       fablo(1)=ARG_L1(u)
       fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       fablo(SDIM)=ARG_L3(u)
 #endif
       fabhi(1)=ARG_H1(u)
       fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       fabhi(SDIM)=ARG_H3(u)
 #endif
       do dir2=1,SDIM
@@ -34279,12 +34280,12 @@ end subroutine initialize2d
 
       fablo(1)=ARG_L1(u)
       fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       fablo(SDIM)=ARG_L3(u)
 #endif
       fabhi(1)=ARG_H1(u)
       fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       fabhi(SDIM)=ARG_H3(u)
 #endif
       do dir2=1,SDIM
@@ -34511,7 +34512,7 @@ end subroutine initialize2d
           growloMAC,growhiMAC,0,dir) 
 
       if (project_option.eq.3) then ! viscosity
-       if (nsolve.ne.BL_SPACEDIM) then
+       if (nsolve.ne.AMREX_SPACEDIM) then
         print *,"nsolve invalid"
         stop
        endif
@@ -34885,12 +34886,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
        velcomp=1
@@ -35068,12 +35069,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
        velcomp=2
@@ -35189,7 +35190,7 @@ end subroutine initialize2d
        end subroutine FORT_VMACFILL
 
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        subroutine FORT_WMACFILL ( &
         level, &
         u,DIMS(u), &
@@ -35224,7 +35225,7 @@ end subroutine initialize2d
         print *,"dimension bust"
         stop
        endif
-       if (BL_SPACEDIM.ne.3) then
+       if (AMREX_SPACEDIM.ne.3) then
         print *,"dimension bust"
         stop
        endif
@@ -35261,15 +35262,15 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
-       velcomp=BL_SPACEDIM
+       velcomp=AMREX_SPACEDIM
        veldir=velcomp-1
 
        do dir2=1,SDIM
@@ -35479,12 +35480,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
        nmat=num_materials
@@ -35656,12 +35657,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
        nmat=num_materials
@@ -35898,12 +35899,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
@@ -36131,12 +36132,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
@@ -36275,16 +36276,16 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
-       do icomp=1,(BL_SPACEDIM+1)*nten
+       do icomp=1,(AMREX_SPACEDIM+1)*nten
         call filcc(bfact, &
          u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
          DIMS(u), &
@@ -36305,7 +36306,7 @@ end subroutine initialize2d
        do dir2=1,SDIM
        do side=1,2
 
-       do icomp=1,(BL_SPACEDIM+1)*nten
+       do icomp=1,(AMREX_SPACEDIM+1)*nten
 
         borderlo(3)=0
         borderhi(3)=0
@@ -36413,12 +36414,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
@@ -36580,12 +36581,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
@@ -36727,12 +36728,12 @@ end subroutine initialize2d
 
         fablo(1)=ARG_L1(u)
         fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         fablo(SDIM)=ARG_L3(u)
 #endif
         fabhi(1)=ARG_H1(u)
         fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         fabhi(SDIM)=ARG_H3(u)
 #endif
 
@@ -36859,12 +36860,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
@@ -36998,12 +36999,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
@@ -37133,12 +37134,12 @@ end subroutine initialize2d
 
        fablo(1)=ARG_L1(u)
        fablo(2)=ARG_L2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fablo(SDIM)=ARG_L3(u)
 #endif
        fabhi(1)=ARG_H1(u)
        fabhi(2)=ARG_H2(u)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
@@ -40888,7 +40889,7 @@ end subroutine initialize2d
       
        if (ractivex.gt.zero) then
         if ((abs(x-xactive).gt.ractivex).or. &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
             (abs(z-zactive).gt.ractivez).or. &
 #endif
             (abs(y-yactive).gt.ractivey)) then
@@ -40899,7 +40900,7 @@ end subroutine initialize2d
        if (nblocks.gt.0) then
         do np=1,nblocks
          if ((abs(x-xblocks(np)).le.rxblocks(np)).and. &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
              (abs(z-zblocks(np)).le.rzblocks(np)).and. &
 #endif
              (abs(y-yblocks(np)).le.ryblocks(np))) then
@@ -40912,7 +40913,7 @@ end subroutine initialize2d
         if (((probtype.eq.541).and.(level.gt.3)).or.(probtype.ne.541)) then
          do np=1,ncoarseblocks
           if ((abs(x-xcoarseblocks(np)).ge.rxcoarseblocks(np)).or. &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
               (abs(z-zcoarseblocks(np)).ge.rzcoarseblocks(np)).or. &
 #endif
               (abs(y-ycoarseblocks(np)).ge.rycoarseblocks(np))) then

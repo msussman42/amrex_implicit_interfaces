@@ -667,14 +667,14 @@
       js = max(ARG_L2(q),domlo(2))
       je = min(ARG_H2(q),domhi(2))
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       ks = max(ARG_L3(q),domlo(SDIM))
       ke = min(ARG_H3(q),domhi(SDIM))
       ndwn = max(0,domlo(SDIM)-ARG_L3(q))
       nup  = max(0,ARG_H3(q)-domhi(SDIM))
       kfirst=ARG_L3(q)
       klast=ARG_H3(q)
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       ks=0
       ke=0
       kfirst=0

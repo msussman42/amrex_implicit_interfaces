@@ -3,21 +3,22 @@
 #define BL_LANG_FORT
 #endif
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
 stop
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
 #include "CTMLFSI_F.H"
-#include "ArrayLim.H"
-#include "SPACE.H"
 
       module CTML_module
       use probf90_module
@@ -113,7 +114,7 @@ stop
 !! ******** z direction **********
 !! if it is a 2D problem, fake it as a 3D problem!
 
-#if (BL_SPACEDIM==2)
+#if (AMREX_SPACEDIM==2)
       nzc = 2
       nz = nzc+1
       allocate( z(0:nz+1))
@@ -128,7 +129,7 @@ stop
       enddo
 
 
-#elif (BL_SPACEDIM==3)
+#elif (AMREX_SPACEDIM==3)
       nzc = (prob_hi(3) - prob_lo(3)) / dx_maxlevel(3)
       nz = nzc+1
 
@@ -299,7 +300,7 @@ stop
 
       IMPLICIT NONE
       INTEGER_T nparts,max_n_fib_nodes
-      REAL_T fib_vel(nparts,max_n_fib_nodes,BL_SPACEDIM)
+      REAL_T fib_vel(nparts,max_n_fib_nodes,AMREX_SPACEDIM)
       INTEGER_T ifib,inode,idir
 
       if (1.eq.1) then

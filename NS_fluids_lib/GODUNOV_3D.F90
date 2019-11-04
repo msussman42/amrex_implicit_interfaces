@@ -3,17 +3,18 @@
 #define BL_LANG_FORT
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
 #include "GODUNOV_F.H"
-#include "ArrayLim.H"
 
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else
 print *,"dimension bust"
@@ -3434,7 +3435,7 @@ stop
         Q(D_DECL(i1,j1,k1),1,2)=tensor(D_DECL(i+i1,j+j1,k+k1),2)
         Q(D_DECL(i1,j1,k1),2,2)=tensor(D_DECL(i+i1,j+j1,k+k1),3)
         Q(D_DECL(i1,j1,k1),3,3)=tensor(D_DECL(i+i1,j+j1,k+k1),4)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         Q(D_DECL(i1,j1,k1),1,3)=tensor(D_DECL(i+i1,j+j1,k+k1),5)
         Q(D_DECL(i1,j1,k1),2,3)=tensor(D_DECL(i+i1,j+j1,k+k1),6)
 #endif
@@ -3625,7 +3626,7 @@ stop
               Q(D_DECL(0,0,0),1,2))/two- &
          tmy*(Q(D_DECL(0,-1,0),1,2)+ &
               Q(D_DECL(0,0,0),1,2))/two)/hy
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        force(dir)=force(dir)+ &
         (tpz*(Q(0,0,1,1,3)+ &
               Q(0,0,0,1,3))/two- &
@@ -3664,7 +3665,7 @@ stop
               Q(D_DECL(0,0,0),2,2))/two- &
          tmy*(Q(D_DECL(0,-1,0),2,2)+ &
               Q(D_DECL(0,0,0),2,2))/two)/hy
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        force(dir)=force(dir)+ &
         (tpz*(Q(0,0,1,2,3)+ &
               Q(0,0,0,2,3))/two- &
@@ -3690,7 +3691,7 @@ stop
        endif 
 
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        dir=3
        force(dir)= &
         (tpx*(Q(1,0,0,3,1)+ &
@@ -3706,7 +3707,7 @@ stop
          tmz*(Q(0,0,-1,3,3)+ &
               Q(0,0,0,3,3))/two)/hz
 
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
          ! do nothing
 #else
        print *,"dimension bust"
@@ -3965,7 +3966,7 @@ stop
        Q(1,2)=tensor(D_DECL(i,j,k),2)
        Q(2,2)=tensor(D_DECL(i,j,k),3)
        Q(3,3)=tensor(D_DECL(i,j,k),4)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        Q(1,3)=tensor(D_DECL(i,j,k),5)
        Q(2,3)=tensor(D_DECL(i,j,k),6)
 #endif
@@ -9039,7 +9040,7 @@ stop
        Q(1,2)=tensor(D_DECL(i,j,k),2)
        Q(2,2)=tensor(D_DECL(i,j,k),3)
        Q(3,3)=tensor(D_DECL(i,j,k),4)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        Q(1,3)=tensor(D_DECL(i,j,k),5)
        Q(2,3)=tensor(D_DECL(i,j,k),6)
 #endif
@@ -9072,7 +9073,7 @@ stop
        tensor(D_DECL(i,j,k),2)=TQ(1,2)
        tensor(D_DECL(i,j,k),3)=TQ(2,2)
        tensor(D_DECL(i,j,k),4)=TQ(3,3)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        tensor(D_DECL(i,j,k),5)=TQ(1,3)
        tensor(D_DECL(i,j,k),6)=TQ(2,3)
 #endif
@@ -9605,7 +9606,7 @@ stop
        Q(1,2)=told(D_DECL(i,j,k),2)
        Q(2,2)=told(D_DECL(i,j,k),3)
        Q(3,3)=told(D_DECL(i,j,k),4)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        Q(1,3)=told(D_DECL(i,j,k),5)
        Q(2,3)=told(D_DECL(i,j,k),6)
 #endif
@@ -9852,7 +9853,7 @@ stop
        tnew(D_DECL(i,j,k),2)=Q(1,2)
        tnew(D_DECL(i,j,k),3)=Q(2,2)
        tnew(D_DECL(i,j,k),4)=Q(3,3)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        tnew(D_DECL(i,j,k),5)=Q(1,3)
        tnew(D_DECL(i,j,k),6)=Q(2,3)
 #endif
@@ -10144,7 +10145,7 @@ stop
          Q(1,2)=told(D_DECL(i+i1,j+j1,k+k1),2)
          Q(2,2)=told(D_DECL(i+i1,j+j1,k+k1),3)
          Q(3,3)=told(D_DECL(i+i1,j+j1,k+k1),4)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
          Q(1,3)=told(D_DECL(i+i1,j+j1,k+k1),5)
          Q(2,3)=told(D_DECL(i+i1,j+j1,k+k1),6)
 #endif
@@ -10199,7 +10200,7 @@ stop
         tnew(D_DECL(i,j,k),2)=Q(1,2)
         tnew(D_DECL(i,j,k),3)=Q(2,2)
         tnew(D_DECL(i,j,k),4)=Q(3,3)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         tnew(D_DECL(i,j,k),5)=Q(1,3)
         tnew(D_DECL(i,j,k),6)=Q(2,3)
 #endif
@@ -18570,9 +18571,9 @@ stop
       REAL_T mask(DIMV(mask))
       REAL_T masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
       REAL_T maskunsplit(DIMV(maskunsplit))
-      REAL_T unode(DIMV(unode),BL_SPACEDIM+1)
-      REAL_T vnode(DIMV(vnode),BL_SPACEDIM+1)
-      REAL_T wnode(DIMV(wnode),BL_SPACEDIM+1)
+      REAL_T unode(DIMV(unode),AMREX_SPACEDIM+1)
+      REAL_T vnode(DIMV(vnode),AMREX_SPACEDIM+1)
+      REAL_T wnode(DIMV(wnode),AMREX_SPACEDIM+1)
        ! local variables
       REAL_T conserve(DIMV(conserve),nc_conserve)
       REAL_T xvel(DIMV(xvel)) 
@@ -26107,7 +26108,7 @@ stop
        stop
       endif
       num_materials_face=num_materials_vel
-      if (nsolve.eq.BL_SPACEDIM) then
+      if (nsolve.eq.AMREX_SPACEDIM) then
        ! do nothing
       else if (nsolve.eq.1) then
        num_materials_face=num_materials_scalar_solve

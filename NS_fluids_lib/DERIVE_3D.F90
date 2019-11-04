@@ -3,17 +3,18 @@
 #define BL_LANG_FORT
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
 #include "DERIVE_F.H"
 #include "PROB_F.H"
-#include "ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else
 print *,"dimension bust"
@@ -475,11 +476,11 @@ stop
 ! ( iproject==0 if called from NavierStokes::tensor_advection_update() )
        if (iproject.eq.1) then
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         a=(two*gradu(1,1)-gradu(2,2)-gradu(3,3))/three
         b=(two*gradu(2,2)-gradu(1,1)-gradu(3,3))/three
         c=(two*gradu(3,3)-gradu(1,1)-gradu(2,2))/three
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
         a=(gradu(1,1)-gradu(2,2)-gradu(3,3))/two
         b=(gradu(2,2)-gradu(1,1)-gradu(3,3))/two
         c=gradu(3,3)
@@ -501,11 +502,11 @@ stop
        enddo
        enddo
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        shear=visctensor(1,1)**2+visctensor(2,2)**2+ &
           visctensor(3,3)**2+two*(visctensor(1,2)**2)+ &
           two*(visctensor(1,3)**2)+two*(visctensor(2,3)**2)
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
        shear=visctensor(1,1)**2+visctensor(2,2)**2+ &
           visctensor(3,3)**2+two*(visctensor(1,2)**2)
 #else
@@ -815,7 +816,7 @@ stop
           Q(1,2)=tensor(D_DECL(i,j,k),2)
           Q(2,2)=tensor(D_DECL(i,j,k),3)
           Q(3,3)=tensor(D_DECL(i,j,k),4)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           Q(1,3)=tensor(D_DECL(i,j,k),5)
           Q(2,3)=tensor(D_DECL(i,j,k),6)
 #endif
@@ -2130,7 +2131,7 @@ stop
                  Q(3,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+4)
                  Q(1,3)=zero
                  Q(2,3)=zero
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
                  Q(1,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+5)
                  Q(2,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+6)
 #endif

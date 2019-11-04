@@ -38,8 +38,8 @@
       INTEGER_T check_for_singular
       REAL_T offdiag_coeff
       REAL_T diag_regularization
-      INTEGER_T tilelo(BL_SPACEDIM), tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM), fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3), growhi(3)
       INTEGER_T bfact,bfact_top
       INTEGER_T DIMDEC(phi)
@@ -118,7 +118,7 @@
          bxright(D_DECL(i,j,k))*phi(D_DECL(i+1,j,k))+ &
          byleft(D_DECL(i,j,k))*phi(D_DECL(i,j-1,k))+ &
          byright(D_DECL(i,j,k))*phi(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         +bzleft(D_DECL(i,j,k))*phi(D_DECL(i,j,k-1))+ &
          bzright(i,j,k)*phi(D_DECL(i,j,k+1)) &
 #endif
@@ -150,7 +150,7 @@
            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
 #endif
@@ -221,7 +221,7 @@
            bxright(D_DECL(i,j,k))*redsoln(D_DECL(i+1,j,k))+ &
            byleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))+ &
            byright(D_DECL(i,j,k))*redsoln(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k+1)) &
 #endif
@@ -257,7 +257,7 @@
            bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
            byleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j-1,k))+ &
            byright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k+1)) &
 #endif
@@ -295,7 +295,7 @@
            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
 #endif
@@ -367,7 +367,7 @@
            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
 #endif
@@ -387,8 +387,8 @@
           if (j.gt.tilelo(2)) then
            YY=YY-icby(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))
           endif
-#if (BL_SPACEDIM==3)
-          if (k.gt.tilelo(BL_SPACEDIM)) then
+#if (AMREX_SPACEDIM==3)
+          if (k.gt.tilelo(AMREX_SPACEDIM)) then
            YY=YY-icbz(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))
           endif
 #endif
@@ -418,8 +418,8 @@
           if (j.lt.tilehi(2)) then
            XX=XX-icby(D_DECL(i,j+1,k))*redsoln(D_DECL(i,j+1,k))
           endif
-#if (BL_SPACEDIM==3)
-          if (k.lt.tilehi(BL_SPACEDIM)) then
+#if (AMREX_SPACEDIM==3)
+          if (k.lt.tilehi(AMREX_SPACEDIM)) then
            XX=XX-icbz(D_DECL(i,j,k+1))*redsoln(D_DECL(i,j,k+1))
           endif
 #endif
@@ -455,7 +455,7 @@
            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
 #endif
@@ -508,7 +508,7 @@
            bxright(D_DECL(i,j,k))*redsoln(D_DECL(i+1,j,k))+ &
            byleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))+ &
            byright(D_DECL(i,j,k))*redsoln(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k+1)) &
 #endif
@@ -544,7 +544,7 @@
            bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
            byleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j-1,k))+ &
            byright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j+1,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
           +bzleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k+1)) &
 #endif
@@ -609,8 +609,8 @@
       INTEGER_T check_for_singular
       REAL_T offdiag_coeff
       REAL_T diag_regularization
-      INTEGER_T tilelo(BL_SPACEDIM), tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM), fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3), growhi(3)
       INTEGER_T bfact,bfact_top
       INTEGER_T DIMDEC(y)
@@ -677,7 +677,7 @@
         diagsing(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
         bxleft(D_DECL(i,j,k))*x(D_DECL(i-1,j,k))- &
         bxright(D_DECL(i,j,k))*x(D_DECL(i+1,j,k)) &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         -bzleft(D_DECL(i,j,k))*x(D_DECL(i,j,k-1))- &
         bzright(D_DECL(i,j,k))*x(D_DECL(i,j,k+1)) &
 #endif
@@ -706,8 +706,8 @@
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T tilelo(BL_SPACEDIM), tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM), fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3), growhi(3)
       INTEGER_T bfact,bfact_top
       INTEGER_T DIMDEC(y)
@@ -748,7 +748,7 @@
       ,0,1,21)
       call checkbound(fablo,fabhi, &
       DIMS(bZ) &
-      ,0,BL_SPACEDIM-1,22)
+      ,0,AMREX_SPACEDIM-1,22)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -763,7 +763,7 @@
        bzright=bZ(D_DECL(i,j,k+1))
 
        offdiagsum=bxleft+bxright &
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
         +bzleft+bzright &
 #endif
         +byleft+byright

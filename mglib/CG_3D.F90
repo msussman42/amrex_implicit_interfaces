@@ -4,11 +4,12 @@
 #define BL_LANG_FORT
 #endif
 
-#include "SPACE.H"
-#include <REAL.H>
-#include <CONSTANTS.H>
+#include "AMReX_SPACE.H"
+#include <AMReX_REAL.H>
+#include <AMReX_CONSTANTS.H>
+#include "AMReX_ArrayLim.H"
+
 #include "CG_F.H"
-#include "ArrayLim.H"
 
 !-----------------------------------------------------------------------
 !      
@@ -30,10 +31,10 @@
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T tilelo(BL_SPACEDIM)
-      INTEGER_T tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM)
-      INTEGER_T fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM)
+      INTEGER_T tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM)
+      INTEGER_T fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T bfact,bfact_top
@@ -93,10 +94,10 @@
       use global_utility_module
       IMPLICIT NONE
 !
-      INTEGER_T tilelo(BL_SPACEDIM)
-      INTEGER_T tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM)
-      INTEGER_T fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM)
+      INTEGER_T tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM)
+      INTEGER_T fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T bfact,bfact_top
@@ -162,10 +163,10 @@
       use global_utility_module
       IMPLICIT NONE
       INTEGER_T ncomp
-      INTEGER_T tilelo(BL_SPACEDIM)
-      INTEGER_T tilehi(BL_SPACEDIM)
-      INTEGER_T fablo(BL_SPACEDIM)
-      INTEGER_T fabhi(BL_SPACEDIM)
+      INTEGER_T tilelo(AMREX_SPACEDIM)
+      INTEGER_T tilehi(AMREX_SPACEDIM)
+      INTEGER_T fablo(AMREX_SPACEDIM)
+      INTEGER_T fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T bfact,bfact_top
@@ -185,7 +186,7 @@
        print *,"bfact_top invalid"
        stop
       endif
-      if ((ncomp.ne.1).and.(ncomp.ne.BL_SPACEDIM)) then
+      if ((ncomp.ne.1).and.(ncomp.ne.AMREX_SPACEDIM)) then
        print *,"ncomp invalid"
        stop
       endif
