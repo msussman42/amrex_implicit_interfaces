@@ -146,7 +146,7 @@ extern "C"
 
     void FORT_RESTORE_PRES(
         Real* offdiagcheck,
-	ARLIM_P(offdiagchecklo),AMREX_ARLIM_P(offdiagcheckhi),
+	AMREX_ARLIM_P(offdiagchecklo),AMREX_ARLIM_P(offdiagcheckhi),
         Real* savepres,AMREX_ARLIM_P(savepreslo),AMREX_ARLIM_P(savepreshi),
         Real* newpres,AMREX_ARLIM_P(newpreslo),AMREX_ARLIM_P(newpreshi),
         const int *tilelo, const int *tilehi,
