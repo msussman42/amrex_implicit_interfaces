@@ -14,13 +14,13 @@
 #  endif
 #  endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
 extern "C" {
 
     void FORT_TECPLOTFAB(
      Real* time,
-     Real* fabdata,ARLIM_P(fabdatalo),ARLIM_P(fabdatahi),
+     Real* fabdata,AMREX_ARLIM_P(fabdatalo),AMREX_ARLIM_P(fabdatahi),
      const int* growlo,const int* growhi,
      const int* fablo,const int* fabhi,
      int* bfact,

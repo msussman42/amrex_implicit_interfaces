@@ -14,7 +14,7 @@
 #  endif
 #  endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
   extern "C" {
 
@@ -30,18 +30,18 @@
         Real* prev_time_slab,
         const Real* xlo,
         const Real* dx,
-        Real* maskfine,ARLIM_P(maskfinelo),ARLIM_P(maskfinehi),//1=fine/fine
-        Real* maskcov,ARLIM_P(maskcovlo),ARLIM_P(maskcovhi),//1=not covered
-        Real* ax,ARLIM_P(axlo),ARLIM_P(axhi), 
-        Real* vol,ARLIM_P(vollo),ARLIM_P(volhi), 
-        Real* xflux,ARLIM_P(xfluxlo),ARLIM_P(xfluxhi), 
-        Real* velfab,ARLIM_P(velfablo),ARLIM_P(velfabhi), 
-        Real* lsfab,ARLIM_P(lsfablo),ARLIM_P(lsfabhi), 
-        Real* snewfab,ARLIM_P(snewfablo),ARLIM_P(snewfabhi), 
-        Real* soldfab,ARLIM_P(soldfablo),ARLIM_P(soldfabhi), 
-        Real* lsnewfab,ARLIM_P(lsnewfablo),ARLIM_P(lsnewfabhi), 
-        Real* lsoldfab,ARLIM_P(lsoldfablo),ARLIM_P(lsoldfabhi), 
-        Real* xmacnew,ARLIM_P(xmacnewlo),ARLIM_P(xmacnewhi), 
+        Real* maskfine,AMREX_ARLIM_P(maskfinelo),AMREX_ARLIM_P(maskfinehi),//1=fine/fine
+        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),//1=not covered
+        Real* ax,AMREX_ARLIM_P(axlo),AMREX_ARLIM_P(axhi), 
+        Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi), 
+        Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi), 
+        Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi), 
+        Real* lsfab,AMREX_ARLIM_P(lsfablo),AMREX_ARLIM_P(lsfabhi), 
+        Real* snewfab,AMREX_ARLIM_P(snewfablo),AMREX_ARLIM_P(snewfabhi), 
+        Real* soldfab,AMREX_ARLIM_P(soldfablo),AMREX_ARLIM_P(soldfabhi), 
+        Real* lsnewfab,AMREX_ARLIM_P(lsnewfablo),AMREX_ARLIM_P(lsnewfabhi), 
+        Real* lsoldfab,AMREX_ARLIM_P(lsoldfablo),AMREX_ARLIM_P(lsoldfabhi), 
+        Real* xmacnew,AMREX_ARLIM_P(xmacnewlo),AMREX_ARLIM_P(xmacnewhi), 
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
         int* bfact,

@@ -27,22 +27,22 @@
 extern "C"
 {
      void FORT_NS_BASICSTATS_NCTRAC (const Real* src, 
-                                       ARLIM_P(src_lo), ARLIM_P(src_hi),
-                                     const int* nsrc,
-                                     Real* dst, 
-                                       ARLIM_P(dst_lo), ARLIM_P(dst_hi),
-                                     const int* ndst,
-                                     const Real* dt,
-                                     const Real* dx);
+        AMREX_ARLIM_P(src_lo),AMREX_ARLIM_P(src_hi),
+        const int* nsrc,
+        Real* dst, 
+        AMREX_ARLIM_P(dst_lo),AMREX_ARLIM_P(dst_hi),
+        const int* ndst,
+        const Real* dt,
+        const Real* dx);
 
      void FORT_NS_BASICSTATS_CTRAC (const Real* src, 
-                                      ARLIM_P(src_lo), ARLIM_P(src_hi),
-                                    const int* nsrc,
-                                    Real* dst, 
-                                      ARLIM_P(dst_lo), ARLIM_P(dst_hi),
-                                    const int* ndst,
-                                    const Real* dt,
-                                    const Real* dx);
+      AMREX_ARLIM_P(src_lo),AMREX_ARLIM_P(src_hi),
+      const int* nsrc,
+      Real* dst, 
+      AMREX_ARLIM_P(dst_lo),AMREX_ARLIM_P(dst_hi),
+      const int* ndst,
+      const Real* dt,
+      const Real* dx);
 }
 
 #endif

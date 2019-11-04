@@ -26,7 +26,7 @@
 #  endif
 #  endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
 extern "C"
 {
@@ -34,17 +34,17 @@ extern "C"
       int* override_density,
       Real* gravity_normalized,
       int* gravity_dir,
-      Real *force, ARLIM_P(forcelo), ARLIM_P(forcehi),
-      Real *tensor, ARLIM_P(tensorlo), ARLIM_P(tensorhi),
-      Real *thermal, ARLIM_P(thermallo), ARLIM_P(thermalhi),
-      Real *recon, ARLIM_P(reconlo), ARLIM_P(reconhi),
-      Real *sol, ARLIM_P(sollo), ARLIM_P(solhi),
+      Real *force,AMREX_ARLIM_P(forcelo),AMREX_ARLIM_P(forcehi),
+      Real *tensor,AMREX_ARLIM_P(tensorlo),AMREX_ARLIM_P(tensorhi),
+      Real *thermal,AMREX_ARLIM_P(thermallo),AMREX_ARLIM_P(thermalhi),
+      Real *recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
+      Real *sol,AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
       const Real *xlo,const Real* dx,
-      Real *uold, ARLIM_P(uoldlo), ARLIM_P(uoldhi),
-      Real *unew, ARLIM_P(unewlo), ARLIM_P(unewhi),
-      Real *lsnew, ARLIM_P(lsnewlo), ARLIM_P(lsnewhi),
-      Real *den, ARLIM_P(denlo), ARLIM_P(denhi),  
-      Real *mu, ARLIM_P(mulo), ARLIM_P(muhi),
+      Real *uold,AMREX_ARLIM_P(uoldlo),AMREX_ARLIM_P(uoldhi),
+      Real *unew,AMREX_ARLIM_P(unewlo),AMREX_ARLIM_P(unewhi),
+      Real *lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
+      Real *den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),  
+      Real *mu,AMREX_ARLIM_P(mulo),AMREX_ARLIM_P(muhi),
       const int* tilelo, const int* tilehi,
       const int* fablo, const int* fabhi,
       int* bfact,
@@ -65,10 +65,10 @@ extern "C"
 
 
     void FORT_COMPUTE_NEG_MOM_FORCE (
-      Real *force, ARLIM_P(forcelo), ARLIM_P(forcehi),
+      Real *force,AMREX_ARLIM_P(forcelo),AMREX_ARLIM_P(forcehi),
       const Real *xlo,const Real* dx,
-      Real *unew, ARLIM_P(unewlo), ARLIM_P(unewhi),
-      Real *den, ARLIM_P(denlo), ARLIM_P(denhi),  
+      Real *unew,AMREX_ARLIM_P(unewlo),AMREX_ARLIM_P(unewhi),
+      Real *den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),  
       const int* tilelo, const int* tilehi,
       const int* fablo, const int* fabhi,
       int* bfact,
@@ -86,14 +86,14 @@ extern "C"
 
     void FORT_THERMAL_OFFSET_FORCE (
       int* override_density,
-      Real *force, ARLIM_P(forcelo), ARLIM_P(forcehi),
-      Real *thermal, ARLIM_P(thermallo), ARLIM_P(thermalhi),
-      Real *recon, ARLIM_P(reconlo), ARLIM_P(reconhi),
+      Real *force,AMREX_ARLIM_P(forcelo),AMREX_ARLIM_P(forcehi),
+      Real *thermal,AMREX_ARLIM_P(thermallo),AMREX_ARLIM_P(thermalhi),
+      Real *recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
       const Real *xlo,const Real* dx,
-      Real *uold, ARLIM_P(uoldlo), ARLIM_P(uoldhi),
-      Real *snew, ARLIM_P(snewlo), ARLIM_P(snewhi),
-      Real *den, ARLIM_P(denlo), ARLIM_P(denhi),   // 1/den
-      Real *DEDT, ARLIM_P(DEDTlo), ARLIM_P(DEDThi), // 1/(rho cv)
+      Real *uold,AMREX_ARLIM_P(uoldlo),AMREX_ARLIM_P(uoldhi),
+      Real *snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
+      Real *den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),   // 1/den
+      Real *DEDT,AMREX_ARLIM_P(DEDTlo),AMREX_ARLIM_P(DEDThi), // 1/(rho cv)
       const int* tilelo, const int* tilehi,
       const int* fablo, const int* fabhi,
       int* bfact,

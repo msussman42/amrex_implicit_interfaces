@@ -18,7 +18,7 @@
 #  endif
 #  endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
   extern "C" {
 
@@ -42,10 +42,10 @@
      Real* probhi,
      const int* velbc,
      const int* vofbc,
-     Real* FSIdata,ARLIM_P(FSIdatalo),ARLIM_P(FSIdatahi),
-     Real* veldata,ARLIM_P(veldatalo),ARLIM_P(veldatahi),
-     Real* masknbr,ARLIM_P(masknbrlo),ARLIM_P(masknbrhi),
-     Real* maskfiner,ARLIM_P(maskfinerlo),ARLIM_P(maskfinerhi),
+     Real* FSIdata,AMREX_ARLIM_P(FSIdatalo),AMREX_ARLIM_P(FSIdatahi),
+     Real* veldata,AMREX_ARLIM_P(veldatalo),AMREX_ARLIM_P(veldatahi),
+     Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
+     Real* maskfiner,AMREX_ARLIM_P(maskfinerlo),AMREX_ARLIM_P(maskfinerhi),
      int* nFSI,
      int* nFSI_sub,
      int* ngrowFSI,

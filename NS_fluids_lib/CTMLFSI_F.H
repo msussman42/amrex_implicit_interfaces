@@ -14,15 +14,15 @@
 #  endif
 #endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
 extern "C" {
 			
  void FORT_CTMLTRANSFERFORCE( 
   const int* tilelo, const int* tilehi,
   const int* fablo, const int* fabhi, 
-  Real* velfab, ARLIM_P(velfablo), ARLIM_P(velfabhi),
-  Real* forcefab, ARLIM_P(forcefablo), ARLIM_P(forcefabhi));
+  Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),
+  Real* forcefab,AMREX_ARLIM_P(forcefablo),AMREX_ARLIM_P(forcefabhi));
 
 };
 #endif
