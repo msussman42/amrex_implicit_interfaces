@@ -9218,9 +9218,6 @@ NavierStokes::level_phase_change_rate(Array<blobclass> blobdata,
  Array<Real> blob_array;
  blob_array.resize(blob_arraysize);
 
- MultiFab* levelcolor;
- MultiFab* leveltype;
-
  int counter=0;
  for (int i=0;i<color_count;i++) {
   copy_from_blobdata(i,counter,blob_array,blobdata);
@@ -9229,13 +9226,10 @@ NavierStokes::level_phase_change_rate(Array<blobclass> blobdata,
  if (counter!=blob_arraysize)
   amrex::Error("counter invalid");
 
- levelcolor=localMF[COLOR_MF];
- leveltype=localMF[TYPE_MF];
-
- if (levelcolor->nGrow()!=1)
-  amrex::Error("levelcolor->nGrow()!=1");
- if (leveltype->nGrow()!=1)
-  amrex::Error("leveltype->nGrow()!=1");
+ if (localMF[COLOR_MF]->nGrow()!=1)
+  amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
+ if (localMF[TYPE_MF]->nGrow()!=1)
+  amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
 
  MultiFab* presmf;
  if (hydrate_flag==1) {
@@ -9297,8 +9291,8 @@ NavierStokes::level_phase_change_rate(Array<blobclass> blobdata,
     amrex::Error("burnvelfab.nComp() incorrect");
 
    FArrayBox& lsnewfab=LS_new[mfi];
-   FArrayBox& colorfab=(*levelcolor)[mfi];
-   FArrayBox& typefab=(*leveltype)[mfi];
+   FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
+   FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
    FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
    FArrayBox& presfab=(*presmf)[mfi]; 
@@ -10486,7 +10480,8 @@ NavierStokes::level_init_icemask() {
 } // subroutine level_init_icemask
 
 void
-NavierStokes::nucleate_bubbles() {
+NavierStokes::nucleate_bubbles(Array<blobclass> blobdata,
+                int color_count) {
 
  int finest_level=parent->finestLevel();
 
@@ -10512,6 +10507,28 @@ NavierStokes::nucleate_bubbles() {
  int nden=nmat*num_state_material;
  int scomp_mofvars=num_materials_vel*(BL_SPACEDIM+1)+
   nmat*num_state_material;
+
+ int blob_arraysize=num_elements_blobclass;
+
+ if (color_count!=blobdata.size())
+  amrex::Error("color_count!=blobdata.size()");
+ blob_arraysize=color_count*num_elements_blobclass;
+
+ Array<Real> blob_array;
+ blob_array.resize(blob_arraysize);
+
+ int counter=0;
+ for (int i=0;i<color_count;i++) {
+  copy_from_blobdata(i,counter,blob_array,blobdata);
+ } // i=0..color_count-1
+
+ if (counter!=blob_arraysize)
+  amrex::Error("counter invalid");
+
+ if (localMF[COLOR_MF]->nGrow()!=1)
+  amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
+ if (localMF[TYPE_MF]->nGrow()!=1)
+  amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
 
  const Real* dx = geom.CellSize();
 
@@ -10715,6 +10732,9 @@ NavierStokes::nucleate_bubbles() {
    FArrayBox& snewfab=S_new[mfi];
    FArrayBox& voffab=(*VOFMF)[mfi]; 
 
+   FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
+   FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
+
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
@@ -10748,7 +10768,16 @@ NavierStokes::nucleate_bubbles() {
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     vofbc.dataPtr(),
-    xlo,dx,&dt_slab,
+    xlo,dx,
+    &dt_slab,
+    &blob_arraysize,
+    blob_array.dataPtr(),
+    &num_elements_blobclass,
+    &color_count,
+    colorfab.dataPtr(),
+    ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
+    typefab.dataPtr(),
+    ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),

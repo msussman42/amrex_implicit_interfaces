@@ -26,7 +26,7 @@
 #  endif
 #  endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
 
 extern "C"
 {
@@ -58,16 +58,16 @@ extern "C"
     Real* dt,
     Real* delta_mass,
     Real* DVOF,
-    Real* maskcov,ARLIM_P(maskcovlo),ARLIM_P(maskcovhi), 
-    Real* deltaVOF,ARLIM_P(deltaVOFlo),ARLIM_P(deltaVOFhi), 
-    Real* nodevel,ARLIM_P(nodevello),ARLIM_P(nodevelhi), 
-    Real* jump,ARLIM_P(jumplo),ARLIM_P(jumphi),
-    Real* LSold,ARLIM_P(LSoldlo),ARLIM_P(LSoldhi),
-    Real* LSnew,ARLIM_P(LSnewlo),ARLIM_P(LSnewhi),      
-    Real* recon,ARLIM_P(reconlo),ARLIM_P(reconhi),      
-    Real* snew,ARLIM_P(snewlo),ARLIM_P(snewhi),      
-    Real* EOS,ARLIM_P(EOSlo),ARLIM_P(EOShi),
-    Real* swept,ARLIM_P(sweptlo),ARLIM_P(swepthi)); 
+    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
+    Real* deltaVOF,AMREX_ARLIM_P(deltaVOFlo),AMREX_ARLIM_P(deltaVOFhi), 
+    Real* nodevel,AMREX_ARLIM_P(nodevello),AMREX_ARLIM_P(nodevelhi), 
+    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* LSold,AMREX_ARLIM_P(LSoldlo),AMREX_ARLIM_P(LSoldhi),
+    Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),      
+    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),      
+    Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),      
+    Real* EOS,AMREX_ARLIM_P(EOSlo),AMREX_ARLIM_P(EOShi),
+    Real* swept,AMREX_ARLIM_P(sweptlo),AMREX_ARLIM_P(swepthi)); 
 
 
    void FORT_NODEDISPLACE(
@@ -79,8 +79,8 @@ extern "C"
      int* bfact,
      int* velbc,
      Real* dt,
-     Real* unode,ARLIM_P(unodelo),ARLIM_P(unodehi),
-     Real* ucell,ARLIM_P(ucelllo),ARLIM_P(ucellhi),
+     Real* unode,AMREX_ARLIM_P(unodelo),AMREX_ARLIM_P(unodehi),
+     Real* ucell,AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
      const Real* xlo,const Real* dx,
      int* level,int* finest_level);
 
@@ -119,18 +119,18 @@ extern "C"
     Real* blob_array,
     int* num_elements_blobclass,
     int* color_count,
-    Real* colorfab,ARLIM_P(colorfablo),ARLIM_P(colorfabhi), 
-    Real* typefab,ARLIM_P(typefablo),ARLIM_P(typefabhi), 
-    Real* maskcov,ARLIM_P(maskcovlo),ARLIM_P(maskcovhi), 
-    Real* burnvel,ARLIM_P(burnvello),ARLIM_P(burnvelhi), 
-    Real* LS,ARLIM_P(LSlo),ARLIM_P(LShi), 
-    Real* LSnew,ARLIM_P(LSnewlo),ARLIM_P(LSnewhi), 
+    Real* colorfab,AMREX_ARLIM_P(colorfablo),AMREX_ARLIM_P(colorfabhi), 
+    Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi), 
+    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
+    Real* burnvel,AMREX_ARLIM_P(burnvello),AMREX_ARLIM_P(burnvelhi), 
+    Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi), 
+    Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
     Real* LS_slopes_FD,
-    ARLIM_P(LS_slopes_FDlo),
-    ARLIM_P(LS_slopes_FDhi), 
-    Real* EOS,ARLIM_P(EOSlo),ARLIM_P(EOShi),
-    Real* recon,ARLIM_P(reconlo),ARLIM_P(reconhi),
-    Real* pres,ARLIM_P(preslo),ARLIM_P(preshi)); 
+    AMREX_ARLIM_P(LS_slopes_FDlo),
+    AMREX_ARLIM_P(LS_slopes_FDhi), 
+    Real* EOS,AMREX_ARLIM_P(EOSlo),AMREX_ARLIM_P(EOShi),
+    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
+    Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi)); 
 
 
    void FORT_EXTEND_BURNING_VEL(
@@ -144,8 +144,8 @@ extern "C"
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
-    Real* burnvel,ARLIM_P(burnvello),ARLIM_P(burnvelhi), 
-    Real* LS,ARLIM_P(LSlo),ARLIM_P(LShi));
+    Real* burnvel,AMREX_ARLIM_P(burnvello),AMREX_ARLIM_P(burnvelhi), 
+    Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
 
 }
 #endif

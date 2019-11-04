@@ -41090,7 +41090,14 @@ end subroutine initialize2d
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        vofbc, &
-       xlo,dx,dt, &
+       xlo,dx, &
+       dt, &
+       arraysize, &
+       blob_array, &
+       num_elements_blobclass, &
+       color_count, &
+       colorfab,DIMS(colorfab), &
+       typefab,DIMS(typefab), &
        maskcov,DIMS(maskcov), &
        LSold,DIMS(LSold), &
        LSnew,DIMS(LSnew), &
@@ -41134,6 +41141,12 @@ end subroutine initialize2d
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: arraysize
+      REAL_T, intent(in) :: blob_array(arraysize)
+      INTEGER_T, intent(in) :: num_elements_blobclass
+      INTEGER_T, intent(in) :: color_count
+      INTEGER_T, intent(in) :: DIMDEC(colorfab)
+      INTEGER_T, intent(in) :: DIMDEC(typefab)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(LSold)
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
@@ -41143,6 +41156,10 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(mdot)
       INTEGER_T, intent(in) :: DIMDEC(pres)
       INTEGER_T, intent(in) :: DIMDEC(preseos)
+
+      REAL_T, intent(in) :: typefab(DIMV(typefab))
+      REAL_T, intent(in) :: colorfab(DIMV(colorfab))
+
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
       REAL_T, intent(in) :: LSold(DIMV(LSold),nmat)
       REAL_T, intent(out) :: LSnew(DIMV(LSnew),nmat)
@@ -41293,6 +41310,9 @@ end subroutine initialize2d
        print *,"dt invalid"
        stop
       endif
+      call checkbound(fablo,fabhi,DIMS(typefab),1,-1,6625)
+      call checkbound(fablo,fabhi,DIMS(colorfab),1,-1,6626)
+
       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,122)
       call checkbound(fablo,fabhi,DIMS(LSold),2,-1,122)
       call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,122)
@@ -41302,6 +41322,29 @@ end subroutine initialize2d
       call checkbound(fablo,fabhi,DIMS(pres),1,-1,122)
       call checkbound(fablo,fabhi,DIMS(preseos),1,-1,122)
       call checkbound(fablo,fabhi,DIMS(mdot),0,-1,122)
+
+      !blob_matrix,blob_RHS,blob_velocity,
+      !blob_integral_momentum,blob_energy,
+      !blob_mass_for_velocity (3 comp)
+      !blob_volume, 
+      !blob_center_integral,blob_center_actual
+      !blob_perim, blob_perim_mat, blob_triple_perim, 
+      if (num_elements_blobclass.ne. &
+          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
+          2*(2*SDIM)+1+ &
+          3+1+2*SDIM+1+nmat+nmat*nmat) then
+       print *,"num_elements_blobclass invalid rate mass change:", &
+         num_elements_blobclass
+       stop
+      endif
+
+      if (arraysize.ne.num_elements_blobclass*color_count) then
+        print *,"arraysize invalid rate mass change (get stat==1)"
+        print *,"arraysize=",arraysize
+        print *,"num_elements_blobclass=",num_elements_blobclass
+        print *,"color_count=",color_count
+        stop
+      endif
 
       if (SDIM.eq.3) then
        kssten=-1

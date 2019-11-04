@@ -3,13 +3,12 @@
 #define BL_LANG_FORT
 #endif
 
-#include <REAL.H>
-
-#include "SPACE.H"
+#include <AMReX_REAL.H>
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 #include "ABec_F.H"
-#include "BC_TYPES.H"
-#include "ArrayLim.H"
-#include "CONSTANTS.H"
 
 
       subroutine FORT_GSRB( &

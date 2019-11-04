@@ -5,12 +5,12 @@
 
 #define STANDALONE 0
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 #include "MASS_TRANSFER_F.H"
-#include "ArrayLim.H"
 
 
 #if (BL_SPACEDIM==3)
@@ -3758,7 +3758,6 @@ stop
       INTEGER_T dencomp_source,dencomp_dest
       INTEGER_T ispec
       REAL_T evap_den
-      INTEGER_T get_statistics
       REAL_T source_perim_factor,dest_perim_factor
       REAL_T contact_line_perim
       INTEGER_T icolor,base_type,ic,im1,im2
@@ -3904,36 +3903,12 @@ stop
        stop
       endif
 
-      get_statistics=0
-      do im=1,nmat
-       if (max_contact_line_size(im).gt.zero) then
-        get_statistics=1
-       else if (max_contact_line_size(im).eq.zero) then 
-        ! do nothing
-       else
-        print *,"max_contact_line_size(im) invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
-      if (get_statistics.eq.1) then
-       if (arraysize.ne.num_elements_blobclass*color_count) then
+      if (arraysize.ne.num_elements_blobclass*color_count) then
         print *,"arraysize invalid rate mass change (get stat==1)"
         print *,"arraysize=",arraysize
         print *,"num_elements_blobclass=",num_elements_blobclass
         print *,"color_count=",color_count
         stop
-       endif
-      else if (get_statistics.eq.0) then
-       if (arraysize.ne.num_elements_blobclass) then
-        print *,"arraysize invalid (rate mass change get stat==0)"
-        print *,"arraysize=",arraysize
-        print *,"num_elements_blobclass=",num_elements_blobclass
-        print *,"color_count=",color_count
-        stop
-       endif
-      else
-       print *,"get_statistics invalid"
-       stop
       endif
  
       call get_dxmin(dx,bfact,dxmin)

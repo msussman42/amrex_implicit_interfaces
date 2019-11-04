@@ -2451,8 +2451,15 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     int coarsest_level=0;
 
 
-      // 2. (a) LEVELSET REINITIALIZATION
-      //    (b) PHASE CHANGE or cavitation
+      // 2. If mass transfer
+      //    (a) nucleation (nucleate_bubbles)
+      //    (b) slopes/redistance
+      //    (c) mass transfer rate (stefan problem) (level_phase_change_rate)
+      //    (d) unsplit advection
+      //    (e) slopes/redistance
+      //    (f) redistribute mass increments
+      //    If no mass transfer
+      //    (a) slopes/redistance
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
       if (mass_transfer_active==1) {
@@ -3157,8 +3164,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        NavierStokes& ns_level=getLevel(ilev);
        ns_level.init_boundary();
       }
+
     } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
+
       // do nothing
+      
     } else
       amrex::Error("slab_step invalid");
 
