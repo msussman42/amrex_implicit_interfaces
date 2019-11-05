@@ -43,6 +43,10 @@ ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
 amr.blocking_factor = 32 32
 ns.SEM_upwind=1
+# 0=> I(u_GL) dot grad u_GG, no sync project
+# 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+# 2=> grad dot (u_GL u_GG) - u_GG div u_GL, sync project
+ns.conservative_div_uu=1
 amr.space_blocking_factor=8 8
 #amr.space_blocking_factor=1 1
 #amr.space_blocking_factor=2 2
@@ -72,7 +76,7 @@ mac.use_cg_solve   = 1
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=2
 ns.initial_cg_cycles=2
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.solvability_projection=1
 ns.projection_pressure_scale=1.0
 

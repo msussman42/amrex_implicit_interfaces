@@ -38,7 +38,7 @@ geometry.prob_hi   =  1.0 1.0
 geometry.is_periodic = 1 0 0 
 mac.visc_abs_tol=1.0e-10
 
-# 0MGPCG 1PCG 2MG
+# 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2

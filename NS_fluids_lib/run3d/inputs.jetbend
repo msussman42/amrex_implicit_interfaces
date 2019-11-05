@@ -12,6 +12,7 @@ geometry.coord_sys      = 0        # 1=RZ 0=XYZ
 geometry.prob_lo   =  0.0 0.0 0.0  # 0 0 = RZ   0 0 0=XYZ 
 geometry.prob_hi   =  5.12 1.28 2.56  # JCP PAPER (with symmetric bc)
 amr.regrid_on_restart=1
+amr.plotfile_on_restart=1
 #ns.nblocks=2
 # 1.3-2.3  1.38-2.3  0.34-0.63
 #ns.xblocks=1.8 1.84
@@ -32,6 +33,8 @@ geometry.is_periodic = 0 0 0 # 0 0 = RZ  0 0 0 = XYZ
 ns.projection_pressure_scale=1.0e+8
 ns.MOFITERMAX=15
 ns.continuous_mof=0
+# EILE_flag=0 Sussman and Puckett  EILE_flag=-1 Weymouth and Yue
+# EILE_flag=1 alternate EI-LE
 ns.EILE_flag=1
 # even though truncate_volume_fractions==1, the algorithm in the present
 # code is much better at selecting which material to truncate than from the
@@ -89,15 +92,21 @@ amr.n_error_buf     = 4 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=4 4 4
-# multigrid performs better with a blocking factor of 8.  Less
-# odds of local max in the divergence.
-amr.blocking_factor = 8 8 8 8 8 8  # block factor in grid generation
+amr.blocking_factor = 4 4 4 4 4 4  # block factor in grid generation
 amr.space_blocking_factor = 2 2 2 2 2
 amr.time_blocking_factor=2
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1
 ns.enable_spectral=1
 ns.viscous_enable_spectral=0
 
-amr.check_int       = 50     # number of timesteps between checkpoints
+# number of timesteps between checkpoints
+# IF THIS VALUE IS TOO SMALL, THEN PERFORMANCE WILL BE EFFECTED!
+# TO GRAB A CHECKPOINT ON THE FLY, CREATE AN EMPTY FILE IN THE
+# RUN DIRECTORY CALLED:
+# "dump_and_continue" or
+# "dump_and_stop"
+amr.check_int       = 50     
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 100 
 amr.plot_file       = plt 
@@ -151,7 +160,7 @@ ns.adv_vel=6.9e+3 # JCP PAPER
 #ns.adv_vel=0.0 # inflow of air from the side is zero (it will be outflow bc)
 ns.adv_dir=1       # inflow in x-dir (outflow bc will be prescribed though)
 ns.viscconst=0.013 0.000142 0.013  # g/(cm s)  0.000142
-ns.constant_viscosity=1
+ns.constant_viscosity=0
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
 # 1 ERG= 1 (gram cm^2/s^2)

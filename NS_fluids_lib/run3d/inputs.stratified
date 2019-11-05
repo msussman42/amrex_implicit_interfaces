@@ -15,7 +15,7 @@ geometry.prob_lo   =  0.0 0.0 0.0
 geometry.prob_hi   =  4.0 4.0 8.0  # 4,4,8 XYZ  2,8 => RZ
 geometry.is_periodic = 0 0 0     
 
-# 0MGPCG 1PCG 2MG
+# 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2

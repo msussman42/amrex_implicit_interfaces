@@ -3768,8 +3768,6 @@ NavierStokes::read_params ()
          DistributionMapping::strategy();
      if (local_strategy==DistributionMapping::ROUNDROBIN) {
       std::cout << "DistributionMapping::strategy=ROUNDROBIN\n";
-     } else if (local_strategy==DistributionMapping::RRDEBUG) {
-      std::cout << "DistributionMapping::strategy=RRDEBUG\n";
      } else if (local_strategy==DistributionMapping::KNAPSACK) {
       std::cout << "DistributionMapping::strategy=KNAPSACK\n";
      } else if (local_strategy==DistributionMapping::SFC) {

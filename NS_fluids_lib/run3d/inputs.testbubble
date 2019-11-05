@@ -16,7 +16,7 @@ geometry.prob_hi   =  2.0 2.0 2.0
 geometry.is_periodic = 0 0 0     
 ns.redist_on_init=1
 
-# 0MGPCG 1PCG 2MG
+# 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2

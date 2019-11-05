@@ -19,7 +19,7 @@ geometry.is_periodic=0 0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 ns.initial_project_cycles=0
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.plotfile_on_restart=1
 
 # multigrid class

@@ -47,7 +47,7 @@ ns.initial_project_cycles=3
 ns.initial_cg_cycles=1
 #MATT
 ns.solvability_projection=0
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.n_cell    = 64 32
 amr.max_level = 1
 # 0- 1 level 1- 2 levels  2- 3 levels

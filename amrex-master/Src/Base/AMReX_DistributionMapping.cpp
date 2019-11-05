@@ -42,6 +42,7 @@ namespace amrex {
 // We default to SFC.
 DistributionMapping::Strategy DistributionMapping::m_Strategy = DistributionMapping::SFC;
 
+
 DistributionMapping::PVMF DistributionMapping::m_BuildMap = 0;
 
 const Vector<int>&
@@ -1321,6 +1322,7 @@ DistributionMapping::RRSFCProcessorMap (const BoxArray&          boxes,
 
     RRSFCDoIt(boxes,nprocs);
 }
+
 
 DistributionMapping
 DistributionMapping::makeKnapSack (const Vector<Real>& rcost)

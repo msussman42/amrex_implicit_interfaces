@@ -41,7 +41,7 @@ Lp.v = 1
 Lp.harmavg = 0
 diffuse.max_order=2
 
-# 0MGPCG 1PCG 2MG
+# 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
 Lp.smooth_type=2  # 0 GSRB 1 ICRB 2 ILU
 Lp.bottom_smooth_type=2

@@ -42,7 +42,7 @@ ns.initial_cg_cycles=3
 # =1 if all domain walls are "no penetration"
 # =0 if some walls are outflow.
 ns.solvability_projection=0 
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=3 # 1: liquid 2: vapor 3: solid  4: heated cylinder
 ns.num_species_var=0

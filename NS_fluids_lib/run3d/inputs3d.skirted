@@ -12,7 +12,7 @@ geometry.is_periodic = 0 0 0
 
 ns.projection_pressure_scale=1.0e+6
 
-# 0MGPCG 1PCG 2MG
+# 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
@@ -37,13 +37,19 @@ Lp.harmavg = 0
 ns.face_flag=1
 ns.ns_tiling=false
 ns.MOFITERMAX=15
-ns.continuous_mof=5
-ns.conservative_tension_force=1
+# continuous_mof=0 regular MOF
+# continuous_mof=2 CMOF
+# continuous_mof=3 CLSVOF + MOF hybrid
+# continuous_mof=4 CLSVOF + CMOF hybrid
+ns.continuous_mof=0
+ns.conservative_tension_force=0
 ns.MOF_TURN_OFF_LS=0
 ns.num_materials=2
 ns.num_materials_vel=1
 ns.num_species_var=0
 
+# EILE_flag=0 Sussman and Puckett  EILE_flag=-1 Weymouth and Yue
+# EILE_flag=1 alternate EI-LE
 ns.EILE_flag=-1  # -1=INCOMP  1=COMP
 ns.post_init_pressure_solve=1 # 1=INCOMP 0=COMP
 
@@ -59,13 +65,16 @@ amr.n_cell    = 16 16 32
 amr.max_level = 1
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 2 2 2 2 2   # number of buffer cells in error est
+amr.n_error_buf     = 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.95   # what constitutes an efficient grid
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1
 ns.enable_spectral=1
 ns.viscous_enable_spectral=0
+amr.n_proper=1  # default is 1
 amr.space_blocking_factor = 4 2 2
 amr.time_blocking_factor=2
-amr.blocking_factor = 8 4 4
+amr.blocking_factor = 8 8 4
 
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file

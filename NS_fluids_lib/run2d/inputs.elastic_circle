@@ -35,7 +35,7 @@ ns.truncate_thickness=2.0
 ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 ns.mof_ordering=0 0 
 ns.MOFITERMAX=15
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.nblocks=0
 ns.xblocks=0.0
 ns.yblocks=0.0

@@ -88,7 +88,7 @@ ns.initial_project_cycles=3
 ns.initial_cg_cycles=1
 #ns.solvability_projection=0 # gas is compressible
 ns.solvability_projection=1
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.n_cell    = 64 640
 amr.max_level = 0
 # 0- 1 level 1- 2 levels  2- 3 levels

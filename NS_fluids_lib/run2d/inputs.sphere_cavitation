@@ -37,7 +37,7 @@ ns.mof_ordering=0 0 1
 # OPTION 2
 #ns.mof_ordering=0 1
 ns.MOFITERMAX=15
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # force AMR tagging within these specified boxes.
 ns.nblocks=1
 ns.xblocks=0.0

@@ -1,7 +1,7 @@
 # Units are MKS
 max_step  =  99999    # maximum timestep
 #max_step  =  1      # maximum timestep
-stop_time = 20.0
+stop_time = 6.0
 ns.solvability_projection=1
 
 # liquid,solid
@@ -22,6 +22,7 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   = -1.0  0.0 
 geometry.prob_hi   =  1.0  1.0 
 amr.regrid_on_restart=1
+amr.plotfile_on_restart=1
 
 # multigrid class
 mg.verbose = 0
@@ -48,7 +49,7 @@ ns.MOFITERMAX=15
 # EILE_flag=1 alternate EI-LE
 ns.EILE_flag=1
 ns.ns_tiling=false
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0 # depnding on outflow pressure
 ns.minimum_relative_error=1.0e-15
 ns.initial_project_cycles=3  # number of initial jacobi iterations
@@ -56,12 +57,21 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 ns.visual_option=-2 # -2 for tecplot, -1 for visit
 
+# n_cell=128 64 for fine grid comparison
 amr.n_cell    = 64 32 
-amr.max_level =  1  # Mehdi had this set at max_level=2
+amr.max_level =  1  
+
+#ns.nblocks=1
+#ns.xblocks=0.0
+#ns.yblocks=0.375
+#ns.zblocks=0.0
+#ns.rxblocks=0.75
+#ns.ryblocks=0.375
+#ns.rzblocks=0.0
 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 6 4 4 4 4 4  # number of buffer cells in error est
+amr.n_error_buf     = 6 6 6 6 6  # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 # blocking_factor[i] is the blocking factor for level i.
@@ -79,12 +89,13 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 8 8 8 8 8      # block factor in grid generation
 # 2nd order in space/time except near interfaces, where algorithm automatically
 # reduces to first order.
-amr.space_blocking_factor = 4 2 2 2  # 2nd order in space for all levels.
-amr.time_blocking_factor=4 # 2nd order in time for all levels
+amr.space_blocking_factor = 4 4 4 4  
+amr.time_blocking_factor=4
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1
 ns.enable_spectral=1  # enable_spectral=0 or 1 (advection, pressure grad are
                       #  high order in space and time.
-ns.viscous_enable_spectral=0 # viscosity is always low order in space and time.
-amr.plotfile_on_restart=1
+ns.viscous_enable_spectral=0
 amr.check_int       = 30    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 30       # 10 for debug, 100 for production run? 
@@ -124,7 +135,7 @@ ns.tension        = 0.0 0.0 0.0
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0
-ns.vorterr=0.0 0.0 0.0 0.0
+ns.vorterr=10.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=0.1

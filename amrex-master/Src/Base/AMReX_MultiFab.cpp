@@ -605,6 +605,33 @@ MultiFab::contains_nan (bool local) const
     return contains_nan(0,nComp(),nGrowVect(),local);
 }
 
+
+bool
+MultiFab::contains_nanTENSOR (int datatype,int scomp,int dir) const {
+
+ if ((scomp<0)||(scomp>=nComp()))
+  amrex::Error("scomp invalid");
+ if ((dir<0)||(dir>=BL_SPACEDIM))
+  amrex::Error("dir invalid");
+
+ bool r = false;
+
+#ifdef _OPENMP
+#pragma omp parallel reduction(|:r)
+#endif
+ for (MFIter mfi(*this,true); mfi.isValid(); ++mfi) {
+  int ng=0;
+  const Box& bx = mfi.growntileboxTENSOR(datatype,ng,dir);
+
+  if (this->FabArray<FArrayBox>::get(mfi).contains_nan(bx,scomp,1))
+   r = true;
+ } // mfi
+
+ ParallelDescriptor::ReduceBoolOr(r,this->color());
+
+ return r;
+} // subroutine contains_nanTENSOR
+
 bool
 MultiFab::contains_inf (int scomp,
                         int ncomp,

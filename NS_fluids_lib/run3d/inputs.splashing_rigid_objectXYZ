@@ -31,7 +31,7 @@ ns.initial_project_cycles=3
 ns.initial_cg_cycles=3
 ns.solvability_projection=0
 ns.outflow_pressure=0.0
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=100.0 
 ns.num_materials=3 # 1: liquid 2: vapor 3: solid 
 ns.num_species_var=0

@@ -20,12 +20,12 @@ geometry.is_periodic = 0 0 0
 ns.EILE_flag=-1
 ns.continuous_mof=2
 ns.MOFITERMAX=15
-ns.conservative_tension_force=1
+ns.conservative_tension_force=0
 ns.face_flag=1
 ns.FD_curv_interp=1
 ns.FD_curv_select=0
 
-# 0MGPCG 1PCG 2MG
+# 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2

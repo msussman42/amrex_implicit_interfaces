@@ -52,7 +52,7 @@ ns.EILE_flag=1
 ns.ns_tiling=false
 ns.law_of_the_wall=0
 ns.extend_pressure_into_solid=0
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0 # depnding on outflow pressure
 ns.minimum_relative_error=1.0e-15
 ns.initial_project_cycles=3  # number of initial jacobi iterations
@@ -89,23 +89,22 @@ amr.grid_eff        = 0.5   # what constitutes an efficient grid
 # level i-1.  In otherwords, blocking_factor[i]=2*order[i-1]
 # In order to meet the proper nesting requirements, we must have:
 # blocking_factor[i-1]=2*order[i-1]
-amr.blocking_factor = 16 16 16 8 8      # block factor in grid generation
+amr.blocking_factor = 8 8 8 8 8      # block factor in grid generation
 # 2nd order in space/time except near interfaces, where algorithm automatically
 # reduces to first order.
-#amr.space_blocking_factor = 4 2 2 2  # 2nd order in space for all levels.
-#amr.time_blocking_factor=4 # 2nd order in time for all levels
 #ns.enable_spectral=1  # enable_spectral=0 or 1 (advection, pressure grad are
                       #  high order in space and time.
 
-amr.space_blocking_factor=2 2 2 2
-amr.time_blocking_factor=2
+amr.space_blocking_factor=4 4 4 4
+amr.time_blocking_factor=4
 ns.enable_spectral=1
+
 
 ns.viscous_enable_spectral=0 # viscosity is always low order in space and time.
 amr.plotfile_on_restart=1
 amr.check_int       = 5000    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 10       # 10 for debug, 100 for production run? 
+amr.plot_int        = 100       # 10 for debug, 100 for production run? 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 #amr.max_grid_size   = 64

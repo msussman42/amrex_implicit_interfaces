@@ -81,7 +81,6 @@ ns.num_materials_vel=1
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 Lp.use_mg_precond_in_mglib=1 # def=1
-Lp.use_bicgstab_in_mglib_pressure=0 # def=0
 mg.presmooth=2  # def=2
 mg.postsmooth=2  # def=2
 Lp.bottom_bottom_tol_factor=0.1 # def=0.1
@@ -112,7 +111,7 @@ ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=10
 ns.solvability_projection=1  # 1=INCOMP 0=COMPRESSIBLE
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.n_cell    = 32 64
 amr.max_level = 1
 ns.ns_tiling=false

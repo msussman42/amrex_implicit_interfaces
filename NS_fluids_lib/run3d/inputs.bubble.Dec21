@@ -15,7 +15,7 @@ geometry.prob_lo   =  0.0 0.0 0.0
 geometry.prob_hi   =  6.0 6.0 6.0
 geometry.is_periodic = 1 1 0   # MITSUHIRO
 
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 

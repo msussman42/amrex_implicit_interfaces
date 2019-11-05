@@ -1972,10 +1972,6 @@ Amr::timeStep (Real time,
   amr_level[level]->post_timestep(stop_time);
  }
 
-  // SUSSMAN
- DistributionMapping::FlushCache();
- FabArrayBase::flushAllCache();
-
 }  // subroutine timeStep
 
 void Amr::recalesce_copy_new_to_old(int nmat) {

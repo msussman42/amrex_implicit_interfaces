@@ -2245,9 +2245,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          (advance_status==1));
         divu_outer_sweeps++) {
 
-    DistributionMapping::FlushCache();
-    FabArrayBase::flushAllCache();
-
     // allocate_physics_vars()
     // mdot=0.0
     for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -7663,8 +7660,6 @@ void NavierStokes::multiphase_project(int project_option) {
  BLProfiler bprof(profname);
 #endif
 
- DistributionMapping::FlushCache();
- FabArrayBase::flushAllCache();
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");

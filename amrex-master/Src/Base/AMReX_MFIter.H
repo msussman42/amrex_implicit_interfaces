@@ -123,6 +123,9 @@ public:
     //! Return the tile box at the current index grown to include ghost cells.
     Box growntilebox (int ng=-1000000) const noexcept;
 
+        // SUSSMAN
+    Box growntileboxTENSOR (int datatype,int ng,int dir) const noexcept;
+
     Box growntilebox (const IntVect& ng) const noexcept;
 
     //! Return the dir-nodal (or all nodal if dir<0) box grown to include ghost cells.

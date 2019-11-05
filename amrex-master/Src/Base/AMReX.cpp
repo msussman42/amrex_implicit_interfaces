@@ -52,6 +52,9 @@
 
 #include <AMReX_Geometry.H>
 
+// SUSSMAN
+int thread_class::nthreads;
+
 namespace amrex {
 
 std::vector<std::unique_ptr<AMReX> > AMReX::m_instance;
@@ -469,6 +472,10 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
     amrex_mempool_init();
 
     // For thread safety, we should do these initializations here.
+
+    // SUSSMAN
+    thread_class::Initialize();
+
     BaseFab_Initialize();
     BoxArray::Initialize();
     DistributionMapping::Initialize();
@@ -706,3 +713,35 @@ AMReX::erase (AMReX* pamrex)
 }
 
 }
+
+
+// SUSSMAN
+void 
+thread_class::Initialize() {
+
+ nthreads=1;
+
+#ifdef _OPENMP
+ int tid=0;
+ int nthreads_local;
+#endif
+
+#ifdef _OPENMP
+#pragma omp parallel private(nthreads_local, tid)
+{
+
+ /* Obtain thread number */
+ tid = omp_get_thread_num();
+
+ /* Only master thread does this */
+ if (tid == 0) {
+  nthreads_local = omp_get_num_threads();
+  nthreads=nthreads_local;
+ }
+}  /* All threads join master thread and disband */
+#endif
+
+ if (nthreads<1)
+  BoxLib::Error("nthreads invalid");
+
+} // end subroutine thread_class::Initialize

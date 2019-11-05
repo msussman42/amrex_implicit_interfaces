@@ -10,6 +10,9 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 1.0  
 geometry.is_periodic = 1 1
 
+# default is SFC (Space Filling Curve)
+DistributionMapping.strategy=SFC
+
 # multigrid class
 #mg.verbose = 1
 #cg.verbose = 1
@@ -28,8 +31,6 @@ Lp.harmavg = 0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 Lp.use_mg_precond_in_mglib=1 # def=1
-Lp.use_bicgstab_in_mglib_pressure=0 # def=0
-Lp.use_bicgstab_in_mglib_diffusion=1 # def=1
 mg.presmooth=2  # def=2
 mg.postsmooth=2  # def=2
 Lp.bottom_bottom_tol_factor=0.1 # def=0.1
@@ -38,8 +39,13 @@ ns.num_materials=2
 # num_species_var=3 for diagnostics
 ns.num_species_var=0
 ns.MOFITERMAX=15
+# continuous_mof=0 regular MOF
+# continuous_mof=2 CMOF
+# continuous_mof=3 CLSVOF + MOF hybrid
+# continuous_mof=4 CLSVOF + CMOF hybrid
+ns.continuous_mof=0
 ns.EILE_flag=1 # EI-LE (want same time step for 2d and 3d cases)
-amr.n_cell    = 128 128
+amr.n_cell    = 256 256
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.max_level = 0
 amr.regrid_int      = 1       # how often to regrid
@@ -47,9 +53,11 @@ amr.n_error_buf     = 2 2 2 2 2 2
 amr.grid_eff        = 0.75 
 
 ns.face_flag=1
+ns.conservative_tension_force=0
 
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
+amr.n_proper=1  # default is 1
 amr.blocking_factor = 32 32
 amr.space_blocking_factor=8 8
 #amr.space_blocking_factor=1 1
@@ -60,14 +68,19 @@ amr.time_blocking_factor=8
 ns.init_shrink    = 0.5      # scale back initial timestep
 ns.enable_spectral=1
 #ns.enable_spectral=0
-amr.check_int       = 100      # number of timesteps between checkpoints
+ns.viscous_enable_spectral=0
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1
+#amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_int       = 10      # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 100
-#amr.plot_int        = 10  
+#amr.plot_int        = 100
+amr.plot_int        = 10  
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 # change this if tiling vs. no tiling.
-amr.max_grid_size   = 1024
+amr.max_grid_size   = 64
+amr.plotfile_on_restart=1
 #amr.restart         = chk4400
 #amr.trace   =1
 
@@ -80,7 +93,7 @@ mac.use_cg_solve   = 1
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=2
 ns.initial_cg_cycles=2
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.solvability_projection=1
 ns.projection_pressure_scale=1.0
 

@@ -32,7 +32,9 @@ Lp.v = 0
 Lp.harmavg = 0
 diffuse.max_order=2
 
-ns.continuous_mof=0
+#0=MOF 2=CMOF 3=CLSVOF (MOF if >2 mat) 4=CLSVOF (CMOF if >2 mat) 5=CLSVOF
+ns.continuous_mof=0 
+ns.VOF_reflux=0 # default is 0
 ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
 ns.MOFITERMAX=15
 ns.num_materials=2
@@ -44,7 +46,7 @@ amr.max_level = 2
 #   (a) curvature exceeds 1/(radius_cutoff*dx) or
 #   (b) 3 materials in cell or
 #   (c) interface is undergoing phase change
-ns.max_level_two_materials=2
+ns.max_level_two_materials=1
 ns.radius_cutoff=2 2 2 2
 
 ns.profile_debug=0
@@ -59,7 +61,7 @@ amr.blocking_factor = 4 4 4 4    # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1
 amr.check_int       = 160     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 80      # 157 for convergence check
+amr.plot_int        = 40       # 157 for convergence check
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -86,7 +88,7 @@ mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0    # body force  (gravity in MKS units)
 ns.tension        = 0.0 0.0 0.0 0.0 0.0 0.0
 #ns.fixed_dt	  = 0.4      # hardwire dt
-ns.sum_interval   = 10        # timesteps between computing mass 
+ns.sum_interval   = 40        # timesteps between computing mass 
 ns.output_drop_distribution=1
 
 ns.axis_dir=0  # 0=notched disk 1=Adist 2=circle
@@ -112,7 +114,7 @@ ns.velfact=0.0
 ns.probtype=28
 
 #ns.mem_debug = 1
-#ns.v = 1
+ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS

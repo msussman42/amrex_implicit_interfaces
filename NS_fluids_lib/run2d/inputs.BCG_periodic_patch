@@ -2,6 +2,7 @@
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  0.5  # maximum problem time
+sleepsec=0.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -9,6 +10,9 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 1.0  
 geometry.is_periodic = 1 1
+
+# default is SFC (Space Filling Curve)
+#DistributionMapping.strategy=SFC
 
 # multigrid class
 #mg.verbose = 1
@@ -35,8 +39,8 @@ ns.nblocks=1
 ns.xblocks=0.75
 ns.yblocks=0.75
 ns.zblocks=0.0
-ns.rxblocks=0.125
-ns.ryblocks=0.125
+ns.rxblocks=0.125  # 0.1875 if n_cell=64 64
+ns.ryblocks=0.125  # 0.1875 if n_cell=64 64
 ns.rzblocks=0.00
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.max_level = 1
@@ -46,27 +50,46 @@ amr.grid_eff        = 0.75
 
 ns.face_flag=1
 
+ns.disable_advection=0
+ns.disable_pressure_solve=0
+ns.post_init_pressure_solve=1
+
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
 amr.blocking_factor = 32 32
 ns.SEM_upwind=1 # the default
-amr.space_blocking_factor=16 16
+# 0=> I(u_GL) dot grad u_GG, no sync project
+# 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+# 2=> grad dot (u_GL u_GG) - u_GG div u_GL, sync project
+ns.conservative_div_uu=1
+amr.space_blocking_factor=4 4  # can go up to 16 16
 #amr.space_blocking_factor=1 1
 #amr.space_blocking_factor=2 2
 #amr.time_blocking_factor=2
 #amr.time_blocking_factor=1
-amr.time_blocking_factor=16
+amr.time_blocking_factor=4  # can go up to 16
 # for SEM, the initial time step is further reduced by 2^{r_time}
 ns.init_shrink    = 0.05 # reduce init dt since grad p not initially known
+# 0  low order space and time
+# 1  SEM space and time
+# 2  SEM space 
+# 3  SEM time
 ns.enable_spectral=1
 #ns.enable_spectral=0
-ns.viscous_enable_spectral=3
-amr.check_int       = 20      # number of timesteps between checkpoints
+ns.viscous_enable_spectral=1
+# number of timesteps between checkpoints
+# IF THIS VALUE IS TOO SMALL, THEN PERFORMANCE WILL BE EFFECTED!
+# TO GRAB A CHECKPOINT ON THE FLY, CREATE AN EMPTY FILE IN THE
+# RUN DIRECTORY CALLED:
+# "dump_and_continue" or
+# "dump_and_stop"
+amr.check_int       = 40     
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 # change this if tiling vs. no tiling.
+# max_grid_size=32 if n_cell=32 32 and MPI scalability tests.
 amr.max_grid_size   = 256
 #amr.restart         = chk4400
 #amr.trace   =1
@@ -80,8 +103,11 @@ mac.use_cg_solve   = 1
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=2
 ns.initial_cg_cycles=2
-ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
-ns.solvability_projection=1
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+
+ns.solvability_projection=0
+ns.dual_time_activate=1
+
 ns.projection_pressure_scale=1.0
 
 ns.visual_option=-2
@@ -92,7 +118,7 @@ ns.cfl            = 0.5   # cfl number for hyperbolic system 0.5
 ns.change_max     = 1.1     
 ns.change_max_init= 1.0e+6
 ns.visc_coef      = 1.0
-mac.visc_abs_tol   = 1.0e-10
+mac.visc_abs_tol   = 1.0e-11
 ns.use_StewartLay=1
 
 ns.gravity        = 0.0
@@ -110,7 +136,7 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=2.0
 ns.adv_dir=3  # 1=advect in x direction  2=advect in y direction 3=x and y
-ns.constant_viscosity=1
+ns.constant_viscosity=0
 ns.viscconst= 0.0 0.0 
 ns.denconst=1.0 1.0 
 ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0
@@ -129,6 +155,7 @@ ns.velfact=0.0
 ns.probtype=26
 
 #ns.mem_debug = 1
+#ns.verbose should be commented out if performance needed.
 ns.v = 1
 #ns.d = 1
 

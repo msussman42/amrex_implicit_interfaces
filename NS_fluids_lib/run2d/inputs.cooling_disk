@@ -10,7 +10,7 @@ geometry.prob_hi   =  100000.0 100000.0 # 100000.0 100000.0 RZ
 geometry.is_periodic = 0 0 0     
 ns.projection_pressure_scale=1.0e+6
 
-# 0MGPCG 1PCG 2MG
+# 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2

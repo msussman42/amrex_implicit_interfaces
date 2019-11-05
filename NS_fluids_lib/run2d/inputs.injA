@@ -68,7 +68,7 @@ amr.max_grid_size   = 64
 #amr.restart         = chk02100
 #amr.trace   =1
 #DistributionMapping.strategy        = ROUNDROBIN
-DistributionMapping.strategy        = SFC
+#DistributionMapping.strategy        = SFC
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 4.0e-12 # level 0 timestep below which we halt

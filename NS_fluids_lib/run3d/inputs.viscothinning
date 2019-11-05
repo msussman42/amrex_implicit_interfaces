@@ -17,7 +17,7 @@ geometry.prob_lo   =  0.0 0.0 0.0
 # 12 12 60 CHANGED TO 3.0 3.0 6.0
 geometry.prob_hi   =  3.0 3.0 6.0    # D* 4 4 20
 
-# 0MGPCG 1PCG 2MG
+# 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
