@@ -384,7 +384,7 @@ public:
                   int             lev,
                   const Geometry& level_geom,
                   const BoxArray& bl,
-                  const DistributionMapping& dmap,
+                  const DistributionMapping& dmap_in,
                   Real            time);
 
     virtual ~NavierStokes ();

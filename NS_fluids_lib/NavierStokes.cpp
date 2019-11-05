@@ -3899,10 +3899,10 @@ NavierStokes::NavierStokes (Amr&            papa,
                             int             lev,
                             const Geometry& level_geom,
                             const BoxArray& bl,
-                            const DistributionMapping& dmap,
+                            const DistributionMapping& dmap_in,
                             Real            time)
     :
-    AmrLevel(papa,lev,level_geom,bl,dmap,time)
+    AmrLevel(papa,lev,level_geom,bl,dmap_in,time)
 {
     Geometry_setup();
 }
@@ -4935,7 +4935,9 @@ void NavierStokes::resize_FSI_GHOST_MF(int ngrow) {
  } else if (localMF[FSI_GHOST_MF]->nGrow()>=0) {
 
   MultiFab* save_ghost=
-    new MultiFab(grids,nparts_ghost*AMREX_SPACEDIM,0,dmap,Fab_allocate); 
+    new MultiFab(grids,dmap,nparts_ghost*AMREX_SPACEDIM,0,
+     MFInfo().SetTag("save_ghost"),FArrayBoxFactory()); 
+
   MultiFab::Copy(*save_ghost,*localMF[FSI_GHOST_MF],0,0,
        nparts_ghost*AMREX_SPACEDIM,0);
   delete_localMF(FSI_GHOST_MF,1);
@@ -4983,7 +4985,8 @@ void NavierStokes::resize_FSI_MF() {
    // do nothing
   } else if (localMF[FSI_MF]->nGrow()>0) {
    MultiFab* save_FSI=
-    new MultiFab(grids,nFSI,0,dmap,Fab_allocate); 
+    new MultiFab(grids,dmap,nFSI,0,
+     MFInfo().SetTag("save_FSI"),FArrayBoxFactory()); 
    MultiFab::Copy(*save_FSI,*localMF[FSI_MF],0,0,nFSI,0);
    delete_localMF(FSI_MF,1);
    new_localMF(FSI_MF,nFSI,0,-1);
@@ -5659,8 +5662,8 @@ void NavierStokes::ns_header_msg_level(
     if (level>0) {
 
       //ngrow=0
-     MultiFab* S_new_coarse=new MultiFab(grids,AMREX_SPACEDIM,0,dmap,
-      Fab_allocate);
+     MultiFab* S_new_coarse=new MultiFab(grids,dmap,AMREX_SPACEDIM,0,
+      MFInfo().SetTag("S_new_coarse"),FArrayBoxFactory());
      int dcomp=0;
      int scomp=0;
      FillCoarsePatch(*S_new_coarse,dcomp,time,State_Type,scomp,AMREX_SPACEDIM);
@@ -5674,8 +5677,9 @@ void NavierStokes::ns_header_msg_level(
      }
 
       //ngrow=0
-     MultiFab* Solid_new_coarse=new MultiFab(grids,nparts*AMREX_SPACEDIM,0,dmap,
-      Fab_allocate);
+     MultiFab* Solid_new_coarse=new MultiFab(grids,dmap,
+	nparts*AMREX_SPACEDIM,0,
+        MFInfo().SetTag("Solid_new_coarse"),FArrayBoxFactory());
      dcomp=0;
      scomp=0;
 
@@ -5698,8 +5702,8 @@ void NavierStokes::ns_header_msg_level(
      }
 
       //ngrow=0
-     MultiFab* LS_new_coarse=new MultiFab(grids,nmat*(AMREX_SPACEDIM+1),0,dmap,
-      Fab_allocate);
+     MultiFab* LS_new_coarse=new MultiFab(grids,dmap,nmat*(AMREX_SPACEDIM+1),0,
+      MFInfo().SetTag("LS_new_coarse"),FArrayBoxFactory());
      dcomp=0;
      scomp=0;
      FillCoarsePatch(*LS_new_coarse,dcomp,time,LS_Type,scomp,
@@ -5738,7 +5742,8 @@ void NavierStokes::ns_header_msg_level(
        MultiFab::Copy(Solid_new,*Solid_new_coarse,scomp,dcomp,AMREX_SPACEDIM,0);
 
         //ngrow==0
-       MultiFab* new_coarse_thermal=new MultiFab(grids,1,0,dmap,Fab_allocate);
+       MultiFab* new_coarse_thermal=new MultiFab(grids,dmap,1,0,
+	    MFInfo().SetTag("new_coarse_thermal"),FArrayBoxFactory());
        dcomp=0;
        int scomp_thermal=dencomp+im_part*num_state_material+1;
         //ncomp==1
@@ -8608,7 +8613,8 @@ void NavierStokes::tensor_advection_update() {
 
      MultiFab* velmf=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
    
-     MultiFab* tendata_mf=new MultiFab(grids,20,ngrow_zero,dmap,Fab_allocate);
+     MultiFab* tendata_mf=new MultiFab(grids,dmap,20,ngrow_zero,
+		  MFInfo().SetTag("tendata_mf"),FArrayBoxFactory());
  
 #ifdef _OPENMP
 #pragma omp parallel
@@ -9911,21 +9917,22 @@ NavierStokes::phase_change_redistributeALL() {
      allocate_array(2*ngrow_expansion,1,-1,donorflag_MF);
      setVal_array(2*ngrow_expansion,1,0.0,donorflag_MF);
 
-     for (int isweep=0;isweep<3;isweep++) {
+     for (int isweep_redistribute=0;isweep_redistribute<3;
+	  isweep_redistribute++) {
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
        ns_level.level_phase_change_redistribute(
         expect_mdot_sign,im_source,im_dest,indexEXP,
-        isweep);
+        isweep_redistribute);
       } // ilev=finest_level ... level
 
-      if (isweep==0) {
+      if (isweep_redistribute==0) {
        std::cout << "before:imsrc,imdst,mdot_sum " <<
         im_source << ' ' << im_dest << ' ' << mdot_sum[0] << '\n';
-      } else if (isweep==1) {
+      } else if (isweep_redistribute==1) {
        // do nothing
-      } else if (isweep==2) {
+      } else if (isweep_redistribute==2) {
        std::cout << "after:imsrc,imdst,mdot_sum2 " <<   
         im_source << ' ' << im_dest << ' ' << mdot_sum2[0] << '\n';
        std::cout << "after:imsrc,imdst,mdot_lost " <<   
@@ -9934,9 +9941,9 @@ NavierStokes::phase_change_redistributeALL() {
         im_source << ' ' << im_dest << ' ' <<   
         mdot_sum2[0]+mdot_lost[0] << '\n';
       } else
-       amrex::Error("isweep invalid");
+       amrex::Error("isweep_redistribute invalid");
 
-     } // isweep=0,1,2
+     } // isweep_redistribute=0,1,2
 
      delete_array(donorflag_MF);
 
@@ -9948,7 +9955,7 @@ NavierStokes::phase_change_redistributeALL() {
 
    // copy contributions from all materials changing phase to a single
    // source term.
- int isweep=3;
+ int isweep_combine=3;
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   mdotplus[tid]=0.0;
@@ -9969,7 +9976,7 @@ NavierStokes::phase_change_redistributeALL() {
   ns_level.level_phase_change_redistribute(
    expect_mdot_sign_filler,
    im_source_filler,im_dest_filler,
-   indexEXP_filler,isweep);
+   indexEXP_filler,isweep_combine);
  } // ilev=finest_level ... level
 
  if (verbose>0) {
@@ -9982,14 +9989,14 @@ NavierStokes::phase_change_redistributeALL() {
 
  if (solvability_projection==1) {
 
-  int isweep=4;
+  int isweep_solvability=4;
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.level_phase_change_redistribute(
     expect_mdot_sign_filler,
     im_source_filler,im_dest_filler,
-    indexEXP_filler,isweep);
+    indexEXP_filler,isweep_solvability);
   } // ilev=finest_level ... level
 
  } else if (solvability_projection==0) {
@@ -11822,7 +11829,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
     MultiFab& S_new=get_new_data(State_Type,slab_step+1);
     MultiFab& S_old=get_new_data(State_Type,slab_step);
 
-    MultiFab* rhs=new MultiFab(grids,nfluxSEM,0,dmap,Fab_allocate);
+    MultiFab* rhs=new MultiFab(grids,dmap,nfluxSEM,0,
+		  MFInfo().SetTag("rhs"),FArrayBoxFactory());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -12243,7 +12251,8 @@ NavierStokes::split_scalar_advection() {
  int ngrid=grids.size();
 
  int nc_conserve=AMREX_SPACEDIM+nmat*num_state_material;
- MultiFab* conserve=new MultiFab(grids,nc_conserve,ngrow,dmap,Fab_allocate);
+ MultiFab* conserve=new MultiFab(grids,dmap,nc_conserve,ngrow,
+	MFInfo().SetTag("conserve"),FArrayBoxFactory());
 
  int iden_base=AMREX_SPACEDIM;
  int itensor_base=iden_base+nmat*num_state_material;
@@ -12286,7 +12295,8 @@ NavierStokes::split_scalar_advection() {
  }  // mfi
 } // omp
 
- MultiFab* momslope=new MultiFab(grids,nc_conserve,1,dmap,Fab_allocate);
+ MultiFab* momslope=new MultiFab(grids,dmap,nc_conserve,1,
+  MFInfo().SetTag("momslope"),FArrayBoxFactory());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -12359,13 +12369,16 @@ NavierStokes::split_scalar_advection() {
 
  } else if (face_flag==1) {
 
-  MultiFab* vofF=new MultiFab(grids,nrefine_vof,ngrow,dmap,Fab_allocate);
+  MultiFab* vofF=new MultiFab(grids,dmap,nrefine_vof,ngrow,
+	MFInfo().SetTag("vofF"),FArrayBoxFactory());
 
    // linear expansion: 
    // 1. find slopes u_x
    // 2. (rho u)(x)_m = rho_m (u + u_x (x - x_m_centroid))
-  MultiFab* cenF=new MultiFab(grids,nrefine_cen,ngrow,dmap,Fab_allocate);
-  MultiFab* massF=new MultiFab(grids,nrefine_vof,ngrow,dmap,Fab_allocate);
+  MultiFab* cenF=new MultiFab(grids,dmap,nrefine_cen,ngrow,
+	MFInfo().SetTag("cenF"),FArrayBoxFactory());
+  MultiFab* massF=new MultiFab(grids,dmap,nrefine_vof,ngrow,
+	MFInfo().SetTag("massF"),FArrayBoxFactory());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -12425,22 +12438,24 @@ NavierStokes::split_scalar_advection() {
 }// omp
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   xvof[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),nmat,
-     ngrow_mac_old,dmap,Fab_allocate);
+   xvof[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,nmat,
+     ngrow_mac_old,MFInfo().SetTag("xvof"),FArrayBoxFactory());
 
-   xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),1,
-     ngrow_mac_old,dmap,Fab_allocate);
+   xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,1,
+     ngrow_mac_old,MFInfo().SetTag("xvel"),FArrayBoxFactory());
     // xvelslope,xcen
-   xvelslope[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),1+nmat,
-     ngrow_mac_old,dmap,Fab_allocate);
+   xvelslope[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,1+nmat,
+     ngrow_mac_old,MFInfo().SetTag("xvelslope"),FArrayBoxFactory());
 
     //ncomp=2 ngrow=1
-   side_bucket_mom[dir]=new MultiFab(grids,2,1,dmap,Fab_allocate);
+   side_bucket_mom[dir]=new MultiFab(grids,dmap,2,1,
+	MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
     //scomp=0 ncomp=2 ngrow=1
    side_bucket_mom[dir]->setVal(0.0,0,2,1);
 
     //ncomp=2 ngrow=1
-   side_bucket_mass[dir]=new MultiFab(grids,2,1,dmap,Fab_allocate);
+   side_bucket_mass[dir]=new MultiFab(grids,dmap,2,1,
+	MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
     //scomp=0 ncomp=2 ngrow=1
    side_bucket_mass[dir]->setVal(0.0,0,2,1);
   }  // dir 
@@ -12851,7 +12866,8 @@ NavierStokes::split_scalar_advection() {
   // do nothing
  } else if (face_flag==1) {
 
-  MultiFab* mask_unsplit=new MultiFab(grids,1,1,dmap,Fab_allocate);
+  MultiFab* mask_unsplit=new MultiFab(grids,dmap,1,1,
+	MFInfo().SetTag("mask_unsplit"),FArrayBoxFactory());
   mask_unsplit->setVal(1.0);
 
 #ifdef _OPENMP
@@ -13150,9 +13166,11 @@ NavierStokes::unsplit_scalar_advection() {
  int ngrid=grids.size();
 
  int nc_conserve=AMREX_SPACEDIM+nmat*num_state_material;
- MultiFab* conserve=new MultiFab(grids,nc_conserve,ngrow,dmap,Fab_allocate);
+ MultiFab* conserve=new MultiFab(grids,dmap,nc_conserve,ngrow,
+  MFInfo().SetTag("conserve"),FArrayBoxFactory());
 
- MultiFab* mask_unsplit=new MultiFab(grids,1,1,dmap,Fab_allocate);
+ MultiFab* mask_unsplit=new MultiFab(grids,dmap,1,1,
+  MFInfo().SetTag("mask_unsplit"),FArrayBoxFactory());
 
  int iden_base=AMREX_SPACEDIM;
  int itensor_base=iden_base+nmat*num_state_material;
@@ -13254,13 +13272,16 @@ NavierStokes::unsplit_scalar_advection() {
 
  } else if (face_flag==1) {
 
-  MultiFab* vofF=new MultiFab(grids,nrefine_vof,ngrow,dmap,Fab_allocate);
+  MultiFab* vofF=new MultiFab(grids,dmap,nrefine_vof,ngrow,
+	MFInfo().SetTag("vofF"),FArrayBoxFactory());
 
    // linear expansion: 
    // 1. find slopes u_x
    // 2. (rho u)(x)_m = rho_m (u + u_x (x - x_m_centroid))
-  MultiFab* cenF=new MultiFab(grids,nrefine_cen,ngrow,dmap,Fab_allocate);
-  MultiFab* massF=new MultiFab(grids,nrefine_vof,ngrow,dmap,Fab_allocate);
+  MultiFab* cenF=new MultiFab(grids,dmap,nrefine_cen,ngrow,
+	MFInfo().SetTag("cenF"),FArrayBoxFactory());
+  MultiFab* massF=new MultiFab(grids,dmap,nrefine_vof,ngrow,
+		MFInfo().SetTag("massF"),FArrayBoxFactory());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -13320,19 +13341,21 @@ NavierStokes::unsplit_scalar_advection() {
 }// omp
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   xvof[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),nmat,
-     ngrow_mac_old,dmap,Fab_allocate);
+   xvof[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,nmat,
+     ngrow_mac_old,MFInfo().SetTag("xvof"),FArrayBoxFactory());
 
-   xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),1,
-     ngrow_mac_old,dmap,Fab_allocate);
+   xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,1,
+     ngrow_mac_old,MFInfo().SetTag("xvel"),FArrayBoxFactory());
 
     //ncomp=2 ngrow=1
-   side_bucket_mom[dir]=new MultiFab(grids,2,1,dmap,Fab_allocate);
+   side_bucket_mom[dir]=new MultiFab(grids,dmap,2,1,
+		MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
     //scomp=0 ncomp=2 ngrow=1
    side_bucket_mom[dir]->setVal(0.0,0,2,1);
 
     //ncomp=2 ngrow=1
-   side_bucket_mass[dir]=new MultiFab(grids,2,1,dmap,Fab_allocate);
+   side_bucket_mass[dir]=new MultiFab(grids,dmap,2,1,
+	MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
     //scomp=0 ncomp=2 ngrow=1
    side_bucket_mass[dir]->setVal(0.0,0,2,1);
   }  // dir 
@@ -14037,7 +14060,8 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 
   elastic_ntensor=num_materials_viscoelastic*NUM_TENSOR_TYPE;
   elastic_tensor_mf=
-   new MultiFab(grids,elastic_ntensor,1,dmap,Fab_allocate);
+   new MultiFab(grids,dmap,elastic_ntensor,1,
+	MFInfo().SetTag("elastic_tensor_mf"),FArrayBoxFactory());
   elastic_tensor_mf->setVal(0.0);
     
   for (int im=0;im<nmat;im++) {
@@ -14745,7 +14769,8 @@ void NavierStokes::volWgtSum(
  MultiFab* den_recon=getStateDen(1,upper_slab_time);  
  int den_ncomp=den_recon->nComp();
 
- MultiFab* error_heat_map_mf=new MultiFab(grids,nmat,0,dmap,Fab_allocate);
+ MultiFab* error_heat_map_mf=new MultiFab(grids,dmap,nmat,0,
+	MFInfo().SetTag("error_heat_map_mf"),FArrayBoxFactory());
  error_heat_map_mf -> setVal(0.0);
 
  int project_option_combine=3; // velocity in volWgtSum
@@ -15676,7 +15701,7 @@ NavierStokes::writePlotFile (
              os << parent->Geom(i).CellSize()[k] << ' ';
          os << '\n';
      }
-     os << (int) CoordSys::Coord() << '\n';
+     os << (int) geom.Coord() << '\n';
      os << "0\n"; // Write bndry data.
    }
    // Build the directory to hold the MultiFab at this level.
@@ -15732,7 +15757,8 @@ NavierStokes::writePlotFile (
    int       cnt   = 0;
    int       ncomp = 1;
    const int nGrow = 0;
-   MultiFab  plotMF(grids,n_data_items,nGrow,dmap,Fab_allocate);
+   MultiFab  plotMF(grids,dmap,n_data_items,nGrow,
+		 MFInfo().SetTag("plotMF"),FArrayBoxFactory());
    //
    // Cull data from state variables 
    //
@@ -17261,7 +17287,8 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
   crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp,0,
+	MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
 
@@ -17351,7 +17378,8 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine) {
   crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp,0,
+   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
 
@@ -17444,7 +17472,8 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
   crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp,0,
+   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
 
@@ -17530,7 +17559,8 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
   crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,ncomp,0,crse_dmap,Fab_allocate);
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp,0,
+  MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
 
@@ -17703,7 +17733,8 @@ void NavierStokes::MOFavgDown() {
    nmat*num_state_material;
 
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,nmat*ngeom_raw,0,crse_dmap,Fab_allocate);
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nmat*ngeom_raw,0,
+   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
 
@@ -17791,7 +17822,8 @@ void NavierStokes::avgDownError() {
   amrex::Error("scomp_error invalid");
 
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,1,0,crse_dmap,Fab_allocate);
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,1,0,
+	MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
 
@@ -17852,12 +17884,12 @@ void NavierStokes::getBCArray_list(Vector<int>& listbc,int state_index,
   Vector<int> bc_single=getBCArray(state_index,gridno,
     scomp[ilist],ncomp[ilist]);
 
-  int scomp=0;
+  int bc_scomp=0;
   for (int nn=0;nn<ncomp[ilist];nn++) {
    for (int side=0;side<=1;side++) {
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     listbc[dcomp]=bc_single[scomp];
-     scomp++;
+     listbc[dcomp]=bc_single[bc_scomp];
+     bc_scomp++;
      dcomp++;
     } // dir
    } // side
@@ -17879,8 +17911,8 @@ MultiFab* NavierStokes::getState_list(
  if (ncomp_list<=0)
   amrex::Error("ncomp_list invalid");
  
- MultiFab* mf = new MultiFab(state[State_Type].boxArray(),ncomp_list,
-   ngrow,dmap,Fab_allocate);
+ MultiFab* mf = new MultiFab(state[State_Type].boxArray(),dmap,ncomp_list,
+   ngrow,MFInfo().SetTag("mf get state list"),FArrayBoxFactory());
 
  int dcomp=0;
  for (int ilist=0;ilist<scomp.size();ilist++) {
@@ -17954,8 +17986,8 @@ MultiFab* NavierStokes::getState (
  if (scomp+ncomp>ntotal)
   amrex::Error("scomp,ncomp invalid");
 
- MultiFab* mf = new MultiFab(state[State_Type].boxArray(),ncomp,
-   ngrow,dmap,Fab_allocate);
+ MultiFab* mf = new MultiFab(state[State_Type].boxArray(),dmap,ncomp,
+   ngrow,MFInfo().SetTag("mf getState"),FArrayBoxFactory());
 
  FillPatch(*this,*mf,0,time,State_Type,scomp,ncomp);
 
@@ -17989,8 +18021,8 @@ MultiFab* NavierStokes::getStateSolid (
  if (scomp+ncomp>ntotal)
   amrex::Error("scomp,ncomp invalid");
 
- MultiFab* mf = new MultiFab(state[Solid_State_Type].boxArray(),ncomp,
-   ngrow,dmap,Fab_allocate);
+ MultiFab* mf = new MultiFab(state[Solid_State_Type].boxArray(),dmap,ncomp,
+   ngrow,MFInfo().SetTag("mf getStateSolid"),FArrayBoxFactory());
 
  FillPatch(*this,*mf,0,time,Solid_State_Type,scomp,ncomp);
 
@@ -18026,8 +18058,8 @@ MultiFab* NavierStokes::getStateTensor (
  if (scomp+ncomp>ntotal)
   amrex::Error("scomp,ncomp invalid");
 
- MultiFab* mf = new MultiFab(state[Tensor_Type].boxArray(),ncomp,
-   ngrow,dmap,Fab_allocate);
+ MultiFab* mf = new MultiFab(state[Tensor_Type].boxArray(),dmap,ncomp,
+   ngrow,MFInfo().SetTag("mf getStateTensor"),FArrayBoxFactory());
 
  FillPatch(*this,*mf,0,time,Tensor_Type,scomp,ncomp);
 
@@ -18054,9 +18086,9 @@ MultiFab* NavierStokes::getStateDist (int ngrow,Real time,int caller_id) {
  if (ntotal!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("ntotal invalid");
 
- MultiFab* mf = new MultiFab(state[State_Type].boxArray(),
+ MultiFab* mf = new MultiFab(state[State_Type].boxArray(),dmap,
    nmat*(AMREX_SPACEDIM+1),
-   ngrow,dmap,Fab_allocate);
+   ngrow,MFInfo().SetTag("mf getStateDist"),FArrayBoxFactory());
 
   // scomp=0
  FillPatch(*this,*mf,0,time,LS_Type,0,nmat*(AMREX_SPACEDIM+1));
@@ -18091,8 +18123,8 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
  if (ntotal!=num_materials_vel)
   amrex::Error("ntotal invalid");
 
- MultiFab* mf = new MultiFab(state[DIV_Type].boxArray(),ncomp,
-   ngrow,dmap,Fab_allocate);
+ MultiFab* mf = new MultiFab(state[DIV_Type].boxArray(),dmap,ncomp,
+   ngrow,MFInfo().SetTag("mf getStateDIV_DATA"),FArrayBoxFactory());
 
  FillPatch(*this,*mf,0,time,DIV_Type,scomp,ncomp);
 
@@ -18330,7 +18362,8 @@ NavierStokes::makeStateDist() {
  MultiFab* dist_touch_coarse_mf;
 
  if ((level>0)&&(level<=finest_level)) {
-  dist_coarse_mf=new MultiFab(grids,nmat*(AMREX_SPACEDIM+1),0,dmap,Fab_allocate);
+  dist_coarse_mf=new MultiFab(grids,dmap,nmat*(AMREX_SPACEDIM+1),0,
+	MFInfo().SetTag("dist_coarse_mf"),FArrayBoxFactory());
   int dcomp=0;
   int scomp=0;
   FillCoarsePatch(*dist_coarse_mf,dcomp,cur_time_slab,LS_Type,scomp,
@@ -18341,7 +18374,8 @@ NavierStokes::makeStateDist() {
   // dest_lstGHOST for State_Type defaults to pc_interp.
   // scompBC_map==0 corresponds to pc_interp and FORT_EXTRAPFILL
   dist_touch_coarse_mf=
-   new MultiFab(grids,nmat,0,dmap,Fab_allocate);
+   new MultiFab(grids,dmap,nmat,0,
+    MFInfo().SetTag("dist_touch_coarse_mf"),FArrayBoxFactory());
 
   for (int i=0;i<nmat;i++) {
    Vector<int> scompBC_map;
@@ -19415,8 +19449,8 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,
  if (scomp+ncomp>ntotal)
   amrex::Error("scomp invalid getStateMAC");
 
- MultiFab* mf = new MultiFab(state[Umac_Type+dir].boxArray(),ncomp,
-   ngrow,dmap,Fab_allocate);
+ MultiFab* mf = new MultiFab(state[Umac_Type+dir].boxArray(),dmap,ncomp,
+   ngrow,MFInfo().SetTag("mf getStateMAC"),FArrayBoxFactory());
 
  FillPatch(*this,*mf,0,time,Umac_Type+dir,scomp,ncomp);
 

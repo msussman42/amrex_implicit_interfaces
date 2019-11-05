@@ -31,7 +31,6 @@
 #include <PLIC_F.H>
 #include <LEVEL_F.H>
 #include <SOLIDFLUID_F.H>
-#include <COORDSYS_F.H>
 #include <DERIVE_F.H>
 
 #define GEOM_GROW   1
