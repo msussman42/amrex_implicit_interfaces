@@ -148,7 +148,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
   amrex::Error("nparts invalid");
- Array<int> im_solid_map_null;
+ Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
  int* im_solid_map_ptr;
@@ -567,7 +567,7 @@ void NavierStokes::viscous_boundary_fluxes(
   int dcomp=num_materials_vel*(BL_SPACEDIM+1);
   int tcomp=dcomp+1;
 
-  Array<int> temp_dombc(2*BL_SPACEDIM);
+  Vector<int> temp_dombc(2*BL_SPACEDIM);
   const BCRec& descbc = get_desc_lst()[State_Type].getBC(tcomp);
   const int* b_rec=descbc.vect();
   for (int m=0;m<2*BL_SPACEDIM;m++)
@@ -605,13 +605,13 @@ void NavierStokes::viscous_boundary_fluxes(
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& xflux=(*fluxdir)[mfi];
+    FArrayBox& xfluxfab=(*fluxdir)[mfi];
     FArrayBox& areafab=(*localMF[AREA_MF+dir])[mfi];
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
-    Array<int> velbc=getBCArray(State_Type,gridno,0,
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,
       num_materials_vel*BL_SPACEDIM);
-    Array<int> tempbc=getBCArray(State_Type,gridno,tcomp,1);
+    Vector<int> tempbc=getBCArray(State_Type,gridno,tcomp,1);
 
       // if solidheat_flag=2, then inhomogeneous Neumann BC are
       // prescribed.
@@ -633,7 +633,8 @@ void NavierStokes::viscous_boundary_fluxes(
      temp_dombc.dataPtr(),
      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      areafab.dataPtr(),ARLIM(areafab.loVect()),ARLIM(areafab.hiVect()),
-     xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
+     xfluxfab.dataPtr(),
+     ARLIM(xfluxfab.loVect()),ARLIM(xfluxfab.hiVect()),
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      domlo,domhi,
@@ -670,7 +671,7 @@ void NavierStokes::combine_state_variable(
 
  int nmat=num_materials;
 
- Array<Real> local_prescribed_solid_scale(nmat);
+ Vector<Real> local_prescribed_solid_scale(nmat);
  for (int im=0;im<nmat;im++) {
   if (prescribed_noslip==1)
    local_prescribed_solid_scale[im]=0.0;
@@ -756,8 +757,8 @@ void NavierStokes::combine_state_variable(
  } else
   amrex::Error("num_materials_face invalid");
 
- Array<int> scomp;
- Array<int> ncomp;
+ Vector<int> scomp;
+ Vector<int> ncomp;
  int state_index;
  int ncomp_check;
  get_mm_scomp_solver(
@@ -790,7 +791,7 @@ void NavierStokes::combine_state_variable(
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
   amrex::Error("nparts invalid");
- Array<int> im_solid_map_null;
+ Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
  int* im_solid_map_ptr;
@@ -934,7 +935,7 @@ void NavierStokes::combine_state_variable(
      FArrayBox& macfab=(*face_mf)[mfi];
      FArrayBox& lsfab=(*LEVEL_COMBINE)[mfi];
      FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
-     Array<int> velbc=getBCArray(State_Type,gridno,0,
+     Vector<int> velbc=getBCArray(State_Type,gridno,0,
        num_materials_vel*BL_SPACEDIM);
 
      int tid=ns_thread();
@@ -1024,7 +1025,8 @@ void NavierStokes::combine_state_variable(
       (combine_flag==1)) { // GFM -> FVM
    if (nsolve!=1)
     amrex::Error("nsolve invalid");
-   new_combined=new MultiFab(grids,nsolve*nmat,0,dmap,Fab_allocate);
+   new_combined=new MultiFab(grids,dmap,nsolve*nmat,0,
+     MFInfo().SetTag("new_combined"),FArrayBoxFactory());
    if (combine_idx==-1) {
     for (int im=0;im<nmat;im++) 
      MultiFab::Copy(*new_combined,*cell_mf,scomp[im],im,1,0);
@@ -1066,9 +1068,9 @@ void NavierStokes::combine_state_variable(
 
    FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
 
-   Array<int> velbc=getBCArray(State_Type,gridno,0,
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,
      num_materials_vel*BL_SPACEDIM);
-   Array<int> listbc;
+   Vector<int> listbc;
    getBCArray_list(listbc,state_index,gridno,scomp,ncomp);
    if (listbc.size()!=nsolveMM*BL_SPACEDIM*2)
     amrex::Error("listbc.size() invalid");

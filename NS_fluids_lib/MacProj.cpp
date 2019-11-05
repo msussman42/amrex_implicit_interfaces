@@ -165,8 +165,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  int bfact=parent->Space_blockingFactor(level);
 
- Array<int> scomp;
- Array<int> ncomp;
+ Vector<int> scomp;
+ Vector<int> ncomp;
  int state_index;
  int ncomp_check;
 
@@ -446,9 +446,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    ParallelDescriptor::Barrier();
 
    int ncomp_edge=-1;
-   int scomp=0;
+   int scomp_bx=0;
    int ncomp_mf=1;
-   avgDownEdge_localMF(BXCOEFNOAREA_MF,scomp,ncomp_edge,dir,ncomp_mf,0,17);
+   avgDownEdge_localMF(BXCOEFNOAREA_MF,scomp_bx,ncomp_edge,dir,ncomp_mf,0,17);
    Copy_localMF(BXCOEF_MF+dir,BXCOEFNOAREA_MF+dir,0,0,nsolveMM,0);
     // dest,source,scomp,dcomp,ncomp,ngrow
    for (int veldir=0;veldir<nsolveMM;veldir++)
@@ -586,7 +586,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   FArrayBox& zfacemm=(*localMF[mm_areafrac_index+BL_SPACEDIM-1])[mfi];  
   FArrayBox& cellfracmm=(*localMF[mm_cell_areafrac_index])[mfi];  
 
-  Array<int> bc;
+  Vector<int> bc;
   getBCArray_list(bc,state_index,gridno,scomp,ncomp);
   if (bc.size()!=nsolveMM*BL_SPACEDIM*2)
    amrex::Error("bc.size() invalid");
@@ -819,10 +819,12 @@ NavierStokes::AllinterpScalarMAC(
  }
 
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,nsolveMM,0,crse_dmap,Fab_allocate);
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nsolveMM,0,
+   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
  crse_S_fine.copy(pcoarse,0,0,nsolveMM);
 
- MultiFab crse_diagsing_fine(crse_S_fine_BA,1,0,crse_dmap,Fab_allocate);
+ MultiFab crse_diagsing_fine(crse_S_fine_BA,crse_dmap,1,0,
+   MFInfo().SetTag("crse_diagsing_fine"),FArrayBoxFactory());
  crse_diagsing_fine.copy(*cdiagsing,0,0,1);
 
  int bfact_f=parent->Space_blockingFactor(level);
@@ -921,7 +923,8 @@ NavierStokes::Allaverage(
  }
 
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,1,0,crse_dmap,Fab_allocate);
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,1,0,
+   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -1292,8 +1295,8 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
   amrex::Error("bfact out of range");
 
  int state_index;
- Array<int> scomp;
- Array<int> ncomp;
+ Vector<int> scomp;
+ Vector<int> ncomp;
  int ncomp_check;
  get_mm_scomp_solver(
   num_materials_face,
@@ -1305,7 +1308,7 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
  if (ncomp_check!=nsolveMM)
   amrex::Error("nsolveMM invalid 898");
 
- Array<int> scompBC_map;
+ Vector<int> scompBC_map;
  scompBC_map.resize(nsolveMM);
 
  int dcomp=0; 
@@ -1399,8 +1402,8 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
  localMF[idx_phi]->setBndry(0.0);
 
  int state_index;
- Array<int> scomp;
- Array<int> ncomp;
+ Vector<int> scomp;
+ Vector<int> ncomp;
  int ncomp_check;
  get_mm_scomp_solver(
   num_materials_face,
@@ -1418,7 +1421,7 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
   ns_coarse.localMF[idx_phi]->setBndry(0.0);
   ns_coarse.localMF[idx_phi]->FillBoundary(ns_coarse.geom.periodicity());
 
-  Array<int> scompBC_map;
+  Vector<int> scompBC_map;
   scompBC_map.resize(nsolveMM);
   int dcomp=0;
   for (int ilist=0;ilist<scomp.size();ilist++) {
@@ -1562,8 +1565,8 @@ void NavierStokes::apply_div(
  
  bool use_tiling=ns_tiling;
 
- Array<int> scomp;
- Array<int> ncomp;
+ Vector<int> scomp;
+ Vector<int> ncomp;
  int state_index;
  int ncomp_check;
 
@@ -1581,7 +1584,7 @@ void NavierStokes::apply_div(
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
   amrex::Error("nparts invalid");
- Array<int> im_solid_map_null;
+ Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
  int* im_solid_map_ptr;
@@ -1726,12 +1729,12 @@ void NavierStokes::apply_div(
 
   const Real* xlo = grid_loc[gridno].lo();
 
-  Array<int> presbc;
+  Vector<int> presbc;
   getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
   if (presbc.size()!=nsolveMM*BL_SPACEDIM*2)
    amrex::Error("presbc.size() invalid");
 
-  Array<int> velbc=getBCArray(State_Type,gridno,0,
+  Vector<int> velbc=getBCArray(State_Type,gridno,0,
    num_materials_vel*BL_SPACEDIM);
 
 // for heat equation:
@@ -2369,7 +2372,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
   amrex::Error("nparts invalid");
- Array<int> im_solid_map_null;
+ Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
  int* im_solid_map_ptr;
@@ -2422,7 +2425,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    FArrayBox& solfab = (*localMF[FSI_GHOST_MF])[mfi];
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
    const Real* xlo = grid_loc[gridno].lo();
-   Array<int> velbc=getBCArray(State_Type,gridno,0,
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,
     num_materials_vel*BL_SPACEDIM);
 
 // RHS=(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/vol_ij
@@ -2649,8 +2652,8 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- Array<int> scomp;
- Array<int> ncomp;
+ Vector<int> scomp;
+ Vector<int> ncomp;
  int state_index;
  int ncomp_check;
 
