@@ -84,7 +84,7 @@ set_tensor_bc (BCRec&       bc,
      bc.setHi(0,extrap_tensor_bc[hi_bc[0]]);
      bc.setLo(1,extrap_tensor_bc[lo_bc[1]]);
      bc.setHi(1,extrap_tensor_bc[hi_bc[1]]);
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
      bc.setLo(2,extrap_tensor_bc[lo_bc[2]]);
      bc.setHi(2,extrap_tensor_bc[hi_bc[2]]);
 #endif
@@ -93,7 +93,7 @@ set_tensor_bc (BCRec&       bc,
      bc.setHi(0,zero_tensor_bc[hi_bc[0]]);
      bc.setLo(1,zero_tensor_bc[lo_bc[1]]);
      bc.setHi(1,zero_tensor_bc[hi_bc[1]]);
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
      bc.setLo(2,extrap_tensor_bc[lo_bc[2]]);
      bc.setHi(2,extrap_tensor_bc[hi_bc[2]]);
 #endif
@@ -121,7 +121,7 @@ static
 void
 set_hoop_bc (BCRec& bc,const BCRec& phys_bc)
 {
- if (BL_SPACEDIM==2) {
+ if (AMREX_SPACEDIM==2) {
 
   const int* lo_bc = phys_bc.lo();
   const int* hi_bc = phys_bc.hi();
@@ -148,7 +148,7 @@ set_x_vel_bc (BCRec&       bc,
     bc.setHi(0,norm_vel_bc[hi_bc[0]]);
     bc.setLo(1,tang_vel_bc[lo_bc[1]]);
     bc.setHi(1,tang_vel_bc[hi_bc[1]]);
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
     bc.setLo(2,tang_vel_bc[lo_bc[2]]);
     bc.setHi(2,tang_vel_bc[hi_bc[2]]);
 #endif
@@ -164,7 +164,7 @@ set_y_vel_bc (BCRec&       bc,
     bc.setHi(0,tang_vel_bc[hi_bc[0]]);
     bc.setLo(1,norm_vel_bc[lo_bc[1]]);
     bc.setHi(1,norm_vel_bc[hi_bc[1]]);
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
     bc.setLo(2,tang_vel_bc[lo_bc[2]]);
     bc.setHi(2,tang_vel_bc[hi_bc[2]]);
 #endif
@@ -182,7 +182,7 @@ set_x_vel_extrap_bc (BCRec&       bc,
     bc.setHi(0,norm_vel_extrap_bc[hi_bc[0]]);
     bc.setLo(1,tang_vel_extrap_bc[lo_bc[1]]);
     bc.setHi(1,tang_vel_extrap_bc[hi_bc[1]]);
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
     bc.setLo(2,tang_vel_extrap_bc[lo_bc[2]]);
     bc.setHi(2,tang_vel_extrap_bc[hi_bc[2]]);
 #endif
@@ -198,7 +198,7 @@ set_y_vel_extrap_bc (BCRec&       bc,
     bc.setHi(0,tang_vel_extrap_bc[hi_bc[0]]);
     bc.setLo(1,norm_vel_extrap_bc[lo_bc[1]]);
     bc.setHi(1,norm_vel_extrap_bc[hi_bc[1]]);
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
     bc.setLo(2,tang_vel_extrap_bc[lo_bc[2]]);
     bc.setHi(2,tang_vel_extrap_bc[hi_bc[2]]);
 #endif
@@ -216,7 +216,7 @@ set_z_vel_bc (BCRec&       bc,
     bc.setHi(0,tang_vel_bc[hi_bc[0]]);
     bc.setLo(1,tang_vel_bc[lo_bc[1]]);
     bc.setHi(1,tang_vel_bc[hi_bc[1]]);
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
     bc.setLo(2,norm_vel_bc[lo_bc[2]]);
     bc.setHi(2,norm_vel_bc[hi_bc[2]]);
 #endif
@@ -234,7 +234,7 @@ set_z_vel_extrap_bc (BCRec&       bc,
     bc.setHi(0,tang_vel_extrap_bc[hi_bc[0]]);
     bc.setLo(1,tang_vel_extrap_bc[lo_bc[1]]);
     bc.setHi(1,tang_vel_extrap_bc[hi_bc[1]]);
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
     bc.setLo(2,norm_vel_extrap_bc[lo_bc[2]]);
     bc.setHi(2,norm_vel_extrap_bc[hi_bc[2]]);
 #endif
@@ -247,7 +247,7 @@ set_scalar_bc (BCRec&       bc,
 {
     const int* lo_bc = phys_bc.lo();
     const int* hi_bc = phys_bc.hi();
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         bc.setLo(i,scalar_bc[lo_bc[i]]);
         bc.setHi(i,scalar_bc[hi_bc[i]]);
@@ -262,7 +262,7 @@ set_custom_temperature_bc (BCRec&       bc,
 {
     const int* lo_bc = phys_bc.lo();
     const int* hi_bc = phys_bc.hi();
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         bc.setLo(i,custom_temperature_bc[lo_bc[i]]);
         bc.setHi(i,custom_temperature_bc[hi_bc[i]]);
@@ -277,7 +277,7 @@ set_custom2_temperature_bc (BCRec&       bc,
 {
     const int* lo_bc = phys_bc.lo();
     const int* hi_bc = phys_bc.hi();
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         bc.setLo(i,custom2_temperature_bc[lo_bc[i]]);
         bc.setHi(i,custom2_temperature_bc[hi_bc[i]]);
@@ -293,7 +293,7 @@ set_temperature_bc (BCRec&       bc,
 {
     const int* lo_bc = phys_bc.lo();
     const int* hi_bc = phys_bc.hi();
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         bc.setLo(i,temperature_bc[lo_bc[i]]);
         bc.setHi(i,temperature_bc[hi_bc[i]]);
@@ -307,7 +307,7 @@ set_extrap_bc (BCRec&       bc,
 {
     const int* lo_bc = phys_bc.lo(); 
     const int* hi_bc = phys_bc.hi();
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         bc.setLo(i,extrap_bc[lo_bc[i]]);
         bc.setHi(i,extrap_bc[hi_bc[i]]);
@@ -322,7 +322,7 @@ set_scalar_vof_bc (BCRec&       bc,
 {
     const int* lo_bc = phys_bc.lo();
     const int* hi_bc = phys_bc.hi();
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         bc.setLo(i,scalar_vof_bc[lo_bc[i]]);
         bc.setHi(i,scalar_vof_bc[hi_bc[i]]);
@@ -338,7 +338,7 @@ set_pressure_bc (BCRec&       bc,
 {
     const int* lo_bc = phys_bc.lo();
     const int* hi_bc = phys_bc.hi();
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         bc.setLo(i,press_bc[lo_bc[i]]);
         bc.setHi(i,press_bc[hi_bc[i]]);
@@ -352,8 +352,8 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
   amrex::Error("num_materials_vel invalid");
 
  int nmat=num_materials;
- int scomp_states=num_materials_vel*(BL_SPACEDIM+1);
- int ncomp=(BL_SPACEDIM+1)*num_materials_vel;
+ int scomp_states=num_materials_vel*(AMREX_SPACEDIM+1);
+ int ncomp=(AMREX_SPACEDIM+1)*num_materials_vel;
 
  enable_spectral=enable_spectral_in;
 
@@ -421,7 +421,7 @@ NavierStokes::override_LS_HO(int Interp_LO) { // 0=use normals 1=PC
   amrex::Error("Interp_LO invalid");
 
  int nmat=num_materials;
- int ncomp_ls_ho=(BL_SPACEDIM+1)*nmat;
+ int ncomp_ls_ho=(AMREX_SPACEDIM+1)*nmat;
 
  if (Interp_LO==0) {
   ls_ho_interp_HIGH_PARM.LSHOInterp_nmat=nmat;
@@ -449,7 +449,7 @@ NavierStokes::variableSetUp ()
     BL_ASSERT(desc_lstGHOST.size() == 0);
 
      // static variable
-    for (int dir = 0; dir < BL_SPACEDIM; dir++)
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
     {
         phys_bc.setLo(dir,NoSlipWall);
         phys_bc.setHi(dir,NoSlipWall);
@@ -480,7 +480,7 @@ NavierStokes::variableSetUp ()
 
      // velocity, pressure, state x nmat, ngeom_raw x nmat, error ind
 
-    int nc=num_materials_vel*(BL_SPACEDIM+1)+
+    int nc=num_materials_vel*(AMREX_SPACEDIM+1)+
      nmat*(ngeom_raw+num_state_material)+1;
 
     BCRec bc;
@@ -493,7 +493,7 @@ NavierStokes::variableSetUp ()
      //rz_flag=0 
     } else if ((CoordSys::CoordType) coord == CoordSys::RZ) {
      //rz_flag=1
-     if (BL_SPACEDIM!=2)
+     if (AMREX_SPACEDIM!=2)
       amrex::Error("RZ only in 2D");
     } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
      //rz_flag=3
@@ -501,7 +501,7 @@ NavierStokes::variableSetUp ()
      amrex::Error("coord_sys invalid");
 
     BCRec phys_bc_pres;
-    for (int dir=0;dir<BL_SPACEDIM;dir++) {
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      phys_bc_pres.setLo(dir,phys_bc.lo(dir));
      phys_bc_pres.setHi(dir,phys_bc.hi(dir));
      if (phys_bc.lo(dir)==SlipWall)
@@ -549,7 +549,7 @@ NavierStokes::variableSetUp ()
 
     set_z_vel_bc(bc,phys_bc); // prevent warnings.
 
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
     wmac_interp.interp_enable_spectral=enable_spectral;
 
       // ngrow=0
@@ -601,9 +601,9 @@ NavierStokes::variableSetUp ()
     if ((nparts>=1)&&(nparts<nmat)) {
  
      desc_lst.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,nparts*BL_SPACEDIM,&pc_interp,store_in_checkpoint);
+      1,nparts*AMREX_SPACEDIM,&pc_interp,store_in_checkpoint);
 
-     int ncghost_solid=1+BL_SPACEDIM;
+     int ncghost_solid=1+AMREX_SPACEDIM;
 
      desc_lstGHOST.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
       1,ncghost_solid,&pc_interp,store_in_checkpoint);
@@ -626,7 +626,7 @@ NavierStokes::variableSetUp ()
      desc_lstGHOST.setComponent(Solid_State_Type,dcomp,
       v_extrap_str_solid,bc,FORT_EXTRAPFILL,&pc_interp);
 
-     if (BL_SPACEDIM==3) {
+     if (AMREX_SPACEDIM==3) {
       dcomp++;
       std::string w_extrap_str_solid="w_extrap_solid";
       set_z_vel_extrap_bc(bc,phys_bc);
@@ -648,10 +648,10 @@ NavierStokes::variableSetUp ()
       std::string im_string=im_string_stream.str();
 
       Vector<std::string> MOFvelocity_names_solid;
-      MOFvelocity_names_solid.resize(BL_SPACEDIM);
+      MOFvelocity_names_solid.resize(AMREX_SPACEDIM);
 
       Vector<BCRec> MOFvelocity_bcs_solid;
-      MOFvelocity_bcs_solid.resize(BL_SPACEDIM);
+      MOFvelocity_bcs_solid.resize(AMREX_SPACEDIM);
 
       int ibase_solid=0;
 
@@ -667,7 +667,7 @@ NavierStokes::variableSetUp ()
       MOFvelocity_names_solid[ibase_solid]=yvel_str_solid;
       set_y_vel_bc(MOFvelocity_bcs_solid[ibase_solid],phys_bc);
      
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
       ibase_solid++;
 
       std::string zvel_str_solid="z_velocity_solid"; 
@@ -680,7 +680,7 @@ NavierStokes::variableSetUp ()
        FORT_GROUP_SOLVFILL);
 
       desc_lst.setComponent(Solid_State_Type,
-       partid*BL_SPACEDIM,
+       partid*AMREX_SPACEDIM,
        MOFvelocity_names_solid,
        MOFvelocity_bcs_solid,
        MOFvelocity_fill_class_solid,
@@ -768,17 +768,17 @@ NavierStokes::variableSetUp ()
       T33_str+=im_string; 
       MOFvelocity_names_tensor[ibase_tensor]=T33_str;
 
-      if ((BL_SPACEDIM==2)&& 
+      if ((AMREX_SPACEDIM==2)&& 
           ((CoordSys::CoordType) coord == CoordSys::RZ)) {
        set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
-      } else if ((BL_SPACEDIM==3)||
+      } else if ((AMREX_SPACEDIM==3)||
                  ((CoordSys::CoordType) coord == CoordSys::cartesian)||
                  ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL)) {
        set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
       } else
        amrex::Error("coord or sdim invalid");
 
-#if (BL_SPACEDIM == 3)
+#if (AMREX_SPACEDIM == 3)
       ibase_tensor++;
      
       std::string T13_str="T13"; 
@@ -814,16 +814,16 @@ NavierStokes::variableSetUp ()
 
 // LEVELSET ------------------------------------------------- 
 
-    int ncomp_ls_ho=(BL_SPACEDIM+1)*nmat;
+    int ncomp_ls_ho=(AMREX_SPACEDIM+1)*nmat;
 
     desc_lst.addDescriptor(LS_Type,IndexType::TheCellType(),
      1,ncomp_ls_ho,&pc_interp,store_in_checkpoint);
 
-     // components 0..nmat * BL_SPACEDIM-1 are for interface normal vectors.
-     // components nmat * BL_SPACEDIM .. nmat * BL_SPACEDIM + 
-     //   nmat * (BL_SPACEDIM+1) are the same (except for the string name)
+     // components 0..nmat * AMREX_SPACEDIM-1 are for interface normal vectors.
+     // components nmat * AMREX_SPACEDIM .. nmat * AMREX_SPACEDIM + 
+     //   nmat * (AMREX_SPACEDIM+1) are the same (except for the string name)
      //   as for dest_lst.
-    int ncomp_LS_ghost=(2*BL_SPACEDIM+1)*nmat;
+    int ncomp_LS_ghost=(2*AMREX_SPACEDIM+1)*nmat;
 
     desc_lstGHOST.addDescriptor(LS_Type,IndexType::TheCellType(),
      1,ncomp_LS_ghost,&pc_interp,store_in_checkpoint);
@@ -836,7 +836,7 @@ NavierStokes::variableSetUp ()
      im_string_stream << imls+1;
      std::string im_string=im_string_stream.str();
 
-     for (int dir=0;dir<BL_SPACEDIM;dir++) {
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
       std::string nrm_extrap_str=" ";
       if (dir==0) {
@@ -847,7 +847,7 @@ NavierStokes::variableSetUp ()
        set_y_vel_extrap_bc(bc,phys_bc);
        nrm_extrap_str="y_norm"; 
        nrm_extrap_str+=im_string;
-      } else if ((dir==2)&&(BL_SPACEDIM==3)) {
+      } else if ((dir==2)&&(AMREX_SPACEDIM==3)) {
        set_z_vel_extrap_bc(bc,phys_bc);
        nrm_extrap_str="z_norm"; 
        nrm_extrap_str+=im_string;
@@ -858,11 +858,11 @@ NavierStokes::variableSetUp ()
         nrm_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
  
       dcomp++;
-     } // dir=0..BL_SPACEDIM-1
+     } // dir=0..AMREX_SPACEDIM-1
 
     } // imls=0..nmat-1
 
-    if (dcomp!=BL_SPACEDIM*nmat)
+    if (dcomp!=AMREX_SPACEDIM*nmat)
      amrex::Error("dcomp invalid");
 
     Vector<std::string> LS_HO_names;
@@ -884,7 +884,7 @@ NavierStokes::variableSetUp ()
      LS_HO_names[imls]=LS_str;
      set_scalar_vof_bc(LS_HO_bcs[imls],phys_bc);
 
-     for (int dir=0;dir<BL_SPACEDIM;dir++) {
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
       std::string nrm_extrap_str=" ";
       if (dir==0) {
@@ -895,7 +895,7 @@ NavierStokes::variableSetUp ()
        set_y_vel_extrap_bc(LS_HO_bcs[nmat+dcomp],phys_bc);
        nrm_extrap_str="y_norm_HO"; 
        nrm_extrap_str+=im_string;
-      } else if ((dir==2)&&(BL_SPACEDIM==3)) {
+      } else if ((dir==2)&&(AMREX_SPACEDIM==3)) {
        set_z_vel_extrap_bc(LS_HO_bcs[nmat+dcomp],phys_bc);
        nrm_extrap_str="z_norm_HO"; 
        nrm_extrap_str+=im_string;
@@ -906,11 +906,11 @@ NavierStokes::variableSetUp ()
 
       dcomp++;
 
-     } // dir=0..BL_SPACEDIM-1
+     } // dir=0..AMREX_SPACEDIM-1
 
     }  // imls=0...nmat-1
 
-    if (dcomp!=BL_SPACEDIM*nmat)
+    if (dcomp!=AMREX_SPACEDIM*nmat)
      amrex::Error("dcomp invalid");
     if (dcomp+nmat!=ncomp_ls_ho)
      amrex::Error("dcomp invalid");
@@ -927,7 +927,7 @@ NavierStokes::variableSetUp ()
     ls_ho_interp_LOW_PARM.LSHOInterp_LO=1; // 0=use normals 1=piecewise const 
 
     desc_lstGHOST.setComponent(LS_Type,
-      BL_SPACEDIM*nmat,LS_HO_names,
+      AMREX_SPACEDIM*nmat,LS_HO_names,
       LS_HO_bcs,LS_HO_fill_class,&ls_ho_interp_HIGH_PARM);
 
     Vector<std::string> LS_main_names;
@@ -949,7 +949,7 @@ NavierStokes::variableSetUp ()
      LS_main_names[imls]=LS_str;
      set_scalar_vof_bc(LS_main_bcs[imls],phys_bc);
 
-     for (int dir=0;dir<BL_SPACEDIM;dir++) {
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
       std::string nrm_extrap_str=" ";
       if (dir==0) {
@@ -960,7 +960,7 @@ NavierStokes::variableSetUp ()
        set_y_vel_extrap_bc(LS_main_bcs[nmat+dcomp],phys_bc);
        nrm_extrap_str="y_norm_main"; 
        nrm_extrap_str+=im_string;
-      } else if ((dir==2)&&(BL_SPACEDIM==3)) {
+      } else if ((dir==2)&&(AMREX_SPACEDIM==3)) {
        set_z_vel_extrap_bc(LS_main_bcs[nmat+dcomp],phys_bc);
        nrm_extrap_str="z_norm_main"; 
        nrm_extrap_str+=im_string;
@@ -974,7 +974,7 @@ NavierStokes::variableSetUp ()
 
     }  // imls=0...nmat-1
 
-    if (dcomp!=BL_SPACEDIM*nmat)
+    if (dcomp!=AMREX_SPACEDIM*nmat)
      amrex::Error("dcomp invalid");
     if (dcomp+nmat!=ncomp_ls_ho)
      amrex::Error("dcomp invalid");
@@ -1000,9 +1000,9 @@ NavierStokes::variableSetUp ()
      1,nc,&pc_interp,store_in_checkpoint);
 
       // first nten components represent a status.
-    int nburning=nten*(BL_SPACEDIM+1);
+    int nburning=nten*(AMREX_SPACEDIM+1);
 
-    int ncghost=1+BL_SPACEDIM+nmat*ngeom_recon+1+nburning;
+    int ncghost=1+AMREX_SPACEDIM+nmat*ngeom_recon+1+nburning;
 
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
      1,ncghost,&pc_interp,store_in_checkpoint);
@@ -1025,7 +1025,7 @@ NavierStokes::variableSetUp ()
     desc_lstGHOST.setComponent(State_Type,dcomp,
      v_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
 
-    if (BL_SPACEDIM==3) {
+    if (AMREX_SPACEDIM==3) {
      dcomp++;
      std::string w_extrap_str="w_extrap";
      set_z_vel_extrap_bc(bc,phys_bc);
@@ -1045,7 +1045,7 @@ NavierStokes::variableSetUp ()
 
     for (int im=0;im<nmat;im++) {
 
-     int ibase=im*ngeom_recon;
+     int ibase_extmof=im*ngeom_recon;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1055,70 +1055,70 @@ NavierStokes::variableSetUp ()
 
      std::string vof_str="vofE"; 
      vof_str+=im_string; 
-     EXTMOF_names[ibase]=vof_str;
-     set_scalar_vof_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=vof_str;
+     set_scalar_vof_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 
-     ibase++;
+     ibase_extmof++;
      std::string cenx_str="cenxE"; 
      cenx_str+=im_string; 
-     EXTMOF_names[ibase]=cenx_str;
-     set_x_vel_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=cenx_str;
+     set_x_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 
-     ibase++;
+     ibase_extmof++;
      std::string ceny_str="cenyE"; 
      ceny_str+=im_string; 
-     EXTMOF_names[ibase]=ceny_str;
-     set_y_vel_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=ceny_str;
+     set_y_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 
-#if (BL_SPACEDIM==3)
-     ibase++;
+#if (AMREX_SPACEDIM==3)
+     ibase_extmof++;
      std::string cenz_str="cenzE"; 
      cenz_str+=im_string; 
-     EXTMOF_names[ibase]=cenz_str;
-     set_z_vel_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=cenz_str;
+     set_z_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 #endif    
 
-     ibase++;
+     ibase_extmof++;
      std::string order_str="orderE"; 
      order_str+=im_string; 
-     EXTMOF_names[ibase]=order_str;
-     set_scalar_vof_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=order_str;
+     set_scalar_vof_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 
-     ibase++;
+     ibase_extmof++;
      std::string nrmx_str="nrmxE"; 
      nrmx_str+=im_string; 
-     EXTMOF_names[ibase]=nrmx_str;
-     set_x_vel_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=nrmx_str;
+     set_x_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 
-     ibase++;
+     ibase_extmof++;
      std::string nrmy_str="nrmyE"; 
      nrmy_str+=im_string; 
-     EXTMOF_names[ibase]=nrmy_str;
-     set_y_vel_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=nrmy_str;
+     set_y_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 
-#if (BL_SPACEDIM==3)
-     ibase++;
+#if (AMREX_SPACEDIM==3)
+     ibase_extmof++;
      std::string nrmz_str="nrmzE"; 
      nrmz_str+=im_string; 
-     EXTMOF_names[ibase]=nrmz_str;
-     set_z_vel_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=nrmz_str;
+     set_z_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 #endif    
 
-     ibase++;
+     ibase_extmof++;
      std::string intercept_str="interceptE"; 
      intercept_str+=im_string; 
-     EXTMOF_names[ibase]=intercept_str;
-     set_scalar_vof_bc(EXTMOF_bcs[ibase],phys_bc);
+     EXTMOF_names[ibase_extmof]=intercept_str;
+     set_scalar_vof_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
 
-     if (ibase!=(im+1)*ngeom_recon-1)
-      amrex::Error("ibase invalid");
+     if (ibase_extmof!=(im+1)*ngeom_recon-1)
+      amrex::Error("ibase_extmof invalid");
 
     }  // im=0..nmat-1  (vfrac, cen, order, slope,int)
 
     StateDescriptor::BndryFunc EXTMOF_fill_class(FORT_EXTMOFFILL,
        FORT_GROUP_EXTMOFFILL);
 
-    int extrecon_start_pos=1+BL_SPACEDIM; //state extrap, vel extrap
+    int extrecon_start_pos=1+AMREX_SPACEDIM; //state extrap, vel extrap
 
     multi_extmof_interp.multiMOFInterp_nmat=nmat;
     multi_extmof_interp.multiMOFInterp_ngeom_raw=ngeom_raw;
@@ -1156,7 +1156,7 @@ NavierStokes::variableSetUp ()
 
     for (int im=0;im<nten;im++) {
 
-     int ibase=nten+im*BL_SPACEDIM;
+     int ibase_burnvel=nten+im*AMREX_SPACEDIM;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1166,25 +1166,25 @@ NavierStokes::variableSetUp ()
 
      std::string burnxvel_str="burnxvel"; 
      burnxvel_str+=im_string; 
-     BURNVEL_names[ibase]=burnxvel_str;
-     set_x_vel_extrap_bc(BURNVEL_bcs[ibase],phys_bc);
+     BURNVEL_names[ibase_burnvel]=burnxvel_str;
+     set_x_vel_extrap_bc(BURNVEL_bcs[ibase_burnvel],phys_bc);
 
-     ibase++;
+     ibase_burnvel++;
      std::string burnyvel_str="burnyvel"; 
      burnyvel_str+=im_string; 
-     BURNVEL_names[ibase]=burnyvel_str;
-     set_y_vel_extrap_bc(BURNVEL_bcs[ibase],phys_bc);
+     BURNVEL_names[ibase_burnvel]=burnyvel_str;
+     set_y_vel_extrap_bc(BURNVEL_bcs[ibase_burnvel],phys_bc);
 
-#if (BL_SPACEDIM==3)
-     ibase++;
+#if (AMREX_SPACEDIM==3)
+     ibase_burnvel++;
      std::string burnzvel_str="burnzvel"; 
      burnzvel_str+=im_string; 
-     BURNVEL_names[ibase]=burnzvel_str;
-     set_z_vel_extrap_bc(BURNVEL_bcs[ibase],phys_bc);
+     BURNVEL_names[ibase_burnvel]=burnzvel_str;
+     set_z_vel_extrap_bc(BURNVEL_bcs[ibase_burnvel],phys_bc);
 #endif    
 
-     if (ibase!=nten+(im+1)*BL_SPACEDIM-1)
-      amrex::Error("ibase invalid");
+     if (ibase_burnvel!=nten+(im+1)*AMREX_SPACEDIM-1)
+      amrex::Error("ibase_burnvel invalid");
 
     }  // im=0..nten-1  (burning velocity)
 
@@ -1217,29 +1217,29 @@ NavierStokes::variableSetUp ()
      amrex::Error("num_materials_vel invalid");
 
     Vector<std::string> MOFvelocity_names;
-    MOFvelocity_names.resize(BL_SPACEDIM);
+    MOFvelocity_names.resize(AMREX_SPACEDIM);
 
     Vector<BCRec> MOFvelocity_bcs;
-    MOFvelocity_bcs.resize(BL_SPACEDIM);
+    MOFvelocity_bcs.resize(AMREX_SPACEDIM);
 
-    int ibase=0;
+    int ibase_state=0;
 
     std::string xvel_str="x_velocity"; 
-    MOFvelocity_names[ibase]=xvel_str;
-    set_x_vel_bc(MOFvelocity_bcs[ibase],phys_bc);
+    MOFvelocity_names[ibase_state]=xvel_str;
+    set_x_vel_bc(MOFvelocity_bcs[ibase_state],phys_bc);
 
-    ibase++;
+    ibase_state++;
      
     std::string yvel_str="y_velocity"; 
-    MOFvelocity_names[ibase]=yvel_str;
-    set_y_vel_bc(MOFvelocity_bcs[ibase],phys_bc);
+    MOFvelocity_names[ibase_state]=yvel_str;
+    set_y_vel_bc(MOFvelocity_bcs[ibase_state],phys_bc);
      
-#if (BL_SPACEDIM == 3)
-    ibase++;
+#if (AMREX_SPACEDIM == 3)
+    ibase_state++;
 
     std::string zvel_str="z_velocity"; 
-    MOFvelocity_names[ibase]=zvel_str;
-    set_z_vel_bc(MOFvelocity_bcs[ibase],phys_bc);
+    MOFvelocity_names[ibase_state]=zvel_str;
+    set_z_vel_bc(MOFvelocity_bcs[ibase_state],phys_bc);
 #endif
 
     StateDescriptor::BndryFunc MOFvelocity_fill_class(FORT_VELFILL,
@@ -1255,7 +1255,7 @@ NavierStokes::variableSetUp ()
 
     set_pressure_bc(bc,phys_bc_pres);
     std::string pres_str="pressure"; 
-    desc_lst.setComponent(State_Type,num_materials_vel*BL_SPACEDIM,
+    desc_lst.setComponent(State_Type,num_materials_vel*AMREX_SPACEDIM,
       pres_str,bc,FORT_PRESSUREFILL,&sem_interp_DEFAULT);
 
     Vector<std::string> MOFstate_names;
@@ -1266,7 +1266,7 @@ NavierStokes::variableSetUp ()
 
     for (int im=0;im<nmat;im++) {
 
-     int ibase=im*num_state_material;
+     int ibase_transport=im*num_state_material;
 
      std::stringstream im_string_stream(std::stringstream::in |
       std::stringstream::out);
@@ -1276,27 +1276,27 @@ NavierStokes::variableSetUp ()
 
      std::string density_str="density"; 
      density_str+=im_string; 
-     MOFstate_names[ibase]=density_str;
-     set_scalar_bc(MOFstate_bcs[ibase],phys_bc);
+     MOFstate_names[ibase_transport]=density_str;
+     set_scalar_bc(MOFstate_bcs[ibase_transport],phys_bc);
 
-     ibase++;
+     ibase_transport++;
 
      std::string temperature_str="temperature"; 
      temperature_str+=im_string; 
-     MOFstate_names[ibase]=temperature_str;
+     MOFstate_names[ibase_transport]=temperature_str;
      
       // 0=Dirichlet at inflow, insulating at walls and outflow (default)
       // 1=Dirichlet at inflow and outflow, insulating at walls.
       // 2=Dirichlet at inflow and at walls, insulating at outflow. 
       // 3=Dirichlet at inflow, outflow, and walls.
      if (prescribe_temperature_outflow==2)  
-      set_custom_temperature_bc(MOFstate_bcs[ibase],temperature_phys_bc);
+      set_custom_temperature_bc(MOFstate_bcs[ibase_transport],temperature_phys_bc);
      else if (prescribe_temperature_outflow==1)
-      set_temperature_bc(MOFstate_bcs[ibase],temperature_phys_bc);
+      set_temperature_bc(MOFstate_bcs[ibase_transport],temperature_phys_bc);
      else if (prescribe_temperature_outflow==0)
-      set_scalar_bc(MOFstate_bcs[ibase],temperature_phys_bc);
+      set_scalar_bc(MOFstate_bcs[ibase_transport],temperature_phys_bc);
      else if (prescribe_temperature_outflow==3)
-      set_custom2_temperature_bc(MOFstate_bcs[ibase],temperature_phys_bc);
+      set_custom2_temperature_bc(MOFstate_bcs[ibase_transport],temperature_phys_bc);
      else 
       amrex::Error("prescribe_temperature_outflow invalid");
 
@@ -1308,26 +1308,26 @@ NavierStokes::variableSetUp ()
       spec_string_stream << spec_comp+1;
       std::string spec_string_num=spec_string_stream.str();
 
-      ibase++;
+      ibase_transport++;
 
       std::string species_str="species";
       species_str+=spec_string_num;
       species_str+=im_string;
 
-      MOFstate_names[ibase]=species_str;
-      set_scalar_bc(MOFstate_bcs[ibase],species_phys_bc); 
+      MOFstate_names[ibase_transport]=species_str;
+      set_scalar_bc(MOFstate_bcs[ibase_transport],species_phys_bc); 
 
      }  // spec_comp
 
-     if (ibase!=(im+1)*num_state_material-1)
-      amrex::Error("ibase bust");
+     if (ibase_transport!=(im+1)*num_state_material-1)
+      amrex::Error("ibase_transport bust");
 
     } // im (scalar state variables + tensor)
 
     StateDescriptor::BndryFunc MOFstate_fill_class(FORT_STATEFILL,
        FORT_GROUP_STATEFILL);
 
-    int scomp_states=num_materials_vel*(BL_SPACEDIM+1);
+    int scomp_states=num_materials_vel*(AMREX_SPACEDIM+1);
 
     desc_lst.setComponent(State_Type,
      scomp_states,
@@ -1346,7 +1346,7 @@ NavierStokes::variableSetUp ()
 
     for (int im=0;im<nmat;im++) {
 
-     int ibase=im*ngeom_raw;
+     int ibase_mof=im*ngeom_raw;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1356,38 +1356,38 @@ NavierStokes::variableSetUp ()
 
      std::string vof_str="vof"; 
      vof_str+=im_string; 
-     MOF_names[ibase]=vof_str;
-     set_scalar_vof_bc(MOF_bcs[ibase],phys_bc);
+     MOF_names[ibase_mof]=vof_str;
+     set_scalar_vof_bc(MOF_bcs[ibase_mof],phys_bc);
 
-     ibase++;
+     ibase_mof++;
      std::string cenx_str="cenx"; 
      cenx_str+=im_string; 
-     MOF_names[ibase]=cenx_str;
-     set_x_vel_bc(MOF_bcs[ibase],phys_bc);
+     MOF_names[ibase_mof]=cenx_str;
+     set_x_vel_bc(MOF_bcs[ibase_mof],phys_bc);
 
-     ibase++;
+     ibase_mof++;
      std::string ceny_str="ceny"; 
      ceny_str+=im_string; 
-     MOF_names[ibase]=ceny_str;
-     set_y_vel_bc(MOF_bcs[ibase],phys_bc);
+     MOF_names[ibase_mof]=ceny_str;
+     set_y_vel_bc(MOF_bcs[ibase_mof],phys_bc);
 
-#if (BL_SPACEDIM==3)
-     ibase++;
+#if (AMREX_SPACEDIM==3)
+     ibase_mof++;
      std::string cenz_str="cenz"; 
      cenz_str+=im_string; 
-     MOF_names[ibase]=cenz_str;
-     set_z_vel_bc(MOF_bcs[ibase],phys_bc);
+     MOF_names[ibase_mof]=cenz_str;
+     set_z_vel_bc(MOF_bcs[ibase_mof],phys_bc);
 #endif    
 
      if (ngeom_raw==NUM_MOF_VAR) {
       amrex::Error("cannot have ngeom_raw=ngeom_recon");
-     } else if (ngeom_raw==BL_SPACEDIM+1) {
+     } else if (ngeom_raw==AMREX_SPACEDIM+1) {
       // do nothing
      } else
       amrex::Error("ngeom_raw invalid");
 
-     if (ibase!=(im+1)*ngeom_raw-1)
-      amrex::Error("ibase invalid");
+     if (ibase_mof!=(im+1)*ngeom_raw-1)
+      amrex::Error("ibase_mof invalid");
 
     }  // im  (volume fractions and centroids)
 
@@ -1432,7 +1432,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
- if ((adv_dir<1)||(adv_dir>2*BL_SPACEDIM+1))
+ if ((adv_dir<1)||(adv_dir>2*AMREX_SPACEDIM+1))
   amrex::Error("adv_dir invalid");
  if (upper_slab_time<0.0)
   amrex::Error("times should be positive");
@@ -1457,9 +1457,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  const Real* fine_dx = ns_fine.geom.CellSize();
 
- Real problo[BL_SPACEDIM];
- Real probhi[BL_SPACEDIM];
- for (int dir=0;dir<BL_SPACEDIM;dir++) {
+ Real problo[AMREX_SPACEDIM];
+ Real probhi[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   problo[dir]=Geometry::ProbLo(dir);
   probhi[dir]=Geometry::ProbHi(dir);
  }
@@ -1484,8 +1484,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  build_masksemALL();
 
  Real dt_min=1.0E+10;
- Real vel_max[BL_SPACEDIM+1];
- Real vel_max_estdt[BL_SPACEDIM+1];
+ Real vel_max[AMREX_SPACEDIM+1];
+ Real vel_max_estdt[AMREX_SPACEDIM+1];
  MaxAdvectSpeedALL(dt_min,vel_max,vel_max_estdt);
 
   // 0 empty
@@ -1605,20 +1605,20 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    amrex::Error("sumdata_type invalid");
  } // isum
 
- int dirx=BL_SPACEDIM-1;
+ int dirx=AMREX_SPACEDIM-1;
  int diry=0;
  int cut_flag=0;
  
- if ((BL_SPACEDIM==2)&&
+ if ((AMREX_SPACEDIM==2)&&
      (probtype==41)&&
      (axis_dir==4)) {
-  dirx=BL_SPACEDIM-1;
+  dirx=AMREX_SPACEDIM-1;
   diry=0;
   cut_flag=1;
  }
- if ((BL_SPACEDIM==3)&&(probtype==53)&&(axis_dir==0)) {
+ if ((AMREX_SPACEDIM==3)&&(probtype==53)&&(axis_dir==0)) {
   dirx=0;
-  diry=BL_SPACEDIM-1;
+  diry=AMREX_SPACEDIM-1;
   cut_flag=1;
  }
 
@@ -1648,11 +1648,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     Real volmat=sumdata[FE_sum_comp+2*im];
     Real LSvolmat=sumdata[LS_F_sum_comp+im];
     if (volmat>0.0) {
-     for (int dir=0;dir<BL_SPACEDIM;dir++)
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
       sumdata[3*im+cen_sum_comp+dir]=sumdata[3*im+cen_sum_comp+dir]/volmat;
     }
     if (LSvolmat>0.0) {
-     for (int dir=0;dir<BL_SPACEDIM;dir++)
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
       sumdata[3*im+LS_cen_sum_comp+dir]=
        sumdata[3*im+LS_cen_sum_comp+dir]/LSvolmat;
     }
@@ -1697,7 +1697,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  if (ParallelDescriptor::IOProcessor()) {
 
   Real smallest_dx=fine_dx[0];
-  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" dir= " << 
      dir << " finest dx=" << fine_dx[dir] << '\n';
    if (smallest_dx>fine_dx[dir])
@@ -1742,7 +1742,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
       Real gvol=blobdata[iblob].blob_volume;
       Real gvol_modify=gvol;
       if (probtype==5700) {
-       if (phys_bc.lo(BL_SPACEDIM-1)==Symmetry)
+       if (phys_bc.lo(AMREX_SPACEDIM-1)==Symmetry)
         gvol_modify=2.0*gvol_modify;
       }
 
@@ -1783,7 +1783,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
       }  // im1
 
       if (gvol>0.0) {
-       for (int dir=0;dir<BL_SPACEDIM;dir++) {
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
         " im= " << imbase << 
         " center dir = " << dir << " coordinate=" << 
@@ -1796,21 +1796,21 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
         " im= " << imbase <<
         " veltype= " << veltype << " blob_mass_for_velocity= " <<
         blobdata[iblob].blob_mass_for_velocity[veltype] << '\n';
-       for (int dir=0;dir<2*BL_SPACEDIM;dir++) {
+       for (int dir=0;dir<2*AMREX_SPACEDIM;dir++) {
         std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
         " im= " << imbase <<
         " veltype= " << veltype << " dir= " << dir << " vel= " <<
-        blobdata[iblob].blob_velocity[2*BL_SPACEDIM*veltype+dir] << '\n';
+        blobdata[iblob].blob_velocity[2*AMREX_SPACEDIM*veltype+dir] << '\n';
        } // dir=0..2 sdim-1
       } // veltype=0..2
-      for (int dir=0;dir<2*BL_SPACEDIM;dir++) {
+      for (int dir=0;dir<2*AMREX_SPACEDIM;dir++) {
        std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
         " im= " << imbase <<
         " dir= " << dir << " momentum= " <<
         blobdata[iblob].blob_integral_momentum[dir] 
 	<< '\n';
        Real numerator=blobdata[iblob].blob_integral_momentum[dir];
-       Real denom=blobdata[iblob].blob_integral_momentum[2*BL_SPACEDIM+dir];
+       Real denom=blobdata[iblob].blob_integral_momentum[2*AMREX_SPACEDIM+dir];
        Real avg_vel=numerator;
        if (denom>0.0) 
 	avg_vel/=denom;
@@ -1837,7 +1837,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    amrex::Error("output_drop_distribution invalid");
 
   Real UMACH=0.0;
-  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" dir= " << dir << 
      " vel_max=" << vel_max[dir] << '\n';
    std::cout << "TIME= "<<upper_slab_time<<" dir= " << dir << 
@@ -1859,7 +1859,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     amrex::Error("denconst[im] invalid");
   }
 
-  Real ccsqr=vel_max_estdt[BL_SPACEDIM];
+  Real ccsqr=vel_max_estdt[AMREX_SPACEDIM];
   if (ccsqr<0.0)
    amrex::Error("cannot have negative c^2");
   Real USOUND=sqrt(ccsqr);
@@ -1936,7 +1936,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    MASS_MAT[im]=sumdata[im+mass_sum_comp];
 
    std::cout<<"TIME= "<<upper_slab_time<<" MAT="<<im<<" mass="<<MASS_MAT[im]<< '\n';
-   for (int dir=0;dir<BL_SPACEDIM;dir++) {
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" dir= "<<
       dir << " mom=" << sumdata[3*im+dir+mom_sum_comp] << '\n';
    }
@@ -1944,11 +1944,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
       sumdata[im+energy_sum_comp] << '\n';
   }
   for (int im=0;im<nmat;im++) { 
-   for (int dir=0;dir<BL_SPACEDIM;dir++) {
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" cendir=" << dir << 
      " centroid=" << sumdata[cen_sum_comp+3*im+dir] << '\n';
    }
-   for (int dir=0;dir<BL_SPACEDIM;dir++) {
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" cendir=" << dir << 
      " LS centroid=" << sumdata[LS_cen_sum_comp+3*im+dir] << '\n';
    }
@@ -1988,12 +1988,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   std::cout << "TIME= "<<upper_slab_time<<" ENERGY MOMENT= " << 
     r_moment << '\n';
 
-  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " DRAG " << 
      sumdata[drag_sum_comp+dir] << '\n';
   }
 
-  if ((probtype==55)&&(axis_dir==5)&&(BL_SPACEDIM==2)&&(nmat==4)) {
+  if ((probtype==55)&&(axis_dir==5)&&(AMREX_SPACEDIM==2)&&(nmat==4)) {
    std::cout << "TIME= "<<upper_slab_time<<" F1+F3= " << 
      F_MAT[0]+F_MAT[2] << '\n';
    std::cout << "TIME= "<<upper_slab_time<<" M1+M3= " << 
@@ -2001,14 +2001,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   }
 
    // melting of block of ice.
-  if ((probtype==59)&&(BL_SPACEDIM==2)&&(nmat==4)) {
+  if ((probtype==59)&&(AMREX_SPACEDIM==2)&&(nmat==4)) {
    std::cout << "TIME= "<<upper_slab_time<<" F1+F3= " << 
      F_MAT[0]+F_MAT[2] << '\n';
    std::cout << "TIME= "<<upper_slab_time<<" M1+M3= " << 
     MASS_MAT[0]+MASS_MAT[2] << '\n';
   }
 
-  if ((probtype==563)&&(axis_dir==2)&&(BL_SPACEDIM==3)) {
+  if ((probtype==563)&&(axis_dir==2)&&(AMREX_SPACEDIM==3)) {
    std::cout << "thickness of gear is 3 cm \n";
    Real thick=probhi[1]-problo[1];
    std::cout << "comp thick of gear is " << thick << '\n';
@@ -2029,7 +2029,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    if (radblob4>0.0)
     UU=radblob4;
 
-   if ((adv_dir<1)||(adv_dir>BL_SPACEDIM))
+   if ((adv_dir<1)||(adv_dir>AMREX_SPACEDIM))
     amrex::Error("adv_dir invalid");
 
    Real dcoef=denconst[0]*UU*UU*radblob;
@@ -2043,10 +2043,10 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     pdragcoeff/=dcoef;
     int symmetry_flag=0;
 
-    if (BL_SPACEDIM==3) {
+    if (AMREX_SPACEDIM==3) {
      if (adv_dir==1) {
       if (zblob==0.0) {
-       if (phys_bc.lo(BL_SPACEDIM-1)==Symmetry)
+       if (phys_bc.lo(AMREX_SPACEDIM-1)==Symmetry)
         symmetry_flag=1;
       } else if (yblob==0.0) {
        if (phys_bc.lo(1)==Symmetry)
@@ -2055,7 +2055,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
        amrex::Error("always run with symmetric bc");
      } else if (adv_dir==2) {
       if (zblob==0.0) {
-       if (phys_bc.lo(BL_SPACEDIM-1)==Symmetry)
+       if (phys_bc.lo(AMREX_SPACEDIM-1)==Symmetry)
         symmetry_flag=1;
       } else if (xblob==0.0) {
        if (phys_bc.lo(0)==Symmetry)
@@ -2073,10 +2073,10 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
        amrex::Error("always run with symmetric bc");
      } else
       amrex::Error("adv_dir invalid");
-    } else if (BL_SPACEDIM==2) {
+    } else if (AMREX_SPACEDIM==2) {
      if (adv_dir==1) {
       if (yblob==0.0) {
-       if (phys_bc.lo(BL_SPACEDIM-1)==Symmetry)
+       if (phys_bc.lo(AMREX_SPACEDIM-1)==Symmetry)
         symmetry_flag=1;
       } else
        amrex::Error("always run with symmetric bc");
@@ -2106,19 +2106,19 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    }  // dcoef<>0
   } // probtype=32
 
-  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " PDRAG " << 
      sumdata[pdrag_sum_comp+dir] << '\n';
   }
-  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " VDRAG " << 
      sumdata[drag_sum_comp+dir]-sumdata[pdrag_sum_comp+dir] << '\n';
   }
-  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " PTORQUE " <<
      sumdata[ptorque_sum_comp+dir] << '\n';
   }
-  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " VTORQUE " <<
      sumdata[torque_sum_comp+dir]-sumdata[ptorque_sum_comp+dir] << '\n';
   }
@@ -2127,7 +2127,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
 
   for (int im=0;im<nmat;im++) {
-   for (int dir=0;dir<BL_SPACEDIM;dir++) {
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
     std::cout << "TIME=" << upper_slab_time << " MAT="<<im<<
      " dir= " << dir << " GLOBAL MIN INT=" << 
@@ -2160,7 +2160,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
   }  // im
   Real offset=yblob;
-  if (BL_SPACEDIM==3)
+  if (AMREX_SPACEDIM==3)
    offset=zblob;
 
   std::cout << "TIME=" << upper_slab_time << " FREE AMPLITUDE=" <<
@@ -2227,7 +2227,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    Real bubble_volume=sumdata[FE_sum_comp+2];
    Real radbubble=0.0;
 
-   if (BL_SPACEDIM==2) {
+   if (AMREX_SPACEDIM==2) {
     // 4/3 pi r^3 = V
     // r=(3V/(4 pi))^{1/3}
     if (rz_flag==1) {
@@ -2237,7 +2237,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
      radbubble=sqrt(2.0*bubble_volume/local_Pi);
     } else
      amrex::Error("rz_flag invalid");
-   } else if (BL_SPACEDIM==3) {
+   } else if (AMREX_SPACEDIM==3) {
     radbubble=exp(log(3.0*bubble_volume/(4.0*local_Pi))/3.0);
    } else
     amrex::Error("sdim bust");

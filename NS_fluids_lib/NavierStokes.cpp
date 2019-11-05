@@ -15599,20 +15599,7 @@ NavierStokes::writePlotFile (
     }  // comp
    } // typ
 
-   int num_derive = 0;
-   std::list<std::string> derive_names;
-   const std::list<DeriveRec>& dlist = derive_lst.dlist();
-
-   for (std::list<DeriveRec>::const_iterator it = dlist.begin();
-        it != dlist.end();
-        ++it) {
-     if (parent->isDerivePlotVar(it->name())) {
-         derive_names.push_back(it->name());
-         num_derive += it->numDerive();
-     }
-   }
-
-   int n_data_items = plot_var_map.size() + num_derive;
+   int n_data_items = plot_var_map.size();
 
    if (level == 0 && ParallelDescriptor::IOProcessor()) {
      //
@@ -15634,13 +15621,6 @@ NavierStokes::writePlotFile (
          os << desc_lst[typ].name(comp) << '\n';
      }
 
-     for (std::list<std::string>::const_iterator it = derive_names.begin();
-          it != derive_names.end();
-          ++it) {
-         const DeriveRec* rec = derive_lst.get(*it);
-         for (i = 0; i < rec->numDerive(); i++)
-             os << rec->variableName(i) << '\n';
-     }
      os << AMREX_SPACEDIM << '\n';
      os << parent->cumTime() << '\n';
      os << f_lev << '\n';
@@ -15713,11 +15693,10 @@ NavierStokes::writePlotFile (
    } // if IOProc
 
    //
-   // We combine all of the multifabs -- state, derived, etc -- into one
+   // We combine all of the multifabs -- state, etc -- into one
    // multifab -- plotMF.
    // Each state variable has one component.
    // The VOF variables have to be obtained together with Centroid vars.
-   // A derived variable is allowed to have multiple components.
    int       cnt   = 0;
    int       ncomp = 1;
    const int nGrow = 0;
@@ -15812,21 +15791,6 @@ NavierStokes::writePlotFile (
      cnt+= ncomp;
      i+=(ncomp-1);
    }  // i
-   //
-   // Cull data from derived variables.
-   // 
-
-   if (derive_names.size() > 0) {
-    for (std::list<std::string>::const_iterator it = derive_names.begin();
-         it != derive_names.end(); ++it) {
-     const DeriveRec* rec = derive_lst.get(*it);
-     ncomp = rec->numDerive();
-     MultiFab* derive_dat = derive(*it,nGrow);
-     MultiFab::Copy(plotMF,*derive_dat,0,cnt,ncomp,nGrow);
-     delete derive_dat;
-     cnt += ncomp;
-    }
-   }
    //
    // Use the Full pathname when naming the MultiFab.
    //

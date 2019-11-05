@@ -1361,8 +1361,8 @@ protected:
 
     ABecLaplacian* mac_op;
 
-    int localMF_grow[MAX_NUM_LOCAL_MF];
-    MultiFab* localMF[MAX_NUM_LOCAL_MF];
+    Array<int,MAX_NUM_LOCAL_MF> localMF_grow;
+    Array<MultiFab*,MAX_NUM_LOCAL_MF> localMF;
 
     Real ones_sum_global;
 
