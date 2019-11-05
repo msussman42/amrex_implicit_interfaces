@@ -36,6 +36,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
    void FORT_NSGENERATE (
@@ -157,6 +159,9 @@ extern "C"
 
 
 }
+
+}/* namespace amrex */
+
 #endif
 
 #endif 

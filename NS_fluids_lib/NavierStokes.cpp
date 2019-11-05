@@ -162,7 +162,7 @@ int  NavierStokes::projection_enable_spectral=0;
 int  NavierStokes::SEM_upwind=1;
 //0=div(uS)-S div(u)    1=u dot grad S
 int  NavierStokes::SEM_advection_algorithm=0;
-Array<int> NavierStokes::truncate_volume_fractions; // def=1  
+Vector<int> NavierStokes::truncate_volume_fractions; // def=1  
 Real NavierStokes::truncate_thickness=2.0;  
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
@@ -254,68 +254,68 @@ int  NavierStokes::visual_revolve=0;
 int  NavierStokes::visual_option=-2;  // -2 zonal tecplot,-1 plot files (visit)
 
 int NavierStokes::visual_compare=0; 
-Array<int> NavierStokes::visual_ncell;
+Vector<int> NavierStokes::visual_ncell;
 
 // 0..sdim-1
 int NavierStokes::slice_dir=0;
-Array<Real> NavierStokes::xslice;
+Vector<Real> NavierStokes::xslice;
 
-Array<int> NavierStokes::number_vcycles_all_solver_calls;
-Array<int> NavierStokes::max_lev0_cycles_all_solver_calls;
-Array<int> NavierStokes::median_lev0_cycles_all_solver_calls;
-Array<int> NavierStokes::lev0_cycles_list;
-Array<int> NavierStokes::number_solver_calls;
+Vector<int> NavierStokes::number_vcycles_all_solver_calls;
+Vector<int> NavierStokes::max_lev0_cycles_all_solver_calls;
+Vector<int> NavierStokes::median_lev0_cycles_all_solver_calls;
+Vector<int> NavierStokes::lev0_cycles_list;
+Vector<int> NavierStokes::number_solver_calls;
 
-Array< Array<Real> > NavierStokes::min_face_wt;
-Array< Array<Real> > NavierStokes::max_face_wt;
+Vector< Vector<Real> > NavierStokes::min_face_wt;
+Vector< Vector<Real> > NavierStokes::max_face_wt;
 
-Array< Array<Real> > NavierStokes::DVOF;
-Array< Array<Real> > NavierStokes::delta_mass;
+Vector< Vector<Real> > NavierStokes::DVOF;
+Vector< Vector<Real> > NavierStokes::delta_mass;
 
 Real NavierStokes::max_problen=0.0;
-Array< Array<Real> > NavierStokes::minLS;
-Array< Array<Real> > NavierStokes::maxLS;
+Vector< Vector<Real> > NavierStokes::minLS;
+Vector< Vector<Real> > NavierStokes::maxLS;
 
-Array<int> NavierStokes::map_forward_direct_split;
-Array<int> NavierStokes::normdir_direct_split;
+Vector<int> NavierStokes::map_forward_direct_split;
+Vector<int> NavierStokes::normdir_direct_split;
 int NavierStokes::dir_absolute_direct_split=0;
 int NavierStokes::order_direct_split=0; // base_step mod 2
 
-Array<Real> NavierStokes::mdotplus;
-Array<Real> NavierStokes::mdotminus;
-Array<Real> NavierStokes::mdotcount;
-Array<Real> NavierStokes::mdot_sum;
-Array<Real> NavierStokes::mdot_sum2;
-Array<Real> NavierStokes::mdot_lost;
+Vector<Real> NavierStokes::mdotplus;
+Vector<Real> NavierStokes::mdotminus;
+Vector<Real> NavierStokes::mdotcount;
+Vector<Real> NavierStokes::mdot_sum;
+Vector<Real> NavierStokes::mdot_sum2;
+Vector<Real> NavierStokes::mdot_lost;
 
-Array<Real> NavierStokes::curv_min;
-Array<Real> NavierStokes::curv_max;
+Vector<Real> NavierStokes::curv_min;
+Vector<Real> NavierStokes::curv_max;
 
 
 // force AMR tagging within these specified boxes.
 int NavierStokes::nblocks=0;
-Array<Real> NavierStokes::xblocks;
-Array<Real> NavierStokes::yblocks;
-Array<Real> NavierStokes::zblocks;
-Array<Real> NavierStokes::rxblocks;
-Array<Real> NavierStokes::ryblocks;
-Array<Real> NavierStokes::rzblocks;
+Vector<Real> NavierStokes::xblocks;
+Vector<Real> NavierStokes::yblocks;
+Vector<Real> NavierStokes::zblocks;
+Vector<Real> NavierStokes::rxblocks;
+Vector<Real> NavierStokes::ryblocks;
+Vector<Real> NavierStokes::rzblocks;
 
 int NavierStokes::tecplot_max_level=0;
 int NavierStokes::max_level_two_materials=0;
 
 // 0=> never adapt  -1=> always adapt
 // otherwise, if radius<radius_cutoff * dx then adapt.
-Array<int> NavierStokes::radius_cutoff;
+Vector<int> NavierStokes::radius_cutoff;
 
 // tagflag forced to 0 OUTSIDE these specified boxes.
 int NavierStokes::ncoarseblocks=0;
-Array<Real> NavierStokes::xcoarseblocks;
-Array<Real> NavierStokes::ycoarseblocks;
-Array<Real> NavierStokes::zcoarseblocks;
-Array<Real> NavierStokes::rxcoarseblocks;
-Array<Real> NavierStokes::rycoarseblocks;
-Array<Real> NavierStokes::rzcoarseblocks;
+Vector<Real> NavierStokes::xcoarseblocks;
+Vector<Real> NavierStokes::ycoarseblocks;
+Vector<Real> NavierStokes::zcoarseblocks;
+Vector<Real> NavierStokes::rxcoarseblocks;
+Vector<Real> NavierStokes::rycoarseblocks;
+Vector<Real> NavierStokes::rzcoarseblocks;
 
 int  NavierStokes::override_bc_to_homogeneous=0;
 
@@ -354,12 +354,12 @@ int  NavierStokes::face_flag=0;
 int  NavierStokes::disable_advection=0;
 int  NavierStokes::disable_pressure_solve=0;
 
-Array<Real> NavierStokes::elastic_time; // def=0
+Vector<Real> NavierStokes::elastic_time; // def=0
 
-Array<int> NavierStokes::viscosity_state_model; // def=0
+Vector<int> NavierStokes::viscosity_state_model; // def=0
 // 0,1 => viscoelastic FENE-CR material  2=> elastic material
-Array<int> NavierStokes::viscoelastic_model; // def=0
-Array<int> NavierStokes::les_model; // def=0
+Vector<int> NavierStokes::viscoelastic_model; // def=0
+Vector<int> NavierStokes::les_model; // def=0
 // E=u dot u/2 + e
 // e=cv T
 // 0=> conservative advection of temperature:
@@ -371,25 +371,25 @@ Array<int> NavierStokes::les_model; // def=0
 // if u is changed, then T must be changed if energy is to be conserved:
 //  u_new^2/2 + cv T_new = u_old^2/2 + cv T_old
 //  Tnew=Told+(1/cv)(u_old^2/2 - u_new^2/2)
-Array<int> NavierStokes::temperature_primitive_variable; 
+Vector<int> NavierStokes::temperature_primitive_variable; 
 
-Array<Real> NavierStokes::elastic_viscosity; // def=0
+Vector<Real> NavierStokes::elastic_viscosity; // def=0
 
-Array<Real> NavierStokes::Carreau_alpha; // def=1
-Array<Real> NavierStokes::Carreau_beta; // def=0
-Array<Real> NavierStokes::Carreau_n; // def=1
-Array<Real> NavierStokes::Carreau_mu_inf; // def=0
+Vector<Real> NavierStokes::Carreau_alpha; // def=1
+Vector<Real> NavierStokes::Carreau_beta; // def=0
+Vector<Real> NavierStokes::Carreau_n; // def=1
+Vector<Real> NavierStokes::Carreau_mu_inf; // def=0
 
-Array<Real> NavierStokes::concentration; // def=0
-Array<Real> NavierStokes::etaL; // def=0 (etaL0)
-Array<Real> NavierStokes::etaS; // def=0
-Array<Real> NavierStokes::etaP; // def=0 (etaP0)
-Array<Real> NavierStokes::polymer_factor; // def=0
+Vector<Real> NavierStokes::concentration; // def=0
+Vector<Real> NavierStokes::etaL; // def=0 (etaL0)
+Vector<Real> NavierStokes::etaS; // def=0
+Vector<Real> NavierStokes::etaP; // def=0 (etaP0)
+Vector<Real> NavierStokes::polymer_factor; // def=0
 
  // 0 - centroid furthest from uncaptured centroid
  // 1 - use MOF error
 int  NavierStokes::mof_error_ordering=0;
-Array<int> NavierStokes::mof_ordering; // def=0
+Vector<int> NavierStokes::mof_ordering; // def=0
 
 // adv_dir=1,..,sdim+1
 int  NavierStokes::adv_dir=0;
@@ -404,9 +404,9 @@ Real NavierStokes::twall=0.1;
 // if make_interface_incomp==2:
 // density equation is rhot_t+div(rho u)=0 in the incompressible zone.
 int  NavierStokes::make_interface_incomp=0; 
-Array<int> NavierStokes::advection_order; // def=1
+Vector<int> NavierStokes::advection_order; // def=1
 // def=advection_order
-Array<int> NavierStokes::density_advection_order; 
+Vector<int> NavierStokes::density_advection_order; 
 
 // 0=Sussman and Puckett algorithm 
 // 1=EILE (default), -1=Weymouth Yue
@@ -439,8 +439,8 @@ int NavierStokes::num_elements_blobclass=0;
 
 int NavierStokes::ngrowFSI=3;
 int NavierStokes::nFSI_sub=12; //velocity+LS+temperature+flag+stress (3D)
-Array<int> NavierStokes::im_solid_map; //nparts components, in range 0..nmat-1
-Array<int> NavierStokes::im_elastic_map; 
+Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..nmat-1
+Vector<int> NavierStokes::im_elastic_map; 
 
 int NavierStokes::ngrow_expansion=2;
  
@@ -449,7 +449,7 @@ int NavierStokes::use_StewartLay=1;
 
 // local_face(facecut_index+1)=prescribed_solid_scale
 // if face has an adjoining prescribed rigid solid cell.
-Array<Real> NavierStokes::prescribed_solid_scale; // def=0.0
+Vector<Real> NavierStokes::prescribed_solid_scale; // def=0.0
 //0=stair-step 1=2nd order 2=mod stair-step 3=modified normal
 int NavierStokes::prescribed_solid_method=0; 
 
@@ -484,28 +484,28 @@ int NavierStokes::conservative_tension_force=0;
 // 2=> grad dot (u_GL u_GG) - u_GG div u_GL, sync project
 int NavierStokes::conservative_div_uu=1;
 
-Array<Real> NavierStokes::tension_slope;
-Array<Real> NavierStokes::tension_min;
-Array<Real> NavierStokes::tension_T0;
-Array<Real> NavierStokes::tension;
-Array<Real> NavierStokes::prefreeze_tension;
-Array<Real> NavierStokes::recalesce_model_parameters;
+Vector<Real> NavierStokes::tension_slope;
+Vector<Real> NavierStokes::tension_min;
+Vector<Real> NavierStokes::tension_T0;
+Vector<Real> NavierStokes::tension;
+Vector<Real> NavierStokes::prefreeze_tension;
+Vector<Real> NavierStokes::recalesce_model_parameters;
 
-Array<Real> NavierStokes::outflow_velocity_buffer_size;
+Vector<Real> NavierStokes::outflow_velocity_buffer_size;
 
-Array<Real> NavierStokes::cap_wave_speed;
+Vector<Real> NavierStokes::cap_wave_speed;
 
 int NavierStokes::dual_time_activate=0;
 Real NavierStokes::dual_time_stepping_tau=0.0;
 Real NavierStokes::dual_time_stepping_coefficient=0.0;
 
-Array<Real> NavierStokes::saturation_temp;
+Vector<Real> NavierStokes::saturation_temp;
 
-Array<int> NavierStokes::microlayer_substrate;
-Array<Real> NavierStokes::microlayer_angle;
-Array<Real> NavierStokes::microlayer_size;
-Array<Real> NavierStokes::macrolayer_size;
-Array<Real> NavierStokes::max_contact_line_size;
+Vector<int> NavierStokes::microlayer_substrate;
+Vector<Real> NavierStokes::microlayer_angle;
+Vector<Real> NavierStokes::microlayer_size;
+Vector<Real> NavierStokes::macrolayer_size;
+Vector<Real> NavierStokes::max_contact_line_size;
 
 // if freezing_model==0:
 //
@@ -521,29 +521,29 @@ Array<Real> NavierStokes::max_contact_line_size;
 //  grad T dot n=(microlayer_temperature_substrate-TSAT)/
 //    macrolayer_size at (im1 or im2)/substrate boundary.
 
-Array<Real> NavierStokes::microlayer_temperature_substrate; 
+Vector<Real> NavierStokes::microlayer_temperature_substrate; 
 
 int NavierStokes::custom_nucleation_model=0;
 
 int NavierStokes::FD_curv_select=0;
 int NavierStokes::FD_curv_interp=1;
 
-Array<Real> NavierStokes::cavitation_pressure;
-Array<Real> NavierStokes::cavitation_vapor_density;
-Array<Real> NavierStokes::cavitation_tension;
-Array<int> NavierStokes::cavitation_species;
-Array<int> NavierStokes::cavitation_model;
+Vector<Real> NavierStokes::cavitation_pressure;
+Vector<Real> NavierStokes::cavitation_vapor_density;
+Vector<Real> NavierStokes::cavitation_tension;
+Vector<int> NavierStokes::cavitation_species;
+Vector<int> NavierStokes::cavitation_model;
 
-Array<Real> NavierStokes::species_evaporation_density;
+Vector<Real> NavierStokes::species_evaporation_density;
 
-Array<Real> NavierStokes::nucleation_pressure;
-Array<Real> NavierStokes::nucleation_pmg;
-Array<Real> NavierStokes::nucleation_mach;
-Array<Real> NavierStokes::nucleation_temp;
+Vector<Real> NavierStokes::nucleation_pressure;
+Vector<Real> NavierStokes::nucleation_pmg;
+Vector<Real> NavierStokes::nucleation_mach;
+Vector<Real> NavierStokes::nucleation_temp;
 Real NavierStokes::nucleation_period=0.0;
 Real NavierStokes::nucleation_init_time=0.0;
 int NavierStokes::n_sites=0;
-Array<Real> NavierStokes::pos_sites;
+Vector<Real> NavierStokes::pos_sites;
 
 int NavierStokes::perturbation_on_restart=0;
  // sin(2 pi k x /L)
@@ -554,8 +554,8 @@ Real NavierStokes::perturbation_eps_vel=0.0;
 
 // latent_heat<0 if condensation or solidification
 // latent_heat>0 if boiling or melting
-Array<Real> NavierStokes::latent_heat;
-Array<Real> NavierStokes::reaction_rate;
+Vector<Real> NavierStokes::latent_heat;
+Vector<Real> NavierStokes::reaction_rate;
 // 0=sharp interface model (TSAT dirichlet BC)
 //   interpolation assumes T=TSAT at the interface.
 // 1=source term model (single equation for T with source term).
@@ -570,15 +570,15 @@ Array<Real> NavierStokes::reaction_rate;
 //   TSAT used to determine if phase change happens.
 //   expansion source, and offsetting sink evenly distributed.
 // 5=evaporation/condensation
-Array<int> NavierStokes::freezing_model;
-Array<int> NavierStokes::mass_fraction_id;
+Vector<int> NavierStokes::freezing_model;
+Vector<int> NavierStokes::mass_fraction_id;
 //link diffused material to non-diff. (array 1..num_species_var)
-Array<int> NavierStokes::spec_material_id; 
+Vector<int> NavierStokes::spec_material_id; 
 // 0 - distribute to the destination material (default)
 //     V=mdot/rho_src
 // 1 - distribute to the source material
 //     V=mdot/rho_dst
-Array<int> NavierStokes::distribute_from_target;
+Vector<int> NavierStokes::distribute_from_target;
 int NavierStokes::is_phasechange=0;
 int NavierStokes::is_cavitation=0;
 int NavierStokes::is_cavitation_mixture_model=0;
@@ -599,65 +599,65 @@ int  NavierStokes::pressure_select_criterion=0;
 
 int  NavierStokes::last_finest_level=-1;
 
-Array<Real> NavierStokes::vorterr;
-Array<Real> NavierStokes::pressure_error_cutoff;
+Vector<Real> NavierStokes::vorterr;
+Vector<Real> NavierStokes::pressure_error_cutoff;
 
 // 0 (check mag, default) 1=check diff
 int NavierStokes::pressure_error_flag=0;
 
-Array<Real> NavierStokes::temperature_error_cutoff;
+Vector<Real> NavierStokes::temperature_error_cutoff;
 
-Array<Real> NavierStokes::tempcutoff;
-Array<Real> NavierStokes::tempcutoffmax;
-Array<Real> NavierStokes::tempconst;
-Array<Real> NavierStokes::initial_temperature;
+Vector<Real> NavierStokes::tempcutoff;
+Vector<Real> NavierStokes::tempcutoffmax;
+Vector<Real> NavierStokes::tempconst;
+Vector<Real> NavierStokes::initial_temperature;
 Real NavierStokes::initial_temperature_diffuse_duration=0.0;
 
 Real NavierStokes::temperature_source=0.0;
-Array<Real> NavierStokes::temperature_source_cen;
-Array<Real> NavierStokes::temperature_source_rad;
+Vector<Real> NavierStokes::temperature_source_cen;
+Vector<Real> NavierStokes::temperature_source_rad;
 
-Array<Real> NavierStokes::density_floor;  // def=0.0
-Array<Real> NavierStokes::density_ceiling;  // def=1.0e+20
-Array<Real> NavierStokes::density_floor_expansion;  // def=denconst
-Array<Real> NavierStokes::density_ceiling_expansion;  // def=denconst
-Array<Real> NavierStokes::denconst;
-Array<Real> NavierStokes::denconst_interface;
-Array<Real> NavierStokes::denconst_gravity; // def=1.0
+Vector<Real> NavierStokes::density_floor;  // def=0.0
+Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
+Vector<Real> NavierStokes::density_floor_expansion;  // def=denconst
+Vector<Real> NavierStokes::density_ceiling_expansion;  // def=denconst
+Vector<Real> NavierStokes::denconst;
+Vector<Real> NavierStokes::denconst_interface;
+Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
-Array<Real> NavierStokes::added_weight;
+Vector<Real> NavierStokes::added_weight;
 
-Array<Real> NavierStokes::stiffPINF;
-Array<Real> NavierStokes::prerecalesce_stiffCP;  // def=4.1855E+7
-Array<Real> NavierStokes::stiffCP;  // def=4.1855E+7
-Array<Real> NavierStokes::stiffGAMMA;
+Vector<Real> NavierStokes::stiffPINF;
+Vector<Real> NavierStokes::prerecalesce_stiffCP;  // def=4.1855E+7
+Vector<Real> NavierStokes::stiffCP;  // def=4.1855E+7
+Vector<Real> NavierStokes::stiffGAMMA;
 
 int NavierStokes::constant_viscosity=0;
 
 Real NavierStokes::angular_velocity=0.0;
-Array<Real> NavierStokes::DrhoDT;  // def=0.0
-Array<Real> NavierStokes::DrhoDz;  // def=0.0
+Vector<Real> NavierStokes::DrhoDT;  // def=0.0
+Vector<Real> NavierStokes::DrhoDz;  // def=0.0
 
  // 1=>rho=rho(T,z)
  // 2=>P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
-Array<int> NavierStokes::override_density; // def=0
-Array<Real> NavierStokes::prerecalesce_viscconst;
-Array<Real> NavierStokes::viscconst;
-Array<Real> NavierStokes::viscconst_eddy;
-Array<Real> NavierStokes::speciesviscconst;// species mass diffusion coeff.
-Array<Real> NavierStokes::prerecalesce_heatviscconst;
-Array<Real> NavierStokes::heatviscconst;
-Array<Real> NavierStokes::viscconst_interface;
-Array<Real> NavierStokes::heatviscconst_interface;
-Array<Real> NavierStokes::speciesconst;  // unused currently
-Array<Real> NavierStokes::speciesviscconst_interface;
+Vector<int> NavierStokes::override_density; // def=0
+Vector<Real> NavierStokes::prerecalesce_viscconst;
+Vector<Real> NavierStokes::viscconst;
+Vector<Real> NavierStokes::viscconst_eddy;
+Vector<Real> NavierStokes::speciesviscconst;// species mass diffusion coeff.
+Vector<Real> NavierStokes::prerecalesce_heatviscconst;
+Vector<Real> NavierStokes::heatviscconst;
+Vector<Real> NavierStokes::viscconst_interface;
+Vector<Real> NavierStokes::heatviscconst_interface;
+Vector<Real> NavierStokes::speciesconst;  // unused currently
+Vector<Real> NavierStokes::speciesviscconst_interface;
 // 0=diffuse in solid 1=dirichlet 2=neumann
 int NavierStokes::solidheat_flag=0; 
 int NavierStokes::diffusionface_flag=1; // 0=use LS  1=use VOF
 int NavierStokes::elasticface_flag=1; // 0=use LS  1=use VOF
 int NavierStokes::temperatureface_flag=1; // 0=use LS  1=use VOF
 
-Array<int> NavierStokes::material_type;
+Vector<int> NavierStokes::material_type;
 
 Real NavierStokes::wait_time=0.0;
 Real NavierStokes::advbot=1.0;
@@ -697,12 +697,12 @@ int NavierStokes::law_of_the_wall=0;
 // 3 FSI ice
 // 4 FSI link w/Kourosh Shoele
 // 5 FSI rigid solid (PROB.F90)
-Array<int> NavierStokes::FSI_flag; 
-Array<int> NavierStokes::FSI_touch_flag; // 0..nthreads-1
+Vector<int> NavierStokes::FSI_flag; 
+Vector<int> NavierStokes::FSI_touch_flag; // 0..nthreads-1
 // default: 1
-Array<int> NavierStokes::FSI_refine_factor; 
+Vector<int> NavierStokes::FSI_refine_factor; 
 // default: 3
-Array<int> NavierStokes::FSI_bounding_box_ngrow; 
+Vector<int> NavierStokes::FSI_bounding_box_ngrow; 
 
 int NavierStokes::CTML_FSI_numsolids = 0;
 int NavierStokes::CTML_force_model = 0; // 0=Lag force 1=Lag stress
@@ -714,7 +714,7 @@ int NavierStokes::elements_generated = 0;
 // 0=take into account sound speed only at t=0 if compressible.
 // 1=always take into account sound speed
 // 2=never take into account sound speed
-Array<int> NavierStokes::shock_timestep; 
+Vector<int> NavierStokes::shock_timestep; 
 
 Real NavierStokes::visc_coef=0.0;
 
@@ -811,11 +811,11 @@ void extra_circle_parameters(
 } // subroutine extra_circle_parameters
 
 // ns.mof_ordering overrides this.
-void mof_ordering_override(Array<int>& mof_ordering_local,
+void mof_ordering_override(Vector<int>& mof_ordering_local,
  int nmat,int probtype,int axis_dir,Real radblob3,
  Real radblob4,Real radblob7,
  int mof_error_ordering_local,
- Array<int> FSI_flag_temp) {
+ Vector<int> FSI_flag_temp) {
 
  if (nmat!=mof_ordering_local.size())
   amrex::Error("mof_ordering_local invalid size");
@@ -927,6 +927,32 @@ void mof_ordering_override(Array<int>& mof_ordering_local,
 
 } // end subroutine mof_ordering_override
 
+void read_geometry_raw(int& geometry_coord,
+	Vector<Real>& geometry_prob_lo,
+        Vector<Real>& geometry_prob_hi,
+	Vector<int>& geometry_is_periodic,
+	int& geometry_is_any_periodic) {
+
+ ParmParse pp("geometry");
+ pp.get("coord_sys",geometry_coord);
+ pp.getarr("prob_lo",geometry_prob_lo,0,AMREX_SPACEDIM);
+ pp.getarr("prob_hi",geometry_prob_hi,0,AMREX_SPACEDIM);
+ geometry_is_periodic.resize(AMREX_SPACEDIM);
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+  geometry_is_periodic[dir]=0;
+ pp.queryarr("is_periodic",geometry_is_periodic,0,AMREX_SPACEDIM);
+ geometry_is_any_periodic=0;
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (geometry_is_periodic[dir]==0) {
+   // do nothing
+  } else if (geometry_is_periodic[dir]==1) {
+   geometry_is_any_periodic=1;
+  } else
+    amrex::Error("geometry_is_periodic[dir] invalid");
+ } // dir=0...sdim-1
+
+} // subroutine read_geometry_raw
+
 void fortran_parameters() {
 
  Real denfact;
@@ -1010,7 +1036,7 @@ void fortran_parameters() {
  int ns_max_level;
  ParmParse ppamr("amr");
  ppamr.get("max_level",ns_max_level);
- Array<int> ns_space_blocking_factor;
+ Vector<int> ns_space_blocking_factor;
  ns_space_blocking_factor.resize(ns_max_level+1);
  for (int lev=0;lev<=ns_max_level;lev++)
   ns_space_blocking_factor[lev]=2;
@@ -1180,7 +1206,7 @@ void fortran_parameters() {
  num_state_material=SpeciesVar;  // den,Temperature
  num_state_material+=num_species_var;
 
- Array<Real> elastic_viscosity_temp;
+ Vector<Real> elastic_viscosity_temp;
  elastic_viscosity_temp.resize(nmat);
  for (int im=0;im<nmat;im++) 
   elastic_viscosity_temp[im]=0.0;
@@ -1196,29 +1222,29 @@ void fortran_parameters() {
    amrex::Error("elastic_viscosity_temp invalid");
  } // im=0..nmat-1 
 
- Array<Real> denconst_temp(nmat);
- Array<Real> den_ceiling_temp(nmat);
- Array<Real> den_floor_temp(nmat);
- Array<Real> cavdenconst_temp(nmat);
+ Vector<Real> denconst_temp(nmat);
+ Vector<Real> den_ceiling_temp(nmat);
+ Vector<Real> den_floor_temp(nmat);
+ Vector<Real> cavdenconst_temp(nmat);
 
- Array<Real> stiffPINFtemp(nmat);
- Array<Real> stiffCPtemp(nmat);
- Array<Real> stiffGAMMAtemp(nmat);
+ Vector<Real> stiffPINFtemp(nmat);
+ Vector<Real> stiffCPtemp(nmat);
+ Vector<Real> stiffGAMMAtemp(nmat);
 
- Array<Real> DrhoDTtemp(nmat);
- Array<Real> DrhoDztemp(nmat);
- Array<Real> tempcutofftemp(nmat);
- Array<Real> tempcutoffmaxtemp(nmat);
- Array<Real> tempconst_temp(nmat);
- Array<Real> initial_temperature_temp(nmat);
- Array<Real> viscconst_temp(nmat);
- Array<Real> viscconst_eddy_temp(nmat);
- Array<int> viscosity_state_model_temp(nmat);
- Array<Real> heatviscconst_temp(nmat);
- Array<Real> speciesconst_temp((num_species_var+1)*nmat);
- Array<Real> speciesviscconst_temp((num_species_var+1)*nmat);
- Array<int> material_type_temp(nmat);
- Array<int> FSI_flag_temp(nmat);
+ Vector<Real> DrhoDTtemp(nmat);
+ Vector<Real> DrhoDztemp(nmat);
+ Vector<Real> tempcutofftemp(nmat);
+ Vector<Real> tempcutoffmaxtemp(nmat);
+ Vector<Real> tempconst_temp(nmat);
+ Vector<Real> initial_temperature_temp(nmat);
+ Vector<Real> viscconst_temp(nmat);
+ Vector<Real> viscconst_eddy_temp(nmat);
+ Vector<int> viscosity_state_model_temp(nmat);
+ Vector<Real> heatviscconst_temp(nmat);
+ Vector<Real> speciesconst_temp((num_species_var+1)*nmat);
+ Vector<Real> speciesviscconst_temp((num_species_var+1)*nmat);
+ Vector<int> material_type_temp(nmat);
+ Vector<int> FSI_flag_temp(nmat);
 
  pp.getarr("material_type",material_type_temp,0,nmat);
 
@@ -1256,7 +1282,7 @@ void fortran_parameters() {
 
  pp.queryarr("stiffCP",stiffCPtemp,0,nmat);
 
- Array<Real> prerecalesce_stiffCP_temp(nmat);
+ Vector<Real> prerecalesce_stiffCP_temp(nmat);
  for (int im=0;im<nmat;im++)
   prerecalesce_stiffCP_temp[im]=stiffCPtemp[im];
  pp.queryarr("precalesce_stiffCP",prerecalesce_stiffCP_temp,0,nmat);
@@ -1279,7 +1305,7 @@ void fortran_parameters() {
   viscconst_eddy_temp[im]=0.0;
  pp.queryarr("viscconst_eddy",viscconst_eddy_temp,0,nmat);
 
- Array<Real> prerecalesce_viscconst_temp(nmat);
+ Vector<Real> prerecalesce_viscconst_temp(nmat);
  for (int im=0;im<nmat;im++)
   prerecalesce_viscconst_temp[im]=viscconst_temp[im];
  pp.queryarr("precalesce_viscconst",prerecalesce_viscconst_temp,0,nmat);
@@ -1291,7 +1317,7 @@ void fortran_parameters() {
 
  pp.getarr("heatviscconst",heatviscconst_temp,0,nmat);
 
- Array<Real> prerecalesce_heatviscconst_temp(nmat);
+ Vector<Real> prerecalesce_heatviscconst_temp(nmat);
  for (int im=0;im<nmat;im++)
   prerecalesce_heatviscconst_temp[im]=heatviscconst_temp[im];
  pp.queryarr("precalesce_heatviscconst",prerecalesce_heatviscconst_temp,0,nmat);
@@ -1302,16 +1328,16 @@ void fortran_parameters() {
  }
 
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- Array<Real> tension_slopetemp(nten);
- Array<Real> tension_T0temp(nten);
- Array<Real> tension_mintemp(nten);
+ Vector<Real> tension_slopetemp(nten);
+ Vector<Real> tension_T0temp(nten);
+ Vector<Real> tension_mintemp(nten);
  for (int im=0;im<nten;im++) {
   tension_slopetemp[im]=0.0;
   tension_T0temp[im]=293.0;
   tension_mintemp[im]=0.0;
  }
- Array<Real> tensiontemp(nten);
- Array<Real> prefreeze_tensiontemp(nten);
+ Vector<Real> tensiontemp(nten);
+ Vector<Real> prefreeze_tensiontemp(nten);
  pp.getarr("tension",tensiontemp,0,nten);
  pp.queryarr("tension_slope",tension_slopetemp,0,nten);
  pp.queryarr("tension_T0",tension_T0temp,0,nten);
@@ -1352,22 +1378,30 @@ void fortran_parameters() {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid 9");
 
+ int geometry_coord;
+ Vector<Real> geometry_prob_lo;
+ Vector<Real> geometry_prob_hi;
+ Vector<int> geometry_is_periodic;
+ int geometry_is_any_periodic;
+ read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
+		 geometry_is_periodic,geometry_is_any_periodic);
+
  int rz_flag=0;
- if (CoordSys::IsRZ())
+ if ((CoordSys::CoordType) geometry_coord == CoordSys::RZ)  
   rz_flag=1;
- else if (CoordSys::IsCartesian())
+ else if ((CoordSys::CoordType) geometry_coord == CoordSys::cartesian)  
   rz_flag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if ((CoordSys::CoordType) geometry_coord == CoordSys::CYLINDRICAL)  
   rz_flag=3;
  else
   amrex::Error("CoordSys bust 1");
 
- Real problox=Geometry::ProbLo(0);
- Real probloy=Geometry::ProbLo(1);
- Real probloz=Geometry::ProbLo(AMREX_SPACEDIM-1);
- Real probhix=Geometry::ProbHi(0);
- Real probhiy=Geometry::ProbHi(1);
- Real probhiz=Geometry::ProbHi(AMREX_SPACEDIM-1);
+ Real problox=geometry_prob_lo[0];
+ Real probloy=geometry_prob_lo[1];
+ Real probloz=geometry_prob_lo[AMREX_SPACEDIM-1];
+ Real probhix=geometry_prob_hi[0];
+ Real probhiy=geometry_prob_hi[1];
+ Real probhiz=geometry_prob_hi[AMREX_SPACEDIM-1];
 
  int ioproc=0;
  if (ParallelDescriptor::IOProcessor())
@@ -1396,7 +1430,7 @@ void fortran_parameters() {
  Real nucleation_init_time=0.0;
  pp.query("nucleation_init_time",nucleation_init_time);
 
- Array<Real> temp_pos_sites(4);
+ Vector<Real> temp_pos_sites(4);
  for (int dir=0;dir<4;dir++)
   temp_pos_sites[dir]=0.0;
  
@@ -1493,7 +1527,7 @@ void fortran_parameters() {
  if ((mof_error_ordering_local!=0)&&
      (mof_error_ordering_local!=1))
   amrex::Error("mof_error_ordering_local invalid");
- Array<int> mof_ordering_local;
+ Vector<int> mof_ordering_local;
  mof_ordering_local.resize(nmat);
 
  mof_ordering_override(mof_ordering_local,
@@ -1544,17 +1578,20 @@ NavierStokes::read_geometry ()
     //
     // Must load coord here because CoordSys hasn't read it in yet.
     //
-    ParmParse pp("geometry");
-    ParmParse ppns("ns");
+    int geometry_coord;
+    Vector<Real> geometry_prob_lo;
+    Vector<Real> geometry_prob_hi;
+    Vector<int> geometry_is_periodic;
+    int geometry_is_any_periodic;
 
-    int coord;
-    pp.get("coord_sys",coord);
+    read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
+		    geometry_is_periodic,geometry_is_any_periodic);
 
-    if ((CoordSys::CoordType) coord == CoordSys::RZ)  
+    if ((CoordSys::CoordType) geometry_coord == CoordSys::RZ)  
      if (AMREX_SPACEDIM==3)
       amrex::Error("No RZ in 3d");
 
-    if (((CoordSys::CoordType) coord == CoordSys::RZ) && 
+    if (((CoordSys::CoordType) geometry_coord == CoordSys::RZ) && 
         (phys_bc.lo(0) != Symmetry)) {
         phys_bc.setLo(0,Symmetry);
         temperature_phys_bc.setLo(0,Symmetry);
@@ -1667,13 +1704,13 @@ NavierStokes::read_params ()
      2*AMREX_SPACEDIM+1+nmat+nmat*nmat;
 
     int ns_max_level;
-    Array<int> ns_max_grid_size;
+    Vector<int> ns_max_grid_size;
     int the_max_grid_size=0;
     int cnt_max_grid_size;
 
     ParmParse ppamr("amr");
     ppamr.get("max_level",ns_max_level);
-    Array<int> ns_n_error_buf;
+    Vector<int> ns_n_error_buf;
     ns_n_error_buf.resize(ns_max_level);
     for (int ilev=0;ilev<ns_max_level;ilev++) 
      ns_n_error_buf[ilev]=1;
@@ -1774,12 +1811,12 @@ NavierStokes::read_params ()
     } else if (ncoarseblocks!=0)
      amrex::Error("ncoarseblocks out of range");
      
-    Array<int> lo_bc(AMREX_SPACEDIM);
-    Array<int> hi_bc(AMREX_SPACEDIM);
-    Array<int> temperature_lo_bc(AMREX_SPACEDIM);
-    Array<int> temperature_hi_bc(AMREX_SPACEDIM);
-    Array<int> species_lo_bc(AMREX_SPACEDIM);
-    Array<int> species_hi_bc(AMREX_SPACEDIM);
+    Vector<int> lo_bc(AMREX_SPACEDIM);
+    Vector<int> hi_bc(AMREX_SPACEDIM);
+    Vector<int> temperature_lo_bc(AMREX_SPACEDIM);
+    Vector<int> temperature_hi_bc(AMREX_SPACEDIM);
+    Vector<int> species_lo_bc(AMREX_SPACEDIM);
+    Vector<int> species_hi_bc(AMREX_SPACEDIM);
     pp.getarr("lo_bc",lo_bc,0,AMREX_SPACEDIM);
     pp.getarr("hi_bc",hi_bc,0,AMREX_SPACEDIM);
     for (int i = 0; i < AMREX_SPACEDIM; i++) {
@@ -1809,22 +1846,19 @@ NavierStokes::read_params ()
      // modified in this routine.
     read_geometry();
 
-    //
-    // Check phys_bc against possible periodic geometry
-    // if periodic, must have internal BC marked.
-    //
-    Array<int> periodic_flag;
-    periodic_flag.resize(AMREX_SPACEDIM);
-    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-     periodic_flag[dir]=0;
-    }
+    int geometry_coord;
+    Vector<Real> geometry_prob_lo;
+    Vector<Real> geometry_prob_hi;
+    Vector<int> geometry_is_periodic;
+    int geometry_is_any_periodic;
+    read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
+		 geometry_is_periodic,geometry_is_any_periodic);
 
-    int local_all_periodic=1;
+    int geometry_is_all_periodic=1;
 
-    if (Geometry::isAnyPeriodic()) {
+    if (geometry_is_any_periodic==1) {
      for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-      if (Geometry::isPeriodic(dir)) {
-       periodic_flag[dir]=1;
+      if (geometry_is_periodic[dir]==1) {
        if ((lo_bc[dir] != Interior)||
            (temperature_lo_bc[dir]!=Interior)) {
         std::cerr << "NavierStokes::variableSetUp:periodic in direction "
@@ -1837,20 +1871,20 @@ NavierStokes::read_params ()
             << dir << " but high BC is not Interior\n";
         amrex::Abort("NavierStokes::read_params()");
        }
-      } else if (! Geometry::isPeriodic(dir)) {
-       local_all_periodic=0;
+      } else if (geometry_is_periodic[dir]==0) {
+       geometry_is_all_periodic=0;
       } else
-       amrex::Error("Geometry::isPeriodic(dir) invalid"); 
+       amrex::Error("geometry_is_periodic[dir] invalid"); 
      } // dir=0..sdim-1
-    } else if (!Geometry::isAnyPeriodic()) {
-     // do nothing
+    } else if (geometry_is_any_periodic==0) {
+     geometry_is_all_periodic=0;
     } else
-     amrex::Error("Geometry::isAnyPeriodic() invalid");
+     amrex::Error("geometry_is_any_periodic invalid");
 
-    FORT_SET_PERIODIC_VAR(periodic_flag.dataPtr());
+    FORT_SET_PERIODIC_VAR(geometry_is_periodic.dataPtr());
 
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-     if (!Geometry::isPeriodic(dir)) {
+     if (geometry_is_periodic[dir]==0) {
       if ((lo_bc[dir] == Interior)||
           (temperature_lo_bc[dir]==Interior)) {
        std::cerr << "NavierStokes::variableSetUp:Interior bc in direction "
@@ -1864,17 +1898,13 @@ NavierStokes::read_params ()
        amrex::Abort("NavierStokes::read_params()");
       }
      }
-    }
+    } // dir=0.. sdim-1
 
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "phys_bc= " << phys_bc << '\n';
      std::cout << "temperature_phys_bc= " << temperature_phys_bc << '\n';
      std::cout << "species_phys_bc= " << species_phys_bc << '\n';
     }
-
-    // if domain dimensions needed:
-    //Geometry::ProbLo(dir);
-    //Geometry::ProbHi(dir);
 
     //
     // Get timestepping parameters.
@@ -1904,12 +1934,12 @@ NavierStokes::read_params ()
     if ((viscous_enable_spectral==1)||  //SEM space and time
         (viscous_enable_spectral==2)) { //SEM space
 
-     if (local_all_periodic==1) {
+     if (geometry_is_all_periodic==1) {
       // do nothing
-     } else if (local_all_periodic==0) {
+     } else if (geometry_is_all_periodic==0) {
       amrex::Error("no slip BC not implemented for space order>2");
      } else
-      amrex::Error("local_all_periodic invalid");
+      amrex::Error("geometry_is_all_periodic invalid");
 
     } else if ((viscous_enable_spectral==0)||  //2nd space, 1st time
 	       (viscous_enable_spectral==3)) { // 2nd order space, SEM time
@@ -3920,8 +3950,8 @@ NavierStokes::get_mm_scomp_solver(
   int num_materials_combine,
   int project_option,
   int& state_index,
-  Array<int>& scomp,
-  Array<int>& ncomp,
+  Vector<int>& scomp,
+  Vector<int>& ncomp,
   int& ncomp_check) {
 
  int nmat=num_materials;
@@ -4122,8 +4152,8 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
  if ((level<0)||(level>finest_level))
   amrex::Error("level corrupt");
 
- Array<int> scomp;
- Array<int> ncomp;
+ Vector<int> scomp;
+ Vector<int> ncomp;
  int ncomp_check;
  int state_index;
  get_mm_scomp_solver(
@@ -4465,8 +4495,8 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  problo[dir]=Geometry::ProbLo(dir);
-  probhi[dir]=Geometry::ProbHi(dir);
+  problo[dir]=geom.ProbLo(dir);
+  probhi[dir]=geom.ProbHi(dir);
  }
 
  bool use_tiling=ns_tiling;
@@ -4485,12 +4515,12 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 
   // this will store information about the grids stored
   // on this processor.
- Array<int> tilelo_array;
- Array<int> tilehi_array;
- Array<int> gridno_array;
- Array<Real> xlo_array;
- Array< int > num_tiles_on_thread_proc;
- Array< int > num_tiles_on_thread_proc_check;
+ Vector<int> tilelo_array;
+ Vector<int> tilehi_array;
+ Vector<int> gridno_array;
+ Vector<Real> xlo_array;
+ Vector< int > num_tiles_on_thread_proc;
+ Vector< int > num_tiles_on_thread_proc_check;
  int max_num_tiles_on_thread_proc=0;
  int tile_dim=0;
 
@@ -4870,7 +4900,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
   //   and FORT_EXTRAPFILL
  for (int partid=0;partid<nparts_ghost;partid++) {
   int ibase=partid*AMREX_SPACEDIM;
-  Array<int> scompBC_map;
+  Vector<int> scompBC_map;
   scompBC_map.resize(AMREX_SPACEDIM);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
    scompBC_map[dir]=dir+1;
@@ -4923,7 +4953,7 @@ void NavierStokes::resize_FSI_GHOST_MF(int ngrow) {
   //   and FORT_EXTRAPFILL
   for (int partid=0;partid<nparts_ghost;partid++) {
    int ibase=partid*AMREX_SPACEDIM;
-   Array<int> scompBC_map;
+   Vector<int> scompBC_map;
    scompBC_map.resize(AMREX_SPACEDIM);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
     scompBC_map[dir]=dir+1;
@@ -5357,7 +5387,7 @@ void NavierStokes::ns_header_msg_level(
  int FSI_operation,int FSI_sub_operation,
  Real time,Real dt,int iter) {
 
- Array< int > num_tiles_on_thread_proc;
+ Vector< int > num_tiles_on_thread_proc;
  num_tiles_on_thread_proc.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   num_tiles_on_thread_proc[tid]=0;
@@ -5505,8 +5535,8 @@ void NavierStokes::ns_header_msg_level(
   Real probhi[AMREX_SPACEDIM];
   Real problen[AMREX_SPACEDIM];
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   problo[dir]=Geometry::ProbLo(dir);
-   probhi[dir]=Geometry::ProbHi(dir);
+   problo[dir]=geom.ProbLo(dir);
+   probhi[dir]=geom.ProbHi(dir);
    problen[dir]=probhi[dir]-problo[dir];
    if (problen[dir]<=0.0)
     amrex::Error("problen[dir]<=0.0");
@@ -5539,11 +5569,11 @@ void NavierStokes::ns_header_msg_level(
     if (num_materials_vel!=1)
      amrex::Error("num_materials_vel invalid");
 
-    Array<int> velbc;
+    Vector<int> velbc;
     velbc.resize(num_materials_vel*AMREX_SPACEDIM*2*AMREX_SPACEDIM);
     for (int i=0;i<velbc.size();i++)
      velbc[i]=0;
-    Array<int> vofbc;
+    Vector<int> vofbc;
     vofbc.resize(2*AMREX_SPACEDIM);
     for (int i=0;i<vofbc.size();i++)
      vofbc[i]=0;
@@ -5817,9 +5847,9 @@ void NavierStokes::ns_header_msg_level(
     FArrayBox& FSIfab=(*localMF[FSI_MF])[mfi];
     FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
 
-    Array<int> velbc=getBCArray(Solid_State_Type,gridno,0,
+    Vector<int> velbc=getBCArray(Solid_State_Type,gridno,0,
      nparts*AMREX_SPACEDIM);
-    Array<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+    Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
     int tid=ns_thread();
     if ((tid<0)||(tid>=thread_class::nthreads))
@@ -5896,7 +5926,7 @@ void NavierStokes::ns_header_msg_level(
    // nFSI=nparts * (vel + LS + temp + flag + stress)
    for (int partid=0;partid<nparts;partid++) {
     int ibase=partid*nFSI_sub;
-    Array<int> scompBC_map;
+    Vector<int> scompBC_map;
     scompBC_map.resize(AMREX_SPACEDIM); 
     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
      scompBC_map[dir]=dir+1;
@@ -5978,11 +6008,11 @@ void NavierStokes::ns_header_msg_level(
     if (num_materials_vel!=1)
      amrex::Error("num_materials_vel invalid");
 
-    Array<int> velbc;
+    Vector<int> velbc;
     velbc.resize(num_materials_vel*AMREX_SPACEDIM*2*AMREX_SPACEDIM);
     for (int i=0;i<velbc.size();i++)
      velbc[i]=0;
-    Array<int> vofbc;
+    Vector<int> vofbc;
     vofbc.resize(2*AMREX_SPACEDIM);
     for (int i=0;i<vofbc.size();i++)
      vofbc[i]=0;
@@ -6057,9 +6087,9 @@ void NavierStokes::ns_header_msg_level(
      FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
      FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
 
-     Array<int> velbc=getBCArray(State_Type,gridno,0,
+     Vector<int> velbc=getBCArray(State_Type,gridno,0,
       num_materials_vel*AMREX_SPACEDIM);
-     Array<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+     Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
      int tid=ns_thread();
      if ((tid<0)||(tid>=thread_class::nthreads))
@@ -6170,8 +6200,8 @@ void NavierStokes::post_restart() {
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  problo[dir]=Geometry::ProbLo(dir);
-  probhi[dir]=Geometry::ProbHi(dir);
+  problo[dir]=geom.ProbLo(dir);
+  probhi[dir]=geom.ProbHi(dir);
  }
 
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
@@ -6188,8 +6218,8 @@ void NavierStokes::post_restart() {
 
  if (level==0) {
 
-  Array<int> bfact_space_level(max_level+1);
-  Array<int> bfact_grid_level(max_level+1);
+  Vector<int> bfact_space_level(max_level+1);
+  Vector<int> bfact_grid_level(max_level+1);
   for (int ilev=0;ilev<=max_level;ilev++) {
    bfact_space_level[ilev]=parent->Space_blockingFactor(ilev);
    bfact_grid_level[ilev]=parent->blockingFactor(ilev);
@@ -6285,8 +6315,8 @@ NavierStokes::initData () {
  Real probhi[AMREX_SPACEDIM];
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  problo[dir]=Geometry::ProbLo(dir);
-  probhi[dir]=Geometry::ProbHi(dir);
+  problo[dir]=geom.ProbLo(dir);
+  probhi[dir]=geom.ProbHi(dir);
  }
 
  if (upper_slab_time!=0.0)
@@ -6294,8 +6324,8 @@ NavierStokes::initData () {
 
  if (level==0) {
 
-  Array<int> bfact_space_level(max_level+1);
-  Array<int> bfact_grid_level(max_level+1);
+  Vector<int> bfact_space_level(max_level+1);
+  Vector<int> bfact_grid_level(max_level+1);
   for (int ilev=0;ilev<=max_level;ilev++) {
    bfact_space_level[ilev]=parent->Space_blockingFactor(ilev);
    bfact_grid_level[ilev]=parent->blockingFactor(ilev);
@@ -6324,7 +6354,7 @@ NavierStokes::initData () {
     at_least_one_ice=1;
   }
 
-  Array<int> recalesce_material;
+  Vector<int> recalesce_material;
   recalesce_material.resize(nmat);
 
   int at_least_one=0;
@@ -6337,7 +6367,7 @@ NavierStokes::initData () {
    }
   }
       
-  Array<Real> recalesce_state_old;
+  Vector<Real> recalesce_state_old;
   int recalesce_num_state=6;
   recalesce_state_old.resize(recalesce_num_state*nmat);
   if (at_least_one==1) {
@@ -6589,8 +6619,8 @@ NavierStokes::initData () {
 
 }  // subroutine initData
 
-void NavierStokes::init_boundary_list(Array<int> scomp,
-  Array<int> ncomp) {
+void NavierStokes::init_boundary_list(Vector<int> scomp,
+  Vector<int> ncomp) {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
@@ -7165,11 +7195,11 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      cur_time_slab);
 
     int rzflag=0;
-    if (CoordSys::IsRZ())
+    if (geom.IsRZ())
      rzflag=1;
-    else if (CoordSys::IsCartesian())
+    else if (geom.IsCartesian())
      rzflag=0;
-    else if (CoordSys::IsCYLINDRICAL())
+    else if (geom.IsCYLINDRICAL())
      rzflag=3;
     else
      amrex::Error("CoordSys bust 2");
@@ -7315,11 +7345,11 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
    debug_ngrow(LEVELPC_MF,2,5);
 
    int rzflag=0;
-   if (CoordSys::IsRZ())
+   if (geom.IsRZ())
     rzflag=1;
-   else if (CoordSys::IsCartesian())
+   else if (geom.IsCartesian())
     rzflag=0;
-   else if (CoordSys::IsCYLINDRICAL())
+   else if (geom.IsCYLINDRICAL())
     rzflag=3;
    else
     amrex::Error("CoordSys bust 2");
@@ -7466,11 +7496,11 @@ void NavierStokes::make_viscoelastic_force(int im) {
     amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
    int rzflag=0;
-   if (CoordSys::IsRZ())
+   if (geom.IsRZ())
     rzflag=1;
-   else if (CoordSys::IsCartesian())
+   else if (geom.IsCartesian())
     rzflag=0;
-   else if (CoordSys::IsCYLINDRICAL())
+   else if (geom.IsCYLINDRICAL())
     rzflag=3;
    else
     amrex::Error("CoordSys bust 2");
@@ -7704,11 +7734,11 @@ void NavierStokes::make_marangoni_force(int isweep) {
   FArrayBox& yp=(*localMF[POTENTIAL_EDGE_MF+1])[mfi];
   FArrayBox& zp=(*localMF[POTENTIAL_EDGE_MF+AMREX_SPACEDIM-1])[mfi];
 
-  Array<int> presbc=getBCArray(State_Type,gridno,
+  Vector<int> presbc=getBCArray(State_Type,gridno,
    num_materials_vel*AMREX_SPACEDIM,1);
-  Array<int> velbc=getBCArray(State_Type,gridno,0,
+  Vector<int> velbc=getBCArray(State_Type,gridno,0,
    num_materials_vel*AMREX_SPACEDIM);
-  Array<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+  Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
   // force=dt * div((I-nn^T)(sigma) delta) / rho
   FORT_MARANGONIFORCE(
@@ -8545,11 +8575,11 @@ void NavierStokes::tensor_advection_update() {
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 3");
@@ -8615,7 +8645,7 @@ void NavierStokes::tensor_advection_update() {
       FArrayBox& velfab=(*velmf)[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
 
-      Array<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+      Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
       // get |grad U|,D,grad U 
       int iproject=0;
@@ -8670,7 +8700,7 @@ void NavierStokes::tensor_advection_update() {
       FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
 
-      Array<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+      Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
       int transposegradu=0;
 
@@ -8948,7 +8978,7 @@ NavierStokes::correct_density() {
     int bfact=parent->Space_blockingFactor(level);
 
     const Real* xlo = grid_loc[gridno].lo();
-    Array<int> presbc=getBCArray(State_Type,gridno,scomp_pres,1);
+    Vector<int> presbc=getBCArray(State_Type,gridno,scomp_pres,1);
     FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
     FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
@@ -9139,7 +9169,7 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    Array<int> velbc=getBCArray(State_Type,gridno,normdir,1);
+    Vector<int> velbc=getBCArray(State_Type,gridno,normdir,1);
 
     FArrayBox& unodetemp=(*temp_mac_velocity)[mfi]; // macgrow+1
     FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir])[mfi]; // macgrow+1
@@ -9187,7 +9217,7 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
 }  // prepare_displacement
 
 void
-NavierStokes::level_phase_change_rate(Array<blobclass> blobdata,
+NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 		int color_count) {
 
  bool use_tiling=ns_tiling;
@@ -9213,7 +9243,7 @@ NavierStokes::level_phase_change_rate(Array<blobclass> blobdata,
   amrex::Error("color_count!=blobdata.size()");
  blob_arraysize=color_count*num_elements_blobclass;
 
- Array<Real> blob_array;
+ Vector<Real> blob_array;
  blob_array.resize(blob_arraysize);
 
  int counter=0;
@@ -9299,7 +9329,7 @@ NavierStokes::level_phase_change_rate(Array<blobclass> blobdata,
      // lsfab is not updated.
      // burnvelfab=BURNING_VELOCITY_MF is cell centered velocity.
    int stefan_flag=1;
-   Array<int> use_exact_temperature(2*nten);
+   Vector<int> use_exact_temperature(2*nten);
    for (int im=0;im<2*nten;im++)
     use_exact_temperature[im]=0;
 
@@ -9395,7 +9425,7 @@ NavierStokes::level_phase_change_rate_extend() {
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
- Array<int> scompBC_map;
+ Vector<int> scompBC_map;
  scompBC_map.resize(nburning);
   // extrap, u_extrap, v_extrap, w_extrap
   // mof recon extrap
@@ -9571,7 +9601,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
 
  const Real* dx = geom.CellSize();
 
- Array< Array<Real> > DVOF_local;
+ Vector< Vector<Real> > DVOF_local;
  DVOF_local.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   DVOF_local[tid].resize(nmat);
@@ -9579,7 +9609,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    DVOF_local[tid][im]=0.0;
  } // tid
 
- Array< Array<Real> > delta_mass_local;
+ Vector< Vector<Real> > delta_mass_local;
  delta_mass_local.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   delta_mass_local[tid].resize(2*nmat); // source 1..nmat  dest 1..nmat
@@ -9605,7 +9635,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    const int* fabhi=fabgrid.hiVect();
 
    const Real* xlo = grid_loc[gridno].lo();
-   Array<int> velbc=getBCArray(State_Type,gridno,0,
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,
     num_materials_vel*AMREX_SPACEDIM);
 
    FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
@@ -9692,7 +9722,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   Array<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+   Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
@@ -10044,7 +10074,7 @@ NavierStokes::level_phase_change_redistribute(
   if ((indexEXP<0)||(indexEXP>=2*nten))
    amrex::Error("indexEXP invalid");
   
-  Array< Real > mdot_sum_local;
+  Vector< Real > mdot_sum_local;
   mdot_sum_local.resize(thread_class::nthreads);
   for (int tid=0;tid<thread_class::nthreads;tid++) {
    mdot_sum_local[tid]=0.0;
@@ -10064,7 +10094,7 @@ NavierStokes::level_phase_change_redistribute(
    const int* fablo=fabgrid.loVect();
    const int* fabhi=fabgrid.hiVect();
    const Real* xlo = grid_loc[gridno].lo();
-   Array<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+   Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
@@ -10146,7 +10176,7 @@ NavierStokes::level_phase_change_redistribute(
     const int* fablo=fabgrid.loVect();
     const int* fabhi=fabgrid.hiVect();
     const Real* xlo = grid_loc[gridno].lo();
-    Array<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+    Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
@@ -10194,8 +10224,8 @@ NavierStokes::level_phase_change_redistribute(
   if ((indexEXP<0)||(indexEXP>=2*nten))
    amrex::Error("indexEXP invalid");
 
-  Array< Real > mdot_lost_local;
-  Array< Real > mdot_sum2_local;
+  Vector< Real > mdot_lost_local;
+  Vector< Real > mdot_sum2_local;
   mdot_lost_local.resize(thread_class::nthreads);
   mdot_sum2_local.resize(thread_class::nthreads);
   for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -10216,7 +10246,7 @@ NavierStokes::level_phase_change_redistribute(
     const int* fablo=fabgrid.loVect();
     const int* fabhi=fabgrid.hiVect();
     const Real* xlo = grid_loc[gridno].lo();
-    Array<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+    Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
@@ -10258,9 +10288,9 @@ NavierStokes::level_phase_change_redistribute(
 
  } else if (isweep==3) {
 
-  Array<Real> mdotplus_local;
-  Array<Real> mdotminus_local;
-  Array<Real> mdotcount_local;
+  Vector<Real> mdotplus_local;
+  Vector<Real> mdotminus_local;
+  Vector<Real> mdotcount_local;
   mdotplus_local.resize(thread_class::nthreads);
   mdotminus_local.resize(thread_class::nthreads);
   mdotcount_local.resize(thread_class::nthreads);
@@ -10478,7 +10508,7 @@ NavierStokes::level_init_icemask() {
 } // subroutine level_init_icemask
 
 void
-NavierStokes::nucleate_bubbles(Array<blobclass> blobdata,
+NavierStokes::nucleate_bubbles(Vector<blobclass> blobdata,
                 int color_count) {
 
  int finest_level=parent->finestLevel();
@@ -10512,7 +10542,7 @@ NavierStokes::nucleate_bubbles(Array<blobclass> blobdata,
   amrex::Error("color_count!=blobdata.size()");
  blob_arraysize=color_count*num_elements_blobclass;
 
- Array<Real> blob_array;
+ Vector<Real> blob_array;
  blob_array.resize(blob_arraysize);
 
  int counter=0;
@@ -10533,16 +10563,16 @@ NavierStokes::nucleate_bubbles(Array<blobclass> blobdata,
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  problo[dir]=Geometry::ProbLo(dir);
-  probhi[dir]=Geometry::ProbHi(dir);
+  problo[dir]=geom.ProbLo(dir);
+  probhi[dir]=geom.ProbHi(dir);
  }
 
  int rz_flag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rz_flag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rz_flag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rz_flag=3;
  else
   amrex::Error("CoordSys bust 1");
@@ -10575,7 +10605,7 @@ NavierStokes::nucleate_bubbles(Array<blobclass> blobdata,
   amrex::Error("prev_time_slab or cur_time_slab invalid");
 
  int do_the_nucleate;
- Array<Real> nucleate_pos;
+ Vector<Real> nucleate_pos;
  nucleate_pos.resize(4);
  if (n_sites>0)
   nucleate_pos.resize(4*n_sites);
@@ -10642,7 +10672,7 @@ NavierStokes::nucleate_bubbles(Array<blobclass> blobdata,
 
        double rr=pos_sites[nc*4+3];  // radius
 
-       Array<Real> xnucleate(AMREX_SPACEDIM);
+       Vector<Real> xnucleate(AMREX_SPACEDIM);
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
         xnucleate[dir]=-1.0e+99;
 
@@ -10694,7 +10724,7 @@ NavierStokes::nucleate_bubbles(Array<blobclass> blobdata,
  } else
   amrex::Error("n_sites invalid");
 
- Array< Array<Real> > delta_mass_local;
+ Vector< Vector<Real> > delta_mass_local;
  delta_mass_local.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   delta_mass_local[tid].resize(2*nmat); // source 1..nmat  dest 1..nmat
@@ -10720,7 +10750,7 @@ NavierStokes::nucleate_bubbles(Array<blobclass> blobdata,
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
-   Array<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+   Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
    FArrayBox& lsfab=(*LSMF)[mfi];
    FArrayBox& lsnewfab=LS_new[mfi];
    FArrayBox& eosfab=(*EOSMF)[mfi];
@@ -10936,8 +10966,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
  int num_materials_combine=nmat;
  int project_option_thermal=2;
  int state_index;
- Array<int> scomp;
- Array<int> ncomp;
+ Vector<int> scomp;
+ Vector<int> ncomp;
  int ncomp_check;
  get_mm_scomp_solver(
    num_materials_combine,
@@ -11439,7 +11469,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  bool use_tiling=ns_tiling;
 
  int num_colors=0;
- Array<Real> blob_array;
+ Vector<Real> blob_array;
  blob_array.resize(1);
  int blob_array_size=blob_array.size();
 
@@ -11485,7 +11515,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   int nparts=im_solid_map.size();
   if ((nparts<0)||(nparts>=nmat))
    amrex::Error("nparts invalid");
-  Array<int> im_solid_map_null;
+  Vector<int> im_solid_map_null;
   im_solid_map_null.resize(1);
 
   int* im_solid_map_ptr;
@@ -11545,11 +11575,11 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   const int* domhi = domain.hiVect();
 
   int rzflag=0;
-  if (CoordSys::IsRZ())
+  if (geom.IsRZ())
    rzflag=1;
-  else if (CoordSys::IsCartesian())
+  else if (geom.IsCartesian())
    rzflag=0;
-  else if (CoordSys::IsCYLINDRICAL())
+  else if (geom.IsCYLINDRICAL())
    rzflag=3;
   else
    amrex::Error("CoordSys bust 20");
@@ -11671,9 +11701,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
      FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
 
-     Array<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
      int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
-     Array<int> denbc=getBCArray(State_Type,gridno,dcomp,
+     Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
       nmat*num_state_material);
 
      int energyflag=0;
@@ -11855,10 +11885,10 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      } else
       amrex::Error("source_term invalid");
 
-     Array<int> velbc=getBCArray(State_Type,gridno,0,
+     Vector<int> velbc=getBCArray(State_Type,gridno,0,
       num_materials_vel*AMREX_SPACEDIM);
      int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
-     Array<int> denbc=getBCArray(State_Type,gridno,dcomp,
+     Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
       nmat*num_state_material);
 
      int operation_flag=6; // advection
@@ -12116,7 +12146,7 @@ NavierStokes::split_scalar_advection() {
  const int* domhi = domain.hiVect();
 
  int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material;
- Array<int> dombc(2*AMREX_SPACEDIM);
+ Vector<int> dombc(2*AMREX_SPACEDIM);
  const BCRec& descbc = get_desc_lst()[State_Type].getBC(scomp_mofvars);
  const int* b_rec=descbc.vect();
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
@@ -12281,7 +12311,7 @@ NavierStokes::split_scalar_advection() {
   FArrayBox& slopefab=(*momslope)[mfi];
   FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
 
-  Array<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
+  Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
 
   FORT_BUILD_SLOPES( 
    masknbrfab.dataPtr(),
@@ -12491,7 +12521,7 @@ NavierStokes::split_scalar_advection() {
     FArrayBox& xvelslopefab=(*xvelslope[veldir-1])[mfi]; //xvelslope,xcen
     FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
 
-    Array<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
+    Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
     int slopedir=veldir-1;
 
     FORT_BUILD_SLOPES_FACE( 
@@ -12529,7 +12559,7 @@ NavierStokes::split_scalar_advection() {
  } else
   amrex::Error("face_flag invalid 5");
 
- Array<int> nprocessed;
+ Vector<int> nprocessed;
  nprocessed.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   nprocessed[tid]=0.0;
@@ -12667,7 +12697,7 @@ NavierStokes::split_scalar_advection() {
   int mofcomp=dencomp+nmat*num_state_material;
   int errcomp=mofcomp+nmat*ngeom_raw;
 
-  Array<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
+  Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
 
      // this is the result
   FArrayBox& destfab=S_new[mfi];
@@ -13047,7 +13077,7 @@ NavierStokes::unsplit_scalar_advection() {
  const int* domhi = domain.hiVect();
 
  int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material;
- Array<int> dombc(2*AMREX_SPACEDIM);
+ Vector<int> dombc(2*AMREX_SPACEDIM);
  const BCRec& descbc = get_desc_lst()[State_Type].getBC(scomp_mofvars);
  const int* b_rec=descbc.vect();
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
@@ -13370,7 +13400,7 @@ NavierStokes::unsplit_scalar_advection() {
  } else
   amrex::Error("face_flag invalid 5");
 
- Array<int> nprocessed;
+ Vector<int> nprocessed;
  nprocessed.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   nprocessed[tid]=0.0;
@@ -13438,7 +13468,7 @@ NavierStokes::unsplit_scalar_advection() {
   int mofcomp=dencomp+nmat*num_state_material;
   int errcomp=mofcomp+nmat*ngeom_raw;
 
-  Array<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
      // this is the result
   FArrayBox& destfab=S_new[mfi];
@@ -13731,7 +13761,11 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  const Real* dx        = geom.CellSize();
  const Real* prob_lo   = geom.ProbLo();
 
- MultiFab* mf = derive("mag_error",0); // the last component of state.
+ int local_time_order=parent->Time_blockingFactor();
+ Real nudge_time=state[State_Type].slabTime(local_time_order);
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int nc_error=S_new.nComp()-1;
+ MultiFab* mf = getState(0,nc_error,1,nudge_time); 
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -13748,10 +13782,10 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   const int* fabhi=fabgrid.hiVect();
   const Real* xlo = grid_loc[gridno].lo();
 
-   // itags: Array<int> ("domain"=box dimensions (not whole domain))
+   // itags: Vector<int> ("domain"=box dimensions (not whole domain))
    // itags=TagBox::CLEAR in "tags"
    // then itags = older tag values.
-  Array<int>  itags;
+  Vector<int>  itags;
   itags             = tags[mfi.index()].tags();
   int*        tptr  = itags.dataPtr();
   const int*  tlo   = tags[mfi.index()].box().loVect();
@@ -13811,7 +13845,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
 //  10..12: integral rho x
 //  13    : integral rho
 void 
-NavierStokes::GetDragALL(Array<Real>& integrated_quantities) {
+NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
 
  int finest_level=parent->finestLevel();
 
@@ -13867,7 +13901,7 @@ NavierStokes::GetDragALL(Array<Real>& integrated_quantities) {
 // sweep=0: integral (rho x), integral (rho) 
 // sweep=1: find force, torque, moments of inertia, center of mass,mass
 void
-NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
+NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 
  int bfact=parent->Space_blockingFactor(level);
 
@@ -13875,11 +13909,11 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 4");
@@ -13907,7 +13941,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
   amrex::Error("nparts invalid");
- Array<int> im_solid_map_null;
+ Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
  int* im_solid_map_ptr;
@@ -13936,7 +13970,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
  if (integrated_quantities.size()!=13)
   amrex::Error("integrated_quantities invalid size");
  
- Array< Array<Real> > local_integrated_quantities;
+ Vector< Vector<Real> > local_integrated_quantities;
  local_integrated_quantities.resize(thread_class::nthreads);
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -14061,7 +14095,7 @@ NavierStokes::GetDrag(Array<Real>& integrated_quantities,int isweep) {
   const int* fabhi=fabgrid.hiVect();
 
   const Real* xlo = grid_loc[gridno].lo();
-  Array<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
   FArrayBox& maskfab=(*mask)[mfi];
   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
@@ -14442,7 +14476,7 @@ NavierStokes::dotSum(int project_option,
  if (mf2->nComp()!=nsolveMM)
   amrex::Error("mf2 invalid ncomp");
 
- Array<Real> sum;
+ Vector<Real> sum;
  sum.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   sum[tid]=0.0;
@@ -14621,10 +14655,10 @@ void NavierStokes::levelCombine(
 
 
 void NavierStokes::volWgtSum(
-  Array<Real>& result,
-  Array<int>& sumdata_type,
-  Array<int>& sumdata_sweep,
-  Array<Real>& ZZ,Array<Real>& FF,
+  Vector<Real>& result,
+  Vector<int>& sumdata_type,
+  Vector<int>& sumdata_sweep,
+  Vector<Real>& ZZ,Vector<Real>& FF,
   int dirx,int diry,int cut_flag,
   MultiFab* dragmf,int isweep) {
 
@@ -14758,9 +14792,9 @@ void NavierStokes::volWgtSum(
  if (NN!=FF.size()-1)
   amrex::Error("FF and ZZ fail size sanity check");
 
- Array< Array<Real> > local_result;
- Array< Array<Real> > local_ZZ;
- Array< Array<Real> > local_FF;
+ Vector< Vector<Real> > local_result;
+ Vector< Vector<Real> > local_ZZ;
+ Vector< Vector<Real> > local_FF;
 
  local_result.resize(thread_class::nthreads);
  local_ZZ.resize(thread_class::nthreads);
@@ -14821,8 +14855,8 @@ void NavierStokes::volWgtSum(
    Real problo[AMREX_SPACEDIM];
    Real probhi[AMREX_SPACEDIM];
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    problo[dir]=Geometry::ProbLo(dir);
-    probhi[dir]=Geometry::ProbHi(dir);
+    problo[dir]=geom.ProbLo(dir);
+    probhi[dir]=geom.ProbHi(dir);
    }
    FArrayBox& lsfab=(*lsmf)[mfi];
    int bfact=parent->Space_blockingFactor(level);
@@ -15035,7 +15069,7 @@ void NavierStokes::writeInterfaceReconstruction() {
   amrex::Error("level should be zero");
 
  int finest_level = parent->finestLevel();
- Array<int> grids_per_level;
+ Vector<int> grids_per_level;
  grids_per_level.resize(finest_level+1);
  for (int ilev=finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -15102,20 +15136,20 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("do_plot invalid");
 
- Array<int> grids_per_level_array;
+ Vector<int> grids_per_level_array;
  grids_per_level_array.resize(finest_level+1);
- Array<BoxArray> cgrids_minusBA_array;
+ Vector<BoxArray> cgrids_minusBA_array;
  cgrids_minusBA_array.resize(finest_level+1);
 
- Array<Real> slice_data;
+ Vector<Real> slice_data;
  NavierStokes& ns_finest=getLevel(finest_level);
  const Box& domain_finest = ns_finest.geom.Domain();
  const int* domlo_finest = domain_finest.loVect();
  const int* domhi_finest = domain_finest.hiVect();
 
   // in order to get domain dimensions:
-  //Geometry::ProbLo(dir);
-  //Geometry::ProbHi(dir);
+  //geom.ProbLo(dir);
+  //geom.ProbHi(dir);
  
  int nslice=domhi_finest[slice_dir]-domlo_finest[slice_dir]+3;
     // x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
@@ -15177,7 +15211,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   amrex::Error("localMF[MAGTRACE_MF]->nComp() invalid");
 
   // idx,ngrow,scomp,ncomp,index,scompBC_map
- Array<int> scompBC_map;
+ Vector<int> scompBC_map;
  scompBC_map.resize(num_materials_vel);
  for (int i=0;i<num_materials_vel;i++)
   scompBC_map[i]=0;
@@ -15221,8 +15255,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  visual_fab_output.setVal(-1.0e+20);
  visual_fab_input.setVal(-1.0e+20);
 
- Array<int> gridlo(3);
- Array<int> gridhi(3);
+ Vector<int> gridlo(3);
+ Vector<int> gridhi(3);
  for (int dir=0;dir<3;dir++) {
   gridlo[dir]=0;
   gridhi[dir]=0;
@@ -15260,7 +15294,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    for (int j=gridlo[1];j<=gridhi[1];j++) {
     for (int k=gridlo[2];k<=gridhi[2];k++) {
      for (int n=0;n<visual_ncomp;n++) {
-      Array<int> arr_index(AMREX_SPACEDIM);
+      Vector<int> arr_index(AMREX_SPACEDIM);
       arr_index[0]=i;
       arr_index[1]=j;
       if (AMREX_SPACEDIM==3) {
@@ -15361,7 +15395,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   for (int j=gridlo[1];j<=gridhi[1];j++) {
    for (int k=gridlo[2];k<=gridhi[2];k++) {
     for (int n=0;n<visual_ncomp;n++) {
-     Array<int> arr_index(AMREX_SPACEDIM);
+     Vector<int> arr_index(AMREX_SPACEDIM);
      arr_index[0]=i;
      arr_index[1]=j;
      if (AMREX_SPACEDIM==3) {
@@ -15390,11 +15424,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    total_number_grids+=grids_per_level_array[ilev];
   }
 
-  Array<int> levels_array(total_number_grids);
-  Array<int> bfact_array(total_number_grids);
-  Array<int> gridno_array(total_number_grids);
-  Array<int> gridlo_array(AMREX_SPACEDIM*total_number_grids);
-  Array<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
+  Vector<int> levels_array(total_number_grids);
+  Vector<int> bfact_array(total_number_grids);
+  Vector<int> gridno_array(total_number_grids);
+  Vector<int> gridlo_array(AMREX_SPACEDIM*total_number_grids);
+  Vector<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
 
   int temp_number_grids=0;
   for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
@@ -15426,7 +15460,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   int nparts=im_solid_map.size();
   if ((nparts<0)||(nparts>=nmat))
    amrex::Error("nparts invalid");
-  Array<int> im_solid_map_null;
+  Vector<int> im_solid_map_null;
   im_solid_map_null.resize(1);
   im_solid_map_null[0]=0;
 
@@ -15625,10 +15659,10 @@ NavierStokes::writePlotFile (
      os << parent->cumTime() << '\n';
      os << f_lev << '\n';
      for (i = 0; i < AMREX_SPACEDIM; i++)
-         os << Geometry::ProbLo(i) << ' ';
+         os << geom.ProbLo(i) << ' ';
      os << '\n';
      for (i = 0; i < AMREX_SPACEDIM; i++)
-         os << Geometry::ProbHi(i) << ' ';
+         os << geom.ProbHi(i) << ' ';
      os << '\n';
      for (i = 0; i < f_lev; i++)
          os << 2 << ' ';
@@ -15893,7 +15927,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>=nmat))
   amrex::Error("nparts invalid");
- Array<int> im_solid_map_null;
+ Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
  int* im_solid_map_ptr;
@@ -15917,11 +15951,11 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
  MultiFab* vofmf=getState(1,scomp_mofvars,nmat*ngeom_raw,cur_time_slab);
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 5");
@@ -15937,10 +15971,10 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
   vel_max_estdt[dir]=0.0;
  }
 
- Array< Array<Real> > local_cap_wave_speed;
- Array< Array<Real> > local_vel_max;
- Array< Array<Real> > local_vel_max_estdt;
- Array< Real > local_dt_min;
+ Vector< Vector<Real> > local_cap_wave_speed;
+ Vector< Vector<Real> > local_vel_max;
+ Vector< Vector<Real> > local_vel_max_estdt;
+ Vector< Real > local_dt_min;
  local_cap_wave_speed.resize(thread_class::nthreads);
  local_vel_max.resize(thread_class::nthreads);
  local_vel_max_estdt.resize(thread_class::nthreads);
@@ -16147,7 +16181,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
 
   }
 
-  Array<Real> time_array;
+  Vector<Real> time_array;
   time_array.resize(ns_time_order+1);
   Real slablow=0.0;
   Real slabhigh=1.0;
@@ -16733,10 +16767,10 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 void
 NavierStokes::volWgtSumALL(
  int post_init_flag,
- Array<Real>& result,
- Array<int>& sumdata_type,
- Array<int>& sumdata_sweep,
- Array<Real>& ZZ,Array<Real>& FF,
+ Vector<Real>& result,
+ Vector<int>& sumdata_type,
+ Vector<int>& sumdata_sweep,
+ Vector<Real>& ZZ,Vector<Real>& FF,
  int dirx,int diry,int cut_flag,
  int isweep) {
 
@@ -16774,7 +16808,7 @@ NavierStokes::volWgtSumALL(
 
   // force,torque,moment of inertia,COM,mass
  allocate_array(0,4*AMREX_SPACEDIM+1,-1,DRAG_MF);
- Array<Real> integrated_quantities;
+ Vector<Real> integrated_quantities;
  integrated_quantities.resize(13); 
  GetDragALL(integrated_quantities);
 
@@ -16850,9 +16884,9 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel) {
  minpres=1.0e+99;
  maxvel=0.0;
 
- Array<Real> minpresA;
- Array<Real> maxpresA;
- Array<Real> maxvelA;
+ Vector<Real> minpresA;
+ Vector<Real> maxpresA;
+ Vector<Real> maxvelA;
  minpresA.resize(thread_class::nthreads);
  maxpresA.resize(thread_class::nthreads);
  maxvelA.resize(thread_class::nthreads);
@@ -17081,7 +17115,7 @@ NavierStokes::post_init_state () {
 
  } // ilev=finest_level ... level
 
- Array<blobclass> blobdata;
+ Vector<blobclass> blobdata;
 
  int color_count;
  int coarsest_level=0;
@@ -17584,8 +17618,8 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
 // spectral_override==1 => order derived from "enable_spectral"
 // spectral_override==0 => always low order.
 void 
-NavierStokes::avgDown_list(int stateidx,Array<int> scomp,
-   Array<int> ncomp,int spectral_override) {
+NavierStokes::avgDown_list(int stateidx,Vector<int> scomp,
+   Vector<int> ncomp,int spectral_override) {
 
  int ncomp_list=0;
  for (int ilist=0;ilist<scomp.size();ilist++) {
@@ -17804,8 +17838,8 @@ void NavierStokes::avgDownError() {
 } // subroutine avgDownError
 
 
-void NavierStokes::getBCArray_list(Array<int>& listbc,int state_index,
-     int gridno,Array<int> scomp,Array<int> ncomp) {
+void NavierStokes::getBCArray_list(Vector<int>& listbc,int state_index,
+     int gridno,Vector<int> scomp,Vector<int> ncomp) {
 
  int ncomp_list=0;
  for (int ilist=0;ilist<scomp.size();ilist++)
@@ -17817,7 +17851,7 @@ void NavierStokes::getBCArray_list(Array<int>& listbc,int state_index,
 
  int dcomp=0;
  for (int ilist=0;ilist<scomp.size();ilist++) {
-  Array<int> bc_single=getBCArray(state_index,gridno,
+  Vector<int> bc_single=getBCArray(state_index,gridno,
     scomp[ilist],ncomp[ilist]);
 
   int scomp=0;
@@ -17837,7 +17871,7 @@ void NavierStokes::getBCArray_list(Array<int>& listbc,int state_index,
 }  // subroutine getBCArray_list
 
 MultiFab* NavierStokes::getState_list(
- int ngrow,Array<int> scomp,Array<int> ncomp,
+ int ngrow,Vector<int> scomp,Vector<int> ncomp,
  Real time) {
 
  int ncomp_list=0;
@@ -17866,7 +17900,7 @@ MultiFab* NavierStokes::getState_list(
 
 // copy localMF[idx_MF] to s_new
 void NavierStokes::putState_list(
- Array<int> scomp,Array<int> ncomp,
+ Vector<int> scomp,Vector<int> ncomp,
  int idx_MF) {
 
  int ncomp_list=0;
@@ -18108,8 +18142,8 @@ NavierStokes::makeStateDistALL() {
  Real problen[AMREX_SPACEDIM];
  max_problen=0.0;
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  problo[dir]=Geometry::ProbLo(dir);
-  probhi[dir]=Geometry::ProbHi(dir);
+  problo[dir]=geom.ProbLo(dir);
+  probhi[dir]=geom.ProbHi(dir);
   problen[dir]=probhi[dir]-problo[dir];
   if (problen[dir]>0.0) {
    max_problen+=(problen[dir]*problen[dir]);
@@ -18259,11 +18293,11 @@ NavierStokes::makeStateDist() {
   before_dist = ParallelDescriptor::second();
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 6");
@@ -18312,7 +18346,7 @@ NavierStokes::makeStateDist() {
    new MultiFab(grids,nmat,0,dmap,Fab_allocate);
 
   for (int i=0;i<nmat;i++) {
-   Array<int> scompBC_map;
+   Vector<int> scompBC_map;
    scompBC_map.resize(1);
    scompBC_map[0]=0;
    PCINTERP_fill_coarse_patch(DIST_TOUCH_MF,i,
@@ -18445,7 +18479,7 @@ NavierStokes::makeStateDist() {
 
  debug_ngrow(STENCIL_MF,ngrow_distance,90);
 
- Array<int> nprocessed;
+ Vector<int> nprocessed;
  nprocessed.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   nprocessed[tid]=0.0;
@@ -18487,7 +18521,7 @@ NavierStokes::makeStateDist() {
    FArrayBox& crsedist=(*dist_coarse_mf)[mfi];
 
    int vofcomp=scomp_mofvars;
-   Array<int> vofbc=getBCArray(State_Type,gridno,vofcomp,1);
+   Vector<int> vofbc=getBCArray(State_Type,gridno,vofcomp,1);
 
    int tid=ns_thread();
 
@@ -18672,11 +18706,11 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
  debug_ngrow(MASK_NBR_MF,1,90);
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 7");
@@ -18775,11 +18809,11 @@ NavierStokes::makeFaceFrac(
  debug_ngrow(MASK_NBR_MF,ngrow,90);
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 7");
@@ -18870,11 +18904,11 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
   amrex::Error("localMF[FACEFRAC_MF]->nComp() invalid");
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 7");
@@ -19057,11 +19091,11 @@ NavierStokes::makeCellFrac(int tessellate,int ngrow,int idx) {
  debug_ngrow(MASK_NBR_MF,ngrow_resize,90);
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 8");
@@ -19131,11 +19165,11 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
   amrex::Error("level invalid makeStateCurv");
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 9");
@@ -19149,8 +19183,8 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
- Array< Real > curv_min_local;
- Array< Real > curv_max_local;
+ Vector< Real > curv_min_local;
+ Vector< Real > curv_max_local;
  curv_min_local.resize(thread_class::nthreads);
  curv_max_local.resize(thread_class::nthreads);
 

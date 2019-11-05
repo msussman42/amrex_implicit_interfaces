@@ -188,6 +188,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
    void FORT_SOD_SANITY(
@@ -1351,6 +1353,8 @@ extern "C"
 
 
 }
+
+}/* namespace amrex */
 #endif
 
 #endif 

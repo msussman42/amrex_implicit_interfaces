@@ -49,8 +49,6 @@ namespace amrex {
 //
 std::list<std::string> Amr::state_plot_vars;
 std::list<std::string> Amr::state_small_plot_vars;
-std::list<std::string> Amr::derive_plot_vars;
-std::list<std::string> Amr::derive_small_plot_vars;
 bool                   Amr::first_plotfile;
 bool                   Amr::first_smallplotfile;
 Vector<BoxArray>       Amr::initial_ba;
@@ -150,8 +148,6 @@ void
 Amr::Finalize ()
 {
     Amr::state_plot_vars.clear();
-    Amr::derive_plot_vars.clear();
-    Amr::derive_small_plot_vars.clear();
     Amr::regrid_ba.clear();
     Amr::initial_ba.clear();
 
@@ -205,14 +201,6 @@ int
 Amr::numGrids (int lev) noexcept
 {
     return amr_level[lev]->numGrids();
-}
-
-std::unique_ptr<MultiFab>
-Amr::derive (const std::string& name,
-             int                lev,
-             int                ngrow)
-{
-    return amr_level[lev]->derive(name,ngrow);
 }
 
 
@@ -745,113 +733,6 @@ Amr::deleteStatePlotVar (const std::string& name)
     if (isStatePlotVar(name))
         state_plot_vars.remove(name);
 }
-
-bool
-Amr::isDerivePlotVar (const std::string& name) noexcept
-{
-    for (std::list<std::string>::const_iterator li = derive_plot_vars.begin(), End = derive_plot_vars.end();
-         li != End;
-         ++li)
-    {
-        if (*li == name)
-            return true;
-    }
-
-    return false;
-}
-
-
-bool
-Amr::isDeriveSmallPlotVar (const std::string& name) noexcept
-{
-    for (std::list<std::string>::const_iterator li = derive_small_plot_vars.begin(), End = derive_small_plot_vars.end();
-         li != End;
-         ++li)
-    {
-        if (*li == name) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-
-void 
-Amr::fillDerivePlotVarList ()
-{
-    derive_plot_vars.clear();
-    DeriveList& derive_lst = AmrLevel::get_derive_lst();
-    std::list<DeriveRec>& dlist = derive_lst.dlist();
-    for (std::list<DeriveRec>::const_iterator it = dlist.begin(), End = dlist.end();
-         it != End;
-         ++it)
-    {
-        if (it->deriveType() == IndexType::TheCellType())
-        {
-            derive_plot_vars.push_back(it->name());
-        }
-    }
-}
-
-void 
-Amr::fillDeriveSmallPlotVarList ()
-{
-    derive_small_plot_vars.clear();
-    DeriveList& derive_lst = AmrLevel::get_derive_lst();
-    std::list<DeriveRec>& dlist = derive_lst.dlist();
-    for (std::list<DeriveRec>::const_iterator it = dlist.begin(), End = dlist.end();
-         it != End;
-         ++it)
-    {
-        if (it->deriveType() == IndexType::TheCellType())
-        {
-            derive_small_plot_vars.push_back(it->name());
-        }
-    }
-}
-
-void
-Amr::clearDerivePlotVarList ()
-{
-    derive_plot_vars.clear();
-}
-
-void
-Amr::clearDeriveSmallPlotVarList ()
-{
-    derive_small_plot_vars.clear();
-}
-
-
-void
-Amr::addDerivePlotVar (const std::string& name)
-{
-    if (!isDerivePlotVar(name))
-        derive_plot_vars.push_back(name);
-}
-
-void
-Amr::addDeriveSmallPlotVar (const std::string& name)
-{
-    if (!isDeriveSmallPlotVar(name))
-        derive_small_plot_vars.push_back(name);
-}
-
-void
-Amr::deleteDerivePlotVar (const std::string& name)
-{
-    if (isDerivePlotVar(name))
-        derive_plot_vars.remove(name);
-}
-
-void
-Amr::deleteDeriveSmallPlotVar (const std::string& name)
-{
-    if (isDeriveSmallPlotVar(name))
-        derive_small_plot_vars.remove(name);
-}
-
 
 Amr::~Amr ()
 {

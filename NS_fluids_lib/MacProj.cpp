@@ -310,11 +310,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
 
   int rzflag=0;
-  if (CoordSys::IsRZ())
+  if (geom.IsRZ())
    rzflag=1;
-  else if (CoordSys::IsCartesian())
+  else if (geom.IsCartesian())
    rzflag=0;
-  else if (CoordSys::IsCYLINDRICAL())
+  else if (geom.IsCYLINDRICAL())
    rzflag=3;
   else
    amrex::Error("CoordSys bust 51");

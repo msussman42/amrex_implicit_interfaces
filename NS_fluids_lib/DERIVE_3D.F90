@@ -31,69 +31,6 @@ stop
 
       end module derive_module
 
-      subroutine FORT_DERERROR ( &
-       vort,DIMS(vort), &
-       nv, &
-       dat,DIMS(dat), &
-       ncomp, &
-       lo,hi,ngrow,domlo,domhi,delta,xlo,time,dt,bc, &
-       level,grid_no)
-
-      use global_utility_module
-
-      IMPLICIT NONE
-!
-      INTEGER_T    ngrow
-      INTEGER_T    lo(SDIM), hi(SDIM)
-      INTEGER_T    DIMDEC(vort)
-      INTEGER_T    DIMDEC(dat)
-      INTEGER_T    domlo(SDIM), domhi(SDIM)
-      INTEGER_T    nv, ncomp
-      INTEGER_T    bc(SDIM,2,ncomp)
-      REAL_T     delta(SDIM), xlo(SDIM),time,dt
-      REAL_T     vort(DIMV(vort),nv)
-      REAL_T     dat(DIMV(dat),ncomp)
-      INTEGER_T    level, grid_no
-
-      INTEGER_T   i,j,k
-      REAL_T    errorind
-      INTEGER_T klo,khi
-
-
-      call checkbound(lo,hi,DIMS(dat),ngrow+1,-1,999)
-      call checkbound(lo,hi,DIMS(vort),ngrow,-1,999)
-
-      if (nv.ne.1) then
-       print *,"INVALID NUMBER"
-       stop
-      endif
-      if (ncomp.ne.1) then
-       print *,"INVALID COMPONENTS IN DERERROR"
-       stop
-      endif
-
-      klo=lo(SDIM)-ngrow
-      khi=hi(SDIM)+ngrow
-      if (SDIM.eq.2) then
-       klo=0
-       khi=0
-      endif
-
-      do k = klo,khi
-      do j = lo(2)-ngrow, hi(2)+ngrow
-      do i = lo(1)-ngrow, hi(1)+ngrow
-
-       errorind=dat(D_DECL(i,j,k),1)
-       vort(D_DECL(i,j,k),1)=errorind
-
-      enddo
-      enddo
-      enddo
-
-      return
-      end
-
-
       subroutine FORT_DERTURBVISC( &
        level, &
        im, &

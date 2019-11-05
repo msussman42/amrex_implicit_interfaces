@@ -20,6 +20,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
   extern "C" {
 
     void FORT_HEADERMSG(
@@ -89,6 +91,9 @@
      Real* probhi);
 
   };
+
+}/* namespace amrex */
+
 #endif
 
 #endif

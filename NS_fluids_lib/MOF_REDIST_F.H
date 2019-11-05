@@ -36,6 +36,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
   extern "C" {
 
 
@@ -146,6 +148,9 @@
        int* nface);
 
   };
+
+}/* namespace amrex */
+
 #endif
 
 #endif

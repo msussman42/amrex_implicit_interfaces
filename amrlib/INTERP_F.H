@@ -52,6 +52,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
 
@@ -165,7 +167,10 @@ extern "C"
       const Real* dxf, const Real* dxc,int* ncomp,
       int* levelc,int* levelf,
       int* bfactc,int* bfactf);
-  }
+}
+
+}/* namespace amrex */
+
 #endif
 
 #endif /*_INTERP_NAMES_H*/

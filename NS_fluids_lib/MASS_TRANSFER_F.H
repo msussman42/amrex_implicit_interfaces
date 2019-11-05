@@ -28,6 +28,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
 
@@ -148,6 +150,9 @@ extern "C"
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
 
 }
+
+}/* namespace amrex */
+
 #endif
 
 #endif 

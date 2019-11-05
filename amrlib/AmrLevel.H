@@ -13,7 +13,6 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_BCRec.H>
 #include <AMReX_VisMF.H>
-#include <Derive.H>
 #include <Interpolater.H>
 #include <Amr.H>
 #include <StateDescriptor.H>
@@ -232,8 +231,6 @@ public:
                           int       scomp,
                           int       ncomp);
 
-    virtual std::unique_ptr<MultiFab> derive (const std::string& name,
-                              int ngrow);
 
     //
     // State data object.
@@ -247,10 +244,6 @@ public:
     //
     static const DescriptorList& get_desc_lst ();
     static const DescriptorList& get_desc_lstGHOST ();
-    //
-    // Returns list of derived variables.
-    //
-    static DeriveList& get_derive_lst ();
     //
     // Boundary condition access function.
     //
@@ -305,7 +298,6 @@ protected:
     DistributionMapping dmap;         // Distribution of grids among processes
     Vector<RealBox> grid_loc;          // Physical locations of each grid.
     Amr* parent;                      // Pointer to parent AMR structure.
-    static DeriveList derive_lst;     // List of derived quantities.
     static DescriptorList desc_lst;   // List of state variables.
     static DescriptorList desc_lstGHOST; 
     Vector<StateData> state;           // Array of state data.

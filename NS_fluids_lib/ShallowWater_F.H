@@ -16,6 +16,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
   extern "C" {
 
       void FORT_FEED_FORWARD_ADVECT(
@@ -52,6 +54,9 @@
         int* nmat);
 
   };
+
+}/* namespace amrex */
+
 #endif
 
 #endif

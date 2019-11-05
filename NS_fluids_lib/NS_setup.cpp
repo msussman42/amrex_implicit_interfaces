@@ -1409,10 +1409,6 @@ NavierStokes::variableSetUp ()
     desc_lst.setComponent(State_Type,nc-1,"errorind",bc,
       FORT_SCALARFILL,&pc_interp_null);
 
-    derive_lst.add("mag_error",IndexType::TheCellType(),1,FORT_DERERROR,
-       grow_box_by_one);
-    derive_lst.addComponent("mag_error",desc_lst,State_Type,nc-1,1);
-
 }  // subroutine variableSetUp
 
 // post_init_flag==0 if called from post_timestep
@@ -1460,8 +1456,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  problo[dir]=Geometry::ProbLo(dir);
-  probhi[dir]=Geometry::ProbHi(dir);
+  problo[dir]=geom.ProbLo(dir);
+  probhi[dir]=geom.ProbHi(dir);
  }
 
  metrics_dataALL(1);
@@ -2190,14 +2186,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   }
 
   int rz_flag=0;
-  if (CoordSys::IsRZ())
+  if (geom.IsRZ())
    rz_flag=1;
-  else if (CoordSys::IsCartesian())
+  else if (geom.IsCartesian())
    rz_flag=0;
-  else if (CoordSys::IsCYLINDRICAL())
+  else if (geom.IsCYLINDRICAL())
    rz_flag=3;
   else
-   amrex::Error("CoordSys bust 1");
+   amrex::Error("geom bust 1");
 
    // inputs.circular_freeze
    // pi r^2/4=F

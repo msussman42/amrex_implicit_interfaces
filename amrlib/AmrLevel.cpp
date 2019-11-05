@@ -9,20 +9,12 @@
 #include <AMReX_Utility.H>
 #include <AMReX_ParmParse.H>
 #include <AmrLevel.H>
-#include <Derive.H>
 #include <FillPatchUtil.H>
 
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
-DeriveList     AmrLevel::derive_lst;
 
 namespace amrex {
-
-DeriveList&
-AmrLevel::get_derive_lst () noexcept
-{
-    return derive_lst;
-}
 
 void
 AmrLevel::manual_tags_placement (TagBoxArray&    tags,
@@ -938,101 +930,6 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
 }   // FillCoarsePatch
 
-std::unique_ptr<MultiFab>
-AmrLevel::derive (const std::string& name,
-                  int                ngrow)
-{
-    BL_ASSERT(ngrow >= 0);
-
-    std::unique_ptr<MultiFab> mf;
-
-    int index, scomp, ncomp;
-
-    int time_order=parent->Time_blockingFactor();
-
-    if (isStateVariable(name, index, scomp))
-    {
-        mf.reset(new MultiFab(state[index].boxArray(),dmap,1,ngrow,
-				Fab_allocate));
-
-        Real nudge_time=state[index].slabTime(time_order);
-
-        FillPatch(*this,*mf,0,nudge_time,index,scomp,1);
-
-    }
-    else if (const DeriveRec* rec = derive_lst.get(name))
-    {
-        BL_ASSERT(rec->derFunc() != static_cast<DeriveFunc>(0));
-
-        rec->getRange(0, index, scomp, ncomp);
-
-        Real nudge_time=state[index].slabTime(time_order);
-
-        BoxArray srcBA(state[index].boxArray());
-        BoxArray dstBA(state[index].boxArray());
-
-        srcBA.convert(rec->boxMap());  // e.g. might grow by 1
-        dstBA.convert(rec->deriveType());
-
-        MultiFab srcMF(srcBA,dmap,rec->numState(),ngrow,Fab_allocate);
-
-        for (int k = 0, dc = 0; k < rec->numRange(); k++, dc += ncomp)
-        {
-            rec->getRange(k, index, scomp, ncomp);
-
-            FillPatch(*this,srcMF,0,nudge_time,index,scomp,ncomp);
-        }
-
-        mf = new MultiFab(dstBA,dmap,rec->numDerive(),ngrow,Fab_allocate);
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-        for (MFIter mfi(srcMF); mfi.isValid(); ++mfi)
-        {
-            int         grid_no = mfi.index();
-            RealBox     gridloc = RealBox(grids[grid_no],geom.CellSize(),geom.ProbLo());
-            Real*       ddat    = (*mf)[grid_no].dataPtr();
-            const int*  dlo     = (*mf)[grid_no].loVect();
-            const int*  dhi     = (*mf)[grid_no].hiVect();
-            int         n_der   = rec->numDerive();
-            Real*       cdat    = srcMF[mfi].dataPtr();
-            const int*  clo     = srcMF[mfi].loVect();
-            const int*  chi     = srcMF[mfi].hiVect();
-            int         n_state = rec->numState();
-            const int*  dom_lo  = state[index].getDomain().loVect();
-            const int*  dom_hi  = state[index].getDomain().hiVect();
-            const Real* dx      = geom.CellSize();
-            const int*  bcr     = rec->getBC();
-            const Real* xlo     = gridloc.lo();
-            Real dt=parent->getDt();
-
-            Box gridbox = dstBA[grid_no];
-            const int* lo=gridbox.loVect();
-            const int* hi=gridbox.hiVect();
-
-// was dlo,dhi now lo,hi,ngrow
-
-            rec->derFunc()(ddat,AMReX_ARLIM(dlo),AMReX_ARLIM(dhi),&n_der,
-                           cdat,AMReX_ARLIM(clo),AMReX_ARLIM(chi),&n_state,
-                           lo,hi,&ngrow,dom_lo,dom_hi,dx,xlo,
-                           &nudge_time,&dt,bcr,
-                           &level,&grid_no);
-        }
-    }
-    else
-    {
-        //
-        // If we got here, cannot derive given name.
-        //
-        std::string msg("AmrLevel::derive(MultiFab*): unknown variable: ");
-        msg += name;
-        amrex::Error(msg.c_str());
-    }
-
-    return mf;
-}
-
 Vector<int>
 AmrLevel::getBCArray (int State_Type,
                       int gridno,
@@ -1099,31 +996,6 @@ AmrLevel::setPlotVariables ()
         parent->fillStatePlotVarList();
     }
   
-    if (pp.contains("derive_plot_vars"))
-    {
-        std::string nm;
-      
-        int nDrvPltVars = pp.countval("derive_plot_vars");
-      
-        for (int i = 0; i < nDrvPltVars; i++)
-        {
-            pp.get("derive_plot_vars", nm, i);
-
-            if (nm == "ALL") 
-                parent->fillDerivePlotVarList();
-            else if (nm == "NONE")
-                parent->clearDerivePlotVarList();
-            else
-                parent->addDerivePlotVar(nm);
-        }
-    }
-    else 
-    {
-        //
-        // The default is to add none of them.
-        //
-        parent->clearDerivePlotVarList();
-    }
 } // subroutine setPlotVariables
 
 } // namespace amrex

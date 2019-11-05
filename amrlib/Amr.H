@@ -98,12 +98,6 @@ public:
     static void clearStatePlotVarList ();
     static void fillStatePlotVarList ();
     static bool Plot_Files_Output ();
-    static const std::list<std::string>& derivePlotVars ();
-    static bool isDerivePlotVar (const std::string& name);
-    static void addDerivePlotVar (const std::string& name);
-    static void deleteDerivePlotVar (const std::string& name);
-    static void clearDerivePlotVarList ();
-    static void fillDerivePlotVarList ();
 
     static void Initialize ();
     static void Finalize ();
@@ -317,7 +311,6 @@ protected:
     // The static data ...
     //
     static std::list<std::string> state_plot_vars;  // State Vars to dump to plotfile 
-    static std::list<std::string> derive_plot_vars; // Derived Vars to dump to plotfile 
     static bool                   first_plotfile;
 
 private:
@@ -412,12 +405,6 @@ Amr::statePlotVars ()
     return state_plot_vars;
 }
 
-inline
-const std::list<std::string>&
-Amr::derivePlotVars ()
-{
-    return derive_plot_vars;
-}
 
 inline
 int

@@ -4442,11 +4442,11 @@ NavierStokes::ColorSum(
   amrex::Error("ngrow_distance invalid");
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 30");
@@ -4918,7 +4918,7 @@ NavierStokes::ColorSumALL(
 
  Real problo_array[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-  problo_array[dir]=Geometry::ProbLo(dir);
+  problo_array[dir]=geom.ProbLo(dir);
  int symmetric_flag=1;
  for (int dir=0;dir<AMREX_SPACEDIM-1;dir++) {
   if (phys_bc.lo(dir)!=Symmetry)
@@ -4926,11 +4926,11 @@ NavierStokes::ColorSumALL(
   if (problo_array[dir]!=0.0)
    symmetric_flag=0;
  } // dir=0..sdim-2
- if (CoordSys::IsRZ()) {
+ if (geom.IsRZ()) {
   if (symmetric_flag==1) {
    // do nothing
   } else if (symmetric_flag==0) {
-   amrex::Error("we force symmetric_flag==1 if CoordSys::IsRZ()");
+   amrex::Error("we force symmetric_flag==1 if geom.IsRZ()");
   } else
    amrex::Error("symmetric_flag error");
  }  // IsRZ?
@@ -5107,12 +5107,12 @@ NavierStokes::ColorSumALL(
         for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX2D[dir];
         }
-        if ((CoordSys::IsRZ())||(symmetric_flag==1)) {
+        if ((geom.IsRZ())||(symmetric_flag==1)) {
          int dir=0;
          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
          dir=AMREX_SPACEDIM;
          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-        } else if ((!CoordSys::IsRZ())&&(symmetric_flag==0)) {
+        } else if ((!geom.IsRZ())&&(symmetric_flag==0)) {
          // do nothing
         } else {
          amrex::Error("IsRZ or symmetric_flag invalid");
@@ -7011,7 +7011,7 @@ void NavierStokes::jacobi_cycles(
       IntVect test_index=ns_level.localMF[RESID_MF]->maxIndex(0,0);
       Real test_pos[AMREX_SPACEDIM];
       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-       test_pos[dir]=Geometry::ProbLo(dir)+(test_index[dir]+0.5)*dx[dir];
+       test_pos[dir]=geom.ProbLo(dir)+(test_index[dir]+0.5)*dx[dir];
        std::cout << "pos(maxIndex)=" << test_pos[dir] << '\n';
       }
       Real test_val=ns_level.localMF[RESID_MF]->max(0,0);
@@ -7019,7 +7019,7 @@ void NavierStokes::jacobi_cycles(
       std::cout << "max_value " << test_val << '\n';
       test_index=ns_level.localMF[RESID_MF]->minIndex(0,0);
       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-       test_pos[dir]=Geometry::ProbLo(dir)+(test_index[dir]+0.5)*dx[dir];
+       test_pos[dir]=geom.ProbLo(dir)+(test_index[dir]+0.5)*dx[dir];
        std::cout << "pos(minIndex)=" << test_pos[dir] << '\n';
       }
       test_val=ns_level.localMF[RESID_MF]->min(0,0);
@@ -8241,8 +8241,8 @@ void NavierStokes::multiphase_project(int project_option) {
    if (maxden>0.0) {
     Real problen_max=0.0;
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     Real problen_local=Geometry::ProbHi(dir)-
- 			Geometry::ProbLo(dir);
+     Real problen_local=geom.ProbHi(dir)-
+ 			geom.ProbLo(dir);
      if (problen_local>0.0) {
       if (problen_local>problen_max)
        problen_max=problen_local;
@@ -10028,13 +10028,13 @@ void NavierStokes::diffusion_heatingALL(
   ns_level.debug_ngrow(VOLUME_MF,1,845);
  }
 
- if (CoordSys::IsRZ()) {
+ if (geom.IsRZ()) {
   //rzflag=1
   if (AMREX_SPACEDIM!=2)
    amrex::Error("dimension bust");
- } else if (CoordSys::IsCartesian()) {
+ } else if (geom.IsCartesian()) {
   //rzflag=0
- } else if (CoordSys::IsCYLINDRICAL()) {
+ } else if (geom.IsCYLINDRICAL()) {
   //rzflag=3
  } else
   amrex::Error("CoordSys bust 61");

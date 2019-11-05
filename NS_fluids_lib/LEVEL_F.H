@@ -118,6 +118,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
   extern "C" {
 
     void FORT_GETTYPEFAB(
@@ -773,6 +775,9 @@
        int* curv_sten);
 
   };
+
+}/* namespace amrex */
+
 #endif
 
 #endif

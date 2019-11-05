@@ -1483,11 +1483,11 @@ void NavierStokes::apply_cell_pressure_gradient(
    Real beta=0.0;
 
    int rzflag=0;
-   if (CoordSys::IsRZ())
+   if (geom.IsRZ())
     rzflag=1;
-   else if (CoordSys::IsCartesian())
+   else if (geom.IsCartesian())
     rzflag=0;
-   else if (CoordSys::IsCYLINDRICAL())
+   else if (geom.IsCYLINDRICAL())
     rzflag=3;
    else
     amrex::Error("CoordSys bust 21");
@@ -2426,11 +2426,11 @@ void NavierStokes::increment_face_velocity(
        num_materials_vel*BL_SPACEDIM);
 
       int rzflag=0;
-      if (CoordSys::IsRZ())
+      if (geom.IsRZ())
        rzflag=1;
-      else if (CoordSys::IsCartesian())
+      else if (geom.IsCartesian())
        rzflag=0;
-      else if (CoordSys::IsCYLINDRICAL())
+      else if (geom.IsCYLINDRICAL())
        rzflag=3;
       else
        amrex::Error("CoordSys bust 20");
@@ -2673,11 +2673,11 @@ void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
        num_materials_vel*BL_SPACEDIM);
 
       int rzflag=0;
-      if (CoordSys::IsRZ())
+      if (geom.IsRZ())
        rzflag=1;
-      else if (CoordSys::IsCartesian())
+      else if (geom.IsCartesian())
        rzflag=0;
-      else if (CoordSys::IsCYLINDRICAL())
+      else if (geom.IsCYLINDRICAL())
        rzflag=3;
       else
        amrex::Error("CoordSys bust 20");
@@ -2928,11 +2928,11 @@ void NavierStokes::density_TO_MAC(int project_option) {
        Real beta=0.0;
  
        int rzflag=0;
-       if (CoordSys::IsRZ())
+       if (geom.IsRZ())
         rzflag=1;
-       else if (CoordSys::IsCartesian())
+       else if (geom.IsCartesian())
         rzflag=0;
-       else if (CoordSys::IsCYLINDRICAL())
+       else if (geom.IsCYLINDRICAL())
         rzflag=3;
        else
         amrex::Error("CoordSys bust 20");
@@ -3523,11 +3523,11 @@ void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
   amrex::Error("slope recon mf has incorrect ncomp");
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 20");
@@ -4022,11 +4022,11 @@ void NavierStokes::apply_pressure_grad(
  const int* domhi = domain.hiVect();
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 20");
@@ -4867,8 +4867,8 @@ void NavierStokes::make_physics_vars(int project_option) {
  Real problo[BL_SPACEDIM];
  Real probhi[BL_SPACEDIM];
  for (int dir=0;dir<BL_SPACEDIM;dir++) {
-  problo[dir]=Geometry::ProbLo(dir);
-  probhi[dir]=Geometry::ProbHi(dir);
+  problo[dir]=geom.ProbLo(dir);
+  probhi[dir]=geom.ProbHi(dir);
  }
   
  localMF[CELL_SOUND_MF]->setVal(0.0,0,2,0);
@@ -5839,11 +5839,11 @@ void NavierStokes::process_potential_force_face() {
     amrex::Error("ncfluxreg invalid");
 
    int rzflag=0;
-   if (CoordSys::IsRZ())
+   if (geom.IsRZ())
     rzflag=1;
-   else if (CoordSys::IsCartesian())
+   else if (geom.IsCartesian())
     rzflag=0;
-   else if (CoordSys::IsCYLINDRICAL())
+   else if (geom.IsCYLINDRICAL())
     rzflag=3;
    else
     amrex::Error("CoordSys bust 21");
@@ -6258,11 +6258,11 @@ void NavierStokes::metrics_data(int ngrow) {
   FArrayBox& areaz=(*localMF[AREA_MF+BL_SPACEDIM-1])[mfi];
 
   int rzflag=0;
-  if (CoordSys::IsRZ())
+  if (geom.IsRZ())
    rzflag=1;
-  else if (CoordSys::IsCartesian())
+  else if (geom.IsCartesian())
    rzflag=0;
-  else if (CoordSys::IsCYLINDRICAL())
+  else if (geom.IsCYLINDRICAL())
    rzflag=3;
   else
    amrex::Error("CoordSys bust 21");
@@ -6940,11 +6940,11 @@ void NavierStokes::output_zones(
  debug_ngrow(MASKSEM_MF,1,28);
 
  int rzflag=0;
- if (CoordSys::IsRZ())
+ if (geom.IsRZ())
   rzflag=1;
- else if (CoordSys::IsCartesian())
+ else if (geom.IsCartesian())
   rzflag=0;
- else if (CoordSys::IsCYLINDRICAL())
+ else if (geom.IsCYLINDRICAL())
   rzflag=3;
  else
   amrex::Error("CoordSys bust 22");

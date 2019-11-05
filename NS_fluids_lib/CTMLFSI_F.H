@@ -16,6 +16,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C" {
 			
  void FORT_CTMLTRANSFERFORCE( 
@@ -25,6 +27,9 @@ extern "C" {
   Real* forcefab,AMREX_ARLIM_P(forcefablo),AMREX_ARLIM_P(forcefabhi));
 
 };
+
+}/* namespace amrex */
+
 #endif
 
 #endif

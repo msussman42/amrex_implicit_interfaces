@@ -10,7 +10,6 @@
 #    define FORT_GETSHEAR getshear
 #    define FORT_MAXPRESVEL maxpresvel 
 #    define FORT_GETDRAG  getdrag
-#    define FORT_DERERROR    dererror
 #    define FORT_DERVISCOSITY derviscosity
 #    define FORT_DERTURBVISC derturbvisc
 #    define FORT_DERMAGTRACE dermagtrace
@@ -21,7 +20,6 @@
 #    define FORT_GETSHEAR GETSHEAR
 #    define FORT_MAXPRESVEL MAXPRESVEL
 #    define FORT_GETDRAG  GETDRAG
-#    define FORT_DERERROR    DERERROR
 #    define FORT_DERVISCOSITY DERVISCOSITY
 #    define FORT_DERTURBVISC DERTURBVISC
 #    define FORT_DERMAGTRACE DERMAGTRACE
@@ -32,7 +30,6 @@
 #    define FORT_GETSHEAR getshear
 #    define FORT_MAXPRESVEL maxpresvel 
 #    define FORT_GETDRAG  getdrag
-#    define FORT_DERERROR    dererror
 #    define FORT_DERVISCOSITY derviscosity
 #    define FORT_DERTURBVISC derturbvisc
 #    define FORT_DERMAGTRACE dermagtrace
@@ -42,7 +39,6 @@
 #    define FORT_GETSHEAR getshear_
 #    define FORT_MAXPRESVEL maxpresvel_ 
 #    define FORT_GETDRAG  getdrag_
-#    define FORT_DERERROR    dererror_
 #    define FORT_DERVISCOSITY derviscosity_
 #    define FORT_DERTURBVISC derturbvisc_
 #    define FORT_DERMAGTRACE dermagtrace_
@@ -103,16 +99,6 @@ extern "C" {
        Real* elastic_time,
        int* viscoelastic_model,
        Real* elastic_viscosity);
-
-     void FORT_DERERROR(
-      Real* data,AMREX_ARLIM_P(dat_lo),AMREX_ARLIM_P(dat_hi),
-      const int* nvar, const Real* compdat,
-     AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi), const int* ncomp,
-      const int* lo, const int* hi,const int* ngrow,
-      const int* domain_lo, const int* domain_hi,
-      const Real* delta, const Real* xlo,
-      const Real* time,const Real* dt,const int* bcrec,
-      const int* level, const int* grid_no);
 
      void FORT_GETDRAG(
       int* isweep,
