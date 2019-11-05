@@ -334,6 +334,12 @@ FArrayBox::get_do_initval ()
     return do_initval;
 }
 
+// SUSSMAN
+bool FArrayBox::get_init_snan ()
+{
+    return init_snan;
+}
+
 Real
 FArrayBox::set_initval (Real iv)
 {

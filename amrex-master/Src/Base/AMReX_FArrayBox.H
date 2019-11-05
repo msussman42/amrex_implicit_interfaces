@@ -393,6 +393,10 @@ public:
 
     static bool set_do_initval (bool tf);
     static bool get_do_initval ();
+
+     //SUSSMAN
+    static bool get_init_snan ();
+
     static Real set_initval    (Real iv);
     static Real get_initval    ();
     //! Initialize from ParmParse with "fab" prefix.

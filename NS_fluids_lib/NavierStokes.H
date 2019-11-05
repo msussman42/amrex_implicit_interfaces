@@ -905,7 +905,7 @@ protected:
      Vector<blobclass> cum_blobdata);
     void ColorSumALL(
      int coarsest_level,
-     int num_colors,
+     int& color_count,
      int idx_type,int idx_color,
      Vector<blobclass>& blobdata);
     void Type_level(

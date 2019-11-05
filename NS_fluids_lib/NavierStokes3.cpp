@@ -4891,7 +4891,7 @@ void NavierStokes::clear_blobdata(int i,Array<blobclass>& blobdata) {
 void
 NavierStokes::ColorSumALL(
  int coarsest_level,
- int num_colors,
+ int& color_count,
  int idx_type,int idx_color,
  Array<blobclass>& blobdata) {
 
@@ -4935,22 +4935,22 @@ NavierStokes::ColorSumALL(
    amrex::Error("symmetric_flag error");
  }  // IsRZ?
 
- if (num_colors==0)
+ if (color_count==0)
   amrex::Error("num_colors=0 in ColorSumALL");
 
  int nmat=num_materials;
 
- blobdata.resize(num_colors);
- for (int i=0;i<num_colors;i++) {
+ blobdata.resize(color_count);
+ for (int i=0;i<color_count;i++) {
   clear_blobdata(i,blobdata);
- }  // i=0..num_colors-1
+ }  // i=0..color_count-1
 
  Array<blobclass> level_blobdata;
- level_blobdata.resize(num_colors);
+ level_blobdata.resize(color_count);
 
- for (int i=0;i<num_colors;i++) {
+ for (int i=0;i<color_count;i++) {
   clear_blobdata(i,level_blobdata); 
- } // i=0..num_colors-1
+ } // i=0..color_count-1
 
  for (int sweep_num=0;sweep_num<2;sweep_num++) {
 
@@ -4966,7 +4966,7 @@ NavierStokes::ColorSumALL(
 
    if (sweep_num==0) {
 
-    for (int i=0;i<num_colors;i++) {
+    for (int i=0;i<color_count;i++) {
       // blob_volume, blob_center_integral, blob_perim, blob_perim_mat,
       // blob_triple_perim
      sum_blobdata(i,blobdata,level_blobdata,sweep_num);
@@ -4981,15 +4981,15 @@ NavierStokes::ColorSumALL(
      } else
       amrex::Error("level_blobdata[i].im invalid");
 
-    }  // i=0..num_colors-1
+    }  // i=0..color_count-1
 
    } else if (sweep_num==1) {
 
      // blob_energy, blob_matrix, blob_RHS, blob_integral_momentum,
      // blob_mass_for_velocity
-    for (int i=0;i<num_colors;i++) {
+    for (int i=0;i<color_count;i++) {
      sum_blobdata(i,blobdata,level_blobdata,sweep_num);
-    }  // i=0..num_colors-1
+    }  // i=0..color_count-1
 
    } else
     amrex::Error("sweep_num invalid");
@@ -4998,7 +4998,7 @@ NavierStokes::ColorSumALL(
 
   if (sweep_num==0) {
 
-   for (int i=0;i<num_colors;i++) {
+   for (int i=0;i<color_count;i++) {
     Real blobvol=blobdata[i].blob_volume;
     if (blobvol>0.0) {
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -5013,11 +5013,11 @@ NavierStokes::ColorSumALL(
      // do nothing
     } else
      amrex::Error("blobvol invalid");
-   } // i=0..num_colors-1
+   } // i=0..color_count-1
 
   } else if (sweep_num==1) {
 
-   for (int i=0;i<num_colors;i++) {
+   for (int i=0;i<color_count;i++) {
 
     for (int veltype=0;veltype<3;veltype++) {
 
@@ -5234,7 +5234,7 @@ NavierStokes::ColorSumALL(
 
     } // veltype=0,1,2
 
-   } // i=0..num_colors-1
+   } // i=0..color_count-1
 
   } else
    amrex::Error("sweep_num invalid");
@@ -5244,10 +5244,10 @@ NavierStokes::ColorSumALL(
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
 
-   std::cout << "in color sum num_colors = " << num_colors << '\n';
+   std::cout << "in color sum color_count = " << color_count << '\n';
    std::cout << "symmetric_flag= " << symmetric_flag << '\n';
 
-   for (int i=0;i<num_colors;i++) {
+   for (int i=0;i<color_count;i++) {
 
     Real blobvol=blobdata[i].blob_volume;
 
@@ -5319,7 +5319,7 @@ NavierStokes::ColorSumALL(
 
     } else 
      amrex::Error("blobdata[i].blob_volume invalid");
-   } // i=0..num_colors-1
+   } // i=0..color_count-1
   } // if IOproc
  } else if (verbose==0) {
   // do nothing
@@ -8032,7 +8032,7 @@ void NavierStokes::multiphase_project(int project_option) {
     }
    }
 
-   int color_count;
+   int color_count=0;
    int coarsest_level=0;
 
    if (project_option==11) {

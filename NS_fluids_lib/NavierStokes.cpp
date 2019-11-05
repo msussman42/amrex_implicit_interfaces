@@ -3802,8 +3802,6 @@ NavierStokes::read_params ()
       std::cout << "DistributionMapping::strategy=KNAPSACK\n";
      } else if (local_strategy==DistributionMapping::SFC) {
       std::cout << "DistributionMapping::strategy=SFC\n";
-     } else if (local_strategy==DistributionMapping::PFC) {
-      std::cout << "DistributionMapping::strategy=PFC\n";
      } else if (local_strategy==DistributionMapping::RRSFC) {
       std::cout << "DistributionMapping::strategy=RRSFC\n";
      } else
@@ -17117,7 +17115,7 @@ NavierStokes::post_init_state () {
 
  Vector<blobclass> blobdata;
 
- int color_count;
+ int color_count=0;
  int coarsest_level=0;
 
   // tessellate==1

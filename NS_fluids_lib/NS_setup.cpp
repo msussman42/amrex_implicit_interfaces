@@ -14,9 +14,6 @@
 
 namespace amrex{
 
-//static Box the_same_box (const Box& b)    { return b; }
-static Box grow_box_by_one (const Box& b)    { return amrex::grow(b,1); }
-
 //
 // Components are  Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall.
 //
@@ -1674,7 +1671,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  Vector<blobclass> blobdata;
 
  if (output_drop_distribution==1) {
-  int color_count;
+  int color_count=0;
   int coarsest_level=0;
    // tessellate==1
   ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
