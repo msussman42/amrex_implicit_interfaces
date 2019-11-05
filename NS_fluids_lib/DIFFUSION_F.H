@@ -28,6 +28,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
     void FORT_HOOPIMPLICIT (
@@ -107,6 +109,8 @@ extern "C"
       int* nsolveMM);
 
 }
+
+}/* namespace amrex */
 
 #endif
 #endif /*_DIFFUSION_F_H*/
