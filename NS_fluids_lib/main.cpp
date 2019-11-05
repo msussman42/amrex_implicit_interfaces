@@ -1,6 +1,5 @@
-#define OUTPUT_CONTOUR 1
+// #include <winstd.H>
 
-#include <winstd.H>
 #include <algorithm>
 #include <vector>
 
@@ -12,14 +11,16 @@
 #include <cmath>
 #endif
 
-#include <CArena.H>
-#include <REAL.H>
-#include <Utility.H>
-#include <IntVect.H>
-#include <Box.H>
+#include <AMReX_CArena.H>
+#include <AMReX_REAL.H>
+#include <AMReX_Utility.H>
+#include <AMReX_IntVect.H>
+#include <AMReX_Box.H>
+#include <AMReX_ParmParse.H>
+#include <AMReX_ParallelDescriptor.H>
 #include <Amr.H>
-#include <ParmParse.H>
-#include <ParallelDescriptor.H>
+
+namespace amrex{
 
 extern void fortran_parameters();
 
@@ -29,11 +30,12 @@ main (int   argc,
 {
 
     std::cout.imbue(std::locale("C"));
-    BoxLib::Initialize(argc,argv);  // mpi initialization.
+    amrex::Initialize(argc,argv);  // mpi initialization.
     std::fflush(NULL);
     ParallelDescriptor::Barrier();
-    std::cout << "Multimaterial SPECTRAL, 11/01/19, 2:00pm on proc " << 
-	    ParallelDescriptor::MyProc() << "\n";
+    std::cout << 
+	"Multimaterial SUPERMESH/SPECTRAL, 11/04/19, 21:40pm on proc " << 
+        ParallelDescriptor::MyProc() << "\n";
     std::cout << "PROC= " << ParallelDescriptor::MyProc() << 
 	    " thread_class::nthreads= " << thread_class::nthreads << '\n';
     std::fflush(NULL);
@@ -65,11 +67,11 @@ main (int   argc,
     pp.query("sleepsec",sleepsec);
 
     if (strt_time < 0.0)
-        BoxLib::Abort("MUST SPECIFY a non-negative strt_time");
+        amrex::Abort("MUST SPECIFY a non-negative strt_time");
 
     if (max_step < 0 && stop_time < 0.0)
     {
-        BoxLib::Abort(
+        amrex::Abort(
             "Exiting because neither max_step nor stop_time is non-negative.");
     }
 
@@ -106,14 +108,14 @@ main (int   argc,
         std::cout << "TIME= " << amrptr->cumTime() << " PROC= " <<
           ParallelDescriptor::MyProc() << " sleepsec= " << sleepsec << '\n';
         std::fflush(NULL);
-	BoxLib::USleep(sleepsec);
+	amrex::USleep(sleepsec);
         ParallelDescriptor::Barrier();
     }
     ParallelDescriptor::Barrier();
 
     delete amrptr;
 
-    if (CArena* arena = dynamic_cast<CArena*>(BoxLib::The_Arena()))
+    if (CArena* arena = dynamic_cast<CArena*>(amrex::The_Arena()))
     {
         //
         // We're using a CArena -- output some FAB memory stats.
@@ -138,7 +140,9 @@ main (int   argc,
     if (ParallelDescriptor::IOProcessor())
         std::cout << "Run time = " << run_stop << '\n';
 
-    BoxLib::Finalize();
+    amrex::Finalize();
 
     return 0;
 }
+
+}/* namespace amrex */

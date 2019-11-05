@@ -1,5 +1,6 @@
+#include <AMReX_ParmParse.H>
+
 #include <NavierStokes.H>
-#include <ParmParse.H>
 
 // --------------------------------------------------------------------
 // -----   NSBld class instantiation

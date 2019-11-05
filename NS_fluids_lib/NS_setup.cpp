@@ -1,6 +1,7 @@
-#include <FArrayBox.H>
-#include <CoordSys.H>
-#include <ParmParse.H>
+#include <AMReX_FArrayBox.H>
+#include <AMReX_CoordSys.H>
+#include <AMReX_ParmParse.H>
+
 #include <NavierStokes.H>
 #include <PROB_F.H>
 #include <DERIVE_F.H>
@@ -9,10 +10,12 @@
 #include <sstream>
 #include <fstream>
 
-#define Pi      3.14159265358979
+#define local_Pi      3.14159265358979
+
+namespace amrex{
 
 //static Box the_same_box (const Box& b)    { return b; }
-static Box grow_box_by_one (const Box& b)    { return BoxLib::grow(b,1); }
+static Box grow_box_by_one (const Box& b)    { return amrex::grow(b,1); }
 
 //
 // Components are  Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall.
@@ -109,7 +112,7 @@ set_tensor_bc (BCRec&       bc,
      bc.setLo(2,zero_tensor_bc[lo_bc[2]]);
      bc.setHi(2,zero_tensor_bc[hi_bc[2]]);
     } else
-     BoxLib::Error("dir1 or dir2 invalid");
+     amrex::Error("dir1 or dir2 invalid");
 
 } // subroutine set_tensor_bc
 
@@ -129,7 +132,7 @@ set_hoop_bc (BCRec& bc,const BCRec& phys_bc)
   bc.setHi(1,extrap_tensor_bc[hi_bc[1]]);
 
  } else
-  BoxLib::Error("bl_spacedim invalid");
+  amrex::Error("bl_spacedim invalid");
 
 } // subroutine set_hoop_bc
 
@@ -346,7 +349,7 @@ void
 NavierStokes::override_enable_spectral(int enable_spectral_in) {
 
  if (num_materials_vel!=1)
-  BoxLib::Error("num_materials_vel invalid");
+  amrex::Error("num_materials_vel invalid");
 
  int nmat=num_materials;
  int scomp_states=num_materials_vel*(BL_SPACEDIM+1);
@@ -384,7 +387,7 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
    desc_lst.resetMapper(State_Type,imvel,&sem_interp_LOW_PARM);
   }
  } else
-  BoxLib::Error("enable_spectral_in invalid");
+  amrex::Error("enable_spectral_in invalid");
 
 }  // subroutine override_enable_spectral
 
@@ -402,11 +405,11 @@ NavierStokes::override_enable_spectralGHOST(
     sem_interp_HIGH_PARM.interp_enable_spectral=enable_spectral_in;
     desc_lstGHOST.resetMapper(State_Type,target_comp,&sem_interp_HIGH_PARM);
    } else
-    BoxLib::Error("enable_spectral_in invalid");
+    amrex::Error("enable_spectral_in invalid");
   } // nc=0..ncomp-1
 
  } else
-  BoxLib::Error("scomp or ncomp invalid");
+  amrex::Error("scomp or ncomp invalid");
 
 }  // subroutine override_enable_spectralGHOST
 
@@ -415,7 +418,7 @@ void
 NavierStokes::override_LS_HO(int Interp_LO) { // 0=use normals 1=PC
 
  if ((Interp_LO!=0)&&(Interp_LO!=1))
-  BoxLib::Error("Interp_LO invalid");
+  amrex::Error("Interp_LO invalid");
 
  int nmat=num_materials;
  int ncomp_ls_ho=(BL_SPACEDIM+1)*nmat;
@@ -433,7 +436,7 @@ NavierStokes::override_LS_HO(int Interp_LO) { // 0=use normals 1=PC
    desc_lst.resetMapper(LS_Type,im,&ls_ho_interp_LOW_PARM);
   } // im
  } else
-  BoxLib::Error("Interp_LO invalid");
+  amrex::Error("Interp_LO invalid");
 
 }  // subroutine override_LS_HO
 
@@ -472,7 +475,7 @@ NavierStokes::variableSetUp ()
 
     if ((nmat<1)||(nmat>MAX_NUM_MATERIALS)) {
      std::cout << "nmat= " << nmat << '\n';
-     BoxLib::Error("nmat invalid in ns setup variable setup");
+     amrex::Error("nmat invalid in ns setup variable setup");
     }
 
      // velocity, pressure, state x nmat, ngeom_raw x nmat, error ind
@@ -491,26 +494,26 @@ NavierStokes::variableSetUp ()
     } else if ((CoordSys::CoordType) coord == CoordSys::RZ) {
      //rz_flag=1
      if (BL_SPACEDIM!=2)
-      BoxLib::Error("RZ only in 2D");
+      amrex::Error("RZ only in 2D");
     } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
      //rz_flag=3
     } else
-     BoxLib::Error("coord_sys invalid");
+     amrex::Error("coord_sys invalid");
 
     BCRec phys_bc_pres;
     for (int dir=0;dir<BL_SPACEDIM;dir++) {
      phys_bc_pres.setLo(dir,phys_bc.lo(dir));
      phys_bc_pres.setHi(dir,phys_bc.hi(dir));
      if (phys_bc.lo(dir)==SlipWall)
-      BoxLib::Error("SlipWall not allowed; use NoSlipWall instead");
+      amrex::Error("SlipWall not allowed; use NoSlipWall instead");
      if (phys_bc.hi(dir)==SlipWall)
-      BoxLib::Error("SlipWall not allowed; use NoSlipWall instead");
+      amrex::Error("SlipWall not allowed; use NoSlipWall instead");
     }
 
 // Umac_Type  -------------------------------------------
 
     if (num_materials_vel!=1)
-     BoxLib::Error("num_materials_vel invalid");
+     amrex::Error("num_materials_vel invalid");
 
     int nsolveMM_FACE=1;
 
@@ -570,7 +573,7 @@ NavierStokes::variableSetUp ()
      sem_interp_LOW_PARM.interp_enable_spectral=enable_spectral;
      sem_interp_HIGH_PARM.interp_enable_spectral=1;
     } else
-     BoxLib::Error("enable_spectral invalid");
+     amrex::Error("enable_spectral invalid");
 
 // DIV -------------------------------------------
 
@@ -631,13 +634,13 @@ NavierStokes::variableSetUp ()
        w_extrap_str_solid,bc,FORT_EXTRAPFILL,&pc_interp);
      }
      if (dcomp!=ncghost_solid-1)
-      BoxLib::Error("dcomp invalid");
+      amrex::Error("dcomp invalid");
 
      for (int partid=0;partid<nparts;partid++) {
 
       int im_part=im_solid_map[partid];
       if ((im_part<0)||(im_part>=nmat))
-       BoxLib::Error("im_part invalid");
+       amrex::Error("im_part invalid");
 
       std::stringstream im_string_stream(std::stringstream::in |
        std::stringstream::out);
@@ -687,13 +690,13 @@ NavierStokes::variableSetUp ()
     } else if (nparts==0) {
      // do nothing
     } else
-     BoxLib::Error("nparts invalid");
+     amrex::Error("nparts invalid");
 
 
 // Tensor_Type  -------------------------------------------
 
     if (num_materials_viscoelastic!=im_elastic_map.size())
-     BoxLib::Error("num_materials_viscoelastic!=im_elastic_map.size()");
+     amrex::Error("num_materials_viscoelastic!=im_elastic_map.size()");
 
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
@@ -714,13 +717,13 @@ NavierStokes::variableSetUp ()
       extrap_str_tensor,bc,FORT_EXTRAPFILL,&pc_interp);
 
      if (dcomp!=ncghost_elastic-1)
-      BoxLib::Error("dcomp invalid");
+      amrex::Error("dcomp invalid");
 
      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
       int im_part=im_elastic_map[partid];
       if ((im_part<0)||(im_part>=nmat))
-       BoxLib::Error("im_part invalid");
+       amrex::Error("im_part invalid");
 
       std::stringstream im_string_stream(std::stringstream::in |
        std::stringstream::out);
@@ -773,7 +776,7 @@ NavierStokes::variableSetUp ()
                  ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL)) {
        set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
       } else
-       BoxLib::Error("coord or sdim invalid");
+       amrex::Error("coord or sdim invalid");
 
 #if (BL_SPACEDIM == 3)
       ibase_tensor++;
@@ -806,7 +809,7 @@ NavierStokes::variableSetUp ()
     } else if (num_materials_viscoelastic==0) {
      // do nothing
     } else
-     BoxLib::Error("num_materials_viscoelastic invalid");
+     amrex::Error("num_materials_viscoelastic invalid");
 
 
 // LEVELSET ------------------------------------------------- 
@@ -849,7 +852,7 @@ NavierStokes::variableSetUp ()
        nrm_extrap_str="z_norm"; 
        nrm_extrap_str+=im_string;
       } else 
-       BoxLib::Error("dir invalid ns_setup");
+       amrex::Error("dir invalid ns_setup");
 
       desc_lstGHOST.setComponent(LS_Type,dcomp,
         nrm_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
@@ -860,7 +863,7 @@ NavierStokes::variableSetUp ()
     } // imls=0..nmat-1
 
     if (dcomp!=BL_SPACEDIM*nmat)
-     BoxLib::Error("dcomp invalid");
+     amrex::Error("dcomp invalid");
 
     Array<std::string> LS_HO_names;
     LS_HO_names.resize(ncomp_ls_ho);
@@ -897,7 +900,7 @@ NavierStokes::variableSetUp ()
        nrm_extrap_str="z_norm_HO"; 
        nrm_extrap_str+=im_string;
       } else 
-       BoxLib::Error("dir invalid ns_setup");
+       amrex::Error("dir invalid ns_setup");
 
       LS_HO_names[nmat+dcomp]=nrm_extrap_str;
 
@@ -908,9 +911,9 @@ NavierStokes::variableSetUp ()
     }  // imls=0...nmat-1
 
     if (dcomp!=BL_SPACEDIM*nmat)
-     BoxLib::Error("dcomp invalid");
+     amrex::Error("dcomp invalid");
     if (dcomp+nmat!=ncomp_ls_ho)
-     BoxLib::Error("dcomp invalid");
+     amrex::Error("dcomp invalid");
 
      // GROUP_LS_HO_FILL: grouplsBC for components 1..nmat
      //                   extrapBC for components nmat+1..nmat * (sdim+1)
@@ -962,7 +965,7 @@ NavierStokes::variableSetUp ()
        nrm_extrap_str="z_norm_main"; 
        nrm_extrap_str+=im_string;
       } else 
-       BoxLib::Error("dir invalid ns_setup");
+       amrex::Error("dir invalid ns_setup");
 
       LS_main_names[nmat+dcomp]=nrm_extrap_str;
 
@@ -972,9 +975,9 @@ NavierStokes::variableSetUp ()
     }  // imls=0...nmat-1
 
     if (dcomp!=BL_SPACEDIM*nmat)
-     BoxLib::Error("dcomp invalid");
+     amrex::Error("dcomp invalid");
     if (dcomp+nmat!=ncomp_ls_ho)
-     BoxLib::Error("dcomp invalid");
+     amrex::Error("dcomp invalid");
 
      // GROUP_LS_HO_FILL: grouplsBC for components 1..nmat
      //                   extrapBC for components nmat+1..nmat * (sdim+1)
@@ -1108,7 +1111,7 @@ NavierStokes::variableSetUp ()
      set_scalar_vof_bc(EXTMOF_bcs[ibase],phys_bc);
 
      if (ibase!=(im+1)*ngeom_recon-1)
-      BoxLib::Error("ibase invalid");
+      amrex::Error("ibase invalid");
 
     }  // im=0..nmat-1  (vfrac, cen, order, slope,int)
 
@@ -1181,7 +1184,7 @@ NavierStokes::variableSetUp ()
 #endif    
 
      if (ibase!=nten+(im+1)*BL_SPACEDIM-1)
-      BoxLib::Error("ibase invalid");
+      amrex::Error("ibase invalid");
 
     }  // im=0..nten-1  (burning velocity)
 
@@ -1211,7 +1214,7 @@ NavierStokes::variableSetUp ()
       // BndryFunc (BndryFuncDefault inFunc,BndryFuncDefault gFunc);
 
     if (num_materials_vel!=1)
-     BoxLib::Error("num_materials_vel invalid");
+     amrex::Error("num_materials_vel invalid");
 
     Array<std::string> MOFvelocity_names;
     MOFvelocity_names.resize(BL_SPACEDIM);
@@ -1248,7 +1251,7 @@ NavierStokes::variableSetUp ()
 
      // pressure
     if (num_materials_vel!=1)
-     BoxLib::Error("num_materials_vel!=1");
+     amrex::Error("num_materials_vel!=1");
 
     set_pressure_bc(bc,phys_bc_pres);
     std::string pres_str="pressure"; 
@@ -1295,7 +1298,7 @@ NavierStokes::variableSetUp ()
      else if (prescribe_temperature_outflow==3)
       set_custom2_temperature_bc(MOFstate_bcs[ibase],temperature_phys_bc);
      else 
-      BoxLib::Error("prescribe_temperature_outflow invalid");
+      amrex::Error("prescribe_temperature_outflow invalid");
 
      for (int spec_comp=0;spec_comp<num_species_var;spec_comp++) {
       
@@ -1317,7 +1320,7 @@ NavierStokes::variableSetUp ()
      }  // spec_comp
 
      if (ibase!=(im+1)*num_state_material-1)
-      BoxLib::Error("ibase bust");
+      amrex::Error("ibase bust");
 
     } // im (scalar state variables + tensor)
 
@@ -1377,14 +1380,14 @@ NavierStokes::variableSetUp ()
 #endif    
 
      if (ngeom_raw==NUM_MOF_VAR) {
-      BoxLib::Error("cannot have ngeom_raw=ngeom_recon");
+      amrex::Error("cannot have ngeom_raw=ngeom_recon");
      } else if (ngeom_raw==BL_SPACEDIM+1) {
       // do nothing
      } else
-      BoxLib::Error("ngeom_raw invalid");
+      amrex::Error("ngeom_raw invalid");
 
      if (ibase!=(im+1)*ngeom_raw-1)
-      BoxLib::Error("ibase invalid");
+      amrex::Error("ibase invalid");
 
     }  // im  (volume fractions and centroids)
 
@@ -1430,9 +1433,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  if ((adv_dir<1)||(adv_dir>2*BL_SPACEDIM+1))
-  BoxLib::Error("adv_dir invalid");
+  amrex::Error("adv_dir invalid");
  if (upper_slab_time<0.0)
-  BoxLib::Error("times should be positive");
+  amrex::Error("times should be positive");
 
  if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Starting: sum_integrated_quantities\n";
@@ -1446,7 +1449,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  ParallelDescriptor::Barrier();
 
  if (level!=0)
-  BoxLib::Error("level invalid in sum_integrated_quantities");
+  amrex::Error("level invalid in sum_integrated_quantities");
 
  int finest_level = parent->finestLevel();
 
@@ -1599,7 +1602,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   else if (sumdata_type[isum]==1)
    sumdata[isum]=0.0;
   else
-   BoxLib::Error("sumdata_type invalid");
+   amrex::Error("sumdata_type invalid");
  } // isum
 
  int dirx=BL_SPACEDIM-1;
@@ -1680,13 +1683,13 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    // tessellate==1
   ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
   if (color_count!=blobdata.size())
-   BoxLib::Error("color_count!=blobdata.size()");
+   amrex::Error("color_count!=blobdata.size()");
   delete_array(TYPE_MF);
   delete_array(COLOR_MF);
  } else if (output_drop_distribution==0) {
   // do nothing
  } else
-  BoxLib::Error("output_drop_distribution invalid");
+  amrex::Error("output_drop_distribution invalid");
 
  ParallelDescriptor::Barrier();
 
@@ -1723,7 +1726,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
       }
      }
      if (local_count!=material_blob_count)
-      BoxLib::Error("local_count!=material_blob_count");
+      amrex::Error("local_count!=material_blob_count");
      for (int isort1=0;isort1<material_blob_count;isort1++) {
       for (int isort2=0;isort2<material_blob_count-1;isort2++) {
        if (blobdata[sorted_blob_list[isort2]].blob_volume<
@@ -1746,12 +1749,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
        // 1..nmat
       int imbase=blobdata[iblob].im;
       if ((imbase<1)||(imbase>nmat))
-       BoxLib::Error("imbase invalid");
+       amrex::Error("imbase invalid");
 
       // r=(3V/(4pi))^(1/3)
       // r^3=3V/(4pi)
       // V=4 pi r^3/3
-      Real gdiam=2.0*exp(log(3.0*gvol_modify/(4.0*Pi))/3.0);
+      Real gdiam=2.0*exp(log(3.0*gvol_modify/(4.0*local_Pi))/3.0);
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
        " im= " << imbase <<
        " volume = " << gvol_modify << '\n';
@@ -1831,7 +1834,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   } else if (output_drop_distribution==0) {
    // do nothing
   } else
-   BoxLib::Error("output_drop_distribution invalid");
+   amrex::Error("output_drop_distribution invalid");
 
   Real UMACH=0.0;
   for (int dir=0;dir<BL_SPACEDIM;dir++) {
@@ -1853,12 +1856,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " elastic_wave_speed=" << elastic_wave_speed << '\n';
    } else
-    BoxLib::Error("denconst[im] invalid");
+    amrex::Error("denconst[im] invalid");
   }
 
   Real ccsqr=vel_max_estdt[BL_SPACEDIM];
   if (ccsqr<0.0)
-   BoxLib::Error("cannot have negative c^2");
+   amrex::Error("cannot have negative c^2");
   Real USOUND=sqrt(ccsqr);
   if (USOUND>0.0)
    UMACH=UMACH/USOUND;
@@ -1887,17 +1890,17 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   } else if (parent->AMR_volume_history_recorded==1) {
    // do nothing
   } else
-   BoxLib::Error("AMR_volume_history_recorded invalid");
+   amrex::Error("AMR_volume_history_recorded invalid");
 
   for (int im=1;im<=nmat;im++) {
    for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
     for (int ireverse=0;ireverse<=1;ireverse++) {
      if ((im>nmat)||(im_opp>nmat))
-      BoxLib::Error("im or im_opp bust 200cpp");
+      amrex::Error("im or im_opp bust 200cpp");
      int iten,im_source,im_dest;
      get_iten_cpp(im,im_opp,iten,nmat);
      if (iten<1)
-      BoxLib::Error("iten invalid");
+      amrex::Error("iten invalid");
      Real LL=latent_heat[iten+ireverse*nten-1];
      if ((ns_is_rigid(im-1)==1)||
          (ns_is_rigid(im_opp-1)==1)) {
@@ -1908,7 +1911,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
       } else if (ireverse==1) {
        im_source=im_opp;im_dest=im;
       } else
-       BoxLib::Error("ireverse invalid");
+       amrex::Error("ireverse invalid");
       Real ratio=0.0;
       Real denom=parent->AMR_volume_history[im_source-1]-F_MAT[im_source-1];
       if (denom!=0.0) 
@@ -1981,7 +1984,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   } else if (energy_first_mat==0.0) {
    // do nothing
   } else
-   BoxLib::Error("energy_first_mat invalid");
+   amrex::Error("energy_first_mat invalid");
   std::cout << "TIME= "<<upper_slab_time<<" ENERGY MOMENT= " << 
     r_moment << '\n';
 
@@ -2027,7 +2030,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     UU=radblob4;
 
    if ((adv_dir<1)||(adv_dir>BL_SPACEDIM))
-    BoxLib::Error("adv_dir invalid");
+    amrex::Error("adv_dir invalid");
 
    Real dcoef=denconst[0]*UU*UU*radblob;
      // pressure and viscous drag
@@ -2049,7 +2052,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
        if (phys_bc.lo(1)==Symmetry)
         symmetry_flag=1;
       } else
-       BoxLib::Error("always run with symmetric bc");
+       amrex::Error("always run with symmetric bc");
      } else if (adv_dir==2) {
       if (zblob==0.0) {
        if (phys_bc.lo(BL_SPACEDIM-1)==Symmetry)
@@ -2058,7 +2061,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
        if (phys_bc.lo(0)==Symmetry)
         symmetry_flag=1;
       } else
-       BoxLib::Error("always run with symmetric bc");
+       amrex::Error("always run with symmetric bc");
      } else if (adv_dir==3) {
       if (xblob==0.0) {
        if (phys_bc.lo(0)==Symmetry)
@@ -2067,32 +2070,32 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
        if (phys_bc.lo(1)==Symmetry)
         symmetry_flag=1;
       } else
-       BoxLib::Error("always run with symmetric bc");
+       amrex::Error("always run with symmetric bc");
      } else
-      BoxLib::Error("adv_dir invalid");
+      amrex::Error("adv_dir invalid");
     } else if (BL_SPACEDIM==2) {
      if (adv_dir==1) {
       if (yblob==0.0) {
        if (phys_bc.lo(BL_SPACEDIM-1)==Symmetry)
         symmetry_flag=1;
       } else
-       BoxLib::Error("always run with symmetric bc");
+       amrex::Error("always run with symmetric bc");
      } else if (adv_dir==2) {
       if (xblob==0.0) {
        if (phys_bc.lo(0)==Symmetry)
         symmetry_flag=1;
       } else
-       BoxLib::Error("always run with symmetric bc");
+       amrex::Error("always run with symmetric bc");
      } else
-      BoxLib::Error("adv_dir invalid");
+      amrex::Error("adv_dir invalid");
     } else
-     BoxLib::Error("dimension bust"); 
+     amrex::Error("dimension bust"); 
 
     if (symmetry_flag==1) {
      dragcoeff*=2.0;
      pdragcoeff*=2.0;
     } else if (symmetry_flag!=0)
-     BoxLib::Error("symmetry_flag invalid");
+     amrex::Error("symmetry_flag invalid");
 
     std::cout << "TIME= " << upper_slab_time << " Cd " << dragcoeff << '\n';
     std::cout << "TIME= " << upper_slab_time << " PCd " << pdragcoeff << '\n';
@@ -2170,7 +2173,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   Real leftwt=sumdata[left_pressure_sum+2];
   Real rightwt=sumdata[left_pressure_sum+3];
   if ((leftwt<=0.0)||(rightwt<=0.0))
-   BoxLib::Error("leftwt or rightwt are invalid");
+   amrex::Error("leftwt or rightwt are invalid");
   Real leftpres=sumdata[left_pressure_sum]/leftwt;
   Real rightpres=sumdata[left_pressure_sum+1]/rightwt;
   std::cout << "TIME= " << upper_slab_time << 
@@ -2181,7 +2184,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    // bubble jetting problem
   if (probtype==42) {
    Real bubble_volume=sumdata[FE_sum_comp+2];
-   Real radbubble=exp(log(3.0*bubble_volume/(4.0*Pi))/3.0);
+   Real radbubble=exp(log(3.0*bubble_volume/(4.0*local_Pi))/3.0);
    std::cout << "TIME= " << upper_slab_time << " JETTINGVOL=  " << 
     radbubble << '\n';
   }
@@ -2194,7 +2197,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   else if (CoordSys::IsCYLINDRICAL())
    rz_flag=3;
   else
-   BoxLib::Error("CoordSys bust 1");
+   amrex::Error("CoordSys bust 1");
 
    // inputs.circular_freeze
    // pi r^2/4=F
@@ -2203,14 +2206,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    Real bubble_volume=sumdata[FE_sum_comp+2];
    Real radbubble=0.0;
    if (rz_flag==0) {
-    radbubble=sqrt(4.0*bubble_volume/Pi);
+    radbubble=sqrt(4.0*bubble_volume/local_Pi);
 
    // 4/3 pi r^3 = 2V
    // r=(3V/(2 pi))^{1/3}
    } else if (rz_flag==1) {
-    radbubble=exp(log(3.0*bubble_volume/(2.0*Pi))/3.0);
+    radbubble=exp(log(3.0*bubble_volume/(2.0*local_Pi))/3.0);
    } else
-    BoxLib::Error("rz_flag invalid");
+    amrex::Error("rz_flag invalid");
 
    std::cout << "TIME= " << upper_slab_time << " EFFECTIVE RAD=  " << 
     radbubble << '\n';
@@ -2228,16 +2231,16 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     // 4/3 pi r^3 = V
     // r=(3V/(4 pi))^{1/3}
     if (rz_flag==1) {
-     radbubble=exp(log(3.0*bubble_volume/(4.0*Pi))/3.0);
+     radbubble=exp(log(3.0*bubble_volume/(4.0*local_Pi))/3.0);
     } else if (rz_flag==0) {
     // pi r^2 = 2V
-     radbubble=sqrt(2.0*bubble_volume/Pi);
+     radbubble=sqrt(2.0*bubble_volume/local_Pi);
     } else
-     BoxLib::Error("rz_flag invalid");
+     amrex::Error("rz_flag invalid");
    } else if (BL_SPACEDIM==3) {
-    radbubble=exp(log(3.0*bubble_volume/(4.0*Pi))/3.0);
+    radbubble=exp(log(3.0*bubble_volume/(4.0*local_Pi))/3.0);
    } else
-    BoxLib::Error("sdim bust");
+    amrex::Error("sdim bust");
 
    std::cout << "TIME= " << upper_slab_time << " EFFECTIVE RAD=  " << 
     radbubble << '\n';
@@ -2254,3 +2257,4 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   }
 } // subroutine sum_integrated_quantities
 
+}/* namespace amrex */
