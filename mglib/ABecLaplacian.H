@@ -238,11 +238,11 @@ protected:
  Vector< MultiFab* > MG_CG_diagsumL;
  Vector< MultiFab* > MG_CG_ones_mf_copy;
 
- std::vector< BoxArray > gbox;
- std::vector< DistributionMapping > dmap_array;
- std::vector< int > bfact_array;
+ Vector< BoxArray > gbox;
+ Vector< DistributionMapping > dmap_array;
+ Vector< int > bfact_array;
  Vector<MultiFab*> maskvals;
- std::vector< Geometry > geomarray;
+ Vector< Geometry > geomarray;
 
  int nsolve_bicgstab;
 

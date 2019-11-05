@@ -27,6 +27,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
     void FORT_CGUPDATE (
@@ -58,6 +60,9 @@ extern "C"
 
 
 }
+
+}/* namespace amrex */
+
 #endif
 
 #endif /*_CG_F_H_*/

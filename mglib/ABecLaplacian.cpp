@@ -58,7 +58,7 @@ Spacer (std::ostream& os, int lev)
 // level==0 is the finest level
 void
 ABecLaplacian::apply (MultiFab& out,MultiFab& in,
-  int level,MultiFab& pbdry,Array<int> bcpres_array) {
+  int level,MultiFab& pbdry,Vector<int> bcpres_array) {
 
     applyBC(in,level,pbdry,bcpres_array);
     Fapply(out,in,level);
@@ -68,7 +68,7 @@ ABecLaplacian::apply (MultiFab& out,MultiFab& in,
 // level==0 is the finest level
 void
 ABecLaplacian::applyBC (MultiFab& inout,int level,
-       MultiFab& pbdry,Array<int> bcpres_array) {
+       MultiFab& pbdry,Vector<int> bcpres_array) {
 
 #if (profile_solver==1)
  std::string subname="ABecLaplacian::applyBC";
@@ -156,7 +156,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();        
 
-  Array<int> bcpres;
+  Vector<int> bcpres;
   bcpres.resize(2*AMREX_SPACEDIM*nsolve_bicgstab);
   int ibase=2*AMREX_SPACEDIM*gridno*nsolve_bicgstab;
   for (int i=0;i<2*AMREX_SPACEDIM*nsolve_bicgstab;i++)
@@ -186,7 +186,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
 void
 ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
   MultiFab& solnL,int level,
-  MultiFab& pbdry,Array<int> bcpres_array) {
+  MultiFab& pbdry,Vector<int> bcpres_array) {
 
 #if (profile_solver==1)
  std::string subname="ABecLaplacian::residual";
@@ -295,7 +295,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
 
 void
 ABecLaplacian::smooth(MultiFab& solnL,MultiFab& rhsL,
-  int level,MultiFab& pbdry,Array<int> bcpres_array,
+  int level,MultiFab& pbdry,Vector<int> bcpres_array,
   int smooth_type) {
 
     int nc = solnL.nComp();
@@ -612,7 +612,7 @@ ABecLaplacian::buildMatrix() {
     // bcoefs[level-1] ~ area_fine/dx_fine  
     // bcoefs[level] ~ (area_coarse/dx_fine)/2^(d-1) =
     //                 4(area_coarse/dx_coarse)/2^d
-    int avg=1;
+    avg=1;
     makeCoefficients(*bcoefs[level][dir],*bcoefs[level-1][dir],level,avg);
     MultiFab& bmf=*bcoefs[level][dir];
 
@@ -930,8 +930,7 @@ ABecLaplacian::ABecLaplacian (
    if (use_local_dmap==0) {
     dmap_array[level] = dmap;
    } else if (use_local_dmap==1) {
-    ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
-    dmap_array[level].define(grids,ParallelDescriptor::NProcs(),color);
+    dmap_array[level].define(grids,ParallelDescriptor::NProcs());
    } else
     amrex::Error("use_local_dmap invalid");
 
@@ -939,8 +938,8 @@ ABecLaplacian::ABecLaplacian (
    bfact_array[level] = bfact;
 
    // mask=0 at fine/fine interfaces
-   maskvals[level]=new MultiFab(grids,1,nghostSOLN,
-		 dmap_array[level],Fab_allocate);
+   maskvals[level]=new MultiFab(grids,dmap_array[level],1,nghostSOLN,
+      MFInfo().SetTag("maskvals level"),FArrayBoxFactory());
    maskvals[level]->setVal(0.0,0,1,nghostSOLN);
    maskvals[level]->setBndry(1.0);
    maskvals[level]->FillBoundary(geom.periodicity());
@@ -955,8 +954,7 @@ ABecLaplacian::ABecLaplacian (
    if (use_local_dmap==0) {
     dmap_array[level] = dmap_array[level-1];
    } else if (use_local_dmap==1) {
-    ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
-    dmap_array[level].define(gbox[level],ParallelDescriptor::NProcs(),color);
+    dmap_array[level].define(gbox[level],ParallelDescriptor::NProcs());
    } else
     amrex::Error("use_local_dmap invalid");
 
@@ -964,8 +962,8 @@ ABecLaplacian::ABecLaplacian (
    bfact_array[level] = bfact_array[level-1];
 
    // mask=0 at fine/fine interfaces
-   maskvals[level]=new MultiFab(gbox[level],1,nghostSOLN,
-		 dmap_array[level],Fab_allocate);
+   maskvals[level]=new MultiFab(gbox[level],dmap_array[level],1,nghostSOLN,
+     MFInfo().SetTag("maskvals level"),FArrayBoxFactory());
    maskvals[level]->setVal(0.0,0,1,nghostSOLN);
    maskvals[level]->setBndry(1.0);
    maskvals[level]->FillBoundary(geomarray[level].periodicity());
@@ -973,50 +971,60 @@ ABecLaplacian::ABecLaplacian (
   } else
    amrex::Error("level invalid");
 
-  MG_CG_ones_mf_copy[level]=new MultiFab(gbox[level],1,nghostSOLN,
-    dmap_array[level],Fab_allocate);
+  MG_CG_ones_mf_copy[level]=new MultiFab(gbox[level],dmap_array[level],
+    1,nghostSOLN,
+    MFInfo().SetTag("MG_CG_ones_mf_copy"),FArrayBoxFactory());
   MG_CG_ones_mf_copy[level]->setVal(1.0,0,1,nghostSOLN);
 
-  MG_CG_diagsumL[level]=new MultiFab(gbox[level],nsolve_bicgstab,nghostRHS,
-    dmap_array[level],Fab_allocate);
+  MG_CG_diagsumL[level]=new MultiFab(gbox[level],dmap_array[level],
+	nsolve_bicgstab,nghostRHS,
+        MFInfo().SetTag("MG_CG_diagsumL"),FArrayBoxFactory());
   MG_CG_diagsumL[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
-  acoefs[level]=new MultiFab(gbox[level],nsolve_bicgstab,nghostRHS,
-    dmap_array[level],Fab_allocate);
+  acoefs[level]=new MultiFab(gbox[level],dmap_array[level],
+	nsolve_bicgstab,nghostRHS,
+        MFInfo().SetTag("acoefs"),FArrayBoxFactory());
   acoefs[level]->setVal(a_def,0,nsolve_bicgstab,nghostRHS);
 
   int ncomp_work=(AMREX_SPACEDIM*3)+10;
-  workcoefs[level]=new MultiFab(gbox[level],ncomp_work*nsolve_bicgstab,
-    nghostSOLN,dmap_array[level],Fab_allocate);
+  workcoefs[level]=new MultiFab(gbox[level],dmap_array[level],
+    ncomp_work*nsolve_bicgstab,nghostSOLN,
+    MFInfo().SetTag("workcoefs"),FArrayBoxFactory());
   workcoefs[level]->setVal(0.0,0,ncomp_work*nsolve_bicgstab,nghostSOLN);
 
-  laplacian_ones[level]=new MultiFab(gbox[level],1,nghostSOLN,
-    dmap_array[level],Fab_allocate);
+  laplacian_ones[level]=new MultiFab(gbox[level],dmap_array[level],
+	1,nghostSOLN,
+        MFInfo().SetTag("laplacian_ones"),FArrayBoxFactory());
   laplacian_ones[level]->setVal(1.0,0,1,nghostSOLN);
 
-  MG_res[level] = new MultiFab(gbox[level],nsolve_bicgstab,nghostRHS,
-	 dmap_array[level],Fab_allocate);
+  MG_res[level] = new MultiFab(gbox[level],dmap_array[level],
+	 nsolve_bicgstab,nghostRHS,
+	 MFInfo().SetTag("MG_res"),FArrayBoxFactory());
   MG_res[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
-  MG_rhs[level] = new MultiFab(gbox[level],nsolve_bicgstab,nghostRHS,
-	 dmap_array[level],Fab_allocate);
+  MG_rhs[level] = new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostRHS,
+    MFInfo().SetTag("MG_rhs"),FArrayBoxFactory());
   MG_rhs[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
-  MG_cor[level] = new MultiFab(gbox[level],nsolve_bicgstab,nghostSOLN,
-	 dmap_array[level],Fab_allocate);
+  MG_cor[level] = new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostSOLN,
+    MFInfo().SetTag("MG_cor"),FArrayBoxFactory());
   MG_cor[level]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
   MG_pbdrycoarser[level] = 
-     new MultiFab(gbox[level],nsolve_bicgstab,nghostSOLN,
-	 dmap_array[level],Fab_allocate);
+     new MultiFab(gbox[level],dmap_array[level],
+	nsolve_bicgstab,nghostSOLN,
+	MFInfo().SetTag("MG_pbdrycoarser"),FArrayBoxFactory());
   MG_pbdrycoarser[level]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
   // no ghost cells for edge or node coefficients
   for (int dir = 0; dir < AMREX_SPACEDIM; ++dir) {
    BoxArray edge_boxes(gbox[level]);
    edge_boxes.surroundingNodes(dir);
-   bcoefs[level][dir]=new MultiFab(edge_boxes,nsolve_bicgstab,0,
-      dmap_array[level],Fab_allocate);
+   bcoefs[level][dir]=new MultiFab(edge_boxes,dmap_array[level],
+     nsolve_bicgstab,0,
+     MFInfo().SetTag("bcoefs"),FArrayBoxFactory());
    bcoefs[level][dir]->setVal(b_def,0,nsolve_bicgstab,0);
   }
 
@@ -1025,13 +1033,15 @@ ABecLaplacian::ABecLaplacian (
  int finest_mg_level=0;
 
  MG_initialsolution = new MultiFab(gbox[finest_mg_level],
-    nsolve_bicgstab,nghostSOLN,
-    dmap_array[finest_mg_level],Fab_allocate);
+   dmap_array[finest_mg_level],
+   nsolve_bicgstab,nghostSOLN,
+   MFInfo().SetTag("MG_initialsolution"),FArrayBoxFactory());
  MG_initialsolution->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
  MG_pbdryhom = new MultiFab(gbox[finest_mg_level],
-    nsolve_bicgstab,nghostSOLN,
-    dmap_array[finest_mg_level],Fab_allocate);
+   dmap_array[finest_mg_level],
+   nsolve_bicgstab,nghostSOLN,
+   MFInfo().SetTag("MG_pbdryhom"),FArrayBoxFactory());
  MG_pbdryhom->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
  for (int coarsefine=0;coarsefine<CG_numlevels_var;coarsefine++) {
@@ -1045,33 +1055,44 @@ ABecLaplacian::ABecLaplacian (
    amrex::Error("coarsefine invalid");
 
   for (int j=0;j<gmres_precond_iter_base_mg*nsolve_bicgstab;j++) {
-   GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostRHS,dmap_array[level],Fab_allocate); 
-   GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostSOLN,dmap_array[level],Fab_allocate); 
+   GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostRHS,
+    MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
+   GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostSOLN,
+    MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
 
    GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
    GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
   }
-  GMRES_W_MF[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostRHS,dmap_array[level],Fab_allocate);
+  GMRES_W_MF[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+   nsolve_bicgstab,nghostRHS,
+   MFInfo().SetTag("GMRES_W_MF"),FArrayBoxFactory());
 
-  CG_delta_sol[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostSOLN,dmap_array[level],Fab_allocate);
-  CG_r[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostRHS,dmap_array[level],Fab_allocate);
-  CG_z[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostSOLN,dmap_array[level],Fab_allocate);
-  CG_Av_search[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostRHS,dmap_array[level],Fab_allocate);
-  CG_p_search[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostRHS,dmap_array[level],Fab_allocate);
-  CG_v_search[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostRHS,dmap_array[level],Fab_allocate);
-  CG_rhs_resid_cor_form[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostRHS,dmap_array[level],Fab_allocate);
-  CG_pbdryhom[coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-    nghostSOLN,dmap_array[level],Fab_allocate);
+  CG_delta_sol[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostSOLN,
+    MFInfo().SetTag("CG_delta_sol"),FArrayBoxFactory());
+  CG_r[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostRHS,
+    MFInfo().SetTag("CG_r"),FArrayBoxFactory());
+  CG_z[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostSOLN,
+    MFInfo().SetTag("CG_z"),FArrayBoxFactory());
+  CG_Av_search[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostRHS,
+    MFInfo().SetTag("CG_Av_search"),FArrayBoxFactory());
+  CG_p_search[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostRHS,
+    MFInfo().SetTag("CG_p_search"),FArrayBoxFactory());
+  CG_v_search[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostRHS,
+    MFInfo().SetTag("CG_v_search"),FArrayBoxFactory());
+  CG_rhs_resid_cor_form[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostRHS,
+    MFInfo().SetTag("CG_rhs_resid_cor_form"),FArrayBoxFactory());
+  CG_pbdryhom[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostSOLN,
+    MFInfo().SetTag("CG_pbdryhom"),FArrayBoxFactory());
 
  } // coarsefine=0..CG_numlevels_var-1
 
@@ -1721,7 +1742,7 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
   BLProfiler bprof2(profname2);
 #endif
 
- Array<Real> pw;
+ Vector<Real> pw;
  pw.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   pw[tid] = 0.0;
@@ -2044,7 +2065,7 @@ ABecLaplacian::pcg_solve(
     MultiFab* r_in,
     Real eps_abs,Real bot_atol,
     MultiFab* pbdryhom_in,
-    Array<int> bcpres_array,
+    Vector<int> bcpres_array,
     int usecg_at_bottom,
     int smooth_type,int bottom_smooth_type,
     int presmooth,int postsmooth,
@@ -2117,7 +2138,7 @@ ABecLaplacian::pcg_GMRES_solve(
     MultiFab* r_in,
     Real eps_abs,Real bot_atol,
     MultiFab* pbdryhom_in,
-    Array<int> bcpres_array,
+    Vector<int> bcpres_array,
     int usecg_at_bottom,
     int smooth_type,int bottom_smooth_type,
     int presmooth,int postsmooth,
@@ -2178,10 +2199,12 @@ ABecLaplacian::pcg_GMRES_solve(
 
    for (int j=0;j<m;j++) {
     if (j>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
-     GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-       nghostRHS,dmap_array[level],Fab_allocate); 
-     GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],nsolve_bicgstab,
-       nghostSOLN,dmap_array[level],Fab_allocate); 
+     GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+       nsolve_bicgstab,nghostRHS,
+       MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
+     GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+       nsolve_bicgstab,nghostSOLN,
+       MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
     }
 
     GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
@@ -2219,7 +2242,7 @@ ABecLaplacian::pcg_GMRES_solve(
      LP_dot(*GMRES_W_MF[coarsefine],
             *GMRES_V_MF[i][coarsefine],level,HH[i][j]);
 
-     Real aa=-HH[i][j];
+     aa=-HH[i][j];
       // W=W+aa Vi
      CG_advance((*GMRES_W_MF[coarsefine]),aa,
                 (*GMRES_W_MF[coarsefine]),
@@ -2428,7 +2451,7 @@ ABecLaplacian::CG_solve(
     MultiFab& rhs,
     Real eps_abs,Real bot_atol,
     MultiFab& pbdry,
-    Array<int> bcpres_array,
+    Vector<int> bcpres_array,
     int usecg_at_bottom,
     int& meets_tol,
     int smooth_type,int bottom_smooth_type,
@@ -2905,7 +2928,7 @@ void ABecLaplacian::CG_advance (
     // Compute p = z  +  beta y
     // only interior cells are updated.
     //
-    const BoxArray& gbox = LPboxArray(level);
+    const BoxArray& gbox_local = LPboxArray(level);
     int ncomp = p.nComp();
     if (ncomp!=nsolve_bicgstab)
      amrex::Error("p ncomp invalid");
@@ -2932,10 +2955,10 @@ void ABecLaplacian::CG_advance (
 #endif
 {
     for (MFIter mfi(p,use_tiling); mfi.isValid(); ++mfi) {
-     BL_ASSERT(zbox[mfi.index()] == gbox[mfi.index()]);
+     BL_ASSERT(zbox[mfi.index()] == gbox_local[mfi.index()]);
      int gridno=mfi.index();
      const Box& tilegrid=mfi.tilebox();
-     const Box& fabgrid=gbox[gridno];
+     const Box& fabgrid=gbox_local[gridno];
      const int* tilelo=tilegrid.loVect();
      const int* tilehi=tilegrid.hiVect();
      const int* fablo=fabgrid.loVect();
@@ -2985,7 +3008,7 @@ void ABecLaplacian::CG_advance (
 
 Real
 ABecLaplacian::MG_errorEstimate(int level,
-  MultiFab& pbdry,Array<int> bcpres_array) {
+  MultiFab& pbdry,Vector<int> bcpres_array) {
   
  residual(*(MG_res[level]),*(MG_rhs[level]),*(MG_cor[level]), 
      level,pbdry,bcpres_array);
@@ -3001,7 +3024,7 @@ ABecLaplacian::MG_errorEstimate(int level,
 
 void ABecLaplacian::MG_residualCorrectionForm (MultiFab& newrhs,
       MultiFab& oldrhs,MultiFab& solnL,
-      MultiFab& inisol,MultiFab& pbdry,Array<int> bcpres_array,
+      MultiFab& inisol,MultiFab& pbdry,Vector<int> bcpres_array,
       int level) {
 
 #if (profile_solver==1)
@@ -3040,7 +3063,7 @@ ABecLaplacian::MG_solve (int nsverbose,
   MultiFab& _sol, MultiFab& _rhs,
   Real _eps_abs,Real _atol_b,
   int usecg_at_bottom,MultiFab& pbdry,
-  Array<int> bcpres_array,
+  Vector<int> bcpres_array,
   int smooth_type,
   int bottom_smooth_type,int presmooth,
   int postsmooth) {
@@ -3079,7 +3102,7 @@ ABecLaplacian::MG_solve (int nsverbose,
 // pbdry will always be identically zero since residual correction form.
 void
 ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
-  Real eps_abs,Real atol_b,MultiFab& pbdry,Array<int> bcpres_array,
+  Real eps_abs,Real atol_b,MultiFab& pbdry,Vector<int> bcpres_array,
   int usecg_at_bottom,
   int smooth_type,int bottom_smooth_type,int presmooth,int postsmooth) {
 
@@ -3189,7 +3212,7 @@ ABecLaplacian::MG_numLevels (const BoxArray& grids) const
 void
 ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
    int level,Real eps_abs,Real atol_b,int usecg_at_bottom,
-   MultiFab& pbdry,Array<int> bcpres_array,
+   MultiFab& pbdry,Vector<int> bcpres_array,
    int smooth_type,int bottom_smooth_type,
    int presmooth,int postsmooth)
 {
@@ -3246,7 +3269,7 @@ void
 ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
    int level,Real eps_abs,
    Real atol_b,int usecg_at_bottom,
-   MultiFab& pbdry,Array<int> bcpres_array,
+   MultiFab& pbdry,Vector<int> bcpres_array,
    int smooth_type,int bottom_smooth_type,int presmooth,
    int postsmooth) {
 

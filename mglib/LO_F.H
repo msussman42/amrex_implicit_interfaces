@@ -35,6 +35,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
 
@@ -107,6 +109,9 @@ extern "C"
 	const int *axis,int* avg,
         int* bfact_coarse,int* bfact_fine,int* bfact_top);
 }
+
+}/* namespace amrex */
+
 #endif
 
 #endif /*_LO_F_H_*/

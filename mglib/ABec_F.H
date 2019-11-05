@@ -26,6 +26,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
 
@@ -100,6 +102,9 @@ extern "C"
         int* bfact,int* bfact_top);
 
 }
+
+}/* namespace amrex */
+
 #endif
 
 #endif /*_AABBEC_F_H_*/
