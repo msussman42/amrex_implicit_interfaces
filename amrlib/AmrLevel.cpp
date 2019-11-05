@@ -26,7 +26,7 @@ AmrLevel::get_derive_lst () noexcept
 
 void
 AmrLevel::manual_tags_placement (TagBoxArray&    tags,
-                                 Array<int>& bf_lev)
+                                 Vector<int>& bf_lev)
 {}
 
 AmrLevel::AmrLevel () noexcept
@@ -311,7 +311,7 @@ AmrLevel::FillPatch (AmrLevel & old,
  BL_ASSERT(ncomp <= (mf.nComp()-dcomp));
  BL_ASSERT(0 <= index && index < desc_lst.size());
 
- Array<int> scompBC_map;
+ Vector<int> scompBC_map;
  scompBC_map.resize(ncomp);
  for (int i=0;i<ncomp;i++)
   scompBC_map[i]=scomp+i;
@@ -339,7 +339,7 @@ AmrLevel::FillPatch (AmrLevel & old,
   const Geometry& fgeom = old.geom;
   StateDataPhysBCFunct fbc(fstatedata,fgeom);
 
-  Array<int> local_scompBC_map;
+  Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
   for (int i=0;i<ncomp_range;i++)
    local_scompBC_map[i]=scompBC_map[scomp_range+i];
@@ -404,7 +404,7 @@ AmrLevel::FillCoarsePatchGHOST (
                            Real      time,
                            int       index,
                            int       scomp, //cmf: scomp..scomp+ncomp-1
-                           Array<int> scompBC_map, // 0..ncomp-1
+                           Vector<int> scompBC_map, // 0..ncomp-1
                            int       ncomp)
 {
  BL_PROFILE("AmrLevel::FillCoarsePatchGHOST()");
@@ -491,7 +491,7 @@ AmrLevel::FillCoarsePatchGHOST (
   if (dcomp_data!=DComp)
    amrex::Error("dcomp_data!=DComp");
 
-  Array<int> local_scompBC_map;
+  Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
   for (int i=0;i<ncomp_range;i++)
    local_scompBC_map[i]=scompBC_map[scomp_range+i];
@@ -513,8 +513,8 @@ AmrLevel::FillCoarsePatchGHOST (
     local_scompBC_map,
     bfact_coarse);
 
-  Array< BCRec > local_bcs;
-  const Array< BCRec> & global_bcs=descGHOST.getBCs();
+  Vector< BCRec > local_bcs;
+  const Vector< BCRec> & global_bcs=descGHOST.getBCs();
   local_bcs.resize(ncomp_range);
   for (int i=0;i<ncomp_range;i++)
    local_bcs[i]=global_bcs[local_scompBC_map[i]]; 
@@ -526,7 +526,7 @@ AmrLevel::FillCoarsePatchGHOST (
 
    const Box& dbx = mfi.validbox();
 	    
-   Array<BCRec> bcr(ncomp_range);
+   Vector<BCRec> bcr(ncomp_range);
    int src_comp_bcs=0;
    int dest_comp_bcr=0;
      // source: local_bcs  dest: bcr
@@ -562,7 +562,7 @@ AmrLevel::InterpBordersGHOST (
                      Real      time,
                      int       index,
                      int       scomp, // source comp wrt mf
-                     Array<int> scompBC_map,
+                     Vector<int> scompBC_map,
                      int       ncomp)
 {
  BL_PROFILE("AmrLevel::InterpBordersGHOST()");
@@ -625,7 +625,7 @@ AmrLevel::InterpBordersGHOST (
   if (dcomp_data!=DComp)
    amrex::Error("dcomp_data!=DComp");
 
-  Array<int> local_scompBC_map;
+  Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
   for (int i=0;i<ncomp_range;i++)
    local_scompBC_map[i]=scompBC_map[scomp_range+i];
@@ -689,7 +689,7 @@ AmrLevel::InterpBorders (
                      Real      time,
                      int       index,
                      int       scomp,
-                     Array<int> scompBC_map,
+                     Vector<int> scompBC_map,
                      int       ncomp)
 {
  BL_PROFILE("AmrLevel::InterpBorders()");
@@ -752,7 +752,7 @@ AmrLevel::InterpBorders (
   if (dcomp_data!=DComp)
    amrex::Error("dcomp_data!=DComp");
 
-  Array<int> local_scompBC_map;
+  Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
   for (int i=0;i<ncomp_range;i++)
    local_scompBC_map[i]=scompBC_map[scomp_range+i];
@@ -828,7 +828,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  if ((index<0)||(index>=desc_lst.size()))
   amrex::Error("(index<0)||(index>=desc_lst.size())");
 
- Array<int> scompBC_map;
+ Vector<int> scompBC_map;
  scompBC_map.resize(ncomp);
  for (int i=0;i<ncomp;i++)
   scompBC_map[i]=scomp+i;
@@ -874,7 +874,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
     // ngrow=0
   MultiFab crseMF(crseBA,dm,ncomp_range,0,Fab_allocate);
 
-  Array<int> local_scompBC_map;
+  Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
   for (int i=0;i<ncomp_range;i++)
    local_scompBC_map[i]=scompBC_map[scomp_range+i];
@@ -894,8 +894,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
     local_scompBC_map,
     bfact_coarse);
 
-  Array< BCRec > local_bcs;
-  const Array< BCRec> & global_bcs=desc.getBCs();
+  Vector< BCRec > local_bcs;
+  const Vector< BCRec> & global_bcs=desc.getBCs();
 
   local_bcs.resize(ncomp_range);
   for (int i=0;i<ncomp_range;i++)
@@ -908,7 +908,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
    const Box& dbx = mfi.validbox();
 	    
-   Array<BCRec> bcr(ncomp_range);
+   Vector<BCRec> bcr(ncomp_range);
    int src_comp_bcs=0;
    int dest_comp_bcr=0;
      // source: local_bcs  dest: bcr
@@ -1033,13 +1033,13 @@ AmrLevel::derive (const std::string& name,
     return mf;
 }
 
-Array<int>
+Vector<int>
 AmrLevel::getBCArray (int State_Type,
                       int gridno,
                       int strt_comp,
                       int ncomp)
 {
-    Array<int> bc(2*BL_SPACEDIM*ncomp);
+    Vector<int> bc(2*BL_SPACEDIM*ncomp);
 
     for (int n = 0; n < ncomp; n++)
     {
@@ -1051,13 +1051,13 @@ AmrLevel::getBCArray (int State_Type,
     return bc;
 } // getBCArray
 
-Array<int>
+Vector<int>
 AmrLevel::getBCArrayGHOST (int State_Type,
                       int gridno,
                       int strt_comp,
                       int ncomp)
 {
- Array<int> bc(2*BL_SPACEDIM*ncomp);
+ Vector<int> bc(2*BL_SPACEDIM*ncomp);
 
  for (int n = 0; n < ncomp; n++) {
   const int* b_rec = state[State_Type].getBCGHOST(strt_comp+n,gridno).vect();

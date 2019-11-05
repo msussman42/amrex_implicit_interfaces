@@ -647,10 +647,10 @@ NavierStokes::variableSetUp ()
       im_string_stream << im_part+1;
       std::string im_string=im_string_stream.str();
 
-      Array<std::string> MOFvelocity_names_solid;
+      Vector<std::string> MOFvelocity_names_solid;
       MOFvelocity_names_solid.resize(BL_SPACEDIM);
 
-      Array<BCRec> MOFvelocity_bcs_solid;
+      Vector<BCRec> MOFvelocity_bcs_solid;
       MOFvelocity_bcs_solid.resize(BL_SPACEDIM);
 
       int ibase_solid=0;
@@ -730,10 +730,10 @@ NavierStokes::variableSetUp ()
       im_string_stream << im_part+1;
       std::string im_string=im_string_stream.str();
 
-      Array<std::string> MOFvelocity_names_tensor;
+      Vector<std::string> MOFvelocity_names_tensor;
       MOFvelocity_names_tensor.resize(NUM_TENSOR_TYPE);
 
-      Array<BCRec> MOFvelocity_bcs_tensor;
+      Vector<BCRec> MOFvelocity_bcs_tensor;
       MOFvelocity_bcs_tensor.resize(NUM_TENSOR_TYPE);
 
       int ibase_tensor=0;
@@ -865,9 +865,9 @@ NavierStokes::variableSetUp ()
     if (dcomp!=BL_SPACEDIM*nmat)
      amrex::Error("dcomp invalid");
 
-    Array<std::string> LS_HO_names;
+    Vector<std::string> LS_HO_names;
     LS_HO_names.resize(ncomp_ls_ho);
-    Array<BCRec> LS_HO_bcs;
+    Vector<BCRec> LS_HO_bcs;
     LS_HO_bcs.resize(ncomp_ls_ho);
 
     dcomp=0;
@@ -930,9 +930,9 @@ NavierStokes::variableSetUp ()
       BL_SPACEDIM*nmat,LS_HO_names,
       LS_HO_bcs,LS_HO_fill_class,&ls_ho_interp_HIGH_PARM);
 
-    Array<std::string> LS_main_names;
+    Vector<std::string> LS_main_names;
     LS_main_names.resize(ncomp_ls_ho);
-    Array<BCRec> LS_main_bcs;
+    Vector<BCRec> LS_main_bcs;
     LS_main_bcs.resize(ncomp_ls_ho);
 
     dcomp=0;
@@ -1038,9 +1038,9 @@ NavierStokes::variableSetUp ()
     // 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
     // 2. reconstruct interior cells only.
     // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
-    Array<std::string> EXTMOF_names;
+    Vector<std::string> EXTMOF_names;
     EXTMOF_names.resize(nmat*ngeom_recon);
-    Array<BCRec> EXTMOF_bcs;
+    Vector<BCRec> EXTMOF_bcs;
     EXTMOF_bcs.resize(nmat*ngeom_recon);
 
     for (int im=0;im<nmat;im++) {
@@ -1134,9 +1134,9 @@ NavierStokes::variableSetUp ()
     desc_lstGHOST.setComponent(State_Type,mask_scomp,
       maskextrap_str,bc,FORT_EXTRAPFILL,&mask_sem_interp);
 
-    Array<std::string> BURNVEL_names;
+    Vector<std::string> BURNVEL_names;
     BURNVEL_names.resize(nburning);
-    Array<BCRec> BURNVEL_bcs;
+    Vector<BCRec> BURNVEL_bcs;
     BURNVEL_bcs.resize(nburning);
 
     for (int im=0;im<nten;im++) {
@@ -1199,7 +1199,7 @@ NavierStokes::variableSetUp ()
     desc_lstGHOST.setComponent(State_Type,burnvel_start_pos,BURNVEL_names,
      BURNVEL_bcs,BURNVEL_fill_class,&burnvel_interp);
 
-      // boundary routines are of type BndryFuncDefault
+      // boundary routines are of type BndryFuncDefaultSUSSMAN
       // setComponent expects a parameter of type 
       // StateDescriptor::BndryFunc&
       // Then it gives the following line:
@@ -1209,17 +1209,17 @@ NavierStokes::variableSetUp ()
       // StateDescriptor::BndryFunc::clone () const
       // { return new BndryFunc(*this); }
       // one of the constructors of BndryFunc is:
-      // BndryFunc (BndryFuncDefault inFunc);
+      // BndryFunc (BndryFuncDefaultSUSSMAN inFunc);
       // another constructor:
-      // BndryFunc (BndryFuncDefault inFunc,BndryFuncDefault gFunc);
+      // BndryFunc (BndryFuncDefaultSUSSMAN inFunc,BndryFuncDefaultSUSSMAN gFunc);
 
     if (num_materials_vel!=1)
      amrex::Error("num_materials_vel invalid");
 
-    Array<std::string> MOFvelocity_names;
+    Vector<std::string> MOFvelocity_names;
     MOFvelocity_names.resize(BL_SPACEDIM);
 
-    Array<BCRec> MOFvelocity_bcs;
+    Vector<BCRec> MOFvelocity_bcs;
     MOFvelocity_bcs.resize(BL_SPACEDIM);
 
     int ibase=0;
@@ -1258,10 +1258,10 @@ NavierStokes::variableSetUp ()
     desc_lst.setComponent(State_Type,num_materials_vel*BL_SPACEDIM,
       pres_str,bc,FORT_PRESSUREFILL,&sem_interp_DEFAULT);
 
-    Array<std::string> MOFstate_names;
+    Vector<std::string> MOFstate_names;
     MOFstate_names.resize(num_state_material*nmat);
 
-    Array<BCRec> MOFstate_bcs;
+    Vector<BCRec> MOFstate_bcs;
     MOFstate_bcs.resize(num_state_material*nmat);
 
     for (int im=0;im<nmat;im++) {
@@ -1339,9 +1339,9 @@ NavierStokes::variableSetUp ()
      // velocity, pressure, density, and temperature. 
     override_enable_spectral(enable_spectral);
 
-    Array<std::string> MOF_names;
+    Vector<std::string> MOF_names;
     MOF_names.resize(nmat*ngeom_raw);
-    Array<BCRec> MOF_bcs;
+    Vector<BCRec> MOF_bcs;
     MOF_bcs.resize(nmat*ngeom_raw);
 
     for (int im=0;im<nmat;im++) {
@@ -1548,15 +1548,15 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int enstrophy=energy_moment+1; // integral of w dot w
  int total_comp=enstrophy+nmat; 
 
- Array<Real> sumdata;
+ Vector<Real> sumdata;
  sumdata.resize(total_comp);
- Array<int> sumdata_type;
+ Vector<int> sumdata_type;
  sumdata_type.resize(total_comp);
- Array<int> sumdata_sweep;
+ Vector<int> sumdata_sweep;
  sumdata_sweep.resize(total_comp);
 
- Array<Real> F_MAT;
- Array<Real> MASS_MAT;
+ Vector<Real> F_MAT;
+ Vector<Real> MASS_MAT;
  F_MAT.resize(nmat);
  MASS_MAT.resize(nmat);
 
@@ -1622,8 +1622,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   cut_flag=1;
  }
 
- Array<Real> ZZ;
- Array<Real> FF;
+ Vector<Real> ZZ;
+ Vector<Real> FF;
  const Box& fdomain = ns_fine.geom.Domain();
  const int* fdomlo = fdomain.loVect();
  const int* fdomhi = fdomain.hiVect();
@@ -1675,7 +1675,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  ParallelDescriptor::Barrier();
 
- Array<blobclass> blobdata;
+ Vector<blobclass> blobdata;
 
  if (output_drop_distribution==1) {
   int color_count;
@@ -1708,7 +1708,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
    for (int im=0;im<nmat;im++) {
     std::cout << "-----------------------------------------------\n";
-    Array<int> sorted_blob_list;
+    Vector<int> sorted_blob_list;
     int material_blob_count=0;
     for (int iblob=0;iblob<blobdata.size();iblob++) 
      if (blobdata[iblob].im==im+1)

@@ -3,8 +3,7 @@
 
 #include <AMReX_Geometry.H>
 #include <AMReX_Array.H>
-#include <AMReX_Tuple.H>
-#include <AMReX_Pointers.H>
+#include <AMReX_Vector.H>
 #include <AMReX_REAL.H>
 #include <AMReX_BoxArray.H>
 #include <AMReX_MultiFab.H>
@@ -41,14 +40,14 @@ public:
     void non_sing_coefficients(Real offdiag_coeff_);
 
     void apply (MultiFab& out, MultiFab& in,
-     int level,MultiFab& pbdry,Array<int> bcpres_array);
+     int level,MultiFab& pbdry,Vector<int> bcpres_array);
     void applyBC (MultiFab& inout,int level,
-       MultiFab& pbdry,Array<int> bcpres_array);
+       MultiFab& pbdry,Vector<int> bcpres_array);
     void residual (MultiFab& residL,MultiFab& rhsL,
        MultiFab& solnL,int level,
-       MultiFab& pbdry,Array<int> bcpres_array);
+       MultiFab& pbdry,Vector<int> bcpres_array);
     void smooth (MultiFab& solnL,MultiFab& rhsL,
-      int level,MultiFab& pbdry,Array<int> bcpres_array,
+      int level,MultiFab& pbdry,Vector<int> bcpres_array,
       int smooth_type);
 
     void project_null_space(MultiFab& rhsL,int level);
@@ -61,7 +60,7 @@ public:
     void pcg_solve(MultiFab* z,MultiFab* r,
      Real eps_abs,Real bot_atol,
      MultiFab* pbdryhom,
-     Array<int> bcpres_array,
+     Vector<int> bcpres_array,
      int usecg_at_bottom,
      int smooth_type,int bottom_smooth_type,
      int presmooth,int postsmooth,
@@ -73,7 +72,7 @@ public:
      MultiFab* z,MultiFab* r,
      Real eps_abs,Real bot_atol,
      MultiFab* pbdryhom,
-     Array<int> bcpres_array,
+     Vector<int> bcpres_array,
      int usecg_at_bottom,
      int smooth_type,int bottom_smooth_type,
      int presmooth,int postsmooth,
@@ -85,7 +84,7 @@ public:
       int nsverbose,int is_bottom,
       MultiFab& solnL,MultiFab& rhsL,
       Real eps_abs,Real bot_atol,
-      MultiFab& pbdry,Array<int> bcpres_array,
+      MultiFab& pbdry,Vector<int> bcpres_array,
       int usecg_at_bottom,
       int& meets_tol,int smooth_type,
       int bottom_smooth_type,int presmooth,
@@ -106,7 +105,7 @@ public:
      MultiFab& _sol, MultiFab& _rhs, 
      Real _eps_abs,Real _atol_b,
      int usecg_at_bottom,MultiFab& pbdry,
-     Array<int> bcpres_array,
+     Vector<int> bcpres_array,
      int smooth_type,
      int bottom_smooth_type,int presmooth,
      int postsmooth);
@@ -149,31 +148,31 @@ protected:
     int CG_use_mg_precond_at_top; // Use multigrid as a preconditioner.
 
     void MG_solve_ (int nsverbose,MultiFab& _sol,
-     Real eps_abs,Real atol_b,MultiFab& pbdry,Array<int> bcpres_array,
+     Real eps_abs,Real atol_b,MultiFab& pbdry,Vector<int> bcpres_array,
      int usecg_at_bottom,
      int smooth_type,int bottom_smooth_type,int presmooth,int postsmooth);
 
     void MG_residualCorrectionForm (MultiFab& newrhs,
       MultiFab& oldrhs,MultiFab& solnL,
-      MultiFab& inisol,MultiFab& pbdry,Array<int> bcpres_array,
+      MultiFab& inisol,MultiFab& pbdry,Vector<int> bcpres_array,
       int level);
 
     int MG_numLevels (const BoxArray& grids) const;
     virtual Real MG_errorEstimate (int level,
-        MultiFab& pbdry,Array<int> bcpres_array);
+        MultiFab& pbdry,Vector<int> bcpres_array);
     void MG_average (MultiFab& c,MultiFab& f,int clevel,int flevel);
     void MG_interpolate (MultiFab& f,MultiFab& c,int clevel,int flevel);
     void MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
       int level,Real eps_abs,Real atol_b,
       int usecg_at_bottom,
-      MultiFab& pbdry,Array<int> bcpres_array,
+      MultiFab& pbdry,Vector<int> bcpres_array,
       int smooth_type,int bottom_smooth_type,
       int presmooth,int postsmooth);
 
     void MG_relax (MultiFab& solL,MultiFab& rhsL,
       int level,Real eps_abs,
       Real atol_b,int usecg_at_bottom,
-      MultiFab& pbdry,Array<int> bcpres_array,
+      MultiFab& pbdry,Vector<int> bcpres_array,
       int smooth_type,
       int bottom_smooth_type,int presmooth,int postsmooth);
 
@@ -190,10 +189,10 @@ protected:
     int MG_maxiter_b;
 
     MultiFab* MG_initialsolution;
-    Array< MultiFab* > MG_res;
-    Array< MultiFab* > MG_rhs;
-    Array< MultiFab* > MG_cor;
-    Array< MultiFab* > MG_pbdrycoarser;
+    Vector< MultiFab* > MG_res;
+    Vector< MultiFab* > MG_rhs;
+    Vector< MultiFab* > MG_cor;
+    Vector< MultiFab* > MG_pbdrycoarser;
 
 
  void makeCoefficients (
@@ -210,39 +209,39 @@ protected:
  virtual void Fdiagsum(MultiFab&       out,
                        int             level);
 
- Array< MultiFab* > acoefs;
+ Vector< MultiFab* > acoefs;
 
 // bxleft,byleft,bzleft,bxright,byright,bzright,icbx,icby,icbz,diag,diagsing
 // mask,icdiag,icdiagrb,ax,solnsave,rhssave,redsoln,blacksoln
- Array< MultiFab* > workcoefs;
+ Vector< MultiFab* > workcoefs;
 
- Array< MultiFab* > laplacian_ones;
+ Vector< MultiFab* > laplacian_ones;
 
- Array< Real > offdiag_coeff;
+ Vector< Real > offdiag_coeff;
 
- Array< Tuple< MultiFab*, BL_SPACEDIM> > bcoefs;
+ Vector< Array< MultiFab*, AMREX_SPACEDIM> > bcoefs;
 
- Array< Tuple< MultiFab*, 2> > GMRES_V_MF;
- Array< Tuple< MultiFab*, 2> > GMRES_Z_MF;
- Tuple< MultiFab*, 2> GMRES_W_MF;
- Tuple< MultiFab*, 2> CG_delta_sol;
- Tuple< MultiFab*, 2> CG_r;
- Tuple< MultiFab*, 2> CG_z;
- Tuple< MultiFab*, 2> CG_Av_search;
- Tuple< MultiFab*, 2> CG_p_search;
- Tuple< MultiFab*, 2> CG_v_search;
- Tuple< MultiFab*, 2> CG_rhs_resid_cor_form;
- Tuple< MultiFab*, 2> CG_pbdryhom;
+ Vector< Array< MultiFab*, 2> > GMRES_V_MF;
+ Vector< Array< MultiFab*, 2> > GMRES_Z_MF;
+ Array< MultiFab*, 2> GMRES_W_MF;
+ Array< MultiFab*, 2> CG_delta_sol;
+ Array< MultiFab*, 2> CG_r;
+ Array< MultiFab*, 2> CG_z;
+ Array< MultiFab*, 2> CG_Av_search;
+ Array< MultiFab*, 2> CG_p_search;
+ Array< MultiFab*, 2> CG_v_search;
+ Array< MultiFab*, 2> CG_rhs_resid_cor_form;
+ Array< MultiFab*, 2> CG_pbdryhom;
 
   // MG_pdryhom only needed by multigrid on the finest level
  MultiFab* MG_pbdryhom;
- Array< MultiFab* > MG_CG_diagsumL;
- Array< MultiFab* > MG_CG_ones_mf_copy;
+ Vector< MultiFab* > MG_CG_diagsumL;
+ Vector< MultiFab* > MG_CG_ones_mf_copy;
 
  std::vector< BoxArray > gbox;
  std::vector< DistributionMapping > dmap_array;
  std::vector< int > bfact_array;
- Array<MultiFab*> maskvals;
+ Vector<MultiFab*> maskvals;
  std::vector< Geometry > geomarray;
 
  int nsolve_bicgstab;

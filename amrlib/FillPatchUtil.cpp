@@ -20,8 +20,8 @@ namespace amrex
       int dcomp, 
       int ncomp,
       const Geometry& geom, 
-      PhysBCFunctBase& physbcf,
-      Array<int> scompBC_map,
+      PhysBCFunctBaseSUSSMAN& physbcf,
+      Vector<int> scompBC_map,
       int bfact)
     {
      BL_PROFILE("FillPatchSingleLevel");
@@ -59,11 +59,11 @@ namespace amrex
      int ncomp,
      const Geometry& cgeom, 
      const Geometry& fgeom, 
-     PhysBCFunctBase& cbc, 
-     PhysBCFunctBase& fbc,
+     PhysBCFunctBaseSUSSMAN& cbc, 
+     PhysBCFunctBaseSUSSMAN& fbc,
      Interpolater* mapper, 
-     const Array<BCRec>& global_bcs,
-     Array<int> scompBC_map,
+     const Vector<BCRec>& global_bcs,
+     Vector<int> scompBC_map,
      int levelc,int levelf,
      int bfactc,int bfactf) {
 
@@ -121,7 +121,7 @@ namespace amrex
         scompBC_map,
         bfactc);
 
-       Array< BCRec > local_bcs;
+       Vector< BCRec > local_bcs;
        local_bcs.resize(ncomp);
        for (int i=0;i<ncomp;i++)
         local_bcs[i]=global_bcs[scompBC_map[i]]; 
@@ -138,7 +138,7 @@ namespace amrex
         int gi = fpc.dst_idxs[li];		
         const Box& dbx = fpc.dst_boxes[li];
 		    
-        Array<BCRec> bcr(ncomp);
+        Vector<BCRec> bcr(ncomp);
         int src_comp_bcs=0;
         int dest_comp_bcr=0;
         amrex::setBC(dbx,fdomain,src_comp_bcs,dest_comp_bcr,ncomp,

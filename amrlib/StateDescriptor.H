@@ -19,9 +19,9 @@ class Interpolater;
 // FILL or GROUP FILL
 extern "C"
 {
-    typedef void (*BndryFuncDefault)(
+    typedef void (*BndryFuncDefaultSUSSMAN)(
       int* level,
-      Real* data, AMReX_ARLIM_P(lo), AMReX_ARLIM_P(hi),
+      Real* data, AMREX_ARLIM_P(lo), AMREX_ARLIM_P(hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
       const Real* time, const int* bc,
@@ -40,7 +40,7 @@ public:
     //
     // Type of function called by BCRec for user-supplied boundary data.
     //
-    // Class wrapper around BndryFuncDefault.
+    // Class wrapper around BndryFuncDefaultSUSSMAN.
     //
     class BndryFunc
     {
@@ -52,11 +52,11 @@ public:
         //
         // A Constructor.
         //
-        BndryFunc (BndryFuncDefault inFunc);
+        BndryFunc (BndryFuncDefaultSUSSMAN inFunc);
         //
         // Another Constructor.
         //
-        BndryFunc (BndryFuncDefault inFunc,BndryFuncDefault gFunc);
+        BndryFunc (BndryFuncDefaultSUSSMAN inFunc,BndryFuncDefaultSUSSMAN gFunc);
         //
         // Return a ptr to a clone of this object.
         // It is the responsibility of the caller to delete the result.
@@ -91,8 +91,8 @@ public:
           bool) const;
     private:
 
-        BndryFuncDefault  m_func;
-        BndryFuncDefault  m_gfunc;
+        BndryFuncDefaultSUSSMAN  m_func;
+        BndryFuncDefaultSUSSMAN  m_gfunc;
     };
     //
     // The default constructor.
@@ -212,16 +212,16 @@ public:
     //
     // Returns all BCRecs.
     //
-    const Array<BCRec>& getBCs () const;
+    const Vector<BCRec>& getBCs () const;
     //
     // Returns the BndryFunc of specified component.
     //
     const BndryFunc& bndryFill (int i) const;
 
-    void check_inRange (Array<int> scompBC_map, int nc) const;
+    void check_inRange (Vector<int> scompBC_map, int nc) const;
 
     std::vector< std::pair<int,int> > 
-      sameInterps (Array<int> scompBC_map, int ncomp) const;
+      sameInterps (Vector<int> scompBC_map, int ncomp) const;
 
     //
     // Should store this StateData in the checkpoint file
@@ -240,17 +240,17 @@ private:
     int                ngrow;    // Grow factor
     Interpolater*      mapper;   // Default interpolator
     bool               m_store_in_checkpoint; // store in checkpoint file?
-    Array<std::string> names;    // Printable names of components
-    Array<BCRec>       bc;       // Array of bndry types for entire level
+    Vector<std::string> names;    // Printable names of components
+    Vector<BCRec>       bc;       // Array of bndry types for entire level
      //!< Array of pointers to bndry fill functions
     Vector<std::unique_ptr<BndryFunc> >  bc_func; 
     std::vector<bool>  m_master; // Are we a master or slave?
-    Array<int>         m_groupsize; // Groupsize if we're a master
+    Vector<int>         m_groupsize; // Groupsize if we're a master
     //
     // If mapper_comp[icomp] != 0, that map is used instead of mapper
     // when interpolating icomp; otherwise, mapper is used.
     //
-    Array<Interpolater*> mapper_comp;
+    Vector<Interpolater*> mapper_comp;
     //
     // For component icomp, max_map_start_comp[icomp] and
     // min_map_end_comp[icomp] represent the maximum starting index and
@@ -261,8 +261,8 @@ private:
     // If there is no need to "couple" a component, max_map_start_comp[icomp]
     // and min_map_end_comp[icomp] simply equal icomp.
     //
-    Array<int> max_map_start_comp;
-    Array<int> min_map_end_comp;
+    Vector<int> max_map_start_comp;
+    Vector<int> min_map_end_comp;
 
 };
 
@@ -328,8 +328,8 @@ public:
     //
     void setComponent (int                               indx,
       int                               comp,
-      const Array<std::string>&         nm,
-      const Array<BCRec>&               bc,
+      const Vector<std::string>&         nm,
+      const Vector<BCRec>&               bc,
       const StateDescriptor::BndryFunc& func,
       Interpolater*                     interp=0
      );

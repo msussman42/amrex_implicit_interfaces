@@ -15,14 +15,14 @@ StateDescriptor::BndryFunc::BndryFunc ()
     m_gfunc(0)
 {}
 
-StateDescriptor::BndryFunc::BndryFunc (BndryFuncDefault inFunc)
+StateDescriptor::BndryFunc::BndryFunc (BndryFuncDefaultSUSSMAN inFunc)
     :
     m_func(inFunc),
     m_gfunc(0)
 {}
 
-StateDescriptor::BndryFunc::BndryFunc (BndryFuncDefault inFunc,
-                                       BndryFuncDefault gFunc)
+StateDescriptor::BndryFunc::BndryFunc (BndryFuncDefaultSUSSMAN inFunc,
+                                       BndryFuncDefaultSUSSMAN gFunc)
     :
     m_func(inFunc),
     m_gfunc(gFunc)
@@ -141,8 +141,8 @@ DescriptorList::setComponent (int        indx,
 void
 DescriptorList::setComponent (int    indx,
    int                               comp,
-   const Array<std::string>&         nm,
-   const Array<BCRec>&               bc,
+   const Vector<std::string>&         nm,
+   const Vector<BCRec>&               bc,
    const StateDescriptor::BndryFunc& func,
    Interpolater*                     interp)
 {
@@ -301,7 +301,7 @@ StateDescriptor::getBC (int i) const
     return bc[i];
 }
 
-const Array<BCRec>&
+const Vector<BCRec>&
 StateDescriptor::getBCs () const
 {
     return bc;
@@ -322,7 +322,7 @@ StateDescriptor::bndryFill (int i) const
 }
 
 void
-StateDescriptor::check_inRange (Array<int> scompBC_map, int nc) const
+StateDescriptor::check_inRange (Vector<int> scompBC_map, int nc) const
 {
  if (scompBC_map.size()!=nc)
   amrex::Error("scompBC_map has invalid size");
@@ -541,7 +541,7 @@ StateDescriptor::cleanUpMaps (Interpolater**& maps,
 }
 
 std::vector< std::pair<int,int> >
-StateDescriptor::sameInterps (Array<int> scompBC_map,
+StateDescriptor::sameInterps (Vector<int> scompBC_map,
                               int ncomp) const
 {
     if (ncomp<1)

@@ -366,7 +366,7 @@ StateData::newData (int slab_index) const
  return *new_data[project_slab_index];
 }
 
-Array<BCRec>&
+Vector<BCRec>&
 StateData::getBCs (int comp)
 {
     return bc[comp];
@@ -379,7 +379,7 @@ StateData::getBC (int comp, int i) const
 }
 
 
-Array<BCRec>&
+Vector<BCRec>&
 StateData::getBCsGHOST (int comp)
 {
     return bcGHOST[comp];
@@ -482,7 +482,7 @@ StateData::FillBoundary (
  const Real* dx,
  const RealBox& prob_domain,
  int dcomp,
- Array<int> scompBC_map,
+ Vector<int> scompBC_map,
  int ncomp,
  int bfact)
 {
@@ -496,7 +496,7 @@ StateData::FillBoundary (
     const int* plo = domain.loVect();
     const int* phi = domain.hiVect();
 
-    Array<int> bcrs;
+    Vector<int> bcrs;
 
     Real xlo[BL_SPACEDIM];
     BCRec bcr;
@@ -586,7 +586,7 @@ StateData::FillBoundaryGHOST (
  const Real* dx,
  const RealBox& prob_domain,
  int dcomp,
- Array<int> scompBC_map,
+ Vector<int> scompBC_map,
  int ncomp,
  int bfact)
 {
@@ -600,7 +600,7 @@ StateData::FillBoundaryGHOST (
     const int* plo = domain.loVect();
     const int* phi = domain.hiVect();
 
-    Array<int> bcrs;
+    Vector<int> bcrs;
 
     Real xlo[BL_SPACEDIM];
     BCRec bcr;
@@ -926,7 +926,7 @@ StateDataPhysBCFunct::FillBoundary (
  MultiFab& mf, 
  Real time,
  int dcomp, 
- Array<int> scompBC_map,
+ Vector<int> scompBC_map,
  int ncomp, 
  int bfact)
 {
@@ -1060,7 +1060,7 @@ StateDataPhysBCFunctGHOST::FillBoundary (
  MultiFab& mf, 
  Real time,
  int dcomp, 
- Array<int> scompBC_map,
+ Vector<int> scompBC_map,
  int ncomp, 
  int bfact)
 {

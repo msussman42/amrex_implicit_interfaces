@@ -119,11 +119,33 @@ public:
     * when defining a Box all of whose faces should be of type
     * IndexType::NODE.
     */
+
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static constexpr IndexType TheNodeType () noexcept {
         return IndexType(AMREX_D_DECL(IndexType::NODE,
                                       IndexType::NODE,
                                       IndexType::NODE));
+    }
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    static constexpr IndexType TheUMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::NODE,
+                                      IndexType::CELL,
+                                      IndexType::CELL));
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    static constexpr IndexType TheVMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                      IndexType::NODE,
+                                      IndexType::CELL));
+    }
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    static constexpr IndexType TheWMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                      IndexType::CELL,
+                                      IndexType::Node));
     }
 
 private:

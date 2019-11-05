@@ -16,7 +16,6 @@
 #include <Derive.H>
 #include <Interpolater.H>
 #include <Amr.H>
-#include <SlabStat.H>
 #include <StateDescriptor.H>
 #include <StateData.H>
 
@@ -205,7 +204,7 @@ public:
                     Real      time,
                     int       index,
                     int       scomp,
-                    Array<int> scompBC_map,
+                    Vector<int> scompBC_map,
                     int       ncomp);
 
     void FillCoarsePatchGHOST (
@@ -214,7 +213,7 @@ public:
                     Real      time,
                     int       index,
                     int       scomp,
-                    Array<int> scompBC_map,
+                    Vector<int> scompBC_map,
                     int       ncomp);
 
     void InterpBorders (
@@ -223,7 +222,7 @@ public:
                     Real      time,
                     int       index,
                     int       scomp,
-                    Array<int> scompBC_map,
+                    Vector<int> scompBC_map,
                     int       ncomp);
 
     void FillCoarsePatch (MultiFab& mf,
@@ -255,11 +254,11 @@ public:
     //
     // Boundary condition access function.
     //
-    Array<int> getBCArray (int State_Type,
+    Vector<int> getBCArray (int State_Type,
                            int gridno,
                            int scomp,
                            int ncomp);
-    Array<int> getBCArrayGHOST (int State_Type,
+    Vector<int> getBCArrayGHOST (int State_Type,
                            int gridno,
                            int scomp,
                            int ncomp);
@@ -268,7 +267,7 @@ public:
     // the list of tagged points.  Default implementation does nothing.
     //
     virtual void manual_tags_placement (TagBoxArray&    tags,
-                                        Array<int>& bf_lev);
+                                        Vector<int>& bf_lev);
     //
     // Modify list of variables to be plotted
     // 
@@ -304,12 +303,12 @@ protected:
     Geometry geom;                    // Geom at this level.
     BoxArray grids;                   // Cell-centered locations of grids.
     DistributionMapping dmap;         // Distribution of grids among processes
-    Array<RealBox> grid_loc;          // Physical locations of each grid.
+    Vector<RealBox> grid_loc;          // Physical locations of each grid.
     Amr* parent;                      // Pointer to parent AMR structure.
     static DeriveList derive_lst;     // List of derived quantities.
     static DescriptorList desc_lst;   // List of state variables.
     static DescriptorList desc_lstGHOST; 
-    Array<StateData> state;           // Array of state data.
+    Vector<StateData> state;           // Array of state data.
 
 private:
     //

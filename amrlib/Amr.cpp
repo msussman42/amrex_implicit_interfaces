@@ -84,8 +84,8 @@ namespace
     bool prereadFAHeaders;
     VisMF::Header::Version plot_headerversion(VisMF::Header::Version_v1);
     VisMF::Header::Version checkpoint_headerversion(VisMF::Header::Version_v1);
-    Array<int> recalesce_flag;  //if set, then "recalesce_state" checkpointed.
-    Array<int> AMR_FSI_flag;
+    Vector<int> recalesce_flag;  //if set, then "recalesce_state" checkpointed.
+    Vector<int> AMR_FSI_flag;
     int  AMR_num_materials;
 
 //}
@@ -361,7 +361,7 @@ Amr::InitAmr () {
     {
       int num_datalogs = pp.countval("data_log");
       datalog.resize(num_datalogs);
-      Array<std::string> data_file_names(num_datalogs);
+      Vector<std::string> data_file_names(num_datalogs);
       pp.queryarr("data_log",data_file_names,0,num_datalogs);
       for (int i = 0; i < num_datalogs; i++) 
         setRecordDataInfo(i,data_file_names[i]);
@@ -565,7 +565,7 @@ Amr::InitAmr () {
     //
     // Read computational domain and set geometry.
     //
-    Array<int> n_cell(AMREX_SPACEDIM);
+    Vector<int> n_cell(AMREX_SPACEDIM);
     pp.getarr("n_cell",n_cell,0,AMREX_SPACEDIM);
     BL_ASSERT(n_cell.size() == AMREX_SPACEDIM);
     IntVect lo(IntVect::TheZeroVector()), hi(n_cell);
@@ -1480,7 +1480,7 @@ Amr::restart (const std::string& filename)
 
     VisMF::IO_Buffer io_buffer(VisMF::IO_Buffer_Size);
 
-    Array<char> fileCharPtr;
+    Vector<char> fileCharPtr;
     ParallelDescriptor::ReadAndBcastFile(File, fileCharPtr);
     std::string fileCharPtrString(fileCharPtr.dataPtr());
     std::istringstream is(fileCharPtrString, std::istringstream::in);
@@ -1511,7 +1511,7 @@ Amr::restart (const std::string& filename)
     is >> finest_level;
     FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
 
-    Array<Box> inputs_domain(max_level+1);
+    Vector<Box> inputs_domain(max_level+1);
     for (int lev = 0; lev <= max_level; lev++) {
      Box bx(geom[lev].Domain().smallEnd(),geom[lev].Domain().bigEnd());
      inputs_domain[lev] = bx;
@@ -2035,7 +2035,7 @@ void Amr::recalesce_init(int nmat) {
 } // recalesce_init
 
 
-void Amr::recalesce_get_state(Array<Real>& recalesce_state_out,int nmat) { 
+void Amr::recalesce_get_state(Vector<Real>& recalesce_state_out,int nmat) { 
 
  if (nmat!=AMR_num_materials)
   amrex::Error("nmat invalid");
@@ -2053,7 +2053,7 @@ void Amr::recalesce_get_state(Array<Real>& recalesce_state_out,int nmat) {
 } // recalesce_get_state
 
 
-void Amr::recalesce_put_state(Array<Real>& recalesce_state_in,int nmat) {
+void Amr::recalesce_put_state(Vector<Real>& recalesce_state_in,int nmat) {
 
  if (nmat!=AMR_num_materials)
   amrex::Error("nmat invalid");
@@ -2308,8 +2308,8 @@ Amr::regrid (int  lbase,
   amrex::Error("cannot have lbase>max_coarsest");
 
  int new_finest;
- Array<BoxArray> new_grids(max_level+1);
- Array<DistributionMapping> new_dmap(max_level+1);
+ Vector<BoxArray> new_grids(max_level+1);
+ Vector<DistributionMapping> new_dmap(max_level+1);
 
  grid_places(lbase,new_finest,new_grids);
  if (new_finest>finest_level+1)
@@ -2574,7 +2574,7 @@ Amr::ProjPeriodic (BoxList&        blout,
 void
 Amr::grid_places (int              lbase,
                   int&             new_finest,
-                  Array<BoxArray>& new_grids)
+                  Vector<BoxArray>& new_grids)
 {
  int i;
  int max_crse = std::min(finest_level,max_level-1);
@@ -2603,9 +2603,9 @@ Amr::grid_places (int              lbase,
   //  (why did I say level i+1 previously?)
   // The proper nesting buffer of level i cells next to level i+1
   // cells is bf_lev[i]*n_proper.
- Array<int> bf_lev(max_level); 
- Array<int> rr_lev(max_level);
- Array<Box> pc_domain(max_level);  // Coarsened problem domain.
+ Vector<int> bf_lev(max_level); 
+ Vector<int> rr_lev(max_level);
+ Vector<Box> pc_domain(max_level);  // Coarsened problem domain.
 
  // blocking_factor is a power of 2 and no smaller than 4.
  for (i = 0; i <= max_crse; i++) {
@@ -2625,8 +2625,8 @@ Amr::grid_places (int              lbase,
   pc_domain[i] = amrex::coarsen(geom[i].Domain(),bf_lev[i]);
  }
 
- Array<BoxList> p_n(max_level);      // Proper nesting domain.
- Array<BoxList> p_n_comp(max_level); // Complement proper nesting domain.
+ Vector<BoxList> p_n(max_level);      // Proper nesting domain.
+ Vector<BoxList> p_n_comp(max_level); // Complement proper nesting domain.
 
  BoxList bl(amr_level[lbase]->boxArray());
  bl.simplify();
@@ -2839,7 +2839,7 @@ Amr::bldFineLevels (Real strt_time)
  finest_level = 0;
  FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
 
- Array<BoxArray> new_grids(max_level+1);
+ Vector<BoxArray> new_grids(max_level+1);
 
  int new_finest=0;
  int previous_new_finest=0;

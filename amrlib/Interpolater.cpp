@@ -28,10 +28,10 @@ maskSEMInterp             mask_sem_interp;
 
 
 static
-Array<int>
-GetBCArray (const Array<BCRec>& bcr)
+Vector<int>
+GetBCArray (const Vector<BCRec>& bcr)
 {
-    Array<int> bc(2*BL_SPACEDIM*bcr.size());
+    Vector<int> bc(2*BL_SPACEDIM*bcr.size());
 
     for (int n = 0; n < bcr.size(); n++)
     {
@@ -111,7 +111,7 @@ multiMOFInterp::interp (Real time,
   const Box&        fine_region,
   const Geometry&   crse_geom,
   const Geometry&   fine_geom,
-  Array<BCRec>&     bcr,
+  Vector<BCRec>&     bcr,
   int levelc,int levelf,
   int bfactc,int bfactf)
 {
@@ -207,7 +207,7 @@ multiEXTMOFInterp::interp (Real time,
   const Box&        fine_region,
   const Geometry&   crse_geom,
   const Geometry&   fine_geom,
-  Array<BCRec>&     bcr,
+  Vector<BCRec>&     bcr,
   int levelc,int levelf,
   int bfactc,int bfactf)
 {
@@ -297,7 +297,7 @@ BurnVelInterp::interp (Real time,
   const Box&        fine_region,
   const Geometry&   crse_geom,
   const Geometry&   fine_geom,
-  Array<BCRec>&     bcr,
+  Vector<BCRec>&     bcr,
   int levelc,int levelf,
   int bfactc,int bfactf)
 {
@@ -398,7 +398,7 @@ PCInterp::interp (
  const Box&       fine_region,
  const Geometry&  crse_geom,
  const Geometry&  fine_geom,
- Array<BCRec>&     bcr,
+ Vector<BCRec>&     bcr,
  int levelc,int levelf,
  int bfactc,int bfactf)
 {
@@ -462,7 +462,7 @@ LSHOInterp::interp (
  const Box&       fine_region,
  const Geometry&  crse_geom,
  const Geometry&  fine_geom,
- Array<BCRec>&     bcr,
+ Vector<BCRec>&     bcr,
  int levelc,int levelf,
  int bfactc,int bfactf)
 {
@@ -547,7 +547,7 @@ SEMInterp::interp (
  const Box&       fine_region,
  const Geometry&  crse_geom,
  const Geometry&  fine_geom,
- Array<BCRec>&     bcr,
+ Vector<BCRec>&     bcr,
  int levelc,int levelf,
  int bfactc,int bfactf)
 {
@@ -618,7 +618,7 @@ maskSEMInterp::interp (
  const Box&       fine_region,
  const Geometry&  crse_geom,
  const Geometry&  fine_geom,
- Array<BCRec>&     bcr,
+ Vector<BCRec>&     bcr,
  int levelc,int levelf,
  int bfactc,int bfactf)
 {
@@ -685,7 +685,7 @@ PCInterpNull::interp (
  const Box&       fine_region,
  const Geometry&  crse_geom,
  const Geometry&  fine_geom,
- Array<BCRec>&     bcr,
+ Vector<BCRec>&     bcr,
  int levelc,int levelf,
  int bfactc,int bfactf)
 {
@@ -753,7 +753,7 @@ UMACInterp::interp(
  const Box& fine_region, 
  const Geometry& crse_geom,
  const Geometry& fine_geom,
- Array<BCRec>&     bcr,
+ Vector<BCRec>&     bcr,
  int levelc,int levelf,
  int bfactc,int bfactf)
 {
@@ -762,7 +762,7 @@ UMACInterp::interp(
 
  BL_ASSERT(bcr.size() >= ncomp);
 
- Array<int> bcfine = GetBCArray(bcr);
+ Vector<int> bcfine = GetBCArray(bcr);
 
  IndexType typ(fine_region.ixType());
 
@@ -851,7 +851,7 @@ VMACInterp::interp(
  const Box& fine_region, 
  const Geometry& crse_geom,
  const Geometry& fine_geom,
- Array<BCRec>&     bcr,
+ Vector<BCRec>&     bcr,
  int levelc,int levelf,
  int bfactc,int bfactf)
 {
@@ -860,7 +860,7 @@ VMACInterp::interp(
 
  BL_ASSERT(bcr.size() >= ncomp);
 
- Array<int> bcfine = GetBCArray(bcr);
+ Vector<int> bcfine = GetBCArray(bcr);
 
  IndexType typ(fine_region.ixType());
 
@@ -945,7 +945,7 @@ WMACInterp::interp(
  const Box& fine_region,
  const Geometry& crse_geom,
  const Geometry& fine_geom,
- Array<BCRec>&     bcr,
+ Vector<BCRec>&     bcr,
  int levelc,int levelf,
  int bfactc,int bfactf)
 {
@@ -954,7 +954,7 @@ WMACInterp::interp(
 
  BL_ASSERT(bcr.size() >= ncomp);
 
- Array<int> bcfine = GetBCArray(bcr);
+ Vector<int> bcfine = GetBCArray(bcr);
 
  IndexType typ(fine_region.ixType());
 

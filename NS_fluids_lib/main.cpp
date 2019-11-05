@@ -18,11 +18,12 @@
 #include <AMReX_Box.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_ParallelDescriptor.H>
+
 #include <Amr.H>
 
-namespace amrex{
-
 extern void fortran_parameters();
+
+namespace amrex{
 
 int
 main (int   argc,

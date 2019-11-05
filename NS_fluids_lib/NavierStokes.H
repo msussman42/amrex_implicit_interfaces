@@ -366,9 +366,9 @@ public:
   Real blob_center_actual[AMREX_SPACEDIM];
   Real blob_perim;  // surface area of the blob
    // surface area of region separating the blob from a given material im.
-  Array<Real> blob_perim_mat;  
+  Vector<Real> blob_perim_mat;  
    // perimeter of contact line between im, im1, im2
-  Array< Array<Real> > blob_triple_perim;
+  Vector< Vector<Real> > blob_triple_perim;
   int im;  // 1<=im<=nmat
 };
 
@@ -430,26 +430,26 @@ public:
     void process_potential_force_cell();
     void init_gravity_potential();
 
-    void GetDrag(Array<Real>& integrated_quantities,int isweep);
-    void GetDragALL(Array<Real>& integrated_quantities);
+    void GetDrag(Vector<Real>& integrated_quantities,int isweep);
+    void GetDragALL(Vector<Real>& integrated_quantities);
 
     void process_recalesce_dataALL(
-     Array<int> recalesce_material,
-     Array<Real>& recalesce_state_old,
-     Array<Real>& recalesce_state_new);
+     Vector<int> recalesce_material,
+     Vector<Real>& recalesce_state_old,
+     Vector<Real>& recalesce_state_new);
     void process_recalesce_data(
-     Array<int> recalesce_material,
-     Array<Real>& recalesce_state_old,
-     Array<Real>& recalesce_state_new,
-     Array<Real>& integrated_quantities,
+     Vector<int> recalesce_material,
+     Vector<Real>& recalesce_state_old,
+     Vector<Real>& recalesce_state_new,
+     Vector<Real>& integrated_quantities,
      int isweep);
     void recalesce_temperature(int im_source);
 
     void volWgtSum(
-     Array<Real>& result,
-     Array<int>& sumdata_type,
-     Array<int>& sumdata_sweep,
-     Array<Real>& ZZ,Array<Real>& FF,
+     Vector<Real>& result,
+     Vector<int>& sumdata_type,
+     Vector<int>& sumdata_sweep,
+     Vector<Real>& ZZ,Vector<Real>& FF,
      int dirx,int diry,int cut_flag,
      MultiFab* dragmf,int isweep);
 
@@ -457,10 +457,10 @@ public:
 
     void volWgtSumALL(
      int post_init_flag,
-     Array<Real>& result,
-     Array<int>& sumdata_type,
-     Array<int>& sumdata_sweep,
-     Array<Real>& ZZ,Array<Real>& FF,
+     Vector<Real>& result,
+     Vector<int>& sumdata_type,
+     Vector<int>& sumdata_sweep,
+     Vector<Real>& ZZ,Vector<Real>& FF,
      int dirx,int diry,int cut_flag,
      int isweep);
 
@@ -478,7 +478,7 @@ public:
 		    int& change_flag);
 
     void init_boundary();
-    void init_boundary_list(Array<int> scomp,Array<int> ncomp);
+    void init_boundary_list(Vector<int> scomp,Vector<int> ncomp);
 
     void MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel);
     void MaxPressureVelocityALL(Real& minpres,Real& maxpres,Real& maxvel);
@@ -557,7 +557,7 @@ public:
     void resize_mask_nbr(int ngrow);
     void prepare_displacement(int mac_grow,int unsplit_displacement);
 
-    void nucleate_bubbles(Array<blobclass> blobdata,
+    void nucleate_bubbles(Vector<blobclass> blobdata,
                     int color_count);
     void heat_source_term();
     void stefan_solver_init(MultiFab* coeffMF,int adjust_temperature);
@@ -636,17 +636,17 @@ protected:
     void getState_localMF_list(
      int idx_MF,int ngrow,
      int state_index,
-     Array<int> scomp,
-     Array<int> ncomp);
+     Vector<int> scomp,
+     Vector<int> ncomp);
 
     void putState_localMF_list(
      int idx_MF,
      int state_index,
-     Array<int> scomp,
-     Array<int> ncomp);
+     Vector<int> scomp,
+     Vector<int> ncomp);
 
-    void getBCArray_list(Array<int>& listbc,int state_index,
-     int gridno,Array<int> scomp,Array<int> ncomp);
+    void getBCArray_list(Vector<int>& listbc,int state_index,
+     int gridno,Vector<int> scomp,Vector<int> ncomp);
 
     void resize_maskfiner(int ngrow,int mask_id);
     void maskfiner_localMF(int idx_MF,int ngrow,
@@ -690,8 +690,8 @@ protected:
      int num_materials_combine,
      int project_option,
      int& state_index,
-     Array<int>& scomp,
-     Array<int>& ncomp,
+     Vector<int>& scomp,
+     Vector<int>& ncomp,
      int& ncomp_check);
 
 // pressure/vel/temp/spec=0
@@ -714,7 +714,7 @@ protected:
     void Geometry_cleanup ();
     void Geometry_setup ();
 
-    void copybc(Array<int> dest,Array<int> source,
+    void copybc(Vector<int> dest,Vector<int> source,
                 int scomp,int dcomp,int ncomp);
 
     void combine_state_variable(
@@ -738,19 +738,19 @@ protected:
       int im_source,int im_dest,int indexEXP,
       int isweep);
 
-    void clear_blobdata(int i,Array<blobclass>& blobdata);
+    void clear_blobdata(int i,Vector<blobclass>& blobdata);
     void copy_from_blobdata(int i,int& counter,
-     Array<Real>& blob_array,Array<blobclass>& blobdata);
+     Vector<Real>& blob_array,Vector<blobclass>& blobdata);
     void sum_blobdata(int i,
-     Array<blobclass>& blobdata,
-     Array<blobclass>& level_blobdata,int sweep_num);
+     Vector<blobclass>& blobdata,
+     Vector<blobclass>& level_blobdata,int sweep_num);
     void copy_to_blobdata(int i,int& counter,
-     Array<Real>& blob_array,Array<blobclass>& blobdata);
+     Vector<Real>& blob_array,Vector<blobclass>& blobdata);
 
     void build_NRM_FD_MF(int fd_mf,int ls_mf, int ngrow);
 
     void level_phase_change_convert(int isweep);
-    void level_phase_change_rate(Array<blobclass> blobdata,
+    void level_phase_change_rate(Vector<blobclass> blobdata,
 		    int color_count);
     void level_phase_change_rate_extend();
    
@@ -825,13 +825,13 @@ protected:
     void allocate_flux_register(int operation_flag);
  
     void PCINTERP_fill_borders(int idx_MF,int ngrow,int scomp,int ncomp,
-      int index,Array<int> scompBC_map);
+      int index,Vector<int> scompBC_map);
     void PCINTERP_fill_bordersALL(int idx_MF,int ngrow,int scomp,int ncomp,
-      int index,Array<int> scompBC_map);
+      int index,Vector<int> scompBC_map);
 
     void PCINTERP_fill_coarse_patch(int idx_MF,
       int scomp,int ncomp,
-      int index,Array<int> scompBC_map);
+      int index,Vector<int> scompBC_map);
 
   void mf_combine(
     int project_option,
@@ -876,19 +876,19 @@ protected:
 
     void correct_colors(
      int idx_color,int base_level,
-     Array<int> domaincolormap,int total_colors,
+     Vector<int> domaincolormap,int total_colors,
      int max_colors_level);
     void assign_colors(
      int& fully_covered,
      int idx_color,int idx_type,
-     Array<int>& colormax,Array<int> type_flag);
+     Vector<int>& colormax,Vector<int> type_flag);
     void avgDownColor(int idx_color,int idx_type);
     MultiFab* CopyFineToCoarseColor(int idx_color,int idx_type);
 
     void sync_colors(
      int idx_color,int idx_type,
-     Array<int> color_per_grid,
-     Array<int>& colormax,
+     Vector<int> color_per_grid,
+     Vector<int>& colormax,
      int max_colors_grid,
      MultiFab* maskmf,
      int check_corners);
@@ -897,22 +897,22 @@ protected:
      int& coarsest_level,
      int idx_color,int idx_type,
      int* color_count,
-     Array<int> type_flag);
+     Vector<int> type_flag);
     void ColorSum(
      int sweep_num,
      MultiFab* typemf,MultiFab* color,
-     Array<blobclass>& level_blobdata,
-     Array<blobclass> cum_blobdata);
+     Vector<blobclass>& level_blobdata,
+     Vector<blobclass> cum_blobdata);
     void ColorSumALL(
      int coarsest_level,
      int num_colors,
      int idx_type,int idx_color,
-     Array<blobclass>& blobdata);
+     Vector<blobclass>& blobdata);
     void Type_level(
-     MultiFab* typemf,Array<int>& type_flag);
+     MultiFab* typemf,Vector<int>& type_flag);
     void TypeALL(
      int idx_type,
-     Array<int>& type_flag);
+     Vector<int>& type_flag);
 
     virtual void post_init_state ();
 
@@ -938,13 +938,13 @@ protected:
      // spectral_override==1 => order derived from "enable_spectral"
      // spectral_override==0 => always low order.
     void avgDown(int stateidx,int startcomp,int numcomp,int spectral_override); 
-    void avgDown_list(int stateidx,Array<int> scomp,
-      Array<int> ncomp,int spectral_override); 
+    void avgDown_list(int stateidx,Vector<int> scomp,
+      Vector<int> ncomp,int spectral_override); 
 
     void prescribe_solid_geometryALL(Real time,int renormalize_only,
       int local_truncate);
     void prescribe_solid_geometry(Real time,int renormalize_only);
-    void truncate_VOF(Array<Real>& delta_mass_all);
+    void truncate_VOF(Vector<Real>& delta_mass_all);
 
     void getState_tracemag_ALL(int idx,int ngrow);
     void getState_tracemag(int idx,int ngrow);
@@ -1124,7 +1124,7 @@ void apply_pressure_grad(
       int idx_velcell,
       int& idx_velcell_temp,
       Real beta,
-      Array<blobclass> blobdata,
+      Vector<blobclass> blobdata,
       int alloc_cell_vel);
 
     void increment_face_velocityALL(
@@ -1133,7 +1133,7 @@ void apply_pressure_grad(
       int project_option,
       int idx_velcell,
       Real beta,
-      Array<blobclass> blobdata);
+      Vector<blobclass> blobdata);
 
     void make_MAC_velocity_consistent();
 
@@ -1184,11 +1184,11 @@ void apply_pressure_grad(
     void increment_potential_forceALL();
     void increment_potential_force();
 
-    MultiFab* getState_list(int ngrow,Array<int> strt_comp,
-       Array<int> num_comp,Real time);
+    MultiFab* getState_list(int ngrow,Vector<int> strt_comp,
+       Vector<int> num_comp,Real time);
 
-    void putState_list(Array<int> strt_comp,
-       Array<int> num_comp,int idx_MF);
+    void putState_list(Vector<int> strt_comp,
+       Vector<int> num_comp,int idx_MF);
 
     MultiFab* getState(int ngrow,int strt_comp,
        int num_comp,Real time);
@@ -1321,35 +1321,35 @@ protected:
     static int advect_iter;
     static int hydrate_flag;
 
-    static Array<int> number_vcycles_all_solver_calls;
-    static Array<int> max_lev0_cycles_all_solver_calls;
-    static Array<int> median_lev0_cycles_all_solver_calls;
-    static Array<int> lev0_cycles_list;
-    static Array<int> number_solver_calls;
+    static Vector<int> number_vcycles_all_solver_calls;
+    static Vector<int> max_lev0_cycles_all_solver_calls;
+    static Vector<int> median_lev0_cycles_all_solver_calls;
+    static Vector<int> lev0_cycles_list;
+    static Vector<int> number_solver_calls;
 
-    static Array<int> map_forward_direct_split;
-    static Array<int> normdir_direct_split;
+    static Vector<int> map_forward_direct_split;
+    static Vector<int> normdir_direct_split;
     static int dir_absolute_direct_split;
     static int order_direct_split; // base_step mod 2
 
-    static Array< Array<Real> > min_face_wt;
-    static Array< Array<Real> > max_face_wt;
-    static Array< Array<Real> > DVOF;
-    static Array< Array<Real> > delta_mass;
+    static Vector< Vector<Real> > min_face_wt;
+    static Vector< Vector<Real> > max_face_wt;
+    static Vector< Vector<Real> > DVOF;
+    static Vector< Vector<Real> > delta_mass;
 
     static Real max_problen;
-    static Array< Array<Real> > minLS;
-    static Array< Array<Real> > maxLS;
+    static Vector< Vector<Real> > minLS;
+    static Vector< Vector<Real> > maxLS;
 
-    static Array<Real> mdotplus;
-    static Array<Real> mdotminus;
-    static Array<Real> mdotcount;
-    static Array<Real> mdot_sum;
-    static Array<Real> mdot_sum2;
-    static Array<Real> mdot_lost;
+    static Vector<Real> mdotplus;
+    static Vector<Real> mdotminus;
+    static Vector<Real> mdotcount;
+    static Vector<Real> mdot_sum;
+    static Vector<Real> mdot_sum2;
+    static Vector<Real> mdot_lost;
 
-    static Array<Real> curv_min;
-    static Array<Real> curv_max;
+    static Vector<Real> curv_min;
+    static Vector<Real> curv_max;
 
     static int override_bc_to_homogeneous;
 
@@ -1372,8 +1372,8 @@ protected:
     int save_mg_precond;
 
     int solvability_level_flag;
-    Array<int> bcpres_array;
-    Array<Real> xarray;
+    Vector<int> bcpres_array;
+    Vector<Real> xarray;
     int icnt_xarray;
 
 
@@ -1393,7 +1393,7 @@ protected:
     static int  MOF_DEBUG_RECON;
     static int  MOFITERMAX;
       // default is 1 
-    static Array<int> truncate_volume_fractions;  
+    static Vector<int> truncate_volume_fractions;  
     static Real truncate_thickness;  // default is 2.0
 
     // 0  low order space and time
@@ -1418,10 +1418,10 @@ protected:
     static int  sum_interval;  // number of timesteps for conservation stats
      // refine a lagrangian element if hside>refine_factor*hfinest
      // do not modify element structure if refine_factor=0
-    static Array<int> FSI_refine_factor;  
+    static Vector<int> FSI_refine_factor;  
      // bounding box ngrow for finding box of cells to visit for a 
      // given lagrangian element.
-    static Array<int> FSI_bounding_box_ngrow;
+    static Vector<int> FSI_bounding_box_ngrow;
 
     //
     // Internal parameters for options.
@@ -1451,7 +1451,7 @@ protected:
     static int use_mg_precond_in_mglib; //def=1 Lp.use_mg_precon_in_mglib
     static Real bottom_bottom_tol_factor;//def=0.1 Lp.bottom_bottom_tol_factor
 
-    static Array<int>  FSI_touch_flag;
+    static Vector<int>  FSI_touch_flag;
     static int         elements_generated;
     static int         invert_solid_levelset;
      // 0=> u=u_solid if phi_solid>=0
@@ -1464,13 +1464,13 @@ protected:
      //   allowed)
      // 4=link w/Kourosh (FSI, not rigid, sci_clsvof.F90) 
      // 5=FSI, rigid (PROB.F90)
-    static Array<int>  FSI_flag; 
+    static Vector<int>  FSI_flag; 
 
     static int         CTML_FSI_numsolids;
     static int         CTML_force_model; // 0=Lag force  1=Lag stress
     static int         CTML_FSI_init;
 
-    static Array<int>  shock_timestep;
+    static Vector<int>  shock_timestep;
 
     static int State_Type;
     static int Umac_Type;
@@ -1493,17 +1493,17 @@ protected:
      // 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
      // 2=> grad dot (u_GL u_GG) - u_GG div u_GL, sync project
     static int conservative_div_uu; 
-    static Array<Real> tension_min;
-    static Array<Real> tension_T0;
-    static Array<Real> tension_slope;
-    static Array<Real> tension; // 1-2 1-3 1-4 2-3 2-4 3-4
-    static Array<Real> prefreeze_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
-    static Array<Real> recalesce_model_parameters; // 3*nmat
+    static Vector<Real> tension_min;
+    static Vector<Real> tension_T0;
+    static Vector<Real> tension_slope;
+    static Vector<Real> tension; // 1-2 1-3 1-4 2-3 2-4 3-4
+    static Vector<Real> prefreeze_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
+    static Vector<Real> recalesce_model_parameters; // 3*nmat
 
      // (dir,side)  (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
-    static Array<Real> outflow_velocity_buffer_size;
+    static Vector<Real> outflow_velocity_buffer_size;
 
-    static Array<Real> cap_wave_speed; // nten components
+    static Vector<Real> cap_wave_speed; // nten components
 
     static Real real_number_of_cells;
 
@@ -1546,47 +1546,47 @@ protected:
     static int FD_curv_interp; // def==1
 
      // index: 1..nmat
-    static Array<Real> cavitation_pressure; 
+    static Vector<Real> cavitation_pressure; 
      // index: 1..nmat
-    static Array<Real> cavitation_vapor_density; 
-    static Array<Real> cavitation_tension; 
+    static Vector<Real> cavitation_vapor_density; 
+    static Vector<Real> cavitation_tension; 
      // index: 1..nmat
      // value: 1..num_species_var
-    static Array<int> cavitation_species; 
+    static Vector<int> cavitation_species; 
      // index: 1..nmat
-    static Array<int> cavitation_model; 
+    static Vector<int> cavitation_model; 
 
      // used if freezing_model==5 (evaporation or condensation)
-    static Array<Real> species_evaporation_density; 
+    static Vector<Real> species_evaporation_density; 
 
       // 1-2 means "material 1 is converted into material 2"
       // 1-2 1-3 1-4 2-3 2-4 3-4
       // 2-1 3-1 4-1 3-2 4-2 4-3
-    static Array<Real> saturation_temp; 
-    static Array<Real> nucleation_pressure; 
-    static Array<Real> nucleation_pmg; 
-    static Array<Real> nucleation_mach; 
-    static Array<Real> nucleation_temp; 
+    static Vector<Real> saturation_temp; 
+    static Vector<Real> nucleation_pressure; 
+    static Vector<Real> nucleation_pmg; 
+    static Vector<Real> nucleation_mach; 
+    static Vector<Real> nucleation_temp; 
     static Real nucleation_period; 
     static Real nucleation_init_time; //def 0.0
     static int n_sites;
-    static Array<Real> pos_sites;
+    static Vector<Real> pos_sites;
 
      // if microlayer_size>0 and LS_substrate>0 in 5x5x5 stencil,
      // then the microlayer model is activated.
      // subroutine get_vel_phasechange returns the larger of the microlayer
      // model rate and the conventional rate. 
-    static Array<Real> microlayer_size; // minimum transition length
-    static Array<Real> macrolayer_size; // maximum transition length
+    static Vector<Real> microlayer_size; // minimum transition length
+    static Vector<Real> macrolayer_size; // maximum transition length
 
      // if the contact line size>max_size, then
      // multiply the microlayer model heat flux by 
      // max_size/size
      // default is 0.0
-    static Array<Real> max_contact_line_size;
+    static Vector<Real> max_contact_line_size;
 
-    static Array<Real> microlayer_angle; // radians
-    static Array<int>  microlayer_substrate; // index of substrate
+    static Vector<Real> microlayer_angle; // radians
+    static Vector<int>  microlayer_substrate; // index of substrate
 
      // if freezing_model==0:
      // given im1,im2 pair:
@@ -1601,14 +1601,14 @@ protected:
      //  grad T dot n=(microlayer_temperature_substrate-TSAT)/
      //    macrolayer_size at (im1 or im2)/substrate boundary.
 
-    static Array<Real> microlayer_temperature_substrate; 
+    static Vector<Real> microlayer_temperature_substrate; 
 
       // 1-2 1-3 1-4 2-3 2-4 3-4
       // 2-1 3-1 4-1 3-2 4-2 4-3
       // latent_heat<0 if condensation or solidification
       // latent_heat>0 if boiling or melting
-    static Array<Real> latent_heat; 
-    static Array<Real> reaction_rate; 
+    static Vector<Real> latent_heat; 
+    static Vector<Real> reaction_rate; 
      // freezing_model:
      // 0=sharp interface model (TSAT dirichlet BC)
      // 1=source term model (single equation for T with source term)
@@ -1622,18 +1622,18 @@ protected:
      // 5=evaporation
      // 1-2 1-3 1-4 2-3 2-4 3-4
      // 2-1 3-1 4-1 3-2 4-2 4-3
-    static Array<int> freezing_model;
+    static Vector<int> freezing_model;
      // index: 1..2*nten
      // value: 1..num_species_var
-    static Array<int> mass_fraction_id; 
+    static Vector<int> mass_fraction_id; 
      // index: 1..num_species_var
      // value: 1..nmat
-    static Array<int> spec_material_id; 
+    static Vector<int> spec_material_id; 
      // 0 - distribute to the destination material (default)
      //     V=mdot/rho_src
      // 1 - distribute to the source material
      //     V=mdot/rho_dst
-    static Array<int> distribute_from_target;
+    static Vector<int> distribute_from_target;
     static int is_phasechange;
     static int is_cavitation;
     static int is_cavitation_mixture_model;
@@ -1650,8 +1650,8 @@ protected:
 
     static int ngrowFSI;//should be 3
     static int nFSI_sub;//should be 12=velocity+LS+temperature+flag+stress (3D)
-    static Array<int> im_solid_map; //nparts components, in range 0..nmat-1
-    static Array<int> im_elastic_map;
+    static Vector<int> im_solid_map; //nparts components, in range 0..nmat-1
+    static Vector<int> im_elastic_map;
 
     static int ngrow_expansion;  // should always be 2
     static int prescribe_temperature_outflow;
@@ -1667,7 +1667,7 @@ protected:
 
       // local_face(facecut_index+1)=prescribed_solid_scale
       // if face has an adjoining prescribed rigid solid cell.
-    static Array<Real> prescribed_solid_scale; // def=0.0
+    static Vector<Real> prescribed_solid_scale; // def=0.0
      //0=stair-step (default)
      //1=2nd order 2=mod stair-step 3=modified normal
     static int  prescribed_solid_method;
@@ -1751,34 +1751,34 @@ protected:
     static int visual_revolve;
     static int visual_option;
 
-    static Array<int> visual_ncell;
+    static Vector<int> visual_ncell;
     static int visual_compare;
 
     static int slice_dir;  // 0,..,sdim-1
-    static Array<Real> xslice;
+    static Vector<Real> xslice;
 
     static int nblocks;
-    static Array<Real> xblocks;
-    static Array<Real> yblocks;
-    static Array<Real> zblocks;
-    static Array<Real> rxblocks;
-    static Array<Real> ryblocks;
-    static Array<Real> rzblocks;
+    static Vector<Real> xblocks;
+    static Vector<Real> yblocks;
+    static Vector<Real> zblocks;
+    static Vector<Real> rxblocks;
+    static Vector<Real> ryblocks;
+    static Vector<Real> rzblocks;
 
     static int tecplot_max_level; //def=0
     static int max_level_two_materials;
 
       // 0=>never adapt  -1=>always adapt
       // otherwise, if radius<radius_cutoff * dx then adapt.
-    static Array<int> radius_cutoff; //def=0 
+    static Vector<int> radius_cutoff; //def=0 
 
     static int ncoarseblocks;
-    static Array<Real> xcoarseblocks;
-    static Array<Real> ycoarseblocks;
-    static Array<Real> zcoarseblocks;
-    static Array<Real> rxcoarseblocks;
-    static Array<Real> rycoarseblocks;
-    static Array<Real> rzcoarseblocks;
+    static Vector<Real> xcoarseblocks;
+    static Vector<Real> ycoarseblocks;
+    static Vector<Real> zcoarseblocks;
+    static Vector<Real> rxcoarseblocks;
+    static Vector<Real> rycoarseblocks;
+    static Vector<Real> rzcoarseblocks;
 
     static int num_species_var; 
     static int num_materials;
@@ -1799,24 +1799,24 @@ protected:
     static int disable_advection;
     static int disable_pressure_solve;
 
-    static Array<Real> etaL; //def=0
-    static Array<Real> etaP; //def=0
-    static Array<Real> etaS; //def=0
-    static Array<Real> concentration; // def=0
+    static Vector<Real> etaL; //def=0
+    static Vector<Real> etaP; //def=0
+    static Vector<Real> etaS; //def=0
+    static Vector<Real> concentration; // def=0
 
-    static Array<Real> Carreau_alpha; // def=1
-    static Array<Real> Carreau_beta; // def=0
-    static Array<Real> Carreau_n; // def=1
-    static Array<Real> Carreau_mu_inf; // def=0
+    static Vector<Real> Carreau_alpha; // def=1
+    static Vector<Real> Carreau_beta; // def=0
+    static Vector<Real> Carreau_n; // def=1
+    static Vector<Real> Carreau_mu_inf; // def=0
 
-    static Array<Real> elastic_time; // viscoelastic parameter
+    static Vector<Real> elastic_time; // viscoelastic parameter
 
-    static Array<int> viscoelastic_model; // def=0
-    static Array<int> viscosity_state_model; // def=0
-    static Array<int> les_model;
-    static Array<int> temperature_primitive_variable; // def=0
-    static Array<Real> elastic_viscosity; // viscoelastic parameter
-    static Array<Real> polymer_factor;
+    static Vector<int> viscoelastic_model; // def=0
+    static Vector<int> viscosity_state_model; // def=0
+    static Vector<int> les_model;
+    static Vector<int> temperature_primitive_variable; // def=0
+    static Vector<Real> elastic_viscosity; // viscoelastic parameter
+    static Vector<Real> polymer_factor;
 
     static int adv_dir;
     static Real adv_vel;
@@ -1825,7 +1825,7 @@ protected:
      // 0 - centroid furthest from uncaptured centroid
      // 1 - use MOF error
     static int mof_error_ordering;
-    static Array<int> mof_ordering;
+    static Vector<int> mof_ordering;
 
     static Real rgasinlet;
     static Real slipcoeff;
@@ -1837,8 +1837,8 @@ protected:
     // if make_interface_incomp==2:
     // density equation is rhot_t+div(rho u)=0 in the incompressible zone.
     static int make_interface_incomp;
-    static Array<int> advection_order;
-    static Array<int> density_advection_order;
+    static Vector<int> advection_order;
+    static Vector<int> density_advection_order;
      // 0=Sussman and Puckett algorithm 
      // 1=EILE (default), -1=Weymouth Yue
      // 2=always EI   3=always LE
@@ -1856,60 +1856,60 @@ protected:
     static Real projection_pressure_scale;
     static Real projection_velocity_scale;
 
-    static Array<Real> vorterr; // 0 to disable
+    static Vector<Real> vorterr; // 0 to disable
     static int pressure_error_flag;  // 0 (check mag, default) 1=check diff
-    static Array<Real> pressure_error_cutoff; // 0 to disable
-    static Array<Real> temperature_error_cutoff; // 0 to disable
+    static Vector<Real> pressure_error_cutoff; // 0 to disable
+    static Vector<Real> temperature_error_cutoff; // 0 to disable
     static Real temperature_source;
-    static Array<Real> temperature_source_cen;
-    static Array<Real> temperature_source_rad;
-    static Array<Real> tempcutoff;
-    static Array<Real> tempcutoffmax;
-    static Array<Real> tempconst;
-    static Array<Real> initial_temperature;
+    static Vector<Real> temperature_source_cen;
+    static Vector<Real> temperature_source_rad;
+    static Vector<Real> tempcutoff;
+    static Vector<Real> tempcutoffmax;
+    static Vector<Real> tempconst;
+    static Vector<Real> initial_temperature;
     static Real initial_temperature_diffuse_duration; // def=0.0
-    static Array<Real> density_floor;  // def=0.0
-    static Array<Real> density_ceiling;  // def=1.0e+20
-    static Array<Real> density_floor_expansion;  // def=denconst
-    static Array<Real> density_ceiling_expansion;  // def=denconst
-    static Array<Real> denconst;
-    static Array<Real> denconst_gravity; // def=1.0
+    static Vector<Real> density_floor;  // def=0.0
+    static Vector<Real> density_ceiling;  // def=1.0e+20
+    static Vector<Real> density_floor_expansion;  // def=denconst
+    static Vector<Real> density_ceiling_expansion;  // def=denconst
+    static Vector<Real> denconst;
+    static Vector<Real> denconst_gravity; // def=1.0
     static int stokes_flow;  // def=0
-    static Array<Real> denconst_interface;
-    static Array<Real> added_weight;
+    static Vector<Real> denconst_interface;
+    static Vector<Real> added_weight;
 
-    static Array<Real> stiffPINF;
-    static Array<Real> prerecalesce_stiffCP; // def=4.1855E+7
-    static Array<Real> stiffCP; // def=4.1855E+7
-    static Array<Real> stiffGAMMA;
+    static Vector<Real> stiffPINF;
+    static Vector<Real> prerecalesce_stiffCP; // def=4.1855E+7
+    static Vector<Real> stiffCP; // def=4.1855E+7
+    static Vector<Real> stiffGAMMA;
 
     static int constant_viscosity;
 
     static Real angular_velocity;
-    static Array<Real> DrhoDT; // default 0.0
-    static Array<Real> DrhoDz; // default 0.0
+    static Vector<Real> DrhoDT; // default 0.0
+    static Vector<Real> DrhoDz; // default 0.0
 
       // 1=>rho=rho(T,z)
       // 2=>P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
-    static Array<int> override_density; // default 0 
-    static Array<Real> viscconst;
-    static Array<Real> viscconst_eddy;
-    static Array<Real> prerecalesce_viscconst;
-    static Array<Real> viscconst_interface;
-    static Array<Real> heatviscconst;
-    static Array<Real> prerecalesce_heatviscconst;
-    static Array<Real> heatviscconst_interface;
+    static Vector<int> override_density; // default 0 
+    static Vector<Real> viscconst;
+    static Vector<Real> viscconst_eddy;
+    static Vector<Real> prerecalesce_viscconst;
+    static Vector<Real> viscconst_interface;
+    static Vector<Real> heatviscconst;
+    static Vector<Real> prerecalesce_heatviscconst;
+    static Vector<Real> heatviscconst_interface;
       // num_species * num_materials size.
-    static Array<Real> speciesconst;
+    static Vector<Real> speciesconst;
       // num_species * num_materials size.
-    static Array<Real> speciesviscconst;
+    static Vector<Real> speciesviscconst;
       // num_species * nten
-    static Array<Real> speciesviscconst_interface;
+    static Vector<Real> speciesviscconst_interface;
     static int solidheat_flag;  // 0=diffuse in solid 1=dirichlet 2=neumann
     static int diffusionface_flag; // 0=use LS 1=use VOF (def=1)
     static int elasticface_flag; // 0=use LS 1=use VOF (def=1)
     static int temperatureface_flag; // 0=use LS 1=use VOF (def=1)
-    static Array<int> material_type; // 0 incomp   
+    static Vector<int> material_type; // 0 incomp   
     static Real wait_time;
     static Real advbot;
     static Real inflow_pressure;

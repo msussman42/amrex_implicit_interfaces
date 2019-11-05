@@ -53,6 +53,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C" {
 
      void FORT_GETSHEAR(
@@ -248,5 +250,7 @@ extern "C" {
       int* ncompvisc);
 
 }
+}/* namespace amrex */
+
 #endif
 #endif

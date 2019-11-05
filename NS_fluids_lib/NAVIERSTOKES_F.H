@@ -160,6 +160,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C" {
 
     void FORT_ADVECTIVE_PRESSURE(
@@ -712,6 +714,7 @@ extern "C" {
       const int* fablo,const int* fabhi,int* bfact);
 
 }
+}/* namespace amrex */
     
 #endif
 #endif /*_NAVIERSTOKES_F_H_*/

@@ -161,6 +161,8 @@
 
 #include "AMReX_ArrayLim.H"
 
+namespace amrex{
+
   extern "C" {
      void FORT_SET_PERIODIC_VAR(int* periodic_flag);
 
@@ -640,5 +642,8 @@
       Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
       Real* preseos,AMREX_ARLIM_P(preseoslo),AMREX_ARLIM_P(preseoshi) );
   }
+
+}/* namespace amrex */
+
 #endif
 #endif 

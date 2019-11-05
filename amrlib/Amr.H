@@ -54,7 +54,7 @@ public:
     int get_MAX_NUM_SLAB () const;
     int get_slab_dt_type () const;
 
-    Array<Real> AMR_volume_history;
+    Vector<Real> AMR_volume_history;
     int AMR_volume_history_recorded;
 
     int maxGridSize (int lev) const;
@@ -63,16 +63,16 @@ public:
     Real cumTime () const;
     Real getDt();
 
-    const Array<Geometry>& Geom () const { return geom; }
-    const Array<DistributionMapping>& DistributionMap () const { return dmap; }
-    const Array<BoxArray>& boxArray () const { return grids; }
+    const Vector<Geometry>& Geom () const { return geom; }
+    const Vector<DistributionMapping>& DistributionMap () const { return dmap; }
+    const Vector<BoxArray>& boxArray () const { return grids; }
 
     const Geometry& Geom (int lev) const { return geom[lev]; }
     const DistributionMapping& DistributionMap (int lev) const 
       { return dmap[lev]; }
     const BoxArray& boxArray (int lev) const { return grids[lev]; }
 
-    Array<Geometry>& Geom () { return geom; }
+    Vector<Geometry>& Geom () { return geom; }
     Geometry& Geom (int lev) { return geom[lev]; }
 
     void SetDistributionMap (int lev, const DistributionMapping& dmap_in);
@@ -120,8 +120,6 @@ public:
     //
     int nProper () const;
     //
-    AmrLevel&  getLevel (int lev);
-    //
     // was PArray of AmrLevels.
     // OLD: PArray<AmrLevel>& getAmrLevels ();
     Vector<std::unique_ptr<AmrLevel> >& getAmrLevels () noexcept;
@@ -168,9 +166,9 @@ public:
     int AMR_recalesce_flag(int im) const;
 
      // initialize class member "recalesce_state_new"
-    void recalesce_put_state(Array<Real>& recalesce_state_in,int nmat); 
+    void recalesce_put_state(Vector<Real>& recalesce_state_in,int nmat); 
      // get class member "recalesce_state_old"
-    void recalesce_get_state(Array<Real>& recalesce_state_out,int nmat); 
+    void recalesce_get_state(Vector<Real>& recalesce_state_out,int nmat); 
     void recalesce_init(int nmat);
 
      // copies new to old.
@@ -180,6 +178,7 @@ public:
 
     void print_cells_advanced();
 
+    AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
 
 #ifdef AMREX_PARTICLES
     //! Redistribute particles
@@ -235,7 +234,7 @@ protected:
     //
     void grid_places (int              lbase,
                       int&             new_finest,
-                      Array<BoxArray>& new_grids);
+                      Vector<BoxArray>& new_grids);
     //
     // Do a single timestep on level L.
     //
@@ -263,8 +262,8 @@ protected:
     //
 
       // nmat x (stage,time,.....)
-    Array<Real> recalesce_state_old;
-    Array<Real> recalesce_state_new;
+    Vector<Real> recalesce_state_old;
+    Vector<Real> recalesce_state_new;
     
     int              max_level;    // Maximum allowed level.
     int              finest_level; // Current finest level.
@@ -272,24 +271,24 @@ protected:
     // OLD: PArray<AmrLevel> amr_level;    // Array of levels
     Vector<std::unique_ptr<AmrLevel> > amr_level;    //!< Vector of levels
 
-    Array<Geometry>  geom;         // Index extent of domain at all levels.
-    Array<DistributionMapping> dmap;
-    Array<BoxArray> grids;
+    Vector<Geometry>  geom;         // Index extent of domain at all levels.
+    Vector<DistributionMapping> dmap;
+    Vector<BoxArray> grids;
 
     Real             cumtime;      // Physical time variable.
     Real             dt_AMR;     // Timestep 
-    Array<Real>      level_cells_advanced;  //not checkpointed 
-    Array<int>       level_steps;  // Number of time steps at this level.
-    Array<int>       level_count;
+    Vector<Real>      level_cells_advanced;  //not checkpointed 
+    Vector<int>       level_steps;  // Number of time steps at this level.
+    Vector<int>       level_count;
     bool             isPeriodic[BL_SPACEDIM];  // Domain periodic?
-    Array<int>       regrid_int;      // Interval between regridding.
-    Array<int>       n_error_buf;     // Buffer cells around each tagged cell.
-    Array<int>       blocking_factor; // Blocking factor (by level).
-    Array<int>       space_blocking_factor; 
+    Vector<int>       regrid_int;      // Interval between regridding.
+    Vector<int>       n_error_buf;     // Buffer cells around each tagged cell.
+    Vector<int>       blocking_factor; // Blocking factor (by level).
+    Vector<int>       space_blocking_factor; 
     int              time_blocking_factor;
     int              slab_dt_type; 
     int              MAX_NUM_SLAB; 
-    Array<int>       max_grid_size;   // Maximum allowable grid size (by level).
+    Vector<int>       max_grid_size;   // Maximum allowable grid size (by level).
     Real             grid_eff;        // Grid efficiency.
     int              n_proper;        // # cells required for proper nesting.
     int              last_checkpoint; // Step number of previous checkpoint.
@@ -329,12 +328,6 @@ private:
     Amr& operator= (const Amr& rhs);
 };
 
-inline
-AmrLevel&
-Amr::getLevel (int lev)
-{
-    return amr_level[lev];
-}
 
 inline
 int

@@ -92,7 +92,7 @@ public:
                        const Real*    dx,
                        const RealBox& prob_domain,
                        int            dcomp,
-                       Array<int>     scompBC_map,
+                       Vector<int>     scompBC_map,
                        int            ncomp,
                        int            bfact);
 
@@ -103,7 +103,7 @@ public:
                        const Real*    dx,
                        const RealBox& prob_domain,
                        int            dcomp,
-                       Array<int>     scompBC_map,
+                       Vector<int>     scompBC_map,
                        int            ncomp,
                        int            bfact);
 
@@ -154,8 +154,8 @@ public:
     // specified component.  Each element in the array corresponds
     // to a grid in the state.
     //
-    Array<BCRec>& getBCs (int comp);
-    Array<BCRec>& getBCsGHOST (int comp);
+    Vector<BCRec>& getBCs (int comp);
+    Vector<BCRec>& getBCsGHOST (int comp);
     //
     // Returns boundary conditions of specified component on the
     //         specified grid.
@@ -201,16 +201,16 @@ private:
     DistributionMapping dmap;
 
     // MAX_NUM_SLAB entries.
-    Array<Real> time_array;
+    Vector<Real> time_array;
     //
     // Pointer to new-time data.
     // MAX_NUM_SLAB entries.
-    Array<MultiFab*> new_data;
+    Vector<MultiFab*> new_data;
     //
     // Boundary conditions for the grids at this level.
     //
-    Array< Array<BCRec> > bc;
-    Array< Array<BCRec> > bcGHOST;
+    Vector< Vector<BCRec> > bc;
+    Vector< Vector<BCRec> > bcGHOST;
 
 }; // StateData
 
@@ -228,7 +228,7 @@ public:
       MultiFab& mf, 
       Real time,
       int dcomp, 
-      Array<int> scompBC_map, 
+      Vector<int> scompBC_map, 
       int ncomp, 
       int bfact);
 
@@ -254,7 +254,7 @@ public:
       MultiFab& mf, 
       Real time,
       int dcomp, 
-      Array<int> scompBC_map, 
+      Vector<int> scompBC_map, 
       int ncomp, 
       int bfact);
 

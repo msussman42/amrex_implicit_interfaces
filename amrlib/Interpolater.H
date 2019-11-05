@@ -32,7 +32,7 @@ public:
    const Box&       fine_region,
    const Geometry&  crse_geom,
    const Geometry&  fine_geom,
-   Array<BCRec>&    bcr,
+   Vector<BCRec>&    bcr,
    int levelc,int levelf,
    int bfactc,int bfactf) = 0;
 
@@ -57,7 +57,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -83,7 +83,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -113,7 +113,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -136,7 +136,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -159,7 +159,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -187,7 +187,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -214,7 +214,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -239,7 +239,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -269,7 +269,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -298,7 +298,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };
@@ -327,7 +327,7 @@ public:
      const Box&       fine_region,
      const Geometry&  crse_geom,
      const Geometry&  fine_geom,
-     Array<BCRec>&    bcr,
+     Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf);
 };

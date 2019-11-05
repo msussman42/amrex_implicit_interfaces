@@ -4,6 +4,7 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_PhysBCFunct.H>
+#include <PhysBCFunctSUSSMAN.H>
 #include <AMReX_Array.H>
 #include <Interpolater.H>
 
@@ -19,8 +20,8 @@ namespace amrex
       int dcomp, 
       int ncomp,
       const Geometry& geom, 
-      PhysBCFunctBase& physbcf,
-      Array<int> scompBC_map,
+      PhysBCFunctBaseSUSSMAN& physbcf,
+      Vector<int> scompBC_map,
       int bfact);
 
     void FillPatchTwoLevels (
@@ -30,9 +31,9 @@ namespace amrex
       MultiFab& fmf, 
       int scomp, int dcomp, int ncomp,
       const Geometry& cgeom, const Geometry& fgeom, 
-      PhysBCFunctBase& cbc, PhysBCFunctBase& fbc,
-      Interpolater* mapper, const Array<BCRec>& bcs,
-      Array<int> scompBC_map,
+      PhysBCFunctBaseSUSSMAN& cbc, PhysBCFunctBaseSUSSMAN& fbc,
+      Interpolater* mapper, const Vector<BCRec>& bcs,
+      Vector<int> scompBC_map,
       int levelc,int levelf,
       int bfactc,int bfactf);
 

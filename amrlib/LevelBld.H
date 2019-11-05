@@ -8,14 +8,8 @@
 #include <Amr.H>
 #include <AmrLevel.H>
 
-extern LevelBld* getLevelBld ();
+namespace amrex {
 
-//
-// Builds problem-specific AmrLevels.
-//
-// Abstract base class specifying an interface for building problem-specific
-// AmrLevels.  
-//
 
 class LevelBld
 {
@@ -32,5 +26,9 @@ public:
                                   const DistributionMapping& dm,
                                   Real            time) = 0;
 };
+
+}
+
+extern AMREX_ATTRIBUTE_WEAK amrex::LevelBld* getLevelBld ();
 
 #endif /*_LEVELBLD_H_*/
