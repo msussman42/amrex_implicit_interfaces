@@ -605,7 +605,7 @@ MultiFab::contains_nan (bool local) const
     return contains_nan(0,nComp(),nGrowVect(),local);
 }
 
-
+// SUSSMAN
 bool
 MultiFab::contains_nanTENSOR (int datatype,int scomp,int dir) const {
 
@@ -631,6 +631,33 @@ MultiFab::contains_nanTENSOR (int datatype,int scomp,int dir) const {
 
  return r;
 } // subroutine contains_nanTENSOR
+// SUSSMAN
+bool
+MultiFab::contains_infTENSOR (int datatype,int scomp,int dir) const {
+
+ if ((scomp<0)||(scomp>=nComp()))
+  BoxLib::Error("scomp invalid");
+ if ((dir<0)||(dir>=BL_SPACEDIM))
+  BoxLib::Error("dir invalid");
+
+ bool r = false;
+
+#ifdef _OPENMP
+#pragma omp parallel reduction(|:r)
+#endif
+ for (MFIter mfi(*this,true); mfi.isValid(); ++mfi) {
+  int ng=0;
+  const Box& bx = mfi.growntileboxTENSOR(datatype,ng,dir);
+
+  if (this->FabArray<FArrayBox>::get(mfi).contains_inf(bx,scomp,1))
+   r = true;
+ } // mfi
+
+ ParallelDescriptor::ReduceBoolOr(r,this->color());
+
+ return r;
+} // subroutine contains_infTENSOR
+
 
 bool
 MultiFab::contains_inf (int scomp,

@@ -16,6 +16,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C"
 {
       void FORT_SLOPERECON(
@@ -44,6 +46,7 @@ extern "C"
         int* radius_cutoff);
 
 }
+}/* namespace amrex */
 #endif
 
 #endif 

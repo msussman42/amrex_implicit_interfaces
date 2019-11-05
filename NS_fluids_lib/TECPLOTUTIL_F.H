@@ -16,6 +16,8 @@
 
 #include <AMReX_ArrayLim.H>
 
+namespace amrex{
+
 extern "C" {
 
     void FORT_TECPLOTFAB(
@@ -29,6 +31,7 @@ extern "C" {
      int* interior_only,int* nsteps);
 
 }
+}/* namespace amrex */
     
 #endif
 #endif /*_TECPLOTUTIL_F_H_*/
