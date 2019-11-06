@@ -17,7 +17,7 @@ pointertype x,
 pointertype b,
 pointertype alpha, 
 pointertype alphasing, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 pointertype Uz,pointertype Lz,
 #endif
 pointertype Ux,pointertype Uy,  
@@ -29,7 +29,7 @@ pointertype mask,long int N,int NX,int NY,int NZ) {
 int idx;
 
 int buffer=NX;
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 buffer*=NY;
 #endif
 
@@ -43,7 +43,7 @@ for (idx=0;idx<N;idx++) {
 
 for (idx=buffer;idx<N-buffer;idx++) {
  rhs[idx]=b[idx]-alphasing[idx]*x[idx]+
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
   Uz[idx]*x[idx+zstride]+Lz[idx]*x[idx-zstride]+
 #endif
   Ux[idx]*x[idx+1]+Lx[idx]*x[idx-1]+
@@ -56,7 +56,7 @@ for (idx=buffer;idx<N-buffer;idx++) {
 
 for (idx=buffer;idx<N-buffer;idx++) {
  black[idx]=(rhs[idx]+
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
   Uz[idx]*red[idx+zstride]+Lz[idx]*red[idx-zstride]+
 #endif
   Ux[idx]*red[idx+1]+Lx[idx]*red[idx-1]+
@@ -65,7 +65,7 @@ for (idx=buffer;idx<N-buffer;idx++) {
 
 for (idx=buffer;idx<N-buffer;idx++) {
  red[idx]=(rhs[idx]+
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
   Uz[idx]*black[idx+zstride]+Lz[idx]*black[idx-zstride]+
 #endif 
   Ux[idx]*black[idx+1]+Lx[idx]*black[idx-1]+
@@ -95,7 +95,7 @@ void kernel_gpu_jacobiCPU(
  pointertype mask_d,
  pointertype alpha_d,
  pointertype alphasing_d,
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  pointertype Uz_d,pointertype Lz_d,
 #endif
  pointertype Ux_d, pointertype Uy_d, 
@@ -113,7 +113,7 @@ void kernel_gpu_jacobiCPU(
 
     gpu_jacobiCPU(xx_d,bb_d,
       alpha_d,alphasing_d, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       Uz_d,Lz_d,
 #endif
       Ux_d, Uy_d, 
@@ -129,7 +129,7 @@ void kernel_gpu_jacobiCPU(
 void gpu_applyCPU(
 pointertype x, 
 pointertype alpha, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 pointertype Uz,pointertype Lz,
 #endif
 pointertype Ux,pointertype Uy, 
@@ -140,13 +140,13 @@ long int N,int NX,int NY,int NZ)
 
 int idx;
 int buffer=NX;
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 buffer*=NY;
 #endif
 
 for (idx=buffer;idx<N-buffer;idx++) {
  Ax[idx]=alpha[idx]*x[idx]-(
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
          Uz[idx] * x[idx+zstride]+
          Lz[idx] * x[idx-zstride]+
 #endif
@@ -164,7 +164,7 @@ void kernel_gpu_applyCPU(
  pointertype xx_d,
  pointertype ax_d,
  pointertype alpha_d,
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  pointertype Uz_d,pointertype Lz_d,
 #endif
  pointertype Ux_d, pointertype Uy_d, 
@@ -180,7 +180,7 @@ void kernel_gpu_applyCPU(
     memcpy(xx_d, x, grid_bytes);
 
     gpu_applyCPU(xx_d,alpha_d, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       Uz_d,Lz_d,
 #endif
       Ux_d, Uy_d, 
@@ -199,7 +199,7 @@ void kernel_wrapperCPU(
  pointertype mask, 
  pointertype alpha, 
  pointertype alphasing, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  pointertype Uz,pointertype Lz,
 #endif
  pointertype Ux, pointertype Uy, 
@@ -215,7 +215,7 @@ void kernel_wrapperCPU(
  pointertype* mask_d,
  pointertype* alpha_d, 
  pointertype* alphasing_d, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  pointertype* Uz_d,pointertype* Lz_d,
 #endif
  pointertype* Ux_d, pointertype* Uy_d,  
@@ -237,7 +237,7 @@ void kernel_wrapperCPU(
 
    *alpha_d=(pointertype)malloc(grid_bytes);
    *alphasing_d=(pointertype)malloc(grid_bytes);
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
    *Uz_d=(pointertype)malloc(grid_bytes);
    *Lz_d=(pointertype)malloc(grid_bytes);
 #endif
@@ -250,7 +250,7 @@ void kernel_wrapperCPU(
    memcpy(*mask_d, mask, grid_bytes);
    memcpy(*alpha_d, alpha, grid_bytes);
    memcpy(*alphasing_d,alphasing,grid_bytes);
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
    memcpy(*Uz_d, Uz, grid_bytes);
    memcpy(*Lz_d, Lz, grid_bytes);
 #endif
@@ -276,7 +276,7 @@ pointertype* black_d,
 pointertype* mask_d,
 pointertype* alpha_d, 
 pointertype* alphasing_d, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 pointertype* Uz_d,pointertype* Lz_d,
 #endif
 pointertype* Ux_d, pointertype* Uy_d, 
@@ -292,7 +292,7 @@ pointertype* Lx_d, pointertype* Ly_d)
  free(*mask_d);
  free(*alpha_d);
  free(*alphasing_d);
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  free(*Uz_d);
  free(*Lz_d);
 #endif

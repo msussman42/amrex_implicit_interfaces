@@ -164,13 +164,13 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  resize_FSI_GHOST_MF(1);
  if (localMF[FSI_GHOST_MF]->nGrow()!=1)
   amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM");
+ if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
+  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
 
- int nsolve=BL_SPACEDIM;
+ int nsolve=AMREX_SPACEDIM;
  int nsolveMM=nsolve*num_materials_vel;
 
- int ntensor=BL_SPACEDIM*BL_SPACEDIM;
+ int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
  int ntensorMM=ntensor*num_materials_vel;
 
  debug_ngrow(FACE_VAR_MF,0,810);
@@ -203,8 +203,8 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  MultiFab* Un=localMF[idx_vel];
  MultiFab& U_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
- if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1))
-  amrex::Error("LS_new.nComp()!=nmat*(BL_SPACEDIM+1)");
+ if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
  Real local_visc_coef=visc_coef;
 
@@ -304,7 +304,7 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
 
- int nsolve=BL_SPACEDIM;
+ int nsolve=AMREX_SPACEDIM;
  int nsolveMM=nsolve*num_materials_vel;
 
  debug_ngrow(FACE_VAR_MF,0,810);
@@ -421,7 +421,7 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
 
  int nmat=num_materials;
 
- int nsolve=BL_SPACEDIM;
+ int nsolve=AMREX_SPACEDIM;
  int nsolveMM=nsolve*num_materials_vel;
 
  debug_ngrow(FACE_VAR_MF,0,810);
@@ -477,7 +477,7 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
   FArrayBox& thermalfab=(*localMF[idx_thermal])[mfi];
   FArrayBox& forcefab=(*localMF[idx_force])[mfi];
 
-  int nstate=num_materials_vel*(BL_SPACEDIM+1)+nmat*num_state_material+
+  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+
    nmat*ngeom_raw+1;
   if (snewfab.nComp()!=nstate)
    amrex::Error("nstate invalid");
@@ -529,7 +529,7 @@ void NavierStokes::viscous_boundary_fluxes(
   int nsolveMM_FACE=nsolveMM;
 
   if (project_option==3) { // viscosity
-   if (nsolve!=BL_SPACEDIM)
+   if (nsolve!=AMREX_SPACEDIM)
     amrex::Error("nsolve invalid");
   } else if (project_option==2) { // thermal diffusion
    if (nsolve!=1)
@@ -558,29 +558,29 @@ void NavierStokes::viscous_boundary_fluxes(
 
   resize_levelsetLO(2,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,2,120);
-  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+BL_SPACEDIM))
+  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
    amrex::Error("levelpc mf has incorrect ncomp");
 
   resize_metrics(1);
  
    // den,T
-  int dcomp=num_materials_vel*(BL_SPACEDIM+1);
+  int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
   int tcomp=dcomp+1;
 
-  Vector<int> temp_dombc(2*BL_SPACEDIM);
+  Vector<int> temp_dombc(2*AMREX_SPACEDIM);
   const BCRec& descbc = get_desc_lst()[State_Type].getBC(tcomp);
   const int* b_rec=descbc.vect();
-  for (int m=0;m<2*BL_SPACEDIM;m++)
+  for (int m=0;m<2*AMREX_SPACEDIM;m++)
    temp_dombc[m]=b_rec[m];
 
-  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
    MultiFab* fluxdir;
    if (dir==0)
     fluxdir=xflux;
    else if (dir==1)
     fluxdir=yflux;
-   else if ((dir==2)&&(BL_SPACEDIM==3))
+   else if ((dir==2)&&(AMREX_SPACEDIM==3))
     fluxdir=zflux;
    else
     amrex::Error("dir invalid viscous boundary fluxes");
@@ -610,7 +610,7 @@ void NavierStokes::viscous_boundary_fluxes(
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
     Vector<int> velbc=getBCArray(State_Type,gridno,0,
-      num_materials_vel*BL_SPACEDIM);
+      num_materials_vel*AMREX_SPACEDIM);
     Vector<int> tempbc=getBCArray(State_Type,gridno,tcomp,1);
 
       // if solidheat_flag=2, then inhomogeneous Neumann BC are
@@ -683,9 +683,9 @@ void NavierStokes::combine_state_variable(
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
- if (LS_new.nComp()!=nmat*(BL_SPACEDIM+1))
-  amrex::Error("LS_new.nComp()!=nmat*(BL_SPACEDIM+1)");
- int nstate=num_materials_vel*(BL_SPACEDIM+1)+
+ if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
+ int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
             nmat*(num_state_material+ngeom_raw)+1;
  if (S_new.nComp()!=nstate)
   amrex::Error("(S_new.nComp()!=nstate)");
@@ -737,7 +737,7 @@ void NavierStokes::combine_state_variable(
   nsolve=1;
   num_materials_combine=nmat;
  } else if (project_option==3) { // viscosity
-  nsolve=BL_SPACEDIM;
+  nsolve=AMREX_SPACEDIM;
   if (combine_flag!=2)
    amrex::Error("combine_flag invalid");
   num_materials_combine=1;
@@ -807,8 +807,8 @@ void NavierStokes::combine_state_variable(
  resize_FSI_GHOST_MF(1);
  if (localMF[FSI_GHOST_MF]->nGrow()!=1)
   amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*BL_SPACEDIM");
+ if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
+  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
 
  MultiFab* LEVEL_COMBINE;
 
@@ -835,8 +835,8 @@ void NavierStokes::combine_state_variable(
   std::cout << "update_flux= " << update_flux << '\n';
   amrex::Error("LEVEL_COMBINE->nGrow()<1");
  }
- if (LEVEL_COMBINE->nComp()!=nmat*(BL_SPACEDIM+1))
-  amrex::Error("LEVEL_COMBINE->nComp()!=nmat*(BL_SPACEDIM+1)");
+ if (LEVEL_COMBINE->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("LEVEL_COMBINE->nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
  debug_ngrow(FSI_GHOST_MF,1,831);
  resize_metrics(1);
@@ -851,7 +851,7 @@ void NavierStokes::combine_state_variable(
      (combine_flag==1)) { // GFM -> FVM
 
   signed_distance=LEVEL_COMBINE;
-  if (signed_distance->nComp()!=nmat*(1+BL_SPACEDIM))
+  if (signed_distance->nComp()!=nmat*(1+AMREX_SPACEDIM))
    amrex::Error("signed_distance->nComp() invalid");
 
  } else if (combine_flag==2) { // combine if F==0
@@ -889,7 +889,7 @@ void NavierStokes::combine_state_variable(
 
   if (project_option==0) { // mac velocity
 
-   for (int dir=0;dir<BL_SPACEDIM;dir++) {
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
     debug_ngrow(FACE_VAR_MF+dir,0,832);
 
@@ -936,7 +936,7 @@ void NavierStokes::combine_state_variable(
      FArrayBox& lsfab=(*LEVEL_COMBINE)[mfi];
      FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
      Vector<int> velbc=getBCArray(State_Type,gridno,0,
-       num_materials_vel*BL_SPACEDIM);
+       num_materials_vel*AMREX_SPACEDIM);
 
      int tid=ns_thread();
  
@@ -1069,10 +1069,10 @@ void NavierStokes::combine_state_variable(
    FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
 
    Vector<int> velbc=getBCArray(State_Type,gridno,0,
-     num_materials_vel*BL_SPACEDIM);
+     num_materials_vel*AMREX_SPACEDIM);
    Vector<int> listbc;
    getBCArray_list(listbc,state_index,gridno,scomp,ncomp);
-   if (listbc.size()!=nsolveMM*BL_SPACEDIM*2)
+   if (listbc.size()!=nsolveMM*AMREX_SPACEDIM*2)
     amrex::Error("listbc.size() invalid");
 
    int scomp_size=scomp.size();
@@ -1180,10 +1180,10 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 
  int nmat=num_materials;
  int nden=nmat*num_state_material;
- int ntensor=BL_SPACEDIM*BL_SPACEDIM;
+ int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
  int ntensorMM=ntensor*num_materials_vel;
 
- int nsolve=BL_SPACEDIM;
+ int nsolve=AMREX_SPACEDIM;
  int nsolveMM=nsolve*num_materials_vel;
  int nsolveMM_FACE=nsolveMM;
 
@@ -1204,7 +1204,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  if (localMF[idx_heat]->nComp()!=num_materials_scalar_solve)
   amrex::Error("localMF[idx_heat]->nComp()!=num_materials_scalar_solve");
 
- for (int dir=0;dir<BL_SPACEDIM;dir++) {
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(CONSERVE_FLUXES_MF+dir,0,7);
   if (localMF[CONSERVE_FLUXES_MF+dir]->nComp()!=nsolveMM_FACE)
    amrex::Error("localMF[CONSERVE_FLUXES_MF+dir]->nComp() invalid");
@@ -1225,11 +1225,11 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  int ncomp_edge=-1;
  avgDownEdge_localMF(
   CONSERVE_FLUXES_MF,
-  0,ncomp_edge,0,BL_SPACEDIM,1,21);
+  0,ncomp_edge,0,AMREX_SPACEDIM,1,21);
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
- int nstate=num_materials_vel*(BL_SPACEDIM+1)+
+ int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
@@ -1265,7 +1265,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 
   FArrayBox& xstress=(*localMF[CONSERVE_FLUXES_MF])[mfi];
   FArrayBox& ystress=(*localMF[CONSERVE_FLUXES_MF+1])[mfi];
-  FArrayBox& zstress=(*localMF[CONSERVE_FLUXES_MF+BL_SPACEDIM-1])[mfi];
+  FArrayBox& zstress=(*localMF[CONSERVE_FLUXES_MF+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
   if (DeDTinversefab.nComp()!=nmat+1)

@@ -27,7 +27,7 @@
 #include <AMReX_DistributionMapping.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_Print.H>
-#include <TagBox.H>
+#include <AMReX_TagBox.H>
 #include <Cluster.H>
 #include <LevelBld.H>
 #include <AmrLevel.H>
@@ -362,7 +362,7 @@ Amr::InitAmr () {
         n_error_buf[i] = 1;
         blocking_factor[i] = 2;
         space_blocking_factor[i] = 1;
-        max_grid_size[i] = (BL_SPACEDIM == 2) ? 128 : 32;
+        max_grid_size[i] = (AMREX_SPACEDIM == 2) ? 128 : 32;
     }
 
     if (max_level > 0) 
@@ -530,8 +530,8 @@ Amr::InitAmr () {
     // SUSSMAN:
     // Now check offset; CoordSys does not need it anymore though.
     //
-    Real offset[BL_SPACEDIM];
-    for (i = 0; i < BL_SPACEDIM; i++)
+    Real offset[AMREX_SPACEDIM];
+    for (i = 0; i < AMREX_SPACEDIM; i++)
     {
         const Real delta = geom[0].ProbLength(i)/(Real)n_cell[i];
         offset[i]        = geom[0].ProbLo(i) + delta*lo[i];
@@ -939,17 +939,17 @@ Amr::checkInput ()
     //
     // Check that domain size is a multiple of blocking_factor[0].
     //
-    for (i = 0; i < BL_SPACEDIM; i++) {
+    for (i = 0; i < AMREX_SPACEDIM; i++) {
         int len = domain.length(i);
         if (len%blocking_factor[0] != 0)
             amrex::Error("domain size not divisible by blocking_factor");
     }
-    for (i = 0; i < BL_SPACEDIM; i++) {
+    for (i = 0; i < AMREX_SPACEDIM; i++) {
         int len = domain.length(i);
         if (len%space_blocking_factor[0] != 0)
          amrex::Error("domain size not divisible by space_blocking_factor");
     }
-    for (i = 0; i < BL_SPACEDIM; i++) {
+    for (i = 0; i < AMREX_SPACEDIM; i++) {
         int len = domain.length(i);
         if (len%time_blocking_factor != 0)
          amrex::Error("domain size not divisible by time_blocking_factor");
@@ -1127,7 +1127,7 @@ Amr::restart (const std::string& filename)
         spdim = atoi(first_line.c_str());
     }
 
-    if (spdim != BL_SPACEDIM) {
+    if (spdim != AMREX_SPACEDIM) {
      std::cerr << "Amr::restart(): bad spacedim = " << spdim << '\n';
      amrex::Abort();
     }
@@ -1377,7 +1377,7 @@ Amr::checkPoint ()
         old_prec = HeaderFile.precision(15);
 
         HeaderFile << CheckPointVersion << '\n'
-                   << BL_SPACEDIM       << '\n'
+                   << AMREX_SPACEDIM       << '\n'
                    << cumtime           << '\n'
                    << max_level         << '\n'
                    << finest_level      << '\n';
@@ -1485,7 +1485,7 @@ Amr::timeStep (Real time,
   IntVect d_length  = domain.size();
   const int* d_len  = d_length.getVect();
 
-  for (int idir = 0; idir < BL_SPACEDIM; idir++)
+  for (int idir = 0; idir < AMREX_SPACEDIM; idir++)
    if (d_len[idir]%2 != 0)
     amrex::Error("timeStep: must have even number of cells");
 
@@ -1886,7 +1886,7 @@ Amr::defBaseLevel (Real strt_time)
     IntVect d_length  = domain.size();
     const int* d_len  = d_length.getVect();
 
-    for (int idir = 0; idir < BL_SPACEDIM; idir++)
+    for (int idir = 0; idir < AMREX_SPACEDIM; idir++)
      if (d_len[idir]%2 != 0)
       amrex::Error("defBaseLevel: must have even number of cells");
 
@@ -2100,7 +2100,7 @@ Amr::printGridInfo (std::ostream& os,
 
             os << ' ' << lev << ": " << b << "   ";
                 
-            for (int i = 0; i < BL_SPACEDIM; i++)
+            for (int i = 0; i < AMREX_SPACEDIM; i++)
                 os << b.length(i) << ' ';
 
             os << ":: " << map[k] << '\n';
@@ -2207,7 +2207,7 @@ Amr::grid_places (int              lbase,
   IntVect d_length  = domain.size();
   const int* d_len  = d_length.getVect();
 
-  for (int idir = 0; idir < BL_SPACEDIM; idir++)
+  for (int idir = 0; idir < AMREX_SPACEDIM; idir++)
    if (d_len[idir]%2 != 0)
     amrex::Error("grid_places: must have even number of cells");
 
@@ -2340,7 +2340,7 @@ Amr::grid_places (int              lbase,
    for (BoxList::iterator blt = bl_tagged.begin(), End = bl_tagged.end();
         blt != End;
         ++blt) {
-    for (int idir = 0; idir < BL_SPACEDIM; idir++) {
+    for (int idir = 0; idir < AMREX_SPACEDIM; idir++) {
      if (blt->smallEnd(idir) == geom[levf].Domain().smallEnd(idir))
       blt->growLo(idir,nerr);
      if (blt->bigEnd(idir) == geom[levf].Domain().bigEnd(idir))
@@ -2362,7 +2362,7 @@ Amr::grid_places (int              lbase,
    BoxArray baF(blF);
    blF.clear();
    baF.grow(n_proper);
-   for (int idir = 0; idir < BL_SPACEDIM; idir++) {
+   for (int idir = 0; idir < AMREX_SPACEDIM; idir++) {
     if (nerr > n_error_buf[levc]*2) 
      baF.grow(idir,nerr-n_error_buf[levc]*2);
    }
@@ -2372,11 +2372,16 @@ Amr::grid_places (int              lbase,
    tags.setVal(baF,TagBox::SET);
   }  // levf < new_finest
 
-  tags.buffer(n_error_buf[levc]+ngrow);
+  int nbuf_all=n_error_buf[levc]+ngrow;
+  IntVect nbuf_vec(D_DECL(nbuf_all,nbuf_all,nbuf_all));
+
+  tags.buffer(nbuf_vec);
 
   int bl_max = bf_lev[levc];
   if (bl_max>=2) {
-   tags.coarsen(bf_lev[levc]); // guarantee proper nesting of n_proper*bf_lev
+   int bf_all=bf_lev[levc];
+   IntVect bf_vec(D_DECL(bf_all,bf_all,bf_all));
+   tags.coarsen(bf_vec); // guarantee proper nesting of n_proper*bf_lev
   } else
    amrex::Error("blocking_factor>=4 required => bf_lev>=2");
 
@@ -2384,7 +2389,7 @@ Amr::grid_places (int              lbase,
   tags.mapPeriodic(Geometry(pc_domain[levc]));
   tags.setVal(p_n_comp[levc],TagBox::CLEAR);
 
-  std::vector<IntVect> tagvec;
+  Vector<IntVect> tagvec;
   tags.collate(tagvec);
   tags.clear();
 
@@ -2425,7 +2430,7 @@ Amr::grid_places (int              lbase,
 
     IntVect chunk(D_DECL(ChunkSize,ChunkSize,ChunkSize));
 
-    for (int j = 0; j < BL_SPACEDIM; j++) {
+    for (int j = 0; j < AMREX_SPACEDIM; j++) {
      chunk[j] /= 2;
 
      if ((new_grids[ilev].size() < NProcs) && 

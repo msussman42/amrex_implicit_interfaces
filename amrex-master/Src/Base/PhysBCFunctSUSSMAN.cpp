@@ -1,6 +1,8 @@
 
 #include <PhysBCFunctSUSSMAN.H>
 
+namespace amrex {
+
 PhysBCFunctSUSSMAN::PhysBCFunctSUSSMAN (
   const Geometry& geom) : m_geom(geom)
 { }
@@ -21,6 +23,8 @@ PhysBCFunctSUSSMAN::FillBoundary (
   int ncomp,
   int bfact) {
 
- BoxLib::Error("this routine should never be called");
+ amrex::Error("this routine should never be called");
 
 }
+
+} // namespace amrex

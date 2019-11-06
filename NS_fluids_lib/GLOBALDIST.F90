@@ -7,7 +7,6 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
-#include "PROB_AMR_F.H"
 #include "PROB_F.H"
 #include "LEVEL_F.H"
 

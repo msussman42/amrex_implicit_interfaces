@@ -627,7 +627,7 @@ MultiFab::contains_nanTENSOR (int datatype,int scomp,int dir) const {
    r = true;
  } // mfi
 
- ParallelDescriptor::ReduceBoolOr(r,this->color());
+ ParallelDescriptor::ReduceBoolOr(r);
 
  return r;
 } // subroutine contains_nanTENSOR
@@ -636,9 +636,9 @@ bool
 MultiFab::contains_infTENSOR (int datatype,int scomp,int dir) const {
 
  if ((scomp<0)||(scomp>=nComp()))
-  BoxLib::Error("scomp invalid");
+  amrex::Error("scomp invalid");
  if ((dir<0)||(dir>=BL_SPACEDIM))
-  BoxLib::Error("dir invalid");
+  amrex::Error("dir invalid");
 
  bool r = false;
 
@@ -653,7 +653,7 @@ MultiFab::contains_infTENSOR (int datatype,int scomp,int dir) const {
    r = true;
  } // mfi
 
- ParallelDescriptor::ReduceBoolOr(r,this->color());
+ ParallelDescriptor::ReduceBoolOr(r);
 
  return r;
 } // subroutine contains_infTENSOR

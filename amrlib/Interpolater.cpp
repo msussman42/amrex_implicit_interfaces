@@ -31,15 +31,15 @@ static
 Vector<int>
 GetBCArray (const Vector<BCRec>& bcr)
 {
-    Vector<int> bc(2*BL_SPACEDIM*bcr.size());
+    Vector<int> bc(2*AMREX_SPACEDIM*bcr.size());
 
     for (int n = 0; n < bcr.size(); n++)
     {
         const int* b_rec = bcr[n].vect();
 
-        for (int m = 0; m < 2*BL_SPACEDIM; m++)
+        for (int m = 0; m < 2*AMREX_SPACEDIM; m++)
         {
-            bc[2*BL_SPACEDIM*n + m] = b_rec[m];
+            bc[2*AMREX_SPACEDIM*n + m] = b_rec[m];
         }
     }
 
@@ -136,9 +136,9 @@ multiMOFInterp::interp (Real time,
     int ngeom_raw=multiMOFInterp_ngeom_raw;
     int ngeom_recon=multiMOFInterp_ngeom_recon;
 
-    if (ngeom_raw!=BL_SPACEDIM+1)
+    if (ngeom_raw!=AMREX_SPACEDIM+1)
      amrex::Error("ngeom_raw invalid");
-    if (ngeom_recon!=2*BL_SPACEDIM+3)
+    if (ngeom_recon!=2*AMREX_SPACEDIM+3)
      amrex::Error("ngeom_recon invalid");
 
     if (nmat<1)
@@ -232,9 +232,9 @@ multiEXTMOFInterp::interp (Real time,
     int ngeom_raw=multiMOFInterp_ngeom_raw;
     int ngeom_recon=multiMOFInterp_ngeom_recon;
 
-    if (ngeom_raw!=BL_SPACEDIM+1)
+    if (ngeom_raw!=AMREX_SPACEDIM+1)
      amrex::Error("ngeom_raw invalid");
-    if (ngeom_recon!=2*BL_SPACEDIM+3)
+    if (ngeom_recon!=2*AMREX_SPACEDIM+3)
      amrex::Error("ngeom_recon invalid");
 
     if (nmat<1)
@@ -325,7 +325,7 @@ BurnVelInterp::interp (Real time,
 
     int nmat=burnvel_nmat;
     int nten=burnvel_nten;
-    int nburning=nten*(BL_SPACEDIM+1);
+    int nburning=nten*(AMREX_SPACEDIM+1);
 
     if ((crse.nComp()>=nburning+crse_comp)&&
         (fine.nComp()>=nburning+fine_comp)) {
@@ -490,7 +490,7 @@ LSHOInterp::interp (
 
     if (nmat<1)
      amrex::Error("nmat invalid in ls ho interp");
-    if (ncomp!=(BL_SPACEDIM+1)*nmat) {
+    if (ncomp!=(AMREX_SPACEDIM+1)*nmat) {
      std::cout << "ncomp " << ncomp << '\n';
      amrex::Error("must interpolate all ls ho data at once");
     }

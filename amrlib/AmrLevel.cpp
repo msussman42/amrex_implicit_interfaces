@@ -952,13 +952,13 @@ AmrLevel::getBCArray (int State_Type,
                       int strt_comp,
                       int ncomp)
 {
-    Vector<int> bc(2*BL_SPACEDIM*ncomp);
+    Vector<int> bc(2*AMREX_SPACEDIM*ncomp);
 
     for (int n = 0; n < ncomp; n++)
     {
         const int* b_rec = state[State_Type].getBC(strt_comp+n,gridno).vect();
-        for (int m = 0; m < 2*BL_SPACEDIM; m++)
-            bc[2*BL_SPACEDIM*n + m] = b_rec[m];
+        for (int m = 0; m < 2*AMREX_SPACEDIM; m++)
+            bc[2*AMREX_SPACEDIM*n + m] = b_rec[m];
     }
 
     return bc;
@@ -970,12 +970,12 @@ AmrLevel::getBCArrayGHOST (int State_Type,
                       int strt_comp,
                       int ncomp)
 {
- Vector<int> bc(2*BL_SPACEDIM*ncomp);
+ Vector<int> bc(2*AMREX_SPACEDIM*ncomp);
 
  for (int n = 0; n < ncomp; n++) {
   const int* b_rec = state[State_Type].getBCGHOST(strt_comp+n,gridno).vect();
-  for (int m = 0; m < 2*BL_SPACEDIM; m++)
-   bc[2*BL_SPACEDIM*n + m] = b_rec[m];
+  for (int m = 0; m < 2*AMREX_SPACEDIM; m++)
+   bc[2*AMREX_SPACEDIM*n + m] = b_rec[m];
  } // n
 
  return bc;

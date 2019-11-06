@@ -437,14 +437,14 @@ MFIter::growntileboxTENSOR (int datatype,int ng,int dir) const noexcept
  } else if ((datatype==1)||(datatype==2)) {
 
   if ((dir<0)||(dir>=BL_SPACEDIM))
-   BoxLib::Error("dir invalid");
+   amrex::Error("dir invalid");
   if (ng!=0)
-   BoxLib::Error("ng invalid");
+   amrex::Error("ng invalid");
   
   for (int d=0; d<BL_SPACEDIM; ++d) {
 
    if (!typ.cellCentered(d))
-    BoxLib::Error("tensor box should be cell centered");
+    amrex::Error("tensor box should be cell centered");
 
    if (d!=dir) {
     if (bx.smallEnd(d) == vbx.smallEnd(d)) {
@@ -461,12 +461,12 @@ MFIter::growntileboxTENSOR (int datatype,int ng,int dir) const noexcept
     } else if (datatype==2) {
      // do nothing
     } else
-     BoxLib::Error("datatype invalid");
+     amrex::Error("datatype invalid");
    }
   } // d
 
  } else
-  BoxLib::Error("datatype invalid");
+  amrex::Error("datatype invalid");
 
  return bx;
 } // subroutine growntileboxTENSOR

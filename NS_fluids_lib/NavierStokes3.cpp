@@ -18,7 +18,6 @@
 #include <AMReX_FArrayBox.H>
 #include <AMReX_ArrayLim.H>
 #include <AMReX_Utility.H>
-#include <TagBox.H>
 #include <NavierStokes.H>
 #include <GODUNOV_F.H>
 #include <NAVIERSTOKES_F.H>

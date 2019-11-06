@@ -32,7 +32,9 @@ namespace amrex
       amrex::Error("scompBC_map has invalid size");
 
       // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
-     mf.copy(smf, scomp, dcomp, ncomp, 0, mf.nGrow(), geom.periodicity());
+//   mf.copy(smf, scomp, dcomp, ncomp, 0, mf.nGrow(), geom.periodicity());
+     mf.ParallelCopy(smf, scomp, dcomp, ncomp, IntVect{0}, 
+        mf.nGrowVect(), geom.periodicity());
 
      if (1==0) {
       std::cout << "scomp=" << scomp << " dcomp= " << dcomp << " ncomp= " <<
@@ -83,8 +85,17 @@ namespace amrex
       amrex::Error("global_bcs has invalid size");
      }
 
+#ifdef AMREX_USE_EB
+     amrex::Error("AMREX_USE_EB should never be defined");
+#else
+     EB2::IndexSpace const* index_space=nullptr;   
+#endif
+
+     IntVect ratio_vec(D_DECL(2,2,2));
+
      int ngrow = mf.nGrow();
-	    
+     const IntVect& ngrow_vec=mf.nGrowVect();	   
+      
      if ((ngrow > 0)||(mf.getBDKey() != fmf.getBDKey())) {
 
       const InterpolaterBoxCoarsener& coarsener = 
@@ -94,7 +105,7 @@ namespace amrex
       fdomain.convert(mf.boxArray().ixType());
 
       Box fdomain_g(fdomain);
-      for (int i = 0; i < BL_SPACEDIM; ++i) {
+      for (int i = 0; i < AMREX_SPACEDIM; ++i) {
        if (fgeom.isPeriodic(i)) {
         fdomain_g.grow(i,ngrow);
        }
@@ -102,11 +113,12 @@ namespace amrex
 
         // find coarsen( mf intersect complement(fmf) within fdomain_g ).
       const FabArrayBase::FPinfo& fpc = 
-       FabArrayBase::TheFPinfo(fmf, mf, fdomain_g, ngrow, coarsener);
+       FabArrayBase::TheFPinfo(fmf, mf, fdomain_g, ngrow_vec, coarsener,
+        amrex::coarsen(fgeom.Domain(),ratio_vec),index_space);
 
       if ( ! fpc.ba_crse_patch.empty()) {
        MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_crse_patch,ncomp,0,
-		       Fab_allocate);
+         MFInfo().SetTag("mf_crse_patch"),FArrayBoxFactory());
 
         // This data will be interpolated next.       
        FillPatchSingleLevel(

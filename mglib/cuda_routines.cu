@@ -19,7 +19,7 @@ pointertype x,
 pointertype b,
 pointertype alpha, 
 pointertype alphasing, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 pointertype Uz,pointertype Lz,
 #endif
 pointertype Ux,pointertype Uy,  
@@ -43,7 +43,7 @@ int idx = k*zstride + j*ystride + i;
  __syncthreads();
  
  rhs[idx]=b[idx]-alphasing[idx]*x[idx]+
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
   Uz[idx]*x[idx+zstride]+Lz[idx]*x[idx-zstride]+
 #endif
   Ux[idx]*x[idx+1]+Lx[idx]*x[idx-1]+
@@ -55,7 +55,7 @@ int idx = k*zstride + j*ystride + i;
  __syncthreads();
 
  black[idx]=(rhs[idx]+
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
   Uz[idx]*red[idx+zstride]+Lz[idx]*red[idx-zstride]+
 #endif
   Ux[idx]*red[idx+1]+Lx[idx]*red[idx-1]+
@@ -63,7 +63,7 @@ int idx = k*zstride + j*ystride + i;
  __syncthreads();
 
  red[idx]=(rhs[idx]+
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
   Uz[idx]*black[idx+zstride]+Lz[idx]*black[idx-zstride]+
 #endif 
   Ux[idx]*black[idx+1]+Lx[idx]*black[idx-1]+
@@ -90,7 +90,7 @@ extern "C" void kernel_gpu_jacobi(
  pointertype mask_d,
  pointertype alpha_d,
  pointertype alphasing_d,
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  pointertype Uz_d,pointertype Lz_d,
 #endif
  pointertype Ux_d, pointertype Uy_d, 
@@ -112,7 +112,7 @@ extern "C" void kernel_gpu_jacobi(
 
     gpu_jacobi <<< dimGrid, dimBlock >>> (xx_d,bb_d,
       alpha_d,alphasing_d, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       Uz_d,Lz_d,
 #endif
       Ux_d, Uy_d, 
@@ -128,7 +128,7 @@ extern "C" void kernel_gpu_jacobi(
 __global__ void gpu_apply(
 pointertype x, 
 pointertype alpha, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 pointertype Uz,pointertype Lz,
 #endif
 pointertype Ux,pointertype Uy, 
@@ -144,7 +144,7 @@ unsigned int i = blockIdx.x*blockDim.x + threadIdx.x;
 int idx = k*zstride + j*ystride + i;
 
  Ax[idx]=alpha[idx]*x[idx]-(
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
          Uz[idx] * x[idx+zstride]+
          Lz[idx] * x[idx-zstride]+
 #endif
@@ -161,7 +161,7 @@ extern "C" void kernel_gpu_apply(
  pointertype xx_d,
  pointertype ax_d,
  pointertype alpha_d,
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  pointertype Uz_d,pointertype Lz_d,
 #endif
  pointertype Ux_d, pointertype Uy_d, 
@@ -181,7 +181,7 @@ extern "C" void kernel_gpu_apply(
     cudaMemcpy(xx_d, x, grid_bytes, cudaMemcpyHostToDevice);
 
     gpu_apply <<< dimGrid, dimBlock >>> (xx_d,alpha_d, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       Uz_d,Lz_d,
 #endif
       Ux_d, Uy_d, 
@@ -200,7 +200,7 @@ extern "C" void kernel_wrapper(
  pointertype mask, 
  pointertype alpha, 
  pointertype alphasing, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  pointertype Uz,pointertype Lz,
 #endif
  pointertype Ux, pointertype Uy, 
@@ -216,7 +216,7 @@ extern "C" void kernel_wrapper(
  pointertype* mask_d,
  pointertype* alpha_d,
  pointertype* alphasing_d,
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  pointertype* Uz_d,pointertype* Lz_d,
 #endif
  pointertype* Ux_d, pointertype* Uy_d,
@@ -238,7 +238,7 @@ extern "C" void kernel_wrapper(
 
    cudaMalloc( (void **) alpha_d, grid_bytes );
    cudaMalloc( (void **) alphasing_d, grid_bytes );
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
    cudaMalloc( (void **) Uz_d, grid_bytes );
    cudaMalloc( (void **) Lz_d, grid_bytes );
 #endif
@@ -251,7 +251,7 @@ extern "C" void kernel_wrapper(
    cudaMemcpy(*mask_d, mask, grid_bytes, cudaMemcpyHostToDevice);
    cudaMemcpy(*alpha_d, alpha, grid_bytes, cudaMemcpyHostToDevice);
    cudaMemcpy(*alphasing_d,alphasing,grid_bytes,cudaMemcpyHostToDevice);
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
    cudaMemcpy(*Uz_d, Uz, grid_bytes, cudaMemcpyHostToDevice);
    cudaMemcpy(*Lz_d, Lz, grid_bytes, cudaMemcpyHostToDevice);
 #endif
@@ -277,7 +277,7 @@ pointertype* black_d,
 pointertype* mask_d,
 pointertype* alpha_d, 
 pointertype* alphasing_d, 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 pointertype* Uz_d,pointertype* Lz_d,
 #endif
 pointertype* Ux_d, pointertype* Uy_d, 
@@ -293,7 +293,7 @@ pointertype* Lx_d, pointertype* Ly_d)
  cudaFree(*mask_d);
  cudaFree(*alpha_d);
  cudaFree(*alphasing_d);
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
  cudaFree(*Uz_d);
  cudaFree(*Lz_d);
 #endif

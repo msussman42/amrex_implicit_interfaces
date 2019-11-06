@@ -6,12 +6,12 @@ endif
 
 C$(AMRLIB_BASE)_sources += Amr.cpp AmrLevel.cpp Cluster.cpp \
                 Interpolater.cpp StateData.cpp \
-                StateDescriptor.cpp TagBox.cpp FillPatchUtil.cpp
+                StateDescriptor.cpp AMReX_TagBox.cpp FillPatchUtil.cpp
 
 C$(AMRLIB_BASE)_headers += Amr.H AmrLevel.H \
                 Cluster.H  \
                 LevelBld.H Interpolater.H StateData.H \
-                StateDescriptor.H TagBox.H FillPatchUtil.H 
+                StateDescriptor.H AMReX_TagBox.H FillPatchUtil.H 
 
 F$(AMRLIB_BASE)_headers += INTERP_F.H
 

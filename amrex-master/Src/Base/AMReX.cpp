@@ -742,6 +742,6 @@ thread_class::Initialize() {
 #endif
 
  if (nthreads<1)
-  BoxLib::Error("nthreads invalid");
+  amrex::Error("nthreads invalid");
 
 } // end subroutine thread_class::Initialize
