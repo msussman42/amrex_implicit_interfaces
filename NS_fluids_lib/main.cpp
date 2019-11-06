@@ -21,9 +21,13 @@
 
 #include <Amr.H>
 
-extern void fortran_parameters();
+using namespace amrex;
 
 namespace amrex{
+
+extern void fortran_parameters();
+
+}
 
 int
 main (int   argc,
@@ -33,24 +37,25 @@ main (int   argc,
     std::cout.imbue(std::locale("C"));
     amrex::Initialize(argc,argv);  // mpi initialization.
     std::fflush(NULL);
-    ParallelDescriptor::Barrier();
+    amrex::ParallelDescriptor::Barrier();
     std::cout << 
 	"Multimaterial SUPERMESH/SPECTRAL, 11/04/19, 21:40pm on proc " << 
-        ParallelDescriptor::MyProc() << "\n";
-    std::cout << "PROC= " << ParallelDescriptor::MyProc() << 
-	    " thread_class::nthreads= " << thread_class::nthreads << '\n';
+        amrex::ParallelDescriptor::MyProc() << "\n";
+    std::cout << "PROC= " << amrex::ParallelDescriptor::MyProc() << 
+	    " thread_class::nthreads= " << 
+	    thread_class::nthreads << '\n';
     std::fflush(NULL);
-    ParallelDescriptor::Barrier();
-    if (ParallelDescriptor::IOProcessor())
+    amrex::ParallelDescriptor::Barrier();
+    if (amrex::ParallelDescriptor::IOProcessor())
      std::cout << "after the barrier on IO processor " << 
-	    ParallelDescriptor::MyProc() << "\n";
+	    amrex::ParallelDescriptor::MyProc() << "\n";
 
-    const double run_strt = ParallelDescriptor::second();
+    const double run_strt = amrex::ParallelDescriptor::second();
 
     int  wait_for_key=0;
     int  max_step;  // int is 4 bytes
-    Real strt_time;
-    Real stop_time;
+    amrex::Real strt_time;
+    amrex::Real stop_time;
 
     ParmParse pp;
 
@@ -79,14 +84,14 @@ main (int   argc,
      
     Amr* amrptr = new Amr();
 
-    ParallelDescriptor::Barrier();
+    amrex::ParallelDescriptor::Barrier();
 
     fortran_parameters();
 
       // Amr::init 
     amrptr->init(strt_time,stop_time);
 
-    ParallelDescriptor::Barrier();
+    amrex::ParallelDescriptor::Barrier();
 
       // if not subcycling then levelSteps(level) is independent of "level"
       // initially, cumTime()==0.0
@@ -94,7 +99,7 @@ main (int   argc,
            (amrptr->levelSteps(0) < max_step || max_step < 0) &&
            (amrptr->cumTime() < stop_time || stop_time < 0.0) )
     {
-        ParallelDescriptor::Barrier();
+        amrex::ParallelDescriptor::Barrier();
         std::fflush(NULL);
 	BL_PROFILE_INITIALIZE();
         std::fflush(NULL);
@@ -102,17 +107,17 @@ main (int   argc,
          // coarseTimeStep is in amrlib/Amr.cpp
         amrptr->coarseTimeStep(stop_time); // synchronizes internally
 
-        ParallelDescriptor::Barrier();
+        amrex::ParallelDescriptor::Barrier();
         std::fflush(NULL);
 	BL_PROFILE_FINALIZE();
         std::fflush(NULL);
         std::cout << "TIME= " << amrptr->cumTime() << " PROC= " <<
-          ParallelDescriptor::MyProc() << " sleepsec= " << sleepsec << '\n';
+          amrex::ParallelDescriptor::MyProc() << " sleepsec= " << sleepsec << '\n';
         std::fflush(NULL);
 	amrex::USleep(sleepsec);
-        ParallelDescriptor::Barrier();
+        amrex::ParallelDescriptor::Barrier();
     }
-    ParallelDescriptor::Barrier();
+    amrex::ParallelDescriptor::Barrier();
 
     delete amrptr;
 
@@ -127,23 +132,23 @@ main (int   argc,
 
         sprintf(buf,
                 "CPU(%d): Heap Space (bytes) used by Coalescing FAB Arena: %ld",
-                ParallelDescriptor::MyProc(),
+                amrex::ParallelDescriptor::MyProc(),
                 arena->heap_space_used());
 
         std::cout << buf << '\n';
     }
 
-    const int IOProc   = ParallelDescriptor::IOProcessorNumber();
-    double    run_stop = ParallelDescriptor::second() - run_strt;
+    const int IOProc   = amrex::ParallelDescriptor::IOProcessorNumber();
+    double    run_stop = amrex::ParallelDescriptor::second() - run_strt;
 
-    ParallelDescriptor::ReduceRealMax(run_stop,IOProc);
+    amrex::ParallelDescriptor::ReduceRealMax(run_stop,IOProc);
 
-    if (ParallelDescriptor::IOProcessor())
+    if (amrex::ParallelDescriptor::IOProcessor())
         std::cout << "Run time = " << run_stop << '\n';
 
     amrex::Finalize();
 
     return 0;
+
 }
 
-}/* namespace amrex */

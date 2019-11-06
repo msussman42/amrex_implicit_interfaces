@@ -3,3 +3,4 @@
 *.dsp
 NS_fluids_lib/tmp_build_dir
 NS_fluids_lib/test
+NS_fluids_lib/amr*
