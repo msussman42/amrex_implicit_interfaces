@@ -97,7 +97,7 @@ public:
     //
     // The default constructor.
     //
-    StateDescriptor ();
+    StateDescriptor () noexcept;
     //
     // Constructor that sets all data members.
     //
@@ -280,7 +280,7 @@ public:
     //
     // The constructor.
     //
-    DescriptorList ();
+    DescriptorList () noexcept;
     //
     // Set the list to its default state.
     //

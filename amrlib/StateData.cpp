@@ -150,8 +150,8 @@ StateData::define (
     int ncomp = desc->nComp();
 
     for (int i=0;i<=bfact_time_order;i++)
-     new_data[i].reset(new MultiFab(grids,dmap,ncomp,desc->nExtra(),
-			     Fab_allocate));
+     new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
+       MFInfo().SetTag("new_data"),FArrayBoxFactory());
 
     buildBC();
 }
@@ -236,8 +236,8 @@ StateData::restart (
 
     for (int i=0;i<=bfact_time_order;i++) {
 
-     new_data[i].reset(new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
-			     Fab_allocate));
+     new_data[i]=new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
+        MFInfo().SetTag("new_data"),FArrayBoxFactory());
 
        // read the file name from the header file.
      is >> mf_name;
@@ -498,11 +498,11 @@ StateData::FillBoundary (
 
     Vector<int> bcrs;
 
-    Real xlo[BL_SPACEDIM];
+    Real xlo[AMREX_SPACEDIM];
     BCRec bcr;
     const Real* problo = prob_domain.lo();
 
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         xlo[i] = problo[i] + dx[i]*(dlo[i]-plo[i]);
     }
@@ -524,8 +524,10 @@ StateData::FillBoundary (
                 //
                 // Can do the whole group at once.
                 //
-                bcrs.resize(2*BL_SPACEDIM*groupsize);
+                bcrs.resize(2*AMREX_SPACEDIM*groupsize);
                 int* bci  = bcrs.dataPtr();
+
+		int kbase=0;
 
                 for (int j = 0; j < groupsize; j++)
                 {
@@ -533,13 +535,18 @@ StateData::FillBoundary (
 
                     amrex::setBC(bx,domain,desc->getBC(sc+j),bcr);
 
-                    const int* bc = bcr.vect();
+                    const int* local_bc = bcr.vect();
 
-                    for (int k = 0; k < 2*BL_SPACEDIM; k++)
-                        bci[k] = bc[k];
+                    for (int k = 0; k < 2*AMREX_SPACEDIM; k++)
+                        bci[kbase+k] = local_bc[k];
 
-                    bci += 2*BL_SPACEDIM;
+                    kbase += 2*AMREX_SPACEDIM;
                 }
+		if (kbase==2*AMREX_SPACEDIM*groupsize) {
+		 // do nothing
+		} else
+		 amrex::Error("kbase invalid");
+
                 //
                 // Use the "group" boundary fill routine.
                 //
@@ -602,11 +609,11 @@ StateData::FillBoundaryGHOST (
 
     Vector<int> bcrs;
 
-    Real xlo[BL_SPACEDIM];
+    Real xlo[AMREX_SPACEDIM];
     BCRec bcr;
     const Real* problo = prob_domain.lo();
 
-    for (int i = 0; i < BL_SPACEDIM; i++)
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
     {
         xlo[i] = problo[i] + dx[i]*(dlo[i]-plo[i]);
     }
@@ -628,8 +635,10 @@ StateData::FillBoundaryGHOST (
                 //
                 // Can do the whole group at once.
                 //
-                bcrs.resize(2*BL_SPACEDIM*groupsize);
+                bcrs.resize(2*AMREX_SPACEDIM*groupsize);
                 int* bci  = bcrs.dataPtr();
+
+		int kbase=0;
 
                 for (int j = 0; j < groupsize; j++)
                 {
@@ -637,13 +646,18 @@ StateData::FillBoundaryGHOST (
 
                     amrex::setBC(bx,domain,descGHOST->getBC(sc+j),bcr);
 
-                    const int* bc = bcr.vect();
+                    const int* local_bc = bcr.vect();
 
-                    for (int k = 0; k < 2*BL_SPACEDIM; k++)
-                        bci[k] = bc[k];
+                    for (int k = 0; k < 2*AMREX_SPACEDIM; k++)
+                        bci[kbase+k] = local_bc[k];
 
-                    bci += 2*BL_SPACEDIM;
+                    kbase += 2*AMREX_SPACEDIM;
                 }
+		if (kbase==2*AMREX_SPACEDIM*groupsize) {
+		 // do nothing
+		} else
+		 amrex::Error("kbase invalid");
+
                 //
                 // Use the "group" boundary fill routine.
                 //
@@ -950,7 +964,7 @@ StateDataPhysBCFunct::FillBoundary (
            
    bool has_phys_bc = false;
    bool is_periodic = false;
-   for (int i = 0; i < BL_SPACEDIM; ++i) {
+   for (int i = 0; i < AMREX_SPACEDIM; ++i) {
     bool touch = bx.smallEnd(i) < domainlo[i] || bx.bigEnd(i) > domainhi[i];
     if (geom.isPeriodic(i)) {
      is_periodic = is_periodic || touch;
@@ -973,7 +987,7 @@ StateDataPhysBCFunct::FillBoundary (
        	
     if (is_periodic) { // fix corner
      Box GrownDomain = domain;
-     for (int dir = 0; dir < BL_SPACEDIM; dir++) {
+     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
       if (!geom.isPeriodic(dir)) {
        const int lo = domainlo[dir] - bx.smallEnd(dir);
        const int hi = bx.bigEnd(dir) - domainhi[dir];
@@ -982,7 +996,7 @@ StateDataPhysBCFunct::FillBoundary (
       }
      }
         	    
-     for (int dir = 0; dir < BL_SPACEDIM; dir++) {
+     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
       if (!geom.isPeriodic(dir)) continue;
         		
       Box lo_slab = bx;
@@ -1084,7 +1098,7 @@ StateDataPhysBCFunctGHOST::FillBoundary (
            
    bool has_phys_bc = false;
    bool is_periodic = false;
-   for (int i = 0; i < BL_SPACEDIM; ++i) {
+   for (int i = 0; i < AMREX_SPACEDIM; ++i) {
     bool touch=((bx.smallEnd(i)<domainlo[i])||(bx.bigEnd(i)>domainhi[i]));
     if (geom.isPeriodic(i)) {
      is_periodic = is_periodic || touch;
@@ -1108,7 +1122,7 @@ StateDataPhysBCFunctGHOST::FillBoundary (
        	
     if (is_periodic) { // fix corner
      Box GrownDomain = domain;
-     for (int dir = 0; dir < BL_SPACEDIM; dir++) {
+     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
       if (!geom.isPeriodic(dir)) {
        const int lo = domainlo[dir] - bx.smallEnd(dir);
        const int hi = bx.bigEnd(dir) - domainhi[dir];
@@ -1117,7 +1131,7 @@ StateDataPhysBCFunctGHOST::FillBoundary (
       }
      } // dir
         	    
-     for (int dir = 0; dir < BL_SPACEDIM; dir++) {
+     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
       if (!geom.isPeriodic(dir)) continue;
         		
       Box lo_slab = bx;

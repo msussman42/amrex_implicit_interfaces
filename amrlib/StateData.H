@@ -205,7 +205,7 @@ private:
     //
     // Pointer to new-time data.
     // MAX_NUM_SLAB entries.
-    Vector<MultiFab*> new_data;
+    Vector< MultiFab* > new_data;
     //
     // Boundary conditions for the grids at this level.
     //
