@@ -64,15 +64,15 @@ AmrLevel::AmrLevel (Amr&            papa,
     if ((level_slab_dt_type!=0)&&(level_slab_dt_type!=1))
      amrex::Error("level_slab_dt_type invalid");
 
-    for (int i = 0; i < state.size(); i++)
+    for (int icomp = 0; icomp < state.size(); icomp++)
     {
         int time_order=parent->Time_blockingFactor();
-        state[i].define(level,
+        state[icomp].define(level,
                         geom.Domain(),
                         grids,
                         dm,
-                        desc_lst[i],
-                        desc_lstGHOST[i],
+                        desc_lst[icomp],
+                        desc_lstGHOST[icomp],
                         time,
                         dt,
                         time_order,
@@ -116,11 +116,11 @@ AmrLevel::restart (Amr&          papa,
     int level_slab_dt_type=parent->get_slab_dt_type();
 
     state.resize(ndesc);
-    for (int i = 0; i < ndesc; i++)
+    for (int icomp = 0; icomp < ndesc; icomp++)
     {
-     if (desc_lst[i].store_in_checkpoint()==true) {
+     if (desc_lst[icomp].store_in_checkpoint()==true) {
       int time_order = parent->Time_blockingFactor();
-      state[i].restart(
+      state[icomp].restart(
         time_order,
         level_slab_dt_type,
         level_MAX_NUM_SLAB,
@@ -129,20 +129,20 @@ AmrLevel::restart (Amr&          papa,
         geom.Domain(),
         grids,
         dmap,
-        desc_lst[i],
-        desc_lstGHOST[i],
+        desc_lst[icomp],
+        desc_lstGHOST[icomp],
         papa.theRestartFile());
-     } else if (desc_lst[i].store_in_checkpoint()==false) {
+     } else if (desc_lst[icomp].store_in_checkpoint()==false) {
       Real time=parent->cumTime();
       Real dt=parent->getDt();
       int time_order = parent->Time_blockingFactor();
-      state[i].define(
+      state[icomp].define(
         level,
         geom.Domain(),
         grids,
         dmap,
-        desc_lst[i],
-        desc_lstGHOST[i],
+        desc_lst[icomp],
+        desc_lstGHOST[icomp],
         time, 
         dt,
         time_order,
@@ -163,9 +163,9 @@ AmrLevel::finishConstructor () {
     //
     grid_loc.resize(grids.size());
 
-    for (int i = 0; i < grid_loc.size(); i++)
+    for (int igrid = 0; igrid < grid_loc.size(); igrid++)
     { 
-        grid_loc[i] = RealBox(grids[i],geom.CellSize(),geom.ProbLo());
+        grid_loc[igrid] = RealBox(grids[igrid],geom.CellSize(),geom.ProbLo());
     }
 
 }
@@ -201,9 +201,9 @@ long
 AmrLevel::countCells () const
 {
     long cnt = 0;
-    for (int i = 0, N = grids.size(); i < N; i++)
+    for (int igrid = 0, N = grids.size(); igrid < N; igrid++)
     {
-        cnt += grids[i].numPts();
+        cnt += grids[igrid].numPts();
     }
     return cnt;
 }
@@ -215,7 +215,6 @@ AmrLevel::checkPoint (const std::string& dir,
                       std::ostream&      os)
 {
     int ndesc = desc_lst.size();
-    int i;
     int ndesc_checkpoint=0;
     for (int j=0;j<ndesc;j++) {
      if (desc_lst[j].store_in_checkpoint()==true)
@@ -258,7 +257,7 @@ AmrLevel::checkPoint (const std::string& dir,
     // Output state data.
     //
 
-    for (i = 0; i < ndesc; i++)
+    for (int icomp = 0; icomp < ndesc; icomp++)
     {
         //
         // Now build the full relative pathname of the StateData.
@@ -267,14 +266,14 @@ AmrLevel::checkPoint (const std::string& dir,
         //
         // There is only one MultiFab written out at each level in HyperCLaw.
         //
-        if (desc_lst[i].store_in_checkpoint()==true) {
+        if (desc_lst[icomp].store_in_checkpoint()==true) {
          std::string PathNameInHdr = 
-           amrex::Concatenate(Level_string + "/SD_", i, 1);
+           amrex::Concatenate(Level_string + "/SD_", icomp, 1);
          std::string FullPathName  = 
-           amrex::Concatenate(FullPath + "/SD_", i, 1);
+           amrex::Concatenate(FullPath + "/SD_", icomp, 1);
 
           // os=HeaderFile 
-         state[i].checkPoint(PathNameInHdr, FullPathName, os);
+         state[icomp].checkPoint(PathNameInHdr, FullPathName, os);
         }
     }
 }
@@ -305,8 +304,8 @@ AmrLevel::FillPatch (AmrLevel & old,
 
  Vector<int> scompBC_map;
  scompBC_map.resize(ncomp);
- for (int i=0;i<ncomp;i++)
-  scompBC_map[i]=scomp+i;
+ for (int icomp=0;icomp<ncomp;icomp++)
+  scompBC_map[icomp]=scomp+icomp;
 
  int                     DComp   = dcomp;
  const StateDescriptor&  desc    = old.desc_lst[index];
@@ -317,9 +316,9 @@ AmrLevel::FillPatch (AmrLevel & old,
  std::vector< std::pair<int,int> > ranges = 
    desc.sameInterps(scompBC_map,ncomp);
 
- for (int i = 0; i < ranges.size(); i++) {
-  const int     scomp_range = ranges[i].first;
-  const int     ncomp_range = ranges[i].second;
+ for (int igroup = 0; igroup < ranges.size(); igroup++) {
+  const int     scomp_range = ranges[igroup].first;
+  const int     ncomp_range = ranges[igroup].second;
   Interpolater* mapper = desc.interp(scompBC_map[scomp_range]);
 
   Real nudge_time;
@@ -333,8 +332,8 @@ AmrLevel::FillPatch (AmrLevel & old,
 
   Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
-  for (int i=0;i<ncomp_range;i++)
-   local_scompBC_map[i]=scompBC_map[scomp_range+i];
+  for (int isub=0;isub<ncomp_range;isub++)
+   local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
   int scomp_local=scomp_range+scomp;
 
@@ -394,7 +393,7 @@ AmrLevel::FillPatch (AmrLevel & old,
 
   DComp += ncomp_range;
 
- } // i=0..ranges.size()-1
+ } // igroup=0..ranges.size()-1
 
 }   // FillPatch
 
@@ -438,7 +437,8 @@ AmrLevel::FillCoarsePatchGHOST (
   // because of the proper nesting requirement, no ghost
   // values are needed for cmf_part.
   // cmf_part: 0..ncomp-1
- MultiFab* cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,Fab_allocate);
+ MultiFab* cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,
+   MFInfo().SetTag("cmf_part"),FArrayBoxFactory());
  MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
 
  int                     DComp   = scomp;
@@ -466,11 +466,11 @@ AmrLevel::FillCoarsePatchGHOST (
 
  const Box& pdomain = state[index].getDomain();
 
- for (int i = 0; i < ranges.size(); i++) {
+ for (int igroup = 0; igroup < ranges.size(); igroup++) {
 
-  const int     scomp_range  = ranges[i].first;
-  const int     ncomp_range  = ranges[i].second;
-  if (i==0) {
+  const int     scomp_range  = ranges[igroup].first;
+  const int     ncomp_range  = ranges[igroup].second;
+  if (igroup==0) {
    if (scomp_range!=0)
     amrex::Error("scomp_range!=0");
   }
@@ -485,7 +485,8 @@ AmrLevel::FillCoarsePatchGHOST (
 
    // ghost cells do not have to be initialized.
    // call InterpBordersGHOST after FillCoarsePatchGHOST.
-  MultiFab crseMF(crseBA,dm,ncomp_range,0,Fab_allocate);
+  MultiFab crseMF(crseBA,dm,ncomp_range,0,
+	MFInfo().SetTag("crseMF"),FArrayBoxFactory());
 
   int scomp_data=scomp_range;
   int dcomp_data=scomp+scomp_data;
@@ -495,8 +496,8 @@ AmrLevel::FillCoarsePatchGHOST (
 
   Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
-  for (int i=0;i<ncomp_range;i++)
-   local_scompBC_map[i]=scompBC_map[scomp_range+i];
+  for (int isub=0;isub<ncomp_range;isub++)
+   local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
   int scomp_local=scomp_range;
 
@@ -518,8 +519,8 @@ AmrLevel::FillCoarsePatchGHOST (
   Vector< BCRec > local_bcs;
   const Vector< BCRec> & global_bcs=descGHOST.getBCs();
   local_bcs.resize(ncomp_range);
-  for (int i=0;i<ncomp_range;i++)
-   local_bcs[i]=global_bcs[local_scompBC_map[i]]; 
+  for (int isub=0;isub<ncomp_range;isub++)
+   local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -551,7 +552,7 @@ AmrLevel::FillCoarsePatchGHOST (
 
   DComp += ncomp_range;
 
- } // i=0..ranges.size()-1
+ } // igroup=0..ranges.size()-1
 
  delete cmf_part;
 
@@ -586,7 +587,8 @@ AmrLevel::InterpBordersGHOST (
 
  DistributionMapping dm=mf.DistributionMap();
 
- MultiFab fmf(mf_BA,dm,ncomp,0,Fab_allocate);
+ MultiFab fmf(mf_BA,dm,ncomp,0,
+   MFInfo().SetTag("fmf"),FArrayBoxFactory());
 
   // dstmf,srcmf,srccomp,dstcomp,ncomp,ngrow
  MultiFab::Copy(fmf,mf,scomp,0,ncomp,0);
@@ -596,7 +598,8 @@ AmrLevel::InterpBordersGHOST (
  if (level>0) {
   const BoxArray& cmf_BA=cmf.boxArray();
   DistributionMapping cdm=cmf.DistributionMap();
-  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,Fab_allocate);
+  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,
+   MFInfo().SetTag("cmf_part"),FArrayBoxFactory());
   MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
  }  // level>0
  
@@ -608,9 +611,9 @@ AmrLevel::InterpBordersGHOST (
  std::vector< std::pair<int,int> > ranges = 
    descGHOST.sameInterps(scompBC_map,ncomp);
 
- for (int i = 0; i < ranges.size(); i++) {
-  const int     scomp_range  = ranges[i].first;
-  const int     ncomp_range  = ranges[i].second;
+ for (int igroup = 0; igroup < ranges.size(); igroup++) {
+  const int     scomp_range  = ranges[igroup].first;
+  const int     ncomp_range  = ranges[igroup].second;
   Interpolater* mapper = descGHOST.interp(scompBC_map[scomp_range]);
 
   Real nudge_time;
@@ -629,8 +632,8 @@ AmrLevel::InterpBordersGHOST (
 
   Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
-  for (int i=0;i<ncomp_range;i++)
-   local_scompBC_map[i]=scompBC_map[scomp_range+i];
+  for (int isub=0;isub<ncomp_range;isub++)
+   local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
   if (level==0) {
    amrex::FillPatchSingleLevel(
@@ -676,7 +679,7 @@ AmrLevel::InterpBordersGHOST (
 
   DComp += ncomp_range;
 
- } // i=0..ranges.size()-1
+ } // igroup=0..ranges.size()-1
 
  if (level>0) 
   delete cmf_part;
@@ -713,7 +716,8 @@ AmrLevel::InterpBorders (
 
  DistributionMapping dm=mf.DistributionMap();
 
- MultiFab fmf(mf_BA,dm,ncomp,0,Fab_allocate);
+ MultiFab fmf(mf_BA,dm,ncomp,0,
+   MFInfo().SetTag("fmf"),FArrayBoxFactory());
 
   // dstmf,srcmf,srccomp,dstcomp,ncomp,ngrow
  MultiFab::Copy(fmf,mf,scomp,0,ncomp,0);
@@ -723,7 +727,8 @@ AmrLevel::InterpBorders (
  if (level>0) {
   const BoxArray& cmf_BA=cmf.boxArray();
   DistributionMapping cdm=cmf.DistributionMap();
-  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,Fab_allocate);
+  cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,
+    MFInfo().SetTag("cmf_part"),FArrayBoxFactory());
   MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
  }  // level>0
  
@@ -735,9 +740,9 @@ AmrLevel::InterpBorders (
  std::vector< std::pair<int,int> > ranges = 
    desc.sameInterps(scompBC_map,ncomp);
 
- for (int i = 0; i < ranges.size(); i++) {
-  const int     scomp_range  = ranges[i].first;
-  const int     ncomp_range  = ranges[i].second;
+ for (int igroup = 0; igroup < ranges.size(); igroup++) {
+  const int     scomp_range  = ranges[igroup].first;
+  const int     ncomp_range  = ranges[igroup].second;
   Interpolater* mapper = desc.interp(scompBC_map[scomp_range]);
 
   Real nudge_time;
@@ -756,8 +761,8 @@ AmrLevel::InterpBorders (
 
   Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
-  for (int i=0;i<ncomp_range;i++)
-   local_scompBC_map[i]=scompBC_map[scomp_range+i];
+  for (int isub=0;isub<ncomp_range;isub++)
+   local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
   if (level==0) {
    amrex::FillPatchSingleLevel(
@@ -802,7 +807,7 @@ AmrLevel::InterpBorders (
    amrex::Error("level invalid");
 
   DComp += ncomp_range;
- } // i=0..ranges.size()-1
+ } // igroup=0..ranges.size()-1
 
  if (level>0) 
   delete cmf_part;
@@ -832,8 +837,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
  Vector<int> scompBC_map;
  scompBC_map.resize(ncomp);
- for (int i=0;i<ncomp;i++)
-  scompBC_map[i]=scomp+i;
+ for (int icomp=0;icomp<ncomp;icomp++)
+  scompBC_map[icomp]=scomp+icomp;
 
  AmrLevel&               clev    = parent->getLevel(level-1);
  const Geometry&         cgeom   = clev.geom;
@@ -860,9 +865,9 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  std::vector< std::pair<int,int> > ranges = 
    desc.sameInterps(scompBC_map,ncomp);
 
- for (int i = 0; i < ranges.size(); i++) {
-  const int     scomp_range  = ranges[i].first;
-  const int     ncomp_range  = ranges[i].second;
+ for (int igroup = 0; igroup < ranges.size(); igroup++) {
+  const int     scomp_range  = ranges[igroup].first;
+  const int     ncomp_range  = ranges[igroup].second;
   Interpolater* mapper = desc.interp(scompBC_map[scomp_range]);
 
   BoxArray crseBA(mf_BA.size());
@@ -874,12 +879,13 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   }
 
     // ngrow=0
-  MultiFab crseMF(crseBA,dm,ncomp_range,0,Fab_allocate);
+  MultiFab crseMF(crseBA,dm,ncomp_range,0,
+    MFInfo().SetTag("crseMF"),FArrayBoxFactory());
 
   Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
-  for (int i=0;i<ncomp_range;i++)
-   local_scompBC_map[i]=scompBC_map[scomp_range+i];
+  for (int isub=0;isub<ncomp_range;isub++)
+   local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
   int scomp_local=scomp_range+scomp;
 
@@ -900,8 +906,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   const Vector< BCRec> & global_bcs=desc.getBCs();
 
   local_bcs.resize(ncomp_range);
-  for (int i=0;i<ncomp_range;i++)
-   local_bcs[i]=global_bcs[local_scompBC_map[i]]; 
+  for (int isub=0;isub<ncomp_range;isub++)
+   local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -936,7 +942,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
     local_scompBC_map,ncomp_range,bfact_fine);
 
   DComp += ncomp_range;
- } // i=0..ranges.size()-1
+ } // igroup=0..ranges.size()-1
 
 }   // FillCoarsePatch
 
@@ -986,9 +992,9 @@ AmrLevel::setPlotVariables ()
       
         int nPltVars = pp.countval("plot_vars");
       
-        for (int i = 0; i < nPltVars; i++)
+        for (int iplot = 0; iplot < nPltVars; iplot++)
         {
-            pp.get("plot_vars", nm, i);
+            pp.get("plot_vars", nm, iplot);
 
             if (nm == "ALL") 
                 parent->fillStatePlotVarList();
