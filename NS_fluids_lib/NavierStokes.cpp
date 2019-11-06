@@ -6708,7 +6708,8 @@ void NavierStokes::init_boundary() {
 }  // subroutine init_boundary()
 
 void
-NavierStokes::init (AmrLevel &old,
+NavierStokes::init (
+  AmrLevel & old,
   const BoxArray& ba_in,
   const DistributionMapping& dmap_in) {
  

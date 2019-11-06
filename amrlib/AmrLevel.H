@@ -141,7 +141,8 @@ public:
     //
     virtual void setTimeLevel (Real time,Real& dt);
 
-    virtual void init (AmrLevel &old,
+    virtual void init (
+      AmrLevel& old,
       const BoxArray& ba_in,
       const DistributionMapping& dmap_in) = 0;
 
@@ -277,7 +278,7 @@ protected:
     //
     // The constructors -- for derived classes.
     //
-    AmrLevel ();
+    AmrLevel () noexcept;
 
     AmrLevel (Amr&            papa,
               int             lev,

@@ -11,10 +11,10 @@
 #include <AmrLevel.H>
 #include <FillPatchUtil.H>
 
+namespace amrex {
+
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
-
-namespace amrex {
 
 void
 AmrLevel::manual_tags_placement (TagBoxArray&    tags,
@@ -340,6 +340,11 @@ AmrLevel::FillPatch (AmrLevel & old,
 
   if (level==0) {
 
+    // This routine is NOT in the "Base" directory, instead it is in the
+    // present directory in the file: FillPatchUtil.cpp.
+    // We are fooled into thinking this is a amrex routine since the
+    // code in FillPatchUtil.cpp is hidden within a "namespace amrex"
+    // block.
    amrex::FillPatchSingleLevel(
     level,
     mf,
@@ -361,6 +366,11 @@ AmrLevel::FillPatch (AmrLevel & old,
    MultiFab& cmf=cstatedata.newData(best_index);
    StateDataPhysBCFunct cbc(cstatedata,cgeom);
 
+    // This routine is NOT in the "Base" directory, instead it is in the
+    // present directory in the file: FillPatchUtil.cpp.
+    // We are fooled into thinking this is a amrex routine since the
+    // code in FillPatchUtil.cpp is hidden within a "namespace amrex"
+    // block.
    amrex::FillPatchTwoLevels(
     mf,
     nudge_time,

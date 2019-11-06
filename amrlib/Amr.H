@@ -75,15 +75,14 @@ public:
     Vector<Geometry>& Geom () { return geom; }
     Geometry& Geom (int lev) { return geom[lev]; }
 
-    void SetDistributionMap (int lev, const DistributionMapping& dmap_in);
-    void SetBoxArray (int lev, const BoxArray& ba_in);
+    void SetDistributionMap (int lev, const DistributionMapping& dmap_in) noexcept;
+    void SetBoxArray (int lev, const BoxArray& ba_in) noexcept;
 
-    void ClearDistributionMap (int lev);
-    void ClearBoxArray (int lev);
+    void ClearDistributionMap (int lev) noexcept;
+    void ClearBoxArray (int lev) noexcept;
 
     int levelSteps (int lev) const;
     int levelCount (int lev) const;
-    bool RegridOnRestart () const;
     int regridInt (int lev) const;
     int checkInt () const;
     Real checkPer() const;
@@ -100,6 +99,7 @@ public:
     static bool Plot_Files_Output ();
 
     static void Initialize ();
+    void InitAmr ();
     static void Finalize ();
     //
     // Number of buffer cells in error estimator.
@@ -118,25 +118,9 @@ public:
     // OLD: PArray<AmrLevel>& getAmrLevels ();
     Vector<std::unique_ptr<AmrLevel> >& getAmrLevels () noexcept;
     //
-    // Total number of cells.
-    //
-    long cellCount ();
-    //
-    // Number of cells at given level.
-    //
-    long cellCount (int lev);
-    //
-    // Total number of grids.
-    //
-    int numGrids ();
-    //
-    // Number of grids at given level.
-    //
-    int numGrids (int lev);
-    //
     // More work to be done?
     //
-    int okToContinue ();
+    int okToContinue () noexcept;
     //
     // Do a complete integration cycle.
     //
@@ -150,9 +134,6 @@ public:
     //
     std::ostream& DataLog (int i);
     //
-    // How many datalogs have been opened
-    //
-    int NumDataLogs ();
 
     void writeDEBUG_PlotFile(int num,int SDC_outer_sweeps_in,int slab_step_in);
 

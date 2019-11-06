@@ -16,7 +16,7 @@ public:
       MultiFab& mf, 
       Real time,
       int dcomp, 
-      Array<int> scompBC_map,
+      Vector<int> scompBC_map,
       int ncomp, 
       int bfact) = 0;
 
@@ -45,7 +45,7 @@ public:
       MultiFab& mf, 
       Real time,
       int dcomp,
-      Array<int> scompBC_map,
+      Vector<int> scompBC_map,
       int ncomp, 
       int bfact) override;
 

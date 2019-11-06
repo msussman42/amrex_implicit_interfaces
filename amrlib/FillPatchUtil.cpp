@@ -107,7 +107,8 @@ namespace amrex
       if ( ! fpc.ba_crse_patch.empty()) {
        MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_crse_patch,ncomp,0,
 		       Fab_allocate);
-		
+
+        // This data will be interpolated next.       
        FillPatchSingleLevel(
         levelc,
         mf_crse_patch, 

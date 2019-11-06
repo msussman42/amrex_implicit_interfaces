@@ -17,7 +17,7 @@ PhysBCFunctSUSSMAN::FillBoundary (
   MultiFab& mf, 
   Real time,
   int dcomp, 
-  Array<int> scompBC_map,
+  Vector<int> scompBC_map,
   int ncomp,
   int bfact) {
 

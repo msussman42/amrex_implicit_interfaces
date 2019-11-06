@@ -25,7 +25,6 @@
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_Utility.H>
 #include <AMReX_DistributionMapping.H>
-#include <AMReX_FabSet.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_Print.H>
 #include <TagBox.H>
@@ -48,11 +47,7 @@ namespace amrex {
 // Set defaults in Initialize()!!!
 //
 std::list<std::string> Amr::state_plot_vars;
-std::list<std::string> Amr::state_small_plot_vars;
 bool                   Amr::first_plotfile;
-bool                   Amr::first_smallplotfile;
-Vector<BoxArray>       Amr::initial_ba;
-Vector<BoxArray>       Amr::regrid_ba;
 
 namespace
 {
@@ -73,6 +68,7 @@ namespace
     int  checkpoint_nfiles;
     int  regrid_on_restart;
     int  use_efficient_regrid;
+    bool refine_grid_layout;
     int  plotfile_on_restart;
     int  insitu_on_restart;
     int  checkpoint_on_restart;
@@ -107,12 +103,6 @@ Amr::get_slab_dt_type () const
     return slab_dt_type;
 }   
 
-bool
-Amr::UsingPrecreateDirectories () noexcept
-{
-    return precreateDirectories;
-}
-
 void
 Amr::Initialize ()
 {
@@ -121,7 +111,6 @@ Amr::Initialize ()
     // Set all defaults here!!!
     //
     Amr::first_plotfile      = true;
-    Amr::first_smallplotfile = true;
     plot_nfiles              = 64;
     mffile_nstreams          = 1;
     probinit_natonce         = 512;
@@ -148,8 +137,6 @@ void
 Amr::Finalize ()
 {
     Amr::state_plot_vars.clear();
-    Amr::regrid_ba.clear();
-    Amr::initial_ba.clear();
 
     initialized = false;
 }
@@ -160,12 +147,6 @@ std::ostream&
 Amr::DataLog (int i)
 {
     return *datalog[i];
-}
-
-int
-Amr::NumDataLogs () noexcept
-{
-    return datalog.size();
 }
 
 int 
@@ -179,28 +160,10 @@ Amr::AMR_recalesce_flag(int im) const {
 }
 
 
-bool
-Amr::RegridOnRestart () const noexcept
-{
-    return regrid_on_restart;
-}
-
 Vector<std::unique_ptr<AmrLevel> >&
 Amr::getAmrLevels () noexcept
 {
     return amr_level;
-}
-
-long
-Amr::cellCount (int lev) noexcept
-{
-    return amr_level[lev]->countCells();
-}
-
-int
-Amr::numGrids (int lev) noexcept
-{
-    return amr_level[lev]->numGrids();
 }
 
 
@@ -245,12 +208,10 @@ Amr::InitAmr () {
     //
     grid_eff               = 0.7;
     plot_int               = -1;
-    small_plot_int         = -1;
     slice_int              = -1;
     n_proper               = 1;
     max_level              = -1;
     last_plotfile          = 0;
-    last_smallplotfile     = -1;
     last_checkpoint        = 0;
     record_run_info        = false;
     record_grid_info       = false;
@@ -351,8 +312,8 @@ Amr::InitAmr () {
       datalog.resize(num_datalogs);
       Vector<std::string> data_file_names(num_datalogs);
       pp.queryarr("data_log",data_file_names,0,num_datalogs);
-      for (int i = 0; i < num_datalogs; i++) 
-        setRecordDataInfo(i,data_file_names[i]);
+      for (int i_data = 0; i_data < num_datalogs; i_data++) 
+        setRecordDataInfo(i_data,data_file_names[i_data]);
     }
 
     probin_file = "probin";  // Make "probin" the default
@@ -566,15 +527,19 @@ Amr::InitAmr () {
             index_domain.refine(2);
     }
     //
-    // Now define offset for CoordSys.
+    // SUSSMAN:
+    // Now check offset; CoordSys does not need it anymore though.
     //
     Real offset[BL_SPACEDIM];
     for (i = 0; i < BL_SPACEDIM; i++)
     {
-        const Real delta = Geometry::ProbLength(i)/(Real)n_cell[i];
-        offset[i]        = Geometry::ProbLo(i) + delta*lo[i];
+        const Real delta = geom[0].ProbLength(i)/(Real)n_cell[i];
+        offset[i]        = geom[0].ProbLo(i) + delta*lo[i];
+	if ((lo[i]==0)&&(delta>0.0)) {
+	 // do nothing
+	} else
+ 	 amrex::Error("expecting lo=0 and delta>0");
     }
-    CoordSys::SetOffset(offset);
 
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "Amr.time_blocking_factor= " <<
@@ -584,15 +549,6 @@ Amr::InitAmr () {
      std::cout << "Amr.slab_dt_type= " <<
         slab_dt_type << '\n';
     }
-
-    loadbalance_with_workestimates = 0;
-    pp.query("loadbalance_with_workestimates", loadbalance_with_workestimates);
-
-    loadbalance_level0_int = 2;
-    pp.query("loadbalance_level0_int", loadbalance_level0_int);
-
-    loadbalance_max_fac = 1.5;
-    pp.query("loadbalance_max_fac", loadbalance_max_fac);
 
 } // subroutine InitAmr
 
@@ -608,11 +564,6 @@ Amr::SetBoxArray (int lev, const BoxArray& ba_in) noexcept
     if (grids[lev] != ba_in) grids[lev] = ba_in;
 }
 
-void
-Amr::SetGeometry (int lev, const Geometry& geom_in) noexcept
-{
-    geom[lev] = geom_in;
-}
 
 void
 Amr::ClearDistributionMap (int lev) noexcept
@@ -621,7 +572,7 @@ Amr::ClearDistributionMap (int lev) noexcept
 }
 
 void
-AmrMesh::ClearBoxArray (int lev) noexcept
+Amr::ClearBoxArray (int lev) noexcept
 {
     grids[lev] = BoxArray();
 }
@@ -639,19 +590,6 @@ Amr::isStatePlotVar (const std::string& name)
     }
     return false;
 }
-
-bool
-Amr::isStateSmallPlotVar (const std::string& name)
-{
-    for (std::list<std::string>::const_iterator li = state_small_plot_vars.begin(), End = state_small_plot_vars.end();
-         li != End;
-         ++li)
-    {
-        if (*li == name)
-            return true;
-    }
-    return false;
-} // isStateSmallPlotVar
 
 void
 Amr::fillStatePlotVarList ()
@@ -674,57 +612,10 @@ Amr::clearStatePlotVarList ()
 }
 
 void
-Amr::fillStateSmallPlotVarList ()
-{
-    state_small_plot_vars.clear();
-    const DescriptorList &desc_lst = AmrLevel::get_desc_lst();
-    for (int typ(0); typ < desc_lst.size(); ++typ) {
-        for (int comp(0); comp < desc_lst[typ].nComp(); ++comp) {
-            if (desc_lst[typ].getType() == IndexType::TheCellType()) {
-                state_small_plot_vars.push_back(desc_lst[typ].name(comp));
-            }
-        }
-    }
-}
-
-void
-Amr::clearStateSmallPlotVarList ()
-{
-    state_small_plot_vars.clear();
-}
-
-void
-Amr::fillStateSmallPlotVarList ()
-{
-    state_small_plot_vars.clear();
-    const DescriptorList &desc_lst = AmrLevel::get_desc_lst();
-    for (int typ(0); typ < desc_lst.size(); ++typ) {
-        for (int comp(0); comp < desc_lst[typ].nComp(); ++comp) {
-            if (desc_lst[typ].getType() == IndexType::TheCellType()) {
-                state_small_plot_vars.push_back(desc_lst[typ].name(comp));
-            }
-        }
-    }
-} // fillStateSmallPlotVarList
-
-void
-Amr::clearStateSmallPlotVarList ()
-{
-    state_small_plot_vars.clear();
-}
-
-void
 Amr::addStatePlotVar (const std::string& name)
 {
     if (!isStatePlotVar(name))
         state_plot_vars.push_back(name);
-}
-
-void
-Amr::addStateSmallPlotVar (const std::string& name)
-{
-    if (!isStateSmallPlotVar(name))
-        state_small_plot_vars.push_back(name);
 }
 
 void
@@ -812,24 +703,6 @@ Amr::setDt(Real dt)
  dt_AMR=dt;
 }
 
-long
-Amr::cellCount () noexcept
-{
-    long cnt = 0;
-    for (int i = 0; i <= finest_level; i++)
-        cnt += amr_level[i]->countCells();
-    return cnt;
-}
-
-int
-Amr::numGrids () noexcept
-{
-    int cnt = 0;
-    for (int i = 0; i <= finest_level; i++)
-        cnt += amr_level[i]->numGrids();
-    return cnt;
-}
-
 int
 Amr::okToContinue () noexcept
 {
@@ -884,12 +757,11 @@ Amr::writePlotFile (const std::string& root,
      runlog << "PLOTFILE: file = " << pltfile << '\n';
 
   int stream_max_tries=4;
+  bool abort_on_stream_retry_failure=false;
   amrex::StreamRetry sretry(pltfile, abort_on_stream_retry_failure,
                              stream_max_tries);
 
   const std::string pltfileTemp(pltfile + ".temp");
-
-  bool abort_on_stream_retry_failure=false;
 
   while(sretry.TryFileOutput()) {
 
@@ -992,132 +864,6 @@ Amr::writePlotFile (const std::string& root,
 
 
 void
-Amr::writeSmallPlotFile ()
-{
-    if ( ! Plot_Files_Output()) {
-      return;
-    }
-
-    BL_PROFILE_REGION_START("Amr::writeSmallPlotFile()");
-    BL_PROFILE("Amr::writeSmallPlotFile()");
-
-    VisMF::SetNOutFiles(plot_nfiles);
-    VisMF::Header::Version currentVersion(VisMF::GetHeaderVersion());
-    VisMF::SetHeaderVersion(plot_headerversion);
-
-    if (first_smallplotfile) {
-        first_smallplotfile = false;
-        amr_level[0]->setSmallPlotVariables();
-    }
-
-    // Don't continue if we have no variables to plot.
-    
-    if (stateSmallPlotVars().size() == 0) {
-      return;
-    }
-
-    double dPlotFileTime0 = amrex::second();
-
-    const std::string& pltfile = amrex::Concatenate(small_plot_file_root,
-                                                     level_steps[0],
-                                                     file_name_digits);
-
-    if (verbose > 0) {
-	amrex::Print() << "SMALL PLOTFILE: file = " << pltfile << '\n';
-    }
-
-    if (record_run_info && ParallelDescriptor::IOProcessor()) {
-        runlog << "SMALL PLOTFILE: file = " << pltfile << '\n';
-    }
-
-  amrex::StreamRetry sretry(pltfile, abort_on_stream_retry_failure,
-                             stream_max_tries);
-
-  const std::string pltfileTemp(pltfile + ".temp");
-
-  while(sretry.TryFileOutput()) {
-    //
-    //  if either the pltfile or pltfileTemp exists, rename them
-    //  to move them out of the way.  then create pltfile
-    //  with the temporary name, then rename it back when
-    //  it is finished writing.  then stream retry can rename
-    //  it to a bad suffix if there were stream errors.
-    //
-    if (precreateDirectories) {    // ---- make all directories at once
-      amrex::UtilRenameDirectoryToOld(pltfile, false);      // dont call barrier
-      amrex::UtilCreateCleanDirectory(pltfileTemp, false);  // dont call barrier
-      for(int i(0); i <= finest_level; ++i) {
-        amr_level[i]->CreateLevelDirectory(pltfileTemp);
-      }
-      ParallelDescriptor::Barrier("Amr::precreate smallplotfile Directories");
-    } else {
-      amrex::UtilRenameDirectoryToOld(pltfile, false);     // dont call barrier
-      amrex::UtilCreateCleanDirectory(pltfileTemp, true);  // call barrier
-    }
-
-
-    std::string HeaderFileName(pltfileTemp + "/Header");
-
-    VisMF::IO_Buffer io_buffer(VisMF::GetIOBufferSize());
-
-    std::ofstream HeaderFile;
-
-    HeaderFile.rdbuf()->pubsetbuf(io_buffer.dataPtr(), io_buffer.size());
-
-    int old_prec(0);
-
-    if (ParallelDescriptor::IOProcessor()) {
-        //
-        // Only the IOProcessor() writes to the header file.
-        //
-        HeaderFile.open(HeaderFileName.c_str(), std::ios::out | std::ios::trunc |
-	                                        std::ios::binary);
-        if ( ! HeaderFile.good()) {
-            amrex::FileOpenFailed(HeaderFileName);
-	}
-        old_prec = HeaderFile.precision(15);
-    }
-
-    for (int k(0); k <= finest_level; ++k) {
-        amr_level[k]->writeSmallPlotFile(pltfileTemp, HeaderFile);
-    }
-
-    if (ParallelDescriptor::IOProcessor()) {
-        HeaderFile.precision(old_prec);
-        if ( ! HeaderFile.good()) {
-            amrex::Error("Amr::writeSmallPlotFile() failed");
-	}
-    }
-
-    last_smallplotfile = level_steps[0];
-
-    if (verbose > 0) {
-        const int IOProc        = ParallelDescriptor::IOProcessorNumber();
-        double      dPlotFileTime = amrex::second() - dPlotFileTime0;
-
-        ParallelDescriptor::ReduceRealMax(dPlotFileTime,IOProc);
-
-	amrex::Print() << "Write small plotfile time = " << dPlotFileTime << "  seconds" << "\n\n";
-    }
-    ParallelDescriptor::Barrier("Amr::writeSmallPlotFile::end");
-
-    if(ParallelDescriptor::IOProcessor()) {
-      std::rename(pltfileTemp.c_str(), pltfile.c_str());
-    }
-    ParallelDescriptor::Barrier("Renaming temporary plotfile.");
-    //
-    // the plotfile file now has the regular name
-    //
-
-  }  // end while
-
-  VisMF::SetHeaderVersion(currentVersion);
-  
-  BL_PROFILE_REGION_STOP("Amr::writeSmallPlotFile()");
-}
-
-
-void
 Amr::checkInput ()
 {
     FabArrayBase::Initialize();
@@ -1163,7 +909,7 @@ Amr::checkInput ()
         } else if (i==max_level) {
  	 // do nothing
 	} else
-	 BoxLib::Error("i invalid");
+	 amrex::Error("i invalid");
 
         while ( k > 0 && (k%2 == 0) )
             k /= 2;
@@ -1233,7 +979,7 @@ Amr::checkInput ()
       amrex::Error("max_grid_size not divisible by time_blocking_factor");
     }
 
-    if (!Geometry::ProbDomain().ok())
+    if (!geom[0].ProbDomain().ok())
         amrex::Error("checkInput: bad physical problem size");
 
     if (max_level > 0) 
@@ -1750,13 +1496,12 @@ Amr::timeStep (Real time,
 
    // SUSSMAN
   int nprocs=ParallelDescriptor::NProcs();
-  ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
-  DistributionMapping dm(lev0,nprocs,color);
+  DistributionMapping dm(lev0,nprocs);
 
   AmrLevel* a = (*levelbld)(*this,0,geom[0],lev0,dm,cumtime);
 
    // calls setTimeLevel for level=0 using old level dt.
-  a->init(amr_level[0],lev0,dm);
+  a->init(*amr_level[0],lev0,dm);
   amr_level[0].reset(a);
   this->SetBoxArray(0, amr_level[0]->boxArray());
   this->SetDistributionMap(0, amr_level[0]->DistributionMap());
@@ -2067,7 +1812,7 @@ Amr::coarseTimeStep (Real stop_time)
     } else if (check_int==-1) {
      // do nothing
     } else
-     BoxLib::Error("check_int invalid");
+     amrex::Error("check_int invalid");
 
     if ((check_int_trigger==1) || 
         (check_test == 1) || 
@@ -2079,7 +1824,7 @@ Amr::coarseTimeStep (Real stop_time)
 	       (to_checkpoint==0)) {
      // do nothing
     } else
-     BoxLib::Error("check_int_trigger,check_test,or to_checkpoint bad");
+     amrex::Error("check_int_trigger,check_test,or to_checkpoint bad");
 
     int plot_test = 0;
     if (plot_per > 0.0)
@@ -2154,8 +1899,7 @@ Amr::defBaseLevel (Real strt_time)
 
      // SUSSMAN
     int nprocs=ParallelDescriptor::NProcs();
-    ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
-    this->SetDistributionMap(0, DistributionMapping(lev0,nprocs,color));
+    this->SetDistributionMap(0, DistributionMapping(lev0,nprocs));
 
     //
     // Now build level 0 grids.
@@ -2209,10 +1953,6 @@ Amr::regrid (int  lbase,
   amr_level[lev].reset();
   this->ClearBoxArray(lev);
   this->ClearDistributionMap(lev);
- }
-
- if (lbase == 0) {
-  DistributionMapping::FlushCache();
  }
 
  const int start = ((regrid_level_zero==1) ? 0 : lbase+1);
@@ -2457,7 +2197,7 @@ Amr::grid_places (int              lbase,
                   int&             new_finest,
                   Vector<BoxArray>& new_grids)
 {
- int i;
+ int ilev=0;
  int max_crse = std::min(finest_level,max_level-1);
 
  const double strttime = ParallelDescriptor::second();
@@ -2489,21 +2229,21 @@ Amr::grid_places (int              lbase,
  Vector<Box> pc_domain(max_level);  // Coarsened problem domain.
 
  // blocking_factor is a power of 2 and no smaller than 4.
- for (i = 0; i <= max_crse; i++) {
-   bf_lev[i] = blocking_factor[i]/2;
-   if (2*bf_lev[i]!=blocking_factor[i])
-    amrex::Error("2*bf_lev[i]!=blocking_factor[i]");
+ for (ilev = 0; ilev <= max_crse; ilev++) {
+   bf_lev[ilev] = blocking_factor[ilev]/2;
+   if (2*bf_lev[ilev]!=blocking_factor[ilev])
+    amrex::Error("2*bf_lev[ilev]!=blocking_factor[ilev]");
  }
 
- for (i = lbase; i < max_crse; i++) {
-   rr_lev[i] = (2*bf_lev[i])/bf_lev[i+1];
-   if (rr_lev[i]<2)
-    amrex::Error("rr_lev[i]<2");
+ for (ilev = lbase; ilev < max_crse; ilev++) {
+   rr_lev[ilev] = (2*bf_lev[ilev])/bf_lev[ilev+1];
+   if (rr_lev[ilev]<2)
+    amrex::Error("rr_lev[ilev]<2");
  }
 
-  //2*bf_lev[i]==blocking_factor[i]
- for (i = lbase; i <= max_crse; i++) {
-  pc_domain[i] = amrex::coarsen(geom[i].Domain(),bf_lev[i]);
+  //2*bf_lev[ilev]==blocking_factor[ilev]
+ for (ilev = lbase; ilev <= max_crse; ilev++) {
+  pc_domain[ilev] = amrex::coarsen(geom[ilev].Domain(),bf_lev[ilev]);
  }
 
  Vector<BoxList> p_n(max_level);      // Proper nesting domain.
@@ -2524,37 +2264,37 @@ Amr::grid_places (int              lbase,
  p_n[lbase].simplify();
 
  if (lbase==0) {
-  if (p_n_comp[lbase].size()!=0)
-   amrex::Error("p_n_comp[lbase].size()!=0");
-  if (p_n[lbase]!=pc_domain[lbase])
-   amrex::Error("p_n[lbase]!=pc_domain[lbase]");
+  if (p_n_comp[lbase].size()==0) {
+   // do nothing
+  } else
+   amrex::Error("p_n_comp[lbase].size() should be 0");
  } // lbase==0
 
  bl.clear();
 
- for (i = lbase+1; i <= max_crse; i++) {
+ for (ilev = lbase+1; ilev <= max_crse; ilev++) {
 
-  p_n_comp[i] = p_n_comp[i-1];
+  p_n_comp[ilev] = p_n_comp[ilev-1];
 
-  p_n_comp[i].simplify();
+  p_n_comp[ilev].simplify();
 
-  p_n_comp[i].refine(rr_lev[i-1]);
-   // grow each box in p_n_comp[i] by n_proper
-  p_n_comp[i].accrete(n_proper);
+  p_n_comp[ilev].refine(rr_lev[ilev-1]);
+   // grow each box in p_n_comp[ilev] by n_proper
+  p_n_comp[ilev].accrete(n_proper);
 
-  Amr::ProjPeriodic(p_n_comp[i], Geometry(pc_domain[i]));
+  Amr::ProjPeriodic(p_n_comp[ilev], Geometry(pc_domain[ilev]));
 
-  p_n[i].complementIn(pc_domain[i],p_n_comp[i]);
-  p_n[i].simplify();
+  p_n[ilev].complementIn(pc_domain[ilev],p_n_comp[ilev]);
+  p_n[ilev].simplify();
 
   if (lbase==0) {
-   if (p_n_comp[i].size()!=0)
-    amrex::Error("p_n_comp[i].size()!=0");
-   if (p_n[i]!=pc_domain[i])
-    amrex::Error("p_n[i]!=pc_domain[i]");
+   if (p_n_comp[ilev].size()==0) {
+    // do nothing
+   } else
+    amrex::Error("p_n_comp[ilev].size() should be 0");
   } // lbase==0
 
- } // i=lbase+1 ... max_crse
+ } // ilev=lbase+1 ... max_crse
 
  new_finest = lbase;
 
@@ -2676,21 +2416,21 @@ Amr::grid_places (int              lbase,
 
   for (int cnt = 1; cnt <= 4; cnt *= 2) {
 
-   for (int i = lbase; i <= new_finest; i++) {
+   for (ilev = lbase; ilev <= new_finest; ilev++) {
 
-    const int ChunkSize = max_grid_size[i]/cnt;
+    const int ChunkSize = max_grid_size[ilev]/cnt;
 
     IntVect chunk(D_DECL(ChunkSize,ChunkSize,ChunkSize));
 
     for (int j = 0; j < BL_SPACEDIM; j++) {
      chunk[j] /= 2;
 
-     if ((new_grids[i].size() < NProcs) && 
-         (chunk[j]%blocking_factor[i] == 0)) {
-      new_grids[i].maxSize(chunk);
+     if ((new_grids[ilev].size() < NProcs) && 
+         (chunk[j]%blocking_factor[ilev] == 0)) {
+      new_grids[ilev].maxSize(chunk);
      }
     }
-   } // i
+   } // ilev
   } // cnt
  }
 
@@ -2750,8 +2490,7 @@ Amr::bldFineLevels (Real strt_time)
 
     // SUSSMAN
    int nprocs=ParallelDescriptor::NProcs();
-   ParallelDescriptor::Color color = ParallelDescriptor::DefaultColor();
-   DistributionMapping new_dm(new_grids[new_finest],nprocs,color);
+   DistributionMapping new_dm(new_grids[new_finest],nprocs);
 
     // see the constructor in AmrLevel.cpp:
     // AmrLevel::AmrLevel ( ....  )

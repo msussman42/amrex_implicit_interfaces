@@ -13,7 +13,7 @@
 #include <AMReX_Vector.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_DistributionMapping.H>
-#include <AMReX_PhysBCFunct.H>
+#include <PhysBCFunctSUSSMAN.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_RealBox.H>
 
@@ -215,7 +215,7 @@ private:
 }; // StateData
 
 class StateDataPhysBCFunct
-    : public PhysBCFunctBase
+    : public PhysBCFunctBaseSUSSMAN
 {
 public:
 
@@ -241,7 +241,7 @@ private:
 
 
 class StateDataPhysBCFunctGHOST
-    : public PhysBCFunctBase
+    : public PhysBCFunctBaseSUSSMAN
 {
 public:
 
