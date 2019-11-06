@@ -26,87 +26,89 @@ TagBox::TagBox (const Box& bx,
 void
 TagBox::coarsen (const int ratio)
 {
-    BL_ASSERT(nComp() == 1);
+ BL_ASSERT(nComp() == 1);
 
-    TagType*   fdat     = dataPtr();
-    IntVect    lov      = domain.smallEnd();
-    IntVect    hiv      = domain.bigEnd();
-    IntVect    d_length = domain.size();
-    const int* flo      = lov.getVect();
-    const int* fhi      = hiv.getVect();
-    const int* flen     = d_length.getVect();
+ TagType*   fdat     = dataPtr();
+ IntVect    lov      = domain.smallEnd();
+ IntVect    hiv      = domain.bigEnd();
+ IntVect    d_length = domain.size();
+ const int* flo      = lov.getVect();
+ const int* fhi      = hiv.getVect();
+ const int* flen     = d_length.getVect();
 
-    const Box& cbox = amrex::coarsen(domain,ratio);
+ const Box& cbox = amrex::coarsen(domain,ratio);
 
-    this->resize(cbox);
+ this->resize(cbox);
 
-    const int* clo      = cbox.loVect();
-    IntVect    cbox_len = cbox.size();
-    const int* clen     = cbox_len.getVect();
+ const int* clo      = cbox.loVect();
+ IntVect    cbox_len = cbox.size();
+ const int* clen     = cbox_len.getVect();
 
-    Box b1(amrex::refine(cbox,ratio));
-    const int* lo       = b1.loVect();
-    int        longlen  = b1.longside();
+ Box b1(amrex::refine(cbox,ratio));
+ const int* lo       = b1.loVect();
+ int        longlen  = b1.longside();
 
-    Vector<TagType> cfab(numpts);
-    TagType* cdat = cfab.dataPtr();
+ long numpts=domain.numPts();
+ Vector<TagType> cfab(numpts);
+ TagType* cdat = cfab.dataPtr();
 
-    Vector<TagType> t(longlen,TagBox::CLEAR);
+ Vector<TagType> t(longlen,TagBox::CLEAR);
 
-    int klo = 0, khi = 0, jlo = 0, jhi = 0, ilo, ihi;
-    AMREX_D_TERM(ilo=flo[0]; ihi=fhi[0]; ,
-           jlo=flo[1]; jhi=fhi[1]; ,
-           klo=flo[2]; khi=fhi[2];)
+ int klo = 0, khi = 0, jlo = 0, jhi = 0, ilo, ihi;
+ AMREX_D_TERM(ilo=flo[0]; ihi=fhi[0]; ,
+        jlo=flo[1]; jhi=fhi[1]; ,
+        klo=flo[2]; khi=fhi[2];)
 
 #define IXPROJ(i,r) (((i)+(r)*std::abs(i))/(r) - std::abs(i))
    
-   int ratiox = 1, ratioy = 1, ratioz = 1;
-   AMREX_D_TERM(ratiox = ratio;,
-          ratioy = ratio;,
-          ratioz = ratio;)
+ int ratiox = 1, ratioy = 1, ratioz = 1;
+ AMREX_D_TERM(ratiox = ratio;,
+        ratioy = ratio;,
+        ratioz = ratio;)
 
-   for (int k = klo; k <= khi; k++)
-   {
-       const int kc = IXPROJ(k,ratioz);
-       for (int j = jlo; j <= jhi; j++)
-       {
-           const int     jc = IXPROJ(j,ratioy);
+ for (int k = klo; k <= khi; k++)
+ {
+     const int kc = IXPROJ(k,ratioz);
+     for (int j = jlo; j <= jhi; j++)
+     {
+         const int     jc = IXPROJ(j,ratioy);
 
-           int cdat_off=(jc-clo[1])*clen[0];
-           int fdat_off=(j-flo[1])*flen[0];
-           if (BL_SPACEDIM==2) {
-            // do nothing
-           } else if (BL_SPACEDIM==3) {
-            cdat_off+=(kc-clo[BL_SPACEDIM-1])*clen[0]*clen[BL_SPACEDIM-2];
-            fdat_off+=(k-flo[BL_SPACEDIM-1])*flen[0]*flen[BL_SPACEDIM-2];
-           } else
-            amrex::Error("dimension bust");
+         int cdat_off=(jc-clo[1])*clen[0];
+         int fdat_off=(j-flo[1])*flen[0];
+         if (BL_SPACEDIM==2) {
+          // do nothing
+         } else if (BL_SPACEDIM==3) {
+          cdat_off+=(kc-clo[BL_SPACEDIM-1])*clen[0]*clen[BL_SPACEDIM-2];
+          fdat_off+=(k-flo[BL_SPACEDIM-1])*flen[0]*flen[BL_SPACEDIM-2];
+         } else
+          amrex::Error("dimension bust");
 
 
-           TagType*       c = cdat + cdat_off;
-           const TagType* f = fdat + fdat_off;
-           //
-           // Copy fine grid row of values into tmp array.
-           //
-           for (int i = ilo; i <= ihi; i++)
-               t[i-lo[0]] = f[i-ilo];
+         TagType*       c = cdat + cdat_off;
+         const TagType* f = fdat + fdat_off;
+         //
+         // Copy fine grid row of values into tmp array.
+         //
+         for (int i = ilo; i <= ihi; i++)
+             t[i-lo[0]] = f[i-ilo];
 
-           for (int off = 0; off < ratiox; off++)
-           {
-               for (int ic = 0; ic < clen[0]; ic++)
-               {
-                   const int i = ic*ratiox + off;
-                   c[ic] = std::max(c[ic],t[i]);
-               }
-           }
-       }
-   }
+         for (int off = 0; off < ratiox; off++)
+         {
+             for (int ic = 0; ic < clen[0]; ic++)
+             {
+                 const int i = ic*ratiox + off;
+                 c[ic] = std::max(c[ic],t[i]);
+             }
+         }
+     }
+ }
 
 #undef IXPROJ
 
-   for (int i = 0; i < numpts; ++i) {
-       fdat[i] = cdat[i];
-   }
+ numpts=domain.numPts();
+ for (int i = 0; i < numpts; ++i) {
+     fdat[i] = cdat[i];
+ }
 }
 
 void 
@@ -135,22 +137,22 @@ TagBox::buffer (int nbuff,
 
 #define OFF(i,j,k,lo,len) AMREX_D_TERM(i-lo[0], +(j-lo[1])*len[0] , +(k-lo[2])*len[0]*len[1])
    
-    for (int k = klo; k <= khi; k++)
+    for (int kouter = klo; kouter <= khi; kouter++)
     {
-        for (int j = jlo; j <= jhi; j++)
+        for (int jouter = jlo; jouter <= jhi; jouter++)
         {
-            for (int i = ilo; i <= ihi; i++)
+            for (int iouter = ilo; iouter <= ihi; iouter++)
             {
-                TagType* d_check = d + OFF(i,j,k,lo,len);
+                TagType* d_check = d + OFF(iouter,jouter,kouter,lo,len);
                 if (*d_check == TagBox::SET)
                 {
-                    for (int k = -nk; k <= nk; k++)
+                    for (int kin = -nk; kin <= nk; kin++)
                     {
-                        for (int j = -nj; j <= nj; j++)
+                        for (int jin = -nj; jin <= nj; jin++)
                         {
-                            for (int i = -ni; i <= ni; i++)
+                            for (int iin = -ni; iin <= ni; iin++)
                             {
-                                TagType* dn = d_check+ AMREX_D_TERM(i, +j*len[0], +k*len[0]*len[1]);
+                                TagType* dn = d_check+ AMREX_D_TERM(iin, +jin*len[0], +kin*len[0]*len[1]);
                                 if (*dn !=TagBox::SET)
                                     *dn = TagBox::BUF;
                             }
@@ -316,6 +318,9 @@ TagBox::tags_and_untags (const Vector<int>& ar)
 void 
 TagBox::get_itags(Vector<int>& ar, const Box& tilebx) const
 {
+    IntVect        d_length   = domain.size();
+    const int*     dlen       = d_length.getVect();
+
     int Lbx[] = {1,1,1};
     for (int idim=0; idim<BL_SPACEDIM; idim++) {
 	Lbx[idim] = dlen[idim];
@@ -354,6 +359,9 @@ TagBox::get_itags(Vector<int>& ar, const Box& tilebx) const
 void 
 TagBox::tags (const Vector<int>& ar, const Box& tilebx)
 {
+    IntVect        d_length   = domain.size();
+    const int*     dlen       = d_length.getVect();
+
     int Lbx[] = {1,1,1};
     for (int idim=0; idim<BL_SPACEDIM; idim++) {
 	Lbx[idim] = dlen[idim];
@@ -385,6 +393,8 @@ TagBox::tags (const Vector<int>& ar, const Box& tilebx)
 void 
 TagBox::tags_and_untags (const Vector<int>& ar, const Box&tilebx)
 {
+    IntVect        d_length   = domain.size();
+    const int*     dlen       = d_length.getVect();
     int Lbx[] = {1,1,1};
     for (int idim=0; idim<BL_SPACEDIM; idim++) {
 	Lbx[idim] = dlen[idim];
@@ -413,9 +423,11 @@ TagBox::tags_and_untags (const Vector<int>& ar, const Box&tilebx)
 }
 
 TagBoxArray::TagBoxArray (const BoxArray& ba,
+		const DistributionMapping& tag_dm,
                           int             _ngrow)
     :
-    FabArray<TagBox>(ba,1,_ngrow)
+    FabArray<TagBox>(ba,tag_dm,1,_ngrow,
+		 MFInfo().SetTag("tagboxarray"))
 {
     if (SharedMemory()) setVal(TagBox::CLEAR);
 }
@@ -423,7 +435,7 @@ TagBoxArray::TagBoxArray (const BoxArray& ba,
 int
 TagBoxArray::borderSize () const
 {
-    return n_grow;
+    return n_grow[0];
 }
 
 void 
@@ -431,14 +443,14 @@ TagBoxArray::buffer (int nbuf)
 {
     if (nbuf != 0)
     {
-        BL_ASSERT(nbuf <= n_grow);
+        BL_ASSERT(nbuf <= n_grow[0]);
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 	for (MFIter mfi(*this); mfi.isValid(); ++mfi)
 	{
-	    get(mfi).buffer(nbuf, n_grow);
+	    get(mfi).buffer(nbuf, n_grow[0]);
         } 
     }
 }
@@ -451,8 +463,8 @@ TagBoxArray::mapPeriodic (const Geometry& geom)
     BL_PROFILE("TagBoxArray::mapPeriodic()");
 
     // This function is called after coarsening.
-    // So we can assume that n_grow is 0.
-    BL_ASSERT(n_grow == 0);
+    // So we can assume that n_grow[0] is 0.
+    BL_ASSERT(n_grow[0] == 0);
 
     TagBoxArray tmp(boxArray()); // note that tmp is filled w/ CLEAR.
 
@@ -657,7 +669,7 @@ TagBoxArray::coarsen (const int ratio)
     boxarray.growcoarsen(n_grow,ratio);
     updateBDKey();  // because we just modify boxarray in-place.
 
-    n_grow = 0;
+    n_grow[0] = 0;
 }
 
 } // namespace amrex

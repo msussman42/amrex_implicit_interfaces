@@ -91,25 +91,25 @@ DescriptorList::size () const
 void
 DescriptorList::saveMapper(int indx,int comp,Interpolater*& interp) {
 
- desc[indx].saveMapper(comp,interp);
+ desc[indx]->saveMapper(comp,interp);
 }
 
 void 
 DescriptorList::resetMapper(int indx,int comp,Interpolater* interp) {
 
- desc[indx].resetMapper(comp,interp);
+ desc[indx]->resetMapper(comp,interp);
 }
 
 void
 DescriptorList::save_bcrecs_statedesc(int indx,int comp,BCRec& bcr) {
     
- desc[indx].save_bcrecs_statedesc(comp,bcr);
+ desc[indx]->save_bcrecs_statedesc(comp,bcr);
 }   
 
 void
 DescriptorList::reset_bcrecs(int indx,int comp,BCRec bcr) {
     
- desc[indx].reset_bcrecs(comp,bcr);
+ desc[indx]->reset_bcrecs(comp,bcr);
 }   
 
 
@@ -121,7 +121,7 @@ DescriptorList::resetComponentBCs (int                               indx,
                                    const BCRec&                      bc,
                                    const StateDescriptor::BndryFunc& func)
 {
-    desc[indx].resetComponentBCs(comp,bc,func);
+    desc[indx]->resetComponentBCs(comp,bc,func);
 }
 
 void
@@ -134,7 +134,7 @@ DescriptorList::setComponent (int        indx,
        int                               max_map_start_comp,
        int                               min_map_end_comp)
 {
-    desc[indx].setComponent(comp,nm,bc,func,interp,max_map_start_comp,
+    desc[indx]->setComponent(comp,nm,bc,func,interp,max_map_start_comp,
       min_map_end_comp);
 }
 
@@ -150,15 +150,15 @@ DescriptorList::setComponent (int    indx,
     {
         const bool master = (i == 0) ? true : false;
 
-        desc[indx].setComponent(comp+i,nm[i],bc[i],func,interp,
+        desc[indx]->setComponent(comp+i,nm[i],bc[i],func,interp,
          master,nm.size());
     }
 }
 
 const StateDescriptor&
-DescriptorList::operator[] (int k) const
+DescriptorList::operator[] (int k) const noexcept
 {
-    return desc[k];
+    return *desc[k];
 }
 
 void
@@ -171,7 +171,7 @@ DescriptorList::addDescriptor (int indx,
 {
     if (indx >= desc.size())
         desc.resize(indx+1);
-    desc.set(indx,new StateDescriptor(typ,indx,nextra,num_comp,
+    desc[indx].reset(new StateDescriptor(typ,indx,nextra,num_comp,
      interp,store_in_checkpoint));
 }  
 
@@ -252,73 +252,72 @@ StateDescriptor::resetComponentBCs (int              comp,
 {
     BL_ASSERT(comp >= 0 && comp < ncomp);
 
-    bc_func.clear(comp);
-    bc_func.set(comp,func.clone());
+    bc_func[comp].reset(func.clone());
     bc[comp] = bcr;
 }
 
 IndexType
-StateDescriptor::getType () const
+StateDescriptor::getType () const noexcept
 {
     return type;
 }
 
 
 int
-StateDescriptor::nComp () const
+StateDescriptor::nComp () const noexcept
 {
     return ncomp;
 }
 
 
 int
-StateDescriptor::nExtra () const
+StateDescriptor::nExtra () const noexcept
 {
     return ngrow;
 }
 
 Interpolater*
-StateDescriptor::interp () const
+StateDescriptor::interp () const noexcept
 {
     return mapper;
 }
 
 Interpolater*
-StateDescriptor::interp (int i) const
+StateDescriptor::interp (int i) const noexcept
 {
     return mapper_comp[i] == 0 ? mapper : mapper_comp[i];
 }
 
 const std::string&
-StateDescriptor::name (int i) const
+StateDescriptor::name (int i) const noexcept
 {
     return names[i];
 }
 
 const BCRec&
-StateDescriptor::getBC (int i) const
+StateDescriptor::getBC (int i) const noexcept
 {
     return bc[i];
 }
 
 const Vector<BCRec>&
-StateDescriptor::getBCs () const
+StateDescriptor::getBCs () const noexcept
 {
     return bc;
 }
 
 
 bool
-StateDescriptor::store_in_checkpoint () const
+StateDescriptor::store_in_checkpoint () const noexcept
 {
     return m_store_in_checkpoint;
 }
 
 
 const StateDescriptor::BndryFunc&
-StateDescriptor::bndryFill (int i) const
+StateDescriptor::bndryFill (int i) const noexcept
 {
-    return bc_func[i];
+    return *bc_func[i];
 }
 
 void
@@ -369,8 +368,7 @@ StateDescriptor::setComponent (int    comp,
     int                               max_map_start_comp_,
     int                               min_map_end_comp_)
 {
-    bc_func.clear(comp);
-    bc_func.set(comp,func.clone());
+    bc_func[comp].reset(func.clone());
 
     names[comp]       = nm;
     bc[comp]          = bcr;
@@ -542,12 +540,12 @@ StateDescriptor::cleanUpMaps (Interpolater**& maps,
 
 std::vector< std::pair<int,int> >
 StateDescriptor::sameInterps (Vector<int> scompBC_map,
-                              int ncomp) const
+                              int ncomp_in) const
 {
-    if (ncomp<1)
-     amrex::Error("ncomp<1");
+    if (ncomp_in<1)
+     amrex::Error("ncomp_in<1");
 
-    if (scompBC_map.size()!=ncomp)
+    if (scompBC_map.size()!=ncomp_in)
      amrex::Error("scompBC_map has invalid size");
 
     std::vector< std::pair<int,int> > range;
@@ -557,7 +555,7 @@ StateDescriptor::sameInterps (Vector<int> scompBC_map,
     int SComp = 0;
     int NComp = 1;
 
-    for (int i = 1; i < ncomp; i++)
+    for (int i = 1; i < ncomp_in; i++)
     {
         if (map == interp(scompBC_map[i]))
         {
@@ -579,7 +577,7 @@ StateDescriptor::sameInterps (Vector<int> scompBC_map,
     int local_sum = 0;
     for (int i = 0; i < range.size(); i++)
         local_sum += range[i].second;
-    BL_ASSERT(local_sum == ncomp);
+    BL_ASSERT(local_sum == ncomp_in);
 #endif
 
     return range;

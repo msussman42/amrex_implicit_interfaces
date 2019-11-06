@@ -184,49 +184,49 @@ public:
     //
     // Returns the IndexType.
     //
-    IndexType getType () const;
+    IndexType getType () const noexcept;
     //
 
 
-    int nComp () const;
+    int nComp () const noexcept;
     //
     // Returns the grow factor.
     //
-    int nExtra () const;
+    int nExtra () const noexcept;
     //
     // Returns the interpolater.
     //
-    Interpolater* interp () const;
+    Interpolater* interp () const noexcept;
     //
     // Returns the interpolater of specified component.
     //
-    Interpolater* interp (int i) const;
+    Interpolater* interp (int i) const noexcept;
     //
     // Returns the name of specified component.
     //
-    const std::string& name (int i) const;
+    const std::string& name (int i) const noexcept;
     //
     // Returns the BCRec of specified component.
     //
-    const BCRec& getBC (int i) const;
+    const BCRec& getBC (int i) const noexcept;
     //
     // Returns all BCRecs.
     //
-    const Vector<BCRec>& getBCs () const;
+    const Vector<BCRec>& getBCs () const noexcept;
     //
     // Returns the BndryFunc of specified component.
     //
-    const BndryFunc& bndryFill (int i) const;
+    const BndryFunc& bndryFill (int i) const noexcept;
 
     void check_inRange (Vector<int> scompBC_map, int nc) const;
 
     std::vector< std::pair<int,int> > 
-      sameInterps (Vector<int> scompBC_map, int ncomp) const;
+      sameInterps (Vector<int> scompBC_map, int ncomp_in) const;
 
     //
     // Should store this StateData in the checkpoint file
     //
-    bool store_in_checkpoint () const;
+    bool store_in_checkpoint () const noexcept;
 
     bool master (int i) const { return m_master[i]; }
 
@@ -336,7 +336,7 @@ public:
     //
     // Returns StateDescriptor at index k.
     //
-    const StateDescriptor& operator[] (int k) const;
+    const StateDescriptor& operator[] (int k) const noexcept;
 
 private:
     //

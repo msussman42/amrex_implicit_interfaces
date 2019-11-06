@@ -37,11 +37,12 @@ public:
     //
     // Construct an invalid TagBox with no memory.
     //
-    TagBox ();
+    TagBox () noexcept;
     //
     // Construct a TagBox on Box bx with number of components n.
     //
-    explicit TagBox (const Box& bx, int n = 1, bool alloc = true, bool shared = false);
+    explicit TagBox (const Box& bx,
+	 int n = 1, bool alloc = true, bool shared = false);
     //
     // Construct and return a new tagbox in which the coarsened cell
     // is tagged of any of the corresponding fine cells are tagged.
@@ -118,7 +119,8 @@ public:
     //
     // The constructor.
     //
-    TagBoxArray (const BoxArray& bs, int _ngrow=0);
+    TagBoxArray (const BoxArray& bs,
+		 const DistributionMapping& tag_dm,int _ngrow=0);
     //
     // Returns the grow factor for the TagBoxArray.
     //
