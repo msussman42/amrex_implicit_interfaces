@@ -151,7 +151,8 @@ DistributionMapping::Initialize ()
         {
             std::string msg("Unknown strategy: ");
             msg += theStrategy;
-            amrex::Warning(msg.c_str());
+             //SUSSMAN
+            amrex::Error(msg.c_str());
         }
     }
     else
