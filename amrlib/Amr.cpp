@@ -1908,7 +1908,8 @@ Amr::defBaseLevel (Real strt_time)
 
      // SUSSMAN
     int nprocs=ParallelDescriptor::NProcs();
-    this->SetDistributionMap(0, DistributionMapping(lev0,nprocs));
+    DistributionMapping dm(lev0,nprocs);
+    this->SetDistributionMap(0, dm);
 
     //
     // Now build level 0 grids.
