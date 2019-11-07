@@ -307,15 +307,15 @@ class NSBld
     :
     public LevelBld
 {
-    virtual void variableSetUp ();
-    virtual void variableCleanUp ();
-    virtual AmrLevel *operator() ();
+    virtual void variableSetUp () override;
+    virtual void variableCleanUp () override;
+    virtual AmrLevel *operator() () override;
     virtual AmrLevel *operator() (Amr&            papa,
                                   int             lev,
                                   const Geometry& level_geom,
                                   const BoxArray& ba,
                                   const DistributionMapping& dm,
-                                  Real            time);
+                                  Real            time) override;
 };
 
 class blobclass

@@ -2,7 +2,7 @@
 
 #include <NavierStokes.H>
 
-namespace amrex{
+using namespace amrex;
 
 // --------------------------------------------------------------------
 // -----   NSBld class instantiation
@@ -38,10 +38,13 @@ NSBld::operator()()
 }
 
 AmrLevel*
-NSBld::operator()(Amr &papa, int lev, const Geometry &level_geom,
-   const BoxArray &ba,const DistributionMapping& dm,Real time)
+NSBld::operator()(Amr &papa, 
+		  int lev, 
+		  const Geometry &level_geom,
+                  const BoxArray &ba,
+		  const DistributionMapping& dm,
+		  Real time)
 {
     return new NavierStokes(papa, lev, level_geom, ba, dm, time);
 }
 
-}

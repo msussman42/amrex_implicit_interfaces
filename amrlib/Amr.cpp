@@ -178,10 +178,15 @@ Amr::RedistributeParticles ()
 
 Amr::Amr () {
 
+     // init default values for some parameters.
     Initialize();
+     // Geometry::Setup()
+     // levelbld = getLevelBld();
+     // ...
     InitAmr();
 
 }
+
 
 void
 Amr::InitAmr () {
@@ -198,10 +203,20 @@ Amr::InitAmr () {
     //
     // Determine physics class.
     //
+    if (1==1) {
+     std::cout << "levelbld = getLevelBld() on processor " <<
+         ParallelDescriptor::MyProc() << "\n";
+    }
+
+    //LevelBld* levelbld
     levelbld = getLevelBld();
     //
     // Global function that define state variables.
     //
+    if (1==1) {
+     std::cout << "levelbld->variableSetUp() on processor " <<
+         ParallelDescriptor::MyProc() << "\n";
+    }
     levelbld->variableSetUp();
     //
     // Set default values.
@@ -316,12 +331,6 @@ Amr::InitAmr () {
         setRecordDataInfo(i_data,data_file_names[i_data]);
     }
 
-    probin_file = "probin";  // Make "probin" the default
-
-    if (pp.contains("probin_file"))
-    {
-        pp.get("probin_file",probin_file);
-    }
     //
     // Restart or run from scratch?
     //

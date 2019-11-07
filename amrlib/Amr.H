@@ -286,7 +286,6 @@ protected:
     // OLD: PArray<std::ofstream> datalog;
     Vector<std::unique_ptr<std::fstream> > datalog;
     std::string      restart_file;
-    std::string      probin_file;
     LevelBld*        levelbld;
     //
     // The static data ...
