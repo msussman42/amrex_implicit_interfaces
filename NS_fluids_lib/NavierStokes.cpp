@@ -4934,6 +4934,15 @@ void NavierStokes::resize_FSI_GHOST_MF(int ngrow) {
   // do nothing
  } else if (localMF[FSI_GHOST_MF]->nGrow()>=0) {
 
+
+   //MultiFab=an array of FABS
+   //FAB="Fortran Array Block"
+   //This command allocates an array of grids in which the dimensions of 
+   //each grid is given by the BoxArray "grids".
+   //FArrayBox
+   //Box
+   //BoxArray
+   //MultiFab (derived from FabArray)
   MultiFab* save_ghost=
     new MultiFab(grids,dmap,nparts_ghost*AMREX_SPACEDIM,0,
      MFInfo().SetTag("save_ghost"),FArrayBoxFactory()); 
