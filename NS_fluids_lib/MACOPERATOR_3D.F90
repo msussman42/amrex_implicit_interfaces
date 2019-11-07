@@ -716,7 +716,7 @@ stop
  
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid110"
        stop
       endif
       if (bfact_f.lt.1) then

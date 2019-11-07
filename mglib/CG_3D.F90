@@ -8,7 +8,6 @@
 #include <AMReX_REAL.H>
 #include <AMReX_CONSTANTS.H>
 #include "AMReX_ArrayLim.H"
-
 #include "CG_F.H"
 
 !-----------------------------------------------------------------------
@@ -31,20 +30,21 @@
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T tilelo(AMREX_SPACEDIM)
-      INTEGER_T tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM)
-      INTEGER_T fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(pp)
-      REAL_T pp(DIMV(pp))
-      INTEGER_T DIMDEC(phi)
-      REAL_T phi(DIMV(phi))
-      INTEGER_T DIMDEC(yy)
-      REAL_T yy(DIMV(yy))
-      REAL_T a
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3)
+      INTEGER_T :: growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(pp)
+      REAL_T, intent(in) :: pp(DIMV(pp))
+      INTEGER_T, intent(in) :: DIMDEC(phi)
+      REAL_T, intent(out) :: phi(DIMV(phi))
+      INTEGER_T, intent(in) :: DIMDEC(yy)
+      REAL_T, intent(in) :: yy(DIMV(yy))
+      REAL_T, intent(in) :: a
+
       INTEGER_T i,j,k
 
       if (bfact.lt.1) then
@@ -94,20 +94,21 @@
       use global_utility_module
       IMPLICIT NONE
 !
-      INTEGER_T tilelo(AMREX_SPACEDIM)
-      INTEGER_T tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM)
-      INTEGER_T fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(rr)
-      REAL_T rr(DIMV(rr))
-      INTEGER_T DIMDEC(pp)
-      REAL_T pp(DIMV(pp))
-      INTEGER_T DIMDEC(yy)
-      REAL_T yy(DIMV(yy))
-      REAL_T b
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3)
+      INTEGER_T :: growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(rr)
+      REAL_T, intent(in) :: rr(DIMV(rr))
+      INTEGER_T, intent(in) :: DIMDEC(pp)
+      REAL_T, intent(out) :: pp(DIMV(pp))
+      INTEGER_T, intent(in) :: DIMDEC(yy)
+      REAL_T, intent(in) :: yy(DIMV(yy))
+      REAL_T, intent(in) :: b
+
       INTEGER_T i,j,k
 !
       call checkbound(fablo,fabhi, &
@@ -162,31 +163,37 @@
        fablo,fabhi,bfact,bfact_top)
       use global_utility_module
       IMPLICIT NONE
-      INTEGER_T ncomp
-      INTEGER_T tilelo(AMREX_SPACEDIM)
-      INTEGER_T tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM)
-      INTEGER_T fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(ww)
-      REAL_T ww(DIMV(ww),ncomp)
-      INTEGER_T DIMDEC(pp)
-      REAL_T pp(DIMV(pp),ncomp)
-      REAL_T pw
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3)
+      INTEGER_T :: growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(ww)
+      REAL_T, intent(in) :: ww(DIMV(ww),ncomp)
+      INTEGER_T, intent(in) :: DIMDEC(pp)
+      REAL_T, intent(in) :: pp(DIMV(pp),ncomp)
+      REAL_T, intent(out) :: pw
 !
       INTEGER_T i, j, k,veldir
 !
-      if (bfact.lt.1) then
+      if (bfact.ge.1) then
+       ! do nothing
+      else
        print *,"bfact invalid"
        stop
       endif
-      if (bfact_top.lt.1) then
+      if (bfact_top.ge.1) then
+       ! do nothing
+      else
        print *,"bfact_top invalid"
        stop
       endif
-      if ((ncomp.ne.1).and.(ncomp.ne.AMREX_SPACEDIM)) then
+      if ((ncomp.eq.1).or.(ncomp.eq.AMREX_SPACEDIM)) then
+       ! do nothing
+      else
        print *,"ncomp invalid"
        stop
       endif

@@ -827,7 +827,7 @@ stop
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -1020,7 +1020,7 @@ stop
         else if (bfact.eq.16) then
          flux_tol=1.0D-5
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid200"
          stop
         endif
 
@@ -1321,7 +1321,7 @@ stop
       REAL_T LL(0:1)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -8993,7 +8993,7 @@ stop
       INTEGER_T dir,side,ii,jj,kk
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.3) then
@@ -10437,7 +10437,7 @@ END SUBROUTINE Adist
 
       nhalf2=1
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.3) then
@@ -10602,7 +10602,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -10721,7 +10721,7 @@ END SUBROUTINE Adist
       INTEGER_T nmat
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.1) then
@@ -10853,7 +10853,7 @@ END SUBROUTINE Adist
       nhalf2=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.1) then
@@ -11098,7 +11098,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -13133,7 +13133,7 @@ END SUBROUTINE Adist
        nhalf_star=1
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        if (nhalf.lt.1) then
@@ -13366,7 +13366,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -13660,7 +13660,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -14334,7 +14334,7 @@ END SUBROUTINE Adist
       im_solid_microfluidic=im_solid_primary()
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.3) then
@@ -14790,7 +14790,7 @@ END SUBROUTINE Adist
       REAL_T xmin,xmax,ymin,ymax,temprad
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.1) then
@@ -14884,7 +14884,7 @@ END SUBROUTINE Adist
       im_solid_materialdist=im_solid_primary()
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.1) then
@@ -15761,7 +15761,7 @@ END SUBROUTINE Adist
       REAL_T, dimension(:), allocatable :: distbatch
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       nmat=num_materials
@@ -15845,7 +15845,7 @@ END SUBROUTINE Adist
 
       nhalf2=1
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.3) then
@@ -15929,7 +15929,7 @@ END SUBROUTINE Adist
 
       nhalf2=1
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.3) then
@@ -16040,7 +16040,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -16621,7 +16621,7 @@ END SUBROUTINE Adist
        stop
       endif 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif 
       call get_dxmax(dx,bfact,dxmax)
@@ -16739,7 +16739,7 @@ END SUBROUTINE Adist
       REAL_T drat,veltop,velbot,ytop,ybot,y2d
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       x=xsten(0,1)
@@ -18011,7 +18011,7 @@ END SUBROUTINE Adist
 
       nhalf2=1
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.3) then
@@ -18096,7 +18096,7 @@ END SUBROUTINE Adist
       REAL_T velleft,velright
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.3) then
@@ -18149,7 +18149,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -18242,7 +18242,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       x=xsten(0,1)
@@ -18433,7 +18433,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       x=xsten(0,1)
@@ -19047,7 +19047,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if ((im.lt.0).or.(im.ge.num_materials)) then
@@ -19147,7 +19147,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -20326,7 +20326,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.2) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if ((bfact_c.ne.bfact).and.(bfact_c.ne.2*bfact)) then
@@ -23156,7 +23156,7 @@ END SUBROUTINE Adist
       ntensorMM=ntensor*num_materials_vel
 
       if (bfact.lt.1) then
-       print *,"bfact invalid mac to cell"
+       print *,"bfact invalid200 mac to cell"
        stop
       endif
 
@@ -23775,7 +23775,7 @@ END SUBROUTINE Adist
           (bfact.ge.1)) then
        ! do nothing
       else
-       print *,"dir_main or bfact invalid in SEM_MAC_TO_CELL"
+       print *,"dir_main or bfact invalid200 in SEM_MAC_TO_CELL"
        stop
       endif
 
@@ -24874,7 +24874,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       x=xsten(0,1)
@@ -25983,7 +25983,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       x=xsten(0,1)
@@ -26072,7 +26072,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       x=xsten(0,1)
@@ -26186,7 +26186,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       x=xsten(0,1)
@@ -26899,7 +26899,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if ((im.le.0).or.(im.gt.num_materials)) then
@@ -27788,7 +27788,7 @@ END SUBROUTINE Adist
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if ((ipart.lt.1).or.(ipart.gt.num_materials_viscoelastic)) then
@@ -28325,7 +28325,7 @@ END SUBROUTINE Adist
       INTEGER_T nmat
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nhalf.lt.1) then
@@ -30081,7 +30081,7 @@ end subroutine RatePhaseChange
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -30215,7 +30215,7 @@ end subroutine RatePhaseChange
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -30341,7 +30341,7 @@ end subroutine RatePhaseChange
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -33524,7 +33524,7 @@ end subroutine initialize2d
 
       nhalf=1
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -33785,7 +33785,7 @@ end subroutine initialize2d
 
       nhalf=3
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (ncomp.ne.1) then
@@ -33931,7 +33931,7 @@ end subroutine initialize2d
 
       nhalf=3
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (num_materials_vel.ne.1) then
@@ -34076,7 +34076,7 @@ end subroutine initialize2d
 
       nhalf=3
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (ncomp.ne.1) then
@@ -34238,7 +34238,7 @@ end subroutine initialize2d
 
       nhalf=3
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (num_materials_vel.ne.1) then
@@ -34459,7 +34459,7 @@ end subroutine initialize2d
  
       nhalf=3 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
  
@@ -34854,7 +34854,7 @@ end subroutine initialize2d
 
        nhalf=3
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        nmat=num_materials
@@ -35037,7 +35037,7 @@ end subroutine initialize2d
 
        nhalf=3
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        nmat=num_materials
@@ -35234,7 +35234,7 @@ end subroutine initialize2d
        endif
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        nmat=num_materials
@@ -35473,7 +35473,7 @@ end subroutine initialize2d
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
 
@@ -35650,7 +35650,7 @@ end subroutine initialize2d
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
 
@@ -35908,7 +35908,7 @@ end subroutine initialize2d
 #endif
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
 
@@ -36105,7 +36105,7 @@ end subroutine initialize2d
 
        nhalf=3
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -36269,7 +36269,7 @@ end subroutine initialize2d
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
 
@@ -36394,7 +36394,7 @@ end subroutine initialize2d
 
        nhalf=3
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -36525,7 +36525,7 @@ end subroutine initialize2d
 
        nhalf=3
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -36692,7 +36692,7 @@ end subroutine initialize2d
 
        nhalf=3
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -36845,7 +36845,7 @@ end subroutine initialize2d
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
        if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -36982,7 +36982,7 @@ end subroutine initialize2d
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
 
@@ -37127,7 +37127,7 @@ end subroutine initialize2d
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid200"
         stop
        endif
 
@@ -37491,7 +37491,7 @@ end subroutine initialize2d
        do ilev=0,max_level
         if ((bfact_space_level(ilev).lt.1).or. &
             (bfact_grid_level(ilev).lt.2)) then
-         print *,"bfact invalid in initgridmap"
+         print *,"bfact invalid200 in initgridmap"
          stop
         endif
         if (bfact_space_level(ilev).gt.bfactmax) then
@@ -38955,7 +38955,7 @@ end subroutine initialize2d
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -40830,7 +40830,7 @@ end subroutine initialize2d
       nhalf=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 
@@ -41254,7 +41254,7 @@ end subroutine initialize2d
       weight_factor=six
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid200"
        stop
       endif
 

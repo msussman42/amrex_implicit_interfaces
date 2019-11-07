@@ -4,19 +4,24 @@
 #endif
 
 #include <AMReX_REAL.H>
-#include "AMReX_CONSTANTS.H"
+
 #include "AMReX_SPACE.H"
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
+#include "AMReX_CONSTANTS.H"
 #include "ABec_F.H"
 
 
       subroutine FORT_GSRB( &
+       level, &
+       mg_coarsest_level, &
        isweep, &
        num_sweeps, & 
        offdiag_coeff, &
        check_for_singular, &
        diag_regularization, &
+       masksing, &
+       DIMS(masksing), &
        phi,DIMS(phi), &
        rhs,DIMS(rhs), &
        diagnonsing, &
@@ -33,44 +38,51 @@
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T isweep
-      INTEGER_T num_sweeps
-      INTEGER_T check_for_singular
-      REAL_T offdiag_coeff
-      REAL_T diag_regularization
-      INTEGER_T tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(phi)
-      INTEGER_T DIMDEC(rhs)
-      INTEGER_T DIMDEC(diagnonsing)
 
-      REAL_T  phi(DIMV(phi))
-      REAL_T  rhs(DIMV(rhs))
-      REAL_T  diagnonsing(DIMV(diagnonsing))
-      REAL_T  diagsing(DIMV(diagnonsing))
-      REAL_T bxleft(DIMV(diagnonsing))
-      REAL_T bxright(DIMV(diagnonsing))
-      REAL_T byleft(DIMV(diagnonsing))
-      REAL_T byright(DIMV(diagnonsing))
-      REAL_T bzleft(DIMV(diagnonsing))
-      REAL_T bzright(DIMV(diagnonsing))
-      REAL_T icbx(DIMV(diagnonsing))
-      REAL_T icby(DIMV(diagnonsing))
-      REAL_T icbz(DIMV(diagnonsing))
-      REAL_T icdiag(DIMV(diagnonsing))
-      REAL_T icdiagrb(DIMV(diagnonsing))
-      REAL_T mask(DIMV(diagnonsing))
-      REAL_T ax(DIMV(diagnonsing))
-      REAL_T solnsave(DIMV(diagnonsing))
-      REAL_T rhssave(DIMV(diagnonsing))
-      REAL_T redsoln(DIMV(diagnonsing))
-      REAL_T blacksoln(DIMV(diagnonsing))
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: mg_coarsest_level
+      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, intent(in) :: num_sweeps
+      INTEGER_T, intent(in) :: check_for_singular
+      REAL_T, intent(in) :: offdiag_coeff
+      REAL_T, intent(in) :: diag_regularization
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(masksing)
+      INTEGER_T, intent(in) :: DIMDEC(phi)
+      INTEGER_T, intent(in) :: DIMDEC(rhs)
+      INTEGER_T, intent(in) :: DIMDEC(diagnonsing)
 
-      INTEGER_T i,j,k,smooth_type
+      REAL_T, intent(in) :: masksing(DIMV(masksing))
+      REAL_T, intent(inout) :: phi(DIMV(phi))
+      REAL_T, intent(in) :: rhs(DIMV(rhs))
+      REAL_T, intent(in) :: diagnonsing(DIMV(diagnonsing))
+      REAL_T, intent(in) :: diagsing(DIMV(diagnonsing))
+      REAL_T, intent(in) :: bxleft(DIMV(diagnonsing))
+      REAL_T, intent(in) :: bxright(DIMV(diagnonsing))
+      REAL_T, intent(in) :: byleft(DIMV(diagnonsing))
+      REAL_T, intent(in) :: byright(DIMV(diagnonsing))
+      REAL_T, intent(in) :: bzleft(DIMV(diagnonsing))
+      REAL_T, intent(in) :: bzright(DIMV(diagnonsing))
+      REAL_T, intent(in) :: icbx(DIMV(diagnonsing))
+      REAL_T, intent(in) :: icby(DIMV(diagnonsing))
+      REAL_T, intent(in) :: icbz(DIMV(diagnonsing))
+      REAL_T, intent(in) :: icdiag(DIMV(diagnonsing))
+      REAL_T, intent(in) :: icdiagrb(DIMV(diagnonsing))
+      REAL_T, intent(in) :: mask(DIMV(diagnonsing))
+      REAL_T, intent(out) :: ax(DIMV(diagnonsing))
+      REAL_T, intent(inout) :: solnsave(DIMV(diagnonsing))
+      REAL_T, intent(inout) :: rhssave(DIMV(diagnonsing))
+      REAL_T, intent(inout) :: redsoln(DIMV(diagnonsing))
+      REAL_T, intent(inout) :: blacksoln(DIMV(diagnonsing))
+      INTEGER_T, intent(in) :: smooth_type
+
+      INTEGER_T i,j,k
       REAL_T XX,YY
       REAL_T local_diag
+      REAL_T test_mask
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -78,6 +90,12 @@
       endif
       if (bfact_top.lt.1) then
        print *,"bfact_top invalid"
+       stop
+      endif
+      if ((level.ge.0).and.(level.le.mg_coarsest_level)) then
+       ! do nothing
+      else
+       print *,"level or mg_coarsest_level invalid"
        stop
       endif
 
@@ -100,6 +118,7 @@
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(masksing),1,-1,81)
       call checkbound(fablo,fabhi,DIMS(phi),1,-1,18)
       call checkbound(fablo,fabhi,DIMS(diagnonsing),1,-1,19)
       call checkbound(fablo,fabhi,DIMS(rhs),0,-1,23)
@@ -189,7 +208,12 @@
 
           local_diag=diagnonsing(D_DECL(i,j,k))
 
-          redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
+          if (local_diag.ne.zero) then
+           redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
+          else
+           print *,"local_diag invalid 1"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -216,16 +240,21 @@
 
           local_diag=diagnonsing(D_DECL(i,j,k))
 
-          blacksoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
-           bxleft(D_DECL(i,j,k))*redsoln(D_DECL(i-1,j,k))+ &
-           bxright(D_DECL(i,j,k))*redsoln(D_DECL(i+1,j,k))+ &
-           byleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))+ &
-           byright(D_DECL(i,j,k))*redsoln(D_DECL(i,j+1,k)) &
+          if (local_diag.ne.zero) then
+           blacksoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
+            bxleft(D_DECL(i,j,k))*redsoln(D_DECL(i-1,j,k))+ &
+            bxright(D_DECL(i,j,k))*redsoln(D_DECL(i+1,j,k))+ &
+            byleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))+ &
+            byright(D_DECL(i,j,k))*redsoln(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-          +bzleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))+ &
-           bzright(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k+1)) &
+           +bzleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))+ &
+            bzright(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k+1)) &
 #endif
-          )/local_diag
+           )/local_diag
+          else
+           print *,"local_diag invalid 2"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -252,16 +281,21 @@
 
           local_diag=diagnonsing(D_DECL(i,j,k))
 
-          redsoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
-           bxleft(D_DECL(i,j,k))*blacksoln(D_DECL(i-1,j,k))+ &
-           bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
-           byleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j-1,k))+ &
-           byright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j+1,k)) &
+          if (local_diag.ne.zero) then
+           redsoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
+            bxleft(D_DECL(i,j,k))*blacksoln(D_DECL(i-1,j,k))+ &
+            bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
+            byleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j-1,k))+ &
+            byright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-          +bzleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k-1))+ &
-           bzright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k+1)) &
+           +bzleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k-1))+ &
+            bzright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k+1)) &
 #endif
-          )/local_diag
+           )/local_diag
+          else
+           print *,"local_diag invalid 3"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -334,7 +368,12 @@
 
           local_diag=diagnonsing(D_DECL(i,j,k))
 
-          redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
+          if (local_diag.ne.zero) then
+           redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
+          else
+           print *,"local_diag invalid 4"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -401,8 +440,14 @@
          do k=growlo(3),growhi(3)
          do j=growlo(2),growhi(2)
          do i=growlo(1),growhi(1)
-          blacksoln(D_DECL(i,j,k))= &
-           redsoln(D_DECL(i,j,k))/icdiag(D_DECL(i,j,k))
+          local_diag=icdiag(D_DECL(i,j,k))
+          if (local_diag.ne.zero) then
+           blacksoln(D_DECL(i,j,k))= &
+            redsoln(D_DECL(i,j,k))/local_diag
+          else
+           print *,"local_diag invalid 5"
+           stop
+          endif
          enddo 
          enddo 
          enddo 
@@ -494,7 +539,12 @@
 
           local_diag=diagnonsing(D_DECL(i,j,k))
 
-          redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
+          if (local_diag.ne.zero) then
+           redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
+          else
+           print *,"local_diag invalid 6"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -503,16 +553,22 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          blacksoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
-           bxleft(D_DECL(i,j,k))*redsoln(D_DECL(i-1,j,k))+ &
-           bxright(D_DECL(i,j,k))*redsoln(D_DECL(i+1,j,k))+ &
-           byleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))+ &
-           byright(D_DECL(i,j,k))*redsoln(D_DECL(i,j+1,k)) &
+          local_diag=icdiagrb(D_DECL(i,j,k))
+          if (local_diag.ne.zero) then
+           blacksoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
+            bxleft(D_DECL(i,j,k))*redsoln(D_DECL(i-1,j,k))+ &
+            bxright(D_DECL(i,j,k))*redsoln(D_DECL(i+1,j,k))+ &
+            byleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))+ &
+            byright(D_DECL(i,j,k))*redsoln(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-          +bzleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))+ &
-           bzright(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k+1)) &
+            +bzleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))+ &
+            bzright(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k+1)) &
 #endif
-          )/icdiagrb(D_DECL(i,j,k))
+           )/local_diag
+          else
+           print *,"local_diag invalid 7"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -539,16 +595,21 @@
 
           local_diag=diagnonsing(D_DECL(i,j,k))
 
-          redsoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
-           bxleft(D_DECL(i,j,k))*blacksoln(D_DECL(i-1,j,k))+ &
-           bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
-           byleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j-1,k))+ &
-           byright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j+1,k)) &
+          if (local_diag.ne.zero) then
+           redsoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
+            bxleft(D_DECL(i,j,k))*blacksoln(D_DECL(i-1,j,k))+ &
+            bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
+            byleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j-1,k))+ &
+            byright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-          +bzleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k-1))+ &
-           bzright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k+1)) &
+            +bzleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k-1))+ &
+             bzright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k+1)) &
 #endif
-          )/local_diag
+           )/local_diag
+          else
+           print *,"local_diag invalid 8"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -577,7 +638,15 @@
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        phi(D_DECL(i,j,k))=phi(D_DECL(i,j,k))+solnsave(D_DECL(i,j,k))
+        test_mask=masksing(D_DECL(i,j,k))
+        if (test_mask.eq.zero) then
+         phi(D_DECL(i,j,k))=zero
+        else if (test_mask.eq.one) then
+         phi(D_DECL(i,j,k))=phi(D_DECL(i,j,k))+solnsave(D_DECL(i,j,k))
+        else
+         print *,"test_mask invalid in gsrb"
+         stop
+        endif
        enddo
        enddo
        enddo
@@ -590,9 +659,13 @@
       end subroutine FORT_GSRB
 
       subroutine FORT_ADOTX( &
+       level, &
+       mg_coarsest_level, &
        offdiag_coeff, &
        check_for_singular, &
        diag_regularization, &
+       masksing, &
+       DIMS(masksing), &
        y,DIMS(y), &
        x,DIMS(x), &
        diagnonsing, &
@@ -606,29 +679,35 @@
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T check_for_singular
-      REAL_T offdiag_coeff
-      REAL_T diag_regularization
-      INTEGER_T tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(y)
-      INTEGER_T DIMDEC(x)
-      INTEGER_T DIMDEC(diagnonsing)
 
-      REAL_T  y(DIMV(y))
-      REAL_T  x(DIMV(x))
-      REAL_T  diagnonsing(DIMV(diagnonsing))
-      REAL_T  diagsing(DIMV(diagnonsing))
-      REAL_T bxleft(DIMV(diagnonsing))
-      REAL_T bxright(DIMV(diagnonsing))
-      REAL_T byleft(DIMV(diagnonsing))
-      REAL_T byright(DIMV(diagnonsing))
-      REAL_T bzleft(DIMV(diagnonsing))
-      REAL_T bzright(DIMV(diagnonsing))
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: mg_coarsest_level
+      INTEGER_T, intent(in) :: check_for_singular
+      REAL_T, intent(in) :: offdiag_coeff
+      REAL_T, intent(in) :: diag_regularization
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(masksing)
+      INTEGER_T, intent(in) :: DIMDEC(y)
+      INTEGER_T, intent(in) :: DIMDEC(x)
+      INTEGER_T, intent(in) :: DIMDEC(diagnonsing)
+
+      REAL_T, intent(in) :: masksing(DIMV(masksing))
+      REAL_T, intent(out) :: y(DIMV(y))
+      REAL_T, intent(in) :: x(DIMV(x))
+      REAL_T, intent(in) :: diagnonsing(DIMV(diagnonsing))
+      REAL_T, intent(in) :: diagsing(DIMV(diagnonsing))
+      REAL_T, intent(in) :: bxleft(DIMV(diagnonsing))
+      REAL_T, intent(in) :: bxright(DIMV(diagnonsing))
+      REAL_T, intent(in) :: byleft(DIMV(diagnonsing))
+      REAL_T, intent(in) :: byright(DIMV(diagnonsing))
+      REAL_T, intent(in) :: bzleft(DIMV(diagnonsing))
+      REAL_T, intent(in) :: bzright(DIMV(diagnonsing))
 
       INTEGER_T i,j,k
+      REAL_T test_mask
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -636,6 +715,12 @@
       endif
       if (bfact_top.lt.1) then
        print *,"bfact_top invalid"
+       stop
+      endif
+      if ((level.ge.0).and.(level.le.mg_coarsest_level)) then
+       ! do nothing
+      else
+       print *,"level or mg_coarsest_level invalid"
        stop
       endif
 
@@ -658,6 +743,7 @@
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(masksing),1,-1,81)
       call checkbound(fablo,fabhi, &
       DIMS(y), &
       0,-1,18)
@@ -673,16 +759,24 @@
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       y(D_DECL(i,j,k))= &
-        diagsing(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
-        bxleft(D_DECL(i,j,k))*x(D_DECL(i-1,j,k))- &
-        bxright(D_DECL(i,j,k))*x(D_DECL(i+1,j,k)) &
+       test_mask=masksing(D_DECL(i,j,k))
+       if (test_mask.eq.zero) then
+        y(D_DECL(i,j,k))=zero
+       else if (test_mask.eq.one) then
+        y(D_DECL(i,j,k))= &
+         diagsing(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
+         bxleft(D_DECL(i,j,k))*x(D_DECL(i-1,j,k))- &
+         bxright(D_DECL(i,j,k))*x(D_DECL(i+1,j,k)) &
 #if (AMREX_SPACEDIM==3)
-        -bzleft(D_DECL(i,j,k))*x(D_DECL(i,j,k-1))- &
-        bzright(D_DECL(i,j,k))*x(D_DECL(i,j,k+1)) &
+         -bzleft(D_DECL(i,j,k))*x(D_DECL(i,j,k-1))- &
+         bzright(D_DECL(i,j,k))*x(D_DECL(i,j,k+1)) &
 #endif
-        -byleft(D_DECL(i,j,k))*x(D_DECL(i,j-1,k))- &
-        byright(D_DECL(i,j,k))*x(D_DECL(i,j+1,k)) 
+         -byleft(D_DECL(i,j,k))*x(D_DECL(i,j-1,k))- &
+         byright(D_DECL(i,j,k))*x(D_DECL(i,j+1,k)) 
+       else
+        print *,"test_mask invalid in adotx"
+        stop
+       endif
       enddo
       enddo
       enddo

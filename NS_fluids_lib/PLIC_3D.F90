@@ -172,7 +172,7 @@ stop
       nhalfbox=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid170"
        stop
       endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2

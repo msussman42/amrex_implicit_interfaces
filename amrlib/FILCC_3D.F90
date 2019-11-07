@@ -29,7 +29,7 @@
       INTEGER_T    i, j, k
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid710"
        stop
       endif
 
@@ -338,7 +338,7 @@
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid711"
        stop
       endif
 
@@ -658,7 +658,7 @@
       INTEGER_T    kfirst,klast
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid712"
        stop
       endif
 

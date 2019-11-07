@@ -588,7 +588,7 @@ stop
        testgridno=gridno_array(iz_gb+1)
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid150"
         stop
        endif
        if (testlev.ne.ilev) then
@@ -1367,7 +1367,7 @@ END SUBROUTINE SIMP
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid151"
        stop
       endif
 
@@ -3555,7 +3555,7 @@ END SUBROUTINE SIMP
           xstenND(-1,dir)=xstenND(0,dir)-dxmin
           xstenND(1,dir)=xstenND(0,dir)+dxmin
          else
-          print *,"bfact invalid"
+          print *,"bfact invalid152"
           stop
          endif
          xposnd(dir)=xstenND(0,dir)
@@ -3658,7 +3658,7 @@ END SUBROUTINE SIMP
             stop
            endif
           else
-           print *,"bfact invalid"
+           print *,"bfact invalid153"
            stop
           endif
 
@@ -3972,7 +3972,7 @@ END SUBROUTINE SIMP
          endif
 
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid154"
          stop
         endif
 
@@ -4629,7 +4629,7 @@ END SUBROUTINE SIMP
           enddo
 
          else
-          print *,"bfact invalid"
+          print *,"bfact invalid155"
           stop
          endif
 
@@ -5100,7 +5100,7 @@ END SUBROUTINE SIMP
         testgridno=gridno_array(iz_gb+1)
 
         if (bfact.lt.1) then
-         print *,"bfact invalid"
+         print *,"bfact invalid156"
          stop
         endif
         if (testlev.ne.ilev) then
@@ -10460,7 +10460,7 @@ END SUBROUTINE SIMP
        INTEGER_T i,j,k
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid157"
         stop
        endif
        if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
@@ -10605,7 +10605,7 @@ END SUBROUTINE SIMP
        INTEGER_T i,j,k
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid158"
         stop
        endif
        if (offdiag_nonsing_level.gt.zero) then
@@ -10930,7 +10930,7 @@ END SUBROUTINE SIMP
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid159"
        stop
       endif
       if (ngrow.ne.1) then
@@ -11221,7 +11221,7 @@ END SUBROUTINE SIMP
       nhalf=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid160"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -11602,7 +11602,7 @@ END SUBROUTINE SIMP
        stop
       endif 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid161"
        stop
       endif
 
@@ -11903,7 +11903,7 @@ END SUBROUTINE SIMP
       INTEGER_T vofcomp
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid162"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -12080,7 +12080,7 @@ END SUBROUTINE SIMP
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid163"
        stop
       endif
       if (num_materials_vel.ne.1) then
@@ -12301,7 +12301,7 @@ END SUBROUTINE SIMP
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid164"
        stop
       endif
       if (nmat.eq.num_materials) then
@@ -12837,7 +12837,7 @@ END SUBROUTINE SIMP
       INTEGER_T sound_comp
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid165"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -12994,7 +12994,7 @@ END SUBROUTINE SIMP
       endif
 
       if (bfact_c.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid166"
        stop
       endif
       if (bfact_f.lt.1) then
@@ -13482,7 +13482,7 @@ END SUBROUTINE SIMP
 
       nhalf=3
       if (bfact.lt.1) then
-       print *,"bfact invalid" 
+       print *,"bfact invalid167" 
        stop
       endif
       if (levelrz.ne.rzflag) then 

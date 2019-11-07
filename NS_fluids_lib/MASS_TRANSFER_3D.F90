@@ -237,7 +237,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid112"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -666,7 +666,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then 
-       print *,"bfact invalid"
+       print *,"bfact invalid113"
        stop
       endif
       if ((comp.lt.1).or.(comp.gt.1000)) then
@@ -854,7 +854,7 @@ stop
       endif
 
       if (bfact.lt.1) then 
-       print *,"bfact invalid"
+       print *,"bfact invalid114"
        stop
       endif
       if ((comp.lt.1).or.(comp.gt.1000)) then
@@ -955,7 +955,7 @@ stop
       call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
 
       if (bfact.lt.1) then 
-       print *,"bfact invalid"
+       print *,"bfact invalid115"
        stop
       endif
       if ((comp.lt.1).or.(comp.gt.1000)) then
@@ -1049,7 +1049,7 @@ stop
 
 
       if (bfact.lt.1) then 
-       print *,"bfact invalid"
+       print *,"bfact invalid116"
        stop
       endif
       if (ngrow.lt.1) then
@@ -1213,7 +1213,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid117"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -3327,7 +3327,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid118"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then

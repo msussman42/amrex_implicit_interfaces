@@ -255,7 +255,7 @@ stop
        endif
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid8"
         stop
        endif
        if (nmat.ne.num_materials) then
@@ -694,7 +694,7 @@ stop
        endif
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid9"
         stop
        endif
        if (nmat.ne.num_materials) then
@@ -878,7 +878,7 @@ stop
        endif
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid10"
         stop
        endif
        if (nmat.ne.num_materials) then

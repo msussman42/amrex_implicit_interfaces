@@ -1937,7 +1937,7 @@ end subroutine nozzle2d
       stop
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid11"
        stop
       endif
       nmat=num_materials

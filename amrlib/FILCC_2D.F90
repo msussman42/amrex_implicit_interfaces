@@ -39,7 +39,7 @@
       je = min(ARG_H2(q),domhi(2))
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid700"
        stop
       endif
 
@@ -213,7 +213,7 @@
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid701"
        stop
       endif
       nlft = max(0,domlo(1)-ARG_L1(q))
@@ -412,7 +412,7 @@
       INTEGER_T    kfirst,klast
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid702"
        stop
       endif
       is = max(ARG_L1(q),domlo(1))

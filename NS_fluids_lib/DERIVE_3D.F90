@@ -97,7 +97,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid1"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -321,7 +321,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid2"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -578,7 +578,7 @@ stop
       REAL_T traceA,modtime,viscoelastic_coeff
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid3"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -991,7 +991,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid4"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -1407,7 +1407,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(drag),0,-1,6607)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid5"
        stop
       endif
       if (visc_coef.lt.zero) then
@@ -2310,7 +2310,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid6"
        stop
       endif
       do im=1,nmat
@@ -2576,7 +2576,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid7"
        stop
       endif
       do im=1,nmat

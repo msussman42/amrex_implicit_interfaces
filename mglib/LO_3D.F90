@@ -26,7 +26,7 @@
        offdiag_coeff, &
        check_for_singular, &
        diag_regularization, &
-       solvemask, &
+       solvemask, &  ! ones_mf
        DIMS(solvemask),  &
        a,DIMS(a),  &
        bx,DIMS(bx), &
@@ -44,50 +44,51 @@
        fablo,fabhi,bfact,bfact_top)
       use global_utility_module
       IMPLICIT NONE
-      INTEGER_T level
-      INTEGER_T veldir
-      INTEGER_T nsolve
-      INTEGER_T isweep
-      INTEGER_T check_for_singular
-      REAL_T offdiag_coeff
-      REAL_T diag_regularization
-      INTEGER_T tilelo(AMREX_SPACEDIM)
-      INTEGER_T tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM)
-      INTEGER_T fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(solvemask)
-      INTEGER_T DIMDEC(a)
-      INTEGER_T DIMDEC(work)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(bx)
-      INTEGER_T DIMDEC(by)
-      INTEGER_T DIMDEC(bz)
-      REAL_T bx(DIMV(bx))
-      REAL_T by(DIMV(by))
-      REAL_T bz(DIMV(bz))
-      REAL_T solvemask(DIMV(solvemask))
-      REAL_T a(DIMV(a))
-      REAL_T diag_non_sing(DIMV(work))
-      REAL_T diag_sing(DIMV(work))
-      REAL_T bxleft(DIMV(work))
-      REAL_T bxright(DIMV(work))
-      REAL_T byleft(DIMV(work))
-      REAL_T byright(DIMV(work))
-      REAL_T bzleft(DIMV(work))
-      REAL_T bzright(DIMV(work))
-      REAL_T icbx(DIMV(work))
-      REAL_T icby(DIMV(work))
-      REAL_T icbz(DIMV(work))
-      REAL_T icdiag(DIMV(work))
-      REAL_T icdiagrb(DIMV(work))
-      REAL_T mask(DIMV(mask))
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: veldir
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, intent(in) :: check_for_singular
+      REAL_T, intent(in) :: offdiag_coeff
+      REAL_T, intent(in) :: diag_regularization
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3)
+      INTEGER_T :: growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(solvemask)
+      INTEGER_T, intent(in) :: DIMDEC(a)
+      INTEGER_T, intent(in) :: DIMDEC(work)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(bx)
+      INTEGER_T, intent(in) :: DIMDEC(by)
+      INTEGER_T, intent(in) :: DIMDEC(bz)
+      REAL_T, intent(inout) :: bx(DIMV(bx))
+      REAL_T, intent(inout) :: by(DIMV(by))
+      REAL_T, intent(inout) :: bz(DIMV(bz))
+      REAL_T, intent(inout) :: solvemask(DIMV(solvemask))
+      REAL_T, intent(inout) :: a(DIMV(a))
+      REAL_T, intent(inout) :: diag_non_sing(DIMV(work))
+      REAL_T, intent(inout) :: diag_sing(DIMV(work))
+      REAL_T, intent(inout) :: bxleft(DIMV(work))
+      REAL_T, intent(inout) :: bxright(DIMV(work))
+      REAL_T, intent(inout) :: byleft(DIMV(work))
+      REAL_T, intent(inout) :: byright(DIMV(work))
+      REAL_T, intent(inout) :: bzleft(DIMV(work))
+      REAL_T, intent(inout) :: bzright(DIMV(work))
+      REAL_T, intent(inout) :: icbx(DIMV(work))
+      REAL_T, intent(inout) :: icby(DIMV(work))
+      REAL_T, intent(inout) :: icbz(DIMV(work))
+      REAL_T, intent(inout) :: icdiag(DIMV(work))
+      REAL_T, intent(out) :: icdiagrb(DIMV(work))
+      REAL_T, intent(out) :: mask(DIMV(mask))
+
       INTEGER_T i,j,k,ioff
       REAL_T offdiagsum
       REAL_T local_diag
-      REAL_T testmask
+      REAL_T test_mask
       REAL_T DD
       REAL_T dtau_factor,dtau
       REAL_T mask_cen
@@ -96,11 +97,15 @@
 
       dtau_factor=0.001
 
-      if (bfact.lt.1) then
+      if (bfact.ge.1) then
+       ! do nothing
+      else
        print *,"bfact invalid"
        stop
       endif
-      if (bfact_top.lt.1) then
+      if (bfact_top.ge.1) then
+       ! do nothing
+      else
        print *,"bfact_top invalid"
        stop
       endif
@@ -157,12 +162,20 @@
        do i=growlo(1),growhi(1)
         if (level.eq.0) then ! finest level
          if (veldir.eq.0) then
-          if (solvemask(D_DECL(i,j,k)).ne.one) then
+          if (solvemask(D_DECL(i,j,k)).eq.one) then
+           ! do nothing
+          else
            print *,"solvemask not initialized properly"
            stop
           endif
          else if ((veldir.gt.0).and.(veldir.lt.nsolve)) then
-          ! check nothing
+          if ((solvemask(D_DECL(i,j,k)).eq.one).or. &
+              (solvemask(D_DECL(i,j,k)).eq.zero)) then
+           ! do nothing
+          else
+           print *,"solvemask not initialized properly"
+           stop
+          endif
          else
           print *,"veldir invalid"
           stop
@@ -291,7 +304,7 @@
         local_diag=a(D_DECL(i,j,k))+offdiagsum
         diag_sing(D_DECL(i,j,k))=local_diag
 
-        testmask=solvemask(D_DECL(i,j,k))
+        test_mask=solvemask(D_DECL(i,j,k))
 
         if (offdiagsum.lt.zero) then
          print *,"offdiagsum invalid"
@@ -314,13 +327,13 @@
         diag_non_sing(D_DECL(i,j,k))=diag_sing(D_DECL(i,j,k))+dtau
 
         if (local_diag.eq.zero) then
-         if ((testmask.eq.one).and.(veldir.gt.0)) then
+         if ((test_mask.eq.one).and.(veldir.gt.0)) then
           print *,"solvemask not uniform wrt veldir"
           stop
-         else if ((testmask.eq.zero).or.(veldir.eq.0)) then
+         else if ((test_mask.eq.zero).or.(veldir.eq.0)) then
           ! do nothing
          else
-          print *,"testmask or veldir invalid"
+          print *,"test_mask or veldir invalid"
           stop
          endif
          solvemask(D_DECL(i,j,k))=zero
@@ -331,8 +344,8 @@
           stop
          endif
         else if (local_diag.gt.zero) then
-         if (testmask.ne.one) then
-          print *,"testmask invalid"
+         if (test_mask.ne.one) then
+          print *,"test_mask invalid"
           stop
          endif
         else
@@ -353,14 +366,14 @@
        do k=growlo(3),growhi(3)
        do j=growlo(2),growhi(2)
        do i=growlo(1),growhi(1)
-        testmask=solvemask(D_DECL(i,j,k))
+        test_mask=solvemask(D_DECL(i,j,k))
         local_diag=diag_sing(D_DECL(i,j,k))
         if (local_diag.eq.zero) then
 
-         if (testmask.eq.zero) then
+         if (test_mask.eq.zero) then
           ! do nothing
          else
-          print *,"testmask invalid"
+          print *,"test_mask invalid"
           stop
          endif
 
@@ -371,10 +384,10 @@
           stop
          endif
         else if (local_diag.gt.zero) then
-         if (testmask.eq.one) then
+         if (test_mask.eq.one) then
           ! do nothing
          else
-          print *,"testmask invalid"
+          print *,"test_mask invalid"
           stop
          endif
         else
@@ -420,14 +433,14 @@
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        testmask=solvemask(D_DECL(i,j,k))
+        test_mask=solvemask(D_DECL(i,j,k))
         local_diag=diag_sing(D_DECL(i,j,k))
         if (local_diag.eq.zero) then
 
-         if (testmask.eq.zero) then
+         if (test_mask.eq.zero) then
           ! do nothing
          else
-          print *,"testmask invalid"
+          print *,"test_mask invalid"
           stop
          endif
 
@@ -438,10 +451,10 @@
           stop
          endif
         else if (local_diag.gt.zero) then
-         if (testmask.eq.one) then
+         if (test_mask.eq.one) then
           ! do nothing
          else
-          print *,"testmask invalid"
+          print *,"test_mask invalid"
           stop
          endif
         else
@@ -604,7 +617,11 @@
 
 
       subroutine FORT_RESIDL ( &
+       level, &
+       mg_coarsest_level, &
        nsolve, &
+       masksing, &
+       DIMS(masksing),  &
        res,DIMS(res),  &
        rhs,DIMS(rhs), &
        phi,DIMS(phi), &
@@ -613,22 +630,28 @@
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T nsolve
-      INTEGER_T tilelo(AMREX_SPACEDIM)
-      INTEGER_T tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM)
-      INTEGER_T fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(phi)
-      REAL_T phi(DIMV(phi),nsolve)
-      INTEGER_T DIMDEC(rhs)
-      REAL_T rhs(DIMV(rhs),nsolve)
-      INTEGER_T DIMDEC(res)
-      REAL_T res(DIMV(res),nsolve)
+
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: mg_coarsest_level
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3)
+      INTEGER_T :: growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(masksing)
+      REAL_T, intent(in) :: masksing(DIMV(masksing))
+      INTEGER_T, intent(in) :: DIMDEC(phi)
+      REAL_T, intent(in) :: phi(DIMV(phi),nsolve)
+      INTEGER_T, intent(in) :: DIMDEC(rhs)
+      REAL_T, intent(in) :: rhs(DIMV(rhs),nsolve)
+      INTEGER_T, intent(in) :: DIMDEC(res)
+      REAL_T, intent(out) :: res(DIMV(res),nsolve)
 !
       INTEGER_T i,j,k,veldir
+      REAL_T test_mask
 !
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -642,6 +665,13 @@
        print *,"nsolve invalid"
        stop
       endif
+      if ((level.ge.0).and.(level.le.mg_coarsest_level)) then
+       ! do nothing
+      else
+       print *,"level or mg_coarsest_level invalid"
+       stop
+      endif
+      call checkbound(fablo,fabhi,DIMS(masksing),1,-1,81)
       call checkbound(fablo,fabhi,DIMS(rhs),0,-1,81)
       call checkbound(fablo,fabhi,DIMS(res),0,-1,84)
       call checkbound(fablo,fabhi,DIMS(phi),0,-1,85)
@@ -650,9 +680,17 @@
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+       test_mask=masksing(D_DECL(i,j,k))
        do veldir=1,nsolve
-        res(D_DECL(i,j,k),veldir) = rhs(D_DECL(i,j,k),veldir) - &
+        if (test_mask.eq.zero) then
+         res(D_DECL(i,j,k),veldir)=zero
+        else if (test_mask.eq.one) then
+         res(D_DECL(i,j,k),veldir) = rhs(D_DECL(i,j,k),veldir) - &
           phi(D_DECL(i,j,k),veldir)
+        else
+         print *,"test_mask invalid in RESIDL"
+         stop
+        endif
        enddo ! veldir
       enddo
       enddo
@@ -814,55 +852,71 @@
       use global_utility_module 
       IMPLICIT NONE
 !
-      INTEGER_T nsolve
-      INTEGER_T ncomp_expect
-      INTEGER_T ngrow
-      INTEGER_T bfact_coarse,bfact_fine,bfact_top
-      INTEGER_T avg
-      INTEGER_T DIMDEC(f)
-      INTEGER_T DIMDEC(c)
-      INTEGER_T lo(AMREX_SPACEDIM)
-      INTEGER_T hi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      REAL_T f(DIMV(f),ncomp_expect)
-      REAL_T c(DIMV(c),ncomp_expect)
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: ncomp_expect
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine,bfact_top
+      INTEGER_T, intent(in) :: avg
+      INTEGER_T, intent(in) :: DIMDEC(f)
+      INTEGER_T, intent(in) :: DIMDEC(c)
+      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3)
+      INTEGER_T :: growhi(3)
+      REAL_T, intent(in) :: f(DIMV(f),ncomp_expect)
+      REAL_T, intent(out) :: c(DIMV(c),ncomp_expect)
 !
       INTEGER_T i,j,k,veldir
       REAL_T denom
       INTEGER_T sum_mask,max_sum
 !
-      if (bfact_coarse.lt.1) then
+      if (bfact_coarse.ge.1) then
+       ! do nothing
+      else
        print *,"bfact_coarse invalid"
        stop
       endif
-      if (bfact_fine.lt.1) then
+      if (bfact_fine.ge.1) then
+       ! do nothing
+      else
        print *,"bfact_fine invalid"
        stop
       endif
-      if (bfact_top.lt.1) then
+      if (bfact_top.ge.1) then
+       ! do nothing
+      else
        print *,"bfact_top invalid"
        stop
       endif
-      if (nsolve.le.0) then
+      if (nsolve.ge.1) then
+       ! do nothing
+      else
        print *,"nsolve invalid"
        stop
       endif
       if ((avg.eq.0).or.(avg.eq.1)) then
-       if (nsolve.ne.ncomp_expect) then
+       if (nsolve.eq.ncomp_expect) then
+        ! do nothing
+       else
         print *,"nsolve.ne.ncomp_expect"
         stop
        endif
-       if (ngrow.ne.0) then
+       if (ngrow.eq.0) then
+        ! do nothing
+       else
         print *,"ngrow.ne.0"
         stop
        endif
       else if (avg.eq.2) then
-       if (ncomp_expect.ne.1) then
+       if (ncomp_expect.eq.1) then
+        ! do nothing
+       else
         print *,"ncomp_expect.ne.1"
         stop
        endif
-       if (ngrow.ne.1) then
+       if (ngrow.eq.1) then
+        ! do nothing
+       else
         print *,"ngrow.ne.1"
         stop
        endif

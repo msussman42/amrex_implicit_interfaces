@@ -300,7 +300,7 @@
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid300"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then

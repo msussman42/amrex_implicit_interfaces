@@ -103,7 +103,7 @@ stop
       imslope=0
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact140 invalid"
        stop
       endif
       nstar_test=9
@@ -291,7 +291,7 @@ stop
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid141"
        stop
       endif
       if ((level.le.finest_level).and.(level.ge.0)) then
@@ -604,7 +604,7 @@ stop
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid142"
        stop
       endif
 
@@ -1420,7 +1420,7 @@ stop
       REAL_T init_dist
      
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid143"
        stop
       endif
       if (max_problen.le.zero) then
@@ -1567,7 +1567,7 @@ stop
       tessellate=0
  
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid144"
        stop
       endif
 
@@ -1866,7 +1866,7 @@ stop
       enddo
       enddo
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid145"
        stop
       endif
 
@@ -2799,7 +2799,7 @@ stop
       endif
  
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid146"
        stop
       endif
 

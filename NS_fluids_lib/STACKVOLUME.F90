@@ -144,7 +144,7 @@ stop
       allocate(distbatch(nmat))
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid301"
        stop
       endif
 
@@ -282,7 +282,7 @@ stop
       endif 
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid302"
        stop
       endif
       if (nhalf.lt.3) then

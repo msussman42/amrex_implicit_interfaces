@@ -81,7 +81,7 @@ stop
       nhalf=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid400"
        stop
       endif
 

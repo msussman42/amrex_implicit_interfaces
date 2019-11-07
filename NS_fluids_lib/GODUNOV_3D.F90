@@ -420,7 +420,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid41"
        stop
       endif
       if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
@@ -856,7 +856,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid42"
        stop
       endif
       do ihalf=-1,1
@@ -1031,7 +1031,7 @@ stop
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid43"
        stop
       endif
       if ((bfact_fine.gt.bfact).or.(bfact_fine.lt.1)) then
@@ -1558,7 +1558,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid44"
        stop
       endif
        ! for the unsplit algorithm, the cell centered state variable
@@ -1804,7 +1804,7 @@ stop
       nhalf=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid45"
        stop
       endif
       if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
@@ -2089,7 +2089,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid46"
        stop
       endif
       if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
@@ -2445,7 +2445,7 @@ stop
       INTEGER_T vofcomp
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid47"
        stop
       endif
 
@@ -2925,7 +2925,7 @@ stop
       REAL_T dxleft,dxright
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid48"
        stop
       endif
 
@@ -3319,7 +3319,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid49"
        stop
       endif
       if (ncphys.ne.vofface_index+2*nmat) then
@@ -3829,7 +3829,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid50"
        stop
       endif
 
@@ -4142,7 +4142,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid51"
        stop
       endif
       if (nsolve.ne.SDIM) then
@@ -4628,7 +4628,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid52"
        stop
       endif
       if (bfact_grid.lt.4) then
@@ -7462,7 +7462,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid53"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -7649,7 +7649,7 @@ stop
 
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid54"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -7821,7 +7821,7 @@ stop
       nmat=num_materials
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid55"
        stop
       endif
       if ((num_materials_vel.ne.1).and. &
@@ -7989,7 +7989,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid56"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -8365,7 +8365,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid57"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -8547,7 +8547,7 @@ stop
       INTEGER_T imattype
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid58"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -8800,7 +8800,7 @@ stop
       INTEGER_T maskleft,maskright
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid59"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -9523,7 +9523,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid60"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -9910,7 +9910,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid61"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -10076,7 +10076,7 @@ stop
       nhalf=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid62"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -10767,7 +10767,7 @@ stop
         else if (bfact.eq.1) then
          ! do nothing
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid63"
          stop
         endif
        else if (enable_spectral.eq.0) then
@@ -10826,7 +10826,7 @@ stop
         else if (bfact.eq.1) then
          ! do nothing
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid64"
          stop
         endif
        else if ((enable_spectral.eq.0).or. &
@@ -11528,7 +11528,7 @@ stop
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid65"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -12014,7 +12014,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid66"
        stop
       endif
 
@@ -12348,7 +12348,7 @@ stop
       thetacut=0.001
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid67"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -13058,7 +13058,7 @@ stop
       REAL_T ls_cell_or_face(nmat)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid68"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -15591,7 +15591,7 @@ stop
       REAL_T mf(DIMV(mf),ndefined)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid69"
        stop
       endif
 
@@ -15994,7 +15994,7 @@ stop
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid70"
        stop
       endif
       if (bfact_f.lt.1) then
@@ -16002,7 +16002,7 @@ stop
        stop
       endif
       if ((bfact.ne.bfact_f).and.(bfact.ne.2*bfact_f)) then
-       print *,"bfact invalid"
+       print *,"bfact invalid71"
        stop
       endif
       if (nrefine_vof.ne.nmat*2*SDIM) then
@@ -17728,7 +17728,7 @@ stop
          else if (bfact.gt.1) then
           ! do nothing
          else
-          print *,"bfact invalid"
+          print *,"bfact invalid72"
           stop
          endif 
          ! -------------------------------------------
@@ -18775,7 +18775,7 @@ stop
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid73"
        stop
       endif
       if (bfact_f.lt.1) then
@@ -18783,7 +18783,7 @@ stop
        stop
       endif
       if ((bfact.ne.bfact_f).and.(bfact.ne.2*bfact_f)) then
-       print *,"bfact invalid"
+       print *,"bfact invalid74"
        stop
       endif
       if (nrefine_vof.ne.nmat*2*SDIM) then
@@ -21438,7 +21438,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid75"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -22632,7 +22632,7 @@ stop
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid76"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -23398,7 +23398,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid77"
        stop
       endif
       if ((bfact_c.ne.bfact).and.(bfact_c.ne.2*bfact)) then
@@ -24365,7 +24365,7 @@ stop
        else if (bfact.eq.1) then
         ! do nothing
        else
-        print *,"bfact invalid"
+        print *,"bfact invalid78"
         stop
        endif
 
@@ -24618,7 +24618,7 @@ stop
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid79"
        stop
       endif
 
@@ -25569,7 +25569,7 @@ stop
          else if (bfact.eq.1) then
           ! do nothing
          else
-          print *,"bfact invalid"
+          print *,"bfact invalid80"
           stop
          endif
 
@@ -26023,7 +26023,7 @@ stop
         else if (bfact.eq.1) then
          ! do nothing
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid81"
          stop
         endif
 

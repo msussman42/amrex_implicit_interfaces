@@ -10,7 +10,6 @@
 #include <AMReX_REAL.H>
 #include <AMReX_CONSTANTS.H>
 #include "AMReX_ArrayLim.H"
-
 #include "MG_F.H"
 
 !-----------------------------------------------------------------------

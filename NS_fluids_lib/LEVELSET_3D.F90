@@ -83,7 +83,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid84"
        stop
       endif
 
@@ -402,7 +402,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid85"
        stop
       endif
       if (RD.ne.4) then
@@ -1846,7 +1846,7 @@ stop
       INTEGER_T radcurrent
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid86"
        stop
       endif
 
@@ -2059,7 +2059,7 @@ stop
       nhalfMAC=1 
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid87"
        stop
       endif
       if ((tessellate.ne.0).and.(tessellate.ne.1)) then
@@ -2419,7 +2419,7 @@ stop
       REAL_T voftest
  
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid88"
        stop
       endif
 
@@ -2623,7 +2623,7 @@ stop
       enddo
       enddo
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid89"
        stop
       endif
 
@@ -3562,7 +3562,7 @@ stop
       allocate(xsten_curv(-RDx:RDx,SDIM))
  
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid90"
        stop
       endif
       if (bfact_grid.lt.4) then
@@ -4368,7 +4368,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid91"
        stop
       endif
 
@@ -4568,7 +4568,7 @@ stop
       nhalf=3
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid92"
        stop
       endif
 
@@ -5403,7 +5403,7 @@ stop
        1,-1,4000)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid93"
        stop
       endif
       if (arrsize.ne.2*max_colors_level) then
@@ -5704,7 +5704,7 @@ stop
        1,-1,4000)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid94"
        stop
       endif
 
@@ -5778,7 +5778,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(color),1,-1,4000)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid95"
        stop
       endif
 
@@ -5915,12 +5915,12 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid96"
        stop
       endif
       if ((bfact.ne.bfact_f).and. &
           (bfact.ne.2*bfact_f)) then
-       print *,"bfact invalid"
+       print *,"bfact invalid97"
        stop
       endif
 
@@ -6007,12 +6007,12 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid98"
        stop
       endif
       if ((bfact.ne.bfact_f).and. &
           (bfact.ne.2*bfact_f)) then
-       print *,"bfact invalid"
+       print *,"bfact invalid99"
        stop
       endif
 
@@ -14823,7 +14823,7 @@ stop
          else if (bfact.eq.1) then
           ! do nothing
          else
-          print *,"bfact invalid"
+          print *,"bfact invalid100"
           stop
          endif
 
@@ -15872,7 +15872,7 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid101"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -16487,7 +16487,7 @@ stop
       nhalf=7
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid102"
        stop
       endif 
 
@@ -17366,7 +17366,7 @@ stop
       nhalf=3
  
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid103"
        stop
       endif
       if (nmat.ne.num_materials) then

@@ -652,7 +652,7 @@ CONTAINS
       bfact=order_r+1
       bfactC=bfact/2
       if (bfactC*2.ne.bfact) then
-       print *,"bfact invalid"
+       print *,"bfact invalid12"
        stop
       endif
       
@@ -716,7 +716,7 @@ CONTAINS
         enddo
        endif
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid13"
        stop
       endif
      
@@ -2735,7 +2735,7 @@ contains
       REAL_T RR
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid14"
        stop
       endif
 
@@ -2750,7 +2750,7 @@ contains
          delta=delta_gauss
         endif
        else
-        print *,"bfact invalid"
+        print *,"bfact invalid15"
         stop
        endif
        RR=one
@@ -2792,7 +2792,7 @@ contains
       REAL_T delta,RR,xL,xR
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid16"
        stop
       endif
 
@@ -2805,7 +2805,7 @@ contains
         xR=cache_gauss(bfact,bfact/2,SPTYPE)
         delta=bfact*(xR-xL)*dx(dir)/two
        else
-        print *,"bfact invalid"
+        print *,"bfact invalid17"
         stop
        endif
        RR=one
@@ -2847,7 +2847,7 @@ contains
       REAL_T delta,xL,xR
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid18"
        stop
       endif
 
@@ -2860,7 +2860,7 @@ contains
         xR=cache_gauss(bfact,bfact/2,SPTYPE)
         delta=bfact*(xR-xL)*dx(dir)/two
        else
-        print *,"bfact invalid"
+        print *,"bfact invalid19"
         stop
        endif
 
@@ -4180,7 +4180,7 @@ contains
          bfact*dx*(cache_gauss(bfact,inodes-1,SPTYPE)+one)/two
        enddo
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid20"
        stop
       endif
 
@@ -4210,7 +4210,7 @@ contains
          bfact*dx*(cache_gauss_lobatto(bfact,inodes-1,SPTYPE)+one)/two
        enddo
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid21"
        stop
       endif
 
@@ -4230,7 +4230,7 @@ contains
       REAL_T, dimension(:), allocatable :: xsub
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid22"
        stop
       endif
 
@@ -4270,7 +4270,7 @@ contains
       REAL_T, dimension(:), allocatable :: xsub
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid23"
        stop
       endif
       if ((normdir.lt.1).or.(normdir.gt.SDIM)) then
@@ -4319,7 +4319,7 @@ contains
       REAL_T, dimension(:), allocatable :: xsub
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid24"
        stop
       endif
 
@@ -4372,7 +4372,7 @@ contains
         stop
        endif
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid25"
        stop
       endif
 
@@ -4400,7 +4400,7 @@ contains
       INTEGER_T icell,imac,isten,signflag,ishift,i_e,i_n
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid26"
        stop
       endif
       if (nhalf.lt.0) then
@@ -4442,7 +4442,7 @@ contains
           stop
          endif
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid27"
          stop
         endif
         x(side*2*icell)=xabs
@@ -4483,7 +4483,7 @@ contains
           stop
          endif
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid28"
          stop
         endif
     
@@ -4512,7 +4512,7 @@ contains
       INTEGER_T icell,imac,isten,signflag,ishift,i_e,i_n
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid29"
        stop
       endif
       if (nhalf.lt.0) then
@@ -4563,7 +4563,7 @@ contains
           stop
          endif
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid30"
          stop
         endif
         x(side*(2*icell-1))=xabs
@@ -4598,7 +4598,7 @@ contains
           stop
          endif
         else
-         print *,"bfact invalid"
+         print *,"bfact invalid31"
          stop
         endif
     
@@ -6025,7 +6025,7 @@ contains
       INTEGER_T, intent(out) :: stripstat
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid32"
        stop
       endif
 
@@ -6082,7 +6082,7 @@ contains
       INTEGER_T, intent(out) :: stripstat
 
       if (bfact.lt.2) then
-       print *,"bfact invalid"
+       print *,"bfact invalid33"
        stop
       endif
 
@@ -6490,7 +6490,7 @@ contains
       endif
        ! in: lineGRAD
       if (bfact.lt.2) then
-       print *,"bfact invalid"
+       print *,"bfact invalid34"
        stop
       endif
       if (levelrz_in.ne.levelrz) then
@@ -7028,7 +7028,7 @@ contains
 
        ! in: line_MAC_TO_CELL
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid35"
        stop
       endif
       dx_element=dx*bfact
@@ -7469,7 +7469,7 @@ contains
       critical_cutoff=1.0D+99
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid36"
        stop
       endif
 
@@ -7810,7 +7810,7 @@ contains
        else if (bfact.gt.1) then
         lo_e=lo(dir)/bfact
         if (lo_e*bfact.ne.lo(dir)) then
-         print *,"bfact invalid"
+         print *,"bfact invalid37"
          stop
         endif
          ! find element whose center is closest to x (i.e. find the
@@ -7833,7 +7833,7 @@ contains
          enddo
         endif
        else
-        print *,"bfact invalid"
+        print *,"bfact invalid38"
         stop
        endif
       enddo ! dir
@@ -7866,7 +7866,7 @@ contains
        else if (bfact.gt.1) then
         lo_e=lo(dir)/bfact
         if (lo_e*bfact.ne.lo(dir)) then
-         print *,"bfact invalid"
+         print *,"bfact invalid39"
          stop
         endif
          ! find element whose center is closest to x (i.e. find the
@@ -7889,7 +7889,7 @@ contains
         enddo
         node_index(dir)=e_index*bfact+i1crit-1
        else
-        print *,"bfact invalid"
+        print *,"bfact invalid40"
         stop
        endif
       enddo ! dir=1..sdim

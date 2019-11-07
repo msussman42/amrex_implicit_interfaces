@@ -2620,7 +2620,7 @@ end subroutine intersection_volume_and_map
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid120"
        stop
       endif
  
@@ -6300,7 +6300,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid121"
        stop
       endif
  
@@ -6507,11 +6507,11 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid122"
        stop
       endif
       if (nhalf0.lt.3) then
-       print *,"nhalf0 invalid"
+       print *,"nhalf0 invalid123"
        stop
       endif
 
@@ -6648,7 +6648,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid124"
        stop
       endif
       if ((sdim.ne.2).and.(sdim.ne.3)) then
@@ -7151,7 +7151,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid125"
        stop
       endif
       if ((sdim.ne.2).and.(sdim.ne.3)) then
@@ -7193,7 +7193,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid126"
        stop
       endif
       if (nhalf.ne.1) then
@@ -7248,7 +7248,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid127"
        stop
       endif
 
@@ -7367,7 +7367,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid128"
        stop
       endif
 
@@ -7543,7 +7543,7 @@ end subroutine volume_sanity_check
       nhalf2=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid129"
        stop
       endif
       if (nhalf0.lt.3) then
@@ -7677,7 +7677,7 @@ end subroutine volume_sanity_check
       INTEGER_T dir
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid130"
        stop
       endif
       if (nhalf.lt.1) then
@@ -7762,7 +7762,7 @@ end subroutine volume_sanity_check
       REAL_T cenall(sdim)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid131"
        stop
       endif
 
@@ -8394,7 +8394,7 @@ end subroutine volume_sanity_check
       INTEGER_T linearcut,fullelementfast,nodedomain
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
@@ -8526,7 +8526,7 @@ end subroutine volume_sanity_check
       nodedomain=4*(sdim-1)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -9542,7 +9542,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
 
@@ -9980,7 +9980,7 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
 
@@ -10906,7 +10906,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
@@ -11528,7 +11528,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if (nhalf.lt.1) then
@@ -12491,7 +12491,7 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
 
@@ -13005,7 +13005,7 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
 
@@ -14335,7 +14335,7 @@ contains
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.eq.3).or.(sdim.eq.2)) then
@@ -14515,7 +14515,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -15454,7 +15454,7 @@ contains
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.eq.3).or.(sdim.eq.2)) then
@@ -16081,7 +16081,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -16955,7 +16955,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -17931,7 +17931,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -18217,7 +18217,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -18461,7 +18461,7 @@ contains
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid135"
         stop
        endif
        if ((nlist.lt.2).or.(nlist.gt.nmat-1).or. &
@@ -18639,7 +18639,7 @@ contains
        INTEGER_T indexlist(2)
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid135"
         stop
        endif
 
@@ -18882,7 +18882,7 @@ contains
        INTEGER_T im,vofcomp,FSI_exclude,irank,testflag,dir
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid135"
         stop
        endif
        if (nhalf0.lt.1) then
@@ -19581,7 +19581,7 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
