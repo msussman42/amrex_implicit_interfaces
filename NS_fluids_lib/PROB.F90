@@ -41092,6 +41092,9 @@ end subroutine initialize2d
        vofbc, &
        xlo,dx, &
        dt, &
+        ! FOR A HISTORY OF blob_array data structures, and its' original
+        ! motivation: See
+        ! Yaohong Wang, Svetlana Simakhina, Sussman
        arraysize, &
        blob_array, &
        num_elements_blobclass, &
@@ -41377,6 +41380,22 @@ end subroutine initialize2d
          stop
         endif
 
+
+         ! SANDIPAN HOOK HERE
+         ! pseudo code:
+         ! if typefab(D_DECL(i,j,k))=im_vapor then
+         !  color = colorfab(D_DECL(i,j,k))
+         !  vapor bubble statistics are in 
+         !   blob_array((color-1)*num_elements_blobclass + l)
+         !  l=1..num_elements_blobclass
+         ! for example l=3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+
+         !               2*(2*SDIM)+1+
+         !               3+1  corresponds to blob_volume.
+         ! MDOT=(1-den_vapor/den_liquid)*(F^Vapor_new - F^Vapor_old)*
+         !  volume/dt^2
+         ! =(1-den_vapor/den_liquid)*(Vvapor_new - Vvapor_old)/dt^2
+         ! MDOT should have the same units as volume * div u/dt
+         ! units of volume * div u/dt = m^3 (1/m)(m/s)(1/s)=1/s^2
          ! check for nucleation of material represented by a species variable
         do im=1,nmat
          ispec=cavitation_species(im)
@@ -41391,8 +41410,10 @@ end subroutine initialize2d
            if ((im_crit.eq.im).and.(FTEST(im_crit).ge.0.99)) then
 
             if (time.gt.zero) then
+              ! SANDIPAN: hints for density of material "im"
              test_den=EOS(D_DECL(i,j,k), &
               (im-1)*num_state_material+1)
+              ! SANDIPAN: hints for temperature of material "im"
              test_temp=EOS(D_DECL(i,j,k), &
               (im-1)*num_state_material+2)
              if (test_den.gt.zero) then
@@ -41604,6 +41625,8 @@ end subroutine initialize2d
              vfrac_remainder=zero
              im_crit=0
 
+              ! SANDIPAN: hints for getting the existing values for level
+              ! set function and volume fraction.
              do im_alt=1,nmat
               vcomp=(im_alt-1)*ngeom_raw+1
               LS_TEST(im_alt)=LSold(D_DECL(i,j,k),im_alt)
