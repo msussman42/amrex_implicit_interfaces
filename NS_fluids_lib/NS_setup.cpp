@@ -10,8 +10,6 @@
 #include <sstream>
 #include <fstream>
 
-#define local_Pi      3.14159265358979
-
 namespace amrex{
 
 //
@@ -1747,7 +1745,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
       // r=(3V/(4pi))^(1/3)
       // r^3=3V/(4pi)
       // V=4 pi r^3/3
-      Real gdiam=2.0*exp(log(3.0*gvol_modify/(4.0*local_Pi))/3.0);
+      Real gdiam=2.0*exp(log(3.0*gvol_modify/(4.0*NS_PI))/3.0);
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
        " im= " << imbase <<
        " volume = " << gvol_modify << '\n';
@@ -2177,7 +2175,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    // bubble jetting problem
   if (probtype==42) {
    Real bubble_volume=sumdata[FE_sum_comp+2];
-   Real radbubble=exp(log(3.0*bubble_volume/(4.0*local_Pi))/3.0);
+   Real radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
    std::cout << "TIME= " << upper_slab_time << " JETTINGVOL=  " << 
     radbubble << '\n';
   }
@@ -2199,12 +2197,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    Real bubble_volume=sumdata[FE_sum_comp+2];
    Real radbubble=0.0;
    if (rz_flag==0) {
-    radbubble=sqrt(4.0*bubble_volume/local_Pi);
+    radbubble=sqrt(4.0*bubble_volume/NS_PI);
 
    // 4/3 pi r^3 = 2V
    // r=(3V/(2 pi))^{1/3}
    } else if (rz_flag==1) {
-    radbubble=exp(log(3.0*bubble_volume/(2.0*local_Pi))/3.0);
+    radbubble=exp(log(3.0*bubble_volume/(2.0*NS_PI))/3.0);
    } else
     amrex::Error("rz_flag invalid");
 
@@ -2224,14 +2222,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     // 4/3 pi r^3 = V
     // r=(3V/(4 pi))^{1/3}
     if (rz_flag==1) {
-     radbubble=exp(log(3.0*bubble_volume/(4.0*local_Pi))/3.0);
+     radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
     } else if (rz_flag==0) {
     // pi r^2 = 2V
-     radbubble=sqrt(2.0*bubble_volume/local_Pi);
+     radbubble=sqrt(2.0*bubble_volume/NS_PI);
     } else
      amrex::Error("rz_flag invalid");
    } else if (AMREX_SPACEDIM==3) {
-    radbubble=exp(log(3.0*bubble_volume/(4.0*local_Pi))/3.0);
+    radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
    } else
     amrex::Error("sdim bust");
 

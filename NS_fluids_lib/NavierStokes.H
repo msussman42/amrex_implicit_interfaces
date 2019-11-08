@@ -6,6 +6,9 @@
 #include <LevelBld.H>
 #include <ABecLaplacian.H>
 
+namespace {
+    constexpr double NS_PI = 3.14159265358979323846264338327950288;
+}
 
 namespace amrex{
 

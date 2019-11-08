@@ -8261,8 +8261,20 @@ void NavierStokes::multiphase_project(int project_option) {
       amrex::Error("problen_local invalid");
     } // dir=0..sdim-1
     if (problen_max>0.0) {
-     dual_time_stepping_tau=maxden*problen_max*problen_max/6.0;
-     dual_time_stepping_coefficient=1.0/dual_time_stepping_tau;
+      // heuristic: p_t=(1/rho)div grad p
+      // factor=exp(-k^2 t/rho)
+      // k=2 m pi/L   m=1
+      // 4 pi^2 t/L^2 = rho ln(factor)
+      // t = L^2 rho ln(factor)/(4 pi^2)
+     Real dual_time_reduction_factor=1.0e-3;
+     dual_time_stepping_tau= 
+        maxden*problen_max*problen_max*
+	fabs(log(dual_time_reduction_factor))/(4.0*NS_PI*NS_PI);
+     if (dual_time_stepping_tau>0.0) {
+      dual_time_stepping_coefficient=1.0/dual_time_stepping_tau;
+     } else
+      amrex::Error("dual_time_stepping_tau invalid");
+
     } else
      amrex::Error("problen_max invalid");
 
@@ -8337,6 +8349,12 @@ void NavierStokes::multiphase_project(int project_option) {
   dual_time_error_met=0;
 
   dual_time_stepping_iter=0;
+
+  int dual_time_cycle_max=200;
+  Vector<Real> dual_error_history;
+  dual_error_history.resize(dual_time_cycle_max);
+  Real dual_error_min=0.0;
+  int dual_error_min_iter=3;
 
   do { // while dual_time_error_met==0
 
@@ -9495,6 +9513,9 @@ void NavierStokes::multiphase_project(int project_option) {
      std::cout << "project_option= " << project_option <<
 	    " TIME= " << cur_time_slab << " dual_time_error0= " <<
 	    dual_time_error0 << '\n';
+     std::cout << "project_option= " << project_option <<
+	    " TIME= " << cur_time_slab << " dual_error_min= " <<
+	    dual_error_min << '\n';
 
      avg_iter=max_lev0_cycles_all_solver_calls[project_option]/
 	     number_solver_calls[project_option];
@@ -9612,11 +9633,40 @@ void NavierStokes::multiphase_project(int project_option) {
    } else 
     amrex::Error("dual_time_stepping_coefficient invalid");	   
 
+   dual_error_history[dual_time_stepping_iter]=dual_time_error;
+
+   if (dual_time_stepping_iter==0) {
+    dual_error_min=dual_time_error;
+   } else if (dual_time_stepping_iter>0) {
+    if (dual_time_error<dual_error_min)
+     dual_error_min=dual_time_error;
+   } else
+    amrex::Error("dual_time_stepping_iter invalid");
+
+   if (dual_time_stepping_iter>=dual_error_min_iter-1) {
+    Real dual_tol=dual_time_abstol;
+    if (dual_tol<dual_time_error0*dual_time_reltol)
+     dual_tol=dual_time_error0*dual_time_reltol;
+
+    if ((fabs(dual_time_error-dual_error_min)<=dual_tol)&&
+	(fabs(dual_time_error-
+	      dual_error_history[dual_time_stepping_iter-1])<=dual_tol)&&
+	(fabs(dual_time_error-
+	      dual_error_history[dual_time_stepping_iter-2])<=dual_tol))
+     dual_time_error_met=1;
+
+   } else if (dual_time_stepping_iter>=0) {
+    // do nothing
+   } else
+    amrex::Error("dual_time_stepping_iter invalid");
+
 #if (profile_solver==1)
    bprof.stop();
 #endif
 
    dual_time_stepping_iter++;
+   if (dual_time_stepping_iter>=dual_time_cycle_max)
+    amrex::Error("dual_time_stepping_iter>=dual_time_cycle_max");
 
   } while (dual_time_error_met==0);
 

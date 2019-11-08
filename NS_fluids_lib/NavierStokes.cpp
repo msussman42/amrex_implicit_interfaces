@@ -44,7 +44,6 @@
 namespace amrex{
 
 #define bogus_value 1.e20
-#define local_Pi 3.14159265358979
 #define show_norm2_flag 0
 #define mf_check_inf_bounds 1
 
@@ -2747,7 +2746,7 @@ NavierStokes::read_params ()
          (microlayer_substrate[i]>nmat))
       amrex::Error("microlayer_substrate invalid");
      if ((microlayer_angle[i]<0.0)|| 
-         (microlayer_angle[i]>=local_Pi))
+         (microlayer_angle[i]>=NS_PI))
       amrex::Error("microlayer_angle invalid");
      if ((microlayer_size[i]<0.0)||
          (macrolayer_size[i]<microlayer_size[i]))
