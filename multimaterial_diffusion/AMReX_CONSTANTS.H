@@ -1,10 +1,12 @@
 #ifndef BL_CONSTANTS_H
 #define BL_CONSTANTS_H
 
-#include "REAL.H"
+#include <AMReX_REAL.H>
 
 
 #ifdef BL_LANG_FORT
+
+#ifndef AMREX_XSDK
 
 #define bigreal BL_REAL_E(1.0,30)
 #define zero    BL_REAL(0.0)
@@ -26,14 +28,15 @@
 #define ninety  BL_REAL(90.0)
 #define tenth   BL_REAL(0.1)
 #define eighth  BL_REAL(0.125)
-#define sixth   BL_REAL(0.1666666666666667)
+#define sixth   BL_REAL(0.16666666666666667)
 #define fifth   BL_REAL(0.2)
-#define forth   BL_REAL(0.25)
 #define fourth  BL_REAL(0.25)
-#define third   BL_REAL(0.3333333333333333)
+#define third   BL_REAL(0.33333333333333333)
 #define half    BL_REAL(0.5)
-#define two3rd  BL_REAL(0.6666666666666667)
+#define two3rd  BL_REAL(0.66666666666666667)
 #define Pi      BL_REAL(3.1415926535897932)
+
+#endif /* ndef AMREX_XSDK */
 
 #endif /*BL_LANG_FORT*/
 

@@ -1,6 +1,7 @@
+#ifndef AMREX_REAL_H_
+#define AMREX_REAL_H_
 
-#ifndef BL_REAL_H
-#define BL_REAL_H
+#include <AMReX_Extension.H>
 
 #ifdef BL_USE_FLOAT
 #  undef BL_USE_DOUBLE
@@ -9,7 +10,7 @@
   The macro BL_USE_FLOAT indicates that C++ floating-point calculations should
   use "float" variables and Fortran floating-point calculations should use
   "real*4" variables.  One of BL_USE_FLOAT or BL_USE_DOUBLE must always be
-  defined when compiling and using BoxLib.
+  defined when compiling and using AMReX.
 */
 #  define BL_USE_FLOAT 1
 #else
@@ -19,7 +20,7 @@
   The macro BL_USE_DOUBLE indicates that C++ floating-point calculations
   should use "double" variables and Fortran floating-point calculations
   should use "real*8" variables.  One of BL_USE_FLOAT or BL_USE_DOUBLE must
-  always be defined when compiling and using BoxLib.
+  always be defined when compiling and using AMReX.
 */
 #  define BL_USE_DOUBLE 1
 #endif
@@ -37,13 +38,25 @@
   Note that exactly one of these macros must be defined
   when compiling any module that uses floating-point.
 */
+
 #ifdef BL_USE_FLOAT
-    typedef float Real;
+typedef float amrex_real;
 #else
-    typedef double Real;
+typedef double amrex_real;
+#endif
+
+#ifdef __cplusplus
+namespace amrex {
+    using Real = amrex_real;
+}
 #endif
 
 #else
+
+/* SUSSMAN */
+#    define INTEGER_T integer
+
+#ifndef AMREX_XSDK
 
 /*
   The REAL_T macro specifies the precision of the floating-point
@@ -57,54 +70,27 @@
   when compiling any module that uses floating-point.
 */
 
-#    define INTEGER_T integer
-
 #ifdef BL_USE_FLOAT
-
-#ifdef BL_USE_FORT_STAR_PRECISION
-#    define REAL_T real*4
-#else
 #    define REAL_T REAL
-#endif
-
-#ifdef BLANKCONCAT
-#        define BL_REAL(a) a/**/E0
-#        define BL_REAL_E(a,b) a/**/E/**/b
-#else
-
-#if __STDC__==1
+#if __STDC__==1 || defined(__INTEL_COMPILER)
 #        define BL_REAL(a) a##E0
 #        define BL_REAL_E(a,b) a##E##b
 #else
 #        define BL_REAL(a) a/**/E0
 #        define BL_REAL_E(a,b) a/**/E/**/b
 #endif
-
-#endif
-
-#else
-#ifdef BL_USE_FORT_STAR_PRECISION
-#    define REAL_T real*8
 #else
 #    define REAL_T DOUBLE PRECISION
-#endif
-
-#ifdef BLANKCONCAT
-#        define BL_REAL(a) a/**/D0
-#        define BL_REAL_E(a,b) a/**/D/**/b
-#else
-
-#if __STDC__==1
+#if __STDC__==1 || defined(__INTEL_COMPILER)
 #        define BL_REAL(a) a##D0
 #        define BL_REAL_E(a,b) a##D##b
 #else
 #        define BL_REAL(a) a/**/D0
 #        define BL_REAL_E(a,b) a/**/D/**/b
 #endif
-
 #endif
 
-#endif
+#endif /* ndef AMREX_XSDK */
 
 #endif /* !BL_LANG_FORT */
 

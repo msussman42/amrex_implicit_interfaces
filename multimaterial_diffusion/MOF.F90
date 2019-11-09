@@ -5,9 +5,9 @@
 
 #define STANDALONE 1
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
 
 #if (STANDALONE==0)
 #include "MOF_F.H"
@@ -2620,7 +2620,7 @@ end subroutine intersection_volume_and_map
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid120"
        stop
       endif
  
@@ -6300,7 +6300,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid121"
        stop
       endif
  
@@ -6507,18 +6507,18 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid122"
        stop
       endif
       if (nhalf0.lt.3) then
-       print *,"nhalf0 invalid"
+       print *,"nhalf0 invalid123"
        stop
       endif
 
       if (nmax.eq.geom_nmax) then
        ! do nothing
       else
-       print *,"nmax<>geom_nmax"
+       print *,"tets_box_planes_super: nmax<>geom_nmax"
        print *,"nmax= ",nmax
        print *,"geom_nmax= ",geom_nmax
        stop
@@ -6648,7 +6648,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid124"
        stop
       endif
       if ((sdim.ne.2).and.(sdim.ne.3)) then
@@ -7151,7 +7151,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid125"
        stop
       endif
       if ((sdim.ne.2).and.(sdim.ne.3)) then
@@ -7193,7 +7193,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid126"
        stop
       endif
       if (nhalf.ne.1) then
@@ -7248,7 +7248,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid127"
        stop
       endif
 
@@ -7367,7 +7367,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid128"
        stop
       endif
 
@@ -7543,7 +7543,7 @@ end subroutine volume_sanity_check
       nhalf2=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid129"
        stop
       endif
       if (nhalf0.lt.3) then
@@ -7677,7 +7677,7 @@ end subroutine volume_sanity_check
       INTEGER_T dir
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid130"
        stop
       endif
       if (nhalf.lt.1) then
@@ -7701,7 +7701,7 @@ end subroutine volume_sanity_check
        print *,"levelrz invalid get volume 2"
        stop
       endif
-      if (BL_SPACEDIM.ne.sdim) then
+      if (AMREX_SPACEDIM.ne.sdim) then
        print *,"dimension mismatch"
        stop
       endif
@@ -7762,7 +7762,7 @@ end subroutine volume_sanity_check
       REAL_T cenall(sdim)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid131"
        stop
       endif
 
@@ -7789,7 +7789,7 @@ end subroutine volume_sanity_check
        print *,"levelrz invalid get volume batch"
        stop
       endif 
-      if (BL_SPACEDIM.ne.sdim) then
+      if (AMREX_SPACEDIM.ne.sdim) then
        print *,"dimension mismatch"
        stop
       endif
@@ -8394,7 +8394,7 @@ end subroutine volume_sanity_check
       INTEGER_T linearcut,fullelementfast,nodedomain
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
@@ -8526,7 +8526,7 @@ end subroutine volume_sanity_check
       nodedomain=4*(sdim-1)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -8733,8 +8733,8 @@ contains
       endif
 
       intercept=zero
-      minphi=1.0E+10
-      maxphi=-1.0E+10
+      minphi=1.0D+10
+      maxphi=-1.0D+10
       do n=1,nlist
        do i=1,sdim+1
         do dir=1,sdim
@@ -9542,7 +9542,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
 
@@ -9641,8 +9641,8 @@ contains
         cencut(dir)=cencell(dir)
        enddo
 
-       minphi=1.0E+10
-       maxphi=-1.0E+10
+       minphi=1.0D+10
+       maxphi=-1.0D+10
        null_intercept=zero
 
        if ((continuous_mof.eq.0).or. &
@@ -9980,7 +9980,7 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
 
@@ -10015,8 +10015,8 @@ contains
        cencut(dir)=cencell(dir)
       enddo
 
-      minphi=1.0E+10
-      maxphi=-1.0E+10
+      minphi=1.0D+10
+      maxphi=-1.0D+10
       null_intercept=zero
 
       do k=klo_stencil,khi_stencil,2
@@ -10906,7 +10906,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
@@ -11528,7 +11528,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if (nhalf.lt.1) then
@@ -12491,7 +12491,7 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
 
@@ -13005,7 +13005,7 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
 
@@ -13029,6 +13029,15 @@ contains
        ! do nothing
       else
        print *,"nlist_alloc invalid"
+       stop
+      endif
+
+      if (nmax.eq.geom_nmax) then
+       ! do nothing
+      else
+       print *,"multimaterial_MOF: nmax<>geom_nmax"
+       print *,"nmax= ",nmax
+       print *,"geom_nmax= ",geom_nmax
        stop
       endif
 
@@ -14326,7 +14335,7 @@ contains
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.eq.3).or.(sdim.eq.2)) then
@@ -14506,7 +14515,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -15445,7 +15454,7 @@ contains
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.eq.3).or.(sdim.eq.2)) then
@@ -16058,12 +16067,21 @@ contains
        stop
       endif
 
+      if (nmax.eq.geom_nmax) then
+       ! do nothing
+      else
+       print *,"multi_get_volume_grid_simple: nmax<>geom_nmax"
+       print *,"nmax= ",nmax
+       print *,"geom_nmax= ",geom_nmax
+       stop
+      endif
+
       if ((nhalf0.lt.1).or.(nhalf_grid.lt.1)) then
        print *,"nhalf invalid multi get volume grid simple"
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -16937,7 +16955,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -17913,7 +17931,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -18199,7 +18217,7 @@ contains
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -18443,7 +18461,7 @@ contains
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid135"
         stop
        endif
        if ((nlist.lt.2).or.(nlist.gt.nmat-1).or. &
@@ -18621,7 +18639,7 @@ contains
        INTEGER_T indexlist(2)
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid135"
         stop
        endif
 
@@ -18864,7 +18882,7 @@ contains
        INTEGER_T im,vofcomp,FSI_exclude,irank,testflag,dir
 
        if (bfact.lt.1) then
-        print *,"bfact invalid"
+        print *,"bfact invalid135"
         stop
        endif
        if (nhalf0.lt.1) then
@@ -19563,7 +19581,7 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid135"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -20312,7 +20330,7 @@ end module MOF_routines_module
       if (1.eq.0) then
        sdim=2
        nmat_test=2
-       nmax_test=400
+       nmax_test=1000
        call diagnostic_MOF(sdim,nmat_test,nmax_test)
        stop
       endif

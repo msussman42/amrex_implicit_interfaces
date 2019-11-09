@@ -1,12 +1,12 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -61,13 +61,13 @@ implicit none
        ! 1 Pa=1 N/m^2 = 1 kg m/s^2 /m^2 =1kg/(m s^2)=1000 g/(m s^2)=
        !      10 g/(cm s^2)=10 dyne/cm^2
        ! 1 kbar=10^8 Pa=10^9 dyne/cm^2
-      REAL_T, PARAMETER :: A_strain_tillotson=21.8E+9 ! dyne/cm^2
-      REAL_T, PARAMETER :: B_strain_tillotson=132.5E+9 ! dyne/cm^2
-      REAL_T, PARAMETER :: E0_tillotson=0.07E+12 ! erg/g
-      REAL_T, PARAMETER :: E_IV_tillotson=0.00419E+12 ! erg/g
-      REAL_T, PARAMETER :: E_CV_tillotson=0.025E+12   ! erg/g
+      REAL_T, PARAMETER :: A_strain_tillotson=21.8D+9 ! dyne/cm^2
+      REAL_T, PARAMETER :: B_strain_tillotson=132.5D+9 ! dyne/cm^2
+      REAL_T, PARAMETER :: E0_tillotson=0.07D+12 ! erg/g
+      REAL_T, PARAMETER :: E_IV_tillotson=0.00419D+12 ! erg/g
+      REAL_T, PARAMETER :: E_CV_tillotson=0.025D+12   ! erg/g
       REAL_T, PARAMETER :: rho_cav_tillotson=0.995 ! g/cm^3
-      REAL_T, PARAMETER :: P_cav_tillotson=5.0E+4 ! dyne/cm^2
+      REAL_T, PARAMETER :: P_cav_tillotson=5.0D+4 ! dyne/cm^2
       REAL_T, PARAMETER :: T_cav_tillotson=305.9 ! degrees Kelvin
       REAL_T, PARAMETER :: alpha_tillotson=10.0 
       REAL_T, PARAMETER :: beta_tillotson=5.0 

@@ -1,11 +1,11 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 !------------------------------------------------------------
 module mmat_FVM
 use GeneralClass
@@ -1851,6 +1851,18 @@ else if (probtype_in.eq.4) then
   stop
  endif
 
+else if (probtype_in.eq.5) then
+
+ dist1=0.2d0-x 
+ if (imat.eq.1) then
+  dist=dist1
+ else if (imat.eq.2) then
+  dist=-dist1
+ else
+  print *,"imat invalid"
+  stop
+ endif
+
 else if ((probtype_in.eq.19).or. &
          (probtype_in.eq.14).or. & 
          (probtype_in.eq.13).or. &
@@ -2149,7 +2161,8 @@ else if (probtype_in.eq.3) then
  endif
 
 else if (probtype_in.eq.4) then
-
+ ! normal points into the circle for material 1
+ ! normal points out of the circle for material 2
  dist= radblob - dist1  ! inner distance function (material 1)
  mx = (x - 0.5d0)/(dist - radblob)
  my = (y - 0.5d0)/(dist - radblob)
@@ -2158,6 +2171,19 @@ else if (probtype_in.eq.4) then
  else if (im.eq.2) then
   mx=-mx
   my=-my
+ else
+  print *,"im invalid"
+  stop
+ endif
+
+else if (probtype_in.eq.5) then
+
+ my=0.0d0
+ mx=-1.0d0
+ if (im.eq.1) then
+  mx=-1.0d0
+ else if (im.eq.2) then
+  mx=1.0d0
  else
   print *,"im invalid"
   stop
@@ -2531,6 +2557,7 @@ if ((probtype_in.eq.0).or. &
     (probtype_in.eq.2).or. &
     (probtype_in.eq.3).or. &
     (probtype_in.eq.4).or. &
+    (probtype_in.eq.5).or. &
     (probtype_in.eq.14).or. &
     (probtype_in.eq.15)) then
 
@@ -2793,6 +2820,8 @@ else if (probtype_in.eq.3) then
  ! do nothing
 else if (probtype_in.eq.4) then
  ! do nothing
+else if (probtype_in.eq.5) then
+ ! do nothing
 elseif(probtype_in .eq. 15)then   
  ! vf_temp(2)=1.0-vf_temp(1)
 
@@ -2922,6 +2951,8 @@ else if (probtype_in.eq.2) then
 else if (probtype_in.eq.3) then
  ! do nothing
 else if (probtype_in.eq.4) then
+ ! do nothing
+else if (probtype_in.eq.5) then
  ! do nothing
 else if (probtype_in.eq.14) then
  ! do nothing
@@ -3222,6 +3253,15 @@ real(kind=8) :: radial_slope
    stop
   endif
  else if (probtype_in.eq.4) then
+  if (im.eq.1) then
+   G_in=0.0
+  else if (im.eq.2) then
+   G_in=0.0
+  else
+   print *,"im invalid 4"
+   stop
+  endif
+ else if (probtype_in.eq.5) then
   if (im.eq.1) then
    G_in=0.0
   else if (im.eq.2) then
@@ -3567,6 +3607,8 @@ else if (local_probtype.eq.3) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.4) then
         Uprescribe=0.0d0
+else if (local_probtype.eq.5) then
+        Uprescribe=0.0d0
 else if (local_probtype.eq.13) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.14) then
@@ -3624,6 +3666,8 @@ else if (local_probtype.eq.2) then
 else if (local_probtype.eq.3) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.4) then
+        Vprescribe=0.0d0
+else if (local_probtype.eq.5) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.13) then
         Vprescribe=0.0d0
@@ -3965,6 +4009,21 @@ real(kind=8)              :: radial_slope
   dely=x_vec(2)-0.5d0
   radius = sqrt(delx**2.0d0 +dely**2.0d0)
   call disk_interp_T(radius,2,exact_temperature)
+
+ else if (probtype_in.eq.5) then
+  if (nmat_in.ne.2) then
+   print *,"nmat_in invalid"
+   stop
+  endif
+  if (x_vec(1).le.0.2d0+t) then
+   exact_temperature=273.0d0
+  else if (x_vec(1).ge.0.2d0+t) then
+   exact_temperature=272.0d0+exp(-(x_vec(1)-0.2d0-t))
+  else
+   print *,"x_vec bust"
+   stop
+  endif
+
  else if ((probtype_in.eq.0).or. &
           (probtype_in.eq.2)) then
   if (nmat_in.ne.2) then

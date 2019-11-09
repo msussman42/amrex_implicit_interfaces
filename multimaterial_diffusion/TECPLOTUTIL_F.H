@@ -14,13 +14,15 @@
 #  endif
 #  endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
+
+namespace amrex{
 
 extern "C" {
 
     void FORT_TECPLOTFAB(
      Real* time,
-     Real* fabdata,ARLIM_P(fabdatalo),ARLIM_P(fabdatahi),
+     Real* fabdata,AMREX_ARLIM_P(fabdatalo),AMREX_ARLIM_P(fabdatahi),
      const int* growlo,const int* growhi,
      const int* fablo,const int* fabhi,
      int* bfact,
@@ -29,6 +31,7 @@ extern "C" {
      int* interior_only,int* nsteps);
 
 }
+}/* namespace amrex */
     
 #endif
 #endif /*_TECPLOTUTIL_F_H_*/

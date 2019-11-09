@@ -3,12 +3,12 @@
 #define BL_LANG_FORT
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
 
 module tetrahedron_keast_module
-  
+
 contains
 
 subroutine comp_next ( n, k, a, more, h, t )

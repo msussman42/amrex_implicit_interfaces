@@ -5,21 +5,22 @@
 
 #define STANDALONE 1
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+
 #include "MOF_REDIST_F.H"
-#include "ArrayLim.H"
 
 #define nsum 64
 #define nsum2 32
 #define VISCINVTOL (1.0D-8)
 #define CURVWT (1.0D-3)
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -47,28 +48,28 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T nhalf
-      INTEGER_T bfact,nmat,nstar
-      INTEGER_T idon,jdon,kdon
-      INTEGER_T i1,j1,k1
-      INTEGER_T fablo(SDIM)
-      REAL_T time
-      REAL_T xsten_accept(-nhalf:nhalf,SDIM)
-      REAL_T xsten_donate(-nhalf:nhalf,SDIM)
-      REAL_T xsten_vert(-nhalf:nhalf,SDIM)
-      REAL_T xdonate_vert(SDIM)
-      REAL_T xdonate_point(SDIM)
-      REAL_T xaccept_point(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T xlo(SDIM)
-      REAL_T mofdata(nmat*ngeom_recon)
-      REAL_T newLS(nmat*(1+SDIM))
-      INTEGER_T touch_hold(nmat)
-      REAL_T minLS(nmat)
-      REAL_T maxLS(nmat)
-      INTEGER_T donateflag(nmat+1+nstar)
-      INTEGER_T center_stencil,im0,imslope
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, intent(in) :: bfact,nmat,nstar
+      INTEGER_T, intent(in) :: idon,jdon,kdon
+      INTEGER_T, intent(in) :: i1,j1,k1
+      INTEGER_T, intent(in) :: fablo(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: xsten_accept(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: xsten_donate(-nhalf:nhalf,SDIM)
+      REAL_T :: xsten_vert(-nhalf:nhalf,SDIM)
+      REAL_T :: xdonate_vert(SDIM)
+      REAL_T :: xdonate_point(SDIM)
+      REAL_T :: xaccept_point(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
+      REAL_T, intent(inout) :: newLS(nmat*(1+SDIM))
+      INTEGER_T, intent(inout) :: touch_hold(nmat)
+      REAL_T, intent(inout) :: minLS(nmat)
+      REAL_T, intent(inout) :: maxLS(nmat)
+      INTEGER_T, intent(in) :: donateflag(nmat+1+nstar)
+      INTEGER_T :: center_stencil,im0,imslope
 
       INTEGER_T nstar_test
       INTEGER_T istar_array(3)
@@ -102,7 +103,7 @@ stop
       imslope=0
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact140 invalid"
        stop
       endif
       nstar_test=9
@@ -257,17 +258,18 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T level,finest_level
-      INTEGER_T nmat
-      INTEGER_T DIMDEC(LS_new)
-      INTEGER_T DIMDEC(LS_NRM_FD)
-      REAL_T LS_new(DIMV(LS_new),nmat*(1+SDIM))
-      REAL_T LS_NRM_FD(DIMV(LS_NRM_FD),nmat*SDIM)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: DIMDEC(LS_new)
+      INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
+      REAL_T, intent(in) :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, intent(out) :: LS_NRM_FD(DIMV(LS_NRM_FD),nmat*SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T dir
@@ -289,7 +291,7 @@ stop
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid141"
        stop
       endif
       if ((level.le.finest_level).and.(level.ge.0)) then
@@ -490,46 +492,46 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T nprocessed
-      INTEGER_T level,finest_level
-      INTEGER_T nten,nstar,nface
-      INTEGER_T nmat
-      INTEGER_T ngrow_distance
-      REAL_T minLS(nmat)
-      REAL_T maxLS(nmat)
-      REAL_T max_problen
-      REAL_T latent_heat(2*nten)
-      INTEGER_T DIMDEC(maskfab)
-      INTEGER_T DIMDEC(facefab)
-      INTEGER_T DIMDEC(facetest)
-      INTEGER_T DIMDEC(stenfab)
-      INTEGER_T DIMDEC(vofrecon)
-      INTEGER_T DIMDEC(origdist)
-      INTEGER_T DIMDEC(newfab)
-      INTEGER_T DIMDEC(touchfab)
-      INTEGER_T DIMDEC(crsetouch)
-      INTEGER_T DIMDEC(crsedist)
+      INTEGER_T, intent(inout) :: nprocessed
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nten,nstar,nface
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ngrow_distance
+      REAL_T, intent(inout) :: minLS(nmat)
+      REAL_T, intent(inout) :: maxLS(nmat)
+      REAL_T, intent(in) :: max_problen
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: DIMDEC(maskfab)
+      INTEGER_T, intent(in) :: DIMDEC(facefab)
+      INTEGER_T, intent(in) :: DIMDEC(facetest)
+      INTEGER_T, intent(in) :: DIMDEC(stenfab)
+      INTEGER_T, intent(in) :: DIMDEC(vofrecon)
+      INTEGER_T, intent(in) :: DIMDEC(origdist)
+      INTEGER_T, intent(in) :: DIMDEC(newfab)
+      INTEGER_T, intent(in) :: DIMDEC(touchfab)
+      INTEGER_T, intent(in) :: DIMDEC(crsetouch)
+      INTEGER_T, intent(in) :: DIMDEC(crsedist)
 
-      REAL_T maskfab(DIMV(maskfab),4)
-      REAL_T facefab(DIMV(facefab),nface)
-      REAL_T facetest(DIMV(facetest),nmat*SDIM)
-      REAL_T stenfab(DIMV(stenfab),nstar)
+      REAL_T, intent(in) :: maskfab(DIMV(maskfab),4)
+      REAL_T, intent(in) :: facefab(DIMV(facefab),nface)
+      REAL_T, intent(in) :: facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T, intent(in) :: stenfab(DIMV(stenfab),nstar)
 
-      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
-      REAL_T origdist(DIMV(origdist),nmat*(1+SDIM))
-      REAL_T newfab(DIMV(newfab),nmat*(1+SDIM))
-      REAL_T touchfab(DIMV(touchfab),nmat)
-      REAL_T crsetouch(DIMV(crsetouch),nmat)
-      REAL_T crsedist(DIMV(crsedist),nmat*(1+SDIM))
+      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in) :: origdist(DIMV(origdist),nmat*(1+SDIM))
+      REAL_T, intent(inout) :: newfab(DIMV(newfab),nmat*(1+SDIM))
+      REAL_T, intent(inout) :: touchfab(DIMV(touchfab),nmat)
+      REAL_T, intent(in) :: crsetouch(DIMV(crsetouch),nmat)
+      REAL_T, intent(in) :: crsedist(DIMV(crsedist),nmat*(1+SDIM))
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T rz_flag
-      INTEGER_T bc(SDIM,2)
-      REAL_T time
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: rz_flag
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+      REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k,i1,j1,k1
       REAL_T vcenter(nmat)
@@ -602,7 +604,7 @@ stop
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid142"
        stop
       endif
 
@@ -1394,23 +1396,23 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T level,finest_level
-      INTEGER_T nmat
-      REAL_T minLS(nmat)
-      REAL_T maxLS(nmat)
-      REAL_T max_problen
-      INTEGER_T DIMDEC(newfab)
-      INTEGER_T DIMDEC(touchfab)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: minLS(nmat)
+      REAL_T, intent(in) :: maxLS(nmat)
+      REAL_T, intent(in) :: max_problen
+      INTEGER_T, intent(in) :: DIMDEC(newfab)
+      INTEGER_T, intent(in) :: DIMDEC(touchfab)
 
-      REAL_T newfab(DIMV(newfab),nmat*(1+SDIM))
-      REAL_T touchfab(DIMV(touchfab),nmat)
+      REAL_T, intent(inout) :: newfab(DIMV(newfab),nmat*(1+SDIM))
+      REAL_T, intent(in) :: touchfab(DIMV(touchfab),nmat)
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM),dx(SDIM)
-      REAL_T time
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k
       INTEGER_T im
@@ -1418,7 +1420,7 @@ stop
       REAL_T init_dist
      
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid143"
        stop
       endif
       if (max_problen.le.zero) then
@@ -1520,25 +1522,25 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nstar
-      INTEGER_T nmat,ngrow_distance
-      INTEGER_T DIMDEC(stenfab)
-      INTEGER_T DIMDEC(maskfab)
-      INTEGER_T DIMDEC(vofrecon)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nstar
+      INTEGER_T, intent(in) :: nmat,ngrow_distance
+      INTEGER_T, intent(in) :: DIMDEC(stenfab)
+      INTEGER_T, intent(in) :: DIMDEC(maskfab)
+      INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T stenfab(DIMV(stenfab),nstar)
-      REAL_T maskfab(DIMV(maskfab),2)
-      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(out) :: stenfab(DIMV(stenfab),nstar)
+      REAL_T, intent(in) :: maskfab(DIMV(maskfab),2)
+      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T rz_flag
-      REAL_T time
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: rz_flag
+      REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k
       REAL_T vcenter(nmat)
@@ -1565,7 +1567,7 @@ stop
       tessellate=0
  
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid144"
        stop
       endif
 
@@ -1754,31 +1756,31 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T tessellate
-      INTEGER_T nten
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nface
-      INTEGER_T nface_decomp
-      INTEGER_T nface_decomp_test
-      INTEGER_T nmat
-      INTEGER_T ngrow
-      INTEGER_T DIMDEC(facefab)
-      INTEGER_T DIMDEC(maskfab)
-      INTEGER_T DIMDEC(vofrecon)
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nface
+      INTEGER_T, intent(in) :: nface_decomp
+      INTEGER_T :: nface_decomp_test
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: DIMDEC(facefab)
+      INTEGER_T, intent(in) :: DIMDEC(maskfab)
+      INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T facefab(DIMV(facefab),nface+nface_decomp)
-      REAL_T maskfab(DIMV(maskfab),2)
-      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(out) :: facefab(DIMV(facefab),nface+nface_decomp)
+      REAL_T, intent(in) :: maskfab(DIMV(maskfab),2)
+      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T rz_flag
-      REAL_T time
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: rz_flag
+      REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k
       INTEGER_T im,im_opp
@@ -1864,7 +1866,7 @@ stop
       enddo
       enddo
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid145"
        stop
       endif
 
@@ -2742,29 +2744,29 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T tessellate
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nface
-      INTEGER_T nmat,ngrow
-      INTEGER_T DIMDEC(facefab)
-      INTEGER_T DIMDEC(facetest)
-      INTEGER_T DIMDEC(maskfab)
-      INTEGER_T DIMDEC(vofrecon)
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nface
+      INTEGER_T, intent(in) :: nmat,ngrow
+      INTEGER_T, intent(in) :: DIMDEC(facefab)
+      INTEGER_T, intent(in) :: DIMDEC(facetest)
+      INTEGER_T, intent(in) :: DIMDEC(maskfab)
+      INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T facefab(DIMV(facefab),nface)
-      REAL_T facetest(DIMV(facetest),nmat*SDIM)
-      REAL_T maskfab(DIMV(maskfab),2)
-      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in) :: facefab(DIMV(facefab),nface)
+      REAL_T, intent(out) :: facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T, intent(in) :: maskfab(DIMV(maskfab),2)
+      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T rz_flag
-      REAL_T time
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: rz_flag
+      REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k
       INTEGER_T icell,jcell,kcell
@@ -2797,7 +2799,7 @@ stop
       endif
  
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid146"
        stop
       endif
 

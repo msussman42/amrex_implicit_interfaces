@@ -34,7 +34,9 @@
 #  endif
 #  endif
 
-#include <ArrayLim.H>
+#include <AMReX_ArrayLim.H>
+
+namespace amrex{
 
   extern "C" {
 
@@ -42,8 +44,8 @@
      void FORT_FD_NORMAL(
        int* level,
        int* finest_level,
-       Real* lsnew,ARLIM_P(lsnewlo),ARLIM_P(lsnewhi),
-       Real* lsnrmFD,ARLIM_P(lsnrmFDlo),ARLIM_P(lsnrmFDhi),
+       Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
+       Real* lsnrmFD,AMREX_ARLIM_P(lsnrmFDlo),AMREX_ARLIM_P(lsnrmFDhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
@@ -58,16 +60,16 @@
        int* level,
        int* finest_level,
        Real* latent_heat,
-       Real* maskfab,ARLIM_P(maskfablo),ARLIM_P(maskfabhi),
-       Real* facefab,ARLIM_P(facefablo),ARLIM_P(facefabhi),
-       Real* facetest,ARLIM_P(facetestlo),ARLIM_P(facetesthi),
-       Real* stenfab,ARLIM_P(stenfablo),ARLIM_P(stenfabhi),
-       Real* vofrecon,ARLIM_P(vofreconlo),ARLIM_P(vofreconhi),
-       Real* origdist,ARLIM_P(origdistlo),ARLIM_P(origdisthi),
-       Real* newfab,ARLIM_P(newfablo),ARLIM_P(newfabhi),
-       Real* touchfab,ARLIM_P(touchfablo),ARLIM_P(touchfabhi),
-       Real* crsetouch,ARLIM_P(crsetouchlo),ARLIM_P(crsetouchhi),
-       Real* crsedist,ARLIM_P(crsedistlo),ARLIM_P(crsedisthi),
+       Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
+       Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
+       Real* facetest,AMREX_ARLIM_P(facetestlo),AMREX_ARLIM_P(facetesthi),
+       Real* stenfab,AMREX_ARLIM_P(stenfablo),AMREX_ARLIM_P(stenfabhi),
+       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
+       Real* origdist,AMREX_ARLIM_P(origdistlo),AMREX_ARLIM_P(origdisthi),
+       Real* newfab,AMREX_ARLIM_P(newfablo),AMREX_ARLIM_P(newfabhi),
+       Real* touchfab,AMREX_ARLIM_P(touchfablo),AMREX_ARLIM_P(touchfabhi),
+       Real* crsetouch,AMREX_ARLIM_P(crsetouchlo),AMREX_ARLIM_P(crsetouchhi),
+       Real* crsedist,AMREX_ARLIM_P(crsedistlo),AMREX_ARLIM_P(crsedisthi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
@@ -83,8 +85,8 @@
        Real* max_problen,
        int* level,
        int* finest_level,
-       Real* newfab,ARLIM_P(newfablo),ARLIM_P(newfabhi),
-       Real* touchfab,ARLIM_P(touchfablo),ARLIM_P(touchfabhi),
+       Real* newfab,AMREX_ARLIM_P(newfablo),AMREX_ARLIM_P(newfabhi),
+       Real* touchfab,AMREX_ARLIM_P(touchfablo),AMREX_ARLIM_P(touchfabhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
@@ -94,9 +96,9 @@
 
      void FORT_STENINIT(
        int* level,int* finest_level,
-       Real* stenfab,ARLIM_P(stenfablo),ARLIM_P(stenfabhi),
-       Real* mask,ARLIM_P(masklo),ARLIM_P(maskhi),
-       Real* vofrecon,ARLIM_P(vofreconlo),ARLIM_P(vofreconhi),
+       Real* stenfab,AMREX_ARLIM_P(stenfablo),AMREX_ARLIM_P(stenfabhi),
+       Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
@@ -112,9 +114,9 @@
        int* nten,
        int* level,
        int* finest_level,
-       Real* facefab,ARLIM_P(facefablo),ARLIM_P(facefabhi),
-       Real* maskfab,ARLIM_P(maskfablo),ARLIM_P(maskfabhi),
-       Real* vofrecon,ARLIM_P(vofreconlo),ARLIM_P(vofreconhi),
+       Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
+       Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
+       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
@@ -131,10 +133,10 @@
        int* tessellate,
        int* level,
        int* finest_level,
-       Real* facefab,ARLIM_P(facefablo),ARLIM_P(facefabhi),
-       Real* facetest,ARLIM_P(facetestlo),ARLIM_P(facetesthi),
-       Real* maskfab,ARLIM_P(maskfablo),ARLIM_P(maskfabhi),
-       Real* vofrecon,ARLIM_P(vofreconlo),ARLIM_P(vofreconhi),
+       Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
+       Real* facetest,AMREX_ARLIM_P(facetestlo),AMREX_ARLIM_P(facetesthi),
+       Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
+       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
@@ -146,6 +148,9 @@
        int* nface);
 
   };
+
+}/* namespace amrex */
+
 #endif
 
 #endif

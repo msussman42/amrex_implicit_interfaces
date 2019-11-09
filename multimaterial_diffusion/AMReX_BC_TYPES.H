@@ -1,5 +1,5 @@
-#ifndef _BC_TYPES_H_
-#define _BC_TYPES_H_ 
+#ifndef AMREX_BC_TYPES_H_
+#define AMREX_BC_TYPES_H_
 
 #if 0
 ---------------------------------------------------------------------
@@ -43,7 +43,10 @@ SYMMETRY       |  Un REFLECT_ODD |  REFLECT_EVEN    | REFLECT_EVEN   |
 
 
 INT_DIR      : data taken from other grids or interpolated
-EXT_DIR      : data specified on EDGE (FACE) of bndry
+EXT_DIR      : data specified on EDGE (FACE) of bndry for the linear solvers
+               for application codes, the location of the EXT_DIR data will
+               depend on how they do reconstruction, and may be edge or
+               cell-centered.
 HOEXTRAP     : higher order extrapolation to EDGE of bndry
 FOEXTRAP     : first order extrapolation from last cell in interior
 REFLECT_EVEN : F(-n) = F(n)   true reflection from interior cells
@@ -51,10 +54,30 @@ REFLECT_ODD  : F(-n) = -F(n)  true reflection from interior cells
 
 #endif
 
-#ifndef BL_LANG_FORT
-enum physicalBndryTypes {Interior,Inflow,Outflow,Symmetry,
-                         SlipWall,NoSlipWall};
+#ifdef __cplusplus
+namespace amrex {
+
+namespace PhysBCType {
+enum physicalBndryTypes : int {interior=0,inflow,outflow,symmetry,
+                               slipwall,noslipwall};
+}
+
+namespace BCType {
+enum mathematicalBndryTypes : int {
+    bogus        = -666,
+    reflect_odd  = -1,
+    int_dir      =  0,
+    reflect_even =  1,
+    foextrap     =  2,
+    ext_dir      =  3,
+    hoextrap     =  4
+};
+}
+
+}
 #endif
+
+#ifndef AMREX_XSDK
 
 #define BOGUS_BC -666
 
@@ -71,6 +94,8 @@ enum physicalBndryTypes {Interior,Inflow,Outflow,Symmetry,
 #define Symmetry 3
 #define SlipWall 4
 #define NoSlipWall 5
+
+#endif
 
 #endif
 

@@ -1,14 +1,14 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
@@ -144,7 +144,7 @@ stop
       allocate(distbatch(nmat))
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid301"
        stop
       endif
 
@@ -282,7 +282,7 @@ stop
       endif 
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid302"
        stop
       endif
       if (nhalf.lt.3) then

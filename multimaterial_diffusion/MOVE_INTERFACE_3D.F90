@@ -3,20 +3,20 @@
 #define BL_LANG_FORT
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
 #include "PLIC_F.H"
 #include "TECPLOTUTIL_F.H"
 #include "MASS_TRANSFER_F.H"
 #include "MOF_REDIST_F.H"
-#include "ArrayLim.H"
+#include "AMReX_ArrayLim.H"
 
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else
 print *,"dimension bust"
@@ -39,12 +39,12 @@ stop
       dir=2
       ARG_L2(fabdim)=fablo(dir)-ngrow
       ARG_H2(fabdim)=fabhi(dir)+ngrow
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       ARG_L3(fabdim)=fablo(dir)-ngrow
       ARG_H3(fabdim)=fabhi(dir)+ngrow
       print *,"prototype code only for 2d"
       stop
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       ! do nothing
 #else
       print *,"dimension bust"
@@ -442,6 +442,17 @@ stop
         print *,"im invalid"
         stop
        endif
+      else if (probtype.eq.5) then
+       ! material 1: left  material 2: right
+       LS=0.2d0+time-xblob
+       if (im.eq.2) then
+        LS=-LS
+       else if (im.eq.1) then
+        ! do nothing
+       else
+        print *,"im invalid"
+        stop
+       endif
       else if (probtype.eq.19) then
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.13) then
@@ -503,6 +514,7 @@ stop
         stop
        endif
       else if (probtype.eq.4) then
+       ! inside material 1, outside material 2
        test_radblob=axisymmetric_disk_radblob(2)
        mag=sqrt((xgrid(1)-xblob)**2+(xgrid(2)-yblob)**2)
        if (mag.gt.zero) then
@@ -510,15 +522,29 @@ stop
         NRM(2)=(xgrid(2)-yblob)/mag
        endif
        if (im.eq.1) then
+        ! material 1 normal points into material 1
         do dir=1,SDIM
          NRM(dir)=-NRM(dir)
         enddo
        else if (im.eq.2) then
-        ! do nothing
+        ! do nothing: material 2 normal points into material 2.
        else
         print *,"im invalid"
         stop
        endif
+
+      else if (probtype.eq.5) then 
+       ! im=1 left  im=2 right
+       NRM(2)=0.0d0
+       if (im.eq.1) then
+        NRM(1)=-1.0d0
+       else if (im.eq.2) then
+        NRM(1)=1.0d0
+       else
+        print *,"im invalid"
+        stop
+       endif
+
       else if ((probtype.eq.19).or. &
                (probtype.eq.13).or. &
                (probtype.eq.1)) then
@@ -599,7 +625,9 @@ stop
          stop
         endif
        else
-        print *,"iten invalid"
+        print *,"iten invalid (get exact vel) "
+        print *,"iten=",iten
+        print *,"probtype=",probtype
         stop
        endif
       else if (probtype.eq.4) then
@@ -615,7 +643,28 @@ stop
          print *,"front_vel,test_front_vel ",front_vel,test_front_vel
         endif
        else
-        print *,"iten invalid"
+        print *,"iten invalid (get exact vel 2)"
+        print *,"iten=",iten
+        print *,"probtype=",probtype
+        stop
+       endif
+      else if (probtype.eq.5) then
+
+       if (iten.eq.2) then
+        call interp_LS_vel_to_grid(xgrid,2,LS,VEL)
+        test_front_vel=0.0d0
+        do dir=1,SDIM
+         test_front_vel=test_front_vel+VEL(dir)**2
+        enddo
+        test_front_vel=sqrt(test_front_vel)
+        front_vel=1.0d0
+        if (1.eq.0) then
+         print *,"front_vel,test_front_vel ",front_vel,test_front_vel
+        endif
+       else
+        print *,"iten invalid (get exact vel)"
+        print *,"iten=",iten
+        print *,"probtype=",probtype
         stop
        endif
       else if (probtype.eq.19) then
@@ -883,7 +932,7 @@ stop
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
 
       diagnostic_output=0
-      DEBUG_LS=1
+      DEBUG_LS=0
       nhalf=3
 
       if (SDIM.eq.2) then

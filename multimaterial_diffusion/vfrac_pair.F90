@@ -1,11 +1,11 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 
 
 ! GeneralClass is in vof_cisl.F90
@@ -130,7 +130,8 @@ contains
         print *,"calling vfrac_pair_along_side  dir,side= ",dir,side
        endif
        call vfrac_pair_along_side(nmat,frac_outside,frac_inside, &
-          x_outside,x_inside,frac_pair,x_pair,L_face,tessellate)
+          x_outside,x_inside,frac_pair,x_pair,L_face,tessellate, &
+          dir)
        do im_outside=1,nmat
        do im_inside=1,nmat
         frac_pair_cell(im_outside,im_inside,dir,side) = &
@@ -159,7 +160,8 @@ contains
         print *,"calling vfrac_pair_along_side  dir,side= ",dir,side
        endif
        call vfrac_pair_along_side(nmat,frac_outside,frac_inside, &
-            x_outside,x_inside,frac_pair,x_pair,L_face,tessellate)
+            x_outside,x_inside,frac_pair,x_pair,L_face,tessellate, &
+            dir)
        do im_outside=1,nmat
        do im_inside=1,nmat
         frac_pair_cell(im_outside,im_inside,dir,side) = &
@@ -789,7 +791,10 @@ contains
       endif
      enddo
     else
-     print *,"iten invalid"
+     print *,"iten invalid, init_multimaterial_flag"
+     print *,"global_nten ",global_nten
+     print *,"iten=",iten
+
      stop
     endif
   else

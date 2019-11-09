@@ -1,7 +1,7 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "BC_TYPES.H"
+#include "AMReX_BC_TYPES.H"
 
       module bicgstab_module
       USE probmain_module
@@ -1842,13 +1842,13 @@
       if (abs(gridval(IV0)-valu).le.1.0D-10) then
        XX(icomp)=gridx(IV0)
        YY(icomp)=gridy(IV0)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        ZZ(icomp)=gridz(IV0)
 #endif
       else if (abs(gridval(IV1)-valu).le.1.0D-10) then
        XX(icomp)=gridx(IV1)
        YY(icomp)=gridy(IV1)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        ZZ(icomp)=gridz(IV1)
 #endif
       else
@@ -1860,7 +1860,7 @@
  
        XX(icomp)=tt*gridx(IV1)+(1.0-tt)*gridx(IV0)
        YY(icomp)=tt*gridy(IV1)+(1.0-tt)*gridy(IV0)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
        ZZ(icomp)=tt*gridz(IV1)+(1.0-tt)*gridz(IV0)
 #endif
       endif
@@ -1879,11 +1879,11 @@
       REAL*8 XX(sdim),YY(sdim),ZZ(sdim),NORMAL(sdim)
       REAL*8 CPROD(sdim),VEC1(3),VEC2(3),DOTPROD
 
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       VEC1(1)=XX(sdim)-XX(1)
       VEC1(2)=YY(sdim)-YY(1)
       VEC1(3)=ZZ(sdim)-ZZ(1)
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       VEC1(1)=0.0
       VEC1(2)=0.0
       VEC1(3)=1.0
@@ -1894,9 +1894,9 @@
 
       VEC2(1)=XX(2)-XX(1)
       VEC2(2)=YY(2)-YY(1)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       VEC2(3)=ZZ(2)-ZZ(1)
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       VEC2(3)=0.0
 #else
       print *,"dimension bust"
@@ -1904,11 +1904,11 @@
 #endif
       CPROD(1)=VEC1(2)*VEC2(3)-VEC1(3)*VEC2(2)
       CPROD(2)=-VEC1(1)*VEC2(3)+VEC1(3)*VEC2(1)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       CPROD(sdim)=VEC1(1)*VEC2(2)-VEC1(2)*VEC2(1)
 #endif
       DOTPROD=CPROD(1)*NORMAL(1)+CPROD(2)*NORMAL(2)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       DOTPROD=DOTPROD+CPROD(sdim)*NORMAL(sdim)
 #endif
 
@@ -1919,10 +1919,10 @@
 
       geom(1,itri+1)=XX(1)
       geom(2,itri+1)=YY(1)
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       geom(sdim,itri+1)=ZZ(1)
 #endif
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
       if (DOTPROD.gt.0.0) then
        geom(1,itri+2)=XX(2)
        geom(2,itri+2)=YY(2)
@@ -1938,7 +1938,7 @@
        geom(2,itri+sdim)=YY(2)
        geom(sdim,itri+sdim)=ZZ(2)
       endif
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
       geom(1,itri+2)=XX(2)
       geom(2,itri+2)=YY(2)
 #else

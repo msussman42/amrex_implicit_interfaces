@@ -5,16 +5,17 @@
 
 #define STANDALONE 1
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "SPACE.H"
-#include "BC_TYPES.H"
-#include "TECPLOTUTIL_F.H"
-#include "ArrayLim.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
 
-#if (BL_SPACEDIM==3)
+#include "TECPLOTUTIL_F.H"
+
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else
 print *,"dimension bust"
@@ -80,7 +81,7 @@ stop
       nhalf=1
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid400"
        stop
       endif
 

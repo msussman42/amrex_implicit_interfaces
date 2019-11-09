@@ -1,7 +1,7 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "BC_TYPES.H"
+#include "AMReX_BC_TYPES.H"
 
 PROGRAM test 
 USE GeneralClass ! vof_cisl.F90
@@ -282,26 +282,31 @@ IMPLICIT NONE
 ! 2=vertical interface
 ! 3=expanding circle (material 1 inside, T=TSAT inside)
 ! 4=expanding or shrinking circle (material 1 inside, T=TSAT outside)
+!    (TSTOP=1.25D-3)
+! 5=phase change for vertical planar interface (initial location xblob_in)
+!    (TSTOP=0.5d0)
 ! 13=pentafoil (pentaeps, dirichlet_pentafoil init below) 
 ! 16=multiscale (thin filament effect)
 !    (filament thickness is thermal_delta init below)
 ! 19=polar solver
 ! 15=hypocycloid with 2 materials
 ! 20=hypocycloid with 6 materials
-INTEGER,PARAMETER          :: probtype_in=16
-INTEGER,PARAMETER          :: stefan_flag=0
+INTEGER,PARAMETER          :: probtype_in=5
+INTEGER,PARAMETER          :: stefan_flag=1
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
 ! buffer for probtype_in=3
 real(kind=8),PARAMETER     :: radblob2_in = 0.05d0  
-real(kind=8),PARAMETER     :: xblob_in = 0.5d0
+real(kind=8),PARAMETER     :: xblob_in = 0.2d0
 real(kind=8),PARAMETER     :: yblob_in = 0.5d0
 ! for probtype=16 , top and bot temperature profile
 real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0  
 ! 1.0d0 for probtype==3
 ! -4.0d0 for probtype==4 (TDIFF=T_DISK_CENTER - TSAT)
 ! 10.0d0 for probtype==16
-real(kind=8),PARAMETER     :: TDIFF_in = 10.0d0  
+! for probtype==5, T(x=0)=273.0  T(x=1)=272.0+e^{-V(1-Vt)}
+! material 1 on the left, material 2 on the right.
+real(kind=8),PARAMETER     :: TDIFF_in = -4.0d0  
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
@@ -309,7 +314,7 @@ real(kind=8),PARAMETER     :: latent_heat_in = 1.0d0
 !0=low,1=simple,2=Dai and Scannapieco,3=orthogonal probe
 INTEGER,PARAMETER          :: local_operator_internal = 1
 INTEGER,PARAMETER          :: local_operator_external = 1
-INTEGER,PARAMETER          :: local_linear_exact = 0
+INTEGER,PARAMETER          :: local_linear_exact = 1
 INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=1 non-deforming boundary tests
 ! M=40 probtype_in=3 test with N=64
@@ -335,7 +340,7 @@ INTEGER,PARAMETER          :: plot_int = 4
 !
 ! non-axisymmetric, polar solver for validation (probtype_in.eq.19):
 ! TSTOP=0.004d0
-real(kind=8),parameter     :: TSTOP = 2.0d0
+real(kind=8),parameter     :: TSTOP = 0.5d0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -455,7 +460,7 @@ integer :: constant_K_test
 integer :: iter
 real(kind=8) :: iter_average
 
-print *,"PROTOTYPE CODE DATE= August 03, 14:40"
+print *,"PROTOTYPE CODE DATE= November 9, 13:40"
 
 im_measure=2
 constant_K_test=0
@@ -463,11 +468,13 @@ constant_K_test=0
 print *,"im_measure= ",im_measure
 print *,"constant_K_test= ",constant_K_test
 
-N_START=16
-N_FINISH=256
-M_START=4
+! N space
+! M time
+N_START=32
+N_FINISH=32
+M_START=32
 M_FACTOR=2
-fixed_dt_main=-1.0d0
+fixed_dt_main=1.0d0/64.0d0
 
 ! INITIALIZE VARIABLES DECLARED IN vof_cisl.F90 (Module GeneralClass)
 
@@ -495,8 +502,6 @@ filament_test_type = 0
 ! 0.01D0, 0.5D0, 0.99D0, 0.99999999D0 are some options
 !ERRTOL=0.99999999D0
 ERRTOL=0.01D0
-
-
 
 
 
@@ -607,6 +612,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
    ! distance function: see subroutine dist_concentric in multimat_FVM.F90
  else if (probtype_in.eq.4) then
+   print *,"MAKE SURE DEBUG_LS==0"
    nmat_in=2
    fort_heatviscconst(1)=1.0  ! inside material (supercooled liquid)
    fort_heatviscconst(2)=0.0  ! outside (ice)
@@ -616,6 +622,35 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     physbc_value(dir,side)=0.0
    enddo
    enddo
+   if ((stefan_flag.eq.1).and.(local_linear_exact.eq.1)) then
+    ! do nothing
+   else
+    print *,"stefan_flag or local_linear_exact invalid for probtype==4"
+    stop
+   endif
+ else if (probtype_in.eq.5) then
+
+   print *,"MAKE SURE DEBUG_LS==0"
+   nmat_in=2
+   fort_heatviscconst(1)=0.0  ! inside material (left material)
+   fort_heatviscconst(2)=1.0  ! outside (right material)
+   do dir=1,sdim_in
+   do side=1,2
+    physbc(dir,side)=REFLECT_EVEN
+    physbc_value(dir,side)=0.0
+   enddo
+   enddo
+   dir=1
+   side=1
+   physbc(dir,side)=EXT_DIR
+   physbc_value(dir,side)=273.0d0
+
+   if ((stefan_flag.eq.1).and.(local_linear_exact.eq.1)) then
+    ! do nothing
+   else
+    print *,"stefan_flag or local_linear_exact invalid for probtype==4"
+    stop
+   endif
 
  else if(probtype_in.eq.19)then
 
@@ -939,6 +974,36 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
    print *,"max_front_vel=",max_front_vel
 
+
+ else if (probtype_in.eq.5) then
+
+   saturation_temp(1)=273.0d0
+   saturation_temp(2)=273.0d0
+   fort_tempconst(1)=273.0d0  ! initial temperature on the left
+   fort_tempconst(2)=273.0d0  ! should not be used.
+   fort_initial_temperature(1)=fort_tempconst(1)
+   fort_initial_temperature(2)=fort_tempconst(2)
+   latent_heat(1)=0.0d0 ! material 1 converted to material 2
+   latent_heat(2)=-abs(latent_heat_in) ! material 2 converted to material 1
+   ireverse=0
+   isink=0
+   fort_alpha(1)=1.0d0
+   fort_alpha(2)=1.0d0
+   fort_stefan_number(1)=TDIFF_in/abs(latent_heat_in)
+   fort_stefan_number(2)=TDIFF_in/abs(latent_heat_in)
+   fort_jacob_number(1)=fort_stefan_number(1)
+   fort_jacob_number(2)=fort_stefan_number(2)
+
+   fort_beta(1)=0.0d0
+   fort_beta(2)=0.0d0
+   fort_time_radblob(1)=0.0d0
+   fort_time_radblob(2)=0.0d0
+
+   max_front_vel=1.0d0
+
+   print *,"max_front_vel=",max_front_vel
+
+
  else if (probtype_in.eq.0) then
    ! do nothing
  else if (probtype_in.eq.1) then
@@ -1036,9 +1101,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  endif
 
  MOFITERMAX=15
- ngeom_raw=1+BL_SPACEDIM
- ngeom_recon=3+2*BL_SPACEDIM
- ngeom_recon_in=3+2*BL_SPACEDIM
+ ngeom_raw=1+AMREX_SPACEDIM
+ ngeom_recon=3+2*AMREX_SPACEDIM
+ ngeom_recon_in=3+2*AMREX_SPACEDIM
 
  call initmof(order_algorithm, &
           nmat_in,MOFITERMAX, &
@@ -1169,6 +1234,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      ! N=2*radblob/(max_front_vel * dt)
     print *,"approx number time steps to double radius: ", &
      NINT(radblob/(max_front_vel*deltat_in))
+ else if (probtype_in.eq.5) then
+  print *,"Velocity is 1"
+  print *,"number of steps to move 1 unit: ", &
+    NINT(1.0d0/(deltat_in*max_front_vel))
  else if (probtype_in.eq.0) then
     ! do nothing
  else if (probtype_in.eq.1) then
@@ -1343,6 +1412,22 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        stop
       endif
 
+     else if (probtype_in.eq.5) then
+
+      if (im.eq.1) then
+       T_FIELD=saturation_temp(1)
+      else if (im.eq.2) then
+       ! (xcen,ycen)
+       T_FIELD=272.0d0+exp(-(xcen-0.2d0))
+      else
+       print *,"im invalid"
+       stop
+      endif
+      T(i,j,im)=T_FIELD
+      if (1.eq.0) then
+       print *,"i,j,r,im,T_FIELD ",i,j,rstefan,im,T_FIELD
+      endif
+
      else if (probtype_in.eq.19) then   ! annulus cvg test
 
        ! pcenter declared in vof_cisl.F90
@@ -1456,6 +1541,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  enddo
 
  iter_average=0.0d0
+
+! BEGIN TIME LOOP - ABOVE INITIALIZATION
+!                   BELOW INTEGRATION IN TIME
 
  do tm  = 1, M_CURRENT
     print *,"time_step (tm=1..M_CURRENT) ", tm
@@ -1573,6 +1661,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      ! do nothing
     else if (probtype_in.eq.4) then
      call axisymmetric_disk_advance(deltat_in)
+    else if (probtype_in.eq.5) then
+     ! do nothing
     else if (probtype_in.eq.19) then   ! annulus cvg test
      ! do nothing (polar solver called before bicgstab is called)
     elseif (probtype_in.eq.13)then
@@ -1620,7 +1710,13 @@ DO WHILE (N_CURRENT.le.N_FINISH)
         UNEW(i,j,im)=T_FIELD
        endif
       else if (probtype_in.eq.4) then
-       ! do nothing
+       ! do nothing - this is a shrinking disk, outside temperature
+       ! is uniform, grad T dot n=0 on the outer walls.
+      else if (probtype_in.eq.5) then
+       if (xcen.ge.1.0-2.0d0*h_in) then
+        T_FIELD=273.0d0+272.0d0+exp(-(xcen-0.2d0-Ts(tm+1)))
+        UNEW(i,j,im)=T_FIELD
+       endif 
       else if (probtype_in.eq.19) then   ! annulus cvg test
        ! do nothing
       elseif (probtype_in.eq.13)then
@@ -1716,6 +1812,16 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     enddo
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," VOLUME= ",voltotal
     eff_radius=sqrt(voltotal/local_Pi)   ! pi r^2 = V  r=(V/pi)^(1/2)
+    if (probtype_in.eq.5) then
+     if (im.eq.1) then
+      eff_radius=voltotal
+     else if (im.eq.2) then
+      eff_radius=1.0d0-voltotal
+     else
+      print *,"im invalid"
+      stop
+     endif
+    endif
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EFF RADIUS= ",eff_radius
    enddo ! im=1..nmat_in
 
@@ -1733,6 +1839,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    else if (probtype_in.eq.4) then
     im=1
     expect_radius=axisymmetric_disk_radblob(2)
+    print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
+   else if (probtype_in.eq.5) then
+    expect_radius=0.2d0+Ts(tm+1)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
    else if (probtype_in.eq.19) then   ! annulus cvg test
     ! do nothing
@@ -1801,9 +1910,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      stop
     endif
    
-   elseif(probtype_in .eq. 17)then
+   elseif(probtype_in.eq.17)then
     ! do nothing
-   elseif(probtype_in .eq. 20)then
+   elseif(probtype_in.eq.20)then
     ! do nothing
    else
     print *,"probtype_in invalid20 ",probtype_in
