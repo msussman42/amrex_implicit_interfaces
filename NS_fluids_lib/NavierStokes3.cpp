@@ -9607,6 +9607,14 @@ void NavierStokes::multiphase_project(int project_option) {
 
     dual_time_abstol=save_mac_abs_tol;
     dual_time_reltol=save_min_rel_error;
+    if (dt_slab>0.0) {
+     if (dt_slab<1.0) {
+      dual_time_abstol/=dt_slab;
+      dual_time_reltol/=dt_slab;
+     }
+    } else
+     amrex::Error("dt_slab invalid");
+
     dual_time_error_met=0;
 
     if (dual_time_error<=dual_time_abstol) {
