@@ -3029,6 +3029,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //    c. pressure gradient
        if (disable_pressure_solve==0) {
 
+	 // FSI_flag=3 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
         if (FSI_material_exists()==1) {
          int rigid_project_option=0;
          multiphase_project(rigid_project_option);
@@ -8266,7 +8267,7 @@ void NavierStokes::multiphase_project(int project_option) {
       // k=2 m pi/L   m=1
       // 4 pi^2 t/L^2 = rho ln(factor)
       // t = L^2 rho ln(factor)/(4 pi^2)
-     Real dual_time_reduction_factor=1.0e-3;
+     Real dual_time_reduction_factor=1.0e-10;
      dual_time_stepping_tau= 
         maxden*problen_max*problen_max*
 	fabs(log(dual_time_reduction_factor))/(4.0*NS_PI*NS_PI);
