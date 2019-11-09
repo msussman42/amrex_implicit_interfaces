@@ -8354,7 +8354,7 @@ void NavierStokes::multiphase_project(int project_option) {
   Vector<Real> dual_error_history;
   dual_error_history.resize(dual_time_cycle_max);
   Real dual_error_min=0.0;
-  int dual_error_min_iter=3;
+  int dual_error_min_iter=4;
 
   do { // while dual_time_error_met==0
 
@@ -9608,9 +9608,11 @@ void NavierStokes::multiphase_project(int project_option) {
     dual_time_abstol=save_mac_abs_tol;
     dual_time_reltol=save_min_rel_error;
     if (dt_slab>0.0) {
-     if (dt_slab<1.0) {
-      dual_time_abstol/=dt_slab;
-      dual_time_reltol/=dt_slab;
+     if (dual_time_stepping_iter>=dual_error_min_iter-1) {
+      if (dt_slab<1.0) {
+       dual_time_abstol/=dt_slab;
+       dual_time_reltol/=dt_slab;
+      }
      }
     } else
      amrex::Error("dt_slab invalid");
