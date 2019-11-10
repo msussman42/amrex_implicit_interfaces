@@ -2151,11 +2151,12 @@ stop
              call extract_tet(xtargetnode,tempdatanode, &
                xtargettri,datatri,id,symmetry_flag,SDIM)
 
-             call intersect_cube(xtri, &
+             call intersect_cube( &
+               xtri, &
                u_xsten_grid,nhalf, &
                geom_xtetlist_old(1,1,1,tid+1), &
                geom_xtetlist(1,1,1,tid+1), &
-               nmat, &
+               nmax, &
                nlist,nmax,SDIM)
 
              if (nlist.gt.0) then

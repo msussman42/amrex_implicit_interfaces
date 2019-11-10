@@ -319,7 +319,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=1 non-deforming boundary tests
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
-INTEGER,PARAMETER          :: plot_int = 4
+INTEGER,PARAMETER          :: plot_int = 1
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! fixed_dt=0.0 for probtype_in=3
@@ -470,11 +470,11 @@ print *,"constant_K_test= ",constant_K_test
 
 ! N space
 ! M time
-N_START=32
-N_FINISH=32
-M_START=32
+N_START=64
+N_FINISH=64
+M_START=64
 M_FACTOR=2
-fixed_dt_main=1.0d0/64.0d0
+fixed_dt_main=1.0d0/128.0d0
 
 ! INITIALIZE VARIABLES DECLARED IN vof_cisl.F90 (Module GeneralClass)
 
@@ -1714,7 +1714,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        ! is uniform, grad T dot n=0 on the outer walls.
       else if (probtype_in.eq.5) then
        if (xcen.ge.1.0-2.0d0*h_in) then
-        T_FIELD=273.0d0+272.0d0+exp(-(xcen-0.2d0-Ts(tm+1)))
+        T_FIELD=272.0d0+exp(-(xcen-0.2d0-Ts(tm+1)))
         UNEW(i,j,im)=T_FIELD
        endif 
       else if (probtype_in.eq.19) then   ! annulus cvg test

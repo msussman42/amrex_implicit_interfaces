@@ -579,7 +579,8 @@ stop
 
       end subroutine get_exact_NRM
 
-
+       ! probmain_module has global_nten
+       ! probcommon_module has num_materials
       subroutine get_exact_VEL(xgrid,dx,time,iten,VEL)
       USE probcommon_module 
       USE probmain_module 
@@ -604,13 +605,21 @@ stop
       INTEGER_T diflag
       INTEGER_T dir
       INTEGER_T im
+      INTEGER_T local_nten
       REAL_T radial_slope
       REAL_T r1,r2
         ! declared in multimat_FVM.F90
       REAL_T, external   :: exact_temperature
 
+      local_nten=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
+      if (local_nten.eq.global_nten) then
+       ! do nothing
+      else
+       print *,"local_nten or global_nten invalid"
+       stop
+      endif
       if (probtype.eq.3) then
-       if (iten.eq.1) then
+       if ((iten.eq.1).or.(iten.eq.global_nten+1)) then
         stefan_time=fort_time_radblob(2)+time
         call solidification_front_speed_driver(stefan_time,front_vel)
         LS=sqrt((xgrid(1)-xblob)**2+(xgrid(2)-yblob)**2)
@@ -631,7 +640,7 @@ stop
         stop
        endif
       else if (probtype.eq.4) then
-       if (iten.eq.1) then
+       if ((iten.eq.1).or.(iten.eq.global_nten+1)) then
         call interp_LS_vel_to_grid(xgrid,2,LS,VEL)
         test_front_vel=0.0d0
         do dir=1,SDIM
@@ -650,8 +659,9 @@ stop
        endif
       else if (probtype.eq.5) then
 
-       if (iten.eq.2) then
-        call interp_LS_vel_to_grid(xgrid,2,LS,VEL)
+       if ((iten.eq.1).or.(iten.eq.global_nten+1)) then
+        VEL(1)=1.0d0
+        VEL(2)=0.0d0
         test_front_vel=0.0d0
         do dir=1,SDIM
          test_front_vel=test_front_vel+VEL(dir)**2
@@ -678,6 +688,7 @@ stop
         stop
        endif
 
+        ! materials 1,2,3 interfaces 12 13 23
        if ((iten.eq.1).or.(iten.eq.3)) then
         im=2
         ! Np,Mp,upolar,pcenter,rlo,rhi defined in vof_cisl.F90

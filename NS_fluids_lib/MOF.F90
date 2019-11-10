@@ -6019,8 +6019,10 @@ end subroutine volume_sanity_check
       subroutine intersect_cube( &
         x1, &
         xsten,nhalf, &
-        xtetlist_old,xtetlist, &
-        nlist_alloc,nlist,nmax,sdim)
+        xtetlist_old, &
+        xtetlist, &
+        nlist_alloc, &
+        nlist,nmax,sdim)
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nlist_alloc
@@ -6111,7 +6113,12 @@ end subroutine volume_sanity_check
 
         do i=1,sdim+1
         do j=1,sdim
-         x1old(i,j)=xtetlist_old(i,j,n)
+         if ((n.ge.1).and.(n.le.nlist_alloc)) then
+          x1old(i,j)=xtetlist_old(i,j,n)
+         else
+          print *,"n out of range1"
+          stop
+         endif
         enddo
         enddo
 
@@ -6150,22 +6157,32 @@ end subroutine volume_sanity_check
            print *,"nlist,nmax ",nlist,nmax
            stop
           endif
-          do i=1,sdim+1
-          do j=1,sdim
-           xtetlist(i,j,nlist)=xcandidate(i,j)
-          enddo
-          enddo
+          if ((nlist.ge.1).and.(nlist.le.nlist_alloc)) then
+           do i=1,sdim+1
+           do j=1,sdim
+            xtetlist(i,j,nlist)=xcandidate(i,j)
+           enddo
+           enddo
+          else
+           print *,"nlist out of range2"
+           stop
+          endif
          endif
 
         enddo  ! n2
        enddo  ! n
        nlist_old=nlist
        do n=1,nlist
-        do i=1,sdim+1
-        do j=1,sdim
-         xtetlist_old(i,j,n)=xtetlist(i,j,n)
-        enddo
-        enddo
+        if ((n.ge.1).and.(n.le.nlist_alloc)) then
+         do i=1,sdim+1
+         do j=1,sdim
+          xtetlist_old(i,j,n)=xtetlist(i,j,n)
+         enddo
+         enddo
+        else
+         print *,"n out of range3"
+         stop
+        endif
        enddo
       enddo  ! iplane
 
