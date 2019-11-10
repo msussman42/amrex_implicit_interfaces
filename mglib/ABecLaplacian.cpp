@@ -39,7 +39,7 @@ int ABecLaplacian::MG_def_verbose      = 0;
 int ABecLaplacian::MG_def_nu_b         = 0;
 
 // 1=> use,
-//  distributionMap.define(boxarray,ParallelDescriptor::NProcs(),color)
+//  distributionMap.define(grids,ParallelDescriptor::NProcs())
 // 0=> use what comes from the caller.
 int ABecLaplacian::use_local_dmap = 1;
 

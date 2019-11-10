@@ -203,20 +203,24 @@ Amr::InitAmr () {
     //
     // Determine physics class.
     //
+    std::fflush(NULL);
     if (1==1) {
      std::cout << "levelbld = getLevelBld() on processor " <<
          ParallelDescriptor::MyProc() << "\n";
     }
+    std::fflush(NULL);
 
     //LevelBld* levelbld
     levelbld = getLevelBld();
     //
     // Global function that define state variables.
     //
+    std::fflush(NULL);
     if (1==1) {
      std::cout << "levelbld->variableSetUp() on processor " <<
          ParallelDescriptor::MyProc() << "\n";
     }
+    std::fflush(NULL);
     levelbld->variableSetUp();
     //
     // Set default values.

@@ -299,6 +299,7 @@ ABecLaplacian::bCoefficients (MultiFab& _b,
     if (_b.nComp()!=nsolve_bicgstab) 
      amrex::Error("_b has wrong ncomp");
 
+    FIX ME THIS has to use ParallelCopy
     MultiFab::Copy(*bcoefs[0][dir],_b,0,0,nsolve_bicgstab,0);
 }
 

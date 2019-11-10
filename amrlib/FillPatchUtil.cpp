@@ -32,7 +32,6 @@ namespace amrex
       amrex::Error("scompBC_map has invalid size");
 
       // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
-//   mf.copy(smf, scomp, dcomp, ncomp, 0, mf.nGrow(), geom.periodicity());
      mf.ParallelCopy(smf, scomp, dcomp, ncomp, IntVect{0}, 
         mf.nGrowVect(), geom.periodicity());
 

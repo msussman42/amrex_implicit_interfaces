@@ -7074,6 +7074,11 @@ void NavierStokes::output_zones(
    check_for_NAN(localMF[MASKSEM_MF],1);
    check_for_NAN(maskSEM_minus,11);
 
+   FIX ME CHANGE THESE TO ParallelCopy (although not necessary)
+   FIX ME all MultiFab::Copy should go through an intermediate routine that
+   verifies the same boxarray and dmap
+   FIX ME all plus,mult,divide, etc..
+
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
    velmfminus->copy(*velmf,0,0,

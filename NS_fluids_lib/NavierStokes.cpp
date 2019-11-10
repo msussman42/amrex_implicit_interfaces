@@ -13797,33 +13797,60 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  int nc_error=S_new.nComp()-1;
  MultiFab* mf = getState(0,nc_error,1,nudge_time); 
 
+ bool use_tiling=ns_tiling;
+
+ if (1==1) {
+  use_tiling=false;
+ }
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*mf); mfi.isValid(); ++mfi) {
+  // itags: Vector<int> ("domain"=box dimensions (not whole domain))
+  // itags=TagBox::CLEAR in "tags"
+  // then itags = older tag values.
+ Vector<int>  itags;
+
+ for (MFIter mfi(*mf,use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
+
   const Box& tilegrid = mfi.tilebox();
   const Box& fabgrid = grids[gridno];
+
+  if (tilegrid==fabgrid) {
+   // do nothing
+  } else
+   amrex::Error("FIX errorEST for tiling");
+
   const int* tilelo=tilegrid.loVect(); 
   const int* tilehi=tilegrid.hiVect();
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
   const Real* xlo = grid_loc[gridno].lo();
 
-   // itags: Vector<int> ("domain"=box dimensions (not whole domain))
-   // itags=TagBox::CLEAR in "tags"
-   // then itags = older tag values.
-  Vector<int>  itags;
-  itags             = tags[mfi.index()].tags();
+  TagBox& tagfab = tags[mfi];
+
+  // We cannot pass tagfab to Fortran becuase it is BaseFab<char>.
+  // So we are going to get a temporary integer array.
+  tagfab.get_itags(itags, tilegrid);
+
   int*        tptr  = itags.dataPtr();
-  const int*  tlo   = tags[mfi.index()].box().loVect();
-  const int*  thi   = tags[mfi.index()].box().hiVect();
-  Real*       dat   = (*mf)[mfi].dataPtr();
-  const int*  dlo   = (*mf)[mfi].box().loVect();
-  const int*  dhi   = (*mf)[mfi].box().hiVect();
-  const int   ncomp = (*mf)[mfi].nComp();
+  const int*  tlo   = tilegrid.loVect();
+  const int*  thi   = tilegrid.hiVect();
+
+  FArrayBox& snewfab=(*mf)[mfi];
+  const Box& snew_box = snewfab.box();
+  if (snew_box==tilegrid) {
+   // do nothing
+  } else
+   amrex::Error("FIX errorEST for tiling");
+
+  Real*       dat   = snewfab.dataPtr();
+  const int*  dlo   = snew_box.loVect();
+  const int*  dhi   = snew_box.hiVect();
+  const int   ncomp = snewfab.nComp();
 
   FORT_VFRACERROR(
     tptr, ARLIM(tlo), ARLIM(thi), 
@@ -13846,7 +13873,8 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
     zcoarseblocks.dataPtr(),
     rxcoarseblocks.dataPtr(),rycoarseblocks.dataPtr(),
     rzcoarseblocks.dataPtr());
-  tags[mfi.index()].tags(itags);
+
+  tagfab.tags_and_untags(itags,tilegrid);
  } // mfi
 } // omp
  ParallelDescriptor::Barrier();
