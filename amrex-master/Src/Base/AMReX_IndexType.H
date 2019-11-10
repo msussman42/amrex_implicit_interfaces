@@ -135,17 +135,20 @@ public:
                                       IndexType::CELL));
     }
 
+    //SUSSMAN
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static constexpr IndexType TheVMACType () noexcept {
         return IndexType(AMREX_D_DECL(IndexType::CELL,
                                       IndexType::NODE,
                                       IndexType::CELL));
     }
+
+    //SUSSMAN
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static constexpr IndexType TheWMACType () noexcept {
         return IndexType(AMREX_D_DECL(IndexType::CELL,
                                       IndexType::CELL,
-                                      IndexType::Node));
+                                      IndexType::NODE));
     }
 
 private:

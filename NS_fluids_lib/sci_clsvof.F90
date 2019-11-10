@@ -5,11 +5,6 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
-#if (AMREX_SPACEDIM==3)
-#include "LEVEL_F.H"
-#include "NAVIERSTOKES_F.H"
-#endif
-
 #define element_buffer_tol 0.01
 
 ! 10 seconds for tail to do a full period
