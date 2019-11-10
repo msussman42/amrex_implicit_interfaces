@@ -127,9 +127,9 @@ public:
                        const std::string& nm,
                        const BCRec&       bc,
                        const BndryFunc&   func,
-                       Interpolater*      interp=0,  
-                       int                max_map_start_comp=-1, 
-                       int                min_map_end_comp=-1 
+                       Interpolater*   interp_in=0,  
+                       int             max_map_start_comp=-1, 
+                       int             min_map_end_comp=-1 
                       );  
     //
     // Sets details of comp component.
@@ -138,9 +138,9 @@ public:
                        const std::string& nm,
                        const BCRec&       bc,
                        const BndryFunc&   func,
-                       Interpolater*      interp,
+                       Interpolater*      interp_in,
                        bool               master_or_slave,
-                       int                groupsize
+                       int                groupsize_in
                       );
     //
     // Resets boundary condition data for comp component.
@@ -319,19 +319,19 @@ public:
           const std::string&                nm,
           const BCRec&                      bc,
           const StateDescriptor::BndryFunc& func,
-          Interpolater*                     interp=0,  
-          int                               max_map_start_comp=-1, 
-          int                               min_map_end_comp=-1 
+          Interpolater*                 interp_in=0,  
+          int                           max_map_start_comp=-1, 
+          int                           min_map_end_comp=-1 
          );
     //
     // Calls setComponent() on StateDescriptor at index indx on group.
     //
-    void setComponent (int                               indx,
+    void setComponent (int              indx,
       int                               comp,
       const Vector<std::string>&         nm,
       const Vector<BCRec>&               bc,
       const StateDescriptor::BndryFunc& func,
-      Interpolater*                     interp=0
+      Interpolater*                     interp_in=0
      );
     //
     // Returns StateDescriptor at index k.

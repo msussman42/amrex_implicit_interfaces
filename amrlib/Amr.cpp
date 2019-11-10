@@ -2332,9 +2332,9 @@ Amr::grid_places (int              lbase,
 
    // TagBox.H: TagBoxArray (const BoxArray& bs,dm,int _ngrow=0)
     // SUSSMAN
-  int nprocs=ParallelDescriptor::NProcs();
-  DistributionMapping tag_dm(amr_level[levc]->boxArray(),nprocs);
-  TagBoxArray tags(amr_level[levc]->boxArray(),tag_dm,n_error_buf[levc]+ngrow);
+  TagBoxArray tags(amr_level[levc]->boxArray(),
+		   amr_level[levc]->DistributionMap(),
+		   n_error_buf[levc]+ngrow);
 
   amr_level[levc]->errorEst(tags,
                            TagBox::CLEAR,TagBox::SET,

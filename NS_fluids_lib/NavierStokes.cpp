@@ -15719,14 +15719,14 @@ NavierStokes::writePlotFile (
    static const std::string BaseName = "/Cell";
    char buf[64];
    sprintf(buf, "Level_%d", level);
-   std::string Level = buf;
+   std::string Level_str = buf;
    //
    // Now for the full pathname of that directory.
    //
    std::string FullPath = dir;
    if (!FullPath.empty() && FullPath[FullPath.length()-1] != '/')
      FullPath += '/';
-   FullPath += Level;
+   FullPath += Level_str;
    //
    // Only the I/O processor makes the directory if it doesn't already exist.
    //
@@ -15752,7 +15752,7 @@ NavierStokes::writePlotFile (
      // It's the name that gets written into the Header.
      //
      if (n_data_items > 0) {
-         std::string PathNameInHeader = Level;
+         std::string PathNameInHeader = Level_str;
          PathNameInHeader += BaseName;
          os << PathNameInHeader << '\n';
      }

@@ -1963,11 +1963,13 @@ BaseFab<T>::BaseFab (const Box& bx, int n, Arena* ar)
     define();
 }
 
+// SUSSMAN
 template <class T>
-BaseFab<T>::BaseFab (const Box& bx, int n, bool alloc, bool shared, Arena* ar)
+BaseFab<T>::BaseFab (const Box& bx, int n, bool alloc_in, 
+		bool shared, Arena* ar)
     : DataAllocator{ar}, domain(bx), nvar(n), shared_memory(shared)
 {
-    if (!this->shared_memory && alloc) define();
+    if (!this->shared_memory && alloc_in) define();
 }
 
 template <class T>

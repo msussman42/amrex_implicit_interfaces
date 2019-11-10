@@ -397,14 +397,14 @@ StateDescriptor::setComponent (int                               comp,
                                const std::string&                nm,
                                const BCRec&                      bcr,
                                const StateDescriptor::BndryFunc& func,
-                               Interpolater*                     interp,
-                               bool                              master,
-                               int                               groupsize)
+                               Interpolater*        interp_in,
+                               bool                 master_in,
+                               int                  groupsize_in)
 {
-    setComponent(comp,nm,bcr,func,interp,-1,-1);
+    setComponent(comp,nm,bcr,func,interp_in,-1,-1);
 
-    m_master[comp]    = master;
-    m_groupsize[comp] = groupsize;
+    m_master[comp]    = master_in;
+    m_groupsize[comp] = groupsize_in;
 }
 
 void
