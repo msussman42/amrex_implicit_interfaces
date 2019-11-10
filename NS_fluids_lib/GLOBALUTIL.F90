@@ -3014,11 +3014,16 @@ contains
        print *,"num_materials=",nmat
        stop
       endif
-      previous_count=0
-      do im_iter=1,im-1
-       previous_count=previous_count+nmat-im_iter
-      enddo
-      iten=previous_count+im_opp-im
+      if (im_opp.gt.im) then
+       previous_count=0
+       do im_iter=1,im-1
+        previous_count=previous_count+nmat-im_iter
+       enddo
+       iten=previous_count+im_opp-im
+      else
+       print *,"im or im_opp invalid"
+       stop
+      endif
 
       return  
       end subroutine get_iten    

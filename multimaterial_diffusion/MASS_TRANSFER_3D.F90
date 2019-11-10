@@ -3904,12 +3904,19 @@ stop
        stop
       endif
 
-      if (arraysize.ne.num_elements_blobclass*color_count) then
+      if (STANDALONE.eq.0) then
+       if (arraysize.ne.num_elements_blobclass*color_count) then
         print *,"arraysize invalid rate mass change (get stat==1)"
         print *,"arraysize=",arraysize
         print *,"num_elements_blobclass=",num_elements_blobclass
         print *,"color_count=",color_count
         stop
+       endif
+      else if (STANDALONE.eq.1) then
+       ! check nothing
+      else
+       print *,"STANDALONE invalid"
+       stop
       endif
  
       call get_dxmin(dx,bfact,dxmin)
