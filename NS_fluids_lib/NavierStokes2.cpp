@@ -7068,60 +7068,64 @@ void NavierStokes::output_zones(
 
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
-   maskSEM_minus->copy(*localMF[MASKSEM_MF],0,0,
+   maskSEM_minus->ParallelCopy(*localMF[MASKSEM_MF],0,0,
     1,0,0,geom.periodicity());
 
    check_for_NAN(localMF[MASKSEM_MF],1);
    check_for_NAN(maskSEM_minus,11);
 
-   FIX ME CHANGE THESE TO ParallelCopy (although not necessary)
-   FIX ME all MultiFab::Copy should go through an intermediate routine that
-   verifies the same boxarray and dmap
-   FIX ME all plus,mult,divide, etc..
-
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
-   velmfminus->copy(*velmf,0,0,
+   velmfminus->ParallelCopy(*velmf,0,0,
     num_materials_vel*(AMREX_SPACEDIM+1),1,1,geom.periodicity());
 
    check_for_NAN(velmf,1);
    check_for_NAN(velmfminus,11);
  
-   velsolidmfminus->copy(*localMF[FSI_GHOST_MF],0,0,
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   velsolidmfminus->ParallelCopy(*localMF[FSI_GHOST_MF],0,0,
     nparts_def*AMREX_SPACEDIM,1,1,geom.periodicity());
 
    check_for_NAN(localMF[FSI_GHOST_MF],1);
    check_for_NAN(velsolidmfminus,11);
 
-   vofmfminus->copy(*localMF[SLOPE_RECON_MF],0,0,
+   vofmfminus->ParallelCopy(*localMF[SLOPE_RECON_MF],0,0,
     nmat*ngeom_recon,1,1,geom.periodicity());
 
    check_for_NAN(localMF[SLOPE_RECON_MF],2); // id==2
    check_for_NAN(vofmfminus,12);
 
    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   presmfminus->copy(*presmf,0,0,num_materials_vel,1,1,geom.periodicity()); 
+   presmfminus->ParallelCopy(*presmf,0,0,num_materials_vel,
+		   1,1,geom.periodicity()); 
 
    check_for_NAN(presmf,3);
    check_for_NAN(presmfminus,13);
 
-   divmfminus->copy(*divmf,0,0,num_materials_vel,1,1,geom.periodicity()); 
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   divmfminus->ParallelCopy(*divmf,0,0,num_materials_vel,
+		   1,1,geom.periodicity()); 
 
    check_for_NAN(divmf,4);
    check_for_NAN(divmfminus,14);
 
-   div_data_minus->copy(*div_data,0,0,num_materials_vel,1,1,geom.periodicity()); 
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   div_data_minus->ParallelCopy(*div_data,0,0,num_materials_vel,
+		   1,1,geom.periodicity()); 
 
    check_for_NAN(div_data,5);
    check_for_NAN(div_data_minus,15);
 
-   denmfminus->copy(*denmf,0,0,nden,1,1,geom.periodicity()); 
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   denmfminus->ParallelCopy(*denmf,0,0,nden,
+		   1,1,geom.periodicity()); 
 
    check_for_NAN(denmf,6);
    check_for_NAN(denmfminus,16);
 
    if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
-    viscoelasticmfminus->copy(*viscoelasticmf,0,0,
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
       num_materials_viscoelastic*NUM_TENSOR_TYPE,1,1,geom.periodicity()); 
     check_for_NAN(viscoelasticmf,6);
     check_for_NAN(viscoelasticmfminus,16);
@@ -7130,7 +7134,8 @@ void NavierStokes::output_zones(
    } else
     amrex::Error("num_materials_viscoelastic invalid");
 
-   lsdistmfminus->copy(*lsdistmf,0,0,nmat*(1+AMREX_SPACEDIM),
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   lsdistmfminus->ParallelCopy(*lsdistmf,0,0,nmat*(1+AMREX_SPACEDIM),
      1,1,geom.periodicity()); 
 
    check_for_NAN(lsdistmf,7);
@@ -7145,12 +7150,16 @@ void NavierStokes::output_zones(
     std::cout << "viscmf BA= " << mfBA << '\n';
    }
 
-   viscmfminus->copy(*viscmf,0,0,nmat,1,1,geom.periodicity()); 
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   viscmfminus->ParallelCopy(*viscmf,0,0,nmat,
+		   1,1,geom.periodicity()); 
 
    check_for_NAN(viscmf,9);
    check_for_NAN(viscmfminus,19);
 
-   magtracemfminus->copy(*magtracemf,0,0,5*nmat,1,1,geom.periodicity()); 
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   magtracemfminus->ParallelCopy(*magtracemf,0,0,5*nmat,
+		   1,1,geom.periodicity()); 
 
    check_for_NAN(magtracemf,10);
    check_for_NAN(magtracemfminus,20);
@@ -7289,7 +7298,7 @@ void NavierStokes::output_zones(
   amrex::Error("level invalid output_zones");
  }
 
-}  // output_zones
+}  // subroutine output_zones
 
 
 // spectral_override==0 => always low order

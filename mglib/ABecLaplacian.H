@@ -256,8 +256,6 @@ private:
     static Real a_def;
     static Real b_def;
 
-    static int use_local_dmap;
-
 };
 
 
@@ -273,8 +271,10 @@ ABecLaplacian::aCoefficients (MultiFab& _a)
     if (_a.nComp()!=nsolve_bicgstab) 
      amrex::Error("_a has wrong ncomp");
 
-    MultiFab::Copy(*acoefs[0],_a,0,0,nsolve_bicgstab,0);
-}
+     // src,scomp,dcomp,snghost,dnghost
+    acoefs[0]->ParallelCopy(_a,0,0,nsolve_bicgstab,0,0);
+
+} // subroutine aCoefficients
 
 // 1. generate coefficients on the finest level.
 // 2. average down coefficients and generate on the coarser levels.
@@ -299,9 +299,10 @@ ABecLaplacian::bCoefficients (MultiFab& _b,
     if (_b.nComp()!=nsolve_bicgstab) 
      amrex::Error("_b has wrong ncomp");
 
-    FIX ME THIS has to use ParallelCopy
-    MultiFab::Copy(*bcoefs[0][dir],_b,0,0,nsolve_bicgstab,0);
-}
+     // src,scomp,dcomp,snghost,dnghost
+    bcoefs[0][dir]->ParallelCopy(_b,0,0,nsolve_bicgstab,0,0);
+
+} // subroutine bCoefficients
 
 
 inline

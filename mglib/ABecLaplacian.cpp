@@ -38,11 +38,6 @@ int ABecLaplacian::MG_def_maxiter_b    = 400;
 int ABecLaplacian::MG_def_verbose      = 0;
 int ABecLaplacian::MG_def_nu_b         = 0;
 
-// 1=> use,
-//  distributionMap.define(grids,ParallelDescriptor::NProcs())
-// 0=> use what comes from the caller.
-int ABecLaplacian::use_local_dmap = 1;
-
 extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
  int caller_id,int& status);
 
@@ -927,12 +922,7 @@ ABecLaplacian::ABecLaplacian (
 
    gbox[level] = grids;
 
-   if (use_local_dmap==0) {
-    dmap_array[level] = dmap;
-   } else if (use_local_dmap==1) {
-    dmap_array[level].define(grids,ParallelDescriptor::NProcs());
-   } else
-    amrex::Error("use_local_dmap invalid");
+   dmap_array[level] = dmap;
 
    geomarray[level] = geom;
    bfact_array[level] = bfact;
@@ -951,12 +941,7 @@ ABecLaplacian::ABecLaplacian (
    if (gbox[level].size()!=gbox[level-1].size())
     amrex::Error("gbox[level].size()!=gbox[level-1].size()");
 
-   if (use_local_dmap==0) {
-    dmap_array[level] = dmap_array[level-1];
-   } else if (use_local_dmap==1) {
-    dmap_array[level].define(gbox[level],ParallelDescriptor::NProcs());
-   } else
-    amrex::Error("use_local_dmap invalid");
+   dmap_array[level] = dmap_array[level-1];
 
    geomarray[level].define(amrex::coarsen(geomarray[level-1].Domain(),2));
    bfact_array[level] = bfact_array[level-1];
@@ -2854,7 +2839,8 @@ ABecLaplacian::CG_solve(
 
  }  // end of CGSolver loop
 
- sol.plus(*CG_delta_sol[coarsefine],0,nsolve_bicgstab,0);
+  // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost
+ sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_bicgstab,0,0);
  project_null_space(sol,level);
 
  cg_cycles_out=nit;
@@ -3047,8 +3033,8 @@ void ABecLaplacian::MG_residualCorrectionForm (MultiFab& newrhs,
  if (solnL.nGrow()!=1)
   amrex::Error("solution should have ngrow=1");
 
- MG_initialsolution->copy(inisol);
- solnL.copy(inisol);
+ MG_initialsolution->ParallelCopy(inisol);
+ solnL.ParallelCopy(inisol);
 
 #if (profile_solver==1)
  bprof.stop();
@@ -3167,8 +3153,9 @@ ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
   }
  }
 
- _sol.copy(*MG_cor[level]);
- _sol.plus(*MG_initialsolution,0,_sol.nComp(),0);
+ _sol.ParallelCopy(*MG_cor[level]);
+   // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost
+ _sol.ParallelAdd(*MG_initialsolution,0,0,_sol.nComp(),0,0);
  project_null_space(_sol,level);
 
 }  // subroutine MG_solve_
