@@ -11,6 +11,7 @@
 #include "TECPLOTUTIL_F.H"
 #include "MASS_TRANSFER_F.H"
 #include "MOF_REDIST_F.H"
+#include "SOLIDFLUID_F.H"
 #include "AMReX_ArrayLim.H"
 
 

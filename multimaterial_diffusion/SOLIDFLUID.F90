@@ -3,7 +3,7 @@
 #define BL_LANG_FORT
 #endif
 
-#define STANDALONE 0
+#define STANDALONE 1
 
 #if (AMREX_SPACEDIM == 2)
 #define SDIM 2

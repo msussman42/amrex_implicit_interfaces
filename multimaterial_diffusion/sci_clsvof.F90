@@ -1,7 +1,7 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#define STANDALONE 0
+#define STANDALONE 1
 
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
