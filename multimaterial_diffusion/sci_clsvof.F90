@@ -53,6 +53,7 @@ end type lag_type
 
 type mesh_type
  INTEGER_T :: PartID
+ INTEGER_T :: flag_2D_to_3D
  INTEGER_T :: refine_factor
  INTEGER_T :: bounding_box_ngrow
  REAL_T :: max_side_len
@@ -607,6 +608,43 @@ REAL_T, intent(out) :: dist
 return
 end subroutine xdist
 
+
+subroutine xdist_project(x1,x2,part_id,dist)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+REAL_T, dimension(3),intent(in) :: x1,x2
+REAL_T, intent(out) :: dist
+INTEGER_T sdim_local
+INTEGER_T dir
+
+ if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+  print *,"part_id invalid"
+  stop
+ endif
+ if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+  sdim_local=2
+ else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+  sdim_local=3
+ else
+  print *,"FSI(part_id)%flag_2D_to_3D invalid"
+  stop
+ endif
+ dist=zero
+ do dir=1,sdim_local
+  dist=dist+(x1(dir)-x2(dir))**2
+ enddo
+ if (dist.ge.zero) then
+  dist=sqrt(dist)
+ else
+  print *,"dist bust"
+  stop
+ endif
+
+return
+end subroutine xdist_project
+
+
 subroutine xdistmin(x1,x2,dist)
 IMPLICIT NONE
 
@@ -734,9 +772,9 @@ INTEGER_T :: local_refine_factor
     endif
    enddo ! dir=1..3
 
-   call xdist(x1,x2,d12)
-   call xdist(x2,x3,d23)
-   call xdist(x3,x1,d13)
+   call xdist_project(x1,x2,part_id,d12)
+   call xdist_project(x2,x3,part_id,d23)
+   call xdist_project(x3,x1,part_id,d13)
    if (first_measure.eq.0) then
     biggest_h=d12
     smallest_h=d12
@@ -906,9 +944,9 @@ INTEGER_T :: local_refine_factor
     temp1=multi_lag(ilevel)%ndtemp(node1)
     temp2=multi_lag(ilevel)%ndtemp(node2)
     temp3=multi_lag(ilevel)%ndtemp(node3)
-    call xdist(x1,x2,d12)
-    call xdist(x2,x3,d23)
-    call xdist(x3,x1,d13)
+    call xdist_project(x1,x2,part_id,d12)
+    call xdist_project(x2,x3,part_id,d23)
+    call xdist_project(x3,x1,part_id,d13)
 
     if ((local_refine_factor.gt.0).and. &
         (d12.ge.(local_refine_factor-0.01)*h_small).and. &
@@ -1244,9 +1282,9 @@ INTEGER_T :: local_refine_factor
 
   enddo ! dir=1..3
 
-  call xdist(x1,x2,d12)
-  call xdist(x2,x3,d23)
-  call xdist(x3,x1,d13)
+  call xdist_project(x1,x2,part_id,d12)
+  call xdist_project(x2,x3,part_id,d23)
+  call xdist_project(x3,x1,part_id,d13)
   if (first_measure.eq.0) then
    biggest_h=d12
    smallest_h=d12
@@ -1278,6 +1316,7 @@ INTEGER_T :: local_refine_factor
  FSI(part_id)%min_side_len_refined=smallest_h  
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
+  print *,"part_id,flag_2D_to_3D ",part_id,FSI(part_id)%flag_2D_to_3D
   print *,"part_id,max_side_len_refined,min_side_len_refined ",part_id, &
    FSI(part_id)%max_side_len_refined,FSI(part_id)%min_side_len_refined
   print *,"local_refine_factor ",local_refine_factor
@@ -2391,13 +2430,108 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
 return
 end subroutine init_from_cas
 
+subroutine convert_2D_to_3D_nodes_FSI(part_id,inode)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: inode
+INTEGER_T local_nodes,orig_nodes,dir
+
+ if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+  print *,"part_id invalid"
+  stop
+ endif
+ if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+  ! do nothing
+ else
+  print *,"FSI(part_id)%flag_2D_to_3D invalid"
+  stop
+ endif
+ local_nodes=FSI(part_id)%NumNodes
+ orig_nodes=local_nodes/2
+ if (orig_nodes*2.eq.local_nodes) then
+  if ((inode.ge.1).and.(inode.le.orig_nodes)) then
+   FSI(part_id)%Node_old(3,inode)=-one
+   do dir=1,3
+    FSI(part_id)%Node_old(dir,inode+orig_nodes)= &
+            FSI(part_id)%Node_old(dir,inode)
+   enddo
+   FSI(part_id)%Node_old(3,inode+orig_nodes)=one
+   do dir=1,3
+    FSI(part_id)%Node_new(dir,inode)= &
+      FSI(part_id)%Node_old(dir,inode)
+    FSI(part_id)%Node_new(dir,inode+orig_nodes)= &
+      FSI(part_id)%Node_old(dir,inode+orig_nodes)
+   enddo
+  else
+   print *,"inode out of range"
+   stop
+  endif
+ else
+  print *,"local_nodes not divisible by 2"
+  stop
+ endif
+
+end subroutine convert_2D_to_3D_nodes_FSI
+
+
+subroutine convert_2D_to_3D_elements_FSI(part_id,iface)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: iface
+INTEGER_T local_nodes,orig_nodes
+INTEGER_T iflag
+INTEGER_T local_elements,orig_elements
+
+
+ if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+  print *,"part_id invalid"
+  stop
+ endif
+ if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+  ! do nothing
+ else
+  print *,"FSI(part_id)%flag_2D_to_3D invalid"
+  stop
+ endif
+
+ local_nodes=FSI(part_id)%NumNodes
+ orig_nodes=local_nodes/2
+ local_elements=FSI(part_id)%NumIntElems
+ orig_elements=local_elements/2
+
+ if ((orig_nodes*2.eq.local_nodes).and. &
+     (orig_elements*2.eq.local_elements)) then
+  if ((iface.ge.1).and.(iface.le.orig_elements)) then
+   do iflag=1,3
+    FSI(part_id)%ElemData(iflag,iface+orig_elements)= &
+      FSI(part_id)%ElemData(iflag,iface)
+   enddo
+   FSI(part_id)%IntElem(1,iface+orig_elements)= &
+     FSI(part_id)%IntElem(3,orig_elements)
+   FSI(part_id)%IntElem(2,iface+orig_elements)= &
+     FSI(part_id)%IntElem(1,orig_elements)+orig_nodes
+   FSI(part_id)%IntElem(3,iface+orig_elements)= &
+     FSI(part_id)%IntElem(1,orig_elements)
+  else
+   print *,"iface out of range"
+   stop
+  endif
+ else
+  print *,"local_nodes or local_elements not divisible by 2"
+  stop
+ endif
+
+end subroutine convert_2D_to_3D_elements_FSI
+
 
 subroutine init_gingerbread2D(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
 
 IMPLICIT NONE
 
-INTEGER_T :: part_id
+INTEGER_T, intent(in) :: part_id
 INTEGER_T :: sdim,ifirst,isout
 INTEGER_T :: inode,iface,ioproc
 REAL_T :: curtime,dt
@@ -2408,8 +2542,9 @@ INTEGER_T :: dir,istep,istop
 REAL_T, dimension(3) :: xxblob1,newxxblob1
 REAL_T :: radradblob1
 INTEGER_T localElem(3)
-REAL_T :: local_nodes(3,3)  ! dir,node num
 character(40) :: dwave
+INTEGER_T :: orig_nodes,local_nodes
+INTEGER_T :: orig_elements,local_elements
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -2424,6 +2559,8 @@ character(40) :: dwave
    print *,"ioproc invalid"
    stop
   endif
+
+  FSI(part_id)%flag_2D_to_3D=1
 
   timeB=curtime
   dtB=0.0
@@ -2462,12 +2599,17 @@ character(40) :: dwave
    READ(14,*) FSI(part_id)%NumNodes,FSI(part_id)%NumIntElems
    print *,"doubling number of nodes and elements 2D -> 3D"
 
-   FSI(part_id)%NumNodes=FSI(part_id)%NumNodes*2
-   FSI(part_id)%NumIntElems=FSI(part_id)%NumIntElems*2
-   print *,"NumNodes ",FSI(part_id)%NumNodes
-   print *,"NumIntElems ",FSI(part_id)%NumIntElems
+   orig_nodes=FSI(part_id)%NumNodes
+   FSI(part_id)%NumNodes=orig_nodes*2
+   local_nodes=FSI(part_id)%NumNodes
+
+   orig_elements=FSI(part_id)%NumIntElems
+   FSI(part_id)%NumIntElems=orig_elements*2
+   local_elements=FSI(part_id)%NumIntElems
+
+   print *,"NumNodes ",local_nodes
+   print *,"NumIntElems ",local_elements
    FSI(part_id)%IntElemDim=3
-   FSI(part_id)%NumIntElems=FSI(part_id)%NumIntElems
 
    if (ifirst.ne.1) then
     print *,"ifirst bust"
@@ -2483,8 +2625,10 @@ character(40) :: dwave
     minnodebefore(dir)=1.0e+10
    enddo
 
-   do inode=1,FSI(part_id)%NumNodes
+   do inode=1,orig_nodes
+
     READ(14,*) xval(1),xval(2),xval(3)
+
     do dir=1,3
      if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
       minnodebefore(dir)=xval(dir)
@@ -2511,36 +2655,34 @@ character(40) :: dwave
      FSI(part_id)%Node_old(dir,inode)=xval1(dir)
      FSI(part_id)%Node_new(dir,inode)=xval1(dir)
     enddo
-      
-   enddo  ! inode=1,NumNodes
+    
+    call convert_2D_to_3D_nodes_FSI(part_id,inode)
+
+   enddo  ! inode=1,orig_nodes
    
-   do iface=1,FSI(part_id)%NumIntElems
-    READ(14,*) localElem(1),localElem(2),localElem(3)
-    do inode=1,3
+   do iface=1,orig_elements
+
+!   READ(14,*) localElem(1),localElem(2),localElem(3)
+    READ(14,*) localElem(1),localElem(2)
+
+!   do inode=1,3
+    do inode=1,2
      if ((localElem(inode).lt.1).or. &
-         (localElem(inode).gt.FSI(part_id)%NumNodes)) then
+         (localElem(inode).gt.orig_nodes)) then
       print *,"localElem(inode) out of range"
       stop
      endif
-    enddo !inode=1..3
+    enddo !inode=1..2
+!   enddo !inode=1..3
+
+    localElem(3)=localElem(2)+orig_nodes
+
     if ((localElem(1).eq.localElem(2)).or. &
         (localElem(1).eq.localElem(3)).or. &
         (localElem(2).eq.localElem(3))) then
      print *,"duplicate nodes for triangle"
      stop
     endif
-    do dir=1,3
-     do inode=1,3
-      local_nodes(dir,inode)=FSI(part_id)%Node_new(dir,localElem(inode))
-     enddo
-    enddo
-
-#if (STANDALONE==0)
-    call CAV3D_ORDER_NODES(local_nodes,localElem)
-#else
-    print *,"CAV3D not recognized in standalone"
-    stop
-#endif
 
     FSI(part_id)%ElemData(1,iface)=3 ! number of nodes in element
     FSI(part_id)%ElemData(2,iface)=1 ! part number
@@ -2548,7 +2690,11 @@ character(40) :: dwave
     do dir=1,3
      FSI(part_id)%IntElem(dir,iface)=localElem(dir)
     enddo
+
+    call convert_2D_to_3D_elements_FSI(part_id,iface)
+
    enddo  ! iface, looping faces
+
    close(14)
 
    do dir=1,3 
@@ -6259,7 +6405,8 @@ subroutine CLSVOF_ReadHeader( &
   nparts_in, &
   im_solid_map_in, &  ! im_part=im_solid_map_in(partid)+1
   h_small, &
-  dx_maxlevel,CTML_FSI_INIT, &
+  dx_maxlevel, &
+  CTML_FSI_INIT, &
   CLSVOFtime,problo,probhi, &
   ioproc,isout)
 use global_utility_module
@@ -6309,7 +6456,9 @@ INTEGER_T im_sanity_check
   TOTAL_NPARTS=nparts_in
   ctml_part_id=0
   fsi_part_id=0
+
   do part_id=1,TOTAL_NPARTS
+
    im_solid_mapF(part_id)=im_solid_map_in(part_id)
    im_part=im_solid_mapF(part_id)+1
    if (CTML_FSI_mat(nmat,im_part).eq.1) then
@@ -6331,6 +6480,8 @@ INTEGER_T im_sanity_check
     print *,"FSI_flag(im_part) invalid"
     stop
    endif
+
+   FSI(part_id)%flag_2D_to_3D=0
 
   enddo ! part_id=1,TOTAL_NPARTS
 
@@ -11534,7 +11685,7 @@ end subroutine CLSVOF_ReadNodes
 
       END DO
 
-      END subroutine
+      END subroutine springs
 
 end module CLSVOFCouplerIO
 
