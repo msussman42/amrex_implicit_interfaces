@@ -1463,10 +1463,12 @@ protected:
      // 0=fluid 
      // 1=prescribed motion, PROB.F90 solid 
      // 2=prescribed motion, sci_clsvof.F90 solid 
-     // 3=rigid FSI interior, ice (u_ice=0)  (expansion/triple point dynamics
+     // 3=rigid FSI interior, ice (expansion/triple point dynamics
      //   allowed)
      // 4=link w/Kourosh (FSI, not rigid, sci_clsvof.F90) 
      // 5=FSI, rigid (PROB.F90)
+     // 6=FSI ice (initial geometry: sci_clsvof.F90)
+     // 7=fluid (initial geometry: sci_clsvof.F90)
     static Vector<int>  FSI_flag; 
 
     static int         CTML_FSI_numsolids;

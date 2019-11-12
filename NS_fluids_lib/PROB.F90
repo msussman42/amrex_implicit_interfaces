@@ -12622,8 +12622,11 @@ END SUBROUTINE Adist
 
        im=1
        call materialdist(xsten,nhalf,dx,bfact,dist,im)
-       if (FSI_flag(im).ne.0) then
-        print *,"FSI_flag(im).ne.0"
+       if ((FSI_flag(im).eq.0).or. &
+           (FSI_flag(im).eq.7)) then
+        ! do nothing
+       else
+        print *,"FSI_flag(im) invalid"
         print *,"im=",im
         print *,"FSI_flag(im)=",FSI_flag(im)
         stop
@@ -12639,10 +12642,12 @@ END SUBROUTINE Adist
         if ((FSI_flag(im).eq.1).or. &
             (FSI_flag(im).eq.2).or. &
             (FSI_flag(im).eq.3).or. &
+            (FSI_flag(im).eq.6).or. &
             (FSI_flag(im).eq.4).or. &
             (FSI_flag(im).eq.5)) then
          ! do nothing
-        else if (FSI_flag(im).eq.0) then  ! impinging jet case probably
+        else if ((FSI_flag(im).eq.0).or. &
+                 (FSI_flag(im).eq.7)) then  ! impinging jet case probably
          call materialdist(xsten,nhalf,dx,bfact,dist3,im)
          if (abs(dist3).le.two*dxmin) then
           inear=2
@@ -18337,8 +18342,10 @@ END SUBROUTINE Adist
       do im=1,nmat
        vofcomp=(im-1)*(ngeom_raw)+1
        if ((FSI_flag(im).eq.0).or. &
+           (FSI_flag(im).eq.7).or. &
            (FSI_flag(im).eq.1).or. &
            (FSI_flag(im).eq.3).or. &
+           (FSI_flag(im).eq.6).or. &
            (FSI_flag(im).eq.5)) then
         VOF(vofcomp)=vofarray(im)
         do dir2=1,SDIM
@@ -18374,8 +18381,10 @@ END SUBROUTINE Adist
 
       do im=1,nmat
        if ((FSI_flag(im).eq.0).or. &
+           (FSI_flag(im).eq.7).or. &
            (FSI_flag(im).eq.1).or. &
            (FSI_flag(im).eq.3).or. &
+           (FSI_flag(im).eq.6).or. &
            (FSI_flag(im).eq.5)) then
         ! do nothing
        else if ((FSI_flag(im).eq.2).or. &
@@ -24588,7 +24597,7 @@ END SUBROUTINE Adist
 
          else if (operation_flag.eq.3) then ! (grad p)_CELL, p div(u)
 
-           ! maskSEM=0 if FSI_flag(im)=1,2,3,4,5
+           ! maskSEM=0 if FSI_flag(im)=1,2,3,4,5,6
           ibase=num_state_material*(maskSEM-1)
 
           prescell=pold(D_DECL(ic,jc,kc),1)

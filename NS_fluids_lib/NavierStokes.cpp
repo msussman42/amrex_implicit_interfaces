@@ -696,6 +696,8 @@ int NavierStokes::law_of_the_wall=0;
 // 3 FSI ice
 // 4 FSI link w/Kourosh Shoele
 // 5 FSI rigid solid (PROB.F90)
+// 6 FSI ice (initial geometry: sci_clsvof.F90)
+// 7 fluid (initial geometry: sci_clsvof.F90)
 Vector<int> NavierStokes::FSI_flag; 
 Vector<int> NavierStokes::FSI_touch_flag; // 0..nthreads-1
 // default: 1
@@ -826,13 +828,15 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
  for (int im=0;im<nmat;im++) {
   mof_ordering_local[im]=0;
 
-  if (FSI_flag_temp[im]==0) { // fluid
+  if ((FSI_flag_temp[im]==0)||
+      (FSI_flag_temp[im]==7)) { // fluid
    // do nothing
   } else if (FSI_flag_temp[im]==1) { // prescribed rigid solid (PROB.F90)
    mof_ordering_local[im]=1;
   } else if (FSI_flag_temp[im]==2) { // prescribed rigid solid (sci_clsvof.F90)
    mof_ordering_local[im]=1;
-  } else if (FSI_flag_temp[im]==3) { // ice (PROB.F90)
+  } else if ((FSI_flag_temp[im]==3)||
+             (FSI_flag_temp[im]==6)) { // ice (PROB.F90),ice (sci_clsvof.F90)
    // do nothing
   } else if (FSI_flag_temp[im]==4) { // FSI link w/Kourosh (sci_clsvof.F90)
    mof_ordering_local[im]=1;
@@ -848,13 +852,15 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
 
   for (int im=0;im<nmat;im++) {
 
-   if (FSI_flag_temp[im]==0) { // fluid
+   if ((FSI_flag_temp[im]==0)||
+       (FSI_flag_temp[im]==7)) { // fluid
     mof_ordering_local[im]=nmat;
    } else if (FSI_flag_temp[im]==1) { //prescribed rigid solid (PROB.F90)
     mof_ordering_local[im]=1;
    } else if (FSI_flag_temp[im]==2) { //prescribed rigid solid (sci_clsvof.F90)
     mof_ordering_local[im]=1;
-   } else if (FSI_flag_temp[im]==3) { // ice (PROB.F90)
+   } else if ((FSI_flag_temp[im]==3)||
+	      (FSI_flag_temp[im]==6)) { // ice (PROB.F90),ice (sci_clsvof.F90)
     mof_ordering_local[im]=nmat;
    } else if (FSI_flag_temp[im]==4) { // FSI link w/Kourosh (sci_clsvof.F90)
     mof_ordering_local[im]=1;
@@ -1359,14 +1365,17 @@ void fortran_parameters() {
   } else if (material_type_temp[im]==0) {
 
    if ((FSI_flag_temp[im]!=0)&& // fluid
+       (FSI_flag_temp[im]!=7)&& // fluid
        (FSI_flag_temp[im]!=3)&& // ice
+       (FSI_flag_temp[im]!=6)&& // ice
        (FSI_flag_temp[im]!=5))  // FSI PROB.F90 rigid solid.
     amrex::Error("FSI_flag_temp invalid");
 
   } else if ((material_type_temp[im]>0)&& 
              (material_type_temp[im]<=MAX_NUM_EOS)) {
 
-   if (FSI_flag_temp[im]!=0) // fluid
+   if ((FSI_flag_temp[im]!=0)&&
+       (FSI_flag_temp[im]!=7)) // fluid
     amrex::Error("FSI_flag_temp invalid");
 
   } else {
@@ -3372,7 +3381,8 @@ NavierStokes::read_params ()
 
     truncate_volume_fractions.resize(nmat);
     for (int i=0;i<nmat;i++) {
-     if (FSI_flag[i]==0) // fluid
+     if ((FSI_flag[i]==0)||
+         (FSI_flag[i]==7)) // fluid
       truncate_volume_fractions[i]=1;
      else if (is_ice_matC(i)==1) // ice
       truncate_volume_fractions[i]=1;
@@ -3927,6 +3937,7 @@ int NavierStokes::ns_is_rigid(int im) {
  int local_flag=-1;
 
  if ((FSI_flag[im]==0)|| // fluid
+     (FSI_flag[im]==7)||  // fluid
      (is_FSI_rigid_matC(im)==1)|| // FSI PROB.F90 rigid solid
      (is_ice_matC(im)==1)) { 
   local_flag=0;
@@ -4314,6 +4325,7 @@ int NavierStokes::do_FSI() {
       (FSI_flag[im]==4)) {  // FSI CTML sci_clsvof.F90 material
    local_do_FSI=1;
   } else if ((FSI_flag[im]==0)|| // fluid
+             (FSI_flag[im]==7)|| // fluid (sci_clsvof.F90 gives init int.)
              (FSI_flag[im]==1)|| // prescribed PROB.F90 rigid material
 	     (is_FSI_rigid_matC(im)==1)|| // FSI PROB.F90 rigid material
              (is_ice_matC(im)==1)) { // FSI ice rigid material
@@ -4332,9 +4344,11 @@ int NavierStokes::is_ice_matC(int im) {
  int nmat=num_materials;
  int local_is_ice=0;
  if ((im>=0)&&(im<nmat)) {
-  if (FSI_flag[im]==3) {  
+  if ((FSI_flag[im]==3)||
+      (FSI_flag[im]==6)) {  
    local_is_ice=1;
   } else if ((FSI_flag[im]==0)||  // fluid
+             (FSI_flag[im]==7)||  // fluid
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
              (FSI_flag[im]==2)||  // prescribed sci_clsvof.F90 rigid material
              (FSI_flag[im]==4)||  // FSI CTML sci_clsvof.F90 material
@@ -4378,10 +4392,12 @@ int NavierStokes::is_FSI_rigid_matC(int im) {
   if (FSI_flag[im]==5) {  // FSI PROB.F90 rigid material
    local_is_FSI_rigid=1;
   } else if ((FSI_flag[im]==0)||  // fluid
+             (FSI_flag[im]==7)||  // fluid
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
              (FSI_flag[im]==2)||  // prescribed sci_clsvof.F90 rigid material
              (FSI_flag[im]==4)||  // FSI CTML sci_clsvof.F90 material
-             (FSI_flag[im]==3)) { // ice
+             (FSI_flag[im]==3)||  // ice
+             (FSI_flag[im]==6)) { // ice
    // do nothing
   } else
    amrex::Error("FSI_flag invalid");
@@ -4403,9 +4419,11 @@ int NavierStokes::is_singular_coeff(int im) {
    local_is_singular_coeff=1;
   } else if (FSI_flag[im]==2) { // prescribed sci_clsvof.F90 rigid material
    local_is_singular_coeff=1;
-  } else if (FSI_flag[im]==0) { // fluid
+  } else if ((FSI_flag[im]==0)||
+             (FSI_flag[im]==7)) { // fluid
    local_is_singular_coeff=0;
-  } else if (FSI_flag[im]==3) { // ice
+  } else if ((FSI_flag[im]==3)||
+	     (FSI_flag[im]==6)) { // ice
    local_is_singular_coeff=1;
   } else if (FSI_flag[im]==4) { // FSI CTML sci_clsvof.F90 material
    local_is_singular_coeff=0;
@@ -4431,6 +4449,7 @@ int NavierStokes::CTML_FSI_flagC() {
    amrex::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
 #endif
   } else if ((FSI_flag[im]==0)||  // fluid
+             (FSI_flag[im]==7)||  // fluid
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
              (FSI_flag[im]==2)||  // prescribed sci_clsvof.F90 rigid material
              (is_FSI_rigid_matC(im)==1)||  // FSI PROB.F90 rigid material
@@ -4457,6 +4476,7 @@ int NavierStokes::CTML_FSI_matC(int im) {
    amrex::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
 #endif
   } else if ((FSI_flag[im]==0)||  // fluid material
+             (FSI_flag[im]==7)||  // fluid
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
              (FSI_flag[im]==2)||  // prescribed sci_clsvof.F90 rigid material
              (is_FSI_rigid_matC(im)==1)||  // FSI PROB.F90 rigid material
@@ -6373,7 +6393,7 @@ NavierStokes::initData () {
    recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
    if (parent->AMR_recalesce_flag(im)>0) {
     if (at_least_one_ice!=1)
-     amrex::Error("expecting FSI_flag==3");
+     amrex::Error("expecting FSI_flag==3 or 6");
     at_least_one=1;
    }
   }

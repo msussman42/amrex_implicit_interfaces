@@ -2480,7 +2480,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
         if (parent->AMR_recalesce_flag(im)>0) {
          if (at_least_one_ice!=1)
-          amrex::Error("expecting at least one material FSI_flag==3");
+          amrex::Error("expecting at least one material FSI_flag==3 or 6");
          at_least_one=1;
         } 
        } //im=1..nmat
@@ -3029,7 +3029,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //    c. pressure gradient
        if (disable_pressure_solve==0) {
 
-	 // FSI_flag=3 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
+	 // FSI_flag=3,6 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
         if (FSI_material_exists()==1) {
          int rigid_project_option=0;
          multiphase_project(rigid_project_option);
@@ -8100,7 +8100,7 @@ void NavierStokes::multiphase_project(int project_option) {
    //
    // In LEVELSET_3D.F90, FORT_CELL_TO_MAC,
    // operation_flag=3,4,5,10,11, num_colors.gt.0, if either
-   // left cell or right cell has ice (FSI_flag==3)
+   // left cell or right cell has ice (FSI_flag==3,6)
    // or is FSI_rigid (FSI_flag==5) then velocity is
    // overwritten.
    // In GODUNOV_3D.F90, FORT_INIT_ICEMASK,
@@ -10714,7 +10714,7 @@ void NavierStokes::veldiffuseALL() {
 
   // if (FSI_flag(im)==1,2,4)
   //  T(im)=TSOLID
-  // else if (FSI_flag(im)=0,3,5)
+  // else if (FSI_flag(im)=0,3,5,6,7)
   //  T(im)=TSOLID if in the solid.
   int hflag=0;
   ns_level.solid_temperature();

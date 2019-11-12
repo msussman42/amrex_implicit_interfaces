@@ -2579,10 +2579,10 @@ INTEGER_T :: orig_elements,local_elements
    xxblob1(2)=0.0
    xxblob1(3)=0.0
 
-   newxxblob1(1)=0.0
-   newxxblob1(2)=0.0
+   newxxblob1(1)=2.0/30.0
+   newxxblob1(2)=2.0/30.0
    newxxblob1(3)=0.0
-   radradblob1=1.0  
+   radradblob1=1.0/30.0 
 
    denpaddle=one
    dampingpaddle=zero

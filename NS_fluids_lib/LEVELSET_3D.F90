@@ -11168,7 +11168,8 @@ stop
          do im=1,nmat
           if (is_rigid(nmat,im).eq.1) then
            ! do nothing
-          else if (FSI_flag(im).eq.0) then
+          else if ((FSI_flag(im).eq.0).or. &
+                   (FSI_flag(im).eq.7)) then
            ! do nothing
           else if (is_ice(nmat,im).eq.1) then
            if (LStest(im).ge.zero) then
@@ -13968,7 +13969,8 @@ stop
                 (levelPC(D_DECL(im1,jm1,km1),im).ge.zero)) then
              use_face_pres=zero ! do not use gp or div(up)
             endif
-           else if (FSI_flag(im).eq.0) then ! regular fluid material
+           else if ((FSI_flag(im).eq.0).or. &
+                    (FSI_flag(im).eq.7)) then ! regular fluid material
             ! do nothing
            else if (is_prescribed(nmat,im).eq.1) then
             ! do nothing (use_face_pres modified above for this case)

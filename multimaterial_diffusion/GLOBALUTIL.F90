@@ -7927,9 +7927,11 @@ contains
         stop
 #endif
        else if ((FSI_flag(im).eq.0).or. &
+                (FSI_flag(im).eq.7).or. &
                 (FSI_flag(im).eq.1).or. &
                 (FSI_flag(im).eq.2).or. &
                 (FSI_flag(im).eq.3).or. &
+                (FSI_flag(im).eq.6).or. &
                 (FSI_flag(im).eq.5)) then
         ! do nothing
        else
@@ -7969,9 +7971,11 @@ contains
        stop
 #endif
       else if ((FSI_flag(im).eq.0).or. &
+               (FSI_flag(im).eq.7).or. &
                (FSI_flag(im).eq.1).or. &
                (FSI_flag(im).eq.2).or. &
                (FSI_flag(im).eq.3).or. &
+               (FSI_flag(im).eq.6).or. &
                (FSI_flag(im).eq.5)) then
        CTML_FSI_mat=0
       else
@@ -8002,9 +8006,11 @@ contains
        stop
       endif
       is_ice=0
-      if (FSI_flag(im).eq.3) then
+      if ((FSI_flag(im).eq.3).or. &
+          (FSI_flag(im).eq.6)) then
        is_ice=1
       else if ((FSI_flag(im).eq.0).or. &
+               (FSI_flag(im).eq.7).or. &
                (FSI_flag(im).eq.1).or. &
                (FSI_flag(im).eq.2).or. &
                (FSI_flag(im).eq.4).or. &
@@ -8041,10 +8047,12 @@ contains
       if (FSI_flag(im).eq.5) then
        is_FSI_rigid=1
       else if ((FSI_flag(im).eq.0).or. &
+               (FSI_flag(im).eq.7).or. &
                (FSI_flag(im).eq.1).or. &
                (FSI_flag(im).eq.2).or. &
                (FSI_flag(im).eq.4).or. &
-               (FSI_flag(im).eq.3)) then
+               (FSI_flag(im).eq.3).or. &
+               (FSI_flag(im).eq.6)) then
        is_FSI_rigid=0
       else
        print *,"FSI_flag invalid in is_FSI_rigid"
@@ -8081,7 +8089,9 @@ contains
           (FSI_flag(im).eq.4)) then ! FSI link w/Kourosh Shoele
        is_rigid=1
       else if ((FSI_flag(im).eq.0).or. &
+               (FSI_flag(im).eq.7).or. & ! fluid
                (FSI_flag(im).eq.3).or. & ! ice
+               (FSI_flag(im).eq.6).or. & ! ice
                (FSI_flag(im).eq.5)) then ! FSI rigid
        is_rigid=0
       else

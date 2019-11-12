@@ -1188,7 +1188,8 @@ stop
           local_maskSEM=0
          else if (is_FSI_rigid(nmat,imcrit).eq.1) then
           local_maskSEM=0
-         else if (FSI_flag(imcrit).eq.0) then
+         else if ((FSI_flag(imcrit).eq.0).or. &
+                  (FSI_flag(imcrit).eq.7)) then
           local_maskSEM=imcrit
          else
           print *,"FSI_flag invalid"

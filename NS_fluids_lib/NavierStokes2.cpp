@@ -5304,7 +5304,7 @@ void NavierStokes::solid_temperature() {
 
      // if (FSI_flag(im)==1,2,4),
      //  T(im)=TSOLID
-     // else if (FSI_flag(im)==0,3,5),
+     // else if (FSI_flag(im)==0,3,5,6,7),
      //  T(im)=TSOLID if in the solid.
      // 
      // note: if FSI_flag==2, then solid temperature copied to itself since
