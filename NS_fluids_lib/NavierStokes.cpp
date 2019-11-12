@@ -5203,9 +5203,9 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
  if ((im_part<0)||(im_part>=nmat))
   amrex::Error("im_part invalid");
 
- if ((FSI_flag[im_part]==2)||
-     (FSI_flag[im_part]==6)||
-     (FSI_flag[im_part]==7)) { //prescribed sci_clsvof.F90 rigid solid 
+ if ((FSI_flag[im_part]==2)|| // prescribed solid CAD
+     (FSI_flag[im_part]==6)|| // ice CAD
+     (FSI_flag[im_part]==7)) {// fluid CAD
 
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
   int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
@@ -5360,7 +5360,7 @@ void NavierStokes::build_moment_from_FSILS() {
 } // subroutine build_moment_from_FSILS
 
 // called from: ns_header_msg_level,initData ()
-void NavierStokes::Transfer_FSI_To_STATE() {
+void NavierStokes::Transfer_FSI_To_STATE(Real time) {
 
  // nparts x (velocity + LS + temperature + flag + stress)
  int nmat=num_materials;
@@ -5404,25 +5404,50 @@ void NavierStokes::Transfer_FSI_To_STATE() {
        (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 solid
        (FSI_flag[im_part]==6)|| //initial ice from CAD file
        (FSI_flag[im_part]==7)) {//initial fluid from CAD file 
+
     int ibase=partid*nFSI_sub;
-    copy_velocity_on_sign(partid);
+
+    int ok_to_modify_EUL=1;
+    if ((FSI_flag[im_part]==6)||
+        (FSI_flag[im_part]==7)) {
+     if (time==0.0) {
+      // do nothing
+     } else if (time>0.0) {
+      ok_to_modify_EUL=0;
+     } else
+      amrex::Error("time invalid");
+    } else if ((FSI_flag[im_part]==2)||
+               (FSI_flag[im_part]==4)) {
+     // do nothing
+    } else
+     amrex::Error("FSI_flag invalid");
+
+    if (ok_to_modify_EUL==1) {
+
+     copy_velocity_on_sign(partid);
      // Solid velocity
      //ngrow=0
-    MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase,partid*AMREX_SPACEDIM,
-     AMREX_SPACEDIM,0);
-     // LS
-     //ngrow=0
-    MultiFab::Copy(LS_new,*localMF[FSI_MF],ibase+3,im_part,1,0);
-     // temperature
-    if (solidheat_flag==0) { // diffuse in solid
-     // do nothing
-    } else if ((solidheat_flag==1)||  //dirichlet
-               (solidheat_flag==2)) { //neumann
+     MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase,partid*AMREX_SPACEDIM,
+      AMREX_SPACEDIM,0);
+      // LS
       //ngrow=0
-     MultiFab::Copy(S_new,*localMF[FSI_MF],ibase+4,
-      dencomp+im_part*num_state_material+1,1,0);
+     MultiFab::Copy(LS_new,*localMF[FSI_MF],ibase+3,im_part,1,0);
+      // temperature
+     if (solidheat_flag==0) { // diffuse in solid
+      // do nothing
+     } else if ((solidheat_flag==1)||  //dirichlet
+                (solidheat_flag==2)) { //neumann
+       //ngrow=0
+      MultiFab::Copy(S_new,*localMF[FSI_MF],ibase+4,
+       dencomp+im_part*num_state_material+1,1,0);
+     } else
+      amrex::Error("solidheat_flag invalid"); 
+
+    } else if (ok_to_modify_EUL==0) {
+     // do nothing
     } else
-     amrex::Error("solidheat_flag invalid"); 
+     amrex::Error("ok_to_modify_EUL invalid");
+
    } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid
     // do nothing
    } else
@@ -5793,40 +5818,63 @@ void NavierStokes::ns_header_msg_level(
 	  (FSI_flag[im_part]==6)||
 	  (FSI_flag[im_part]==7)) { 
 
-       dcomp=im_part;
-       scomp=im_part;
-         //ngrow==0 (levelset)
-       MultiFab::Copy(LS_new,*LS_new_coarse,scomp,dcomp,1,0);
-       dcomp=nmat+im_part*AMREX_SPACEDIM;
-       scomp=dcomp;
-         //ngrow==0 (levelset normal)
-       MultiFab::Copy(LS_new,*LS_new_coarse,scomp,dcomp,AMREX_SPACEDIM,0);
+       int ok_to_modify_EUL=1;
+       if ((FSI_flag[im_part]==6)||
+           (FSI_flag[im_part]==7)) {
+	if (time==0.0) {
+	 // do nothing
+	} else if (time>0.0) {
+	 ok_to_modify_EUL=0;
+	} else
+	 amrex::Error("time invalid");
+       } else if ((FSI_flag[im_part]==2)||
+  	          (FSI_flag[im_part]==4)) {
+        // do nothing
+       } else
+        amrex::Error("FSI_flag invalid");
 
-       dcomp=partid*AMREX_SPACEDIM;
-       scomp=partid*AMREX_SPACEDIM;
+       if (ok_to_modify_EUL==1) {
+
+        dcomp=im_part;
+        scomp=im_part;
+         //ngrow==0 (levelset)
+        MultiFab::Copy(LS_new,*LS_new_coarse,scomp,dcomp,1,0);
+        dcomp=nmat+im_part*AMREX_SPACEDIM;
+        scomp=dcomp;
+         //ngrow==0 (levelset normal)
+        MultiFab::Copy(LS_new,*LS_new_coarse,scomp,dcomp,AMREX_SPACEDIM,0);
+
+        dcomp=partid*AMREX_SPACEDIM;
+        scomp=partid*AMREX_SPACEDIM;
          //ngrow==0
-       MultiFab::Copy(Solid_new,*Solid_new_coarse,scomp,dcomp,AMREX_SPACEDIM,0);
+        MultiFab::Copy(Solid_new,*Solid_new_coarse,
+		scomp,dcomp,AMREX_SPACEDIM,0);
 
         //ngrow==0
-       MultiFab* new_coarse_thermal=new MultiFab(grids,dmap,1,0,
+        MultiFab* new_coarse_thermal=new MultiFab(grids,dmap,1,0,
 	    MFInfo().SetTag("new_coarse_thermal"),FArrayBoxFactory());
-       dcomp=0;
-       int scomp_thermal=dencomp+im_part*num_state_material+1;
+        dcomp=0;
+        int scomp_thermal=dencomp+im_part*num_state_material+1;
         //ncomp==1
-       FillCoarsePatch(*new_coarse_thermal,dcomp,time,State_Type,
+        FillCoarsePatch(*new_coarse_thermal,dcomp,time,State_Type,
          scomp_thermal,1);
 
-        //ngrow==0
-       if (solidheat_flag==0) {  // diffuse in solid
-        // do nothing
-       } else if ((solidheat_flag==1)||   // dirichlet
-                  (solidheat_flag==2)) {  // neumann
          //ngrow==0
-        MultiFab::Copy(S_new,*new_coarse_thermal,0,scomp_thermal,1,0);
-       } else
-        amrex::Error("solidheat_flag invalid");
+        if (solidheat_flag==0) {  // diffuse in solid
+         // do nothing
+        } else if ((solidheat_flag==1)||   // dirichlet
+                   (solidheat_flag==2)) {  // neumann
+          //ngrow==0
+         MultiFab::Copy(S_new,*new_coarse_thermal,0,scomp_thermal,1,0);
+        } else
+         amrex::Error("solidheat_flag invalid");
 
-       delete new_coarse_thermal;
+        delete new_coarse_thermal;
+
+       } else if (ok_to_modify_EUL==0) {
+        // do nothing
+       } else
+        amrex::Error("ok_to_modify_EUL invalid");
 
       } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid 
        // do nothing
@@ -6017,7 +6065,7 @@ void NavierStokes::ns_header_msg_level(
     // 3. update LS_new
     // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
 
-   Transfer_FSI_To_STATE();
+   Transfer_FSI_To_STATE(time);
 
    delete solidmf;
    delete denmf;
@@ -6667,7 +6715,7 @@ NavierStokes::initData () {
  // 2. update Solid_new
  // 3. update LS_new
  // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
- Transfer_FSI_To_STATE();
+ Transfer_FSI_To_STATE(strt_time);
 
   // if nparts>0,
   //  Initialize FSI_GHOST_MF from Solid_State_Type

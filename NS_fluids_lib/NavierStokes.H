@@ -1292,7 +1292,7 @@ void apply_pressure_grad(
     static int ns_is_lag_part(int im);
 
     void copy_velocity_on_sign(int partid);
-    void Transfer_FSI_To_STATE();
+    void Transfer_FSI_To_STATE(Real time);
     void build_moment_from_FSILS();
 
     void ctml_fsi_transfer_force();
