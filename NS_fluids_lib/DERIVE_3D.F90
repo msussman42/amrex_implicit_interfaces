@@ -205,7 +205,7 @@ stop
           s(2,1)*s(2,1)+s(2,2)*s(2,2)+s(2,3)*s(2,3)+&
           s(3,1)*s(3,1)+s(3,2)*s(3,2)+s(3,3)*s(3,3)
 
-       ! Buils the traceless symmetric part of the square of the
+       ! Builds the traceless symmetric part of the square of the
        ! velocity tensor
        do veldir=1,3
         g2(veldir)=zero
@@ -1375,12 +1375,12 @@ stop
        stop
       endif
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_GETDRAG"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_GETDRAG"
        stop
       endif
 
@@ -1787,14 +1787,14 @@ stop
              nsolid, &
              time,im_solid_crit)
 
-           if ((FSI_flag(im_solid_crit).eq.2).or. &
-               (FSI_flag(im_solid_crit).eq.4)) then
+           if ((FSI_flag(im_solid_crit).eq.2).or. & ! prescribed solid CAD
+               (FSI_flag(im_solid_crit).eq.4)) then ! CTML FSI
             do dir=1,SDIM
              nsolid(dir)= &
               levelpc(D_DECL(icell,jcell,kcell), &
                       nmat+SDIM*(im_solid_crit-1)+dir)
             enddo
-           else if (FSI_flag(im_solid_crit).eq.1) then
+           else if (FSI_flag(im_solid_crit).eq.1) then ! prescribed solid EUL
             ! do nothing
            else
             print *,"FSI_flag invalid"
@@ -1883,7 +1883,7 @@ stop
 
                if (is_rigid(nmat,im_solid_crit).eq.1) then
 
-                if (FSI_flag(im_solid_crit).eq.1) then
+                if (FSI_flag(im_solid_crit).eq.1) then ! prescribed solid EUL
 
                  do dir=1,SDIM
 
@@ -1905,12 +1905,14 @@ stop
 
                  enddo ! dir=1..sdim
 
+                        !2=prescribed solid CAD
+                        !4=CTML FSI
                 else if ((FSI_flag(im_solid_crit).eq.2).or. &
                          (FSI_flag(im_solid_crit).eq.4)) then
 
                  partid=0
                  do im=1,im_solid_crit-1
-                  if (is_rigid(nmat,im).eq.1) then
+                  if (is_lag_part(nmat,im).eq.1) then
                    partid=partid+1
                   endif
                  enddo

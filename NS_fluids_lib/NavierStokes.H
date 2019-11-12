@@ -1268,7 +1268,7 @@ void apply_pressure_grad(
     void ns_header_msg_level(int FSI_operation,int FSI_sub_operation,
       Real time,Real dt,int iter);
 
-    static int do_FSI();
+    static int read_from_CAD();
     static int is_ice_matC(int im);
     static int is_singular_coeff(int im);
     static int is_FSI_rigid_matC(int im);
@@ -1289,6 +1289,7 @@ void apply_pressure_grad(
     void CPP_OVERRIDEPBC(int homflag_in,int project_option_in);
 
     static int ns_is_rigid(int im);
+    static int ns_is_lag_part(int im);
 
     void copy_velocity_on_sign(int partid);
     void Transfer_FSI_To_STATE();

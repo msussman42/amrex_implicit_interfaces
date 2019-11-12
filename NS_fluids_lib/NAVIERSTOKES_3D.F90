@@ -494,12 +494,12 @@ stop
        stop
       endif
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid zones_revolve"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid zones_revolve"
        stop
       endif
 
@@ -3327,12 +3327,12 @@ END SUBROUTINE SIMP
        print *,"level invalid 39"
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_CELLGRID"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_CELLGRID"
        stop
       endif
       if ((num_materials_viscoelastic.ge.1).and. &
@@ -4967,12 +4967,12 @@ END SUBROUTINE SIMP
        print *,"num_state_base invalid"
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_COMBINEZONES"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_COMBINEZONES"
        stop
       endif
 

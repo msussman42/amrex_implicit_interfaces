@@ -146,7 +146,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   amrex::Error("num_materials_vel invalid");
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -156,7 +156,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -789,7 +789,7 @@ void NavierStokes::combine_state_variable(
  }
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -799,7 +799,7 @@ void NavierStokes::combine_state_variable(
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");

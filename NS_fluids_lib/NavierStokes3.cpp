@@ -644,7 +644,7 @@ void NavierStokes::nonlinear_advection() {
    ns_level.debug_ngrow(MASKCOEF_MF,1,6003);
  } // ilev=level..finest_level
 
-// 0. convert Lagrangian description to Eulerian if do_FSI()==1
+// 0. convert Lagrangian description to Eulerian if read_from_CAD==1
 // 1. renormalize variables
 // 2. extend from F>0 fluid regions into F=0 regions
 // 3. if renormalize_only==0, 
@@ -652,7 +652,7 @@ void NavierStokes::nonlinear_advection() {
 //    b. init U,T in the solid regions.
 //    c. extrapolate F,X,LS from fluid regions into solid regions.
 
- if (do_FSI()==1) {
+ if (read_from_CAD()==1) {
   int iter=0;
   int FSI_operation=4; // eul vel -> structure vel
   int FSI_sub_operation=0;
@@ -670,10 +670,10 @@ void NavierStokes::nonlinear_advection() {
   FSI_sub_operation=0;
   ns_header_msg_level(FSI_operation,FSI_sub_operation,
    cur_time_slab,dt_slab,iter);
- } else if (do_FSI()==0) {
+ } else if (read_from_CAD()==0) {
   // do nothing
  } else
-  amrex::Error("do_FSI() invalid");
+  amrex::Error("read_from_CAD() invalid");
 
  // convert Lagrangian position, velocity, temperature, and force to
  // Eulerian.
@@ -11003,7 +11003,7 @@ void NavierStokes::APPLY_REGISTERS(
   amrex::Error("num_state_base invalid");
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -11013,7 +11013,7 @@ void NavierStokes::APPLY_REGISTERS(
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");

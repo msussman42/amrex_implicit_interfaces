@@ -9145,8 +9145,8 @@ stop
        print *,"ngrowFSI.ne.3"
        stop
       endif
-      if ((nparts.lt.1).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.1).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_COPY_VEL_ON_SIGN"
        stop
       endif
       if ((partid.lt.0).or.(partid.ge.nparts)) then
@@ -9159,7 +9159,7 @@ stop
       endif
       if ((im_part.lt.0).or. &
           (im_part.ge.nmat).or. &
-          (is_rigid(nmat,im_part+1).ne.1)) then
+          (is_lag_part(nmat,im_part+1).ne.1)) then
        print *,"im_part invalid"
        stop
       endif
@@ -9281,7 +9281,7 @@ stop
        stop
       endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid"
+       print *,"nparts invalid FORT_BUILD_MOMENT"
        stop
       endif
       if (ngrowFSI.ne.3) then
@@ -9319,14 +9319,16 @@ stop
        do partid=1,nparts
         im_part=im_solid_map(partid)+1
         if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-         print *,"im_part invalid"
+         print *,"im_part invalid FORT_BUILD_MOMENT"
          stop
         endif
-        if ((FSI_flag(im_part).eq.2).or. &
-            (FSI_flag(im_part).eq.4)) then
+        if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid CAD
+            (FSI_flag(im_part).eq.4).or. & ! CTML FSI
+            (FSI_flag(im_part).eq.6).or. & ! ice CAD
+            (FSI_flag(im_part).eq.7)) then ! fluid CAD
 
-         if (is_rigid(nmat,im_part).ne.1) then
-          print *,"is_rigid(nmat,im_part).ne.1"
+         if (is_lag_part(nmat,im_part).ne.1) then
+          print *,"is_lag_part(nmat,im_part).ne.1"
           stop
          endif
 
@@ -9429,7 +9431,7 @@ stop
          do dir=1,SDIM
           snew(D_DECL(i,j,k),vofcomp+1+dir)=centroid(dir)-cencell(dir)
          enddo 
-        else if (FSI_flag(im_part).eq.1) then
+        else if (FSI_flag(im_part).eq.1) then ! prescribed solid EUL
          ! do nothing
         else
          print *,"FSI_flag invalid"
@@ -10407,12 +10409,12 @@ stop
        print *,"bfact too small"
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_ESTDT"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_ESTDT"
        stop
       endif
       if ((enable_spectral.lt.0).or. &
@@ -13691,8 +13693,8 @@ stop
        print *,"nden invalid"
        stop
       endif
-      if ((nparts.lt.1).or.(nparts.ge.nmat)) then 
-       print *,"nparts invalid"
+      if ((nparts.lt.1).or.(nparts.gt.nmat)) then 
+       print *,"nparts invalid FORT_WALLFUNCTION"
        stop
       endif
       if (dt.le.zero) then
@@ -13749,255 +13751,260 @@ stop
         enddo  
         impart=im_solid_map(partid)+1  ! type integer: material id
         if ((impart.lt.1).or.(impart.gt.nmat)) then
-         print *,"impart invalid"
+         print *,"impart invalid FORT_WALLFUNCTION"
          stop
         endif
-        if (is_rigid(nmat,impart).eq.1) then
-          ! zero is defined in CONSTANTS.H
-          ! CONSTANTS.H is defined in: ./BoxLib/Src/C_BaseLib/CONSTANTS.H
-         if ((LScenter(impart).ge.zero).and.(im_primary.eq.impart)) then
-        
-           ! check if cell (i,j,k) is a ghost point. 
-          nearwall_exists=0
-          im_fluid=0
-          LScrit=zero
-          if (do_corners.eq.1) then
-           do i1=-1,1
-           do j1=-1,1
-           do k1=klosten,khisten
-            ijksum=abs(i1)+abs(j1)+abs(k1)
-            if ((ijksum.gt.0).and.(ijksum.le.SDIM)) then
-             do im=1,nmat
-              LStest(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
-             enddo
-             call get_primary_material(LStest,nmat,im_primary_near)
-             if (is_rigid(nmat,im_primary_near).eq.0) then
-              if (nearwall_exists.eq.0) then
-               nearwall_exists=1
-               im_fluid=im_primary_near
-               LScrit=LScenter(im_fluid)
-              else if (nearwall_exists.eq.1) then
-               LScompare=LScenter(im_primary_near)
-               if (abs(LScompare).le.abs(LScrit)) then
+        if (is_lag_part(nmat,impart).eq.1) then
+
+         if (is_rigid(nmat,impart).eq.1) then
+           ! zero is defined in CONSTANTS.H
+           ! CONSTANTS.H is defined in: ./BoxLib/Src/C_BaseLib/CONSTANTS.H
+          if ((LScenter(impart).ge.zero).and.(im_primary.eq.impart)) then
+         
+            ! check if cell (i,j,k) is a ghost point. 
+           nearwall_exists=0
+           im_fluid=0
+           LScrit=zero
+           if (do_corners.eq.1) then
+            do i1=-1,1
+            do j1=-1,1
+            do k1=klosten,khisten
+             ijksum=abs(i1)+abs(j1)+abs(k1)
+             if ((ijksum.gt.0).and.(ijksum.le.SDIM)) then
+              do im=1,nmat
+               LStest(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
+              enddo
+              call get_primary_material(LStest,nmat,im_primary_near)
+              if (is_rigid(nmat,im_primary_near).eq.0) then
+               if (nearwall_exists.eq.0) then
+                nearwall_exists=1
                 im_fluid=im_primary_near
                 LScrit=LScenter(im_fluid)
+               else if (nearwall_exists.eq.1) then
+                LScompare=LScenter(im_primary_near)
+                if (abs(LScompare).le.abs(LScrit)) then
+                 im_fluid=im_primary_near
+                 LScrit=LScenter(im_fluid)
+                endif
+               else
+                print *,"nearwall_exits invalid"
+                stop
                endif
-              else
-               print *,"nearwall_exits invalid"
-               stop
               endif
+             else if (ijksum.eq.0) then
+              ! do nothing
+             else
+              print *,"i1,j1,k1 bust"
+              stop
              endif
-            else if (ijksum.eq.0) then
-             ! do nothing
-            else
-             print *,"i1,j1,k1 bust"
-             stop
-            endif
-           enddo
-           enddo
-           enddo
-          else if (do_corners.eq.0) then
-           do dir=1,SDIM
-            ii=0
-            jj=0
-            kk=0
-            if (dir.eq.1) then
-             ii=1
-            else if (dir.eq.2) then
-             jj=1
-            else if ((dir.eq.3).and.(SDIM.eq.3)) then
-             kk=1
-            else
-             print *,"dir invalid"
-             stop
-            endif
-            do side=-1,1,2
-             do im=1,nmat
-              if (side.eq.-1) then
-               LStest(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
-              else if (side.eq.1) then
-               LStest(im)=LS(D_DECL(i+ii,j+jj,k+kk),im)
-              else
-               print *,"side invalid"
-               stop
-              endif 
-             enddo ! im=1..nmat
-             call get_primary_material(LStest,nmat,im_primary_near)
-             if (is_rigid(nmat,im_primary_near).eq.0) then
-              if (nearwall_exists.eq.0) then
-               nearwall_exists=1
-               im_fluid=im_primary_near
-               LScrit=LScenter(im_fluid)
-              else if (nearwall_exists.eq.1) then
-               LScompare=LScenter(im_primary_near)
-               if (abs(LScompare).le.abs(LScrit)) then
+            enddo
+            enddo
+            enddo
+           else if (do_corners.eq.0) then
+            do dir=1,SDIM
+             ii=0
+             jj=0
+             kk=0
+             if (dir.eq.1) then
+              ii=1
+             else if (dir.eq.2) then
+              jj=1
+             else if ((dir.eq.3).and.(SDIM.eq.3)) then
+              kk=1
+             else
+              print *,"dir invalid"
+              stop
+             endif
+             do side=-1,1,2
+              do im=1,nmat
+               if (side.eq.-1) then
+                LStest(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
+               else if (side.eq.1) then
+                LStest(im)=LS(D_DECL(i+ii,j+jj,k+kk),im)
+               else
+                print *,"side invalid"
+                stop
+               endif 
+              enddo ! im=1..nmat
+              call get_primary_material(LStest,nmat,im_primary_near)
+              if (is_rigid(nmat,im_primary_near).eq.0) then
+               if (nearwall_exists.eq.0) then
+                nearwall_exists=1
                 im_fluid=im_primary_near
                 LScrit=LScenter(im_fluid)
+               else if (nearwall_exists.eq.1) then
+                LScompare=LScenter(im_primary_near)
+                if (abs(LScompare).le.abs(LScrit)) then
+                 im_fluid=im_primary_near
+                 LScrit=LScenter(im_fluid)
+                endif
+               else
+                print *,"nearwall_exits invalid"
+                stop
                endif
-              else
-               print *,"nearwall_exits invalid"
-               stop
               endif
-             endif
-            enddo ! side=-1,1,2
-           enddo ! dir=1..SDIM
-          else
-           print *,"do_corners invalid"
-           stop
-          endif
-        
-          if (nearwall_exists.eq.1) then
-            ! normal for solid materials with a Lagrangian representation
-            ! are calculated as follows:
-            ! 1. convert from Lagrangian representation (elements and nodes)
-            !    to an Eulerian representation (levelset function "phi")
-            ! 2. normal=grad phi/|grad phi|  (central differencing to
-            !    approximate grad phi)
-            ! NOTE: currently Lagrangian representation converted to
-            !  Eulerian representation at each time step.  BUT, if
-            !  it is known that the solid does not move, and the 
-            !  solid is wholly contained on the finest adaptive level,
-            !  then it is unnecessary to repeat the conversion process.
-           do dir=1,SDIM
-            nrm(dir)=LS(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
-             ! projection point
-            x_projection(dir)=xsten(0,dir)-LScenter(impart)*nrm(dir)
-             ! image point
-            x_image(dir)=x_projection(dir)- &
-             sign_funct(LScenter(impart))*delta_r*nrm(dir)
-           enddo ! dir=1..sdim
+             enddo ! side=-1,1,2
+            enddo ! dir=1..SDIM
+           else
+            print *,"do_corners invalid"
+            stop
+           endif
+         
+           if (nearwall_exists.eq.1) then
+             ! normal for solid materials with a Lagrangian representation
+             ! are calculated as follows:
+             ! 1. convert from Lagrangian representation (elements and nodes)
+             !    to an Eulerian representation (levelset function "phi")
+             ! 2. normal=grad phi/|grad phi|  (central differencing to
+             !    approximate grad phi)
+             ! NOTE: currently Lagrangian representation converted to
+             !  Eulerian representation at each time step.  BUT, if
+             !  it is known that the solid does not move, and the 
+             !  solid is wholly contained on the finest adaptive level,
+             !  then it is unnecessary to repeat the conversion process.
+            do dir=1,SDIM
+             nrm(dir)=LS(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
+              ! projection point
+             x_projection(dir)=xsten(0,dir)-LScenter(impart)*nrm(dir)
+              ! image point
+             x_image(dir)=x_projection(dir)- &
+              sign_funct(LScenter(impart))*delta_r*nrm(dir)
+            enddo ! dir=1..sdim
 
-            !  x  x   x   o   o    o  x  x  x
-           call containing_node(bfact,dx,xlo,fablo,x_projection, &
-             node_index_project)
-            ! if in_grow_box==1 then a stencil can be found.
-           in_grow_box=1
-           do dir=1,SDIM
-            if (node_index_project(dir).le.fablo(dir)-ngrow_law_of_wall) then
-             in_grow_box=0
-            endif
-            if (node_index_project(dir).ge.fabhi(dir)+ngrow_law_of_wall+1) then
-             in_grow_box=0
-            endif
-           enddo ! dir=1..sdim
-
-           if (in_grow_box.eq.1) then
-            call containing_node(bfact,dx,xlo,fablo,x_image, &
-             node_index_image)
+             !  x  x   x   o   o    o  x  x  x
+            call containing_node(bfact,dx,xlo,fablo,x_projection, &
+              node_index_project)
+             ! if in_grow_box==1 then a stencil can be found.
             in_grow_box=1
             do dir=1,SDIM
-             if (node_index_image(dir).le.fablo(dir)-ngrow_law_of_wall) then
+             if (node_index_project(dir).le.fablo(dir)-ngrow_law_of_wall) then
               in_grow_box=0
              endif
-             if (node_index_image(dir).ge.fabhi(dir)+ngrow_law_of_wall+1) then
+             if (node_index_project(dir).ge.fabhi(dir)+ngrow_law_of_wall+1) then
               in_grow_box=0
              endif
             enddo ! dir=1..sdim
 
             if (in_grow_box.eq.1) then
-
-              ! khisten=0 in 2D
-             do i1=0,1
-             do j1=0,1
-             do k1=0,khisten
-              i3=node_index_image(1)-1
-              j3=node_index_image(2)-1
-              k3=node_index_image(SDIM)-1
-      
-               ! cell index to the left of node i: i-1
-               ! cell index to the right of node i: i 
-              do dir=1,SDIM
-               ufluid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                ufluid(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-              enddo
-              tcomp=(im_fluid-1)*num_state_material+2
-              thermal_image(D_DECL(i1+1,j1+1,k1+1))= &
-               state(D_DECL(i3+i1,j3+j1,k3+k1),tcomp)
-              call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
-              do dir=1,SDIM
-               ximage_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
-              enddo
-
-              i3=node_index_project(1)-1
-              j3=node_index_project(2)-1
-              k3=node_index_project(SDIM)-1
-
-              do dir=1,SDIM
-               usolid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                usolid(D_DECL(i3+i1,j3+j1,k3+k1),(partid-1)*SDIM+dir)
-              enddo
-              call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
-              do dir=1,SDIM
-               xproject_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
-              enddo
-             enddo
-             enddo
-             enddo ! i1,j1,k1
-
-             ! call Cody's routine here
-             call getGhostVel( &
-               delta_r, &
-               dx, &
-               nrm, &
-               ufluid_stencil, &
-               usolid_stencil, &
-               x_projection, &
-               xsten, &
-               x_image, &
-               ximage_stencil, &
-               xproject_stencil, &
-               usolid_law_of_wall, &
-               im_fluid)
-
+             call containing_node(bfact,dx,xlo,fablo,x_image, &
+              node_index_image)
+             in_grow_box=1
              do dir=1,SDIM
-              ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
-               usolid_law_of_wall(dir)
-             enddo  
-          
+              if (node_index_image(dir).le.fablo(dir)-ngrow_law_of_wall) then
+               in_grow_box=0
+              endif
+              if (node_index_image(dir).ge.fabhi(dir)+ngrow_law_of_wall+1) then
+               in_grow_box=0
+              endif
+             enddo ! dir=1..sdim
+
+             if (in_grow_box.eq.1) then
+
+               ! khisten=0 in 2D
+              do i1=0,1
+              do j1=0,1
+              do k1=0,khisten
+               i3=node_index_image(1)-1
+               j3=node_index_image(2)-1
+               k3=node_index_image(SDIM)-1
+       
+                ! cell index to the left of node i: i-1
+                ! cell index to the right of node i: i 
+               do dir=1,SDIM
+                ufluid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                 ufluid(D_DECL(i3+i1,j3+j1,k3+k1),dir)
+               enddo
+               tcomp=(im_fluid-1)*num_state_material+2
+               thermal_image(D_DECL(i1+1,j1+1,k1+1))= &
+                state(D_DECL(i3+i1,j3+j1,k3+k1),tcomp)
+               call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
+               do dir=1,SDIM
+                ximage_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
+               enddo
+
+               i3=node_index_project(1)-1
+               j3=node_index_project(2)-1
+               k3=node_index_project(SDIM)-1
+
+               do dir=1,SDIM
+                usolid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                 usolid(D_DECL(i3+i1,j3+j1,k3+k1),(partid-1)*SDIM+dir)
+               enddo
+               call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
+               do dir=1,SDIM
+                xproject_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
+               enddo
+              enddo
+              enddo
+              enddo ! i1,j1,k1
+
+              ! call Cody's routine here
+              call getGhostVel( &
+                delta_r, &
+                dx, &
+                nrm, &
+                ufluid_stencil, &
+                usolid_stencil, &
+                x_projection, &
+                xsten, &
+                x_image, &
+                ximage_stencil, &
+                xproject_stencil, &
+                usolid_law_of_wall, &
+                im_fluid)
+
+              do dir=1,SDIM
+               ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
+                usolid_law_of_wall(dir)
+              enddo  
+           
+             else if (in_grow_box.eq.0) then
+              ! do nothing
+             else
+              print *,"in_grow_box invalid"
+              stop
+             endif
             else if (in_grow_box.eq.0) then
              ! do nothing
             else
              print *,"in_grow_box invalid"
              stop
             endif
-           else if (in_grow_box.eq.0) then
+
+           else if (nearwall_exists.eq.0) then
             ! do nothing
            else
-            print *,"in_grow_box invalid"
+            print *,"nearwall_exists invalid"
+            stop
+           endif
+     
+          else if ((LScenter(impart).lt.zero).or.(im_primary.ne.impart)) then
+
+           if (is_rigid(nmat,im_primary).eq.0) then
+            do dir=1,SDIM
+             ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= & 
+               ufluid(D_DECL(i,j,k),dir)
+            enddo  
+           else if (is_rigid(nmat,im_primary).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid(nmat,im_primary) invalid"
             stop
            endif
 
-          else if (nearwall_exists.eq.0) then
-           ! do nothing
           else
-           print *,"nearwall_exists invalid"
-           stop
-          endif
-    
-         else if ((LScenter(impart).lt.zero).or.(im_primary.ne.impart)) then
-
-          if (is_rigid(nmat,im_primary).eq.0) then
-           do dir=1,SDIM
-            ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= & 
-              ufluid(D_DECL(i,j,k),dir)
-           enddo  
-          else if (is_rigid(nmat,im_primary).eq.1) then
-           ! do nothing
-          else
-           print *,"is_rigid(nmat,im_primary) invalid"
+           print *,"LScenter(impart) became corrupted"
            stop
           endif
 
+         else if (is_rigid(nmat,impart).eq.0) then
+          ! do nothing
          else
-          print *,"LScenter(impart) became corrupted"
+          print *,"is_rigid(nmat,impart) invalid"
           stop
          endif
-
-        else if (is_rigid(nmat,impart).eq.0) then
-         print *,"cannot have a fluid material that is also a solid"
-         stop
-        else
-         print *,"is_rigid(nmat,impart) invalid"
+        else 
+         print *,"is_lag_part(nmat,impart) invalid"
          stop
         endif
        enddo ! partid=1..nparts
@@ -21488,12 +21495,12 @@ stop
        stop
       endif
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_COMBINEVEL"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_COMBINEVEL"
        stop
       endif
 
@@ -21706,52 +21713,64 @@ stop
         LSCRIT_solid=-1.0D+99
         
         do im=1,nmat
-         if (is_rigid(nmat,im).eq.1) then
-          LSTEST=LSNEW(D_DECL(i,j,k),im)
-          if (LSTEST.ge.zero) then
-           if (im_solid_vel_plus.eq.0) then
-            partid_vel_plus=partid
-            im_solid_vel_plus=im
-            LSCRIT_solid_plus=LSTEST
-           else if ((im_solid_vel_plus.ge.1).and. &
-                    (im_solid_vel_plus.le.nmat)) then
-            if (LSTEST.ge.LSCRIT_solid_plus) then
+         if (is_lag_part(nmat,im).eq.1) then
+          if (is_rigid(nmat,im).eq.1) then
+           LSTEST=LSNEW(D_DECL(i,j,k),im)
+           if (LSTEST.ge.zero) then
+            if (im_solid_vel_plus.eq.0) then
              partid_vel_plus=partid
              im_solid_vel_plus=im
              LSCRIT_solid_plus=LSTEST
+            else if ((im_solid_vel_plus.ge.1).and. &
+                     (im_solid_vel_plus.le.nmat)) then
+             if (LSTEST.ge.LSCRIT_solid_plus) then
+              partid_vel_plus=partid
+              im_solid_vel_plus=im
+              LSCRIT_solid_plus=LSTEST
+             endif
+            else
+             print *,"im_solid_vel_plus invalid combinevel:",im_solid_vel_plus
+             stop
             endif
+           else if (LSTEST.lt.zero) then
+            ! do nothing
            else
-            print *,"im_solid_vel_plus invalid combinevel:",im_solid_vel_plus
+            print *,"LSTEST invalid"
             stop
            endif
-          else if (LSTEST.lt.zero) then
-           ! do nothing
-          else
-           print *,"LSTEST invalid"
-           stop
-          endif
 
-          if (im_solid_vel.eq.0) then
-           partid_vel=partid
-           im_solid_vel=im
-           LSCRIT_solid=LSTEST
-          else if ((im_solid_vel.ge.1).and. &
-                   (im_solid_vel.le.nmat)) then
-           if (LSTEST.ge.LSCRIT_solid) then
+           if (im_solid_vel.eq.0) then
             partid_vel=partid
             im_solid_vel=im
             LSCRIT_solid=LSTEST
+           else if ((im_solid_vel.ge.1).and. &
+                    (im_solid_vel.le.nmat)) then
+            if (LSTEST.ge.LSCRIT_solid) then
+             partid_vel=partid
+             im_solid_vel=im
+             LSCRIT_solid=LSTEST
+            endif
+           else
+            print *,"im_solid_vel invalid"
+            stop
            endif
+
+          else if (is_rigid(nmat,im).eq.0) then
+           ! do nothing
           else
-           print *,"im_solid_vel invalid"
+           print *,"is_rigid(nmat,im) invalid"
            stop
           endif
-
           partid=partid+1
-         else if (is_rigid(nmat,im).eq.0) then
-          ! do nothing
+         else if (is_lag_part(nmat,im).eq.0) then
+          if (is_rigid(nmat,im).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid(nmat,im) invalid"
+           stop
+          endif
          else
-          print *,"is_rigid(nmat,im) invalid"
+          print *,"is_lag_part(nmat,im) invalid"
           stop
          endif
         enddo ! im=1..nmat
@@ -22656,12 +22675,12 @@ stop
        stop
       endif
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_COMBINEVELFACE"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_COMBINEVELFACE"
        stop
       endif
 
@@ -22885,12 +22904,12 @@ stop
           stop
          endif
 
-         if (is_rigid(nmat,im).eq.1) then
+         if (is_lag_part(nmat,im).eq.1) then
           partid=partid+1
-         else if (is_rigid(nmat,im).eq.0) then
+         else if (is_lag_part(nmat,im).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_lag_part invalid"
           stop
          endif
 
@@ -22910,12 +22929,12 @@ stop
         if (is_prescribed(nmat,imL).eq.1) then ! is_rigid=1 CTML_FSI_mat=0
          prescribed_factor=prescribed_solid_scale(imL)
          do im=1,imL-1
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_lag_part(nmat,im).eq.1) then
            partidL=partidL+1
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_lag_part(nmat,im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"is_lag_part(nmat,im) invalid"
            stop
           endif
          enddo ! im=1..imL-1
@@ -22933,12 +22952,12 @@ stop
         if (is_prescribed(nmat,imR).eq.1) then
          prescribed_factor=prescribed_solid_scale(imR)
          do im=1,imR-1
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_lag_part(nmat,im).eq.1) then
            partidR=partidR+1
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_lag_part(nmat,im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"is_lag_part(nmat,im) invalid"
            stop
           endif
          enddo ! im=1..imR-1
@@ -23734,12 +23753,12 @@ stop
 
           if (is_prescribed(nmat,imL).eq.1) then
            do im=1,imL-1
-            if (is_rigid(nmat,im).eq.1) then
+            if (is_lag_part(nmat,im).eq.1) then
              partidL=partidL+1
-            else if (is_rigid(nmat,im).eq.0) then
+            else if (is_lag_part(nmat,im).eq.0) then
              ! do nothing
             else
-             print *,"is_rigid(nmat,im) invalid"
+             print *,"is_lag_part(nmat,im) invalid"
              stop
             endif
            enddo ! im=1..imL-1
@@ -23756,12 +23775,12 @@ stop
 
           if (is_prescribed(nmat,imR).eq.1) then
            do im=1,imR-1
-            if (is_rigid(nmat,im).eq.1) then
+            if (is_lag_part(nmat,im).eq.1) then
              partidR=partidR+1
-            else if (is_rigid(nmat,im).eq.0) then
+            else if (is_lag_part(nmat,im).eq.0) then
              ! do nothing
             else
-             print *,"is_rigid(nmat,im) invalid"
+             print *,"is_lag_part(nmat,im) invalid"
              stop
             endif
            enddo ! im=1..imR-1
@@ -26131,12 +26150,12 @@ stop
        stop
       endif
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_VELADVANCE"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_VELADVANCE"
        stop
       endif
 
@@ -26189,12 +26208,12 @@ stop
           print *,"is_prescribed(nmat,im) invalid"
           stop
          endif
-         if (is_rigid(nmat,im).eq.1) then
+         if (is_lag_part(nmat,im).eq.1) then
           partid=partid+1
-         else if (is_rigid(nmat,im).eq.0) then
+         else if (is_lag_part(nmat,im).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_lag_part invalid"
           stop
          endif 
         enddo ! im=1..nmat

@@ -6464,12 +6464,12 @@ stop
        print *,"num_curv invalid"
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_INIT_PHYSICS_VARS"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_INIT_PHYSICS_VARS"
        stop
       endif
 
@@ -9817,12 +9817,12 @@ stop
        print *,"num_materials_vel invalid"
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid MAC_TO_CELL"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid MAC_TO_CELL"
        stop
       endif
       if (bfact.lt.1) then
@@ -10843,33 +10843,48 @@ stop
          im_solid=0
          do im=1,nmat
           LStest(im)=levelPC(D_DECL(i,j,k),im)
-          if (is_rigid(nmat,im).eq.1) then
-           if (is_prescribed(nmat,im).eq.1) then
-            if (im_solid.eq.0) then
-             im_solid=im
-             partid=nparts_temp
-            else if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
-             if (LStest(im).gt.LStest(im_solid)) then
+          if (is_lag_part(nmat,im).eq.1) then
+
+           if (is_rigid(nmat,im).eq.1) then
+            if (is_prescribed(nmat,im).eq.1) then
+             if (im_solid.eq.0) then
               im_solid=im
               partid=nparts_temp
+             else if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
+              if (LStest(im).gt.LStest(im_solid)) then
+               im_solid=im
+               partid=nparts_temp
+              endif
+             else
+              print *,"im_solid invalid 5"
+              stop
              endif
+            else if (is_prescribed(nmat,im).eq.0) then
+             ! do nothing
             else
-             print *,"im_solid invalid 5"
+             print *,"is_prescribed(nmat,im) invalid"
              stop
             endif
-           else if (is_prescribed(nmat,im).eq.0) then
+           else if (is_rigid(nmat,im).eq.0) then
             ! do nothing
            else
-            print *,"is_prescribed(nmat,im) invalid"
+            print *,"is_rigid invalid"
             stop
            endif
            nparts_temp=nparts_temp+1
-          else if (is_rigid(nmat,im).eq.0) then
-           ! do nothing
+
+          else if (is_lag_part(nmat,im).eq.0) then
+           if (is_rigid(nmat,im).eq.0) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
           else
-           print *,"is_rigid invalid"
+           print *,"is_lag_part invalid"
            stop
           endif
+
          enddo ! im=1..nmat
 
          if (nparts_temp.ne.nparts) then
@@ -12498,6 +12513,7 @@ stop
       INTEGER_T im_prescribed_valid
       INTEGER_T partid_solid
       INTEGER_T partid_prescribed
+      INTEGER_T partid_check
       REAL_T wtleft,wtright
       INTEGER_T all_incomp,local_incomp
       REAL_T cutoff
@@ -12526,12 +12542,12 @@ stop
        print *,"ncomp_xp invalid"
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_CELL_TO_MAC"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid FORT_CELL_TO_MAC"
        stop
       endif
       if ((simple_AMR_BC_flag.eq.0).or.(simple_AMR_BC_flag.eq.1)) then
@@ -13522,7 +13538,7 @@ stop
 
               do side=1,2
 
-               partid_prescribed=0
+               partid_check=0
                do im=1,nmat
 
                 DMface=local_face(massface_index+2*(im-1)+side)
@@ -13596,12 +13612,12 @@ stop
                  print *,"operation_flag invalid16"
                  stop
                 endif
-                if (is_rigid(nmat,im).eq.1) then
-                 partid_prescribed=partid_prescribed+1
-                else if (is_rigid(nmat,im).eq.0) then
+                if (is_lag_part(nmat,im).eq.1) then
+                 partid_check=partid_check+1
+                else if (is_lag_part(nmat,im).eq.0) then
                  ! do nothing
                 else
-                 print *,"is_rigid(nmat,im) invalid"
+                 print *,"is_lag_part(nmat,im) invalid"
                  stop
                 endif
                 mass_sum=mass_sum+DMface
@@ -13609,8 +13625,8 @@ stop
 
                enddo ! im=1..nmat
 
-               if (partid_prescribed.ne.nparts) then
-                print *,"partid_prescribed invalid"
+               if (partid_check.ne.nparts) then
+                print *,"partid_check invalid"
                 stop
                endif
 
@@ -14995,12 +15011,12 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid GFMUPDATE"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid GFMUPDATE"
        stop
       endif
       if (bfact.lt.1) then
@@ -15325,14 +15341,14 @@ stop
 
             partid=0
             do im=1,nmat
-             if (is_rigid(nmat,im).eq.1) then
+             if (is_lag_part(nmat,im).eq.1) then
               if (im.le.im_prescribed_main) then
                partid=partid+1
               endif
-             else if (is_rigid(nmat,im).eq.0) then
+             else if (is_lag_part(nmat,im).eq.0) then
               ! do nothing
              else
-              print *,"is_rigid invalid"
+              print *,"is_lag_part invalid"
               stop
              endif
             enddo ! im=1..nmat
@@ -15631,14 +15647,14 @@ stop
 
              partid=0
              do im=1,nmat
-              if (is_rigid(nmat,im).eq.1) then
+              if (is_lag_part(nmat,im).eq.1) then
                if (im.le.im_prescribed_both) then
                 partid=partid+1
                endif
-              else if (is_rigid(nmat,im).eq.0) then
+              else if (is_lag_part(nmat,im).eq.0) then
                ! do nothing
               else
-               print *,"is_rigid invalid"
+               print *,"is_lag_part invalid"
                stop
               endif
              enddo ! im=1..nmat
@@ -16473,7 +16489,7 @@ stop
       REAL_T LS_virtual_max
       REAL_T near_fluid
       REAL_T WT
-      INTEGER_T nmat_fluid,nmat_solid
+      INTEGER_T nmat_fluid,nmat_solid,nmat_lag
       INTEGER_T at_center
       INTEGER_T ibase
       INTEGER_T partid
@@ -16544,17 +16560,18 @@ stop
        stop
       endif
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid RENORMALIZE_PRESCRIBE"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid RENORMALIZE_PRESCRIBE"
        stop
       endif
 
       nmat_fluid=0
       nmat_solid=0
+      nmat_lag=0
 
       do im=1,nmat
 
@@ -16564,19 +16581,32 @@ stop
         stop
        endif
 
-       if (is_rigid(nmat,im).eq.1) then
-        nmat_solid=nmat_solid+1
-       else if (is_rigid(nmat,im).eq.0) then
-        nmat_fluid=nmat_fluid+1
+       if (is_lag_part(nmat,im).eq.1) then
+        nmat_lag=nmat_lag+1
+        if (is_rigid(nmat,im).eq.1) then
+         nmat_solid=nmat_solid+1
+        else if (is_rigid(nmat,im).eq.0) then
+         nmat_fluid=nmat_fluid+1
+        else
+         print *,"is_rigid(nmat,im) invalid"
+         stop
+        endif
+       else if (is_lag_part(nmat,im).eq.0) then
+        if (is_rigid(nmat,im).eq.0) then
+         nmat_fluid=nmat_fluid+1
+        else
+         print *,"is_rigid(nmat,im) invalid"
+         stop
+        endif
        else
-        print *,"is_rigid(nmat,im) invalid"
+        print *,"is_lag_part(nmat,im) invalid"
         stop
        endif
 
       enddo ! im=1..nmat
 
-      if (nmat_solid.ne.nparts) then
-       print *,"nmat_solid invalid"
+      if (nmat_lag.ne.nparts) then
+       print *,"nmat_lag invalid"
        stop
       endif
 
@@ -16761,8 +16791,8 @@ stop
          im_solid_max=0
          partid_max=0
 
-         if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-          print *,"nparts invalid"
+         if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+          print *,"nparts invalid FORT_RENORMALIZE_PRESCRIBE"
           stop
          endif
 
@@ -16774,165 +16804,172 @@ stop
            stop
           endif
 
-          if (is_rigid(nmat,im).eq.0) then
-           print *,"is_rigid(nmat,im).eq.0"
+          if (is_lag_part(nmat,im).eq.0) then
+           print *,"is_lag_part(nmat,im).eq.0"
            stop
-          else if (is_rigid(nmat,im).eq.1) then
-
-           ! positive in the rigid body
-           call materialdistsolid( &
-            xsten(0,1),xsten(0,2),xsten(0,SDIM), &
-            LS_solid_new(im),time,im)
-
-           if ((FSI_flag(im).eq.2).or. &
-               (FSI_flag(im).eq.4)) then
-            LS_solid_new(im)=LS(D_DECL(i,j,k),im)
-           else if (FSI_flag(im).eq.1) then
+          else if (is_lag_part(nmat,im).eq.1) then
+           if (is_rigid(nmat,im).eq.0) then
             ! do nothing
-           else
-            print *,"FSI_flag invalid"
-            stop
-           endif
- 
-           if (LS_solid_new(im).gt.max_solid_LS) then
-            max_solid_LS=LS_solid_new(im)
-            im_solid_max=im
-            partid_max=partid
-           endif
+           else if (is_rigid(nmat,im).eq.1) then
 
-           nrefine_geom=1
+            ! positive in the rigid body
+            call materialdistsolid( &
+             xsten(0,1),xsten(0,2),xsten(0,SDIM), &
+             LS_solid_new(im),time,im)
+
+            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+                (FSI_flag(im).eq.4)) then ! CTML FSI
+             LS_solid_new(im)=LS(D_DECL(i,j,k),im)
+            else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+             ! do nothing
+            else
+             print *,"FSI_flag invalid"
+             stop
+            endif
+ 
+            if (LS_solid_new(im).gt.max_solid_LS) then
+             max_solid_LS=LS_solid_new(im)
+             im_solid_max=im
+             partid_max=partid
+            endif
+
+            nrefine_geom=1
 
             ! centroid in absolute coordinate system
             ! returns a volume fraction
-           call find_LS_stencil_volume( &
-            bfact, &
-            dx, &
-            xsten,nhalf, &
-            nrefine_geom, &
-            time, &
-            vfrac_solid_new(im), &
-            centroid, &
-            im)
+            call find_LS_stencil_volume( &
+             bfact, &
+             dx, &
+             xsten,nhalf, &
+             nrefine_geom, &
+             time, &
+             vfrac_solid_new(im), &
+             centroid, &
+             im)
 
-           if ((FSI_flag(im).eq.2).or. &
-               (FSI_flag(im).eq.4)) then
-            vofcompraw=(im-1)*ngeom_raw+1
-            vfrac_solid_new(im)=vofnew(D_DECL(i,j,k),vofcompraw)
+            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+                (FSI_flag(im).eq.4)) then ! CTML FSI
+             vofcompraw=(im-1)*ngeom_raw+1
+             vfrac_solid_new(im)=vofnew(D_DECL(i,j,k),vofcompraw)
+             do dir=1,SDIM
+              centroid(dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)+cencell(dir)
+             enddo
+            else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+             ! do nothing
+            else
+             print *,"FSI_flag invalid"
+             stop
+            endif
+
             do dir=1,SDIM
-             centroid(dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)+cencell(dir)
+             censolid_new(im,dir)=centroid(dir)-cencell(dir)
             enddo
-           else if (FSI_flag(im).eq.1) then
-            ! do nothing
-           else
-            print *,"FSI_flag invalid"
-            stop
-           endif
-
-           do dir=1,SDIM
-            censolid_new(im,dir)=centroid(dir)-cencell(dir)
-           enddo
 
             ! slope points into the solid
             ! this slope ignores 1/R term for dphi/dtheta
-           call find_LS_stencil_slope( &
-            bfact, &
-            dx, &
-            xsten,nhalf, &
-            nslope_solid, &
-            time,im)
+            call find_LS_stencil_slope( &
+             bfact, &
+             dx, &
+             xsten,nhalf, &
+             nslope_solid, &
+             time,im)
 
-           if ((FSI_flag(im).eq.2).or. &
-               (FSI_flag(im).eq.4)) then
-            do dir=1,SDIM
-             nslope_solid(dir)=LS(D_DECL(i,j,k),nmat+SDIM*(im-1)+dir)
-            enddo
-           else if (FSI_flag(im).eq.1) then
-            ! do nothing
-           else
-            print *,"FSI_flag invalid"
-            stop
-           endif
-
-           if (vfrac_solid_new(im).le.VOFTOL) then
-            vfrac_solid_new(im)=zero
-           else if (vfrac_solid_new(im).ge.one-VOFTOL) then
-            vfrac_solid_new(im)=one
-           else if ((vfrac_solid_new(im).ge.VOFTOL).and. &
-                    (vfrac_solid_new(im).le.one-VOFTOL)) then
-            ! do nothing
-           else
-            print *,"vfrac_solid_new bust"
-            stop
-           endif  
-            
-           sum_vfrac_solid_new=sum_vfrac_solid_new+vfrac_solid_new(im)
-
-            ! level set for rigid solid
-           ls_hold(im)=LS_solid_new(im)
-           do dir=1,SDIM
-            ls_hold(nmat+SDIM*(im-1)+dir)=nslope_solid(dir)
-           enddo
-
-           if ((vfrac_solid_new(im).le.VOFTOL).and. &
-               (LS_solid_new(im).ge.zero)) then
-            print *,"cannot have F<eps and LS>0"
-            print *,"i,j,k,im ",i,j,k,im
-            print *,"vfrac_solid_new(im)=",vfrac_solid_new(im)
-            print *,"LS_solid_new(im)=",LS_solid_new(im)
-            stop
-           endif
-           if ((vfrac_solid_new(im).ge.one-VOFTOL).and. &
-               (LS_solid_new(im).le.zero)) then
-            print *,"cannot have F>1-eps and LS<0"
-            print *,"i,j,k,im ",i,j,k,im
-            print *,"vfrac_solid_new(im)=",vfrac_solid_new(im)
-            print *,"LS_solid_new(im)=",LS_solid_new(im)
-            stop
-           endif
-
-            ! temperature in rigid solid.
-           if ((LS_solid_new(im).ge.zero).or. &
-               (vfrac_solid_new(im).ge.half)) then
-            istate=2
-            statecomp=(im-1)*num_state_material+istate
-            if (solidheat_flag.eq.0) then
-             ! do nothing (heat conduction in solid)
-            else if (solidheat_flag.eq.2) then ! neumann at solid/fluid
-             if ((FSI_flag(im).eq.2).or. &
-                 (FSI_flag(im).eq.4)) then
-              ! den_hold(statecomp) already has the solid temperature
-             else if (FSI_flag(im).eq.1) then
-              call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
-               den_hold(statecomp),time,im)
-             else
-              print *,"FSI_flag invalid"
-              stop
-             endif
-            else if (solidheat_flag.eq.1) then ! dirichlet at solid/fluid
-             if ((FSI_flag(im).eq.2).or. &
-                 (FSI_flag(im).eq.4)) then
-              ! den_hold(statecomp) already has the solid temperature
-             else if (FSI_flag(im).eq.1) then
-              call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
-               den_hold(statecomp),time,im)
-             else
-              print *,"FSI_flag invalid"
-              stop
-             endif
+            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+                (FSI_flag(im).eq.4)) then ! CTML FSI
+             do dir=1,SDIM
+              nslope_solid(dir)=LS(D_DECL(i,j,k),nmat+SDIM*(im-1)+dir)
+             enddo
+            else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+             ! do nothing
             else
-             print *,"solidheat_flag out of range"
+             print *,"FSI_flag invalid"
              stop
             endif
-           else if ((LS_solid_new(im).le.zero).and. &
-                    (vfrac_solid_new(im).le.half)) then
-            ! do nothing
+
+            if (vfrac_solid_new(im).le.VOFTOL) then
+             vfrac_solid_new(im)=zero
+            else if (vfrac_solid_new(im).ge.one-VOFTOL) then
+             vfrac_solid_new(im)=one
+            else if ((vfrac_solid_new(im).ge.VOFTOL).and. &
+                     (vfrac_solid_new(im).le.one-VOFTOL)) then
+             ! do nothing
+            else
+             print *,"vfrac_solid_new bust"
+             stop
+            endif  
+            
+            sum_vfrac_solid_new=sum_vfrac_solid_new+vfrac_solid_new(im)
+
+            ! level set for rigid solid
+            ls_hold(im)=LS_solid_new(im)
+            do dir=1,SDIM
+             ls_hold(nmat+SDIM*(im-1)+dir)=nslope_solid(dir)
+            enddo
+
+            if ((vfrac_solid_new(im).le.VOFTOL).and. &
+                (LS_solid_new(im).ge.zero)) then
+             print *,"cannot have F<eps and LS>0"
+             print *,"i,j,k,im ",i,j,k,im
+             print *,"vfrac_solid_new(im)=",vfrac_solid_new(im)
+             print *,"LS_solid_new(im)=",LS_solid_new(im)
+             stop
+            endif
+            if ((vfrac_solid_new(im).ge.one-VOFTOL).and. &
+                (LS_solid_new(im).le.zero)) then
+             print *,"cannot have F>1-eps and LS<0"
+             print *,"i,j,k,im ",i,j,k,im
+             print *,"vfrac_solid_new(im)=",vfrac_solid_new(im)
+             print *,"LS_solid_new(im)=",LS_solid_new(im)
+             stop
+            endif
+
+            ! temperature in rigid solid.
+            if ((LS_solid_new(im).ge.zero).or. &
+                (vfrac_solid_new(im).ge.half)) then
+             istate=2
+             statecomp=(im-1)*num_state_material+istate
+             if (solidheat_flag.eq.0) then
+              ! do nothing (heat conduction in solid)
+             else if (solidheat_flag.eq.2) then ! neumann at solid/fluid
+              if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+                  (FSI_flag(im).eq.4)) then ! CTML FSI
+               ! den_hold(statecomp) already has the solid temperature
+              else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+               call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
+                den_hold(statecomp),time,im)
+              else
+               print *,"FSI_flag invalid"
+               stop
+              endif
+             else if (solidheat_flag.eq.1) then ! dirichlet at solid/fluid
+              if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+                  (FSI_flag(im).eq.4)) then ! CTML FSI
+               ! den_hold(statecomp) already has the solid temperature
+              else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+               call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
+                den_hold(statecomp),time,im)
+              else
+               print *,"FSI_flag invalid"
+               stop
+              endif
+             else
+              print *,"solidheat_flag out of range"
+              stop
+             endif
+            else if ((LS_solid_new(im).le.zero).and. &
+                     (vfrac_solid_new(im).le.half)) then
+             ! do nothing
+            else
+             print *,"LS_solid_new or vfrac_solid_new invalid"
+             stop
+            endif
+
            else
-            print *,"LS_solid_new or vfrac_solid_new invalid"
+            print *,"is_rigid invalid"
             stop
            endif
-
-          else
-           print *,"is_rigid invalid"
+          else 
+           print *,"is_lag_part(nmat,im) invalid"
            stop
           endif
 

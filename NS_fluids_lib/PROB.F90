@@ -110,18 +110,18 @@ stop
 
       nparts=0
       do im=1,nmat
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_lag_part(nmat,im).eq.1) then
         nparts=nparts+1
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_lag_part(nmat,im).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid(nmat,im) invalid"
+        print *,"is_lag_part(nmat,im) invalid"
         stop
        endif
       enddo !im=1..nmat
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid in get_nwrite"
        stop
       endif
       nparts_def=nparts
@@ -173,26 +173,26 @@ stop
 
       nparts=0
       do im=1,nmat
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_lag_part(nmat,im).eq.1) then
         nparts=nparts+1
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_lag_part(nmat,im).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid(nmat,im) invalid"
+        print *,"is_lag_part(nmat,im) invalid dumpstring_headers"
         stop
        endif
       enddo !im=1..nmat
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid dumpstring_headers"
        stop
       endif
       nparts_def=nparts
       if (nparts_def.eq.0) then
        nparts_def=1
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid dumpstring_headers2"
        stop
       endif
 
@@ -249,7 +249,7 @@ stop
       partid=0
       do im=1,nmat
 
-       if ((is_rigid(nmat,im).eq.1).or. &
+       if ((is_lag_part(nmat,im).eq.1).or. &
            ((im.eq.1).and.(nparts.eq.0))) then
 
         write(matstr,'(I2)') im
@@ -294,11 +294,12 @@ stop
          call dumpstring(Varname)
         endif
         partid=partid+1
-       else if ((is_rigid(nmat,im).eq.0).and. &
+
+       else if ((is_lag_part(nmat,im).eq.0).and. &
                 ((im.gt.1).or.(nparts.gt.0))) then
         ! do nothing
        else
-        print *,"is_rigid(nmat,im) invalid"
+        print *,"is_lag_part(nmat,im) invalid"
         stop
        endif
 
@@ -12256,62 +12257,86 @@ END SUBROUTINE Adist
       partid_solid=-1
       partid_prescribed=-1
       do im=1,nmat
-       if (is_rigid(nmat,im).eq.0) then
-        if (is_prescribed(nmat,im).eq.0) then
-         ! do nothing
-        else
-         print *,"is_prescribed(nmat,im) invalid"
-         stop
-        endif
-       else if (is_rigid(nmat,im).eq.1) then
-        if (im_solid.eq.0) then
-         im_solid=im
-         partid_solid=nparts
-         LScrit_solid=max(LSleft(im),LSright(im))
-        else if ((im_solid.ge.1).and. &
-                 (im_solid.le.nmat)) then
-         LStest=max(LSleft(im),LSright(im))
-         if (LStest.gt.LScrit_solid) then
-          LScrit_solid=LStest
-          im_solid=im
-          partid_solid=nparts
-         endif
-        else
-         print *,"im_solid invalid 7"
-         stop
-        endif
-        if (is_prescribed(nmat,im).eq.1) then
-         if (im_prescribed.eq.0) then
-          im_prescribed=im
-          partid_prescribed=nparts
-          LScrit_prescribed=max(LSleft(im),LSright(im))
-         else if ((im_prescribed.ge.1).and. &
-                  (im_prescribed.le.nmat)) then
-          LStest=max(LSleft(im),LSright(im))
-          if (LStest.gt.LScrit_prescribed) then
-           LScrit_prescribed=LStest
-           im_prescribed=im
-           partid_prescribed=nparts
-          endif
+
+       if (is_lag_part(nmat,im).eq.1) then
+
+        if (is_rigid(nmat,im).eq.0) then
+         if (is_prescribed(nmat,im).eq.0) then
+          ! do nothing
          else
-          print *,"im_prescribed invalid 7"
+          print *,"is_prescribed(nmat,im) invalid"
           stop
          endif
-        else if (is_prescribed(nmat,im).eq.0) then
-         ! do nothing
+        else if (is_rigid(nmat,im).eq.1) then
+         if (im_solid.eq.0) then
+          im_solid=im
+          partid_solid=nparts
+          LScrit_solid=max(LSleft(im),LSright(im))
+         else if ((im_solid.ge.1).and. &
+                  (im_solid.le.nmat)) then
+          LStest=max(LSleft(im),LSright(im))
+          if (LStest.gt.LScrit_solid) then
+           LScrit_solid=LStest
+           im_solid=im
+           partid_solid=nparts
+          endif
+         else
+          print *,"im_solid invalid 7"
+          stop
+         endif
+         if (is_prescribed(nmat,im).eq.1) then
+          if (im_prescribed.eq.0) then
+           im_prescribed=im
+           partid_prescribed=nparts
+           LScrit_prescribed=max(LSleft(im),LSright(im))
+          else if ((im_prescribed.ge.1).and. &
+                   (im_prescribed.le.nmat)) then
+           LStest=max(LSleft(im),LSright(im))
+           if (LStest.gt.LScrit_prescribed) then
+            LScrit_prescribed=LStest
+            im_prescribed=im
+            partid_prescribed=nparts
+           endif
+          else
+           print *,"im_prescribed invalid 7"
+           stop
+          endif
+         else if (is_prescribed(nmat,im).eq.0) then
+          ! do nothing
+         else
+          print *,"is_prescribed(nmat,im) invalid"
+          stop
+         endif
         else
-         print *,"is_prescribed(nmat,im) invalid"
+         print *,"is_rigid invalid"
          stop
         endif
+
         nparts=nparts+1
+
+       else if (is_lag_part(nmat,im).eq.0) then
+
+        if (is_rigid(nmat,im).eq.0) then
+         if (is_prescribed(nmat,im).eq.0) then
+          ! do nothing
+         else
+          print *,"is_prescribed(nmat,im) invalid"
+          stop
+         endif
+        else 
+         print *,"is_rigid(nmat,im) invalid"
+         stop
+        endif
+       
        else
-        print *,"is_rigid invalid"
+        print *,"is_lag_part invalid"
         stop
        endif
+
       enddo ! im=1..nmat
 
-      if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid fixed_face"
        stop
       endif
 
@@ -12622,8 +12647,8 @@ END SUBROUTINE Adist
 
        im=1
        call materialdist(xsten,nhalf,dx,bfact,dist,im)
-       if ((FSI_flag(im).eq.0).or. &
-           (FSI_flag(im).eq.7)) then
+       if ((FSI_flag(im).eq.0).or. & ! fluid
+           (FSI_flag(im).eq.7)) then ! fluid from CAD
         ! do nothing
        else
         print *,"FSI_flag(im) invalid"
@@ -14150,7 +14175,7 @@ END SUBROUTINE Adist
        vel(dir)=zero
       enddo
 
-      if (FSI_flag(im).eq.1) then  ! no sci_clsvof FSI
+      if (FSI_flag(im).eq.1) then  ! prescribed solid (EUL)
 
          ! velsolid, no sci_clsvof.F90 
        if (probtype.eq.411) then
@@ -14290,8 +14315,8 @@ END SUBROUTINE Adist
          vel(dir)=zero
         enddo
        endif
-      else if ((FSI_flag(im).eq.2).or. &
-               (FSI_flag(im).eq.4)) then   ! velsolid
+      else if ((FSI_flag(im).eq.2).or. & ! prescribed solid - CAD
+               (FSI_flag(im).eq.4)) then ! CTML FSI - velsolid
 
 ! in future: FSI_MF multifab copied to fortran.
 ! closest value(s) on same processor are used.
@@ -18341,18 +18366,18 @@ END SUBROUTINE Adist
 
       do im=1,nmat
        vofcomp=(im-1)*(ngeom_raw)+1
-       if ((FSI_flag(im).eq.0).or. &
-           (FSI_flag(im).eq.7).or. &
-           (FSI_flag(im).eq.1).or. &
-           (FSI_flag(im).eq.3).or. &
-           (FSI_flag(im).eq.6).or. &
-           (FSI_flag(im).eq.5)) then
+       if ((FSI_flag(im).eq.0).or. & ! fluid
+           (FSI_flag(im).eq.1).or. & ! prescribed solid - (EUL)
+           (FSI_flag(im).eq.3).or. & ! ice
+           (FSI_flag(im).eq.5)) then ! FSI rigid solid (EUL)
         VOF(vofcomp)=vofarray(im)
         do dir2=1,SDIM
          VOF(vofcomp+dir2)=cenbc(im,dir2)
         enddo
-       else if ((FSI_flag(im).eq.2).or. &
-                (FSI_flag(im).eq.4)) then
+       else if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+                (FSI_flag(im).eq.6).or. & ! ice - from CAD
+                (FSI_flag(im).eq.7).or. & ! fluid - from CAD
+                (FSI_flag(im).eq.4)) then ! CTML FSI
         VOF(vofcomp)=VOFwall(vofcomp)
         do dir2=1,SDIM
          VOF(vofcomp+dir2)=VOFwall(vofcomp+dir2)
@@ -18380,15 +18405,15 @@ END SUBROUTINE Adist
       endif
 
       do im=1,nmat
-       if ((FSI_flag(im).eq.0).or. &
-           (FSI_flag(im).eq.7).or. &
-           (FSI_flag(im).eq.1).or. &
-           (FSI_flag(im).eq.3).or. &
-           (FSI_flag(im).eq.6).or. &
-           (FSI_flag(im).eq.5)) then
+       if ((FSI_flag(im).eq.0).or. & ! fluid
+           (FSI_flag(im).eq.1).or. & ! prescribed solid - (EUL)
+           (FSI_flag(im).eq.3).or. & ! ice
+           (FSI_flag(im).eq.5)) then ! FSI rigid solid (EUL)
         ! do nothing
-       else if ((FSI_flag(im).eq.2).or. &
-                (FSI_flag(im).eq.4)) then
+       else if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+                (FSI_flag(im).eq.6).or. & ! ice - from CAD
+                (FSI_flag(im).eq.7).or. & ! fluid - from CAD
+                (FSI_flag(im).eq.4)) then ! CTML FSI
         LS(im)=LSwall(im)
        else
         print *,"FSI_flag invalid"
@@ -18522,6 +18547,8 @@ END SUBROUTINE Adist
        call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
 
       else if (probtype.eq.199) then !hydrates (groupmofBC)
+       print *,"this code must be upgrated"
+       stop
        do im=1,nmat
         if ((FSI_flag(im).ne.2).and. &
             (FSI_flag(im).ne.4)) then
@@ -33573,9 +33600,9 @@ end subroutine initialize2d
 
         ibase=(partid-1)*nFSI_sub
 
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_lag_part(nmat,im).eq.1) then
 
-         if (FSI_flag(im).eq.1) then
+         if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
           call materialdistsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
             distsolid,time,im) 
           call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),vel,time,im)
@@ -33586,8 +33613,10 @@ end subroutine initialize2d
           do dir=1,SDIM
            solid(D_DECL(i,j,k),ibase+dir)=vel(dir)
           enddo
-         else if ((FSI_flag(im).eq.2).or. &
-                  (FSI_flag(im).eq.4)) then
+         else if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
+                  (FSI_flag(im).eq.4).or. & ! CTML FSI
+                  (FSI_flag(im).eq.6).or. & ! ice (CAD)
+                  (FSI_flag(im).eq.7)) then ! fluid (CAD)
           ! do nothing
          else
           print *,"FSI_flag invalid"
@@ -33595,9 +33624,10 @@ end subroutine initialize2d
          endif
 
         else
-         print *,"is_rigid invalid"
+         print *,"is_lag_part invalid FORT_INITDATASOLID"
          stop
         endif
+
        enddo ! partid=1..nparts
 
       enddo
@@ -33707,10 +33737,10 @@ end subroutine initialize2d
           ! in: INITSOLIDTEMP
          call materialdistsolid(xsten(0,1),xsten(0,2), &
            xsten(0,SDIM),disttest,time,im)
-         if ((FSI_flag(im).eq.2).or. &
-             (FSI_flag(im).eq.4)) then
+         if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
+             (FSI_flag(im).eq.4)) then ! CTML FSI
           disttest=lsnew(D_DECL(i,j,k),im)
-         else if (FSI_flag(im).eq.1) then
+         else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
           ! do nothing
          else
           print *,"FSI_flag invalid"
@@ -33736,11 +33766,11 @@ end subroutine initialize2d
  
        call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
          temp_solid_mat,time,im_solid_crit)
-       if ((FSI_flag(im_solid_crit).eq.2).or. &
-           (FSI_flag(im_solid_crit).eq.4)) then
+       if ((FSI_flag(im_solid_crit).eq.2).or. & ! prescribed solid (CAD)
+           (FSI_flag(im_solid_crit).eq.4)) then ! CTML FSU
         tcomp=(im_solid_crit-1)*num_state_material+2  ! den,T
         temp_solid_mat=snew(D_DECL(i,j,k),tcomp)
-       else if (FSI_flag(im_solid_crit).eq.1) then
+       else if (FSI_flag(im_solid_crit).eq.1) then ! prescribed solid (EUL)
         ! do nothing
        else
         print *,"FSI_flag(im_solid_crit) invalid"
@@ -34099,17 +34129,17 @@ end subroutine initialize2d
 
       nparts=0
       do im_vel=1,num_materials
-       if (is_rigid(num_materials,im_vel).eq.1) then
+       if (is_lag_part(num_materials,im_vel).eq.1) then
         nparts=nparts+1
-       else if (is_rigid(num_materials,im_vel).eq.0) then
+       else if (is_lag_part(num_materials,im_vel).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid(num_materials,im_vel) invalid"
+        print *,"is_lag_part(num_materials,im_vel) invalid"
         stop
        endif
       enddo
-      if ((nparts.lt.1).or.(nparts.ge.num_materials)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.1).or.(nparts.gt.num_materials)) then
+       print *,"nparts invalid SOLVFILL"
        stop
       endif
 
@@ -34257,17 +34287,17 @@ end subroutine initialize2d
 
       nparts=0
       do im_vel=1,num_materials
-       if (is_rigid(num_materials,im_vel).eq.1) then
+       if (is_lag_part(num_materials,im_vel).eq.1) then
         nparts=nparts+1
-       else if (is_rigid(num_materials,im_vel).eq.0) then
+       else if (is_lag_part(num_materials,im_vel).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid(num_materials,im_vel) invalid"
+        print *,"is_lag_part(num_materials,im_vel) invalid"
         stop
        endif
       enddo
-      if ((nparts.lt.1).or.(nparts.ge.num_materials)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.1).or.(nparts.gt.num_materials)) then
+       print *,"nparts invalid GROUP SOLVFILL"
        stop
       endif
 
@@ -38641,10 +38671,10 @@ end subroutine initialize2d
         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat)
         do im=1,nmat
          if (is_rigid(nmat,im).eq.1) then
-          if ((FSI_flag(im).eq.2).or. &
-              (FSI_flag(im).eq.4)) then
+          if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
+              (FSI_flag(im).eq.4)) then ! CTML FSI
            distbatch(im)=LS(D_DECL(ic,jc,kc),im)
-          else if (FSI_flag(im).eq.1) then
+          else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
            ! do nothing
           else
            print *,"FSI_flag(im) invalid"
@@ -38703,13 +38733,13 @@ end subroutine initialize2d
          if (is_rigid(nmat,im).eq.0) then
           debug_vfrac_sum=debug_vfrac_sum+vofdark(im)
          else if (is_rigid(nmat,im).eq.1) then
-          if ((FSI_flag(im).eq.2).or. &
-              (FSI_flag(im).eq.4)) then
+          if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
+              (FSI_flag(im).eq.4)) then ! CTML FSI (EUL)
            scalc(vofcomp_raw)=scal(D_DECL(ic,jc,kc),vofcomp_raw)
            do dir=1,SDIM 
             scalc(vofcomp_raw+dir)=scal(D_DECL(ic,jc,kc),vofcomp_raw+dir)
            enddo
-          else if (FSI_flag(im).eq.1) then
+          else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
            ! do nothing
           else
            print *,"FSI_flag invalid"
@@ -38732,8 +38762,8 @@ end subroutine initialize2d
           print *,"im,distbatch ",im,distbatch(im)
          enddo
          call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
-         if ((FSI_flag(im_solid_initdata).eq.2).or. &
-             (FSI_flag(im_solid_initdata).eq.4)) then
+         if ((FSI_flag(im_solid_initdata).eq.2).or. & ! prescribed solid (CAD)
+             (FSI_flag(im_solid_initdata).eq.4)) then ! CTML FSI
           distsolid=LS(D_DECL(ic,jc,kc),im_solid_initdata)
          endif
          print *,"result of materialdistsolid: distsolid=",distsolid
@@ -38766,10 +38796,10 @@ end subroutine initialize2d
          call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,nmat)
          do im=1,nmat
           if (is_rigid(nmat,im).eq.1) then
-           if ((FSI_flag(im).eq.2).or. &
-               (FSI_flag(im).eq.4)) then
+           if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+               (FSI_flag(im).eq.4)) then ! CTML FSI
             distbatch(im)=LS(D_DECL(ic+i1,jc+j1,kc+k1),im)
-           else if (FSI_flag(im).eq.1) then
+           else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
             ! do nothing
            else
             print *,"FSI_Flag(im) invalid"

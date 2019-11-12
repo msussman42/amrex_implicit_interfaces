@@ -1716,7 +1716,7 @@ end subroutine nozzle2d
        xvec(SDIM)=z
       endif
 
-      if (FSI_flag(im).eq.1) then  ! no external FSI
+      if (FSI_flag(im).eq.1) then  ! no external FSI (prescribed EUL)
 
        if (probtype.eq.411) then ! user defined cavitation problem
         call CAV3D_LS(xvec,time,dist_array)
@@ -1807,8 +1807,8 @@ end subroutine nozzle2d
         dist=-dist
        endif ! cases in which soliddist is called.
 
-      else if ((FSI_flag(im).eq.2).or. &
-               (FSI_flag(im).eq.4)) then  
+      else if ((FSI_flag(im).eq.2).or. & ! prescribed CAD
+               (FSI_flag(im).eq.4)) then ! CTML FSI 
 
 ! dist>0 in the solid
 ! in future: FSI_MF multifab copied to fortran.
@@ -2641,7 +2641,9 @@ end subroutine nozzle2d
        stop
       endif
 
-      if (FSI_flag(im).ne.1) then
+      if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
+       ! do nothing
+      else
        print *,"FSI_flag(im) invalid"
        stop
       endif

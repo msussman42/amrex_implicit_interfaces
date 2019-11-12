@@ -62,7 +62,7 @@
 
       if (SDIM.eq.2) then
 
-       if (CTML_FSI_flagF(nmat).eq.1) then
+       if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
         xmap3D(1)=1
         xmap3D(2)=2
         xmap3D(3)=0
@@ -388,8 +388,8 @@
        print *,"num_materials_vel invalid"
        stop
       endif
-      if ((nparts.lt.1).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.1).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_HEADERMSG"
        stop
       endif
  
@@ -640,13 +640,15 @@
        do partid=1,nparts
         im_part=im_solid_map(partid)+1
         if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-         print *,"im_part invalid"
+         print *,"im_part invalid FORT_HEADERMSG"
          stop
         endif
-        if (is_rigid(nmat,im_part).eq.1) then
+        if (is_lag_part(nmat,im_part).eq.1) then
 
-         if ((FSI_flag(im_part).eq.2).or. &
-             (FSI_flag(im_part).eq.4)) then
+         if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid from CAD
+             (FSI_flag(im_part).eq.4).or. & ! CTML FSI
+             (FSI_flag(im_part).eq.6).or. & ! ice from CAD
+             (FSI_flag(im_part).eq.7)) then ! fluid from CAD
 
           if (container_allocated.ne.1) then
            print *,"container_allocated.ne.1"
@@ -714,7 +716,7 @@
            CTML_force_model, &
            ioproc,isout)
 
-         else if (FSI_flag(im_part).eq.1) then
+         else if (FSI_flag(im_part).eq.1) then ! prescribed solid (EUL)
 
           ! do nothing
 
@@ -724,7 +726,7 @@
          endif
 
         else
-         print *,"is_rigid invalid"
+         print *,"is_lag_part invalid"
          stop
         endif
 
@@ -932,13 +934,15 @@
         do partid=1,nparts
          im_part=im_solid_map(partid)+1
          if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-          print *,"im_part invalid"
+          print *,"im_part invalid FORT_HEADERMSG"
           stop
          endif
-         if (is_rigid(nmat,im_part).eq.1) then
+         if (is_lag_part(nmat,im_part).eq.1) then
 
-          if ((FSI_flag(im_part).eq.2).or. &
-              (FSI_flag(im_part).eq.4)) then
+          if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid CAD
+              (FSI_flag(im_part).eq.4).or. & ! CTML FSI
+              (FSI_flag(im_part).eq.6).or. & ! ice from CAD
+              (FSI_flag(im_part).eq.7)) then ! fluid from CAD
 
            if (container_allocated.ne.1) then
             print *,"container_allocated.ne.1"
@@ -1011,7 +1015,7 @@
             DIMS3D(FSIdata3D), &
             ioproc,isout)
 
-          else if (FSI_flag(im_part).eq.1) then
+          else if (FSI_flag(im_part).eq.1) then !prescribed solid(EUL)
  
            ! do nothing
 
@@ -1021,14 +1025,14 @@
           endif
 
          else
-          print *,"is_rigid invalid"
+          print *,"is_lag_part invalid"
           stop
          endif
 
         enddo ! partid=1..nparts
 
-        if (nparts.gt.nmat-1) then
-         print *,"nparts out of range"
+        if (nparts.gt.nmat) then
+         print *,"nparts out of range FORT_HEADERMSG"
          stop
         endif
 
@@ -1146,8 +1150,8 @@
        print *,"nmat invalid"
        stop
       endif
-      if ((nparts.lt.1).or.(nparts.ge.nmat)) then
-       print *,"nparts invalid"
+      if ((nparts.lt.1).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid FORT_FILLCONTAINER"
        stop
       endif
       if (time.lt.zero) then
@@ -1372,10 +1376,13 @@
           stop
          endif
          local_flag=FSI_flag(im_part)
-         if ((local_flag.eq.2).or.(local_flag.eq.4)) then
+         if ((local_flag.eq.2).or. & !prescribed solid from CAD
+             (local_flag.eq.4).or. & !CTML FSI
+             (local_flag.eq.6).or. & !ice from CAD
+             (local_flag.eq.7)) then !fluid from CAD
           call CLSVOF_FILLCONTAINER(lev77,max_level,nthread_parm, &
            dx3D,partid,im_part,nmat,time,dt)
-         else if (local_flag.eq.1) then
+         else if (local_flag.eq.1) then ! prescribed solid (EUL)
           ! do nothing
          else
           print *,"local_flag invalid"

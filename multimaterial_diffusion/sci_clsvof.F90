@@ -5596,7 +5596,7 @@ REAL_T dist_scale,df,support_size,line_mass
        (xmap3D(dir).eq.2).or. &
        (xmap3D(dir).eq.AMREX_SPACEDIM)) then
     dist_scale=abs(xc(dir)-xtarget(dir))/dx(dir)
-    if (CTML_FSI_flagF(nmat).eq.1) then
+    if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
 #ifdef MVAHABFSI
      call CTML_DELTA(dir,dist_scale,df)
 #else
@@ -6193,7 +6193,7 @@ INTEGER_T :: dir,inode,num_nodes
 
  if (TOTAL_NPARTS.ge.1) then
 
-  if (CTML_FSI_flagF(nmat).eq.1) then
+  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
 #ifdef MVAHABFSI
    call CTML_RESET_ARRAYS(); ! vel_fib=zero  force_fib=zero
 #else
@@ -6373,7 +6373,7 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 
   enddo !part_id=1,TOTAL_NPARTS
 
-  if (CTML_FSI_flagF(nmat).eq.1) then
+  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
 #ifdef MVAHABFSI
    call CTML_SET_VELOCITY(CTML_NPARTS, &
     ctml_max_n_fib_nodes,ctml_fib_vel) !vel_fib=ctml_fib_vel
@@ -6461,7 +6461,7 @@ INTEGER_T im_sanity_check
 
    im_solid_mapF(part_id)=im_solid_map_in(part_id)
    im_part=im_solid_mapF(part_id)+1
-   if (CTML_FSI_mat(nmat,im_part).eq.1) then
+   if (CTML_FSI_mat(nmat,im_part).eq.1) then ! FSI_flag==4
     ctml_part_id=ctml_part_id+1
     CTML_partid_map(part_id)=ctml_part_id
    else if (CTML_FSI_mat(nmat,im_part).eq.0) then
@@ -6470,11 +6470,13 @@ INTEGER_T im_sanity_check
     print *,"CTML_FSI_mat(nmat,im_part) invalid"
     stop
    endif
-   if (FSI_flag(im_part).eq.2) then
+   if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid (CAD)
+       (FSI_flag(im_part).eq.6).or. & ! prescribed ice (CAD)
+       (FSI_flag(im_part).eq.7)) then ! prescribed fluid (CAD)
     fsi_part_id=fsi_part_id+1
     FSI_partid_map(part_id)=fsi_part_id
-   else if ((FSI_flag(im_part).eq.1).or. &
-            (FSI_flag(im_part).eq.4)) then
+   else if ((FSI_flag(im_part).eq.1).or. & ! prescribed solid (EUL)
+            (FSI_flag(im_part).eq.4)) then ! CTML FSI
     FSI_partid_map(part_id)=0
    else
     print *,"FSI_flag(im_part) invalid"
@@ -6521,7 +6523,7 @@ INTEGER_T im_sanity_check
 
   use_temp=0
 
-  if (CTML_FSI_flagF(nmat).eq.1) then
+  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
 #ifdef MVAHABFSI
    if (CTML_FSI_INIT.eq.0) then
     call CTML_INIT_SOLID(dx_maxlevel, &
@@ -7046,6 +7048,9 @@ REAL_T velparm(3)
 return
 end subroutine get_contained_node
 
+! elem_contain_type, node_contain_type,
+! level_contain_type, contain_elem
+! are declared in PROBCOMMON.F90
 subroutine CLSVOF_FILLCONTAINER( &
  lev77, &
  max_level, &
@@ -7905,8 +7910,8 @@ IMPLICIT NONE
    LSMAX_debug=-1.0D+10
 
     ! in NavierStokes::initData ():
-    !  state solid velocity for FSI_flag=2,4 is init to 0.0
-    !  state level set function for FSI_flag=2,4 is init to -99999.0
+    !  state solid velocity for FSI_flag=2,4,6,7 is init to 0.0
+    !  state level set function for FSI_flag=2,4,6,7 is init to -99999.0
     !
     ! in NavierStokes::FSI_make_distance FSI_MF is initialized as
     ! follows:
@@ -7925,7 +7930,7 @@ IMPLICIT NONE
     ! the order of operations on startup:
     ! 1. initData is called and LS=-99999.0, vel=0.0
     ! 2. FSI_make_distance is called from initData
-    ! 3. The rest of the (non FSI_flag=2,4) materials are initialized.
+    ! 3. The rest of the (non FSI_flag=2,4,6,7) materials are initialized.
    if (FSI_operation.eq.2) then ! make distance in narrow band
 
     num_elements_container=contain_elem(lev77)% &
@@ -9614,7 +9619,7 @@ end subroutine CLSVOF_InitBox
                (xmap3D(dir).eq.2).or. &
                (xmap3D(dir).eq.sdim_AMR)) then
             dist_scale=abs(xdata3D(i,j,k,dir)-xnot(dir))/dxBB(dir)
-            if (CTML_FSI_flagF(nmat).eq.1) then
+            if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
 #ifdef MVAHABFSI
              call CTML_DELTA(dir,dist_scale,df)
 #else
@@ -10922,7 +10927,7 @@ IMPLICIT NONE
 
   if ((TOTAL_NPARTS.ge.1).and.(TOTAL_NPARTS.le.MAX_PARTS)) then
 
-   if (CTML_FSI_flagF(nmat).eq.1) then
+   if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
 #ifdef MVAHABFSI
     call CTML_SOLVE_SOLID( &
      CLSVOF_curtime, &

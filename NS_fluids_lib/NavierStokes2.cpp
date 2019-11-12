@@ -1289,7 +1289,7 @@ void NavierStokes::apply_cell_pressure_gradient(
  } // dir=0..sdim-1
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -1299,7 +1299,7 @@ void NavierStokes::apply_cell_pressure_gradient(
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -2149,7 +2149,7 @@ void NavierStokes::increment_face_velocity(
   amrex::Error("num_materials_vel invalid");
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -2159,7 +2159,7 @@ void NavierStokes::increment_face_velocity(
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -2588,7 +2588,7 @@ void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
    } // dir=0..sdim-1
 
    int nparts=im_solid_map.size();
-   if ((nparts<0)||(nparts>=nmat))
+   if ((nparts<0)||(nparts>nmat))
     amrex::Error("nparts invalid");
    Vector<int> im_solid_map_null;
    im_solid_map_null.resize(1);
@@ -2598,7 +2598,7 @@ void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
    if (nparts==0) {
     im_solid_map_ptr=im_solid_map_null.dataPtr();
     nparts_def=1;
-   } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+   } else if ((nparts>=1)&&(nparts<=nmat)) {
     im_solid_map_ptr=im_solid_map.dataPtr();
    } else
     amrex::Error("nparts invalid");
@@ -2773,7 +2773,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -2783,7 +2783,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -3108,7 +3108,7 @@ void NavierStokes::VELMAC_TO_CELL(int prescribed_noslip,int use_VOF_weight) {
   debug_ngrow(FACE_VAR_MF+dir,0,1111);
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -3118,7 +3118,7 @@ void NavierStokes::VELMAC_TO_CELL(int prescribed_noslip,int use_VOF_weight) {
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -3489,7 +3489,7 @@ void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
   amrex::Error("masksolidtensor has invalid ncomp");
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -3499,7 +3499,7 @@ void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -3971,7 +3971,7 @@ void NavierStokes::apply_pressure_grad(
  }
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -3981,7 +3981,7 @@ void NavierStokes::apply_pressure_grad(
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -4810,7 +4810,7 @@ void NavierStokes::make_physics_vars(int project_option) {
   amrex::Error("project_option invalid make_physics_vars");
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -4820,7 +4820,7 @@ void NavierStokes::make_physics_vars(int project_option) {
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -5698,7 +5698,7 @@ void NavierStokes::process_potential_force_face() {
  int nsolveMM_FACE=nsolve*num_materials_vel;
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -5708,7 +5708,7 @@ void NavierStokes::process_potential_force_face() {
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -6004,7 +6004,7 @@ void NavierStokes::process_potential_force_cell() {
  int nsolveMM_FACE=nsolve*num_materials_vel;
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -6014,7 +6014,7 @@ void NavierStokes::process_potential_force_cell() {
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -6402,7 +6402,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
  // nparts x (velocity + LS + temperature + flag)
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
 
  Vector<int> im_solid_map_null;
@@ -6413,7 +6413,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -6922,7 +6922,7 @@ void NavierStokes::output_zones(
   amrex::Error("num_state_base invalid");
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -6933,7 +6933,7 @@ void NavierStokes::output_zones(
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -8601,13 +8601,13 @@ void NavierStokes::scale_variables(int scale_flag) {
   amrex::Error("num_materials_vel invalid");
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>=nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
 
  int nparts_def=nparts;
  if (nparts==0) {
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat-1)) {
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
   // do nothing
  } else
   amrex::Error("nparts invalid");
@@ -8675,7 +8675,7 @@ void NavierStokes::scale_variables(int scale_flag) {
  // coeff_avg,padvect_avg 
  localMF[CELL_SOUND_MF]->mult(pres_factor,1,1,0);
 
- if ((nparts>=1)&&(nparts<nmat)) {
+ if ((nparts>=1)&&(nparts<=nmat)) {
   MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
   Solid_new.mult(vel_factor,0,nparts*AMREX_SPACEDIM,0);
  } else if (nparts==0) {

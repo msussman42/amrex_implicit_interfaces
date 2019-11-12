@@ -245,12 +245,12 @@ stop
         print *,"level invalid hoop implicit"
         stop
        endif
-       if ((nparts.lt.0).or.(nparts.ge.nmat)) then
-        print *,"nparts invalid"
+       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+        print *,"nparts invalid FORT_HOOPIMPLICIT"
         stop
        endif
-       if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-        print *,"nparts_def invalid"
+       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+        print *,"nparts_def invalid FORT_HOOPIMPLICIT"
         stop
        endif
 
@@ -319,41 +319,53 @@ stop
         partid_crit=0
 
         do im=1,nmat
-         if (is_rigid(nmat,im).eq.1) then
-          LStest=lsnew(D_DECL(i,j,k),im)
-          if (is_prescribed(nmat,im).eq.1) then
-           if (LStest.ge.zero) then
-            if (im_solid.eq.0) then
-             im_solid=im
-             partid_crit=partid
-             LScrit=LStest
-            else if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
-             if (LStest.ge.LScrit) then
+         if (is_lag_part(nmat,im).eq.1) then
+          if (is_rigid(nmat,im).eq.1) then
+           LStest=lsnew(D_DECL(i,j,k),im)
+           if (is_prescribed(nmat,im).eq.1) then
+            if (LStest.ge.zero) then
+             if (im_solid.eq.0) then
               im_solid=im
               partid_crit=partid
               LScrit=LStest
+             else if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
+              if (LStest.ge.LScrit) then
+               im_solid=im
+               partid_crit=partid
+               LScrit=LStest
+              endif
+             else
+              print *,"im_solid invalid 1"
+              stop
              endif
+            else if (LStest.lt.zero) then
+             ! do nothing
             else
-             print *,"im_solid invalid 1"
+             print *,"LStest invalid"
              stop
             endif
-           else if (LStest.lt.zero) then
+           else if (is_prescribed(nmat,im).eq.0) then
             ! do nothing
            else
-            print *,"LStest invalid"
+            print *,"is_prescribed(nmat,im) invalid"
             stop
            endif
-          else if (is_prescribed(nmat,im).eq.0) then
+          else if (is_rigid(nmat,im).eq.0) then
            ! do nothing
           else
-           print *,"is_prescribed(nmat,im) invalid"
+           print *,"is_rigid(nmat,im) invalid"
            stop
           endif
           partid=partid+1
-         else if (is_rigid(nmat,im).eq.0) then
-          ! do nothing
+         else if (is_lag_part(nmat,im).eq.0) then
+          if (is_rigid(nmat,im).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid"
+           stop
+          endif
          else
-          print *,"is_rigid(nmat,im) invalid"
+          print *,"is_lag_part invalid"
           stop
          endif
         enddo ! im=1..nmat

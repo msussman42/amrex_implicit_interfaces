@@ -8063,6 +8063,43 @@ contains
       end function is_FSI_rigid
 
 
+      function is_lag_part(nmat,im)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T is_lag_part
+      INTEGER_T nmat,im
+
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid17: im=",im
+       print *,"nmat=",nmat
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid is_lag_part"
+       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
+       stop
+      endif
+
+      if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
+          (FSI_flag(im).eq.2).or. & ! prescribed rigid solid (CAD)
+          (FSI_flag(im).eq.4).or. & ! FSI link w/Kourosh Shoele
+          (FSI_flag(im).eq.6).or. & ! lag ice (CAD)
+          (FSI_flag(im).eq.7)) then ! lag fluid (CAD)
+       is_lag_part=1
+      else if ((FSI_flag(im).eq.0).or. &
+               (FSI_flag(im).eq.3).or. & ! ice
+               (FSI_flag(im).eq.5)) then ! FSI rigid
+       is_lag_part=0
+      else
+       print *,"FSI_flag invalid in is_lag_part"
+       stop
+      endif
+
+      return
+      end function is_lag_part
  
       function is_rigid(nmat,im)
       use probcommon_module
