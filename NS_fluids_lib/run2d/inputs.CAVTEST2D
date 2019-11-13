@@ -172,7 +172,7 @@ ns.zblob=0.0
 ns.radblob=1.0
 ns.denfact=1.0
 ns.velfact=0.0
-ns.probtype=411
+ns.probtype=411 # structure not grid aligned
 
 #ns.mem_debug = 1
 ns.v = 1

@@ -1,0 +1,13 @@
+#space range of simulation domain in x, y and z directions, unit: [mu*m].
+l 300 300 100
+#amount of mesh in x, y and z directions.
+n 60 60 20
+#amount of droplet
+ndrop 6
+#information of droplets(centre coordinates and radius)
+drop 65 90 70 20
+drop 150 95 72 18
+drop 235 92 70 15
+drop 65 205 68 21
+drop 150 210 70 19
+drop 235 207 72 17
