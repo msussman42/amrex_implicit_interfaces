@@ -25,6 +25,7 @@ F90EXE_headers += \
   sample_user_defined.F90 \
   cone3D.F90 \
   cav3D.F90 \
+  helix.F90 \
   cav2Dstep.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \
@@ -47,6 +48,7 @@ F90EXE_sources += \
   sample_user_defined.F90 \
   cone3D.F90 \
   cav3D.F90 \
+  helix.F90 \
   cav2Dstep.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \

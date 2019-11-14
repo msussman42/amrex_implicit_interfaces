@@ -133,6 +133,9 @@
          xslice3D(3)=zero
          problo3D(3)=-half*dx_maxlevel(1)
          probhi3D(3)=half*dx_maxlevel(1)
+        else if (probtype.eq.401) then ! helix
+         print *,"this geometry has no 2D analogue"
+         stop
         else if (probtype.eq.411) then
 #if (STANDALONE==0)
          call CAV3D_SLICE(xmap3D,xslice3D,problo3D,probhi3D, &

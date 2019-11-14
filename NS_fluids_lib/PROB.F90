@@ -1700,6 +1700,7 @@ stop
       use global_distance_module
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use rigid_FSI_module
       IMPLICIT NONE
@@ -1790,6 +1791,11 @@ stop
        if (probtype.eq.411) then
 
         call CAV3D_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
+               HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
+
+       else if (probtype.eq.401) then
+
+        call HELIX_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
                HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
 
        else if (probtype.eq.533) then
@@ -13923,6 +13929,7 @@ END SUBROUTINE Adist
       use probcommon_module
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -13957,6 +13964,11 @@ END SUBROUTINE Adist
        if (probtype.eq.411) then ! cavitation user defined
         call CAV3D_LS(xvec,time,LS)
         call CAV3D_STATE(xvec,time,LS,STATE)
+        ibase=(im-1)*num_state_material
+        temp=STATE(ibase+2) 
+       else if (probtype.eq.401) then ! helix user defined
+        call HELIX_LS(xvec,time,LS)
+        call HELIX_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2) 
        else if (probtype.eq.412) then ! user defined
@@ -14127,6 +14139,7 @@ END SUBROUTINE Adist
       use probcommon_module
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -14181,6 +14194,10 @@ END SUBROUTINE Adist
        if (probtype.eq.411) then
         call CAV3D_LS(xvec,time,LS)
         call CAV3D_VEL(xvec,time,LS,vel,velsolid_flag)
+
+       else if (probtype.eq.401) then
+        call HELIX_LS(xvec,time,LS)
+        call HELIX_VEL(xvec,time,LS,vel,velsolid_flag)
 
        else if (probtype.eq.412) then ! step
         call CAV2Dstep_LS(xvec,time,LS)
@@ -14881,6 +14898,7 @@ END SUBROUTINE Adist
       use River
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -14989,6 +15007,8 @@ END SUBROUTINE Adist
 
       if (probtype.eq.411) then
        call CAV3D_LS(x_in,initial_time,dist)
+      else if (probtype.eq.401) then
+       call HELIX_LS(x_in,initial_time,dist)
       else if (probtype.eq.412) then ! step
        call CAV2Dstep_LS(x_in,initial_time,dist)
       else if (probtype.eq.533) then
@@ -18537,6 +18557,10 @@ END SUBROUTINE Adist
        call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
        call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
 
+      else if (probtype.eq.401) then
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+
       else if (probtype.eq.412) then
        call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
        call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -19137,6 +19161,7 @@ END SUBROUTINE Adist
       use unimaterialChannel_module
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -19221,6 +19246,9 @@ END SUBROUTINE Adist
 
       if (probtype.eq.411) then
        call CAV3D_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
+       call check_lsbc_extrap(LS,LSWALL,nmat)
+      else if (probtype.eq.401) then
+       call HELIX_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.412) then ! step
        call CAV2Dstep_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
@@ -24869,6 +24897,7 @@ END SUBROUTINE Adist
       use shockdrop
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -24943,6 +24972,10 @@ END SUBROUTINE Adist
        if (probtype.eq.411) then
         call CAV3D_LS(xvec,time,local_LS)
         call CAV3D_VEL_BC(xwall,xvec,time,local_LS, &
+         velcell(veldir),vel,veldir,dir,side,dx)
+       else if (probtype.eq.401) then
+        call HELIX_LS(xvec,time,local_LS)
+        call HELIX_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
        else if (probtype.eq.412) then ! step
         call CAV2Dstep_LS(xvec,time,local_LS)
@@ -26192,6 +26225,7 @@ END SUBROUTINE Adist
       use shockdrop
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -26285,6 +26319,11 @@ END SUBROUTINE Adist
 
         call CAV3D_LS(xpos,time,local_LS)
         call CAV3D_PRES_BC(xwall,xpos,time,local_LS, &
+          ADV,ADVwall,dir,side,dx)
+       else if (probtype.eq.401) then
+
+        call HELIX_LS(xpos,time,local_LS)
+        call HELIX_PRES_BC(xwall,xpos,time,local_LS, &
           ADV,ADVwall,dir,side,dx)
        else if (probtype.eq.412) then ! step
         call CAV2Dstep_LS(xpos,time,local_LS)
@@ -26909,6 +26948,7 @@ END SUBROUTINE Adist
       use marangoni
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -27047,6 +27087,12 @@ END SUBROUTINE Adist
 
         call CAV3D_LS(xvec,time,local_LS)
         call CAV3D_STATE_BC(xwall,xvec,time,local_LS, &
+          ADV,ADV_merge,ADVwall,im,istate,dir,side,dx) 
+
+       else if (probtype.eq.401) then
+
+        call HELIX_LS(xvec,time,local_LS)
+        call HELIX_STATE_BC(xwall,xvec,time,local_LS, &
           ADV,ADV_merge,ADVwall,im,istate,dir,side,dx) 
 
        else if (probtype.eq.412) then ! step
@@ -32729,6 +32775,7 @@ end subroutine initialize2d
        use shockdrop
        use USERDEF_module
        use CAV3D_module
+       use HELIX_module
        use CAV2Dstep_module
        use CONE3D_module
        use WAVY_Channel_module
@@ -33327,6 +33374,9 @@ end subroutine initialize2d
        if (probtype.eq.411) then
 
         call INIT_CAV3D_MODULE()
+       else if (probtype.eq.401) then
+
+        call INIT_HELIX_MODULE()
        else if (probtype.eq.412) then
 
         call INIT_CAV2Dstep_MODULE()
@@ -37692,6 +37742,7 @@ end subroutine initialize2d
        use CISL_SANITY_MODULE
        use USERDEF_module
        use CAV3D_module
+       use HELIX_module
        use CAV2Dstep_module
        use CONE3D_module
        use WAVY_Channel_module
@@ -37923,6 +37974,24 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call CAV3D_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.401) then
+
+         call HELIX_LS(xpos,time,distbatch)
+         call HELIX_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+           ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call HELIX_PRES(xpos,time,distbatch,p_hyd)
          scalc(ipresbase+impres)=p_hyd
 
         else if (probtype.eq.412) then ! step
@@ -39197,6 +39266,7 @@ end subroutine initialize2d
       use shockdrop
       use USERDEF_module
       use CAV3D_module
+      use HELIX_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -39693,6 +39763,13 @@ end subroutine initialize2d
         if (probtype.eq.411) then
          call CAV3D_LS(xvec,time,distbatch)
          call CAV3D_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.401) then
+         call HELIX_LS(xvec,time,distbatch)
+         call HELIX_VEL(xvec,time,distbatch,velcell,velsolid_flag)
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)

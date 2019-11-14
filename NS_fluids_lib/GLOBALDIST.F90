@@ -1722,7 +1722,7 @@ end subroutine nozzle2d
         call CAV3D_LS(xvec,time,dist_array)
         dist=dist_array(im)
 
-       else if (probtype.eq.412) then ! cone3D
+       else if (probtype.eq.412) then ! user defined cavitation problem
         call CAV2Dstep_LS(xvec,time,dist_array)
         dist=dist_array(im)
 

@@ -5424,6 +5424,12 @@ REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
           (probtype.eq.50).or. & ! paddle
           (probtype.eq.9)) then ! ship
   call advance_solid(sci_sdim,sci_curtime,sci_dt,sci_istop,sci_istep,part_id)
+ else if (probtype.eq.400) then
+  call init_gingerbread2D(CLSVOF_curtime,sci_dt,ifirst,sci_sdim,sci_istop, &
+    sci_istep,ioproc,part_id,isout) 
+ else if (probtype.eq.401) then
+  call init_helix(CLSVOF_curtime,sci_dt,ifirst,sci_sdim,sci_istop, &
+    sci_istep,ioproc,part_id,isout) 
  else
    ! ifirst=0 (in overall_solid_advance)
   call init_from_cas(CLSVOF_curtime,sci_dt,ifirst,sci_sdim,sci_istop, &
@@ -5598,6 +5604,12 @@ INTEGER_T :: fsi_part_id
    else if (probtype.eq.9) then
     call initship(sci_curtime,sci_dt,sci_sdim,sci_istop,sci_istep, &
       paddle_pos,paddle_vel)
+   else if (probtype.eq.400) then
+    call init_gingerbread2D(CLSVOFtime,sci_dt,ifirst,sci_sdim,sci_istop, &
+     sci_istep,ioproc,part_id,isout) 
+   else if (probtype.eq.401) then
+    call init_helix(CLSVOFtime,sci_dt,ifirst,sci_sdim,sci_istop, &
+     sci_istep,ioproc,part_id,isout) 
    else
     call init_from_cas(CLSVOFtime,sci_dt,ifirst,sci_sdim,sci_istop,sci_istep, &
       ioproc,part_id,isout) 
@@ -6850,7 +6862,8 @@ INTEGER_T im_sanity_check
      endif
 
      ! ifirst=1 (=>read from data files in 
-     !           initinjector, initflapping, or init_from_cas)
+     !           initinjector, initflapping, init_gingerbread2D,
+     !           init_helix, or init_from_cas)
      call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
      ! ReadHeader
