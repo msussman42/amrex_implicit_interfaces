@@ -2724,6 +2724,207 @@ return
 end subroutine init_gingerbread2D
 
 
+subroutine init_helix(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
+  part_id,isout)
+
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+INTEGER_T :: sdim,ifirst,isout
+INTEGER_T :: inode,iface
+INTEGER_T :: inode_read
+INTEGER_T :: iface_read
+INTEGER_T :: ioproc
+REAL_T :: curtime,dt
+REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
+REAL_T, dimension(3) :: maxnodebefore,minnodebefore
+INTEGER_T :: dir,istep,istop
+
+REAL_T, dimension(3) :: xxblob1,newxxblob1
+REAL_T :: radradblob1
+INTEGER_T localElem(3)
+character(40) :: dwave
+INTEGER_T :: orig_nodes,local_nodes
+INTEGER_T :: orig_elements,local_elements
+
+  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+   print *,"part_id invalid"
+   stop
+  endif
+  if (FSI(part_id)%partID.ne.part_id) then
+   print *,"FSI(part_id)%partID.ne.part_id"
+   stop
+  endif
+
+  if ((ioproc.ne.1).and.(ioproc.ne.0)) then
+   print *,"ioproc invalid"
+   stop
+  endif
+
+  FSI(part_id)%flag_2D_to_3D=0
+
+  timeB=curtime
+  dtB=0.0
+  TorquePos=0.0
+  TorqueVel=0.0
+
+  if ((ifirst.eq.0).or.(ifirst.eq.1)) then
+   ! do nothing
+  else
+   print *,"ifirst invalid"
+   stop
+  endif
+
+  if (ifirst.eq.1) then
+   xxblob1(1)=0.0
+   xxblob1(2)=0.0
+   xxblob1(3)=0.0
+
+   newxxblob1(1)=0.0
+   newxxblob1(2)=0.0
+   newxxblob1(3)=0.0
+   radradblob1=1.0
+
+   denpaddle=one
+   dampingpaddle=zero
+
+   if (probtype.eq.401) then ! helix
+    dwave="helix.dat"
+    print *,"opening ",dwave
+    OPEN(unit=14,file=dwave,access='sequential',form="formatted",status='old')
+   else
+    print *,"probtype not recognized in init_helix"
+    stop
+   endif
+
+   READ(14,*) FSI(part_id)%NumNodes,FSI(part_id)%NumIntElems
+
+   orig_nodes=FSI(part_id)%NumNodes
+   local_nodes=FSI(part_id)%NumNodes
+
+   orig_elements=FSI(part_id)%NumIntElems
+   local_elements=FSI(part_id)%NumIntElems
+
+   print *,"NumNodes ",local_nodes
+   print *,"NumIntElems ",local_elements
+   FSI(part_id)%IntElemDim=3
+
+   if (ifirst.ne.1) then
+    print *,"ifirst bust"
+    stop
+   endif
+
+   call init_FSI(part_id,1)  ! allocate_intelem=1
+
+   do dir=1,3
+    maxnode(dir)=0.0
+    minnode(dir)=0.0
+    maxnodebefore(dir)=-1.0e+10
+    minnodebefore(dir)=1.0e+10
+   enddo
+
+   do inode=1,orig_nodes
+
+    READ(14,*) inode_read,xval(1),xval(2),xval(3)
+
+    if (inode_read.eq.inode) then
+     ! do nothing
+    else
+     print *,"inode_read invalid"
+     stop
+    endif
+
+    do dir=1,3
+     if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
+      minnodebefore(dir)=xval(dir)
+     endif
+     if ((maxnodebefore(dir).lt.xval(dir)).or.(inode.eq.1)) then
+      maxnodebefore(dir)=xval(dir)
+     endif
+    enddo ! dir=1..3
+
+    do dir=1,3
+     xval1(dir)=(xval(dir)-xxblob1(dir))/radradblob1 + newxxblob1(dir)
+    enddo
+
+    do dir=1,3
+     if ((minnode(dir).gt.xval1(dir)).or.(inode.eq.1)) then
+      minnode(dir)=xval1(dir)
+     endif
+     if ((maxnode(dir).lt.xval1(dir)).or.(inode.eq.1)) then
+      maxnode(dir)=xval1(dir)
+     endif
+    enddo ! dir
+    
+    do dir=1,3
+     FSI(part_id)%Node_old(dir,inode)=xval1(dir)
+     FSI(part_id)%Node_new(dir,inode)=xval1(dir)
+    enddo
+    
+   enddo  ! inode=1,orig_nodes
+   
+   do iface=1,orig_elements
+
+    READ(14,*) iface_read,localElem(1),localElem(2),localElem(3)
+
+    if (iface_read.eq.iface) then
+     ! do nothing
+    else
+     print *,"iface_read invalid"
+     stop
+    endif
+
+    do inode=1,3
+     if ((localElem(inode).lt.1).or. &
+         (localElem(inode).gt.orig_nodes)) then
+      print *,"localElem(inode) out of range"
+      stop
+     endif
+    enddo !inode=1..3
+
+    if ((localElem(1).eq.localElem(2)).or. &
+        (localElem(1).eq.localElem(3)).or. &
+        (localElem(2).eq.localElem(3))) then
+     print *,"duplicate nodes for triangle"
+     stop
+    endif
+
+    FSI(part_id)%ElemData(1,iface)=3 ! number of nodes in element
+    FSI(part_id)%ElemData(2,iface)=1 ! part number
+    FSI(part_id)%ElemData(3,iface)=0 ! singly wetted
+    do dir=1,3
+     FSI(part_id)%IntElem(dir,iface)=localElem(dir)
+    enddo
+
+   enddo  ! iface, looping faces
+
+   close(14)
+
+   do dir=1,3 
+    print *,"(before)dir,min,max ",dir,minnodebefore(dir),maxnodebefore(dir)
+   enddo
+   do dir=1,3 
+    print *,"(after)dir,min,max ",dir,minnode(dir),maxnode(dir)
+   enddo
+
+   call init2_FSI(part_id)
+
+  else if (ifirst.eq.0) then
+   ! do nothing
+  else
+   print *,"ifirst invalid"
+   stop
+  endif 
+
+  
+  use_temp=0
+
+   ! do_2nd_part=0  
+  call init3_FSI(part_id,ifirst,0,ioproc,isout) 
+
+
+return
+end subroutine init_helix
 
 subroutine initchannel(curtime,dt,ifirst,sdim,istop,istep)
 IMPLICIT NONE
