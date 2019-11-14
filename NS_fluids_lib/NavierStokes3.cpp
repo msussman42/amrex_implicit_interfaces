@@ -8267,7 +8267,7 @@ void NavierStokes::multiphase_project(int project_option) {
       // k=2 m pi/L   m=1
       // 4 pi^2 t/L^2 = rho ln(factor)
       // t = L^2 rho ln(factor)/(4 pi^2)
-     Real dual_time_reduction_factor=1.0e-10;
+     double dual_time_reduction_factor=1.0e-50;
      dual_time_stepping_tau= 
         maxden*problen_max*problen_max*
 	fabs(log(dual_time_reduction_factor))/(4.0*NS_PI*NS_PI);
