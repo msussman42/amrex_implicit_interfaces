@@ -85,19 +85,11 @@ contains
   stop
  endif
 
-  ! flow enters wide part (yhi) and exits narrow part (ylo)?
  if ((adv_dir.ge.1).and.(adv_dir.le.SDIM)) then
   do dir=1,SDIM
    VEL(dir)=zero
   enddo
-  if ((abs(x(1)).lt.4.5).and.(velsolid_flag.eq.0)) then
-   VEL(adv_dir)=-abs(adv_vel)
-  else if ((abs(x(1)).ge.4.5).or.(velsolid_flag.eq.1)) then
-   VEL(adv_dir)=zero
-  else
-   print *,"x(1) bust"
-   stop
-  endif
+  VEL(adv_dir)=adv_vel
  else
   print *,"adv_dir invalid in HELIX_VEL"
   stop
