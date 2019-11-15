@@ -3073,7 +3073,7 @@ NavierStokes::read_params ()
      if ((Carreau_beta[i]!=0.0)&&(visc_coef==0.0))
       amrex::Error("Cannot have Carreau_beta!=0 and visc_coef==0 ");
 
-      // if first material, Carreau_beta==0 for first material,
+      // if first material and Carreau_beta==0 for first material,
       //  probtype==2, axis_dir>0, then 
       //  "call viscosity(axis_dir,visc(i,j),shear)"
       //  VISCOSITY=visc_coef * visc(i,j)
