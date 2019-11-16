@@ -355,6 +355,12 @@ int  NavierStokes::disable_pressure_solve=0;
 
 Vector<Real> NavierStokes::elastic_time; // def=0
 
+// if viscosity_state_model>=1, density and temperature come from State_Type
+//  otherwise density=fort_denconst, temperature=fort_tempconst
+// mu=get_user_viscconst(im,density,temperature)
+// in: PROB.F90,
+// REAL_T function get_user_viscconst(im,density,temperature)
+// MITSUHIRO: viscosity_state_model=2
 Vector<int> NavierStokes::viscosity_state_model; // def=0
 // 0,1 => viscoelastic FENE-CR material  2=> elastic material
 Vector<int> NavierStokes::viscoelastic_model; // def=0
@@ -16831,6 +16837,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   residual_verify=sqrt(residual_verify);
   if ((residual_verify>1.0e-4*min_diag)&&
       (residual_verify>1.0e-11)) {
+   std::cout << "caller_id= " << caller_id << '\n';
    std::cout << "residual_verify= " << residual_verify << '\n';
    std::cout << "min_diag= " << min_diag << '\n';
    std::cout << "beta= " << beta << '\n';
@@ -16845,8 +16852,8 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
      std::cout << "i= " << i << " j= " << j << " HH= " << HH[i][j] << '\n';
     }
    }
-   amrex::Error("residual too large HTH, do dual time stepping");
-//  amrex::Warning("residual too large HTH");
+//  amrex::Error("residual too large HTH, do dual time stepping");
+    amrex::Warning("residual overflow HTH, dual time stepping? (if p solve)");
   }
   delete [] HTHy;
 
