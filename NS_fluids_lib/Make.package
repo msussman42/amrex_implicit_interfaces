@@ -26,6 +26,7 @@ F90EXE_headers += \
   cone3D.F90 \
   cav3D.F90 \
   helix.F90 \
+  thermalspray.F90 \
   cav2Dstep.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \
@@ -49,6 +50,7 @@ F90EXE_sources += \
   cone3D.F90 \
   cav3D.F90 \
   helix.F90 \
+  thermalspray.F90 \
   cav2Dstep.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \
