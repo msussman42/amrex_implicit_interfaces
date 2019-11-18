@@ -29,16 +29,45 @@ module TSPRAY_module
 
 implicit none                   
 
-contains
 
         REAL_T, allocatable, dimension(:,:) :: drop_data
+        REAL_T, dimension(3) :: TDOMAIN
+        INTEGER_T :: T_num_drops
+
+contains
 
    ! do any initial preparation needed
  subroutine INIT_TSPRAY_MODULE()
+ use probcommon_module
  IMPLICIT NONE
 
- if ((num_materials.eq.4).and.(probtype.eq.402)) then
+ INTEGER_T nd
 
+ if ((num_materials.eq.4).and.(probtype.eq.402)) then
+  print *,"opening: inputs_data_file_Zeyu"
+   ! this file has to be able to be opened by multiple processes.
+  open(unit=2,file='inputs_data_file_Zeyu')
+  print *,"reading expected domain size TDOMAIN"
+  read(2,*) TDOMAIN(1),TDOMAIN(2),TDOMAIN(3)
+  print *,"TDOMAIN= ",TDOMAIN(1),TDOMAIN(2),TDOMAIN(3)
+  print *,"reading the number of drops"
+  read(2,*) T_num_drops
+  print *,"number of drops, T_num_drops=",T_num_drops
+  if (T_num_drops>0) then
+   allocate(drop_data(T_num_drops,4))
+   do nd=1,T_num_drops
+    print *,"reading drop number nd=",nd
+    read(2,*) drop_data(nd,1),drop_data(nd,2), &
+          drop_data(nd,3),drop_data(nd,4)
+    print *,"drop nd,x,y,z,r= ",nd,drop_data(nd,1), &
+          drop_data(nd,2),drop_data(nd,3), &
+          drop_data(nd,4)
+   enddo ! nd=1,T_num_drops
+   close(2)
+  else
+   print *,"T_num_drops invalid"
+   stop
+  endif
 
  else
   print *,"num_materials or probtype invalid"
