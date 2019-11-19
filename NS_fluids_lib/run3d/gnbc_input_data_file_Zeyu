@@ -1,0 +1,24 @@
+#dimension of simulation domain
+dim 2
+#dynamic viscosity of liquid [Pa.s]
+mu_l 0.006
+#surface tension [N/m]
+sigma 0.0679
+#static contact angle
+thet_s 37.08
+#grid-scale dynamic contact angle (should be calculate by multiphase fluid solver)
+thet_d_grid 50
+#grid space [m]
+l_grid 3.2e-5
+#macroscopic characteristic length scale [m]
+l_macro 3.2e-5
+#microscopic characteristic length scale [m]
+l_micro 1.e-9
+#nondimensional slip parameter
+chi 0.017
+#x coodinate of a point within contact line [m] (should be calculate by multiphase fluid solver)
+x_cl 0
+#y coodinate of a point within contact line [m] (should be calculate by multiphase fluid solver)
+y_cl 0
+#z coodinate of a point within contact line [m] (should be calculate by multiphase fluid solver)
+z_cl 0
