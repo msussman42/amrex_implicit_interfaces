@@ -43,13 +43,24 @@ contains
 
  INTEGER_T nd
 
- if ((num_materials.eq.4).and.(probtype.eq.402)) then
+ if ((num_materials.eq.4).and. &
+     (probtype.eq.402).and. &
+     (SDIM.eq.3)) then
   print *,"opening: inputs_data_file_Zeyu"
    ! this file has to be able to be opened by multiple processes.
   open(unit=2,file='inputs_data_file_Zeyu')
   print *,"reading expected domain size TDOMAIN"
   read(2,*) TDOMAIN(1),TDOMAIN(2),TDOMAIN(3)
   print *,"TDOMAIN= ",TDOMAIN(1),TDOMAIN(2),TDOMAIN(3)
+  if ((abs(TDOMAIN(1)-probhix).le.1.0E-10).and. &
+      (abs(TDOMAIN(2)-probhiy).le.1.0E-10).and. &
+      (abs(TDOMAIN(3)-probhiz).le.1.0E-10)) then
+   ! do nothing
+  else
+   print *,"TDOMAIN invalid"
+   stop
+  endif
+
   print *,"reading the number of drops"
   read(2,*) T_num_drops
   print *,"number of drops, T_num_drops=",T_num_drops
@@ -63,14 +74,15 @@ contains
           drop_data(nd,2),drop_data(nd,3), &
           drop_data(nd,4)
    enddo ! nd=1,T_num_drops
-   close(2)
   else
    print *,"T_num_drops invalid"
    stop
   endif
 
+  close(2)
+
  else
-  print *,"num_materials or probtype invalid"
+  print *,"num_materials, probtype, or sdim invalid"
   stop
  endif
 
@@ -85,24 +97,78 @@ contains
 
  REAL_T x(SDIM)
  REAL_T t
- INTEGER_T im
+ INTEGER_T nd
  REAL_T LS(num_materials)
+ INTEGER_T in_droplet
+ REAL_T minLS,tempLS
 
- if ((num_materials.eq.4).and.(probtype.eq.402)) then
-  do im=1,num_materials
-   if (im.eq.1) then !liquid
-    LS(im)=sqrt( (x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)-radblob
-   else if (im.eq.2) then !gas
-    LS(im)=-sqrt( (x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)+radblob
-   else if (im.eq.3) then ! geometry (placeholder)
-    LS(im)=-99999.0
+ if ((num_materials.eq.4).and. &
+     (probtype.eq.402).and.  &
+     (SDIM.eq.3)) then
+  in_droplet=0
+  minLS=1.0D+20
+  tempLS=0.0d0
+  do nd=1,T_num_drops
+   tempLS=drop_data(nd,4)- &
+       sqrt((x(1)-drop_data(nd,1))**2+ &
+            (x(2)-drop_data(nd,2))**2+ &
+            (x(SDIM)-drop_data(nd,SDIM))**2) 
+   if (in_droplet.eq.0) then
+    if (tempLS.ge.zero) then
+     LS(1)=tempLS
+     in_droplet=1
+    else if (tempLS.le.zero) then
+     if (abs(tempLS).lt.minLS) then
+      minLS=abs(tempLS)
+     endif
+    else
+     print *,"tempLS invalid"
+     stop
+    endif
+   else if (in_droplet.eq.1) then
+    ! do nothing
    else
-    print *,"im invalid"
+    print *,"in_droplet invalid"
     stop
    endif
-  enddo ! im=1..num_materials
+  enddo !nd=1,T_num_drops
+
+  if (in_droplet.eq.0) then
+   LS(1)=-minLS
+  else if (in_droplet.eq.1) then
+   ! do nothing
+  else
+   print *,"in_droplet invalid"
+   stop
+  endif
+  LS(4)=zblob-x(SDIM)  ! substrate
+  LS(3)=radblob2-abs(x(SDIM)-(zblob+radblob2)) ! ice layer
+   ! gas
+  tempLS=x(SDIM)-(zblob+two*radblob2)
+  if (tempLS.le.zero) then
+   LS(2)=tempLS
+  else if (tempLS.ge.zero) then
+   if (LS(1).ge.zero) then
+    LS(2)=-LS(1)
+   else if (LS(1).le.zero) then
+    if (abs(LS(1)).le.abs(tempLS)) then
+     LS(2)=-LS(1)
+    else if (abs(LS(1)).ge.abs(tempLS)) then
+     LS(2)=tempLS
+    else
+     print *,"LS(1) bust"
+     stop
+    endif
+   else
+    print *,"LS(1) bust"
+    stop
+   endif
+  else
+   print *,"tempLS bust"
+   stop
+  endif
  else
-  print *,"num_materials or probtype invalid"
+  print *,"num_materials, probtype, or sdim invalid"
   stop
  endif
 
