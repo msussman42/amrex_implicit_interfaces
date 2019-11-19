@@ -16,20 +16,21 @@ stop_time = 1.0
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
-geometry.prob_lo   =  -2.5 0.0 0.0
-geometry.prob_hi   =  2.5 2.5 2.5
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   = 300.0 300.0 100.0 # microns=10^-6 meters 
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
 
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 ns.minimum_relative_error=1.0e-22
-ns.initial_project_cycles=10 # initial jacobi cycles
-ns.initial_cg_cycles=10
+ns.initial_project_cycles=3 # initial jacobi cycles
+ns.initial_cg_cycles=3
 ns.solvability_projection=0 # 0 since must allow for expansion
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
 ns.num_materials=4 # 1: liquid 2: air 3: ice  4: substrate
+ns.mof_ordering=5 5 1 1
 
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
@@ -58,7 +59,9 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
-amr.n_cell    = 64 32 32
+# domain size is 300 x 300 x 100 (centimeters)
+# minimum radius is 15
+amr.n_cell    = 96 96 32
 amr.max_level =  1  
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
@@ -83,7 +86,7 @@ mac.mac_abs_tol    = 1.0e-10
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
-ns.visc_coef      = 14.4     # Prandtl
+ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0     
 ns.use_lsa=0

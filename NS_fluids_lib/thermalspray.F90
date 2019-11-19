@@ -142,9 +142,9 @@ contains
    stop
   endif
   LS(4)=zblob-x(SDIM)  ! substrate
-  LS(3)=radblob2-abs(x(SDIM)-(zblob+radblob2)) ! ice layer
+  LS(3)=radblob-abs(x(SDIM)-(zblob+radblob)) ! ice layer
    ! gas
-  tempLS=x(SDIM)-(zblob+two*radblob2)
+  tempLS=x(SDIM)-(zblob+two*radblob)
   if (tempLS.le.zero) then
    LS(2)=tempLS
   else if (tempLS.ge.zero) then
@@ -152,11 +152,11 @@ contains
     LS(2)=-LS(1)
    else if (LS(1).le.zero) then
     if (abs(LS(1)).le.abs(tempLS)) then
-     LS(2)=-LS(1)
+     LS(2)=abs(LS(1))
     else if (abs(LS(1)).ge.abs(tempLS)) then
-     LS(2)=tempLS
+     LS(2)=abs(tempLS)
     else
-     print *,"LS(1) bust"
+     print *,"LS(1) or tempLS bust"
      stop
     endif
    else
@@ -194,13 +194,27 @@ contains
   stop
  endif
 
- if ((adv_dir.ge.1).and.(adv_dir.le.SDIM)) then
-  do dir=1,SDIM
-   VEL(dir)=zero
-  enddo
-  VEL(adv_dir)=adv_vel
+ if ((num_materials.eq.4).and. &
+     (probtype.eq.402).and.  &
+     (SDIM.eq.3)) then
+  if ((adv_dir.ge.1).and.(adv_dir.le.SDIM)) then
+   if (adv_vel.eq.zero) then
+    do dir=1,SDIM
+     VEL(dir)=zero
+    enddo
+    if (LS(1).ge.zero) then
+     VEL(SDIM)=advbot
+    endif
+   else
+    print *,"expecting adv_vel=0 in TSPRAY_VEL"
+    stop
+   endif
+  else
+   print *,"adv_dir invalid in TSPRAY_VEL"
+   stop
+  endif
  else
-  print *,"adv_dir invalid in TSPRAY_VEL"
+  print *,"num_materials, probtype, or sdim invalid"
   stop
  endif
 
@@ -216,7 +230,7 @@ contains
  REAL_T LS(num_materials)
  REAL_T PRES
 
- PRES=outflow_pressure
+ PRES=zero
 
  return 
  end subroutine TSPRAY_PRES
@@ -232,9 +246,10 @@ contains
  REAL_T STATE(num_materials*num_state_material)
  INTEGER_T im,ibase,n
 
- if ((num_materials.eq.3).and. &
-     (num_state_material.ge.2).and. &
-     (probtype.eq.401)) then
+ if ((num_materials.eq.4).and. &
+     (num_state_material.eq.2).and. &
+     (probtype.eq.402).and.  &
+     (SDIM.eq.3)) then
   do im=1,num_materials
    ibase=(im-1)*num_state_material
    STATE(ibase+1)=fort_denconst(im)
@@ -251,7 +266,7 @@ contains
    enddo
   enddo ! im=1..num_materials
  else
-  print *,"num_materials,num_state_material, or probtype invalid"
+  print *,"num_materials,num_state_material, sdim, or probtype invalid"
   stop
  endif
   
@@ -403,10 +418,13 @@ contains
  REAL_T dt
  REAL_T heat_source
 
- if ((num_materials.eq.3).and.(probtype.eq.401)) then
+ if ((num_materials.eq.4).and. &
+     (num_state_material.eq.2).and. &
+     (probtype.eq.402).and.  &
+     (SDIM.eq.3)) then
   heat_source=zero
  else
-  print *,"num_materials or probtype invalid"
+  print *,"num_materials, num_state_material, sdim or probtype invalid"
   stop
  endif
 
