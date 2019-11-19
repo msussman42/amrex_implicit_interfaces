@@ -4073,6 +4073,12 @@ stop
                   use_exact_temperature, &
                   xI,cur_time,nmat,nten,7)
 
+                 ! freezing_mod=0 (sharp interface stefan model)
+                 ! freezing_mod=1 (source term model)
+                 ! freezing_mod=2 (hydrate model)
+                 ! freezing_mod=3 (wildfire)
+                 ! freezing_mod=4 (source term model)
+                 ! freezing_mod=5 (evaporation/condensation)
                 if ((freezing_mod.eq.0).or. &
                     (freezing_mod.eq.5)) then
 
@@ -4119,8 +4125,10 @@ stop
                   stop
                  endif
 
+                  ! tempdst_grad=(1/LL)*(tempdst-Tsat)/||xI-xdst||
                  call grad_probe(xI,xdst,tempdst,tempdst_grad, &
                    Tsat,LL(ireverse))
+                  ! tempsrc_grad=(1/LL)*(tempsrc-Tsat)/||xI-xsrc||
                  call grad_probe(xI,xsrc,tempsrc,tempsrc_grad, &
                    Tsat,LL(ireverse))
 

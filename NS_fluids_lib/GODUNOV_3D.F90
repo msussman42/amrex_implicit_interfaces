@@ -12567,6 +12567,12 @@ stop
 
             if (start_freezing.eq.1) then
 
+              ! freezing_mod=0 (sharp interface stefan model)
+              ! freezing_mod=1 (source term model)
+              ! freezing_mod=2 (hydrate model)
+              ! freezing_mod=3 (wildfire)
+              ! freezing_mod=4 (source term model)
+              ! freezing_mod=5 (evaporation/condensation)
              if ((freezing_mod.eq.0).or. &
                  (freezing_mod.eq.5)) then
 
@@ -12623,14 +12629,21 @@ stop
 
                 if (TSTATUS(im_crit).eq.1) then
 
-                 if (LL.lt.zero) then
+                 if (LL.lt.zero) then ! freezing or condensation
                   TGRAD_test=TSAT-TMIN(im_crit)
-                 else if (LL.gt.zero) then
+                 else if (LL.gt.zero) then  ! melting or boiling
                   TGRAD_test=TMAX(im_crit)-TSAT
                  else
                   print *,"LL invalid"
                   stop
                  endif
+
+                  ! freezing_mod=0 (sharp interface stefan model)
+                  ! freezing_mod=1 (source term model)
+                  ! freezing_mod=2 (hydrate model)
+                  ! freezing_mod=3 (wildfire)
+                  ! freezing_mod=4 (source term model)
+                  ! freezing_mod=5 (evaporation/condensation)
 
                  if ((freezing_mod.eq.0).or. &
                      ((freezing_mod.eq.5).and.(TGRAD_test.gt.zero))) then

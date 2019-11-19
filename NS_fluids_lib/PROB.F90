@@ -29842,6 +29842,13 @@ end subroutine RatePhaseChange
          ! in: get_vel_phasechange
          ! fixed rate of phase change (sanity check)
         vel=vinletgas  ! MDOT/rho_src
+
+        ! freezing_mod=0 (sharp interface stefan model)
+        ! freezing_mod=1 (source term model)
+        ! freezing_mod=2 (hydrate model)
+        ! freezing_mod=3 (wildfire)
+        ! freezing_mod=4 (source term model)
+        ! freezing_mod=5 (evaporation/condensation)
        else if ((freezing_mod.eq.0).or. &
                 (freezing_mod.eq.5).or. &
                 (freezing_mod.eq.1)) then
