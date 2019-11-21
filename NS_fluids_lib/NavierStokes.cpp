@@ -501,6 +501,7 @@ Vector<Real> NavierStokes::outflow_velocity_buffer_size;
 Vector<Real> NavierStokes::cap_wave_speed;
 
 int NavierStokes::dual_time_activate=0;
+Real NavierStokes::dual_time_sound_speed=0.0;
 Real NavierStokes::dual_time_stepping_tau=0.0;
 Real NavierStokes::dual_time_stepping_coefficient=0.0;
 
@@ -2707,6 +2708,7 @@ NavierStokes::read_params ()
     pp.query("conservative_div_uu",conservative_div_uu);
 
     pp.query("dual_time_activate",dual_time_activate);
+    pp.query("dual_time_sound_speed",dual_time_sound_speed);
 
     pp.getarr("tension",tension,0,nten);
     for (int i=0;i<nten;i++) 
@@ -3488,6 +3490,8 @@ NavierStokes::read_params ()
 
      std::cout << "dual_time_activate=" << 
         dual_time_activate << '\n';
+     std::cout << "dual_time_sound_speed=" << 
+        dual_time_sound_speed << '\n';
      for (int i=0;i<AMREX_SPACEDIM;i++) {
       std::cout << "i,temperature_source_cen=" << i << ' ' <<
          temperature_source_cen[i] << '\n';

@@ -8559,6 +8559,7 @@ void NavierStokes::scale_variablesALL() {
    &projection_velocity_scale);
 
  dt_slab*=projection_velocity_scale;
+ dual_time_sound_speed/=projection_velocity_scale;
 
  int scale_flag=0;
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -8579,6 +8580,7 @@ void NavierStokes::unscale_variablesALL() {
  FORT_SETFORTSCALES(&dummy_scale,&dummy_scale);
 
  dt_slab/=projection_velocity_scale;
+ dual_time_sound_speed*=projection_velocity_scale;
 
  int scale_flag=1;
  for (int ilev=finest_level;ilev>=level;ilev--) {

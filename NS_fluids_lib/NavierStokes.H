@@ -1527,6 +1527,7 @@ protected:
       // 2 * 3 * rho_max * L^2/(4 * 9) =
       // rho_max * L^2/6
     static int dual_time_activate; // default is 0
+    static Real dual_time_sound_speed; // default is 0
     static Real dual_time_stepping_tau;
      // solver coefficient is volume(i,j,k)*dual_time_stepping_coefficient
     static Real dual_time_stepping_coefficient;
