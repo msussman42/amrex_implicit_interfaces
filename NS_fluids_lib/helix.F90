@@ -45,6 +45,7 @@ contains
  INTEGER_T im
  REAL_T LS(num_materials)
 
+  ! fluid materials tessellate the domain
  if ((num_materials.eq.3).and.(probtype.eq.401)) then
   do im=1,num_materials
    if (im.eq.1) then !liquid

@@ -1556,6 +1556,8 @@ stop
           stop
          else if (mass.eq.zero) then
           print *,"WARNING: FSI_flag(im_test)=1,2,4 mass=0"
+          print *,"im_test=",im_test
+          print *,"FSI_flag(im_test)=",FSI_flag(im_test)
           do dir=1,SDIM
            global_centroid(dir)=zero
           enddo

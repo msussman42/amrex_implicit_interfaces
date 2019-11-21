@@ -102,6 +102,7 @@ contains
  INTEGER_T in_droplet
  REAL_T minLS,tempLS
 
+  ! fluids tessellate the domain, solids are immersed. 
  if ((num_materials.eq.4).and. &
      (probtype.eq.402).and.  &
      (SDIM.eq.3)) then
@@ -142,7 +143,8 @@ contains
    stop
   endif
   LS(4)=zblob-x(SDIM)  ! substrate
-  LS(3)=radblob-abs(x(SDIM)-(zblob+radblob)) ! ice layer
+  LS(3)=radblob-abs(x(SDIM)-(zblob+radblob)) ! ice layer (tessellating ver)
+  LS(3)=zblob+two*radblob-x(SDIM) ! ice layer (non tessellating ver)
    ! gas
   tempLS=x(SDIM)-(zblob+two*radblob)
   if (tempLS.le.zero) then

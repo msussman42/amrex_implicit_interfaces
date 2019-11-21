@@ -1701,6 +1701,7 @@ stop
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use rigid_FSI_module
       IMPLICIT NONE
@@ -1798,6 +1799,11 @@ stop
         call HELIX_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
                HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
 
+       else if (probtype.eq.402) then
+      
+        call TSPRAY_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
+               HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
+      
        else if (probtype.eq.533) then
 
         call rigid_FSI_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
@@ -13930,6 +13936,7 @@ END SUBROUTINE Adist
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -13971,6 +13978,11 @@ END SUBROUTINE Adist
         call HELIX_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2) 
+       else if (probtype.eq.402) then  ! thermal spray
+        call TSPRAY_LS(xvec,time,LS)
+        call TSPRAY_STATE(xvec,time,LS,STATE)
+        ibase=(im-1)*num_state_material
+        temp=STATE(ibase+2)
        else if (probtype.eq.412) then ! user defined
         call CAV2Dstep_LS(xvec,time,LS)
         call CAV2Dstep_STATE(xvec,time,LS,STATE)
@@ -14140,6 +14152,7 @@ END SUBROUTINE Adist
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -14198,6 +14211,10 @@ END SUBROUTINE Adist
        else if (probtype.eq.401) then
         call HELIX_LS(xvec,time,LS)
         call HELIX_VEL(xvec,time,LS,vel,velsolid_flag)
+
+       else if (probtype.eq.402) then ! thermal spray
+        call TSPRAY_LS(xvec,time,LS)
+        call TSPRAY_VEL(xvec,time,LS,vel,velsolid_flag)
 
        else if (probtype.eq.412) then ! step
         call CAV2Dstep_LS(xvec,time,LS)
@@ -14899,6 +14916,7 @@ END SUBROUTINE Adist
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -15009,6 +15027,8 @@ END SUBROUTINE Adist
        call CAV3D_LS(x_in,initial_time,dist)
       else if (probtype.eq.401) then
        call HELIX_LS(x_in,initial_time,dist)
+      else if (probtype.eq.402) then
+       call TSPRAY_LS(x_in,initial_time,dist)
       else if (probtype.eq.412) then ! step
        call CAV2Dstep_LS(x_in,initial_time,dist)
       else if (probtype.eq.533) then
@@ -19162,6 +19182,7 @@ END SUBROUTINE Adist
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -19249,6 +19270,9 @@ END SUBROUTINE Adist
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.401) then
        call HELIX_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
+       call check_lsbc_extrap(LS,LSWALL,nmat)
+      else if (probtype.eq.402) then
+       call TSPRAY_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.412) then ! step
        call CAV2Dstep_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
@@ -24898,6 +24922,7 @@ END SUBROUTINE Adist
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -24976,6 +25001,10 @@ END SUBROUTINE Adist
        else if (probtype.eq.401) then
         call HELIX_LS(xvec,time,local_LS)
         call HELIX_VEL_BC(xwall,xvec,time,local_LS, &
+         velcell(veldir),vel,veldir,dir,side,dx)
+       else if (probtype.eq.402) then
+        call TSPRAY_LS(xvec,time,local_LS)
+        call TSPRAY_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
        else if (probtype.eq.412) then ! step
         call CAV2Dstep_LS(xvec,time,local_LS)
@@ -26226,6 +26255,7 @@ END SUBROUTINE Adist
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -26324,6 +26354,11 @@ END SUBROUTINE Adist
 
         call HELIX_LS(xpos,time,local_LS)
         call HELIX_PRES_BC(xwall,xpos,time,local_LS, &
+          ADV,ADVwall,dir,side,dx)
+       else if (probtype.eq.402) then
+
+        call TSPRAY_LS(xpos,time,local_LS)
+        call TSPRAY_PRES_BC(xwall,xpos,time,local_LS, &
           ADV,ADVwall,dir,side,dx)
        else if (probtype.eq.412) then ! step
         call CAV2Dstep_LS(xpos,time,local_LS)
@@ -26949,6 +26984,7 @@ END SUBROUTINE Adist
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -27093,6 +27129,12 @@ END SUBROUTINE Adist
 
         call HELIX_LS(xvec,time,local_LS)
         call HELIX_STATE_BC(xwall,xvec,time,local_LS, &
+          ADV,ADV_merge,ADVwall,im,istate,dir,side,dx) 
+
+       else if (probtype.eq.402) then
+
+        call TSPRAY_LS(xvec,time,local_LS)
+        call TSPRAY_STATE_BC(xwall,xvec,time,local_LS, &
           ADV,ADV_merge,ADVwall,im,istate,dir,side,dx) 
 
        else if (probtype.eq.412) then ! step
@@ -32783,6 +32825,7 @@ end subroutine initialize2d
        use USERDEF_module
        use CAV3D_module
        use HELIX_module
+       use TSPRAY_module
        use CAV2Dstep_module
        use CONE3D_module
        use WAVY_Channel_module
@@ -33384,6 +33427,9 @@ end subroutine initialize2d
        else if (probtype.eq.401) then
 
         call INIT_HELIX_MODULE()
+       else if (probtype.eq.402) then
+
+        call INIT_TSPRAY_MODULE()
        else if (probtype.eq.412) then
 
         call INIT_CAV2Dstep_MODULE()
@@ -37750,6 +37796,7 @@ end subroutine initialize2d
        use USERDEF_module
        use CAV3D_module
        use HELIX_module
+       use TSPRAY_module
        use CAV2Dstep_module
        use CONE3D_module
        use WAVY_Channel_module
@@ -37999,6 +38046,24 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call HELIX_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.402) then
+
+         call TSPRAY_LS(xpos,time,distbatch)
+         call TSPRAY_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+           ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call TSPRAY_PRES(xpos,time,distbatch,p_hyd)
          scalc(ipresbase+impres)=p_hyd
 
         else if (probtype.eq.412) then ! step
@@ -39274,6 +39339,7 @@ end subroutine initialize2d
       use USERDEF_module
       use CAV3D_module
       use HELIX_module
+      use TSPRAY_module
       use CAV2Dstep_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -39777,6 +39843,13 @@ end subroutine initialize2d
         else if (probtype.eq.401) then
          call HELIX_LS(xvec,time,distbatch)
          call HELIX_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.402) then
+         call TSPRAY_LS(xvec,time,distbatch)
+         call TSPRAY_VEL(xvec,time,distbatch,velcell,velsolid_flag)
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)

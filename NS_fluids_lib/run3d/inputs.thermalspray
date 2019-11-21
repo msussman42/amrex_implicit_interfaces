@@ -17,7 +17,7 @@ stop_time = 1.0
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0
-geometry.prob_hi   = 0.0003 0.0003 0.0001 # meters
+geometry.prob_hi   = 0.0003 0.0003 0.00015 # meters
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
 
@@ -60,10 +60,10 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
-# domain size is 300 x 300 x 100 (centimeters)
+# domain size is 0.0003 x 0.0003 x 0.00015 (meters)
 # minimum radius is 15
-amr.n_cell    = 96 96 32
-amr.max_level =  1  
+amr.n_cell    = 64 64 32
+amr.max_level =  0
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4   # number of buffer cells in error est
@@ -153,16 +153,7 @@ ns.tempconst=2995.0 2995.0 2895.0 473.0 # initial temperature of liquid/gas/ice
 ns.xblob=0.0  
 ns.yblob=0.0
 ns.zblob=0.000015 # substrate thickness.
-ns.xblob2=0.0 
-ns.yblob2=0.0
-ns.zblob2=0.0
-ns.subscale_len=0.04
-# 0.3/2.5=tan(radblob2)
-# radblob2=arctan(0.3/2.5)=0.119
-ns.radblob2=0.0
-ns.radblob3=0.0 
 ns.radblob=0.000015 # radius of initial ice layer.
-ns.radblob5=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=402

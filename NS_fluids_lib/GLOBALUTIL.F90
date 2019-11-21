@@ -8267,10 +8267,23 @@ contains
        if (is_rigid(nmat,im).eq.0) then
         ! do nothing
        else if (is_rigid(nmat,im).eq.1) then
-        if (LS(im).gt.solid_dist) then
+        if (im_solid_primary.eq.0) then
          solid_dist=LS(im)
          im_solid_primary=im
-        endif
+        else if ((im_solid_primary.ge.1).and.(im_solid_primary.le.nmat)) then
+         if (LS(im).gt.solid_dist) then
+          solid_dist=LS(im)
+          im_solid_primary=im
+         else if (LS(im).le.solid_dist) then
+          ! do nothing
+         else
+          print *,"LS(im) bust"
+          stop
+         endif
+        else
+         print *,"im_solid_primary invalid"
+         stop
+        endif 
        else
         print *,"is_rigid invalid"
         stop
