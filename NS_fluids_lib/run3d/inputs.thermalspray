@@ -40,6 +40,7 @@ ns.solidheat_flag=0
 ns.num_species_var=0
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
+ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 
 # multigrid class
 mg.verbose = 0

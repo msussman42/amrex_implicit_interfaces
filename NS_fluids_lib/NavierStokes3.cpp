@@ -7992,6 +7992,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // fortran pressure and velocity scales
    // dt_slab
+   // dual_time_sound_speed
    // s_new velocity
    // s_new pressure
    // div_new 
@@ -8233,65 +8234,91 @@ void NavierStokes::multiphase_project(int project_option) {
  for (int ilist=0;ilist<scomp.size();ilist++) 
   avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
 
- if ((project_option==0)||
-     (project_option==1)||
-     (project_option==10)|| // sync project at advection
-     (project_option==11)|| // FSI_material_exists (2nd project)
-     (project_option==12)|| // pressure extrapolation
-     (project_option==13)) { // FSI_material_exists (1st project)
-  if (dual_time_activate==0) {
-   dual_time_stepping_tau=0.0;
-   dual_time_stepping_coefficient=0.0;
-  } else if (dual_time_activate==1) {
+ Real maxden=denconst[0];
+ for (int im=1;im<nmat;im++) {
+  if (denconst[im]>maxden)
+   maxden=denconst[im];
+ }
 
-   Real maxden=denconst[0];
-   for (int im=1;im<nmat;im++) {
-    if (denconst[im]>maxden)
-     maxden=denconst[im];
-   }
+ if (maxden>0.0) {
 
-   if (maxden>0.0) {
-    Real problen_max=0.0;
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     Real problen_local=geom.ProbHi(dir)-
- 			geom.ProbLo(dir);
-     if (problen_local>0.0) {
-      if (problen_local>problen_max)
-       problen_max=problen_local;
-     } else
-      amrex::Error("problen_local invalid");
-    } // dir=0..sdim-1
-    if (problen_max>0.0) {
-      // heuristic: p_t=(1/rho)div grad p
-      // factor=exp(-k^2 t/rho)
-      // k=2 m pi/L   m=1
-      // 4 pi^2 t/L^2 = rho ln(factor)
-      // t = L^2 rho ln(factor)/(4 pi^2)
+  Real problen_max=0.0;
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   Real problen_local=geom.ProbHi(dir)-geom.ProbLo(dir);
+   if (problen_local>0.0) {
+    if (problen_local>problen_max)
+     problen_max=problen_local;
+   } else
+    amrex::Error("problen_local invalid");
+  } // dir=0..sdim-1
+
+  if (problen_max>0.0) {
+
+   if (dual_time_activate==0) {
+
+    dual_time_stepping_tau=0.0;
+    dual_time_stepping_coefficient=0.0;
+
+   } else if (dual_time_activate==1) {
+
+    dual_time_stepping_tau=0.0;
+
+    if ((project_option==0)||
+        (project_option==1)||
+        (project_option==10)|| // sync project at advection
+        (project_option==11)|| // FSI_material_exists (2nd project)
+        (project_option==12)|| // pressure extrapolation
+        (project_option==13)) { // FSI_material_exists (1st project)
+     // heuristic: p_t=(1/rho)div grad p
+     // factor=exp(-k^2 t/rho)
+     // k=2 m pi/L   m=1
+     // 4 pi^2 t/L^2 = rho ln(factor)
+     // t = L^2 rho ln(factor)/(4 pi^2)
      double dual_time_reduction_factor=1.0e-50;
      dual_time_stepping_tau= 
         maxden*problen_max*problen_max*
 	fabs(log(dual_time_reduction_factor))/(4.0*NS_PI*NS_PI);
+
+     if (dual_time_sound_speed>0.0) {
+      if ((project_option==0)||
+          (project_option==10)|| //sync project at advection
+          (project_option==11)|| //FSI_material_exists (2nd project)
+          (project_option==13)) { // FSI_material_exists (1st project)
+
+       dual_time_stepping_tau=
+        maxden*dual_time_sound_speed*dual_time_sound_speed*dt_slab*dt_slab;
+
+      } else if ((project_option==1)||
+                 (project_option==12)) { // pressure extrapolation
+       // do nothing
+      } else
+       amrex::Error("project_option invalid");
+
+     } else if (dual_time_sound_speed==0.0) {
+      // do nothing
+     } else
+      amrex::Error("dual_time_sound_speed invalid");
+
      if (dual_time_stepping_tau>0.0) {
       dual_time_stepping_coefficient=1.0/dual_time_stepping_tau;
      } else
       amrex::Error("dual_time_stepping_tau invalid");
 
+    } else if (project_option==3) {  // viscosity
+     dual_time_stepping_coefficient=0.0;
+    } else if (project_option==2) {  // thermal diffusion
+     dual_time_stepping_coefficient=0.0;
+    } else if ((project_option>=100)&&
+               (project_option<100+num_species_var)) {
+     dual_time_stepping_coefficient=0.0;
     } else
-     amrex::Error("problen_max invalid");
-
+     amrex::Error("project_option invalid301");
    } else
-    amrex::Error("maxden invalid");
+    amrex::Error("dual_time_activate invalid");
   } else
-   amrex::Error("dual_time_activate invalid");
- } else if (project_option==3) {  // viscosity
-  dual_time_stepping_coefficient=0.0;
- } else if (project_option==2) {  // thermal diffusion
-  dual_time_stepping_coefficient=0.0;
- } else if ((project_option>=100)&&
-            (project_option<100+num_species_var)) {
-  dual_time_stepping_coefficient=0.0;
+   amrex::Error("problen_max invalid");
  } else
-  amrex::Error("project_option invalid301");
+  amrex::Error("maxden invalid");
 
  prescribed_velocity_iter=0;
  int prescribed_velocity_iter_active=0;
