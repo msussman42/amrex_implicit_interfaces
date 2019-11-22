@@ -2682,7 +2682,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	ns_level.build_NRM_FD_MF(LS_NRM_FD_MF,HOLD_LS_DATA_MF,1);
        }
 
-        // BURNING_VELOCITY_MF flag==1 if valid rate of phase change.
+        // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
        for (int ilev=level;ilev<=finest_level;ilev++) {
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.level_phase_change_rate(blobdata,color_count);
@@ -2693,6 +2693,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
+	  // in: NavierStokes2.cpp
         ns_level.avgDownBURNING_localMF(BURNING_VELOCITY_MF);
         ns_level.avgDown(LS_Type,0,nmat,0);
        }

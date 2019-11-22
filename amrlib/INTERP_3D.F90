@@ -1111,18 +1111,17 @@ stop
       REAL_T testwt
 
       INTEGER_T dir
-      INTEGER_T im
+      INTEGER_T iten
       REAL_T xsten(-3:3,SDIM)
       REAL_T xstenfine(-3:3,SDIM)
       REAL_T xstengrid(-1:1,SDIM)
       INTEGER_T nhalf,nhalfgrid
       INTEGER_T n_overlap
 
-      REAL_T burn_fine(nburning)
-      REAL_T burn_fine_extend(nburning)
+      INTEGER_T iflag,iflag_sign,hitflag
+      REAL_T burn_fine(nburning,-2:2)
       REAL_T burn_coarse(nburning)
-      INTEGER_T n_burn(nten)
-      INTEGER_T n_burn_extend(nten)
+      INTEGER_T n_burn(nten,-2:2)
       INTEGER_T burnstat
       INTEGER_T bcomp
       REAL_T rburnstat
@@ -1175,14 +1174,16 @@ stop
       do kfine=growlo(3),growhi(3)
 
        do dir=1,nburning
-        burn_fine(dir)=zero
-        burn_fine_extend(dir)=zero
+        do iflag=-2,2
+         burn_fine(dir,iflag)=zero
+        enddo
        enddo
 
        n_overlap=0
-       do im=1,nten
-        n_burn(im)=0
-        n_burn_extend(im)=0
+       do iten=1,nten
+        do iflag=-2,2
+         n_burn(iten,iflag)=0
+        enddo
        enddo
 
        call coarse_subelement_stencil(ifine,jfine,kfine,stenlo,stenhi, &
@@ -1238,37 +1239,35 @@ stop
                endif
               enddo ! dir
 
-              do im=1,nten
-               rburnstat=burn_coarse(im)
+              do iten=1,nten
+               rburnstat=burn_coarse(iten)
                burnstat=NINT(rburnstat)
                if ((burnstat.eq.0).and.(rburnstat.eq.zero)) then
                 ! do nothing
-               else if ((burnstat.eq.1).and.(rburnstat.eq.one)) then
-                n_burn(im)=n_burn(im)+1
+               else if (((burnstat.eq.1).and.(rburnstat.eq.one)).or.  &
+                        ((burnstat.eq.2).and.(rburnstat.eq.two)).or.  &
+                        ((burnstat.eq.-1).and.(rburnstat.eq.-one)).or. &
+                        ((burnstat.eq.-2).and.(rburnstat.eq.-two))) then
+                n_burn(iten,burnstat)=n_burn(iten,burnstat)+1
                 do dir=1,SDIM
-                 bcomp=nten+(im-1)*SDIM+dir
-                 burn_fine(bcomp)= &
-                   burn_fine(bcomp)+burn_coarse(bcomp)
-                enddo ! dir
-               else if ((burnstat.eq.2).and.(rburnstat.eq.two)) then
-                n_burn_extend(im)=n_burn_extend(im)+1
-                do dir=1,SDIM
-                 bcomp=nten+(im-1)*SDIM+dir
-                 burn_fine_extend(bcomp)= &
-                   burn_fine_extend(bcomp)+burn_coarse(bcomp)
+                 bcomp=nten+(iten-1)*SDIM+dir
+                 burn_fine(bcomp,burnstat)= &
+                   burn_fine(bcomp,burnstat)+burn_coarse(bcomp)
                 enddo ! dir
                else
                 print *,"burnstat or rburnstatus invalid"
-                print *,"nmat,nten,im,burnstat,rburnstat ",  &
-                   nmat,nten,im,burnstat,rburnstat
-                print *,"n_burn(im) ",n_burn(im)
-                print *,"n_burn_extend(im) ",n_burn_extend(im)
-                print *,"n_overlap ",n_overlap
-                print *,"ifine,jfine,kfine ",ifine,jfine,kfine
-                print *,"ic,jc,kc ",ic,jc,kc
-                stop
+                print *,"nmat,nten,iten,burnstat,rburnstat ",  &
+                   nmat,nten,iten,burnstat,rburnstat
+                do iflag=-2,2
+                 print *,"iflag"
+                 print *,"n_burn(iten,iflag) ",n_burn(iten,iflag)
+                 print *,"n_overlap ",n_overlap
+                 print *,"ifine,jfine,kfine ",ifine,jfine,kfine
+                 print *,"ic,jc,kc ",ic,jc,kc
+                 stop
+                enddo ! iflag=-2,2
                endif
-              enddo ! im=1..nten
+              enddo ! iten=1..nten
 
              else if (testwt.eq.zero) then
               print *,"testwt cannot be 0"
@@ -1298,35 +1297,42 @@ stop
        endif
 
        if (n_overlap.ge.1) then
-        do im=1,nten
-         if ((n_burn(im).gt.0).and. &
-             (n_burn(im).le.n_overlap)) then
-          fburn(D_DECL(ifine,jfine,kfine),im)=one
+        do iten=1,nten
+         hitflag=0
+         do iflag=1,2
+          do iflag_sign=-1,1,2
+           if ((n_burn(iten,iflag*iflag_sign).gt.0).and. &
+               (n_burn(iten,iflag*iflag_sign).le.n_overlap).and. &
+               (hitflag.eq.0)) then
+            hitflag=1
+            fburn(D_DECL(ifine,jfine,kfine),iten)=iflag*iflag_sign
+            do dir=1,SDIM
+             bcomp=nten+(iten-1)*SDIM+dir
+             fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
+              burn_fine(bcomp,iflag*iflag_sign)/n_burn(iten,iflag*iflag_sign)
+            enddo
+           else if (n_burn(iten,iflag*iflag_sign).eq.0) then
+            ! do nothing
+           else
+            print *,"n_burn(iten,iflag*iflag_sign) invalid"
+            stop
+           endif
+          enddo ! iflag_sign=-1,1
+         enddo ! iflag=1,2
+
+         if (hitflag.eq.0) then
+          fburn(D_DECL(ifine,jfine,kfine),iten)=zero
           do dir=1,SDIM
-           bcomp=nten+(im-1)*SDIM+dir
-           fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
-             burn_fine(bcomp)/n_burn(im)
-          enddo
-         else if ((n_burn_extend(im).gt.0).and. &
-                  (n_burn_extend(im).le.n_overlap)) then
-          fburn(D_DECL(ifine,jfine,kfine),im)=two
-          do dir=1,SDIM
-           bcomp=nten+(im-1)*SDIM+dir
-           fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
-             burn_fine_extend(bcomp)/n_burn_extend(im)
-          enddo
-         else if ((n_burn(im).eq.0).and. &
-                  (n_burn_extend(im).eq.0)) then
-          fburn(D_DECL(ifine,jfine,kfine),im)=zero
-          do dir=1,SDIM
-           bcomp=nten+(im-1)*SDIM+dir
+           bcomp=nten+(iten-1)*SDIM+dir
            fburn(D_DECL(ifine,jfine,kfine),bcomp)=zero
           enddo
-         else
-          print *,"n_burn or n_burn_extend invalid"
+         else if (hitflag.gt.0) then
+          ! dio nothing
+         else     
+          print *,"n_burn invalid"
           stop
          endif
-        enddo ! im
+        enddo ! iten=1..nten
        else
         print *,"n_overlap invalid"
         stop

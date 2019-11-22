@@ -8567,7 +8567,7 @@ END SUBROUTINE SIMP
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
       INTEGER_T dir2
-      INTEGER_T im
+      INTEGER_T iten
       INTEGER_T n
       REAL_T voltotal
       REAL_T volall
@@ -8577,6 +8577,7 @@ END SUBROUTINE SIMP
       INTEGER_T coarse_test
       REAL_T velwt(nten)
       INTEGER_T local_comp
+      INTEGER_T avgdown_sweep
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -8628,103 +8629,149 @@ END SUBROUTINE SIMP
        do n=1,ncomp
         crse_value(n)=zero
        enddo
-       do im=1,nten
-        velwt(im)=zero
-       enddo
-       voltotal=zero
 
        call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
         bfact_c,bfact_f)
 
-       do ifine=stenlo(1),stenhi(1)
-        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-        if (wt(1).gt.zero) then
-         do jfine=stenlo(2),stenhi(2)
-          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-          if (wt(2).gt.zero) then
-           do kfine=stenlo(3),stenhi(3)
-            if (SDIM.eq.3) then
-             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-            endif
-            if (wt(SDIM).gt.zero) then
-             volall=wt(1)
-             do dir2=2,SDIM
-              volall=volall*wt(dir2)
-             enddo
-             if (volall.le.zero) then
-              print *,"volall invalid"
-              stop
+       do avgdown_sweep=0,1
+
+        do iten=1,nten
+         velwt(iten)=zero
+        enddo
+        voltotal=zero
+
+        do ifine=stenlo(1),stenhi(1)
+         call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+         if (wt(1).gt.zero) then
+          do jfine=stenlo(2),stenhi(2)
+           call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+           if (wt(2).gt.zero) then
+            do kfine=stenlo(3),stenhi(3)
+             if (SDIM.eq.3) then
+              call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
              endif
-
-             do im=1,nten
-              fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),im))
-              coarse_test=NINT(crse_value(im))
-
-              if ((coarse_test.eq.0).or. &
-                  (coarse_test.eq.1)) then
-
-               if (fine_test.eq.0) then
-                ! do nothing
-               else if (fine_test.eq.1) then
-                velwt(im)=velwt(im)+volall
-                crse_value(im)=one
-                do dir2=1,SDIM
-                 local_comp=nten+(im-1)*SDIM+dir2
-                 crse_value(local_comp)=crse_value(local_comp)+ &
-                  volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-                enddo
-               else
-                print *,"fine_test bad (avgdown burning): ",fine_test
-                stop
-               endif
-              else
-               print *,"coarse_test invalid"
+             if (wt(SDIM).gt.zero) then
+              volall=wt(1)
+              do dir2=2,SDIM
+               volall=volall*wt(dir2)
+              enddo
+              if (volall.le.zero) then
+               print *,"volall invalid"
                stop
               endif
-             enddo ! im=1..nten
 
-             voltotal=voltotal+volall
-            endif ! wt(sdim).gt.0
-           enddo ! kfine
-          endif
-         enddo ! jfine
-        endif
-       enddo ! ifine
+              do iten=1,nten
+               fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),iten))
+               coarse_test=NINT(crse_value(iten))
 
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid"
-        stop
-       endif
+               if (avgdown_sweep.eq.0) then
 
-       do im=1,nten
+                if (coarse_test.eq.0) then 
+                 coarse_test=fine_test
+                else if (fine_test.eq.0) then
+                 ! do nothing
+                else if ((fine_test.eq.1).or.(fine_test.eq.-1)) then
+                 coarse_test=fine_test
+                else
+                 print *,"fine_test invalid"
+                 stop
+                endif
 
-        coarse_test=NINT(crse_value(im))
-        if (coarse_test.eq.0) then
-         if (velwt(im).ne.zero) then
-          print *,"velwt invalid"
-          stop
+                if ((coarse_test.eq.1).or. &
+                    (coarse_test.eq.-1)) then
+                 crse_value(iten)=coarse_test
+                else if (coarse_test.eq.0) then
+                 ! do nothing (crse_value init. to zero)
+                else
+                 print *,"coarse_test invalid"
+                 stop
+                endif
+
+               else if (avgdown_sweep.eq.1) then
+
+                if ((coarse_test.eq.0).or. &
+                    (coarse_test.eq.1).or. &
+                    (coarse_test.eq.-1)) then
+
+                 if (fine_test.eq.0) then
+                  ! do nothing
+                 else if (fine_test.eq.coarse_test) then
+                  velwt(iten)=velwt(iten)+volall
+                  do dir2=1,SDIM
+                   local_comp=nten+(iten-1)*SDIM+dir2
+                   crse_value(local_comp)=crse_value(local_comp)+ &
+                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
+                  enddo
+                 else
+                  print *,"fine_test bad (avgdown burning): ",fine_test
+                  stop
+                 endif
+                else
+                 print *,"coarse_test invalid"
+                 stop
+                endif
+               else 
+                print *,"avgdown_sweep invalid"
+                stop
+               endif
+              enddo ! iten=1..nten
+
+              voltotal=voltotal+volall
+             endif ! wt(sdim).gt.0
+            enddo ! kfine
+           endif
+          enddo ! jfine
          endif
-         crse(D_DECL(ic,jc,kc),im)=zero
-         do dir2=1,SDIM
-          crse(D_DECL(ic,jc,kc),nten+(im-1)*SDIM+dir2)=zero
-         enddo
-        else if (coarse_test.eq.1) then
-         if (velwt(im).gt.zero) then
-          crse(D_DECL(ic,jc,kc),im)=one
-          do dir2=1,SDIM
-           crse(D_DECL(ic,jc,kc),nten+(im-1)*SDIM+dir2)= &
-            crse_value(nten+(im-1)*SDIM+dir2)/velwt(im)
-          enddo
-         else
-          print *,"velwt invalid"
-          stop
-         endif
-        else
-         print *,"coarse_test invalid"
+        enddo ! ifine
+
+        if (voltotal.le.zero) then
+         print *,"voltotal invalid"
          stop
         endif
 
-       enddo ! im=1..nten
+        if (avgdown_sweep.eq.0) then
+         ! do nothing
+        else if (avgdown_sweep.eq.1) then
+
+         do iten=1,nten
+
+          coarse_test=NINT(crse_value(iten))
+          if (coarse_test.eq.0) then
+           if (velwt(iten).eq.zero) then
+            ! do nothing
+           else
+            print *,"velwt invalid"
+            stop
+           endif
+           crse(D_DECL(ic,jc,kc),iten)=zero
+           do dir2=1,SDIM
+            crse(D_DECL(ic,jc,kc),nten+(iten-1)*SDIM+dir2)=zero
+           enddo
+          else if ((coarse_test.eq.1).or. &
+                   (coarse_test.eq.-1)) then
+           if (velwt(iten).gt.zero) then
+            crse(D_DECL(ic,jc,kc),iten)=coarse_test
+            do dir2=1,SDIM
+             crse(D_DECL(ic,jc,kc),nten+(iten-1)*SDIM+dir2)= &
+              crse_value(nten+(iten-1)*SDIM+dir2)/velwt(iten)
+            enddo
+           else
+            print *,"velwt invalid"
+            stop
+           endif
+          else
+           print *,"coarse_test invalid"
+           stop
+          endif
+
+         enddo ! iten=1..nten
+
+        else 
+         print *,"avgdown_sweep invalid"
+         stop
+        endif
+
+       enddo ! avgdown_sweep=0..1
 
       enddo
       enddo

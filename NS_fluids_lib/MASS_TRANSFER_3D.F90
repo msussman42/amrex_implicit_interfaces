@@ -1294,7 +1294,8 @@ stop
           tag_local=NINT(ucell(D_DECL(i-i1,j-j1,k-k1),imcrit))
           if (tag_local.eq.0) then
            ! do nothing
-          else if ((tag_local.eq.1).or.(tag_local.eq.2)) then
+          else if ((abs(tag_local).eq.1).or. &
+                   (abs(tag_local).eq.2)) then
            scomp=nten+(imcrit-1)*SDIM+dir
            velnd=velnd+ucell(D_DECL(i-i1,j-j1,k-k1),scomp)
            totalwt=totalwt+one
@@ -3304,7 +3305,8 @@ stop
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
 
       INTEGER_T im,im_opp
-      INTEGER_T iten,ireverse,im_dest,im_source
+      INTEGER_T iten,ireverse,sign_local
+      INTEGER_T im_dest,im_source
       INTEGER_T i,j,k,dir
       INTEGER_T i_sp,j_sp,k_sp
       INTEGER_T sten_lo(3)
@@ -3491,7 +3493,17 @@ stop
                do k_sp = sten_lo(3),sten_hi(3)
                 rtag_local=vel(D_DECL(i_sp,j_sp,k_sp),iten) 
                 tag_local=NINT(rtag_local) 
-                if ((tag_local.eq.1).and.(rtag_local.eq.one)) then
+                if (ireverse.eq.0) then
+                 sign_local=1
+                else if (ireverse.eq.1) then
+                 sign_local=-1
+                else
+                 print *,"ireverse invalid"
+                 stop
+                endif
+
+                if ((tag_local.eq.sign_local).and. &
+                    (rtag_local.eq.sign_local)) then
                  call gridsten_level(xsp,i_sp,j_sp,k_sp,level,nhalf)
 
                  weight=zero
@@ -3508,8 +3520,12 @@ stop
                  enddo
                 else if ((tag_local.eq.0).and.(rtag_local.eq.zero)) then
                  ! do nothing
-                else if ((tag_local.eq.2).and.(rtag_local.eq.two)) then
+                else if ((abs(tag_local).eq.2).and. &
+                         (abs(rtag_local).eq.two)) then
                  ! do nothing (this is a newly extended rate)
+                else if ((abs(tag_local).eq.1).and. &
+                         (abs(rtag_local).eq.one)) then
+                 ! do nothing (this is opposite sign)
                 else
                  print *,"tag_local or rtag_local invalid1:", &
                     tag_local,rtag_local
@@ -4854,7 +4870,14 @@ stop
              ! (m^3/kg)(kelvin/m)kg(1/m)(1/s)(1/kelvin)=
              ! m/s 
             if ((im_dest.ge.1).and.(im_dest.le.nmat)) then
-             burnvel(D_DECL(i,j,k),iten)=one
+             if (ireverse.eq.0) then
+              burnvel(D_DECL(i,j,k),iten)=one
+             else if (ireverse.eq.1) then
+              burnvel(D_DECL(i,j,k),iten)=-one
+             else
+              print *,"ireverse invalid"
+              stop
+             endif
              do dir=1,SDIM
               burnvel(D_DECL(i,j,k),nten+(iten-1)*SDIM+dir)= &
                 SIGNVEL*nrmFD(dir)*vel_phasechange(ireverse)
@@ -4881,7 +4904,8 @@ stop
            burnflag=NINT(burnvel(D_DECL(i,j,k),iten))
            if (burnflag.eq.0) then
             ! do nothing
-           else if (burnflag.eq.1) then
+           else if ((burnflag.eq.1).or. &
+                    (burnflag.eq.-1)) then
             local_velmag=zero
             do dir=1,SDIM
              local_velmag=local_velmag+ &
