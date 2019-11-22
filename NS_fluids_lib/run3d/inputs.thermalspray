@@ -20,6 +20,8 @@ geometry.prob_lo   =  0.0 0.0 0.0
 geometry.prob_hi   = 0.0003 0.0003 0.00015 # meters
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
+ns.dual_time_activate=0
+ns.dual_time_sound_speed=1500.0e+10 # sound speed of water cm/s is 150000.0
 
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # 0=no limiter 1=minmod
@@ -72,7 +74,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 4       # block factor in grid generation
 amr.check_int       = 50     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 50
+amr.plot_int        = 25
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 32
@@ -99,7 +101,9 @@ ns.use_lsa=0
 # Mo (not Ni)
 # N/m
 # LV,L S,L S2, V S, V S2, S S2
-ns.tension = 2.1 2.1 2.1 2.1 2.1 2.1 # 12 - liquid/vapor
+#ns.tension = 2.1 2.1 2.1 2.1 2.1 2.1 # 12 - liquid/vapor
+# tame parameters:
+ns.tension = 0.021 0.021 0.021 0.021 0.021 0.021 # 12 - liquid/vapor
 ns.stiffCP=570.0 114.0 339.0 339.0 # J/(kg K)
 #ns.latent_heat = -3.34e+9 0.0 # 12,21 liquid-> ice, ice -> liquid FREEZING
 # <0 if condensation or solidification
