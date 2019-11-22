@@ -1180,6 +1180,7 @@ stop
        enddo
 
        n_overlap=0
+
        do iten=1,nten
         do iflag=-2,2
          n_burn(iten,iflag)=0
@@ -1243,7 +1244,7 @@ stop
                rburnstat=burn_coarse(iten)
                burnstat=NINT(rburnstat)
                if ((burnstat.eq.0).and.(rburnstat.eq.zero)) then
-                ! do nothing
+                ! do nothing (burn_fine and n_burn already init to 0)
                else if (((burnstat.eq.1).and.(rburnstat.eq.one)).or.  &
                         ((burnstat.eq.2).and.(rburnstat.eq.two)).or.  &
                         ((burnstat.eq.-1).and.(rburnstat.eq.-one)).or. &
@@ -1259,7 +1260,7 @@ stop
                 print *,"nmat,nten,iten,burnstat,rburnstat ",  &
                    nmat,nten,iten,burnstat,rburnstat
                 do iflag=-2,2
-                 print *,"iflag"
+                 print *,"iflag ",iflag
                  print *,"n_burn(iten,iflag) ",n_burn(iten,iflag)
                  print *,"n_overlap ",n_overlap
                  print *,"ifine,jfine,kfine ",ifine,jfine,kfine
@@ -1301,20 +1302,26 @@ stop
          hitflag=0
          do iflag=1,2
           do iflag_sign=-1,1,2
-           if ((n_burn(iten,iflag*iflag_sign).gt.0).and. &
-               (n_burn(iten,iflag*iflag_sign).le.n_overlap).and. &
-               (hitflag.eq.0)) then
-            hitflag=1
-            fburn(D_DECL(ifine,jfine,kfine),iten)=iflag*iflag_sign
-            do dir=1,SDIM
-             bcomp=nten+(iten-1)*SDIM+dir
-             fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
-              burn_fine(bcomp,iflag*iflag_sign)/n_burn(iten,iflag*iflag_sign)
-            enddo
-           else if (n_burn(iten,iflag*iflag_sign).eq.0) then
+           if (hitflag.eq.0) then
+            if ((n_burn(iten,iflag*iflag_sign).gt.0).and. &
+                (n_burn(iten,iflag*iflag_sign).le.n_overlap)) then
+             hitflag=1
+             fburn(D_DECL(ifine,jfine,kfine),iten)=iflag*iflag_sign
+             do dir=1,SDIM
+              bcomp=nten+(iten-1)*SDIM+dir
+              fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
+               burn_fine(bcomp,iflag*iflag_sign)/n_burn(iten,iflag*iflag_sign)
+             enddo
+            else if (n_burn(iten,iflag*iflag_sign).eq.0) then
+             ! do nothing
+            else
+             print *,"n_burn(iten,iflag*iflag_sign) invalid"
+             stop
+            endif
+           else if (hitflag.eq.1) then
             ! do nothing
            else
-            print *,"n_burn(iten,iflag*iflag_sign) invalid"
+            print *,"hitflag invalid"
             stop
            endif
           enddo ! iflag_sign=-1,1
@@ -1326,13 +1333,15 @@ stop
            bcomp=nten+(iten-1)*SDIM+dir
            fburn(D_DECL(ifine,jfine,kfine),bcomp)=zero
           enddo
-         else if (hitflag.gt.0) then
-          ! dio nothing
+         else if (hitflag.eq.1) then
+          ! do nothing
          else     
-          print *,"n_burn invalid"
+          print *,"hitflag invalid"
           stop
          endif
+
         enddo ! iten=1..nten
+
        else
         print *,"n_overlap invalid"
         stop

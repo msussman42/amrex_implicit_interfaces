@@ -29786,7 +29786,7 @@ end subroutine RatePhaseChange
       REAL_T, intent(in) :: VOFsrc,VOFdst
 
       REAL_T DTsrc,DTdst
-      REAL_T velsrc,veldst
+      REAL_T velsrc,veldst,velsum
       REAL_T velsrc_micro,veldst_micro
       REAL_T psi_upper,psi_lower,micro_slope
       REAL_T gamma_tanasawa
@@ -30044,14 +30044,17 @@ end subroutine RatePhaseChange
          stop
         endif
 
-        if (velsrc.lt.zero) then
-         velsrc=zero
-        endif
-        if (veldst.lt.zero) then
-         veldst=zero
-        endif
- 
-        vel=velsrc+veldst
+        velsum=velsrc+veldst
+        if (velsum.gt.zero) then
+         ! do nothing
+        else if (velsum.le.zero) then
+         velsum=zero
+        else
+         print *,"velsum invalid"
+         stop
+        endif 
+
+        vel=velsum
 
        else if (freezing_mod.eq.4) then
 

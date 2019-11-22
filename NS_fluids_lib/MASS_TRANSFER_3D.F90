@@ -1205,7 +1205,7 @@ stop
       REAL_T xstenND(-3:3,SDIM)
      
       INTEGER_T i,j,k,klosten,khisten,i1,j1,k1
-      INTEGER_T dir,imcrit
+      INTEGER_T dir,itencrit
 
       REAL_T delta,velnd,totalwt
       INTEGER_T scomp,tag_local,nhalf
@@ -1283,7 +1283,7 @@ stop
       do k=growlo(3),growhi(3)
 
        call gridstenND_level(xstenND,i,j,k,level,nhalf)
-       do imcrit=1,nten
+       do itencrit=1,nten
 
         do dir=1,SDIM
          velnd=zero
@@ -1291,12 +1291,12 @@ stop
          do i1=0,1
          do j1=0,1
          do k1=klosten,khisten
-          tag_local=NINT(ucell(D_DECL(i-i1,j-j1,k-k1),imcrit))
+          tag_local=NINT(ucell(D_DECL(i-i1,j-j1,k-k1),itencrit))
           if (tag_local.eq.0) then
            ! do nothing
           else if ((abs(tag_local).eq.1).or. &
                    (abs(tag_local).eq.2)) then
-           scomp=nten+(imcrit-1)*SDIM+dir
+           scomp=nten+(itencrit-1)*SDIM+dir
            velnd=velnd+ucell(D_DECL(i-i1,j-j1,k-k1),scomp)
            totalwt=totalwt+one
           else
@@ -1347,10 +1347,10 @@ stop
           print *,"levelrz invalid node displace 3"
           stop
          endif
-         scomp=(imcrit-1)*SDIM+dir
+         scomp=(itencrit-1)*SDIM+dir
          unode(D_DECL(i,j,k),scomp)=delta
         enddo ! dir
-       enddo ! imcrit
+       enddo ! itencrit
 
       enddo
       enddo
@@ -3388,9 +3388,11 @@ stop
          if (ireverse.eq.0) then
           im_source=im
           im_dest=im_opp
+          sign_local=1
          else if (ireverse.eq.1) then
           im_source=im_opp
           im_dest=im
+          sign_local=-1
          else
           print *,"ireverse invalid"
           stop
@@ -3493,14 +3495,6 @@ stop
                do k_sp = sten_lo(3),sten_hi(3)
                 rtag_local=vel(D_DECL(i_sp,j_sp,k_sp),iten) 
                 tag_local=NINT(rtag_local) 
-                if (ireverse.eq.0) then
-                 sign_local=1
-                else if (ireverse.eq.1) then
-                 sign_local=-1
-                else
-                 print *,"ireverse invalid"
-                 stop
-                endif
 
                 if ((tag_local.eq.sign_local).and. &
                     (rtag_local.eq.sign_local)) then
@@ -3523,8 +3517,8 @@ stop
                 else if ((abs(tag_local).eq.2).and. &
                          (abs(rtag_local).eq.two)) then
                  ! do nothing (this is a newly extended rate)
-                else if ((abs(tag_local).eq.1).and. &
-                         (abs(rtag_local).eq.one)) then
+                else if ((tag_local.eq.-sign_local).and. &
+                         (rtag_local.eq.-sign_local)) then
                  ! do nothing (this is opposite sign)
                 else
                  print *,"tag_local or rtag_local invalid1:", &
@@ -3540,7 +3534,7 @@ stop
                  scomp=nten+(iten-1)*SDIM+dir
                  vel(D_DECL(i,j,k),scomp)=vel_sum(dir)/total_weight
                 enddo
-                vel(D_DECL(i,j,k),iten)=two
+                vel(D_DECL(i,j,k),iten)=two*sign_local
                else if (total_weight.eq.zero) then
                 ! do nothing
                else
@@ -3549,6 +3543,8 @@ stop
                endif
               endif ! min(|ls_w|,|ls_i|)<extension width
              else if ((tag_local.eq.1).and.(rtag_local.eq.one)) then
+              ! do nothing
+             else if ((tag_local.eq.-1).and.(rtag_local.eq.-one)) then
               ! do nothing
              else
               print *,"tag_local or rtag_local invalid2:", &
@@ -3781,7 +3777,7 @@ stop
       INTEGER_T icolor,base_type,ic,im1,im2
       REAL_T normal_probe_factor
 #if (STANDALONE==1)
-      REAL_T DTsrc,DTdst,velsrc,veldst
+      REAL_T DTsrc,DTdst,velsrc,veldst,velsum
 #endif
 
       nhalf=3
@@ -4687,9 +4683,17 @@ stop
                     DTdst=tempdst-Tsat
                     velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe)
                     veldst=kdest*DTdst/(LL(ireverse)*dxprobe)
-                    velsrc=abs(velsrc)
-                    veldst=abs(veldst)
-                    vel_phasechange(ireverse)=velsrc+veldst
+                   
+                    velsum=velsrc+veldst
+                    if (velsum.gt.zero) then
+                     ! do nothing
+                    else if (velsum.le.zero) then
+                     velsum=zero
+                    else
+                     print *,"velsum invalid"
+                     stop
+                    endif 
+                    vel_phasechange(ireverse)=velsum
                    else
                     print *,"freezing_mod invalid"
                     stop
@@ -4894,8 +4898,8 @@ stop
             stop
            endif
 
-          enddo ! im_opp
-         enddo ! im
+          enddo ! im_opp=im+1,nmat
+         enddo ! im=1,nmat-1
 
          velmag_sum=zero
          do im=1,nmat-1

@@ -8662,7 +8662,7 @@ END SUBROUTINE SIMP
 
               do iten=1,nten
                fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),iten))
-               coarse_test=NINT(crse_value(iten))
+               coarse_test=NINT(crse_value(iten)) ! crse_value init to 0
 
                if (avgdown_sweep.eq.0) then
 

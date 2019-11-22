@@ -2645,6 +2645,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // first nten components correspond to the status.
        int nburning=nten*(AMREX_SPACEDIM+1);
 
+        // BURNING_VELOCITY_MF is passed to the following fortran
+        // routines:
+        //  AVGDOWN_BURNING, 
+        //  EXT_BURNVEL_INTERP,
+        //  RATEMASSCHANGE,
+        //  EXTEND_BURNING_VEL,
+        //  NODEDISPLACE
        for (int ilev=level;ilev<=finest_level;ilev++) {
 
         NavierStokes& ns_level=getLevel(ilev);
