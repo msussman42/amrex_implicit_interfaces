@@ -181,12 +181,14 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T VEL(SDIM)
+ REAL_T, intent(in) :: x(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(in) :: LS(num_materials)
+ REAL_T, intent(out) :: VEL(SDIM)
  INTEGER_T dir
- INTEGER_T velsolid_flag
+ INTEGER_T, intent(in) :: velsolid_flag
+ REAL_T max_drop_rad,local_rad
+ INTEGER_T nd
 
  if ((velsolid_flag.eq.0).or. &
      (velsolid_flag.eq.1)) then
@@ -201,11 +203,34 @@ contains
      (SDIM.eq.3)) then
   if ((adv_dir.ge.1).and.(adv_dir.le.SDIM)) then
    if (adv_vel.eq.zero) then
-    do dir=1,SDIM
-     VEL(dir)=zero
-    enddo
-    if (LS(1).ge.zero) then
-     VEL(SDIM)=advbot
+    if (advbot.lt.zero) then
+     max_drop_rad=zero
+     if (T_num_drops.gt.0) then
+      do nd=1,T_num_drops
+       local_rad=drop_data(nd,4)
+       if (local_rad.gt.zero) then
+        if (local_rad.gt.max_drop_rad) then
+         max_drop_rad=local_rad
+        endif
+       else 
+        print *,"local_rad should be positive"
+        stop
+       endif
+      enddo ! nd=1..T_num_drops
+     else
+      print *,"expecting T_num_drops positive"
+      stop
+     endif
+
+     do dir=1,SDIM
+      VEL(dir)=zero
+     enddo
+     if (LS(1)+max_drop_rad/ten.ge.zero) then
+      VEL(SDIM)=advbot
+     endif
+    else
+     print *,"expecting advbot<0"
+     stop
     endif
    else
     print *,"expecting adv_vel=0 in TSPRAY_VEL"

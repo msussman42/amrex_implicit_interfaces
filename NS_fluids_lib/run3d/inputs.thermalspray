@@ -132,7 +132,7 @@ ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=263  # not used
 # initial falling (downward) speed of liquid drop
-ns.advbot=125.0 # m/s
+ns.advbot=-125.0 # m/s
 ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
