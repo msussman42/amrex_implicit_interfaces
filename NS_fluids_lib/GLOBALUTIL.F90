@@ -3587,8 +3587,16 @@ contains
          else if ((m_in_crit.eq.0).and.(m_out_crit.eq.0)) then
           ! do nothing
          else
-          print *,"m_in_crit or m_out_crit invalid"
-          stop
+          print *,"WARNING m_in_crit or m_out_crit invalid"
+          print *,"dimension= ",SDIM
+          print *,"tessellate= ",tessellate
+          print *,"m_in_crit= ",m_in_crit
+          print *,"m_out_crit= ",m_out_crit
+          do m = 1,nmat
+           print *,"m,local_frac_inside,local_frac_outside ", &
+               m,local_frac_inside(m),local_frac_outside(m)
+          enddo
+!         stop
          endif
 
         enddo ! while (change==1)

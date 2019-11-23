@@ -3587,8 +3587,16 @@ contains
          else if ((m_in_crit.eq.0).and.(m_out_crit.eq.0)) then
           ! do nothing
          else
-          print *,"m_in_crit or m_out_crit invalid"
-          stop
+          print *,"WARNING m_in_crit or m_out_crit invalid"
+          print *,"dimension= ",SDIM
+          print *,"tessellate= ",tessellate
+          print *,"m_in_crit= ",m_in_crit
+          print *,"m_out_crit= ",m_out_crit
+          do m = 1,nmat
+           print *,"m,local_frac_inside,local_frac_outside ", &
+               m,local_frac_inside(m),local_frac_outside(m)
+          enddo
+!         stop
          endif
 
         enddo ! while (change==1)
@@ -8267,10 +8275,23 @@ contains
        if (is_rigid(nmat,im).eq.0) then
         ! do nothing
        else if (is_rigid(nmat,im).eq.1) then
-        if (LS(im).gt.solid_dist) then
+        if (im_solid_primary.eq.0) then
          solid_dist=LS(im)
          im_solid_primary=im
-        endif
+        else if ((im_solid_primary.ge.1).and.(im_solid_primary.le.nmat)) then
+         if (LS(im).gt.solid_dist) then
+          solid_dist=LS(im)
+          im_solid_primary=im
+         else if (LS(im).le.solid_dist) then
+          ! do nothing
+         else
+          print *,"LS(im) bust"
+          stop
+         endif
+        else
+         print *,"im_solid_primary invalid"
+         stop
+        endif 
        else
         print *,"is_rigid invalid"
         stop

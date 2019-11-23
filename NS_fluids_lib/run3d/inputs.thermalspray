@@ -65,7 +65,7 @@ ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 # domain size is 0.0003 x 0.0003 x 0.00015 (meters)
 # minimum radius is 15
 amr.n_cell    = 64 64 32
-amr.max_level =  0
+amr.max_level =  1
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4   # number of buffer cells in error est
@@ -100,10 +100,13 @@ ns.use_lsa=0
 # material 1=liquid 2=gas  3=ice 4=substrate
 # Mo (not Ni)
 # N/m
-# LV,L S,L S2, V S, V S2, S S2
-#ns.tension = 2.1 2.1 2.1 2.1 2.1 2.1 # 12 - liquid/vapor
-# tame parameters:
-ns.tension = 0.021 0.021 0.021 0.021 0.021 0.021 # 12 - liquid/vapor
+# Liquid-Vapor,
+# Liquid-ice,
+# Liquid-Solid, 
+# Vapor-ice, 
+# Vapor-solid, 
+# ice-solid
+ns.tension = 2.1 2.1 2.1 3.58 3.58 2.1 # 12 - liquid/vapor
 ns.stiffCP=570.0 114.0 339.0 339.0 # J/(kg K)
 #ns.latent_heat = -3.34e+9 0.0 # 12,21 liquid-> ice, ice -> liquid FREEZING
 # <0 if condensation or solidification
