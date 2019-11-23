@@ -44,27 +44,48 @@ contains
  INTEGER_T nd
 
  if ((num_materials.eq.4).and. &
-     (probtype.eq.402).and. &
-     (SDIM.eq.3)) then
-  print *,"opening: inputs_data_file_Zeyu"
+     (probtype.eq.402)) then
+  if (SDIM.eq.3) then
+   print *,"opening: inputs_data_file_Zeyu"
    ! this file has to be able to be opened by multiple processes.
-  open(unit=2,file='inputs_data_file_Zeyu')
+   open(unit=2,file='inputs_data_file_Zeyu')
+  else if (SDIM.eq.2) then
+   print *,"opening: inputs2d_data_file_Zeyu"
+   ! this file has to be able to be opened by multiple processes.
+   open(unit=2,file='inputs2d_data_file_Zeyu')
+  else
+   print *,"dimension invalid"
+   stop
+  endif
   print *,"reading expected domain size TDOMAIN"
   read(2,*) TDOMAIN(1),TDOMAIN(2),TDOMAIN(3)
   print *,"TDOMAIN= ",TDOMAIN(1),TDOMAIN(2),TDOMAIN(3)
-  if ((abs(TDOMAIN(1)-probhix).le.1.0E-10).and. &
-      (abs(TDOMAIN(2)-probhiy).le.1.0E-10).and. &
-      (abs(TDOMAIN(3)-probhiz).le.1.0E-10)) then
-   ! do nothing
+
+  if (SDIM.eq.3) then
+   if ((abs(TDOMAIN(1)-probhix).le.1.0E-10).and. &
+       (abs(TDOMAIN(2)-probhiy).le.1.0E-10).and. &
+       (abs(TDOMAIN(3)-probhiz).le.1.0E-10)) then
+    ! do nothing
+   else
+    print *,"TDOMAIN invalid"
+    stop
+   endif
+  else if (SDIM.eq.2) then
+   if (abs(TDOMAIN(3)-probhiy).le.1.0E-10) then
+    ! do nothing
+   else
+    print *,"TDOMAIN invalid"
+    stop
+   endif
   else
-   print *,"TDOMAIN invalid"
+   print *,"dimension invalid"
    stop
   endif
 
   print *,"reading the number of drops"
   read(2,*) T_num_drops
   print *,"number of drops, T_num_drops=",T_num_drops
-  if (T_num_drops>0) then
+  if (T_num_drops.gt.0) then
    allocate(drop_data(T_num_drops,4))
    do nd=1,T_num_drops
     print *,"reading drop number nd=",nd
@@ -104,16 +125,24 @@ contains
 
   ! fluids tessellate the domain, solids are immersed. 
  if ((num_materials.eq.4).and. &
-     (probtype.eq.402).and.  &
-     (SDIM.eq.3)) then
+     (probtype.eq.402)) then
   in_droplet=0
   minLS=1.0D+20
   tempLS=0.0d0
   do nd=1,T_num_drops
-   tempLS=drop_data(nd,4)- &
+   if (SDIM.eq.3) then
+    tempLS=drop_data(nd,4)- &
        sqrt((x(1)-drop_data(nd,1))**2+ &
             (x(2)-drop_data(nd,2))**2+ &
-            (x(SDIM)-drop_data(nd,SDIM))**2) 
+            (x(SDIM)-drop_data(nd,3))**2) 
+   else if (SDIM.eq.2) then
+    tempLS=drop_data(nd,4)- &
+       sqrt(x(1)**2+ &
+            (x(SDIM)-drop_data(nd,3))**2)
+   else
+    print *,"dimension invalid"
+    stop
+   endif
    if (in_droplet.eq.0) then
     if (tempLS.ge.zero) then
      LS(1)=tempLS
@@ -199,8 +228,7 @@ contains
  endif
 
  if ((num_materials.eq.4).and. &
-     (probtype.eq.402).and.  &
-     (SDIM.eq.3)) then
+     (probtype.eq.402)) then
   if ((adv_dir.ge.1).and.(adv_dir.le.SDIM)) then
    if (adv_vel.eq.zero) then
     if (advbot.lt.zero) then
@@ -275,8 +303,7 @@ contains
 
  if ((num_materials.eq.4).and. &
      (num_state_material.eq.2).and. &
-     (probtype.eq.402).and.  &
-     (SDIM.eq.3)) then
+     (probtype.eq.402)) then
   do im=1,num_materials
    ibase=(im-1)*num_state_material
    STATE(ibase+1)=fort_denconst(im)
@@ -394,17 +421,17 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
+ REAL_T, intent(in) :: xwall
+ REAL_T, intent(in) :: xghost(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(in) :: LS(num_materials)
  REAL_T local_STATE(num_materials*num_state_material)
- REAL_T STATE
- REAL_T STATE_merge
- REAL_T STATE_in
- INTEGER_T dir,side
- REAL_T dx(SDIM)
- INTEGER_T istate,im
+ REAL_T, intent(out) :: STATE
+ REAL_T, intent(out) :: STATE_merge
+ REAL_T, intent(in) :: STATE_in
+ INTEGER_T, intent(in) :: dir,side
+ REAL_T, intent(in) :: dx(SDIM)
+ INTEGER_T, intent(in) :: istate,im
  INTEGER_T ibase,im_crit,im_loop
 
  if ((istate.ge.1).and. &
@@ -447,8 +474,7 @@ contains
 
  if ((num_materials.eq.4).and. &
      (num_state_material.eq.2).and. &
-     (probtype.eq.402).and.  &
-     (SDIM.eq.3)) then
+     (probtype.eq.402)) then
   heat_source=zero
  else
   print *,"num_materials, num_state_material, sdim or probtype invalid"

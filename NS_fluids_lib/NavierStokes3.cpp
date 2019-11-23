@@ -2651,7 +2651,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //  EXT_BURNVEL_INTERP,
         //  RATEMASSCHANGE,
         //  EXTEND_BURNING_VEL,
-        //  NODEDISPLACE
+        //  NODEDISPLACE,
+        //  CONVERTMATERIAL
        for (int ilev=level;ilev<=finest_level;ilev++) {
 
         NavierStokes& ns_level=getLevel(ilev);
@@ -2717,8 +2718,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        allocate_array(0,nmat,-1,deltaVOF_MF);
        setVal_array(0,nmat,0.0,deltaVOF_MF);
-       allocate_array(1,nten*AMREX_SPACEDIM,-1,nodevel_MF);
-       setVal_array(1,nten*AMREX_SPACEDIM,0.0,nodevel_MF);
+       allocate_array(1,2*nten*AMREX_SPACEDIM,-1,nodevel_MF);
+       setVal_array(1,2*nten*AMREX_SPACEDIM,0.0,nodevel_MF);
 
        DVOF.resize(thread_class::nthreads);
        for (int tid=0;tid<thread_class::nthreads;tid++) {

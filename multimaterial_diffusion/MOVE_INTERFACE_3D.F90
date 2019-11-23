@@ -1124,7 +1124,7 @@ stop
        allocate(maskcov(DIMV(maskcov)))
        allocate(masknbr(DIMV(masknbr),4))
        allocate(burnvel(DIMV(burnvel),nburning))
-       allocate(nodevel(DIMV(nodevel),nten*SDIM))
+       allocate(nodevel(DIMV(nodevel),2*nten*SDIM))
        allocate(deltaVOF(DIMV(deltaVOF),nmat))
        allocate(LS(DIMV(LS),nmat*(SDIM+1)))
        allocate(LSnew(DIMV(LSnew),nmat*(SDIM+1)))
@@ -1208,7 +1208,7 @@ stop
        enddo
        do i=fablo(1)-1,fabhi(1)+1
        do j=fablo(2)-1,fabhi(2)+1
-       do im=1,nten*SDIM
+       do im=1,2*nten*SDIM
         nodevel(i,j,im)=0.0d0
        enddo
        enddo
@@ -1538,7 +1538,7 @@ stop
         else if (stefan_flag.eq.0) then
          do i=fablo(1)-1,fabhi(1)+1
          do j=fablo(2)-1,fabhi(2)+1
-         do im=1,nten*SDIM
+         do im=1,2*nten*SDIM
           nodevel(i,j,im)=0.0d0
          enddo
          enddo

@@ -9703,7 +9703,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
 
  if (localMF[nodevel_MF]->nGrow()!=1)
   amrex::Error("localMF[nodevel_MF]->nGrow()  invalid");
- if (localMF[nodevel_MF]->nComp()!=nten*AMREX_SPACEDIM)
+ if (localMF[nodevel_MF]->nComp()!=2*nten*AMREX_SPACEDIM)
   amrex::Error("localMF[nodevel_MF]->nComp()  invalid");
 
  if (localMF[deltaVOF_MF]->nComp()!=nmat)
@@ -9775,7 +9775,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    } else 
     amrex::Error("burnvelfab.nComp() invalid");
 
-   if (nodevelfab.nComp()==nten*AMREX_SPACEDIM) {
+   if (nodevelfab.nComp()==2*nten*AMREX_SPACEDIM) {
     // do nothing
    } else 
     amrex::Error("nodevelfab.nComp() invalid");
@@ -9813,7 +9813,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    FArrayBox& nodevelfab=(*localMF[nodevel_MF])[0];
    const Real* dxplot = geom.CellSize();
    int scomp=0;
-   int ncomp=nten*AMREX_SPACEDIM;
+   int ncomp=2*nten*AMREX_SPACEDIM;
    int dirplot=-1;
    int id=0;
    std::cout << "dt_slab = " << dt_slab << '\n';
@@ -9860,7 +9860,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    FArrayBox& deltafab=(*localMF[deltaVOF_MF])[mfi];
 
    FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
-   if (nodevelfab.nComp()==nten*AMREX_SPACEDIM) {
+   if (nodevelfab.nComp()==2*nten*AMREX_SPACEDIM) {
     // do nothing
    } else 
     amrex::Error("nodevelfab.nComp() invalid");

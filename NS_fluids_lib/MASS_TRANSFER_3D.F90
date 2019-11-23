@@ -1197,7 +1197,7 @@ stop
       INTEGER_T DIMDEC(unode)
       INTEGER_T DIMDEC(ucell)
      
-      REAL_T  unode(DIMV(unode),nten*SDIM) 
+      REAL_T  unode(DIMV(unode),2*nten*SDIM) 
       REAL_T  ucell(DIMV(ucell),nburning) 
       INTEGER_T velbc(SDIM,2,num_materials_vel*SDIM)
 
@@ -1209,6 +1209,8 @@ stop
 
       REAL_T delta,velnd,totalwt
       INTEGER_T scomp,tag_local,nhalf
+      INTEGER_T ireverse
+      INTEGER_T sign_reverse
 
       nhalf=3
 
@@ -1284,6 +1286,16 @@ stop
 
        call gridstenND_level(xstenND,i,j,k,level,nhalf)
        do itencrit=1,nten
+       do ireverse=0,1
+
+        if (ireverse.eq.0) then
+         sign_reverse=1
+        else if (ireverse.eq.1) then
+         sign_reverse=-1
+        else
+         print *,"ireverse invalid"
+         stop
+        endif
 
         do dir=1,SDIM
          velnd=zero
@@ -1294,11 +1306,14 @@ stop
           tag_local=NINT(ucell(D_DECL(i-i1,j-j1,k-k1),itencrit))
           if (tag_local.eq.0) then
            ! do nothing
-          else if ((abs(tag_local).eq.1).or. &
-                   (abs(tag_local).eq.2)) then
+          else if ((sign_reverse*tag_local.eq.1).or. &
+                   (sign_reverse*tag_local.eq.2)) then
            scomp=nten+(itencrit-1)*SDIM+dir
            velnd=velnd+ucell(D_DECL(i-i1,j-j1,k-k1),scomp)
            totalwt=totalwt+one
+          else if ((-sign_reverse*tag_local.eq.1).or. &
+                   (-sign_reverse*tag_local.eq.2)) then
+           ! do nothing
           else
            print *,"tag_local invalid3:",tag_local
            stop
@@ -1347,10 +1362,12 @@ stop
           print *,"levelrz invalid node displace 3"
           stop
          endif
-         scomp=(itencrit-1)*SDIM+dir
+         scomp=(itencrit+ireverse*nten-1)*SDIM+dir
          unode(D_DECL(i,j,k),scomp)=delta
-        enddo ! dir
-       enddo ! itencrit
+        enddo ! dir=1..sdim
+
+       enddo ! ireverse=0,1
+       enddo ! itencrit=1,nten
 
       enddo
       enddo
@@ -1455,7 +1472,7 @@ stop
 
       REAL_T, intent(inout) :: deltaVOF(DIMV(deltaVOF),nmat)
 
-      REAL_T, intent(in) :: nodevel(DIMV(nodevel),nten*SDIM)
+      REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
       REAL_T, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
       REAL_T, intent(in) :: LSold(DIMV(LSold),nmat*(1+SDIM))
       REAL_T, intent(out) :: LSnew(DIMV(LSnew),nmat)
@@ -1983,7 +2000,7 @@ stop
                 stop
                endif
                if ((iten.ge.1).and.(iten.le.nten)) then
-                scomp=(iten-1)*SDIM
+                scomp=(iten+nten*ireverse-1)*SDIM
                 velnode_test=zero
                 do udir=1,SDIM
                  velnode_test=velnode_test+ &
@@ -2121,7 +2138,7 @@ stop
               stop
              endif
 
-             scomp=(iten_crit-1)*SDIM
+             scomp=(iten_crit+ireverse_crit*nten-1)*SDIM
 
               ! node velocity initialized in "nodedisplace"
              do udir=1,SDIM

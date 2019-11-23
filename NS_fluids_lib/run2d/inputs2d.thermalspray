@@ -15,9 +15,9 @@ stop_time = 1.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
-geometry.prob_lo   =  0.0 0.0 0.0
-geometry.prob_hi   = 0.0003 0.0003 0.00015 # meters
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   = 0.00015 0.00015 # meters
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
 ns.dual_time_activate=0
@@ -64,7 +64,7 @@ ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
 # domain size is 0.0003 x 0.0003 x 0.00015 (meters)
 # minimum radius is 15
-amr.n_cell    = 64 64 32
+amr.n_cell    = 32 32
 amr.max_level =  1
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
@@ -178,8 +178,8 @@ ns.probtype=402
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=3
-ns.lo_bc          = 3 3 5
-ns.hi_bc          = 3 3 2
+ns.lo_bc          = 3 5
+ns.hi_bc          = 3 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
