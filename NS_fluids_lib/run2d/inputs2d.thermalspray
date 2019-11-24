@@ -181,16 +181,16 @@ ns.velfact=0.0
 ns.probtype=402
 
 #ns.mem_debug = 1
-ns.v = 1
+#ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
 # boundary conditions 
 # 0=dirichlet at inflow
 # 1=dirichlet at inflow and outflow
-# 2=dirichlet at inflow and walls.
+# 2=dirichlet at inflow and walls, extrap at outflow.
 # 3=dirichlet at inflow, outflow, and walls.
-ns.prescribe_temperature_outflow=3
+ns.prescribe_temperature_outflow=2
 ns.lo_bc          = 3 5
 ns.hi_bc          = 3 2
 
