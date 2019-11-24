@@ -1285,13 +1285,17 @@ NavierStokes::variableSetUp ()
       // 2=Dirichlet at inflow and at walls, insulating at outflow. 
       // 3=Dirichlet at inflow, outflow, and walls.
      if (prescribe_temperature_outflow==2)  
-      set_custom_temperature_bc(MOFstate_bcs[ibase_transport],temperature_phys_bc);
+      set_custom_temperature_bc(MOFstate_bcs[ibase_transport],
+		      temperature_phys_bc);
      else if (prescribe_temperature_outflow==1)
-      set_temperature_bc(MOFstate_bcs[ibase_transport],temperature_phys_bc);
+      set_temperature_bc(MOFstate_bcs[ibase_transport],
+		      temperature_phys_bc);
      else if (prescribe_temperature_outflow==0)
-      set_scalar_bc(MOFstate_bcs[ibase_transport],temperature_phys_bc);
+      set_scalar_bc(MOFstate_bcs[ibase_transport],
+		      temperature_phys_bc);
      else if (prescribe_temperature_outflow==3)
-      set_custom2_temperature_bc(MOFstate_bcs[ibase_transport],temperature_phys_bc);
+      set_custom2_temperature_bc(MOFstate_bcs[ibase_transport],
+		      temperature_phys_bc);
      else 
       amrex::Error("prescribe_temperature_outflow invalid");
 

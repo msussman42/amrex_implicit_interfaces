@@ -118,29 +118,43 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T STATE(num_materials*num_state_material)
- INTEGER_T im,ibase,n
+ REAL_T, intent(in) :: x(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(in) :: LS(num_materials)
+ REAL_T, intent(out) :: STATE(num_materials*num_state_material)
+ INTEGER_T im,im_local,ibase,n
 
  if ((num_materials.eq.3).and. &
      (num_state_material.ge.2).and. &
      (probtype.eq.401)) then
   do im=1,num_materials
+
    ibase=(im-1)*num_state_material
    STATE(ibase+1)=fort_denconst(im)
+
+   im_local=im
+   if (LS(3).ge.zero) then ! x is in a rigid material
+    im_local=3
+   else if (LS(3).le.zero) then
+    ! do nothing
+   else
+    print *,"LS(3) invalid"
+    stop
+   endif
+
    if (t.eq.zero) then
-    STATE(ibase+2)=fort_initial_temperature(im)
+    STATE(ibase+2)=fort_initial_temperature(im_local)
    else if (t.gt.zero) then
-    STATE(ibase+2)=fort_tempconst(im)
+    STATE(ibase+2)=fort_tempconst(im_local)
    else
     print *,"t invalid"
     stop
    endif
+
    do n=1,num_species_var
     STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
    enddo
+
   enddo ! im=1..num_materials
  else
   print *,"num_materials,num_state_material, or probtype invalid"

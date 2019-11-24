@@ -26993,10 +26993,14 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
 
-      INTEGER_T dir,side,istate,im,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time,ADV,xwall,ADVwall,x,y,z
-      REAL_T ADVwall_in
+      INTEGER_T, intent(in) :: dir,side,istate,im,nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(inout) :: ADV
+      REAL_T xwall
+      REAL_T ADVwall
+      REAL_T x,y,z
+      REAL_T, intent(inout) :: ADVwall_in
       REAL_T ADV_merge
       REAL_T dx(SDIM)
       REAL_T dist,water_temp
@@ -36648,12 +36652,12 @@ end subroutine initialize2d
 
        IMPLICIT NONE
 
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
+       INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+       INTEGER_T, intent(in) :: DIMDEC(u)
+       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+       REAL_T, intent(inout) :: u(DIMV(u))
+       INTEGER_T, intent(in) :: bc(SDIM,2)
        INTEGER_T i,j,k
        INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
        INTEGER_T fablo(SDIM)
@@ -36677,7 +36681,6 @@ end subroutine initialize2d
         print *,"level invalid in fill 14"
         stop
        endif
-
 
        if (ncomp.ne.1) then
         print *,"ncomp invalid15"
@@ -37088,13 +37091,12 @@ end subroutine initialize2d
 
        IMPLICIT NONE
 
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u),ncomp)
-       INTEGER_T bc(SDIM,2,ncomp)
+       INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+       INTEGER_T, intent(in) :: DIMDEC(u)
+       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+       REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
        INTEGER_T i,j,k
        INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
        INTEGER_T fablo(SDIM)

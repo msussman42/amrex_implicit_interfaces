@@ -9906,6 +9906,7 @@ contains
 
         if (niter.ge.maxiter) then
          print *,"vof recon failed in multi_find_intercept"
+         print *,"switch to a smaller length scale (e.g. cm instead of m)"
          print *,"niter,maxiter ",niter,maxiter
          print *,"bfact ",bfact
          print *,"vfrac ",vfrac

@@ -17,11 +17,12 @@ stop_time = 1.0
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0
-geometry.prob_hi   = 0.0003 0.0003 0.00015 # meters
+#geometry.prob_hi   = 0.0003 0.0003 0.00015 # meters
+geometry.prob_hi   = 0.03 0.03 0.015 # cm
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
 ns.dual_time_activate=0
-ns.dual_time_sound_speed=1500.0e+10 # sound speed of water cm/s is 150000.0
+ns.dual_time_sound_speed=150000.0e+10 # sound speed of water cm/s is 150000.0
 
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # 0=no limiter 1=minmod
@@ -106,8 +107,12 @@ ns.use_lsa=0
 # Vapor-ice, 
 # Vapor-solid, 
 # ice-solid
-ns.tension = 2.1 2.1 2.1 3.58 3.58 2.1 # 12 - liquid/vapor
-ns.stiffCP=570.0 114.0 339.0 339.0 # J/(kg K)
+#ns.tension = 2.1 2.1 2.1 3.58 3.58 2.1 # 12 - liquid/vapor
+ns.tension = 2100.0 2100.0 2100.0 3580.0 3580.0 2100.0 # cgs
+# 1 J = 1e+7 erg
+# 1 kg = 1000g
+#ns.stiffCP=570.0 114.0 339.0 339.0 # J/(kg K)
+ns.stiffCP=570.0e+4 114.0e+4 339.0e+4 339.0e+4 #  erg/(g K)
 #ns.latent_heat = -3.34e+9 0.0 # 12,21 liquid-> ice, ice -> liquid FREEZING
 # <0 if condensation or solidification
 # >0 if boiling or melting
@@ -116,7 +121,8 @@ ns.stiffCP=570.0 114.0 339.0 339.0 # J/(kg K)
 # J/kg
 # Still to be tested: nodevel in CONVERTMATERIAL now has 2 * nten components.
 #ns.latent_heat = 0.0 -3.753e+5 0.0 0.0 0.0 0.0 0.0 3.753e+5 0.0 0.0 0.0 0.0
-ns.latent_heat = 0.0 -3.753e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+#ns.latent_heat = 0.0 -3.753e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 #J/kg
+ns.latent_heat = 0.0 -3.753e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 #erg/g
 # 1->2 liquid-> gas
 # 1->3 liquid->ice 
 # 2->3 gas->ice 
@@ -134,7 +140,8 @@ ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=263  # not used
 # initial falling (downward) speed of liquid drop
-ns.advbot=-125.0 # m/s
+#ns.advbot=-125.0 # m/s
+ns.advbot=-12500.0 # cm/s
 ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
@@ -148,21 +155,27 @@ ns.material_type=0 0 0 999
 # cp hardwired to be 4.1855E+7 (all incompressible materials)
 #ns.heatviscconst=58000.0 0.0 218000.0 # liquid/air/ice 
 # W/(m K)
-ns.heatviscconst=46.0 0.068 84.0 84.0 # liquid/air/ice 
+# 1 W = 10^7 ERG/S (cm g/s)
+#ns.heatviscconst=46.0 0.068 84.0 84.0 # liquid/air/ice  W/(m K)
+ns.heatviscconst=46.0e+5 0.068e+5 84.0e+5 84.0e+5 # liquid/air/ice ERG/(S cm K)
 # diffusivity liquid/ice this problem does not inlucde air
 #ns.viscconst=0.02 0.0001 100.0
 # solid viscosity should be "small" so that gas-solid coefficient
 # not large.
-# kg/(m s)
-ns.viscconst=0.005 4.15e-5 1.0 1.0
-ns.denconst=9350.0 0.353 10200.0 10200.0
+# kg/(m s)=10 g/(cm s)
+#ns.viscconst=0.005 4.15e-5 1.0 1.0 # kg/(m s)
+ns.viscconst=0.05 4.15e-4 10.0 10.0 # g/(cm s)
+#ns.denconst=9350.0 0.353 10200.0 10200.0 # kg/m^3
+ns.denconst=9.350 0.000353 10.2000 10.2000 # g/cm^3
 ns.FSI_flag=0 0 3 1 # 0 - fluid 1 - solid in PROB.F90 2-lag solid 3-ice
 #dimensionless: (supercooled droplets)
 ns.tempconst=2995.0 2995.0 2895.0 473.0 # initial temperature of liquid/gas/ice
 ns.xblob=0.0  
 ns.yblob=0.0
-ns.zblob=0.000015 # substrate thickness.
-ns.radblob=0.000015 # radius of initial ice layer.
+#ns.zblob=0.000015 # substrate thickness. Meters
+ns.zblob=0.0015 # substrate thickness. cm
+#ns.radblob=0.000015 # radius of initial ice layer. Meters
+ns.radblob=0.0015 # radius of initial ice layer. CentiMeters
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=402
