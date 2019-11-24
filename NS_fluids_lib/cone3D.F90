@@ -493,29 +493,20 @@
    REAL_T, intent(in) :: t
    REAL_T, intent(in) :: LS(num_materials)
    REAL_T, intent(out) :: STATE(num_materials*num_state_material)
-   INTEGER_T im,im_local,ibase
+   INTEGER_T im,ibase
 
    if ((num_materials.eq.2).and. &
     (num_state_material.eq.2).and. &
     (probtype.eq.222)) then
     do im=1,num_materials
+
      ibase=(im-1)*num_state_material
      STATE(ibase+1)=fort_denconst(im)
 
-     im_local=im
-     if (LS(2).ge.zero) then ! x is in a rigid material
-      im_local=2
-     else if (LS(2).le.zero) then
-      ! do nothing
-     else
-      print *,"LS(2) invalid"
-      stop
-     endif
-
      if (t.eq.zero) then
-      STATE(ibase+2)=fort_initial_temperature(im_local)
+      STATE(ibase+2)=fort_initial_temperature(im)
      else if (t.gt.zero) then
-      STATE(ibase+2)=fort_tempconst(im_local)
+      STATE(ibase+2)=fort_tempconst(im)
      else
       print *,"t invalid"
       stop
@@ -619,6 +610,39 @@
    return
   end subroutine CONE3D_PRES_BC
 
+
+ function is_CONE3D_overlay(nmat,im)
+ use probcommon_module
+ IMPLICIT NONE
+
+ INTEGER_T is_CONE3D_overlay
+ INTEGER_T nmat,im
+
+ if (nmat.eq.num_materials) then
+  if (num_materials.eq.2) then
+   if ((im.ge.1).and.(im.le.nmat)) then
+    if (im.eq.2) then 
+     is_CONE3D_overlay=1
+    else
+     is_CONE3D_overlay=0
+    endif
+   else
+    print *,"im invalid in is_CONE3D_overlay"
+    stop
+   endif
+  else
+   print *,"num_materials invalid in is_CONE3D_overlay"
+   stop
+  endif
+ else
+  print *,"nmat invalid in is_CONE3D_overlay"
+  stop
+ endif
+  
+ return
+ end function is_CONE3D_overlay
+
+
   !****************************************************
   ! dir=1..sdim  side=1..2
   subroutine CONE3D_STATE_BC(xwall,xghost,t,LS, &
@@ -652,6 +676,25 @@
       im_crit=im_loop
      endif
     enddo
+
+    do im_loop=1,num_materials
+     if (is_CONE3D_overlay(num_materials,im_loop).eq.1) then
+      if (LS(im_loop).ge.zero) then
+       im_crit=im_loop
+      else if (LS(im_loop).le.zero) then
+       ! do nothing
+      else
+       print *,"LS(im_loop) invalid"
+       stop
+      endif
+     else if (is_CONE3D_overlay(num_materials,im_loop).eq.0) then
+      ! do nothing
+     else
+      print *,"is_CONE3D_overlay(num_materials,im_loop) invalid"
+      stop
+     endif
+    enddo ! im_loop=1,num_materials
+
     ibase=(im_crit-1)*num_state_material
     STATE_merge=local_STATE(ibase+istate)
    else
