@@ -39,6 +39,8 @@ implicit none
 
 INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=20
 
+INTEGER_T, PARAMETER :: INTERCEPT_MAXITER=100
+
 INTEGER_T, PARAMETER :: maxfacelist=20
 INTEGER_T, PARAMETER :: maxnodelist=20,maxtetlist=15,maxcapfacelist=5
 INTEGER_T, PARAMETER :: maxmappednodes=8
@@ -46,12 +48,15 @@ INTEGER_T, PARAMETER :: n_vol_listmax=400,n_area_listmax=200
 
 INTEGER_T :: geom_nthreads
 INTEGER_T :: geom_nmax
+ ! 4,3,geom_nmax,geom_nthreads
 REAL_T, ALLOCATABLE :: geom_xtetlist_local(:,:,:,:)
 REAL_T, ALLOCATABLE :: geom_xtetlist(:,:,:,:)
 REAL_T, ALLOCATABLE :: geom_xtetlist_old(:,:,:,:)
 REAL_T, ALLOCATABLE :: geom_xtetlist_uncapt(:,:,:,:)
 INTEGER_T, ALLOCATABLE :: mof_calls(:,:)
 INTEGER_T, ALLOCATABLE :: mof_iterations(:,:)
+
+REAL_T, ALLOCATABLE :: intercept_error_history(:,:)
 
 ! the 3rd component of a facelist is 0 in 2D
 type intersect_type
@@ -9502,7 +9507,9 @@ contains
       REAL_T, intent(out) :: centroid(sdim)
       REAL_T cencell(sdim)
       REAL_T arean
-      REAL_T err,moftol
+      REAL_T err
+      REAL_T moftol
+      REAL_T min_err
       REAL_T vtarget,fc
       INTEGER_T debug_root
       INTEGER_T, intent(in) :: use_initial_guess
@@ -9519,6 +9526,19 @@ contains
       REAL_T intercept_upper,intercept_lower
       REAL_T intercept_test,aa,bb,fa,fb
       INTEGER_T local_nlist
+      INTEGER_T tid
+#ifdef _OPENMP
+      INTEGER_T omp_get_thread_num
+#endif
+
+      tid=0       
+#ifdef _OPENMP
+      tid=omp_get_thread_num()
+#endif
+      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
+       print *,"tid invalid"
+       stop
+      endif 
 
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
@@ -9618,8 +9638,9 @@ contains
 
       debug_root=0
 
-      maxiter=100
+      maxiter=INTERCEPT_MAXITER
       moftol=INTERCEPT_TOL
+      min_err=-one
 
 ! phi=n dot (x-x0)+int
 ! find max,min n dot (x-x0)
@@ -9809,6 +9830,19 @@ contains
 
         niter=0
         do while ((niter.lt.maxiter).and.(err.gt.moftol)) 
+
+         if (min_err.eq.-one) then
+          min_err=err
+         else if (min_err.gt.err) then
+          min_err=err
+         else if ((min_err.le.err).and.(min_err.ge.zero)) then
+          ! do nothing
+         else
+          print *,"min_err invalid"
+          stop
+         endif
+         intercept_error_history(niter+1,tid+1)=err
+
          if (arean.gt.zero) then
 
           intercept_test=intercept-fc*volcell/arean
@@ -9902,7 +9936,29 @@ contains
           print *,"intercept_default ",intercept_default
           stop
          endif
-        enddo ! outer while statement: Newton's method
+
+         if (niter.gt.maxiter/2) then
+          if (abs(min_err-err).le.moftol) then
+           if ((abs(err-intercept_error_history(niter,tid+1)).le.moftol).and. &
+               (abs(err-intercept_error_history(niter-1,tid+1)).le.moftol)) then
+            err=zero
+           endif
+          else if (abs(min_err-err).gt.moftol) then
+           ! do nothing
+          else
+           print *,"min_err or err invalid"
+           stop
+          endif
+         else if ((niter.ge.1).and.(niter.le.maxiter/2)) then
+          ! do nothing
+         else
+          print *,"niter invalid in the newtons method"
+          stop
+         endif
+
+         ! outer while statement: Newton's method:
+         ! do while((niter.lt.maxiter).and.(err.gt.moftol))
+        enddo 
 
         if (niter.ge.maxiter) then
          print *,"vof recon failed in multi_find_intercept"
@@ -9915,6 +9971,11 @@ contains
          enddo
          do dir=1,sdim
           print *,"dir,slope ",dir,slope(dir)
+         enddo
+         print *,"error history: "
+         do nn=1,maxiter
+          print *,"nn,tid,error ",nn,tid, &
+             intercept_error_history(nn,tid+1)
          enddo
          stop
         endif
@@ -20334,6 +20395,8 @@ end module MOF_routines_module
       allocate(geom_xtetlist_old(4,3,geom_nmax,geom_nthreads))
       allocate(geom_xtetlist_uncapt(4,3,geom_nmax,geom_nthreads))
 
+      allocate(intercept_error_history(INTERCEPT_MAXITER,geom_nthreads))
+
       allocate(mof_calls(geom_nthreads,nmat))
       allocate(mof_iterations(geom_nthreads,nmat))
 
@@ -20369,6 +20432,8 @@ end module MOF_routines_module
       deallocate(geom_xtetlist)
       deallocate(geom_xtetlist_old)
       deallocate(geom_xtetlist_uncapt)
+
+      deallocate(intercept_error_history)
 
       deallocate(mof_calls)
       deallocate(mof_iterations)
