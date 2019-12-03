@@ -17,15 +17,13 @@ compute_integrals (MultiFab& intgmf, IntVect nghost)
 #if (AMREX_SPACEDIM == 2)
     amrex::Abort("amrex::algoim::compute_integrals is 3D only");
 #else
-    // todo: gpu
-    Gpu::LaunchSafeGuard lg(false);
 
     nghost.min(intgmf.nGrowVect());
     AMREX_ASSERT(intgmf.nComp() >= numIntgs);
 
     const auto& my_factory = dynamic_cast<EBFArrayBoxFactory const&>(intgmf.Factory());
 
-    const MultiFab&    vfrac = my_factory.getVolFrac();
+    // const MultiFab&    vfrac = my_factory.getVolFrac();
     const MultiCutFab& bcent = my_factory.getBndryCent();
     const MultiCutFab& bnorm = my_factory.getBndryNormal();
     const auto&        flags = my_factory.getMultiEBCellFlagFab();
@@ -60,7 +58,7 @@ compute_integrals (MultiFab& intgmf, IntVect nghost)
         }
         else
         {
-            auto const& vf = vfrac.array(mfi);
+            // auto const& vf = vfrac.array(mfi);
             auto const& bc = bcent.array(mfi);
             auto const& bn = bnorm.array(mfi);
             auto const& fg = flagfab.array();
@@ -117,6 +115,8 @@ compute_integrals (MultiFab& intgmf, IntVect nghost)
                                                    { return x*x*z*z; });
                         intg(i,j,k,i_S_y2_z2) = q([] AMREX_GPU_DEVICE (Real x, Real y, Real z) noexcept
                                                    { return y*y*z*z; });
+                        intg(i,j,k,i_S_xyz  ) = q([] AMREX_GPU_DEVICE (Real x, Real y, Real z) noexcept
+                                                   { return x*y*z; });
                     }
                 });
             }
@@ -175,6 +175,8 @@ compute_integrals (MultiFab& intgmf, IntVect nghost)
                                                    { return x*x*z*z; });
                         intg(i,j,k,i_S_y2_z2) = q.eval([](Real x, Real y, Real z) noexcept
                                                    { return y*y*z*z; });
+                        intg(i,j,k,i_S_xyz  ) = q.eval([](Real x, Real y, Real z) noexcept
+                                                   { return x*y*z; });
                     }
                 }
             }

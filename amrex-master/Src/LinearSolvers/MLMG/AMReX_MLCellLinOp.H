@@ -124,7 +124,7 @@ public:
                          MultiFab& res, const MultiFab& crse_sol, const MultiFab&,
                          MultiFab&, MultiFab& fine_sol, const MultiFab&) const final override;
     virtual void compFlux (int amrlev, const Array<MultiFab*,AMREX_SPACEDIM>& fluxes,
-                           MultiFab& sol, Location loc) const final override;
+                           MultiFab& sol, Location loc) const override;
     virtual void compGrad (int amrlev, const Array<MultiFab*,AMREX_SPACEDIM>& grad,
                            MultiFab& sol, Location loc) const override;
 
@@ -161,10 +161,14 @@ protected:
     {
     public:
         BndryCondLoc (const BoxArray& ba, const DistributionMapping& dm, int ncomp);
+
         void setLOBndryConds (const Geometry& geom, const Real* dx,
                               const Vector<Array<BCType,AMREX_SPACEDIM> >& lobc,
                               const Vector<Array<BCType,AMREX_SPACEDIM> >& hibc,
-                              int ratio, const RealVect& a_loc);
+                              int ratio, const RealVect& interior_bloc,
+                              const Array<Real,AMREX_SPACEDIM>& domain_bloc_lo,
+                              const Array<Real,AMREX_SPACEDIM>& domain_bloc_hi);
+
         const Vector<BCTuple>& bndryConds (const MFIter& mfi) const noexcept {
             return bcond[mfi];
         }

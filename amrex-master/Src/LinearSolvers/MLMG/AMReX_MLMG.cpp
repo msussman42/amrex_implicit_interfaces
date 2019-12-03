@@ -2,7 +2,6 @@
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_BC_TYPES.H>
-#include <AMReX_MLMG_F.H>
 #include <AMReX_MLMG_K.H>
 #include <AMReX_MLABecLaplacian.H>
 
@@ -522,8 +521,11 @@ MLMG::mgFcycle ()
 
     for (int mglev = 1; mglev <= mg_bottom_lev; ++mglev)
     {
-        // TODO: for EB cell-centered, we need to use EB_average_down
+#ifdef AMREX_USE_EB
+        amrex::EB_average_down(res[amrlev][mglev-1], res[amrlev][mglev], 0, ncomp, ratio);
+#else
         amrex::average_down(res[amrlev][mglev-1], res[amrlev][mglev], 0, ncomp, ratio);
+#endif
     }
 
     bottomSolve();
@@ -549,7 +551,6 @@ MLMG::mgFcycle ()
 void
 MLMG::interpCorrection (int alev)
 {
-    // todo: gpu
     BL_PROFILE("MLMG::interpCorrection_1");
 
     const int ncomp = linop.getNComp();
@@ -587,7 +588,6 @@ MLMG::interpCorrection (int alev)
 
     if (linop.isCellCentered())
     {
-        Gpu::LaunchSafeGuard lg(!isEB && Gpu::inLaunchRegion()); // turn off gpu for eb for now TODO
         MFItInfo mfi_info;
         if (Gpu::notInLaunchRegion()) mfi_info.EnableTiling().SetDynamic(true);
 #ifdef _OPENMP
@@ -596,6 +596,8 @@ MLMG::interpCorrection (int alev)
         for (MFIter mfi(fine_cor, mfi_info); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.tilebox();
+            Array4<Real> const& ff = fine_cor.array(mfi);
+            Array4<Real const> const& cc = cfine.const_array(mfi);
 #ifdef AMREX_USE_EB
             bool call_lincc;
             if (isEB)
@@ -604,12 +606,28 @@ MLMG::interpCorrection (int alev)
                 if (flag.getType(amrex::grow(bx,1)) == FabType::regular) {
                     call_lincc = true;
                 } else {
-                    amrex_mlmg_eb_cc_interp(BL_TO_FORTRAN_BOX(bx),
-                                            BL_TO_FORTRAN_ANYD(fine_cor[mfi]),
-                                            BL_TO_FORTRAN_ANYD(cfine[mfi]),
-                                            BL_TO_FORTRAN_ANYD(flag),
-                                            &refratio[0],
-                                            &ncomp);
+                    Array4<EBCellFlag const> const& flg = flag.const_array();
+                    switch(refratio[0]) {
+                    case 2:
+                    {
+                        AMREX_LAUNCH_HOST_DEVICE_LAMBDA (bx, tbx,
+                        {
+                            mlmg_eb_cc_interp_r<2>(tbx, ff, cc, flg, ncomp);
+                        });
+                        break;
+                    }
+                    case 4:
+                    {
+                        AMREX_LAUNCH_HOST_DEVICE_LAMBDA (bx, tbx,
+                        {
+                            mlmg_eb_cc_interp_r<4>(tbx, ff, cc, flg, ncomp);
+                        });
+                        break;
+                    }
+                    default:
+                        amrex::Abort("mlmg_eb_cc_interp: only refratio 2 and 4 are supported");
+                    }
+
                     call_lincc = false;
                 }
             }
@@ -622,8 +640,6 @@ MLMG::interpCorrection (int alev)
 #endif
             if (call_lincc)
             {
-                const auto& ff = fine_cor.array(mfi);
-                const auto& cc = cfine.array(mfi);
                 switch(refratio[0]) {
                 case 2:
                 {
@@ -651,38 +667,19 @@ MLMG::interpCorrection (int alev)
     {
         AMREX_ALWAYS_ASSERT(amrrr == 2);
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
+        for (MFIter mfi(fine_cor, TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
-            FArrayBox tmpfab;
-            for (MFIter mfi(fine_cor, true); mfi.isValid(); ++mfi)
+            Box fbx = mfi.tilebox();
+            if (cf_strategy == CFStrategy::ghostnodes and nghost >1) fbx.grow(2);
+            Array4<Real> const& ffab = fine_cor.array(mfi);
+            Array4<Real const> const& cfab = cfine.const_array(mfi);
+
+            AMREX_HOST_DEVICE_FOR_4D ( fbx, ncomp, i, j, k, n,
             {
-                const Box& fbx = mfi.tilebox();
-                const Box& cbx = amrex::coarsen(fbx,2);
-		if (cf_strategy == CFStrategy::none)
-		{
-                    const Box& tmpbx = amrex::refine(cbx,2);
-                    tmpfab.resize(tmpbx,ncomp);
-                    amrex_mlmg_lin_nd_interp(BL_TO_FORTRAN_BOX(cbx),
-                                             BL_TO_FORTRAN_BOX(tmpbx),
-                                             BL_TO_FORTRAN_ANYD(tmpfab),
-                                             BL_TO_FORTRAN_ANYD(cfine[mfi]),
-					     &ncomp);
-                    fine_cor[mfi].copy(tmpfab, fbx, 0, fbx, 0, ncomp);
-                }
-                else if (cf_strategy == CFStrategy::ghostnodes)
-                {
-                    Box tmpbx = amrex::refine(cbx,2);
-		    if (nghost > 1) tmpbx.grow(2);
-                    tmpfab.resize(tmpbx,ncomp);
-                    amrex_mlmg_lin_nd_interp_ghostnodes(BL_TO_FORTRAN_BOX(cbx),
-                                                        BL_TO_FORTRAN_BOX(tmpbx),
-                                                        BL_TO_FORTRAN_ANYD(tmpfab),
-                                                        BL_TO_FORTRAN_ANYD(cfine[mfi]),
-			                                &ncomp);
-                    fine_cor[mfi].copy(tmpfab, tmpbx, 0, tmpbx, 0, ncomp);
-                }
-            }
+                mlmg_lin_nd_interp(i,j,k,n,ffab,cfab);
+            });
         }
     }
 }
@@ -693,7 +690,6 @@ MLMG::interpCorrection (int alev)
 void
 MLMG::interpCorrection (int alev, int mglev)
 {
-    // todo: gpu
     BL_PROFILE("MLMG::interpCorrection_2");
 
     MultiFab& crse_cor = *cor[alev][mglev+1];
@@ -736,7 +732,6 @@ MLMG::interpCorrection (int alev, int mglev)
 
     if (linop.isCellCentered())
     {
-        Gpu::LaunchSafeGuard lg(!isEB && Gpu::inLaunchRegion()); // turn off gpu for eb for now TODO
         MFItInfo mfi_info;
         if (Gpu::notInLaunchRegion()) mfi_info.EnableTiling().SetDynamic(true);
 #ifdef _OPENMP
@@ -745,6 +740,8 @@ MLMG::interpCorrection (int alev, int mglev)
         for (MFIter mfi(fine_cor, mfi_info); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.tilebox();
+            const auto& ff = fine_cor.array(mfi);
+            const auto& cc = cmf->array(mfi);
 #ifdef AMREX_USE_EB
             bool call_lincc;
             if (isEB)
@@ -753,11 +750,12 @@ MLMG::interpCorrection (int alev, int mglev)
                 if (flag.getType(amrex::grow(bx,1)) == FabType::regular) {
                     call_lincc = true;
                 } else {
-                    amrex_mlmg_eb_cc_interp(BL_TO_FORTRAN_BOX(bx),
-                                            BL_TO_FORTRAN_ANYD(fine_cor[mfi]),
-                                            BL_TO_FORTRAN_ANYD(  (*cmf)[mfi]),
-                                            BL_TO_FORTRAN_ANYD(flag),
-                                            &refratio, &ncomp);
+                    Array4<EBCellFlag const> const& flg = flag.const_array();
+                    AMREX_LAUNCH_HOST_DEVICE_LAMBDA (bx, tbx,
+                    {
+                        mlmg_eb_cc_interp_r<2>(tbx, ff, cc, flg, ncomp);
+                    });
+
                     call_lincc = false;
                 }
             }
@@ -770,8 +768,6 @@ MLMG::interpCorrection (int alev, int mglev)
 #endif
             if (call_lincc)
             {
-                const auto& ff = fine_cor.array(mfi);
-                const auto& cc = cmf->array(mfi);
                 AMREX_LAUNCH_HOST_DEVICE_LAMBDA (bx, tbx,
                 {
                     mlmg_lin_cc_interp_r2(tbx, ff, cc, ncomp);
@@ -782,34 +778,18 @@ MLMG::interpCorrection (int alev, int mglev)
     else
     {
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
+        for (MFIter mfi(fine_cor, TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
-            FArrayBox tmpfab;
-            for (MFIter mfi(fine_cor, true); mfi.isValid(); ++mfi)
+            const Box& fbx = mfi.tilebox();
+            Array4<Real> const& ffab = fine_cor.array(mfi);
+            Array4<Real const> const& cfab = cmf->const_array(mfi);
+
+            AMREX_HOST_DEVICE_FOR_4D ( fbx, ncomp, i, j, k, n,
             {
-                const Box& fbx = mfi.tilebox();
-                const Box& cbx = amrex::coarsen(fbx,2);
-                const Box& tmpbx = amrex::refine(cbx,2);
-                tmpfab.resize(tmpbx,ncomp);
-		if (cf_strategy == CFStrategy::none)
-		{
-			amrex_mlmg_lin_nd_interp(BL_TO_FORTRAN_BOX(cbx),
-						 BL_TO_FORTRAN_BOX(tmpbx),
-						 BL_TO_FORTRAN_ANYD(tmpfab),
-						 BL_TO_FORTRAN_ANYD((*cmf)[mfi]),
-						 &ncomp);
-		}
-		else if (cf_strategy == CFStrategy::ghostnodes)
-		{
-			amrex_mlmg_lin_nd_interp_ghostnodes(BL_TO_FORTRAN_BOX(cbx),
-							    BL_TO_FORTRAN_BOX(tmpbx),
-							    BL_TO_FORTRAN_ANYD(tmpfab),
-							    BL_TO_FORTRAN_ANYD((*cmf)[mfi]),
-							    &ncomp);
-		}
-                fine_cor[mfi].copy(tmpfab, fbx, 0, fbx, 0, ncomp);
-            }
+                mlmg_lin_nd_interp(i,j,k,n,ffab,cfab);
+            });
         }
     }
 }
@@ -1097,26 +1077,9 @@ MLMG::buildFineMask ()
     const auto& amrrr = linop.AMRRefRatio();
     for (int alev = 0; alev < finest_amr_lev; ++alev)
     {
-        fine_mask[alev].reset(new iMultiFab(rhs[alev].boxArray(), rhs[alev].DistributionMap(), 1, 0));
-        fine_mask[alev]->setVal(1);
-
-        BoxArray baf = rhs[alev+1].boxArray();
-        baf.coarsen(amrrr[alev]);
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-        for (MFIter mfi(*fine_mask[alev], MFItInfo().SetDynamic(true)); mfi.isValid(); ++mfi)
-        {
-            auto& fab = (*fine_mask[alev])[mfi];
-
-            const std::vector< std::pair<int,Box> >& isects = baf.intersections(fab.box());
-
-            for (int ii = 0; ii < isects.size(); ++ii)
-            {
-                fab.setVal(0,isects[ii].second,0);
-            }
-        }
+        fine_mask[alev].reset
+            (new iMultiFab(makeFineMask(rhs[alev], rhs[alev+1], IntVect(0), IntVect(amrrr[alev]),
+                                        Periodicity::NonPeriodic(), 1, 0)));
     }
 
     if (!linop.isCellCentered()) {
@@ -1193,6 +1156,8 @@ MLMG::prepareForSolve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab con
         }
         MultiFab::Copy(rhs[alev], *a_rhs[alev], 0, 0, ncomp, nghost);
         linop.applyMetricTerm(alev, 0, rhs[alev]);
+        linop.unimposeNeumannBC(alev, rhs[alev]);
+        linop.applyInhomogNeumannTerm(alev, rhs[alev]);
 
 #ifdef AMREX_USE_EB
         auto factory = dynamic_cast<EBFArrayBoxFactory const*>(linop.Factory(alev));
@@ -1320,7 +1285,7 @@ MLMG::prepareForSolve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab con
 void
 MLMG::prepareForNSolve ()
 {
-    ns_linop = std::move(linop.makeNLinOp(nsolve_grid_size));
+    ns_linop = linop.makeNLinOp(nsolve_grid_size);
 
     const int ncomp = linop.getNComp();
     int nghost = 0;
@@ -1474,6 +1439,8 @@ MLMG::compResidual (const Vector<MultiFab*>& a_res, const Vector<MultiFab*>& a_s
                         MFInfo(), *linop.Factory(alev));
         MultiFab::Copy(rhstmp, *prhs, 0, 0, ncomp, nghost);
         linop.applyMetricTerm(alev, 0, rhstmp);
+        linop.unimposeNeumannBC(alev, rhstmp);
+        linop.applyInhomogNeumannTerm(alev, rhstmp);
         prhs = &rhstmp;
 #endif
         linop.solutionResidual(alev, *a_res[alev], *sol[alev], *prhs, crse_bcdata);

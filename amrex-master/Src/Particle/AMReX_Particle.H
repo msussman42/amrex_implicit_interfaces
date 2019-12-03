@@ -7,6 +7,9 @@
 #include <AMReX_FArrayBox.H>
 #include <AMReX_IntVect.H>
 
+#include <AMReX_ParmParse.H>
+#include <AMReX_Geometry.H>
+
 namespace amrex {
 
 namespace
@@ -20,18 +23,22 @@ namespace
     constexpr int NoSplitParticleID  = std::numeric_limits<int>::max()-4;
 }
 
-//
-//! The struct used to store particles.
-template<int NReal, int NInt=0>
+/** \brief The struct used to store particles.
+ *
+ * \tparam T_NReal The number of extra Real components
+ * \tparam T_NInt The number of extra integer components
+ */
+template<int T_NReal, int T_NInt=0>
 struct Particle
 {
+    //! \brief number of extra Real components in the particle struct
+    static constexpr int NReal = T_NReal;
+    //! \brief number of extra integer components in the particle struct
+    static constexpr int NInt = T_NInt;
+
     //
     //! The floating point type used for the particles.
-#ifdef BL_SINGLE_PRECISION_PARTICLES
-    typedef float RealType;
-#else
-    typedef double RealType;
-#endif
+    using RealType = ParticleReal;
 
     /**
     * The real data. We always have SPACEDIM position coordinates,
@@ -63,14 +70,38 @@ struct Particle
     AMREX_GPU_HOST_DEVICE int& cpu()       & {return m_idata.cpu;}
     AMREX_GPU_HOST_DEVICE int  cpu() const & {return m_idata.cpu;}
 
-    AMREX_GPU_HOST_DEVICE RealType& pos(int index)       & {return m_rdata.pos[index];}
-    AMREX_GPU_HOST_DEVICE RealType  pos(int index) const & {return m_rdata.pos[index];}
+    AMREX_GPU_HOST_DEVICE RealType& pos(int index)       &
+	{
+		AMREX_ASSERT(index < AMREX_SPACEDIM);
+		return m_rdata.pos[index];
+	}
+    AMREX_GPU_HOST_DEVICE RealType  pos(int index) const &
+	{
+		AMREX_ASSERT(index < AMREX_SPACEDIM);
+		return m_rdata.pos[index];
+	}
 
-    AMREX_GPU_HOST_DEVICE RealType& rdata(int index)       & {return m_rdata.arr[AMREX_SPACEDIM + index];}
-    AMREX_GPU_HOST_DEVICE RealType  rdata(int index) const & {return m_rdata.arr[AMREX_SPACEDIM + index];}
+    AMREX_GPU_HOST_DEVICE RealType& rdata(int index)       &
+	{
+		AMREX_ASSERT(index < NReal);
+		return m_rdata.arr[AMREX_SPACEDIM + index];
+	}
+    AMREX_GPU_HOST_DEVICE RealType  rdata(int index) const &
+	{
+		AMREX_ASSERT(index < NReal);
+		return m_rdata.arr[AMREX_SPACEDIM + index];
+	}
 
-    AMREX_GPU_HOST_DEVICE int& idata(int index)       & {return m_idata.arr[2 + index];}
-    AMREX_GPU_HOST_DEVICE int  idata(int index) const & {return m_idata.arr[2 + index];}
+    AMREX_GPU_HOST_DEVICE int& idata(int index)       &
+	{
+		AMREX_ASSERT(index < NInt);
+		return m_idata.arr[2 + index];
+	}
+    AMREX_GPU_HOST_DEVICE int  idata(int index) const &
+	{
+		AMREX_ASSERT(index < NInt);		
+		return m_idata.arr[2 + index];
+	}
 
     static Real InterpDoit (const FArrayBox& fab, const Real* fracs, const IntVect* cells, int comp);
 
@@ -326,9 +357,9 @@ Particle<NReal, NInt>::CIC_Cells_Fracs_Basic (const Particle<NReal, NInt>& p,
     //
     // "cells" should be dimensioned: IntVect cells[AMREX_D_TERM(2,+2,+4)]
     //
-    const Real len[AMREX_SPACEDIM] = { AMREX_D_DECL((p.m_rdata.pos[0]-plo[0])/dx[0] + Real(0.5),
-                                           (p.m_rdata.pos[1]-plo[1])/dx[1] + Real(0.5),
-                                           (p.m_rdata.pos[2]-plo[2])/dx[2] + Real(0.5)) };
+    const Real len[AMREX_SPACEDIM] = { AMREX_D_DECL((p.m_rdata.pos[0]-plo[0])/dx[0] + 0.5_rt,
+                                           (p.m_rdata.pos[1]-plo[1])/dx[1] + 0.5_rt,
+                                           (p.m_rdata.pos[2]-plo[2])/dx[2] + 0.5_rt) };
 
     const IntVect cell(AMREX_D_DECL(floor(len[0]), floor(len[1]), floor(len[2])));
 
@@ -385,34 +416,34 @@ Particle<NReal, NInt>::CIC_Cells_Fracs (const Particle<NReal, NInt>& p,
     for (int xi = locell[0]; xi <= hicell[0]; xi++)
     {
         cells[i][0] = xi;
-        fracs[i] = (std::min(hilen[0]-xi,Real(1))-std::max(lolen[0]-xi,Real(0)))*cell_density;
+        fracs[i] = (std::min(hilen[0]-xi,1_rt)-std::max(lolen[0]-xi,0_rt))*cell_density;
         i++;
     }
 #elif (AMREX_SPACEDIM == 2)
     for (int yi = locell[1]; yi <= hicell[1]; yi++)
     {
-        const Real yf = std::min(hilen[1]-yi,Real(1))-std::max(lolen[1]-yi,Real(0));
+        const Real yf = std::min(hilen[1]-yi,1_rt)-std::max(lolen[1]-yi,0_rt);
         for (int xi = locell[0]; xi <= hicell[0]; xi ++)
         {
             cells[i][0] = xi;
             cells[i][1] = yi;
-            fracs[i] = yf * (std::min(hilen[0]-xi,Real(1))-std::max(lolen[0]-xi,Real(0)))*cell_density;
+            fracs[i] = yf * (std::min(hilen[0]-xi,1_rt)-std::max(lolen[0]-xi,0_rt))*cell_density;
             i++;
         }
     }
 #elif (AMREX_SPACEDIM == 3)
     for (int zi = locell[2]; zi <= hicell[2]; zi++)
     {
-        const Real zf = std::min(hilen[2]-zi,Real(1))-std::max(lolen[2]-zi,Real(0));
+        const Real zf = std::min(hilen[2]-zi,1_rt)-std::max(lolen[2]-zi,0_rt);
         for (int yi = locell[1]; yi <= hicell[1]; yi++)
         {
-            const Real yf = std::min(hilen[1]-yi,Real(1))-std::max(lolen[1]-yi,Real(0));
+            const Real yf = std::min(hilen[1]-yi,1_rt)-std::max(lolen[1]-yi,0_rt);
             for (int xi = locell[0]; xi <= hicell[0]; xi++)
             {
                 cells[i][0] = xi;
                 cells[i][1] = yi;
                 cells[i][2] = zi;
-                fracs[i] = zf * yf * (std::min(hilen[0]-xi,Real(1))-std::max(lolen[0]-xi,Real(0))) * cell_density;
+                fracs[i] = zf * yf * (std::min(hilen[0]-xi,1_rt)-std::max(lolen[0]-xi,0_rt)) * cell_density;
                 i++;
             }
         }
@@ -517,8 +548,9 @@ int
 Particle<NReal, NInt>::NextID ()
 {
     int next;
-
-#if defined(_OPENMP) && _OPENMP < 201107
+// we should be able to test on _OPENMP < 201107 for capture (version 3.1)
+// but we must work around a bug in gcc < 4.9
+#if defined(_OPENMP) && _OPENMP < 201307
 #pragma omp critical (amrex_particle_nextid)
 #elif defined(_OPENMP)
 #pragma omp atomic capture
@@ -599,8 +631,8 @@ Particle<NReal, NInt>::Interp (const Particle<NReal, NInt>& prt,
 			  int                 cnt)
 {
     BL_PROFILE("Particle<NReal, NInt>::Interp()");
-    BL_ASSERT(idx != 0);
-    BL_ASSERT(val != 0);
+    AMREX_ASSERT(idx != 0);
+    AMREX_ASSERT(val != 0);
 
     const int       M   = AMREX_D_TERM(2,+2,+4);
     const Real*     plo = geom.ProbLo();
@@ -615,7 +647,7 @@ Particle<NReal, NInt>::Interp (const Particle<NReal, NInt>& prt,
 
     for (int i = 0; i < cnt; i++)
     {
-        BL_ASSERT(idx[i] >= 0 && idx[i] < fab.nComp());
+        AMREX_ASSERT(idx[i] >= 0 && idx[i] < fab.nComp());
 
         val[i] = Particle<NReal, NInt>::InterpDoit(fab,fracs,cells,idx[i]);
     }
@@ -629,7 +661,7 @@ Particle<NReal, NInt>::GetGravity (const FArrayBox&    gfab,
 			      Real*               grav)
 {
     BL_PROFILE("Particle<NReal, NInt>::GetGravity()");
-    BL_ASSERT(grav != 0);
+    AMREX_ASSERT(grav != 0);
 
     int idx[AMREX_SPACEDIM] = { AMREX_D_DECL(0,1,2) };
 

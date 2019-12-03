@@ -1,12 +1,8 @@
 
 #include <AMReX_MLCellLinOp.H>
-#include <AMReX_MG_K.H>
 #include <AMReX_MLLinOp_K.H>
 #include <AMReX_MLLinOp_F.H>
 #include <AMReX_MultiFabUtil.H>
-#ifdef AMREX_USE_EB
-#include <AMReX_MLEBABecLap_F.H>
-#endif
 
 namespace amrex {
 
@@ -227,7 +223,8 @@ MLCellLinOp::setLevelBC (int amrlev, const MultiFab* a_levelbcdata)
     {
         m_bcondloc[amrlev][mglev]->setLOBndryConds(m_geom[amrlev][mglev], dx,
                                                    m_lobc, m_hibc,
-                                                   br_ref_ratio, m_coarse_bc_loc);
+                                                   br_ref_ratio, m_coarse_bc_loc,
+                                                   m_domain_bloc_lo, m_domain_bloc_hi);
     }
 }
 
@@ -302,14 +299,17 @@ MLCellLinOp::interpolation (int amrlev, int fmglev, MultiFab& fine, const MultiF
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(crse,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    for (MFIter mfi(fine,TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const Box& bx    = mfi.tilebox();
-        auto const cfab = crse.array(mfi);
-        auto       ffab = fine.array(mfi);
-        AMREX_HOST_DEVICE_FOR_4D ( bx, ncomp, i, j, k, n,
+        Array4<Real const> const& cfab = crse.const_array(mfi);
+        Array4<Real> const& ffab = fine.array(mfi);
+        AMREX_HOST_DEVICE_PARALLEL_FOR_4D ( bx, ncomp, i, j, k, n,
         {
-            mg_cc_interp(i,j,k,n,ffab,cfab);
+            int ic = amrex::coarsen(i,2);
+            int jc = amrex::coarsen(j,2);
+            int kc = amrex::coarsen(k,2);
+            ffab(i,j,k,n) += cfab(ic,jc,kc,n);
         });
     }    
 }
@@ -462,7 +462,7 @@ MLCellLinOp::applyBC (int amrlev, int mglev, MultiFab& in, BCMode bc_mode, State
     MFItInfo mfi_info;
     if (Gpu::notInLaunchRegion()) mfi_info.SetDynamic(true);
 
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(cross || Gpu::notInLaunchRegion(),
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(cross || tensorop || Gpu::notInLaunchRegion(),
                                      "non-cross stencil not support for gpu");
 
 #ifdef _OPENMP
@@ -651,7 +651,7 @@ MLCellLinOp::compFlux (int amrlev, const Array<MultiFab*,AMREX_SPACEDIM>& fluxes
     if (Gpu::notInLaunchRegion()) mfi_info.EnableTiling().SetDynamic(true);
 
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
     {
         Array<FArrayBox,AMREX_SPACEDIM> flux;
@@ -659,9 +659,9 @@ MLCellLinOp::compFlux (int amrlev, const Array<MultiFab*,AMREX_SPACEDIM>& fluxes
         for (MFIter mfi(sol, mfi_info);  mfi.isValid(); ++mfi)
         {
             const Box& tbx = mfi.tilebox();
-            AMREX_D_TERM(flux[0].resize(amrex::surroundingNodes(tbx,0));,
-                         flux[1].resize(amrex::surroundingNodes(tbx,1));,
-                         flux[2].resize(amrex::surroundingNodes(tbx,2)););
+            AMREX_D_TERM(flux[0].resize(amrex::surroundingNodes(tbx,0),ncomp);,
+                         flux[1].resize(amrex::surroundingNodes(tbx,1),ncomp);,
+                         flux[2].resize(amrex::surroundingNodes(tbx,2),ncomp););
             AMREX_D_TERM(Elixir elifx = flux[0].elixir();,
                          Elixir elify = flux[1].elixir();,
                          Elixir elifz = flux[2].elixir(););
@@ -670,7 +670,7 @@ MLCellLinOp::compFlux (int amrlev, const Array<MultiFab*,AMREX_SPACEDIM>& fluxes
                 const Box& nbx = mfi.nodaltilebox(idim);
                 Array4<Real      > dst = fluxes[idim]->array(mfi);
                 Array4<Real const> src =  pflux[idim]->array();
-                AMREX_HOST_DEVICE_FOR_4D (nbx, ncomp, i, j, k, n,
+                AMREX_HOST_DEVICE_PARALLEL_FOR_4D (nbx, ncomp, i, j, k, n,
                 {
                     dst(i,j,k,n) = src(i,j,k,n);
                 });
@@ -710,18 +710,18 @@ MLCellLinOp::compGrad (int amrlev, const Array<MultiFab*,AMREX_SPACEDIM>& grad,
                      const auto& gy = grad[1]->array(mfi);,
                      const auto& gz = grad[2]->array(mfi););
 
-        AMREX_HOST_DEVICE_FOR_4D ( xbx, ncomp, i, j, k, n,
+        AMREX_HOST_DEVICE_PARALLEL_FOR_4D ( xbx, ncomp, i, j, k, n,
         {
             gx(i,j,k,n) = dxi*(s(i,j,k,n) - s(i-1,j,k,n));
         });
 #if (AMREX_SPACEDIM >= 2)
-        AMREX_HOST_DEVICE_FOR_4D ( ybx, ncomp, i, j, k, n,
+        AMREX_HOST_DEVICE_PARALLEL_FOR_4D ( ybx, ncomp, i, j, k, n,
         {
             gy(i,j,k,n) = dyi*(s(i,j,k,n) - s(i,j-1,k,n));
         });
 #endif
 #if (AMREX_SPACEDIM == 3)
-        AMREX_HOST_DEVICE_FOR_4D ( zbx, ncomp, i, j, k, n,
+        AMREX_HOST_DEVICE_PARALLEL_FOR_4D ( zbx, ncomp, i, j, k, n,
         {
             gz(i,j,k,n) = dzi*(s(i,j,k,n) - s(i,j,k-1,n));
         });
@@ -850,7 +850,9 @@ void
 MLCellLinOp::BndryCondLoc::setLOBndryConds (const Geometry& geom, const Real* dx,
                                             const Vector<Array<BCType,AMREX_SPACEDIM> >& lobc,
                                             const Vector<Array<BCType,AMREX_SPACEDIM> >& hibc,
-                                            int ratio, const RealVect& a_loc)
+                                            int ratio, const RealVect& interior_bloc,
+                                            const Array<Real,AMREX_SPACEDIM>& domain_bloc_lo,
+                                            const Array<Real,AMREX_SPACEDIM>& domain_bloc_hi)
 {
     const Box& domain = geom.Domain();
 
@@ -864,7 +866,8 @@ MLCellLinOp::BndryCondLoc::setLOBndryConds (const Geometry& geom, const Real* dx
             RealTuple & bloc  = bcloc[mfi][icomp];
             BCTuple   & bctag = bcond[mfi][icomp];
             MLMGBndry::setBoxBC(bloc, bctag, bx, domain, lobc[icomp], hibc[icomp],
-                                dx, ratio, a_loc, geom.isPeriodicArray());
+                                dx, ratio, interior_bloc, domain_bloc_lo, domain_bloc_hi,
+                                geom.isPeriodicArray());
         }
     }
 }
@@ -892,7 +895,7 @@ MLCellLinOp::applyMetricTerm (int amrlev, int mglev, MultiFab& rhs) const
         const Box& tbx = mfi.tilebox();
         Array4<Real> const& rhsarr = rhs.array(mfi);
         if (cc) {
-            AMREX_HOST_DEVICE_FOR_4D ( tbx, ncomp, i, j, k, n,
+            AMREX_HOST_DEVICE_PARALLEL_FOR_4D ( tbx, ncomp, i, j, k, n,
             {
                 Real rc = probxlo + (i+0.5)*dx;
 #if (AMREX_SPACEDIM == 2)
@@ -902,7 +905,7 @@ MLCellLinOp::applyMetricTerm (int amrlev, int mglev, MultiFab& rhs) const
 #endif
             });
         } else {
-            AMREX_HOST_DEVICE_FOR_4D ( tbx, ncomp, i, j, k, n,
+            AMREX_HOST_DEVICE_PARALLEL_FOR_4D ( tbx, ncomp, i, j, k, n,
             {
                 Real re = probxlo + i*dx;
 #if (AMREX_SPACEDIM == 2)
@@ -939,7 +942,7 @@ MLCellLinOp::unapplyMetricTerm (int amrlev, int mglev, MultiFab& rhs) const
         const Box& tbx = mfi.tilebox();
         Array4<Real> const& rhsarr = rhs.array(mfi);
         if (cc) {
-            AMREX_HOST_DEVICE_FOR_4D ( tbx, ncomp, i, j, k, n,
+            AMREX_HOST_DEVICE_PARALLEL_FOR_4D ( tbx, ncomp, i, j, k, n,
             {
                 Real rcinv = 1.0/(probxlo + (i+0.5)*dx);
 #if (AMREX_SPACEDIM == 2)
@@ -949,7 +952,7 @@ MLCellLinOp::unapplyMetricTerm (int amrlev, int mglev, MultiFab& rhs) const
 #endif
             });
         } else {
-            AMREX_HOST_DEVICE_FOR_4D ( tbx, ncomp, i, j, k, n,
+            AMREX_HOST_DEVICE_PARALLEL_FOR_4D ( tbx, ncomp, i, j, k, n,
             {
                 Real re = probxlo + i*dx;
                 Real reinv = (re==0.0) ? 0.0 : 1./re;

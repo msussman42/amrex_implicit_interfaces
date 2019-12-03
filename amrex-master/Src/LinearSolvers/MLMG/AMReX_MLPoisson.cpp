@@ -77,30 +77,30 @@ MLPoisson::Fapply (int amrlev, int mglev, MultiFab& out, const MultiFab& in) con
         const auto& yfab = out.array(mfi);
 
 #if (AMREX_SPACEDIM == 3)
-        AMREX_HOST_DEVICE_FOR_3D (bx, i, j, k,
+        AMREX_HOST_DEVICE_PARALLEL_FOR_3D (bx, i, j, k,
         {
             mlpoisson_adotx(i, j, k, yfab, xfab, dhx, dhy, dhz);
         });
 #elif (AMREX_SPACEDIM == 2)
         if (m_has_metric_term) {
-            AMREX_HOST_DEVICE_FOR_3D (bx, i, j, k,
+            AMREX_HOST_DEVICE_PARALLEL_FOR_3D (bx, i, j, k,
             {
                 mlpoisson_adotx_m(i, j, yfab, xfab, dhx, dhy, dx, probxlo);
             });
         } else {
-            AMREX_HOST_DEVICE_FOR_3D (bx, i, j, k,
+            AMREX_HOST_DEVICE_PARALLEL_FOR_3D (bx, i, j, k,
             {
                 mlpoisson_adotx(i, j, yfab, xfab, dhx, dhy);
             });
         }
 #elif (AMREX_SPACEDIM == 1)
         if (m_has_metric_term) {
-            AMREX_HOST_DEVICE_FOR_3D (bx, i, j, k,
+            AMREX_HOST_DEVICE_PARALLEL_FOR_3D (bx, i, j, k,
             {
                 mlpoisson_adotx_m(i, yfab, xfab, dhx, dx, probxlo);
             });
         } else {
-            AMREX_HOST_DEVICE_FOR_3D (bx, i, j, k,
+            AMREX_HOST_DEVICE_PARALLEL_FOR_3D (bx, i, j, k,
             {
                 mlpoisson_adotx(i, yfab, xfab, dhx);
             });
@@ -486,8 +486,6 @@ MLPoisson::makeNLinOp (int grid_size) const
 
     nop->setScalars(1.0, -1.0);
 
-    const BoxArray& myba = m_grids[0].back();
-
     const Real* dxinv = geom.InvCellSize();
     Real dxscale = dxinv[0];
 #if (AMREX_SPACEDIM >= 2)
@@ -500,22 +498,9 @@ MLPoisson::makeNLinOp (int grid_size) const
     MultiFab alpha(ba, dm, 1, 0);
     alpha.setVal(1.e30*dxscale*dxscale);
 
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-    {
-        std::vector< std::pair<int,Box> > isects;
-        
-        for (MFIter mfi(alpha, MFItInfo().SetDynamic(true)); mfi.isValid(); ++mfi)
-        {
-            FArrayBox& fab = alpha[mfi];
-            myba.intersections(fab.box(), isects);
-            for (const auto& is : isects)
-            {
-                fab.setVal(0.0, is.second, 0, 1);
-            }
-        }
-    }
+    MultiFab foo(m_grids[0].back(), m_dmap[0].back(), 1, 0, MFInfo().SetAlloc(false));
+    const FabArrayBase::CPC& cpc = alpha.getCPC(IntVect(0),foo,IntVect(0),Periodicity::NonPeriodic());
+    alpha.setVal(0.0, cpc, 0, 1);
 
     nop->setACoeffs(0, alpha);
 

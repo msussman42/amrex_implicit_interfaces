@@ -30,6 +30,9 @@ public:
     AmrMesh (const AmrMesh& rhs) = delete;
     AmrMesh& operator= (const AmrMesh& rhs) = delete;
 
+    AmrMesh (AmrMesh&& rhs) = default;
+    AmrMesh& operator= (AmrMesh&& rhs) = default;
+
     virtual ~AmrMesh ();
 
     int Verbose () const noexcept { return verbose; }
@@ -101,6 +104,9 @@ public:
     void SetDistributionMap (int lev, const DistributionMapping& dmap_in) noexcept;
     void SetBoxArray (int lev, const BoxArray& ba_in) noexcept;
     void SetGeometry (int lev, const Geometry& geom_in) noexcept;
+
+    //! Given domain box, return AMR level.  Return -1 if there is no match.
+    int GetLevel (Box const& domain) noexcept;
 
     void ClearDistributionMap (int lev) noexcept;
     void ClearBoxArray (int lev) noexcept;

@@ -85,6 +85,8 @@ AmrCore::InitFromScratch (Real time)
 void
 AmrCore::regrid (int lbase, Real time, bool)
 {
+    if (lbase >= max_level) return;
+
     int new_finest;
     Vector<BoxArray> new_grids(finest_level+2);
     MakeNewGrids(lbase, time, new_finest, new_grids);
@@ -131,7 +133,7 @@ AmrCore::printGridSummary (std::ostream& os, int min_lev, int max_lev) const noe
         int                       numgrid = bs.size();
         long                      ncells  = bs.numPts();
         double                    ntot    = Geom(lev).Domain().d_numPts();
-        Real                      frac    = 100.0*(Real(ncells) / ntot);
+        Real                      frac    = 100.0_rt*(Real(ncells) / ntot);
 
         os << "  Level "
            << lev

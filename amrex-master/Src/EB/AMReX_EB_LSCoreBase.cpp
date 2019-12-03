@@ -82,8 +82,8 @@ void LSCoreBase::InitLSCoreBase() {
     // int bc_hi[] = {BCType::int_dir, BCType::int_dir, BCType::int_dir};
 
     // walls (Neumann)
-    int bc_lo[] = {FOEXTRAP, FOEXTRAP, FOEXTRAP};
-    int bc_hi[] = {FOEXTRAP, FOEXTRAP, FOEXTRAP};
+    int bc_lo[] = {BCType::foextrap, BCType::foextrap, BCType::foextrap};
+    int bc_hi[] = {BCType::foextrap, BCType::foextrap, BCType::foextrap};
 
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         // lo-side BCs
@@ -650,7 +650,7 @@ Vector<MultiFab> LSCoreBase::PlotFileMF () const {
 
         amrex::average_node_to_cellcenter(r[i], 0, level_set[i], 0, 1);
     }
-    return std::move(r);
+    return r;
 }
 
 

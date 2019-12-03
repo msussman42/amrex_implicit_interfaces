@@ -116,7 +116,7 @@ MLTensorOp::apply (int amrlev, int mglev, MultiFab& out, MultiFab& in, BCMode bc
 
     if (mglev >= m_kappa[amrlev].size()) return;
 
-    applyBCTensor(amrlev, mglev, in, bc_mode, bndry);
+    applyBCTensor(amrlev, mglev, in, bc_mode, s_mode, bndry );
 
     const auto dxinv = m_geom[amrlev][mglev].InvCellSizeArray();
 
@@ -133,13 +133,13 @@ MLTensorOp::apply (int amrlev, int mglev, MultiFab& out, MultiFab& in, BCMode bc
         {
             const Box& bx = mfi.tilebox();
             Array4<Real> const axfab = out.array(mfi);
-            Array4<Real const> const vfab = in.array(mfi);
-            AMREX_D_TERM(Array4<Real const> const etaxfab = etamf[0].array(mfi);,
-                         Array4<Real const> const etayfab = etamf[1].array(mfi);,
-                         Array4<Real const> const etazfab = etamf[2].array(mfi););
-            AMREX_D_TERM(Array4<Real const> const kapxfab = kapmf[0].array(mfi);,
-                         Array4<Real const> const kapyfab = kapmf[1].array(mfi);,
-                         Array4<Real const> const kapzfab = kapmf[2].array(mfi););
+            Array4<Real const> const vfab = in.const_array(mfi);
+            AMREX_D_TERM(Array4<Real const> const etaxfab = etamf[0].const_array(mfi);,
+                         Array4<Real const> const etayfab = etamf[1].const_array(mfi);,
+                         Array4<Real const> const etazfab = etamf[2].const_array(mfi););
+            AMREX_D_TERM(Array4<Real const> const kapxfab = kapmf[0].const_array(mfi);,
+                         Array4<Real const> const kapyfab = kapmf[1].const_array(mfi);,
+                         Array4<Real const> const kapzfab = kapmf[2].const_array(mfi););
             AMREX_D_TERM(Box const xbx = amrex::surroundingNodes(bx,0);,
                          Box const ybx = amrex::surroundingNodes(bx,1);,
                          Box const zbx = amrex::surroundingNodes(bx,2););
@@ -180,10 +180,10 @@ MLTensorOp::apply (int amrlev, int mglev, MultiFab& out, MultiFab& in, BCMode bc
 
 void
 MLTensorOp::applyBCTensor (int amrlev, int mglev, MultiFab& vel,
-                           BCMode bc_mode, const MLMGBndry* bndry) const
+                           BCMode bc_mode, StateMode, const MLMGBndry* bndry) const
 {
 #if (AMREX_SPACEDIM > 1)
-
+ 
     const int inhomog = bc_mode == BCMode::Inhomogeneous;
     const int imaxorder = maxorder;
     const auto& bcondloc = *m_bcondloc[amrlev][mglev];
@@ -194,6 +194,8 @@ MLTensorOp::applyBCTensor (int amrlev, int mglev, MultiFab& vel,
 
     const auto dxinv = m_geom[amrlev][mglev].InvCellSizeArray();
     const Box& domain = m_geom[amrlev][mglev].growPeriodicDomain(1);
+
+    // Domain and coarse-fine boundaries are handled below.
 
     MFItInfo mfi_info;
     if (Gpu::notInLaunchRegion()) mfi_info.SetDynamic(true);
@@ -220,20 +222,21 @@ MLTensorOp::applyBCTensor (int amrlev, int mglev, MultiFab& vel,
             }
         }
 
-#if (AMREX_SPACEDIM == 2)
         const auto& mxlo = maskvals[Orientation(0,Orientation::low )].array(mfi);
         const auto& mylo = maskvals[Orientation(1,Orientation::low )].array(mfi);
         const auto& mxhi = maskvals[Orientation(0,Orientation::high)].array(mfi);
         const auto& myhi = maskvals[Orientation(1,Orientation::high)].array(mfi);
 
         const auto& bvxlo = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(0,Orientation::low )).array(mfi) : foo;
+	  (*bndry)[Orientation(0,Orientation::low )].array(mfi) : foo;
         const auto& bvylo = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(1,Orientation::low )).array(mfi) : foo;
+	  (*bndry)[Orientation(1,Orientation::low )].array(mfi) : foo;
         const auto& bvxhi = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(0,Orientation::high)).array(mfi) : foo;
+	  (*bndry)[Orientation(0,Orientation::high)].array(mfi) : foo;
         const auto& bvyhi = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(1,Orientation::high)).array(mfi) : foo;
+	  (*bndry)[Orientation(1,Orientation::high)].array(mfi) : foo;
+
+#if (AMREX_SPACEDIM == 2)
 
         AMREX_HOST_DEVICE_FOR_1D ( 4, icorner,
         {
@@ -244,45 +247,109 @@ MLTensorOp::applyBCTensor (int amrlev, int mglev, MultiFab& vel,
                                   dxinv, domain);
         });
 #else
-        const auto& mxlo = maskvals[Orientation(0,Orientation::low )].array(mfi);
-        const auto& mylo = maskvals[Orientation(1,Orientation::low )].array(mfi);
         const auto& mzlo = maskvals[Orientation(2,Orientation::low )].array(mfi);
-        const auto& mxhi = maskvals[Orientation(0,Orientation::high)].array(mfi);
-        const auto& myhi = maskvals[Orientation(1,Orientation::high)].array(mfi);
         const auto& mzhi = maskvals[Orientation(2,Orientation::high)].array(mfi);
 
-        const auto& bvxlo = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(0,Orientation::low )).array(mfi) : foo;
-        const auto& bvylo = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(1,Orientation::low )).array(mfi) : foo;
         const auto& bvzlo = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(2,Orientation::low )).array(mfi) : foo;
-        const auto& bvxhi = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(0,Orientation::high)).array(mfi) : foo;
-        const auto& bvyhi = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(1,Orientation::high)).array(mfi) : foo;
+	  (*bndry)[Orientation(2,Orientation::low )].array(mfi) : foo;
         const auto& bvzhi = (bndry != nullptr) ?
-            bndry->bndryValues(Orientation(2,Orientation::high)).array(mfi) : foo;
+	  (*bndry)[Orientation(2,Orientation::high)].array(mfi) : foo;
 
+	// only edge vals used in 3D stencil
         AMREX_HOST_DEVICE_FOR_1D ( 12, iedge,
         {
             mltensor_fill_edges(iedge, vbx, velfab,
                                 mxlo, mylo, mzlo, mxhi, myhi, mzhi,
                                 bvxlo, bvylo, bvzlo, bvxhi, bvyhi, bvzhi,
-                                bct, bcl, inhomog, imaxorder, dxinv, domain);
+                                bct, bcl, inhomog, imaxorder,
+				dxinv, domain);
         });
 
-        AMREX_HOST_DEVICE_FOR_1D ( 8, icorner,
-        {
-            mltensor_fill_corners(icorner, vbx, velfab,
-                                  mxlo, mylo, mzlo, mxhi, myhi, mzhi,
-                                  bvxlo, bvylo, bvzlo, bvxhi, bvyhi, bvzhi,
-                                  bct, bcl, inhomog, imaxorder, dxinv, domain);
-        });
 #endif
     }
 
+    vel.EnforcePeriodicity(0, AMREX_SPACEDIM, m_geom[amrlev][mglev].periodicity());
 #endif
 }
+
+void
+MLTensorOp::compFlux (int amrlev, const Array<MultiFab*,AMREX_SPACEDIM>& fluxes,
+                       MultiFab& sol, Location loc) const
+{
+#if (AMREX_SPACEDIM > 1)
+    BL_PROFILE("MLTensorOp::compFlux()");
+
+    const int mglev = 0;
+    const int ncomp = getNComp();
+    MLABecLaplacian::compFlux(amrlev, fluxes, sol, loc);
+
+    applyBCTensor(amrlev, mglev, sol, BCMode::Inhomogeneous, StateMode::Solution, m_bndry_sol[amrlev].get());
+
+    const auto dxinv = m_geom[amrlev][mglev].InvCellSizeArray();
+
+    Array<MultiFab,AMREX_SPACEDIM> const& etamf = m_b_coeffs[amrlev][mglev];
+    Array<MultiFab,AMREX_SPACEDIM> const& kapmf = m_kappa[amrlev][mglev];
+    Real bscalar = m_b_scalar;
+
+#ifdef _OPENMP
+#pragma omp parallel if (Gpu::notInLaunchRegion())
+#endif
+    {
+        Array<FArrayBox,AMREX_SPACEDIM> fluxfab_tmp;
+
+        for (MFIter mfi(sol, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        {
+            const Box& bx = mfi.tilebox();
+            Array4<Real const> const vfab = sol.const_array(mfi);
+            AMREX_D_TERM(Array4<Real const> const etaxfab = etamf[0].const_array(mfi);,
+                         Array4<Real const> const etayfab = etamf[1].const_array(mfi);,
+                         Array4<Real const> const etazfab = etamf[2].const_array(mfi););
+            AMREX_D_TERM(Array4<Real const> const kapxfab = kapmf[0].const_array(mfi);,
+                         Array4<Real const> const kapyfab = kapmf[1].const_array(mfi);,
+                         Array4<Real const> const kapzfab = kapmf[2].const_array(mfi););
+            AMREX_D_TERM(Box const xbx = amrex::surroundingNodes(bx,0);,
+                         Box const ybx = amrex::surroundingNodes(bx,1);,
+                         Box const zbx = amrex::surroundingNodes(bx,2););
+	    AMREX_D_TERM(fluxfab_tmp[0].resize(xbx,AMREX_SPACEDIM);,
+                         fluxfab_tmp[1].resize(ybx,AMREX_SPACEDIM);,
+                         fluxfab_tmp[2].resize(zbx,AMREX_SPACEDIM););
+            AMREX_D_TERM(Elixir fxeli = fluxfab_tmp[0].elixir();,
+                         Elixir fyeli = fluxfab_tmp[1].elixir();,
+                         Elixir fzeli = fluxfab_tmp[2].elixir(););
+            AMREX_D_TERM(Array4<Real> const fxfab = fluxfab_tmp[0].array();,
+                         Array4<Real> const fyfab = fluxfab_tmp[1].array();,
+                         Array4<Real> const fzfab = fluxfab_tmp[2].array(););
+            AMREX_LAUNCH_HOST_DEVICE_LAMBDA
+            ( xbx, txbx,
+              {
+                  mltensor_cross_terms_fx(txbx,fxfab,vfab,etaxfab,kapxfab,dxinv);
+              }
+            , ybx, tybx,
+              {
+                  mltensor_cross_terms_fy(tybx,fyfab,vfab,etayfab,kapyfab,dxinv);
+              }
+#if (AMREX_SPACEDIM == 3)
+            , zbx, tzbx,
+              {
+                  mltensor_cross_terms_fz(tzbx,fzfab,vfab,etazfab,kapzfab,dxinv);
+              }
+#endif
+            );
+
+	    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+	        const Box& nbx = mfi.nodaltilebox(idim);
+                Array4<Real      > dst = fluxes[idim]->array(mfi);
+		Array4<Real const> src = fluxfab_tmp[idim].const_array();
+		AMREX_HOST_DEVICE_PARALLEL_FOR_4D (nbx, ncomp, i, j, k, n,
+                {
+                    dst(i,j,k,n) += bscalar*src(i,j,k,n);
+                });
+            }
+
+        }
+    }
+#endif
+}
+
 
 }

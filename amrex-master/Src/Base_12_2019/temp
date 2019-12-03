@@ -1,0 +1,5 @@
+// SUSSMAN
+bool FArrayBox::get_init_snan ()
+{
+    return init_snan;
+}

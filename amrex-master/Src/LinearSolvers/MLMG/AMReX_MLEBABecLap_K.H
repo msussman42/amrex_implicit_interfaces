@@ -3,12 +3,27 @@
 
 #include <AMReX_MLLinOp_K.H>
 
+#include <AMReX_EBCellFlag.H>
+
+namespace amrex { namespace {
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    Real get_dx_eb (Real kappa) noexcept {
+        return amrex::max(0.3,(kappa*kappa-0.25)/(2.0*kappa));
+    }
+}}
+
+#if (AMREX_SPACEDIM == 2)
+#include <AMReX_MLEBABecLap_2D_K.H>
+#else
+#include <AMReX_MLEBABecLap_3D_K.H>
+#endif
+
 namespace amrex {
 
 // note that the mask in these functions is different from masks in bndry registers
 // 1 means valid data, 0 means invalid data
 
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void mlebabeclap_apply_bc_x (int side, Box const& box, int blen,
                              Array4<Real> const& phi,
                              Array4<int const> const& mask,
@@ -92,7 +107,7 @@ void mlebabeclap_apply_bc_x (int side, Box const& box, int blen,
     }
 }
 
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void mlebabeclap_apply_bc_y (int side, Box const& box, int blen,
                              Array4<Real> const& phi,
                              Array4<int const> const& mask,
@@ -176,7 +191,7 @@ void mlebabeclap_apply_bc_y (int side, Box const& box, int blen,
     }
 }
 
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void mlebabeclap_apply_bc_z (int side, Box const& box, int blen,
                              Array4<Real> const& phi,
                              Array4<int const> const& mask,

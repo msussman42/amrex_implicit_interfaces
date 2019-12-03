@@ -1,19 +1,19 @@
 #ifndef AMREX_STRUCTOFARRAYS_H_
 #define AMREX_STRUCTOFARRAYS_H_
 
-#include <array>
-
 #include <AMReX_REAL.H>
 #include <AMReX_Vector.H>
-#include <AMReX_CudaContainers.H>
+#include <AMReX_GpuContainers.H>
+
+#include <array>
 
 namespace amrex {
 
 template <int NReal, int NInt>
 struct StructOfArrays {
 
-    using RealVector = Gpu::ManagedDeviceVector<Real>;
-    using IntVector = Gpu::ManagedDeviceVector<int>;    
+    using RealVector = Gpu::ManagedVector<ParticleReal>;
+    using IntVector = Gpu::ManagedVector<int>;    
 
     StructOfArrays()
         : m_num_neighbor_particles(0),
@@ -27,6 +27,10 @@ struct StructOfArrays {
         m_runtime_idata.resize(a_num_runtime_int );
     }
     
+    int NumRealComps () const noexcept { return NReal + m_runtime_rdata.size(); }
+
+    int NumIntComps () const noexcept { return NInt + m_runtime_idata.size(); }
+
     std::array<RealVector, NReal>& GetRealData () { return m_rdata; }
     std::array< IntVector,  NInt>& GetIntData  () { return m_idata; }
 
@@ -120,7 +124,7 @@ struct StructOfArrays {
 
     int getNumNeighbors () { return m_num_neighbor_particles; }
 
-    void resize(size_t count)
+    void resize (size_t count)
     {
         for (int i = 0; i < NReal; ++i) m_rdata[i].resize(count);
         for (int i = 0; i < NInt;  ++i) m_idata[i].resize(count); 
@@ -128,7 +132,7 @@ struct StructOfArrays {
         for (int i = 0; i < (int) m_runtime_idata.size(); ++i) m_runtime_idata[i].resize(count);
     }
 
-    GpuArray<Real*, NReal> realarray ()
+    GpuArray<ParticleReal*, NReal> realarray ()
     {
         GpuArray<Real*, NReal> arr;
         for (int i = 0; i < NReal; ++i)

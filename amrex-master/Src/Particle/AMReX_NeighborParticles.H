@@ -4,12 +4,20 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_Particles.H>
+#include <AMReX_ParticleUtil.H>
 
 #ifdef AMREX_USE_CUDA
 #include <AMReX_NeighborList.H>
 #endif
 
 namespace amrex {
+
+  struct NeighborCode
+  {
+      int grid_id;
+      IntVect periodic_shift;
+  };
+
 
 ///
 /// This is a container for particles that undergo short-range interations.
@@ -26,8 +34,10 @@ template <int NStructReal, int NStructInt>
 class NeighborParticleContainer
     : public ParticleContainer<NStructReal, NStructInt, 0, 0>
 {
+public:
     using ParticleContainerType = ParticleContainer<NStructReal, NStructInt, 0, 0>;
-    
+    using SuperParticleType = typename ParticleContainerType::SuperParticleType;
+private:
     struct MaskComps
     {
         enum {
@@ -278,8 +288,6 @@ public:
     
     void printNeighborListGPU ();
     
-    void sortParticlesByNeighborDestGPU ();
-    
     void fillNeighborsGPU ();
     
     void updateNeighborsGPU ();
@@ -304,10 +312,18 @@ public:
 
 #endif
 
-    void setEnableInverse (bool flag) { enable_inverse = flag; }
+    void setEnableInverse (bool flag)
+    {
+        enable_inverse = flag;
+        calcCommSize();
+    }
 
     bool enableInverse () { return enable_inverse; }
-    
+
+    void buildNeighborMask ();
+
+    void buildNeighborCopyOp ();
+
 protected:
 
     void cacheNeighborInfo ();
@@ -382,15 +398,7 @@ protected:
     static bool enable_inverse;
 
 #ifdef AMREX_USE_CUDA
-    void fillNeighborsMPIGPU (std::map<int, SendBuffer>& not_ours);
     
-    void buildNeighborMask ();
-
-    struct NeighborCode {
-        int grid_id;
-        IntVect periodic_shift;
-    };
-
     struct NeighborTask {
         int grid_id;
         Box box;
@@ -418,11 +426,25 @@ protected:
     bool m_neighbor_mask_initialized = false;
     std::unique_ptr<amrex::iMultiFab> m_neighbor_mask_ptr;
     std::map<int, std::vector<std::vector<NeighborCode> > > m_grid_map;
-    std::map<int, amrex::Gpu::HostVector<int> > m_start;
-    std::map<int, amrex::Gpu::HostVector<int> > m_stop;
-    
+
+    std::map<int, amrex::Gpu::ManagedVector<NeighborCode> > m_code_array;
+    std::map<int, amrex::Gpu::ManagedVector<int> > m_code_offsets;
+
+    ParticleCopyOp neighbor_copy_op;
+    ParticleCopyPlan neighbor_copy_plan;
+
+    amrex::Gpu::DeviceVector<char> snd_buffer;
+    amrex::Gpu::DeviceVector<char> rcv_buffer;
+
+    Gpu::PinnedVector<char> pinned_snd_buffer;
+    Gpu::PinnedVector<char> pinned_rcv_buffer;
+
     std::map<std::pair<int, int>, amrex::NeighborList<ParticleType> > m_neighbor_list;
 #endif
+
+    bool hasNeighbors() const { return m_has_neighbors; };
+  
+    bool m_has_neighbors = false;
 };
     
 #include "AMReX_NeighborParticlesI.H"
