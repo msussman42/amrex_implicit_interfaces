@@ -56,6 +56,10 @@ CC  = pgcc
 CXXFLAGS =
 CFLAGS   =
 
+# Allow -gopt to be disabled to work around a compiler bug on P9.
+
+PGI_GOPT ?= TRUE
+
 ifeq ($(DEBUG),TRUE)
 
   # 2016-12-02: pgi 16.10 doesn't appear to like -traceback together with c++11
@@ -65,11 +69,19 @@ ifeq ($(DEBUG),TRUE)
 
 else
 
-  CXXFLAGS += -gopt $(PGI_OPT)
-  CFLAGS   += -gopt $(PGI_OPT)
+  CXXFLAGS += $(PGI_OPT)
+  CFLAGS   += $(PGI_OPT)
+
+  ifeq ($(PGI_GOPT),TRUE)
+
+    CXXFLAGS += -gopt
+    CFLAGS   += -gopt
+
+  endif
 
 endif
 
+# The logic here should be consistent with what's in nvcc.mak
 ifeq ($(shell expr $(gcc_major_version) \>= 5), 1)
   CXXFLAGS += -std=c++14
 else ifeq ($(shell expr $(gcc_major_version) \>= 4), 1)
@@ -79,6 +91,18 @@ CFLAGS   += -c99
 
 CXXFLAGS += $(GENERIC_PGI_FLAGS)
 CFLAGS   += $(GENERIC_PGI_FLAGS)
+
+else # AMREX_CCOMP == pgi
+
+# If we're using OpenACC but also CUDA, then nvcc will be the C++ compiler. If
+# we want to call the OpenACC API from C++ then we need to make sure we have
+# the includes for it, because PGI may not be the host compiler for nvcc.
+
+ifeq ($(USE_ACC),TRUE)
+  PGI_BIN_LOCATION := $(shell pgc++ -show 2>&1 | grep CPPCOMPDIR | awk '{print $$7}' | cut -c2-)
+  PGI_LOCATION := $(shell dirname $(PGI_BIN_LOCATION))
+  INCLUDE_LOCATIONS += $(PGI_LOCATION)/etc/include_acc
+endif
 
 endif # AMREX_CCOMP == pgi
 
@@ -108,8 +132,15 @@ ifeq ($(DEBUG),TRUE)
 
 else
 
-  FFLAGS   += -gopt $(PGI_OPT)
-  F90FLAGS += -gopt $(PGI_OPT)
+  FFLAGS   += $(PGI_OPT)
+  F90FLAGS += $(PGI_OPT)
+
+  ifeq ($(PGI_GOPT),TRUE)
+
+    FFLAGS   += -gopt
+    F90FLAGS += -gopt
+
+  endif
 
 endif
 
@@ -122,15 +153,20 @@ endif
 
 ifeq ($(USE_CUDA),TRUE)
 
-  F90FLAGS += -Mcuda=cc$(CUDA_ARCH),ptxinfo,fastmath,charstring
-  FFLAGS   += -Mcuda=cc$(CUDA_ARCH),ptxinfo,fastmath,charstring
+  F90FLAGS += -Mcuda=cc$(CUDA_ARCH),fastmath,charstring
+  FFLAGS   += -Mcuda=cc$(CUDA_ARCH),fastmath,charstring
 
   ifeq ($(DEBUG),TRUE)
     F90FLAGS += -Mcuda=debug
-    FFLAGSS  += -Mcuda=debug
+    FFLAGS   += -Mcuda=debug
   else
     F90FLAGS += -Mcuda=lineinfo
     FFLAGS   += -Mcuda=lineinfo
+  endif
+
+  ifeq ($(CUDA_VERBOSE),TRUE)
+    F90FLAGS += -Mcuda=ptxinfo
+    FFLAGS   += -Mcuda=ptxinfo
   endif
 
   F90FLAGS += CUDA_HOME=$(COMPILE_CUDA_PATH)

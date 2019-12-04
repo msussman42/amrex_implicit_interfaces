@@ -151,13 +151,13 @@ endif
 # Boundary-related 
 #
 ifneq ($(BL_NO_FORT),TRUE)
-  C$(AMREX_BASE)_sources += AMReX_BCRec.cpp 
-  C$(AMREX_BASE)_sources += AMReX_PhysBCFunct.cpp 
-  C$(AMREX_BASE)_sources += AMReX_PhysBCFunctSUSSMAN.cpp 
+  C$(AMREX_BASE)_sources += AMReX_BCRec.cpp
+  C$(AMREX_BASE)_sources += AMReX_PhysBCFunct.cpp
+  C$(AMREX_BASE)_sources += PhysBCFunctSUSSMAN.cpp
   C$(AMREX_BASE)_sources += AMReX_BCUtil.cpp
-  C$(AMREX_BASE)_headers += AMReX_BCRec.H 
+  C$(AMREX_BASE)_headers += AMReX_BCRec.H
   C$(AMREX_BASE)_headers += AMReX_PhysBCFunct.H
-  C$(AMREX_BASE)_headers += AMReX_PhysBCFunctSUSSMAN.H
+  C$(AMREX_BASE)_headers += PhysBCFunctSUSSMAN.H
   C$(AMREX_BASE)_headers += AMReX_BC_TYPES.H AMReX_BCUtil.H
 endif
 
@@ -236,6 +236,7 @@ endif
 CEXE_headers += AMReX_Machine.H
 CEXE_sources += AMReX_Machine.cpp
 
-VPATH_LOCATIONS += $(AMREX_HOME)/Src/Base
-INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base
+#SUSSMAN
+VPATH_LOCATIONS += $(AMREX_HOME)/Src/Base_12_2019
+INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base_12_2019
 

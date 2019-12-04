@@ -224,11 +224,13 @@ def find_targets_from_pragmas(outdir, cxx_files, macro_list, cpp):
 def convert_headers(inputs):
     """rewrite the C++ headers that contain the Fortran routines"""
 
-    header_file = inputs[0]
-    outdir      = inputs[1]
-    targets     = inputs[2]
-    macro_list  = inputs[3]
-    cpp         = inputs[4]
+    header_file   = inputs[0]
+    outdir        = inputs[1]
+    targets       = inputs[2]
+    macro_list    = inputs[3]
+    cpp           = inputs[4]
+    device_suffix = inputs[5]
+    no_host_version = inputs[6]
 
     print('looking for targets: {}'.format(list(targets)))
     print('looking in header file: {}'.format(header_file))
@@ -343,12 +345,14 @@ def convert_headers(inputs):
                     break
 
         if found is not None:
-            hout.write(line)
+            if not no_host_version:
+                hout.write(line)
             launch_sig = "" + line
             sig_end = False
             while not sig_end:
                 line = hin.readline()
-                hout.write(line)
+                if not no_host_version:
+                    hout.write(line)
                 launch_sig += line
                 if line.strip().endswith(";"):
                     sig_end = True
@@ -394,9 +398,8 @@ def convert_headers(inputs):
         # here's the case-sensitive name
         case_name = func_sig[idx:idx+len(name)]
 
-        # Add _device to the function name.
-
-        device_sig = device_sig.replace(case_name, case_name + "_device")
+        # Add device suffix to the function name.
+        device_sig = device_sig.replace(case_name, case_name + device_suffix)
 
         # Now write out the global signature. This involves
         # getting rid of the data type definitions and also
@@ -505,7 +508,7 @@ def convert_headers(inputs):
 
         # reassemble the function sig
         all_vars = ", ".join(vars)
-        new_call = "{}({})".format(case_name + "_device", all_vars)
+        new_call = "{}({})".format(case_name + device_suffix, all_vars)
 
         # Collate all the IntVects that we are going to make
         # local copies of.
@@ -546,10 +549,12 @@ def convert_cxx(inputs):
     """look through the C++ files for "#pragma gpu" and switch it
     to the appropriate CUDA launch macro"""
 
-    cxx_file = inputs[0]
-    outdir   = inputs[1]
-    cpp      = inputs[2]
-    defines  = inputs[3]
+    cxx_file      = inputs[0]
+    outdir        = inputs[1]
+    cpp           = inputs[2]
+    defines       = inputs[3]
+    device_suffix = inputs[4]
+    no_host_version = inputs[5]
 
     print('looking in C++ file: {}'.format(cxx_file))
 
@@ -598,6 +603,11 @@ def convert_cxx(inputs):
                 if "smem(" in entry:
                     smem = entry[len("smem("):-1]
 
+            do_host_version = True
+            for entry in split_line:
+                if "nohost" in entry or no_host_version == True:
+                    do_host_version = False
+
             # we don't need to reproduce the pragma line in the
             # output, but we need to capture the whole function
             # call that follows
@@ -626,6 +636,7 @@ def convert_cxx(inputs):
             # debugging at this time, but could be used later
             # for dividing the work between the host and device.
 
+            hout.write("{\n")
             hout.write("#if defined(__CUDA_ARCH__)\n")
 
             # For the device launch, we need to replace certain macros.
@@ -634,11 +645,13 @@ def convert_cxx(inputs):
             host_args = host_args.replace("AMREX_REAL_ANYD", "AMREX_ZFILL")
             host_args = host_args.replace("BL_TO_FORTRAN_GPU", "BL_TO_FORTRAN")
 
-            hout.write("{}_device\n ({});\n".format(func_name, host_args))
+            hout.write("{}{}\n ({});\n".format(func_name, device_suffix, host_args))
 
             hout.write("#else\n")
 
-            hout.write("if (amrex::Gpu::inLaunchRegion()) {\n")
+            if do_host_version:
+                hout.write("if (amrex::Gpu::inLaunchRegion()) {\n")
+
             hout.write("    dim3 {}numBlocks, {}numThreads;\n".format(func_name, func_name))
             if box:
                 hout.write("    amrex::Gpu::Device::box_threads_and_blocks({}, {}numBlocks, {}numThreads);\n".format(box, func_name, func_name))
@@ -656,17 +669,19 @@ def convert_cxx(inputs):
             if 'AMREX_DEBUG' in defines:
                 hout.write("AMREX_GPU_SAFE_CALL(cudaDeviceSynchronize());\n")
 
-            # For the host launch, we need to replace certain macros.
-            host_args = args
-            host_args = host_args.replace("AMREX_INT_ANYD", "AMREX_ARLIM_3D")
-            host_args = host_args.replace("AMREX_REAL_ANYD", "AMREX_ZFILL")
-            host_args = host_args.replace("BL_TO_FORTRAN_GPU", "BL_TO_FORTRAN")
+            if do_host_version:
+                # For the host launch, we need to replace certain macros.
+                host_args = args
+                host_args = host_args.replace("AMREX_INT_ANYD", "AMREX_ARLIM_3D")
+                host_args = host_args.replace("AMREX_REAL_ANYD", "AMREX_ZFILL")
+                host_args = host_args.replace("BL_TO_FORTRAN_GPU", "BL_TO_FORTRAN")
 
-            hout.write("} else {\n")
-            hout.write("    {}\n ({});\n".format(func_name, host_args))
-            hout.write("}\n")
+                hout.write("} else {\n")
+                hout.write("    {}\n ({});\n".format(func_name, host_args))
+                hout.write("}\n")
 
             hout.write("#endif\n")
+            hout.write("}\n")
 
 
         else:
@@ -705,6 +720,14 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers",
                         help="number of parallel workers",
                         default="1")
+    parser.add_argument("--device_suffix",
+                        help="suffix to add to device function names",
+                        default="_device")
+    parser.add_argument("--no_host_version",
+                        help="should we implement a host version?",
+                        dest='no_host_version',
+                        action='store_true')
+    parser.set_defaults(no_host_version=False)
 
 
     args = parser.parse_args()
@@ -743,11 +766,11 @@ if __name__ == "__main__":
 
     # copy the headers to the output directory, replacing the
     # signatures of the target Fortran routines with the CUDA pair
-    inputs = [[header, args.output_dir, targets, macro_list, cpp_pass] for header in headers]
+    inputs = [[header, args.output_dir, targets, macro_list, cpp_pass, args.device_suffix, args.no_host_version] for header in headers]
     pool.map(convert_headers, inputs)
 
     # part II: for each C++ file, we need to expand the `#pragma gpu`
-    inputs = [[cxx_file, args.output_dir, cpp_pass, defines] for cxx_file in cxx]
+    inputs = [[cxx_file, args.output_dir, cpp_pass, defines, args.device_suffix, args.no_host_version] for cxx_file in cxx]
     pool.map(convert_cxx, inputs)
 
     pool.close()
