@@ -235,14 +235,15 @@ public:
     //! Set periodicity flags and return the old flags.
     //! Note that, unlike Periodicity class, the flags are just boolean.
     //!
+    //SUSSMAN
     Array<int,AMREX_SPACEDIM>
-    setPeriodicity (Array<int,AMREX_SPACEDIM> const& period) noexcept {
+    setPeriodicity (Array<int,AMREX_SPACEDIM> const& period_in) noexcept {
         Array<int,AMREX_SPACEDIM> r{AMREX_D_DECL(is_periodic[0],
                                                  is_periodic[1],
                                                  is_periodic[2])};
-        AMREX_D_TERM(is_periodic[0] = period[0];,
-                     is_periodic[1] = period[1];,
-                     is_periodic[2] = period[2];);
+        AMREX_D_TERM(is_periodic[0] = period_in[0];,
+                     is_periodic[1] = period_in[1];,
+                     is_periodic[2] = period_in[2];);
         return r;
     }
 

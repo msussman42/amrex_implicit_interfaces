@@ -106,6 +106,9 @@ namespace amrex {
 
 #else
 
+/* SUSSMAN */
+#    define INTEGER_T integer
+
 #ifndef AMREX_XSDK
 
 /*

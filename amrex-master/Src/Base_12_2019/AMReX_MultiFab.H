@@ -640,6 +640,10 @@ public:
     * This version checks all components and grow cells.
     */
     bool contains_nan (bool local=false) const;
+
+     //SUSSMAN
+    bool contains_nanTENSOR (int datatype,int scomp,int dir) const;
+
     bool contains_nan (int scomp, int ncomp, int ngrow = 0, bool local=false) const;
     bool contains_nan (int scomp, int ncomp, const IntVect& ngrow, bool local=false) const;
     /**
@@ -649,6 +653,10 @@ public:
     * This version checks all components and grow cells.
     */
     bool contains_inf (bool local=false) const;
+
+     // SUSSMAN
+    bool contains_infTENSOR (int datatype,int scomp,int dir) const;
+
     bool contains_inf (int scomp, int ncomp, int ngrow = 0, bool local=false) const;
     bool contains_inf (int scomp, int ncomp, const IntVect& ngrow, bool local=false) const;
 

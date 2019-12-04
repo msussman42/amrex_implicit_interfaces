@@ -126,6 +126,32 @@ public:
                                       IndexType::NODE));
     }
 
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheUMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::NODE,
+                                       IndexType::CELL,
+                                       IndexType::CELL));
+    }
+ 
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheVMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                      IndexType::NODE,
+                                      IndexType::CELL));
+    }
+ 
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheWMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                      IndexType::CELL,
+                                      IndexType::NODE));
+    }
+
+
 private:
     //! Returns 1<<k.
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE

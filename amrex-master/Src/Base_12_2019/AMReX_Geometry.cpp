@@ -125,7 +125,8 @@ Geometry::Setup (const RealBox* rb, int coord, int const* isper) noexcept
 
     ParmParse pp("geometry");
 
-    if (coord >=0 && coord <= 2) {
+     // SUSSMAN
+    if (coord >=0 && coord <= 3) {
         gg->SetCoord( (CoordType) coord );        
     } else {
         coord = 0;  // default is Cartesian coordinates
@@ -189,7 +190,8 @@ Geometry::ResetDefaultPeriodicity (const Array<int,AMREX_SPACEDIM>& is_per) noex
 void
 Geometry::ResetDefaultCoord (int coord) noexcept
 {
-    AMREX_ASSERT(coord >= -1 && coord <= 2);
+	// SUSSMAN
+    AMREX_ASSERT(coord >= -1 && coord <= 3);
     Geometry* gg = AMReX::top()->getDefaultGeometry();
     gg->SetCoord(static_cast<CoordType>(coord));
 }

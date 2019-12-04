@@ -193,4 +193,12 @@ namespace amrex
     };
 }
 
+// SUSSMAN
+class thread_class {
+
+ public:
+  static void Initialize();
+  static int nthreads;
+};
+
 #endif /*BL_AMREX_H*/

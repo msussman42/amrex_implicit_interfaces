@@ -421,6 +421,66 @@ MFIter::growntilebox (int a_ng) const noexcept
     return bx;
 }
 
+// SUSSMAN
+// datatype=0 standard case
+// datatype=1 face grad U
+// datatype=2 cell grad U
+Box 
+MFIter::growntileboxTENSOR (int datatype,int ng,int dir) const noexcept
+{
+ Box bx = tilebox();
+ const Box& vbx = validbox();
+
+ if (datatype==0) {
+
+  if (ng < -100) ng = fabArray.nGrow();
+  for (int d=0; d<BL_SPACEDIM; ++d) {
+   if (bx.smallEnd(d) == vbx.smallEnd(d)) {
+    bx.growLo(d, ng);
+   }
+   if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+    bx.growHi(d, ng);
+   }
+  } // d
+
+ } else if ((datatype==1)||(datatype==2)) {
+
+  if ((dir<0)||(dir>=BL_SPACEDIM))
+   amrex::Error("dir invalid");
+  if (ng!=0)
+   amrex::Error("ng invalid");
+  
+  for (int d=0; d<BL_SPACEDIM; ++d) {
+
+   if (!typ.cellCentered(d))
+    amrex::Error("tensor box should be cell centered");
+
+   if (d!=dir) {
+    if (bx.smallEnd(d) == vbx.smallEnd(d)) {
+     bx.growLo(d,1);
+    }
+    if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+     bx.growHi(d, 1);
+    }
+   } else if (d==dir) {
+    if (datatype==1) {
+     if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+      bx.growHi(d, 1);
+     }
+    } else if (datatype==2) {
+     // do nothing
+    } else
+     amrex::Error("datatype invalid");
+   }
+  } // d
+
+ } else
+  amrex::Error("datatype invalid");
+
+ return bx;
+} // subroutine growntileboxTENSOR
+
+
 Box
 MFIter::growntilebox (const IntVect& ng) const noexcept
 {
