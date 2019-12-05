@@ -6835,8 +6835,8 @@ void NavierStokes::init_boundary() {
 void
 NavierStokes::init (
   AmrLevel & old,
-  const BoxArray& ba_in,
-  const DistributionMapping& dmap_in) {
+  const BoxArray& ba_in,  // BoxArray of "this"
+  const DistributionMapping& dmap_in) { // dmap of "this"
  
  NavierStokes* oldns     = (NavierStokes*) &old;
 
