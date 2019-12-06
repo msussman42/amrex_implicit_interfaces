@@ -6835,8 +6835,8 @@ void NavierStokes::init_boundary() {
 void
 NavierStokes::init (
   AmrLevel & old,
-  const BoxArray& ba_in,  // BoxArray of "this"
-  const DistributionMapping& dmap_in) { // dmap of "this"
+  const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
+  const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
  
  NavierStokes* oldns     = (NavierStokes*) &old;
 
@@ -6879,6 +6879,19 @@ NavierStokes::init (
  for (int k=0;k<nstate;k++) {
 
   MultiFab &S_new = get_new_data(k,ns_time_order);
+
+  if (S_new.DistributionMap()==dmap_in) {
+   // do nothing
+  } else {
+   amrex::Error("dmap_in invalid");
+  }
+  if (S_new.boxArray()==ba_in) {
+   // do nothing
+  } else {
+   amrex::Error("ba_in invalid");
+  }
+
+
   int ncomp=S_new.nComp();
 
   int numparts=1;

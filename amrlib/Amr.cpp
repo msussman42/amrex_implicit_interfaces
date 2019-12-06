@@ -1520,6 +1520,8 @@ Amr::timeStep (Real time,
   AmrLevel* a = (*levelbld)(*this,0,geom[0],lev0,dm,cumtime);
 
    // calls setTimeLevel for level=0 using old level dt.
+   // dm is the DistributionMapping on the new level 0.
+   // lev0 is the BoxArray on the new level 0
   a->init(*amr_level[0],lev0,dm);
   amr_level[0].reset(a);
   this->SetBoxArray(0, amr_level[0]->boxArray());
