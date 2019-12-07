@@ -333,10 +333,10 @@ AmrLevel::FillPatch (AmrLevel & old,
   } else {
    amrex::Error("fmf.DistributionMap()!=old.DistributionMap()");
   }
-  if (fmf.boxArray()==old.boxArray()) {
+  if (fmf.boxArray().CellEqual(old.boxArray())) {
    // do nothing
   } else {
-   amrex::Error("fmf.boxArray()!=old.boxArray()");
+   amrex::Error("fmf.boxArray().CellEqual(old.boxArray()) failed");
   }
 
   const Geometry& fgeom = old.geom;
@@ -381,10 +381,10 @@ AmrLevel::FillPatch (AmrLevel & old,
    } else {
     amrex::Error("cmf.DistributionMap()!=clev.DistributionMap()");
    }
-   if (cmf.boxArray()==clev.boxArray()) {
+   if (cmf.boxArray().CellEqual(clev.boxArray())) {
     // do nothing
    } else {
-    amrex::Error("cmf.boxArray()!=clev.boxArray()");
+    amrex::Error("cmf.boxArray().CellEqual(clev.boxArray()) failed");
    }
    StateDataPhysBCFunct cbc(cstatedata,cgeom);
 

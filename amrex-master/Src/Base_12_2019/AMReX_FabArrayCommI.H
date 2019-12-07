@@ -529,6 +529,15 @@ FabArray<FAB>::ParallelCopy (const FabArray<FAB>& src,
 #ifdef AMREX_DEBUG
                 if (!CheckRcvStats(stats, recv_size, MPI_CHAR, SeqNum))
                 {
+			// SUSSMAN
+		    std::cout << "src.boxArray() \n";
+                    std::cout << src.boxArray() << '\n';
+		    std::cout << "src.DistributionMap() \n";
+                    std::cout << src.DistributionMap() << '\n';
+		    std::cout << "dest boxArray() \n";
+                    std::cout << boxArray() << '\n';
+		    std::cout << "dest DistributionMap() \n";
+                    std::cout << DistributionMap() << '\n';
                     amrex::Abort("ParallelCopy failed with wrong message size");
                 }
 #endif

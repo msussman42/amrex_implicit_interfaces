@@ -6885,10 +6885,11 @@ NavierStokes::init(
   } else {
    amrex::Error("dmap_in invalid");
   }
-  if (S_new.boxArray()==ba_in) {
+   //  Are the BoxArrays equal after conversion to cell-centered?
+  if (S_new.boxArray().CellEqual(ba_in)) {
    // do nothing
   } else {
-   amrex::Error("ba_in invalid");
+   amrex::Error("S_new.boxArray().CellEqual(ba_in) failed");
   }
 
 

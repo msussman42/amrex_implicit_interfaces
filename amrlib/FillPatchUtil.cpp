@@ -96,6 +96,7 @@ namespace amrex
      const IntVect& ngrow_vec=mf.nGrowVect();	   
      
      int do_the_interp=0;
+
      if (ngrow>0) {
       do_the_interp=1;
      } else if (ngrow==0) {
@@ -142,10 +143,10 @@ namespace amrex
 
       bool empty_flag=fpc.ba_crse_patch.empty();
 
-      if (empty_flag) {
+      if (empty_flag==true) {
 	      // do nothing, no data on the coarse level is needed to
 	      // fill the fine level target.
-      } else if (! empty_flag) {
+      } else if (empty_flag==false) {
 
        MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_crse_patch,ncomp,0,
          MFInfo().SetTag("mf_crse_patch"),FArrayBoxFactory());
@@ -210,7 +211,7 @@ namespace amrex
 
      FillPatchSingleLevel(
       levelf,
-      mf,  // mf is now init with coarse data.
+      mf,  //mf already init with coarse data in regions not covered by fmf
       time, 
       fmf, 
       scomp, 

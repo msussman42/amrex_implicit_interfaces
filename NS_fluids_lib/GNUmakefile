@@ -39,6 +39,7 @@ CTML_FBC = FALSE
 # 13. emacs
 # 14. procps (search)  (corresponds to "top")
 # heaviside: scl enable devtoolset-2 python27 bash
+# bromwich or compute1: scl enable devtoolset-8 bash
 # Bromwich PGI:
 #  http://www.pgroup.com/resources/docs/17.10/x86/pgi-install-guide/index.htm
 #  bash
