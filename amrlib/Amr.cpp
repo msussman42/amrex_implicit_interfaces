@@ -2027,6 +2027,7 @@ Amr::regrid (int  lbase,
 
   } else if (amr_level[lev]) {
 
+    // amr_level[lev-1] should already be init.
    a->init(*amr_level[lev],new_grids[lev],new_dmap[lev]);
    amr_level[lev].reset(a);
    this->SetBoxArray(lev, amr_level[lev]->boxArray());

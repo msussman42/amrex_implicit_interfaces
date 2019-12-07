@@ -373,8 +373,8 @@ AmrLevel::FillPatch (AmrLevel & old,
    amrex::FillPatchTwoLevels(
     mf,
     nudge_time,
-    cmf,
-    fmf,
+    cmf,  // new data at the previous level
+    fmf,  // old data at the current level
     scomp_local,
     DComp,
     ncomp_range,
