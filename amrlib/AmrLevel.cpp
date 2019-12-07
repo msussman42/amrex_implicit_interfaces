@@ -285,7 +285,7 @@ AmrLevel::~AmrLevel ()
 
 void
 AmrLevel::FillPatch (AmrLevel & old,
-                     MultiFab& mf,
+                     MultiFab& mf,  // data to be filled
                      int       dcomp,
                      Real      time,
                      int       index,
@@ -327,6 +327,18 @@ AmrLevel::FillPatch (AmrLevel & old,
   fstatedata.get_time_index(time,nudge_time,best_index);
 
   MultiFab& fmf=fstatedata.newData(best_index);
+
+  if (fmf.DistributionMap()==old.DistributionMap()) {
+   // do nothing
+  } else {
+   amrex::Error("fmf.DistributionMap()!=old.DistributionMap()");
+  }
+  if (fmf.boxArray()==old.boxArray()) {
+   // do nothing
+  } else {
+   amrex::Error("fmf.boxArray()!=old.boxArray()");
+  }
+
   const Geometry& fgeom = old.geom;
   StateDataPhysBCFunct fbc(fstatedata,fgeom);
 
@@ -346,9 +358,9 @@ AmrLevel::FillPatch (AmrLevel & old,
     // block.
    amrex::FillPatchSingleLevel(
     level,
-    mf,
+    mf,  // data to be filled
     nudge_time,
-    fmf,
+    fmf, // old data at the current level.
     scomp_local,
     DComp,
     ncomp_range,
@@ -363,6 +375,17 @@ AmrLevel::FillPatch (AmrLevel & old,
    int bfact_coarse=parent->Space_blockingFactor(level-1);
    StateData& cstatedata = clev.state[index];
    MultiFab& cmf=cstatedata.newData(best_index);
+
+   if (cmf.DistributionMap()==clev.DistributionMap()) {
+    // do nothing
+   } else {
+    amrex::Error("cmf.DistributionMap()!=clev.DistributionMap()");
+   }
+   if (cmf.boxArray()==clev.boxArray()) {
+    // do nothing
+   } else {
+    amrex::Error("cmf.boxArray()!=clev.boxArray()");
+   }
    StateDataPhysBCFunct cbc(cstatedata,cgeom);
 
     // This routine is NOT in the "Base" directory, instead it is in the
@@ -371,7 +394,7 @@ AmrLevel::FillPatch (AmrLevel & old,
     // code in FillPatchUtil.cpp is hidden within a "namespace amrex"
     // block.
    amrex::FillPatchTwoLevels(
-    mf,
+    mf,   // data to be filled
     nudge_time,
     cmf,  // new data at the previous level
     fmf,  // old data at the current level

@@ -51,10 +51,10 @@ namespace amrex
 
 
     void FillPatchTwoLevels (
-     MultiFab& mf, 
+     MultiFab& mf,   // target
      Real time,
-     MultiFab& cmf, 
-     MultiFab& fmf, 
+     MultiFab& cmf,  // coarse
+     MultiFab& fmf,  // fine
      int scomp, 
      int dcomp, 
      int ncomp,
@@ -94,8 +94,33 @@ namespace amrex
 
      int ngrow = mf.nGrow();
      const IntVect& ngrow_vec=mf.nGrowVect();	   
-      
-     if ((ngrow > 0)||(mf.getBDKey() != fmf.getBDKey())) {
+     
+     int do_the_interp=0;
+     if (ngrow>0) {
+      do_the_interp=1;
+     } else if (ngrow==0) {
+      // do nothing
+     } else {
+      amrex::Error("ngrow invalid");
+     }
+     if (do_the_interp==0) {
+      if (mf.boxArray()!=fmf.boxArray()) {
+       do_the_interp=1;
+      }
+      if (do_the_interp==0) {
+       if (mf.DistributionMap()!=fmf.DistributionMap()) {
+        do_the_interp=1;
+       }
+      } else if (do_the_interp==1) {
+       // do nothing
+      } else
+       amrex::Error("do_the_interp invalid");
+     } else if (do_the_interp==1) {
+      // do nothing
+     } else
+      amrex::Error("do_the_interp invalid");
+
+     if (do_the_interp==1) {
 
       const InterpolaterBoxCoarsener& coarsener = 
         mapper->BoxCoarsener(bfactc,bfactf);
@@ -115,16 +140,22 @@ namespace amrex
        FabArrayBase::TheFPinfo(fmf, mf, fdomain_g, ngrow_vec, coarsener,
         amrex::coarsen(fgeom.Domain(),ratio_vec),index_space);
 
-      if ( ! fpc.ba_crse_patch.empty()) {
+      bool empty_flag=fpc.ba_crse_patch.empty();
+
+      if (empty_flag) {
+	      // do nothing, no data on the coarse level is needed to
+	      // fill the fine level target.
+      } else if (! empty_flag) {
+
        MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_crse_patch,ncomp,0,
          MFInfo().SetTag("mf_crse_patch"),FArrayBoxFactory());
 
         // This data will be interpolated next.       
        FillPatchSingleLevel(
         levelc,
-        mf_crse_patch, 
+        mf_crse_patch, // target data (coarse)
         time, 
-        cmf, 
+        cmf,  // coarse data source
         scomp, 
         0,   // dst_comp
         ncomp, 
@@ -157,9 +188,9 @@ namespace amrex
           local_bcs,bcr);
 		    
         mapper->interp(time,
-                       mf_crse_patch[mfi],
+                       mf_crse_patch[mfi], // source
 	               0,
-		       mf[gi],
+		       mf[gi], //dest; does not overwrite existing fine.
 		       dcomp,
 		       ncomp,
 		       dbx,
@@ -168,12 +199,18 @@ namespace amrex
 		       bcr,
                        levelc,levelf,bfactc,bfactf);
        } // mfi
-      } // some boxes need to be interpolated
-     }  // coarse data needed
+      } else {
+       amrex::Error("empty_flag invalid");
+      }
+     } else if (do_the_interp==0) {
+      // do nothing, mf and fmf have same boxarray's and dmaps and
+      // ngrow==0
+     } else
+      amrex::Error("do_the_interp invalid");
 
      FillPatchSingleLevel(
       levelf,
-      mf, 
+      mf,  // mf is now init with coarse data.
       time, 
       fmf, 
       scomp, 
