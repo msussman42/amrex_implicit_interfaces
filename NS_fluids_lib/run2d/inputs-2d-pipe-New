@@ -52,8 +52,6 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-mg.maxiter = 60
-mg.maxiter = 100
 cg.maxiter = 200
 mg.usecg=0
 # SOLVER ROBUSTNESS: bot_atol should be two orders of magnitude smaller

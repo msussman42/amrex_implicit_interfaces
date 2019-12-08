@@ -21,8 +21,6 @@ geometry.prob_hi   =  1.0 4.0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-mg.maxiter = 60
-mg.maxiter = 100
 cg.maxiter = 200
 mg.usecg=1
 mg.bot_atol = 1.0e-10

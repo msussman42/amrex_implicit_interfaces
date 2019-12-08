@@ -29,12 +29,11 @@ int ABecLaplacian::nghostSOLN=1;
 Real ABecLaplacian::a_def     = 0.0;
 Real ABecLaplacian::b_def     = 1.0;
 
-int ABecLaplacian::CG_def_maxiter = 40;
+int ABecLaplacian::CG_def_maxiter = 200;
 int ABecLaplacian::CG_def_verbose = 0;
 
 int ABecLaplacian::MG_def_nu_0         = 1;
 int ABecLaplacian::MG_def_nu_f         = 8;
-int ABecLaplacian::MG_def_maxiter_b    = 400;
 int ABecLaplacian::MG_def_verbose      = 0;
 int ABecLaplacian::MG_def_nu_b         = 0;
 
@@ -867,6 +866,12 @@ ABecLaplacian::ABecLaplacian (
  CG_maxiter = CG_def_maxiter;
  CG_verbose = CG_def_verbose;
 
+ CG_error_history.resize(CG_maxiter);
+ for (int ehist=0;ehist<CG_error_history.size();ehist++) {
+  for (int ih=0;ih<4;ih++)
+   CG_error_history[ehist][ih]=0.0;
+ }
+
  nsolve_bicgstab=nsolve_in; 
 
  gbox.resize(MG_numlevels_var);
@@ -1090,13 +1095,12 @@ ABecLaplacian::ABecLaplacian (
 
  if (ParallelDescriptor::IOProcessor() && CG_def_verbose) {
   std::cout << "CGSolver settings...\n";
-  std::cout << "   CG_def_maxiter        = " << CG_def_maxiter << '\n';
+  std::cout << "   CG_def_maxiter   = " << CG_def_maxiter << '\n';
  }
     
  ParmParse ppmg("mg");
  ParmParse ppLp("Lp");
 
- ppmg.query("maxiter_b", MG_def_maxiter_b);
  ppmg.query("nu_0", MG_def_nu_0);
  ppmg.query("nu_f", MG_def_nu_f);
  ppmg.query("v", MG_def_verbose);
@@ -1107,14 +1111,12 @@ ABecLaplacian::ABecLaplacian (
   std::cout << "MultiGrid settings...\n";
   std::cout << "   def_nu_0 =         " << MG_def_nu_0         << '\n';
   std::cout << "   def_nu_f =         " << MG_def_nu_f         << '\n';
-  std::cout << "   def_maxiter_b =      " << MG_def_maxiter_b  << '\n';
   std::cout << "   def_nu_b =         " << MG_def_nu_b         << '\n';
  }
 
  MG_nu_0         = MG_def_nu_0;
  MG_nu_f         = MG_def_nu_f;
  MG_verbose      = MG_def_verbose;
- MG_maxiter_b   = MG_def_maxiter_b;
  MG_nu_b         = MG_def_nu_b;
 
  if ((ParallelDescriptor::IOProcessor())&&(MG_verbose > 2)) {
@@ -2340,6 +2342,13 @@ ABecLaplacian::pcg_GMRES_solve(
   std::cout << "level= " << level << '\n';
   std::cout << "MG_numlevels_var= " << MG_numlevels_var << '\n';
   std::cout << "CG_numlevels_var= " << CG_numlevels_var << '\n';
+
+  for (int ehist=0;ehist<CG_error_history.size();ehist++) {
+   std::cout << "nit " << ehist << " CG_error_history[nit][0,1] " <<
+    CG_error_history[ehist][2*coarsefine+0] << ' ' <<
+    CG_error_history[ehist][2*coarsefine+1] << '\n';
+  }
+
   amrex::Error("ABecLaplacian.cpp: gmres_precond_iter invalid");
  }
 
@@ -2459,8 +2468,10 @@ ABecLaplacian::CG_solve(
 #endif
 
  int coarsefine=0;
+  // finest level of the hierarchy
  if (level==0) {
   coarsefine=0;
+  // coarsest level of the hierarchy
  } else if ((level==MG_numlevels_var-1)&&(CG_numlevels_var==2)) {
   coarsefine=1;
  } else
@@ -2594,6 +2605,11 @@ ABecLaplacian::CG_solve(
  bprof.stop();
 #endif
 
+ for (int ehist=0;ehist<CG_error_history.size();ehist++) {
+  for (int ih=0;ih<2;ih++)
+   CG_error_history[ehist][2*coarsefine+ih]=0.0;
+ }
+
  for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero!=1)); ++nit) {
 
   restart_flag=0;
@@ -2608,6 +2624,9 @@ ABecLaplacian::CG_solve(
   }
   if (nit==0)
    rnorm_init=rnorm;
+
+  CG_error_history[nit][2*coarsefine]=rnorm;
+  CG_error_history[nit][2*coarsefine+1]=eps_abs;
 
   CG_check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
 		 error_close_to_zero,level);
@@ -2862,9 +2881,17 @@ ABecLaplacian::CG_solve(
  }
 
  if (error_close_to_zero!=1) {
+
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Warning: ABecLaplacian:: failed to converge! \n";
+   std::cout << "coarsefine= " << coarsefine << '\n';
+   for (int ehist=0;ehist<CG_error_history.size();ehist++) {
+    std::cout << "nit " << ehist << " CG_error_history[nit][0,1] " <<
+     CG_error_history[ehist][2*coarsefine+0] << ' ' <<
+     CG_error_history[ehist][2*coarsefine+1] << '\n';
+   }
   }
+
   CG_dump_params(rnorm,rnorm_init,
     eps_abs,relative_error,
     is_bottom,bot_atol,
@@ -3234,7 +3261,6 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
    }
   }
  } else {
-  CG_maxiter=MG_maxiter_b;
   int local_meets_tol=0;
   Real local_error0=0.0;
   int nsverbose=0;

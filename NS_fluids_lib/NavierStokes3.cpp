@@ -8606,8 +8606,12 @@ void NavierStokes::multiphase_project(int project_option) {
    bprof.stop();
 #endif
 
-   Vector<Real> outer_error_history;
-   outer_error_history.resize(bicgstab_max_num_outer_iter+1,0.0);
+   Vector< Array<Real,2> > outer_error_history;
+   outer_error_history.resize(bicgstab_max_num_outer_iter+1);
+   for (int ehist=0;ehist<outer_error_history.size();ehist++) {
+    outer_error_history[ehist][0]=0.0;
+    outer_error_history[ehist][1]=0.0;
+   }
 
    while (outer_iter_done==0) {
 
@@ -8734,7 +8738,7 @@ void NavierStokes::multiphase_project(int project_option) {
       } else
        amrex::Error("initial_cg_cycles invalid");
 
-      Vector<Real> error_history;
+      Vector< Array<Real,2> > error_history;
 
 #if (profile_solver==1)
       bprof.stop();
@@ -8870,7 +8874,11 @@ void NavierStokes::multiphase_project(int project_option) {
         // MAC_PHI_CRSE(U1)=0.0
        zeroALL(1,nsolveMM,bicg_U0_MF);
 
-       error_history.resize(vcycle_max+1,0.0);
+       error_history.resize(vcycle_max+1);
+       for (int ehist=0;ehist<error_history.size();ehist++) {
+        error_history[ehist][0]=0.0;
+        error_history[ehist][1]=0.0;
+       }
 
 #if (profile_solver==1)
        bprof.stop();
@@ -8890,9 +8898,10 @@ void NavierStokes::multiphase_project(int project_option) {
         } else
          amrex::Error("error_n invalid");
 
-        error_history[vcycle]=error_n;
-
         adjust_tolerance(error_n,error0_max,project_option);
+
+        error_history[vcycle][0]=error_n;
+        error_history[vcycle][1]=save_mac_abs_tol;
 
         Real restart_tol=save_mac_abs_tol*save_mac_abs_tol*1.0e-4;
         restart_flag=0;
@@ -9201,8 +9210,9 @@ void NavierStokes::multiphase_project(int project_option) {
 		   << vcycle << '\n';
             std::cout << "RESTARTING: gmres_precond_iter= " << 
              gmres_precond_iter << '\n';
-            std::cout << "RESTARTING: error_history[vcycle]= " << 
-             error_history[vcycle] << '\n';
+            std::cout << "RESTARTING: error_history[vcycle][0,1]= " << 
+             error_history[vcycle][0] << ' ' <<
+	     error_history[vcycle][1] << '\n';
             std::cout << "RESTARTING: project_option= " << 
 		   project_option << '\n';
            }
@@ -9255,9 +9265,16 @@ void NavierStokes::multiphase_project(int project_option) {
             gmres_precond_iter << '\n';
          std::cout << "->project_option= " << project_option << '\n';
          for (int ehist=0;ehist<error_history.size();ehist++) {
-          std::cout << "vcycle " << ehist << " error_history[vcycle] " <<
-          error_history[ehist] << '\n';
+          std::cout << "vcycle " << ehist << " error_history[vcycle][0,1] " <<
+           error_history[ehist][0] << ' ' <<
+ 	   error_history[ehist][1] << '\n';
  	 }
+         for (int ehist=0;ehist<outer_error_history.size();ehist++) {
+          std::cout << "outer_iter " << ehist << 
+           " outer_error_history[vcycle][0,1] " <<
+           outer_error_history[ehist][0] << ' ' <<
+	   outer_error_history[ehist][1] << '\n';
+	 }
 	 amrex::Error("abort:NavierStokes3.cpp,gmres_precond_iter overflow");
         }
 
@@ -9323,13 +9340,15 @@ void NavierStokes::multiphase_project(int project_option) {
        std::cout << "->cg_loop_max= " << cg_loop_max << '\n';
        std::cout << "->ERROR HISTORY " << cg_loop_max << '\n';
        for (int ehist=0;ehist<error_history.size();ehist++) {
-        std::cout << "vcycle " << ehist << " error_history[vcycle] " <<
-         error_history[ehist] << '\n';
+        std::cout << "vcycle " << ehist << " error_history[vcycle][0,1] " <<
+         error_history[ehist][0] << ' ' <<
+	 error_history[ehist][1] << '\n';
        }
        for (int ehist=0;ehist<outer_error_history.size();ehist++) {
         std::cout << "outer_iter " << ehist << 
-         " outer_error_history[vcycle] " <<
-         outer_error_history[ehist] << '\n';
+         " outer_error_history[vcycle][0,1] " <<
+         outer_error_history[ehist][0] << ' ' <<
+	 outer_error_history[ehist][1] << '\n';
        }
       } else if (vcycle>=0) {
        // do nothing
@@ -9461,7 +9480,9 @@ void NavierStokes::multiphase_project(int project_option) {
       delete_array(OUTER_MAC_PHI_CRSE_MF);
       delete_array(OUTER_RESID_MF);
 
-      outer_error_history[bicgstab_num_outer_iterSOLVER]=outer_iter;
+      outer_error_history[bicgstab_num_outer_iterSOLVER][0]=outer_error;
+      outer_error_history[bicgstab_num_outer_iterSOLVER][1]=
+	      1.1*save_mac_abs_tol;
 
       bicgstab_num_outer_iterSOLVER++;
 
