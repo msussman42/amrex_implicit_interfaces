@@ -8606,6 +8606,9 @@ void NavierStokes::multiphase_project(int project_option) {
    bprof.stop();
 #endif
 
+   Vector<Real> outer_error_history;
+   outer_error_history.resize(bicgstab_max_num_outer_iter+1,0.0);
+
    while (outer_iter_done==0) {
 
 #if (profile_solver==1)
@@ -8867,7 +8870,7 @@ void NavierStokes::multiphase_project(int project_option) {
         // MAC_PHI_CRSE(U1)=0.0
        zeroALL(1,nsolveMM,bicg_U0_MF);
 
-       error_history.resize(vcycle_max+1);
+       error_history.resize(vcycle_max+1,0.0);
 
 #if (profile_solver==1)
        bprof.stop();
@@ -9323,6 +9326,11 @@ void NavierStokes::multiphase_project(int project_option) {
         std::cout << "vcycle " << ehist << " error_history[vcycle] " <<
          error_history[ehist] << '\n';
        }
+       for (int ehist=0;ehist<outer_error_history.size();ehist++) {
+        std::cout << "outer_iter " << ehist << 
+         " outer_error_history[vcycle] " <<
+         outer_error_history[ehist] << '\n';
+       }
       } else if (vcycle>=0) {
        // do nothing
       } else {
@@ -9414,8 +9422,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
       delete_array(PRESPC_MF);
 
-      bicgstab_num_outer_iterSOLVER++;
-
          // variables initialized to 0.0
       allocate_array(1,nsolveMM,-1,OUTER_MAC_PHI_CRSE_MF);
       allocate_array(0,nsolveMM,-1,OUTER_RESID_MF);
@@ -9454,6 +9460,10 @@ void NavierStokes::multiphase_project(int project_option) {
       delete_array(OUTER_MAC_RHS_CRSE_MF);
       delete_array(OUTER_MAC_PHI_CRSE_MF);
       delete_array(OUTER_RESID_MF);
+
+      outer_error_history[bicgstab_num_outer_iterSOLVER]=outer_iter;
+
+      bicgstab_num_outer_iterSOLVER++;
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
