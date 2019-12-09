@@ -30,6 +30,11 @@ implicit none
       REAL_T latent_heat(100)
       REAL_T reaction_rate(100)
       REAL_T visc_coef
+
+      REAL_T aux_problo(SDIM)
+      REAL_T aux_probhi(SDIM)
+      REAL_T aux_dx(SDIM)
+
 contains
 
 end module probmain_module
