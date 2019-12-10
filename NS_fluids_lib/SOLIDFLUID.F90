@@ -25,15 +25,16 @@
       contains
 
       subroutine init_3D_map(xmap3D,xslice3D,problo3D,probhi3D, &
-         problo,probhi,dx_maxlevel)
+         problo,probhi,dx_maxlevel,probtype_in,num_materials_in)
       use global_utility_module
-      use probcommon_module
 #if (STANDALONE==0)
       use CAV3D_module
 #endif
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: probtype_in
       INTEGER_T, intent(out) :: xmap3D(3)
       REAL_T, intent(out) :: xslice3D(3)
       REAL_T, intent(out) :: problo3D(3),probhi3D(3)
@@ -42,7 +43,7 @@
       INTEGER_T dir
       INTEGER_T nmat
 
-      nmat=num_materials
+      nmat=num_materials_in
 
       do dir=1,SDIM
        if (probhi(dir)-problo(dir).le.zero) then
@@ -72,9 +73,9 @@
        else if (CTML_FSI_flagF(nmat).eq.0) then
 
          ! 537 is 6 hole injector
-        if ((probtype.eq.538).or. &
-            (probtype.eq.537).or. &
-            (probtype.eq.541)) then
+        if ((probtype_in.eq.538).or. &
+            (probtype_in.eq.537).or. &
+            (probtype_in.eq.541)) then
          xmap3D(3)=2
          xmap3D(1)=1
          xmap3D(2)=0
@@ -83,7 +84,7 @@
          probhi3D(2)=probhi(1)
 
           ! injector C
-         if (probtype.eq.541) then
+         if (probtype_in.eq.541) then
           if (problo(1).ne.zero) then
            print *,"problo(1).ne.zero"
            stop
@@ -98,45 +99,45 @@
           probhi3D(3)=1e-3
          endif
 
-        else if (probtype.eq.701) then  ! flapping wing
+        else if (probtype_in.eq.701) then  ! flapping wing
          xmap3D(1)=1
          xmap3D(3)=2
          xmap3D(2)=0
          xslice3D(2)=0.05
          problo3D(2)=-0.1
          probhi3D(2)=0.2
-        else if(probtype.eq.539) then ! the surface is 3D
+        else if(probtype_in.eq.539) then ! the surface is 3D
          xmap3D(1)=1
          xmap3D(2)=2
          xmap3D(3)=0
          xslice3D(3)=0.0
          problo3D(3)=-0.014
          probhi3D(3)=0.014
-        else if (probtype.eq.9) then ! ship wave
+        else if (probtype_in.eq.9) then ! ship wave
          xmap3D(1)=1
          xmap3D(3)=2
          xmap3D(2)=0
          xslice3D(2)=0.0
          problo3D(2)=0.0
          probhi3D(2)=0.25
-        else if (probtype.eq.5700) then
+        else if (probtype_in.eq.5700) then
          xmap3D(1)=1
          xmap3D(2)=2
          xmap3D(3)=0
          xslice3D(3)=0.31
          problo3D(3)=0.0
          probhi3D(3)=0.62
-        else if (probtype.eq.400) then ! gingerbread man
+        else if (probtype_in.eq.400) then ! gingerbread man
          xmap3D(1)=1
          xmap3D(2)=2
          xmap3D(3)=0
          xslice3D(3)=zero
          problo3D(3)=-half*dx_maxlevel(1)
          probhi3D(3)=half*dx_maxlevel(1)
-        else if (probtype.eq.401) then ! helix
+        else if (probtype_in.eq.401) then ! helix
          print *,"this geometry has no 2D analogue"
          stop
-        else if (probtype.eq.411) then
+        else if (probtype_in.eq.411) then
 #if (STANDALONE==0)
          call CAV3D_SLICE(xmap3D,xslice3D,problo3D,probhi3D, &
                           dx_maxlevel(1))
@@ -429,7 +430,7 @@
       enddo
 
       call init_3D_map(xmap3D,xslice3D,problo3D,probhi3D, &
-        problo,probhi,dx_maxlevel)
+        problo,probhi,dx_maxlevel,probtype,num_materials)
 
       if (SDIM.eq.2) then
 
@@ -1095,27 +1096,27 @@
 
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T max_level
-      INTEGER_T nparts
-      INTEGER_T im_solid_map(nparts)
-      INTEGER_T nthread_parm
-      INTEGER_T num_grids_on_level
-      INTEGER_T num_grids_on_level_proc
-      INTEGER_T max_num_tiles_on_thread_proc
-      INTEGER_T tile_dim
-      INTEGER_T nmat
-      INTEGER_T tilelo_array(tile_dim*SDIM)
-      INTEGER_T tilehi_array(tile_dim*SDIM)
-      REAL_T time,dt
-      REAL_T xlo_array(tile_dim*SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dx_maxlevel(SDIM)
-      INTEGER_T gridno_array(tile_dim)
-      INTEGER_T num_tiles_on_thread_proc(nthread_parm)
-      REAL_T problo(SDIM)
-      REAL_T probhi(SDIM)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: max_level
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: im_solid_map(nparts)
+      INTEGER_T, intent(in) :: nthread_parm
+      INTEGER_T, intent(in) :: num_grids_on_level
+      INTEGER_T, intent(in) :: num_grids_on_level_proc
+      INTEGER_T, intent(in) :: max_num_tiles_on_thread_proc
+      INTEGER_T, intent(in) :: tile_dim
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo_array(tile_dim*SDIM)
+      INTEGER_T, intent(in) :: tilehi_array(tile_dim*SDIM)
+      REAL_T, intent(in) :: time,dt
+      REAL_T, intent(in) :: xlo_array(tile_dim*SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dx_maxlevel(SDIM)
+      INTEGER_T, intent(in) :: gridno_array(tile_dim)
+      INTEGER_T, intent(in) :: num_tiles_on_thread_proc(nthread_parm)
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: probhi(SDIM)
    
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)
@@ -1204,7 +1205,7 @@
       endif
 
       call init_3D_map(xmap3D,xslice3D,problo3D,probhi3D, &
-       problo,probhi,dx_maxlevel)
+       problo,probhi,dx_maxlevel,probtype,num_materials)
 
       if (SDIM.eq.3) then
        do dir=1,3
