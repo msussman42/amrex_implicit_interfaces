@@ -862,7 +862,7 @@ stop
       INTEGER_T veldir
       INTEGER_T side
       INTEGER_T do_face_decomp
-      INTEGER_T maxlevel,level,finest_level
+      INTEGER_T max_level,level,finest_level
       INTEGER_T gridno
       INTEGER_T im
       INTEGER_T im_opp
@@ -1674,7 +1674,7 @@ stop
        gridno=0
        level=0
        finest_level=0
-       maxlevel=0
+       max_level=0
        ngrow_recon=1
        update_flag=0
        total_calls=0
@@ -1688,7 +1688,7 @@ stop
         gridno, &
         level, &
         finest_level, &
-        maxlevel, &
+        max_level, &
         ngrow_recon, &
         fablo,fabhi, &
         fablo,fabhi,bfact, &
@@ -1849,7 +1849,7 @@ stop
        gridno=0
        level=0
        finest_level=0
-       maxlevel=0
+       max_level=0
        ngrow_recon=1
        update_flag=0
        total_calls=0
@@ -1863,7 +1863,7 @@ stop
         gridno, &
         level, &
         finest_level, &
-        maxlevel, &
+        max_level, &
         ngrow_recon, &
         fablo,fabhi, &
         fablo,fabhi,bfact, &

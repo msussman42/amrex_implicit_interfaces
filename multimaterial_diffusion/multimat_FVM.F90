@@ -2756,7 +2756,9 @@ real(kind=8)                       :: cendark(nmat_in,2)
 real(kind=8)                       :: cenlight(nmat_in,2)
 real(kind=8)                       :: xsten(-3:3,2)
 real(kind=8)                       :: vf(-1:N,-1:N,nmat_in)
-integer                            :: maxlevel,current_level,bfact
+integer                            :: stack_max_level
+integer                            :: current_level
+integer                            :: bfact
 integer                            :: iloc,nhalf
 
  print *,"in init_vfncen "
@@ -2785,7 +2787,7 @@ integer                            :: iloc,nhalf
     if (1.eq.0) then
      call AdaptQuad_2d(i,j,nmat_in,dx,center,cen_temp,vf_temp,probtype_in)
     else if (1.eq.1) then
-     maxlevel=6  ! was 4
+     stack_max_level=6  ! was 4
      current_level=0
      nhalf=3
      do iloc=-nhalf,nhalf
@@ -2795,7 +2797,7 @@ integer                            :: iloc,nhalf
      enddo 
      bfact=1
      call stackvolume_batch(xsten,nhalf,dx,bfact, &
-       voldata,nmat_in,current_level,maxlevel,LS_sub)
+       voldata,nmat_in,current_level,stack_max_level,LS_sub)
       ! centroid relative to the center (or centroid?) of the cell
      call extract_vof_cen_batch(voldata,vofdark,voflight, &
        cendark,cenlight,nmat_in)

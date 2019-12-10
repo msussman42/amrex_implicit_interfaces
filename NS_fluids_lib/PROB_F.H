@@ -293,7 +293,7 @@ namespace amrex{
      void FORT_INITDATA (
       int* tid,
       int* adapt_quad_depth,
-      int* level,int* maxlevel,
+      int* level,int* max_level,
       Real* time,
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,

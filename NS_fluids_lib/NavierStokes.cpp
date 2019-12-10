@@ -4560,12 +4560,12 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
  int nmat=num_materials;
  const Real* dx = geom.CellSize();
 
- Real dx_maxlevel[AMREX_SPACEDIM];
+ Real dx_max_level[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  dx_maxlevel[dir]=dx[dir];
+  dx_max_level[dir]=dx[dir];
  for (int ilev=level+1;ilev<=max_level;ilev++) 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-   dx_maxlevel[dir]/=2.0;
+   dx_max_level[dir]/=2.0;
 
   // this will store information about the grids stored
   // on this processor.
@@ -4778,7 +4778,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
   tilehi_array.dataPtr(),
   xlo_array.dataPtr(),
   dx,
-  dx_maxlevel,
+  dx_max_level,
   &num_grids_on_level,
   &num_grids_on_level_proc,
   gridno_array.dataPtr(),
@@ -5564,12 +5564,12 @@ void NavierStokes::ns_header_msg_level(
  for (int i=level+1;i<=max_level;i++)
   h_small/=2.0;
 
- Real dx_maxlevel[AMREX_SPACEDIM];
+ Real dx_max_level[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  dx_maxlevel[dir]=dx[dir];
+  dx_max_level[dir]=dx[dir];
  for (int ilev=level+1;ilev<=max_level;ilev++) 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-   dx_maxlevel[dir]/=2.0;
+   dx_max_level[dir]/=2.0;
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
@@ -5696,7 +5696,7 @@ void NavierStokes::ns_header_msg_level(
      &bfact,
      problo,
      problen, 
-     dx_maxlevel, 
+     dx_max_level, 
      problo,
      probhi, 
      velbc.dataPtr(),  
@@ -5997,7 +5997,7 @@ void NavierStokes::ns_header_msg_level(
      &bfact,
      xlo,
      dx, 
-     dx_maxlevel, 
+     dx_max_level, 
      problo,
      probhi, 
      velbc.dataPtr(),  
@@ -6162,7 +6162,7 @@ void NavierStokes::ns_header_msg_level(
      &bfact,
      problo,
      problen, 
-     dx_maxlevel, 
+     dx_max_level, 
      problo,
      probhi, 
      velbc.dataPtr(),  
@@ -6237,7 +6237,7 @@ void NavierStokes::ns_header_msg_level(
       &bfact,
       xlo,
       dx, 
-      dx_maxlevel, 
+      dx_max_level, 
       problo,
       probhi, 
       velbc.dataPtr(),  

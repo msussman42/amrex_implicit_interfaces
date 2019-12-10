@@ -9506,7 +9506,7 @@ END SUBROUTINE SIMP
 
        INTEGER_T tid
        INTEGER_T adapt_quad_depth
-       INTEGER_T maxlevel
+       INTEGER_T max_level
        INTEGER_T slice_dir
        REAL_T xslice(SDIM)
        INTEGER_T resultsize
@@ -9725,9 +9725,9 @@ END SUBROUTINE SIMP
        enddo  ! idest
 
        if (isweep.eq.0) then
-        maxlevel=adapt_quad_depth
+        max_level=adapt_quad_depth
        else if (isweep.eq.1) then
-        maxlevel=1
+        max_level=1
        else
         print *,"isweep invalid"
         stop
@@ -9844,7 +9844,7 @@ END SUBROUTINE SIMP
           xsten,nhalf, &
           mofdata, &
           mofdata_tess, &
-          errorparm,level,maxlevel,nmat,time)
+          errorparm,level,max_level,nmat,time)
 
           ! F1,E1,F2,E2,F3,E3,...
          do dir=1,2*nmat

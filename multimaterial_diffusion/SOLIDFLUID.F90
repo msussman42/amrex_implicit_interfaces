@@ -25,32 +25,33 @@
       contains
 
       subroutine init_3D_map(xmap3D,xslice3D,problo3D,probhi3D, &
-         problo,probhi,dx_maxlevel)
+         problo,probhi,dx_max_level,probtype_in,num_materials_in)
       use global_utility_module
-      use probcommon_module
 #if (STANDALONE==0)
       use CAV3D_module
 #endif
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: probtype_in
       INTEGER_T, intent(out) :: xmap3D(3)
       REAL_T, intent(out) :: xslice3D(3)
       REAL_T, intent(out) :: problo3D(3),probhi3D(3)
       REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
-      REAL_T, intent(in) :: dx_maxlevel(SDIM)
+      REAL_T, intent(in) :: dx_max_level(SDIM)
       INTEGER_T dir
       INTEGER_T nmat
 
-      nmat=num_materials
+      nmat=num_materials_in
 
       do dir=1,SDIM
        if (probhi(dir)-problo(dir).le.zero) then
         print *,"probhi(dir)-problo(dir).le.zero"
         stop
        endif
-       if (dx_maxlevel(dir).le.zero) then
-        print *,"dx_maxlevel(dir).le.zero"
+       if (dx_max_level(dir).le.zero) then
+        print *,"dx_max_level(dir).le.zero"
         stop
        endif
       enddo
@@ -67,14 +68,14 @@
         xmap3D(2)=2
         xmap3D(3)=0
         xslice3D(3)=zero
-        problo3D(3)=-half*dx_maxlevel(1)
-        probhi3D(3)=half*dx_maxlevel(1)
+        problo3D(3)=-half*dx_max_level(1)
+        probhi3D(3)=half*dx_max_level(1)
        else if (CTML_FSI_flagF(nmat).eq.0) then
 
          ! 537 is 6 hole injector
-        if ((probtype.eq.538).or. &
-            (probtype.eq.537).or. &
-            (probtype.eq.541)) then
+        if ((probtype_in.eq.538).or. &
+            (probtype_in.eq.537).or. &
+            (probtype_in.eq.541)) then
          xmap3D(3)=2
          xmap3D(1)=1
          xmap3D(2)=0
@@ -83,7 +84,7 @@
          probhi3D(2)=probhi(1)
 
           ! injector C
-         if (probtype.eq.541) then
+         if (probtype_in.eq.541) then
           if (problo(1).ne.zero) then
            print *,"problo(1).ne.zero"
            stop
@@ -98,48 +99,48 @@
           probhi3D(3)=1e-3
          endif
 
-        else if (probtype.eq.701) then  ! flapping wing
+        else if (probtype_in.eq.701) then  ! flapping wing
          xmap3D(1)=1
          xmap3D(3)=2
          xmap3D(2)=0
          xslice3D(2)=0.05
          problo3D(2)=-0.1
          probhi3D(2)=0.2
-        else if(probtype.eq.539) then ! the surface is 3D
+        else if(probtype_in.eq.539) then ! the surface is 3D
          xmap3D(1)=1
          xmap3D(2)=2
          xmap3D(3)=0
          xslice3D(3)=0.0
          problo3D(3)=-0.014
          probhi3D(3)=0.014
-        else if (probtype.eq.9) then ! ship wave
+        else if (probtype_in.eq.9) then ! ship wave
          xmap3D(1)=1
          xmap3D(3)=2
          xmap3D(2)=0
          xslice3D(2)=0.0
          problo3D(2)=0.0
          probhi3D(2)=0.25
-        else if (probtype.eq.5700) then
+        else if (probtype_in.eq.5700) then
          xmap3D(1)=1
          xmap3D(2)=2
          xmap3D(3)=0
          xslice3D(3)=0.31
          problo3D(3)=0.0
          probhi3D(3)=0.62
-        else if (probtype.eq.400) then ! gingerbread man
+        else if (probtype_in.eq.400) then ! gingerbread man
          xmap3D(1)=1
          xmap3D(2)=2
          xmap3D(3)=0
          xslice3D(3)=zero
-         problo3D(3)=-half*dx_maxlevel(1)
-         probhi3D(3)=half*dx_maxlevel(1)
-        else if (probtype.eq.401) then ! helix
+         problo3D(3)=-half*dx_max_level(1)
+         probhi3D(3)=half*dx_max_level(1)
+        else if (probtype_in.eq.401) then ! helix
          print *,"this geometry has no 2D analogue"
          stop
-        else if (probtype.eq.411) then
+        else if (probtype_in.eq.411) then
 #if (STANDALONE==0)
          call CAV3D_SLICE(xmap3D,xslice3D,problo3D,probhi3D, &
-                          dx_maxlevel(1))
+                          dx_max_level(1))
 #else
          print *,"this option not for standalone version"
          stop
@@ -193,7 +194,7 @@
         bfact, &
         xlo, & ! problo if FSI_operation==0
         dx, &  ! problen if FSI_operation==1
-        dx_maxlevel, & 
+        dx_max_level, & 
         problo, &
         probhi, &
         velbc, &
@@ -280,7 +281,7 @@
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: dx_maxlevel(SDIM)
+      REAL_T, intent(in) :: dx_max_level(SDIM)
       REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)
@@ -339,6 +340,12 @@
        print *,"level invalid in headermsg"
        stop
       endif
+      if (finest_level.le.max_level) then
+       ! do nothing
+      else
+       print *,"finest_level or max_level invalid"
+       stop
+      endif
       lev77=level+1
       if ((lev77.lt.1).or.(lev77.gt.finest_level+1)) then
        print *,"lev77 invalid in headermsg"
@@ -357,8 +364,8 @@
        stop
       endif
       do dir=1,SDIM
-       if (dx_maxlevel(dir).le.zero) then
-        print *,"dx_maxlevel(dir).le.zero"
+       if (dx_max_level(dir).le.zero) then
+        print *,"dx_max_level(dir).le.zero"
         stop
        endif
       enddo
@@ -429,13 +436,13 @@
       enddo
 
       call init_3D_map(xmap3D,xslice3D,problo3D,probhi3D, &
-        problo,probhi,dx_maxlevel)
+        problo,probhi,dx_max_level,probtype,num_materials)
 
       if (SDIM.eq.2) then
 
        do dir=1,3
         if (xmap3D(dir).eq.0) then
-         dx3D(dir)=dx_maxlevel(1)
+         dx3D(dir)=dx_max_level(1)
          FSI_lo3D(dir)=0
          FSI_hi3D(dir)=0
          growlo3D(dir)=-ngrowFSI
@@ -502,7 +509,7 @@
           FSI_bounding_box_ngrow, &
           nparts, &
           im_solid_map, &
-          h_small,dx_maxlevel,CTML_FSI_INIT, &
+          h_small,dx_max_level,CTML_FSI_INIT, &
           time,problo3D,probhi3D,ioproc,isout)
        else if (FSI_operation.eq.1) then 
         if (CTML_FSI_INIT.ne.1) then
@@ -623,7 +630,7 @@
          enddo
          do dir=1,3
           if (xmap3D(dir).eq.0) then
-           xdata3D(i,j,k,dir)=xslice3D(dir)+idx(dir)*dx_maxlevel(1)
+           xdata3D(i,j,k,dir)=xslice3D(dir)+idx(dir)*dx_max_level(1)
           else if (xmap3D(dir).eq.1) then 
            xdata3D(i,j,k,dir)=xsten(0,1)
           else if (xmap3D(dir).eq.2) then 
@@ -917,7 +924,7 @@
           maskfiner3D(i,j,k)=maskfiner(D_DECL(i2d,j2d,k2d),1)
           do dir=1,3
            if (xmap3D(dir).eq.0) then
-            xdata3D(i,j,k,dir)=xslice3D(dir)+idx(dir)*dx_maxlevel(1)
+            xdata3D(i,j,k,dir)=xslice3D(dir)+idx(dir)*dx_max_level(1)
            else if (xmap3D(dir).eq.1) then 
             xdata3D(i,j,k,dir)=xsten(0,1)
            else if (xmap3D(dir).eq.2) then 
@@ -1065,14 +1072,14 @@
       subroutine FORT_FILLCONTAINER( &
         level, &
         finest_level, &
-        max_level, &
+        sci_max_level, &
         time, &
         dt, &
         tilelo_array, &
         tilehi_array, &
         xlo_array, &
         dx, &
-        dx_maxlevel, &
+        dx_max_level, &
         num_grids_on_level, & !total number of grids on "level"
         num_grids_on_level_proc, & ! number of grids on "level" and on
                                    ! this (mpi) proc.
@@ -1095,27 +1102,27 @@
 
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T max_level
-      INTEGER_T nparts
-      INTEGER_T im_solid_map(nparts)
-      INTEGER_T nthread_parm
-      INTEGER_T num_grids_on_level
-      INTEGER_T num_grids_on_level_proc
-      INTEGER_T max_num_tiles_on_thread_proc
-      INTEGER_T tile_dim
-      INTEGER_T nmat
-      INTEGER_T tilelo_array(tile_dim*SDIM)
-      INTEGER_T tilehi_array(tile_dim*SDIM)
-      REAL_T time,dt
-      REAL_T xlo_array(tile_dim*SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dx_maxlevel(SDIM)
-      INTEGER_T gridno_array(tile_dim)
-      INTEGER_T num_tiles_on_thread_proc(nthread_parm)
-      REAL_T problo(SDIM)
-      REAL_T probhi(SDIM)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: sci_max_level
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: im_solid_map(nparts)
+      INTEGER_T, intent(in) :: nthread_parm
+      INTEGER_T, intent(in) :: num_grids_on_level
+      INTEGER_T, intent(in) :: num_grids_on_level_proc
+      INTEGER_T, intent(in) :: max_num_tiles_on_thread_proc
+      INTEGER_T, intent(in) :: tile_dim
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo_array(tile_dim*SDIM)
+      INTEGER_T, intent(in) :: tilehi_array(tile_dim*SDIM)
+      REAL_T, intent(in) :: time,dt
+      REAL_T, intent(in) :: xlo_array(tile_dim*SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dx_max_level(SDIM)
+      INTEGER_T, intent(in) :: gridno_array(tile_dim)
+      INTEGER_T, intent(in) :: num_tiles_on_thread_proc(nthread_parm)
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: probhi(SDIM)
    
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)
@@ -1146,8 +1153,8 @@
        stop
       endif
 
-      if (finest_level.gt.max_level) then
-       print *,"max_level invalid"
+      if (finest_level.gt.sci_max_level) then
+       print *,"sci_max_level invalid"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -1204,7 +1211,7 @@
       endif
 
       call init_3D_map(xmap3D,xslice3D,problo3D,probhi3D, &
-       problo,probhi,dx_maxlevel)
+       problo,probhi,dx_max_level,probtype,num_materials)
 
       if (SDIM.eq.3) then
        do dir=1,3
@@ -1216,7 +1223,7 @@
             (xmap3D(dir).eq.2)) then
          dx3D(dir)=dx(xmap3D(dir))
         else if (xmap3D(dir).eq.0) then
-         dx3D(dir)=dx_maxlevel(1)
+         dx3D(dir)=dx_max_level(1)
         else
          print *,"xmap3D invalid"
          stop
@@ -1291,11 +1298,11 @@
        endif
       else if (container_allocated.eq.0) then
        container_allocated=1
-       allocate(level_container_allocated(max_level+1))
-       do ilev=1,max_level+1
+       allocate(level_container_allocated(sci_max_level+1))
+       do ilev=1,sci_max_level+1
         level_container_allocated(ilev)=0
        enddo
-       allocate(contain_elem(max_level+1))
+       allocate(contain_elem(sci_max_level+1))
       else
        print *,"container_allocated invalid"
        stop
@@ -1384,7 +1391,7 @@
              (local_flag.eq.4).or. & !CTML FSI
              (local_flag.eq.6).or. & !ice from CAD
              (local_flag.eq.7)) then !fluid from CAD
-          call CLSVOF_FILLCONTAINER(lev77,max_level,nthread_parm, &
+          call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &
            dx3D,partid,im_part,nmat,time,dt)
          else if (local_flag.eq.1) then ! prescribed solid (EUL)
           ! do nothing

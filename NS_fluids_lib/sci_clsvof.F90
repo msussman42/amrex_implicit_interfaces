@@ -6618,7 +6618,7 @@ subroutine CLSVOF_ReadHeader( &
   nparts_in, &
   im_solid_map_in, &  ! im_part=im_solid_map_in(partid)+1
   h_small, &
-  dx_maxlevel, &
+  dx_max_level, &
   CTML_FSI_INIT, &
   CLSVOFtime,problo,probhi, &
   ioproc,isout)
@@ -6633,7 +6633,7 @@ INTEGER_T :: nparts_in
 INTEGER_T im_solid_map_in(nparts_in)
 INTEGER_T :: initflag,ioproc,isout
 INTEGER_T :: CTML_FSI_INIT
-REAL_T :: dx_maxlevel(AMREX_SPACEDIM)
+REAL_T :: dx_max_level(AMREX_SPACEDIM)
 REAL_T :: h_small
 REAL_T :: CLSVOFtime
 REAL_T problo(3),probhi(3)
@@ -6728,8 +6728,8 @@ INTEGER_T im_sanity_check
     print *,"problen_ref(dir).le.zero"
     stop
    endif
-   if (dx_maxlevel(dir).le.zero) then
-    print *,"dx_maxlevel(dir).le.zero"
+   if (dx_max_level(dir).le.zero) then
+    print *,"dx_max_level(dir).le.zero"
     stop
    endif
   enddo ! dir=1..AMREX_SPACEDIM
@@ -6739,7 +6739,7 @@ INTEGER_T im_sanity_check
   if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
 #ifdef MVAHABFSI
    if (CTML_FSI_INIT.eq.0) then
-    call CTML_INIT_SOLID(dx_maxlevel, &
+    call CTML_INIT_SOLID(dx_max_level, &
      problo_ref,probhi_ref,ioproc, &
      ctml_n_fib_bodies,ctml_max_n_fib_nodes)
     if (ctml_n_fib_bodies.eq.CTML_NPARTS) then
@@ -7267,7 +7267,7 @@ end subroutine get_contained_node
 ! are declared in PROBCOMMON.F90
 subroutine CLSVOF_FILLCONTAINER( &
  lev77, &
- max_level, &
+ sci_max_level, &
  nthread_parm, &
  dx3D, &
  part_id, &
@@ -7280,7 +7280,7 @@ use global_utility_module
 IMPLICIT NONE
 
  INTEGER_T lev77
- INTEGER_T max_level
+ INTEGER_T sci_max_level
  INTEGER_T nthread_parm
  REAL_T dx3D(3)
  INTEGER_T part_id
@@ -7314,7 +7314,7 @@ IMPLICIT NONE
  INTEGER_T ctml_part_id
  INTEGER_T fsi_part_id
 
- if ((lev77.lt.1).or.(lev77.gt.max_level+1)) then
+ if ((lev77.lt.1).or.(lev77.gt.sci_max_level+1)) then
   print *,"lev77 invalid"
   stop
  endif

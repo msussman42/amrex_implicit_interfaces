@@ -45,7 +45,7 @@ stop
       end subroutine CTML_DELTA
 
       subroutine CTML_INIT_SOLID(&
-       dx_maxlevel,&
+       dx_max_level,&
        prob_lo,&
        prob_hi, &
        io_proc, &
@@ -59,7 +59,7 @@ stop
       use grid_arrays
 
       IMPLICIT NONE
-      REAL_T dx_maxlevel(SDIM)
+      REAL_T dx_max_level(SDIM)
       REAL_T prob_lo(SDIM)
       REAL_T prob_hi(SDIM)
       INTEGER_T io_proc
@@ -74,41 +74,41 @@ stop
       endif
 
       do dir=1,SDIM
-       if (dx_maxlevel(dir).le.zero) then
-        print *,"dx_maxlevel(dir).le.zero"
+       if (dx_max_level(dir).le.zero) then
+        print *,"dx_max_level(dir).le.zero"
         stop
        endif
       enddo
 
-      !! call CTML_InitVicarVariables(dx_maxlevel,prob_lo,prob_hi)
+      !! call CTML_InitVicarVariables(dx_max_level,prob_lo,prob_hi)
       !! ******** x direction **********
-      nxc_GLBL = (prob_hi(1) - prob_lo(1)) / dx_maxlevel(1)
+      nxc_GLBL = (prob_hi(1) - prob_lo(1)) / dx_max_level(1)
       nx_GLBL = nxc_GLBL+1
 
       allocate( x(0:nx_GLBL+1))
       allocate(dx(0:nx_GLBL+1))
 
       do i=0,nxc_GLBL+1
-       dx(i)=dx_maxlevel(1)
+       dx(i)=dx_max_level(1)
       enddo
        
       do i=0,nx_GLBL+1
-        x(i)=prob_lo(1) + ((i-1)*dx_maxlevel(1))
+        x(i)=prob_lo(1) + ((i-1)*dx_max_level(1))
       enddo
 
 !! ******** y direction **********
-      nyc_GLBL = (prob_hi(2) - prob_lo(2)) / dx_maxlevel(2)
+      nyc_GLBL = (prob_hi(2) - prob_lo(2)) / dx_max_level(2)
       ny_GLBL = nyc_GLBL+1
 
       allocate( y(0:ny_GLBL+1))
       allocate(dy(0:ny_GLBL+1))
 
       do i=0,nyc_GLBL+1
-       dy(i)=dx_maxlevel(2)
+       dy(i)=dx_max_level(2)
       enddo
 
       do i=0,ny_GLBL+1
-       y(i)=prob_lo(2) + ((i-1)*dx_maxlevel(2))
+       y(i)=prob_lo(2) + ((i-1)*dx_max_level(2))
       enddo
 
 !! ******** z direction **********
@@ -121,27 +121,27 @@ stop
       allocate(dz(0:nz+1))
 
       do i=0,nzc+1
-       dz(i)=sqrt(dx_maxlevel(1)*dx_maxlevel(2)) 
+       dz(i)=sqrt(dx_max_level(1)*dx_max_level(2)) 
       enddo
 
       do i=0,nz+1
-       z(i)= (i-1)*sqrt(dx_maxlevel(1)*dx_maxlevel(2))
+       z(i)= (i-1)*sqrt(dx_max_level(1)*dx_max_level(2))
       enddo
 
 
 #elif (AMREX_SPACEDIM==3)
-      nzc = (prob_hi(3) - prob_lo(3)) / dx_maxlevel(3)
+      nzc = (prob_hi(3) - prob_lo(3)) / dx_max_level(3)
       nz = nzc+1
 
       allocate( z(0:nz+1))
       allocate(dz(0:nz+1))
 
       do i=0,nzc+1
-       dz(i)=dx_maxlevel(3)
+       dz(i)=dx_max_level(3)
       enddo
 
       do i=0,nz+1
-       z(i)=problo(3) + ((i-1)*dx_maxlevel(3))
+       z(i)=problo(3) + ((i-1)*dx_max_level(3))
       enddo
 
 #endif

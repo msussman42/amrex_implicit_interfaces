@@ -248,7 +248,7 @@ stop
 ! voldark,vollight,volall,cendark,cenlight,cenall
 ! called from FORT_INITDATA
       recursive subroutine stackvolume_batch(xsten,nhalf,dxin,bfact, &
-        voldata,nmat,level,maxlevel,LS_sub)
+        voldata,nmat,level,stack_max_level,LS_sub)
       use probcommon_module
       IMPLICIT NONE
 
@@ -259,7 +259,7 @@ stop
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: dxin(SDIM)
       REAL_T, intent(inout) :: voldata(nmat,2*SDIM+2)
-      INTEGER_T, intent(inout) :: maxlevel
+      INTEGER_T, intent(inout) :: stack_max_level
       INTEGER_T, intent(in) :: level
 
       INTEGER_T i1,j1,k1,k1lo,k1hi,dir,cutflag,im,isten
@@ -274,10 +274,10 @@ stop
       allocate(dxin_fine(SDIM))
       allocate(xsten_fine(-nhalf:nhalf,SDIM))
     
-      if ((maxlevel.ge.0).and.(maxlevel.le.10)) then
+      if ((stack_max_level.ge.0).and.(stack_max_level.le.10)) then
        ! do nothing
       else
-       print *,"maxlevel out of range"
+       print *,"stack_max_level out of range"
        stop
       endif 
 
@@ -320,14 +320,14 @@ stop
       call get_volume_data_batch(xsten,nhalf,dxin,bfact, &
         localdata,nmat,cutflag,LS_sub)
 
-      if ((level.eq.maxlevel).or.(cutflag.eq.0)) then
+      if ((level.eq.stack_max_level).or.(cutflag.eq.0)) then
        do im=1,nmat
         do i1=1,2+2*SDIM
          voldata(im,i1)=voldata(im,i1)+localdata(im,i1)
         enddo
        enddo
       else if ((level.ge.0).and. &
-               (level.lt.maxlevel).and. &
+               (level.lt.stack_max_level).and. &
                (cutflag.eq.1)) then
        do dir=1,SDIM
         dxin_fine(dir)=half*dxin(dir)
@@ -361,7 +361,7 @@ stop
 
         call stackvolume_batch( &
          xsten_fine,nhalf,dxin_fine,bfact, &
-         voldata,nmat,level+1,maxlevel,LS_sub)
+         voldata,nmat,level+1,stack_max_level,LS_sub)
        enddo 
        enddo 
        enddo

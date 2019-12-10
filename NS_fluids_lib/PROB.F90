@@ -12554,7 +12554,7 @@ END SUBROUTINE Adist
        ! stencil_valid==0 => coarse/fine ghost values use piecewise const int.
       subroutine calc_error_indicator( &
         stencil_valid, &
-        level,maxlevel, &
+        level,max_level, &
         xsten,nhalf,dx,bfact, &
         voflist, &
         LS_stencil, &
@@ -12571,7 +12571,7 @@ END SUBROUTINE Adist
 
       INTEGER_T stencil_valid
       INTEGER_T level
-      INTEGER_T maxlevel
+      INTEGER_T max_level
       INTEGER_T nhalf,bfact
       INTEGER_T nmat
       INTEGER_T nten
@@ -12604,7 +12604,7 @@ END SUBROUTINE Adist
       REAL_T LL
       REAL_T curv
 
-      if ((level.lt.0).or.(level.gt.maxlevel)) then
+      if ((level.lt.0).or.(level.gt.max_level)) then
        print *,"level invalid calc_error_indicator"
        stop
       endif
@@ -12875,7 +12875,7 @@ END SUBROUTINE Adist
           if (abs(curv).gt.zero) then
            if (one/abs(curv).lt.radius_cutoff(im)*dxmin) then
             inear=2
-            if ((1.eq.0).and.(level.eq.maxlevel-1)) then
+            if ((1.eq.0).and.(level.eq.max_level-1)) then
              print *,"(PASS)im,x,y,curv ",im,xsten(0,1),xsten(0,2),curv
              print *,"1/abs(curv),dxmin ",one/abs(curv),dxmin
             endif
@@ -13659,7 +13659,7 @@ END SUBROUTINE Adist
        xsten,nhalf, &
        mofdata, &
        mofdata_tess, &
-       errorparm,level,maxlevel,nmat,time)
+       errorparm,level,max_level,nmat,time)
       IMPLICIT NONE
 
 
@@ -13670,7 +13670,7 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, intent(inout) :: dxin(SDIM)
       REAL_T, intent(inout) :: errorparm(2*nmat)
-      INTEGER_T, intent(inout) :: maxlevel
+      INTEGER_T, intent(inout) :: max_level
       INTEGER_T, intent(in) :: level
       REAL_T, intent(inout) :: mofdata(nmat*ngeom_recon)
       REAL_T, intent(inout) :: mofdata_tess(nmat*ngeom_recon)
@@ -13746,7 +13746,7 @@ END SUBROUTINE Adist
         mofdata_tess, &
         localerror,cutflag,nmat,time)
 
-      if ((level.eq.maxlevel).or.(cutflag.eq.0)) then
+      if ((level.eq.max_level).or.(cutflag.eq.0)) then
        do im=1,2*nmat
         errorparm(im)=errorparm(im)+localerror(im)
        enddo
@@ -13782,7 +13782,7 @@ END SUBROUTINE Adist
          xstensub,nhalf, &
          mofdata, &
          mofdata_tess, &
-         errorparm,level+1,maxlevel,nmat,time)
+         errorparm,level+1,max_level,nmat,time)
        enddo
        enddo 
        enddo 
@@ -37773,7 +37773,7 @@ end subroutine initialize2d
        subroutine FORT_INITDATA( &
         tid, &
         adapt_quad_depth, &
-        level,maxlevel, &
+        level,max_level, &
         time, &
         tilelo,tilehi, &
         fablo,fabhi, &
@@ -37818,7 +37818,7 @@ end subroutine initialize2d
        INTEGER_T fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
        INTEGER_T bfact
-       INTEGER_T level,maxlevel
+       INTEGER_T level,max_level
        INTEGER_T nc
        INTEGER_T nten
        INTEGER_T imls
@@ -37881,7 +37881,7 @@ end subroutine initialize2d
        REAL_T temp_jwl,temp_slope,temproom,u_jwl
        REAL_T water_temp
        INTEGER_T imattype,isten
-       INTEGER_T maxlevelstack
+       INTEGER_T max_levelstack
        INTEGER_T vofcomp_raw
        INTEGER_T vofcomp_recon
        REAL_T jumpval
@@ -37939,7 +37939,7 @@ end subroutine initialize2d
         print *,"adapt_quad_depth invalid"
         stop
        endif
-       maxlevelstack=adapt_quad_depth
+       max_levelstack=adapt_quad_depth
 
        ipresbase=num_materials_vel*SDIM
        impres=1
@@ -38836,7 +38836,7 @@ end subroutine initialize2d
 
          ! in: FORT_INITDATA
         call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata,nmat, &
-         0,maxlevelstack,materialdist_batch)
+         0,max_levelstack,materialdist_batch)
         call extract_vof_cen_batch(fluiddata,vofdark,voflight, &
          cendark,cenlight,nmat)
 
@@ -38987,7 +38987,7 @@ end subroutine initialize2d
 
         call calc_error_indicator( &
          stencil_valid, &
-         level,maxlevel, &
+         level,max_level, &
          xsten,nhalf,dx,bfact, &
          voflist, &
          LS_stencil, &
@@ -39023,7 +39023,7 @@ end subroutine initialize2d
           print *,"im,vfrac ",im,scalc(vofcomp_raw)
           print *,"im,LS ",im,LSc(im)
          enddo
-         print *,"level,maxlevel ",level,maxlevel
+         print *,"level,max_level ",level,max_level
          print *,"x,y,z= ",x,y,z
          print *,"dx,dy,dz= ",dx(1),dx(2),dx(SDIM)
          print *,"ic,jc,kc= ",ic,jc,kc

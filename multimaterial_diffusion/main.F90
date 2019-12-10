@@ -460,6 +460,8 @@ integer :: constant_K_test
 integer :: iter
 real(kind=8) :: iter_average
 
+integer :: sci_max_level
+
 print *,"PROTOTYPE CODE DATE= November 9, 13:40"
 
 im_measure=2
@@ -810,8 +812,11 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  ngrow_expansion=2
  num_species_var=0
+
+ sci_max_level=0
  fort_max_level=0
  fort_finest_level=0
+
  bfact_time_order=1
  bfact_space_order(0)=1
  bfact_space_order(1)=1
@@ -825,6 +830,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  cache_index_low=-4*bfactmax
  cache_index_high=2*N_CURRENT+4*bfactmax
  cache_max_level=fort_max_level
+ if (cache_max_level.lt.sci_max_level) then
+  cache_max_level=sci_max_level
+ endif
 
  allocate(grid_cache(0:fort_max_level, &
     cache_index_low:cache_index_high,sdim_in))

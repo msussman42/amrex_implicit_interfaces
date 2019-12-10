@@ -47,7 +47,7 @@ stop
         gridno, &
         level, &
         finest_level, &
-        maxlevel, &
+        max_level, &
         ngrow, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
@@ -79,7 +79,7 @@ stop
 
       INTEGER_T tid
       INTEGER_T gridno
-      INTEGER_T level,finest_level,maxlevel
+      INTEGER_T level,finest_level,max_level
       INTEGER_T nsteps
 
       INTEGER_T nmat
@@ -191,8 +191,8 @@ stop
        print *,"grid or level bust"
        stop
       endif
-      if (maxlevel.lt.finest_level) then
-       print *,"maxlevel invalid sloperecon"
+      if (max_level.lt.finest_level) then
+       print *,"max_level invalid sloperecon"
        stop
       endif 
      
@@ -645,7 +645,7 @@ stop
 
          call calc_error_indicator( &
           stencil_valid, &
-          level,maxlevel, &
+          level,max_level, &
           xsten,nhalf,dx,bfact, &
           voflist, &
           LS_stencil, &
