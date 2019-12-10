@@ -37693,7 +37693,8 @@ end subroutine initialize2d
         print *,"cache_index_low ",cache_index_low
         print *,"cache_index_high ",cache_index_high
         print *,"bfactmax,max_ncell ",bfactmax,max_ncell
-        allocate(grid_cache(0:max_level, &
+
+        allocate(grid_cache(0:cache_max_level, &
          cache_index_low:cache_index_high,SDIM))
 
         do dir=1,SDIM
@@ -37702,7 +37703,7 @@ end subroutine initialize2d
          domhi_level(dir)=domhi(dir)
         enddo
 
-        do ilev=0,max_level
+        do ilev=0,cache_max_level
          do dir=1,SDIM
           if (domlo_level(dir).ne.0) then
            print *,"domlo_level invalid"
@@ -37726,7 +37727,7 @@ end subroutine initialize2d
          enddo ! dir
          do dir=1,SDIM
           dxlevel(dir)=half*dxlevel(dir)
-          domlo_level(dir)=2*domlo(dir)
+          domlo_level(dir)=2*domlo_level(dir)
           domhi_level(dir)=2*(domhi_level(dir)+1)-1
          enddo
         enddo !ilev

@@ -315,6 +315,7 @@ real(kind=8),PARAMETER     :: latent_heat_in = 1.0d0
 INTEGER,PARAMETER          :: local_operator_internal = 1
 INTEGER,PARAMETER          :: local_operator_external = 1
 INTEGER,PARAMETER          :: local_linear_exact = 1
+INTEGER                    :: ilev,max_ncell
 INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=1 non-deforming boundary tests
 ! M=40 probtype_in=3 test with N=64
@@ -373,6 +374,7 @@ real(kind=8),dimension(:), allocatable :: xCC,yCC       ! cell centers
 !REAL(KIND=8)               :: Ts(M+1)
 REAL(KIND=8),dimension(:), allocatable :: Ts
 real(kind=8)               :: dx_in(sdim_in)
+real(kind=8)               :: dxlevel(sdim_in)
 real(kind=8)               :: dx_coarse
 !TYPE(POLYGON),dimension(-1:N,-1:N):: CELL_FAB
 TYPE(POLYGON),dimension(:,:), allocatable :: CELL_FAB
@@ -403,7 +405,9 @@ INTEGER order_algorithm(1000)
 INTEGER MOFITERMAX
 INTEGER ngeom_recon_in
 INTEGER bfactmax
-INTEGER domlo_arr(2)
+INTEGER domlo_in(2)
+INTEGER domlo_level(2)
+INTEGER domhi_level(2)
 real(kind=8) :: problo_arr(2)
 
 integer local_state_ncomp
@@ -827,23 +831,46 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  call init_cache(bfactmax+2)
 
- cache_index_low=-4*bfactmax
- cache_index_high=2*N_CURRENT+4*bfactmax
  cache_max_level=fort_max_level
  if (cache_max_level.lt.sci_max_level) then
   cache_max_level=sci_max_level
  endif
 
- allocate(grid_cache(0:fort_max_level, &
+ max_ncell=N_CURRENT
+ do ilev=1,cache_max_level
+  max_ncell=max_ncell*2
+ enddo
+
+ cache_index_low=-4*bfactmax
+ cache_index_high=2*max_ncell+4*bfactmax
+
+ allocate(grid_cache(0:cache_max_level, &
     cache_index_low:cache_index_high,sdim_in))
 
  h_in = (probhi-problo)/N_CURRENT
  do dir=1,sdim_in
-   dx_in(dir) = h_in
+  dx_in(dir) = h_in
  enddo
 
  do dir=1,sdim_in
-   do i=0-2*bfactmax,N_CURRENT-1+2*bfactmax
+  domlo_in(dir)=0
+  domhi_in(dir)=N_CURRENT-1
+ enddo
+
+ do dir=1,sdim_in
+  dxlevel(dir)=dx_in(dir)
+  domlo_level(dir)=domlo_in(dir)
+  domhi_level(dir)=domhi_in(dir)
+ enddo
+
+ do ilev=0,cache_max_level
+  do dir=1,sdim_in
+   if (domlo_level(dir).ne.0) then
+    print *,"domlo_level invalid"
+    stop
+   endif
+   do i=domlo_level(dir)-2*bfactmax, &
+        domhi_level(dir)+2*bfactmax
     inode=2*i
     if ((inode.lt.cache_index_low).or. &
         (inode+1.gt.cache_index_high)) then
@@ -851,16 +878,21 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      stop
     endif
     nhalf=1
-    domlo_arr(1)=0
-    domlo_arr(2)=0
     problo_arr(1)=0.0d0
     problo_arr(2)=0.0d0
-    call gridsten1D(xsten_cache,problo_arr,i,domlo_arr, &
-      bfact_space_order(0),dx_in,dir,nhalf) 
-    grid_cache(0,inode,dir)=xsten_cache(0)
-    grid_cache(0,inode+1,dir)=xsten_cache(1)
+    call gridsten1D(xsten_cache,problo_arr,i, &
+      domlo_in, &
+      bfact_space_order(0),dxlevel,dir,nhalf) 
+    grid_cache(ilev,inode,dir)=xsten_cache(0)
+    grid_cache(ilev,inode+1,dir)=xsten_cache(1)
    enddo ! i
- enddo ! dir
+  enddo ! dir
+  do dir=1,sdim_in
+   dxlevel(dir)=half*dxlevel(dir)
+   domlo_level(dir)=2*domlo_level(dir)
+   domhi_level(dir)=2*(domhi_level(dir)+1)-1
+  enddo
+ enddo !ilev
 
  grid_cache_allocated=1
 
