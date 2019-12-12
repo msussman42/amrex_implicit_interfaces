@@ -13550,6 +13550,12 @@ stop
  
        ughost_nrml = -(delta_g/delta_r)*uimage_nrml
 
+        ! From Spaldings' paper, a representative size for the linear 
+        ! region is:
+        ! y+ = 10.0
+        ! y+ = y sqrt(tau rho)/mu_molecular
+        !  or y+ is the intersection point of the linear (viscous) 
+        !  and log layer profiles.
        if (viscosity_eddy.gt.zero) then
         !obtain wall shear stress tau_w
         !out tau_w
@@ -13570,6 +13576,9 @@ stop
        
       end subroutine getGhostVel
 
+       ! called from:NavierStokes::init_FSI_GHOST_MF(int ngrow) 
+       ! (in NavierStokes.cpp)
+       ! called when "law_of_the_wall>0"
       subroutine FORT_WALLFUNCTION( &
        im_solid_map, &
        level, &
@@ -13951,7 +13960,8 @@ stop
               enddo
               enddo ! i1,j1,k1
 
-              ! call Cody's routine here
+              ! call CODY ESTEBEs routine here 
+              ! (defined in this file: GODUNOV_3D.F90)
               call getGhostVel( &
                 delta_r, &
                 dx, &

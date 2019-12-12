@@ -464,13 +464,13 @@
 
       else if (SDIM.eq.3) then
 
-       do dir=1,3
+       do dir=1,SDIM
         dx3D(dir)=dx(dir)
         FSI_lo3D(dir)=tilelo(dir)
         FSI_hi3D(dir)=tilehi(dir)
         growlo3D(dir)=growlo(dir)
         growhi3D(dir)=growhi(dir)
-       enddo ! dir=1..3
+       enddo ! dir=1..SDIM
 
       else
        print *,"dimension bust"
@@ -1214,7 +1214,7 @@
        problo,probhi,dx_max_level,probtype,num_materials)
 
       if (SDIM.eq.3) then
-       do dir=1,3
+       do dir=1,SDIM
         dx3D(dir)=dx(dir)
        enddo
       else if (SDIM.eq.2) then
