@@ -291,7 +291,8 @@ IMPLICIT NONE
 ! 19=polar solver
 ! 15=hypocycloid with 2 materials
 ! 20=hypocycloid with 6 materials
-INTEGER,PARAMETER          :: probtype_in=5
+! 400=melting gingerbread (material 1 inside, T=TSAT inside)
+INTEGER,PARAMETER          :: probtype_in=400
 INTEGER,PARAMETER          :: stefan_flag=1
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
@@ -306,10 +307,13 @@ real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0
 ! 10.0d0 for probtype==16
 ! for probtype==5, T(x=0)=273.0  T(x=1)=272.0+e^{-V(1-Vt)}
 ! material 1 on the left, material 2 on the right.
-real(kind=8),PARAMETER     :: TDIFF_in = -4.0d0  
+! 1.0d0 for probtype==400 (gingerbread)
+!  (T=TSAT interior domain, T=TSAT+TDIFF on walls)
+real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
+! 1.0d0 for probtype==400 (melting gingerbread)
 real(kind=8),PARAMETER     :: latent_heat_in = 1.0d0
 !0=low,1=simple,2=Dai and Scannapieco,3=orthogonal probe
 INTEGER,PARAMETER          :: local_operator_internal = 1
@@ -468,7 +472,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= November 9, 13:40"
+print *,"PROTOTYPE CODE DATE= December 14, 2019, 15:00"
 
 im_measure=2
 constant_K_test=0
@@ -534,6 +538,13 @@ probhiz=0.0d0
 problenx=probhix-problox
 probleny=probhiy-probloy
 problenz=probhiz-probloz
+
+sci_max_level=0
+fort_max_level=0
+fort_finest_level=0
+do im=1,nmat_in
+  FSI_flag(im)=0
+enddo
 
 print *,"N_START,N_FINISH ",N_START,N_FINISH
 print *,"M_START,M_FACTOR ",M_START,M_FACTOR
@@ -636,6 +647,32 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     print *,"stefan_flag or local_linear_exact invalid for probtype==4"
     stop
    endif
+
+ else if (probtype_in.eq.400) then
+   print *,"MAKE SURE DEBUG_LS==0"
+
+   sci_max_level=2
+   nmat_in=2
+   fort_heatviscconst(1)=1.0  ! inside gingerbread (T=TSAT init.)
+   fort_heatviscconst(2)=1.0  ! outside gingerbread (T=TSAT init.)
+   do dir=1,sdim_in
+   do side=1,2
+    physbc(dir,side)=REFLECT_EVEN
+    physbc_value(dir,side)=0.0
+   enddo
+   enddo
+   physbc(2,1)=EXT_DIR
+   physbc_value(2,1)=TDIFF_in
+   physbc(2,2)=EXT_DIR
+   physbc_value(2,2)=TDIFF_in
+   if ((stefan_flag.eq.1).and.(local_linear_exact.eq.1)) then
+    ! do nothing
+   else
+    print *,"stefan_flag or local_linear_exact invalid for probtype==400"
+    stop
+   endif
+
+   FSI_Flag(1)=7 ! gingerbread (in the man)
  else if (probtype_in.eq.5) then
 
    print *,"MAKE SURE DEBUG_LS==0"
@@ -818,10 +855,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  ngrow_expansion=2
  num_species_var=0
-
- sci_max_level=0
- fort_max_level=0
- fort_finest_level=0
 
  bfact_time_order=1
  bfact_space_order(0)=1
@@ -1218,10 +1251,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    stop
  endif
 
- do im=1,nmat_in
-   FSI_flag(im)=0
- enddo
-
  allocate(XLINE(-1:N_CURRENT+1))
  allocate(YLINE(-1:N_CURRENT+1))
  ! init nodes
@@ -1256,8 +1285,16 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  allocate(T(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp)) 
  allocate(T_new(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp)) 
 
- call convert_lag_to_eul(dxlevel,domlo_level,domhi_level, &
+ if (FSI_flag(1).eq.7) then
+  call convert_lag_to_eul(dxlevel,domlo_level,domhi_level, &
          cache_max_level,sdim_in)
+ else if (FSI_flag(1).eq.0) then
+  ! do nothing
+ else
+  print *,"FSI_flag value unexpected"
+  stop
+ endif
+       
 
  ! init velocity in: vof_cisl.F90
  do iten=1,local_nten

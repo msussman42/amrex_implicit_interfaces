@@ -792,6 +792,15 @@ stop
        stop
       endif
 
+      iter=0
+       !initialize node locations; generate_new_triangles
+      FSI_operation=0
+      FSI_sub_operation=0
+      call ns_header_msg_level(FSI_operation, &
+              FSI_sub_operation, &
+              iter, &
+              dxlevel,domlo_level,domhi_level)
+
       return
       end subroutine convert_lag_to_eul
 
