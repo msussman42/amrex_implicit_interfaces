@@ -374,7 +374,8 @@ real(kind=8),dimension(:), allocatable :: xCC,yCC       ! cell centers
 !REAL(KIND=8)               :: Ts(M+1)
 REAL(KIND=8),dimension(:), allocatable :: Ts
 real(kind=8)               :: dx_in(sdim_in)
-real(kind=8)               :: dxlevel(sdim_in)
+real(kind=8),dimension(:,:), allocatable :: dxlevel
+real(kind=8)               :: dx_local(sdim_in)
 real(kind=8)               :: dx_coarse
 !TYPE(POLYGON),dimension(-1:N,-1:N):: CELL_FAB
 TYPE(POLYGON),dimension(:,:), allocatable :: CELL_FAB
@@ -406,8 +407,9 @@ INTEGER MOFITERMAX
 INTEGER ngeom_recon_in
 INTEGER bfactmax
 INTEGER domlo_in(2)
-INTEGER domlo_level(2)
-INTEGER domhi_level(2)
+INTEGER domhi_in(2)
+INTEGER,dimension(:,:), allocatable :: domlo_level
+INTEGER,dimension(:,:), allocatable :: domhi_level
 real(kind=8) :: problo_arr(2)
 
 integer local_state_ncomp
@@ -857,20 +859,27 @@ DO WHILE (N_CURRENT.le.N_FINISH)
   domhi_in(dir)=N_CURRENT-1
  enddo
 
+ allocate(dxlevel(0:cache_max_level,sdim_in))
+ allocate(domlo_level(0:cache_max_level,sdim_in))
+ allocate(domhi_level(0:cache_max_level,sdim_in))
+
  do dir=1,sdim_in
-  dxlevel(dir)=dx_in(dir)
-  domlo_level(dir)=domlo_in(dir)
-  domhi_level(dir)=domhi_in(dir)
+  dxlevel(0,dir)=dx_in(dir)
+  domlo_level(0,dir)=domlo_in(dir)
+  domhi_level(0,dir)=domhi_in(dir)
  enddo
 
  do ilev=0,cache_max_level
   do dir=1,sdim_in
-   if (domlo_level(dir).ne.0) then
+   dx_local(dir)=dxlevel(ilev,dir)
+  enddo
+  do dir=1,sdim_in
+   if (domlo_level(ilev,dir).ne.0) then
     print *,"domlo_level invalid"
     stop
    endif
-   do i=domlo_level(dir)-2*bfactmax, &
-        domhi_level(dir)+2*bfactmax
+   do i=domlo_level(ilev,dir)-2*bfactmax, &
+        domhi_level(ilev,dir)+2*bfactmax
     inode=2*i
     if ((inode.lt.cache_index_low).or. &
         (inode+1.gt.cache_index_high)) then
@@ -882,17 +891,26 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     problo_arr(2)=0.0d0
     call gridsten1D(xsten_cache,problo_arr,i, &
       domlo_in, &
-      bfact_space_order(0),dxlevel,dir,nhalf) 
+      bfact_space_order(0),dx_local,dir,nhalf) 
     grid_cache(ilev,inode,dir)=xsten_cache(0)
     grid_cache(ilev,inode+1,dir)=xsten_cache(1)
    enddo ! i
-  enddo ! dir
-  do dir=1,sdim_in
-   dxlevel(dir)=half*dxlevel(dir)
-   domlo_level(dir)=2*domlo_level(dir)
-   domhi_level(dir)=2*(domhi_level(dir)+1)-1
-  enddo
- enddo !ilev
+  enddo ! dir=1..sdim_in
+
+  if (ilev.lt.cache_max_level) then
+   do dir=1,sdim_in
+    dxlevel(ilev+1,dir)=0.5d0*dxlevel(ilev,dir)
+    domlo_level(ilev+1,dir)=2*domlo_level(ilev,dir)
+    domhi_level(ilev+1,dir)=2*(domhi_level(ilev,dir)+1)-1
+   enddo
+  else if (ilev.eq.cache_max_level) then
+   ! do nothing
+  else
+   print *,"ilev invalid"
+   stop
+  endif
+
+ enddo !ilev=0...cache_max_level
 
  grid_cache_allocated=1
 
@@ -1237,6 +1255,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  allocate(centroid_mult(-1:N_CURRENT,-1:N_CURRENT,nmat_in,sdim_in)) 
  allocate(T(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp)) 
  allocate(T_new(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp)) 
+
+ call convert_lag_to_eul(dxlevel,domlo_level,domhi_level, &
+         cache_max_level,sdim_in)
 
  ! init velocity in: vof_cisl.F90
  do iten=1,local_nten
@@ -2171,6 +2192,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  deallocate(grid_cache)
 
  call delete_cache()
+ deallocate(dxlevel)
+ deallocate(domlo_level)
+ deallocate(domhi_level)
+
 
  if ((probtype_in.eq.4).or. &
      (probtype_in.eq.16)) then

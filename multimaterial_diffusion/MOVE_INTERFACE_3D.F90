@@ -764,6 +764,36 @@ stop
 
       end subroutine get_exact_VEL
 
+      subroutine convert_lag_to_eul(dxlevel, &
+          domlo_level,domhi_level, &
+          cache_max_level_in,sdim_in)
+      USE probcommon_module 
+      USE probmain_module 
+      USE global_utility_module 
+      use MOF_routines_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: cache_max_level_in
+      INTEGER_T, intent(in) :: sdim_in
+      INTEGER_T, intent(in) :: domlo_level(0:cache_max_level,sdim_in)
+      INTEGER_T, intent(in) :: domhi_level(0:cache_max_level,sdim_in)
+      REAL_T, intent(in) :: dxlevel(0:cache_max_level,sdim_in)
+
+      if (sdim_in.eq.SDIM) then
+       ! do nothing
+      else
+       print *,"sdim_in invalid"
+       stop
+      endif
+      if (cache_max_level_in.eq.cache_max_level) then
+       ! do nothing
+      else
+       print *,"cache_max_level_in invalid"
+       stop
+      endif
+
+      return
+      end subroutine convert_lag_to_eul
 
       ! input: UOLD
       ! output: UNEW
