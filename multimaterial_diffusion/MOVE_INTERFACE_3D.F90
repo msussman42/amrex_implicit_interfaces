@@ -790,6 +790,10 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      do ilev=0,cache_max_level
+       deallocate(MG(ilev)%FSI_MF)
+      enddo
+      deallocate(MG)
       deallocate(im_solid_map)
 
       return
@@ -855,93 +859,160 @@ stop
         stop
        endif
 
+       start_time=0.0d0
+       start_dt=1.0d0
+
        iter=0
         !initialize node locations; generate_new_triangles
        FSI_operation=0
        FSI_sub_operation=0
-       call ns_header_msg_level(FSI_operation, &
+       ilev=0
+       call ns_header_msg_level(ilev, &
+              FSI_operation, &
               FSI_sub_operation, &
               iter, &
               dxlevel,domlo_level,domhi_level)
-
 
         !nmat x (velocity + LS + temperature + flag+stress)  3D
        nFSI_sub=12
        nFSI=global_nparts*nFSI_sub
        ngrowFSI=3
 
+       allocate(MG(0:cache_max_level))
+
        do ilev=0,cache_max_level
 
-
         !  new_localMF(FSI_MF,nFSI,ngrowFSI,-1);
+
+        do dir=1,SDIM
+         local_domlo(dir)=domlo_level(ilev,dir)
+         local_domhi(dir)=domhi_level(ilev,dir)
+        enddo
+
+        call set_dimdec(DIMS(FSI_MF),local_domlo, &
+                local_domhi,ngrowFSI)
+
+        if (SDIM.eq.3) then
+         klo=local_domlo(SDIM)-ngrowFSI
+         khi=local_domhi(SDIM)+ngrowFSI
+        else if (SDIM.eq.2) then
+         klo=0
+         khi=0
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+        allocate(MG(ilev)%FSI_MF(DIMV(FSI_MF),nFSI))
 
         do partid=1,global_nparts
          ibase=(partid-1)*nFSI_sub
 
-         if (SDIM.eq.3) then
-          klo=domlo_level(ilev,SDIM)-ngrowFSI
-          khi=domhi_level(ilev,SDIM)+ngrowFSI
-         else if (SDIM.eq.2) then
-          klo=0
-          khi=0
-         else
-          print *,"dimension bust"
-          stop
-         endif
-
-         do i=domlo_level(ilev,1)-ngrowFSI,domhi_level(ilev,1)+ngrowFSI
-         do j=domlo_level(ilev,2)-ngrowFSI,domhi_level(ilev,2)+ngrowFSI
+         do i=ARG_L1(FSI_MF),ARG_H1(FSI_MF)
+         do j=ARG_L2(FSI_MF),ARG_H2(FSI_MF)
          do k=klo,khi
           do dir=1,3
-           FSI_MF(i,j,k,ibase+dir)=0.0d0 ! velocity
+           MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+dir)=0.0d0 ! velocity
           enddo
-          FSI_MF(i,j,k,ibase+3)=-9999.0d0 ! LS
-          FSI_MF(i,j,k,ibase+4)=0.0d0 ! temp
-          FSI_MF(i,j,k,ibase+5)=0.0d0 ! mask
+          MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+3)=-9999.0d0 ! LS
+          MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+4)=0.0d0 ! temp
+          MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+5)=0.0d0 ! mask
           do dir=1,6
-           FSI_MF(i,j,k,ibase+5+dir)=0.0d0 ! stress
+           MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+5+dir)=0.0d0 ! stress
           enddo
          enddo
          enddo
          enddo
         enddo ! partid=1..global_nparts
 
-  if (read_from_CAD()==1) {
+        do dir=1,SDIM
+         tilelo_array(dir)=domlo_level(ilev,dir)
+         tilehi_array(dir)=domhi_level(ilev,dir)
+         dx_current(dir)=dxlevel(ilev,dir)
+         dx_max_level(dir)=dxlevel(cache_max_level,dir)
+        enddo
+        xlo_array(1)=problox
+        xlo_array(2)=probloy
+        if (SDIM.eq.3) then
+         xlo_array(SDIM)=probloz
+        endif
+        xhi_array(1)=probhix
+        xhi_array(2)=probhiy
+        if (SDIM.eq.3) then
+         xhi_array(SDIM)=probhiz
+        endif
+        num_grids_on_level=1
+        gridno_array(1)=1
+        num_tiles_on_thread_proc=1
+        local_nthreads=1
 
-    // in: NavierStokes::FSI_make_distance
-    // 1. create lagrangian container data structure within the 
-    //    fortran part that recognizes tiles. (FILLCONTAINER in SOLIDFLUID.F90)
-    // 2. fill the containers with the Lagrangian information.
-    //    (CLSVOF_FILLCONTAINER called from FILLCONTAINER)
-    //    i.e. associate to each tile a set of Lagrangian nodes and elements
-    //    that are located in or very near the tile.
-   create_fortran_grid_struct(time,dt);
+        ! 1. create lagrangian container data structure within the 
+        !    fortran part that recognizes tiles. 
+        !    (FILLCONTAINER in SOLIDFLUID.F90)
+        ! 2. fill the containers with the Lagrangian information.
+        !    (CLSVOF_FILLCONTAINER called from FILLCONTAINER)
+        !    i.e. associate to each tile a set of Lagrangian nodes and elements
+        !    that are located in or very near the tile.
+        call FORT_FILLCONTAINER( &
+                ilev, &
+                cache_max_level, &
+                cache_max_level, &
+                start_time, &
+                start_dt, &
+                tilelo_array, &
+                tilehi_array, &
+                xlo_array, &
+                dx_current, &
+                dx_max_level, &
+                num_grids_on_level, &
+                num_grids_on_level, &
+                gridno_array, &
+                num_tiles_on_thread_proc, &
+                local_nthreads, &
+                num_tiles_on_thread_proc, &
+                num_tiles_on_thread_proc, &
+                nmat, &
+                global_nparts, &
+                im_solid_map, &
+                xlo_array, &
+                xhi_array)
 
-   int iter=0; // touch_flag=0
-   int FSI_operation=2;  // make distance in narrow band
-   int FSI_sub_operation=0;
-   resize_mask_nbr(ngrowFSI);
-    // in: FSI_make_distance
-    // 1.FillCoarsePatch
-    // 2.traverse lagrangian elements belonging to each tile and update
-    //   cells within "bounding box" of the element.
-   ns_header_msg_level(FSI_operation,FSI_sub_operation,time,dt,iter);
+        iter=0 ! touch_flag=0
+        FSI_operation=2 ! make distance in narrow band
+        FSI_sub_operation=0
+        ! 1.FillCoarsePatch
+        ! 2.traverse lagrangian elements belonging to each tile and update
+        !   cells within "bounding box" of the element.
+        call ns_header_msg_level(ilev, &
+                FSI_operation, &
+                FSI_sub_operation, &
+                iter, &
+                dxlevel,domlo_level,domhi_level)
+
+        first_iter=1 
+        do while ((FSI_touch_flag.eq.1).or.(first_iter.eq.1)) 
+         first_iter=0
+   
+         FSI_operation=3 ! sign update   
+         FSI_sub_operation=0
+         call ns_header_msg_level(ilev, &
+                 FSI_operation, &
+                 FSI_sub_operation, &
+                 iter, &
+                 dxlevel,domlo_level,domhi_level)
+
+         iter=iter+1
+        enddo
+
+       enddo ! ilev=0..cache_max_level
+
+      else if (global_nparts.eq.0) then
+       ! do nothing
+      else
+       print *,"global_nparts invalid"
+       stop
+      endif
   
-   do {
- 
-    FSI_operation=3; // sign update   
-    FSI_sub_operation=0;
-    ns_header_msg_level(FSI_operation,FSI_sub_operation,time,dt,iter);
-    iter++;
-  
-   } while (FSI_touch_flag[0]==1);
-
-   build_moment_from_FSILS();
-
-  } else if (read_from_CAD()==0) {
-   // do nothing
-  } else
-   amrex::Error("read_from_CAD invalid");
  
   bool use_tiling=ns_tiling;
 
