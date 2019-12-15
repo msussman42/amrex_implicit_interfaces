@@ -443,6 +443,8 @@ stop
         print *,"im invalid"
         stop
        endif
+      else if (probtype.eq.400) then
+       call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.5) then
        ! material 1: left  material 2: right
        LS=0.2d0+time-xblob
@@ -548,7 +550,8 @@ stop
 
       else if ((probtype.eq.19).or. &
                (probtype.eq.13).or. &
-               (probtype.eq.1)) then
+               (probtype.eq.1).or. &
+               (probtype.eq.400)) then
        h_opt=1.0D-6
        dir=1
        call dist_concentric(im,xgrid(1)+h_opt,xgrid(2),LSp1,probtype)
@@ -601,7 +604,8 @@ stop
       REAL_T xgrid_probe(SDIM)
       REAL_T T_grid,T_probe
       REAL_T h_opt
-      REAL_T stefan_time,front_vel,test_front_vel
+      REAL_T stefan_time
+      REAL_T front_vel,test_front_vel
       REAL_T rgrid,dux
       INTEGER_T diflag
       INTEGER_T dir
@@ -652,6 +656,21 @@ stop
         if (1.eq.0) then
          print *,"front_vel,test_front_vel ",front_vel,test_front_vel
         endif
+       else
+        print *,"iten invalid (get exact vel 2)"
+        print *,"iten=",iten
+        print *,"probtype=",probtype
+        stop
+       endif
+      else if (probtype.eq.400) then
+
+       if (iten.eq.1) then
+        call interp_LS_vel_to_grid(xgrid,2,LS,VEL)
+        test_front_vel=0.0d0
+        do dir=1,SDIM
+         test_front_vel=test_front_vel+VEL(dir)**2
+        enddo
+        test_front_vel=sqrt(test_front_vel)
        else
         print *,"iten invalid (get exact vel 2)"
         print *,"iten=",iten

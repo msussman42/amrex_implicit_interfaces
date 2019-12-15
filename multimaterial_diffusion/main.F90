@@ -291,7 +291,7 @@ IMPLICIT NONE
 ! 19=polar solver
 ! 15=hypocycloid with 2 materials
 ! 20=hypocycloid with 6 materials
-! 400=melting gingerbread (material 1 inside, T=TSAT inside)
+! 400=melting gingerbread (material 1 inside, T=TSAT initially)
 INTEGER,PARAMETER          :: probtype_in=400
 INTEGER,PARAMETER          :: stefan_flag=1
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
@@ -308,7 +308,7 @@ real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0
 ! for probtype==5, T(x=0)=273.0  T(x=1)=272.0+e^{-V(1-Vt)}
 ! material 1 on the left, material 2 on the right.
 ! 1.0d0 for probtype==400 (gingerbread)
-!  (T=TSAT interior domain, T=TSAT+TDIFF on walls)
+!  (T=TSAT interior domain initially, T=TSAT+TDIFF on walls)
 real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
@@ -662,9 +662,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    enddo
    enddo
    physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=TDIFF_in
+   physbc_value(2,1)=273.0d0+TDIFF_in
    physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=TDIFF_in
+   physbc_value(2,2)=273.0d0+TDIFF_in
    if ((stefan_flag.eq.1).and.(local_linear_exact.eq.1)) then
     ! do nothing
    else
@@ -672,7 +672,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
-   FSI_Flag(1)=7 ! gingerbread (in the man)
+   FSI_flag(1)=7 ! gingerbread (in the man)
  else if (probtype_in.eq.5) then
 
    print *,"MAKE SURE DEBUG_LS==0"
@@ -1065,6 +1065,29 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
    print *,"max_front_vel=",max_front_vel
 
+ else if (probtype_in.eq.400) then
+
+   saturation_temp(1)=273.0d0
+   saturation_temp(2)=273.0d0
+   fort_tempconst(1)=273.0
+   fort_tempconst(2)=273.0
+   fort_initial_temperature(1)=fort_tempconst(1)
+   fort_initial_temperature(2)=fort_tempconst(2)
+   latent_heat(1)=abs(latent_heat_in) ! material 1 converted to material 2
+   latent_heat(2)=0.0d0 ! material 2 converted to material 1
+   ireverse=0
+   isink=0
+   fort_alpha(1)=1.0d0
+   fort_alpha(2)=1.0d0
+   fort_stefan_number(1)=TDIFF_in/abs(latent_heat_in)
+   fort_stefan_number(2)=TDIFF_in/abs(latent_heat_in)
+   fort_jacob_number(1)=fort_stefan_number(1)
+   fort_jacob_number(2)=fort_stefan_number(2)
+
+   fort_beta(1)=0.0d0
+   fort_beta(2)=0.0d0
+   fort_time_radblob(1)=0.0d0
+   fort_time_radblob(2)=0.0d0
 
  else if (probtype_in.eq.5) then
 
@@ -1332,6 +1355,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      ! N=2*radblob/(max_front_vel * dt)
     print *,"approx number time steps to double radius: ", &
      NINT(radblob/(max_front_vel*deltat_in))
+ else if (probtype_in.eq.400) then
+  ! do nothing
  else if (probtype_in.eq.5) then
   print *,"Velocity is 1"
   print *,"number of steps to move 1 unit: ", &
@@ -1509,6 +1534,11 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        print *,"bust: TDIFF_in= ",TDIFF_in
        stop
       endif
+
+     else if (probtype_in.eq.400) then
+
+      T_FIELD=saturation_temp(1)
+      T(i,j,im)=T_FIELD
 
      else if (probtype_in.eq.5) then
 
@@ -1759,6 +1789,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      ! do nothing
     else if (probtype_in.eq.4) then
      call axisymmetric_disk_advance(deltat_in)
+    else if (probtype_in.eq.400) then
+     ! do nothing
     else if (probtype_in.eq.5) then
      ! do nothing
     else if (probtype_in.eq.19) then   ! annulus cvg test
@@ -1810,6 +1842,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       else if (probtype_in.eq.4) then
        ! do nothing - this is a shrinking disk, outside temperature
        ! is uniform, grad T dot n=0 on the outer walls.
+      else if (probtype_in.eq.400) then
+       ! do nothing
       else if (probtype_in.eq.5) then
        if (xcen.ge.1.0-2.0d0*h_in) then
         T_FIELD=272.0d0+exp(-(xcen-0.2d0-Ts(tm+1)))
@@ -1938,6 +1972,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     im=1
     expect_radius=axisymmetric_disk_radblob(2)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
+   else if (probtype_in.eq.400) then
+    ! do nothing
    else if (probtype_in.eq.5) then
     expect_radius=0.2d0+Ts(tm+1)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
