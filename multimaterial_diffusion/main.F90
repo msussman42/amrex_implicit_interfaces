@@ -1308,16 +1308,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  allocate(T(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp)) 
  allocate(T_new(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp)) 
 
- if (FSI_flag(1).eq.7) then
-  call convert_lag_to_eul(dxlevel,domlo_level,domhi_level, &
-         cache_max_level,sdim_in)
- else if (FSI_flag(1).eq.0) then
-  ! do nothing
- else
-  print *,"FSI_flag value unexpected"
-  stop
- endif
-       
+ call convert_lag_to_eul(dxlevel,domlo_level,domhi_level, &
+      cache_max_level,sdim_in)
 
  ! init velocity in: vof_cisl.F90
  do iten=1,local_nten
@@ -2262,9 +2254,12 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  call delete_mof()
 
+ call deallocate_FSI()
+
  deallocate(grid_cache)
 
  call delete_cache()
+
  deallocate(dxlevel)
  deallocate(domlo_level)
  deallocate(domhi_level)

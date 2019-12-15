@@ -783,6 +783,18 @@ stop
 
       end subroutine get_exact_VEL
 
+      subroutine deallocate_FSI()
+      USE probcommon_module 
+      USE probmain_module 
+      USE global_utility_module 
+      use MOF_routines_module
+      IMPLICIT NONE
+
+      deallocate(im_solid_map)
+
+      return
+      end subroutine deallocate_FSI
+
       subroutine convert_lag_to_eul(dxlevel, &
           domlo_level,domhi_level, &
           cache_max_level_in,sdim_in)
@@ -811,14 +823,182 @@ stop
        stop
       endif
 
-      iter=0
-       !initialize node locations; generate_new_triangles
-      FSI_operation=0
-      FSI_sub_operation=0
-      call ns_header_msg_level(FSI_operation, &
+      global_nparts=0
+      do im=1,nmat
+       if (FSI_flag(im).eq.7) then
+        global_nparts=global_nparts+1
+       else if (FSI_flag(im).eq.0) then
+        ! do nothing
+       else
+        print *,"FSI_flag(im) value unexpected"
+        stop
+       endif
+      enddo
+
+      if ((global_nparts.gt.0).and. &
+          (global_nparts.le.nmat)) then
+       allocate(im_solid_map(global_nparts))
+       partid=0
+       do im=1,nmat
+        if (FSI_flag(im).eq.7) then
+         partid=partid+1
+         im_solid_map(partid)=im
+        else if (FSI_flag(im).eq.0) then
+         ! do nothing
+        else
+         print *,"FSI_flag(im) value unexpected"
+         stop
+        endif
+       enddo
+       if (partid.ne.global_nparts) then
+        print *,"partid.ne.global_nparts"
+        stop
+       endif
+
+       iter=0
+        !initialize node locations; generate_new_triangles
+       FSI_operation=0
+       FSI_sub_operation=0
+       call ns_header_msg_level(FSI_operation, &
               FSI_sub_operation, &
               iter, &
               dxlevel,domlo_level,domhi_level)
+
+
+        !nmat x (velocity + LS + temperature + flag+stress)  3D
+       nFSI_sub=12
+       nFSI=global_nparts*nFSI_sub
+       ngrowFSI=3
+
+       do ilev=0,cache_max_level
+
+
+        !  new_localMF(FSI_MF,nFSI,ngrowFSI,-1);
+
+        do partid=1,global_nparts
+         ibase=(partid-1)*nFSI_sub
+
+         if (SDIM.eq.3) then
+          klo=domlo_level(ilev,SDIM)-ngrowFSI
+          khi=domhi_level(ilev,SDIM)+ngrowFSI
+         else if (SDIM.eq.2) then
+          klo=0
+          khi=0
+         else
+          print *,"dimension bust"
+          stop
+         endif
+
+         do i=domlo_level(ilev,1)-ngrowFSI,domhi_level(ilev,1)+ngrowFSI
+         do j=domlo_level(ilev,2)-ngrowFSI,domhi_level(ilev,2)+ngrowFSI
+         do k=klo,khi
+          do dir=1,3
+           FSI_MF(i,j,k,ibase+dir)=0.0d0 ! velocity
+          enddo
+          FSI_MF(i,j,k,ibase+3)=-9999.0d0 ! LS
+          FSI_MF(i,j,k,ibase+4)=0.0d0 ! temp
+          FSI_MF(i,j,k,ibase+5)=0.0d0 ! mask
+          do dir=1,6
+           FSI_MF(i,j,k,ibase+5+dir)=0.0d0 ! stress
+          enddo
+         enddo
+         enddo
+         enddo
+        enddo ! partid=1..global_nparts
+
+  if (read_from_CAD()==1) {
+
+    // in: NavierStokes::FSI_make_distance
+    // 1. create lagrangian container data structure within the 
+    //    fortran part that recognizes tiles. (FILLCONTAINER in SOLIDFLUID.F90)
+    // 2. fill the containers with the Lagrangian information.
+    //    (CLSVOF_FILLCONTAINER called from FILLCONTAINER)
+    //    i.e. associate to each tile a set of Lagrangian nodes and elements
+    //    that are located in or very near the tile.
+   create_fortran_grid_struct(time,dt);
+
+   int iter=0; // touch_flag=0
+   int FSI_operation=2;  // make distance in narrow band
+   int FSI_sub_operation=0;
+   resize_mask_nbr(ngrowFSI);
+    // in: FSI_make_distance
+    // 1.FillCoarsePatch
+    // 2.traverse lagrangian elements belonging to each tile and update
+    //   cells within "bounding box" of the element.
+   ns_header_msg_level(FSI_operation,FSI_sub_operation,time,dt,iter);
+  
+   do {
+ 
+    FSI_operation=3; // sign update   
+    FSI_sub_operation=0;
+    ns_header_msg_level(FSI_operation,FSI_sub_operation,time,dt,iter);
+    iter++;
+  
+   } while (FSI_touch_flag[0]==1);
+
+   build_moment_from_FSILS();
+
+  } else if (read_from_CAD()==0) {
+   // do nothing
+  } else
+   amrex::Error("read_from_CAD invalid");
+ 
+  bool use_tiling=ns_tiling;
+
+  const Real* dx = geom.CellSize();
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*localMF[FSI_MF],use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+   const Real* xlo = grid_loc[gridno].lo();
+   const Real* xhi = grid_loc[gridno].hi();
+
+   FArrayBox& solidfab=(*localMF[FSI_MF])[mfi];
+
+    // updates FSI_MF for FSI_flag(im)==1 type materials.
+   FORT_INITDATASOLID(
+     &nmat,
+     &nparts,
+     &nFSI_sub,
+     &nFSI,
+     &ngrowFSI,
+     im_solid_map.dataPtr(),
+     &time,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     solidfab.dataPtr(),
+     ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
+     dx,xlo,xhi);  
+  } // mfi
+} // omp
+  ParallelDescriptor::Barrier();
+
+   // Solid velocity
+  MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
+  if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
+   amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
+  for (int partid=0;partid<nparts;partid++) {
+   int ibase=partid*nFSI_sub;
+   MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase,partid*AMREX_SPACEDIM,
+     AMREX_SPACEDIM,0);
+  } // partid=0..nparts-1
+
+ } else {
+  amrex::Error("nparts invalid");
+ }
+
 
       return
       end subroutine convert_lag_to_eul
