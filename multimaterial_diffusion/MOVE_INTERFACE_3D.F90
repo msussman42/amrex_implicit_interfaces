@@ -924,6 +924,16 @@ stop
     amrex::Error("problen[dir]<=0.0");
   }
 
+      do dir=1,SDIM*2*SDIM
+       velbc(dir)=REFLECT_EVEN
+      enddo
+      do dir=1,2*SDIM
+       vofbc(dir)=REFLECT_EVEN
+      enddo
+      tid=0
+      gridno=0
+      num_tiles_on_thread=1
+      nthreads=1
 
       if ((FSI_operation.eq.0).or. & ! initialize nodes
           (FSI_operation.eq.1)) then ! update node locations
@@ -945,76 +955,64 @@ stop
         call set_dimdec(DIMS(unitdim),unitlo,unithi,unit_ngrow)
         allocate(unitdata(DIMV(unitdim),nFSI))
 
+        call FORT_HEADERMSG( &
+          tid, &
+          num_tiles_on_thread, &
+          gridno, &
+          nthreads, &
+          ilev, &
+          cache_max_level, &
+          cache_max_level, &
+          FSI_operation, & ! 0 or 1 (initialize or update nodes)
+          FSI_sub_operation, & ! 0
+          unitlo,unithi, &
+          unitlo,unithi, &
+          bfact, &
+          problo, &
+          problen,  &
+          dx_max_level, &
+          problo, &
+          probhi, &
+          velbc, & 
+          vofbc, &
+          FSIfab, & ! placeholder
+          DIMS(FSIfab), &
+          FSIfab, & ! velfab spot
+          DIMS(FSIfab),
+          FSIfab, & ! mnbrfab spot
+          DIMS(FSIfab),
+          FSIfab, & ! mfiner spot
+          DIMS(FSIfab), &
+          nFSI, &
+          nFSI_sub, &
+          ngrowFSI_fab, &
+          global_nparts, &
+          im_solid_map, &
+          h_small, &
+          time,  &
+          dt, &
+          FSI_refine_factor, &
+          FSI_bounding_box_ngrow, &
+          FSI_touch_flag, &
+          CTML_FSI_init, &
+          CTML_force_model, &
+          iter, &
+          current_step, &
+          plot_interval, &
+          ioproc)
 
-    Vector<int> velbc;
-    velbc.resize(num_materials_vel*AMREX_SPACEDIM*2*AMREX_SPACEDIM);
-    for (int i=0;i<velbc.size();i++)
-     velbc[i]=0;
-    Vector<int> vofbc;
-    vofbc.resize(2*AMREX_SPACEDIM);
-    for (int i=0;i<vofbc.size();i++)
-     vofbc[i]=0;
-
-    int tid=0;
-    int gridno=0;
-
-    FORT_HEADERMSG(
-     &tid,
-     &num_tiles_on_thread_proc[tid],
-     &gridno,
-     &thread_class::nthreads,
-     &level,
-     &finest_level,
-     &max_level,
-     &FSI_operation, // 0 or 1 (initialize or update nodes)
-     &FSI_sub_operation, // 0
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     problo,
-     problen, 
-     dx_max_level, 
-     problo,
-     probhi, 
-     velbc.dataPtr(),  
-     vofbc.dataPtr(), 
-     FSIfab.dataPtr(), // placeholder
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // velfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // mnbrfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // mfiner spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     &nFSI,
-     &nFSI_sub,
-     &ngrowFSI_fab,
-     &nparts,
-     im_solid_map.dataPtr(),
-     &h_small,
-     &time, 
-     &dt, 
-     FSI_refine_factor.dataPtr(),
-     FSI_bounding_box_ngrow.dataPtr(),
-     &FSI_touch_flag[tid],
-     &CTML_FSI_init,
-     &CTML_force_model,
-     &iter,
-     &current_step,
-     &plot_interval,
-     &ioproc);
-
-    elements_generated=1;
-   } else if (elements_generated==1) {
-    // do nothing
-   } else 
-    amrex::Error("elements_generated invalid");
-
-   elements_generated=1;
-
-   CTML_FSI_init=1;
-
+        elements_generated=1
         deallocate(unitdata)
+       else if (elements_generated.eq.1) then
+        ! do nothing
+       else 
+        print *,"elements_generated invalid"
+        stop
+       endif
+       elements_generated=1
+
+       CTML_FSI_init=1
+
 
   } else if ((FSI_operation==2)||  // make distance in narrow band
              (FSI_operation==3)) { // update the sign
@@ -1737,28 +1735,28 @@ stop
         !    i.e. associate to each tile a set of Lagrangian nodes and elements
         !    that are located in or very near the tile.
         call FORT_FILLCONTAINER( &
-                ilev, &
-                cache_max_level, &
-                cache_max_level, &
-                start_time, &
-                start_dt, &
-                tilelo_array, &
-                tilehi_array, &
-                xlo_array, &
-                dx_current, &
-                dx_max_level, &
-                num_grids_on_level, &
-                num_grids_on_level, &
-                gridno_array, &
-                num_tiles_on_thread_proc, &
-                local_nthreads, &
-                num_tiles_on_thread_proc, &
-                num_tiles_on_thread_proc, &
-                nmat, &
-                global_nparts, &
-                im_solid_map, &
-                xlo_array, &
-                xhi_array)
+          ilev, &
+          cache_max_level, &
+          cache_max_level, &
+          start_time, &
+          start_dt, &
+          tilelo_array, &
+          tilehi_array, &
+          xlo_array, &
+          dx_current, &
+          dx_max_level, &
+          num_grids_on_level, &
+          num_grids_on_level, &
+          gridno_array, &
+          num_tiles_on_thread_proc, &
+          local_nthreads, &
+          num_tiles_on_thread_proc, &
+          num_tiles_on_thread_proc, &
+          nmat, &
+          global_nparts, &
+          im_solid_map, &
+          xlo_array, &
+          xhi_array)
 
         iter=0 ! touch_flag=0
         FSI_operation=2 ! make distance in narrow band
@@ -1767,10 +1765,10 @@ stop
         ! 2.traverse lagrangian elements belonging to each tile and update
         !   cells within "bounding box" of the element.
         call ns_header_msg_level(ilev, &
-                FSI_operation, &
-                FSI_sub_operation, &
-                iter, &
-                dxlevel,domlo_level,domhi_level)
+          FSI_operation, &
+          FSI_sub_operation, &
+          iter, &
+          dxlevel,domlo_level,domhi_level)
 
         first_iter=1 
         do while ((FSI_touch_flag.eq.1).or.(first_iter.eq.1)) 
@@ -1779,10 +1777,10 @@ stop
          FSI_operation=3 ! sign update   
          FSI_sub_operation=0
          call ns_header_msg_level(ilev, &
-                 FSI_operation, &
-                 FSI_sub_operation, &
-                 iter, &
-                 dxlevel,domlo_level,domhi_level)
+           FSI_operation, &
+           FSI_sub_operation, &
+           iter, &
+           dxlevel,domlo_level,domhi_level)
 
          iter=iter+1
         enddo
