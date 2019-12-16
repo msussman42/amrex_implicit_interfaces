@@ -799,6 +799,826 @@ stop
       return
       end subroutine deallocate_FSI
 
+
+      subroutine ns_header_msg_level(ilev, &
+         FSI_operation, &
+         FSI_sub_operation, &
+         iter, &
+         dxlevel,domlo_level,domhi_level)
+      USE probcommon_module 
+      USE probmain_module 
+      USE global_utility_module 
+      use MOF_routines_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: FSI_operation
+      INTEGER_T, intent(in) :: FSI_sub_operation
+      INTEGER_T, intent(in) :: iter
+      INTEGER_T, intent(in) :: domlo_level(0:cache_max_level,SDIM)
+      INTEGER_T, intent(in) :: domhi_level(0:cache_max_level,SDIM)
+      REAL_T, intent(in) :: dxlevel(0:cache_max_level,SDIM)
+
+      if (FSI_operation.eq.0) then !init node locations;generate_new_triangles
+       if ((iter.eq.0).and.(FSI_sub_operation.eq.0)) then
+        ! do nothing
+       else
+        print *,"parameters invalid"
+        stop
+       endif
+      else if (FSI_operation.eq.1) then !update node locations
+       if ((iter.eq.0).and.(FSI_sub_operation.eq.0)) then
+        ! do nothing
+       else
+        print *,"parameters invalid"
+        stop
+       endif
+      else if (FSI_operation.eq.2) then !make distance in narrow band
+       if ((iter.eq.0).and.(FSI_sub_operation.eq.0)) then
+        ! do nothing
+       else
+        print *,"parameters invalid"
+        stop
+       endif
+      else if (FSI_operation.eq.3) then !update the sign
+       if ((iter.ge.0).and.(FSI_sub_operation.eq.0)) then
+        ! do nothing
+       else
+        print *,"parameters invalid"
+        stop
+       endif
+      else
+       print *,"FSI_operation out of range"
+       stop
+      endif
+
+      if (iter.eq.0) then
+       FSI_touch_flag=0
+      else if (iter.gt.0) then
+       FSI_touch_flag=0
+      else
+       print *,"iter invalid"
+       stop
+      endif
+
+ int nmat=num_materials;
+ int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+
+  nmat*num_state_material;
+ int dencomp=num_materials_vel*(AMREX_SPACEDIM+1);     
+  
+ const int max_level = parent->maxLevel();
+ int finest_level=parent->finestLevel();
+
+ if ((level>max_level)||(finest_level>max_level))
+  amrex::Error("(level>max_level)||(finest_level>max_level)");
+
+ const Real* dx = geom.CellSize();
+ Real h_small=dx[0];
+ if (h_small>dx[1])
+  h_small=dx[1];
+ if (h_small>dx[AMREX_SPACEDIM-1])
+  h_small=dx[AMREX_SPACEDIM-1];
+ for (int i=level+1;i<=max_level;i++)
+  h_small/=2.0;
+
+ Real dx_max_level[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+  dx_max_level[dir]=dx[dir];
+ for (int ilev=level+1;ilev<=max_level;ilev++) 
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+   dx_max_level[dir]/=2.0;
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "ns_header_msg_level START\n";
+   std::cout << "level= " << level << " finest_level= " << finest_level <<
+    " max_level= " << max_level << '\n';
+   std::cout << "FSI_operation= " << FSI_operation <<
+    " time = " << time << " dt= " << dt << " iter = " << iter << '\n';
+  }
+ } else if (verbose==0) {
+  // do nothing
+ } else
+  amrex::Error("verbose invalid");
+
+ int ioproc;
+ if (ParallelDescriptor::IOProcessor())
+  ioproc=1;
+ else
+  ioproc=0;
+
+ if (FSI_operation==0) { // init node locations
+  if (level==0) {
+   elements_generated=0;
+  } else {
+   elements_generated=1;
+  }
+ } else if (FSI_operation==1) { // update node locations
+  if (level==0) {
+   elements_generated=0;
+  } else {
+   elements_generated=1;
+  }
+ } else if ((FSI_operation>=2)&&(FSI_operation<=3)) {
+  elements_generated=1;
+ } else if (FSI_operation==4) { // copy Eul. fluid vel to Lag. fluid vel.
+  elements_generated=1;
+ } else
+  amrex::Error("FSI_operation invalid");
+
+ int current_step = nStep();
+ int plot_interval=parent->plotInt();
+
+ if (read_from_CAD()==1) {
+
+   // nparts x (velocity + LS + temperature + flag)
+  int nparts=im_solid_map.size();
+  if ((nparts<1)||(nparts>nmat))
+   amrex::Error("nparts invalid");
+
+  MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
+  if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
+   amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
+
+  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
+  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
+   amrex::Error("LS_new invalid ncomp");
+
+  bool use_tiling=ns_tiling;
+  int bfact=parent->Space_blockingFactor(level);
+
+  Real problo[AMREX_SPACEDIM];
+  Real probhi[AMREX_SPACEDIM];
+  Real problen[AMREX_SPACEDIM];
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   problo[dir]=geom.ProbLo(dir);
+   probhi[dir]=geom.ProbHi(dir);
+   problen[dir]=probhi[dir]-problo[dir];
+   if (problen[dir]<=0.0)
+    amrex::Error("problen[dir]<=0.0");
+  }
+
+  if (nFSI_sub!=12)
+   amrex::Error("nFSI_sub invalid");
+  int nFSI=nparts*nFSI_sub;
+
+  if ((FSI_operation==0)||  // initialize nodes
+      (FSI_operation==1)) { // update node locations
+
+   if (FSI_sub_operation!=0)
+    amrex::Error("FSI_sub_operation!=0");
+
+   if (elements_generated==0) {
+    int ngrowFSI_fab=0;
+    IntVect unitlo(D_DECL(0,0,0));
+    IntVect unithi(D_DECL(0,0,0));
+     // construct cell-centered type box
+    Box unitbox(unitlo,unithi);
+
+    const int* tilelo=unitbox.loVect();
+    const int* tilehi=unitbox.hiVect();
+    const int* fablo=unitbox.loVect();
+    const int* fabhi=unitbox.hiVect();
+
+    FArrayBox FSIfab(unitbox,nFSI);
+
+    if (num_materials_vel!=1)
+     amrex::Error("num_materials_vel invalid");
+
+    Vector<int> velbc;
+    velbc.resize(num_materials_vel*AMREX_SPACEDIM*2*AMREX_SPACEDIM);
+    for (int i=0;i<velbc.size();i++)
+     velbc[i]=0;
+    Vector<int> vofbc;
+    vofbc.resize(2*AMREX_SPACEDIM);
+    for (int i=0;i<vofbc.size();i++)
+     vofbc[i]=0;
+
+    int tid=0;
+    int gridno=0;
+
+    FORT_HEADERMSG(
+     &tid,
+     &num_tiles_on_thread_proc[tid],
+     &gridno,
+     &thread_class::nthreads,
+     &level,
+     &finest_level,
+     &max_level,
+     &FSI_operation, // 0 or 1 (initialize or update nodes)
+     &FSI_sub_operation, // 0
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     problo,
+     problen, 
+     dx_max_level, 
+     problo,
+     probhi, 
+     velbc.dataPtr(),  
+     vofbc.dataPtr(), 
+     FSIfab.dataPtr(), // placeholder
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // velfab spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // mnbrfab spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // mfiner spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     &nFSI,
+     &nFSI_sub,
+     &ngrowFSI_fab,
+     &nparts,
+     im_solid_map.dataPtr(),
+     &h_small,
+     &time, 
+     &dt, 
+     FSI_refine_factor.dataPtr(),
+     FSI_bounding_box_ngrow.dataPtr(),
+     &FSI_touch_flag[tid],
+     &CTML_FSI_init,
+     &CTML_force_model,
+     &iter,
+     &current_step,
+     &plot_interval,
+     &ioproc);
+
+    elements_generated=1;
+   } else if (elements_generated==1) {
+    // do nothing
+   } else 
+    amrex::Error("elements_generated invalid");
+
+   elements_generated=1;
+
+   CTML_FSI_init=1;
+
+  } else if ((FSI_operation==2)||  // make distance in narrow band
+             (FSI_operation==3)) { // update the sign
+
+   if (FSI_sub_operation!=0)
+    amrex::Error("FSI_sub_operation!=0");
+
+   elements_generated=1;
+
+    // FSI_MF allocated in FSI_make_distance
+   if (ngrowFSI!=3)
+    amrex::Error("ngrowFSI invalid");
+   debug_ngrow(FSI_MF,ngrowFSI,1);
+   if (localMF[FSI_MF]->nComp()!=nFSI)
+    amrex::Error("localMF[FSI_MF]->nComp() invalid");
+
+   if (FSI_operation==2) { // make distance in narrow band.
+
+    if (num_materials_vel!=1)
+     amrex::Error("num_materials_vel invalid");
+
+     // fill coarse patch 
+    if (level>0) {
+
+      //ngrow=0
+     MultiFab* S_new_coarse=new MultiFab(grids,dmap,AMREX_SPACEDIM,0,
+      MFInfo().SetTag("S_new_coarse"),FArrayBoxFactory());
+     int dcomp=0;
+     int scomp=0;
+     FillCoarsePatch(*S_new_coarse,dcomp,time,State_Type,scomp,AMREX_SPACEDIM);
+
+     if (verbose>0) {
+      if (ParallelDescriptor::IOProcessor()) {
+       std::cout << "check_for_NAN(S_new_coarse,200)\n";
+      }
+      std::fflush(NULL);
+      check_for_NAN(S_new_coarse,200);
+     }
+
+      //ngrow=0
+     MultiFab* Solid_new_coarse=new MultiFab(grids,dmap,
+	nparts*AMREX_SPACEDIM,0,
+        MFInfo().SetTag("Solid_new_coarse"),FArrayBoxFactory());
+     dcomp=0;
+     scomp=0;
+
+     if ((verbose>0)&&(1==0)) {
+      if (ParallelDescriptor::IOProcessor()) {
+       std::cout << "FillCoarsePatch(*Solid_new_coarse)\n";
+      }
+      std::fflush(NULL);
+     }
+
+     FillCoarsePatch(*Solid_new_coarse,dcomp,time,Solid_State_Type,scomp,
+        nparts*AMREX_SPACEDIM);
+
+     if (verbose>0) {
+      if (ParallelDescriptor::IOProcessor()) {
+       std::cout << "check_for_NAN(Solid_new_coarse,200)\n";
+      }
+      std::fflush(NULL);
+      check_for_NAN(Solid_new_coarse,201);
+     }
+
+      //ngrow=0
+     MultiFab* LS_new_coarse=new MultiFab(grids,dmap,nmat*(AMREX_SPACEDIM+1),0,
+      MFInfo().SetTag("LS_new_coarse"),FArrayBoxFactory());
+     dcomp=0;
+     scomp=0;
+     FillCoarsePatch(*LS_new_coarse,dcomp,time,LS_Type,scomp,
+        nmat*(AMREX_SPACEDIM+1));
+
+     if (verbose>0) {
+      if (ParallelDescriptor::IOProcessor()) {
+       std::cout << "check_for_NAN(LS_new_coarse,200)\n";
+      }
+      std::fflush(NULL);
+      check_for_NAN(LS_new_coarse,202);
+     }
+
+     for (int partid=0;partid<nparts;partid++) {
+
+      int im_part=im_solid_map[partid];
+
+      if ((im_part<0)||(im_part>=nmat))
+       amrex::Error("im_part invalid");
+ 
+      if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
+          (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 solid
+	  (FSI_flag[im_part]==6)||
+	  (FSI_flag[im_part]==7)) { 
+
+       int ok_to_modify_EUL=1;
+       if ((FSI_flag[im_part]==6)||
+           (FSI_flag[im_part]==7)) {
+	if (time==0.0) {
+	 // do nothing
+	} else if (time>0.0) {
+	 ok_to_modify_EUL=0;
+	} else
+	 amrex::Error("time invalid");
+       } else if ((FSI_flag[im_part]==2)||
+  	          (FSI_flag[im_part]==4)) {
+        // do nothing
+       } else
+        amrex::Error("FSI_flag invalid");
+
+       if (ok_to_modify_EUL==1) {
+
+        dcomp=im_part;
+        scomp=im_part;
+         //ngrow==0 (levelset)
+        MultiFab::Copy(LS_new,*LS_new_coarse,scomp,dcomp,1,0);
+        dcomp=nmat+im_part*AMREX_SPACEDIM;
+        scomp=dcomp;
+         //ngrow==0 (levelset normal)
+        MultiFab::Copy(LS_new,*LS_new_coarse,scomp,dcomp,AMREX_SPACEDIM,0);
+
+        dcomp=partid*AMREX_SPACEDIM;
+        scomp=partid*AMREX_SPACEDIM;
+         //ngrow==0
+        MultiFab::Copy(Solid_new,*Solid_new_coarse,
+		scomp,dcomp,AMREX_SPACEDIM,0);
+
+        //ngrow==0
+        MultiFab* new_coarse_thermal=new MultiFab(grids,dmap,1,0,
+	    MFInfo().SetTag("new_coarse_thermal"),FArrayBoxFactory());
+        dcomp=0;
+        int scomp_thermal=dencomp+im_part*num_state_material+1;
+        //ncomp==1
+        FillCoarsePatch(*new_coarse_thermal,dcomp,time,State_Type,
+         scomp_thermal,1);
+
+         //ngrow==0
+        if (solidheat_flag==0) {  // diffuse in solid
+         // do nothing
+        } else if ((solidheat_flag==1)||   // dirichlet
+                   (solidheat_flag==2)) {  // neumann
+          //ngrow==0
+         MultiFab::Copy(S_new,*new_coarse_thermal,0,scomp_thermal,1,0);
+        } else
+         amrex::Error("solidheat_flag invalid");
+
+        delete new_coarse_thermal;
+
+       } else if (ok_to_modify_EUL==0) {
+        // do nothing
+       } else
+        amrex::Error("ok_to_modify_EUL invalid");
+
+      } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid 
+       // do nothing
+      } else
+       amrex::Error("FSI_flag invalid");
+     } // partid=0..nparts-1
+
+     delete S_new_coarse;
+     delete Solid_new_coarse;
+     delete LS_new_coarse;
+
+    } else if (level==0) {
+     // do nothing
+    } else
+     amrex::Error("level invalid 3");
+
+   } else if (FSI_operation==3) { // update sign
+    // do not fill coarse patch.
+   } else
+    amrex::Error("FSI_operation invalid");
+
+   MultiFab* solidmf=getStateSolid(ngrowFSI,0,
+     nparts*AMREX_SPACEDIM,time);
+   MultiFab* denmf=getStateDen(ngrowFSI,time);  
+   MultiFab* LSMF=getStateDist(ngrowFSI,time,2);
+   if (LSMF->nGrow()!=ngrowFSI)
+    amrex::Error("LSMF->nGrow()!=ngrow_distance");
+
+   // FSI_MF allocated in FSI_make_distance
+   // all components of FSI_MF are initialized to zero except for LS.
+   // LS component of FSI_MF is init to -99999
+   // nparts x (velocity + LS + temperature + flag + stress)
+   for (int partid=0;partid<nparts;partid++) {
+
+    int im_part=im_solid_map[partid];
+    if ((im_part<0)||(im_part>=nmat))
+     amrex::Error("im_part invalid");
+
+    int ibase=partid*nFSI_sub;
+     // velocity
+    MultiFab::Copy(*localMF[FSI_MF],*solidmf,partid*AMREX_SPACEDIM,
+      ibase,AMREX_SPACEDIM,ngrowFSI);
+     // LS  
+    MultiFab::Copy(*localMF[FSI_MF],*LSMF,im_part,
+      ibase+3,1,ngrowFSI);
+     // temperature
+    MultiFab::Copy(*localMF[FSI_MF],*denmf,im_part*num_state_material+1,
+      ibase+4,1,ngrowFSI);
+
+     // flag (mask)
+    if (FSI_operation==2) {
+
+     if ((level>0)||
+         ((level==0)&&(time>0.0))) {
+      setVal_localMF(FSI_MF,10.0,ibase+5,1,ngrowFSI); 
+     } else if ((level==0)&&(time==0.0)) {
+      // do nothing
+     } else
+      amrex::Error("level or time invalid");
+
+    } else if (FSI_operation==3) {
+     // do nothing
+    } else
+     amrex::Error("FSI_operation invalid");
+
+   } // partid=0..nparts-1
+
+   // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+   // (2) =1 interior  =0 otherwise
+   resize_mask_nbr(ngrowFSI);
+   debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
+ 
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    const Real* xlo = grid_loc[gridno].lo();
+    FArrayBox& FSIfab=(*localMF[FSI_MF])[mfi];
+    FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
+
+    Vector<int> velbc=getBCArray(Solid_State_Type,gridno,0,
+     nparts*AMREX_SPACEDIM);
+    Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+
+    int tid=ns_thread();
+    if ((tid<0)||(tid>=thread_class::nthreads))
+     amrex::Error("tid invalid");
+
+    FORT_HEADERMSG(
+     &tid,
+     &num_tiles_on_thread_proc[tid],
+     &gridno,
+     &thread_class::nthreads,
+     &level,
+     &finest_level,
+     &max_level,
+     &FSI_operation, // 2 or 3 (make distance or update sign)
+     &FSI_sub_operation, // 0
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     xlo,
+     dx, 
+     dx_max_level, 
+     problo,
+     probhi, 
+     velbc.dataPtr(),  
+     vofbc.dataPtr(), 
+     FSIfab.dataPtr(),
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // velfab spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     mnbrfab.dataPtr(),
+     ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
+     mnbrfab.dataPtr(), // mfiner spot
+     ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
+     &nFSI,
+     &nFSI_sub,
+     &ngrowFSI,
+     &nparts,
+     im_solid_map.dataPtr(),
+     &h_small,
+     &time, 
+     &dt, 
+     FSI_refine_factor.dataPtr(),
+     FSI_bounding_box_ngrow.dataPtr(),
+     &FSI_touch_flag[tid],
+     &CTML_FSI_init,
+     &CTML_force_model,
+     &iter,
+     &current_step,
+     &plot_interval,
+     &ioproc);
+
+    num_tiles_on_thread_proc[tid]++;
+   } //mfi
+}//omp
+   for (int tid=1;tid<thread_class::nthreads;tid++) {
+    if (FSI_touch_flag[tid]==1) {
+     FSI_touch_flag[0]=1;
+    } else if (FSI_touch_flag[tid]==0) {
+     // do nothing
+    } else
+     amrex::Error("FSI_touch_flag[tid] invalid");
+   } 
+   ParallelDescriptor::ReduceIntMax(FSI_touch_flag[0]);
+
+   if (num_materials_vel!=1)
+    amrex::Error("num_materials_vel invalid");
+
+   // idx,ngrow,scomp,ncomp,index,scompBC_map
+   // InterpBordersGHOST is ultimately called.
+   // dest_lstGHOST for Solid_State_Type defaults to pc_interp.
+   // scompBC_map==0 corresponds to extrap_bc, pc_interp and FORT_EXTRAPFILL
+   // scompBC_map==1,2,3 corresponds to x or y or z vel_extrap_bc, pc_interp 
+   //   and FORT_EXTRAPFILL
+   // nFSI=nparts * (vel + LS + temp + flag + stress)
+   for (int partid=0;partid<nparts;partid++) {
+    int ibase=partid*nFSI_sub;
+    Vector<int> scompBC_map;
+    scompBC_map.resize(AMREX_SPACEDIM); 
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+     scompBC_map[dir]=dir+1;
+
+    // This routine interpolates from coarser levels.
+    PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase,
+     AMREX_SPACEDIM,Solid_State_Type,scompBC_map);
+
+    for (int i=AMREX_SPACEDIM;i<nFSI_sub;i++) {
+     scompBC_map.resize(1); 
+     scompBC_map[0]=0;
+     PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+i,
+      1,Solid_State_Type,scompBC_map);
+    } // i=AMREX_SPACEDIM  ... nFSI_sub-1
+   } // partid=0..nparts-1
+
+    // 1. copy_velocity_on_sign
+    // 2. update Solid_new
+    // 3. update LS_new
+    // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
+
+   Transfer_FSI_To_STATE(time);
+
+   delete solidmf;
+   delete denmf;
+   delete LSMF;
+
+  } else if (FSI_operation==4) { // copy Eul. vel to struct vel.
+
+   elements_generated=1;
+   if (ngrowFSI!=3)
+    amrex::Error("ngrowFSI invalid");
+   if (num_materials_vel!=1)
+    amrex::Error("num_materials_vel invalid");
+   if ((FSI_sub_operation!=0)&&
+       (FSI_sub_operation!=1)&&
+       (FSI_sub_operation!=2))
+    amrex::Error("FSI_sub_operation invalid");
+
+   // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+   // (2) =1 interior  =0 otherwise
+   resize_mask_nbr(ngrowFSI);
+   debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
+   // mask=1 if not covered or if outside the domain.
+   // NavierStokes::maskfiner_localMF
+   // NavierStokes::maskfiner
+   resize_maskfiner(ngrowFSI,MASKCOEF_MF);
+   debug_ngrow(MASKCOEF_MF,ngrowFSI,28);
+
+   if ((FSI_sub_operation==0)|| //init VELADVECT_MF, fortran grid structure,...
+       (FSI_sub_operation==2)) {//delete VELADVECT_MF
+
+    if (FSI_sub_operation==0) {
+     // Two layers of ghost cells are needed if
+     // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
+     getState_localMF(VELADVECT_MF,ngrowFSI,0,
+      num_materials_vel*AMREX_SPACEDIM,cur_time_slab); 
+
+      // in: NavierStokes::ns_header_msg_level
+     create_fortran_grid_struct(time,dt);
+    } else if (FSI_sub_operation==2) {
+     delete_localMF(VELADVECT_MF,1);
+    } else
+     amrex::Error("FSI_sub_operation invalid");
+
+    int ngrowFSI_fab=0;
+    IntVect unitlo(D_DECL(0,0,0));
+    IntVect unithi(D_DECL(0,0,0));
+     // construct cell-centered type box
+    Box unitbox(unitlo,unithi);
+
+    const int* tilelo=unitbox.loVect();
+    const int* tilehi=unitbox.hiVect();
+    const int* fablo=unitbox.loVect();
+    const int* fabhi=unitbox.hiVect();
+
+    FArrayBox FSIfab(unitbox,nFSI);
+
+    if (num_materials_vel!=1)
+     amrex::Error("num_materials_vel invalid");
+
+    Vector<int> velbc;
+    velbc.resize(num_materials_vel*AMREX_SPACEDIM*2*AMREX_SPACEDIM);
+    for (int i=0;i<velbc.size();i++)
+     velbc[i]=0;
+    Vector<int> vofbc;
+    vofbc.resize(2*AMREX_SPACEDIM);
+    for (int i=0;i<vofbc.size();i++)
+     vofbc[i]=0;
+
+    int tid=0;
+    int gridno=0;
+
+    FORT_HEADERMSG(
+     &tid,
+     &num_tiles_on_thread_proc[tid],
+     &gridno,
+     &thread_class::nthreads,
+     &level,
+     &finest_level,
+     &max_level,
+     &FSI_operation, // 4
+     &FSI_sub_operation, // 0 (clear lag data) or 2 (sync lag data)
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     problo,
+     problen, 
+     dx_max_level, 
+     problo,
+     probhi, 
+     velbc.dataPtr(),  
+     vofbc.dataPtr(), 
+     FSIfab.dataPtr(), // placeholder
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // velfab spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // mnbrfab spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // mfiner spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     &nFSI,
+     &nFSI_sub,
+     &ngrowFSI_fab,
+     &nparts,
+     im_solid_map.dataPtr(),
+     &h_small,
+     &time, 
+     &dt, 
+     FSI_refine_factor.dataPtr(),
+     FSI_bounding_box_ngrow.dataPtr(),
+     &FSI_touch_flag[tid],
+     &CTML_FSI_init,
+     &CTML_force_model,
+     &iter,
+     &current_step,
+     &plot_interval,
+     &ioproc);
+
+   } else if (FSI_sub_operation==1) {
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+    for (MFIter mfi(*localMF[VELADVECT_MF],use_tiling); mfi.isValid(); ++mfi) {
+     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+     const int gridno = mfi.index();
+     const Box& tilegrid = mfi.tilebox();
+     const Box& fabgrid = grids[gridno];
+     const int* tilelo=tilegrid.loVect();
+     const int* tilehi=tilegrid.hiVect();
+     const int* fablo=fabgrid.loVect();
+     const int* fabhi=fabgrid.hiVect();
+     const Real* xlo = grid_loc[gridno].lo();
+     FArrayBox& FSIfab=(*localMF[VELADVECT_MF])[mfi]; // placeholder
+     FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi]; // ngrowFSI ghost cells
+     FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
+     FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
+
+     Vector<int> velbc=getBCArray(State_Type,gridno,0,
+      num_materials_vel*AMREX_SPACEDIM);
+     Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+
+     int tid=ns_thread();
+     if ((tid<0)||(tid>=thread_class::nthreads))
+      amrex::Error("tid invalid");
+
+     FORT_HEADERMSG(
+      &tid,
+      &num_tiles_on_thread_proc[tid],
+      &gridno,
+      &thread_class::nthreads,
+      &level,
+      &finest_level,
+      &max_level,
+      &FSI_operation, // 4 (copy eul. fluid vel to lag. solid vel)
+      &FSI_sub_operation, // 1 
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      xlo,
+      dx, 
+      dx_max_level, 
+      problo,
+      probhi, 
+      velbc.dataPtr(),  
+      vofbc.dataPtr(), 
+      FSIfab.dataPtr(), // placeholder
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      velfab.dataPtr(), // ngrowFSI ghost cells
+      ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+      mnbrfab.dataPtr(),
+      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
+      mfinerfab.dataPtr(),
+      ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
+      &nFSI,
+      &nFSI_sub,
+      &ngrowFSI,
+      &nparts,
+      im_solid_map.dataPtr(),
+      &h_small,
+      &time, 
+      &dt, 
+      FSI_refine_factor.dataPtr(),
+      FSI_bounding_box_ngrow.dataPtr(),
+      &FSI_touch_flag[tid],
+      &CTML_FSI_init,
+      &CTML_force_model,
+      &iter,
+      &current_step,
+      &plot_interval,
+      &ioproc);
+
+     num_tiles_on_thread_proc[tid]++;
+    } //mfi
+}//omp
+
+   } else 
+    amrex::Error("FSI_sub_operation invalid");
+
+  } else
+   amrex::Error("FSI_operation invalid");
+
+ } else if (read_from_CAD()==0) {
+  // do nothing
+ } else
+  amrex::Error("read_from_CAD invalid");
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "ns_header_msg_level FINISH\n";
+   std::cout << "level= " << level << " finest_level= " << finest_level <<
+    " max_level= " << max_level << '\n';
+   std::cout << "FSI_operation= " << FSI_operation <<
+    " FSI_sub_operation= " << FSI_sub_operation <<
+    " time = " << time << " dt= " << dt << " iter = " << iter << '\n';
+  }
+ } else if (verbose==0) {
+  // do nothing
+ } else
+  amrex::Error("verbose invalid");
+
+} // end subroutine ns_header_msg_level
+
+
+
+
+
       subroutine convert_lag_to_eul(dxlevel, &
           domlo_level,domhi_level, &
           cache_max_level_in,sdim_in)

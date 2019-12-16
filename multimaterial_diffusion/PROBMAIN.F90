@@ -31,9 +31,13 @@ implicit none
       REAL_T reaction_rate(100)
       REAL_T visc_coef
 
-      REAL_T aux_problo(SDIM)
-      REAL_T aux_probhi(SDIM)
-      REAL_T aux_dx(SDIM)
+      INTEGER_T FSI_touch_flag
+
+      type MG_type
+       REAL_T, pointer :: FSI_MF(D_DECL(:,:,:),:)
+      end type MG_type
+
+      type(MG_type), dimension(:), allocatable :: MG
 
 contains
 
