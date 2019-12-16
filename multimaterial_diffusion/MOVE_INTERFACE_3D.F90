@@ -813,10 +813,22 @@ stop
 
       INTEGER_T, intent(in) :: FSI_operation
       INTEGER_T, intent(in) :: FSI_sub_operation
+      INTEGER_T, intent(in) :: ilev
       INTEGER_T, intent(in) :: iter
       INTEGER_T, intent(in) :: domlo_level(0:cache_max_level,SDIM)
       INTEGER_T, intent(in) :: domhi_level(0:cache_max_level,SDIM)
       REAL_T, intent(in) :: dxlevel(0:cache_max_level,SDIM)
+
+      INTEGER_T DIMDEC(unitdim)
+
+      REAL_T, allocatable, dimension(D_DECL(:,:,:),:) :: unitdata
+
+      if ((ilev.ge.0).and.(ilev.le.cache_max_level)) then
+       ! do nothing
+      else
+       print *,"ilev invalid"
+       stop
+      endif
 
       if (FSI_operation.eq.0) then !init node locations;generate_new_triangles
        if ((iter.eq.0).and.(FSI_sub_operation.eq.0)) then
@@ -860,80 +872,34 @@ stop
        stop
       endif
 
- int nmat=num_materials;
- int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+
-  nmat*num_state_material;
- int dencomp=num_materials_vel*(AMREX_SPACEDIM+1);     
-  
- const int max_level = parent->maxLevel();
- int finest_level=parent->finestLevel();
+      h_small=dxlevel(cache_max_level,1)
 
- if ((level>max_level)||(finest_level>max_level))
-  amrex::Error("(level>max_level)||(finest_level>max_level)");
-
- const Real* dx = geom.CellSize();
- Real h_small=dx[0];
- if (h_small>dx[1])
-  h_small=dx[1];
- if (h_small>dx[AMREX_SPACEDIM-1])
-  h_small=dx[AMREX_SPACEDIM-1];
- for (int i=level+1;i<=max_level;i++)
-  h_small/=2.0;
-
- Real dx_max_level[AMREX_SPACEDIM];
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  dx_max_level[dir]=dx[dir];
- for (int ilev=level+1;ilev<=max_level;ilev++) 
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-   dx_max_level[dir]/=2.0;
-
- if (verbose>0) {
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "ns_header_msg_level START\n";
-   std::cout << "level= " << level << " finest_level= " << finest_level <<
-    " max_level= " << max_level << '\n';
-   std::cout << "FSI_operation= " << FSI_operation <<
-    " time = " << time << " dt= " << dt << " iter = " << iter << '\n';
-  }
- } else if (verbose==0) {
-  // do nothing
- } else
-  amrex::Error("verbose invalid");
-
- int ioproc;
- if (ParallelDescriptor::IOProcessor())
-  ioproc=1;
- else
-  ioproc=0;
-
- if (FSI_operation==0) { // init node locations
-  if (level==0) {
-   elements_generated=0;
-  } else {
-   elements_generated=1;
-  }
- } else if (FSI_operation==1) { // update node locations
-  if (level==0) {
-   elements_generated=0;
-  } else {
-   elements_generated=1;
-  }
- } else if ((FSI_operation>=2)&&(FSI_operation<=3)) {
-  elements_generated=1;
- } else if (FSI_operation==4) { // copy Eul. fluid vel to Lag. fluid vel.
-  elements_generated=1;
- } else
-  amrex::Error("FSI_operation invalid");
-
- int current_step = nStep();
- int plot_interval=parent->plotInt();
-
- if (read_from_CAD()==1) {
-
-   // nparts x (velocity + LS + temperature + flag)
-  int nparts=im_solid_map.size();
-  if ((nparts<1)||(nparts>nmat))
-   amrex::Error("nparts invalid");
+      if (FSI_operation.eq.0) then ! init node locations
+       if (ilev.eq.0) then
+        elements_generated=0
+       else
+        elements_generated=1
+       endif
+      else if (FSI_operation.eq.1) then ! update node locations
+       if (ilev.eq.0) then
+        elements_generated=0
+       else
+        elements_generated=1
+       endif
+      else if ((FSI_operation.ge.2).and.(FSI_operation.le.3)) then
+       elements_generated=1
+      else
+       print *,"FSI_operation invalid"
+       stop
+      endif
+ 
+      if (nFSI_sub.eq.12) then
+       ! do nothing
+      else
+       print *,"nFSI_sub invalid"
+       stop
+      endif
+      nFSI=global_nparts*nFSI_sub
 
   MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
   if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
@@ -958,32 +924,27 @@ stop
     amrex::Error("problen[dir]<=0.0");
   }
 
-  if (nFSI_sub!=12)
-   amrex::Error("nFSI_sub invalid");
-  int nFSI=nparts*nFSI_sub;
 
-  if ((FSI_operation==0)||  // initialize nodes
-      (FSI_operation==1)) { // update node locations
+      if ((FSI_operation.eq.0).or. & ! initialize nodes
+          (FSI_operation.eq.1)) then ! update node locations
 
-   if (FSI_sub_operation!=0)
-    amrex::Error("FSI_sub_operation!=0");
+       if (FSI_sub_operation.eq.0) then
+        ! do nothing
+       else
+        print *,"FSI_sub_operation!=0"
+        stop
+       endif
 
-   if (elements_generated==0) {
-    int ngrowFSI_fab=0;
-    IntVect unitlo(D_DECL(0,0,0));
-    IntVect unithi(D_DECL(0,0,0));
-     // construct cell-centered type box
-    Box unitbox(unitlo,unithi);
+       if (elements_generated.eq.0) then ! on the coarsest level
+        unit_ngrow=0
+        do dir=1,SDIM
+         unitlo(dir)=0
+         unithi(dir)=0
+        enddo
 
-    const int* tilelo=unitbox.loVect();
-    const int* tilehi=unitbox.hiVect();
-    const int* fablo=unitbox.loVect();
-    const int* fabhi=unitbox.hiVect();
+        call set_dimdec(DIMS(unitdim),unitlo,unithi,unit_ngrow)
+        allocate(unitdata(DIMV(unitdim),nFSI))
 
-    FArrayBox FSIfab(unitbox,nFSI);
-
-    if (num_materials_vel!=1)
-     amrex::Error("num_materials_vel invalid");
 
     Vector<int> velbc;
     velbc.resize(num_materials_vel*AMREX_SPACEDIM*2*AMREX_SPACEDIM);
@@ -1052,6 +1013,8 @@ stop
    elements_generated=1;
 
    CTML_FSI_init=1;
+
+        deallocate(unitdata)
 
   } else if ((FSI_operation==2)||  // make distance in narrow band
              (FSI_operation==3)) { // update the sign

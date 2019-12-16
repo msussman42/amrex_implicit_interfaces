@@ -32,6 +32,7 @@ implicit none
       REAL_T visc_coef
 
       INTEGER_T FSI_touch_flag
+      INTEGER_T elements_generated
 
       type MG_type
        REAL_T, pointer :: FSI_MF(D_DECL(:,:,:),:)
