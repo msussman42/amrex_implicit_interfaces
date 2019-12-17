@@ -5653,7 +5653,7 @@ void NavierStokes::ns_header_msg_level(
     amrex::Error("FSI_sub_operation!=0");
 
    if (elements_generated==0) {
-    int ngrowFSI_fab=0;
+    int ngrowFSI_unitfab=0;
     IntVect unitlo(D_DECL(0,0,0));
     IntVect unithi(D_DECL(0,0,0));
      // construct cell-centered type box
@@ -5711,7 +5711,7 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      &nFSI,
      &nFSI_sub,
-     &ngrowFSI_fab,
+     &ngrowFSI_unitfab,
      &nparts,
      im_solid_map.dataPtr(),
      &h_small,
@@ -6119,7 +6119,7 @@ void NavierStokes::ns_header_msg_level(
     } else
      amrex::Error("FSI_sub_operation invalid");
 
-    int ngrowFSI_fab=0;
+    int ngrowFSI_unitfab=0;
     IntVect unitlo(D_DECL(0,0,0));
     IntVect unithi(D_DECL(0,0,0));
      // construct cell-centered type box
@@ -6177,7 +6177,7 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      &nFSI,
      &nFSI_sub,
-     &ngrowFSI_fab,
+     &ngrowFSI_unitfab,
      &nparts,
      im_solid_map.dataPtr(),
      &h_small,

@@ -824,6 +824,16 @@ stop
       INTEGER_T local_domlo(SDIM)
       INTEGER_T local_domhi(SDIM)
 
+      REAL_T problo(SDIM)
+      REAL_T probhi(SDIM)
+      REAL_T problen(SDIM)
+
+      INTEGER_T velbc(global_nparts*SDIM*SDIM*2)
+      INTEGER_T vofbc(SDIM*2)
+
+      REAL_T local_dx(SDIM)
+      REAL_T dx_max_level(SDIM)
+
       REAL_T, allocatable, dimension(D_DECL(:,:,:),:) :: unitdata
 
       if ((ilev.ge.0).and.(ilev.le.cache_max_level)) then
@@ -833,7 +843,28 @@ stop
        stop
       endif
 
+      problo(1)=problox
+      problo(2)=probloy
+      probhi(1)=probhix
+      probhi(2)=probhiy
+      if (SDIM.eq.3) then
+       problo(SDIM)=probloz
+       probhi(SDIM)=probhiz
+      endif
+
       do dir=1,SDIM
+       problen(dir)=probhi(dir)-problo(dir)
+       if (problen(dir).gt.0.0d0) then
+        ! do nothing
+       else
+        print *,"problen invalid"
+        stop
+       endif
+      enddo
+
+      do dir=1,SDIM
+       dx_max_level(dir)=dxlevel(cache_max_level,dir)
+       local_dx(dir)=dxlevel(ilev,dir)
        local_domlo(dir)=domlo_level(ilev,dir)
        local_domhi(dir)=domhi_level(ilev,dir)
       enddo
@@ -924,23 +955,14 @@ stop
   bool use_tiling=ns_tiling;
   int bfact=parent->Space_blockingFactor(level);
 
-  Real problo[AMREX_SPACEDIM];
-  Real probhi[AMREX_SPACEDIM];
-  Real problen[AMREX_SPACEDIM];
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   problo[dir]=geom.ProbLo(dir);
-   probhi[dir]=geom.ProbHi(dir);
-   problen[dir]=probhi[dir]-problo[dir];
-   if (problen[dir]<=0.0)
-    amrex::Error("problen[dir]<=0.0");
-  }
 
-      do dir=1,SDIM*2*SDIM
+      do dir=1,global_nparts*SDIM*2*SDIM
        velbc(dir)=REFLECT_EVEN
       enddo
       do dir=1,2*SDIM
        vofbc(dir)=REFLECT_EVEN
       enddo
+
       tid=0
       gridno=0
       num_tiles_on_thread=1
@@ -996,7 +1018,7 @@ stop
           DIMS(FSIfab), &
           nFSI, &
           nFSI_sub, &
-          ngrowFSI_fab, &
+          ngrowFSI_unitfab, &
           global_nparts, &
           im_solid_map, &
           h_small, &
@@ -1039,13 +1061,10 @@ stop
    if (localMF[FSI_MF]->nComp()!=nFSI)
     amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
-   if (FSI_operation==2) { // make distance in narrow band.
+       if (FSI_operation.eq.2) then ! make distance in narrow band.
 
-    if (num_materials_vel!=1)
-     amrex::Error("num_materials_vel invalid");
-
-     // fill coarse patch 
-    if (level>0) {
+        ! fill coarse patch 
+        if (ilev.gt.0) then
 
       //ngrow=0
      MultiFab* S_new_coarse=new MultiFab(grids,dmap,AMREX_SPACEDIM,0,
@@ -1054,13 +1073,6 @@ stop
      int scomp=0;
      FillCoarsePatch(*S_new_coarse,dcomp,time,State_Type,scomp,AMREX_SPACEDIM);
 
-     if (verbose>0) {
-      if (ParallelDescriptor::IOProcessor()) {
-       std::cout << "check_for_NAN(S_new_coarse,200)\n";
-      }
-      std::fflush(NULL);
-      check_for_NAN(S_new_coarse,200);
-     }
 
       //ngrow=0
      MultiFab* Solid_new_coarse=new MultiFab(grids,dmap,
@@ -1069,23 +1081,8 @@ stop
      dcomp=0;
      scomp=0;
 
-     if ((verbose>0)&&(1==0)) {
-      if (ParallelDescriptor::IOProcessor()) {
-       std::cout << "FillCoarsePatch(*Solid_new_coarse)\n";
-      }
-      std::fflush(NULL);
-     }
-
      FillCoarsePatch(*Solid_new_coarse,dcomp,time,Solid_State_Type,scomp,
         nparts*AMREX_SPACEDIM);
-
-     if (verbose>0) {
-      if (ParallelDescriptor::IOProcessor()) {
-       std::cout << "check_for_NAN(Solid_new_coarse,200)\n";
-      }
-      std::fflush(NULL);
-      check_for_NAN(Solid_new_coarse,201);
-     }
 
       //ngrow=0
      MultiFab* LS_new_coarse=new MultiFab(grids,dmap,nmat*(AMREX_SPACEDIM+1),0,
@@ -1095,42 +1092,14 @@ stop
      FillCoarsePatch(*LS_new_coarse,dcomp,time,LS_Type,scomp,
         nmat*(AMREX_SPACEDIM+1));
 
-     if (verbose>0) {
-      if (ParallelDescriptor::IOProcessor()) {
-       std::cout << "check_for_NAN(LS_new_coarse,200)\n";
-      }
-      std::fflush(NULL);
-      check_for_NAN(LS_new_coarse,202);
-     }
 
-     for (int partid=0;partid<nparts;partid++) {
+         do partid=1,global_nparts
 
-      int im_part=im_solid_map[partid];
+          im_part=im_solid_map(partid)
 
-      if ((im_part<0)||(im_part>=nmat))
-       amrex::Error("im_part invalid");
- 
-      if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
-          (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 solid
-	  (FSI_flag[im_part]==6)||
-	  (FSI_flag[im_part]==7)) { 
+          if ((im_part.ge.1).and.(im_part.le.nmat)) then
 
-       int ok_to_modify_EUL=1;
-       if ((FSI_flag[im_part]==6)||
-           (FSI_flag[im_part]==7)) {
-	if (time==0.0) {
-	 // do nothing
-	} else if (time>0.0) {
-	 ok_to_modify_EUL=0;
-	} else
-	 amrex::Error("time invalid");
-       } else if ((FSI_flag[im_part]==2)||
-  	          (FSI_flag[im_part]==4)) {
-        // do nothing
-       } else
-        amrex::Error("FSI_flag invalid");
-
-       if (ok_to_modify_EUL==1) {
+           if (FSI_flag(im_part).eq.7) then 
 
         dcomp=im_part;
         scomp=im_part;
@@ -1168,30 +1137,37 @@ stop
 
         delete new_coarse_thermal;
 
-       } else if (ok_to_modify_EUL==0) {
-        // do nothing
-       } else
-        amrex::Error("ok_to_modify_EUL invalid");
+           else
+            print *,"FSI_flag invalid"
+            stop
+           endif
 
-      } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid 
-       // do nothing
-      } else
-       amrex::Error("FSI_flag invalid");
-     } // partid=0..nparts-1
+          else 
+           print *,"im_part invalid"
+           stop
+          endif
+
+         enddo ! partid=1..global_nparts
+  
+
 
      delete S_new_coarse;
      delete Solid_new_coarse;
      delete LS_new_coarse;
 
-    } else if (level==0) {
-     // do nothing
-    } else
-     amrex::Error("level invalid 3");
+        else if (ilev.eq.0) then
+         ! do nothing
+        else
+         print *,"ilev invalid"
+         stop
+        endif
 
-   } else if (FSI_operation==3) { // update sign
-    // do not fill coarse patch.
-   } else
-    amrex::Error("FSI_operation invalid");
+       else if (FSI_operation.eq.3) then ! update sign
+        ! do not fill coarse patch.
+       else
+        print *,"FSI_operation invalid"
+        stop
+       endif
 
    MultiFab* solidmf=getStateSolid(ngrowFSI,0,
      nparts*AMREX_SPACEDIM,time);
@@ -1244,92 +1220,55 @@ stop
    resize_mask_nbr(ngrowFSI);
    debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
  
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    const Real* xlo = grid_loc[gridno].lo();
     FArrayBox& FSIfab=(*localMF[FSI_MF])[mfi];
     FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
 
-    Vector<int> velbc=getBCArray(Solid_State_Type,gridno,0,
-     nparts*AMREX_SPACEDIM);
-    Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+       call FORT_HEADERMSG( &
+          tid, &
+          num_tiles_on_thread, &
+          gridno, &
+          nthreads, &
+          ilev, &
+          cache_max_level, &
+          cache_max_level, &
+          FSI_operation, & ! 2 or 3 (make distance or update sign)
+          FSI_sub_operation, & ! 0
+          local_domlo,local_domhi, &
+          local_domlo,local_domhi, &
+          bfact, &
+          problo, &
+          local_dx,  &
+          dx_max_level, &
+          problo, &
+          probhi, &
+          velbc, & 
+          vofbc, &
+          FSIfab, & 
+          DIMS(FSIfab), &
+          FSIfab, & ! velfab spot
+          DIMS(FSIfab),
+          mnbrfab, & 
+          DIMS(mnbrfab),
+          mnbrfab, & ! mfiner spot
+          DIMS(mnbrfab), &
+          nFSI, &
+          nFSI_sub, &
+          ngrowFSI, &
+          global_nparts, &
+          im_solid_map, &
+          h_small, &
+          time,  &
+          dt, &
+          FSI_refine_factor, &
+          FSI_bounding_box_ngrow, &
+          FSI_touch_flag, &
+          CTML_FSI_init, &
+          CTML_force_model, &
+          iter, &
+          current_step, &
+          plot_interval, &
+          ioproc)
 
-    int tid=ns_thread();
-    if ((tid<0)||(tid>=thread_class::nthreads))
-     amrex::Error("tid invalid");
-
-    FORT_HEADERMSG(
-     &tid,
-     &num_tiles_on_thread_proc[tid],
-     &gridno,
-     &thread_class::nthreads,
-     &level,
-     &finest_level,
-     &max_level,
-     &FSI_operation, // 2 or 3 (make distance or update sign)
-     &FSI_sub_operation, // 0
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     xlo,
-     dx, 
-     dx_max_level, 
-     problo,
-     probhi, 
-     velbc.dataPtr(),  
-     vofbc.dataPtr(), 
-     FSIfab.dataPtr(),
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // velfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     mnbrfab.dataPtr(),
-     ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
-     mnbrfab.dataPtr(), // mfiner spot
-     ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
-     &nFSI,
-     &nFSI_sub,
-     &ngrowFSI,
-     &nparts,
-     im_solid_map.dataPtr(),
-     &h_small,
-     &time, 
-     &dt, 
-     FSI_refine_factor.dataPtr(),
-     FSI_bounding_box_ngrow.dataPtr(),
-     &FSI_touch_flag[tid],
-     &CTML_FSI_init,
-     &CTML_force_model,
-     &iter,
-     &current_step,
-     &plot_interval,
-     &ioproc);
-
-    num_tiles_on_thread_proc[tid]++;
-   } //mfi
-}//omp
-   for (int tid=1;tid<thread_class::nthreads;tid++) {
-    if (FSI_touch_flag[tid]==1) {
-     FSI_touch_flag[0]=1;
-    } else if (FSI_touch_flag[tid]==0) {
-     // do nothing
-    } else
-     amrex::Error("FSI_touch_flag[tid] invalid");
-   } 
-   ParallelDescriptor::ReduceIntMax(FSI_touch_flag[0]);
-
-   if (num_materials_vel!=1)
-    amrex::Error("num_materials_vel invalid");
 
    // idx,ngrow,scomp,ncomp,index,scompBC_map
    // InterpBordersGHOST is ultimately called.
@@ -1368,225 +1307,13 @@ stop
    delete denmf;
    delete LSMF;
 
-  } else if (FSI_operation==4) { // copy Eul. vel to struct vel.
+      else
+       print *,"FSI_operation invalid"
+       stop
+      endif
 
-   elements_generated=1;
-   if (ngrowFSI!=3)
-    amrex::Error("ngrowFSI invalid");
-   if (num_materials_vel!=1)
-    amrex::Error("num_materials_vel invalid");
-   if ((FSI_sub_operation!=0)&&
-       (FSI_sub_operation!=1)&&
-       (FSI_sub_operation!=2))
-    amrex::Error("FSI_sub_operation invalid");
-
-   // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
-   // (2) =1 interior  =0 otherwise
-   resize_mask_nbr(ngrowFSI);
-   debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
-   // mask=1 if not covered or if outside the domain.
-   // NavierStokes::maskfiner_localMF
-   // NavierStokes::maskfiner
-   resize_maskfiner(ngrowFSI,MASKCOEF_MF);
-   debug_ngrow(MASKCOEF_MF,ngrowFSI,28);
-
-   if ((FSI_sub_operation==0)|| //init VELADVECT_MF, fortran grid structure,...
-       (FSI_sub_operation==2)) {//delete VELADVECT_MF
-
-    if (FSI_sub_operation==0) {
-     // Two layers of ghost cells are needed if
-     // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
-     getState_localMF(VELADVECT_MF,ngrowFSI,0,
-      num_materials_vel*AMREX_SPACEDIM,cur_time_slab); 
-
-      // in: NavierStokes::ns_header_msg_level
-     create_fortran_grid_struct(time,dt);
-    } else if (FSI_sub_operation==2) {
-     delete_localMF(VELADVECT_MF,1);
-    } else
-     amrex::Error("FSI_sub_operation invalid");
-
-    int ngrowFSI_fab=0;
-    IntVect unitlo(D_DECL(0,0,0));
-    IntVect unithi(D_DECL(0,0,0));
-     // construct cell-centered type box
-    Box unitbox(unitlo,unithi);
-
-    const int* tilelo=unitbox.loVect();
-    const int* tilehi=unitbox.hiVect();
-    const int* fablo=unitbox.loVect();
-    const int* fabhi=unitbox.hiVect();
-
-    FArrayBox FSIfab(unitbox,nFSI);
-
-    if (num_materials_vel!=1)
-     amrex::Error("num_materials_vel invalid");
-
-    Vector<int> velbc;
-    velbc.resize(num_materials_vel*AMREX_SPACEDIM*2*AMREX_SPACEDIM);
-    for (int i=0;i<velbc.size();i++)
-     velbc[i]=0;
-    Vector<int> vofbc;
-    vofbc.resize(2*AMREX_SPACEDIM);
-    for (int i=0;i<vofbc.size();i++)
-     vofbc[i]=0;
-
-    int tid=0;
-    int gridno=0;
-
-    FORT_HEADERMSG(
-     &tid,
-     &num_tiles_on_thread_proc[tid],
-     &gridno,
-     &thread_class::nthreads,
-     &level,
-     &finest_level,
-     &max_level,
-     &FSI_operation, // 4
-     &FSI_sub_operation, // 0 (clear lag data) or 2 (sync lag data)
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     problo,
-     problen, 
-     dx_max_level, 
-     problo,
-     probhi, 
-     velbc.dataPtr(),  
-     vofbc.dataPtr(), 
-     FSIfab.dataPtr(), // placeholder
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // velfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // mnbrfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // mfiner spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     &nFSI,
-     &nFSI_sub,
-     &ngrowFSI_fab,
-     &nparts,
-     im_solid_map.dataPtr(),
-     &h_small,
-     &time, 
-     &dt, 
-     FSI_refine_factor.dataPtr(),
-     FSI_bounding_box_ngrow.dataPtr(),
-     &FSI_touch_flag[tid],
-     &CTML_FSI_init,
-     &CTML_force_model,
-     &iter,
-     &current_step,
-     &plot_interval,
-     &ioproc);
-
-   } else if (FSI_sub_operation==1) {
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-    for (MFIter mfi(*localMF[VELADVECT_MF],use_tiling); mfi.isValid(); ++mfi) {
-     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-     const int gridno = mfi.index();
-     const Box& tilegrid = mfi.tilebox();
-     const Box& fabgrid = grids[gridno];
-     const int* tilelo=tilegrid.loVect();
-     const int* tilehi=tilegrid.hiVect();
-     const int* fablo=fabgrid.loVect();
-     const int* fabhi=fabgrid.hiVect();
-     const Real* xlo = grid_loc[gridno].lo();
-     FArrayBox& FSIfab=(*localMF[VELADVECT_MF])[mfi]; // placeholder
-     FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi]; // ngrowFSI ghost cells
-     FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
-     FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
-
-     Vector<int> velbc=getBCArray(State_Type,gridno,0,
-      num_materials_vel*AMREX_SPACEDIM);
-     Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
-
-     int tid=ns_thread();
-     if ((tid<0)||(tid>=thread_class::nthreads))
-      amrex::Error("tid invalid");
-
-     FORT_HEADERMSG(
-      &tid,
-      &num_tiles_on_thread_proc[tid],
-      &gridno,
-      &thread_class::nthreads,
-      &level,
-      &finest_level,
-      &max_level,
-      &FSI_operation, // 4 (copy eul. fluid vel to lag. solid vel)
-      &FSI_sub_operation, // 1 
-      tilelo,tilehi,
-      fablo,fabhi,
-      &bfact,
-      xlo,
-      dx, 
-      dx_max_level, 
-      problo,
-      probhi, 
-      velbc.dataPtr(),  
-      vofbc.dataPtr(), 
-      FSIfab.dataPtr(), // placeholder
-      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-      velfab.dataPtr(), // ngrowFSI ghost cells
-      ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-      mnbrfab.dataPtr(),
-      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
-      mfinerfab.dataPtr(),
-      ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
-      &nFSI,
-      &nFSI_sub,
-      &ngrowFSI,
-      &nparts,
-      im_solid_map.dataPtr(),
-      &h_small,
-      &time, 
-      &dt, 
-      FSI_refine_factor.dataPtr(),
-      FSI_bounding_box_ngrow.dataPtr(),
-      &FSI_touch_flag[tid],
-      &CTML_FSI_init,
-      &CTML_force_model,
-      &iter,
-      &current_step,
-      &plot_interval,
-      &ioproc);
-
-     num_tiles_on_thread_proc[tid]++;
-    } //mfi
-}//omp
-
-   } else 
-    amrex::Error("FSI_sub_operation invalid");
-
-  } else
-   amrex::Error("FSI_operation invalid");
-
- } else if (read_from_CAD()==0) {
-  // do nothing
- } else
-  amrex::Error("read_from_CAD invalid");
-
- if (verbose>0) {
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "ns_header_msg_level FINISH\n";
-   std::cout << "level= " << level << " finest_level= " << finest_level <<
-    " max_level= " << max_level << '\n';
-   std::cout << "FSI_operation= " << FSI_operation <<
-    " FSI_sub_operation= " << FSI_sub_operation <<
-    " time = " << time << " dt= " << dt << " iter = " << iter << '\n';
-  }
- } else if (verbose==0) {
-  // do nothing
- } else
-  amrex::Error("verbose invalid");
-
-} // end subroutine ns_header_msg_level
-
-
+      return
+      end subroutine ns_header_msg_level
 
 
 
@@ -2098,6 +1825,11 @@ stop
       problo(2)=probloy
       probhi(1)=probhix
       probhi(2)=probhiy
+      if (SDIM.eq.3) then
+       problo(SDIM)=probloz
+       probhi(SDIM)=probhiz
+      endif
+
       max_problen=0.0d0
       do dir=1,SDIM
        problen(dir)=probhi(dir)-problo(dir)
