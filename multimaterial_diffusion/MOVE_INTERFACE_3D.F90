@@ -820,6 +820,9 @@ stop
       REAL_T, intent(in) :: dxlevel(0:cache_max_level,SDIM)
 
       INTEGER_T DIMDEC(unitdim)
+      INTEGER_T DIMDEC(FSI_MF)
+      INTEGER_T local_domlo(SDIM)
+      INTEGER_T local_domhi(SDIM)
 
       REAL_T, allocatable, dimension(D_DECL(:,:,:),:) :: unitdata
 
@@ -829,6 +832,14 @@ stop
        print *,"ilev invalid"
        stop
       endif
+
+      do dir=1,SDIM
+       local_domlo(dir)=domlo_level(ilev,dir)
+       local_domhi(dir)=domhi_level(ilev,dir)
+      enddo
+
+      call set_dimdec(DIMS(FSI_MF),local_domlo, &
+             local_domhi,ngrowFSI)
 
       if (FSI_operation.eq.0) then !init node locations;generate_new_triangles
        if ((iter.eq.0).and.(FSI_sub_operation.eq.0)) then
@@ -1013,19 +1024,18 @@ stop
 
        CTML_FSI_init=1
 
+      else if ((FSI_operation.eq.2).or. & ! make distance in narrow band
+               (FSI_operation.eq.3)) then ! update the sign
 
-  } else if ((FSI_operation==2)||  // make distance in narrow band
-             (FSI_operation==3)) { // update the sign
+       if ((FSI_sub_operation.eq.0).and.(ngrowFSI.eq.3)) then
+        ! do nothing
+       else
+        print *,"FSI_sub_operation!=0 or ngrowFSI!=3"
+        stop
+       endif
 
-   if (FSI_sub_operation!=0)
-    amrex::Error("FSI_sub_operation!=0");
+       elements_generated=1;
 
-   elements_generated=1;
-
-    // FSI_MF allocated in FSI_make_distance
-   if (ngrowFSI!=3)
-    amrex::Error("ngrowFSI invalid");
-   debug_ngrow(FSI_MF,ngrowFSI,1);
    if (localMF[FSI_MF]->nComp()!=nFSI)
     amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
@@ -1595,6 +1605,8 @@ stop
       INTEGER_T, intent(in) :: domhi_level(0:cache_max_level,sdim_in)
       REAL_T, intent(in) :: dxlevel(0:cache_max_level,sdim_in)
 
+      INTEGER_T DIMDEC(FSI_MF)
+
       if (sdim_in.eq.SDIM) then
        ! do nothing
       else
@@ -1607,6 +1619,8 @@ stop
        print *,"cache_max_level_in invalid"
        stop
       endif
+
+      CTML_FSI_init=0
 
       global_nparts=0
       do im=1,nmat

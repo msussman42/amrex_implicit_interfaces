@@ -31,9 +31,11 @@ implicit none
       REAL_T reaction_rate(100)
       REAL_T visc_coef
 
+      INTEGER_T CTML_FSI_init
       INTEGER_T FSI_touch_flag
       INTEGER_T elements_generated
       INTEGER_T nFSI_sub
+      INTEGER_T ngrowFSI
       INTEGER_T global_nparts
 
       type MG_type
@@ -41,6 +43,8 @@ implicit none
       end type MG_type
 
       type(MG_type), dimension(:), allocatable :: MG
+
+      INTEGER_T, dimension(:), allocatable :: im_solid_map
 
 contains
 
