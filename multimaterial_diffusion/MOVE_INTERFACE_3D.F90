@@ -405,6 +405,83 @@ stop
 
       end subroutine set_boundary_VOF
 
+
+      subroutine set_boundary_FSI( &
+        FSI_MF,DIMS(FSI_MF), &
+        fablo,fabhi, &
+        ngrow)
+      USE probcommon_module 
+      USE probmain_module 
+      USE global_utility_module 
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: fablo(SDIM)
+      INTEGER_T, intent(in) :: fabhi(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(FSI_MF)
+      REAL_T, intent(inout) :: FSI_MF(DIMV(FSI_MF),nFSI) 
+      INTEGER_T ::  i,j,iofs,jofs,i_fsi,dir,dirtan
+
+      if (ngrow.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow invalid"
+       stop
+      endif
+
+       !nparts x (velocity + LS + temperature + flag+stress)  3D
+      if ((nFSI.eq.global_nparts*nFSI_sub).and. &
+          (nFSI_sub.eq.12).and. &
+          (ngrowFSI.eq.3).and. &
+          (ngrow.eq.3)) then
+       ! do nothing
+       else
+        print *,"nFSI,nFSI_sub, or ngrowFSI invalid"
+        stop
+       endif
+      call checkbound(fablo,fabhi,DIMS(FSI_MF),ngrow,-1,1221)
+
+      if (SDIM.eq.2) then
+
+        ! top and bottom
+       dir=1
+       dirtan=2
+       do i=fablo(dir),fabhi(dir)
+        do i_fsi=1,nFSI
+         do jofs=-1,-ngrow,-1
+          j=fablo(dirtan)
+          FSI_MF(i,j+jofs,i_fsi) = FSI_MF(i,j,i_fsi)
+         enddo
+         do jofs=1,ngrow,1
+          j=fabhi(dirtan)
+          FSI_MF(i,j+jofs,i_fsi) = FSI_MF(i,j,i_fsi)
+         enddo
+        enddo ! i_fsi=1..nFSI
+       enddo ! i=fablo,fabhi
+
+        ! left and right
+       dir=2
+       dirtan=1
+       do j=fablo(dir)-ngrow,fabhi(dir)+ngrow
+        do i_fsi=1,nFSI
+         do iofs=-1,-ngrow,-1
+          i=fablo(dirtan)
+          FSI_MF(i+iofs,j,i_fsi) = FSI_MF(i,j,i_fsi)
+         enddo
+         do iofs=1,ngrow,1
+          i=fabhi(dirtan)
+          FSI_MF(i+iofs,j,i_fsi) = FSI_MF(i,j,i_fsi)
+         enddo
+        enddo ! i_fsi=1..nFSI
+       enddo ! j=fablo-ngrow,fabhi+ngrow
+
+      else
+       print *,"only sdim==2 supported"
+       stop
+      endif
+
+      end subroutine set_boundary_FSI
+
       subroutine get_exact_LS(xgrid,time,im,LS)
       USE probcommon_module 
       USE probmain_module 
@@ -792,6 +869,7 @@ stop
 
       do ilev=0,cache_max_level
        deallocate(MG(ilev)%FSI_MF)
+       deallocate(MG(ilev)%MASK_NBR_MF)
       enddo
       deallocate(MG)
       deallocate(im_solid_map)
@@ -803,8 +881,7 @@ stop
       subroutine ns_header_msg_level(ilev, &
          FSI_operation, &
          FSI_sub_operation, &
-         iter, &
-         dxlevel,domlo_level,domhi_level)
+         iter)
       USE probcommon_module 
       USE probmain_module 
       USE global_utility_module 
@@ -815,9 +892,6 @@ stop
       INTEGER_T, intent(in) :: FSI_sub_operation
       INTEGER_T, intent(in) :: ilev
       INTEGER_T, intent(in) :: iter
-      INTEGER_T, intent(in) :: domlo_level(0:cache_max_level,SDIM)
-      INTEGER_T, intent(in) :: domhi_level(0:cache_max_level,SDIM)
-      REAL_T, intent(in) :: dxlevel(0:cache_max_level,SDIM)
 
       INTEGER_T DIMDEC(unitdata)
       INTEGER_T DIMDEC(FSI_MF)
@@ -1027,6 +1101,7 @@ stop
 
         elements_generated=1
         deallocate(unitdata)
+
        else if (elements_generated.eq.1) then
         ! do nothing
        else 
@@ -1102,7 +1177,7 @@ stop
                 if (ilev.gt.0) then
                  MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+isub)=10.0d0
                 else
-                 print *,"ilev invalid, note: flag init to 0 if ilev=0 and t=0"
+                 print *,"ilev invalid; flag=0 if ilev=0 and t=0"
                  stop
                 endif
                else
@@ -1140,16 +1215,18 @@ stop
         stop
        endif
 
-       FILL BORDERS FSI_MF HERE
+       call set_boundary_FSI( &
+         MG(ilev)%FSI_MF, &
+         DIMS(FSI_MF), &
+         local_domlo,local_domhi, &
+         ngrowFSI);
 
-   // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
-   // (2) =1 interior  =0 otherwise
-   resize_mask_nbr(ngrowFSI);
-   debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
+        ! MG(ilev)%MASK_NBR_MF 
+        ! (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+        ! (2) =1 interior  =0 otherwise
+        ! (3) =1 interior+ngrow-1  =0 otherwise
+        ! (4) =1 interior+ngrow    =0 otherwise
  
-    FArrayBox& FSIfab=(*localMF[FSI_MF])[mfi];
-    FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
-
        call FORT_HEADERMSG( &
           tid, &
           num_tiles_on_thread, &
@@ -1170,14 +1247,14 @@ stop
           probhi, &
           velbc, & 
           vofbc, &
-          FSIfab, & 
-          DIMS(FSIfab), &
-          FSIfab, & ! velfab spot
-          DIMS(FSIfab),
-          mnbrfab, & 
-          DIMS(mnbrfab),
-          mnbrfab, & ! mfiner spot
-          DIMS(mnbrfab), &
+          MG(ilev)%FSI_MF, & 
+          DIMS(FSI_MF), &
+          MG(ilev)%FSI_MF, &  ! velfab spot
+          DIMS(FSI_MF),
+          MG(ilev)%MASK_NBR_MF, & 
+          DIMS(FSI_MF),
+          MG(ilev)%MASK_NBR_MF, &  ! mfiner spot
+          DIMS(FSI_MF), &
           nFSI, &
           nFSI_sub, &
           ngrowFSI, &
@@ -1196,43 +1273,11 @@ stop
           plot_interval, &
           ioproc)
 
-
-   // idx,ngrow,scomp,ncomp,index,scompBC_map
-   // InterpBordersGHOST is ultimately called.
-   // dest_lstGHOST for Solid_State_Type defaults to pc_interp.
-   // scompBC_map==0 corresponds to extrap_bc, pc_interp and FORT_EXTRAPFILL
-   // scompBC_map==1,2,3 corresponds to x or y or z vel_extrap_bc, pc_interp 
-   //   and FORT_EXTRAPFILL
-   // nFSI=nparts * (vel + LS + temp + flag + stress)
-   for (int partid=0;partid<nparts;partid++) {
-    int ibase=partid*nFSI_sub;
-    Vector<int> scompBC_map;
-    scompBC_map.resize(AMREX_SPACEDIM); 
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-     scompBC_map[dir]=dir+1;
-
-    // This routine interpolates from coarser levels.
-    PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase,
-     AMREX_SPACEDIM,Solid_State_Type,scompBC_map);
-
-    for (int i=AMREX_SPACEDIM;i<nFSI_sub;i++) {
-     scompBC_map.resize(1); 
-     scompBC_map[0]=0;
-     PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+i,
-      1,Solid_State_Type,scompBC_map);
-    } // i=AMREX_SPACEDIM  ... nFSI_sub-1
-   } // partid=0..nparts-1
-
-    // 1. copy_velocity_on_sign
-    // 2. update Solid_new
-    // 3. update LS_new
-    // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
-
-   Transfer_FSI_To_STATE(time);
-
-   delete solidmf;
-   delete denmf;
-   delete LSMF;
+       call set_boundary_FSI( &
+         MG(ilev)%FSI_MF, &
+         DIMS(FSI_MF), &
+         local_domlo,local_domhi, &
+         ngrowFSI);
 
       else
        print *,"FSI_operation invalid"
@@ -1244,8 +1289,7 @@ stop
 
 
 
-      subroutine convert_lag_to_eul(dxlevel, &
-          domlo_level,domhi_level, &
+      subroutine convert_lag_to_eul( &
           cache_max_level_in,sdim_in)
       USE probcommon_module 
       USE probmain_module 
@@ -1255,9 +1299,6 @@ stop
 
       INTEGER_T, intent(in) :: cache_max_level_in
       INTEGER_T, intent(in) :: sdim_in
-      INTEGER_T, intent(in) :: domlo_level(0:cache_max_level,sdim_in)
-      INTEGER_T, intent(in) :: domhi_level(0:cache_max_level,sdim_in)
-      REAL_T, intent(in) :: dxlevel(0:cache_max_level,sdim_in)
 
       INTEGER_T DIMDEC(FSI_MF)
 
@@ -1319,8 +1360,7 @@ stop
        call ns_header_msg_level(ilev, &
               FSI_operation, &
               FSI_sub_operation, &
-              iter, &
-              dxlevel,domlo_level,domhi_level)
+              iter)
 
         !nparts x (velocity + LS + temperature + flag+stress)  3D
        nFSI_sub=12
@@ -1353,6 +1393,44 @@ stop
         endif
 
         allocate(MG(ilev)%FSI_MF(DIMV(FSI_MF),nFSI))
+        allocate(MG(ilev)%MASK_NBR_MF(DIMV(FSI_MF),4))
+
+        ! MG(ilev)%MASK_NBR_MF 
+        ! (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+        ! (2) =1 interior  =0 otherwise
+        ! (3) =1 interior+ngrow-1  =0 otherwise
+        ! (4) =1 interior+ngrow    =0 otherwise
+        do i=ARG_L1(FSI_MF),ARG_H1(FSI_MF)
+        do j=ARG_L2(FSI_MF),ARG_H2(FSI_MF)
+        do k=klo,khi
+         interior_flag=1
+         if ((i.lt.local_domlo(1)).or. &
+             (j.lt.local_domlo(2)).or. &
+             (i.gt.local_domhi(1)).or. &
+             (j.gt.local_domhi(2))) then
+          interior_flag=0
+         endif
+         big_interior_flag=1
+         if ((i.lt.local_domlo(1)-ngrowFSI+1).or. &
+             (j.lt.local_domlo(2)-ngrowFSI+1).or. &
+             (i.gt.local_domhi(1)+ngrowFSI-1).or. &
+             (j.gt.local_domhi(2)+ngrowFSI-1)) then
+          big_interior_flag=0
+         endif
+         MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),1)=0.0d0
+         if (interior_flag.eq.1) then
+          MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),1)=1.0d0
+         endif
+         MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),2)= &
+           MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),1)
+         MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),3)=0.0d0
+         if (big_interior_flag.eq.1) then
+          MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),3)=1.0d0
+         endif
+         MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),4)=1.0d0
+        enddo ! k
+        enddo ! j
+        enddo ! i
 
         do partid=1,global_nparts
          ibase=(partid-1)*nFSI_sub
@@ -1435,8 +1513,7 @@ stop
         call ns_header_msg_level(ilev, &
           FSI_operation, &
           FSI_sub_operation, &
-          iter, &
-          dxlevel,domlo_level,domhi_level)
+          iter)
 
         first_iter=1 
         do while ((FSI_touch_flag.eq.1).or.(first_iter.eq.1)) 
@@ -1447,8 +1524,7 @@ stop
          call ns_header_msg_level(ilev, &
            FSI_operation, &
            FSI_sub_operation, &
-           iter, &
-           dxlevel,domlo_level,domhi_level)
+           iter)
 
          iter=iter+1
         enddo
@@ -1461,65 +1537,7 @@ stop
        print *,"global_nparts invalid"
        stop
       endif
-  
  
-  bool use_tiling=ns_tiling;
-
-  const Real* dx = geom.CellSize();
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*localMF[FSI_MF],use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-   const Real* xlo = grid_loc[gridno].lo();
-   const Real* xhi = grid_loc[gridno].hi();
-
-   FArrayBox& solidfab=(*localMF[FSI_MF])[mfi];
-
-    // updates FSI_MF for FSI_flag(im)==1 type materials.
-   FORT_INITDATASOLID(
-     &nmat,
-     &nparts,
-     &nFSI_sub,
-     &nFSI,
-     &ngrowFSI,
-     im_solid_map.dataPtr(),
-     &time,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     solidfab.dataPtr(),
-     ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
-     dx,xlo,xhi);  
-  } // mfi
-} // omp
-  ParallelDescriptor::Barrier();
-
-   // Solid velocity
-  MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
-  if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
-   amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
-  for (int partid=0;partid<nparts;partid++) {
-   int ibase=partid*nFSI_sub;
-   MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase,partid*AMREX_SPACEDIM,
-     AMREX_SPACEDIM,0);
-  } // partid=0..nparts-1
-
- } else {
-  amrex::Error("nparts invalid");
- }
-
-
       return
       end subroutine convert_lag_to_eul
 

@@ -40,11 +40,16 @@ implicit none
 
       type MG_type
        REAL_T, pointer :: FSI_MF(D_DECL(:,:,:),:)
+       REAL_T, pointer :: MASK_NBR_MF(D_DECL(:,:,:),:)
       end type MG_type
 
       type(MG_type), dimension(:), allocatable :: MG
 
       INTEGER_T, dimension(:), allocatable :: im_solid_map
+
+      real(kind=8),dimension(:,:), allocatable :: dxlevel
+      INTEGER,dimension(:,:), allocatable :: domlo_level
+      INTEGER,dimension(:,:), allocatable :: domhi_level
 
 contains
 

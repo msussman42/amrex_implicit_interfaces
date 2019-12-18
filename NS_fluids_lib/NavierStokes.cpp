@@ -5954,6 +5954,8 @@ void NavierStokes::ns_header_msg_level(
 
    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
    // (2) =1 interior  =0 otherwise
+   // (3) =1 interior+ngrow-1  =0 otherwise
+   // (4) =1 interior+ngrow    =0 otherwise
    resize_mask_nbr(ngrowFSI);
    debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
  
@@ -6095,6 +6097,8 @@ void NavierStokes::ns_header_msg_level(
 
    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
    // (2) =1 interior  =0 otherwise
+   // (3) =1 interior+ngrow-1  =0 otherwise
+   // (4) =1 interior+ngrow    =0 otherwise
    resize_mask_nbr(ngrowFSI);
    debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
    // mask=1 if not covered or if outside the domain.
@@ -9227,6 +9231,7 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
   // value,scomp,ncomp,ngrow
  localMF[MASK_NBR_MF]->setVal(0.0,0,4,ngrow);
  localMF[MASK_NBR_MF]->setVal(1.0,0,2,0);
+   // scomp,ncomp, periodicity
  localMF[MASK_NBR_MF]->FillBoundary(0,1,geom.periodicity());  
  localMF[MASK_NBR_MF]->setVal(1.0,2,1,ngrow-1);
  localMF[MASK_NBR_MF]->setVal(1.0,3,1,ngrow);

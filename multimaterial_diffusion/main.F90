@@ -378,7 +378,6 @@ real(kind=8),dimension(:), allocatable :: xCC,yCC       ! cell centers
 !REAL(KIND=8)               :: Ts(M+1)
 REAL(KIND=8),dimension(:), allocatable :: Ts
 real(kind=8)               :: dx_in(sdim_in)
-real(kind=8),dimension(:,:), allocatable :: dxlevel
 real(kind=8)               :: dx_local(sdim_in)
 real(kind=8)               :: dx_coarse
 !TYPE(POLYGON),dimension(-1:N,-1:N):: CELL_FAB
@@ -412,8 +411,6 @@ INTEGER ngeom_recon_in
 INTEGER bfactmax
 INTEGER domlo_in(2)
 INTEGER domhi_in(2)
-INTEGER,dimension(:,:), allocatable :: domlo_level
-INTEGER,dimension(:,:), allocatable :: domhi_level
 real(kind=8) :: problo_arr(2)
 
 integer local_state_ncomp
@@ -1308,8 +1305,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  allocate(T(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp)) 
  allocate(T_new(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp)) 
 
- call convert_lag_to_eul(dxlevel,domlo_level,domhi_level, &
-      cache_max_level,sdim_in)
+ call convert_lag_to_eul(cache_max_level,sdim_in)
 
  ! init velocity in: vof_cisl.F90
  do iten=1,local_nten

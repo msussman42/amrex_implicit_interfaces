@@ -959,11 +959,8 @@ end subroutine dist_fns
   stop
  endif
 
- 
+ end subroutine dist_to_boundary
 
-
-
- end subroutine
 !------------------------------------------------- 
 subroutine YangLiu_cross_product(sdim,x1,x2,cc,crossp)
 implicit none
@@ -1750,14 +1747,169 @@ real(kind=8)             :: xtheta,ytheta
      0.5d0*(0.6d0*cos(theta)-0.6d0*cos(3.0d0*theta))**2.0d0 + &
      (ytheta-x(2))*(-0.6d0*sin(theta)+1.8d0*sin(3.0d0*theta)) 
 
-
-end subroutine
-
+end subroutine fundd_hypocycloid
 
 
+subroutine interp_from_fsi(imat,x,y,z,dist,local_sdim,probtype_in)
+USE probmain_module 
+implicit none
+
+integer,intent(in)               :: imat
+integer,intent(in)               :: probtype_in
+real(kind=8), intent(in)         :: x,y,z
+real(kind=8), intent(out)        :: dist
+integer, intent(in)              :: local_sdim
+integer                          :: dir
+integer                          :: ipart,ibase
+integer                          :: ii,klo,khi
+integer                          :: ilin,jlin,klin
+integer, dimension(3)            :: lo,hi
+integer, dimension(3)            :: growlo,growhi
+integer, dimension(3)            :: ileft,iright
+real(kind=8), dimension(3)       :: dx
+real(kind=8), dimension(3)       :: xinput
+real(kind=8), dimension(3)       :: xtarget
+real(kind=8), dimension(3)       :: xcen
+real(kind=8), dimension(3)       :: xleft,xright,xlen
+real(kind=8), dimension(3)       :: theta
+real(kind=8)                     :: wt,total_wt,total_LS,dataLS
+
+ local_sdim=2
+ if (cache_max_level.ge.0) then
+  if (ngrowFSI.eq.3) then
+   if (dxlevel(cache_max_level,1).gt.0.0d0) then
+    do dir=1,local_sdim
+     dx(dir)=dxlevel(cache_max_level,dir)
+     lo(dir)=domlo_level(cache_max_level,dir)
+     hi(dir)=domhi_level(cache_max_level,dir)
+     growlo(dir)=lo(dir)-ngrowFSI
+     growhi(dir)=hi(dir)+ngrowFSI
+    enddo
+    xinput(1)=x
+    xinput(2)=y
+    xinput(3)=z
+
+     ! (i+1/2)dx=x  i=x/dx - 1/2
+    do dir=1,local_sdim
+     ii=NINT(xinput(dir)/dx(dir)-0.5d0)
+     if (ii.le.growlo(dir)) then
+      ileft(dir)=growlo(dir)
+      iright(dir)=growlo(dir)+1
+      xtarget(dir)=(ileft(dir)+0.5d0)*dx(dir)
+     else if (ii.ge.growhi(dir)) then
+      iright(dir)=growhi(dir)
+      ileft(dir)=growhi(dir)-1
+      xtarget(dir)=(iright(dir)+0.5d0)*dx(dir)
+     else if ((ii.gt.growlo(dir).and.(ii.lt.growhi(dir)) then
+      xcen(dir)=(ii+0.5d0)*dx(dir)
+      if (xinput(dir).le.xcen(dir)) then
+       iright(dir)=ii
+       ileft(dir)=iright(dir)-1
+       xtarget(dir)=xinput(dir)
+      else if (xinput(dir).ge.xcen(dir)) then
+       ileft(dir)=ii
+       iright(dir)=ileft(dir)+1
+       xtarget(dir)=xinput(dir)
+      else
+       print *,"xinput invalid"
+       stop
+      endif
+     else
+      print *,"ii invalid"
+      stop
+     endif
+     xleft(dir)=(ileft(dir)+0.5d0)*dx(dir)
+     xright(dir)=(iright(dir)+0.5d0)*dx(dir)
+     xlen(dir)=xright(dir)-xleft(dir)
+     if (xlen(dir).gt.0.0d0) then
+      theta(dir)=(xtarget(dir)-xleft(dir))/xlen(dir)
+      if (theta(dir).lt.0.0d0) then
+       theta(dir)=0.0d0
+      endif
+      if (theta(dir).gt.1.0d0) then
+       theta(dir)=1.0d0
+      endif
+     else
+      print *,"xlen invalid"
+      stop
+     endif
+    enddo ! dir=1..local_sdim
+
+    total_wt=0.0d0
+    total_LS=0.0d0
+    if (local_sdim.eq.2) then
+     klo=0
+     khi=0
+    else if (local_sdim.eq.3) then
+     klo=ileft(local_sdim)
+     khi=iright(local_sdim)
+    else
+     print *,"local_sdim invalid"
+     stop
+    endif
+
+    do ilin=ileft(1),iright(1)  
+    do jlin=ileft(2),iright(2)  
+    do klin=klo,khi
+     ipart=1
+     ibase=(ipart-1)*nFSI_sub
+     dataLS=MG(cache_max_level)%FSI_MF(D_DECL(ilin,jlin,klin),ibase+4)
+     wt=1.0d0
+     if (ilin.eq.ileft(1)) then
+      wt=wt*(1.0d0-theta(1))
+     else
+      wt=wt*theta(1)
+     endif 
+     if (jlin.eq.ileft(2)) then
+      wt=wt*(1.0d0-theta(2))
+     else
+      wt=wt*theta(2)
+     endif 
+     if (local_sdim.eq.3) then
+      if (klin.eq.klo) then
+       wt=wt*(1.0d0-theta(local_sdim))
+      else
+       wt=wt*theta(local_sdim)
+      endif 
+     else if (local_sdim.eq.2) then
+      ! do nothing
+     else
+      print *,"local_sdim invalid"
+      stop
+     endif
+     total_wt=total_wt+wt
+     total_LS=total_LS+wt*dataLS
+    enddo
+    enddo
+    enddo
+    if (total_wt.gt.0.0d0) then
+     dist=total_LS/total_wt
+     if (imat.eq.2) then
+      dist=-dist
+     endif
+    else
+     print *,"total_wt invalid"
+     stop
+    endif 
+   else
+    print *,"dxlevel invalid"
+    stop
+   endif
+  else
+   print *,"ngrowFSI invalid"
+   stop
+  endif
+ else
+  print *,"cache_max_level invalid"
+  stop
+ endif
+     
+ return
+end subroutine interp_from_fsi
 
 !---------------------------------------------------------
 subroutine dist_concentric(imat,x,y,dist,probtype_in)
+USE probmain_module 
 implicit none
 
 integer,intent(in)               :: imat
@@ -1868,9 +2020,12 @@ else if ((probtype_in.eq.19).or. &
          (probtype_in.eq.13).or. &
          (probtype_in.eq.15).or. &
          (probtype_in.eq.16).or. &
-         (probtype_in.eq.400).or. &
          (probtype_in.eq.20)) then
  call dist_fns(imat,x,y,dist,probtype_in)
+
+else if (probtype_in.eq.400) then
+
+ call interp_from_fsi(imat,x,y,y,dist,2,probtype_in)
 
 else
  print *,"probtype_in invalid6 ",probtype_in
