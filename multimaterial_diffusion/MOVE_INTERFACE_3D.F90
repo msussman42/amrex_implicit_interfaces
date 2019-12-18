@@ -1093,7 +1093,27 @@ stop
               ibase=(partid-1)*nFSI_sub
               do isub=1,nFSI_sub
                coarse_data=MG(ilev-1)%FSI_MF(D_DECL(ic,jc,kc),ibase+isub)
-               if (is 
+               if (((isub.ge.1).and.(isub.le.3)).or. & ! velocity
+                   (isub.eq.4).or. & ! LS
+                   (isub.eq.5).or. & ! temperature
+                   ((isub.ge.7).and.(isub.le.12))) then
+                MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+isub)=coarse_data
+               else if (isub.eq.6) then ! flag
+                if (ilev.gt.0) then
+                 MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+isub)=10.0d0
+                else
+                 print *,"ilev invalid, note: flag init to 0 if ilev=0 and t=0"
+                 stop
+                endif
+               else
+                print *,"isub invalid"
+                stop
+               endif
+              enddo ! isub=1..nFSI_sub
+             enddo ! partid=1..global_nparts
+            enddo !k
+            enddo !j
+            enddo !i
            else
             print *,"FSI_flag invalid"
             stop
@@ -1120,51 +1140,7 @@ stop
         stop
        endif
 
-   MultiFab* solidmf=getStateSolid(ngrowFSI,0,
-     nparts*AMREX_SPACEDIM,time);
-   MultiFab* denmf=getStateDen(ngrowFSI,time);  
-   MultiFab* LSMF=getStateDist(ngrowFSI,time,2);
-   if (LSMF->nGrow()!=ngrowFSI)
-    amrex::Error("LSMF->nGrow()!=ngrow_distance");
-
-   // FSI_MF allocated in FSI_make_distance
-   // all components of FSI_MF are initialized to zero except for LS.
-   // LS component of FSI_MF is init to -99999
-   // nparts x (velocity + LS + temperature + flag + stress)
-   for (int partid=0;partid<nparts;partid++) {
-
-    int im_part=im_solid_map[partid];
-    if ((im_part<0)||(im_part>=nmat))
-     amrex::Error("im_part invalid");
-
-    int ibase=partid*nFSI_sub;
-     // velocity
-    MultiFab::Copy(*localMF[FSI_MF],*solidmf,partid*AMREX_SPACEDIM,
-      ibase,AMREX_SPACEDIM,ngrowFSI);
-     // LS  
-    MultiFab::Copy(*localMF[FSI_MF],*LSMF,im_part,
-      ibase+3,1,ngrowFSI);
-     // temperature
-    MultiFab::Copy(*localMF[FSI_MF],*denmf,im_part*num_state_material+1,
-      ibase+4,1,ngrowFSI);
-
-     // flag (mask)
-    if (FSI_operation==2) {
-
-     if ((level>0)||
-         ((level==0)&&(time>0.0))) {
-      setVal_localMF(FSI_MF,10.0,ibase+5,1,ngrowFSI); 
-     } else if ((level==0)&&(time==0.0)) {
-      // do nothing
-     } else
-      amrex::Error("level or time invalid");
-
-    } else if (FSI_operation==3) {
-     // do nothing
-    } else
-     amrex::Error("FSI_operation invalid");
-
-   } // partid=0..nparts-1
+       FILL BORDERS FSI_MF HERE
 
    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
    // (2) =1 interior  =0 otherwise
