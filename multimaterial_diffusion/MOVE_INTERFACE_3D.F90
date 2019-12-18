@@ -819,7 +819,7 @@ stop
       INTEGER_T, intent(in) :: domhi_level(0:cache_max_level,SDIM)
       REAL_T, intent(in) :: dxlevel(0:cache_max_level,SDIM)
 
-      INTEGER_T DIMDEC(unitdim)
+      INTEGER_T DIMDEC(unitdata)
       INTEGER_T DIMDEC(FSI_MF)
       INTEGER_T local_domlo(SDIM)
       INTEGER_T local_domhi(SDIM)
@@ -834,6 +834,8 @@ stop
       REAL_T local_dx(SDIM)
       REAL_T dx_max_level(SDIM)
 
+      INTEGER_T bfact
+
       REAL_T, allocatable, dimension(D_DECL(:,:,:),:) :: unitdata
 
       if ((ilev.ge.0).and.(ilev.le.cache_max_level)) then
@@ -842,6 +844,8 @@ stop
        print *,"ilev invalid"
        stop
       endif
+
+      bfact=1
 
       problo(1)=problox
       problo(2)=probloy
@@ -943,19 +947,6 @@ stop
       endif
       nFSI=global_nparts*nFSI_sub
 
-  MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
-  if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
-   amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
-
-  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
-  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
-   amrex::Error("LS_new invalid ncomp");
-
-  bool use_tiling=ns_tiling;
-  int bfact=parent->Space_blockingFactor(level);
-
-
       do dir=1,global_nparts*SDIM*2*SDIM
        velbc(dir)=REFLECT_EVEN
       enddo
@@ -985,8 +976,8 @@ stop
          unithi(dir)=0
         enddo
 
-        call set_dimdec(DIMS(unitdim),unitlo,unithi,unit_ngrow)
-        allocate(unitdata(DIMV(unitdim),nFSI))
+        call set_dimdec(DIMS(unitdata),unitlo,unithi,unit_ngrow)
+        allocate(unitdata(DIMV(unitdata),nFSI))
 
         call FORT_HEADERMSG( &
           tid, &
@@ -1008,14 +999,14 @@ stop
           probhi, &
           velbc, & 
           vofbc, &
-          FSIfab, & ! placeholder
-          DIMS(FSIfab), &
-          FSIfab, & ! velfab spot
-          DIMS(FSIfab),
-          FSIfab, & ! mnbrfab spot
-          DIMS(FSIfab),
-          FSIfab, & ! mfiner spot
-          DIMS(FSIfab), &
+          unitdata, & ! placeholder
+          DIMS(unitdata), &
+          unitdata, & ! velfab spot
+          DIMS(unitdata),
+          unitdata, & ! mnbrfab spot
+          DIMS(unitdata),
+          unitdata, & ! mfiner spot
+          DIMS(unitdata), &
           nFSI, &
           nFSI_sub, &
           ngrowFSI_unitfab, &
@@ -1058,40 +1049,20 @@ stop
 
        elements_generated=1;
 
-   if (localMF[FSI_MF]->nComp()!=nFSI)
-    amrex::Error("localMF[FSI_MF]->nComp() invalid");
-
+        !nparts x (velocity + LS + temperature + flag+stress)  3D
+       if ((nFSI.eq.global_nparts*nFSI_sub).and. &
+           (nFSI_sub.eq.12).and. &
+           (ngrowFSI.eq.3)) then
+        ! do nothing
+       else
+        print *,"nFSI,nFSI_sub, or ngrowFSI invalid"
+        stop
+       endif
+       
        if (FSI_operation.eq.2) then ! make distance in narrow band.
 
         ! fill coarse patch 
         if (ilev.gt.0) then
-
-      //ngrow=0
-     MultiFab* S_new_coarse=new MultiFab(grids,dmap,AMREX_SPACEDIM,0,
-      MFInfo().SetTag("S_new_coarse"),FArrayBoxFactory());
-     int dcomp=0;
-     int scomp=0;
-     FillCoarsePatch(*S_new_coarse,dcomp,time,State_Type,scomp,AMREX_SPACEDIM);
-
-
-      //ngrow=0
-     MultiFab* Solid_new_coarse=new MultiFab(grids,dmap,
-	nparts*AMREX_SPACEDIM,0,
-        MFInfo().SetTag("Solid_new_coarse"),FArrayBoxFactory());
-     dcomp=0;
-     scomp=0;
-
-     FillCoarsePatch(*Solid_new_coarse,dcomp,time,Solid_State_Type,scomp,
-        nparts*AMREX_SPACEDIM);
-
-      //ngrow=0
-     MultiFab* LS_new_coarse=new MultiFab(grids,dmap,nmat*(AMREX_SPACEDIM+1),0,
-      MFInfo().SetTag("LS_new_coarse"),FArrayBoxFactory());
-     dcomp=0;
-     scomp=0;
-     FillCoarsePatch(*LS_new_coarse,dcomp,time,LS_Type,scomp,
-        nmat*(AMREX_SPACEDIM+1));
-
 
          do partid=1,global_nparts
 
@@ -1101,42 +1072,28 @@ stop
 
            if (FSI_flag(im_part).eq.7) then 
 
-        dcomp=im_part;
-        scomp=im_part;
-         //ngrow==0 (levelset)
-        MultiFab::Copy(LS_new,*LS_new_coarse,scomp,dcomp,1,0);
-        dcomp=nmat+im_part*AMREX_SPACEDIM;
-        scomp=dcomp;
-         //ngrow==0 (levelset normal)
-        MultiFab::Copy(LS_new,*LS_new_coarse,scomp,dcomp,AMREX_SPACEDIM,0);
+            if (SDIM.eq.3) then
+             klo=local_domlo(SDIM)
+             khi=local_domhi(SDIM)
+            else if (SDIM.eq.2) then
+             klo=0
+             khi=0
+            else
+             print *,"dimension bust"
+             stop
+            endif
 
-        dcomp=partid*AMREX_SPACEDIM;
-        scomp=partid*AMREX_SPACEDIM;
-         //ngrow==0
-        MultiFab::Copy(Solid_new,*Solid_new_coarse,
-		scomp,dcomp,AMREX_SPACEDIM,0);
-
-        //ngrow==0
-        MultiFab* new_coarse_thermal=new MultiFab(grids,dmap,1,0,
-	    MFInfo().SetTag("new_coarse_thermal"),FArrayBoxFactory());
-        dcomp=0;
-        int scomp_thermal=dencomp+im_part*num_state_material+1;
-        //ncomp==1
-        FillCoarsePatch(*new_coarse_thermal,dcomp,time,State_Type,
-         scomp_thermal,1);
-
-         //ngrow==0
-        if (solidheat_flag==0) {  // diffuse in solid
-         // do nothing
-        } else if ((solidheat_flag==1)||   // dirichlet
-                   (solidheat_flag==2)) {  // neumann
-          //ngrow==0
-         MultiFab::Copy(S_new,*new_coarse_thermal,0,scomp_thermal,1,0);
-        } else
-         amrex::Error("solidheat_flag invalid");
-
-        delete new_coarse_thermal;
-
+            do i=local_domlo(1),local_domhi(1)
+            do j=local_domlo(2),local_domhi(2)
+            do k=klo,khi
+             ic=i/2
+             jc=j/2
+             kc=k/2
+             do partid=1,global_nparts
+              ibase=(partid-1)*nFSI_sub
+              do isub=1,nFSI_sub
+               coarse_data=MG(ilev-1)%FSI_MF(D_DECL(ic,jc,kc),ibase+isub)
+               if (is 
            else
             print *,"FSI_flag invalid"
             stop
@@ -1149,12 +1106,6 @@ stop
 
          enddo ! partid=1..global_nparts
   
-
-
-     delete S_new_coarse;
-     delete Solid_new_coarse;
-     delete LS_new_coarse;
-
         else if (ilev.eq.0) then
          ! do nothing
         else
@@ -1395,7 +1346,7 @@ stop
               iter, &
               dxlevel,domlo_level,domhi_level)
 
-        !nmat x (velocity + LS + temperature + flag+stress)  3D
+        !nparts x (velocity + LS + temperature + flag+stress)  3D
        nFSI_sub=12
        nFSI=global_nparts*nFSI_sub
        ngrowFSI=3

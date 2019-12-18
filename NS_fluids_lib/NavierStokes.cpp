@@ -5081,7 +5081,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
   // do nothing
  } else if ((nparts>=1)&&(nparts<=nmat)) {
 
-  // nmat x (velocity + LS + temperature + flag+stress)   3D
+  // nparts x (velocity + LS + temperature + flag+stress)   3D
   if (nFSI_sub!=12)
    amrex::Error("nFSI_sub invalid");
   int nFSI=nparts*nFSI_sub;
@@ -5223,7 +5223,7 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
   if (nstate!=S_new.nComp())
    amrex::Error("nstate invalid");
 
-   // nmat x (velocity + LS + temperature + flag)
+   // nparts x (velocity + LS + temperature + flag + stress) 3D
   if (nFSI_sub!=12)
    amrex::Error("nFSI_sub invalid");
 
