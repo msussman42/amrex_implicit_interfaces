@@ -1774,7 +1774,6 @@ real(kind=8), dimension(3)       :: xleft,xright,xlen
 real(kind=8), dimension(3)       :: theta
 real(kind=8)                     :: wt,total_wt,total_LS,dataLS
 
- local_sdim=2
  if (cache_max_level.ge.0) then
   if (ngrowFSI.eq.3) then
    if (dxlevel(cache_max_level,1).gt.0.0d0) then
