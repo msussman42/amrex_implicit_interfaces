@@ -419,7 +419,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM)
       INTEGER_T, intent(in) :: fabhi(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(FSI_MF)
-      REAL_T, intent(inout) :: FSI_MF(DIMV(FSI_MF),nFSI) 
+      REAL_T, intent(inout) :: FSI_MF(DIMV(FSI_MF),nFSI_all) 
       INTEGER_T ::  i,j,iofs,jofs,i_fsi,dir,dirtan
 
       if (ngrow.ge.0) then
@@ -430,13 +430,13 @@ stop
       endif
 
        !nparts x (velocity + LS + temperature + flag+stress)  3D
-      if ((nFSI.eq.global_nparts*nFSI_sub).and. &
+      if ((nFSI_all.eq.global_nparts*nFSI_sub).and. &
           (nFSI_sub.eq.12).and. &
           (ngrowFSI.eq.3).and. &
           (ngrow.eq.3)) then
        ! do nothing
        else
-        print *,"nFSI,nFSI_sub, or ngrowFSI invalid"
+        print *,"nFSI_all,nFSI_sub, or ngrowFSI invalid"
         stop
        endif
       call checkbound(fablo,fabhi,DIMS(FSI_MF),ngrow,-1,1221)
@@ -447,7 +447,7 @@ stop
        dir=1
        dirtan=2
        do i=fablo(dir),fabhi(dir)
-        do i_fsi=1,nFSI
+        do i_fsi=1,nFSI_all
          do jofs=-1,-ngrow,-1
           j=fablo(dirtan)
           FSI_MF(i,j+jofs,i_fsi) = FSI_MF(i,j,i_fsi)
@@ -456,14 +456,14 @@ stop
           j=fabhi(dirtan)
           FSI_MF(i,j+jofs,i_fsi) = FSI_MF(i,j,i_fsi)
          enddo
-        enddo ! i_fsi=1..nFSI
+        enddo ! i_fsi=1..nFSI_all
        enddo ! i=fablo,fabhi
 
         ! left and right
        dir=2
        dirtan=1
        do j=fablo(dir)-ngrow,fabhi(dir)+ngrow
-        do i_fsi=1,nFSI
+        do i_fsi=1,nFSI_all
          do iofs=-1,-ngrow,-1
           i=fablo(dirtan)
           FSI_MF(i+iofs,j,i_fsi) = FSI_MF(i,j,i_fsi)
@@ -472,7 +472,7 @@ stop
           i=fabhi(dirtan)
           FSI_MF(i+iofs,j,i_fsi) = FSI_MF(i,j,i_fsi)
          enddo
-        enddo ! i_fsi=1..nFSI
+        enddo ! i_fsi=1..nFSI_all
        enddo ! j=fablo-ngrow,fabhi+ngrow
 
       else
@@ -1019,7 +1019,6 @@ stop
        print *,"nFSI_sub invalid"
        stop
       endif
-      nFSI=global_nparts*nFSI_sub
 
       do dir=1,global_nparts*SDIM*2*SDIM
        velbc(dir)=REFLECT_EVEN
@@ -1051,7 +1050,7 @@ stop
         enddo
 
         call set_dimdec(DIMS(unitdata),unitlo,unithi,unit_ngrow)
-        allocate(unitdata(DIMV(unitdata),nFSI))
+        allocate(unitdata(DIMV(unitdata),nFSI_all))
 
         call FORT_HEADERMSG( &
           tid, &
@@ -1081,7 +1080,7 @@ stop
           DIMS(unitdata),
           unitdata, & ! mfiner spot
           DIMS(unitdata), &
-          nFSI, &
+          nFSI_all, &
           nFSI_sub, &
           ngrowFSI_unitfab, &
           global_nparts, &
@@ -1125,12 +1124,12 @@ stop
        elements_generated=1;
 
         !nparts x (velocity + LS + temperature + flag+stress)  3D
-       if ((nFSI.eq.global_nparts*nFSI_sub).and. &
+       if ((nFSI_all.eq.global_nparts*nFSI_sub).and. &
            (nFSI_sub.eq.12).and. &
            (ngrowFSI.eq.3)) then
         ! do nothing
        else
-        print *,"nFSI,nFSI_sub, or ngrowFSI invalid"
+        print *,"nFSI_all,nFSI_sub, or ngrowFSI invalid"
         stop
        endif
        
@@ -1255,7 +1254,7 @@ stop
           DIMS(FSI_MF),
           MG(ilev)%MASK_NBR_MF, &  ! mfiner spot
           DIMS(FSI_MF), &
-          nFSI, &
+          nFSI_all, &
           nFSI_sub, &
           ngrowFSI, &
           global_nparts, &
@@ -1299,6 +1298,17 @@ stop
 
       INTEGER_T, intent(in) :: cache_max_level_in
       INTEGER_T, intent(in) :: sdim_in
+
+      INTEGER_T im,partid,iter,ilev
+      INTEGER_T FSI_operation,FSI_sub_operation
+
+      REAL_T start_time,start_dt
+      INTEGER_T local_domlo(SDIM)
+      INTEGER_T local_domhi(SDIM)
+      INTEGER_T klo,khi
+      INTEGER_T i,j,k
+      INTEGER_T interior_flag
+      INTEGER_T big_interior_flag
 
       INTEGER_T DIMDEC(FSI_MF)
 
@@ -1364,14 +1374,14 @@ stop
 
         !nparts x (velocity + LS + temperature + flag+stress)  3D
        nFSI_sub=12
-       nFSI=global_nparts*nFSI_sub
+       nFSI_all=global_nparts*nFSI_sub
        ngrowFSI=3
 
        allocate(MG(0:cache_max_level))
 
        do ilev=0,cache_max_level
 
-        !  new_localMF(FSI_MF,nFSI,ngrowFSI,-1);
+        !  new_localMF(FSI_MF,nFSI_all,ngrowFSI,-1);
 
         do dir=1,SDIM
          local_domlo(dir)=domlo_level(ilev,dir)
@@ -1392,7 +1402,7 @@ stop
          stop
         endif
 
-        allocate(MG(ilev)%FSI_MF(DIMV(FSI_MF),nFSI))
+        allocate(MG(ilev)%FSI_MF(DIMV(FSI_MF),nFSI_all))
         allocate(MG(ilev)%MASK_NBR_MF(DIMV(FSI_MF),4))
 
         ! MG(ilev)%MASK_NBR_MF 
