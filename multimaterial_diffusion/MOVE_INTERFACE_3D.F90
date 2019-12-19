@@ -864,8 +864,9 @@ stop
       USE probcommon_module 
       USE probmain_module 
       USE global_utility_module 
-      use MOF_routines_module
       IMPLICIT NONE
+
+      INTEGER_T ilev
 
       do ilev=0,cache_max_level
        deallocate(MG(ilev)%FSI_MF)
@@ -895,8 +896,12 @@ stop
 
       INTEGER_T DIMDEC(unitdata)
       INTEGER_T DIMDEC(FSI_MF)
+
       INTEGER_T local_domlo(SDIM)
       INTEGER_T local_domhi(SDIM)
+      INTEGER_T unitlo(SDIM)
+      INTEGER_T unithi(SDIM)
+      INTEGER_T unit_ngrow
 
       REAL_T problo(SDIM)
       REAL_T probhi(SDIM)
@@ -907,8 +912,17 @@ stop
 
       REAL_T local_dx(SDIM)
       REAL_T dx_max_level(SDIM)
+      REAL_T h_small
 
+      INTEGER_T dir
       INTEGER_T bfact
+      INTEGER_T tid,gridno,num_tiles_on_thread,nthreads
+
+      REAL_T start_time,start_dt
+
+      INTEGER_T FSI_refine_factor
+      INTEGER_T FSI_bounding_box_ngrow
+      INTEGER_T current_step,plot_interval,ioproc
 
       REAL_T, allocatable, dimension(D_DECL(:,:,:),:) :: unitdata
 
@@ -919,6 +933,16 @@ stop
        stop
       endif
 
+      current_step=0
+      plot_interval=-1
+      ioproc=1
+
+      FSI_refine_factor=1
+      FSI_bounding_box_ngrow=1
+
+      start_time=0.0d0
+      start_dt=1.0d0
+ 
       bfact=1
 
       problo(1)=problox
@@ -1086,8 +1110,8 @@ stop
           global_nparts, &
           im_solid_map, &
           h_small, &
-          time,  &
-          dt, &
+          start_time,  &
+          start_dt, &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
           FSI_touch_flag, &
@@ -1286,8 +1310,6 @@ stop
       return
       end subroutine ns_header_msg_level
 
-
-
       subroutine convert_lag_to_eul( &
           cache_max_level_in,sdim_in)
       USE probcommon_module 
@@ -1337,6 +1359,8 @@ stop
       endif
 
       CTML_FSI_init=0
+      CTML_FSI_numsolids=0
+      CTML_force_model=0
 
       global_nparts=0
       do im=1,nmat

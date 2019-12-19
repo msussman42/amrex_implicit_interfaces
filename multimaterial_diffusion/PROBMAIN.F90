@@ -31,7 +31,10 @@ implicit none
       REAL_T reaction_rate(100)
       REAL_T visc_coef
 
+      INTEGER_T CTML_FSI_numsolids
       INTEGER_T CTML_FSI_init
+      INTEGER_T CTML_force_model
+
       INTEGER_T FSI_touch_flag
       INTEGER_T elements_generated
       INTEGER_T nFSI_all,nFSI_sub
