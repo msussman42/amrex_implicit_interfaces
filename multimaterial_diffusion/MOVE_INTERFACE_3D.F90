@@ -1299,7 +1299,7 @@ stop
       INTEGER_T, intent(in) :: cache_max_level_in
       INTEGER_T, intent(in) :: sdim_in
 
-      INTEGER_T im,partid,iter,ilev
+      INTEGER_T im,partid,iter,first_iter,ilev
       INTEGER_T FSI_operation,FSI_sub_operation
 
       REAL_T start_time,start_dt
@@ -1307,8 +1307,19 @@ stop
       INTEGER_T local_domhi(SDIM)
       INTEGER_T klo,khi
       INTEGER_T i,j,k
+      INTEGER_T ibase
+      INTEGER_T dir
       INTEGER_T interior_flag
       INTEGER_T big_interior_flag
+      INTEGER_T tilelo_array(SDIM)
+      INTEGER_T tilehi_array(SDIM)
+      REAL_T dx_current(SDIM)
+      REAL_T dx_max_level(SDIM)
+      REAL_T xlo_array(SDIM)
+      REAL_T xhi_array(SDIM)
+      INTEGER_T gridno_array(100) ! 100 is a placeholder
+      INTEGER_T num_tiles_on_thread_proc
+      INTEGER_T local_nthreads
 
       INTEGER_T DIMDEC(FSI_MF)
 
@@ -1427,6 +1438,22 @@ stop
              (j.gt.local_domhi(2)+ngrowFSI-1)) then
           big_interior_flag=0
          endif
+         if (SDIM.eq.3) then
+          if ((k.lt.local_domlo(SDIM)).or. &
+              (k.gt.local_domhi(SDIM))) then
+           interior_flag=0
+          endif
+          if ((k.lt.local_domlo(SDIM)-ngrowFSI+1).or. &
+              (k.gt.local_domhi(SDIM)+ngrowFSI-1)) then
+           big_interior_flag=0
+          endif
+         else if (SDIM.eq.2) then
+          ! do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+
          MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),1)=0.0d0
          if (interior_flag.eq.1) then
           MG(ilev)%MASK_NBR_MF(D_DECL(i,j,k),1)=1.0d0
