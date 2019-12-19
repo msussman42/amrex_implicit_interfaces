@@ -887,6 +887,7 @@ stop
       USE probmain_module 
       USE global_utility_module 
       use MOF_routines_module
+      use solidfluid_cpp_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: FSI_operation
@@ -901,7 +902,7 @@ stop
       INTEGER_T local_domhi(SDIM)
       INTEGER_T unitlo(SDIM)
       INTEGER_T unithi(SDIM)
-      INTEGER_T unit_ngrow
+      INTEGER_T ngrowFSI_unitfab
 
       REAL_T problo(SDIM)
       REAL_T probhi(SDIM)
@@ -916,13 +917,18 @@ stop
 
       INTEGER_T dir
       INTEGER_T bfact
-      INTEGER_T tid,gridno,num_tiles_on_thread,nthreads
+      INTEGER_T tid,gridno,nthreads,tilenum
 
       REAL_T start_time,start_dt
 
-      INTEGER_T FSI_refine_factor
-      INTEGER_T FSI_bounding_box_ngrow
+      INTEGER_T FSI_refine_factor(num_materials)
+      INTEGER_T FSI_bounding_box_ngrow(num_materials)
       INTEGER_T current_step,plot_interval,ioproc
+      INTEGER_T partid,im_part,im,ibase,isub
+      INTEGER_T klo,khi
+      INTEGER_T i,j,k
+      INTEGER_T ic,jc,kc
+      REAL_T coarse_data
 
       REAL_T, allocatable, dimension(D_DECL(:,:,:),:) :: unitdata
 
@@ -937,8 +943,10 @@ stop
       plot_interval=-1
       ioproc=1
 
-      FSI_refine_factor=1
-      FSI_bounding_box_ngrow=1
+      do im=1,num_materials
+       FSI_refine_factor(im)=1
+       FSI_bounding_box_ngrow(im)=3
+      enddo
 
       start_time=0.0d0
       start_dt=1.0d0
@@ -1053,7 +1061,7 @@ stop
 
       tid=0
       gridno=0
-      num_tiles_on_thread=1
+      tilenum=1
       nthreads=1
 
       if ((FSI_operation.eq.0).or. & ! initialize nodes
@@ -1067,18 +1075,18 @@ stop
        endif
 
        if (elements_generated.eq.0) then ! on the coarsest level
-        unit_ngrow=0
+        ngrowFSI_unitfab=0
         do dir=1,SDIM
          unitlo(dir)=0
          unithi(dir)=0
         enddo
 
-        call set_dimdec(DIMS(unitdata),unitlo,unithi,unit_ngrow)
+        call set_dimdec(DIMS(unitdata),unitlo,unithi,ngrowFSI_unitfab)
         allocate(unitdata(DIMV(unitdata),nFSI_all))
 
         call FORT_HEADERMSG( &
           tid, &
-          num_tiles_on_thread, &
+          tilenum, &
           gridno, &
           nthreads, &
           ilev, &
@@ -1099,9 +1107,9 @@ stop
           unitdata, & ! placeholder
           DIMS(unitdata), &
           unitdata, & ! velfab spot
-          DIMS(unitdata),
+          DIMS(unitdata), &
           unitdata, & ! mnbrfab spot
-          DIMS(unitdata),
+          DIMS(unitdata), &
           unitdata, & ! mfiner spot
           DIMS(unitdata), &
           nFSI_all, &
@@ -1166,7 +1174,8 @@ stop
 
           im_part=im_solid_map(partid)
 
-          if ((im_part.ge.1).and.(im_part.le.nmat)) then
+          if ((im_part.ge.1).and. &
+              (im_part.le.num_materials)) then
 
            if (FSI_flag(im_part).eq.7) then 
 
@@ -1187,28 +1196,26 @@ stop
              ic=i/2
              jc=j/2
              kc=k/2
-             do partid=1,global_nparts
-              ibase=(partid-1)*nFSI_sub
-              do isub=1,nFSI_sub
-               coarse_data=MG(ilev-1)%FSI_MF(D_DECL(ic,jc,kc),ibase+isub)
-               if (((isub.ge.1).and.(isub.le.3)).or. & ! velocity
-                   (isub.eq.4).or. & ! LS
-                   (isub.eq.5).or. & ! temperature
-                   ((isub.ge.7).and.(isub.le.12))) then
-                MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+isub)=coarse_data
-               else if (isub.eq.6) then ! flag
-                if (ilev.gt.0) then
-                 MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+isub)=10.0d0
-                else
-                 print *,"ilev invalid; flag=0 if ilev=0 and t=0"
-                 stop
-                endif
+             ibase=(partid-1)*nFSI_sub
+             do isub=1,nFSI_sub
+              coarse_data=MG(ilev-1)%FSI_MF(D_DECL(ic,jc,kc),ibase+isub)
+              if (((isub.ge.1).and.(isub.le.3)).or. & ! velocity
+                  (isub.eq.4).or. & ! LS
+                  (isub.eq.5).or. & ! temperature
+                  ((isub.ge.7).and.(isub.le.12))) then
+               MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+isub)=coarse_data
+              else if (isub.eq.6) then ! flag
+               if (ilev.gt.0) then
+                MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+isub)=10.0d0
                else
-                print *,"isub invalid"
+                print *,"ilev invalid; flag=0 if ilev=0 and t=0"
                 stop
                endif
-              enddo ! isub=1..nFSI_sub
-             enddo ! partid=1..global_nparts
+              else
+               print *,"isub invalid"
+               stop
+              endif
+             enddo ! isub=1..nFSI_sub
             enddo !k
             enddo !j
             enddo !i
@@ -1252,7 +1259,7 @@ stop
  
        call FORT_HEADERMSG( &
           tid, &
-          num_tiles_on_thread, &
+          tilenum, &
           gridno, &
           nthreads, &
           ilev, &
@@ -1273,9 +1280,9 @@ stop
           MG(ilev)%FSI_MF, & 
           DIMS(FSI_MF), &
           MG(ilev)%FSI_MF, &  ! velfab spot
-          DIMS(FSI_MF),
+          DIMS(FSI_MF), &
           MG(ilev)%MASK_NBR_MF, & 
-          DIMS(FSI_MF),
+          DIMS(FSI_MF), &
           MG(ilev)%MASK_NBR_MF, &  ! mfiner spot
           DIMS(FSI_MF), &
           nFSI_all, &
@@ -1284,8 +1291,8 @@ stop
           global_nparts, &
           im_solid_map, &
           h_small, &
-          time,  &
-          dt, &
+          start_time,  &
+          start_dt, &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
           FSI_touch_flag, &
@@ -1316,6 +1323,7 @@ stop
       USE probmain_module 
       USE global_utility_module 
       use MOF_routines_module
+      use solidfluid_cpp_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: cache_max_level_in
@@ -1340,7 +1348,10 @@ stop
       REAL_T xlo_array(SDIM)
       REAL_T xhi_array(SDIM)
       INTEGER_T gridno_array(100) ! 100 is a placeholder
-      INTEGER_T num_tiles_on_thread_proc
+      INTEGER_T num_tiles_on_thread_proc(100)
+      INTEGER_T max_num_tiles_on_thread_proc
+      INTEGER_T tile_dim
+      INTEGER_T num_grids_on_level
       INTEGER_T local_nthreads
 
       INTEGER_T DIMDEC(FSI_MF)
@@ -1363,7 +1374,7 @@ stop
       CTML_force_model=0
 
       global_nparts=0
-      do im=1,nmat
+      do im=1,num_materials
        if (FSI_flag(im).eq.7) then
         global_nparts=global_nparts+1
        else if (FSI_flag(im).eq.0) then
@@ -1375,10 +1386,10 @@ stop
       enddo
 
       if ((global_nparts.gt.0).and. &
-          (global_nparts.le.nmat)) then
+          (global_nparts.le.num_materials)) then
        allocate(im_solid_map(global_nparts))
        partid=0
-       do im=1,nmat
+       do im=1,num_materials
         if (FSI_flag(im).eq.7) then
          partid=partid+1
          im_solid_map(partid)=im
@@ -1531,7 +1542,9 @@ stop
         endif
         num_grids_on_level=1
         gridno_array(1)=1
-        num_tiles_on_thread_proc=1
+        num_tiles_on_thread_proc(1)=1
+        max_num_tiles_on_thread_proc=1
+        tile_dim=1
         local_nthreads=1
 
         ! 1. create lagrangian container data structure within the 
@@ -1557,9 +1570,9 @@ stop
           gridno_array, &
           num_tiles_on_thread_proc, &
           local_nthreads, &
-          num_tiles_on_thread_proc, &
-          num_tiles_on_thread_proc, &
-          nmat, &
+          max_num_tiles_on_thread_proc, &
+          tile_dim, &
+          num_materials, &
           global_nparts, &
           im_solid_map, &
           xlo_array, &

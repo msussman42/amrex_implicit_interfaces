@@ -1799,7 +1799,7 @@ real(kind=8)                     :: wt,total_wt,total_LS,dataLS
       iright(dir)=growhi(dir)
       ileft(dir)=growhi(dir)-1
       xtarget(dir)=(iright(dir)+0.5d0)*dx(dir)
-     else if ((ii.gt.growlo(dir).and.(ii.lt.growhi(dir)) then
+     else if ((ii.gt.growlo(dir)).and.(ii.lt.growhi(dir))) then
       xcen(dir)=(ii+0.5d0)*dx(dir)
       if (xinput(dir).le.xcen(dir)) then
        iright(dir)=ii

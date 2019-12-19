@@ -3,6 +3,7 @@
 
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
 #include "AMReX_BC_TYPES.H"
 
 #if (AMREX_SPACEDIM==3)
