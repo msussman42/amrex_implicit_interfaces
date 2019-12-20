@@ -211,7 +211,7 @@
         nFSI_sub, &
         ngrowFSI, &
         nparts, &
-        im_solid_map, &
+        im_solid_map, & ! type: 0..nmat-1
         h_small, &  ! smallest mesh size from the max_level.
         time, &
         dt, &
@@ -410,7 +410,7 @@
        stop
       endif
       if (nFSI_sub.ne.12) then 
-       print *,"nFSI_sub invalid"
+       print *,"nFSI_sub invalid 1 fort headermsg: ",nFSI_sub
        stop
       endif
   
@@ -494,6 +494,8 @@
 
        if ((tilenum.ne.0).or.(gridno.ne.0)) then
         print *,"tilenum or gridno invalid"
+        print *,"tilenum: ",tilenum
+        print *,"gridno: ",gridno
         stop
        endif
 
@@ -541,7 +543,7 @@
         stop
        endif
        if (nFSI_sub.ne.12) then 
-        print *,"nFSI_sub invalid"
+        print *,"nFSI_sub invalid fort headermsg 2: ",nFSI_sub
         stop
        endif
        ! nparts x (velocity + LS + temperature + flag + stress)
@@ -769,7 +771,7 @@
           stop
          endif
          if (nFSI_sub.ne.12) then 
-          print *,"nFSI_sub invalid"
+          print *,"nFSI_sub invalid fort headermsg 3: ",nFSI_sub
           stop
          endif
 

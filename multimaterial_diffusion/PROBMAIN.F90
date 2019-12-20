@@ -49,7 +49,7 @@ implicit none
 
       type(MG_type), dimension(:), allocatable :: MG
 
-      INTEGER_T, dimension(:), allocatable :: im_solid_map
+      INTEGER_T, dimension(:), allocatable :: im_solid_map ! type: 0..nmat-1
 
       real(kind=8),dimension(:,:), allocatable :: dxlevel
       INTEGER,dimension(:,:), allocatable :: domlo_level

@@ -1048,7 +1048,7 @@ stop
       if (nFSI_sub.eq.12) then
        ! do nothing
       else
-       print *,"nFSI_sub invalid"
+       print *,"nFSI_sub invalid ns_header_msg_level: ",nFSI_sub
        stop
       endif
 
@@ -1061,7 +1061,7 @@ stop
 
       tid=0
       gridno=0
-      tilenum=1
+      tilenum=0
       nthreads=1
 
       if ((FSI_operation.eq.0).or. & ! initialize nodes
@@ -1116,7 +1116,7 @@ stop
           nFSI_sub, &
           ngrowFSI_unitfab, &
           global_nparts, &
-          im_solid_map, &
+          im_solid_map, & ! type: 0..nmat-1
           h_small, &
           start_time,  &
           start_dt, &
@@ -1172,7 +1172,7 @@ stop
 
          do partid=1,global_nparts
 
-          im_part=im_solid_map(partid)
+          im_part=im_solid_map(partid)+1
 
           if ((im_part.ge.1).and. &
               (im_part.le.num_materials)) then
@@ -1289,7 +1289,7 @@ stop
           nFSI_sub, &
           ngrowFSI, &
           global_nparts, &
-          im_solid_map, &
+          im_solid_map, & ! type: 0..nmat-1
           h_small, &
           start_time,  &
           start_dt, &
@@ -1392,7 +1392,7 @@ stop
        do im=1,num_materials
         if (FSI_flag(im).eq.7) then
          partid=partid+1
-         im_solid_map(partid)=im
+         im_solid_map(partid)=im-1
         else if (FSI_flag(im).eq.0) then
          ! do nothing
         else
@@ -1404,6 +1404,11 @@ stop
         print *,"partid.ne.global_nparts"
         stop
        endif
+
+        !nparts x (velocity + LS + temperature + flag+stress)  3D
+       nFSI_sub=12
+       nFSI_all=global_nparts*nFSI_sub
+       ngrowFSI=3
 
        start_time=0.0d0
        start_dt=1.0d0
@@ -1417,11 +1422,6 @@ stop
               FSI_operation, &
               FSI_sub_operation, &
               iter)
-
-        !nparts x (velocity + LS + temperature + flag+stress)  3D
-       nFSI_sub=12
-       nFSI_all=global_nparts*nFSI_sub
-       ngrowFSI=3
 
        allocate(MG(0:cache_max_level))
 
@@ -1574,7 +1574,7 @@ stop
           tile_dim, &
           num_materials, &
           global_nparts, &
-          im_solid_map, &
+          im_solid_map, & ! type: 0..nmat-1
           xlo_array, &
           xhi_array)
 

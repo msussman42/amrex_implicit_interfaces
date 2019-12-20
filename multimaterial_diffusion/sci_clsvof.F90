@@ -141,7 +141,7 @@ REAL_T problen_act(3)
 INTEGER_T FSI_NPARTS
 INTEGER_T CTML_NPARTS
 INTEGER_T TOTAL_NPARTS
-INTEGER_T im_solid_mapF(MAX_PARTS)
+INTEGER_T im_solid_mapF(MAX_PARTS) ! type: 0..nmat-1
 INTEGER_T CTML_partid_map(MAX_PARTS)
 INTEGER_T FSI_partid_map(MAX_PARTS)
 
@@ -745,7 +745,10 @@ INTEGER_T :: local_refine_factor
    node3=FSI(part_id)%IntElem(nodes_per_elem-isub,ielem)
    if ((node1.gt.FSI(part_id)%NumNodes).or. &
        (node2.gt.FSI(part_id)%NumNodes).or. &
-       (node3.gt.FSI(part_id)%NumNodes)) then
+       (node3.gt.FSI(part_id)%NumNodes).or. &
+       (node1.lt.1).or. &
+       (node2.lt.1).or. &
+       (node3.lt.1)) then
     print *,"node1,node2, or node3 invalid ",node1,node2,node3
     print *,"ielem=",ielem
     print *,"FSI(part_id)%NumNodes ",FSI(part_id)%NumNodes
@@ -2447,16 +2450,18 @@ INTEGER_T local_nodes,orig_nodes,dir
   print *,"FSI(part_id)%flag_2D_to_3D invalid"
   stop
  endif
+  !  new nodes: z=1   x          x
+  !  old nodes: z=-1  x          x
  local_nodes=FSI(part_id)%NumNodes
  orig_nodes=local_nodes/2
  if (orig_nodes*2.eq.local_nodes) then
   if ((inode.ge.1).and.(inode.le.orig_nodes)) then
-   FSI(part_id)%Node_old(3,inode)=-one
+   FSI(part_id)%Node_old(3,inode)=-one ! z coordinate
    do dir=1,3
     FSI(part_id)%Node_old(dir,inode+orig_nodes)= &
             FSI(part_id)%Node_old(dir,inode)
    enddo
-   FSI(part_id)%Node_old(3,inode+orig_nodes)=one
+   FSI(part_id)%Node_old(3,inode+orig_nodes)=one ! z coordinate
    do dir=1,3
     FSI(part_id)%Node_new(dir,inode)= &
       FSI(part_id)%Node_old(dir,inode)
@@ -2508,12 +2513,15 @@ INTEGER_T local_elements,orig_elements
     FSI(part_id)%ElemData(iflag,iface+orig_elements)= &
       FSI(part_id)%ElemData(iflag,iface)
    enddo
+
+     !           3x         2y     1y
+     !   1x      2x         3y
    FSI(part_id)%IntElem(1,iface+orig_elements)= &
-     FSI(part_id)%IntElem(3,orig_elements)
+     FSI(part_id)%IntElem(3,iface)
    FSI(part_id)%IntElem(2,iface+orig_elements)= &
-     FSI(part_id)%IntElem(1,orig_elements)+orig_nodes
+     FSI(part_id)%IntElem(1,iface)+orig_nodes
    FSI(part_id)%IntElem(3,iface+orig_elements)= &
-     FSI(part_id)%IntElem(1,orig_elements)
+     FSI(part_id)%IntElem(1,iface)
   else
    print *,"iface out of range"
    stop
@@ -2616,6 +2624,9 @@ INTEGER_T :: orig_elements,local_elements
     stop
    endif
 
+    ! allocates and inits: Eul2IntNode,ElemData,IntElem,Node_old,
+    !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
+    !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass
    call init_FSI(part_id,1)  ! allocate_intelem=1
 
    do dir=1,3
@@ -2675,6 +2686,8 @@ INTEGER_T :: orig_elements,local_elements
     enddo !inode=1..2
 !   enddo !inode=1..3
 
+     !          3x
+     !  1x      2x
     localElem(3)=localElem(2)+orig_nodes
 
     if ((localElem(1).eq.localElem(2)).or. &
@@ -6693,6 +6706,8 @@ INTEGER_T im_sanity_check
     FSI_partid_map(part_id)=0
    else
     print *,"FSI_flag(im_part) invalid"
+    print *,"part_id,im_part,FSI_flag(im_part) ", &
+            part_id,im_part,FSI_flag(im_part)
     stop
    endif
 
@@ -8092,7 +8107,7 @@ IMPLICIT NONE
     stop
    endif
    if (nFSI_sub.ne.12) then
-    print *,"nFSI_sub invalid"
+    print *,"nFSI_sub invalid CLSVOF_InitBox: ",nFSI_sub
     stop
    endif
    if ((nparts.lt.1).or.(nparts.ge.nmat)) then
@@ -9714,7 +9729,7 @@ end subroutine CLSVOF_InitBox
         stop
        endif
        if (nFSI_sub.ne.12) then
-        print *,"nFSI_sub invalid"
+        print *,"nFSI_sub invalid CLSVOF_Copy_To_LAG: ",nFSI_sub
         stop
        endif
        if ((nparts.lt.1).or.(nparts.ge.nmat)) then

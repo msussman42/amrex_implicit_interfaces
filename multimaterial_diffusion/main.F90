@@ -469,7 +469,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= December 14, 2019, 15:00"
+print *,"PROTOTYPE CODE DATE= December 20, 2019, 11:57"
 
 im_measure=2
 constant_K_test=0
@@ -539,7 +539,7 @@ problenz=probhiz-probloz
 sci_max_level=0
 fort_max_level=0
 fort_finest_level=0
-do im=1,nmat_in
+do im=1,100
   FSI_flag(im)=0
 enddo
 
