@@ -5742,7 +5742,7 @@ end subroutine advance_solid
 
 
 ! calls CTML_DELTA or hsprime
-subroutine check_force_weight( &
+subroutine check_force_weightBIG( &
   xmap3D,inode,ielem, &
   xc,part_id,time,dx, &
   force_weight,force_vector)
@@ -5861,11 +5861,11 @@ REAL_T dist_scale,df,support_size,line_mass
  endif
   
 return
-end subroutine check_force_weight
+end subroutine check_force_weightBIG
 
 
 
-subroutine checkinpoint(xclosest,normal_closest, &
+subroutine checkinpointBIG(xclosest,normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
   xc,inplane,part_id,time,dx)
@@ -5931,7 +5931,7 @@ REAL_T, dimension(3) :: velparm
  enddo
  mag=sqrt(mag)
  if (mag.le.zero) then
-  print *,"mag invalid checkinpoint 0"
+  print *,"mag invalid checkinpointBIG 0"
   stop
  endif
  do dir=1,3
@@ -5960,11 +5960,11 @@ REAL_T, dimension(3) :: velparm
  endif
 
 return
-end subroutine checkinpoint
+end subroutine checkinpointBIG
 
 
 
-subroutine checkinline(xclosest,normal_closest, &
+subroutine checkinlineBIG(xclosest,normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
   xc,inplane,part_id,time,dx)
@@ -6033,7 +6033,7 @@ REAL_T, dimension(3) :: velparm
   enddo
   mag=sqrt(mag)
   if (mag.le.zero) then
-   print *,"mag invalid checkinline 0"
+   print *,"mag invalid checkinlineBIG 0"
    stop
   endif
   do dir=1,3
@@ -6058,7 +6058,7 @@ REAL_T, dimension(3) :: velparm
   enddo
   mag=sqrt(mag)
   if (mag.le.zero) then
-   print *,"mag invalid checkinline 1"
+   print *,"mag invalid checkinlineBIG 1"
    stop
   endif
   do dir=1,3
@@ -6106,14 +6106,14 @@ REAL_T, dimension(3) :: velparm
  else if (inode.eq.3) then
   ! do nothing
  else
-  print *,"inode invalid in checkinline"
+  print *,"inode invalid in checkinlineBIG"
   stop
  endif
 
 return
-end subroutine checkinline
+end subroutine checkinlineBIG
 
-subroutine checkinplane(xclosest,elemnum,inplane, &
+subroutine checkinplaneBIG(xclosest,elemnum,inplane, &
   minnode,maxnode,element_scale,part_id,time)
 IMPLICIT NONE
 
@@ -6246,7 +6246,7 @@ REAL_T, dimension(3) :: velparm
  endif  ! inplane.eq.1
 
 return
-end subroutine checkinplane
+end subroutine checkinplaneBIG
 
 
 
@@ -7075,7 +7075,7 @@ REAL_T local_buffer(3)
 return
 end subroutine check_overlap
 
-subroutine check_overlap_node(part_id,inode,time, &
+subroutine check_overlap_nodeBIG(part_id,inode,time, &
  minnode, &
  tid,tilenum,dx3D,lev77,overlap)
 IMPLICIT NONE
@@ -7103,7 +7103,7 @@ REAL_T xlo,xhi
  endif
 
  if ((inode.ge.1).and. &
-     (inode.le.FSI(part_id)%NumNodes)) then
+     (inode.le.FSI(part_id)%NumNodesBIG)) then
 
   if ((tid.eq.0).or.(tilenum.eq.0)) then
 
@@ -7173,10 +7173,10 @@ REAL_T xlo,xhi
  endif
 
 return
-end subroutine check_overlap_node
+end subroutine check_overlap_nodeBIG
 
 
-subroutine get_minmax_node(part_id,ielem,time,minnode,maxnode)
+subroutine get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode)
 IMPLICIT NONE
 
 INTEGER_T part_id
@@ -7241,10 +7241,10 @@ REAL_T velparm(3)
  endif
 
 return
-end subroutine get_minmax_node
+end subroutine get_minmax_nodeBIG
 
 
-subroutine get_contained_node(part_id,inode,time,minnode)
+subroutine get_contained_nodeBIG(part_id,inode,time,minnode)
 IMPLICIT NONE
 
 INTEGER_T part_id
@@ -7258,10 +7258,10 @@ REAL_T velparm(3)
 
 
  if ((inode.ge.1).and. &
-     (inode.le.FSI(part_id)%NumNodes)) then
+     (inode.le.FSI(part_id)%NumNodesBIG)) then
 
   do dir=1,3
-   xfoot(dir)=FSI(part_id)%Node(dir,inode)
+   xfoot(dir)=FSI(part_id)%NodeBIG(dir,inode)
    velparm(dir)=zero
   enddo
   call get_target_from_foot(xfoot,xtarget, &
@@ -7275,7 +7275,7 @@ REAL_T velparm(3)
  endif
 
 return
-end subroutine get_contained_node
+end subroutine get_contained_nodeBIG
 
 ! elem_contain_type, node_contain_type,
 ! level_contain_type, contain_elem
@@ -7359,8 +7359,7 @@ IMPLICIT NONE
   print *,"num_elements invalid"
   stop
  endif
-  ! use NumNodesBIG ?
- num_nodes=FSI(part_id)%NumNodes
+ num_nodes=FSI(part_id)%NumNodesBIG
  if (num_nodes.le.0) then
   print *,"num_nodes invalid"
   stop
@@ -7502,7 +7501,7 @@ IMPLICIT NONE
        if (interior_flag.eq.1) then
         ! do nothing
        else if (interior_flag.eq.0) then
-        call get_minmax_node(part_id,ielem,time,minnode,maxnode) 
+        call get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode) 
         do tid_loop=1,nthread_parm
         do tilenum_loop=1, &
                contain_elem(lev77)%num_tiles_on_thread3D_proc(tid_loop)
@@ -7526,7 +7525,7 @@ IMPLICIT NONE
 
          ! traverse FSI(part_id)%IntElemBIG(inode,ielem)
          ! look at FSI(part_id)%NodeBIG(dir,node_id)
-      call get_minmax_node(part_id,ielem,time,minnode,maxnode)
+      call get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode)
      
       if (ielem.eq.1) then
        tid_predict=0
@@ -7652,14 +7651,12 @@ IMPLICIT NONE
        stop
       endif
 
-        ! use nodeBIG ?
-      call get_contained_node(part_id,inode,time,minnode)
+      call get_contained_nodeBIG(part_id,inode,time,minnode)
 
-        ! use nodeBIG ?
        ! isweep==1
-       ! check_overlap_node increments
+       ! check_overlap_nodeBIG increments
        !  contain_elem(lev77)%level_node_data(tid,part_id,tilenum)%numNodes
-      call check_overlap_node(part_id,inode,time, &
+      call check_overlap_nodeBIG(part_id,inode,time, &
         minnode, &
         tid_predict,tilenum_predict, &
         dx3D,lev77,overlap)
@@ -7679,7 +7676,7 @@ IMPLICIT NONE
          if ((tid_loop.ne.tid_predict).or. &
              (tilenum_loop.ne.tilenum_predict)) then
            ! isweep==1
-          call check_overlap_node(part_id,inode,time, &
+          call check_overlap_nodeBIG(part_id,inode,time, &
            minnode, &
            tid_loop,tilenum_loop, &
            dx3D,lev77,overlap)
@@ -7759,7 +7756,7 @@ IMPLICIT NONE
       print *,"CLSVOF_FILLCONTAINER"
       print *,"lev77=",lev77
       print *,"part_id=",part_id
-      print *,"FSI(part_id)%NumNodes ",FSI(part_id)%NumNodes
+      print *,"FSI(part_id)%NumNodesBIG ",FSI(part_id)%NumNodesBIG
       print *,"FSI(part_id)%NumIntElemsBIG ",FSI(part_id)%NumIntElemsBIG
       print *,"total_num_elements ",total_num_elements 
       print *,"total_num_nodes ",total_num_nodes
@@ -8232,7 +8229,7 @@ IMPLICIT NONE
 
       ! for each node in the element, this routine calls:
       ! get_target_from_foot
-     call get_minmax_node(part_id,ielem,time,minnode,maxnode)
+     call get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode)
       ! sanity check
      do dir=1,3
       test_scale=maxnode(dir)-minnode(dir)
@@ -8329,7 +8326,7 @@ IMPLICIT NONE
          if (CTML_force_model.eq.0) then
           do inode=1,nodes_per_elem
             ! calls either CTML_DELTA or hsprime
-           call check_force_weight(xmap3D,inode,ielem, &
+           call check_force_weightBIG(xmap3D,inode,ielem, &
             xx,part_id,time,dxBB,force_weight,force_vector)
            ! nparts x (vel + LS + temperature + flag + stress)
            do dir=1,3
@@ -8370,18 +8367,18 @@ IMPLICIT NONE
           endif
          endif
 
-         call checkinplane(xclosest,ielem,inplane, &
+         call checkinplaneBIG(xclosest,ielem,inplane, &
           minnode,maxnode,element_scale,part_id,time)
 
 ! investigate using NodeNormalBIG (normal defined at nodes)
          do inode=1,nodes_per_elem
           ! check distance to the edges of a triangular element.
-          call checkinline(xclosest,normal_closest, &
+          call checkinlineBIG(xclosest,normal_closest, &
            inode,ielem, &
            unsigned_mindist, &
            xx,inplane,part_id,time,dxBB)
           ! check distance to the nodes of a triangular element.
-          call checkinpoint(xclosest,normal_closest, &
+          call checkinpointBIG(xclosest,normal_closest, &
            inode,ielem, &
            unsigned_mindist, &
            xx,inplane,part_id,time,dxBB)
@@ -8537,7 +8534,7 @@ IMPLICIT NONE
              endif
             enddo  ! dir
 
-            call checkinplane(xcrit,ielem,inplane, &
+            call checkinplaneBIG(xcrit,ielem,inplane, &
              minnode,maxnode,element_scale,part_id,time)
 ! totaldist is the distance between xx and xside
 ! testdist  is the distance between xx and xcrit 
