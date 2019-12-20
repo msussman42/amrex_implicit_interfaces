@@ -1224,7 +1224,7 @@ INTEGER_T :: local_refine_factor
   do dir=1,3
    FSI(part_id)%ElemDataXnotBIG(dir,ielem)=0.0
   enddo
-  call scinormal(ielem,normal,part_id,generate_time)
+  call scinormalBIG(ielem,normal,part_id,generate_time)
   do i=1,nodes_per_elem
    inode=FSI(part_id)%IntElemBIG(i,ielem)
    do dir=1,3
@@ -2590,7 +2590,7 @@ INTEGER_T :: orig_elements,local_elements
    newxxblob1(1)=2.0/30.0
    newxxblob1(2)=2.0/30.0
    newxxblob1(3)=0.0
-   radradblob1=1.0/30.0 
+   radradblob1=30.0 
 
    denpaddle=one
    dampingpaddle=zero
@@ -6254,7 +6254,7 @@ end subroutine checkinplane
 ! solid nodes are ordered clockwise when viewed from the fluid.
 ! for 2d problems, it is assumed that the 3rd node is equal to the 2nd
 ! node, except that the 3rd node extends OUT of the paper. (positive z)
-subroutine scinormal(elemnum,normal,part_id,time)
+subroutine scinormalBIG(elemnum,normal,part_id,time)
 IMPLICIT NONE
 
 INTEGER_T :: part_id
@@ -6343,7 +6343,7 @@ INTEGER_T :: local_normal_invert
  endif
 
 return
-end subroutine scinormal
+end subroutine scinormalBIG
 
 
 subroutine sciarea(elemnum,area,part_id)
@@ -7359,6 +7359,7 @@ IMPLICIT NONE
   print *,"num_elements invalid"
   stop
  endif
+  ! use NumNodesBIG ?
  num_nodes=FSI(part_id)%NumNodes
  if (num_nodes.le.0) then
   print *,"num_nodes invalid"
@@ -7523,6 +7524,8 @@ IMPLICIT NONE
 
      else if (isweep.eq.1) then
 
+         ! traverse FSI(part_id)%IntElemBIG(inode,ielem)
+         ! look at FSI(part_id)%NodeBIG(dir,node_id)
       call get_minmax_node(part_id,ielem,time,minnode,maxnode)
      
       if (ielem.eq.1) then
@@ -7649,8 +7652,10 @@ IMPLICIT NONE
        stop
       endif
 
+        ! use nodeBIG ?
       call get_contained_node(part_id,inode,time,minnode)
 
+        ! use nodeBIG ?
        ! isweep==1
        ! check_overlap_node increments
        !  contain_elem(lev77)%level_node_data(tid,part_id,tilenum)%numNodes
@@ -7754,6 +7759,8 @@ IMPLICIT NONE
       print *,"CLSVOF_FILLCONTAINER"
       print *,"lev77=",lev77
       print *,"part_id=",part_id
+      print *,"FSI(part_id)%NumNodes ",FSI(part_id)%NumNodes
+      print *,"FSI(part_id)%NumIntElemsBIG ",FSI(part_id)%NumIntElemsBIG
       print *,"total_num_elements ",total_num_elements 
       print *,"total_num_nodes ",total_num_nodes
      endif
@@ -8212,7 +8219,7 @@ IMPLICIT NONE
      ! normal points from solid to fluid
      ! phi=n dot (x-xnot)
      ! phi>0 in the fluid
-     call scinormal(ielem,normal,part_id,time)
+     call scinormalBIG(ielem,normal,part_id,time)
 
      if (debug_all.eq.1) then
       print *,"ielem=",ielem

@@ -681,6 +681,7 @@
            print *,"gridno= ",gridno
            print *,"lev77= ",lev77
            print *,"tid= ",tid
+           print *,"tilenum= ",tilenum
            print *,"contain_elem(lev77)%gridno3D(tid+1,tilenum+1)=", &
             contain_elem(lev77)%gridno3D(tid+1,tilenum+1)
            stop
