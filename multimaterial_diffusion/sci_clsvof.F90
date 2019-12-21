@@ -19,6 +19,7 @@
 #define MAX_PARTS 100
 #define flags_per_element 3
 #define CTMLoverflow (1.0D+20)
+#define CTMLunderflow (1.0D-20)
 
 #ifdef BL_USE_MPI
 #define mpi_activate 1
@@ -778,6 +779,25 @@ INTEGER_T :: local_refine_factor
    call xdist_project(x1,x2,part_id,d12)
    call xdist_project(x2,x3,part_id,d23)
    call xdist_project(x3,x1,part_id,d13)
+   if ((d12.ge.CTMLunderflow).and. &
+       (d12.le.CTMLoverflow).and. &
+       (d23.ge.CTMLunderflow).and. &
+       (d23.le.CTMLoverflow).and. &
+       (d13.ge.CTMLunderflow).and. &
+       (d13.le.CTMLoverflow)) then
+    ! do nothing
+   else
+    print *,"ielem ",ielem
+    print *,"isub= ",isub
+    print *,"d12,d23,d13 out of range: ",d12,d23,d13
+    print *,"part_id,node1,node2,node3 ", &
+      part_id,node1,node2,node3
+    do dir=1,3
+     print *,"dir,x1,x2,x3 ",dir,x1(dir),x2(dir),x3(dir)
+    enddo
+    stop
+   endif
+
    if (first_measure.eq.0) then
     biggest_h=d12
     smallest_h=d12

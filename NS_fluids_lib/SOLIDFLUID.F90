@@ -681,6 +681,7 @@
            print *,"gridno= ",gridno
            print *,"lev77= ",lev77
            print *,"tid= ",tid
+           print *,"tilenum= ",tilenum
            print *,"contain_elem(lev77)%gridno3D(tid+1,tilenum+1)=", &
             contain_elem(lev77)%gridno3D(tid+1,tilenum+1)
            stop
@@ -1089,7 +1090,7 @@
         num_tiles_on_thread_proc, &
         nthread_parm, &
         max_num_tiles_on_thread_proc, &
-        tile_dim, &
+        tile_dim, & ! nthreads x max_num_tiles_on_thread_proc
         nmat, &
         nparts, &
         im_solid_map, &
@@ -1211,6 +1212,18 @@
        print *,"num_grids_on_level_proc invalid"
        stop
       endif
+
+      do tilenum=1,tile_dim
+       if ((gridno_array(tilenum).ge.0).and. &
+           (gridno_array(tilenum).le.num_grids_on_level-1)) then
+        ! do nothing
+       else
+        print *,"gridno_array(tilenum) invalid: ",gridno_array(tilenum)
+        print *,"tilenum=",tilenum
+        print *,"num_grids_on_level=",num_grids_on_level
+        stop
+       endif
+      enddo ! tilenum=1,tile_dim
 
       call init_3D_map(xmap3D,xslice3D,problo3D,probhi3D, &
        problo,probhi,dx_max_level,probtype,num_materials)

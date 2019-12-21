@@ -1541,7 +1541,7 @@ stop
          xhi_array(SDIM)=probhiz
         endif
         num_grids_on_level=1
-        gridno_array(1)=1
+        gridno_array(1)=0
         num_tiles_on_thread_proc(1)=1
         max_num_tiles_on_thread_proc=1
         tile_dim=1
