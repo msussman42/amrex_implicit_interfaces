@@ -610,12 +610,13 @@ return
 end subroutine xdist
 
 
-subroutine xdist_project(x1,x2,part_id,dist)
+subroutine xdist_project(x1,x2,part_id,dist_project,dist_actual)
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id
 REAL_T, dimension(3),intent(in) :: x1,x2
-REAL_T, intent(out) :: dist
+REAL_T, intent(out) :: dist_project
+REAL_T, intent(out) :: dist_actual
 INTEGER_T sdim_local
 INTEGER_T dir
 
@@ -631,16 +632,28 @@ INTEGER_T dir
   print *,"FSI(part_id)%flag_2D_to_3D invalid"
   stop
  endif
- dist=zero
+ dist_project=zero
  do dir=1,sdim_local
-  dist=dist+(x1(dir)-x2(dir))**2
+  dist_project=dist_project+(x1(dir)-x2(dir))**2
  enddo
- if (dist.ge.zero) then
-  dist=sqrt(dist)
+ if (dist_project.ge.zero) then
+  dist_project=sqrt(dist_project)
  else
-  print *,"dist bust"
+  print *,"dist_project bust"
   stop
  endif
+
+ dist_actual=zero
+ do dir=1,3
+  dist_actual=dist_actual+(x1(dir)-x2(dir))**2
+ enddo
+ if (dist_actual.ge.zero) then
+  dist_actual=sqrt(dist_actual)
+ else
+  print *,"dist_actual bust"
+  stop
+ endif
+
 
 return
 end subroutine xdist_project
@@ -689,7 +702,8 @@ REAL_T :: smallest_h
 INTEGER_T :: first_measure
 REAL_T :: temp_h
 REAL_T :: mass1,mass2,mass3,mass_split
-REAL_T :: d12,d23,d13
+REAL_T :: d12_2D,d23_2D,d13_2D
+REAL_T :: d12_3D,d23_3D,d13_3D
 REAL_T :: temp1,temp2,temp3
 REAL_T :: tempsplit
 INTEGER_T :: iter
@@ -776,20 +790,20 @@ INTEGER_T :: local_refine_factor
     endif
    enddo ! dir=1..3
 
-   call xdist_project(x1,x2,part_id,d12)
-   call xdist_project(x2,x3,part_id,d23)
-   call xdist_project(x3,x1,part_id,d13)
-   if ((d12.ge.CTMLunderflow).and. &
-       (d12.le.CTMLoverflow).and. &
-       (d23.ge.CTMLunderflow).and. &
-       (d23.le.CTMLoverflow).and. &
-       (d13.ge.CTMLunderflow).and. &
-       (d13.le.CTMLoverflow)) then
+   call xdist_project(x1,x2,part_id,d12_2D,d12_3D)
+   call xdist_project(x2,x3,part_id,d23_2D,d23_3D)
+   call xdist_project(x3,x1,part_id,d13_2D,d13_3D)
+   if ((d12_3D.ge.CTMLunderflow).and. &
+       (d12_3D.le.CTMLoverflow).and. &
+       (d23_3D.ge.CTMLunderflow).and. &
+       (d23_3D.le.CTMLoverflow).and. &
+       (d13_3D.ge.CTMLunderflow).and. &
+       (d13_3D.le.CTMLoverflow)) then
     ! do nothing
    else
     print *,"ielem ",ielem
     print *,"isub= ",isub
-    print *,"d12,d23,d13 out of range: ",d12,d23,d13
+    print *,"d12_3D,d23_3D,d13_3D out of range: ",d12_3D,d23_3D,d13_3D
     print *,"part_id,node1,node2,node3 ", &
       part_id,node1,node2,node3
     do dir=1,3
@@ -799,29 +813,29 @@ INTEGER_T :: local_refine_factor
    endif
 
    if (first_measure.eq.0) then
-    biggest_h=d12
-    smallest_h=d12
+    biggest_h=d12_2D
+    smallest_h=d12_3D
    endif
    first_measure=1
 
-   if (biggest_h.lt.d12) then
-    biggest_h=d12
+   if (biggest_h.lt.d12_2D) then
+    biggest_h=d12_2D
    endif
-   if (biggest_h.lt.d23) then
-    biggest_h=d23
+   if (biggest_h.lt.d23_2D) then
+    biggest_h=d23_2D
    endif
-   if (biggest_h.lt.d13) then
-    biggest_h=d13
+   if (biggest_h.lt.d13_2D) then
+    biggest_h=d13_2D
    endif
 
-   if (smallest_h.gt.d12) then
-    smallest_h=d12
+   if (smallest_h.gt.d12_3D) then
+    smallest_h=d12_3D
    endif
-   if (smallest_h.gt.d23) then
-    smallest_h=d23
+   if (smallest_h.gt.d23_3D) then
+    smallest_h=d23_3D
    endif
-   if (smallest_h.gt.d13) then
-    smallest_h=d13
+   if (smallest_h.gt.d13_3D) then
+    smallest_h=d13_3D
    endif
 
   enddo ! isub=0..nodes_per_elem-3
@@ -967,14 +981,14 @@ INTEGER_T :: local_refine_factor
     temp1=multi_lag(ilevel)%ndtemp(node1)
     temp2=multi_lag(ilevel)%ndtemp(node2)
     temp3=multi_lag(ilevel)%ndtemp(node3)
-    call xdist_project(x1,x2,part_id,d12)
-    call xdist_project(x2,x3,part_id,d23)
-    call xdist_project(x3,x1,part_id,d13)
+    call xdist_project(x1,x2,part_id,d12_2D,d12_3D)
+    call xdist_project(x2,x3,part_id,d23_2D,d23_3D)
+    call xdist_project(x3,x1,part_id,d13_2D,d13_3D)
 
     if ((local_refine_factor.gt.0).and. &
-        (d12.ge.(local_refine_factor-0.01)*h_small).and. &
-        (d12.ge.d23).and. &
-        (d12.ge.d13)) then
+        (d12_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+        (d12_2D.ge.d23_2D).and. &
+        (d12_2D.ge.d13_2D)) then
      do dir=1,3
       xsplit(dir)=0.5*(x1(dir)+x2(dir))
       velsplit(dir)=0.5*(vel1(dir)+vel2(dir))
@@ -1027,9 +1041,9 @@ INTEGER_T :: local_refine_factor
       enddo
      endif ! iter.eq.2
     else if ((local_refine_factor.gt.0).and. &
-             (d23.ge.(local_refine_factor-0.01)*h_small).and. &
-             (d23.ge.d12).and. &
-             (d23.ge.d13)) then
+             (d23_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+             (d23_2D.ge.d12_2D).and. &
+             (d23_2D.ge.d13_2D)) then
      do dir=1,3
       xsplit(dir)=0.5*(x2(dir)+x3(dir))
       velsplit(dir)=0.5*(vel2(dir)+vel3(dir))
@@ -1080,9 +1094,9 @@ INTEGER_T :: local_refine_factor
       enddo
      endif ! iter.eq.2
     else if ((local_refine_factor.gt.0).and. &
-             (d13.ge.(local_refine_factor-0.01)*h_small).and. &
-             (d13.ge.d12).and. &
-             (d13.ge.d23)) then
+             (d13_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+             (d13_2D.ge.d12_2D).and. &
+             (d13_2D.ge.d23_2D)) then
      do dir=1,3
       xsplit(dir)=0.5*(x1(dir)+x3(dir))
       velsplit(dir)=0.5*(vel1(dir)+vel3(dir))
@@ -1305,34 +1319,36 @@ INTEGER_T :: local_refine_factor
 
   enddo ! dir=1..3
 
-  call xdist_project(x1,x2,part_id,d12)
-  call xdist_project(x2,x3,part_id,d23)
-  call xdist_project(x3,x1,part_id,d13)
+  call xdist_project(x1,x2,part_id,d12_2D,d12_3D)
+  call xdist_project(x2,x3,part_id,d23_2D,d23_3D)
+  call xdist_project(x3,x1,part_id,d13_2D,d13_3D)
+
   if (first_measure.eq.0) then
-   biggest_h=d12
-   smallest_h=d12
+   biggest_h=d12_2D
+   smallest_h=d12_3D
   endif
   first_measure=1
 
-  if (biggest_h.lt.d12) then
-   biggest_h=d12
+  if (biggest_h.lt.d12_2D) then
+   biggest_h=d12_2D
   endif
-  if (biggest_h.lt.d23) then
-   biggest_h=d23
+  if (biggest_h.lt.d23_2D) then
+   biggest_h=d23_2D
   endif
-  if (biggest_h.lt.d13) then
-   biggest_h=d13
+  if (biggest_h.lt.d13_2D) then
+   biggest_h=d13_2D
   endif
 
-  if (smallest_h.gt.d12) then
-   smallest_h=d12
+  if (smallest_h.gt.d12_3D) then
+   smallest_h=d12_3D
   endif
-  if (smallest_h.gt.d23) then
-   smallest_h=d23
+  if (smallest_h.gt.d23_3D) then
+   smallest_h=d23_3D
   endif
-  if (smallest_h.gt.d13) then
-   smallest_h=d13
+  if (smallest_h.gt.d13_3D) then
+   smallest_h=d13_3D
   endif
+
  enddo ! ielem=1..FSI(part_id)%NumIntElemsBIG
 
  FSI(part_id)%max_side_len_refined=biggest_h  
