@@ -324,21 +324,13 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=1 non-deforming boundary tests
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
+INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 2000
 INTEGER,PARAMETER          :: plot_int = 1
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
-! fixed_dt=0.0 for probtype_in=3
-! TSTOP=1.25D-3 fixed_dt=1.25D-4  for probtype_in=4 N=64  M=10
-! TSTOP=1.25D-3 fixed_dt=6.25D-5 for probtype_in=4 N=128 M=20
-! TSTOP=1.25D-3 fixed_dt=3.125D-5 for probtype_in=4 N=256 M=40
-! fixed_dt=1.5625D-5 for probtype_in=4 N=512 M=80
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1
 ! dt<dx^2/4=1/(4 * 512^2)=.95E-6
 ! for N=256, explicit time step=3.8E-6
-!
-! pentafoil, hypocycloid (probtype_in.eq.13)
-! TSTOP=0.0125d0
-! fixed_dt=0.0125d0 for probtype_in=13,15,20 N=32  M=1
 !
 ! multiscale: (probtype_in.eq.16)
 ! TSTOP=2.0d0  if filament thickness is 0.02.
@@ -483,7 +475,46 @@ N_START=64
 N_FINISH=64
 M_START=64
 M_FACTOR=2
-fixed_dt_main=1.0d0/128.0d0
+
+if (probtype_in.eq.4) then
+ fixed_dt_main=-1.0d0 ! dt=1.25D-4 N=64  M=10  TSTOP=1.25D-3
+else if ((probtype_in.eq.13).or. & ! hypocycloid
+         (probtype_in.eq.15).or. &
+         (probtype_in.eq.20)) then
+ fixed_dt_main=-1.0d0 ! dt=1.25D-2 N=32  M=1  TSTOP=1.25D-2
+else if (probtype_in.eq.16) then ! multiscale
+ fixed_dt_main=-1.0d0 ! TSTOP=2.0
+else if (probtype_in.eq.1) then ! annulus
+ fixed_dt_main=-1.0d0 ! TSTOP=1.25D-2 
+else if (probtype_in.eq.19) then ! polar solver
+ fixed_dt_main=-1.0d0 ! TSTOP=0.004
+else if (probtype_in.eq.0) then ! flat interface
+ fixed_dt_main=-1.0d0 
+else if (probtype_in.eq.2) then ! vertical
+ fixed_dt_main=-1.0d0 
+else if (probtype_in.eq.3) then ! expanding circle
+ fixed_dt_main=-1.0d0  ! TSTOP=1.25D-3
+else if (probtype_in.eq.4) then ! expanding or shrinking circle
+ fixed_dt_main=-1.0d0  ! TSTOP=1.25D-3
+else if (probtype_in.eq.5) then ! phase change vertical planar interface
+ fixed_dt_main=-1.0d0  ! TSTOP=0.5d0
+else if (probtype_in.eq.400) then ! gingerbread man
+ fixed_dt_main=0.0d0
+else
+ print *,"probtype_in invalid"
+ stop
+endif
+
+if (fixed_dt_main.eq.-1.0d0) then
+ ! do nothing fixed_dt_current=TSTOP/M_CURRENT
+else if (fixed_dt_main.eq.0.0d0) then
+ ! do nothing fixed_dt_current=0.0d0
+else if (fixed_dt_main.gt.0.0d0) then
+ ! do nothing fixed_dt_current=fixed_dt_main
+else
+ print *,"fixed_dt_main invalid"
+ stop
+endif
 
 ! INITIALIZE VARIABLES DECLARED IN vof_cisl.F90 (Module GeneralClass)
 
@@ -1064,6 +1095,17 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  else if (probtype_in.eq.400) then
 
+    ! max_front_vel
+   if ((abs(latent_heat_in).gt.0.0d0).and. &
+       (fort_tempconst(1).ge.0.0d0).and. &
+       (fort_tempconst(2).ge.0.0d0)) then
+    max_front_vel=abs(TDIFF_in)* &
+      (fort_tempconst(1)+fort_tempconst(2))/abs(latent_heat_in)
+   else
+    print *,"latent_heat_in or fort_tempconst invalid"
+    stop
+   endif
+
    saturation_temp(1)=273.0d0
    saturation_temp(2)=273.0d0
    fort_tempconst(1)=273.0
@@ -1085,6 +1127,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    fort_beta(2)=0.0d0
    fort_time_radblob(1)=0.0d0
    fort_time_radblob(2)=0.0d0
+
+   print *,"max_front_vel=",max_front_vel
 
  else if (probtype_in.eq.5) then
 
@@ -1113,7 +1157,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    max_front_vel=1.0d0
 
    print *,"max_front_vel=",max_front_vel
-
 
  else if (probtype_in.eq.0) then
    ! do nothing
@@ -1374,10 +1417,15 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
  endif
 
- allocate(Ts(M_CURRENT+1))
- do i = 1,M_CURRENT+1
+ if (M_MAX_TIME_STEP.ge.M_CURRENT) then
+  allocate(Ts(M_MAX_TIME_STEP+1))
+  do i = 1,M_MAX_TIME_STEP+1
     Ts(i) = (i-1)* deltat_in
- enddo
+  enddo
+ else
+  print *,"M_MAX_TIME_STEP or M_CURRENT invalid"
+  stop
+ endif
 
     ! in: multimat_FVM.F90
     ! init_vfncen calls:
@@ -1661,6 +1709,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 ! BEGIN TIME LOOP - ABOVE INITIALIZATION
 !                   BELOW INTEGRATION IN TIME
 
+   FIX ME
  do tm  = 1, M_CURRENT
     print *,"time_step (tm=1..M_CURRENT) ", tm
 
