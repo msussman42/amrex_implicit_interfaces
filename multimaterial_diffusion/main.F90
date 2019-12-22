@@ -376,6 +376,7 @@ real(kind=8)               :: dx_coarse
 TYPE(POLYGON),dimension(:,:), allocatable :: CELL_FAB
 real(kind=8),external      :: exact_temperature
 real(kind=8)               :: max_front_vel
+real(kind=8)               :: test_vel
 real(kind=8)               :: lmSt
 real(kind=8)               :: rstefan
 real(kind=8)               :: T_FIELD
@@ -387,7 +388,8 @@ integer                     :: nhalf
 integer                     :: imof
 integer                     :: im
 integer                     :: im1
-real(kind=8)                :: sumT,sumvf,voltotal,local_Pi
+integer                     :: im_opp
+real(kind=8)                :: sumT,sumvf,sumvf2,voltotal,local_Pi
 real(kind=8)                :: eff_radius
 real(kind=8)                :: expect_radius
 real(kind=8)                :: test_radblob
@@ -409,6 +411,7 @@ integer local_state_ncomp
 integer nx_in,ny_in,lox_in,loy_in,hix_in,hiy_in
 integer hflag
 integer vofcomp
+integer vofcomp2
 integer scomp
 integer nsteps
 integer inode
@@ -420,6 +423,9 @@ real(kind=8) :: flxtot1,flxtot2
 real(kind=8) :: xlo_fluxtest,xhi_fluxtest
 real(kind=8) :: y_fluxtest1
 real(kind=8) :: y_fluxtest2
+real(kind=8) :: LL
+real(kind=8) :: TSAT
+
 integer j_fluxtest,ilo_fluxtest,ihi_fluxtest,isum
 integer icen,jcen
 
@@ -457,11 +463,12 @@ real(kind=8),dimension(:,:,:),allocatable :: fine_data
 integer :: im_measure
 integer :: constant_K_test
 integer :: iter
+integer :: finished_flag
 real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= December 20, 2019, 17:25"
+print *,"PROTOTYPE CODE DATE= December 22, 2019, 18:10"
 
 im_measure=2
 constant_K_test=0
@@ -1420,7 +1427,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  if (M_MAX_TIME_STEP.ge.M_CURRENT) then
   allocate(Ts(M_MAX_TIME_STEP+1))
   do i = 1,M_MAX_TIME_STEP+1
-    Ts(i) = (i-1)* deltat_in
+    Ts(i) = (i-1)*deltat_in
   enddo
  else
   print *,"M_MAX_TIME_STEP or M_CURRENT invalid"
@@ -1709,8 +1716,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 ! BEGIN TIME LOOP - ABOVE INITIALIZATION
 !                   BELOW INTEGRATION IN TIME
 
-   FIX ME
- do tm  = 1, M_CURRENT
+ tm=1
+ finished_flag=0
+ do while (finished_flag.eq.0)
+
     print *,"time_step (tm=1..M_CURRENT) ", tm
 
     ngeom_recon_in=2*sdim_in+3
@@ -2090,7 +2099,115 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
- enddo ! tm=1,...,M_CURRENT
+   tm=tm+1
+   finished_flag=0
+   if (Ts(tm).ge.TSTOP-1.0D-14) then
+    finished_flag=1
+   endif
+   if (tm-1.ge.M_MAX_TIME_STEP) then
+    finished_flag=1
+   endif
+   if (tm-1.ge.M_CURRENT) then
+    if ((fixed_dt_main.eq.-1.0d0).or. &
+        (fixed_dt_main.gt.0.0d0)) then
+     if ((finished_flag.ne.1).or. &
+         (abs(Ts(tm)-TSTOP).gt.1.0D-14)) then
+      print *,"expecting Ts(M_CURRENT+1) == TSTOP"
+      stop
+     endif
+    else if (fixed_dt_main.eq.0.0d0) then
+     ! check nothing
+    else
+     print *,"fixed_dt_main invalid"
+     stop
+    endif
+   else if (tm.ge.2) then
+    !check nothing
+   else
+    print *,"tm invalid"
+    stop
+   endif
+
+   if (probtype_in.eq.400) then
+    max_front_vel=0.0
+    do i= 0,N_CURRENT-1
+    do j= 0,N_CURRENT-1
+     do im=1,nmat_in
+      vofcomp=nmat_in+local_nten*sdim_in+(im-1)*ngeom_recon_in+1
+      sumvf=T(i,j,vofcomp)
+      if ((sumvf.ge.VOFTOL_REDIST).and. &
+          (sumvf.le.1.0d0-VOFTOL_REDIST)) then
+       do im_opp=1,nmat_in
+        if (im_opp.ne.im) then
+         vofcomp2=nmat_in+local_nten*sdim_in+(im_opp-1)*ngeom_recon_in+1
+         sumvf2=T(i,j,vofcomp2)
+         if ((sumvf2.ge.VOFTOL_REDIST).and. &
+             (sumvf2.le.1.0d0-VOFTOL_REDIST)) then
+          call get_iten(im,im_opp,iten,nmat_in)
+          do ireverse=0,1
+           LL=abs(latent_heat(iten+ireverse*local_nten))
+           TSAT=saturation_temp(iten+ireverse*local_nten)
+           if (LL.gt.0.0d0) then
+            test_vel=fort_heatviscconst(im)*abs(T(i,j,im)-TSAT)/LL+ &
+                     fort_heatviscconst(im_opp)*abs(T(i,j,im_opp)-TSAT)/LL
+            test_vel=test_vel*2.0d0/dx_in(1)
+            if (test_vel.gt.max_front_vel) then
+             max_front_vel=test_vel
+            endif
+           else if (LL.eq.0.0d0) then
+            ! do nothing
+           else
+            print *,"LL invalid"
+            stop
+           endif
+          enddo ! ireverse=0..1
+         else if ((sumvf2.ge.-VOFTOL_REDIST).and. &
+                  (sumvf2.le.VOFTOL_REDIST)) then
+          ! do nothing
+         else if ((sumvf2.ge.1.0d0-VOFTOL_REDIST).and. &
+                  (sumvf2.le.1.0d0+VOFTOL_REDIST)) then
+          ! do nothing
+         else
+          print *,"sumvf2 invalid"
+          stop
+         endif
+        else if (im.eq.im_opp) then
+         ! do nothing
+        else
+         print *,"im or im_opp bust"
+         stop
+        endif
+       enddo ! im_opp=1..nmat_in
+      else if ((sumvf.ge.-VOFTOL_REDIST).and. &
+               (sumvf.le.VOFTOL_REDIST)) then
+       ! do nothing
+      else if ((sumvf.ge.1.0d0-VOFTOL_REDIST).and. &
+               (sumvf.le.1.0d0+VOFTOL_REDIST)) then
+       ! do nothing
+      else
+       print *,"sumvf invalid"
+       stop
+      endif
+     enddo ! im=1..nmat_in
+    enddo
+    enddo
+
+    if (max_front_vel.gt.0.0d0) then
+     deltat_in=h_in*0.25d0/max_front_vel
+     Ts(tm+1)=Ts(tm)+deltat_in
+    else
+     print *,"max_front_vel invalid"
+     stop
+    endif
+
+   else if (probtype_in.ne.400) then
+    ! do not alter dt
+   else
+    print *,"probtype_in invalid"
+    stop
+   endif
+
+ enddo ! do while (finished_flag.eq.0)
 
  iter_average=iter_average/real(M_CURRENT,8)
 
