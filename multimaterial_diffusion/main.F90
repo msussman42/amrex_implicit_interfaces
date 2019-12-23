@@ -468,7 +468,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= December 22, 2019, 18:10"
+print *,"PROTOTYPE CODE DATE= December 23, 2019, 10:00am"
 
 im_measure=2
 constant_K_test=0
@@ -1731,7 +1731,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  finished_flag=0
  do while (finished_flag.eq.0)
 
-    print *,"time_step (tm=1..M_CURRENT) ", tm
+    current_time_in=Ts(tm) ! t^{n} (Ts(i)=(i-1) * deltat)
+
+    print *,"STEP (>=1), TIME, DT ",tm,current_time_in,deltat_in
 
     ngeom_recon_in=2*sdim_in+3
     nx_in=N_CURRENT
@@ -1779,8 +1781,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      enddo
     enddo
     enddo 
-
-    current_time_in=Ts(tm) ! t^{n} (Ts(i)=(i-1) * deltat)
 
      ! in: BICGSTAB_Yang_MULTI.F90
     call INIT_GLOBALS( &
@@ -2111,6 +2111,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    endif
 
    tm=tm+1
+
    finished_flag=0
    if (Ts(tm).ge.TSTOP-1.0D-14) then
     finished_flag=1
@@ -2139,7 +2140,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
-   if (probtype_in.eq.400) then
+   if (probtype_in.eq.400) then ! gingerbread man
+
     max_front_vel=0.0
     do i= 0,N_CURRENT-1
     do j= 0,N_CURRENT-1
@@ -2148,44 +2150,37 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       sumvf=T(i,j,vofcomp)
       if ((sumvf.ge.VOFTOL_REDIST).and. &
           (sumvf.le.1.0d0-VOFTOL_REDIST)) then
-       do im_opp=1,nmat_in
-        if (im_opp.ne.im) then
-         vofcomp2=nmat_in+local_nten*sdim_in+(im_opp-1)*ngeom_recon_in+1
-         sumvf2=T(i,j,vofcomp2)
-         if ((sumvf2.ge.VOFTOL_REDIST).and. &
-             (sumvf2.le.1.0d0-VOFTOL_REDIST)) then
-          call get_iten(im,im_opp,iten,nmat_in)
-          do ireverse=0,1
-           LL=abs(latent_heat(iten+ireverse*local_nten))
-           TSAT=saturation_temp(iten+ireverse*local_nten)
-           if (LL.gt.0.0d0) then
-            test_vel=fort_heatviscconst(im)*abs(T(i,j,im)-TSAT)/LL+ &
-                     fort_heatviscconst(im_opp)*abs(T(i,j,im_opp)-TSAT)/LL
-            test_vel=test_vel*2.0d0/dx_in(1)
-            if (test_vel.gt.max_front_vel) then
-             max_front_vel=test_vel
-            endif
-           else if (LL.eq.0.0d0) then
-            ! do nothing
-           else
-            print *,"LL invalid"
-            stop
+       do im_opp=im+1,nmat_in
+        vofcomp2=nmat_in+local_nten*sdim_in+(im_opp-1)*ngeom_recon_in+1
+        sumvf2=T(i,j,vofcomp2)
+        if ((sumvf2.ge.VOFTOL_REDIST).and. &
+            (sumvf2.le.1.0d0-VOFTOL_REDIST)) then
+         call get_iten(im,im_opp,iten,nmat_in)
+         do ireverse=0,1
+          LL=abs(latent_heat(iten+ireverse*local_nten))
+          TSAT=saturation_temp(iten+ireverse*local_nten)
+          if (LL.gt.0.0d0) then
+           test_vel=fort_heatviscconst(im)*abs(T(i,j,im)-TSAT)/LL+ &
+                    fort_heatviscconst(im_opp)*abs(T(i,j,im_opp)-TSAT)/LL
+           test_vel=test_vel*2.0d0/dx_in(1)
+           if (test_vel.gt.max_front_vel) then
+            max_front_vel=test_vel
            endif
-          enddo ! ireverse=0..1
-         else if ((sumvf2.ge.-VOFTOL_REDIST).and. &
-                  (sumvf2.le.VOFTOL_REDIST)) then
-          ! do nothing
-         else if ((sumvf2.ge.1.0d0-VOFTOL_REDIST).and. &
-                  (sumvf2.le.1.0d0+VOFTOL_REDIST)) then
-          ! do nothing
-         else
-          print *,"sumvf2 invalid"
-          stop
-         endif
-        else if (im.eq.im_opp) then
+          else if (LL.eq.0.0d0) then
+           ! do nothing
+          else
+           print *,"LL invalid"
+           stop
+          endif
+         enddo ! ireverse=0..1
+        else if ((sumvf2.ge.-VOFTOL_REDIST).and. &
+                 (sumvf2.le.VOFTOL_REDIST)) then
          ! do nothing
+        else if ((sumvf2.ge.1.0d0-VOFTOL_REDIST).and. &
+                 (sumvf2.le.1.0d0+VOFTOL_REDIST)) then
+          ! do nothing
         else
-         print *,"im or im_opp bust"
+         print *,"sumvf2 invalid"
          stop
         endif
        enddo ! im_opp=1..nmat_in
@@ -2205,7 +2200,14 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     if (max_front_vel.gt.0.0d0) then
      deltat_in=h_in*0.25d0/max_front_vel
-     Ts(tm+1)=Ts(tm)+deltat_in
+     if (finished_flag.eq.0) then
+      Ts(tm+1)=Ts(tm)+deltat_in
+     else if (finished_flag.eq.1) then
+      ! do nothing
+     else
+      print *,"finished_flag invalid"
+      stop
+     endif
     else
      print *,"max_front_vel invalid"
      stop
