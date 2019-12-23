@@ -1052,6 +1052,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    call solidification_front_speed_driver(fort_time_radblob(2),max_front_vel) 
 
    fort_time_radblob(1)=fort_time_radblob(2)
+   print *,"probtype_in=",probtype_in
    print *,"Stefan_number= ",fort_stefan_number(2)
    print *,"Jacob_number= ",fort_jacob_number(2)
    print *,"lmSt= ",lmSt
@@ -1098,6 +1099,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    call disk_get_speed(1,max_front_vel)
    max_front_vel=abs(max_front_vel) 
 
+   print *,"probtype_in=",probtype_in
    print *,"max_front_vel=",max_front_vel
 
  else if (probtype_in.eq.400) then
@@ -1108,6 +1110,12 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        (fort_tempconst(2).ge.0.0d0)) then
     max_front_vel=abs(TDIFF_in)* &
       (fort_tempconst(1)+fort_tempconst(2))/abs(latent_heat_in)
+    if (max_front_vel.gt.0.0d0) then
+     ! do nothing
+    else
+     print *,"max_front_vel invalid probtype_in=",probtype_in
+     stop
+    endif
    else
     print *,"latent_heat_in or fort_tempconst invalid"
     stop
@@ -1135,6 +1143,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    fort_time_radblob(1)=0.0d0
    fort_time_radblob(2)=0.0d0
 
+   print *,"probtype_in=",probtype_in
    print *,"max_front_vel=",max_front_vel
 
  else if (probtype_in.eq.5) then
@@ -1163,6 +1172,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
    max_front_vel=1.0d0
 
+   print *,"probtype_in=",probtype_in
    print *,"max_front_vel=",max_front_vel
 
  else if (probtype_in.eq.0) then
@@ -1284,6 +1294,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  print *,"BEFORE TIME LOOP, N_CURRENT= ",N_CURRENT
  print *,"BEFORE TIME LOOP, M_CURRENT= ",M_CURRENT
  print *,"TSTOP= ",TSTOP
+ print *,"fixed_dt_main= ",fixed_dt_main
  print *,"fixed_dt_current= ",fixed_dt_current
  print *,"these vars declared in vof_cisl.F90 are init. in main.F90"
  print *,"radcen, radeps, thermal_delta, pentaeps declared: vof_cisl.F90"
