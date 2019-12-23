@@ -695,6 +695,8 @@ Real NavierStokes::bottom_bottom_tol_factor=0.1;
 
 // 0=> u=u_solid if phi_solid>=0
 // 1=> u=u_solid_ghost if phi_solid>=0
+//   for generalized Navier Boundary condition (GNBC),
+//   set law_of_the_wall=1 and also modify "get_use_DCA" in PROB.F90.
 int NavierStokes::law_of_the_wall=0;
 
 // 0 fluid (default)
@@ -4822,6 +4824,11 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow) {
 //                   solid velocity in the fluid=fluid velocity.
 // initialize Fluid Structure Interaction Ghost Multifab
 // multifab = multiple fortran array blocks.
+// called from:
+//  NavierStokes::sum_integrated_quantities
+//  NavierStokes::init_FSI_GHOST_MF_ALL
+//  NavierStokes::initData ()
+//  NavierStokes::prepare_post_process ()
 void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
 
  if ((ngrow<1)||(ngrow>ngrowFSI))
@@ -4865,7 +4872,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
    if (nparts*AMREX_SPACEDIM!=Solid_new.nComp())
     amrex::Error("nparts*AMREX_SPACEDIM!=Solid_new.nComp()");
    MultiFab::Copy(*localMF[FSI_GHOST_MF],Solid_new,0,0,nparts*AMREX_SPACEDIM,0);
-  } else if (law_of_the_wall>0) {
+  } else if (law_of_the_wall==1) {
    if (num_materials_vel!=1)
     amrex::Error("num_materials_vel invalid");
 
@@ -4913,6 +4920,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
 
      // CODY ESTEBE: LAW OF THE WALL
      // fab = fortran array block
+     // Generalized Navier Boundary Condition GNBC (call get_use_DCA)
     FORT_WALLFUNCTION( 
      im_solid_map.dataPtr(),
      &level,

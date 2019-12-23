@@ -468,7 +468,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= December 23, 2019, 10:00am"
+print *,"PROTOTYPE CODE DATE= December 23, 2019, 17:40am"
 
 im_measure=2
 constant_K_test=0
@@ -2162,7 +2162,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
           if (LL.gt.0.0d0) then
            test_vel=fort_heatviscconst(im)*abs(T(i,j,im)-TSAT)/LL+ &
                     fort_heatviscconst(im_opp)*abs(T(i,j,im_opp)-TSAT)/LL
-           test_vel=test_vel*2.0d0/dx_in(1)
+           test_vel=test_vel*4.0d0/dx_in(1)
            if (test_vel.gt.max_front_vel) then
             max_front_vel=test_vel
            endif

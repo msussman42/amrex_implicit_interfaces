@@ -742,18 +742,16 @@ stop
       else if (probtype.eq.400) then
 
        if (iten.eq.1) then
-        call interp_LS_vel_to_grid(xgrid,2,LS,VEL)
         test_front_vel=0.0d0
-        do dir=1,SDIM
-         test_front_vel=test_front_vel+VEL(dir)**2
-        enddo
-        test_front_vel=sqrt(test_front_vel)
+        VEL(1)=0.0d0
+        VEL(2)=0.0d0
        else
         print *,"iten invalid (get exact vel 2)"
         print *,"iten=",iten
         print *,"probtype=",probtype
         stop
        endif
+
       else if (probtype.eq.5) then
 
        if ((iten.eq.1).or.(iten.eq.global_nten+1)) then
