@@ -1399,9 +1399,10 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T :: isout
-INTEGER_T :: inode,inode_fiber,ioproc
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: isout
+INTEGER_T :: inode
+INTEGER_T, intent(in) :: ioproc
 REAL_T, dimension(3) :: maxnode,minnode,xval,xval1,xval2
 REAL_T, dimension(3) :: maxnodebefore,minnodebefore
 INTEGER_T :: dir
@@ -1458,36 +1459,35 @@ INTEGER_T :: ctml_part_id
     minnodebefore(dir)=1.0e+10
    enddo
 
-   do inode=1,FSI(part_id)%NumNodes
-
-    if (AMREX_SPACEDIM.eq.2) then
-     if ((inode.ge.1).and. &
-         (inode.le.ctml_n_fib_active_nodes(ctml_part_id))) then
-      inode_fiber=inode
-     else if ((inode.ge.ctml_n_fib_active_nodes(ctml_part_id)+1).and. &
-              (inode.le.2*ctml_n_fib_active_nodes(ctml_part_id))) then
-      inode_fiber=inode-ctml_n_fib_active_nodes(ctml_part_id)
-     else
-      print *,"node invalid"
-      stop
-     endif
-    else if (AMREX_SPACEDIM.eq.3) then
-     inode_fiber=inode
+   if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+    orig_nodes=FSI(part_id)%NumNodes/2
+    if (orig_nodes*2.eq.FSI(part_id)%NumNodes) then
+     ! do nothing
     else
-     print *,"dimension bust"
+     print *,"orig_nodes invalid"
      stop
-    endif  
+    endif
+   else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+    orig_nodes=FSI(part_id)%NumNodes
+   else
+    print *,"FSI(part_id)%flag_2D_to_3D invalid"
+    stop
+   endif
+
+
+   do inode=1,orig_nodes
+
     do dir=1,AMREX_SPACEDIM
-     xval(dir)=ctml_fib_pst(ctml_part_id,inode_fiber,dir)
-     vel_local(dir)=ctml_fib_vel(ctml_part_id,inode_fiber,dir)
+     xval(dir)=ctml_fib_pst(ctml_part_id,inode,dir)
+     vel_local(dir)=ctml_fib_vel(ctml_part_id,inode,dir)
     enddo
     do dir=1,6
      stress_local(dir)=zero
     enddo
     do dir=1,2*AMREX_SPACEDIM
-     stress_local(dir)=ctml_fib_frc(ctml_part_id,inode_fiber,dir)
+     stress_local(dir)=ctml_fib_frc(ctml_part_id,inode,dir)
     enddo
-    mass_local=ctml_fib_mass(ctml_part_id,inode_fiber)
+    mass_local=ctml_fib_mass(ctml_part_id,inode)
     if (mass_local.gt.zero) then
      ! do nothing
     else
@@ -1495,23 +1495,6 @@ INTEGER_T :: ctml_part_id
      stop
     endif
 
-    if (AMREX_SPACEDIM.eq.3) then
-     ! do nothing
-    else if (AMREX_SPACEDIM.eq.2) then
-     vel_local(3)=zero
-     if (inode.eq.inode_fiber) then
-      xval(3)=problo_act(3)+problen_act(3)/ten
-     else if (inode.eq.inode_fiber+ctml_n_fib_active_nodes(ctml_part_id)) then
-      xval(3)=probhi_act(3)-problen_act(3)/ten
-     else
-      print *,"inode invalid"
-      stop
-     endif
-    else
-     print *,"dimension bust"
-     stop
-    endif
-     
     do dir=1,3
      if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
       minnodebefore(dir)=xval(dir)
@@ -1539,8 +1522,8 @@ INTEGER_T :: ctml_part_id
      if ((maxnode(dir).lt.xval2(dir)).or.(inode.eq.1)) then
       maxnode(dir)=xval2(dir)
      endif
-    enddo ! dir
-     
+    enddo ! dir=1..3
+
     do dir=1,3
      FSI(part_id)%Node_old(dir,inode)=xval1(dir)
      FSI(part_id)%Node_new(dir,inode)=xval1(dir)
@@ -1560,6 +1543,16 @@ INTEGER_T :: ctml_part_id
     FSI(part_id)%NodeMass(inode)=mass_local
     FSI(part_id)%NodeTemp(inode)=zero
     FSI(part_id)%NodeTemp_new(inode)=zero
+
+    if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+     stand_alone_flag=0
+     call convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
+    else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+     ! do nothing
+    else
+     print *,"FSI(part_id)%flag_2D_to_3D invalid"
+     stop
+    endif
        
    enddo  ! inode=1,NumNodes
      
@@ -1591,15 +1584,23 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T :: sdim,ifirst,isout
-INTEGER_T :: iface,inode_base,ioproc
-REAL_T :: curtime,dt
-INTEGER_T :: dir,istep,istop
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: sdim
+INTEGER_T, intent(in) :: ifirst
+INTEGER_T, intent(in) :: isout
+INTEGER_T :: iface,inode_base
+INTEGER_T, intent(in) :: ioproc
+REAL_T, intent(in) :: curtime,dt
+INTEGER_T :: dir
+INTEGER_T, intent(in) :: istep
+INTEGER_T, intent(in) :: istop
 INTEGER_T :: nmat
-INTEGER_T :: node_factor
 INTEGER_T :: ctml_part_id
 INTEGER_T :: inode_crit,inode
+INTEGER_T :: orig_nodes
+INTEGER_T :: orig_elements
+INTEGER_T :: local_nodes
+INTEGER_T :: local_elements
 
   nmat=num_materials
 
@@ -1618,6 +1619,7 @@ INTEGER_T :: inode_crit,inode
   endif
 
   ctml_part_id=CTML_partid_map(part_id)
+
   if ((ctml_part_id.ge.1).and. &
       (ctml_part_id.le.CTML_NPARTS)) then
 
@@ -1645,7 +1647,9 @@ INTEGER_T :: inode_crit,inode
      stop
     endif
    enddo ! inode=1,ctml_n_fib_nodes(ctml_part_id)
+
    if (inode_crit.eq.0) then
+     ! all the node masses are positive
     ctml_n_fib_active_nodes(ctml_part_id)= &
       ctml_n_fib_nodes(ctml_part_id)
    else if (inode_crit.gt.1) then
@@ -1659,7 +1663,7 @@ INTEGER_T :: inode_crit,inode
     stop
    endif
 #else
-   print *,"define MVAHABFSI"
+   print *,"in: CTML_init_sci; define MVAHABFSI"
    stop
 #endif
 
@@ -1676,25 +1680,40 @@ INTEGER_T :: inode_crit,inode
    endif
 
    if (AMREX_SPACEDIM.eq.3) then
-    node_factor=1
+    FSI(part_id)%flag_2D_to_3D=0
     print *,"3D not supported yet"
    else if (AMREX_SPACEDIM.eq.2) then
-    node_factor=2
+    FSI(part_id)%flag_2D_to_3D=1
    else
     print *,"dimension bust"
     stop
    endif
-   FSI(part_id)%NumNodes=ctml_n_fib_active_nodes(ctml_part_id)*node_factor
-    ! 2 triangular elements make up a rectangle.
-   FSI(part_id)%NumIntElems= &
-    (ctml_n_fib_active_nodes(ctml_part_id)-1)*node_factor
+
+   orig_nodes=ctml_n_fib_active_nodes(ctml_part_id)
+   orig_elements=ctml_n_fib_active_nodes(ctml_part_id)-1
+
+   if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+    FSI(part_id)%NumNodes=orig_nodes*2
+    FSI(part_id)%NumIntElems=orig_elements*2
+   else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+    FSI(part_id)%NumNodes=orig_nodes
+    FSI(part_id)%NumIntElems=orig_elements
+   else
+    print *,"FSI(part_id)%flag_2D_to_3D invalid"
+    stop
+   endif
+   local_nodes=FSI(part_id)%NumNodes
+   local_elements=FSI(part_id)%NumIntElems
    FSI(part_id)%IntElemDim=3
  
     ! in: CTML_init_sci 
    if (ifirst.eq.1) then
 
-     ! allocate_intelem=1
-     ! allocates NodeMass
+    ! allocates and inits: Eul2IntNode,ElemData,IntElem,Node_old,
+    !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
+    !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass
+    ! allocate_intelem=1
+    ! allocates NodeMass
     call init_FSI(part_id,1)  
 
     allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
@@ -1708,6 +1727,7 @@ INTEGER_T :: inode_crit,inode
 
    call CTML_init_sci_node(ioproc,part_id,isout)
 
+   FIX ME
    do iface=1,FSI(part_id)%NumIntElems
     if (AMREX_SPACEDIM.eq.3) then
      print *,"3d not ready yet"
@@ -2469,9 +2489,10 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
 return
 end subroutine init_from_cas
 
-subroutine convert_2D_to_3D_nodes_FSI(part_id,inode)
+subroutine convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: stand_alone_flag
 INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: inode
 INTEGER_T local_nodes,orig_nodes,dir
@@ -2504,6 +2525,53 @@ INTEGER_T local_nodes,orig_nodes,dir
     FSI(part_id)%Node_new(dir,inode+orig_nodes)= &
       FSI(part_id)%Node_old(dir,inode+orig_nodes)
    enddo
+
+   if (stand_alone_flag.eq.1) then
+    ! do nothing
+   else if (stand_alone_flag.eq.0) then
+
+    FSI(part_id)%NodeVel(3,inode)=zero
+
+    do dir=1,3
+     FSI(part_id)%Node_current(dir,inode)= &
+             FSI(part_id)%Node_old(dir,inode)
+     FSI(part_id)%Node_current(dir,inode+orig_nodes)= &
+             FSI(part_id)%Node_old(dir,inode+orig_nodes)
+
+     FSI(part_id)%Node(dir,inode)= &
+             FSI(part_id)%Node_old(dir,inode)
+     FSI(part_id)%Node(dir,inode+orig_nodes)= &
+             FSI(part_id)%Node_old(dir,inode+orig_nodes)
+
+     FSI(part_id)%NodeVel(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeVel(dir,orig_nodes)
+
+     FSI(part_id)%NodeVel_old(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeVel(dir,orig_nodes)
+     FSI(part_id)%NodeVel_new(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeVel(dir,orig_nodes)
+    enddo ! dir=1..3
+    do dir=1,6
+     FSI(part_id)%NodeForce(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeForce(dir,inode)
+     FSI(part_id)%NodeForce_old(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeForce_old(dir,inode)
+     FSI(part_id)%NodeForce_new(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeForce_new(dir,inode)
+    enddo
+
+    FSI(part_id)%NodeMass(inode+orig_nodes)= &
+       FSI(part_id)%NodeMass(inode)
+
+    FSI(part_id)%NodeTemp(inode+orig_nodes)= &
+       FSI(part_id)%NodeTemp(inode)
+    FSI(part_id)%NodeTemp_new(inode+orig_nodes)= &
+       FSI(part_id)%NodeTemp_new(inode)
+
+   else
+    print *,"stand_alone_flag invalid"
+    stop
+   endif
   else
    print *,"inode out of range"
    stop
@@ -2589,6 +2657,7 @@ INTEGER_T localElem(3)
 character(40) :: dwave
 INTEGER_T :: orig_nodes,local_nodes
 INTEGER_T :: orig_elements,local_elements
+INTEGER_T :: stand_alone_flag
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -2696,14 +2765,15 @@ INTEGER_T :: orig_elements,local_elements
      if ((maxnode(dir).lt.xval1(dir)).or.(inode.eq.1)) then
       maxnode(dir)=xval1(dir)
      endif
-    enddo ! dir
+    enddo ! dir=1..3
     
     do dir=1,3
      FSI(part_id)%Node_old(dir,inode)=xval1(dir)
      FSI(part_id)%Node_new(dir,inode)=xval1(dir)
     enddo
-    
-    call convert_2D_to_3D_nodes_FSI(part_id,inode)
+   
+    stand_alone_flag=1 
+    call convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 
    enddo  ! inode=1,orig_nodes
    
