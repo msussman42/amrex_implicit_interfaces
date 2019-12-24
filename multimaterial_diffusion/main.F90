@@ -316,7 +316,7 @@ real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 ! 1.0d0 for probtype==400 (melting gingerbread)
 real(kind=8),PARAMETER     :: latent_heat_in = 1.0d0
 !0=low,1=simple,2=Dai and Scannapieco,3=orthogonal probe
-INTEGER,PARAMETER          :: local_operator_internal = 1
+INTEGER,PARAMETER          :: local_operator_internal = 3
 INTEGER,PARAMETER          :: local_operator_external = 1
 INTEGER,PARAMETER          :: local_linear_exact = 1
 INTEGER                    :: ilev,max_ncell
@@ -414,6 +414,7 @@ integer vofcomp
 integer vofcomp2
 integer scomp
 integer nsteps
+integer total_nsteps_parm
 integer inode
 real(kind=8) :: cc(2)
 real(kind=8) :: dtemp1,dtemp2
@@ -468,7 +469,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= December 23, 2019, 17:40am"
+print *,"PROTOTYPE CODE DATE= December 24, 2019, 1:40am"
 
 im_measure=2
 constant_K_test=0
@@ -581,6 +582,21 @@ do im=1,100
   FSI_flag(im)=0
 enddo
 
+if (local_linear_exact.eq.1) then
+ if ((local_operator_internal.eq.3).and. &
+     (local_operator_external.eq.1)) then
+  ! do nothing
+ else
+  print *,"local_operator_internal or local_operator_external bad"
+  stop
+ endif
+else if (local_linear_exact.eq.0) then
+ ! check nothing
+else
+ print *,"local_linear_exact invalid"
+ stop
+endif
+
 print *,"N_START,N_FINISH ",N_START,N_FINISH
 print *,"M_START,M_FACTOR ",M_START,M_FACTOR
 print *,"fixed_dt_main= ",fixed_dt_main
@@ -676,10 +692,13 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     physbc_value(dir,side)=0.0
    enddo
    enddo
-   if ((stefan_flag.eq.1).and.(local_linear_exact.eq.1)) then
+   if ((stefan_flag.eq.1).and. &
+       (local_operator_internal.eq.3).and. &
+       (local_operator_external.eq.1).and. &
+       (local_linear_exact.eq.1)) then
     ! do nothing
    else
-    print *,"stefan_flag or local_linear_exact invalid for probtype==4"
+    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==4"
     stop
    endif
 
@@ -700,10 +719,13 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    physbc_value(2,1)=273.0d0+TDIFF_in
    physbc(2,2)=EXT_DIR
    physbc_value(2,2)=273.0d0+TDIFF_in
-   if ((stefan_flag.eq.1).and.(local_linear_exact.eq.1)) then
+   if ((stefan_flag.eq.1).and. &
+       (local_operator_internal.eq.3).and. &
+       (local_operator_external.eq.1).and. &
+       (local_linear_exact.eq.1)) then
     ! do nothing
    else
-    print *,"stefan_flag or local_linear_exact invalid for probtype==400"
+    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==400"
     stop
    endif
 
@@ -1802,7 +1824,14 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     nsteps=tm-1
     if (tm.eq.1) then
         ! in: BICGSTAB_Yang_MULTI.F90
-     call output_solution(UNEW_in,time_n,nsteps,plot_int,M_CURRENT)
+     if (fixed_dt_main.eq.0.0d0) then
+      total_nsteps_parm=M_MAX_TIME_STEP
+     else
+      total_nsteps_parm=M_CURRENT
+     endif
+     call output_solution(UNEW_in,time_n,nsteps,plot_int, &
+             total_nsteps_parm, &
+             fixed_dt_main)
     endif
 
      ! Dirichlet BC use t^n+1 data
@@ -1958,7 +1987,18 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     nsteps=tm
         ! in: BICGSTAB_Yang_MULTI.F90
-    call output_solution(UNEW_in,time_np1,nsteps,plot_int,M_CURRENT)
+    if (fixed_dt_main.eq.0.0d0) then
+     if (Ts(tm+1).ge.TSTOP-1.0D-14) then
+      total_nsteps_parm=nsteps
+     else
+      total_nsteps_parm=M_MAX_TIME_STEP
+     endif
+    else
+     total_nsteps_parm=M_CURRENT
+    endif
+    call output_solution(UNEW_in,time_np1,nsteps,plot_int, &
+            total_nsteps_parm, &
+            fixed_dt_main)
 
     call DEALLOCATE_GLOBALS()
    

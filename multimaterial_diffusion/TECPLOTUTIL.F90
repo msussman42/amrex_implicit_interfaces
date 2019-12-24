@@ -90,7 +90,7 @@ stop
        stop
       endif
       if (nsteps.lt.0) then
-       print *,"nsteps invalid"
+       print *,"nsteps invalid in tecplotfab nsteps=",nsteps
        stop
       endif
       if (time.lt.zero) then

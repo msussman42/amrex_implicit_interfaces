@@ -2174,12 +2174,14 @@
 
 
 
-      subroutine isogrid(im,nsteps,out_time,plot_int,total_nsteps)
+      subroutine isogrid(im,nsteps,out_time,plot_int,total_nsteps, &
+         fixed_dt_main)
       IMPLICIT NONE
 
       integer, intent(in) :: im
       integer, intent(in) :: nsteps
       integer, intent(in) :: total_nsteps
+      REAL*8,  intent(in) :: fixed_dt_main
       integer, intent(in) :: plot_int
       integer strandid 
       REAL*8 valu
@@ -2229,14 +2231,19 @@
        print *,"im out of range"
        stop
       endif
-      if ((nsteps.ge.0).and.(nsteps.le.total_nsteps)) then
+      if ((nsteps.ge.0).and. &
+          (nsteps.le.total_nsteps)) then
        ! do nothing
       else
-       print *,"nsteps invalid"
+       print *,"nsteps invalid in isogrid: ",nsteps,total_nsteps
        stop
       endif
 
-      write(Mstr,'(I3)') total_nsteps
+      if (fixed_dt_main.eq.0.0d0) then
+       write(Mstr,'(I3)') 0
+      else
+       write(Mstr,'(I3)') total_nsteps
+      endif
       do i=1,3
        if (Mstr(i:i).eq.' ') then
         Mstr(i:i)='0'
@@ -2809,7 +2816,7 @@
 
 
       subroutine output_solution(local_UNEW,out_time,nsteps,plot_int, &
-        total_nsteps)
+        total_nsteps,fixed_dt_main)
       IMPLICIT NONE
 
       character*8 nodedatastr
@@ -2823,6 +2830,7 @@
       integer i,j
       integer, intent(in) :: nsteps
       integer, intent(in) :: total_nsteps
+      REAL*8,  intent(in) :: fixed_dt_main
       integer, intent(in) :: plot_int
       integer strandid,im,lscomp
       REAL*8 xpoint,ypoint
@@ -2856,10 +2864,11 @@
        print *,"state_ncomp invalid"
        stop
       endif
-      if ((nsteps.ge.0).and.(nsteps.le.total_nsteps)) then
+      if ((nsteps.ge.0).and. &
+          (nsteps.le.total_nsteps)) then
        ! do nothing
       else
-       print *,"nsteps invalid"
+       print *,"nsteps invalid in output_solution: ",nsteps,total_nsteps
        stop
       endif
 
@@ -2873,7 +2882,8 @@
            (nsteps.eq.total_nsteps)) then
 
         do im=1,nmat
-         call isogrid(im,nsteps,out_time,plot_int,total_nsteps)
+         call isogrid(im,nsteps,out_time,plot_int,total_nsteps, &
+          fixed_dt_main)
         enddo
 
         write(stepstr,'(I6)') nsteps
@@ -2883,7 +2893,11 @@
          endif
         enddo
 
-        write(Mstr,'(I3)') total_nsteps
+        if (fixed_dt_main.eq.0.0d0) then
+         write(Mstr,'(I3)') 0
+        else
+         write(Mstr,'(I3)') total_nsteps
+        endif
         do i=1,3
          if (Mstr(i:i).eq.' ') then
           Mstr(i:i)='0'

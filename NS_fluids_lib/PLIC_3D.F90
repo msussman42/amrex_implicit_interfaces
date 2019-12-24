@@ -182,7 +182,7 @@ stop
       endif
 
       if (nsteps.lt.0) then
-       print *,"nsteps invalid"
+       print *,"nsteps invalid in sloperecon, nsteps=",nsteps
        stop
       endif
       if ((gridno.lt.0).or. &

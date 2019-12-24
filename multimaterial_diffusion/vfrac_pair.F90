@@ -1772,7 +1772,7 @@ contains
 
   REAL_T, intent(in) :: x_interface(2)
   REAL_T, intent(in) :: xsten(-3:3,2)
-  REAL_T dx_local
+  REAL_T dx_local(2)
   INTEGER_T dir_local
   REAL_T VP_tol
   INTEGER_T in_box
@@ -1781,10 +1781,12 @@ contains
 
   in_box=1
   do dir_local=1,2
-   dx_local=xsten(1,dir_local)-xsten(-1,dir_local)
-   if (dx_local.gt.0.0d0) then
-    if ((x_interface(dir_local).le.xsten(-1,dir_local)-VP_tol*dx_local).or. &
-        (x_interface(dir_local).ge.xsten(1,dir_local)+VP_tol*dx_local)) then
+   dx_local(dir_local)=xsten(1,dir_local)-xsten(-1,dir_local)
+   if (dx_local(dir_local).gt.0.0d0) then
+    if ((x_interface(dir_local).le. &
+         xsten(-1,dir_local)-VP_tol*dx_local(dir_local)).or. &
+        (x_interface(dir_local).ge. &
+         xsten(1,dir_local)+VP_tol*dx_local(dir_local))) then
      if (VP_areaface_current.gt.0.0d0) then
       in_box=0
      else
@@ -1792,9 +1794,9 @@ contains
       stop
      endif
     else if ((x_interface(dir_local).ge. &
-              xsten(-1,dir_local)-VP_tol*dx_local).and. &
+              xsten(-1,dir_local)-VP_tol*dx_local(dir_local)).and. &
              (x_interface(dir_local).le. &
-              xsten(1,dir_local)+VP_tol*dx_local)) then
+              xsten(1,dir_local)+VP_tol*dx_local(dir_local))) then
      ! do nothing
     else
      print *,"x_interface invalid"
@@ -1816,6 +1818,12 @@ contains
    print *,"y=",xsten(0,2)
    print *,"VP_xcentroid ",x_interface(1)
    print *,"VP_ycentroid ",x_interface(2)
+   do dir_local=1,2
+    print *,"dir_local= ",dir_local
+    print *,"dx_local(dir_local) ",dx_local(dir_local)
+    print *,"xlocut=",xsten(-1,dir_local)-VP_tol*dx_local(dir_local)
+    print *,"xhicut=",xsten(1,dir_local)+VP_tol*dx_local(dir_local)
+   enddo
    print *,"VP_areaface_current ",VP_areaface_current
    print *,"VP_dir_current ",VP_dir_current
    print *,"VP_side_current ",VP_side_current
