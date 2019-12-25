@@ -8,12 +8,12 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
-#define element_buffer_tol 0.01
+#define element_buffer_tol 0.01d0
 
 ! 10 seconds for tail to do a full period
 #define WHALE_LENGTH 13.0
 #define PERIOD_TAIL 10.0
-#define DT_DUFFY 0.01
+#define DT_DUFFY 0.01d0
 #define STEPS_DUFFY 800
 #define injG 1
 #define MAX_PARTS 100
@@ -40,7 +40,9 @@ type lag_type
  INTEGER_T :: n_nodes,n_elems
  REAL_T, pointer :: nd(:,:)    ! nd(dir,node_id) dir=1..3
  REAL_T, pointer :: ndvel(:,:) ! ndvel(dir,node_id) dir=1..3
+  ! ndmass=nddensity * ndvolume
  REAL_T, pointer :: ndmass(:) ! ndmass(node_id) 
+ REAL_T, pointer :: nddensity(:) ! nddensity(node_id) 
  REAL_T, pointer :: ndforce(:,:) ! ndforce(dir,node_id)  dir=1..6
  REAL_T, pointer :: ndtemp(:)  ! ndtemp(node_id)
   ! number of nodes in element=elemdt(1,elemid)
@@ -73,6 +75,7 @@ type mesh_type
  REAL_T, pointer :: NodeBIG(:,:)
  REAL_T, pointer :: NodeVelBIG(:,:)
  REAL_T, pointer :: NodeForceBIG(:,:)  ! (6,node_id)
+ REAL_T, pointer :: NodeDensityBIG(:)
  REAL_T, pointer :: NodeMassBIG(:)
  REAL_T, pointer :: NodeTempBIG(:)  
  REAL_T, pointer :: NodeNormalBIG(:,:)
@@ -89,6 +92,7 @@ type mesh_type
  REAL_T, pointer :: NodeForce(:,:)
  REAL_T, pointer :: NodeForce_old(:,:)
  REAL_T, pointer :: NodeForce_new(:,:)
+ REAL_T, pointer :: NodeDensity(:)
  REAL_T, pointer :: NodeMass(:)
  REAL_T, pointer :: NodeTemp(:)
  REAL_T, pointer :: NodeTemp_old(:)
@@ -259,6 +263,7 @@ INTEGER_T inode,dir
   enddo
    ! in: init2_FSI
   FSI(part_id)%NodeMass(inode)=one
+  FSI(part_id)%NodeDensity(inode)=one
  enddo  ! inode=1,NumNodes
 
 return
@@ -331,7 +336,7 @@ REAL_T dilated_time
 ! if probtype=538 and part_id=1 and RZ, then 
 ! dist(x,y,z)=dist(x+0.0015,y-0.0045,z)
 ! if probtype=538 and part_id=2, then
-! dist(x,y,z)= dist(x,y,z+0.01)
+! dist(x,y,z)= dist(x,y,z+0.01d0)
 ! IN FUTURE, DO NOT CALL "UNITE", INSTEAD
 ! USE BOTH FSI and FSI_NEEDLE when returning LS or VEL.
 ! ALSO IN FUTURE, DO NOT REPEATEDLY CALL GENERATE_NEW_TRIANGLES
@@ -389,12 +394,12 @@ REAL_T dilated_time
       t1 = t
       displ1(1) = x
       displ1(2) = y
-      displ1(3) = 0.5*(z0+z90)
+      displ1(3) = 0.5d0*(z0+z90)
      else if (t.gt.dilated_time) then
       t2 = t
       displ2(1) = x
       displ2(2) = y
-      displ2(3) = 0.5*(z0+z90)
+      displ2(3) = 0.5d0*(z0+z90)
       dt = t2-t1
       goto 10
      endif
@@ -571,12 +576,14 @@ INTEGER_T inode,dir,allocate_intelem
 
   ! in: init_FSI
  allocate(FSI(part_id)%NodeMass(FSI(part_id)%NumNodes))
+ allocate(FSI(part_id)%NodeDensity(FSI(part_id)%NumNodes))
 
  do inode=1,FSI(part_id)%NumNodes
   FSI(part_id)%Eul2IntNode(inode)=inode
 
    ! in: init_FSI
   FSI(part_id)%NodeMass(inode)=one
+  FSI(part_id)%NodeDensity(inode)=one
 
   FSI(part_id)%NodeTemp_old(inode)=0.0
   FSI(part_id)%NodeTemp_new(inode)=0.0
@@ -681,6 +688,30 @@ INTEGER_T :: dir
 return
 end subroutine xdistmin
 
+subroutine get_new_half_vols(x1,x2,xsplit,volL,volR)
+IMPLICIT NONE
+
+REAL_T, intent(in), dimension(3) :: x1,x2,xsplit
+REAL_T, intent(out) :: volL,volR
+INTEGER_T :: dir
+
+ volL=zero
+ volR=zero
+ do dir=1,3
+  volL=volL+(xsplit(dir)-x1(dir))**2
+  volR=volR+(xsplit(dir)-x2(dir))**2
+ enddo
+ if ((volL.gt.zero).and.(volR.gt.zero)) then
+  volL=sqrt(volL)
+  volR=sqrt(volR)
+ else
+  print *,"volL or volR invalid in get_new_half_vols"
+  print *,"volL,volR= ",volL,volR
+  stop
+ endif
+
+end subroutine get_new_half_vols
+
 ! split triangles so that size is no bigger than "h_small"
 subroutine generate_new_triangles(initflag,problo,probhi, &
   part_id,ioproc,isout,h_small)
@@ -696,12 +727,16 @@ REAL_T :: h_small
 REAL_T, dimension(3) :: x1,x2,x3
 REAL_T, dimension(3) :: vel1,vel2,vel3
 REAL_T, dimension(6) :: force1,force2,force3,forcesplit
-REAL_T, dimension(3) :: xsplit,velsplit
+REAL_T, dimension(3) :: xsplit
+REAL_T, dimension(3) :: velsplit
 REAL_T :: biggest_h
 REAL_T :: smallest_h
 INTEGER_T :: first_measure
 REAL_T :: temp_h
 REAL_T :: mass1,mass2,mass3,mass_split
+REAL_T :: new_massL,new_massR
+REAL_T :: volL,volR
+REAL_T :: den1,den2,den3,den_split
 REAL_T :: d12_2D,d23_2D,d13_2D
 REAL_T :: d12_3D,d23_3D,d13_3D
 REAL_T :: temp1,temp2,temp3
@@ -853,7 +888,7 @@ INTEGER_T :: local_refine_factor
  else if (local_refine_factor.ge.1) then
   n_lag_levels=1
   temp_h=biggest_h
-  do while (temp_h.gt.(local_refine_factor-0.01)*h_small)
+  do while (temp_h.gt.(local_refine_factor-0.01d0)*h_small)
    temp_h=half*temp_h
    n_lag_levels=n_lag_levels+2  ! two sides might exceed limit
   enddo
@@ -884,6 +919,7 @@ INTEGER_T :: local_refine_factor
  allocate(multi_lag(1)%ndvel(3,FSI(part_id)%NumNodes))
  allocate(multi_lag(1)%ndforce(6,FSI(part_id)%NumNodes))
  allocate(multi_lag(1)%ndmass(FSI(part_id)%NumNodes))
+ allocate(multi_lag(1)%nddensity(FSI(part_id)%NumNodes))
  allocate(multi_lag(1)%ndtemp(FSI(part_id)%NumNodes))
  allocate(multi_lag(1)%elemdt(3,new_NumIntElems))
  allocate(multi_lag(1)%intelemdt(4,new_NumIntElems))
@@ -893,6 +929,7 @@ INTEGER_T :: local_refine_factor
    multi_lag(1)%ndvel(dir,i)=FSI(part_id)%NodeVel(dir,i)
   enddo
   multi_lag(1)%ndmass(i)=FSI(part_id)%NodeMass(i)
+  multi_lag(1)%nddensity(i)=FSI(part_id)%NodeDensity(i)
   do dir=1,6
    multi_lag(1)%ndforce(dir,i)=FSI(part_id)%NodeForce(dir,i)
   enddo
@@ -936,6 +973,7 @@ INTEGER_T :: local_refine_factor
     allocate(multi_lag(ilevel+1)%ndvel(3,save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndforce(6,save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndmass(save_n_nodes))
+    allocate(multi_lag(ilevel+1)%nddensity(save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndtemp(save_n_nodes))
     allocate(multi_lag(ilevel+1)%elemdt(3,save_n_elems))
     allocate(multi_lag(ilevel+1)%intelemdt(4,save_n_elems))
@@ -945,6 +983,7 @@ INTEGER_T :: local_refine_factor
       multi_lag(ilevel+1)%ndvel(dir,i)=multi_lag(ilevel)%ndvel(dir,i)
      enddo
      multi_lag(ilevel+1)%ndmass(i)=multi_lag(ilevel)%ndmass(i)
+     multi_lag(ilevel+1)%nddensity(i)=multi_lag(ilevel)%nddensity(i)
      do dir=1,6
       multi_lag(ilevel+1)%ndforce(dir,i)=multi_lag(ilevel)%ndforce(dir,i)
      enddo
@@ -973,6 +1012,9 @@ INTEGER_T :: local_refine_factor
     mass1=multi_lag(ilevel_current)%ndmass(node1)
     mass2=multi_lag(ilevel_current)%ndmass(node2)
     mass3=multi_lag(ilevel_current)%ndmass(node3)
+    den1=multi_lag(ilevel_current)%nddensity(node1)
+    den2=multi_lag(ilevel_current)%nddensity(node2)
+    den3=multi_lag(ilevel_current)%nddensity(node3)
     do dir=1,6
      force1(dir)=multi_lag(ilevel)%ndforce(dir,node1)
      force2(dir)=multi_lag(ilevel)%ndforce(dir,node2)
@@ -986,19 +1028,33 @@ INTEGER_T :: local_refine_factor
     call xdist_project(x3,x1,part_id,d13_2D,d13_3D)
 
     if ((local_refine_factor.gt.0).and. &
-        (d12_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+        (d12_2D.ge.(local_refine_factor-0.01d0)*h_small).and. &
         (d12_2D.ge.d23_2D).and. &
         (d12_2D.ge.d13_2D)) then
      do dir=1,3
-      xsplit(dir)=0.5*(x1(dir)+x2(dir))
-      velsplit(dir)=0.5*(vel1(dir)+vel2(dir))
+      xsplit(dir)=0.5d0*(x1(dir)+x2(dir))
+      velsplit(dir)=0.5d0*(vel1(dir)+vel2(dir))
      enddo
      do dir=1,6
-      forcesplit(dir)=0.5*(force1(dir)+force2(dir))
+      forcesplit(dir)=0.5d0*(force1(dir)+force2(dir))
      enddo
 
-     tempsplit=0.5*(temp1+temp2)
-     mass_split=(mass1+mass2)/three  ! criterion: mass is conserved
+     tempsplit=0.5d0*(temp1+temp2)
+     den_split=0.5d0*(den1+den2)
+       !  x1     x_split     x2
+       ! den1 * vol1R = mass1R   
+       ! den2 * vol2L = mass2L   
+       ! 0.5d0 * den12 * (vol1R+vol2L) = mass12
+     call get_new_half_vols(x1,x2,xsplit,volL,volR)
+     mass_split=0.5d0*den_split*(volL+volR)
+     new_massL=mass1-0.5d0*den_split*volL
+     new_massR=mass2-0.5d0*den_split*volR
+     if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
+      ! do nothing
+     else
+      print *,"new_massL or new_massR invalid"
+      stop
+     endif
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
      multi_lag(ilevel+1)%n_elems=multi_lag(ilevel+1)%n_elems+2
@@ -1013,9 +1069,10 @@ INTEGER_T :: local_refine_factor
       do dir=1,6
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
+      multi_lag(ilevel+1)%nddensity(nsplit)=den_split
       multi_lag(ilevel+1)%ndmass(nsplit)=mass_split
-      multi_lag(ilevel+1)%ndmass(node1)=two*mass1/three
-      multi_lag(ilevel+1)%ndmass(node2)=two*mass2/three
+      multi_lag(ilevel+1)%ndmass(node1)=new_massL
+      multi_lag(ilevel+1)%ndmass(node2)=new_massR
 
       multi_lag(ilevel+1)%ndtemp(nsplit)=tempsplit
 
@@ -1041,19 +1098,30 @@ INTEGER_T :: local_refine_factor
       enddo
      endif ! iter.eq.2
     else if ((local_refine_factor.gt.0).and. &
-             (d23_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+             (d23_2D.ge.(local_refine_factor-0.01d0)*h_small).and. &
              (d23_2D.ge.d12_2D).and. &
              (d23_2D.ge.d13_2D)) then
      do dir=1,3
-      xsplit(dir)=0.5*(x2(dir)+x3(dir))
-      velsplit(dir)=0.5*(vel2(dir)+vel3(dir))
+      xsplit(dir)=0.5d0*(x2(dir)+x3(dir))
+      velsplit(dir)=0.5d0*(vel2(dir)+vel3(dir))
      enddo
      do dir=1,6
-      forcesplit(dir)=0.5*(force2(dir)+force3(dir))
+      forcesplit(dir)=0.5d0*(force2(dir)+force3(dir))
      enddo
  
-     tempsplit=0.5*(temp2+temp3)
-     mass_split=(mass2+mass3)/three ! criterion: mass is conserved
+     tempsplit=0.5d0*(temp2+temp3)
+     den_split=0.5d0*(den2+den3)
+
+     call get_new_half_vols(x2,x3,xsplit,volL,volR)
+     mass_split=0.5d0*den_split*(volL+volR)
+     new_massL=mass2-0.5d0*den_split*volL
+     new_massR=mass3-0.5d0*den_split*volR
+     if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
+      ! do nothing
+     else
+      print *,"new_massL or new_massR invalid"
+      stop
+     endif
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
      multi_lag(ilevel+1)%n_elems=multi_lag(ilevel+1)%n_elems+2
@@ -1068,9 +1136,10 @@ INTEGER_T :: local_refine_factor
       do dir=1,6
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
+      multi_lag(ilevel+1)%nddensity(nsplit)=den_split
       multi_lag(ilevel+1)%ndmass(nsplit)=mass_split
-      multi_lag(ilevel+1)%ndmass(node2)=two*mass2/three
-      multi_lag(ilevel+1)%ndmass(node3)=two*mass3/three
+      multi_lag(ilevel+1)%ndmass(node2)=new_massL
+      multi_lag(ilevel+1)%ndmass(node3)=new_massR
 
       multi_lag(ilevel+1)%ndtemp(nsplit)=tempsplit
 
@@ -1094,19 +1163,30 @@ INTEGER_T :: local_refine_factor
       enddo
      endif ! iter.eq.2
     else if ((local_refine_factor.gt.0).and. &
-             (d13_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+             (d13_2D.ge.(local_refine_factor-0.01d0)*h_small).and. &
              (d13_2D.ge.d12_2D).and. &
              (d13_2D.ge.d23_2D)) then
      do dir=1,3
-      xsplit(dir)=0.5*(x1(dir)+x3(dir))
-      velsplit(dir)=0.5*(vel1(dir)+vel3(dir))
+      xsplit(dir)=0.5d0*(x1(dir)+x3(dir))
+      velsplit(dir)=0.5d0*(vel1(dir)+vel3(dir))
      enddo
      do dir=1,6
-      forcesplit(dir)=0.5*(force1(dir)+force3(dir))
+      forcesplit(dir)=0.5d0*(force1(dir)+force3(dir))
      enddo
 
-     tempsplit=0.5*(temp1+temp3)
-     mass_split=(mass1+mass3)/three ! criterion: mass is conserved
+     tempsplit=0.5d0*(temp1+temp3)
+     den_split=0.5d0*(den1+den3)
+
+     call get_new_half_vols(x1,x3,xsplit,volL,volR)
+     mass_split=0.5d0*den_split*(volL+volR)
+     new_massL=mass1-0.5d0*den_split*volL
+     new_massR=mass3-0.5d0*den_split*volR
+     if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
+      ! do nothing
+     else
+      print *,"new_massL or new_massR invalid"
+      stop
+     endif
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
      multi_lag(ilevel+1)%n_elems=multi_lag(ilevel+1)%n_elems+2
@@ -1121,9 +1201,10 @@ INTEGER_T :: local_refine_factor
       do dir=1,6
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
+      multi_lag(ilevel+1)%nddensity(nsplit)=den_split
       multi_lag(ilevel+1)%ndmass(nsplit)=mass_split
-      multi_lag(ilevel+1)%ndmass(node1)=two*mass1/three
-      multi_lag(ilevel+1)%ndmass(node3)=two*mass3/three
+      multi_lag(ilevel+1)%ndmass(node1)=new_massL
+      multi_lag(ilevel+1)%ndmass(node3)=new_massR
 
       multi_lag(ilevel+1)%ndtemp(nsplit)=tempsplit
 
@@ -1178,6 +1259,7 @@ INTEGER_T :: local_refine_factor
   deallocate(FSI(part_id)%NodeVelBIG)
   deallocate(FSI(part_id)%NodeForceBIG)
   deallocate(FSI(part_id)%NodeMassBIG)
+  deallocate(FSI(part_id)%NodeDensityBIG)
   deallocate(FSI(part_id)%NodeTempBIG)
   deallocate(FSI(part_id)%NodeNormalBIG)
   deallocate(FSI(part_id)%ElemNodeCountBIG)
@@ -1194,6 +1276,7 @@ INTEGER_T :: local_refine_factor
  allocate(FSI(part_id)%NodeVelBIG(3,FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeForceBIG(6,FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeMassBIG(FSI(part_id)%NumNodesBIG))
+ allocate(FSI(part_id)%NodeDensityBIG(FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeTempBIG(FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%ElemNodeCountBIG(FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%ElemDataXnotBIG(3,FSI(part_id)%NumIntElemsBIG))
@@ -1230,6 +1313,7 @@ INTEGER_T :: local_refine_factor
      multi_lag(n_lag_levels)%ndforce(dir,inode)
   enddo
   FSI(part_id)%NodeMassBIG(inode)=multi_lag(n_lag_levels)%ndmass(inode)
+  FSI(part_id)%NodeDensityBIG(inode)=multi_lag(n_lag_levels)%nddensity(inode)
   FSI(part_id)%NodeTempBIG(inode)=multi_lag(n_lag_levels)%ndtemp(inode)
   FSI(part_id)%ElemNodeCountBIG(inode)=0
  enddo ! inode=1,FSI(part_id)%NumNodesBIG
@@ -1241,6 +1325,7 @@ INTEGER_T :: local_refine_factor
   deallocate(multi_lag(i)%ndvel)
   deallocate(multi_lag(i)%ndforce)
   deallocate(multi_lag(i)%ndmass)
+  deallocate(multi_lag(i)%nddensity)
   deallocate(multi_lag(i)%ndtemp)
  enddo
  deallocate(multi_lag)
@@ -1399,10 +1484,12 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T :: isout
-INTEGER_T :: inode,inode_fiber,ioproc
-REAL_T, dimension(3) :: maxnode,minnode,xval,xval1,xval2
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: isout
+INTEGER_T :: inode
+INTEGER_T, intent(in) :: ioproc
+REAL_T, dimension(3) :: maxnode,minnode
+REAL_T, dimension(3) :: xval,xval1,xval2,xvalm1,xvalp1
 REAL_T, dimension(3) :: maxnodebefore,minnodebefore
 INTEGER_T :: dir
 
@@ -1410,7 +1497,11 @@ REAL_T, dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
 REAL_T, dimension(3) :: vel_local
 REAL_T, dimension(6) :: stress_local
 REAL_T :: mass_local
+REAL_T :: density_local
+REAL_T :: volm1,volp1
 REAL_T :: radradblob1,radradblob2
+INTEGER_T :: stand_alone_flag
+INTEGER_T :: orig_nodes
 INTEGER_T :: nmat
 INTEGER_T :: ctml_part_id
 
@@ -1458,60 +1549,83 @@ INTEGER_T :: ctml_part_id
     minnodebefore(dir)=1.0e+10
    enddo
 
-   do inode=1,FSI(part_id)%NumNodes
-
-    if (AMREX_SPACEDIM.eq.2) then
-     if ((inode.ge.1).and. &
-         (inode.le.ctml_n_fib_active_nodes(ctml_part_id))) then
-      inode_fiber=inode
-     else if ((inode.ge.ctml_n_fib_active_nodes(ctml_part_id)+1).and. &
-              (inode.le.2*ctml_n_fib_active_nodes(ctml_part_id))) then
-      inode_fiber=inode-ctml_n_fib_active_nodes(ctml_part_id)
-     else
-      print *,"node invalid"
-      stop
-     endif
-    else if (AMREX_SPACEDIM.eq.3) then
-     inode_fiber=inode
+   if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+    orig_nodes=FSI(part_id)%NumNodes/2
+    if (orig_nodes*2.eq.FSI(part_id)%NumNodes) then
+     ! do nothing
     else
-     print *,"dimension bust"
+     print *,"orig_nodes invalid"
      stop
-    endif  
-    do dir=1,AMREX_SPACEDIM
-     xval(dir)=ctml_fib_pst(ctml_part_id,inode_fiber,dir)
-     vel_local(dir)=ctml_fib_vel(ctml_part_id,inode_fiber,dir)
+    endif
+   else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+    orig_nodes=FSI(part_id)%NumNodes
+   else
+    print *,"FSI(part_id)%flag_2D_to_3D invalid"
+    stop
+   endif
+
+
+   do inode=1,orig_nodes
+
+    do dir=1,3
+     xval(dir)=zero
+     xvalm1(dir)=zero
+     xvalp1(dir)=zero
+     vel_local(dir)=zero
     enddo
+
+    do dir=1,AMREX_SPACEDIM
+     xval(dir)=ctml_fib_pst(ctml_part_id,inode,dir)
+     if (inode.gt.1) then
+      xvalm1(dir)=ctml_fib_pst(ctml_part_id,inode-1,dir)
+     endif
+     if (inode.lt.orig_nodes) then
+      xvalp1(dir)=ctml_fib_pst(ctml_part_id,inode+1,dir)
+     endif
+     vel_local(dir)=ctml_fib_vel(ctml_part_id,inode,dir)
+    enddo
+    volm1=zero
+    volp1=zero
+    if (inode.gt.1) then
+     volm1=zero
+     do dir=1,AMREX_SPACEDIM
+      volm1=volm1+(xval(dir)-xvalm1(dir))**2
+     enddo
+     volm1=half*sqrt(volm1)
+    endif 
+    if (inode.lt.orig_nodes) then
+     volp1=zero
+     do dir=1,AMREX_SPACEDIM
+      volp1=volp1+(xval(dir)-xvalp1(dir))**2
+     enddo
+     volp1=half*sqrt(volp1)
+    endif
+
     do dir=1,6
      stress_local(dir)=zero
     enddo
     do dir=1,2*AMREX_SPACEDIM
-     stress_local(dir)=ctml_fib_frc(ctml_part_id,inode_fiber,dir)
+     stress_local(dir)=ctml_fib_frc(ctml_part_id,inode,dir)
     enddo
-    mass_local=ctml_fib_mass(ctml_part_id,inode_fiber)
+    mass_local=ctml_fib_mass(ctml_part_id,inode)
     if (mass_local.gt.zero) then
      ! do nothing
     else
      print *,"mass_local invalid, mass_local=",mass_local
      stop
     endif
-
-    if (AMREX_SPACEDIM.eq.3) then
-     ! do nothing
-    else if (AMREX_SPACEDIM.eq.2) then
-     vel_local(3)=zero
-     if (inode.eq.inode_fiber) then
-      xval(3)=problo_act(3)+problen_act(3)/ten
-     else if (inode.eq.inode_fiber+ctml_n_fib_active_nodes(ctml_part_id)) then
-      xval(3)=probhi_act(3)-problen_act(3)/ten
+    if (volm1+volp1.gt.zero) then
+     if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+      density_local=mass_local/(volm1+volp1)
      else
-      print *,"inode invalid"
+      print *,"do not know how to fine density_local if 3d"
       stop
      endif
     else
-     print *,"dimension bust"
+     print *,"volm1 or volp1 invalid",volm1,volp1
      stop
     endif
-     
+
     do dir=1,3
      if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
       minnodebefore(dir)=xval(dir)
@@ -1539,8 +1653,8 @@ INTEGER_T :: ctml_part_id
      if ((maxnode(dir).lt.xval2(dir)).or.(inode.eq.1)) then
       maxnode(dir)=xval2(dir)
      endif
-    enddo ! dir
-     
+    enddo ! dir=1..3
+
     do dir=1,3
      FSI(part_id)%Node_old(dir,inode)=xval1(dir)
      FSI(part_id)%Node_new(dir,inode)=xval1(dir)
@@ -1549,7 +1663,7 @@ INTEGER_T :: ctml_part_id
      FSI(part_id)%NodeVel(dir,inode)=vel_local(dir)
      FSI(part_id)%NodeVel_old(dir,inode)=vel_local(dir)
      FSI(part_id)%NodeVel_new(dir,inode)=vel_local(dir)
-    enddo
+    enddo ! dir=1,3
     do dir=1,6
      FSI(part_id)%NodeForce(dir,inode)=stress_local(dir)
      FSI(part_id)%NodeForce_old(dir,inode)=stress_local(dir)
@@ -1558,8 +1672,20 @@ INTEGER_T :: ctml_part_id
 
      ! in: CTML_init_sci_node
     FSI(part_id)%NodeMass(inode)=mass_local
+    FSI(part_id)%NodeDensity(inode)=density_local
+
     FSI(part_id)%NodeTemp(inode)=zero
     FSI(part_id)%NodeTemp_new(inode)=zero
+
+    if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+     stand_alone_flag=0
+     call convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
+    else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+     ! do nothing
+    else
+     print *,"FSI(part_id)%flag_2D_to_3D invalid"
+     stop
+    endif
        
    enddo  ! inode=1,NumNodes
      
@@ -1591,15 +1717,23 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T :: sdim,ifirst,isout
-INTEGER_T :: iface,inode_base,ioproc
-REAL_T :: curtime,dt
-INTEGER_T :: dir,istep,istop
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: sdim
+INTEGER_T, intent(in) :: ifirst
+INTEGER_T, intent(in) :: isout
+INTEGER_T :: iface
+INTEGER_T, intent(in) :: ioproc
+REAL_T, intent(in) :: curtime,dt
+INTEGER_T :: dir
+INTEGER_T, intent(in) :: istep
+INTEGER_T, intent(in) :: istop
 INTEGER_T :: nmat
-INTEGER_T :: node_factor
 INTEGER_T :: ctml_part_id
 INTEGER_T :: inode_crit,inode
+INTEGER_T :: orig_nodes
+INTEGER_T :: orig_elements
+INTEGER_T :: local_nodes
+INTEGER_T :: local_elements
 
   nmat=num_materials
 
@@ -1618,6 +1752,7 @@ INTEGER_T :: inode_crit,inode
   endif
 
   ctml_part_id=CTML_partid_map(part_id)
+
   if ((ctml_part_id.ge.1).and. &
       (ctml_part_id.le.CTML_NPARTS)) then
 
@@ -1645,7 +1780,9 @@ INTEGER_T :: inode_crit,inode
      stop
     endif
    enddo ! inode=1,ctml_n_fib_nodes(ctml_part_id)
+
    if (inode_crit.eq.0) then
+     ! all the node masses are positive
     ctml_n_fib_active_nodes(ctml_part_id)= &
       ctml_n_fib_nodes(ctml_part_id)
    else if (inode_crit.gt.1) then
@@ -1659,7 +1796,7 @@ INTEGER_T :: inode_crit,inode
     stop
    endif
 #else
-   print *,"define MVAHABFSI"
+   print *,"in: CTML_init_sci; define MVAHABFSI"
    stop
 #endif
 
@@ -1676,25 +1813,40 @@ INTEGER_T :: inode_crit,inode
    endif
 
    if (AMREX_SPACEDIM.eq.3) then
-    node_factor=1
+    FSI(part_id)%flag_2D_to_3D=0
     print *,"3D not supported yet"
    else if (AMREX_SPACEDIM.eq.2) then
-    node_factor=2
+    FSI(part_id)%flag_2D_to_3D=1
    else
     print *,"dimension bust"
     stop
    endif
-   FSI(part_id)%NumNodes=ctml_n_fib_active_nodes(ctml_part_id)*node_factor
-    ! 2 triangular elements make up a rectangle.
-   FSI(part_id)%NumIntElems= &
-    (ctml_n_fib_active_nodes(ctml_part_id)-1)*node_factor
+
+   orig_nodes=ctml_n_fib_active_nodes(ctml_part_id)
+   orig_elements=ctml_n_fib_active_nodes(ctml_part_id)-1
+
+   if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+    FSI(part_id)%NumNodes=orig_nodes*2
+    FSI(part_id)%NumIntElems=orig_elements*2
+   else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+    FSI(part_id)%NumNodes=orig_nodes
+    FSI(part_id)%NumIntElems=orig_elements
+   else
+    print *,"FSI(part_id)%flag_2D_to_3D invalid"
+    stop
+   endif
+   local_nodes=FSI(part_id)%NumNodes
+   local_elements=FSI(part_id)%NumIntElems
    FSI(part_id)%IntElemDim=3
  
     ! in: CTML_init_sci 
    if (ifirst.eq.1) then
 
-     ! allocate_intelem=1
-     ! allocates NodeMass
+    ! allocates and inits: Eul2IntNode,ElemData,IntElem,Node_old,
+    !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
+    !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
+    ! allocate_intelem=1
+    ! allocates NodeMass
     call init_FSI(part_id,1)  
 
     allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
@@ -1708,34 +1860,28 @@ INTEGER_T :: inode_crit,inode
 
    call CTML_init_sci_node(ioproc,part_id,isout)
 
-   do iface=1,FSI(part_id)%NumIntElems
-    if (AMREX_SPACEDIM.eq.3) then
+   do iface=1,orig_elements
+
+    if (FSI(part_id)%flag_2D_to_3D.eq.0) then
      print *,"3d not ready yet"
      stop
-    else if (AMREX_SPACEDIM.eq.2) then
-     if (iface.le.ctml_n_fib_active_nodes(ctml_part_id)-1) then
-      inode_base=iface
-      FSI(part_id)%IntElem(1,iface)=inode_base
-      FSI(part_id)%IntElem(2,iface)= &
-       inode_base+ctml_n_fib_active_nodes(ctml_part_id)
-      FSI(part_id)%IntElem(3,iface)=inode_base+1
-     else if ((iface.ge.ctml_n_fib_active_nodes(ctml_part_id)).and. &
-              (iface.le.FSI(part_id)%NumIntElems)) then
-      inode_base=iface+1-ctml_n_fib_active_nodes(ctml_part_id)
-      FSI(part_id)%IntElem(1,iface)=inode_base+1
-      FSI(part_id)%IntElem(2,iface)= &
-       inode_base+ctml_n_fib_active_nodes(ctml_part_id)
-      FSI(part_id)%IntElem(3,iface)= &
-       inode_base+1+ctml_n_fib_active_nodes(ctml_part_id)
-     endif
+    else if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+     FSI(part_id)%IntElem(1,iface)=iface
+     FSI(part_id)%IntElem(2,iface)=iface+1
+     FSI(part_id)%IntElem(3,iface)=iface+1+orig_nodes
+
+     FSI(part_id)%ElemData(1,iface)=3   ! number of nodes in element
+     FSI(part_id)%ElemData(2,iface)=1   ! part number
+     FSI(part_id)%ElemData(3,iface)=1   ! doubly wetted (0=singly wetted)
+
+     call convert_2D_to_3D_elements_FSI(part_id,iface)
+
     else
      print *,"dimension bust"
      stop
     endif
-    FSI(part_id)%ElemData(1,iface)=3   ! number of nodes in element
-    FSI(part_id)%ElemData(2,iface)=1   ! part number
-    FSI(part_id)%ElemData(3,iface)=1   ! doubly wetted (0=singly wetted)
-   enddo ! iface=1,FSI(part_id)%NumIntElems
+
+   enddo ! iface=1,orig_elements
 
    do dir=1,3
     FSI(part_id)%solid_displ(dir)=0.
@@ -1859,10 +2005,10 @@ REAL_T :: radradblob1,radradblob2
              (probtype.eq.541)) then
 
        ! MARK:
-       ! IF probtype=538 and partID=2, then add 0.01 in order to shift the
-       ! needle all the way in the domain (newxxblob1(3)=0.01)
+       ! IF probtype=538 and partID=2, then add 0.01d0 in order to shift the
+       ! needle all the way in the domain (newxxblob1(3)=0.01d0)
        ! this shift will be taken into account in the line that has:
-       ! "xfoot(3)=xfoot(3)+0.01" (get_foot_from_target, get_target_from_foot)
+       ! "xfoot(3)=xfoot(3)+0.01d0" (get_foot_from_target, get_target_from_foot)
      xxblob1(1)=0.0
      xxblob1(2)=0.0
      xxblob1(3)=0.0
@@ -1873,7 +2019,7 @@ REAL_T :: radradblob1,radradblob2
      if ((probtype.eq.538).or.(probtype.eq.541)) then
       if (FSI(part_id)%partID.eq.2) then !want the whole needle in the domain.
        if ((AMREX_SPACEDIM.eq.3).or.(probtype.eq.538)) then
-        newxxblob1(3)=0.01
+        newxxblob1(3)=0.01d0
        else if ((AMREX_SPACEDIM.eq.2).and.(probtype.eq.541)) then
         newxxblob1(3)=0.0
        endif
@@ -1933,7 +2079,7 @@ REAL_T :: radradblob1,radradblob2
     FSI(part_id)%IntElemDim=3
   
     if (ifirst.eq.1) then
-     ! allocates NodeMass
+     ! allocates NodeMass,NodeDensity
      ! allocate_intelem=1
      call init_FSI(part_id,1)  
     else
@@ -2469,9 +2615,10 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
 return
 end subroutine init_from_cas
 
-subroutine convert_2D_to_3D_nodes_FSI(part_id,inode)
+subroutine convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: stand_alone_flag
 INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: inode
 INTEGER_T local_nodes,orig_nodes,dir
@@ -2504,6 +2651,55 @@ INTEGER_T local_nodes,orig_nodes,dir
     FSI(part_id)%Node_new(dir,inode+orig_nodes)= &
       FSI(part_id)%Node_old(dir,inode+orig_nodes)
    enddo
+
+   if (stand_alone_flag.eq.1) then
+    ! do nothing
+   else if (stand_alone_flag.eq.0) then
+
+    FSI(part_id)%NodeVel(3,inode)=zero
+
+    do dir=1,3
+     FSI(part_id)%Node_current(dir,inode)= &
+             FSI(part_id)%Node_old(dir,inode)
+     FSI(part_id)%Node_current(dir,inode+orig_nodes)= &
+             FSI(part_id)%Node_old(dir,inode+orig_nodes)
+
+     FSI(part_id)%Node(dir,inode)= &
+             FSI(part_id)%Node_old(dir,inode)
+     FSI(part_id)%Node(dir,inode+orig_nodes)= &
+             FSI(part_id)%Node_old(dir,inode+orig_nodes)
+
+     FSI(part_id)%NodeVel(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeVel(dir,orig_nodes)
+
+     FSI(part_id)%NodeVel_old(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeVel(dir,orig_nodes)
+     FSI(part_id)%NodeVel_new(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeVel(dir,orig_nodes)
+    enddo ! dir=1..3
+    do dir=1,6
+     FSI(part_id)%NodeForce(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeForce(dir,inode)
+     FSI(part_id)%NodeForce_old(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeForce_old(dir,inode)
+     FSI(part_id)%NodeForce_new(dir,inode+orig_nodes)= &
+        FSI(part_id)%NodeForce_new(dir,inode)
+    enddo
+
+    FSI(part_id)%NodeMass(inode+orig_nodes)= &
+       FSI(part_id)%NodeMass(inode)
+    FSI(part_id)%NodeDensity(inode+orig_nodes)= &
+       FSI(part_id)%NodeDensity(inode)
+
+    FSI(part_id)%NodeTemp(inode+orig_nodes)= &
+       FSI(part_id)%NodeTemp(inode)
+    FSI(part_id)%NodeTemp_new(inode+orig_nodes)= &
+       FSI(part_id)%NodeTemp_new(inode)
+
+   else
+    print *,"stand_alone_flag invalid"
+    stop
+   endif
   else
    print *,"inode out of range"
    stop
@@ -2589,6 +2785,7 @@ INTEGER_T localElem(3)
 character(40) :: dwave
 INTEGER_T :: orig_nodes,local_nodes
 INTEGER_T :: orig_elements,local_elements
+INTEGER_T :: stand_alone_flag
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -2662,7 +2859,7 @@ INTEGER_T :: orig_elements,local_elements
 
     ! allocates and inits: Eul2IntNode,ElemData,IntElem,Node_old,
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
-    !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass
+    !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
    call init_FSI(part_id,1)  ! allocate_intelem=1
 
    do dir=1,3
@@ -2696,14 +2893,15 @@ INTEGER_T :: orig_elements,local_elements
      if ((maxnode(dir).lt.xval1(dir)).or.(inode.eq.1)) then
       maxnode(dir)=xval1(dir)
      endif
-    enddo ! dir
+    enddo ! dir=1..3
     
     do dir=1,3
      FSI(part_id)%Node_old(dir,inode)=xval1(dir)
      FSI(part_id)%Node_new(dir,inode)=xval1(dir)
     enddo
-    
-    call convert_2D_to_3D_nodes_FSI(part_id,inode)
+   
+    stand_alone_flag=1 
+    call convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 
    enddo  ! inode=1,orig_nodes
    
@@ -3348,7 +3546,7 @@ INTEGER_T :: local_part_id
      xxblob(1)=260.0
      xxblob(2)=19.0
      xxblob(3)=-191.0
-     newxxblob(3)=0.5
+     newxxblob(3)=0.5d0
      newxxblob(1)=0.25
      newxxblob(2)=0.25
      radradblob=440.0
@@ -3392,9 +3590,9 @@ INTEGER_T :: local_part_id
       stop
      endif
 
-     newxxblob(1)=0.5
-     newxxblob(2)=0.5
-     newxxblob(3)=0.5
+     newxxblob(1)=0.5d0
+     newxxblob(2)=0.5d0
+     newxxblob(3)=0.5d0
 
      if (j.lt.10) then
       dwave = "h/heartleft000"//char(48+j)//".txt"
@@ -3423,7 +3621,7 @@ INTEGER_T :: local_part_id
       xxblob(3)=0.0  ! will become z
       newxxblob(1)=0.0
       newxxblob(2)=1.0
-      newxxblob(3)=0.5
+      newxxblob(3)=0.5d0
       radradblob=7.5     ! 12.5/1.67=7.5
 
 ! was 10 for whale file dated December, 2007  (whalenormal)
@@ -3433,7 +3631,7 @@ INTEGER_T :: local_part_id
       xxblob(2)=0.0
       xxblob(3)=0.0
       newxxblob(1)=0.0
-      newxxblob(2)=0.5
+      newxxblob(2)=0.5d0
       newxxblob(3)=0.9   ! was 1.0
       radradblob=10.87   ! was 12.5, now 10.87
 ! whalepregnant
@@ -3445,7 +3643,7 @@ INTEGER_T :: local_part_id
       xxblob(2)=0.0  ! will become z
       newxxblob(1)=0.0
       newxxblob(3)=1.0
-      newxxblob(2)=0.5
+      newxxblob(2)=0.5d0
       radradblob=10.87   ! was 12.5, now 10.87
 ! whaletailup 
      else if (axis_dir.eq.0) then
@@ -3455,7 +3653,7 @@ INTEGER_T :: local_part_id
       xxblob(3)=0.0  ! will become z
       newxxblob(1)=0.0
       newxxblob(2)=1.0
-      newxxblob(3)=0.5
+      newxxblob(3)=0.5d0
       radradblob=10.87   ! was 12.5, now 10.87
 ! whaletaildown
      else if (axis_dir.eq.5) then
@@ -3465,7 +3663,7 @@ INTEGER_T :: local_part_id
       xxblob(3)=0.0  ! will become z
       newxxblob(1)=0.0
       newxxblob(2)=1.0
-      newxxblob(3)=0.5
+      newxxblob(3)=0.5d0
       radradblob=10.87   ! was 12.5, now 10.87
      else
       print *,"axis_dir bad in geominit (for whale) probtype,axis_dir ", &
@@ -3551,7 +3749,7 @@ INTEGER_T :: local_part_id
     else if ((probtype.eq.56).or.(probtype.eq.561)) then
      xxblob(1)=0.2
      xxblob(2)=0.25
-     xxblob(3)=0.5
+     xxblob(3)=0.5d0
      if (1.eq.0) then
       newxxblob(3)=0.65
       newxxblob(1)=0.375
@@ -3589,7 +3787,7 @@ INTEGER_T :: local_part_id
      if (1.eq.1) then   
       xxblob(1)=0.0
       xxblob(2)=36.0
-      xxblob(3)=-0.5
+      xxblob(3)=-0.5d0
       newxxblob(3)=30.0
       newxxblob(1)=30.0
       newxxblob(2)=18.0
@@ -3705,7 +3903,7 @@ INTEGER_T :: local_part_id
     endif
 
     if ((ifirst.eq.1).and.(i1.eq.1)) then
-      ! allocates NodeMass + other variables.
+      ! allocates NodeMass, NodeDensity + other variables.
       ! it is assumed that the number of nodes and elements does not
       ! change from frame to frame.
      call init_FSI(local_part_id,1)
@@ -4673,7 +4871,7 @@ INTEGER_T local_part_id
   newxxblob(1)=0.0
   newxxblob(2)=0.0
   newxxblob(3)=0.0
-  radradblob=0.01 ! units are expected in cm
+  radradblob=0.01d0 ! units are expected in cm
 
   if (axis_dir.eq.0) then
    dwave="gear1_geom.cas"
@@ -4854,7 +5052,7 @@ INTEGER_T :: local_part_id
    xxblob(3)=0.0  ! will become z
    newxxblob(1)=0.0
    newxxblob(2)=1.0
-   newxxblob(3)=0.5
+   newxxblob(3)=0.5d0
    radradblob=7.5     ! 12.5/1.67=7.5
 
 ! was 10 for whale file dated December, 2007  (whalenormal)
@@ -4864,7 +5062,7 @@ INTEGER_T :: local_part_id
    xxblob(2)=0.0
    xxblob(3)=0.0
    newxxblob(1)=0.0
-   newxxblob(2)=0.5
+   newxxblob(2)=0.5d0
    newxxblob(3)=0.9   ! was 1.0
    radradblob=10.87   ! was 12.5, now 10.87
 ! whalepregnant
@@ -4876,7 +5074,7 @@ INTEGER_T :: local_part_id
    xxblob(2)=0.0  ! will become z
    newxxblob(1)=0.0
    newxxblob(3)=1.0
-   newxxblob(2)=0.5
+   newxxblob(2)=0.5d0
    radradblob=10.87   ! was 12.5, now 10.87
 ! whaletailup 
   else if (whale_type.eq.0) then
@@ -4886,7 +5084,7 @@ INTEGER_T :: local_part_id
    xxblob(3)=0.0  ! will become z
    newxxblob(1)=0.0
    newxxblob(2)=1.0
-   newxxblob(3)=0.5
+   newxxblob(3)=0.5d0
    radradblob=10.87   ! was 12.5, now 10.87
 ! whaletaildown
   else if (whale_type.eq.5) then
@@ -4896,7 +5094,7 @@ INTEGER_T :: local_part_id
    xxblob(3)=0.0  ! will become z
    newxxblob(1)=0.0
    newxxblob(2)=1.0
-   newxxblob(3)=0.5
+   newxxblob(3)=0.5d0
    radradblob=10.87   ! was 12.5, now 10.87
   else
    print *,"whale_type bad in whale_geominit probtype,axis_dir ", &
@@ -5088,7 +5286,7 @@ INTEGER_T :: local_part_id
   radradblob=60.0
   radradblobwall=60.0
   denpaddle=0.0035
-  dampingpaddle=0.01
+  dampingpaddle=0.01d0
 
   dwave="h/paddle.txt"
   dwave2="h/wall.txt"
@@ -5290,7 +5488,7 @@ INTEGER_T :: local_part_id
   newxxblob(3)=0.0  
   radradblob=1.0
   denpaddle=1.0
-  dampingpaddle=0.01
+  dampingpaddle=0.01d0
 
   if (axis_dir.eq.1) then
    dwave="5415_froude4136.cas"
@@ -5722,6 +5920,7 @@ INTEGER_T :: i,dir,istep
 
    ! in: advance_solid
   FSI(part_id)%NodeMass(i)=one
+  FSI(part_id)%NodeDensity(i)=one
   FSI(part_id)%NodeTemp(i)=FSI(part_id)%NodeTemp_new(i)
  enddo
 
@@ -5778,6 +5977,7 @@ end subroutine advance_solid
 
 
 ! calls CTML_DELTA or hsprime
+! called from: CLSVOF_InitBox
 subroutine check_force_weightBIG( &
   xmap3D,inode,ielem, &
   xc,part_id,time,dx, &
@@ -5794,7 +5994,7 @@ INTEGER_T, intent(in) :: inode,ielem
 REAL_T, intent(in) :: time 
 REAL_T, dimension(3), intent(out) :: force_vector
 REAL_T, dimension(3), intent(in) :: dx
-REAL_T, dimension(3), intent(in) :: xc
+REAL_T, dimension(3), intent(in) :: xc ! a point on the Eulerian grid.
 REAL_T, intent(out) :: force_weight
 REAL_T, dimension(3) :: xtarget
 REAL_T, dimension(3) :: xfoot
@@ -6422,7 +6622,7 @@ REAL_T :: aa,bb,cc
  aa=nodesave(1,2)*nodesave(2,3)-nodesave(2,2)*nodesave(1,3)
  bb=nodesave(1,1)*nodesave(2,3)-nodesave(2,1)*nodesave(1,3)
  cc=nodesave(1,1)*nodesave(2,2)-nodesave(2,1)*nodesave(1,2)
- area=0.5*sqrt(aa**2+bb**2+cc**2)
+ area=0.5d0*sqrt(aa**2+bb**2+cc**2)
 
  if ((area.eq.0.0).and.(1.eq.0)) then
    print *,"area=0 x1,y1,x2,y2 ",nodesave(1,1),nodesave(1,2), &
@@ -6507,6 +6707,7 @@ INTEGER_T :: dir,inode,num_nodes
       FSI(part_id)%NodeVel_new(dir,inode)=zero
      enddo
      FSI(part_id)%NodeMass(inode)=one
+     FSI(part_id)%NodeDensity(inode)=one
      do dir=1,6
       FSI(part_id)%NodeForce(dir,inode)=zero
       FSI(part_id)%NodeForce_old(dir,inode)=zero
@@ -10328,7 +10529,7 @@ end subroutine CLSVOF_InitBox
          stop
         endif 
 
-        xfoot(3)=xfoot(3)+0.01
+        xfoot(3)=xfoot(3)+0.01d0
         do dir=1,3
          xfoot(dir)=xfoot(dir)-FSI(part_id)%solid_displ(dir)
         enddo
@@ -10365,7 +10566,7 @@ end subroutine CLSVOF_InitBox
          motionPara(11,1)=1.
 
          motionPara(1,2)=1   ! motionType 
-         motionPara(2,2)=0.5 ! hMag (was 0.0)
+         motionPara(2,2)=0.5d0 ! hMag (was 0.0)
          motionPara(3,2)=1.  ! hF
          motionPara(4,2)=0.  ! hPhi
          motionPara(5,2)=0.  ! h0 
@@ -10407,7 +10608,7 @@ end subroutine CLSVOF_InitBox
          xfoot(1)=rinv(1,1)*xfootsave(1)+rinv(1,2)*xfootsave(3)
          xfoot(3)=rinv(2,1)*xfootsave(1)+rinv(2,2)*xfootsave(3)
 
-         dt_flapping=0.01
+         dt_flapping=0.01d0
          flapping_time_plus=flapping_time+dt_flapping
          call flappingKinematics(numMotion,motionPara,rplus,flapping_time_plus)
          velparm(1)=(rplus(1,1)-r(1,1))*xfoot(1)+ &
@@ -10675,7 +10876,7 @@ end subroutine CLSVOF_InitBox
          stop
         endif 
 
-        xtarget(3)=xtarget(3)-0.01
+        xtarget(3)=xtarget(3)-0.01d0
         do dir=1,3
          xtarget(dir)=xtarget(dir)+FSI(part_id)%solid_displ(dir)
         enddo
@@ -10712,7 +10913,7 @@ end subroutine CLSVOF_InitBox
          motionPara(11,1)=1.
 
          motionPara(1,2)=1   ! motionType 
-         motionPara(2,2)=0.5 ! hMag (was 0.0)
+         motionPara(2,2)=0.5d0 ! hMag (was 0.0)
          motionPara(3,2)=1.  ! hF
          motionPara(4,2)=0.  ! hPhi
          motionPara(5,2)=0.  ! h0 
@@ -10754,7 +10955,7 @@ end subroutine CLSVOF_InitBox
          xtarget(1)=xtarget(1)+r(1,4)
          xtarget(3)=xtarget(3)+r(2,4)
 
-         dt_flapping=0.01
+         dt_flapping=0.01d0
          flapping_time_plus=flapping_time+dt_flapping
          call flappingKinematics(numMotion,motionPara,rplus,flapping_time_plus)
          velparm(1)=(rplus(1,1)-r(1,1))*xfoot(1)+ &
@@ -11414,7 +11615,7 @@ end subroutine CLSVOF_ReadNodes
       REAL_T  xtailpos
 
       tailpos=7.77
-      xtailpos=0.5
+      xtailpos=0.5d0
 
       
       open(unit=2, file= whaleout)
@@ -11874,7 +12075,7 @@ end subroutine CLSVOF_ReadNodes
       DO i=1,Nodes
          U(i)=0.0
          V(i)=0.0
-         V(i)=0.1+0.1*tanh(0.5*Z(i)-0.75)
+         V(i)=0.1+0.1*tanh(0.5d0*Z(i)-0.75)
 
               If (Z(i).lt.0.0) Then
                  V(i)=V(i)-.01*Z(i)
@@ -11947,7 +12148,7 @@ end subroutine CLSVOF_ReadNodes
       REAL_T springcons
 
 
-      springcons=0.5
+      springcons=0.5d0
 
       DO i=1,Nodes
            spring(i)=0.1
