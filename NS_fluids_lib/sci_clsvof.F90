@@ -8,12 +8,12 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
-#define element_buffer_tol 0.01
+#define element_buffer_tol 0.01d0
 
 ! 10 seconds for tail to do a full period
 #define WHALE_LENGTH 13.0
 #define PERIOD_TAIL 10.0
-#define DT_DUFFY 0.01
+#define DT_DUFFY 0.01d0
 #define STEPS_DUFFY 800
 #define injG 1
 #define MAX_PARTS 100
@@ -40,7 +40,9 @@ type lag_type
  INTEGER_T :: n_nodes,n_elems
  REAL_T, pointer :: nd(:,:)    ! nd(dir,node_id) dir=1..3
  REAL_T, pointer :: ndvel(:,:) ! ndvel(dir,node_id) dir=1..3
+  ! ndmass=nddensity * ndvolume
  REAL_T, pointer :: ndmass(:) ! ndmass(node_id) 
+ REAL_T, pointer :: nddensity(:) ! nddensity(node_id) 
  REAL_T, pointer :: ndforce(:,:) ! ndforce(dir,node_id)  dir=1..6
  REAL_T, pointer :: ndtemp(:)  ! ndtemp(node_id)
   ! number of nodes in element=elemdt(1,elemid)
@@ -73,6 +75,7 @@ type mesh_type
  REAL_T, pointer :: NodeBIG(:,:)
  REAL_T, pointer :: NodeVelBIG(:,:)
  REAL_T, pointer :: NodeForceBIG(:,:)  ! (6,node_id)
+ REAL_T, pointer :: NodeDensityBIG(:)
  REAL_T, pointer :: NodeMassBIG(:)
  REAL_T, pointer :: NodeTempBIG(:)  
  REAL_T, pointer :: NodeNormalBIG(:,:)
@@ -89,6 +92,7 @@ type mesh_type
  REAL_T, pointer :: NodeForce(:,:)
  REAL_T, pointer :: NodeForce_old(:,:)
  REAL_T, pointer :: NodeForce_new(:,:)
+ REAL_T, pointer :: NodeDensity(:)
  REAL_T, pointer :: NodeMass(:)
  REAL_T, pointer :: NodeTemp(:)
  REAL_T, pointer :: NodeTemp_old(:)
@@ -331,7 +335,7 @@ REAL_T dilated_time
 ! if probtype=538 and part_id=1 and RZ, then 
 ! dist(x,y,z)=dist(x+0.0015,y-0.0045,z)
 ! if probtype=538 and part_id=2, then
-! dist(x,y,z)= dist(x,y,z+0.01)
+! dist(x,y,z)= dist(x,y,z+0.01d0)
 ! IN FUTURE, DO NOT CALL "UNITE", INSTEAD
 ! USE BOTH FSI and FSI_NEEDLE when returning LS or VEL.
 ! ALSO IN FUTURE, DO NOT REPEATEDLY CALL GENERATE_NEW_TRIANGLES
@@ -389,12 +393,12 @@ REAL_T dilated_time
       t1 = t
       displ1(1) = x
       displ1(2) = y
-      displ1(3) = 0.5*(z0+z90)
+      displ1(3) = 0.5d0*(z0+z90)
      else if (t.gt.dilated_time) then
       t2 = t
       displ2(1) = x
       displ2(2) = y
-      displ2(3) = 0.5*(z0+z90)
+      displ2(3) = 0.5d0*(z0+z90)
       dt = t2-t1
       goto 10
      endif
@@ -853,7 +857,7 @@ INTEGER_T :: local_refine_factor
  else if (local_refine_factor.ge.1) then
   n_lag_levels=1
   temp_h=biggest_h
-  do while (temp_h.gt.(local_refine_factor-0.01)*h_small)
+  do while (temp_h.gt.(local_refine_factor-0.01d0)*h_small)
    temp_h=half*temp_h
    n_lag_levels=n_lag_levels+2  ! two sides might exceed limit
   enddo
@@ -884,6 +888,7 @@ INTEGER_T :: local_refine_factor
  allocate(multi_lag(1)%ndvel(3,FSI(part_id)%NumNodes))
  allocate(multi_lag(1)%ndforce(6,FSI(part_id)%NumNodes))
  allocate(multi_lag(1)%ndmass(FSI(part_id)%NumNodes))
+ allocate(multi_lag(1)%nddensity(FSI(part_id)%NumNodes))
  allocate(multi_lag(1)%ndtemp(FSI(part_id)%NumNodes))
  allocate(multi_lag(1)%elemdt(3,new_NumIntElems))
  allocate(multi_lag(1)%intelemdt(4,new_NumIntElems))
@@ -893,6 +898,7 @@ INTEGER_T :: local_refine_factor
    multi_lag(1)%ndvel(dir,i)=FSI(part_id)%NodeVel(dir,i)
   enddo
   multi_lag(1)%ndmass(i)=FSI(part_id)%NodeMass(i)
+  multi_lag(1)%nddensity(i)=FSI(part_id)%NodeDensity(i)
   do dir=1,6
    multi_lag(1)%ndforce(dir,i)=FSI(part_id)%NodeForce(dir,i)
   enddo
@@ -936,6 +942,7 @@ INTEGER_T :: local_refine_factor
     allocate(multi_lag(ilevel+1)%ndvel(3,save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndforce(6,save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndmass(save_n_nodes))
+    allocate(multi_lag(ilevel+1)%nddensity(save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndtemp(save_n_nodes))
     allocate(multi_lag(ilevel+1)%elemdt(3,save_n_elems))
     allocate(multi_lag(ilevel+1)%intelemdt(4,save_n_elems))
@@ -945,6 +952,7 @@ INTEGER_T :: local_refine_factor
       multi_lag(ilevel+1)%ndvel(dir,i)=multi_lag(ilevel)%ndvel(dir,i)
      enddo
      multi_lag(ilevel+1)%ndmass(i)=multi_lag(ilevel)%ndmass(i)
+     multi_lag(ilevel+1)%nddensity(i)=multi_lag(ilevel)%nddensity(i)
      do dir=1,6
       multi_lag(ilevel+1)%ndforce(dir,i)=multi_lag(ilevel)%ndforce(dir,i)
      enddo
@@ -973,6 +981,9 @@ INTEGER_T :: local_refine_factor
     mass1=multi_lag(ilevel_current)%ndmass(node1)
     mass2=multi_lag(ilevel_current)%ndmass(node2)
     mass3=multi_lag(ilevel_current)%ndmass(node3)
+    den1=multi_lag(ilevel_current)%nddensity(node1)
+    den2=multi_lag(ilevel_current)%nddensity(node2)
+    den3=multi_lag(ilevel_current)%nddensity(node3)
     do dir=1,6
      force1(dir)=multi_lag(ilevel)%ndforce(dir,node1)
      force2(dir)=multi_lag(ilevel)%ndforce(dir,node2)
@@ -986,19 +997,33 @@ INTEGER_T :: local_refine_factor
     call xdist_project(x3,x1,part_id,d13_2D,d13_3D)
 
     if ((local_refine_factor.gt.0).and. &
-        (d12_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+        (d12_2D.ge.(local_refine_factor-0.01d0)*h_small).and. &
         (d12_2D.ge.d23_2D).and. &
         (d12_2D.ge.d13_2D)) then
      do dir=1,3
-      xsplit(dir)=0.5*(x1(dir)+x2(dir))
-      velsplit(dir)=0.5*(vel1(dir)+vel2(dir))
+      xsplit(dir)=0.5d0*(x1(dir)+x2(dir))
+      velsplit(dir)=0.5d0*(vel1(dir)+vel2(dir))
      enddo
      do dir=1,6
-      forcesplit(dir)=0.5*(force1(dir)+force2(dir))
+      forcesplit(dir)=0.5d0*(force1(dir)+force2(dir))
      enddo
 
-     tempsplit=0.5*(temp1+temp2)
-     mass_split=(mass1+mass2)/three  ! criterion: mass is conserved
+     tempsplit=0.5d0*(temp1+temp2)
+     den_split=0.5d0*(den1+den2)
+       !  x1     x_split     x2
+       ! den1 * vol1R = mass1R   
+       ! den2 * vol2L = mass2L   
+       ! 0.5d0 * den12 * (vol1R+vol2L) = mass12
+     call get_new_half_vols(x1,x2,xsplit,vol1R,vol2L)
+     mass_split=0.5d0*den_split*(vol1R+vol2L)
+     new_mass1=mass1-0.5d0*den_split*vol1R
+     new_mass2=mass2-0.5d0*den_split*vol2L
+     if ((new_mass1.gt.0.0d0).and.(new_mass2.gt.0.0d0)) then
+      ! do nothing
+     else
+      print *,"new_mass1 or new_mass2 invalid"
+      stop
+     endif
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
      multi_lag(ilevel+1)%n_elems=multi_lag(ilevel+1)%n_elems+2
@@ -1014,8 +1039,8 @@ INTEGER_T :: local_refine_factor
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
       multi_lag(ilevel+1)%ndmass(nsplit)=mass_split
-      multi_lag(ilevel+1)%ndmass(node1)=two*mass1/three
-      multi_lag(ilevel+1)%ndmass(node2)=two*mass2/three
+      multi_lag(ilevel+1)%ndmass(node1)=new_mass1
+      multi_lag(ilevel+1)%ndmass(node2)=new_mass2
 
       multi_lag(ilevel+1)%ndtemp(nsplit)=tempsplit
 
@@ -1041,18 +1066,18 @@ INTEGER_T :: local_refine_factor
       enddo
      endif ! iter.eq.2
     else if ((local_refine_factor.gt.0).and. &
-             (d23_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+             (d23_2D.ge.(local_refine_factor-0.01d0)*h_small).and. &
              (d23_2D.ge.d12_2D).and. &
              (d23_2D.ge.d13_2D)) then
      do dir=1,3
-      xsplit(dir)=0.5*(x2(dir)+x3(dir))
-      velsplit(dir)=0.5*(vel2(dir)+vel3(dir))
+      xsplit(dir)=0.5d0*(x2(dir)+x3(dir))
+      velsplit(dir)=0.5d0*(vel2(dir)+vel3(dir))
      enddo
      do dir=1,6
-      forcesplit(dir)=0.5*(force2(dir)+force3(dir))
+      forcesplit(dir)=0.5d0*(force2(dir)+force3(dir))
      enddo
  
-     tempsplit=0.5*(temp2+temp3)
+     tempsplit=0.5d0*(temp2+temp3)
      mass_split=(mass2+mass3)/three ! criterion: mass is conserved
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
@@ -1094,18 +1119,18 @@ INTEGER_T :: local_refine_factor
       enddo
      endif ! iter.eq.2
     else if ((local_refine_factor.gt.0).and. &
-             (d13_2D.ge.(local_refine_factor-0.01)*h_small).and. &
+             (d13_2D.ge.(local_refine_factor-0.01d0)*h_small).and. &
              (d13_2D.ge.d12_2D).and. &
              (d13_2D.ge.d23_2D)) then
      do dir=1,3
-      xsplit(dir)=0.5*(x1(dir)+x3(dir))
-      velsplit(dir)=0.5*(vel1(dir)+vel3(dir))
+      xsplit(dir)=0.5d0*(x1(dir)+x3(dir))
+      velsplit(dir)=0.5d0*(vel1(dir)+vel3(dir))
      enddo
      do dir=1,6
-      forcesplit(dir)=0.5*(force1(dir)+force3(dir))
+      forcesplit(dir)=0.5d0*(force1(dir)+force3(dir))
      enddo
 
-     tempsplit=0.5*(temp1+temp3)
+     tempsplit=0.5d0*(temp1+temp3)
      mass_split=(mass1+mass3)/three ! criterion: mass is conserved
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
@@ -1879,10 +1904,10 @@ REAL_T :: radradblob1,radradblob2
              (probtype.eq.541)) then
 
        ! MARK:
-       ! IF probtype=538 and partID=2, then add 0.01 in order to shift the
-       ! needle all the way in the domain (newxxblob1(3)=0.01)
+       ! IF probtype=538 and partID=2, then add 0.01d0 in order to shift the
+       ! needle all the way in the domain (newxxblob1(3)=0.01d0)
        ! this shift will be taken into account in the line that has:
-       ! "xfoot(3)=xfoot(3)+0.01" (get_foot_from_target, get_target_from_foot)
+       ! "xfoot(3)=xfoot(3)+0.01d0" (get_foot_from_target, get_target_from_foot)
      xxblob1(1)=0.0
      xxblob1(2)=0.0
      xxblob1(3)=0.0
@@ -1893,7 +1918,7 @@ REAL_T :: radradblob1,radradblob2
      if ((probtype.eq.538).or.(probtype.eq.541)) then
       if (FSI(part_id)%partID.eq.2) then !want the whole needle in the domain.
        if ((AMREX_SPACEDIM.eq.3).or.(probtype.eq.538)) then
-        newxxblob1(3)=0.01
+        newxxblob1(3)=0.01d0
        else if ((AMREX_SPACEDIM.eq.2).and.(probtype.eq.541)) then
         newxxblob1(3)=0.0
        endif
@@ -3418,7 +3443,7 @@ INTEGER_T :: local_part_id
      xxblob(1)=260.0
      xxblob(2)=19.0
      xxblob(3)=-191.0
-     newxxblob(3)=0.5
+     newxxblob(3)=0.5d0
      newxxblob(1)=0.25
      newxxblob(2)=0.25
      radradblob=440.0
@@ -3462,9 +3487,9 @@ INTEGER_T :: local_part_id
       stop
      endif
 
-     newxxblob(1)=0.5
-     newxxblob(2)=0.5
-     newxxblob(3)=0.5
+     newxxblob(1)=0.5d0
+     newxxblob(2)=0.5d0
+     newxxblob(3)=0.5d0
 
      if (j.lt.10) then
       dwave = "h/heartleft000"//char(48+j)//".txt"
@@ -3493,7 +3518,7 @@ INTEGER_T :: local_part_id
       xxblob(3)=0.0  ! will become z
       newxxblob(1)=0.0
       newxxblob(2)=1.0
-      newxxblob(3)=0.5
+      newxxblob(3)=0.5d0
       radradblob=7.5     ! 12.5/1.67=7.5
 
 ! was 10 for whale file dated December, 2007  (whalenormal)
@@ -3503,7 +3528,7 @@ INTEGER_T :: local_part_id
       xxblob(2)=0.0
       xxblob(3)=0.0
       newxxblob(1)=0.0
-      newxxblob(2)=0.5
+      newxxblob(2)=0.5d0
       newxxblob(3)=0.9   ! was 1.0
       radradblob=10.87   ! was 12.5, now 10.87
 ! whalepregnant
@@ -3515,7 +3540,7 @@ INTEGER_T :: local_part_id
       xxblob(2)=0.0  ! will become z
       newxxblob(1)=0.0
       newxxblob(3)=1.0
-      newxxblob(2)=0.5
+      newxxblob(2)=0.5d0
       radradblob=10.87   ! was 12.5, now 10.87
 ! whaletailup 
      else if (axis_dir.eq.0) then
@@ -3525,7 +3550,7 @@ INTEGER_T :: local_part_id
       xxblob(3)=0.0  ! will become z
       newxxblob(1)=0.0
       newxxblob(2)=1.0
-      newxxblob(3)=0.5
+      newxxblob(3)=0.5d0
       radradblob=10.87   ! was 12.5, now 10.87
 ! whaletaildown
      else if (axis_dir.eq.5) then
@@ -3535,7 +3560,7 @@ INTEGER_T :: local_part_id
       xxblob(3)=0.0  ! will become z
       newxxblob(1)=0.0
       newxxblob(2)=1.0
-      newxxblob(3)=0.5
+      newxxblob(3)=0.5d0
       radradblob=10.87   ! was 12.5, now 10.87
      else
       print *,"axis_dir bad in geominit (for whale) probtype,axis_dir ", &
@@ -3621,7 +3646,7 @@ INTEGER_T :: local_part_id
     else if ((probtype.eq.56).or.(probtype.eq.561)) then
      xxblob(1)=0.2
      xxblob(2)=0.25
-     xxblob(3)=0.5
+     xxblob(3)=0.5d0
      if (1.eq.0) then
       newxxblob(3)=0.65
       newxxblob(1)=0.375
@@ -3659,7 +3684,7 @@ INTEGER_T :: local_part_id
      if (1.eq.1) then   
       xxblob(1)=0.0
       xxblob(2)=36.0
-      xxblob(3)=-0.5
+      xxblob(3)=-0.5d0
       newxxblob(3)=30.0
       newxxblob(1)=30.0
       newxxblob(2)=18.0
@@ -4743,7 +4768,7 @@ INTEGER_T local_part_id
   newxxblob(1)=0.0
   newxxblob(2)=0.0
   newxxblob(3)=0.0
-  radradblob=0.01 ! units are expected in cm
+  radradblob=0.01d0 ! units are expected in cm
 
   if (axis_dir.eq.0) then
    dwave="gear1_geom.cas"
@@ -4924,7 +4949,7 @@ INTEGER_T :: local_part_id
    xxblob(3)=0.0  ! will become z
    newxxblob(1)=0.0
    newxxblob(2)=1.0
-   newxxblob(3)=0.5
+   newxxblob(3)=0.5d0
    radradblob=7.5     ! 12.5/1.67=7.5
 
 ! was 10 for whale file dated December, 2007  (whalenormal)
@@ -4934,7 +4959,7 @@ INTEGER_T :: local_part_id
    xxblob(2)=0.0
    xxblob(3)=0.0
    newxxblob(1)=0.0
-   newxxblob(2)=0.5
+   newxxblob(2)=0.5d0
    newxxblob(3)=0.9   ! was 1.0
    radradblob=10.87   ! was 12.5, now 10.87
 ! whalepregnant
@@ -4946,7 +4971,7 @@ INTEGER_T :: local_part_id
    xxblob(2)=0.0  ! will become z
    newxxblob(1)=0.0
    newxxblob(3)=1.0
-   newxxblob(2)=0.5
+   newxxblob(2)=0.5d0
    radradblob=10.87   ! was 12.5, now 10.87
 ! whaletailup 
   else if (whale_type.eq.0) then
@@ -4956,7 +4981,7 @@ INTEGER_T :: local_part_id
    xxblob(3)=0.0  ! will become z
    newxxblob(1)=0.0
    newxxblob(2)=1.0
-   newxxblob(3)=0.5
+   newxxblob(3)=0.5d0
    radradblob=10.87   ! was 12.5, now 10.87
 ! whaletaildown
   else if (whale_type.eq.5) then
@@ -4966,7 +4991,7 @@ INTEGER_T :: local_part_id
    xxblob(3)=0.0  ! will become z
    newxxblob(1)=0.0
    newxxblob(2)=1.0
-   newxxblob(3)=0.5
+   newxxblob(3)=0.5d0
    radradblob=10.87   ! was 12.5, now 10.87
   else
    print *,"whale_type bad in whale_geominit probtype,axis_dir ", &
@@ -5158,7 +5183,7 @@ INTEGER_T :: local_part_id
   radradblob=60.0
   radradblobwall=60.0
   denpaddle=0.0035
-  dampingpaddle=0.01
+  dampingpaddle=0.01d0
 
   dwave="h/paddle.txt"
   dwave2="h/wall.txt"
@@ -5360,7 +5385,7 @@ INTEGER_T :: local_part_id
   newxxblob(3)=0.0  
   radradblob=1.0
   denpaddle=1.0
-  dampingpaddle=0.01
+  dampingpaddle=0.01d0
 
   if (axis_dir.eq.1) then
    dwave="5415_froude4136.cas"
@@ -6492,7 +6517,7 @@ REAL_T :: aa,bb,cc
  aa=nodesave(1,2)*nodesave(2,3)-nodesave(2,2)*nodesave(1,3)
  bb=nodesave(1,1)*nodesave(2,3)-nodesave(2,1)*nodesave(1,3)
  cc=nodesave(1,1)*nodesave(2,2)-nodesave(2,1)*nodesave(1,2)
- area=0.5*sqrt(aa**2+bb**2+cc**2)
+ area=0.5d0*sqrt(aa**2+bb**2+cc**2)
 
  if ((area.eq.0.0).and.(1.eq.0)) then
    print *,"area=0 x1,y1,x2,y2 ",nodesave(1,1),nodesave(1,2), &
@@ -10398,7 +10423,7 @@ end subroutine CLSVOF_InitBox
          stop
         endif 
 
-        xfoot(3)=xfoot(3)+0.01
+        xfoot(3)=xfoot(3)+0.01d0
         do dir=1,3
          xfoot(dir)=xfoot(dir)-FSI(part_id)%solid_displ(dir)
         enddo
@@ -10435,7 +10460,7 @@ end subroutine CLSVOF_InitBox
          motionPara(11,1)=1.
 
          motionPara(1,2)=1   ! motionType 
-         motionPara(2,2)=0.5 ! hMag (was 0.0)
+         motionPara(2,2)=0.5d0 ! hMag (was 0.0)
          motionPara(3,2)=1.  ! hF
          motionPara(4,2)=0.  ! hPhi
          motionPara(5,2)=0.  ! h0 
@@ -10477,7 +10502,7 @@ end subroutine CLSVOF_InitBox
          xfoot(1)=rinv(1,1)*xfootsave(1)+rinv(1,2)*xfootsave(3)
          xfoot(3)=rinv(2,1)*xfootsave(1)+rinv(2,2)*xfootsave(3)
 
-         dt_flapping=0.01
+         dt_flapping=0.01d0
          flapping_time_plus=flapping_time+dt_flapping
          call flappingKinematics(numMotion,motionPara,rplus,flapping_time_plus)
          velparm(1)=(rplus(1,1)-r(1,1))*xfoot(1)+ &
@@ -10745,7 +10770,7 @@ end subroutine CLSVOF_InitBox
          stop
         endif 
 
-        xtarget(3)=xtarget(3)-0.01
+        xtarget(3)=xtarget(3)-0.01d0
         do dir=1,3
          xtarget(dir)=xtarget(dir)+FSI(part_id)%solid_displ(dir)
         enddo
@@ -10782,7 +10807,7 @@ end subroutine CLSVOF_InitBox
          motionPara(11,1)=1.
 
          motionPara(1,2)=1   ! motionType 
-         motionPara(2,2)=0.5 ! hMag (was 0.0)
+         motionPara(2,2)=0.5d0 ! hMag (was 0.0)
          motionPara(3,2)=1.  ! hF
          motionPara(4,2)=0.  ! hPhi
          motionPara(5,2)=0.  ! h0 
@@ -10824,7 +10849,7 @@ end subroutine CLSVOF_InitBox
          xtarget(1)=xtarget(1)+r(1,4)
          xtarget(3)=xtarget(3)+r(2,4)
 
-         dt_flapping=0.01
+         dt_flapping=0.01d0
          flapping_time_plus=flapping_time+dt_flapping
          call flappingKinematics(numMotion,motionPara,rplus,flapping_time_plus)
          velparm(1)=(rplus(1,1)-r(1,1))*xfoot(1)+ &
@@ -11484,7 +11509,7 @@ end subroutine CLSVOF_ReadNodes
       REAL_T  xtailpos
 
       tailpos=7.77
-      xtailpos=0.5
+      xtailpos=0.5d0
 
       
       open(unit=2, file= whaleout)
@@ -11944,7 +11969,7 @@ end subroutine CLSVOF_ReadNodes
       DO i=1,Nodes
          U(i)=0.0
          V(i)=0.0
-         V(i)=0.1+0.1*tanh(0.5*Z(i)-0.75)
+         V(i)=0.1+0.1*tanh(0.5d0*Z(i)-0.75)
 
               If (Z(i).lt.0.0) Then
                  V(i)=V(i)-.01*Z(i)
@@ -12017,7 +12042,7 @@ end subroutine CLSVOF_ReadNodes
       REAL_T springcons
 
 
-      springcons=0.5
+      springcons=0.5d0
 
       DO i=1,Nodes
            spring(i)=0.1
