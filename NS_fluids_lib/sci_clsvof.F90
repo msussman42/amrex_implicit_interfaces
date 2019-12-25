@@ -1412,6 +1412,8 @@ REAL_T, dimension(3) :: vel_local
 REAL_T, dimension(6) :: stress_local
 REAL_T :: mass_local
 REAL_T :: radradblob1,radradblob2
+INTEGER_T :: stand_alone_flag
+INTEGER_T :: orig_nodes
 INTEGER_T :: nmat
 INTEGER_T :: ctml_part_id
 
@@ -1477,6 +1479,11 @@ INTEGER_T :: ctml_part_id
 
    do inode=1,orig_nodes
 
+    do dir=1,3
+     xval(dir)=zero
+     vel_local(dir)=zero
+    enddo
+
     do dir=1,AMREX_SPACEDIM
      xval(dir)=ctml_fib_pst(ctml_part_id,inode,dir)
      vel_local(dir)=ctml_fib_vel(ctml_part_id,inode,dir)
@@ -1532,7 +1539,7 @@ INTEGER_T :: ctml_part_id
      FSI(part_id)%NodeVel(dir,inode)=vel_local(dir)
      FSI(part_id)%NodeVel_old(dir,inode)=vel_local(dir)
      FSI(part_id)%NodeVel_new(dir,inode)=vel_local(dir)
-    enddo
+    enddo ! dir=1,3
     do dir=1,6
      FSI(part_id)%NodeForce(dir,inode)=stress_local(dir)
      FSI(part_id)%NodeForce_old(dir,inode)=stress_local(dir)
@@ -1588,7 +1595,7 @@ INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: sdim
 INTEGER_T, intent(in) :: ifirst
 INTEGER_T, intent(in) :: isout
-INTEGER_T :: iface,inode_base
+INTEGER_T :: iface
 INTEGER_T, intent(in) :: ioproc
 REAL_T, intent(in) :: curtime,dt
 INTEGER_T :: dir
@@ -1727,35 +1734,28 @@ INTEGER_T :: local_elements
 
    call CTML_init_sci_node(ioproc,part_id,isout)
 
-   FIX ME
-   do iface=1,FSI(part_id)%NumIntElems
-    if (AMREX_SPACEDIM.eq.3) then
+   do iface=1,orig_elements
+
+    if (FSI(part_id)%flag_2D_to_3D.eq.0) then
      print *,"3d not ready yet"
      stop
-    else if (AMREX_SPACEDIM.eq.2) then
-     if (iface.le.ctml_n_fib_active_nodes(ctml_part_id)-1) then
-      inode_base=iface
-      FSI(part_id)%IntElem(1,iface)=inode_base
-      FSI(part_id)%IntElem(2,iface)= &
-       inode_base+ctml_n_fib_active_nodes(ctml_part_id)
-      FSI(part_id)%IntElem(3,iface)=inode_base+1
-     else if ((iface.ge.ctml_n_fib_active_nodes(ctml_part_id)).and. &
-              (iface.le.FSI(part_id)%NumIntElems)) then
-      inode_base=iface+1-ctml_n_fib_active_nodes(ctml_part_id)
-      FSI(part_id)%IntElem(1,iface)=inode_base+1
-      FSI(part_id)%IntElem(2,iface)= &
-       inode_base+ctml_n_fib_active_nodes(ctml_part_id)
-      FSI(part_id)%IntElem(3,iface)= &
-       inode_base+1+ctml_n_fib_active_nodes(ctml_part_id)
-     endif
+    else if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+     FSI(part_id)%IntElem(1,iface)=iface
+     FSI(part_id)%IntElem(2,iface)=iface+1
+     FSI(part_id)%IntElem(3,iface)=iface+1+orig_nodes
+
+     FSI(part_id)%ElemData(1,iface)=3   ! number of nodes in element
+     FSI(part_id)%ElemData(2,iface)=1   ! part number
+     FSI(part_id)%ElemData(3,iface)=1   ! doubly wetted (0=singly wetted)
+
+     call convert_2D_to_3D_elements_FSI(part_id,iface)
+
     else
      print *,"dimension bust"
      stop
     endif
-    FSI(part_id)%ElemData(1,iface)=3   ! number of nodes in element
-    FSI(part_id)%ElemData(2,iface)=1   ! part number
-    FSI(part_id)%ElemData(3,iface)=1   ! doubly wetted (0=singly wetted)
-   enddo ! iface=1,FSI(part_id)%NumIntElems
+
+   enddo ! iface=1,orig_elements
 
    do dir=1,3
     FSI(part_id)%solid_displ(dir)=0.
