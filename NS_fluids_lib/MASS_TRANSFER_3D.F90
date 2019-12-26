@@ -4096,6 +4096,7 @@ stop
                 dencomp_source=(im_source-1)*num_state_material+1
                 dencomp_dest=(im_dest-1)*num_state_material+1
 
+                 ! use_exact_temperature==0 if regular Stefan problem.
                 call get_interface_temperature( &
                   Tsat,iten+ireverse*nten, &
                   saturation_temp, &

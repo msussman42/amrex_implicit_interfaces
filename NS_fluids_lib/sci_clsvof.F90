@@ -547,7 +547,8 @@ return
 end subroutine init3_FSI
 
 ! called from:
-!  CTML_init_sci,initinjector,initflapping,init_from_cas,
+!  CTML_init_sci (prior to CTML_init_sci_node),
+!  initinjector,initflapping,init_from_cas,
 !  init_gingerbread2D,init_helix,initchannel,geominit,
 !  viorel_sphere_geominit,internal_inflow_geominit,
 !  gearinit,whale_geominit,initpaddle,initship
