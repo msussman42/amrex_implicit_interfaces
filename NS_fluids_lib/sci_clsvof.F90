@@ -57,6 +57,7 @@ end type lag_type
 type mesh_type
  INTEGER_T :: PartID
  INTEGER_T :: flag_2D_to_3D
+ INTEGER_T :: CTML_flag
  INTEGER_T :: refine_factor
  INTEGER_T :: bounding_box_ngrow
  REAL_T :: max_side_len
@@ -231,7 +232,10 @@ contains
       return
       end subroutine checkbound3D
 
-
+! called from:
+!   initinjector,initflapping,init_from_cas,init_gingerbread2D,
+!   init_helix,initchannel,viorel_sphere_geominit,internal_inflow_geominit,
+!   gearinit,initpaddle,initship
 subroutine init2_FSI(part_id)
 IMPLICIT NONE
 
@@ -542,6 +546,11 @@ REAL_T dilated_time
 return
 end subroutine init3_FSI
 
+! called from:
+!  CTML_init_sci,initinjector,initflapping,init_from_cas,
+!  init_gingerbread2D,init_helix,initchannel,geominit,
+!  viorel_sphere_geominit,internal_inflow_geominit,
+!  gearinit,whale_geominit,initpaddle,initship
 subroutine init_FSI(part_id,allocate_intelem)
 IMPLICIT NONE
 
@@ -1046,9 +1055,20 @@ INTEGER_T :: local_refine_factor
        ! den2 * vol2L = mass2L   
        ! 0.5d0 * den12 * (vol1R+vol2L) = mass12
      call get_new_half_vols(x1,x2,xsplit,volL,volR)
-     mass_split=0.5d0*den_split*(volL+volR)
-     new_massL=mass1-0.5d0*den_split*volL
-     new_massR=mass2-0.5d0*den_split*volR
+
+     if (FSI(part_id)%CTML_flag.eq.1) then
+      mass_split=0.5d0*den_split*(volL+volR)
+      new_massL=mass1-0.5d0*den_split*volL
+      new_massR=mass2-0.5d0*den_split*volR
+     else if (FSI(part_id)%CTML_flag.eq.0) then
+      mass_split=0.5d0*(mass1+mass2)
+      new_massL=mass1
+      new_massR=mass2
+     else
+      print *,"FSI(part_id)%CTML_flag invalid"
+      stop
+     endif
+
      if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
       ! do nothing
      else
@@ -1113,9 +1133,20 @@ INTEGER_T :: local_refine_factor
      den_split=0.5d0*(den2+den3)
 
      call get_new_half_vols(x2,x3,xsplit,volL,volR)
-     mass_split=0.5d0*den_split*(volL+volR)
-     new_massL=mass2-0.5d0*den_split*volL
-     new_massR=mass3-0.5d0*den_split*volR
+
+     if (FSI(part_id)%CTML_flag.eq.1) then
+      mass_split=0.5d0*den_split*(volL+volR)
+      new_massL=mass2-0.5d0*den_split*volL
+      new_massR=mass3-0.5d0*den_split*volR
+     else if (FSI(part_id)%CTML_flag.eq.0) then
+      mass_split=0.5d0*(mass2+mass3)
+      new_massL=mass2
+      new_massR=mass3
+     else
+      print *,"FSI(part_id)%CTML_flag invalid"
+      stop
+     endif
+
      if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
       ! do nothing
      else
@@ -1178,9 +1209,20 @@ INTEGER_T :: local_refine_factor
      den_split=0.5d0*(den1+den3)
 
      call get_new_half_vols(x1,x3,xsplit,volL,volR)
-     mass_split=0.5d0*den_split*(volL+volR)
-     new_massL=mass1-0.5d0*den_split*volL
-     new_massR=mass3-0.5d0*den_split*volR
+
+     if (FSI(part_id)%CTML_flag.eq.1) then
+      mass_split=0.5d0*den_split*(volL+volR)
+      new_massL=mass1-0.5d0*den_split*volL
+      new_massR=mass3-0.5d0*den_split*volR
+     else if (FSI(part_id)%CTML_flag.eq.0) then
+      mass_split=0.5d0*(mass1+mass3)
+      new_massL=mass1
+      new_massR=mass3
+     else
+      print *,"FSI(part_id)%CTML_flag invalid"
+      stop
+     endif
+
      if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
       ! do nothing
      else
@@ -1708,6 +1750,9 @@ INTEGER_T :: ctml_part_id
 return
 end subroutine CTML_init_sci_node
 
+! called from overall_solid_init
+! overall_solid_init is called from CLSVOF_ReadHeader
+! CLSVOF_ReadHeader is called from FORT_HEADERMSG when FSI_operation==0.
 subroutine CTML_init_sci(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
 use global_utility_module
@@ -1755,6 +1800,8 @@ INTEGER_T :: local_elements
 
   if ((ctml_part_id.ge.1).and. &
       (ctml_part_id.le.CTML_NPARTS)) then
+
+   FSI(part_id)%CTML_flag=1
 
    inode_crit=0  ! node index of first inactive node.
    inode=0
@@ -1846,7 +1893,7 @@ INTEGER_T :: local_elements
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
     !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
     ! allocate_intelem=1
-    ! allocates NodeMass
+    ! allocates NodeMass,NodeDensity
     call init_FSI(part_id,1)  
 
     allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
@@ -2802,6 +2849,7 @@ INTEGER_T :: stand_alone_flag
   endif
 
   FSI(part_id)%flag_2D_to_3D=1
+  FSI(part_id)%CTML_flag=0
 
   timeB=curtime
   dtB=0.0
@@ -3009,6 +3057,7 @@ INTEGER_T :: orig_elements,local_elements
   endif
 
   FSI(part_id)%flag_2D_to_3D=0
+  FSI(part_id)%CTML_flag=0
 
   timeB=curtime
   dtB=0.0
@@ -5899,6 +5948,15 @@ INTEGER_T :: i,dir,istep
   stop
  endif
 
+ if ((probtype.eq.563).or. & ! gear
+     (probtype.eq.50).or. &  ! paddle
+     (probtype.eq.9)) then   ! ship
+  ! do nothing
+ else
+  print *,"advance_solid only for gear, paddle or ship"
+  stop
+ endif
+
  do i=1,FSI(part_id)%NumNodes
   do dir=1,3
    FSI(part_id)%Node_old(dir,i)=FSI(part_id)%Node_new(dir,i)
@@ -6988,7 +7046,7 @@ INTEGER_T im_sanity_check
 
   use_temp=0
 
-  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
+  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4 for some materials
 #ifdef MVAHABFSI
    if (CTML_FSI_INIT.eq.0) then
     call CTML_INIT_SOLID(dx_max_level, &
@@ -7000,10 +7058,12 @@ INTEGER_T im_sanity_check
      call CTML_GET_FIB_NODE_COUNT( &
       ctml_n_fib_bodies, &
       ctml_n_fib_nodes)
-     allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes,AMREX_SPACEDIM))
-     allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes,AMREX_SPACEDIM))
+     allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+             AMREX_SPACEDIM))
+     allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+             AMREX_SPACEDIM))
      allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-       2*AMREX_SPACEDIM))
+             2*AMREX_SPACEDIM))
      allocate(ctml_fib_mass(ctml_n_fib_bodies,ctml_max_n_fib_nodes))
     else
      print *,"ctml_n_fib_bodies out of range"
@@ -7019,8 +7079,10 @@ INTEGER_T im_sanity_check
     im_part=im_solid_mapF(part_id)+1
     if (CTML_FSI_mat(nmat,im_part).eq.1) then
      FSI(part_id)%deforming_part=1
+     FSI(part_id)%CTML_flag=1
     else if (CTML_FSI_mat(nmat,im_part).eq.0) then
      FSI(part_id)%deforming_part=0
+     FSI(part_id)%CTML_flag=0
     else
      print *,"CTML_FSI_mat(nmat,im_part) invalid"
      stop
@@ -7033,18 +7095,25 @@ INTEGER_T im_sanity_check
 #endif
   else if (CTML_FSI_flagF(nmat).eq.0) then
 
+   part_id=1
+
    if((probtype.eq.538).or.(probtype.eq.541)) then ! needle, housing
     test_NPARTS=2
     FSI(1)%deforming_part=0
     FSI(2)%deforming_part=0
+    FSI(1)%CTML_flag=0
+    FSI(2)%CTML_flag=0
    else if (probtype.eq.701) then  ! flapping wing - ReadHeader
     if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
      test_NPARTS=1
      FSI(1)%deforming_part=0
+     FSI(1)%CTML_flag=0
     else if (axis_dir.eq.1) then
      test_NPARTS=2
      FSI(1)%deforming_part=0
      FSI(2)%deforming_part=0
+     FSI(1)%CTML_flag=0
+     FSI(2)%CTML_flag=0
     else
      print *,"axis_dir invalid"
      stop
@@ -7069,13 +7138,16 @@ INTEGER_T im_sanity_check
             (probtype.eq.5501)) then
     test_NPARTS=1
     FSI(part_id)%deforming_part=1
+    FSI(part_id)%CTML_flag=0
    else if (probtype.eq.9) then ! ship
     test_NPARTS=1
     FSI(part_id)%deforming_part=0
+    FSI(part_id)%CTML_flag=0
    else
     test_NPARTS=TOTAL_NPARTS
     do part_id=1,TOTAL_NPARTS
      FSI(part_id)%deforming_part=0
+     FSI(part_id)%CTML_flag=0
     enddo
    endif
    if (test_NPARTS.ne.TOTAL_NPARTS) then

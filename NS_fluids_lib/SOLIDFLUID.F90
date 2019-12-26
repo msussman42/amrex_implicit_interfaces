@@ -179,6 +179,9 @@
        !FSI_operation=2  make distance in narrow band
        !FSI_operation=3  update the sign.
        !FSI_operation=4  copy eul fluid vel to solid
+       !  FSI_sub_operation.eq.0 (clear lagrangian data)
+       !  FSI_sub_operation.eq.1 (actual copy)
+       !  FSI_sub_operation.eq.2 (sync lag data)
       subroutine FORT_HEADERMSG( &
         tid, &
         tilenum, &
@@ -843,7 +846,7 @@
        deallocate(FSIdata3D)
        deallocate(masknbr3D)
 
-      else if (FSI_operation.eq.4) then
+      else if (FSI_operation.eq.4) then ! copy Eul fluid vel to solid
 
        isout=1 ! verbose on in sci_clsvof.F90
 
