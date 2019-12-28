@@ -13778,6 +13778,8 @@ stop
         endif
         if (is_lag_part(nmat,impart).eq.1) then
 
+          ! law of wall or dynamic contact angle treatment
+          ! only for rigid substrates; not flexible substrates.
          if (is_rigid(nmat,impart).eq.1) then
            ! zero is defined in CONSTANTS.H
            ! CONSTANTS.H is defined in: ./BoxLib/Src/C_BaseLib/CONSTANTS.H

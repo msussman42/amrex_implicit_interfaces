@@ -4921,6 +4921,11 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
      // CODY ESTEBE: LAW OF THE WALL
      // fab = fortran array block
      // Generalized Navier Boundary Condition GNBC (call get_use_DCA)
+     // 1. copy solid velocity into ghost velocity where phi_solid>0
+     // 2. copy fluid velocity into ghost velocity where phi_solid<0
+     // 3. overwrite ghost velocity with law of the wall or GNBC velocity
+     //    where phi_solid > 0.  (and solid is rigid)
+     // in: GODUNOV_3D.F90
     FORT_WALLFUNCTION( 
      im_solid_map.dataPtr(),
      &level,
