@@ -6037,6 +6037,11 @@ end subroutine advance_solid
 
 ! calls CTML_DELTA or hsprime
 ! called from: CLSVOF_InitBox
+! xc is the center of a (3D) grid cell.
+! This routine is called for all cell centers within 3 cells 
+! (bounding_box_ngrow) of the "(minnode,maxnode)" box that frames the
+! given element.   So, it is essential that the support radius of CTML_DELTA
+! and hsprime be less than or equal to 3 (bounding_box_ngrow)
 subroutine check_force_weightBIG( &
   xmap3D,inode,ielem, &
   xc,part_id,time,dx, &
@@ -6062,6 +6067,9 @@ INTEGER_T nmat,nodes_per_elem,Node_repeat_count
 INTEGER_T dir
 INTEGER_T inode_raw
 REAL_T dist_scale,df,support_size,line_mass
+INTEGER_T CTML_DEBUG_Mass
+
+ CTML_DEBUG_Mass=0
 
  nmat=num_materials
 
@@ -6110,9 +6118,16 @@ REAL_T dist_scale,df,support_size,line_mass
 
  if (Node_repeat_count.ge.1) then
 
+  if (CTML_DEBUG_Mass.eq.1) then
+   print *,"inode,ielem,xc,xtarget,Node_repeat_count"
+   print *,inode,ielem,xc(1),xc(2),xc(3), &
+           xtarget(1),xtarget(2),xtarget(3),node_repeat_count
+  endif
   force_weight=one
   do dir=1,3
 
+    ! xc is a grid cell center coordinate
+    ! xtarget is a Lagrangian node in the neighborhood of xc.
    if ((xmap3D(dir).eq.1).or. &
        (xmap3D(dir).eq.2).or. &
        (xmap3D(dir).eq.AMREX_SPACEDIM)) then
@@ -6137,6 +6152,10 @@ REAL_T dist_scale,df,support_size,line_mass
      print *,"df invalid"
      stop
     endif
+    if (CTML_DEBUG_Mass.eq.1) then
+     print *,"dir,xmap3D(dir),dist_scale ", &
+         dir,xmap3D(dir),dist_scale
+    endif
    else if ((xmap3D(dir).eq.0).and.(AMREX_SPACEDIM.eq.2)) then
     ! do nothing
    else
@@ -6145,11 +6164,16 @@ REAL_T dist_scale,df,support_size,line_mass
    endif
  
    force_vector(dir)=FSI(part_id)%NodeForceBIG(dir,inode_raw)
+   if (CTML_DEBUG_Mass.eq.1) then
+    print *,"dir,force_vector(dir) ",dir,force_vector(dir)
+   endif
   enddo ! dir=1..3
  
   line_mass=FSI(part_id)%NodeMassBIG(inode_raw)
   force_weight=force_weight*line_mass/Node_repeat_count
-
+  if (CTML_DEBUG_Mass.eq.1) then
+   print *,"line_mass,force_weight ",line_mass,force_weight
+  endif
  else
   print *,"Node_repeat_count invalid"
   stop
@@ -8268,10 +8292,13 @@ IMPLICIT NONE
   INTEGER_T ctml_part_id
   INTEGER_T fsi_part_id
   INTEGER_T local_iband
+  INTEGER_T CTML_DEBUG_Mass
 
   call FLUSH(6)  ! 6=screen
 
   debug_all=0
+
+  CTML_DEBUG_Mass=0
 
   if ((part_id.lt.1).or.(part_id.gt.nparts)) then
    print *,"part_id invalid"
@@ -9008,7 +9035,15 @@ IMPLICIT NONE
             enddo
             call get_target_from_foot(xfoot,xtarget, &
              velparm,time,part_id)
-    
+   
+             ! xtarget is Lagrangian coordinate
+             ! xx is grid coordinate 
+            if (CTML_DEBUG_Mass.eq.1) then
+             print *,"inode,ielem,xtarget,xx,massparm ", &
+                  inode,ielem, &
+                  xtarget(1),xtarget(2),xtarget(3), &  
+                  xx(1),xx(2),xx(3),massparm
+            endif
             distwt=0.0d0
             do dir=1,3
              distwt=distwt+(xtarget(dir)-xx(dir))**2
