@@ -4922,9 +4922,13 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
      // fab = fortran array block
      // Generalized Navier Boundary Condition GNBC (call get_use_DCA)
      // 1. copy solid velocity into ghost velocity where phi_solid>0
-     // 2. copy fluid velocity into ghost velocity where phi_solid<0
+     // 2. copy solid velocity into ghost velocity where phi_solid<-|cutoff|
      // 3. overwrite ghost velocity with law of the wall or GNBC velocity
-     //    where phi_solid > 0.  (and solid is rigid)
+     //    where phi_solid > -|cutoff|.  (and solid is rigid)
+     //    (tangential velocity in phi_solid>0 regions is replaced by
+     //     ghost tangential velocity, and unchanged where
+     //     0>phi_solid>-|cutoff|)
+     //    ghost normal velocity = solid normal velocity everywhere.
      // in: GODUNOV_3D.F90
     FORT_WALLFUNCTION( 
      im_solid_map.dataPtr(),

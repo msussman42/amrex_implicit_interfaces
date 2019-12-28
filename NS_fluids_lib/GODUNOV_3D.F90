@@ -13602,33 +13602,33 @@ stop
 
       IMPLICIT NONE
 
-
-      INTEGER_T level,finest_level
-      INTEGER_T ngrow_law_of_wall
-      INTEGER_T ngrow_distance
-      INTEGER_T nmat,nparts,nden
-      INTEGER_T im_solid_map(nparts)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: ngrow_law_of_wall
+      INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: nmat,nparts,nden
+      INTEGER_T, intent(in) :: im_solid_map(nparts)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dt
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
        ! DIMDEC is defined in ArrayLim.H in the BoxLib/Src/C_BaseLib
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(state)
-      INTEGER_T DIMDEC(ufluid)   ! declare the x,y,z dimensions of LS
-      INTEGER_T DIMDEC(usolid)
-      INTEGER_T DIMDEC(ughost)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(state)
+      INTEGER_T, intent(in) :: DIMDEC(ufluid) ! declare x,y,z dimensions of LS
+      INTEGER_T, intent(in) :: DIMDEC(usolid)
+      INTEGER_T, intent(in) :: DIMDEC(ughost)
 
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
-      REAL_T LS(DIMV(LS),nmat*(SDIM+1)) !DIMV(LS)=x,y,z  nmat=num. materials
-      REAL_T state(DIMV(state),nden)
-      REAL_T ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
-      REAL_T usolid(DIMV(usolid),nparts*SDIM) 
-      REAL_T ughost(DIMV(ughost),nparts*SDIM) 
+        !DIMV(LS)=x,y,z  nmat=num. materials
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
+      REAL_T, intent(in) :: state(DIMV(state),nden)
+      REAL_T, intent(in) :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
+      REAL_T, intent(in) :: usolid(DIMV(usolid),nparts*SDIM) 
+      REAL_T, intent(out) :: ughost(DIMV(ughost),nparts*SDIM) 
       INTEGER_T i,j,k
       REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_local(-3:3,SDIM)
@@ -13665,6 +13665,7 @@ stop
       REAL_T LScompare
       INTEGER_T tcomp
       INTEGER_T ijksum
+      INTEGER_T plus_flag,minus_flag
 
       nhalf=3
 
@@ -14004,16 +14005,49 @@ stop
            endif
      
           else if ((LScenter(impart).lt.zero).or.(im_primary.ne.impart)) then
+  
+           plus_flag=0
+           minus_flag=0
+           do ii=-1,1
+           do jj=-1,1
+           do kk=klosten,khisten
+            LStest(impart)=LS(D_DECL(i+ii,j+jj,k+kk),impart)
+            if (LStest(impart).ge.zero) then
+             plus_flag=1
+            endif
+            if (LStest(impart).le.zero) then
+             minus_flag=1
+            endif
+           enddo
+           enddo
+           enddo
 
-           if (is_rigid(nmat,im_primary).eq.0) then
-            do dir=1,SDIM
-             ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= & 
-               ufluid(D_DECL(i,j,k),dir)
-            enddo  
-           else if (is_rigid(nmat,im_primary).eq.1) then
-            ! do nothing
+           if ((plus_flag.eq.0).and.(minus_flag.eq.1)) then
+            if (im_primary.eq.impart) then
+             print *,"expecting im_primary<>impart"
+             stop
+            else 
+             ! do nothing, already ughost=usolid
+            endif
+           else if ((plus_flag.eq.1).and.(minus_flag.eq.0)) then
+            print *,"expecting LS(impart)>=0.0 and im_primary=impart"
+            stop
+           else if ((plus_flag.eq.1).and.(minus_flag.eq.1)) then
+            if (is_rigid(nmat,im_primary).eq.0) then
+
+                   FIX ME
+             do dir=1,SDIM
+              ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= & 
+                ufluid(D_DECL(i,j,k),dir)
+             enddo  
+            else if (is_rigid(nmat,im_primary).eq.1) then
+             ! do nothing, already ughost=usolid
+            else
+             print *,"is_rigid(nmat,im_primary) invalid"
+             stop
+            endif
            else
-            print *,"is_rigid(nmat,im_primary) invalid"
+            print *,"plus_flag or minus_flag invalid"
             stop
            endif
 

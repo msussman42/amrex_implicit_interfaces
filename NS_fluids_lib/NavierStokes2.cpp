@@ -2499,7 +2499,7 @@ void NavierStokes::increment_face_velocity(
        ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
        lsfab.dataPtr(),
        ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-       sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()),
+       sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()), //FSI_GHOST_MF
        local_xface.dataPtr(),
        ARLIM(local_xface.loVect()),ARLIM(local_xface.hiVect()), //xcut
        xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
