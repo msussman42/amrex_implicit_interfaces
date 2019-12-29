@@ -13658,6 +13658,8 @@ stop
       INTEGER_T node_index_image(SDIM)
       REAL_T ufluid_stencil(D_DECL(2,2,2),SDIM)
       REAL_T usolid_stencil(D_DECL(2,2,2),SDIM)
+      REAL_T ufluid_point(SDIM)
+      REAL_T usolid_point(SDIM)
       REAL_T thermal_image(D_DECL(2,2,2))
       REAL_T ximage_stencil(D_DECL(2,2,2),SDIM)
       REAL_T xproject_stencil(D_DECL(2,2,2),SDIM)
@@ -14034,6 +14036,11 @@ stop
             stop
            else if ((plus_flag.eq.1).and.(minus_flag.eq.1)) then
             if (is_rigid(nmat,im_primary).eq.0) then
+             if (im_primary.ne.impart) then
+              im_fluid=im_primary
+              do dir=1,SDIM
+               nrm(dir)=LS(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
+              enddo
 
                    FIX ME
              do dir=1,SDIM
