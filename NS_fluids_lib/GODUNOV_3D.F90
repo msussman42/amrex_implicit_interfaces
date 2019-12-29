@@ -14038,9 +14038,22 @@ stop
             if (is_rigid(nmat,im_primary).eq.0) then
              if (im_primary.ne.impart) then
               im_fluid=im_primary
+              mag_norm=zero
               do dir=1,SDIM
                nrm(dir)=LS(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
+               mag_norm=mag_norm+nrm(dir)**2
+               ufluid_point(dir)=ufluid(D_DECL(i,j,k),dir)
+               usolid_point(dir)=usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)
               enddo
+              mag_norm=sqrt(mag_norm)
+              if (mag_norm.gt.zero) then ....
+               ! us = usn n + ust t
+               ! us dot n = usn
+               ! ust t =us-usn n
+               ! ug=usn n + u t = u + (usn-un)n
+               ! ug dot t = u dot t
+               ! ug dot n = u dot n + (usn-un)=usn
+
 
                    FIX ME
              do dir=1,SDIM
