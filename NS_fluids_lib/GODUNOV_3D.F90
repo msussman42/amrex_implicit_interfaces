@@ -14046,20 +14046,36 @@ stop
                usolid_point(dir)=usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)
               enddo
               mag_norm=sqrt(mag_norm)
-              if (mag_norm.gt.zero) then ....
+              if (mag_norm.gt.zero) then 
                ! us = usn n + ust t
                ! us dot n = usn
                ! ust t =us-usn n
                ! ug=usn n + u t = u + (usn-un)n
                ! ug dot t = u dot t
                ! ug dot n = u dot n + (usn-un)=usn
+               usolid_normal=zero
+               ufluid_normal=zero
+               do dir=1,SDIM
+                usolid_normal=usolid_normal+ &
+                        nrm(dir)*usolid_point(dir)/mag_norm
+                ufluid_normal=ufluid_normal+ &
+                        nrm(dir)*ufluid_point(dir)/mag_norm
+               enddo
+               do dir=1,SDIM
+                usolid_law_of_the_wall(dir)=ufluid_point(dir)+ &
+                       (usolid_normal-ufluid_normal)*nrm(dir)/mag_norm
+               enddo 
 
-
-                   FIX ME
-             do dir=1,SDIM
-              ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= & 
-                ufluid(D_DECL(i,j,k),dir)
-             enddo  
+              do dir=1,SDIM
+               ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
+                   usolid_law_of_the_wall(dir)
+              enddo  
+             else if (im_primary.eq.impart) then
+              ! do nothing, use solid vel.
+             else
+              print *,"im_primary or impart invalid"
+              stop
+             endif
             else if (is_rigid(nmat,im_primary).eq.1) then
              ! do nothing, already ughost=usolid
             else
