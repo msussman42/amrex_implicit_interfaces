@@ -13651,6 +13651,7 @@ stop
       INTEGER_T i3,j3,k3
       INTEGER_T in_grow_box
       REAL_T nrm(SDIM)
+      REAL_T mag_norm
       REAL_T x_projection(SDIM)
       REAL_T x_image(SDIM)
       REAL_T delta_r
@@ -13668,6 +13669,7 @@ stop
       INTEGER_T tcomp
       INTEGER_T ijksum
       INTEGER_T plus_flag,minus_flag
+      REAL_T usolid_normal,ufluid_normal
 
       nhalf=3
 
@@ -13891,7 +13893,7 @@ stop
              !  then it is unnecessary to repeat the conversion process.
             do dir=1,SDIM
              nrm(dir)=LS(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
-              ! projection point
+              ! projection point  xp=x-phi grad phi
              x_projection(dir)=xsten(0,dir)-LScenter(impart)*nrm(dir)
               ! image point
              x_image(dir)=x_projection(dir)- &
@@ -14056,20 +14058,25 @@ stop
                usolid_normal=zero
                ufluid_normal=zero
                do dir=1,SDIM
+                nrm(dir)=nrm(dir)/mag_norm
                 usolid_normal=usolid_normal+ &
-                        nrm(dir)*usolid_point(dir)/mag_norm
+                        nrm(dir)*usolid_point(dir)
                 ufluid_normal=ufluid_normal+ &
-                        nrm(dir)*ufluid_point(dir)/mag_norm
+                        nrm(dir)*ufluid_point(dir)
                enddo
                do dir=1,SDIM
-                usolid_law_of_the_wall(dir)=ufluid_point(dir)+ &
-                       (usolid_normal-ufluid_normal)*nrm(dir)/mag_norm
+                usolid_law_of_wall(dir)=ufluid_point(dir)+ &
+                       (usolid_normal-ufluid_normal)*nrm(dir)
                enddo 
 
-              do dir=1,SDIM
-               ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
-                   usolid_law_of_the_wall(dir)
-              enddo  
+               do dir=1,SDIM
+                ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
+                   usolid_law_of_wall(dir)
+               enddo  
+              else
+               print *,"mag_norm invalid"
+               stop
+              endif
              else if (im_primary.eq.impart) then
               ! do nothing, use solid vel.
              else
