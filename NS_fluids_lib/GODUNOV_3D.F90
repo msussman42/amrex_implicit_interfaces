@@ -13338,12 +13338,12 @@ stop
       subroutine getGhostVel( &
        delta_r, &
        dx, &
-       nrm, &
-       ufluid_stencil, &
-       usolid_stencil, &
-       x_projection, &
+       nrm, & ! points to the solid
+       ufluid_stencil, & ! fluid velocity on ximage_stencil
+       usolid_stencil, & ! solid velocity on xproject_stencil
+       x_projection, &  ! on solid/fluid interface
        xsten, &
-       x_image, &
+       x_image, &  ! in the fluid
        ximage_stencil, &
        xproject_stencil, &
        ughost, &
@@ -13374,13 +13374,17 @@ stop
        REAL_T, dimension(SDIM) :: projectdist
        REAL_T, dimension(SDIM) :: c00,c01,c10,c11,c0,c1
        REAL_T :: delta_g
-       REAL_T, dimension(SDIM) :: tngt
-       REAL_T :: uimage_nrml, uimage_tngt,ughost_nrml,ughost_tngt
-       REAL_T :: tau_w, viscosity_molecular, viscosity_eddy
+       REAL_T, dimension(SDIM) :: u_tngt
+       REAL_T :: uimage_nrml, ughost_nrml,ughost_tngt
+       REAL_T :: uimage_tngt_mag
+       REAL_T :: tau_w
+       REAL_T :: viscosity_molecular, viscosity_eddy
+       REAL_T :: density_fluid
        INTEGER_T :: dir
        REAL_T, dimension(SDIM), intent(out) :: ughost
        REAL_T, dimension(SDIM) :: local_dx
        REAL_T :: nrm_sanity
+       REAL_T :: dxmin
        
        if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
         print *,"im_fluid invalid in getGhostVel"
@@ -13398,7 +13402,30 @@ stop
        endif
        viscosity_molecular=fort_viscconst(im_fluid)
        viscosity_eddy=fort_viscconst_eddy(im_fluid)
- 
+       density_fluid=fort_denconst(im_fluid)
+
+       if (density_fluid.gt.zero) then
+        ! do nothing
+       else
+        print *,"density_fluid invalid"
+        stop
+       endif
+
+       dxmin=dx(1)
+       if (dx(2).lt.dxmin) then
+        dxmin=dx(2)
+       endif
+       if (dx(SDIM).lt.dxmin) then
+        dxmin=dx(SDIM)
+       endif
+       if (dxmin.gt.zero) then
+        ! do nothing
+       else
+        print *,"dxmin invalid"
+        stop
+       endif
+
+        !x_projection is closest point on the fluid/solid interface. 
         !distance between ghost point and projection point
         !alternatively: delta_g = LScenter(impart) , can 
         !either use level set or difference between 
@@ -13432,20 +13459,20 @@ stop
        enddo ! dir=1..sdim
 
        do dir=1,SDIM
-        c00(dir) = ufluid_stencil(D_DECL(1,1,1),dir)*(1-imagedist(1)) + &
+        c00(dir) = ufluid_stencil(D_DECL(1,1,1),dir)*(one-imagedist(1)) + &
                    ufluid_stencil(D_DECL(2,1,1),dir)*imagedist(1)
-        c01(dir) = ufluid_stencil(D_DECL(1,1,2),dir)*(1-imagedist(1)) + &
+        c01(dir) = ufluid_stencil(D_DECL(1,1,2),dir)*(one-imagedist(1)) + &
                    ufluid_stencil(D_DECL(2,1,2),dir)*imagedist(1)
-        c10(dir) = ufluid_stencil(D_DECL(1,2,1),dir)*(1-imagedist(1)) + &
+        c10(dir) = ufluid_stencil(D_DECL(1,2,1),dir)*(one-imagedist(1)) + &
                    ufluid_stencil(D_DECL(2,2,1),dir)*imagedist(1)
-        c11(dir) = ufluid_stencil(D_DECL(1,2,2),dir)*(1-imagedist(1)) + &
+        c11(dir) = ufluid_stencil(D_DECL(1,2,2),dir)*(one-imagedist(1)) + &
                    ufluid_stencil(D_DECL(2,2,2),dir)*imagedist(1)
 
-        c0(dir) = c00(dir)*(1-imagedist(2))+c10(dir)*imagedist(2)
-        c1(dir) = c01(dir)*(1-imagedist(2))+c11(dir)*imagedist(2)
+        c0(dir) = c00(dir)*(one-imagedist(2))+c10(dir)*imagedist(2)
+        c1(dir) = c01(dir)*(one-imagedist(2))+c11(dir)*imagedist(2)
     
         if (SDIM.eq.3) then
-         uimage(dir) = c0(dir)*(1-imagedist(SDIM))+c1(dir)*imagedist(SDIM)
+         uimage(dir) = c0(dir)*(one-imagedist(SDIM))+c1(dir)*imagedist(SDIM)
         else if (SDIM.eq.2) then
          uimage(dir) = c0(dir)
         else
@@ -13484,20 +13511,20 @@ stop
        enddo ! dir=1..sdim
 
        do dir=1,SDIM
-        c00(dir) = usolid_stencil(D_DECL(1,1,1),dir)*(1-projectdist(1)) + &
+        c00(dir) = usolid_stencil(D_DECL(1,1,1),dir)*(one-projectdist(1)) + &
                    usolid_stencil(D_DECL(2,1,1),dir)*projectdist(1)
-        c01(dir) = usolid_stencil(D_DECL(1,1,2),dir)*(1-projectdist(1)) + &
+        c01(dir) = usolid_stencil(D_DECL(1,1,2),dir)*(one-projectdist(1)) + &
                    usolid_stencil(D_DECL(2,1,2),dir)*projectdist(1)
-        c10(dir) = usolid_stencil(D_DECL(1,2,1),dir)*(1-projectdist(1)) + &
+        c10(dir) = usolid_stencil(D_DECL(1,2,1),dir)*(one-projectdist(1)) + &
                    usolid_stencil(D_DECL(2,2,1),dir)*projectdist(1)
-        c11(dir) = usolid_stencil(D_DECL(1,2,2),dir)*(1-projectdist(1)) + &
+        c11(dir) = usolid_stencil(D_DECL(1,2,2),dir)*(one-projectdist(1)) + &
                    usolid_stencil(D_DECL(2,2,2),dir)*projectdist(1)
 
-        c0(dir) = c00(dir)*(1-projectdist(2))+c10(dir)*projectdist(2)
-        c1(dir) = c01(dir)*(1-projectdist(2))+c11(dir)*projectdist(2)
+        c0(dir) = c00(dir)*(one-projectdist(2))+c10(dir)*projectdist(2)
+        c1(dir) = c01(dir)*(one-projectdist(2))+c11(dir)*projectdist(2)
     
         if (SDIM.eq.3) then
-         usolid(dir) = c0(dir)*(1-projectdist(SDIM))+c1(dir)*projectdist(SDIM)
+         usolid(dir) = c0(dir)*(one-projectdist(SDIM))+c1(dir)*projectdist(SDIM)
         else if (SDIM.eq.2) then
          usolid(dir) = c0(dir)
         else
@@ -13506,38 +13533,63 @@ stop
         endif
        enddo ! dir=1..sdim
 
+        ! convert to solid velocity frame of reference.
+       uimage_mag=zero
        do dir=1,SDIM
         uimage(dir)=uimage(dir)-usolid(dir)
+        uimage_mag=uimage_mag+uimage(dir)**2
        enddo
-       
+       uimage_mag=sqrt(uimage_mag)
+       if (uimage_mag.ge.zero) then
+        ! do nothing
+       else
+        print *,"uimage_mag invalid"
+        stop
+       endif
+
+        ! laminar boundary layer thickness:
+        ! delta=4.91 (mu x / (U rho))^(1/2)
+        ! dx=4.91 (mu dx/ (U rho))^(1/2)
+        ! dx=4.91^2 mu/(U rho)
+        !   =(g/(cm s))/(cm/s  g/cm^3)=(g/(cm s))/(g/(cm^2 s))=cm
+       if (uimage_mag.gt.zero) then
+        critical_length=((4.91D0)**2)*viscosity_molecular/ &
+                (density_fluid*uimage_mag)
+       else if (uimage_mag.eq.zero) then
+        critical_length=dxmin*1.0D+10
+       else
+        print *,"uimage_mag invalid"
+        stop
+       endif
+
         !normal and tangential velocity components of image point
         !magnitude, normal velocity component
        uimage_nrml = DOT_PRODUCT(uimage,nrm) 
        do dir = 1,SDIM
-        tngt(dir) = uimage(dir)-uimage_nrml*nrm(dir)
+        u_tngt(dir) = uimage(dir)-uimage_nrml*nrm(dir)
        enddo
       
-       uimage_tngt = DOT_PRODUCT(tngt,tngt)
-       uimage_tngt = sqrt(uimage_tngt) !magnitude,tangential velocity component
+       uimage_tngt_mag = DOT_PRODUCT(u_tngt,u_tngt)
+       uimage_tngt_mag = sqrt(uimage_tngt_mag) 
       
-       if (uimage_tngt.lt.zero) then
-        print *,"uimage_tngt.lt.zero"
+       if (uimage_tngt_mag.lt.zero) then
+        print *,"uimage_tngt_mag.lt.zero"
         stop
-       else if (uimage_tngt.eq.zero) then
+       else if (uimage_tngt_mag.eq.zero) then
         ! do nothing
-       else if (uimage_tngt.gt.zero) then 
-        !normalize tangential vector
+       else if (uimage_tngt_mag.gt.zero) then 
+        !normalize tangential velocity vector
         do dir = 1,SDIM
-         tngt(dir) = tngt(dir)/uimage_tngt 
+         u_tngt(dir) = u_tngt(dir)/uimage_tngt_mag 
         enddo
        else
-        print *,"uimage_tngt invalid"
-        print *,"uimage_tngt=",uimage_tngt
+        print *,"uimage_tngt_mag invalid"
+        print *,"uimage_tngt_mag=",uimage_tngt_mag
         print *,"uimage_nrml=",uimage_nrml
         do dir=1,SDIM
          print *,"dir,uimage(dir) ",dir,uimage(dir)
          print *,"dir,usolid(dir) ",dir,usolid(dir)
-         print *,"dir,tngt(dir) ",dir,tngt(dir)
+         print *,"dir,u_tngt(dir) ",dir,u_tngt(dir)
         enddo
         stop
        endif
@@ -13559,11 +13611,11 @@ stop
        if (viscosity_eddy.gt.zero) then
         !obtain wall shear stress tau_w
         !out tau_w
-        call wallFunc_NewtonsMethod(uimage_tngt,delta_r,tau_w,im_fluid) 
-        ughost_tngt = uimage_tngt - tau_w*(delta_g+delta_r)/ &
+        call wallFunc_NewtonsMethod(uimage_tngt_mag,delta_r,tau_w,im_fluid) 
+        ughost_tngt = uimage_tngt_mag - tau_w*(delta_g+delta_r)/ &
          (viscosity_molecular+viscosity_eddy)
        else if (viscosity_eddy.eq.zero) then
-        ughost_tngt = -(delta_g/delta_r)*uimage_tngt
+        ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
        else
         print *,"viscosity_eddy invalid"
         stop
@@ -13571,7 +13623,7 @@ stop
        
         !get ghost velocity using normal and tangential components
        do dir=1,SDIM
-        ughost(dir) = ughost_nrml*nrm(dir)+ughost_tngt*tngt(dir)+usolid(dir)
+        ughost(dir) = ughost_nrml*nrm(dir)+ughost_tngt*u_tngt(dir)+usolid(dir)
        enddo
        
       end subroutine getGhostVel
@@ -13893,14 +13945,16 @@ stop
              !  then it is unnecessary to repeat the conversion process.
             do dir=1,SDIM
              nrm(dir)=LS(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
-              ! projection point  xp=x-phi grad phi
+              ! projection point  xp=x-phi grad phi xp on the
+              !  solid/fluid interface.  nrm=grad phi points to solid.
              x_projection(dir)=xsten(0,dir)-LScenter(impart)*nrm(dir)
-              ! image point
+              ! image point (in the fluid)
              x_image(dir)=x_projection(dir)- &
               sign_funct(LScenter(impart))*delta_r*nrm(dir)
             enddo ! dir=1..sdim
 
              !  x  x   x   o   o    o  x  x  x
+             ! x_projection is closest point on the fluid/solid interface.
             call containing_node(bfact,dx,xlo,fablo,x_projection, &
               node_index_project)
              ! if in_grow_box==1 then a stencil can be found.
@@ -13915,6 +13969,7 @@ stop
             enddo ! dir=1..sdim
 
             if (in_grow_box.eq.1) then
+              ! x_image is image point in the fluid.
              call containing_node(bfact,dx,xlo,fablo,x_image, &
               node_index_image)
              in_grow_box=1
@@ -13973,11 +14028,11 @@ stop
                 delta_r, &
                 dx, &
                 nrm, &
-                ufluid_stencil, &
-                usolid_stencil, &
-                x_projection, &
+                ufluid_stencil, & ! fluid velocity on ximage_stencil
+                usolid_stencil, & ! solid velocity on xproject_stencil
+                x_projection, &  ! on solid/fluid interface
                 xsten, &
-                x_image, &
+                x_image, &  ! in the fluid.
                 ximage_stencil, &
                 xproject_stencil, &
                 usolid_law_of_wall, &
@@ -13989,13 +14044,13 @@ stop
               enddo  
            
              else if (in_grow_box.eq.0) then
-              ! do nothing
+              ! do nothing; use solid velocity in solid regions.
              else
               print *,"in_grow_box invalid"
               stop
              endif
             else if (in_grow_box.eq.0) then
-             ! do nothing
+             ! do nothing; use solid velocity in solid regions.
             else
              print *,"in_grow_box invalid"
              stop
