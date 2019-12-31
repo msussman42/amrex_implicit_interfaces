@@ -13385,6 +13385,10 @@ stop
        REAL_T, dimension(SDIM) :: local_dx
        REAL_T :: nrm_sanity
        REAL_T :: dxmin
+       REAL_T :: predict_deriv_utan
+       REAL_T :: max_deriv_utan
+       REAL_T :: critical_length
+       REAL_T :: uimage_mag
        
        if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
         print *,"im_fluid invalid in getGhostVel"
@@ -13547,31 +13551,16 @@ stop
         stop
        endif
 
-        ! laminar boundary layer thickness:
-        ! delta=4.91 (mu x / (U rho))^(1/2)
-        ! dx=4.91 (mu dx/ (U rho))^(1/2)
-        ! dx=4.91^2 mu/(U rho)
-        !   =(g/(cm s))/(cm/s  g/cm^3)=(g/(cm s))/(g/(cm^2 s))=cm
-       if (uimage_mag.gt.zero) then
-        critical_length=((4.91D0)**2)*viscosity_molecular/ &
-                (density_fluid*uimage_mag)
-       else if (uimage_mag.eq.zero) then
-        critical_length=dxmin*1.0D+10
-       else
-        print *,"uimage_mag invalid"
-        stop
-       endif
-
         !normal and tangential velocity components of image point
         !magnitude, normal velocity component
        uimage_nrml = DOT_PRODUCT(uimage,nrm) 
        do dir = 1,SDIM
         u_tngt(dir) = uimage(dir)-uimage_nrml*nrm(dir)
        enddo
-      
+
        uimage_tngt_mag = DOT_PRODUCT(u_tngt,u_tngt)
        uimage_tngt_mag = sqrt(uimage_tngt_mag) 
-      
+
        if (uimage_tngt_mag.lt.zero) then
         print *,"uimage_tngt_mag.lt.zero"
         stop
@@ -13593,7 +13582,22 @@ stop
         enddo
         stop
        endif
-      
+
+        ! laminar boundary layer thickness:
+        ! delta=4.91 (mu x / (U rho))^(1/2)
+        ! dx=4.91 (mu dx/ (U rho))^(1/2)
+        ! dx=4.91^2 mu/(U rho)
+        !   =(g/(cm s))/(cm/s  g/cm^3)=(g/(cm s))/(g/(cm^2 s))=cm
+       if (uimage_tngt_mag.gt.zero) then
+        critical_length=((4.91D0)**2)*viscosity_molecular/ &
+                (density_fluid*uimage_tngt_mag)
+       else if (uimage_tngt_mag.eq.zero) then
+        critical_length=dxmin*1.0D+10
+       else
+        print *,"uimage_tngt_mag invalid"
+        stop
+       endif
+
        if ((viscosity_molecular.le.zero).or. &
            (viscosity_eddy.lt.zero)) then
         print *,"viscosity_molecular.le.zero or viscosity_eddy.lt.zero"
@@ -13608,20 +13612,50 @@ stop
         ! y+ = y sqrt(tau rho)/mu_molecular
         !  or y+ is the intersection point of the linear (viscous) 
         !  and log layer profiles.
-       if (viscosity_eddy.gt.zero) then
-        !obtain wall shear stress tau_w
-        !out tau_w
-        call wallFunc_NewtonsMethod(uimage_tngt_mag,delta_r,tau_w,im_fluid) 
-        ughost_tngt = uimage_tngt_mag - tau_w*(delta_g+delta_r)/ &
-         (viscosity_molecular+viscosity_eddy)
-       else if (viscosity_eddy.eq.zero) then
+       if (critical_length.lt.dxmin) then
+
+        if (viscosity_eddy.gt.zero) then
+         !obtain wall shear stress tau_w
+         !out tau_w
+         call wallFunc_NewtonsMethod(uimage_tngt_mag,delta_r,tau_w,im_fluid) 
+         ughost_tngt = uimage_tngt_mag - tau_w*(delta_g+delta_r)/ &
+          (viscosity_molecular+viscosity_eddy)
+
+         predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/(delta_g+delta_r)
+         max_deriv_utan=two*uimage_tngt_mag/critical_length
+         if (predict_deriv_utan.lt.max_deriv_utan) then
+          ! do nothing
+         else
+          print *,"predict_deriv_utan or max_deriv_utan invalid"
+          print *,"predict_deriv_utan= ",predict_deriv_utan
+          print *,"max_deriv_utan= ",max_deriv_utan
+          stop
+         endif
+
+        else if (viscosity_eddy.eq.zero) then
+         ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+        else
+         print *,"viscosity_eddy invalid"
+         stop
+        endif
+
+       else if (critical_length.ge.dxmin) then
         ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
        else
-        print *,"viscosity_eddy invalid"
+        print *,"critical_length invalid"
         stop
        endif
        
         !get ghost velocity using normal and tangential components
+        !default:
+        !ughost dot n = ughost_nrml + 
+        !               ughost_tngt * u_tngt dot n +
+        !               usolid dot n=
+        ! -(uimage-usolid) dot n +
+        ! -(I-P)(uimage-usolid)dot n+
+        ! usolid dot n = (2 usolid - uimage) dot n
+        ! (I-P)ughost=(I-P)usolid+
+        ! -(I-P)(uimage-usolid)=(I-P)(2 usolid - uimage)
        do dir=1,SDIM
         ughost(dir) = ughost_nrml*nrm(dir)+ughost_tngt*u_tngt(dir)+usolid(dir)
        enddo

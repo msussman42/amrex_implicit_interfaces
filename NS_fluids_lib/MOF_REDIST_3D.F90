@@ -713,7 +713,10 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
- 
+
+       ! initialize LS
+       ! if is_rigid==0, then use coarse data or init to + or - bigdist
+       ! if is_rigid==1, then use existing solid dist funct.
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
