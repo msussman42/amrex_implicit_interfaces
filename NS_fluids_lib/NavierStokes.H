@@ -135,6 +135,8 @@ namespace amrex{
 #define S_NEW_GROW_MF 119
 #define INTERIOR_FLAG_MF 120
 
+#define LS_NRM_FD_GNBC_MF 121
+
 #define TYPE_MF 122
 #define COLOR_MF 123
 #define PRES_MF 124
@@ -145,6 +147,8 @@ namespace amrex{
 #define CGRESID_MF 129
 #define Z_MF 130
 #define P_MF 131
+
+#define LS_NRM_CP_MF 132
 
 #define MAC_PHI_CRSE_MF 133
 #define MAC_RHS_CRSE_MF 134
@@ -1460,6 +1464,7 @@ protected:
     static int         invert_solid_levelset;
      // 0=> u=u_solid if phi_solid>=0
      // 1=> u=u_solid_ghost if phi_solid>=0
+     // 2=> GNBC (u=u_solid_ghost if phi_solid>=0)
     static int         law_of_the_wall;  // def=0
      // 0=fluid 
      // 1=prescribed motion, PROB.F90 solid 

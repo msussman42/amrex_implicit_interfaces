@@ -240,6 +240,7 @@ stop
 
        ! prior to calling this routine, copy LS_new normal information
        ! to LS_NRM_FD.
+       ! called from: NavierStokes::build_NRM_FD_MF (NavierStokes.cpp)
       subroutine FORT_FD_NORMAL( &
        level, &
        finest_level, &

@@ -13676,7 +13676,8 @@ stop
        fablo,fabhi,bfact, &
        xlo,dx, &
        dt, &
-       LS,DIMS(LS),  &
+       LSCP,DIMS(LSCP),  &
+       LSFD,DIMS(LSFD),  &
        state,DIMS(state), &
        ufluid,DIMS(ufluid), &
        usolid,DIMS(usolid), &
@@ -13701,7 +13702,8 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dt
        ! DIMDEC is defined in ArrayLim.H in the BoxLib/Src/C_BaseLib
-      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(LSCP)
+      INTEGER_T, intent(in) :: DIMDEC(LSFD)
       INTEGER_T, intent(in) :: DIMDEC(state)
       INTEGER_T, intent(in) :: DIMDEC(ufluid) ! declare x,y,z dimensions of LS
       INTEGER_T, intent(in) :: DIMDEC(usolid)
@@ -13710,7 +13712,8 @@ stop
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
+      REAL_T, intent(in) :: LSCP(DIMV(LSCP),nmat*(SDIM+1)) 
+      REAL_T, intent(in) :: LSFD(DIMV(LSFD),nmat*SDIM) 
       REAL_T, intent(in) :: state(DIMV(state),nden)
       REAL_T, intent(in) :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
       REAL_T, intent(in) :: usolid(DIMV(usolid),nparts*SDIM) 
@@ -13822,7 +13825,8 @@ stop
        ! are 0,1,..,SDIM-1. The last parameter is a "unique" 
        ! caller id that is printed to the screen if the sanity
        ! check fails.
-      call checkbound(fablo,fabhi,DIMS(LS),ngrow_distance,-1,1252)
+      call checkbound(fablo,fabhi,DIMS(LSCP),ngrow_distance,-1,1252)
+      call checkbound(fablo,fabhi,DIMS(LSFD),ngrow_distance,-1,1252)
       call checkbound(fablo,fabhi,DIMS(state),ngrow_law_of_wall,-1,1253)
       call checkbound(fablo,fabhi,DIMS(ufluid),ngrow_law_of_wall,-1,1254)
       call checkbound(fablo,fabhi,DIMS(usolid),ngrow_law_of_wall,-1,1255)
@@ -13848,7 +13852,7 @@ stop
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do im=1,nmat
-        LScenter(im)=LS(D_DECL(i,j,k),im)
+        LScenter(im)=LSCP(D_DECL(i,j,k),im)
        enddo
        call get_primary_material(LScenter,nmat,im_primary)
        if ((im_primary.lt.1).or.(im_primary.gt.nmat)) then
@@ -13887,7 +13891,7 @@ stop
              ijksum=abs(i1)+abs(j1)+abs(k1)
              if ((ijksum.gt.0).and.(ijksum.le.SDIM)) then
               do im=1,nmat
-               LStest(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
+               LStest(im)=LSCP(D_DECL(i+i1,j+j1,k+k1),im)
               enddo
               call get_primary_material(LStest,nmat,im_primary_near)
               if (is_rigid(nmat,im_primary_near).eq.0) then
@@ -13933,9 +13937,9 @@ stop
              do side=-1,1,2
               do im=1,nmat
                if (side.eq.-1) then
-                LStest(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
+                LStest(im)=LSCP(D_DECL(i-ii,j-jj,k-kk),im)
                else if (side.eq.1) then
-                LStest(im)=LS(D_DECL(i+ii,j+jj,k+kk),im)
+                LStest(im)=LSCP(D_DECL(i+ii,j+jj,k+kk),im)
                else
                 print *,"side invalid"
                 stop
@@ -13978,7 +13982,7 @@ stop
              !  solid is wholly contained on the finest adaptive level,
              !  then it is unnecessary to repeat the conversion process.
             do dir=1,SDIM
-             nrm(dir)=LS(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
+             nrm(dir)=LSCP(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
               ! projection point  xp=x-phi grad phi xp on the
               !  solid/fluid interface.  nrm=grad phi points to solid.
              x_projection(dir)=xsten(0,dir)-LScenter(impart)*nrm(dir)
@@ -14104,7 +14108,7 @@ stop
            do ii=-1,1
            do jj=-1,1
            do kk=klosten,khisten
-            LStest(impart)=LS(D_DECL(i+ii,j+jj,k+kk),impart)
+            LStest(impart)=LSCP(D_DECL(i+ii,j+jj,k+kk),impart)
             if (LStest(impart).ge.zero) then
              plus_flag=1
             endif
@@ -14123,7 +14127,7 @@ stop
              ! do nothing, already ughost=usolid
             endif
            else if ((plus_flag.eq.1).and.(minus_flag.eq.0)) then
-            print *,"expecting LS(impart)>=0.0 and im_primary=impart"
+            print *,"expecting LSCP(impart)>=0.0 and im_primary=impart"
             stop
            else if ((plus_flag.eq.1).and.(minus_flag.eq.1)) then
             if (is_rigid(nmat,im_primary).eq.0) then
@@ -14131,7 +14135,7 @@ stop
               im_fluid=im_primary
               mag_norm=zero
               do dir=1,SDIM
-               nrm(dir)=LS(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
+               nrm(dir)=LSCP(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
                mag_norm=mag_norm+nrm(dir)**2
                ufluid_point(dir)=ufluid(D_DECL(i,j,k),dir)
                usolid_point(dir)=usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)

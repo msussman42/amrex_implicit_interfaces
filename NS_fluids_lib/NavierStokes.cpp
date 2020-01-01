@@ -695,8 +695,9 @@ Real NavierStokes::bottom_bottom_tol_factor=0.1;
 
 // 0=> u=u_solid if phi_solid>=0
 // 1=> u=u_solid_ghost if phi_solid>=0
-//   for generalized Navier Boundary condition (GNBC),
-//   set law_of_the_wall=1 and also modify "get_use_DCA" in PROB.F90.
+// 2=> generalized Navier Boundary condition (GNBC),
+//   for conventional contact line dynamics, 
+//   modify "get_use_DCA" in PROB.F90.
 int NavierStokes::law_of_the_wall=0;
 
 // 0 fluid (default)
@@ -2155,8 +2156,9 @@ NavierStokes::read_params ()
      amrex::Error("invert_solid_levelset invalid");
 
     pp.query("law_of_the_wall",law_of_the_wall);
-    if ((law_of_the_wall!=0)&&
-        (law_of_the_wall!=1))
+    if ((law_of_the_wall==0)||
+        (law_of_the_wall==1)||
+	(law_of_the_wall==2))
      amrex::Error("law_of_the_wall invalid");
 
     FSI_flag.resize(nmat);
@@ -4872,7 +4874,9 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
    if (nparts*AMREX_SPACEDIM!=Solid_new.nComp())
     amrex::Error("nparts*AMREX_SPACEDIM!=Solid_new.nComp()");
    MultiFab::Copy(*localMF[FSI_GHOST_MF],Solid_new,0,0,nparts*AMREX_SPACEDIM,0);
-  } else if (law_of_the_wall==1) {
+  } else if ((law_of_the_wall==1)||   //turbulent wall flux
+             (law_of_the_wall==2)) {  //GNBC
+
    if (num_materials_vel!=1)
     amrex::Error("num_materials_vel invalid");
 
@@ -4887,11 +4891,16 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
    MultiFab* state_var_mf=getStateDen(ngrow_law_of_wall,cur_time_slab);
    if (state_var_mf->nComp()!=nden)
     amrex::Error("state_var_mf->nComp()!=nden");
-   MultiFab* LS_mf=getStateDist(ngrow_distance,cur_time_slab,1);
-   if (LS_mf->nGrow()!=ngrow_distance)
-    amrex::Error("LS_mf->nGrow()!=ngrow_distance");
-   if (LS_mf->nComp()!=nmat*(AMREX_SPACEDIM+1))
-    amrex::Error("LS_mf->nComp()!=nmat*(AMREX_SPACEDIM+1)");
+
+    // caller_id==1
+   getStateDist_localMF(LS_NRM_CP_MF,ngrow_distance,cur_time_slab,1);
+   if (localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance)
+    amrex::Error("localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance");
+   if (localMF[LS_NRM_CP_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+    amrex::Error("localMF[LS_NRM_CP_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
+
+   new_localMF(LS_NRM_FD_GNBC_MF,nmat*AMREX_SPACEDIM,ngrow_distance,-1);
+   build_NRM_FD_MF(LS_NRM_FD_GNBC_MF,LS_NRM_CP_MF,ngrow_distance);
 
    const Real* dx = geom.CellSize();
 
@@ -4899,7 +4908,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*LS_mf,use_tiling); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*localMF[LS_NRM_CP_MF],use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -4912,7 +4921,9 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& lsfab=(*LS_mf)[mfi];
+    FArrayBox& lsCPfab=(*localMF[LS_NRM_CP_MF])[mfi];
+    FArrayBox& lsFDfab=(*localMF[LS_NRM_FD_GNBC_MF])[mfi];
+
     FArrayBox& statefab=(*state_var_mf)[mfi];
     FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; 
     FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; 
@@ -4941,7 +4952,8 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
      fablo,fabhi,&bfact,
      xlo,dx,
      &dt_slab,
-     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+     lsCPfab.dataPtr(),ARLIM(lsCPfab.loVect()),ARLIM(lsCPfab.hiVect()),
+     lsFDfab.dataPtr(),ARLIM(lsFDfab.loVect()),ARLIM(lsFDfab.hiVect()),
      statefab.dataPtr(),ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
      fluidvelfab.dataPtr(),
      ARLIM(fluidvelfab.loVect()),ARLIM(fluidvelfab.hiVect()),
@@ -4952,7 +4964,9 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
    } // mfi
 } // omp
 
-   delete LS_mf;
+   delete_localMF(LS_NRM_CP_MF,1);
+   delete_localMF(LS_NRM_FD_GNBC_MF,1);
+
    delete state_var_mf;
    delete fluid_vel_mf;
    delete solid_vel_mf;
@@ -18425,6 +18439,9 @@ NavierStokes::makeStateDistALL() {
 
 } // subroutine makeStateDistALL()
 
+// called from: NavierStokes::do_the_advance 
+// (prior to level_phase_change_rate) and
+// called from: NavierStokes::init_FSI_GHOST_MF
 void 
 NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
 
@@ -18438,7 +18455,8 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
       (localMF[ls_mf]->nGrow()>=ngrow)) {
    if ((localMF[fd_mf]->nComp()==nmat*AMREX_SPACEDIM)&&
        (localMF[ls_mf]->nComp()==nmat*(AMREX_SPACEDIM+1))) {
-    MultiFab::Copy(*localMF[fd_mf],*localMF[ls_mf],nmat,0,nmat*AMREX_SPACEDIM,1);
+    MultiFab::Copy(*localMF[fd_mf],*localMF[ls_mf],nmat,0,
+		    nmat*AMREX_SPACEDIM,ngrow);
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -18478,6 +18496,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
 
     ParallelDescriptor::Barrier();
 
+    localMF[fd_mf]->FillBoundary(geom.periodicity()); 
    } else
     amrex::Error("fd_mf or ls_mf nComp() invalid");
   } else

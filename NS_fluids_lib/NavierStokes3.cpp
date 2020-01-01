@@ -2271,6 +2271,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     }
 
       // initialize "law of the wall" velocity derived from solid velocity.
+      // in: NavierStokes::do_the_advance (prior to nonlinear_advect)
     init_FSI_GHOST_MF_ALL(1);
 
     int SEM_VISCOUS_SANITY_CHECK=0;
