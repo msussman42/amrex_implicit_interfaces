@@ -708,6 +708,7 @@ extern "C"
 
 
    void FORT_WALLFUNCTION(
+    int* law_of_the_wall,
     int* im_solid_map,
     int* level,
     int* finest_level,
@@ -724,7 +725,8 @@ extern "C"
     Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
     Real* ufluid,AMREX_ARLIM_P(ufluidlo),AMREX_ARLIM_P(ufluidhi),
     Real* usolid,AMREX_ARLIM_P(usolidlo),AMREX_ARLIM_P(usolidhi),
-    Real* ughost,AMREX_ARLIM_P(ughostlo),AMREX_ARLIM_P(ughosthi));
+    Real* ughost,AMREX_ARLIM_P(ughostlo),AMREX_ARLIM_P(ughosthi),
+    Real* visc_coef);
 
 
    void FORT_STEFANSOLVER(

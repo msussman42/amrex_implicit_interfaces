@@ -4942,6 +4942,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
      //    ghost normal velocity = solid normal velocity everywhere.
      // in: GODUNOV_3D.F90
     FORT_WALLFUNCTION( 
+     &law_of_the_wall,
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
@@ -4960,7 +4961,8 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
      solidvelfab.dataPtr(),
      ARLIM(solidvelfab.loVect()),ARLIM(solidvelfab.hiVect()),
      ghostsolidvelfab.dataPtr(),
-     ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()) );
+     ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()),
+     &visc_coef);
    } // mfi
 } // omp
 

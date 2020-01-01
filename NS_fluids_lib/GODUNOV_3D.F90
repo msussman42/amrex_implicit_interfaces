@@ -13336,9 +13336,15 @@ stop
        ! This assumes that all velocities are in a frame of reference with
        ! respect to the solid: ufluid_stencil, ughost
       subroutine getGhostVel( &
+       law_of_the_wall, &
+       nmat, &
        delta_r, &
        dx, &
+       dt, &
+       visc_coef, &
        nrm, & ! points to the solid
+       LSCP_stencil, &
+       LSFD_stencil, &
        ufluid_stencil, & ! fluid velocity on ximage_stencil
        usolid_stencil, & ! solid velocity on xproject_stencil
        x_projection, &  ! on solid/fluid interface
@@ -13358,9 +13364,20 @@ stop
        
        !in: nrm, delta_r, LScenter or x_projection, dx, x_image, 
        !ximage_stencil, ufluid_stencil
+       INTEGER_T, intent(in) :: law_of_the_wall
+       INTEGER_T, intent(in) :: nmat
        INTEGER_T, intent(in) :: im_fluid
        REAL_T, intent(in) :: delta_r
-       REAL_T, dimension(SDIM), intent(in) :: nrm, x_projection, x_image, dx
+       REAL_T, dimension(SDIM), intent(in) :: nrm
+       REAL_T, dimension(SDIM), intent(in) :: x_projection
+       REAL_T, dimension(SDIM), intent(in) :: x_image
+       REAL_T, dimension(SDIM), intent(in) :: dx
+       REAL_T, intent(in) :: dt
+       REAL_T, intent(in) :: visc_coef 
+       REAL_T, dimension(D_DECL(2,2,2),nmat*(SDIM+1)), intent(in) :: &
+               LSCP_stencil
+       REAL_T, dimension(D_DECL(2,2,2),nmat*SDIM), intent(in) :: &
+               LSFD_stencil
        REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: ufluid_stencil
        REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: usolid_stencil
        REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: ximage_stencil
@@ -13396,6 +13413,29 @@ stop
        endif
        if (delta_r.le.zero) then
         print *,"(delta_r.le.zero)"
+        stop
+       endif
+       if (nmat.ne.num_materials) then
+        print *,"nmat invalid"
+        stop
+       endif
+       if (dt.gt.zero) then
+        ! do nothing
+       else
+        print *,"dt invalid"
+        stop
+       endif 
+       if (visc_coef.ge.zero) then
+        ! do nothing
+       else
+        print *,"visc_coef invalid"
+        stop
+       endif 
+       if ((law_of_the_wall.eq.1).or. &
+           (law_of_the_wall.eq.2)) then
+        ! do nothing
+       else
+        print *,"law_of_the_wall invalid"
         stop
        endif
 
@@ -13666,6 +13706,7 @@ stop
        ! (in NavierStokes.cpp)
        ! called when "law_of_the_wall>0"
       subroutine FORT_WALLFUNCTION( &
+       law_of_the_wall, &
        im_solid_map, &
        level, &
        finest_level, &
@@ -13681,7 +13722,8 @@ stop
        state,DIMS(state), &
        ufluid,DIMS(ufluid), &
        usolid,DIMS(usolid), &
-       ughost,DIMS(ughost))
+       ughost,DIMS(ughost), &
+       visc_coef)
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -13689,6 +13731,7 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: law_of_the_wall
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: ngrow_law_of_wall
       INTEGER_T, intent(in) :: ngrow_distance
@@ -13701,6 +13744,7 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: visc_coef
        ! DIMDEC is defined in ArrayLim.H in the BoxLib/Src/C_BaseLib
       INTEGER_T, intent(in) :: DIMDEC(LSCP)
       INTEGER_T, intent(in) :: DIMDEC(LSFD)
@@ -13746,6 +13790,8 @@ stop
       REAL_T delta_r
       INTEGER_T node_index_project(SDIM)
       INTEGER_T node_index_image(SDIM)
+      REAL_T LSCP_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
+      REAL_T LSFD_stencil(D_DECL(2,2,2),nmat*SDIM)
       REAL_T ufluid_stencil(D_DECL(2,2,2),SDIM)
       REAL_T usolid_stencil(D_DECL(2,2,2),SDIM)
       REAL_T ufluid_point(SDIM)
@@ -13813,10 +13859,25 @@ stop
        print *,"nparts invalid FORT_WALLFUNCTION"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif 
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
+       print *,"visc_coef invalid"
+       stop
+      endif 
+      if ((law_of_the_wall.eq.1).or. &
+          (law_of_the_wall.eq.2)) then
+       ! do nothing
+      else
+       print *,"law_of_the_wall invalid"
+       stop
+      endif
 
        ! check that LS has ngrow_distance border cells.
        ! the "-1" means that LS is a cell centered variable
@@ -14036,6 +14097,14 @@ stop
                 ufluid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
                  ufluid(D_DECL(i3+i1,j3+j1,k3+k1),dir)
                enddo
+               do dir=1,nmat*(SDIM+1)
+                LSCP_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                 LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
+               enddo 
+               do dir=1,nmat*SDIM
+                LSFD_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                 LSFD(D_DECL(i3+i1,j3+j1,k3+k1),dir)
+               enddo 
                tcomp=(im_fluid-1)*num_state_material+2
                thermal_image(D_DECL(i1+1,j1+1,k1+1))= &
                 state(D_DECL(i3+i1,j3+j1,k3+k1),tcomp)
@@ -14063,9 +14132,15 @@ stop
               ! call CODY ESTEBEs routine here 
               ! (defined in this file: GODUNOV_3D.F90)
               call getGhostVel( &
+                law_of_the_wall, &
+                nmat, &
                 delta_r, &
                 dx, &
+                dt, &
+                visc_coef, &
                 nrm, &
+                LSCP_stencil, &
+                LSFD_stencil, &
                 ufluid_stencil, & ! fluid velocity on ximage_stencil
                 usolid_stencil, & ! solid velocity on xproject_stencil
                 x_projection, &  ! on solid/fluid interface
