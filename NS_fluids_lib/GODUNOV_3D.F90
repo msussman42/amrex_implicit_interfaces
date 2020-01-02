@@ -13338,11 +13338,14 @@ stop
       subroutine getGhostVel( &
        law_of_the_wall, &
        nmat, &
+       nten, &
        delta_r, &
        dx, &
        dt, &
+       time, &
        visc_coef, &
        nrm, & ! points to the solid
+       thermal_stencil, &
        LSCP_stencil, &
        LSFD_stencil, &
        ufluid_stencil, & ! fluid velocity on ximage_stencil
@@ -13353,7 +13356,8 @@ stop
        ximage_stencil, &
        xproject_stencil, &
        ughost, &
-       im_fluid)
+       im_fluid, &
+       im_solid)
        
        use probf90_module
        use global_utility_module
@@ -13366,14 +13370,18 @@ stop
        !ximage_stencil, ufluid_stencil
        INTEGER_T, intent(in) :: law_of_the_wall
        INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: nten
        INTEGER_T, intent(in) :: im_fluid
+       INTEGER_T, intent(in) :: im_solid
        REAL_T, intent(in) :: delta_r
        REAL_T, dimension(SDIM), intent(in) :: nrm
        REAL_T, dimension(SDIM), intent(in) :: x_projection
        REAL_T, dimension(SDIM), intent(in) :: x_image
        REAL_T, dimension(SDIM), intent(in) :: dx
        REAL_T, intent(in) :: dt
+       REAL_T, intent(in) :: time
        REAL_T, intent(in) :: visc_coef 
+       REAL_T, dimension(D_DECL(2,2,2),nmat), intent(in) :: thermal_stencil
        REAL_T, dimension(D_DECL(2,2,2),nmat*(SDIM+1)), intent(in) :: &
                LSCP_stencil
        REAL_T, dimension(D_DECL(2,2,2),nmat*SDIM), intent(in) :: &
@@ -13385,11 +13393,16 @@ stop
        REAL_T, dimension(-3:3,SDIM), intent(in) :: xsten
       
        !D_DECL is defined in SPACE.H in the BoxLib/Src/C_BaseLib
+
+       REAL_T, dimension(nmat) :: thermal_interp
+
+       REAL_T, dimension(nmat*(SDIM+1)) :: LSCP_interp
+       REAL_T, dimension(nmat*SDIM) :: LSFD_interp
+
        REAL_T, dimension(SDIM) :: uimage
        REAL_T, dimension(SDIM) :: usolid
        REAL_T, dimension(SDIM) :: imagedist
        REAL_T, dimension(SDIM) :: projectdist
-       REAL_T, dimension(SDIM) :: c00,c01,c10,c11,c0,c1
        REAL_T :: delta_g
        REAL_T, dimension(SDIM) :: u_tngt
        REAL_T :: uimage_nrml, ughost_nrml,ughost_tngt
@@ -13406,9 +13419,35 @@ stop
        REAL_T :: max_deriv_utan
        REAL_T :: critical_length
        REAL_T :: uimage_mag
+       INTEGER_T :: im,im_primary,im_secondary
+       INTEGER_T :: im_fluid1,im_fluid2
+       INTEGER_T :: iten
+       INTEGER_T :: iten_13,iten_23
+       INTEGER_T :: nten_test
+       REAL_T, dimension(nten) :: user_tension
+       REAL_T :: cos_angle,sin_angle
+       INTEGER_T :: near_contact_line
        
+       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+       if (nten.eq.nten_test) then
+        ! do nothing
+       else
+        print *,"nten invalid"
+        stop
+       endif
+
        if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
         print *,"im_fluid invalid in getGhostVel"
+        stop
+       endif
+       if ((im_solid.lt.1).or.(im_solid.gt.num_materials)) then
+        print *,"im_solid invalid in getGhostVel"
+        stop
+       endif
+       if (is_rigid(nmat,im_solid).eq.1) then
+        ! do nothing
+       else
+        print *,"is_rigid(nmat,im_solid) invalid"
         stop
        endif
        if (delta_r.le.zero) then
@@ -13423,6 +13462,12 @@ stop
         ! do nothing
        else
         print *,"dt invalid"
+        stop
+       endif 
+       if (time.ge.zero) then
+        ! do nothing
+       else
+        print *,"time invalid"
         stop
        endif 
        if (visc_coef.ge.zero) then
@@ -13502,28 +13547,15 @@ stop
                          local_dx(dir)
        enddo ! dir=1..sdim
 
-       do dir=1,SDIM
-        c00(dir) = ufluid_stencil(D_DECL(1,1,1),dir)*(one-imagedist(1)) + &
-                   ufluid_stencil(D_DECL(2,1,1),dir)*imagedist(1)
-        c01(dir) = ufluid_stencil(D_DECL(1,1,2),dir)*(one-imagedist(1)) + &
-                   ufluid_stencil(D_DECL(2,1,2),dir)*imagedist(1)
-        c10(dir) = ufluid_stencil(D_DECL(1,2,1),dir)*(one-imagedist(1)) + &
-                   ufluid_stencil(D_DECL(2,2,1),dir)*imagedist(1)
-        c11(dir) = ufluid_stencil(D_DECL(1,2,2),dir)*(one-imagedist(1)) + &
-                   ufluid_stencil(D_DECL(2,2,2),dir)*imagedist(1)
+       call bilinear_interp_stencil(thermal_stencil,imagedist, &
+               nmat,thermal_interp)
+       call bilinear_interp_stencil(LSCP_stencil,imagedist, &
+               nmat*(SDIM+1),LSCP_interp)
+       call bilinear_interp_stencil(LSFD_stencil,imagedist, &
+               nmat*SDIM,LSFD_interp)
 
-        c0(dir) = c00(dir)*(one-imagedist(2))+c10(dir)*imagedist(2)
-        c1(dir) = c01(dir)*(one-imagedist(2))+c11(dir)*imagedist(2)
-    
-        if (SDIM.eq.3) then
-         uimage(dir) = c0(dir)*(one-imagedist(SDIM))+c1(dir)*imagedist(SDIM)
-        else if (SDIM.eq.2) then
-         uimage(dir) = c0(dir)
-        else
-         print *,"macro defined dimension invalid"
-         stop
-        endif
-       enddo ! dir=1..sdim
+       call bilinear_interp_stencil(ufluid_stencil,imagedist, &
+               SDIM,uimage)
 
         !Trilinear interpolation - obtain projection point coordinates
        dir=1
@@ -13554,28 +13586,8 @@ stop
           local_dx(dir)
        enddo ! dir=1..sdim
 
-       do dir=1,SDIM
-        c00(dir) = usolid_stencil(D_DECL(1,1,1),dir)*(one-projectdist(1)) + &
-                   usolid_stencil(D_DECL(2,1,1),dir)*projectdist(1)
-        c01(dir) = usolid_stencil(D_DECL(1,1,2),dir)*(one-projectdist(1)) + &
-                   usolid_stencil(D_DECL(2,1,2),dir)*projectdist(1)
-        c10(dir) = usolid_stencil(D_DECL(1,2,1),dir)*(one-projectdist(1)) + &
-                   usolid_stencil(D_DECL(2,2,1),dir)*projectdist(1)
-        c11(dir) = usolid_stencil(D_DECL(1,2,2),dir)*(one-projectdist(1)) + &
-                   usolid_stencil(D_DECL(2,2,2),dir)*projectdist(1)
-
-        c0(dir) = c00(dir)*(one-projectdist(2))+c10(dir)*projectdist(2)
-        c1(dir) = c01(dir)*(one-projectdist(2))+c11(dir)*projectdist(2)
-    
-        if (SDIM.eq.3) then
-         usolid(dir) = c0(dir)*(one-projectdist(SDIM))+c1(dir)*projectdist(SDIM)
-        else if (SDIM.eq.2) then
-         usolid(dir) = c0(dir)
-        else
-         print *,"macro defined dimension invalid"
-         stop
-        endif
-       enddo ! dir=1..sdim
+       call bilinear_interp_stencil(usolid_stencil,projectdist, &
+               SDIM,usolid)
 
         ! convert to solid velocity frame of reference.
        uimage_mag=zero
@@ -13646,45 +13658,121 @@ stop
  
        ughost_nrml = -(delta_g/delta_r)*uimage_nrml
 
+       call get_primary_material(LSCP_interp,nmat,im_primary)
+
         ! From Spaldings' paper, a representative size for the linear 
         ! region is:
         ! y+ = 10.0
         ! y+ = y sqrt(tau rho)/mu_molecular
         !  or y+ is the intersection point of the linear (viscous) 
         !  and log layer profiles.
-       if (critical_length.lt.dxmin) then
 
-        if (viscosity_eddy.gt.zero) then
-         !obtain wall shear stress tau_w
-         !out tau_w
-         call wallFunc_NewtonsMethod(uimage_tngt_mag,delta_r,tau_w,im_fluid) 
-         ughost_tngt = uimage_tngt_mag - tau_w*(delta_g+delta_r)/ &
-          (viscosity_molecular+viscosity_eddy)
+       if (is_rigid(nmat,im_primary).eq.0) then
 
-         predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/(delta_g+delta_r)
-         max_deriv_utan=two*uimage_tngt_mag/critical_length
-         if (predict_deriv_utan.lt.max_deriv_utan) then
+        im_secondary=0
+        do im=1,nmat
+         if ((im.ne.im_primary).and.(im.ne.im_solid)) then
+          if (im_secondary.eq.0) then
+           im_secondary=im
+          else if (LSCP_interp(im).gt.LSCP_interp(im_secondary)) then
+           im_secondary=im
+          else if (LSCP_interp(im).le.LSCP_interp(im_secondary)) then
+           ! do nothing
+          else
+           print *,"LSCP_interp bust"
+           stop
+          endif
+         else if ((im.eq.im_primary).or.(im.eq.im_solid)) then
           ! do nothing
          else
-          print *,"predict_deriv_utan or max_deriv_utan invalid"
-          print *,"predict_deriv_utan= ",predict_deriv_utan
-          print *,"max_deriv_utan= ",max_deriv_utan
+          print *,"im bust"
           stop
          endif
 
-        else if (viscosity_eddy.eq.zero) then
-         ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+        enddo !im=1..nmat
+
+        near_contact_line=1
+        if (im_secondary.eq.0) then
+         near_contact_line=0
+        else if ((im_secondary.ge.1).and.(im_secondary.le.nmat)) then
+         if (is_rigid(nmat,im_secondary).eq.1) then
+          near_contact_line=0
+         else if (is_rigid(nmat,im_secondary).eq.0) then
+          ! do nothing
+         else
+          print *,"is_rigid(nmat,im_secondary) invalid"
+          stop
+         endif
         else
-         print *,"viscosity_eddy invalid"
+         print *,"im_secondary invalid"
          stop
         endif
 
-       else if (critical_length.ge.dxmin) then
+        if (near_contact_line.eq.1) then
+         if (im_primary.lt.im_secondary) then
+          im_fluid1=im_primary
+          im_fluid2=im_secondary
+         else if (im_primary.gt.im_secondary) then
+          im_fluid2=im_primary
+          im_fluid1=im_secondary
+         else
+          print *,"im_primary or im_secondary invalid"
+          stop
+         endif
+         call get_iten(im_fluid1,im_fluid2,iten,nmat)
+         call get_user_tension(x_image,time, &
+                 fort_tension,user_tension, &
+                 thermal_interp,nmat,iten)
+         call get_CL_iten(im_fluid1,im_fluid2,im_solid,iten_13,iten_23, &
+           user_tension,nten,cos_angle,sin_angle)
+        else if (near_contact_line.eq.0) then
+         ! do nothing
+        else
+         print *,"near_contact_line invalid"
+         stop
+        endif
+
+        if (critical_length.lt.dxmin) then
+
+         if (viscosity_eddy.gt.zero) then
+          !obtain wall shear stress tau_w
+          !out tau_w
+          call wallFunc_NewtonsMethod(uimage_tngt_mag,delta_r,tau_w,im_fluid) 
+          ughost_tngt = uimage_tngt_mag - tau_w*(delta_g+delta_r)/ &
+           (viscosity_molecular+viscosity_eddy)
+
+          predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/(delta_g+delta_r)
+          max_deriv_utan=two*uimage_tngt_mag/critical_length
+          if (predict_deriv_utan.lt.max_deriv_utan) then
+           ! do nothing
+          else
+           print *,"predict_deriv_utan or max_deriv_utan invalid"
+           print *,"predict_deriv_utan= ",predict_deriv_utan
+           print *,"max_deriv_utan= ",max_deriv_utan
+           stop
+          endif
+
+         else if (viscosity_eddy.eq.zero) then
+          ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+         else
+          print *,"viscosity_eddy invalid"
+          stop
+         endif
+
+        else if (critical_length.ge.dxmin) then
+         ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+        else
+         print *,"critical_length invalid"
+         stop
+        endif
+
+       else if (is_rigid(nmat,im_primary).eq.1) then
         ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
        else
-        print *,"critical_length invalid"
+        print *,"is_rigid(nmat,im_primary) invalid"
         stop
        endif
+
        
         !get ghost velocity using normal and tangential components
         !default:
@@ -13717,6 +13805,7 @@ stop
        fablo,fabhi,bfact, &
        xlo,dx, &
        dt, &
+       time, &
        LSCP,DIMS(LSCP),  &
        LSFD,DIMS(LSFD),  &
        state,DIMS(state), &
@@ -13744,6 +13833,7 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: time
       REAL_T, intent(in) :: visc_coef
        ! DIMDEC is defined in ArrayLim.H in the BoxLib/Src/C_BaseLib
       INTEGER_T, intent(in) :: DIMDEC(LSCP)
@@ -13796,7 +13886,7 @@ stop
       REAL_T usolid_stencil(D_DECL(2,2,2),SDIM)
       REAL_T ufluid_point(SDIM)
       REAL_T usolid_point(SDIM)
-      REAL_T thermal_image(D_DECL(2,2,2))
+      REAL_T thermal_image(D_DECL(2,2,2),nmat)
       REAL_T ximage_stencil(D_DECL(2,2,2),SDIM)
       REAL_T xproject_stencil(D_DECL(2,2,2),SDIM)
       REAL_T usolid_law_of_wall(SDIM)
@@ -13805,6 +13895,9 @@ stop
       INTEGER_T ijksum
       INTEGER_T plus_flag,minus_flag
       REAL_T usolid_normal,ufluid_normal
+      INTEGER_T nten
+
+      nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
 
       nhalf=3
 
@@ -13863,6 +13956,12 @@ stop
        ! do nothing
       else
        print *,"dt invalid"
+       stop
+      endif 
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid"
        stop
       endif 
       if (visc_coef.ge.zero) then
@@ -14105,9 +14204,11 @@ stop
                 LSFD_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
                  LSFD(D_DECL(i3+i1,j3+j1,k3+k1),dir)
                enddo 
-               tcomp=(im_fluid-1)*num_state_material+2
-               thermal_image(D_DECL(i1+1,j1+1,k1+1))= &
-                state(D_DECL(i3+i1,j3+j1,k3+k1),tcomp)
+               do im=1,nmat
+                tcomp=(im-1)*num_state_material+2
+                thermal_image(D_DECL(i1+1,j1+1,k1+1),im)= &
+                  state(D_DECL(i3+i1,j3+j1,k3+k1),tcomp)
+               enddo ! im=1..nmat
                call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
                do dir=1,SDIM
                 ximage_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
@@ -14134,11 +14235,14 @@ stop
               call getGhostVel( &
                 law_of_the_wall, &
                 nmat, &
+                nten, &
                 delta_r, &
                 dx, &
                 dt, &
+                time, &
                 visc_coef, &
                 nrm, &
+                thermal_image, &
                 LSCP_stencil, &
                 LSFD_stencil, &
                 ufluid_stencil, & ! fluid velocity on ximage_stencil
@@ -14149,7 +14253,8 @@ stop
                 ximage_stencil, &
                 xproject_stencil, &
                 usolid_law_of_wall, &
-                im_fluid)
+                im_fluid, &
+                impart)
 
               do dir=1,SDIM
                ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &

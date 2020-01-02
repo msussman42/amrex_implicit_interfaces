@@ -4953,6 +4953,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
      fablo,fabhi,&bfact,
      xlo,dx,
      &dt_slab,
+     &cur_time_slab,
      lsCPfab.dataPtr(),ARLIM(lsCPfab.loVect()),ARLIM(lsCPfab.hiVect()),
      lsFDfab.dataPtr(),ARLIM(lsFDfab.loVect()),ARLIM(lsFDfab.hiVect()),
      statefab.dataPtr(),ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),

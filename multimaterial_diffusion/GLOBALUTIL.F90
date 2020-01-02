@@ -7174,6 +7174,52 @@ contains
       return
       end subroutine get_longdir
 
+      subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
+                      ncomp,data_interp)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: ncomp
+      REAL_T, dimension(D_DECL(2,2,2),ncomp), intent(in) :: data_stencil
+      REAL_T, intent(in) :: wt_dist(SDIM)
+      REAL_T, intent(out) :: data_interp(ncomp)
+      INTEGER_T :: dir
+      REAL_T :: c00,c01,c10,c11,c0,c1
+
+      do dir=1,SDIM
+       if ((wt_dist(dir).ge.-VOFTOL).and. &
+           (wt_dist(dir).le.one+VOFTOL)) then
+        ! do nothing
+       else
+        print *,"wt_dist out of range"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      do dir=1,ncomp
+       c00 = data_stencil(D_DECL(1,1,1),dir)*(one-wt_dist(1)) + &
+             data_stencil(D_DECL(2,1,1),dir)*wt_dist(1)
+       c01 = data_stencil(D_DECL(1,1,2),dir)*(one-wt_dist(1)) + &
+             data_stencil(D_DECL(2,1,2),dir)*wt_dist(1)
+       c10 = data_stencil(D_DECL(1,2,1),dir)*(one-wt_dist(1)) + &
+             data_stencil(D_DECL(2,2,1),dir)*wt_dist(1)
+       c11 = data_stencil(D_DECL(1,2,2),dir)*(one-wt_dist(1)) + &
+             data_stencil(D_DECL(2,2,2),dir)*wt_dist(1)
+
+       c0 = c00*(one-wt_dist(2))+c10*wt_dist(2)
+       c1 = c01*(one-wt_dist(2))+c11*wt_dist(2)
+    
+       if (SDIM.eq.3) then
+        data_interp(dir) = c0*(one-wt_dist(SDIM))+c1*wt_dist(SDIM)
+       else if (SDIM.eq.2) then
+        data_interp(dir) = c0
+       else
+        print *,"macro defined dimension invalid"
+        stop
+       endif
+      enddo ! dir=1..ncomp
+
+      end subroutine bilinear_interp_stencil
 
       subroutine curverr(curv,LS,xsten,nhalf)
       use probcommon_module
