@@ -6468,6 +6468,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
    int tid=ns_thread();
 
+    // in: LEVELSET_3D.F90
    FORT_RENORMALIZE_PRESCRIBE(
      &tid,
      &level,&finest_level,
