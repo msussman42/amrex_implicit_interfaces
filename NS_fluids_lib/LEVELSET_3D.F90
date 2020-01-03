@@ -17066,11 +17066,15 @@ stop
               (sum_vfrac_solid_new.ge.half)) then
 
             ! default radius: 1 cell
+            ! this inner loop is needed since the volume fraction
+            ! at (i,j,k) depends on the levelset function values
+            ! in the (i+i1,j+j1,k+k1) stencil.
            do i1=istenlo(1),istenhi(1)
            do j1=istenlo(2),istenhi(2)
            do k1=istenlo(3),istenhi(3)
 
             near_fluid=zero
+
             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
              at_center=1
             else
@@ -17099,6 +17103,10 @@ stop
              enddo
 
               ! default radius: 2 cells.
+              ! In order to find the level set function values at the
+              ! (i+i1,j+j1,k+k1) stencil points in the solid, 
+              ! extrapolation from the
+              ! fluid region must be done.
              do i2=LSstenlo(1),LSstenhi(1)
              do j2=LSstenlo(2),LSstenhi(2)
              do k2=LSstenlo(3),LSstenhi(3)
@@ -17110,8 +17118,11 @@ stop
                ! most weight.
               call get_primary_material(LS_virtual,nmat,im_primary_sub_stencil)
               if (is_rigid(nmat,im_primary_sub_stencil).eq.0) then
+                ! WT=1/((dx/10)^2 + ||xfluid-xghost||^2)
                WT=0.01*(dxmaxLS**2)
                 ! nhalf==7
+                ! xfluid: fluid cell
+                ! xghost: solid cell
                do dir=1,SDIM
                 if (dir.eq.1) then
                  xfluid=xsten(2*(i1+i2),dir)
@@ -17129,7 +17140,10 @@ stop
 
                 WT=WT+(xfluid-xghost)**2
                enddo ! dir=1..sdim
-               if (WT.le.zero) then
+
+               if (WT.gt.zero) then
+                ! do nothing
+               else
                 print *,"WT invalid"
                 stop
                endif
@@ -17155,6 +17169,7 @@ stop
                LS_virtual_new(im)=LS_virtual_new(im)/near_fluid
               enddo
              else if (near_fluid.eq.zero) then
+              ! LS_predict=LS(i+i1,j+j1,k+k1)
               do im=1,nmat
                LS_virtual_new(im)=LS_predict(im)
               enddo
@@ -17175,6 +17190,7 @@ stop
            enddo
            enddo ! i1,j1,k1=-1..1
 
+            ! default radius: 1 cell
             ! make the extension fluid level set tessellating
            do i1=istenlo(1),istenhi(1)
            do j1=istenlo(2),istenhi(2)

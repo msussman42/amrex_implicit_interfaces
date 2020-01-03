@@ -13346,7 +13346,8 @@ stop
        visc_coef, &
        nrm, & ! points to the solid
        thermal_stencil, &
-       LSCP_stencil, &
+       LSCP_image_stencil, &
+       LSCP_prj_stencil, &
        LSFD_stencil, &
        ufluid_stencil, & ! fluid velocity on ximage_stencil
        usolid_stencil, & ! solid velocity on xproject_stencil
@@ -13374,7 +13375,7 @@ stop
        INTEGER_T, intent(in) :: im_fluid
        INTEGER_T, intent(in) :: im_solid
        REAL_T, intent(in) :: delta_r
-       REAL_T, dimension(SDIM), intent(in) :: nrm
+       REAL_T, dimension(SDIM), intent(in) :: nrm ! points to the solid
        REAL_T, dimension(SDIM), intent(in) :: x_projection
        REAL_T, dimension(SDIM), intent(in) :: x_image
        REAL_T, dimension(SDIM), intent(in) :: dx
@@ -13383,7 +13384,9 @@ stop
        REAL_T, intent(in) :: visc_coef 
        REAL_T, dimension(D_DECL(2,2,2),nmat), intent(in) :: thermal_stencil
        REAL_T, dimension(D_DECL(2,2,2),nmat*(SDIM+1)), intent(in) :: &
-               LSCP_stencil
+               LSCP_image_stencil
+       REAL_T, dimension(D_DECL(2,2,2),nmat*(SDIM+1)), intent(in) :: &
+               LSCP_prj_stencil
        REAL_T, dimension(D_DECL(2,2,2),nmat*SDIM), intent(in) :: &
                LSFD_stencil
        REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: ufluid_stencil
@@ -13396,8 +13399,9 @@ stop
 
        REAL_T, dimension(nmat) :: thermal_interp
 
-       REAL_T, dimension(nmat*(SDIM+1)) :: LSCP_interp
-       REAL_T, dimension(nmat*SDIM) :: LSFD_interp
+       REAL_T, dimension(nmat*(SDIM+1)) :: LSCP_image_interp
+       REAL_T, dimension(nmat*(SDIM+1)) :: LSCP_prj_interp
+       REAL_T, dimension(nmat*SDIM) :: LSFD_image_interp
 
        REAL_T, dimension(SDIM) :: uimage
        REAL_T, dimension(SDIM) :: usolid
@@ -13419,7 +13423,9 @@ stop
        REAL_T :: max_deriv_utan
        REAL_T :: critical_length
        REAL_T :: uimage_mag
-       INTEGER_T :: im,im_primary,im_secondary
+       INTEGER_T :: im
+       INTEGER_T :: im_primary_image
+       INTEGER_T :: im_secondary_image
        INTEGER_T :: im_fluid1,im_fluid2
        INTEGER_T :: iten
        INTEGER_T :: iten_13,iten_23
@@ -13427,6 +13433,18 @@ stop
        REAL_T, dimension(nten) :: user_tension
        REAL_T :: cos_angle,sin_angle
        INTEGER_T :: near_contact_line
+       REAL_T :: mag
+       REAL_T :: sinthetaACT
+       REAL_T :: costhetaACT
+       REAL_T :: dist_to_CL
+       REAL_T :: nf_dot_ns
+       REAL_T :: nf_dot_nCL_perp
+       REAL_T, dimension(3) :: nfluidFD
+       REAL_T, dimension(3) :: nsolidCP
+       REAL_T, dimension(3) :: nCL
+       REAL_T, dimension(3) :: nCL_perp
+       REAL_T, dimension(3) :: nCL_perp2
+       REAL_T, dimension(3) :: nf_prj
        
        nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
        if (nten.eq.nten_test) then
@@ -13549,10 +13567,10 @@ stop
 
        call bilinear_interp_stencil(thermal_stencil,imagedist, &
                nmat,thermal_interp)
-       call bilinear_interp_stencil(LSCP_stencil,imagedist, &
-               nmat*(SDIM+1),LSCP_interp)
+       call bilinear_interp_stencil(LSCP_image_stencil,imagedist, &
+               nmat*(SDIM+1),LSCP_image_interp)
        call bilinear_interp_stencil(LSFD_stencil,imagedist, &
-               nmat*SDIM,LSFD_interp)
+               nmat*SDIM,LSFD_image_interp)
 
        call bilinear_interp_stencil(ufluid_stencil,imagedist, &
                SDIM,uimage)
@@ -13586,6 +13604,8 @@ stop
           local_dx(dir)
        enddo ! dir=1..sdim
 
+       call bilinear_interp_stencil(LSCP_prj_stencil,projectdist, &
+               nmat*(SDIM+1),LSCP_prj_interp)
        call bilinear_interp_stencil(usolid_stencil,projectdist, &
                SDIM,usolid)
 
@@ -13658,7 +13678,7 @@ stop
  
        ughost_nrml = -(delta_g/delta_r)*uimage_nrml
 
-       call get_primary_material(LSCP_interp,nmat,im_primary)
+       call get_primary_material(LSCP_image_interp,nmat,im_primary_image)
 
         ! From Spaldings' paper, a representative size for the linear 
         ! region is:
@@ -13667,22 +13687,24 @@ stop
         !  or y+ is the intersection point of the linear (viscous) 
         !  and log layer profiles.
 
-       if (is_rigid(nmat,im_primary).eq.0) then
+       if (is_rigid(nmat,im_primary_image).eq.0) then
 
-        im_secondary=0
+        im_secondary_image=0
         do im=1,nmat
-         if ((im.ne.im_primary).and.(im.ne.im_solid)) then
-          if (im_secondary.eq.0) then
-           im_secondary=im
-          else if (LSCP_interp(im).gt.LSCP_interp(im_secondary)) then
-           im_secondary=im
-          else if (LSCP_interp(im).le.LSCP_interp(im_secondary)) then
+         if ((im.ne.im_primary_image).and.(im.ne.im_solid)) then
+          if (im_secondary_image.eq.0) then
+           im_secondary_image=im
+          else if (LSCP_image_interp(im).gt. &
+                   LSCP_image_interp(im_secondary_image)) then
+           im_secondary_image=im
+          else if (LSCP_image_interp(im).le. &
+                   LSCP_image_interp(im_secondary_image)) then
            ! do nothing
           else
-           print *,"LSCP_interp bust"
+           print *,"LSCP_image_interp bust"
            stop
           endif
-         else if ((im.eq.im_primary).or.(im.eq.im_solid)) then
+         else if ((im.eq.im_primary_image).or.(im.eq.im_solid)) then
           ! do nothing
          else
           print *,"im bust"
@@ -13692,31 +13714,32 @@ stop
         enddo !im=1..nmat
 
         near_contact_line=1
-        if (im_secondary.eq.0) then
+        if (im_secondary_image.eq.0) then
          near_contact_line=0
-        else if ((im_secondary.ge.1).and.(im_secondary.le.nmat)) then
-         if (is_rigid(nmat,im_secondary).eq.1) then
+        else if ((im_secondary_image.ge.1).and. &
+                 (im_secondary_image.le.nmat)) then
+         if (is_rigid(nmat,im_secondary_image).eq.1) then
           near_contact_line=0
-         else if (is_rigid(nmat,im_secondary).eq.0) then
+         else if (is_rigid(nmat,im_secondary_image).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im_secondary) invalid"
+          print *,"is_rigid(nmat,im_secondary_image) invalid"
           stop
          endif
         else
-         print *,"im_secondary invalid"
+         print *,"im_secondary_image invalid"
          stop
         endif
 
         if (near_contact_line.eq.1) then
-         if (im_primary.lt.im_secondary) then
-          im_fluid1=im_primary
-          im_fluid2=im_secondary
-         else if (im_primary.gt.im_secondary) then
-          im_fluid2=im_primary
-          im_fluid1=im_secondary
+         if (im_primary_image.lt.im_secondary_image) then
+          im_fluid1=im_primary_image
+          im_fluid2=im_secondary_image
+         else if (im_primary_image.gt.im_secondary_image) then
+          im_fluid2=im_primary_image
+          im_fluid1=im_secondary_image
          else
-          print *,"im_primary or im_secondary invalid"
+          print *,"im_primary_image or im_secondary_image invalid"
           stop
          endif
          call get_iten(im_fluid1,im_fluid2,iten,nmat)
@@ -13725,6 +13748,84 @@ stop
                  thermal_interp,nmat,iten)
          call get_CL_iten(im_fluid1,im_fluid2,im_solid,iten_13,iten_23, &
            user_tension,nten,cos_angle,sin_angle)
+          ! nrm points to the solid
+         nf_dot_ns=zero
+         nfluidFD(3)=zero
+         nsolidCP(3)=zero
+         do dir=1,SDIM
+          nfluidFD(dir)=LSFD_image_interp((im_primary_image-1)*SDIM+dir)
+          nsolidCP(dir)=nrm(dir)
+          nf_dot_ns=nf_dot_ns+nfluidFD(dir)*nsolidCP(dir)
+         enddo
+         mag=zero
+         do dir=1,3
+          nCL(dir)=nfluidFD(dir)-nf_dot_ns*nsolidCP(dir)
+          mag=mag+nCL(dir)**2
+         enddo 
+         mag=sqrt(mag)
+         if (mag.eq.zero) then ! theta=0
+          near_contact_line=0 
+         else if (mag.gt.zero) then
+          do dir=1,3
+           nCL(dir)=nCL(dir)/mag
+          enddo
+          call crossprod(nCL,nsolidCP,nCL_perp)
+          mag=zero
+          do dir=1,3
+           mag=mag+nCL_perp(dir)**2
+          enddo
+          mag=sqrt(mag)
+          if (mag.gt.zero) then
+           do dir=1,3
+            nCL_perp(dir)=nCL_perp(dir)/mag
+           enddo
+           nf_dot_nCL_perp=zero
+           do dir=1,3
+            nf_dot_nCL_perp=nf_dot_nCL_perp+nfluidFD(dir)*nCL_perp(dir)
+           enddo
+           mag=zero
+           do dir=1,3
+            nf_prj(dir)=nfluidFD(dir)-nf_dot_nCL_perp*nCL_perp(dir)
+            mag=mag+nf_prj(dir)**2
+           enddo
+           mag=sqrt(mag)
+           if (mag.gt.zero) then
+            do dir=1,3
+             nf_prj(dir)=nf_prj(dir)/mag
+            enddo
+            call crossprod(nsolidCP,nf_prj,nCL_perp2)
+            sinthetaACT=zero
+            costhetaACT=zero
+            do dir=1,3
+             sinthetaACT=sinthetaACT+nCL_perp2(dir)**2
+             costhetaACT=costhetaACT+nsolidCP(dir)*nf_prj(dir)
+            enddo
+            sinthetaACT=sqrt(sinthetaACT)
+            if (sinthetaACT.gt.zero) then
+             if (costhetaACT.ge.zero) then
+              dist_to_CL=LSCP_prj_interp(im_primary_image)/sinthetaACT
+             else if (costhetaACT.le.zero) then
+              dist_to_CL=LSCP_prj_interp(im_primary_image)
+             else
+              print *,"costhetaACT invalid"
+              stop
+             endif
+            else
+             print *,"sinthetaACT invalid; nCL_perp2 has 0 size"
+             stop
+            endif
+           else
+            print *,"nf_prj should not have 0 size"
+            stop
+           endif
+          else
+           print *,"nCL_perp should not have 0 size"
+           stop
+          endif
+         else
+          print *,"mag invalid"
+          stop
+         endif
         else if (near_contact_line.eq.0) then
          ! do nothing
         else
@@ -13766,10 +13867,10 @@ stop
          stop
         endif
 
-       else if (is_rigid(nmat,im_primary).eq.1) then
+       else if (is_rigid(nmat,im_primary_image).eq.1) then
         ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
        else
-        print *,"is_rigid(nmat,im_primary) invalid"
+        print *,"is_rigid(nmat,im_primary_image) invalid"
         stop
        endif
 
@@ -13880,7 +13981,8 @@ stop
       REAL_T delta_r
       INTEGER_T node_index_project(SDIM)
       INTEGER_T node_index_image(SDIM)
-      REAL_T LSCP_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
+      REAL_T LSCP_image_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
+      REAL_T LSCP_prj_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
       REAL_T LSFD_stencil(D_DECL(2,2,2),nmat*SDIM)
       REAL_T ufluid_stencil(D_DECL(2,2,2),SDIM)
       REAL_T usolid_stencil(D_DECL(2,2,2),SDIM)
@@ -14197,7 +14299,7 @@ stop
                  ufluid(D_DECL(i3+i1,j3+j1,k3+k1),dir)
                enddo
                do dir=1,nmat*(SDIM+1)
-                LSCP_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                LSCP_image_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
                  LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
                enddo 
                do dir=1,nmat*SDIM
@@ -14218,6 +14320,10 @@ stop
                j3=node_index_project(2)-1
                k3=node_index_project(SDIM)-1
 
+               do dir=1,nmat*(SDIM+1)
+                LSCP_prj_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                 LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
+               enddo 
                do dir=1,SDIM
                 usolid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
                  usolid(D_DECL(i3+i1,j3+j1,k3+k1),(partid-1)*SDIM+dir)
@@ -14243,7 +14349,8 @@ stop
                 visc_coef, &
                 nrm, &
                 thermal_image, &
-                LSCP_stencil, &
+                LSCP_image_stencil, &
+                LSCP_prj_stencil, &
                 LSFD_stencil, &
                 ufluid_stencil, & ! fluid velocity on ximage_stencil
                 usolid_stencil, & ! solid velocity on xproject_stencil
