@@ -7942,8 +7942,13 @@ contains
          dx(dir),bfact)
         i1crit=1
         do i1=2,bfact+1
-         if (abs(x(dir)-xnodes(i1)).le.abs(x(dir)-xnodes(i1crit))) then
-          i1crit=i1
+         if (xnodes(i1).gt.xnodes(i1crit)) then
+          if (abs(x(dir)-xnodes(i1)).le.abs(x(dir)-xnodes(i1crit))) then
+           i1crit=i1
+          endif
+         else
+          print *,"expecting xnodes(i1).gt.xnodes(i1crit)"
+          stop
          endif
         enddo
         node_index(dir)=e_index*bfact+i1crit-1

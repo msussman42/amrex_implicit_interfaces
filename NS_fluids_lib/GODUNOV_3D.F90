@@ -13344,7 +13344,7 @@ stop
        dt, &
        time, &
        visc_coef, &
-       nrm, & ! points to the solid
+       nrm_solid, & ! points to the solid
        thermal_stencil, &
        LSCP_image_stencil, &
        LSCP_prj_stencil, &
@@ -13367,7 +13367,7 @@ stop
        
        implicit none
        
-       !in: nrm, delta_r, LScenter or x_projection, dx, x_image, 
+       !in: nrm_solid, delta_r, LScenter or x_projection, dx, x_image, 
        !ximage_stencil, ufluid_stencil
        INTEGER_T, intent(in) :: law_of_the_wall
        INTEGER_T, intent(in) :: nmat
@@ -13375,7 +13375,7 @@ stop
        INTEGER_T, intent(in) :: im_fluid
        INTEGER_T, intent(in) :: im_solid
        REAL_T, intent(in) :: delta_r
-       REAL_T, dimension(SDIM), intent(in) :: nrm ! points to the solid
+       REAL_T, dimension(SDIM), intent(in) :: nrm_solid ! points to the solid
        REAL_T, dimension(SDIM), intent(in) :: x_projection
        REAL_T, dimension(SDIM), intent(in) :: x_image
        REAL_T, dimension(SDIM), intent(in) :: dx
@@ -13502,7 +13502,8 @@ stop
         stop
        endif
 
-       nrm_sanity=DOT_PRODUCT(nrm,nrm)
+        ! nrm_solid points into the solid.
+       nrm_sanity=DOT_PRODUCT(nrm_solid,nrm_solid)
        if (abs(nrm_sanity-one).gt.VOFTOL) then
         print *,"abs(nrm_sanity-one).gt.VOFTOL"
         stop
@@ -13536,12 +13537,19 @@ stop
         !distance between ghost point and projection point
         !alternatively: delta_g = LScenter(impart) , can 
         !either use level set or difference between 
-        !ghost and projection point
+        !ghost and projection point.
+        !xsten(0,dir) is a ghost point in the solid.
        delta_g = zero
        do dir = 1,SDIM
         delta_g = delta_g + (x_projection(dir)-xsten(0,dir))**2
        enddo
        delta_g = sqrt(delta_g)
+       if (delta_g.ge.zero) then
+        ! do nothing
+       else
+        print *,"delta_g invalid"
+        stop
+       endif
        
         !Trilinear interpolation - obtain image point coordinates
        dir=1
@@ -13557,7 +13565,9 @@ stop
        endif
 
        do dir=1,SDIM
-        if (local_dx(dir).le.zero) then
+        if (local_dx(dir).gt.zero) then
+         ! do nothing
+        else
          print *,"local_dx(dir).le.zero"
          stop
         endif
@@ -13625,9 +13635,9 @@ stop
 
         !normal and tangential velocity components of image point
         !magnitude, normal velocity component
-       uimage_nrml = DOT_PRODUCT(uimage,nrm) 
+       uimage_nrml = DOT_PRODUCT(uimage,nrm_solid) 
        do dir = 1,SDIM
-        u_tngt(dir) = uimage(dir)-uimage_nrml*nrm(dir)
+        u_tngt(dir) = uimage(dir)-uimage_nrml*nrm_solid(dir)
        enddo
 
        uimage_tngt_mag = DOT_PRODUCT(u_tngt,u_tngt)
@@ -13670,8 +13680,10 @@ stop
         stop
        endif
 
-       if ((viscosity_molecular.le.zero).or. &
-           (viscosity_eddy.lt.zero)) then
+       if ((viscosity_molecular.gt.zero).and. &
+           (viscosity_eddy.ge.zero)) then
+        ! do nothing
+       else
         print *,"viscosity_molecular.le.zero or viscosity_eddy.lt.zero"
         stop
        endif
@@ -13748,13 +13760,13 @@ stop
                  thermal_interp,nmat,iten)
          call get_CL_iten(im_fluid1,im_fluid2,im_solid,iten_13,iten_23, &
            user_tension,nten,cos_angle,sin_angle)
-          ! nrm points to the solid
+          ! nrm_solid points to the solid
          nf_dot_ns=zero
          nfluidFD(3)=zero
          nsolidCP(3)=zero
          do dir=1,SDIM
           nfluidFD(dir)=LSFD_image_interp((im_primary_image-1)*SDIM+dir)
-          nsolidCP(dir)=nrm(dir)
+          nsolidCP(dir)=nrm_solid(dir)
           nf_dot_ns=nf_dot_ns+nfluidFD(dir)*nsolidCP(dir)
          enddo
          mag=zero
@@ -13833,37 +13845,56 @@ stop
          stop
         endif
 
-        if (critical_length.lt.dxmin) then
+        if (law_of_the_wall.eq.1) then
 
-         if (viscosity_eddy.gt.zero) then
-          !obtain wall shear stress tau_w
-          !out tau_w
-          call wallFunc_NewtonsMethod(uimage_tngt_mag,delta_r,tau_w,im_fluid) 
-          ughost_tngt = uimage_tngt_mag - tau_w*(delta_g+delta_r)/ &
-           (viscosity_molecular+viscosity_eddy)
+         if (critical_length.lt.dxmin) then
 
-          predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/(delta_g+delta_r)
-          max_deriv_utan=two*uimage_tngt_mag/critical_length
-          if (predict_deriv_utan.lt.max_deriv_utan) then
-           ! do nothing
+          if (viscosity_eddy.gt.zero) then
+           !obtain wall shear stress tau_w
+           !out tau_w
+           call wallFunc_NewtonsMethod(uimage_tngt_mag,delta_r,tau_w,im_fluid) 
+           ughost_tngt = uimage_tngt_mag - tau_w*(delta_g+delta_r)/ &
+            (viscosity_molecular+viscosity_eddy)
+
+           predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/(delta_g+delta_r)
+           max_deriv_utan=two*uimage_tngt_mag/critical_length
+           if (predict_deriv_utan.lt.max_deriv_utan) then
+            ! do nothing
+           else
+            print *,"predict_deriv_utan or max_deriv_utan invalid"
+            print *,"predict_deriv_utan= ",predict_deriv_utan
+            print *,"max_deriv_utan= ",max_deriv_utan
+            stop
+           endif
+
+          else if (viscosity_eddy.eq.zero) then
+           ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
           else
-           print *,"predict_deriv_utan or max_deriv_utan invalid"
-           print *,"predict_deriv_utan= ",predict_deriv_utan
-           print *,"max_deriv_utan= ",max_deriv_utan
+           print *,"viscosity_eddy invalid"
            stop
           endif
 
-         else if (viscosity_eddy.eq.zero) then
+         else if (critical_length.ge.dxmin) then
           ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
          else
-          print *,"viscosity_eddy invalid"
+          print *,"critical_length invalid"
           stop
          endif
 
-        else if (critical_length.ge.dxmin) then
-         ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+        else if (law_of_the_wall.eq.2) then
+
+         if (near_contact_line.eq.1) then
+          print *,"FIX ME"
+          stop
+         else if (near_contact_line.eq.0) then
+          ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+         else
+          print *,"near_contact_line invalid"
+          stop
+         endif
+
         else
-         print *,"critical_length invalid"
+         print *,"law_of_the_wall invalid"
          stop
         endif
 
@@ -13886,7 +13917,9 @@ stop
         ! (I-P)ughost=(I-P)usolid+
         ! -(I-P)(uimage-usolid)=(I-P)(2 usolid - uimage)
        do dir=1,SDIM
-        ughost(dir) = ughost_nrml*nrm(dir)+ughost_tngt*u_tngt(dir)+usolid(dir)
+        ughost(dir) = ughost_nrml*nrm_solid(dir)+ &
+                      ughost_tngt*u_tngt(dir)+ &
+                      usolid(dir)
        enddo
        
       end subroutine getGhostVel
