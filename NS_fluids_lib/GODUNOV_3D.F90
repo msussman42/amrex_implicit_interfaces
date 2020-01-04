@@ -13348,7 +13348,7 @@ stop
        thermal_stencil, &
        LSCP_image_stencil, &
        LSCP_prj_stencil, &
-       LSFD_stencil, &
+       LSFD_image_stencil, &
        ufluid_stencil, & ! fluid velocity on ximage_stencil
        usolid_stencil, & ! solid velocity on xproject_stencil
        x_projection, &  ! on solid/fluid interface
@@ -13388,7 +13388,7 @@ stop
        REAL_T, dimension(D_DECL(2,2,2),nmat*(SDIM+1)), intent(in) :: &
                LSCP_prj_stencil
        REAL_T, dimension(D_DECL(2,2,2),nmat*SDIM), intent(in) :: &
-               LSFD_stencil
+               LSFD_image_stencil
        REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: ufluid_stencil
        REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: usolid_stencil
        REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: ximage_stencil
@@ -13569,7 +13569,7 @@ stop
                nmat,thermal_interp)
        call bilinear_interp_stencil(LSCP_image_stencil,imagedist, &
                nmat*(SDIM+1),LSCP_image_interp)
-       call bilinear_interp_stencil(LSFD_stencil,imagedist, &
+       call bilinear_interp_stencil(LSFD_image_stencil,imagedist, &
                nmat*SDIM,LSFD_image_interp)
 
        call bilinear_interp_stencil(ufluid_stencil,imagedist, &
@@ -13969,12 +13969,12 @@ stop
       REAL_T LScrit
       INTEGER_T do_corners
       INTEGER_T klosten,khisten
-      INTEGER_T dir,side
+      INTEGER_T dir
       INTEGER_T ii,jj,kk
       INTEGER_T i1,j1,k1
       INTEGER_T i3,j3,k3
       INTEGER_T in_grow_box
-      REAL_T nrm(SDIM)
+      REAL_T nrm_solid(SDIM)
       REAL_T mag_norm
       REAL_T x_projection(SDIM)
       REAL_T x_image(SDIM)
@@ -13983,7 +13983,7 @@ stop
       INTEGER_T node_index_image(SDIM)
       REAL_T LSCP_image_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
       REAL_T LSCP_prj_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
-      REAL_T LSFD_stencil(D_DECL(2,2,2),nmat*SDIM)
+      REAL_T LSFD_image_stencil(D_DECL(2,2,2),nmat*SDIM)
       REAL_T ufluid_stencil(D_DECL(2,2,2),SDIM)
       REAL_T usolid_stencil(D_DECL(2,2,2),SDIM)
       REAL_T ufluid_point(SDIM)
@@ -14146,16 +14146,17 @@ stop
            nearwall_exists=0
            im_fluid=0
            LScrit=zero
-           if (do_corners.eq.1) then
-            do i1=-1,1
-            do j1=-1,1
-            do k1=klosten,khisten
-             ijksum=abs(i1)+abs(j1)+abs(k1)
-             if ((ijksum.gt.0).and.(ijksum.le.SDIM)) then
-              do im=1,nmat
-               LStest(im)=LSCP(D_DECL(i+i1,j+j1,k+k1),im)
-              enddo
-              call get_primary_material(LStest,nmat,im_primary_near)
+           do i1=-1,1
+           do j1=-1,1
+           do k1=klosten,khisten
+            ijksum=abs(i1)+abs(j1)+abs(k1)
+            if ((ijksum.gt.0).and.(ijksum.le.SDIM)) then
+             do im=1,nmat
+              LStest(im)=LSCP(D_DECL(i+i1,j+j1,k+k1),im)
+             enddo
+             call get_primary_material(LStest,nmat,im_primary_near)
+
+             if ((ijksum.eq.1).or.(do_corners.eq.1)) then
               if (is_rigid(nmat,im_primary_near).eq.0) then
                if (nearwall_exists.eq.0) then
                 nearwall_exists=1
@@ -14171,65 +14172,28 @@ stop
                 print *,"nearwall_exits invalid"
                 stop
                endif
+              else if (is_rigid(nmat,im_primary_near).eq.1) then
+               ! do nothing
+              else
+               print *,"is_rigid(nmat,im_primary_near) invalid"
+               stop
               endif
-             else if (ijksum.eq.0) then
+             else if (((ijksum.eq.2).or.(ijksum.eq.SDIM)).and. &
+                      (do_corners.eq.0)) then
               ! do nothing
              else
-              print *,"i1,j1,k1 bust"
+              print *,"ijksum or do_corners invalid"
               stop
              endif
-            enddo
-            enddo
-            enddo
-           else if (do_corners.eq.0) then
-            do dir=1,SDIM
-             ii=0
-             jj=0
-             kk=0
-             if (dir.eq.1) then
-              ii=1
-             else if (dir.eq.2) then
-              jj=1
-             else if ((dir.eq.3).and.(SDIM.eq.3)) then
-              kk=1
-             else
-              print *,"dir invalid"
-              stop
-             endif
-             do side=-1,1,2
-              do im=1,nmat
-               if (side.eq.-1) then
-                LStest(im)=LSCP(D_DECL(i-ii,j-jj,k-kk),im)
-               else if (side.eq.1) then
-                LStest(im)=LSCP(D_DECL(i+ii,j+jj,k+kk),im)
-               else
-                print *,"side invalid"
-                stop
-               endif 
-              enddo ! im=1..nmat
-              call get_primary_material(LStest,nmat,im_primary_near)
-              if (is_rigid(nmat,im_primary_near).eq.0) then
-               if (nearwall_exists.eq.0) then
-                nearwall_exists=1
-                im_fluid=im_primary_near
-                LScrit=LScenter(im_fluid)
-               else if (nearwall_exists.eq.1) then
-                LScompare=LScenter(im_primary_near)
-                if (abs(LScompare).le.abs(LScrit)) then
-                 im_fluid=im_primary_near
-                 LScrit=LScenter(im_fluid)
-                endif
-               else
-                print *,"nearwall_exits invalid"
-                stop
-               endif
-              endif
-             enddo ! side=-1,1,2
-            enddo ! dir=1..SDIM
-           else
-            print *,"do_corners invalid"
-            stop
-           endif
+            else if (ijksum.eq.0) then
+             ! do nothing
+            else
+             print *,"ijksum invalid"
+             stop
+            endif
+           enddo
+           enddo
+           enddo
          
            if (nearwall_exists.eq.1) then
              ! normal for solid materials with a Lagrangian representation
@@ -14244,13 +14208,14 @@ stop
              !  solid is wholly contained on the finest adaptive level,
              !  then it is unnecessary to repeat the conversion process.
             do dir=1,SDIM
-             nrm(dir)=LSCP(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
+             nrm_solid(dir)=LSCP(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
               ! projection point  xp=x-phi grad phi xp on the
-              !  solid/fluid interface.  nrm=grad phi points to solid.
-             x_projection(dir)=xsten(0,dir)-LScenter(impart)*nrm(dir)
+              !  solid/fluid interface.  
+              ! nrm_solid=grad phi points to solid.
+             x_projection(dir)=xsten(0,dir)-LScenter(impart)*nrm_solid(dir)
               ! image point (in the fluid)
              x_image(dir)=x_projection(dir)- &
-              sign_funct(LScenter(impart))*delta_r*nrm(dir)
+              sign_funct(LScenter(impart))*delta_r*nrm_solid(dir)
             enddo ! dir=1..sdim
 
              !  x  x   x   o   o    o  x  x  x
@@ -14303,7 +14268,7 @@ stop
                  LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
                enddo 
                do dir=1,nmat*SDIM
-                LSFD_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                LSFD_image_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
                  LSFD(D_DECL(i3+i1,j3+j1,k3+k1),dir)
                enddo 
                do im=1,nmat
@@ -14347,11 +14312,11 @@ stop
                 dt, &
                 time, &
                 visc_coef, &
-                nrm, &
+                nrm_solid, &
                 thermal_image, &
                 LSCP_image_stencil, &
                 LSCP_prj_stencil, &
-                LSFD_stencil, &
+                LSFD_image_stencil, &
                 ufluid_stencil, & ! fluid velocity on ximage_stencil
                 usolid_stencil, & ! solid velocity on xproject_stencil
                 x_projection, &  ! on solid/fluid interface
@@ -14382,7 +14347,7 @@ stop
             endif
 
            else if (nearwall_exists.eq.0) then
-            ! do nothing
+            ! do nothing; already ughost=usolid
            else
             print *,"nearwall_exists invalid"
             stop
@@ -14422,8 +14387,8 @@ stop
               im_fluid=im_primary
               mag_norm=zero
               do dir=1,SDIM
-               nrm(dir)=LSCP(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
-               mag_norm=mag_norm+nrm(dir)**2
+               nrm_solid(dir)=LSCP(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
+               mag_norm=mag_norm+nrm_solid(dir)**2
                ufluid_point(dir)=ufluid(D_DECL(i,j,k),dir)
                usolid_point(dir)=usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)
               enddo
@@ -14438,15 +14403,15 @@ stop
                usolid_normal=zero
                ufluid_normal=zero
                do dir=1,SDIM
-                nrm(dir)=nrm(dir)/mag_norm
+                nrm_solid(dir)=nrm_solid(dir)/mag_norm
                 usolid_normal=usolid_normal+ &
-                        nrm(dir)*usolid_point(dir)
+                        nrm_solid(dir)*usolid_point(dir)
                 ufluid_normal=ufluid_normal+ &
-                        nrm(dir)*ufluid_point(dir)
+                        nrm_solid(dir)*ufluid_point(dir)
                enddo
                do dir=1,SDIM
                 usolid_law_of_wall(dir)=ufluid_point(dir)+ &
-                       (usolid_normal-ufluid_normal)*nrm(dir)
+                       (usolid_normal-ufluid_normal)*nrm_solid(dir)
                enddo 
 
                do dir=1,SDIM
