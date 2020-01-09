@@ -292,14 +292,13 @@ IMPLICIT NONE
 ! 15=hypocycloid with 2 materials
 ! 20=hypocycloid with 6 materials
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
-INTEGER,PARAMETER          :: probtype_in=4
+INTEGER,PARAMETER          :: probtype_in=400
 INTEGER,PARAMETER          :: stefan_flag=1
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
-! buffer for probtype_in=3 (not used for shrinking circle w/T=TSAT outside)
+! buffer for probtype_in=3
 real(kind=8),PARAMETER     :: radblob2_in = 0.05d0  
-! adjust this for shrinking circle and maybe planar moving front.
-real(kind=8),PARAMETER     :: xblob_in = 0.5d0
+real(kind=8),PARAMETER     :: xblob_in = 0.2d0
 real(kind=8),PARAMETER     :: yblob_in = 0.5d0
 ! for probtype=16 , top and bot temperature profile
 real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0  
@@ -310,7 +309,7 @@ real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0
 ! material 1 on the left, material 2 on the right.
 ! 1.0d0 for probtype==400 (gingerbread)
 !  (T=TSAT interior domain initially, T=TSAT+TDIFF on walls)
-real(kind=8),PARAMETER     :: TDIFF_in = -4.0d0
+real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
@@ -338,9 +337,7 @@ INTEGER,PARAMETER          :: plot_int = 1
 !
 ! non-axisymmetric, polar solver for validation (probtype_in.eq.19):
 ! TSTOP=0.004d0
-! probtype_in==4: TSTOP=1.25D-3
-! probtype_in==400: TSTOP=0.5d0
-real(kind=8),parameter     :: TSTOP = 1.25D-3
+real(kind=8),parameter     :: TSTOP = 0.5d0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -485,10 +482,10 @@ print *,"constant_K_test= ",constant_K_test
 ! M time
 N_START=64
 N_FINISH=64
-M_START=10
+M_START=64
 M_FACTOR=2
 
-if (probtype_in.eq.4) then ! expanding or shrinking circle
+if (probtype_in.eq.4) then
  fixed_dt_main=-1.0d0 ! dt=1.25D-4 N=64  M=10  TSTOP=1.25D-3
 else if ((probtype_in.eq.13).or. & ! hypocycloid
          (probtype_in.eq.15).or. &
@@ -505,6 +502,8 @@ else if (probtype_in.eq.0) then ! flat interface
 else if (probtype_in.eq.2) then ! vertical
  fixed_dt_main=-1.0d0 
 else if (probtype_in.eq.3) then ! expanding circle
+ fixed_dt_main=-1.0d0  ! TSTOP=1.25D-3
+else if (probtype_in.eq.4) then ! expanding or shrinking circle
  fixed_dt_main=-1.0d0  ! TSTOP=1.25D-3
 else if (probtype_in.eq.5) then ! phase change vertical planar interface
  fixed_dt_main=-1.0d0  ! TSTOP=0.5d0
@@ -725,7 +724,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        (local_linear_exact.eq.1)) then
     ! do nothing
    else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact bad prob==400"
+    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==400"
     stop
    endif
 

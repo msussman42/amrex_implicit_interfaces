@@ -1788,11 +1788,9 @@ stop
       INTEGER_T i_inf_nrm(nten_in)
       INTEGER_T j_inf_nrm(nten_in)
 
-      INTEGER_T DEBUG_LS
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
 
       diagnostic_output=0
-      DEBUG_LS=0
       nhalf=3
 
       if (SDIM.eq.2) then
@@ -2147,7 +2145,7 @@ stop
          nmat)
 
 
-       if (DEBUG_LS.eq.1) then
+       if (DEBUG_LS_MOVE_INTERFACE.eq.1) then
         k=0
         do i=fablo(1)-ngrow,fabhi(1)+ngrow
         do j=fablo(2)-ngrow,fabhi(2)+ngrow
@@ -2168,10 +2166,10 @@ stop
          enddo
         enddo
         enddo
-       else if (DEBUG_LS.eq.0) then
+       else if (DEBUG_LS_MOVE_INTERFACE.eq.0) then
         ! do nothing
        else
-        print *,"DEBUG_LS invalid"
+        print *,"DEBUG_LS_MOVE_INTERFACE invalid"
         stop
        endif
 
@@ -2245,7 +2243,7 @@ stop
        endif
 
 
-       if (DEBUG_LS.eq.1) then
+       if (DEBUG_LS_MOVE_INTERFACE.eq.1) then
         k=0
         do i=fablo(1)-ngrow,fabhi(1)+ngrow
         do j=fablo(2)-ngrow,fabhi(2)+ngrow
@@ -2266,10 +2264,10 @@ stop
          enddo
         enddo
         enddo
-       else if (DEBUG_LS.eq.0) then
+       else if (DEBUG_LS_MOVE_INTERFACE.eq.0) then
         ! do nothing
        else
-        print *,"DEBUG_LS invalid"
+        print *,"DEBUG_LS_MOVE_INTERFACE invalid"
         stop
        endif
 
@@ -2470,7 +2468,7 @@ stop
         pause
        endif
 
-       if (DEBUG_LS.eq.1) then
+       if (DEBUG_LS_MOVE_INTERFACE.eq.1) then
         k=0
         do i=fablo(1)-ngrow,fabhi(1)+ngrow
         do j=fablo(2)-ngrow,fabhi(2)+ngrow
@@ -2491,10 +2489,10 @@ stop
          enddo
         enddo
         enddo
-       else if (DEBUG_LS.eq.0) then
+       else if (DEBUG_LS_MOVE_INTERFACE.eq.0) then
         ! do nothing
        else
-        print *,"DEBUG_LS invalid"
+        print *,"DEBUG_LS_MOVE_INTERFACE invalid"
         stop
        endif
 
@@ -2741,7 +2739,7 @@ stop
         fablo,fabhi, &
         nmat,ngrow)
 
-       if (DEBUG_LS.eq.1) then
+       if (DEBUG_LS_MOVE_INTERFACE.eq.1) then
         k=0
         do i=fablo(1)-ngrow,fabhi(1)+ngrow
         do j=fablo(2)-ngrow,fabhi(2)+ngrow
@@ -2762,10 +2760,10 @@ stop
          enddo
         enddo
         enddo
-       else if (DEBUG_LS.eq.0) then
+       else if (DEBUG_LS_MOVE_INTERFACE.eq.0) then
         ! do nothing
        else
-        print *,"DEBUG_LS invalid"
+        print *,"DEBUG_LS_MOVE_INTERFACE invalid"
         stop
        endif
 
