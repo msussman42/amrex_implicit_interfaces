@@ -3714,6 +3714,215 @@ stop
        return
        end subroutine get_scaled_pforce
 
+
+! ZEYU HUANG
+!mu_l: dynamic viscocity of liquid
+!mu_g: dynamic viscocity of gas
+!sigma: surface tension coeffient
+!thet_s: static contact angle (liquid region)
+!imodel: model index, can be 1 ~ 7
+!ifgnbc: if use gnbc, only works in model 1
+!lambda: slip length, equal to 8.e-7 in Yamamoto2013, depends on 
+!specific problems
+!l_macro: parameter in gnbc, can be set as grid length
+!l_micro: parameter in gnbc, can be set as 1.e-9
+!dgrid: grid length
+!d_closest: closest distance
+!thet_d_apparent: dynamic contact angle from simulation (input in gnbc)
+!(liquid region)
+!u_cl: velocity of contact line (input in dynamic contact angle models)
+! (unused for GNBC)
+!u_slip: slip velocity of wall (output in gnbc)
+! u_slip>0 if CL advancing into the vapor region.
+!thet_d: dynamic contact angle (output in dynamic contact angle models)
+!(liquid region) (unused, GNBC)
+!For the test results of different dynamic contact angle models, model 4 and 
+!model 7 have large difference between other models.
+subroutine dynamic_contact_angle(mu_l, mu_g, sigma, thet_s, &
+                                 imodel, ifgnbc, lambda, l_macro, l_micro, &
+                                 dgrid, d_closest, thet_d_apparent, &
+                                 u_cl, u_slip, thet_d)
+implicit none
+
+integer imodel, ifgnbc
+double precision mu_l, mu_g, sigma, thet_s, dgrid, d_closest, thet_d_apparent, u_cl, u_slip, thet_d, delta
+double precision lambda, l_macro, l_micro !parameter of gnbc
+integer iter
+double precision Ca, thet_d_micro, beta, chi !parameters of model1
+double precision thet_d_micro_old, Ca_old, a, b, c
+double precision f1, f2, Ja11, Ja12, Ja21, Ja22, b1, b2, u11, u12, u22, l21, y1, y2
+double precision a1, a2, a3, a4, u, u0, thet_d_old !parameters of model3
+double precision temp, fHI, fHI_old !parameters of model5
+double precision sigma_0, v_0 !parameters of model7
+integer diag_output
+
+diag_output=1
+
+if (ifgnbc.eq.0) then
+        if (diag_output.eq.1) then
+         print *, "Implement Dynamic Contact Angle ..."
+        endif
+else if (ifgnbc.eq.1) then
+        if (diag_output.eq.1) then
+         print *, "Implement Generalized Navier Boundary Condition ..."
+        endif
+else
+        print *,"ifgnbc invalid"
+        stop
+end if
+
+ ! sanity check
+if (sigma.gt.0.0d0) then
+ Ca = mu_l * u_cl / sigma
+else
+        print *,"sigma invalid"
+        stop
+endif
+
+select case (imodel)
+    case (1) !Cox1986
+        if (diag_output.eq.1) then
+         print *, "Implement model 1 ..."
+        endif
+       if (abs(l_macro) < 1.e-9) then
+           l_macro = dgrid
+       end if
+
+        if (ifgnbc.eq.0) then !If don't implement GNBC.
+            thet_d = (thet_s**3 + 9. * Ca * log(l_macro / l_micro))**(1./3.)
+            u_slip = 0.
+        else if (ifgnbc.eq.1) then !Implement GNBC
+            beta = mu_l / lambda
+            chi = (mu_l + mu_g) / (2. * beta * dgrid)
+            a = 9. * log(l_macro / l_micro)
+            b = thet_d_apparent**3
+            c = chi * cos(thet_s)
+            
+            iter = 0
+            thet_d_micro = 0.
+            Ca = 0.
+            thet_d_micro_old = thet_d_apparent
+            Ca_old = chi * (cos(thet_s) - cos(thet_d_apparent))
+            do iter = 0, 1000
+                f1 = thet_d_micro_old**3 + a * Ca_old - b
+                f2 = Ca_old + chi * cos(thet_d_micro_old) - c
+                Ja11 = 3. * thet_d_micro_old**2
+                Ja12 = a
+                Ja21 = - chi * sin(thet_d_micro_old)
+                Ja22 = 1.
+                b1 = Ja11 * thet_d_micro_old + Ja12 * Ca_old - f1
+                b2 = Ja21 * thet_d_micro_old + Ja22 * Ca_old - f2
+                u11 = Ja11
+                u12 = Ja12
+                l21 = Ja21 / (u11 + 1.e-20)
+                u22 = Ja22 - l21 * u12
+                y1 = b1
+                y2 = b2 - l21 * y1
+                Ca = y2 / (u22 + 1.e-20)
+                thet_d_micro = (y1 - u12 * Ca) / (u11 + 1.e-20)
+                if (abs((thet_d_micro - thet_d_micro_old)/(thet_d_micro_old+1.e-20)) < 1.e-4 &
+                   .AND. abs((Ca - Ca_old)/(Ca_old+1.e-20)) < 1.e-4) then
+                    exit
+                end if
+                thet_d_micro_old = thet_d_micro
+                Ca_old = Ca
+            end do
+            print *, "Calculating Ca and thet_d_micro..."
+            print *, "number of iteration is: ", iter
+            u_slip = 1. / (beta * dgrid + 1.e-20) * delta(d_closest/dgrid) * sigma * (cos(thet_s) - cos(thet_d_micro))
+            thet_d = thet_d_apparent
+        else
+            print *,"ifgnbc invalid"
+            stop
+        end if
+
+    case (2) !Jiang1970
+        if (diag_output.eq.1) then
+         print *, "Implement model 2 ..."
+        endif 
+        thet_d = acos(cos(thet_s) - Ca / abs(Ca) * (1. + cos(thet_s)) * tanh(4.96 * abs(Ca)**0.702))
+        u_slip = 0.
+
+    case (3) !Shikmurzaev2008
+        if (diag_output.eq.1) then
+         print *, "Implement model 3 ..."
+        endif
+        a2 = 0.54
+        a3 = 12.5
+        a4 = 0.07
+        a1 = 1. + (1. - a2) * (cos(thet_s) - a4)
+        u = a3 * Ca
+        thet_d_old = thet_d_apparent
+        u0 = 0.
+        do iter = 0, 1000
+            u0 = (sin(thet_d_old - thet_d_old * cos(thet_d_old))) / (sin(thet_d_old) * cos(thet_d_old) - thet_d_old)
+            thet_d = acos(cos(thet_s) - 2. * u * (a1 + a2 * u0) / (1. - a2) / (sqrt(a1 + u * u) + u))
+            if (abs((thet_d - thet_d_old)/(thet_d_old + 1.e-20)) < 1.e-4) then
+                exit
+            else
+               thet_d_old = thet_d
+            end if
+        end do
+        if (diag_output.eq.1) then
+         print *, "Calculating thet_d..."
+         print *, "number of iteration is: ", iter
+        endif
+        u_slip = 0.
+
+    case (4) !Kalliadasis1994-'abs(tan(the_d))=...', so how to determine the_d<90 or thet_d>90? It seems have problems...
+        if (diag_output.eq.1) then
+         print *, "Implement model 4 ..."
+        endif
+        thet_d = atan(7.48 * Ca**(1./3.) - 3.28 * 1.e-8**0.04 * Ca**0.293)
+        u_slip = 0.
+        
+    case (5) !Kistler1993
+        if (diag_output.eq.1) then
+         print *, "Implement model 5 ..."
+        endif 
+        temp = (tanh((1. - cos(thet_s)) / 2.) / 5.16)**(1./0.706)
+        fHI_old = temp / (1. - 1.31 * temp)
+        do iter = 0, 1000
+            fHI = temp * (1. + 1.31 * fHI_old**0.99)
+            if (abs((fHI - fHI_old)/(fHI_old + 1.e-20)) < 1.e-4) then
+                exit
+            else
+                fHI_old = fHI
+            end if
+        end do
+        if (diag_output.eq.1) then
+         print *, "Calculating fHI..."
+         print *, "number of iteration is: ", iter
+        endif
+        thet_d = acos(1. - 2. * tanh(5.16 * ((Ca + fHI)/(1. + 1.31 * (Ca + fHI)**0.99))**0.706))
+        u_slip = 0.
+
+    case (6) !Bracke1989
+        if (diag_output.eq.1) then
+         print *, "Implement model 6 ..."
+        endif 
+        thet_d = acos(cos(thet_s) - 2. * (1. + cos(thet_s)) * Ca**0.5)
+        u_slip = 0.
+
+    case (7) !Blake2006, Popescu2008
+        if (diag_output.eq.1) then
+         print *, "Implement model 7 ..."
+        endif
+        sigma_0 = 1.7e-2 !sigma_0 = 1.7e-2 for water and 1.e-2 for oil in Popescu2008
+        v_0 = 5.e-3 !v_0 = 5e-3 for water and 1.35e-5 for oil in Popescu2008
+        thet_d = acos(cos(thet_s) - sigma_0 / sigma * asinh(u_cl / v_0))
+        u_slip = 0.
+
+    case default
+        print *, "unknown model index"
+        stop
+end select
+
+
+end subroutine dynamic_contact_angle
+
+
+
       subroutine get_vortex_info(x,time,neg_force,vel,vort,energy_moment)
       IMPLICIT NONE
 

@@ -13333,6 +13333,24 @@ stop
        tau_w = rho_w*u_tau**2
       end subroutine wallFunc_NewtonsMethod
 
+function delta(r)
+implicit none
+
+double precision delta
+double precision, intent(in) :: r
+
+if (abs(r) <= 1.0) then
+    delta = (3.0 - 2.0 * abs(r) + sqrt(1.0 + 4.0 * abs(r) - 4.0 * r * r)) / 8.0
+else if (1.0 < abs(r) .AND. abs(r) <= 2.0) then
+    delta = (5.0 - 2.0 * abs(r) - sqrt(-7.0 + 12.0 * abs(r) - 4.0 * r * r)) / 8.0
+else
+    delta = 0.0
+end if
+
+end function delta
+
+
+
        ! This assumes that all velocities are in a frame of reference with
        ! respect to the solid: ufluid_stencil, ughost
       subroutine getGhostVel( &
@@ -13445,6 +13463,14 @@ stop
        REAL_T, dimension(3) :: nCL_perp
        REAL_T, dimension(3) :: nCL_perp2
        REAL_T, dimension(3) :: nf_prj
+       REAL_T :: ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma
+       REAL_T :: ZEYU_thet_s,ZEYU_lambda,ZEYU_l_macro, ZEYU_l_micro
+       REAL_T :: ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent
+       REAL_T :: ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d
+       REAL_T :: angle_ACT,angle_im1
+       INTEGER_T :: ZEYU_imodel
+       INTEGER_T :: ZEYU_ifgnbc
+       INTEGER_T :: im_vapor,im_liquid
        
        nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
        if (nten.eq.nten_test) then
@@ -13758,6 +13784,7 @@ stop
          call get_user_tension(x_image,time, &
                  fort_tension,user_tension, &
                  thermal_interp,nmat,iten)
+          ! cos_angle and sin_angle correspond to the angle in im_fluid1
          call get_CL_iten(im_fluid1,im_fluid2,im_solid,iten_13,iten_23, &
            user_tension,nten,cos_angle,sin_angle)
           ! nrm_solid points to the solid
@@ -13778,9 +13805,12 @@ stop
          if (mag.eq.zero) then ! theta=0
           near_contact_line=0 
          else if (mag.gt.zero) then
+           ! nCL is normal to the contact line in the substrate plane.
+           ! nCL points to the im_primary_image material.
           do dir=1,3
            nCL(dir)=nCL(dir)/mag
           enddo
+           ! nCL_perp is tangent to the contact line in the substrate plane.
           call crossprod(nCL,nsolidCP,nCL_perp)
           mag=zero
           do dir=1,3
@@ -13795,6 +13825,7 @@ stop
            do dir=1,3
             nf_dot_nCL_perp=nf_dot_nCL_perp+nfluidFD(dir)*nCL_perp(dir)
            enddo
+            ! nfluidFD points into im_primary_image material.
            mag=zero
            do dir=1,3
             nf_prj(dir)=nfluidFD(dir)-nf_dot_nCL_perp*nCL_perp(dir)
@@ -13826,6 +13857,15 @@ stop
              print *,"sinthetaACT invalid; nCL_perp2 has 0 size"
              stop
             endif
+            if ((sinthetaACT.ge.zero).and.(costhetaACT.ge.zero)) then
+             angle_ACT=asin(sinthetaACT)
+            else if ((sinthetaACT.ge.zero).and.(costhetaACT.le.zero)) then
+             angle_ACT=Pi-asin(sinthetaACT)
+            else
+             print *,"sinthetaACT or costhetaACT invalid"
+             stop
+            endif
+
            else
             print *,"nf_prj should not have 0 size"
             stop
@@ -13884,8 +13924,78 @@ stop
         else if (law_of_the_wall.eq.2) then
 
          if (near_contact_line.eq.1) then
-          print *,"FIX ME"
-          stop
+          if ((fort_denconst(im_fluid1).gt.zero).and. &
+              (fort_denconst(im_fluid2).gt.zero)) then
+
+           if ((sin_angle.ge.zero).and.(cos_angle.ge.zero)) then
+            angle_im1=asin(sin_angle)
+            ! sin_angle=sin(a)  cos_angle=cos(a)
+            ! a=pi-asin(sin_angle)
+           else if ((sin_angle.ge.zero).and.(cos_angle.le.zero)) then
+            angle_im1=Pi-asin(sin_angle)
+           else
+            print *,"sin_angle or cos_angle invalid"
+            stop
+           endif
+
+           ZEYU_imodel=1 ! GNBC
+           ZEYU_ifgnbc=1 ! GNBC
+           ZEYU_lambda=8.0D-7
+           ZEYU_l_macro=dxmin
+           ZEYU_l_micro=1.0D-9
+           ZEYU_dgrid=dxmin 
+           ZEYU_d_closest=abs(dist_to_CL)
+
+           if (fort_denconst(im_fluid1).ge. &
+               fort_denconst(im_fluid2)) then
+            im_liquid=im_fluid1
+            im_vapor=im_fluid2
+            ZEYU_thet_s=angle_im1
+           else if (fort_denconst(im_fluid2).ge. &
+                    fort_denconst(im_fluid1)) then
+            im_liquid=im_fluid2
+            im_vapor=im_fluid1
+            ZEYU_thet_s=Pi-angle_im1
+           else
+            print *,"fort_denconst bust"
+            stop
+           endif
+           ZEYU_mu_l=fort_viscconst(im_liquid)
+           ZEYU_mu_g=fort_viscconst(im_vapor)
+           ZEYU_sigma=user_tension(iten)
+           if (im_primary_image.eq.im_liquid) then
+            ZEYU_thet_d_apparent=angle_ACT
+           else if (im_primary_image.eq.im_vapor) then
+            ZEYU_thet_d_apparent=Pi-angle_ACT
+           else
+            print *,"im_primary_image or im_vapor invalid"
+            stop
+           endif
+           ZEYU_u_cl=zero
+           ZEYU_thet_d=ZEYU_thet_d_apparent
+           call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
+             ZEYU_thet_s, &
+             ZEYU_imodel, ZEYU_ifgnbc, ZEYU_lambda, &
+             ZEYU_l_macro, ZEYU_l_micro, &
+             ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent, &
+             ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d)
+
+           ughost_tngt=ZEYU_u_cl
+           do dir=1,SDIM
+            if (im_primary_image.eq.im_liquid) then
+             u_tngt(dir)=-nCL(dir)
+            else if (im_primary_image.eq.im_vapor) then
+             u_tngt(dir)=nCL(dir)
+            else
+             print *,"im_primary_image or im_vapor invalid"
+             stop
+            endif
+           enddo
+          else
+           print *,"fort_denconst invalid"
+           stop
+          endif
+
          else if (near_contact_line.eq.0) then
           ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
          else

@@ -1039,7 +1039,12 @@ stop
       endif
 
 
-! sigma_{im,im_opp}cos(theta_{im,im_opp})=sigma_{im_opp,im3}-sigma_{im,im3}
+!    \
+!     \ 
+!   im \  im_opp
+!  -----------
+!    im3
+! sigma_{im,im_opp}cos(theta_{im,im3})=sigma_{im_opp,im3}-sigma_{im,im3}
 ! theta_{im,im3}=0 => material im wets material im3 (angle between im and im3)
 ! iten_13 corresponds to "im,im3"
 ! iten_23 corresponds to "im_opp,im3"
