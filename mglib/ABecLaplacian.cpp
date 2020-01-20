@@ -1429,7 +1429,8 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
   } // mfi
 } // omp
  } // isweep
-}
+
+} // subroutine Fsmooth
 
 // y=Ax
 void

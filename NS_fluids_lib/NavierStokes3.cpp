@@ -3041,8 +3041,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
 	 // FSI_flag=3,6 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
         if (FSI_material_exists()==1) {
+          // MDOT term included
          int rigid_project_option=0;
          multiphase_project(rigid_project_option);
+
+          // MDOT term not included, instead 
+          // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
+          // if incompressible: DIV_new=MDOT_MF dt
          rigid_project_option=11;
          multiphase_project(rigid_project_option);
         } else if (FSI_material_exists()==0) {
@@ -7711,6 +7716,7 @@ void NavierStokes::multiphase_project(int project_option) {
       *ns_level.localMF[DIV_SAVE_MF],
       DIV_new,0,0,1,1);
   } // ilev=level ... finest_level
+  // in: MacProj.cpp
   // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
   // if incompressible: DIV_new=MDOT_MF dt
   ADVECT_DIV_ALL();

@@ -1849,7 +1849,7 @@ void NavierStokes::apply_div(
    ARLIM(diagsingfab.loVect()),ARLIM(diagsingfab.hiVect()),//denold
    poldfab.dataPtr(),ARLIM(poldfab.loVect()),ARLIM(poldfab.hiVect()),//ustar
    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-   diffusionRHSfab.dataPtr(),
+   diffusionRHSfab.dataPtr(), //mdotcell
    ARLIM(diffusionRHSfab.loVect()),ARLIM(diffusionRHSfab.hiVect()),
    maskdivresfab.dataPtr(),
    ARLIM(maskdivresfab.loVect()),ARLIM(maskdivresfab.hiVect()),
@@ -2280,6 +2280,7 @@ void NavierStokes::ADVECT_DIV() {
   FArrayBox& snewfab=S_new[mfi];
   FArrayBox& divfab=DIV_new[mfi];
 
+   // in: NAVIERSTOKES_3D.F90
   FORT_UPDATE_DIV(
    xlo,dx,
    &dt_slab,
