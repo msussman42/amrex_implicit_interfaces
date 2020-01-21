@@ -699,6 +699,7 @@ Real NavierStokes::bottom_bottom_tol_factor=0.1;
 //   for conventional contact line dynamics, 
 //   modify "get_use_DCA" in PROB.F90.
 int NavierStokes::law_of_the_wall=0;
+int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 
 // 0 fluid (default)
 // 1 prescribed rigid solid (PROB.F90)
@@ -1462,6 +1463,8 @@ void fortran_parameters() {
 
  int cpp_max_num_eos=MAX_NUM_EOS;
 
+ FIX ME ZEYU_DCA_SELECT
+
  FORT_OVERRIDE(
   &ns_max_level,
   ns_space_blocking_factor.dataPtr(),
@@ -2160,6 +2163,13 @@ NavierStokes::read_params ()
         (law_of_the_wall==1)||
 	(law_of_the_wall==2))
      amrex::Error("law_of_the_wall invalid");
+    pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
+    if ((ZEYU_DCA_SELECT==-1)||
+        ((ZEYU_DCA_SELECT>=1)&&
+	 (ZEYU_DCA_SELECT<=6))) {
+     // do nothing
+    } else
+     BoxLib::Error("ZEYU_DCA_SELECT invalid");
 
     FSI_flag.resize(nmat);
     FSI_refine_factor.resize(nmat);
@@ -2306,6 +2316,7 @@ NavierStokes::read_params ()
 
      std::cout << "invert_solid_levelset " << invert_solid_levelset << '\n';
      std::cout << "law_of_the_wall " << law_of_the_wall << '\n';
+     std::cout << "ZEYU_DCA_SELECT " << ZEYU_DCA_SELECT << '\n';
      std::cout << "adapt_quad_depth= " << adapt_quad_depth << '\n';
     }
 

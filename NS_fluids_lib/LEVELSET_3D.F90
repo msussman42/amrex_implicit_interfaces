@@ -379,6 +379,20 @@ stop
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
+      dxmin=dx(1)
+      if (dx(2).lt.dxmin) then
+       dxmin=dx(2)
+      endif
+      if (dx(SDIM).lt.dxmin) then
+       dxmin=dx(SDIM)
+      endif
+      if (dxmin.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxmin invalid"
+       stop
+      endif
+
        ! -1 if use static angle
       call get_use_DCA(use_DCA)
 
@@ -1298,8 +1312,27 @@ stop
            ! use_DCA=0 static angle
            ! use_DCA=1 Jiang
            ! use_DCA=2 Kistler
-           call DCA_select_model(nproject,totaludotn,cos_angle, &
-            liquid_viscosity,user_tension(iten),cos_angle,use_DCA)
+           if ((use_DCA.eq.0).or.(use_DCA.eq.1).or.(use_DCA.eq.2)) then
+            call DCA_select_model(nproject,totaludotn,cos_angle, &
+             liquid_viscosity,user_tension(iten),cos_angle,use_DCA)
+           else if ((use_DCA.ge.101).and. & ! fort_ZEYU_DCA_SELECT>=1
+                    (use_DCA.le.106)) then
+            if (use_DCA.eq.101) then
+                    ! do nothing
+            else if ((use_DCA.ge.102).and.(use_DCA.le.106)) then
+             ZEYU_imodel=use_DCA-100
+             ZEYU_ifgnbc=0
+             ZEYU_lambda=8.0D-7
+             ZEYU_l_macro=dxmin
+             ZEYU_l_micro=1.0D-9
+             ZEYU_dgrid=dxmin 
+             ZEYU_d_closest=abs(dist_to_CL)
+
+               FIX ME
+           else
+            print *,"use_DCA invalid"
+            stop
+           endif
 
            if (cos_angle.gt.one) then 
             cos_angle=one

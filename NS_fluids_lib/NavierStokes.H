@@ -1466,6 +1466,8 @@ protected:
      // 1=> u=u_solid_ghost if phi_solid>=0
      // 2=> GNBC (u=u_solid_ghost if phi_solid>=0)
     static int         law_of_the_wall;  // def=0
+     // 1..7 "1" corresponds to the GNBC option.
+    static int         ZEYU_DCA_SELECT;  // DCA=dynamic contact angle
      // 0=fluid 
      // 1=prescribed motion, PROB.F90 solid 
      // 2=prescribed motion, sci_clsvof.F90 solid 

@@ -3326,9 +3326,18 @@ stop
         print *,"im_solid_DCA invalid"
         stop
        endif
-       use_DCA=xblob10
+       use_DCA=NINT(xblob10)
       else
        use_DCA=-1
+       if (fort_ZEYU_DCA_SELECT.eq.-1) then
+        ! do nothing
+       else if ((fort_ZEYU_DCA_SELECT.ge.1).and. &
+                (fort_ZEYU_DCA_SELECT.le.6)) then
+        use_DCA=fort_ZEYU_DCA_SELECT+100
+       else
+        print *,"fort_ZEYU_DCA_SELECT invalid"
+        stop
+       endif 
       endif
 
       return

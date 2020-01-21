@@ -4707,6 +4707,7 @@ stop
 
        ! -1 if use static angle
       call get_use_DCA(use_DCA)
+      FIX ME fort_ZEYU_DCA_SELECT
 
       if (dt.le.zero) then
        print *,"dt invalid"
@@ -13950,7 +13951,7 @@ end function delta
                fort_denconst(im_fluid2)) then
             im_liquid=im_fluid1
             im_vapor=im_fluid2
-            ZEYU_thet_s=angle_im1
+            ZEYU_thet_s=angle_im1  ! thet_s in the liquid.
            else if (fort_denconst(im_fluid2).ge. &
                     fort_denconst(im_fluid1)) then
             im_liquid=im_fluid2
