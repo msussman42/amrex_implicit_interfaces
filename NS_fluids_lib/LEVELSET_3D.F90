@@ -1329,6 +1329,10 @@ stop
              ZEYU_d_closest=abs(dist_to_CL)
 
                FIX ME
+            else
+             print *,"use_DCA bust"
+             stop
+            endif
            else
             print *,"use_DCA invalid"
             stop

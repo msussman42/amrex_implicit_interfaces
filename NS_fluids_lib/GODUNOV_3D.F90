@@ -4707,7 +4707,6 @@ stop
 
        ! -1 if use static angle
       call get_use_DCA(use_DCA)
-      FIX ME fort_ZEYU_DCA_SELECT
 
       if (dt.le.zero) then
        print *,"dt invalid"
@@ -6408,7 +6407,12 @@ stop
                          ! 1. project nfluid onto the 
                          !    solid (im_solid_node) material
 
-                         if (use_DCA.ge.0) then
+                         ! use_DCA=0 static angle
+                         ! use_DCA=1 Jiang
+                         ! use_DCA=2 Kistler
+                         if ((use_DCA.eq.0).or. &
+                             (use_DCA.eq.1).or. &
+                             (use_DCA.eq.2)) then
 
                           dotprod=zero
                           do dirloc=1,SDIM
@@ -6465,13 +6469,27 @@ stop
                            print *,"mag cannot be negative"
                            stop
                           endif 
-        
+
+                          ! fort_ZEYU_DCA_SELECT>=1
+                         else if ((use_DCA.ge.101).and. & 
+                                  (use_DCA.le.106)) then
+                          if (use_DCA.eq.101) then
+                           ! do nothing
+                          else if ((use_DCA.ge.102).and.(use_DCA.le.106)) then
+                           print *,"use_DCA>=102 and <=106 not supported"
+                           print *."for conservative surface tension alg."
+                           stop
+                          else
+                           print *,"use_DCA bust"
+                           stop
+                          endif
                          else if (use_DCA.eq.-1) then
                           ! do nothing
                          else
                           print *,"use_DCA invalid"
                           stop
                          endif 
+
                          do dirloc=1,SDIM
                           nfluid(dirloc)=Nint_node(inode,jnode,dirloc,iten)
                           nsolid(dirloc)= &

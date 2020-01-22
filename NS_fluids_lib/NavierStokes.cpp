@@ -1262,6 +1262,9 @@ void fortran_parameters() {
  Vector<int> material_type_temp(nmat);
  Vector<int> FSI_flag_temp(nmat);
 
+ int ZEYU_DCA_SELECT_temp=-1;  // -1=static angle
+
+
  pp.getarr("material_type",material_type_temp,0,nmat);
 
  for (int im=0;im<nmat;im++) {
@@ -1449,6 +1452,14 @@ void fortran_parameters() {
  Real nucleation_init_time=0.0;
  pp.query("nucleation_init_time",nucleation_init_time);
 
+ pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT_temp);
+ if ((ZEYU_DCA_SELECT_temp==-1)||
+     ((ZEYU_DCA_SELECT_temp>=1)&&
+      (ZEYU_DCA_SELECT_temp<=6))) {
+  // do nothing
+ } else
+  BoxLib::Error("ZEYU_DCA_SELECT_temp invalid");
+
  Vector<Real> temp_pos_sites(4);
  for (int dir=0;dir<4;dir++)
   temp_pos_sites[dir]=0.0;
@@ -1463,8 +1474,6 @@ void fortran_parameters() {
 
  int cpp_max_num_eos=MAX_NUM_EOS;
 
- FIX ME ZEYU_DCA_SELECT
-
  FORT_OVERRIDE(
   &ns_max_level,
   ns_space_blocking_factor.dataPtr(),
@@ -1472,6 +1481,7 @@ void fortran_parameters() {
   &prescribe_temperature_outflow,
   &rz_flag,
   FSI_flag_temp.dataPtr(),
+  &ZEYU_DCA_SELECT_temp,
   &invert_solid_levelset,
   &denfact,
   &velfact,
@@ -2163,6 +2173,7 @@ NavierStokes::read_params ()
         (law_of_the_wall==1)||
 	(law_of_the_wall==2))
      amrex::Error("law_of_the_wall invalid");
+
     pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
     if ((ZEYU_DCA_SELECT==-1)||
         ((ZEYU_DCA_SELECT>=1)&&

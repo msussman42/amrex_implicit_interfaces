@@ -97,6 +97,7 @@
       INTEGER_T invert_solid_levelset
       INTEGER_T FSI_flag(100)
       INTEGER_T fort_material_type(100)
+      INTEGER_T fort_ZEYU_DCA_SELECT
       INTEGER_T gravity_dir,invert_gravity
       INTEGER_T pres_homflag
       INTEGER_T vel_homflag

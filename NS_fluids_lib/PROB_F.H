@@ -177,6 +177,7 @@ namespace amrex{
        const int* prescribe_temperature_outflow,
        const int* rz_flag,
        const int* FSI_flag,
+       const int* ZEYU_DCA_SELECT,
        const int* invert_solid_levelset,
        const Real* denfact,
        const Real* velfact,

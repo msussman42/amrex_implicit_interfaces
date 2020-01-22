@@ -32961,6 +32961,7 @@ end subroutine initialize2d
          ccprescribe_temperature_outflow, &
          rz_flag, &
          ccFSI_flag, &
+         ccZEYU_DCA_SELECT, &
          ccinvert_solid_levelset, &
          ccdenfact, &
          ccvelfact, &
@@ -33069,6 +33070,7 @@ end subroutine initialize2d
        INTEGER_T ccgravity_dir
        INTEGER_T ccinvert_gravity
        INTEGER_T ccFSI_flag(ccnum_materials)
+       INTEGER_T ccZEYU_DCA_SELECT
        INTEGER_T ccinvert_solid_levelset
        INTEGER_T ccprescribe_temperature_outflow
        INTEGER_T rz_flag,ioproc
@@ -33385,6 +33387,8 @@ end subroutine initialize2d
         endif
 
        enddo ! im=1..num_materials
+
+       fort_ZEYU_DCA_SELECT=ccZEYU_DCA_SELECT
 
        invert_solid_levelset=ccinvert_solid_levelset
        if ((invert_solid_levelset.ne.0).and. &
@@ -33793,6 +33797,7 @@ end subroutine initialize2d
         print *,"fort: outflow_pressure ",outflow_pressure
         print *,"fort:period_time",period_time
         print *,"fort:twall",twall
+        print *,"fort:fort_ZEYU_DCA_SELECT",fort_ZEYU_DCA_SELECT
 
         print *,"fort:end of override routine"
 
