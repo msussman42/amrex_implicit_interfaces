@@ -13999,6 +13999,10 @@ end function delta
              ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent, &
              ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d)
 
+            ! nCL is normal to the contact line in the substrate plane.
+            ! nCL points to the im_primary_image material.
+            ! ZEYU_u_cl is positive if the contact line is advancing into
+            ! the gas.
            ughost_tngt=ZEYU_u_cl
            do dir=1,SDIM
             if (im_primary_image.eq.im_liquid) then

@@ -734,9 +734,31 @@ stop
       sin_angle=zero
       iten_13=0
       iten_23=0
-      if (im3.ne.0) then
+      if ((im3.ge.1).and.(im3.le.nmat)) then
+        ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
+        ! theta_{ik}=0 => material i wets material k.
+        ! im is material "i"  ("fluid" material)
+        ! im_opp is material "j"
        call get_CL_iten(im,im_opp,im3,iten_13,iten_23, &
         user_tension,nten,cos_angle,sin_angle)
+
+       if ((sin_angle.ge.zero).and.(cos_angle.ge.zero)) then
+        angle_im=asin(sin_angle)
+        ! sin_angle=sin(a)  cos_angle=cos(a)
+        ! a=pi-asin(sin_angle)
+        ! sin(pi-asin(sin_angle))=sin(pi)cos(-asin(sin_angle)+
+        !  cos(pi)sin(-asin(sin_angle))=-sin(-asin(sin_angle))=sin_angle
+       else if ((sin_angle.ge.zero).and.(cos_angle.le.zero)) then
+        angle_im=Pi-asin(sin_angle)
+       else
+        print *,"sin_angle or cos_angle invalid"
+        stop
+       endif
+      else if (im3.eq.0) then
+       ! do nothing
+      else
+       print *,"im3 invalid"
+       stop
       endif
 
       if (nmat.eq.1) then
@@ -1318,7 +1340,7 @@ stop
            else if ((use_DCA.ge.101).and. & ! fort_ZEYU_DCA_SELECT>=1
                     (use_DCA.le.106)) then
             if (use_DCA.eq.101) then
-                    ! do nothing
+             ! do nothing (GNBC model)
             else if ((use_DCA.ge.102).and.(use_DCA.le.106)) then
              ZEYU_imodel=use_DCA-100
              ZEYU_ifgnbc=0
@@ -1328,7 +1350,46 @@ stop
              ZEYU_dgrid=dxmin 
              ZEYU_d_closest=abs(dist_to_CL)
 
-               FIX ME
+              ! ZEYU_u_cl is positive if the contact line is advancing into
+              ! the gas.
+              ! nproject points towards the im material
+             if (fort_denconst(im).ge. &
+                 fort_denconst(im_opp)) then
+              im_liquid=im
+              im_vapor=im_opp
+              ZEYU_thet_s=angle_im  ! thet_s in the liquid.
+              ZEYU_u_cl=-totaludotn
+             else if (fort_denconst(im_opp).ge. &
+                      fort_denconst(im)) then
+              im_liquid=im_opp
+              im_vapor=im
+              ZEYU_thet_s=Pi-angle_im
+              ZEYU_u_cl=totaludotn
+             else
+              print *,"fort_denconst bust"
+              stop
+             endif
+             ZEYU_mu_l=fort_viscconst(im_liquid)
+             ZEYU_mu_g=fort_viscconst(im_vapor)
+             ZEYU_sigma=user_tension(iten)
+             ZEYU_thet_d_apparent=ZEYU_thet_s
+             ZEYU_thet_d=ZEYU_thet_d_apparent
+             call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
+               ZEYU_thet_s, &
+               ZEYU_imodel, ZEYU_ifgnbc, ZEYU_lambda, &
+               ZEYU_l_macro, ZEYU_l_micro, &
+               ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent, &
+               ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d)
+             if (im.eq.im_liquid) then
+              cos_angle=cos(ZEYU_thet_d)
+             else if (im.eq.im_vapor) then
+              cos_angle=Pi-cos(ZEYU_thet_d)
+             else
+              print *,"im invalid"
+              stop
+             endif
+                     
+               FIX ME for GNBC
             else
              print *,"use_DCA bust"
              stop
