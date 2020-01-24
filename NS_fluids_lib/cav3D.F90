@@ -291,8 +291,17 @@ contains
  REAL_T t
  REAL_T LS(num_materials)
  REAL_T PRES
+ REAL_T ymid
 
- PRES=outflow_pressure
+ ymid=half*(probloy+probhiy)
+ if (x(2).le.ymid) then
+  PRES=inflow_pressure
+ else if (x(2).ge.ymid) then
+  PRES=outflow_pressure
+ else
+  print *,"x(2) or ymid invalid"
+  stop
+ endif
 
  return 
  end subroutine CAV3D_PRES

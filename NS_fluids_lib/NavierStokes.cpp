@@ -1458,7 +1458,7 @@ void fortran_parameters() {
       (ZEYU_DCA_SELECT_temp<=6))) {
   // do nothing
  } else
-  BoxLib::Error("ZEYU_DCA_SELECT_temp invalid");
+  amrex::Error("ZEYU_DCA_SELECT_temp invalid");
 
  Vector<Real> temp_pos_sites(4);
  for (int dir=0;dir<4;dir++)
@@ -2171,8 +2171,11 @@ NavierStokes::read_params ()
     pp.query("law_of_the_wall",law_of_the_wall);
     if ((law_of_the_wall==0)||
         (law_of_the_wall==1)||
-	(law_of_the_wall==2))
+	(law_of_the_wall==2)) {
+     // do nothing
+    } else {
      amrex::Error("law_of_the_wall invalid");
+    }
 
     pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
     if ((ZEYU_DCA_SELECT==-1)||
@@ -2180,7 +2183,7 @@ NavierStokes::read_params ()
 	 (ZEYU_DCA_SELECT<=6))) {
      // do nothing
     } else
-     BoxLib::Error("ZEYU_DCA_SELECT invalid");
+     amrex::Error("ZEYU_DCA_SELECT invalid");
 
     FSI_flag.resize(nmat);
     FSI_refine_factor.resize(nmat);

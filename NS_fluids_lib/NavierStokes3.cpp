@@ -6120,7 +6120,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 //  2. UMAC = (1-H_solid)UMAC + H_solid USOLID^{k+1}
 //  3. average down UMAC 
 void NavierStokes::update_prescribed(int project_option,
-            Real& prescribed_error) {
+            Real& prescribed_error_in) {
 
  int finest_level = parent->finestLevel();
  int num_materials_face=1;
@@ -6163,7 +6163,7 @@ void NavierStokes::update_prescribed(int project_option,
    getState_localMF_list(OUTER_ITER_PRESSURE_MF,0,state_index,scomp,ncomp);
 
    // UMAC_MF = (1-H_solid)UMAC_MF + H_solid USOLID^{k+1}
-   MAC_velocity_GFM(UMAC_MF,project_option,prescribed_error);
+   MAC_velocity_GFM(UMAC_MF,project_option,prescribed_error_in);
 
    if (level==finest_level) {
     // do nothing

@@ -6477,7 +6477,7 @@ stop
                            ! do nothing
                           else if ((use_DCA.ge.102).and.(use_DCA.le.106)) then
                            print *,"use_DCA>=102 and <=106 not supported"
-                           print *."for conservative surface tension alg."
+                           print *,"for conservative surface tension alg."
                            stop
                           else
                            print *,"use_DCA bust"

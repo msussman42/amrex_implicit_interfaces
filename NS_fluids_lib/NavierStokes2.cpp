@@ -2569,9 +2569,9 @@ void NavierStokes::increment_face_velocity(
 
 
 void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
-		Real& prescribed_error) {
+		Real& prescribed_error_in) {
 
- if (prescribed_error>=0.0) {
+ if (prescribed_error_in>=0.0) {
 
   if (num_materials_vel==1) {
 
@@ -2737,13 +2737,13 @@ void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
     delete face_velocity[dir];
 
-   if (prescribed_error<GFM_error[0])
-    prescribed_error=GFM_error[0];
+   if (prescribed_error_in<GFM_error[0])
+    prescribed_error_in=GFM_error[0];
   } else
    amrex::Error("num_materials_vel invalid");
 
  } else
-  amrex::Error("prescribed_error invalid");
+  amrex::Error("prescribed_error_in invalid");
 
 } // subroutine MAC_velocity_GFM
 
@@ -5015,13 +5015,13 @@ void NavierStokes::make_physics_vars(int project_option) {
 } // omp
  ParallelDescriptor::Barrier();
 
- Vector< Real > curv_min;
- Vector< Real > curv_max;
- curv_min.resize(thread_class::nthreads);
- curv_max.resize(thread_class::nthreads);
+ Vector< Real > local_curv_min;
+ Vector< Real > local_curv_max;
+ local_curv_min.resize(thread_class::nthreads);
+ local_curv_max.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  curv_min[tid]=1.0e+99;
-  curv_max[tid]=-1.0e+99;
+  local_curv_min[tid]=1.0e+99;
+  local_curv_max[tid]=-1.0e+99;
  } // tid
 
  debug_ngrow(MASKCOEF_MF,1,6001);
@@ -5099,8 +5099,8 @@ void NavierStokes::make_physics_vars(int project_option) {
     &tid,
     &FD_curv_select, 
     &FD_curv_interp, 
-    &curv_min[tid],
-    &curv_max[tid],
+    &local_curv_min[tid],
+    &local_curv_max[tid],
     &isweep,
     &nrefine_vof,
     denconst_interface.dataPtr(),
@@ -5189,14 +5189,14 @@ void NavierStokes::make_physics_vars(int project_option) {
  density_TO_MAC(project_option);
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
-  if (curv_min[tid]<curv_min[0])
-   curv_min[0]=curv_min[tid];
-  if (curv_max[tid]>curv_max[0])
-   curv_max[0]=curv_max[tid];
+  if (local_curv_min[tid]<local_curv_min[0])
+   local_curv_min[0]=local_curv_min[tid];
+  if (local_curv_max[tid]>local_curv_max[0])
+   local_curv_max[0]=local_curv_max[tid];
  } // tid
 
- ParallelDescriptor::ReduceRealMin(curv_min[0]);
- ParallelDescriptor::ReduceRealMax(curv_max[0]);
+ ParallelDescriptor::ReduceRealMin(local_curv_min[0]);
+ ParallelDescriptor::ReduceRealMax(local_curv_max[0]);
 
  if ((fab_verbose==1)||(fab_verbose==3)) {
 
@@ -5206,8 +5206,8 @@ void NavierStokes::make_physics_vars(int project_option) {
    std::cout << "c++ ngrow,csten " << ngrow_distance << ' ' <<
      curv_stencil_height << ' ' << '\n';
 
-   std::cout << "curv_min= " << curv_min[0] << '\n';
-   std::cout << "curv_max= " << curv_max[0] << '\n';
+   std::cout << "local_curv_min= " << local_curv_min[0] << '\n';
+   std::cout << "local_curv_max= " << local_curv_max[0] << '\n';
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -6542,12 +6542,12 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
  if (delta_mass_all.size()!=nmat)
   amrex::Error("delta_mass_all has invalid size");
 
- Vector< Vector<Real> > delta_mass;
- delta_mass.resize(thread_class::nthreads);
+ Vector< Vector<Real> > local_delta_mass;
+ local_delta_mass.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  delta_mass[tid].resize(nmat); 
+  local_delta_mass[tid].resize(nmat); 
   for (int im=0;im<nmat;im++)
-   delta_mass[tid][im]=0.0;
+   local_delta_mass[tid][im]=0.0;
  } // tid
 
  resize_maskfiner(1,MASKCOEF_MF);
@@ -6580,7 +6580,7 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
    int tid=ns_thread();
 
    FORT_PURGEFLOTSAM(
-     delta_mass[tid].dataPtr(),
+     local_delta_mass[tid].dataPtr(),
      truncate_volume_fractions.dataPtr(),
      &truncate_thickness, 
      &level,&finest_level,
@@ -6599,16 +6599,16 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
 } // omp
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<nmat;im++) {
-   delta_mass[0][im]+=delta_mass[tid][im];
+   local_delta_mass[0][im]+=local_delta_mass[tid][im];
   }
  } // tid
 
  ParallelDescriptor::Barrier();
  for (int im=0;im<nmat;im++) {
-  ParallelDescriptor::ReduceRealSum(delta_mass[0][im]);
+  ParallelDescriptor::ReduceRealSum(local_delta_mass[0][im]);
  }
  for (int im=0;im<nmat;im++) {
-  delta_mass_all[im]+=delta_mass[0][im];
+  delta_mass_all[im]+=local_delta_mass[0][im];
  }
 
 }  // truncate_VOF()

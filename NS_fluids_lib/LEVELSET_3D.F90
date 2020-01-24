@@ -354,6 +354,7 @@ stop
       REAL_T LS2_save(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T im_sort
       REAL_T dxmax,dxmaxLS
+      REAL_T dxmin
       REAL_T delta_mgoni
       REAL_T volpos,facearea
       REAL_T cenpos(SDIM)
@@ -375,6 +376,25 @@ stop
       REAL_T LS_OPP_EXTEND
 
       REAL_T pm_val
+
+      INTEGER_T ZEYU_imodel
+      INTEGER_T ZEYU_ifgnbc
+      REAL_T ZEYU_lambda
+      REAL_T ZEYU_l_macro
+      REAL_T ZEYU_l_micro
+      REAL_T ZEYU_dgrid
+      REAL_T ZEYU_d_closest
+      REAL_T ZEYU_thet_s
+      REAL_T ZEYU_thet_d_apparent
+      REAL_T ZEYU_thet_d
+      REAL_T ZEYU_u_cl
+      REAL_T ZEYU_u_slip
+      REAL_T ZEYU_mu_l
+      REAL_T ZEYU_mu_g
+      REAL_T ZEYU_sigma
+      REAL_T angle_im
+      REAL_T dist_to_CL
+      INTEGER_T im_liquid,im_vapor
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -1074,9 +1094,8 @@ stop
        stop
       endif
 
-
 !    \
-!     \ 
+!     \
 !   im \  im_opp
 !  -----------
 !    im3
@@ -1348,6 +1367,7 @@ stop
              ZEYU_l_macro=dxmin
              ZEYU_l_micro=1.0D-9
              ZEYU_dgrid=dxmin 
+             dist_to_CL=zero
              ZEYU_d_closest=abs(dist_to_CL)
 
               ! ZEYU_u_cl is positive if the contact line is advancing into
@@ -1389,7 +1409,6 @@ stop
               stop
              endif
                      
-               FIX ME for GNBC
             else
              print *,"use_DCA bust"
              stop
@@ -1457,8 +1476,16 @@ stop
 
          ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
          ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
-         gamma1=half*(one-cos_angle)
-         gamma2=half*(one+cos_angle)
+         if (use_DCA.eq.101) then
+          print *,"FIX ME for GNBC"
+          stop
+         else if (use_DCA.ge.-1) then
+          gamma1=half*(one-cos_angle)
+          gamma2=half*(one+cos_angle)
+         else
+          print *,"use_DCA invalid"
+          stop
+         endif 
 
         else if (is_rigid(nmat,im3).eq.0) then
 
@@ -1536,10 +1563,18 @@ stop
          nmain(dir2)=nfluid_save(D_DECL(i,j,k),dir2)
          nopp(dir2)=-nsolid_save(D_DECL(i,j,k),dir2)
         enddo
-        call ghostnormal(nmain,nopp,cos_angle,nghost,nperp)
-        do dir2=1,SDIM
-         nopp(dir2)=nghost(dir2)
-        enddo
+        if (use_DCA.eq.101) then
+         print *,"FIX ME for GNBC"
+         stop
+        else if (use_DCA.ge.-1) then
+         call ghostnormal(nmain,nopp,cos_angle,nghost,nperp)
+         do dir2=1,SDIM
+          nopp(dir2)=nghost(dir2)
+         enddo
+        else
+         print *,"use_DCA invalid"
+         stop
+        endif 
 
        else
         print *,"is_rigid(nmat,im3) invalid"

@@ -16,6 +16,7 @@
 #
 # in future: it will be possible to take a CAD file from AUTODESK (for example)
 # and have it automatically converted into a levelset function.
+# CODY
 
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
@@ -90,10 +91,10 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.9   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 4       # block factor in grid generation
+amr.blocking_factor = 8 4 4 4 4 4   # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 100     # 10 for debug, 100 for production run? 
+amr.plot_int        = 10     # 10 for debug, 100 for production run? 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -110,8 +111,8 @@ mac.use_cg_solve   = 1
 # 2=never take sound speed into account
 # 0=take sound speed into account at t=0 only if compressible material
 # water, vacuum, sphere
-ns.shock_timestep=1 2  # COMPRESSIBLE
-#ns.shock_timestep=2 2   # INCOMPRESSIBLE
+#ns.shock_timestep=1 2  # COMPRESSIBLE
+ns.shock_timestep=2 2   # INCOMPRESSIBLE
 ns.cfl            = 0.5    # cfl number for hyperbolic system
 ns.init_shrink    = 0.5      # scale back initial timestep
 ns.change_max     = 1.1    # scale back initial timestep
@@ -125,7 +126,7 @@ ns.cavitation_species=0 0 # disable cavitation
 ns.cavitation_pressure=35400.0 0.0 # saturation pressure g/(cm s^2)
 ns.cavitation_vapor_density=0.00002558 0.0
 ns.cavitation_tension=71.7 0.0
-ns.inflow_pressure=1.0e+6  # should not be used
+ns.inflow_pressure=2.2e+6  #  0.22 MPa = 2.2e+6 cgs units
 ns.outflow_pressure=1.0e+6  # this will be used at all outflow boundaries.
 ns.tension        = 0.0 0.0 0.0 
 #ns.fixed_dt	  = 0.01     # hardwire dt
@@ -144,8 +145,8 @@ ns.adv_dir=2  # adv_dir=1..sdim+1
 ns.viscconst=0.00853 0.00853
 ns.tempconst=293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
-#ns.material_type=0 999 # INCOMPRESSIBLE
-ns.material_type=1 999 # COMPRESSIBLE (EOS_tait)
+ns.material_type=0 999 # INCOMPRESSIBLE
+#ns.material_type=1 999 # COMPRESSIBLE (EOS_tait)
 ns.density_floor=0.9999577 0.9999999 # corresponds ~ 250 dyne/cm^2
 ns.density_ceiling=1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
 # see FORT_WALLFUNCTION in GODUNOV_3D.F90
@@ -178,10 +179,11 @@ ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
+# if all BC=2 => PRESSURE BC at INFLOW AND OUTFLOW
 ns.lo_bc          = 2 2 
-ns.hi_bc          = 2 1
+ns.hi_bc          = 2 2
 ns.species_lo_bc  = 2 2
-ns.species_hi_bc  = 2 1
+ns.species_hi_bc  = 2 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry

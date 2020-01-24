@@ -3313,6 +3313,7 @@ stop
        ! Dynamic Contact Angle
       subroutine get_use_DCA(use_DCA)
       use global_utility_module
+      use probcommon_module
 
       IMPLICIT NONE
 
