@@ -54,40 +54,40 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T num_materials_face
-       INTEGER_T nsolve
-       INTEGER_T nsolveMM
-       INTEGER_T level
-       INTEGER_T finest_level
-       INTEGER_T nmat
-       INTEGER_T solidheat_flag
-       REAL_T xlo(SDIM)
-       REAL_T dx(SDIM)
-       INTEGER_T tilelo(SDIM), tilehi(SDIM)
-       INTEGER_T fablo(SDIM), fabhi(SDIM)
-       INTEGER_T bfact
-       INTEGER_T growlo(3), growhi(3)
-       INTEGER_T DIMDEC(offdiagcheck)
-       INTEGER_T DIMDEC(cterm)
-       INTEGER_T DIMDEC(c2)
-       INTEGER_T DIMDEC(DeDT)
-       INTEGER_T DIMDEC(recon)
-       INTEGER_T DIMDEC(lsnew)
-       INTEGER_T DIMDEC(den)
-       INTEGER_T DIMDEC(mu)
-       REAL_T visc_coef,angular_velocity
-       REAL_T dt
-       REAL_T dual_time_stepping_coefficient
-       INTEGER_T project_option,rzflag
+       INTEGER_T, intent(in) :: num_materials_face
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: nsolveMM
+       INTEGER_T, intent(in) :: level
+       INTEGER_T, intent(in) :: finest_level
+       INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: solidheat_flag
+       REAL_T, intent(in) :: xlo(SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
+       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T :: growlo(3), growhi(3)
+       INTEGER_T, intent(in) :: DIMDEC(offdiagcheck)
+       INTEGER_T, intent(in) :: DIMDEC(cterm)
+       INTEGER_T, intent(in) :: DIMDEC(c2)
+       INTEGER_T, intent(in) :: DIMDEC(DeDT)
+       INTEGER_T, intent(in) :: DIMDEC(recon)
+       INTEGER_T, intent(in) :: DIMDEC(lsnew)
+       INTEGER_T, intent(in) :: DIMDEC(den)
+       INTEGER_T, intent(in) :: DIMDEC(mu)
+       REAL_T, intent(in) :: visc_coef,angular_velocity
+       REAL_T, intent(in) :: dt
+       REAL_T, intent(in) :: dual_time_stepping_coefficient
+       INTEGER_T, intent(in) :: project_option,rzflag
 
-       REAL_T  mu(DIMV(mu),nmat+1)
-       REAL_T  den(DIMV(den),nmat+1)
-       REAL_T  offdiagcheck(DIMV(offdiagcheck),nsolveMM)
-       REAL_T  cterm(DIMV(cterm),nsolveMM)
-       REAL_T  c2(DIMV(c2),2)
-       REAL_T  DeDT(DIMV(DeDT),nmat+1)
-       REAL_T  recon(DIMV(recon),nmat*ngeom_recon)
-       REAL_T  lsnew(DIMV(lsnew),nmat*(SDIM+1))
+       REAL_T, intent(in) ::  mu(DIMV(mu),nmat+1)
+       REAL_T, intent(in) ::  den(DIMV(den),nmat+1)
+       REAL_T, intent(in) ::  offdiagcheck(DIMV(offdiagcheck),nsolveMM)
+       REAL_T, intent(out) ::  cterm(DIMV(cterm),nsolveMM)
+       REAL_T, intent(in) ::  c2(DIMV(c2),2)
+       REAL_T, intent(in) ::  DeDT(DIMV(DeDT),nmat+1)
+       REAL_T, intent(in) ::  recon(DIMV(recon),nmat*ngeom_recon)
+       REAL_T, intent(in) ::  lsnew(DIMV(lsnew),nmat*(SDIM+1))
 
        INTEGER_T i,j,k
        INTEGER_T in_rigid
@@ -210,11 +210,11 @@ stop
          endif
         enddo ! im=1..nmat
 
-        if ((project_option.eq.0).or. &
-            (project_option.eq.1).or. &
-            (project_option.eq.10).or. &
-            (project_option.eq.13).or. &
-            (project_option.eq.11)) then ! pressure
+        if ((project_option.eq.0).or. & ! regular project
+            (project_option.eq.1).or. & ! initial project
+            (project_option.eq.10).or. & ! sync project
+            (project_option.eq.13).or. & ! FSI_material_exists 1st project
+            (project_option.eq.11)) then ! FSI_material_exists 2nd project
 
          if (num_materials_vel.ne.1) then
           print *,"num_materials_vel invalid"
@@ -252,10 +252,25 @@ stop
          im_vel=1
          local_diag=offdiagcheck(D_DECL(i,j,k),im_vel)
 
+          !if facecut_index>0 then facecut_extend=0
+          !if facecut_index=0 then facecut_extend=1
+          !i.e. if both adjoining cells are fluid, then
+          !facecut_extend=0, otherwise, if at least
+          !one adjoining cell is solid, then 
+          !facecut_extend=1.
+          !
+          !at least one adjoining face with both adjoining
+          !cells as fluid cells.
+          !i.e. a fluid cell with at least 1 surrounding fluid
+          !cell.
          if ((local_diag.ge.zero).and. &
              (local_diag.le.two*SDIM-one)) then
           local_cterm(im_vel)=1.0D+6
-         else if (local_diag.eq.two*SDIM) then
+
+          !all adjoining faces have an adjoining solid cell.
+          !e.g. fluid cell completely surrounded by solid
+          !cells or a solid cell with any kind of neighbor.
+         else if (local_diag.eq.two*SDIM) then 
           local_cterm(im_vel)=zero
          else
           print *,"local_diag invalid"

@@ -343,7 +343,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &visc_coef,
     &angular_velocity,
     &dt_diffuse,
-    &dual_time_stepping_coefficient,
+    &dual_time_stepping_coefficient, // not used
     &project_option,
     &rzflag, 
     &solidheat_flag);
