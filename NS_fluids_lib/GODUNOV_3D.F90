@@ -11484,7 +11484,9 @@ stop
        velbc, &
        dt,time, &
        passive_veltime, &
-       vel_time,normdir, &
+       vel_time, &
+       dir_absolute_direct_split, &
+       normdir, &
        utemp,DIMS(utemp), &
        unode,DIMS(unode), &
        ucell,DIMS(ucell), &
@@ -11503,31 +11505,33 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T isweep
-      INTEGER_T unsplit_displacement
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T SDC_outer_sweeps
-      INTEGER_T ns_time_order
-      INTEGER_T divu_outer_sweeps
-      INTEGER_T num_divu_outer_sweeps
-      INTEGER_T level,finest_level
-      INTEGER_T nmat
-      INTEGER_T normdir,mac_grow,map_forward
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T dt,time,vel_time,passive_veltime
-      INTEGER_T DIMDEC(utemp)
-      INTEGER_T DIMDEC(unode)
-      INTEGER_T DIMDEC(ucell)
+      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, intent(in) :: unsplit_displacement
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T, intent(in) :: SDC_outer_sweeps
+      INTEGER_T, intent(in) :: ns_time_order
+      INTEGER_T, intent(in) :: divu_outer_sweeps
+      INTEGER_T, intent(in) :: num_divu_outer_sweeps
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: dir_absolute_direct_split
+      INTEGER_T, intent(in) :: normdir
+      INTEGER_T, intent(in) :: mac_grow,map_forward
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dt,time,vel_time,passive_veltime
+      INTEGER_T, intent(in) :: DIMDEC(utemp)
+      INTEGER_T, intent(in) :: DIMDEC(unode)
+      INTEGER_T, intent(in) :: DIMDEC(ucell)
      
-      REAL_T  utemp(DIMV(utemp)) 
-      REAL_T  unode(DIMV(unode),SDIM+1) 
-      REAL_T  ucell(DIMV(ucell),num_materials_vel*SDIM) 
-      INTEGER_T velbc(SDIM,2)
+      REAL_T, intent(in) :: utemp(DIMV(utemp)) 
+      REAL_T, intent(out) :: unode(DIMV(unode),SDIM+1) 
+      REAL_T, intent(inout) :: ucell(DIMV(ucell),num_materials_vel*SDIM) 
+      INTEGER_T, intent(in) :: velbc(SDIM,2)
 
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
      
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
@@ -11588,8 +11592,17 @@ stop
        print *,"map_forward invalid"
        stop
       endif
-      if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
+      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
+       ! do nothing
+      else
        print *,"normdir invalid"
+       stop
+      endif
+      if ((dir_absolute_direct_split.ge.0).and. &
+          (dir_absolute_direct_split.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_absolute_direct_split invalid"
        stop
       endif
       if (fabhi(normdir+1)-fablo(normdir+1)+1.lt.4) then
@@ -11772,6 +11785,7 @@ stop
          print *,"delta (u dt) = ",delta
          print *,"hx=    ",hx
          print *,"dt=    ",dt
+         print *,"dir_absolute_direct_split= ",dir_absolute_direct_split
          print *,"normdir= ",normdir
          print *,"i,j,k ",i,j,k 
          print *,"level,finest_level ",level,finest_level
@@ -11948,6 +11962,7 @@ stop
          print *,"delta= ",delta
          print *,"hx=    ",hx
          print *,"dt=    ",dt
+         print *,"dir_absolute_direct_split= ",dir_absolute_direct_split
          print *,"normdir= ",normdir
          print *,"i,j,k ",i,j,k 
          print *,"level,finest_level ",level,finest_level

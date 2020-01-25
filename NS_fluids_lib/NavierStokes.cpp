@@ -9398,6 +9398,7 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
      &prev_time_slab,
      &prescribed_vel_time_slab,
      &vel_time_slab,
+     &dir_absolute_direct_split,
      &normdir,
      unodetemp.dataPtr(),ARLIM(unodetemp.loVect()),ARLIM(unodetemp.hiVect()),
      unode.dataPtr(),ARLIM(unode.loVect()),ARLIM(unode.hiVect()),
