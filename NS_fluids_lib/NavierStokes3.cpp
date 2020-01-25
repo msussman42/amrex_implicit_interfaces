@@ -7016,7 +7016,8 @@ void NavierStokes::jacobi_cycles(
     // routine modifies RESID so that it sums to zero.
     // RESID=project( mac_rhs-(alpha*phi+div (-grad p)/dt) )
     // if singular_possible, then this routine zeros out the
-    // residual where the matrix diagonal is 0.
+    // residual where the matrix diagonal (prior to dual
+    // time stepping modification) is 0.
   residALL(project_option,idx_mac_rhs_crse,
     RESID_MF,idx_mac_phi_crse,nsolve);
 
@@ -7094,7 +7095,8 @@ void NavierStokes::jacobi_cycles(
     // if local_solvability_projection, then this
     // routine modifies RESID so that it sums to zero.
     // if singular_possible, then this routine zeros out the
-    // residual where the matrix diagonal is 0.
+    // residual where the matrix diagonal (prior to dual time stepping
+    // modification) is 0.
   residALL(project_option,idx_mac_rhs_crse,
     RESID_MF,idx_mac_phi_crse,nsolve);
 
@@ -8779,7 +8781,8 @@ void NavierStokes::multiphase_project(int project_option) {
          // if local_solvability_projection, then this
          // routine modifies CGRESID so that it sums to zero.
          // if singular_possible, then this routine zeros out the
-         // residual where the matrix diagonal is 0.
+         // residual where the matrix diagonal (prior to dual time stepping
+	 // modification) is 0.
        residALL(project_option,MAC_RHS_CRSE_MF,
         CGRESID_MF,MAC_PHI_CRSE_MF,nsolve);
 
@@ -9472,7 +9475,8 @@ void NavierStokes::multiphase_project(int project_option) {
        // if local_solvability_projection, then this
        // routine modifies OUTER_RESID so that it sums to zero.
        // if singular_possible, then this routine zeros out the
-       // residual where the matrix diagonal is 0.
+       // residual where the matrix diagonal (prior to dual time stepping
+       // modification) is 0.
       residALL(project_option,OUTER_MAC_RHS_CRSE_MF,
         OUTER_RESID_MF,OUTER_MAC_PHI_CRSE_MF,nsolve);
       Real outer_error;

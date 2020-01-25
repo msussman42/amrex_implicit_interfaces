@@ -14518,7 +14518,7 @@ void NavierStokes::project_right_hand_side(
 
      if (local_solvability_projection==0) {
       if (singular_possible==1) {
-       zap_resid_where_singular(index_MF);
+       zap_resid_where_singular(index_MF); // multiply by ONES_MF
        change_flag=1;
       } else if (singular_possible==0) {
        // do nothing
@@ -14530,7 +14530,7 @@ void NavierStokes::project_right_hand_side(
        // rhsnew=rhs H-alpha H
        // 0 =sum rhs H-alpha sum H
        // alpha=sum rhs H / sum H
-       zap_resid_where_singular(index_MF);
+       zap_resid_where_singular(index_MF); // multiply by ONES_MF
        Real coef;
        dot_productALL_ones(project_option,index_MF,coef);
        coef=-coef/ones_sum_global;

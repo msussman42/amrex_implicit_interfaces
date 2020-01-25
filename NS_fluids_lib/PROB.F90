@@ -20237,7 +20237,7 @@ END SUBROUTINE Adist
            else if ((local_presbc.eq.EXT_DIR).or. &
                     (local_presbc.eq.REFLECT_EVEN).or. &
                     (local_presbc.eq.FOEXTRAP)) then
-            local_wt(veldir)=zero
+            local_wt(veldir)=zero ! pressure extrap case
            else
             print *,"local_presbc invalid"
             stop
