@@ -5071,21 +5071,28 @@ stop
                stop
               endif
 
-               ! note: AFACE close to 0 at wall.
+              if (solvability_projection.eq.1) then
+               ! do nothing
+              else if (solvability_projection.eq.0) then
+               ! do nothing
+              else
+               print *,"solvability_projection invalid"
+               stop
+              endif
+
+               ! note: expecting AFACE = 0 at wall.
                ! at_wall==1 if presbc==REFLECT_EVEN or FOEXTRAP
-              if ((at_wall.eq.1).and. &
-                  (solvability_projection.eq.1)) then
+              if (at_wall.eq.1) then
                is_solid_face=1
               else if (at_reflect_wall.eq.1) then
                is_solid_face=1
               else if (at_reflect_wall.eq.2) then
                is_solid_face=1
               else if ((at_reflect_wall.eq.0).and. &
-                       ((at_wall.eq.0).or. &
-                        (solvability_projection.eq.0))) then
+                       (at_wall.eq.0)) then
                ! do nothing
               else
-               print *,"bad:at_wall,at_reflect_wall,or solvability_projection"
+               print *,"bad:at_wall or at_reflect_wall"
                stop
               endif
 

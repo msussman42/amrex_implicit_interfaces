@@ -2928,15 +2928,17 @@ NavierStokes::read_params ()
 
     pp.query("solvability_projection",solvability_projection);
 
+    if (dual_time_activate==0) {
+     // do nothing
+    } else if (dual_time_activate==1) {
+     // do nothing
+    } else
+     amrex::Error("dual_time_activate invalid");
+
     if (solvability_projection==0) {
      // do nothing
     } else if (solvability_projection==1) {
-     if (dual_time_activate==0) {
-      // do nothing
-     } else if (dual_time_activate==1) {
-      amrex::Error("cant have dual time stepping and solvability projection");
-     } else
-      amrex::Error("dual_time_activate invalid");
+     // do nothing
     } else
      amrex::Error("solvability_projection invalid");
 
@@ -7947,6 +7949,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
   Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
   // force=dt * div((I-nn^T)(sigma) delta) / rho
+  // in: GODUNOV_3D.F90
   FORT_MARANGONIFORCE(
    &conservative_tension_force,
    &isweep,
@@ -8008,7 +8011,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
    &dt_slab,
    &cur_time_slab,
    &visc_coef,
-   &solvability_projection, 
+   &solvability_projection,  // not used
    presbc.dataPtr(),
    velbc.dataPtr(),
    vofbc.dataPtr(),
@@ -9967,10 +9970,11 @@ NavierStokes::level_phase_change_convert(int isweep) {
    int tid_data=ns_thread();
 
     // nodevelfab (=nodevel) is node based (interior: lo..hi+1)
+    // in: MASS_TRANSFER_3D.F90
    FORT_CONVERTMATERIAL( 
     &tid_data,
     &isweep, 
-    &solvability_projection,
+    &solvability_projection, // if solvability_projection==1 => net growth=0
     &ngrow_expansion,
     &level,&finest_level,
     &normal_probe_size,
@@ -10192,7 +10196,7 @@ NavierStokes::phase_change_redistributeALL() {
   } // IOProc?
  } // verbose>0
 
- if (solvability_projection==1) {
+ if (solvability_projection==1) { // require net growth = 0
 
   int isweep_solvability=4;
 
@@ -11925,6 +11929,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
      // in SEM_scalar_advection
      // advect: rho u, rho, temperature (non conservatively)
+     // FORT_CELL_TO_MAC in LEVELSET_3D.F90
      FORT_CELL_TO_MAC(
       &ncomp_xp,
       &ncomp_xgp,

@@ -10657,14 +10657,25 @@ stop
             stop
            endif
            if (local_solvability_projection.eq.1) then
-            if ((CC.eq.zero).and.(CC_DUAL.eq.zero)) then
+            if (CC.eq.zero) then
              ! do nothing
             else
              print *,"CC invalid"
              stop
             endif
+            if (CC_DUAL.ge.zero) then
+             ! do nothing
+            else
+             print *,"CC_DUAL invalid"
+             stop
+            endif
            else if (local_solvability_projection.eq.0) then
-            ! do nothing
+            if ((CC.ge.zero).and.(CC_DUAL.ge.zero)) then
+             ! do nothing
+            else
+             print *,"CC or CC_DUAL invalid"
+             stop
+            endif
            else
             print *,"local_solvability_projection invalid"
             stop
@@ -14473,18 +14484,25 @@ stop
            partid_solid, &
            partid_prescribed) 
 
+          if (solvability_projection.eq.1) then
+           ! do nothing
+          else if (solvability_projection.eq.0) then
+           ! do nothing
+          else
+           print *,"solvability_projection invalid"
+           stop
+          endif
+ 
            ! at_wall==1 if FOEXTRAP or REFLECT_EVEN BC for pressure.
            ! gradh represents (H_{i}-H_{i-1})
-          if ((at_wall.eq.1).and. &
-              (solvability_projection.eq.1)) then
+          if (at_wall.eq.1) then
            ! do nothing, gradh=0 on a wall
           else if (at_reflect_wall.eq.1) then
            ! do nothing, gradh=0 at a reflecting wall 
           else if (at_reflect_wall.eq.2) then
            ! do nothing, gradh=0 at a reflecting wall 
           else if ((at_reflect_wall.eq.0).and. &
-                   ((at_wall.eq.0).or. &
-                    (solvability_projection.eq.0))) then
+                   ((at_wall.eq.0)) then
 
            ! gradh=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4
            if (is_solid_face.eq.1) then
