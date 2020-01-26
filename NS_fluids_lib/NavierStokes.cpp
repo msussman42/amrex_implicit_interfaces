@@ -2021,7 +2021,7 @@ NavierStokes::read_params ()
 
     pp.query("ns_tiling",ns_tiling);
     if (ns_tiling==true) {
-     amrex::Error("bug in code for tiling");
+     // do nothing
     } else if (ns_tiling==false) {
      // do nothing
     } else
