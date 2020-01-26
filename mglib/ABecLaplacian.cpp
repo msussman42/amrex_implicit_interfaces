@@ -17,6 +17,8 @@
 #include <CG_F.H>
 #include <MG_F.H>
 
+#define SCALAR_WORK_NCOMP 11
+
 namespace amrex{
 
 #define profile_solver 0
@@ -579,7 +581,7 @@ ABecLaplacian::buildMatrix() {
  bool use_tiling=cfd_tiling;
  use_tiling=false;  // two different tile instances might mod the same data.
 
- int ncwork=AMREX_SPACEDIM*3+11;
+ int ncwork=AMREX_SPACEDIM*3+SCALAR_WORK_NCOMP;
 
  for (int level=0;level<MG_numlevels_var;level++) {
 #if (profile_solver==1)
@@ -646,6 +648,8 @@ ABecLaplacian::buildMatrix() {
 
   if (acoefs[level]->nGrow()!=nghostRHS)
    amrex::Error("acoefs[level]->nGrow() invalid");
+  if (a_dual_coefs[level]->nGrow()!=nghostRHS)
+   amrex::Error("a_dual_coefs[level]->nGrow() invalid");
 
   if (offdiag_coeff[level]>0.0) {
    // do nothing
@@ -886,6 +890,7 @@ ABecLaplacian::ABecLaplacian (
  geomarray.resize(MG_numlevels_var);
  bfact_array.resize(MG_numlevels_var);
  maskvals.resize(MG_numlevels_var);
+ a_dual_coefs.resize(MG_numlevels_var,(MultiFab*)0);
  acoefs.resize(MG_numlevels_var,(MultiFab*)0);
  bcoefs.resize(MG_numlevels_var);
  for (int lev=0;lev<MG_numlevels_var;lev++) {
@@ -978,12 +983,17 @@ ABecLaplacian::ABecLaplacian (
         MFInfo().SetTag("MG_CG_diagsumL"),FArrayBoxFactory());
   MG_CG_diagsumL[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
+  a_dual_coefs[level]=new MultiFab(gbox[level],dmap_array[level],
+	nsolve_bicgstab,nghostRHS,
+        MFInfo().SetTag("a_dual_coefs"),FArrayBoxFactory());
+  a_dual_coefs[level]->setVal(a_def,0,nsolve_bicgstab,nghostRHS);
+
   acoefs[level]=new MultiFab(gbox[level],dmap_array[level],
 	nsolve_bicgstab,nghostRHS,
         MFInfo().SetTag("acoefs"),FArrayBoxFactory());
   acoefs[level]->setVal(a_def,0,nsolve_bicgstab,nghostRHS);
 
-  int ncomp_work=(AMREX_SPACEDIM*3)+10;
+  int ncomp_work=(AMREX_SPACEDIM*3)+SCALAR_WORK_NCOMP;
   workcoefs[level]=new MultiFab(gbox[level],dmap_array[level],
     ncomp_work*nsolve_bicgstab,nghostSOLN,
     MFInfo().SetTag("workcoefs"),FArrayBoxFactory());
@@ -1161,6 +1171,8 @@ ABecLaplacian::~ABecLaplacian ()
   MG_CG_ones_mf_copy[level]=(MultiFab*)0;
   delete MG_CG_diagsumL[level];
   MG_CG_diagsumL[level]=(MultiFab*)0;
+  delete a_dual_coefs[level];
+  a_dual_coefs[level]=(MultiFab*)0;
   delete acoefs[level];
   acoefs[level]=(MultiFab*)0;
   delete workcoefs[level];
@@ -1265,7 +1277,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  bprof.start();
 #endif
 
- int ncwork=AMREX_SPACEDIM*3+11;
+ int ncwork=AMREX_SPACEDIM*3+SCALAR_WORK_NCOMP;
 
  int nctest = work.nComp();
  if (nctest!=ncwork*nsolve_bicgstab)
@@ -1461,7 +1473,7 @@ ABecLaplacian::Fapply (MultiFab& y,
   amrex::Error("offdiag_coeff_level invalid");
 
  const MultiFab & work=*workcoefs[level];
- int ncwork=AMREX_SPACEDIM*3+11;
+ int ncwork=AMREX_SPACEDIM*3+SCALAR_WORK_NCOMP;
 
  int nctest = work.nComp();
  if (nctest!=ncwork*nsolve_bicgstab)
@@ -1985,6 +1997,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
  bool use_tiling=cfd_tiling;
 
  const BoxArray& bxa = gbox[level];
+FIX ME
  const MultiFab& a   = *acoefs[level];
  const MultiFab& bX  = *bcoefs[level][0];
  const MultiFab& bY  = *bcoefs[level][1];
