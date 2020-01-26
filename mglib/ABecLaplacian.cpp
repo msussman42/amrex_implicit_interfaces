@@ -417,7 +417,7 @@ ABecLaplacian::makeCoefficients (
  int nComp_expect = nsolve_bicgstab;
  if ((avg==0)||(avg==1)) {
   // do nothing
- } else if (avg==2) {
+ } else if (avg==2) { // ones_mf variable
   nComp_expect=1;
  } else
   amrex::Error("avg invalid");
@@ -444,7 +444,7 @@ ABecLaplacian::makeCoefficients (
 
  if ((avg==0)||(avg==1)) {
   ngrow_expect=0;
- } else if (avg==2) {
+ } else if (avg==2) { // ones_mf variable
   ngrow_expect=1;
   if (cdir==-1) {
    // do nothing
@@ -475,7 +475,7 @@ ABecLaplacian::makeCoefficients (
 
  if ((avg==0)||(avg==1)) {
   crs.setVal(0.0,0,nComp_expect,nGrow); 
- } else if (avg==2) {
+ } else if (avg==2) { // ones_mf variable
   crs.setVal(1.0,0,nComp_expect,nGrow); 
  } else
   amrex::Error("avg invalid");
@@ -553,7 +553,7 @@ ABecLaplacian::makeCoefficients (
 
  if ((avg==0)||(avg==1)) {
   // do nothing
- } else if (avg==2) {
+ } else if (avg==2) { // ones_mf variable
   crs.FillBoundary(geomarray[level].periodicity());
  } else
   amrex::Error("avg invalid");
@@ -579,7 +579,7 @@ ABecLaplacian::buildMatrix() {
  bool use_tiling=cfd_tiling;
  use_tiling=false;  // two different tile instances might mod the same data.
 
- int ncwork=AMREX_SPACEDIM*3+10;
+ int ncwork=AMREX_SPACEDIM*3+11;
 
  for (int level=0;level<MG_numlevels_var;level++) {
 #if (profile_solver==1)
@@ -597,6 +597,7 @@ ABecLaplacian::buildMatrix() {
    // acoefs[level] ~ volume_coarse/ 2^d
    int avg=1;
    makeCoefficients(*acoefs[level],*acoefs[level-1],level,avg);
+   makeCoefficients(*a_dual_coefs[level],*a_dual_coefs[level-1],level,avg);
 
    avg=2;
    makeCoefficients(*laplacian_ones[level],*laplacian_ones[level-1],level,avg);
@@ -674,8 +675,9 @@ ABecLaplacian::buildMatrix() {
   int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
   int diag_non_singcomp=icbzcomp+1;
-  int diag_singcomp=diag_non_singcomp+1;
-  int maskcomp=diag_singcomp+1;
+  int diag_dualcomp=diag_non_singcomp+1;
+  int diag_comp=diag_dualcomp+1;
+  int maskcomp=diag_comp+1;
 
   int icdiagcomp=maskcomp+1;
   int icdiagrbcomp=icdiagcomp+1;
@@ -742,11 +744,13 @@ ABecLaplacian::buildMatrix() {
 
      FArrayBox& workFAB=(*workcoefs[level])[mfi];
      FArrayBox& onesFAB=(*laplacian_ones[level])[mfi];
+     FArrayBox& adualFAB=(*a_dual_coefs[level])[mfi];
      FArrayBox& aFAB=(*acoefs[level])[mfi];
      FArrayBox& bxFAB=(*bcoefs[level][0])[mfi];
      FArrayBox& byFAB=(*bcoefs[level][1])[mfi];
      FArrayBox& bzFAB=(*bcoefs[level][AMREX_SPACEDIM-1])[mfi];
 
+      // in: LO_3D.F90
      FORT_BUILDMAT(
       &level, // level==0 is finest
       &veldir,
@@ -757,6 +761,8 @@ ABecLaplacian::buildMatrix() {
       &diag_regularization,
       onesFAB.dataPtr(),
       ARLIM(onesFAB.loVect()),ARLIM(onesFAB.hiVect()),
+      adualFAB.dataPtr(veldir),
+      ARLIM(adualFAB.loVect()),ARLIM(adualFAB.hiVect()),
       aFAB.dataPtr(veldir),
       ARLIM(aFAB.loVect()),ARLIM(aFAB.hiVect()),
       bxFAB.dataPtr(veldir),
@@ -768,7 +774,8 @@ ABecLaplacian::buildMatrix() {
       workFAB.dataPtr(diag_non_singcomp+ofs),
       ARLIM(workFAB.loVect()),
       ARLIM(workFAB.hiVect()),
-      workFAB.dataPtr(diag_singcomp+ofs),
+      workFAB.dataPtr(diag_dualcomp+ofs),
+      workFAB.dataPtr(diag_comp+ofs),
       workFAB.dataPtr(bxleftcomp+ofs),
       workFAB.dataPtr(bxrightcomp+ofs), 
       workFAB.dataPtr(byleftcomp+ofs),
@@ -1258,7 +1265,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  bprof.start();
 #endif
 
- int ncwork=AMREX_SPACEDIM*3+10;
+ int ncwork=AMREX_SPACEDIM*3+11;
 
  int nctest = work.nComp();
  if (nctest!=ncwork*nsolve_bicgstab)
@@ -1297,8 +1304,9 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
  int diag_non_singcomp=icbzcomp+1;
- int diag_singcomp=diag_non_singcomp+1;
- int maskcomp=diag_singcomp+1;
+ int diag_dualcomp=diag_non_singcomp+1;
+ int diag_comp=diag_dualcomp+1;
+ int maskcomp=diag_comp+1;
 
  int icdiagcomp=maskcomp+1;
  int icdiagrbcomp=icdiagcomp+1;
@@ -1393,7 +1401,8 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
      work[mfi].dataPtr(diag_non_singcomp+ofs),
      ARLIM(work[mfi].loVect()), ARLIM(work[mfi].hiVect()),
-     work[mfi].dataPtr(diag_singcomp+ofs),
+     work[mfi].dataPtr(diag_dualcomp+ofs),
+     work[mfi].dataPtr(diag_comp+ofs),
 
      work[mfi].dataPtr(bxleftcomp+ofs),
      work[mfi].dataPtr(bxrightcomp+ofs), 
@@ -1452,7 +1461,7 @@ ABecLaplacian::Fapply (MultiFab& y,
   amrex::Error("offdiag_coeff_level invalid");
 
  const MultiFab & work=*workcoefs[level];
- int ncwork=AMREX_SPACEDIM*3+10;
+ int ncwork=AMREX_SPACEDIM*3+11;
 
  int nctest = work.nComp();
  if (nctest!=ncwork*nsolve_bicgstab)
@@ -1489,8 +1498,9 @@ ABecLaplacian::Fapply (MultiFab& y,
  int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
  int diag_non_singcomp=icbzcomp+1;
- int diag_singcomp=diag_non_singcomp+1;
- int maskcomp=diag_singcomp+1;
+ int diag_dualcomp=diag_non_singcomp+1;
+ int diag_comp=diag_dualcomp+1;
+ int maskcomp=diag_comp+1;
 
  int icdiagcomp=maskcomp+1;
  int icdiagrbcomp=icdiagcomp+1;
@@ -1563,7 +1573,8 @@ ABecLaplacian::Fapply (MultiFab& y,
 
     work[mfi].dataPtr(diag_non_singcomp+ofs),
     ARLIM(work[mfi].loVect()),ARLIM(work[mfi].hiVect()),
-    work[mfi].dataPtr(diag_singcomp+ofs),
+    work[mfi].dataPtr(diag_dualcomp+ofs),
+    work[mfi].dataPtr(diag_comp+ofs),
 
     work[mfi].dataPtr(bxleftcomp+ofs),
     work[mfi].dataPtr(bxrightcomp+ofs),

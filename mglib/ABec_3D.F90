@@ -26,7 +26,8 @@
        rhs,DIMS(rhs), &
        diagnonsing, &
        DIMS(diagnonsing), &
-       diagsing, &
+       diagdual, &
+       diagnodual, &
        bxleft,bxright, &
        byleft,byright, &
        bzleft,bzright, &
@@ -59,7 +60,8 @@
       REAL_T, intent(inout) :: phi(DIMV(phi))
       REAL_T, intent(in) :: rhs(DIMV(rhs))
       REAL_T, intent(in) :: diagnonsing(DIMV(diagnonsing))
-      REAL_T, intent(in) :: diagsing(DIMV(diagnonsing))
+      REAL_T, intent(in) :: diagdual(DIMV(diagnonsing))
+      REAL_T, intent(in) :: diagnodual(DIMV(diagnonsing))
       REAL_T, intent(in) :: bxleft(DIMV(diagnonsing))
       REAL_T, intent(in) :: bxright(DIMV(diagnonsing))
       REAL_T, intent(in) :: byleft(DIMV(diagnonsing))
@@ -141,7 +143,7 @@
         +bzleft(D_DECL(i,j,k))*phi(D_DECL(i,j,k-1))+ &
          bzright(i,j,k)*phi(D_DECL(i,j,k+1)) &
 #endif
-        -diagsing(D_DECL(i,j,k))*phi(D_DECL(i,j,k))
+        -diagdual(D_DECL(i,j,k))*phi(D_DECL(i,j,k))
        enddo
        enddo
        enddo
@@ -173,7 +175,7 @@
           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
 #endif
-          -diagsing(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+          -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
          enddo
          enddo
          enddo
@@ -191,7 +193,7 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagsing(D_DECL(i,j,k))
+          local_diag=diagdual(D_DECL(i,j,k))
           if (local_diag.eq.zero) then
            if (check_for_singular.eq.1) then
             local_diag=local_diag+diag_regularization*offdiag_coeff
@@ -223,7 +225,7 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagsing(D_DECL(i,j,k))
+          local_diag=diagdual(D_DECL(i,j,k))
           if (local_diag.eq.zero) then
            if (check_for_singular.eq.1) then
             local_diag=local_diag+diag_regularization*offdiag_coeff
@@ -264,7 +266,7 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagsing(D_DECL(i,j,k))
+          local_diag=diagdual(D_DECL(i,j,k))
           if (local_diag.eq.zero) then
            if (check_for_singular.eq.1) then
             local_diag=local_diag+diag_regularization*offdiag_coeff
@@ -333,7 +335,7 @@
           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
 #endif
-          -diagsing(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+          -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
          enddo
          enddo
          enddo
@@ -351,7 +353,7 @@
          do k=growlo(3),growhi(3)
           ! R=AX/D=(B+(L+U)X)/D-X
 
-          local_diag=diagsing(D_DECL(i,j,k))
+          local_diag=diagdual(D_DECL(i,j,k))
           if (local_diag.eq.zero) then
            if (check_for_singular.eq.1) then
             local_diag=local_diag+diag_regularization*offdiag_coeff
@@ -410,7 +412,7 @@
           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
 #endif
-          -diagsing(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+          -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
          enddo
          enddo
          enddo
@@ -504,7 +506,7 @@
           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
 #endif
-          -diagsing(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+          -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
          enddo
          enddo
          enddo
@@ -522,7 +524,7 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagsing(D_DECL(i,j,k))
+          local_diag=diagdual(D_DECL(i,j,k))
           if (local_diag.eq.zero) then
            if (check_for_singular.eq.1) then
             local_diag=local_diag+diag_regularization*offdiag_coeff
@@ -578,7 +580,7 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagsing(D_DECL(i,j,k))
+          local_diag=diagdual(D_DECL(i,j,k))
           if (local_diag.eq.zero) then
            if (check_for_singular.eq.1) then
             local_diag=local_diag+diag_regularization*offdiag_coeff
@@ -670,7 +672,8 @@
        x,DIMS(x), &
        diagnonsing, &
        DIMS(diagnonsing), &
-       diagsing, &
+       diagdual, &
+       diagnodual, &
        bxleft,bxright, &
        byleft,byright, &
        bzleft,bzright, &
@@ -698,7 +701,8 @@
       REAL_T, intent(out) :: y(DIMV(y))
       REAL_T, intent(in) :: x(DIMV(x))
       REAL_T, intent(in) :: diagnonsing(DIMV(diagnonsing))
-      REAL_T, intent(in) :: diagsing(DIMV(diagnonsing))
+      REAL_T, intent(in) :: diagdual(DIMV(diagnonsing))
+      REAL_T, intent(in) :: diagnodual(DIMV(diagnonsing))
       REAL_T, intent(in) :: bxleft(DIMV(diagnonsing))
       REAL_T, intent(in) :: bxright(DIMV(diagnonsing))
       REAL_T, intent(in) :: byleft(DIMV(diagnonsing))
@@ -764,7 +768,7 @@
         y(D_DECL(i,j,k))=zero
        else if (test_mask.eq.one) then
         y(D_DECL(i,j,k))= &
-         diagsing(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
+         diagdual(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
          bxleft(D_DECL(i,j,k))*x(D_DECL(i-1,j,k))- &
          bxright(D_DECL(i,j,k))*x(D_DECL(i+1,j,k)) &
 #if (AMREX_SPACEDIM==3)

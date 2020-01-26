@@ -1,4 +1,4 @@
-!
+_dual!
 ! $Id: LO_3D.F,v 1.2 1998/12/14 20:23:47 lijewski Exp $
 !
 #undef  BL_LANG_CC
@@ -28,13 +28,15 @@
        diag_regularization, &
        solvemask, &  ! ones_mf
        DIMS(solvemask),  &
+       adual,DIMS(adual),  &
        a,DIMS(a),  &
        bx,DIMS(bx), &
        by,DIMS(by), &
        bz,DIMS(bz), &
        diag_non_sing, &
        DIMS(work), &
-       diag_sing, &
+       diag_dual, &
+       diag_nodual, &
        bxleft,bxright, &
        byleft,byright,bzleft,bzright, &
        icbx,icby,icbz,icdiag,icdiagrb, &
@@ -59,6 +61,7 @@
       INTEGER_T :: growhi(3)
       INTEGER_T, intent(in) :: bfact,bfact_top
       INTEGER_T, intent(in) :: DIMDEC(solvemask)
+      INTEGER_T, intent(in) :: DIMDEC(adual)
       INTEGER_T, intent(in) :: DIMDEC(a)
       INTEGER_T, intent(in) :: DIMDEC(work)
       INTEGER_T, intent(in) :: DIMDEC(mask)
@@ -69,9 +72,11 @@
       REAL_T, intent(inout) :: by(DIMV(by))
       REAL_T, intent(inout) :: bz(DIMV(bz))
       REAL_T, intent(inout) :: solvemask(DIMV(solvemask))
+      REAL_T, intent(inout) :: adual(DIMV(adual))
       REAL_T, intent(inout) :: a(DIMV(a))
       REAL_T, intent(inout) :: diag_non_sing(DIMV(work))
-      REAL_T, intent(inout) :: diag_sing(DIMV(work))
+      REAL_T, intent(inout) :: diag_dual(DIMV(work))
+      REAL_T, intent(inout) :: diag_nodual(DIMV(work))
       REAL_T, intent(inout) :: bxleft(DIMV(work))
       REAL_T, intent(inout) :: bxright(DIMV(work))
       REAL_T, intent(inout) :: byleft(DIMV(work))
@@ -87,7 +92,9 @@
 
       INTEGER_T i,j,k,ioff
       REAL_T offdiagsum
-      REAL_T local_diag
+      REAL_T local_diag_NONSING
+      REAL_T local_diag_dual
+      REAL_T local_diag_nodual
       REAL_T test_mask
       REAL_T DD
       REAL_T dtau_factor,dtau
@@ -147,6 +154,7 @@
       endif
 
       call checkbound(fablo,fabhi,DIMS(solvemask),1,-1,81)
+      call checkbound(fablo,fabhi,DIMS(adual),0,-1,81)
       call checkbound(fablo,fabhi,DIMS(a),0,-1,81)
       call checkbound(fablo,fabhi,DIMS(work),1,-1,81)
       call checkbound(fablo,fabhi,DIMS(mask),1,-1,81)
@@ -190,6 +198,7 @@
           maskZP=solvemask(D_DECL(i,j,k+1))
           maskZM=solvemask(D_DECL(i,j,k-1))
           if (mask_cen.eq.zero) then
+           adual(D_DECL(i,j,k))=zero
            a(D_DECL(i,j,k))=zero
            bx(D_DECL(i,j,k))=zero
            bx(D_DECL(i+1,j,k))=zero
@@ -301,8 +310,11 @@
 #endif
           +byleft(D_DECL(i,j,k))+byright(D_DECL(i,j,k))
 
-        local_diag=a(D_DECL(i,j,k))+offdiagsum
-        diag_sing(D_DECL(i,j,k))=local_diag
+        local_diag_dual=adual(D_DECL(i,j,k))+offdiagsum
+        diag_dual(D_DECL(i,j,k))=local_diag_dual
+
+        local_diag_nodual=a(D_DECL(i,j,k))+offdiagsum
+        diag_nodual(D_DECL(i,j,k))=local_diag_nodual
 
         test_mask=solvemask(D_DECL(i,j,k))
 
@@ -317,6 +329,13 @@
          print *,"offdiagsum bust"
          stop
         endif
+        if (adual(D_DECL(i,j,k)).lt.zero) then
+         print *,"adual should be nonneg"
+         stop
+        endif
+        if (adual(D_DECL(i,j,k)).gt.dtau) then
+         dtau=zero
+        endif
         if (a(D_DECL(i,j,k)).lt.zero) then
          print *,"a should be nonneg"
          stop
@@ -324,9 +343,9 @@
         if (a(D_DECL(i,j,k)).gt.dtau) then
          dtau=zero
         endif
-        diag_non_sing(D_DECL(i,j,k))=diag_sing(D_DECL(i,j,k))+dtau
+        diag_non_sing(D_DECL(i,j,k))=diag_dual(D_DECL(i,j,k))+dtau
 
-        if (local_diag.eq.zero) then
+        if (local_diag_nodual.eq.zero) then ! local_diag_nodual=a+offdiagsum
          if ((test_mask.eq.one).and.(veldir.gt.0)) then
           print *,"solvemask not uniform wrt veldir"
           stop
@@ -343,13 +362,19 @@
           print *,"check_for_singular invalid"
           stop
          endif
-        else if (local_diag.gt.zero) then
+        else if (local_diag_nodual.gt.zero) then
          if (test_mask.ne.one) then
           print *,"test_mask invalid"
           stop
          endif
         else
-         print *,"local_diag invalid"
+         print *,"local_diag_nodual invalid"
+         stop
+        endif
+        if (adual(D_DECL(i,j,k)).ge.zero) then
+         ! do nothing
+        else
+         print *,"adual invalid: ",adual(D_DECL(i,j,k))
          stop
         endif
         if (a(D_DECL(i,j,k)).ge.zero) then
@@ -367,8 +392,9 @@
        do j=growlo(2),growhi(2)
        do i=growlo(1),growhi(1)
         test_mask=solvemask(D_DECL(i,j,k))
-        local_diag=diag_sing(D_DECL(i,j,k))
-        if (local_diag.eq.zero) then
+        local_diag_nodual=diag_nodual(D_DECL(i,j,k))
+        local_diag_dual=diag_dual(D_DECL(i,j,k))
+        if (local_diag_nodual.eq.zero) then
 
          if (test_mask.eq.zero) then
           ! do nothing
@@ -377,13 +403,21 @@
           stop
          endif
 
-         if (check_for_singular.eq.1) then
-          local_diag=local_diag+diag_regularization*offdiag_coeff
+         if (local_diag_dual.eq.zero) then
+          if (check_for_singular.eq.1) then
+           local_diag_dual=local_diag_dual+ &
+            diag_regularization*offdiag_coeff
+          else
+           print *,"local_diag_dual or check_for_singular invalid"
+           stop
+          endif
+         else if (local_diag_dual.gt.zero) then
+          ! do nothing
          else
-          print *,"local_diag or check_for_singular invalid"
+          print *,"local_diag_dual invalid"
           stop
          endif
-        else if (local_diag.gt.zero) then
+        else if (local_diag_nodual.gt.zero) then
          if (test_mask.eq.one) then
           ! do nothing
          else
@@ -391,7 +425,7 @@
           stop
          endif
         else
-         print *,"local_diag invalid"
+         print *,"local_diag_nodual invalid"
          stop
         endif
         DD=diag_non_sing(D_DECL(i,j,k))
@@ -434,8 +468,10 @@
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
         test_mask=solvemask(D_DECL(i,j,k))
-        local_diag=diag_sing(D_DECL(i,j,k))
-        if (local_diag.eq.zero) then
+        local_diag_dual=diag_dual(D_DECL(i,j,k))
+        local_diag_nodual=diag_nodual(D_DECL(i,j,k))
+
+        if (local_diag_nodual.eq.zero) then
 
          if (test_mask.eq.zero) then
           ! do nothing
@@ -444,13 +480,21 @@
           stop
          endif
 
-         if (check_for_singular.eq.1) then
-          local_diag=local_diag+diag_regularization*offdiag_coeff
+         if (local_diag_dual.eq.zero) then
+          if (check_for_singular.eq.1) then
+           local_diag_dual=local_diag_dual+ &
+            diag_regularization*offdiag_coeff
+          else
+           print *,"local_diag_dual or check_for_singular invalid"
+           stop
+          endif
+         else if (local_diag_dual.gt.zero) then
+          ! do nothing
          else
-          print *,"local_diag or check_for_singular invalid"
+          print *,"local_diag_dual invalid"
           stop
          endif
-        else if (local_diag.gt.zero) then
+        else if (local_diag_nodual.gt.zero) then
          if (test_mask.eq.one) then
           ! do nothing
          else
@@ -458,7 +502,7 @@
           stop
          endif
         else
-         print *,"local_diag invalid"
+         print *,"local_diag_nodual invalid"
          stop
         endif
 
@@ -466,139 +510,145 @@
 
         if (i.gt.tilelo(1)) then
 
-         local_diag=diag_sing(D_DECL(i-1,j,k))
-         if (local_diag.eq.zero) then
+         local_diag_dual=diag_dual(D_DECL(i-1,j,k))
+         if (local_diag_dual.eq.zero) then
           if (check_for_singular.eq.1) then
-           local_diag=local_diag+diag_regularization*offdiag_coeff
+           local_diag_dual=local_diag_dual+ &
+             diag_regularization*offdiag_coeff
           else
-           print *,"local_diag or check_for_singular invalid"
+           print *,"local_diag_dual or check_for_singular invalid"
            stop
           endif
-         else if (local_diag.gt.zero) then
+         else if (local_diag_dual.gt.zero) then
           ! do nothing
          else
-          print *,"local_diag invalid"
+          print *,"local_diag_dual invalid"
           stop
          endif
-         local_diag=diag_non_sing(D_DECL(i-1,j,k))
+         local_diag_NONSING=diag_non_sing(D_DECL(i-1,j,k))
 
          DD=DD-bxleft(D_DECL(i,j,k))* &
-          bxleft(D_DECL(i,j,k))/local_diag
+          bxleft(D_DECL(i,j,k))/local_diag_NONSING
 
         endif
 
         if (j.gt.tilelo(2)) then
 
-         local_diag=diag_sing(D_DECL(i,j-1,k))
-         if (local_diag.eq.zero) then
+         local_diag_dual=diag_dual(D_DECL(i,j-1,k))
+         if (local_diag_dual.eq.zero) then
           if (check_for_singular.eq.1) then
-           local_diag=local_diag+diag_regularization*offdiag_coeff
+           local_diag_dual=local_diag_dual+ &
+             diag_regularization*offdiag_coeff
           else
-           print *,"local_diag or check_for_singular invalid"
+           print *,"local_diag_dual or check_for_singular invalid"
            stop
           endif
-         else if (local_diag.gt.zero) then
+         else if (local_diag_dual.gt.zero) then
           ! do nothing
          else
-          print *,"local_diag invalid"
+          print *,"local_diag_dual invalid"
           stop
          endif
-         local_diag=diag_non_sing(D_DECL(i,j-1,k))
+         local_diag_NONSING=diag_non_sing(D_DECL(i,j-1,k))
 
          DD=DD-byleft(D_DECL(i,j,k))* &
-          byleft(D_DECL(i,j,k))/local_diag
+          byleft(D_DECL(i,j,k))/local_diag_NONSING
 
         endif
 #if (AMREX_SPACEDIM==3)
         if (k.gt.tilelo(AMREX_SPACEDIM)) then
 
-         local_diag=diag_sing(D_DECL(i,j,k-1))
-         if (local_diag.eq.zero) then
+         local_diag_dual=diag_dual(D_DECL(i,j,k-1))
+         if (local_diag_dual.eq.zero) then
           if (check_for_singular.eq.1) then
-           local_diag=local_diag+diag_regularization*offdiag_coeff
+           local_diag_dual=local_diag_dual+ &
+             diag_regularization*offdiag_coeff
           else
-           print *,"local_diag or check_for_singular invalid"
+           print *,"local_diag_dual or check_for_singular invalid"
            stop
           endif
-         else if (local_diag.gt.zero) then
+         else if (local_diag_dual.gt.zero) then
           ! do nothing
          else
-          print *,"local_diag invalid"
+          print *,"local_diag_dual invalid"
           stop
          endif
-         local_diag=diag_non_sing(D_DECL(i,j,k-1))
+         local_diag_NONSING=diag_non_sing(D_DECL(i,j,k-1))
 
          DD=DD-bzleft(D_DECL(i,j,k))* &
-          bzleft(D_DECL(i,j,k))/local_diag
+          bzleft(D_DECL(i,j,k))/local_diag_NONSING
 
         endif
 #endif
         if (i.lt.tilehi(1)) then
 
-         local_diag=diag_sing(D_DECL(i+1,j,k))
-         if (local_diag.eq.zero) then
+         local_diag_dual=diag_dual(D_DECL(i+1,j,k))
+         if (local_diag_dual.eq.zero) then
           if (check_for_singular.eq.1) then
-           local_diag=local_diag+diag_regularization*offdiag_coeff
+           local_diag_dual=local_diag_dual+ &
+             diag_regularization*offdiag_coeff
           else
-           print *,"local_diag or check_for_singular invalid"
+           print *,"local_diag_dual or check_for_singular invalid"
            stop
           endif
-         else if (local_diag.gt.zero) then
+         else if (local_diag_dual.gt.zero) then
           ! do nothing
          else
-          print *,"local_diag invalid"
+          print *,"local_diag_dual invalid"
           stop
          endif
 
-         local_diag=diag_non_sing(D_DECL(i+1,j,k))
+         local_diag_NONSING=diag_non_sing(D_DECL(i+1,j,k))
 
          DD=DD-bxright(D_DECL(i,j,k))* &
-          bxright(D_DECL(i,j,k))/local_diag 
+          bxright(D_DECL(i,j,k))/local_diag_NONSING 
 
         endif
         if (j.lt.tilehi(2)) then
 
-         local_diag=diag_sing(D_DECL(i,j+1,k))
-         if (local_diag.eq.zero) then
+         local_diag_dual=diag_dual(D_DECL(i,j+1,k))
+         if (local_diag_dual.eq.zero) then
           if (check_for_singular.eq.1) then
-           local_diag=local_diag+diag_regularization*offdiag_coeff
+           local_diag_dual=local_diag_dual+ &
+            diag_regularization*offdiag_coeff
           else
-           print *,"local_diag or check_for_singular invalid"
+           print *,"local_diag_dual or check_for_singular invalid"
            stop
           endif
-         else if (local_diag.gt.zero) then
+         else if (local_diag_dual.gt.zero) then
           ! do nothing
          else
-          print *,"local_diag invalid"
+          print *,"local_diag_dual invalid"
           stop
          endif
-         local_diag=diag_non_sing(D_DECL(i,j+1,k))
+         local_diag_NONSING=diag_non_sing(D_DECL(i,j+1,k))
 
          DD=DD-byright(D_DECL(i,j,k))* &
-          byright(D_DECL(i,j,k))/local_diag
+          byright(D_DECL(i,j,k))/local_diag_NONSING
 
         endif
 #if (AMREX_SPACEDIM==3)
         if (k.lt.tilehi(AMREX_SPACEDIM)) then
 
-         local_diag=diag_sing(D_DECL(i,j,k+1))
-         if (local_diag.eq.zero) then
+         local_diag_dual=diag_dual(D_DECL(i,j,k+1))
+         if (local_diag_dual.eq.zero) then
           if (check_for_singular.eq.1) then
-           local_diag=local_diag+diag_regularization*offdiag_coeff
+           local_diag_dual=local_diag_dual+ &
+             diag_regularization*offdiag_coeff
           else
-           print *,"local_diag or check_for_singular invalid"
+           print *,"local_diag_dual or check_for_singular invalid"
            stop
           endif
-         else if (local_diag.gt.zero) then
+         else if (local_diag_dual.gt.zero) then
           ! do nothing
          else
-          print *,"local_diag invalid"
+          print *,"local_diag_dual invalid"
           stop
          endif
-         local_diag=diag_non_sing(D_DECL(i,j,k+1))
+         local_diag_NONSING=diag_non_sing(D_DECL(i,j,k+1))
 
          DD=DD-bzright(D_DECL(i,j,k))* &
-          bzright(D_DECL(i,j,k))/local_diag
+          bzright(D_DECL(i,j,k))/local_diag_NONSING
 
         endif
 #endif

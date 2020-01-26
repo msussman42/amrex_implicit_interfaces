@@ -377,6 +377,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  avgDown_localMF(ALPHANOVOLUME_MF,0,nsolveMM,0);
  Copy_localMF(ALPHACOEF_MF,ALPHANOVOLUME_MF,0,0,nsolveMM,0);
  Copy_localMF(ALPHACOEF_DUAL_MF,ALPHANOVOLUME_MF,0,0,nsolveMM,0);
+
  for (int veldir=0;veldir<nsolveMM;veldir++) {
 
   if (dual_time_stepping_coefficient>0.0) {
@@ -389,7 +390,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    // dest,source,scomp,dcomp,ncomp,ngrow
   Mult_localMF(ALPHACOEF_MF,VOLUME_MF,0,veldir,1,0);
   Mult_localMF(ALPHACOEF_DUAL_MF,VOLUME_MF,0,veldir,1,0);
- }
+ } // veldir=0,..,nsolveMM-1
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -487,7 +488,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    mac_op->bCoefficients(*localMF[BXCOEF_MF+dir],dir);
  }  // dir=0...sdim-1
 
- mac_op->aCoefficients(*localMF[ALPHACOEF_DUAL_MF]);
+ mac_op->aCoefficients(*localMF[ALPHACOEF_DUAL_MF],
+		       *localMF[ALPHACOEF_MF]);
 
  OFFDIAG_NONSING_LEVEL=max_face_wt[0][1];
  if (OFFDIAG_NONSING_LEVEL>0.0) {

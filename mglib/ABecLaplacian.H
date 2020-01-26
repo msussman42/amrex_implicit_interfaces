@@ -34,7 +34,7 @@ public:
 
     virtual ~ABecLaplacian ();
 
-    void aCoefficients (MultiFab& _a);
+    void aCoefficients (MultiFab& _a_dual,MultiFab& _a);
     void generateCoefficients();
     void bCoefficients (MultiFab& _b, int dir);
     void non_sing_coefficients(Real offdiag_coeff_);
@@ -211,6 +211,7 @@ protected:
  virtual void Fdiagsum(MultiFab&       out,
                        int             level);
 
+ Vector< MultiFab* > a_dual_coefs;
  Vector< MultiFab* > acoefs;
 
 // bxleft,byleft,bzleft,bxright,byright,bzright,icbx,icby,icbz,diag,diagsing
@@ -263,8 +264,10 @@ private:
 
 inline
 void
-ABecLaplacian::aCoefficients (MultiFab& _a)
+ABecLaplacian::aCoefficients (MultiFab& _a_dual,MultiFab& _a)
 {
+    if (! _a_dual.ok())
+     amrex::Error("_a_dual not ok");
     if (! _a.ok())
      amrex::Error("_a not ok");
 
@@ -273,8 +276,14 @@ ABecLaplacian::aCoefficients (MultiFab& _a)
     if (_a.nComp()!=nsolve_bicgstab) 
      amrex::Error("_a has wrong ncomp");
 
+    if (_a_dual.boxArray() != (a_dual_coefs[0])->boxArray())
+     amrex::Error("_a_dual and a_dual_coefs boxarrays do not match");
+    if (_a_dual.nComp()!=nsolve_bicgstab) 
+     amrex::Error("_a_dual has wrong ncomp");
+
      // src,scomp,dcomp,snghost,dnghost
     acoefs[0]->ParallelCopy(_a,0,0,nsolve_bicgstab,0,0);
+    a_dual_coefs[0]->ParallelCopy(_a_dual,0,0,nsolve_bicgstab,0,0);
 
 } // subroutine aCoefficients
 
