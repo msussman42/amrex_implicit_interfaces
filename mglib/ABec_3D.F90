@@ -47,8 +47,10 @@
       INTEGER_T, intent(in) :: check_for_singular
       REAL_T, intent(in) :: offdiag_coeff
       REAL_T, intent(in) :: diag_regularization
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact,bfact_top
       INTEGER_T, intent(in) :: DIMDEC(masksing)
@@ -113,7 +115,8 @@
        print *,"offdiag_coeff invalid"
        stop
       endif
-      if (diag_regularization.gt.zero) then
+      if ((diag_regularization.gt.zero).and. &
+          (diag_regularization.le.1.0D-3)) then
        ! do nothing
       else
        print *,"diag_regularization invalid"
@@ -134,16 +137,21 @@
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        rhssave(D_DECL(i,j,k))=rhs(D_DECL(i,j,k))+ &
-         bxleft(D_DECL(i,j,k))*phi(D_DECL(i-1,j,k))+ &
-         bxright(D_DECL(i,j,k))*phi(D_DECL(i+1,j,k))+ &
-         byleft(D_DECL(i,j,k))*phi(D_DECL(i,j-1,k))+ &
-         byright(D_DECL(i,j,k))*phi(D_DECL(i,j+1,k)) &
+        if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+         rhssave(D_DECL(i,j,k))=rhs(D_DECL(i,j,k))+ &
+          bxleft(D_DECL(i,j,k))*phi(D_DECL(i-1,j,k))+ &
+          bxright(D_DECL(i,j,k))*phi(D_DECL(i+1,j,k))+ &
+          byleft(D_DECL(i,j,k))*phi(D_DECL(i,j-1,k))+ &
+          byright(D_DECL(i,j,k))*phi(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-        +bzleft(D_DECL(i,j,k))*phi(D_DECL(i,j,k-1))+ &
-         bzright(i,j,k)*phi(D_DECL(i,j,k+1)) &
+         +bzleft(D_DECL(i,j,k))*phi(D_DECL(i,j,k-1))+ &
+          bzright(i,j,k)*phi(D_DECL(i,j,k+1)) &
 #endif
-        -diagdual(D_DECL(i,j,k))*phi(D_DECL(i,j,k))
+         -diagdual(D_DECL(i,j,k))*phi(D_DECL(i,j,k))
+        else
+         print *,"diagdual or diagnodual invalid"
+         stop
+        endif
        enddo
        enddo
        enddo
@@ -166,16 +174,21 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
-           bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
-           bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
-           byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
-           byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
+          if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+           ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
+            bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
+            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
+            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
+            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-          +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
-           bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
+           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
+            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
 #endif
-          -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+           -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+          else
+           print *,"diagdual or diagnodual invalid"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -326,16 +339,21 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
-           bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
-           bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
-           byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
-           byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
+          if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+           ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
+            bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
+            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
+            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
+            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-          +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
-           bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
+           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
+            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
 #endif
-          -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+           -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+          else
+           print *,"diagdual or diagnodual invalid"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -403,16 +421,21 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
-           bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
-           bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
-           byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
-           byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
+          if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+           ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
+            bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
+            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
+            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
+            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-          +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
-           bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
+           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
+            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
 #endif
-          -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+           -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+          else
+           print *,"diagdual or diagnodual invalid"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -497,16 +520,21 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
-           bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
-           bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
-           byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
-           byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
+          if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+           ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
+            bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
+            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
+            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
+            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
 #if (AMREX_SPACEDIM==3)
-          +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
-           bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
+           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
+            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
 #endif
-          -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+           -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+          else
+           print *,"diagdual or diagnodual invalid"
+           stop
+          endif
          enddo
          enddo
          enddo
@@ -688,8 +716,10 @@
       INTEGER_T, intent(in) :: check_for_singular
       REAL_T, intent(in) :: offdiag_coeff
       REAL_T, intent(in) :: diag_regularization
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact,bfact_top
       INTEGER_T, intent(in) :: DIMDEC(masksing)
@@ -740,7 +770,8 @@
        print *,"offdiag_coeff invalid"
        stop
       endif
-      if (diag_regularization.gt.zero) then
+      if ((diag_regularization.gt.zero).and. &
+          (diag_regularization.le.1.0D-3)) then
        ! do nothing
       else
        print *,"diag_regularization invalid"
@@ -767,16 +798,21 @@
        if (test_mask.eq.zero) then
         y(D_DECL(i,j,k))=zero
        else if (test_mask.eq.one) then
-        y(D_DECL(i,j,k))= &
-         diagdual(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
-         bxleft(D_DECL(i,j,k))*x(D_DECL(i-1,j,k))- &
-         bxright(D_DECL(i,j,k))*x(D_DECL(i+1,j,k)) &
+        if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+         y(D_DECL(i,j,k))= &
+          diagdual(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
+          bxleft(D_DECL(i,j,k))*x(D_DECL(i-1,j,k))- &
+          bxright(D_DECL(i,j,k))*x(D_DECL(i+1,j,k)) &
 #if (AMREX_SPACEDIM==3)
-         -bzleft(D_DECL(i,j,k))*x(D_DECL(i,j,k-1))- &
-         bzright(D_DECL(i,j,k))*x(D_DECL(i,j,k+1)) &
+          -bzleft(D_DECL(i,j,k))*x(D_DECL(i,j,k-1))- &
+          bzright(D_DECL(i,j,k))*x(D_DECL(i,j,k+1)) &
 #endif
-         -byleft(D_DECL(i,j,k))*x(D_DECL(i,j-1,k))- &
-         byright(D_DECL(i,j,k))*x(D_DECL(i,j+1,k)) 
+          -byleft(D_DECL(i,j,k))*x(D_DECL(i,j-1,k))- &
+          byright(D_DECL(i,j,k))*x(D_DECL(i,j+1,k)) 
+        else
+         print *,"diagdual or diagnodual invalid"
+         stop
+        endif
        else
         print *,"test_mask invalid in adotx"
         stop
