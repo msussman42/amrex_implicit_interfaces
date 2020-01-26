@@ -10628,26 +10628,26 @@ END SUBROUTINE SIMP
 
        IMPLICIT NONE
 
-       INTEGER_T singular_possible
-       REAL_T offdiag_nonsing_level
-       REAL_T diag_regularization
-       REAL_T local_diag
-       INTEGER_T bfact
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T DIMDEC(diagnonsing)
-       INTEGER_T DIMDEC(diagsing)
-       INTEGER_T DIMDEC(resid)
-       INTEGER_T DIMDEC(xnew)
-       INTEGER_T DIMDEC(xold)
-       INTEGER_T DIMDEC(mask)
-       REAL_T  diagnonsing(DIMV(diagnonsing))
-       REAL_T  diagsing(DIMV(diagsing))
-       REAL_T  resid(DIMV(resid))
-       REAL_T  xnew(DIMV(xnew))
-       REAL_T  xold(DIMV(xold))
-       REAL_T  mask(DIMV(mask))
+       INTEGER_T, intent(in) :: singular_possible
+       REAL_T, intent(in) :: offdiag_nonsing_level
+       REAL_T, intent(in) :: diag_regularization
+       REAL_T :: local_diag
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: DIMDEC(diagnonsing)
+       INTEGER_T, intent(in) :: DIMDEC(diagsing)
+       INTEGER_T, intent(in) :: DIMDEC(resid)
+       INTEGER_T, intent(in) :: DIMDEC(xnew)
+       INTEGER_T, intent(in) :: DIMDEC(xold)
+       INTEGER_T, intent(in) :: DIMDEC(mask)
+       REAL_T, intent(in) ::  diagnonsing(DIMV(diagnonsing))
+       REAL_T, intent(in) ::  diagsing(DIMV(diagsing))
+       REAL_T, intent(in) ::  resid(DIMV(resid))
+       REAL_T, intent(out) :: xnew(DIMV(xnew))
+       REAL_T, intent(in) ::  xold(DIMV(xold))
+       REAL_T, intent(in) ::  mask(DIMV(mask))
 
        INTEGER_T i,j,k
 
@@ -10662,7 +10662,7 @@ END SUBROUTINE SIMP
         stop
        endif
        if ((diag_regularization.gt.zero).and. &
-           (diag_regularization.lt.half)) then
+           (diag_regularization.le.1.0D-3)) then
         ! do nothing
        else 
         print *,"diag_regularization invalid"

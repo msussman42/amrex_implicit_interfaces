@@ -562,7 +562,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // mask=tag if not covered by level+1 or outside the domain.
   FArrayBox& maskcov = (*localMF[MASKCOEF_MF])[mfi];
-  FArrayBox& alphafab = (*localMF[ALPHACOEF_DUAL_MF])[mfi];
+  FArrayBox& alphadual = (*localMF[ALPHACOEF_DUAL_MF])[mfi];
+  FArrayBox& alphanodual = (*localMF[ALPHACOEF_MF])[mfi];
 
   FArrayBox& offdiagcheck=(*localMF[OFF_DIAG_CHECK_MF])[mfi];
   FArrayBox& diagnonsingfab = (*localMF[DIAG_NON_SING_MF])[mfi];
@@ -617,7 +618,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
     ones_fab.dataPtr(),ARLIM(ones_fab.loVect()),ARLIM(ones_fab.hiVect()),
     maskcov.dataPtr(),ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    alphafab.dataPtr(),ARLIM(alphafab.loVect()),ARLIM(alphafab.hiVect()),
+    alphadual.dataPtr(),
+    ARLIM(alphadual.loVect()),ARLIM(alphadual.hiVect()),
+    alphanodual.dataPtr(),
+    ARLIM(alphanodual.loVect()),ARLIM(alphanodual.hiVect()),
     offdiagcheck.dataPtr(),
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
     diagnonsingfab.dataPtr(),
@@ -1772,6 +1776,7 @@ void NavierStokes::apply_div(
   int ncomp_dendest=poldfab_dual.nComp();
 
    // in: NavierStokes::apply_div
+   // FORT_MAC_TO_CELL declared in: LEVELSET_3D.F90
   FORT_MAC_TO_CELL(
    &nsolveMM_FACE, 
    &num_materials_face,

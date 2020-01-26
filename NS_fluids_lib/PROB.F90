@@ -24123,7 +24123,7 @@ END SUBROUTINE Adist
 
       if (1.eq.0) then
        if (operation_flag.eq.0) then ! right hand side for solver
-        if (project_option.eq.10) then
+        if (project_option.eq.10) then ! sync project
          if (level.eq.3) then
           if ((j.eq.0).and.(i.eq.120).and.(k.eq.18)) then
            print *,"TO_CELL: i,j,k,maskSEM,homflag ",i,j,k,maskSEM,homflag
@@ -24753,13 +24753,17 @@ END SUBROUTINE Adist
 
             MDOT=mdotcell(D_DECL(ic,jc,kc),velcomp)
 
-            if (CC.lt.zero) then
+            if (CC.ge.zero) then
+             ! do nothing
+            else
              print *,"CC invalid in SEM_MAC_TO_CELL"
              stop
             endif
 
             if (1.eq.0) then
-             if (CC.ne.zero) then
+             if (CC.eq.zero) then
+              ! do nothing
+             else
               print *,"CC should be 0 for incompressible fluids"
               stop
              endif

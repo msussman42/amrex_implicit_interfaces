@@ -1,6 +1,3 @@
-_dual!
-! $Id: LO_3D.F,v 1.2 1998/12/14 20:23:47 lijewski Exp $
-!
 #undef  BL_LANG_CC
 #ifndef BL_LANG_FORT
 #define BL_LANG_FORT

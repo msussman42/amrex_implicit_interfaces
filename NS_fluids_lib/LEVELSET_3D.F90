@@ -14502,7 +14502,7 @@ stop
           else if (at_reflect_wall.eq.2) then
            ! do nothing, gradh=0 at a reflecting wall 
           else if ((at_reflect_wall.eq.0).and. &
-                   ((at_wall.eq.0)) then
+                   (at_wall.eq.0)) then
 
            ! gradh=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4
            if (is_solid_face.eq.1) then
