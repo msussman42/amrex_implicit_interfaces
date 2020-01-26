@@ -38,7 +38,8 @@ _dual!
        diag_dual, &
        diag_nodual, &
        bxleft,bxright, &
-       byleft,byright,bzleft,bzright, &
+       byleft,byright, &
+       bzleft,bzright, &
        icbx,icby,icbz,icdiag,icdiagrb, &
        mask, &
        DIMS(mask), &
@@ -128,7 +129,8 @@ _dual!
        print *,"offdiag_coeff invalid"
        stop
       endif
-      if (diag_regularization.gt.zero) then
+      if ((diag_regularization.gt.zero).and. &
+          (diag_regularization.le.1.0D-3)) then
        ! do nothing
       else
        print *,"diag_regularization invalid"
@@ -329,19 +331,29 @@ _dual!
          print *,"offdiagsum bust"
          stop
         endif
-        if (adual(D_DECL(i,j,k)).lt.zero) then
+        if (adual(D_DECL(i,j,k)).ge.zero) then
+         ! do nothing
+        else
          print *,"adual should be nonneg"
          stop
         endif
         if (adual(D_DECL(i,j,k)).gt.dtau) then
          dtau=zero
         endif
-        if (a(D_DECL(i,j,k)).lt.zero) then
+        if (a(D_DECL(i,j,k)).ge.zero) then
+         ! do nothing
+        else
          print *,"a should be nonneg"
          stop
         endif
         if (a(D_DECL(i,j,k)).gt.dtau) then
          dtau=zero
+        endif
+        if (adual(D_DECL(i,j,k)).ge.a(D_DECL(i,j,k))) then
+         ! do nothing
+        else
+         print *,"must have adual>=a"
+         stop
         endif
         diag_non_sing(D_DECL(i,j,k))=diag_dual(D_DECL(i,j,k))+dtau
 
@@ -394,6 +406,13 @@ _dual!
         test_mask=solvemask(D_DECL(i,j,k))
         local_diag_nodual=diag_nodual(D_DECL(i,j,k))
         local_diag_dual=diag_dual(D_DECL(i,j,k))
+        if (local_diag_dual.ge.local_diag_nodual) then
+         ! do nothing
+        else
+         print *,"local_diag_dual or local_diag_nodual invalid"
+         stop
+        endif
+
         if (local_diag_nodual.eq.zero) then
 
          if (test_mask.eq.zero) then
@@ -470,6 +489,12 @@ _dual!
         test_mask=solvemask(D_DECL(i,j,k))
         local_diag_dual=diag_dual(D_DECL(i,j,k))
         local_diag_nodual=diag_nodual(D_DECL(i,j,k))
+        if (local_diag_dual.ge.local_diag_nodual) then
+         ! do nothing
+        else
+         print *,"local_diag_dual or local_diag_nodual invalid"
+         stop
+        endif
 
         if (local_diag_nodual.eq.zero) then
 

@@ -680,8 +680,8 @@ ABecLaplacian::buildMatrix() {
 
   int diag_non_singcomp=icbzcomp+1;
   int diag_dualcomp=diag_non_singcomp+1;
-  int diag_comp=diag_dualcomp+1;
-  int maskcomp=diag_comp+1;
+  int diag_nodualcomp=diag_dualcomp+1;
+  int maskcomp=diag_nodualcomp+1;
 
   int icdiagcomp=maskcomp+1;
   int icdiagrbcomp=icdiagcomp+1;
@@ -779,7 +779,7 @@ ABecLaplacian::buildMatrix() {
       ARLIM(workFAB.loVect()),
       ARLIM(workFAB.hiVect()),
       workFAB.dataPtr(diag_dualcomp+ofs),
-      workFAB.dataPtr(diag_comp+ofs),
+      workFAB.dataPtr(diag_nodualcomp+ofs),
       workFAB.dataPtr(bxleftcomp+ofs),
       workFAB.dataPtr(bxrightcomp+ofs), 
       workFAB.dataPtr(byleftcomp+ofs),
@@ -868,7 +868,7 @@ ABecLaplacian::ABecLaplacian (
 
  laplacian_solvability=0;
  check_for_singular=0;
- diag_regularization=0.0;
+ diag_regularization=0.0; // default is 0.0, overridden in MacProj.cpp
 
  cfd_level=cfd_level_in;
  cfd_project_option=cfd_project_option_in;
@@ -1317,8 +1317,8 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
  int diag_non_singcomp=icbzcomp+1;
  int diag_dualcomp=diag_non_singcomp+1;
- int diag_comp=diag_dualcomp+1;
- int maskcomp=diag_comp+1;
+ int diag_nodualcomp=diag_dualcomp+1;
+ int maskcomp=diag_nodualcomp+1;
 
  int icdiagcomp=maskcomp+1;
  int icdiagrbcomp=icdiagcomp+1;
@@ -1414,7 +1414,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
      work[mfi].dataPtr(diag_non_singcomp+ofs),
      ARLIM(work[mfi].loVect()), ARLIM(work[mfi].hiVect()),
      work[mfi].dataPtr(diag_dualcomp+ofs),
-     work[mfi].dataPtr(diag_comp+ofs),
+     work[mfi].dataPtr(diag_nodualcomp+ofs),
 
      work[mfi].dataPtr(bxleftcomp+ofs),
      work[mfi].dataPtr(bxrightcomp+ofs), 
@@ -1511,8 +1511,8 @@ ABecLaplacian::Fapply (MultiFab& y,
 
  int diag_non_singcomp=icbzcomp+1;
  int diag_dualcomp=diag_non_singcomp+1;
- int diag_comp=diag_dualcomp+1;
- int maskcomp=diag_comp+1;
+ int diag_nodualcomp=diag_dualcomp+1;
+ int maskcomp=diag_nodualcomp+1;
 
  int icdiagcomp=maskcomp+1;
  int icdiagrbcomp=icdiagcomp+1;
@@ -1586,7 +1586,7 @@ ABecLaplacian::Fapply (MultiFab& y,
     work[mfi].dataPtr(diag_non_singcomp+ofs),
     ARLIM(work[mfi].loVect()),ARLIM(work[mfi].hiVect()),
     work[mfi].dataPtr(diag_dualcomp+ofs),
-    work[mfi].dataPtr(diag_comp+ofs),
+    work[mfi].dataPtr(diag_nodualcomp+ofs),
 
     work[mfi].dataPtr(bxleftcomp+ofs),
     work[mfi].dataPtr(bxrightcomp+ofs),
@@ -1997,8 +1997,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
  bool use_tiling=cfd_tiling;
 
  const BoxArray& bxa = gbox[level];
-FIX ME
- const MultiFab& a   = *acoefs[level];
+ const MultiFab& adual = *a_dual_coefs[level];
  const MultiFab& bX  = *bcoefs[level][0];
  const MultiFab& bY  = *bcoefs[level][1];
  const MultiFab& bZ  = *bcoefs[level][AMREX_SPACEDIM-1];
@@ -2044,12 +2043,13 @@ FIX ME
 
    BLProfiler bprof(profname);
 #endif
-
+  
+    // in: ABec_3D.F90
    FORT_DIAGSUM(
     y[mfi].dataPtr(veldir),
     ARLIM(y[mfi].loVect()), ARLIM(y[mfi].hiVect()),
-    a[mfi].dataPtr(veldir), 
-    ARLIM(a[mfi].loVect()), ARLIM(a[mfi].hiVect()),
+    adual[mfi].dataPtr(veldir),  // not used
+    ARLIM(adual[mfi].loVect()), ARLIM(adual[mfi].hiVect()),
     bX[mfi].dataPtr(veldir), 
     ARLIM(bX[mfi].loVect()), ARLIM(bX[mfi].hiVect()),
     bY[mfi].dataPtr(veldir), 

@@ -95,7 +95,8 @@ extern "C"
    
     void FORT_DIAGSUM(
         Real *y      , AMREX_ARLIM_P(y_lo), AMREX_ARLIM_P(y_hi),
-        const Real* a , AMREX_ARLIM_P(a_lo),  AMREX_ARLIM_P(a_hi),
+        const Real* adual , 
+	AMREX_ARLIM_P(adual_lo),  AMREX_ARLIM_P(adual_hi),
         const Real* bX, AMREX_ARLIM_P(bX_lo), AMREX_ARLIM_P(bX_hi),
         const Real* bY, AMREX_ARLIM_P(bY_lo), AMREX_ARLIM_P(bY_hi),
         const Real* bZ, AMREX_ARLIM_P(bZ_lo), AMREX_ARLIM_P(bZ_hi),

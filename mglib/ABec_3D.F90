@@ -791,8 +791,8 @@
       subroutine FORT_DIAGSUM( &
        y, &
        DIMS(y), &
-       a,  &
-       DIMS(a), &
+       adual,  &
+       DIMS(adual), &
        bX, &
        DIMS(bX), &
        bY, &
@@ -804,21 +804,23 @@
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T tilelo(AMREX_SPACEDIM), tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM), fabhi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
       INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(y)
-      INTEGER_T DIMDEC(a)
-      INTEGER_T DIMDEC(bX)
-      INTEGER_T DIMDEC(bY)
-      INTEGER_T DIMDEC(bZ)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(y)
+      INTEGER_T, intent(in) :: DIMDEC(adual)
+      INTEGER_T, intent(in) :: DIMDEC(bX)
+      INTEGER_T, intent(in) :: DIMDEC(bY)
+      INTEGER_T, intent(in) :: DIMDEC(bZ)
 
-      REAL_T  y(DIMV(y))
-      REAL_T  a(DIMV(a))
-      REAL_T bX(DIMV(bX))
-      REAL_T bY(DIMV(bY))
-      REAL_T bZ(DIMV(bZ))
+      REAL_T, intent(out) ::  y(DIMV(y))
+      REAL_T, intent(in) ::  adual(DIMV(adual))
+      REAL_T, intent(in) :: bX(DIMV(bX))
+      REAL_T, intent(in) :: bY(DIMV(bY))
+      REAL_T, intent(in) :: bZ(DIMV(bZ))
 
       INTEGER_T i,j,k
       REAL_T bxleft,bxright,byleft,byright,bzleft,bzright
@@ -836,7 +838,7 @@
       DIMS(y) &
       ,0,-1,18)
       call checkbound(fablo,fabhi, &
-      DIMS(a) &
+      DIMS(adual) &
       ,0,-1,19)
       call checkbound(fablo,fabhi, &
       DIMS(bX) &
