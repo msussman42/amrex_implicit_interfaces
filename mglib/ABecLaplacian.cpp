@@ -1778,6 +1778,11 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
  if (w.nComp()!=nsolve_bicgstab)
   amrex::Error("ncomp invalid w");
 
+ if (p.boxArray()==w.boxArray()) {
+  // do nothing
+ } else
+  BoxLib::Error("p.boxArray()!=w.boxArray()");
+
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
 
@@ -1837,6 +1842,7 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
    BLProfiler bprof6(profname6);
 #endif 
 
+   // in: CG_3D.F90
   FORT_CGXDOTY(
    &ncomp,
    &tpw, // init to 0.0d0 in CGXDOTY
