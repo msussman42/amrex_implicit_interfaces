@@ -151,6 +151,8 @@ protected:
     int        CG_verbose;  // Current verbosity level.
     int CG_use_mg_precond_at_top; // Use multigrid as a preconditioner.
 
+    Vector<Real> pw_dotprod_var;
+
     Vector< Array<Real,4> > CG_error_history;
 
     void MG_solve_ (int nsverbose,MultiFab& _sol,

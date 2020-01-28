@@ -1756,10 +1756,9 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
   BLProfiler bprof2(profname2);
 #endif
 
- Vector<Real> pw;
- pw.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  pw[tid] = 0.0;
+ pw_dotprod_var.resize(thread_class::nthreads);
+ for (int tid_local=0;tid_local<thread_class::nthreads;tid_local++) {
+  pw_dotprod_var[tid_local] = 0.0;
  }
 
 #if (profile_dot==1)
@@ -1784,6 +1783,11 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
   // do nothing
  } else
   amrex::Error("p_in.boxArray()!=w_in.boxArray()");
+
+ if (p_in.boxArray()==gboxlev) {
+  // do nothing
+ } else
+  amrex::Error("p_in.boxArray()!=gboxlev");
 
  int bfact=bfact_array[level_in];
  int bfact_top=bfact_array[0];
@@ -1817,23 +1821,28 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
 #endif 
 
   Real tpw=0.0;
-  BL_ASSERT(mfi.validbox() == gboxlev[mfi.index()]);
+
+  if (mfi.validbox()==gboxlev[mfi.index()]) {
+   // do nothing
+  } else
+   amrex::Error("mfi.validbox()!=gboxlev[mfi.index()] LP_dot");
+
   const int gridno = mfi.index();
   const Box& tilegrid=mfi.tilebox();
-  const Box& fabgrid=gbox[level_in][gridno];
+  const Box& fabgrid=gboxlev[gridno];
   const int* tilelo=tilegrid.loVect();
   const int* tilehi=tilegrid.hiVect();
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
 
-  int tid=0;
+  int tid_current=0;
 #ifdef _OPENMP
-  tid = omp_get_thread_num();
+  tid_current = omp_get_thread_num();
 #endif
-  if ((tid>=0)&&(tid<thread_class::nthreads)) {
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
    // do nothing
   } else
-   amrex::Error("tid invalid");
+   amrex::Error("tid_current invalid");
 
 #if (profile_dot==1)
    bprof5.stop();
@@ -1857,7 +1866,7 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
    wfab.dataPtr(),ARLIM(wfab.loVect()),ARLIM(wfab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact,&bfact_top);
-  pw[tid] += tpw;
+  pw_dotprod_var[tid_current] += tpw;
 
 #if (profile_dot==1)
   bprof6.stop();
@@ -1870,15 +1879,15 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
   bprof4.start();
 #endif
 
- for (int tid=1;tid<thread_class::nthreads;tid++) {
-  pw[0]+=pw[tid];
+ for (int tid_local=1;tid_local<thread_class::nthreads;tid_local++) {
+  pw_dotprod_var[0]+=pw_dotprod_var[tid_local];
  }
 
   // no Barrier needed since all processes must wait in order to receive the
   // reduced value.
- ParallelDescriptor::ReduceRealSum(pw[0]);
+ ParallelDescriptor::ReduceRealSum(pw_dotprod_var[0]);
 
- dot_result=pw[0];
+ dot_result=pw_dotprod_var[0];
 
 #if (profile_dot==1)
  bprof4.stop();
@@ -1962,6 +1971,14 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
      std::cout << "cfd_level= " << cfd_level << '\n';
      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
      std::cout << "cfd_tiling= " << cfd_tiling << '\n';
+
+     std::cout << "pw_dotprod_var.size()=" << pw_dotprod_var.size() << '\n';
+     for (int tid_local=0;tid_local<pw_dotprod_var.size();tid_local++) {
+      std::cout << "tid_local= " << tid_local << 
+	     " pw_dotprod_var[tid_local]= " <<
+	     pw_dotprod_var[tid_local] << '\n';
+     }
+
      std::cout << "domainsum= " << domainsum << '\n';
      std::cout << "total_cells= " << total_cells << '\n';
      std::cout << "MG_CG_ones_mf_copy[level]->boxArray()" << 
