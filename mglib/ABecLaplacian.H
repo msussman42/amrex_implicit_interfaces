@@ -117,7 +117,11 @@ public:
     const DistributionMapping& dmapLevel (int level) const;
     int get_bfact_array (int level) const;
 
-    void LP_dot(MultiFab& w,const MultiFab& p,int level,Real& result);
+    void LP_dot(const MultiFab& w_in,
+		const MultiFab& p_in,
+		int level_in,
+		Real& dot_result);
+
      // sol=y+alpha p
     void LP_update(MultiFab& sol,Real alpha,
      MultiFab& y,const MultiFab& p,int level);

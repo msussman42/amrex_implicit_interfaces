@@ -1708,8 +1708,10 @@ ABecLaplacian::LP_update (MultiFab& sol,
 } // end subroutine LP_update
 
 
-void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
-   int level,Real& result) {
+void ABecLaplacian::LP_dot(const MultiFab& w_in,
+		           const MultiFab& p_in,
+                           int level_in,
+			   Real& dot_result) {
 
 #define profile_dot 0
 
@@ -1722,7 +1724,7 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
   profname=profname+"_";
   std::stringstream lev_string_stream(std::stringstream::in |
    std::stringstream::out);
-  lev_string_stream << level;
+  lev_string_stream << level_in;
   profname=profname+lev_string_stream.str();
 
   BLProfiler bprof(profname);
@@ -1730,11 +1732,11 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
  
  bool use_tiling=cfd_tiling;
 
- if (level>=MG_numlevels_var)
-  amrex::Error("level invalid in LP_dot");
+ if (level_in>=MG_numlevels_var)
+  amrex::Error("level_in invalid in LP_dot");
 
- if (level>=gbox.size()) {
-  std::cout << "level= " << level << '\n';
+ if (level_in>=gbox.size()) {
+  std::cout << "level_in= " << level_in << '\n';
   std::cout << "gboxsize= " << gbox.size() << '\n';
   std::cout << "num levels = " << MG_numlevels_var << '\n';
   amrex::Error("level exceeds gbox size");
@@ -1771,19 +1773,19 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
   BLProfiler bprof3(profname3);
 #endif 
 
- const BoxArray& gboxlev = gbox[level];
- int ncomp = p.nComp();
+ const BoxArray& gboxlev = gbox[level_in];
+ int ncomp = p_in.nComp();
  if (ncomp!=nsolve_bicgstab)
-  amrex::Error("ncomp invalid p");
- if (w.nComp()!=nsolve_bicgstab)
-  amrex::Error("ncomp invalid w");
+  amrex::Error("ncomp invalid p_in");
+ if (w_in.nComp()!=nsolve_bicgstab)
+  amrex::Error("ncomp invalid w_in");
 
- if (p.boxArray()==w.boxArray()) {
+ if (p_in.boxArray()==w_in.boxArray()) {
   // do nothing
  } else
-  amrex::Error("p.boxArray()!=w.boxArray()");
+  amrex::Error("p_in.boxArray()!=w_in.boxArray()");
 
- int bfact=bfact_array[level];
+ int bfact=bfact_array[level_in];
  int bfact_top=bfact_array[0];
 
 #if (profile_dot==1)
@@ -1803,7 +1805,7 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
 #pragma omp parallel 
 #endif
 {
- for (MFIter mfi(w,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(w_in,use_tiling); mfi.isValid(); ++mfi) {
 
 #if (profile_dot==1)
    std::string subname5="ABecLaplacian::LP_dot_MFIter_tilebox";
@@ -1818,7 +1820,7 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
   BL_ASSERT(mfi.validbox() == gboxlev[mfi.index()]);
   const int gridno = mfi.index();
   const Box& tilegrid=mfi.tilebox();
-  const Box& fabgrid=gbox[level][gridno];
+  const Box& fabgrid=gbox[level_in][gridno];
   const int* tilelo=tilegrid.loVect();
   const int* tilehi=tilegrid.hiVect();
   const int* fablo=fabgrid.loVect();
@@ -1828,7 +1830,9 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
 #ifdef _OPENMP
   tid = omp_get_thread_num();
 #endif
-  if ((tid<0)||(tid>=thread_class::nthreads))
+  if ((tid>=0)&&(tid<thread_class::nthreads)) {
+   // do nothing
+  } else
    amrex::Error("tid invalid");
 
 #if (profile_dot==1)
@@ -1842,18 +1846,21 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
    BLProfiler bprof6(profname6);
 #endif 
 
+  const FArrayBox& pfab=p_in[mfi];
+  const FArrayBox& wfab=w_in[mfi];
+
    // in: CG_3D.F90
   FORT_CGXDOTY(
    &ncomp,
    &tpw, // init to 0.0d0 in CGXDOTY
-   p[mfi].dataPtr(),ARLIM(p[mfi].loVect()), ARLIM(p[mfi].hiVect()),
-   w[mfi].dataPtr(),ARLIM(w[mfi].loVect()), ARLIM(w[mfi].hiVect()),
+   pfab.dataPtr(),ARLIM(pfab.loVect()),ARLIM(pfab.hiVect()),
+   wfab.dataPtr(),ARLIM(wfab.loVect()),ARLIM(wfab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact,&bfact_top);
   pw[tid] += tpw;
 
 #if (profile_dot==1)
-   bprof6.stop();
+  bprof6.stop();
 #endif 
 
  } // MFIter
@@ -1871,10 +1878,10 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
   // reduced value.
  ParallelDescriptor::ReduceRealSum(pw[0]);
 
- result=pw[0];
+ dot_result=pw[0];
 
 #if (profile_dot==1)
-  bprof4.stop();
+ bprof4.stop();
 #endif 
 
 #undef profile_dot 
@@ -1942,15 +1949,16 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
     MultiFab::Copy(*MG_CG_ones_mf_copy[level],
        *laplacian_ones[level],0,0,1,1);
 
-    Real result,domainsum;
-    LP_dot(rhsL,*laplacian_ones[level],level,result);
+    Real dot_result=0.0;
+    Real domainsum=0.0;
+    LP_dot(rhsL,*laplacian_ones[level],level,dot_result);
     LP_dot(*MG_CG_ones_mf_copy[level],
            *laplacian_ones[level],level,domainsum); 
 
     double total_cells=gbox[level].d_numPts();
     if (domainsum>total_cells) {
      std::cout << "level= " << level << '\n';
-     std::cout << "result= " << result << '\n';
+     std::cout << "dot_result= " << dot_result << '\n';
      std::cout << "cfd_level= " << cfd_level << '\n';
      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
      std::cout << "cfd_tiling= " << cfd_tiling << '\n';
@@ -1988,13 +1996,13 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
      std::cout << "cfd_level= " << cfd_level << '\n';
      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
      std::cout << "level= " << level << '\n';
-     std::cout << "result= " << result << '\n';
+     std::cout << "dot_result= " << dot_result << '\n';
      std::cout << "domainsum= " << domainsum << '\n';
      std::cout << "total_cells= " << total_cells << '\n';
     }
 
     if (domainsum>=1.0) {
-     Real coef=-result/domainsum;
+     Real coef=-dot_result/domainsum;
       // rhsL=rhsL+coef * ones_mf
      LP_update(rhsL,coef,rhsL,*laplacian_ones[level],level); 
     } else if (domainsum==0.0) {
@@ -2006,9 +2014,9 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
 
     if (1==0) {
      std::cout << "check rhsL after projection \n";
-     LP_dot(rhsL,*laplacian_ones[level],level,result);
+     LP_dot(rhsL,*laplacian_ones[level],level,dot_result);
      std::cout << "level= " << level << '\n';
-     std::cout << "result= " << result << '\n';
+     std::cout << "dot_result= " << dot_result << '\n';
     }
 
    } else
