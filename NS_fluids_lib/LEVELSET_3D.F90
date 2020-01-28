@@ -3800,6 +3800,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,1) 
 
+       ! curvature stencil is 9x9x9
+       ! loop through all cells
+       !
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
