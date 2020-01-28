@@ -1781,7 +1781,7 @@ void ABecLaplacian::LP_dot(MultiFab& w,const MultiFab& p,
  if (p.boxArray()==w.boxArray()) {
   // do nothing
  } else
-  BoxLib::Error("p.boxArray()!=w.boxArray()");
+  amrex::Error("p.boxArray()!=w.boxArray()");
 
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
@@ -1953,8 +1953,35 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
      std::cout << "result= " << result << '\n';
      std::cout << "cfd_level= " << cfd_level << '\n';
      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
+     std::cout << "cfd_tiling= " << cfd_tiling << '\n';
      std::cout << "domainsum= " << domainsum << '\n';
      std::cout << "total_cells= " << total_cells << '\n';
+     std::cout << "MG_CG_ones_mf_copy[level]->boxArray()" << 
+	     MG_CG_ones_mf_copy[level]->boxArray() << '\n';
+     std::cout << "laplacian_ones[level]->boxArray()" << 
+	     laplacian_ones[level]->boxArray() << '\n';
+     std::cout << "MG_CG_ones_mf_copy[level]->nComp()" << 
+	     MG_CG_ones_mf_copy[level]->nComp() << '\n';
+     std::cout << "laplacian_ones[level]->nComp()" << 
+	     laplacian_ones[level]->nComp() << '\n';
+
+     for (int local_comp=0;local_comp<laplacian_ones[level]->nComp();
+          local_comp++) {
+      std::cout << "comp= " << local_comp << 
+       " MG_CG_ones_mf_copy[level]->min=" <<
+       MG_CG_ones_mf_copy[level]->min(local_comp) << '\n';
+      std::cout << "comp= " << local_comp << 
+       " MG_CG_ones_mf_copy[level]->max=" <<
+       MG_CG_ones_mf_copy[level]->max(local_comp) << '\n';
+
+      std::cout << "comp= " << local_comp <<
+       " laplacian_ones[level]->min=" <<
+       laplacian_ones[level]->min(local_comp) << '\n';
+      std::cout << "comp= " << local_comp <<
+       " laplacian_ones[level]->max=" <<
+       laplacian_ones[level]->max(local_comp) << '\n';
+     } // local_comp=0..nComp-1
+
      amrex::Error("domainsum too big");
     }
     if (1==0) {
