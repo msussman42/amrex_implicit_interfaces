@@ -1828,6 +1828,9 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
    amrex::Error("mfi.validbox()!=gboxlev[mfi.index()] LP_dot");
 
   const int gridno = mfi.index();
+   // MFIter::tilebox () is declared in AMReX_MFIter.cpp
+   // MFIter::Initialize (), which is in AMReX_MFIter.cpp,
+   // calls getTileArray which is in AMReX_FabArrayBase.cpp
   const Box& tilegrid=mfi.tilebox();
   const Box& fabgrid=gboxlev[gridno];
   const int* tilelo=tilegrid.loVect();

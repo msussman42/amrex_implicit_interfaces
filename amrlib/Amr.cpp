@@ -1723,6 +1723,12 @@ Amr::coarseTimeStep (Real stop_time)
 {
     const double run_strt = ParallelDescriptor::second() ;
 
+    //SUSSMAN
+    //in: AMReX_FabArrayBase.cpp
+    FabArrayBase::flushTileArrayCache();
+    FabArrayBase::flushFBCache();
+    FabArrayBase::flushCPCache();
+
      // check dt on all the levels.
     if (level_steps[0] > 0) {
         int post_regrid_flag = 0;
