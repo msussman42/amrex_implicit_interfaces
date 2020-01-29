@@ -1737,7 +1737,8 @@ Amr::coarseTimeStep (Real stop_time)
         amr_level[0]->computeNewDt(finest_level,
          dt_AMR,stop_time,post_regrid_flag);
     } else if (level_steps[0]==0) {
-     // do nothing since initial dt already calculated NavierStokes::computeInitialDt
+     // do nothing since initial dt already calculated 
+     // NavierStokes::computeInitialDt
     } else
       amrex::Error("level_steps invalid");
 
