@@ -7,7 +7,7 @@ AMREX_HOME = ../amrex-master
 MOF_HOME = ..
 
 PRECISION = DOUBLE
-DEBUG	  = TRUE
+DEBUG	  = FALSE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
@@ -101,7 +101,7 @@ FCOMP = gfortran
 USE_MPI   = FALSE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
-USE_OMP = TRUE
+USE_OMP = FALSE
 EBASE = amr
 #EBASE = amrcompute
 
