@@ -55,7 +55,9 @@
 
 // SUSSMAN
 int thread_class::nthreads;
-
+double thread_class::number_mfiter_loops=0.0;
+std::vector<double> thread_class::tile_d_numPts;
+double thread_class::boxarray_d_numPts=0.0;
 
 namespace amrex {
 
@@ -771,5 +773,28 @@ thread_class::Initialize() {
  if (nthreads<1)
   amrex::Error("nthreads invalid");
 
+ tile_d_numPts.resize(nthreads);
+ for (int tid_local=0;tid_local<nthreads;tid_local++)
+  tile_d_numPts[tid_local]=0.0;
+ number_mfiter_loops=0.0;
+
 } // end subroutine thread_class::Initialize
+
+// SUSSMAN
+void 
+thread_class::reconcile_d_numPts(int caller_id) {
+
+ number_mfiter_loops=number_mfiter_loops+1.0;
+
+ if (tile_d_numPts[0]==boxarray_d_numPts) {
+  // do nothing
+ } else {
+  std::cout << "tile_d_numPts[0]= " << tile_d_numPts[0] << '\n';
+  std::cout << "boxarray_d_numPts= " << boxarray_d_numPts << '\n';
+  std::cout << "number_mfiter_loops= " << number_mfiter_loops << '\n';
+  std::cout << "caller_id= " << caller_id << '\n';
+  amrex::Error("reconcile_d_numPts found tile sum <> boxarray sum\n");
+ }
+
+} // end subroutine thread_class::reconcile_d_numPts()
 

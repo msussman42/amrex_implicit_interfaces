@@ -1805,6 +1805,11 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
   bprof4.stop();
 #endif
 
+ for (int tid_local=0;tid_local<thread_class::nthreads;tid_local++) {
+  thread_class::tile_d_numPts[tid_local] = 0.0;
+ }
+ thread_class::boxarray_d_numPts=w_in.boxArray().d_numPts();
+
 #ifdef _OPENMP
 #pragma omp parallel 
 #endif
@@ -1861,6 +1866,8 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
   const FArrayBox& pfab=p_in[mfi];
   const FArrayBox& wfab=w_in[mfi];
 
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    // in: CG_3D.F90
   FORT_CGXDOTY(
    &ncomp,
@@ -1883,12 +1890,19 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
 #endif
 
  for (int tid_local=1;tid_local<thread_class::nthreads;tid_local++) {
+  thread_class::tile_d_numPts[0]+=thread_class::tile_d_numPts[tid_local];
+ }
+
+ for (int tid_local=1;tid_local<thread_class::nthreads;tid_local++) {
   pw_dotprod_var[0]+=pw_dotprod_var[tid_local];
  }
 
   // no Barrier needed since all processes must wait in order to receive the
   // reduced value.
  ParallelDescriptor::ReduceRealSum(pw_dotprod_var[0]);
+
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(1);
 
  dot_result=pw_dotprod_var[0];
 

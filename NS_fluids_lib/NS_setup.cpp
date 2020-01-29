@@ -2239,7 +2239,10 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
    std::cout << "TIME= " << upper_slab_time << " EFFECTIVE RAD=  " << 
     radbubble << '\n';
-  }
+  } // probtype==55 and axis_dir==6 or 7
+  std::cout << "TIME= " << upper_slab_time << " number_mfiter_loops=  " << 
+    thread_class::number_mfiter_loops << '\n';
+
  }  // io processor
  std::fflush(NULL);
  ParallelDescriptor::Barrier();
