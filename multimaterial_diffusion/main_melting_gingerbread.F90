@@ -509,6 +509,7 @@ else if (probtype_in.eq.5) then ! phase change vertical planar interface
  fixed_dt_main=-1.0d0  ! TSTOP=0.5d0
 else if (probtype_in.eq.400) then ! gingerbread man
  fixed_dt_main=0.0d0
+ print *,"gingeroutline should be in run directory"
 else
  print *,"probtype_in invalid"
  stop
