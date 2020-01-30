@@ -246,6 +246,10 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(solnL.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -281,6 +285,17 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
 
    FArrayBox& ones_FAB=(*laplacian_ones[level])[mfi];
 
+   int tid_current=0;
+#ifdef _OPENMP
+   tid_current = omp_get_thread_num();
+#endif
+   if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+    // do nothing
+   } else
+    amrex::Error("tid_current invalid");
+
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
      // in: LO_3D.F90
    FORT_RESIDL(
     &level,
@@ -307,6 +322,9 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
 #endif
   } // mfi
 } // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(3);
 
 }
 
@@ -509,11 +527,15 @@ ABecLaplacian::makeCoefficients (
  bprof.stop();
 #endif
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(crs.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(crs); mfi.isValid();++mfi) {
+ for (MFIter mfi(crs,false); mfi.isValid();++mfi) {
 
 #if (profile_solver==1)
   std::string subname="AVERAGE_CC_or_EC";
@@ -535,10 +557,22 @@ ABecLaplacian::makeCoefficients (
   BLProfiler bprof(profname);
 #endif
 
+  const Box& tilegrid=mfi.tilebox();
   const Box& fabgrid=grids[mfi.index()];
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
-  
+ 
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   if (cdir==-1) {
    FORT_AVERAGECC(
      &nsolve_bicgstab,
@@ -573,6 +607,10 @@ ABecLaplacian::makeCoefficients (
 #endif
  }  // mfi
 } //omp
+
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(4);
 
  if ((avg==0)||(avg==1)) {
   // do nothing
