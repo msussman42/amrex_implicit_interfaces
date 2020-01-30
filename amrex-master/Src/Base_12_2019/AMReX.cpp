@@ -798,3 +798,23 @@ thread_class::reconcile_d_numPts(int caller_id) {
 
 } // end subroutine thread_class::reconcile_d_numPts()
 
+// SUSSMAN
+void
+thread_class::init_d_numPts(double BA_d_numPts) {
+
+ for (int tid_local=0;tid_local<nthreads;tid_local++) {
+  tile_d_numPts[tid_local] = 0.0;
+ }
+ boxarray_d_numPts=BA_d_numPts;
+
+} // end subroutine thread_class::init_d_numPts
+
+// SUSSMAN
+void 
+thread_class::sync_tile_d_numPts() {
+
+ for (int tid_local=1;tid_local<nthreads;tid_local++) {
+  tile_d_numPts[0]+=tile_d_numPts[tid_local];
+ }
+
+} // end subroutine thread_class::sync_tile_d_numPts()

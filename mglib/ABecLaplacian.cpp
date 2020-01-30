@@ -1805,10 +1805,7 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
   bprof4.stop();
 #endif
 
- for (int tid_local=0;tid_local<thread_class::nthreads;tid_local++) {
-  thread_class::tile_d_numPts[tid_local] = 0.0;
- }
- thread_class::boxarray_d_numPts=w_in.boxArray().d_numPts();
+ thread_class::init_d_numPts(w_in.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel 
@@ -1889,9 +1886,7 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
   bprof4.start();
 #endif
 
- for (int tid_local=1;tid_local<thread_class::nthreads;tid_local++) {
-  thread_class::tile_d_numPts[0]+=thread_class::tile_d_numPts[tid_local];
- }
+ thread_class::sync_tile_d_numPts();
 
  for (int tid_local=1;tid_local<thread_class::nthreads;tid_local++) {
   pw_dotprod_var[0]+=pw_dotprod_var[tid_local];
