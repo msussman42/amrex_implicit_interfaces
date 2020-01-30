@@ -120,13 +120,20 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
  bprof.stop();
 #endif
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(inout.boxArray().d_numPts());
+
    // if openmp and no tiling, then tilegrid=validbox
    // and the grids are distributed amongst the threads.
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(inout); mfi.isValid(); ++mfi) {
+
+  // MFIter declared in AMReX_MFIter.H
+  // do_tiling=false
+ for (MFIter mfi(inout,false); mfi.isValid(); ++mfi) {
 
 #if (profile_solver==1)
   std::string subname="APPLYBC";
@@ -159,6 +166,18 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
    bcpres[i]=bcpres_array[i+ibase];
   FArrayBox& mfab=(*maskvals[level])[gridno];
   FArrayBox& bfab=pbdry[gridno];
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   FORT_APPLYBC( 
    &nsolve_bicgstab,
    inout[gridno].dataPtr(),
@@ -175,7 +194,9 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
  }  // mfi
 } // omp
  
- // no Barrier needed since FillBoundary called up above.  
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(2);
 }
 
 
