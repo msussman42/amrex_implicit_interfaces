@@ -3333,7 +3333,7 @@ stop
        if (fort_ZEYU_DCA_SELECT.eq.-1) then
         ! do nothing
        else if ((fort_ZEYU_DCA_SELECT.ge.1).and. &
-                (fort_ZEYU_DCA_SELECT.le.6)) then
+                (fort_ZEYU_DCA_SELECT.le.8)) then
         use_DCA=fort_ZEYU_DCA_SELECT+100
        else
         print *,"fort_ZEYU_DCA_SELECT invalid"
@@ -3790,7 +3790,7 @@ else
 endif
 
 select case (imodel)
-    case (1) !Cox1986
+    case (1) !GNBC
         if (diag_output.eq.1) then
          print *, "Implement model 1 ..."
         endif
@@ -3799,8 +3799,8 @@ select case (imodel)
        end if
 
         if (ifgnbc.eq.0) then !If don't implement GNBC.
-            thet_d = (thet_s**3 + 9. * Ca * log(l_macro / l_micro))**(1./3.)
-            u_slip = 0.
+            print *,"imodel and ifgnbc mismatch"
+            stop
         else if (ifgnbc.eq.1) then !Implement GNBC
             beta = mu_l / lambda
             chi = (mu_l + mu_g) / (2. * beta * dgrid)
@@ -3841,6 +3841,25 @@ select case (imodel)
             print *, "number of iteration is: ", iter
             u_slip = 1. / (beta * dgrid + 1.e-20) * delta(d_closest/dgrid) * sigma * (cos(thet_s) - cos(thet_d_micro))
             thet_d = thet_d_apparent
+        else
+            print *,"ifgnbc invalid"
+            stop
+        end if
+
+    case (8) !Cox1986
+        if (diag_output.eq.1) then
+         print *, "Implement model 1 ..."
+        endif
+       if (abs(l_macro) < 1.e-9) then
+           l_macro = dgrid
+       end if
+
+        if (ifgnbc.eq.0) then !If don't implement GNBC.
+            thet_d = (thet_s**3 + 9. * Ca * log(l_macro / l_micro))**(1./3.)
+            u_slip = 0.
+        else if (ifgnbc.eq.1) then !Implement GNBC
+            print *,"imodel and ifgnbc mismatch"
+            stop
         else
             print *,"ifgnbc invalid"
             stop

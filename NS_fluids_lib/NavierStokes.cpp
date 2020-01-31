@@ -1455,7 +1455,7 @@ void fortran_parameters() {
  pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT_temp);
  if ((ZEYU_DCA_SELECT_temp==-1)||
      ((ZEYU_DCA_SELECT_temp>=1)&&
-      (ZEYU_DCA_SELECT_temp<=6))) {
+      (ZEYU_DCA_SELECT_temp<=8))) {
   // do nothing
  } else
   amrex::Error("ZEYU_DCA_SELECT_temp invalid");
@@ -2180,7 +2180,7 @@ NavierStokes::read_params ()
     pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
     if ((ZEYU_DCA_SELECT==-1)||
         ((ZEYU_DCA_SELECT>=1)&&
-	 (ZEYU_DCA_SELECT<=6))) {
+	 (ZEYU_DCA_SELECT<=8))) {
      // do nothing
     } else
      amrex::Error("ZEYU_DCA_SELECT invalid");

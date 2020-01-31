@@ -6479,11 +6479,11 @@ stop
 
                           ! fort_ZEYU_DCA_SELECT>=1
                          else if ((use_DCA.ge.101).and. & 
-                                  (use_DCA.le.106)) then
+                                  (use_DCA.le.108)) then
                           if (use_DCA.eq.101) then
                            ! do nothing
-                          else if ((use_DCA.ge.102).and.(use_DCA.le.106)) then
-                           print *,"use_DCA>=102 and <=106 not supported"
+                          else if ((use_DCA.ge.102).and.(use_DCA.le.108)) then
+                           print *,"use_DCA>=102 and <=107 not supported"
                            print *,"for conservative surface tension alg."
                            stop
                           else

@@ -1174,11 +1174,16 @@ stop
 
        RR=one
        call prepare_normal(nfluid,RR,mag)
-       if (mag.le.zero) then
+       if (mag.eq.zero) then
         do dir2=1,SDIM
          nfluid(dir2)=nfluid_cen(dir2)
         enddo
-       endif  ! mag<=0
+       else if (mag.gt.zero) then
+        ! do nothing
+       else
+        print *,"mag invalid"
+        stop
+       endif  
 
        do dir2=1,SDIM
         nfluid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
@@ -1357,10 +1362,14 @@ stop
             call DCA_select_model(nproject,totaludotn,cos_angle, &
              liquid_viscosity,user_tension(iten),cos_angle,use_DCA)
            else if ((use_DCA.ge.101).and. & ! fort_ZEYU_DCA_SELECT>=1
-                    (use_DCA.le.106)) then
+                    (use_DCA.le.108)) then
             if (use_DCA.eq.101) then
              ! do nothing (GNBC model)
-            else if ((use_DCA.ge.102).and.(use_DCA.le.106)) then
+
+             ! cases 2,...,8 for Zeyu's code.
+             ! case 2 Jiang 1970 ...
+             ! case 8 model=Cox 1986
+            else if ((use_DCA.ge.102).and.(use_DCA.le.108)) then
              ZEYU_imodel=use_DCA-100
              ZEYU_ifgnbc=0
              ZEYU_lambda=8.0D-7
@@ -1476,9 +1485,9 @@ stop
 
          ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
          ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
-         if (use_DCA.eq.101) then
-          print *,"FIX ME for GNBC"
-          stop
+         if (use_DCA.eq.101) then ! GNBC
+          gamma1=half*user_tension(iten)
+          gamma2=half*user_tension(iten)
          else if (use_DCA.ge.-1) then
           gamma1=half*(one-cos_angle)
           gamma2=half*(one+cos_angle)
@@ -1560,13 +1569,19 @@ stop
         call get_LS_extend(LSTEST,nmat,iten,LSmain)
         LSopp=LSmain
         do dir2=1,SDIM
+          ! nmain points from material im_opp into material im.
          nmain(dir2)=nfluid_save(D_DECL(i,j,k),dir2)
+          ! nsolid_save points into the solid
+          ! nopp points aways from the solid.
          nopp(dir2)=-nsolid_save(D_DECL(i,j,k),dir2)
         enddo
         if (use_DCA.eq.101) then
-         print *,"FIX ME for GNBC"
-         stop
+         do dir2=1,SDIM
+          nghost(dir2)=nmain(dir2)
+          nopp(dir2)=nmain(dir2)
+         enddo
         else if (use_DCA.ge.-1) then
+          ! nghost points from material im_opp into material im.
          call ghostnormal(nmain,nopp,cos_angle,nghost,nperp)
          do dir2=1,SDIM
           nopp(dir2)=nghost(dir2)
