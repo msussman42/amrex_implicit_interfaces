@@ -455,167 +455,276 @@ TagBoxArray::borderSize () const noexcept
     return n_grow;
 }
 
+// SUSSMAN
 void 
 TagBoxArray::buffer (const IntVect& nbuf)
 {
 //    Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
 
-    AMREX_ASSERT(nbuf.allLE(n_grow));
+ AMREX_ASSERT(nbuf.allLE(n_grow));
 
-    if (nbuf.max() > 0)
-    {
+ if (nbuf.max() > 0) {
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(this->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-       for (MFIter mfi(*this); mfi.isValid(); ++mfi)
-           get(mfi).buffer(nbuf, n_grow);
-    }
-}
+{
+  for (MFIter mfi(*this,false); mfi.isValid(); ++mfi) {
+   const Box& tilegrid=mfi.tilebox();
 
+   int tid_current=0;
+#ifdef _OPENMP
+   tid_current = omp_get_thread_num();
+#endif
+   if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+    // do nothing
+   } else
+    amrex::Error("tid_current invalid");
+
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   get(mfi).buffer(nbuf, n_grow);
+  } // mfi
+} // omp
+  thread_class::sync_tile_d_numPts();
+  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+  thread_class::reconcile_d_numPts(13);
+
+ }
+} // end subroutine buffer
+
+// SUSSMAN
 void
 TagBoxArray::mapPeriodic (const Geometry& geom)
 {
-    if (!geom.isAnyPeriodic()) return;
+ if (!geom.isAnyPeriodic()) return;
 
-    BL_PROFILE("TagBoxArray::mapPeriodic()");
+ BL_PROFILE("TagBoxArray::mapPeriodic()");
 
-    // This function is called after coarsening.
-    // So we can assume that n_grow is 0.
-    BL_ASSERT(n_grow[0] == 0);
+ // This function is called after coarsening.
+ // So we can assume that n_grow is 0.
+ BL_ASSERT(n_grow[0] == 0);
 
-    TagBoxArray tmp(boxArray(),DistributionMap()); // note that tmp is filled w/ CLEAR.
+ //note that tmp is filled w/CLEAR.
+ TagBoxArray tmp(boxArray(),DistributionMap());
 
-    tmp.copy(*this, geom.periodicity(), FabArrayBase::ADD);
+ tmp.copy(*this, geom.periodicity(), FabArrayBase::ADD);
 
-//    Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
+// Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(this->boxArray().d_numPts());
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-    for (MFIter mfi(*this); mfi.isValid(); ++mfi)
-    {
-	get(mfi).merge(tmp[mfi]);
-    }
-}
+{
+ for (MFIter mfi(*this,false); mfi.isValid(); ++mfi) {
+  const Box& tilegrid=mfi.tilebox();
+  
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  get(mfi).merge(tmp[mfi]);
+ } //mfi
+} // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(14);
+} // end subroutine mapPeriodic
 
 long
 TagBoxArray::numTags () const
 {
-    long ntag = 0;
+ long ntag = 0;
 
-//    Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
+// Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(this->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel reduction(+:ntag)
 #endif
-    for (MFIter mfi(*this); mfi.isValid(); ++mfi)
-    {
-	ntag += get(mfi).numTags();
-    }
+{
+ for (MFIter mfi(*this,false); mfi.isValid(); ++mfi) {
+  const Box& tilegrid=mfi.tilebox();
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  ntag += get(mfi).numTags();
+ } // mfi
+} // omp
     
-    ParallelDescriptor::ReduceLongSum(ntag);
+ ParallelDescriptor::ReduceLongSum(ntag);
+
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(15);
     
-    return ntag;
-}
+ return ntag;
+} // numTags
 
 void
 TagBoxArray::collate (Vector<IntVect>& TheGlobalCollateSpace) const
 {
-    BL_PROFILE("TagBoxArray::collate()");
+ BL_PROFILE("TagBoxArray::collate()");
 
-    // Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
+ // Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
 
-    long count = 0;
+ long count = 0;
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(this->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel reduction(+:count)
 #endif
-    for (MFIter fai(*this); fai.isValid(); ++fai)
-    {
-        count += get(fai).numTags();
-    }
+{
+ for (MFIter fai(*this,false); fai.isValid(); ++fai) {
+  const Box& tilegrid=fai.tilebox();
 
-    //
-    // Local space for holding just those tags we want to gather to the root cpu.
-    //
-    Vector<IntVect> TheLocalCollateSpace(count);
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
 
-    count = 0;
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // unsafe to do OMP
-    for (MFIter fai(*this); fai.isValid(); ++fai)
-    {
-        count += get(fai).collate(TheLocalCollateSpace,count);
-    }
+  count += get(fai).numTags();
+ } // fai
+} // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(16);
 
-    if (count > 0)
-    {
-        amrex::RemoveDuplicates(TheLocalCollateSpace);
-	count = TheLocalCollateSpace.size();
-    }
-    //
-    // The total number of tags system wide that must be collated.
-    // This is really just an estimate of the upper bound due to duplicates.
-    // While we've removed duplicates per MPI process there's still more systemwide.
-    //
-    long numtags = count;
+ //
+ // Local space for holding just those tags we want to gather to the root cpu.
+ //
+ Vector<IntVect> TheLocalCollateSpace(count);
 
-    ParallelDescriptor::ReduceLongSum(numtags);
+ count = 0;
 
-    if (numtags == 0) {
-	TheGlobalCollateSpace.clear();
-	return;
-    }
+ thread_class::init_d_numPts(this->boxArray().d_numPts());
 
-    //
-    // This holds all tags after they've been gather'd and unique'ified.
-    //
-    // Each CPU needs an identical copy since they all must go through grid_places() which isn't parallelized.
+ // unsafe to do OMP
+ for (MFIter fai(*this,false); fai.isValid(); ++fai) {
+  const Box& tilegrid=fai.tilebox();
 
-    TheGlobalCollateSpace.resize(numtags);
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  count += get(fai).collate(TheLocalCollateSpace,count);
+ } // fai
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(17);
+
+ if (count > 0) {
+  amrex::RemoveDuplicates(TheLocalCollateSpace);
+  count = TheLocalCollateSpace.size();
+ }
+ //
+ // The total number of tags system wide that must be collated.
+ // This is really just an estimate of the upper bound due to duplicates.
+ // While we've removed duplicates per MPI process there's still more 
+ // systemwide.
+ //
+ long numtags = count;
+
+ ParallelDescriptor::ReduceLongSum(numtags);
+
+ if (numtags == 0) {
+  TheGlobalCollateSpace.clear();
+  return;
+ }
+
+ //
+ // This holds all tags after they've been gather'd and unique'ified.
+ //
+ // Each CPU needs an identical copy since they all must go 
+ // through grid_places() which isn't parallelized.
+
+ TheGlobalCollateSpace.resize(numtags);
 
 #ifdef BL_USE_MPI
-    //
-    // Tell root CPU how many tags each CPU will be sending.
-    //
-    const int IOProcNumber = ParallelDescriptor::IOProcessorNumber();
-    count *= AMREX_SPACEDIM;  // Convert from count of tags to count of integers to expect.
-    const std::vector<long>& countvec = ParallelDescriptor::Gather(count, IOProcNumber);
+ //
+ // Tell root CPU how many tags each CPU will be sending.
+ //
+ const int IOProcNumber = ParallelDescriptor::IOProcessorNumber();
+ // Convert from count of tags to count of integers to expect.
+ count *= AMREX_SPACEDIM;  
+ const std::vector<long>& countvec = 
+   ParallelDescriptor::Gather(count, IOProcNumber);
     
-    std::vector<long> offset(countvec.size(),0L);
-    if (ParallelDescriptor::IOProcessor())
-    {
-        for (int i = 1, N = offset.size(); i < N; i++) {
-	    offset[i] = offset[i-1] + countvec[i-1];
-	}
-    }
-    //
-    // Gather all the tags to IOProcNumber into TheGlobalCollateSpace.
-    //
-    BL_ASSERT(sizeof(IntVect) == AMREX_SPACEDIM * sizeof(int));
-    const int* psend = (count > 0) ? TheLocalCollateSpace[0].getVect() : 0;
-    int* precv = TheGlobalCollateSpace[0].getVect();
-    ParallelDescriptor::Gatherv(psend, count,
-				precv, countvec, offset, IOProcNumber); 
+ std::vector<long> offset(countvec.size(),0L);
+ if (ParallelDescriptor::IOProcessor()) {
+  for (int i = 1, N = offset.size(); i < N; i++) {
+   offset[i] = offset[i-1] + countvec[i-1];
+  }
+ }
+ //
+ // Gather all the tags to IOProcNumber into TheGlobalCollateSpace.
+ //
+ BL_ASSERT(sizeof(IntVect) == AMREX_SPACEDIM * sizeof(int));
+ const int* psend = (count > 0) ? TheLocalCollateSpace[0].getVect() : 0;
+ int* precv = TheGlobalCollateSpace[0].getVect();
+ ParallelDescriptor::Gatherv(psend, count,
+	precv, countvec, offset, IOProcNumber); 
 
-    if (ParallelDescriptor::IOProcessor())
-    {
-        amrex::RemoveDuplicates(TheGlobalCollateSpace);
-	numtags = TheGlobalCollateSpace.size();
-    }
+ if (ParallelDescriptor::IOProcessor()) {
+  amrex::RemoveDuplicates(TheGlobalCollateSpace);
+  numtags = TheGlobalCollateSpace.size();
+ }
 
-    //
-    // Now broadcast them back to the other processors.
-    //
-    ParallelDescriptor::Bcast(&numtags, 1, IOProcNumber);
-    ParallelDescriptor::Bcast(TheGlobalCollateSpace[0].getVect(), numtags*AMREX_SPACEDIM, IOProcNumber);
-    TheGlobalCollateSpace.resize(numtags);
+ //
+ // Now broadcast them back to the other processors.
+ //
+ ParallelDescriptor::Bcast(&numtags, 1, IOProcNumber);
+ ParallelDescriptor::Bcast(TheGlobalCollateSpace[0].getVect(), 
+		 numtags*AMREX_SPACEDIM, IOProcNumber);
+ TheGlobalCollateSpace.resize(numtags);
 
 #else
     //
     // Copy TheLocalCollateSpace to TheGlobalCollateSpace.
     //
-    TheGlobalCollateSpace = TheLocalCollateSpace;
+ TheGlobalCollateSpace = TheLocalCollateSpace;
 #endif
 }
 
