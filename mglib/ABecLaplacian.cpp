@@ -763,6 +763,10 @@ ABecLaplacian::buildMatrix() {
   for (int isweep=0;isweep<4;isweep++) {
    for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
 
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(workcoefs[level]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -813,6 +817,17 @@ ABecLaplacian::buildMatrix() {
      FArrayBox& byFAB=(*bcoefs[level][1])[mfi];
      FArrayBox& bzFAB=(*bcoefs[level][AMREX_SPACEDIM-1])[mfi];
 
+     int tid_current=0;
+#ifdef _OPENMP
+     tid_current = omp_get_thread_num();
+#endif
+     if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+      // do nothing
+     } else
+      amrex::Error("tid_current invalid");
+
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
       // in: LO_3D.F90
      FORT_BUILDMAT(
       &level, // level==0 is finest
@@ -861,6 +876,10 @@ ABecLaplacian::buildMatrix() {
 #endif
     } // mfi
 } // omp
+
+    thread_class::sync_tile_d_numPts();
+    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+    thread_class::reconcile_d_numPts(5);
 
    } // veldir=0...nsolve_bicgstab-1
   } // isweep=0..3
@@ -1407,6 +1426,10 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
  for (int isweep=0;isweep<num_sweeps;isweep++) {
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(solnL.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1425,6 +1448,17 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
    if (gsrb_timing==1) 
     t1 = ParallelDescriptor::second();
+
+   int tid_current=0;
+#ifdef _OPENMP
+   tid_current = omp_get_thread_num();
+#endif
+   if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+    // do nothing
+   } else
+    amrex::Error("tid_current invalid");
+
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
 
@@ -1509,6 +1543,11 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
    }
   } // mfi
 } // omp
+
+  thread_class::sync_tile_d_numPts();
+  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+  thread_class::reconcile_d_numPts(6);
+
  } // isweep
 
 } // subroutine Fsmooth
@@ -1589,6 +1628,10 @@ ABecLaplacian::Fapply (MultiFab& y,
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(y.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1604,6 +1647,17 @@ ABecLaplacian::Fapply (MultiFab& y,
   const int* tilehi=tilegrid.hiVect();
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
 
@@ -1664,6 +1718,10 @@ ABecLaplacian::Fapply (MultiFab& y,
  } // mfi
 } // omp
 
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(7);
+
 } // end subroutine Fapply
 
 
@@ -1710,6 +1768,10 @@ ABecLaplacian::LP_update (MultiFab& sol,
  bprof.stop();
 #endif
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(sol.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1723,6 +1785,17 @@ ABecLaplacian::LP_update (MultiFab& sol,
   const int* tilehi=tilegrid.hiVect();
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
 
@@ -1761,8 +1834,12 @@ ABecLaplacian::LP_update (MultiFab& sol,
    bprof.stop();
 #endif
   } // veldir=0 ... nsolve_bicgstab-1
- }
+ } // mfi
 } // omp
+
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(8);
 
 } // end subroutine LP_update
 
@@ -2138,6 +2215,10 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(y.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -2151,6 +2232,17 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
   const int* tilehi=tilegrid.hiVect();
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
 
@@ -2193,8 +2285,12 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
    bprof.stop();
 #endif
   } // veldir
- }
+ } // mfi
 } // omp
+
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(9);
 
 } // end subroutine Fdiagsum
 
@@ -3118,6 +3214,10 @@ void ABecLaplacian::CG_advance (
 
     bool use_tiling=cfd_tiling;
 
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(p.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -3131,6 +3231,17 @@ void ABecLaplacian::CG_advance (
      const int* tilehi=tilegrid.hiVect();
      const int* fablo=fabgrid.loVect();
      const int* fabhi=fabgrid.hiVect();
+
+     int tid_current=0;
+#ifdef _OPENMP
+     tid_current = omp_get_thread_num();
+#endif
+     if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+      // do nothing
+     } else
+      amrex::Error("tid_current invalid");
+
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
 
@@ -3171,6 +3282,10 @@ void ABecLaplacian::CG_advance (
      } // veldir
     } // mfi
 } // omp
+
+    thread_class::sync_tile_d_numPts();
+    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+    thread_class::reconcile_d_numPts(10);
 
 } // end subroutine advance
 
@@ -3531,13 +3646,19 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
  int bfact_fine=get_bfact_array(flevel);
  int bfact_top=get_bfact_array(0);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(c.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
- for (MFIter mfi(c); mfi.isValid(); ++mfi) {
+{
+ for (MFIter mfi(c,false); mfi.isValid(); ++mfi) {
 
   BL_ASSERT(c.boxArray().get(mfi.index()) == mfi.validbox());
 
+  const Box& tilegrid=mfi.tilebox();
   const Box& bx = mfi.validbox();
 
   int nc = c.nComp();
@@ -3546,6 +3667,18 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
     nsolve_bicgstab << '\n';
    amrex::Error("nc invalid in average");
   }
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    // divide by 4 in 2D and 8 in 3D
   int iaverage=1;
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
@@ -3558,6 +3691,12 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
     &bfact_coarse,&bfact_fine,&bfact_top);
   }  // veldir
  } // mfi
+} // omp
+
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(11);
+
 #if (profile_solver==1)
  bprof.stop();
 #endif
@@ -3592,6 +3731,9 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
  int bfact_fine=get_bfact_array(flevel);
  int bfact_top=get_bfact_array(0);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(f.boxArray().d_numPts());
 
  //
  // Use fortran function to interpolate up (prolong) c to f
@@ -3600,8 +3742,12 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
- for (MFIter mfi(f); mfi.isValid(); ++mfi) {
+{
+ for (MFIter mfi(f,false); mfi.isValid(); ++mfi) {
 
+  BL_ASSERT(f.boxArray().get(mfi.index()) == mfi.validbox());
+
+  const Box& tilegrid=mfi.tilebox();
   const Box& bx = c.boxArray()[mfi.index()];
   int nc = f.nComp();
   if (nc!=nsolve_bicgstab) {
@@ -3609,6 +3755,17 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
     nsolve_bicgstab << '\n';
    amrex::Error("nc invalid in interpolate");
   }
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
    FORT_INTERP(
@@ -3621,6 +3778,11 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
   } // veldir
 
  } // mfi
+} // omp
+
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(12);
 
 #if (profile_solver==1)
  bprof.stop();
