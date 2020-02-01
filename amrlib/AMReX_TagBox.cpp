@@ -545,6 +545,7 @@ TagBoxArray::mapPeriodic (const Geometry& geom)
  thread_class::reconcile_d_numPts(14);
 } // end subroutine mapPeriodic
 
+// SUSSMAN
 long
 TagBoxArray::numTags () const
 {
@@ -726,7 +727,7 @@ TagBoxArray::collate (Vector<IntVect>& TheGlobalCollateSpace) const
     //
  TheGlobalCollateSpace = TheLocalCollateSpace;
 #endif
-}
+} // end subroutine collate
 
 void
 TagBoxArray::setVal (const BoxList& bl,
@@ -743,52 +744,95 @@ TagBoxArray::setVal (const BoxDomain& bd,
     setVal(bd.boxList(),val);
 }
 
+// SUSSMAN
 void
 TagBoxArray::setVal (const BoxArray& ba,
-                     TagBox::TagVal  val)
-{
-//    Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
+                     TagBox::TagVal  val) {
+
+// Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(this->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-    for (MFIter mfi(*this); mfi.isValid(); ++mfi)
-    {
-	std::vector< std::pair<int,Box> > isects;
-
-        ba.intersections(mfi.fabbox(),isects);
-
-        TagBox& tags = get(mfi);
-
-        for (int i = 0, N = isects.size(); i < N; i++)
-        {
-            tags.setVal(val,isects[i].second,0);
-        }
-    }
-}
-
-void
-TagBoxArray::coarsen (const IntVect & ratio)
 {
-    // If team is used, all team workers need to go through all the fabs, including ones they don't own.
-    int teamsize = ParallelDescriptor::TeamSize();
-    unsigned char flags = (teamsize == 1) ? 0 : MFIter::AllBoxes;
+ for (MFIter mfi(*this); mfi.isValid(); ++mfi) {
+  const Box& tilegrid=mfi.tilebox();
 
-//    Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  std::vector< std::pair<int,Box> > isects;
+
+  ba.intersections(mfi.fabbox(),isects);
+
+  TagBox& tags = get(mfi);
+
+  for (int i = 0, N = isects.size(); i < N; i++) {
+   tags.setVal(val,isects[i].second,0);
+  }
+ }  // mfi
+} // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(18);
+
+} // end subroutine setVal
+
+// SUSSMAN
+void
+TagBoxArray::coarsen (const IntVect & ratio) {
+ // If team is used, all team workers need to go through all 
+ // the fabs, including ones they don't own.
+ int teamsize = ParallelDescriptor::TeamSize();
+ unsigned char flags = (teamsize == 1) ? 0 : MFIter::AllBoxes;
+
+// Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(this->boxArray().d_numPts());
 
 #if defined(_OPENMP)
 #pragma omp parallel if (teamsize == 1)
 #endif
-    for (MFIter mfi(*this,flags); mfi.isValid(); ++mfi)
-    {
-        this->fabPtr(mfi)->coarsen(ratio);
-    }
+{
+ for (MFIter mfi(*this,flags); mfi.isValid(); ++mfi) {
+  const Box& tilegrid=mfi.tilebox();
 
-    boxarray.growcoarsen(n_grow,ratio);
-    updateBDKey();  // because we just modify boxarray in-place.
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
 
-    n_grow = IntVect::TheZeroVector();
-}
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+  this->fabPtr(mfi)->coarsen(ratio);
+ } // mfi
+} // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(19);
 
-}
+ boxarray.growcoarsen(n_grow,ratio);
+ updateBDKey();  // because we just modify boxarray in-place.
+
+ n_grow = IntVect::TheZeroVector();
+} // end subroutine coarsen
+
+} // end namespace amrex
 
