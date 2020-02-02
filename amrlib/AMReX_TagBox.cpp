@@ -636,6 +636,13 @@ TagBoxArray::collate (Vector<IntVect>& TheGlobalCollateSpace) const
  thread_class::init_d_numPts(this->boxArray().d_numPts());
 
  // unsafe to do OMP
+ // if this loop is not inside of a "pragma omp parallel" command, then
+ // omp_get_num_threads() returns 1 so that all tiles live on thread=1.
+ // i.e.
+ // The omp_get_num_threads routine returns the number of threads in the team 
+ // that is executing the parallel region to which the routine region binds. 
+ // If called from the sequential part of a program, omp_get_num_threads()
+ // returns 1.
  for (MFIter fai(*this,false); fai.isValid(); ++fai) {
   const Box& tilegrid=fai.tilebox();
 
