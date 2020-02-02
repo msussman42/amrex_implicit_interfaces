@@ -208,6 +208,10 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
 
  Real local_visc_coef=visc_coef;
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(U_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -235,6 +239,17 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   FArrayBox& thermalfab=(*localMF[idx_thermal])[mfi];
   FArrayBox& forcefab=(*localMF[idx_force])[mfi];
   FArrayBox& tensorfab=(*localMF[CELLTENSOR_MF])[mfi];
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   FORT_HOOPIMPLICIT(
    &override_density[0], 
@@ -273,6 +288,9 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &nsolveMM);
  } // mfi
 } // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(25);
 
 }  // diffuse_hoop
 
@@ -324,6 +342,10 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
 
  MultiFab& U_new=get_new_data(State_Type,slab_step+1);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(U_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -360,6 +382,17 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
   } else
    amrex::Error("update_state invalid");
 
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   FORT_COMPUTE_NEG_MOM_FORCE(
    forcefab.dataPtr(),
    ARLIM(forcefab.loVect()),ARLIM(forcefab.hiVect()),
@@ -379,6 +412,9 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
    &nsolveMM);
  } // mfi
 } // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(26);
 
 }  // mom_force
 
@@ -452,6 +488,10 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
  MultiFab* Un=localMF[idx_vel];
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -482,6 +522,17 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
   if (snewfab.nComp()!=nstate)
    amrex::Error("nstate invalid");
 
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   FORT_THERMAL_OFFSET_FORCE(
    &override_density[0], 
    forcefab.dataPtr(),
@@ -507,6 +558,9 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
    &nsolveMM);
  } // mfi
 } // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(27);
 
 }  // thermal_transform_force
 
@@ -588,6 +642,10 @@ void NavierStokes::viscous_boundary_fluxes(
    if (fluxdir->nComp()!=nsolveMM_FACE)
     amrex::Error("conserve_fluxes invalid ncomp");
 
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[LEVELPC_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -612,6 +670,17 @@ void NavierStokes::viscous_boundary_fluxes(
     Vector<int> velbc=getBCArray(State_Type,gridno,0,
       num_materials_vel*AMREX_SPACEDIM);
     Vector<int> tempbc=getBCArray(State_Type,gridno,tcomp,1);
+
+    int tid_current=0;
+#ifdef _OPENMP
+    tid_current = omp_get_thread_num();
+#endif
+    if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+     // do nothing
+    } else
+     amrex::Error("tid_current invalid");
+
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // if solidheat_flag=2, then inhomogeneous Neumann BC are
       // prescribed.
@@ -646,6 +715,10 @@ void NavierStokes::viscous_boundary_fluxes(
      &cur_time_slab);
    } // mfi
 } //omp
+
+   thread_class::sync_tile_d_numPts();
+   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+   thread_class::reconcile_d_numPts(28);
 
   } // dir
 
@@ -912,6 +985,10 @@ void NavierStokes::combine_state_variable(
     if (face_mf->nComp()!=nsolveMM_FACE)
      amrex::Error("face_mf->nComp() invalid");
 
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -938,11 +1015,12 @@ void NavierStokes::combine_state_variable(
      Vector<int> velbc=getBCArray(State_Type,gridno,0,
        num_materials_vel*AMREX_SPACEDIM);
 
-     int tid=ns_thread();
+     int tid_current=ns_thread();
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
       // in: GODUNOV_3D.F90
      FORT_COMBINEVELFACE(
-      &tid,
+      &tid_current,
       &num_materials_combine,
       &hflag,
       &facecut_index,
@@ -983,6 +1061,9 @@ void NavierStokes::combine_state_variable(
     }  // mfi
 } // omp
     ParallelDescriptor::Barrier(); 
+    thread_class::sync_tile_d_numPts();
+    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+    thread_class::reconcile_d_numPts(29);
    } // dir=0..sdim-1
 
   } else
@@ -1039,6 +1120,10 @@ void NavierStokes::combine_state_variable(
   } else
    amrex::Error("combine_flag invalid");
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1077,11 +1162,12 @@ void NavierStokes::combine_state_variable(
 
    int scomp_size=scomp.size();
 
-   int tid=ns_thread();
+   int tid_current=ns_thread();
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: GODUNOV_3D.F90
    FORT_COMBINEVEL(
-    &tid,
+    &tid_current,
     &hflag,
     &num_materials_combine,
     latent_heat.dataPtr(),
@@ -1130,6 +1216,9 @@ void NavierStokes::combine_state_variable(
   }  // mfi
 } // omp
   ParallelDescriptor::Barrier(); 
+  thread_class::sync_tile_d_numPts();
+  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+  thread_class::reconcile_d_numPts(30);
 
   if ((combine_flag==0)||  // FVM->GFM
       (combine_flag==1)) { // GFM->FVM
@@ -1246,6 +1335,10 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 
  const Real* dx = geom.CellSize();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[CELLTENSOR_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1278,6 +1371,17 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   FArrayBox& heatfab=(*localMF[idx_heat])[mfi];
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   FORT_VISCTENSORHEAT(
    &ntensor,
    &ntensorMM,
@@ -1306,6 +1410,9 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 } // omp
 
  ParallelDescriptor::Barrier(); 
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(31);
 
 }   // subroutine diffusion_heating
 

@@ -759,7 +759,7 @@ TagBoxArray::setVal (const BoxArray& ba,
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*this); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*this,false); mfi.isValid(); ++mfi) {
   const Box& tilegrid=mfi.tilebox();
 
   int tid_current=0;
@@ -821,6 +821,7 @@ TagBoxArray::coarsen (const IntVect & ratio) {
    amrex::Error("tid_current invalid");
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   this->fabPtr(mfi)->coarsen(ratio);
  } // mfi
 } // omp

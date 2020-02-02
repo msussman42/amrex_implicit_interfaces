@@ -545,13 +545,30 @@ AmrLevel::FillCoarsePatchGHOST (
   for (int isub=0;isub<ncomp_range;isub++)
    local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(mf.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-  for (MFIter mfi(mf); mfi.isValid(); ++mfi) {
+{
+  for (MFIter mfi(mf,false); mfi.isValid(); ++mfi) {
 
+   const Box& tilegrid=mfi.tilebox();
    const Box& dbx = mfi.validbox();
-	    
+
+   int tid_current=0;
+#ifdef _OPENMP
+   tid_current = omp_get_thread_num();
+#endif
+   if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+    // do nothing
+   } else
+    amrex::Error("tid_current invalid");
+
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    Vector<BCRec> bcr(ncomp_range);
    int src_comp_bcs=0;
    int dest_comp_bcr=0;
@@ -572,6 +589,10 @@ AmrLevel::FillCoarsePatchGHOST (
                   level-1,level,
 		  bfact_coarse,bfact_fine);
   }  // mfi
+} // omp
+  thread_class::sync_tile_d_numPts();
+  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+  thread_class::reconcile_d_numPts(20);
 
   DComp += ncomp_range;
 
@@ -932,13 +953,30 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   for (int isub=0;isub<ncomp_range;isub++)
    local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(mf.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-  for (MFIter mfi(mf); mfi.isValid(); ++mfi) {
+{
+  for (MFIter mfi(mf,false); mfi.isValid(); ++mfi) {
 
+   const Box& tilegrid=mfi.tilebox();
    const Box& dbx = mfi.validbox();
 	    
+   int tid_current=0;
+#ifdef _OPENMP
+   tid_current = omp_get_thread_num();
+#endif
+   if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+    // do nothing
+   } else
+    amrex::Error("tid_current invalid");
+
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    Vector<BCRec> bcr(ncomp_range);
    int src_comp_bcs=0;
    int dest_comp_bcr=0;
@@ -959,6 +997,10 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
                   level-1,level,
 		  bfact_coarse,bfact_fine);
   }  // mfi
+} // omp
+  thread_class::sync_tile_d_numPts();
+  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+  thread_class::reconcile_d_numPts(21);
 
   StateDataPhysBCFunct physbc_fine(state[index],geom);
   physbc_fine.FillBoundary(level,mf,nudge_time,DComp,

@@ -952,13 +952,30 @@ StateDataPhysBCFunct::FillBoundary (
  const Real*    dx          = geom.CellSize();
  const RealBox& prob_domain = geom.ProbDomain();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(mf.boxArray().d_numPts());
+
 #ifdef CRSEGRNDOMP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 #endif
- {
-  for (MFIter mfi(mf); mfi.isValid(); ++mfi) {
+{
+  for (MFIter mfi(mf,false); mfi.isValid(); ++mfi) {
+   const Box& tilegrid=mfi.tilebox();
+
+   int tid_current=0;
+#ifdef _OPENMP
+   tid_current = omp_get_thread_num();
+#endif
+   if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+    // do nothing
+   } else
+    amrex::Error("tid_current invalid");
+
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    FArrayBox& dest = mf[mfi];
    const Box& bx = dest.box();
            
@@ -1055,7 +1072,10 @@ StateDataPhysBCFunct::FillBoundary (
     } // periodic?
    } // has_phys_bc?
   } // mfi
- } // omp
+} // omp
+  thread_class::sync_tile_d_numPts();
+  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+  thread_class::reconcile_d_numPts(23);
 
 } // StateDataPhysBCFunct::FillBoundary
 
@@ -1086,13 +1106,30 @@ StateDataPhysBCFunctGHOST::FillBoundary (
  const Real*    dx          = geom.CellSize();
  const RealBox& prob_domain = geom.ProbDomain();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(mf.boxArray().d_numPts());
+
 #ifdef CRSEGRNDOMP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 #endif
- {
-  for (MFIter mfi(mf); mfi.isValid(); ++mfi) {
+{
+  for (MFIter mfi(mf,false); mfi.isValid(); ++mfi) {
+   const Box& tilegrid=mfi.tilebox();
+
+   int tid_current=0;
+#ifdef _OPENMP
+   tid_current = omp_get_thread_num();
+#endif
+   if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+    // do nothing
+   } else
+    amrex::Error("tid_current invalid");
+
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    FArrayBox& dest = mf[mfi];
    const Box& bx = dest.box();
            
@@ -1201,7 +1238,10 @@ StateDataPhysBCFunctGHOST::FillBoundary (
     } // periodic?
    } // has_phys_bc?
   } // mfi
- } // omp
+} // omp
+  thread_class::sync_tile_d_numPts();
+  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+  thread_class::reconcile_d_numPts(24);
 
 } // StateDataPhysBCFunctGHOST::FillBoundary
 
