@@ -280,6 +280,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  if (localMF[CELL_SOUND_MF]->nComp()!=2)
   amrex::Error("localMF[CELL_SOUND_MF]->nComp() invalid");
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[ALPHANOVOLUME_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -319,6 +323,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   else
    amrex::Error("CoordSys bust 51");
 
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    // defined in MACOPERATOR_3D.F90
   FORT_SCALARCOEFF(
     &num_materials_face,
@@ -350,7 +357,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  }  // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(32);
 
   // alpha T - div beta grad T = f
  if (project_option==2) {
@@ -411,6 +420,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    if (localMF[BXCOEFNOAREA_MF+dir]->nComp()!=nsolveMM) 
     amrex::Error("localMF[BXCOEFNOAREA_MF+dir]->nComp() invalid");
 
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[ALPHACOEF_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -429,6 +442,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     FArrayBox & bxfab=(*localMF[BXCOEFNOAREA_MF+dir])[mfi];
     FArrayBox & facefab=(*localMF[FACE_WEIGHT_MF+dir])[mfi];
 
+    int tid_current=ns_thread();
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
      // BXCOEFNOAREA *= (facewtL + facewtR)/2
     FORT_MULT_FACEWT(
      &num_materials_face,
@@ -444,7 +460,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      xlo,dx,&dir);
    } // mfi
 } // omp
-   ParallelDescriptor::Barrier();
+   thread_class::sync_tile_d_numPts();
+   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+   thread_class::reconcile_d_numPts(33);
 
    int ncomp_edge=-1;
    int scomp_bx=0;
@@ -454,6 +472,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     // dest,source,scomp,dcomp,ncomp,ngrow
    for (int veldir=0;veldir<nsolveMM;veldir++)
     Mult_localMF(BXCOEF_MF+dir,AREA_MF+dir,0,veldir,1,0);
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[ALPHACOEF_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -471,6 +493,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox & bxfab=(*localMF[BXCOEF_MF+dir])[mfi];
+
+    int tid_current=ns_thread();
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
     FORT_DIVIDEDX(
      &num_materials_face,
      &nsolve,
@@ -483,7 +509,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      xlo,dx,&dir);
    } // mfi
 } // omp
-   ParallelDescriptor::Barrier();
+   thread_class::sync_tile_d_numPts();
+   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+   thread_class::reconcile_d_numPts(34);
 
    mac_op->bCoefficients(*localMF[BXCOEF_MF+dir],dir);
  }  // dir=0...sdim-1
@@ -544,6 +572,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  debug_ngrow(DIFFUSIONRHS_MF,0,141);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[DIAG_SING_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -593,6 +625,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   getBCArray_list(bc,state_index,gridno,scomp,ncomp);
   if (bc.size()!=nsolveMM*AMREX_SPACEDIM*2)
    amrex::Error("bc.size() invalid");
+
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // FORT_NSGENERATE is in MACOPERATOR_3D.F90
    // initializes DIAG_SING
@@ -645,7 +680,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     bc.dataPtr());
  }// mfi
 } // omp
- ParallelDescriptor::Barrier();
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(35);
 
 }  // subroutine allocate_maccoef
 
@@ -672,6 +709,10 @@ NavierStokes::restore_active_pressure(int save_mf) {
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int pcomp=num_materials_vel*AMREX_SPACEDIM;
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[OFF_DIAG_CHECK_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -690,6 +731,9 @@ NavierStokes::restore_active_pressure(int save_mf) {
   FArrayBox& savepres=(*localMF[save_mf])[mfi];
   FArrayBox& newpres=S_new[mfi];
 
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    // defined in MACOPERATOR_3D.F90
   FORT_RESTORE_PRES(
    offdiagcheck.dataPtr(),
@@ -706,7 +750,9 @@ NavierStokes::restore_active_pressure(int save_mf) {
 
  }  // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(36);
 
 } // end subroutine restore_active_pressure
 
@@ -836,12 +882,18 @@ NavierStokes::AllinterpScalarMAC(
  int bfact_f=parent->Space_blockingFactor(level);
  int bfact=parent->Space_blockingFactor(level-1);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_fine.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_fine); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(S_fine,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(fgridscen[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
   const int i = mfi.index();
 
   FArrayBox& crse_fab = crse_S_fine[mfi];
@@ -851,6 +903,10 @@ NavierStokes::AllinterpScalarMAC(
 
   FArrayBox& cdiagfab=crse_diagsing_fine[mfi];
   FArrayBox& fdiagfab=(*fdiagsing)[mfi];
+
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   for (int veldir=0;veldir<nsolveMM;veldir++) {
    FORT_INTERPMAC(
     &bfact,&bfact_f,
@@ -863,10 +919,12 @@ NavierStokes::AllinterpScalarMAC(
     ARLIM(cdiagfab.loVect()),ARLIM(cdiagfab.hiVect()),
     fdiagfab.dataPtr(0),
     ARLIM(fdiagfab.loVect()),ARLIM(fdiagfab.hiVect()));  
-  } // veldir
+  } // veldir=0..nsolveMM-1
  }   // mfi
 } //omp
- ParallelDescriptor::Barrier();
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(37);
 
 }  // subroutine AllinterpScalarMAC
 
@@ -932,18 +990,27 @@ NavierStokes::Allaverage(
  MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,1,0,
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_fine.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_fine); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(S_fine,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(fgrids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
   const int i = mfi.index();
 
   FArrayBox& crse_fab = crse_S_fine[mfi];
   const Box& cbox = crse_cen_fine_BA[i];
 
   FArrayBox& fine_fab = S_fine[mfi];
+
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: MG_3D.F90; a low order average down.
   FORT_AVERAGE(
@@ -957,7 +1024,9 @@ NavierStokes::Allaverage(
     &bfact_fine,&bfact_fine);
  }   // mfi
 } //omp
- ParallelDescriptor::Barrier();
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(38);
 
 // src,scomp,dcomp,ncomp
  S_crse.copy(crse_S_fine,0,dcomp,1);
@@ -1108,6 +1177,10 @@ void NavierStokes::DiagInverse(
  if (xnew->nComp()!=nsolveMM)
   amrex::Error("xnew->nComp() invalid");
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(resid->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1135,6 +1208,9 @@ void NavierStokes::DiagInverse(
   if (diagsingfab.nComp()!=nsolveMM)
    amrex::Error("diagsingfab.nComp() invalid");
 
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   for (int veldir=0;veldir<nsolveMM;veldir++) {
     // FORT_DIAGINV is in NAVIERSTOKES_3D.F90
    FORT_DIAGINV(
@@ -1154,6 +1230,9 @@ void NavierStokes::DiagInverse(
   } // veldir
  } // mfi
 } // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(39);
 
 } // subroutine DiagInverse
 
@@ -1680,6 +1759,10 @@ void NavierStokes::apply_div(
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[FSI_GHOST_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1774,6 +1857,9 @@ void NavierStokes::apply_div(
   int ncomp_denold=nsolveMM;
   int ncomp_veldest=cterm_dual.nComp();
   int ncomp_dendest=poldfab_dual.nComp();
+
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: NavierStokes::apply_div
    // FORT_MAC_TO_CELL declared in: LEVELSET_3D.F90
@@ -1872,6 +1958,9 @@ void NavierStokes::apply_div(
    &SEM_advection_algorithm);
  } // mfi
 } // omp
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(40);
 
  if (num_materials_face==1) {
   // do nothing
@@ -2263,6 +2352,10 @@ void NavierStokes::ADVECT_DIV() {
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int pcomp=num_materials_vel*AMREX_SPACEDIM;
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(DIV_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -2287,6 +2380,9 @@ void NavierStokes::ADVECT_DIV() {
   FArrayBox& snewfab=S_new[mfi];
   FArrayBox& divfab=DIV_new[mfi];
 
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    // in: NAVIERSTOKES_3D.F90
   FORT_UPDATE_DIV(
    xlo,dx,
@@ -2304,7 +2400,9 @@ void NavierStokes::ADVECT_DIV() {
 
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(41);
 
 } // subroutine ADVECT_DIV
 
@@ -2399,6 +2497,10 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
  if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
   amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[idx]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -2451,6 +2553,9 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    int ncomp_denold=vol.nComp();
    int ncomp_veldest=rhs.nComp();
    int ncomp_dendest=rhs.nComp();
+
+   int tid_current=ns_thread();
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: NavierStokes::getStateDIV
    FORT_MAC_TO_CELL(
@@ -2542,7 +2647,9 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &SEM_advection_algorithm);
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ thread_class::sync_tile_d_numPts();
+ ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+ thread_class::reconcile_d_numPts(42);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   delete velmac[dir];

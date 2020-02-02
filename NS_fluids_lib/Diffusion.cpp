@@ -720,9 +720,7 @@ void NavierStokes::viscous_boundary_fluxes(
    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
    thread_class::reconcile_d_numPts(28);
 
-  } // dir
-
-  ParallelDescriptor::Barrier(); 
+  } // dir=0..sdim-1
 
 } // subroutine viscous_boundary_fluxes
 
@@ -1060,7 +1058,6 @@ void NavierStokes::combine_state_variable(
 
     }  // mfi
 } // omp
-    ParallelDescriptor::Barrier(); 
     thread_class::sync_tile_d_numPts();
     ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
     thread_class::reconcile_d_numPts(29);
@@ -1215,7 +1212,6 @@ void NavierStokes::combine_state_variable(
 
   }  // mfi
 } // omp
-  ParallelDescriptor::Barrier(); 
   thread_class::sync_tile_d_numPts();
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
   thread_class::reconcile_d_numPts(30);
@@ -1409,7 +1405,6 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  }  // mfi  
 } // omp
 
- ParallelDescriptor::Barrier(); 
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
  thread_class::reconcile_d_numPts(31);
