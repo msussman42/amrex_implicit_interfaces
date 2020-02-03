@@ -84,7 +84,7 @@ FCOMP = gfortran
 # hpc-login.rcc.fsu.edu  "module load intel"
 # sussman + old password
 # bromwich or compute1 GNU MPI:
-#  "module load mpi/openmpi-x86_64"
+#  "module load mpi/openmpi-4-gcc8"
 # csh: command >& out_and_err_file &
 # if "ImportError: no module named site" then give command:
 #  "export PYTHONHOME="
@@ -98,10 +98,10 @@ FCOMP = gfortran
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI   = FALSE
+USE_MPI   = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
-USE_OMP = TRUE
+USE_OMP = FALSE
 EBASE = amr
 #EBASE = amrcompute
 

@@ -11,7 +11,10 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  4.8e-3 7.2e-3   # MKS
 ns.EILE_flag=-1
-ns.continuous_mof=2 # CLSVOF in 2 material cells, and MOF in >2 mat cells.
+# 3=CLSVOF in 2 material cells, and MOF in >2 mat cells.
+# 4=CLSVOF in 2 material cells, and CMOF in >2 mat cells.
+# 2=CMOF
+ns.continuous_mof=4 
 ns.MOFITERMAX=15
 ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.advection_order=1 1 1 1
@@ -21,6 +24,7 @@ ns.initial_project_cycles=3
 ns.initial_cg_cycles=3
 ns.solvability_projection=0 # 0 since must allow for expansion
 ns.dual_time_activate=1
+ns.dual_time_sound_speed=1500.0e+10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6  # non-dimensional
 #ns.projection_pressure_scale=1.0  # dimensional ?
@@ -55,10 +59,10 @@ ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16
 #amr.max_level =  0
 # 0- 1 level 1- 2 levels  2- 3 levels
-amr.n_error_buf     = 2 2 2 2 2 2 2  # number of buffer cells in error est
+amr.n_error_buf     = 4 4 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 4 4 4 4 4 4 4    # block factor in grid generation
+amr.blocking_factor = 8 4 4 4 4 4 4    # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.num_SDC_outer_sweeps=1
@@ -72,7 +76,7 @@ amr.plot_int        = 100
 #amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 32
 #amr.restart         = chk55600
 #amr.trace   =1
 
@@ -94,11 +98,12 @@ ns.use_lsa=0
 ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
 ns.DrhoDz = 0.0 0.0 0.0
 # override_density=1 => rho=rho(T,z)
+# 2=>P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
 # "default_hydrostatic_pressure_density" called if override_density=1.
 # since DrhoDz=0.0,
 # gravity force is grad (-|g| denconst(1) y)/denconst(1) = -|g| 
 # rho_liq=denconst(1)+denconst(1)*DrhoDT(1)*(T-tempconst(1))
-ns.override_density=2 0 0
+ns.override_density=1 0 0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # sigma_{SL}=sigma_{LV}
 # sigma_{SV}=(1+cos(theta)) sigma_{LV}
@@ -130,7 +135,8 @@ ns.viscosity_state_model=0 0 0
 ns.axis_dir=6
 ns.xblob3=0.0  # unused
 # see subroutine outside_temperature in PROB.F90
-ns.yblob3=6.95e-4  # initial thermal layer (meters)
+#ns.yblob3=6.95e-4  # initial thermal layer (meters)
+ns.yblob3=1.0e-10  # initial thermal layer (meters)
 # see subroutine get_internal_heat_source in PROB.F90
 # see subroutine microcell_heat_model in PROB.F90
 # if zblob3>0, heatcoeff=heatcoeff*dx/zblob3 (where LS_SOLID changes sign)
@@ -162,8 +168,8 @@ ns.heatviscconst=0.680 0.0248 377
 # liquid-vapor, liquid-solid, vapor-solid
 # 0.0 means do not use.
 #JULY 17 
-ns.heatviscconst_interface=0.0 2.0 2.0
-#ns.heatviscconst_interface=0.0 0.0 0.0
+#ns.heatviscconst_interface=0.0 2.0 2.0
+ns.heatviscconst_interface=0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
 ns.viscconst=279E-6 12.02e-6 279E-6
 # density: kg/m^3
@@ -175,6 +181,8 @@ ns.FSI_flag=0 0 1
 #ns.solidheat_flag=0  # diffuse in solid (substrate)
 ns.solidheat_flag=1 # dirichlet at solid/substrate boundary.
 
+ns.max_contact_line_size=0.9 0.0 0.0
+
 # February 21, 2018: parameters for new microlayer model:
 # material id for the substrate material that neighbors the thin film
 # microlayer liquid:
@@ -182,18 +190,19 @@ ns.microlayer_substrate=3 0 0
 
 # microlayer contact angle (radians): 38 degrees
 # microscopic contact angle between liquid and substrate    
-ns.microlayer_angle=0.663225 0.0 0.0
+ns.microlayer_angle=0.663 0.0 0.0
 
 # minimum thickness of thin liquid film (MKS)
 # make this zero in order to disable the microlayer model.
 # diameter of water molecule is about 2.9e-10
 # 2.9e-10/l_0
-# ns.microlayer_size=1.0e-9  0.0 0.0                      # dimensional
+ns.microlayer_size=1.0e-9  0.0 0.0                      # dimensional
 #ns.microlayer_size=  1.157e-7 0.0 0.0                    # dimensionless
 #size of thin liquid film (size of a few liquid molecules)
 # JULY 17
 #ns.microlayer_size=  0.0 0.0 0.0  
-ns.microlayer_size=  6.0e-10 0.0 0.0  
+#ns.microlayer_size=  6.0e-10 0.0 0.0  
+
 
 # resolvable scale size (2 * dx for a representative dx):
 # 4.8e-3/192=2.5e-5
@@ -207,9 +216,9 @@ ns.macrolayer_size=2.5e-5 0.0 0.0
 
 #JULY 17
 # no Temp BC at substrate/vapor interface
-#ns.microlayer_temperature_substrate=0.0 0.0 0.0 
+ns.microlayer_temperature_substrate=0.0 0.0 0.0 
 # Temp=373 at substrate/vapor interface
-ns.microlayer_temperature_substrate=373.0 0.0 0.0 
+#ns.microlayer_temperature_substrate=373.0 0.0 0.0 
 ns.tempconst=373.0 373.0 380.0
 #JULY 17
 ns.initial_temperature=373.0 373.0 380.0
