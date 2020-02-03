@@ -288,9 +288,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &nsolveMM);
  } // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(25);
+ ns_reconcile_d_num(25);
 
 }  // diffuse_hoop
 
@@ -412,9 +410,7 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
    &nsolveMM);
  } // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(26);
+ ns_reconcile_d_num(26);
 
 }  // mom_force
 
@@ -558,9 +554,7 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
    &nsolveMM);
  } // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(27);
+ ns_reconcile_d_num(27);
 
 }  // thermal_transform_force
 
@@ -716,9 +710,7 @@ void NavierStokes::viscous_boundary_fluxes(
    } // mfi
 } //omp
 
-   thread_class::sync_tile_d_numPts();
-   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-   thread_class::reconcile_d_numPts(28);
+   ns_reconcile_d_num(28);
 
   } // dir=0..sdim-1
 
@@ -1058,9 +1050,7 @@ void NavierStokes::combine_state_variable(
 
     }  // mfi
 } // omp
-    thread_class::sync_tile_d_numPts();
-    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-    thread_class::reconcile_d_numPts(29);
+    ns_reconcile_d_num(29);
    } // dir=0..sdim-1
 
   } else
@@ -1212,9 +1202,7 @@ void NavierStokes::combine_state_variable(
 
   }  // mfi
 } // omp
-  thread_class::sync_tile_d_numPts();
-  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(30);
+  ns_reconcile_d_num(30);
 
   if ((combine_flag==0)||  // FVM->GFM
       (combine_flag==1)) { // GFM->FVM
@@ -1405,9 +1393,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  }  // mfi  
 } // omp
 
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(31);
+ ns_reconcile_d_num(31);
 
 }   // subroutine diffusion_heating
 

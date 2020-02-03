@@ -690,6 +690,7 @@ protected:
     int NSnumLevels();
 
     int ns_thread();
+    void ns_reconcile_d_num(int caller_id);
 
     static int some_materials_compressible();
 

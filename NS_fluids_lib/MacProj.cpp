@@ -357,9 +357,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  }  // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(32);
+ ns_reconcile_d_num(32);
 
   // alpha T - div beta grad T = f
  if (project_option==2) {
@@ -460,9 +458,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      xlo,dx,&dir);
    } // mfi
 } // omp
-   thread_class::sync_tile_d_numPts();
-   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-   thread_class::reconcile_d_numPts(33);
+   ns_reconcile_d_num(33);
 
    int ncomp_edge=-1;
    int scomp_bx=0;
@@ -509,9 +505,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      xlo,dx,&dir);
    } // mfi
 } // omp
-   thread_class::sync_tile_d_numPts();
-   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-   thread_class::reconcile_d_numPts(34);
+   ns_reconcile_d_num(34);
 
    mac_op->bCoefficients(*localMF[BXCOEF_MF+dir],dir);
  }  // dir=0...sdim-1
@@ -680,9 +674,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     bc.dataPtr());
  }// mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(35);
+ ns_reconcile_d_num(35);
 
 }  // subroutine allocate_maccoef
 
@@ -750,9 +742,7 @@ NavierStokes::restore_active_pressure(int save_mf) {
 
  }  // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(36);
+ ns_reconcile_d_num(36);
 
 } // end subroutine restore_active_pressure
 
@@ -922,9 +912,7 @@ NavierStokes::AllinterpScalarMAC(
   } // veldir=0..nsolveMM-1
  }   // mfi
 } //omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(37);
+ ns_reconcile_d_num(37);
 
 }  // subroutine AllinterpScalarMAC
 
@@ -1024,9 +1012,7 @@ NavierStokes::Allaverage(
     &bfact_fine,&bfact_fine);
  }   // mfi
 } //omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(38);
+ ns_reconcile_d_num(38);
 
 // src,scomp,dcomp,ncomp
  S_crse.copy(crse_S_fine,0,dcomp,1);
@@ -1230,9 +1216,7 @@ void NavierStokes::DiagInverse(
   } // veldir
  } // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(39);
+ ns_reconcile_d_num(39);
 
 } // subroutine DiagInverse
 
@@ -1958,9 +1942,7 @@ void NavierStokes::apply_div(
    &SEM_advection_algorithm);
  } // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(40);
+ ns_reconcile_d_num(40);
 
  if (num_materials_face==1) {
   // do nothing
@@ -2400,9 +2382,7 @@ void NavierStokes::ADVECT_DIV() {
 
  } // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(41);
+ ns_reconcile_d_num(41);
 
 } // subroutine ADVECT_DIV
 
@@ -2647,9 +2627,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &SEM_advection_algorithm);
  } // mfi
 } // omp
- thread_class::sync_tile_d_numPts();
- ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(42);
+ ns_reconcile_d_num(42);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   delete velmac[dir];
