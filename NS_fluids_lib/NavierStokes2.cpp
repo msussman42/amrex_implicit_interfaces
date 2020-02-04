@@ -308,12 +308,23 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
  MultiFab* mask=new MultiFab(grids,dmap,1,ngrow,
   MFInfo().SetTag("mask"),FArrayBoxFactory());
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(mask->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*mask); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*mask,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   FArrayBox& fab = (*mask)[mfi];
   if (clear_phys_boundary==0) {
    fab.setVal(tag);
@@ -332,7 +343,7 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
    amrex::Error("clear_phys_boundary invalid");
  } // mfi
 } //omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(126);
 
  if ((clear_phys_boundary==0)||
      (clear_phys_boundary==1)||
@@ -342,12 +353,23 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
    NavierStokes& ns_fine=getLevel(level+1);
    const BoxArray& f_box=ns_fine.grids;
 
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(mask->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*mask); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*mask,false); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const Box& tilegrid = mfi.tilebox();
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
     FArrayBox& fab = (*mask)[mfi];
     for (int j = 0; j < f_box.size(); j++) {
      Box c_box = amrex::coarsen(f_box[j],2);
@@ -357,7 +379,7 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
     } // j
    } // mfi
 } //omp
-   ParallelDescriptor::Barrier();
+   ns_reconcile_d_num(127);
   } // level<finest_level
  } else if (clear_phys_boundary==3) {
   // do nothing
@@ -584,12 +606,25 @@ void NavierStokes::avgDown_and_Copy_localMF(
    const Real* dxf = fine_lev.geom.CellSize();
    const Real* prob_lo   = geom.ProbLo();
  
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(
+      fine_lev.localMF[idx_den_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*fine_lev.localMF[idx_den_MF]); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*fine_lev.localMF[idx_den_MF],false); 
+		   mfi.isValid(); ++mfi) {
     BL_ASSERT(fgrids[mfi.index()] == mfi.validbox());
+    const Box& tilegrid = mfi.tilebox();
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
     const int gridno = mfi.index();
     const Real* xlo_fine = fine_lev.grid_loc[gridno].lo();
     const Box& ovgrid = crse_S_fine_BA[gridno];
@@ -658,7 +693,8 @@ void NavierStokes::avgDown_and_Copy_localMF(
 
    }// mfi
 } //omp
-   ParallelDescriptor::Barrier();
+   ns_reconcile_d_num(128);
+
    S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux_use);
    ParallelDescriptor::Barrier();
 
@@ -847,11 +883,15 @@ void NavierStokes::interp_and_Copy_localMF(
    const Real* dxc = coarse_lev.geom.CellSize();
    const Real* prob_lo   = geom.ProbLo();
  
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[idx_den_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*localMF[idx_den_MF]); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*localMF[idx_den_MF],false); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
 
@@ -896,6 +936,11 @@ void NavierStokes::interp_and_Copy_localMF(
     FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
      // in: NAVIERSTOKES_3D.F90
     FORT_INTERP_COPY( 
      &enable_spectral,
@@ -930,7 +975,7 @@ void NavierStokes::interp_and_Copy_localMF(
 
    }// mfi
 } //omp
-   ParallelDescriptor::Barrier();
+   ns_reconcile_d_num(129);
   } // dir=0..sdim-1
 
   delete coarse_den_fine;
@@ -969,11 +1014,15 @@ void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
 
     for (int sync_iter=0;sync_iter<=1;sync_iter++) {
 
+     if (thread_class::nthreads<1)
+      amrex::Error("thread_class::nthreads invalid");
+     thread_class::init_d_numPts(localMF[MASKCOEF_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-     for (MFIter mfi(*localMF[MASKCOEF_MF]); mfi.isValid(); ++mfi) {
+     for (MFIter mfi(*localMF[MASKCOEF_MF],false); mfi.isValid(); ++mfi) {
       BL_ASSERT(grids[mfi.index()] == mfi.validbox());
       const int gridno = mfi.index();
 
@@ -990,6 +1039,11 @@ void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
       FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
       FArrayBox& masknbr=(*localMF[MASK_NBR_MF])[mfi];
       Vector<int> presbc=getBCArray(State_Type,gridno,AMREX_SPACEDIM,1);
+
+      int tid_current=ns_thread();
+      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+       amrex::Error("tid_current invalid");
+      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       FORT_FILLBDRY_FLUX( 
        &sync_iter,
@@ -1011,7 +1065,7 @@ void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
 
      }// mfi
 } //omp
-     ParallelDescriptor::Barrier();
+     ns_reconcile_d_num(130);
 
      if (sync_iter==0) {
       flux_hold_mf->FillBoundary(geom.periodicity()); 
@@ -1117,11 +1171,15 @@ void NavierStokes::interp_flux_localMF(
    const Real* dxc = coarse_lev.geom.CellSize();
    const Real* prob_lo   = geom.ProbLo();
  
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[MASKCOEF_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*localMF[MASKSEM_MF]); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*localMF[MASKSEM_MF],false); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
 
@@ -1158,6 +1216,11 @@ void NavierStokes::interp_flux_localMF(
     FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
     FORT_INTERP_FLUX( 
      &enable_spectral,
      dxc,dx,
@@ -1185,7 +1248,7 @@ void NavierStokes::interp_flux_localMF(
 
    }// mfi
 } //omp
-   ParallelDescriptor::Barrier();
+   ns_reconcile_d_num(131);
   } // dir=0..sdim-1
 
   delete coarse_mask_sem_fine;
@@ -1429,6 +1492,11 @@ void NavierStokes::apply_cell_pressure_gradient(
   // set flag for whether to update cell velocity conservatively
   // or non-conservatively.
   // Modify MAC velocity with solid velocity or ice velocity.
+  
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+ 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1503,6 +1571,10 @@ void NavierStokes::apply_cell_pressure_gradient(
    int ncomp_xp=2+nsolveMM_FACE;
    int ncomp_xgp=1;
 
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in apply_cell_pressure_gradient: p^CELL -> p^MAC 
    // AMR transfer data is in the 3rd component of xp.
@@ -1596,6 +1668,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &SEM_advection_algorithm);
   } // mfi
 } // omp
+  ns_reconcile_d_num(132);
  } // tileloop
  } // dir
 
@@ -1619,6 +1692,10 @@ void NavierStokes::apply_cell_pressure_gradient(
   //  update energy.
  for (int isweep=1;isweep<=2;isweep++) {
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1627,6 +1704,12 @@ void NavierStokes::apply_cell_pressure_gradient(
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    const Box& fabgrid = grids[gridno];
    const int* tilelo=tilegrid.loVect();
    const int* tilehi=tilegrid.hiVect();
@@ -1806,6 +1889,7 @@ void NavierStokes::apply_cell_pressure_gradient(
 
   }   // mfi
 } // omp
+  ns_reconcile_d_num(133);
 
  }  // isweep=1,2
 
@@ -2370,6 +2454,10 @@ void NavierStokes::increment_face_velocity(
      // if low order, then nothing done when tileloop==1
     for (int tileloop=0;tileloop<=1;tileloop++) {
 
+     if (thread_class::nthreads<1)
+      amrex::Error("thread_class::nthreads invalid");
+     thread_class::init_d_numPts(localMF[FSI_GHOST_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -2446,6 +2534,11 @@ void NavierStokes::increment_face_velocity(
       int simple_AMR_BC_flag=0;
       int ncomp_xp=1;
       int ncomp_xgp=1;
+
+      int tid_current=ns_thread();
+      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+       amrex::Error("tid_current invalid");
+      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // in increment_face_velocity
       FORT_CELL_TO_MAC(
@@ -2544,7 +2637,7 @@ void NavierStokes::increment_face_velocity(
        &SEM_advection_algorithm);
      } // mfi
 } // omp
-     ParallelDescriptor::Barrier();
+     ns_reconcile_d_num(134);
     } // tileloop
 
     if (interp_option==4) {
@@ -2637,6 +2730,10 @@ void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(localMF[FSI_GHOST_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -2687,12 +2784,15 @@ void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
       else
        amrex::Error("CoordSys bust 20");
 
-      int tid=ns_thread();
+      int tid_current=ns_thread();
+      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+       amrex::Error("tid_current invalid");
+      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       FORT_GFMUPDATE(
-       &tid,
+       &tid_current,
        &dir,
-       &GFM_error[tid],
+       &GFM_error[tid_current],
        velbc.dataPtr(),  
        &slab_step,
        &dt_slab,
@@ -2726,7 +2826,8 @@ void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
        &project_option);
     } // mfi
 } // omp
-    ParallelDescriptor::Barrier();
+    ns_reconcile_d_num(135);
+
     for (int tid=1;tid<thread_class::nthreads;tid++) {
      if (GFM_error[tid]>GFM_error[0])
       GFM_error[0]=GFM_error[tid];
@@ -2885,6 +2986,10 @@ void NavierStokes::density_TO_MAC(int project_option) {
  
      for (int tileloop=0;tileloop<=1;tileloop++) {
 
+      if (thread_class::nthreads<1)
+       amrex::Error("thread_class::nthreads invalid");
+      thread_class::init_d_numPts(localMF[FSI_GHOST_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -2948,6 +3053,11 @@ void NavierStokes::density_TO_MAC(int project_option) {
        int simple_AMR_BC_flag=0;
        int ncomp_xp=1;
        int ncomp_xgp=1;
+
+       int tid_current=ns_thread();
+       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+        amrex::Error("tid_current invalid");
+       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
         // in density_TO_MAC
        FORT_CELL_TO_MAC(
@@ -3048,6 +3158,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
         &SEM_advection_algorithm);
       } // mfi
 } // omp
+      ns_reconcile_d_num(136);
      } // tileloop
     } // dir
     ParallelDescriptor::Barrier();
