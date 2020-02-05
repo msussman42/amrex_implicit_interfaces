@@ -7726,6 +7726,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
   // pressure extension
  if (project_option==12) {
+   // solvability conditions?
+  BoxLib::Error("set wall boundary conditions to homogeneous Neumann");
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -10087,7 +10089,8 @@ void NavierStokes::multiphase_project(int project_option) {
   // temperature (2), velocity (3,4,5), or species.
  CPP_OVERRIDEPBC(0,project_option);
 
- if (project_option==12) {
+ if (project_option==12) {  // pressure extrapolation
+  BoxLib::Error("set wall boundary conditions back to presBC");
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.restore_active_pressure(PRESSURE_SAVE_MF);
