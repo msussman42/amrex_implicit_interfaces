@@ -4545,6 +4545,10 @@ void NavierStokes::apply_pressure_grad(
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 	  //tileloop==0 low  tileloop==1 SEM
   for (int tileloop=0;tileloop<=1;tileloop++) {
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[LEVELPC_MF]->boxArray().d_numPts());
  
 #ifdef _OPENMP
 #pragma omp parallel
@@ -4597,6 +4601,11 @@ void NavierStokes::apply_pressure_grad(
     int local_enable_spectral=enable_spectral;
     int ncomp_xp=nsolveMM_FACE;
     int ncomp_xgp=nsolveMM_FACE;
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // -grad p * FACE_WEIGHT * dt
     // in: apply_pressure_grad
@@ -4696,6 +4705,9 @@ void NavierStokes::apply_pressure_grad(
 
    }  // mfi
 } // omp
+
+   ns_reconcile_d_num(143);
+
   } // tileloop
   } // dir
 
@@ -5071,6 +5083,10 @@ void NavierStokes::make_physics_vars(int project_option) {
  MultiFab* massF=new MultiFab(grids,dmap,nrefine_vof,ngrow_refine,
 	MFInfo().SetTag("massF"),FArrayBoxFactory());
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(tempmf.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -5097,11 +5113,14 @@ void NavierStokes::make_physics_vars(int project_option) {
 
   int tessellate=1;
 
-  int tid=ns_thread();
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // centroid in absolute coordinates.
   FORT_BUILD_SEMIREFINEVOF(
-   &tid,
+   &tid_current,
    &tessellate,
    &ngrow_refine,
    &nrefine_vof,
@@ -5128,13 +5147,17 @@ void NavierStokes::make_physics_vars(int project_option) {
    &level,&finest_level);
  }  // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(144);
 
  resize_levelsetLO(2,LEVELPC_MF);
 
  int ngrow_visc=1;
  MultiFab* modvisc=new MultiFab(grids,dmap,nmat,ngrow_visc,
 	MFInfo().SetTag("modvisc"),FArrayBoxFactory());
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(tempmf.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -5161,6 +5184,11 @@ void NavierStokes::make_physics_vars(int project_option) {
 
   FArrayBox& modviscfab=(*modvisc)[mfi];
 
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    // visc_coef passed as a parameter so that Guibo can
    // calculate the dynamic contact angle condition. 
   FORT_BUILD_MODVISC(
@@ -5186,7 +5214,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    &level,&finest_level);
  }  // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(145);
 
  Vector< Real > local_curv_min;
  Vector< Real > local_curv_max;
@@ -5206,6 +5234,10 @@ void NavierStokes::make_physics_vars(int project_option) {
   // isweep==0  face variables
   // isweep==1  cenden,cenvof,cenDeDT,cenvisc
  for (int isweep=0;isweep<2;isweep++) {
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(tempmf.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -5266,14 +5298,17 @@ void NavierStokes::make_physics_vars(int project_option) {
    FArrayBox& massFfab=(*massF)[mfi];
    FArrayBox& modviscfab=(*modvisc)[mfi];
 
-   int tid=ns_thread();
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    FORT_INIT_PHYSICS_VARS(
-    &tid,
+    &tid_current,
     &FD_curv_select, 
     &FD_curv_interp, 
-    &local_curv_min[tid],
-    &local_curv_max[tid],
+    &local_curv_min[tid_current],
+    &local_curv_max[tid_current],
     &isweep,
     &nrefine_vof,
     denconst_interface.dataPtr(),
@@ -5355,7 +5390,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     &finest_level);
   }  // mfi
 } // omp
-  ParallelDescriptor::Barrier();
+  ns_reconcile_d_num(146);
  } // isweep
 
   // correction and sanity check if spectral element method.
@@ -5384,8 +5419,19 @@ void NavierStokes::make_physics_vars(int project_option) {
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-    for (MFIter mfi(tempmf); mfi.isValid(); ++mfi) {
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(tempmf.boxArray().d_numPts());
+
+    for (MFIter mfi(tempmf,false); mfi.isValid(); ++mfi) {
      BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+     const Box& tilegrid = mfi.tilebox();
+
+     int tid_current=ns_thread();
+     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+      amrex::Error("tid_current invalid");
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
      const int gridno = mfi.index();
      const Box& fabgrid = grids[gridno];
      const int* fablo=fabgrid.loVect();
@@ -5398,6 +5444,7 @@ void NavierStokes::make_physics_vars(int project_option) {
      tecplot_debug(curvfab,xlo,fablo,fabhi,dx,dir,0,curv_index,
       1,interior_only);
     } // mfi
+    ns_reconcile_d_num(147);
 
    } // dir=0..sdim-1
 
@@ -5455,6 +5502,10 @@ void NavierStokes::solid_temperature() {
    int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
    int nden=nmat*num_state_material;
 
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -5474,6 +5525,11 @@ void NavierStokes::solid_temperature() {
     FArrayBox& lsnewfab=LS_new[mfi];
 
     const Real* xlo = grid_loc[gridno].lo();
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // if (FSI_flag(im)==1,2,4),
      //  T(im)=TSOLID
@@ -5498,7 +5554,7 @@ void NavierStokes::solid_temperature() {
  
    } // mfi
 } // omp
-   ParallelDescriptor::Barrier();
+   ns_reconcile_d_num(148);
   } else
    amrex::Error("solidheat_flag invalid");
 
