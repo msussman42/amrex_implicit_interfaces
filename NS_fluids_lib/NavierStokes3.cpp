@@ -123,12 +123,23 @@ NavierStokes::avgDownEdge(int dir,MultiFab& S_crse,MultiFab& S_fine,
  const Real* dxf = fine_lev.geom.CellSize();
  const Real* prob_lo   = geom.ProbLo();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_fine.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_fine); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(S_fine,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(fgridsMAC[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   const int i = mfi.index();
   const Real* xlo_fine = fine_lev.grid_loc[i].lo();
 
@@ -161,7 +172,8 @@ NavierStokes::avgDownEdge(int dir,MultiFab& S_crse,MultiFab& S_fine,
    &ncomp);
  }  // mfi
 } //omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(169);
+
  S_crse.copy(crse_S_fine_MAC,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 
@@ -262,12 +274,23 @@ NavierStokes::vofflux_sum(int dir,MultiFab& S_crse,MultiFab& S_fine) {
  const Real* dxf = fine_lev.geom.CellSize();
  const Real* prob_lo   = geom.ProbLo();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_fine.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_fine); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(S_fine,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(fgrids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   const int i = mfi.index();
   const Real* xlo_fine = fine_lev.grid_loc[i].lo();
 
@@ -294,9 +317,11 @@ NavierStokes::vofflux_sum(int dir,MultiFab& S_crse,MultiFab& S_fine) {
    &nmat);
  }  // mfi
 } //omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(170);
+
  S_crse.copy(crse_S_fine,0,0,nmat*num_materials_vel);
  ParallelDescriptor::Barrier();
+
  const Box& domain = geom.Domain();
  if (geom.isPeriodic(dir)) {
   IntVect pshift=IntVect::TheZeroVector();
@@ -1387,6 +1412,10 @@ NavierStokes::recalesce_temperature(int im_source) {
  if (num_materials_vel!=1)
   amrex::Error("this code not ready yet for num_materials_vel!=1");
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1407,6 +1436,11 @@ NavierStokes::recalesce_temperature(int im_source) {
 
   FArrayBox& snewfab=S_new[mfi];
 
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   FORT_RESET_TEMPERATURE(
    &im_source,
    &TSAT,
@@ -1421,12 +1455,11 @@ NavierStokes::recalesce_temperature(int im_source) {
    &ncomp_state,
    &level,&finest_level);
 
- }
+ } // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(171);
 
 }  // recalesce_temperature
-
 
 
 
@@ -1495,7 +1528,11 @@ NavierStokes::process_recalesce_data(
  Real tag=1.0;
  MultiFab* mask=maskfiner(ngrowmask,tag,clear_phys_boundary);  
 
- for (MFIter mfi(S_new); mfi.isValid(); ++mfi) {
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+ for (MFIter mfi(S_new,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -1513,6 +1550,11 @@ NavierStokes::process_recalesce_data(
   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
 
   FArrayBox& snewfab=S_new[mfi];
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   FORT_INTEGRATE_RECALESCE(
    &isweep,
@@ -1533,7 +1575,7 @@ NavierStokes::process_recalesce_data(
    &level,&finest_level);
 
  } // mfi
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(172);
 
  for (im=0;im<nmat;im++) {
   int ibase=im*num_integrate;
@@ -1764,6 +1806,10 @@ void NavierStokes::init_splitting_force_SDC() {
   const Real* dx = geom.CellSize();
   int bfact=parent->Space_blockingFactor(level);
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(localMF[delta_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1794,6 +1840,11 @@ void NavierStokes::init_splitting_force_SDC() {
        (delta_ncomp!=ns_time_order*nstate_SDC))
     amrex::Error("HOncomp, LOncomp, or delta_ncomp invalid");
 
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    FORT_SDC_TIME_QUAD(
     &HOncomp,
     &LOncomp,
@@ -1818,8 +1869,13 @@ void NavierStokes::init_splitting_force_SDC() {
     &delta_slab_time);
   }  // mfi  
 } // omp
+  ns_reconcile_d_num(173);
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[delta_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -1851,6 +1907,11 @@ void NavierStokes::init_splitting_force_SDC() {
         (delta_ncomp!=ns_time_order))
      amrex::Error("HOncomp, LOncomp, or delta_ncomp invalid");
 
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
     FORT_SDC_TIME_QUAD_FACE(
      &dir,
      &HOncomp,
@@ -1876,7 +1937,7 @@ void NavierStokes::init_splitting_force_SDC() {
      &delta_slab_time);
    }  // mfi  
 } // omp
-
+   ns_reconcile_d_num(174);
 
   } // dir=0..sdim-1
 
@@ -3551,12 +3612,16 @@ void NavierStokes::correct_colors(
 
  MultiFab* colormf=localMF[idx_color];
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(colormf->boxArray().d_numPts());
+
 // COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*colormf); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*colormf,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -3570,6 +3635,12 @@ void NavierStokes::correct_colors(
 
   FArrayBox& colorfab=(*colormf)[mfi];
   int arrsize=domaincolormap.size();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    // in: LEVELSET_3D.F90
   FORT_LEVELRECOLOR(
    colorfab.dataPtr(),
@@ -3583,7 +3654,7 @@ void NavierStokes::correct_colors(
    &base_level,&arrsize);
  } // mfi
 } //omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(175);
 
 }  // subroutine correct_colors
 
@@ -3644,13 +3715,24 @@ void NavierStokes::assign_colors(
   // no tiling on this loop.
  for (int ipass=0;ipass<ipass_max;ipass++) {
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(typemf->boxArray().d_numPts());
+
 // COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*typemf); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const Box& tilegrid = mfi.tilebox();
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    const int gridno = mfi.index();
    const Box& grd=grids[gridno];
    const int* lo = grd.loVect();
@@ -3660,9 +3742,7 @@ void NavierStokes::assign_colors(
    FArrayBox& typefab=(*typemf)[mfi];
    FArrayBox& colorfab=(*colormf)[mfi];
 
-   int tid=ns_thread();
-
-   int tid_max_colors=tid;
+   int tid_max_colors=tid_current;
    if (ipass==0) {
     // do nothing
    } else if (ipass==1) {
@@ -3683,16 +3763,19 @@ void NavierStokes::assign_colors(
      lo,hi,
      &ipass,
      &number_grids,
-     color_per_grid_array[tid].dataPtr(),
+     color_per_grid_array[tid_current].dataPtr(),
      &gridno,
      &max_colors_grid_array[tid_max_colors],
      &typedim);
 
    if (ipass==0)
-    if (color_per_grid_array[tid][gridno]>max_colors_grid_array[tid])
-     max_colors_grid_array[tid]=color_per_grid_array[tid][gridno];
+    if (color_per_grid_array[tid_current][gridno]>
+	max_colors_grid_array[tid_current])
+     max_colors_grid_array[tid_current]= 
+	     color_per_grid_array[tid_current][gridno];
   } // mfi
 } // omp
+  ns_reconcile_d_num(176);
 
   if (ipass==0) {
 
@@ -3780,13 +3863,24 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
  const Real* dxf = fine_lev.geom.CellSize();
  const Real* prob_lo   = geom.ProbLo();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_fine->boxArray().d_numPts());
+
 // COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*S_fine); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*S_fine,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(fgrids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   const int gridno = mfi.index();
   const Real* xlo_fine = fine_lev.grid_loc[gridno].lo();
 
@@ -3820,7 +3914,8 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
     ovlo,ovhi);
  } // mfi
 } //omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(177);
+
  S_crse->copy(crse_S_fine,0,0,1);
 }
 
@@ -3878,13 +3973,24 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(int idx_color,int idx_type) {
  const Real* dxf = fine_lev.geom.CellSize();
  const Real* prob_lo   = geom.ProbLo();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_fine->boxArray().d_numPts());
+
 // COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*S_fine); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*S_fine,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(fgrids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   const int gridno = mfi.index();
   const Real* xlo_fine = fine_lev.grid_loc[gridno].lo();
 
@@ -3923,7 +4029,8 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(int idx_color,int idx_type) {
     ovlo,ovhi,lofine,hifine);
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(178);
+
  mf->copy(crse_S_fine,0,0,6);
 
  delete maskfinemf;
@@ -3995,6 +4102,10 @@ void NavierStokes::sync_colors(
  } // igrid
 } // omp
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(typemf->boxArray().d_numPts());
+
    // grid_color_array[tid][i][j]=1 if color i neighbors color j
    // and they are both not covered by a finer level.
 // COLORING LOOP
@@ -4002,8 +4113,15 @@ void NavierStokes::sync_colors(
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*typemf); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const Box& tilegrid = mfi.tilebox();
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    const int gridno = mfi.index();
    const Box& fabgrid=grids[gridno];
    const int* lo = fabgrid.loVect();
@@ -4011,8 +4129,6 @@ void NavierStokes::sync_colors(
    FArrayBox& maskfab=(*maskmf)[mfi];
    FArrayBox& typefab=(*typemf)[mfi];
    FArrayBox& colorfab=(*colormf)[mfi];
-
-   int tid=ns_thread();
 
 #if (AMREX_SPACEDIM==3)
    for (int i=lo[0];i<=hi[0];i++)
@@ -4065,9 +4181,9 @@ void NavierStokes::sync_colors(
           if ((icolor>Nside)||(jcolor>Nside))
            amrex::Error("icolor or jcolor invalid"); 
           long int igrid=Nside*(icolor-1)+jcolor-1;
-          grid_color_array[tid][igrid]=true;
+          grid_color_array[tid_current][igrid]=true;
           igrid=Nside*(jcolor-1)+icolor-1;
-          grid_color_array[tid][igrid]=true;
+          grid_color_array[tid_current][igrid]=true;
          } // primary_type==secondary_type
         } else if (mask2!=0.0)
          amrex::Error("mask2 invalid");
@@ -4082,7 +4198,7 @@ void NavierStokes::sync_colors(
    } // i,j,k
  } // mfi
 } //omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(179);
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) {
@@ -4208,6 +4324,10 @@ void NavierStokes::sync_colors(
 
  const Real* dx = geom.CellSize();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(typemf->boxArray().d_numPts());
+
     // resets one ghost layer.
     // switches from local coloring scheme on the level to a global
     // coloring scheme on the level.
@@ -4216,7 +4336,7 @@ void NavierStokes::sync_colors(
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*typemf); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -4231,6 +4351,12 @@ void NavierStokes::sync_colors(
    FArrayBox& maskfab=(*maskmf)[mfi];
    FArrayBox& colorfab=(*colormf)[mfi];
    int arrsize=levelcolormap.size();
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
     // in: LEVELSET_3D.F90
    FORT_GRIDRECOLOR(
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
@@ -4243,7 +4369,7 @@ void NavierStokes::sync_colors(
     &number_grids,&arrsize);
  }  //mfi
 } //omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(180);
 
  colormax[level]=total_colors;
 
@@ -4286,6 +4412,10 @@ void NavierStokes::sync_colors(
    } // ilevel
 } // omp
 
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(typemf->boxArray().d_numPts());
+
     // level_color_array[i][j]=1 if color i neighbors color j and
     // the mask of one of them is 1.
 // COLORING LOOP
@@ -4293,7 +4423,7 @@ void NavierStokes::sync_colors(
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*typemf); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -4305,7 +4435,10 @@ void NavierStokes::sync_colors(
     int bfact=parent->Space_blockingFactor(level);
     const Real* xlo = grid_loc[gridno].lo();
 
-    int tid=ns_thread();
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     FArrayBox& maskfab=(*maskmf)[mfi];
     FArrayBox& colorfab=(*fine_coarse_color)[mfi];
@@ -4316,12 +4449,12 @@ void NavierStokes::sync_colors(
      xlo,dx,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
-     level_color_array[tid].dataPtr(),
+     level_color_array[tid_current].dataPtr(),
      &max_colors_level,
      &arrsize,&check_corners);
    } //mfi
 } //omp
-   ParallelDescriptor::Barrier();
+   ns_reconcile_d_num(181);
 
    delete fine_coarse_color;
 
@@ -4583,6 +4716,10 @@ NavierStokes::ColorSum(
  MultiFab* mask=maskfiner(ngrowmask,tag,clear_phys_boundary);  
  const Real* dx = geom.CellSize();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(mask->boxArray().d_numPts());
+
 // COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
@@ -4622,7 +4759,10 @@ NavierStokes::ColorSum(
   Vector<int> levelbc=getBCArray(LS_Type,gridno,0,1);
   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
-  int tid=ns_thread();
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: LEVELSET_3D.F90
   FORT_GETCOLORSUM(
@@ -4651,8 +4791,8 @@ NavierStokes::ColorSum(
    &rzflag,
    &num_colors,
    cum_blob_array.dataPtr(),
-   level_blob_array[tid].dataPtr(),
-   level_blob_type_array[tid].dataPtr(),
+   level_blob_array[tid_current].dataPtr(),
+   level_blob_type_array[tid_current].dataPtr(),
    &blob_array_size,
    &num_elements_blobclass,
    levelbc.dataPtr(),
@@ -4660,6 +4800,7 @@ NavierStokes::ColorSum(
    &nface,&nface_dst,&ncellfrac);
  } // mfi
 } // omp
+ ns_reconcile_d_num(182);
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int i=0;i<blob_array_size;i++) {
@@ -5381,12 +5522,16 @@ NavierStokes::Type_level(
 
  const Real* dx = geom.CellSize();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(typemf->boxArray().d_numPts());
+
 // COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*typemf); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -5401,7 +5546,10 @@ NavierStokes::Type_level(
   FArrayBox& LSfab=(*LS)[mfi];
   FArrayBox& typefab=(*typemf)[mfi];
 
-  int tid=ns_thread();
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // updates one ghost cell.
    // in: LEVELSET_3D.F90
@@ -5411,10 +5559,11 @@ NavierStokes::Type_level(
    xlo,dx,
    tilelo,tilehi,
    fablo,fabhi,&bfact,
-   local_type_flag[tid].dataPtr(),
+   local_type_flag[tid_current].dataPtr(),
    &nmat);
  } // mfi
 } // omp
+ ns_reconcile_d_num(183);
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<nmat;im++) { 
@@ -5783,6 +5932,10 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  for (int facewt_iter=0;facewt_iter<=1;facewt_iter++) {
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -5833,7 +5986,10 @@ void NavierStokes::allocate_FACE_WEIGHT(
    } else
     amrex::Error("presbc.size() invalid");
 
-   int tid=ns_thread();
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // BUILDFACEWT is defined in LEVELSET_3D.F90
    FORT_BUILDFACEWT(
@@ -5874,11 +6030,11 @@ void NavierStokes::allocate_FACE_WEIGHT(
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    min_face_wt[tid].dataPtr(),
-    max_face_wt[tid].dataPtr(),
+    min_face_wt[tid_current].dataPtr(),
+    max_face_wt[tid_current].dataPtr(),
     &singular_possible,
     &local_solvability_projection,
-    &solvability_level_flag_arr[tid],
+    &solvability_level_flag_arr[tid_current],
     presbc.dataPtr(),
     &visc_coef,
     &constant_viscosity,
@@ -5887,7 +6043,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
   }  // mfi
 } // omp
-  ParallelDescriptor::Barrier();
+  ns_reconcile_d_num(184);
 
  } // facewt_iter=0..1
 
@@ -6258,6 +6414,10 @@ void NavierStokes::overwrite_outflow() {
    if (Umac_new.nComp()!=nsolveMM_FACE)
     amrex::Error("Umac_new.nComp() invalid");
 
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(U_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -6280,6 +6440,11 @@ void NavierStokes::overwrite_outflow() {
     Vector<int> presbc=getBCArray(State_Type,gridno,scomp_pres,
      num_materials_vel);
 
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
      // in: PROB.F90
     FORT_FORCEVELOCITY(
       &nsolveMM_FACE,
@@ -6294,9 +6459,10 @@ void NavierStokes::overwrite_outflow() {
       outflow_velocity_buffer_size.dataPtr());
    } // mfi
 }  // omp
+   ns_reconcile_d_num(185);
 
  } // dir=0..sdim-1
- ParallelDescriptor::Barrier();
+
 } // subroutine overwrite_outflow
 
 
@@ -6407,6 +6573,10 @@ void NavierStokes::correct_velocity(
 
  MultiFab& S_new=get_new_data(state_index,slab_step+1);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -6452,6 +6622,11 @@ void NavierStokes::correct_velocity(
   if (presbc.size()!=nsolveMM*AMREX_SPACEDIM*2)
    amrex::Error("presbc.size() invalid");
 
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
   for (int velcomp=0;velcomp<nsolveMM_FACE;velcomp++) {
 
     // in: NAVIERSTOKES_3D.F90
@@ -6491,6 +6666,7 @@ void NavierStokes::correct_velocity(
   } // velcomp=0..nsolveMM_FACE
  } // mfi
 } // omp
+ ns_reconcile_d_num(186);
 
 } // subroutine correct_velocity
 
@@ -11131,6 +11307,10 @@ void NavierStokes::APPLY_REGISTERS(
 
  const Real* dx = geom.CellSize();
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -11154,6 +11334,11 @@ void NavierStokes::APPLY_REGISTERS(
   FArrayBox& dufab=(*localMF[source_mf])[mfi];
   FArrayBox& advectfab=(*localMF[advect_mf])[mfi];
 
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
    // snew=advect+du
   FORT_VELADVANCE(
     &nmat,
@@ -11174,7 +11359,7 @@ void NavierStokes::APPLY_REGISTERS(
 
  } // mfi
 } // omp
- ParallelDescriptor::Barrier();
+ ns_reconcile_d_num(187);
 
 } // subroutine APPLY_REGISTERS
 
@@ -11390,6 +11575,11 @@ void NavierStokes::zalesakVEL() {
  U_new.setVal(0.0,scomp_pres,num_materials_vel,1);
 
  for (int im=0;im<num_materials_vel;im++) {
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(U_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -11409,6 +11599,12 @@ void NavierStokes::zalesakVEL() {
    FArrayBox& velfab = U_new[mfi];
 
    int velcomp=im*AMREX_SPACEDIM;
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
     // takes into consideration global_velocity_scale
    FORT_ZALESAKNODE(
     xlo,dx,
@@ -11423,7 +11619,7 @@ void NavierStokes::zalesakVEL() {
 
   } // mfi
 } // omp
-  ParallelDescriptor::Barrier();
+  ns_reconcile_d_num(188);
  } // im
 }
 
