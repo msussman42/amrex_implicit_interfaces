@@ -6885,8 +6885,9 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
      xlo,dx,&nmat);
 
  }  // mfi
- ns_reconcile_d_num(155);
 } // omp
+ ns_reconcile_d_num(155);
+
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<nmat;im++) {
    local_delta_mass[0][im]+=local_delta_mass[tid][im];

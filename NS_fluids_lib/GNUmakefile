@@ -98,10 +98,10 @@ FCOMP = gfortran
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI   = TRUE
+USE_MPI   = FALSE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
-USE_OMP = FALSE
+USE_OMP = TRUE
 EBASE = amr
 #EBASE = amrcompute
 

@@ -1725,9 +1725,11 @@ Amr::coarseTimeStep (Real stop_time)
 
     //SUSSMAN
     //in: AMReX_FabArrayBase.cpp
-    FabArrayBase::flushTileArrayCache();
-    FabArrayBase::flushFBCache();
-    FabArrayBase::flushCPCache();
+    if (1==1) {
+     FabArrayBase::flushTileArrayCache();
+     FabArrayBase::flushFBCache();
+     FabArrayBase::flushCPCache();
+    }
 
      // check dt on all the levels.
     if (level_steps[0] > 0) {
