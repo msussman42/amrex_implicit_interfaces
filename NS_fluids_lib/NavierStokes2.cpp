@@ -4078,7 +4078,7 @@ void NavierStokes::apply_pressure_grad(
      (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
-     (project_option==12)||
+     (project_option==12)|| //pressure extrapolation
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
@@ -4453,8 +4453,8 @@ void NavierStokes::apply_pressure_grad(
             (project_option==10)||
             (project_option==11)|| //FSI_material_exists 2nd project
             (project_option==13)|| //FSI_material_exists 1st project
-            (project_option==12)||
-            (project_option==2)||  // thermal diffusion
+            (project_option==12)|| //pressure extrapolation
+            (project_option==2)||  //thermal diffusion
             ((project_option>=100)&&
              (project_option<100+num_species_var))) {
 

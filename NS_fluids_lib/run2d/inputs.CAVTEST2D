@@ -83,7 +83,7 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 ns.visual_option=-2 # -2 for tecplot, -1 for visit
 
-amr.n_cell    = 32 32 
+amr.n_cell    = 64 64 
 amr.max_level =  1
 
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -97,7 +97,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10     # 10 for debug, 100 for production run? 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 32
 #amr.restart         = chk04600
 #amr.trace   =1
 

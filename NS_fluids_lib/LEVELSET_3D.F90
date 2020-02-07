@@ -10473,7 +10473,7 @@ stop
           (project_option.eq.10).or. &
           (project_option.eq.11).or. & ! FSI_material_exists 2nd project
           (project_option.eq.13).or. & ! FSI_material_exists 1st project
-          (project_option.eq.12).or. &
+          (project_option.eq.12).or. & ! pressure extension
           (project_option.eq.2).or. &
           (project_option.ge.3).or. &
           ((project_option.ge.100).and. &
@@ -13037,7 +13037,7 @@ stop
           (project_option.eq.10).or. &
           (project_option.eq.11).or. & !FSI_material_exists 2nd project
           (project_option.eq.13).or. & !FSI_material_exists 1st project
-          (project_option.eq.12).or. &
+          (project_option.eq.12).or. & !pressure extrapolation
           (project_option.eq.2).or. &  ! thermal diffusion
           (project_option.ge.3).or. &  ! viscosity
           ((project_option.ge.100).and. &
@@ -14638,7 +14638,7 @@ stop
               (project_option.eq.10).or. &
               (project_option.eq.11).or. & !FSI_material_exists 2nd project
               (project_option.eq.13).or. & !FSI_material_exists 1st project
-              (project_option.eq.12).or. &
+              (project_option.eq.12).or. & !pressure extrapolation
               (project_option.eq.2).or. &  ! thermal diffusion
               (project_option.ge.3).or. &  ! viscosity
               ((project_option.ge.100).and. &

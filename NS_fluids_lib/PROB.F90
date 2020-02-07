@@ -919,7 +919,7 @@ stop
           (project_option.eq.1).or. &
           (project_option.eq.10).or. &
           (project_option.eq.11).or. &
-          (project_option.eq.12).or. &
+          (project_option.eq.12).or. & ! pressure extrapolation
           (project_option.eq.13).or. &
           (project_option.eq.3).or. &
           (project_option.eq.2).or. &
@@ -1077,7 +1077,7 @@ stop
           (project_option.eq.1).or. &
           (project_option.eq.10).or. &
           (project_option.eq.11).or. &
-          (project_option.eq.12).or. &
+          (project_option.eq.12).or. & ! pressure extrapolation
           (project_option.eq.13).or. &
           (project_option.eq.3).or. &
           (project_option.eq.2).or. &
@@ -20252,9 +20252,10 @@ END SUBROUTINE Adist
            ! do nothing
           else if ((side.eq.1).or.(side.eq.2)) then
            if (local_presbc.eq.INT_DIR) then
-            ! do nothing
-           else if ((local_presbc.eq.EXT_DIR).or. &
-                    (local_presbc.eq.REFLECT_EVEN).or. &
+            ! do nothing (periodic BC)
+           else if (local_presbc.eq.EXT_DIR) then !pressure extrap case
+            ! do nothing (same BC as regular pressue)
+           else if ((local_presbc.eq.REFLECT_EVEN).or. &
                     (local_presbc.eq.FOEXTRAP)) then
             local_wt(veldir)=zero ! pressure extrap case
            else

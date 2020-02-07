@@ -15251,8 +15251,8 @@ NavierStokes::dotSum(int project_option,
      (project_option==10)||
      (project_option==11)|| //FSI_material_exists (2nd project)
      (project_option==13)|| //FSI_material_exists (1st project)
-     (project_option==12)||
-     (project_option==3)) {  // viscosity
+     (project_option==12)|| //pressure extrapolation
+     (project_option==3)) { //viscosity
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
@@ -15392,8 +15392,8 @@ void NavierStokes::levelCombine(
      (project_option==10)||
      (project_option==11)|| //FSI_material_exists (2nd project)
      (project_option==13)|| //FSI_material_exists (1st project)
-     (project_option==12)||
-     (project_option==3)) {  // viscosity
+     (project_option==12)|| //pressure extrapolation
+     (project_option==3)) { //viscosity
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion

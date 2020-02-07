@@ -477,6 +477,10 @@ stop
 
          local_diag=offdiagcheck(D_DECL(i,j,k))
 
+          !at least one adjoining face with both adjoining
+          !cells as fluid cells.
+          !i.e. a fluid cell with at least 1 surrounding fluid
+          !cell.
          if ((local_diag.ge.zero).and. &
              (local_diag.le.two*SDIM-one)) then
           newpres(D_DECL(i,j,k))=savepres(D_DECL(i,j,k))

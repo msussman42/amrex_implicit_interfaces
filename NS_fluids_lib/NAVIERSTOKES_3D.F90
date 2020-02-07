@@ -11637,7 +11637,7 @@ END SUBROUTINE SIMP
           (project_option.eq.10).or. &
           (project_option.eq.13).or. & !FSI_material_exists 1st project
           (project_option.eq.11).or. & !FSI_material_exists 2nd project
-          (project_option.eq.12).or. &
+          (project_option.eq.12).or. & !pressure extrap
           (project_option.eq.2).or. & ! thermal diffusion
           (project_option.eq.3)) then ! viscosity
        ! do nothing
@@ -11750,7 +11750,7 @@ END SUBROUTINE SIMP
              (project_option.eq.10).or. &
              (project_option.eq.11).or. & !FSI_material_exists 2nd project
              (project_option.eq.13).or. & !FSI_material_exists 1st project
-             (project_option.eq.12)) then
+             (project_option.eq.12)) then !pressure extrap.
           if ((nsolve.eq.1).and.(nsolveMM.eq.1).and.(velcomp.eq.0)) then
            veldir=1
            im_vel=1
