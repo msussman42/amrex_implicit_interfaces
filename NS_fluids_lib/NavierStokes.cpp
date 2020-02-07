@@ -9377,11 +9377,13 @@ NavierStokes::correct_density() {
    amrex::Error("DrhoDT mismatch"); 
   if ((DrhoDz[im]!=0.0)&&(override_density[im]==0))
    amrex::Error("DrhoDz mismatch"); 
-  if (override_density[im]==1) {
+  if (override_density[im]==1) { // rho=rho(T,z)
    non_conservative_density=1;
   } else if (override_density[im]==0) {
    // do nothing
-  } else if (override_density[im]==2) {
+
+   // P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
+  } else if (override_density[im]==2) { 
    // do nothing
   } else
    amrex::Error("override density invalid");

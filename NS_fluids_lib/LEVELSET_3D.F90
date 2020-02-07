@@ -6545,7 +6545,7 @@ stop
       REAL_T xstenMAC(-3:3,SDIM)
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
-      INTEGER_T for_hydro
+      INTEGER_T for_hydrostatic_pres
 
       INTEGER_T icurv,icurv_ofs
       INTEGER_T curv_interp_flag
@@ -6577,7 +6577,7 @@ stop
 
 ! INIT_PHYSICS_VARS code starts here:
 
-      for_hydro=0
+      for_hydrostatic_pres=0
 
       nhalf=3
 
@@ -8539,11 +8539,17 @@ stop
 
          delta_mass=denstate(D_DECL(i,j,k),dencomp)*volmat(im)
          voldepart=volmat(im)
+          ! if is_rigid(im), density=fort_denconst(im)
+          ! if incompressible,
+          !   if override_density=0,2 then density=fort_denconst(im)
+          !   if override_density=1 then density=mass_depart/vol_depart
+          ! if compressible,
+          !   density=massdepart/voltarget
          call derive_density( &
           voldepart,voldepart,voltotal, &
           override_density,delta_mass, &
           im,nmat,den, &
-          for_hydro) 
+          for_hydrostatic_pres) 
 
          if (den.le.zero) then
           print *,"density must be positive init_phyiscs_vars2"
@@ -8813,12 +8819,12 @@ stop
       INTEGER_T irefinecen
       REAL_T xsten_recon(-1:1,SDIM)
       REAL_T xsten_donate(-1:1,SDIM)
-      INTEGER_T for_hydro
+      INTEGER_T for_hydrostatic_pres
       REAL_T mu
       REAL_T total_density,evap_den,local_mfrac
       INTEGER_T ispecies,im_species,speccomp
 
-      for_hydro=0
+      for_hydrostatic_pres=0
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -9021,10 +9027,16 @@ stop
             den=denstate(D_DECL(i,j,k),dencomp)
             delta_mass=den*multi_volume(im)
             voldepart=multi_volume(im)
+            ! if is_rigid(im), density=fort_denconst(im)
+            ! if incompressible,
+            !   if override_density=0,2 then density=fort_denconst(im)
+            !   if override_density=1 then density=mass_depart/vol_depart
+            ! if compressible,
+            !   density=massdepart/voltarget
             call derive_density( &
              voldepart,voldepart,voldonate, &
              override_density,delta_mass, &
-             im,nmat,den,for_hydro)
+             im,nmat,den,for_hydrostatic_pres)
  
             total_density=den
 
@@ -12673,7 +12685,7 @@ stop
       INTEGER_T im_vel
       INTEGER_T nsolveMM_FACE_test
       REAL_T test_velocity_FACE
-      INTEGER_T ok_to_interp
+      INTEGER_T ok_to_HO_interp
       INTEGER_T im_solid
       INTEGER_T im_prescribed
       INTEGER_T im_solid_valid
@@ -14797,14 +14809,14 @@ stop
             local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
             maskcov=NINT(maskcoef(D_DECL(i,j,k)))
 
-            ok_to_interp=0
+            ok_to_HO_interp=0
 
              ! local_maskSEM==0 for rigid materials or ice
             if ((local_maskSEM.ge.1).and. &
                 (local_maskSEM.le.nmat).and. &
                 (maskcov.eq.1)) then
 
-             ok_to_interp=1
+             ok_to_HO_interp=1
 
               ! operation_flag=9  density cell -> MAC
              if (operation_flag.eq.9) then
@@ -14814,20 +14826,20 @@ stop
 
                ! rho=rho(T,z)
               else if (override_density(local_maskSEM).eq.1) then
-               ok_to_interp=0
+               ok_to_HO_interp=0
 
                ! temperature dependent buoyancy source term.
               else if (override_density(local_maskSEM).eq.2) then
-               ok_to_interp=0
+               ok_to_HO_interp=0
               else
                print *,"override_density invalid"
                stop
               endif
               imattype=fort_material_type(local_maskSEM)
-              if (imattype.eq.0) then
-               ok_to_interp=0
-              else if (imattype.eq.999) then
-               ok_to_interp=0
+              if (imattype.eq.0) then ! incompressible
+               ok_to_HO_interp=0
+              else if (imattype.eq.999) then ! rigid material
+               ok_to_HO_interp=0
               else if ((imattype.gt.0).and. &
                        (imattype.le.fort_max_num_eos)) then
                ! do nothing
@@ -14846,7 +14858,7 @@ stop
               stop
              endif
 
-             if (ok_to_interp.eq.1) then
+             if (ok_to_HO_interp.eq.1) then
 
               call elementbox(i,j,k,bfact,dir,elemlo,elemhi)
               do ielem=elemlo(1),elemhi(1)
@@ -14984,10 +14996,10 @@ stop
               enddo 
               enddo  ! ielem,jelem,kelem
 
-             else if (ok_to_interp.eq.0) then
+             else if (ok_to_HO_interp.eq.0) then
               ! do nothing
              else
-              print *,"ok_to_interp invalid"
+              print *,"ok_to_HO_interp invalid"
               stop
              endif
 

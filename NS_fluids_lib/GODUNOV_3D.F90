@@ -16594,7 +16594,7 @@ end function delta
       REAL_T warning_cutoff
       INTEGER_T momcomp
       REAL_T u_minimum,u_maximum
-      INTEGER_T for_hydro
+      INTEGER_T for_hydrostatic_pres
 
       INTEGER_T nsolveMM_FACE_test
 
@@ -16614,7 +16614,7 @@ end function delta
     
 ! VFRAC_SPLIT code starts here
 
-      for_hydro=0
+      for_hydrostatic_pres=0
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -18594,10 +18594,16 @@ end function delta
            print *,"local_incomp invalid"
            stop
           endif
+          ! if is_rigid(im), density=fort_denconst(im)
+          ! if incompressible,
+          !   if override_density=0,2 then density=fort_denconst(im)
+          !   if override_density=1 then density=mass_depart/vol_depart
+          ! if compressible,
+          !   density=massdepart/voltarget
           call derive_density(volmat_depart_cor(im), &
            vol_target_local,voltotal_depart, &
            override_density,massdepart,im,nmat, &
-           dencore(im),for_hydro)
+           dencore(im),for_hydrostatic_pres)
           istate=dencomp+(im-1)*num_state_material+1
           if (dencore(im).le.zero) then
            print *,"density must be positive vfrac_split 2"
@@ -19341,7 +19347,7 @@ end function delta
 
       REAL_T warning_cutoff
       INTEGER_T momcomp
-      INTEGER_T for_hydro
+      INTEGER_T for_hydrostatic_pres
 
       INTEGER_T nsolveMM_FACE_test
 
@@ -19391,7 +19397,7 @@ end function delta
     
 ! VFRAC_UNSPLIT code starts here
 
-      for_hydro=0
+      for_hydrostatic_pres=0
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -21429,10 +21435,16 @@ end function delta
             print *,"local_incomp invalid"
             stop
            endif
+           ! if is_rigid(im), density=fort_denconst(im)
+           ! if incompressible,
+           !   if override_density=0,2 then density=fort_denconst(im)
+           !   if override_density=1 then density=mass_depart/vol_depart
+           ! if compressible,
+           !   density=massdepart/voltarget
            call derive_density(volmat_depart(u_im), &
             vol_target_local,voltotal_depart, &
             override_density,massdepart,u_im,nmat, &
-            dencore(u_im),for_hydro)
+            dencore(u_im),for_hydrostatic_pres)
            istate=dencomp+(u_im-1)*num_state_material+1
            if (dencore(u_im).le.zero) then
             print *,"density must be positive vfrac_split 2"

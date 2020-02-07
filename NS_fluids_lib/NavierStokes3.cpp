@@ -10180,7 +10180,8 @@ void NavierStokes::multiphase_project(int project_option) {
      // non-conservative correction to density.
      // if override_density(im)==1,
      // rho_im=rho(z)+drho/dT * (T_im - T0_im)
-     // if override_density(im)=0 or 2, nothing changes
+     // if override_density(im)=0 or 2, nothing changes:
+     //   P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
     ns_level.correct_density();  
 
       // velocity and pressure
@@ -10482,7 +10483,7 @@ void NavierStokes::veldiffuseALL() {
   
   if (convert_temperature==1) {
    combine_flag=0; // FVM -> GFM
-  } else if (convert_temperature==0) {
+  } else if (convert_temperature==0) { //thermal diffusivities all zero
    combine_flag=2;
   } else
    amrex::Error("convert_temperature invalid");
@@ -10553,6 +10554,9 @@ void NavierStokes::veldiffuseALL() {
   } else if (override_density[im]==1) { // rho=rho(T,z)
    // check nothing
   } else if (override_density[im]==2) { // P_hydro=P_hydro(rho(T,Z))
+    // convert_temperature==0 if all thermal diffusivities are zero.
+    // P_hydro is expecting a reasonable temperature defined for each
+    //  separate material?
    if ((convert_temperature==0)&&
        (num_materials_scalar_solve==1))
     amrex::Error("convert_temperature invalid");
