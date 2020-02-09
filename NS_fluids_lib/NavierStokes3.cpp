@@ -7468,6 +7468,11 @@ void NavierStokes::multiphase_GMRES_preconditioner(
  int presmooth,int postsmooth,
  int idx_Z,int idx_R,int nsolve) {
 
+ if (override_bc_to_homogeneous==1) {
+  // do nothing
+ } else
+  amrex::Error("expecting homogeneous mode in preconditioner");
+
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
@@ -7504,137 +7509,166 @@ void NavierStokes::multiphase_GMRES_preconditioner(
             (gmres_precond_iter*nsolveMM<=MAX_GMRES_BUFFER)) {
   int m=gmres_precond_iter*nsolveMM;
 
-  Real* yy=new Real[m];
-
-  Real** HH=new Real*[m+1];
-  for (int i=0;i<m+1;i++) { 
-   HH[i]=new Real[m];
-   for (int j=0;j<m;j++) 
-    HH[i][j]=0.0;
-  }
   Real beta=0.0;
   dot_productALL(project_option,idx_R,idx_R,beta,nsolve);
+
   if (beta>0.0) {
 
    beta=sqrt(beta);
-
-   for (int i=0;i<m;i++) {
     // variables initialized to 0.0
-    allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+i);
-    allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+i);
-   }
-
+   allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF);
    Real aa=1.0/beta;
     // V0=V0+aa R
    mf_combine(project_option,
     GMRES_BUFFER0_V_MF,idx_R,aa,GMRES_BUFFER0_V_MF,nsolve); 
 
-   int m_small=m;
+   int breakdown_free_flag=0;
 
-   for (int j=0;j<m_small;j++) {
-    if (verbose>0) {
-     if (ParallelDescriptor::IOProcessor()) {
-      std::cout << "GMRES project_option= " << project_option <<
+   if (breakdown_free_flag==0) {
+
+    Real* yy=new Real[m];
+
+    Real** HH=new Real*[m+1];
+    for (int i=0;i<m+1;i++) { 
+     HH[i]=new Real[m];
+     for (int j=0;j<m;j++) 
+      HH[i][j]=0.0;
+    }
+
+    for (int i=1;i<m;i++) {
+     // variables initialized to 0.0
+     allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+i);
+    }
+    for (int i=0;i<m;i++) {
+     // variables initialized to 0.0
+     allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+i);
+    }
+
+    int m_small=m;
+
+    for (int j=0;j<m_small;j++) {
+     if (verbose>0) {
+      if (ParallelDescriptor::IOProcessor()) {
+       std::cout << "GMRES project_option= " << project_option <<
 	      " nsolveMM= " << nsolveMM <<
 	      " loop j= " << j << " m= " << m << '\n';
+      }
      }
-    }
-     // variables initialized to 0.0
-    allocate_array(0,nsolveMM,-1,GMRES_BUFFER_W_MF);
+      // variables initialized to 0.0
+     allocate_array(0,nsolveMM,-1,GMRES_BUFFER_W_MF);
 
-     // Z=M^{-1}Vj
-    multiphase_preconditioner(
-     project_option,project_timings,
-     presmooth,postsmooth,
-     GMRES_BUFFER0_Z_MF+j,
-     GMRES_BUFFER0_V_MF+j,nsolve);
-
-     // w=A Z
-    applyALL(project_option,
+      // Z=M^{-1}Vj
+     multiphase_preconditioner(
+      project_option,project_timings,
+      presmooth,postsmooth,
       GMRES_BUFFER0_Z_MF+j,
-      GMRES_BUFFER_W_MF,nsolve);
-    for (int i=0;i<=j;i++) {
-     dot_productALL(project_option,
-      GMRES_BUFFER_W_MF,
-      GMRES_BUFFER0_V_MF+i,HH[i][j],nsolve);
-     aa=-HH[i][j];
-      // W=W+aa Vi
-     mf_combine(project_option,
-      GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
-    } // i=0..j
+      GMRES_BUFFER0_V_MF+j,nsolve);
 
-    dot_productALL(project_option,
-      GMRES_BUFFER_W_MF,
-      GMRES_BUFFER_W_MF,HH[j+1][j],nsolve);
-
-    if (HH[j+1][j]>0.0) {
-     HH[j+1][j]=sqrt(HH[j+1][j]);
-     if ((j>=0)&&(j<m-1)) {
-      aa=1.0/HH[j+1][j];
-       // V=V+aa W
+      // w=A Z
+     applyALL(project_option,
+       GMRES_BUFFER0_Z_MF+j,
+       GMRES_BUFFER_W_MF,nsolve);
+     for (int i=0;i<=j;i++) {
+      dot_productALL(project_option,
+       GMRES_BUFFER_W_MF,
+       GMRES_BUFFER0_V_MF+i,HH[i][j],nsolve);
+      aa=-HH[i][j];
+       // W=W+aa Vi
       mf_combine(project_option,
-       GMRES_BUFFER0_V_MF+j+1,
-       GMRES_BUFFER_W_MF,aa,
-       GMRES_BUFFER0_V_MF+j+1,nsolve); 
-     } else if (j==m-1) {
-      // do nothing
+       GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+     } // i=0..j
+
+     dot_productALL(project_option,
+       GMRES_BUFFER_W_MF,
+       GMRES_BUFFER_W_MF,HH[j+1][j],nsolve);
+
+     if (HH[j+1][j]>0.0) {
+      HH[j+1][j]=sqrt(HH[j+1][j]);
+      if ((j>=0)&&(j<m-1)) {
+       aa=1.0/HH[j+1][j];
+        // V=V+aa W
+       mf_combine(project_option,
+        GMRES_BUFFER0_V_MF+j+1,
+        GMRES_BUFFER_W_MF,aa,
+        GMRES_BUFFER0_V_MF+j+1,nsolve); 
+      } else if (j==m-1) {
+       // do nothing
+      } else
+       amrex::Error("j invalid");
+     } else if (HH[j+1][j]==0.0) {
+      m_small=j;
      } else
-      amrex::Error("j invalid");
-    } else if (HH[j+1][j]==0.0) {
-     m_small=j;
+      amrex::Error("HH[j+1][j] invalid");
+
+     delete_array(GMRES_BUFFER_W_MF);
+    } // j=0..m-1
+  
+    int status=1;
+    setVal_array(1,nsolveMM,0.0,idx_Z);
+
+    if (m_small==m) {
+     int caller_id=1;
+     GMRES_MIN_CPP(HH,beta,yy,m,caller_id,status);
+    } else if ((m_small>=1)&&
+               (m_small<m)) {
+     Real** HH_small=new Real*[m_small+1];
+     for (int i=0;i<m_small+1;i++) { 
+      HH_small[i]=new Real[m_small];
+      for (int j=0;j<m_small;j++) 
+       HH_small[i][j]=HH[i][j];
+     }
+     int caller_id=2;
+     GMRES_MIN_CPP(HH_small,beta,yy,m_small,caller_id,status);
+
+     for (int i=0;i<m_small+1;i++) 
+      delete [] HH_small[i];
+     delete [] HH_small;
+    } else if (m_small==0) {
+      // Z=M^{-1}R
+     multiphase_preconditioner(
+      project_option,project_timings,
+      presmooth,postsmooth,
+      idx_Z,idx_R,nsolve);
+    } else {
+     std::cout << "m_small= " << m_small << '\n';
+     amrex::Error("NavierStokes3.cpp m_small invalid");
+    }
+
+    if (status==1) {
+     for (int j=0;j<m_small;j++) {
+      aa=yy[j];
+       // Z=Z+aa Zj
+      mf_combine(project_option,
+       idx_Z,
+       GMRES_BUFFER0_Z_MF+j,aa,
+       idx_Z,nsolve); 
+     }
     } else
-     amrex::Error("HH[j+1][j] invalid");
+     amrex::Error("status invalid");
 
-    delete_array(GMRES_BUFFER_W_MF);
-   } // j=0..m-1
+    for (int i=1;i<m;i++) {
+     delete_array(GMRES_BUFFER0_V_MF+i); 
+    }
+    for (int i=0;i<m;i++) {
+     delete_array(GMRES_BUFFER0_Z_MF+i); 
+    }
+
+    for (int i=0;i<m+1;i++) 
+     delete [] HH[i];
+    delete [] HH;
+    delete [] yy;
  
-   int status=1;
-   setVal_array(1,nsolveMM,0.0,idx_Z);
+   } else if (breakdown_free_flag==1) {
 
-   if (m_small==m) {
-    int caller_id=1;
-    GMRES_MIN_CPP(HH,beta,yy,m,caller_id,status);
-   } else if ((m_small>=1)&&
-              (m_small<m)) {
-    Real** HH_small=new Real*[m_small+1];
-    for (int i=0;i<m_small+1;i++) { 
-     HH_small[i]=new Real[m_small];
-     for (int j=0;j<m_small;j++) 
-      HH_small[i][j]=HH[i][j];
-    }
-    int caller_id=2;
-    GMRES_MIN_CPP(HH_small,beta,yy,m_small,caller_id,status);
+    int convergence_flag=0;
+    for (int j=0;((j<m)&&(convergence_flag==0));j++) {
 
-    for (int i=0;i<m_small+1;i++) 
-     delete [] HH_small[i];
-    delete [] HH_small;
-   } else if (m_small==0) {
-     // Z=M^{-1}R
-    multiphase_preconditioner(
-     project_option,project_timings,
-     presmooth,postsmooth,
-     idx_Z,idx_R,nsolve);
-   } else {
-    std::cout << "m_small= " << m_small << '\n';
-    amrex::Error("NavierStokes3.cpp m_small invalid");
-   }
+    } // j=0..m-1 (and convergence_flag==0)
 
-   if (status==1) {
-    for (int j=0;j<m_small;j++) {
-     aa=yy[j];
-      // Z=Z+aa Zj
-     mf_combine(project_option,
-      idx_Z,
-      GMRES_BUFFER0_Z_MF+j,aa,
-      idx_Z,nsolve); 
-    }
    } else
-    amrex::Error("status invalid");
+    amrex::Error("breakdown_free_flag invalid");
 
-   for (int i=0;i<m;i++) {
-    delete_array(GMRES_BUFFER0_V_MF+i); 
-    delete_array(GMRES_BUFFER0_Z_MF+i); 
-   }
+   delete_array(GMRES_BUFFER0_V_MF); 
 
   } else if (beta==0.0) {
    multiphase_preconditioner(
@@ -7644,11 +7678,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
   } else
    amrex::Error("beta invalid");
 
-  for (int i=0;i<m+1;i++) 
-   delete [] HH[i];
-  delete [] HH;
-  delete [] yy;
-  
  } else {
   std::cout << "gmres_precond_iter= " << gmres_precond_iter << '\n';
   amrex::Error("NavierStokes3.cpp: gmres_precond_iter invalid");
