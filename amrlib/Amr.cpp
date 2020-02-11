@@ -1725,11 +1725,22 @@ Amr::coarseTimeStep (Real stop_time)
 
     //SUSSMAN
     //in: AMReX_FabArrayBase.cpp
-    if (1==1) {
+    if (1==0) {
      FabArrayBase::flushTileArrayCache();
      FabArrayBase::flushFBCache();
      FabArrayBase::flushCPCache();
     }
+    if (1==1) {
+     if (ParallelDescriptor::IOProcessor()) {
+      FabArrayBase::m_FA_stats.print();
+      FabArrayBase::m_TAC_stats.print();
+      FabArrayBase::m_FBC_stats.print();
+      FabArrayBase::m_CPC_stats.print();
+      FabArrayBase::m_FPinfo_stats.print();
+      FabArrayBase::m_CFinfo_stats.print();
+     }
+    }
+
 
      // check dt on all the levels.
     if (level_steps[0] > 0) {
