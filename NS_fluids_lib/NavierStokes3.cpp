@@ -7522,18 +7522,18 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    mf_combine(project_option,
     GMRES_BUFFER0_V_MF,idx_R,aa,GMRES_BUFFER0_V_MF,nsolve); 
 
+   Real** HH=new Real*[m+1];
+   for (int i=0;i<m+1;i++) { 
+    HH[i]=new Real[m];
+    for (int j=0;j<m;j++) 
+     HH[i][j]=0.0;
+   }
+
    int breakdown_free_flag=0;
 
    if (breakdown_free_flag==0) {
 
     Real* yy=new Real[m];
-
-    Real** HH=new Real*[m+1];
-    for (int i=0;i<m+1;i++) { 
-     HH[i]=new Real[m];
-     for (int j=0;j<m;j++) 
-      HH[i][j]=0.0;
-    }
 
     for (int i=1;i<m;i++) {
      // variables initialized to 0.0
@@ -7568,6 +7568,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      applyALL(project_option,
        GMRES_BUFFER0_Z_MF+j,
        GMRES_BUFFER_W_MF,nsolve);
+
      for (int i=0;i<=j;i++) {
       dot_productALL(project_option,
        GMRES_BUFFER_W_MF,
@@ -7653,20 +7654,84 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      delete_array(GMRES_BUFFER0_Z_MF+i); 
     }
 
-    for (int i=0;i<m+1;i++) 
-     delete [] HH[i];
-    delete [] HH;
     delete [] yy;
  
    } else if (breakdown_free_flag==1) {
 
-    int convergence_flag=0;
-    for (int j=0;((j<m)&&(convergence_flag==0));j++) {
+    Real** GG=new Real*[m+1];
+    for (int i=0;i<m+1;i++) { 
+     GG[i]=new Real[m];
+     for (int j=0;j<m;j++) 
+      GG[i][j]=0.0;
+    }
 
-    } // j=0..m-1 (and convergence_flag==0)
+    int convergence_flag=0;
+    int p_local=-1;
+
+    int j_local=0;
+
+    for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
+
+     // variables initialized to 0.0
+     allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+j_local);
+      // Zj=M^{-1}Vj
+     multiphase_preconditioner(
+      project_option,project_timings,
+      presmooth,postsmooth,
+      GMRES_BUFFER0_Z_MF+j_local,
+      GMRES_BUFFER0_V_MF+j_local,nsolve);
+
+      // variables initialized to 0.0
+     allocate_array(0,nsolveMM,-1,GMRES_BUFFER_W_MF);
+      // w=A Z
+     applyALL(project_option,
+       GMRES_BUFFER0_Z_MF+j_local,
+       GMRES_BUFFER_W_MF,nsolve);
+
+     for (int i=0;i<=j_local;i++) {
+       // H_ij=W dot Vi
+      dot_productALL(project_option,
+       GMRES_BUFFER_W_MF,
+       GMRES_BUFFER0_V_MF+i,HH[i][j_local],nsolve);
+     } // i=0..j_local
+
+     for (int i=0;i<=p_local;i++) {
+       // G_ij=W dot Ui
+      dot_productALL(project_option,
+       GMRES_BUFFER_W_MF,
+       GMRES_BUFFER0_U_MF+i,GG[i][j_local],nsolve);
+     } // i=0..p_local
+
+     for (int i=0;i<=j_local;i++) {
+      aa=-HH[i][j_local];
+       // W=W+aa Vi
+      mf_combine(project_option,
+       GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+     }
+     for (int i=0;i<=p_local;i++) {
+      aa=-GG[i][j_local];
+       // W=W+aa Ui
+      mf_combine(project_option,
+       GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+     }
+     delete_array(GMRES_BUFFER_W_MF);
+
+    } // j_local=0..m-1 (and convergence_flag==0)
+
+    for (int i=0;i<j_local;i++) {
+     delete_array(GMRES_BUFFER0_Z_MF+i); 
+    }
+
+    for (int i=0;i<m+1;i++) 
+     delete [] GG[i];
+    delete [] GG;
 
    } else
     amrex::Error("breakdown_free_flag invalid");
+
+   for (int i=0;i<m+1;i++) 
+    delete [] HH[i];
+   delete [] HH;
 
    delete_array(GMRES_BUFFER0_V_MF); 
 

@@ -231,6 +231,7 @@ protected:
  Vector< Array< MultiFab*, AMREX_SPACEDIM> > bcoefs;
 
  Vector< Array< MultiFab*, 2> > GMRES_V_MF;
+ Vector< Array< MultiFab*, 2> > GMRES_U_MF;
  Vector< Array< MultiFab*, 2> > GMRES_Z_MF;
  Array< MultiFab*, 2> GMRES_W_MF;
  Array< MultiFab*, 2> CG_delta_sol;

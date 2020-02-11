@@ -989,11 +989,13 @@ ABecLaplacian::ABecLaplacian (
  MG_CG_ones_mf_copy.resize(MG_numlevels_var, (MultiFab*)0);
 
  GMRES_V_MF.resize(gmres_max_iter*nsolve_bicgstab);
+ GMRES_U_MF.resize(gmres_max_iter*nsolve_bicgstab);
  GMRES_Z_MF.resize(gmres_max_iter*nsolve_bicgstab);
 
  for (int coarsefine=0;coarsefine<CG_numlevels_var;coarsefine++) {
   for (int m=0;m<gmres_max_iter*nsolve_bicgstab;m++) {
    GMRES_V_MF[m][coarsefine]=(MultiFab*)0;
+   GMRES_U_MF[m][coarsefine]=(MultiFab*)0;
    GMRES_Z_MF[m][coarsefine]=(MultiFab*)0;
   }
   GMRES_W_MF[coarsefine]=(MultiFab*)0;
