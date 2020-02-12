@@ -8,9 +8,6 @@ stop_time =  3.5  # maximum problem time
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0 
 geometry.prob_hi   =  3.0 3.0 3.0 
-# FD_curv_select=0 => height function technique
-# FD_curv_select=1 => finite difference technique
-ns.FD_curv_select=0
 ns.FD_curv_interp=1
 ns.conservative_tension_force=1
 

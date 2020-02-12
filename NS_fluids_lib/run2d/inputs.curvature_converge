@@ -6,9 +6,6 @@ stop_time =  3.5  # maximum problem time
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
-# FD_curv_select=0 => height function technique
-# FD_curv_select=1 => finite difference technique
-ns.FD_curv_select=0
 ns.FD_curv_interp=1
 ns.conservative_tension_force=1
 

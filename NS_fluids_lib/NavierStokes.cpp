@@ -531,7 +531,6 @@ Vector<Real> NavierStokes::microlayer_temperature_substrate;
 
 int NavierStokes::custom_nucleation_model=0;
 
-int NavierStokes::FD_curv_select=0;
 int NavierStokes::FD_curv_interp=1;
 
 Vector<Real> NavierStokes::cavitation_pressure;
@@ -2096,11 +2095,6 @@ NavierStokes::read_params ()
     if ((FD_curv_interp!=0)&&
         (FD_curv_interp!=1))
      amrex::Error("FD_curv_interp invalid");
-
-    pp.query("FD_curv_select",FD_curv_select);
-    if ((FD_curv_select!=0)&&
-        (FD_curv_select!=1))
-     amrex::Error("FD_curv_select invalid");
 
     custom_nucleation_model=0;
     pp.query("custom_nucleation_model",custom_nucleation_model);
@@ -3683,7 +3677,6 @@ NavierStokes::read_params ()
        conservative_div_uu << '\n';
      std::cout << "conservative_tension_force " << 
        conservative_tension_force << '\n';
-     std::cout << "FD_curv_select " << FD_curv_select << '\n';
      std::cout << "FD_curv_interp " << FD_curv_interp << '\n';
 
      std::cout << "hydrate flag " << hydrate_flag << '\n';

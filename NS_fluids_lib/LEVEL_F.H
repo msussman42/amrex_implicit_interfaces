@@ -497,7 +497,6 @@ namespace amrex{
 
       void FORT_INIT_PHYSICS_VARS(
        int* tid,
-       int* FD_curv_select,
        int* FD_curv_interp,
        Real* curv_min,
        Real* curv_max,

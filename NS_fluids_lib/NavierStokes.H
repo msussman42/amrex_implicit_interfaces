@@ -1562,7 +1562,6 @@ protected:
 
     static int custom_nucleation_model;
 
-    static int FD_curv_select; // def==0
     static int FD_curv_interp; // def==1
 
      // index: 1..nmat

@@ -5305,7 +5305,6 @@ void NavierStokes::make_physics_vars(int project_option) {
 
    FORT_INIT_PHYSICS_VARS(
     &tid_current,
-    &FD_curv_select, 
     &FD_curv_interp, 
     &local_curv_min[tid_current],
     &local_curv_max[tid_current],

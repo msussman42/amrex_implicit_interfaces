@@ -35,7 +35,6 @@ ns.slope_limiter_option=1
 ns.advection_order=2 2 1
 ns.continuous_mof=0
 ns.FD_curv_interp=1
-ns.FD_curv_select=0 GET RID OF THIS
 # 0=Sussman and Puckett algorithm 
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE

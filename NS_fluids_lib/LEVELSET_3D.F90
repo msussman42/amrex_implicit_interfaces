@@ -6267,7 +6267,6 @@ stop
 
       subroutine FORT_INIT_PHYSICS_VARS( &
        tid, &
-       FD_curv_select, &
        FD_curv_interp, &
        curv_min, &
        curv_max, &
@@ -6557,7 +6556,6 @@ stop
       INTEGER_T local_maskL,local_maskR,local_masknbr
       INTEGER_T covered_face,coarse_fine_face
       INTEGER_T prescribed_flag
-      INTEGER_T FD_curv_select
       INTEGER_T FD_curv_interp
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T micro_table(nmat,nmat)
@@ -6601,11 +6599,6 @@ stop
       if ((FD_curv_interp.ne.0).and. &
           (FD_curv_interp.ne.1)) then
        print *,"FD_curv_interp invalid"
-       stop
-      endif
-      if ((FD_curv_select.ne.0).and. &
-          (FD_curv_select.ne.1)) then
-       print *,"FD_curv_select invalid"
        stop
       endif
 
@@ -8315,15 +8308,10 @@ stop
 
                 ! inputs.curvature_converge, continuous_mof=2
                 ! March 10, 2018: 1.99, 2.03 RZ 24x48 HT
-                ! March 10, 2018: 1.98, 2.03 RZ 24x48 FD
-                ! March 10, 2018: 0.98, 1.01 XY 24x48 FD
-                ! March 11, 2018: 0.95, 1.05 XY 24x48 FD
-                !                                     FD_curv_interp=0
                 ! March 10, 2018: 1.00, 1.01 XY 24x48 HT
                 ! March 10, 2018: 1.93, 2.07 XYZ 32x32x32 HT
-                ! March 10, 2018: 1.96, 2.04 XYZ 32x32x32 FD
-               if (FD_curv_select.eq.1) then
-
+               if (((im3L.ge.1).and.(im3L.le.nmat)).or. &
+                   ((im3R.ge.1).and.(im3R.le.nmat))) then
                 if (FD_curv_interp.eq.1) then
                  curv_interp_flag=0 ! interpolate curvFD
                 else if (FD_curv_interp.eq.0) then
@@ -8332,19 +8320,8 @@ stop
                  print *,"FD_curv_interp invalid"
                  stop
                 endif 
-
-               else if (FD_curv_select.eq.0) then
-
-                if ((im3L.ne.0).or.(im3R.ne.0)) then
-                 if (FD_curv_interp.eq.1) then
-                  curv_interp_flag=0 ! interpolate curvFD
-                 else if (FD_curv_interp.eq.0) then
-                  curv_interp_flag=5 ! closest curvFD
-                 else
-                  print *,"FD_curv_interp invalid"
-                  stop
-                 endif 
-                else if ((orientL.eq.1).and.(orientR.eq.1)) then
+               else if ((im3L.eq.0).and.(im3R.eq.0)) then
+                if ((orientL.eq.1).and.(orientR.eq.1)) then
                  curv_interp_flag=1 ! closest curvHT
                 else if ((orientL.eq.1).and.(orientR.eq.0)) then
                  curv_interp_flag=2 ! left curvHT
@@ -8356,9 +8333,8 @@ stop
                  print *,"orientL or orientR invalid"
                  stop
                 endif
-
                else
-                print *,"FD_curv_select invalid"
+                print *,"im3L or im3R invalid"
                 stop
                endif
 
