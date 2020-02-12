@@ -7721,7 +7721,9 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
      int condition_number_blowup=0;
      if (HH[j_local+1][j_local]==0.0) {
-      condition_number_blowup=1;
+       // Real** HH   i=0..m  j=0..m-1
+       // active region: i=0..j_local+1  j=0..j_local
+      condition_number_blowup=0;  // placeholder
      } else if (HH[j_local+1][j_local]>0.0) {
       HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
        // Real** HH   i=0..m  j=0..m-1
@@ -7739,12 +7741,47 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
        // do not forget to check for convergence!
 
+     if (convergence_flag==0) {
+
+      if (HH[j_local+1][j_local]>0.0) {
+       if ((j_local>=0)&&(j_local<m-1)) {
+
+        // variables initialized to 0.0
+        allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+j_local+1);
+
+        aa=1.0/HH[j_local+1][j_local];
+         // V=V+aa W
+        mf_combine(project_option,
+         GMRES_BUFFER0_V_MF+j_local+1,
+         GMRES_BUFFER_W_MF,aa,
+         GMRES_BUFFER0_V_MF+j_local+1,nsolve); 
+       } else if (j_local==m-1) {
+        // do nothing
+       } else
+        amrex::Error("j_local invalid");
+      } else if (HH[j_local+1][j_local]==0.0) {
+       amrex::Error("HH[j_local+1][j_local] should not be 0");
+      } else {
+       amrex::Error("HH[j_local+1][j_local] invalid");
+      }
+
+     } else if (convergence_flag==1) {
+      // do nothing
+     } else
+      amrex::Error("convergence_flag invalid");
+
+
+     
+
      delete_array(GMRES_BUFFER_W_MF);
 
     } // j_local=0..m-1 (and convergence_flag==0)
 
     for (int i=0;i<j_local;i++) {
      delete_array(GMRES_BUFFER0_Z_MF+i); 
+    }
+    for (int i=1;i<j_local;i++) {
+     delete_array(GMRES_BUFFER0_V_MF+i); 
     }
 
     for (int i=0;i<m+1;i++) 
