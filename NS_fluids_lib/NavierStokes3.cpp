@@ -7714,6 +7714,31 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       mf_combine(project_option,
        GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
      }
+
+     dot_productALL(project_option,
+       GMRES_BUFFER_W_MF,
+       GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
+
+     int condition_number_blowup=0;
+     if (HH[j_local+1][j_local]==0.0) {
+      condition_number_blowup=1;
+     } else if (HH[j_local+1][j_local]>0.0) {
+      HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
+       // Real** HH   i=0..m  j=0..m-1
+       // active region: i=0..j_local+1  j=0..j_local
+      condition_number_blowup=0;  // placeholder
+     } else
+      amrex::Error("HH[j_local+1][j_local] invalid");
+
+     if (condition_number_blowup==1) {
+
+     } else if (condition_number_blowup==0) {
+      // do nothing
+     } else
+      amrex::Error("condition_number_blowup invalid");
+
+       // do not forget to check for convergence!
+
      delete_array(GMRES_BUFFER_W_MF);
 
     } // j_local=0..m-1 (and convergence_flag==0)
