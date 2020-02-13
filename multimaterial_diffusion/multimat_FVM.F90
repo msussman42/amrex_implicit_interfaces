@@ -2026,6 +2026,12 @@ else if (probtype_in.eq.400) then
 
  call interp_from_fsi(imat,x,y,y,dist,2,probtype_in)
 
+else if (probtype_in.eq.401) then
+
+ center(1)=x
+ center(2)=y
+ call dist_fns_melting_ice(imat,center,dist)
+
 else
  print *,"probtype_in invalid6 ",probtype_in
  stop
@@ -3739,6 +3745,277 @@ integer                     :: i,j
 
 end subroutine polar_2d_heat
 
+subroutine dist_fns_melting_ice(imat,x_in,dist)
+! imat=3, the ice block/ice ball
+! imat=1, liquid
+! imat=2, air
+
+implicit none
+
+integer,parameter                :: iceshape=1  ! 1=round  2=square
+integer,intent(in)               :: imat
+real(kind=8)                     :: x_in(2)
+real(kind=8)                     :: dist
+real(kind=8)                     :: dist1,dist2,dist3,dist4,dist5
+real(kind=8)                     :: xy(2)
+real(kind=8)                     :: x1(2),x2(2),x3(2),x4(2),x5(2)
+real(kind=8)                     :: x6(2),x7(2),x8(2),x9(2)
+real(kind=8)                     :: cc1(2),cc2(2),cc3(2)
+integer                          :: i
+real(kind=8)                     :: signtemp
+real(kind=8)                     :: xvoid(2)
+
+
+
+do i=1,2
+ xy(i) = x_in(i)
+enddo
+
+if(x_in(1) .gt. 0.5d0)then
+ xy(1)=1.0d0-x_in(1) 
+endif
+
+
+if(iceshape.eq.1)then
+
+
+x1(1)=0.5d0       !                        * x1
+x1(2)=0.6d0       !                      *
+x2(1)=0.4d0       !                *   *
+x2(2)=0.5d0       !           x5*    *x2    cc1
+x3(1)=0.5d0       !     cc3    *       * 
+x3(2)=0.5d0       !          *           *  * x6
+x4(1)=0.0d0       !         *      cc2       
+x4(2)=0.2d0       !      x4*                
+x5(1)=0.3d0       ! 
+x5(2)=0.5d0
+x6(1)=0.5d0
+x6(2)=0.4d0         
+
+! centers of the circles 
+cc1(1)=0.5d0
+cc1(2)=0.5d0
+cc2(1)=0.35d0
+cc2(2)=0.5d0-sqrt(0.3d0**2.0-0.05d0**2.0d0)
+cc3(1)=0.0d0
+cc3(2)=0.5d0
+
+
+if(imat.eq.3)then
+ call l2normd(2,xy,x3,dist1)
+ dist=0.1d0-dist1
+elseif(imat.eq.1)then
+ call dist_point_to_arc(xy,x1,x2,cc1,dist1)
+ call dist_point_to_arc(xy,x2,x5,cc2,dist2)
+ call dist_point_to_arc(xy,x4,x5,cc3,dist3)
+ dist=min(dist1,dist2,dist3)
+elseif(imat.eq.2)then
+ call dist_point_to_arc(xy,x2,x6,cc1,dist1)
+ call dist_point_to_arc(xy,x2,x5,cc2,dist2)
+ call dist_point_to_arc(xy,x4,x5,cc3,dist3)
+ dist=min(dist1,dist2,dist3)
+else
+ print *,"imat invalid"
+ stop
+endif
+ 
+if(imat.eq.3)then
+ signtemp=1.0d0
+elseif(imat.eq.1)then
+ if(xy(1).le.0.3d0)then
+  if(xy(2).gt.0.5d0)then
+   signtemp=-1.0d0
+  else
+   call l2normd(2,xy,cc3,dist1)
+   signtemp=dist1-0.3d0
+  endif
+ elseif(xy(1).le.0.4d0)then
+  if(xy(2).gt.0.55d0)then
+   signtemp=-1.0d0
+  elseif(xy(2).lt.0.5d0)then
+   signtemp=1.0d0
+  else
+   call l2normd(2,xy,cc2,dist1)
+   signtemp=0.3d0-dist1
+  endif
+ elseif(xy(1).le.0.5d0)then
+  if(xy(2).gt.0.5d0)then
+   signtemp=-1.0d0
+  else
+   call l2normd(2,xy,cc1,dist1)
+   signtemp=dist1-0.1d0
+  endif
+ else
+  print *,"xy(1) invalid"
+  stop
+ endif
+elseif(imat.eq.2)then
+ if(xy(1).le.0.3d0)then
+  if(xy(2).gt.0.5d0)then
+   signtemp=-1.0d0
+  else
+   call l2normd(2,xy,cc3,dist1)
+   signtemp=dist1-0.3d0
+  endif
+  signtemp=-1.0*signtemp
+ elseif(xy(1).le.0.4d0)then
+  if(xy(2).gt.0.55d0)then
+   signtemp=-1.0d0
+  elseif(xy(2).lt.0.5d0)then
+   signtemp=1.0d0
+  else
+   call l2normd(2,xy,cc2,dist1)
+   signtemp=0.3d0-dist1
+  endif
+  signtemp=-1.0*signtemp
+ elseif(xy(1).le.0.5d0)then
+  if(xy(2).lt.0.5d0)then
+   signtemp=-1.0d0
+  else
+   call l2normd(2,xy,cc1,dist1)
+   signtemp=dist1-0.1d0
+  endif
+ else
+  print *,"xy(1) invalid"
+  stop
+ endif
+
+else
+ print *,"imat invalid"
+ stop
+endif
+
+elseif(iceshape.eq.2)then
+
+x1(1)=0.5d0       !                       x8 * x1
+x1(2)=0.6d0       !                       *
+x2(1)=0.4d0       !                *      *
+x2(2)=0.5d0       !           x5*    * *  x2   x7
+x3(1)=0.5d0       !     cc3    *          * 
+x3(2)=0.5d0       !          *            x9  *x6
+x4(1)=0.0d0       !         *      cc2       
+x4(2)=0.2d0       !      x4*                
+x5(1)=0.3d0       ! 
+x5(2)=0.5d0
+x6(1)=0.5d0
+x6(2)=0.4d0         
+x7(1)=0.5d0
+x7(2)=0.5d0
+x8(1)=0.4d0
+x8(2)=0.6d0
+x9(1)=0.4d0
+x9(2)=0.4d0
+
+! centers of the circles 
+cc2(1)=0.35d0
+cc2(2)=0.5d0-sqrt(0.3d0**2.0-0.05d0**2.0d0)
+cc3(1)=0.0d0
+cc3(2)=0.5d0
+
+
+if(imat.eq.3)then
+ call dist_point_to_line_modify(2,x1,x8,xy,dist1,xvoid)
+ call dist_point_to_line_modify(2,x9,x8,xy,dist2,xvoid)
+ call dist_point_to_line_modify(2,x9,x6,xy,dist3,xvoid)
+ dist=min(dist1,dist2,dist3)
+ if(xy(1).ge.0.4d0.and.xy(2).le.0.6d0.and.xy(2).ge.0.4d0)then
+  !do nothing
+ else
+  dist=-1.0d0*dist
+ endif
+
+elseif(imat.eq.1)then
+ call dist_point_to_arc(xy,x2,x5,cc2,dist2)
+ call dist_point_to_arc(xy,x4,x5,cc3,dist3)
+ call dist_point_to_line_modify(2,x9,x6,xy,dist4,xvoid)
+ call dist_point_to_line_modify(2,x2,x9,xy,dist5,xvoid)
+ dist=min(dist2,dist3,dist4,dist5)
+elseif(imat.eq.2)then
+ call dist_point_to_arc(xy,x2,x5,cc2,dist2)
+ call dist_point_to_arc(xy,x4,x5,cc3,dist3)
+ call dist_point_to_line_modify(2,x2,x8,xy,dist4,xvoid)
+ call dist_point_to_line_modify(2,x1,x8,xy,dist5,xvoid)
+ dist=min(dist2,dist3,dist4,dist5)
+else
+ print *,"imat invalid"
+ stop
+endif
+ 
+if(imat.eq.3)then
+ signtemp=1.0d0
+elseif(imat.eq.1)then
+ if(xy(1).le.0.3d0)then
+  if(xy(2).gt.0.5d0)then
+   signtemp=-1.0d0
+  else
+   call l2normd(2,xy,cc3,dist1)
+   signtemp=dist1-0.3d0
+  endif
+ elseif(xy(1).le.0.4d0)then
+  if(xy(2).gt.0.55d0)then
+   signtemp=-1.0d0
+  elseif(xy(2).lt.0.5d0)then
+   signtemp=1.0d0
+  else
+   call l2normd(2,xy,cc2,dist1)
+   signtemp=0.3d0-dist1
+  endif
+ elseif(xy(1).le.0.5d0)then
+ 
+  if(xy(2).gt.0.4d0)then
+   signtemp=-1.0d0
+  else
+   signtemp=1.0d0
+  endif
+
+ else
+  print *,"xy(1) invalid"
+  stop
+ endif
+elseif(imat.eq.2)then
+ if(xy(1).le.0.3d0)then
+  if(xy(2).gt.0.5d0)then
+   signtemp=-1.0d0
+  else
+   call l2normd(2,xy,cc3,dist1)
+   signtemp=dist1-0.3d0
+  endif
+  signtemp=-1.0*signtemp
+ elseif(xy(1).le.0.4d0)then
+  if(xy(2).gt.0.55d0)then
+   signtemp=-1.0d0
+  elseif(xy(2).lt.0.5d0)then
+   signtemp=1.0d0
+  else
+   call l2normd(2,xy,cc2,dist1)
+   signtemp=0.3d0-dist1
+  endif
+  signtemp=-1.0*signtemp
+ elseif(xy(1).le.0.5d0)then
+  if(xy(2).lt.0.6d0)then
+   signtemp=-1.0d0
+  else
+   signtemp=1.0d0
+  endif
+ else
+  print *,"xy(1) invalid"
+  stop
+ endif
+
+else
+ print *,"imat invalid"
+ stop
+endif
+
+else
+ print *,"iceshape flag invalid"
+ stop
+endif
+
+dist=signtemp*dist
+
+
+end subroutine dist_fns_melting_ice
 
 
 
@@ -3781,6 +4058,8 @@ else if (local_probtype.eq.3) then
 else if (local_probtype.eq.4) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.400) then
+        Uprescribe=0.0d0
+else if (local_probtype.eq.401) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.5) then
         Uprescribe=0.0d0
@@ -3843,6 +4122,8 @@ else if (local_probtype.eq.3) then
 else if (local_probtype.eq.4) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.400) then
+        Vprescribe=0.0d0
+else if (local_probtype.eq.401) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.5) then
         Vprescribe=0.0d0
@@ -4346,6 +4627,10 @@ real(kind=8)              :: radial_slope
    stop
   endif
  else if (probtype_in.eq.400)then
+
+  exact_temperature=0.0d0
+
+ else if (probtype_in.eq.401)then
 
   exact_temperature=0.0d0
 
