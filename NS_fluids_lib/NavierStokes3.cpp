@@ -7664,6 +7664,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      for (int j=0;j<m;j++) 
       GG[i][j]=0.0;
     }
+    int g_rows=0;
+    int g_cols=0;
 
     int convergence_flag=0;
     int p_local=-1;
@@ -7734,6 +7736,20 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
      if (condition_number_blowup==1) {
 
+      p_local++;
+       // variables initialized to 0.0  dir=-1
+      allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_U_MF+p_local);
+       // ngrow,ncomp,idx_dest,idx_source
+      copyALL(0,nsolveMM,GMRES_BUFFER0_U_MF+p_local,
+	      GMRES_BUFFER0_V_MF+j_local);
+
+      if (j_local==0) {
+       // do nothing, G_{j-1} and H^_{j-1} are blank
+      } else if (j_local>0) {
+       // FIX ME
+      } else
+       amrex::Error("j_local invalid");
+      
      } else if (condition_number_blowup==0) {
       // do nothing
      } else
@@ -7782,6 +7798,9 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     }
     for (int i=1;i<j_local;i++) {
      delete_array(GMRES_BUFFER0_V_MF+i); 
+    }
+    for (int i=0;i<=p_local;i++) {
+     delete_array(GMRES_BUFFER0_U_MF+i); 
     }
 
     for (int i=0;i<m+1;i++) 

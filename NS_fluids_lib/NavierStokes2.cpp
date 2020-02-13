@@ -7682,7 +7682,7 @@ void NavierStokes::negateALL(int idx_localMF) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.localMF[idx_localMF]->negate(0,1,ngrow);
  }
-}
+} // end subroutine negateALL
 
 void NavierStokes::zeroALL(int ngrow,int ncomp,int idx_localMF) {
 
@@ -7700,7 +7700,7 @@ void NavierStokes::zeroALL(int ngrow,int ncomp,int idx_localMF) {
 
   ns_level.localMF[idx_localMF]->setVal(0.0,0,ncomp,ngrow);
  }
-}
+} // end subroutine zeroALL
 
 void NavierStokes::allocate_array(int idx_localMF_new,int idx_localMF_old) {
 
@@ -7845,7 +7845,7 @@ void NavierStokes::copyALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
   NavierStokes& ns_level=getLevel(i);
   ns_level.Copy_localMF(idx_dest,idx_source,0,0,ncomp,ngrow);
  }
-} // copyALL
+} // end subroutine copyALL
 
 void NavierStokes::delete_array(int idx_localMF) {
 
