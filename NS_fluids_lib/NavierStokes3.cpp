@@ -7529,6 +7529,23 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      HH[i][j]=0.0;
    }
 
+    // for Zeyus routine:
+    // inputs: 
+    //   double** HH
+    //   integer HH_rows,HH_cols
+    //   integer HH_sub_rows,HH_sub_cols
+    // Another routine for Zeyu?
+    //   given B=[ H
+    //             G ]
+    //   find min_y ||By -beta e1||
+    // inputs:
+    //   double** B
+    //   integer B_rows,B_cols
+    //   integer B_sub_rows,B_sub_cols
+    //  B will be some kind of m+p x m matrix
+    //  and if the algorithm is slower than O(m^2), then
+    //  no need to code, since a Gaussian elimination solver is already
+    //  available.
    int breakdown_free_flag=0;
 
    if (breakdown_free_flag==0) {

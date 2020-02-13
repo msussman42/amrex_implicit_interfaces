@@ -17343,7 +17343,9 @@ NavierStokes::post_init (Real stop_time)
 
 // HH is m+1 x m
 // yy is m x 1
-// solve H^T H y = H^T beta e1 
+// solve H^T H y = H^T beta e1  (slow, since H is m+1xm  H^T H is mxm
+//   Gaussian elimination for mxm system has a cost of O(m^3))
+//  Givens' rotation approach has a cost of O(m^2)
 //  ( min_y ||Hy - beta e1|| )
 // status==1 success
 // status==0 failure
