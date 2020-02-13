@@ -7746,7 +7746,18 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       if (j_local==0) {
        // do nothing, G_{j-1} and H^_{j-1} are blank
       } else if (j_local>0) {
-       // FIX ME
+       if (p_local==0) {
+        g_rows=1;
+        g_cols=j_local;
+       } else if ((p_local>0)&&(p_local<=j_local)) {
+        g_rows++;
+        if (g_cols==j_local) {
+         // do nothing
+        } else
+         amrex::Error("expecting g_cols==j_local");
+       } else
+        amrex::Error("p_local invalid");
+
       } else
        amrex::Error("j_local invalid");
       
