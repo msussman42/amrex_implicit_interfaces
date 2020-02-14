@@ -7707,6 +7707,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        GMRES_BUFFER0_Z_MF+j_local,
        GMRES_BUFFER_W_MF,nsolve);
 
+      // H_j is a j+2 x j+1 matrix  j=0..m-1
      for (int i=0;i<=j_local;i++) {
        // H_ij=W dot Vi
       dot_productALL(project_option,
@@ -7714,6 +7715,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        GMRES_BUFFER0_V_MF+i,HH[i][j_local],nsolve);
      } // i=0..j_local
 
+      // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
      for (int i=0;i<=p_local;i++) {
        // G_ij=W dot Ui
       dot_productALL(project_option,
@@ -7734,6 +7736,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
      }
 
+      // H_j is a j+2 x j+1 matrix  j=0..m-1
      dot_productALL(project_option,
        GMRES_BUFFER_W_MF,
        GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
@@ -7756,7 +7759,16 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       copyALL(0,nsolveMM,GMRES_BUFFER0_U_MF+p_local,
 	      GMRES_BUFFER0_V_MF+j_local);
 
-      
+      if (j_local==0) {
+	     // do nothing
+      } else if ((j_local>=1)&&(j_local<m)) {
+       for (int i=0;i<j_local;i++) {
+        GG[p_local][i]=HH[j_local][i];
+	HH[j_local][i]=0.0;
+       }
+      } else
+       amrex::Error("j_local invalid");
+
      } else if (condition_number_blowup==0) {
       // do nothing
      } else
