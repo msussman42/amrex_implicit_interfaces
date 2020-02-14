@@ -1244,7 +1244,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    fort_time_radblob(3)=0.0d0
 
     ! max_front_vel
-   if (abs(latent_heat(5).gt.0.0d0) then
+   if (abs(latent_heat(5)).gt.0.0d0) then
+     ! FOR YANG: bound on initial speed is 
+     ! abs(TDIFF_in)*(k_water + k_ice)/(L_{ice,water} * h)
     max_front_vel=abs(TDIFF_in)* &
       (fort_heatviscconst(1)+fort_heatviscconst(3))/abs(latent_heat(5))
     if (max_front_vel.gt.0.0d0) then
@@ -1488,6 +1490,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    CALL INIT_V(N_CURRENT,xCC,yCC,probtype_in,iten,scomp,sdim_in,T)
  enddo
 
+  ! STEP 0 FOR YANG: initial time step
  if (fixed_dt_current.eq.0.0) then
     if (max_front_vel.gt.0.0d0) then
      deltat_in = h_in*0.25d0/max_front_vel
@@ -1560,7 +1563,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
   print *,"M_MAX_TIME_STEP or M_CURRENT invalid"
   stop
  endif
-
+ 
+    ! STEP 1 FOR YANG: initialize zeroeth and first order moments
+    ! STEP 2 FOR YANG: initialize levelset functions
     ! in: multimat_FVM.F90
     ! init_vfncen calls:
     !  AdaptQuad_2d  (in multimat_FVM.F90)
@@ -1602,6 +1607,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       subcycling_step)
  endif
 
+  ! STEP 3: Initialize Temperature
  do i= -1,N_CURRENT
  do j= -1,N_CURRENT
 
@@ -1845,6 +1851,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  iter_average=0.0d0
 
+! STEP 4: TIME LOOP
 ! BEGIN TIME LOOP - ABOVE INITIALIZATION
 !                   BELOW INTEGRATION IN TIME
 
@@ -1948,6 +1955,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      enddo
     endif
 
+     ! STEP 5: FOR YANG
+     ! diffusion with saturation temperature dirichlet boundary
+     ! condition.
     call bicgstab(UNEW_in,hflag,iter)
 
     iter_average=iter_average+iter

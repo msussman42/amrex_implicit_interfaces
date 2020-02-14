@@ -2339,6 +2339,8 @@ else if (probtype_in.eq.4) then
 
 else if (probtype_in.eq.400) then
         ! call dist_concentric
+else if (probtype_in.eq.401) then
+        ! call dist_concentric
 else if (probtype_in.eq.5) then
 
  my=0.0d0
@@ -2714,7 +2716,7 @@ implicit none
 integer       ,intent(in)  :: nmat_in,iin,jin,probtype_in
 real(kind=8)               :: vf(nmat_in)
 real(kind=8)               :: vcheck
-integer                    :: i
+integer                    :: i,justtwo,im,im_opp
 
 if ((probtype_in.eq.0).or. &
     (probtype_in.eq.2).or. &
@@ -2740,6 +2742,47 @@ if ((probtype_in.eq.0).or. &
   stop
  endif
 
+else if (probtype_in.eq.401) then ! melting ice
+
+ if (nmat_in.ne.3) then
+  print *,"nmat_in invalid"
+  stop
+ endif
+
+ justtwo=0
+ do im=1,3
+  if (vf(im).eq.0.0d0) then
+   justtwo=1
+   vcheck=0.0d0
+   do im_opp=1,3 
+    if (im_opp.ne.im) then
+     vcheck=vcheck+vf(im_opp)
+    endif
+   enddo
+   if (vcheck.gt.0.0d0) then
+    do im_opp=1,3 
+     if (im_opp.ne.im) then
+      vf(im_opp)=vf(im_opp)/vcheck
+     endif
+    enddo
+   else
+    print *,"vcheck invalid"
+    stop
+   endif
+  endif
+ enddo
+ if (justtwo.eq.0) then
+  vcheck=vf(1)+vf(2)+vf(3)
+  if (vcheck.gt.0.0d0) then
+   do im_opp=1,3 
+    vf(im_opp)=vf(im_opp)/vcheck
+   enddo
+  else
+   print *,"vcheck invalid"
+   stop
+  endif
+ endif
+  
 else if ((probtype_in.eq.1).or. &
          (probtype_in.eq.13).or. &
          (probtype_in.eq.19)) then
@@ -2988,6 +3031,8 @@ else if (probtype_in.eq.4) then
  ! do nothing
 else if (probtype_in.eq.400) then
  ! do nothing
+else if (probtype_in.eq.401) then
+ ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
 elseif(probtype_in .eq. 15)then   
@@ -3121,6 +3166,8 @@ else if (probtype_in.eq.3) then
 else if (probtype_in.eq.4) then
  ! do nothing
 else if (probtype_in.eq.400) then
+ ! do nothing
+else if (probtype_in.eq.401) then
  ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
@@ -3432,6 +3479,16 @@ real(kind=8) :: radial_slope
    stop
   endif
  else if (probtype_in.eq.400) then
+  if (im.eq.1) then
+   G_in=0.0
+  else if (im.eq.2) then
+   G_in=0.0
+  else
+   print *,"im invalid 4"
+   stop
+  endif
+
+ else if (probtype_in.eq.401) then
   if (im.eq.1) then
    G_in=0.0
   else if (im.eq.2) then

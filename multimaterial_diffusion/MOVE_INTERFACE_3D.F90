@@ -522,6 +522,8 @@ stop
        endif
       else if (probtype.eq.400) then
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
+      else if (probtype.eq.401) then
+       call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.5) then
        ! material 1: left  material 2: right
        LS=0.2d0+time-xblob
@@ -628,7 +630,8 @@ stop
       else if ((probtype.eq.19).or. &
                (probtype.eq.13).or. &
                (probtype.eq.1).or. &
-               (probtype.eq.400)) then
+               (probtype.eq.400).or. &
+               (probtype.eq.401)) then
        h_opt=1.0D-6
        dir=1
        call dist_concentric(im,xgrid(1)+h_opt,xgrid(2),LSp1,probtype)
@@ -742,6 +745,22 @@ stop
       else if (probtype.eq.400) then
 
        if (iten.eq.1) then
+        test_front_vel=0.0d0
+        VEL(1)=0.0d0
+        VEL(2)=0.0d0
+       else
+        print *,"iten invalid (get exact vel 2)"
+        print *,"iten=",iten
+        print *,"probtype=",probtype
+        stop
+       endif
+
+      else if (probtype.eq.401) then
+        ! 1=liquid 2=gas 3=ice
+        ! 12 13 23 21 31 32
+        ! 31 -> ice to liquid
+        ! 12 -> liquid to gas
+       if ((iten.eq.1).or.(iten.eq.5)) then
         test_front_vel=0.0d0
         VEL(1)=0.0d0
         VEL(2)=0.0d0

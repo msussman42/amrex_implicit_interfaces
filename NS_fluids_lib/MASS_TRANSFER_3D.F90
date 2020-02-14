@@ -4022,6 +4022,9 @@ stop
 
               found_path=0
 
+               ! FOR YANG:
+               ! BOTH LEVELSET FUNCTIONS WITHIN 2 dx of interface and
+               ! at least one of them is positive.
                ! note: is_rigid(nmat,im_primary).eq.0 so we are not in 
                ! a solid material.
               if ((abs(LShere(im_source)).le.two*dxmaxLS).and. &
@@ -4036,6 +4039,8 @@ stop
                if ((LShere(im_dest).ge.zero).or. &
                    (LShere(im_source).ge.zero)) then
 
+                 ! FOR YANG: use closest point map generated using VAHAB'S
+                 !  multimaterial redistancing algorithm.
                 if (LShere(im_dest).ge.zero) then
                  LS_pos=LShere(im_source)
                  do dir=1,SDIM
