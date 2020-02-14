@@ -7522,6 +7522,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    mf_combine(project_option,
     GMRES_BUFFER0_V_MF,idx_R,aa,GMRES_BUFFER0_V_MF,nsolve); 
 
+    // H_j is a j+2 x j+1 matrix  j=0..m-1
    Real** HH=new Real*[m+1];
    for (int i=0;i<m+1;i++) { 
     HH[i]=new Real[m];
@@ -7675,14 +7676,13 @@ void NavierStokes::multiphase_GMRES_preconditioner(
  
    } else if (breakdown_free_flag==1) {
 
+     // G_j is a p(j)+1 x j+1 matrix   j=0..m-1
     Real** GG=new Real*[m+1];
     for (int i=0;i<m+1;i++) { 
      GG[i]=new Real[m];
      for (int j=0;j<m;j++) 
       GG[i][j]=0.0;
     }
-    int g_rows=0;
-    int g_cols=0;
 
     int convergence_flag=0;
     int p_local=-1;
@@ -7739,11 +7739,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
 
      int condition_number_blowup=0;
-     if (HH[j_local+1][j_local]==0.0) {
-       // Real** HH   i=0..m  j=0..m-1
-       // active region: i=0..j_local+1  j=0..j_local
-      condition_number_blowup=0;  // placeholder
-     } else if (HH[j_local+1][j_local]>0.0) {
+     if (HH[j_local+1][j_local]>=0.0) {
       HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
        // Real** HH   i=0..m  j=0..m-1
        // active region: i=0..j_local+1  j=0..j_local
@@ -7760,23 +7756,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       copyALL(0,nsolveMM,GMRES_BUFFER0_U_MF+p_local,
 	      GMRES_BUFFER0_V_MF+j_local);
 
-      if (j_local==0) {
-       // do nothing, G_{j-1} and H^_{j-1} are blank
-      } else if (j_local>0) {
-       if (p_local==0) {
-        g_rows=1;
-        g_cols=j_local;
-       } else if ((p_local>0)&&(p_local<=j_local)) {
-        g_rows++;
-        if (g_cols==j_local) {
-         // do nothing
-        } else
-         amrex::Error("expecting g_cols==j_local");
-       } else
-        amrex::Error("p_local invalid");
-
-      } else
-       amrex::Error("j_local invalid");
       
      } else if (condition_number_blowup==0) {
       // do nothing
@@ -7813,9 +7792,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       // do nothing
      } else
       amrex::Error("convergence_flag invalid");
-
-
-     
 
      delete_array(GMRES_BUFFER_W_MF);
 
