@@ -7760,7 +7760,9 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 	      GMRES_BUFFER0_V_MF+j_local);
 
       if (j_local==0) {
-	     // do nothing
+	// do nothing
+        // G_j-1 is a p(j-1)+1 x j matrix  j=0..m-1
+        // H_j-1 is a j+1 x j matrix  j=0..m-1
       } else if ((j_local>=1)&&(j_local<m)) {
        for (int i=0;i<j_local;i++) {
         GG[p_local][i]=HH[j_local][i];
@@ -7812,6 +7814,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     for (int i=0;i<j_local;i++) {
      delete_array(GMRES_BUFFER0_Z_MF+i); 
     }
+      // GMRES_BUFFER0_V_MF+0 deleted after if statement.
     for (int i=1;i<j_local;i++) {
      delete_array(GMRES_BUFFER0_V_MF+i); 
     }
