@@ -7771,6 +7771,75 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       } else
        amrex::Error("j_local invalid");
 
+      int max_vhat_sweeps=10;
+      int vhat_counter=0;
+      for (vhat_counter=0;((vhat_counter<max_vhat_sweeps)&&
+			   (condition_number_blowup==1));vhat_counter++) {
+
+       setVal_array(0,nsolveMM,1.0,GMRES_BUFFER0_V_MF+j_local);
+       project_right_hand_side(GMRES_BUFFER0_V_MF+j_local,
+		     project_option,change_flag);
+        // v_i dot v_j = 0 i=0..j-1
+	// u_p dot v_j = 0
+	// for i=0..j-1
+	//  v_j = v_j - (vj,vi)vi/(vi,vi)
+
+       double vj_dot_vi=0.0;
+       double vi_dot_vi=0.0;
+       for (int i=0;i<=j_local;i++) {
+        int idx_vi;
+        if ((i>=0)&&(i<j_local)) {
+         idx_vi=GMRES_BUFFER0_V_MF+i;
+        } else if (i==j_local) {
+         idx_vi=GMRES_BUFFER0_U_MF+p_local;
+        } else
+         amrex::Error("i invalid");
+
+        dot_productALL(project_option,
+         idx_vi,
+         GMRES_BUFFER0_V_MF+j_local,vj_dot_vi,nsolve);
+        dot_productALL(project_option,
+         idx_vi,
+         idx_vi,vi_dot_vi,nsolve);
+	if (vi_dot_vi>0.0) {
+         aa=-vj_dot_vi/vi_dot_vi;
+          // vj=vj+aa vi
+         mf_combine(project_option,
+           GMRES_BUFFER0_V_MF+j_local,idx_vi,aa,
+	   GMRES_BUFFER0_V_MF+j_local,nsolve); 
+	} else
+ 	 amrex::Error("vi_dot_vi==0.0");
+       } // i=0..j_local
+       dot_productALL(project_option,
+        GMRES_BUFFER0_V_MF+j_local,
+        GMRES_BUFFER0_V_MF+j_local,vi_dot_vi,nsolve);
+       if (vi_dot_vi>0.0) {
+        aa=1.0/vi_dot_vi;
+        mult_array(0,nsolveMM,aa,GMRES_BUFFER0_V_MF+j_local);
+       } else
+        amrex::Error("vi_dot_vi==0.0 (renormalization)");
+
+        // Zj=M^{-1}Vj
+       multiphase_preconditioner(
+         project_option,project_timings,
+         presmooth,postsmooth,
+         GMRES_BUFFER0_Z_MF+j_local,
+         GMRES_BUFFER0_V_MF+j_local,nsolve);
+
+         // w=A Z
+       applyALL(project_option,
+         GMRES_BUFFER0_Z_MF+j_local,
+         GMRES_BUFFER_W_MF,nsolve);
+         // continue hj=...
+
+      } // vhat_counter loop
+      if (vhat_counter==max_vhat_sweeps) {
+       amrex::Error("vhat_counter==max_vhat_sweeps");
+      } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
+       // do nothing
+      } else
+       amrex::Error("vhat_counter invalid");
+
      } else if (condition_number_blowup==0) {
       // do nothing
      } else

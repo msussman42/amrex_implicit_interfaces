@@ -7666,7 +7666,7 @@ void NavierStokes::getStateALL(int ngrow,Real time,int scomp,
   ns_level.localMF_grow[idx_localMF]=ngrow;
  }
 
-}
+} // end subroutine getStateALL
 
 
 void NavierStokes::negateALL(int idx_localMF) {
@@ -7718,7 +7718,7 @@ void NavierStokes::allocate_array(int idx_localMF_new,int idx_localMF_old) {
  int dir=-1;
  allocate_array(ngrow,ncomp,dir,idx_localMF_new);
  copyALL(ngrow,ncomp,idx_localMF_new,idx_localMF_old);
-}
+}  // end subroutine allocate_array
 
 void NavierStokes::allocate_array(int ngrow,int ncomp,int dir,
   int idx_localMF) {
@@ -7833,7 +7833,7 @@ void NavierStokes::mult_array(int ngrow,int ncomp,Real dataval,
   NavierStokes& ns_level=getLevel(i);
   ns_level.localMF[idx_localMF]->mult(dataval,0,ncomp,ngrow);
  }
-} 
+}  // end subroutine mult_array
 
 void NavierStokes::copyALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
 

@@ -15100,12 +15100,12 @@ void NavierStokes::project_right_hand_side(
   } else
    amrex::Error("finest_level invalid");
 
- } else if (project_option==2) {
+ } else if (project_option==2) { // thermal diffusion
   if (singular_possible==0) {
    // do nothing
   } else
    amrex::Error("singular_possible invalid");
- } else if (project_option==3) {
+ } else if (project_option==3) {  // viscosity
   if (singular_possible==0) {
    // do nothing
   } else
