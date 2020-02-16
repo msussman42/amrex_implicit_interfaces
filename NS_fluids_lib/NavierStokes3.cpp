@@ -7530,6 +7530,9 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      HH[i][j]=0.0;
    }
 
+   Real* yy=new Real[m];
+   int status=1;
+
     // for Zeyus routine:
     // inputs: 
     //   double** HH
@@ -7550,8 +7553,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    int breakdown_free_flag=0;
 
    if (breakdown_free_flag==0) {
-
-    Real* yy=new Real[m];
 
     for (int i=1;i<m;i++) {
      // variables initialized to 0.0
@@ -7622,7 +7623,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      delete_array(GMRES_BUFFER_W_MF);
     } // j=0..m-1
   
-    int status=1;
+    status=1;
     setVal_array(1,nsolveMM,0.0,idx_Z);
 
     if (m_small==m) {
@@ -7672,8 +7673,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      delete_array(GMRES_BUFFER0_Z_MF+i); 
     }
 
-    delete [] yy;
- 
    } else if (breakdown_free_flag==1) {
 
      // G_j is a p(j)+1 x j+1 matrix   j=0..m-1
@@ -7682,6 +7681,13 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      GG[i]=new Real[m];
      for (int j=0;j<m;j++) 
       GG[i][j]=0.0;
+    }
+
+    Real** HHGG=new Real*[2*(m+1)];
+    for (int i=0;i<2*(m+1);i++) { 
+     HHGG[i]=new Real[m];
+     for (int j=0;j<m;j++) 
+      HHGG[i][j]=0.0;
     }
 
     int convergence_flag=0;
@@ -7830,13 +7836,58 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        applyALL(project_option,
          GMRES_BUFFER0_Z_MF+j_local,
          GMRES_BUFFER_W_MF,nsolve);
-         // continue hj=...
+
+        // H_j is a j+2 x j+1 matrix  j=0..m-1
+       for (int i=0;i<=j_local;i++) {
+        // H_ij=W dot Vi
+        dot_productALL(project_option,
+          GMRES_BUFFER_W_MF,
+          GMRES_BUFFER0_V_MF+i,HH[i][j_local],nsolve);
+       } // i=0..j_local
+
+        // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
+       for (int i=0;i<=p_local;i++) {
+        // G_ij=W dot Ui
+        dot_productALL(project_option,
+         GMRES_BUFFER_W_MF,
+         GMRES_BUFFER0_U_MF+i,GG[i][j_local],nsolve);
+       } // i=0..p_local
+
+       for (int i=0;i<=j_local;i++) {
+        aa=-HH[i][j_local];
+         // W=W+aa Vi
+        mf_combine(project_option,
+         GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+       }
+       for (int i=0;i<=p_local;i++) {
+        aa=-GG[i][j_local];
+         // W=W+aa Ui
+        mf_combine(project_option,
+         GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+       }
+
+        // H_j is a j+2 x j+1 matrix  j=0..m-1
+       dot_productALL(project_option,
+         GMRES_BUFFER_W_MF,
+         GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
+
+       condition_number_blowup=0;
+       if (HH[j_local+1][j_local]>=0.0) {
+        HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
+         // Real** HH   i=0..m  j=0..m-1
+         // active region: i=0..j_local+1  j=0..j_local
+        condition_number_blowup=0;  // placeholder
+       } else
+        amrex::Error("HH[j_local+1][j_local] invalid");
 
       } // vhat_counter loop
       if (vhat_counter==max_vhat_sweeps) {
        amrex::Error("vhat_counter==max_vhat_sweeps");
       } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
-       // do nothing
+       if (condition_number_blowup==0) {
+        // do nothing
+       } else
+        amrex::Error("condition_number_blowup invalid");
       } else
        amrex::Error("vhat_counter invalid");
 
@@ -7844,6 +7895,33 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       // do nothing
      } else
       amrex::Error("condition_number_blowup invalid");
+
+      // H_j is a j+2 x j+1 matrix j=0..m-1
+      // G_j is a p(j)+1 x j+1 matrix j=0..m-1
+     for (int i1=0;i1<=j_local+1;i1++) {
+      for (int i2=0;i2<=j_local;i2++) {
+       HHGG[i1][i2]=HH[i1][i2];
+      }
+     }
+     for (int i1=0;i1<=p_local;i1++) {
+      for (int i2=0;i2<=j_local;i2++) {
+       HHGG[i1][i2]=GG[i1][i2];
+      }
+     }
+     status=1;
+     setVal_array(1,nsolveMM,0.0,idx_Z);
+      // CALL ZEYU's least squares routine here
+     if (status==1) {
+      for (int i2=0;i2<=j_local;i2++) {
+       aa=yy[i2];
+        // Z=Z+aa Z_{i2}
+       mf_combine(project_option,
+        idx_Z,
+        GMRES_BUFFER0_Z_MF+i2,aa,
+        idx_Z,nsolve); 
+      }
+     } else
+      amrex::Error("status invalid");
 
        // do not forget to check for convergence!
 
@@ -7895,8 +7973,14 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      delete [] GG[i];
     delete [] GG;
 
+    for (int i=0;i<2*(m+1);i++) 
+     delete [] HHGG[i];
+    delete [] HHGG;
+
    } else
     amrex::Error("breakdown_free_flag invalid");
+
+   delete [] yy;
 
    for (int i=0;i<m+1;i++) 
     delete [] HH[i];
