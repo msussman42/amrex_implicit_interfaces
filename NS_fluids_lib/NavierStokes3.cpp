@@ -7509,14 +7509,18 @@ void NavierStokes::multiphase_GMRES_preconditioner(
             (gmres_precond_iter*nsolveMM<=MAX_GMRES_BUFFER)) {
   int m=gmres_precond_iter*nsolveMM;
 
+  Real GMRES_tol=1.0e-10;
   Real beta=0.0;
   dot_productALL(project_option,idx_R,idx_R,beta,nsolve);
 
   if (beta>0.0) {
 
    beta=sqrt(beta);
+
     // variables initialized to 0.0
    allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF);
+   allocate_array(0,nsolveMM,-1,GMRES_BUFFER_W_MF);
+
    Real aa=1.0/beta;
     // V0=V0+aa R
    mf_combine(project_option,
@@ -7573,8 +7577,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 	      " loop j= " << j << " m= " << m << '\n';
       }
      }
-      // variables initialized to 0.0
-     allocate_array(0,nsolveMM,-1,GMRES_BUFFER_W_MF);
 
       // Z=M^{-1}Vj
      multiphase_preconditioner(
@@ -7620,7 +7622,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      } else
       amrex::Error("HH[j+1][j] invalid");
 
-     delete_array(GMRES_BUFFER_W_MF);
     } // j=0..m-1
   
     status=1;
@@ -7706,8 +7707,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       GMRES_BUFFER0_Z_MF+j_local,
       GMRES_BUFFER0_V_MF+j_local,nsolve);
 
-      // variables initialized to 0.0
-     allocate_array(0,nsolveMM,-1,GMRES_BUFFER_W_MF);
       // w=A Z
      applyALL(project_option,
        GMRES_BUFFER0_Z_MF+j_local,
@@ -7923,7 +7922,29 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      } else
       amrex::Error("status invalid");
 
-       // do not forget to check for convergence!
+      // residALL calls applyALL which calls 
+      // project_right_hand_side(idx_Z).
+      // At end end of residALL, 
+      // project_right_hand_side(W) is called.
+     residALL(project_option,
+       idx_R, // rhs
+       GMRES_BUFFER_W_MF, // resid
+       idx_Z, // source
+       nsolve);
+     Real beta_compare=0.0;
+     dot_productALL(project_option,
+	GMRES_BUFFER_W_MF, 
+	GMRES_BUFFER_W_MF,beta_compare,nsolve);
+     if (beta_compare>=0.0) {
+      beta_compare=sqrt(beta_compare);
+      if (beta_compare<=GMRES_tol*beta) {
+       convergence_flag=1;
+      } else if (beta_compare>GMRES_tol*beta) {
+       convergence_flag=0;
+      } else
+       amrex::Error("beta_compare invalid");
+     } else
+      amrex::Error("beta_compare invalid");
 
      if (convergence_flag==0) {
 
@@ -7953,8 +7974,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       // do nothing
      } else
       amrex::Error("convergence_flag invalid");
-
-     delete_array(GMRES_BUFFER_W_MF);
 
     } // j_local=0..m-1 (and convergence_flag==0)
 
@@ -7987,6 +8006,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    delete [] HH;
 
    delete_array(GMRES_BUFFER0_V_MF); 
+   delete_array(GMRES_BUFFER_W_MF);
 
   } else if (beta==0.0) {
    multiphase_preconditioner(
