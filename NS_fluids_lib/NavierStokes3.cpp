@@ -27,6 +27,7 @@
 #include <SOLIDFLUID_F.H>
 #include <DERIVE_F.H>
 #include <DIFFUSION_F.H>
+#include <Zeyu_Matrix_Functions.H>
 
 namespace amrex{
 
@@ -7676,6 +7677,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
    } else if (breakdown_free_flag==1) {
 
+    Real breakdown_tol=1.0e-8;
+
      // G_j is a p(j)+1 x j+1 matrix   j=0..m-1
     Real** GG=new Real*[m+1];
     for (int i=0;i<m+1;i++) { 
@@ -7746,12 +7749,27 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        GMRES_BUFFER_W_MF,
        GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
 
+     double local_tol=breakdown_tol;
+     if (p_local>=0) {
+      local_tol/=pow(10.0,2*p_local);
+     } else if (p_local==-1) {
+      // do nothing
+     } else
+      amrex::Error("p_local invalid");
+
      int condition_number_blowup=0;
      if (HH[j_local+1][j_local]>=0.0) {
       HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
        // Real** HH   i=0..m  j=0..m-1
        // active region: i=0..j_local+1  j=0..j_local
-      condition_number_blowup=0;  // placeholder
+      double zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+      if (zeyu_condnum>1.0/local_tol) { 
+       condition_number_blowup=1;  
+      } else if (zeyu_condnum<=1.0/local_tol) {
+       condition_number_blowup=0;  
+      } else
+       amrex::Error("zeyu_condnum NaN");
+
      } else
       amrex::Error("HH[j_local+1][j_local] invalid");
 
@@ -7875,7 +7893,15 @@ void NavierStokes::multiphase_GMRES_preconditioner(
         HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
          // Real** HH   i=0..m  j=0..m-1
          // active region: i=0..j_local+1  j=0..j_local
-        condition_number_blowup=0;  // placeholder
+         
+        double zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+        if (zeyu_condnum>1.0/local_tol) { 
+         condition_number_blowup=1;  
+        } else if (zeyu_condnum<=1.0/local_tol) {
+         condition_number_blowup=0;  
+        } else
+         amrex::Error("zeyu_condnum NaN");
+         
        } else
         amrex::Error("HH[j_local+1][j_local] invalid");
 

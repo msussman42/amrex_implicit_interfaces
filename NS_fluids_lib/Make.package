@@ -12,8 +12,8 @@ CEXE_sources += \
        MacProj.cpp Diffusion.cpp
 CEXE_headers += NavierStokes.H 
 
-#CEXE_sources += Zeyu_Matrix.cpp
-#CEXE_headers += Zeyu_Matrix.H 
+CEXE_sources += Zeyu_Matrix_Functions.cpp
+CEXE_headers += Zeyu_Matrix_Functions.H 
 
 F90EXE_headers += \
   tetrahedron_keast_rule.F90 \
