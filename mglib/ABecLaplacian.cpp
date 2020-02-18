@@ -2469,7 +2469,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
      GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
      GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-    } 
+    } // j=1..m 
 
     int m_small=m;
 
@@ -2585,6 +2585,72 @@ ABecLaplacian::pcg_GMRES_solve(
    } else if (breakdown_free_flag==1) {
 
     Real breakdown_tol=1.0e-8;
+
+     // G_j is a p(j)+1 x j+1 matrix   j=0..m-1
+    Real** GG=new Real*[m+1];
+    for (int i=0;i<m+1;i++) { 
+     GG[i]=new Real[m];
+     for (int j=0;j<m;j++) 
+      GG[i][j]=0.0;
+    }
+
+    Real** HHGG=new Real*[2*(m+1)];
+    for (int i=0;i<2*(m+1);i++) { 
+     HHGG[i]=new Real[m];
+     for (int j=0;j<m;j++) 
+      HHGG[i][j]=0.0;
+    }
+
+    int convergence_flag=0;
+    int p_local=-1;
+
+    int j_local=0;
+
+    for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
+
+     if (j_local>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
+      GMRES_Z_MF[j_local][coarsefine]=
+        new MultiFab(gbox[level],dmap_array[level],
+                     nsolve_bicgstab,nghostSOLN,
+                     MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
+     }
+
+     GMRES_Z_MF[j_local][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+
+     GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+
+      // Zj=M^{-1}Vj
+     pcg_solve(
+      GMRES_Z_MF[j_local][coarsefine],
+      GMRES_V_MF[j_local][coarsefine],
+      eps_abs,bot_atol,
+      pbdryhom_in,
+      bcpres_array,
+      usecg_at_bottom,
+      smooth_type,bottom_smooth_type,
+      presmooth,postsmooth,
+      use_PCG,
+      level);
+
+     // w=A Z
+     apply(*GMRES_W_MF[coarsefine],
+          *GMRES_Z_MF[j_local][coarsefine],
+          level,*pbdryhom_in,bcpres_array);
+
+    } // j_local=0..m-1 (and convergence_flag==0)
+
+    for (int i=gmres_precond_iter_base_mg*nsolve_bicgstab;i<j_local;i++) {
+     delete GMRES_Z_MF[i][coarsefine];
+     GMRES_Z_MF[i][coarsefine]=(MultiFab*)0;
+    }
+
+    for (int i=0;i<m+1;i++) 
+     delete [] GG[i];
+    delete [] GG;
+
+    for (int i=0;i<2*(m+1);i++) 
+     delete [] HHGG[i];
+    delete [] HHGG;
 
    } else
     amrex::Error("breakdown_free_flag invalid");
