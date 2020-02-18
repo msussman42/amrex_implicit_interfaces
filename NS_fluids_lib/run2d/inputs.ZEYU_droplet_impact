@@ -119,7 +119,7 @@ ns.vinletgas=0.0
 #ns.advbot=77.0 # Yongsheng
 ns.advbot=298.0 # Kensuke
 ns.adv_vel=0.0
-ns.adv_dir=1       # inflow in x-direction
+ns.adv_dir=2       # inflow direction in the falling drop direction.
 # 0.0 0.4 Yongsheng
 # 0.0 0.1053027 Kensuke
 ns.xblob=0.0  # center of falling droplet

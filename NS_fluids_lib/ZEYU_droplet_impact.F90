@@ -77,8 +77,8 @@ if ((num_materials.eq.3).and.(probtype.eq.413)) then
  else if (SDIM.eq.2) then
   LS(1)=radblob-sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
  else
-         print *,"dimension bust"
-         stop
+  print *,"dimension bust"
+  stop
  endif
  LS(2)=-LS(1)
 
@@ -91,17 +91,16 @@ endif
 return
 end subroutine ZEYU_droplet_impact_LS
 
-PASS MESH PARAMETER HERE
-subroutine ZEYU_droplet_impact_LS_VEL(x,t,LS,VEL,velsolid_flag)
+subroutine ZEYU_droplet_impact_LS_VEL(x,t,LS,VEL,velsolid_flag,dx)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T x(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T VEL(SDIM)
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T velsolid_flag
+INTEGER_T, intent(in) :: velsolid_flag
 
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
@@ -111,37 +110,47 @@ else
  stop
 endif
 
- if (adv_dir.eq.1) then
+if (adv_dir.eq.SDIM) then
 
-  if ((LS(2).ge.zero).or. &
-      (velsolid_flag.eq.1)) then
-   ! in solid
+  ! material 3 is the substrate
+ if ((LS(3).ge.zero).or.(velsolid_flag.eq.1)) then
+  ! in solid
+  do dir=1,SDIM
+   VEL(dir)=zero
+  enddo
+ else if ((LS(3).le.zero).and. &
+          (velsolid_flag.eq.0)) then
+
+     ! material 1 is the drop
+  if ((LS(1).ge.zero).or. &
+      (LS(1).ge.-dx(1)) then
+   ! in drop
+   do dir=1,SDIM
+    VEL(dir)=-abs(advbot)
+   enddo
+  else if (LS(2).ge.zero) then ! material 2 is the gas
+
    do dir=1,SDIM
     VEL(dir)=zero
    enddo
-  else if ((LS(2).le.zero).and. &
-           (velsolid_flag.eq.0)) then
-   VEL(1)=adv_vel
-   do dir=2,SDIM
-    VEL(dir)=zero
-   enddo
+
   else
-   print *,"LS(2) bust"
+   print *,"LS bust"
    stop
   endif
-
  else
-  print *,"expecting adv_dir = 1 in CAV2Dstep_VEL"
+  print *,"LS(3) or velsolid bust"
   stop
  endif
 
 else
- print *,"adv_dir invalid in CAV2Dstep_VEL"
+ print *,"expecting adv_dir = SDIM in ZEYU_droplet_impact_LS_VEL"
  stop
 endif
 
+
 return 
-end subroutine CAV2Dstep_VEL
+end subroutine ZEYU_droplet_impact_LS_VEL
 
 subroutine CAV2Dstep_PRES(x,t,LS,PRES)
 use probcommon_module

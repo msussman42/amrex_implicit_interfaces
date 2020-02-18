@@ -1897,9 +1897,9 @@ stop
                   xminus(dir)=xminus(dir)-half*dx(dir)
 
                   call velsolid(xplus(1),xplus(2),xplus(SDIM), &
-                   velplus,time,im_solid_crit)
+                   velplus,time,im_solid_crit,dx)
                   call velsolid(xminus(1),xminus(2),xminus(SDIM), &
-                   velminus,time,im_solid_crit)
+                   velminus,time,im_solid_crit,dx)
                   do veldir=1,SDIM
                    gradu(veldir,dir)= &
                     (velplus(veldir)-velminus(veldir))/dx(dir)

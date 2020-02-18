@@ -14384,7 +14384,7 @@ END SUBROUTINE Adist
        !  subroutine mask_velocity
        !  subroutine FORT_INITDATASOLID
        !  subroutine FORT_GETDRAG 
-      subroutine velsolid(x,y,z,vel,time,im)
+      subroutine velsolid(x,y,z,vel,time,im,dx)
       use global_distance_module
       use probcommon_module
       use USERDEF_module
@@ -14396,10 +14396,11 @@ END SUBROUTINE Adist
       use WAVY_Channel_module
       IMPLICIT NONE
 
-      INTEGER_T im
+      INTEGER_T, intent(in) :: im
       INTEGER_T dir
-      REAL_T x,y,z,time
-      REAL_T vel(SDIM)
+      REAL_T, intent(in) :: x,y,z,time
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(out) :: vel(SDIM)
       REAL_T areacross
       REAL_T tadv,dist
       REAL_T LS(num_materials)
@@ -14458,6 +14459,8 @@ END SUBROUTINE Adist
         call CAV2Dstep_LS(xvec,time,LS)
         call CAV2Dstep_VEL(xvec,time,LS,vel,velsolid_flag)
 
+       else if (probtype.eq.413) then ! ZEYU droplet impact
+        ! pass dx
        else if (probtype.eq.311) then ! user defined
         call USERDEF_LS(xvec,time,LS)
         call USERDEF_VEL(xvec,time,LS,vel,velsolid_flag)
@@ -18471,7 +18474,7 @@ END SUBROUTINE Adist
        if (is_prescribed(nmat,im).eq.1) then
         if (is_rigid(nmat,im).eq.1) then
          if (VOF(im).gt.zero) then
-          call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),velcell,time,im)
+          call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),velcell,time,im,dx)
          endif
         else
          print *,"is_rigid(nmat,im) invalid"
@@ -25254,6 +25257,8 @@ END SUBROUTINE Adist
         call CAV2Dstep_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
 
+       else if (probtype.eq.413) then ! ZEYU droplet impact
+        ! pass dx
        else if (probtype.eq.533) then
         call rigid_FSI_LS(xvec,time,local_LS)
         call rigid_FSI_VEL_BC(xwall,xvec,time,local_LS, &
@@ -33963,7 +33968,7 @@ end subroutine initialize2d
          if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
           call materialdistsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
             distsolid,time,im) 
-          call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),vel,time,im)
+          call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),vel,time,im,dx)
           call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
            temp_solid_mat,time,im)
           solid(D_DECL(i,j,k),ibase+4)=distsolid
@@ -40114,6 +40119,9 @@ end subroutine initialize2d
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)
+
+        else if (probtype.eq.413) then ! ZEYU droplet impact
+         ! pass dx
 
         else if (probtype.eq.533) then
          call rigid_FSI_LS(xvec,time,distbatch)
