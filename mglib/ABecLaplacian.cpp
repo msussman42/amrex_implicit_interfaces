@@ -2390,6 +2390,11 @@ ABecLaplacian::pcg_GMRES_solve(
  } else
   amrex::Error("nsolve_bicgstab invalid");
 
+ if (gmres_precond_iter_base_mg>=1) {
+  // do nothing
+ } else
+  amrex::Error("gmres_precond_iter_base_mg invalid");
+
  int coarsefine=0;
  if (level==0) {
   coarsefine=0;
@@ -2421,15 +2426,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
   int m=nsolve_bicgstab*gmres_precond_iter;
 
-  Real* yy=new Real[m];
-
-  Real** HH=new Real*[m+1];
-  for (int i=0;i<m+1;i++) { 
-   HH[i]=new Real[m];
-   for (int j=0;j<m;j++) 
-    HH[i][j]=0.0;
-  }
-
+  Real GMRES_tol=1.0e-10;
   Real beta=0.0;
   LP_dot(*r_in,*r_in,level,beta);
 
@@ -2437,135 +2434,166 @@ ABecLaplacian::pcg_GMRES_solve(
 
    beta=sqrt(beta);
 
-   for (int j=0;j<m;j++) {
-    if (j>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
-     GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-       nsolve_bicgstab,nghostRHS,
-       MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
-     GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-       nsolve_bicgstab,nghostSOLN,
-       MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
-    }
-
-    GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-    GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-   } 
+   GMRES_V_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+   GMRES_Z_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
    Real aa=1.0/beta;
     // V0=V0+aa R
    CG_advance((*GMRES_V_MF[0][coarsefine]),aa,
               (*GMRES_V_MF[0][coarsefine]),(*r_in),level);
 
-   int m_small=m;
+    // H_j is a j+2 x j+1 matrix  j=0..m-1
+   Real** HH=new Real*[m+1];
+   for (int i=0;i<m+1;i++) { 
+    HH[i]=new Real[m];
+    for (int j=0;j<m;j++) 
+     HH[i][j]=0.0;
+   }
 
-   for (int j=0;j<m_small;j++) {
-    GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+   Real* yy=new Real[m];
+   int status=1;
 
-     // Zj=M^{-1}Vj
-    pcg_solve(
-     GMRES_Z_MF[j][coarsefine],
-     GMRES_V_MF[j][coarsefine],
-     eps_abs,bot_atol,
-     pbdryhom_in,
-     bcpres_array,
-     usecg_at_bottom,
-     smooth_type,bottom_smooth_type,
-     presmooth,postsmooth,
-     use_PCG,
-     level);
+   int breakdown_free_flag=0;
+
+   if (breakdown_free_flag==0) {
+
+    for (int j=1;j<m;j++) {
+     if (j>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
+      GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+       nsolve_bicgstab,nghostRHS,
+       MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
+      GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+       nsolve_bicgstab,nghostSOLN,
+       MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
+     }
+
+     GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+     GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+    } 
+
+    int m_small=m;
+
+    for (int j=0;j<m_small;j++) {
+     GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+
+      // Zj=M^{-1}Vj
+     pcg_solve(
+      GMRES_Z_MF[j][coarsefine],
+      GMRES_V_MF[j][coarsefine],
+      eps_abs,bot_atol,
+      pbdryhom_in,
+      bcpres_array,
+      usecg_at_bottom,
+      smooth_type,bottom_smooth_type,
+      presmooth,postsmooth,
+      use_PCG,
+      level);
 
      // w=A Z
-    apply(*GMRES_W_MF[coarsefine],
+     apply(*GMRES_W_MF[coarsefine],
           *GMRES_Z_MF[j][coarsefine],
           level,*pbdryhom_in,bcpres_array);
-    for (int i=0;i<=j;i++) {
+     for (int i=0;i<=j;i++) {
+      LP_dot(*GMRES_W_MF[coarsefine],
+             *GMRES_V_MF[i][coarsefine],level,HH[i][j]);
+
+      aa=-HH[i][j];
+       // W=W+aa Vi
+      CG_advance((*GMRES_W_MF[coarsefine]),aa,
+                 (*GMRES_W_MF[coarsefine]),
+                 (*GMRES_V_MF[i][coarsefine]),level);
+     } // i=0..j
+
      LP_dot(*GMRES_W_MF[coarsefine],
-            *GMRES_V_MF[i][coarsefine],level,HH[i][j]);
+            *GMRES_W_MF[coarsefine],level,HH[j+1][j]);
 
-     aa=-HH[i][j];
-      // W=W+aa Vi
-     CG_advance((*GMRES_W_MF[coarsefine]),aa,
-                (*GMRES_W_MF[coarsefine]),
-                (*GMRES_V_MF[i][coarsefine]),level);
-    } // i=0..j
+     if (HH[j+1][j]>0.0) {
+      HH[j+1][j]=sqrt(HH[j+1][j]);
+      if ((j>=0)&&(j<m-1)) {
+       aa=1.0/HH[j+1][j];
+        // V=V+aa W
+       CG_advance((*GMRES_V_MF[j+1][coarsefine]),aa,
+                  (*GMRES_V_MF[j+1][coarsefine]),
+                  (*GMRES_W_MF[coarsefine]),level);
+      } else if (j==m-1) {
+       // do nothing
+      } else
+       amrex::Error("j invalid");
+     } else if (HH[j+1][j]==0.0) {
+      m_small=j;
+     } else {
+      std::cout << "HH[j+1][j]= " << HH[j+1][j] << '\n';
+      amrex::Error("HH[j+1][j] invalid");
+     }
 
-    LP_dot(*GMRES_W_MF[coarsefine],
-           *GMRES_W_MF[coarsefine],level,HH[j+1][j]);
+    } // j=0..m-1
+ 
+    status=1;
+    z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
-    if (HH[j+1][j]>0.0) {
-     HH[j+1][j]=sqrt(HH[j+1][j]);
-     if ((j>=0)&&(j<m-1)) {
-      aa=1.0/HH[j+1][j];
-       // V=V+aa W
-      CG_advance((*GMRES_V_MF[j+1][coarsefine]),aa,
-                 (*GMRES_V_MF[j+1][coarsefine]),
-                 (*GMRES_W_MF[coarsefine]),level);
-     } else if (j==m-1) {
-      // do nothing
-     } else
-      amrex::Error("j invalid");
-    } else if (HH[j+1][j]==0.0) {
-     m_small=j;
+    if (m_small==m) {
+     int caller_id=3;
+     GMRES_MIN_CPP(HH,beta,yy,m,caller_id,status);
+    } else if ((m_small>=1)&&
+               (m_small<m)) {
+     Real** HH_small=new Real*[m_small+1];
+     for (int i=0;i<m_small+1;i++) { 
+      HH_small[i]=new Real[m_small];
+      for (int j=0;j<m_small;j++) 
+       HH_small[i][j]=HH[i][j];
+     }
+     int caller_id=4;
+     GMRES_MIN_CPP(HH_small,beta,yy,m_small,caller_id,status);
+
+     for (int i=0;i<m_small+1;i++) 
+      delete [] HH_small[i];
+     delete [] HH_small;
+    } else if (m_small==0) {
+     // Z=M^{-1}R
+     pcg_solve(
+      z_in,r_in,
+      eps_abs,bot_atol,
+      pbdryhom_in,
+      bcpres_array,
+      usecg_at_bottom,
+      smooth_type,bottom_smooth_type,
+      presmooth,postsmooth,
+      use_PCG,
+      level);
     } else {
-     std::cout << "HH[j+1][j]= " << HH[j+1][j] << '\n';
-     amrex::Error("HH[j+1][j] invalid");
+     std::cout << "m_small= " << m_small << '\n';
+     amrex::Error("CGSolver.cpp m_small invalid");
     }
-
-   } // j=0..m-1
  
-   int status=1;
-   z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+    if (status==1) {
+     for (int j=0;j<m_small;j++) {
+      aa=yy[j];
+       // Z=Z+aa Zj
+      CG_advance((*z_in),aa,(*z_in),
+                 (*GMRES_Z_MF[j][coarsefine]),level);
+     }
+    } else
+     amrex::Error("status invalid");
 
-   if (m_small==m) {
-    int caller_id=3;
-    GMRES_MIN_CPP(HH,beta,yy,m,caller_id,status);
-   } else if ((m_small>=1)&&
-              (m_small<m)) {
-    Real** HH_small=new Real*[m_small+1];
-    for (int i=0;i<m_small+1;i++) { 
-     HH_small[i]=new Real[m_small];
-     for (int j=0;j<m_small;j++) 
-      HH_small[i][j]=HH[i][j];
+    for (int j=gmres_precond_iter_base_mg*nsolve_bicgstab;j<m;j++) {
+     delete GMRES_V_MF[j][coarsefine];
+     delete GMRES_Z_MF[j][coarsefine];
+     GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
+     GMRES_Z_MF[j][coarsefine]=(MultiFab*)0;
     }
-    int caller_id=4;
-    GMRES_MIN_CPP(HH_small,beta,yy,m_small,caller_id,status);
 
-    for (int i=0;i<m_small+1;i++) 
-     delete [] HH_small[i];
-    delete [] HH_small;
-   } else if (m_small==0) {
-    // Z=M^{-1}R
-    pcg_solve(
-     z_in,r_in,
-     eps_abs,bot_atol,
-     pbdryhom_in,
-     bcpres_array,
-     usecg_at_bottom,
-     smooth_type,bottom_smooth_type,
-     presmooth,postsmooth,
-     use_PCG,
-     level);
-   } else {
-    std::cout << "m_small= " << m_small << '\n';
-    amrex::Error("CGSolver.cpp m_small invalid");
-   }
- 
-   if (status==1) {
-    for (int j=0;j<m_small;j++) {
-     aa=yy[j];
-      // Z=Z+aa Zj
-     CG_advance((*z_in),aa,(*z_in),
-                (*GMRES_Z_MF[j][coarsefine]),level);
-    }
+   } else if (breakdown_free_flag==1) {
+
+    Real breakdown_tol=1.0e-8;
+
    } else
-    amrex::Error("status invalid");
+    amrex::Error("breakdown_free_flag invalid");
 
-   for (int j=gmres_precond_iter_base_mg*nsolve_bicgstab;j<m;j++) {
-    delete GMRES_V_MF[j][coarsefine];
-    delete GMRES_Z_MF[j][coarsefine];
-    GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
-    GMRES_Z_MF[j][coarsefine]=(MultiFab*)0;
-   }
+   delete [] yy;
+
+   for (int i=0;i<m+1;i++) 
+    delete [] HH[i];
+   delete [] HH;
 
   } else if (beta==0.0) {
 
@@ -2583,12 +2611,6 @@ ABecLaplacian::pcg_GMRES_solve(
 
   } else
    amrex::Error("beta invalid");
-
-  for (int i=0;i<m+1;i++) 
-   delete [] HH[i];
-  delete [] HH;
-
-  delete [] yy;
   
  } else {
   std::cout << "gmres_precond_iter= " << gmres_precond_iter << '\n';
