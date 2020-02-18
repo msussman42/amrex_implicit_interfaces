@@ -156,11 +156,14 @@ stop
       return
       end subroutine adjust_du
 
-       ! cc_flag=0  centroid -> center
+       ! cc_flag=0  centroid -> center or some other target "xtarget"
        ! cc_flag=1  center -> centroid
        ! tsat_flag=-1 use all cells in the stencil
        ! tsat_flag=0 no tsat
        ! tsat_flag=1 tsat
+       ! if normal probe is target: xtarget = xprobe
+       ! if centroid to center: xtarget = xcenter
+       ! if center to centroid: xtarget = xcentroid
       subroutine center_centroid_interchange( &
        nsolve, &
        cc_flag, &
@@ -211,7 +214,7 @@ stop
       REAL_T BB(SDIM+1)
       REAL_T BBcopy(SDIM+1)
       REAL_T xtemp(SDIM)
-      REAL_T xtarget(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
       REAL_T xbase(SDIM)
       REAL_T xlive(SDIM)
       REAL_T delx(SDIM+1)
@@ -1134,6 +1137,7 @@ stop
       cc_flag=0  ! centroid -> target
       tsat_flag=1 ! use TSAT
       nsolve=1
+       ! YANG LIUs routine
       call center_centroid_interchange( &
        nsolve, &
        cc_flag, &
