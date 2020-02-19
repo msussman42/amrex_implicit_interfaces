@@ -1145,13 +1145,17 @@ ABecLaplacian::ABecLaplacian (
    GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
     nsolve_bicgstab,nghostRHS,
     MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
+   GMRES_U_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostRHS,
+    MFInfo().SetTag("GMRES_U_MF"),FArrayBoxFactory()); 
    GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
     nsolve_bicgstab,nghostSOLN,
     MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
 
    GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+   GMRES_U_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
    GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-  }
+  } //j=0;j<gmres_precond_iter_base_mg*nsolve_bicgstab
   GMRES_W_MF[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
    nsolve_bicgstab,nghostRHS,
    MFInfo().SetTag("GMRES_W_MF"),FArrayBoxFactory());
@@ -1283,6 +1287,8 @@ ABecLaplacian::~ABecLaplacian ()
   for (int j=0;j<gmres_precond_iter_base_mg*nsolve_bicgstab;j++) {
    delete GMRES_V_MF[j][coarsefine];
    GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
+   delete GMRES_U_MF[j][coarsefine];
+   GMRES_U_MF[j][coarsefine]=(MultiFab*)0;
    delete GMRES_Z_MF[j][coarsefine];
    GMRES_Z_MF[j][coarsefine]=(MultiFab*)0;
   }
@@ -2493,6 +2499,7 @@ ABecLaplacian::pcg_GMRES_solve(
      apply(*GMRES_W_MF[coarsefine],
           *GMRES_Z_MF[j][coarsefine],
           level,*pbdryhom_in,bcpres_array);
+
      for (int i=0;i<=j;i++) {
       LP_dot(*GMRES_W_MF[coarsefine],
              *GMRES_V_MF[i][coarsefine],level,HH[i][j]);
@@ -2637,11 +2644,315 @@ ABecLaplacian::pcg_GMRES_solve(
           *GMRES_Z_MF[j_local][coarsefine],
           level,*pbdryhom_in,bcpres_array);
 
+      // H_j is a j+2 x j+1 matrix  j=0..m-1
+     for (int i=0;i<=j_local;i++) {
+       // H_ij=W dot Vi
+      LP_dot(*GMRES_W_MF[coarsefine],
+	     *GMRES_V_MF[i][coarsefine],level,HH[i][j_local]);
+     } // i=0..j_local
+
+      // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
+     for (int i=0;i<=p_local;i++) {
+       // G_ij=W dot Ui
+      LP_dot(*GMRES_W_MF[coarsefine],
+	     *GMRES_U_MF[i][coarsefine],level,GG[i][j_local]);
+     } // i=0..p_local
+
+     for (int i=0;i<=j_local;i++) {
+      aa=-HH[i][j_local];
+       // W=W+aa Vi
+      CG_advance((*GMRES_W_MF[coarsefine]),aa,
+                 (*GMRES_W_MF[coarsefine]),
+                 (*GMRES_V_MF[i][coarsefine]),level);
+     }
+     for (int i=0;i<=p_local;i++) {
+      aa=-GG[i][j_local];
+       // W=W+aa Ui
+      CG_advance((*GMRES_W_MF[coarsefine]),aa,
+                 (*GMRES_W_MF[coarsefine]),
+                 (*GMRES_U_MF[i][coarsefine]),level);
+     }
+
+      // H_j is a j+2 x j+1 matrix  j=0..m-1
+     LP_dot(*GMRES_W_MF[coarsefine],
+            *GMRES_W_MF[coarsefine],level,HH[j_local+1][j_local]);
+
+     double local_tol=breakdown_tol;
+     if (p_local>=0) {
+      local_tol/=pow(10.0,2*p_local);
+     } else if (p_local==-1) {
+      // do nothing
+     } else
+      amrex::Error("p_local invalid");
+
+     int condition_number_blowup=0;
+     if (HH[j_local+1][j_local]>=0.0) {
+      HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
+       // Real** HH   i=0..m  j=0..m-1
+       // active region: i=0..j_local+1  j=0..j_local
+      double zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+      if (zeyu_condnum>1.0/local_tol) { 
+       condition_number_blowup=1;  
+      } else if (zeyu_condnum<=1.0/local_tol) {
+       condition_number_blowup=0;  
+      } else
+       amrex::Error("zeyu_condnum NaN");
+
+     } else
+      amrex::Error("HH[j_local+1][j_local] invalid");
+
+     if (condition_number_blowup==1) {
+
+      p_local++;
+       // variables initialized to 0.0  
+      if (p_local>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
+       GMRES_U_MF[p_local][coarsefine]=
+	 new MultiFab(gbox[level],dmap_array[level],
+                      nsolve_bicgstab,nghostRHS,
+                      MFInfo().SetTag("GMRES_U_MF"),FArrayBoxFactory()); 
+      }
+      GMRES_U_MF[p_local][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+    
+      MultiFab::Copy(*GMRES_U_MF[p_local][coarsefine],
+		     GMRES_V_MF[j_local][coarsefine],0,0,
+		     nsolve_bicgstab,nghostRHS);
+
+      if (j_local==0) {
+	// do nothing
+        // G_j-1 is a p(j-1)+1 x j matrix  j=0..m-1
+        // H_j-1 is a j+1 x j matrix  j=0..m-1
+      } else if ((j_local>=1)&&(j_local<m)) {
+       for (int i=0;i<j_local;i++) {
+        GG[p_local][i]=HH[j_local][i];
+	HH[j_local][i]=0.0;
+       }
+      } else
+       amrex::Error("j_local invalid");
+
+      int max_vhat_sweeps=10;
+      int vhat_counter=0;
+      for (vhat_counter=0;((vhat_counter<max_vhat_sweeps)&&
+			   (condition_number_blowup==1));vhat_counter++) {
+
+       GMRES_V_MF[j_local][coarsefine]->setVal(1.0,0,nsolve_bicgstab,nghostRHS);
+       project_null_space((*GMRES_V_MF[j_local][coarsefine]),level);
+        // v_i dot v_j = 0 i=0..j-1
+	// u_p dot v_j = 0
+	// for i=0..j-1
+	//  v_j = v_j - (vj,vi)vi/(vi,vi)
+
+       double vj_dot_vi=0.0;
+       double vi_dot_vi=0.0;
+       for (int i=0;i<=j_local;i++) {
+	MultiFab* vi_MF;
+        if ((i>=0)&&(i<j_local)) {
+         vi_MF=GMRES_V_MF[i][coarsefine];
+        } else if (i==j_local) {
+         vi_MF=GMRES_U_MF[p_local][coarsefine];
+        } else
+         amrex::Error("i invalid");
+
+        LP_dot(*vi_MF,
+               *GMRES_V_MF[j_local][coarsefine],
+	       level,vj_dot_vi);
+        LP_dot(*vi_MF,
+               *vi_MF,
+	       level,vi_dot_vi);
+	if (vi_dot_vi>0.0) {
+         aa=-vj_dot_vi/vi_dot_vi;
+          // vj=vj+aa vi
+         CG_advance((*GMRES_V_MF[j_local][coarsefine]),aa,
+                    (*GMRES_V_MF[j_local][coarsefine]),
+                    *vi_MF,level);
+	} else
+ 	 amrex::Error("vi_dot_vi==0.0");
+       } // i=0..j_local
+       LP_dot((*GMRES_V_MF[j_local][coarsefine]),
+              (*GMRES_V_MF[j_local][coarsefine])
+	       level,vi_dot_vi);
+       if (vi_dot_vi>0.0) {
+        aa=1.0/vi_dot_vi;
+	GMRES_V_MF[j_local][coarsefine]->mult(aa,0,nsolve_bicgstab,nghostRHS);
+       } else
+        amrex::Error("vi_dot_vi==0.0 (renormalization)");
+
+       FIX ME STARTING HERE
+        // Zj=M^{-1}Vj
+       multiphase_preconditioner(
+         project_option,project_timings,
+         presmooth,postsmooth,
+         GMRES_BUFFER0_Z_MF+j_local,
+         GMRES_BUFFER0_V_MF+j_local,nsolve);
+
+         // w=A Z
+       applyALL(project_option,
+         GMRES_BUFFER0_Z_MF+j_local,
+         GMRES_BUFFER_W_MF,nsolve);
+
+        // H_j is a j+2 x j+1 matrix  j=0..m-1
+       for (int i=0;i<=j_local;i++) {
+        // H_ij=W dot Vi
+        dot_productALL(project_option,
+          GMRES_BUFFER_W_MF,
+          GMRES_BUFFER0_V_MF+i,HH[i][j_local],nsolve);
+       } // i=0..j_local
+
+        // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
+       for (int i=0;i<=p_local;i++) {
+        // G_ij=W dot Ui
+        dot_productALL(project_option,
+         GMRES_BUFFER_W_MF,
+         GMRES_BUFFER0_U_MF+i,GG[i][j_local],nsolve);
+       } // i=0..p_local
+
+       for (int i=0;i<=j_local;i++) {
+        aa=-HH[i][j_local];
+         // W=W+aa Vi
+        mf_combine(project_option,
+         GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+       }
+       for (int i=0;i<=p_local;i++) {
+        aa=-GG[i][j_local];
+         // W=W+aa Ui
+        mf_combine(project_option,
+         GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+       }
+
+        // H_j is a j+2 x j+1 matrix  j=0..m-1
+       dot_productALL(project_option,
+         GMRES_BUFFER_W_MF,
+         GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
+
+       condition_number_blowup=0;
+       if (HH[j_local+1][j_local]>=0.0) {
+        HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
+         // Real** HH   i=0..m  j=0..m-1
+         // active region: i=0..j_local+1  j=0..j_local
+         
+        double zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+        if (zeyu_condnum>1.0/local_tol) { 
+         condition_number_blowup=1;  
+        } else if (zeyu_condnum<=1.0/local_tol) {
+         condition_number_blowup=0;  
+        } else
+         amrex::Error("zeyu_condnum NaN");
+         
+       } else
+        amrex::Error("HH[j_local+1][j_local] invalid");
+
+      } // vhat_counter loop
+      if (vhat_counter==max_vhat_sweeps) {
+       amrex::Error("vhat_counter==max_vhat_sweeps");
+      } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
+       if (condition_number_blowup==0) {
+        // do nothing
+       } else
+        amrex::Error("condition_number_blowup invalid");
+      } else
+       amrex::Error("vhat_counter invalid");
+
+     } else if (condition_number_blowup==0) {
+      // do nothing
+     } else
+      amrex::Error("condition_number_blowup invalid");
+
+      // H_j is a j+2 x j+1 matrix j=0..m-1
+      // G_j is a p(j)+1 x j+1 matrix j=0..m-1
+     for (int i1=0;i1<=j_local+1;i1++) {
+      for (int i2=0;i2<=j_local;i2++) {
+       HHGG[i1][i2]=HH[i1][i2];
+      }
+     }
+     for (int i1=0;i1<=p_local;i1++) {
+      for (int i2=0;i2<=j_local;i2++) {
+       HHGG[i1][i2]=GG[i1][i2];
+      }
+     }
+     status=1;
+     setVal_array(1,nsolveMM,0.0,idx_Z);
+      // CALL ZEYU's least squares routine here
+     if (status==1) {
+      for (int i2=0;i2<=j_local;i2++) {
+       aa=yy[i2];
+        // Z=Z+aa Z_{i2}
+       mf_combine(project_option,
+        idx_Z,
+        GMRES_BUFFER0_Z_MF+i2,aa,
+        idx_Z,nsolve); 
+      }
+     } else
+      amrex::Error("status invalid");
+
+      // residALL calls applyALL which calls 
+      // project_right_hand_side(idx_Z).
+      // At end end of residALL, 
+      // project_right_hand_side(W) is called.
+     residALL(project_option,
+       idx_R, // rhs
+       GMRES_BUFFER_W_MF, // resid
+       idx_Z, // source
+       nsolve);
+     Real beta_compare=0.0;
+     dot_productALL(project_option,
+	GMRES_BUFFER_W_MF, 
+	GMRES_BUFFER_W_MF,beta_compare,nsolve);
+     if (beta_compare>=0.0) {
+      beta_compare=sqrt(beta_compare);
+      if (beta_compare<=GMRES_tol*beta) {
+       convergence_flag=1;
+      } else if (beta_compare>GMRES_tol*beta) {
+       convergence_flag=0;
+      } else
+       amrex::Error("beta_compare invalid");
+     } else
+      amrex::Error("beta_compare invalid");
+
+     if (convergence_flag==0) {
+
+      if (HH[j_local+1][j_local]>0.0) {
+       if ((j_local>=0)&&(j_local<m-1)) {
+
+        // variables initialized to 0.0
+        allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+j_local+1);
+
+        aa=1.0/HH[j_local+1][j_local];
+         // V=V+aa W
+        mf_combine(project_option,
+         GMRES_BUFFER0_V_MF+j_local+1,
+         GMRES_BUFFER_W_MF,aa,
+         GMRES_BUFFER0_V_MF+j_local+1,nsolve); 
+       } else if (j_local==m-1) {
+        // do nothing
+       } else
+        amrex::Error("j_local invalid");
+      } else if (HH[j_local+1][j_local]==0.0) {
+       amrex::Error("HH[j_local+1][j_local] should not be 0");
+      } else {
+       amrex::Error("HH[j_local+1][j_local] invalid");
+      }
+
+     } else if (convergence_flag==1) {
+      // do nothing
+     } else
+      amrex::Error("convergence_flag invalid");
+
+
+
+
+
     } // j_local=0..m-1 (and convergence_flag==0)
 
     for (int i=gmres_precond_iter_base_mg*nsolve_bicgstab;i<j_local;i++) {
      delete GMRES_Z_MF[i][coarsefine];
      GMRES_Z_MF[i][coarsefine]=(MultiFab*)0;
+    }
+    for (int i=gmres_precond_iter_base_mg*nsolve_bicgstab;i<j_local;i++) {
+     delete GMRES_V_MF[i][coarsefine];
+     GMRES_V_MF[i][coarsefine]=(MultiFab*)0;
+    }
+    for (int i=gmres_precond_iter_base_mg*nsolve_bicgstab;i<=p_local;i++) {
+     delete GMRES_U_MF[i][coarsefine];
+     GMRES_U_MF[i][coarsefine]=(MultiFab*)0;
     }
 
     for (int i=0;i<m+1;i++) 
