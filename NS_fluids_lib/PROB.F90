@@ -1703,6 +1703,7 @@ stop
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
+!     use ZEYU_droplet_impact_module
       use rigid_FSI_module
       IMPLICIT NONE
 
@@ -14176,6 +14177,7 @@ END SUBROUTINE Adist
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
+!     use ZEYU_droplet_impact_module
       use CONE3D_module
       use WAVY_Channel_module
 
@@ -14224,6 +14226,11 @@ END SUBROUTINE Adist
        else if (probtype.eq.412) then ! user defined
         call CAV2Dstep_LS(xvec,time,LS)
         call CAV2Dstep_STATE(xvec,time,LS,STATE)
+        ibase=(im-1)*num_state_material
+        temp=STATE(ibase+2)
+       else if (probtype.eq.413) then ! user defined
+!        call ZEYU_droplet_impact_LS(xvec,time,LS)
+!        call ZEYU_droplet_impact_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2)
        else if (probtype.eq.311) then ! user defined

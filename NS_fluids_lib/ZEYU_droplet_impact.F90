@@ -152,7 +152,7 @@ endif
 return 
 end subroutine ZEYU_droplet_impact_LS_VEL
 
-subroutine CAV2Dstep_PRES(x,t,LS,PRES)
+subroutine ZEYU_droplet_impact_PRES(x,t,LS,PRES)
 use probcommon_module
 IMPLICIT NONE
 
@@ -164,10 +164,10 @@ REAL_T PRES
 PRES=outflow_pressure
 
 return 
-end subroutine CAV2Dstep_PRES
+end subroutine ZEYU_droplet_impact_PRES
 
 
-subroutine CAV2Dstep_STATE(x,t,LS,STATE)
+subroutine ZEYU_droplet_impact_STATE(x,t,LS,STATE)
 use probcommon_module
 IMPLICIT NONE
 
@@ -177,9 +177,9 @@ REAL_T LS(num_materials)
 REAL_T STATE(num_materials*num_state_material)
 INTEGER_T im,ibase,n
 
-if ((num_materials.eq.2).and. &
+if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
-    (probtype.eq.412)) then
+    (probtype.eq.413)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+1)=fort_denconst(im)
@@ -201,10 +201,10 @@ else
 endif
  
 return
-end subroutine CAV2Dstep_STATE
+end subroutine ZEYU_droplet_impact_STATE
 
  ! dir=1..sdim  side=1..2
-subroutine CAV2Dstep_LS_BC(xwall,xghost,t,LS, &
+subroutine ZEYU_droplet_impact_LS_BC(xwall,xghost,t,LS, &
    LS_in,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
@@ -219,14 +219,14 @@ REAL_T dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
- call CAV2Dstep_LS(xghost,t,LS)
+ call ZEYU_droplet_impact_LS(xghost,t,LS)
 else
  print *,"dir or side invalid"
  stop
 endif
 
 return
-end subroutine CAV2Dstep_LS_BC
+end subroutine ZEYU_droplet_impact_LS_BC
 
 
  ! dir=1..sdim  side=1..2 veldir=1..sdim
@@ -263,7 +263,7 @@ return
 end subroutine ZEYU_droplet_impact_VEL_BC
 
  ! dir=1..sdim  side=1..2
-subroutine CAV2Dstep_PRES_BC(xwall,xghost,t,LS, &
+subroutine ZEYU_droplet_impact_PRES_BC(xwall,xghost,t,LS, &
    PRES,PRES_in,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
@@ -280,7 +280,7 @@ REAL_T dx(SDIM)
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- call CAV2Dstep_PRES(xghost,t,LS,PRES)
+ call ZEYU_droplet_impact_PRES(xghost,t,LS,PRES)
 
 else
  print *,"dir or side invalid"
@@ -288,10 +288,10 @@ else
 endif
 
 return
-end subroutine CAV2Dstep_PRES_BC
+end subroutine ZEYU_droplet_impact_PRES_BC
 
  ! dir=1..sdim  side=1..2
-subroutine CAV2Dstep_STATE_BC(xwall,xghost,t,LS, &
+subroutine ZEYU_droplet_impact_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
@@ -313,7 +313,7 @@ if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
- call CAV2Dstep_STATE(xghost,t,LS,local_STATE)
+ call ZEYU_droplet_impact_STATE(xghost,t,LS,local_STATE)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
  im_crit=1
@@ -330,9 +330,9 @@ else
 endif
 
 return
-end subroutine CAV2Dstep_STATE_BC
+end subroutine ZEYU_droplet_impact_STATE_BC
 
-subroutine CAV2Dstep_HEATSOURCE(im,VFRAC,time,x,temp, &
+subroutine ZEYU_droplet_impact_HEATSOURCE(im,VFRAC,time,x,temp, &
      heat_source,den,CV,dt)
 use probcommon_module
 IMPLICIT NONE
@@ -355,6 +355,6 @@ else
 endif
 
 return
-end subroutine CAV2Dstep_HEATSOURCE
+end subroutine ZEYU_droplet_impact_HEATSOURCE
 
-end module CAV2Dstep_module
+end module ZEYU_droplet_impact_module
