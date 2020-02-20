@@ -1,5 +1,5 @@
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <vector>
 
 using namespace std;
@@ -62,15 +62,15 @@ double Matrix::CondNum()
     double min = 1.e20;
     double max = 0.0;
     for(int i = 0; i < n; ++i){
-        if(abs(D[i]) > max) max = abs(D[i]);
-        if(abs(D[i]) < min) min = abs(D[i]);
+        if(std::abs(D[i]) > max) max = std::abs(D[i]);
+        if(std::abs(D[i]) < min) min = std::abs(D[i]);
         //cout << "diag[" << i + 1 << "] = " << D[i] << endl;
     }
 
     if(iprint == 1)
         cout << "Matrix::CondNum(): end" << endl;
     
-    if(abs(min - 0.0) < 1.e-16){
+    if(std::abs(min - 0.0) < 1.e-16){
         cerr << "Error in calculating condition number: Zero singular value!" 
              << endl;
         abort();   
@@ -129,7 +129,7 @@ void Matrix::Givens(const double a, const double b, double &c, double &s)
         s = 0.0;
     }
     else{
-        if(abs(b) > abs(a)){
+        if(std::abs(b) > std::abs(a)){
             s = 1.0 / sqrt(1. + a / b * a / b);
             c = s * (- a / b);
         }
@@ -207,7 +207,7 @@ void Matrix::GKSVD(vector<double> &Bd, vector<double> &Bs)
     double t2 = Bs[n-2] * Bs[n-2] + Bd[n-1] * Bd[n-1];//t(n, n)
     double t3 = Bs[n-2] * Bd[n-2];//t(n, n-1)
     double d = (t1 - t2) / 2.0;
-    double mu = t2 - t3 * t3 / (d + d / abs(d) * sqrt(d * d + t3 * t3));
+    double mu = t2 - t3 * t3 / (d + d / std::abs(d) * sqrt(d * d + t3 * t3));
 
     double y = Bd[0] * Bd[0] - mu;
     double z = Bd[0] * Bs[0];
@@ -293,7 +293,7 @@ void Matrix::SVD(matrix<double> A, vector<double> &D)
     double tol = 1.e-16;
     while(q < n){
         for(int i = 0; i < n-p-q-1; ++i){
-            if(abs(Bs[i]) <= tol * (abs(Bd[i]) + abs(Bd[i+1])))
+            if(std::abs(Bs[i]) <= tol * (std::abs(Bd[i]) + std::abs(Bd[i+1])))
                 Bs[i] = 0.0;
         }
         for(int i = 0; i < n-p-q-1; ++i){
@@ -332,7 +332,7 @@ void Matrix::SVD(matrix<double> A, vector<double> &D)
         
         int bi = 0;
         for(int i = 0; i < n-p-q; ++i){
-            if(abs(Bd[i]) <= tol * Bn){
+            if(std::abs(Bd[i]) <= tol * Bn){
                 Bd[i] = 0.0;
                 if(i != n-p-q-1 && Bs[i] != 0.0)
                     ZeroRow(Bd, Bs, i);

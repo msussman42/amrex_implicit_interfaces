@@ -4,13 +4,8 @@
 #include <algorithm>
 #include <vector>
 
-#if defined(BL_OLD_STL)
-#include <stdio.h>
-#include <math.h>
-#else
 #include <cstdio>
 #include <cmath>
-#endif
 
 #include <AMReX_CoordSys.H>
 #include <AMReX_Geometry.H>
@@ -5797,7 +5792,7 @@ void NavierStokes::init_gravity_potential() {
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombcpres[m]=b_rec[m];
 
- Real gravity_normalized=fabs(gravity);
+ Real gravity_normalized=std::abs(gravity);
  if (invert_gravity==1)
   gravity_normalized=-gravity_normalized;
  else if (invert_gravity==0) {
@@ -6604,7 +6599,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   amrex::Error("local_truncate invalid");
 
  if (renormalize_only==0) {
-  if (fabs(time-cur_time_slab)>1.0e-8)
+  if (std::abs(time-cur_time_slab)>1.0e-8)
    amrex::Error("prescribe solid at the new time");
 
   init_FSI_GHOST_MF_ALL(1);

@@ -3,7 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <math.h>
+#include <cmath>
 using namespace std;
 #include "Zeyu_structfordrop.h"
 #include "Zeyu_myFunctions.h"
@@ -55,8 +55,8 @@ void Initial_Level_Set_Function_Thermal_Spray(const double x, const double y, co
             in_droplet = 1;
             break;
         }
-        else if(abs(temp) < min)
-            min = abs(temp);
+        else if(std::abs(temp) < min)
+            min = std::abs(temp);
     }
     if(in_droplet == 0) phi = -min;
 }

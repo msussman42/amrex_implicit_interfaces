@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <cmath>
 
 namespace amrex{
 
@@ -1837,8 +1838,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
      " vel_max=" << vel_max[dir] << '\n';
    std::cout << "TIME= "<<upper_slab_time<<" dir= " << dir << 
      " vel_max_estdt=" << vel_max_estdt[dir] << '\n';
-   if (fabs(vel_max[dir])>UMACH)
-    UMACH=fabs(vel_max[dir]);
+   if (std::abs(vel_max[dir])>UMACH)
+    UMACH=std::abs(vel_max[dir]);
   }
   for (int iten=0;iten<nten;iten++) {
    std::cout << "TIME= "<<upper_slab_time<<" iten= " << iten <<
@@ -2013,13 +2014,13 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   }
   if (probtype==32) {
    Real ff=0.0;
-   Real UU=fabs(adv_vel);
-   if (fabs(advbot)>UU)
-    UU=fabs(advbot);
+   Real UU=std::abs(adv_vel);
+   if (std::abs(advbot)>UU)
+    UU=std::abs(advbot);
    if (xblob4>0.0) {
     ff=1.0/xblob4;
-    if (fabs(ff)>UU)
-     UU=fabs(ff);
+    if (std::abs(ff)>UU)
+     UU=std::abs(ff);
    }
    if (radblob4>0.0)
     UU=radblob4;

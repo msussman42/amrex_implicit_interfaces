@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include <math.h>
+#include <cmath>
 #include <vector>
 using namespace std;
 #include "Zeyu_dynamic_contact_angle.h"
@@ -10,16 +10,16 @@ double delta(const double r, const int idelta)
     double d = 0.0;    
 
     if(idelta == 1){
-        if(abs(r) <= 2.0)
+        if(std::abs(r) <= 2.0)
             d = 1.0 / 4.0 * (1.0 + cos(asin(1.0) * r));
         else
             d = 0.0;
     }
     else if(idelta == 2){
-        if(abs(r) <= 1.0)
-            d = (3.0 - 2.0 * abs(r) + sqrt(1.0 + 4.0 * abs(r) - 4.0 * r * r)) / 8.0;
-        else if(1.0 < abs(r) && abs(r) <= 2.0)
-            d = (5.0 - 2.0 * abs(r) - sqrt(-7.0 + 12.0 * abs(r) - 4.0 * r * r)) / 8.0;
+        if(std::abs(r) <= 1.0)
+            d = (3.0 - 2.0 * std::abs(r) + sqrt(1.0 + 4.0 * std::abs(r) - 4.0 * r * r)) / 8.0;
+        else if(1.0 < std::abs(r) && std::abs(r) <= 2.0)
+            d = (5.0 - 2.0 * std::abs(r) - sqrt(-7.0 + 12.0 * std::abs(r) - 4.0 * r * r)) / 8.0;
         else
             d = 0.0;
     }
@@ -51,7 +51,7 @@ void dynamic_contact_angle(const int dim, const double mu_l, const double mu_g, 
         double minGridScale = 1.e3;
         for(auto it = gridscale.begin(); it != gridscale.end(); ++it)
             if(*it < minGridScale) minGridScale = *it;
-        if(abs(l_macro - 0.0) < 1.e-9) l_macro = minGridScale;
+        if(std::abs(l_macro - 0.0) < 1.e-9) l_macro = minGridScale;
 
         if(ifgnbc == 0){ //If don't implement GNBC.
             int index = 0;
@@ -100,7 +100,7 @@ void dynamic_contact_angle(const int dim, const double mu_l, const double mu_g, 
                         double y2 = b2 - l21 * y1;
                         Ca[index] = y2 / (u22 + 1.e-20);
                         thet_d_micro[index] = (y1 - u12 * Ca[index]) / (u11 + 1.e-20);
-                        if(abs((thet_d_micro[index] - thet_d_micro_old[index])/thet_d_micro_old[index]) < erromax && abs((Ca[index] - Ca_old[index])/Ca_old[index]) < erromax)
+                        if(std::abs((thet_d_micro[index] - thet_d_micro_old[index])/thet_d_micro_old[index]) < erromax && std::abs((Ca[index] - Ca_old[index])/Ca_old[index]) < erromax)
                             break;
                         thet_d_micro_old[index] = thet_d_micro[index];
                         Ca_old[index] = Ca[index];
@@ -117,13 +117,13 @@ void dynamic_contact_angle(const int dim, const double mu_l, const double mu_g, 
                 double tempz = 0.;
                 int index2 = 0;
                 for(auto it2 = x_cl.begin(); it2 != x_cl.end(); ++it2){
-                    double temp = 1. / (beta+1.e-20)  / (minGridScale+1.e-20) * delta(abs(x_wall[index1].x-(*it2).x)/(minGridScale+1.e-20),idelta) * sigma;
+                    double temp = 1. / (beta+1.e-20)  / (minGridScale+1.e-20) * delta(std::abs(x_wall[index1].x-(*it2).x)/(minGridScale+1.e-20),idelta) * sigma;
                     if(ifmicro == 0)
                         temp = temp * (cos(thet_s) - cos(thet_d_apparent[index2]));
                     else
                         temp = temp * (cos(thet_s) - cos(thet_d_micro[index2]));
                     if(dim == 3)
-                        temp = temp * 1. / (minGridScale+1.e-20) * delta(abs(x_wall[index1].y-(*it2).y)/(minGridScale+1.e-20),idelta) * (*it2).l;
+                        temp = temp * 1. / (minGridScale+1.e-20) * delta(std::abs(x_wall[index1].y-(*it2).y)/(minGridScale+1.e-20),idelta) * (*it2).l;
                     tempx = tempx + temp * n_cl[index2].x;
                     tempy = tempy + temp * n_cl[index2].y;//If 2D, tempy should be zero
                     tempz = tempz + temp * n_cl[index2].z;//tempz should be zero
@@ -166,7 +166,7 @@ void dynamic_contact_angle(const int dim, const double mu_l, const double mu_g, 
                 u0[index] = (sin(thet_d_old[index] - thet_d_old[index] * cos(thet_d_old[index]))) 
                           / (sin(thet_d_old[index]) * cos(thet_d_old[index]) - thet_d_old[index]);
                 *it = acos(cos(thet_s) - 2. * u[index] * (a1 + a2 * u0[index]) / (1. - a2) / (sqrt(a1 + u[index] * u[index]) + u[index]));
-                if(abs((*it - thet_d_old[index])/thet_d_old[index]) < 1e-4)
+                if(std::abs((*it - thet_d_old[index])/thet_d_old[index]) < 1e-4)
                     break;
                 else
                     thet_d_old[index] = *it;
@@ -177,7 +177,7 @@ void dynamic_contact_angle(const int dim, const double mu_l, const double mu_g, 
         for(auto it = u_slip.begin(); it != u_slip.end(); ++it)
             *it = {0, 0, 0};
     }
-    else if(imodel == 4){//Kalliadasis1994-'abs(tan(the_d))=...', so how to determine the_d<90 or thet_d>90? This one seems have problems...
+    else if(imodel == 4){//Kalliadasis1994-'std::abs(tan(the_d))=...', so how to determine the_d<90 or thet_d>90? This one seems have problems...
         cout << "Implement model 4..." << endl;
         double lamda = 1.e-8;
         int index = 0;
@@ -196,7 +196,7 @@ void dynamic_contact_angle(const int dim, const double mu_l, const double mu_g, 
         int iter;
         for(iter = 0; iter < 100; ++iter){
             fHI = temp * (1. + 1.31 * pow(fHI_old, 0.99));
-            if(abs((fHI - fHI_old)/fHI_old) < 1.e-4)
+            if(std::abs((fHI - fHI_old)/fHI_old) < 1.e-4)
                 break;
             else
                 fHI_old = fHI;

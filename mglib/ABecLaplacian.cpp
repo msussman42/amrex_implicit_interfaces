@@ -16,6 +16,7 @@
 #include <ABec_F.H>
 #include <CG_F.H>
 #include <MG_F.H>
+#include <Zeyu_Matrix_Functions.H>
 
 #define SCALAR_WORK_NCOMP 11
 
@@ -202,7 +203,8 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
 
 void
 ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
-  MultiFab& solnL,int level,
+  MultiFab& solnL,
+  int level,
   MultiFab& pbdry,Vector<int> bcpres_array) {
 
 #if (profile_solver==1)
@@ -2713,7 +2715,7 @@ ABecLaplacian::pcg_GMRES_solve(
       GMRES_U_MF[p_local][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
     
       MultiFab::Copy(*GMRES_U_MF[p_local][coarsefine],
-		     GMRES_V_MF[j_local][coarsefine],0,0,
+		     *GMRES_V_MF[j_local][coarsefine],0,0,
 		     nsolve_bicgstab,nghostRHS);
 
       if (j_local==0) {
@@ -2767,8 +2769,8 @@ ABecLaplacian::pcg_GMRES_solve(
  	 amrex::Error("vi_dot_vi==0.0");
        } // i=0..j_local
        LP_dot((*GMRES_V_MF[j_local][coarsefine]),
-              (*GMRES_V_MF[j_local][coarsefine])
-	       level,vi_dot_vi);
+              (*GMRES_V_MF[j_local][coarsefine]),
+	      level,vi_dot_vi);
        if (vi_dot_vi>0.0) {
         aa=1.0/vi_dot_vi;
 	GMRES_V_MF[j_local][coarsefine]->mult(aa,0,nsolve_bicgstab,nghostRHS);
@@ -2872,7 +2874,7 @@ ABecLaplacian::pcg_GMRES_solve(
       }
      }
      status=1;
-     setVal_array(1,nsolveMM,0.0,idx_Z);
+     z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
       // CALL ZEYU's least squares routine here
      if (status==1) {
       for (int i2=0;i2<=j_local;i2++) {
@@ -2889,7 +2891,8 @@ ABecLaplacian::pcg_GMRES_solve(
      residual((*GMRES_W_MF[coarsefine]),  // resid
               (*r_in),  // rhs
               (*z_in),  // soln
-              level,pbdryhom_in,bcpres_array);
+              level,
+	      (*pbdryhom_in),bcpres_array);
      project_null_space((*GMRES_W_MF[coarsefine]),level);
      Real beta_compare=0.0;
      LP_dot(*GMRES_W_MF[coarsefine],

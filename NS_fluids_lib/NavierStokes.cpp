@@ -3,13 +3,8 @@
 #include <algorithm>
 #include <vector>
 
-#if defined(BL_OLD_STL)
-#include <stdio.h>
-#include <math.h>
-#else
 #include <cstdio>
 #include <cmath>
-#endif
 
 #include <string>
 #include <stdlib.h>
@@ -2821,7 +2816,7 @@ NavierStokes::read_params ()
      if (constant_viscosity==0) {
       // do nothing
      } else if (constant_viscosity==1) {
-      if (fabs(viscconst[im]-viscconst[0])>1.0e-12)
+      if (std::abs(viscconst[im]-viscconst[0])>1.0e-12)
        amrex::Warning("variable visc but constant_viscosity==1");
      } else
       amrex::Error("constant_viscosity invalid");
@@ -9401,7 +9396,7 @@ NavierStokes::correct_density() {
  
    int scomp_pres=num_materials_vel*AMREX_SPACEDIM;
 
-   Real gravity_normalized=fabs(gravity);
+   Real gravity_normalized=std::abs(gravity);
    if (invert_gravity==1)
     gravity_normalized=-gravity_normalized;
    else if (invert_gravity==0) {
@@ -10575,7 +10570,7 @@ NavierStokes::level_phase_change_redistribute(
  
   if (LL==0.0)
    amrex::Error("LL invalid");
-  if (fabs(expect_mdot_sign)!=1.0)
+  if (std::abs(expect_mdot_sign)!=1.0)
    amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
    amrex::Error("im_source invalid");
@@ -10671,7 +10666,7 @@ NavierStokes::level_phase_change_redistribute(
 
   if (LL==0.0)
    amrex::Error("LL invalid");
-  if (fabs(expect_mdot_sign)!=1.0)
+  if (std::abs(expect_mdot_sign)!=1.0)
    amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
    amrex::Error("im_source invalid");
@@ -10742,7 +10737,7 @@ NavierStokes::level_phase_change_redistribute(
 
   if (LL==0.0)
    amrex::Error("LL invalid");
-  if (fabs(expect_mdot_sign)!=1.0)
+  if (std::abs(expect_mdot_sign)!=1.0)
    amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
    amrex::Error("im_source invalid");
@@ -14923,7 +14918,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
   FArrayBox& tensor_data=(*localMF[CELLTENSOR_MF])[mfi];
   FArrayBox& elastic_tensor_data=(*elastic_tensor_mf)[mfi];
 
-  Real gravity_normalized=fabs(gravity);
+  Real gravity_normalized=std::abs(gravity);
   if (invert_gravity==1)
    gravity_normalized=-gravity_normalized;
   else if (invert_gravity==0) {
@@ -17467,7 +17462,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   } else if (v1!=0.0) {
    Real t=sqrt(v1*v1+v2*v2);
    if (t>0.0) {
-    cs_k=fabs(v1)/t;
+    cs_k=std::abs(v1)/t;
     sn_k=cs_k*v2/v1; 
    } else {
     std::cout << "t= " << t << '\n';
@@ -17490,7 +17485,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
 
  } // k=1..m
 
- Real min_diag=fabs(HCOPY[0][0]);
+ Real min_diag=std::abs(HCOPY[0][0]);
 
  for (int k=m;k>=1;k--) {
 
@@ -17498,9 +17493,9 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   for (int j=k+1;j<=m;j++)
    yy[k-1]-=HCOPY[k-1][j-1]*yy[j-1];
   Real hdiag=HCOPY[k-1][k-1];
-  if (fabs(hdiag)<min_diag)
-   min_diag=fabs(hdiag);
-  if (fabs(hdiag)>0.0) 
+  if (std::abs(hdiag)<min_diag)
+   min_diag=std::abs(hdiag);
+  if (std::abs(hdiag)>0.0) 
    yy[k-1]/=hdiag;
   else
    amrex::Error("hdiag became 0");
@@ -17588,11 +17583,11 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
  status=1;
  for (i=1;i<=numelem-1;i++) {
   holdj=i;
-  holdvalue=fabs(AA[i-1][i-1]);
+  holdvalue=std::abs(AA[i-1][i-1]);
   for (j=i+1;j<=numelem;j++) {
-   if (fabs(AA[j-1][i-1])>holdvalue) {
+   if (std::abs(AA[j-1][i-1])>holdvalue) {
     holdj=j;
-    holdvalue=fabs(AA[j-1][i-1]);
+    holdvalue=std::abs(AA[j-1][i-1]);
    }
   }
   if (holdj!=i) {
@@ -17605,7 +17600,7 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
   holdvalue=bb[i-1];
   bb[i-1]=bb[holdj-1];
   bb[holdj-1]=holdvalue;
-  if (fabs(AA[i-1][i-1])<1.0E-32) 
+  if (std::abs(AA[i-1][i-1])<1.0E-32) 
    status=0;
   else {
    for (j=i+1;j<=numelem;j++) {
@@ -17622,7 +17617,7 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
    holdvalue=bb[i-1];
    for (j=i+1;j<=numelem;j++)
     holdvalue=holdvalue-AA[i-1][j-1]*xx[j-1];
-   if (fabs(AA[i-1][i-1])<1.0E-32) 
+   if (std::abs(AA[i-1][i-1])<1.0E-32) 
     status=0;
    else
     xx[i-1]=holdvalue/AA[i-1][i-1];

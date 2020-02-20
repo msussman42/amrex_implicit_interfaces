@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include <math.h>
+#include <cmath>
 using namespace std;
 #include "Zeyu_gnbc.h"
 
@@ -8,7 +8,7 @@ double d_2d(double r, double l_grid)
 {
     double d = 0.0;    
 
-    if(abs(r) <= 2.0 * l_grid)
+    if(std::abs(r) <= 2.0 * l_grid)
         d = 1.0 / (4.0 * l_grid) * (1.0 + cos(2.0 * asin(1.0) * r / 2.0 / l_grid));
     else
         d = 0.0;
@@ -20,10 +20,10 @@ double d_3d(double r)
 {
     double d = 0.0;
 
-    if(abs(r) <= 1.0)
-        d = (3.0 - 2.0 * abs(r) + sqrt(1.0 + 4.0 * abs(r) - 4 * r * r)) / 8.0;
-    else if(1.0 < abs(r) && abs(r) <= 2.0)
-        d = 0.5 - (3.0 - 2.0 * abs(2.0 - abs(r)) + sqrt(1.0 + 4.0 * abs(2.0 - abs(r)) - 4 * (2.0 - abs(r)) * (2.0 - abs(r)))) / 8.0;
+    if(std::abs(r) <= 1.0)
+        d = (3.0 - 2.0 * std::abs(r) + sqrt(1.0 + 4.0 * std::abs(r) - 4 * r * r)) / 8.0;
+    else if(1.0 < std::abs(r) && std::abs(r) <= 2.0)
+        d = 0.5 - (3.0 - 2.0 * std::abs(2.0 - std::abs(r)) + sqrt(1.0 + 4.0 * std::abs(2.0 - std::abs(r)) - 4 * (2.0 - std::abs(r)) * (2.0 - std::abs(r)))) / 8.0;
     else
         d = 0.0;
 
@@ -67,7 +67,7 @@ void gnbc(const int dim, const double mu_l, const double sigma, const double the
         double y2 = b2 - l21 * y1;
         Ca = y2 / (u22 + 1.e-20);
         thet_d_micro = (y1 - u12 * Ca) / (u11 + 1.e-20);
-        if(abs((thet_d_micro - thet_d_micro_old)/thet_d_micro_old) < erromax && abs((Ca - Ca_old)/Ca_old) < erromax)
+        if(std::abs((thet_d_micro - thet_d_micro_old)/thet_d_micro_old) < erromax && std::abs((Ca - Ca_old)/Ca_old) < erromax)
             break;
         thet_d_micro_old = thet_d_micro;
         Ca_old = Ca;

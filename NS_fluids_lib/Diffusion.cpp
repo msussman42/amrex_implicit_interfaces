@@ -16,11 +16,8 @@
 
 #include <algorithm>
 
-#if defined(BL_OLD_STL)
-#include <float.h>
-#else
 #include <cfloat>
-#endif
+#include <cmath>
 
 namespace amrex{
 	
@@ -130,7 +127,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   amrex::Error("CoordSys bust 60");
 
  Real gravity_normalized=0.0;
- gravity_normalized=fabs(gravity);
+ gravity_normalized=std::abs(gravity);
  if (invert_gravity==1)
   gravity_normalized=-gravity_normalized;
  else if (invert_gravity==0) {
@@ -366,7 +363,7 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
   FArrayBox& forcefab=(*localMF[idx_neg_mom_force])[mfi];
 
   if (update_state==1) { 
-   if (fabs(cur_time_slab-prev_time_slab-dt_slab)>1.0E-5) {
+   if (std::abs(cur_time_slab-prev_time_slab-dt_slab)>1.0E-5) {
     std::cout << "cur_time_slab " << cur_time_slab << '\n';
     std::cout << "prev_time_slab " << prev_time_slab << '\n';
     std::cout << "dt_slab " << dt_slab << '\n';

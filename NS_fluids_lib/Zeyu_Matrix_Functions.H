@@ -32,4 +32,12 @@ void ZeroRow(double *Bd, double *Bs, const int n);
 // zero the last column if the last diagonal entry is 0
 void ZeroColumn(double *Bd, double *Bs, const int n);
 
+// QR factorization for least squares problems
+// A: m x n, x: n, b: m
+// To solve min||Ax-b|| for x:
+// 1. A = QR;
+// 2. d=QTb;
+// 3. solve Rx=d.
+void LeastSquaresQR(double **A, double *x, const double *b, const int m, const int n);
+
 #endif

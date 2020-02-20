@@ -3,13 +3,8 @@
 #include <algorithm>
 #include <vector>
 
-#if defined(BL_OLD_STL)
-#include <stdio.h>
-#include <math.h>
-#else
 #include <cstdio>
 #include <cmath>
-#endif
 
 #include <AMReX_CoordSys.H>
 #include <AMReX_Geometry.H>
@@ -410,7 +405,7 @@ void NavierStokes::nonlinear_advection() {
   amrex::Error("divu_outer_sweeps invalid nonlinear_advection");
 
  int finest_level=parent->finestLevel();
- if (fabs(cur_time_slab-prev_time_slab-dt_slab)>1.0E-5) {
+ if (std::abs(cur_time_slab-prev_time_slab-dt_slab)>1.0E-5) {
   std::cout << "cur_time_slab " << cur_time_slab << '\n';
   std::cout << "prev_time_slab " << prev_time_slab << '\n';
   std::cout << "dt_slab " << dt_slab << '\n';
@@ -982,10 +977,10 @@ Real NavierStokes::advance(Real time,Real dt) {
    SDC_setup_step(); 
 
    if ((time>=0.0)&&(time<=1.0)) {
-    if (fabs(upper_slab_time-time)>1.0e-12)
+    if (std::abs(upper_slab_time-time)>1.0e-12)
      amrex::Error("upper_slab_time-time>tol (a)");
    } else if (time>1.0) {
-    if (fabs(upper_slab_time-time)>1.0e-12*time)
+    if (std::abs(upper_slab_time-time)>1.0e-12*time)
      amrex::Error("upper_slab_time-time>tol(time) (b)");
    } else
     amrex::Error("time invalid");
@@ -1078,9 +1073,9 @@ Real NavierStokes::advance(Real time,Real dt) {
     time_scale=upper_slab_time;
    time_scale*=1.0E-10;
 
-   if (fabs(upper_slab_time-lower_slab_time-dt_new)>time_scale)
+   if (std::abs(upper_slab_time-lower_slab_time-dt_new)>time_scale)
     amrex::Error("SDC_setup_step failed");
-   if (fabs(lower_slab_time-time)>time_scale)
+   if (std::abs(lower_slab_time-time)>time_scale)
     amrex::Error("lower_slab_time set improperly");
 
    do_the_advance(lower_slab_time,dt_new,advance_status);
@@ -4151,13 +4146,13 @@ void NavierStokes::sync_colors(
       for (int jj=-1;jj<=1;jj++)
       for (int kk=-1;kk<=1;kk++) {
        IntVect pofs(i+ii,j+jj,k+kk);
-       int idist=abs(ii)+abs(jj)+abs(kk);
+       int idist=std::abs(ii)+std::abs(jj)+std::abs(kk);
 #endif
 #if (AMREX_SPACEDIM==2)
       for (int ii=-1;ii<=1;ii++)
       for (int jj=-1;jj<=1;jj++) {
        IntVect pofs(i+ii,j+jj);
-       int idist=abs(ii)+abs(jj);
+       int idist=std::abs(ii)+std::abs(jj);
 #endif
        if ((check_corners==1)||(idist<=1)) {
 
@@ -5312,11 +5307,11 @@ NavierStokes::ColorSumALL(
         Real proposed_mom=proposed_velocity*mass;
 
 	if ((original_mom*proposed_mom<=0.0)|| 
-	    (abs(original_mom)<abs(proposed_mom))) {
+	    (std::abs(original_mom)<std::abs(proposed_mom))) {
 	 if (original_mom*proposed_mom<=0.0) {
 	  corrected_velocity=0.0;
-	 } else if (abs(original_mom)<abs(proposed_mom)) {
-	  corrected_velocity*=abs(original_mom/proposed_mom);
+	 } else if (std::abs(original_mom)<std::abs(proposed_mom)) {
+	  corrected_velocity*=std::abs(original_mom/proposed_mom);
 	 } else
 	  amrex::Error("original_mom or proposed_mom became corrupt");
 
@@ -5339,7 +5334,7 @@ NavierStokes::ColorSumALL(
 	  }
 	 }
 	} else if ((original_mom*proposed_mom>0.0)&& 
-		   (abs(original_mom)>=abs(proposed_mom))) {
+		   (std::abs(original_mom)>=std::abs(proposed_mom))) {
 	 // do nothing
 	} else
 	 amrex::Error("original_mom or proposed_mom invalid");
@@ -8864,7 +8859,7 @@ void NavierStokes::multiphase_project(int project_option) {
      double dual_time_reduction_factor=1.0e-50;
      dual_time_stepping_tau= 
         maxden*problen_max*problen_max*
-	fabs(log(dual_time_reduction_factor))/(4.0*NS_PI*NS_PI);
+	std::abs(log(dual_time_reduction_factor))/(4.0*NS_PI*NS_PI);
 
      if (dual_time_sound_speed>0.0) {
       if ((project_option==0)||
@@ -10307,10 +10302,10 @@ void NavierStokes::multiphase_project(int project_option) {
     if (dual_tol<dual_time_error0*dual_time_reltol)
      dual_tol=dual_time_error0*dual_time_reltol;
 
-    if ((fabs(dual_time_error-dual_error_min)<=dual_tol)&&
-	(fabs(dual_time_error-
+    if ((std::abs(dual_time_error-dual_error_min)<=dual_tol)&&
+	(std::abs(dual_time_error-
 	      dual_error_history[dual_time_stepping_iter-1])<=dual_tol)&&
-	(fabs(dual_time_error-
+	(std::abs(dual_time_error-
 	      dual_error_history[dual_time_stepping_iter-2])<=dual_tol))
      dual_time_error_met=1;
 
@@ -10470,11 +10465,12 @@ void NavierStokes::multiphase_project(int project_option) {
    if (prescribed_error_met==0) {
     if (min_prescribed_opt_iter>5) {
      if (prescribed_velocity_iter>min_prescribed_opt_iter) {
-      if (fabs(prescribed_error-prescribed_error_old)<= 
+      if (std::abs(prescribed_error-prescribed_error_old)<= 
 	  prescribed_error_old*prescribed_reltol) {
        prescribed_error_met=1;
       } 
-      if (fabs(prescribed_error-prescribed_error_old)<=prescribed_abstol) {
+      if (std::abs(prescribed_error-prescribed_error_old)<=
+	  prescribed_abstol) {
        prescribed_error_met=1;
       } 
      }

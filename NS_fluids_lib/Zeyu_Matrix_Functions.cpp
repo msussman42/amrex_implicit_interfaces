@@ -1,5 +1,5 @@
 #include <iostream>
-#include <math.h>
+#include <cmath>
 
 using namespace std;
 
@@ -33,8 +33,8 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
     double min = 1.e20;
     double max = 0.0;
     for(int i = 0; i < sn; ++i){
-        if(fabs(D[i]) > max) max = fabs(D[i]);
-        if(fabs(D[i]) < min) min = fabs(D[i]);
+        if(std::abs(D[i]) > max) max = std::abs(D[i]);
+        if(std::abs(D[i]) < min) min = std::abs(D[i]);
     }
 
     //if(iprint == 1)
@@ -44,8 +44,8 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
         Dn = Dn + D[i] * D[i];
     Dn = sqrt(Dn);
     
-    if(fabs(min - 0.0) <= 1.e-16 * Dn){
-     min=max*(1.0e-100);
+    if(std::abs(min - 0.0) <= 1.e-16 * Dn){
+        min = max * (1.0e-100);
     }
     return max / min;
 }
@@ -102,7 +102,7 @@ void Givens(const double a, const double b, double &c, double &s)
         s = 0.0;
     }
     else{
-        if(fabs(b) > fabs(a)){
+        if(std::abs(b) > std::abs(a)){
             s = 1.0 / sqrt(1. + a / b * a / b);
             c = s * (- a / b);
         }
@@ -141,14 +141,14 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
             }
         }
 
-        double c[m-it][n-it] {};
-        for(int i = 0; i < m-it; ++i)
-            for(int j = 0; j < n-it; ++j)
+        for(int j = 0; j < n-it; ++j){
+            double temp[m-it] {};
+            for(int i = 0; i < m-it; ++i)
                 for(int k = 0; k < m-it; ++k)
-                    c[i][j] = c[i][j] + u[i][k] * A[k+it][j+it];
-        for(int i = 0; i < m-it; ++i)
-            for(int j = 0; j < n-it; ++j)
-                A[i+it][j+it] = c[i][j];
+                    temp[i] += u[i][k] * A[k+it][j+it];
+            for(int i = 0; i < m-it; ++i)
+                A[i+it][j+it] = temp[i];
+        }
 
         Bd[it] = A[it][it];
 
@@ -169,14 +169,15 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
                     v[i][j] = v[i][j] - beta2 * v2[i] * v2[j];
                 }
             }
-            double d[m-it][n-it-1] {};
-            for(int i = 0; i < m-it; ++i)
+
+            for(int i = 0; i < m-it; ++i){
+                double temp[n-it-1] {};
                 for(int j = 0; j < n-it-1; ++j)
                     for(int k = 0; k < n-it-1; ++k)
-                        d[i][j] = d[i][j] + A[i+it][k+it+1] * v[k][j];
-            for(int i = 0; i < m-it; ++i)
+                        temp[j] += A[i+it][k+it+1] * v[k][j];
                 for(int j = 0; j < n-it-1; ++j)
-                    A[i+it][j+it+1] = d[i][j];
+                    A[i+it][j+it+1] = temp[j];
+            }
 
             Bs[it] = A[it][it+1]; 
         }
@@ -198,20 +199,15 @@ void GKSVD(double *Bd, double *Bs, const int n)
     double t2 = Bs[n-2] * Bs[n-2] + Bd[n-1] * Bd[n-1];//t(n, n)
     double t3 = Bs[n-2] * Bd[n-2];//t(n, n-1)
     double d = (t1 - t2) / 2.0;
-    double mu = t2 - t3 * t3 / (d + d / fabs(d) * sqrt(d * d + t3 * t3));
+    double mu = t2 - t3 * t3 / (d + d / std::abs(d) * sqrt(d * d + t3 * t3));
 
     double y = Bd[0] * Bd[0] - mu;
     double z = Bd[0] * Bs[0];
     double c, s;
     double a1 = 0.0;
     double a2 = 0.0;
-    double G[2][2];
     for(int k = 0; k < n - 1; ++k){
         Givens(y, z, c, s);
-        G[0][0] = c;
-        G[0][1] = s;
-        G[1][0] = -s;
-        G[1][1] = c;
         double b1[3][2];
         if(k == 0){
             b1[0][0] = 0.0;
@@ -226,14 +222,12 @@ void GKSVD(double *Bd, double *Bs, const int n)
         b1[2][0] = 0.0;
         b1[2][1] = Bd[k+1];
 
-        double temp1[3][2] {};
-        for(int i = 0; i < 3; ++i)
-            for(int j = 0; j < 2; ++j)
-                for(int k = 0; k < 2; ++k)
-                    temp1[i][j] = temp1[i][j] + b1[i][k] * G[k][j];
-        for(int i = 0; i < 3; ++i)
-            for(int j = 0; j < 2; ++j)
-                b1[i][j] = temp1[i][j];
+        for(int i = 0; i < 3; ++i){
+            double temp1 = b1[i][0] * c + b1[i][1] * (-s);
+            double temp2 = b1[i][0] * s + b1[i][1] * c;
+            b1[i][0] = temp1;
+            b1[i][1] = temp2;
+        }
 
         a1 = b1[2][0];
         if(k != 0) Bs[k-1] = b1[0][0];
@@ -243,10 +237,6 @@ void GKSVD(double *Bd, double *Bs, const int n)
         y = Bd[k];
         z = a1;
         Givens(y, z, c, s);
-        G[0][0] = c;
-        G[0][1] = -s;
-        G[1][0] = s;
-        G[1][1] = c;
         double b2[2][3];
         b2[0][0] = Bd[k];
         b2[0][1] = Bs[k];
@@ -260,14 +250,12 @@ void GKSVD(double *Bd, double *Bs, const int n)
             b2[1][2] = Bs[k+1];
         }
 
-        double temp2[2][3] {};
-        for(int i = 0; i < 2; ++i)
-            for(int j = 0; j < 3; ++j)
-                for(int k = 0; k < 2; ++k)
-                    temp2[i][j] = temp2[i][j] + G[i][k] * b2[k][j];
-        for(int i = 0; i < 2; ++i)
-            for(int j = 0; j < 3; ++j)
-                b2[i][j] = temp2[i][j];
+        for(int j = 0; j < 3; ++j){
+            double temp1 = c * b2[0][j] + (-s) * b2[1][j];
+            double temp2 = s * b2[0][j] + c * b2[1][j];
+            b2[0][j] = temp1;
+            b2[1][j] = temp2;
+        }
 
         if(k != n - 2) a2 = b2[0][2];
         Bd[k] = b2[0][0];
@@ -306,7 +294,8 @@ void SVD(double **A, double *D, const int m, const int n)
     while(q < n){
         //set b(i,i+1) to zero, if |b(i,i+1)| <= tol*(|b(i,i)|+|b(i+1,i+1)|)
         for(int i = 0; i < n-p-q-1; ++i){//relative index
-            if(fabs(Bs[p+i]) <= tol * (fabs(Bd[p+i]) + fabs(Bd[p+i+1])))
+            if(std::abs(Bs[p+i]) <= 
+	       tol * (std::abs(Bd[p+i]) + std::abs(Bd[p+i+1])))
                 Bs[p+i] = 0.0;//absolute index
         }
         for(int i = 0; i < n-p-q-1; ++i){
@@ -342,7 +331,7 @@ void SVD(double **A, double *D, const int m, const int n)
         int bi = 0;
         for(int i = 0; i < n-p-q; ++i){
             //if any diagonal entry is zero, then zero the superdiagnoal entry in the same row and same column
-            if(fabs(Bd[p+i]) <= tol * Bn){
+            if(std::abs(Bd[p+i]) <= tol * Bn){
                 Bd[p+i] = 0.0;
                 if(i != n-p-q-1 && Bs[p+i] != 0.0)
                     ZeroRow(Bd+p+i, Bs+p+i, n-p-q-i);
@@ -382,18 +371,15 @@ void ZeroRow(double *Bd, double *Bs, const int n)
         Givens(y, z, c, s);
         swap(c, s);
         c = -c;
-        double G[2][2] {c, -s, s, c};
         double b[2][2] {y, 0.0, z, 0.0};
         if(it != n-1) b[1][1] = Bs[it];
 
-        double temp[2][2] {};
-        for(int i = 0; i < 2; ++i)
-            for(int j = 0; j < 2; ++j)
-                for(int k = 0; k < 2; ++k)
-                    temp[i][j] = temp[i][j] + G[i][k] * b[k][j];
-        for(int i = 0; i < 2; ++i)
-            for(int j = 0; j < 2; ++j)
-                b[i][j] = temp[i][j];
+        for(int j = 0; j < 2; ++j){
+            double temp1 = c * b[0][j] + (-s) * b[1][j];
+            double temp2 = s * b[0][j] + c * b[1][j];
+            b[0][j] = temp1;
+            b[1][j] = temp2;
+        }
 
         if(it == 1) Bs[0] = 0.0;
         Bd[it] = b[1][0];
@@ -417,18 +403,15 @@ void ZeroColumn(double *Bd, double *Bs, const int n)
         double z = a;
         double c, s;
         Givens(y, z, c, s);
-        double G[2][2] {c, s, -s, c};
         double b[2][2] {0.0, 0.0, y, z};
         if(it != 0) b[0][0] = Bs[it-1];
 
-        double temp[2][2] {};
-        for(int i = 0; i < 2; ++i)
-            for(int j = 0; j < 2; ++j)
-                for(int k = 0; k < 2; ++k)
-                    temp[i][j] = temp[i][j] + b[i][k] * G[k][j];
-        for(int i = 0; i < 2; ++i)
-            for(int j = 0; j < 2; ++j)
-                b[i][j] = temp[i][j];
+        for(int i = 0; i < 2; ++i){
+            double temp1 = b[i][0] * c + b[i][1] * (-s);
+            double temp2 = b[i][0] * s + b[i][1] * c;
+            b[i][0] = temp1;
+            b[i][1] = temp2;
+        }
 
         if(it == n-2) Bs[it] = 0.0;
         Bd[it] = b[1][0];
@@ -438,4 +421,104 @@ void ZeroColumn(double *Bd, double *Bs, const int n)
 
     //if(iprint == 1)
     //    cout << "Matrix::ZeroColumn(): end" << endl;
+}
+
+// QR factorization for least squares problems
+// A: m x n, x: n, b: m
+// To solve min||Ax-b|| for x:
+// 1. A = QR;
+// 2. d=QTb;
+// 3. solve Rx=d.
+void LeastSquaresQR(double **A, double *x, const double *b, const int m, const int n)
+{
+    //define R(mx(n+1)), d is included in the last column of R
+    double **R = new double *[m];
+    for(int i = 0; i < m; ++i){
+        *(R+i) = new double [n+1];
+    }
+    for(int i = 0; i < m; ++i){
+        for(int j = 0; j < n+1; ++j){
+            if(j == n)
+                R[i][j] = b[i];
+            else{
+                R[i][j] = A[i][j];
+            }
+        }
+    }
+
+    for(int it = 0; it < n; ++it){
+        double y = R[it][it];
+        for(int i = it+1; i < m; ++i){
+            double z = R[i][it];
+            if(std::abs(z) < 1.0e-16) 
+                continue;
+            else{
+                double c, s;
+                Givens(y, z, c, s);
+
+                for(int j = it; j < n+1; ++j){
+                    double temp1 = c * R[it][j] + (-s) * R[i][j];
+                    double temp2 = s * R[it][j] + c * R[i][j];
+                    R[it][j] = temp1;
+                    R[i][j] = temp2;
+                }
+            }
+        }
+    }
+
+    if(std::abs(R[n-1][n-1]) <= 1.e-16){
+        cout << "Warn! R[" << n-1 << "][" << n-1 
+             << "] is close to zero in QR fatorization!" << endl;
+        R[n-1][n-1] = 1.e-16;
+    }
+    x[n-1] = R[n-1][n] / R[n-1][n-1];
+    for(int i = 0; i < n-1; ++i){
+        x[n-2-i] = R[n-2-i][n];
+        for(int j = n-1-i; j < n; ++j)
+            x[n-2-i] -= R[n-2-i][j] * x[j];
+        if(std::abs(R[n-2-i][n-2-i]) <= 1.e-16){
+            cout << "Warn! R[" << n-2-i << "][" << n-2-i 
+                 << "] is close to zero in QR fatorization!" << endl;
+            R[n-2-i][n-2-i] = 1.e-16;
+        }
+        x[n-2-i] = x[n-2-i] / R[n-2-i][n-2-i];
+    }
+
+    for(int i = 0; i < m; ++i)
+        delete[] *(R+i);
+    delete[] R;
+
+    double **ATA = new double *[n];
+    for(int i = 0; i < n; ++i){
+        ATA[i] = new double [n];
+        for(int j = 0; j < n; ++j){
+            ATA[i][j] = 0.0;
+            for(int k = 0; k < m; ++k)
+                ATA[i][j] += A[k][i] * A[k][j];
+        }
+    }
+    double residual_verify = 0.0;
+    double ATAx[n];
+    double ATb[n];
+    for(int i = 0; i < n; ++i){
+        ATAx[i] = 0.0;
+        ATb[i] = 0.0;
+        for(int j = 0; j < n; ++j){
+            ATAx[i] += ATA[i][j] * x[j];
+            ATb[i] += A[j][i] * b[j];
+        }
+        for(int j = n; j < m; ++j)
+            ATb[i] += A[j][i] * b[j];
+        double res_comp = ATAx[i] - ATb[i];;
+        residual_verify += res_comp * res_comp;
+    }
+    residual_verify = sqrt(residual_verify);
+    if(residual_verify < 1.e-16)
+        cout << "x is the optimization solution." << endl;
+    else
+        cout << "Something is wrong. residual_verify = " << residual_verify << endl;
+    for(int i = 0; i < n; ++i)
+        delete[] *(ATA+i);
+    delete[] ATA;
+
 }
