@@ -1493,7 +1493,7 @@ Amr::timeStep (Real time,
                Real stop_time)
 {
 
- if (fabs(time-cumtime)>1.0e-13)
+ if (std::abs(time-cumtime)>1.0e-13)
   amrex::Error("time<>cumtime");
 
  if ((finest_level==0)&&(regrid_on_restart==1)) {
@@ -1961,7 +1961,7 @@ Amr::regrid (int  lbase,
              bool initial)
 {
 
- if (fabs(time-cumtime)>1.0e-13)
+ if (std::abs(time-cumtime)>1.0e-13)
   amrex::Error("time<>cumtime in regrid");
 
  if (verbose > 0 && ParallelDescriptor::IOProcessor())

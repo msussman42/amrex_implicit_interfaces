@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include <unistd.h>
+#include <cmath>
 
 #include <AMReX_RealBox.H>
 #include <AMReX_ParallelDescriptor.H>
@@ -459,14 +460,14 @@ StateData::setTimeLevel (Real time,Real& dt)
  }
 
  if (do_scale_time==1) {
-  if (fabs(time_array[0]/dt-slablow)>1.0e-10)
+  if (std::abs(time_array[0]/dt-slablow)>1.0e-10)
    amrex::Error("time_array[0] inv in setTimeLevel StateData");
-  if (fabs(time_array[bfact_time_order]/dt-slabhigh)>1.0e-10)
+  if (std::abs(time_array[bfact_time_order]/dt-slabhigh)>1.0e-10)
    amrex::Error("time_array[bfact_time_order] inv setTimeLevel StateData");
  } else if (do_scale_time==0) {
-  if (fabs(time_array[0]-slablow)>1.0e-10*dt)
+  if (std::abs(time_array[0]-slablow)>1.0e-10*dt)
    amrex::Error("time_array[0] inv in setTimeLevel StateData");
-  if (fabs(time_array[bfact_time_order]-slabhigh)>1.0e-10*dt)
+  if (std::abs(time_array[bfact_time_order]-slabhigh)>1.0e-10*dt)
    amrex::Error("time_array[bfact_time_order] inv setTimeLevel StateData");
  } else {
   amrex::Error("dt invalid");
@@ -738,8 +739,8 @@ StateData::get_time_index(Real time,Real &nudge_time,int& best_index) {
   for (int slab_step=bfact_time_order-1;slab_step>=0;slab_step--) {
    Real time_scale_current=time_array[slab_step]/time_array[bfact_time_order];
    Real time_scale_best=time_array[best_index]/time_array[bfact_time_order];
-   if (fabs(time_scale-time_scale_current)<
-       fabs(time_scale-time_scale_best)) {
+   if (std::abs(time_scale-time_scale_current)<
+       std::abs(time_scale-time_scale_best)) {
     best_index=slab_step;
     nudge_time=time_array[slab_step];
    }
