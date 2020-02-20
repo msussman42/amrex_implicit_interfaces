@@ -2621,7 +2621,6 @@ ABecLaplacian::pcg_GMRES_solve(
                      nsolve_bicgstab,nghostSOLN,
                      MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
      }
-
      GMRES_Z_MF[j_local][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
      GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
@@ -2776,52 +2775,56 @@ ABecLaplacian::pcg_GMRES_solve(
        } else
         amrex::Error("vi_dot_vi==0.0 (renormalization)");
 
-       FIX ME STARTING HERE
         // Zj=M^{-1}Vj
-       multiphase_preconditioner(
-         project_option,project_timings,
-         presmooth,postsmooth,
-         GMRES_BUFFER0_Z_MF+j_local,
-         GMRES_BUFFER0_V_MF+j_local,nsolve);
+       pcg_solve(
+        GMRES_Z_MF[j_local][coarsefine],
+        GMRES_V_MF[j_local][coarsefine],
+        eps_abs,bot_atol,
+        pbdryhom_in,
+        bcpres_array,
+        usecg_at_bottom,
+        smooth_type,bottom_smooth_type,
+        presmooth,postsmooth,
+        use_PCG,
+        level);
 
-         // w=A Z
-       applyALL(project_option,
-         GMRES_BUFFER0_Z_MF+j_local,
-         GMRES_BUFFER_W_MF,nsolve);
+       // w=A Z
+       apply(*GMRES_W_MF[coarsefine],
+            *GMRES_Z_MF[j_local][coarsefine],
+            level,*pbdryhom_in,bcpres_array);
 
         // H_j is a j+2 x j+1 matrix  j=0..m-1
        for (int i=0;i<=j_local;i++) {
         // H_ij=W dot Vi
-        dot_productALL(project_option,
-          GMRES_BUFFER_W_MF,
-          GMRES_BUFFER0_V_MF+i,HH[i][j_local],nsolve);
+        LP_dot(*GMRES_W_MF[coarsefine],
+  	       *GMRES_V_MF[i][coarsefine],level,HH[i][j_local]);
        } // i=0..j_local
 
         // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
        for (int i=0;i<=p_local;i++) {
         // G_ij=W dot Ui
-        dot_productALL(project_option,
-         GMRES_BUFFER_W_MF,
-         GMRES_BUFFER0_U_MF+i,GG[i][j_local],nsolve);
+        LP_dot(*GMRES_W_MF[coarsefine],
+  	       *GMRES_U_MF[i][coarsefine],level,GG[i][j_local]);
        } // i=0..p_local
 
        for (int i=0;i<=j_local;i++) {
         aa=-HH[i][j_local];
          // W=W+aa Vi
-        mf_combine(project_option,
-         GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+        CG_advance((*GMRES_W_MF[coarsefine]),aa,
+                   (*GMRES_W_MF[coarsefine]),
+                   (*GMRES_V_MF[i][coarsefine]),level);
        }
        for (int i=0;i<=p_local;i++) {
         aa=-GG[i][j_local];
          // W=W+aa Ui
-        mf_combine(project_option,
-         GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+        CG_advance((*GMRES_W_MF[coarsefine]),aa,
+                   (*GMRES_W_MF[coarsefine]),
+                   (*GMRES_U_MF[i][coarsefine]),level);
        }
 
         // H_j is a j+2 x j+1 matrix  j=0..m-1
-       dot_productALL(project_option,
-         GMRES_BUFFER_W_MF,
-         GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
+       LP_dot(*GMRES_W_MF[coarsefine],
+              *GMRES_W_MF[coarsefine],level,HH[j_local+1][j_local]);
 
        condition_number_blowup=0;
        if (HH[j_local+1][j_local]>=0.0) {
@@ -2875,27 +2878,22 @@ ABecLaplacian::pcg_GMRES_solve(
       for (int i2=0;i2<=j_local;i2++) {
        aa=yy[i2];
         // Z=Z+aa Z_{i2}
-       mf_combine(project_option,
-        idx_Z,
-        GMRES_BUFFER0_Z_MF+i2,aa,
-        idx_Z,nsolve); 
+       CG_advance((*z_in),aa,(*z_in),
+                  (*GMRES_Z_MF[i2][coarsefine]),level);
       }
      } else
       amrex::Error("status invalid");
 
-      // residALL calls applyALL which calls 
-      // project_right_hand_side(idx_Z).
-      // At end end of residALL, 
-      // project_right_hand_side(W) is called.
-     residALL(project_option,
-       idx_R, // rhs
-       GMRES_BUFFER_W_MF, // resid
-       idx_Z, // source
-       nsolve);
+     project_null_space(*z_in,level);
+      // resid,rhs,soln
+     residual((*GMRES_W_MF[coarsefine]),  // resid
+              (*r_in),  // rhs
+              (*z_in),  // soln
+              level,pbdryhom_in,bcpres_array);
+     project_null_space((*GMRES_W_MF[coarsefine]),level);
      Real beta_compare=0.0;
-     dot_productALL(project_option,
-	GMRES_BUFFER_W_MF, 
-	GMRES_BUFFER_W_MF,beta_compare,nsolve);
+     LP_dot(*GMRES_W_MF[coarsefine],
+            *GMRES_W_MF[coarsefine],level,beta_compare);
      if (beta_compare>=0.0) {
       beta_compare=sqrt(beta_compare);
       if (beta_compare<=GMRES_tol*beta) {
@@ -2912,15 +2910,20 @@ ABecLaplacian::pcg_GMRES_solve(
       if (HH[j_local+1][j_local]>0.0) {
        if ((j_local>=0)&&(j_local<m-1)) {
 
-        // variables initialized to 0.0
-        allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+j_local+1);
+        if (j_local+1>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
+         GMRES_V_MF[j_local+1][coarsefine]=
+          new MultiFab(gbox[level],dmap_array[level],
+                       nsolve_bicgstab,nghostRHS,
+                       MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
+        }
+        GMRES_V_MF[j_local+1][coarsefine]->
+          setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
         aa=1.0/HH[j_local+1][j_local];
          // V=V+aa W
-        mf_combine(project_option,
-         GMRES_BUFFER0_V_MF+j_local+1,
-         GMRES_BUFFER_W_MF,aa,
-         GMRES_BUFFER0_V_MF+j_local+1,nsolve); 
+        CG_advance((*GMRES_V_MF[j_local+1][coarsefine]),aa,
+                   (*GMRES_V_MF[j_local+1][coarsefine]),
+                   (*GMRES_W_MF[coarsefine]),level);
        } else if (j_local==m-1) {
         // do nothing
        } else
@@ -2935,10 +2938,6 @@ ABecLaplacian::pcg_GMRES_solve(
       // do nothing
      } else
       amrex::Error("convergence_flag invalid");
-
-
-
-
 
     } // j_local=0..m-1 (and convergence_flag==0)
 

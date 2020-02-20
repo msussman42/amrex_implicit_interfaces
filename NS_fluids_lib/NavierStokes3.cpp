@@ -8006,7 +8006,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     for (int i=0;i<j_local;i++) {
      delete_array(GMRES_BUFFER0_Z_MF+i); 
     }
-      // GMRES_BUFFER0_V_MF+0 deleted after if statement.
+      // GMRES_BUFFER0_V_MF+0 deleted after if statement below. 
     for (int i=1;i<j_local;i++) {
      delete_array(GMRES_BUFFER0_V_MF+i); 
     }
