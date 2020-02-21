@@ -314,10 +314,10 @@ stop
          xtemp(SDIM)=xsten(2*k,SDIM)
         endif
         do dir=1,SDIM
-         if (cc_flag.eq.0) then ! centroid-> center
-          xlive(dir)=XC_sten(D_DECL(i,j,k),dir)
+         if (cc_flag.eq.0) then ! centroid-> center or centroid to probe.
+          xlive(dir)=XC_sten(D_DECL(i,j,k),dir) ! cell centroid
          else if (cc_flag.eq.1) then ! center-> centroid
-          xlive(dir)=xtemp(dir)
+          xlive(dir)=xtemp(dir)  ! cell center
          else
           print *,"cc_flag invalid"
           stop
@@ -491,10 +491,10 @@ stop
           xtemp(SDIM)=xsten(2*k1,SDIM)
          endif
          do dir=1,SDIM
-          if (cc_flag.eq.0) then ! centroid-> center
-           xlive(dir)=XC_sten(D_DECL(i1,j1,k1),dir)
+          if (cc_flag.eq.0) then ! centroid-> center or probe
+           xlive(dir)=XC_sten(D_DECL(i1,j1,k1),dir) ! centroid
           else if (cc_flag.eq.1) then ! center-> centroid
-           xlive(dir)=xtemp(dir)
+           xlive(dir)=xtemp(dir) ! center
           else
            print *,"cc_flag invalid"
            stop
@@ -3967,6 +3967,7 @@ stop
 
        if (local_mask.eq.1) then
 
+         ! LEVELSET FUNCTION AT CELL CENTERS YANG.
         do imls=1,nmat
          LShere(imls)=LS(D_DECL(i,j,k),imls)
         enddo
@@ -4043,6 +4044,11 @@ stop
                if ((LShere(im_dest).ge.zero).or. &
                    (LShere(im_source).ge.zero)) then
 
+                 ! TODO:
+                 ! If probe is in a 3rd material "3", then
+                 !  revise the probe to be closest point on the material
+                 !  "3" interface.  The gradient is then calculated as
+                 ! (T_3-T_sat)/(d * (n12 dot n3)) or something like that.
                  ! FOR YANG: use closest point map generated using VAHAB'S
                  !  multimaterial redistancing algorithm.
                 if (LShere(im_dest).ge.zero) then
