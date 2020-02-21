@@ -50,7 +50,7 @@ else
  stop
 endif
 
-if (abs(x(SDIM)).le.1.0D-20) then
+if (abs(x(SDIM)).le.1.0D+20) then
  Phi=substrate_height-x(SDIM)
 else
  print *,"x(SDIM) invalid"
@@ -96,6 +96,7 @@ use probcommon_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(num_materials)
 REAL_T, intent(out) :: VEL(SDIM)
@@ -110,6 +111,15 @@ else
  stop
 endif
 
+do dir=1,SDIM
+ if (dx(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"dx invalid"
+  stop
+ endif
+enddo
+
 if (adv_dir.eq.SDIM) then
 
   ! material 3 is the substrate
@@ -123,7 +133,7 @@ if (adv_dir.eq.SDIM) then
 
      ! material 1 is the drop
   if ((LS(1).ge.zero).or. &
-      (LS(1).ge.-dx(1)) then
+      (LS(1).ge.-dx(1))) then
    ! in drop
    do dir=1,SDIM
     VEL(dir)=-abs(advbot)
@@ -235,14 +245,14 @@ subroutine ZEYU_droplet_impact_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T VEL
-REAL_T VEL_in
-INTEGER_T veldir,dir,side
-REAL_T dx(SDIM)
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(out) :: VEL
+REAL_T, intent(in) :: VEL_in
+INTEGER_T, intent(in) :: veldir,dir,side
+REAL_T, intent(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 

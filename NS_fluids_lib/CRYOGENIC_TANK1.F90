@@ -50,7 +50,7 @@ else
  stop
 endif
 
-if (abs(x(SDIM)).le.1.0D-20) then
+if (abs(x(SDIM)).le.1.0D+20) then
  Phi=substrate_height-x(SDIM)
 else
  print *,"x(SDIM) invalid"

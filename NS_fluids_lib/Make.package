@@ -31,6 +31,7 @@ F90EXE_headers += \
   helix.F90 \
   thermalspray.F90 \
   cav2Dstep.F90 \
+  ZEYU_droplet_impact.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \
   wavy_channel.F90 \
@@ -55,6 +56,7 @@ F90EXE_sources += \
   helix.F90 \
   thermalspray.F90 \
   cav2Dstep.F90 \
+  ZEYU_droplet_impact.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \
   wavy_channel.F90 \
