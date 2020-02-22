@@ -7531,6 +7531,11 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    }
 
    Real* yy=new Real[m];
+   Real* beta_e1=new Real[2*(m+1)];
+   for (int j=0;j<2*(m+1);j++)
+    beta_e1[j]=0.0;
+   beta_e1[0]=beta;
+
    int status=1;
 
     // for Zeyus routine:
@@ -7925,12 +7930,14 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      }
      for (int i1=0;i1<=p_local;i1++) {
       for (int i2=0;i2<=j_local;i2++) {
-       HHGG[i1][i2]=GG[i1][i2];
+       HHGG[i1+j_local+2][i2]=GG[i1][i2];
       }
      }
      status=1;
      setVal_array(1,nsolveMM,0.0,idx_Z);
-      // CALL ZEYU's least squares routine here
+
+      // sub box dimensions: p_local+j_local+3  x j_local+1
+     LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m);
      if (status==1) {
       for (int i2=0;i2<=j_local;i2++) {
        aa=yy[i2];

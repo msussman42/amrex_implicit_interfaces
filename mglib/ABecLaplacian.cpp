@@ -2459,6 +2459,11 @@ ABecLaplacian::pcg_GMRES_solve(
    }
 
    Real* yy=new Real[m];
+   Real* beta_e1=new Real[2*(m+1)];
+   for (int j=0;j<2*(m+1);j++)
+    beta_e1[j]=0.0;
+   beta_e1[0]=beta;
+
    int status=1;
 
    int breakdown_free_flag=0;
@@ -2870,12 +2875,14 @@ ABecLaplacian::pcg_GMRES_solve(
      }
      for (int i1=0;i1<=p_local;i1++) {
       for (int i2=0;i2<=j_local;i2++) {
-       HHGG[i1][i2]=GG[i1][i2];
+       HHGG[i1+j_local+2][i2]=GG[i1][i2];
       }
      }
      status=1;
      z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-      // CALL ZEYU's least squares routine here
+
+      // sub box dimensions: p_local+j_local+3  x j_local+1
+     LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m);
      if (status==1) {
       for (int i2=0;i2<=j_local;i2++) {
        aa=yy[i2];

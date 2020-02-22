@@ -17424,7 +17424,6 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
 
  Real* sn=new Real[m];
  Real* cs=new Real[m];
- Real* e1=new Real[m+1];
  Real* h=new Real[m+1];
  Real* beta_vec=new Real[m+1];
 
@@ -17433,11 +17432,9 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   cs[i]=0.0;
  }
  for (int i=0;i<m+1;i++) {
-  e1[i]=0.0;
   h[i]=0.0;
   beta_vec[i]=0.0;
  }
- e1[0]=1.0;
  beta_vec[0]=beta;
 
  for (int k=1;k<=m;k++) {
@@ -17552,7 +17549,6 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
 
  delete [] sn;
  delete [] cs;
- delete [] e1;
  delete [] h;
  delete [] beta_vec;
 
