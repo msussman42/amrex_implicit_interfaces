@@ -33,11 +33,20 @@ void ZeroRow(double *Bd, double *Bs, const int n);
 void ZeroColumn(double *Bd, double *Bs, const int n);
 
 // QR factorization for least squares problems
-// A: m x n, x: n, b: m
+// A: m x n, x: sn, b: sm
 // To solve min||Ax-b|| for x:
 // 1. A = QR;
 // 2. d=QTb;
 // 3. solve Rx=d.
-void LeastSquaresQR(double **A, double *x, const double *b, const int m, const int n);
+void LeastSquaresQR(double **A, double *x, const double *b, const int m, const int n, const int sm, const int sn);
+
+// calculate determinant of a square matrix using PLU decomposition
+// det(A) = (-1)^S * det(U)
+double GetDeterminant(double **A, const int m);
+
+// PLU decomposition
+// A: m x m, is overwritten by L and U, A <= (L-E)+U
+// P: m+1, P[m] = S
+void PLUDecomposition(double **A, int *P, const int m);
 
 #endif

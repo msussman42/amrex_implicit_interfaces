@@ -2650,7 +2650,8 @@ ABecLaplacian::pcg_GMRES_solve(
           *GMRES_Z_MF[j_local][coarsefine],
           level,*pbdryhom_in,bcpres_array);
 
-      // H_j is a j+2 x j+1 matrix  j=0..m-1
+      // H_j     is a j+2 x j+1 matrix  j=0..m-1
+      // H_{j-1} is a j+1 x j   matrix  j=0..m-1
       // This step is equivalent to:
       // H_j=[ H_{j-1}    h_{j}  
       //         0        h_{j+1,j}  ]
@@ -2661,10 +2662,13 @@ ABecLaplacian::pcg_GMRES_solve(
 	     *GMRES_V_MF[i][coarsefine],level,HH[i][j_local]);
      } // i=0..j_local
 
-      // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
+      // p_local=p(j-1)
+      // G_j      is a p(j)+1   x j+1 matrix  j=0..m-1
+      // G_{j-1}  is a p(j-1)+1 x j   matrix  j=0..m-1
+      // G'_j     is a p(j-1)+1 x j+1 matrix  j=0..m-1
       // This step is equivalent to:
-      // G_j= [ G_{j-1} g_{j} ]
-      // g_{j} is a p(j)+1 x 1 vector
+      // G'_j= [ G_{j-1} g_{j} ]
+      // g_{j} is a p(j-1)+1 x 1 vector
      for (int i=0;i<=p_local;i++) {
        // G_ij=W dot Ui
       LP_dot(*GMRES_W_MF[coarsefine],
@@ -2698,8 +2702,17 @@ ABecLaplacian::pcg_GMRES_solve(
      } else
       amrex::Error("p_local invalid");
 
+       // NOTE: if h_{j+1,j}==0 this means that ||w||=0,
+       //  which means that the new candidate v_{j+1} will
+       //  be a linear combination of v_{0},...,v_{j}.
+       //  Also, if h_{j+1,j}=0, this means that the last
+       //  row of H_j will be all zeroes which implies that the
+       //  last column of H_{j}^T will be all zeros.  
+       //  But, h_{j+1,j}=0, does not imply that 
+       //  condnum(H_{j})=infinity.  Theoretically, ||w||<>0
+       //  if h_j not the zero vector?
      int condition_number_blowup=0;
-     if (HH[j_local+1][j_local]>=0.0) {
+     if (HH[j_local+1][j_local]>0.0) {
       HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
        // Real** HH   i=0..m  j=0..m-1
        // active region: i=0..j_local+1  j=0..j_local
@@ -2710,7 +2723,8 @@ ABecLaplacian::pcg_GMRES_solve(
        condition_number_blowup=0;  
       } else
        amrex::Error("zeyu_condnum NaN");
-
+     } else if (HH[j_local+1][j_local]==0.0) {
+      condition_number_blowup=1;  
      } else
       amrex::Error("HH[j_local+1][j_local] invalid");
 
@@ -2731,9 +2745,19 @@ ABecLaplacian::pcg_GMRES_solve(
 		     nsolve_bicgstab,nghostRHS);
 
       if (j_local==0) {
-	// do nothing
-        // G_j-1 is a p(j-1)+1 x j matrix  j=0..m-1
-        // H_j-1 is a j+1 x j matrix  j=0..m-1
+	// do nothing if j_local==0
+
+        // In the paper by Reichel and Ye:
+	//  H_k     is a k+1 x k matrix  k=1..m	      
+	//  H_{k-1} is a k x k-1 matrix  k=1..m	      
+	// In this code:
+        // G_{j-1} is a p(j-1)+1 x j   matrix  j=0..m-1
+        // G'_j    is a p(j-1)+1 x j+1 matrix  j=0..m-1
+        // H_{j}   is a j+2 x j+1      matrix  j=0..m-1
+        // H_{j-1} is a j+1 x j        matrix  j=0..m-1
+	// G_j     is a p(j)+1 x j+1   matrix  j=0..m-1
+	// G_j= [                          G'_j
+	//        last (j+1)th row of H_{j-1}        0  ]
       } else if ((j_local>=1)&&(j_local<m)) {
        for (int i=0;i<j_local;i++) {
         GG[p_local][i]=HH[j_local][i];
@@ -2808,6 +2832,8 @@ ABecLaplacian::pcg_GMRES_solve(
             level,*pbdryhom_in,bcpres_array);
 
         // H_j is a j+2 x j+1 matrix  j=0..m-1
+	// last column of H_j is replaced by h_j
+	//  (except the (j+2th,j+1th) component)
        for (int i=0;i<=j_local;i++) {
         // H_ij=W dot Vi
         LP_dot(*GMRES_W_MF[coarsefine],
@@ -2815,8 +2841,10 @@ ABecLaplacian::pcg_GMRES_solve(
        } // i=0..j_local
 
         // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
+        // g_j is a p(j)+1 x 1   vector  j=0..m-1
        for (int i=0;i<=p_local;i++) {
         // G_ij=W dot Ui
+	// last column of G_j is replaced by g_j
         LP_dot(*GMRES_W_MF[coarsefine],
   	       *GMRES_U_MF[i][coarsefine],level,GG[i][j_local]);
        } // i=0..p_local
@@ -2841,7 +2869,7 @@ ABecLaplacian::pcg_GMRES_solve(
               *GMRES_W_MF[coarsefine],level,HH[j_local+1][j_local]);
 
        condition_number_blowup=0;
-       if (HH[j_local+1][j_local]>=0.0) {
+       if (HH[j_local+1][j_local]>0.0) {
         HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
          // Real** HH   i=0..m  j=0..m-1
          // active region: i=0..j_local+1  j=0..j_local
@@ -2853,7 +2881,8 @@ ABecLaplacian::pcg_GMRES_solve(
          condition_number_blowup=0;  
         } else
          amrex::Error("zeyu_condnum NaN");
-         
+       } else if (HH[j_local+1][j_local]==0.0) {
+        condition_number_blowup=1;  
        } else
         amrex::Error("HH[j_local+1][j_local] invalid");
 
@@ -2889,7 +2918,9 @@ ABecLaplacian::pcg_GMRES_solve(
      z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
       // sub box dimensions: p_local+j_local+3  x j_local+1
-     LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m);
+      // j_local=0..m-1
+     LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m,
+		    p_local+j_local+3,j_local+1);
      if (status==1) {
       for (int i2=0;i2<=j_local;i2++) {
        aa=yy[i2];

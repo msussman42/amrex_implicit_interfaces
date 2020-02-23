@@ -1730,7 +1730,7 @@ Amr::coarseTimeStep (Real stop_time)
      FabArrayBase::flushFBCache();
      FabArrayBase::flushCPCache();
     }
-    if (1==1) {
+    if (1==0) {
      if (ParallelDescriptor::IOProcessor()) {
       FabArrayBase::m_FA_stats.print();
       FabArrayBase::m_TAC_stats.print();

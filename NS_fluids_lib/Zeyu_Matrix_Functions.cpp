@@ -33,9 +33,50 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
     double min = 1.e20;
     double max = 0.0;
     for(int i = 0; i < sn; ++i){
-        if(std::abs(D[i]) > max) max = std::abs(D[i]);
-        if(std::abs(D[i]) < min) min = std::abs(D[i]);
+        D[i] = std::abs(D[i]);
+        if(D[i] > max) max = D[i];
+        if(D[i] < min) min = D[i];
     }
+
+    //sanity check
+    double **B = new double *[sn];
+    for(int i = 0; i < sn; ++i){
+        *(B+i) = new double [sn];
+        for(int j = 0; j < sn; ++j){
+            B[i][j] = 0.0;
+            for(int k = 0; k < sm; ++k)
+                B[i][j] += H[k][i] * H[k][j];
+        }
+    }
+    for(int it = 0; it < sn; ++it){
+        for(int i = 0; i < sn; ++i)
+            B[i][i] -= D[it] * D[it];
+
+        //cout << endl;
+        //for(int i = 0; i < sn; ++i){
+        //    for(int j = 0; j < sn; ++j){
+        //        cout << B[i][j] << " ";
+        //    }
+        //    cout << "\n";
+        //}
+        //cout << endl;
+
+        double detB = GetDeterminant(B, sn);
+        for(int i = 0; i < sn; ++i)
+            B[i][i] += D[it] * D[it];
+        if(std::abs(detB) <= 1.e-16){
+            //cout << D[it] << " is singluar value of Matrix H." << endl;
+        }
+        else{
+            cout << "Something is wrong for singluar value "<< D[it] 
+                 <<"! det(ATA - sigma^2*I) = " << std::abs(detB) << endl;
+        }
+    }
+
+    for(int i = 0; i < sn; ++i)
+        delete[] *(B+i);
+    delete[] B;
+    //end sanity check
 
     //if(iprint == 1)
     //    cout << "Matrix::CondNum(): end" << endl;
@@ -46,6 +87,7 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
     
     if(std::abs(min - 0.0) <= 1.e-16 * Dn){
         min = max * (1.0e-100);
+        cout << "Warning! Zero singular value." << endl;
     }
     return max / min;
 }
@@ -294,8 +336,7 @@ void SVD(double **A, double *D, const int m, const int n)
     while(q < n){
         //set b(i,i+1) to zero, if |b(i,i+1)| <= tol*(|b(i,i)|+|b(i+1,i+1)|)
         for(int i = 0; i < n-p-q-1; ++i){//relative index
-            if(std::abs(Bs[p+i]) <= 
-	       tol * (std::abs(Bd[p+i]) + std::abs(Bd[p+i+1])))
+            if(std::abs(Bs[p+i]) <= tol * (std::abs(Bd[p+i]) + std::abs(Bd[p+i+1])))
                 Bs[p+i] = 0.0;//absolute index
         }
         for(int i = 0; i < n-p-q-1; ++i){
@@ -424,21 +465,21 @@ void ZeroColumn(double *Bd, double *Bs, const int n)
 }
 
 // QR factorization for least squares problems
-// A: m x n, x: n, b: m
+// A: m x n, x: sn, b: sm
 // To solve min||Ax-b|| for x:
 // 1. A = QR;
 // 2. d=QTb;
 // 3. solve Rx=d.
-void LeastSquaresQR(double **A, double *x, const double *b, const int m, const int n)
+void LeastSquaresQR(double **A, double *x, const double *b, const int m, const int n, const int sm, const int sn)
 {
     //define R(mx(n+1)), d is included in the last column of R
-    double **R = new double *[m];
-    for(int i = 0; i < m; ++i){
-        *(R+i) = new double [n+1];
+    double **R = new double *[sm];
+    for(int i = 0; i < sm; ++i){
+        *(R+i) = new double [sn+1];
     }
-    for(int i = 0; i < m; ++i){
-        for(int j = 0; j < n+1; ++j){
-            if(j == n)
+    for(int i = 0; i < sm; ++i){
+        for(int j = 0; j < sn+1; ++j){
+            if(j == sn)
                 R[i][j] = b[i];
             else{
                 R[i][j] = A[i][j];
@@ -446,9 +487,9 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
         }
     }
 
-    for(int it = 0; it < n; ++it){
+    for(int it = 0; it < sn; ++it){
         double y = R[it][it];
-        for(int i = it+1; i < m; ++i){
+        for(int i = it+1; i < sm; ++i){
             double z = R[i][it];
             if(std::abs(z) < 1.0e-16) 
                 continue;
@@ -456,7 +497,7 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
                 double c, s;
                 Givens(y, z, c, s);
 
-                for(int j = it; j < n+1; ++j){
+                for(int j = it; j < sn+1; ++j){
                     double temp1 = c * R[it][j] + (-s) * R[i][j];
                     double temp2 = s * R[it][j] + c * R[i][j];
                     R[it][j] = temp1;
@@ -466,59 +507,229 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
         }
     }
 
-    if(std::abs(R[n-1][n-1]) <= 1.e-16){
-        cout << "Warn! R[" << n-1 << "][" << n-1 
+    if(std::abs(R[sn-1][sn-1]) <= 1.e-16){
+        cout << "Warning! R[" << sn-1 << "][" << sn-1 
              << "] is close to zero in QR fatorization!" << endl;
-        R[n-1][n-1] = 1.e-16;
+        R[sn-1][sn-1] = 1.e-16;
     }
-    x[n-1] = R[n-1][n] / R[n-1][n-1];
-    for(int i = 0; i < n-1; ++i){
-        x[n-2-i] = R[n-2-i][n];
-        for(int j = n-1-i; j < n; ++j)
-            x[n-2-i] -= R[n-2-i][j] * x[j];
-        if(std::abs(R[n-2-i][n-2-i]) <= 1.e-16){
-            cout << "Warn! R[" << n-2-i << "][" << n-2-i 
+    x[sn-1] = R[sn-1][sn] / R[sn-1][sn-1];
+    for(int i = 0; i < sn-1; ++i){
+        x[sn-2-i] = R[sn-2-i][sn];
+        for(int j = sn-1-i; j < sn; ++j)
+            x[sn-2-i] -= R[sn-2-i][j] * x[j];
+        if(std::abs(R[sn-2-i][sn-2-i]) <= 1.e-16){
+            cout << "Warn! R[" << sn-2-i << "][" << sn-2-i 
                  << "] is close to zero in QR fatorization!" << endl;
-            R[n-2-i][n-2-i] = 1.e-16;
+            R[sn-2-i][sn-2-i] = 1.e-16;
         }
-        x[n-2-i] = x[n-2-i] / R[n-2-i][n-2-i];
+        x[sn-2-i] = x[sn-2-i] / R[sn-2-i][sn-2-i];
     }
 
-    for(int i = 0; i < m; ++i)
+    for(int i = 0; i < sm; ++i)
         delete[] *(R+i);
     delete[] R;
 
-    double **ATA = new double *[n];
-    for(int i = 0; i < n; ++i){
-        ATA[i] = new double [n];
-        for(int j = 0; j < n; ++j){
+    //sanity check
+    double **ATA = new double *[sn];
+    for(int i = 0; i < sn; ++i){
+        ATA[i] = new double [sn];
+        for(int j = 0; j < sn; ++j){
             ATA[i][j] = 0.0;
-            for(int k = 0; k < m; ++k)
+            for(int k = 0; k < sm; ++k)
                 ATA[i][j] += A[k][i] * A[k][j];
         }
     }
     double residual_verify = 0.0;
-    double ATAx[n];
-    double ATb[n];
-    for(int i = 0; i < n; ++i){
+    double ATAx[sn];
+    double ATb[sn];
+    for(int i = 0; i < sn; ++i){
         ATAx[i] = 0.0;
         ATb[i] = 0.0;
-        for(int j = 0; j < n; ++j){
+        for(int j = 0; j < sn; ++j){
             ATAx[i] += ATA[i][j] * x[j];
             ATb[i] += A[j][i] * b[j];
         }
-        for(int j = n; j < m; ++j)
+        for(int j = sn; j < sm; ++j)
             ATb[i] += A[j][i] * b[j];
         double res_comp = ATAx[i] - ATb[i];;
         residual_verify += res_comp * res_comp;
     }
     residual_verify = sqrt(residual_verify);
-    if(residual_verify < 1.e-16)
-        cout << "x is the optimization solution." << endl;
+    if(residual_verify <= 1.e-16){
+        //cout << "x is the optimization solution." << endl;
+    }
     else
-        cout << "Something is wrong. residual_verify = " << residual_verify << endl;
-    for(int i = 0; i < n; ++i)
+        cout << "Something is wrong! ||ATAx - ATb|| = " << residual_verify << endl;
+    for(int i = 0; i < sn; ++i)
         delete[] *(ATA+i);
     delete[] ATA;
+    //end sanity check
+}
+
+// calculate determinant of a square matrixi using PLU decomposition
+// det(A) = (-1)^S * det(U)
+double GetDeterminant(double **A, const int m)
+{
+    double detA;
+
+    double **B = new double *[m];
+    for(int i = 0; i < m; ++i){
+        *(B+i) = new double [m];
+        for(int j = 0; j < m; ++j)
+            B[i][j] = A[i][j];
+    }
+
+    int P[m+1];
+
+    PLUDecomposition(B, P, m);
+
+    double Bmax = 0.0;
+    for(int i = 0; i < m; ++i){
+        if(std::abs(B[i][i]) > Bmax)
+            Bmax = std::abs(B[i][i]);
+    }
+    detA = pow(-1, P[m]);
+    for(int i = 0; i < m; ++i){
+        //cout << B[i][i] << endl;
+        if(std::abs(B[m-1-i][m-1-i]) <= 1.e-9 * Bmax){
+            //B[m-1-i][m-1-i] = 0.0;
+            detA = 0.0;
+            break;
+        }
+        else
+            detA *= B[m-1-i][m-1-i];
+    }
+
+    //sanity check
+    /*double Pt[m][m];
+    for(int i = 0; i < m; ++i){
+        for(int j = 0; j < m; ++j){
+            Pt[j][i] = 0;
+            if(j == P[i])
+                Pt[j][i] = 1.0;
+        }
+        //cout << P[i] << " ";
+    }
+    double Lt[m][m];
+    double Ut[m][m];
+    for(int i = 0; i < m; ++i){
+        for(int j = 0; j < m; ++j){
+            if(i == j)
+                Lt[i][j] = 1.0;
+            else if(i < j)
+                Lt[i][j] = 0.0;
+            else
+                Lt[i][j] = B[i][j];
+            if(i > j)
+                Ut[i][j] = 0.0;
+            else
+                Ut[i][j] = B[i][j];
+        }
+    }
+    double At[m][m];
+    for(int i = 0; i < m; ++i){
+        for(int j = 0; j < m; ++j){
+            At[i][j] = 0.0;
+            for(int k = 0; k < m; ++k)
+                At[i][j] += Pt[i][k] * Lt[k][j];
+        }
+    }
+    for(int i = 0; i < m; ++i){
+        double temp[m];
+        for(int j = 0; j < m; ++j){
+            temp[j] = 0.0;
+            for(int k = 0; k < m; ++k)
+                temp[j] += At[i][k] * Ut[k][j];
+        }
+        for(int j = 0; j < m; ++j)
+            At[i][j] = temp[j];
+    }
+    double An = 0.0;
+    for(int i = 0; i < m; ++i)
+        for(int j = 0; j < m; ++j)
+            An += A[i][j] * A[i][j];
+    An = sqrt(An);
+    double r = 0;
+    for(int i = 0; i < m; ++i){
+        for(int j = 0; j < m; ++j){
+            At[i][j] = At[i][j] - A[i][j];
+            if(std::abs(At[i][j]) <= 1.e-14 * An)
+                At[i][j] = 0.0;
+            cout << Ut[i][j] << " ";
+            r += At[i][j] * At[i][j];
+        }
+        cout << endl;
+    }
+    r = sqrt(r);
+    if(r <= 1.e-16){
+        //Do nothing!
+    }
+    else{
+        cout << "Something is wrong in LPU decomposition! ||PLU-A|| = " 
+             << r << endl;
+    }*/
+    //end sanity check
+
+    for(int i = 0; i < m; ++i)
+        delete[] *(B+i);
+    delete[] B;
+
+    return detA;
+}
+
+// PLU decomposition
+// A: m x m, is overwritten by L and U, A <= (L-E)+U
+// P: m+1, P[m] = S
+void PLUDecomposition(double **A, int *P, const int m)
+{
+    for(int i = 0; i < m; ++i)
+        P[i] = i;
+    P[m] = 0;
+    
+    double An = 0.0;
+    for(int i = 0; i < m; ++i)
+        for(int j = 0; j < m; ++j)
+            An += A[i][j] * A[i][j];
+    An = sqrt(An);
+
+    for(int it = 0; it < m; ++it){
+        double max = 0.0;
+        int imax = it;
+        for(int i = it; i < m; ++i){
+            if(std::abs(A[i][it]) > max){
+                max = std::abs(A[i][it]);
+                imax = i;
+            }
+        }
+
+        if(max <= 1.e-16 * An){
+            if(it == m-1){
+                //A[it][it] = 0.0;
+            }
+            else{
+                cerr << "Error!PLU decomposition failure!" << endl;
+                abort();
+            }
+        }
+
+        if(imax != it){
+            int temp = P[it];
+            P[it] = P[imax];
+            P[imax] = temp;
+
+            double *pt = A[it];
+            A[it] = A[imax];
+            A[imax] = pt;
+
+            P[m]++;
+        }
+
+        for(int i = it+1; i < m; ++i){
+            A[i][it] /= A[it][it];
+            for(int j = it+1; j < m; ++j){
+                A[i][j] -= A[i][it] * A[it][j];
+            }
+        }
+    }
 
 }
