@@ -2651,6 +2651,10 @@ ABecLaplacian::pcg_GMRES_solve(
           level,*pbdryhom_in,bcpres_array);
 
       // H_j is a j+2 x j+1 matrix  j=0..m-1
+      // This step is equivalent to:
+      // H_j=[ H_{j-1}    h_{j}  
+      //         0        h_{j+1,j}  ]
+      // h_{j} is a j+1 x 1 vector.
      for (int i=0;i<=j_local;i++) {
        // H_ij=W dot Vi
       LP_dot(*GMRES_W_MF[coarsefine],
@@ -2658,6 +2662,9 @@ ABecLaplacian::pcg_GMRES_solve(
      } // i=0..j_local
 
       // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
+      // This step is equivalent to:
+      // G_j= [ G_{j-1} g_{j} ]
+      // g_{j} is a p(j)+1 x 1 vector
      for (int i=0;i<=p_local;i++) {
        // G_ij=W dot Ui
       LP_dot(*GMRES_W_MF[coarsefine],
