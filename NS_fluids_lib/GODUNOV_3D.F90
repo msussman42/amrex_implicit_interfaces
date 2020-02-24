@@ -10427,6 +10427,7 @@ stop
       REAL_T dest_perim_factor
       REAL_T v_terminal
       REAL_T effective_velocity
+      REAL_T local_elastic_time
       REAL_T ugrav
 
       nhalf=3
@@ -10910,17 +10911,43 @@ stop
        cright_diag=zero
        cc_diag=zero
 
+       FIX ME 1. pass elastic_time
+              2. verify for visc_coef<>1
        do im=1,nmat
         if (fort_denconst(im).gt.zero) then
-         elastic_wave_speed=fort_elastic_viscosity(im)/fort_denconst(im)
-         if (elastic_wave_speed.gt.zero) then
-          elastic_wave_speed=sqrt(elastic_wave_speed)
-          dthold=hx/elastic_wave_speed
-          dt_min=min(dt_min,dthold)
-         else if (elastic_wave_speed.eq.zero) then
-          ! do nothing
+         if (fort_viscosity_state_model(im).ge.0) then
+          if (visc_coef.ge.zero) then
+           if (elastic_time(im).ge.zero) then
+            if (elastic_time(im).eq.zero) then
+             local_elastic_time=one
+            else if (elastic_time(im).ge.one) then
+             local_elastic_time=one
+            else
+             local_elastic_time=elastic_time(im)
+            endif
+
+            elastic_wave_speed=visc_coef*fort_elastic_viscosity(im)/ &
+                (local_elastic_time*fort_denconst(im))
+            if (elastic_wave_speed.gt.zero) then
+             elastic_wave_speed=sqrt(elastic_wave_speed)
+             dthold=hx/elastic_wave_speed
+             dt_min=min(dt_min,dthold)
+            else if (elastic_wave_speed.eq.zero) then
+             ! do nothing
+            else
+             print *,"elastic_wave_speed invalid"
+             stop
+            endif
+           else
+            print *,"elastic_time invalid"
+            stop
+           endif
+          else
+           print *,"visc_coef invalid"
+           stop
+          endif
          else
-          print *,"elastic_wave_speed invalid"
+          print *,"fort_viscosity_state_model invalid"
           stop
          endif
         else

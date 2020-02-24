@@ -3082,7 +3082,9 @@ NavierStokes::read_params ()
      if (Carreau_mu_inf[i]<0.0)
       amrex::Error("Carreau_mu_inf[i] invalid");
 
-     if (viscosity_state_model[i]<0)
+     if (viscosity_state_model[i]>=0) {
+      // do nothing
+     } else
       amrex::Error("viscosity state model invalid");
 
      if ((viscoelastic_model[i]>=0)&&(viscoelastic_model[i]<=2)) {

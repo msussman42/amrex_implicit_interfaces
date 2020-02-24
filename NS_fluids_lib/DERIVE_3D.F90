@@ -600,7 +600,9 @@ stop
        print *,"viscosity_state_model invalid"
        stop
       endif
-      if (viscosity_state_model.lt.0) then
+      if (viscosity_state_model.ge.0) then
+       ! do nothing
+      else
        print *,"viscosity_state_model invalid"
        stop
       endif
