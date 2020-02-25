@@ -25,7 +25,26 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
             M[i][j] = H[i][j];
 
     double D[sn];
-    SVD(M, D, sm, sn);
+    if(1)
+        SVD(M, D, sm, sn);
+    else{
+        double **MTM = new double *[sn];
+        for(int i = 0; i < sn; ++i){
+            *(MTM+i) = new double [sn];
+            for(int j = 0; j < sn; ++j){
+                MTM[i][j] = 0.0;
+                for(int k = 0; k < sm; ++k)
+                    MTM[i][j] += M[k][i] * M[k][j];
+            }
+        }
+        JacobiEigenvalue(MTM, D, sn);
+        for(int i = 0; i < sn; ++i)
+            D[i] = sqrt(D[i]);
+
+        for(int i = 0; i < sn; ++i)
+            delete[] *(MTM+i);
+        delete[] MTM;
+    }
     for(int i = 0; i < sm; ++i)
         delete *(M+i);
     delete[] M;
@@ -37,7 +56,27 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
         if(D[i] > max) max = D[i];
         if(D[i] < min) min = D[i];
     }
+    for(int i = 0; i < sn-1; ++i){
+        int imax = i;
+        for(int j = i+1; j < sn; ++j){
+            if(D[j] > D[imax])
+                imax = j;
+        }
+        if(imax != i){
+            double temp = D[i];
+            D[i] = D[imax];
+            D[imax] = temp;
+        }
+        //cout << "\n" << D[i];
+    }
+    //cout << "\n" << D[sn-1];
+    //cout << endl;
 
+    double Dn = 0.0;
+    for(int i = 0; i < sn; ++i)
+        Dn += D[i] * D[i];
+    Dn = sqrt(Dn);
+    
     //sanity check
     double **B = new double *[sn];
     for(int i = 0; i < sn; ++i){
@@ -48,28 +87,52 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
                 B[i][j] += H[k][i] * H[k][j];
         }
     }
-    for(int it = 0; it < sn; ++it){
-        for(int i = 0; i < sn; ++i)
-            B[i][i] -= D[it] * D[it];
+    if(0){
+        for(int it = 0; it < sn; ++it){
+            for(int i = 0; i < sn; ++i)
+                B[i][i] -= D[it] * D[it];
 
-        //cout << endl;
-        //for(int i = 0; i < sn; ++i){
-        //    for(int j = 0; j < sn; ++j){
-        //        cout << B[i][j] << " ";
-        //    }
-        //    cout << "\n";
-        //}
-        //cout << endl;
-
-        double detB = GetDeterminant(B, sn);
-        for(int i = 0; i < sn; ++i)
-            B[i][i] += D[it] * D[it];
-        if(std::abs(detB) <= 1.e-16){
-            //cout << D[it] << " is singluar value of Matrix H." << endl;
+            double detB = GetDeterminant(B, sn);
+            for(int i = 0; i < sn; ++i)
+                B[i][i] += D[it] * D[it];
+            if(std::abs(detB) <= 1.e-16){
+              //cout << D[it] << " is singluar value of Matrix H." << endl;
+            }
+            else{
+                cout << "Something is wrong for singluar value "<< D[it] 
+                     <<"! det(ATA - sigma^2*I) = " << std::abs(detB) << endl;
+            }
         }
-        else{
-            cout << "Something is wrong for singluar value "<< D[it] 
-                 <<"! det(ATA - sigma^2*I) = " << std::abs(detB) << endl;
+    }
+    else{
+        double Dt[sn] {};
+        JacobiEigenvalue(B, Dt, sn);
+        for(int i = 0; i < sn-1; ++i){
+            int imax = i;
+            for(int j = i+1; j < sn; ++j){
+                if(Dt[j] > Dt[imax])
+                    imax = j;
+            }
+            if(imax != i){
+                double temp = Dt[i];
+                Dt[i] = Dt[imax];
+                Dt[imax] = temp;
+            }
+        }
+        //cout << endl;
+        //for(int i = 0; i < sn; ++i)
+        //    cout << sqrt(Dt[i]) << endl;
+        for(int i = 0; i < sn; ++i){
+            Dt[i] = sqrt(Dt[i]);
+            double re = (D[i] - Dt[i])/D[i];
+            if(std::abs(re) <= 1.e-12){
+                //do nothing!
+            }
+            else{
+                cout << "Something is wrong in singular value" 
+                     << "[" << i << "], " 
+                     << "relative residual is " << std::abs(re) << endl;
+            }
         }
     }
 
@@ -80,11 +143,6 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
 
     //if(iprint == 1)
     //    cout << "Matrix::CondNum(): end" << endl;
-    double Dn = 0.0;
-    for(int i = 0; i < sn; ++i)
-        Dn = Dn + D[i] * D[i];
-    Dn = sqrt(Dn);
-    
     if(std::abs(min - 0.0) <= 1.e-16 * Dn){
         min = max * (1.0e-100);
         cout << "Warning! Zero singular value." << endl;
@@ -130,7 +188,7 @@ void House(const double *const x, double *v, double &beta, const int n)
 
 // calculate Givens rotation matrix
 //    _     _ T _  _     _ _
-//   |  c  s | |  a |2   | r |
+//   |  c  s | |  a |   | r |
 //                    = 
 //   |_-s  c_| |_ b_|   |_0_|
 //
@@ -158,6 +216,34 @@ void Givens(const double a, const double b, double &c, double &s)
     //    cout << "Matrix::Givens(): end" << endl;
 }
 
+// calculate Givens rotation matrix, overload
+//    _     _ T _      _  _     _     _    _
+//   |  c  s | |  a  b  ||  c  s |   | x  0 |
+//                                 = 
+//   |_-s  c_| |_ b  c _||_-s  c_|   |_0  y_|
+//    
+void Givens(const double aii, const double aij, const double ajj, double &c, double &s)
+{
+    if(aij == 0.0){
+        c = 1.0;
+        s = 0.0;
+    }
+    else{
+        double thet = 0.0;
+        if(std::abs(ajj-aii) <= 1.e-16){
+            if(aij > 0)
+                thet = 0.5 * asin(1.0);
+            if(aij < 0)
+                thet = -0.5 * asin(1.0);
+        }
+        else{
+            thet = 0.5 * atan(2.0 * aij / (ajj - aii));
+        }
+        c = cos(thet);
+        s = sin(thet);
+    }
+}
+
 // Householder Bidiagonalization
 void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
 {
@@ -172,7 +258,9 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
         double v1[m-it];
         double beta1;
         House(x, v1, beta1, m-it);
-        double u[m-it][m-it];
+        double **u = new double *[m-it];
+        for(int i = 0; i < m-it; ++i)
+            *(u+i) = new double [m-it];
         for(int i = 0; i < m-it; ++i){
             for(int j = 0; j < m-it; ++j){
                 if(i == j)
@@ -192,6 +280,10 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
                 A[i+it][j+it] = temp[i];
         }
 
+        for(int i = 0; i < m-it; ++i)
+            delete[] *(u+i);
+        delete[] u;
+
         Bd[it] = A[it][it];
 
         if(it < n-2){
@@ -201,7 +293,9 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
             for(int i = 0; i < n-it-1; ++i)
                 xr[i] = A[it][i+it+1];
             House(xr, v2, beta2, n-it-1);
-            double v[n-it-1][n-it-1];
+            double **v = new double *[n-it-1];
+            for(int i = 0; i < n-it-1; ++i)
+                *(v+i) = new double [n-it-1];
             for(int i = 0; i < n-it-1; ++i){
                 for(int j = 0; j < n-it-1; ++j){
                     if(i == j)
@@ -220,6 +314,10 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
                 for(int j = 0; j < n-it-1; ++j)
                     A[i+it][j+it+1] = temp[j];
             }
+
+            for(int i = 0; i < n-it-1; ++i)
+                delete[] *(v+i);
+            delete[] v;
 
             Bs[it] = A[it][it+1]; 
         }
@@ -732,4 +830,100 @@ void PLUDecomposition(double **A, int *P, const int m)
         }
     }
 
+}
+
+// Jacobi eigenvalue algorithm
+// A: m x m, symmetric matrix
+// D: m, store eigenvalues
+void JacobiEigenvalue(double **A, double *D, const int m)
+{
+    double **M = new double *[m];
+    for(int i = 0; i < m; ++i){
+        *(M+i) = new double [m];
+        for(int j = 0; j < m; ++j)
+            M[i][j] = A[i][j];
+    }
+
+    int imax[m];
+
+    int max_i = 0;
+    int max_j = 0;
+    for(int i = 0; i < m-1; ++i){
+        imax[i] = i+1;
+        for(int j = i+2; j < m; ++j){
+            if(std::abs(M[i][j]) > std::abs(M[i][imax[i]]))
+                imax[i] = j;
+        }
+        if(i == 0){
+            max_i = i;
+            max_j = imax[i];
+        }
+        else{
+            if(std::abs(M[i][imax[i]]) > std::abs(M[max_i][max_j])){
+                max_i = i;
+                max_j = imax[i];
+            }
+        }
+    }
+
+    while(1){
+        double Mn = 0.0;
+        for(int i = 0; i < m; ++i)
+            Mn += M[i][i];
+        Mn = sqrt(Mn);
+
+        double Dn = 0.0;
+        for(int i = 0; i < m; ++i){
+            D[i] = M[i][i];
+            Dn += D[i] * D[i];
+        }
+        Dn = sqrt(Dn);
+
+        if(std::abs(M[max_i][max_j]) <= 1.e-16 * Dn)
+            break;
+
+        double aii = M[max_i][max_i];
+        double ajj = M[max_j][max_j];
+        double aij = M[max_i][max_j];
+        double c, s;
+        Givens(aii, aij, ajj, c, s);
+
+        for(int k = 0; k < m; ++k){
+            if(k == max_i || k == max_j)
+                continue;
+            double a = M[max_i][k];
+            double b = M[max_j][k];
+            M[max_i][k] = c * a - s * b;
+            M[k][max_i] = M[max_i][k];
+            M[max_j][k] = s * a + c * b;
+            M[k][max_j] = M[max_j][k];
+        }
+        M[max_i][max_i] = c * c * aii - 2. * s * c * aij + s * s * ajj;
+        M[max_j][max_j] = s * s * aii + 2. * s * c * aij + c * c * ajj;
+        M[max_i][max_j] = (c * c - s * s) * aij + s * c * (aii - ajj);
+        M[max_j][max_i] = M[max_i][max_j];
+
+        int mj = max_j;
+        for(int i = 0; i <= mj; ++i){
+            imax[i] = i+1;
+            for(int j = i+2; j < m; ++j){
+                if(std::abs(M[i][j]) > std::abs(M[i][imax[i]]))
+                    imax[i] = j;
+            }
+            if(i == 0){
+                max_i = i;
+                max_j = imax[i];
+            }
+            else{
+                if(std::abs(M[i][imax[i]]) > std::abs(M[max_i][max_j])){
+                    max_i = i;
+                    max_j = imax[i];
+                }
+            }
+        }
+    }
+
+    for(int i = 0; i < m; ++i)
+        delete[] *(M+i);
+    delete[] M;
 }

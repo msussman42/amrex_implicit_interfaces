@@ -17,6 +17,14 @@ void House(const double *const x, double *v, double &beta, const int n);
 //    
 void Givens(const double a, const double b, double &c, double &s);
 
+// calculate Givens rotation matrix, overload
+//    _     _ T _      _  _     _     _    _
+//   |  c  s | |  a  b  ||  c  s |   | x  0 |
+//                                 = 
+//   |_-s  c_| |_ b  c _||_-s  c_|   |_0  y_|
+//    
+void Givens(const double aii, const double aij, const double ajj, double &c, double &s);
+
 // Householder Bidiagonalization
 void GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n);
 
@@ -48,5 +56,10 @@ double GetDeterminant(double **A, const int m);
 // A: m x m, is overwritten by L and U, A <= (L-E)+U
 // P: m+1, P[m] = S
 void PLUDecomposition(double **A, int *P, const int m);
+
+// Jacobi eigenvalue algorithm
+// A: m x m, symmetric matrix
+// D: m, store eigenvalues
+void JacobiEigenvalue(double **A, double *D, const int m);
 
 #endif

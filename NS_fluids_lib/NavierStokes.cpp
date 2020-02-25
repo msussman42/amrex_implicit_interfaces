@@ -7537,7 +7537,8 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
       tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
       tilelo,tilehi,
       fablo,fabhi,&bfact,
-      &elastic_viscosity[im],&etaS[im],
+      &elastic_viscosity[im],
+      &etaS[im],
       &elastic_time[im],
       &viscoelastic_model[im],
       &polymer_factor[im],
@@ -7798,6 +7799,11 @@ void NavierStokes::make_viscoelastic_force(int im) {
   if ((elastic_time[im]>0.0)&&(elastic_viscosity[im]>0.0)) {
 
    debug_ngrow(VISCOTEN_MF,1,5);
+    // CELL_VISC_MATERIAL init in getStateVISC_ALL which
+    // calls getStateVISC which calls:
+    //  FORT_GETSHEAR,FORT_DERVISCOSITY, and
+    //  FORT_DERTURBVISC
+    //  FORT_DERVISCOSITY is in DERIVE_3D.F90
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
    if (ncomp_visc!=3*nmat)
     amrex::Error("cell_visc_material ncomp invalid");
@@ -16894,6 +16900,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
    FORT_ESTDT(
     &nsolveMM_FACE,
     &local_enable_spectral,
+    elastic_time.dataPtr(),
     microlayer_substrate.dataPtr(),
     microlayer_angle.dataPtr(),
     microlayer_size.dataPtr(),

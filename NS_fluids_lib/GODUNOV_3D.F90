@@ -10253,6 +10253,7 @@ stop
       subroutine FORT_ESTDT ( &
         nsolveMM_FACE, &
         enable_spectral, &
+        elastic_time, &
         microlayer_substrate, &
         microlayer_angle, &
         microlayer_size, &
@@ -10304,68 +10305,70 @@ stop
       use hydrateReactor_module
       IMPLICIT NONE
 
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
-      INTEGER_T enable_spectral
-      INTEGER_T use_lsa
-      INTEGER_T level,finest_level
-      REAL_T cfl
-      INTEGER_T EILE_flag
-      INTEGER_T nmat,nten
-      INTEGER_T shock_timestep(nmat)
-      INTEGER_T material_type(nmat)
-      INTEGER_T microlayer_substrate(nmat)
-      REAL_T microlayer_angle(nmat)
-      REAL_T microlayer_size(nmat)
-      REAL_T macrolayer_size(nmat)
-      REAL_T latent_heat(2*nten)
-      REAL_T reaction_rate(2*nten)
-      REAL_T K_f
-      INTEGER_T freezing_model(2*nten)
-      INTEGER_T distribute_from_target(2*nten)
-      REAL_T saturation_temp(2*nten)
-      INTEGER_T mass_fraction_id(2*nten)
-      REAL_T species_evaporation_density(num_species_var+1)
-      REAL_T xlo(SDIM),dx(SDIM)
-      REAL_T time
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T :: nsolveMM_FACE_test
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: use_lsa
+      INTEGER_T, intent(in) :: level,finest_level
+      REAL_T, intent(in) :: cfl
+      INTEGER_T, intent(in) :: EILE_flag
+      INTEGER_T, intent(in) :: nmat,nten
+      INTEGER_T, intent(in) :: elastic_time(nmat)
+      INTEGER_T, intent(in) :: shock_timestep(nmat)
+      INTEGER_T, intent(in) :: material_type(nmat)
+      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
+      REAL_T, intent(in) :: microlayer_angle(nmat)
+      REAL_T, intent(in) :: microlayer_size(nmat)
+      REAL_T, intent(in) :: macrolayer_size(nmat)
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      REAL_T, intent(in) :: reaction_rate(2*nten)
+      REAL_T :: K_f
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
+      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: time
       REAL_T u_core,u_core_estdt,uu,uu_estdt,c_core
       REAL_T cc,cleft,cright
       REAL_T cc_diag,cleft_diag,cright_diag
       INTEGER_T i,j,k
       INTEGER_T icell,jcell,kcell
       INTEGER_T ialt,jalt,kalt
-      INTEGER_T rzflag
-      INTEGER_T dirnormal
+      INTEGER_T, intent(in) :: rzflag
+      INTEGER_T, intent(in) :: dirnormal
       INTEGER_T side,dir2
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T u_max(SDIM+1)
-      REAL_T u_max_estdt(SDIM+1)
-      REAL_T dt_min
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(inout) :: u_max(SDIM+1)
+      REAL_T, intent(inout) :: u_max_estdt(SDIM+1)
+      REAL_T, intent(inout) :: dt_min
       REAL_T user_tension(nten)
       REAL_T Uref,Lref
-      REAL_T denconst(nmat)
-      REAL_T denconst_gravity(nmat)
-      REAL_T visc_coef
-      REAL_T ns_gravity
-      INTEGER_T terminal_velocity_dt
-      INTEGER_T DIMDEC(velmac)
-      INTEGER_T DIMDEC(velcell)
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(dist)
-      INTEGER_T DIMDEC(sol)
-      INTEGER_T DIMDEC(den)
-      REAL_T velmac(DIMV(velmac),nsolveMM_FACE)
-      REAL_T velcell(DIMV(velcell),num_materials_vel*SDIM)
-      REAL_T sol(DIMV(sol),nparts_def*SDIM) 
-      REAL_T den(DIMV(den),num_state_material*nmat)  ! den,denA,E,temp
-      REAL_T vof(DIMV(vof),nmat*ngeom_raw)
-      REAL_T dist(DIMV(dist),nmat)
+      REAL_T, intent(in) :: denconst(nmat)
+      REAL_T, intent(in) :: denconst_gravity(nmat)
+      REAL_T, intent(in) :: visc_coef
+      REAL_T, intent(in) :: ns_gravity
+      INTEGER_T, intent(inout) :: terminal_velocity_dt
+      INTEGER_T, intent(in) :: DIMDEC(velmac)
+      INTEGER_T, intent(in) :: DIMDEC(velcell)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(dist)
+      INTEGER_T, intent(in) :: DIMDEC(sol)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      REAL_T, intent(in) :: velmac(DIMV(velmac),nsolveMM_FACE)
+      REAL_T, intent(in) :: velcell(DIMV(velcell),num_materials_vel*SDIM)
+      REAL_T, intent(in) :: sol(DIMV(sol),nparts_def*SDIM) 
+       ! den,denA,E,temp
+      REAL_T, intent(in) :: den(DIMV(den),num_state_material*nmat)  
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw)
+      REAL_T, intent(in) :: dist(DIMV(dist),nmat)
       REAL_T hx,hxmac
       REAL_T dthold
       INTEGER_T ii,jj,kk
@@ -10911,8 +10914,7 @@ stop
        cright_diag=zero
        cc_diag=zero
 
-       FIX ME 1. pass elastic_time
-              2. verify for visc_coef<>1
+       !FIX ME  verify for visc_coef<>1
        do im=1,nmat
         if (fort_denconst(im).gt.zero) then
          if (fort_viscosity_state_model(im).ge.0) then
