@@ -11,7 +11,7 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
     //if(iprint == 1)
     //    cout << "Matrix::CondNum(): start" << endl;
 
-    if(sm > m || sn > n){
+    if(sm > m || sn > n || sm<=0 || sn <= 0){
         cout << "Sub-matrix is larger than the orginial matrix!" << endl;
         abort();
     }
@@ -24,39 +24,60 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
         for(int j = 0; j < sn; ++j)
             M[i][j] = H[i][j];
 
-    double D[sn];
-    if(1)
-        SVD(M, D, sm, sn);
-    else{
-        double **MTM = new double *[sn];
-        for(int i = 0; i < sn; ++i){
-            *(MTM+i) = new double [sn];
-            for(int j = 0; j < sn; ++j){
-                MTM[i][j] = 0.0;
-                for(int k = 0; k < sm; ++k)
-                    MTM[i][j] += M[k][i] * M[k][j];
-            }
-        }
-        JacobiEigenvalue(MTM, D, sn);
-        for(int i = 0; i < sn; ++i)
-            D[i] = sqrt(D[i]);
+    double D_QR[sn];
+    double D_JAC[sn];
 
-        for(int i = 0; i < sn; ++i)
-            delete[] *(MTM+i);
-        delete[] MTM;
+    SVD(M, D_QR, sm, sn);
+
+    double **MTM = new double *[sn];
+    for(int i = 0; i < sn; ++i){
+     *(MTM+i) = new double [sn];
+     for(int j = 0; j < sn; ++j){
+      MTM[i][j] = 0.0;
+      for(int k = 0; k < sm; ++k)
+       MTM[i][j] += M[k][i] * M[k][j];
+     }
+    }
+
+    JacobiEigenvalue(MTM, D_JAC, sn);
+
+    for(int i = 0; i < sn; ++i) {
+     if (D_JAC[i]>=0.0) {
+      D_JAC[i] = sqrt(D_JAC[i]);
+     } else {
+      cout << "D_JAC<0" << endl;
+      abort();
+     }
+    }
+    for(int i = 0; i < sn; ++i) {
+      delete[] *(MTM+i);
+     delete[] MTM;
     }
     for(int i = 0; i < sm; ++i)
-        delete *(M+i);
+       delete *(M+i);
     delete[] M;
 
-    double min = 1.e20;
-    double max = 0.0;
+    double min_JAC = 1.e20;
+    double min_QR = 1.e20;
+    double max_JAC = 0.0;
+    double max_QR = 0.0;
     for(int i = 0; i < sn; ++i){
-        D[i] = std::abs(D[i]);
-        if(D[i] > max) max = D[i];
-        if(D[i] < min) min = D[i];
+     if ((D_QR[i]<=0.0)||(D_QR[i]>=0.0)) {
+      // do nothing
+     } else {
+      cout << "D_QR invalid" << endl;
+      abort();
+     }
+     D_QR[i] = std::abs(D_QR[i]);
+     if(D_QR[i] > max_QR) max_QR = D_QR[i];
+     if(D_QR[i] < min_QR) min_QR = D_QR[i];
+     if(D_JAC[i] > max_JAC) max_JAC = D_JAC[i];
+     if(D_JAC[i] < min_JAC) min_JAC = D_JAC[i];
     }
-    for(int i = 0; i < sn-1; ++i){
+
+/*
+    if (1==0) {
+     for(int i = 0; i < sn-1; ++i){
         int imax = i;
         for(int j = i+1; j < sn; ++j){
             if(D[j] > D[imax])
@@ -68,26 +89,26 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
             D[imax] = temp;
         }
         //cout << "\n" << D[i];
-    }
-    //cout << "\n" << D[sn-1];
-    //cout << endl;
+     }
+     //cout << "\n" << D[sn-1];
+     //cout << endl;
 
-    double Dn = 0.0;
-    for(int i = 0; i < sn; ++i)
+     double Dn = 0.0;
+     for(int i = 0; i < sn; ++i)
         Dn += D[i] * D[i];
-    Dn = sqrt(Dn);
+     Dn = sqrt(Dn);
     
-    //sanity check
-    double **B = new double *[sn];
-    for(int i = 0; i < sn; ++i){
+     //sanity check
+     double **B = new double *[sn];
+     for(int i = 0; i < sn; ++i){
         *(B+i) = new double [sn];
         for(int j = 0; j < sn; ++j){
             B[i][j] = 0.0;
             for(int k = 0; k < sm; ++k)
                 B[i][j] += H[k][i] * H[k][j];
         }
-    }
-    if(0){
+     }
+     if(0){
         for(int it = 0; it < sn; ++it){
             for(int i = 0; i < sn; ++i)
                 B[i][i] -= D[it] * D[it];
@@ -103,8 +124,8 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
                      <<"! det(ATA - sigma^2*I) = " << std::abs(detB) << endl;
             }
         }
-    }
-    else{
+     }
+     else{
         double Dt[sn] {};
         JacobiEigenvalue(B, Dt, sn);
         for(int i = 0; i < sn-1; ++i){
@@ -134,20 +155,39 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
                      << "relative residual is " << std::abs(re) << endl;
             }
         }
-    }
+     }
 
-    for(int i = 0; i < sn; ++i)
+     for(int i = 0; i < sn; ++i)
         delete[] *(B+i);
-    delete[] B;
-    //end sanity check
-
+     delete[] B;
+     //end sanity check
+    }
+*/
     //if(iprint == 1)
     //    cout << "Matrix::CondNum(): end" << endl;
-    if(std::abs(min - 0.0) <= 1.e-16 * Dn){
-        min = max * (1.0e-100);
-        cout << "Warning! Zero singular value." << endl;
+    if (min_QR<=0.0) {
+        min_QR = max_QR * (1.0e-100);
+        cout << "Warning! (QR) Zero singular value." << endl;
     }
-    return max / min;
+    if (min_JAC<=0.0) {
+        min_JAC = max_JAC * (1.0e-100);
+        cout << "Warning! (JAC) Zero singular value." << endl;
+    }
+    double local_condnum=0.0;
+    if ((max_QR>0.0)&&(max_JAC>0.0)) {
+     double rel_error=std::abs(2.0*(max_QR-max_JAC)/(max_QR+max_JAC));
+     double rel_error_min=std::abs(2.0*(min_QR-min_JAC)/(max_QR+max_JAC));
+     if ((rel_error<=1.0e-12)||(rel_error_min<=1.0e-12)) {
+      local_condnum=(max_QR+max_JAC)/(min_QR+min_JAC);
+     } else {
+      cout << "rel_error too big" << endl;
+      abort();
+     }
+    } else {
+      cout << "max_QR or max_JAC invalid" << endl;
+      abort();
+    }
+    return local_condnum;
 }
 
 // calculate Householder vector
@@ -652,12 +692,14 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
         double res_comp = ATAx[i] - ATb[i];;
         residual_verify += res_comp * res_comp;
     }
-    residual_verify = sqrt(residual_verify);
-    if(residual_verify <= 1.e-16){
+    residual_verify = sqrt(residual_verify)/sn;
+    if(residual_verify <= 1.e-8){
         //cout << "x is the optimization solution." << endl;
     }
-    else
-        cout << "Something is wrong! ||ATAx - ATb|| = " << residual_verify << endl;
+    else {
+     cout << "Something wrong! ||ATAx - ATb|| = " << residual_verify << endl;
+     abort();
+    }
     for(int i = 0; i < sn; ++i)
         delete[] *(ATA+i);
     delete[] ATA;
