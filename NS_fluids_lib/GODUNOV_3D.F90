@@ -3254,45 +3254,45 @@ stop
        tensor,DIMS(tensor), &
        tilelo,tilehi, &
        fablo,fabhi,bfact,level, &
-       dt,irz,im,nmat,nden)
+       dt,irz,im_parm,nmat,nden)
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T elasticface_flag
-      INTEGER_T massface_index
-      INTEGER_T vofface_index
-      INTEGER_T ncphys
-      INTEGER_T nmat
-      INTEGER_T im
-      INTEGER_T nden,nstate
-      INTEGER_T level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T veldir
-      REAL_T deninv
+      INTEGER_T, intent(in) :: elasticface_flag
+      INTEGER_T, intent(in) :: massface_index
+      INTEGER_T, intent(in) :: vofface_index
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: nden,nstate
+      INTEGER_T, intent(in) :: level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T :: i,j,k
+      INTEGER_T :: veldir
+      REAL_T    :: deninv
 
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(yface)
-      INTEGER_T DIMDEC(zface)
-      INTEGER_T DIMDEC(lsfab)
-      INTEGER_T DIMDEC(rhoinverse)
-      INTEGER_T DIMDEC(velnew)
-      INTEGER_T DIMDEC(tensor)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T yface(DIMV(yface),ncphys)
-      REAL_T zface(DIMV(zface),ncphys)
-      REAL_T lsfab(DIMV(lsfab),nmat*(1+SDIM))
-      REAL_T rhoinverse(DIMV(rhoinverse),nmat+1)
-      REAL_T velnew(DIMV(velnew),SDIM)
-      REAL_T tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
-      REAL_T dt
-      INTEGER_T irz
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(yface)
+      INTEGER_T, intent(in) :: DIMDEC(zface)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(rhoinverse)
+      INTEGER_T, intent(in) :: DIMDEC(velnew)
+      INTEGER_T, intent(in) :: DIMDEC(tensor)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
+      REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
+      REAL_T, intent(inout) :: velnew(DIMV(velnew),SDIM)
+      REAL_T, intent(in) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: irz
       INTEGER_T dir,side
       REAL_T rplus,rminus,rval,RRX,RRY
       REAL_T tpx,tpy,tpz
@@ -3359,8 +3359,8 @@ stop
        print *,"nstate invalid"
        stop
       endif
-      if ((im.lt.0).or.(im.ge.nmat)) then
-       print *,"im invalid23"
+      if ((im_parm.lt.0).or.(im_parm.ge.nmat)) then
+       print *,"im_parm invalid23"
        stop
       endif
 
@@ -3477,14 +3477,14 @@ stop
 
        if (elasticface_flag.eq.0) then
 
-        if (ldata(D_DECL(0,0,0)).ne.im+1) then
+        if (ldata(D_DECL(0,0,0)).ne.im_parm+1) then
          do dir=1,SDIM
          do side=1,2
           tparr(dir,side)=zero
          enddo
          enddo
          tcen=zero
-        else if (ldata(D_DECL(0,0,0)).eq.im+1) then
+        else if (ldata(D_DECL(0,0,0)).eq.im_parm+1) then
          tcen=one
          do dir=1,SDIM
          do side=1,2
@@ -3492,23 +3492,23 @@ stop
          enddo
          enddo
  
-         if (ldata(D_DECL(1,0,0)).ne.im+1) then
+         if (ldata(D_DECL(1,0,0)).ne.im_parm+1) then
           tparr(1,2)=zero
          endif
-         if (ldata(D_DECL(-1,0,0)).ne.im+1) then
+         if (ldata(D_DECL(-1,0,0)).ne.im_parm+1) then
           tparr(1,1)=zero
          endif
-         if (ldata(D_DECL(0,1,0)).ne.im+1) then
+         if (ldata(D_DECL(0,1,0)).ne.im_parm+1) then
           tparr(2,2)=zero
          endif
-         if (ldata(D_DECL(0,-1,0)).ne.im+1) then
+         if (ldata(D_DECL(0,-1,0)).ne.im_parm+1) then
           tparr(2,1)=zero
          endif
          if (SDIM.eq.3) then
-          if (ldata(D_DECL(0,0,1)).ne.im+1) then
+          if (ldata(D_DECL(0,0,1)).ne.im_parm+1) then
            tparr(SDIM,2)=zero
           endif
-          if (ldata(D_DECL(0,0,-1)).ne.im+1) then
+          if (ldata(D_DECL(0,0,-1)).ne.im_parm+1) then
            tparr(SDIM,1)=zero
           endif
          endif
@@ -3559,7 +3559,7 @@ stop
           voftotal_sum=voftotal_sum+vleft+vright+vleftleft+vrightright
           voftotal_sum_side(dir,1)=voftotal_sum_side(dir,1)+vleft+vleftleft
           voftotal_sum_side(dir,2)=voftotal_sum_side(dir,2)+vright+vrightright
-          if (imloop.eq.im+1) then
+          if (imloop.eq.im_parm+1) then
            vofmat_sum=vofmat_sum+vleft+vright+vleftleft+vrightright
            vofmat_sum_side(dir,1)=vofmat_sum_side(dir,1)+vleft+vleftleft
            vofmat_sum_side(dir,2)=vofmat_sum_side(dir,2)+vright+vrightright
@@ -8977,7 +8977,7 @@ stop
       end subroutine FORT_SDC_TIME_QUAD_FACE
 
       subroutine FORT_MAKETENSOR( &
-       ncomp_visc,im, &
+       ncomp_visc,im_parm, &
        xlo,dx, &
        visc,DIMS(visc), &
        tensor,DIMS(tensor), &
@@ -8992,24 +8992,26 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T ncomp_visc,im
-      INTEGER_T nmat
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T ngrow
-      INTEGER_T DIMDEC(visc)
-      INTEGER_T DIMDEC(tensor)
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
+      INTEGER_T, intent(in) :: ncomp_visc
+      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(tensor)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
 
-      REAL_T visc(DIMV(visc),ncomp_visc)
-      REAL_T tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, intent(inout) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
 
-      REAL_T elastic_viscosity,etaS
-      REAL_T elastic_time,polymer_factor
-      INTEGER_T viscoelastic_model
-      INTEGER_T irz
+      REAL_T, intent(in) :: elastic_viscosity,etaS
+      REAL_T, intent(in) :: elastic_time,polymer_factor
+      INTEGER_T, intent(in) :: viscoelastic_model
+      INTEGER_T, intent(in) :: irz
+
       INTEGER_T ii,jj
       REAL_T Q(3,3),TQ(3,3)
       INTEGER_T i,j,k
@@ -9038,10 +9040,10 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if ((im.lt.0).or. &
-          (im.ge.nmat).or. &
-          (is_rigid(nmat,im+1).eq.1)) then
-       print *,"im invalid26"
+      if ((im_parm.lt.0).or. &
+          (im_parm.ge.nmat).or. &
+          (is_rigid(nmat,im_parm+1).eq.1)) then
+       print *,"im_parm invalid26"
        stop
       endif
       if (ncomp_visc.ne.3*nmat) then
@@ -9087,12 +9089,12 @@ stop
        endif
 
         ! viscoelastic_model==0: 
-        !   visc(nmat+im+1)=(eta/lambda_mod)*visc_coef
+        !   visc(nmat+im_parm+1)=(eta/lambda_mod)*visc_coef
         ! viscoelastic_model==2: 
-        !   visc(nmat+im+1)=eta*visc_coef
+        !   visc(nmat+im_parm+1)=eta*visc_coef
        do ii=1,3
        do jj=1,3
-         TQ(ii,jj)=Q(ii,jj)*visc(D_DECL(i,j,k),nmat+im+1)
+         TQ(ii,jj)=Q(ii,jj)*visc(D_DECL(i,j,k),nmat+im_parm+1)
        enddo
        enddo
 
@@ -10914,7 +10916,6 @@ stop
        cright_diag=zero
        cc_diag=zero
 
-       !FIX ME  verify for visc_coef<>1
        do im=1,nmat
         if (fort_denconst(im).gt.zero) then
          if (fort_viscosity_state_model(im).ge.0) then

@@ -3105,36 +3105,38 @@ NavierStokes::read_params ()
 
       // if first material and Carreau_beta==0 for first material,
       //  probtype==2, axis_dir>0, then 
-      //  "call viscosity(axis_dir,visc(i,j),shear)"
-      //  VISCOSITY=visc_coef * visc(i,j)
+      //  "call viscosity(axis_dir,visc(D_DECL(i,j,k)),shear)"
+      //  VISC_RAW=visc(D_DECL(i,j,k))
       // otherwise:
       //  if Carreau_beta==0, then
-      //   VISCOSITY=visc_coef * viscconst
+      //   VISC_RAW=viscconst
       //  else if (Carreau_beta>0) then
       //   if visco-elastic then
-      //    VISCOSITY=visc_coef * ( etaL0-etaP0+ 
+      //    VISC_RAW=( etaL0-etaP0+ 
       //     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
       //    =
-      //    VISCOSITY=visc_coef * ( etaS+ 
+      //    VISC_RAW=( etaS+ 
       //     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
       //
       //   else
-      //    VISCOSITY=visc_coef * (
+      //    VISC_RAW=(
       //      mu_inf + (etaL0-mu_inf)* 
       //      (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) )
+      //
+      //   VISCOSITY=visc_coef * VISC_RAW
       //
       // my "etaL0" is Mitsuhiro's eta_S(1+c_0)= viscconst
       // my "etaP0" is Mitsuhiro's c_0 eta_S   = elastic_viscosity
       // my "etaS" is Mitsuhiro's eta_S too.  = viscconst-elastic_viscosity
       // The coefficient for the viscoelastic force term is:
       //  visc_coef * 
-      //  (VISCOSITY-viscconst+elastic_viscosity)/(elastic_time*(1-tr(A)/L^2))
+      //  (VISC_RAW-viscconst+elastic_viscosity)/(elastic_time*(1-tr(A)/L^2))
       // =
       //  visc_coef * 
-      //  (VISCOSITY-etaL0+etaP0)/(elastic_time*(1-tr(A)/L^2))
+      //  (VISC_RAW-etaL0+etaP0)/(elastic_time*(1-tr(A)/L^2))
       // =
       //  visc_coef * 
-      //  (VISCOSITY-etaS)/(elastic_time*(1-tr(A)/L^2))
+      //  (VISC_RAW-etaS)/(elastic_time*(1-tr(A)/L^2))
       // =  (assume visc_coef==1)
       //  etaP0*
       //  (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) 
@@ -7452,6 +7454,11 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
+ // 1. viscosity coefficient - 1..nmat
+ // 2. viscoelastic coefficient - 1..nmat
+ // 3. relaxation time - 1..nmat
+ // the viscous and viscoelastic forces should both be multiplied by
+ // visc_coef.  
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
   amrex::Error("cell_visc_material ncomp invalid");
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow)
@@ -7804,11 +7811,13 @@ void NavierStokes::make_viscoelastic_force(int im) {
     //  FORT_GETSHEAR,FORT_DERVISCOSITY, and
     //  FORT_DERTURBVISC
     //  FORT_DERVISCOSITY is in DERIVE_3D.F90
-    //  a. 1..nmat           mu or etaS+etaP*(bterm**pterm)   "VISC"
-    //  b. nmat+1..2*nmat    (i)   visc_coef*(VISC-etaS)/lambda or
-    //                       (ii)  visc_coef*(VISC-etaS) or
+    //  a. 1..nmat           mu or etaS+etaP*(bterm**pterm)   "VISC_RAW"
+    //  b. nmat+1..2*nmat    (i)   visc_coef*(VISC_RAW-etaS)/lambda or
+    //                       (ii)  visc_coef*(VISC_RAW-etaS) or
     //                       (iii) visc_coef*elastic_viscosity
     //  c. n*nmat+1..3*nmat  lambda
+    //  etaS=viscconst-elastic_viscosity
+    //  etaP=etaP0=elastic_viscosity
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
    if (ncomp_visc!=3*nmat)
     amrex::Error("cell_visc_material ncomp invalid");
