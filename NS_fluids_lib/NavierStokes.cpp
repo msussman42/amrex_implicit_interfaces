@@ -7804,6 +7804,11 @@ void NavierStokes::make_viscoelastic_force(int im) {
     //  FORT_GETSHEAR,FORT_DERVISCOSITY, and
     //  FORT_DERTURBVISC
     //  FORT_DERVISCOSITY is in DERIVE_3D.F90
+    //  a. 1..nmat           mu or etaS+etaP*(bterm**pterm)   "VISC"
+    //  b. nmat+1..2*nmat    (i)   visc_coef*(VISC-etaS)/lambda or
+    //                       (ii)  visc_coef*(VISC-etaS) or
+    //                       (iii) visc_coef*elastic_viscosity
+    //  c. n*nmat+1..3*nmat  lambda
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
    if (ncomp_visc!=3*nmat)
     amrex::Error("cell_visc_material ncomp invalid");

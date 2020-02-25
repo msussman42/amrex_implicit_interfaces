@@ -494,7 +494,7 @@ stop
         level, &
         finest_level, &
         visc_coef, &
-        im, &
+        im_parm, &
         nmat, &
         dt, &
         viscosity_coefficient, &
@@ -529,45 +529,45 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      REAL_T visc_coef
-      INTEGER_T im
-      INTEGER_T nmat
-      INTEGER_T ncompvisc
-      REAL_T dt
-      REAL_T viscosity_coefficient
-      INTEGER_T shear_thinning_fluid
-      REAL_T Carreau_alpha
-      REAL_T Carreau_beta
-      REAL_T Carreau_n
-      REAL_T Carreau_mu_inf
-      REAL_T concentration,etaL,etaP,etaS
-      REAL_T elastic_time
-      REAL_T elastic_viscosity
-      INTEGER_T viscosity_state_model
-      INTEGER_T viscoelastic_model
-      REAL_T polymer_factor
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(visc)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(eosdata)
-      INTEGER_T DIMDEC(tensor)
-      INTEGER_T DIMDEC(gammadot)
-      INTEGER_T bc(SDIM,2,SDIM)
-      INTEGER_T ngrow
-      REAL_T time
-      REAL_T dx(SDIM), xlo(SDIM)
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T visc(DIMV(visc),ncompvisc)
-      REAL_T vel(DIMV(vel),SDIM)
-      REAL_T gammadot(DIMV(gammadot))
-      REAL_T eosdata(DIMV(eosdata),nmat*num_state_material)
-      REAL_T tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: visc_coef
+      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ncompvisc
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: viscosity_coefficient
+      INTEGER_T, intent(in) :: shear_thinning_fluid
+      REAL_T, intent(in) :: Carreau_alpha
+      REAL_T, intent(in) :: Carreau_beta
+      REAL_T, intent(in) :: Carreau_n
+      REAL_T, intent(in) :: Carreau_mu_inf
+      REAL_T, intent(in) :: concentration,etaL,etaP,etaS
+      REAL_T, intent(in) :: elastic_time
+      REAL_T, intent(in) :: elastic_viscosity
+      INTEGER_T, intent(in) :: viscosity_state_model
+      INTEGER_T, intent(in) :: viscoelastic_model
+      REAL_T, intent(in) :: polymer_factor
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(eosdata)
+      INTEGER_T, intent(in) :: DIMDEC(tensor)
+      INTEGER_T, intent(in) :: DIMDEC(gammadot)
+      INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: ngrow
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM)
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(out) :: visc(DIMV(visc),ncompvisc)
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in) :: gammadot(DIMV(gammadot))
+      REAL_T, intent(in) :: eosdata(DIMV(eosdata),nmat*num_state_material)
+      REAL_T, intent(in) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
 
       INTEGER_T i,j,k
       REAL_T    shear,density,temperature,mu
@@ -590,13 +590,13 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
-       print *,"im invalid3"
+      if ((im_parm.lt.1).or.(im_parm.gt.nmat)) then
+       print *,"im_parm invalid3"
        stop
       endif
 
       if (viscosity_state_model.ne. &
-          fort_viscosity_state_model(im)) then
+          fort_viscosity_state_model(im_parm)) then
        print *,"viscosity_state_model invalid"
        stop
       endif
@@ -632,7 +632,7 @@ stop
        print *,"viscosity_coefficient invalid"
        stop
       endif
-      if (abs(viscosity_coefficient-fort_viscconst(im)).gt.1.0E-14) then
+      if (abs(viscosity_coefficient-fort_viscconst(im_parm)).gt.1.0E-14) then
        print *,"viscosity_coefficient invalid"
        stop
       endif
@@ -656,15 +656,15 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
-      if (is_rigid(nmat,im).eq.1) then
+      if (is_rigid(nmat,im_parm).eq.1) then
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        visc(D_DECL(i,j,k),im)=viscosity_coefficient 
+        visc(D_DECL(i,j,k),im_parm)=viscosity_coefficient 
        enddo
        enddo
        enddo
-      else if (is_rigid(nmat,im).eq.0) then
+      else if (is_rigid(nmat,im_parm).eq.0) then
 
        if (shear_thinning_fluid.eq.1) then
         call checkbound(fablo,fabhi,DIMS(vel),ngrow+1,-1,321)
@@ -676,25 +676,25 @@ stop
 
          ! den,T
         if (viscosity_state_model.ge.1) then
-         flagcomp=(im-1)*num_state_material+1
+         flagcomp=(im_parm-1)*num_state_material+1
          density=eosdata(D_DECL(i,j,k),flagcomp)
          temperature=eosdata(D_DECL(i,j,k),flagcomp+1)
         else if (viscosity_state_model.eq.0) then
-         density=fort_denconst(im)
-         temperature=fort_tempconst(im)
+         density=fort_denconst(im_parm)
+         temperature=fort_tempconst(im_parm)
         else
          print *,"viscosity_state_model invalid"
          stop
         endif
 
-        mu=get_user_viscconst(im,density,temperature)
-        visc(D_DECL(i,j,k),im) = mu
+        mu=get_user_viscconst(im_parm,density,temperature)
+        visc(D_DECL(i,j,k),im_parm) = mu
 
         if (shear_thinning_fluid.eq.1) then
          shear=gammadot(D_DECL(i,j,k))
-         if ((im.eq.1).and.(Carreau_beta.eq.zero).and. &
+         if ((im_parm.eq.1).and.(Carreau_beta.eq.zero).and. &
              (probtype.eq.2).and.(axis_dir.gt.0)) then
-          call viscosity(axis_dir,visc(D_DECL(i,j,k),im),shear)
+          call viscosity(axis_dir,visc(D_DECL(i,j,k),im_parm),shear)
          else if (Carreau_beta.gt.zero) then
           if (Carreau_n.gt.one) then
            print *,"Carreau_n invalid"
@@ -707,10 +707,10 @@ stop
           bterm=one+(Carreau_beta*shear)**Carreau_alpha
           if ((elastic_time.gt.zero).and. &
               (elastic_viscosity.gt.zero)) then
-           visc(D_DECL(i,j,k),im)=etaS+etaP*(bterm**pterm)
+           visc(D_DECL(i,j,k),im_parm)=etaS+etaP*(bterm**pterm)
           else if ((elastic_time.eq.zero).and. &
                    (elastic_viscosity.eq.zero)) then
-           visc(D_DECL(i,j,k),im)=Carreau_mu_inf+ &
+           visc(D_DECL(i,j,k),im_parm)=Carreau_mu_inf+ &
               (etaL-Carreau_mu_inf)*(bterm**pterm)
           else
            print *,"elastic_time or elastic_viscosity invalid"
@@ -811,7 +811,7 @@ stop
             print *,"WARNING: A violates pos. def"
             print *,"ii,Q(ii,ii)= ",ii,Q(ii,ii)
             print *,"level,finest_level ",level,finest_level
-            print *,"im,ngrow,i,j,k = ",im,ngrow,i,j,k
+            print *,"im_parm,ngrow,i,j,k = ",im_parm,ngrow,i,j,k
             print *,"dt= ",dt
            endif
           enddo
@@ -839,10 +839,10 @@ stop
           else
            if (viscoelastic_model.eq.0) then
             viscoelastic_coeff= &
-             (visc(D_DECL(i,j,k),im)-etaS)/(modtime+dt)
+             (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
            else if (viscoelastic_model.eq.1) then
             viscoelastic_coeff= &
-             (visc(D_DECL(i,j,k),im)-etaS)
+             (visc(D_DECL(i,j,k),im_parm)-etaS)
            else if (viscoelastic_model.eq.2) then
             viscoelastic_coeff=elastic_viscosity
            else
@@ -855,8 +855,8 @@ stop
            stop
           endif
 
-          visc(D_DECL(i,j,k),nmat+im)=viscoelastic_coeff*visc_coef
-          visc(D_DECL(i,j,k),2*nmat+im)=modtime
+          visc(D_DECL(i,j,k),nmat+im_parm)=viscoelastic_coeff*visc_coef
+          visc(D_DECL(i,j,k),2*nmat+im_parm)=modtime
 
         else if ((elastic_time.eq.zero).and. &
                  (elastic_viscosity.eq.zero)) then
@@ -871,7 +871,7 @@ stop
        enddo
 
       else
-       print *,"im invalid4"
+       print *,"im_parm invalid4"
        stop
       endif
 
