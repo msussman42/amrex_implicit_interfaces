@@ -165,19 +165,38 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
 */
     //if(iprint == 1)
     //    cout << "Matrix::CondNum(): end" << endl;
-    if (min_QR<=0.0) {
-        min_QR = max_QR * (1.0e-100);
-        cout << "Warning! (QR) Zero singular value." << endl;
+    if (min_QR<0.0) {
+     cout << "min_QR<0 invalid." << endl;
+     abort();
+    } else if (min_QR==0.0) {
+     min_QR = max_QR * (1.0e-100);
+     cout << "Warning! (QR) Zero singular value." << endl;
+    } else if (min_QR>0.0) {
+     // do nothing
+    } else {
+     cout << "min_QR invalid NaN." << endl;
+     abort();
     }
-    if (min_JAC<=0.0) {
-        min_JAC = max_JAC * (1.0e-100);
-        cout << "Warning! (JAC) Zero singular value." << endl;
+
+    if (min_JAC<0.0) {
+     cout << "min_JAC<0 invalid." << endl;
+     abort();
+    } else if (min_JAC==0.0) {
+     min_JAC = max_JAC * (1.0e-100);
+     cout << "Warning! (JAC) Zero singular value." << endl;
+    } else if (min_JAC>0.0) {
+     // do nothing
+    } else {
+     cout << "min_JAC invalid NaN." << endl;
+     abort();
     }
+
+
     double local_condnum=0.0;
     if ((max_QR>0.0)&&(max_JAC>0.0)) {
      double rel_error=std::abs(2.0*(max_QR-max_JAC)/(max_QR+max_JAC));
      double rel_error_min=std::abs(2.0*(min_QR-min_JAC)/(max_QR+max_JAC));
-     if ((rel_error<=1.0e-12)||(rel_error_min<=1.0e-12)) {
+     if ((rel_error<=1.0e-12)&&(rel_error_min<=1.0e-12)) {
       local_condnum=(max_QR+max_JAC)/(min_QR+min_JAC);
      } else {
       cout << "rel_error too big" << endl;
