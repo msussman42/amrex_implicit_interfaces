@@ -7497,6 +7497,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
  if (gmres_precond_iter==0) {
    // Z=M^{-1}R
+   // initially called: zeroALL(1,nsolveMM,idx_Z) 
   multiphase_preconditioner(
    project_option,project_timings,
    presmooth,postsmooth,
@@ -7555,7 +7556,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     //  and if the algorithm is slower than O(m^2), then
     //  no need to code, since a Gaussian elimination solver is already
     //  available.
-   int breakdown_free_flag=0;
+   int breakdown_free_flag=1;
 
    if (breakdown_free_flag==0) {
 
@@ -7626,7 +7627,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     } // j=0..m-1
   
     status=1;
-    setVal_array(1,nsolveMM,0.0,idx_Z);
 
     if (m_small==m) {
      int caller_id=1;
@@ -7647,6 +7647,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      delete [] HH_small;
     } else if (m_small==0) {
       // Z=M^{-1}R
+      // initially called: zeroALL(1,nsolveMM,idx_Z) 
      multiphase_preconditioner(
       project_option,project_timings,
       presmooth,postsmooth,
@@ -7657,6 +7658,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     }
 
     if (status==1) {
+     zeroALL(1,nsolveMM,idx_Z);
      for (int j=0;j<m_small;j++) {
       aa=yy[j];
        // Z=Z+aa Zj
@@ -7676,6 +7678,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     }
 
    } else if (breakdown_free_flag==1) {
+
+    int debug_BF_GMRES=1;
 
     Real breakdown_tol=1.0e-8;
 
@@ -7698,6 +7702,12 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     int p_local=-1;
 
     int j_local=0;
+
+    if (debug_BF_GMRES==1) {
+     std::cout << "BF_GMRES: project_option= " << project_option
+	    << "gmres_precond_iter= " << gmres_precond_iter << '\n';
+     std::cout << "BF_GMRES: beta= " << beta << '\n';
+    }
 
     for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
 
@@ -7758,11 +7768,13 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       amrex::Error("p_local invalid");
 
      int condition_number_blowup=0;
+     double zeyu_condnum=1.0;
+
      if (HH[j_local+1][j_local]>0.0) {
       HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
        // Real** HH   i=0..m  j=0..m-1
        // active region: i=0..j_local+1  j=0..j_local
-      double zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+      zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
       if (zeyu_condnum>1.0/local_tol) { 
        condition_number_blowup=1;  
       } else if (zeyu_condnum<=1.0/local_tol) {
@@ -7773,6 +7785,18 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       condition_number_blowup=1;  
      } else
       amrex::Error("HH[j_local+1][j_local] invalid");
+
+     if (debug_BF_GMRES==1) {
+      std::cout << "BFGMRES: j_local="<< j_local << '\n';
+      std::cout << "BFGMRES: zeyu_condnum="<< zeyu_condnum << '\n';
+      std::cout << "BFGMRES: condition_number_blowup="<< 
+	     condition_number_blowup << '\n';
+
+      std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
+	      HH[j_local+1][j_local] << '\n';
+      std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
+	      HH[j_local+1][j_local] << '\n';
+     }
 
      if (condition_number_blowup==1) {
 
@@ -7890,12 +7914,14 @@ void NavierStokes::multiphase_GMRES_preconditioner(
          GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
 
        condition_number_blowup=0;
+       zeyu_condnum=1.0;
+
        if (HH[j_local+1][j_local]>0.0) {
         HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
          // Real** HH   i=0..m  j=0..m-1
          // active region: i=0..j_local+1  j=0..j_local
          
-        double zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+        zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
         if (zeyu_condnum>1.0/local_tol) { 
          condition_number_blowup=1;  
         } else if (zeyu_condnum<=1.0/local_tol) {
@@ -7907,7 +7933,23 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        } else
         amrex::Error("HH[j_local+1][j_local] invalid");
 
+       if (debug_BF_GMRES==1) {
+        std::cout << "BFGMRES: j_local="<< j_local << '\n';
+        std::cout << "BFGMRES: p_local="<< p_local << '\n';
+        std::cout << "BFGMRES: vhat_counter="<< vhat_counter << '\n';
+        std::cout << "BFGMRES: zeyu_condnum="<< zeyu_condnum << '\n';
+        std::cout << "BFGMRES: condition_number_blowup="<< 
+	     condition_number_blowup << '\n';
+
+        std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
+	      HH[j_local+1][j_local] << '\n';
+        std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
+	      HH[j_local+1][j_local] << '\n';
+       }
+
       } // vhat_counter loop
+
+
       if (vhat_counter==max_vhat_sweeps) {
        amrex::Error("vhat_counter==max_vhat_sweeps");
       } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
@@ -7936,7 +7978,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       }
      }
      status=1;
-     setVal_array(1,nsolveMM,0.0,idx_Z);
+     zeroALL(1,nsolveMM,idx_Z);
 
       // sub box dimensions: p_local+j_local+3  x j_local+1
       // j_local=0..m-1
@@ -7977,6 +8019,9 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        amrex::Error("beta_compare invalid");
      } else
       amrex::Error("beta_compare invalid");
+
+     std::cout << "BFGMRES: beta_compare=" <<
+       beta_compare << " beta=" << beta << '\n';
 
      if (convergence_flag==0) {
 
