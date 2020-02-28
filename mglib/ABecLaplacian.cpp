@@ -2418,6 +2418,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
  if (gmres_precond_iter==0) {
    // Z=M^{-1}R
+   // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
   pcg_solve(
    z_in,r_in,
    eps_abs,bot_atol,
@@ -2466,7 +2467,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
    int status=1;
 
-   int breakdown_free_flag=0;
+   int breakdown_free_flag=1;
 
    if (breakdown_free_flag==0) {
 
@@ -2543,7 +2544,6 @@ ABecLaplacian::pcg_GMRES_solve(
     } // j=0..m-1
  
     status=1;
-    z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
     if (m_small==m) {
      int caller_id=3;
@@ -2564,6 +2564,7 @@ ABecLaplacian::pcg_GMRES_solve(
      delete [] HH_small;
     } else if (m_small==0) {
      // Z=M^{-1}R
+     // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
      pcg_solve(
       z_in,r_in,
       eps_abs,bot_atol,
@@ -2580,6 +2581,7 @@ ABecLaplacian::pcg_GMRES_solve(
     }
  
     if (status==1) {
+     z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
      for (int j=0;j<m_small;j++) {
       aa=yy[j];
        // Z=Z+aa Zj
@@ -2597,6 +2599,8 @@ ABecLaplacian::pcg_GMRES_solve(
     }
 
    } else if (breakdown_free_flag==1) {
+
+    int debug_BF_GMRES=1;
 
     Real breakdown_tol=1.0e-8;
 
@@ -2619,6 +2623,12 @@ ABecLaplacian::pcg_GMRES_solve(
     int p_local=-1;
 
     int j_local=0;
+
+    if (debug_BF_GMRES==1) {
+     std::cout << "BF_GMRES mglib: level= " << level 
+	    << "gmres_precond_iter= " << gmres_precond_iter << '\n';
+     std::cout << "BF_GMRES mglib: beta= " << beta << '\n';
+    }
 
     for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
 
@@ -2711,12 +2721,15 @@ ABecLaplacian::pcg_GMRES_solve(
        //  But, h_{j+1,j}=0, does not imply that 
        //  condnum(H_{j})=infinity.  Theoretically, ||w||<>0
        //  if h_j not the zero vector?
+
      int condition_number_blowup=0;
+     double zeyu_condnum=1.0;
+
      if (HH[j_local+1][j_local]>0.0) {
       HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
        // Real** HH   i=0..m  j=0..m-1
        // active region: i=0..j_local+1  j=0..j_local
-      double zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+      zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
       if (zeyu_condnum>1.0/local_tol) { 
        condition_number_blowup=1;  
       } else if (zeyu_condnum<=1.0/local_tol) {
@@ -2727,6 +2740,18 @@ ABecLaplacian::pcg_GMRES_solve(
       condition_number_blowup=1;  
      } else
       amrex::Error("HH[j_local+1][j_local] invalid");
+
+     if (debug_BF_GMRES==1) {
+      std::cout << "BFGMRES mglib: j_local="<< j_local << '\n';
+      std::cout << "BFGMRES mglib: zeyu_condnum="<< zeyu_condnum << '\n';
+      std::cout << "BFGMRES mglib: condition_number_blowup="<< 
+	     condition_number_blowup << '\n';
+
+      std::cout << "BFGMRES mglib: HH[j_local+1][j_local]=" <<
+	      HH[j_local+1][j_local] << '\n';
+      std::cout << "BFGMRES mglib: HH[j_local+1][j_local]=" <<
+	      HH[j_local+1][j_local] << '\n';
+     }
 
      if (condition_number_blowup==1) {
 
@@ -2869,12 +2894,14 @@ ABecLaplacian::pcg_GMRES_solve(
               *GMRES_W_MF[coarsefine],level,HH[j_local+1][j_local]);
 
        condition_number_blowup=0;
+       zeyu_condnum=1.0;
+
        if (HH[j_local+1][j_local]>0.0) {
         HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
          // Real** HH   i=0..m  j=0..m-1
          // active region: i=0..j_local+1  j=0..j_local
          
-        double zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+        zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
         if (zeyu_condnum>1.0/local_tol) { 
          condition_number_blowup=1;  
         } else if (zeyu_condnum<=1.0/local_tol) {
@@ -2886,7 +2913,22 @@ ABecLaplacian::pcg_GMRES_solve(
        } else
         amrex::Error("HH[j_local+1][j_local] invalid");
 
+       if (debug_BF_GMRES==1) {
+        std::cout << "BFGMRES: j_local="<< j_local << '\n';
+        std::cout << "BFGMRES: p_local="<< p_local << '\n';
+        std::cout << "BFGMRES: vhat_counter="<< vhat_counter << '\n';
+        std::cout << "BFGMRES: zeyu_condnum="<< zeyu_condnum << '\n';
+        std::cout << "BFGMRES: condition_number_blowup="<< 
+	     condition_number_blowup << '\n';
+
+        std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
+	      HH[j_local+1][j_local] << '\n';
+        std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
+	      HH[j_local+1][j_local] << '\n';
+       }
+
       } // vhat_counter loop
+
       if (vhat_counter==max_vhat_sweeps) {
        amrex::Error("vhat_counter==max_vhat_sweeps");
       } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
@@ -2952,6 +2994,11 @@ ABecLaplacian::pcg_GMRES_solve(
        amrex::Error("beta_compare invalid");
      } else
       amrex::Error("beta_compare invalid");
+
+     if (debug_BF_GMRES==1) {
+      std::cout << "BFGMRES mglib: beta_compare=" <<
+       beta_compare << " beta=" << beta << '\n';
+     }
 
      if (convergence_flag==0) {
 

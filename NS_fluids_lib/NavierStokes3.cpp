@@ -7497,7 +7497,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
  if (gmres_precond_iter==0) {
    // Z=M^{-1}R
-   // initially called: zeroALL(1,nsolveMM,idx_Z) 
+   // first calls: zeroALL(1,nsolveMM,idx_Z) 
   multiphase_preconditioner(
    project_option,project_timings,
    presmooth,postsmooth,
@@ -7647,7 +7647,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      delete [] HH_small;
     } else if (m_small==0) {
       // Z=M^{-1}R
-      // initially called: zeroALL(1,nsolveMM,idx_Z) 
+      // first calls: zeroALL(1,nsolveMM,idx_Z) 
      multiphase_preconditioner(
       project_option,project_timings,
       presmooth,postsmooth,
@@ -8020,8 +8020,10 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      } else
       amrex::Error("beta_compare invalid");
 
-     std::cout << "BFGMRES: beta_compare=" <<
+     if (debug_BF_GMRES==1) {
+      std::cout << "BFGMRES: beta_compare=" <<
        beta_compare << " beta=" << beta << '\n';
+     }
 
      if (convergence_flag==0) {
 
