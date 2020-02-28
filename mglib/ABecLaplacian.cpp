@@ -2467,8 +2467,6 @@ ABecLaplacian::pcg_GMRES_solve(
 
    int status=1;
 
-   int breakdown_free_flag=1;
-
    if (breakdown_free_flag==0) {
 
     for (int j=1;j<m;j++) {
@@ -2599,8 +2597,6 @@ ABecLaplacian::pcg_GMRES_solve(
     }
 
    } else if (breakdown_free_flag==1) {
-
-    int debug_BF_GMRES=1;
 
     Real breakdown_tol=1.0e-8;
 

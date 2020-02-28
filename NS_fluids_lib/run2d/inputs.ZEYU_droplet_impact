@@ -1,6 +1,6 @@
-max_step  =  10   # maximum timestep ZEYU
+max_step  =  99999   # maximum timestep ZEYU
 #stop_time =  0.05  # maximum problem time Yongsheng
-stop_time=0.0013 # Kensuke 1.3 ms
+stop_time=0.02 # ZEYU 60 ms
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -10,7 +10,8 @@ geometry.prob_lo   =  0.0 0.0  # ZEYU
 # Figure 15, JCP 2013, 252-271  Kensuke
 # 2 * 0.3936864 = 0.7873728
 # dz_fine=0.3936864/128=0.003075675
-geometry.prob_hi   =  1.0 1.0  # ZEYU
+# DIAMETER OF DROP IS 2mm page 651, Pasandidah-Fard 1996, POF
+geometry.prob_hi   =  0.4 0.4  # ZEYU, cm
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -39,12 +40,12 @@ ns.FD_curv_interp=1
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE
 ns.EILE_flag=-1
-ns.projection_pressure_scale=1.0e+4 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
+ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
 #ns.show_mem=1
 ns.MOFITERMAX=15
 #amr.n_cell    = 24 24 # Yongsheng
 #amr.n_cell=32 24 # Kensuke
-amr.n_cell=32 32 # ZEYU
+amr.n_cell=32 32 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  1   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=1 # ZEYU
 ns.truncate_thickness=2.0
@@ -64,7 +65,7 @@ Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
 # ZEYU
-ns.visual_option=-2 # -2=tecplot -1=plot files (visit or paraview)
+ns.visual_option=-1 # -2=tecplot -1=plot files (visit or paraview)
 ns.shock_timestep=2 2 2
 
 amr.regrid_int      = 1       # how often to regrid
@@ -72,9 +73,9 @@ amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 amr.blocking_factor = 8 8 4       # block factor in grid generation
-amr.check_int       = 100 # number of timesteps between checkpoints - ZEYU
+amr.check_int       = 50 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 50      # ZEYU
+amr.plot_int        = 25      # ZEYU
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 32
@@ -109,9 +110,21 @@ ns.gravity        = -980.0  # ZEYU
 # sigma_SL=2 * 72
 #   -----
 #  | 13 | 23 
-ns.tension=72.0 140.9 72.0  #ZEYU
-#ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface
+#  ZEYU: material 1=liquid material 2=gas  3=substrate
+#  sigma_{SV}=sigma_{23}
+#  sigma_{SL}=sigma_{13}
+#  sigma_{LV}=sigma_{12}
+#  sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+#  if theta=90 degrees,
+#  sigma_SV=sigma_SL
+#  12,13,23
+ns.tension=73.0 73.0 73.0  #ZEYU  dyne/cm
+#ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
 ns.law_of_the_wall=0  # 2 for GNBC ZEYU
+# =1 GNBC
+# =2 Jiang 1970
+# =3 Shikmurzaev 2008 ....
+# =8 Cox 1986
 ns.ZEYU_DSC_SELECT=-1  # use static angle ZEYU
 ns.use_lsa=0
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
@@ -124,20 +137,23 @@ ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
 #ns.advbot=77.0 # Yongsheng
-ns.advbot=298.0 # ZEYU
+ns.advbot=100.0 # ZEYU  cm/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 # 0.0 0.4 Yongsheng
 # 0.0 0.1053027 Kensuke
 ns.xblob=0.0  # center of falling droplet ZEYU
-ns.yblob=0.1053027
-ns.zblob=0.1053027  # 0.0123027+0.093=0.1053027
+ns.yblob=0.125
+ns.zblob=0.125  # 0.025+0.1
 # 0.18 Yongsheng
 # 0.186/2=0.093 Kensuke
-ns.radblob=0.093 # ZEYU
+ns.radblob=0.1 # ZEYU
 ns.xblob2=0.0
-ns.yblob2=0.0123027  # thickness of substrate=1 coarse cell ZEYU
-ns.zblob2=0.0123027  # thickness of substrate=1 coarse cell ZEYU
+# SUBSTRATE THICKNESS SHOULD BE A MULTIPLE OF dx_{coarsest}
+# if n_cell=32 32 and domain height=0.4 cm then
+# dx_coarsest=0.4/32=0.0125
+ns.yblob2=0.025  # thickness of substrate=1 coarse cell ZEYU
+ns.zblob2=0.025  # thickness of substrate=1 coarse cell ZEYU
 ns.radblob2=0.0  # 0 degrees in x direction
 ns.radblob3=0.0  # 0 degrees in y direction
 ns.denfact=1.0
@@ -147,9 +163,12 @@ ns.material_type=0 0 999
 ns.FSI_flag=0 0 1
 ns.heatviscconst=0.0 0.0 0.0
 #ns.viscconst=1.0 0.0156552 1.0 # Yongsheng
-ns.viscconst=0.01 0.000182 1.0 # ZEYU
+#material 1 is water
+#material 2 is gas
+#material 3 is substrate
+ns.viscconst=8.9e-3 0.000181 1.0 # ZEYU
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
-ns.denconst=1.0 0.00125 1.0 #ZEYU
+ns.denconst=0.997 0.00125 1.0 #ZEYU
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS

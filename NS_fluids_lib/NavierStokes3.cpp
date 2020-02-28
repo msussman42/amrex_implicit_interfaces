@@ -7556,7 +7556,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     //  and if the algorithm is slower than O(m^2), then
     //  no need to code, since a Gaussian elimination solver is already
     //  available.
-   int breakdown_free_flag=1;
 
    if (breakdown_free_flag==0) {
 
@@ -7678,8 +7677,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     }
 
    } else if (breakdown_free_flag==1) {
-
-    int debug_BF_GMRES=1;
 
     Real breakdown_tol=1.0e-8;
 
