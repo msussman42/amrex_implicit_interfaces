@@ -65,7 +65,8 @@ public:
      int smooth_type,int bottom_smooth_type,
      int presmooth,int postsmooth,
      int use_PCG,
-     int level);
+     int level, 
+     int caller_id);
 
     void pcg_GMRES_solve(
      int gmres_precond_iter,

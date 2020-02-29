@@ -8,8 +8,9 @@ using namespace std;
 // calculate condition number
 double CondNum(double **H, const int m, const int n, const int sm, const int sn)
 {
-    //if(iprint == 1)
-    //    cout << "Matrix::CondNum(): start" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::CondNum(): start" << endl;
+    }
 
     if(sm > m || sn > n || sm<=0 || sn <= 0){
         cout << "Sub-matrix is larger than the orginial matrix!" << endl;
@@ -27,7 +28,16 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
     double D_QR[sn];
     double D_JAC[sn];
 
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "calling SVD sm=" << sm << '\n';
+     std::cout << "calling SVD sn=" << sn << '\n';
+    }
+
     SVD(M, D_QR, sm, sn);
+
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "done with SVD\n";
+    }
 
     double **MTM = new double *[sn];
     for(int i = 0; i < sn; ++i){
@@ -39,7 +49,15 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      }
     }
 
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "calling JacobiEigenvalue\n";
+    }
+
     JacobiEigenvalue(MTM, D_JAC, sn);
+
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "done with JacobiEigenvalue\n";
+    }
 
     for(int i = 0; i < sn; ++i) {
      if (D_JAC[i]>=0.0) {
@@ -163,8 +181,9 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      //end sanity check
     }
 */
-    //if(iprint == 1)
-    //    cout << "Matrix::CondNum(): end" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::CondNum(): end" << endl;
+    }
     if (min_QR<0.0) {
      cout << "min_QR<0 invalid." << endl;
      abort();
@@ -212,8 +231,9 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
 // calculate Householder vector
 void House(const double *const x, double *v, double &beta, const int n)
 {
-    //if(iprint == 1)
-    //    cout << "Matrix::House(): start" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::House(): start" << endl;
+    }
 
     double sigma = 0.0;
     double xx[n-1];
@@ -241,8 +261,9 @@ void House(const double *const x, double *v, double &beta, const int n)
             v[i] = v[i] / v0;
     }
 
-    //if(iprint == 1)
-    //    cout << "Matrix::House(): end" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::House(): end" << endl;
+    }
 }
 
 // calculate Givens rotation matrix
@@ -253,8 +274,9 @@ void House(const double *const x, double *v, double &beta, const int n)
 //
 void Givens(const double a, const double b, double &c, double &s)
 {
-    //if(iprint == 1)
-    //    cout << "Matrix::Givens(): start" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::Givens(): start" << endl;
+    }
 
     if(b == 0.0){
         c = 1.0;
@@ -271,8 +293,9 @@ void Givens(const double a, const double b, double &c, double &s)
         }
     }
 
-    //if(iprint == 1)
-    //    cout << "Matrix::Givens(): end" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::Givens(): end" << endl;
+    }
 }
 
 // calculate Givens rotation matrix, overload
@@ -306,8 +329,9 @@ void Givens(const double aii, const double aij, const double ajj, double &c, dou
 // Householder Bidiagonalization
 void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
 {
-    //if(iprint == 1)
-    //    cout << "Matrix::GetBidiag(): start" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::GetBidiag(): start" << endl;
+    }
 
     int it;
     for(it = 0; it < n; ++it){
@@ -384,15 +408,17 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
             Bs[it] = A[it][it+1];
     }
  
-    //if(iprint == 1)
-    //    cout << "Matrix::GetBidiag(): end" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::GetBidiag(): end" << endl;
+    }
 }
 
 // Golub-Kahan SVD step
 void GKSVD(double *Bd, double *Bs, const int n)
 {
-    //if(iprint == 1)
-    //    cout << "Matrix::GKSVD(): start" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::GKSVD(): start" << endl;
+    }
 
     double t1 = Bs[n-3] * Bs[n-3] + Bd[n-2] * Bd[n-2];//t(n-1, n-1)
     double t2 = Bs[n-2] * Bs[n-2] + Bd[n-1] * Bd[n-1];//t(n, n)
@@ -467,19 +493,24 @@ void GKSVD(double *Bd, double *Bs, const int n)
         }
     }
 
-    //if(iprint == 1)
-    //    cout << "Matrix::GKSVD(): end" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::GKSVD(): end" << endl;
+    }
 }
 
 // SVD algorithm
 void SVD(double **A, double *D, const int m, const int n)
 {
-    //if(iprint == 1)
-    //    cout << "Matrix::SVD(): start" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "in SVD m=" << m << '\n';
+     std::cout << "in SVD n=" << n << '\n';
+    }
 
     double Bd[n];
     double Bs[n-1];
+
     GetBidiag(A, Bd, Bs, m, n);
+
     double Bn = 0.0;
     for(int i = 0; i < n-1; ++i)
         Bn = Bn + Bd[i] * Bd[i] + Bs[i] * Bs[i];
@@ -491,6 +522,17 @@ void SVD(double **A, double *D, const int m, const int n)
     int qq = q;
     double tol = 1.e-16;
     while(q < n){
+        if (debug_MATRIX_ANALYSIS==1) {
+ 	 std::cout << "in q<n loop, q= " << q << " n= " << n << '\n';
+ 	 std::cout << "in q<n loop, m= " << m << " n= " << n << '\n';
+	 for (int ideb=0;ideb<m;ideb++) {
+	  for (int jdeb=0;jdeb<n;jdeb++) {
+	   std::cout << "i,j,Aij " << ideb << ' ' << jdeb << ' ' <<
+	     A[ideb][jdeb] << '\n';
+	  }
+	 }
+	}
+
         //set b(i,i+1) to zero, if |b(i,i+1)| <= tol*(|b(i,i)|+|b(i+1,i+1)|)
         for(int i = 0; i < n-p-q-1; ++i){//relative index
             if(std::abs(Bs[p+i]) <= tol * (std::abs(Bd[p+i]) + std::abs(Bd[p+i+1])))
@@ -551,15 +593,18 @@ void SVD(double **A, double *D, const int m, const int n)
         }
     }
 
-    //if(iprint == 1)
-    //    cout << "Matrix::SVD(): end" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "after SVD m=" << m << '\n';
+     std::cout << "after SVD n=" << n << '\n';
+    }
 }
 
 // zero 1st row of the bidiagonal matrix when the 1st diagonal entry is 0
 void ZeroRow(double *Bd, double *Bs, const int n)
 {
-    //if(iprint == 1)
-    //    cout << "Matrix::ZeroRow(): start" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::ZeroRow(): start" << endl;
+    }
 
     double a = Bs[0];
     for(int it = 1; it < n; ++it){
@@ -585,15 +630,17 @@ void ZeroRow(double *Bd, double *Bs, const int n)
         a = b[0][1];
     }
 
-    //if(iprint == 1)
-    //    cout << "Matrix::ZeroRow(): end" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::ZeroRow(): end" << endl;
+    }
 }
 
 // zero the last column if the last diagonal entry is 0
 void ZeroColumn(double *Bd, double *Bs, const int n)
 {
-    //if(iprint == 1)
-    //    cout << "Matrix::ZeroColumn(): start" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::ZeroColumn(): start" << endl;
+    }
 
     double a = Bs[n-2];
     for(int it = n-2; it >= 0; --it){
@@ -617,8 +664,9 @@ void ZeroColumn(double *Bd, double *Bs, const int n)
         a = b[0][1];
     }
 
-    //if(iprint == 1)
-    //    cout << "Matrix::ZeroColumn(): end" << endl;
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "Matrix::ZeroColumn(): end" << endl;
+    }
 }
 
 // QR factorization for least squares problems

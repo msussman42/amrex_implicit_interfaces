@@ -2318,7 +2318,8 @@ ABecLaplacian::pcg_solve(
     int smooth_type,int bottom_smooth_type,
     int presmooth,int postsmooth,
     int use_PCG,
-    int level) {
+    int level,
+    int caller_id) {
 
 #if (profile_solver==1)
  std::string subname="ABecLaplacian::pcg_solve";
@@ -2350,6 +2351,11 @@ ABecLaplacian::pcg_solve(
       (MG_numlevels_var-1>0)) {
 
    if (CG_numlevels_var==2) {
+    if (CG_verbose>2) {
+     std::cout << "calling MG_solve level=" << level << '\n';
+     std::cout << "calling MG_solve presmooth=" << presmooth << '\n';
+     std::cout << "calling MG_solve postsmooth=" << postsmooth << '\n';
+    }
     MG_solve(0,
       *z_in,
       *r_in,
@@ -2363,6 +2369,12 @@ ABecLaplacian::pcg_solve(
   } else if ((CG_use_mg_precond_at_top==0)||
 	     (level==MG_numlevels_var-1)) {
    for (int j=0;j<presmooth+postsmooth;j++) {
+    if (CG_verbose>2) {
+     std::cout << "calling smooth level=" << level << '\n';
+     std::cout << "calling smooth j=" << j << '\n';
+     std::cout << "calling smooth presmooth=" << presmooth << '\n';
+     std::cout << "calling smooth postsmooth=" << postsmooth << '\n';
+    }
     smooth(*z_in,
 	   *r_in,
 	   level,
@@ -2374,6 +2386,11 @@ ABecLaplacian::pcg_solve(
   amrex::Error("use_PCG invalid");
 
  project_null_space(*z_in,level);
+
+ if (CG_verbose>2) {
+  std::cout << "end of pcg_solve level=" << level << '\n';
+  std::cout << "end of pcg_solve caller_id=" << caller_id << '\n';
+ }
 
 } // subroutine pcg_solve
 
@@ -2428,7 +2445,7 @@ ABecLaplacian::pcg_GMRES_solve(
    smooth_type,bottom_smooth_type,
    presmooth,postsmooth,
    use_PCG,
-   level);
+   level,1);
 
  } else if ((gmres_precond_iter>0)&&
             (gmres_precond_iter<=gmres_max_iter)) {
@@ -2499,7 +2516,7 @@ ABecLaplacian::pcg_GMRES_solve(
       smooth_type,bottom_smooth_type,
       presmooth,postsmooth,
       use_PCG,
-      level);
+      level,2);
 
      // w=A Z
      apply(*GMRES_W_MF[coarsefine],
@@ -2572,7 +2589,7 @@ ABecLaplacian::pcg_GMRES_solve(
       smooth_type,bottom_smooth_type,
       presmooth,postsmooth,
       use_PCG,
-      level);
+      level,3);
     } else {
      std::cout << "m_small= " << m_small << '\n';
      amrex::Error("CGSolver.cpp m_small invalid");
@@ -2649,7 +2666,7 @@ ABecLaplacian::pcg_GMRES_solve(
       smooth_type,bottom_smooth_type,
       presmooth,postsmooth,
       use_PCG,
-      level);
+      level,4);
 
      // w=A Z
      apply(*GMRES_W_MF[coarsefine],
@@ -2725,7 +2742,16 @@ ABecLaplacian::pcg_GMRES_solve(
       HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
        // Real** HH   i=0..m  j=0..m-1
        // active region: i=0..j_local+1  j=0..j_local
+      if (CG_verbose>2) {
+       std::cout << "calling CondNum level=" << level << '\n';
+       std::cout << "calling CondNum j_local=" << j_local << '\n';
+       std::cout << "calling CondNum m=" << m << '\n';
+      }
       zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+      if (CG_verbose>2) {
+       std::cout << "after CondNum level=" << level << '\n';
+       std::cout << "after CondNum zeyu_condnum=" << zeyu_condnum << '\n';
+      }
       if (zeyu_condnum>1.0/local_tol) { 
        condition_number_blowup=1;  
       } else if (zeyu_condnum<=1.0/local_tol) {
@@ -2845,7 +2871,7 @@ ABecLaplacian::pcg_GMRES_solve(
         smooth_type,bottom_smooth_type,
         presmooth,postsmooth,
         use_PCG,
-        level);
+        level,5);
 
        // w=A Z
        apply(*GMRES_W_MF[coarsefine],
@@ -3074,7 +3100,7 @@ ABecLaplacian::pcg_GMRES_solve(
     smooth_type,bottom_smooth_type,
     presmooth,postsmooth,
     use_PCG,
-    level);
+    level,6);
 
   } else
    amrex::Error("beta invalid");
@@ -3542,7 +3568,6 @@ ABecLaplacian::CG_solve(
      // do nothing
     } else
      amrex::Error("CG_verbose or nsverbose invalid");
-
 
     if (error_close_to_zero!=1) {
      beta=0.0;
