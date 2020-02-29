@@ -30071,7 +30071,8 @@ end subroutine RatePhaseChange
        microlayer_angle_dest, &
        microlayer_size_dest, &
        macrolayer_size_dest, &
-       dxprobe, &
+       dxprobe_source, &
+       dxprobe_dest, &
        im_source,im_dest, &
        time,dt, &
        alpha, &
@@ -30107,7 +30108,8 @@ end subroutine RatePhaseChange
       REAL_T, intent(in) :: microlayer_angle_source,microlayer_angle_dest
       REAL_T, intent(in) :: microlayer_size_source,microlayer_size_dest
       REAL_T, intent(in) :: macrolayer_size_source,macrolayer_size_dest
-      REAL_T, intent(in) :: dxprobe
+      REAL_T, intent(in) :: dxprobe_source
+      REAL_T, intent(in) :: dxprobe_dest
       REAL_T, intent(in) :: Tsrc_INT,Tdst_INT
       REAL_T, intent(in) :: K_f
       REAL_T, intent(in) :: Cmethane_in_hydrate,C_w0,PHYDWATER
@@ -30224,15 +30226,17 @@ end subroutine RatePhaseChange
                 (freezing_mod.eq.1)) then
          ! LL<0 if freezing
 
-        if ((LL.eq.zero).or.(dxprobe.le.zero)) then
-         print *,"LL or dxprobe invalid"
+        if ((LL.eq.zero).or. &
+            (dxprobe_source.le.zero).or. &
+            (dxprobe_dest.le.zero)) then
+         print *,"LL, dxprobe_source, or dxprobe_dest invalid"
          stop
         endif
  
         DTsrc=Tsrc-Tsat
         DTdst=Tdst-Tsat
-        velsrc=ksrc*DTsrc/(LL*dxprobe)
-        veldst=kdst*DTdst/(LL*dxprobe)
+        velsrc=ksrc*DTsrc/(LL*dxprobe_source)
+        veldst=kdst*DTdst/(LL*dxprobe_dest)
 
         if (freezing_mod.eq.0) then
 

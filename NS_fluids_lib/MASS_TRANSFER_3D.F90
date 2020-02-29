@@ -3769,7 +3769,9 @@ stop
       REAL_T vel_phasechange(0:1)
       REAL_T LL(0:1)
       INTEGER_T valid_phase_change(0:1)
-      REAL_T dxprobe,ksource,kdest
+      REAL_T dxprobe_source
+      REAL_T dxprobe_dest
+      REAL_T ksource,kdest
       REAL_T LS_pos
       REAL_T C_w0,Cmethane_in_hydrate,PHYDWATER,Tsrc_INT,Tdst_INT
       INTEGER_T concen_comp
@@ -4378,11 +4380,12 @@ stop
                   endif
 
                   if (at_interface.eq.1) then
-                   dxprobe=zero
+                   dxprobe_source=zero
                    do dir=1,SDIM
-                    dxprobe=dxprobe+(xdst(dir)-xsrc(dir))**2
+                    dxprobe_source=dxprobe_source+(xdst(dir)-xsrc(dir))**2
                    enddo
-                   dxprobe=half*sqrt(dxprobe)
+                   dxprobe_source=half*sqrt(dxprobe_source)
+                   dxprobe_dest=dxprobe_source
 
                    RR=one
                    call prepare_normal(nrmFD,RR,mag)
@@ -4412,7 +4415,8 @@ stop
                        stop
                       endif
                       if (abs(mag).gt.zero) then
-                       dxprobe=dxprobe*abs(mag)
+                       dxprobe_source=dxprobe_source*abs(mag)
+                       dxprobe_dest=dxprobe_dest*abs(mag)
                       endif
                      else if (mag.eq.zero) then
                       ! do nothing
@@ -4699,7 +4703,8 @@ stop
                     microlayer_angle(im_dest), &
                     microlayer_size(im_dest), &
                     macrolayer_size(im_dest), &
-                    dxprobe, &
+                    dxprobe_source, &
+                    dxprobe_dest, &
                     im_source,im_dest, &
                     prev_time,dt, &
                     fort_alpha(iten+ireverse*nten), &
@@ -4714,8 +4719,8 @@ stop
                    if (freezing_mod.eq.0) then
                     DTsrc=tempsrc-Tsat
                     DTdst=tempdst-Tsat
-                    velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe)
-                    veldst=kdest*DTdst/(LL(ireverse)*dxprobe)
+                    velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe_source)
+                    veldst=kdest*DTdst/(LL(ireverse)*dxprobe_dest)
                    
                     velsum=velsrc+veldst
                     if (velsum.gt.zero) then
@@ -4762,7 +4767,9 @@ stop
                      im_source,im_dest 
                     print *,"dt,vel_phasechange(ireverse) ", &
                      dt,vel_phasechange(ireverse)
-                    print *,"LL,dxprobe,dxmin ",LL(ireverse),dxprobe,dxmin
+                    print *,"LL,dxmin ",LL(ireverse),dxmin
+                    print *,"dxprobe_source,dxprobe_dest ", &
+                       dxprobe_source,dxprobe_dest
                     print *,"ksource,kdest,Tsat ",ksource,kdest,Tsat
                     print *,"tempsrc,tempdst,densrc ",tempsrc,tempdst,densrc
                     print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)

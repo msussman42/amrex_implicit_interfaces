@@ -11159,7 +11159,8 @@ stop
               microlayer_angle(im_dest), &
               microlayer_size(im_dest), &
               macrolayer_size(im_dest), &
-              delta, &
+              delta, &  ! dxprobe_source
+              delta, &  ! dxprobe_dest
               im_source,im_dest, &
               time,dt_heat, &
               alpha, &

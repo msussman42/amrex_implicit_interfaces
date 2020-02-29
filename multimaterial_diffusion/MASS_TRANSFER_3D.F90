@@ -3769,7 +3769,9 @@ stop
       REAL_T vel_phasechange(0:1)
       REAL_T LL(0:1)
       INTEGER_T valid_phase_change(0:1)
-      REAL_T dxprobe,ksource,kdest
+      REAL_T dxprobe_source
+      REAL_T dxprobe_dest
+      REAL_T ksource,kdest
       REAL_T LS_pos
       REAL_T C_w0,Cmethane_in_hydrate,PHYDWATER,Tsrc_INT,Tdst_INT
       INTEGER_T concen_comp
@@ -3797,6 +3799,12 @@ stop
       REAL_T contact_line_perim
       INTEGER_T icolor,base_type,ic,im1,im2
       REAL_T normal_probe_factor
+      INTEGER_T iprobe
+      REAL_T xtarget_probe(SDIM)
+      INTEGER_T im_target_probe
+      INTEGER_T tcomp_probe
+      REAL_T temp_target_probe
+      REAL_T temp_target_grad
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
 #endif
@@ -4044,13 +4052,6 @@ stop
                if ((LShere(im_dest).ge.zero).or. &
                    (LShere(im_source).ge.zero)) then
 
-                 ! TODO:
-                 ! If probe is in a 3rd material "3", then
-                 !  revise the probe to be closest point on the material
-                 !  "3" interface.  The gradient is then calculated as
-                 ! (T_3-T_sat)/(d * (n12 dot n3)) or something like that.
-                 ! FOR YANG: use closest point map generated using VAHAB'S
-                 !  multimaterial redistancing algorithm.
                 if (LShere(im_dest).ge.zero) then
                  LS_pos=LShere(im_source)
                  do dir=1,SDIM
@@ -4064,7 +4065,7 @@ stop
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
                   xsrc(dir)=xI(dir)+ &
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
-                 enddo ! dir
+                 enddo ! dir=1..sdim
                 else if (LShere(im_source).ge.zero) then
                  LS_pos=LShere(im_dest)
                  do dir=1,SDIM
@@ -4127,63 +4128,81 @@ stop
                 if ((freezing_mod.eq.0).or. &
                     (freezing_mod.eq.5)) then
 
-                  ! centroid -> target (cc_flag==0)
-                  ! tsat_flag==1
-                  ! call center_centroid_interchange
-                 call interpfabTEMP( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xsrc, &
-                  xI,Tsat, &
-                  im_source,nmat, &
-                  tcomp_source, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  LS,DIMS(LS), &
-                  recon,DIMS(recon), &
-                  tempsrc, &
-                  debugrate)
-    
-                 call interpfabTEMP( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xdst, &
-                  xI,Tsat, &
-                  im_dest,nmat, &
-                  tcomp_dest, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  LS,DIMS(LS), &
-                  recon,DIMS(recon), &
-                  tempdst, &
-                  debugrate)
+                 do iprobe=1,2
 
-                 if ((tempdst.lt.zero).or.(tempsrc.lt.zero)) then
-                  print *,"tempdst or tempsrc went negative"
-                  print *,"tempdst,tempsrc ",tempdst,tempsrc
-                  stop
-                 endif
+                  if (iprobe.eq.1) then
+                   do dir=1,SDIM
+                    xtarget_probe(dir)=xsrc(dir)
+                   enddo
+                   im_target_probe=im_source
+                   tcomp_probe=tcomp_source
+                  else if (iprobe.eq.2) then
+                   do dir=1,SDIM
+                    xtarget_probe(dir)=xdst(dir)
+                   enddo
+                   im_target_probe=im_dest
+                   tcomp_probe=tcomp_dest
+                  else
+                   print *,"iprobe invalid"
+                   stop
+                  endif
+                   
+                    ! centroid -> target (cc_flag==0)
+                    ! tsat_flag==1
+                    ! call center_centroid_interchange
+                  call interpfabTEMP( &
+                    bfact, &
+                    level, &
+                    finest_level, &
+                    dx, &
+                    xlo,xtarget_probe, &
+                    xI,Tsat, &
+                    im_target_probe,nmat, &
+                    tcomp_probe, &
+                    ngrow, &
+                    fablo,fabhi, &
+                    EOS,DIMS(EOS), &
+                    LS,DIMS(LS), &
+                    recon,DIMS(recon), &
+                    temp_target_probe, &
+                    debugrate)
 
-                  ! tempdst_grad=(1/LL)*(tempdst-Tsat)/||xI-xdst||
-                 call grad_probe(xI,xdst,tempdst,tempdst_grad, &
-                   Tsat,LL(ireverse))
-                  ! tempsrc_grad=(1/LL)*(tempsrc-Tsat)/||xI-xsrc||
-                 call grad_probe(xI,xsrc,tempsrc,tempsrc_grad, &
-                   Tsat,LL(ireverse))
+                  if (temp_target_probe.lt.zero) then
+                   print *,"temp_target_probe went negative"
+                   print *,"temp_target_probe ",temp_target_probe
+                   stop
+                  endif
 
-                 if ((tempdst.lt.zero).or.(tempsrc.lt.zero)) then
-                  print *,"after adjust: tempdst or tempsrc went negative"
-                  print *,"tempdst_grad ",tempdst_grad
-                  print *,"tempsrc_grad ",tempsrc_grad
-                  print *,"tempdst,tempsrc ",tempdst,tempsrc
-                  stop
-                 endif
+                   ! temp_target_grad=(1/LL)*(temp_target_probe-Tsat)/
+                   !                  ||xI-xtarget_probe||
+                  call grad_probe(xI,xtarget_probe, &
+                     temp_target_probe,temp_target_grad, &
+                     Tsat,LL(ireverse))
+
+                  if (temp_target_probe.lt.zero) then
+                   print *,"after adjust: temp_target_probe went negative"
+                   print *,"temp_target_probe ",temp_target_probe
+                   stop
+                  endif
+   
+                  if (iprobe.eq.1) then
+                   tempsrc=temp_target_probe
+                   tempsrc_grad=temp_target_grad
+                  else if (iprobe.eq.2) then 
+                   tempdst=temp_target_probe
+                   tempdst_grad=temp_target_grad
+                  else
+                   print *,"iprobe invalid"
+                   stop
+                  endif
+
+                  if (temp_target_probe.lt.zero) then
+                   print *,"temp_target_probe went negative"
+                   print *,"temp_target_probe ",temp_target_probe
+                   stop
+                  endif
+
+                 enddo ! iprobe=1..2
 
                  Tsrc_INT=Tsat
                  Tdst_INT=Tsat
@@ -4378,11 +4397,12 @@ stop
                   endif
 
                   if (at_interface.eq.1) then
-                   dxprobe=zero
+                   dxprobe_source=zero
                    do dir=1,SDIM
-                    dxprobe=dxprobe+(xdst(dir)-xsrc(dir))**2
+                    dxprobe_source=dxprobe_source+(xdst(dir)-xsrc(dir))**2
                    enddo
-                   dxprobe=half*sqrt(dxprobe)
+                   dxprobe_source=half*sqrt(dxprobe_source)
+                   dxprobe_dest=dxprobe_source
 
                    RR=one
                    call prepare_normal(nrmFD,RR,mag)
@@ -4412,7 +4432,8 @@ stop
                        stop
                       endif
                       if (abs(mag).gt.zero) then
-                       dxprobe=dxprobe*abs(mag)
+                       dxprobe_source=dxprobe_source*abs(mag)
+                       dxprobe_dest=dxprobe_dest*abs(mag)
                       endif
                      else if (mag.eq.zero) then
                       ! do nothing
@@ -4699,7 +4720,8 @@ stop
                     microlayer_angle(im_dest), &
                     microlayer_size(im_dest), &
                     macrolayer_size(im_dest), &
-                    dxprobe, &
+                    dxprobe_source, &
+                    dxprobe_dest, &
                     im_source,im_dest, &
                     prev_time,dt, &
                     fort_alpha(iten+ireverse*nten), &
@@ -4714,8 +4736,8 @@ stop
                    if (freezing_mod.eq.0) then
                     DTsrc=tempsrc-Tsat
                     DTdst=tempdst-Tsat
-                    velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe)
-                    veldst=kdest*DTdst/(LL(ireverse)*dxprobe)
+                    velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe_source)
+                    veldst=kdest*DTdst/(LL(ireverse)*dxprobe_dest)
                    
                     velsum=velsrc+veldst
                     if (velsum.gt.zero) then
@@ -4762,7 +4784,9 @@ stop
                      im_source,im_dest 
                     print *,"dt,vel_phasechange(ireverse) ", &
                      dt,vel_phasechange(ireverse)
-                    print *,"LL,dxprobe,dxmin ",LL(ireverse),dxprobe,dxmin
+                    print *,"LL,dxmin ",LL(ireverse),dxmin
+                    print *,"dxprobe_source=",dxprobe_source
+                    print *,"dxprobe_dest=",dxprobe_dest
                     print *,"ksource,kdest,Tsat ",ksource,kdest,Tsat
                     print *,"tempsrc,tempdst,densrc ",tempsrc,tempdst,densrc
                     print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)

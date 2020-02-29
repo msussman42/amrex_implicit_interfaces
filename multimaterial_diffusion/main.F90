@@ -471,7 +471,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= Feb 13, 2020, 1:00pm"
+print *,"PROTOTYPE CODE DATE= Feb 29, 2020, 15:40pm"
 
 
 im_measure=2
