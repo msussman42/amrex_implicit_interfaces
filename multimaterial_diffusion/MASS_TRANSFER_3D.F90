@@ -4192,13 +4192,17 @@ stop
                     xtarget_probe(dir)=xsrc(dir)
                    enddo
                    im_target_probe=im_source
+                   im_target_probe_opp=im_dest
                    tcomp_probe=tcomp_source
+                   dxprobe_target=dxprobe_source
                   else if (iprobe.eq.2) then
                    do dir=1,SDIM
                     xtarget_probe(dir)=xdst(dir)
                    enddo
                    im_target_probe=im_dest
+                   im_target_probe_opp=im_source
                    tcomp_probe=tcomp_dest
+                   dxprobe_target=dxprobe_dest
                   else
                    print *,"iprobe invalid"
                    stop
@@ -4212,9 +4216,12 @@ stop
                     level, &
                     finest_level, &
                     dx, &
-                    xlo,xtarget_probe, &
-                    xI,Tsat, &
-                    im_target_probe,nmat, &
+                    xlo, &
+                    xtarget_probe, &
+                    xI, &
+                    Tsat, &
+                    im_target_probe, &
+                    nmat, &
                     tcomp_probe, &
                     ngrow, &
                     fablo,fabhi, &
@@ -4230,24 +4237,84 @@ stop
                    stop
                   endif
 
-                   ! temp_target_grad=(1/LL)*(temp_target_probe-Tsat)/
+                  do imls=1,nmat
+                    ! center -> target (cc_flag==1)
+                    ! tsat_flag==-1
+                    ! call center_centroid_interchange
+                   call interpfab( &
+                    bfact, &
+                    level, &
+                    finest_level, &
+                    dx, &
+                    xlo, &
+                    xtarget_probe, &
+                    imls, &
+                    ngrow, &
+                    fablo,fabhi, &
+                    LS,DIMS(LS), &
+                    LSPROBE(imls))
+                  enddo ! imls=1..nmat
+
+                  call get_primary_material(LSPROBE,nmat,im_primary_probe)
+
+                  if (im_primary_probe.eq.im_target_probe) then
+
+                   ! temp_target_grad=(temp_target_probe-Tsat)/
                    !                  ||xI-xtarget_probe||
-                  call grad_probe(xI,xtarget_probe, &
+                   ! sanity check for temp_target_grad; temp_target_grad
+                   ! ultimately never used.
+                   call grad_probe(xI,xtarget_probe, &
                      temp_target_probe,temp_target_grad, &
                      Tsat,LL(ireverse))
 
-                  if (temp_target_probe.lt.zero) then
-                   print *,"after adjust: temp_target_probe went negative"
-                   print *,"temp_target_probe ",temp_target_probe
-                   stop
-                  endif
-   
+                   if (temp_target_probe.lt.zero) then
+                    print *,"after adjust: temp_target_probe went negative"
+                    print *,"temp_target_probe ",temp_target_probe
+                    stop
+                   endif
+
+                  else if ((im_primary_probe.ne.im_target_probe).and. &
+                           (im_primary_probe.ge.1).and. &
+                           (im_primary_probe.le.nmat)) then
+
+                   temp_target_probe=Tsat
+                   temp_target_grad=0.0
+     
+                   call get_secondary_material(LSPROBE,nmat, &
+                      im_primary_probe, &
+                      im_secondary_probe)
+
+                   if ((im_primary_probe.ne.im_target_probe_opp).and. &
+                       (im_secondary_probe.eq.im_target_probe).and. &
+                       (LSPROBE(im_target_probe).ge.-dxprobe_target)) then
+
+                    call interpfab_filament_probe( &
+                      bfact, &
+                      level, &
+                      finest_level, &
+                      dx, &
+                      xlo, &
+                      Tsat, &
+                      im_target_probe, &
+                      im_target_probe_opp, &
+                      nmat, &
+                      tcomp_probe, &
+                      ngrow, &
+                      fablo,fabhi, &
+                      EOS,DIMS(EOS), &
+                      LS,DIMS(LS), &
+                      recon,DIMS(recon), &
+                      temp_target_probe, &
+                      dxprobe_target)
+
                   if (iprobe.eq.1) then
                    tempsrc=temp_target_probe
-                   tempsrc_grad=temp_target_grad
+                   tempsrc_grad=temp_target_grad ! tempsrc_grad never used
+                   dxprobe_source=dxprobe_target
                   else if (iprobe.eq.2) then 
                    tempdst=temp_target_probe
-                   tempdst_grad=temp_target_grad
+                   tempdst_grad=temp_target_grad ! tempdst_grad never used
+                   dxprobe_dest=dxprobe_target
                   else
                    print *,"iprobe invalid"
                    stop
@@ -4369,6 +4436,8 @@ stop
                  print *,"iten,ireverse,nten ",iten,ireverse,nten
                  stop
                 endif
+
+                FIX ME PUT THIS IN THE LOOP UP ABOVE
 
                 mtype=fort_material_type(im_source)
                 if (mtype.eq.0) then
@@ -4701,6 +4770,11 @@ stop
                    for_estdt=0
 
 #if (STANDALONE==0)
+                    ! if freezing_mod==0,5, or 1, then
+                    !  DTsrc=(Tsrc-Tsat)
+                    !  DTdst=(Tdst-Tsat)
+                    !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
+                    !  veldst=kdst*DTdst/(LL * dxprobe_dest)
                    call get_vel_phasechange( &
                     for_estdt, &
                     xI, &
