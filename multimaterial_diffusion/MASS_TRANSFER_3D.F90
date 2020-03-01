@@ -179,7 +179,7 @@ stop
        xtarget, &
        VF_sten, &
        LS_sten, &
-       TSAT, &
+       TSAT, & ! unused if tsat_flag==-1 (but set to 293.0 for sanity check)
        T_out)
       use global_utility_module
       implicit none
@@ -804,7 +804,8 @@ stop
        level, &
        finest_level, &
        dx, &
-       xlo,x, &
+       xlo, &
+       xtarget, &
        comp, &
        ngrow, &
        lo,hi, &
@@ -818,7 +819,7 @@ stop
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: comp,ngrow
       INTEGER_T, intent(in) :: DIMDEC(data)
@@ -865,7 +866,7 @@ stop
        stop
       endif
 
-      call containing_cell(bfact,dx,xlo,lo,x,cell_index)
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
 
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow+1) then
@@ -900,7 +901,7 @@ stop
       cc_flag=1  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
       nsolve=1
-      Tsat=293.0
+      Tsat=293.0 !unused if tsat_flag==-1 (but set to 293.0 for sanity check)
       call center_centroid_interchange( &
        nsolve, &
        cc_flag, &
@@ -912,11 +913,11 @@ stop
        xsten,nhalf, &
        T_sten, & 
        XC_sten, & 
-       x, & ! xI (not used)
-       x, & ! xtarget
+       xtarget, & ! xI (not used)
+       xtarget, & ! xtarget
        T_sten, &  ! VF_sten (not used)
        T_sten, &  ! LS_Sten (not used)
-       Tsat, &
+       Tsat, & ! unused if tsat_flag==-1
        T_out)
 
       dest=T_out(1)
@@ -930,7 +931,8 @@ stop
        level, &
        finest_level, &
        dx, &
-       xlo,x, &
+       xlo, &
+       xtarget, &
        comp, &
        ngrow, &
        lo,hi, &
@@ -944,7 +946,7 @@ stop
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: comp,ngrow
       INTEGER_T, intent(in) :: DIMDEC(data)
@@ -966,7 +968,7 @@ stop
        stop
       endif
 
-      call containing_cell(bfact,dx,xlo,lo,x,cell_index)
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
 
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow) then
@@ -4119,6 +4121,61 @@ stop
                   use_exact_temperature, &
                   xI,cur_time,nmat,nten,7)
 
+                dxprobe_source=zero
+                do dir=1,SDIM
+                 dxprobe_source=dxprobe_source+(xdst(dir)-xsrc(dir))**2
+                enddo
+                dxprobe_source=half*sqrt(dxprobe_source)
+                dxprobe_dest=dxprobe_source
+
+                RR=one
+                call prepare_normal(nrmFD,RR,mag)
+
+                if (levelrz.eq.0) then
+                 ! do nothing
+                else if (levelrz.eq.1) then
+                 if (SDIM.ne.2) then
+                  print *,"dimension bust"
+                  stop
+                 endif
+                else if (levelrz.eq.3) then
+                 if (mag.gt.zero) then
+                  do dir=1,SDIM
+                   theta_nrmFD(dir)=nrmFD(dir)
+                  enddo
+                  RR=xsten(0,1)
+                  call prepare_normal(theta_nrmFD,RR,mag)
+                  if (mag.gt.zero) then
+                   ! mag=theta_nrmFD dot nrmFD
+                   mag=zero
+                   do dir=1,SDIM
+                    mag=mag+theta_nrmFD(dir)*nrmFD(dir)
+                   enddo
+                   if (abs(mag).gt.one+VOFTOL) then
+                    print *,"dot product bust"
+                    stop
+                   endif
+                   if (abs(mag).gt.zero) then
+                    dxprobe_source=dxprobe_source*abs(mag)
+                    dxprobe_dest=dxprobe_dest*abs(mag)
+                   endif
+                  else if (mag.eq.zero) then
+                   ! do nothing
+                  else
+                   print *,"mag bust"
+                   stop
+                  endif 
+                 else if (mag.eq.zero) then
+                  ! do nothing
+                 else
+                  print *,"mag bust"
+                  stop
+                 endif 
+                else
+                 print *,"levelrz invalid rate mass change"
+                 stop
+                endif
+
                  ! freezing_mod=0 (sharp interface stefan model)
                  ! freezing_mod=1 (source term model)
                  ! freezing_mod=2 (hydrate model)
@@ -4397,60 +4454,6 @@ stop
                   endif
 
                   if (at_interface.eq.1) then
-                   dxprobe_source=zero
-                   do dir=1,SDIM
-                    dxprobe_source=dxprobe_source+(xdst(dir)-xsrc(dir))**2
-                   enddo
-                   dxprobe_source=half*sqrt(dxprobe_source)
-                   dxprobe_dest=dxprobe_source
-
-                   RR=one
-                   call prepare_normal(nrmFD,RR,mag)
-
-                   if (levelrz.eq.0) then
-                    ! do nothing
-                   else if (levelrz.eq.1) then
-                    if (SDIM.ne.2) then
-                     print *,"dimension bust"
-                     stop
-                    endif
-                   else if (levelrz.eq.3) then
-                    if (mag.gt.zero) then
-                     do dir=1,SDIM
-                      theta_nrmFD(dir)=nrmFD(dir)
-                     enddo
-                     RR=xsten(0,1)
-                     call prepare_normal(theta_nrmFD,RR,mag)
-                     if (mag.gt.zero) then
-                       ! mag=theta_nrmFD dot nrmFD
-                      mag=zero
-                      do dir=1,SDIM
-                       mag=mag+theta_nrmFD(dir)*nrmFD(dir)
-                      enddo
-                      if (abs(mag).gt.one+VOFTOL) then
-                       print *,"dot product bust"
-                       stop
-                      endif
-                      if (abs(mag).gt.zero) then
-                       dxprobe_source=dxprobe_source*abs(mag)
-                       dxprobe_dest=dxprobe_dest*abs(mag)
-                      endif
-                     else if (mag.eq.zero) then
-                      ! do nothing
-                     else
-                      print *,"mag bust"
-                      stop
-                     endif 
-                    else if (mag.eq.zero) then
-                     ! do nothing
-                    else
-                     print *,"mag bust"
-                     stop
-                    endif 
-                   else
-                    print *,"levelrz invalid rate mass change"
-                    stop
-                   endif
                     
 #if (STANDALONE==0)
                    ksource=get_user_heatviscconst(im_source)
