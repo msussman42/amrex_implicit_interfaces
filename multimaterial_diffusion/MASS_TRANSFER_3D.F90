@@ -1182,7 +1182,8 @@ stop
        LS,DIMS(LS), &
        recon,DIMS(recon), &
        dest, &
-       dxprobe_target)
+       dxprobe_target, &
+       VOF_pos_probe_counter)
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -1207,6 +1208,7 @@ stop
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: dest
       REAL_T, intent(inout) :: dxprobe_target
+      INTEGER_T, intent(inout) :: VOF_pos_probe_counter
 
       INTEGER_T dir
       INTEGER_T ic,jc,kc
@@ -1325,9 +1327,7 @@ stop
        if (mag.ge.zero) then
         if ((VF_sten.ge.-VOFTOL).and. &
             (VF_sten.le.one+VOFTOL)) then
-         if ((VF_sten.ge.half).or. &
-             ((VF_sten.ge.LSTOL).and. &
-              (mag/dxmax.ge.VOFTOL))) then
+         if (VF_sten.ge.LSTOL) then
 
           ! center -> target (cc_flag==1)
           ! tsat_flag==-1
@@ -1372,12 +1372,10 @@ stop
            print *,"LSPROBE_OPP invalid"
            stop
           endif
-         else if ((VF_sten.le.half).and. &
-                  ((VF_sten.le.LSTOL).or. &
-                   (mag/dxmax.le.VOFTOL))) then
+         else if (VF_sten.le.LSTOL) then
           ! do nothing
          else
-          print *,"VF_sten or mag or dxmax invalid"
+          print *,"VF_sten invalid"
           stop
          endif
         else
@@ -1398,6 +1396,7 @@ stop
       else if (grad_init.eq.1) then
        dest=current_temp_probe
        dxprobe_target=current_dxprobe
+       VOF_pos_probe_counter=VOF_pos_probe_counter+1
       else
        print *,"grad_init invalid"
        stop
@@ -3547,7 +3546,7 @@ stop
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         vel,DIMS(vel), &
-        LS,DIMS(LS))
+        LS,DIMS(LS))  ! old level set function before phase change
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
@@ -4058,6 +4057,9 @@ stop
       INTEGER_T im_primary_probe
       INTEGER_T im_secondary_probe
       INTEGER_T im_target_probe_opp
+      INTEGER_T LS_pos_probe_counter
+      INTEGER_T LS_INT_VERY_CLOSE_counter
+      INTEGER_T VOF_pos_probe_counter
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
 #endif
@@ -4599,7 +4601,8 @@ stop
                       LS,DIMS(LS), &
                       recon,DIMS(recon), &
                       temp_target_probe, &
-                      dxprobe_target)
+                      dxprobe_target, &
+                      VOF_pos_probe_counter)
 
                   else if ((im_primary_probe.eq.im_target_probe_opp).or. &
                            (im_secondary_probe.ne.im_target_probe).or. &
