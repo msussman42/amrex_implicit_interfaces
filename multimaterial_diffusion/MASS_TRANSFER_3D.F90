@@ -4427,6 +4427,24 @@ stop
                  stop
                 endif
 
+                do imls=1,nmat*(SDIM+1)
+                 call interpfab( &
+                  bfact, &
+                  level, &
+                  finest_level, &
+                  dx, &
+                  xlo,xI, &
+                  imls, &
+                  ngrow, &
+                  fablo,fabhi, &
+                  LS,DIMS(LS), &
+                  LSINT(imls))
+                enddo ! imls=1..nmat*(SDIM+1)
+
+                LS_pos_probe_counter=0
+                LS_INT_VERY_CLOSE_counter=0
+                VOF_pos_probe_counter=0
+
                 do iprobe=1,2
 
                  if (iprobe.eq.1) then
@@ -4451,7 +4469,16 @@ stop
                   print *,"iprobe invalid"
                   stop
                  endif
-                  
+                
+                 if (LSINT(im_target_probe).ge.-dxmaxLS) then
+                  LS_INT_VERY_CLOSE_counter=LS_INT_VERY_CLOSE_counter+1
+                 else if (LSINT(im_target_probe).le.-dxmaxLS) then
+                  ! do nothing
+                 else
+                  print *,"LSINT(im_target_probe) invalid"
+                  stop
+                 endif
+  
                  mtype=fort_material_type(im_target_probe)
                  if (mtype.eq.0) then
                   den_targetINT=fort_denconst(im_target_probe)
@@ -4534,6 +4561,8 @@ stop
                  call get_primary_material(LSPROBE,nmat,im_primary_probe)
 
                  if (im_primary_probe.eq.im_target_probe) then
+
+                  LS_pos_probe_counter=LS_pos_probe_counter+1
 
                   call grad_probe_sanity(xI,xtarget_probe, &
                     temp_target_probe,Tsat,LL(ireverse))
@@ -4727,20 +4756,6 @@ stop
                  endif
 
                 enddo ! iprobe=1..2
-
-                do imls=1,nmat*(SDIM+1)
-                 call interpfab( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xI, &
-                  imls, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  LS,DIMS(LS), &
-                  LSINT(imls))
-                enddo ! imls=1..nmat*(SDIM+1)
 
                 at_interface=0
                 call get_primary_material(LSINT,nmat,imls1)
