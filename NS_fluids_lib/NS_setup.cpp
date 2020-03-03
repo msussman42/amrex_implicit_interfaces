@@ -1902,6 +1902,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
          (ns_is_rigid(im_opp-1)==1)) {
       // do nothing
      } else if (LL!=0.0) {
+      im_source=im;im_dest=im_opp;
       if (ireverse==0) {
        im_source=im;im_dest=im_opp;
       } else if (ireverse==1) {

@@ -355,12 +355,13 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
         }
 
         for(int j = 0; j < n-it; ++j){
-            double temp[m-it] {};
+            double* temp=new double[m-it];  //SUSSMAN
             for(int i = 0; i < m-it; ++i)
                 for(int k = 0; k < m-it; ++k)
                     temp[i] += u[i][k] * A[k+it][j+it];
             for(int i = 0; i < m-it; ++i)
                 A[i+it][j+it] = temp[i];
+            delete temp; //SUSSMAN
         }
 
         for(int i = 0; i < m-it; ++i)
@@ -390,12 +391,13 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
             }
 
             for(int i = 0; i < m-it; ++i){
-                double temp[n-it-1] {};
+                double* temp=new double[n-it-1];  //SUSSMAN
                 for(int j = 0; j < n-it-1; ++j)
                     for(int k = 0; k < n-it-1; ++k)
                         temp[j] += A[i+it][k+it+1] * v[k][j];
                 for(int j = 0; j < n-it-1; ++j)
                     A[i+it][j+it+1] = temp[j];
+                delete temp; //SUSSMAN
             }
 
             for(int i = 0; i < n-it-1; ++i)
@@ -420,7 +422,13 @@ void GKSVD(double *Bd, double *Bs, const int n)
      std::cout << "Matrix::GKSVD(): start" << endl;
     }
 
-    double t1 = Bs[n-3] * Bs[n-3] + Bd[n-2] * Bd[n-2];//t(n-1, n-1)
+    double t1;//t(n-1, n-1)
+    if(n == 2){
+        t1 = Bd[n-2] * Bd[n-2];
+    }
+    else{
+        t1 = Bs[n-3] * Bs[n-3] + Bd[n-2] * Bd[n-2];
+    }
     double t2 = Bs[n-2] * Bs[n-2] + Bd[n-1] * Bd[n-1];//t(n, n)
     double t3 = Bs[n-2] * Bd[n-2];//t(n, n-1)
     double d = (t1 - t2) / 2.0;
@@ -506,10 +514,17 @@ void SVD(double **A, double *D, const int m, const int n)
      std::cout << "in SVD n=" << n << '\n';
     }
 
-    double Bd[n];
-    double Bs[n-1];
+    double* Bd=new double[n];  //SUSSMAN
+    int nn;
+    if(n == 1)
+        nn = 2;
+    else
+        nn = n;
+    double* Bs=new double[nn-1];  //SUSSMAN
 
     GetBidiag(A, Bd, Bs, m, n);
+
+    if(n == 1) D[0] = Bd[0];
 
     double Bn = 0.0;
     for(int i = 0; i < n-1; ++i)
@@ -521,7 +536,7 @@ void SVD(double **A, double *D, const int m, const int n)
     int pp = p;
     int qq = q;
     double tol = 1.e-16;
-    while(q < n){
+    while(q < n && n > 1){
         if (debug_MATRIX_ANALYSIS==1) {
  	 std::cout << "in q<n loop, q= " << q << " n= " << n << '\n';
  	 std::cout << "in q<n loop, m= " << m << " n= " << n << '\n';
@@ -575,15 +590,20 @@ void SVD(double **A, double *D, const int m, const int n)
                 Bd[p+i] = 0.0;
                 if(i != n-p-q-1 && Bs[p+i] != 0.0)
                     ZeroRow(Bd+p+i, Bs+p+i, n-p-q-i);
-                if(i == bi){
+                if(i == bi){//if Bd[p+bi] = 0.0
                     bi = i + 1;
                     continue;
                 }
-                if(Bs[i-bi-1] != 0.0)
+                if(Bs[p+i-1] != 0.0)
                     ZeroColumn(Bd+p+bi, Bs+p+bi, i-bi+1);
-                GKSVD(Bd+p+bi, Bs+p+bi, i-bi);
-                //Bs[p+i-1] = 0.0;
-                bi = i + 1;
+                if(i-bi == 1){
+                    bi = i + 1;
+                    continue;
+                }
+                else{
+                    GKSVD(Bd+p+bi, Bs+p+bi, i-bi);
+                    bi = i + 1;
+                }
             }
         }
         if(bi != n-p-q){
@@ -592,6 +612,8 @@ void SVD(double **A, double *D, const int m, const int n)
             GKSVD(Bd+p+bi, Bs+p+bi, n-p-q-bi);
         }
     }
+    delete Bd; //SUSSMAN
+    delete Bs; //SUSSMAN
 
     if (debug_MATRIX_ANALYSIS==1) {
      std::cout << "after SVD m=" << m << '\n';
@@ -988,7 +1010,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
         }
         Dn = sqrt(Dn);
 
-        if(std::abs(M[max_i][max_j]) <= 1.e-16 * Dn)
+        if(std::abs(M[max_i][max_j]) <= 1.e-16 * Dn || m == 1)
             break;
 
         double aii = M[max_i][max_i];
