@@ -1239,6 +1239,14 @@ stop
        print *,"bfact invalid116"
        stop
       endif
+      if ((VOF_pos_probe_counter.eq.0).or. &
+          (VOF_pos_probe_counter.eq.1)) then
+       ! do nothing
+      else
+       print *,"VOF_pos_probe_counter invalid"
+       stop
+      endif
+
       if (ngrow.lt.1) then
        print *,"ngrow invalid"
        stop

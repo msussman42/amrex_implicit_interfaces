@@ -179,7 +179,7 @@ stop
        xtarget, &
        VF_sten, &
        LS_sten, &
-       TSAT, &
+       TSAT, & ! unused if tsat_flag==-1, 0 (but set to 293.0 for sanity check)
        T_out)
       use global_utility_module
       implicit none
@@ -724,7 +724,7 @@ stop
       cc_flag=0  ! centroid -> target
       tsat_flag=0 ! do not use TSAT
       nsolve=1
-      Tsat=293.0
+      Tsat=293.0 ! representative value for sanity check
       call center_centroid_interchange( &
        nsolve, &
        cc_flag, &
@@ -740,7 +740,7 @@ stop
        x, &   ! xtarget
        VF_sten, & 
        VF_sten, & 
-       Tsat, &
+       Tsat, & ! unused if tsat_flag==0
        T_out)
 
       dest=T_out(1)
@@ -748,16 +748,16 @@ stop
       return 
       end subroutine interpfabFWEIGHT
 
-      subroutine grad_probe(xI,xprobe,temp_probe,grad_probe_out,Tsat,LL)
+      subroutine grad_probe_sanity(xI,xprobe,temp_probe,Tsat,LL)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: LL
       REAL_T, intent(in) :: xI(SDIM)
       REAL_T, intent(in) :: xprobe(SDIM)
-      REAL_T, intent(out) :: grad_probe_out
       REAL_T, intent(in) :: temp_probe
       REAL_T, intent(in) :: Tsat
 
+      REAL_T :: grad_probe_local
       REAL_T :: mag
       REAL_T :: nrm(SDIM)
 
@@ -780,14 +780,14 @@ stop
        do dir=1,SDIM
         nrm(dir)=nrm(dir)/mag
        enddo
-       grad_probe_out=(temp_probe-Tsat)/mag
+       grad_probe_local=(temp_probe-Tsat)/mag
 
-       if (grad_probe_out/LL.ge.zero) then
+       if (grad_probe_local/LL.ge.zero) then
         ! do nothing (good case)
-       else if (grad_probe_out/LL.lt.zero) then
+       else if (grad_probe_local/LL.lt.zero) then
         ! do nothing (bad case)
        else
-        print *,"grad_probe_out bust"
+        print *,"grad_probe_local bust"
         stop
        endif
 
@@ -797,14 +797,15 @@ stop
       endif
 
       return
-      end subroutine grad_probe
+      end subroutine grad_probe_sanity
 
       subroutine interpfab( &
        bfact, &
        level, &
        finest_level, &
        dx, &
-       xlo,x, &
+       xlo, &
+       xtarget, &
        comp, &
        ngrow, &
        lo,hi, &
@@ -818,7 +819,7 @@ stop
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: comp,ngrow
       INTEGER_T, intent(in) :: DIMDEC(data)
@@ -865,7 +866,7 @@ stop
        stop
       endif
 
-      call containing_cell(bfact,dx,xlo,lo,x,cell_index)
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
 
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow+1) then
@@ -900,7 +901,7 @@ stop
       cc_flag=1  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
       nsolve=1
-      Tsat=293.0
+      Tsat=293.0 !unused if tsat_flag==-1 (but set to 293.0 for sanity check)
       call center_centroid_interchange( &
        nsolve, &
        cc_flag, &
@@ -912,11 +913,11 @@ stop
        xsten,nhalf, &
        T_sten, & 
        XC_sten, & 
-       x, & ! xI (not used)
-       x, & ! xtarget
+       xtarget, & ! xI (not used)
+       xtarget, & ! xtarget
        T_sten, &  ! VF_sten (not used)
        T_sten, &  ! LS_Sten (not used)
-       Tsat, &
+       Tsat, & ! unused if tsat_flag==-1
        T_out)
 
       dest=T_out(1)
@@ -930,7 +931,8 @@ stop
        level, &
        finest_level, &
        dx, &
-       xlo,x, &
+       xlo, &
+       xtarget, &
        comp, &
        ngrow, &
        lo,hi, &
@@ -944,7 +946,7 @@ stop
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: comp,ngrow
       INTEGER_T, intent(in) :: DIMDEC(data)
@@ -966,7 +968,7 @@ stop
        stop
       endif
 
-      call containing_cell(bfact,dx,xlo,lo,x,cell_index)
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
 
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow) then
@@ -1160,6 +1162,258 @@ stop
 
       return 
       end subroutine interpfabTEMP
+
+      subroutine interpfab_filament_probe( &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       xI, &
+       Tsat, &
+       im_target_probe, &
+       im_target_probe_opp, &
+       nmat, &
+       comp, &
+       ngrow, &
+       lo,hi, &
+       tempfab, &
+       DIMS(tempfab), &
+       LS,DIMS(LS), &
+       recon,DIMS(recon), &
+       dest, &
+       dxprobe_target, &
+       VOF_pos_probe_counter)
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xI(SDIM)
+      REAL_T, intent(in) :: Tsat
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T, intent(in) :: im_target_probe
+      INTEGER_T, intent(in) :: im_target_probe_opp
+      INTEGER_T, intent(in) :: nmat,comp,ngrow
+      INTEGER_T, intent(in) :: DIMDEC(tempfab)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      REAL_T, intent(in) :: tempfab(DIMV(tempfab),comp)
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(out) :: dest
+      REAL_T, intent(inout) :: dxprobe_target
+      INTEGER_T, intent(inout) :: VOF_pos_probe_counter
+
+      INTEGER_T dir
+      INTEGER_T ic,jc,kc
+      INTEGER_T i1,j1,k1
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T k1lo,k1hi
+      INTEGER_T nhalf
+      INTEGER_T vofcomp
+      INTEGER_T cell_index(SDIM)
+      REAL_T xsten_stencil(-3:3,SDIM)
+      REAL_T volcell
+      REAL_T cencell(SDIM)
+      REAL_T T_sten
+      REAL_T VF_sten
+      REAL_T XC_sten(SDIM)
+      REAL_T dxmax
+      INTEGER_T grad_init
+      REAL_T local_grad
+      REAL_T current_grad
+      REAL_T current_dxprobe
+      REAL_T current_temp_probe
+      REAL_T mag
+      REAL_T LSPROBE_OPP
+
+      call get_dxmax(dx,bfact,dxmax)
+
+      if (bfact.lt.1) then 
+       print *,"bfact invalid116"
+       stop
+      endif
+      if ((VOF_pos_probe_counter.eq.0).or. &
+          (VOF_pos_probe_counter.eq.1)) then
+       ! do nothing
+      else
+       print *,"VOF_pos_probe_counter invalid"
+       stop
+      endif
+
+      if (ngrow.lt.1) then
+       print *,"ngrow invalid"
+       stop
+      endif
+      if ((comp.lt.1).or.(comp.gt.1000)) then
+       print *,"comp out of range"
+       stop
+      endif
+      if ((im_target_probe.lt.1).or. &
+          (im_target_probe.gt.nmat)) then
+       print *,"im_target_probe invalid21"
+       stop
+      endif
+      if ((im_target_probe_opp.lt.1).or. &
+          (im_target_probe_opp.gt.nmat)) then
+       print *,"im_target_probe_opp invalid21"
+       stop
+      endif
+      if ((Tsat.ge.zero).and.(Tsat.le.1.0D+99)) then
+       ! do nothing
+      else
+       print *,"Tsat out of range"
+       stop
+      endif
+
+      call checkbound(lo,hi,DIMS(tempfab),ngrow,-1,1223)
+      call checkbound(lo,hi,DIMS(LS),ngrow,-1,1224)
+      call checkbound(lo,hi,DIMS(recon),ngrow,-1,1224)
+
+      if (SDIM.eq.2) then
+       k1lo=0
+       k1hi=0
+      else if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      call containing_cell(bfact,dx,xlo,lo,xI,cell_index)
+
+      do dir=1,SDIM
+       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
+        cell_index(dir)=lo(dir)-ngrow+1
+       endif
+       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
+        cell_index(dir)=hi(dir)+ngrow-1
+       endif
+      enddo ! dir
+
+      vofcomp=(im_target_probe-1)*ngeom_recon+1
+
+      ic=cell_index(1)
+      jc=cell_index(2)
+      kc=cell_index(SDIM)
+
+      nhalf=3
+
+      grad_init=0
+      current_grad=zero
+      current_dxprobe=zero
+      current_temp_probe=zero
+
+      do i1=-1,1
+      do j1=-1,1
+      do k1=k1lo,k1hi
+
+       isten=i1+ic
+       jsten=j1+jc
+       ksten=k1+kc
+
+       call gridsten_level(xsten_stencil,isten,jsten,ksten,level,nhalf)
+       call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
+         volcell,cencell,SDIM)
+
+       T_sten=tempfab(D_DECL(isten,jsten,ksten),comp)
+       VF_sten=recon(D_DECL(isten,jsten,ksten),vofcomp)
+       mag=zero
+       do dir=1,SDIM
+        XC_sten(dir)= &
+         recon(D_DECL(isten,jsten,ksten),vofcomp+dir)+cencell(dir)
+        mag=mag+(XC_sten(dir)-cencell(dir))**2
+       enddo
+       mag=sqrt(mag)
+       if (mag.ge.zero) then
+        if ((VF_sten.ge.-VOFTOL).and. &
+            (VF_sten.le.one+VOFTOL)) then
+         if (VF_sten.ge.LSTOL) then
+
+          ! center -> target (cc_flag==1)
+          ! tsat_flag==-1
+          ! call center_centroid_interchange
+          call interpfab( &
+           bfact, &
+           level, &
+           finest_level, &
+           dx, &
+           xlo, &
+           XC_sten, &
+           im_target_probe_opp, &
+           ngrow, &
+           lo,hi, &
+           LS,DIMS(LS), &
+           LSPROBE_OPP)
+
+          if (LSPROBE_OPP.lt.zero) then
+           local_grad=abs((T_sten-Tsat)/LSPROBE_OPP)
+           if (grad_init.eq.0) then
+            current_grad=local_grad
+            current_dxprobe=abs(LSPROBE_OPP)
+            current_temp_probe=T_sten
+           else if (grad_init.eq.1) then
+            if (local_grad.lt.current_grad) then
+             current_grad=local_grad
+             current_dxprobe=abs(LSPROBE_OPP)
+             current_temp_probe=T_sten
+            else if (local_grad.ge.current_grad) then
+             ! do nothing
+            else
+             print *,"local_grad invalid"
+             stop
+            endif
+           else
+            print *,"grad_init invalid"
+            stop
+           endif
+          else if (LSPROBE_OPP.ge.zero) then
+           ! do nothing
+          else
+           print *,"LSPROBE_OPP invalid"
+           stop
+          endif
+         else if (VF_sten.le.LSTOL) then
+          ! do nothing
+         else
+          print *,"VF_sten invalid"
+          stop
+         endif
+        else
+         print *,"VF_sten invalid"
+         stop
+        endif
+       else
+        print *,"mag invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! i1,j1,k1
+
+      if (grad_init.eq.0) then
+       dest=Tsat
+      else if (grad_init.eq.1) then
+       dest=current_temp_probe
+       dxprobe_target=current_dxprobe
+       VOF_pos_probe_counter=VOF_pos_probe_counter+1
+      else
+       print *,"grad_init invalid"
+       stop
+      endif
+
+      return 
+      end subroutine interpfab_filament_probe
+
+
 
       end module mass_transfer_module
 
@@ -3300,7 +3554,7 @@ stop
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         vel,DIMS(vel), &
-        LS,DIMS(LS))
+        LS,DIMS(LS))  ! old level set function before phase change
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
@@ -3740,7 +3994,7 @@ stop
       INTEGER_T dir,dir2
       INTEGER_T im,im_opp,ireverse,iten,imls
       INTEGER_T im_primary
-      INTEGER_T imls1,imls2
+      INTEGER_T imls1
       INTEGER_T im_substrate_source
       INTEGER_T im_substrate_dest
       INTEGER_T im_source,im_dest,ngrow
@@ -3758,11 +4012,10 @@ stop
       REAL_T nrmFD(SDIM)  ! finite difference normal
       REAL_T theta_nrmFD(SDIM)
       REAL_T LSINT(nmat*(SDIM+1))
+      REAL_T LSPROBE(nmat)
       REAL_T LShere(nmat)
       REAL_T tempsrc
-      REAL_T tempsrc_grad
       REAL_T tempdst
-      REAL_T tempdst_grad
       REAL_T densrc
       REAL_T dendst
       REAL_T Tsat
@@ -3771,9 +4024,12 @@ stop
       INTEGER_T valid_phase_change(0:1)
       REAL_T dxprobe_source
       REAL_T dxprobe_dest
+      REAL_T dxprobe_target
       REAL_T ksource,kdest
       REAL_T LS_pos
-      REAL_T C_w0,Cmethane_in_hydrate,PHYDWATER,Tsrc_INT,Tdst_INT
+      REAL_T C_w0,Cmethane_in_hydrate,PHYDWATER
+      REAL_T temp_target_INT
+      REAL_T Tsrc_INT,Tdst_INT
       INTEGER_T concen_comp
       INTEGER_T freezing_mod
       INTEGER_T distribute_from_targ
@@ -3799,6 +4055,20 @@ stop
       REAL_T contact_line_perim
       INTEGER_T icolor,base_type,ic,im1,im2
       REAL_T normal_probe_factor
+      INTEGER_T iprobe
+      REAL_T xtarget_probe(SDIM)
+      INTEGER_T im_target_probe
+      INTEGER_T tcomp_probe
+      INTEGER_T dencomp_probe
+      REAL_T temp_target_probe
+      REAL_T den_targetINT
+      INTEGER_T im_primary_probe
+      INTEGER_T im_secondary_probe
+      INTEGER_T im_target_probe_opp
+      INTEGER_T LS_pos_probe_counter
+      INTEGER_T LS_INT_VERY_CLOSE_counter
+      INTEGER_T LS_INT_OWN_counter
+      INTEGER_T VOF_pos_probe_counter
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
 #endif
@@ -4046,13 +4316,6 @@ stop
                if ((LShere(im_dest).ge.zero).or. &
                    (LShere(im_source).ge.zero)) then
 
-                 ! TODO:
-                 ! If probe is in a 3rd material "3", then
-                 !  revise the probe to be closest point on the material
-                 !  "3" interface.  The gradient is then calculated as
-                 ! (T_3-T_sat)/(d * (n12 dot n3)) or something like that.
-                 ! FOR YANG: use closest point map generated using VAHAB'S
-                 !  multimaterial redistancing algorithm.
                 if (LShere(im_dest).ge.zero) then
                  LS_pos=LShere(im_source)
                  do dir=1,SDIM
@@ -4066,7 +4329,7 @@ stop
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
                   xsrc(dir)=xI(dir)+ &
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
-                 enddo ! dir
+                 enddo ! dir=1..sdim
                 else if (LShere(im_source).ge.zero) then
                  LS_pos=LShere(im_dest)
                  do dir=1,SDIM
@@ -4120,235 +4383,58 @@ stop
                   use_exact_temperature, &
                   xI,cur_time,nmat,nten,7)
 
-                 ! freezing_mod=0 (sharp interface stefan model)
-                 ! freezing_mod=1 (source term model)
-                 ! freezing_mod=2 (hydrate model)
-                 ! freezing_mod=3 (wildfire)
-                 ! freezing_mod=4 (source term model)
-                 ! freezing_mod=5 (evaporation/condensation)
-                if ((freezing_mod.eq.0).or. &
-                    (freezing_mod.eq.5)) then
+                dxprobe_source=zero
+                do dir=1,SDIM
+                 dxprobe_source=dxprobe_source+(xdst(dir)-xsrc(dir))**2
+                enddo
+                dxprobe_source=half*sqrt(dxprobe_source)
+                dxprobe_dest=dxprobe_source
 
-                  ! centroid -> target (cc_flag==0)
-                  ! tsat_flag==1
-                  ! call center_centroid_interchange
-                 call interpfabTEMP( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xsrc, &
-                  xI,Tsat, &
-                  im_source,nmat, &
-                  tcomp_source, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  LS,DIMS(LS), &
-                  recon,DIMS(recon), &
-                  tempsrc, &
-                  debugrate)
-    
-                 call interpfabTEMP( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xdst, &
-                  xI,Tsat, &
-                  im_dest,nmat, &
-                  tcomp_dest, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  LS,DIMS(LS), &
-                  recon,DIMS(recon), &
-                  tempdst, &
-                  debugrate)
+                RR=one
+                call prepare_normal(nrmFD,RR,mag)
 
-                 if ((tempdst.lt.zero).or.(tempsrc.lt.zero)) then
-                  print *,"tempdst or tempsrc went negative"
-                  print *,"tempdst,tempsrc ",tempdst,tempsrc
+                if (levelrz.eq.0) then
+                 ! do nothing
+                else if (levelrz.eq.1) then
+                 if (SDIM.ne.2) then
+                  print *,"dimension bust"
                   stop
                  endif
-
-                  ! tempdst_grad=(1/LL)*(tempdst-Tsat)/||xI-xdst||
-                 call grad_probe(xI,xdst,tempdst,tempdst_grad, &
-                   Tsat,LL(ireverse))
-                  ! tempsrc_grad=(1/LL)*(tempsrc-Tsat)/||xI-xsrc||
-                 call grad_probe(xI,xsrc,tempsrc,tempsrc_grad, &
-                   Tsat,LL(ireverse))
-
-                 if ((tempdst.lt.zero).or.(tempsrc.lt.zero)) then
-                  print *,"after adjust: tempdst or tempsrc went negative"
-                  print *,"tempdst_grad ",tempdst_grad
-                  print *,"tempsrc_grad ",tempsrc_grad
-                  print *,"tempdst,tempsrc ",tempdst,tempsrc
+                else if (levelrz.eq.3) then
+                 if (mag.gt.zero) then
+                  do dir=1,SDIM
+                   theta_nrmFD(dir)=nrmFD(dir)
+                  enddo
+                  RR=xsten(0,1)
+                  call prepare_normal(theta_nrmFD,RR,mag)
+                  if (mag.gt.zero) then
+                   ! mag=theta_nrmFD dot nrmFD
+                   mag=zero
+                   do dir=1,SDIM
+                    mag=mag+theta_nrmFD(dir)*nrmFD(dir)
+                   enddo
+                   if (abs(mag).gt.one+VOFTOL) then
+                    print *,"dot product bust"
+                    stop
+                   endif
+                   if (abs(mag).gt.zero) then
+                    dxprobe_source=dxprobe_source*abs(mag)
+                    dxprobe_dest=dxprobe_dest*abs(mag)
+                   endif
+                  else if (mag.eq.zero) then
+                   ! do nothing
+                  else
+                   print *,"mag bust"
+                   stop
+                  endif 
+                 else if (mag.eq.zero) then
+                  ! do nothing
+                 else
+                  print *,"mag bust"
                   stop
-                 endif
-
-                 Tsrc_INT=Tsat
-                 Tdst_INT=Tsat
-                else if ((freezing_mod.eq.1).or. &
-                         (freezing_mod.eq.2).or. &
-                         (freezing_mod.eq.4)) then
-
-                  ! centroid -> target (cc_flag==0)
-                  ! tsat_flag==0 do not use TSAT
-                  ! call center_centroid_interchange
-                  ! distance and volume fraction weighted linear least
-                  ! squares.  If matrix system is singular, then
-                  ! zeroth order least squares is used.
-                 call interpfabFWEIGHT( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xsrc, &
-                  im_source,nmat, &
-                  tcomp_source, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  recon,DIMS(recon), &
-                  tempsrc)
-                 call interpfabFWEIGHT( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xI, &
-                  im_source,nmat, &
-                  tcomp_source, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  recon,DIMS(recon), &
-                  Tsrc_INT)
-
-                 call interpfabFWEIGHT( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xdst, &
-                  im_dest,nmat, &
-                  tcomp_dest, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  recon,DIMS(recon), &
-                  tempdst)
-                 call interpfabFWEIGHT( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xI, &
-                  im_dest,nmat, &
-                  tcomp_dest, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  recon,DIMS(recon), &
-                  Tdst_INT)
-
-                  ! hydrate
-                 if (freezing_mod.eq.2) then
-                  if (distribute_from_targ.ne.0) then
-                   print *,"distribute_from_targ invalid"
-                   stop
-                  endif
-                  if (num_species_var.ne.1) then
-                   print *,"num_species_var invalid"
-                   stop
-                  endif
-                  concen_comp=(im_dest-1)*num_state_material+3
-                  call interpfabFWEIGHT( &
-                   bfact, &
-                   level, &
-                   finest_level, &
-                   dx, &
-                   xlo,xI, &
-                   im_dest,nmat, &
-                   concen_comp,ngrow, &
-                   fablo,fabhi, &
-                   EOS,DIMS(EOS), &
-                   recon,DIMS(recon), &
-                   Cmethane_in_hydrate)
-                  pcomp=1
-                  call interpfab( &
-                   bfact, &
-                   level, &
-                   finest_level, &
-                   dx, &
-                   xlo,xI, &
-                   pcomp, &
-                   ngrow, &
-                   fablo,fabhi, &
-                   pres,DIMS(pres), &
-                   PHYDWATER)
-                 endif  ! hydrate
+                 endif 
                 else
-                 print *,"freezing_model invalid in ratemasschange"
-                 print *,"freezing_mod= ",freezing_mod
-                 print *,"iten,ireverse,nten ",iten,ireverse,nten
-                 stop
-                endif
-
-                mtype=fort_material_type(im_source)
-                if (mtype.eq.0) then
-                 densrc=fort_denconst(im_source)
-                else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
-                 call interpfabFWEIGHT( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xI, &
-                  im_source,nmat, &
-                  dencomp_source, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  recon,DIMS(recon), &
-                  densrc)
-                 if (densrc.lt.density_floor_expansion(im_source)) then
-                  densrc=density_floor_expansion(im_source)
-                 endif
-                 if (densrc.gt.density_ceiling_expansion(im_source)) then
-                  densrc=density_ceiling_expansion(im_source)
-                 endif
-                else
-                 print *,"mtype invalid"
-                 stop
-                endif
-
-                mtype=fort_material_type(im_dest)
-                if (mtype.eq.0) then
-                 dendst=fort_denconst(im_dest)
-                else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
-                 call interpfabFWEIGHT( &
-                  bfact, &
-                  level, &
-                  finest_level, &
-                  dx, &
-                  xlo,xI, &
-                  im_dest,nmat, &
-                  dencomp_dest, &
-                  ngrow, &
-                  fablo,fabhi, &
-                  EOS,DIMS(EOS), &
-                  recon,DIMS(recon), &
-                  dendst)
-                 if (dendst.lt.density_floor_expansion(im_dest)) then
-                  dendst=density_floor_expansion(im_dest)
-                 endif
-                 if (dendst.gt.density_ceiling_expansion(im_dest)) then
-                  dendst=density_ceiling_expansion(im_dest)
-                 endif
-                else
-                 print *,"mtype invalid"
+                 print *,"levelrz invalid rate mass change"
                  stop
                 endif
 
@@ -4366,436 +4452,723 @@ stop
                   LSINT(imls))
                 enddo ! imls=1..nmat*(SDIM+1)
 
-                at_interface=0
                 call get_primary_material(LSINT,nmat,imls1)
 
-                if (is_rigid(nmat,imls1).eq.0) then
-                 call get_secondary_material(LSINT,nmat,imls1,imls2)
+                LS_pos_probe_counter=0
+                LS_INT_VERY_CLOSE_counter=0
+                LS_INT_OWN_counter=0
+                VOF_pos_probe_counter=0
 
-                 if (is_rigid(nmat,imls2).eq.0) then
+                do iprobe=1,2
 
-                  if (((imls1.eq.im_dest).and.(imls2.eq.im_source)).or. &
-                      ((imls1.eq.im_source).and.(imls2.eq.im_dest))) then
-                   at_interface=1
-                  endif
-
-                  if (at_interface.eq.1) then
-                   dxprobe_source=zero
-                   do dir=1,SDIM
-                    dxprobe_source=dxprobe_source+(xdst(dir)-xsrc(dir))**2
-                   enddo
-                   dxprobe_source=half*sqrt(dxprobe_source)
-                   dxprobe_dest=dxprobe_source
-
-                   RR=one
-                   call prepare_normal(nrmFD,RR,mag)
-
-                   if (levelrz.eq.0) then
-                    ! do nothing
-                   else if (levelrz.eq.1) then
-                    if (SDIM.ne.2) then
-                     print *,"dimension bust"
-                     stop
-                    endif
-                   else if (levelrz.eq.3) then
-                    if (mag.gt.zero) then
-                     do dir=1,SDIM
-                      theta_nrmFD(dir)=nrmFD(dir)
-                     enddo
-                     RR=xsten(0,1)
-                     call prepare_normal(theta_nrmFD,RR,mag)
-                     if (mag.gt.zero) then
-                       ! mag=theta_nrmFD dot nrmFD
-                      mag=zero
-                      do dir=1,SDIM
-                       mag=mag+theta_nrmFD(dir)*nrmFD(dir)
-                      enddo
-                      if (abs(mag).gt.one+VOFTOL) then
-                       print *,"dot product bust"
-                       stop
-                      endif
-                      if (abs(mag).gt.zero) then
-                       dxprobe_source=dxprobe_source*abs(mag)
-                       dxprobe_dest=dxprobe_dest*abs(mag)
-                      endif
-                     else if (mag.eq.zero) then
-                      ! do nothing
-                     else
-                      print *,"mag bust"
-                      stop
-                     endif 
-                    else if (mag.eq.zero) then
-                     ! do nothing
-                    else
-                     print *,"mag bust"
-                     stop
-                    endif 
-                   else
-                    print *,"levelrz invalid rate mass change"
-                    stop
-                   endif
-                    
-#if (STANDALONE==0)
-                   ksource=get_user_heatviscconst(im_source)
-                   kdest=get_user_heatviscconst(im_dest)
-#elif (STANDALONE==1)
-                   ksource=fort_heatviscconst(im_source)
-                   kdest=fort_heatviscconst(im_dest)
-#else
-                   print *,"bust compiling ratemasschange"
-                   stop
-#endif
-
-                   microlayer_substrate_source=0
-                   microlayer_substrate_dest=0
-
-                   im_substrate_source=microlayer_substrate(im_source)
-                   im_substrate_dest=microlayer_substrate(im_dest)
-
-                   if (microlayer_size(im_source).gt.zero) then
-                    if (im_substrate_source.gt.0) then
-                     if (is_rigid(nmat,im_substrate_source).ne.1) then
-                      print *,"is_rigid(nmat,im_substrate_source).ne.1"
-                      stop
-                     endif
-                     do dir=1,SDIM
-                      dir2=nmat+(im_substrate_source-1)*SDIM+dir
-                      gradphi_substrate(dir)=LSINT(dir2)
-                     enddo
-                     call get_physical_dist(xI,LSINT(im_substrate_source), &
-                      gradphi_substrate,newphi_substrate);
-                     if (newphi_substrate.ge.-macrolayer_size(im_source)) then
-                      microlayer_substrate_source=im_substrate_source
-                     endif
-                    else if (im_substrate_source.eq.0) then
-                     print *,"microlayer material must have corresponding"
-                     print *,"substrate. im_source,im_dest=",im_source,im_dest
-                     stop
-                    else
-                     print *,"im_substrate_source invalid"
-                     stop
-                    endif
-                   else if (microlayer_size(im_source).eq.zero) then
-                    ! do nothing
-                   else
-                    print *,"microlayer_size(im_source) invalid"
-                    stop
-                   endif
-
-                   if (microlayer_size(im_dest).gt.zero) then
-                    if (im_substrate_dest.gt.0) then
-                     if (is_rigid(nmat,im_substrate_dest).ne.1) then
-                      print *,"is_rigid(nmat,im_substrate_dest).ne.1"
-                      stop
-                     endif
-                     do dir=1,SDIM
-                      dir2=nmat+(im_substrate_dest-1)*SDIM+dir
-                      gradphi_substrate(dir)=LSINT(dir2)
-                     enddo
-                     call get_physical_dist(xI,LSINT(im_substrate_dest), &
-                      gradphi_substrate,newphi_substrate);
-                     if (newphi_substrate.ge.-macrolayer_size(im_dest)) then
-                      microlayer_substrate_dest=im_substrate_dest
-                     endif
-                    else if (im_substrate_dest.eq.0) then
-                     print *,"microlayer material must have corresponding"
-                     print *,"substrate. im_source,im_dest=",im_source,im_dest
-                     stop
-                    else
-                     print *,"im_substrate_dest invalid"
-                     stop
-                    endif
-                   else if (microlayer_size(im_dest).eq.zero) then
-                    ! do nothing
-                   else
-                    print *,"microlayer_size(im_dest) invalid"
-                    stop
-                   endif
-
-                   if (freezing_mod.eq.5) then
-                    ispec=mass_fraction_id(iten+ireverse*nten)
-                    if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-                     evap_den=species_evaporation_density(ispec)
-                     if (evap_den.gt.zero) then
-                      if (LL(ireverse).gt.zero) then ! evaporation
-                       dendst=evap_den
-                      else if (LL(ireverse).lt.zero) then ! condensation
-                       densrc=evap_den
-                      else
-                       print *,"LL invalid"
-                       stop
-                      endif
-                     else
-                      print *,"evap_den invalid"
-                      stop
-                     endif  
-                    else
-                     print *,"ispec invalid"
-                     stop
-                    endif
-                   endif ! freezing_mod==5
-
-                   source_perim_factor=one
-                   dest_perim_factor=one
-
-                   if ((max_contact_line_size(im_source).gt.zero).and. &
-                       (microlayer_size(im_source).gt.zero).and. &
-                       (macrolayer_size(im_source).gt.zero).and. &
-                       (microlayer_substrate_source.ge.1).and. &
-                       (microlayer_substrate_source.le.nmat)) then
-                    icolor=NINT(colorfab(D_DECL(i,j,k)))
-                    if ((icolor.gt.color_count).or.(icolor.le.0)) then
-                     print *,"icolor invalid in RATEMASSCHANGE icolor=",icolor
-                     print *,"i,j,k ",i,j,k
-                     stop
-                    endif
-                    base_type=NINT(typefab(D_DECL(i,j,k)))
-                    if ((base_type.lt.1).or.(base_type.gt.nmat)) then
-                     print *,"base_type invalid"
-                     stop
-                    endif
-                    ! blob_matrix,blob_RHS,blob_velocity,
-                    ! blob_integral_momentum,blob_energy,
-                    ! blob_mass_for_velocity, (3 comp)
-                    ! volume, 
-                    ! centroid_integral, centroid_actual, 
-                    ! perim, perim_mat
-                    ic=(icolor-1)*num_elements_blobclass+ &
-                     3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-                     2*(2*SDIM)+1+ &
-                     3+1+2*SDIM+1+nmat
-
-                    im2=microlayer_substrate_source
-                    if ((im2.ge.1).and.(im2.le.nmat)) then
-                     if (base_type.eq.im_source) then
-                      im1=im_dest
-                     else if (base_type.eq.im_dest) then
-                      im1=im_source
-                     else
-                      print *,"base_type invalid"
-                      stop
-                     endif
-                     ic=ic+(im1-1)*nmat+im2
-                     contact_line_perim=blob_array(ic)
-                    else 
-                     print *,"im2 invalid"
-                     stop
-                    endif
-
-                    if ((contact_line_perim.ge.zero).and. &
-                        (contact_line_perim.le. &
-                         max_contact_line_size(im_source))) then
-                     ! do nothing
-                    else if (contact_line_perim.gt. &
-                             max_contact_line_size(im_source)) then
-                     source_perim_factor= &
-                       max_contact_line_size(im_source)/contact_line_perim
-                    else
-                     print *,"contact_line_perim invalid"
-                     stop
-                    endif
-                   else if ((max_contact_line_size(im_source).eq.zero).or. &
-                            (microlayer_size(im_source).eq.zero).or. &
-                            (macrolayer_size(im_source).eq.zero).or. &
-                            (microlayer_substrate_source.eq.0)) then
-                    ! do nothing
-                   else
-                    print *,"microlayer parameters invalid"
-                    stop
-                   endif
-
-                   if ((max_contact_line_size(im_dest).gt.zero).and. &
-                       (microlayer_size(im_dest).gt.zero).and. &
-                       (macrolayer_size(im_dest).gt.zero).and. &
-                       (microlayer_substrate_dest.ge.1).and. &
-                       (microlayer_substrate_dest.le.nmat)) then
-                    icolor=NINT(colorfab(D_DECL(i,j,k)))
-                    if ((icolor.gt.color_count).or.(icolor.le.0)) then
-                     print *,"icolor invalid in RATEMASSCHANGE icolor=",icolor
-                     print *,"i,j,k ",i,j,k
-                     stop
-                    endif
-                    base_type=NINT(typefab(D_DECL(i,j,k)))
-                    if ((base_type.lt.1).or.(base_type.gt.nmat)) then
-                     print *,"base_type invalid"
-                     stop
-                    endif
-                    ! blob_matrix,blob_RHS,blob_velocity,
-                    ! blob_integral_momentum,blob_energy,
-                    ! blob_mass_for_velocity, (3 comp)
-                    ! volume, 
-                    ! centroid_integral, centroid_actual, 
-                    ! perim, perim_mat
-                    ic=(icolor-1)*num_elements_blobclass+ &
-                     3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-                     2*(2*SDIM)+1+ &
-                     3+1+2*SDIM+1+nmat
-
-                    im2=microlayer_substrate_dest
-                    if ((im2.ge.1).and.(im2.le.nmat)) then
-                     if (base_type.eq.im_source) then
-                      im1=im_dest
-                     else if (base_type.eq.im_dest) then
-                      im1=im_source
-                     else
-                      print *,"base_type invalid"
-                      stop
-                     endif
-                     ic=ic+(im1-1)*nmat+im2
-                     contact_line_perim=blob_array(ic)
-                    else 
-                     print *,"im2 invalid"
-                     stop
-                    endif
-
-                    if ((contact_line_perim.ge.zero).and. &
-                        (contact_line_perim.le. &
-                         max_contact_line_size(im_dest))) then
-                      ! do nothing
-                    else if (contact_line_perim.gt. &
-                             max_contact_line_size(im_dest)) then
-                     dest_perim_factor= &
-                       max_contact_line_size(im_dest)/contact_line_perim
-                    else
-                     print *,"contact_line_perim invalid"
-                     stop
-                    endif
-                   else if ((max_contact_line_size(im_dest).eq.zero).or. &
-                            (microlayer_size(im_dest).eq.zero).or. &
-                            (macrolayer_size(im_dest).eq.zero).or. &
-                            (microlayer_substrate_dest.eq.0)) then
-                    ! do nothing
-                   else
-                    print *,"microlayer parameters invalid"
-                    stop
-                   endif
-
-                    ! V dt * L * L = volume of material change of phase
-                    ! rho_src * V dt L^2 = rho_dst * (V+Vexpand) * dt L^2
-                    ! S=V+Vexpand=rho_src V/rho_dst=[k grad T dot n]/(L rho_dst)
-                    ! Vexpand=(rho_src/rho_dst-1)V
-                    ! note: rho_src V = MDOT
-
-                    ! this call to get_vel_phasechange is not for the purpose
-                    ! of estimating the timestep dt.
-                   for_estdt=0
-
-#if (STANDALONE==0)
-                   call get_vel_phasechange( &
-                    for_estdt, &
-                    xI, &
-                    freezing_mod, &
-                    distribute_from_targ, &
-                    vel_phasechange(ireverse), & ! vel
-                    densrc,dendst, &
-                    ksource,kdest, & ! ksrc,kdst
-                    tempsrc,tempdst, & ! Tsrc,Tdst
-                    Tsat, &
-                    Tsrc_INT,Tdst_INT, &
-                    LL(ireverse), &
-                    source_perim_factor, &
-                    dest_perim_factor, &
-                    microlayer_substrate_source, &
-                    microlayer_angle(im_source), &
-                    microlayer_size(im_source), &
-                    macrolayer_size(im_source), &
-                    microlayer_substrate_dest, &
-                    microlayer_angle(im_dest), &
-                    microlayer_size(im_dest), &
-                    macrolayer_size(im_dest), &
-                    dxprobe_source, &
-                    dxprobe_dest, &
-                    im_source,im_dest, &
-                    prev_time,dt, &
-                    fort_alpha(iten+ireverse*nten), &
-                    fort_beta(iten+ireverse*nten), &
-                    fort_expansion_factor(iten+ireverse*nten), &
-                    K_f(ireverse), &
-                    Cmethane_in_hydrate, &
-                    C_w0, &
-                    PHYDWATER, &
-                    Fsource,Fdest)
-#elif (STANDALONE==1)
-                   if (freezing_mod.eq.0) then
-                    DTsrc=tempsrc-Tsat
-                    DTdst=tempdst-Tsat
-                    velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe_source)
-                    veldst=kdest*DTdst/(LL(ireverse)*dxprobe_dest)
-                   
-                    velsum=velsrc+veldst
-                    if (velsum.gt.zero) then
-                     ! do nothing
-                    else if (velsum.le.zero) then
-                     velsum=zero
-                    else
-                     print *,"velsum invalid"
-                     stop
-                    endif 
-                    vel_phasechange(ireverse)=velsum
-                   else
-                    print *,"freezing_mod invalid"
-                    stop
-                   endif
-#else
-                   print *,"bust compiling ratemasschange"
-                   stop
-#endif
-
-                   if (debugrate.eq.1) then
-                    print *,"i,j,k,ireverse,vel_phasechange ", &
-                      i,j,k,ireverse,vel_phasechange(ireverse)
-                   endif
-                   if (1.eq.0) then
-                    if (freezing_mod.eq.4) then
-                     print *,"i,j,k,ireverse,vel_phasechange ", &
-                      i,j,k,ireverse,vel_phasechange(ireverse)
-                     print *,"im_source,im_dest ",im_source,im_dest
-                     print *,"Tsat ",Tsat
-                     print *,"tempsrc,Tsrc_INT ",tempsrc,Tsrc_INT
-                     print *,"tempdst,Tdst_INT ",tempdst,Tdst_INT
-                    endif
-                   endif
-
-                   if (vel_phasechange(ireverse).lt.zero) then
-                    vel_phasechange(ireverse)=zero
-                   endif
-
-                   valid_phase_change(ireverse)=1
+                 if (iprobe.eq.1) then
+                  do dir=1,SDIM
+                   xtarget_probe(dir)=xsrc(dir)
+                  enddo
+                  im_target_probe=im_source
+                  im_target_probe_opp=im_dest
+                  tcomp_probe=tcomp_source
+                  dencomp_probe=dencomp_source
+                  dxprobe_target=dxprobe_source
+                 else if (iprobe.eq.2) then
+                  do dir=1,SDIM
+                   xtarget_probe(dir)=xdst(dir)
+                  enddo
+                  im_target_probe=im_dest
+                  im_target_probe_opp=im_source
+                  tcomp_probe=tcomp_dest
+                  dencomp_probe=dencomp_dest
+                  dxprobe_target=dxprobe_dest
+                 else
+                  print *,"iprobe invalid"
+                  stop
+                 endif
                
-                   if (debugrate.eq.1) then
-                    print *,"i,j,k,im_source,im_dest ",i,j,k, &
-                     im_source,im_dest 
-                    print *,"dt,vel_phasechange(ireverse) ", &
-                     dt,vel_phasechange(ireverse)
-                    print *,"LL,dxmin ",LL(ireverse),dxmin
-                    print *,"dxprobe_source,dxprobe_dest ", &
-                       dxprobe_source,dxprobe_dest
-                    print *,"ksource,kdest,Tsat ",ksource,kdest,Tsat
-                    print *,"tempsrc,tempdst,densrc ",tempsrc,tempdst,densrc
-                    print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
-                    print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
-                    print *,"nrmFD ",nrmFD(1),nrmFD(2),nrmFD(SDIM)
-                    print *,"im_dest= ",im_dest
-                   endif
-   
-                  else if (at_interface.eq.0) then
-                   ! do nothing
-                  else
-                   print *,"at_interface invalid"
-                   stop
-                  endif
-
-                 else if (is_rigid(nmat,imls2).eq.1) then
+                 if (imls1.eq.im_target_probe) then
+                  LS_INT_OWN_counter=LS_INT_OWN_counter+1
+                 else if ((imls1.ge.1).and.(imls1.le.nmat)) then
                   ! do nothing
                  else
-                  print *,"is_rigid invalid"
+                  print *,"imls1 invalid"
+                  stop
+                 endif
+ 
+                 if (LSINT(im_target_probe).ge.-dxmaxLS) then
+                  LS_INT_VERY_CLOSE_counter=LS_INT_VERY_CLOSE_counter+1
+                 else if (LSINT(im_target_probe).le.-dxmaxLS) then
+                  ! do nothing
+                 else
+                  print *,"LSINT(im_target_probe) invalid"
+                  stop
+                 endif
+  
+                 mtype=fort_material_type(im_target_probe)
+                 if (mtype.eq.0) then
+                  den_targetINT=fort_denconst(im_target_probe)
+                 else if ((mtype.ge.1).and. &
+                          (mtype.le.fort_max_num_eos)) then
+                  call interpfabFWEIGHT( &
+                   bfact, &
+                   level, &
+                   finest_level, &
+                   dx, &
+                   xlo,xI, &
+                   im_target_probe,nmat, &
+                   dencomp_probe, &
+                   ngrow, &
+                   fablo,fabhi, &
+                   EOS,DIMS(EOS), &
+                   recon,DIMS(recon), &
+                   den_targetINT)
+
+                  if (den_targetINT.lt. &
+                      density_floor_expansion(im_target_probe)) then
+                   den_targetINT=density_floor_expansion(im_target_probe)
+                  endif
+                  if (den_targetINT.gt. &
+                      density_ceiling_expansion(im_target_probe)) then
+                   den_targetINT=density_ceiling_expansion(im_target_probe)
+                  endif
+                 else
+                  print *,"mtype invalid"
                   stop
                  endif
 
-                else if (is_rigid(nmat,imls1).eq.1) then 
+                  ! centroid -> target (cc_flag==0)
+                  ! tsat_flag==1
+                  ! call center_centroid_interchange
+                 call interpfabTEMP( &
+                  bfact, &
+                  level, &
+                  finest_level, &
+                  dx, &
+                  xlo, &
+                  xtarget_probe, &
+                  xI, &
+                  Tsat, &
+                  im_target_probe, &
+                  nmat, &
+                  tcomp_probe, &
+                  ngrow, &
+                  fablo,fabhi, &
+                  EOS,DIMS(EOS), &
+                  LS,DIMS(LS), &
+                  recon,DIMS(recon), &
+                  temp_target_probe, &
+                  debugrate)
+
+                 if (temp_target_probe.lt.zero) then
+                  print *,"temp_target_probe went negative"
+                  print *,"temp_target_probe ",temp_target_probe
+                  stop
+                 endif
+
+                 do imls=1,nmat
+                   ! center -> target (cc_flag==1)
+                   ! tsat_flag==-1
+                   ! call center_centroid_interchange
+                  call interpfab( &
+                    bfact, &
+                    level, &
+                    finest_level, &
+                    dx, &
+                    xlo, &
+                    xtarget_probe, &
+                    imls, &
+                    ngrow, &
+                    fablo,fabhi, &
+                    LS,DIMS(LS), &
+                    LSPROBE(imls))
+                 enddo ! imls=1..nmat
+
+                 call get_primary_material(LSPROBE,nmat,im_primary_probe)
+
+                 if (im_primary_probe.eq.im_target_probe) then
+
+                  LS_pos_probe_counter=LS_pos_probe_counter+1
+
+                  call grad_probe_sanity(xI,xtarget_probe, &
+                    temp_target_probe,Tsat,LL(ireverse))
+
+                 else if ((im_primary_probe.ne.im_target_probe).and. &
+                          (im_primary_probe.ge.1).and. &
+                          (im_primary_probe.le.nmat)) then
+
+                  temp_target_probe=Tsat
+    
+                  call get_secondary_material(LSPROBE,nmat, &
+                     im_primary_probe, &
+                     im_secondary_probe)
+
+                  if ((im_primary_probe.ne.im_target_probe_opp).and. &
+                      (im_secondary_probe.eq.im_target_probe).and. &
+                      (LSPROBE(im_target_probe).ge.-dxprobe_target)) then
+
+                   call interpfab_filament_probe( &
+                      bfact, &
+                      level, &
+                      finest_level, &
+                      dx, &
+                      xlo, &
+                      xI, &
+                      Tsat, &
+                      im_target_probe, &
+                      im_target_probe_opp, &
+                      nmat, &
+                      tcomp_probe, &
+                      ngrow, &
+                      fablo,fabhi, &
+                      EOS,DIMS(EOS), &
+                      LS,DIMS(LS), &
+                      recon,DIMS(recon), &
+                      temp_target_probe, &
+                      dxprobe_target, &
+                      VOF_pos_probe_counter)
+
+                  else if ((im_primary_probe.eq.im_target_probe_opp).or. &
+                           (im_secondary_probe.ne.im_target_probe).or. &
+                           (LSPROBE(im_target_probe).le.-dxprobe_target)) then
+                   temp_target_probe=Tsat
+                  else
+                   print *,"probe parameters bust"
+                   stop
+                  endif
+                 else 
+                  print *,"im_primary_probe invalid"
+                  stop
+                 endif
+
+                 temp_target_INT=Tsat
+
+                 ! freezing_mod=0 (sharp interface stefan model)
+                 ! freezing_mod=1 (source term model)
+                 ! freezing_mod=2 (hydrate model)
+                 ! freezing_mod=3 (wildfire)
+                 ! freezing_mod=4 (source term model)
+                 ! freezing_mod=5 (evaporation/condensation)
+                 if ((freezing_mod.eq.0).or. &
+                     (freezing_mod.eq.5)) then
+                  ! do nothing
+                 else if ((freezing_mod.eq.1).or. &
+                          (freezing_mod.eq.2).or. &
+                          (freezing_mod.eq.4)) then
+
+                  ! centroid -> target (cc_flag==0)
+                  ! tsat_flag==0 do not use TSAT
+                  ! call center_centroid_interchange
+                  ! distance and volume fraction weighted linear least
+                  ! squares.  If matrix system is singular, then
+                  ! zeroth order least squares is used.
+                  call interpfabFWEIGHT( &
+                   bfact, &
+                   level, &
+                   finest_level, &
+                   dx, &
+                   xlo, &
+                   xtarget_probe, &
+                   im_target_probe, &
+                   nmat, &
+                   tcomp_probe, &
+                   ngrow, &
+                   fablo,fabhi, &
+                   EOS,DIMS(EOS), &
+                   recon,DIMS(recon), &
+                   temp_target_probe)
+
+                  call interpfabFWEIGHT( &
+                   bfact, &
+                   level, &
+                   finest_level, &
+                   dx, &
+                   xlo, &
+                   xI, &
+                   im_target_probe, &
+                   nmat, &
+                   tcomp_probe, &
+                   ngrow, &
+                   fablo,fabhi, &
+                   EOS,DIMS(EOS), &
+                   recon,DIMS(recon), &
+                   temp_target_INT)
+
+                   ! hydrate
+                  if (freezing_mod.eq.2) then
+                   if (distribute_from_targ.ne.0) then
+                    print *,"distribute_from_targ invalid"
+                    stop
+                   endif
+                   if (num_species_var.ne.1) then
+                    print *,"num_species_var invalid"
+                    stop
+                   endif
+
+                   if (iprobe.eq.1) then
+                    ! do nothing (source)
+                          
+                    ! dest
+                   else if (iprobe.eq.2) then
+                    concen_comp=(im_target_probe-1)*num_state_material+3
+                    call interpfabFWEIGHT( &
+                     bfact, &
+                     level, &
+                     finest_level, &
+                     dx, &
+                     xlo, &
+                     xI, &
+                     im_target_probe, &
+                     nmat, &
+                     concen_comp, &
+                     ngrow, &
+                     fablo,fabhi, &
+                     EOS,DIMS(EOS), &
+                     recon,DIMS(recon), &
+                     Cmethane_in_hydrate)
+                    pcomp=1
+                    call interpfab( &
+                     bfact, &
+                     level, &
+                     finest_level, &
+                     dx, &
+                     xlo, &
+                     xI, &
+                     pcomp, &
+                     ngrow, &
+                     fablo,fabhi, &
+                     pres,DIMS(pres), &
+                     PHYDWATER)
+                   else
+                    print *,"iprobe invalid"
+                    stop
+                   endif
+                  else if (freezing_mod.ne.2) then
+                   ! do nothing
+                  else
+                   print *,"freezing_mod bust"
+                   stop
+                  endif  ! hydrate
+                 else
+                  print *,"freezing_model invalid in ratemasschange"
+                  print *,"freezing_mod= ",freezing_mod
+                  print *,"iten,ireverse,nten ",iten,ireverse,nten
+                  stop
+                 endif
+
+                 if (iprobe.eq.1) then
+                  tempsrc=temp_target_probe
+                  densrc=den_targetINT
+                  Tsrc_INT=temp_target_INT
+                  dxprobe_source=dxprobe_target
+                 else if (iprobe.eq.2) then 
+                  tempdst=temp_target_probe
+                  dendst=den_targetINT
+                  Tdst_INT=temp_target_INT
+                  dxprobe_dest=dxprobe_target
+                 else
+                  print *,"iprobe invalid"
+                  stop
+                 endif
+
+                 if (temp_target_probe.lt.zero) then
+                  print *,"temp_target_probe went negative"
+                  print *,"temp_target_probe ",temp_target_probe
+                  stop
+                 endif
+                 if (temp_target_INT.lt.zero) then
+                  print *,"temp_target_INT went negative"
+                  print *,"temp_target_INT ",temp_target_INT
+                  stop
+                 endif
+
+                enddo ! iprobe=1..2
+
+                at_interface=0
+                
+                if ((LS_pos_probe_counter.eq.1).or. &
+                    (LS_pos_probe_counter.eq.2)) then
+                 if (LS_INT_VERY_CLOSE_counter.eq.2) then
+                  if (LS_INT_OWN_counter.eq.1) then
+                   if (LS_pos_probe_counter+VOF_pos_probe_counter.eq.2) then
+                    at_interface=1
+                   else if (VOF_pos_probe_counter.eq.0) then
+                    ! do nothing
+                   else
+                    print *,"VOF_pos_probe_counter invalid"
+                    stop
+                   endif
+                  else if (LS_INT_OWN_counter.eq.0) then
+                   ! do nothing
+                  else
+                   print *,"LS_INT_OWN_counter invalid"
+                   stop
+                  endif 
+                 else if ((LS_INT_VERY_CLOSE_counter.eq.1).or. &
+                          (LS_INT_VERY_CLOSE_counter.eq.0)) then
+                  ! do nothing
+                 else
+                  print *,"LS_INT_VERY_CLOSE_counter invalid"
+                  stop
+                 endif
+                else if (LS_pos_probe_counter.eq.0) then
                  ! do nothing
                 else
-                 print *,"is_rigid invalid"
+                 print *,"LS_pos_probe_counter invalid"
+                 stop
+                endif
+                    
+                if (at_interface.eq.1) then
+                    
+#if (STANDALONE==0)
+                 ksource=get_user_heatviscconst(im_source)
+                 kdest=get_user_heatviscconst(im_dest)
+#elif (STANDALONE==1)
+                 ksource=fort_heatviscconst(im_source)
+                 kdest=fort_heatviscconst(im_dest)
+#else
+                 print *,"bust compiling ratemasschange"
+                 stop
+#endif
+
+                 microlayer_substrate_source=0
+                 microlayer_substrate_dest=0
+
+                 im_substrate_source=microlayer_substrate(im_source)
+                 im_substrate_dest=microlayer_substrate(im_dest)
+
+                 if (microlayer_size(im_source).gt.zero) then
+                  if (im_substrate_source.gt.0) then
+                   if (is_rigid(nmat,im_substrate_source).ne.1) then
+                    print *,"is_rigid(nmat,im_substrate_source).ne.1"
+                    stop
+                   endif
+                   do dir=1,SDIM
+                    dir2=nmat+(im_substrate_source-1)*SDIM+dir
+                    gradphi_substrate(dir)=LSINT(dir2)
+                   enddo
+                   call get_physical_dist(xI,LSINT(im_substrate_source), &
+                    gradphi_substrate,newphi_substrate);
+                   if (newphi_substrate.ge.-macrolayer_size(im_source)) then
+                    microlayer_substrate_source=im_substrate_source
+                   endif
+                  else if (im_substrate_source.eq.0) then
+                   print *,"microlayer material must have corresponding"
+                   print *,"substrate. im_source,im_dest=",im_source,im_dest
+                   stop
+                  else
+                   print *,"im_substrate_source invalid"
+                   stop
+                  endif
+                 else if (microlayer_size(im_source).eq.zero) then
+                  ! do nothing
+                 else
+                  print *,"microlayer_size(im_source) invalid"
+                  stop
+                 endif
+
+                 if (microlayer_size(im_dest).gt.zero) then
+                  if (im_substrate_dest.gt.0) then
+                   if (is_rigid(nmat,im_substrate_dest).ne.1) then
+                    print *,"is_rigid(nmat,im_substrate_dest).ne.1"
+                    stop
+                   endif
+                   do dir=1,SDIM
+                    dir2=nmat+(im_substrate_dest-1)*SDIM+dir
+                    gradphi_substrate(dir)=LSINT(dir2)
+                   enddo
+                   call get_physical_dist(xI,LSINT(im_substrate_dest), &
+                    gradphi_substrate,newphi_substrate);
+                   if (newphi_substrate.ge.-macrolayer_size(im_dest)) then
+                    microlayer_substrate_dest=im_substrate_dest
+                   endif
+                  else if (im_substrate_dest.eq.0) then
+                   print *,"microlayer material must have corresponding"
+                   print *,"substrate. im_source,im_dest=",im_source,im_dest
+                   stop
+                  else
+                   print *,"im_substrate_dest invalid"
+                   stop
+                  endif
+                 else if (microlayer_size(im_dest).eq.zero) then
+                  ! do nothing
+                 else
+                  print *,"microlayer_size(im_dest) invalid"
+                  stop
+                 endif
+
+                 if (freezing_mod.eq.5) then
+                  ispec=mass_fraction_id(iten+ireverse*nten)
+                  if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+                   evap_den=species_evaporation_density(ispec)
+                   if (evap_den.gt.zero) then
+                    if (LL(ireverse).gt.zero) then ! evaporation
+                     dendst=evap_den
+                    else if (LL(ireverse).lt.zero) then ! condensation
+                     densrc=evap_den
+                    else
+                     print *,"LL invalid"
+                     stop
+                    endif
+                   else
+                    print *,"evap_den invalid"
+                    stop
+                   endif  
+                  else
+                   print *,"ispec invalid"
+                   stop
+                  endif
+                 endif ! freezing_mod==5
+
+                 source_perim_factor=one
+                 dest_perim_factor=one
+
+                 if ((max_contact_line_size(im_source).gt.zero).and. &
+                     (microlayer_size(im_source).gt.zero).and. &
+                     (macrolayer_size(im_source).gt.zero).and. &
+                     (microlayer_substrate_source.ge.1).and. &
+                     (microlayer_substrate_source.le.nmat)) then
+                  icolor=NINT(colorfab(D_DECL(i,j,k)))
+                  if ((icolor.gt.color_count).or.(icolor.le.0)) then
+                   print *,"icolor invalid in RATEMASSCHANGE icolor=",icolor
+                   print *,"i,j,k ",i,j,k
+                   stop
+                  endif
+                  base_type=NINT(typefab(D_DECL(i,j,k)))
+                  if ((base_type.lt.1).or.(base_type.gt.nmat)) then
+                   print *,"base_type invalid"
+                   stop
+                  endif
+                  ! blob_matrix,blob_RHS,blob_velocity,
+                  ! blob_integral_momentum,blob_energy,
+                  ! blob_mass_for_velocity, (3 comp)
+                  ! volume, 
+                  ! centroid_integral, centroid_actual, 
+                  ! perim, perim_mat
+                  ic=(icolor-1)*num_elements_blobclass+ &
+                   3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
+                   2*(2*SDIM)+1+ &
+                   3+1+2*SDIM+1+nmat
+
+                  im2=microlayer_substrate_source
+                  if ((im2.ge.1).and.(im2.le.nmat)) then
+                   if (base_type.eq.im_source) then
+                    im1=im_dest
+                   else if (base_type.eq.im_dest) then
+                    im1=im_source
+                   else
+                    print *,"base_type invalid"
+                    stop
+                   endif
+                   ic=ic+(im1-1)*nmat+im2
+                   contact_line_perim=blob_array(ic)
+                  else 
+                   print *,"im2 invalid"
+                   stop
+                  endif
+
+                  if ((contact_line_perim.ge.zero).and. &
+                      (contact_line_perim.le. &
+                       max_contact_line_size(im_source))) then
+                   ! do nothing
+                  else if (contact_line_perim.gt. &
+                           max_contact_line_size(im_source)) then
+                   source_perim_factor= &
+                     max_contact_line_size(im_source)/contact_line_perim
+                  else
+                   print *,"contact_line_perim invalid"
+                   stop
+                  endif
+                 else if ((max_contact_line_size(im_source).eq.zero).or. &
+                          (microlayer_size(im_source).eq.zero).or. &
+                          (macrolayer_size(im_source).eq.zero).or. &
+                          (microlayer_substrate_source.eq.0)) then
+                  ! do nothing
+                 else
+                  print *,"microlayer parameters invalid"
+                  stop
+                 endif
+
+                 if ((max_contact_line_size(im_dest).gt.zero).and. &
+                     (microlayer_size(im_dest).gt.zero).and. &
+                     (macrolayer_size(im_dest).gt.zero).and. &
+                     (microlayer_substrate_dest.ge.1).and. &
+                     (microlayer_substrate_dest.le.nmat)) then
+                  icolor=NINT(colorfab(D_DECL(i,j,k)))
+                  if ((icolor.gt.color_count).or.(icolor.le.0)) then
+                   print *,"icolor invalid in RATEMASSCHANGE icolor=",icolor
+                   print *,"i,j,k ",i,j,k
+                   stop
+                  endif
+                  base_type=NINT(typefab(D_DECL(i,j,k)))
+                  if ((base_type.lt.1).or.(base_type.gt.nmat)) then
+                   print *,"base_type invalid"
+                   stop
+                  endif
+                  ! blob_matrix,blob_RHS,blob_velocity,
+                  ! blob_integral_momentum,blob_energy,
+                  ! blob_mass_for_velocity, (3 comp)
+                  ! volume, 
+                  ! centroid_integral, centroid_actual, 
+                  ! perim, perim_mat
+                  ic=(icolor-1)*num_elements_blobclass+ &
+                   3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
+                   2*(2*SDIM)+1+ &
+                   3+1+2*SDIM+1+nmat
+
+                  im2=microlayer_substrate_dest
+                  if ((im2.ge.1).and.(im2.le.nmat)) then
+                   if (base_type.eq.im_source) then
+                    im1=im_dest
+                   else if (base_type.eq.im_dest) then
+                    im1=im_source
+                   else
+                    print *,"base_type invalid"
+                    stop
+                   endif
+                   ic=ic+(im1-1)*nmat+im2
+                   contact_line_perim=blob_array(ic)
+                  else 
+                   print *,"im2 invalid"
+                   stop
+                  endif
+
+                  if ((contact_line_perim.ge.zero).and. &
+                      (contact_line_perim.le. &
+                       max_contact_line_size(im_dest))) then
+                    ! do nothing
+                  else if (contact_line_perim.gt. &
+                           max_contact_line_size(im_dest)) then
+                   dest_perim_factor= &
+                     max_contact_line_size(im_dest)/contact_line_perim
+                  else
+                   print *,"contact_line_perim invalid"
+                   stop
+                  endif
+                 else if ((max_contact_line_size(im_dest).eq.zero).or. &
+                          (microlayer_size(im_dest).eq.zero).or. &
+                          (macrolayer_size(im_dest).eq.zero).or. &
+                          (microlayer_substrate_dest.eq.0)) then
+                  ! do nothing
+                 else
+                  print *,"microlayer parameters invalid"
+                  stop
+                 endif
+
+                  ! V dt * L * L = volume of material change of phase
+                  ! rho_src * V dt L^2 = rho_dst * (V+Vexpand) * dt L^2
+                  ! S=V+Vexpand=rho_src V/rho_dst=[k grad T dot n]/(L rho_dst)
+                  ! Vexpand=(rho_src/rho_dst-1)V
+                  ! note: rho_src V = MDOT
+
+                  ! this call to get_vel_phasechange is not for the purpose
+                  ! of estimating the timestep dt.
+                 for_estdt=0
+
+#if (STANDALONE==0)
+                  ! if freezing_mod==0,5, or 1, then
+                  !  DTsrc=(Tsrc-Tsat)
+                  !  DTdst=(Tdst-Tsat)
+                  !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
+                  !  veldst=kdst*DTdst/(LL * dxprobe_dest)
+                 call get_vel_phasechange( &
+                  for_estdt, &
+                  xI, &
+                  freezing_mod, &
+                  distribute_from_targ, &
+                  vel_phasechange(ireverse), & ! vel
+                  densrc,dendst, &
+                  ksource,kdest, & ! ksrc,kdst
+                  tempsrc,tempdst, & ! Tsrc,Tdst
+                  Tsat, &
+                  Tsrc_INT,Tdst_INT, &
+                  LL(ireverse), &
+                  source_perim_factor, &
+                  dest_perim_factor, &
+                  microlayer_substrate_source, &
+                  microlayer_angle(im_source), &
+                  microlayer_size(im_source), &
+                  macrolayer_size(im_source), &
+                  microlayer_substrate_dest, &
+                  microlayer_angle(im_dest), &
+                  microlayer_size(im_dest), &
+                  macrolayer_size(im_dest), &
+                  dxprobe_source, &
+                  dxprobe_dest, &
+                  im_source,im_dest, &
+                  prev_time,dt, &
+                  fort_alpha(iten+ireverse*nten), &
+                  fort_beta(iten+ireverse*nten), &
+                  fort_expansion_factor(iten+ireverse*nten), &
+                  K_f(ireverse), &
+                  Cmethane_in_hydrate, &
+                  C_w0, &
+                  PHYDWATER, &
+                  Fsource,Fdest)
+#elif (STANDALONE==1)
+                 if (freezing_mod.eq.0) then
+                  DTsrc=tempsrc-Tsat
+                  DTdst=tempdst-Tsat
+                  velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe_source)
+                  veldst=kdest*DTdst/(LL(ireverse)*dxprobe_dest)
+                 
+                  velsum=velsrc+veldst
+                  if (velsum.gt.zero) then
+                   ! do nothing
+                  else if (velsum.le.zero) then
+                   velsum=zero
+                  else
+                   print *,"velsum invalid"
+                   stop
+                  endif 
+                  vel_phasechange(ireverse)=velsum
+                 else
+                  print *,"freezing_mod invalid"
+                  stop
+                 endif
+#else
+                 print *,"bust compiling ratemasschange"
+                 stop
+#endif
+
+                 if (debugrate.eq.1) then
+                  print *,"i,j,k,ireverse,vel_phasechange ", &
+                    i,j,k,ireverse,vel_phasechange(ireverse)
+                 endif
+                 if (1.eq.0) then
+                  if (freezing_mod.eq.4) then
+                   print *,"i,j,k,ireverse,vel_phasechange ", &
+                    i,j,k,ireverse,vel_phasechange(ireverse)
+                   print *,"im_source,im_dest ",im_source,im_dest
+                   print *,"Tsat ",Tsat
+                   print *,"tempsrc,Tsrc_INT ",tempsrc,Tsrc_INT
+                   print *,"tempdst,Tdst_INT ",tempdst,Tdst_INT
+                  endif
+                 endif
+
+                 if (vel_phasechange(ireverse).lt.zero) then
+                  vel_phasechange(ireverse)=zero
+                 endif
+
+                 valid_phase_change(ireverse)=1
+             
+                 if (debugrate.eq.1) then
+                  print *,"i,j,k,im_source,im_dest ",i,j,k, &
+                   im_source,im_dest 
+                  print *,"dt,vel_phasechange(ireverse) ", &
+                   dt,vel_phasechange(ireverse)
+                  print *,"LL,dxmin ",LL(ireverse),dxmin
+                  print *,"dxprobe_source=",dxprobe_source
+                  print *,"dxprobe_dest=",dxprobe_dest
+                  print *,"ksource,kdest,Tsat ",ksource,kdest,Tsat
+                  print *,"tempsrc,tempdst,densrc ",tempsrc,tempdst,densrc
+                  print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
+                  print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
+                  print *,"nrmFD ",nrmFD(1),nrmFD(2),nrmFD(SDIM)
+                  print *,"im_dest= ",im_dest
+                 endif
+   
+                else if (at_interface.eq.0) then
+                 ! do nothing
+                else
+                 print *,"at_interface invalid"
                  stop
                 endif
 
@@ -4805,6 +5178,7 @@ stop
                 print *,"found_path invalid"
                 stop
                endif
+
               else if ((abs(LShere(im_source)).gt.two*dxmaxLS).or. &
                        (abs(LShere(im_dest)).gt.two*dxmaxLS)) then
                ! do nothing

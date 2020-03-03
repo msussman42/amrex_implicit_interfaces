@@ -19,7 +19,7 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
 
     double **M = new double *[sm];
     for(int i = 0; i < sm; ++i)
-        *(M+i) = new double [sn];
+        M[i] = new double [sn]; // SUSSMAN
 
     for(int i = 0; i < sm; ++i)
         for(int j = 0; j < sn; ++j)
@@ -41,7 +41,7 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
 
     double **MTM = new double *[sn];
     for(int i = 0; i < sn; ++i){
-     *(MTM+i) = new double [sn];
+     MTM[i] = new double [sn]; //SUSSMAN
      for(int j = 0; j < sn; ++j){
       MTM[i][j] = 0.0;
       for(int k = 0; k < sm; ++k)
@@ -68,11 +68,11 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      }
     }
     for(int i = 0; i < sn; ++i) {
-      delete[] *(MTM+i);
+      delete[] MTM[i]; //SUSSMAN
      delete[] MTM;
     }
     for(int i = 0; i < sm; ++i)
-       delete *(M+i);
+       delete[] M[i]; // SUSSMAN
     delete[] M;
 
     double min_JAC = 1.e20;
@@ -119,7 +119,7 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      //sanity check
      double **B = new double *[sn];
      for(int i = 0; i < sn; ++i){
-        *(B+i) = new double [sn];
+        B[i] = new double [sn]; //SUSSMAN
         for(int j = 0; j < sn; ++j){
             B[i][j] = 0.0;
             for(int k = 0; k < sm; ++k)
@@ -176,7 +176,7 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      }
 
      for(int i = 0; i < sn; ++i)
-        delete[] *(B+i);
+        delete[] B[i]; //SUSSMAN
      delete[] B;
      //end sanity check
     }
@@ -335,7 +335,7 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
 
     int it;
     for(it = 0; it < n; ++it){
-        double x[m-it];
+        double* x=new double[m-it];  //SUSSMAN
         for(int i = it; i < m; ++i)
             x[i-it] = A[i][it];
         double v1[m-it];
@@ -343,7 +343,7 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
         House(x, v1, beta1, m-it);
         double **u = new double *[m-it];
         for(int i = 0; i < m-it; ++i)
-            *(u+i) = new double [m-it];
+            u[i] = new double [m-it]; //SUSSMAN
         for(int i = 0; i < m-it; ++i){
             for(int j = 0; j < m-it; ++j){
                 if(i == j)
@@ -353,6 +353,7 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
                 u[i][j] = u[i][j] - beta1 * v1[i] * v1[j];
             }
         }
+        delete [] x; //SUSSMAN
 
         for(int j = 0; j < n-it; ++j){
             double* temp=new double[m-it];  //SUSSMAN
@@ -361,17 +362,17 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
                     temp[i] += u[i][k] * A[k+it][j+it];
             for(int i = 0; i < m-it; ++i)
                 A[i+it][j+it] = temp[i];
-            delete temp; //SUSSMAN
+            delete[] temp; //SUSSMAN
         }
 
         for(int i = 0; i < m-it; ++i)
-            delete[] *(u+i);
+            delete[] u[i]; //SUSSMAN
         delete[] u;
 
         Bd[it] = A[it][it];
 
         if(it < n-2){
-            double v2[n-it-1];
+            double* v2=new double[n-it-1];
             double beta2;
             double xr[n-it-1];
             for(int i = 0; i < n-it-1; ++i)
@@ -379,7 +380,7 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
             House(xr, v2, beta2, n-it-1);
             double **v = new double *[n-it-1];
             for(int i = 0; i < n-it-1; ++i)
-                *(v+i) = new double [n-it-1];
+                v[i] = new double [n-it-1]; //SUSSMAN
             for(int i = 0; i < n-it-1; ++i){
                 for(int j = 0; j < n-it-1; ++j){
                     if(i == j)
@@ -397,12 +398,13 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
                         temp[j] += A[i+it][k+it+1] * v[k][j];
                 for(int j = 0; j < n-it-1; ++j)
                     A[i+it][j+it+1] = temp[j];
-                delete temp; //SUSSMAN
+                delete[] temp; //SUSSMAN
             }
 
             for(int i = 0; i < n-it-1; ++i)
-                delete[] *(v+i);
+                delete[] v[i];
             delete[] v;
+            delete[] v2; //SUSSMAN
 
             Bs[it] = A[it][it+1]; 
         }
@@ -612,8 +614,8 @@ void SVD(double **A, double *D, const int m, const int n)
             GKSVD(Bd+p+bi, Bs+p+bi, n-p-q-bi);
         }
     }
-    delete Bd; //SUSSMAN
-    delete Bs; //SUSSMAN
+    delete[] Bd; //SUSSMAN
+    delete[] Bs; //SUSSMAN
 
     if (debug_MATRIX_ANALYSIS==1) {
      std::cout << "after SVD m=" << m << '\n';
@@ -702,7 +704,7 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
     //define R(mx(n+1)), d is included in the last column of R
     double **R = new double *[sm];
     for(int i = 0; i < sm; ++i){
-        *(R+i) = new double [sn+1];
+        R[i] = new double [sn+1];
     }
     for(int i = 0; i < sm; ++i){
         for(int j = 0; j < sn+1; ++j){
@@ -753,7 +755,7 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
     }
 
     for(int i = 0; i < sm; ++i)
-        delete[] *(R+i);
+        delete[] R[i]; //SUSSMAN
     delete[] R;
 
     //sanity check
@@ -767,8 +769,8 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
         }
     }
     double residual_verify = 0.0;
-    double ATAx[sn];
-    double ATb[sn];
+    double* ATAx=new double[sn];
+    double* ATb=new double[sn];
     for(int i = 0; i < sn; ++i){
         ATAx[i] = 0.0;
         ATb[i] = 0.0;
@@ -781,6 +783,9 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
         double res_comp = ATAx[i] - ATb[i];;
         residual_verify += res_comp * res_comp;
     }
+    delete[] ATAx;
+    delete[] ATb;
+
     residual_verify = sqrt(residual_verify)/sn;
     if(residual_verify <= 1.e-8){
         //cout << "x is the optimization solution." << endl;
@@ -790,7 +795,7 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
      abort();
     }
     for(int i = 0; i < sn; ++i)
-        delete[] *(ATA+i);
+        delete[] ATA[i]; //SUSSMAN
     delete[] ATA;
     //end sanity check
 }
@@ -803,7 +808,7 @@ double GetDeterminant(double **A, const int m)
 
     double **B = new double *[m];
     for(int i = 0; i < m; ++i){
-        *(B+i) = new double [m];
+        B[i] = new double [m];
         for(int j = 0; j < m; ++j)
             B[i][j] = A[i][j];
     }
@@ -900,7 +905,7 @@ double GetDeterminant(double **A, const int m)
     //end sanity check
 
     for(int i = 0; i < m; ++i)
-        delete[] *(B+i);
+        delete[] B[i]; //SUSSMAN
     delete[] B;
 
     return detA;
@@ -970,7 +975,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
 {
     double **M = new double *[m];
     for(int i = 0; i < m; ++i){
-        *(M+i) = new double [m];
+        M[i] = new double [m]; //SUSSMAN
         for(int j = 0; j < m; ++j)
             M[i][j] = A[i][j];
     }
@@ -1055,6 +1060,6 @@ void JacobiEigenvalue(double **A, double *D, const int m)
     }
 
     for(int i = 0; i < m; ++i)
-        delete[] *(M+i);
+        delete[] M[i];
     delete[] M;
 }
