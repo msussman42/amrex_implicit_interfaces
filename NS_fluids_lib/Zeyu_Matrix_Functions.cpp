@@ -1,6 +1,15 @@
 #include <iostream>
 #include <cmath>
 
+#define STANDALONE 0
+
+#if (STANDALONE==1)
+// do nothing
+#else
+#include <AMReX_Box.H>
+
+#endif
+
 using namespace std;
 
 #include "Zeyu_Matrix_Functions.H"
@@ -219,7 +228,26 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
       local_condnum=(max_QR+max_JAC)/(min_QR+min_JAC);
      } else {
       cout << "rel_error too big" << endl;
+      std::cout << "max_QR=" << max_QR << endl;
+      std::cout << "max_JAC=" << max_JAC << endl;
+      std::cout << "min_QR=" << min_QR << endl;
+      std::cout << "min_JAC=" << min_JAC << endl;
+      std::cout << "rel_error=" << rel_error << endl;
+      std::cout << "rel_error_min=" << rel_error_min << endl;
+      std::cout << "m,n,sm,sn = " << m << ' ' << n << ' ' << sm << ' ' <<
+       sn << endl;
+      for (int i=0;i<sm;i++) {
+       for (int j=0;j<sn;j++) {
+        std::cout << "i,j,H[i][j] " << i << ' ' << j << ' ' << 
+          H[i][j] << endl;
+       }
+      }
+      
+#if (STANDALONE==1)
       abort();
+#else
+      amrex::Error("cannot find condnum");
+#endif
      }
     } else {
       cout << "max_QR or max_JAC invalid" << endl;
@@ -638,7 +666,11 @@ void ZeroRow(double *Bd, double *Bs, const int n)
         Givens(y, z, c, s);
         swap(c, s);
         c = -c;
-        double b[2][2] {y, 0.0, z, 0.0};
+        double b[2][2];
+        b[0][0]=y;
+        b[1][0]=z;
+        b[0][1]=0.0;
+        b[1][1]=0.0; 
         if(it != n-1) b[1][1] = Bs[it];
 
         for(int j = 0; j < 2; ++j){
@@ -672,7 +704,11 @@ void ZeroColumn(double *Bd, double *Bs, const int n)
         double z = a;
         double c, s;
         Givens(y, z, c, s);
-        double b[2][2] {0.0, 0.0, y, z};
+        double b[2][2];
+        b[0][0]=0.0;
+        b[1][0]=y;
+        b[0][1]=0.0;
+        b[1][1]=z; 
         if(it != 0) b[0][0] = Bs[it-1];
 
         for(int i = 0; i < 2; ++i){
@@ -1063,3 +1099,5 @@ void JacobiEigenvalue(double **A, double *D, const int m)
         delete[] M[i];
     delete[] M;
 }
+
+#undef STANDALONE
