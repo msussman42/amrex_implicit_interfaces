@@ -760,7 +760,12 @@ stop
         ! 12 13 23 21 31 32
         ! 31 -> ice to liquid
         ! 12 -> liquid to gas
-       if ((iten.eq.1).or.(iten.eq.5)) then
+       if ((iten.eq.1).or. &
+           (iten.eq.2).or. &
+           (iten.eq.3).or. &
+           (iten.eq.4).or. &
+           (iten.eq.5).or. &
+           (iten.eq.6)) then
         test_front_vel=0.0d0
         VEL(1)=0.0d0
         VEL(2)=0.0d0

@@ -292,7 +292,8 @@ IMPLICIT NONE
 ! 15=hypocycloid with 2 materials
 ! 20=hypocycloid with 6 materials
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
-INTEGER,PARAMETER          :: probtype_in=400
+! 401=ice melt (material 1 liquid, material 2 gas, material 3 ice)
+INTEGER,PARAMETER          :: probtype_in=401
 INTEGER,PARAMETER          :: stefan_flag=1
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
@@ -309,7 +310,8 @@ real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0
 ! material 1 on the left, material 2 on the right.
 ! 1.0d0 for probtype==400 (gingerbread)
 !  (T=TSAT interior domain initially, T=TSAT+TDIFF on walls)
-real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
+! 10.0d0 for probtype==401 (ice melt)
+real(kind=8),PARAMETER     :: TDIFF_in = 10.0d0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
@@ -469,7 +471,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= December 27, 2019, 23:20pm"
+print *,"PROTOTYPE CODE DATE= March 3, 2020, 8:40am"
 
 
 im_measure=2
@@ -510,6 +512,8 @@ else if (probtype_in.eq.5) then ! phase change vertical planar interface
 else if (probtype_in.eq.400) then ! gingerbread man
  fixed_dt_main=0.0d0
  print *,"gingeroutline should be in run directory"
+else if (probtype_in.eq.401) then ! melting block of ice
+ fixed_dt_main=0.0d0
 else
  print *,"probtype_in invalid"
  stop
@@ -730,6 +734,31 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    endif
 
    FSI_flag(1)=7 ! gingerbread (in the man)
+
+ else if (probtype_in.eq.401) then ! melting block of ice
+
+   nmat_in=3
+   fort_heatviscconst(1)=10.0  ! liquid
+   fort_heatviscconst(2)=1.0  ! gas
+   fort_heatviscconst(3)=100.0  ! ice
+   do dir=1,sdim_in
+   do side=1,2
+    physbc(dir,side)=REFLECT_EVEN
+    physbc_value(dir,side)=0.0
+   enddo
+   enddo
+   physbc(2,1)=EXT_DIR
+   physbc_value(2,1)=273.0d0+TDIFF_in
+   if ((stefan_flag.eq.1).and. &
+       (local_operator_internal.eq.3).and. &
+       (local_operator_external.eq.1).and. &
+       (local_linear_exact.eq.1)) then
+    ! do nothing
+   else
+    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==400"
+    stop
+   endif
+
  else if (probtype_in.eq.5) then
 
    nmat_in=2
@@ -1127,10 +1156,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     ! max_front_vel
    if ((abs(latent_heat_in).gt.0.0d0).and. &
-       (fort_heatviscconst(1).gt.0.0d0).and. &
-       (fort_heatviscconst(2).ge.0.0d0)) then
+       (fort_tempconst(1).ge.0.0d0).and. &
+       (fort_tempconst(2).ge.0.0d0)) then
     max_front_vel=abs(TDIFF_in)* &
-      (fort_heatviscconst(1)+fort_heatviscconst(2))/abs(latent_heat_in)
+      (fort_tempconst(1)+fort_tempconst(2))/abs(latent_heat_in)
     if (max_front_vel.gt.0.0d0) then
      ! do nothing
     else
@@ -1164,6 +1193,72 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    fort_time_radblob(1)=0.0d0
    fort_time_radblob(2)=0.0d0
 
+   print *,"probtype_in=",probtype_in
+   print *,"max_front_vel=",max_front_vel
+
+
+ else if (probtype_in.eq.401) then
+
+    ! 1=liquid  2=gas  3=ice
+    ! 12 13 23 21 31 32
+    !  1  2  3  4  5  6
+   saturation_temp(1)=275.0d0
+   saturation_temp(2)=273.0d0
+   saturation_temp(3)=273.0d0
+   saturation_temp(4)=273.0d0
+   saturation_temp(5)=273.0d0
+   saturation_temp(6)=273.0d0
+   fort_tempconst(1)=273.0
+   fort_tempconst(2)=273.0
+   fort_tempconst(3)=273.0
+   fort_initial_temperature(1)=fort_tempconst(1)
+   fort_initial_temperature(2)=fort_tempconst(2)
+   fort_initial_temperature(3)=fort_tempconst(3)
+   latent_heat(1)=1.0D0  ! liquid to gas
+   latent_heat(2)=0.0D0
+   latent_heat(3)=0.0D0
+   latent_heat(4)=0.0D0
+   latent_heat(5)=1.0D0  ! ice to liquid
+   latent_heat(6)=0.0D0
+  
+   ireverse=0
+   isink=0
+
+
+   fort_alpha(1)=1.0d0
+   fort_alpha(2)=1.0d0
+   fort_alpha(3)=1.0d0
+   fort_stefan_number(1)=1.0D0
+   fort_stefan_number(2)=1.0D0
+   fort_stefan_number(3)=1.0D0
+   fort_jacob_number(1)=fort_stefan_number(1)
+   fort_jacob_number(2)=fort_stefan_number(2)
+   fort_jacob_number(3)=fort_stefan_number(3)
+
+   fort_beta(1)=0.0d0
+   fort_beta(2)=0.0d0
+   fort_beta(3)=0.0d0
+
+   fort_time_radblob(1)=0.0d0
+   fort_time_radblob(2)=0.0d0
+   fort_time_radblob(3)=0.0d0
+
+    ! max_front_vel
+   if (abs(latent_heat(5)).gt.0.0d0) then
+     ! FOR YANG: bound on initial speed is 
+     ! abs(TDIFF_in)*(k_water + k_ice)/(L_{ice,water} * h)
+    max_front_vel=abs(TDIFF_in)* &
+      (fort_heatviscconst(1)+fort_heatviscconst(3))/abs(latent_heat(5))
+    if (max_front_vel.gt.0.0d0) then
+     ! do nothing
+    else
+     print *,"max_front_vel invalid probtype_in=",probtype_in
+     stop
+    endif
+   else
+    print *,"latent_heat_in or fort_heatviscconst invalid"
+    stop
+   endif
    print *,"probtype_in=",probtype_in
    print *,"max_front_vel=",max_front_vel
 
@@ -1395,6 +1490,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    CALL INIT_V(N_CURRENT,xCC,yCC,probtype_in,iten,scomp,sdim_in,T)
  enddo
 
+  ! STEP 0 FOR YANG: initial time step
  if (fixed_dt_current.eq.0.0) then
     if (max_front_vel.gt.0.0d0) then
      deltat_in = h_in*0.25d0/max_front_vel
@@ -1426,6 +1522,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     print *,"approx number time steps to double radius: ", &
      NINT(radblob/(max_front_vel*deltat_in))
  else if (probtype_in.eq.400) then
+  ! do nothing
+ else if (probtype_in.eq.401) then
   ! do nothing
  else if (probtype_in.eq.5) then
   print *,"Velocity is 1"
@@ -1465,7 +1563,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
   print *,"M_MAX_TIME_STEP or M_CURRENT invalid"
   stop
  endif
-
+ 
+    ! STEP 1 FOR YANG: initialize zeroeth and first order moments
+    ! STEP 2 FOR YANG: initialize levelset functions
     ! in: multimat_FVM.F90
     ! init_vfncen calls:
     !  AdaptQuad_2d  (in multimat_FVM.F90)
@@ -1507,6 +1607,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       subcycling_step)
  endif
 
+  ! STEP 3: Initialize Temperature
  do i= -1,N_CURRENT
  do j= -1,N_CURRENT
 
@@ -1613,6 +1714,11 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      else if (probtype_in.eq.400) then
 
       T_FIELD=saturation_temp(1)
+      T(i,j,im)=T_FIELD
+
+     else if (probtype_in.eq.401) then
+
+      T_FIELD=273.0d0
       T(i,j,im)=T_FIELD
 
      else if (probtype_in.eq.5) then
@@ -1745,6 +1851,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  iter_average=0.0d0
 
+! STEP 4: TIME LOOP
 ! BEGIN TIME LOOP - ABOVE INITIALIZATION
 !                   BELOW INTEGRATION IN TIME
 
@@ -1848,6 +1955,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      enddo
     endif
 
+     ! STEP 5: FOR YANG
+     ! diffusion with saturation temperature dirichlet boundary
+     ! condition.
     call bicgstab(UNEW_in,hflag,iter)
 
     iter_average=iter_average+iter
@@ -1875,6 +1985,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     else if (probtype_in.eq.4) then
      call axisymmetric_disk_advance(deltat_in)
     else if (probtype_in.eq.400) then
+     ! do nothing
+    else if (probtype_in.eq.401) then
      ! do nothing
     else if (probtype_in.eq.5) then
      ! do nothing
@@ -1928,6 +2040,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        ! do nothing - this is a shrinking disk, outside temperature
        ! is uniform, grad T dot n=0 on the outer walls.
       else if (probtype_in.eq.400) then
+       ! do nothing
+      else if (probtype_in.eq.401) then
        ! do nothing
       else if (probtype_in.eq.5) then
        if (xcen.ge.1.0-2.0d0*h_in) then
@@ -2070,6 +2184,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
    else if (probtype_in.eq.400) then
     ! do nothing
+   else if (probtype_in.eq.401) then
+    ! do nothing
    else if (probtype_in.eq.5) then
     expect_radius=0.2d0+Ts(tm+1)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
@@ -2179,7 +2295,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
-   if (probtype_in.eq.400) then ! gingerbread man
+   if ((probtype_in.eq.400).or. &
+       (probtype_in.eq.401)) then ! gingerbread man or ice melt
 
     max_front_vel=0.0
     do i= 0,N_CURRENT-1

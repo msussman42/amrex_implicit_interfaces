@@ -3457,7 +3457,7 @@ real(kind=8) :: radial_slope
   else if (im.eq.2) then
    G_in=0.0
   else
-   print *,"im invalid 4"
+   print *,"im invalid 4 probtype_in==2"
    stop
   endif
  else if (probtype_in.eq.3) then
@@ -3466,7 +3466,7 @@ real(kind=8) :: radial_slope
   else if (im.eq.2) then
    G_in=0.0
   else
-   print *,"im invalid 4"
+   print *,"im invalid 4 probtype_in==3"
    stop
   endif
  else if (probtype_in.eq.4) then
@@ -3475,7 +3475,7 @@ real(kind=8) :: radial_slope
   else if (im.eq.2) then
    G_in=0.0
   else
-   print *,"im invalid 4"
+   print *,"im invalid 4 probtype_in==4"
    stop
   endif
  else if (probtype_in.eq.400) then
@@ -3484,7 +3484,7 @@ real(kind=8) :: radial_slope
   else if (im.eq.2) then
    G_in=0.0
   else
-   print *,"im invalid 4"
+   print *,"im invalid 4 probtype_in==400"
    stop
   endif
 
@@ -3493,8 +3493,10 @@ real(kind=8) :: radial_slope
    G_in=0.0
   else if (im.eq.2) then
    G_in=0.0
+  else if (im.eq.3) then
+   G_in=0.0
   else
-   print *,"im invalid 4"
+   print *,"im invalid 4 probtype==401"
    stop
   endif
  else if (probtype_in.eq.5) then
@@ -3503,7 +3505,7 @@ real(kind=8) :: radial_slope
   else if (im.eq.2) then
    G_in=0.0
   else
-   print *,"im invalid 4"
+   print *,"im invalid 4 probtype==5"
    stop
   endif
  else if (probtype_in.eq.1) then

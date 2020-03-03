@@ -77,9 +77,10 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      }
     }
     for(int i = 0; i < sn; ++i) {
-      delete[] MTM[i]; //SUSSMAN
-     delete[] MTM;
+     delete[] MTM[i]; //SUSSMAN
     }
+    delete[] MTM;
+    
     for(int i = 0; i < sm; ++i)
        delete[] M[i]; // SUSSMAN
     delete[] M;
@@ -386,6 +387,8 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
         for(int j = 0; j < n-it; ++j){
             double* temp=new double[m-it];  //SUSSMAN
             for(int i = 0; i < m-it; ++i)
+             temp[i]=0.0;
+            for(int i = 0; i < m-it; ++i)
                 for(int k = 0; k < m-it; ++k)
                     temp[i] += u[i][k] * A[k+it][j+it];
             for(int i = 0; i < m-it; ++i)
@@ -421,6 +424,8 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
 
             for(int i = 0; i < m-it; ++i){
                 double* temp=new double[n-it-1];  //SUSSMAN
+                for(int j = 0; j < n-it-1; ++j)
+                 temp[j]=0.0;
                 for(int j = 0; j < n-it-1; ++j)
                     for(int k = 0; k < n-it-1; ++k)
                         temp[j] += A[i+it][k+it+1] * v[k][j];
@@ -545,12 +550,16 @@ void SVD(double **A, double *D, const int m, const int n)
     }
 
     double* Bd=new double[n];  //SUSSMAN
+    for(int i = 0; i < n; ++i)
+     Bd[i]=0.0;
     int nn;
     if(n == 1)
         nn = 2;
     else
         nn = n;
     double* Bs=new double[nn-1];  //SUSSMAN
+    for(int i = 0; i < nn-1; ++i)
+     Bs[i]=0.0;
 
     GetBidiag(A, Bd, Bs, m, n);
 
