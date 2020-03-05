@@ -9,6 +9,8 @@ using namespace std;
 
 // calculate condition number
 // if condition number>1/local_tol then a new basis vector is found.
+// SUSSMAN add local_tol parameter (local_tol should be a small number
+// e.g. 10^{-6})
 double CondNum(double **H, const int m, const int n, 
 	 const int sm, const int sn,double local_tol);
 
