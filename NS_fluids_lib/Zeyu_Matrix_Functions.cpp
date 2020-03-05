@@ -59,6 +59,9 @@ double CondNum(double **H, const int m, const int n,
     double **MTM = new double *[sn];
     for(int i = 0; i < sn; ++i){
      MTM[i] = new double [sn]; //SUSSMAN
+    }
+
+    for(int i = 0; i < sn; ++i){
      for(int j = 0; j < sn; ++j){
       MTM[i][j] = 0.0;
       for(int k = 0; k < sm; ++k)
@@ -239,7 +242,7 @@ double CondNum(double **H, const int m, const int n,
     if ((max_QR>0.0)&&(max_JAC>0.0)) {
 
      if (min_QR/max_QR<local_tol) {
-      local_QR_condnum=10.0/local_tol;
+      local_QR_condnum=1.0+1.0/local_tol;
      } else if (min_QR/max_QR>=local_tol) {
       local_QR_condnum=max_QR/min_QR;
      } else {
@@ -247,7 +250,7 @@ double CondNum(double **H, const int m, const int n,
       abort();
      }
      if (min_JAC/max_JAC<local_tol) {
-      local_JAC_condnum=10.0/local_tol;
+      local_JAC_condnum=1.0+1.0/local_tol;
      } else if (min_JAC/max_JAC>=local_tol) {
       local_JAC_condnum=max_JAC/min_JAC;
      } else {
@@ -403,7 +406,7 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
         double* x=new double[m-it];  //SUSSMAN
         for(int i = it; i < m; ++i)
             x[i-it] = A[i][it];
-        double v1[m-it];
+        double* v1=new double[m-it]; //SUSSMAN
         double beta1;
         House(x, v1, beta1, m-it);
         double **u = new double *[m-it];
@@ -419,6 +422,7 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
             }
         }
         delete [] x; //SUSSMAN
+        delete [] v1; //SUSSMAN
 
         for(int j = 0; j < n-it; ++j){
             double* temp=new double[m-it];  //SUSSMAN
@@ -441,7 +445,7 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
         if(it < n-2){
             double* v2=new double[n-it-1];
             double beta2;
-            double xr[n-it-1];
+            double* xr=new double[n-it-1]; //SUSSMAN
             for(int i = 0; i < n-it-1; ++i)
                 xr[i] = A[it][i+it+1];
             House(xr, v2, beta2, n-it-1);
@@ -474,6 +478,7 @@ void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
                 delete[] v[i];
             delete[] v;
             delete[] v2; //SUSSMAN
+            delete[] xr; //SUSSMAN
 
             Bs[it] = A[it][it+1]; 
         }
@@ -785,7 +790,7 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
     //define R(mx(n+1)), d is included in the last column of R
     double **R = new double *[sm];
     for(int i = 0; i < sm; ++i){
-        R[i] = new double [sn+1];
+        R[i] = new double [sn+1]; //SUSSMAN
     }
     for(int i = 0; i < sm; ++i){
         for(int j = 0; j < sn+1; ++j){
@@ -842,7 +847,9 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
     //sanity check
     double **ATA = new double *[sn];
     for(int i = 0; i < sn; ++i){
-        ATA[i] = new double [sn];
+        ATA[i] = new double [sn]; //SUSSMAN
+    }
+    for(int i = 0; i < sn; ++i){
         for(int j = 0; j < sn; ++j){
             ATA[i][j] = 0.0;
             for(int k = 0; k < sm; ++k)
@@ -889,7 +896,9 @@ double GetDeterminant(double **A, const int m)
 
     double **B = new double *[m];
     for(int i = 0; i < m; ++i){
-        B[i] = new double [m];
+        B[i] = new double [m]; //SUSSMAN
+    }
+    for(int i = 0; i < m; ++i){
         for(int j = 0; j < m; ++j)
             B[i][j] = A[i][j];
     }
@@ -1057,6 +1066,8 @@ void JacobiEigenvalue(double **A, double *D, const int m)
     double **M = new double *[m];
     for(int i = 0; i < m; ++i){
         M[i] = new double [m]; //SUSSMAN
+    }
+    for(int i = 0; i < m; ++i){
         for(int j = 0; j < m; ++j)
             M[i][j] = A[i][j];
     }
@@ -1132,6 +1143,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
                 max_j = imax[i];
             }
             else{
+INVALID READ FIX ME
                 if(std::abs(M[i][imax[i]]) > std::abs(M[max_i][max_j])){
                     max_i = i;
                     max_j = imax[i];
