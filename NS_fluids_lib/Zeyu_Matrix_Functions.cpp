@@ -1058,6 +1058,24 @@ void PLUDecomposition(double **A, int *P, const int m)
 
 }
 
+//SUSSMAN
+void abort_and_dump(double** A,int m,int n) {
+
+ std::cout << "A is mxn where m,n = " << m << ' ' << n << endl;
+ for (int i=0;i<m;i++) {
+  for (int j=0;j<n;j++) {
+    std::cout << "i,j,A[i][j] " << i << ' ' << j << ' ' <<
+	 A[i][j] << endl;
+  }
+ }
+#if (STANDALONE==1)
+ abort();
+#else
+ amrex::Error("abort_and_dump");
+#endif
+			 
+} // abort_and_dump
+
 // Jacobi eigenvalue algorithm
 // A: m x m, symmetric matrix
 // D: m, store eigenvalues
@@ -1072,7 +1090,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
             M[i][j] = A[i][j];
     }
 
-    int imax[m];
+    int* imax=new int[m]; //SUSSMAM
 
     int max_i = 0;
     int max_j = 0;
@@ -1135,6 +1153,29 @@ void JacobiEigenvalue(double **A, double *D, const int m)
         for(int i = 0; i <= mj; ++i){
             imax[i] = i+1;
             for(int j = i+2; j < m; ++j){
+
+	        if ((i>=0)&&(i<m)) {
+	         if ((j>=0)&&(j<m)) {
+		  if ((imax[i]>=0)&&(imax[i]<m)) {
+		   // do nothing    	   
+		  } else {
+		   std::cout << "imax[i] invalid\n";
+		   std::cout << "i,j= " << i << ' ' << j << endl;
+		   std::cout << "imax[i]= " << imax[i] << endl;
+                   abort_and_dump(A,m,m); //SUSSMAN
+		  }
+		 } else {
+		  std::cout << "j invalid\n";
+		  std::cout << "i,j= " << i << ' ' << j << endl;
+                  abort_and_dump(A,m,m); //SUSSMAN
+		 }
+		} else {
+		 std::cout << "i invalid\n";
+		 std::cout << "i,j= " << i << ' ' << j << endl;
+                 abort_and_dump(A,m,m); //SUSSMAN
+		}
+
+
                 if(std::abs(M[i][j]) > std::abs(M[i][imax[i]]))
                     imax[i] = j;
             }
@@ -1143,7 +1184,37 @@ void JacobiEigenvalue(double **A, double *D, const int m)
                 max_j = imax[i];
             }
             else{
-INVALID READ FIX ME
+	        if ((i>=0)&&(i<m)) {
+		 if ((max_i>=0)&&(max_i<m)) {
+		  if ((max_j>=0)&&(max_j<m)) {
+		   if ((imax[i]>=0)&&(imax[i]<m)) {
+		    // do nothing    	   
+		   } else {
+		    std::cout << "imax[i] invalid\n";
+		    std::cout << "i,max_i,max_j= " << i << ' ' <<
+		     max_i << ' ' << max_j << endl;
+		    std::cout << "imax[i]= " << imax[i] << endl;
+                    abort_and_dump(A,m,m); //SUSSMAN
+		   }
+		  } else {
+		   std::cout << "max_j invalid\n";
+		   std::cout << "i,max_i,max_j= " << i << ' ' <<
+		     max_i << ' ' << max_j << endl;
+                   abort_and_dump(A,m,m); //SUSSMAN
+		  }
+		 } else {
+		  std::cout << "max_i invalid\n";
+		  std::cout << "i,max_i,max_j= " << i << ' ' <<
+		    max_i << ' ' << max_j << endl;
+                  abort_and_dump(A,m,m); //SUSSMAN
+		 }
+		} else {
+		 std::cout << "i invalid\n";
+		 std::cout << "i,max_i,max_j= " << i << ' ' <<
+		    max_i << ' ' << max_j << endl;
+                 abort_and_dump(A,m,m); //SUSSMAN
+		}
+
                 if(std::abs(M[i][imax[i]]) > std::abs(M[max_i][max_j])){
                     max_i = i;
                     max_j = imax[i];
@@ -1151,6 +1222,8 @@ INVALID READ FIX ME
             }
         }
     }
+
+    delete[] imax; //SUSSMAN
 
     for(int i = 0; i < m; ++i)
         delete[] M[i];
