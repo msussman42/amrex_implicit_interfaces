@@ -15,7 +15,8 @@ using namespace std;
 #include "Zeyu_Matrix_Functions.H"
 
 // calculate condition number
-double CondNum(double **H, const int m, const int n, const int sm, const int sn)
+double CondNum(double **H, const int m, const int n, 
+	const int sm, const int sn,double local_tol)
 {
     if (debug_MATRIX_ANALYSIS==1) {
      std::cout << "Matrix::CondNum(): start" << endl;
@@ -24,6 +25,13 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
     if(sm > m || sn > n || sm<=0 || sn <= 0){
         cout << "Sub-matrix is larger than the orginial matrix!" << endl;
         abort();
+    }
+
+    if ((local_tol>0.0)&&(local_tol<1.0)) {
+     // do nothing
+    } else {
+     std::cout << "local_tol invalid\n";
+     abort();
     }
 
     double **M = new double *[sm];
@@ -77,7 +85,13 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      }
     }
     for(int i = 0; i < sn; ++i) {
+     if (debug_MATRIX_ANALYSIS==1) {
+      std::cout << "deleting MTM[i] i=" << i << "\n";
+     }
      delete[] MTM[i]; //SUSSMAN
+    }
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "deleting MTM\n";
     }
     delete[] MTM;
     
@@ -198,8 +212,7 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      cout << "min_QR<0 invalid." << endl;
      abort();
     } else if (min_QR==0.0) {
-     min_QR = max_QR * (1.0e-100);
-     cout << "Warning! (QR) Zero singular value." << endl;
+     std::cout << "Warning! (QR) Zero singular value." << endl;
     } else if (min_QR>0.0) {
      // do nothing
     } else {
@@ -211,7 +224,6 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
      cout << "min_JAC<0 invalid." << endl;
      abort();
     } else if (min_JAC==0.0) {
-     min_JAC = max_JAC * (1.0e-100);
      cout << "Warning! (JAC) Zero singular value." << endl;
     } else if (min_JAC>0.0) {
      // do nothing
@@ -221,14 +233,38 @@ double CondNum(double **H, const int m, const int n, const int sm, const int sn)
     }
 
 
+    double local_QR_condnum=0.0;
+    double local_JAC_condnum=0.0;
     double local_condnum=0.0;
     if ((max_QR>0.0)&&(max_JAC>0.0)) {
-     double rel_error=std::abs(2.0*(max_QR-max_JAC)/(max_QR+max_JAC));
-     double rel_error_min=std::abs(2.0*(min_QR-min_JAC)/(max_QR+max_JAC));
-     if ((rel_error<=1.0e-12)&&(rel_error_min<=1.0e-12)) {
-      local_condnum=(max_QR+max_JAC)/(min_QR+min_JAC);
+
+     if (min_QR/max_QR<local_tol) {
+      local_QR_condnum=10.0/local_tol;
+     } else if (min_QR/max_QR>=local_tol) {
+      local_QR_condnum=max_QR/min_QR;
+     } else {
+      cout << "min_QR, max_QR invalid" << endl;
+      abort();
+     }
+     if (min_JAC/max_JAC<local_tol) {
+      local_JAC_condnum=10.0/local_tol;
+     } else if (min_JAC/max_JAC>=local_tol) {
+      local_JAC_condnum=max_JAC/min_JAC;
+     } else {
+      cout << "min_JAC, max_JAC invalid" << endl;
+      abort();
+     }
+
+     double rel_error=std::abs(2.0*(max_QR-max_JAC)/
+		     (local_JAC_condnum+local_QR_condnum));
+     double rel_error_min=std::abs(2.0*(min_QR-min_JAC)/
+		     (local_JAC_condnum+local_QR_condnum));
+     if ((rel_error<=1.0e-5)&&(rel_error_min<=1.0e-5)) {
+      local_condnum=0.5*(local_QR_condnum+local_JAC_condnum);
      } else {
       cout << "rel_error too big" << endl;
+      std::cout << "local_QR_condnum=" << local_QR_condnum << endl;
+      std::cout << "local_JAC_condnum=" << local_JAC_condnum << endl;
       std::cout << "max_QR=" << max_QR << endl;
       std::cout << "max_JAC=" << max_JAC << endl;
       std::cout << "min_QR=" << min_QR << endl;

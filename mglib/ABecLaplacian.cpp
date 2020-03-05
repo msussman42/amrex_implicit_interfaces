@@ -2747,7 +2747,7 @@ ABecLaplacian::pcg_GMRES_solve(
        std::cout << "calling CondNum j_local=" << j_local << '\n';
        std::cout << "calling CondNum m=" << m << '\n';
       }
-      zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+      zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
       if (CG_verbose>2) {
        std::cout << "after CondNum level=" << level << '\n';
        std::cout << "after CondNum zeyu_condnum=" << zeyu_condnum << '\n';
@@ -2923,7 +2923,7 @@ ABecLaplacian::pcg_GMRES_solve(
          // Real** HH   i=0..m  j=0..m-1
          // active region: i=0..j_local+1  j=0..j_local
          
-        zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+        zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
         if (zeyu_condnum>1.0/local_tol) { 
          condition_number_blowup=1;  
         } else if (zeyu_condnum<=1.0/local_tol) {

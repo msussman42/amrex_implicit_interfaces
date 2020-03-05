@@ -7771,7 +7771,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
        // Real** HH   i=0..m  j=0..m-1
        // active region: i=0..j_local+1  j=0..j_local
-      zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+      zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
       if (zeyu_condnum>1.0/local_tol) { 
        condition_number_blowup=1;  
       } else if (zeyu_condnum<=1.0/local_tol) {
@@ -7918,7 +7918,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
          // Real** HH   i=0..m  j=0..m-1
          // active region: i=0..j_local+1  j=0..j_local
          
-        zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1);
+        zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
         if (zeyu_condnum>1.0/local_tol) { 
          condition_number_blowup=1;  
         } else if (zeyu_condnum<=1.0/local_tol) {

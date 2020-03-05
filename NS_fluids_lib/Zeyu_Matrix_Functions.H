@@ -8,7 +8,9 @@
 using namespace std;
 
 // calculate condition number
-double CondNum(double **H, const int m, const int n, const int sm, const int sn);
+// if condition number>1/local_tol then a new basis vector is found.
+double CondNum(double **H, const int m, const int n, 
+	 const int sm, const int sn,double local_tol);
 
 // calculate Householder vector
 void House(const double *const x, double *v, double &beta, const int n);
