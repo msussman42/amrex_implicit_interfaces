@@ -1152,6 +1152,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
         M[max_j][max_i] = M[max_i][max_j];
 
         int mj = max_j;
+        if(mj == m-1) mj = mj -1;
         for(int i = 0; i <= mj; ++i){
             imax[i] = i+1;
             for(int j = i+2; j < m; ++j){
