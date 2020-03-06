@@ -2643,6 +2643,9 @@ ABecLaplacian::pcg_GMRES_solve(
      std::cout << "BF_GMRES mglib: beta= " << beta << '\n';
     }
 
+    Vector<Real> error_history;
+    error_history.resize(m);
+
     for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
 
      if (j_local>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
@@ -2848,8 +2851,23 @@ ABecLaplacian::pcg_GMRES_solve(
          CG_advance((*GMRES_V_MF[j_local][coarsefine]),aa,
                     (*GMRES_V_MF[j_local][coarsefine]),
                     *vi_MF,level);
-	} else
+	} else {
+         std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
+         std::cout << "vhat_counter,i,j_local,p_local,m " <<
+           vhat_counter << ' ' << i << ' ' << j_local << ' ' <<
+           p_local << ' ' << m << endl;
+         std::cout << "beta= " << beta << endl;
+         for (int eh=0;eh<j_local;eh++) {
+          std::cout << "eh,error_history[eh] " << eh << ' ' <<
+           error_history[eh] << endl;
+         }
+         std::cout << "level= " << level << endl;
+         std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
+         std::cout << "cfd_project_option= " << cfd_project_option << '\n';
+         std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
+         std::cout << "gbox[level]= " << gbox[level] << '\n';
  	 amrex::Error("vi_dot_vi==0.0");
+        }
        } // i=0..j_local
        LP_dot((*GMRES_V_MF[j_local][coarsefine]),
               (*GMRES_V_MF[j_local][coarsefine]),
@@ -2857,8 +2875,25 @@ ABecLaplacian::pcg_GMRES_solve(
        if (vi_dot_vi>0.0) {
         aa=1.0/vi_dot_vi;
 	GMRES_V_MF[j_local][coarsefine]->mult(aa,0,nsolve_bicgstab,nghostRHS);
-       } else
+       } else {
+
+        std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
+        std::cout << "vhat_counter,j_local,p_local,m " <<
+          vhat_counter << ' ' << ' ' << j_local << ' ' <<
+          p_local << ' ' << m << endl;
+        std::cout << "beta= " << beta << endl;
+        for (int eh=0;eh<j_local;eh++) {
+         std::cout << "eh,error_history[eh] " << eh << ' ' <<
+          error_history[eh] << endl;
+        }
+        std::cout << "level= " << level << endl;
+        std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
+        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
+        std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
+        std::cout << "gbox[level]= " << gbox[level] << '\n';
+
         amrex::Error("vi_dot_vi==0.0 (renormalization)");
+       }
 
         // Zj=M^{-1}Vj
        pcg_solve(
@@ -3021,6 +3056,8 @@ ABecLaplacian::pcg_GMRES_solve(
       std::cout << "BFGMRES mglib: beta_compare=" <<
        beta_compare << " beta=" << beta << '\n';
      }
+
+     error_history[j_local]=beta_compare;
 
      if (convergence_flag==0) {
 
