@@ -594,6 +594,13 @@ void SVD(double **A, double *D, const int m, const int n)
      std::cout << "in SVD m=" << m << '\n';
      std::cout << "in SVD n=" << n << '\n';
     }
+    double **ASAVE = new double *[m];
+    for(int i = 0; i < m; ++i)
+     ASAVE[i] = new double [n]; // SUSSMAN
+
+    for(int i = 0; i < m; ++i)
+     for(int j = 0; i < n; ++j)
+      ASAVE[i][j]=A[i][j];
 
     double* Bd=new double[n];  //SUSSMAN
     for(int i = 0; i < n; ++i)
@@ -630,6 +637,8 @@ void SVD(double **A, double *D, const int m, const int n)
 	  for (int jdeb=0;jdeb<n;jdeb++) {
 	   std::cout << "i,j,Aij " << ideb << ' ' << jdeb << ' ' <<
 	     A[ideb][jdeb] << '\n';
+	   std::cout << "i,j,ASAVEij " << ideb << ' ' << jdeb << ' ' <<
+	     ASAVE[ideb][jdeb] << '\n';
 	  }
 	 }
 	}
@@ -700,6 +709,10 @@ void SVD(double **A, double *D, const int m, const int n)
     }
     delete[] Bd; //SUSSMAN
     delete[] Bs; //SUSSMAN
+
+    for(int i = 0; i < m; ++i)
+       delete[] ASAVE[i]; // SUSSMAN
+    delete[] ASAVE;
 
     if (debug_MATRIX_ANALYSIS==1) {
      std::cout << "after SVD m=" << m << '\n';
