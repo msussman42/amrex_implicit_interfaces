@@ -2767,6 +2767,9 @@ else if (probtype_in.eq.401) then ! melting ice
     enddo
    else
     print *,"vcheck invalid"
+    do im_opp=1,3 
+     print *,"im_opp,vf(im_opp) ",im_opp,vf(im_opp)
+    enddo
     stop
    endif
   endif
@@ -3823,6 +3826,11 @@ real(kind=8)                     :: cc1(2),cc2(2),cc3(2)
 integer                          :: i
 real(kind=8)                     :: signtemp
 real(kind=8)                     :: xvoid(2)
+real(kind=8)                     :: ccrad
+real(kind=8)                     :: ccrad2
+real(kind=8)                     :: ccrad3
+real(kind=8)                     :: distcircle
+real(kind=8)                     :: dist2_opp
 
 
 
@@ -3830,12 +3838,13 @@ do i=1,2
  xy(i) = x_in(i)
 enddo
 
+! symmetry; only consider 0<xy(1)<1/2
 if(x_in(1) .gt. 0.5d0)then
  xy(1)=1.0d0-x_in(1) 
 endif
 
 
-if(iceshape.eq.1)then
+if(iceshape.eq.1)then  ! round ice
 
 
 x1(1)=0.5d0       !                        * x1
@@ -3854,30 +3863,68 @@ x6(2)=0.4d0
 ! centers of the circles 
 cc1(1)=0.5d0
 cc1(2)=0.5d0
+ccrad=(x1(2)-x6(2))
+
 cc2(1)=0.35d0
-cc2(2)=0.5d0-sqrt(0.3d0**2.0-0.05d0**2.0d0)
+ccrad2=0.3d0
+cc2(2)=0.5d0-sqrt(ccrad2**2.0-0.05d0**2.0d0)
 cc3(1)=0.0d0
 cc3(2)=0.5d0
+ccrad3=abs(x4(2)-cc3(2))
 
+if (ccrad.le.0.0d0) then
+ print *,"ccrad invalid"
+ stop
+endif
+! material 3
+distcircle=ccrad-sqrt( (xy(1)-cc1(1))**2 + (xy(2)-cc1(2))**2 )
+
+if (xy(1).le.x5(1)) then
+ ! cc3 is center of first arc
+ if (ccrad3.gt.0.0d0) then
+  dist2=xy(2)-cc3(2)+sqrt(ccrad3**2-(xy(1)-cc3(1))**2)
+ else
+  print *,"ccrad3 invalid"
+  stop
+ endif
+else if (xy(1).le.x2(1)) then
+ dist2=xy(2)-cc2(2)-sqrt(ccrad2**2-(xy(1)-cc2(1))**2)
+else
+ dist2=xy(2)-x2(2)
+endif
+dist2_opp=-dist2
 
 if(imat.eq.3)then
- call l2normd(2,xy,x3,dist1)
- dist=0.1d0-dist1
+ if (1.eq.0) then
+  call l2normd(2,xy,x3,dist1)
+  dist=0.1d0-dist1
+ else
+  dist=distcircle
+ endif
 elseif(imat.eq.1)then
- call dist_point_to_arc(xy,x1,x2,cc1,dist1)
- call dist_point_to_arc(xy,x2,x5,cc2,dist2)
- call dist_point_to_arc(xy,x4,x5,cc3,dist3)
- dist=min(dist1,dist2,dist3)
+ if (1.eq.0) then
+  call dist_point_to_arc(xy,x1,x2,cc1,dist1)
+  call dist_point_to_arc(xy,x2,x5,cc2,dist2)
+  call dist_point_to_arc(xy,x4,x5,cc3,dist3)
+  dist=min(dist1,dist2,dist3)
+ else
+  dist=min(dist2_opp,-distcircle)
+ endif
 elseif(imat.eq.2)then
- call dist_point_to_arc(xy,x2,x6,cc1,dist1)
- call dist_point_to_arc(xy,x2,x5,cc2,dist2)
- call dist_point_to_arc(xy,x4,x5,cc3,dist3)
- dist=min(dist1,dist2,dist3)
+ if (1.eq.0) then
+  call dist_point_to_arc(xy,x2,x6,cc1,dist1)
+  call dist_point_to_arc(xy,x2,x5,cc2,dist2)
+  call dist_point_to_arc(xy,x4,x5,cc3,dist3)
+  dist=min(dist1,dist2,dist3)
+ else
+  dist=min(dist2,-distcircle)
+ endif
 else
  print *,"imat invalid"
  stop
 endif
- 
+
+if (1.eq.0) then 
 if(imat.eq.3)then
  signtemp=1.0d0
 elseif(imat.eq.1)then
@@ -3942,6 +3989,7 @@ elseif(imat.eq.2)then
 else
  print *,"imat invalid"
  stop
+endif
 endif
 
 elseif(iceshape.eq.2)then
