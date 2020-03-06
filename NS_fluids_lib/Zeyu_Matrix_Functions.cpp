@@ -52,6 +52,7 @@ double CondNum(double **H, const int m, const int n,
      std::cout << "calling SVD sn=" << sn << '\n';
     }
 
+      // modifies M
     SVD(M, D_QR, sm, sn);
 
     if (debug_MATRIX_ANALYSIS==1) {
@@ -67,7 +68,7 @@ double CondNum(double **H, const int m, const int n,
      for(int j = 0; j < sn; ++j){
       MTM[i][j] = 0.0;
       for(int k = 0; k < sm; ++k)
-       MTM[i][j] += M[k][i] * M[k][j];
+       MTM[i][j] += H[k][i] * H[k][j];
      }
     }
 
@@ -397,6 +398,7 @@ void Givens(const double aii, const double aij, const double ajj, double &c, dou
 }
 
 // Householder Bidiagonalization
+// modifies A
 void  GetBidiag(double **A, double *Bd, double *Bs, const int m, const int n)
 {
     if (debug_MATRIX_ANALYSIS==1) {
@@ -585,6 +587,7 @@ void GKSVD(double *Bd, double *Bs, const int n)
 }
 
 // SVD algorithm
+// modifies A
 void SVD(double **A, double *D, const int m, const int n)
 {
     if (debug_MATRIX_ANALYSIS==1) {
@@ -604,6 +607,7 @@ void SVD(double **A, double *D, const int m, const int n)
     for(int i = 0; i < nn-1; ++i)
      Bs[i]=0.0;
 
+     // modifies A
     GetBidiag(A, Bd, Bs, m, n);
 
     if(n == 1) D[0] = Bd[0];
