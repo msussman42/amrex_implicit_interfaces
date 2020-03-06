@@ -599,7 +599,7 @@ void SVD(double **A, double *D, const int m, const int n)
      ASAVE[i] = new double [n]; // SUSSMAN
 
     for(int i = 0; i < m; ++i)
-     for(int j = 0; i < n; ++j)
+     for(int j = 0; j < n; ++j)
       ASAVE[i][j]=A[i][j];
 
     double* Bd=new double[n];  //SUSSMAN
