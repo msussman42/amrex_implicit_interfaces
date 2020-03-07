@@ -7706,6 +7706,9 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      std::cout << "BF_GMRES: beta= " << beta << '\n';
     }
 
+    Vector<Real> error_history;
+    error_history.resize(m);
+
     for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
 
      // variables initialized to 0.0
@@ -7822,6 +7825,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 			   (condition_number_blowup==1));vhat_counter++) {
 
        setVal_array(0,nsolveMM,1.0,GMRES_BUFFER0_V_MF+j_local);
+       init_checkerboardALL(GMRES_BUFFER0_V_MF+j_local,
+		     project_option);
        project_right_hand_side(GMRES_BUFFER0_V_MF+j_local,
 		     project_option,change_flag);
         // v_i dot v_j = 0 i=0..j-1
@@ -7839,6 +7844,30 @@ void NavierStokes::multiphase_GMRES_preconditioner(
          idx_vi=GMRES_BUFFER0_U_MF+p_local;
         } else
          amrex::Error("i invalid");
+
+	 // SANITY CHECK
+        dot_productALL(project_option,
+         GMRES_BUFFER0_V_MF+j_local,
+         GMRES_BUFFER0_V_MF+j_local,vi_dot_vi,nsolve);
+
+        if (vi_dot_vi>0.0) {
+	 // do nothing
+	} else {	
+         std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
+	 std::cout << "i= " << i << endl;
+         std::cout << "vhat_counter,j_local,p_local,m " <<
+          vhat_counter << ' ' << ' ' << j_local << ' ' <<
+          p_local << ' ' << m << endl;
+         std::cout << "beta= " << beta << endl;
+         for (int eh=0;eh<j_local;eh++) {
+          std::cout << "eh,error_history[eh] " << eh << ' ' <<
+           error_history[eh] << endl;
+         }
+         std::cout << "nsolve= " << nsolve << endl;
+         std::cout << "project_option= " << project_option << '\n';
+
+         amrex::Error("vi_dot_vi==0.0 (mid loop (main) sanity check)");
+	}
 
         dot_productALL(project_option,
          idx_vi,
@@ -8021,6 +8050,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       std::cout << "BFGMRES: beta_compare=" <<
        beta_compare << " beta=" << beta << '\n';
      }
+
+     error_history[j_local]=beta_compare;
 
      if (convergence_flag==0) {
 

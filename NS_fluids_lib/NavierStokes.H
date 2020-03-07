@@ -488,6 +488,8 @@ public:
 
     void project_right_hand_side(int index_MF,int project_option,
 		    int& change_flag);
+    void init_checkerboardALL(int index_MF,int project_option);
+    void init_checkerboardLEV(int index_MF,int project_option);
 
     void init_boundary();
     void init_boundary_list(Vector<int> scomp,Vector<int> ncomp);
