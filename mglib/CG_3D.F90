@@ -160,7 +160,8 @@
        ww,  &
        DIMS(ww), &
        tilelo, tilehi, &
-       fablo,fabhi,bfact,bfact_top)
+       fablo,fabhi, &
+       bfact,bfact_top)
       use global_utility_module
       IMPLICIT NONE
       INTEGER_T, intent(in) :: ncomp

@@ -51,6 +51,7 @@ public:
       int smooth_type);
 
     void project_null_space(MultiFab& rhsL,int level);
+    void init_checkerboard(MultiFab& v_in,int level);
 
     void Fsmooth (MultiFab& solnL,
                   MultiFab& rhsL,

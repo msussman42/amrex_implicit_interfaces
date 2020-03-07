@@ -189,3 +189,71 @@
       end do
 
       end subroutine FORT_INTERP
+
+
+      subroutine FORT_CHECKERBOARD_RB( &
+       ncomp, &
+       v,  &
+       DIMS(v), &
+       tilelo, tilehi, &
+       fablo,fabhi, &
+       bfact,bfact_top)
+      use global_utility_module
+      IMPLICIT NONE
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3)
+      INTEGER_T :: growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(v)
+      REAL_T, intent(inout) :: v(DIMV(v),ncomp)
+
+      INTEGER_T i, j, k, veldir,ioff
+
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid"
+       stop
+      endif
+      if (bfact_top.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact_top invalid"
+       stop
+      endif
+      if ((ncomp.eq.1).or.(ncomp.eq.AMREX_SPACEDIM)) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+      call checkbound(fablo,fabhi, &
+      DIMS(v) &
+      ,0,-1,61)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+       do veldir=1,ncomp
+        ioff=MOD(i+j+k+4,2)
+        if (ioff.eq.0) then
+         v(D_DECL(i,j,k),veldir)=-one
+        else if (ioff.eq.1) then
+         v(D_DECL(i,j,k),veldir)=one
+        else
+         print *,"ioff invalid"
+         stop
+        endif
+       enddo ! veldir
+      end do
+      end do
+      end do
+
+      end subroutine FORT_CHECKERBOARD_RB
+
+

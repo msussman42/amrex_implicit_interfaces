@@ -2055,6 +2055,142 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
 
 } // subroutine LP_dot
 
+
+void ABecLaplacian::init_checkerboard(MultiFab& v_in,
+                           int level_in) {
+
+#define profile_checkerboard 0
+
+#if (profile_checkerboard==1)
+ std::string subname="ABecLaplacian::init_checkerboard";
+ std::stringstream popt_string_stream(std::stringstream::in |
+  std::stringstream::out);
+ popt_string_stream << cfd_project_option;
+ std::string profname=subname+popt_string_stream.str();
+ profname=profname+"_";
+ std::stringstream lev_string_stream(std::stringstream::in |
+  std::stringstream::out);
+ lev_string_stream << level_in;
+ profname=profname+lev_string_stream.str();
+
+ BLProfiler bprof(profname);
+ bprof.stop();
+#endif
+
+ if (laplacian_solvability==0) { // system is nonsingular.
+   // check_for_singular==0 heat eqn, viscosity, species diffusion
+  if (check_for_singular==1) { // some parts of domain are masked off.
+   if ((v_in.nComp()==1)&&
+       (laplacian_ones[level_in]->nComp()==1)) {
+    // do nothing
+   } else {
+    std::cout << "laplacian_solvability= " << 
+     laplacian_solvability << '\n';
+    std::cout << "check_for_singular= " << 
+     check_for_singular << '\n';
+    amrex::Error("rhsL or ones_mf invalid nComp");
+   }
+  } else if (check_for_singular==0) {
+   // do nothing
+  } else
+   amrex::Error("check_for_singular invalid");
+
+ } else if (laplacian_solvability==1) { // system is singular
+
+  if (check_for_singular==1) { // some parts of domain are masked off.
+
+   bool use_tiling=cfd_tiling;
+
+   if (level_in>=MG_numlevels_var)
+    amrex::Error("level_in invalid in init_checkerboard");
+
+   if (level_in>=gbox.size()) {
+    std::cout << "level_in= " << level_in << '\n';
+    std::cout << "gboxsize= " << gbox.size() << '\n';
+    std::cout << "num levels = " << MG_numlevels_var << '\n';
+    amrex::Error("level exceeds gbox size");
+   }
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+
+   const BoxArray& gboxlev = gbox[level_in];
+   int ncomp = v_in.nComp();
+   if (ncomp!=nsolve_bicgstab)
+    amrex::Error("ncomp invalid v_in");
+
+   if (v_in.boxArray()==gboxlev) {
+    // do nothing
+   } else
+    amrex::Error("v_in.boxArray()!=gboxlev");
+
+   int bfact=bfact_array[level_in];
+   int bfact_top=bfact_array[0];
+
+   thread_class::init_d_numPts(v_in.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel 
+#endif
+{
+   for (MFIter mfi(v_in,use_tiling); mfi.isValid(); ++mfi) {
+
+    if (mfi.validbox()==gboxlev[mfi.index()]) {
+     // do nothing
+    } else
+     amrex::Error("mfi.validbox()!=gboxlev[mfi.index()] init_checkerboard");
+
+    const int gridno = mfi.index();
+     // MFIter::tilebox () is declared in AMReX_MFIter.cpp
+     // MFIter::Initialize (), which is in AMReX_MFIter.cpp,
+     // calls getTileArray which is in AMReX_FabArrayBase.cpp
+    const Box& tilegrid=mfi.tilebox();
+    const Box& fabgrid=gboxlev[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+
+    int tid_current=0;
+#ifdef _OPENMP
+    tid_current = omp_get_thread_num();
+#endif
+    if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+     // do nothing
+    } else
+     amrex::Error("tid_current invalid");
+
+    FArrayBox& vfab=v_in[mfi];
+
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+     // in: MG_3D.F90
+    FORT_CHECKERBOARD_RB(
+     &ncomp,
+     vfab.dataPtr(),ARLIM(vfab.loVect()),ARLIM(vfab.hiVect()),
+     tilelo,tilehi,
+     fablo,fabhi, 
+     &bfact,&bfact_top);
+
+   } // MFIter
+} // omp
+
+   thread_class::sync_tile_d_numPts();
+
+   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+   thread_class::reconcile_d_numPts(1);
+  } else
+   amrex::Error("check_for_singular invalid");
+
+ } else
+  amrex::Error("laplacian_solvability invalid");
+
+#undef profile_checkerboard
+
+} // subroutine init_checkerboard
+
+
+
 // onesCoefficients:
 // =1 if diagonal <> 0
 // =0 otherwise
@@ -2078,8 +2214,9 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
  bprof.stop();
 #endif
 
- if (laplacian_solvability==0) {
-  if (check_for_singular==1) {
+ if (laplacian_solvability==0) { // system is nonsingular.
+   // check_for_singular==0 heat eqn, viscosity, species diffusion
+  if (check_for_singular==1) { // some parts of domain are masked off.
    if ((rhsL.nComp()==1)&&
        (laplacian_ones[level]->nComp()==1)) {
     MultiFab::Multiply(rhsL,*laplacian_ones[level],0,0,1,0);
@@ -2095,7 +2232,7 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
   } else
    amrex::Error("check_for_singular invalid");
 
- } else if (laplacian_solvability==1) {
+ } else if (laplacian_solvability==1) { // system is singular
 
   if (nsolve_bicgstab!=1)
    amrex::Error("nsolve_bicgstab invalid");
@@ -2822,6 +2959,7 @@ ABecLaplacian::pcg_GMRES_solve(
 			   (condition_number_blowup==1));vhat_counter++) {
 
        GMRES_V_MF[j_local][coarsefine]->setVal(1.0,0,nsolve_bicgstab,nghostRHS);
+       init_checkerboard((*GMRES_V_MF[j_local][coarsefine]),level);
        project_null_space((*GMRES_V_MF[j_local][coarsefine]),level);
         // v_i dot v_j = 0 i=0..j-1
 	// u_p dot v_j = 0
@@ -2838,6 +2976,33 @@ ABecLaplacian::pcg_GMRES_solve(
          vi_MF=GMRES_U_MF[p_local][coarsefine];
         } else
          amrex::Error("i invalid");
+
+	 // SANITY CHECK
+        LP_dot((*GMRES_V_MF[j_local][coarsefine]),
+               (*GMRES_V_MF[j_local][coarsefine]),
+    	       level,vi_dot_vi);
+	
+        if (vi_dot_vi>0.0) {
+	 // do nothing
+	} else {	
+         std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
+	 std::cout << "i= " << i << endl;
+         std::cout << "vhat_counter,j_local,p_local,m " <<
+          vhat_counter << ' ' << ' ' << j_local << ' ' <<
+          p_local << ' ' << m << endl;
+         std::cout << "beta= " << beta << endl;
+         for (int eh=0;eh<j_local;eh++) {
+          std::cout << "eh,error_history[eh] " << eh << ' ' <<
+           error_history[eh] << endl;
+         }
+         std::cout << "level= " << level << endl;
+         std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
+         std::cout << "cfd_project_option= " << cfd_project_option << '\n';
+         std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
+         std::cout << "gbox[level]= " << gbox[level] << '\n';
+
+         amrex::Error("vi_dot_vi==0.0 (mid loop sanity check)");
+	}
 
         LP_dot(*vi_MF,
                *GMRES_V_MF[j_local][coarsefine],
@@ -2987,7 +3152,22 @@ ABecLaplacian::pcg_GMRES_solve(
       } // vhat_counter loop
 
       if (vhat_counter==max_vhat_sweeps) {
-       amrex::Error("vhat_counter==max_vhat_sweeps");
+
+       std::cout << "vhat_counter,j_local,p_local,m " <<
+        vhat_counter << ' ' << ' ' << j_local << ' ' <<
+        p_local << ' ' << m << endl;
+       std::cout << "beta= " << beta << endl;
+       for (int eh=0;eh<j_local;eh++) {
+        std::cout << "eh,error_history[eh] " << eh << ' ' <<
+         error_history[eh] << endl;
+       }
+       std::cout << "level= " << level << endl;
+       std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
+       std::cout << "cfd_project_option= " << cfd_project_option << '\n';
+       std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
+       std::cout << "gbox[level]= " << gbox[level] << '\n';
+       amrex::Error("vhat_counter==max_vhat_sweeps mglib");
+
       } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
        if (condition_number_blowup==0) {
         // do nothing
@@ -4321,6 +4501,7 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+    // in: MG_3D.F90
    FORT_INTERP(
      &bfact_coarse,&bfact_fine,&bfact_top,
      f[mfi].dataPtr(veldir),
