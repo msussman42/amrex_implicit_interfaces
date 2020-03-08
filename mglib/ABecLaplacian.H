@@ -79,7 +79,8 @@ public:
      int smooth_type,int bottom_smooth_type,
      int presmooth,int postsmooth,
      int use_PCG,
-     int level);
+     int level,
+     int nit);
 
     void CG_solve(
       int& cg_cycles_out,
@@ -138,6 +139,8 @@ protected:
        int level);
 
     void CG_check_for_convergence(
+      int coarsefine,
+      int presmooth,int postsmooth,
       Real rnorm,Real rnorm0,Real eps_abs,
       Real relative_error,int nit,int& error_close_to_zero,
       int level);

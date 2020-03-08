@@ -2545,7 +2545,8 @@ ABecLaplacian::pcg_GMRES_solve(
     int smooth_type,int bottom_smooth_type,
     int presmooth,int postsmooth,
     int use_PCG,
-    int level) {
+    int level,
+    int nit) {
 
  if (nsolve_bicgstab>=1) {
   // do nothing
@@ -2953,7 +2954,7 @@ ABecLaplacian::pcg_GMRES_solve(
       } else
        amrex::Error("j_local invalid");
 
-      int max_vhat_sweeps=10;
+      int max_vhat_sweeps=4;
       int vhat_counter=0;
       for (vhat_counter=0;((vhat_counter<max_vhat_sweeps)&&
 			   (condition_number_blowup==1));vhat_counter++) {
@@ -3152,6 +3153,11 @@ ABecLaplacian::pcg_GMRES_solve(
       } // vhat_counter loop
 
       if (vhat_counter==max_vhat_sweeps) {
+
+
+	      FIX ME if this happens then just use the previous value for
+		      z
+
 
        std::cout << "vhat_counter,j_local,p_local,m " <<
         vhat_counter << ' ' << ' ' << j_local << ' ' <<
@@ -3354,7 +3360,10 @@ ABecLaplacian::pcg_GMRES_solve(
   std::cout << "MG_numlevels_var= " << MG_numlevels_var << '\n';
   std::cout << "CG_numlevels_var= " << CG_numlevels_var << '\n';
 
-  for (int ehist=0;ehist<CG_error_history.size();ehist++) {
+  int dump_size=CG_error_history.size();
+  if (nit+1<dump_size)
+   dump_size=nit+1;
+  for (int ehist=0;ehist<dump_size;ehist++) {
    std::cout << "nit " << ehist << " CG_error_history coarsefine " <<
      coarsefine << " rnorm=" <<
      CG_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
@@ -3373,11 +3382,19 @@ ABecLaplacian::pcg_GMRES_solve(
 
 void 
 ABecLaplacian::CG_check_for_convergence(
+  int coarsefine,
+  int presmooth,int postsmooth,
   Real rnorm,Real rnorm_init,Real eps_abs,
   Real relative_error,int nit,int& error_close_to_zero,
   int level) {
 
- int critical_nit=10;
+ if ((coarsefine==0)||
+     (coarsefine==1)) {
+  // do nothing
+ } else
+  amrex::Error("coarsefine invalid");
+
+ int critical_nit=presmooth+postsmooth;
  Real critical_abs_tol=1.0e-14;
  Real critical_rel_tol=1.0e-14;
  if (critical_abs_tol>eps_abs)
@@ -3390,6 +3407,28 @@ ABecLaplacian::CG_check_for_convergence(
 
  if (nit>critical_nit) {
   error_close_to_zero=base_check;
+  if (error_close_to_zero==0) {
+   if (nit>4) {
+    Real rnorm_prev=CG_error_history[nit-1][2*coarsefine];
+    Real rnorm_prev2=CG_error_history[nit-2][2*coarsefine];
+    double slope_error=0.5*(std::abs(rnorm-rnorm_prev)+
+	    std::abs(rnorm_prev-rnorm_prev2));
+    if ((slope_error<=eps_abs)||
+        (slope_error<=relative_error*rnorm_init)) {
+     error_close_to_zero=1;
+    }
+
+   } else if ((nit>=0)&&(nit<=4)) {
+    // do nothing
+   } else {
+    amrex::Error("nit invalid");
+   }
+  } else if (error_close_to_zero==1) {
+	  // do nothing
+  } else {
+   amrex::Error("error_close_to_zero invalid");
+  }
+
  } else if ((nit>=0)&&(nit<=critical_nit)) {
   error_close_to_zero=((rnorm<=critical_abs_tol)||
                        (rnorm<=critical_rel_tol*rnorm_init));
@@ -3600,7 +3639,11 @@ ABecLaplacian::CG_solve(
 
   // check if the initial residual passes the convergence test.
  int error_close_to_zero=0;
- CG_check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
+ CG_check_for_convergence(
+   coarsefine,
+   presmooth,postsmooth,
+   rnorm,rnorm_init,
+   eps_abs,relative_error,nit,
    error_close_to_zero,level);
 
  if (ParallelDescriptor::IOProcessor()) {
@@ -3641,8 +3684,12 @@ ABecLaplacian::CG_solve(
   CG_error_history[nit][2*coarsefine]=rnorm;
   CG_error_history[nit][2*coarsefine+1]=eps_abs;
 
-  CG_check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
-		 error_close_to_zero,level);
+  CG_check_for_convergence(
+   coarsefine,
+   presmooth,postsmooth,
+   rnorm,rnorm_init,
+   eps_abs,relative_error,nit,
+   error_close_to_zero,level);
 
   if ((error_close_to_zero==0)||  // tolerances not met.
       (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
@@ -3683,7 +3730,7 @@ ABecLaplacian::CG_solve(
        usecg_at_bottom,
        smooth_type,bottom_smooth_type,
        presmooth,postsmooth,
-       use_PCG,level);
+       use_PCG,level,nit);
        // v_search=A*z 
       apply(*CG_v_search[coarsefine],
             *CG_z[coarsefine],level,
@@ -3723,8 +3770,12 @@ ABecLaplacian::CG_solve(
        amrex::Error("rnorm invalid mglib");
       }
 
-      CG_check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
-	 error_close_to_zero,level);
+      CG_check_for_convergence(
+        coarsefine,
+        presmooth,postsmooth,
+	rnorm,rnorm_init,
+	eps_abs,relative_error,nit,
+        error_close_to_zero,level);
 
       if ((error_close_to_zero==0)||  // tolerances not met.
           (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
@@ -3740,7 +3791,7 @@ ABecLaplacian::CG_solve(
 	smooth_type,bottom_smooth_type,
         presmooth,postsmooth,
 	use_PCG,
-	level);
+	level,nit);
        // Av_search=A*z
        apply(*CG_Av_search[coarsefine],
 	     *CG_z[coarsefine],level,
@@ -3902,7 +3953,10 @@ ABecLaplacian::CG_solve(
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Warning: ABecLaplacian:: failed to converge! \n";
    std::cout << "coarsefine= " << coarsefine << '\n';
-   for (int ehist=0;ehist<CG_error_history.size();ehist++) {
+   int dump_size=CG_error_history.size();
+   if (nit+1<dump_size)
+    dump_size=nit+1;
+   for (int ehist=0;ehist<dump_size;ehist++) {
     std::cout << "nit " << ehist << " CG_error_history[nit][0,1] " <<
      CG_error_history[ehist][2*coarsefine+0] << ' ' <<
      CG_error_history[ehist][2*coarsefine+1] << '\n';

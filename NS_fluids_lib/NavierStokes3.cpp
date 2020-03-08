@@ -7819,7 +7819,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       } else
        amrex::Error("j_local invalid");
 
-      int max_vhat_sweeps=10;
+      int max_vhat_sweeps=4;
       int vhat_counter=0;
       for (vhat_counter=0;((vhat_counter<max_vhat_sweeps)&&
 			   (condition_number_blowup==1));vhat_counter++) {
@@ -10412,7 +10412,7 @@ void NavierStokes::multiphase_project(int project_option) {
     if (dual_tol<dual_time_error0*dual_time_reltol)
      dual_tol=dual_time_error0*dual_time_reltol;
 
-    if ((std::abs(dual_time_error-dual_error_min)<=dual_tol)&&
+    if ((dual_time_error<=dual_tol+dual_error_min)&&
 	(std::abs(dual_time_error-
 	      dual_error_history[dual_time_stepping_iter-1])<=dual_tol)&&
 	(std::abs(dual_time_error-
