@@ -3350,13 +3350,15 @@ ABecLaplacian::pcg_GMRES_solve(
  } else {
   std::cout << "gmres_precond_iter= " << gmres_precond_iter << '\n';
   std::cout << "level= " << level << '\n';
+  std::cout << "cfd_project_option= " << cfd_project_option << '\n';
   std::cout << "MG_numlevels_var= " << MG_numlevels_var << '\n';
   std::cout << "CG_numlevels_var= " << CG_numlevels_var << '\n';
 
   for (int ehist=0;ehist<CG_error_history.size();ehist++) {
-   std::cout << "nit " << ehist << " CG_error_history[nit][0,1] " <<
-    CG_error_history[ehist][2*coarsefine+0] << ' ' <<
-    CG_error_history[ehist][2*coarsefine+1] << '\n';
+   std::cout << "nit " << ehist << " CG_error_history coarsefine " <<
+     coarsefine << " rnorm=" <<
+     CG_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
+     CG_error_history[ehist][2*coarsefine+1] << '\n';
   }
 
   amrex::Error("ABecLaplacian.cpp: gmres_precond_iter invalid");
@@ -3596,6 +3598,7 @@ ABecLaplacian::CG_solve(
  int prev_restart_flag=0;
  int gmres_precond_iter=gmres_precond_iter_base_mg;
 
+  // check if the initial residual passes the convergence test.
  int error_close_to_zero=0;
  CG_check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
    error_close_to_zero,level);
@@ -3641,7 +3644,8 @@ ABecLaplacian::CG_solve(
   CG_check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
 		 error_close_to_zero,level);
 
-  if (error_close_to_zero!=1) {
+  if ((error_close_to_zero==0)||  // tolerances not met.
+      (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
 
     // "meets_tol" informs the main solver in NavierStokes3.cpp 
     // whether it needs to continue.
@@ -3722,7 +3726,8 @@ ABecLaplacian::CG_solve(
       CG_check_for_convergence(rnorm,rnorm_init,eps_abs,relative_error,nit,
 	 error_close_to_zero,level);
 
-      if (error_close_to_zero!=1) {
+      if ((error_close_to_zero==0)||  // tolerances not met.
+          (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
        // z=K^{-1} r
        pcg_GMRES_solve(
         gmres_precond_iter,
@@ -3811,7 +3816,8 @@ ABecLaplacian::CG_solve(
     } else
      amrex::Error("CG_verbose or nsverbose invalid");
 
-    if (error_close_to_zero!=1) {
+    if ((error_close_to_zero==0)||  // tolerances not met.
+        (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
      beta=0.0;
      rho=1.0;
      rho_old=1.0;
@@ -3825,12 +3831,13 @@ ABecLaplacian::CG_solve(
      MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
        *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
     } else if (error_close_to_zero==1) {
-     amrex::Error("cannot have both restart_flag and error_close_to_zero");
+     amrex::Error("cannot have both restart_flag and error_close_to_zero==1");
     } else
      amrex::Error("error_close_to_zero invalid");
 
    } else if (restart_flag==0) {
-    if (error_close_to_zero!=1) {
+    if ((error_close_to_zero==0)||  // tolerances not met.
+        (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
      // do nothing
     } else if (error_close_to_zero==1) {
      // do nothing
@@ -3889,7 +3896,8 @@ ABecLaplacian::CG_solve(
   }
  }
 
- if (error_close_to_zero!=1) {
+ if ((error_close_to_zero==0)||  // tolerances not met.
+     (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
 
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Warning: ABecLaplacian:: failed to converge! \n";
