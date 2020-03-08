@@ -3239,6 +3239,24 @@ ABecLaplacian::pcg_GMRES_solve(
 
      error_history[j_local]=beta_compare;
 
+     if (j_local==0) {
+      if (beta_compare>beta) {
+       convergence_flag=1;
+      } else if (beta_compare<=beta) {
+       // do nothing
+      } else
+       amrex::Error("beta_compare or beta invalid");
+     } else if (j_local>0) {
+      if (beta_compare>error_history[j_local-1]) {
+       convergence_flag=1;
+      } else if (beta_compare<=error_history[j_local-1]) {
+       // do nothing
+      } else
+       amrex::Error("beta_compare or error_history[j_local-1] invalid");
+     } else
+      amrex::Error("j_local invalid");
+
+
      if (convergence_flag==0) {
 
       if (HH[j_local+1][j_local]>0.0) {
@@ -3274,6 +3292,13 @@ ABecLaplacian::pcg_GMRES_solve(
       amrex::Error("convergence_flag invalid");
 
     } // j_local=0..m-1 (and convergence_flag==0)
+
+    if (debug_BF_GMRES==1) {
+     for (int i=0;i<j_local;i++) {
+      std::cout << "mglib: i,error_history[i] " << i << ' ' <<
+	     error_history[i] << endl;
+     } 
+    }
 
     for (int i=gmres_precond_iter_base_mg*nsolve_bicgstab;i<j_local;i++) {
      delete GMRES_Z_MF[i][coarsefine];

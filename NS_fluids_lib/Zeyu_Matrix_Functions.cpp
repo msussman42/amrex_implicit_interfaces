@@ -894,7 +894,7 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
     delete[] ATb;
 
     residual_verify = sqrt(residual_verify)/sn;
-    if(residual_verify <= 1.e-8){
+    if(residual_verify <= 1.e-3){
         //cout << "x is the optimization solution." << endl;
     }
     else {
