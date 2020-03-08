@@ -31,6 +31,7 @@
 #include <ShallowWater_F.H>
 #include <SOLIDFLUID_F.H>
 #include <DERIVE_F.H>
+#include <MG_F.H>
 
 #ifdef MVAHABFSI
 #include <CTMLFSI_F.H>
@@ -15138,61 +15139,27 @@ void NavierStokes::project_right_hand_side(
 } // subroutine project_right_hand_side
 
 void NavierStokes::init_checkerboardLEV(
-  int index_MF,int project_option) {
+  int index_MF,int project_option,
+  int nsolve,int nsolveMM) {
 
  bool use_tiling=ns_tiling;
 
- int num_materials_face=num_materials_vel;
-nsolve? FIX ME
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
 
- if ((project_option==0)||
-     (project_option==1)||
-     (project_option==10)||
-     (project_option==11)|| //FSI_material_exists (2nd project)
-     (project_option==13)|| //FSI_material_exists (1st project)
-     (project_option==12)|| //pressure extrapolation
-     (project_option==3)) { //viscosity
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
- } else if ((project_option==2)||  // thermal diffusion
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
-  num_materials_face=num_materials_scalar_solve;
+ debug_ngrow(index_MF,0,51);
+
+ if (localMF[index_MF]->nGrow()==0) {
+  // do nothing
  } else
-  amrex::Error("project_option invalid2");
+  amrex::Error("localMF[index_MF]->nGrow() invalid");
+ if (localMF[index_MF]->nComp()==nsolveMM) {
+  // do nothing
+ } else
+  amrex::Error("localMF[index_MF]->nComp() invalid");
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=num_materials))
-  amrex::Error("num_materials_face invalid");
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
-
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,0,51);
- debug_ngrow(DOTMASK_MF,0,51);
- if (localMF[DOTMASK_MF]->nComp()!=num_materials_face)
-  amrex::Error("localMF[DOTMASK_MF]->nComp()!=num_materials_face");
-
- int nsolveMM=nsolve*num_materials_face;
-
- if (mf1->nComp()!=nsolveMM) {
-  std::cout << "mf1_ncomp nsolveMM " << mf1->nComp() << ' ' << nsolveMM << '\n';
-  amrex::Error("dotSum: mf1 invalid ncomp");
- }
- if (mf2->nComp()!=nsolveMM)
-  amrex::Error("mf2 invalid ncomp");
-
- Vector<Real> sum;
- sum.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  sum[tid]=0.0;
- }
 
  int finest_level=parent->finestLevel();
  if (level>finest_level)
@@ -15200,13 +15167,13 @@ nsolve? FIX ME
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(mf1->boxArray().d_numPts());
+ thread_class::init_d_numPts(localMF[index_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel 
 #endif
 {
- for (MFIter mfi(*mf1,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*localMF[index_MF],use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
 
   const int gridno = mfi.index();
@@ -15218,44 +15185,28 @@ nsolve? FIX ME
   const int* fabhi=fabgrid.hiVect();
   int bfact=parent->Space_blockingFactor(level);
 
-  FArrayBox& fab = (*mf1)[mfi];
-  FArrayBox& fab2 = (*mf2)[mfi];
+  FArrayBox& fab = (*localMF[index_MF])[mfi];
 
-  Real tsum=0.0;
-  FArrayBox& mfab=(*localMF[MASKCOEF_MF])[mfi];
-  FArrayBox& dotfab=(*localMF[DOTMASK_MF])[mfi];
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // in: NAVIERSTOKES_3D.F90
-  FORT_SUMDOT(&tsum,
+    // in: MG_3D.F90
+  FORT_CHECKERBOARD_RB(&nsolveMM,
     fab.dataPtr(),ARLIM(fab.loVect()), ARLIM(fab.hiVect()),
-    fab2.dataPtr(),ARLIM(fab2.loVect()), ARLIM(fab2.hiVect()),
-    dotfab.dataPtr(),ARLIM(dotfab.loVect()),ARLIM(dotfab.hiVect()),
-    mfab.dataPtr(),ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),
     tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    &debug_dot_product,
-    &level,&gridno,
-    &nsolve, 
-    &nsolveMM, 
-    &num_materials_face);
-  sum[tid_current] += tsum;
- } // mfi1
+    fablo,fabhi,
+    &bfact,&bfact);
+ } // mfi
 } // omp
  ns_reconcile_d_num(101);
- for (int tid=1;tid<thread_class::nthreads;tid++) {
-  sum[0]+=sum[tid];
- }
- ParallelDescriptor::ReduceRealSum(sum[0]);
 
- result=sum[0];
 } // init_checkerboardLEV
 
 void NavierStokes::init_checkerboardALL(
-  int index_MF,int project_option) {
+  int index_MF,int project_option,
+  int nsolve,int nsolveMM) {
 
  if ((project_option==0)||
      (project_option==1)||
@@ -15280,10 +15231,11 @@ void NavierStokes::init_checkerboardALL(
        amrex::Error("singular_possible invalid"); 
      } else if (local_solvability_projection==1) { // system is singular
 
-      if (singular_possible==1) { // some parts of domain are masked off.
+      if (singular_possible==1) { // some parts of domain might be masked off.
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-	ns_level.init_checkerboardLEV(index_MF,project_option);
+	ns_level.init_checkerboardLEV(index_MF,project_option,
+			nsolve,nsolveMM);
        }
       } else
        amrex::Error("singular_possible invalid"); 

@@ -7826,7 +7826,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
        setVal_array(0,nsolveMM,1.0,GMRES_BUFFER0_V_MF+j_local);
        init_checkerboardALL(GMRES_BUFFER0_V_MF+j_local,
-		     project_option);
+		     project_option,nsolve,nsolveMM);
        project_right_hand_side(GMRES_BUFFER0_V_MF+j_local,
 		     project_option,change_flag);
         // v_i dot v_j = 0 i=0..j-1
