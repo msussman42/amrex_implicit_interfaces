@@ -7709,7 +7709,11 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     Vector<Real> error_history;
     error_history.resize(m);
 
+    int use_previous_iterate=0;
+
     for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
+
+     use_previous_iterate=0;
 
      // variables initialized to 0.0
      allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+j_local);
@@ -7973,11 +7977,17 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 	      HH[j_local+1][j_local] << '\n';
        }
 
-      } // vhat_counter loop
-
+      } // vhat_counter=0..max_vhat_sweeps-1 or condition_number_blowup==0
 
       if (vhat_counter==max_vhat_sweeps) {
-       amrex::Error("vhat_counter==max_vhat_sweeps");
+
+       if (j_local>0) {
+        use_previous_iterate=1;
+       } else if (j_local==0) {
+        amrex::Error("vhat_counter==max_vhat_sweeps");
+       } else
+        amrex::Error("j_local invalid");
+
       } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
        if (condition_number_blowup==0) {
         // do nothing
@@ -7991,113 +8001,120 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      } else
       amrex::Error("condition_number_blowup invalid");
 
-      // H_j is a j+2 x j+1 matrix j=0..m-1
-      // G_j is a p(j)+1 x j+1 matrix j=0..m-1
-     for (int i1=0;i1<=j_local+1;i1++) {
-      for (int i2=0;i2<=j_local;i2++) {
-       HHGG[i1][i2]=HH[i1][i2];
+     if (use_previous_iterate==0) {
+
+       // H_j is a j+2 x j+1 matrix j=0..m-1
+       // G_j is a p(j)+1 x j+1 matrix j=0..m-1
+      for (int i1=0;i1<=j_local+1;i1++) {
+       for (int i2=0;i2<=j_local;i2++) {
+        HHGG[i1][i2]=HH[i1][i2];
+       }
       }
-     }
-     for (int i1=0;i1<=p_local;i1++) {
-      for (int i2=0;i2<=j_local;i2++) {
-       HHGG[i1+j_local+2][i2]=GG[i1][i2];
+      for (int i1=0;i1<=p_local;i1++) {
+       for (int i2=0;i2<=j_local;i2++) {
+        HHGG[i1+j_local+2][i2]=GG[i1][i2];
+       }
       }
-     }
-     status=1;
-     zeroALL(1,nsolveMM,idx_Z);
+      status=1;
+      zeroALL(1,nsolveMM,idx_Z);
 
       // sub box dimensions: p_local+j_local+3  x j_local+1
       // j_local=0..m-1
-     LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m,
-		    p_local+j_local+3,j_local+1);
-     if (status==1) {
-      for (int i2=0;i2<=j_local;i2++) {
-       aa=yy[i2];
-        // Z=Z+aa Z_{i2}
-       mf_combine(project_option,
-        idx_Z,
-        GMRES_BUFFER0_Z_MF+i2,aa,
-        idx_Z,nsolve); 
-      }
-     } else
-      amrex::Error("status invalid");
+      LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m,
+         	     p_local+j_local+3,j_local+1);
+      if (status==1) {
+       for (int i2=0;i2<=j_local;i2++) {
+        aa=yy[i2];
+         // Z=Z+aa Z_{i2}
+        mf_combine(project_option,
+         idx_Z,
+         GMRES_BUFFER0_Z_MF+i2,aa,
+         idx_Z,nsolve); 
+       }
+      } else
+       amrex::Error("status invalid");
 
       // residALL calls applyALL which calls 
       // project_right_hand_side(idx_Z).
       // At end end of residALL, 
       // project_right_hand_side(W) is called.
-     residALL(project_option,
+      residALL(project_option,
        idx_R, // rhs
        GMRES_BUFFER_W_MF, // resid
        idx_Z, // source
        nsolve);
-     Real beta_compare=0.0;
-     dot_productALL(project_option,
+      Real beta_compare=0.0;
+      dot_productALL(project_option,
 	GMRES_BUFFER_W_MF, 
 	GMRES_BUFFER_W_MF,beta_compare,nsolve);
-     if (beta_compare>=0.0) {
-      beta_compare=sqrt(beta_compare);
-      if (beta_compare<=GMRES_tol*beta) {
-       convergence_flag=1;
-      } else if (beta_compare>GMRES_tol*beta) {
-       convergence_flag=0;
+      if (beta_compare>=0.0) {
+       beta_compare=sqrt(beta_compare);
+       if (beta_compare<=GMRES_tol*beta) {
+        convergence_flag=1;
+       } else if (beta_compare>GMRES_tol*beta) {
+        convergence_flag=0;
+       } else
+        amrex::Error("beta_compare invalid");
       } else
        amrex::Error("beta_compare invalid");
-     } else
-      amrex::Error("beta_compare invalid");
 
-     if (debug_BF_GMRES==1) {
-      std::cout << "BFGMRES: beta_compare=" <<
-       beta_compare << " beta=" << beta << '\n';
-     }
-
-     error_history[j_local]=beta_compare;
-
-     if (j_local==0) {
-      if (beta_compare>beta) {
-       convergence_flag=1;
-      } else if (beta_compare<=beta) {
-       // do nothing
-      } else
-       amrex::Error("beta_compare or beta invalid");
-     } else if (j_local>0) {
-      if (beta_compare>error_history[j_local-1]) {
-       convergence_flag=1;
-      } else if (beta_compare<=error_history[j_local-1]) {
-       // do nothing
-      } else
-       amrex::Error("beta_compare or error_history[j_local-1] invalid");
-     } else
-      amrex::Error("j_local invalid");
-
-     if (convergence_flag==0) {
-
-      if (HH[j_local+1][j_local]>0.0) {
-       if ((j_local>=0)&&(j_local<m-1)) {
-
-        // variables initialized to 0.0
-        allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+j_local+1);
-
-        aa=1.0/HH[j_local+1][j_local];
-         // V=V+aa W
-        mf_combine(project_option,
-         GMRES_BUFFER0_V_MF+j_local+1,
-         GMRES_BUFFER_W_MF,aa,
-         GMRES_BUFFER0_V_MF+j_local+1,nsolve); 
-       } else if (j_local==m-1) {
-        // do nothing
-       } else
-        amrex::Error("j_local invalid");
-      } else if (HH[j_local+1][j_local]==0.0) {
-       amrex::Error("HH[j_local+1][j_local] should not be 0");
-      } else {
-       amrex::Error("HH[j_local+1][j_local] invalid");
+      if (debug_BF_GMRES==1) {
+       std::cout << "BFGMRES: beta_compare=" <<
+        beta_compare << " beta=" << beta << '\n';
       }
 
-     } else if (convergence_flag==1) {
-      // do nothing
+      error_history[j_local]=beta_compare;
+
+      if (j_local==0) {
+       if (beta_compare>beta) {
+        convergence_flag=1;
+       } else if (beta_compare<=beta) {
+        // do nothing
+       } else
+        amrex::Error("beta_compare or beta invalid");
+      } else if (j_local>0) {
+       if (beta_compare>error_history[j_local-1]) {
+        convergence_flag=1;
+       } else if (beta_compare<=error_history[j_local-1]) {
+        // do nothing
+       } else
+        amrex::Error("beta_compare or error_history[j_local-1] invalid");
+      } else
+       amrex::Error("j_local invalid");
+
+      if (convergence_flag==0) {
+
+       if (HH[j_local+1][j_local]>0.0) {
+        if ((j_local>=0)&&(j_local<m-1)) {
+
+         // variables initialized to 0.0
+         allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+j_local+1);
+
+         aa=1.0/HH[j_local+1][j_local];
+          // V=V+aa W
+         mf_combine(project_option,
+          GMRES_BUFFER0_V_MF+j_local+1,
+          GMRES_BUFFER_W_MF,aa,
+          GMRES_BUFFER0_V_MF+j_local+1,nsolve); 
+        } else if (j_local==m-1) {
+         // do nothing
+        } else
+         amrex::Error("j_local invalid");
+       } else if (HH[j_local+1][j_local]==0.0) {
+        amrex::Error("HH[j_local+1][j_local] should not be 0");
+       } else {
+        amrex::Error("HH[j_local+1][j_local] invalid");
+       }
+
+      } else if (convergence_flag==1) {
+       // do nothing
+      } else
+       amrex::Error("convergence_flag invalid");
+
+     } else if (use_previous_iterate==1) {
+      convergence_flag=1;
      } else
-      amrex::Error("convergence_flag invalid");
+      amrex::Error("use_previous_iterate invalid");
 
     } // j_local=0..m-1 (and convergence_flag==0)
 

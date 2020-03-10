@@ -1131,7 +1131,9 @@ void JacobiEigenvalue(double **A, double *D, const int m)
         }
     }
 
-    while(1){
+    int max_iter_jac_eigen=200;
+    int iter_jac_eigen=0;
+    while(iter_jac_eigen<max_iter_jac_eigen){
         double Mn = 0.0;
         for(int i = 0; i < m; ++i)
             Mn += M[i][i];
@@ -1144,8 +1146,9 @@ void JacobiEigenvalue(double **A, double *D, const int m)
         }
         Dn = sqrt(Dn);
 
-        if(std::abs(M[max_i][max_j]) <= 1.e-16 * Dn || m == 1)
-            break;
+        if((std::abs(M[max_i][max_j]) <= 1.e-11 * Dn)||
+	   (m == 1))
+         break;
 
         double aii = M[max_i][max_i];
         double ajj = M[max_j][max_j];
@@ -1241,6 +1244,18 @@ void JacobiEigenvalue(double **A, double *D, const int m)
                 }
             }
         }
+
+	iter_jac_eigen++;
+    }
+    if (iter_jac_eigen>=max_iter_jac_eigen) {
+#if (STANDALONE==1)
+     abort();
+#else
+     amrex::Error("iter_jac_eigen>=max_iter_jac_eigen");
+#endif
+    }
+    if (debug_MATRIX_ANALYSIS==1) {
+     std::cout << "iter_jac_eigen=" << iter_jac_eigen << endl;
     }
 
     delete[] imax; //SUSSMAN

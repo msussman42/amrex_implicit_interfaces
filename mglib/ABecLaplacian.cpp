@@ -2784,7 +2784,11 @@ ABecLaplacian::pcg_GMRES_solve(
     Vector<Real> error_history;
     error_history.resize(m);
 
+    int use_previous_iterate=0;
+
     for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
+
+     use_previous_iterate=0;
 
      if (j_local>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
       GMRES_Z_MF[j_local][coarsefine]=
@@ -3150,29 +3154,29 @@ ABecLaplacian::pcg_GMRES_solve(
 	      HH[j_local+1][j_local] << '\n';
        }
 
-      } // vhat_counter loop
+      } // vhat_counter=0..max_vhat_sweeps-1 or condition_number_blowup==0
 
       if (vhat_counter==max_vhat_sweeps) {
 
-
-	      FIX ME if this happens then just use the previous value for
-		      z
-
-
-       std::cout << "vhat_counter,j_local,p_local,m " <<
-        vhat_counter << ' ' << ' ' << j_local << ' ' <<
-        p_local << ' ' << m << endl;
-       std::cout << "beta= " << beta << endl;
-       for (int eh=0;eh<j_local;eh++) {
-        std::cout << "eh,error_history[eh] " << eh << ' ' <<
-         error_history[eh] << endl;
-       }
-       std::cout << "level= " << level << endl;
-       std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
-       std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-       std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
-       std::cout << "gbox[level]= " << gbox[level] << '\n';
-       amrex::Error("vhat_counter==max_vhat_sweeps mglib");
+       if (j_local>0) {
+	use_previous_iterate=1;
+       } else if (j_local==0) {
+        std::cout << "vhat_counter,j_local,p_local,m " <<
+         vhat_counter << ' ' << ' ' << j_local << ' ' <<
+         p_local << ' ' << m << endl;
+        std::cout << "beta= " << beta << endl;
+        for (int eh=0;eh<j_local;eh++) {
+         std::cout << "eh,error_history[eh] " << eh << ' ' <<
+          error_history[eh] << endl;
+        }
+        std::cout << "level= " << level << endl;
+        std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
+        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
+        std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
+        std::cout << "gbox[level]= " << gbox[level] << '\n';
+        amrex::Error("vhat_counter==max_vhat_sweeps mglib");
+       } else
+        amrex::Error("j_local invalid");
 
       } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
        if (condition_number_blowup==0) {
@@ -3187,115 +3191,122 @@ ABecLaplacian::pcg_GMRES_solve(
      } else
       amrex::Error("condition_number_blowup invalid");
 
-      // H_j is a j+2 x j+1 matrix j=0..m-1
-      // G_j is a p(j)+1 x j+1 matrix j=0..m-1
-     for (int i1=0;i1<=j_local+1;i1++) {
-      for (int i2=0;i2<=j_local;i2++) {
-       HHGG[i1][i2]=HH[i1][i2];
-      }
-     }
-     for (int i1=0;i1<=p_local;i1++) {
-      for (int i2=0;i2<=j_local;i2++) {
-       HHGG[i1+j_local+2][i2]=GG[i1][i2];
-      }
-     }
-     status=1;
-     z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+     if (use_previous_iterate==0) {
 
-      // sub box dimensions: p_local+j_local+3  x j_local+1
-      // j_local=0..m-1
-     LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m,
+       // H_j is a j+2 x j+1 matrix j=0..m-1
+       // G_j is a p(j)+1 x j+1 matrix j=0..m-1
+      for (int i1=0;i1<=j_local+1;i1++) {
+       for (int i2=0;i2<=j_local;i2++) {
+        HHGG[i1][i2]=HH[i1][i2];
+       }
+      }
+      for (int i1=0;i1<=p_local;i1++) {
+       for (int i2=0;i2<=j_local;i2++) {
+        HHGG[i1+j_local+2][i2]=GG[i1][i2];
+       }
+      }
+      status=1;
+      z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+
+       // sub box dimensions: p_local+j_local+3  x j_local+1
+       // j_local=0..m-1
+      LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m,
 		    p_local+j_local+3,j_local+1);
-     if (status==1) {
-      for (int i2=0;i2<=j_local;i2++) {
-       aa=yy[i2];
-        // Z=Z+aa Z_{i2}
-       CG_advance((*z_in),aa,(*z_in),
-                  (*GMRES_Z_MF[i2][coarsefine]),level);
-      }
-     } else
-      amrex::Error("status invalid");
+      if (status==1) {
+       for (int i2=0;i2<=j_local;i2++) {
+        aa=yy[i2];
+         // Z=Z+aa Z_{i2}
+        CG_advance((*z_in),aa,(*z_in),
+                   (*GMRES_Z_MF[i2][coarsefine]),level);
+       }
+      } else
+       amrex::Error("status invalid");
 
-     project_null_space(*z_in,level);
-      // resid,rhs,soln
-     residual((*GMRES_W_MF[coarsefine]),  // resid
-              (*r_in),  // rhs
-              (*z_in),  // soln
-              level,
+      project_null_space(*z_in,level);
+       // resid,rhs,soln
+      residual((*GMRES_W_MF[coarsefine]),  // resid
+               (*r_in),  // rhs
+               (*z_in),  // soln
+               level,
 	      (*pbdryhom_in),bcpres_array);
-     project_null_space((*GMRES_W_MF[coarsefine]),level);
-     Real beta_compare=0.0;
-     LP_dot(*GMRES_W_MF[coarsefine],
-            *GMRES_W_MF[coarsefine],level,beta_compare);
-     if (beta_compare>=0.0) {
-      beta_compare=sqrt(beta_compare);
-      if (beta_compare<=GMRES_tol*beta) {
-       convergence_flag=1;
-      } else if (beta_compare>GMRES_tol*beta) {
-       convergence_flag=0;
+      project_null_space((*GMRES_W_MF[coarsefine]),level);
+      Real beta_compare=0.0;
+      LP_dot(*GMRES_W_MF[coarsefine],
+             *GMRES_W_MF[coarsefine],level,beta_compare);
+      if (beta_compare>=0.0) {
+       beta_compare=sqrt(beta_compare);
+       if (beta_compare<=GMRES_tol*beta) {
+        convergence_flag=1;
+       } else if (beta_compare>GMRES_tol*beta) {
+        convergence_flag=0;
+       } else
+        amrex::Error("beta_compare invalid");
       } else
        amrex::Error("beta_compare invalid");
-     } else
-      amrex::Error("beta_compare invalid");
 
-     if (debug_BF_GMRES==1) {
-      std::cout << "BFGMRES mglib: beta_compare=" <<
-       beta_compare << " beta=" << beta << '\n';
-     }
-
-     error_history[j_local]=beta_compare;
-
-     if (j_local==0) {
-      if (beta_compare>beta) {
-       convergence_flag=1;
-      } else if (beta_compare<=beta) {
-       // do nothing
-      } else
-       amrex::Error("beta_compare or beta invalid");
-     } else if (j_local>0) {
-      if (beta_compare>error_history[j_local-1]) {
-       convergence_flag=1;
-      } else if (beta_compare<=error_history[j_local-1]) {
-       // do nothing
-      } else
-       amrex::Error("beta_compare or error_history[j_local-1] invalid");
-     } else
-      amrex::Error("j_local invalid");
-
-
-     if (convergence_flag==0) {
-
-      if (HH[j_local+1][j_local]>0.0) {
-       if ((j_local>=0)&&(j_local<m-1)) {
-
-        if (j_local+1>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
-         GMRES_V_MF[j_local+1][coarsefine]=
-          new MultiFab(gbox[level],dmap_array[level],
-                       nsolve_bicgstab,nghostRHS,
-                       MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
-        }
-        GMRES_V_MF[j_local+1][coarsefine]->
-          setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-
-        aa=1.0/HH[j_local+1][j_local];
-         // V=V+aa W
-        CG_advance((*GMRES_V_MF[j_local+1][coarsefine]),aa,
-                   (*GMRES_V_MF[j_local+1][coarsefine]),
-                   (*GMRES_W_MF[coarsefine]),level);
-       } else if (j_local==m-1) {
-        // do nothing
-       } else
-        amrex::Error("j_local invalid");
-      } else if (HH[j_local+1][j_local]==0.0) {
-       amrex::Error("HH[j_local+1][j_local] should not be 0");
-      } else {
-       amrex::Error("HH[j_local+1][j_local] invalid");
+      if (debug_BF_GMRES==1) {
+       std::cout << "BFGMRES mglib: beta_compare=" <<
+        beta_compare << " beta=" << beta << '\n';
       }
 
-     } else if (convergence_flag==1) {
-      // do nothing
+      error_history[j_local]=beta_compare;
+
+      if (j_local==0) {
+       if (beta_compare>beta) {
+        convergence_flag=1;
+       } else if (beta_compare<=beta) {
+        // do nothing
+       } else
+        amrex::Error("beta_compare or beta invalid");
+      } else if (j_local>0) {
+       if (beta_compare>error_history[j_local-1]) {
+        convergence_flag=1;
+       } else if (beta_compare<=error_history[j_local-1]) {
+        // do nothing
+       } else
+        amrex::Error("beta_compare or error_history[j_local-1] invalid");
+      } else
+       amrex::Error("j_local invalid");
+
+
+      if (convergence_flag==0) {
+
+       if (HH[j_local+1][j_local]>0.0) {
+        if ((j_local>=0)&&(j_local<m-1)) {
+
+         if (j_local+1>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
+          GMRES_V_MF[j_local+1][coarsefine]=
+           new MultiFab(gbox[level],dmap_array[level],
+                        nsolve_bicgstab,nghostRHS,
+                        MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
+         }
+         GMRES_V_MF[j_local+1][coarsefine]->
+           setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+
+         aa=1.0/HH[j_local+1][j_local];
+          // V=V+aa W
+         CG_advance((*GMRES_V_MF[j_local+1][coarsefine]),aa,
+                    (*GMRES_V_MF[j_local+1][coarsefine]),
+                    (*GMRES_W_MF[coarsefine]),level);
+        } else if (j_local==m-1) {
+         // do nothing
+        } else
+         amrex::Error("j_local invalid");
+       } else if (HH[j_local+1][j_local]==0.0) {
+        amrex::Error("HH[j_local+1][j_local] should not be 0");
+       } else {
+        amrex::Error("HH[j_local+1][j_local] invalid");
+       }
+
+      } else if (convergence_flag==1) {
+       // do nothing
+      } else
+       amrex::Error("convergence_flag invalid");
+
+     } else if (use_previous_iterate==1) {
+      convergence_flag=1;
      } else
-      amrex::Error("convergence_flag invalid");
+      amrex::Error("use_previous_iterate invalid");
 
     } // j_local=0..m-1 (and convergence_flag==0)
 
