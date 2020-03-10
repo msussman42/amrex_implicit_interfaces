@@ -1132,7 +1132,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
     }
 
     int max_iter_jac_eigen=200;
-    int min_iter_jac_eigen=10;
+    int min_iter_jac_eigen=40;
     int iter_jac_eigen=0;
     int converge_flag=0;
     double Dn = 0.0;
@@ -1157,7 +1157,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
             (iter_jac_eigen>=0)) {
          converge_flag=0;
         } else if (iter_jac_eigen>min_iter_jac_eigen) {
-         if(std::abs(M[max_i][max_j]) <= 1.e-11 * Dn) {
+         if(std::abs(M[max_i][max_j]) <= 1.e-16 * Dn) {
           converge_flag=1;
          } else
           converge_flag=0;
@@ -1270,10 +1270,15 @@ void JacobiEigenvalue(double **A, double *D, const int m)
     }
 
     if (iter_jac_eigen>=max_iter_jac_eigen) {
+     std::cout << "max_i,max_j,m " << max_i << ' ' << max_j << ' ' << 
+	     m << endl;
+     std::cout << "std::abs(M[max_i][max_j]) " <<
+	     std::abs(M[max_i][max_j]) << endl;
+     std::cout << "Dn=" << Dn << endl;
 #if (STANDALONE==1)
      abort();
 #else
-     amrex::Error("iter_jac_eigen>=max_iter_jac_eigen");
+     amrex::Warning("Warning:iter_jac_eigen>=max_iter_jac_eigen");
 #endif
     }
     if (debug_MATRIX_ANALYSIS==1) {
