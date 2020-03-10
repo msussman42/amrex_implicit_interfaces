@@ -1132,23 +1132,39 @@ void JacobiEigenvalue(double **A, double *D, const int m)
     }
 
     int max_iter_jac_eigen=200;
+    int min_iter_jac_eigen=10;
     int iter_jac_eigen=0;
-    while(iter_jac_eigen<max_iter_jac_eigen){
-        double Mn = 0.0;
-        for(int i = 0; i < m; ++i)
-            Mn += M[i][i];
-        Mn = sqrt(Mn);
+    int converge_flag=0;
+    double Dn = 0.0;
 
-        double Dn = 0.0;
+    if (m==1) {
+     D[0]=M[0][0];
+     Dn=std::abs(D[0]);
+     converge_flag=1;
+    } else if (m>1) {
+
+     while((iter_jac_eigen<max_iter_jac_eigen)&&
+           (converge_flag==0)) {
+
+        Dn = 0.0;
         for(int i = 0; i < m; ++i){
             D[i] = M[i][i];
             Dn += D[i] * D[i];
         }
         Dn = sqrt(Dn);
 
-        if((std::abs(M[max_i][max_j]) <= 1.e-11 * Dn)||
-	   (m == 1))
-         break;
+        if ((iter_jac_eigen<=min_iter_jac_eigen)&&
+            (iter_jac_eigen>=0)) {
+         converge_flag=0;
+        } else if (iter_jac_eigen>min_iter_jac_eigen) {
+         if(std::abs(M[max_i][max_j]) <= 1.e-11 * Dn) {
+          converge_flag=1;
+         } else
+          converge_flag=0;
+        } else {
+         std::cout << "iter_jac_eigen invalid\n";
+         abort();
+        }
 
         double aii = M[max_i][max_i];
         double ajj = M[max_j][max_j];
@@ -1246,7 +1262,13 @@ void JacobiEigenvalue(double **A, double *D, const int m)
         }
 
 	iter_jac_eigen++;
+     }
+
+    } else {
+     std::cout << "m invalid\n";
+     abort();
     }
+
     if (iter_jac_eigen>=max_iter_jac_eigen) {
 #if (STANDALONE==1)
      abort();
