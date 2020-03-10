@@ -3831,6 +3831,7 @@ real(kind=8)                     :: ccrad2
 real(kind=8)                     :: ccrad3
 real(kind=8)                     :: distcircle
 real(kind=8)                     :: dist2_opp
+real(kind=8)                     :: len_side
 
 
 
@@ -3846,7 +3847,9 @@ endif
 
 if(iceshape.eq.1)then  ! round ice
 
-
+ ! arc 1: x4 (0,.3) to x5 (0.2,0.5) center cc3 (0.0,0.5) rad=ccrad3 concave up
+ ! arc 2: x5 (.2,.5) to x2 (.4,.5) center cc2 rad=ccrad2=.3 concave down
+ ! ice: x1, x2, x6, center cc1
 x1(1)=0.5d0       !                        * x1
 x1(2)=0.6d0       !                      *
 x2(1)=0.4d0       !                *   *
@@ -3854,8 +3857,8 @@ x2(2)=0.5d0       !           x5*    *x2    cc1
 x3(1)=0.5d0       !     cc3    *       * 
 x3(2)=0.5d0       !          *           *  * x6
 x4(1)=0.0d0       !         *      cc2       
-x4(2)=0.2d0       !      x4*                
-x5(1)=0.3d0       ! 
+x4(2)=0.3d0       !      x4*                
+x5(1)=0.2d0       ! 
 x5(2)=0.5d0
 x6(1)=0.5d0
 x6(2)=0.4d0         
@@ -3863,11 +3866,12 @@ x6(2)=0.4d0
 ! centers of the circles 
 cc1(1)=0.5d0
 cc1(2)=0.5d0
-ccrad=(x1(2)-x6(2))
+ccrad=(x1(2)-x6(2))/2.0d0
 
-cc2(1)=0.35d0
+cc2(1)=0.5d0*(x5(1)+x2(1)) 
 ccrad2=0.3d0
-cc2(2)=0.5d0-sqrt(ccrad2**2.0-0.05d0**2.0d0)
+len_side=(x2(1)-x5(1))/2.0d0
+cc2(2)=x5(2)-sqrt(ccrad2**2.0-len_side**2.0d0)
 cc3(1)=0.0d0
 cc3(2)=0.5d0
 ccrad3=abs(x4(2)-cc3(2))
@@ -3876,32 +3880,35 @@ if (ccrad.le.0.0d0) then
  print *,"ccrad invalid"
  stop
 endif
-! material 3
+! positive in material 3 (ice)
 distcircle=ccrad-sqrt( (xy(1)-cc1(1))**2 + (xy(2)-cc1(2))**2 )
 
 if (xy(1).le.x5(1)) then
  ! cc3 is center of first arc
+ ! dist2 positive in the gas and gas "ghost" regions
  if (ccrad3.gt.0.0d0) then
-  dist2=xy(2)-cc3(2)+sqrt(ccrad3**2-(xy(1)-cc3(1))**2)
+  dist2=xy(2)-(cc3(2)-sqrt(ccrad3**2-(xy(1)-cc3(1))**2))
  else
   print *,"ccrad3 invalid"
   stop
  endif
+ ! dist2 positive in the gas and gas "ghost" regions
 else if (xy(1).le.x2(1)) then
- dist2=xy(2)-cc2(2)-sqrt(ccrad2**2-(xy(1)-cc2(1))**2)
+ dist2=xy(2)-(cc2(2)+sqrt(ccrad2**2-(xy(1)-cc2(1))**2))
 else
  dist2=xy(2)-x2(2)
 endif
+ ! dist2_opp positive in the liquid and liquid "ghost" regions
 dist2_opp=-dist2
 
-if(imat.eq.3)then
+if(imat.eq.3)then  ! ice
  if (1.eq.0) then
   call l2normd(2,xy,x3,dist1)
   dist=0.1d0-dist1
  else
   dist=distcircle
  endif
-elseif(imat.eq.1)then
+elseif(imat.eq.1)then  !liquid
  if (1.eq.0) then
   call dist_point_to_arc(xy,x1,x2,cc1,dist1)
   call dist_point_to_arc(xy,x2,x5,cc2,dist2)
@@ -3910,7 +3917,7 @@ elseif(imat.eq.1)then
  else
   dist=min(dist2_opp,-distcircle)
  endif
-elseif(imat.eq.2)then
+elseif(imat.eq.2)then  ! gas
  if (1.eq.0) then
   call dist_point_to_arc(xy,x2,x6,cc1,dist1)
   call dist_point_to_arc(xy,x2,x5,cc2,dist2)
@@ -4119,7 +4126,7 @@ else
  stop
 endif
 
-dist=signtemp*dist
+
 
 
 end subroutine dist_fns_melting_ice

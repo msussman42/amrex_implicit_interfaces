@@ -68,7 +68,8 @@ double CondNum(double **H, const int m, const int n,
      for(int j = 0; j < sn; ++j){
       MTM[i][j] = 0.0;
       for(int k = 0; k < sm; ++k)
-       MTM[i][j] += H[k][i] * H[k][j];
+       MTM[i][j] += M[k][i] * M[k][j];
+//       MTM[i][j] += H[k][i] * H[k][j];
      }
     }
 
@@ -1106,7 +1107,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
     }
     for(int i = 0; i < m; ++i){
         for(int j = 0; j < m; ++j)
-            M[i][j] = A[i][j];
+            M[i][j] = 0.5*(A[i][j]+A[j][i]);
     }
 
     int* imax=new int[m]; //SUSSMAM
@@ -1115,6 +1116,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
     int max_j = 0;
     for(int i = 0; i < m-1; ++i){
         imax[i] = i+1;
+         // upper triangular part
         for(int j = i+2; j < m; ++j){
             if(std::abs(M[i][j]) > std::abs(M[i][imax[i]]))
                 imax[i] = j;
@@ -1132,7 +1134,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
     }
 
     int max_iter_jac_eigen=200;
-    int min_iter_jac_eigen=40;
+    int min_iter_jac_eigen=0;
     int iter_jac_eigen=0;
     int converge_flag=0;
     double Dn = 0.0;
@@ -1191,6 +1193,7 @@ void JacobiEigenvalue(double **A, double *D, const int m)
         if(mj == m-1) mj = mj -1;
         for(int i = 0; i <= mj; ++i){
             imax[i] = i+1;
+             // upper triangular part
             for(int j = i+2; j < m; ++j){
 
 	        if ((i>=0)&&(i<m)) {
