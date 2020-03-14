@@ -3504,7 +3504,12 @@ ABecLaplacian::CG_solve(
     int& cg_cycles_out,
     int nsverbose,int is_bottom,
     MultiFab& sol,
+     //(rhs dot v_null)/(v_null dot v_null)
+     //zero for now.
+    Vector<Real> null_space_sol,  
     MultiFab& rhs,
+     // should be zero=sum p_ijk
+    Vector<Real> null_space_rhs,  
     Real eps_abs,Real bot_atol,
     MultiFab& pbdry,
     Vector<int> bcpres_array,
@@ -3557,6 +3562,12 @@ ABecLaplacian::CG_solve(
  //
  BL_ASSERT(sol.boxArray() == LPboxArray(level));
  BL_ASSERT(rhs.boxArray() == LPboxArray(level));
+
+ if (null_space_factor.size()>=0) {
+  // do nothing
+ } else
+  amrex::Error("null_space_factor.size() invalid");
+
  BL_ASSERT(pbdry.boxArray() == LPboxArray(level));
 
  Real relative_error=1.0e-12;
@@ -3571,8 +3582,10 @@ ABecLaplacian::CG_solve(
  bprof.stop();
 #endif
 
- project_null_space(rhs,level);
- project_null_space(sol,level);
+ int rhs_flag=1;
+ project_null_space(rhs,null_space_factor,level);
+ rhs_flag=0;
+ project_null_space(sol,null_space_factor,level);
 
  CG_rhs_resid_cor_form[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
  MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
@@ -3582,10 +3595,13 @@ ABecLaplacian::CG_solve(
   if (ParallelDescriptor::IOProcessor())
    std::cout << "CGSolver: is_bottom= " << is_bottom << '\n';
 
+ Vector<Real> null_space_CG_r;
+
   // resid,rhs,soln
  residual((*CG_r[coarsefine]),(*CG_rhs_resid_cor_form[coarsefine]),
-    sol,level,pbdry,bcpres_array);
- project_null_space((*CG_r[coarsefine]),level);
+    sol,null_space_factor,level,pbdry,bcpres_array);
+ rhs_flag=1;
+ project_null_space((*CG_r[coarsefine]),null_space_factor,level);
 
   // put solution and residual in residual correction form
  CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_bicgstab,1);

@@ -85,7 +85,13 @@ public:
     void CG_solve(
       int& cg_cycles_out,
       int nsverbose,int is_bottom,
-      MultiFab& solnL,MultiFab& rhsL,
+      MultiFab& solnL,
+       //(rhs dot v_null)/(v_null dot v_null)
+       //zero for now.
+      Vector<Real> null_space_sol,  
+      MultiFab& rhsL,
+       // should be zero=sum p_ijk
+      Vector<Real> null_space_rhs,  
       Real eps_abs,Real bot_atol,
       MultiFab& pbdry,Vector<int> bcpres_array,
       int usecg_at_bottom,
