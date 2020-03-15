@@ -32,7 +32,8 @@ namespace amrex{
 // status==0 failure
 extern void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
  int& status,int numelem);
-extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
+extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
+ int m,int m_small,
  int caller_id,int& status);
 
 // if ncomp_input==-1, then ncomp=S_crse.ncomp()
@@ -7591,7 +7592,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       GMRES_BUFFER0_Z_MF+j,
       GMRES_BUFFER0_V_MF+j,nsolve);
 
-      // w=A Z
+      // W=A Z
       // 1. (begin)calls project_right_hand_side(Z)
       // 2. (end)  calls project_right_hand_side(W)
      applyALL(project_option,
@@ -7637,24 +7638,16 @@ void NavierStokes::multiphase_GMRES_preconditioner(
   
     status=1;
 
-    if (m_small==m) {
-     int caller_id=1;
-     GMRES_MIN_CPP(HH,beta,yy,m,caller_id,status);
-    } else if ((m_small>=1)&&
-               (m_small<m)) {
-     Real** HH_small=new Real*[m_small+1];
-     for (int i=0;i<m_small+1;i++) { 
-      HH_small[i]=new Real[m_small];
-      for (int j=0;j<m_small;j++) 
-       HH_small[i][j]=HH[i][j];
-     }
-     int caller_id=2;
-     GMRES_MIN_CPP(HH_small,beta,yy,m_small,caller_id,status);
+    if ((m_small>=1)&&
+        (m_small<=m)) {
 
-     for (int i=0;i<m_small+1;i++) 
-      delete [] HH_small[i];
-     delete [] HH_small;
+     int caller_id=1;
+     GMRES_MIN_CPP(HH,beta,yy,
+	m,m_small,
+	caller_id,status);
+
     } else if (m_small==0) {
+
       // Z=M^{-1}R
       // first calls: zeroALL(1,nsolveMM,idx_Z) 
       // Z=project(Z)
@@ -7662,6 +7655,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       project_option,project_timings,
       presmooth,postsmooth,
       idx_Z,idx_R,nsolve);
+
     } else {
      std::cout << "m_small= " << m_small << '\n';
      amrex::Error("NavierStokes3.cpp m_small invalid");
@@ -7736,7 +7730,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       GMRES_BUFFER0_Z_MF+j_local,
       GMRES_BUFFER0_V_MF+j_local,nsolve);
 
-      // w=A Z
+      // W=A Z
       // 1. (begin)calls project_right_hand_side(Z)
       // 2. (end)  calls project_right_hand_side(W)
      applyALL(project_option,
@@ -7925,7 +7919,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
          GMRES_BUFFER0_Z_MF+j_local,
          GMRES_BUFFER0_V_MF+j_local,nsolve);
 
-         // w=A Z
+         // W=A Z
          // 1. (begin)calls project_right_hand_side(Z)
          // 2. (end)  calls project_right_hand_side(W)
        applyALL(project_option,
@@ -9884,7 +9878,7 @@ void NavierStokes::multiphase_project(int project_option) {
              a1=1.0;
              a2=w1;
              mf_combine(project_option,
-	     bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
+	       bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
 	     change_flag=0;
              project_right_hand_side(MAC_PHI_CRSE_MF,
                   project_option,change_flag);

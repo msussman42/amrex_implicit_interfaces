@@ -31,7 +31,7 @@ Lp.bottom_smooth_type=2
 
 # multigrid class
 mg.verbose = 1
-cg.verbose = 3
+cg.verbose = 1
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle

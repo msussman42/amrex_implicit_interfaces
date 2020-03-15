@@ -40,7 +40,8 @@ int ABecLaplacian::MG_def_nu_f         = 8;
 int ABecLaplacian::MG_def_verbose      = 0;
 int ABecLaplacian::MG_def_nu_b         = 0;
 
-extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
+extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
+ int m,int m_small,
  int caller_id,int& status);
 
 static
@@ -2517,6 +2518,7 @@ ABecLaplacian::pcg_solve(
 	   *r_in,
 	   level,
 	   *pbdryhom_in,bcpres_array,smooth_type);
+    project_null_space(*z_in,level);
    }
   } else
    amrex::Error("use_mg_precond invalid");
@@ -2705,24 +2707,16 @@ ABecLaplacian::pcg_GMRES_solve(
  
     status=1;
 
-    if (m_small==m) {
-     int caller_id=3;
-     GMRES_MIN_CPP(HH,beta,yy,m,caller_id,status);
-    } else if ((m_small>=1)&&
-               (m_small<m)) {
-     Real** HH_small=new Real*[m_small+1];
-     for (int i=0;i<m_small+1;i++) { 
-      HH_small[i]=new Real[m_small];
-      for (int j=0;j<m_small;j++) 
-       HH_small[i][j]=HH[i][j];
-     }
-     int caller_id=4;
-     GMRES_MIN_CPP(HH_small,beta,yy,m_small,caller_id,status);
+    if ((m_small>=1)&&
+        (m_small<=m)) {
 
-     for (int i=0;i<m_small+1;i++) 
-      delete [] HH_small[i];
-     delete [] HH_small;
+     int caller_id=3;
+     GMRES_MIN_CPP(HH,beta,yy,
+       m,m_small,
+       caller_id,status);
+
     } else if (m_small==0) {
+
      // Z=M^{-1}R
      // z=project_null_space(z)
      // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
@@ -2736,6 +2730,7 @@ ABecLaplacian::pcg_GMRES_solve(
       presmooth,postsmooth,
       use_PCG,
       level,3);
+
     } else {
      std::cout << "m_small= " << m_small << '\n';
      amrex::Error("CGSolver.cpp m_small invalid");
@@ -3973,6 +3968,7 @@ ABecLaplacian::CG_solve(
 
  }  // end of CGSolver loop
 
+  // sol=sol+CG_delta_sol
   // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost
  sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_bicgstab,0,0);
  project_null_space(sol,level);
@@ -4390,6 +4386,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
 
   for (int i = MG_nu_f; i > 0; i--) {
    smooth(solL,rhsL,level,pbdry,bcpres_array,smooth_type); 
+   project_null_space(solL,level);
 
    if (MG_verbose > 1 || (i == 1 && MG_verbose)) {
     Real error = MG_errorEstimate(level,pbdry,bcpres_array);
@@ -4398,7 +4395,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
        << " error/error0 " << error/error0 << " error " 
        << error << '\n';
    }
-  }
+  } // i=MG_nu_f downto 1
  } else {
   int local_meets_tol=0;
   Real local_error0=0.0;
@@ -4457,6 +4454,7 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
 
   for (int i = presmooth ; i > 0 ; i--) {
    smooth(solL,rhsL,level,pbdry,bcpres_array,smooth_type);
+   project_null_space(solL,level);
   }
   residual(*MG_res[level],rhsL,solL,level,pbdry,bcpres_array);
   project_null_space(*MG_res[level],level);

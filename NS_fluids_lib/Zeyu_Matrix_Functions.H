@@ -1,7 +1,8 @@
 #ifndef ZEYU_MATRIX_FUNCTIONS_H
 #define ZEYU_MATRIX_FUNCTIONS_H
 
-#define breakdown_free_flag (1)
+#define breakdown_free_flag (0)
+#define check_step_by_step (1)
 #define debug_BF_GMRES (1)
 #define debug_MATRIX_ANALYSIS (1)
 

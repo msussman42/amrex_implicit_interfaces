@@ -17523,7 +17523,8 @@ NavierStokes::post_init (Real stop_time)
 //         .
 //         .
 //     h1m h2m h3m h4m ... hmm hm+1,m
-void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
+void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
+		int m,int m_small,
 		int caller_id,int& status) {
 
 #define profile_gmres 0
@@ -17542,16 +17543,29 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
 
  status=1;
 
- Real** HCOPY=new Real*[m+1];
- for (int i=0;i<m+1;i++) 
-  HCOPY[i]=new Real[m];
+ if ((m_small>=1)&&(m_small<=m)) {
+  // do nothing
+ } else
+  amrex::Error("m_small invalid");
 
- Real** HT=new Real*[m];
- for (int i=0;i<m;i++) 
-  HT[i]=new Real[m+1];
+ Real** HH_small=new Real*[m_small+1];
+ for (int i=0;i<m_small+1;i++) { 
+  HH_small[i]=new Real[m_small];
+  for (int j=0;j<m_small;j++) 
+   HH_small[i][j]=HH[i][j];
+ }
 
- for (int i=0;i<m;i++) { 
-  for (int j=0;j<m+1;j++) {
+ Real** HCOPY=new Real*[m_small+1];
+ for (int i=0;i<m_small+1;i++) 
+  HCOPY[i]=new Real[m_small];
+
+ Real** HT=new Real*[m_small];
+ for (int i=0;i<m_small;i++) 
+  HT[i]=new Real[m_small+1];
+
+ for (int i=0;i<m_small;i++) { 
+  for (int j=0;j<m_small+1;j++) {
+
    if (HH[j][i]<0.0) {
     // do nothing
    } else if (HH[j][i]>0.0) {
@@ -17572,10 +17586,31 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
    } else
     amrex::Error("i or j became corrupt");
 
+   if (HH_small[j][i]<0.0) {
+    // do nothing
+   } else if (HH_small[j][i]>0.0) {
+    // do nothing
+   } else if (HH_small[j][i]==0.0) {
+    // do nothing
+   } else {
+    status=0;
+    amrex::Error("HH_small[j][i] corrupt");
+   }
+   if (j>=i+2) {
+    if (HH_small[j][i]==0.0) {
+     // do nothing
+    } else
+     amrex::Error("HH_small should be 0");
+   } else if (j<i+2) {
+    // check nothing
+   } else
+    amrex::Error("i or j became corrupt");
+
    HT[i][j]=HH[j][i];
    HCOPY[j][i]=HH[j][i];
-  } // j=0;j<m+1
- } // i=0;i<m
+  } // j=0;j<m_small+1
+ } // i=0;i<m_small
+
  if (beta>0.0) {
   // do nothing
  } else {
@@ -17584,24 +17619,24 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   amrex::Error("beta invalid");
  }
 
- Real* sn=new Real[m];
- Real* cs=new Real[m];
- Real* h=new Real[m+1];
- Real* beta_vec=new Real[m+1];
+ Real* sn=new Real[m_small];
+ Real* cs=new Real[m_small];
+ Real* h=new Real[m_small+1];
+ Real* beta_vec=new Real[m_small+1];
 
- for (int i=0;i<m;i++) {
+ for (int i=0;i<m_small;i++) {
   sn[i]=0.0;
   cs[i]=0.0;
  }
- for (int i=0;i<m+1;i++) {
+ for (int i=0;i<m_small+1;i++) {
   h[i]=0.0;
   beta_vec[i]=0.0;
  }
  beta_vec[0]=beta;
 
- for (int k=1;k<=m;k++) {
+ for (int k=1;k<=m_small;k++) {
 
-  for (int i=1;i<=m+1;i++)
+  for (int i=1;i<=m_small+1;i++)
    h[i-1]=0.0;
   for (int i=1;i<=k+1;i++)
    h[i-1]=HCOPY[i-1][k-1];
@@ -17642,14 +17677,14 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   beta_vec[k]=-sn[k-1]*beta_vec[k-1];
   beta_vec[k-1]=cs[k-1]*beta_vec[k-1];
 
- } // k=1..m
+ } // k=1..m_small
 
  Real min_diag=std::abs(HCOPY[0][0]);
 
- for (int k=m;k>=1;k--) {
+ for (int k=m_small;k>=1;k--) {
 
   yy[k-1]=beta_vec[k-1];
-  for (int j=k+1;j<=m;j++)
+  for (int j=k+1;j<=m_small;j++)
    yy[k-1]-=HCOPY[k-1][j-1]*yy[j-1];
   Real hdiag=HCOPY[k-1][k-1];
   if (std::abs(hdiag)<min_diag)
@@ -17659,26 +17694,26 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   else
    amrex::Error("hdiag became 0");
 
- } // k=m ... 1 
+ } // k=m_small ... 1 
 
  if (1==1) {
-  Real** HTH=new Real*[m];
-  for (int i=0;i<m;i++) { 
-   HTH[i]=new Real[m];
-   for (int j=0;j<m;j++) {
+  Real** HTH=new Real*[m_small];
+  for (int i=0;i<m_small;i++) { 
+   HTH[i]=new Real[m_small];
+   for (int j=0;j<m_small;j++) {
     HTH[i][j]=0.0;
-    for (int k=0;k<m+1;k++)
-     HTH[i][j]+=HH[k][i]*HH[k][j];
+    for (int k=0;k<m_small+1;k++)
+     HTH[i][j]+=HH_small[k][i]*HH_small[k][j];
    }
   }
   residual_verify=0.0;
-  Real* HTHy=new Real[m];
-  for (int i=0;i<m;i++) {
+  Real* HTHy=new Real[m_small];
+  for (int i=0;i<m_small;i++) {
    HTHy[i]=0.0;
-   for (int j=0;j<m;j++) {
+   for (int j=0;j<m_small;j++) {
     HTHy[i]+=HTH[i][j]*yy[j];
    }
-   Real res_comp=HTHy[i]-HH[0][i]*beta;
+   Real res_comp=HTHy[i]-HH_small[0][i]*beta;
    residual_verify+=res_comp*res_comp;
   }
   residual_verify=sqrt(residual_verify);
@@ -17688,15 +17723,16 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
    std::cout << "residual_verify= " << residual_verify << '\n';
    std::cout << "min_diag= " << min_diag << '\n';
    std::cout << "beta= " << beta << '\n';
-   for (int j=0;j<m;j++) {
+   for (int j=0;j<m_small;j++) {
     std::cout << "j= " << j << " yy= " << yy[j] << '\n';
     std::cout << "j= " << j << " HTHy= " << HTHy[j] << '\n';
-    std::cout << "j= " << j << " HH[0][j]*beta= " << 
-      HH[0][j]*beta << '\n';
+    std::cout << "j= " << j << " HH_small[0][j]*beta= " << 
+      HH_small[0][j]*beta << '\n';
    }
-   for (int i=0;i<m+1;i++) {
-    for (int j=0;j<m;j++) {
-     std::cout << "i= " << i << " j= " << j << " HH= " << HH[i][j] << '\n';
+   for (int i=0;i<m_small+1;i++) {
+    for (int j=0;j<m_small;j++) {
+     std::cout << "i= " << i << " j= " << j << 
+      " HH_small= " << HH_small[i][j] << '\n';
     }
    }
 //  amrex::Error("residual too large HTH, do dual time stepping");
@@ -17704,7 +17740,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
   }
   delete [] HTHy;
 
-  for (int i=0;i<m;i++) 
+  for (int i=0;i<m_small;i++) 
    delete [] HTH[i];
   delete [] HTH;
  } // sanity check
@@ -17714,13 +17750,17 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,int m,
  delete [] h;
  delete [] beta_vec;
 
- for (int i=0;i<m;i++) 
+ for (int i=0;i<m_small;i++) 
   delete [] HT[i];
  delete [] HT;
 
- for (int i=0;i<m+1;i++) 
+ for (int i=0;i<m_small+1;i++) 
   delete [] HCOPY[i];
  delete [] HCOPY;
+
+ for (int i=0;i<m_small+1;i++) 
+  delete [] HH_small[i];
+ delete [] HH_small;
 
 #if (profile_gmres==1)
  bprof.stop();
