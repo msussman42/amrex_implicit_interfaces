@@ -3504,12 +3504,11 @@ ABecLaplacian::CG_solve(
     int& cg_cycles_out,
     int nsverbose,int is_bottom,
     MultiFab& sol,
-     //(rhs dot v_null)/(v_null dot v_null)
-     //zero for now.
+     //input:
+     //null_space_sol=zero for now.
+     //vol(alpha p - beta div grad p/rho) + null_space_sol = -vol div u/dt
     Vector<Real> null_space_sol,  
     MultiFab& rhs,
-     // should be zero=sum p_ijk
-    Vector<Real> null_space_rhs,  
     Real eps_abs,Real bot_atol,
     MultiFab& pbdry,
     Vector<int> bcpres_array,
@@ -3563,10 +3562,16 @@ ABecLaplacian::CG_solve(
  BL_ASSERT(sol.boxArray() == LPboxArray(level));
  BL_ASSERT(rhs.boxArray() == LPboxArray(level));
 
- if (null_space_factor.size()>=0) {
+ if (null_space_sol.size()>=0) {
   // do nothing
  } else
-  amrex::Error("null_space_factor.size() invalid");
+  amrex::Error("null_space_sol.size() invalid");
+
+ Vector<Real> null_space_sol_constraint;
+ null_space_sol_constraint.resize(null_space_sol.size());
+ for (int i=0;i<null_space_sol_constraint.size();i++) {
+  null_space_sol_constraint[i]=0.0;
+ }
 
  BL_ASSERT(pbdry.boxArray() == LPboxArray(level));
 
@@ -3582,10 +3587,12 @@ ABecLaplacian::CG_solve(
  bprof.stop();
 #endif
 
- int rhs_flag=1;
- project_null_space(rhs,null_space_factor,level);
- rhs_flag=0;
- project_null_space(sol,null_space_factor,level);
+   //null_space_sol=zero for now.
+   //vol(alpha p - beta div grad p/rho) + null_space_sol = -vol div u/dt
+   //null_space_sol dot ones_vector = -vol div u/dt dot ones_vector
+ project_null_space(rhs,null_space_sol,level);
+   //sol dot ones_vector=null_space_sol_constraint dot ones_vector
+ project_null_space(sol,null_space_sol_constraint,level);
 
  CG_rhs_resid_cor_form[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
  MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
@@ -3595,13 +3602,11 @@ ABecLaplacian::CG_solve(
   if (ParallelDescriptor::IOProcessor())
    std::cout << "CGSolver: is_bottom= " << is_bottom << '\n';
 
- Vector<Real> null_space_CG_r;
-
   // resid,rhs,soln
  residual((*CG_r[coarsefine]),(*CG_rhs_resid_cor_form[coarsefine]),
     sol,null_space_factor,level,pbdry,bcpres_array);
- rhs_flag=1;
- project_null_space((*CG_r[coarsefine]),null_space_factor,level);
+
+ project_null_space((*CG_r[coarsefine]),null_space_sol,level);
 
   // put solution and residual in residual correction form
  CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_bicgstab,1);
