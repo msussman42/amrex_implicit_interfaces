@@ -2444,6 +2444,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
 
 
 // z=K^{-1}r
+// z=project_null_space(z)
 void
 ABecLaplacian::pcg_solve(
     MultiFab* z_in,
@@ -2573,6 +2574,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
  if (gmres_precond_iter==0) {
    // Z=M^{-1}R
+   // z=project_null_space(z)
    // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
   pcg_solve(
    z_in,r_in,
@@ -2605,6 +2607,7 @@ ABecLaplacian::pcg_GMRES_solve(
     // V0=V0+aa R
    CG_advance((*GMRES_V_MF[0][coarsefine]),aa,
               (*GMRES_V_MF[0][coarsefine]),(*r_in),level);
+   project_null_space((*GMRES_V_MF[0][coarsefine]),level);
 
     // H_j is a j+2 x j+1 matrix  j=0..m-1
    Real** HH=new Real*[m+1];
@@ -2644,6 +2647,7 @@ ABecLaplacian::pcg_GMRES_solve(
      GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
       // Zj=M^{-1}Vj
+      // z=project_null_space(z)
      pcg_solve(
       GMRES_Z_MF[j][coarsefine],
       GMRES_V_MF[j][coarsefine],
@@ -2660,6 +2664,7 @@ ABecLaplacian::pcg_GMRES_solve(
      apply(*GMRES_W_MF[coarsefine],
           *GMRES_Z_MF[j][coarsefine],
           level,*pbdryhom_in,bcpres_array);
+     project_null_space(*GMRES_W_MF[coarsefine],level);
 
      for (int i=0;i<=j;i++) {
       LP_dot(*GMRES_W_MF[coarsefine],
@@ -2670,6 +2675,7 @@ ABecLaplacian::pcg_GMRES_solve(
       CG_advance((*GMRES_W_MF[coarsefine]),aa,
                  (*GMRES_W_MF[coarsefine]),
                  (*GMRES_V_MF[i][coarsefine]),level);
+      project_null_space(*GMRES_W_MF[coarsefine],level);
      } // i=0..j
 
      LP_dot(*GMRES_W_MF[coarsefine],
@@ -2683,6 +2689,7 @@ ABecLaplacian::pcg_GMRES_solve(
        CG_advance((*GMRES_V_MF[j+1][coarsefine]),aa,
                   (*GMRES_V_MF[j+1][coarsefine]),
                   (*GMRES_W_MF[coarsefine]),level);
+       project_null_space(*GMRES_V_MF[j+1][coarsefine],level);
       } else if (j==m-1) {
        // do nothing
       } else
@@ -2717,6 +2724,7 @@ ABecLaplacian::pcg_GMRES_solve(
      delete [] HH_small;
     } else if (m_small==0) {
      // Z=M^{-1}R
+     // z=project_null_space(z)
      // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
      pcg_solve(
       z_in,r_in,
@@ -2740,6 +2748,7 @@ ABecLaplacian::pcg_GMRES_solve(
        // Z=Z+aa Zj
       CG_advance((*z_in),aa,(*z_in),
                  (*GMRES_Z_MF[j][coarsefine]),level);
+      project_null_space((*z_in),level);
      }
     } else
      amrex::Error("status invalid");
@@ -2801,6 +2810,7 @@ ABecLaplacian::pcg_GMRES_solve(
      GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
       // Zj=M^{-1}Vj
+      // z=project_null_space(z)
      pcg_solve(
       GMRES_Z_MF[j_local][coarsefine],
       GMRES_V_MF[j_local][coarsefine],
@@ -2817,6 +2827,7 @@ ABecLaplacian::pcg_GMRES_solve(
      apply(*GMRES_W_MF[coarsefine],
           *GMRES_Z_MF[j_local][coarsefine],
           level,*pbdryhom_in,bcpres_array);
+     project_null_space(*GMRES_W_MF[coarsefine],level);
 
       // H_j     is a j+2 x j+1 matrix  j=0..m-1
       // H_{j-1} is a j+1 x j   matrix  j=0..m-1
@@ -2849,6 +2860,7 @@ ABecLaplacian::pcg_GMRES_solve(
       CG_advance((*GMRES_W_MF[coarsefine]),aa,
                  (*GMRES_W_MF[coarsefine]),
                  (*GMRES_V_MF[i][coarsefine]),level);
+      project_null_space(*GMRES_W_MF[coarsefine],level);
      }
      for (int i=0;i<=p_local;i++) {
       aa=-GG[i][j_local];
@@ -2856,6 +2868,7 @@ ABecLaplacian::pcg_GMRES_solve(
       CG_advance((*GMRES_W_MF[coarsefine]),aa,
                  (*GMRES_W_MF[coarsefine]),
                  (*GMRES_U_MF[i][coarsefine]),level);
+      project_null_space(*GMRES_W_MF[coarsefine],level);
      }
 
       // H_j is a j+2 x j+1 matrix  j=0..m-1
@@ -3021,6 +3034,7 @@ ABecLaplacian::pcg_GMRES_solve(
          CG_advance((*GMRES_V_MF[j_local][coarsefine]),aa,
                     (*GMRES_V_MF[j_local][coarsefine]),
                     *vi_MF,level);
+         project_null_space(*GMRES_V_MF[j_local][coarsefine],level);
 	} else {
          std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
          std::cout << "vhat_counter,i,j_local,p_local,m " <<
@@ -3045,6 +3059,7 @@ ABecLaplacian::pcg_GMRES_solve(
        if (vi_dot_vi>0.0) {
         aa=1.0/vi_dot_vi;
 	GMRES_V_MF[j_local][coarsefine]->mult(aa,0,nsolve_bicgstab,nghostRHS);
+        project_null_space(*GMRES_V_MF[j_local][coarsefine],level);
        } else {
 
         std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
@@ -3066,6 +3081,7 @@ ABecLaplacian::pcg_GMRES_solve(
        }
 
         // Zj=M^{-1}Vj
+        // z=project_null_space(z)
        pcg_solve(
         GMRES_Z_MF[j_local][coarsefine],
         GMRES_V_MF[j_local][coarsefine],
@@ -3082,6 +3098,7 @@ ABecLaplacian::pcg_GMRES_solve(
        apply(*GMRES_W_MF[coarsefine],
             *GMRES_Z_MF[j_local][coarsefine],
             level,*pbdryhom_in,bcpres_array);
+       project_null_space(*GMRES_W_MF[coarsefine],level);
 
         // H_j is a j+2 x j+1 matrix  j=0..m-1
 	// last column of H_j is replaced by h_j
@@ -3114,6 +3131,7 @@ ABecLaplacian::pcg_GMRES_solve(
         CG_advance((*GMRES_W_MF[coarsefine]),aa,
                    (*GMRES_W_MF[coarsefine]),
                    (*GMRES_U_MF[i][coarsefine]),level);
+        project_null_space(*GMRES_W_MF[coarsefine],level);
        }
 
         // H_j is a j+2 x j+1 matrix  j=0..m-1
@@ -3218,6 +3236,7 @@ ABecLaplacian::pcg_GMRES_solve(
          // Z=Z+aa Z_{i2}
         CG_advance((*z_in),aa,(*z_in),
                    (*GMRES_Z_MF[i2][coarsefine]),level);
+        project_null_space((*z_in),level);
        }
       } else
        amrex::Error("status invalid");
@@ -3288,6 +3307,7 @@ ABecLaplacian::pcg_GMRES_solve(
          CG_advance((*GMRES_V_MF[j_local+1][coarsefine]),aa,
                     (*GMRES_V_MF[j_local+1][coarsefine]),
                     (*GMRES_W_MF[coarsefine]),level);
+         project_null_space(*GMRES_V_MF[j_local+1][coarsefine],level);
         } else if (j_local==m-1) {
          // do nothing
         } else
@@ -3350,6 +3370,7 @@ ABecLaplacian::pcg_GMRES_solve(
   } else if (beta==0.0) {
 
    // Z=M^{-1}R
+   // z=project_null_space(z)
    pcg_solve(
     z_in,r_in,
     eps_abs,bot_atol,
@@ -3504,10 +3525,6 @@ ABecLaplacian::CG_solve(
     int& cg_cycles_out,
     int nsverbose,int is_bottom,
     MultiFab& sol,
-     //input:
-     //null_space_sol=zero for now.
-     //vol(alpha p - beta div grad p/rho) + null_space_sol = -vol div u/dt
-    Vector<Real> null_space_sol,  
     MultiFab& rhs,
     Real eps_abs,Real bot_atol,
     MultiFab& pbdry,
@@ -3559,21 +3576,20 @@ ABecLaplacian::CG_solve(
  //      r = b - A*x
  //   }
  //
- BL_ASSERT(sol.boxArray() == LPboxArray(level));
- BL_ASSERT(rhs.boxArray() == LPboxArray(level));
-
- if (null_space_sol.size()>=0) {
+ if (sol.boxArray() == LPboxArray(level)) {
   // do nothing
  } else
-  amrex::Error("null_space_sol.size() invalid");
+  amrex::Error("sol.boxArray() != LPboxArray(level)");
 
- Vector<Real> null_space_sol_constraint;
- null_space_sol_constraint.resize(null_space_sol.size());
- for (int i=0;i<null_space_sol_constraint.size();i++) {
-  null_space_sol_constraint[i]=0.0;
- }
+ if (rhs.boxArray() == LPboxArray(level)) {
+  // do nothing
+ } else
+  amrex::Error("rhs.boxArray() != LPboxArray(level)");
 
- BL_ASSERT(pbdry.boxArray() == LPboxArray(level));
+ if (pbdry.boxArray() == LPboxArray(level)) {
+  // do nothing
+ } else
+  amrex::Error("bdry.boxArray() != LPboxArray(level)");
 
  Real relative_error=1.0e-12;
 
@@ -3587,12 +3603,8 @@ ABecLaplacian::CG_solve(
  bprof.stop();
 #endif
 
-   //null_space_sol=zero for now.
-   //vol(alpha p - beta div grad p/rho) + null_space_sol = -vol div u/dt
-   //null_space_sol dot ones_vector = -vol div u/dt dot ones_vector
- project_null_space(rhs,null_space_sol,level);
-   //sol dot ones_vector=null_space_sol_constraint dot ones_vector
- project_null_space(sol,null_space_sol_constraint,level);
+ project_null_space(rhs,level);
+ project_null_space(sol,level);
 
  CG_rhs_resid_cor_form[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
  MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
@@ -3604,9 +3616,9 @@ ABecLaplacian::CG_solve(
 
   // resid,rhs,soln
  residual((*CG_r[coarsefine]),(*CG_rhs_resid_cor_form[coarsefine]),
-    sol,null_space_factor,level,pbdry,bcpres_array);
+    sol,level,pbdry,bcpres_array);
 
- project_null_space((*CG_r[coarsefine]),null_space_sol,level);
+ project_null_space((*CG_r[coarsefine]),level);
 
   // put solution and residual in residual correction form
  CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_bicgstab,1);
@@ -3752,6 +3764,7 @@ ABecLaplacian::CG_solve(
                (*CG_p_search[coarsefine]),level );
       project_null_space((*CG_p_search[coarsefine]),level);
        // z=K^{-1} p
+       // z=project_null_space(z)
       pcg_GMRES_solve(
        gmres_precond_iter,
        CG_z[coarsefine],
@@ -3767,6 +3780,7 @@ ABecLaplacian::CG_solve(
       apply(*CG_v_search[coarsefine],
             *CG_z[coarsefine],level,
             *CG_pbdryhom[coarsefine],bcpres_array);
+      project_null_space((*CG_v_search[coarsefine]),level);
      } else if ((rho_old<=restart_tol)||(omega<=restart_tol)) {
       restart_flag=1;
      } else
@@ -3812,6 +3826,7 @@ ABecLaplacian::CG_solve(
       if ((error_close_to_zero==0)||  // tolerances not met.
           (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
        // z=K^{-1} r
+       // z=project_null_space(z)
        pcg_GMRES_solve(
         gmres_precond_iter,
         CG_z[coarsefine],
@@ -3828,6 +3843,7 @@ ABecLaplacian::CG_solve(
        apply(*CG_Av_search[coarsefine],
 	     *CG_z[coarsefine],level,
              *CG_pbdryhom[coarsefine],bcpres_array);
+       project_null_space((*CG_Av_search[coarsefine]),level);
        Real rAz=0.0;
        Real zAAz=0.0;
        // rAz=(Az) dot r =z^T A^T r = z^T A^T K z >=0 if A and K SPD.
@@ -4015,6 +4031,7 @@ ABecLaplacian::CG_solve(
 
  if ((CG_verbose>0)||(nsverbose>0)) {
   residual((*CG_r[coarsefine]),rhs,sol,level,pbdry,bcpres_array);
+  project_null_space(*CG_r[coarsefine],level);
 
   Real testnorm=LPnorm(*CG_r[coarsefine],level);
   if (testnorm>=0.0) {

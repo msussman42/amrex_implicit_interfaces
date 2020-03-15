@@ -86,10 +86,6 @@ public:
       int& cg_cycles_out,
       int nsverbose,int is_bottom,
       MultiFab& solnL,
-       //input:
-       //null_space_sol=zero for now.
-       //vol(alpha p - beta div grad p/rho) + null_space_sol = -vol div u/dt
-      Vector<Real> null_space_sol,  
       MultiFab& rhsL,
       Real eps_abs,Real bot_atol,
       MultiFab& pbdry,Vector<int> bcpres_array,
