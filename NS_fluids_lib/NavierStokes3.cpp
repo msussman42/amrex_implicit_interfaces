@@ -7252,7 +7252,8 @@ void NavierStokes::jacobi_cycles(
    amrex::Error("update_vel invalid");
 
   if (ncycles>0) {
-    // calls project_right_hand_side
+    // 1. (begin) project_right_hand_side(idx_mac_phi_crse)
+    // 2. (end)   project_right_hand_side(idx_mac_phi_crse)
    JacobiALL(RESID_MF,idx_mac_rhs_crse,
      idx_mac_phi_crse,project_option,nsolve); 
   } else if (ncycles==0) {
@@ -7266,6 +7267,7 @@ void NavierStokes::jacobi_cycles(
 
     // if local_solvability_projection, then this
     // routine modifies RESID so that it sums to zero.
+    // RESID=project( mac_rhs-(alpha*phi+div (-grad p)/dt) )
     // if singular_possible, then this routine zeros out the
     // residual where the matrix diagonal (prior to dual time stepping
     // modification) is 0.
@@ -7497,6 +7499,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
  if (gmres_precond_iter==0) {
    // Z=M^{-1}R
+   // Z=project(Z)
    // first calls: zeroALL(1,nsolveMM,idx_Z) 
   multiphase_preconditioner(
    project_option,project_timings,
@@ -7522,6 +7525,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     // V0=V0+aa R
    mf_combine(project_option,
     GMRES_BUFFER0_V_MF,idx_R,aa,GMRES_BUFFER0_V_MF,nsolve); 
+   project_right_hand_side(GMRES_BUFFER0_V_MF,project_option,change_flag);
 
     // H_j is a j+2 x j+1 matrix  j=0..m-1
    Real** HH=new Real*[m+1];
@@ -7580,6 +7584,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      }
 
       // Z=M^{-1}Vj
+      // Z=project(Z)
      multiphase_preconditioner(
       project_option,project_timings,
       presmooth,postsmooth,
@@ -7587,6 +7592,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       GMRES_BUFFER0_V_MF+j,nsolve);
 
       // w=A Z
+      // 1. (begin)calls project_right_hand_side(Z)
+      // 2. (end)  calls project_right_hand_side(W)
      applyALL(project_option,
        GMRES_BUFFER0_Z_MF+j,
        GMRES_BUFFER_W_MF,nsolve);
@@ -7599,6 +7606,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        // W=W+aa Vi
       mf_combine(project_option,
        GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+      project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
      } // i=0..j
 
      dot_productALL(project_option,
@@ -7614,6 +7622,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
         GMRES_BUFFER0_V_MF+j+1,
         GMRES_BUFFER_W_MF,aa,
         GMRES_BUFFER0_V_MF+j+1,nsolve); 
+       project_right_hand_side(GMRES_BUFFER0_V_MF+j+1,
+		       project_option,change_flag);
       } else if (j==m-1) {
        // do nothing
       } else
@@ -7647,6 +7657,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     } else if (m_small==0) {
       // Z=M^{-1}R
       // first calls: zeroALL(1,nsolveMM,idx_Z) 
+      // Z=project(Z)
      multiphase_preconditioner(
       project_option,project_timings,
       presmooth,postsmooth,
@@ -7718,6 +7729,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      // variables initialized to 0.0
      allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+j_local);
       // Zj=M^{-1}Vj
+      // Z=project(Z)
      multiphase_preconditioner(
       project_option,project_timings,
       presmooth,postsmooth,
@@ -7725,6 +7737,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
       GMRES_BUFFER0_V_MF+j_local,nsolve);
 
       // w=A Z
+      // 1. (begin)calls project_right_hand_side(Z)
+      // 2. (end)  calls project_right_hand_side(W)
      applyALL(project_option,
        GMRES_BUFFER0_Z_MF+j_local,
        GMRES_BUFFER_W_MF,nsolve);
@@ -7750,12 +7764,14 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        // W=W+aa Vi
       mf_combine(project_option,
        GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+      project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
      }
      for (int i=0;i<=p_local;i++) {
       aa=-GG[i][j_local];
        // W=W+aa Ui
       mf_combine(project_option,
        GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+      project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
      }
 
       // H_j is a j+2 x j+1 matrix  j=0..m-1
@@ -7885,6 +7901,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
          mf_combine(project_option,
            GMRES_BUFFER0_V_MF+j_local,idx_vi,aa,
 	   GMRES_BUFFER0_V_MF+j_local,nsolve); 
+         project_right_hand_side(GMRES_BUFFER0_V_MF+j_local,
+			 project_option,change_flag);
 	} else
  	 amrex::Error("vi_dot_vi==0.0");
        } // i=0..j_local
@@ -7894,10 +7912,13 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        if (vi_dot_vi>0.0) {
         aa=1.0/vi_dot_vi;
         mult_array(0,nsolveMM,aa,GMRES_BUFFER0_V_MF+j_local);
+        project_right_hand_side(GMRES_BUFFER0_V_MF+j_local, 
+			project_option,change_flag);
        } else
         amrex::Error("vi_dot_vi==0.0 (renormalization)");
 
         // Zj=M^{-1}Vj
+        // Z=project(Z)
        multiphase_preconditioner(
          project_option,project_timings,
          presmooth,postsmooth,
@@ -7905,6 +7926,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
          GMRES_BUFFER0_V_MF+j_local,nsolve);
 
          // w=A Z
+         // 1. (begin)calls project_right_hand_side(Z)
+         // 2. (end)  calls project_right_hand_side(W)
        applyALL(project_option,
          GMRES_BUFFER0_Z_MF+j_local,
          GMRES_BUFFER_W_MF,nsolve);
@@ -7930,12 +7953,14 @@ void NavierStokes::multiphase_GMRES_preconditioner(
          // W=W+aa Vi
         mf_combine(project_option,
          GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+        project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
        }
        for (int i=0;i<=p_local;i++) {
         aa=-GG[i][j_local];
          // W=W+aa Ui
         mf_combine(project_option,
          GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+        project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
        }
 
         // H_j is a j+2 x j+1 matrix  j=0..m-1
@@ -8030,6 +8055,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
          idx_Z,
          GMRES_BUFFER0_Z_MF+i2,aa,
          idx_Z,nsolve); 
+        project_right_hand_side(idx_Z,project_option,change_flag);
        }
       } else
        amrex::Error("status invalid");
@@ -8096,6 +8122,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
           GMRES_BUFFER0_V_MF+j_local+1,
           GMRES_BUFFER_W_MF,aa,
           GMRES_BUFFER0_V_MF+j_local+1,nsolve); 
+         project_right_hand_side(GMRES_BUFFER0_V_MF+j_local+1,
+		       project_option,change_flag);
         } else if (j_local==m-1) {
          // do nothing
         } else
@@ -8157,6 +8185,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    delete_array(GMRES_BUFFER_W_MF);
 
   } else if (beta==0.0) {
+    // Z=project(Z)
    multiphase_preconditioner(
     project_option,project_timings,
     presmooth,postsmooth,
@@ -8296,6 +8325,9 @@ void NavierStokes::multiphase_preconditioner(
 
  } else
   amrex::Error("project_solver_type invalid");
+
+ int change_flag=0;
+ project_right_hand_side(idx_Z,project_option,change_flag);
 
  double after_cycle=0.0;
  if (project_timings==1) {
@@ -9353,6 +9385,7 @@ void NavierStokes::multiphase_project(int project_option) {
         // 3. c=-(U0 dot v)/(v dot v)
         // 4. U=U0-[(U0 dot v)/(v dot v)] v
       change_flag=0;
+       // change_flag set to 1 if MAC_RHS_CRSE_MF is modified.
       project_right_hand_side(MAC_RHS_CRSE_MF,project_option,change_flag);
 
       if (initial_project_cycles<1)
@@ -9390,7 +9423,7 @@ void NavierStokes::multiphase_project(int project_option) {
         update_vel,
         project_option,
         MAC_RHS_CRSE_MF,
-        MAC_PHI_CRSE_MF,
+        MAC_PHI_CRSE_MF, // null space projected out.
         error_at_the_beginning, 
         error_after_all_jacobi_sweeps,
         error0,error0_max,
@@ -9711,6 +9744,7 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
            // Y=M^{-1}P1
+	   // Y=project(Y)
           multiphase_GMRES_preconditioner(
            gmres_precond_iter,
            project_option,project_timings,
@@ -9722,6 +9756,8 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
            // V1=A Y
+           // 1. (begin)calls project_right_hand_side(Y)
+           // 2. (end)  calls project_right_hand_side(V1)
           applyALL(project_option,bicg_Y_MF,bicg_V1_MF,nsolve);
 
           // alpha=R0hat dot V1=R0hat dot A M^-1 P1=
@@ -9751,7 +9787,10 @@ void NavierStokes::multiphase_project(int project_option) {
            a1=1.0;
            a2=alpha;
            mf_combine(project_option,
-	   bicg_U0_MF,bicg_Y_MF,a2,bicg_Hvec_MF,nsolve);
+	     bicg_U0_MF,bicg_Y_MF,a2,bicg_Hvec_MF,nsolve);
+
+	   change_flag=0;
+           project_right_hand_side(bicg_Hvec_MF,project_option,change_flag);
            // mac_phi_crse(U1)=Hvec
            copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
 
@@ -9759,6 +9798,8 @@ void NavierStokes::multiphase_project(int project_option) {
            project_right_hand_side(MAC_PHI_CRSE_MF,project_option,change_flag);
 
            // R1=RHS-A mac_phi_crse(U1)
+	   // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
+	   // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
            residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
              MAC_PHI_CRSE_MF,nsolve);
 
@@ -9783,7 +9824,7 @@ void NavierStokes::multiphase_project(int project_option) {
             a1=1.0;
             a2=-alpha;
             mf_combine(project_option,
-	    CGRESID_MF,bicg_V1_MF,a2,bicg_S_MF,nsolve);
+ 	      CGRESID_MF,bicg_V1_MF,a2,bicg_S_MF,nsolve);
 
 	    change_flag=0;
             project_right_hand_side(bicg_S_MF,project_option,change_flag);
@@ -9793,6 +9834,7 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
             // Z=M^{-1}S
+	    // Z=project(Z)
             multiphase_GMRES_preconditioner(
              gmres_precond_iter,
              project_option,project_timings,
@@ -9804,6 +9846,8 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
             // T=A Z
+            // 1. (begin)calls project_right_hand_side(Z)
+            // 2. (end)  calls project_right_hand_side(T)
             applyALL(project_option,Z_MF,bicg_T_MF,nsolve);
 
 	    // a1 = T dot S = AZ dot MZ >=0.0 if A and M are SPD
@@ -9864,6 +9908,8 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
            // R1=RHS-A mac_phi_crse(U1)
+	   // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
+	   // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
            residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
              MAC_PHI_CRSE_MF,nsolve);
 
@@ -9923,6 +9969,8 @@ void NavierStokes::multiphase_project(int project_option) {
 	   amrex::Error("verbose invalid");
 
           // CGRESID(R0)=RHS-A U0
+	  // 1. (start) calls project_right_hand_side(bicg_U0_MF)
+	  // 2. (end)   calls project_right_hand_side(CGRESID_MF)
           residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
             bicg_U0_MF,nsolve);
           // R0hat=CGRESID(R0)

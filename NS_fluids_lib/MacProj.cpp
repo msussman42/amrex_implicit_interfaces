@@ -1232,6 +1232,8 @@ void NavierStokes::residALL(
  if (level!=0)
   amrex::Error("level invalid residALL");
 
+  // 1. (start) calls project_right_hand_side(idx_phi) 
+  // 2. (end)   calls project_right_hand_side(idx_resid)
  applyALL(project_option,idx_phi,idx_resid,nsolve);
 
   // resid_array=rhs_array-resid_array
@@ -1310,6 +1312,8 @@ void NavierStokes::applyALL(
    GRADPEDGE_MF,
    nsolve);
  } // ilev=finest_level ... level
+
+ project_right_hand_side(idx_Aphi,project_option,change_flag);
 
 } // subroutine applyALL
 
