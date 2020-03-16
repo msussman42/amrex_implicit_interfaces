@@ -2646,10 +2646,11 @@ ABecLaplacian::pcg_GMRES_solve(
     } // j=1..m 
 
     for (int j=0;j<m_small;j++) {
+
      GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
       // Zj=M^{-1}Vj
-      // z=project_null_space(z)
+      // Z=project_null_space(Z)
       // Vj is a normalized vector
      pcg_solve(
       GMRES_Z_MF[j][coarsefine],
@@ -2690,6 +2691,7 @@ ABecLaplacian::pcg_GMRES_solve(
       amrex::Error("HH[j+1][j] invalid");
       
      if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
+
       if ((j>=0)&&(j<m-1)) {
        aa=1.0/HH[j+1][j];
         // V=V+aa W
@@ -2701,6 +2703,7 @@ ABecLaplacian::pcg_GMRES_solve(
        // do nothing
       } else
        amrex::Error("j invalid");
+
      } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
       m_small=j;
      } else {
@@ -2723,7 +2726,7 @@ ABecLaplacian::pcg_GMRES_solve(
     } else if (m_small==0) {
 
      // Z=M^{-1}R
-     // z=project_null_space(z)
+     // Z=project_null_space(Z)
      // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
      pcg_solve(
       z_in,r_in,
@@ -2904,14 +2907,22 @@ ABecLaplacian::pcg_GMRES_solve(
      double zeyu_condnum=1.0;
 
      if (HH[j_local+1][j_local]>KRYLOV_NORM_CUTOFF) {
-       // Real** HH   i=0..m  j=0..m-1
-       // active region: i=0..j_local+1  j=0..j_local
+
       if (CG_verbose>2) {
        std::cout << "calling CondNum level=" << level << '\n';
        std::cout << "calling CondNum j_local=" << j_local << '\n';
        std::cout << "calling CondNum m=" << m << '\n';
       }
-      zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
+
+       // Real** HH   i=0..m  j=0..m-1
+       // active region: i=0..j_local+1  j=0..j_local
+      if (disable_additional_basis==0) {
+       zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
+      } else if (disable_additional_basis==1) {
+       zeyu_condnum=0.0;
+      } else
+       amrex::Error("disable_additional_basis invalid");
+
       if (CG_verbose>2) {
        std::cout << "after CondNum level=" << level << '\n';
        std::cout << "after CondNum zeyu_condnum=" << zeyu_condnum << '\n';
@@ -2922,6 +2933,7 @@ ABecLaplacian::pcg_GMRES_solve(
        condition_number_blowup=0;  
       } else
        amrex::Error("zeyu_condnum NaN");
+
      } else if ((HH[j_local+1][j_local]>=0.0)&&
 		(HH[j_local+1][j_local]<=KRYLOV_NORM_CUTOFF)) {
       condition_number_blowup=2;  
@@ -3168,6 +3180,7 @@ ABecLaplacian::pcg_GMRES_solve(
          condition_number_blowup=0;  
         } else
          amrex::Error("zeyu_condnum NaN");
+
        } else if ((HH[j_local+1][j_local]>=0.0)&&
   		  (HH[j_local+1][j_local]<=KRYLOV_NORM_CUTOFF)) {
         condition_number_blowup=2;  
@@ -3245,52 +3258,61 @@ ABecLaplacian::pcg_GMRES_solve(
       } else
        amrex::Error("status invalid");
 
-      project_null_space(*z_in,level);
+      if (disable_additional_basis==0) {
+
+       project_null_space(*z_in,level);
        // resid,rhs,soln
-      residual((*GMRES_W_MF[coarsefine]),  // resid
-               (*r_in),  // rhs
-               (*z_in),  // soln
-               level,
-	      (*pbdryhom_in),bcpres_array);
-      project_null_space((*GMRES_W_MF[coarsefine]),level);
-      Real beta_compare=0.0;
-      LP_dot(*GMRES_W_MF[coarsefine],
-             *GMRES_W_MF[coarsefine],level,beta_compare);
-      if (beta_compare>=0.0) {
-       beta_compare=sqrt(beta_compare);
-       if (beta_compare<=GMRES_tol*beta) {
-        convergence_flag=1;
-       } else if (beta_compare>GMRES_tol*beta) {
-        convergence_flag=0;
+       residual((*GMRES_W_MF[coarsefine]),  // resid
+                (*r_in),  // rhs
+                (*z_in),  // soln
+                level,
+  	        (*pbdryhom_in),bcpres_array);
+       project_null_space((*GMRES_W_MF[coarsefine]),level);
+
+       Real beta_compare=0.0;
+       LP_dot(*GMRES_W_MF[coarsefine],
+              *GMRES_W_MF[coarsefine],level,beta_compare);
+       if (beta_compare>=0.0) {
+        beta_compare=sqrt(beta_compare);
+        if (beta_compare<=GMRES_tol*beta) {
+         convergence_flag=1;
+        } else if (beta_compare>GMRES_tol*beta) {
+         convergence_flag=0;
+        } else
+         amrex::Error("beta_compare invalid");
        } else
         amrex::Error("beta_compare invalid");
-      } else
-       amrex::Error("beta_compare invalid");
 
-      if (debug_BF_GMRES==1) {
-       std::cout << "BFGMRES mglib: beta_compare=" <<
-        beta_compare << " beta=" << beta << '\n';
-      }
+       if (debug_BF_GMRES==1) {
+        std::cout << "BFGMRES mglib: beta_compare=" <<
+         beta_compare << " beta=" << beta << '\n';
+       }
 
-      error_history[j_local]=beta_compare;
+       error_history[j_local]=beta_compare;
 
-      if (j_local==0) {
-       if (beta_compare>beta) {
-        convergence_flag=1;
-       } else if (beta_compare<=beta) {
-        // do nothing
+       if (j_local==0) {
+        if (beta_compare>beta) {
+         convergence_flag=1;
+        } else if (beta_compare<=beta) {
+         // do nothing
+        } else
+         amrex::Error("beta_compare or beta invalid");
+       } else if (j_local>0) {
+        if (beta_compare>error_history[j_local-1]) {
+         convergence_flag=1;
+        } else if (beta_compare<=error_history[j_local-1]) {
+         // do nothing
+        } else
+         amrex::Error("beta_compare or error_history[j_local-1] invalid");
        } else
-        amrex::Error("beta_compare or beta invalid");
-      } else if (j_local>0) {
-       if (beta_compare>error_history[j_local-1]) {
-        convergence_flag=1;
-       } else if (beta_compare<=error_history[j_local-1]) {
-        // do nothing
-       } else
-        amrex::Error("beta_compare or error_history[j_local-1] invalid");
-      } else
-       amrex::Error("j_local invalid");
+        amrex::Error("j_local invalid");
 
+      } else if (disable_additional_basis==1) {
+
+       convergence_flag=0;
+
+      } else
+       amrex::Error("disable_additional_basis invalid");
 
       if (convergence_flag==0) {
 

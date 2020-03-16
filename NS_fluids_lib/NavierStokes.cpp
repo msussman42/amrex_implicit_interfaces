@@ -17716,9 +17716,9 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
    Real res_comp=HTHy[i]-HH_small[0][i]*beta;
    residual_verify+=res_comp*res_comp;
   }
-  residual_verify=sqrt(residual_verify);
-  if ((residual_verify>1.0e-4*min_diag)&&
-      (residual_verify>1.0e-11)) {
+  residual_verify=sqrt(residual_verify)/m_small;
+  if ((residual_verify>1.0e-3*min_diag)&&
+      (residual_verify>1.0e-3)) {
    std::cout << "caller_id= " << caller_id << '\n';
    std::cout << "residual_verify= " << residual_verify << '\n';
    std::cout << "min_diag= " << min_diag << '\n';
