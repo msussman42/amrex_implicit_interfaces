@@ -5,6 +5,7 @@
 #define check_step_by_step (1)
 #define debug_BF_GMRES (1)
 #define debug_MATRIX_ANALYSIS (1)
+#define KRYLOV_NORM_CUTOFF (1.0e-8)
 
 using namespace std;
 

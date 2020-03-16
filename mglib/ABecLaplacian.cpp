@@ -2606,7 +2606,7 @@ ABecLaplacian::pcg_GMRES_solve(
    GMRES_Z_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
    Real aa=1.0/beta;
-    // V0=V0+aa R
+    // V0=V0+aa R = R/||R||
    CG_advance((*GMRES_V_MF[0][coarsefine]),aa,
               (*GMRES_V_MF[0][coarsefine]),(*r_in),level);
    project_null_space((*GMRES_V_MF[0][coarsefine]),level);
@@ -2650,6 +2650,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
       // Zj=M^{-1}Vj
       // z=project_null_space(z)
+      // Vj is a normalized vector
      pcg_solve(
       GMRES_Z_MF[j][coarsefine],
       GMRES_V_MF[j][coarsefine],
@@ -2683,8 +2684,12 @@ ABecLaplacian::pcg_GMRES_solve(
      LP_dot(*GMRES_W_MF[coarsefine],
             *GMRES_W_MF[coarsefine],level,HH[j+1][j]);
 
-     if (HH[j+1][j]>0.0) {
+     if (HH[j+1][j]>=0.0) {
       HH[j+1][j]=sqrt(HH[j+1][j]);
+     } else
+      amrex::Error("HH[j+1][j] invalid");
+      
+     if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
       if ((j>=0)&&(j<m-1)) {
        aa=1.0/HH[j+1][j];
         // V=V+aa W
@@ -2696,14 +2701,14 @@ ABecLaplacian::pcg_GMRES_solve(
        // do nothing
       } else
        amrex::Error("j invalid");
-     } else if (HH[j+1][j]==0.0) {
+     } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
       m_small=j;
      } else {
       std::cout << "HH[j+1][j]= " << HH[j+1][j] << '\n';
       amrex::Error("HH[j+1][j] invalid");
      }
 
-    } // j=0..m-1
+    } // j=0..m_small-1
  
     status=1;
 
@@ -2757,7 +2762,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
    } else if (breakdown_free_flag==1) {
 
-    Real breakdown_tol=1.0e-8;
+    Real breakdown_tol=KRYLOV_NORM_CUTOFF;
 
      // G_j is a p(j)+1 x j+1 matrix   j=0..m-1
     Real** GG=new Real*[m+1];

@@ -7523,7 +7523,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    allocate_array(0,nsolveMM,-1,GMRES_BUFFER_W_MF);
 
    Real aa=1.0/beta;
-    // V0=V0+aa R
+    // V0=V0+aa R = R/||R||
    mf_combine(project_option,
     GMRES_BUFFER0_V_MF,idx_R,aa,GMRES_BUFFER0_V_MF,nsolve); 
    project_right_hand_side(GMRES_BUFFER0_V_MF,project_option,change_flag);
@@ -7586,6 +7586,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
       // Z=M^{-1}Vj
       // Z=project(Z)
+      // Vj is a normalized vector
      multiphase_preconditioner(
       project_option,project_timings,
       presmooth,postsmooth,
@@ -7614,8 +7615,12 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        GMRES_BUFFER_W_MF,
        GMRES_BUFFER_W_MF,HH[j+1][j],nsolve);
 
-     if (HH[j+1][j]>0.0) {
+     if (HH[j+1][j]>=0.0) {
       HH[j+1][j]=sqrt(HH[j+1][j]);
+     } else
+      amrex::Error("HH[j+1][j] invalid");
+
+     if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
       if ((j>=0)&&(j<m-1)) {
        aa=1.0/HH[j+1][j];
         // V=V+aa W
@@ -7629,12 +7634,12 @@ void NavierStokes::multiphase_GMRES_preconditioner(
        // do nothing
       } else
        amrex::Error("j invalid");
-     } else if (HH[j+1][j]==0.0) {
+     } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
       m_small=j;
      } else
       amrex::Error("HH[j+1][j] invalid");
 
-    } // j=0..m-1
+    } // j=0..m_small-1
   
     status=1;
 
@@ -7683,7 +7688,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
    } else if (breakdown_free_flag==1) {
 
-    Real breakdown_tol=1.0e-8;
+    Real breakdown_tol=KRYLOV_NORM_CUTOFF;
 
      // G_j is a p(j)+1 x j+1 matrix   j=0..m-1
     Real** GG=new Real*[m+1];
@@ -8179,6 +8184,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    delete_array(GMRES_BUFFER_W_MF);
 
   } else if (beta==0.0) {
+    // Z=M^{-1}R
     // Z=project(Z)
    multiphase_preconditioner(
     project_option,project_timings,
