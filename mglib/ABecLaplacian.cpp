@@ -2594,7 +2594,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
   int m=nsolve_bicgstab*gmres_precond_iter;
 
-  Real GMRES_tol=1.0e-10;
+  Real GMRES_tol=KRYLOV_NORM_CUTOFF;
   Real beta=0.0;
   LP_dot(*r_in,*r_in,level,beta);
 
@@ -2627,6 +2627,8 @@ ABecLaplacian::pcg_GMRES_solve(
 
    int status=1;
 
+   int m_small=m;
+
    if (breakdown_free_flag==0) {
 
     for (int j=1;j<m;j++) {
@@ -2642,8 +2644,6 @@ ABecLaplacian::pcg_GMRES_solve(
      GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
      GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
     } // j=1..m 
-
-    int m_small=m;
 
     for (int j=0;j<m_small;j++) {
      GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
@@ -2772,15 +2772,17 @@ ABecLaplacian::pcg_GMRES_solve(
       GG[i][j]=0.0;
     }
 
-    Real** HHGG=new Real*[2*(m+1)];
-    for (int i=0;i<2*(m+1);i++) { 
-     HHGG[i]=new Real[m];
-     for (int j=0;j<m;j++) 
+    Real** HHGG=new Real*[2*m+2];
+    for (int i=0;i<2*m+2;i++) { 
+     HHGG[i]=new Real[2*m+1];
+     for (int j=0;j<2*m+1;j++) 
       HHGG[i][j]=0.0;
     }
 
     int convergence_flag=0;
     int p_local=-1;
+    int p_local_allocated=gmres_precond_iter_base_mg*nsolve_bicgstab;
+    int p_local_init_allocated=p_local_allocated;
 
     int j_local=0;
 
@@ -2795,7 +2797,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
     int use_previous_iterate=0;
 
-    for (j_local=0;((j_local<m)&&(convergence_flag==0));j_local++) {
+    for (j_local=0;((j_local<m_small)&&(convergence_flag==0));j_local++) {
 
      use_previous_iterate=0;
 
@@ -2875,6 +2877,11 @@ ABecLaplacian::pcg_GMRES_solve(
      LP_dot(*GMRES_W_MF[coarsefine],
             *GMRES_W_MF[coarsefine],level,HH[j_local+1][j_local]);
 
+     if (HH[j_local+1][j_local]>=0.0) {
+      HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
+     } else
+      amrex::Error("HH[j_local+1][j_local] invalid");
+
      double local_tol=breakdown_tol;
      if (p_local>=0) {
       local_tol/=pow(10.0,2*p_local);
@@ -2896,8 +2903,7 @@ ABecLaplacian::pcg_GMRES_solve(
      int condition_number_blowup=0;
      double zeyu_condnum=1.0;
 
-     if (HH[j_local+1][j_local]>0.0) {
-      HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
+     if (HH[j_local+1][j_local]>KRYLOV_NORM_CUTOFF) {
        // Real** HH   i=0..m  j=0..m-1
        // active region: i=0..j_local+1  j=0..j_local
       if (CG_verbose>2) {
@@ -2916,8 +2922,10 @@ ABecLaplacian::pcg_GMRES_solve(
        condition_number_blowup=0;  
       } else
        amrex::Error("zeyu_condnum NaN");
-     } else if (HH[j_local+1][j_local]==0.0) {
-      condition_number_blowup=1;  
+     } else if ((HH[j_local+1][j_local]>=0.0)&&
+		(HH[j_local+1][j_local]<=KRYLOV_NORM_CUTOFF)) {
+      condition_number_blowup=2;  
+      use_previous_iterate=1;
      } else
       amrex::Error("HH[j_local+1][j_local] invalid");
 
@@ -2936,13 +2944,16 @@ ABecLaplacian::pcg_GMRES_solve(
      if (condition_number_blowup==1) {
 
       p_local++;
+
        // variables initialized to 0.0  
-      if (p_local>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
+      if (p_local>=p_local_allocated) {
        GMRES_U_MF[p_local][coarsefine]=
 	 new MultiFab(gbox[level],dmap_array[level],
                       nsolve_bicgstab,nghostRHS,
                       MFInfo().SetTag("GMRES_U_MF"),FArrayBoxFactory()); 
+       p_local_allocated++;
       }
+
       GMRES_U_MF[p_local][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
     
       MultiFab::Copy(*GMRES_U_MF[p_local][coarsefine],
@@ -3141,8 +3152,12 @@ ABecLaplacian::pcg_GMRES_solve(
        condition_number_blowup=0;
        zeyu_condnum=1.0;
 
-       if (HH[j_local+1][j_local]>0.0) {
+       if (HH[j_local+1][j_local]>=0.0) {
         HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
+       } else
+        amrex::Error("HH[j_local+1][j_local] invalid");
+
+       if (HH[j_local+1][j_local]>KRYLOV_NORM_CUTOFF) {
          // Real** HH   i=0..m  j=0..m-1
          // active region: i=0..j_local+1  j=0..j_local
          
@@ -3153,8 +3168,11 @@ ABecLaplacian::pcg_GMRES_solve(
          condition_number_blowup=0;  
         } else
          amrex::Error("zeyu_condnum NaN");
-       } else if (HH[j_local+1][j_local]==0.0) {
-        condition_number_blowup=1;  
+       } else if ((HH[j_local+1][j_local]>=0.0)&&
+  		  (HH[j_local+1][j_local]<=KRYLOV_NORM_CUTOFF)) {
+        condition_number_blowup=2;  
+        use_previous_iterate=1;
+	p_local--;
        } else
         amrex::Error("HH[j_local+1][j_local] invalid");
 
@@ -3176,29 +3194,13 @@ ABecLaplacian::pcg_GMRES_solve(
 
       if (vhat_counter==max_vhat_sweeps) {
 
-       if (j_local>0) {
-	use_previous_iterate=1;
-       } else if (j_local==0) {
-        std::cout << "vhat_counter,j_local,p_local,m " <<
-         vhat_counter << ' ' << ' ' << j_local << ' ' <<
-         p_local << ' ' << m << endl;
-        std::cout << "beta= " << beta << endl;
-        for (int eh=0;eh<j_local;eh++) {
-         std::cout << "eh,error_history[eh] " << eh << ' ' <<
-          error_history[eh] << endl;
-        }
-        std::cout << "level= " << level << endl;
-        std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
-        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-        std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
-        std::cout << "gbox[level]= " << gbox[level] << '\n';
-        amrex::Error("vhat_counter==max_vhat_sweeps mglib");
-       } else
-        amrex::Error("j_local invalid");
+       use_previous_iterate=1;
 
       } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
        if (condition_number_blowup==0) {
         // do nothing
+       } else if (condition_number_blowup==2) {
+        use_previous_iterate=1;
        } else
         amrex::Error("condition_number_blowup invalid");
       } else
@@ -3206,6 +3208,8 @@ ABecLaplacian::pcg_GMRES_solve(
 
      } else if (condition_number_blowup==0) {
       // do nothing
+     } else if (condition_number_blowup==2) {
+      use_previous_iterate=1;
      } else
       amrex::Error("condition_number_blowup invalid");
 
@@ -3228,7 +3232,7 @@ ABecLaplacian::pcg_GMRES_solve(
 
        // sub box dimensions: p_local+j_local+3  x j_local+1
        // j_local=0..m-1
-      LeastSquaresQR(HHGG,yy,beta_e1,2*(m+1),m,
+      LeastSquaresQR(HHGG,yy,beta_e1,2*m+2,2*m+1,
 		    p_local+j_local+3,j_local+1);
       if (status==1) {
        for (int i2=0;i2<=j_local;i2++) {
@@ -3325,10 +3329,25 @@ ABecLaplacian::pcg_GMRES_solve(
 
      } else if (use_previous_iterate==1) {
       convergence_flag=1;
+      if (j_local==0) {
+ 
+       // Z=M^{-1}R
+       // z=project_null_space(z)
+       pcg_solve(
+        z_in,r_in,
+        eps_abs,bot_atol,
+        pbdryhom_in,
+        bcpres_array,
+        usecg_at_bottom,
+        smooth_type,bottom_smooth_type,
+        presmooth,postsmooth,
+        use_PCG,
+        level,6);
+      } 
      } else
       amrex::Error("use_previous_iterate invalid");
 
-    } // j_local=0..m-1 (and convergence_flag==0)
+    } // j_local=0..m_small-1 (and convergence_flag==0)
 
     if (debug_BF_GMRES==1) {
      for (int i=0;i<j_local;i++) {
@@ -3345,7 +3364,7 @@ ABecLaplacian::pcg_GMRES_solve(
      delete GMRES_V_MF[i][coarsefine];
      GMRES_V_MF[i][coarsefine]=(MultiFab*)0;
     }
-    for (int i=gmres_precond_iter_base_mg*nsolve_bicgstab;i<=p_local;i++) {
+    for (int i=p_local_init_allocated;i<p_local_allocated;i++) {
      delete GMRES_U_MF[i][coarsefine];
      GMRES_U_MF[i][coarsefine]=(MultiFab*)0;
     }
@@ -3354,7 +3373,7 @@ ABecLaplacian::pcg_GMRES_solve(
      delete [] GG[i];
     delete [] GG;
 
-    for (int i=0;i<2*(m+1);i++) 
+    for (int i=0;i<2*m+2;i++) 
      delete [] HHGG[i];
     delete [] HHGG;
 
