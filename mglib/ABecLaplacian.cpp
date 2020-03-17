@@ -1007,6 +1007,7 @@ ABecLaplacian::ABecLaplacian (
   CG_z[coarsefine]=(MultiFab*)0;
   CG_Av_search[coarsefine]=(MultiFab*)0;
   CG_p_search[coarsefine]=(MultiFab*)0;
+  CG_p_search_SOLN[coarsefine]=(MultiFab*)0;
   CG_v_search[coarsefine]=(MultiFab*)0;
   CG_rhs_resid_cor_form[coarsefine]=(MultiFab*)0;
   CG_pbdryhom[coarsefine]=(MultiFab*)0;
@@ -1178,6 +1179,9 @@ ABecLaplacian::ABecLaplacian (
   CG_p_search[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
     nsolve_bicgstab,nghostRHS,
     MFInfo().SetTag("CG_p_search"),FArrayBoxFactory());
+  CG_p_search_SOLN[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+    nsolve_bicgstab,nghostSOLN,
+    MFInfo().SetTag("CG_p_search_SOLN"),FArrayBoxFactory());
   CG_v_search[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
     nsolve_bicgstab,nghostRHS,
     MFInfo().SetTag("CG_v_search"),FArrayBoxFactory());
@@ -1308,6 +1312,8 @@ ABecLaplacian::~ABecLaplacian ()
   CG_Av_search[coarsefine]=(MultiFab*)0;
   delete CG_p_search[coarsefine];
   CG_p_search[coarsefine]=(MultiFab*)0;
+  delete CG_p_search_SOLN[coarsefine];
+  CG_p_search_SOLN[coarsefine]=(MultiFab*)0;
   delete CG_v_search[coarsefine];
   CG_v_search[coarsefine]=(MultiFab*)0;
   delete CG_rhs_resid_cor_form[coarsefine];
@@ -3479,23 +3485,34 @@ ABecLaplacian::CG_check_for_convergence(
                  (rnorm<=relative_error*rnorm_init));
 
  if (nit>critical_nit) {
+
   error_close_to_zero=base_check;
+
   if (error_close_to_zero==0) {
-   if (nit>4) {
-    Real rnorm_prev=CG_error_history[nit-1][2*coarsefine];
-    Real rnorm_prev2=CG_error_history[nit-2][2*coarsefine];
-    double slope_error=0.5*(std::abs(rnorm-rnorm_prev)+
-	    std::abs(rnorm_prev-rnorm_prev2));
-    if ((slope_error<=eps_abs)||
-        (slope_error<=relative_error*rnorm_init)) {
-     error_close_to_zero=1;
+
+   if ((BICGSTAB_ACTIVE==1)&&(1==0)) {
+
+    if (nit>4) {
+     Real rnorm_prev=CG_error_history[nit-1][2*coarsefine];
+     Real rnorm_prev2=CG_error_history[nit-2][2*coarsefine];
+     double slope_error=0.5*(std::abs(rnorm-rnorm_prev)+
+ 	    std::abs(rnorm_prev-rnorm_prev2));
+     if ((slope_error<=eps_abs)||
+         (slope_error<=relative_error*rnorm_init)) {
+      error_close_to_zero=1;
+     }
+
+    } else if ((nit>=0)&&(nit<=4)) {
+     // do nothing
+    } else {
+     amrex::Error("nit invalid");
     }
 
-   } else if ((nit>=0)&&(nit<=4)) {
-    // do nothing
-   } else {
-    amrex::Error("nit invalid");
-   }
+   } else if ((BICGSTAB_ACTIVE==0)||(1==1)) {
+    // do not check for error valley
+   } else
+    amrex::Error("BICGSTAB_ACTIVE invalid");
+
   } else if (error_close_to_zero==1) {
 	  // do nothing
   } else {
@@ -3714,6 +3731,7 @@ ABecLaplacian::CG_solve(
  Real rho_old=1.0;
  Real omega=1.0;
  Real alpha=1.0;
+ CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN); 
  CG_p_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
  CG_v_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
 
@@ -3751,11 +3769,13 @@ ABecLaplacian::CG_solve(
    CG_error_history[ehist][2*coarsefine+ih]=0.0;
  }
 
+ BICGSTAB_ACTIVE=0;
+
  for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero!=1)); ++nit) {
 
   restart_flag=0;
 
-  rho_old=rho;
+  rho_old=rho; // initially or on restart, rho_old=rho=1
 
   rnorm=LPnorm(*CG_r[coarsefine],level);
   if (rnorm>=0.0) {
@@ -3790,10 +3810,79 @@ ABecLaplacian::CG_solve(
    } else
     amrex::Error("nit invalid");
 
-    // rho=r0 dot r
-   LP_dot(*CG_rhs_resid_cor_form[coarsefine],*CG_r[coarsefine],level,rho); 
+   if (BICGSTAB_ACTIVE==0) { //MGPCG
 
-   if (rho>=0.0) {
+    // z=K^{-1} r
+    // z=project_null_space(z)
+    pcg_solve(
+       CG_z[coarsefine],
+       CG_r[coarsefine],
+       eps_abs,bot_atol,
+       CG_pbdryhom[coarsefine],
+       bcpres_array,
+       usecg_at_bottom,
+       smooth_type,bottom_smooth_type,
+       presmooth,postsmooth,
+       use_PCG,level,nit);
+
+     // rho=z dot r
+    LP_dot(*CG_z[coarsefine],*CG_r[coarsefine],level,rho); 
+
+    if (rho>=0.0) {
+     if (rho_old>restart_tol) {
+      beta=rho/rho_old;
+       // CG_p_search=0 initially or on restart.
+       // p=z + beta p
+      CG_advance( (*CG_p_search[coarsefine]),beta,(*CG_z[coarsefine]),
+               (*CG_p_search[coarsefine]),level );
+      project_null_space((*CG_p_search[coarsefine]),level);
+
+       // Av_search=A*p
+      MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
+       *CG_p_search[coarsefine],0,0,nsolve_bicgstab,0);
+
+      apply(*CG_Av_search[coarsefine],
+	    *CG_p_search_SOLN[coarsefine],level,
+            *CG_pbdryhom[coarsefine],bcpres_array);
+      project_null_space((*CG_Av_search[coarsefine]),level);
+
+      Real pAp=0.0;
+      LP_dot(*CG_p_search[coarsefine],*CG_Av_search[coarsefine],level,pAp);
+      if (pAp>restart_tol) {
+       alpha=rho/pAp;
+        // x=x+alpha p
+       LP_update( (*CG_delta_sol[coarsefine]), alpha, 
+                  (*CG_delta_sol[coarsefine]),
+   	          (*CG_p_search_SOLN[coarsefine]),level );
+       project_null_space((*CG_delta_sol[coarsefine]),level);
+
+       residual(
+         (*CG_r[coarsefine]),
+         (*CG_rhs_resid_cor_form[coarsefine]),
+         (*CG_delta_sol[coarsefine]),
+    	 level,
+         *CG_pbdryhom[coarsefine],
+	 bcpres_array); 
+       project_null_space((*CG_r[coarsefine]),level);
+      } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
+//       restart_flag=1;
+       error_close_to_zero=1;
+      } else
+       amrex::Error("pAp invalid");
+     } else if ((rho_old>=0.0)&&(rho_old<=restart_tol)) {
+//      restart_flag=1;
+      error_close_to_zero=1;
+     } else
+      amrex::Error("rho_old invalid");
+    } else
+     amrex::Error("rho invalid");
+
+   } else if (BICGSTAB_ACTIVE==1) { //MG-GMRES PCG
+
+     // rho=r0 dot r
+    LP_dot(*CG_rhs_resid_cor_form[coarsefine],*CG_r[coarsefine],level,rho); 
+
+    if (rho>=0.0) {
      if ((rho_old>restart_tol)&&(omega>restart_tol)) {
       beta=rho*alpha/(rho_old*omega);
        // p=p - omega v
@@ -3826,12 +3915,12 @@ ABecLaplacian::CG_solve(
       restart_flag=1;
      } else
       amrex::Error("rho_old or omega invalid");
-   } else if (rho<0.0) {
+    } else if (rho<0.0) {
      restart_flag=1;
-   } else
+    } else
      amrex::Error("rho invalid mglib");
 
-   if (restart_flag==0) {
+    if (restart_flag==0) {
      LP_dot(*CG_rhs_resid_cor_form[coarsefine],
             *CG_v_search[coarsefine],level,alpha);
 
@@ -3933,10 +4022,13 @@ ABecLaplacian::CG_solve(
       restart_flag=1;
      } else
       amrex::Error("alpha invalid");
-   } else if (restart_flag==1) {
+    } else if (restart_flag==1) {
      // do nothing
-   } else 
+    } else 
      amrex::Error("restart_flag invalid");
+
+   } else 
+    amrex::Error("BICGSTAB_ACTIVE invalid");
 
    if (restart_flag==1) {
 
@@ -3944,6 +4036,7 @@ ABecLaplacian::CG_solve(
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "WARNING:RESTARTING: nit= " << nit << '\n';
       std::cout << "WARNING:RESTARTING: level= " << level << '\n';
+      std::cout << "RESTARTING: BICGSTAB_ACTIVE=" << BICGSTAB_ACTIVE << '\n';
       std::cout << "RESTARTING: gmres_precond_iter= " << 
        gmres_precond_iter << '\n';
       std::cout << "RESTARTING: rnorm= " << 
@@ -3964,6 +4057,7 @@ ABecLaplacian::CG_solve(
      omega=1.0;
      alpha=1.0;
      CG_p_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
+     CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN); 
      CG_v_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
      sol.plus(*CG_delta_sol[coarsefine],0,nsolve_bicgstab,0);
      project_null_space(sol,level);

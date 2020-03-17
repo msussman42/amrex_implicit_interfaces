@@ -161,6 +161,8 @@ protected:
 
     Vector< Array<Real,4> > CG_error_history;
 
+    int BICGSTAB_ACTIVE;
+
     void MG_solve_ (int nsverbose,MultiFab& _sol,
      Real eps_abs,Real atol_b,MultiFab& pbdry,Vector<int> bcpres_array,
      int usecg_at_bottom,
@@ -245,6 +247,7 @@ protected:
  Array< MultiFab*, 2> CG_z;
  Array< MultiFab*, 2> CG_Av_search;
  Array< MultiFab*, 2> CG_p_search;
+ Array< MultiFab*, 2> CG_p_search_SOLN;
  Array< MultiFab*, 2> CG_v_search;
  Array< MultiFab*, 2> CG_rhs_resid_cor_form;
  Array< MultiFab*, 2> CG_pbdryhom;
