@@ -37,7 +37,7 @@ mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
 mg.usecg=1
-mg.bot_atol = 1.0e-14
+mg.bot_atol = 1.0e-11
 mg.visc_bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
@@ -112,7 +112,7 @@ amr.plotfile_on_restart=1
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-12
+mac.mac_abs_tol    = 1.0e-9
 mac.visc_abs_tol    = 1.0e-5
 mac.use_cg_solve   = 1
 
