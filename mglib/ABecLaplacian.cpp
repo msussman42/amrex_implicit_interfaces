@@ -3488,38 +3488,8 @@ ABecLaplacian::CG_check_for_convergence(
 
   error_close_to_zero=base_check;
 
-  if (error_close_to_zero==0) {
-
-   if ((BICGSTAB_ACTIVE==1)&&(1==0)) {
-
-    if (nit>4) {
-     Real rnorm_prev=CG_error_history[nit-1][2*coarsefine];
-     Real rnorm_prev2=CG_error_history[nit-2][2*coarsefine];
-     double slope_error=0.5*(std::abs(rnorm-rnorm_prev)+
- 	    std::abs(rnorm_prev-rnorm_prev2));
-     if ((slope_error<=eps_abs)||
-         (slope_error<=relative_error*rnorm_init)) {
-      error_close_to_zero=1;
-     }
-
-    } else if ((nit>=0)&&(nit<=4)) {
-     // do nothing
-    } else {
-     amrex::Error("nit invalid");
-    }
-
-   } else if ((BICGSTAB_ACTIVE==0)||(1==1)) {
-    // do not check for error valley
-   } else
-    amrex::Error("BICGSTAB_ACTIVE invalid");
-
-  } else if (error_close_to_zero==1) {
-	  // do nothing
-  } else {
-   amrex::Error("error_close_to_zero invalid");
-  }
-
  } else if ((nit>=0)&&(nit<=critical_nit)) {
+
   error_close_to_zero=((rnorm<=critical_abs_tol)||
                        (rnorm<=critical_rel_tol*rnorm_init));
 
@@ -3769,7 +3739,7 @@ ABecLaplacian::CG_solve(
    CG_error_history[ehist][2*coarsefine+ih]=0.0;
  }
 
- BICGSTAB_ACTIVE=0;
+ int BICGSTAB_ACTIVE=0;
 
  for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero!=1)); ++nit) {
 

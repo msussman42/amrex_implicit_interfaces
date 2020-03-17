@@ -9615,7 +9615,7 @@ void NavierStokes::multiphase_project(int project_option) {
         amrex::Error("presmooth!=postsmooth");
 
        Real rho0=1.0;
-       Real rho1=0.0;
+       Real rho1=1.0;
        Real alpha=1.0;
        Real beta=0.0;
        Real w0=1.0;
@@ -9668,6 +9668,8 @@ void NavierStokes::multiphase_project(int project_option) {
        bprof.stop();
 #endif
 
+       int BICGSTAB_ACTIVE=0;
+
        for (vcycle=0;((vcycle<=vcycle_max)&&(meets_tol==0));vcycle++) {
 
 #if (profile_solver==1)
@@ -9719,107 +9721,50 @@ void NavierStokes::multiphase_project(int project_option) {
          bprof.start();
 #endif
 
-          // rho1=R0hat dot CGRESID(R0)
-         dot_productALL(project_option,bicg_R0hat_MF,CGRESID_MF,rho1,nsolve);
+         if (BICGSTAB_ACTIVE==0) { //MGPCG
 
-         if (vcycle==0) { // R0hat=R when vcycle==0
 
-	  if (rho1>0.0) {
-           Real sanity_error=sqrt(rho1);
-           if (sanity_error>0.9*save_mac_abs_tol) {
-            // do nothing
-           } else
-            amrex::Error("sanity_error invalid");
-	  } else
-           amrex::Error("rho1 invalid");
+         } else if (BICGSTAB_ACTIVE==1) { //MG-GMRES PCG
 
-         } else if (vcycle>0) {
-          // check nothing
-         } else
-          amrex::Error("vcycle invalid");
+           // rho1=R0hat dot CGRESID(R0)
+          dot_productALL(project_option,bicg_R0hat_MF,CGRESID_MF,rho1,nsolve);
 
-	 if (rho0<=restart_tol) {
-  	  restart_flag=1;
-	 } else if (rho0>=restart_tol) {
-	  // do nothing
-	 } else
-	  amrex::Error("rho0 failed Nav3");
+          if (vcycle==0) { // R0hat=R when vcycle==0
 
-	 if (w0<=restart_tol) {
-	  restart_flag=1;
-	 } else if (w0>=restart_tol) {
-	  // do nothing
-	 } else
-	  amrex::Error("w0 failed Nav3");
+	   if (rho1>0.0) {
+            Real sanity_error=sqrt(rho1);
+            if (sanity_error>0.9*save_mac_abs_tol) {
+             // do nothing
+            } else
+             amrex::Error("sanity_error invalid");
+	   } else
+            amrex::Error("rho1 invalid");
 
-	 if (rho1<0.0) {
-  	  restart_flag=1;
-	 } else if (rho1>=0.0) {
-	  // do nothing
-	 } else
-	  amrex::Error("rho1 invalid mglib");
+          } else if (vcycle>0) {
+           // check nothing
+          } else
+           amrex::Error("vcycle invalid");
 
-#if (profile_solver==1)
-         bprof.stop();
-#endif
-
-         if (restart_flag==0) {
-
-#if (profile_solver==1)
-          bprof.start();
-#endif
-
-          beta=(rho1/rho0)*(alpha/w0);
-
-	  if (beta>=0.0) {
+	  if (rho0<=restart_tol) {
+   	   restart_flag=1;
+	  } else if (rho0>=restart_tol) {
 	   // do nothing
 	  } else
-	   amrex::Error("beta invalid Nav3");
+	   amrex::Error("rho0 failed Nav3");
 
-          a1=1.0;
-          a2=-w0;
-
-           // P1=P - w0 V0
-          mf_combine(project_option,
-	  P_MF,bicg_V0_MF,a2,bicg_P1_MF,nsolve); 
-           // P1=CGRESID(R0)+beta P1
-          mf_combine(project_option,
-           CGRESID_MF,bicg_P1_MF,beta,bicg_P1_MF,nsolve); 
-
-	  change_flag=0;
-          project_right_hand_side(bicg_P1_MF,project_option,change_flag);
-
-#if (profile_solver==1)
-          bprof.stop();
-#endif
-
-           // Y=M^{-1}P1
-	   // Y=project(Y)
-          multiphase_GMRES_preconditioner(
-           gmres_precond_iter,
-           project_option,project_timings,
-           presmooth,postsmooth,
-           bicg_Y_MF,bicg_P1_MF,nsolve);
-
-#if (profile_solver==1)
-          bprof.start();
-#endif
-
-           // V1=A Y
-           // 1. (begin)calls project_right_hand_side(Y)
-           // 2. (end)  calls project_right_hand_side(V1)
-          applyALL(project_option,bicg_Y_MF,bicg_V1_MF,nsolve);
-
-          // alpha=R0hat dot V1=R0hat dot A M^-1 P1=
-	  //       R0hat dot A M^-1 (R0+beta(P-w0 V0))
-          dot_productALL(project_option,bicg_R0hat_MF,bicg_V1_MF,alpha,nsolve);
-
-	  if (alpha<=restart_tol) {
+	  if (w0<=restart_tol) {
 	   restart_flag=1;
-	  } else if (alpha>=restart_tol) {
-  	   // do nothing
+	  } else if (w0>=restart_tol) {
+	   // do nothing
 	  } else
-	   amrex::Error("alpha failed Nav3");
+	   amrex::Error("w0 failed Nav3");
+
+	  if (rho1<0.0) {
+   	   restart_flag=1;
+	  } else if (rho1>=0.0) {
+	   // do nothing
+	  } else
+	   amrex::Error("rho1 invalid mglib");
 
 #if (profile_solver==1)
           bprof.stop();
@@ -9831,167 +9776,232 @@ void NavierStokes::multiphase_project(int project_option) {
            bprof.start();
 #endif
 
-           alpha=rho1/alpha;
+           beta=(rho1/rho0)*(alpha/w0);
 
-           // Hvec=U0+alpha Y
-           a1=1.0;
-           a2=alpha;
-           mf_combine(project_option,
-	     bicg_U0_MF,bicg_Y_MF,a2,bicg_Hvec_MF,nsolve);
-
-	   change_flag=0;
-           project_right_hand_side(bicg_Hvec_MF,project_option,change_flag);
-           // mac_phi_crse(U1)=Hvec
-           copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
-
-	   change_flag=0;
-           project_right_hand_side(MAC_PHI_CRSE_MF,project_option,change_flag);
-
-           // R1=RHS-A mac_phi_crse(U1)
-	   // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
-	   // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
-           residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
-             MAC_PHI_CRSE_MF,nsolve);
-
-	   // dnorm=R1 dot R1
-           dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
-	   if (dnorm>=0.0) {
-            dnorm=sqrt(dnorm);
+	   if (beta>=0.0) {
+	    // do nothing
 	   } else
-            amrex::Error("dnorm invalid Nav3");
+	    amrex::Error("beta invalid Nav3");
+
+           a1=1.0;
+           a2=-w0;
+
+            // P1=P - w0 V0
+           mf_combine(project_option,
+	    P_MF,bicg_V0_MF,a2,bicg_P1_MF,nsolve); 
+            // P1=CGRESID(R0)+beta P1
+           mf_combine(project_option,
+            CGRESID_MF,bicg_P1_MF,beta,bicg_P1_MF,nsolve); 
+
+	   change_flag=0;
+           project_right_hand_side(bicg_P1_MF,project_option,change_flag);
 
 #if (profile_solver==1)
            bprof.stop();
 #endif
 
-           if (dnorm>save_mac_abs_tol) {
-
-#if (profile_solver==1)
-            bprof.start();
-#endif
-
-            // S=CGRESID(R0)-alpha V1
-            a1=1.0;
-            a2=-alpha;
-            mf_combine(project_option,
- 	      CGRESID_MF,bicg_V1_MF,a2,bicg_S_MF,nsolve);
-
-	    change_flag=0;
-            project_right_hand_side(bicg_S_MF,project_option,change_flag);
-
-#if (profile_solver==1)
-            bprof.stop();
-#endif
-
-            // Z=M^{-1}S
-	    // Z=project(Z)
-            multiphase_GMRES_preconditioner(
-             gmres_precond_iter,
-             project_option,project_timings,
-             presmooth,postsmooth,
-             Z_MF,bicg_S_MF,nsolve);
-
-#if (profile_solver==1)
-            bprof.start();
-#endif
-
-            // T=A Z
-            // 1. (begin)calls project_right_hand_side(Z)
-            // 2. (end)  calls project_right_hand_side(T)
-            applyALL(project_option,Z_MF,bicg_T_MF,nsolve);
-
-	    // a1 = T dot S = AZ dot MZ >=0.0 if A and M are SPD
-            dot_productALL(project_option,bicg_T_MF,bicg_S_MF,a1,nsolve);
-	    // a2 = T dot T = AZ dot AZ >=0.0 
-            dot_productALL(project_option,bicg_T_MF,bicg_T_MF,a2,nsolve);
-
-	    if (a2>=restart_tol) {
-  	     // do nothing
-	    } else if ((a2>=0.0)&&(a2<=restart_tol)) {
-	     restart_flag=1;
-	    } else
-	     amrex::Error("a2 invalid Nav3");
-
-	    if (a1>0.0) {
-	     // do nothing
-	    } else if (a1<=0.0) {
-	     restart_flag=1;
-	    } else
-	     amrex::Error("a1 invalid");
-
-#if (profile_solver==1)
-            bprof.stop();
-#endif
-
-            if (restart_flag==0) {
-
-#if (profile_solver==1)
-             bprof.start();
-#endif
-
-             w1=a1/a2;
-             // mac_phi_crse(U1)=Hvec+w1 Z
-             a1=1.0;
-             a2=w1;
-             mf_combine(project_option,
-	       bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
-	     change_flag=0;
-             project_right_hand_side(MAC_PHI_CRSE_MF,
-                  project_option,change_flag);
-
-#if (profile_solver==1)
-             bprof.stop();
-#endif
-
-            } else if (restart_flag==1) {
-  	     // do nothing
-	    } else
-	     amrex::Error("restart_flag invalid");
-
-           } else if ((dnorm>=0.0)&&(dnorm<=save_mac_abs_tol)) {
-	    // do nothing
-           } else
-	    amrex::Error("dnorm invalid");
+            // Y=M^{-1}P1
+	    // Y=project(Y)
+           multiphase_GMRES_preconditioner(
+            gmres_precond_iter,
+            project_option,project_timings,
+            presmooth,postsmooth,
+            bicg_Y_MF,bicg_P1_MF,nsolve);
 
 #if (profile_solver==1)
            bprof.start();
 #endif
 
-           // R1=RHS-A mac_phi_crse(U1)
-	   // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
-	   // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
-           residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
-             MAC_PHI_CRSE_MF,nsolve);
+            // V1=A Y
+            // 1. (begin)calls project_right_hand_side(Y)
+            // 2. (end)  calls project_right_hand_side(V1)
+           applyALL(project_option,bicg_Y_MF,bicg_V1_MF,nsolve);
 
-	   // dnorm=R1 dot R1
-           dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
-	   if (dnorm>=0.0) {
-            dnorm=sqrt(dnorm);
+           // alpha=R0hat dot V1=R0hat dot A M^-1 P1=
+	   //       R0hat dot A M^-1 (R0+beta(P-w0 V0))
+           dot_productALL(project_option,bicg_R0hat_MF,bicg_V1_MF,alpha,nsolve);
+
+	   if (alpha<=restart_tol) {
+	    restart_flag=1;
+	   } else if (alpha>=restart_tol) {
+   	    // do nothing
 	   } else
-	    amrex::Error("dnorm invalid Nav3");
-
-           rho0=rho1;
-           w0=w1;
-           // CGRESID(R0)=R1
-           copyALL(0,nsolveMM,CGRESID_MF,bicg_R1_MF);
-           copyALL(0,nsolveMM,P_MF,bicg_P1_MF);
-           copyALL(0,nsolveMM,bicg_V0_MF,bicg_V1_MF);
-           // U0=MAC_PHI_CRSE(U1)
-           copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
+	    amrex::Error("alpha failed Nav3");
 
 #if (profile_solver==1)
            bprof.stop();
 #endif
 
+           if (restart_flag==0) {
+
+#if (profile_solver==1)
+            bprof.start();
+#endif
+
+            alpha=rho1/alpha;
+
+            // Hvec=U0+alpha Y
+            a1=1.0;
+            a2=alpha;
+            mf_combine(project_option,
+	     bicg_U0_MF,bicg_Y_MF,a2,bicg_Hvec_MF,nsolve);
+
+	    change_flag=0;
+            project_right_hand_side(bicg_Hvec_MF,project_option,change_flag);
+            // mac_phi_crse(U1)=Hvec
+            copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
+
+	    change_flag=0;
+            project_right_hand_side(MAC_PHI_CRSE_MF,project_option,change_flag);
+
+            // R1=RHS-A mac_phi_crse(U1)
+	    // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
+	    // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
+            residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
+              MAC_PHI_CRSE_MF,nsolve);
+
+	    // dnorm=R1 dot R1
+            dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
+	    if (dnorm>=0.0) {
+             dnorm=sqrt(dnorm);
+	    } else
+             amrex::Error("dnorm invalid Nav3");
+
+#if (profile_solver==1)
+            bprof.stop();
+#endif
+
+            if (dnorm>save_mac_abs_tol) {
+
+#if (profile_solver==1)
+             bprof.start();
+#endif
+
+             // S=CGRESID(R0)-alpha V1
+             a1=1.0;
+             a2=-alpha;
+             mf_combine(project_option,
+  	      CGRESID_MF,bicg_V1_MF,a2,bicg_S_MF,nsolve);
+
+	     change_flag=0;
+             project_right_hand_side(bicg_S_MF,project_option,change_flag);
+
+#if (profile_solver==1)
+             bprof.stop();
+#endif
+
+             // Z=M^{-1}S
+	     // Z=project(Z)
+             multiphase_GMRES_preconditioner(
+              gmres_precond_iter,
+              project_option,project_timings,
+              presmooth,postsmooth,
+              Z_MF,bicg_S_MF,nsolve);
+
+#if (profile_solver==1)
+             bprof.start();
+#endif
+
+             // T=A Z
+             // 1. (begin)calls project_right_hand_side(Z)
+             // 2. (end)  calls project_right_hand_side(T)
+             applyALL(project_option,Z_MF,bicg_T_MF,nsolve);
+
+	     // a1 = T dot S = AZ dot MZ >=0.0 if A and M are SPD
+             dot_productALL(project_option,bicg_T_MF,bicg_S_MF,a1,nsolve);
+	     // a2 = T dot T = AZ dot AZ >=0.0 
+             dot_productALL(project_option,bicg_T_MF,bicg_T_MF,a2,nsolve);
+
+	     if (a2>=restart_tol) {
+   	      // do nothing
+	     } else if ((a2>=0.0)&&(a2<=restart_tol)) {
+	      restart_flag=1;
+	     } else
+	      amrex::Error("a2 invalid Nav3");
+
+	     if (a1>0.0) {
+	      // do nothing
+	     } else if (a1<=0.0) {
+	      restart_flag=1;
+	     } else
+	      amrex::Error("a1 invalid");
+
+#if (profile_solver==1)
+             bprof.stop();
+#endif
+
+             if (restart_flag==0) {
+
+#if (profile_solver==1)
+              bprof.start();
+#endif
+
+              w1=a1/a2;
+              // mac_phi_crse(U1)=Hvec+w1 Z
+              a1=1.0;
+              a2=w1;
+              mf_combine(project_option,
+	       bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
+	      change_flag=0;
+              project_right_hand_side(MAC_PHI_CRSE_MF,
+                   project_option,change_flag);
+
+#if (profile_solver==1)
+              bprof.stop();
+#endif
+
+             } else if (restart_flag==1) {
+   	      // do nothing
+	     } else
+	      amrex::Error("restart_flag invalid");
+
+            } else if ((dnorm>=0.0)&&(dnorm<=save_mac_abs_tol)) {
+	     // do nothing
+            } else
+	     amrex::Error("dnorm invalid");
+
+#if (profile_solver==1)
+            bprof.start();
+#endif
+
+            // R1=RHS-A mac_phi_crse(U1)
+	    // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
+	    // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
+            residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
+              MAC_PHI_CRSE_MF,nsolve);
+
+	    // dnorm=R1 dot R1
+            dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
+	    if (dnorm>=0.0) {
+             dnorm=sqrt(dnorm);
+	    } else
+	     amrex::Error("dnorm invalid Nav3");
+
+            rho0=rho1;
+            w0=w1;
+            // CGRESID(R0)=R1
+            copyALL(0,nsolveMM,CGRESID_MF,bicg_R1_MF);
+            copyALL(0,nsolveMM,P_MF,bicg_P1_MF);
+            copyALL(0,nsolveMM,bicg_V0_MF,bicg_V1_MF);
+            // U0=MAC_PHI_CRSE(U1)
+            copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
+
+#if (profile_solver==1)
+            bprof.stop();
+#endif
+
+           } else if (restart_flag==1) {
+            // do nothing
+           } else
+            amrex::Error("restart_flag invalid");
+
           } else if (restart_flag==1) {
            // do nothing
-          } else
-           amrex::Error("restart_flag invalid");
+	  } else
+	   amrex::Error("restart_flag invalid");
 
-         } else if (restart_flag==1) {
-          // do nothing
-	 } else
-	  amrex::Error("restart_flag invalid");
+         } else 
+          amrex::Error("BICGSTAB_ACTIVE invalid");
 
          if (restart_flag==0) {
           // do nothing
@@ -10005,6 +10015,8 @@ void NavierStokes::multiphase_project(int project_option) {
            if (ParallelDescriptor::IOProcessor()) {
             std::cout << "WARNING:RESTARTING: bicgstab vcycle " 
 		   << vcycle << '\n';
+            std::cout << "RESTARTING: BICGSTAB_ACTIVE=" << 
+             BICGSTAB_ACTIVE << '\n';
             std::cout << "RESTARTING: gmres_precond_iter= " << 
              gmres_precond_iter << '\n';
             std::cout << "RESTARTING: error_history[vcycle][0,1]= " << 
@@ -10028,6 +10040,7 @@ void NavierStokes::multiphase_project(int project_option) {
           // MAC_PHI_CRSE(U1)=U0
           copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_U0_MF);
           rho0=1.0;
+          rho1=1.0;
           alpha=1.0;
           w0=1.0;
 	  // dnorm=RESID dot RESID
@@ -10046,6 +10059,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
          } else
           amrex::Error("restart_flag invalid");
+
         } // meets_tol==0
 
         if ((prev_restart_flag==1)&&(restart_flag==1)) {
