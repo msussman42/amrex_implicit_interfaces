@@ -9977,7 +9977,6 @@ void NavierStokes::multiphase_project(int project_option) {
 	    } else
 	     amrex::Error("dnorm invalid Nav3");
 
-            rho0=rho1;
             w0=w1;
             // CGRESID(R0)=R1
             copyALL(0,nsolveMM,CGRESID_MF,bicg_R1_MF);
@@ -10002,6 +10001,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
          } else 
           amrex::Error("BICGSTAB_ACTIVE invalid");
+
+         rho0=rho1;
 
          if (restart_flag==0) {
           // do nothing
