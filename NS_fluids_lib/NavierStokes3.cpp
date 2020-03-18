@@ -9641,6 +9641,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
          // variables initialized to 0.0
        allocate_array(1,nsolveMM,-1,Z_MF);
+       allocate_array(1,nsolveMM,-1,P_SOLN_MF);
        allocate_array(0,nsolveMM,-1,P_MF);
        allocate_array(0,nsolveMM,-1,bicg_R0hat_MF);
        allocate_array(1,nsolveMM,-1,bicg_U0_MF);
@@ -9723,6 +9724,65 @@ void NavierStokes::multiphase_project(int project_option) {
 
          if (BICGSTAB_ACTIVE==0) { //MGPCG
 
+          // Z=M^{-1}CGRESID
+	  // Z=project(Z)
+          multiphase_preconditioner(
+           project_option,project_timings,
+           presmooth,postsmooth,
+           Z_MF,CGRESID_MF,nsolve);
+
+          // rho=z dot r
+          dot_productALL(project_option,Z_MF,CGRESID_MF,rho1,nsolve);
+
+          if (rho1>=0.0) {
+           if (rho0>restart_tol) {
+            beta=rho1/rho0;
+            // P_MF=0 initially or on restart.
+            // P_MF=Z_MF + beta P_MF
+            mf_combine(project_option,
+	     Z_MF,P_MF,beta,P_MF,nsolve);
+	    change_flag=0;
+            project_right_hand_side(P_MF,project_option,change_flag);
+
+            copyALL(0,nsolveMM,P_SOLN_MF,P_MF); //P_SOLN=P
+            // V1=A P_SOLN
+            // 1. (begin)calls project_right_hand_side(P)
+            // 2. (end)  calls project_right_hand_side(V1)
+            applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
+
+            Real pAp=0.0;
+            dot_productALL(project_option,P_MF,bicg_V1_MF,pAp,nsolve);
+
+            if (pAp>restart_tol) {
+             alpha=rho1/pAp;
+
+              // mac_phi_crse(U1)=mac_phi_crse+alpha P
+             mf_combine(project_option,
+	       MAC_PHI_CRSE_MF,P_MF,alpha,MAC_PHI_CRSE_MF,nsolve);
+             change_flag=0;
+             project_right_hand_side(MAC_PHI_CRSE_MF,
+               project_option,change_flag);
+              // U0=MAC_PHI_CRSE(U1)
+             copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
+
+             // CGRESID=RHS-A mac_phi_crse(U1)
+	     // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
+	     // 2. (end)   calls project_right_hand_side(CGRESID_MF)
+             residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
+              MAC_PHI_CRSE_MF,nsolve);
+
+            } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
+//           restart_flag=1;
+             meets_tol=1;
+            } else
+             amrex::Error("pAp invalid");
+           } else if ((rho0>=0.0)&&(rho0<=restart_tol)) {
+//          restart_flag=1;
+            meets_tol=1;
+           } else
+            amrex::Error("rho0 invalid");
+          } else
+           amrex::Error("rho1 invalid");
 
          } else if (BICGSTAB_ACTIVE==1) { //MG-GMRES PCG
 
@@ -10103,6 +10163,7 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
        delete_array(Z_MF);
+       delete_array(P_SOLN_MF);
        delete_array(P_MF);
        delete_array(bicg_R0hat_MF);
        delete_array(bicg_U0_MF);

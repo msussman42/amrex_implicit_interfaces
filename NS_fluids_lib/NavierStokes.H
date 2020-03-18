@@ -175,7 +175,8 @@ namespace amrex{
 #define Y_MF 148
 #define S_MF 149
 #define T_MF 150
-#define ZT_MF 151
+
+#define P_SOLN_MF 151
 
 #define FACEFRAC_SOLVE_MM_MF 155
 #define FACEFRAC_MM_MF 158
