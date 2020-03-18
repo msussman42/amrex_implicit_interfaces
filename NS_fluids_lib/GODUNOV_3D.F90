@@ -10280,6 +10280,7 @@ stop
         cap_wave_speed, &
         u_max, &
         u_max_estdt, &
+        u_max_cap_wave, &
         dt_min, &
         rzflag, &
         Uref,Lref, &
@@ -10350,6 +10351,7 @@ stop
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(inout) :: u_max(SDIM+1)
       REAL_T, intent(inout) :: u_max_estdt(SDIM+1)
+      REAL_T, intent(inout) :: u_max_cap_wave
       REAL_T, intent(inout) :: dt_min
       REAL_T user_tension(nten)
       REAL_T Uref,Lref

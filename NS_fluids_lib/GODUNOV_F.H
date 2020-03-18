@@ -685,6 +685,7 @@ extern "C"
       Real* cap_wave_speed,
       Real* u_max,
       Real* u_max_estdt,
+      Real* u_max_cap_wave,
       Real* dt_min,
       int* rzflag,
       Real* Uref,Real* Lref,

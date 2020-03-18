@@ -1482,7 +1482,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  Real dt_min=1.0E+10;
  Real vel_max[AMREX_SPACEDIM+1];
  Real vel_max_estdt[AMREX_SPACEDIM+1];
- MaxAdvectSpeedALL(dt_min,vel_max,vel_max_estdt);
+ Real vel_max_cap_wave=0.0;
+ MaxAdvectSpeedALL(dt_min,vel_max,vel_max_estdt,vel_max_cap_wave);
 
   // 0 empty
   // F,E  2 x nmat
@@ -1841,6 +1842,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    if (std::abs(vel_max[dir])>UMACH)
     UMACH=std::abs(vel_max[dir]);
   }
+  std::cout << "TIME= "<<upper_slab_time<< 
+     " vel_max_cap_wave=" << vel_max_cap_wave << '\n';
+
   for (int iten=0;iten<nten;iten++) {
    std::cout << "TIME= "<<upper_slab_time<<" iten= " << iten <<
      " cap_wave_speed=" << cap_wave_speed[iten] << '\n';

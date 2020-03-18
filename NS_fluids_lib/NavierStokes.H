@@ -677,8 +677,10 @@ protected:
 
     void delete_localMF(int idx_MF,int ncomp); 
 
-    void MaxAdvectSpeedALL(Real& dt_min,Real* vel_max,Real* vel_max_estdt);
-    void MaxAdvectSpeed(Real& dt_min,Real* vel_max,Real* vel_max_estdt);
+    void MaxAdvectSpeedALL(Real& dt_min,Real* vel_max,Real* vel_max_estdt,
+		    Real& vel_max_cap_wave);
+    void MaxAdvectSpeed(Real& dt_min,Real* vel_max,Real* vel_max_estdt,
+		    Real& vel_max_cap_wave);
     void DumpProcNum();
 
       // interpolates coarsedata from level-1 to level.

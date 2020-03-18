@@ -9670,6 +9670,27 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
        int BICGSTAB_ACTIVE=0;
+       if ((enable_spectral==1)||  // SEM space and time
+	   (enable_spectral==2)) { // SEM space
+        BICGSTAB_ACTIVE=1;
+       } if ((enable_spectral==0)||
+             (enable_spectral==3)) { 
+        if ((project_option==0)||
+  	    (project_option==1)||
+            (project_option==10)|| // sync project at advection
+            (project_option==11)|| // FSI_material_exists (2nd project)
+            (project_option==12)|| // pressure extrapolation
+            (project_option==13)|| // FSI_material_exists (1st project)
+	    (project_option==2)||  // thermal diffusion
+            ((project_option>=100)&&
+             (project_option<100+num_species_var))) {
+         BICGSTAB_ACTIVE=0;
+	} else if (project_option==3) { // viscosity
+         BICGSTAB_ACTIVE=1;
+        } else
+	 amrex::Error("project_option invalid");
+       } else
+	amrex::Error("enable_spectral invalid");
 
        for (vcycle=0;((vcycle<=vcycle_max)&&(meets_tol==0));vcycle++) {
 
@@ -9731,7 +9752,7 @@ void NavierStokes::multiphase_project(int project_option) {
            presmooth,postsmooth,
            Z_MF,CGRESID_MF,nsolve);
 
-          // rho=z dot r
+          // rho1=z dot r
           dot_productALL(project_option,Z_MF,CGRESID_MF,rho1,nsolve);
 
           if (rho1>=0.0) {
@@ -9849,6 +9870,10 @@ void NavierStokes::multiphase_project(int project_option) {
             // P1=P - w0 V0
            mf_combine(project_option,
 	    P_MF,bicg_V0_MF,a2,bicg_P1_MF,nsolve); 
+
+	   change_flag=0;
+           project_right_hand_side(bicg_P1_MF,project_option,change_flag);
+
             // P1=CGRESID(R0)+beta P1
            mf_combine(project_option,
             CGRESID_MF,bicg_P1_MF,beta,bicg_P1_MF,nsolve); 

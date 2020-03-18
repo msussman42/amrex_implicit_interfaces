@@ -16877,7 +16877,7 @@ void NavierStokes::DumpProcNum() {
 
 // called from: estTimeStep
 void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
-  Real* vel_max,Real* vel_max_estdt) {
+  Real* vel_max,Real* vel_max_estdt,Real& vel_max_cap_wave) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -16887,12 +16887,15 @@ void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
  
  Real local_vel_max[AMREX_SPACEDIM+1];  // last component is max|c|^2
  Real local_vel_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
+ Real local_vel_max_cap_wave;
  Real local_dt_min;
 
  for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
   vel_max[dir]=0.0;
   vel_max_estdt[dir]=0.0;
  }
+ vel_max_cap_wave=0.0;
+
  dt_min=1.0E+30;
  if (dt_min<dt_max) 
   dt_min=dt_max;
@@ -16909,22 +16912,25 @@ void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
    local_vel_max[dir]=0.0;
    local_vel_max_estdt[dir]=0.0;
   }
+  local_vel_max_cap_wave=0.0;
   local_dt_min=1.0E+25;
   if (local_dt_min<dt_max) 
    local_dt_min=dt_max;
 
-  ns_level.MaxAdvectSpeed(local_dt_min,local_vel_max,local_vel_max_estdt); 
+  ns_level.MaxAdvectSpeed(local_dt_min,local_vel_max,local_vel_max_estdt,
+		  local_vel_max_cap_wave); 
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
    vel_max[dir] = std::max(vel_max[dir],local_vel_max[dir]);
    vel_max_estdt[dir] = std::max(vel_max_estdt[dir],local_vel_max_estdt[dir]);
   }
+  vel_max_cap_wave = std::max(vel_max_cap_wave,local_vel_max_cap_wave);
   dt_min=std::min(dt_min,local_dt_min);
  } // ilev 
 } // end subroutine MaxAdvectSpeedALL
 
 // vel_max[0,1,2]= max vel in direction  vel_max[sdim]=max c^2
 void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
- Real* vel_max_estdt) {
+ Real* vel_max_estdt,Real& vel_max_cap_wave) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -16983,27 +16989,33 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
   vel_max[dir]=0.0;
   vel_max_estdt[dir]=0.0;
  }
+ vel_max_cap_wave=0.0;
 
  Vector< Vector<Real> > local_cap_wave_speed;
  Vector< Vector<Real> > local_vel_max;
  Vector< Vector<Real> > local_vel_max_estdt;
+ Vector<Real> local_vel_max_cap_wave;
  Vector< Real > local_dt_min;
  local_cap_wave_speed.resize(thread_class::nthreads);
  local_vel_max.resize(thread_class::nthreads);
  local_vel_max_estdt.resize(thread_class::nthreads);
+ local_vel_max_cap_wave.resize(thread_class::nthreads);
  local_dt_min.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
 
   local_cap_wave_speed[tid].resize(nten); 
-  for (int iten=0;iten<nten;iten++)
+  for (int iten=0;iten<nten;iten++) {
    local_cap_wave_speed[tid][iten]=cap_wave_speed[iten];
+  }
 
-  local_vel_max[tid].resize(AMREX_SPACEDIM+1); // last component is max|c|^2
-  local_vel_max_estdt[tid].resize(AMREX_SPACEDIM+1); // last component is max|c|^2
+  local_vel_max[tid].resize(AMREX_SPACEDIM+1);//last component max|c|^2
+  local_vel_max_estdt[tid].resize(AMREX_SPACEDIM+1);//last component max|c|^2
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
    local_vel_max[tid][dir]=0.0;
    local_vel_max_estdt[tid][dir]=0.0;
   }
+  local_vel_max_cap_wave[tid]=0.0;
+
   local_dt_min[tid]=1.0E+25;
   if (local_dt_min[tid]<dt_max) 
    local_dt_min[tid]=dt_max;
@@ -17078,6 +17090,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     local_cap_wave_speed[tid_current].dataPtr(),
     local_vel_max[tid_current].dataPtr(),
     local_vel_max_estdt[tid_current].dataPtr(),
+    &local_vel_max_cap_wave[tid_current],
     &local_dt_min[tid_current],
     &rzflag,
     &Uref,&Lref,
@@ -17122,17 +17135,24 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     local_vel_max_estdt[0][dir]=local_vel_max_estdt[tid][dir];
    if (local_vel_max_estdt[tid][AMREX_SPACEDIM]>
        local_vel_max_estdt[0][AMREX_SPACEDIM])
-    local_vel_max_estdt[0][AMREX_SPACEDIM]=local_vel_max_estdt[tid][AMREX_SPACEDIM];
+    local_vel_max_estdt[0][AMREX_SPACEDIM]=
+	    local_vel_max_estdt[tid][AMREX_SPACEDIM];
 
+   if (local_vel_max_cap_wave[tid]>local_vel_max_cap_wave[0])
+    local_vel_max_cap_wave[0]=local_vel_max_cap_wave[tid];
   } // tid
 
-  for (int iten=0;iten<nten;iten++)
+  for (int iten=0;iten<nten;iten++) {
    ParallelDescriptor::ReduceRealMax(local_cap_wave_speed[0][iten]);
+  }
 
   ParallelDescriptor::ReduceRealMax(local_vel_max[0][dir]);
   ParallelDescriptor::ReduceRealMax(local_vel_max[0][AMREX_SPACEDIM]);
   ParallelDescriptor::ReduceRealMax(local_vel_max_estdt[0][dir]);
   ParallelDescriptor::ReduceRealMax(local_vel_max_estdt[0][AMREX_SPACEDIM]);
+
+  ParallelDescriptor::ReduceRealMax(local_vel_max_cap_wave[0]);
+
   ParallelDescriptor::ReduceRealMin(local_dt_min[0]);
 
   delete velmac;
@@ -17147,6 +17167,8 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
   vel_max[dir]=local_vel_max[0][dir];
   vel_max_estdt[dir]=local_vel_max_estdt[0][dir];
  }
+ vel_max_cap_wave=local_vel_max_cap_wave[0];
+
  dt_min=local_dt_min[0];
 
  delete denmf;
@@ -17187,8 +17209,9 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
    Real dt_min;
    Real u_max[AMREX_SPACEDIM+1];  // last component is max|c|^2
    Real u_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
+   Real u_max_cap_wave;
 
-   MaxAdvectSpeedALL(dt_min,u_max,u_max_estdt);
+   MaxAdvectSpeedALL(dt_min,u_max,u_max_estdt,u_max_cap_wave);
    if (min_velocity_for_dt>0.0) {
     Real local_dt_max=smallest_dx/min_velocity_for_dt;
     if (dt_min>local_dt_max)
