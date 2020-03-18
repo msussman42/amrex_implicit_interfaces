@@ -1453,12 +1453,36 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  const Real* fine_dx = ns_fine.geom.CellSize();
 
+ int rz_flag=0;
+ if (geom.IsRZ())
+  rz_flag=1;
+ else if (geom.IsCartesian())
+  rz_flag=0;
+ else if (geom.IsCYLINDRICAL())
+  rz_flag=3;
+ else
+  amrex::Error("geom bust 1");
+
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
+ Real problen[AMREX_SPACEDIM];
+ Real prob_volume=1.0;
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   problo[dir]=geom.ProbLo(dir);
   probhi[dir]=geom.ProbHi(dir);
+  problen[dir]=probhi[dir]-problo[dir];
+  prob_volume*=problen[dir];
  }
+
+ if (rz_flag==0) {
+  // do nothing
+ } else if (rz_flag==1) {
+  prob_volume*=(2.0*NS_PI*problen[0]/2.0);
+ } else if (rz_flag==3) {
+  prob_volume*=(2.0*NS_PI);
+ } else
+  amrex::Error("rz_Flag invalid");
+
 
  metrics_dataALL(1);
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -1842,6 +1866,71 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    if (std::abs(vel_max[dir])>UMACH)
     UMACH=std::abs(vel_max[dir]);
   }
+  Real vel_max_recommend=UMACH;
+  vel_max_recommend=std::max(UMACH,vel_max_cap_wave);
+
+  Real simple_main_tol=1.0e-11;
+  Real tol_factor=1.0e-2;
+  Real recommend_tol=simple_main_tol;
+  Real recommend_bot_tol=recommend_tol*tol_factor;
+
+  std::cout << "TIME= "<<upper_slab_time<<
+	 " RECOMMEND simple_main_tol= " << recommend_tol << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<
+	 " projection_velocity_scale= " << projection_velocity_scale << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<
+	 " RECOMMEND vel_max= " << vel_max_recommend << '\n';
+
+  Real denconst_ratio=1.0;
+  if (denconst_min>0.0) {
+   denconst_ratio=denconst_max/denconst_min;
+  } else
+   amrex::Error("denconst_min invalid");
+
+   // (1/(rho c^2 dt^2) p_t - (div grad p/rho) = - div ustar/dt
+  Real velmax_scaled=vel_max_recommend/projection_velocity_scale;
+  recommend_tol=simple_main_tol*denconst_ratio*velmax_scaled*velmax_scaled;
+  recommend_bot_tol=recommend_tol*tol_factor;
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND denconst_ratio= " << denconst_ratio << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND ns.mac_abs_tol= " << recommend_tol << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND mg.bot_atol= " << recommend_bot_tol << '\n';
+
+  Real viscconst_ratio=1.0;
+  if (viscconst_min>=0.0) {
+   viscconst_ratio=viscconst_max/std::max(viscconst_min,1.0e-3);
+  } else
+   amrex::Error("viscconst_min invalid");
+
+  recommend_tol=simple_main_tol*viscconst_ratio*denconst_ratio* 
+	  vel_max_recommend;
+  recommend_bot_tol=recommend_tol*tol_factor;
+
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND viscconst_ratio= " << viscconst_ratio << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND ns.visc_abs_tol= " << recommend_tol << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND mg.visc_bot_atol= " << recommend_bot_tol << '\n';
+
+  Real heatviscconst_ratio=1.0;
+  if (heatviscconst_min>=0.0) {
+   heatviscconst_ratio=heatviscconst_max/std::max(heatviscconst_min,1.0e-3);
+  } else
+   amrex::Error("heatviscconst_min invalid");
+
+  recommend_tol=simple_main_tol*heatviscconst_ratio*denconst_ratio*273.0; 
+  recommend_bot_tol=recommend_tol*tol_factor;
+
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND heatviscconst_ratio= " << heatviscconst_ratio << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND ns.thermal_abs_tol= " << recommend_tol << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<
+   " RECOMMEND mg.thermal_bot_atol= " << recommend_bot_tol << '\n';
+
   std::cout << "TIME= "<<upper_slab_time<< 
      " vel_max_cap_wave=" << vel_max_cap_wave << '\n';
 
@@ -2189,16 +2278,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    std::cout << "TIME= " << upper_slab_time << " JETTINGVOL=  " << 
     radbubble << '\n';
   }
-
-  int rz_flag=0;
-  if (geom.IsRZ())
-   rz_flag=1;
-  else if (geom.IsCartesian())
-   rz_flag=0;
-  else if (geom.IsCYLINDRICAL())
-   rz_flag=3;
-  else
-   amrex::Error("geom bust 1");
 
    // inputs.circular_freeze
    // pi r^2/4=F

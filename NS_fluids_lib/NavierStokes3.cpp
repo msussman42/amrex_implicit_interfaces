@@ -1968,8 +1968,10 @@ void NavierStokes::SEM_advectALL(int source_term) {
     SEM_end_spectral_loop=2;
    } else if ((enable_spectral==0)||(enable_spectral==3)) {
     SEM_end_spectral_loop=1;
-   } else
-    amrex::Error("enable_spectral invalid");
+   } else {
+    std::cout << "enable_spectral= " << enable_spectral << '\n';
+    amrex::Error("enable_spectral invalid 1");
+   }
 
    int nmat=num_materials;
 
@@ -3251,7 +3253,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	  (enable_spectral==3)) {
        // do nothing
       } else
-       amrex::Error("enable_spectral invalid");
+       amrex::Error("enable_spectral invalid 2");
 
       if ((viscous_enable_spectral==0)||  // do low order viscosity in time.
           (viscous_enable_spectral==1)||  // SEM space and time
@@ -9673,8 +9675,8 @@ void NavierStokes::multiphase_project(int project_option) {
        if ((enable_spectral==1)||  // SEM space and time
 	   (enable_spectral==2)) { // SEM space
         BICGSTAB_ACTIVE=1;
-       } if ((enable_spectral==0)||
-             (enable_spectral==3)) { 
+       } else if ((enable_spectral==0)||
+                  (enable_spectral==3)) {  // SEM time
         if ((project_option==0)||
   	    (project_option==1)||
             (project_option==10)|| // sync project at advection
@@ -9690,7 +9692,7 @@ void NavierStokes::multiphase_project(int project_option) {
         } else
 	 amrex::Error("project_option invalid");
        } else
-	amrex::Error("enable_spectral invalid");
+	amrex::Error("enable_spectral invalid 3");
 
        for (vcycle=0;((vcycle<=vcycle_max)&&(meets_tol==0));vcycle++) {
 

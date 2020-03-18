@@ -623,6 +623,8 @@ Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
 Vector<Real> NavierStokes::density_floor_expansion;  // def=denconst
 Vector<Real> NavierStokes::density_ceiling_expansion;  // def=denconst
 Vector<Real> NavierStokes::denconst;
+Real NavierStokes::denconst_max=0.0;
+Real NavierStokes::denconst_min=0.0;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
@@ -644,10 +646,14 @@ Vector<Real> NavierStokes::DrhoDz;  // def=0.0
 Vector<int> NavierStokes::override_density; // def=0
 Vector<Real> NavierStokes::prerecalesce_viscconst;
 Vector<Real> NavierStokes::viscconst;
+Real NavierStokes::viscconst_max=0.0;
+Real NavierStokes::viscconst_min=0.0;
 Vector<Real> NavierStokes::viscconst_eddy;
 Vector<Real> NavierStokes::speciesviscconst;// species mass diffusion coeff.
 Vector<Real> NavierStokes::prerecalesce_heatviscconst;
 Vector<Real> NavierStokes::heatviscconst;
+Real NavierStokes::heatviscconst_max=0.0;
+Real NavierStokes::heatviscconst_min=0.0;
 Vector<Real> NavierStokes::viscconst_interface;
 Vector<Real> NavierStokes::heatviscconst_interface;
 Vector<Real> NavierStokes::speciesconst;  // unused currently
@@ -2582,7 +2588,14 @@ NavierStokes::read_params ()
     denconst.resize(nmat);
     pp.getarr("denconst",denconst,0,nmat);
 
+    denconst_min=denconst[0];
+    denconst_max=denconst[0];
+
     for (int i=0;i<nmat;i++) {
+     if (denconst[i]<denconst_min)
+      denconst_min=denconst[i];
+     if (denconst[i]>denconst_max)
+      denconst_max=denconst[i];
      if (density_ceiling[i]<=0.0) {
       amrex::Error("density_ceiling[i]<=0.0");
      } else if (density_ceiling[i]<=denconst[i]) {
@@ -2687,8 +2700,18 @@ NavierStokes::read_params ()
 
     pp.getarr("viscconst",viscconst,0,nmat);
 
-    for (int i=0;i<nmat;i++)
+    viscconst_min=viscconst[0];
+    viscconst_max=viscconst[0];
+
+    for (int i=0;i<nmat;i++) {
+
+     if (viscconst[i]<viscconst_min)
+      viscconst_min=viscconst[i];
+     if (viscconst[i]>viscconst_max)
+      viscconst_max=viscconst[i];
+
      viscconst_eddy[i]=0.0;
+    }
     pp.queryarr("viscconst_eddy",viscconst_eddy,0,nmat);
 
     for (int i=0;i<nmat;i++)
@@ -2706,8 +2729,21 @@ NavierStokes::read_params ()
     heatviscconst.resize(nmat);
     heatviscconst_interface.resize(nten);
     pp.getarr("heatviscconst",heatviscconst,0,nmat);
-    for (int i=0;i<nten;i++) 
+
+    heatviscconst_min=heatviscconst[0];
+    heatviscconst_max=heatviscconst[0];
+
+    for (int i=0;i<nmat;i++) {
+     if (heatviscconst[i]<heatviscconst_min)
+      heatviscconst_min=heatviscconst[i];
+     if (heatviscconst[i]>heatviscconst_max)
+      heatviscconst_max=heatviscconst[i];
+    }
+
+    for (int i=0;i<nten;i++) {
      heatviscconst_interface[i]=0.0;
+    }
+
     pp.queryarr("heatviscconst_interface",heatviscconst_interface,0,nten);
     if (num_species_var>0) {
      pp.queryarr("speciesconst",speciesconst,0,num_species_var*nmat);

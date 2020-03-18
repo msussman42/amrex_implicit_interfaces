@@ -1899,6 +1899,8 @@ protected:
     static Vector<Real> density_floor_expansion;  // def=denconst
     static Vector<Real> density_ceiling_expansion;  // def=denconst
     static Vector<Real> denconst;
+    static Real denconst_max;
+    static Real denconst_min;
     static Vector<Real> denconst_gravity; // def=1.0
     static int stokes_flow;  // def=0
     static Vector<Real> denconst_interface;
@@ -1919,10 +1921,14 @@ protected:
       // 2=>P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
     static Vector<int> override_density; // default 0 
     static Vector<Real> viscconst;
+    static Real viscconst_max;
+    static Real viscconst_min;
     static Vector<Real> viscconst_eddy;
     static Vector<Real> prerecalesce_viscconst;
     static Vector<Real> viscconst_interface;
     static Vector<Real> heatviscconst;
+    static Real heatviscconst_max;
+    static Real heatviscconst_min;
     static Vector<Real> prerecalesce_heatviscconst;
     static Vector<Real> heatviscconst_interface;
       // num_species * num_materials size.
