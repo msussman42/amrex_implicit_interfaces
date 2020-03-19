@@ -3784,7 +3784,8 @@ ABecLaplacian::CG_solve(
 
     // z=K^{-1} r
     // z=project_null_space(z)
-    pcg_solve(
+    if (1==1) {
+     pcg_solve(
        CG_z[coarsefine],
        CG_r[coarsefine],
        eps_abs,bot_atol,
@@ -3795,6 +3796,19 @@ ABecLaplacian::CG_solve(
        presmooth,postsmooth,
        use_PCG, // 0=no preconditioning  1=depends:"CG_use_mg_precond_at_top"
        level,nit);
+    } else {
+     pcg_GMRES_solve(
+       gmres_precond_iter,
+       CG_z[coarsefine],
+       CG_r[coarsefine],
+       eps_abs,bot_atol,
+       CG_pbdryhom[coarsefine],
+       bcpres_array,
+       usecg_at_bottom,
+       smooth_type,bottom_smooth_type,
+       presmooth,postsmooth,
+       use_PCG,level,nit);
+    }
 
      // rho=z dot r
     LP_dot(*CG_z[coarsefine],*CG_r[coarsefine],level,rho); 
