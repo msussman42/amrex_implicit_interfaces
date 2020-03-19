@@ -24,6 +24,8 @@ namespace amrex{
 
 #define profile_solver 0
 
+int ABecLaplacian::abec_use_bicgstab = 0;
+
 int ABecLaplacian::gmres_max_iter = 64;
 int ABecLaplacian::gmres_precond_iter_base_mg = 4;
 int ABecLaplacian::nghostRHS=0;
@@ -1196,6 +1198,8 @@ ABecLaplacian::ABecLaplacian (
 
 
  ParmParse ppcg("cg");
+
+ ppcg.query("abec_use_bicgstab", abec_use_bicgstab);
 
  ppcg.query("maxiter", CG_def_maxiter);
  ppcg.query("v", CG_def_verbose);
@@ -3707,14 +3711,16 @@ ABecLaplacian::CG_solve(
 
  Real restart_tol=eps_abs*eps_abs*1.0e-4;
  int restart_flag=0;
- int prev_restart_flag=0;
  int gmres_precond_iter=gmres_precond_iter_base_mg;
+
+ int local_presmooth=presmooth;
+ int local_postsmooth=postsmooth;
 
   // check if the initial residual passes the convergence test.
  int error_close_to_zero=0;
  CG_check_for_convergence(
    coarsefine,
-   presmooth,postsmooth,
+   local_presmooth,local_postsmooth,
    rnorm,rnorm_init,
    eps_abs,relative_error,nit,
    error_close_to_zero,level);
@@ -3739,8 +3745,6 @@ ABecLaplacian::CG_solve(
    CG_error_history[ehist][2*coarsefine+ih]=0.0;
  }
 
- int BICGSTAB_ACTIVE=0;
-
  for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero!=1)); ++nit) {
 
   restart_flag=0;
@@ -3761,7 +3765,7 @@ ABecLaplacian::CG_solve(
 
   CG_check_for_convergence(
    coarsefine,
-   presmooth,postsmooth,
+   local_presmooth,local_postsmooth,
    rnorm,rnorm_init,
    eps_abs,relative_error,nit,
    error_close_to_zero,level);
@@ -3780,7 +3784,7 @@ ABecLaplacian::CG_solve(
    } else
     amrex::Error("nit invalid");
 
-   if (BICGSTAB_ACTIVE==0) { //MGPCG
+   if (abec_use_bicgstab==0) { //MGPCG
 
     // z=K^{-1} r
     // z=project_null_space(z)
@@ -3793,7 +3797,7 @@ ABecLaplacian::CG_solve(
        bcpres_array,
        usecg_at_bottom,
        smooth_type,bottom_smooth_type,
-       presmooth,postsmooth,
+       local_presmooth,local_postsmooth,
        use_PCG, // 0=no preconditioning  1=depends:"CG_use_mg_precond_at_top"
        level,nit);
     } else {
@@ -3806,7 +3810,7 @@ ABecLaplacian::CG_solve(
        bcpres_array,
        usecg_at_bottom,
        smooth_type,bottom_smooth_type,
-       presmooth,postsmooth,
+       local_presmooth,local_postsmooth,
        use_PCG,level,nit);
     }
 
@@ -3852,8 +3856,10 @@ ABecLaplacian::CG_solve(
       } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
 //       restart_flag=1;
        error_close_to_zero=1;
-      } else
-       amrex::Error("pAp invalid");
+      } else {
+       std::cout << "pAp= " << pAp << endl;
+       amrex::Error("pAp invalid in bottom solver");
+      }
      } else if ((rho_old>=0.0)&&(rho_old<=restart_tol)) {
 //      restart_flag=1;
       error_close_to_zero=1;
@@ -3862,7 +3868,7 @@ ABecLaplacian::CG_solve(
     } else
      amrex::Error("rho invalid");
 
-   } else if (BICGSTAB_ACTIVE==1) { //MG-GMRES PCG
+   } else if (abec_use_bicgstab==1) { //MG-GMRES PCG
 
      // rho=r0 dot r
     LP_dot(*CG_rhs_resid_cor_form[coarsefine],*CG_r[coarsefine],level,rho); 
@@ -3889,7 +3895,7 @@ ABecLaplacian::CG_solve(
        bcpres_array,
        usecg_at_bottom,
        smooth_type,bottom_smooth_type,
-       presmooth,postsmooth,
+       local_presmooth,local_postsmooth,
        use_PCG,level,nit);
        // v_search=A*z 
       apply(*CG_v_search[coarsefine],
@@ -3933,7 +3939,7 @@ ABecLaplacian::CG_solve(
 
       CG_check_for_convergence(
         coarsefine,
-        presmooth,postsmooth,
+        local_presmooth,local_postsmooth,
 	rnorm,rnorm_init,
 	eps_abs,relative_error,nit,
         error_close_to_zero,level);
@@ -3951,7 +3957,7 @@ ABecLaplacian::CG_solve(
 	bcpres_array,
         usecg_at_bottom,
 	smooth_type,bottom_smooth_type,
-        presmooth,postsmooth,
+        local_presmooth,local_postsmooth,
 	use_PCG,
 	level,nit);
        // Av_search=A*z
@@ -4013,7 +4019,7 @@ ABecLaplacian::CG_solve(
      amrex::Error("restart_flag invalid");
 
    } else 
-    amrex::Error("BICGSTAB_ACTIVE invalid");
+    amrex::Error("abec_use_bicgstab invalid");
 
    if (restart_flag==1) {
 
@@ -4021,9 +4027,15 @@ ABecLaplacian::CG_solve(
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "WARNING:RESTARTING: nit= " << nit << '\n';
       std::cout << "WARNING:RESTARTING: level= " << level << '\n';
-      std::cout << "RESTARTING: BICGSTAB_ACTIVE=" << BICGSTAB_ACTIVE << '\n';
+      std::cout << "RESTARTING: abec_use_bicgstab=" << 
+	      abec_use_bicgstab << '\n';
       std::cout << "RESTARTING: gmres_precond_iter= " << 
        gmres_precond_iter << '\n';
+      std::cout << "RESTARTING: local_presmooth= " <<
+        local_presmooth << '\n';
+      std::cout << "RESTARTING: local_postsmooth= " <<
+        local_postsmooth << '\n';
+
       std::cout << "RESTARTING: rnorm= " << 
        rnorm << '\n';
       std::cout << "RESTARTING: nsolve_bicgstab= " << 
@@ -4070,26 +4082,20 @@ ABecLaplacian::CG_solve(
   } else
    amrex::Error("error_close_to_zero invalid");
 
-  if ((prev_restart_flag==1)&&(restart_flag==1)) {
+  if (restart_flag==1) {
+   local_presmooth++;
+   local_postsmooth++;
+   if ((local_presmooth>1000)||(local_postsmooth>1000)) {
+    std::cout << "local_presmooth overflow " <<
+       local_presmooth << '\n';
+    std::cout << "local_postsmooth overflow " <<
+       local_postsmooth << '\n';
+   } 
 
-   if ((error_close_to_zero==1)||
-       (error_close_to_zero==2)) {
-    gmres_precond_iter=gmres_precond_iter_base_mg;
-   } else if (error_close_to_zero==0) {
-    gmres_precond_iter=2*gmres_precond_iter;
-   } else
-    amrex::Error("error_close_to_zero invalid");
-
-  } else if ((prev_restart_flag==0)&&(restart_flag==1)) {
-   gmres_precond_iter=2*gmres_precond_iter_base_mg;
-  } else if ((prev_restart_flag==1)&&(restart_flag==0)) {
-   gmres_precond_iter=gmres_precond_iter_base_mg;
-  } else if ((prev_restart_flag==0)&&(restart_flag==0)) {
-   gmres_precond_iter=gmres_precond_iter_base_mg;
+  } else if (restart_flag==0) {
+   // do nothing
   } else
-   amrex::Error("prev_restart_flag or restart_flag invalid");
-        
-  prev_restart_flag=restart_flag;
+   amrex::Error("restart_flag invalid");
 
  }  // end of CGSolver loop
 
@@ -4136,8 +4142,8 @@ ABecLaplacian::CG_solve(
     eps_abs,relative_error,
     is_bottom,bot_atol,
     usecg_at_bottom,smooth_type,
-    bottom_smooth_type,presmooth, 
-    postsmooth,
+    bottom_smooth_type,local_presmooth, 
+    local_postsmooth,
     sol,
     rhs,
     level);

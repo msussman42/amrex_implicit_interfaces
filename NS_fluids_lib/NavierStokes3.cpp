@@ -9616,6 +9616,8 @@ void NavierStokes::multiphase_project(int project_option) {
        if (presmooth!=postsmooth)
         amrex::Error("presmooth!=postsmooth");
 
+       int local_presmooth=presmooth;
+       int local_postsmooth=postsmooth;
        Real rho0=1.0;
        Real rho1=1.0;
        Real alpha=1.0;
@@ -9636,7 +9638,6 @@ void NavierStokes::multiphase_project(int project_option) {
         amrex::Error("initial_cg_cycles or cg_loop invalid");
 
        int restart_flag=0;
-       int prev_restart_flag=0;
        int gmres_precond_iter=gmres_precond_iter_base;
 
        Real dnorm=0.0;
@@ -9686,7 +9687,14 @@ void NavierStokes::multiphase_project(int project_option) {
 	    (project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
              (project_option<100+num_species_var))) {
-         BICGSTAB_ACTIVE=0;
+
+         if (always_use_bicgstab==1) {
+          BICGSTAB_ACTIVE=1;
+	 } else if (always_use_bicgstab==0) {
+          BICGSTAB_ACTIVE=0;
+	 } else
+	  amrex::Error("always_use_bicgstab invalid");
+
 	} else if (project_option==3) { // viscosity
          BICGSTAB_ACTIVE=1;
         } else
@@ -9751,7 +9759,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	  // Z=project(Z)
           multiphase_preconditioner(
            project_option,project_timings,
-           presmooth,postsmooth,
+           local_presmooth,local_postsmooth,
            Z_MF,CGRESID_MF,nsolve);
 
           // rho1=z dot r
@@ -9797,8 +9805,10 @@ void NavierStokes::multiphase_project(int project_option) {
             } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
 //           restart_flag=1;
              meets_tol=1;
-            } else
-             amrex::Error("pAp invalid");
+            } else {
+             std::cout << "pAp= " << pAp << endl;
+             amrex::Error("pAp invalid in main solver");
+	    }
            } else if ((rho0>=0.0)&&(rho0<=restart_tol)) {
 //          restart_flag=1;
             meets_tol=1;
@@ -9892,7 +9902,7 @@ void NavierStokes::multiphase_project(int project_option) {
            multiphase_GMRES_preconditioner(
             gmres_precond_iter,
             project_option,project_timings,
-            presmooth,postsmooth,
+            local_presmooth,local_postsmooth,
             bicg_Y_MF,bicg_P1_MF,nsolve);
 
 #if (profile_solver==1)
@@ -9982,7 +9992,7 @@ void NavierStokes::multiphase_project(int project_option) {
              multiphase_GMRES_preconditioner(
               gmres_precond_iter,
               project_option,project_timings,
-              presmooth,postsmooth,
+              local_presmooth,local_postsmooth,
               Z_MF,bicg_S_MF,nsolve);
 
 #if (profile_solver==1)
@@ -10107,6 +10117,10 @@ void NavierStokes::multiphase_project(int project_option) {
              BICGSTAB_ACTIVE << '\n';
             std::cout << "RESTARTING: gmres_precond_iter= " << 
              gmres_precond_iter << '\n';
+            std::cout << "RESTARTING: local_presmooth= " << 
+             local_presmooth << '\n';
+            std::cout << "RESTARTING: local_postsmooth= " << 
+             local_postsmooth << '\n';
             std::cout << "RESTARTING: error_history[vcycle][0,1]= " << 
              error_history[vcycle][0] << ' ' <<
 	     error_history[vcycle][1] << '\n';
@@ -10150,20 +10164,31 @@ void NavierStokes::multiphase_project(int project_option) {
 
         } // meets_tol==0
 
-        if ((prev_restart_flag==1)&&(restart_flag==1)) {
-         gmres_precond_iter=2*gmres_precond_iter;
-        } else if ((prev_restart_flag==0)&&(restart_flag==1)) {
-         gmres_precond_iter=2*gmres_precond_iter_base;
-        } else if ((prev_restart_flag==1)&&(restart_flag==0)) {
-         gmres_precond_iter=gmres_precond_iter_base;
-        } else if ((prev_restart_flag==0)&&(restart_flag==0)) {
-         gmres_precond_iter=gmres_precond_iter_base;
+	  // top level: BiCGStab  
+	  // preconditioner: preconditioned GMRES
+	  // GMRES, like CG or BiCGStab, is a Krylov subspace method in which
+	  // the solutions is approximated as
+	  // sum_i=0^M alpha_i A^{i}r
+	  // (r is the residual)
+	  // preconditioner for GMRES: multigrid
+	  // smooth for multigrid: "local_presmooth" iterations of the
+	  // ILU smoother going down the V-cycle and "local_postsmooth" 
+	  // iterations going up the V-cycle.
+	  // See: Pei, Vahab, Sussman, Hussaini JSC Hierarchical Spectral 
+	  // element method for multiphase flows. 2020
+	if (restart_flag==1) {
+ 	 local_presmooth++;
+	 local_postsmooth++;
+	} else if (restart_flag==0) {
+	 // do nothing
         } else
-         amrex::Error("prev_restart_flag or restart_flag invalid");
-        
-        if (gmres_precond_iter*nsolveMM>MAX_GMRES_BUFFER) {
-         std::cout << "gmres_precond_iter overflow " << 
-            gmres_precond_iter << '\n';
+         amrex::Error("restart_flag invalid");
+       
+        if ((local_presmooth>1000)||(local_postsmooth>1000)) {	
+         std::cout << "local_presmooth overflow " << 
+            local_presmooth << '\n';
+         std::cout << "local_postsmooth overflow " << 
+            local_postsmooth << '\n';
          std::cout << "->project_option= " << project_option << '\n';
          for (int ehist=0;ehist<error_history.size();ehist++) {
           std::cout << "vcycle " << ehist << " error_history[vcycle][0,1] " <<
@@ -10176,10 +10201,8 @@ void NavierStokes::multiphase_project(int project_option) {
            outer_error_history[ehist][0] << ' ' <<
 	   outer_error_history[ehist][1] << '\n';
 	 }
-	 amrex::Error("abort:NavierStokes3.cpp,gmres_precond_iter overflow");
+	 amrex::Error("abort:NavierStokes3.cpp,local_pre(post)smooth overflow");
         }
-
-        prev_restart_flag=restart_flag;
 
         total_number_vcycles++;
 

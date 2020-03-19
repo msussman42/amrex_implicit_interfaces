@@ -265,6 +265,8 @@ protected:
 
 private:
 
+    static int abec_use_bicgstab;
+
     static int gmres_max_iter;
     static int gmres_precond_iter_base_mg;
     static int nghostRHS;
