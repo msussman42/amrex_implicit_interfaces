@@ -30,8 +30,8 @@ Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
 # multigrid class
-mg.verbose = 1
-cg.verbose = 1
+mg.verbose = 0
+cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
@@ -91,10 +91,10 @@ amr.grid_eff        = 0.8   #  MO improve efficiency
 amr.n_proper=1  # default is 1
 #amr.blocking_factor = 8 4 4 4     # 8 for GPU
 amr.blocking_factor = 8 8 4 4     # 8 for GPU
-amr.space_blocking_factor = 4 2 1 1
+amr.space_blocking_factor = 4 2 1 1  # 4 2 1 1
 #amr.space_blocking_factor = 4 4 1 1
 #amr.time_blocking_factor=2
-amr.time_blocking_factor=4
+amr.time_blocking_factor=4  # 4
 ns.enable_spectral=1  # enable_spectral=0 or 1
 ns.viscous_enable_spectral=0
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project

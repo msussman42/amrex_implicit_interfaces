@@ -206,10 +206,20 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  const DistributionMapping dmapparm=dmap;
 
  int local_use_mg_precond=0;
+
  if ((create_hierarchy==1)&&
      (use_mg_precond_in_mglib==1)&&
      (level==0)) {
-  local_use_mg_precond=1;
+
+  int bfact_mg_cutoff=1024;
+
+  if ((bfact>=1)&&(bfact<=bfact_mg_cutoff)) {
+   local_use_mg_precond=1;
+  } else if (bfact>bfact_mg_cutoff) {
+   local_use_mg_precond=0;
+  } else
+   amrex::Error("bfact invalid in allocate_maccoef");
+
  } else if ((create_hierarchy==0)||
    	    (use_mg_precond_in_mglib==0)||
 	    ((level>=1)&&(level<=finest_level))) {

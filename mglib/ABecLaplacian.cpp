@@ -3793,7 +3793,8 @@ ABecLaplacian::CG_solve(
        usecg_at_bottom,
        smooth_type,bottom_smooth_type,
        presmooth,postsmooth,
-       use_PCG,level,nit);
+       use_PCG, // 0=no preconditioning  1=depends:"CG_use_mg_precond_at_top"
+       level,nit);
 
      // rho=z dot r
     LP_dot(*CG_z[coarsefine],*CG_r[coarsefine],level,rho); 
