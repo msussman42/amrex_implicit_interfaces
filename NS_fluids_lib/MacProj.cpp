@@ -115,26 +115,34 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
-  if (singular_possible!=1)
+  if (singular_possible==1) {
+   // do nothing
+  } else
    amrex::Error("singular_possible invalid");
 
  } else if (project_option==12) {  // extension project
 
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
-  if (singular_possible!=1)
+  if (singular_possible==1) {
+   // do nothing
+  } else
    amrex::Error("singular_possible invalid");
 
  } else if (project_option==3) {  // viscosity
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
-  if (singular_possible!=0)
+  if (singular_possible==0) {
+   // do nothing
+  } else
    amrex::Error("singular_possible invalid");
  } else if ((project_option==2)||     // thermal diffusion
             ((project_option>=100)&&  // species
              (project_option<100+num_species_var))) {
   num_materials_face=num_materials_scalar_solve;
-  if (singular_possible!=0)
+  if (singular_possible==0) {
+   // do nothing
+  } else
    amrex::Error("singular_possible invalid");
  } else
   amrex::Error("project_option invalid60");
@@ -239,14 +247,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   local_use_mg_precond);
 
  mac_op->laplacian_solvability=solvability_level_flag;
- mac_op->check_for_singular=singular_possible;
- mac_op->diag_regularization=NS_diag_regularization;
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "allocate_maccoef level= " << level << 
-     " solvability_level_flag= " << solvability_level_flag << 
-     " singular_possible= " << singular_possible << '\n';
+     " solvability_level_flag= " << solvability_level_flag << '\n';
   }
  }
 
@@ -255,7 +260,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
  
  new_localMF(ALPHACOEF_MF,nsolveMM,0,-1);
- new_localMF(ALPHACOEF_DUAL_MF,nsolveMM,0,-1);
  new_localMF(ALPHANOVOLUME_MF,nsolveMM,0,-1);
  localMF[ALPHANOVOLUME_MF]->setVal(0.0,0,nsolveMM,0);
 
@@ -360,7 +364,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &visc_coef,
     &angular_velocity,
     &dt_diffuse,
-    &dual_time_stepping_coefficient, // not used
     &project_option,
     &rzflag, 
     &solidheat_flag);
@@ -393,20 +396,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // average down from level+1 to level.
  avgDown_localMF(ALPHANOVOLUME_MF,0,nsolveMM,0);
  Copy_localMF(ALPHACOEF_MF,ALPHANOVOLUME_MF,0,0,nsolveMM,0);
- Copy_localMF(ALPHACOEF_DUAL_MF,ALPHANOVOLUME_MF,0,0,nsolveMM,0);
 
  for (int veldir=0;veldir<nsolveMM;veldir++) {
 
-  if (dual_time_stepping_coefficient>0.0) {
-   Plus_localMF(ALPHACOEF_DUAL_MF,dual_time_stepping_coefficient,veldir,1,0);
-  } else if (dual_time_stepping_coefficient==0.0) {
-   // do nothing
-  } else
-   amrex::Error("dual_time_stepping_coefficient invalid");
-
    // dest,source,scomp,dcomp,ncomp,ngrow
   Mult_localMF(ALPHACOEF_MF,VOLUME_MF,0,veldir,1,0);
-  Mult_localMF(ALPHACOEF_DUAL_MF,VOLUME_MF,0,veldir,1,0);
  } // veldir=0,..,nsolveMM-1
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -453,7 +447,17 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     int tid_current=ns_thread();
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    FIX ME
      // BXCOEFNOAREA *= (facewtL + facewtR)/2
+    Real min_interior_coeff=0.0;
+    if (denconst_max>0.0) {
+     if (mglib_min_coeff_factor>1.0) {
+      min_interior_coeff=1.0/(denconst_max*mglib_min_coeff_factor);
+     } else
+      amrex::Error("mglib_min_coeff_factor invalid");
+    } else
+     amrex::Error("denconst_max invalid");
+
     FORT_MULT_FACEWT(
      &num_materials_face,
      &nsolve,
@@ -520,23 +524,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    mac_op->bCoefficients(*localMF[BXCOEF_MF+dir],dir);
  }  // dir=0...sdim-1
 
- mac_op->aCoefficients(*localMF[ALPHACOEF_DUAL_MF],
-		       *localMF[ALPHACOEF_MF]);
-
- OFFDIAG_NONSING_LEVEL=max_face_wt[0][1];
- if (OFFDIAG_NONSING_LEVEL>0.0) {
-  // do nothing
- } else
-  amrex::Error("OFFDIAG_NONSING_LEVEL invalid");
-
- if (AMREX_SPACEDIM==2) {
-  // do nothing
- } else if (AMREX_SPACEDIM==3) {
-  OFFDIAG_NONSING_LEVEL*=dx[0];  // ~ area/dx
- } else
-  amrex::Error("dimension bust");
-
- mac_op->non_sing_coefficients(OFFDIAG_NONSING_LEVEL);
+ mac_op->aCoefficients(*localMF[ALPHACOEF_MF]);
 
   // generateCoefficients calls buildMatrix ranging from 
   // the finest mglib level (lev=0) down to the coarsest 
@@ -598,8 +586,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // mask=tag if not covered by level+1 or outside the domain.
   FArrayBox& maskcov = (*localMF[MASKCOEF_MF])[mfi];
-  FArrayBox& alphadual = (*localMF[ALPHACOEF_DUAL_MF])[mfi];
-  FArrayBox& alphanodual = (*localMF[ALPHACOEF_MF])[mfi];
+  FArrayBox& alpha = (*localMF[ALPHACOEF_MF])[mfi];
 
   FArrayBox& offdiagcheck=(*localMF[OFF_DIAG_CHECK_MF])[mfi];
   FArrayBox& diagnonsingfab = (*localMF[DIAG_NON_SING_MF])[mfi];
@@ -632,6 +619,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+ 
+  FIX ME
 
    // FORT_NSGENERATE is in MACOPERATOR_3D.F90
    // initializes DIAG_SING
@@ -657,10 +646,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
     ones_fab.dataPtr(),ARLIM(ones_fab.loVect()),ARLIM(ones_fab.hiVect()),
     maskcov.dataPtr(),ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    alphadual.dataPtr(),
-    ARLIM(alphadual.loVect()),ARLIM(alphadual.hiVect()),
-    alphanodual.dataPtr(),
-    ARLIM(alphanodual.loVect()),ARLIM(alphanodual.hiVect()),
+    alpha.dataPtr(),
+    ARLIM(alpha.loVect()),ARLIM(alpha.hiVect()),
     offdiagcheck.dataPtr(),
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
     diagnonsingfab.dataPtr(),
@@ -794,7 +781,6 @@ NavierStokes::deallocate_maccoef(int project_option) {
  delete_localMF(MASK_RESIDUAL_MF,1);
  delete_localMF(ALPHANOVOLUME_MF,1);
  delete_localMF(ALPHACOEF_MF,1);
- delete_localMF(ALPHACOEF_DUAL_MF,1);
  delete_localMF(BXCOEFNOAREA_MF,AMREX_SPACEDIM);
  delete_localMF(BXCOEF_MF,AMREX_SPACEDIM);
 
@@ -1207,11 +1193,12 @@ void NavierStokes::DiagInverse(
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+  FIX ME
   for (int veldir=0;veldir<nsolveMM;veldir++) {
     // FORT_DIAGINV is in NAVIERSTOKES_3D.F90
    FORT_DIAGINV(
-    &singular_possible,
     &OFFDIAG_NONSING_LEVEL,
+    &singular_possible,
     &NS_diag_regularization,
     diagnonsingfab.dataPtr(veldir),
     ARLIM(diagnonsingfab.loVect()),ARLIM(diagnonsingfab.hiVect()),
@@ -1570,24 +1557,23 @@ void NavierStokes::applyGradALL(
  } // ilev
 } // subroutine applyGradALL
 
+// NOTE: POLDHOLD=p^advect-p^init
 // homflag=0 =>
 // called from mac_project_rhs =>
-// RHS=POLDHOLD*alpha+POLDHOLD_dual*alpha_dual-
+// RHS=POLDHOLD*alpha-
 //     (a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2})/dt+diffusionRHS
 //
 // homflag=1 =>
 // called from applyALL =>
-// RHS=phi*alpha_dual+(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/dt
-// (idx_phi=idx_phi_dual on input)
+// RHS=phi*alpha+(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/dt
 //
 // homflag=2 =>
 // called from relaxLEVEL which is called from mg_cycleALL =>
-// RHS=-phi*alpha_dual-
+// RHS=-phi*alpha-
 // (a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2})/dt+diffusionRHS
-// aka: residmf=-idx_phi_dual*alpha_dual-
+// aka: residmf=-idx_phi*alpha-
 //              (a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2})/dt+
 //              rhsmf 
-// (idx_phi=idx_phi_dual on input)
 //
 // homflag=3 =>
 // called from relaxLEVEL which is called from mg_cycleALL
@@ -1602,7 +1588,6 @@ void NavierStokes::applyGradALL(
 void NavierStokes::apply_div(
   int project_option,int homflag,
   int idx_phi,
-  int idx_phi_dual,
   MultiFab* rhsmf, 
   MultiFab* diffusionRHScell,
   int idx_gphi,
@@ -1689,31 +1674,18 @@ void NavierStokes::apply_div(
  const Real* dx = geom.CellSize();
 
  if (homflag==0) {
-  if ((idx_phi==POLDHOLD_MF)&&
-      (idx_phi_dual==POLDHOLD_DUAL_MF)) {
+  if (idx_phi==POLDHOLD_MF) {
    // do nothing
   } else
-   amrex::Error("expecting POLDHOLD and POLDHOLD_DUAL");
+   amrex::Error("expecting POLDHOLD");
  } else if (homflag==1) {
-  if (idx_phi==idx_phi_dual) {
-   // do nothing
-  } else
-   amrex::Error("expecting idx_phi==idx_phi_dual");
+  // do nothing
  } else if (homflag==2) {
-  if (idx_phi==idx_phi_dual) {
-   // do nothing
-  } else
-   amrex::Error("expecting idx_phi==idx_phi_dual");
+  // do nothing
  } else if (homflag==3) {
-  if (idx_phi==idx_phi_dual) {
-   // do nothing
-  } else
-   amrex::Error("expecting idx_phi==idx_phi_dual");
+  // do nothing
  } else if (homflag==4) {
-  if (idx_phi==idx_phi_dual) {
-   // do nothing
-  } else
-   amrex::Error("expecting idx_phi==idx_phi_dual");
+  // do nothing
  } else
   amrex::Error("homflag invalid");
 
@@ -1737,16 +1709,11 @@ void NavierStokes::apply_div(
  if (localMF[ALPHACOEF_MF]->nComp()!=nsolveMM)
   amrex::Error("localMF[ALPHACOEF_MF]->nComp()!=nsolveMM");
 
- debug_ngrow(ALPHACOEF_DUAL_MF,0,253); 
- if (localMF[ALPHACOEF_DUAL_MF]->nComp()!=nsolveMM)
-  amrex::Error("localMF[ALPHACOEF_DUAL_MF]->nComp()!=nsolveMM");
-
  debug_ngrow(DOTMASK_MF,0,253); 
 
  if (diffusionRHScell->nGrow()<0)
   amrex::Error("diffusionRHScell invalid");
  if ((localMF[idx_phi]->nComp()!=nsolveMM)||
-     (localMF[idx_phi_dual]->nComp()!=nsolveMM)||
      (rhsmf->nComp()!=nsolveMM)||
      (localMF[DOTMASK_MF]->nComp()!=num_materials_face)||
      (diffusionRHScell->nComp()!=nsolveMM)||
@@ -1800,7 +1767,6 @@ void NavierStokes::apply_div(
   FArrayBox& diagsingfab = (*localMF[DIAG_SING_MF])[mfi];
 
   FArrayBox& poldfab = (*localMF[idx_phi])[mfi];
-  FArrayBox& poldfab_dual = (*localMF[idx_phi_dual])[mfi];
 
   FArrayBox& diffusionRHSfab = (*diffusionRHScell)[mfi];
 
@@ -1808,7 +1774,6 @@ void NavierStokes::apply_div(
   FArrayBox& solfab = (*localMF[FSI_GHOST_MF])[mfi];
 
   FArrayBox& cterm = (*localMF[ALPHACOEF_MF])[mfi];
-  FArrayBox& cterm_dual = (*localMF[ALPHACOEF_DUAL_MF])[mfi];
 
   FArrayBox& maskdivresfab = (*localMF[MASK_DIV_RESIDUAL_MF])[mfi];
   FArrayBox& maskresfab = (*localMF[MASK_RESIDUAL_MF])[mfi];
@@ -1834,16 +1799,17 @@ void NavierStokes::apply_div(
 //   u=u-dt k grad T0
 // 
 // a=vol/(rho c^2 dt^2)
-// (a+da) p-div beta grad p=- div u/dt+a p^adv+da p^last+diffusionRHS
+// a p-div beta grad p=- div u/dt+a p^adv+diffusionRHS
 // p=dp+pguess
-// pguess=-POLDHOLD-POLDHOLD_DUAL+p^adv
+// pguess=-POLDHOLD+p^adv
 // p^last=-POLDHOLD+p^adv
 // V=-dt beta grad pguess
-// (a+da) dp - div beta grad dp = 
-//   -div (u+V)/dt + a p^adv + da (p^adv-POLDHOLD) + diffusionRHS -
-//   (a+da)(-POLDHOLD-POLDHOLD_DUAL+p^adv) =
-//   -div (u+V)/dt+diffusionRHS+a POLDHOLD+(a+da)POLDHOLD_DUAL
-// RHS=POLDHOLD*a+POLDHOLD_DUAL*(a+da)-
+// a (dp+pguess) - div beta grad(dp+pguess)= - div u/dt+a p^adv+diffusionRHS
+// a dp - div beta grad dp = 
+//   -div u/dt + a p^adv -a pguess + diffusionRHS + div beta grad pguess
+// =-div (u+V)/dt + a(p^adv-pguess)+diffusionRHS
+// =-div (u+V)/dt + a POLDHOLD +diffusionRHS
+// RHS=POLDHOLD*a-
 //     (a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/dt+diffusionRHS
 //
 
@@ -1853,7 +1819,7 @@ void NavierStokes::apply_div(
   int use_VOF_weight=0;
 
   int ncomp_denold=nsolveMM;
-  int ncomp_veldest=cterm_dual.nComp();
+  int ncomp_veldest=cterm.nComp();
   int ncomp_dendest=poldfab_dual.nComp();
 
   int tid_current=ns_thread();
@@ -1921,8 +1887,8 @@ void NavierStokes::apply_div(
    az.dataPtr(),ARLIM(az.loVect()),ARLIM(az.hiVect()),
    vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
    rhs.dataPtr(),ARLIM(rhs.loVect()),ARLIM(rhs.hiVect()),
-   cterm_dual.dataPtr(),
-   ARLIM(cterm_dual.loVect()),ARLIM(cterm_dual.hiVect()), // veldest
+   cterm.dataPtr(),
+   ARLIM(cterm.loVect()),ARLIM(cterm.hiVect()), // veldest
    poldfab_dual.dataPtr(),
    ARLIM(poldfab_dual.loVect()),ARLIM(poldfab_dual.hiVect()), // dendest
    maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
@@ -2695,20 +2661,17 @@ void NavierStokes::mac_project_rhs(int project_option,
  localMF[idx_mac_phi_crse]->setBndry(0.0);
 
    // residual correction form,
-   // p=dp+p*, p*=-POLDHOLD_DUAL+p^last, POLDHOLD=p^adv-p^{last}
+   // p=dp+p^init, POLDHOLD=p^adv-p^{init}
    //         
-   // (a+da)p    - div grad p = f + da p^last + a p^adv
-   // (a+da)(dp) - div grad dp= -(a+da) p* + da p^last + a p^adv +
-   //                           div grad p* + f =
-   //                           (a+da) POLDHOLD_DUAL - a p^{last} + a p^{adv} +
-   //                           div grad p* + f
+   // a (p-p^adv) - div grad p = f
+   // a (dp+p^init-p^adv) - div grad (dp+p^init) = f
+   // a dp - div grad dp = div grad p^init + f + a(p^adv-p^init)
    //
-   // rhs=POLDHOLD*a + (a+da) * POLDHOLD_DUAL - vol div u/dt + diffusionRHS
+   // rhs=POLDHOLD*a  - vol div u/dt + diffusionRHS
  int homflag=0;
  apply_div(
    project_option,homflag,
    POLDHOLD_MF,
-   POLDHOLD_DUAL_MF,
    localMF[idx_mac_rhs_crse], 
    localMF[DIFFUSIONRHS_MF],
    UMAC_MF,
@@ -2719,7 +2682,7 @@ void NavierStokes::mac_project_rhs(int project_option,
 // GRADPEDGE=-dt W grad p
 // UMAC=UMAC+GRADPEDGE
 // pnew+=mac_phi_crse
-// POLDHOLD_DUAL-=mac_phi_crse
+// POLDHOLD-=mac_phi_crse
 void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
   int nsolve) {
 
@@ -2775,7 +2738,7 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
  if (ncomp_check!=nsolveMM)
   amrex::Error("ncomp_check invalid");
 
- MultiFab::Subtract(*localMF[POLDHOLD_DUAL_MF],*mac_phi_crse,0,0,nsolveMM,0);
+ MultiFab::Subtract(*localMF[POLDHOLD_MF],*mac_phi_crse,0,0,nsolveMM,0);
 
    // UMAC=UMAC+GRADPEDGE
  correct_velocity(project_option,

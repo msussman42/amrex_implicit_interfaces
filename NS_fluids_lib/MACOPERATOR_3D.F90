@@ -46,7 +46,6 @@ stop
          visc_coef, &
          angular_velocity, &
          dt, &
-         dual_time_stepping_coefficient, &
          project_option, &
          rzflag, &
          solidheat_flag)
@@ -77,7 +76,6 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(mu)
        REAL_T, intent(in) :: visc_coef,angular_velocity
        REAL_T, intent(in) :: dt
-       REAL_T, intent(in) :: dual_time_stepping_coefficient
        INTEGER_T, intent(in) :: project_option,rzflag
 
        REAL_T, intent(in) ::  mu(DIMV(mu),nmat+1)
@@ -146,12 +144,6 @@ stop
        endif
        if ((num_materials_face.ne.1).and.(num_materials_face.ne.nmat)) then
         print *,"num_materials_face invalid"
-        stop
-       endif
-       if (dual_time_stepping_coefficient.ge.zero) then
-        ! do nothing
-       else
-        print *,"dual_time_stepping_coefficient invalid"
         stop
        endif
 
@@ -843,8 +835,7 @@ stop
        zface,DIMS(zface), &
        masksolv,DIMS(masksolv), & ! ONES_MF in c++
        maskcov,DIMS(maskcov), &
-       alphadual,DIMS(alphadual), &
-       alphanodual,DIMS(alphanodual), &
+       alpha,DIMS(alpha), &
        offdiagcheck, &
        DIMS(offdiagcheck), &
        diag_non_sing, &
@@ -890,8 +881,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(zface)
       INTEGER_T, intent(in) :: DIMDEC(masksolv)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(alphadual)
-      INTEGER_T, intent(in) :: DIMDEC(alphanodual)
+      INTEGER_T, intent(in) :: DIMDEC(alpha)
       INTEGER_T, intent(in) :: DIMDEC(offdiagcheck)
       INTEGER_T, intent(in) :: DIMDEC(diag_non_sing)
       INTEGER_T, intent(in) :: DIMDEC(diag_sing)
@@ -919,8 +909,7 @@ stop
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
       REAL_T, intent(out) :: masksolv(DIMV(masksolv),num_materials_face)
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: alphadual(DIMV(alphadual),nsolveMM)
-      REAL_T, intent(in) :: alphanodual(DIMV(alphanodual),nsolveMM)
+      REAL_T, intent(in) :: alpha(DIMV(alpha),nsolveMM)
       REAL_T, intent(in) :: offdiagcheck(DIMV(offdiagcheck),nsolveMM)
       REAL_T, intent(out) :: diag_non_sing(DIMV(diag_non_sing),nsolveMM)
       REAL_T, intent(out) :: diag_sing(DIMV(diag_sing),nsolveMM)
@@ -947,8 +936,7 @@ stop
       INTEGER_T faceL,faceR
       REAL_T bface,mface
       REAL_T facewtsum,offdiagsum
-      REAL_T local_diag_dual
-      REAL_T local_diag_nodual
+      REAL_T local_diag
       REAL_T local_diag_check1
       REAL_T local_diag_check2
       REAL_T dtau,dtau_factor
@@ -1021,8 +1009,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,244)
       call checkbound(fablo,fabhi,DIMS(masksolv),0,-1,140)
       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,140)
-      call checkbound(fablo,fabhi,DIMS(alphadual),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(alphanodual),0,-1,140)
+      call checkbound(fablo,fabhi,DIMS(alpha),0,-1,140)
       call checkbound(fablo,fabhi,DIMS(offdiagcheck),0,-1,140)
       call checkbound(fablo,fabhi,DIMS(diag_non_sing),0,-1,140)
       call checkbound(fablo,fabhi,DIMS(diag_sing),0,-1,140)
@@ -1089,19 +1076,13 @@ stop
            bz(D_DECL(i,j,k),veldir)+bz(D_DECL(i,j,k+1),veldir)
          endif
 
-         local_diag_dual=alphadual(D_DECL(i,j,k),veldir)+offdiagsum
-         local_diag_nodual=alphanodual(D_DECL(i,j,k),veldir)+offdiagsum
-         if (local_diag_dual.ge.local_diag_nodual) then
-          if (local_diag_nodual.gt.zero) then
-           masksolv(D_DECL(i,j,k),im)=one
-          else if (local_diag_nodual.eq.zero) then
-           masksolv(D_DECL(i,j,k),im)=zero
-          else
-           print *,"local_diag_nodual invalid"
-           stop
-          endif
+         local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
+         if (local_diag.gt.zero) then
+          masksolv(D_DECL(i,j,k),im)=one
+         else if (local_diag.eq.zero) then
+          masksolv(D_DECL(i,j,k),im)=zero
          else
-          print *,"local_diag_dual or local_diag_nodual invalid"
+          print *,"local_diag invalid"
           stop
          endif
 
@@ -1207,19 +1188,13 @@ stop
 
          enddo ! dir=1..sdim
 
-         local_diag_dual=alphadual(D_DECL(i,j,k),veldir)+offdiagsum
-         local_diag_nodual=alphanodual(D_DECL(i,j,k),veldir)+offdiagsum
-         if (local_diag_dual.ge.local_diag_nodual) then
-          if (local_diag_nodual.gt.zero) then
-           masksolv(D_DECL(i,j,k),im)=one
-          else if (local_diag_nodual.eq.zero) then
-           masksolv(D_DECL(i,j,k),im)=zero
-          else
-           print *,"local_diag_nodual invalid"
-           stop
-          endif
+         local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
+         if (local_diag.gt.zero) then
+          masksolv(D_DECL(i,j,k),im)=one
+         else if (local_diag.eq.zero) then
+          masksolv(D_DECL(i,j,k),im)=zero
          else
-          print *,"local_diag_dual or local_diag_nodual invalid"
+          print *,"local_diag invalid"
           stop
          endif
 
@@ -1235,9 +1210,9 @@ stop
           maskres(D_DECL(i,j,k))=one
          else if ((facewtsum.eq.zero).or.(offdiagsum.eq.zero)) then
           maskdivres(D_DECL(i,j,k))=zero
-          if (alphanodual(D_DECL(i,j,k),veldir).gt.zero) then
+          if (alpha(D_DECL(i,j,k),veldir).gt.zero) then
            maskres(D_DECL(i,j,k))=one
-          else if (alphanodual(D_DECL(i,j,k),veldir).eq.zero) then
+          else if (alpha(D_DECL(i,j,k),veldir).eq.zero) then
            maskres(D_DECL(i,j,k))=zero
            if (mdot(D_DECL(i,j,k),veldir).eq.zero) then
             ! do nothing
@@ -1246,9 +1221,9 @@ stop
             stop
            endif
           else
-           print *,"alphanodual invalid"
+           print *,"alpha invalid"
            print *,"i,j,k= ",i,j,k
-           print *,"alphanodual=",alphanodual(D_DECL(i,j,k),veldir)
+           print *,"alpha=",alpha(D_DECL(i,j,k),veldir)
            stop
           endif
          else
@@ -1270,8 +1245,7 @@ stop
          stop
         endif
 
-        local_diag_dual=alphadual(D_DECL(i,j,k),veldir)+offdiagsum
-        local_diag_nodual=alphanodual(D_DECL(i,j,k),veldir)+offdiagsum
+        local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
 
         local_diag_check1=facewtsum
         local_diag_check2=offdiagcheck(D_DECL(i,j,k),veldir)
@@ -1289,43 +1263,29 @@ stop
          stop
         endif
 
-        if (local_diag_dual.ge.local_diag_nodual) then
+        diag_sing(D_DECL(i,j,k),veldir)=local_diag
 
-         diag_sing(D_DECL(i,j,k),veldir)=local_diag_dual
-
-         if (offdiagsum.lt.zero) then
-          print *,"offdiagsum invalid"
-          stop
-         else if (offdiagsum.eq.zero) then
-          dtau=dtau_factor
-         else
-          dtau=offdiagsum*dtau_factor
-         endif
-         if (alphadual(D_DECL(i,j,k),veldir).ge.zero) then
+        if (offdiagsum.lt.zero) then
+         print *,"offdiagsum invalid"
+         stop
+        else if (offdiagsum.eq.zero) then
+         dtau=dtau_factor
+        else
+         dtau=offdiagsum*dtau_factor
+        endif
+        if (alpha(D_DECL(i,j,k),veldir).ge.zero) then
           ! do nothing
-         else
-          print *,"alphadual should be nonneg"
-          stop
-         endif
-         if (alphadual(D_DECL(i,j,k),veldir).gt.dtau) then
-          dtau=zero
-         endif
-
-         diag_non_sing(D_DECL(i,j,k),veldir)= &
-          diag_sing(D_DECL(i,j,k),veldir)+dtau
-
         else
-         print *,"local_diag_dual or local_diag_nodual invalid"
+         print *,"alpha should be nonneg"
          stop
         endif
-
-
-        if (alphadual(D_DECL(i,j,k),veldir).ge.zero) then
-         ! do nothing
-        else
-         print *,"alphadual should be nonneg"
-         stop
+        if (alpha(D_DECL(i,j,k),veldir).gt.dtau) then
+         dtau=zero
         endif
+
+        FIX ME dtau should not be needed after BXCOEFF_NONSING USED
+        diag_non_sing(D_DECL(i,j,k),veldir)= &
+         diag_sing(D_DECL(i,j,k),veldir)+dtau
 
        enddo ! veldir=1..nsolveMM
           

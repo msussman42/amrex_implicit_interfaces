@@ -65,8 +65,6 @@ namespace amrex{
 
 #define MASKCOEF_MF 38
 
-#define POLDHOLD_DUAL_MF 39
-
 #define SLOPE_RECON_MF 40
 #define MASKSEM_MF 41
 
@@ -79,8 +77,6 @@ namespace amrex{
 // used in update_SEM_forces
 #define GP_DEST_FACE_MF 50
 #define GP_DEST_CELL_MF 53
-
-#define ALPHACOEF_DUAL_MF 54
 
 #define SEM_FLUXREG_MF 55
 
@@ -1016,7 +1012,6 @@ void applyBC_LEVEL(int project_option,int idx_phi,int nsolve);
 void apply_div(
   int project_option,int homflag,
   int idx_phi,
-  int idx_phi_dual,
   MultiFab* rhsmf,
   MultiFab* mdotcell,
   int idx_gphi,
@@ -1533,31 +1528,8 @@ protected:
 
     static Real real_number_of_cells;
 
-      // dual time stepping:
-      // see e.g. KunzETAL2000DualTimeStepping.pdf or
-      // Martinelli and A. Jameson?
-      // p_tau = (1/rho_max) div grad p
-      // p=e^(w tau+ikx)
-      // w = -k^2/rho_max   k=2 pi m/L
-      // min |w|=w'=(2 pi/L)^2/rho_max
-      // e^(-w' tau)=10^-2
-      // -w' tau = -2 log(10)
-      // tau = 2 log(10)/w' = 2 rho_max log(10)/(2 pi/L)^2 
-      // Above expression is bounded by:
-      // 2 * 3 * rho_max * L^2/(4 * 9) =
-      // rho_max * L^2/6
-    static int dual_time_activate; // default is 0
-    static Real dual_time_sound_speed; // default is 0
-    static Real dual_time_stepping_tau;
-     // solver coefficient is volume(i,j,k)*dual_time_stepping_coefficient
-    static Real dual_time_stepping_coefficient;
-
-    static int dual_time_error_met;
-    static int dual_time_stepping_iter;
-    static Real dual_time_error;
-    static Real dual_time_abstol;
-    static Real dual_time_reltol;
-    static Real dual_time_error0;
+     // 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
+    static Real mglib_min_coeff_factor; 
 
     static int prescribed_velocity_iter;
     static int prescribed_error_met;

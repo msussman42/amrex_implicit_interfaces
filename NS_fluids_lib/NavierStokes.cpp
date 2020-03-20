@@ -466,12 +466,8 @@ Real NavierStokes::prescribed_error0=0.0;
 
 Real NavierStokes::real_number_of_cells=0.0; 
 
-int NavierStokes::dual_time_stepping_iter=0; 
-int NavierStokes::dual_time_error_met=0; 
-Real NavierStokes::dual_time_error=0.0; 
-Real NavierStokes::dual_time_abstol=0.0; 
-Real NavierStokes::dual_time_reltol=0.0; 
-Real NavierStokes::dual_time_error0=0.0; 
+// 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
+Real NavierStokes::mglib_min_coeff_factor=1000.0; 
 
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::singular_possible=0; 
@@ -495,11 +491,6 @@ Vector<Real> NavierStokes::recalesce_model_parameters;
 Vector<Real> NavierStokes::outflow_velocity_buffer_size;
 
 Vector<Real> NavierStokes::cap_wave_speed;
-
-int NavierStokes::dual_time_activate=0;
-Real NavierStokes::dual_time_sound_speed=0.0;
-Real NavierStokes::dual_time_stepping_tau=0.0;
-Real NavierStokes::dual_time_stepping_coefficient=0.0;
 
 Vector<Real> NavierStokes::saturation_temp;
 
@@ -2763,8 +2754,7 @@ NavierStokes::read_params ()
     pp.query("conservative_tension_force",conservative_tension_force);
     pp.query("conservative_div_uu",conservative_div_uu);
 
-    pp.query("dual_time_activate",dual_time_activate);
-    pp.query("dual_time_sound_speed",dual_time_sound_speed);
+    pp.query("mglib_min_coeff_factor",mglib_min_coeff_factor);
 
     pp.getarr("tension",tension,0,nten);
     for (int i=0;i<nten;i++) 
@@ -2954,13 +2944,6 @@ NavierStokes::read_params ()
      amrex::Error("post_init_pressure_solve out of range");
 
     pp.query("solvability_projection",solvability_projection);
-
-    if (dual_time_activate==0) {
-     // do nothing
-    } else if (dual_time_activate==1) {
-     // do nothing
-    } else
-     amrex::Error("dual_time_activate invalid");
 
     if (solvability_projection==0) {
      // do nothing
@@ -3558,10 +3541,8 @@ NavierStokes::read_params ()
 
      std::cout << "temperature_source=" << temperature_source << '\n';
 
-     std::cout << "dual_time_activate=" << 
-        dual_time_activate << '\n';
-     std::cout << "dual_time_sound_speed=" << 
-        dual_time_sound_speed << '\n';
+     std::cout << "mglib_min_coeff_factor=" << 
+        mglib_min_coeff_factor << '\n';
      for (int i=0;i<AMREX_SPACEDIM;i++) {
       std::cout << "i,temperature_source_cen=" << i << ' ' <<
          temperature_source_cen[i] << '\n';
@@ -17787,7 +17768,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   }
   residual_verify=sqrt(residual_verify)/m_small;
   if ((residual_verify>1.0e-3*min_diag)&&
-      (residual_verify>1.0e-3)&&(1==0)) {
+      (residual_verify>1.0e-3)&&(1==1)) {
    std::cout << "caller_id= " << caller_id << '\n';
    std::cout << "residual_verify= " << residual_verify << '\n';
    std::cout << "min_diag= " << min_diag << '\n';
@@ -17804,8 +17785,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
       " HH_small= " << HH_small[i][j] << '\n';
     }
    }
-//  amrex::Error("residual too large HTH, do dual time stepping");
-    amrex::Warning("residual overflow HTH, dual time stepping? (if p solve)");
+   amrex::Error("residual too large HTH, decrease mglib_min_coeff_factor");
   }
   delete [] HTHy;
 

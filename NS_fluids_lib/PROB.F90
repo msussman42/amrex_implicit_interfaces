@@ -24807,7 +24807,7 @@ END SUBROUTINE Adist
             divu=divdest(D_DECL(ic,jc,kc),velcomp)*VOLTERM
             CC=cterm(D_DECL(ic,jc,kc),velcomp) ! already x VOLTERM
             CC_DUAL=veldest(D_DECL(ic,jc,kc),velcomp) ! already x VOLTERM
-            if (CC_DUAL.ge.CC) then
+            if (CC_DUAL.eq.CC) then
              ! do nothing
             else
              print *,"CC_DUAL invalid"
@@ -24856,17 +24856,22 @@ END SUBROUTINE Adist
             local_POLD_DUAL=dendest(D_DECL(ic,jc,kc),velcomp)
 
             if (homflag.eq.0) then
-             RHS=local_POLD*CC+local_POLD_DUAL*CC_DUAL
+             if (local_POLD.eq.local_POLD_DUAL) then
+              RHS=local_POLD*CC
+             else
+              print *,"local_POLD invalid"
+              stop
+             endif
             else if (homflag.eq.1) then
              if (local_POLD.eq.local_POLD_DUAL) then
-              RHS=local_POLD_DUAL*CC_DUAL
+              RHS=local_POLD*CC
              else
               print *,"local_POLD invalid"
               stop
              endif
             else if (homflag.eq.2) then
              if (local_POLD.eq.local_POLD_DUAL) then
-              RHS=-local_POLD_DUAL*CC_DUAL
+              RHS=-local_POLD*CC
              else
               print *,"local_POLD invalid"
               stop

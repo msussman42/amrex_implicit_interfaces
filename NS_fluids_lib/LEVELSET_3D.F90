@@ -10579,11 +10579,9 @@ stop
 
        else if (operation_flag.eq.0) then ! RHS
 
-        ! (cterm_dual)*p-vol grad dot grad p/rho=-vol div u/dt + mdot +
-        !    cterm * p^adv + dc * p^last 
+        ! (cterm)*p-vol grad dot grad p/rho=-vol div u/dt + mdot +
+        !    cterm * p^adv 
         ! cterm=vol/(rho c^2 dt*dt)
-        ! cterm_dual=cterm+vol/(rho_max c_max^2 dt*dt)
-        ! dc=cterm_dual-cterm
 
         if (maskcoef(D_DECL(i,j,k)).eq.one) then ! not covered
 
@@ -10591,7 +10589,7 @@ stop
     
           CC=cterm(D_DECL(i,j,k),veldir)
           CC_DUAL=veldest(D_DECL(i,j,k),veldir)
-          if (CC_DUAL.ge.CC) then
+          if (CC_DUAL.eq.CC) then
            ! do nothing
           else
            print *,"CC_DUAL invalid"
@@ -10669,7 +10667,7 @@ stop
              print *,"CC invalid"
              stop
             endif
-            if (CC_DUAL.ge.zero) then
+            if (CC_DUAL.eq.zero) then
              ! do nothing
             else
              print *,"CC_DUAL invalid"
@@ -10698,18 +10696,16 @@ stop
 
           local_POLD=pold(D_DECL(i,j,k),veldir)
           local_POLD_DUAL=dendest(D_DECL(i,j,k),veldir)
-          if (homflag.eq.0) then
-           rhs(D_DECL(i,j,k),veldir)=local_POLD*CC+local_POLD_DUAL*CC_DUAL
-          else if (homflag.eq.1) then
+          if ((homflag.eq.0).or.(homflag.eq.1)) then
            if (local_POLD.eq.local_POLD_DUAL) then
-            rhs(D_DECL(i,j,k),veldir)=local_POLD_DUAL*CC_DUAL
+            rhs(D_DECL(i,j,k),veldir)=local_POLD*CC
            else
             print *,"local_POLD invalid"
             stop
            endif
           else if (homflag.eq.2) then
            if (local_POLD.eq.local_POLD_DUAL) then
-            rhs(D_DECL(i,j,k),veldir)=-local_POLD_DUAL*CC_DUAL
+            rhs(D_DECL(i,j,k),veldir)=-local_POLD*CC
            else
             print *,"local_POLD invalid"
             stop

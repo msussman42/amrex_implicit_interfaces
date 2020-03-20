@@ -10655,12 +10655,14 @@ END SUBROUTINE SIMP
         print *,"bfact invalid158"
         stop
        endif
+       FIX ME
        if (offdiag_nonsing_level.gt.zero) then
         ! do nothing
        else
         print *,"offdiag_nonsing_level<=0"
         stop
        endif
+       FIX ME
        if ((diag_regularization.gt.zero).and. &
            (diag_regularization.le.1.0D-3)) then
         ! do nothing
@@ -10690,6 +10692,7 @@ END SUBROUTINE SIMP
 
         if (mask(D_DECL(i,j,k)).eq.one) then
 
+                FIX ME
          if (diagsing(D_DECL(i,j,k)).eq.zero) then
            ! offdiag_nonsing_level ~ coeff_max * area / dx
           if (singular_possible.eq.1) then
@@ -10704,7 +10707,7 @@ END SUBROUTINE SIMP
           print *,"diag invalid 2"
           stop
          endif
-
+THIS IS OK - diagnonsing should be ok
          local_diag=diagnonsing(D_DECL(i,j,k))
 
          xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))+ &

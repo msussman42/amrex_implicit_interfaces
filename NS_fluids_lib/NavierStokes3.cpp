@@ -5627,7 +5627,6 @@ void NavierStokes::remove_pressure_work_vars() {
 void NavierStokes::remove_project_variables() {
 
  delete_localMF(POLDHOLD_MF,1);
- delete_localMF(POLDHOLD_DUAL_MF,1);
  delete_localMF(ONES_MF,1);
  delete_localMF(DOTMASK_MF,1);
  delete_localMF(OUTER_ITER_PRESSURE_MF,1);
@@ -6133,8 +6132,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 
  new_localMF(POLDHOLD_MF,nsolveMM,0,-1);
  setVal_localMF(POLDHOLD_MF,0.0,0,nsolveMM,0);
- new_localMF(POLDHOLD_DUAL_MF,nsolveMM,0,-1);
- setVal_localMF(POLDHOLD_DUAL_MF,0.0,0,nsolveMM,0);
 
   // S_new and outer_iter_pressure will both hold S^*
   // at the very beginning.
@@ -6148,7 +6145,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   //  OUTER_ITER_PRESSURE = S_init
   //  S_new = S_init
   //  POLDHOLD = S^* - S^init
-  //  POLDHOLD_DUAL = 0.0
 
    // this holds S^*
  new_localMF(OUTER_ITER_PRESSURE_MF,nsolveMM,0,-1);
@@ -6243,7 +6239,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   if (scomp_temp!=nsolveMM)
    amrex::Error("scomp_temp invalid");
 
-   // dp=S^init-S^*
+   // dp=S^init-S^*   dS=S-S^init
    // alpha(S^init + dS - S^*) - div beta grad (S^init + dS) = 0
    // alpha dS - div beta grad dS = -alpha dp + div beta grad S^init 
    //                             = alpha POLDHOLD + div beta grad S^init
@@ -6797,7 +6793,13 @@ void NavierStokes::mg_cycleALL(int presmooth,
   amrex::Error("num_materials_face invalid");
 
    // residmf represents the current status of:
-   // f+ div grad p^* + (a+da)(POLDHOLD_DUAL) + a(POLDHOLD)
+   // f+ div grad p^init + a(POLDHOLD)  (POLDHOLD=p^*-p^init)
+   // originally:
+   // a(p-p*)-div grad p = f
+   // let dp=p-p^init
+   // a(dp+p^init-p^*)- div grad (dp+p^init) = f 
+   // a dp - div grad dp = f+a(p^*-p^init)+div grad p^init=f+a POLDHOLD +
+   // div grad p^init
  MultiFab* residmf=new MultiFab(grids,dmap,nsolveMM,0,
 	MFInfo().SetTag("residmf"),FArrayBoxFactory());
  MultiFab::Copy(*residmf,*localMF[idx_rhs],0,0,nsolveMM,0);
@@ -6882,21 +6884,21 @@ void NavierStokes::relaxLEVEL(
   // if mask=1 (uncovered cell), rhsmf=idx_rhs-div u/dt
   // otherwise, rhsmf=rhsmf
   // idx_phi[level]=0.0 on input.
-  // rhsmf=( idx_phi )*alpha + ( idx_phi )*alpha_dual-
+  // rhsmf=( idx_phi )*alpha -
   //       vol div UMACSTAR + idx_rhs=
   //       -vol div UMACSTAR + idx_rhs
-  // (a+da) p - div grad p = f + a p^adv + da p^last
-  // p=dp + p^*
-  // (a+da)dp - div grad dp = f - (a+da)p^* + div grad p^* + a p^adv + 
-  //                          da p^last
-  // p^*=-POLDHOLD_DUAL-POLDHOLD+p^adv
+  // a p - div grad p = f + a p^adv 
+  // p=dp + p^init
+  // (a)dp - div grad dp = f - (a)p^init + div grad p^init + a p^adv 
+  //                          
+  // p^init=-POLDHOLD+p^adv
   // p^last=p^adv-POLDHOLD
-  // (a+da)dp - div grad dp = f- (a+da)(-POLDHOLD_DUAL-POLDHOLD+p^adv) +
-  //       div grad p^* + a p^adv + da p^last=
-  //       f- (a+da)(-POLDHOLD_DUAL-POLDHOLD+p^adv) +
-  //       div grad p^* + a p^adv + da(p^adv-POLDHOLD)=
-  //       f+ div grad p^* + (a+da)(POLDHOLD_DUAL) + a(POLDHOLD)=
-  //       f- div UMACSTAR + (a+da)(POLDHOLD_DUAL) + a(POLDHOLD)
+  // a dp - div grad dp = f- (a)(-POLDHOLD+p^adv) +
+  //       div grad p^init + a p^adv =
+  //       f- (a)(-POLDHOLD+p^adv) +
+  //       div grad p^init + a p^adv =
+  //       f+ div grad p^init + a(POLDHOLD)=
+  //       f- div UMACSTAR + a(POLDHOLD)
   // 
   // on the finest level: UMACSTAR = 0 and idx_phi = 0.0
   // on coarser levels: idx_phi=0.0
@@ -7343,9 +7345,7 @@ void NavierStokes::updatevelALL(
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-     //
-     // POLDHOLD_DUAL-=idx_mac_phi_crse
-     //
+     // POLDHOLD-=idx_mac_phi_crse
      // PNEW+=idx_mac_phi_crse
      // UMAC+=GRADPEDGE  (GRADPEDGE=-dt W grad p)
   ns_level.mac_update(ns_level.localMF[idx_mac_phi_crse],
@@ -8640,10 +8640,9 @@ void NavierStokes::multiphase_project(int project_option) {
   //
   // allocate_project_variables comes after this since 
   // allocate_project_variables does the following:
-  // p^* = outer_iter_pressure = p_new
+  // p^adv = outer_iter_pressure = p_new
   // p_init = outer_iter_pressure = p_new
-  // POLDHOLD = p^* - p_init
-  // POLDHOLD_DUAL = 0.0
+  // POLDHOLD = p^adv - p_init
   // p_new = p_init
   // outer_iter_pressure=p_init
 
@@ -8785,7 +8784,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // fortran pressure and velocity scales
    // dt_slab
-   // dual_time_sound_speed
    // s_new velocity
    // s_new pressure
    // div_new 
@@ -9009,8 +9007,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // updates the following variables:
    // ONES_MF, DOTMASK_MF, 
-   // POLDHOLD_MF=S^* - S^init, 
-   // POLDHOLD_DUAL_MF=0.0, 
+   // POLDHOLD_MF=S^adv - S^init, 
    // OUTER_ITER_PRESSURE_MF=S^init,
    // snew=S^init
    //
@@ -9022,7 +9019,6 @@ void NavierStokes::multiphase_project(int project_option) {
  }
  show_norm2_id(OUTER_ITER_PRESSURE_MF,15);
  show_norm2_id(POLDHOLD_MF,16);
- show_norm2_id(POLDHOLD_DUAL_MF,161);
 
  for (int ilist=0;ilist<scomp.size();ilist++) 
   avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
@@ -9047,67 +9043,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
   if (problen_max>0.0) {
 
-   if (dual_time_activate==0) {
-
-    dual_time_stepping_tau=0.0;
-    dual_time_stepping_coefficient=0.0;
-
-   } else if (dual_time_activate==1) {
-
-    dual_time_stepping_tau=0.0;
-
-    if ((project_option==0)||
-        (project_option==1)||
-        (project_option==10)|| // sync project at advection
-        (project_option==11)|| // FSI_material_exists (2nd project)
-        (project_option==12)|| // pressure extrapolation
-        (project_option==13)) { // FSI_material_exists (1st project)
-     // heuristic: p_t=(1/rho)div grad p
-     // factor=exp(-k^2 t/rho)
-     // k=2 m pi/L   m=1
-     // 4 pi^2 t/L^2 = rho ln(factor)
-     // t = L^2 rho ln(factor)/(4 pi^2)
-     double dual_time_reduction_factor=1.0e-50;
-     dual_time_stepping_tau= 
-        maxden*problen_max*problen_max*
-	std::abs(log(dual_time_reduction_factor))/(4.0*NS_PI*NS_PI);
-
-     if (dual_time_sound_speed>0.0) {
-      if ((project_option==0)||
-          (project_option==10)|| //sync project at advection
-          (project_option==11)|| //FSI_material_exists (2nd project)
-          (project_option==13)) { // FSI_material_exists (1st project)
-
-       dual_time_stepping_tau=
-        maxden*dual_time_sound_speed*dual_time_sound_speed*dt_slab*dt_slab;
-
-      } else if ((project_option==1)||
-                 (project_option==12)) { // pressure extrapolation
-       // do nothing
-      } else
-       amrex::Error("project_option invalid");
-
-     } else if (dual_time_sound_speed==0.0) {
-      // do nothing
-     } else
-      amrex::Error("dual_time_sound_speed invalid");
-
-     if (dual_time_stepping_tau>0.0) {
-      dual_time_stepping_coefficient=1.0/dual_time_stepping_tau;
-     } else
-      amrex::Error("dual_time_stepping_tau invalid");
-
-    } else if (project_option==3) {  // viscosity
-     dual_time_stepping_coefficient=0.0;
-    } else if (project_option==2) {  // thermal diffusion
-     dual_time_stepping_coefficient=0.0;
-    } else if ((project_option>=100)&&
-               (project_option<100+num_species_var)) {
-     dual_time_stepping_coefficient=0.0;
-    } else
-     amrex::Error("project_option invalid301");
-   } else
-    amrex::Error("dual_time_activate invalid");
   } else
    amrex::Error("problen_max invalid");
  } else
@@ -9134,9 +9069,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
   // at this point:
   // S_new=S^init
-  // POLDHOLD=S^* - S^init
-  // POLDHOLD_DUAL=0.0
-  // UMAC_new=U^*
+  // POLDHOLD=S^adv - S^init
+  // UMAC_new=U^adv
  if (prescribed_velocity_iter_active==1) {
   // do nothing
  } else if (prescribed_velocity_iter_active==0) {
@@ -9165,61 +9099,18 @@ void NavierStokes::multiphase_project(int project_option) {
   bprof.stop();
 #endif
 
-  dual_time_error=0.0;
-  dual_time_error0=0.0;
-  dual_time_error_met=0;
-
-  dual_time_stepping_iter=0;
-
-  int dual_time_cycle_max=200;
-  Vector<Real> dual_error_history;
-  dual_error_history.resize(dual_time_cycle_max);
-  Real dual_error_min=0.0;
-  int dual_error_min_iter=4;
-
-  do { // while dual_time_error_met==0
-
 #if (profile_solver==1)
-   bprof.start();
+  bprof.start();
 #endif
 
-   // dual time stepping algorithm:
-   // initially: 
-   // alpha p-div beta grad p/dt=f+alpha p^{adv}-div U/dt
-   //   or
-   // alpha(p-pI+pI)-div beta grad(p-pI+pI)/dt=f+alpha p^{adv}-div U/dt
-   // alpha(p-pI)-div beta grad(p-pI)/dt=f+alpha p^{adv}-
-   //     alpha pI+div(beta grad pI-U)/dt
-   // alpha(dp)-div beta grad(dp)/dt=f+alpha(p^{adv}-pI)-div(U+V)/dt
-   //
-   // dual time stepping:
-   // da p^{k+1}+alpha p^{k+1}-div beta grad p^{k+1}/dt =
-   //  f+alpha p^{adv}+da p^{k}-div U/dt
-   // da=1/dual_time_stepping_tau=dual_time_stepping_coefficient
-   // iterate until ||p^{k+1}-p^{k}||<tol
-   //
-   // da(p^{k+1}-p^{k}+p^{k})+ 
-   // alpha(p^{k+1}-p^{k}+p^{k})- 
-   // div beta grad(p^{k+1}-p^{k}+p^{k})/dt =
-   //  f+alpha p^{adv}+da p^{k}-div U/dt
-   // let dp=p^{k+1}-p^{k}
-   //      V=-beta grad p^{k}
-   //      p^{0}=pI
-   //      A=da+alpha
-   // A dp-div beta grad dp/dt=
-   //  f+alpha p^{adv}+da p^{k}-div(U+V)/dt -
-   //  da p^{k}-alpha p^{k}=
-   //  f+alpha(p^adv-p^{k})-div(U+V)/dt
-   //
+  energyflag=0;
+  int homflag_residual_correction_form=0; 
 
-   energyflag=0;
-   int homflag_residual_correction_form=0; 
-
-   if ((project_option==10)|| // sync project
+  if ((project_option==10)|| // sync project
        (project_option==11)|| // FSI_material_exists 2nd project
        (project_option==1)) { // initial project
     homflag_residual_correction_form=1; 
-   } else if ((project_option==0)|| // regular projection
+  } else if ((project_option==0)|| // regular projection
 	     (project_option==12)|| // pressure extrapolation
 	     (project_option==13)|| // FSI_material_exists 1st project
 	     (project_option==3)||  // viscosity
@@ -9227,14 +9118,14 @@ void NavierStokes::multiphase_project(int project_option) {
 	     ((project_option>=100)&&
               (project_option<100+num_species_var))) {
     homflag_residual_correction_form=0; 
-   } else
+  } else
      amrex::Error("project_option invalid");
 
-   CPP_OVERRIDEPBC(homflag_residual_correction_form,project_option);
+  CPP_OVERRIDEPBC(homflag_residual_correction_form,project_option);
 
    // STATE_FOR_RESID is an input to 
    //  NavierStokes::residual_correction_form
-   for (int ilev=finest_level;ilev>=level;ilev--) {
+  for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
      // ngrow=1
     ns_level.getState_localMF_list(STATE_FOR_RESID_MF,1,
@@ -9244,7 +9135,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
     ns_level.resize_levelsetLO(2,LEVELPC_MF);
     ns_level.debug_ngrow(LEVELPC_MF,2,870);
-   } // ilev=finest_level ... level
+  } // ilev=finest_level ... level
 
     // initializes diagsing,mask_div_residual,mask_residual,ONES_MF,
     // ones_sum_global
@@ -9253,32 +9144,24 @@ void NavierStokes::multiphase_project(int project_option) {
     //  
     // calls:FORT_SCALARCOEFF,FORT_MULT_FACEWT,FORT_DIVIDEDX,FORT_NSGENERATE
     // initializes arrays holding the diagonal and ONES_MF.
-   int create_hierarchy=0;
-   allocate_maccoefALL(project_option,nsolve,create_hierarchy);
+  int create_hierarchy=0;
+  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
-   int change_flag=0;
+  int change_flag=0;
 
     // at very beginning:
-    // POLDHOLD_MF=S^*-S^init
-    // POLDHOLD_DUAL_MF=0.0
+    // POLDHOLD_MF=S^adv-S^init
     // OUTER_ITER_PRESSURE_MF=S^init
     // snew=S^init
     // STATE_FOR_RESID=S^init
     //
-    // after a dual time stepping iter:
-    // POLDHOLD_MF=S^* - S^{k+1,l+1}
-    // POLDHOLD_DUAL_MF=0.0
-    // OUTER_ITER_PRESSURE_MF=S^{k+1,l+1}
-    // snew=S^{k+1,l+1}
-    // STATE_FOR_RESID=S^{k+1,l+1}
-   project_right_hand_side(POLDHOLD_MF,project_option,change_flag);
-   project_right_hand_side(POLDHOLD_DUAL_MF,project_option,change_flag);
-   project_right_hand_side(OUTER_ITER_PRESSURE_MF,project_option,change_flag);
-   project_right_hand_side(STATE_FOR_RESID_MF,project_option,change_flag);
+  project_right_hand_side(POLDHOLD_MF,project_option,change_flag);
+  project_right_hand_side(OUTER_ITER_PRESSURE_MF,project_option,change_flag);
+  project_right_hand_side(STATE_FOR_RESID_MF,project_option,change_flag);
 
-   if (change_flag==0) {
+  if (change_flag==0) {
     // do nothing
-   } else if (change_flag==1) {
+  } else if (change_flag==1) {
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      ns_level.putState_localMF_list(STATE_FOR_RESID_MF,
@@ -9290,27 +9173,23 @@ void NavierStokes::multiphase_project(int project_option) {
      ns_level.getState_localMF_list(STATE_FOR_RESID_MF,1,
   	   state_index,scomp,ncomp);
     } // ilev=finest_level ... level
-   } else
+  } else
     amrex::Error("change_flag invalid");
 
-   for (int ilev=finest_level;ilev>=level;ilev--) {
+  for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
 
      // UMAC_MF-=beta grad STATE_FOR_RESID
-    if ((prescribed_velocity_iter==0)&&
-	(dual_time_stepping_iter==0)) {
+    if (prescribed_velocity_iter==0) {
      ns_level.residual_correction_form(
       homflag_residual_correction_form,
       energyflag,
       project_option,nsolve);
-    } else if ((prescribed_velocity_iter>0)||
-	       (dual_time_stepping_iter>0)) {
+    } else if (prescribed_velocity_iter>0) {
      // do nothing
     } else {
      std::cout << "invalid: prescribed_velocity_iter= " <<
       prescribed_velocity_iter << '\n';
-     std::cout << "invalid: dual_time_stepping_iter= " <<
-      dual_time_stepping_iter << '\n';
      amrex::Error("aborting because of a bad iter");
     }
 
@@ -9322,15 +9201,15 @@ void NavierStokes::multiphase_project(int project_option) {
      ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolveMM_FACE,0);
     }
 
-   }  // ilev=finest_level ... level
+  }  // ilev=finest_level ... level
 
-   delete_array(STATE_FOR_RESID_MF);
+  delete_array(STATE_FOR_RESID_MF);
 
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     show_norm2_id(MAC_TEMP_MF+dir,5+dir);
-   }
+  }
 
-   if (verbose>0) {
+  if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "iwt:0=denface 1=cutface 2=desing. 3=sing";
      std::cout << "project_option= " << project_option << '\n';
@@ -9340,64 +9219,64 @@ void NavierStokes::multiphase_project(int project_option) {
         max_face_wt[0][iwt] << '\n';
      }
     }
-   } // verbose>0
+  } // verbose>0
 
-   deallocate_maccoefALL(project_option);
+  deallocate_maccoefALL(project_option);
    
-   int meets_tol;
+  int meets_tol;
 
-   set_local_tolerances(project_option);
+  set_local_tolerances(project_option);
 
-   Real error0_max=0.0;
-   Real error0=0.0;
-   Real error_n=0.0;
-   Real error_at_the_beginning=0.0;
-   Real error_after_all_jacobi_sweeps=0.0;
+  Real error0_max=0.0;
+  Real error0=0.0;
+  Real error_n=0.0;
+  Real error_at_the_beginning=0.0;
+  Real error_after_all_jacobi_sweeps=0.0;
      
-   if (verbose>0) {
+  if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "LEVEL PROJECT from level=" << level << " to level=" <<
        ' ' << finest_level << '\n';
      std::cout << "PROJECT OPTION=" << project_option << '\n';
      std::cout << "NSOLVE=" << nsolve << '\n';
     }
-   }
+  }
 
-   int vcycle;
-   int bicgstab_num_outer_iterSOLVER=0;
-   int outer_iter_done=0;
+  int vcycle;
+  int bicgstab_num_outer_iterSOLVER=0;
+  int outer_iter_done=0;
 
-   int min_bicgstab_outer_iter=0;
+  int min_bicgstab_outer_iter=0;
 
       // initializes diagsing,mask_div_residual,mask_residual,ONES_MF,
       //  ones_sum_global
-   create_hierarchy=1;
-   allocate_maccoefALL(project_option,nsolve,create_hierarchy);
+  create_hierarchy=1;
+  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
     // this must be done after allocate_maccoef (stefan_solver_init relies on
     // inhomogeneous BCs)
     // set BCs to homogeneous for the outer_iter loop.
-   CPP_OVERRIDEPBC(1,project_option);
+  CPP_OVERRIDEPBC(1,project_option);
 
-   int total_number_vcycles=0;
+  int total_number_vcycles=0;
 
-   bicgstab_num_outer_iterSOLVER=0;
-   outer_iter_done=0;
+  bicgstab_num_outer_iterSOLVER=0;
+  outer_iter_done=0;
   
-   lev0_cycles_list.resize(0);
+  lev0_cycles_list.resize(0);
 
 #if (profile_solver==1)
-   bprof.stop();
+  bprof.stop();
 #endif
 
-   Vector< Array<Real,2> > outer_error_history;
-   outer_error_history.resize(bicgstab_max_num_outer_iter+1);
-   for (int ehist=0;ehist<outer_error_history.size();ehist++) {
+  Vector< Array<Real,2> > outer_error_history;
+  outer_error_history.resize(bicgstab_max_num_outer_iter+1);
+  for (int ehist=0;ehist<outer_error_history.size();ehist++) {
     outer_error_history[ehist][0]=0.0;
     outer_error_history[ehist][1]=0.0;
-   }
+  }
 
-   while (outer_iter_done==0) {
+  while (outer_iter_done==0) {
 
 #if (profile_solver==1)
       bprof.start();
@@ -9423,7 +9302,7 @@ void NavierStokes::multiphase_project(int project_option) {
         ns_level.avgDownMac();  // works on UMAC_MF
        }
         // mac_phi_crse=0
-        // mac_rhs_crse=POLDHOLD * alpha + POLDHOLD_DUAL * (alpha+da) - 
+        // mac_rhs_crse=POLDHOLD * alpha -  (note: POLDHOLD=p^advect-p^init)
         //              vol div UMAC/dt + diffusionRHS
        ns_level.mac_project_rhs(project_option,MAC_PHI_CRSE_MF,
          MAC_RHS_CRSE_MF,nsolve);
@@ -9500,7 +9379,7 @@ void NavierStokes::multiphase_project(int project_option) {
        // UMAC=UMAC-beta grad mac_phi_crse
        // S_new=S_new+mac_phi_crse
        //
-       // POLDHOLD_DUAL=POLDHOLD_DUAL-mac_phi_crse
+       // POLDHOLD=POLDHOLD-mac_phi_crse
        //
        // mac_phi_crse=0
        //
@@ -9546,7 +9425,7 @@ void NavierStokes::multiphase_project(int project_option) {
          ns_level.avgDownMac(); // works on UMAC_MF
         }
          // mac_phi_crse_mf=0.0
-         // mac_rhs_crse=POLDHOLD * alpha + POLDHOLD_DUAL * (alpha+da) - 
+         // mac_rhs_crse=POLDHOLD * alpha - 
          //              vol div UMAC/dt + diffusionRHS
         ns_level.mac_project_rhs(project_option,MAC_PHI_CRSE_MF,
           MAC_RHS_CRSE_MF,nsolve);
@@ -10237,7 +10116,7 @@ void NavierStokes::multiphase_project(int project_option) {
        // UMAC=UMAC-grad(mac_phi_crse) 
        // S_new=S_new+mac_phi_crse 
        //
-       // POLDHOLD_DUAL=POLDHOLD_DUAL-mac_phi_crse
+       // POLDHOLD=POLDHOLD-mac_phi_crse
        //
        // mac_phi_crse=0
        //
@@ -10379,7 +10258,7 @@ void NavierStokes::multiphase_project(int project_option) {
         ns_level.avgDownMac(); // works on UMAC_MF
        }
         // OUTER_MAC_PHI_CRSE=0
-        // OUTER_MAC_RHS=POLDHOLD * alpha + POLDHOLD_DUAL * (alpha+da) - 
+        // OUTER_MAC_RHS=POLDHOLD * alpha - 
         //               vol div UMAC/dt + diffusionRHS
        ns_level.mac_project_rhs(project_option,OUTER_MAC_PHI_CRSE_MF,
          OUTER_MAC_RHS_CRSE_MF,nsolve);
@@ -10448,14 +10327,14 @@ void NavierStokes::multiphase_project(int project_option) {
       bprof.stop();
 #endif
 
-   }  //  while outer_iter_done==0
+  }  //  while outer_iter_done==0
 
 #if (profile_solver==1)
-   bprof.start();
+  bprof.start();
 #endif
 
-   if (number_vcycles_all_solver_calls.size()==
-       number_solver_calls.size()) {
+  if (number_vcycles_all_solver_calls.size()==
+      number_solver_calls.size()) {
 
     int prev_size=number_solver_calls.size();
     int new_size=project_option+1;
@@ -10498,18 +10377,6 @@ void NavierStokes::multiphase_project(int project_option) {
      std::cout << "project_option= " << project_option <<
 	    " TIME= " << cur_time_slab << " Current iterations= " <<
 	    total_number_vcycles << '\n';
-     std::cout << "project_option= " << project_option <<
-	    " TIME= " << cur_time_slab << " dual_time_stepping_iter= " <<
-	    dual_time_stepping_iter << '\n';
-     std::cout << "project_option= " << project_option <<
-	    " TIME= " << cur_time_slab << " dual_time_error= " <<
-	    dual_time_error << '\n';
-     std::cout << "project_option= " << project_option <<
-	    " TIME= " << cur_time_slab << " dual_time_error0= " <<
-	    dual_time_error0 << '\n';
-     std::cout << "project_option= " << project_option <<
-	    " TIME= " << cur_time_slab << " dual_error_min= " <<
-	    dual_error_min << '\n';
 
      avg_iter=max_lev0_cycles_all_solver_calls[project_option]/
 	     number_solver_calls[project_option];
@@ -10531,150 +10398,52 @@ void NavierStokes::multiphase_project(int project_option) {
 	    local_median_lev0_cycles << '\n';
     }
 
-   } else
+  } else
     amrex::Error("number_solver_calls.size() invalid");
 
-   deallocate_maccoefALL(project_option);
+  deallocate_maccoefALL(project_option);
 
     // copy OUTER_ITER_PRESSURE to s_new
-   for (int ilev=finest_level;ilev>=level;ilev--) {
+  for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     ns_level.putState_localMF_list(OUTER_ITER_PRESSURE_MF,state_index,
 		   scomp,ncomp);
-   }  // ilev=finest_level ... level
+  }  // ilev=finest_level ... level
 
-   for (int ilist=0;ilist<scomp.size();ilist++) 
+  for (int ilist=0;ilist<scomp.size();ilist++) 
     avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
 
-   int homflag_dual_time=0;
+  int homflag_dual_time=0;
 
-   if ((project_option==1)||   // initial project
-       (project_option==10)||  // sync project prior to advection
-       (project_option==11)) { // FSI_material_exists (2nd project)
+  if ((project_option==1)||   // initial project
+      (project_option==10)||  // sync project prior to advection
+      (project_option==11)) { // FSI_material_exists (2nd project)
     homflag_dual_time=1;
-   } else if (project_option==12) { // pressure extrapolation
+  } else if (project_option==12) { // pressure extrapolation
     homflag_dual_time=0;
-   } else if ((project_option==0)||  //regular project
-              (project_option==13)|| //FSI_material_exists (1st project)
-              (project_option==2)) { //thermal conductivity
+  } else if ((project_option==0)||  //regular project
+             (project_option==13)|| //FSI_material_exists (1st project)
+             (project_option==2)) { //thermal conductivity
     homflag_dual_time=0;
-   } else if (project_option==3) { // viscosity
+  } else if (project_option==3) { // viscosity
     homflag_dual_time=0;
-   } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
+  } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
     homflag_dual_time=0;
-   } else
+  } else
     amrex::Error("project_option invalid 53");
 
-   CPP_OVERRIDEPBC(homflag_dual_time,project_option);
+  CPP_OVERRIDEPBC(homflag_dual_time,project_option);
 
-   for (int ilev=finest_level;ilev>=level;ilev--) {
+  for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     if (ilev<finest_level)
      ns_level.avgDownMac(); // interpolates UMAC_MF from ilev+1
-   } // ilev=finest_level ... level
+  } // ilev=finest_level ... level
 
-
-   // POLDHOLD+=(p^{k+1,l}-p^{k+1,l+1}), POLDHOLD_DUAL=0.0
-   if (dual_time_stepping_coefficient==0.0) {
-    dual_time_error_met=1;
-    dual_time_error=0.0;
-   } else if (dual_time_stepping_coefficient>0.0) {
-    dual_time_error=0.0;
-
-    dot_productALL(project_option,POLDHOLD_DUAL_MF,
-		   POLDHOLD_DUAL_MF,dual_time_error,nsolveMM);
-    if (real_number_of_cells>0.0) {
-     dual_time_error/=real_number_of_cells;
-    } else
-     amrex::Error("real_number_of_cells invalid");
-
-    if (dual_time_error>=0.0) {
-     dual_time_error=sqrt(dual_time_error);
-    } else
-     amrex::Error("dual_time_error invalid");
-
-    if (dual_time_stepping_iter==0) {
-     dual_time_error0=dual_time_error;
-    } else if (dual_time_stepping_iter>0) {
-     // do nothing
-    } else
-     amrex::Error("dual_time_stepping_iter invalid");
-
-    dual_time_abstol=save_mac_abs_tol;
-    dual_time_reltol=save_min_rel_error;
-    if (dt_slab>0.0) {
-     if (dual_time_stepping_iter>=dual_error_min_iter-1) {
-      if (dt_slab<1.0) {
-       dual_time_abstol/=dt_slab;
-       dual_time_reltol/=dt_slab;
-      }
-     }
-    } else
-     amrex::Error("dt_slab invalid");
-
-    dual_time_error_met=0;
-
-    if (dual_time_error<=dual_time_abstol) {
-     dual_time_error_met=1;
-    } else if (dual_time_error>dual_time_abstol) {
-     if (dual_time_stepping_iter==0) {
-      // do nothing
-     } else if (dual_time_stepping_iter>0) {
-      if (dual_time_error<=dual_time_error0*dual_time_reltol)
-       dual_time_error_met=1;
-     } else
-      amrex::Error("dual_time_stepping_iter invalid");
-
-    } else
-     amrex::Error("dual_time_error invalid");
-
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.localMF[POLDHOLD_MF]->plus(
-      *ns_level.localMF[POLDHOLD_DUAL_MF],0,nsolveMM,0);
-     ns_level.setVal_localMF(POLDHOLD_DUAL_MF,0.0,0,nsolveMM,0);
-    }
-
-   } else 
-    amrex::Error("dual_time_stepping_coefficient invalid");	   
-
-   dual_error_history[dual_time_stepping_iter]=dual_time_error;
-
-   if (dual_time_stepping_iter==0) {
-    dual_error_min=dual_time_error;
-   } else if (dual_time_stepping_iter>0) {
-    if (dual_time_error<dual_error_min)
-     dual_error_min=dual_time_error;
-   } else
-    amrex::Error("dual_time_stepping_iter invalid");
-
-   if (dual_time_stepping_iter>=dual_error_min_iter-1) {
-    Real dual_tol=dual_time_abstol;
-    if (dual_tol<dual_time_error0*dual_time_reltol)
-     dual_tol=dual_time_error0*dual_time_reltol;
-
-    if ((dual_time_error<=dual_tol+dual_error_min)&&
-	(std::abs(dual_time_error-
-	      dual_error_history[dual_time_stepping_iter-1])<=dual_tol)&&
-	(std::abs(dual_time_error-
-	      dual_error_history[dual_time_stepping_iter-2])<=dual_tol))
-     dual_time_error_met=1;
-
-   } else if (dual_time_stepping_iter>=0) {
-    // do nothing
-   } else
-    amrex::Error("dual_time_stepping_iter invalid");
 
 #if (profile_solver==1)
-   bprof.stop();
+  bprof.stop();
 #endif
-
-   dual_time_stepping_iter++;
-   if (dual_time_stepping_iter>=dual_time_cycle_max)
-    amrex::Error("dual_time_stepping_iter>=dual_time_cycle_max");
-
-  } while (dual_time_error_met==0);
-
 
 #if (profile_solver==1)
   bprof.start();
@@ -10694,59 +10463,6 @@ void NavierStokes::multiphase_project(int project_option) {
    //   u^{k+1}=u^* - dt beta grad p^{k+1}
    // end while
    //
-   // with dual time stepping:
-   // p^{0,0}=p^init
-   // while not converged prescribed velocity
-   //   while not converged dual time stepping
-   //    da (p^{k+1,l+1}-p^{k+1,l})+
-   //    alpha (p^{k+1,l+1}-p^*) - div beta (1-HS) grad p^{k+1,l+1} = 
-   //     -div[(1-HS) u^*/dt + HS us^k]/dt
-   //   end  while
-   //   u^{k+1}=u^* - dt beta grad p^{k+1}
-   // end while
-   // IN RESIDUAL CORRECTION FORM:
-   // dp^{l+1}=p^{k+1,l+1}-p^{k+1,l}
-   //  V=u^* - dt beta grad p^{k+1,l}
-   // da dp^{l+1} + alpha(dp^{l+1}+p^{k+1,l}-p^*) - 
-   //  div beta (1-HS) grad (dp^{l+1}+p^{k+1,l}) =
-   //  -div[(1-HS) u^*/dt + HS us^k]/dt
-   //
-   // (da+alpha)dp^{l+1} - div beta (1-HS) grad dp^{l+1} = 
-   //  -div[ (1-HS) V/dt + HS us^k ] +
-   //   alpha (p^* - p^{k+1,l})
-   //
-   //  1. Umac_new=U^* and p_new=p^* are given
-   //  2. p_new=p_init
-   //  3. UMAC=Umac_new - beta grad p_init (residual_correction_form
-   //       only called inside the while loop for the 1st iteration
-   //       of both the prescribed_velocity iteration and the dual
-   //       timestepping iteration)
-   //  4. POLDHOLD=p^* - p_init, POLDHOLD_DUAL=0.0
-   //  5. OUTER_ITER_PRESSURE=p_init, p^{0}=p_init
-   //  6. while not converged prescribed velocity,
-   //  7.   while not converged dual time stepping
-   //  8.     while not converged outer_residual
-   //  6.       p_new=0.0
-   //  7.       MAC_TEMP=UMAC
-   //  8.       while residual>0
-   //  9.        calculate dp
-   // 10.        p_new += dp, POLDHOLD_DUAL -= dp, UMAC -= beta dt grad dp
-   // 11.        residual=-div UMAC + alpha POLDHOLD + (alpha+da) POLDHOLD_DUAL 
-   // 12.       endwhile
-   // 13.       OUTER_ITER_PRESSURE += p_new
-   // 14.       UMAC = MAC_TEMP - beta dt grad p_new
-   // 15.       outer_residual=-div UMAC + alpha poldhold + 
-   //                          (alpha+da) POLDHOLD_DUAL
-   // 16.     endwhile 
-   // 17.     p_new=OUTER_ITER_PRESSURE,
-   //         POLDHOLD+=(p^{k+1,l}-p^{k+1,l+1}), POLDHOLD_DUAL=0.0
-   // 18.   endwhile
-   // 19.   UMAC = (1-H_solid)UMAC + H_solid USOLID^{k+1}
-   // 20. endwhile
-   // update_prescribed:
-   //  1. OUTER_ITER_PRESSURE=p_new
-   //  2. UMAC = (1-H_solid)UMAC + H_solid USOLID^{k+1}
-   //  3. average down UMAC 
    if (prescribed_velocity_iter>0) {
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
