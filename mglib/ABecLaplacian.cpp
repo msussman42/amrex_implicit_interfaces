@@ -18,7 +18,7 @@
 #include <MG_F.H>
 #include <Zeyu_Matrix_Functions.H>
 
-#define SCALAR_WORK_NCOMP 8
+#define SCALAR_WORK_NCOMP 9
 
 namespace amrex{
 
@@ -742,8 +742,9 @@ ABecLaplacian::buildMatrix() {
   int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
   int diag_comp=icbzcomp+1;
+  int maskcomp=diag_comp+1;
 
-  int icdiagcomp=diag_comp+1;
+  int icdiagcomp=maskcomp+1;
   int icdiagrbcomp=icdiagcomp+1;
   int axcomp=icdiagrbcomp+1;
   int solnsavecomp=axcomp+1;
@@ -859,6 +860,7 @@ ABecLaplacian::buildMatrix() {
       workFAB.dataPtr(icbzcomp+ofs), 
       workFAB.dataPtr(icdiagcomp+ofs), 
       workFAB.dataPtr(icdiagrbcomp+ofs), 
+      workFAB.dataPtr(maskcomp+ofs), 
       ARLIM(workFAB.loVect()),
       ARLIM(workFAB.hiVect()),
       tilelo,tilehi,
@@ -1402,8 +1404,9 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
  int diag_comp=icbzcomp+1;
+ int maskcomp=diag_comp+1;
 
- int icdiagcomp=diag_comp+1;
+ int icdiagcomp=maskcomp+1;
  int icdiagrbcomp=icdiagcomp+1;
  int axcomp=icdiagrbcomp+1;
  int solnsavecomp=axcomp+1;
@@ -1521,6 +1524,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
      work[mfi].dataPtr(icbzcomp+ofs), 
      work[mfi].dataPtr(icdiagcomp+ofs), 
      work[mfi].dataPtr(icdiagrbcomp+ofs), 
+     work[mfi].dataPtr(maskcomp+ofs), 
      work[mfi].dataPtr(axcomp+ofs), 
      work[mfi].dataPtr(solnsavecomp+ofs), 
      work[mfi].dataPtr(rhssavecomp+ofs), 
@@ -1608,8 +1612,9 @@ ABecLaplacian::Fapply (MultiFab& y,
  int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
  int diag_comp=icbzcomp+1;
+ int maskcomp=diag_comp+1;
 
- int icdiagcomp=diag_comp+1;
+ int icdiagcomp=maskcomp+1;
  int icdiagrbcomp=icdiagcomp+1;
  int axcomp=icdiagrbcomp+1;
  int solnsavecomp=axcomp+1;

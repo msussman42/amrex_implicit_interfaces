@@ -17,21 +17,17 @@
        mg_coarsest_level, &
        isweep, &
        num_sweeps, & 
-       offdiag_coeff, &
-       check_for_singular, &
-       diag_regularization, &
        masksing, &
        DIMS(masksing), &
        phi,DIMS(phi), &
        rhs,DIMS(rhs), &
-       diagnonsing, &
-       DIMS(diagnonsing), &
-       diagdual, &
-       diagnodual, &
+       diagfab, &
+       DIMS(diagfab), &
        bxleft,bxright, &
        byleft,byright, &
        bzleft,bzright, &
-       icbx,icby,icbz,icdiag,icdiagrb,mask,ax,solnsave, &
+       icbx,icby,icbz,icdiag,icdiagrb, &
+       mask,ax,solnsave, &
        rhssave,redsoln,blacksoln, &
        tilelo,tilehi, &
        fablo,fabhi,bfact,bfact_top, &
@@ -44,9 +40,6 @@
       INTEGER_T, intent(in) :: mg_coarsest_level
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: num_sweeps
-      INTEGER_T, intent(in) :: check_for_singular
-      REAL_T, intent(in) :: offdiag_coeff
-      REAL_T, intent(in) :: diag_regularization
       INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
       INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
       INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
@@ -56,14 +49,12 @@
       INTEGER_T, intent(in) :: DIMDEC(masksing)
       INTEGER_T, intent(in) :: DIMDEC(phi)
       INTEGER_T, intent(in) :: DIMDEC(rhs)
-      INTEGER_T, intent(in) :: DIMDEC(diagnonsing)
+      INTEGER_T, intent(in) :: DIMDEC(diagfab)
 
       REAL_T, intent(in) :: masksing(DIMV(masksing))
       REAL_T, intent(inout) :: phi(DIMV(phi))
       REAL_T, intent(in) :: rhs(DIMV(rhs))
-      REAL_T, intent(in) :: diagnonsing(DIMV(diagnonsing))
-      REAL_T, intent(in) :: diagdual(DIMV(diagnonsing))
-      REAL_T, intent(in) :: diagnodual(DIMV(diagnonsing))
+      REAL_T, intent(in) :: diagfab(DIMV(diagfab))
       REAL_T, intent(in) :: bxleft(DIMV(diagnonsing))
       REAL_T, intent(in) :: bxright(DIMV(diagnonsing))
       REAL_T, intent(in) :: byleft(DIMV(diagnonsing))
@@ -103,29 +94,9 @@
        stop
       endif
 
-      if ((check_for_singular.eq.0).or.(check_for_singular.eq.1)) then
-       ! do nothing
-      else
-       print *,"check_for_singular invalid"
-       stop
-      endif
-      if (offdiag_coeff.gt.zero) then
-       ! do nothing
-      else
-       print *,"offdiag_coeff invalid"
-       stop
-      endif
-      if ((diag_regularization.gt.zero).and. &
-          (diag_regularization.le.1.0D-3)) then
-       ! do nothing
-      else
-       print *,"diag_regularization invalid"
-       stop
-      endif
-
       call checkbound(fablo,fabhi,DIMS(masksing),1,-1,81)
       call checkbound(fablo,fabhi,DIMS(phi),1,-1,18)
-      call checkbound(fablo,fabhi,DIMS(diagnonsing),1,-1,19)
+      call checkbound(fablo,fabhi,DIMS(diagfab),1,-1,19)
       call checkbound(fablo,fabhi,DIMS(rhs),0,-1,23)
       if (num_sweeps.le.1) then
        print *,"num_sweeps invalid"
@@ -137,7 +108,7 @@
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+        if (diagfab(D_DECL(i,j,k)).gt.zero) then
          rhssave(D_DECL(i,j,k))=rhs(D_DECL(i,j,k))+ &
           bxleft(D_DECL(i,j,k))*phi(D_DECL(i-1,j,k))+ &
           bxright(D_DECL(i,j,k))*phi(D_DECL(i+1,j,k))+ &
@@ -147,9 +118,9 @@
          +bzleft(D_DECL(i,j,k))*phi(D_DECL(i,j,k-1))+ &
           bzright(i,j,k)*phi(D_DECL(i,j,k+1)) &
 #endif
-         -diagdual(D_DECL(i,j,k))*phi(D_DECL(i,j,k))
+         -diagfab(D_DECL(i,j,k))*phi(D_DECL(i,j,k))
         else
-         print *,"diagdual or diagnodual invalid"
+         print *,"diagfab invalid"
          stop
         endif
        enddo
@@ -174,7 +145,7 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+          if (diagfab(D_DECL(i,j,k)).gt.zero) then
            ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
             bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
@@ -184,9 +155,9 @@
            +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
             bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
 #endif
-           -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+           -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
           else
-           print *,"diagdual or diagnodual invalid"
+           print *,"diagfab invalid"
            stop
           endif
          enddo
@@ -206,29 +177,15 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagdual(D_DECL(i,j,k))
-          if (local_diag.eq.zero) then
-           if (check_for_singular.eq.1) then
-            local_diag=local_diag+diag_regularization*offdiag_coeff
-           else
-            print *,"local_diag or check_for_singular invalid"
-            stop
-           endif
-          else if (local_diag.gt.zero) then
+          local_diag=diagfab(D_DECL(i,j,k))
+          if (local_diag.gt.zero) then
            ! do nothing
           else
            print *,"local_diag invalid"
            stop
           endif
 
-          local_diag=diagnonsing(D_DECL(i,j,k))
-
-          if (local_diag.ne.zero) then
-           redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
-          else
-           print *,"local_diag invalid 1"
-           stop
-          endif
+          redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
          enddo
          enddo
          enddo
@@ -238,25 +195,15 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagdual(D_DECL(i,j,k))
-          if (local_diag.eq.zero) then
-           if (check_for_singular.eq.1) then
-            local_diag=local_diag+diag_regularization*offdiag_coeff
-           else
-            print *,"local_diag or check_for_singular invalid"
-            stop
-           endif
-          else if (local_diag.gt.zero) then
+          local_diag=diagfab(D_DECL(i,j,k))
+          if (local_diag.gt.zero) then
            ! do nothing
           else
            print *,"local_diag invalid"
            stop
           endif
 
-          local_diag=diagnonsing(D_DECL(i,j,k))
-
-          if (local_diag.ne.zero) then
-           blacksoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
+          blacksoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*redsoln(D_DECL(i-1,j,k))+ &
             bxright(D_DECL(i,j,k))*redsoln(D_DECL(i+1,j,k))+ &
             byleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))+ &
@@ -266,10 +213,6 @@
             bzright(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k+1)) &
 #endif
            )/local_diag
-          else
-           print *,"local_diag invalid 2"
-           stop
-          endif
          enddo
          enddo
          enddo
@@ -279,24 +222,9 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagdual(D_DECL(i,j,k))
-          if (local_diag.eq.zero) then
-           if (check_for_singular.eq.1) then
-            local_diag=local_diag+diag_regularization*offdiag_coeff
-           else
-            print *,"local_diag or check_for_singular invalid"
-            stop
-           endif
-          else if (local_diag.gt.zero) then
-           ! do nothing
-          else
-           print *,"local_diag invalid"
-           stop
-          endif
+          local_diag=diagfab(D_DECL(i,j,k))
 
-          local_diag=diagnonsing(D_DECL(i,j,k))
-
-          if (local_diag.ne.zero) then
+          if (local_diag.gt.zero) then
            redsoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*blacksoln(D_DECL(i-1,j,k))+ &
             bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
@@ -339,7 +267,7 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+          if (diagfab(D_DECL(i,j,k)).gt.zero) then
            ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
             bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
@@ -349,9 +277,9 @@
            +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
             bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1))  &
 #endif
-           -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+           -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
           else
-           print *,"diagdual or diagnodual invalid"
+           print *,"diagfab invalid"
            stop
           endif
          enddo
@@ -371,29 +299,15 @@
          do k=growlo(3),growhi(3)
           ! R=AX/D=(B+(L+U)X)/D-X
 
-          local_diag=diagdual(D_DECL(i,j,k))
-          if (local_diag.eq.zero) then
-           if (check_for_singular.eq.1) then
-            local_diag=local_diag+diag_regularization*offdiag_coeff
-           else
-            print *,"local_diag or check_for_singular invalid"
-            stop
-           endif
-          else if (local_diag.gt.zero) then
+          local_diag=diagfab(D_DECL(i,j,k))
+          if (local_diag.gt.zero) then
            ! do nothing
           else
            print *,"local_diag invalid"
            stop
           endif
 
-          local_diag=diagnonsing(D_DECL(i,j,k))
-
-          if (local_diag.ne.zero) then
-           redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
-          else
-           print *,"local_diag invalid 4"
-           stop
-          endif
+          redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
          enddo
          enddo
          enddo
@@ -421,7 +335,7 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+          if (diagfab(D_DECL(i,j,k)).gt.zero) then
            ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
             bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
@@ -431,9 +345,9 @@
            +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
             bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
 #endif
-           -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+           -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
           else
-           print *,"diagdual or diagnodual invalid"
+           print *,"diagfab invalid"
            stop
           endif
          enddo
@@ -520,7 +434,7 @@
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+          if (diagfab(D_DECL(i,j,k)).gt.zero) then
            ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
             bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
@@ -530,9 +444,9 @@
            +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
             bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
 #endif
-           -diagdual(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
+           -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
           else
-           print *,"diagdual or diagnodual invalid"
+           print *,"diagfab invalid"
            stop
           endif
          enddo
@@ -552,24 +466,9 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagdual(D_DECL(i,j,k))
-          if (local_diag.eq.zero) then
-           if (check_for_singular.eq.1) then
-            local_diag=local_diag+diag_regularization*offdiag_coeff
-           else
-            print *,"local_diag or check_for_singular invalid"
-            stop
-           endif
-          else if (local_diag.gt.zero) then
-           ! do nothing
-          else
-           print *,"local_diag invalid"
-           stop
-          endif
+          local_diag=diagfab(D_DECL(i,j,k))
 
-          local_diag=diagnonsing(D_DECL(i,j,k))
-
-          if (local_diag.ne.zero) then
+          if (local_diag.gt.zero) then
            redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
           else
            print *,"local_diag invalid 6"
@@ -608,24 +507,9 @@
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          local_diag=diagdual(D_DECL(i,j,k))
-          if (local_diag.eq.zero) then
-           if (check_for_singular.eq.1) then
-            local_diag=local_diag+diag_regularization*offdiag_coeff
-           else
-            print *,"local_diag or check_for_singular invalid"
-            stop
-           endif
-          else if (local_diag.gt.zero) then
-           ! do nothing
-          else
-           print *,"local_diag invalid"
-           stop
-          endif
+          local_diag=diagfab(D_DECL(i,j,k))
 
-          local_diag=diagnonsing(D_DECL(i,j,k))
-
-          if (local_diag.ne.zero) then
+          if (local_diag.gt.zero) then
            redsoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*blacksoln(D_DECL(i-1,j,k))+ &
             bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
@@ -669,9 +553,7 @@
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
         test_mask=masksing(D_DECL(i,j,k))
-        if (test_mask.eq.zero) then
-         phi(D_DECL(i,j,k))=zero
-        else if (test_mask.eq.one) then
+        if (test_mask.eq.one) then
          phi(D_DECL(i,j,k))=phi(D_DECL(i,j,k))+solnsave(D_DECL(i,j,k))
         else
          print *,"test_mask invalid in gsrb"
@@ -691,17 +573,12 @@
       subroutine FORT_ADOTX( &
        level, &
        mg_coarsest_level, &
-       offdiag_coeff, &
-       check_for_singular, &
-       diag_regularization, &
        masksing, &
        DIMS(masksing), &
        y,DIMS(y), &
        x,DIMS(x), &
-       diagnonsing, &
-       DIMS(diagnonsing), &
-       diagdual, &
-       diagnodual, &
+       diagfab, &
+       DIMS(diagfab), &
        bxleft,bxright, &
        byleft,byright, &
        bzleft,bzright, &
@@ -713,9 +590,6 @@
 
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: mg_coarsest_level
-      INTEGER_T, intent(in) :: check_for_singular
-      REAL_T, intent(in) :: offdiag_coeff
-      REAL_T, intent(in) :: diag_regularization
       INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
       INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
       INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
@@ -725,20 +599,18 @@
       INTEGER_T, intent(in) :: DIMDEC(masksing)
       INTEGER_T, intent(in) :: DIMDEC(y)
       INTEGER_T, intent(in) :: DIMDEC(x)
-      INTEGER_T, intent(in) :: DIMDEC(diagnonsing)
+      INTEGER_T, intent(in) :: DIMDEC(diagfab)
 
       REAL_T, intent(in) :: masksing(DIMV(masksing))
       REAL_T, intent(out) :: y(DIMV(y))
       REAL_T, intent(in) :: x(DIMV(x))
-      REAL_T, intent(in) :: diagnonsing(DIMV(diagnonsing))
-      REAL_T, intent(in) :: diagdual(DIMV(diagnonsing))
-      REAL_T, intent(in) :: diagnodual(DIMV(diagnonsing))
-      REAL_T, intent(in) :: bxleft(DIMV(diagnonsing))
-      REAL_T, intent(in) :: bxright(DIMV(diagnonsing))
-      REAL_T, intent(in) :: byleft(DIMV(diagnonsing))
-      REAL_T, intent(in) :: byright(DIMV(diagnonsing))
-      REAL_T, intent(in) :: bzleft(DIMV(diagnonsing))
-      REAL_T, intent(in) :: bzright(DIMV(diagnonsing))
+      REAL_T, intent(in) :: diagfab(DIMV(diagfab))
+      REAL_T, intent(in) :: bxleft(DIMV(diagfab))
+      REAL_T, intent(in) :: bxright(DIMV(diagfab))
+      REAL_T, intent(in) :: byleft(DIMV(diagfab))
+      REAL_T, intent(in) :: byright(DIMV(diagfab))
+      REAL_T, intent(in) :: bzleft(DIMV(diagfab))
+      REAL_T, intent(in) :: bzright(DIMV(diagfab))
 
       INTEGER_T i,j,k
       REAL_T test_mask
@@ -758,32 +630,12 @@
        stop
       endif
 
-      if ((check_for_singular.eq.0).or.(check_for_singular.eq.1)) then
-       ! do nothing
-      else
-       print *,"check_for_singular invalid"
-       stop
-      endif
-      if (offdiag_coeff.gt.zero) then
-       ! do nothing
-      else
-       print *,"offdiag_coeff invalid"
-       stop
-      endif
-      if ((diag_regularization.gt.zero).and. &
-          (diag_regularization.le.1.0D-3)) then
-       ! do nothing
-      else
-       print *,"diag_regularization invalid"
-       stop
-      endif
-
       call checkbound(fablo,fabhi,DIMS(masksing),1,-1,81)
       call checkbound(fablo,fabhi, &
       DIMS(y), &
       0,-1,18)
       call checkbound(fablo,fabhi, &
-      DIMS(diagnonsing), &
+      DIMS(diagfab), &
       1,-1,19)
       call checkbound(fablo,fabhi, &
       DIMS(x), &
@@ -795,12 +647,10 @@
       do k=growlo(3),growhi(3)
 
        test_mask=masksing(D_DECL(i,j,k))
-       if (test_mask.eq.zero) then
-        y(D_DECL(i,j,k))=zero
-       else if (test_mask.eq.one) then
-        if (diagdual(D_DECL(i,j,k)).ge.diagnodual(D_DECL(i,j,k))) then
+       if (test_mask.eq.one) then
+        if (diagfab(D_DECL(i,j,k)).gt.zero) then
          y(D_DECL(i,j,k))= &
-          diagdual(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
+          diagfab(D_DECL(i,j,k))*x(D_DECL(i,j,k))- &
           bxleft(D_DECL(i,j,k))*x(D_DECL(i-1,j,k))- &
           bxright(D_DECL(i,j,k))*x(D_DECL(i+1,j,k)) &
 #if (AMREX_SPACEDIM==3)
@@ -810,7 +660,7 @@
           -byleft(D_DECL(i,j,k))*x(D_DECL(i,j-1,k))- &
           byright(D_DECL(i,j,k))*x(D_DECL(i,j+1,k)) 
         else
-         print *,"diagdual or diagnodual invalid"
+         print *,"diagfab invalid"
          stop
         endif
        else
@@ -827,8 +677,6 @@
       subroutine FORT_DIAGSUM( &
        y, &
        DIMS(y), &
-       adual,  &
-       DIMS(adual), &
        bX, &
        DIMS(bX), &
        bY, &
@@ -847,13 +695,11 @@
       INTEGER_T growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact,bfact_top
       INTEGER_T, intent(in) :: DIMDEC(y)
-      INTEGER_T, intent(in) :: DIMDEC(adual)
       INTEGER_T, intent(in) :: DIMDEC(bX)
       INTEGER_T, intent(in) :: DIMDEC(bY)
       INTEGER_T, intent(in) :: DIMDEC(bZ)
 
       REAL_T, intent(out) ::  y(DIMV(y))
-      REAL_T, intent(in) ::  adual(DIMV(adual))
       REAL_T, intent(in) :: bX(DIMV(bX))
       REAL_T, intent(in) :: bY(DIMV(bY))
       REAL_T, intent(in) :: bZ(DIMV(bZ))
@@ -873,9 +719,6 @@
       call checkbound(fablo,fabhi, &
       DIMS(y) &
       ,0,-1,18)
-      call checkbound(fablo,fabhi, &
-      DIMS(adual) &
-      ,0,-1,19)
       call checkbound(fablo,fabhi, &
       DIMS(bX) &
       ,0,0,20)
