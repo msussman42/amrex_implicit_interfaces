@@ -17787,7 +17787,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   }
   residual_verify=sqrt(residual_verify)/m_small;
   if ((residual_verify>1.0e-3*min_diag)&&
-      (residual_verify>1.0e-3)) {
+      (residual_verify>1.0e-3)&&(1==0)) {
    std::cout << "caller_id= " << caller_id << '\n';
    std::cout << "residual_verify= " << residual_verify << '\n';
    std::cout << "min_diag= " << min_diag << '\n';

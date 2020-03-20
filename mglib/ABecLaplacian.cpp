@@ -26,6 +26,8 @@ namespace amrex{
 
 int ABecLaplacian::abec_use_bicgstab = 0;
 
+int ABecLaplacian::mglib_blocking_factor = 2;
+
 int ABecLaplacian::gmres_max_iter = 64;
 int ABecLaplacian::gmres_precond_iter_base_mg = 4;
 int ABecLaplacian::nghostRHS=0;
@@ -1200,6 +1202,7 @@ ABecLaplacian::ABecLaplacian (
  ParmParse ppcg("cg");
 
  ppcg.query("abec_use_bicgstab", abec_use_bicgstab);
+ ppcg.query("mglib_blocking_factor", mglib_blocking_factor);
 
  ppcg.query("maxiter", CG_def_maxiter);
  ppcg.query("v", CG_def_verbose);
@@ -4460,30 +4463,28 @@ ABecLaplacian::MG_numLevels (const BoxArray& grids) const
 
  int ng = grids.size();
  int lv = MG_numLevelsMAX;
- //
- // The routine `falls through' since coarsening and refining
- // a unit box does not yield the initial box.
- //
 
  for (int i = 0; i < ng; ++i) {
   int llv = 0;
   Box tmp = grids[i];
   for (;;) {
-      Box ctmp = tmp;   
-      ctmp.coarsen(2);
-      Box rctmp = ctmp; 
-      rctmp.refine(2);
-      if ((tmp != rctmp)||(ctmp.numPts() == 1))
-          break;
-      llv++;
-      tmp = ctmp;
+   tmp.coarsen(2);
+   int block_check=1;
+   for (int dir=0;dir<BL_SPACEDIM;dir++) {
+    int len=tmp.length(dir);
+    if ((len/mglib_blocking_factor)*mglib_blocking_factor!=len)
+     block_check=0;
+   } // dir=0..sdim-1
+   if (block_check==0)
+    break;
+   llv++;
   }
   //
   // Set number of levels so that every box can be refined to there.
   //
   if (lv >= llv)
       lv = llv;
- }
+ } // i=0..ng-1
 
  return lv+1; // Including coarsest.
 

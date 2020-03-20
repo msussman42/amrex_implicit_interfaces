@@ -266,6 +266,7 @@ protected:
 private:
 
     static int abec_use_bicgstab;
+    static int mglib_blocking_factor;
 
     static int gmres_max_iter;
     static int gmres_precond_iter_base_mg;
