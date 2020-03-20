@@ -18,7 +18,7 @@
 #include <MG_F.H>
 #include <Zeyu_Matrix_Functions.H>
 
-#define SCALAR_WORK_NCOMP 11
+#define SCALAR_WORK_NCOMP 8
 
 namespace amrex{
 
@@ -665,7 +665,6 @@ ABecLaplacian::buildMatrix() {
    // acoefs[level] ~ volume_coarse/ 2^d
    int avg=1;
    makeCoefficients(*acoefs[level],*acoefs[level-1],level,avg);
-   makeCoefficients(*a_dual_coefs[level],*a_dual_coefs[level-1],level,avg);
 
    avg=2;
    makeCoefficients(*laplacian_ones[level],*laplacian_ones[level-1],level,avg);
@@ -714,8 +713,6 @@ ABecLaplacian::buildMatrix() {
 
   if (acoefs[level]->nGrow()!=nghostRHS)
    amrex::Error("acoefs[level]->nGrow() invalid");
-  if (a_dual_coefs[level]->nGrow()!=nghostRHS)
-   amrex::Error("a_dual_coefs[level]->nGrow() invalid");
 
   if (offdiag_coeff[level]>0.0) {
    // do nothing
@@ -744,12 +741,9 @@ ABecLaplacian::buildMatrix() {
   int icbycomp=icbxcomp+1;
   int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
-  int diag_non_singcomp=icbzcomp+1;
-  int diag_dualcomp=diag_non_singcomp+1;
-  int diag_nodualcomp=diag_dualcomp+1;
-  int maskcomp=diag_nodualcomp+1;
+  int diag_comp=icbzcomp+1;
 
-  int icdiagcomp=maskcomp+1;
+  int icdiagcomp=diag_comp+1;
   int icdiagrbcomp=icdiagcomp+1;
   int axcomp=icdiagrbcomp+1;
   int solnsavecomp=axcomp+1;
@@ -841,13 +835,8 @@ ABecLaplacian::buildMatrix() {
       &veldir,
       &nsolve_bicgstab,
       &isweep,
-      &offdiag_coeff[level],
-      &check_for_singular,
-      &diag_regularization,
       onesFAB.dataPtr(),
       ARLIM(onesFAB.loVect()),ARLIM(onesFAB.hiVect()),
-      adualFAB.dataPtr(veldir),
-      ARLIM(adualFAB.loVect()),ARLIM(adualFAB.hiVect()),
       aFAB.dataPtr(veldir),
       ARLIM(aFAB.loVect()),ARLIM(aFAB.hiVect()),
       bxFAB.dataPtr(veldir),
@@ -856,11 +845,9 @@ ABecLaplacian::buildMatrix() {
       ARLIM(byFAB.loVect()),ARLIM(byFAB.hiVect()),
       bzFAB.dataPtr(veldir),
       ARLIM(bzFAB.loVect()),ARLIM(bzFAB.hiVect()),
-      workFAB.dataPtr(diag_non_singcomp+ofs),
+      workFAB.dataPtr(diag_comp+ofs),
       ARLIM(workFAB.loVect()),
       ARLIM(workFAB.hiVect()),
-      workFAB.dataPtr(diag_dualcomp+ofs),
-      workFAB.dataPtr(diag_nodualcomp+ofs),
       workFAB.dataPtr(bxleftcomp+ofs),
       workFAB.dataPtr(bxrightcomp+ofs), 
       workFAB.dataPtr(byleftcomp+ofs),
@@ -872,7 +859,6 @@ ABecLaplacian::buildMatrix() {
       workFAB.dataPtr(icbzcomp+ofs), 
       workFAB.dataPtr(icdiagcomp+ofs), 
       workFAB.dataPtr(icdiagrbcomp+ofs), 
-      workFAB.dataPtr(maskcomp+ofs), 
       ARLIM(workFAB.loVect()),
       ARLIM(workFAB.hiVect()),
       tilelo,tilehi,
@@ -952,8 +938,6 @@ ABecLaplacian::ABecLaplacian (
   amrex::Error("CG_use_mg_precond_at_top invalid");
 
  laplacian_solvability=0;
- check_for_singular=0;
- diag_regularization=0.0; // default is 0.0, overridden in MacProj.cpp
 
  cfd_level=cfd_level_in;
  cfd_project_option=cfd_project_option_in;
@@ -1417,12 +1401,9 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  int icbycomp=icbxcomp+1;
  int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
- int diag_non_singcomp=icbzcomp+1;
- int diag_dualcomp=diag_non_singcomp+1;
- int diag_nodualcomp=diag_dualcomp+1;
- int maskcomp=diag_nodualcomp+1;
+ int diag_comp=icbzcomp+1;
 
- int icdiagcomp=maskcomp+1;
+ int icdiagcomp=diag_comp+1;
  int icdiagrbcomp=icdiagcomp+1;
  int axcomp=icdiagrbcomp+1;
  int solnsavecomp=axcomp+1;
@@ -1519,9 +1500,6 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
      &mg_coarsest_level,
      &isweep,
      &num_sweeps,
-     &offdiag_coeff_level,
-     &check_for_singular,
-     &diag_regularization,
      ones_mf[mfi].dataPtr(), 
      ARLIM(ones_mf[mfi].loVect()),ARLIM(ones_mf[mfi].hiVect()),
      solnL[mfi].dataPtr(veldir), 
@@ -1529,10 +1507,8 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
      rhsL[mfi].dataPtr(veldir), 
      ARLIM(rhsL[mfi].loVect()), ARLIM(rhsL[mfi].hiVect()),
 
-     work[mfi].dataPtr(diag_non_singcomp+ofs),
+     work[mfi].dataPtr(diag_comp+ofs),
      ARLIM(work[mfi].loVect()), ARLIM(work[mfi].hiVect()),
-     work[mfi].dataPtr(diag_dualcomp+ofs),
-     work[mfi].dataPtr(diag_nodualcomp+ofs),
 
      work[mfi].dataPtr(bxleftcomp+ofs),
      work[mfi].dataPtr(bxrightcomp+ofs), 
@@ -1545,7 +1521,6 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
      work[mfi].dataPtr(icbzcomp+ofs), 
      work[mfi].dataPtr(icdiagcomp+ofs), 
      work[mfi].dataPtr(icdiagrbcomp+ofs), 
-     work[mfi].dataPtr(maskcomp+ofs), 
      work[mfi].dataPtr(axcomp+ofs), 
      work[mfi].dataPtr(solnsavecomp+ofs), 
      work[mfi].dataPtr(rhssavecomp+ofs), 
@@ -1632,12 +1607,9 @@ ABecLaplacian::Fapply (MultiFab& y,
  int icbycomp=icbxcomp+1;
  int icbzcomp=icbycomp+AMREX_SPACEDIM-2;
 
- int diag_non_singcomp=icbzcomp+1;
- int diag_dualcomp=diag_non_singcomp+1;
- int diag_nodualcomp=diag_dualcomp+1;
- int maskcomp=diag_nodualcomp+1;
+ int diag_comp=icbzcomp+1;
 
- int icdiagcomp=maskcomp+1;
+ int icdiagcomp=diag_comp+1;
  int icdiagrbcomp=icdiagcomp+1;
  int axcomp=icdiagrbcomp+1;
  int solnsavecomp=axcomp+1;
@@ -1711,9 +1683,6 @@ ABecLaplacian::Fapply (MultiFab& y,
    FORT_ADOTX(
     &level,
     &mg_coarsest_level,
-    &offdiag_coeff_level,
-    &check_for_singular,
-    &diag_regularization,
     ones_mf[mfi].dataPtr(), 
     ARLIM(ones_mf[mfi].loVect()),ARLIM(ones_mf[mfi].hiVect()),
     y[mfi].dataPtr(veldir),
@@ -1721,10 +1690,8 @@ ABecLaplacian::Fapply (MultiFab& y,
     x[mfi].dataPtr(veldir),
     ARLIM(x[mfi].loVect()), ARLIM(x[mfi].hiVect()),
 
-    work[mfi].dataPtr(diag_non_singcomp+ofs),
+    work[mfi].dataPtr(diag_comp+ofs),
     ARLIM(work[mfi].loVect()),ARLIM(work[mfi].hiVect()),
-    work[mfi].dataPtr(diag_dualcomp+ofs),
-    work[mfi].dataPtr(diag_nodualcomp+ofs),
 
     work[mfi].dataPtr(bxleftcomp+ofs),
     work[mfi].dataPtr(bxrightcomp+ofs),
@@ -2092,62 +2059,46 @@ void ABecLaplacian::init_checkerboard(MultiFab& v_in,
 #endif
 
  if (laplacian_solvability==0) { // system is nonsingular.
-   // check_for_singular==0 heat eqn, viscosity, species diffusion
-  if (check_for_singular==1) { // some parts of domain are masked off.
-   if ((v_in.nComp()==1)&&
-       (laplacian_ones[level_in]->nComp()==1)) {
-    // do nothing
-   } else {
-    std::cout << "laplacian_solvability= " << 
-     laplacian_solvability << '\n';
-    std::cout << "check_for_singular= " << 
-     check_for_singular << '\n';
-    amrex::Error("rhsL or ones_mf invalid nComp");
-   }
-  } else if (check_for_singular==0) {
-   // do nothing
-  } else
-   amrex::Error("check_for_singular invalid");
 
+  // do nothing
+  
  } else if (laplacian_solvability==1) { // system is singular
 
-  if (check_for_singular==1) { // some parts of domain are masked off.
+  bool use_tiling=cfd_tiling;
 
-   bool use_tiling=cfd_tiling;
+  if (level_in>=MG_numlevels_var)
+   amrex::Error("level_in invalid in init_checkerboard");
 
-   if (level_in>=MG_numlevels_var)
-    amrex::Error("level_in invalid in init_checkerboard");
-
-   if (level_in>=gbox.size()) {
+  if (level_in>=gbox.size()) {
     std::cout << "level_in= " << level_in << '\n';
     std::cout << "gboxsize= " << gbox.size() << '\n';
     std::cout << "num levels = " << MG_numlevels_var << '\n';
     amrex::Error("level exceeds gbox size");
-   }
+  }
 
-   if (thread_class::nthreads<1)
+  if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
 
-   const BoxArray& gboxlev = gbox[level_in];
-   int ncomp = v_in.nComp();
-   if (ncomp!=nsolve_bicgstab)
+  const BoxArray& gboxlev = gbox[level_in];
+  int ncomp = v_in.nComp();
+  if (ncomp!=nsolve_bicgstab)
     amrex::Error("ncomp invalid v_in");
 
-   if (v_in.boxArray()==gboxlev) {
+  if (v_in.boxArray()==gboxlev) {
     // do nothing
-   } else
+  } else
     amrex::Error("v_in.boxArray()!=gboxlev");
 
-   int bfact=bfact_array[level_in];
-   int bfact_top=bfact_array[0];
+  int bfact=bfact_array[level_in];
+  int bfact_top=bfact_array[0];
 
-   thread_class::init_d_numPts(v_in.boxArray().d_numPts());
+  thread_class::init_d_numPts(v_in.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel 
 #endif
 {
-   for (MFIter mfi(v_in,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(v_in,use_tiling); mfi.isValid(); ++mfi) {
 
     if (mfi.validbox()==gboxlev[mfi.index()]) {
      // do nothing
@@ -2186,15 +2137,13 @@ void ABecLaplacian::init_checkerboard(MultiFab& v_in,
      fablo,fabhi, 
      &bfact,&bfact_top);
 
-   } // MFIter
+  } // MFIter
 } // omp
 
-   thread_class::sync_tile_d_numPts();
+  thread_class::sync_tile_d_numPts();
 
-   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-   thread_class::reconcile_d_numPts(1);
-  } else
-   amrex::Error("check_for_singular invalid");
+  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+  thread_class::reconcile_d_numPts(1);
 
  } else
   amrex::Error("laplacian_solvability invalid");
@@ -2206,8 +2155,7 @@ void ABecLaplacian::init_checkerboard(MultiFab& v_in,
 
 
 // onesCoefficients:
-// =1 if diagonal <> 0
-// =0 otherwise
+// =1 
 void
 ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
 
@@ -2229,52 +2177,37 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
 #endif
 
  if (laplacian_solvability==0) { // system is nonsingular.
-   // check_for_singular==0 heat eqn, viscosity, species diffusion
-  if (check_for_singular==1) { // some parts of domain are masked off.
-   if ((rhsL.nComp()==1)&&
-       (laplacian_ones[level]->nComp()==1)) {
-    MultiFab::Multiply(rhsL,*laplacian_ones[level],0,0,1,0);
-   } else {
-    std::cout << "laplacian_solvability= " << 
-     laplacian_solvability << '\n';
-    std::cout << "check_for_singular= " << 
-     check_for_singular << '\n';
-    amrex::Error("rhsL or ones_mf invalid nComp");
-   }
-  } else if (check_for_singular==0) {
-   // do nothing
-  } else
-   amrex::Error("check_for_singular invalid");
+
+  // do nothing
 
  } else if (laplacian_solvability==1) { // system is singular
 
   if (nsolve_bicgstab!=1)
    amrex::Error("nsolve_bicgstab invalid");
 
-  if (check_for_singular==1) {
-   if ((rhsL.nComp()==1)&&
-       (laplacian_ones[level]->nComp()==1)) {
-    MultiFab::Multiply(rhsL,*laplacian_ones[level],0,0,1,0);
-   } else {
-    std::cout << "laplacian_solvability= " << 
-     laplacian_solvability << '\n';
-    std::cout << "check_for_singular= " << 
-     check_for_singular << '\n';
-    amrex::Error("rhsL or ones_mf invalid nComp");
-   }
-   if ((laplacian_ones[level]->nComp()==1)&&
-       (laplacian_ones[level]->nGrow()==1)) {
-    MultiFab::Copy(*MG_CG_ones_mf_copy[level],
-       *laplacian_ones[level],0,0,1,1);
+  if ((rhsL.nComp()==1)&&
+      (laplacian_ones[level]->nComp()==1)) {
+   MultiFab::Multiply(rhsL,*laplacian_ones[level],0,0,1,0);
+  } else {
+   std::cout << "laplacian_solvability= " << 
+    laplacian_solvability << '\n';
+   std::cout << "check_for_singular= " << 
+    check_for_singular << '\n';
+   amrex::Error("rhsL or ones_mf invalid nComp");
+  }
+  if ((laplacian_ones[level]->nComp()==1)&&
+      (laplacian_ones[level]->nGrow()==1)) {
+   MultiFab::Copy(*MG_CG_ones_mf_copy[level],
+      *laplacian_ones[level],0,0,1,1);
 
-    Real dot_result=0.0;
-    Real domainsum=0.0;
-    LP_dot(rhsL,*laplacian_ones[level],level,dot_result);
-    LP_dot(*MG_CG_ones_mf_copy[level],
-           *laplacian_ones[level],level,domainsum); 
+   Real dot_result=0.0;
+   Real domainsum=0.0;
+   LP_dot(rhsL,*laplacian_ones[level],level,dot_result);
+   LP_dot(*MG_CG_ones_mf_copy[level],
+          *laplacian_ones[level],level,domainsum); 
 
-    double total_cells=gbox[level].d_numPts();
-    if (domainsum>total_cells) {
+   double total_cells=gbox[level].d_numPts();
+   if (domainsum>total_cells) {
      std::cout << "level= " << level << '\n';
      std::cout << "dot_result= " << dot_result << '\n';
      std::cout << "cfd_level= " << cfd_level << '\n';
@@ -2317,39 +2250,36 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
      } // local_comp=0..nComp-1
 
      amrex::Error("domainsum too big");
-    }
-    if (1==0) {
+   }
+   if (1==0) {
      std::cout << "cfd_level= " << cfd_level << '\n';
      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
      std::cout << "level= " << level << '\n';
      std::cout << "dot_result= " << dot_result << '\n';
      std::cout << "domainsum= " << domainsum << '\n';
      std::cout << "total_cells= " << total_cells << '\n';
-    }
+   }
 
-    if (domainsum>=1.0) {
+   if (domainsum>=1.0) {
      Real coef=-dot_result/domainsum;
       // rhsL=rhsL+coef * ones_mf
      LP_update(rhsL,coef,rhsL,*laplacian_ones[level],level); 
-    } else if (domainsum==0.0) {
+   } else if (domainsum==0.0) {
      // do nothing
-    } else
+   } else
      amrex::Error("domainsum invalid");
 
-    MultiFab::Multiply(rhsL,*laplacian_ones[level],0,0,1,0);
+   MultiFab::Multiply(rhsL,*laplacian_ones[level],0,0,1,0);
 
-    if (1==0) {
+   if (1==0) {
      std::cout << "check rhsL after projection \n";
      LP_dot(rhsL,*laplacian_ones[level],level,dot_result);
      std::cout << "level= " << level << '\n';
      std::cout << "dot_result= " << dot_result << '\n';
-    }
-
-   } else
-    amrex::Error("laplacian_ones[level]: ncomp or ngrow invalid");
+   }
 
   } else
-   amrex::Error("check_for_singular invalid");
+    amrex::Error("laplacian_ones[level]: ncomp or ngrow invalid");
 
  } else
   amrex::Error("laplacian solvability incorrect");
@@ -2431,8 +2361,6 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
    FORT_DIAGSUM(
     y[mfi].dataPtr(veldir),
     ARLIM(y[mfi].loVect()), ARLIM(y[mfi].hiVect()),
-    adual[mfi].dataPtr(veldir),  // not used
-    ARLIM(adual[mfi].loVect()), ARLIM(adual[mfi].hiVect()),
     bX[mfi].dataPtr(veldir), 
     ARLIM(bX[mfi].loVect()), ARLIM(bX[mfi].hiVect()),
     bY[mfi].dataPtr(veldir), 
@@ -3542,8 +3470,6 @@ ABecLaplacian::CG_dump_params(Real rnorm,Real rnorm_init,
   std::cout << "cfd_project_option= " << cfd_project_option << '\n';
   std::cout << "laplacian_solvability= " << 
           laplacian_solvability << '\n';
-  std::cout << "check_for_singular= " << 
-          check_for_singular << '\n';
   std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << '\n';
   std::cout << "gbox[0].size()= " << gbox[0].size() << '\n';
   std::cout << "numLevels()= " << MG_numlevels_var << '\n';

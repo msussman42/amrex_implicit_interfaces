@@ -18,8 +18,6 @@ public:
     bool cfd_tiling;
 
     int laplacian_solvability; // 0=> do not project, 1=> project RHS
-    int check_for_singular;  // 0=> diag<>0  1=> diag can be 0
-    Real diag_regularization;
 
     ABecLaplacian (
      const BoxArray& grids,
@@ -34,10 +32,9 @@ public:
 
     virtual ~ABecLaplacian ();
 
-    void aCoefficients (MultiFab& _a_dual,MultiFab& _a);
+    void aCoefficients (MultiFab& _a);
     void generateCoefficients();
     void bCoefficients (MultiFab& _b, int dir);
-    void non_sing_coefficients(Real offdiag_coeff_);
 
     void apply (MultiFab& out, MultiFab& in,
      int level,MultiFab& pbdry,Vector<int> bcpres_array);
@@ -223,7 +220,6 @@ protected:
  virtual void Fdiagsum(MultiFab&       out,
                        int             level);
 
- Vector< MultiFab* > a_dual_coefs;
  Vector< MultiFab* > acoefs;
 
 // bxleft,byleft,bzleft,bxright,byright,bzright,icbx,icby,icbz,diag,diagsing
@@ -231,8 +227,6 @@ protected:
  Vector< MultiFab* > workcoefs;
 
  Vector< MultiFab* > laplacian_ones;
-
- Vector< Real > offdiag_coeff;
 
  Vector< Array< MultiFab*, AMREX_SPACEDIM> > bcoefs;
 
@@ -281,10 +275,8 @@ private:
 
 inline
 void
-ABecLaplacian::aCoefficients (MultiFab& _a_dual,MultiFab& _a)
+ABecLaplacian::aCoefficients (MultiFab& _a)
 {
-    if (! _a_dual.ok())
-     amrex::Error("_a_dual not ok");
     if (! _a.ok())
      amrex::Error("_a not ok");
 
@@ -293,14 +285,8 @@ ABecLaplacian::aCoefficients (MultiFab& _a_dual,MultiFab& _a)
     if (_a.nComp()!=nsolve_bicgstab) 
      amrex::Error("_a has wrong ncomp");
 
-    if (_a_dual.boxArray() != (a_dual_coefs[0])->boxArray())
-     amrex::Error("_a_dual and a_dual_coefs boxarrays do not match");
-    if (_a_dual.nComp()!=nsolve_bicgstab) 
-     amrex::Error("_a_dual has wrong ncomp");
-
      // src,scomp,dcomp,snghost,dnghost
     acoefs[0]->ParallelCopy(_a,0,0,nsolve_bicgstab,0,0);
-    a_dual_coefs[0]->ParallelCopy(_a_dual,0,0,nsolve_bicgstab,0,0);
 
 } // subroutine aCoefficients
 
@@ -331,20 +317,6 @@ ABecLaplacian::bCoefficients (MultiFab& _b,
     bcoefs[0][dir]->ParallelCopy(_b,0,0,nsolve_bicgstab,0,0);
 
 } // subroutine bCoefficients
-
-
-inline
-void
-ABecLaplacian::non_sing_coefficients(Real offdiag_coeff_) {
-
- if (offdiag_coeff_>0.0) {
-  // do nothing
- } else
-  amrex::Error("offdiag_coeff_ not ok");
-
- offdiag_coeff[0]=offdiag_coeff_;
-
-}  // end subroutine non_sing_coefficients
 
 
 inline
