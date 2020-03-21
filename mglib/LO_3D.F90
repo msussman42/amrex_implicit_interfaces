@@ -78,6 +78,7 @@
       REAL_T, intent(out) :: mask(DIMV(mask))
 
       INTEGER_T i,j,k,ioff
+      REAL_T test_mask
       REAL_T offdiagsum
       REAL_T local_diag
       REAL_T DD

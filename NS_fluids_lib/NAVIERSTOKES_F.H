@@ -699,13 +699,8 @@ extern "C" {
      int* num_materials_face);
 
     void FORT_DIAGINV(
-      int* singular_possible,
-      Real* offdiag_nonsing_level,
-      Real* diag_regularization,
-      const Real* diagnonsing, 
-     AMREX_ARLIM_P(diagnonsinglo),AMREX_ARLIM_P(diagnonsinghi),
-      const Real* diagsing, 
-     AMREX_ARLIM_P(diagsinglo),AMREX_ARLIM_P(diagsinghi),
+      const Real* diagfab, 
+      AMREX_ARLIM_P(diagfablo),AMREX_ARLIM_P(diagfabhi),
       const Real* resid,AMREX_ARLIM_P(residlo),AMREX_ARLIM_P(residhi),
       const Real* xnew,AMREX_ARLIM_P(xnewlo),AMREX_ARLIM_P(xnewhi),
       const Real* xold,AMREX_ARLIM_P(xoldlo),AMREX_ARLIM_P(xoldhi),

@@ -9907,7 +9907,7 @@ stop
       REAL_T local_POLD
       REAL_T local_POLD_DUAL
 
-      REAL_T DIAG_SING
+      REAL_T DIAG_REGULARIZE
       REAL_T uface(2,num_materials_face)
       REAL_T aface(2)
       REAL_T pfacegrav(2)
@@ -10599,22 +10599,12 @@ stop
           MSKRES=maskres(D_DECL(i,j,k))
           MDOT=mdotcell(D_DECL(i,j,k),veldir)
 
-          DIAG_SING=denold(D_DECL(i,j,k),veldir)
+          DIAG_REGULARIZE=denold(D_DECL(i,j,k),veldir)
 
-          if (DIAG_SING.gt.zero) then
+          if (DIAG_REGULARIZE.gt.zero) then
            ! check nothing
-          else if (DIAG_SING.eq.zero) then
-           if ((MDOT.eq.zero).and. &
-               (MSKRES.eq.zero).and. &
-               (CC.eq.zero).and. &
-               (CC_DUAL.eq.zero)) then
-            ! do nothing
-           else
-            print *,"MDOT, MSKRES, CC, or CC_DUAL invalid"
-            stop
-           endif
           else
-           print *,"DIAG_SING invalid"
+           print *,"DIAG_REGULARIZE invalid"
            stop
           endif
 
@@ -10624,25 +10614,6 @@ stop
               (project_option.eq.11).or. & ! FSI_material_exists 2nd project
               (project_option.eq.13).or. & ! FSI_material_exists 1st project
               (project_option.eq.12)) then ! pressure extension
-
-
-           if (DIAG_SING.gt.zero) then
-            ! check nothing
-           else if (DIAG_SING.eq.zero) then
-            if ((MDOT.eq.zero).and. &
-                (MSKRES.eq.zero).and. &
-                (CC.eq.zero).and. &
-                (CC_DUAL.eq.zero).and. &
-                (MSKDV.eq.zero)) then
-             ! do nothing
-            else
-             print *,"MDOT, MSKRES, CC, CC_DUAL, or MSKDV invalid"
-             stop
-            endif
-           else
-            print *,"DIAG_SING invalid"
-            stop
-           endif
 
            if (MDOT.eq.zero) then
             ! check nothing

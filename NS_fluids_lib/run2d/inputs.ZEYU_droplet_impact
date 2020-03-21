@@ -21,7 +21,7 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
-cg.abec_use_bicgstab=0
+cg.abec_use_bicgstab=1
 ns.always_use_bicgstab=1
 mg.usecg=1
 mg.bot_atol = 1.0e-12
@@ -59,8 +59,7 @@ ns.initial_viscosity_cycles=1
 ns.initial_thermal_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
-ns.solvability_projection=0 # solvability_projection=0 if all walls symmetric.
-ns.dual_time_activate=0
+ns.solvability_projection=1 # solvability_projection=0 if all walls symmetric.
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2
@@ -174,8 +173,8 @@ ns.denconst=0.997 0.00125 1.0 #ZEYU
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 3 2
-ns.hi_bc          = 3 2
+ns.lo_bc          = 3 3
+ns.hi_bc          = 3 3
 ns.v=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<

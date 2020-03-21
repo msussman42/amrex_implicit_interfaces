@@ -649,8 +649,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     int tid_current=ns_thread();
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // BXCOEFNOAREA = max(BXCOEFNOAREA,min_interior_coeff) if not on the
-    // edge of the domain
+    // BXCOEFNOAREA = min_interior_coeff if not on the
+    // edge of the domain and BXCOEFNOAREA previously = 0.0
     // REGULARIZE_BX is in MACOPERATOR_3D.F90
     FORT_REGULARIZE_BX(
      &num_materials_face,
@@ -658,6 +658,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      &nsolveMM,
      &nsolveMM_FACE,
      bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
+     &min_interior_coeff,
      domlo,domhi,
      tilelo,tilehi,
      fablo,fabhi,
@@ -730,18 +731,17 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // buildMatrix calls FORT_BUILDMAT
  mac_op->generateCoefficients();
 
-
-
-FIX ME
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[DIAG_SING_MF]->boxArray().d_numPts());
+ thread_class::init_d_numPts(
+   localMF[DIAG_REGULARIZE_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[DIAG_SING_MF],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*localMF[DIAG_REGULARIZE_MF],use_tiling); 
+		 mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -751,48 +751,17 @@ FIX ME
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
 
-  FArrayBox& ones_fab=(*localMF[ONES_MF])[mfi];
-
-   // mask=tag if not covered by level+1 or outside the domain.
-  FArrayBox& maskcov = (*localMF[MASKCOEF_MF])[mfi];
   FArrayBox& alpha = (*localMF[ALPHACOEF_MF])[mfi];
-
-  FArrayBox& offdiagcheck=(*localMF[OFF_DIAG_CHECK_MF])[mfi];
-  FArrayBox& diagnonsingfab = (*localMF[DIAG_NON_SING_MF])[mfi];
-  FArrayBox& diagsingfab = (*localMF[DIAG_SING_MF])[mfi];
-
-  FArrayBox& maskdivresidfab = (*localMF[MASK_DIV_RESIDUAL_MF])[mfi];
-  FArrayBox& maskresidfab = (*localMF[MASK_RESIDUAL_MF])[mfi];
-  FArrayBox& mdotfab=(*localMF[DIFFUSIONRHS_MF])[mfi];
-
+  FArrayBox& diagfab = (*localMF[DIAG_REGULARIZE_MF])[mfi];
   FArrayBox& bxfab = (*localMF[BXCOEF_MF])[mfi];
   FArrayBox& byfab = (*localMF[BXCOEF_MF+1])[mfi];
   FArrayBox& bzfab = (*localMF[BXCOEF_MF+AMREX_SPACEDIM-1])[mfi];
-  FArrayBox& fwtxfab = (*localMF[FACE_WEIGHT_MF])[mfi];
-  FArrayBox& fwtyfab = (*localMF[FACE_WEIGHT_MF+1])[mfi];
-  FArrayBox& fwtzfab = (*localMF[FACE_WEIGHT_MF+AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];  
-  FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
-  FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
-
-  FArrayBox& xfacemm=(*localMF[mm_areafrac_index])[mfi];  
-  FArrayBox& yfacemm=(*localMF[mm_areafrac_index+1])[mfi];  
-  FArrayBox& zfacemm=(*localMF[mm_areafrac_index+AMREX_SPACEDIM-1])[mfi];  
-  FArrayBox& cellfracmm=(*localMF[mm_cell_areafrac_index])[mfi];  
-
-  Vector<int> bc;
-  getBCArray_list(bc,state_index,gridno,scomp,ncomp);
-  if (bc.size()!=nsolveMM*AMREX_SPACEDIM*2)
-   amrex::Error("bc.size() invalid");
 
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
-  FIX ME
-
    // FORT_NSGENERATE is in MACOPERATOR_3D.F90
-   // initializes DIAG_SING
+   // initializes DIAG_REGULARIZE
   FORT_NSGENERATE(
     &num_materials_face,
     &level,
@@ -800,44 +769,18 @@ FIX ME
     &nsolve,
     &nsolveMM,
     &nsolveMM_FACE,
-    &nfacefrac,
-    &ncellfrac,
     &nmat,
     &project_option,
     &ncphys,
-    cellfracmm.dataPtr(),
-    ARLIM(cellfracmm.loVect()),ARLIM(cellfracmm.hiVect()),
-    xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-    yfacemm.dataPtr(),ARLIM(yfacemm.loVect()),ARLIM(yfacemm.hiVect()),
-    zfacemm.dataPtr(),ARLIM(zfacemm.loVect()),ARLIM(zfacemm.hiVect()),
-    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
-    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
-    ones_fab.dataPtr(),ARLIM(ones_fab.loVect()),ARLIM(ones_fab.hiVect()),
-    maskcov.dataPtr(),ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     alpha.dataPtr(),
     ARLIM(alpha.loVect()),ARLIM(alpha.hiVect()),
-    offdiagcheck.dataPtr(),
-    ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
-    diagnonsingfab.dataPtr(),
-    ARLIM(diagnonsingfab.loVect()),ARLIM(diagnonsingfab.hiVect()),
-    diagsingfab.dataPtr(),
-    ARLIM(diagsingfab.loVect()),ARLIM(diagsingfab.hiVect()),
-    maskdivresidfab.dataPtr(),
-    ARLIM(maskdivresidfab.loVect()),ARLIM(maskdivresidfab.hiVect()),
-    maskresidfab.dataPtr(),
-    ARLIM(maskresidfab.loVect()),ARLIM(maskresidfab.hiVect()),
-    mdotfab.dataPtr(),
-    ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
+    diagfab.dataPtr(),
+    ARLIM(diagfab.loVect()),ARLIM(diagfab.hiVect()),
     bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
     byfab.dataPtr(),ARLIM(byfab.loVect()),ARLIM(byfab.hiVect()),
     bzfab.dataPtr(),ARLIM(bzfab.loVect()),ARLIM(bzfab.hiVect()),
-    fwtxfab.dataPtr(),ARLIM(fwtxfab.loVect()),ARLIM(fwtxfab.hiVect()),
-    fwtyfab.dataPtr(),ARLIM(fwtyfab.loVect()),ARLIM(fwtyfab.hiVect()),
-    fwtzfab.dataPtr(),ARLIM(fwtzfab.loVect()),ARLIM(fwtzfab.hiVect()),
     tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    bc.dataPtr());
+    fablo,fabhi,&bfact);
  }// mfi
 } // omp
  ns_reconcile_d_num(35);
@@ -945,8 +888,7 @@ NavierStokes::deallocate_maccoef(int project_option) {
  } else
   amrex::Error("project_option invalid deallocate_maccoef");
 
- delete_localMF(DIAG_NON_SING_MF,1);
- delete_localMF(DIAG_SING_MF,1);
+ delete_localMF(DIAG_REGULARIZE_MF,1);
  delete_localMF(MASK_DIV_RESIDUAL_MF,1);
  delete_localMF(MASK_RESIDUAL_MF,1);
  delete_localMF(ALPHANOVOLUME_MF,1);
@@ -1350,30 +1292,22 @@ void NavierStokes::DiagInverse(
 
   FArrayBox& residfab = (*resid)[mfi];
   FArrayBox& xnewfab  = (*xnew)[mfi];
+  // mask=tag if not covered by level+1 or outside the domain.
   FArrayBox& mfab = (*localMF[MASKCOEF_MF])[mfi];
   FArrayBox& xoldfab = (*xnew)[mfi];
 
-  FArrayBox& diagnonsingfab = (*localMF[DIAG_NON_SING_MF])[mfi];
-  if (diagnonsingfab.nComp()!=nsolveMM)
-   amrex::Error("diagnonsingfab.nComp() invalid");
-  FArrayBox& diagsingfab = (*localMF[DIAG_SING_MF])[mfi];
-  if (diagsingfab.nComp()!=nsolveMM)
-   amrex::Error("diagsingfab.nComp() invalid");
+  FArrayBox& diagfab = (*localMF[DIAG_REGULARIZE_MF])[mfi];
+  if (diagfab.nComp()!=nsolveMM)
+   amrex::Error("diagfab.nComp() invalid");
 
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FIX ME
   for (int veldir=0;veldir<nsolveMM;veldir++) {
     // FORT_DIAGINV is in NAVIERSTOKES_3D.F90
    FORT_DIAGINV(
-    &OFFDIAG_NONSING_LEVEL,
-    &singular_possible,
-    &NS_diag_regularization,
-    diagnonsingfab.dataPtr(veldir),
-    ARLIM(diagnonsingfab.loVect()),ARLIM(diagnonsingfab.hiVect()),
-    diagsingfab.dataPtr(veldir),
-    ARLIM(diagsingfab.loVect()),ARLIM(diagsingfab.hiVect()),
+    diagfab.dataPtr(veldir),
+    ARLIM(diagfab.loVect()),ARLIM(diagfab.hiVect()),
     residfab.dataPtr(veldir),ARLIM(residfab.loVect()),ARLIM(residfab.hiVect()),
     xnewfab.dataPtr(veldir),ARLIM(xnewfab.loVect()),ARLIM(xnewfab.hiVect()),
     xoldfab.dataPtr(veldir),ARLIM(xoldfab.loVect()),ARLIM(xoldfab.hiVect()),
@@ -1472,7 +1406,6 @@ void NavierStokes::applyALL(
   ns_level.apply_div(
    project_option,
    homflag,
-   idx_phi,
    idx_phi,
    ns_level.localMF[idx_Aphi],
    mdot_local,
@@ -1871,9 +1804,9 @@ void NavierStokes::apply_div(
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer lev.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
 
- debug_ngrow(DIAG_SING_MF,0,253); 
- if (localMF[DIAG_SING_MF]->nComp()!=nsolveMM)
-  amrex::Error("localMF[DIAG_SING_MF]->nComp()!=nsolveMM");
+ debug_ngrow(DIAG_REGULARIZE_MF,0,253); 
+ if (localMF[DIAG_REGULARIZE_MF]->nComp()!=nsolveMM)
+  amrex::Error("localMF[DIAG_REGULARIZE_MF]->nComp()!=nsolveMM");
 
  debug_ngrow(ALPHACOEF_MF,0,253); 
  if (localMF[ALPHACOEF_MF]->nComp()!=nsolveMM)
@@ -1934,8 +1867,8 @@ void NavierStokes::apply_div(
    //1=not cov  0=cov
   FArrayBox& maskcoef = (*localMF[MASKCOEF_MF])[mfi];
 
-   // DIAG_SING_MF used for sanity check only.
-  FArrayBox& diagsingfab = (*localMF[DIAG_SING_MF])[mfi];
+   // DIAG_REGULARIZE_MF used for sanity check only.
+  FArrayBox& diagfab = (*localMF[DIAG_REGULARIZE_MF])[mfi];
 
   FArrayBox& poldfab = (*localMF[idx_phi])[mfi];
 
@@ -1991,7 +1924,7 @@ void NavierStokes::apply_div(
 
   int ncomp_denold=nsolveMM;
   int ncomp_veldest=cterm.nComp();
-  int ncomp_dendest=poldfab_dual.nComp();
+  int ncomp_dendest=poldfab.nComp();
 
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
@@ -2060,8 +1993,8 @@ void NavierStokes::apply_div(
    rhs.dataPtr(),ARLIM(rhs.loVect()),ARLIM(rhs.hiVect()),
    cterm.dataPtr(),
    ARLIM(cterm.loVect()),ARLIM(cterm.hiVect()), // veldest
-   poldfab_dual.dataPtr(),
-   ARLIM(poldfab_dual.loVect()),ARLIM(poldfab_dual.hiVect()), // dendest
+   poldfab.dataPtr(),
+   ARLIM(poldfab.loVect()),ARLIM(poldfab.hiVect()), // dendest
    maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
    maskcoef.dataPtr(), // 1=not covered  0=covered
@@ -2073,8 +2006,8 @@ void NavierStokes::apply_div(
    solfab.dataPtr(),ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
    cterm.dataPtr(),ARLIM(cterm.loVect()),ARLIM(cterm.hiVect()),
    poldfab.dataPtr(),ARLIM(poldfab.loVect()),ARLIM(poldfab.hiVect()),
-   diagsingfab.dataPtr(),
-   ARLIM(diagsingfab.loVect()),ARLIM(diagsingfab.hiVect()),//denold
+   diagfab.dataPtr(),
+   ARLIM(diagfab.loVect()),ARLIM(diagfab.hiVect()),//denold
    poldfab.dataPtr(),ARLIM(poldfab.loVect()),ARLIM(poldfab.hiVect()),//ustar
    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
    diffusionRHSfab.dataPtr(), //mdotcell
@@ -2354,7 +2287,6 @@ void NavierStokes::update_SEM_forces(int project_option,
    apply_div(
     project_option,
     homflag,
-    idx_source,
     idx_source,
     rhs,
     sourcemf,

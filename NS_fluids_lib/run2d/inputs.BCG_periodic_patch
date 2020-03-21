@@ -104,7 +104,6 @@ ns.initial_cg_cycles=2
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 ns.solvability_projection=1
-ns.dual_time_activate=1
 
 ns.projection_pressure_scale=1.0
 

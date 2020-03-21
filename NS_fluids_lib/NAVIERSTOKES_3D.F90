@@ -10610,13 +10610,8 @@ END SUBROUTINE SIMP
        end subroutine FORT_FABCOM
 
        subroutine FORT_DIAGINV( &
-        singular_possible, &
-        offdiag_nonsing_level, &
-        diag_regularization, &
-        diagnonsing, &
-        DIMS(diagnonsing), &
-        diagsing, &
-        DIMS(diagsing), &
+        diag_reg, &
+        DIMS(diag_reg), &
         resid, DIMS(resid), &
         xnew, DIMS(xnew), &
         xold, DIMS(xold), &
@@ -10628,22 +10623,17 @@ END SUBROUTINE SIMP
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: singular_possible
-       REAL_T, intent(in) :: offdiag_nonsing_level
-       REAL_T, intent(in) :: diag_regularization
        REAL_T :: local_diag
        INTEGER_T, intent(in) :: bfact
        INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: DIMDEC(diagnonsing)
-       INTEGER_T, intent(in) :: DIMDEC(diagsing)
+       INTEGER_T, intent(in) :: DIMDEC(diag_reg)
        INTEGER_T, intent(in) :: DIMDEC(resid)
        INTEGER_T, intent(in) :: DIMDEC(xnew)
        INTEGER_T, intent(in) :: DIMDEC(xold)
        INTEGER_T, intent(in) :: DIMDEC(mask)
-       REAL_T, intent(in) ::  diagnonsing(DIMV(diagnonsing))
-       REAL_T, intent(in) ::  diagsing(DIMV(diagsing))
+       REAL_T, intent(in) ::  diag_reg(DIMV(diag_reg))
        REAL_T, intent(in) ::  resid(DIMV(resid))
        REAL_T, intent(out) :: xnew(DIMV(xnew))
        REAL_T, intent(in) ::  xold(DIMV(xold))
@@ -10655,32 +10645,9 @@ END SUBROUTINE SIMP
         print *,"bfact invalid158"
         stop
        endif
-       FIX ME
-       if (offdiag_nonsing_level.gt.zero) then
-        ! do nothing
-       else
-        print *,"offdiag_nonsing_level<=0"
-        stop
-       endif
-       FIX ME
-       if ((diag_regularization.gt.zero).and. &
-           (diag_regularization.le.1.0D-3)) then
-        ! do nothing
-       else 
-        print *,"diag_regularization invalid"
-        stop
-       endif
-       if ((singular_possible.ge.0).and. &
-           (singular_possible.le.1)) then
-        ! do nothing
-       else
-        print *,"singular_possible invalid"
-        stop
-       endif
 
        call checkbound(fablo,fabhi,DIMS(mask),1,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(diagnonsing),0,-1,415) 
-       call checkbound(fablo,fabhi,DIMS(diagsing),0,-1,415) 
+       call checkbound(fablo,fabhi,DIMS(diag_reg),0,-1,415) 
        call checkbound(fablo,fabhi,DIMS(xnew),1,-1,416) 
        call checkbound(fablo,fabhi,DIMS(xold),1,-1,417) 
        call checkbound(fablo,fabhi,DIMS(resid),0,-1,417) 
@@ -10690,30 +10657,26 @@ END SUBROUTINE SIMP
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
+        ! mask=tag if not covered by level+1 or outside the domain.
         if (mask(D_DECL(i,j,k)).eq.one) then
 
-                FIX ME
-         if (diagsing(D_DECL(i,j,k)).eq.zero) then
-           ! offdiag_nonsing_level ~ coeff_max * area / dx
-          if (singular_possible.eq.1) then
-           local_diag=diag_regularization*offdiag_nonsing_level
-          else
-           print *,"diag or singular_possible invalid 1"
-           stop
-          endif
-         else if (diagsing(D_DECL(i,j,k)).gt.zero) then
-          local_diag=diagsing(D_DECL(i,j,k))
+         if (diag_reg(D_DECL(i,j,k)).eq.zero) then
+          print *,"diag_reg invalid 1"
+          stop
+         else if (diag_reg(D_DECL(i,j,k)).gt.zero) then
+          local_diag=diag_reg(D_DECL(i,j,k))
          else
           print *,"diag invalid 2"
           stop
          endif
-THIS IS OK - diagnonsing should be ok
-         local_diag=diagnonsing(D_DECL(i,j,k))
 
          xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))+ &
            resid(D_DECL(i,j,k))/local_diag
+
         else if (mask(D_DECL(i,j,k)).eq.zero) then
+
          xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))
+
         else 
          print *,"mask invalid"
          stop

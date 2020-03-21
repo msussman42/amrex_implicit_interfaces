@@ -690,8 +690,6 @@ ABecLaplacian::buildMatrix() {
     bmf.mult(0.25);
    } // dir=0..sdim-1
 
-   offdiag_coeff[level] = 0.0;
-
    Real denom=0.0;
    if (AMREX_SPACEDIM==2) {
     denom=0.25;
@@ -700,12 +698,6 @@ ABecLaplacian::buildMatrix() {
    } else
     amrex::Error("dimension bust");
 
-   offdiag_coeff[level]=denom*offdiag_coeff[level-1];
-   if (offdiag_coeff[level]>0.0) {
-    // do nothing
-   } else
-    amrex::Error("offdiag_coeff[level] invalid");
-
   } else if (level==0) {
    // do nothing
   } else
@@ -713,11 +705,6 @@ ABecLaplacian::buildMatrix() {
 
   if (acoefs[level]->nGrow()!=nghostRHS)
    amrex::Error("acoefs[level]->nGrow() invalid");
-
-  if (offdiag_coeff[level]>0.0) {
-   // do nothing
-  } else
-   amrex::Error("offdiag_coeff[level] invalid");
 
   if (workcoefs[level]->nComp()==ncwork*nsolve_bicgstab) {
    // do nothing
@@ -813,7 +800,6 @@ ABecLaplacian::buildMatrix() {
 
      FArrayBox& workFAB=(*workcoefs[level])[mfi];
      FArrayBox& onesFAB=(*laplacian_ones[level])[mfi];
-     FArrayBox& adualFAB=(*a_dual_coefs[level])[mfi];
      FArrayBox& aFAB=(*acoefs[level])[mfi];
      FArrayBox& bxFAB=(*bcoefs[level][0])[mfi];
      FArrayBox& byFAB=(*bcoefs[level][1])[mfi];
@@ -961,14 +947,12 @@ ABecLaplacian::ABecLaplacian (
  geomarray.resize(MG_numlevels_var);
  bfact_array.resize(MG_numlevels_var);
  maskvals.resize(MG_numlevels_var);
- a_dual_coefs.resize(MG_numlevels_var,(MultiFab*)0);
  acoefs.resize(MG_numlevels_var,(MultiFab*)0);
  bcoefs.resize(MG_numlevels_var);
  for (int lev=0;lev<MG_numlevels_var;lev++) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
    bcoefs[lev][dir]=(MultiFab*)0;
  }
- offdiag_coeff.resize(MG_numlevels_var,0.0);
  workcoefs.resize(MG_numlevels_var,(MultiFab*)0);
  laplacian_ones.resize(MG_numlevels_var,(MultiFab*)0);
  MG_CG_diagsumL.resize(MG_numlevels_var,(MultiFab*)0);
@@ -1006,8 +990,6 @@ ABecLaplacian::ABecLaplacian (
  MG_initialsolution=(MultiFab*) 0; 
  
  for (int level=0;level<MG_numlevels_var;level++) {
-
-  offdiag_coeff[level]=0.0;
 
   if (level==0) {
 
@@ -1056,11 +1038,6 @@ ABecLaplacian::ABecLaplacian (
 	nsolve_bicgstab,nghostRHS,
         MFInfo().SetTag("MG_CG_diagsumL"),FArrayBoxFactory());
   MG_CG_diagsumL[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-
-  a_dual_coefs[level]=new MultiFab(gbox[level],dmap_array[level],
-	nsolve_bicgstab,nghostRHS,
-        MFInfo().SetTag("a_dual_coefs"),FArrayBoxFactory());
-  a_dual_coefs[level]->setVal(a_def,0,nsolve_bicgstab,nghostRHS);
 
   acoefs[level]=new MultiFab(gbox[level],dmap_array[level],
 	nsolve_bicgstab,nghostRHS,
@@ -1255,8 +1232,6 @@ ABecLaplacian::~ABecLaplacian ()
   MG_CG_ones_mf_copy[level]=(MultiFab*)0;
   delete MG_CG_diagsumL[level];
   MG_CG_diagsumL[level]=(MultiFab*)0;
-  delete a_dual_coefs[level];
-  a_dual_coefs[level]=(MultiFab*)0;
   delete acoefs[level];
   acoefs[level]=(MultiFab*)0;
   delete workcoefs[level];
@@ -1348,12 +1323,6 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  double t2=0.0;
 
  const BoxArray& bxa = gbox[level];
-
- Real offdiag_coeff_level=offdiag_coeff[level];
- if (offdiag_coeff_level>0.0) {
-  // do nothing
- } else
-  amrex::Error("offdiag_coeff_level invalid");
 
 #if (profile_solver==1)
  bprof.stop();
@@ -1567,12 +1536,6 @@ ABecLaplacian::Fapply (MultiFab& y,
  bool use_tiling=cfd_tiling;
 
  const BoxArray& bxa = gbox[level];
-
- Real offdiag_coeff_level=offdiag_coeff[level];
- if (offdiag_coeff_level>0.0) {
-  // do nothing
- } else
-  amrex::Error("offdiag_coeff_level invalid");
 
  const MultiFab & work=*workcoefs[level];
  int ncwork=AMREX_SPACEDIM*3+SCALAR_WORK_NCOMP;
@@ -2196,8 +2159,6 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
   } else {
    std::cout << "laplacian_solvability= " << 
     laplacian_solvability << '\n';
-   std::cout << "check_for_singular= " << 
-    check_for_singular << '\n';
    amrex::Error("rhsL or ones_mf invalid nComp");
   }
   if ((laplacian_ones[level]->nComp()==1)&&
@@ -2300,7 +2261,6 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
  bool use_tiling=cfd_tiling;
 
  const BoxArray& bxa = gbox[level];
- const MultiFab& adual = *a_dual_coefs[level];
  const MultiFab& bX  = *bcoefs[level][0];
  const MultiFab& bY  = *bcoefs[level][1];
  const MultiFab& bZ  = *bcoefs[level][AMREX_SPACEDIM-1];

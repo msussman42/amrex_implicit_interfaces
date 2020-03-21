@@ -23,8 +23,6 @@ ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=3
 ns.solvability_projection=0 # 0 since must allow for expansion
-ns.dual_time_activate=1
-ns.dual_time_sound_speed=1500.0e+10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6  # non-dimensional
 #ns.projection_pressure_scale=1.0  # dimensional ?

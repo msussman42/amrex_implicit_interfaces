@@ -6907,7 +6907,6 @@ void NavierStokes::relaxLEVEL(
   project_option, 
   homflag_apply_div,
   idx_phi,
-  idx_phi,
   rhsmf,
   localMF[idx_rhs],
   UMACSTAR_MF,
@@ -6993,7 +6992,6 @@ void NavierStokes::relaxLEVEL(
   apply_div(
    project_option, 
    homflag_down_V3,
-   idx_phi,
    idx_phi,
    residmf,  // called "rhsmf" in apply_div
    rhsmf,    // called "diffusionRHScell" in apply_div

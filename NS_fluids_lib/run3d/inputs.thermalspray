@@ -21,8 +21,6 @@ geometry.prob_lo   =  0.0 0.0 0.0
 geometry.prob_hi   = 0.03 0.03 0.015 # cm
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
-ns.dual_time_activate=0
-ns.dual_time_sound_speed=150000.0e+10 # sound speed of water cm/s is 150000.0
 
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # 0=no limiter 1=minmod

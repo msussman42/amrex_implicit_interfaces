@@ -74,8 +74,6 @@ ns.post_init_pressure_solve=1
 ns.output_drop_distribution=1
 ns.face_flag=1
 # NOV 2019
-ns.dual_time_activate=1
-ns.dual_time_sound_speed=1500.0e+10  # sound speed of water m/s is 1500.0
 
 # multigrid class
 mg.verbose = 0

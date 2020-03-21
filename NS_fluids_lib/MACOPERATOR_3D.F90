@@ -432,19 +432,19 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T level
-       INTEGER_T finest_level
-       INTEGER_T tilelo(SDIM), tilehi(SDIM)
-       INTEGER_T fablo(SDIM), fabhi(SDIM)
-       INTEGER_T bfact
-       INTEGER_T growlo(3), growhi(3)
-       INTEGER_T DIMDEC(offdiagcheck)
-       INTEGER_T DIMDEC(savepres)
-       INTEGER_T DIMDEC(newpres)
+       INTEGER_T, intent(in) :: level
+       INTEGER_T, intent(in) :: finest_level
+       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T :: growlo(3), growhi(3)
+       INTEGER_T, intent(in) :: DIMDEC(offdiagcheck)
+       INTEGER_T, intent(in) :: DIMDEC(savepres)
+       INTEGER_T, intent(in) :: DIMDEC(newpres)
 
-       REAL_T  offdiagcheck(DIMV(offdiagcheck))
-       REAL_T  savepres(DIMV(savepres))
-       REAL_T  newpres(DIMV(newpres))
+       REAL_T, intent(in) :: offdiagcheck(DIMV(offdiagcheck))
+       REAL_T, intent(in) :: savepres(DIMV(savepres))
+       REAL_T, intent(out) :: newpres(DIMV(newpres))
 
        INTEGER_T i,j,k
        REAL_T local_diag
@@ -503,17 +503,17 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T num_materials_face
-       INTEGER_T nsolve
-       INTEGER_T nsolveMM
-       INTEGER_T dir,level
-       INTEGER_T DIMDEC(bx)
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T bfact
-       REAL_T  bx(DIMV(bx),nsolveMM)
-       REAL_T  xlo(SDIM),dx(SDIM)
+       INTEGER_T, intent(in) :: num_materials_face
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: nsolveMM
+       INTEGER_T, intent(in) :: dir,level
+       INTEGER_T, intent(in) :: DIMDEC(bx)
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: bfact
+       REAL_T, intent(inout) :: bx(DIMV(bx),nsolveMM)
+       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
        REAL_T xsten(-1:1,SDIM)
@@ -592,6 +592,136 @@ stop
        end subroutine FORT_DIVIDEDX
 
 
+       subroutine FORT_REGULARIZE_BX ( &
+         num_materials_face, &
+         nsolve, &
+         nsolveMM, &
+         nsolveMM_FACE, &
+         bx,DIMS(bx), &
+         min_interior_coeff, &
+         domlo,domhi, &
+         tilelo,tilehi, &
+         fablo,fabhi, &
+         bfact, &
+         level, &
+         xlo,dx, &
+         dir)
+       use probf90_module
+       use global_utility_module
+       IMPLICIT NONE
+ 
+       INTEGER_T, intent(in) :: num_materials_face
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: nsolveMM
+       INTEGER_T, intent(in) :: nsolveMM_FACE
+       INTEGER_T :: nsolveMM_FACE_test
+       INTEGER_T, intent(in) :: dir
+       INTEGER_T, intent(in) :: level
+       INTEGER_T, intent(in) :: DIMDEC(bx)
+       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: bfact
+       REAL_T, intent(in) :: min_interior_coeff
+       REAL_T, intent(inout) :: bx(DIMV(bx),nsolveMM)
+       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+
+       INTEGER_T i,j,k,n
+       INTEGER_T inorm
+       INTEGER_T nmat
+       REAL_T local_bx
+
+       nmat=num_materials
+
+       if (min_interior_coeff.gt.zero) then
+        ! do nothing
+       else
+        print *,"min_interior_coeff invalid"
+        stop
+       endif
+
+       if (bfact.lt.1) then
+        print *,"bfact too small"
+        stop
+       endif
+       if (num_materials_vel.ne.1) then
+        print *,"num_materials_vel.ne.1"
+        stop
+       endif
+       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
+        print *,"nsolve invalid23"
+        stop
+       endif
+       if (nsolveMM.ne.nsolve*num_materials_face) then
+        print *,"nsolveMM invalid 690"
+        stop
+       endif
+       nsolveMM_FACE_test=nsolveMM
+       if (num_materials_face.eq.1) then
+        ! do nothing
+       else if (num_materials_face.eq.nmat) then
+        nsolveMM_FACE_test=nsolveMM_FACE_test*2
+       else
+        print *,"num_materials_face invalid"
+        stop
+       endif
+       if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
+        print *,"nsolveMM_FACE invalid"
+        stop
+       endif
+
+       if ((dir.lt.0).or.(dir.ge.SDIM)) then
+        print *,"dir invalid mult_facewt"
+        stop
+       endif
+       call checkbound(fablo,fabhi,DIMS(bx),0,dir,33)
+
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+       
+        if (dir.eq.0) then
+         inorm=i
+        else if (dir.eq.1) then
+         inorm=j
+        else if ((dir.eq.2).and.(SDIM.eq.3)) then
+         inorm=k
+        else
+         print *,"dir invalid"
+         stop
+        endif
+
+        do n=1,nsolveMM
+         local_bx=bx(D_DECL(i,j,k),n)
+         if (local_bx.eq.zero) then
+          if ((inorm.gt.domlo(dir+1)).and. &
+              (inorm.lt.domhi(dir+1)+1)) then
+           bx(D_DECL(i,j,k),n)=min_interior_coeff
+          else if ((inorm.eq.domlo(dir+1)).or. &
+                   (inorm.eq.domhi(dir+1)+1)) then
+           ! do nothing
+          else
+           print *,"inorm invalid"
+           stop
+          endif
+         else if (local_bx.gt.zero) then
+          ! do nothing
+         else
+          print *,"local_bx invalid"
+          stop
+         endif
+        enddo ! n=1,nsolveMM
+
+       enddo
+       enddo
+       enddo
+ 
+       return
+       end subroutine FORT_REGULARIZE_BX
+
+
        subroutine FORT_MULT_FACEWT ( &
          num_materials_face, &
          nsolve, &
@@ -609,22 +739,22 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T num_materials_face
-       INTEGER_T nsolve
-       INTEGER_T nsolveMM
-       INTEGER_T nsolveMM_FACE
-       INTEGER_T nsolveMM_FACE_test
-       INTEGER_T dir
-       INTEGER_T level
-       INTEGER_T DIMDEC(bx)
-       INTEGER_T DIMDEC(facewt)
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T bfact
-       REAL_T  bx(DIMV(bx),nsolveMM)
-       REAL_T  facewt(DIMV(facewt),nsolveMM_FACE)
-       REAL_T  xlo(SDIM),dx(SDIM)
+       INTEGER_T, intent(in) :: num_materials_face
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: nsolveMM
+       INTEGER_T, intent(in) :: nsolveMM_FACE
+       INTEGER_T :: nsolveMM_FACE_test
+       INTEGER_T, intent(in) :: dir
+       INTEGER_T, intent(in) :: level
+       INTEGER_T, intent(in) :: DIMDEC(bx)
+       INTEGER_T, intent(in) :: DIMDEC(facewt)
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: bfact
+       REAL_T, intent(out) :: bx(DIMV(bx),nsolveMM)
+       REAL_T, intent(in) :: facewt(DIMV(facewt),nsolveMM_FACE)
+       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
        INTEGER_T nmat
@@ -1243,41 +1373,18 @@ stop
        nsolve, &
        nsolveMM, &
        nsolveMM_FACE, &
-       nfacefrac, &
-       ncellfrac, &
        nmat, &
        project_option, &
        ncphys, &
-       cellmm,DIMS(cellmm), &
-       xfacemm,DIMS(xfacemm), &
-       yfacemm,DIMS(yfacemm), &
-       zfacemm,DIMS(zfacemm), &
-       xface,DIMS(xface), &
-       yface,DIMS(yface), &
-       zface,DIMS(zface), &
-       masksolv,DIMS(masksolv), & ! ONES_MF in c++
-       maskcov,DIMS(maskcov), &
        alpha,DIMS(alpha), &
-       offdiagcheck, &
-       DIMS(offdiagcheck), &
-       diag_non_sing, &
-       DIMS(diag_non_sing), &
-       diag_sing, &
-       DIMS(diag_sing), &
-       maskdivres, &
-       DIMS(maskdivres), &
-       maskres,DIMS(maskres), &
-       mdot,DIMS(mdot), &
+       diag_reg, &
+       DIMS(diag_reg), &
        bx,DIMS(bx), &
        by,DIMS(by), &
        bz,DIMS(bz), &
-       fwtx,DIMS(fwtx), &
-       fwty,DIMS(fwty), &
-       fwtz,DIMS(fwtz), &
        tilelo,tilehi, &
        fablo,fabhi, &
-       bfact, &
-       bc)
+       bfact)
       use probf90_module
       use global_utility_module
       IMPLICIT NONE
@@ -1289,79 +1396,30 @@ stop
       INTEGER_T, intent(in) :: nsolveMM
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T             :: nsolveMM_FACE_test
-      INTEGER_T, intent(in) :: nfacefrac
-      INTEGER_T, intent(in) :: ncellfrac
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: ncphys
-      INTEGER_T, intent(in) :: DIMDEC(cellmm)
-      INTEGER_T, intent(in) :: DIMDEC(xfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(yfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(zfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(yface)
-      INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(masksolv)
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(alpha)
-      INTEGER_T, intent(in) :: DIMDEC(offdiagcheck)
-      INTEGER_T, intent(in) :: DIMDEC(diag_non_sing)
-      INTEGER_T, intent(in) :: DIMDEC(diag_sing)
-      INTEGER_T, intent(in) :: DIMDEC(maskdivres)
-      INTEGER_T, intent(in) :: DIMDEC(maskres)
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(diag_reg)
       INTEGER_T, intent(in) :: DIMDEC(bx)
       INTEGER_T, intent(in) :: DIMDEC(by)
       INTEGER_T, intent(in) :: DIMDEC(bz)
-      INTEGER_T, intent(in) :: DIMDEC(fwtx)
-      INTEGER_T, intent(in) :: DIMDEC(fwty)
-      INTEGER_T, intent(in) :: DIMDEC(fwtz)
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T             :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bc(SDIM,2,nsolveMM)
 
-      REAL_T, intent(in) :: cellmm(DIMV(cellmm),ncellfrac) 
-      REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
-      REAL_T, intent(in) :: yfacemm(DIMV(yfacemm),nfacefrac) 
-      REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
-      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(out) :: masksolv(DIMV(masksolv),num_materials_face)
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
       REAL_T, intent(in) :: alpha(DIMV(alpha),nsolveMM)
-      REAL_T, intent(in) :: offdiagcheck(DIMV(offdiagcheck),nsolveMM)
-      REAL_T, intent(out) :: diag_non_sing(DIMV(diag_non_sing),nsolveMM)
-      REAL_T, intent(out) :: diag_sing(DIMV(diag_sing),nsolveMM)
-      REAL_T, intent(out) :: maskdivres(DIMV(maskdivres))
-      REAL_T, intent(out) :: maskres(DIMV(maskres))
-      REAL_T, intent(in) :: mdot(DIMV(mdot),nsolveMM)
-       ! coeff * areafrac * areaface / (dxfrac*dx)
+      REAL_T, intent(out) :: diag_reg(DIMV(diag_reg),nsolveMM)
+      ! coeff * areafrac * areaface / (dxfrac*dx)  (if coeff>0.0)
       REAL_T, intent(in) :: bx(DIMV(bx),nsolveMM) 
       REAL_T, intent(in) :: by(DIMV(by),nsolveMM)
       REAL_T, intent(in) :: bz(DIMV(bz),nsolveMM)
-       ! coeff * areafrac / dxfrac
-      REAL_T, intent(in) :: fwtx(DIMV(fwtx),nsolveMM_FACE)  
-      REAL_T, intent(in) :: fwty(DIMV(fwty),nsolveMM_FACE)
-      REAL_T, intent(in) :: fwtz(DIMV(fwtz),nsolveMM_FACE)
 
       INTEGER_T i,j,k
-      INTEGER_T inormal
-      INTEGER_T ii,jj,kk
-      INTEGER_T iface,jface,kface
-      INTEGER_T icell,jcell,kcell
-      INTEGER_T dir,side
       INTEGER_T veldir
-      INTEGER_T im
-      INTEGER_T faceL,faceR
-      REAL_T bface,mface
-      REAL_T facewtsum,offdiagsum
+      REAL_T offdiagsum
       REAL_T local_diag
-      REAL_T local_diag_check1
-      REAL_T local_diag_check2
-      REAL_T dtau,dtau_factor
 
        ! indexes start at 0
       if (ncphys.lt.8) then
@@ -1402,50 +1460,17 @@ stop
        print *,"nsolveMM_FACE invalid"
        stop
       endif
-       ! (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)
-      if (nfacefrac.ne.nmat*nmat*2) then
-       print *,"nfacefrac invalid"
-       stop
-      endif
-       !im_inside,im_outside,3+sdim -->
-       !area, dist_to_line, dist, line normal.
-      if (ncellfrac.ne.nmat*nmat*(3+SDIM)) then
-       print *,"ncellfrac invalid"
-       stop
-      endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid nsgenerate"
        stop
       endif
 
-      dtau_factor=0.001
-
-      call checkbound(fablo,fabhi,DIMS(cellmm),0,-1,234)
-      call checkbound(fablo,fabhi,DIMS(xfacemm),0,0,264)
-      call checkbound(fablo,fabhi,DIMS(yfacemm),0,1,264)
-      call checkbound(fablo,fabhi,DIMS(zfacemm),0,SDIM-1,264)
-
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,244)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,244)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,244)
-      call checkbound(fablo,fabhi,DIMS(masksolv),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,140)
       call checkbound(fablo,fabhi,DIMS(alpha),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(offdiagcheck),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(diag_non_sing),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(diag_sing),0,-1,140)
-      call checkbound(fablo,fabhi, &
-       DIMS(maskdivres), &
-       0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(maskres),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,140)
+      call checkbound(fablo,fabhi,DIMS(diag_reg),0,-1,140)
       call checkbound(fablo,fabhi,DIMS(bx),0,0,140)
       call checkbound(fablo,fabhi,DIMS(by),0,1,140)
       call checkbound(fablo,fabhi,DIMS(bz),0,AMREX_SPACEDIM-1,140)
-      call checkbound(fablo,fabhi,DIMS(fwtx),0,0,140)
-      call checkbound(fablo,fabhi,DIMS(fwty),0,1,140)
-      call checkbound(fablo,fabhi,DIMS(fwtz),0,AMREX_SPACEDIM-1,140)
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -1459,255 +1484,33 @@ stop
 
        do veldir=1,nsolveMM
 
-        if (num_materials_face.eq.1) then
-         if (nsolveMM.eq.nsolve) then
-          faceL=veldir
-          faceR=veldir
-          im=1
-         else
-          print *,"nsolveMM invalid"
-          stop
-         endif
-        else if (num_materials_face.eq.nmat) then
-         if ((nsolve.eq.1).and.(nsolveMM.eq.nmat)) then
-          faceL=veldir
-          faceR=faceL+nsolveMM_FACE/2
-          im=veldir
-         else
-          print *,"nsolve or nsolveMM invalid"
-          stop
-         endif
-        else
-         print *,"num_materials_face invalid"
-         stop
-        endif
-
-        facewtsum=fwtx(D_DECL(i,j,k),faceR)+fwtx(D_DECL(i+1,j,k),faceL)+ &
-                  fwty(D_DECL(i,j,k),faceR)+fwty(D_DECL(i,j+1,k),faceL)
+        offdiagsum=bx(D_DECL(i,j,k),veldir)+bx(D_DECL(i+1,j,k),veldir)+ &
+                   by(D_DECL(i,j,k),veldir)+by(D_DECL(i,j+1,k),veldir)
         if (SDIM.eq.3) then
-         facewtsum=facewtsum+ &
-          fwtz(D_DECL(i,j,k),faceR)+fwtz(D_DECL(i,j,k+1),faceL)
-        endif
-
-        if (maskcov(D_DECL(i,j,k)).eq.zero) then ! covered by finer cell
-
-         offdiagsum=bx(D_DECL(i,j,k),veldir)+bx(D_DECL(i+1,j,k),veldir)+ &
-                    by(D_DECL(i,j,k),veldir)+by(D_DECL(i,j+1,k),veldir)
-         if (SDIM.eq.3) then
-          offdiagsum=offdiagsum+ &
-           bz(D_DECL(i,j,k),veldir)+bz(D_DECL(i,j,k+1),veldir)
-         endif
-
-         local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
-         if (local_diag.gt.zero) then
-          masksolv(D_DECL(i,j,k),im)=one
-         else if (local_diag.eq.zero) then
-          masksolv(D_DECL(i,j,k),im)=zero
-         else
-          print *,"local_diag invalid"
-          stop
-         endif
-
-        else if (maskcov(D_DECL(i,j,k)).eq.one) then
-
-         offdiagsum=zero
-
-         do dir=1,SDIM
-
-          ii=0
-          jj=0
-          kk=0
-          if (dir.eq.1) then
-           ii=1
-           inormal=i
-          else if (dir.eq.2) then
-           jj=1
-           inormal=j
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           kk=1
-           inormal=k
-          else
-           print *,"dir invalid"
-           stop
-          endif
-
-          do side=1,2
-
-           if (side.eq.1) then
-            iface=i
-            jface=j
-            kface=k
-            icell=i-ii
-            jcell=j-jj
-            kcell=k-kk
-           else if (side.eq.2) then
-            iface=i+ii
-            jface=j+jj
-            kface=k+kk
-            icell=i+ii
-            jcell=j+jj
-            kcell=k+kk
-           else
-            print *,"side invalid"
-            stop
-           endif
-
-           if (dir.eq.1) then
-            bface=bx(D_DECL(iface,jface,kface),veldir)
-           else if (dir.eq.2) then
-            bface=by(D_DECL(iface,jface,kface),veldir)
-           else if ((dir.eq.3).and.(SDIM.eq.3)) then
-            bface=bz(D_DECL(iface,jface,kface),veldir)
-           else
-            print *,"dir invalid"
-            stop
-           endif
-           mface=maskcov(D_DECL(icell,jcell,kcell))
-
-           if ((inormal.eq.fablo(dir)).and. &
-               (bc(dir,side,veldir).ne.INT_DIR)) then
-            offdiagsum=offdiagsum+bface
-           else if ((inormal.gt.fablo(dir)).or. &
-                    (bc(dir,side,veldir).eq.INT_DIR)) then
-            if (mface.eq.one) then  ! neighbor not covered.
-             offdiagsum=offdiagsum+bface
-            else if (mface.eq.zero) then ! fine-coarse face (nbr is covered)
-              ! bface=coeff * area_coarse/dx_coarse
-              ! from the fine side: bface=coeff * area_fine/dx_fine
-              ! In order to be symmetric we need
-              ! bface=coeff * area_coarse/dx_fine =
-              !       coeff * area_coarse/(dx_coarse/2) =
-              !       2 * coeff * area_coarse/dx_coarse
-             offdiagsum=offdiagsum+two*bface
-            else
-             print *,"maskcov invalid"
-             stop
-            endif
-           else
-            print *,"inormal or bc bust"
-            stop
-           endif
-
-           if ((inormal.eq.fabhi(dir)).and. &
-               (bc(dir,side,veldir).ne.INT_DIR)) then
-            offdiagsum=offdiagsum+bface 
-           else if ((inormal.lt.fabhi(dir)).or. &
-                    (bc(dir,side,veldir).eq.INT_DIR)) then
-            if (mface.eq.one) then ! neighbor not covered.
-             offdiagsum=offdiagsum+bface
-            else if (mface.eq.zero) then ! fine-coarse face (nbr is covered)
-             offdiagsum=offdiagsum+two*bface
-            else
-             print *,"maskcov invalid"
-             stop
-            endif
-           else
-            print *,"inormal or bc bust"
-            stop
-           endif
-
-          enddo ! side=1,2
-
-         enddo ! dir=1..sdim
-
-         local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
-         if (local_diag.gt.zero) then
-          masksolv(D_DECL(i,j,k),im)=one
-         else if (local_diag.eq.zero) then
-          masksolv(D_DECL(i,j,k),im)=zero
-         else
-          print *,"local_diag invalid"
-          stop
-         endif
-
-        else
-         print *,"maskcov invalid"
-         stop
-        endif
-
-        if ((facewtsum.ge.zero).and.(offdiagsum.ge.zero)) then
-
-         if ((facewtsum.gt.zero).and.(offdiagsum.gt.zero)) then
-          maskdivres(D_DECL(i,j,k))=one
-          maskres(D_DECL(i,j,k))=one
-         else if ((facewtsum.eq.zero).or.(offdiagsum.eq.zero)) then
-          maskdivres(D_DECL(i,j,k))=zero
-          if (alpha(D_DECL(i,j,k),veldir).gt.zero) then
-           maskres(D_DECL(i,j,k))=one
-          else if (alpha(D_DECL(i,j,k),veldir).eq.zero) then
-           maskres(D_DECL(i,j,k))=zero
-           if (mdot(D_DECL(i,j,k),veldir).eq.zero) then
-            ! do nothing
-           else
-            print *,"mdot invalid in nsgenerate"
-            stop
-           endif
-          else
-           print *,"alpha invalid"
-           print *,"i,j,k= ",i,j,k
-           print *,"alpha=",alpha(D_DECL(i,j,k),veldir)
-           stop
-          endif
-         else
-          print *,"facewtsum or offdiagsum invalid"
-          print *,"i,j,k ",i,j,k
-          print *,"facewtsum= ",facewtsum
-          print *,"offdiagsum= ",offdiagsum
-          print *,"fwtx Left ",fwtx(D_DECL(i,j,k),faceR)
-          print *,"fwtx Right ",fwtx(D_DECL(i+1,j,k),faceL)
-          print *,"fwty front ",fwty(D_DECL(i,j,k),faceR)
-          print *,"fwty back ",fwty(D_DECL(i,j+1,k),faceL)
-          print *,"fwtz bottom ",fwtz(D_DECL(i,j,k),faceR)
-          print *,"fwtz top ",fwtz(D_DECL(i,j,k+1),faceL)
-          stop
-         endif
-
-        else
-         print *,"facewtsum or offdiagsum invalid"
-         stop
+         offdiagsum=offdiagsum+ &
+          bz(D_DECL(i,j,k),veldir)+bz(D_DECL(i,j,k+1),veldir)
         endif
 
         local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
-
-        local_diag_check1=facewtsum
-        local_diag_check2=offdiagcheck(D_DECL(i,j,k),veldir)
-
-        if ((local_diag_check1.eq.zero).and. &
-            (local_diag_check2.eq.zero)) then
-         ! do nothing
-        else if ((local_diag_check1.gt.zero).and. &
-                 (local_diag_check2.gt.zero)) then
-         ! do nothing
+        if (local_diag.gt.zero) then
+         diag_reg(D_DECL(i,j,k),veldir)=local_diag
         else
-         print *,"local_diag_check bust"
-         print *,"local_diag_check1=",local_diag_check1
-         print *,"local_diag_check2=",local_diag_check2
+         print *,"local_diag invalid"
          stop
         endif
 
-        diag_sing(D_DECL(i,j,k),veldir)=local_diag
-
-        if (offdiagsum.lt.zero) then
-         print *,"offdiagsum invalid"
-         stop
-        else if (offdiagsum.eq.zero) then
-         dtau=dtau_factor
-        else
-         dtau=offdiagsum*dtau_factor
-        endif
         if (alpha(D_DECL(i,j,k),veldir).ge.zero) then
           ! do nothing
         else
          print *,"alpha should be nonneg"
          stop
         endif
-        if (alpha(D_DECL(i,j,k),veldir).gt.dtau) then
-         dtau=zero
+        if (offdiagsum.ge.zero) then
+          ! do nothing
+        else
+         print *,"offdiagsum should be nonneg"
+         stop
         endif
-
-        FIX ME dtau should not be needed after BXCOEFF_NONSING USED
-        diag_non_sing(D_DECL(i,j,k),veldir)= &
-         diag_sing(D_DECL(i,j,k),veldir)+dtau
 
        enddo ! veldir=1..nsolveMM
           
