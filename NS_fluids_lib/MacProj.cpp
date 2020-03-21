@@ -1764,6 +1764,7 @@ void NavierStokes::apply_div(
    //1=not cov  0=cov
   FArrayBox& maskcoef = (*localMF[MASKCOEF_MF])[mfi];
 
+   // DIAG_SING_MF used for sanity check only.
   FArrayBox& diagsingfab = (*localMF[DIAG_SING_MF])[mfi];
 
   FArrayBox& poldfab = (*localMF[idx_phi])[mfi];
