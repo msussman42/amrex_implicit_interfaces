@@ -22,7 +22,7 @@ namespace amrex{
 // assume 3d for face declarations.
 
 #define OFF_DIAG_CHECK_MF 0  // nsolveMM components
-#define DIAG_SING_MF 1
+#define DIAG_REGULARIZE_MF 1
 
 #define ADVECT_REGISTER_FACE_MF 2
 
@@ -248,8 +248,6 @@ namespace amrex{
 #define DEN_COLORSUM_MF 236
 
 #define PRESSURE_SAVE_MF 237
-
-#define DIAG_NON_SING_MF 238
 
 #define SAVE_MAC_PRESCRIBE_MF 239
 #define SAVE_SNEW_PRESCRIBE_MF 242
@@ -1381,9 +1379,6 @@ protected:
     Array<MultiFab*,MAX_NUM_LOCAL_MF> localMF;
 
     Real ones_sum_global;
-
-    Real OFFDIAG_NONSING_LEVEL;
-    static Real NS_diag_regularization;
 
     int save_mg_precond;
 

@@ -2,6 +2,7 @@
 #define _MACOPERATOR_F_H_
 
 #ifdef BL_LANG_FORT
+#    define FORT_INIT_MASK_SING init_mask_sing
 #    define FORT_NSGENERATE    nsgenerate
 #    define FORT_DIVIDEDX      dividedx
 #    define FORT_MULT_FACEWT   mult_facewt
@@ -10,6 +11,7 @@
 #    define FORT_RESTORE_PRES  restore_pres
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
+#    define FORT_INIT_MASK_SING INIT_MASK_SING
 #    define FORT_NSGENERATE    NSGENERATE
 #    define FORT_DIVIDEDX      DIVIDEDX
 #    define FORT_MULT_FACEWT   MULT_FACEWT
@@ -18,6 +20,7 @@
 #    define FORT_RESTORE_PRES  RESTORE_PRES
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
+#    define FORT_INIT_MASK_SING init_mask_sing
 #    define FORT_NSGENERATE    nsgenerate
 #    define FORT_DIVIDEDX      dividedx
 #    define FORT_MULT_FACEWT   mult_facewt
@@ -25,6 +28,7 @@
 #    define FORT_SCALARCOEFF   scalarcoeff
 #    define FORT_RESTORE_PRES  restore_pres
 #  else
+#    define FORT_INIT_MASK_SING init_mask_sing_
 #    define FORT_NSGENERATE    nsgenerate_
 #    define FORT_DIVIDEDX      dividedx_
 #    define FORT_MULT_FACEWT   mult_facewt_
@@ -40,6 +44,46 @@ namespace amrex{
 
 extern "C"
 {
+
+   void FORT_INIT_MASK_SING (
+     int* num_materials_face,
+     int* level,
+     int* finest_level,
+     int* nsolve,
+     int* nsolveMM,
+     int* nsolveMM_FACE,
+     int* nfacefrac,
+     int* ncellfrac,
+     int* nmat,
+     int* project_option,
+     int* ncphys,
+     Real* cellmm,AMREX_ARLIM_P(cellmmlo),AMREX_ARLIM_P(cellmmhi), 
+     Real* xfacemm,AMREX_ARLIM_P(xfacemmlo),AMREX_ARLIM_P(xfacemmhi), 
+     Real* yfacemm,AMREX_ARLIM_P(yfacemmlo),AMREX_ARLIM_P(yfacemmhi), 
+     Real* zfacemm,AMREX_ARLIM_P(zfacemmlo),AMREX_ARLIM_P(zfacemmhi), 
+     Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi), 
+     Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi), 
+     Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi), 
+     Real* masksolv,AMREX_ARLIM_P(masksolvlo),AMREX_ARLIM_P(masksolvhi),
+     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+     Real* alpha,
+     AMREX_ARLIM_P(alphalo),AMREX_ARLIM_P(alphahi),
+     Real* offdiagcheck, 
+     AMREX_ARLIM_P(offdiagchecklo),AMREX_ARLIM_P(offdiagcheckhi),
+     Real* maskdivres,AMREX_ARLIM_P(maskdivreslo),AMREX_ARLIM_P(maskdivreshi),
+     Real* maskres,AMREX_ARLIM_P(maskreslo),AMREX_ARLIM_P(maskreshi),
+     Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+     Real* bx,AMREX_ARLIM_P(bxlo),AMREX_ARLIM_P(bxhi),
+     Real* by,AMREX_ARLIM_P(bylo),AMREX_ARLIM_P(byhi),
+     Real* bz,AMREX_ARLIM_P(bzlo),AMREX_ARLIM_P(bzhi),
+     Real* fwtx,AMREX_ARLIM_P(fwtxlo),AMREX_ARLIM_P(fwtxhi),
+     Real* fwty,AMREX_ARLIM_P(fwtylo),AMREX_ARLIM_P(fwtyhi),
+     Real* fwtz,AMREX_ARLIM_P(fwtzlo),AMREX_ARLIM_P(fwtzhi),
+     const int* tilelo, const int* tilehi,
+     const int* fablo, const int* fabhi,
+     int* bfact,
+     int* bc);
+
    void FORT_NSGENERATE (
      int* num_materials_face,
      int* level,
@@ -64,11 +108,11 @@ extern "C"
      Real* alpha,
      AMREX_ARLIM_P(alphalo),AMREX_ARLIM_P(alphahi),
      Real* offdiagcheck, 
-    AMREX_ARLIM_P(offdiagchecklo),AMREX_ARLIM_P(offdiagcheckhi),
+     AMREX_ARLIM_P(offdiagchecklo),AMREX_ARLIM_P(offdiagcheckhi),
      Real* diag_non_sing, 
-    AMREX_ARLIM_P(diag_non_singlo),AMREX_ARLIM_P(diag_non_singhi),
+     AMREX_ARLIM_P(diag_non_singlo),AMREX_ARLIM_P(diag_non_singhi),
      Real* diag_sing, 
-    AMREX_ARLIM_P(diag_singlo),AMREX_ARLIM_P(diag_singhi),
+     AMREX_ARLIM_P(diag_singlo),AMREX_ARLIM_P(diag_singhi),
      Real* maskdivres,AMREX_ARLIM_P(maskdivreslo),AMREX_ARLIM_P(maskdivreshi),
      Real* maskres,AMREX_ARLIM_P(maskreslo),AMREX_ARLIM_P(maskreshi),
      Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),

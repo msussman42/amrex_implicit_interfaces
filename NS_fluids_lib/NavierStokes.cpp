@@ -74,9 +74,6 @@ Real NavierStokes::prescribed_vel_time_slab=0.0;
 Real NavierStokes::dt_slab=1.0;
 int NavierStokes::advect_iter=0;
 
-// probably the density ratio will never exceed 1.0e+5
-Real NavierStokes::NS_diag_regularization=1.0e-6;
-
 int  NavierStokes::show_mem = 0;
 int  NavierStokes::show_timings = 1;
 int  NavierStokes::verbose      = 0;
