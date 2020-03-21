@@ -8998,6 +8998,7 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("project_option invalid 49");
 
+   // in: multiphase_project
    // calls FORT_BUILDFACEWT
    // BUILDFACEWT updates static variables min_face_wt and max_face_wt
    // max_face_wt[0][1] has max of (1/rho) or (visc_coef*mu) or (k) or (D)

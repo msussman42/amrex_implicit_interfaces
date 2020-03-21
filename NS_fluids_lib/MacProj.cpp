@@ -173,6 +173,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  int bfact=parent->Space_blockingFactor(level);
 
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
+
  Vector<int> scomp;
  Vector<int> ncomp;
  int state_index;
@@ -450,7 +454,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // BXCOEFNOAREA *= (facewtL + facewtR)/2
-
+    // MULT_FACEWT is in MACOPERATOR_3D.F90
    FORT_MULT_FACEWT(
     &num_materials_face,
     &nsolve,
@@ -601,18 +605,25 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  ns_reconcile_d_num(35);
 
 
+ Real min_interior_coeff=0.0;
+ if (denconst_max>0.0) {
+  if (mglib_min_coeff_factor>1.0) {
+   min_interior_coeff=1.0/(denconst_max*mglib_min_coeff_factor);
+  } else
+   amrex::Error("mglib_min_coeff_factor invalid");
+ } else
+  amrex::Error("denconst_max invalid");
 
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
+  if (localMF[AREA_MF+dir]->boxArray()!=
+      localMF[BXCOEFNOAREA_MF+dir]->boxArray())
+   amrex::Error("BXCOEFNOAREA boxarrays do not match");
 
+  if (localMF[BXCOEFNOAREA_MF+dir]->nComp()!=nsolveMM) 
+   amrex::Error("localMF[BXCOEFNOAREA_MF+dir]->nComp() invalid");
 
-   int ncomp_edge=-1;
-   int scomp_bx=0;
-   int ncomp_mf=1;
-   avgDownEdge_localMF(BXCOEFNOAREA_MF,scomp_bx,ncomp_edge,dir,ncomp_mf,0,17);
-   Copy_localMF(BXCOEF_MF+dir,BXCOEFNOAREA_MF+dir,0,0,nsolveMM,0);
-    // dest,source,scomp,dcomp,ncomp,ngrow
-   for (int veldir=0;veldir<nsolveMM;veldir++)
-    Mult_localMF(BXCOEF_MF+dir,AREA_MF+dir,0,veldir,1,0);
+  if (singular_possible==1) {
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -623,6 +634,63 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 #endif
 {
    for (MFIter mfi(*localMF[ALPHACOEF_MF],use_tiling); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    const Real* xlo = grid_loc[gridno].lo();
+
+    FArrayBox & bxfab=(*localMF[BXCOEFNOAREA_MF+dir])[mfi];
+
+    int tid_current=ns_thread();
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // BXCOEFNOAREA = max(BXCOEFNOAREA,min_interior_coeff) if not on the
+    // edge of the domain
+    // REGULARIZE_BX is in MACOPERATOR_3D.F90
+    FORT_REGULARIZE_BX(
+     &num_materials_face,
+     &nsolve,
+     &nsolveMM,
+     &nsolveMM_FACE,
+     bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
+     domlo,domhi,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &level,
+     xlo,dx,&dir);
+   } // mfi
+ } // omp
+   ns_reconcile_d_num(33);
+
+  } else if (singular_possible==0) {
+   // do nothing 
+  } else
+   amrex::Error("singular_possible invalid");
+
+  int ncomp_edge=-1;
+  int scomp_bx=0;
+  int ncomp_mf=1;
+  avgDownEdge_localMF(BXCOEFNOAREA_MF,scomp_bx,ncomp_edge,dir,ncomp_mf,0,17);
+  Copy_localMF(BXCOEF_MF+dir,BXCOEFNOAREA_MF+dir,0,0,nsolveMM,0);
+   // dest,source,scomp,dcomp,ncomp,ngrow
+  for (int veldir=0;veldir<nsolveMM;veldir++)
+   Mult_localMF(BXCOEF_MF+dir,AREA_MF+dir,0,veldir,1,0);
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(localMF[ALPHACOEF_MF]->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*localMF[ALPHACOEF_MF],use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -648,26 +716,12 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      &bfact,
      &level,
      xlo,dx,&dir);
-   } // mfi
+  } // mfi
 } // omp
-   ns_reconcile_d_num(34);
+  ns_reconcile_d_num(34);
 
-   mac_op->bCoefficients(*localMF[BXCOEF_MF+dir],dir);
+  mac_op->bCoefficients(*localMF[BXCOEF_MF+dir],dir);
  }  // dir=0...sdim-1
-
-
-    Real min_interior_coeff=0.0;
-    if (denconst_max>0.0) {
-     if (mglib_min_coeff_factor>1.0) {
-      min_interior_coeff=1.0/(denconst_max*mglib_min_coeff_factor);
-     } else
-      amrex::Error("mglib_min_coeff_factor invalid");
-    } else
-     amrex::Error("denconst_max invalid");
-
-
-
-
 
   // generateCoefficients calls buildMatrix ranging from 
   // the finest mglib level (lev=0) down to the coarsest 
@@ -676,6 +730,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // buildMatrix calls FORT_BUILDMAT
  mac_op->generateCoefficients();
 
+
+
+FIX ME
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(localMF[DIAG_SING_MF]->boxArray().d_numPts());
