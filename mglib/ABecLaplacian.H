@@ -66,6 +66,19 @@ public:
      int level, 
      int caller_id);
 
+    void pcg_MULTI_solve(
+     int gmres_precond_iter,
+     MultiFab* z,MultiFab* r,
+     Real eps_abs,Real bot_atol,
+     MultiFab* pbdryhom,
+     Vector<int> bcpres_array,
+     int usecg_at_bottom,
+     int smooth_type,int bottom_smooth_type,
+     int presmooth,int postsmooth,
+     int use_PCG,
+     int level, 
+     int caller_id);
+
     void pcg_GMRES_solve(
      int gmres_precond_iter,
      MultiFab* z,MultiFab* r,

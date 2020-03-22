@@ -24,7 +24,7 @@ namespace amrex{
 
 #define profile_solver 0
 
-int ABecLaplacian::abec_use_bicgstab = 0;
+int ABecLaplacian::abec_use_bicgstab = 1;
 
 int ABecLaplacian::mglib_blocking_factor = 2;
 
@@ -2476,55 +2476,84 @@ ABecLaplacian::pcg_MULTI_solve(
  bprof.stop();
 #endif
 
+ if (nsolve_bicgstab>=1) {
+  // do nothing
+ } else
+  amrex::Error("nsolve_bicgstab invalid");
+
+ if (gmres_precond_iter_base_mg>=1) {
+  // do nothing
+ } else
+  amrex::Error("gmres_precond_iter_base_mg invalid");
+
+ int coarsefine=0;
+ if (level==0) {
+  coarsefine=0;
+ } else if ((level==MG_numlevels_var-1)&&(CG_numlevels_var==2)) {
+  coarsefine=1;
+ } else
+  amrex::Error("level invalid");
+
  project_null_space(*r_in,level);
 
  // z=K^{-1} r
  z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
 
- for (int vcycle_iter=0;vcycle_iter<
- if (use_PCG==0) {
-  MultiFab::Copy(*z_in,
-		 *r_in,0,0,nsolve_bicgstab,nghostRHS);
- } else if (use_PCG==1) {
-  if ((CG_use_mg_precond_at_top==1)&&
-      (level==0)&&
-      (MG_numlevels_var-1>0)) {
+ if (gmres_precond_iter==0) {
+   // Z=M^{-1}R
+   // z=project_null_space(z)
+   // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
+  pcg_solve(
+   z_in,r_in,
+   eps_abs,bot_atol,
+   pbdryhom_in,
+   bcpres_array,
+   usecg_at_bottom,
+   smooth_type,bottom_smooth_type,
+   presmooth,postsmooth,
+   use_PCG,
+   level,1);
 
-   if (CG_numlevels_var==2) {
-    if (CG_verbose>2) {
-     std::cout << "calling MG_solve level=" << level << '\n';
-     std::cout << "calling MG_solve presmooth=" << presmooth << '\n';
-     std::cout << "calling MG_solve postsmooth=" << postsmooth << '\n';
-    }
-    MG_solve(0,
-      *z_in,
-      *r_in,
-      eps_abs,bot_atol,
-      usecg_at_bottom,*pbdryhom_in,bcpres_array,
-      smooth_type,bottom_smooth_type,
-      presmooth,postsmooth);
-   } else
-    amrex::Error("CG_numlevels_var invalid");
+ } else if ((gmres_precond_iter>0)&&
+            (gmres_precond_iter<=gmres_max_iter)) {
 
-  } else if ((CG_use_mg_precond_at_top==0)||
-	     (level==MG_numlevels_var-1)) {
-   for (int j=0;j<presmooth+postsmooth;j++) {
-    if (CG_verbose>2) {
-     std::cout << "calling smooth level=" << level << '\n';
-     std::cout << "calling smooth j=" << j << '\n';
-     std::cout << "calling smooth presmooth=" << presmooth << '\n';
-     std::cout << "calling smooth postsmooth=" << postsmooth << '\n';
-    }
-    smooth(*z_in,
-	   *r_in,
-	   level,
-	   *pbdryhom_in,bcpres_array,smooth_type);
-    project_null_space(*z_in,level);
-   }
-  } else
-   amrex::Error("use_mg_precond invalid");
+  GMRES_V_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+  GMRES_Z_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+
+  MultiFab::Copy(*GMRES_V_MF[0][coarsefine],*r_in,
+                 0,0,nsolve_bicgstab,nghostRHS);
+
+  for (int vcycle_iter=0;vcycle_iter<gmres_precond_iter;vcycle_iter++) {
+
+   // Z=M^{-1}R
+   // z=project_null_space(z)
+   pcg_solve(
+    GMRES_Z_MF[0][coarsefine],
+    GMRES_V_MF[0][coarsefine],
+    eps_abs,bot_atol,
+    pbdryhom_in,
+    bcpres_array,
+    usecg_at_bottom,
+    smooth_type,bottom_smooth_type,
+    presmooth,postsmooth,
+    use_PCG,
+    level,1);
+
+   // z_in=_z_in+GMRES_Z_MF
+   // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost
+   z_in->ParallelAdd(*GMRES_Z_MF[0][coarsefine],0,0,nsolve_bicgstab,0,0);
+   project_null_space(*z_in,level);
+   GMRES_Z_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+   // resid,rhs,soln
+   residual((*GMRES_V_MF[0][coarsefine]),  // resid
+            (*r_in),  // rhs
+            (*z_in),  // soln
+            level,
+            (*pbdryhom_in),bcpres_array);
+   project_null_space((*GMRES_V_MF[0][coarsefine]),level);
+  } // vcycle_iter=0...gmres_precond_iter-1
  } else
-  amrex::Error("use_PCG invalid");
+  amrex::Error("gmres_precond_iter invalid");
 
  project_null_space(*z_in,level);
 
@@ -3548,7 +3577,8 @@ ABecLaplacian::CG_solve(
     int nsverbose,int is_bottom,
     MultiFab& sol,
     MultiFab& rhs,
-    Real eps_abs,Real bot_atol,
+    Real eps_abs, // save_atol_b : caller
+    Real bot_atol,// bottom_bottom_tol : caller
     MultiFab& pbdry,
     Vector<int> bcpres_array,
     int usecg_at_bottom,
@@ -3735,6 +3765,8 @@ ABecLaplacian::CG_solve(
    CG_error_history[ehist][2*coarsefine+ih]=0.0;
  }
 
+ int local_use_bicgstab=abec_use_bicgstab;
+
  for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero!=1)); ++nit) {
 
   restart_flag=0;
@@ -3774,36 +3806,21 @@ ABecLaplacian::CG_solve(
    } else
     amrex::Error("nit invalid");
 
-   if (abec_use_bicgstab==0) { //MGPCG
+   if (local_use_bicgstab==0) { //MGPCG
 
     // z=K^{-1} r
     // z=project_null_space(z)
-    if (1==1) {
-     pcg_MULTI_solve(
-       gmres_precond_iter,
-       CG_z[coarsefine],
-       CG_r[coarsefine],
-       eps_abs,bot_atol,
-       CG_pbdryhom[coarsefine],
-       bcpres_array,
-       usecg_at_bottom,
-       smooth_type,bottom_smooth_type,
-       local_presmooth,local_postsmooth,
-       use_PCG, // 0=no preconditioning  1=depends:"CG_use_mg_precond_at_top"
-       level,nit);
-    } else {
-     pcg_GMRES_solve(
-       gmres_precond_iter,
-       CG_z[coarsefine],
-       CG_r[coarsefine],
-       eps_abs,bot_atol,
-       CG_pbdryhom[coarsefine],
-       bcpres_array,
-       usecg_at_bottom,
-       smooth_type,bottom_smooth_type,
-       local_presmooth,local_postsmooth,
-       use_PCG,level,nit);
-    }
+    pcg_solve(
+     CG_z[coarsefine],
+     CG_r[coarsefine],
+     eps_abs,bot_atol,
+     CG_pbdryhom[coarsefine],
+     bcpres_array,
+     usecg_at_bottom,
+     smooth_type,bottom_smooth_type,
+     local_presmooth,local_postsmooth,
+     use_PCG, // 0=no preconditioning  1=depends:"CG_use_mg_precond_at_top"
+     level,nit);
 
      // rho=z dot r
     LP_dot(*CG_z[coarsefine],*CG_r[coarsefine],level,rho); 
@@ -3868,7 +3885,7 @@ ABecLaplacian::CG_solve(
      amrex::Error("rho invalid mglib, cg");
     }
 
-   } else if (abec_use_bicgstab==1) { //MG-GMRES PCG
+   } else if (local_use_bicgstab==1) { //MG-GMRES PCG
 
      // rho=r0 dot r
     LP_dot(*CG_rhs_resid_cor_form[coarsefine],*CG_r[coarsefine],level,rho); 
@@ -4019,7 +4036,7 @@ ABecLaplacian::CG_solve(
      amrex::Error("restart_flag invalid");
 
    } else 
-    amrex::Error("abec_use_bicgstab invalid");
+    amrex::Error("local_use_bicgstab invalid");
 
    if (restart_flag==1) {
 
@@ -4027,8 +4044,8 @@ ABecLaplacian::CG_solve(
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "WARNING:RESTARTING: nit= " << nit << '\n';
       std::cout << "WARNING:RESTARTING: level= " << level << '\n';
-      std::cout << "RESTARTING: abec_use_bicgstab=" << 
-	      abec_use_bicgstab << '\n';
+      std::cout << "RESTARTING: local_use_bicgstab=" << 
+	      local_use_bicgstab << '\n';
       std::cout << "RESTARTING: gmres_precond_iter= " << 
        gmres_precond_iter << '\n';
       std::cout << "RESTARTING: local_presmooth= " <<
@@ -4489,7 +4506,10 @@ ABecLaplacian::MG_numLevels (const BoxArray& grids) const
 
 void
 ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
-   int level,Real eps_abs,Real atol_b,int usecg_at_bottom,
+   int level,
+   Real eps_abs,
+   Real atol_b,
+   int usecg_at_bottom,
    MultiFab& pbdry,Vector<int> bcpres_array,
    int smooth_type,int bottom_smooth_type,
    int presmooth,int postsmooth)
@@ -4534,7 +4554,9 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
   CG_solve(
     cg_cycles_parm,
     nsverbose,is_bottom,
-    solL,rhsL, atol_b, atol_b,
+    solL,rhsL, 
+    atol_b, 
+    atol_b,
     pbdry,bcpres_array,usecg_at_bottom,
     local_meets_tol,
     bottom_smooth_type,bottom_smooth_type,

@@ -680,7 +680,7 @@ int NavierStokes::gmres_precond_iter_base=4;
 int NavierStokes::smooth_type = 2; // 0=GSRB 1=ICRB 2=ILU  3=Jacobi
 int NavierStokes::bottom_smooth_type = 2; // 0=GSRB 1=ICRB 2=ILU 3=Jacobi
 int NavierStokes::use_mg_precond_in_mglib=1;
-Real NavierStokes::bottom_bottom_tol_factor=0.1;
+Real NavierStokes::bottom_bottom_tol_factor=0.01;
 
 // 0=> u=u_solid if phi_solid>=0
 // 1=> u=u_solid_ghost if phi_solid>=0
@@ -737,7 +737,7 @@ Real NavierStokes::mac_abs_tol = 1.0e-10;
 Real NavierStokes::visc_abs_tol = 1.0e-10;
 Real NavierStokes::thermal_abs_tol = 1.0e-10;
 int NavierStokes::viscous_maxiter = 1;
-int NavierStokes::always_use_bicgstab = 0;
+int NavierStokes::always_use_bicgstab = 1;
 Real NavierStokes::total_advance_time=0.0;
 
 int NavierStokes::curv_index=0;

@@ -59,7 +59,9 @@ ns.initial_viscosity_cycles=1
 ns.initial_thermal_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
-ns.solvability_projection=1 # solvability_projection=0 if all walls symmetric.
+# solvability_projection=1 if all walls symmetric.
+# solvability_projection=0 if some walls outflow.
+ns.solvability_projection=1 
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2
@@ -175,7 +177,7 @@ ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 3 3
 ns.hi_bc          = 3 3
-ns.v=1
+#ns.v=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
