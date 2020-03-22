@@ -2441,6 +2441,102 @@ ABecLaplacian::pcg_solve(
 } // subroutine pcg_solve
 
 
+
+// z=K^{-1}r
+// z=project_null_space(z)
+void
+ABecLaplacian::pcg_MULTI_solve(
+    int gmres_precond_iter,
+    MultiFab* z_in,
+    MultiFab* r_in,
+    Real eps_abs,Real bot_atol,
+    MultiFab* pbdryhom_in,
+    Vector<int> bcpres_array,
+    int usecg_at_bottom,
+    int smooth_type,int bottom_smooth_type,
+    int presmooth,int postsmooth,
+    int use_PCG,
+    int level,
+    int caller_id) {
+
+#if (profile_solver==1)
+ std::string subname="ABecLaplacian::pcg_MULTI_solve";
+ std::stringstream popt_string_stream(std::stringstream::in |
+      std::stringstream::out);
+ popt_string_stream << cfd_project_option;
+ std::string profname=subname+popt_string_stream.str();
+ profname=profname+"_";
+ std::stringstream lev_string_stream(std::stringstream::in |
+      std::stringstream::out);
+ lev_string_stream << level;
+ profname=profname+lev_string_stream.str();
+
+ BLProfiler bprof(profname);
+
+ bprof.stop();
+#endif
+
+ project_null_space(*r_in,level);
+
+ // z=K^{-1} r
+ z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+
+ for (int vcycle_iter=0;vcycle_iter<
+ if (use_PCG==0) {
+  MultiFab::Copy(*z_in,
+		 *r_in,0,0,nsolve_bicgstab,nghostRHS);
+ } else if (use_PCG==1) {
+  if ((CG_use_mg_precond_at_top==1)&&
+      (level==0)&&
+      (MG_numlevels_var-1>0)) {
+
+   if (CG_numlevels_var==2) {
+    if (CG_verbose>2) {
+     std::cout << "calling MG_solve level=" << level << '\n';
+     std::cout << "calling MG_solve presmooth=" << presmooth << '\n';
+     std::cout << "calling MG_solve postsmooth=" << postsmooth << '\n';
+    }
+    MG_solve(0,
+      *z_in,
+      *r_in,
+      eps_abs,bot_atol,
+      usecg_at_bottom,*pbdryhom_in,bcpres_array,
+      smooth_type,bottom_smooth_type,
+      presmooth,postsmooth);
+   } else
+    amrex::Error("CG_numlevels_var invalid");
+
+  } else if ((CG_use_mg_precond_at_top==0)||
+	     (level==MG_numlevels_var-1)) {
+   for (int j=0;j<presmooth+postsmooth;j++) {
+    if (CG_verbose>2) {
+     std::cout << "calling smooth level=" << level << '\n';
+     std::cout << "calling smooth j=" << j << '\n';
+     std::cout << "calling smooth presmooth=" << presmooth << '\n';
+     std::cout << "calling smooth postsmooth=" << postsmooth << '\n';
+    }
+    smooth(*z_in,
+	   *r_in,
+	   level,
+	   *pbdryhom_in,bcpres_array,smooth_type);
+    project_null_space(*z_in,level);
+   }
+  } else
+   amrex::Error("use_mg_precond invalid");
+ } else
+  amrex::Error("use_PCG invalid");
+
+ project_null_space(*z_in,level);
+
+ if (CG_verbose>2) {
+  std::cout << "end of pcg_MULTI_solve level=" << level << '\n';
+  std::cout << "end of pcg_MULTI_solve caller_id=" << caller_id << '\n';
+ }
+
+} // subroutine pcg_MULTI_solve
+
+
+
 // z=K^{-1}r
 void
 ABecLaplacian::pcg_GMRES_solve(
@@ -3683,7 +3779,8 @@ ABecLaplacian::CG_solve(
     // z=K^{-1} r
     // z=project_null_space(z)
     if (1==1) {
-     pcg_solve(
+     pcg_MULTI_solve(
+       gmres_precond_iter,
        CG_z[coarsefine],
        CG_r[coarsefine],
        eps_abs,bot_atol,
