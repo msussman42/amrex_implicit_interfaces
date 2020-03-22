@@ -103,7 +103,7 @@ USE_MPI   = TRUE
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
 #EBASE = amr
-EBASE = amrcompute
+EBASE = amr
 
 AMREX_PARTICLES = FALSE
 
