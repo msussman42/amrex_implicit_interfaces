@@ -3731,36 +3731,45 @@ ABecLaplacian::CG_solve(
 
       Real pAp=0.0;
       LP_dot(*CG_p_search[coarsefine],*CG_Av_search[coarsefine],level,pAp);
-      if (pAp>restart_tol) {
-       alpha=rho/pAp;
-        // x=x+alpha p
-       LP_update( (*CG_delta_sol[coarsefine]), alpha, 
-                  (*CG_delta_sol[coarsefine]),
-   	          (*CG_p_search_SOLN[coarsefine]),level );
-       project_null_space((*CG_delta_sol[coarsefine]),level);
 
-       residual(
+      if (pAp>=0.0) {
+
+       if (pAp>restart_tol) {
+        alpha=rho/pAp;
+         // x=x+alpha p
+        LP_update( (*CG_delta_sol[coarsefine]), alpha, 
+                   (*CG_delta_sol[coarsefine]),
+        	   (*CG_p_search_SOLN[coarsefine]),level );
+        project_null_space((*CG_delta_sol[coarsefine]),level);
+
+        residual(
          (*CG_r[coarsefine]),
          (*CG_rhs_resid_cor_form[coarsefine]),
          (*CG_delta_sol[coarsefine]),
     	 level,
          *CG_pbdryhom[coarsefine],
 	 bcpres_array); 
-       project_null_space((*CG_r[coarsefine]),level);
-      } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
-//       restart_flag=1;
-       error_close_to_zero=1;
+        project_null_space((*CG_r[coarsefine]),level);
+       } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
+        restart_flag=1;
+       } else {
+        std::cout << "pAp= " << pAp << endl;
+        amrex::Error("pAp invalid in bottom solver");
+       }
       } else {
        std::cout << "pAp= " << pAp << endl;
        amrex::Error("pAp invalid in bottom solver");
       }
      } else if ((rho_old>=0.0)&&(rho_old<=restart_tol)) {
-//      restart_flag=1;
-      error_close_to_zero=1;
+      restart_flag=1;
      } else
       amrex::Error("rho_old invalid");
-    } else
-     amrex::Error("rho invalid");
+    } else if (rho<0.0) {
+     restart_flag=1;
+    } else {
+     std::cout << "rho= " << rho << '\n';
+     amrex::Error("rho invalid mglib, cg");
+    }
 
    } else if (abec_use_bicgstab==1) { //MG-GMRES PCG
 
