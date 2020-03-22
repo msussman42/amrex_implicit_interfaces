@@ -30,6 +30,8 @@ mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
 mg.usecg=1
+ns.always_use_bicgstab=1
+cg.abec_use_bicgstab=1
 mg.bot_atol = 1.0e-13
 mg.rtol_b = -0.01
 Lp.v = 1
@@ -46,7 +48,8 @@ ns.advection_order=1 1 1 # flow away from droplet not important
 ns.v=1
 
 ns.face_flag=0
-ns.continuous_mof=4
+# 0=MOF 2=CMOF 3=CLSVOF/MOF 4=CLSVOF/CMOF
+ns.continuous_mof=2
 ns.mof_ordering=0 0 1
 
 ns.MOFITERMAX=15
@@ -73,7 +76,7 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2  # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 4       # block factor in grid generation
+amr.blocking_factor = 8       # block factor in grid generation
 amr.check_int       = 1000     # number of timesteps between checkpoints 1000
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 1000    # CHANGE TO 1000
