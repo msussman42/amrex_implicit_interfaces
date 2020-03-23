@@ -46,7 +46,8 @@ int ABecLaplacian::MG_def_nu_b         = 0;
 
 extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
  int m,int m_small,
- int caller_id,int& status);
+ int caller_id,int project_option,
+ int mg_level,int& status);
 
 static
 void
@@ -2752,7 +2753,8 @@ ABecLaplacian::pcg_GMRES_solve(
      int caller_id=3;
      GMRES_MIN_CPP(HH,beta,yy,
        m,m_small,
-       caller_id,status);
+       caller_id,cfd_project_option,
+       level,status);
 
     } else if (m_small==0) {
 

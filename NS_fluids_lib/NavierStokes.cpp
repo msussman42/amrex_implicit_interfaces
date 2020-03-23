@@ -17572,7 +17572,8 @@ NavierStokes::post_init (Real stop_time)
 //     h1m h2m h3m h4m ... hmm hm+1,m
 void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
 		int m,int m_small,
-		int caller_id,int& status) {
+		int caller_id,int project_option,
+                int mg_level,int& status) {
 
 #define profile_gmres 0
 
@@ -17767,6 +17768,8 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   if ((residual_verify>1.0e-3*min_diag)&&
       (residual_verify>1.0e-3)&&(1==1)) {
    std::cout << "caller_id= " << caller_id << '\n';
+   std::cout << "project_option= " << project_option << '\n';
+   std::cout << "mg_level= " << mg_level << '\n';
    std::cout << "residual_verify= " << residual_verify << '\n';
    std::cout << "min_diag= " << min_diag << '\n';
    std::cout << "beta= " << beta << '\n';
@@ -17782,7 +17785,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
       " HH_small= " << HH_small[i][j] << '\n';
     }
    }
-   amrex::Error("residual too large HTH, decrease mglib_min_coeff_factor");
+   amrex::Error("residual too large HTH, decrease ns.mglib_min_coeff_factor");
   }
   delete [] HTHy;
 

@@ -34,7 +34,8 @@ extern void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
  int& status,int numelem);
 extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
  int m,int m_small,
- int caller_id,int& status);
+ int caller_id,int project_option,
+ int mg_level,int& status);
 
 // if ncomp_input==-1, then ncomp=S_crse.ncomp()
 // spectral_override==0 => always do low order average down.
@@ -7467,6 +7468,11 @@ void NavierStokes::multiphase_GMRES_preconditioner(
  int presmooth,int postsmooth,
  int idx_Z,int idx_R,int nsolve) {
 
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
+
  if (override_bc_to_homogeneous==1) {
   // do nothing
  } else
@@ -7652,7 +7658,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
      int caller_id=1;
      GMRES_MIN_CPP(HH,beta,yy,
 	m,m_small,
-	caller_id,status);
+	caller_id,project_option,
+        level,status);
 
     } else if (m_small==0) {
 
