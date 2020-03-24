@@ -7892,7 +7892,8 @@ end subroutine dynamic_contact_angle
        print *,"cp error"
        stop
       endif
-      pressure=omega*rho*internal_energy
+        ! e=cv T
+      pressure=omega*rho*internal_energy  ! omega=gamma-1
 
       return
       end subroutine EOS_air
@@ -8228,7 +8229,7 @@ end subroutine dynamic_contact_angle
       internal_energy=cv*temperature
 
       return
-      end subroutine
+      end subroutine INTERNAL_air
 
 
       subroutine INTERNAL_simple_air(rho,temperature,internal_energy)
@@ -9053,7 +9054,7 @@ end subroutine dynamic_contact_angle
       internal_energy=cv*temperature+PP/rho
 
       return
-      end subroutine
+      end subroutine INTERNAL_stiffened
 
 
       subroutine TEMPERATURE_stiffened(rho,temperature, &
@@ -9518,6 +9519,7 @@ end subroutine dynamic_contact_angle
       end subroutine debug_EOS
 
         ! returns p(e*scale)/scale
+        ! pressure=p(density=rho,internal_energy)
       subroutine EOS_material(rho,internal_energy_in,pressure, &
         imattype,im)
       IMPLICIT NONE
@@ -9637,8 +9639,12 @@ end subroutine dynamic_contact_angle
       return
       end subroutine DeDT_material
 
-
+        ! in general for gas: e=cv T
+        !                     p=(gamma-1)rho e=(gamma-1)rho cv T
+        !                      =(cp-cv) rho T=rho R T
+        ! total energy per unit mass? = (1/2)u dot u  + e
         ! returns c^2(e*scale)/scale
+        ! sound squared=c^2(density=rho,internal_energy)
       subroutine SOUNDSQR_material(rho,internal_energy_in,soundsqr, &
         imattype,im)
       IMPLICIT NONE
@@ -9753,7 +9759,7 @@ end subroutine dynamic_contact_angle
       endif
 
       return
-      end subroutine
+      end subroutine INTERNAL_default
  
         ! returns e/scale
       subroutine INTERNAL_material_cutoff(rho,internal_energy, &
@@ -9781,6 +9787,7 @@ end subroutine dynamic_contact_angle
       end subroutine INTERNAL_material_cutoff
 
         ! returns e/scale
+        ! internal energy = e(temperature,density=rho)
       subroutine INTERNAL_material(rho,temperature,internal_energy, &
         imattype,im)
       IMPLICIT NONE
