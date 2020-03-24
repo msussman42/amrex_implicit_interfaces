@@ -17552,7 +17552,7 @@ NavierStokes::post_init (Real stop_time)
 //  Givens' rotation approach has a cost of O(m^2)
 //  ( min_y ||Hy - beta e1|| )
 // status==1 success
-// status==0 failure
+// status==0 poor conditioning
 // HT is m x m+1
 // HH=  h11 h12 h13 ... h1m
 //      h21 h22 h23 ... h2m
@@ -17570,6 +17570,119 @@ NavierStokes::post_init (Real stop_time)
 //         .
 //         .
 //     h1m h2m h3m h4m ... hmm hm+1,m
+//
+// beta_vec_input[m+1]
+// HH_input[m+1][m]
+//
+void GMRES_HELPER(Real** HH_input,Real* beta_vec_input,Real* yy,int m) {
+
+ if (m>=1) {
+  // do nothing
+ } else
+  amrex::Error("m invalid in GMRES_HELPER");
+
+ Real** HH=new Real*[m+1];
+ for (int i=0;i<m+1;i++) 
+  HH[i]=new Real[m];
+
+ Real* sn=new Real[m];
+ Real* cs=new Real[m];
+ Real* h=new Real[m+1];
+ Real* beta_vec=new Real[m+1];
+
+ for (int i=0;i<m+1;i++) {
+  for (int j=0;j<m;j++) {
+   if ((HH_input[i][j]>=0.0)||
+       (HH_input[i][j]<=0.0)) {
+    HH[i][j]=HH_input[i][j];
+   } else
+    amrex::Error("HH_input bust");
+  }
+  if ((beta_vec_input[i]>=0.0)||
+      (beta_vec_input[i]<=0.0)) {
+   beta_vec[i]=beta_vec_input[i];
+  } else
+   amrex::Error("beta_vec_input bust");
+ } // i=0..m
+
+ for (int i=0;i<m;i++) {
+  sn[i]=0.0;
+  cs[i]=0.0;
+ }
+ for (int i=0;i<m+1;i++) {
+  h[i]=0.0;
+ }
+
+ for (int k=1;k<=m;k++) {
+
+  for (int i=1;i<=m+1;i++)
+   h[i-1]=0.0;
+  for (int i=1;i<=k+1;i++)
+   h[i-1]=HH[i-1][k-1];
+
+  for (int i=1;i<=k-1;i++) {
+   Real temp=cs[i-1]*h[i-1]+sn[i-1]*h[i];
+   h[i]=-sn[i-1]*h[i-1]+cs[i-1]*h[i];
+   h[i-1]=temp;
+  }
+  Real cs_k=0.0;
+  Real sn_k=0.0;
+  Real v1=h[k-1];
+  Real v2=h[k];
+  if (v1==0.0) {
+   cs_k=0.0;
+   sn_k=1.0;
+  } else if (v1!=0.0) {
+   Real t=sqrt(v1*v1+v2*v2);
+   if (t>0.0) {
+    cs_k=std::abs(v1)/t;
+    sn_k=cs_k*v2/v1; 
+   } else {
+    std::cout << "t= " << t << '\n';
+    amrex::Error("t invalid");
+   }
+  } else
+   amrex::Error("v1 is corrupt");
+ 
+  h[k-1]=cs_k*h[k-1]+sn_k*h[k];
+  h[k]=0.0;
+
+  for (int i=1;i<=k+1;i++)
+   HH[i-1][k-1]=h[i-1];
+
+  cs[k-1]=cs_k;
+  sn[k-1]=sn_k;
+
+  beta_vec[k]=-sn[k-1]*beta_vec[k-1];
+  beta_vec[k-1]=cs[k-1]*beta_vec[k-1];
+
+ } // k=1..m
+
+ for (int k=m;k>=1;k--) {
+
+  yy[k-1]=beta_vec[k-1];
+  for (int j=k+1;j<=m_small;j++)
+   yy[k-1]-=HH[k-1][j-1]*yy[j-1];
+  Real hdiag=HH[k-1][k-1];
+  if (std::abs(hdiag)>0.0) 
+   yy[k-1]/=hdiag;
+  else
+   amrex::Error("hdiag became 0");
+
+ } // k=m ... 1 
+
+ delete [] sn;
+ delete [] cs;
+ delete [] h;
+ delete [] beta_vec;
+
+ for (int i=0;i<m+1;i++) 
+  delete [] HH[i];
+ delete [] HH;
+
+} // end subroutine GMRES_HELPER
+
+
 void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
 		int m,int m_small,
 		int caller_id,int project_option,
@@ -17589,7 +17702,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
 
  Real residual_verify=0.0;
 
- status=1;
+ status=1; // status==1 means success, status==0 means poor conditioning.
 
  if ((m_small>=1)&&(m_small<=m)) {
   // do nothing
@@ -17621,7 +17734,6 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
    } else if (HH[j][i]==0.0) {
     // do nothing
    } else {
-    status=0;
     amrex::Error("HH[j][i] corrupt");
    }
    if (j>=i+2) {
@@ -17641,7 +17753,6 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
    } else if (HH_small[j][i]==0.0) {
     // do nothing
    } else {
-    status=0;
     amrex::Error("HH_small[j][i] corrupt");
    }
    if (j>=i+2) {
@@ -17662,87 +17773,32 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
  if (beta>0.0) {
   // do nothing
  } else {
-  status=0;
   std::cout << "beta= " << beta << '\n';
   amrex::Error("beta invalid");
  }
 
- Real* sn=new Real[m_small];
- Real* cs=new Real[m_small];
- Real* h=new Real[m_small+1];
- Real* beta_vec=new Real[m_small+1];
+ Real* delta_y=new Real[m_small];
 
- for (int i=0;i<m_small;i++) {
-  sn[i]=0.0;
-  cs[i]=0.0;
- }
+ Real* beta_vec=new Real[m_small+1];
  for (int i=0;i<m_small+1;i++) {
-  h[i]=0.0;
   beta_vec[i]=0.0;
  }
  beta_vec[0]=beta;
 
- for (int k=1;k<=m_small;k++) {
+ GMRES_HELPER(HCOPY,beta_vec,yy,m_small);
 
-  for (int i=1;i<=m_small+1;i++)
-   h[i-1]=0.0;
-  for (int i=1;i<=k+1;i++)
-   h[i-1]=HCOPY[i-1][k-1];
-
-  for (int i=1;i<=k-1;i++) {
-   Real temp=cs[i-1]*h[i-1]+sn[i-1]*h[i];
-   h[i]=-sn[i-1]*h[i-1]+cs[i-1]*h[i];
-   h[i-1]=temp;
-  }
-  Real cs_k=0.0;
-  Real sn_k=0.0;
-  Real v1=h[k-1];
-  Real v2=h[k];
-  if (v1==0.0) {
-   cs_k=0.0;
-   sn_k=1.0;
-  } else if (v1!=0.0) {
-   Real t=sqrt(v1*v1+v2*v2);
-   if (t>0.0) {
-    cs_k=std::abs(v1)/t;
-    sn_k=cs_k*v2/v1; 
-   } else {
-    std::cout << "t= " << t << '\n';
-    amrex::Error("t invalid");
-   }
+ for (int i=0;i<m_small+1;i++) {
+  if (i==0) {
+   beta_vec[i]=beta;
+  } else if ((i>=1)&&(i<m_small+1)) {
+   beta_vec[i]=0.0;
   } else
-   amrex::Error("v1 is corrupt");
- 
-  h[k-1]=cs_k*h[k-1]+sn_k*h[k];
-  h[k]=0.0;
+   amrex::Error("i invalid");
+  for (int j=0;j<m_small;j++)
+   beta_vec[i]-=HCOPY[i][j]*yy[j];
+ }
 
-  for (int i=1;i<=k+1;i++)
-   HCOPY[i-1][k-1]=h[i-1];
-
-  cs[k-1]=cs_k;
-  sn[k-1]=sn_k;
-
-  beta_vec[k]=-sn[k-1]*beta_vec[k-1];
-  beta_vec[k-1]=cs[k-1]*beta_vec[k-1];
-
- } // k=1..m_small
-
- Real min_diag=std::abs(HCOPY[0][0]);
-
- for (int k=m_small;k>=1;k--) {
-
-  yy[k-1]=beta_vec[k-1];
-  for (int j=k+1;j<=m_small;j++)
-   yy[k-1]-=HCOPY[k-1][j-1]*yy[j-1];
-  Real hdiag=HCOPY[k-1][k-1];
-  if (std::abs(hdiag)<min_diag)
-   min_diag=std::abs(hdiag);
-  if (std::abs(hdiag)>0.0) 
-   yy[k-1]/=hdiag;
-  else
-   amrex::Error("hdiag became 0");
-
- } // k=m_small ... 1 
+ GMRES_HELPER(HCOPY,beta_vec,delta_y,m_small);
 
  if (1==1) {
   Real** HTH=new Real*[m_small];
@@ -17794,10 +17850,9 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   delete [] HTH;
  } // sanity check
 
- delete [] sn;
- delete [] cs;
- delete [] h;
  delete [] beta_vec;
+
+ delete [] delta_y;
 
  for (int i=0;i<m_small;i++) 
   delete [] HT[i];
