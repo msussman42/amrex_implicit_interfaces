@@ -17661,7 +17661,7 @@ void GMRES_HELPER(Real** HH_input,Real* beta_vec_input,Real* yy,int m) {
  for (int k=m;k>=1;k--) {
 
   yy[k-1]=beta_vec[k-1];
-  for (int j=k+1;j<=m_small;j++)
+  for (int j=k+1;j<=m;j++)
    yy[k-1]-=HH[k-1][j-1]*yy[j-1];
   Real hdiag=HH[k-1][k-1];
   if (std::abs(hdiag)>0.0) 
@@ -17700,8 +17700,6 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
  BLProfiler bprof(profname);
 #endif
 
- Real residual_verify=0.0;
-
  status=1; // status==1 means success, status==0 means poor conditioning.
 
  if ((m_small>=1)&&(m_small<=m)) {
@@ -17720,55 +17718,50 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
  for (int i=0;i<m_small+1;i++) 
   HCOPY[i]=new Real[m_small];
 
- Real** HT=new Real*[m_small];
- for (int i=0;i<m_small;i++) 
-  HT[i]=new Real[m_small+1];
+ for (int i=0;i<m_small+1;i++) { 
+  for (int j=0;j<m_small;j++) {
 
- for (int i=0;i<m_small;i++) { 
-  for (int j=0;j<m_small+1;j++) {
-
-   if (HH[j][i]<0.0) {
+   if (HH[i][j]<0.0) {
     // do nothing
-   } else if (HH[j][i]>0.0) {
+   } else if (HH[i][j]>0.0) {
     // do nothing
-   } else if (HH[j][i]==0.0) {
+   } else if (HH[i][j]==0.0) {
     // do nothing
    } else {
-    amrex::Error("HH[j][i] corrupt");
+    amrex::Error("HH[i][j] corrupt");
    }
-   if (j>=i+2) {
-    if (HH[j][i]==0.0) {
+   if (i>=j+2) {
+    if (HH[i][j]==0.0) {
      // do nothing
     } else
      amrex::Error("HH should be 0");
-   } else if (j<i+2) {
+   } else if (i<j+2) {
     // check nothing
    } else
     amrex::Error("i or j became corrupt");
 
-   if (HH_small[j][i]<0.0) {
+   if (HH_small[i][j]<0.0) {
     // do nothing
-   } else if (HH_small[j][i]>0.0) {
+   } else if (HH_small[i][j]>0.0) {
     // do nothing
-   } else if (HH_small[j][i]==0.0) {
+   } else if (HH_small[i][j]==0.0) {
     // do nothing
    } else {
-    amrex::Error("HH_small[j][i] corrupt");
+    amrex::Error("HH_small[i][j] corrupt");
    }
-   if (j>=i+2) {
-    if (HH_small[j][i]==0.0) {
+   if (i>=j+2) {
+    if (HH_small[i][j]==0.0) {
      // do nothing
     } else
      amrex::Error("HH_small should be 0");
-   } else if (j<i+2) {
+   } else if (i<j+2) {
     // check nothing
    } else
     amrex::Error("i or j became corrupt");
 
-   HT[i][j]=HH[j][i];
-   HCOPY[j][i]=HH[j][i];
-  } // j=0;j<m_small+1
- } // i=0;i<m_small
+   HCOPY[i][j]=HH[i][j];
+  } // j=0;j<m_small
+ } //  i=0;i<m_small+1
 
  if (beta>0.0) {
   // do nothing
@@ -17794,69 +17787,43 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
    beta_vec[i]=0.0;
   } else
    amrex::Error("i invalid");
+
   for (int j=0;j<m_small;j++)
    beta_vec[i]-=HCOPY[i][j]*yy[j];
  }
 
  GMRES_HELPER(HCOPY,beta_vec,delta_y,m_small);
 
- if (1==1) {
-  Real** HTH=new Real*[m_small];
-  for (int i=0;i<m_small;i++) { 
-   HTH[i]=new Real[m_small];
-   for (int j=0;j<m_small;j++) {
-    HTH[i][j]=0.0;
-    for (int k=0;k<m_small+1;k++)
-     HTH[i][j]+=HH_small[k][i]*HH_small[k][j];
-   }
-  }
-  residual_verify=0.0;
-  Real* HTHy=new Real[m_small];
-  for (int i=0;i<m_small;i++) {
-   HTHy[i]=0.0;
-   for (int j=0;j<m_small;j++) {
-    HTHy[i]+=HTH[i][j]*yy[j];
-   }
-   Real res_comp=HTHy[i]-HH_small[0][i]*beta;
-   residual_verify+=res_comp*res_comp;
-  }
-  residual_verify=sqrt(residual_verify)/m_small;
-  if ((residual_verify>1.0e-3*min_diag)&&
-      (residual_verify>1.0e-3)&&(1==1)) {
+ Real norm_y=0.0;
+ Real norm_delta_y=0.0;
+ for (int i=0;i<m_small;i++) { 
+  norm_y+=yy[i]*yy[i];
+  norm_delta_y+=delta_y[i]*delta_y[i];
+ }
+ if (norm_y>0.0) {
+  norm_y=sqrt(norm_y);
+  norm_delta_y=sqrt(norm_delta_y);
+  double relative_error=norm_delta_y/norm_y;
+
+  if (relative_error>0.5) {
    std::cout << "caller_id= " << caller_id << '\n';
    std::cout << "project_option= " << project_option << '\n';
    std::cout << "mg_level= " << mg_level << '\n';
-   std::cout << "residual_verify= " << residual_verify << '\n';
-   std::cout << "min_diag= " << min_diag << '\n';
+   std::cout << "relative_error= " << relative_error << '\n';
    std::cout << "beta= " << beta << '\n';
-   for (int j=0;j<m_small;j++) {
-    std::cout << "j= " << j << " yy= " << yy[j] << '\n';
-    std::cout << "j= " << j << " HTHy= " << HTHy[j] << '\n';
-    std::cout << "j= " << j << " HH_small[0][j]*beta= " << 
-      HH_small[0][j]*beta << '\n';
-   }
-   for (int i=0;i<m_small+1;i++) {
-    for (int j=0;j<m_small;j++) {
-     std::cout << "i= " << i << " j= " << j << 
-      " HH_small= " << HH_small[i][j] << '\n';
-    }
-   }
-   amrex::Error("residual too large HTH, decrease ns.mglib_min_coeff_factor");
+   std::cout << "norm_y= " << norm_y << '\n';
+   std::cout << "norm_delta_y= " << norm_delta_y << '\n';
+   std::cout << "m_small= " << m_small << '\n';
+   amrex::Error("relative_error too large, decrease ns.mglib_min_coeff_factor");
   }
-  delete [] HTHy;
-
-  for (int i=0;i<m_small;i++) 
-   delete [] HTH[i];
-  delete [] HTH;
- } // sanity check
+ } else if (norm_y==0.0) {
+  amrex::Error("norm_y cannot be zero");
+ } else
+  amrex::Error("norm_y invalid");
 
  delete [] beta_vec;
 
  delete [] delta_y;
-
- for (int i=0;i<m_small;i++) 
-  delete [] HT[i];
- delete [] HT;
 
  for (int i=0;i<m_small+1;i++) 
   delete [] HCOPY[i];
