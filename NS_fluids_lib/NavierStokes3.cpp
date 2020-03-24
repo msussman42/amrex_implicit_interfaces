@@ -7468,6 +7468,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
  int presmooth,int postsmooth,
  int idx_Z,int idx_R,int nsolve) {
 
+ int caller_id=0;
+
  if (level==0) {
   // do nothing
  } else
@@ -7629,22 +7631,42 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
      if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
 
-      if ((j>=0)&&(j<m-1)) {
-       aa=1.0/HH[j+1][j];
-        // V=V+aa W
-       mf_combine(project_option,
-        GMRES_BUFFER0_V_MF+j+1,
-        GMRES_BUFFER_W_MF,aa,
-        GMRES_BUFFER0_V_MF+j+1,nsolve); 
-       project_right_hand_side(GMRES_BUFFER0_V_MF+j+1,
-		       project_option,change_flag);
-      } else if (j==m-1) {
-       // do nothing
+      status=1;
+
+      if ((j>=0)&&(j<m_small)) {
+       caller_id=11;
+       GMRES_MIN_CPP(HH,beta,yy,
+	m,j+1,
+	caller_id,project_option,
+        level,status);
       } else
        amrex::Error("j invalid");
 
+      if (status==1) {
+
+       if ((j>=0)&&(j<m-1)) {
+        aa=1.0/HH[j+1][j];
+         // V=V+aa W
+        mf_combine(project_option,
+         GMRES_BUFFER0_V_MF+j+1,
+         GMRES_BUFFER_W_MF,aa,
+         GMRES_BUFFER0_V_MF+j+1,nsolve); 
+        project_right_hand_side(GMRES_BUFFER0_V_MF+j+1,
+		       project_option,change_flag);
+       } else if (j==m-1) {
+        // do nothing
+       } else
+        amrex::Error("j invalid");
+
+      } else if (status==0) {
+
+       m_small=j;
+
+      } else
+       amrex::Error("status invalid");
+
      } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
-      m_small=j;
+      m_small=j; // valid indexes of HH: i1=0..j  i2=0..j-1
      } else
       amrex::Error("HH[j+1][j] invalid");
 
@@ -7655,11 +7677,16 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     if ((m_small>=1)&&
         (m_small<=m)) {
 
-     int caller_id=1;
+     caller_id=1;
      GMRES_MIN_CPP(HH,beta,yy,
 	m,m_small,
 	caller_id,project_option,
         level,status);
+
+     if (status==1) {
+      // do nothing
+     } else
+      amrex::Error("expecting status==1 here");
 
     } else if (m_small==0) {
 

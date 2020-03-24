@@ -2583,6 +2583,8 @@ ABecLaplacian::pcg_GMRES_solve(
     int level,
     int nit) {
 
+ int caller_id=0;
+
  if (nsolve_bicgstab>=1) {
   // do nothing
  } else
@@ -2724,17 +2726,37 @@ ABecLaplacian::pcg_GMRES_solve(
       
      if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
 
-      if ((j>=0)&&(j<m-1)) {
-       aa=1.0/HH[j+1][j];
-        // V=V+aa W
-       CG_advance((*GMRES_V_MF[j+1][coarsefine]),aa,
-                  (*GMRES_V_MF[j+1][coarsefine]),
-                  (*GMRES_W_MF[coarsefine]),level);
-       project_null_space(*GMRES_V_MF[j+1][coarsefine],level);
-      } else if (j==m-1) {
-       // do nothing
+      status=1;
+
+      if ((j>=0)&&(j<m_small)) {
+       caller_id=33;
+       GMRES_MIN_CPP(HH,beta,yy,
+	m,j+1,
+	caller_id,cfd_project_option,
+        level,status);
       } else
        amrex::Error("j invalid");
+
+      if (status==1) {
+ 
+       if ((j>=0)&&(j<m-1)) {
+        aa=1.0/HH[j+1][j];
+         // V=V+aa W
+        CG_advance((*GMRES_V_MF[j+1][coarsefine]),aa,
+                   (*GMRES_V_MF[j+1][coarsefine]),
+                   (*GMRES_W_MF[coarsefine]),level);
+        project_null_space(*GMRES_V_MF[j+1][coarsefine],level);
+       } else if (j==m-1) {
+        // do nothing
+       } else
+        amrex::Error("j invalid");
+
+      } else if (status==0) {
+
+       m_small=j;
+
+      } else
+       amrex::Error("status invalid");
 
      } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
       m_small=j;
@@ -2750,11 +2772,16 @@ ABecLaplacian::pcg_GMRES_solve(
     if ((m_small>=1)&&
         (m_small<=m)) {
 
-     int caller_id=3;
+     caller_id=3;
      GMRES_MIN_CPP(HH,beta,yy,
        m,m_small,
        caller_id,cfd_project_option,
        level,status);
+
+     if (status==1) {
+      // do nothing
+     } else
+      amrex::Error("expecting status==1 here");
 
     } else if (m_small==0) {
 

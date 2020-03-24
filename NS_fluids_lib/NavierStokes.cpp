@@ -17806,15 +17806,18 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   double relative_error=norm_delta_y/norm_y;
 
   if (relative_error>0.5) {
-   std::cout << "caller_id= " << caller_id << '\n';
-   std::cout << "project_option= " << project_option << '\n';
-   std::cout << "mg_level= " << mg_level << '\n';
-   std::cout << "relative_error= " << relative_error << '\n';
-   std::cout << "beta= " << beta << '\n';
-   std::cout << "norm_y= " << norm_y << '\n';
-   std::cout << "norm_delta_y= " << norm_delta_y << '\n';
-   std::cout << "m_small= " << m_small << '\n';
-   amrex::Error("relative_error too large, decrease ns.mglib_min_coeff_factor");
+   status=0;
+   if (1==0) {
+    std::cout << "caller_id= " << caller_id << '\n';
+    std::cout << "project_option= " << project_option << '\n';
+    std::cout << "mg_level= " << mg_level << '\n';
+    std::cout << "relative_error= " << relative_error << '\n';
+    std::cout << "beta= " << beta << '\n';
+    std::cout << "norm_y= " << norm_y << '\n';
+    std::cout << "norm_delta_y= " << norm_delta_y << '\n';
+    std::cout << "m_small= " << m_small << '\n';
+    amrex::Error("relative_error large, decrease ns.mglib_min_coeff_factor");
+   }
   }
  } else if (norm_y==0.0) {
   amrex::Error("norm_y cannot be zero");
