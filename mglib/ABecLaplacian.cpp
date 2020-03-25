@@ -4102,7 +4102,7 @@ ABecLaplacian::CG_solve(
      CG_p_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
      CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN); 
      CG_v_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
-     sol.plus(*CG_delta_sol[coarsefine],0,nsolve_bicgstab,0);
+     sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_bicgstab,0,0);
      project_null_space(sol,level);
      CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_bicgstab,1);
      MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
@@ -4113,6 +4113,7 @@ ABecLaplacian::CG_solve(
      amrex::Error("error_close_to_zero invalid");
 
    } else if (restart_flag==0) {
+
     if ((error_close_to_zero==0)||  // tolerances not met.
         (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
      // do nothing
@@ -4120,6 +4121,13 @@ ABecLaplacian::CG_solve(
      // do nothing
     } else
      amrex::Error("error_close_to_zero invalid");
+
+    sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_bicgstab,0,0);
+    project_null_space(sol,level);
+    CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_bicgstab,1);
+    MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
+      *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+
    } else 
     amrex::Error("restart_flag invalid");
 

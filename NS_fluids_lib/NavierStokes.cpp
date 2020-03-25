@@ -17805,7 +17805,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   norm_delta_y=sqrt(norm_delta_y);
   double relative_error=norm_delta_y/norm_y;
 
-  if (relative_error>0.5) {
+  if (relative_error>1.0) {
    status=0;
    if (1==0) {
     std::cout << "caller_id= " << caller_id << '\n';
