@@ -102,7 +102,9 @@ public:
       int usecg_at_bottom,
       int& meets_tol,int smooth_type,
       int bottom_smooth_type,int presmooth,
-      int postsmooth,Real& error0,
+      int postsmooth,
+      Real& error0,
+      Real& A_error0,
       int level);
 
     void CG_dump_params(Real rnorm,Real rnorm0,
@@ -170,6 +172,7 @@ protected:
     Vector<Real> pw_dotprod_var;
 
     Vector< Array<Real,4> > CG_error_history;
+    Vector< Array<Real,4> > CG_A_error_history;
 
     void MG_solve_ (int nsverbose,MultiFab& _sol,
      Real eps_abs,Real atol_b,MultiFab& pbdry,Vector<int> bcpres_array,

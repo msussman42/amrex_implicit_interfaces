@@ -3614,7 +3614,9 @@ ABecLaplacian::CG_solve(
     int& meets_tol,
     int smooth_type,int bottom_smooth_type,
     int presmooth,int postsmooth,
-    Real& error_init,int level)
+    Real& error_init,
+    Real& A_error_init,
+    int level)
 {
 
 #if (profile_solver==1)
@@ -3708,6 +3710,15 @@ ABecLaplacian::CG_solve(
 
  Real rnorm = LPnorm(*CG_r[coarsefine], level);
 
+ MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
+       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+ apply(*CG_Av_search[coarsefine],
+       *CG_p_search_SOLN[coarsefine],level,
+       *CG_pbdryhom[coarsefine],bcpres_array);
+ project_null_space((*CG_Av_search[coarsefine]),level);
+
+ Real Ar_norm = LPnorm(*CG_Av_search[coarsefine],level);
+
 #if (profile_solver==1)
  bprof.start();
 #endif
@@ -3717,16 +3728,25 @@ ABecLaplacian::CG_solve(
  } else {
   amrex::Error("rnorm invalid");
  }
+ if (Ar_norm>=0.0) {
+  Ar_norm=sqrt(Ar_norm);
+ } else {
+  amrex::Error("Ar_norm invalid");
+ }
 	 
  Real rnorm_init=rnorm;
+ Real Ar_norm_init=Ar_norm;
  error_init=rnorm_init;
+ A_error_init=Ar_norm_init;
 
  if ((CG_verbose>0)||(nsverbose>0)) {
   if (ParallelDescriptor::IOProcessor()) {
    if (is_bottom==1)
-    std::cout << "CGsolver(BOTTOM):Initial error(error_init)="<<rnorm << '\n';
+    std::cout << "CGsolver(BOTTOM):Initial error(r0,Ar0)="<<
+	    rnorm << ' ' << Ar_norm << '\n';
    else
-    std::cout << "CGsolver(NOBOT):Initial error(error_init)="<<rnorm << '\n';
+    std::cout << "CGsolver(NOBOT):Initial error(r0,Ar0)="<<
+	    rnorm << ' ' << Ar_norm << '\n';
   }
  }
 
@@ -3770,18 +3790,23 @@ ABecLaplacian::CG_solve(
  CG_check_for_convergence(
    coarsefine,
    local_presmooth,local_postsmooth,
-   rnorm,rnorm_init,
+   rnorm,
+   rnorm_init,
+   Ar_norm,
+   Ar_rnorm_init,
    eps_abs,relative_error,nit,
    error_close_to_zero,level);
 
  if (ParallelDescriptor::IOProcessor()) {
   if (CG_verbose>1) {
    if (is_bottom==1)
-    std::cout << "CGSolver(BOT): rnorm_init,eps_abs,relative_error " <<
-     rnorm_init << ' ' << eps_abs << ' ' << relative_error << '\n';
+    std::cout << "CGSolver(BOT): r0,Ar0,eps_abs,eps_rel " <<
+     rnorm_init << ' ' << Ar_norm_init << ' ' << 
+     eps_abs << ' ' << relative_error << '\n';
    else
-    std::cout << "CGSolver(NOBOT): rnorm_init,eps_abs,relative_error " <<
-     rnorm_init << ' ' << eps_abs << ' ' << relative_error << '\n';
+    std::cout << "CGSolver(NOBOT): r0,Ar0,eps_abs,eps_rel " <<
+     rnorm_init << ' ' << Ar_norm_init << ' ' << 
+     eps_abs << ' ' << relative_error << '\n';
   }
  }
 
@@ -3790,8 +3815,10 @@ ABecLaplacian::CG_solve(
 #endif
 
  for (int ehist=0;ehist<CG_error_history.size();ehist++) {
-  for (int ih=0;ih<2;ih++)
+  for (int ih=0;ih<2;ih++) {
    CG_error_history[ehist][2*coarsefine+ih]=0.0;
+   CG_A_error_history[ehist][2*coarsefine+ih]=0.0;
+  }
  }
 
  int local_use_bicgstab=abec_use_bicgstab;
@@ -3801,7 +3828,7 @@ ABecLaplacian::CG_solve(
   restart_flag=0;
 
   rho_old=rho; // initially or on restart, rho_old=rho=1
-
+FIX ME
   rnorm=LPnorm(*CG_r[coarsefine],level);
   if (rnorm>=0.0) {
    rnorm=sqrt(rnorm);
