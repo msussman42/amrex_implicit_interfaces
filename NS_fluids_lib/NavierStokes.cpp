@@ -17589,6 +17589,8 @@ void GMRES_HELPER(Real** HH_input,Real* beta_vec_input,Real* yy,int m) {
  Real* cs=new Real[m];
  Real* h=new Real[m+1];
  Real* beta_vec=new Real[m+1];
+ Real beta1;
+ Real beta2;
 
  for (int i=0;i<m+1;i++) {
   for (int j=0;j<m;j++) {
@@ -17643,7 +17645,9 @@ void GMRES_HELPER(Real** HH_input,Real* beta_vec_input,Real* yy,int m) {
    }
   } else
    amrex::Error("v1 is corrupt");
- 
+
+    // the rotation matrix:  ( cs  sn 
+    //                         -sn cs ) 
   h[k-1]=cs_k*h[k-1]+sn_k*h[k];
   h[k]=0.0;
 
@@ -17653,8 +17657,10 @@ void GMRES_HELPER(Real** HH_input,Real* beta_vec_input,Real* yy,int m) {
   cs[k-1]=cs_k;
   sn[k-1]=sn_k;
 
-  beta_vec[k]=-sn[k-1]*beta_vec[k-1];
-  beta_vec[k-1]=cs[k-1]*beta_vec[k-1];
+  beta1=beta_vec[k-1];
+  beta2=beta_vec[k];
+  beta_vec[k-1]=cs[k-1]*beta1+sn[k-1]*beta2;
+  beta_vec[k]=-sn[k-1]*beta1+cs[k-1]*beta2;
 
  } // k=1..m
 
@@ -17790,7 +17796,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
 
   for (int j=0;j<m_small;j++)
    beta_vec[i]-=HCOPY[i][j]*yy[j];
- }
+ } // i=0..m_small+1
 
  GMRES_HELPER(HCOPY,beta_vec,delta_y,m_small);
 
@@ -17805,7 +17811,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   norm_delta_y=sqrt(norm_delta_y);
   double relative_error=norm_delta_y/norm_y;
 
-  if (relative_error>1.0) {
+  if (relative_error>0.01) {
    status=0;
    if (1==0) {
     std::cout << "caller_id= " << caller_id << '\n';

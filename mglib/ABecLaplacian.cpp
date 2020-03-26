@@ -936,9 +936,12 @@ ABecLaplacian::ABecLaplacian (
  CG_verbose = CG_def_verbose;
 
  CG_error_history.resize(CG_maxiter);
+ CG_A_error_history.resize(CG_maxiter);
  for (int ehist=0;ehist<CG_error_history.size();ehist++) {
-  for (int ih=0;ih<4;ih++)
+  for (int ih=0;ih<4;ih++) {
    CG_error_history[ehist][ih]=0.0;
+   CG_A_error_history[ehist][ih]=0.0;
+  }
  }
 
  nsolve_bicgstab=nsolve_in; 
@@ -2755,6 +2758,14 @@ ABecLaplacian::pcg_GMRES_solve(
 
        m_small=j;
 
+       if (1==0) {
+        std::cout << "j= " << j << " HH[j][j]= " <<
+          HH[j][j] << endl;
+        std::cout << "j= " << j << " HH[j+1][j]= " <<
+          HH[j+1][j] << endl;
+	std::cout << "j= " << j << " beta= " << beta << endl;
+       }
+
       } else
        amrex::Error("status invalid");
 
@@ -3501,6 +3512,10 @@ ABecLaplacian::pcg_GMRES_solve(
      coarsefine << " rnorm=" <<
      CG_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
      CG_error_history[ehist][2*coarsefine+1] << '\n';
+   std::cout << "nit " << ehist << " CG_A_error_history coarsefine " <<
+     coarsefine << " Ar_norm=" <<
+     CG_A_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
+     CG_A_error_history[ehist][2*coarsefine+1] << '\n';
   }
 
   amrex::Error("ABecLaplacian.cpp: gmres_precond_iter invalid");
@@ -3517,7 +3532,11 @@ void
 ABecLaplacian::CG_check_for_convergence(
   int coarsefine,
   int presmooth,int postsmooth,
-  Real rnorm,Real rnorm_init,Real eps_abs,
+  Real rnorm,
+  Real rnorm_init,
+  Real Ar_norm,
+  Real Ar_norm_init,
+  Real eps_abs,
   Real relative_error,int nit,int& error_close_to_zero,
   int level) {
 
@@ -3537,6 +3556,14 @@ ABecLaplacian::CG_check_for_convergence(
 
  int base_check=((rnorm<=eps_abs)||
                  (rnorm<=relative_error*rnorm_init));
+ if (base_check==0) {
+  base_check=((Ar_norm<=eps_abs)||
+              (Ar_norm<=relative_error*Ar_norm_init));
+ } else if (base_check==1) {
+  // do nothing
+ } else
+  amrex::Error("base_check invalid");
+
 
  if (nit>critical_nit) {
 
@@ -3546,6 +3573,14 @@ ABecLaplacian::CG_check_for_convergence(
 
   error_close_to_zero=((rnorm<=critical_abs_tol)||
                        (rnorm<=critical_rel_tol*rnorm_init));
+
+  if (error_close_to_zero==0) {
+   error_close_to_zero=((Ar_norm<=critical_abs_tol)||
+                        (Ar_norm<=critical_rel_tol*Ar_norm_init));
+  } else if (error_close_to_zero==1) {
+   // do nothing
+  } else
+   amrex::Error("error_close_to_zero invalid");
 
   if ((error_close_to_zero==0)&&
       (base_check==1))
@@ -3557,15 +3592,22 @@ ABecLaplacian::CG_check_for_convergence(
  if (ParallelDescriptor::IOProcessor()) {
   if (CG_verbose>1) {
    std::cout << "in: CG_check_for_convergence nit= " << nit << 
-	   " rnorm_init= " <<
+	  " rnorm_init= " <<
 	  rnorm_init << " rnorm= " << rnorm << '\n';
+   std::cout << "in: CG_check_for_convergence nit= " << nit << 
+	  " Ar_norm_init= " <<
+	  Ar_norm_init << " Ar_norm= " << Ar_norm << '\n';
   }
  }
 
 } // CG_check_for_convergence
 
 void 
-ABecLaplacian::CG_dump_params(Real rnorm,Real rnorm_init,
+ABecLaplacian::CG_dump_params(
+		Real rnorm,
+		Real rnorm_init,
+		Real Ar_norm,
+		Real Ar_norm_init,
 		Real eps_abs,Real relative_error,
                 int is_bottom,Real bot_atol,
                 int usecg_at_bottom,int smooth_type,
@@ -3577,6 +3619,9 @@ ABecLaplacian::CG_dump_params(Real rnorm,Real rnorm_init,
   std::cout << "level= " << level << '\n';
   std::cout << "rnorm_init,rnorm,eps_abs,relative_error " <<
    rnorm_init << ' ' << rnorm << ' ' <<  eps_abs << 
+   ' ' << relative_error << '\n';
+  std::cout << "Ar_norm_init,Ar_norm,eps_abs,relative_error " <<
+   Ar_norm_init << ' ' << Ar_norm << ' ' <<  eps_abs << 
    ' ' << relative_error << '\n';
   std::cout << "is_bottom= " << is_bottom << '\n';
   std::cout << "bot_atol= " << bot_atol << '\n';
@@ -3793,7 +3838,7 @@ ABecLaplacian::CG_solve(
    rnorm,
    rnorm_init,
    Ar_norm,
-   Ar_rnorm_init,
+   Ar_norm_init,
    eps_abs,relative_error,nit,
    error_close_to_zero,level);
 
@@ -3828,23 +3873,51 @@ ABecLaplacian::CG_solve(
   restart_flag=0;
 
   rho_old=rho; // initially or on restart, rho_old=rho=1
-FIX ME
+
   rnorm=LPnorm(*CG_r[coarsefine],level);
+
   if (rnorm>=0.0) {
    rnorm=sqrt(rnorm);
   } else {
    amrex::Error("rnorm invalid mglib");
   }
-  if (nit==0)
+
+  MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
+       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+  apply(*CG_Av_search[coarsefine],
+       *CG_p_search_SOLN[coarsefine],level,
+       *CG_pbdryhom[coarsefine],bcpres_array);
+  project_null_space((*CG_Av_search[coarsefine]),level);
+
+  Ar_norm = LPnorm(*CG_Av_search[coarsefine],level);
+
+  if (Ar_norm>=0.0) {
+   Ar_norm=sqrt(Ar_norm);
+  } else {
+   amrex::Error("Ar_norm invalid");
+  }
+
+  if (nit==0) {
    rnorm_init=rnorm;
+   Ar_norm_init=Ar_norm;
+  } else if (nit>0) {
+   // do nothing
+  } else
+   amrex::Error("nit invalid");
 
   CG_error_history[nit][2*coarsefine]=rnorm;
   CG_error_history[nit][2*coarsefine+1]=eps_abs;
 
+  CG_A_error_history[nit][2*coarsefine]=Ar_norm;
+  CG_A_error_history[nit][2*coarsefine+1]=eps_abs;
+
   CG_check_for_convergence(
    coarsefine,
    local_presmooth,local_postsmooth,
-   rnorm,rnorm_init,
+   rnorm,
+   rnorm_init,
+   Ar_norm,
+   Ar_norm_init,
    eps_abs,relative_error,nit,
    error_close_to_zero,level);
 
@@ -4010,10 +4083,22 @@ FIX ME
        amrex::Error("rnorm invalid mglib");
       }
 
+      MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
+       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+      apply(*CG_Av_search[coarsefine],
+       *CG_p_search_SOLN[coarsefine],level,
+       *CG_pbdryhom[coarsefine],bcpres_array);
+      project_null_space((*CG_Av_search[coarsefine]),level);
+
+      Ar_norm = LPnorm(*CG_Av_search[coarsefine],level);
+
       CG_check_for_convergence(
         coarsefine,
         local_presmooth,local_postsmooth,
-	rnorm,rnorm_init,
+	rnorm,
+	rnorm_init,
+	Ar_norm,
+	Ar_norm_init,
 	eps_abs,relative_error,nit,
         error_close_to_zero,level);
 
@@ -4111,6 +4196,8 @@ FIX ME
 
       std::cout << "RESTARTING: rnorm= " << 
        rnorm << '\n';
+      std::cout << "RESTARTING: Ar_norm= " << 
+       Ar_norm << '\n';
       std::cout << "RESTARTING: nsolve_bicgstab= " << 
         nsolve_bicgstab << '\n';
      }
@@ -4216,10 +4303,17 @@ FIX ME
     std::cout << "nit " << ehist << " CG_error_history[nit][0,1] " <<
      CG_error_history[ehist][2*coarsefine+0] << ' ' <<
      CG_error_history[ehist][2*coarsefine+1] << '\n';
+    std::cout << "nit " << ehist << " CG_A_error_history[nit][0,1] " <<
+     CG_A_error_history[ehist][2*coarsefine+0] << ' ' <<
+     CG_A_error_history[ehist][2*coarsefine+1] << '\n';
    }
   }
 
-  CG_dump_params(rnorm,rnorm_init,
+  CG_dump_params(
+    rnorm,
+    rnorm_init,
+    Ar_norm,
+    Ar_norm_init,
     eps_abs,relative_error,
     is_bottom,bot_atol,
     usecg_at_bottom,smooth_type,
@@ -4248,11 +4342,28 @@ FIX ME
    amrex::Error("testnorm invalid mglib");
   }
 
+  MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
+       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+  apply(*CG_Av_search[coarsefine],
+       *CG_p_search_SOLN[coarsefine],level,
+       *CG_pbdryhom[coarsefine],bcpres_array);
+  project_null_space((*CG_Av_search[coarsefine]),level);
+
+  Real A_testnorm = LPnorm(*CG_Av_search[coarsefine],level);
+  if (A_testnorm>=0.0) {
+   A_testnorm=sqrt(A_testnorm);
+  } else {
+   amrex::Error("A_testnorm invalid mglib");
+  }
+
   if (ParallelDescriptor::IOProcessor()) {
-   if (is_bottom==1)
+   if (is_bottom==1) {
     std::cout << "residual non-homogeneous bc (BOT) " << testnorm << '\n';  
-   else
-    std::cout << "residual non-homogeneous bc (NOBOT)"<<testnorm << '\n';  
+    std::cout << "A_residual non-homogeneous bc (BOT) " << A_testnorm << '\n';  
+   } else {
+    std::cout << "residual non-homogeneous bc (NOBOT)"<< testnorm << '\n';  
+    std::cout << "A_residual non-homogeneous bc (NOBOT)"<< A_testnorm << '\n';  
+   }
   }
  }
 
@@ -4612,6 +4723,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
  } else {
   int local_meets_tol=0;
   Real local_error0=0.0;
+  Real local_A_error0=0.0;
   int nsverbose=0;
   int cg_cycles_parm=0;
 
@@ -4624,7 +4736,10 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
     pbdry,bcpres_array,usecg_at_bottom,
     local_meets_tol,
     bottom_smooth_type,bottom_smooth_type,
-    presmooth,postsmooth,local_error0,level);
+    presmooth,postsmooth,
+    local_error0,
+    local_A_error0,
+    level);
  }
 }
 

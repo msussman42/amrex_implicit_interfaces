@@ -107,7 +107,11 @@ public:
       Real& A_error0,
       int level);
 
-    void CG_dump_params(Real rnorm,Real rnorm0,
+    void CG_dump_params(
+      Real rnorm,
+      Real rnorm0,
+      Real Ar_norm,
+      Real Ar_norm0,
       Real eps_abs,Real relative_error,
       int is_bottom,Real bot_atol,
       int usecg_at_bottom,int smooth_type,
@@ -154,7 +158,11 @@ protected:
     void CG_check_for_convergence(
       int coarsefine,
       int presmooth,int postsmooth,
-      Real rnorm,Real rnorm0,Real eps_abs,
+      Real rnorm,
+      Real rnorm0,
+      Real Ar_norm,
+      Real Ar_norm0,
+      Real eps_abs,
       Real relative_error,int nit,int& error_close_to_zero,
       int level);
 

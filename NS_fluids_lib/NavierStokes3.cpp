@@ -7069,6 +7069,7 @@ void NavierStokes::relaxLEVEL(
   int usecg_at_bottom=1;
   int temp_meets_tol=0;
   Real error0=0.0;
+  Real A_error0=0.0;
   Real bottom_bottom_tol=save_atol_b*bottom_bottom_tol_factor;
 
   int lev0_cycles=0;
@@ -7091,6 +7092,7 @@ void NavierStokes::relaxLEVEL(
    smooth_type,smooth_type,
    presmooth,presmooth,
    error0,
+   A_error0,
    apply_lev_cg_solve);
 
 #if (profile_solver==1)
