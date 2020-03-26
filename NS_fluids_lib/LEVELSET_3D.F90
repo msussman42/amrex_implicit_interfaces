@@ -15850,7 +15850,7 @@ stop
       end subroutine FORT_GFMUPDATE
 
 
-      ! called from: NavierStokes::allocate_FACE_WEIGHT
+      ! called from: NavierStokes::allocate_FACE_WEIGHT (NavierStokes3.cpp)
       !  which is called from:
       !   NavierStokes::update_SEM_forcesALL
       !   NavierStokes::multiphase_project
