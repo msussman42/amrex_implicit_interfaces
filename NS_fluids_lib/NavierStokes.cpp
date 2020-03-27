@@ -17806,9 +17806,14 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   norm_y+=yy[i]*yy[i];
   norm_delta_y+=delta_y[i]*delta_y[i];
  }
+
+ if (norm_delta_y>=0.0) {
+  norm_delta_y=sqrt(norm_delta_y);
+ } else
+  amrex::Error("norm_delta_y invalid");
+
  if (norm_y>0.0) {
   norm_y=sqrt(norm_y);
-  norm_delta_y=sqrt(norm_delta_y);
   double relative_error=norm_delta_y/norm_y;
 
   if (relative_error>0.01) {
@@ -17826,7 +17831,18 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
    }
   }
  } else if (norm_y==0.0) {
-  amrex::Error("norm_y cannot be zero");
+  status=0;
+  if ((norm_delta_y!=0.0)||(1==0)) {
+   std::cout << "caller_id= " << caller_id << '\n';
+   std::cout << "project_option= " << project_option << '\n';
+   std::cout << "mg_level= " << mg_level << '\n';
+   std::cout << "beta= " << beta << '\n';
+   std::cout << "norm_y= " << norm_y << '\n';
+   std::cout << "norm_delta_y= " << norm_delta_y << '\n';
+   std::cout << "m_small= " << m_small << '\n';
+   amrex::Error("norm_y became zero, and norm_delta_y might be invalid too");
+  }
+
  } else
   amrex::Error("norm_y invalid");
 
