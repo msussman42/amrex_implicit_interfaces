@@ -3554,10 +3554,18 @@ ABecLaplacian::CG_check_for_convergence(
  if (critical_rel_tol>relative_error)
   critical_rel_tol=relative_error;
 
+ Real scale_Ar_norm=Ar_norm;
+ if (Ar_norm_init>0.0) {
+  scale_Ar_norm=Ar_norm*rnorm_init/Ar_norm_init;
+ } else if (Ar_norm_init==0.0) {
+  // do nothing
+ } else
+  amrex::Error("Ar_norm_init invalid");
+
  int base_check=((rnorm<=eps_abs)||
                  (rnorm<=relative_error*rnorm_init));
  if (base_check==0) {
-  base_check=((Ar_norm<=eps_abs)||
+  base_check=((scale_Ar_norm<=eps_abs)||
               (Ar_norm<=relative_error*Ar_norm_init));
  } else if (base_check==1) {
   // do nothing
@@ -3575,7 +3583,7 @@ ABecLaplacian::CG_check_for_convergence(
                        (rnorm<=critical_rel_tol*rnorm_init));
 
   if (error_close_to_zero==0) {
-   error_close_to_zero=((Ar_norm<=critical_abs_tol)||
+   error_close_to_zero=((scale_Ar_norm<=critical_abs_tol)||
                         (Ar_norm<=critical_rel_tol*Ar_norm_init));
   } else if (error_close_to_zero==1) {
    // do nothing

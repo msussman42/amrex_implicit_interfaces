@@ -46,6 +46,7 @@ Lp.harmavg = 0
 
 cg.abec_use_bicgstab=1
 ns.always_use_bicgstab=1
+ns.mglib_min_coeff_factor=1000.0
 
 ns.projection_pressure_scale=1.0e+6
 ns.num_materials=2
