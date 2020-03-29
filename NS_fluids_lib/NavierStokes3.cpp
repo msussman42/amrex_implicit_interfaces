@@ -7137,7 +7137,8 @@ void NavierStokes::jacobi_cycles(
  int idx_mac_phi_crse,
  Real& error_at_the_beginning,
  Real& error_after_all_jacobi_sweeps,
- Real& error0,Real& error0_max,
+ Real& error0,
+ Real& error0_max,
  int bicgstab_num_outer_iterSOLVER,int nsolve) {
 
  int finest_level=parent->finestLevel();
@@ -7190,7 +7191,7 @@ void NavierStokes::jacobi_cycles(
  if (ncycles==0) 
   temp_ncycles=1;
 
- for (int vcycle=0;vcycle<temp_ncycles;vcycle++) {
+ for (int vcycle_jacobi=0;vcycle_jacobi<temp_ncycles;vcycle_jacobi++) {
 
     // if local_solvability_projection, then this
     // routine modifies RESID so that it sums to zero.
@@ -7208,7 +7209,7 @@ void NavierStokes::jacobi_cycles(
    local_error=sqrt(local_error);
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "jacobi vcycle,error " << vcycle << ' ' << 
+     std::cout << "vcycle_jacobi,error " << vcycle_jacobi << ' ' << 
       local_error << '\n';
     }
     if (1==0) {
@@ -7238,7 +7239,7 @@ void NavierStokes::jacobi_cycles(
     } // debugging
 
    }  // verbose>0
-   if (vcycle==0)
+   if (vcycle_jacobi==0)
     error_at_the_beginning=local_error;
 
    if (bicgstab_num_outer_iterSOLVER==0) {
@@ -7269,7 +7270,7 @@ void NavierStokes::jacobi_cycles(
   } else
    amrex::Error("ncycles invalid");
 
- }  // vcycle
+ }  // vcycle_jacobi=0..temp_ncycles-1
 
  if (ncycles>0) {
 
@@ -9383,9 +9384,10 @@ void NavierStokes::multiphase_project(int project_option) {
       } else
        amrex::Error("project_option invalid52");
 
-      int update_vel=1; // update error0 if bicgstab_num_outer_iterSOLVER=0
+      int update_vel=1; // update error0 if bicgstab_num_outer_iterSOLVER==0
       int call_adjust_tolerance=1;
 
+        // NavierStokes::jacobi_cycles in NavierStokes3.cpp
       jacobi_cycles(
         call_adjust_tolerance,
         jacobi_cycles_count,
@@ -9395,7 +9397,8 @@ void NavierStokes::multiphase_project(int project_option) {
         MAC_PHI_CRSE_MF, // null space projected out.
         error_at_the_beginning, 
         error_after_all_jacobi_sweeps,
-        error0,error0_max,
+        error0,
+	error0_max,
         bicgstab_num_outer_iterSOLVER,
         nsolve);
 
@@ -9408,11 +9411,11 @@ void NavierStokes::multiphase_project(int project_option) {
        }
       }
 
-       // (alpha+da) deltap - div beta grad deltap=
+       // alpha deltap - div beta grad deltap=
        //   -(1/dt)div U + alpha poldhold
        // 
-       // (alpha+da) dp - div beta grad dp=
-       //   -(1/dt)div (U+V) + alpha poldhold + (alpha+da)poldhold_dual
+       // alpha dp - div beta grad dp=
+       //   -(1/dt)div (U+V) + alpha poldhold 
        //
        // UMAC=UMAC-beta grad mac_phi_crse
        // S_new=S_new+mac_phi_crse
@@ -9470,7 +9473,7 @@ void NavierStokes::multiphase_project(int project_option) {
        } // ilev=finest_level ... level
 
          // MAC_PHI_CRSE=0.0 (from above)
-         // CGRESID=MAC_RHS_CRSE-( (alpha+da)*phi-div grad phi )
+         // CGRESID=MAC_RHS_CRSE-( alpha*phi-div grad phi )
          // if local_solvability_projection, then this
          // routine modifies CGRESID so that it sums to zero.
          // if singular_possible, then this routine zeros out the
