@@ -289,7 +289,7 @@ protected:
 
 private:
 
-    static int abec_use_bicgstab;
+    static int abec_use_bicgstab; // default 0
     static int mglib_blocking_factor;
 
     static int gmres_max_iter;

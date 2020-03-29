@@ -24,7 +24,7 @@ namespace amrex{
 
 #define profile_solver 0
 
-int ABecLaplacian::abec_use_bicgstab = 1;
+int ABecLaplacian::abec_use_bicgstab = 0;
 
 int ABecLaplacian::mglib_blocking_factor = 2;
 

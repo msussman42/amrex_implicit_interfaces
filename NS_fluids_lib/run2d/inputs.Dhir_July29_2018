@@ -41,7 +41,7 @@ mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
 
-cg.abec_use_bicgstab=1
+cg.abec_use_bicgstab=0
 ns.always_use_bicgstab=1
 
 mg.usecg=1
@@ -79,7 +79,7 @@ amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 32
-#amr.restart         = chk55600
+#amr.restart         = chk05600
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -176,6 +176,7 @@ ns.heatviscconst_interface=0.0 0.0 0.0
 ns.viscconst=279E-6 12.02e-6 279E-6
 # density: kg/m^3
 ns.denconst=958 0.5956 8960
+ns.mglib_min_coeff_factor=10.0
 ns.FSI_flag=0 0 1
 # 0=diffuse in solid, 1=dirichlet, 2=neumann
 # if solidheat_flag=2, then "tempfluxsolid" is called.
