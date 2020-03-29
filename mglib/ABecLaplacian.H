@@ -105,6 +105,7 @@ public:
       int postsmooth,
       Real& error0,
       Real& A_error0,
+      Real& rAr_error0,
       int level);
 
     void CG_dump_params(

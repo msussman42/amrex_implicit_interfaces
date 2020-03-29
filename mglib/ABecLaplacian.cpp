@@ -3543,6 +3543,8 @@ ABecLaplacian::CG_check_for_convergence(
   Real rnorm_init,
   Real Ar_norm,
   Real Ar_norm_init,
+  Real rAr_norm,
+  Real rAr_norm_init,
   Real eps_abs,
   Real relative_error,int nit,int& error_close_to_zero,
   int level) {
@@ -3579,6 +3581,21 @@ ABecLaplacian::CG_check_for_convergence(
  } else
   amrex::Error("base_check invalid");
 
+ Real scale_rAr_norm=rAr_norm;
+ if (rAr_norm_init>0.0) {
+  scale_rAr_norm=rAr_norm*rnorm_init/rAr_norm_init;
+ } else if (rAr_norm_init==0.0) {
+  // do nothing
+ } else
+  amrex::Error("rAr_norm_init invalid");
+
+ if (base_check==0) {
+  base_check=((scale_rAr_norm<=eps_abs)||
+              (rAr_norm<=relative_error*rAr_norm_init));
+ } else if (base_check==1) {
+  // do nothing
+ } else
+  amrex::Error("base_check invalid");
 
  if (nit>critical_nit) {
 
@@ -3597,6 +3614,16 @@ ABecLaplacian::CG_check_for_convergence(
   } else
    amrex::Error("error_close_to_zero invalid");
 
+  if (error_close_to_zero==0) {
+   error_close_to_zero=((scale_rAr_norm<=critical_abs_tol)||
+                        (rAr_norm<=critical_rel_tol*rAr_norm_init));
+  } else if (error_close_to_zero==1) {
+   // do nothing
+  } else
+   amrex::Error("error_close_to_zero invalid");
+
+
+
   if ((error_close_to_zero==0)&&
       (base_check==1))
    error_close_to_zero=2;
@@ -3612,6 +3639,9 @@ ABecLaplacian::CG_check_for_convergence(
    std::cout << "in: CG_check_for_convergence nit= " << nit << 
 	  " Ar_norm_init= " <<
 	  Ar_norm_init << " Ar_norm= " << Ar_norm << '\n';
+   std::cout << "in: CG_check_for_convergence nit= " << nit << 
+	  " rAr_norm_init= " <<
+	  rAr_norm_init << " rAr_norm= " << rAr_norm << '\n';
   }
  }
 
@@ -3623,6 +3653,8 @@ ABecLaplacian::CG_dump_params(
 		Real rnorm_init,
 		Real Ar_norm,
 		Real Ar_norm_init,
+		Real rAr_norm,
+		Real rAr_norm_init,
 		Real eps_abs,Real relative_error,
                 int is_bottom,Real bot_atol,
                 int usecg_at_bottom,int smooth_type,
@@ -3637,6 +3669,9 @@ ABecLaplacian::CG_dump_params(
    ' ' << relative_error << '\n';
   std::cout << "Ar_norm_init,Ar_norm,eps_abs,relative_error " <<
    Ar_norm_init << ' ' << Ar_norm << ' ' <<  eps_abs << 
+   ' ' << relative_error << '\n';
+  std::cout << "rAr_norm_init,rAr_norm,eps_abs,relative_error " <<
+   rAr_norm_init << ' ' << rAr_norm << ' ' <<  eps_abs << 
    ' ' << relative_error << '\n';
   std::cout << "is_bottom= " << is_bottom << '\n';
   std::cout << "bot_atol= " << bot_atol << '\n';
@@ -3676,6 +3711,7 @@ ABecLaplacian::CG_solve(
     int presmooth,int postsmooth,
     Real& error_init,
     Real& A_error_init,
+    Real& rAr_error_init,
     int level)
 {
 
@@ -3779,6 +3815,15 @@ ABecLaplacian::CG_solve(
 
  Real Ar_norm = LPnorm(*CG_Av_search[coarsefine],level);
 
+ Real rAr_norm=0.0;
+ LP_dot(*CG_Av_search[coarsefine],*CG_r[coarsefine],level,rAr_norm); 
+ if (rAr_norm<0.0) {
+  rAr_norm=0.0;
+ } else if (rAr_norm>=0.0) {
+  rAr_norm=sqrt(rAr_norm);
+ } else
+  amrex::Error("rAr_norm invalid");
+
 #if (profile_solver==1)
  bprof.start();
 #endif
@@ -3796,17 +3841,19 @@ ABecLaplacian::CG_solve(
 	 
  Real rnorm_init=rnorm;
  Real Ar_norm_init=Ar_norm;
+ Real rAr_norm_init=rAr_norm;
  error_init=rnorm_init;
  A_error_init=Ar_norm_init;
+ rAr_error_init=rAr_norm_init;
 
  if ((CG_verbose>0)||(nsverbose>0)) {
   if (ParallelDescriptor::IOProcessor()) {
    if (is_bottom==1)
-    std::cout << "CGsolver(BOTTOM):Initial error(r0,Ar0)="<<
-	    rnorm << ' ' << Ar_norm << '\n';
+    std::cout << "CGsolver(BOTTOM):Initial error(r0,Ar0,rAr0)="<<
+	    rnorm << ' ' << Ar_norm << ' ' << rAr_norm << '\n';
    else
-    std::cout << "CGsolver(NOBOT):Initial error(r0,Ar0)="<<
-	    rnorm << ' ' << Ar_norm << '\n';
+    std::cout << "CGsolver(NOBOT):Initial error(r0,Ar0,rAr0)="<<
+	    rnorm << ' ' << Ar_norm << ' ' << rAr_norm << '\n';
   }
  }
 
@@ -3838,7 +3885,7 @@ ABecLaplacian::CG_solve(
  CG_p_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
  CG_v_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
 
- Real restart_tol=eps_abs*eps_abs*1.0e-4;
+ Real restart_tol=0.0;
  int restart_flag=0;
  int gmres_precond_iter=gmres_precond_iter_base_mg;
 
@@ -3854,18 +3901,24 @@ ABecLaplacian::CG_solve(
    rnorm_init,
    Ar_norm,
    Ar_norm_init,
+   rAr_norm,
+   rAr_norm_init,
    eps_abs,relative_error,nit,
    error_close_to_zero,level);
 
  if (ParallelDescriptor::IOProcessor()) {
   if (CG_verbose>1) {
    if (is_bottom==1)
-    std::cout << "CGSolver(BOT): r0,Ar0,eps_abs,eps_rel " <<
-     rnorm_init << ' ' << Ar_norm_init << ' ' << 
+    std::cout << "CGSolver(BOT): r0,Ar0,rAr0,eps_abs,eps_rel " <<
+     rnorm_init << ' ' << 
+     Ar_norm_init << ' ' << 
+     rAr_norm_init << ' ' << 
      eps_abs << ' ' << relative_error << '\n';
    else
-    std::cout << "CGSolver(NOBOT): r0,Ar0,eps_abs,eps_rel " <<
-     rnorm_init << ' ' << Ar_norm_init << ' ' << 
+    std::cout << "CGSolver(NOBOT): r0,Ar0,rAr0,eps_abs,eps_rel " <<
+     rnorm_init << ' ' << 
+     Ar_norm_init << ' ' << 
+     rAr_norm_init << ' ' << 
      eps_abs << ' ' << relative_error << '\n';
   }
  }
@@ -3907,6 +3960,14 @@ ABecLaplacian::CG_solve(
 
   Ar_norm = LPnorm(*CG_Av_search[coarsefine],level);
 
+  LP_dot(*CG_Av_search[coarsefine],*CG_r[coarsefine],level,rAr_norm); 
+  if (rAr_norm<0.0) {
+   rAr_norm=0.0;
+  } else if (rAr_norm>=0.0) {
+   rAr_norm=sqrt(rAr_norm);
+  } else
+   amrex::Error("rAr_norm invalid");
+
   if (Ar_norm>=0.0) {
    Ar_norm=sqrt(Ar_norm);
   } else {
@@ -3916,6 +3977,7 @@ ABecLaplacian::CG_solve(
   if (nit==0) {
    rnorm_init=rnorm;
    Ar_norm_init=Ar_norm;
+   rAr_norm_init=rAr_norm;
   } else if (nit>0) {
    // do nothing
   } else
@@ -4016,6 +4078,8 @@ ABecLaplacian::CG_solve(
         project_null_space((*CG_r[coarsefine]),level);
        } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
         restart_flag=1;
+       } else if (pAp<0.0) {
+        restart_flag=1;
        } else {
         std::cout << "pAp= " << pAp << endl;
         amrex::Error("pAp invalid in bottom solver");
@@ -4025,6 +4089,8 @@ ABecLaplacian::CG_solve(
        amrex::Error("pAp invalid in bottom solver");
       }
      } else if ((rho_old>=0.0)&&(rho_old<=restart_tol)) {
+      restart_flag=1;
+     } else if (rho_old<0.0) {
       restart_flag=1;
      } else
       amrex::Error("rho_old invalid");
@@ -4113,6 +4179,14 @@ ABecLaplacian::CG_solve(
 
       Ar_norm = LPnorm(*CG_Av_search[coarsefine],level);
 
+      LP_dot(*CG_Av_search[coarsefine],*CG_r[coarsefine],level,rAr_norm); 
+      if (rAr_norm<0.0) {
+       rAr_norm=0.0;
+      } else if (rAr_norm>=0.0) {
+       rAr_norm=sqrt(rAr_norm);
+      } else
+       amrex::Error("rAr_norm invalid");
+
       CG_check_for_convergence(
         coarsefine,
         local_presmooth,local_postsmooth,
@@ -4120,6 +4194,8 @@ ABecLaplacian::CG_solve(
 	rnorm_init,
 	Ar_norm,
 	Ar_norm_init,
+	rAr_norm,
+	rAr_norm_init,
 	eps_abs,relative_error,nit,
         error_close_to_zero,level);
 
@@ -4176,6 +4252,8 @@ ABecLaplacian::CG_solve(
          project_null_space((*CG_r[coarsefine]),level);
         } else if ((zAAz>=0.0)&&(zAAz<=restart_tol)) {
          restart_flag=1;
+	} else if (zAAz<0.0) {
+         restart_flag=1;
         } else
  	 amrex::Error("zAAz invalid");
 
@@ -4219,6 +4297,8 @@ ABecLaplacian::CG_solve(
        rnorm << '\n';
       std::cout << "RESTARTING: Ar_norm= " << 
        Ar_norm << '\n';
+      std::cout << "RESTARTING: rAr_norm= " << 
+       rAr_norm << '\n';
       std::cout << "RESTARTING: nsolve_bicgstab= " << 
         nsolve_bicgstab << '\n';
      }
@@ -4382,13 +4462,26 @@ ABecLaplacian::CG_solve(
    amrex::Error("A_testnorm invalid mglib");
   }
 
+  Real rAr_testnorm=0.0;
+  LP_dot(*CG_Av_search[coarsefine],*CG_r[coarsefine],level,rAr_testnorm); 
+  if (rAr_testnorm<0.0) {
+   rAr_testnorm=0.0;
+  } else if (rAr_testnorm>=0.0) {
+   rAr_testnorm=sqrt(rAr_testnorm);
+  } else
+   amrex::Error("rAr_testnorm invalid");
+
   if (ParallelDescriptor::IOProcessor()) {
    if (is_bottom==1) {
     std::cout << "residual non-homogeneous bc (BOT) " << testnorm << '\n';  
     std::cout << "A_residual non-homogeneous bc (BOT) " << A_testnorm << '\n';  
+    std::cout << "rAr_residual non-homogeneous bc (BOT) " << 
+	    rAr_testnorm << '\n';  
    } else {
     std::cout << "residual non-homogeneous bc (NOBOT)"<< testnorm << '\n';  
     std::cout << "A_residual non-homogeneous bc (NOBOT)"<< A_testnorm << '\n';  
+    std::cout << "rAr_residual non-homogeneous bc (NOBOT)"<< 
+	    rAr_testnorm << '\n';  
    }
   }
  }
@@ -4750,6 +4843,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
   int local_meets_tol=0;
   Real local_error0=0.0;
   Real local_A_error0=0.0;
+  Real local_rAr_error0=0.0;
   int nsverbose=0;
   int cg_cycles_parm=0;
 
@@ -4765,6 +4859,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
     presmooth,postsmooth,
     local_error0,
     local_A_error0,
+    local_rAr_error0,
     level);
  }
 }
