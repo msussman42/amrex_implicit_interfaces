@@ -8261,6 +8261,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     amrex::Error("breakdown_free_flag invalid");
 
    delete [] yy;
+   delete [] beta_e1;
 
    for (int i=0;i<m+1;i++) 
     delete [] HH[i];

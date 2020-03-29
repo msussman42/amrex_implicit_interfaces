@@ -112,6 +112,8 @@ public:
       Real rnorm0,
       Real Ar_norm,
       Real Ar_norm0,
+      Real rAr_norm,
+      Real rAr_norm0,
       Real eps_abs,Real relative_error,
       int is_bottom,Real bot_atol,
       int usecg_at_bottom,int smooth_type,
@@ -162,6 +164,8 @@ protected:
       Real rnorm0,
       Real Ar_norm,
       Real Ar_norm0,
+      Real rAr_norm,
+      Real rAr_norm0,
       Real eps_abs,
       Real relative_error,int nit,int& error_close_to_zero,
       int level);
@@ -181,6 +185,7 @@ protected:
 
     Vector< Array<Real,4> > CG_error_history;
     Vector< Array<Real,4> > CG_A_error_history;
+    Vector< Array<Real,4> > CG_rAr_error_history;
 
     void MG_solve_ (int nsverbose,MultiFab& _sol,
      Real eps_abs,Real atol_b,MultiFab& pbdry,Vector<int> bcpres_array,

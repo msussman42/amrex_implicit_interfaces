@@ -937,10 +937,12 @@ ABecLaplacian::ABecLaplacian (
 
  CG_error_history.resize(CG_maxiter);
  CG_A_error_history.resize(CG_maxiter);
+ CG_rAr_error_history.resize(CG_maxiter);
  for (int ehist=0;ehist<CG_error_history.size();ehist++) {
   for (int ih=0;ih<4;ih++) {
    CG_error_history[ehist][ih]=0.0;
    CG_A_error_history[ehist][ih]=0.0;
+   CG_rAr_error_history[ehist][ih]=0.0;
   }
  }
 
@@ -3474,6 +3476,7 @@ ABecLaplacian::pcg_GMRES_solve(
     amrex::Error("breakdown_free_flag invalid");
 
    delete [] yy;
+   delete [] beta_e1;
 
    for (int i=0;i<m+1;i++) 
     delete [] HH[i];
@@ -3516,6 +3519,10 @@ ABecLaplacian::pcg_GMRES_solve(
      coarsefine << " Ar_norm=" <<
      CG_A_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
      CG_A_error_history[ehist][2*coarsefine+1] << '\n';
+   std::cout << "nit " << ehist << " CG_rAr_error_history coarsefine " <<
+     coarsefine << " rAr_norm=" <<
+     CG_rAr_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
+     CG_rAr_error_history[ehist][2*coarsefine+1] << '\n';
   }
 
   amrex::Error("ABecLaplacian.cpp: gmres_precond_iter invalid");
@@ -3871,6 +3878,7 @@ ABecLaplacian::CG_solve(
   for (int ih=0;ih<2;ih++) {
    CG_error_history[ehist][2*coarsefine+ih]=0.0;
    CG_A_error_history[ehist][2*coarsefine+ih]=0.0;
+   CG_rAr_error_history[ehist][2*coarsefine+ih]=0.0;
   }
  }
 
@@ -3919,6 +3927,9 @@ ABecLaplacian::CG_solve(
   CG_A_error_history[nit][2*coarsefine]=Ar_norm;
   CG_A_error_history[nit][2*coarsefine+1]=eps_abs;
 
+  CG_rAr_error_history[nit][2*coarsefine]=rAr_norm;
+  CG_rAr_error_history[nit][2*coarsefine+1]=eps_abs;
+
   CG_check_for_convergence(
    coarsefine,
    local_presmooth,local_postsmooth,
@@ -3926,6 +3937,8 @@ ABecLaplacian::CG_solve(
    rnorm_init,
    Ar_norm,
    Ar_norm_init,
+   rAr_norm,
+   rAr_norm_init,
    eps_abs,relative_error,nit,
    error_close_to_zero,level);
 
@@ -4314,6 +4327,9 @@ ABecLaplacian::CG_solve(
     std::cout << "nit " << ehist << " CG_A_error_history[nit][0,1] " <<
      CG_A_error_history[ehist][2*coarsefine+0] << ' ' <<
      CG_A_error_history[ehist][2*coarsefine+1] << '\n';
+    std::cout << "nit " << ehist << " CG_rAr_error_history[nit][0,1] " <<
+     CG_rAr_error_history[ehist][2*coarsefine+0] << ' ' <<
+     CG_rAr_error_history[ehist][2*coarsefine+1] << '\n';
    }
   }
 
@@ -4322,6 +4338,8 @@ ABecLaplacian::CG_solve(
     rnorm_init,
     Ar_norm,
     Ar_norm_init,
+    rAr_norm,
+    rAr_norm_init,
     eps_abs,relative_error,
     is_bottom,bot_atol,
     usecg_at_bottom,smooth_type,
