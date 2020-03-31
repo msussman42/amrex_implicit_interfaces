@@ -8374,7 +8374,8 @@ void NavierStokes::multiphase_preconditioner(
 
   jacobi_cycles(
    call_adjust_tolerance,
-   smooth_cycles,update_vel,
+   smooth_cycles,
+   update_vel,  // =0 (i.e. jacobi_cycles used as a preconditioner)
    project_option,
    idx_R,idx_Z,
    error_at_the_beginning,
