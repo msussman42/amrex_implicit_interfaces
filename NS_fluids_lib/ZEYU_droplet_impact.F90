@@ -123,6 +123,7 @@ enddo
 if (adv_dir.eq.SDIM) then
 
   ! material 3 is the substrate
+  ! velsolid_flag==1 if initializing the solid velocity.
  if ((LS(3).ge.zero).or.(velsolid_flag.eq.1)) then
   ! in solid
   do dir=1,SDIM
@@ -133,11 +134,12 @@ if (adv_dir.eq.SDIM) then
 
      ! material 1 is the drop
   if ((LS(1).ge.zero).or. &
-      (LS(1).ge.-dx(1))) then
+      (LS(1).ge.-two*dx(1))) then
    ! in drop
    do dir=1,SDIM
-    VEL(dir)=-abs(advbot)
+    VEL(dir)=zero
    enddo
+   VEL(SDIM)=-abs(advbot)
   else if (LS(2).ge.zero) then ! material 2 is the gas
 
    do dir=1,SDIM

@@ -21,8 +21,16 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
-cg.abec_use_bicgstab=1
-ns.always_use_bicgstab=1
+ns.post_init_pressure_solve=1  # make sure initial velocity is solonoidal
+cg.abec_use_bicgstab=0  # Multigrid PCG best for bottom solver.
+ns.always_use_bicgstab=0  # Probably PCG best for "main" solver too
+                          # once fixes are complete.
+                          # note: BICGSTAB must be used for "top" solver
+                          # if doing the spectral element method, but 
+                          # Zeyu's application, does not require space/time
+                          # spectral accuracy.
+                          # top solver: levels 0...max_level
+                          # bottom solver: levels -p,-p+1, ..., 0
 mg.usecg=1
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
@@ -59,8 +67,16 @@ ns.initial_viscosity_cycles=1
 ns.initial_thermal_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
+# FOR INDEFINITE MATRICES:
 # solvability_projection=1 if all walls symmetric.
 # solvability_projection=0 if some walls outflow.
+# since all walls are "symmetry": we force sum p_{ij} = 0 
+# (null space vector as extra row) and we force
+# sum rhs_{ij}=0 (null space vector as extra column)
+# Note: the "A" weighted error (appropriately scaled) is now checked
+# for convergence criteria too,  R^{T} A R < C * tolerance , along
+# with the standard check: R^{T} R < tolerance
+#  R=residual 
 ns.solvability_projection=1 
 
 # 0=GSRB 1=ICRB 2=ILU
@@ -68,7 +84,7 @@ Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
 # ZEYU
-ns.visual_option=-1 # -2=tecplot -1=plot files (visit or paraview)
+ns.visual_option=-2 # -2=tecplot -1=plot files (visit or paraview)
 ns.shock_timestep=2 2 2
 
 amr.regrid_int      = 1       # how often to regrid
@@ -135,6 +151,7 @@ ns.sum_interval   = 10       # timesteps between computing mass
 ns.twall=0.0
 
 ns.axis_dir=0
+# 0.0 means do not use vorticity as a criterion for AMR
 ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=0.0
 ns.vinletgas=0.0
@@ -172,6 +189,13 @@ ns.heatviscconst=0.0 0.0 0.0
 ns.viscconst=8.9e-3 0.000181 1.0 # ZEYU
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=0.997 0.00125 1.0 #ZEYU
+# if pressure_error_cutoff=0.0 then pressure is not used as an AMR
+# criteria, otherwise if pressure_error_flag==0, then check the
+# magnitude of pressure, if pressure_error_flag==1, then check the
+# pressure variation (not exactly gradient).
+# if temperature_error_cutoff=0.0 then temperature is not used as an AMR
+# criteria, otherwise check the
+# temperature variation (not exactly gradient).
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS
