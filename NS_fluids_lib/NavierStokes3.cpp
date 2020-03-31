@@ -9643,7 +9643,7 @@ void NavierStokes::multiphase_project(int project_option) {
         error_history[vcycle][0]=error_n;
         error_history[vcycle][1]=save_mac_abs_tol;
 
-        Real restart_tol=save_mac_abs_tol*save_mac_abs_tol*1.0e-4;
+        Real restart_tol=0.0;
         restart_flag=0;
 
         if (error_n<save_mac_abs_tol)
@@ -9684,7 +9684,9 @@ void NavierStokes::multiphase_project(int project_option) {
            local_presmooth,local_postsmooth,
            Z_MF,CGRESID_MF,nsolve);
 
-          // rho1=z dot r
+          // rho1=z dot r=MINV r dot r =r^T MINV^T r
+	  // if rho1<=0 then safe to assume convergence has been 
+	  // achieved or something very wrong.
           dot_productALL(project_option,Z_MF,CGRESID_MF,rho1,nsolve);
 
           if (rho1>=0.0) {
@@ -9725,23 +9727,38 @@ void NavierStokes::multiphase_project(int project_option) {
               MAC_PHI_CRSE_MF,nsolve);
 
             } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
-//           restart_flag=1;
+             meets_tol=1;
+
+	     // this case can happen due to round off error when
+	     // A is a singular (indefinite) matrix
+	    } else if (pAp<0.0) { 
              meets_tol=1;
             } else {
              std::cout << "pAp= " << pAp << endl;
              amrex::Error("pAp invalid in main solver");
 	    }
            } else if ((rho0>=0.0)&&(rho0<=restart_tol)) {
-//          restart_flag=1;
+            meets_tol=1;
+
+	    // this case can happen due to round off error when
+	    // A is a singular (indefinite) matrix
+	   } else if (rho0<0.0) {
             meets_tol=1;
            } else
             amrex::Error("rho0 invalid");
+
+	   // this case can happen due to round off error when
+	   // A is a singular (indefinite) matrix
+	  } else if (rho1<0.0) {
+ 	   meets_tol=1;
           } else
            amrex::Error("rho1 invalid");
 
          } else if (BICGSTAB_ACTIVE==1) { //MG-GMRES PCG
 
            // rho1=R0hat dot CGRESID(R0)
+	   //  =(b-A x0) dot (b-A xn) =
+	   //  b^T b + x0^T A^T A xn - x0^T A^T b - b^T A xn
           dot_productALL(project_option,bicg_R0hat_MF,CGRESID_MF,rho1,nsolve);
 
           if (vcycle==0) { // R0hat=R when vcycle==0
@@ -9752,8 +9769,10 @@ void NavierStokes::multiphase_project(int project_option) {
              // do nothing
             } else
              amrex::Error("sanity_error invalid");
-	   } else
+	   } else {
+            std::cout << "rho1=" << rho1 << " vcycle= " << vcycle << '\n';
             amrex::Error("rho1 invalid");
+	   }
 
           } else if (vcycle>0) {
            // check nothing
@@ -9762,21 +9781,21 @@ void NavierStokes::multiphase_project(int project_option) {
 
 	  if (rho0<=restart_tol) {
    	   restart_flag=1;
-	  } else if (rho0>=restart_tol) {
+	  } else if (rho0>restart_tol) {
 	   // do nothing
 	  } else
 	   amrex::Error("rho0 failed Nav3");
 
 	  if (w0<=restart_tol) {
 	   restart_flag=1;
-	  } else if (w0>=restart_tol) {
+	  } else if (w0>restart_tol) {
 	   // do nothing
 	  } else
 	   amrex::Error("w0 failed Nav3");
 
-	  if (rho1<0.0) {
+	  if (rho1<=0.0) {
    	   restart_flag=1;
-	  } else if (rho1>=0.0) {
+	  } else if (rho1>0.0) {
 	   // do nothing
 	  } else
 	   amrex::Error("rho1 invalid mglib");
@@ -9793,7 +9812,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
            beta=(rho1/rho0)*(alpha/w0);
 
-	   if (beta>=0.0) {
+	   if (beta>0.0) {
 	    // do nothing
 	   } else
 	    amrex::Error("beta invalid Nav3");
@@ -9842,7 +9861,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
 	   if (alpha<=restart_tol) {
 	    restart_flag=1;
-	   } else if (alpha>=restart_tol) {
+	   } else if (alpha>restart_tol) {
    	    // do nothing
 	   } else
 	    amrex::Error("alpha failed Nav3");
@@ -9931,17 +9950,20 @@ void NavierStokes::multiphase_project(int project_option) {
 	     // a2 = T dot T = AZ dot AZ >=0.0 
              dot_productALL(project_option,bicg_T_MF,bicg_T_MF,a2,nsolve);
 
-	     if (a2>=restart_tol) {
+	     if (a2>restart_tol) {
    	      // do nothing
 	     } else if ((a2>=0.0)&&(a2<=restart_tol)) {
-	      restart_flag=1;
-	     } else
+//	      restart_flag=1;
+              meets_tol=1;
+	     } else {
 	      amrex::Error("a2 invalid Nav3");
+	     }
 
 	     if (a1>0.0) {
 	      // do nothing
 	     } else if (a1<=0.0) {
-	      restart_flag=1;
+//	      restart_flag=1;
+              meets_tol=1;
 	     } else
 	      amrex::Error("a1 invalid");
 
@@ -9949,33 +9971,40 @@ void NavierStokes::multiphase_project(int project_option) {
              bprof.stop();
 #endif
 
-             if (restart_flag==0) {
+	     if (meets_tol==0) {
+
+              if (restart_flag==0) {
 
 #if (profile_solver==1)
-              bprof.start();
+               bprof.start();
 #endif
 
-              w1=a1/a2;
-              // mac_phi_crse(U1)=Hvec+w1 Z
-              a1=1.0;
-              a2=w1;
-              mf_combine(project_option,
-	       bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
-	      change_flag=0;
-              project_right_hand_side(MAC_PHI_CRSE_MF,
+               w1=a1/a2;
+               // mac_phi_crse(U1)=Hvec+w1 Z
+               a1=1.0;
+               a2=w1;
+               mf_combine(project_option,
+   	        bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
+	       change_flag=0;
+               project_right_hand_side(MAC_PHI_CRSE_MF,
                    project_option,change_flag);
 
 #if (profile_solver==1)
-              bprof.stop();
+               bprof.stop();
 #endif
 
-             } else if (restart_flag==1) {
-   	      // do nothing
+              } else if (restart_flag==1) {
+   	       // do nothing
+	      } else
+	       amrex::Error("restart_flag invalid");
+
+	     } else if (meets_tol==1) {
+	      // do nothing
 	     } else
-	      amrex::Error("restart_flag invalid");
+	      amrex::Error("meets_tol invalid");
 
             } else if ((dnorm>=0.0)&&(dnorm<=save_mac_abs_tol)) {
-	     // do nothing
+	     // do nothing (dnorm=R1 dot R1)
             } else
 	     amrex::Error("dnorm invalid");
 
@@ -10344,7 +10373,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
       outer_iter_done=0;
 
-      if (outer_error<=1.1*save_mac_abs_tol)
+      if (outer_error<=10.0*save_mac_abs_tol)
        outer_iter_done=1;
       if (outer_error*dt_slab<=1.1*save_mac_abs_tol)
        outer_iter_done=1;
