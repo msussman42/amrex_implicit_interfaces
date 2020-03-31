@@ -7239,6 +7239,7 @@ void NavierStokes::jacobi_cycles(
     } // debugging
 
    }  // verbose>0
+
    if (vcycle_jacobi==0)
     error_at_the_beginning=local_error;
 
@@ -9391,18 +9392,18 @@ void NavierStokes::multiphase_project(int project_option) {
       jacobi_cycles(
         call_adjust_tolerance,
         jacobi_cycles_count,
-        update_vel,
+        update_vel, // =1
         project_option,
         MAC_RHS_CRSE_MF,
         MAC_PHI_CRSE_MF, // null space projected out.
-        error_at_the_beginning, 
+        error_at_the_beginning, // error before any Jacobi iterations 
         error_after_all_jacobi_sweeps,
-        error0,
-	error0_max,
+        error0, // error after Jacobi iterations. (if num_outer_iterSOLVER=1)
+	error0_max, //max of the errors during Jacobi Iterations.
         bicgstab_num_outer_iterSOLVER,
         nsolve);
 
-      error_n=error0;
+      error_n=error0; // error after Jacobi iter. (if num_outer_iterSOLVER=1)
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
