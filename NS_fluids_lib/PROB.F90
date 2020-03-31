@@ -7565,7 +7565,11 @@ end subroutine dynamic_contact_angle
 ! -------------------- END OF EOS 10,11,12 ----------------
 
 
-
+       ! BENCHMARK TESTS ONLY REPORT ENERGY, PRESSURE, DENSITY, and VELOCITY,
+       ! THESE tests are inviscid and have zero thermal diffusion,
+       ! therefore not important what cp or cv are so just set them
+       ! to 1 for (a) inputs.shockturbulence, (b) Gary Sod test problem
+       ! inputs.sod, (c) inputs.strong, (d) inputs.mach4
       subroutine simple_air_parms(R,cp,cv,gamma_constant,omega)
       IMPLICIT NONE
       REAL_T R,cp,cv,gamma_constant,omega
@@ -7586,9 +7590,9 @@ end subroutine dynamic_contact_angle
       IMPLICIT NONE
       REAL_T R,cp,cv,gamma_constant,omega
 
-      R=R_AIR_PARMS
-      cv=CV_AIR_PARMS
-      cp=cv+R 
+      R=R_AIR_PARMS  ! ergs/(Kelvin g)
+      cv=CV_AIR_PARMS ! ergs/(Kelvin g)
+      cp=cv+R  ! ergs/(Kelvin g)
       gamma_constant=cp/cv
       omega=gamma_constant-one
 
@@ -7893,6 +7897,12 @@ end subroutine dynamic_contact_angle
        stop
       endif
         ! e=cv T
+        ! rho=g/(cm^3)
+        ! internal_energy has units ergs/g
+        ! pressure has units of g/(cm^3)  ergs/g =ergs/cm^3
+        ! 1erg=1 g cm^2/s^2
+        ! erg/cm^3=(g cm^2/s^2)/cm^3 = g/(s^2 cm)
+        ! pressure also described as dyne/cm^2 = (g cm/s^2)/cm^2=g/(cm s^2) 
       pressure=omega*rho*internal_energy  ! omega=gamma-1
 
       return
@@ -8226,6 +8236,8 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
+        ! cv has units of ergs/(Kelvin g)
+        ! internal energy has units of ergs/g
       internal_energy=cv*temperature
 
       return
@@ -9406,7 +9418,10 @@ end subroutine dynamic_contact_angle
       end subroutine EOS_error_ind
 
 
-
+       ! ADIABATIC_EOS_FLAG==0 if pressure does depend on internal energy.
+       ! ADIABATIC_EOS_FLAG==1 if pressure does NOT depend on internal energy.
+       ! NOT USED ANYMORE, BUT SHOULD STILL BE MAINTAINED FOR REINFORCING
+       ! WHAT EACH EOS ASSUMES.
       subroutine ADIABATIC_EOS_FLAG(imattype,flag)
       IMPLICIT NONE
 
@@ -9593,7 +9608,7 @@ end subroutine dynamic_contact_angle
       pressure=pressure/global_pressure_scale
 
       return
-      end subroutine
+      end subroutine EOS_material
 
 
         ! returns De/DT / scale 

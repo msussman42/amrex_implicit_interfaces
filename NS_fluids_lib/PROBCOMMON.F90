@@ -36,11 +36,11 @@ implicit none
       REAL_T, PARAMETER :: GAMMA_SIMPLE_PARMS=1.4
 
          ! R=CP-CV
-         ! CP=1.007D+7
+         ! CP=1.007D+7 Specific heat at constant pressure cgs ergs/(Kelvin g)
          ! GAMMA=CP/CV=1.39861
-      REAL_T, PARAMETER :: R_AIR_PARMS=0.287D+7
-      REAL_T, PARAMETER :: CV_AIR_PARMS=0.72D+7
-      REAL_T, PARAMETER :: PCAV_TAIT=220.2726D0  ! dyne/cm^2
+      REAL_T, PARAMETER :: R_AIR_PARMS=0.287D+7  ! ergs/(Kelvin g)
+      REAL_T, PARAMETER :: CV_AIR_PARMS=0.72D+7  ! ergs/(Kelvin g)
+      REAL_T, PARAMETER :: PCAV_TAIT=220.2726D0  ! cgs dyne/cm^2
       REAL_T, PARAMETER :: PCAV_TAIT_VACUUM=220.2726D0  ! dyne/cm^2
       REAL_T, PARAMETER :: A_TAIT=1.0D+6  ! dyne/cm^2
       REAL_T, PARAMETER :: B_TAIT=3.31D+9  ! dyne/cm^2
