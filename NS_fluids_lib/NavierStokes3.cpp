@@ -7127,6 +7127,41 @@ void NavierStokes::relaxLEVEL(
 
 } // subroutine relaxLEVEL
 
+void NavierStokes::check_outer_solver_convergence(
+	Real error_n,Real error0,
+        Real Ar_error_n,Real Ar_error0,
+        Real rAr_error_n,Real rAr_error0,
+        Real save_mac_abs_tol_in,
+        int& meets_tol) {
+
+ if (error_n<save_mac_abs_tol_in) {
+  meets_tol=1;
+ } else if (Ar_error_n<=0.0) {
+  meets_tol=1;
+ } else if (rAr_error_n<=0.0) {
+  meets_tol=1;
+ } else if ((error_n>0.0)&&
+   	    (Ar_error_n>0.0)&&
+	    (rAr_error_n>0.0)&&
+	    (error0>0.0)&&
+	    (Ar_error0>0.0)&&
+	    (rAr_error0>0.0)) {
+  Real scale_Ar_error_n=Ar_error_n*error0/Ar_error0;
+  Real scale_rAr_error_n=rAr_error_n*error0/rAr_error0;
+  if (scale_Ar_error_n<save_mac_abs_tol_in) {
+   meets_tol=1;
+  } else if (scale_rAr_error_n<save_mac_abs_tol_in) {
+   meets_tol=1;
+  } else if ((scale_Ar_error_n>=save_mac_abs_tol_in)&&
+             (scale_rAr_error_n>=save_mac_abs_tol_in)) {
+   // do nothing
+  } else
+   amrex::Error("scale_Ar_error_n or scale_rAr_error_n invalid");
+ } else
+  amrex::Error("one of error_r,Ar,rAr invalid");
+
+} // subroutine check_outer_solver_convergence
+
 // update_vel=1 if called at the beginning of each outer_iter sweep.
 // update_vel=0 if this routine used as a preconditioner (instead of MG).
 void NavierStokes::jacobi_cycles(
@@ -7244,6 +7279,7 @@ void NavierStokes::jacobi_cycles(
     error_at_the_beginning=local_error;
 
    if (bicgstab_num_outer_iterSOLVER==0) {
+
     error0=local_error;
 
     if (call_adjust_tolerance==1) {
@@ -7253,7 +7289,9 @@ void NavierStokes::jacobi_cycles(
     } else
      amrex::Error("call_adjust_tolerance invalid");
 
-   } else if (bicgstab_num_outer_iterSOLVER<0)
+   } else if (bicgstab_num_outer_iterSOLVER>0) {
+    // do nothing
+   } else
     amrex::Error("bicgstab_num_outer_iterSOLVER invalid");
 
   } else if (update_vel==0) { // called as preconditioner
@@ -8373,14 +8411,15 @@ void NavierStokes::multiphase_preconditioner(
   int call_adjust_tolerance=0;
 
   jacobi_cycles(
-   call_adjust_tolerance,
+   call_adjust_tolerance, //=0
    smooth_cycles,
    update_vel,  // =0 (i.e. jacobi_cycles used as a preconditioner)
    project_option,
    idx_R,idx_Z,
    error_at_the_beginning,
    error_after_all_jacobi_sweeps,
-   error_n,error0_max,
+   error_n,    // not modified
+   error0_max, // not modified
    bicgstab_num_outer_iterSOLVER,nsolve);
 
 #if (profile_solver==1)
@@ -9271,6 +9310,10 @@ void NavierStokes::multiphase_project(int project_option) {
   Real error0_max=0.0;
   Real error0=0.0;
   Real error_n=0.0;
+  Real rAr_error0=0.0;
+  Real rAr_error_n=0.0;
+  Real Ar_error0=0.0;
+  Real Ar_error_n=0.0;
   Real error_at_the_beginning=0.0;
   Real error_after_all_jacobi_sweeps=0.0;
      
@@ -9386,7 +9429,7 @@ void NavierStokes::multiphase_project(int project_option) {
       } else
        amrex::Error("project_option invalid52");
 
-      int update_vel=1; // update error0 if bicgstab_num_outer_iterSOLVER==0
+      int update_vel=1; // update error0 IF bicgstab_num_outer_iterSOLVER==0
       int call_adjust_tolerance=1;
 
         // NavierStokes::jacobi_cycles in NavierStokes3.cpp
@@ -9399,12 +9442,14 @@ void NavierStokes::multiphase_project(int project_option) {
         MAC_PHI_CRSE_MF, // null space projected out.
         error_at_the_beginning, // error before any Jacobi iterations 
         error_after_all_jacobi_sweeps, //error after jacobi iter. 
-        error0, // error after Jacobi iterations IF num_outer_iterSOLVER==1
-	error0_max, //max of the errors during Jacobi Iterations.
+	                               //regardless num_outer_iterSOLVER
+        error0, // error after Jacobi iterations IF num_outer_iterSOLVER==0
+	error0_max, //max error0 during Jacobi Iterations IF 
+	            //(num_outer_iterSOLVER==0)&&(call_adjust_tol==1)
         bicgstab_num_outer_iterSOLVER,
         nsolve);
 
-      error_n=error0; // error after Jacobi iter. IF num_outer_iterSOLVER==1
+      error_n=error0; // error after Jacobi iter. IF num_outer_iterSOLVER==0
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
@@ -9458,6 +9503,8 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
        allocate_array(0,nsolveMM,-1,CGRESID_MF);
+       allocate_array(1,nsolveMM,-1,P_SOLN_MF);
+       allocate_array(0,nsolveMM,-1,bicg_V1_MF);
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
@@ -9484,8 +9531,44 @@ void NavierStokes::multiphase_project(int project_option) {
        residALL(project_option,MAC_RHS_CRSE_MF,
         CGRESID_MF,MAC_PHI_CRSE_MF,nsolve);
 
-       if (error_n<save_mac_abs_tol)
-        meets_tol=1;
+       copyALL(0,nsolveMM,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
+         // V1=A P_SOLN
+         // 1. (begin)calls project_right_hand_side(P)
+         // 2. (end)  calls project_right_hand_side(V1)
+       applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
+       rAr_error_n=0.0;
+       dot_productALL(project_option,CGRESID_MF,bicg_V1_MF,rAr_error_n,nsolve);
+       Ar_error_n=0.0;
+       dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,Ar_error_n,nsolve);
+
+       if (rAr_error_n<0.0) {
+        rAr_error_n=0.0;
+       } else if (rAr_error_n>=0.0) {
+        rAr_error_n=sqrt(rAr_error_n);
+       } else
+        amrex::Error("rAr_error_n invalid");
+
+       if (Ar_error_n>=0.0) {
+        Ar_error_n=sqrt(Ar_error_n);
+       } else
+        amrex::Error("Ar_error_n invalid");
+
+       if ((bicgstab_num_outer_iterSOLVER==0)&&(cg_loop==0)) {
+        Ar_error0=Ar_error_n;
+        rAr_error0=rAr_error_n;
+       } else if ((bicgstab_num_outer_iterSOLVER>0)||
+		       (cg_loop==1)) {
+        // do nothing
+       } else
+        amrex::Error("bicgstab_num_outer_iterSOLVER or cg_loop invalid");
+
+        // if cg_loop==0 then error_n=error0 
+	// error0=error after Jacobi iter. IF num_outer_iterSOLVER==0
+       check_outer_solver_convergence(error_n,error0,
+	       Ar_error_n,Ar_error0,
+	       rAr_error_n,rAr_error0,
+	       save_mac_abs_tol,
+	       meets_tol);
 
        if (cg_loop==0) {
         if (error_after_all_jacobi_sweeps<save_mac_abs_tol) {
@@ -9514,7 +9597,7 @@ void NavierStokes::multiphase_project(int project_option) {
         } else
          amrex::Error("error_n invalid");
 
-        if (error_n<save_mac_abs_tol)
+        if (error_n<1.1*save_mac_abs_tol)
          meets_tol=1;
         else
          meets_tol=0;
@@ -9566,13 +9649,11 @@ void NavierStokes::multiphase_project(int project_option) {
 
          // variables initialized to 0.0
        allocate_array(1,nsolveMM,-1,Z_MF);
-       allocate_array(1,nsolveMM,-1,P_SOLN_MF);
        allocate_array(0,nsolveMM,-1,P_MF);
        allocate_array(0,nsolveMM,-1,bicg_R0hat_MF);
        allocate_array(1,nsolveMM,-1,bicg_U0_MF);
        allocate_array(0,nsolveMM,-1,bicg_V0_MF);
        allocate_array(0,nsolveMM,-1,bicg_P1_MF);
-       allocate_array(0,nsolveMM,-1,bicg_V1_MF);
        allocate_array(0,nsolveMM,-1,bicg_R1_MF);
        allocate_array(1,nsolveMM,-1,bicg_Y_MF);
        allocate_array(1,nsolveMM,-1,bicg_Hvec_MF);
@@ -10164,20 +10245,20 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
        delete_array(Z_MF);
-       delete_array(P_SOLN_MF);
        delete_array(P_MF);
        delete_array(bicg_R0hat_MF);
        delete_array(bicg_U0_MF);
        delete_array(bicg_V0_MF);
        delete_array(bicg_P1_MF);
-       delete_array(bicg_V1_MF);
        delete_array(bicg_R1_MF);
        delete_array(bicg_Y_MF);
        delete_array(bicg_Hvec_MF);
        delete_array(bicg_S_MF);
        delete_array(bicg_T_MF);
 
+       delete_array(bicg_V1_MF);
        delete_array(CGRESID_MF);
+       delete_array(P_SOLN_MF);
 
        // (alpha+da) deltap - div beta grad deltap=
        //   -(1/dt)div U + alpha poldhold

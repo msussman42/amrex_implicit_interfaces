@@ -1055,6 +1055,12 @@ void apply_pressure_grad(
       int idx_rhs,int idx_phi,
       int nsolve);
 
+    void check_outer_solver_convergence(
+	Real error_n,Real error0,
+        Real Ar_error_n,Real Ar_error0,
+        Real rAr_error_n,Real rAr_error0,
+        Real save_mac_abs_tol_in,
+        int& meets_tol);
 
     void jacobi_cycles(
      int call_adjust_tolerance,
