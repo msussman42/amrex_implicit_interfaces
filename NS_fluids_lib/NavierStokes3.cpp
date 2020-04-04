@@ -7136,7 +7136,7 @@ void NavierStokes::check_outer_solver_convergence(
 
  if (error_n<save_mac_abs_tol_in) {
   meets_tol=1;
- } else if (Ar_error_n<=0.0) {
+ } else if (Ar_error_n==0.0) {
   meets_tol=1;
  } else if (rAr_error_n<=0.0) {
   meets_tol=1;
@@ -9303,7 +9303,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   deallocate_maccoefALL(project_option);
    
-  int meets_tol;
+  int meets_tol=0;
 
   set_local_tolerances(project_option);
 
@@ -10443,6 +10443,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
        ns_level.zero_independent_variable(project_option,nsolve);
       }  // ilev=finest_level ... level
+
       change_flag=0;
       project_right_hand_side(OUTER_ITER_PRESSURE_MF,project_option,
 		     change_flag);
@@ -10453,6 +10454,9 @@ void NavierStokes::multiphase_project(int project_option) {
       allocate_array(1,nsolveMM,-1,OUTER_MAC_PHI_CRSE_MF);
       allocate_array(0,nsolveMM,-1,OUTER_RESID_MF);
       allocate_array(0,nsolveMM,-1,OUTER_MAC_RHS_CRSE_MF);
+
+      allocate_array(1,nsolveMM,-1,P_SOLN_MF);
+      allocate_array(0,nsolveMM,-1,bicg_V1_MF);
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
@@ -10487,7 +10491,7 @@ void NavierStokes::multiphase_project(int project_option) {
       } else
        amrex::Error("outer_error invalid");
 
-      copyALL(0,nsolveMM,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=CGRESID_MF
+      copyALL(0,nsolveMM,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=OUTER_RESID_MF
          // V1=A P_SOLN
          // 1. (begin)calls project_right_hand_side(P)
          // 2. (end)  calls project_right_hand_side(V1)
@@ -10495,34 +10499,54 @@ void NavierStokes::multiphase_project(int project_option) {
       dot_productALL(project_option,OUTER_RESID_MF,bicg_V1_MF,
 		     rAr_outer_error,nsolve);
       dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,
-		     Ar_outer_error_n,nsolve);
+		     Ar_outer_error,nsolve);
 
-      FIX ME (change where P_SOLN and bicg_V1_MF are alloc and dealloc) ..
+      if (rAr_outer_error<0.0) {
+       rAr_outer_error=0.0;
+      } else if (rAr_outer_error>=0.0) {
+       rAr_outer_error=sqrt(rAr_outer_error);
+      } else
+       amrex::Error("rAr_outer_error invalid");
+
+      if (Ar_outer_error>=0.0) {
+       Ar_outer_error=sqrt(Ar_outer_error);
+      } else
+       amrex::Error("Ar_outer_error invalid");
+
+      delete_array(bicg_V1_MF);
+      delete_array(P_SOLN_MF);
 
       delete_array(OUTER_MAC_RHS_CRSE_MF);
       delete_array(OUTER_MAC_PHI_CRSE_MF);
       delete_array(OUTER_RESID_MF);
 
+      Real outer_tol=100.0*save_mac_abs_tol;
+
       outer_error_history[bicgstab_num_outer_iterSOLVER][0]=outer_error;
-      outer_error_history[bicgstab_num_outer_iterSOLVER][1]=
-	      1.1*save_mac_abs_tol;
+      outer_error_history[bicgstab_num_outer_iterSOLVER][1]=rAr_outer_error;
+      outer_error_history[bicgstab_num_outer_iterSOLVER][2]=Ar_outer_error;
+      outer_error_history[bicgstab_num_outer_iterSOLVER][3]=outer_tol;
 
       bicgstab_num_outer_iterSOLVER++;
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
         std::cout << "project_option= " << project_option << '\n';
-        std::cout << "bicgstab_num_outer_iterSOLVER,error " << 
-         bicgstab_num_outer_iterSOLVER << ' ' << outer_error << '\n';
+        std::cout << "bicgstab_num_outer_iterSOLVER,E,rAr_E,Ar_E " << 
+         bicgstab_num_outer_iterSOLVER << ' ' << outer_error << 
+	 ' ' << rAr_outer_error << 
+	 ' ' << Ar_outer_error << '\n';
        }
       }
 
       outer_iter_done=0;
 
-      if (outer_error<=10.0*save_mac_abs_tol)
-       outer_iter_done=1;
-      if (outer_error*dt_slab<=1.1*save_mac_abs_tol)
-       outer_iter_done=1;
+      check_outer_solver_convergence(outer_error,error0,
+	       Ar_outer_error,Ar_error0,
+	       rAr_outer_error,rAr_error0,
+	       outer_tol,
+	       outer_iter_done);
+
       if (bicgstab_num_outer_iterSOLVER>bicgstab_max_num_outer_iter)
        outer_iter_done=1;
 
