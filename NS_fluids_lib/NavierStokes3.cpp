@@ -10626,6 +10626,10 @@ void NavierStokes::multiphase_project(int project_option) {
 
      std::cout << "project_option= " << project_option << 
 	    " number calls= " << number_solver_calls[project_option] << 
+             " local outer_error= " << outer_error << '\n';
+
+     std::cout << "project_option= " << project_option << 
+	    " number calls= " << number_solver_calls[project_option] << 
              " solver avg iter= " << avg_iter << '\n';
      std::cout << "project_option= " << project_option <<
 	    " TIME= " << cur_time_slab << " Current iterations= " <<
