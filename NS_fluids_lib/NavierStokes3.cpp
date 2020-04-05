@@ -10307,11 +10307,11 @@ void NavierStokes::multiphase_project(int project_option) {
        delete_array(CGRESID_MF);
        delete_array(P_SOLN_MF);
 
-       // (alpha+da) deltap - div beta grad deltap=
+       // alpha deltap - div beta grad deltap=
        //   -(1/dt)div U + alpha poldhold
        // 
-       // (alpha+da) dp - div beta grad dp=
-       //   -(1/dt)div (U+V) + alpha poldhold + (alpha+da)poldhold_dual
+       // alpha dp - div beta grad dp=
+       //   -(1/dt)div (U+V) + alpha poldhold 
        // 
        // UMAC=UMAC-grad(mac_phi_crse) 
        // S_new=S_new+mac_phi_crse 
