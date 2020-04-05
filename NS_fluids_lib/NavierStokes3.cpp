@@ -9361,6 +9361,7 @@ void NavierStokes::multiphase_project(int project_option) {
     outer_error_history[ehist][2]=0.0;
     outer_error_history[ehist][3]=0.0;
   }
+  Real outer_error=0.0;
 
   while (outer_iter_done==0) {
 
@@ -10481,7 +10482,7 @@ void NavierStokes::multiphase_project(int project_option) {
        // modification) is 0.
       residALL(project_option,OUTER_MAC_RHS_CRSE_MF,
         OUTER_RESID_MF,OUTER_MAC_PHI_CRSE_MF,nsolve);
-      Real outer_error=0.0;
+      outer_error=0.0;
       Real rAr_outer_error=0.0;
       Real Ar_outer_error=0.0;
       dot_productALL(project_option,
@@ -10586,6 +10587,7 @@ void NavierStokes::multiphase_project(int project_option) {
      number_vcycles_all_solver_calls.resize(new_size,0);
      max_lev0_cycles_all_solver_calls.resize(new_size,0);
      median_lev0_cycles_all_solver_calls.resize(new_size,0);
+     outer_error_all_solver_calls.resize(new_size,0.0);
      number_solver_calls.resize(new_size,0);
     } else
      amrex::Error("new_size or prev_size invalid");
@@ -10604,6 +10606,7 @@ void NavierStokes::multiphase_project(int project_option) {
     median_lev0_cycles_all_solver_calls[project_option]+=
 	   local_median_lev0_cycles;
     number_vcycles_all_solver_calls[project_option]+=total_number_vcycles;
+    outer_error_all_solver_calls[project_option]+=outer_error;
 
     if (ParallelDescriptor::IOProcessor()) {
      Real avg_iter=number_vcycles_all_solver_calls[project_option]/
@@ -10613,6 +10616,14 @@ void NavierStokes::multiphase_project(int project_option) {
      std::cout << "project_option= " << project_option <<
 	    " SDC_outer_sweeps= " << SDC_outer_sweeps <<
 	    " slab_step= " << slab_step << '\n';
+
+     Real avg_outer_error=outer_error_all_solver_calls[project_option]/
+  	          number_solver_calls[project_option];
+
+     std::cout << "project_option= " << project_option << 
+	    " number calls= " << number_solver_calls[project_option] << 
+             " solver avg outer_error= " << avg_outer_error << '\n';
+
      std::cout << "project_option= " << project_option << 
 	    " number calls= " << number_solver_calls[project_option] << 
              " solver avg iter= " << avg_iter << '\n';

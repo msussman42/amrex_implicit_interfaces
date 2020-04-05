@@ -252,6 +252,7 @@ Vector<int> NavierStokes::visual_ncell;
 int NavierStokes::slice_dir=0;
 Vector<Real> NavierStokes::xslice;
 
+Vector<Real> NavierStokes::outer_error_all_solver_calls;
 Vector<int> NavierStokes::number_vcycles_all_solver_calls;
 Vector<int> NavierStokes::max_lev0_cycles_all_solver_calls;
 Vector<int> NavierStokes::median_lev0_cycles_all_solver_calls;

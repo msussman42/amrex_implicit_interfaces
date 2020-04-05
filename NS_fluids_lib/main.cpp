@@ -39,7 +39,7 @@ main (int   argc,
     std::fflush(NULL);
     amrex::ParallelDescriptor::Barrier();
     std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 04/04/20, 17:30pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 04/05/20, 00:50am on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
     std::cout << "PROC= " << amrex::ParallelDescriptor::MyProc() << 
 	    " thread_class::nthreads= " << 

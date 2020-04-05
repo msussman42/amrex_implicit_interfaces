@@ -1341,6 +1341,7 @@ protected:
     static int advect_iter;
     static int hydrate_flag;
 
+    static Vector<Real> outer_error_all_solver_calls;
     static Vector<int> number_vcycles_all_solver_calls;
     static Vector<int> max_lev0_cycles_all_solver_calls;
     static Vector<int> median_lev0_cycles_all_solver_calls;
