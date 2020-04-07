@@ -9485,7 +9485,7 @@ end subroutine dynamic_contact_angle
       character*4 filename4
       character*5 filename5
 
-      verbose_EOS=1
+      verbose_EOS=0
       mat_type=fort_material_type(im)
       if ((mat_type.gt.0).and.(mat_type.le.fort_max_num_eos)) then
        if (verbose_EOS.eq.1) then
@@ -9540,6 +9540,7 @@ end subroutine dynamic_contact_angle
         ! pressure=p(density=rho,internal_energy)
       subroutine EOS_material(rho,internal_energy_in,pressure, &
         imattype,im)
+      use CRYOGENIC_TANK1_module       
       IMPLICIT NONE
 
       INTEGER_T imattype,im
@@ -9603,6 +9604,8 @@ end subroutine dynamic_contact_angle
        call EOS_tillotson(rho,internal_energy,pressure)
       else if (imattype.eq.23) then
        call EOS_peng_robinson(rho,internal_energy,pressure)
+      else if (imattype.eq.24) then
+       call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure)
       else
        print *,"imattype invalid EOS_material"
        stop
@@ -9665,6 +9668,7 @@ end subroutine dynamic_contact_angle
         ! sound squared=c^2(density=rho,internal_energy)
       subroutine SOUNDSQR_material(rho,internal_energy_in,soundsqr, &
         imattype,im)
+      use CRYOGENIC_TANK1_module       
       IMPLICIT NONE
 
       INTEGER_T imattype,im
@@ -9729,6 +9733,8 @@ end subroutine dynamic_contact_angle
        call SOUNDSQR_tillotson(rho,internal_energy,soundsqr)
       else if (imattype.eq.23) then
        call SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
+      else if (imattype.eq.24) then
+       call SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr)
       else
        print *,"imattype invalid SOUNDSQR_material"
        stop
@@ -9808,6 +9814,7 @@ end subroutine dynamic_contact_angle
         ! internal energy = e(temperature,density=rho)
       subroutine INTERNAL_material(rho,temperature,internal_energy, &
         imattype,im)
+      use CRYOGENIC_TANK1_module       
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -9874,6 +9881,8 @@ end subroutine dynamic_contact_angle
        call INTERNAL_tillotson(rho,temperature,local_internal_energy)
       else if (imattype.eq.23) then
        call INTERNAL_peng_robinson(rho,temperature,local_internal_energy)
+      else if (imattype.eq.24) then
+       call INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy)
       else
        print *,"imattype invalid INTERNAL_material"
        stop
@@ -10033,6 +10042,7 @@ end subroutine dynamic_contact_angle
        ! returns T(e*scale)
       subroutine TEMPERATURE_material(rho,temperature,internal_energy_in, &
         imattype,im)
+      use CRYOGENIC_TANK1_module       
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -10108,6 +10118,8 @@ end subroutine dynamic_contact_angle
        call TEMPERATURE_tillotson(rho,temperature,internal_energy)
       else if (imattype.eq.23) then
        call TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
+      else if (imattype.eq.24) then
+       call TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy)
       else
        print *,"imattype invalid TEMPERATURE_material"
        print *,"imattype= ",imattype

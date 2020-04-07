@@ -6797,7 +6797,9 @@ stop
         stop
        endif
        if (fort_energyconst(im).le.zero) then
-        print *,"energy must be positive"
+        print *,"energy must be positive in FORT_INIT_PHYSICS_VARS"
+        print *,"im= ",im
+        print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
@@ -8894,7 +8896,9 @@ stop
         stop
        endif
        if (fort_energyconst(im).le.zero) then
-        print *,"energy must be positive"
+        print *,"energy must be positive in FORT_BUILD_SEMIREFINEVOF"
+        print *,"im= ",im
+        print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
@@ -9594,7 +9598,9 @@ stop
         stop
        endif
        if (fort_energyconst(im).le.zero) then
-        print *,"energy must be positive"
+        print *,"energy must be positive in FORT_BUILD_MODVISC"
+        print *,"im= ",im
+        print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))

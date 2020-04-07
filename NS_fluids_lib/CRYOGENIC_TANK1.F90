@@ -30,10 +30,15 @@ REAL_T :: TANK1_RADIUS
 REAL_T :: TANK1_HEIGHT         
 ! Tank wall thickness
 REAL_T :: TANK1_THICKNESS      
-! Location of liquid-gas interface in respect to y=0
+! Location of liquid-gas interface in respect to z=0
 REAL_T :: TANK1_LIQUID_HEIGHT  
 ! Initial vapor pressure
-REAL_T :: TANK1_INITIAL_VAPOR_PRESSURE 
+REAL_T :: TANK1_INITIAL_VAPOR_PRESSURE
+
+! Vapor thermodygamma =c_p/c_v
+REAL_T :: TANK1_VAPOR_GAMMA
+REAL_T :: TANK1_VAPOR_CP
+REAL_T :: TANK1_VAPOR_CV
 contains
 
  ! do any initial preparation needed
@@ -44,7 +49,12 @@ contains
   TANK1_HEIGHT = yblob
   TANK1_THICKNESS = radblob
   TANK1_LIQUID_HEIGHT = zblob
-  TANK1_INITIAL_VAPOR_PRESSURE = xblob2
+
+  TANK1_VAPOR_GAMMA =  1.666666667D0
+  TANK1_VAPOR_CV = 6.490D3 ! [J∕(kg·K)]
+  TANK1_VAPOR_CP =  TANK1_VAPOR_CV * TANK1_VAPOR_GAMMA ! [J∕(kg·K)]
+  TANK1_INITIAL_VAPOR_PRESSURE = fort_denconst(2)*(TANK1_VAPOR_GAMMA-one)*fort_tempconst(2)
+  
   return
  end subroutine INIT_CRYOGENIC_TANK1_MODULE
 
@@ -87,10 +97,12 @@ contains
     stop
    endif
   else
+   print *,"num_materials ", num_materials
+   print *,"probtype ", probtype
    print *,"num_materials or probtype invalid"
    stop
   endif
-
+  ! print*,"X= ",x," LS= ", LS
   return
  end subroutine CRYOGENIC_TANK1_LS
 
@@ -167,7 +179,8 @@ REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
    dist_end = min(H_top-y,y-H_bot)
    DIST_FINITE_CYLINDER = -min(dist_cyl,dist_end)
   else
-   print *,"invalid r value at DIST_FINITE_CYLINDER"
+   print *,"r=",r
+   print *,"invalid r value at DIST_FINITE_CYLINDER (1)"
    stop
   endif
 
@@ -176,13 +189,14 @@ REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
   if(r.le.R_cyl) then
    ! inside infinite cylinder
    DIST_FINITE_CYLINDER = y-H_top
-  else if (r.lt.R_cyl) then
+  else if (r.gt.R_cyl) then
    ! outside infinite cylinder
    ! distance to the edge of the top
    DIST_FINITE_CYLINDER = &
     sqrt((r-R_cyl)**2 + (y-H_top)**2)
   else
-   print *,"invalid r value at DIST_FINITE_CYLINDER"
+   print *,"r=",r
+   print *,"invalid r value at DIST_FINITE_CYLINDER (2)"
    stop
   endif
 
@@ -191,13 +205,14 @@ REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
   if(r.le.R_cyl) then
    ! inside infinite cylinder
    DIST_FINITE_CYLINDER = H_bot-y
-  else if (r.lt.R_cyl) then
+  else if (r.gt.R_cyl) then
    ! outside infinite cylinder
    ! distance to the edge of the bottom
    DIST_FINITE_CYLINDER = &
     sqrt((r-R_cyl)**2 + (H_bot-y)**2)
   else
-   print *,"invalid r value at DIST_FINITE_CYLINDER"
+   print *,"r=",r
+   print *,"invalid r value at DIST_FINITE_CYLINDER (3)"
    stop
   endif
  else
@@ -206,6 +221,55 @@ REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
  endif
 end function DIST_FINITE_CYLINDER
 
+!***********************************************
+! compressible material functions for (ns.material_type = 24)
+subroutine EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure)
+ IMPLICIT NONE
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: internal_energy
+ REAL_T, intent(out) :: pressure
+
+ pressure=rho*(TANK1_VAPOR_GAMMA-1)*internal_energy
+
+ return
+end subroutine EOS_CRYOGENIC_TANK1
+
+subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr)
+ IMPLICIT NONE
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: internal_energy
+ REAL_T, intent(out) :: soundsqr
+ REAL_T pressure
+
+ call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure)
+ soundsqr=TANK1_VAPOR_GAMMA*pressure/rho
+
+ return
+end subroutine SOUNDSQR_CRYOGENIC_TANK1
+
+subroutine INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy)
+ IMPLICIT NONE
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: temperature 
+ REAL_T, intent(out) :: local_internal_energy
+ 
+ local_internal_energy=TANK1_VAPOR_CV*temperature
+
+ return
+end subroutine INTERNAL_CRYOGENIC_TANK1
+
+subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy)
+ IMPLICIT NONE
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(out) :: temperature 
+ REAL_T, intent(in) :: internal_energy
+
+ temperature=internal_energy/TANK1_VAPOR_CV
+
+ return
+end subroutine TEMPERATURE_CRYOGENIC_TANK1
+
+!***********************************************
 ! called by the boundary condition routine
 ! might be called at initialization, so put a placeholder pressure here.
 subroutine CRYOGENIC_TANK1_PRES(x,t,LS,PRES)
@@ -412,9 +476,11 @@ REAL_T CV(num_materials)
 REAL_T dt
 REAL_T heat_source
 
-if ((num_materials.eq.2).and.(probtype.eq.412)) then
+if ((num_materials.eq.3).and.(probtype.eq.421)) then
  heat_source=zero
 else
+ print *,"num_materials ", num_materials
+ print *,"probtype ", probtype
  print *,"num_materials or probtype invalid"
  stop
 endif

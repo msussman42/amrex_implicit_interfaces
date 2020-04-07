@@ -14,7 +14,7 @@ namespace amrex{
 
 #define MAX_NUM_MATERIALS 20
 #define MAX_NUM_SPECIES 20
-#define MAX_NUM_EOS 23
+#define MAX_NUM_EOS 24
 
 // (1/2) ( (n-1)^2 + n-1 )
 #define MAX_NUM_TENSION 190
