@@ -3595,10 +3595,11 @@ stop
       subroutine get_user_tension(xpos,time, &
         tension,new_tension, &
         temperature, &
-        nmat,nten)
+        nmat,nten,caller_id)
       use global_utility_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: caller_id 
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xpos(SDIM)
       REAL_T, intent(in) :: time
@@ -3614,6 +3615,8 @@ stop
       if (nten_test.ne.nten) then
        print *,"nten invalid get_user_tension nten nten test", &
          nten,nten_test
+       print *,"nmat=",nmat
+       print *,"caller_id=",caller_id
        stop
       endif
 
@@ -13272,7 +13275,7 @@ END SUBROUTINE Adist
         call get_user_tension(xvec,time, &
           fort_tension,user_tension, &
           marangoni_temp, &
-          nmat,nten)
+          nmat,nten,1)
           ! find angle between materials "im" and "im_3"
         call get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
          user_tension,nten,cos_angle,sin_angle)

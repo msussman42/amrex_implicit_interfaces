@@ -583,7 +583,7 @@ stop
       call get_user_tension(xcenter,time, &
        fort_tension,user_tension, &
        temperature_cen, &
-       nmat,nten)
+       nmat,nten,2)
 
       do dir2=1,SDIM
        mgoni_force(dir2)=zero
@@ -14498,7 +14498,7 @@ stop
 
             call get_user_tension(xmac,time, &
              fort_tension,user_tension, &
-             mgoni_temp,nmat,nten)
+             mgoni_temp,nmat,nten,3)
 
             call get_iten(im,im_opp,iten,nmat)
             call get_scaled_tension(user_tension(iten),tension_scaled)

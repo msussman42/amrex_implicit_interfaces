@@ -5326,7 +5326,7 @@ stop
                enddo
                call get_user_tension(xtension,cur_time, &
                 fort_tension,user_tension, &
-                mgoni_temp,nmat,nten)
+                mgoni_temp,nmat,nten,4)
 
                do im=1,nmat
                 LSmat(im)=localMAC_LS(D_DECL(0,0,0),im)
@@ -5749,7 +5749,7 @@ stop
                   call get_user_tension(xtension,cur_time, &
                    fort_tension,user_tension, &
                    thermalmat, &
-                   nmat,nten)
+                   nmat,nten,5)
 
                   do im=1,nmat
                    do im_opp=im+1,nmat
@@ -13855,9 +13855,10 @@ end function delta
           stop
          endif
          call get_iten(im_fluid1,im_fluid2,iten,nmat)
+           ! in: subroutine getGhostVel
          call get_user_tension(x_image,time, &
                  fort_tension,user_tension, &
-                 thermal_interp,nmat,iten)
+                 thermal_interp,nmat,nten,6)
           ! cos_angle and sin_angle correspond to the angle in im_fluid1
          call get_CL_iten(im_fluid1,im_fluid2,im_solid,iten_13,iten_23, &
            user_tension,nten,cos_angle,sin_angle)
@@ -13959,7 +13960,7 @@ end function delta
          stop
         endif
 
-        if (law_of_the_wall.eq.1) then
+        if (law_of_the_wall.eq.1) then ! turbulence modeling here.
 
          if (critical_length.lt.dxmin) then
 
@@ -13995,7 +13996,7 @@ end function delta
           stop
          endif
 
-        else if (law_of_the_wall.eq.2) then
+        else if (law_of_the_wall.eq.2) then ! GNBC model
 
          if (near_contact_line.eq.1) then
           if ((fort_denconst(im_fluid1).gt.zero).and. &
@@ -14359,6 +14360,8 @@ end function delta
           ! law of wall or dynamic contact angle treatment
           ! only for rigid substrates; not flexible substrates.
          if (is_rigid(nmat,impart).eq.1) then
+           ! impart=material id of a rigid solid.
+           ! Here, we test if cell center is in the solid.
            ! zero is defined in CONSTANTS.H
            ! CONSTANTS.H is defined in: ./BoxLib/Src/C_BaseLib/CONSTANTS.H
           if ((LScenter(impart).ge.zero).and.(im_primary.eq.impart)) then
@@ -14549,6 +14552,7 @@ end function delta
                 im_fluid, &
                 impart)
 
+               ! solid "ghost" velocity in the solid regions.
               do dir=1,SDIM
                ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
                 usolid_law_of_wall(dir)
@@ -14573,7 +14577,8 @@ end function delta
             print *,"nearwall_exists invalid"
             stop
            endif
-     
+    
+            ! cell center is not in the solid 
           else if ((LScenter(impart).lt.zero).or.(im_primary.ne.impart)) then
   
            plus_flag=0
@@ -14635,6 +14640,7 @@ end function delta
                        (usolid_normal-ufluid_normal)*nrm_solid(dir)
                enddo 
 
+                ! solid ghost velocity in the fluid regions.
                do dir=1,SDIM
                 ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
                    usolid_law_of_wall(dir)
