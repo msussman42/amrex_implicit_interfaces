@@ -6356,105 +6356,105 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T nmat
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-      INTEGER_T nten
-      REAL_T curv_min
-      REAL_T curv_max
-      INTEGER_T isweep
-      INTEGER_T nrefine_vof
-      REAL_T prescribed_solid_scale(nmat)
-      INTEGER_T level,finest_level
-      INTEGER_T diffusionface_flag
-      INTEGER_T temperatureface_flag
-      INTEGER_T curv_index
-      INTEGER_T pforce_index
-      INTEGER_T faceden_index
-      INTEGER_T facecut_index
-      INTEGER_T icefacecut_index
-      INTEGER_T icemask_index
-      INTEGER_T facevisc_index
-      INTEGER_T faceheat_index
-      INTEGER_T facevel_index
-      INTEGER_T facespecies_index
-      INTEGER_T massface_index
-      INTEGER_T vofface_index
-      INTEGER_T ncphys
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: nten
+      REAL_T :: curv_min
+      REAL_T :: curv_max
+      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, intent(in) :: nrefine_vof
+      REAL_T, intent(in) :: prescribed_solid_scale(nmat)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: diffusionface_flag
+      INTEGER_T, intent(in) :: temperatureface_flag
+      INTEGER_T, intent(in) :: curv_index
+      INTEGER_T, intent(in) :: pforce_index
+      INTEGER_T, intent(in) :: faceden_index
+      INTEGER_T, intent(in) :: facecut_index
+      INTEGER_T, intent(in) :: icefacecut_index
+      INTEGER_T, intent(in) :: icemask_index
+      INTEGER_T, intent(in) :: facevisc_index
+      INTEGER_T, intent(in) :: faceheat_index
+      INTEGER_T, intent(in) :: facevel_index
+      INTEGER_T, intent(in) :: facespecies_index
+      INTEGER_T, intent(in) :: massface_index
+      INTEGER_T, intent(in) :: vofface_index
+      INTEGER_T, intent(in) :: ncphys
 
-      INTEGER_T solidheat_flag
-      REAL_T microlayer_size(nmat)
-      INTEGER_T microlayer_substrate(nmat)
-      REAL_T microlayer_temperature_substrate(nmat)
+      INTEGER_T, intent(in) :: solidheat_flag
+      REAL_T, intent(in) :: microlayer_size(nmat)
+      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
+      REAL_T, intent(in) :: microlayer_temperature_substrate(nmat)
 
-      INTEGER_T num_curv
-      REAL_T time
-      INTEGER_T project_option
-      REAL_T problo(SDIM),probhi(SDIM)
-      REAL_T visc_coef
-      REAL_T latent_heat(2*nten)
-      INTEGER_T freezing_model(2*nten)
-      INTEGER_T distribute_from_target(2*nten)
-      INTEGER_T veldir
-      INTEGER_T override_density(nmat)
-      INTEGER_T spec_material_id(num_species_var+1)
-      INTEGER_T mass_fraction_id(2*nten)
-      REAL_T species_evaporation_density(num_species_var+1)
-      REAL_T cavitation_vapor_density(nmat)
-      INTEGER_T cavitation_species(nmat)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T presbc_arr(SDIM,2)
-      INTEGER_T velbc(SDIM,2,num_materials_vel*SDIM)
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(yface)
-      INTEGER_T DIMDEC(zface)
-      INTEGER_T DIMDEC(curv)
-      INTEGER_T DIMDEC(slope)
-      INTEGER_T DIMDEC(denstate)
-      INTEGER_T DIMDEC(viscstate)
-      INTEGER_T DIMDEC(sol)
-      INTEGER_T DIMDEC(cenDeDT)
-      INTEGER_T DIMDEC(cenden)
-      INTEGER_T DIMDEC(cenvof)
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(levelPC)
-      INTEGER_T DIMDEC(cenvisc)
-      INTEGER_T DIMDEC(vofC)
-      INTEGER_T DIMDEC(vofF)
-      INTEGER_T DIMDEC(massF)
-      INTEGER_T DIMDEC(modvisc)
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T masknbr(DIMV(masknbr),4)
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T yface(DIMV(yface),ncphys)
-      REAL_T zface(DIMV(zface),ncphys)
-      REAL_T curv(DIMV(curv),num_curv) 
-      REAL_T slope(DIMV(slope),nmat*ngeom_recon) 
-      REAL_T denstate(DIMV(denstate),nmat*num_state_material) 
-      REAL_T viscstate(DIMV(viscstate),nmat) 
-      REAL_T sol(DIMV(sol),nparts_def*SDIM) 
-      REAL_T cenDeDT(DIMV(cenDeDT),nmat+1)
-      REAL_T cenden(DIMV(cenden),nmat+1)
-      REAL_T cenvof(DIMV(cenvof),nmat)  
-      REAL_T cenvisc(DIMV(cenvisc),nmat+1)
-      REAL_T vol(DIMV(vol))
-      REAL_T levelPC(DIMV(levelPC),nmat)
-      REAL_T vofC(DIMV(vofC),nmat)
-      REAL_T vofF(DIMV(vofF),nrefine_vof)
-      REAL_T massF(DIMV(massF),nrefine_vof)
-      REAL_T modvisc(DIMV(modvisc),nmat)
-      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: num_curv
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: project_option
+      REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
+      REAL_T, intent(in) :: visc_coef
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T :: veldir
+      INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: spec_material_id(num_species_var+1)
+      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
+      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
+      REAL_T, intent(in) :: cavitation_vapor_density(nmat)
+      INTEGER_T, intent(in) :: cavitation_species(nmat)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(yface)
+      INTEGER_T, intent(in) :: DIMDEC(zface)
+      INTEGER_T, intent(in) :: DIMDEC(curv)
+      INTEGER_T, intent(in) :: DIMDEC(slope)
+      INTEGER_T, intent(in) :: DIMDEC(denstate)
+      INTEGER_T, intent(in) :: DIMDEC(viscstate)
+      INTEGER_T, intent(in) :: DIMDEC(sol)
+      INTEGER_T, intent(in) :: DIMDEC(cenDeDT)
+      INTEGER_T, intent(in) :: DIMDEC(cenden)
+      INTEGER_T, intent(in) :: DIMDEC(cenvof)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(levelPC)
+      INTEGER_T, intent(in) :: DIMDEC(cenvisc)
+      INTEGER_T, intent(in) :: DIMDEC(vofC)
+      INTEGER_T, intent(in) :: DIMDEC(vofF)
+      INTEGER_T, intent(in) :: DIMDEC(massF)
+      INTEGER_T, intent(in) :: DIMDEC(modvisc)
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr),4)
+      REAL_T, intent(out) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(out) :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(out) :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in) :: curv(DIMV(curv),num_curv) 
+      REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
+      REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, intent(in) :: viscstate(DIMV(viscstate),nmat) 
+      REAL_T, intent(in) :: sol(DIMV(sol),nparts_def*SDIM) 
+      REAL_T, intent(out) :: cenDeDT(DIMV(cenDeDT),nmat+1)
+      REAL_T, intent(out) :: cenden(DIMV(cenden),nmat+1)
+      REAL_T, intent(out) :: cenvof(DIMV(cenvof),nmat)  
+      REAL_T, intent(out) :: cenvisc(DIMV(cenvisc),nmat+1)
+      REAL_T, intent(in) :: vol(DIMV(vol))
+      REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat)
+      REAL_T, intent(in) :: vofC(DIMV(vofC),nmat)
+      REAL_T, intent(in) :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, intent(in) :: massF(DIMV(massF),nrefine_vof)
+      REAL_T, intent(in) :: modvisc(DIMV(modvisc),nmat)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
-      REAL_T den_interface(nten)
-      REAL_T visc_interface(nten)
-      REAL_T heatvisc_interface(nten)
-      REAL_T speciesvisc_interface(nten*num_species_var)
+      REAL_T, intent(in) :: den_interface(nten)
+      REAL_T, intent(in) :: visc_interface(nten)
+      REAL_T, intent(in) :: heatvisc_interface(nten)
+      REAL_T, intent(in) :: speciesvisc_interface(nten*num_species_var)
 
       INTEGER_T im1,jm1,km1
       INTEGER_T i,j,k,ii,jj,kk
@@ -6786,24 +6786,32 @@ stop
         stop
        endif
 
-       if (fort_denconst(im).le.zero) then
+       if (fort_denconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"density must be positive init_physics_vars"
         print *,"im,denconst ",im,fort_denconst(im)
         stop
        endif
-       if (fort_tempconst(im).le.zero) then
+       if (fort_tempconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"INIT_PHYSICS_VAR:temperature must be positive"
         print *,"im,fort_tempconst : ",im,fort_tempconst(im)
         stop
        endif
-       if (fort_energyconst(im).le.zero) then
+       if (fort_energyconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"energy must be positive in FORT_INIT_PHYSICS_VARS"
         print *,"im= ",im
         print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.lt.zero) then
+       if (mu.ge.zero) then
+        ! do nothing
+       else
         print *,"viscosity cannot be negative"
         stop
        endif
@@ -8733,35 +8741,36 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T tessellate
-      INTEGER_T ngrow_refine
-      INTEGER_T tid
-      INTEGER_T nrefine_vof
-      INTEGER_T nrefine_cen
-      INTEGER_T nten,nten_test
-      INTEGER_T spec_material_id(num_species_var+1)
-      INTEGER_T mass_fraction_id(2*nten)
-      REAL_T species_evaporation_density(num_species_var+1)
-      REAL_T cavitation_vapor_density(nmat)
-      INTEGER_T cavitation_species(nmat)
-      INTEGER_T level,finest_level
-      INTEGER_T nmat
-      INTEGER_T veldir
-      INTEGER_T override_density(nmat)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(slope)
-      INTEGER_T DIMDEC(denstate)
-      INTEGER_T DIMDEC(vofF)
-      INTEGER_T DIMDEC(cenF)
-      INTEGER_T DIMDEC(massF)
-      REAL_T slope(DIMV(slope),nmat*ngeom_recon) 
-      REAL_T denstate(DIMV(denstate),nmat*num_state_material) 
-      REAL_T vofF(DIMV(vofF),nrefine_vof)
-      REAL_T cenF(DIMV(cenF),nrefine_cen)
-      REAL_T massF(DIMV(massF),nrefine_vof)
-      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: ngrow_refine
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: nrefine_vof
+      INTEGER_T, intent(in) :: nrefine_cen
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T :: nten_test
+      INTEGER_T, intent(in) :: spec_material_id(num_species_var+1)
+      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
+      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
+      REAL_T, intent(in) :: cavitation_vapor_density(nmat)
+      INTEGER_T, intent(in) :: cavitation_species(nmat)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T :: veldir
+      INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(slope)
+      INTEGER_T, intent(in) :: DIMDEC(denstate)
+      INTEGER_T, intent(in) :: DIMDEC(vofF)
+      INTEGER_T, intent(in) :: DIMDEC(cenF)
+      INTEGER_T, intent(in) :: DIMDEC(massF)
+      REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
+      REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, intent(out) :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, intent(out) :: cenF(DIMV(cenF),nrefine_cen)
+      REAL_T, intent(out) :: massF(DIMV(massF),nrefine_vof)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k
       INTEGER_T dir2
@@ -8885,24 +8894,32 @@ stop
         stop
        endif
 
-       if (fort_denconst(im).le.zero) then
+       if (fort_denconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"density must be positive semirefinevof"
         print *,"im,denconst ",im,fort_denconst(im)
         stop
        endif
-       if (fort_tempconst(im).le.zero) then
+       if (fort_tempconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"semirefinevof:temperature must be positive"
         print *,"im,fort_tempconst : ",im,fort_tempconst(im)
         stop
        endif
-       if (fort_energyconst(im).le.zero) then
+       if (fort_energyconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"energy must be positive in FORT_BUILD_SEMIREFINEVOF"
         print *,"im= ",im
         print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.lt.zero) then
+       if (mu.ge.zero) then
+        ! do nothing
+       else
         print *,"viscosity cannot be negative"
         stop
        endif
@@ -9483,27 +9500,27 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T ngrow_visc
-      INTEGER_T level,finest_level
-      INTEGER_T nten
-      REAL_T time
-      REAL_T problo(SDIM),probhi(SDIM)
-      REAL_T visc_coef
-      INTEGER_T nmat
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(slope)
-      INTEGER_T DIMDEC(denstate)
-      INTEGER_T DIMDEC(viscstate)
-      INTEGER_T DIMDEC(levelPC)
-      INTEGER_T DIMDEC(modvisc)
-      REAL_T slope(DIMV(slope),nmat*ngeom_recon) 
-      REAL_T denstate(DIMV(denstate),nmat*num_state_material) 
-      REAL_T viscstate(DIMV(viscstate),nmat) 
-      REAL_T levelPC(DIMV(levelPC),nmat)
-      REAL_T modvisc(DIMV(modvisc),nmat)
-      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: ngrow_visc
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nten
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
+      REAL_T, intent(in) :: visc_coef
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(slope)
+      INTEGER_T, intent(in) :: DIMDEC(denstate)
+      INTEGER_T, intent(in) :: DIMDEC(viscstate)
+      INTEGER_T, intent(in) :: DIMDEC(levelPC)
+      INTEGER_T, intent(in) :: DIMDEC(modvisc)
+      REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
+      REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, intent(in) :: viscstate(DIMV(viscstate),nmat) 
+      REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat)
+      REAL_T, intent(out) :: modvisc(DIMV(modvisc),nmat)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k
 
@@ -9587,24 +9604,32 @@ stop
         stop
        endif
 
-       if (fort_denconst(im).le.zero) then
+       if (fort_denconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"density must be positive build modvisc"
         print *,"im,denconst ",im,fort_denconst(im)
         stop
        endif
-       if (fort_tempconst(im).le.zero) then
+       if (fort_tempconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"build modvisc:temperature must be positive"
         print *,"im,fort_tempconst : ",im,fort_tempconst(im)
         stop
        endif
-       if (fort_energyconst(im).le.zero) then
+       if (fort_energyconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"energy must be positive in FORT_BUILD_MODVISC"
         print *,"im= ",im
         print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.lt.zero) then
+       if (mu.ge.zero) then
+        ! do nothing
+       else
         print *,"viscosity cannot be negative"
         stop
        endif

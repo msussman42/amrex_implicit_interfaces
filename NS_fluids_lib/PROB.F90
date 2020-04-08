@@ -5003,6 +5003,13 @@ end subroutine dynamic_contact_angle
        ! in default_hydrostatic_pressure_density
       denfree=fort_denconst(imat)
       energy_free=fort_energyconst(imat)
+      if (energy_free.gt.zero) then
+       ! do nothing
+      else
+       print *,"energy_free invalid in default_hydrostatic_pressure_density"
+       print *,"imat,energy_free= ",imat,energy_free
+       stop
+      endif
 
       if (SDIM.eq.2) then
        zfree=probhiy
@@ -27902,6 +27909,13 @@ END SUBROUTINE Adist
             water_temp=radblob2+fort_tempconst(1)
             call INTERNAL_material(fort_denconst(1),water_temp, &
              fort_energyconst(1),fort_material_type(1),1)
+            if (fort_energyconst(1).gt.zero) then
+             ! do nothing
+            else
+             print *,"fort_energyconst(1) invalid in denBC ylo"
+             print *,"fort_energyconst(1)=",fort_energyconst(1)
+             stop
+            endif
 
             ! this density will never be used at the wall.
             if (istate.eq.1) then 
@@ -27980,6 +27994,13 @@ END SUBROUTINE Adist
             water_temp=fort_tempconst(1)
             call INTERNAL_material(fort_denconst(1),water_temp, &
              fort_energyconst(1),fort_material_type(1),1)
+            if (fort_energyconst(1).gt.zero) then
+             ! do nothing
+            else
+             print *,"fort_energyconst(1) invalid in denBC yhi"
+             print *,"fort_energyconst(1)=",fort_energyconst(1)
+             stop
+            endif
 
             ! this density will never be used at the wall.
             if (istate.eq.1) then
@@ -28110,6 +28131,13 @@ END SUBROUTINE Adist
            water_temp=radblob2+fort_tempconst(1)
            call INTERNAL_material(fort_denconst(1),water_temp, &
             fort_energyconst(1),fort_material_type(1),1)
+           if (fort_energyconst(1).gt.zero) then
+            ! do nothing
+           else
+            print *,"fort_energyconst(1) invalid in denBC zlo"
+            print *,"fort_energyconst(1)=",fort_energyconst(1)
+            stop
+           endif
 
             ! this density will never be used at the wall.
            if (istate.eq.1) then 
@@ -28149,6 +28177,13 @@ END SUBROUTINE Adist
            water_temp=fort_tempconst(1)
            call INTERNAL_material(fort_denconst(1),water_temp, &
             fort_energyconst(1),fort_material_type(1),1)
+           if (fort_energyconst(1).gt.zero) then
+            ! do nothing
+           else
+            print *,"fort_energyconst(1) invalid in denBC zhi"
+            print *,"fort_energyconst(1)=",fort_energyconst(1)
+            stop
+           endif
 
             ! this density will never be used at the wall.
            if (istate.eq.1) then
@@ -33653,11 +33688,6 @@ end subroutine initialize2d
         fort_prerecalesce_viscconst(im)=ccprerecalesce_viscconst(im)
         fort_prerecalesce_stiffCP(im)=ccprerecalesce_stiffCP(im)
 
-        call INTERNAL_material(fort_denconst(im),fort_tempconst(im), &
-            fort_energyconst(im),fort_material_type(im),im)
-        call INTERNAL_material(fort_denconst(im),fort_tempcutoff(im), &
-            fort_energycutoff(im),fort_material_type(im),im)
-
         fort_im_elastic_map(im)=-1
 
        enddo ! im=1..num_materials
@@ -33708,8 +33738,6 @@ end subroutine initialize2d
         enddo 
         do im=1,num_materials
          print *,"im,mat type ",im,fort_material_type(im)
-         print *,"im,energy ",im,fort_energyconst(im)
-         print *,"im,energycutoff ",im,fort_energycutoff(im)
          print *,"im,drhodt ",im,fort_drhodt(im)
          print *,"im,drhodz ",im,fort_drhodz(im)
          print *,"im,temp ",im,fort_tempconst(im)
@@ -33881,6 +33909,24 @@ end subroutine initialize2d
  
        else
         ! do nothing 
+       endif
+
+        ! this loop occurs after user defined initialization.
+       do im=1,num_materials
+        call INTERNAL_material(fort_denconst(im),fort_tempconst(im), &
+            fort_energyconst(im),fort_material_type(im),im)
+        call INTERNAL_material(fort_denconst(im),fort_tempcutoff(im), &
+            fort_energycutoff(im),fort_material_type(im),im)
+       enddo
+
+       if (ioproc.eq.1) then
+        do im=1,num_materials
+         print *,"im,energy ",im,fort_energyconst(im)
+         print *,"im,energycutoff ",im,fort_energycutoff(im)
+        enddo
+       else if (ioproc.ne.0) then
+        print *,"ioproc invalid"
+        stop
        endif
 
        if (ioproc.eq.1) then
