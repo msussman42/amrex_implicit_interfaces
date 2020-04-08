@@ -38509,9 +38509,35 @@ end subroutine initialize2d
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
           enddo
+
+          if (scalc(ibase+1).gt.zero) then
+           ! do nothing
+          else
+           print *,"density invalid probtype==421 "
+           print *,"im,ibase,nmat ",im,ibase,nmat
+           print *,"density=",scalc(ibase+1)
+           stop
+          endif
+
+          if (scalc(ibase+2).gt.zero) then
+           ! do nothing
+          else
+           print *,"temperature invalid probtype==421 "
+           print *,"im,ibase,nmat ",im,ibase,nmat
+           print *,"temperature=",scalc(ibase+1)
+           stop
+          endif
+
          enddo ! im=1..nmat
          call CRYOGENIC_TANK1_PRES(xpos,time,distbatch,p_hyd)
          scalc(ipresbase+impres)=p_hyd
+
+         if (p_hyd.gt.zero) then
+          ! do nothing
+         else
+          print *,"p_hyd invalid probtype==421   p_hyd=",p_hyd
+          stop
+         endif
 
         else if (probtype.eq.533) then
 
