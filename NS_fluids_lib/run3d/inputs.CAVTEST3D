@@ -16,6 +16,8 @@
 #
 # in future: it will be possible to take a CAD file from AUTODESK (for example)
 # and have it automatically converted into a levelset function.
+# CODY  cav3D.F90,cav2Dstep.F90
+# nozzle.cas
 
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
@@ -71,12 +73,15 @@ ns.ns_tiling=false
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.solvability_projection=0 
 
+#0=stair-step 1=2nd order 2=mod stair-step 3=modified normal
+ns.prescribed_solid_method=0
+
 ns.projection_pressure_scale=1.0e+6 # since outflow_pressure=1.0e+6
 ns.minimum_relative_error=1.0e-24
 ns.initial_project_cycles=3  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.
-ns.visual_option=-2 # -2 for tecplot, -1 for visit
+ns.visual_option=-1 # -2 for tecplot, -1 for visit
 
 amr.n_cell    = 32 32 8
 amr.max_level =  1
@@ -86,10 +91,10 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.9   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 4       # block factor in grid generation
+amr.blocking_factor = 8 4 4 4 # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 10     # 10 for debug, 100 for production run? 
+amr.plot_int        = 1     # 10 for debug, 100 for production run? 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -121,7 +126,7 @@ ns.cavitation_species=0 0 # disable cavitation
 ns.cavitation_pressure=35400.0 0.0 # saturation pressure g/(cm s^2)
 ns.cavitation_vapor_density=0.00002558 0.0
 ns.cavitation_tension=71.7 0.0
-ns.inflow_pressure=1.0e+6  # should not be used
+ns.inflow_pressure=2.2e+6  # 0.22 MPa = 2.2e+6 cgs units
 ns.outflow_pressure=1.0e+6  # this will be used at all outflow boundaries.
 ns.tension        = 0.0 0.0 0.0 
 #ns.fixed_dt	  = 0.01     # hardwire dt
@@ -145,7 +150,7 @@ ns.material_type=0 999 # INCOMPRESSIBLE
 ns.density_floor=0.9999577 0.9999999 # corresponds ~ 250 dyne/cm^2
 ns.density_ceiling=1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
 # see FORT_WALLFUNCTION in GODUNOV_3D.F90
-# see getGhostVel in GODUNOV_3D.F90
+# see getGhostVel called from FORT_WALLFUNCTION in GODUNOV_3D.F90
 ns.law_of_the_wall=0  # make 1 for law of the wall
 ns.FSI_flag=0 2  # 1 (GLOBALDIST), 2 (cas file)
 ns.FSI_refine_factor=1 0
@@ -167,7 +172,7 @@ ns.zblob=0.0
 ns.radblob=1.0
 ns.denfact=1.0
 ns.velfact=0.0
-ns.probtype=411
+ns.probtype=411  # structure not grid aligned
 
 #ns.mem_debug = 1
 ns.v = 1
@@ -175,9 +180,9 @@ ns.v = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 2 2 2
-ns.hi_bc          = 2 1 2
+ns.hi_bc          = 2 2 2
 ns.species_lo_bc  = 2 2 2
-ns.species_hi_bc  = 2 1 2
+ns.species_hi_bc  = 2 2 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
