@@ -1687,6 +1687,7 @@ stop
 
        ! T^new=T^* + dt * Q/(rho cv)
        ! Q units: J/(m^3 s)
+       ! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
       subroutine get_local_heat_source( &
        time,dt, &
        nmat, &

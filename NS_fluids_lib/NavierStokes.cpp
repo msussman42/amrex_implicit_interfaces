@@ -8509,7 +8509,7 @@ void NavierStokes::make_heat_source() {
    // rho cv : J/(m^3 Kelvin)
    // 1/(rho cv) : (m^3 Kelvin)/J
    // heat_source: J/(m^3 s)
-   //  
+   // in: GODUNOV_3D.F90
   FORT_HEATSOURCE(
    &nstate,
    &nmat,

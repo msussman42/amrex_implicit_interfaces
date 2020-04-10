@@ -7568,7 +7568,8 @@ stop
          print *,"T_local must be positive"
          stop
         endif
-        imattype=fort_material_type(im)
+        imattype=fort_material_type(im) 
+          ! in otherwords, find c_v for material im
         call DeDT_material(den_local(im),T_local(im), &
          DeDT_local(im),imattype,im)
        enddo ! im=1..nmat
@@ -7577,8 +7578,10 @@ stop
         xsten_cell(dirloc)=xsten(0,dirloc)
        enddo
 
+       ! for right flux boundary condition:  T_new = T_old + dt (-q_right + qleft)/dx
        ! T^new=T^* + dt * Q/(rho cv)
        ! Q units: J/(m^3 s)
+       ! get_local_heat_source in PROB.F90
        call get_local_heat_source( &
          time,dt, &
          nmat, &
@@ -7601,7 +7604,8 @@ stop
         stop
        endif
        heat_source_total=heat_source_total/vfrac_total
-
+ 
+         ! DeDTinverse = 1/(rho cv)
        do im=1,nmat
         if (num_materials_scalar_solve.eq.1) then
          T_local(im)=T_local(im)+ &
