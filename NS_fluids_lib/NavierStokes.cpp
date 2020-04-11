@@ -8422,6 +8422,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
 }   // subroutine make_SEM_delta_force
 
 
+// VAHAB HEAT SOURCE
 // called from veldiffuseALL in NavierStokes3.cpp
 void NavierStokes::make_heat_source() {
 
@@ -11715,9 +11716,11 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
  
 }  // stefan_solver_init
 
+// VAHAB HEAT SOURCE
 // T^new=T^* += dt A Q/(rho cv V) 
+// called from NavierStokes::allocate_project_variables
 void
-NavierStokes::heat_source_term() {
+NavierStokes::heat_source_term_flux_source() {
  
  bool use_tiling=ns_tiling;
 
@@ -11793,6 +11796,7 @@ NavierStokes::heat_source_term() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: GODUNOV_3D.F90
    FORT_HEATSOURCE_FACE( 
     &nmat,&nten,&nstate,
     latent_heat.dataPtr(),
@@ -11819,7 +11823,7 @@ NavierStokes::heat_source_term() {
 
  delete LSmf;
  
-}  // subroutine heat_source_term
+}  // end subroutine heat_source_term_flux_source
 
 void NavierStokes::show_norm2_id(int mf_id,int id) {
 

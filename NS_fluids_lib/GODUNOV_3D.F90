@@ -7415,6 +7415,7 @@ stop
       return
       end subroutine FORT_MARANGONIFORCE
 
+       ! VAHAB HEAT SOURCE
        ! T^new=T^* + dt * Q/(rho cv)
        ! Q units: J/(m^3 s)
       subroutine FORT_HEATSOURCE( &
@@ -7578,7 +7579,8 @@ stop
         xsten_cell(dirloc)=xsten(0,dirloc)
        enddo
 
-       ! for right flux boundary condition:  T_new = T_old + dt (-q_right + qleft)/dx
+       ! for right flux boundary condition:  
+       !   T_new = T_old + dt (-q_right + qleft)/dx
        ! T^new=T^* + dt * Q/(rho cv)
        ! Q units: J/(m^3 s)
        ! get_local_heat_source in PROB.F90
@@ -7586,6 +7588,8 @@ stop
          time,dt, &
          nmat, &
          xsten_cell, &
+         xsten, &
+         nhalf, &
          temperature_source, &
          temperature_source_cen, &
          temperature_source_rad, &

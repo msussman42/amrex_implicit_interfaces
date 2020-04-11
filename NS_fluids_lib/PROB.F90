@@ -1692,6 +1692,8 @@ stop
        time,dt, &
        nmat, &
        x, &
+       xsten, &
+       nhalf, &
        temperature_source, &
        temperature_source_cen, &
        temperature_source_rad, &
@@ -1709,18 +1711,20 @@ stop
       use rigid_FSI_module
       IMPLICIT NONE
 
-      REAL_T time,dt
-      INTEGER_T nmat
-      REAL_T x(SDIM)
-      REAL_T temperature_source
-      REAL_T temperature_source_cen(SDIM)
-      REAL_T temperature_source_rad(SDIM)
-      REAL_T LS(nmat)
-      REAL_T VFRAC(nmat)
-      REAL_T TEMPERATURE(nmat)
-      REAL_T DENSITY(nmat)
-      REAL_T CV(nmat)
-      REAL_T HEAT_SOURCE_OUT(nmat)
+      REAL_T, intent(in) :: time,dt
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: temperature_source
+      REAL_T, intent(in) :: temperature_source_cen(SDIM)
+      REAL_T, intent(in) :: temperature_source_rad(SDIM)
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(in) :: VFRAC(nmat)
+      REAL_T, intent(in) :: TEMPERATURE(nmat)
+      REAL_T, intent(in) :: DENSITY(nmat)
+      REAL_T, intent(in) :: CV(nmat)
+      REAL_T, intent(out) :: HEAT_SOURCE_OUT(nmat)
       REAL_T dist
       REAL_T dist_gas
       REAL_T eta,depth,xs,ys,zs,phiE

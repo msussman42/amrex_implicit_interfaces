@@ -6153,10 +6153,12 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   // temperature diffusion
  if (project_option==2) {
 
+    // VAHAB HEAT SOURCE
     // T^new=T^* += dt A Q/(rho cv V) 
     // in: allocate_project_variables
-    // NavierStokes::heat_source_term  (in:NavierStokes.cpp)
-  heat_source_term();
+    // NavierStokes::heat_source_term_flux_source  (in:NavierStokes.cpp)
+    // heat_source_term_flux_source calls GODUNOV_3D::FORT_HEATSOURCE_FACE
+  heat_source_term_flux_source();
 
   if (is_phasechange==1) {
     // both S_new and outer_iter_pressure are adjusted.
@@ -11595,6 +11597,7 @@ void NavierStokes::veldiffuseALL() {
  } else 
   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
+  // VAHAB HEAT SOURCE
   // NavierStokes.cpp: void NavierStokes::make_heat_source()
   // make_heat_source calls GODUNOV_3D.F90::FORT_HEATSOURCE
  for (int ilev=finest_level;ilev>=level;ilev--) {

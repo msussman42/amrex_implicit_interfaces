@@ -570,7 +570,10 @@ public:
 
     void nucleate_bubbles(Vector<blobclass> blobdata,
                     int color_count);
-    void heat_source_term();
+
+    // VAHAB HEAT SOURCE
+    void heat_source_term_flux_source();
+
     void stefan_solver_init(MultiFab* coeffMF,int adjust_temperature);
 
     void prepare_viscous_solver();
@@ -796,7 +799,10 @@ protected:
     void make_viscoelastic_tensor(int im);
     void make_viscoelastic_force(int im);
     void make_viscoelastic_heating(int im,int idx);
+
+    // VAHAB HEAT SOURCE
     void make_heat_source();
+
     void add_perturbation();
     void make_SEM_delta_force(int project_option);
 
