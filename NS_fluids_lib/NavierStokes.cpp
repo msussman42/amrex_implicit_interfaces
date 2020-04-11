@@ -8422,7 +8422,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
 }   // subroutine make_SEM_delta_force
 
 
-// VAHAB HEAT SOURCE
+// MEHDI VAHAB HEAT SOURCE
 // called from veldiffuseALL in NavierStokes3.cpp
 void NavierStokes::make_heat_source() {
 
@@ -8502,7 +8502,7 @@ void NavierStokes::make_heat_source() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // T^{n+1}=T^{n}+dt * heat_source/(rho cv)
+   // T^{n+1}=T^{n}+dt * (heat_source)/(rho cv)
    // MKS units:
    // T: Kelvin
    // rho : kg/m^3
@@ -11716,7 +11716,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
  
 }  // stefan_solver_init
 
-// VAHAB HEAT SOURCE
+// MEHDI VAHAB HEAT SOURCE
 // T^new=T^* += dt A Q/(rho cv V) 
 // called from NavierStokes::allocate_project_variables
 void

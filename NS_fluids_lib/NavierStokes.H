@@ -1917,6 +1917,7 @@ protected:
     static Vector<Real> speciesviscconst;
       // num_species * nten
     static Vector<Real> speciesviscconst_interface;
+     // default is solidheat_flag=0
     static int solidheat_flag;  // 0=diffuse in solid 1=dirichlet 2=neumann
     static int diffusionface_flag; // 0=use LS 1=use VOF (def=1)
     static int elasticface_flag; // 0=use LS 1=use VOF (def=1)

@@ -454,30 +454,112 @@ endif
 return
 end subroutine CRYOGENIC_TANK1_STATE_BC
 
-! suppose inhomogeneous flux condition: k grad T dot n= q
-! n outward facing normal
-! 1. set "k"=0 on the boundary
-! 2. T_t + div k grad T = F
-! 3. T_t + ((k grad T)_right - (k grad T)_left)/dx = F 
-! 4. at the left wall:
-!    T_t + (k grad T)_right/dx = F - q/dx 
-subroutine CRYOGENIC_TANK1_HEATSOURCE(im,VFRAC,time,x,temp, &
+! suppose inhomogeneous flux condition: -k grad T = q
+! 1. T_t - div k grad T = 0
+! 3. T_t - (1/V) sum (A_{i} (k grad T)_i dot n_i) =0  n_i=outward facing normal
+! 4. at the right wall:
+!     (k grad T)_{right} = -q_{right}
+! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
+!      (1/V)A_{right} (-q_{right} dot n_right)
+!
+! xblob3 \equiv -q dot n
+subroutine CRYOGENIC_TANK1_HEATSOURCE( &
+     im,VFRAC, &
+     time, &
+     x, &
+     xsten, & ! xsten(-nhalf:nhalf,SDIM)
+     nhalf, &
+     temp, &
      heat_source,den,CV,dt)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T im
-REAL_T VFRAC(num_materials)
-REAL_T time
-REAL_T x(SDIM)
+INTEGER_T, intent(in) :: im
+REAL_T, intent(in) :: VFRAC(num_materials)
+REAL_T, intent(in) :: time
+INTEGER_T, intent(in) :: nhalf
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
 REAL_T, intent(in) :: temp(num_materials)
-REAL_T den(num_materials)
-REAL_T CV(num_materials)
-REAL_T dt
-REAL_T heat_source
+REAL_T, intent(in) :: den(num_materials)
+REAL_T, intent(in) :: CV(num_materials)
+REAL_T, intent(in) :: dt
+REAL_T, intent(out) :: heat_source
+
+INTEGER_T dir
+REAL_T local_dx(SDIM)
+REAL_T flux_magnitude
+REAL_T denom
+
+
+do dir=1,SDIM
+ local_dx(dir)=xsten(1,dir)-xsten(-1,dir)
+ if (local_dx(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"local_dx invalid"
+  stop
+ endif
+enddo
 
 if ((num_materials.eq.3).and.(probtype.eq.421)) then
  heat_source=zero
+ if (im.eq.1) then
+  ! do nothing (liquid)
+ else if (im.eq.2) then
+  ! do nothing (vapor)
+ else if (im.eq.3) then
+  ! right side of domain
+  heat_source=zero
+  if ((xsten(0,1).lt.TANK1_RADIUS).and. &
+      (xsten(2,1).gt.TANK1_RADIUS)) then
+      ! area=2 pi rf dz
+      ! vol =2 pi rc dr dz
+      ! area/vol=rf/(rc dr)
+   flux_magnitude=xblob3
+   if (levelrz.eq.1) then
+    denom=xsten(0,1)*local_dx(1)
+    if (denom.gt.zero) then
+     flux_magnitude=flux_magnitude*xsten(1,1)/denom
+    else
+     print *,"denom invalid"
+     stop
+    endif
+   else if (levelrz.eq.0) then
+    flux_magnitude=flux_magnitude/local_dx(1)
+   else
+    print *,"levelrz invalid"
+    stop
+   endif
+   heat_source=heat_source+flux_magnitude
+
+   if (1.eq.0) then
+    print *,"right trigger x,heat_source ",xsten(0,1),xsten(0,2),heat_source
+   endif
+  endif
+
+  if ((xsten(0,SDIM).lt.TANK1_HEIGHT).and. &
+      (xsten(2,SDIM).gt.TANK1_HEIGHT)) then
+      ! area=2 pi rc dr
+      ! vol =2 pi rc dr dz
+      ! area/vol=1/(dz)
+   flux_magnitude=xblob3/local_dx(SDIM)
+   heat_source=heat_source+flux_magnitude
+  endif
+
+  if ((xsten(0,SDIM).gt.zero).and. &
+      (xsten(-2,SDIM).lt.zero)) then
+      ! area=2 pi rc dr
+      ! vol =2 pi rc dr dz
+      ! area/vol=1/(dz)
+   flux_magnitude=xblob3/local_dx(SDIM)
+   heat_source=heat_source+flux_magnitude
+  endif
+
+ else
+  print *,"im invalid in CRYOGENIC_TANK1_HEATSOURCE"
+  stop
+ endif
 else
  print *,"num_materials ", num_materials
  print *,"probtype ", probtype

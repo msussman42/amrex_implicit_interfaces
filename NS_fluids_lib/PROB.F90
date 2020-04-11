@@ -1685,15 +1685,15 @@ stop
       return
       end subroutine get_icemask
 
-       ! VAHAB HEAT SOURCE
-       ! T^new=T^* + dt * Q/(rho cv)
+       ! MEHDI VAHAB HEAT SOURCE
+       ! T^new=T^* + dt * (Q)/(rho cv)
        ! Q units: J/(m^3 s)
        ! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
       subroutine get_local_heat_source( &
        time,dt, &
        nmat, &
        x, &
-       xsten, &
+       xsten, &  ! xsten(-nhalf:nhalf,SDIM)
        nhalf, &
        temperature_source, &
        temperature_source_cen, &
@@ -1799,7 +1799,9 @@ stop
 
        if (probtype.eq.411) then
 
-        call CAV3D_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
+        call CAV3D_HEATSOURCE(im,VFRAC,time, &
+               x, &
+               TEMPERATURE, &
                HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
 
        else if (probtype.eq.401) then
@@ -1814,7 +1816,11 @@ stop
 
        else if (probtype.eq.421) then
         
-        call CRYOGENIC_TANK1_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
+        call CRYOGENIC_TANK1_HEATSOURCE(im,VFRAC,time, &
+               x, &
+               xsten, & ! xsten(-nhalf:nhalf,SDIM)
+               nhalf, &
+               TEMPERATURE, &
                HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
       
        else if (probtype.eq.533) then
@@ -2027,6 +2033,12 @@ stop
         stop
        endif
 
+       if (1.eq.0) then
+        if (HEAT_SOURCE_OUT(im).ne.zero) then
+         print *,"x,im,heat_source_out ",xsten(0,1),xsten(0,2), &
+           im,HEAT_SOURCE_OUT(im)
+        endif
+       endif
       enddo ! im=1..nmat
 
       return
@@ -29815,7 +29827,7 @@ END SUBROUTINE Adist
       return
       end subroutine
 
-       ! VAHAB HEAT SOURCE
+       ! MEHDI VAHAB HEAT SOURCE
        ! called from: GODUNOV_3D.F90, 
        !  HEATSOURCE_FACE when center cell is a solid
        ! and the opposite cell is a fluid cell.

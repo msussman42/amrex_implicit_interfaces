@@ -6153,7 +6153,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   // temperature diffusion
  if (project_option==2) {
 
-    // VAHAB HEAT SOURCE
+    // MEHDI VAHAB HEAT SOURCE
     // T^new=T^* += dt A Q/(rho cv V) 
     // in: allocate_project_variables
     // NavierStokes::heat_source_term_flux_source  (in:NavierStokes.cpp)
@@ -11189,7 +11189,15 @@ void NavierStokes::veldiffuseALL() {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   int hflag=0;
-  ns_level.solid_temperature();
+  ns_level.solid_temperature();  // if solid temperature is prescribed
+
+  // MEHDI VAHAB HEAT SOURCE
+  // NavierStokes.cpp: void NavierStokes::make_heat_source()
+  // make_heat_source calls GODUNOV_3D.F90::FORT_HEATSOURCE
+  // if not supermesh algorithm, then the same temperature 
+  // increment is added to all of the materials.
+  ns_level.make_heat_source();  // updates S_new
+
   int project_option_combine=2;  // temperature in veldiffuseALL
   int prescribed_noslip=1;
   int combine_flag=0;  // FVM -> GFM 
@@ -11205,6 +11213,7 @@ void NavierStokes::veldiffuseALL() {
   } else
    amrex::Error("convert_temperature invalid");
 
+   // MEHDI VAHAB: COMBINE TEMPERATURES HERE IF NOT SUPERMESH APPROACH
   ns_level.combine_state_variable(
    prescribed_noslip,
    project_option_combine,
@@ -11597,13 +11606,7 @@ void NavierStokes::veldiffuseALL() {
  } else 
   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
-  // VAHAB HEAT SOURCE
-  // NavierStokes.cpp: void NavierStokes::make_heat_source()
-  // make_heat_source calls GODUNOV_3D.F90::FORT_HEATSOURCE
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.make_heat_source();
- }
+   // why average down the density here?
  avgDownALL(State_Type,dencomp,nden,1);
 
  multiphase_project(project_option_temperature); // MGP BiCGStab temperature.

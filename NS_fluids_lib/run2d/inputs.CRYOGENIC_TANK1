@@ -1,4 +1,5 @@
 max_step  =  999999   # maximum timestep
+#max_step  =  2
 stop_time =  1000     # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
@@ -51,7 +52,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
-ns.visual_option=-1 # -2=tecplot -1=plot files (visit or paraview)
+ns.visual_option=-2 # -2=tecplot -1=plot files (visit or paraview)
 #2=ignore 1=always account for sound speed 0=only at t=0
 ns.shock_timestep=2 2 2 
 
@@ -62,7 +63,7 @@ amr.grid_eff        = 0.55   # what constitutes an efficient grid
 amr.blocking_factor = 8 8     # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1       
+amr.plot_int        = 1     
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -84,7 +85,7 @@ ns.visc_coef=1.0
 ns.gravity        = -9.8
 ns.use_lsa=0
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
-ns.sum_interval   = 10       # timesteps between computing mass 
+ns.sum_interval   = 1       # timesteps between computing mass 
 ns.twall=0.0
 
 ns.axis_dir=0
@@ -95,6 +96,7 @@ ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=1       # inflow direction in the falling drop direction.
 
+ns.xblob3=11.22 # -q dot n=Watts/m^2
 ns.xblob=4.21 # outher thank diameter
 ns.yblob=29.47 # ouer tank height
 ns.zblob=14.735 # initial interface location (29.47/2)

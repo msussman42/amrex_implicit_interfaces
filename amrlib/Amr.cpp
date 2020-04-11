@@ -787,6 +787,8 @@ Amr::writePlotFile (const std::string& root,
    //
 
    if(precreateDirectories) {    // ---- make all directories at once
+     // MEHDI VAHAB: UtilRenameDirectoryToOld is in: AMReX_Utility.cpp
+     // Comment out this line to disable saving old plot files.
     amrex::UtilRenameDirectoryToOld(pltfile, false);      // dont call barrier
     if ((verbose > 1)||(1==1)) {
      amrex::Print() << "IOIOIOIO:  precreating directories for " << 
@@ -848,6 +850,8 @@ Amr::writePlotFile (const std::string& root,
    }
    ParallelDescriptor::Barrier("Amr::writePlotFile::end");
 
+    // if "old plotfile" is disabled, will this command have
+    // problems if file of same name already exists?
    if(ParallelDescriptor::IOProcessor()) {
      std::rename(pltfileTemp.c_str(), pltfile.c_str());
    }

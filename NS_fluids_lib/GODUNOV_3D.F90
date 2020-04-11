@@ -7415,7 +7415,7 @@ stop
       return
       end subroutine FORT_MARANGONIFORCE
 
-       ! VAHAB HEAT SOURCE
+       ! MEHDI VAHAB HEAT SOURCE
        ! T^new=T^* + dt * Q/(rho cv)
        ! Q units: J/(m^3 s)
       subroutine FORT_HEATSOURCE( &
@@ -7580,7 +7580,7 @@ stop
         xsten_cell(dirloc)=xsten(0,dirloc)
        enddo
 
-       ! VAHAB HEAT SOURCE
+       ! MEHDI VAHAB HEAT SOURCE
        ! for right flux boundary condition:  
        !   T_new = T_old + dt (-q_right + qleft)/dx
        ! T^new=T^* + dt * Q/(rho cv)
@@ -7590,7 +7590,9 @@ stop
          time,dt, &
          nmat, &
          xsten_cell, &
-         xsten, &
+         xsten, &  ! xsten(-nhalf:nhalf,SDIM) xsten(0,dir)=cell center
+                   ! xsten(1,dir)=xcell + dx/2   xsten(-1,dir)=xcell-dx/2
+                   ! xsten(2,dir)=xcell + dx     xsten(-2,dir)=xcell-dx
          nhalf, &
          temperature_source, &
          temperature_source_cen, &
@@ -7623,6 +7625,13 @@ stop
          print *,"num_materials_scalar_solve invalid"
          stop
         endif 
+        if (1.eq.0) then
+         if (heat_source_local(im).ne.zero) then
+          print *,"x,im,heat_source_local ",xsten(0,1),xsten(0,2), &
+           im,heat_source_local(im)
+         endif
+        endif
+
         dencomp=(im-1)*num_state_material+1
         Tnew(D_DECL(i,j,k),dencomp+1)=T_local(im)
        enddo ! im=1..nmat
@@ -13084,7 +13093,7 @@ stop
       return
       end subroutine FORT_STEFANSOLVER
 
-! VAHAB HEAT SOURCE
+! MEHDI VAHAB HEAT SOURCE
 ! T^new=T^* + dt A Q/(rho cv V) 
 ! Q units: J/(m^2 s)
       subroutine FORT_HEATSOURCE_FACE( &
@@ -13235,7 +13244,7 @@ stop
       do k=growlo(3),growhi(3)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       ! VAHAB HEAT SOURCE
+       ! MEHDI VAHAB HEAT SOURCE
        ! heat_dir=1,2,3
        ! heat_side=1,2
        call get_internal_heat_source(time,dt,xsten,nhalf, &
