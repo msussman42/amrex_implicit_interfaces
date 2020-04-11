@@ -6154,6 +6154,8 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  if (project_option==2) {
 
     // T^new=T^* += dt A Q/(rho cv V) 
+    // in: allocate_project_variables
+    // NavierStokes::heat_source_term  (in:NavierStokes.cpp)
   heat_source_term();
 
   if (is_phasechange==1) {
@@ -11594,6 +11596,7 @@ void NavierStokes::veldiffuseALL() {
   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
   // NavierStokes.cpp: void NavierStokes::make_heat_source()
+  // make_heat_source calls GODUNOV_3D.F90::FORT_HEATSOURCE
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.make_heat_source();

@@ -1409,7 +1409,7 @@ NavierStokes::variableSetUp ()
     desc_lst.setComponent(State_Type,nc-1,"errorind",bc,
       FORT_SCALARFILL,&pc_interp_null);
 
-}  // subroutine variableSetUp
+}  // end subroutine variableSetUp
 
 // post_init_flag==0 if called from post_timestep
 // post_init_flag==0 if called from writePlotFile
