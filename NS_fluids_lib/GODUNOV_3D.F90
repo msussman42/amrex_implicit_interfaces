@@ -7445,32 +7445,33 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T nstate
-      INTEGER_T nmat
-      INTEGER_T nden
-      INTEGER_T level
-      INTEGER_T finest_level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T DIMDEC(rhoinverse)
-      INTEGER_T DIMDEC(DeDTinverse)
-      INTEGER_T DIMDEC(Tnew)
-      INTEGER_T DIMDEC(lsfab)
-      INTEGER_T DIMDEC(recon)
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T temperature_source
-      REAL_T temperature_source_cen(SDIM)
-      REAL_T temperature_source_rad(SDIM)
-      REAL_T rhoinverse(DIMV(rhoinverse),nmat+1)
-      REAL_T DeDTinverse(DIMV(DeDTinverse),nmat+1) ! 1/(rho cv)
-      REAL_T Tnew(DIMV(Tnew),nden)
-      REAL_T lsfab(DIMV(lsfab),nmat)
-      REAL_T recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T vol(DIMV(vol))
-      REAL_T dt,time
+      INTEGER_T, intent(in) :: nstate
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nden
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(rhoinverse)
+      INTEGER_T, intent(in) :: DIMDEC(DeDTinverse)
+      INTEGER_T, intent(in) :: DIMDEC(Tnew)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: temperature_source
+      REAL_T, intent(in) :: temperature_source_cen(SDIM)
+      REAL_T, intent(in) :: temperature_source_rad(SDIM)
+      REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
+      REAL_T, intent(in) :: DeDTinverse(DIMV(DeDTinverse),nmat+1) ! 1/(rho cv)
+      REAL_T, intent(inout) :: Tnew(DIMV(Tnew),nden)
+      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in) :: vol(DIMV(vol))
+      REAL_T, intent(in) :: dt,time
+
       REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_cell(SDIM)
       INTEGER_T nhalf
@@ -7579,6 +7580,7 @@ stop
         xsten_cell(dirloc)=xsten(0,dirloc)
        enddo
 
+       ! VAHAB HEAT SOURCE
        ! for right flux boundary condition:  
        !   T_new = T_old + dt (-q_right + qleft)/dx
        ! T^new=T^* + dt * Q/(rho cv)
@@ -13082,6 +13084,7 @@ stop
       return
       end subroutine FORT_STEFANSOLVER
 
+! VAHAB HEAT SOURCE
 ! T^new=T^* + dt A Q/(rho cv V) 
 ! Q units: J/(m^2 s)
       subroutine FORT_HEATSOURCE_FACE( &
@@ -13093,6 +13096,9 @@ stop
        bfact, &
        xlo,dx, &
        dt, &
+       time, &
+       level, &
+       finest_level, &
        LS,DIMS(LS),  &
        Snew,DIMS(Snew), & 
        DeDT,DIMS(DeDT), &
@@ -13110,50 +13116,60 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat,nten,nstate
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(Snew)
+      INTEGER_T, intent(in) :: DIMDEC(DeDT)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(heatx)
+      INTEGER_T, intent(in) :: DIMDEC(heaty)
+      INTEGER_T, intent(in) :: DIMDEC(heatz)
+      INTEGER_T, intent(in) :: DIMDEC(areax)
+      INTEGER_T, intent(in) :: DIMDEC(areay)
+      INTEGER_T, intent(in) :: DIMDEC(areaz)
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(inout) :: Snew(DIMV(Snew),nstate)
+      REAL_T, intent(in) :: DeDT(DIMV(DeDT),nmat+1)  ! 1/(rho cv) (cv=DeDT)
+       ! 1/den (i.e. den actually stores 1/den)
+      REAL_T, intent(in) :: den(DIMV(den),nmat+1) 
+      REAL_T, intent(in) :: vol(DIMV(vol))
+      REAL_T, intent(in) :: heatx(DIMV(heatx))
+      REAL_T, intent(in) :: heaty(DIMV(heaty))
+      REAL_T, intent(in) :: heatz(DIMV(heatz))
+      REAL_T, intent(in) :: areax(DIMV(areax))
+      REAL_T, intent(in) :: areay(DIMV(areay))
+      REAL_T, intent(in) :: areaz(DIMV(areaz))
 
-      INTEGER_T nmat,nten,nstate
-      REAL_T latent_heat(2*nten)
-      REAL_T saturation_temp(2*nten)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dt
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(Snew)
-      INTEGER_T DIMDEC(DeDT)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(heatx)
-      INTEGER_T DIMDEC(heaty)
-      INTEGER_T DIMDEC(heatz)
-      INTEGER_T DIMDEC(areax)
-      INTEGER_T DIMDEC(areay)
-      INTEGER_T DIMDEC(areaz)
-      REAL_T LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T Snew(DIMV(Snew),nstate)
-      REAL_T DeDT(DIMV(DeDT),nmat+1)  ! 1/(rho cv) (cv=DeDT)
-      REAL_T den(DIMV(den),nmat+1)  ! 1/den (i.e. den actually stores 1/den)
-      REAL_T vol(DIMV(vol))
-      REAL_T heatx(DIMV(heatx))
-      REAL_T heaty(DIMV(heaty))
-      REAL_T heatz(DIMV(heatz))
-      REAL_T areax(DIMV(areax))
-      REAL_T areay(DIMV(areay))
-      REAL_T areaz(DIMV(areaz))
       INTEGER_T i,j,k
       INTEGER_T heat_dir
+      INTEGER_T heat_side
       INTEGER_T ii,jj,kk
       INTEGER_T iface,jface,kface
+      INTEGER_T icell,jcell,kcell
       INTEGER_T im
       INTEGER_T nten_test
       REAL_T over_den,over_cv,local_vol
       REAL_T aface,hface
       INTEGER_T tcomp
-      REAL_T heat_source_term,heat_flux
+      REAL_T heat_source_term
+      REAL_T heat_flux
+      REAL_T flux_sign
       REAL_T ls_cell_or_face(nmat)
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
 
       if (bfact.lt.1) then
        print *,"bfact invalid68"
@@ -13182,10 +13198,21 @@ stop
        print *,"nstate invalid"
        stop
       endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid heat source face"
+       stop
+      endif
       if (dt.le.zero) then
        print *,"dt invalid"
        stop
       endif
+      if (time.lt.zero) then
+       print *,"time invalid"
+       stop
+      endif
+
+      nhalf=3
+
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,1239)
       call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1240)
       call checkbound(fablo,fabhi,DIMS(DeDT),0,-1,1241)
@@ -13206,8 +13233,13 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       call get_internal_heat_source(heat_flux,heat_dir)
+       ! VAHAB HEAT SOURCE
+       ! heat_dir=1,2,3
+       ! heat_side=1,2
+       call get_internal_heat_source(time,dt,xsten,nhalf, &
+               heat_flux,heat_dir,heat_side)
 
        if (heat_flux.gt.zero) then
  
@@ -13231,18 +13263,35 @@ stop
           print *,"heat_dir invalid heatsource"
           stop
          endif
-         iface=i+ii
-         jface=j+jj
-         kface=k+kk
+         if (heat_side.eq.2) then
+          iface=i+ii
+          jface=j+jj
+          kface=k+kk
+          icell=i+ii
+          jcell=j+jj
+          kcell=k+kk
+          flux_sign=one
+         else if (heat_side.eq.1) then
+          iface=i
+          jface=j
+          kface=k
+          icell=i-ii
+          jcell=j-jj
+          kcell=k-kk
+          flux_sign=-one
+         else
+          print *,"heat_side invalid"
+          stop
+         endif
 
          do im=1,nmat
-          ls_cell_or_face(im)=LS(D_DECL(iface,jface,kface),im)
+          ls_cell_or_face(im)=LS(D_DECL(icell,jcell,kcell),im)
          enddo
          call get_primary_material(ls_cell_or_face,nmat,im)
 
          if (is_rigid(nmat,im).eq.0) then
 
-           ! subroutine FORT_HEATSOURCE_FACE
+           ! in: subroutine FORT_HEATSOURCE_FACE
           if (heat_dir.eq.1) then
            aface=areax(D_DECL(iface,jface,kface))
            hface=heatx(D_DECL(iface,jface,kface))
@@ -13274,7 +13323,7 @@ stop
             stop
            endif
 
-           heat_source_term=dt*over_cv*aface*heat_flux/local_vol
+           heat_source_term=flux_sign*dt*over_cv*aface*heat_flux/local_vol
 
            if (num_materials_scalar_solve.eq.1) then
             tcomp=num_materials_vel*(SDIM+1)+2

@@ -1685,6 +1685,7 @@ stop
       return
       end subroutine get_icemask
 
+       ! VAHAB HEAT SOURCE
        ! T^new=T^* + dt * Q/(rho cv)
        ! Q units: J/(m^3 s)
        ! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
@@ -29814,17 +29815,36 @@ END SUBROUTINE Adist
       return
       end subroutine
 
-       ! called from: HEATSOURCE_FACE when center cell is a solid
-       ! and the cell to the right or top is a fluid cell.
-       ! this routine has limited use.
-      subroutine get_internal_heat_source(heat_flux,heat_dir)
+       ! VAHAB HEAT SOURCE
+       ! called from: GODUNOV_3D.F90, 
+       !  HEATSOURCE_FACE when center cell is a solid
+       ! and the opposite cell is a fluid cell.
+       ! heat_dir=1,2,3
+       ! heat_side=1,2
+      subroutine get_internal_heat_source(time,dt,xsten,nhalf, &
+                      heat_flux,heat_dir,heat_side)
       IMPLICIT NONE
  
-      REAL_T heat_flux
-      INTEGER_T heat_dir
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(out) :: heat_flux
+      INTEGER_T, intent(out) :: heat_dir
+      INTEGER_T, intent(out) :: heat_side
  
+      if (time.lt.zero) then
+       print *,"time invalid"
+       stop
+      endif
+      if (dt.le.zero) then
+       print *,"dt invalid"
+       stop
+      endif
+
       heat_flux=zero
       heat_dir=0
+      heat_side=0
  
        ! Sato and Niceno
       if ((probtype.eq.55).and. &
@@ -29832,6 +29852,7 @@ END SUBROUTINE Adist
           (zblob3.lt.zero)) then
        heat_flux=abs(zblob3)
        heat_dir=SDIM
+       heat_side=2
       endif
 
       return

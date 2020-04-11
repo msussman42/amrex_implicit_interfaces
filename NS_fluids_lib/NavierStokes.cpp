@@ -8535,7 +8535,7 @@ void NavierStokes::make_heat_source() {
    fablo,fabhi,&bfact,
    &level,
    &finest_level,
-   &dt_slab,  // time step within a slab if SDC, otherwise dt is not SDC.
+   &dt_slab,  // time step within a slab if SDC, otherwise dt if not SDC.
    &prev_time_slab);
  }  // mfi  
 } // omp
@@ -11722,6 +11722,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
 void
 NavierStokes::heat_source_term_flux_source() {
  
+ int finest_level=parent->finestLevel();
+
  bool use_tiling=ns_tiling;
 
  resize_metrics(1);
@@ -11802,9 +11804,13 @@ NavierStokes::heat_source_term_flux_source() {
     latent_heat.dataPtr(),
     saturation_temp.dataPtr(),
     tilelo,tilehi,
-    fablo,fabhi,&bfact,
+    fablo,fabhi,
+    &bfact,
     xlo,dx,
     &dt_slab,
+    &prev_time_slab,
+    &level,
+    &finest_level,
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
     DeDTfab.dataPtr(),ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
