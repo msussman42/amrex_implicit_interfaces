@@ -890,12 +890,19 @@ stop
 
       INTEGER_T ilev
 
-      do ilev=0,cache_max_level
-       deallocate(MG(ilev)%FSI_MF)
-       deallocate(MG(ilev)%MASK_NBR_MF)
-      enddo
-      deallocate(MG)
-      deallocate(im_solid_map)
+      if (global_nparts.gt.0) then
+       do ilev=0,cache_max_level
+        deallocate(MG(ilev)%FSI_MF)
+        deallocate(MG(ilev)%MASK_NBR_MF)
+       enddo
+       deallocate(MG)
+       deallocate(im_solid_map)
+      else if (global_nparts.eq.0) then
+       ! do nothing
+      else
+       print *,"global_nparts invalid"
+       stop
+      endif
 
       return
       end subroutine deallocate_FSI

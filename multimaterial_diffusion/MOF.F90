@@ -40,6 +40,7 @@ implicit none
 INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=20
 
 INTEGER_T, PARAMETER :: INTERCEPT_MAXITER=100
+INTEGER_T, PARAMETER :: INTERCEPT_MAXITER_NEWTON=25
 
 INTEGER_T, PARAMETER :: maxfacelist=20
 INTEGER_T, PARAMETER :: maxnodelist=20,maxtetlist=15,maxcapfacelist=5
@@ -9584,6 +9585,7 @@ contains
       endif
 
        ! intercept scaled directly
+       ! no scaling if levelrz==1 or levelrz==3
       call scale_VOF_variables( &
         bfact,dx,xsten0,nhalf0, &
         intercept, &
@@ -9637,6 +9639,13 @@ contains
       endif
 
       debug_root=0
+
+      if (INTERCEPT_MAXITER_NEWTON.lt.INTERCEPT_MAXITER) then
+       ! do nothing
+      else
+       print *,"INTERCEPT_MAXITER_NEWTON invalid"
+       stop
+      endif
 
       maxiter=INTERCEPT_MAXITER
       moftol=INTERCEPT_TOL
@@ -9756,7 +9765,9 @@ contains
        intercept=intercept_lower
       else if (vfrac.ge.volcut/volcell-MLSVOFTOL) then
        intercept=intercept_upper
-      else
+      else if ((vfrac.ge.MLSVOFTOL).and. &
+               (vfrac.le.volcut/volcell-MLSVOFTOL)) then
+
        vtarget=volcell*vfrac
 
 ! solve f(xx)=0 where f(xx)=(V(n dot (x-x0)+intercept-xx)-Vtarget)/volcell
@@ -9846,9 +9857,10 @@ contains
          if (arean.gt.zero) then
 
           intercept_test=intercept-fc*volcell/arean
+
           if ((intercept_test.le.intercept_lower).or. &
               (intercept_test.ge.intercept_upper).or. &
-              (niter.ge.maxiter-1)) then
+              (niter.ge.INTERCEPT_MAXITER_NEWTON)) then
            aa=intercept_lower
            bb=intercept_upper
            niter=0
@@ -9906,7 +9918,27 @@ contains
              print *,"bisection: niter,intercept,fc ",niter,intercept,fc
             endif  
            enddo ! bisection while
-          else
+
+           if ((niter.ge.1).and.(niter.lt.maxiter)) then
+            if (err.le.moftol) then
+             ! do nothing
+            else
+             print *,"err invalid err,moftol=",err,moftol
+             stop
+            endif
+           else if (niter.eq.maxiter) then
+            ! 10^15 < 2^x   x=15 log 10/log 2=50
+            if (niter.gt.50) then
+             err=zero
+            endif
+           else
+            print *,"niter invalid"
+            stop
+           endif
+          else if ((intercept_test.ge.intercept_lower).and. &
+                   (intercept_test.le.intercept_upper).and. &
+                   (niter.lt.INTERCEPT_MAXITER_NEWTON)) then
+            !intercept_test=intercept-fc*volcell/arean
            intercept=intercept_test
            call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
             fc,slope,intercept, &
@@ -9915,6 +9947,13 @@ contains
             local_nlist,centroid,nlist,nmax, &
             fastflag,sdim)
            err=abs(fc)
+          else
+           print *,"intercept_test or intercept_lower(upper) invalid"
+           print *,"intercept_test=",intercept_test
+           print *,"intercept_lower=",intercept_upper
+           print *,"niter ",niter
+           print *,"INTERCEPT_MAXITER_NEWTON ",INTERCEPT_MAXITER_NEWTON
+           stop
           endif
 
           niter=niter+1
@@ -9937,7 +9976,7 @@ contains
           stop
          endif
 
-         if (niter.gt.maxiter/2) then
+         if (niter.gt.maxiter-2) then
           if (abs(min_err-err).le.moftol) then
            if ((abs(err-intercept_error_history(niter,tid+1)).le.moftol).and. &
                (abs(err-intercept_error_history(niter-1,tid+1)).le.moftol)) then
@@ -9949,7 +9988,7 @@ contains
            print *,"min_err or err invalid"
            stop
           endif
-         else if ((niter.ge.1).and.(niter.le.maxiter/2)) then
+         else if ((niter.ge.1).and.(niter.le.maxiter-2)) then
           ! do nothing
          else
           print *,"niter invalid in the newtons method"
@@ -9960,7 +9999,7 @@ contains
          ! do while((niter.lt.maxiter).and.(err.gt.moftol))
         enddo 
 
-        if (niter.ge.maxiter) then
+        if ((niter.ge.maxiter).and.(err.gt.moftol)) then
          print *,"vof recon failed in multi_find_intercept"
          print *,"switch to a smaller length scale (e.g. cm instead of m)"
          print *,"niter,maxiter ",niter,maxiter
@@ -9972,15 +10011,29 @@ contains
          do dir=1,sdim
           print *,"dir,slope ",dir,slope(dir)
          enddo
+         print *,"moftol ",moftol
          print *,"error history: "
          do nn=1,maxiter
           print *,"nn,tid,error ",nn,tid, &
              intercept_error_history(nn,tid+1)
          enddo
          stop
+        else if ((niter.lt.maxiter).or.(err.le.moftol)) then
+         ! do nothing
+        else
+         print *,"niter or err invalid"
+         stop
         endif
-       endif ! err> moftol
-      endif  ! cell has a partial vof
+       else if ((err.le.moftol).and.(err.ge.zero)) then
+        ! do nothing
+       else
+        print *,"err invalid"
+        stop       
+       endif 
+      else
+       print *,"vfrac invalid vfrac= ",vfrac
+       stop
+      endif 
 
        ! centroid in absolute coordinate system
       do dir=1,sdim

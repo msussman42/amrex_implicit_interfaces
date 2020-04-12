@@ -473,6 +473,7 @@ integer :: sci_max_level
 
 print *,"PROTOTYPE CODE DATE= March 3, 2020, 8:40am"
 
+global_nparts=0
 
 im_measure=2
 constant_K_test=0

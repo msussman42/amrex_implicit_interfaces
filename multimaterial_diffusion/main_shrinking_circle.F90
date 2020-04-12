@@ -472,8 +472,9 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= December 27, 2019, 23:20pm"
+print *,"PROTOTYPE CODE DATE= March 12, 2020, 16:20pm"
 
+global_nparts=0
 
 im_measure=2
 constant_K_test=0
@@ -483,12 +484,18 @@ print *,"constant_K_test= ",constant_K_test
 
 ! N space
 ! M time
-N_START=64
-N_FINISH=64
-M_START=10
+! for shrinking circle, time step is hardwired (fixed_dt_main==-1); M_START
+! is critical.
+! fixed_dt<0
+! example: 64x64 M_START=10
+! example: 32x32 M_START=5 
+N_START=32
+N_FINISH=32
+M_START=5
 M_FACTOR=2
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
+        ! time step hardwire for this test
  fixed_dt_main=-1.0d0 ! dt=1.25D-4 N=64  M=10  TSTOP=1.25D-3
 else if ((probtype_in.eq.13).or. & ! hypocycloid
          (probtype_in.eq.15).or. &
@@ -1089,6 +1096,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  else if (probtype_in.eq.4) then
 
+    ! material 1 is inside the circle
    saturation_temp(1)=273.0d0
    saturation_temp(2)=273.0d0
    fort_tempconst(1)=273.0

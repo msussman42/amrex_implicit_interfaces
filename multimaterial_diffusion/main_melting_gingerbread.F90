@@ -471,6 +471,7 @@ integer :: sci_max_level
 
 print *,"PROTOTYPE CODE DATE= December 27, 2019, 23:20pm"
 
+global_nparts=0
 
 im_measure=2
 constant_K_test=0
@@ -703,7 +704,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
- else if (probtype_in.eq.400) then
+ else if (probtype_in.eq.400) then ! gingerbread
 
    sci_max_level=2
    nmat_in=2
