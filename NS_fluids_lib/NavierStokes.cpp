@@ -359,8 +359,11 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 // 0,1 => viscoelastic FENE-CR material  2=> elastic material
 Vector<int> NavierStokes::viscoelastic_model; // def=0
 Vector<int> NavierStokes::les_model; // def=0
+// temperature_primitive_variable defaults to 0 (conservative) for
+// inviscid compressible materials, and 1 (non conservative) for other
+// materials.
 // E=u dot u/2 + e
-// e=cv T
+// e=cv T (compressible)   cp T (incompressible)
 // 0=> conservative advection of temperature:
 //    (rho E)_t + div(rho u E + up)=div(k grad T) 
 //    it is assumed the fluid is inviscid and 
@@ -8508,6 +8511,10 @@ void NavierStokes::make_heat_source() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // MEHDI VAHAB HEAT SOURCE
+   // e_{t} + u dot grad e = div k grad T + other terms
+   // e = rho cv T (compressible)  rho cp T (incompressible)
+   //
    // T^{n+1}=T^{n}+dt * (heat_source)/(rho cv)
    // MKS units:
    // T: Kelvin

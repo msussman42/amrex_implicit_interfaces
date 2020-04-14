@@ -4069,6 +4069,10 @@ stop
       INTEGER_T LS_INT_VERY_CLOSE_counter
       INTEGER_T LS_INT_OWN_counter
       INTEGER_T VOF_pos_probe_counter
+       ! iten=1..nten  ireverse=0..1
+      REAL_T temp_target_probe_history(2*nten,2)
+      REAL_T dxprobe_target_history(2*nten,2)
+
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
 #endif
@@ -4231,9 +4235,18 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
+      do iten=1,2*nten
+       temp_target_probe_history(iten,1)=zero
+       dxprobe_target_history(iten,1)=zero
+       temp_target_probe_history(iten,2)=zero
+       dxprobe_target_history(iten,2)=zero
+      enddo
+
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -4257,6 +4270,11 @@ stop
            call get_iten(im,im_opp,iten,nmat)
 
            do ireverse=0,1
+            temp_target_probe_history(iten+ireverse*nten,1)=zero
+            dxprobe_target_history(iten+ireverse*nten,1)=zero
+            temp_target_probe_history(iten+ireverse*nten,2)=zero
+            dxprobe_target_history(iten+ireverse*nten,2)=zero
+
             valid_phase_change(ireverse)=0
             LL(ireverse)=latent_heat(iten+ireverse*nten)
             K_f(ireverse)=reaction_rate(iten+ireverse*nten)
@@ -4306,8 +4324,6 @@ stop
                ! a solid material.
               if ((abs(LShere(im_source)).le.two*dxmaxLS).and. &
                   (abs(LShere(im_dest)).le.two*dxmaxLS)) then
-
-               call gridsten_level(xsten,i,j,k,level,nhalf)
 
                 ! The phase change velocity is defined at the cell
                 ! centers, therefore, we find the jump in heat
@@ -4604,6 +4620,8 @@ stop
                       (im_secondary_probe.eq.im_target_probe).and. &
                       (LSPROBE(im_target_probe).ge.-dxprobe_target)) then
 
+                    ! find the smallest gradient from valid options.
+                    ! (Temperature(xcentroid)-TSAT)/LS(xcentroid)
                    call interpfab_filament_probe( &
                       bfact, &
                       level, &
@@ -4621,8 +4639,8 @@ stop
                       EOS,DIMS(EOS), &
                       LS,DIMS(LS), &
                       recon,DIMS(recon), &
-                      temp_target_probe, &
-                      dxprobe_target, &
+                      temp_target_probe, &  ! Temp(xprobe)
+                      dxprobe_target, &     ! |xprobe-xcp|
                       VOF_pos_probe_counter)
 
                   else if ((im_primary_probe.eq.im_target_probe_opp).or. &
@@ -5127,6 +5145,10 @@ stop
                  print *,"bust compiling ratemasschange"
                  stop
 #endif
+                 temp_target_probe_history(iten+ireverse*nten,1)=tempsrc
+                 dxprobe_target_history(iten+ireverse*nten,1)=dxprobe_source
+                 temp_target_probe_history(iten+ireverse*nten,2)=tempdst
+                 dxprobe_target_history(iten+ireverse*nten,2)=dxprobe_dest
 
                  if (debugrate.eq.1) then
                   print *,"i,j,k,ireverse,vel_phasechange ", &
@@ -5350,6 +5372,39 @@ stop
            print *,"dxmin ",dxmin
            print *,"dt ",dt
            print *,"velmag_sum x dt ",velmag_sum*dt
+           print *,"i,j,k ",i,j,k
+           print *,"im_primary ",im_primary
+           do imls=1,nmat
+            print *,"imls,LShere ",imls,LShere(imls)
+           enddo
+           print *,"xsten(0,1-3) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+           do im=1,nmat-1
+            do im_opp=im+1,nmat
+             call get_iten(im,im_opp,iten,nmat)
+             do ireverse=0,1
+              print *,"im,im_opp,ireverse,latent_heat ",im,im_opp,ireverse, &
+                      latent_heat(iten+ireverse*nten)
+              print *,"im,im_opp,ireverse,saturation_temp ", &
+                      im,im_opp,ireverse, &
+                      saturation_temp(iten+ireverse*nten)
+             enddo
+            enddo
+           enddo
+           do im=1,nmat
+            print *,"im,T ",im,EOS(D_DECL(i,j,k),(im-1)*num_state_material+2)
+           enddo 
+           do iten=1,nten
+            do ireverse=0,1
+             print *,"iten,ireverse,temp_probe(1) ", &
+               iten,ireverse,temp_target_probe_history(iten+ireverse*nten,1)
+             print *,"iten,ireverse,temp_probe(2) ", &
+               iten,ireverse,temp_target_probe_history(iten+ireverse*nten,2)
+             print *,"iten,ireverse,dxprobe(1) ", &
+               iten,ireverse,dxprobe_target_history(iten+ireverse*nten,1)
+             print *,"iten,ireverse,dxprobe(2) ", &
+               iten,ireverse,dxprobe_target_history(iten+ireverse*nten,2)
+            enddo
+           enddo
            stop
           else if (stefan_flag.eq.0) then
            ! do nothing

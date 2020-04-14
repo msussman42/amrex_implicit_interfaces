@@ -2032,6 +2032,12 @@ else if (probtype_in.eq.401) then
  center(2)=y
  call dist_fns_melting_ice(imat,center,dist)
 
+else if (probtype_in.eq.402) then
+
+ center(1)=x
+ center(2)=y
+ call dist_fns_NASA_boiling(imat,center,dist)
+
 else
  print *,"probtype_in invalid6 ",probtype_in
  stop
@@ -2340,6 +2346,8 @@ else if (probtype_in.eq.4) then
 else if (probtype_in.eq.400) then
         ! call dist_concentric
 else if (probtype_in.eq.401) then
+        ! call dist_concentric
+else if (probtype_in.eq.402) then
         ! call dist_concentric
 else if (probtype_in.eq.5) then
 
@@ -2785,7 +2793,51 @@ else if (probtype_in.eq.401) then ! melting ice
    stop
   endif
  endif
-  
+
+else if (probtype_in.eq.402) then ! NASA boiling
+
+ if (nmat_in.ne.3) then
+  print *,"nmat_in invalid"
+  stop
+ endif
+
+ justtwo=0
+ do im=1,3
+  if (vf(im).eq.0.0d0) then
+   justtwo=1
+   vcheck=0.0d0
+   do im_opp=1,3 
+    if (im_opp.ne.im) then
+     vcheck=vcheck+vf(im_opp)
+    endif
+   enddo
+   if (vcheck.gt.0.0d0) then
+    do im_opp=1,3 
+     if (im_opp.ne.im) then
+      vf(im_opp)=vf(im_opp)/vcheck
+     endif
+    enddo
+   else
+    print *,"vcheck invalid"
+    do im_opp=1,3 
+     print *,"im_opp,vf(im_opp) ",im_opp,vf(im_opp)
+    enddo
+    stop
+   endif
+  endif
+ enddo
+ if (justtwo.eq.0) then
+  vcheck=vf(1)+vf(2)+vf(3)
+  if (vcheck.gt.0.0d0) then
+   do im_opp=1,3 
+    vf(im_opp)=vf(im_opp)/vcheck
+   enddo
+  else
+   print *,"vcheck invalid"
+   stop
+  endif
+ endif
+
 else if ((probtype_in.eq.1).or. &
          (probtype_in.eq.13).or. &
          (probtype_in.eq.19)) then
@@ -3036,6 +3088,8 @@ else if (probtype_in.eq.400) then
  ! do nothing
 else if (probtype_in.eq.401) then
  ! do nothing
+else if (probtype_in.eq.402) then
+ ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
 elseif(probtype_in .eq. 15)then   
@@ -3171,6 +3225,8 @@ else if (probtype_in.eq.4) then
 else if (probtype_in.eq.400) then
  ! do nothing
 else if (probtype_in.eq.401) then
+ ! do nothing
+else if (probtype_in.eq.402) then
  ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
@@ -3502,6 +3558,19 @@ real(kind=8) :: radial_slope
    print *,"im invalid 4 probtype==401"
    stop
   endif
+
+ else if (probtype_in.eq.402) then
+  if (im.eq.1) then
+   G_in=0.0
+  else if (im.eq.2) then
+   G_in=0.0
+  else if (im.eq.3) then
+   G_in=0.0
+  else
+   print *,"im invalid 4 probtype==401"
+   stop
+  endif
+
  else if (probtype_in.eq.5) then
   if (im.eq.1) then
    G_in=0.0
@@ -3806,6 +3875,90 @@ integer                     :: i,j
 
 
 end subroutine polar_2d_heat
+
+subroutine dist_fns_NASA_boiling(imat,x_in,dist)
+! imat=3, substrate
+! imat=2, vapor
+! imat=1, liquid
+
+implicit none
+
+integer,intent(in)               :: imat
+real(kind=8)                     :: x_in(2)
+real(kind=8)                     :: dist
+real(kind=8)                     :: dist1,dist2,dist3,dist4,dist5,dist6,dist7
+real(kind=8)                     :: xy(2)
+real(kind=8)                     :: x1(2),x2(2),x3(2),x4(2),x5(2)
+real(kind=8)                     :: x6(2),x7(2),xvoid(2)
+real(kind=8)                     :: cc1(2),cc2(2),cc3(2)
+integer                          :: i
+real(kind=8)                     :: signtemp
+real(kind=8)                     :: theta, ccrad
+real(kind=8)                     :: substrate_thick
+
+
+do i=1,2
+ xy(i) = x_in(i)
+enddo
+
+if(x_in(1) .gt. 0.5d0)then
+ xy(1)=1.0d0-x_in(1) 
+endif
+
+ cc1(1)=0.5d0
+ cc1(2)=0.5d0
+
+ theta=1.0/18.0*pi
+ 
+ substrate_thick=0.2d0
+
+x1(1)=0.0d0       !                    
+x1(2)=substrate_thick+0.2d0*tan(theta)       !                     
+x2(1)=0.2d0       !     
+x2(2)=substrate_thick+0.2d0*tan(theta)       !      
+x3(1)=0.4d0       !    
+x3(2)=substrate_thick       !       
+x4(1)=0.5d0       !             
+x4(2)=substrate_thick       !              
+
+ ccrad=sqrt((x2(1)-cc1(1))**2.0+(x2(2)-cc1(2))**2.0d0)
+
+ dist1=substrate_thick-xy(2)
+ 
+ call dist_point_to_line_modify(2,x1,x2,xy,dist4,xvoid)
+ call dist_point_to_line_modify(2,x2,x3,xy,dist5,xvoid)
+ call dist_point_to_line_modify(2,x3,x4,xy,dist6,xvoid)
+ if(xy(1).le.x2(1))then
+  signtemp=sign(1.0d0,x2(2)-xy(2))
+ elseif(xy(1).le.x3(1))then
+  signtemp=sign(1.0d0, -tan(theta)*(xy(1)-x2(1))+x2(2)-xy(2))
+ elseif(xy(1).le.x4(1))then
+  signtemp=sign(1.0d0,x4(2)-xy(2))
+ else
+  print *, "err"
+  stop
+ endif
+
+ dist2=signtemp*min(dist4,dist5,dist6)
+
+ dist3=ccrad-sqrt((xy(1)-cc1(1))**2.0d0+(xy(2)-cc1(2))**2.0d0)
+
+if(imat.eq.3)then ! substrate
+ dist=dist1
+elseif(imat.eq.2)then ! gas
+ dist=min(dist3,-dist2)
+elseif(imat.eq.1)then  ! liquid
+ dist7=min(dist3,-dist2)
+ dist=min(-dist7,-dist1)
+else
+ print *,"imat invalid"
+ stop
+endif
+
+
+end subroutine dist_fns_NASA_boiling
+
+
 
 subroutine dist_fns_melting_ice(imat,x_in,dist)
 ! imat=3, the ice block/ice ball
@@ -4175,6 +4328,8 @@ else if (local_probtype.eq.400) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.401) then
         Uprescribe=0.0d0
+else if (local_probtype.eq.402) then
+        Uprescribe=0.0d0
 else if (local_probtype.eq.5) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.13) then
@@ -4238,6 +4393,8 @@ else if (local_probtype.eq.4) then
 else if (local_probtype.eq.400) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.401) then
+        Vprescribe=0.0d0
+else if (local_probtype.eq.402) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.5) then
         Vprescribe=0.0d0
@@ -4745,6 +4902,10 @@ real(kind=8)              :: radial_slope
   exact_temperature=0.0d0
 
  else if (probtype_in.eq.401)then
+
+  exact_temperature=0.0d0
+
+ else if (probtype_in.eq.402)then
 
   exact_temperature=0.0d0
 
