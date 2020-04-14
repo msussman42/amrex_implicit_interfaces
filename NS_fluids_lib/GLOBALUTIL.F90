@@ -8183,13 +8183,13 @@ contains
       if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
           (FSI_flag(im).eq.2).or. & ! prescribed rigid solid (sci_clsvof.F90)
           (FSI_flag(im).eq.4)) then ! FSI link w/Kourosh Shoele
-       is_rigid=1
+       is_rigid=1 ! non-tessellating
       else if ((FSI_flag(im).eq.0).or. &
                (FSI_flag(im).eq.7).or. & ! fluid
                (FSI_flag(im).eq.3).or. & ! ice
                (FSI_flag(im).eq.6).or. & ! ice
                (FSI_flag(im).eq.5)) then ! FSI rigid
-       is_rigid=0
+       is_rigid=0 ! tessellating
       else
        print *,"FSI_flag invalid in is_rigid"
        stop

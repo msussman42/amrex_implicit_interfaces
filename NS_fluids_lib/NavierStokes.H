@@ -1484,15 +1484,18 @@ protected:
     static int         law_of_the_wall;  // def=0
      // 1..7 "1" corresponds to the GNBC option.
     static int         ZEYU_DCA_SELECT;  // DCA=dynamic contact angle
-     // 0=fluid 
-     // 1=prescribed motion, PROB.F90 solid 
-     // 2=prescribed motion, sci_clsvof.F90 solid 
-     // 3=rigid FSI interior, ice (expansion/triple point dynamics
-     //   allowed)
-     // 4=link w/Kourosh (FSI, not rigid, sci_clsvof.F90) 
-     // 5=FSI, rigid (PROB.F90)
-     // 6=FSI ice (initial geometry: sci_clsvof.F90)
-     // 7=fluid (initial geometry: sci_clsvof.F90)
+     // 0=fluid, tessellating 
+     // 1=prescribed motion, non-tessellating, PROB.F90 solid 
+     // 2=prescribed motion, non-tessellating, sci_clsvof.F90 solid 
+     // 3=rigid FSI interior, tessellating, ice 
+     //    (expansion/triple point dynamics allowed)
+     // 4=link w/Kourosh, FSI, sci_clsvof.F90, fluids tessellate the
+     //   computational domain, and the CTML elastic solid is embedded
+     //   within the domain (non-tessellating) as if it was a rigid solid.
+     // 5=FSI, tessellating, rigid (PROB.F90)
+     // 6=FSI ice, represented as a tessellating fluid
+     //   (initial geometry: sci_clsvof.F90)
+     // 7=fluid, tessellating (initial geometry: sci_clsvof.F90)
     static Vector<int>  FSI_flag; 
 
     static int         CTML_FSI_numsolids;
