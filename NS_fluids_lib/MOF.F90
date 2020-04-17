@@ -3074,12 +3074,16 @@ end subroutine intersection_volume_and_map
         !  idx = index at triangle node locations
         !        2 components: material id, cut number
         !  im_current = phi is im_current reconstructed interface.
-        !  icuts = cut number (1,2,3,...)
+        !  icuts = cut number (1,2,3,...,ncuts)
         ! output:
         !  xtrilist = triangles of intersection (phi>0 region)
         !  idx_trilist = index of intersection  (phi>0 region)
         !  the cut nodes get new im_current,icuts pair.
-      subroutine list_tris_multicuts(phi,x,idx,im_current,icuts, &
+      subroutine list_tris_multicuts(phi,x, &
+        idx, &
+        im_current,icuts, &
+        ncuts_material, &
+        ncuts, &
         xtrilist, &
         nlist_alloc,nlist, &
         idx_trilist, &
@@ -3090,6 +3094,8 @@ end subroutine intersection_volume_and_map
       INTEGER_T, intent(in) :: sdim 
       INTEGER_T, intent(in) :: im_current
       INTEGER_T, intent(in) :: icuts
+      INTEGER_T, intent(in) :: ncuts
+      INTEGER_T, intent(in) :: ncuts_material
       REAL_T, intent(in)    :: phi(sdim+1)
       REAL_T, intent(in)    :: x(sdim+1,sdim)
       INTEGER_T, intent(in) :: idx(sdim+1,2)
@@ -3109,6 +3115,18 @@ end subroutine intersection_volume_and_map
        print *,"nlist_alloc invalid"
        stop
       endif
+      if ((ncuts_material.ge.0).and.(ncuts_material.le.ncuts)) then
+       ! do nothing
+      else
+       print *,"ncuts_material invalid"
+       stop
+      endif
+      if ((icuts.ge.1).and.(icuts.le.ncuts_material)) then
+       ! do nothing
+      else
+       print *,"icuts invalid"
+       stop
+      endif
 
       nlist=0
       if ((phi(1).le.zero).and.(phi(2).le.zero).and. &
@@ -3121,55 +3139,73 @@ end subroutine intersection_volume_and_map
         do j=1,2
          xtrilist(i,j,1)=x(i,j)
         enddo 
-        do j=1,2
+        do j=1,2  ! im,icut
          idx_trilist(i,j,1)=idx(i,j)
         enddo
        enddo 
       else if ((phi(1).lt.zero).and.(phi(2).ge.zero).and. &
                (phi(3).ge.zero)) then
                ! complement=1
-       call shrink_list_tri_multicuts(phi,x,idx, &
+       call shrink_list_tri_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          1,2,3,1, &
          xtrilist, &
          nlist_alloc,nlist,idx_trilist)
       else if ((phi(2).lt.zero).and.(phi(1).ge.zero).and. &
                (phi(3).ge.zero)) then
                ! complement=1
-       call shrink_list_tri_multicuts(phi,x,idx, &
+       call shrink_list_tri_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          2,1,3,1, &
          xtrilist, &
          nlist_alloc,nlist,idx_trilist)
                ! complement=1
       else if ((phi(3).lt.zero).and.(phi(1).ge.zero).and. &
                (phi(2).ge.zero)) then
-       call shrink_list_tri_multicuts(phi,x,idx, &
+       call shrink_list_tri_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          3,1,2,1, &
          xtrilist, &
          nlist_alloc,nlist,idx_trilist)
       else if ((phi(1).ge.zero).and.(phi(2).lt.zero).and. &
                (phi(3).lt.zero)) then
                ! complement=0
-       call shrink_list_tri_multicuts(phi,x,idx, &
+       call shrink_list_tri_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          1,2,3,0, &
          xtrilist, &
          nlist_alloc,nlist,idx_trilist)
       else if ((phi(2).ge.zero).and.(phi(1).lt.zero).and. &
                (phi(3).lt.zero)) then
                ! complement=0
-       call shrink_list_tri_multicuts(phi,x,idx, &
+       call shrink_list_tri_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          2,1,3,0, &
          xtrilist, &
          nlist_alloc,nlist,idx_trilist)
                ! complement=0
       else if ((phi(3).ge.zero).and.(phi(1).lt.zero).and. &
                (phi(2).lt.zero)) then
-       call shrink_list_tri_multicuts(phi,x,idx, &
+       call shrink_list_tri_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          3,1,2,0, &
          xtrilist, &
          nlist_alloc,nlist,idx_trilist)
@@ -4927,7 +4963,11 @@ end subroutine intersection_volume_and_map
         !  xtetlist = tets of intersection (phi>0 region)
         !  idx_tetlist = index of intersection  (phi>0 region)
         !  the cut nodes get new im_current,icuts pair.
-      subroutine shrink_list_tet_multicuts(phi,x,idx,im_current,icuts, &
+      subroutine shrink_list_tet_multicuts(phi,x, &
+        idx, &
+        im_current,icuts, &
+        ncuts_material, &
+        ncuts, &
         i1,i2,i3,i4,complement, &
         xtetlist, &
         nlist_alloc,nlist,idx_tetlist)
@@ -4940,7 +4980,10 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(in) :: phi(4)
       REAL_T, intent(in) :: x(4,3)
       INTEGER_T, intent(in) :: idx(4,2)
-      INTEGER_T, intent(in) :: im_current,icuts
+      INTEGER_T, intent(in) :: im_current
+      INTEGER_T, intent(in) :: icuts
+      INTEGER_T, intent(in) :: ncuts
+      INTEGER_T, intent(in) :: ncuts_material
       REAL_T xint(4,3)
       INTEGER_T, intent(in) :: i1,i2,i3,i4,complement
       INTEGER_T i,j
@@ -4948,6 +4991,7 @@ end subroutine intersection_volume_and_map
  
       sdim=3
 
+     FIX ME SANITY CHECK HERE
       if (nlist_alloc.ge.nlist+1) then
        ! do nothing
       else
@@ -15917,10 +15961,12 @@ contains
 
            do itetnode=1,sdim+1
             do dir_node=1,sdim
+              ! old/new = 1
              xcandidate_hold(itetnode,dir_node)= &
                x_tetlist(itetnode,dir_node,1,itet)
             enddo
-            do iflags=1,2
+            do iflags=1,2  ! material id, order?
+              ! old/new = 1
              idx_candidate_hold(itetnode,iflags)= &
               idx_tetlist(itetnode,iflags,1,itet)
             enddo 
@@ -15940,12 +15986,22 @@ contains
             call list_tets_multicuts(phi1,xcandidate_hold, &
               idx_candidate_hold, &
               im_current,icuts, &
-              xsublist,MAXTET,nsub,idx_sublist,sdim)
+              ncuts_material(im_current), &
+              ncuts, &
+              xsublist, &
+              MAXTET,nsub, &
+              idx_sublist, &
+              sdim)
            else if (sdim.eq.2) then
             call list_tris_multicuts(phi1,xcandidate_hold, &
               idx_candidate_hold, &
               im_current,icuts, &
-              xsublist,MAXTET,nsub,idx_sublist,sdim)
+              ncuts_material(im_current), &
+              ncuts, &
+              xsublist, &
+              MAXTET,nsub, &
+              idx_sublist, &
+              sdim)
            else
             print *,"sdim invalid"
             stop
