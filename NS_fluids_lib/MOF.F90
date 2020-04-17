@@ -15579,6 +15579,9 @@ contains
         ! for finding pair area fractions and centroids,
         ! (i)  nmat=2 * nmat_original
         ! (ii) each "material" has two cuts
+        ! (iii) order group on one side as 1..nmat_original,
+        !       and order group on opposite side as 
+        !       nmat_original+1 ... 2*nmat_original
         ! shapeflag=0 find volumes within xsten_grid
         ! shapeflag=1 find volumes within xtet
         ! multi_cen is "absolute" (not relative to cell centroid)
@@ -15677,6 +15680,8 @@ contains
       REAL_T local_area
       REAL_T local_areacentroid(sdim)
 
+        ! volume fraction + centroid + reconstructed slope(s)
+        ! normal(s) point inward.
       ngeom_recon_cuts=1+sdim+1+ncuts*(sdim+1)
 
       if (ncomp_mofdata_cuts.eq.nmat*ngeom_recon_cuts) then
@@ -15750,7 +15755,7 @@ contains
       enddo  ! im=1..nmat
 
 
-      if (shapeflag.eq.0) then ! volumes in a box
+      if (shapeflag.eq.0) then ! volumes in a box, break box into tets
        symmetry_flag=0
        call get_ntetbox(ntetbox,symmetry_flag,sdim)
        nlist_old=ntetbox
@@ -15857,6 +15862,7 @@ contains
 
       if ((num_empty.eq.nmat-1).and. &
           (local_vfrac(im_max_vfrac).ge.VOFTOL)) then
+        ! ncomp_mofdata_cuts=nmat*ngeom_recon_cuts
        do im=1,ncomp_mofdata_cuts
         mofdata_cuts_local(im)=zero
        enddo
@@ -15867,7 +15873,9 @@ contains
          ! output
         idx_tetlist(itetnode,1,1,itet)=im_max_vfrac
        enddo
+
       else if ((num_empty.ge.0).and.(num_empty.le.nmat-2)) then
+
        nlist_new=0
 
        do im_order=1,nmat-1
@@ -15877,8 +15885,21 @@ contains
           NINT(mofdata_cuts_local((im-1)*ngeom_recon_cuts+1+sdim+1))
          if (current_order.eq.im_order) then
           im_current=im
+         else if ((current_order.ge.0).and.(current_order.le.nmat)) then
+          ! do nothing
+         else
+          print *,"current_order invalid"
+          stop
          endif
         enddo
+
+        if ((im_current.ge.1).and.(im_current.le.nmat)) then
+         ! do nothing
+        else
+         print *,"im_current invalid"
+         stop
+        endif
+
         if ((material_processed(im_current).eq.0).and. &
             (local_vfrac(im_current).ge.VOFTOL)) then
 
