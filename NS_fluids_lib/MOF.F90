@@ -2612,7 +2612,10 @@ end subroutine intersection_volume_and_map
       REAL_T lsdark(sdim+1)
       REAL_T volumeiddark
       REAL_T areaiddark
-      INTEGER_T i,j,k
+      INTEGER_T j_dir
+      INTEGER_T i_grid_node
+      INTEGER_T j_grid_node
+      INTEGER_T k_grid_node
       INTEGER_T id,symmetry_flag,ntetbox
       INTEGER_T power2,inode,nplus,nminus,ndark,sumdark
 
@@ -2630,10 +2633,10 @@ end subroutine intersection_volume_and_map
        stop
       endif
  
-      do j=1,sdim
-       centroiddark(j)=zero
-       areacentroiddark(j)=zero
-       areacentroid(j)=zero
+      do j_dir=1,sdim
+       centroiddark(j_dir)=zero
+       areacentroiddark(j_dir)=zero
+       areacentroid(j_dir)=zero
       enddo
       volumedark=zero
       area=zero
@@ -2653,12 +2656,12 @@ end subroutine intersection_volume_and_map
        call get_ntetbox(ntetbox,symmetry_flag,sdim)
  
        if (sdim.eq.3) then
-        do k=-1,1,2
-        do j=-1,1,2
-        do i=-1,1,2
-         xnode(inode,1)=xgrid(i,1)
-         xnode(inode,2)=xgrid(j,2)
-         xnode(inode,sdim)=xgrid(k,sdim)
+        do k_grid_node=-1,1,2
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
+         xnode(inode,1)=xgrid(i_grid_node,1)
+         xnode(inode,2)=xgrid(j_grid_node,2)
+         xnode(inode,sdim)=xgrid(k_grid_node,sdim)
 
          if (lnode(inode).ge.zero) then
           nplus=nplus+1
@@ -2675,10 +2678,10 @@ end subroutine intersection_volume_and_map
         enddo
         enddo
        else if (sdim.eq.2) then
-        do j=-1,1,2
-        do i=-1,1,2
-         xnode(inode,1)=xgrid(i,1)
-         xnode(inode,2)=xgrid(j,2)
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
+         xnode(inode,1)=xgrid(i_grid_node,1)
+         xnode(inode,2)=xgrid(j_grid_node,2)
 
          if (lnode(inode).ge.zero) then
           nplus=nplus+1
@@ -2715,9 +2718,11 @@ end subroutine intersection_volume_and_map
 
         volumedark=volumedark+volumeiddark
         area=area+areaiddark
-        do j=1,sdim
-         centroiddark(j)=centroiddark(j)+centroididdark(j)*volumeiddark
-         areacentroid(j)=areacentroid(j)+areacentroiddark(j)*areaiddark
+        do j_dir=1,sdim
+         centroiddark(j_dir)=centroiddark(j_dir)+ &
+                 centroididdark(j_dir)*volumeiddark
+         areacentroid(j_dir)=areacentroid(j_dir)+ &
+                 areacentroiddark(j_dir)*areaiddark
         enddo
 
        enddo ! id
@@ -2729,23 +2734,23 @@ end subroutine intersection_volume_and_map
       endif
 
       if (area.gt.zero) then
-       do j=1,sdim
-        areacentroid(j)=areacentroid(j)/area
+       do j_dir=1,sdim
+        areacentroid(j_dir)=areacentroid(j_dir)/area
        enddo
       else
-       do j=1,sdim
-        areacentroid(j)=zero
+       do j_dir=1,sdim
+        areacentroid(j_dir)=zero
        enddo
       endif
 
       if (volumedark.gt.zero) then
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)/volumedark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)/volumedark
        enddo
       else
        volumedark=zero
-       do j=1,sdim
-        centroiddark(j)=zero
+       do j_dir=1,sdim
+        centroiddark(j_dir)=zero
        enddo
       endif
 
@@ -2775,7 +2780,8 @@ end subroutine intersection_volume_and_map
       REAL_T centroiddark(sdim)
       REAL_T centroidlistdark(sdim)
 
-      INTEGER_T i,j,n,nlist,narea
+      INTEGER_T i,n,nlist,narea
+      INTEGER_T j_dir
 
       if (sdim.ne.2) then
        print *,"sdim invalid"
@@ -2786,55 +2792,57 @@ end subroutine intersection_volume_and_map
 
       volumedark=zero
       area=zero
-      do j=1,sdim
-       centroiddark(j)=zero
-       areacentroid(j)=zero
+      do j_dir=1,sdim
+       centroiddark(j_dir)=zero
+       areacentroid(j_dir)=zero
       enddo
       do n=1,nlist
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=xtrilist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xtrilist(i,j_dir,n)
        enddo
        enddo
        call tetrahedron_volume(xint,volumelistdark,centroidlistdark,sdim)
        volumedark=volumedark+volumelistdark
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)+centroidlistdark(j)*volumelistdark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)+ &
+                centroidlistdark(j_dir)*volumelistdark
        enddo
       enddo
       if (volumedark.gt.zero) then
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)/volumedark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)/volumedark
        enddo
       else
-       do j=1,sdim
-        centroiddark(j)=zero
+       do j_dir=1,sdim
+        centroiddark(j_dir)=zero
        enddo
       endif
 
       do n=1,narea
        do i=1,sdim
-       do j=1,sdim
-        xint(i,j)=xarealist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xarealist(i,j_dir,n)
        enddo
        enddo
-       do j=1,sdim
-        xint(sdim+1,j)=zero
+       do j_dir=1,sdim
+        xint(sdim+1,j_dir)=zero
        enddo
        call areaXYorRZ(xint,1,2,arealist,areacentroidlist)
        area=area+arealist
-       do j=1,sdim
-        areacentroid(j)=areacentroid(j)+areacentroidlist(j)*arealist
+       do j_dir=1,sdim
+        areacentroid(j_dir)=areacentroid(j_dir)+ &
+                areacentroidlist(j_dir)*arealist
        enddo
       enddo
 
       if (area.gt.zero) then
-       do j=1,sdim
-        areacentroid(j)=areacentroid(j)/area
+       do j_dir=1,sdim
+        areacentroid(j_dir)=areacentroid(j_dir)/area
        enddo
       else
-       do j=1,sdim
-        areacentroid(j)=zero
+       do j_dir=1,sdim
+        areacentroid(j_dir)=zero
        enddo
       endif
 
@@ -2862,7 +2870,7 @@ end subroutine intersection_volume_and_map
       REAL_T centroiddark(sdim)
       REAL_T centroidlistdark(sdim)
 
-      INTEGER_T i,j,n,nlist,narea
+      INTEGER_T i,j_dir,n,nlist,narea
 
       if (sdim.ne.2) then
        print *,"sdim invalid"
@@ -2872,28 +2880,29 @@ end subroutine intersection_volume_and_map
       call list_tris(phi,x,xtrilist,MAXTET,nlist,xarealist,narea,sdim)
 
       volumedark=zero
-      do j=1,sdim
-       centroiddark(j)=zero
+      do j_dir=1,sdim
+       centroiddark(j_dir)=zero
       enddo
       do n=1,nlist
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=xtrilist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xtrilist(i,j_dir,n)
        enddo
        enddo
        call tetrahedron_volume(xint,volumelistdark,centroidlistdark,sdim)
        volumedark=volumedark+volumelistdark
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)+centroidlistdark(j)*volumelistdark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)+ &
+                centroidlistdark(j_dir)*volumelistdark
        enddo
       enddo
       if (volumedark.gt.zero) then
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)/volumedark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)/volumedark
        enddo
       else
-       do j=1,sdim
-        centroiddark(j)=zero
+       do j_dir=1,sdim
+        centroiddark(j_dir)=zero
        enddo
       endif
 
@@ -2933,7 +2942,7 @@ end subroutine intersection_volume_and_map
       REAL_T centroiddark_map(sdim)
       REAL_T centroidlistdark_map(sdim)
 
-      INTEGER_T i,j,n,nlist,narea
+      INTEGER_T i,j_dir,n,nlist,narea
 
       if (sdim.ne.2) then
        print *,"sdim invalid"
@@ -2952,14 +2961,14 @@ end subroutine intersection_volume_and_map
 
       volumedark=zero
       volumedark_map=zero
-      do j=1,sdim
-       centroiddark(j)=zero
-       centroiddark_map(j)=zero
+      do j_dir=1,sdim
+       centroiddark(j_dir)=zero
+       centroiddark_map(j_dir)=zero
       enddo
       do n=1,nlist
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=xtrilist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xtrilist(i,j_dir,n)
        enddo
        enddo
        call tetrahedron_volume_and_map(normdir,coeff, &
@@ -2968,21 +2977,21 @@ end subroutine intersection_volume_and_map
         sdim)
        volumedark=volumedark+volumelistdark
        volumedark_map=volumedark_map+volumelistdark_map
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)+centroidlistdark(j)*volumelistdark
-        centroiddark_map(j)=centroiddark_map(j)+ &
-         centroidlistdark_map(j)*volumelistdark_map
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)+centroidlistdark(j_dir)*volumelistdark
+        centroiddark_map(j_dir)=centroiddark_map(j_dir)+ &
+         centroidlistdark_map(j_dir)*volumelistdark_map
        enddo
       enddo
       if ((volumedark.gt.zero).and.(volumedark_map.gt.zero)) then
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)/volumedark
-        centroiddark_map(j)=centroiddark_map(j)/volumedark_map
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)/volumedark
+        centroiddark_map(j_dir)=centroiddark_map(j_dir)/volumedark_map
        enddo
       else if ((volumedark.eq.zero).or.(volumedark_map.eq.zero)) then
-       do j=1,sdim
-        centroiddark(j)=zero
-        centroiddark_map(j)=zero
+       do j_dir=1,sdim
+        centroiddark(j_dir)=zero
+        centroiddark_map(j_dir)=zero
        enddo
       else
        print *,"volumedark or volumedark_map invalid"
@@ -3009,7 +3018,7 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(out) :: xarealist(2,2,MAXAREA)
       INTEGER_T, intent(out) :: nlist
       INTEGER_T, intent(out) :: narea
-      INTEGER_T i,j
+      INTEGER_T i,j_dir
 
       if (sdim.ne.2) then
        print *,"sdim invalid list_tris"
@@ -3031,8 +3040,8 @@ end subroutine intersection_volume_and_map
                (phi(3).ge.zero)) then
        nlist=1
        do i=1,3
-       do j=1,2
-        xtrilist(i,j,1)=x(i,j)
+       do j_dir=1,2
+        xtrilist(i,j_dir,1)=x(i,j_dir)
        enddo 
        enddo 
       else if ((phi(1).lt.zero).and.(phi(2).ge.zero).and. &
@@ -3103,7 +3112,9 @@ end subroutine intersection_volume_and_map
       INTEGER_T, intent(out) :: idx_trilist(sdim+1,2,nlist_alloc)
       INTEGER_T, intent(out) :: nlist
 
-      INTEGER_T i,j
+      INTEGER_T i
+      INTEGER_T j_dir
+      INTEGER_T j_cut
 
       if (sdim.ne.2) then
        print *,"sdim invalid list_tris multicuts"
@@ -3136,11 +3147,11 @@ end subroutine intersection_volume_and_map
                (phi(3).ge.zero)) then
        nlist=1
        do i=1,3
-        do j=1,2
-         xtrilist(i,j,1)=x(i,j)
+        do j_dir=1,2
+         xtrilist(i,j_dir,nlist)=x(i,j_dir)
         enddo 
-        do j=1,2  ! im,icut
-         idx_trilist(i,j,1)=idx(i,j)
+        do j_cut=1,2  ! im,icut
+         idx_trilist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo 
       else if ((phi(1).lt.zero).and.(phi(2).ge.zero).and. &
@@ -3785,7 +3796,7 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(out) :: centroid(sdim)
       REAL_T centroid_def(sdim)
       REAL_T xx(sdim,sdim)
-      INTEGER_T i,j,dir
+      INTEGER_T i,j_dir,j_vec,dir
       REAL_T, dimension(:,:), allocatable :: xyz
       REAL_T, dimension(:), allocatable :: w
       INTEGER_T rule,degree,order_num
@@ -3877,8 +3888,8 @@ end subroutine intersection_volume_and_map
        do i=1,order_num
         do dir=1,sdim
          dxpos(dir)=zero
-         do j=1,sdim
-          dxpos(dir)=dxpos(dir)+xx(j,dir)*xyz(j,i)
+         do j_vec=1,sdim
+          dxpos(dir)=dxpos(dir)+xx(j_vec,dir)*xyz(j_vec,i)
          enddo
         enddo
         rho=x(sdim+1,1)+dxpos(1)
@@ -3924,8 +3935,8 @@ end subroutine intersection_volume_and_map
         do i=1,order_num
          do dir=1,sdim
           dxpos(dir)=zero
-          do j=1,sdim
-           dxpos(dir)=dxpos(dir)+xx(j,dir)*xyz(j,i)
+          do j_vec=1,sdim
+           dxpos(dir)=dxpos(dir)+xx(j_vec,dir)*xyz(j_vec,i)
           enddo
          enddo
          rho=x(sdim+1,1)+dxpos(1)
@@ -3968,8 +3979,8 @@ end subroutine intersection_volume_and_map
         do i=1,order_num
          do dir=1,sdim
           dxpos(dir)=zero
-          do j=1,sdim
-           dxpos(dir)=dxpos(dir)+xx(j,dir)*xyz(j,i)
+          do j_vec=1,sdim
+           dxpos(dir)=dxpos(dir)+xx(j_vec,dir)*xyz(j_vec,i)
           enddo
          enddo
          rho=x(sdim+1,1)+dxpos(1)
@@ -4004,23 +4015,23 @@ end subroutine intersection_volume_and_map
        stop
       endif
 
-      do j=1,sdim
+      do j_dir=1,sdim
 
-       if (xmin(j).gt.xmax(j)) then
-        print *,"xmin(j).gt.xmax(j)"
+       if (xmin(j_dir).gt.xmax(j_dir)) then
+        print *,"xmin(j_dir).gt.xmax(j_dir)"
         stop
        endif
 
-       if (centroid(j)+CENTOL.lt.xmin(j)) then
-        print *,"WARNING centroid(j)+CENTOL.lt.xmin(j) XYZ"
-        centroid(j)=xmin(j)
-       else if (centroid(j)-CENTOL.gt.xmax(j)) then
-        print *,"WARNING centroid(j)-CENTOL.gt.xmax(j) XYZ"
-        centroid(j)=xmax(j)
+       if (centroid(j_dir)+CENTOL.lt.xmin(j_dir)) then
+        print *,"WARNING centroid(j_dir)+CENTOL.lt.xmin(j_dir) XYZ"
+        centroid(j_dir)=xmin(j_dir)
+       else if (centroid(j_dir)-CENTOL.gt.xmax(j_dir)) then
+        print *,"WARNING centroid(j_dir)-CENTOL.gt.xmax(j_dir) XYZ"
+        centroid(j_dir)=xmax(j_dir)
        endif
 
-       if ((centroid(j)+CENTOL.lt.xmin(j)).or. &
-           (centroid(j)-CENTOL.gt.xmax(j))) then
+       if ((centroid(j_dir)+CENTOL.lt.xmin(j_dir)).or. &
+           (centroid(j_dir)-CENTOL.gt.xmax(j_dir))) then
         print *,"centroid still invalid XYZ"
         stop
        endif
@@ -4053,7 +4064,7 @@ end subroutine intersection_volume_and_map
       REAL_T centroid_def(sdim)
       REAL_T centroid_def_map(sdim)
       REAL_T xx(sdim,sdim)
-      INTEGER_T i,j,dir
+      INTEGER_T i,j_dir,j_vec,dir
       REAL_T, dimension(:,:), allocatable :: xyz
       REAL_T, dimension(:), allocatable :: w
       INTEGER_T rule,degree,order_num
@@ -4171,8 +4182,8 @@ end subroutine intersection_volume_and_map
        do i=1,order_num
         do dir=1,sdim
          dxpos(dir)=zero
-         do j=1,sdim
-          dxpos(dir)=dxpos(dir)+xx(j,dir)*xyz(j,i)
+         do j_vec=1,sdim
+          dxpos(dir)=dxpos(dir)+xx(j_vec,dir)*xyz(j_vec,i)
          enddo
         enddo
 
@@ -4240,8 +4251,8 @@ end subroutine intersection_volume_and_map
         do i=1,order_num
          do dir=1,sdim
           dxpos(dir)=zero
-          do j=1,sdim
-           dxpos(dir)=dxpos(dir)+xx(j,dir)*xyz(j,i)
+          do j_vec=1,sdim
+           dxpos(dir)=dxpos(dir)+xx(j_vec,dir)*xyz(j_vec,i)
           enddo
          enddo
 
@@ -4307,8 +4318,8 @@ end subroutine intersection_volume_and_map
         do i=1,order_num
          do dir=1,sdim
           dxpos(dir)=zero
-          do j=1,sdim
-           dxpos(dir)=dxpos(dir)+xx(j,dir)*xyz(j,i)
+          do j_vec=1,sdim
+           dxpos(dir)=dxpos(dir)+xx(j_vec,dir)*xyz(j_vec,i)
           enddo
          enddo
 
@@ -4363,49 +4374,49 @@ end subroutine intersection_volume_and_map
        stop
       endif
 
-      do j=1,sdim
+      do j_dir=1,sdim
 
-       if (xmin(j).gt.xmax(j)) then
-        print *,"xmin(j).gt.xmax(j)"
+       if (xmin(j_dir).gt.xmax(j_dir)) then
+        print *,"xmin(j_dir).gt.xmax(j_dir)"
         stop
        endif
 
-       if (centroid(j)+CENTOL.lt.xmin(j)) then
-        print *,"WARNING centroid(j)+CENTOL.lt.xmin(j) XYZ"
-        centroid(j)=xmin(j)
-       else if (centroid(j)-CENTOL.gt.xmax(j)) then
-        print *,"WARNING centroid(j)-CENTOL.gt.xmax(j) XYZ"
-        centroid(j)=xmax(j)
+       if (centroid(j_dir)+CENTOL.lt.xmin(j_dir)) then
+        print *,"WARNING centroid(j_dir)+CENTOL.lt.xmin(j_dir) XYZ"
+        centroid(j_dir)=xmin(j_dir)
+       else if (centroid(j_dir)-CENTOL.gt.xmax(j_dir)) then
+        print *,"WARNING centroid(j_dir)-CENTOL.gt.xmax(j_dir) XYZ"
+        centroid(j_dir)=xmax(j_dir)
        endif
 
-       if ((centroid(j)+CENTOL.lt.xmin(j)).or. &
-           (centroid(j)-CENTOL.gt.xmax(j))) then
+       if ((centroid(j_dir)+CENTOL.lt.xmin(j_dir)).or. &
+           (centroid(j_dir)-CENTOL.gt.xmax(j_dir))) then
         print *,"centroid still invalid XYZ"
         stop
        endif
 
-       xmin_map(j)=xmin(j)
-       xmax_map(j)=xmax(j)
-       if (j.eq.normdir+1) then
-        xmin_map(j)=coeff(1)*xmin_map(j)+coeff(2)
-        xmax_map(j)=coeff(1)*xmax_map(j)+coeff(2)
+       xmin_map(j_dir)=xmin(j_dir)
+       xmax_map(j_dir)=xmax(j_dir)
+       if (j_dir.eq.normdir+1) then
+        xmin_map(j_dir)=coeff(1)*xmin_map(j_dir)+coeff(2)
+        xmax_map(j_dir)=coeff(1)*xmax_map(j_dir)+coeff(2)
        endif
 
-       if (xmin_map(j).gt.xmax_map(j)) then
-        print *,"xmin_map(j).gt.xmax_map(j)"
+       if (xmin_map(j_dir).gt.xmax_map(j_dir)) then
+        print *,"xmin_map(j_dir).gt.xmax_map(j_dir)"
         stop
        endif
 
-       if (centroid_map(j)+CENTOL.lt.xmin_map(j)) then
-        print *,"WARNING centroid_map(j)+CENTOL.lt.xmin_map(j) XYZ"
-        centroid_map(j)=xmin_map(j)
-       else if (centroid_map(j)-CENTOL.gt.xmax_map(j)) then
-        print *,"WARNING centroid_map(j)-CENTOL.gt.xmax_map(j) XYZ"
-        centroid_map(j)=xmax_map(j)
+       if (centroid_map(j_dir)+CENTOL.lt.xmin_map(j_dir)) then
+        print *,"WARNING centroid_map(j_dir)+CENTOL.lt.xmin_map(j_dir) XYZ"
+        centroid_map(j_dir)=xmin_map(j_dir)
+       else if (centroid_map(j_dir)-CENTOL.gt.xmax_map(j_dir)) then
+        print *,"WARNING centroid_map(j_dir)-CENTOL.gt.xmax_map(j_dir) XYZ"
+        centroid_map(j_dir)=xmax_map(j_dir)
        endif
 
-       if ((centroid_map(j)+CENTOL.lt.xmin_map(j)).or. &
-           (centroid_map(j)-CENTOL.gt.xmax_map(j))) then
+       if ((centroid_map(j_dir)+CENTOL.lt.xmin_map(j_dir)).or. &
+           (centroid_map(j_dir)-CENTOL.gt.xmax_map(j_dir))) then
         print *,"centroid_map still invalid XYZ"
         stop
        endif
@@ -4512,7 +4523,7 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(in) :: phi(3)
       REAL_T, intent(in) :: x(3,2)
       REAL_T xint(3,2)
-      INTEGER_T i,j
+      INTEGER_T i,j_dir
       INTEGER_T, intent(in) :: i1,i2,i3,complement
       INTEGER_T sdim
 
@@ -4527,8 +4538,8 @@ end subroutine intersection_volume_and_map
 
       if (complement.eq.0) then
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink2D(xint,x,phi,i1,i2,sdim)
@@ -4539,20 +4550,20 @@ end subroutine intersection_volume_and_map
         stop
        endif 
        do i=1,sdim+1
-       do j=1,sdim
-        xtrilist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtrilist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
        enddo
 
        narea=narea+1
-       do j=1,sdim
-        xarealist(1,j,narea)=xint(i2,j)
-        xarealist(2,j,narea)=xint(i3,j)
+       do j_dir=1,sdim
+        xarealist(1,j_dir,narea)=xint(i2,j_dir)
+        xarealist(2,j_dir,narea)=xint(i3,j_dir)
        enddo
       else if (complement.eq.1) then
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink2D(xint,x,phi,i2,i1,sdim)
@@ -4562,14 +4573,14 @@ end subroutine intersection_volume_and_map
         stop
        endif 
        do i=1,sdim+1
-       do j=1,sdim
-        xtrilist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtrilist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
        enddo
 
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink2D(xint,x,phi,i1,i2,sdim)
@@ -4580,8 +4591,8 @@ end subroutine intersection_volume_and_map
         stop
        endif 
        do i=1,sdim+1
-       do j=1,sdim
-        xtrilist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtrilist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
        enddo
 
@@ -4590,9 +4601,9 @@ end subroutine intersection_volume_and_map
         print *,"nlist invalid"
         stop
        endif 
-       do j=1,sdim
-        xarealist(1,j,narea)=xint(i2,j)
-        xarealist(2,j,narea)=xint(i1,j)
+       do j_dir=1,sdim
+        xarealist(1,j_dir,narea)=xint(i2,j_dir)
+        xarealist(2,j_dir,narea)=xint(i1,j_dir)
        enddo
       else
        print *,"complement invalid"
@@ -4636,7 +4647,9 @@ end subroutine intersection_volume_and_map
       INTEGER_T, intent(in) :: ncuts
       INTEGER_T, intent(in) :: ncuts_material
       REAL_T xint(3,2)
-      INTEGER_T i,j
+      INTEGER_T i
+      INTEGER_T j_dir
+      INTEGER_T j_cut
       INTEGER_T, intent(in) :: i1,i2,i3,complement
       INTEGER_T sdim
 
@@ -4664,8 +4677,8 @@ end subroutine intersection_volume_and_map
 
       if (complement.eq.0) then
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink2D(xint,x,phi,i1,i2,sdim)
@@ -4676,11 +4689,11 @@ end subroutine intersection_volume_and_map
         stop
        endif 
        do i=1,sdim+1
-        do j=1,sdim
-         xtrilist(i,j,nlist)=xint(i,j)
+        do j_dir=1,sdim
+         xtrilist(i,j_dir,nlist)=xint(i,j_dir)
         enddo
-        do j=1,2
-         idx_trilist(i,j,nlist)=idx(i,j)
+        do j_cut=1,2
+         idx_trilist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo
        idx_trilist(i2,1,nlist)=im_current
@@ -4690,8 +4703,8 @@ end subroutine intersection_volume_and_map
 
       else if (complement.eq.1) then
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink2D(xint,x,phi,i2,i1,sdim)
@@ -4701,17 +4714,17 @@ end subroutine intersection_volume_and_map
         stop
        endif 
        do i=1,sdim+1
-        do j=1,sdim
-         xtrilist(i,j,nlist)=xint(i,j)
+        do j_dir=1,sdim
+         xtrilist(i,j_dir,nlist)=xint(i,j_dir)
         enddo
-        do j=1,2
-         idx_trilist(i,j,nlist)=idx(i,j)
+        do j_cut=1,2
+         idx_trilist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo
 
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink2D(xint,x,phi,i1,i2,sdim)
@@ -4722,11 +4735,11 @@ end subroutine intersection_volume_and_map
         stop
        endif 
        do i=1,sdim+1
-        do j=1,sdim
-         xtrilist(i,j,nlist)=xint(i,j)
+        do j_dir=1,sdim
+         xtrilist(i,j_dir,nlist)=xint(i,j_dir)
         enddo
-        do j=1,2
-         idx_trilist(i,j,nlist)=idx(i,j)
+        do j_cut=1,2
+         idx_trilist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo
        idx_trilist(i2,1,nlist)=im_current
@@ -4755,7 +4768,7 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(in) :: phi(4)
       REAL_T, intent(in) :: x(4,3)
       REAL_T xint(4,3)
-      INTEGER_T i,j
+      INTEGER_T i,j_dir
       INTEGER_T, intent(in) :: i1,i2,i3,i4,complement
       INTEGER_T sdim
  
@@ -4770,8 +4783,8 @@ end subroutine intersection_volume_and_map
 
       if (complement.eq.0) then
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink3D(xint,x,phi,i1,i2,sdim)  ! xint,x,phi,isrc,itarg
@@ -4783,20 +4796,20 @@ end subroutine intersection_volume_and_map
         stop
        endif
        do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
        enddo
        narea=narea+1
-       do j=1,sdim
-        xarealist(1,j,narea)=xint(i2,j)
-        xarealist(2,j,narea)=xint(i3,j)
-        xarealist(3,j,narea)=xint(i4,j)
+       do j_dir=1,sdim
+        xarealist(1,j_dir,narea)=xint(i2,j_dir)
+        xarealist(2,j_dir,narea)=xint(i3,j_dir)
+        xarealist(3,j_dir,narea)=xint(i4,j_dir)
        enddo
       else if (complement.eq.1) then
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink3D(xint,x,phi,i3,i1,sdim)
@@ -4806,14 +4819,14 @@ end subroutine intersection_volume_and_map
         stop
        endif
        do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
        enddo
 
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink3D(xint,x,phi,i4,i1,sdim)
@@ -4824,14 +4837,14 @@ end subroutine intersection_volume_and_map
         stop
        endif
        do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
        enddo
 
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink3D(xint,x,phi,i1,i3,sdim)
@@ -4843,8 +4856,8 @@ end subroutine intersection_volume_and_map
         stop
        endif
        do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
        enddo
        narea=narea+1
@@ -4852,10 +4865,10 @@ end subroutine intersection_volume_and_map
         print *,"narea invalid"
         stop
        endif
-       do j=1,sdim
-        xarealist(1,j,narea)=xint(i3,j)
-        xarealist(2,j,narea)=xint(i4,j)
-        xarealist(3,j,narea)=xint(i1,j)
+       do j_dir=1,sdim
+        xarealist(1,j_dir,narea)=xint(i3,j_dir)
+        xarealist(2,j_dir,narea)=xint(i4,j_dir)
+        xarealist(3,j_dir,narea)=xint(i1,j_dir)
        enddo
       else
        print *,"complement invalid"
@@ -4880,7 +4893,7 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(in) :: x(4,3)
       REAL_T xint(4,3)
       INTEGER_T, intent(in) :: i1,i2,i3,i4
-      INTEGER_T i,j
+      INTEGER_T i,j_dir
 
       INTEGER_T sdim
 
@@ -4894,8 +4907,8 @@ end subroutine intersection_volume_and_map
       endif 
 
       do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
       enddo
       call shrink3D(xint,x,phi,i1,i3,sdim)  ! xint,x,phi,isrc,itarg
@@ -4907,8 +4920,8 @@ end subroutine intersection_volume_and_map
         stop
       endif
       do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
       enddo
       narea=narea+1
@@ -4916,15 +4929,15 @@ end subroutine intersection_volume_and_map
         print *,"narea invalid"
         stop
       endif
-      do j=1,sdim
-       xarealist(1,j,narea)=xint(i2,j)
-       xarealist(2,j,narea)=xint(i3,j)
-       xarealist(3,j,narea)=xint(i4,j)
+      do j_dir=1,sdim
+       xarealist(1,j_dir,narea)=xint(i2,j_dir)
+       xarealist(2,j_dir,narea)=xint(i3,j_dir)
+       xarealist(3,j_dir,narea)=xint(i4,j_dir)
       enddo
 
       do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
       enddo
       call shrink3D(xint,x,phi,i1,i3,sdim)
@@ -4936,8 +4949,8 @@ end subroutine intersection_volume_and_map
         stop
       endif
       do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
       enddo
       narea=narea+1
@@ -4945,15 +4958,15 @@ end subroutine intersection_volume_and_map
         print *,"narea invalid"
         stop
       endif
-      do j=1,sdim
-       xarealist(1,j,narea)=xint(i2,j)
-       xarealist(2,j,narea)=xint(i3,j)
-       xarealist(3,j,narea)=xint(i4,j)
+      do j_dir=1,sdim
+       xarealist(1,j_dir,narea)=xint(i2,j_dir)
+       xarealist(2,j_dir,narea)=xint(i3,j_dir)
+       xarealist(3,j_dir,narea)=xint(i4,j_dir)
       enddo
 
       do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
       enddo
       call shrink3D(xint,x,phi,i2,i4,sdim)
@@ -4964,8 +4977,8 @@ end subroutine intersection_volume_and_map
         stop
       endif
       do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
       enddo
 
@@ -5007,7 +5020,7 @@ end subroutine intersection_volume_and_map
       INTEGER_T, intent(in) :: ncuts_material
       REAL_T xint(4,3)
       INTEGER_T, intent(in) :: i1,i2,i3,i4,complement
-      INTEGER_T i,j
+      INTEGER_T i,j_dir,j_cut
       INTEGER_T sdim
  
       sdim=3
@@ -5034,8 +5047,8 @@ end subroutine intersection_volume_and_map
 
       if (complement.eq.0) then
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
        enddo
        call shrink3D(xint,x,phi,i1,i2,sdim)  ! xint,x,phi,isrc,itarg
@@ -5047,11 +5060,11 @@ end subroutine intersection_volume_and_map
         stop
        endif
        do i=1,sdim+1
-        do j=1,sdim
-         xtetlist(i,j,nlist)=xint(i,j)
+        do j_dir=1,sdim
+         xtetlist(i,j_dir,nlist)=xint(i,j_dir)
         enddo
-        do j=1,2
-         idx_tetlist(i,j,nlist)=idx(i,j)
+        do j_cut=1,2
+         idx_tetlist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo
        idx_tetlist(i2,1,nlist)=im_current
@@ -5062,8 +5075,8 @@ end subroutine intersection_volume_and_map
        idx_tetlist(i4,2,nlist)=icuts
       else if (complement.eq.1) then
        do i=1,sdim+1
-        do j=1,sdim
-         xint(i,j)=x(i,j)
+        do j_dir=1,sdim
+         xint(i,j_dir)=x(i,j_dir)
         enddo
        enddo
        call shrink3D(xint,x,phi,i3,i1,sdim)
@@ -5073,17 +5086,17 @@ end subroutine intersection_volume_and_map
         stop
        endif
        do i=1,sdim+1
-        do j=1,sdim
-         xtetlist(i,j,nlist)=xint(i,j)
+        do j_dir=1,sdim
+         xtetlist(i,j_dir,nlist)=xint(i,j_dir)
         enddo
-        do j=1,2
-         idx_tetlist(i,j,nlist)=idx(i,j)
+        do j_cut=1,2
+         idx_tetlist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo
 
        do i=1,sdim+1
-        do j=1,sdim
-         xint(i,j)=x(i,j)
+        do j_dir=1,sdim
+         xint(i,j_dir)=x(i,j_dir)
         enddo
        enddo
        call shrink3D(xint,x,phi,i4,i1,sdim)
@@ -5094,17 +5107,17 @@ end subroutine intersection_volume_and_map
         stop
        endif
        do i=1,sdim+1
-        do j=1,sdim
-         xtetlist(i,j,nlist)=xint(i,j)
+        do j_dir=1,sdim
+         xtetlist(i,j_dir,nlist)=xint(i,j_dir)
         enddo
-        do j=1,2
-         idx_tetlist(i,j,nlist)=idx(i,j)
+        do j_cut=1,2
+         idx_tetlist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo
 
        do i=1,sdim+1
-        do j=1,sdim
-         xint(i,j)=x(i,j)
+        do j_dir=1,sdim
+         xint(i,j_dir)=x(i,j_dir)
         enddo
        enddo
        call shrink3D(xint,x,phi,i1,i3,sdim)
@@ -5116,11 +5129,11 @@ end subroutine intersection_volume_and_map
         stop
        endif
        do i=1,sdim+1
-        do j=1,sdim
-         xtetlist(i,j,nlist)=xint(i,j)
+        do j_dir=1,sdim
+         xtetlist(i,j_dir,nlist)=xint(i,j_dir)
         enddo
-        do j=1,2
-         idx_tetlist(i,j,nlist)=idx(i,j)
+        do j_cut=1,2
+         idx_tetlist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo
        idx_tetlist(i1,1,nlist)=im_current
@@ -5178,7 +5191,7 @@ end subroutine intersection_volume_and_map
       INTEGER_T, intent(in) :: ncuts_material
       REAL_T xint(4,3)
       INTEGER_T, intent(in) :: i1,i2,i3,i4
-      INTEGER_T i,j
+      INTEGER_T i,j_dir,j_cut
 
       INTEGER_T sdim
 
@@ -5205,8 +5218,8 @@ end subroutine intersection_volume_and_map
       endif
 
       do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
       enddo
       call shrink3D(xint,x,phi,i1,i3,sdim)  ! xint,x,phi,isrc,itarg
@@ -5218,11 +5231,11 @@ end subroutine intersection_volume_and_map
         stop
       endif
       do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
-       do j=1,2
-        idx_tetlist(i,j,nlist)=idx(i,j)
+       do j_cut=1,2
+        idx_tetlist(i,j_cut,nlist)=idx(i,j_cut)
        enddo
       enddo
       idx_tetlist(i2,1,nlist)=im_current
@@ -5233,8 +5246,8 @@ end subroutine intersection_volume_and_map
       idx_tetlist(i4,2,nlist)=icuts
 
       do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
       enddo
       call shrink3D(xint,x,phi,i1,i3,sdim)
@@ -5246,11 +5259,11 @@ end subroutine intersection_volume_and_map
         stop
       endif
       do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
-       do j=1,2
-        idx_tetlist(i,j,nlist)=idx(i,j)
+       do j_cut=1,2
+        idx_tetlist(i,j_cut,nlist)=idx(i,j_cut)
        enddo
       enddo
       idx_tetlist(i2,1,nlist)=im_current
@@ -5261,8 +5274,8 @@ end subroutine intersection_volume_and_map
       idx_tetlist(i4,2,nlist)=icuts
 
       do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=x(i,j)
+       do j_dir=1,sdim
+        xint(i,j_dir)=x(i,j_dir)
        enddo
       enddo
       call shrink3D(xint,x,phi,i2,i4,sdim)
@@ -5273,11 +5286,11 @@ end subroutine intersection_volume_and_map
         stop
       endif
       do i=1,sdim+1
-       do j=1,sdim
-        xtetlist(i,j,nlist)=xint(i,j)
+       do j_dir=1,sdim
+        xtetlist(i,j_dir,nlist)=xint(i,j_dir)
        enddo
-       do j=1,2
-        idx_tetlist(i,j,nlist)=idx(i,j)
+       do j_cut=1,2
+        idx_tetlist(i,j_cut,nlist)=idx(i,j_cut)
        enddo
       enddo
 
@@ -5589,7 +5602,7 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: xtetlist(sdim+1,sdim,nlist_alloc)
       REAL_T, intent(out) :: xarealist(3,3,MAXAREA)
       INTEGER_T, intent(out) :: nlist
-      INTEGER_T i,j
+      INTEGER_T i,j_dir
       INTEGER_T, intent(out) :: narea
 
       if (sdim.ne.3) then
@@ -5613,8 +5626,8 @@ end subroutine volume_sanity_check
                (phi(3).ge.zero).and.(phi(4).ge.zero)) then
        nlist=1
        do i=1,4
-       do j=1,3
-        xtetlist(i,j,1)=x(i,j)
+       do j_dir=1,3
+        xtetlist(i,j_dir,1)=x(i,j_dir)
        enddo 
        enddo 
       else if ((phi(1).lt.zero).and.(phi(2).ge.zero).and. &
@@ -5731,7 +5744,9 @@ end subroutine volume_sanity_check
       REAL_T, intent(out)   :: xtetlist(sdim+1,sdim,nlist_alloc)
       INTEGER_T, intent(out) :: idx_tetlist(sdim+1,2,nlist_alloc)
       INTEGER_T, intent(out) :: nlist
-      INTEGER_T i,j
+      INTEGER_T i
+      INTEGER_T j_dir
+      INTEGER_T j_cut
 
       if (sdim.ne.3) then
        print *,"sdim invalid list_tets multicuts"
@@ -5766,11 +5781,11 @@ end subroutine volume_sanity_check
                (phi(3).ge.zero).and.(phi(4).ge.zero)) then
        nlist=1
        do i=1,4
-        do j=1,3
-         xtetlist(i,j,1)=x(i,j)
+        do j_dir=1,3
+         xtetlist(i,j_dir,nlist)=x(i,j_dir)
         enddo 
-        do j=1,2
-         idx_tetlist(i,j,1)=idx(i,j)
+        do j_cut=1,2
+         idx_tetlist(i,j_cut,nlist)=idx(i,j_cut)
         enddo
        enddo 
       else if ((phi(1).lt.zero).and.(phi(2).ge.zero).and. &
@@ -5943,7 +5958,10 @@ end subroutine volume_sanity_check
       INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(out) :: nlist
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T nlist_old,i,j,iplane,n,nsub,narea,n2
+      INTEGER_T nlist_old
+      INTEGER_T i
+      INTEGER_T j_dir
+      INTEGER_T iplane,n,nsub,narea,n2
       REAL_T, intent(in) :: x1(sdim+1,sdim)
       REAL_T x1old(sdim+1,sdim)
       REAL_T, intent(in) :: x2(sdim+1,sdim)
@@ -5976,9 +5994,9 @@ end subroutine volume_sanity_check
       do i=2,sdim+1
        testside1=zero
        testside2=zero
-       do j=1,sdim
-        testside1=testside1+(x1(1,j)-x1(i,j))**2
-        testside2=testside2+(x2(1,j)-x2(i,j))**2
+       do j_dir=1,sdim
+        testside1=testside1+(x1(1,j_dir)-x1(i,j_dir))**2
+        testside2=testside2+(x2(1,j_dir)-x2(i,j_dir))**2
        enddo
        testside1=sqrt(testside1)
        testside2=sqrt(testside2)
@@ -6001,8 +6019,8 @@ end subroutine volume_sanity_check
 
       nlist_old=1
       do i=1,sdim+1
-      do j=1,sdim
-       xtetlist_old(i,j,1)=x1(i,j)
+      do j_dir=1,sdim
+       xtetlist_old(i,j_dir,1)=x1(i,j_dir)
       enddo
       enddo
 
@@ -6033,12 +6051,12 @@ end subroutine volume_sanity_check
        mag=sqrt(coeff(1)**2+coeff(2)**2)
 
        if (mag.gt.MLSVOFTOL*maxside) then
-        do j=1,sdim
-         coeff(j)=coeff(j)/mag
+        do j_dir=1,sdim
+         coeff(j_dir)=coeff(j_dir)/mag
         enddo
         sign=zero
-        do j=1,sdim
-         sign=sign+coeff(j)*(x2(iplane,j)-x2(itan(1),j))
+        do j_dir=1,sdim
+         sign=sign+coeff(j_dir)*(x2(iplane,j_dir)-x2(itan(1),j_dir))
         enddo
        
         if (abs(sign).gt.MLSVOFTOL*maxside) then
@@ -6046,15 +6064,15 @@ end subroutine volume_sanity_check
          do n=1,nlist_old
 
           do i=1,sdim+1
-          do j=1,sdim
-           x1old(i,j)=xtetlist_old(i,j,n)
+          do j_dir=1,sdim
+           x1old(i,j_dir)=xtetlist_old(i,j_dir,n)
           enddo
           enddo
 
           do i=1,sdim+1
            phi1(i)=zero
-           do j=1,sdim
-            phi1(i)=phi1(i)+coeff(j)*(x1old(i,j)-x2(itan(1),j))
+           do j_dir=1,sdim
+            phi1(i)=phi1(i)+coeff(j_dir)*(x1old(i,j_dir)-x2(itan(1),j_dir))
            enddo
            phi1(i)=phi1(i)*sign
           enddo
@@ -6062,8 +6080,8 @@ end subroutine volume_sanity_check
           do n2=1,nsub
 
            do i=1,sdim+1
-           do j=1,sdim
-            xcandidate(i,j)=xsublist(i,j,n2)
+           do j_dir=1,sdim
+            xcandidate(i,j_dir)=xsublist(i,j_dir,n2)
            enddo
            enddo
            call tetrahedron_volume(xcandidate,voltest, &
@@ -6077,8 +6095,8 @@ end subroutine volume_sanity_check
              stop
             endif
             do i=1,sdim+1
-            do j=1,sdim
-             xtetlist(i,j,nlist)=xcandidate(i,j)
+            do j_dir=1,sdim
+             xtetlist(i,j_dir,nlist)=xcandidate(i,j_dir)
             enddo
             enddo
            endif
@@ -6088,8 +6106,8 @@ end subroutine volume_sanity_check
          nlist_old=nlist
          do n=1,nlist
           do i=1,sdim+1
-          do j=1,sdim
-           xtetlist_old(i,j,n)=xtetlist(i,j,n)
+          do j_dir=1,sdim
+           xtetlist_old(i,j_dir,n)=xtetlist(i,j_dir,n)
           enddo
           enddo
          enddo
@@ -6117,7 +6135,9 @@ end subroutine volume_sanity_check
       INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(out) :: nlist
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T nlist_old,i,j,iplane,n,nsub,narea,n2
+      INTEGER_T nlist_old,iplane,n,nsub,narea,n2
+      INTEGER_T i
+      INTEGER_T j_dir
       REAL_T, intent(in) :: x1(sdim+1,sdim)
       REAL_T x1old(sdim+1,sdim)
       REAL_T, intent(in) :: x2(sdim+1,sdim)
@@ -6152,9 +6172,9 @@ end subroutine volume_sanity_check
       do i=2,sdim+1
        testside1=zero
        testside2=zero
-       do j=1,sdim
-        testside1=testside1+(x1(1,j)-x1(i,j))**2
-        testside2=testside2+(x2(1,j)-x2(i,j))**2
+       do j_dir=1,sdim
+        testside1=testside1+(x1(1,j_dir)-x1(i,j_dir))**2
+        testside2=testside2+(x2(1,j_dir)-x2(i,j_dir))**2
        enddo
        testside1=sqrt(testside1)
        testside2=sqrt(testside2)
@@ -6177,8 +6197,8 @@ end subroutine volume_sanity_check
 
       nlist_old=1
       do i=1,sdim+1
-      do j=1,sdim
-       xtetlist_old(i,j,1)=x1(i,j)
+      do j_dir=1,sdim
+       xtetlist_old(i,j_dir,1)=x1(i,j_dir)
       enddo
       enddo
 
@@ -6220,8 +6240,8 @@ end subroutine volume_sanity_check
          print *,"sdim=",sdim
          stop
         endif
-        do j=1,sdim
-         vec(i,j)=x2(itan(i),j)-x2(itan(3),j)
+        do j_dir=1,sdim
+         vec(i,j_dir)=x2(itan(i),j_dir)-x2(itan(3),j_dir)
         enddo
        enddo
        coeff(1)=vec(1,2)*vec(2,3)-vec(1,3)*vec(2,2)
@@ -6230,12 +6250,12 @@ end subroutine volume_sanity_check
        mag=sqrt(coeff(1)**2+coeff(2)**2+coeff(3)**2)
 
        if (mag.gt.MLSVOFTOL*maxside) then
-        do j=1,sdim
-         coeff(j)=coeff(j)/mag
+        do j_dir=1,sdim
+         coeff(j_dir)=coeff(j_dir)/mag
         enddo
         sign=zero
-        do j=1,sdim
-         sign=sign+coeff(j)*(x2(iplane,j)-x2(itan(1),j))
+        do j_dir=1,sdim
+         sign=sign+coeff(j_dir)*(x2(iplane,j_dir)-x2(itan(1),j_dir))
         enddo
        
         if (abs(sign).gt.MLSVOFTOL*maxside) then
@@ -6243,15 +6263,15 @@ end subroutine volume_sanity_check
          do n=1,nlist_old
 
           do i=1,sdim+1
-          do j=1,sdim
-           x1old(i,j)=xtetlist_old(i,j,n)
+          do j_dir=1,sdim
+           x1old(i,j_dir)=xtetlist_old(i,j_dir,n)
           enddo
           enddo
 
           do i=1,sdim+1
            phi1(i)=zero
-           do j=1,sdim
-            phi1(i)=phi1(i)+coeff(j)*(x1old(i,j)-x2(itan(1),j))
+           do j_dir=1,sdim
+            phi1(i)=phi1(i)+coeff(j_dir)*(x1old(i,j_dir)-x2(itan(1),j_dir))
            enddo
            phi1(i)=phi1(i)*sign
           enddo
@@ -6259,8 +6279,8 @@ end subroutine volume_sanity_check
           do n2=1,nsub
 
            do i=1,sdim+1
-           do j=1,sdim
-            xcandidate(i,j)=xsublist(i,j,n2)
+           do j_dir=1,sdim
+            xcandidate(i,j_dir)=xsublist(i,j_dir,n2)
            enddo
            enddo
            call tetrahedron_volume(xcandidate,voltest, &
@@ -6274,8 +6294,8 @@ end subroutine volume_sanity_check
              stop
             endif
             do i=1,sdim+1
-            do j=1,sdim
-             xtetlist(i,j,nlist)=xcandidate(i,j)
+            do j_dir=1,sdim
+             xtetlist(i,j_dir,nlist)=xcandidate(i,j_dir)
             enddo
             enddo
            endif
@@ -6285,8 +6305,8 @@ end subroutine volume_sanity_check
          nlist_old=nlist
          do n=1,nlist
           do i=1,sdim+1
-          do j=1,sdim
-           xtetlist_old(i,j,n)=xtetlist(i,j,n)
+          do j_dir=1,sdim
+           xtetlist_old(i,j_dir,n)=xtetlist(i,j_dir,n)
           enddo
           enddo
          enddo
@@ -6318,7 +6338,9 @@ end subroutine volume_sanity_check
       INTEGER_T, intent(in) :: sdim,nhalf
       INTEGER_T, intent(out) :: nlist
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T nlist_old,i,j,iplane,n,nsub,narea,n2
+      INTEGER_T nlist_old,iplane,n,nsub,narea,n2
+      INTEGER_T i
+      INTEGER_T j_dir
       REAL_T, intent(in) :: x1(sdim+1,sdim)
       REAL_T x1old(sdim+1,sdim)
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
@@ -6350,8 +6372,8 @@ end subroutine volume_sanity_check
 
       nlist_old=1
       do i=1,sdim+1
-      do j=1,sdim
-       xtetlist_old(i,j,1)=x1(i,j)
+      do j_dir=1,sdim
+       xtetlist_old(i,j_dir,1)=x1(i,j_dir)
       enddo
       enddo
 
@@ -6401,9 +6423,9 @@ end subroutine volume_sanity_check
        do n=1,nlist_old
 
         do i=1,sdim+1
-        do j=1,sdim
+        do j_dir=1,sdim
          if ((n.ge.1).and.(n.le.nlist_alloc)) then
-          x1old(i,j)=xtetlist_old(i,j,n)
+          x1old(i,j_dir)=xtetlist_old(i,j_dir,n)
          else
           print *,"n out of range1"
           stop
@@ -6413,8 +6435,8 @@ end subroutine volume_sanity_check
 
         do i=1,sdim+1
          phi1(i)=zero
-         do j=1,sdim
-          phi1(i)=phi1(i)+coeff(j)*(x1old(i,j)-x0(j))
+         do j_dir=1,sdim
+          phi1(i)=phi1(i)+coeff(j_dir)*(x1old(i,j_dir)-x0(j_dir))
          enddo
         enddo
      
@@ -6432,8 +6454,8 @@ end subroutine volume_sanity_check
         do n2=1,nsub
 
          do i=1,sdim+1
-         do j=1,sdim
-          xcandidate(i,j)=xsublist(i,j,n2)
+         do j_dir=1,sdim
+          xcandidate(i,j_dir)=xsublist(i,j_dir,n2)
          enddo
          enddo
          call tetrahedron_volume(xcandidate,voltest, &
@@ -6448,8 +6470,8 @@ end subroutine volume_sanity_check
           endif
           if ((nlist.ge.1).and.(nlist.le.nlist_alloc)) then
            do i=1,sdim+1
-           do j=1,sdim
-            xtetlist(i,j,nlist)=xcandidate(i,j)
+           do j_dir=1,sdim
+            xtetlist(i,j_dir,nlist)=xcandidate(i,j_dir)
            enddo
            enddo
           else
@@ -6464,8 +6486,8 @@ end subroutine volume_sanity_check
        do n=1,nlist
         if ((n.ge.1).and.(n.le.nlist_alloc)) then
          do i=1,sdim+1
-         do j=1,sdim
-          xtetlist_old(i,j,n)=xtetlist(i,j,n)
+         do j_dir=1,sdim
+          xtetlist_old(i,j_dir,n)=xtetlist(i,j_dir,n)
          enddo
          enddo
         else
@@ -6489,7 +6511,7 @@ end subroutine volume_sanity_check
 
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nlist,nmax,sdim
-      INTEGER_T i,j,n
+      INTEGER_T i,j_dir,n
       REAL_T, intent(out) :: volcut
       REAL_T, intent(out) :: cencut(sdim)
       REAL_T, intent(in) :: xtetlist(4,3,nlist_alloc)
@@ -6509,30 +6531,30 @@ end subroutine volume_sanity_check
       endif
 
       volcut=zero
-      do j=1,sdim
-       cencut(j)=zero
+      do j_dir=1,sdim
+       cencut(j_dir)=zero
       enddo
       do n=1,nlist
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=xtetlist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xtetlist(i,j_dir,n)
        enddo
        enddo
      
        call tetrahedron_volume(xint,volumelist,centroidlist,sdim)
 
        volcut=volcut+volumelist
-       do j=1,sdim
-        cencut(j)=cencut(j)+centroidlist(j)*volumelist
+       do j_dir=1,sdim
+        cencut(j_dir)=cencut(j_dir)+centroidlist(j_dir)*volumelist
        enddo
       enddo
       if (volcut.gt.zero) then
-       do j=1,sdim
-        cencut(j)=cencut(j)/volcut
+       do j_dir=1,sdim
+        cencut(j_dir)=cencut(j_dir)/volcut
        enddo
       else
-       do j=1,sdim
-        cencut(j)=zero
+       do j_dir=1,sdim
+        cencut(j_dir)=zero
        enddo
       endif
 
@@ -6563,7 +6585,12 @@ end subroutine volume_sanity_check
       INTEGER_T symmetry_flag,ntetbox
       INTEGER_T, intent(out) :: nlist
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T nlist_old,i,j,k,iplane,n,nsub,narea,n2
+      INTEGER_T nlist_old,iplane,n,nsub,narea,n2
+      INTEGER_T j_dir
+      INTEGER_T i_tet_node
+      INTEGER_T i_grid_node
+      INTEGER_T j_grid_node
+      INTEGER_T k_grid_node
       INTEGER_T id,icrit,im,vofcomp,iorder
       INTEGER_T dir
       REAL_T, intent(in) :: dx(sdim)
@@ -6620,22 +6647,22 @@ end subroutine volume_sanity_check
 
 ! YANG: CONVERT xsten_box to xnode.
       if (sdim.eq.3) then
-       do k=-1,1,2
-       do j=-1,1,2
-       do i=-1,1,2
-        xnode(inode,1)=xsten_box(i,1)
-        xnode(inode,2)=xsten_box(j,2)
-        xnode(inode,sdim)=xsten_box(k,sdim)
+       do k_grid_node=-1,1,2
+       do j_grid_node=-1,1,2
+       do i_grid_node=-1,1,2 
+        xnode(inode,1)=xsten_box(i_grid_node,1)
+        xnode(inode,2)=xsten_box(j_grid_node,2)
+        xnode(inode,sdim)=xsten_box(k_grid_node,sdim)
         phinode(inode)=one
         inode=inode+1
        enddo
        enddo
        enddo
       else if (sdim.eq.2) then
-       do j=-1,1,2
-       do i=-1,1,2
-        xnode(inode,1)=xsten_box(i,1)
-        xnode(inode,2)=xsten_box(j,2)
+       do j_grid_node=-1,1,2
+       do i_grid_node=-1,1,2 
+        xnode(inode,1)=xsten_box(i_grid_node,1)
+        xnode(inode,2)=xsten_box(j_grid_node,2)
         phinode(inode)=one
         inode=inode+1
        enddo
@@ -6648,10 +6675,10 @@ end subroutine volume_sanity_check
 ! YANG: add these tetrahedra to your data structure.
       do id=1,ntetbox
        call extract_tet(xnode,phinode,xx,dummyphi,id,symmetry_flag,sdim)
-       do i=1,sdim+1
-       do j=1,sdim
-        xtetlist_old(i,j,id)=xx(i,j)
-        xtetlist(i,j,id)=xx(i,j)
+       do i_tet_node=1,sdim+1
+       do j_dir=1,sdim
+        xtetlist_old(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
+        xtetlist(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
        enddo 
        enddo 
       enddo
@@ -6688,17 +6715,18 @@ end subroutine volume_sanity_check
  
         do n=1,nlist_old
 
-         do i=1,sdim+1
-         do j=1,sdim
-          x1old(i,j)=xtetlist_old(i,j,n)
+         do i_tet_node=1,sdim+1
+         do j_dir=1,sdim
+          x1old(i_tet_node,j_dir)=xtetlist_old(i_tet_node,j_dir,n)
          enddo
          enddo
 
            ! LEVELSET FOR CUTTING PLANE
-         do i=1,sdim+1
-          phi1(i)=intercept
-          do j=1,sdim
-           phi1(i)=phi1(i)+nn(j)*(x1old(i,j)-xsten0(0,j))
+         do i_tet_node=1,sdim+1
+          phi1(i_tet_node)=intercept
+          do j_dir=1,sdim
+           phi1(i_tet_node)=phi1(i_tet_node)+ &
+                   nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0(0,j_dir))
           enddo
          enddo
           ! tetrahedras representing intersection of region where phi1>0
@@ -6714,9 +6742,9 @@ end subroutine volume_sanity_check
 
          do n2=1,nsub
 
-          do i=1,sdim+1
-          do j=1,sdim
-           xcandidate(i,j)=xsublist(i,j,n2)
+          do i_tet_node=1,sdim+1
+          do j_dir=1,sdim
+           xcandidate(i_tet_node,j_dir)=xsublist(i_tet_node,j_dir,n2)
           enddo
           enddo
           call tetrahedron_volume(xcandidate,voltest, &
@@ -6729,9 +6757,9 @@ end subroutine volume_sanity_check
             print *,"nlist,nmax ",nlist,nmax
             stop
            endif
-           do i=1,sdim+1
-           do j=1,sdim
-            xtetlist(i,j,nlist)=xcandidate(i,j)
+           do i_tet_node=1,sdim+1
+           do j_dir=1,sdim
+            xtetlist(i_tet_node,j_dir,nlist)=xcandidate(i_tet_node,j_dir)
            enddo
            enddo
           endif
@@ -6740,18 +6768,18 @@ end subroutine volume_sanity_check
         enddo  ! n
         nlist_old=nlist
         do n=1,nlist
-         do i=1,sdim+1
-         do j=1,sdim
-          xtetlist_old(i,j,n)=xtetlist(i,j,n)
+         do i_tet_node=1,sdim+1
+         do j_dir=1,sdim
+          xtetlist_old(i_tet_node,j_dir,n)=xtetlist(i_tet_node,j_dir,n)
          enddo
          enddo
         enddo
        else if (icrit.eq.0) then
         nlist=nlist_old
         do n=1,nlist
-         do i=1,sdim+1
-         do j=1,sdim
-          xtetlist(i,j,n)=xtetlist_old(i,j,n)
+         do i_tet_node=1,sdim+1
+         do j_dir=1,sdim
+          xtetlist(i_tet_node,j_dir,n)=xtetlist_old(i_tet_node,j_dir,n)
          enddo
          enddo
         enddo
@@ -6924,7 +6952,9 @@ end subroutine volume_sanity_check
       INTEGER_T, intent(in) :: sdim,nmat,bfact,nhalf0
       INTEGER_T, intent(out) :: nlist
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T nlist_old,i,j,iplane,n,nsub,narea,n2
+      INTEGER_T nlist_old,iplane,n,nsub,narea,n2
+      INTEGER_T i
+      INTEGER_T j_dir
       INTEGER_T icrit,im,vofcomp,iorder
       INTEGER_T dir
       REAL_T, intent(in) :: xtet(sdim+1,sdim)
@@ -6969,9 +6999,9 @@ end subroutine volume_sanity_check
       nlist_old=1
       nlist=1
       do i=1,sdim+1
-      do j=1,sdim
-        xtetlist_old(i,j,1)=xtet(i,j)
-        xtetlist(i,j,1)=xtet(i,j)
+      do j_dir=1,sdim
+        xtetlist_old(i,j_dir,1)=xtet(i,j_dir)
+        xtetlist(i,j_dir,1)=xtet(i,j_dir)
       enddo 
       enddo 
 
@@ -7006,15 +7036,15 @@ end subroutine volume_sanity_check
         do n=1,nlist_old
 
          do i=1,sdim+1
-         do j=1,sdim
-          x1old(i,j)=xtetlist_old(i,j,n)
+         do j_dir=1,sdim
+          x1old(i,j_dir)=xtetlist_old(i,j_dir,n)
          enddo
          enddo
 
          do i=1,sdim+1
           phi1(i)=intercept
-          do j=1,sdim
-           phi1(i)=phi1(i)+nn(j)*(x1old(i,j)-xsten0(0,j))
+          do j_dir=1,sdim
+           phi1(i)=phi1(i)+nn(j_dir)*(x1old(i,j_dir)-xsten0(0,j_dir))
           enddo
          enddo
           ! triangles representing intersection of region where phi1>0
@@ -7032,8 +7062,8 @@ end subroutine volume_sanity_check
          do n2=1,nsub
 
           do i=1,sdim+1
-          do j=1,sdim
-           xcandidate(i,j)=xsublist(i,j,n2)
+          do j_dir=1,sdim
+           xcandidate(i,j_dir)=xsublist(i,j_dir,n2)
           enddo
           enddo
 
@@ -7048,8 +7078,8 @@ end subroutine volume_sanity_check
             stop
            endif
            do i=1,sdim+1
-           do j=1,sdim
-            xtetlist(i,j,nlist)=xcandidate(i,j)
+           do j_dir=1,sdim
+            xtetlist(i,j_dir,nlist)=xcandidate(i,j_dir)
            enddo
            enddo
           endif
@@ -7059,8 +7089,8 @@ end subroutine volume_sanity_check
         nlist_old=nlist
         do n=1,nlist
          do i=1,sdim+1
-         do j=1,sdim
-          xtetlist_old(i,j,n)=xtetlist(i,j,n)
+         do j_dir=1,sdim
+          xtetlist_old(i,j_dir,n)=xtetlist(i,j_dir,n)
          enddo
          enddo
         enddo
@@ -7068,8 +7098,8 @@ end subroutine volume_sanity_check
         nlist=nlist_old
         do n=1,nlist
          do i=1,sdim+1
-         do j=1,sdim
-          xtetlist(i,j,n)=xtetlist_old(i,j,n)
+         do j_dir=1,sdim
+          xtetlist(i,j_dir,n)=xtetlist_old(i,j_dir,n)
          enddo
          enddo
         enddo
@@ -7103,7 +7133,9 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: volumedark,area
       REAL_T volumelistdark,arealist
 
-      INTEGER_T i,j,n,nlist,narea
+      INTEGER_T n,nlist,narea
+      INTEGER_T i
+      INTEGER_T j_dir
 
       if (sdim.ne.3) then
        print *,"sdim invalid"
@@ -7114,56 +7146,56 @@ end subroutine volume_sanity_check
 
       volumedark=zero
       area=zero
-      do j=1,sdim
-       centroiddark(j)=zero
-       areacentroid(j)=zero
+      do j_dir=1,sdim
+       centroiddark(j_dir)=zero
+       areacentroid(j_dir)=zero
       enddo
 
       do n=1,nlist
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=xtetlist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xtetlist(i,j_dir,n)
        enddo
        enddo
        call tetrahedron_volume(xint,volumelistdark,centroidlistdark,sdim)
        volumedark=volumedark+volumelistdark
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)+centroidlistdark(j)*volumelistdark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)+centroidlistdark(j_dir)*volumelistdark
        enddo
       enddo
       if (volumedark.gt.zero) then
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)/volumedark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)/volumedark
        enddo
       else
-       do j=1,sdim
-        centroiddark(j)=zero
+       do j_dir=1,sdim
+        centroiddark(j_dir)=zero
        enddo
       endif
 
       do n=1,narea
        do i=1,sdim
-       do j=1,sdim
-        xint(i,j)=xarealist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xarealist(i,j_dir,n)
        enddo
        enddo
-       do j=1,sdim
-        xint(sdim+1,j)=zero
+       do j_dir=1,sdim
+        xint(sdim+1,j_dir)=zero
        enddo
        call areaXYZ(xint,1,2,3,arealist,areacentroidlist)
        area=area+arealist
-       do j=1,sdim
-        areacentroid(j)=areacentroid(j)+areacentroidlist(j)*arealist
+       do j_dir=1,sdim
+        areacentroid(j_dir)=areacentroid(j_dir)+areacentroidlist(j_dir)*arealist
        enddo
       enddo
 
       if (area.gt.zero) then
-       do j=1,sdim
-        areacentroid(j)=areacentroid(j)/area
+       do j_dir=1,sdim
+        areacentroid(j_dir)=areacentroid(j_dir)/area
        enddo
       else
-       do j=1,sdim
-        areacentroid(j)=zero
+       do j_dir=1,sdim
+        areacentroid(j_dir)=zero
        enddo
       endif
 
@@ -7189,7 +7221,7 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: volumedark
       REAL_T volumelistdark
 
-      INTEGER_T i,j,n,nlist,narea
+      INTEGER_T i,j_dir,n,nlist,narea
 
       if (sdim.ne.3) then
        print *,"sdim invalid"
@@ -7199,29 +7231,29 @@ end subroutine volume_sanity_check
       call list_tets(phi,x,xtetlist,MAXTET,nlist,xarealist,narea,sdim)
 
       volumedark=zero
-      do j=1,sdim
-       centroiddark(j)=zero
+      do j_dir=1,sdim
+       centroiddark(j_dir)=zero
       enddo
 
       do n=1,nlist
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=xtetlist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xtetlist(i,j_dir,n)
        enddo
        enddo
        call tetrahedron_volume(xint,volumelistdark,centroidlistdark,sdim)
        volumedark=volumedark+volumelistdark
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)+centroidlistdark(j)*volumelistdark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)+centroidlistdark(j_dir)*volumelistdark
        enddo
       enddo
       if (volumedark.gt.zero) then
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)/volumedark
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)/volumedark
        enddo
       else
-       do j=1,sdim
-        centroiddark(j)=zero
+       do j_dir=1,sdim
+        centroiddark(j_dir)=zero
        enddo
       endif
 
@@ -7261,7 +7293,9 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: volumedark_map
       REAL_T volumelistdark_map
 
-      INTEGER_T i,j,n,nlist,narea
+      INTEGER_T n,nlist,narea
+      INTEGER_T i
+      INTEGER_T j_dir
 
       if (sdim.ne.3) then
        print *,"sdim invalid"
@@ -7279,15 +7313,15 @@ end subroutine volume_sanity_check
 
       volumedark=zero
       volumedark_map=zero
-      do j=1,sdim
-       centroiddark(j)=zero
-       centroiddark_map(j)=zero
+      do j_dir=1,sdim
+       centroiddark(j_dir)=zero
+       centroiddark_map(j_dir)=zero
       enddo
 
       do n=1,nlist
        do i=1,sdim+1
-       do j=1,sdim
-        xint(i,j)=xtetlist(i,j,n)
+       do j_dir=1,sdim
+        xint(i,j_dir)=xtetlist(i,j_dir,n)
        enddo
        enddo
        call tetrahedron_volume_and_map(normdir,coeff, &
@@ -7296,21 +7330,21 @@ end subroutine volume_sanity_check
         sdim)
        volumedark=volumedark+volumelistdark
        volumedark_map=volumedark_map+volumelistdark_map
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)+centroidlistdark(j)*volumelistdark
-        centroiddark_map(j)=centroiddark_map(j)+ &
-         centroidlistdark_map(j)*volumelistdark_map
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)+centroidlistdark(j_dir)*volumelistdark
+        centroiddark_map(j_dir)=centroiddark_map(j_dir)+ &
+         centroidlistdark_map(j_dir)*volumelistdark_map
        enddo
       enddo
       if ((volumedark.gt.zero).and.(volumedark_map.gt.zero)) then
-       do j=1,sdim
-        centroiddark(j)=centroiddark(j)/volumedark
-        centroiddark_map(j)=centroiddark_map(j)/volumedark_map
+       do j_dir=1,sdim
+        centroiddark(j_dir)=centroiddark(j_dir)/volumedark
+        centroiddark_map(j_dir)=centroiddark_map(j_dir)/volumedark_map
        enddo
       else if ((volumedark.eq.zero).or.(volumedark_map.eq.zero)) then
-       do j=1,sdim
-        centroiddark(j)=zero
-        centroiddark_map(j)=zero
+       do j_dir=1,sdim
+        centroiddark(j_dir)=zero
+        centroiddark_map(j_dir)=zero
        enddo
       else
        print *,"volumedark or volumedark_map invalid"
@@ -8268,7 +8302,12 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: volume,area
       REAL_T, intent(out) :: areacentroid(sdim)
       REAL_T, intent(out) :: centroid(sdim)
-      INTEGER_T i,j,k,dir,inode
+      INTEGER_T dir,inode
+      INTEGER_T j_dir
+      INTEGER_T i_grid_node
+      INTEGER_T j_grid_node
+      INTEGER_T k_grid_node
+      INTEGER_T i_tet_node
       REAL_T xtarget(sdim)
       REAL_T ls(sdim+1)
 
@@ -8297,13 +8336,13 @@ end subroutine volume_sanity_check
 
       if (shapeflag.eq.1) then
 
-       do i=1,sdim+1
-        do j=1,sdim
-         xtarget(j)=xtet(i,j)
+       do i_tet_node=1,sdim+1
+        do j_dir=1,sdim
+         xtarget(j_dir)=xtet(i_tet_node,j_dir)
         enddo
         call distfunc(bfact,dx,xsten0,nhalf0, &
-         intercept,slope,xtarget,ls(i),sdim)
-       enddo  ! i=1,sdim+1
+         intercept,slope,xtarget,ls(i_tet_node),sdim)
+       enddo  ! i_tet_node=1,sdim+1
 
        nodedomain=sdim+1
        call intersection_volume( &
@@ -8316,16 +8355,16 @@ end subroutine volume_sanity_check
        inode=1
 
        if (sdim.eq.3) then
-        do k=-1,1,2
-        do j=-1,1,2
-        do i=-1,1,2
+        do k_grid_node=-1,1,2
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
          do dir=1,sdim
           if (dir.eq.1) then
-           xnode(inode,dir)=xsten_grid(i,dir)
+           xnode(inode,dir)=xsten_grid(i_grid_node,dir)
           else if (dir.eq.2) then
-           xnode(inode,dir)=xsten_grid(j,dir)
+           xnode(inode,dir)=xsten_grid(j_grid_node,dir)
           else if (dir.eq.sdim) then
-           xnode(inode,dir)=xsten_grid(k,dir)
+           xnode(inode,dir)=xsten_grid(k_grid_node,dir)
           else
            print *,"dir invalid face cut cell intersection"
            stop
@@ -8343,13 +8382,13 @@ end subroutine volume_sanity_check
 
        else if (sdim.eq.2) then
 
-        do j=-1,1,2
-        do i=-1,1,2
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
          do dir=1,sdim
           if (dir.eq.1) then
-           xnode(inode,dir)=xsten_grid(i,dir)
+           xnode(inode,dir)=xsten_grid(i_grid_node,dir)
           else if (dir.eq.2) then
-           xnode(inode,dir)=xsten_grid(j,dir)
+           xnode(inode,dir)=xsten_grid(j_grid_node,dir)
           else
            print *,"dir invalid face cut cell intersection 2"
            stop
@@ -8695,7 +8734,10 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: area(nmat)
       REAL_T, intent(out) :: cenall(sdim)
       REAL_T, intent(out) :: areacentroid(nmat,sdim)
-      INTEGER_T i,j,k
+      INTEGER_T j_dir
+      INTEGER_T i_grid_node
+      INTEGER_T j_grid_node
+      INTEGER_T k_grid_node
       INTEGER_T inode,im
       INTEGER_T linearcut,fullelementfast,nodedomain
 
@@ -8728,21 +8770,21 @@ end subroutine volume_sanity_check
       if (volall.gt.zero) then
      
        if (sdim.eq.3) then
-        do k=-1,1,2
-        do j=-1,1,2
-        do i=-1,1,2
-         xnode(inode,1)=xsten0(i,1)
-         xnode(inode,2)=xsten0(j,2)
-         xnode(inode,sdim)=xsten0(k,sdim)
+        do k_grid_node=-1,1,2
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
+         xnode(inode,1)=xsten0(i_grid_node,1)
+         xnode(inode,2)=xsten0(j_grid_node,2)
+         xnode(inode,sdim)=xsten0(k_grid_node,sdim)
          inode=inode+1
         enddo
         enddo
         enddo
        else if (sdim.eq.2) then
-        do j=-1,1,2
-        do i=-1,1,2
-         xnode(inode,1)=xsten0(i,1)
-         xnode(inode,2)=xsten0(j,2)
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
+         xnode(inode,1)=xsten0(i_grid_node,1)
+         xnode(inode,2)=xsten0(j_grid_node,2)
          inode=inode+1
         enddo
         enddo
@@ -8767,9 +8809,9 @@ end subroutine volume_sanity_check
 
         volumedark(im)=cum_volume
         area(im)=cum_area
-        do j=1,sdim
-         centroiddark(im,j)=cum_centroid(j)
-         areacentroid(im,j)=cum_areacentroid(j)
+        do j_dir=1,sdim
+         centroiddark(im,j_dir)=cum_centroid(j_dir)
+         areacentroid(im,j_dir)=cum_areacentroid(j_dir)
         enddo
        enddo  ! im
 
@@ -8779,9 +8821,9 @@ end subroutine volume_sanity_check
        do im=1,nmat
         volumedark(im)=zero
         area(im)=zero
-        do j=1,sdim
-         centroiddark(im,j)=zero
-         areacentroid(im,j)=zero
+        do j_dir=1,sdim
+         centroiddark(im,j_dir)=zero
+         areacentroid(im,j_dir)=zero
         enddo
        enddo  ! im
 
@@ -8819,7 +8861,10 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: volall,area
       REAL_T, intent(out) :: cenall(sdim)
       REAL_T, intent(out) :: areacentroid(sdim)
-      INTEGER_T i,j,k
+      INTEGER_T i_grid_node
+      INTEGER_T j_grid_node
+      INTEGER_T k_grid_node
+      INTEGER_T j_dir
       INTEGER_T inode
       INTEGER_T linearcut,fullelementfast,nodedomain
 
@@ -8847,21 +8892,21 @@ end subroutine volume_sanity_check
       if (volall.gt.zero) then
      
        if (sdim.eq.3) then
-        do k=-1,1,2
-        do j=-1,1,2
-        do i=-1,1,2 
-         xnode(inode,1)=xsten0(i,1)
-         xnode(inode,2)=xsten0(j,2)
-         xnode(inode,sdim)=xsten0(k,sdim)
+        do k_grid_node=-1,1,2
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
+         xnode(inode,1)=xsten0(i_grid_node,1)
+         xnode(inode,2)=xsten0(j_grid_node,2)
+         xnode(inode,sdim)=xsten0(k_grid_node,sdim)
          inode=inode+1
         enddo
         enddo
         enddo
        else if (sdim.eq.2) then
-        do j=-1,1,2
-        do i=-1,1,2
-         xnode(inode,1)=xsten0(i,1)
-         xnode(inode,2)=xsten0(j,2)
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
+         xnode(inode,1)=xsten0(i_grid_node,1)
+         xnode(inode,2)=xsten0(j_grid_node,2)
          inode=inode+1
         enddo
         enddo
@@ -8881,18 +8926,18 @@ end subroutine volume_sanity_check
 
        volumedark=cum_volume
        area=cum_area
-       do j=1,sdim
-        centroiddark(j)=cum_centroid(j)
-        areacentroid(j)=cum_areacentroid(j)
+       do j_dir=1,sdim
+        centroiddark(j_dir)=cum_centroid(j_dir)
+        areacentroid(j_dir)=cum_areacentroid(j_dir)
        enddo
 
       else if (volall.eq.zero) then
        print *,"WARNING:volall cannot be zero: fast_cell_intersection_grid"
        volumedark=zero
        area=zero
-       do j=1,sdim
-        centroiddark(j)=zero
-        areacentroid(j)=zero
+       do j_dir=1,sdim
+        centroiddark(j_dir)=zero
+        areacentroid(j_dir)=zero
        enddo
       else if (volall.lt.zero) then
        print *,"volall invalid"
@@ -9156,7 +9201,9 @@ contains
       REAL_T areacentroid(sdim)
       REAL_T, intent(out) :: centroid(sdim)
       REAL_T centroidlist(sdim)
-      INTEGER_T i,j,n
+      INTEGER_T i
+      INTEGER_T j_dir
+      INTEGER_T n
       REAL_T xx(sdim+1,sdim)
       REAL_T xtarget(sdim)
       REAL_T ls(sdim+1)
@@ -9176,17 +9223,17 @@ contains
        stop
       endif
 
-      do j=1,sdim
-       centroid(j)=zero
+      do j_dir=1,sdim
+       centroid(j_dir)=zero
       enddo
       area=zero
       volume=zero
 
       do n=1,nlist
        do i=1,sdim+1
-        do j=1,sdim
-         xx(i,j)=xtetlist(i,j,n)
-         xtarget(j)=xx(i,j)
+        do j_dir=1,sdim
+         xx(i,j_dir)=xtetlist(i,j_dir,n)
+         xtarget(j_dir)=xx(i,j_dir)
         enddo
         call distfunc(bfact,dx,xsten,nhalf, &
          intercept,slope,xtarget,ls(i),sdim)
@@ -9205,19 +9252,19 @@ contains
 
        volume=volume+volumelist
        area=area+arealist
-       do j=1,sdim
-        centroid(j)=centroid(j)+centroidlist(j)*volumelist
+       do j_dir=1,sdim
+        centroid(j_dir)=centroid(j_dir)+centroidlist(j_dir)*volumelist
        enddo
       enddo ! n
 
       if (volume.gt.zero) then
-       do j=1,sdim
-        centroid(j)=centroid(j)/volume
+       do j_dir=1,sdim
+        centroid(j_dir)=centroid(j_dir)/volume
        enddo
       else
        volume=zero
-       do j=1,sdim
-        centroid(j)=zero
+       do j_dir=1,sdim
+        centroid(j_dir)=zero
        enddo
       endif
 
@@ -9252,7 +9299,9 @@ contains
       REAL_T volumelist
       REAL_T, intent(out) :: centroid(sdim)
       REAL_T centroidlist(sdim)
-      INTEGER_T i,j,n
+      INTEGER_T i
+      INTEGER_T j_dir
+      INTEGER_T n
       REAL_T xx(sdim+1,sdim)
       REAL_T xtarget(sdim)
       REAL_T ls(sdim+1)
@@ -9272,16 +9321,16 @@ contains
        stop
       endif
 
-      do j=1,sdim
-       centroid(j)=zero
+      do j_dir=1,sdim
+       centroid(j_dir)=zero
       enddo
       volume=zero
 
       do n=1,nlist
        do i=1,sdim+1
-        do j=1,sdim
-         xx(i,j)=xtetlist(i,j,n)
-         xtarget(j)=xx(i,j)
+        do j_dir=1,sdim
+         xx(i,j_dir)=xtetlist(i,j_dir,n)
+         xtarget(j_dir)=xx(i,j_dir)
         enddo
         call distfunc(bfact,dx,xsten,nhalf, &
          intercept,slope,xtarget,ls(i),sdim)
@@ -9299,19 +9348,19 @@ contains
        endif
 
        volume=volume+volumelist
-       do j=1,sdim
-        centroid(j)=centroid(j)+centroidlist(j)*volumelist
+       do j_dir=1,sdim
+        centroid(j_dir)=centroid(j_dir)+centroidlist(j_dir)*volumelist
        enddo
       enddo ! n
 
       if (volume.gt.zero) then
-       do j=1,sdim
-        centroid(j)=centroid(j)/volume
+       do j_dir=1,sdim
+        centroid(j_dir)=centroid(j_dir)/volume
        enddo
       else
        volume=zero
-       do j=1,sdim
-        centroid(j)=zero
+       do j_dir=1,sdim
+        centroid(j_dir)=zero
        enddo
       endif
 
@@ -9358,7 +9407,9 @@ contains
       REAL_T, intent(out) :: centroid_map(sdim)
       REAL_T centroidlist(sdim)
       REAL_T centroidlist_map(sdim)
-      INTEGER_T i,j,n
+      INTEGER_T i
+      INTEGER_T j_dir
+      INTEGER_T n
       REAL_T xx(sdim+1,sdim)
       REAL_T xtarget(sdim)
       REAL_T ls(sdim+1)
@@ -9386,18 +9437,18 @@ contains
        stop
       endif
 
-      do j=1,sdim
-       centroid(j)=zero
-       centroid_map(j)=zero
+      do j_dir=1,sdim
+       centroid(j_dir)=zero
+       centroid_map(j_dir)=zero
       enddo
       volume=zero
       volume_map=zero
 
       do n=1,nlist
        do i=1,sdim+1
-        do j=1,sdim
-         xx(i,j)=xtetlist(i,j,n)
-         xtarget(j)=xx(i,j)
+        do j_dir=1,sdim
+         xx(i,j_dir)=xtetlist(i,j_dir,n)
+         xtarget(j_dir)=xx(i,j_dir)
         enddo
         call distfunc(bfact,dx,xsten,nhalf, &
          intercept,slope,xtarget,ls(i),sdim)
@@ -9428,23 +9479,23 @@ contains
 
        volume=volume+volumelist
        volume_map=volume_map+volumelist_map
-       do j=1,sdim
-        centroid(j)=centroid(j)+centroidlist(j)*volumelist
-        centroid_map(j)=centroid_map(j)+centroidlist_map(j)*volumelist_map
+       do j_dir=1,sdim
+        centroid(j_dir)=centroid(j_dir)+centroidlist(j_dir)*volumelist
+        centroid_map(j_dir)=centroid_map(j_dir)+centroidlist_map(j_dir)*volumelist_map
        enddo
       enddo ! n
 
       if ((volume.gt.zero).and.(volume_map.gt.zero)) then
-       do j=1,sdim
-        centroid(j)=centroid(j)/volume
-        centroid_map(j)=centroid_map(j)/volume_map
+       do j_dir=1,sdim
+        centroid(j_dir)=centroid(j_dir)/volume
+        centroid_map(j_dir)=centroid_map(j_dir)/volume_map
        enddo
       else if ((volume.eq.zero).or.(volume_map.eq.zero)) then
        volume=zero
        volume_map=zero
-       do j=1,sdim
-        centroid(j)=zero
-        centroid_map(j)=zero
+       do j_dir=1,sdim
+        centroid(j_dir)=zero
+        centroid_map(j_dir)=zero
        enddo
       else
        print *,"volume or volume_map invalid"
@@ -16080,22 +16131,24 @@ contains
           intercept=mofdata_cuts_local((im-1)*ngeom_recon_cuts+1+sdim+1+ &
             (icuts-1)*(sdim+1)+sdim+1)
 
+           ! loop through previous tessellation
           do itet=1,nlist_old
 
            do itetnode=1,sdim+1
             do dir_node=1,sdim
-              ! old/new = 1
+              ! old (1)
              xcandidate_hold(itetnode,dir_node)= &
                x_tetlist(itetnode,dir_node,1,itet)
             enddo
             do iflags=1,2  ! material id, order?
-              ! old/new = 1
+              ! old (1)
              idx_candidate_hold(itetnode,iflags)= &
               idx_tetlist(itetnode,iflags,1,itet)
             enddo 
            enddo
 
            ! LEVELSET FOR CUTTING PLANE
+
            do itetnode=1,sdim+1
             phi1(itetnode)=intercept
             do dir_node=1,sdim
@@ -16105,6 +16158,9 @@ contains
             enddo
            enddo
            ! tetrahedras representing intersection of region where phi1>0
+           ! each new tet. gets a copy of original idx 
+           ! (im before,icut before), then
+           ! the nodes of the cutting face get (im_current,icuts)
            if (sdim.eq.3) then
             call list_tets_multicuts(phi1,xcandidate_hold, &
               idx_candidate_hold, &
@@ -16197,7 +16253,8 @@ contains
 
            enddo  ! itet_sub=1..nsub
 
-           ! COMPLIMENT
+           ! LEVELSET FOR CUTTING PLANE -> COMPLIMENT
+
            do itetnode=1,sdim+1
             phi1(itetnode)=-intercept
             do dir_node=1,sdim
