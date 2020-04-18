@@ -5351,6 +5351,7 @@ REAL_T angle(2)
 REAL_T nslope(3)
 INTEGER_T Nangle,shapeflag,sdim,Nangle2,nodedomain
 INTEGER_T i_int,a1,a2,inode,dir
+INTEGER_T isten_loop
 INTEGER_T i_grid_node
 INTEGER_T j_grid_node
 INTEGER_T k_grid_node
@@ -5377,9 +5378,9 @@ REAL_T cum_areacentroid(3)
  dxgrid(1)=0.013
  dxgrid(2)=0.031
  dxgrid(3)=0.072
- do i=-nhalf,nhalf
+ do isten_loop=-nhalf,nhalf
   do dir=1,3
-   xsten0(i,dir)=xsanity(dir)+i*dxgrid(dir)*half
+   xsten0(isten_loop,dir)=xsanity(dir)+isten_loop*dxgrid(dir)*half
   enddo
  enddo
 
@@ -5410,9 +5411,9 @@ REAL_T cum_areacentroid(3)
 
      inode=1
      if (sdim.eq.3) then
-      do kgrid_node=-1,1,2
-      do jgrid_node=-1,1,2
-      do igrid_node=-1,1,2
+      do k_grid_node=-1,1,2
+      do j_grid_node=-1,1,2
+      do i_grid_node=-1,1,2
        do dir=1,sdim
         if (dir.eq.1) then
          xnode3d(inode,dir)=xsten0(i_grid_node,dir)
@@ -5435,8 +5436,8 @@ REAL_T cum_areacentroid(3)
       enddo
       enddo  ! i,j,k
      else if (sdim.eq.2) then
-      do jgrid_node=-1,1,2
-      do igrid_node=-1,1,2
+      do j_grid_node=-1,1,2
+      do i_grid_node=-1,1,2
        do dir=1,sdim
         if (dir.eq.1) then
          xnode2d(inode,dir)=xsten0(i_grid_node,dir)
