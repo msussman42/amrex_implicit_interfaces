@@ -4614,7 +4614,11 @@ end subroutine intersection_volume_and_map
         !  xtrilist = triangles of intersection (phi>0 region)
         !  idx_trilist = index of intersection  (phi>0 region)
         !  the cut nodes get new im_current,icuts pair.
-      subroutine shrink_list_tri_multicuts(phi,x,idx,im_current,icuts, &
+      subroutine shrink_list_tri_multicuts(phi,x, &
+        idx, &
+        im_current,icuts, &
+        ncuts_material, &
+        ncuts, &
         i1,i2,i3,complement, &
         xtrilist, &
         nlist_alloc,nlist,idx_trilist)
@@ -4627,7 +4631,10 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(in) :: phi(3)
       REAL_T, intent(in) :: x(3,2)
       INTEGER_T, intent(in) :: idx(3,2)
-      INTEGER_T, intent(in) :: im_current,icuts
+      INTEGER_T, intent(in) :: im_current
+      INTEGER_T, intent(in) :: icuts
+      INTEGER_T, intent(in) :: ncuts
+      INTEGER_T, intent(in) :: ncuts_material
       REAL_T xint(3,2)
       INTEGER_T i,j
       INTEGER_T, intent(in) :: i1,i2,i3,complement
@@ -4641,6 +4648,20 @@ end subroutine intersection_volume_and_map
        print *,"nlist_alloc invalid"
        stop
       endif 
+
+      if ((ncuts_material.ge.0).and.(ncuts_material.le.ncuts)) then
+       ! do nothing
+      else
+       print *,"ncuts_material invalid"
+       stop
+      endif
+      if ((icuts.ge.1).and.(icuts.le.ncuts_material)) then
+       ! do nothing
+      else
+       print *,"icuts invalid"
+       stop
+      endif
+
       if (complement.eq.0) then
        do i=1,sdim+1
        do j=1,sdim
@@ -4991,7 +5012,6 @@ end subroutine intersection_volume_and_map
  
       sdim=3
 
-     FIX ME SANITY CHECK HERE
       if (nlist_alloc.ge.nlist+1) then
        ! do nothing
       else
@@ -4999,6 +5019,19 @@ end subroutine intersection_volume_and_map
        stop
       endif 
      
+      if ((ncuts_material.ge.0).and.(ncuts_material.le.ncuts)) then
+       ! do nothing
+      else
+       print *,"ncuts_material invalid"
+       stop
+      endif
+      if ((icuts.ge.1).and.(icuts.le.ncuts_material)) then
+       ! do nothing
+      else
+       print *,"icuts invalid"
+       stop
+      endif
+
       if (complement.eq.0) then
        do i=1,sdim+1
        do j=1,sdim
@@ -5122,7 +5155,11 @@ end subroutine intersection_volume_and_map
         ! internal routine, do not call
         ! i1,i2 nodes are positive
         ! i3,i4 nodes are negative
-      subroutine shrink_gableroof_list_multicuts(phi,x,idx,im_current,icuts, &
+      subroutine shrink_gableroof_list_multicuts(phi,x, &
+        idx, &
+        im_current,icuts, &
+        ncuts_material, &
+        ncuts, &
         i1,i2,i3,i4, &
         xtetlist, &
         nlist_alloc,nlist,idx_tetlist)
@@ -5135,7 +5172,10 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(in) :: phi(4)
       REAL_T, intent(in) :: x(4,3)
       INTEGER_T, intent(in) :: idx(4,2)
-      INTEGER_T, intent(in) :: im_current,icuts
+      INTEGER_T, intent(in) :: im_current
+      INTEGER_T, intent(in) :: icuts
+      INTEGER_T, intent(in) :: ncuts
+      INTEGER_T, intent(in) :: ncuts_material
       REAL_T xint(4,3)
       INTEGER_T, intent(in) :: i1,i2,i3,i4
       INTEGER_T i,j
@@ -5150,6 +5190,19 @@ end subroutine intersection_volume_and_map
        print *,"nlist_alloc invalid"
        stop
       endif 
+
+      if ((ncuts_material.ge.0).and.(ncuts_material.le.ncuts)) then
+       ! do nothing
+      else
+       print *,"ncuts_material invalid"
+       stop
+      endif
+      if ((icuts.ge.1).and.(icuts.le.ncuts_material)) then
+       ! do nothing
+      else
+       print *,"icuts invalid"
+       stop
+      endif
 
       do i=1,sdim+1
        do j=1,sdim
@@ -5655,7 +5708,11 @@ end subroutine volume_sanity_check
         !  xtetlist = tets of intersection (phi>0 region)
         !  idx_tetlist = index of intersection  (phi>0 region)
         !  the cut nodes get new im_current,icuts pair.
-      subroutine list_tets_multicuts(phi,x,idx,im_current,icuts, &
+      subroutine list_tets_multicuts(phi,x, &
+        idx, &
+        im_current,icuts, &
+        ncuts_material, &
+        ncuts, &
         xtetlist, &
         nlist_alloc,nlist, &
         idx_tetlist, &
@@ -5666,6 +5723,8 @@ end subroutine volume_sanity_check
       INTEGER_T, intent(in) :: sdim 
       INTEGER_T, intent(in) :: im_current
       INTEGER_T, intent(in) :: icuts
+      INTEGER_T, intent(in) :: ncuts
+      INTEGER_T, intent(in) :: ncuts_material
       REAL_T, intent(in)    :: phi(sdim+1)
       REAL_T, intent(in)    :: x(sdim+1,sdim)
       INTEGER_T, intent(in) :: idx(sdim+1,2)
@@ -5686,6 +5745,19 @@ end subroutine volume_sanity_check
        stop
       endif
 
+      if ((ncuts_material.ge.0).and.(ncuts_material.le.ncuts)) then
+       ! do nothing
+      else
+       print *,"ncuts_material invalid"
+       stop
+      endif
+      if ((icuts.ge.1).and.(icuts.le.ncuts_material)) then
+       ! do nothing
+      else
+       print *,"icuts invalid"
+       stop
+      endif
+
       nlist=0
       if ((phi(1).le.zero).and.(phi(2).le.zero).and. &
           (phi(3).le.zero).and.(phi(4).le.zero)) then
@@ -5703,98 +5775,149 @@ end subroutine volume_sanity_check
        enddo 
       else if ((phi(1).lt.zero).and.(phi(2).ge.zero).and. &
                (phi(3).ge.zero).and.(phi(4).ge.zero)) then
-       call shrink_list_tet_multicuts(phi,x,idx, &
+         ! complement=1
+       call shrink_list_tet_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          1,2,3,4,1, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(2).lt.zero).and.(phi(1).ge.zero).and. &
                (phi(3).ge.zero).and.(phi(4).ge.zero)) then
-       call shrink_list_tet_multicuts(phi,x,idx, &
+        ! complement=1
+       call shrink_list_tet_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          2,1,3,4,1, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(3).lt.zero).and.(phi(1).ge.zero).and. &
                (phi(2).ge.zero).and.(phi(4).ge.zero)) then
-       call shrink_list_tet_multicuts(phi,x,idx, &
+        ! complement=1
+       call shrink_list_tet_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          3,1,2,4,1, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(4).lt.zero).and.(phi(1).ge.zero).and. &
                (phi(2).ge.zero).and.(phi(3).ge.zero)) then
-       call shrink_list_tet_multicuts(phi,x,idx, &
+        ! complement=1
+       call shrink_list_tet_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          4,1,2,3,1, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(1).ge.zero).and.(phi(2).lt.zero).and. &
                (phi(3).lt.zero).and.(phi(4).lt.zero)) then
-       call shrink_list_tet_multicuts(phi,x,idx, &
+        ! complement=0
+       call shrink_list_tet_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          1,2,3,4,0, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(2).ge.zero).and.(phi(1).lt.zero).and. &
                (phi(3).lt.zero).and.(phi(4).lt.zero)) then
-       call shrink_list_tet_multicuts(phi,x,idx, &
+        ! complement=0
+       call shrink_list_tet_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          2,1,3,4,0, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(3).ge.zero).and.(phi(1).lt.zero).and. &
                (phi(2).lt.zero).and.(phi(4).lt.zero)) then
-       call shrink_list_tet_multicuts(phi,x,idx, &
+        ! complement=0
+       call shrink_list_tet_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          3,1,2,4,0, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(4).ge.zero).and.(phi(1).lt.zero).and. &
                (phi(2).lt.zero).and.(phi(3).lt.zero)) then
-       call shrink_list_tet_multicuts(phi,x,idx, &
+        ! complement=0
+       call shrink_list_tet_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          4,1,2,3,0, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(1).lt.zero).and.(phi(2).lt.zero).and. &
                (phi(3).ge.zero).and.(phi(4).ge.zero)) then
-       call shrink_gableroof_list_multicuts(phi,x,idx, &
+       call shrink_gableroof_list_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          3,4,1,2, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(1).lt.zero).and.(phi(3).lt.zero).and. &
                (phi(2).ge.zero).and.(phi(4).ge.zero)) then
-       call shrink_gableroof_list_multicuts(phi,x,idx, &
+       call shrink_gableroof_list_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          2,4,1,3, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(1).ge.zero).and.(phi(2).ge.zero).and. &
                (phi(3).lt.zero).and.(phi(4).lt.zero)) then
-       call shrink_gableroof_list_multicuts(phi,x,idx, &
+       call shrink_gableroof_list_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          1,2,3,4, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(1).ge.zero).and.(phi(3).ge.zero).and. &
                (phi(2).lt.zero).and.(phi(4).lt.zero)) then
-       call shrink_gableroof_list_multicuts(phi,x,idx, &
-         im_current,icuts,1,3,2,4, &
+       call shrink_gableroof_list_multicuts(phi,x, &
+         idx, &
+         im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
+         1,3,2,4, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(3).ge.zero).and.(phi(2).ge.zero).and. &
                (phi(1).lt.zero).and.(phi(4).lt.zero)) then
-       call shrink_gableroof_list_multicuts(phi,x,idx, &
+       call shrink_gableroof_list_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          3,2,1,4, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
       else if ((phi(1).ge.zero).and.(phi(4).ge.zero).and. &
                (phi(2).lt.zero).and.(phi(3).lt.zero)) then
-       call shrink_gableroof_list_multicuts(phi,x,idx, &
+       call shrink_gableroof_list_multicuts(phi,x, &
+         idx, &
          im_current,icuts, &
+         ncuts_material, &
+         ncuts, &
          1,4,2,3, &
          xtetlist, &
          nlist_alloc,nlist,idx_tetlist)
@@ -16086,12 +16209,25 @@ contains
            ! tetrahedras representing intersection of region where phi1>0
            if (sdim.eq.3) then
             call list_tets_multicuts(phi1,xcandidate_hold, &
-              idx_candidate,im_current,icuts, &
-              xsublist,MAXTET,nsub,idx_sublist,sdim)
+              idx_candidate, &
+              im_current,icuts, &
+              ncuts_material(im_current), &
+              ncuts, &
+              xsublist, &
+              MAXTET,nsub, &
+              idx_sublist, &
+              sdim)
            else if (sdim.eq.2) then
             call list_tris_multicuts(phi1,xcandidate_hold, &
-              idx_candidate,im_current,icuts, &
-              xsublist,MAXTET,nsub,idx_sublist,sdim)
+              idx_candidate, &
+              im_current,icuts, &
+              ncuts_material(im_current), &
+              ncuts, &
+              xsublist, &
+              MAXTET, &
+              nsub, &
+              idx_sublist, &
+              sdim)
            else
             print *,"sdim invalid"
             stop
