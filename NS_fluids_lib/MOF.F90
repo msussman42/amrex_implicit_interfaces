@@ -197,15 +197,20 @@ type(intersect_type) :: template_geom
 INTEGER_T :: gridmap(2,2,2)
 INTEGER_T :: mapped_nodes(maxmappednodes)
 INTEGER_T :: power2(maxmappednodes)
-INTEGER_T :: i,j,k,nn,n_nodes,inode,checksum
+INTEGER_T :: nn,n_nodes,inode,checksum
+INTEGER_T :: igrid_node
+INTEGER_T :: jgrid_node
+INTEGER_T :: kgrid_node
+INTEGER_T :: i_power
+INTEGER_T :: i_map
 
  power2(1)=1
- do i=2,maxmappednodes
-  power2(i)=2*power2(i-1)
+ do i_power=2,maxmappednodes
+  power2(i_power)=2*power2(i_power-1)
  enddo
 
- do i=1,maxmappednodes
-  mapped_nodes(i)=0
+ do i_map=1,maxmappednodes
+  mapped_nodes(i_map)=0
  enddo
 
  n_nodes=template_geom%n_nodes
@@ -216,10 +221,10 @@ INTEGER_T :: i,j,k,nn,n_nodes,inode,checksum
 
  inode=1
  checksum=0
- do k=1,2
- do j=1,2
- do i=1,2
-  mapped_nodes(inode)=gridmap(i,j,k)
+ do kgrid_node=1,2
+ do jgrid_node=1,2
+ do igrid_node=1,2
+  mapped_nodes(inode)=gridmap(igrid_node,jgrid_node,kgrid_node)
   if ((mapped_nodes(inode).lt.1).or.(mapped_nodes(inode).gt.8)) then
    print *,"mapped nodes bust"
    stop
@@ -242,8 +247,9 @@ INTEGER_T :: i,j,k,nn,n_nodes,inode,checksum
  endif
  call copy_intersect_type(template_geom, &
    hexahedron_maps(checksum,mapped_nodes(1))%intersect_geometry)
- do i=1,maxmappednodes
-  hexahedron_maps(checksum,mapped_nodes(1))%mapped_nodes(i)=mapped_nodes(i)
+ do i_map=1,maxmappednodes
+  hexahedron_maps(checksum,mapped_nodes(1))%mapped_nodes(i_map)= &
+          mapped_nodes(i_map)
  enddo
 
 return
@@ -257,15 +263,17 @@ type(intersect_type) :: template_geom
 INTEGER_T :: linemap(4)
 INTEGER_T :: mapped_nodes(maxmappednodes)
 INTEGER_T :: power2(maxmappednodes)
-INTEGER_T :: i,nn,n_nodes,inode,checksum
+INTEGER_T :: nn,n_nodes,inode,checksum
+INTEGER_T :: i_power
+INTEGER_T :: i_map
 
  power2(1)=1
- do i=2,maxmappednodes
-  power2(i)=2*power2(i-1)
+ do i_power=2,maxmappednodes
+  power2(i_power)=2*power2(i_power-1)
  enddo
 
- do i=1,maxmappednodes
-  mapped_nodes(i)=0
+ do i_map=1,maxmappednodes
+  mapped_nodes(i_map)=0
  enddo
 
  n_nodes=template_geom%n_nodes
@@ -298,8 +306,9 @@ INTEGER_T :: i,nn,n_nodes,inode,checksum
  endif
  call copy_intersect_type(template_geom, &
    tetrahedron_maps(checksum,mapped_nodes(1))%intersect_geometry)
- do i=1,maxmappednodes
-  tetrahedron_maps(checksum,mapped_nodes(1))%mapped_nodes(i)=mapped_nodes(i)
+ do i_map=1,maxmappednodes
+  tetrahedron_maps(checksum,mapped_nodes(1))%mapped_nodes(i_map)= &
+          mapped_nodes(i_map)
  enddo
 
 return
@@ -313,15 +322,17 @@ type(intersect_type) :: template_geom
 INTEGER_T :: linemap(3)
 INTEGER_T :: mapped_nodes(maxmappednodes)
 INTEGER_T :: power2(maxmappednodes)
-INTEGER_T :: i,nn,n_nodes,inode,checksum
+INTEGER_T :: nn,n_nodes,inode,checksum
+INTEGER_T :: i_power
+INTEGER_T :: i_map
 
  power2(1)=1
- do i=2,maxmappednodes
-  power2(i)=2*power2(i-1)
+ do i_power=2,maxmappednodes
+  power2(i_power)=2*power2(i_power-1)
  enddo
 
- do i=1,maxmappednodes
-  mapped_nodes(i)=0
+ do i_map=1,maxmappednodes
+  mapped_nodes(i_map)=0
  enddo
 
  n_nodes=template_geom%n_nodes
@@ -354,8 +365,9 @@ INTEGER_T :: i,nn,n_nodes,inode,checksum
  endif
  call copy_intersect_type(template_geom, &
    triangle_maps(checksum,mapped_nodes(1))%intersect_geometry)
- do i=1,maxmappednodes
-  triangle_maps(checksum,mapped_nodes(1))%mapped_nodes(i)=mapped_nodes(i)
+ do i_map=1,maxmappednodes
+  triangle_maps(checksum,mapped_nodes(1))%mapped_nodes(i_map)= &
+          mapped_nodes(i_map)
  enddo
 
 return
@@ -370,7 +382,11 @@ type(intersect_type) :: template_geom
 INTEGER_T :: gridmap(2,2)
 INTEGER_T :: mapped_nodes(maxmappednodes)
 INTEGER_T :: power2(maxmappednodes)
-INTEGER_T :: i,j,nn,n_nodes,inode,checksum
+INTEGER_T :: nn,n_nodes,inode,checksum
+INTEGER_T :: igrid_node
+INTEGER_T :: jgrid_node
+INTEGER_T :: i_power
+INTEGER_T :: i_map
 
  if (maxmappednodes.lt.4) then
   print *,"maxmappednodes invalid"
@@ -378,12 +394,12 @@ INTEGER_T :: i,j,nn,n_nodes,inode,checksum
  endif
 
  power2(1)=1
- do i=2,maxmappednodes
-  power2(i)=2*power2(i-1)
+ do i_power=2,maxmappednodes
+  power2(i_power)=2*power2(i_power-1)
  enddo
 
- do i=1,maxmappednodes
-  mapped_nodes(i)=0
+ do i_map=1,maxmappednodes
+  mapped_nodes(i_map)=0
  enddo
 
  n_nodes=template_geom%n_nodes
@@ -394,9 +410,9 @@ INTEGER_T :: i,j,nn,n_nodes,inode,checksum
 
  inode=1
  checksum=0
- do j=1,2
- do i=1,2
-  mapped_nodes(inode)=gridmap(i,j)
+ do jgrid_node=1,2
+ do igrid_node=1,2
+  mapped_nodes(inode)=gridmap(igrid_node,jgrid_node)
   if ((mapped_nodes(inode).lt.1).or.(mapped_nodes(inode).gt.4)) then
    print *,"mapped nodes bust"
    stop
@@ -428,8 +444,9 @@ INTEGER_T :: i,j,nn,n_nodes,inode,checksum
 
  call copy_intersect_type(template_geom, &
    rectangle_maps(checksum,mapped_nodes(1))%intersect_geometry)
- do i=1,maxmappednodes
-  rectangle_maps(checksum,mapped_nodes(1))%mapped_nodes(i)=mapped_nodes(i)
+ do i_map=1,maxmappednodes
+  rectangle_maps(checksum,mapped_nodes(1))%mapped_nodes(i_map)= &
+          mapped_nodes(i_map)
  enddo
 
 return
@@ -1206,7 +1223,9 @@ INTEGER_T checksum,maxnode,shapeflag,nodedomain
 REAL_T xnode(nodedomain,sdim)
 REAL_T phinode(nodedomain)
 INTEGER_T mapped_nodes(nodedomain)
-INTEGER_T n_nodes,i,j,dir,index1,index2,n_tet,n_capfaces
+INTEGER_T n_nodes,dir,index1,index2,n_tet,n_capfaces
+INTEGER_T i
+INTEGER_T j_tet_node
 REAL_T x1(sdim),x2(sdim)
 REAL_T phi1,phi2
 REAL_T xtet(sdim+1,sdim)
@@ -1321,9 +1340,10 @@ type(intersect_type) :: template_geom
   do i=1,n_tet
    n_vol=n_vol+1
 
-   do j=1,sdim+1
+   do j_tet_node=1,sdim+1
     do dir=1,sdim
-     xtet(j,dir)=xnodelist_array(template_geom%tetlist(i,j),dir)
+     xtet(j_tet_node,dir)= &
+        xnodelist_array(template_geom%tetlist(i,j_tet_node),dir)
     enddo
    enddo
 
@@ -1336,11 +1356,12 @@ type(intersect_type) :: template_geom
 
    if (1.eq.0) then
     print *,"n_tet,n_vol,cum_volume ",n_tet,n_vol,cum_volume
-    do j=1,sdim+1
-     print *,"i,j,tetnode ",i,j,template_geom%tetlist(i,j)
+    do j_tet_node=1,sdim+1
+     print *,"i,j_tet_node,tetnode ",i,j_tet_node, &
+             template_geom%tetlist(i,j_tet_node)
      do dir=1,sdim
-      print *,"i,j,dir,xtetnode ",i,j,dir, &
-       xnodelist_array(template_geom%tetlist(i,j),dir)
+      print *,"i,j_tet_node,dir,xtetnode ",i,j_tet_node,dir, &
+       xnodelist_array(template_geom%tetlist(i,j_tet_node),dir)
      enddo
     enddo
    endif
@@ -1351,9 +1372,10 @@ type(intersect_type) :: template_geom
   do i=1,n_capfaces
    n_area=n_area+1
 
-   do j=1,sdim
+   do j_tet_node=1,sdim
     do dir=1,sdim
-     xtri(j,dir)=xnodelist_array(template_geom%capfacelist(i,j),dir)
+     xtri(j_tet_node,dir)= &
+       xnodelist_array(template_geom%capfacelist(i,j_tet_node),dir)
     enddo
    enddo
 
@@ -1393,7 +1415,9 @@ INTEGER_T checksum,maxnode,shapeflag,nodedomain
 REAL_T xnode(nodedomain,sdim)
 REAL_T phinode(nodedomain)
 INTEGER_T mapped_nodes(nodedomain)
-INTEGER_T n_nodes,i,j,dir,index1,index2,n_tet
+INTEGER_T n_nodes,dir,index1,index2,n_tet
+INTEGER_T i
+INTEGER_T j_tet_node
 REAL_T x1(sdim),x2(sdim)
 REAL_T phi1,phi2
 REAL_T xtet(sdim+1,sdim)
@@ -1506,9 +1530,10 @@ type(intersect_type) :: template_geom
   do i=1,n_tet
    n_vol=n_vol+1
 
-   do j=1,sdim+1
+   do j_tet_node=1,sdim+1
     do dir=1,sdim
-     xtet(j,dir)=xnodelist_array(template_geom%tetlist(i,j),dir)
+     xtet(j_tet_node,dir)= &
+        xnodelist_array(template_geom%tetlist(i,j_tet_node),dir)
     enddo
    enddo
 
@@ -1521,11 +1546,12 @@ type(intersect_type) :: template_geom
 
    if (1.eq.0) then
     print *,"n_tet,n_vol,cum_volume ",n_tet,n_vol,cum_volume
-    do j=1,sdim+1
-     print *,"i,j,tetnode ",i,j,template_geom%tetlist(i,j)
+    do j_tet_node=1,sdim+1
+     print *,"i,j_tet_node,tetnode ",i,j_tet_node, &
+             template_geom%tetlist(i,j_tet_node)
      do dir=1,sdim
-      print *,"i,j,dir,xtetnode ",i,j,dir, &
-       xnodelist_array(template_geom%tetlist(i,j),dir)
+      print *,"i,j_tet_node,dir,xtetnode ",i,j_tet_node,dir, &
+       xnodelist_array(template_geom%tetlist(i,j_tet_node),dir)
      enddo
     enddo
    endif
@@ -1564,7 +1590,9 @@ INTEGER_T checksum,maxnode,shapeflag,nodedomain
 REAL_T xnode(nodedomain,sdim)
 REAL_T phinode(nodedomain)
 INTEGER_T mapped_nodes(nodedomain)
-INTEGER_T n_nodes,i,j,dir,index1,index2,n_tet
+INTEGER_T n_nodes,dir,index1,index2,n_tet
+INTEGER_T i
+INTEGER_T j_tet_node
 REAL_T x1(sdim),x2(sdim)
 REAL_T phi1,phi2
 REAL_T xtet(sdim+1,sdim)
@@ -1688,9 +1716,10 @@ type(intersect_type) :: template_geom
   do i=1,n_tet
    n_vol=n_vol+1
 
-   do j=1,sdim+1
+   do j_tet_node=1,sdim+1
     do dir=1,sdim
-     xtet(j,dir)=xnodelist_array(template_geom%tetlist(i,j),dir)
+     xtet(j_tet_node,dir)= &
+       xnodelist_array(template_geom%tetlist(i,j_tet_node),dir)
     enddo
    enddo
 
@@ -1710,11 +1739,12 @@ type(intersect_type) :: template_geom
 
    if (1.eq.0) then
     print *,"n_tet,n_vol,cum_volume ",n_tet,n_vol,cum_volume
-    do j=1,sdim+1
-     print *,"i,j,tetnode ",i,j,template_geom%tetlist(i,j)
+    do j_tet_node=1,sdim+1
+     print *,"i,j_tet_node,tetnode ",i,j_tet_node, &
+             template_geom%tetlist(i,j_tet_node)
      do dir=1,sdim
-      print *,"i,j,dir,xtetnode ",i,j,dir, &
-       xnodelist_array(template_geom%tetlist(i,j),dir)
+      print *,"i,j_tet_node,dir,xtetnode ",i,j_tet_node,dir, &
+       xnodelist_array(template_geom%tetlist(i,j_tet_node),dir)
      enddo
     enddo
    endif
@@ -2978,7 +3008,8 @@ end subroutine intersection_volume_and_map
        volumedark=volumedark+volumelistdark
        volumedark_map=volumedark_map+volumelistdark_map
        do j_dir=1,sdim
-        centroiddark(j_dir)=centroiddark(j_dir)+centroidlistdark(j_dir)*volumelistdark
+        centroiddark(j_dir)=centroiddark(j_dir)+ &
+                centroidlistdark(j_dir)*volumelistdark
         centroiddark_map(j_dir)=centroiddark_map(j_dir)+ &
          centroidlistdark_map(j_dir)*volumelistdark_map
        enddo
@@ -3313,7 +3344,9 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(out) :: xtet(sdim+1,sdim)
       REAL_T, intent(out) :: datatet(sdim+1)
       INTEGER_T, intent(in) :: id
-      INTEGER_T j,k,inode,jnode
+      INTEGER_T inode,jnode
+      INTEGER_T j_tet_node
+      INTEGER_T k_dir
       INTEGER_T, intent(in) :: symmetry_flag
 
       REAL_T, intent(in) :: datanode(4*(sdim-1))
@@ -3380,12 +3413,12 @@ end subroutine intersection_volume_and_map
         stop
        endif
 
-       do j=1,sdim+1
-        inode=nodelist(j)
-        do k=1,sdim
-         xtet(j,k)=xnode(inode,k)
+       do j_tet_node=1,sdim+1
+        inode=nodelist(j_tet_node)
+        do k_dir=1,sdim
+         xtet(j_tet_node,k_dir)=xnode(inode,k_dir)
         enddo
-        datatet(j)=datanode(inode)
+        datatet(j_tet_node)=datanode(inode)
        enddo 
 
       else if (symmetry_flag.eq.1) then
@@ -3415,17 +3448,17 @@ end subroutine intersection_volume_and_map
          stop
         endif
 
-        do j=1,sdim+1
-         inode=nodelist(j)
-         do k=1,sdim
+        do j_tet_node=1,sdim+1
+         inode=nodelist(j_tet_node)
+         do k_dir=1,sdim
           if (inode.eq.0) then
            xavg=zero
            do jnode=1,4
-            xavg=xavg+xnode(jnode,k)
+            xavg=xavg+xnode(jnode,k_dir)
            enddo
-           xtet(j,k)=xavg/four
+           xtet(j_tet_node,k_dir)=xavg/four
           else
-           xtet(j,k)=xnode(inode,k)
+           xtet(j_tet_node,k_dir)=xnode(inode,k_dir)
           endif
          enddo
          if (inode.eq.0) then
@@ -3433,11 +3466,11 @@ end subroutine intersection_volume_and_map
           do jnode=1,4
            davg=davg+datanode(jnode)
           enddo
-          datatet(j)=davg/four
+          datatet(j_tet_node)=davg/four
          else
-          datatet(j)=datanode(inode)
+          datatet(j_tet_node)=datanode(inode)
          endif
-        enddo  ! j
+        enddo  ! j_tet_node
 
        else if (sdim.eq.3) then
         print *,"symmetric tetrahedrazation for 3d not complete"
@@ -4436,7 +4469,8 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(in) :: x(sdim+1,sdim)
       REAL_T, intent(in) :: phi(sdim+1)
       INTEGER_T, intent(in) :: isrc,itarg
-      INTEGER_T j
+      INTEGER_T j_tet_node
+      INTEGER_T j_dir
 
       if (sdim.ne.2) then
        print *,"sdim bust shring 2d"
@@ -4446,10 +4480,11 @@ end subroutine intersection_volume_and_map
       if ((itarg.lt.1).or.(itarg.gt.3).or.(isrc.lt.1).or. &
           (isrc.gt.3).or.(itarg.eq.isrc)) then
        print *,"index invalid shrink2d "
-       do j=1,3
-        print *,"j,xint ",j,xint(j,1),xint(j,2)
-        print *,"j,x ",j,x(j,1),x(j,2)
-        print *,"j,phi ",j,phi(j)
+       do j_tet_node=1,3
+        print *,"j_tet_node,xint ", &
+           j_tet_node,xint(j_tet_node,1),xint(j_tet_node,2)
+        print *,"j_tet_node,x ",j_tet_node,x(j_tet_node,1),x(j_tet_node,2)
+        print *,"j_tet_node,phi ",j_tet_node,phi(j_tet_node)
        enddo
        stop
       endif
@@ -4459,10 +4494,10 @@ end subroutine intersection_volume_and_map
        stop
       endif
 
-      do j=1,2
-       xint(itarg,j)=(abs(phi(itarg))*x(isrc,j)+ &
-                      abs(phi(isrc))*x(itarg,j))/ &
-                     (abs(phi(itarg))+abs(phi(isrc)))
+      do j_dir=1,2
+       xint(itarg,j_dir)=(abs(phi(itarg))*x(isrc,j_dir)+ &
+                          abs(phi(isrc))*x(itarg,j_dir))/ &
+                         (abs(phi(itarg))+abs(phi(isrc)))
       enddo
 
       return
@@ -4477,7 +4512,8 @@ end subroutine intersection_volume_and_map
       REAL_T, intent(in) :: x(sdim+1,sdim)
       REAL_T, intent(in) :: phi(sdim+1)
       INTEGER_T, intent(in) :: isrc,itarg
-      INTEGER_T j
+      INTEGER_T j_tet_node
+      INTEGER_T j_dir
 
       if (sdim.ne.3) then
        print *,"sdim bust shrink 3d"
@@ -4487,10 +4523,12 @@ end subroutine intersection_volume_and_map
       if ((itarg.lt.1).or.(itarg.gt.4).or.(isrc.lt.1).or. &
           (isrc.gt.4).or.(itarg.eq.isrc)) then
        print *,"index invalid shrink3d "
-       do j=1,4
-        print *,"j,xint ",j,xint(j,1),xint(j,2),xint(j,3)
-        print *,"j,x ",j,x(j,1),x(j,2),x(j,3)
-        print *,"j,phi ",j,phi(j)
+       do j_tet_node=1,4
+        print *,"j_tet_node,xint ",j_tet_node, &
+            xint(j_tet_node,1),xint(j_tet_node,2),xint(j_tet_node,3)
+        print *,"j_tet_node,x ",j_tet_node, &
+            x(j_tet_node,1),x(j_tet_node,2),x(j_tet_node,3)
+        print *,"j_tet_node,phi ",j_tet_node,phi(j_tet_node)
        enddo
        stop
       endif
@@ -4500,10 +4538,10 @@ end subroutine intersection_volume_and_map
        stop
       endif
 
-      do j=1,3
-       xint(itarg,j)=(abs(phi(itarg))*x(isrc,j)+ &
-                      abs(phi(isrc))*x(itarg,j))/ &
-                     (abs(phi(itarg))+abs(phi(isrc)))
+      do j_dir=1,3
+       xint(itarg,j_dir)=(abs(phi(itarg))*x(isrc,j_dir)+ &
+                          abs(phi(isrc))*x(itarg,j_dir))/ &
+                         (abs(phi(itarg))+abs(phi(isrc)))
       enddo
 
       return
@@ -5312,7 +5350,10 @@ REAL_T hangle,hintercept,intercept
 REAL_T angle(2)
 REAL_T nslope(3)
 INTEGER_T Nangle,shapeflag,sdim,Nangle2,nodedomain
-INTEGER_T i_int,a1,a2,i,j,k,inode,dir
+INTEGER_T i_int,a1,a2,inode,dir
+INTEGER_T i_grid_node
+INTEGER_T j_grid_node
+INTEGER_T k_grid_node
 REAL_T volslow,areaslow,volall
 REAL_T cenall(3)
 REAL_T censlow(3)
@@ -5369,16 +5410,16 @@ REAL_T cum_areacentroid(3)
 
      inode=1
      if (sdim.eq.3) then
-      do k=-1,1,2
-      do j=-1,1,2
-      do i=-1,1,2
+      do kgrid_node=-1,1,2
+      do jgrid_node=-1,1,2
+      do igrid_node=-1,1,2
        do dir=1,sdim
         if (dir.eq.1) then
-         xnode3d(inode,dir)=xsten0(i,dir)
+         xnode3d(inode,dir)=xsten0(i_grid_node,dir)
         else if (dir.eq.2) then
-         xnode3d(inode,dir)=xsten0(j,dir)
+         xnode3d(inode,dir)=xsten0(j_grid_node,dir)
         else if (dir.eq.sdim) then
-         xnode3d(inode,dir)=xsten0(k,dir)
+         xnode3d(inode,dir)=xsten0(k_grid_node,dir)
         else
          print *,"dir invalid volume sanity check"
          stop
@@ -5394,13 +5435,13 @@ REAL_T cum_areacentroid(3)
       enddo
       enddo  ! i,j,k
      else if (sdim.eq.2) then
-      do j=-1,1,2
-      do i=-1,1,2
+      do jgrid_node=-1,1,2
+      do igrid_node=-1,1,2
        do dir=1,sdim
         if (dir.eq.1) then
-         xnode2d(inode,dir)=xsten0(i,dir)
+         xnode2d(inode,dir)=xsten0(i_grid_node,dir)
         else if (dir.eq.2) then
-         xnode2d(inode,dir)=xsten0(j,dir)
+         xnode2d(inode,dir)=xsten0(j_grid_node,dir)
         else
          print *,"dir invalid volume sanity check 2"
          stop
@@ -5465,13 +5506,13 @@ REAL_T cum_areacentroid(3)
         print *,"volume incorrect"
         print *,"cum_volume,volslow ",cum_volume,volslow
         print *,"nodedomain ",nodedomain
-        do i=1,nodedomain
-         print *,"i,phi ",i,phinode(i)
+        do inode=1,nodedomain
+         print *,"inode,phi ",inode,phinode(inode)
          do dir=1,sdim
           if (sdim.eq.2) then
-           print *,"i,dir,xnode2d ",i,dir,xnode2d(i,dir)
+           print *,"inode,dir,xnode2d ",inode,dir,xnode2d(inode,dir)
           else
-           print *,"i,dir,xnode3d ",i,dir,xnode3d(i,dir)
+           print *,"inode,dir,xnode3d ",inode,dir,xnode3d(inode,dir)
           endif
          enddo 
         enddo
@@ -5482,13 +5523,13 @@ REAL_T cum_areacentroid(3)
         print *,"area incorrect"
         print *,"cum_area,areaslow ",cum_area,areaslow
         print *,"nodedomain ",nodedomain
-        do i=1,nodedomain
-         print *,"i,phi ",i,phinode(i)
+        do inode=1,nodedomain
+         print *,"inode,phi ",inode,phinode(inode)
          do dir=1,sdim
           if (sdim.eq.2) then
-           print *,"i,dir,xnode2d ",i,dir,xnode2d(i,dir)
+           print *,"inode,dir,xnode2d ",inode,dir,xnode2d(inode,dir)
           else
-           print *,"i,dir,xnode3d ",i,dir,xnode3d(i,dir)
+           print *,"inode,dir,xnode3d ",inode,dir,xnode3d(inode,dir)
           endif
          enddo 
         enddo
@@ -7160,7 +7201,8 @@ end subroutine volume_sanity_check
        call tetrahedron_volume(xint,volumelistdark,centroidlistdark,sdim)
        volumedark=volumedark+volumelistdark
        do j_dir=1,sdim
-        centroiddark(j_dir)=centroiddark(j_dir)+centroidlistdark(j_dir)*volumelistdark
+        centroiddark(j_dir)=centroiddark(j_dir)+ &
+                centroidlistdark(j_dir)*volumelistdark
        enddo
       enddo
       if (volumedark.gt.zero) then
@@ -7185,7 +7227,8 @@ end subroutine volume_sanity_check
        call areaXYZ(xint,1,2,3,arealist,areacentroidlist)
        area=area+arealist
        do j_dir=1,sdim
-        areacentroid(j_dir)=areacentroid(j_dir)+areacentroidlist(j_dir)*arealist
+        areacentroid(j_dir)=areacentroid(j_dir)+ &
+                areacentroidlist(j_dir)*arealist
        enddo
       enddo
 
@@ -7244,7 +7287,8 @@ end subroutine volume_sanity_check
        call tetrahedron_volume(xint,volumelistdark,centroidlistdark,sdim)
        volumedark=volumedark+volumelistdark
        do j_dir=1,sdim
-        centroiddark(j_dir)=centroiddark(j_dir)+centroidlistdark(j_dir)*volumelistdark
+        centroiddark(j_dir)=centroiddark(j_dir)+ &
+                centroidlistdark(j_dir)*volumelistdark
        enddo
       enddo
       if (volumedark.gt.zero) then
@@ -7331,7 +7375,8 @@ end subroutine volume_sanity_check
        volumedark=volumedark+volumelistdark
        volumedark_map=volumedark_map+volumelistdark_map
        do j_dir=1,sdim
-        centroiddark(j_dir)=centroiddark(j_dir)+centroidlistdark(j_dir)*volumelistdark
+        centroiddark(j_dir)=centroiddark(j_dir)+ &
+                centroidlistdark(j_dir)*volumelistdark
         centroiddark_map(j_dir)=centroiddark_map(j_dir)+ &
          centroidlistdark_map(j_dir)*volumelistdark_map
        enddo
@@ -8460,8 +8505,11 @@ end subroutine volume_sanity_check
 
       REAL_T, intent(out) :: volume
       REAL_T, intent(out) :: centroid(sdim)
-      INTEGER_T i,j,k,dir,inode
+      INTEGER_T dir,inode
       REAL_T xtarget(sdim)
+      INTEGER_T i_grid_node
+      INTEGER_T j_grid_node
+      INTEGER_T k_grid_node
 
 !   3  4  
 !   1  2
@@ -8486,16 +8534,16 @@ end subroutine volume_sanity_check
       inode=1
 
       if (sdim.eq.3) then
-       do k=-1,1,2
-       do j=-1,1,2
-       do i=-1,1,2
+       do k_grid_node=-1,1,2
+       do j_grid_node=-1,1,2
+       do i_grid_node=-1,1,2 
         do dir=1,sdim
          if (dir.eq.1) then
-          xnode(inode,dir)=xsten_grid(i,dir)
+          xnode(inode,dir)=xsten_grid(i_grid_node,dir)
          else if (dir.eq.2) then
-          xnode(inode,dir)=xsten_grid(j,dir)
+          xnode(inode,dir)=xsten_grid(j_grid_node,dir)
          else if (dir.eq.sdim) then
-          xnode(inode,dir)=xsten_grid(k,dir)
+          xnode(inode,dir)=xsten_grid(k_grid_node,dir)
          else
           print *,"dir invalid face cut cell intersection"
           stop
@@ -8513,13 +8561,13 @@ end subroutine volume_sanity_check
 
       else if (sdim.eq.2) then
 
-       do j=-1,1,2
-       do i=-1,1,2
+       do j_grid_node=-1,1,2
+       do i_grid_node=-1,1,2 
         do dir=1,sdim
          if (dir.eq.1) then
-          xnode(inode,dir)=xsten_grid(i,dir)
+          xnode(inode,dir)=xsten_grid(i_grid_node,dir)
          else if (dir.eq.2) then
-          xnode(inode,dir)=xsten_grid(j,dir)
+          xnode(inode,dir)=xsten_grid(j_grid_node,dir)
          else
           print *,"dir invalid face cut cell intersection 2"
           stop
@@ -8594,8 +8642,11 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: centroid(sdim)
       REAL_T, intent(out) :: volume_map
       REAL_T, intent(out) :: centroid_map(sdim)
-      INTEGER_T i,j,k,dir,inode
+      INTEGER_T dir,inode
       REAL_T xtarget(sdim)
+      INTEGER_T i_grid_node
+      INTEGER_T j_grid_node
+      INTEGER_T k_grid_node
 
 !   3  4  
 !   1  2
@@ -8628,16 +8679,16 @@ end subroutine volume_sanity_check
       inode=1
 
       if (sdim.eq.3) then
-       do k=-1,1,2
-       do j=-1,1,2
-       do i=-1,1,2
+       do k_grid_node=-1,1,2
+       do j_grid_node=-1,1,2
+       do i_grid_node=-1,1,2 
         do dir=1,sdim
          if (dir.eq.1) then
-          xnode(inode,dir)=xsten_grid(i,dir)
+          xnode(inode,dir)=xsten_grid(i_grid_node,dir)
          else if (dir.eq.2) then
-          xnode(inode,dir)=xsten_grid(j,dir)
+          xnode(inode,dir)=xsten_grid(j_grid_node,dir)
          else if (dir.eq.sdim) then
-          xnode(inode,dir)=xsten_grid(k,dir)
+          xnode(inode,dir)=xsten_grid(k_grid_node,dir)
          else
           print *,"dir invalid face cut cell intersection and map"
           stop
@@ -8655,13 +8706,13 @@ end subroutine volume_sanity_check
 
       else if (sdim.eq.2) then
 
-       do j=-1,1,2
-       do i=-1,1,2
+       do j_grid_node=-1,1,2
+       do i_grid_node=-1,1,2 
         do dir=1,sdim
          if (dir.eq.1) then
-          xnode(inode,dir)=xsten_grid(i,dir)
+          xnode(inode,dir)=xsten_grid(i_grid_node,dir)
          else if (dir.eq.2) then
-          xnode(inode,dir)=xsten_grid(j,dir)
+          xnode(inode,dir)=xsten_grid(j_grid_node,dir)
          else
           print *,"dir invalid face cut cell intersection and map 2"
           stop
@@ -9481,7 +9532,8 @@ contains
        volume_map=volume_map+volumelist_map
        do j_dir=1,sdim
         centroid(j_dir)=centroid(j_dir)+centroidlist(j_dir)*volumelist
-        centroid_map(j_dir)=centroid_map(j_dir)+centroidlist_map(j_dir)*volumelist_map
+        centroid_map(j_dir)=centroid_map(j_dir)+ &
+                centroidlist_map(j_dir)*volumelist_map
        enddo
       enddo ! n
 
