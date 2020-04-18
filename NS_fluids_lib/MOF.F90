@@ -14913,6 +14913,14 @@ contains
          ! projected representation:
          ! ntilde dot (x-x0) + intercept_project =
          ! (Pr(n) dot (x-x0) + n dot (xf-x0) + intercept_old)/||Pr(n)||
+         ! Since Pr(n) has no nf component, Pr(n) dot (x-x0)=
+         ! Pr(n) dot (x-xf).
+         ! If x is on the face, then Pr(n) dot (x-xf)=n dot (x-xf)
+         ! so that
+         ! ntilde dot (x-x0)+ intercept_project=
+         ! (n dot (x-xf) + n dot (xf-x0) + intercept_old)/||Pr(n)||=
+         ! (n dot (x-x0) + intercept_old)/||Pr(n)||.
+
         do dir_local=1,sdim
          mofdataproject(vofcomp+sdim+1+dir_local)=slope_project(dir_local)
         enddo
@@ -15848,35 +15856,48 @@ contains
 
 
         ! for finding pair area fractions and centroids,
-        ! (i)  nmat=2 * nmat_original
-        ! (ii) each "material" has two cuts
-        ! (iii) order group on one side as 1..nmat_original,
-        !       and order group on opposite side as 
-        !       nmat_original+1 ... 2*nmat_original
-        ! shapeflag=0 find volumes within xsten_grid
-        ! shapeflag=1 find volumes within xtet
-        ! multi_cen is "absolute" (not relative to cell centroid)
-        ! multi_area_cen is "absolute" (not relative to cell centroid)
-      subroutine multi_get_volume_multicuts( &
+        !  input: mofdata_plus
+        !         mofdata_minus
+        !         nmat
+        !         xsten0_plus,
+        !         xsten0_minus,
+        !         nhalf0,
+        !         dir_plus=1..sdim, 
+        ! (i) call project_slopes_to_face for all interfaces.
+        ! (ii) in 2D, create an auxiliary 1D domain;
+        !      in 3D, create an auxiliary 2D domain and breakup into 
+        !      triangles:
+        !      Omega_aux is a list of triangles.
+        ! (iii) for im_plus=1..nmat (WLOG assume order number same as material
+        !                            id)
+        !       (a) cut Omega_aux into two parts by im_plus plane:
+        !           Omega_aux_im_plus,Omega_aux_im_plus_complement
+        !       (b) find area and centroid pairs of Omega_aux_im_plus 
+        !           intersected with all of the Omega_im_minus materials.
+        !       (c) replace Omega_aux with Omega_aux_im_plus_complement and 
+        !           continue im_plus for-loop. 
+        !                 
+        ! output: multi_area_pair,multi_area_cen_pair
+        !
+        ! note: all scratch variables are local.
+        ! Initially: 2 triangles
+        ! For each cut, given "n_old" triangles, allocate max amount of
+        ! space needed for new triangles list: in 2D, it would be 2*n_old
+        ! 
+        ! FUTURE: modify routines to dynamically allocate scratch space.
+      subroutine multi_get_area_pairs( &
        bfact,dx, &
-       xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept (phi>0 in omega_m)
-        ! volume fraction,centroid(unused),order,cutdata...
-       mofdata_cuts, &  ! nmat * (1+sdim+1+ncuts*(sdim+1))
-       ncuts_material, & ! nmat
-       xsten_grid,nhalf_grid, & ! find volumes within xsten_grid or,
-       xtet, &                  ! within xtet
-       multi_volume, & ! nmat
-       multi_cen, & ! (sdim,nmat)
-       multi_area, & ! (nmat,nmat)
-       multi_area_cen, & ! (nmat,nmat,sdim)
-       x_tetlist, &
-       idx_tetlist, &
-       nmax, &
+       xsten0_plus, &
+       xsten0_minus, & !phi = n dot (x-x0) + intercept (phi>0 in omega_m)
+       nhalf0, & 
+       mofdata_plus, & ! vfrac,centroid(unused),order,slope,intercept
+       mofdata_minus, & ! vfrac,centroid(unused),order,slope,intercept
        nmat, &
-       ncuts, &
-       ncomp_mofdata_cuts, &
+       dir_plus, & ! 1..sdim
+       multi_area_pair, & ! (nmat,nmat)
+       multi_area_cen_pair, & ! (nmat,nmat,sdim)
        sdim, &
-       shapeflag,caller_id)
+       caller_id)
 
       use probcommon_module
       use geometry_intersect_module
@@ -15884,93 +15905,22 @@ contains
 
       IMPLICIT NONE
 
-        ! order array index: (im-1)*ngeom_recon_cuts+1+sdim+1
-      INTEGER_T, intent(in) :: ncomp_mofdata_cuts!nmat(1+sdim+1+ncuts(sdim+1))
-      INTEGER_T, intent(in) :: nmax
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: ncuts ! ncuts>=ncuts_material(im) im=1..nmat
-      INTEGER_T, intent(in) :: ncuts_material(nmat)
       INTEGER_T, intent(in) :: sdim
-      INTEGER_T, intent(in) :: shapeflag
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: nhalf0,nhalf_grid
-      REAL_T, intent(in) :: xtet(sdim+1,sdim)
-      REAL_T, intent(in) :: mofdata_cuts(ncomp_mofdata_cuts)
-      REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      INTEGER_T, intent(in) :: nhalf0
+      INTEGER_T, intent(in) :: dir_plus
+      REAL_T, intent(in) :: mofdata_plus(nmat*ngeom_recon)
+      REAL_T, intent(in) :: mofdata_minus(nmat*ngeom_recon)
+      REAL_T, intent(in) :: xsten0_plus(-nhalf0:nhalf0,sdim)
+      REAL_T, intent(in) :: xsten0_minus(-nhalf0:nhalf0,sdim)
       REAL_T, intent(in) :: dx(sdim)
-      REAL_T, intent(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
-      REAL_T, intent(out) :: multi_volume(nmat)
-      REAL_T, intent(out) :: multi_cen(sdim,nmat)
-      REAL_T, intent(out) :: multi_area(nmat,nmat)
-      REAL_T, intent(out) :: multi_area_cen(nmat,nmat,sdim)
-      REAL_T, intent(out) :: x_tetlist(4,3,2,nmax) !itetnode,dir,old/new,nmax
-       !itetnode+1,flags,old/new,nmax
-      INTEGER_T, intent(out) :: idx_tetlist(5,2,2,nmax) 
+      REAL_T, intent(out) :: multi_area_pair(nmat,nmat)
+      REAL_T, intent(out) :: multi_area_cen_pair(nmat,nmat,sdim)
 
-      INTEGER_T ngeom_recon_cuts
-      REAL_T :: mofdata_cuts_local(ncomp_mofdata_cuts)
-      REAL_T :: xsublist(sdim+1,sdim,MAXTET)
-      INTEGER_T :: idx_sublist(sdim+1,2,MAXTET)
-      INTEGER_T nsub
-
-      INTEGER_T num_empty
-      INTEGER_T symmetry_flag
-      INTEGER_T ntetbox
-      INTEGER_T nlist_new,nlist_old
-      INTEGER_T i,j,k
-      INTEGER_T inode
-      INTEGER_T itet
-      INTEGER_T itet_sub
-      INTEGER_T iflags
-      INTEGER_T itetnode
+      INTEGER_T im,im_opp
       INTEGER_T dir_node
-      INTEGER_T im,im_opp,im_max_vfrac,im_order,im_current,prev_im,new_im
-      INTEGER_T im_last_processed,im_face
-      INTEGER_T prev_icuts,new_icuts
-      INTEGER_T current_order
-      INTEGER_T material_processed(nmat)
-      REAL_T nn(sdim)
-      REAL_T intercept
-      REAL_T local_vfrac(nmat)
-      REAL_T xcandidate(sdim+1,sdim)
-      REAL_T xcandidate_hold(sdim+1,sdim)
-      INTEGER_T idx_candidate(sdim+1,2)
-      INTEGER_T idx_candidate_hold(sdim+1,2)
-      REAL_T dummyphi(sdim+1)
-      REAL_T phi1(sdim+1)
-      REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T phinode(4*(sdim-1))
-      REAL_T voltest
-      REAL_T centroidtest(sdim)
-      INTEGER_T i_area(sdim+1)
-      INTEGER_T im_area(sdim+1)
-      INTEGER_T icuts_area(sdim+1)
-      INTEGER_T nface
-      INTEGER_T icuts
-      REAL_T local_area
-      REAL_T local_areacentroid(sdim)
-
-        ! volume fraction + centroid + reconstructed slope(s)
-        ! normal(s) point inward.
-      ngeom_recon_cuts=1+sdim+1+ncuts*(sdim+1)
-
-      if (ncomp_mofdata_cuts.eq.nmat*ngeom_recon_cuts) then
-       ! do nothing
-      else
-       print *,"ncomp_mofdata_cuts invalid"
-       stop
-      endif
-
-      do im=1,nmat
-       if ((ncuts_material(im).ge.0).and. &
-           (ncuts_material(im).le.ncuts)) then
-        ! do nothing
-       else
-        print *,"ncuts_material invalid"
-        stop
-       endif
-      enddo
 
       if (ngeom_recon.eq.2*sdim+3) then
        ! do nothing
@@ -15979,17 +15929,10 @@ contains
        stop
       endif
 
-      if (nmax.ge.20) then
+      if (nhalf0.ge.1) then
        ! do nothing
       else
-       print *,"nmax invalid multi_get_volume_multicuts nmax=",nmax
-       stop
-      endif
-
-      if ((nhalf0.ge.1).and.(nhalf_grid.ge.1)) then
-       ! do nothing
-      else
-       print *,"nhalf invalid multi get volume multicuts"
+       print *,"nhalf0 invalid multi get area pairs"
        stop
       endif
 
@@ -16002,565 +15945,28 @@ contains
       if ((sdim.eq.3).or.(sdim.eq.2)) then
        ! do nothing
       else
-       print *,"sdim invalid multi_get_volume_multicuts"
+       print *,"sdim invalid multi_get_pairs"
        stop
       endif
       if ((nmat.ge.1).and.(nmat.le.MAX_NUM_MATERIALS)) then
        ! do nothing
       else
-       print *,"nmat invalid multi get volume multicuts"
+       print *,"nmat invalid multi get area pairs"
        stop
       endif
  
       do im=1,nmat
-       multi_volume(im)=zero
-       do dir_node=1,sdim
-        multi_cen(dir_node,im)=zero
-       enddo
        do im_opp=1,nmat
-        multi_area(im,im_opp)=zero
+        multi_area_pair(im,im_opp)=zero
         do dir_node=1,sdim
-         multi_area_cen(im,im_opp,dir_node)=zero
+         multi_area_cen_pair(im,im_opp,dir_node)=zero
         enddo
        enddo
       enddo  ! im=1..nmat
 
 
-      if (shapeflag.eq.0) then ! volumes in a box, break box into tets
-       symmetry_flag=0
-       call get_ntetbox(ntetbox,symmetry_flag,sdim)
-       nlist_old=ntetbox
-
-       inode=1
-       if (sdim.eq.3) then
-        do k=-1,1,2
-        do j=-1,1,2
-        do i=-1,1,2
-         xnode(inode,1)=xsten_grid(i,1)
-         xnode(inode,2)=xsten_grid(j,2)
-         xnode(inode,sdim)=xsten_grid(k,sdim)
-         phinode(inode)=one
-         inode=inode+1
-        enddo
-        enddo
-        enddo
-       else if (sdim.eq.2) then
-        do j=-1,1,2
-        do i=-1,1,2
-         xnode(inode,1)=xsten_grid(i,1)
-         xnode(inode,2)=xsten_grid(j,2)
-         phinode(inode)=one
-         inode=inode+1
-        enddo
-        enddo
-       else
-        print *,"sdim invalid"
-        stop
-       endif
-
-       do itet=1,ntetbox
-        call extract_tet(xnode,phinode,xcandidate, &
-          dummyphi,itet,symmetry_flag,sdim)
-        do itetnode=1,sdim+1
-         do dir_node=1,sdim
-           ! output variable.
-          x_tetlist(itetnode,dir_node,1,itet)=xcandidate(itetnode,dir_node)
-         enddo 
-        enddo 
-        do itetnode=1,sdim+2
-         do iflags=1,2 ! 1=material id  2=order param
-           ! output variable.
-          idx_tetlist(itetnode,iflags,1,itet)=0
-         enddo
-        enddo
-       enddo ! itet=1..ntetbox
-
-      else if (shapeflag.eq.1) then ! volumes in a tet.
-       nlist_old=1
-       itet=1
-
-       do itetnode=1,sdim+1
-        do dir_node=1,sdim
-         x_tetlist(itetnode,dir_node,1,itet)=xtet(itetnode,dir_node)
-        enddo 
-       enddo 
-       do itetnode=1,sdim+2
-        do iflags=1,2 ! 1=material_id 2=order param
-         idx_tetlist(itetnode,iflags,1,itet)=0
-        enddo
-       enddo
-
-      else
-       print *,"shapeflag invalid"
-       stop
-      endif
-
-      num_empty=0
-      im_max_vfrac=0
-      do im=1,nmat
-       material_processed(im)=0
-         !ngeom_recon_cuts=1+sdim+1+ncuts*(sdim+1)
-       local_vfrac(im)=mofdata_cuts((im-1)*ngeom_recon_cuts+1)
-       if ((local_vfrac(im).ge.-VOFTOL).and. &
-           (local_vfrac(im).le.VOFTOL)) then
-        local_vfrac(im)=zero
-        num_empty=num_empty+1
-       else if ((local_vfrac(im).ge.VOFTOL).and. &
-                (local_vfrac(im).le.one+VOFTOL)) then
-        if (local_vfrac(im).ge.one) then
-         local_vfrac(im)=one
-        endif
-        if (im_max_vfrac.eq.0) then
-         im_max_vfrac=im
-        else if ((im_max_vfrac.ge.1).and.(im_max_vfrac.le.nmat)) then
-         if (local_vfrac(im).gt.local_vfrac(im_max_vfrac)) then
-          im_max_vfrac=im
-         endif
-        else
-         print *,"im_max_vfrac invalid"
-         stop
-        endif 
-       else
-        print *,"local_vfrac invalid"
-        stop
-       endif
-
-      enddo ! im=1..nmat
-
-      do im=1,ncomp_mofdata_cuts
-       mofdata_cuts_local(im)=mofdata_cuts(im)
-      enddo
-
-      if ((num_empty.eq.nmat-1).and. &
-          (local_vfrac(im_max_vfrac).ge.VOFTOL)) then
-        ! ncomp_mofdata_cuts=nmat*ngeom_recon_cuts
-       do im=1,ncomp_mofdata_cuts
-        mofdata_cuts_local(im)=zero
-       enddo
-        ! volume fraction=1.0
-       mofdata_cuts_local((im_max_vfrac-1)*ngeom_recon_cuts+1)=one
-       do itet=1,nlist_old
-        itetnode=sdim+2
-         ! output
-        idx_tetlist(itetnode,1,1,itet)=im_max_vfrac
-       enddo
-
-      else if ((num_empty.ge.0).and.(num_empty.le.nmat-2)) then
-
-       nlist_new=0
-
-       do im_order=1,nmat-1
-        im_current=0
-        do im=1,nmat
-         current_order= &
-          NINT(mofdata_cuts_local((im-1)*ngeom_recon_cuts+1+sdim+1))
-         if (current_order.eq.im_order) then
-          im_current=im
-         else if ((current_order.ge.0).and.(current_order.le.nmat)) then
-          ! do nothing
-         else
-          print *,"current_order invalid"
-          stop
-         endif
-        enddo
-
-        if ((im_current.ge.1).and.(im_current.le.nmat)) then
-         ! do nothing
-        else
-         print *,"im_current invalid"
-         stop
-        endif
-
-        if ((material_processed(im_current).eq.0).and. &
-            (local_vfrac(im_current).ge.VOFTOL)) then
-
-         material_processed(im_current)=1
-
-         do icuts=1,ncuts_material(im_current) 
-          do dir_node=1,sdim
-           nn(dir_node)=mofdata_cuts_local((im-1)*ngeom_recon_cuts+1+sdim+1+ &
-            (icuts-1)*(sdim+1)+dir_node)
-          enddo
-          intercept=mofdata_cuts_local((im-1)*ngeom_recon_cuts+1+sdim+1+ &
-            (icuts-1)*(sdim+1)+sdim+1)
-
-           ! loop through previous tessellation
-          do itet=1,nlist_old
-
-           do itetnode=1,sdim+1
-            do dir_node=1,sdim
-              ! old (1)
-             xcandidate_hold(itetnode,dir_node)= &
-               x_tetlist(itetnode,dir_node,1,itet)
-            enddo
-            do iflags=1,2  ! material id, order?
-              ! old (1)
-             idx_candidate_hold(itetnode,iflags)= &
-              idx_tetlist(itetnode,iflags,1,itet)
-            enddo 
-           enddo
-
-           ! LEVELSET FOR CUTTING PLANE
-
-           do itetnode=1,sdim+1
-            phi1(itetnode)=intercept
-            do dir_node=1,sdim
-             phi1(itetnode)=phi1(itetnode)+ &
-              nn(dir_node)* &
-              (xcandidate_hold(itetnode,dir_node)-xsten0(0,dir_node))
-            enddo
-           enddo
-           ! tetrahedras representing intersection of region where phi1>0
-           ! each new tet. gets a copy of original idx 
-           ! (im before,icut before), then
-           ! the nodes of the cutting face get (im_current,icuts)
-           if (sdim.eq.3) then
-            call list_tets_multicuts(phi1,xcandidate_hold, &
-              idx_candidate_hold, &
-              im_current,icuts, &
-              ncuts_material(im_current), &
-              ncuts, &
-              xsublist, &
-              MAXTET,nsub, &
-              idx_sublist, &
-              sdim)
-           else if (sdim.eq.2) then
-            call list_tris_multicuts(phi1,xcandidate_hold, &
-              idx_candidate_hold, &
-              im_current,icuts, &
-              ncuts_material(im_current), &
-              ncuts, &
-              xsublist, &
-              MAXTET,nsub, &
-              idx_sublist, &
-              sdim)
-           else
-            print *,"sdim invalid"
-            stop
-           endif
-
-           do itet_sub=1,nsub
-
-            do itetnode=1,sdim+1
-             do dir_node=1,sdim
-              xcandidate(itetnode,dir_node)= &
-                xsublist(itetnode,dir_node,itet_sub)
-             enddo
-            enddo
-            call tetrahedron_volume(xcandidate,voltest, &
-              centroidtest,sdim)
-
-            if (voltest.gt.zero) then
-             nlist_new=nlist_new+1
-             if (nlist_new.gt.nmax) then
-              print *,"nlist_new overflow in multi_get_volume_multicuts"
-              print *,"nlist_new,nmax ",nlist_new,nmax
-              stop
-             endif
-             do itetnode=1,sdim+1
-              do dir_node=1,sdim
-               x_tetlist(itetnode,dir_node,2,nlist_new)= &
-                 xcandidate(itetnode,dir_node)
-              enddo
-              do iflags=1,2
-               idx_tetlist(itetnode,iflags,2,nlist_new)= &
-                 idx_sublist(itetnode,iflags,itet_sub)
-              enddo 
-             enddo
-             prev_im=idx_tetlist(sdim+2,1,1,itet)
-             prev_icuts=idx_tetlist(sdim+2,2,1,itet)
-
-             if (prev_im.eq.0) then
-              new_im=im_current
-              new_icuts=icuts
-             else if ((prev_im.eq.im_current).and. &
-                      (prev_icuts.eq.icuts-1)) then
-              new_im=im_current
-              new_icuts=icuts
-             else if ((prev_im.ge.1).and.(prev_im.le.nmat).and. &
-                      (prev_im.ne.im_current)) then
-              if (ncuts_material(prev_im).ne.prev_icuts) then
-               print *,"prev_im invalid"
-               stop
-              endif
-              if (material_processed(prev_im).ne.1) then
-               print *,"material_processed(prev_im) invalid"
-               stop
-              endif
-              new_im=prev_im
-              new_icuts=prev_icuts
-             else
-              print *,"prev_im invalid"
-              stop
-             endif
-
-             idx_tetlist(sdim+2,1,2,nlist_new)=new_im
-             idx_tetlist(sdim+2,2,2,nlist_new)=new_icuts
-
-            else if (voltest.eq.zero) then
-             ! do nothing
-            else
-             print *,"voltest invalid"
-             stop
-            endif
-
-           enddo  ! itet_sub=1..nsub
-
-           ! LEVELSET FOR CUTTING PLANE -> COMPLIMENT
-
-           do itetnode=1,sdim+1
-            phi1(itetnode)=-intercept
-            do dir_node=1,sdim
-             phi1(itetnode)=phi1(itetnode)- &
-               nn(dir_node)* &
-               (xcandidate_hold(itetnode,dir_node)-xsten0(0,dir_node))
-            enddo
-           enddo
-           ! tetrahedras representing intersection of region where phi1>0
-           if (sdim.eq.3) then
-            call list_tets_multicuts(phi1,xcandidate_hold, &
-              idx_candidate, &
-              im_current,icuts, &
-              ncuts_material(im_current), &
-              ncuts, &
-              xsublist, &
-              MAXTET,nsub, &
-              idx_sublist, &
-              sdim)
-           else if (sdim.eq.2) then
-            call list_tris_multicuts(phi1,xcandidate_hold, &
-              idx_candidate, &
-              im_current,icuts, &
-              ncuts_material(im_current), &
-              ncuts, &
-              xsublist, &
-              MAXTET, &
-              nsub, &
-              idx_sublist, &
-              sdim)
-           else
-            print *,"sdim invalid"
-            stop
-           endif
-
-           do itet_sub=1,nsub
-
-            do itetnode=1,sdim+1
-             do dir_node=1,sdim
-              xcandidate(itetnode,dir_node)=xsublist(itetnode,dir_node,itet_sub)
-             enddo
-            enddo
-            call tetrahedron_volume(xcandidate,voltest, &
-              centroidtest,sdim)
-
-            if (voltest.gt.zero) then
-             nlist_new=nlist_new+1
-             if (nlist_new.gt.nmax) then
-              print *,"nlist_new overflow in multi_get_volume_multicuts"
-              print *,"nlist_new,nmax ",nlist_new,nmax
-              stop
-             endif
-             do itetnode=1,sdim+1
-              do dir_node=1,sdim
-               x_tetlist(itetnode,dir_node,2,nlist_new)= &
-                 xcandidate(itetnode,dir_node)
-              enddo
-              do iflags=1,2
-               idx_tetlist(itetnode,iflags,2,nlist_new)= &
-                 idx_sublist(itetnode,iflags,itet_sub)
-              enddo 
-             enddo
-             prev_im=idx_tetlist(sdim+2,1,1,itet)
-             prev_icuts=idx_tetlist(sdim+2,2,1,itet)
-
-             if (prev_im.eq.0) then
-              new_im=0
-              new_icuts=0
-             else if ((prev_im.eq.im_current).and. &
-                      (prev_icuts.eq.icuts-1)) then
-              new_im=0
-              new_icuts=0
-             else if ((prev_im.ge.1).and.(prev_im.le.nmat).and. &
-                      (prev_im.ne.im_current)) then
-              if (ncuts_material(prev_im).ne.prev_icuts) then
-               print *,"prev_im invalid"
-               stop
-              endif
-              if (material_processed(prev_im).ne.1) then
-               print *,"material_processed(prev_im) invalid"
-               stop
-              endif
-              new_im=prev_im
-              new_icuts=prev_icuts
-             else
-              print *,"prev_im invalid"
-              stop
-             endif
-
-             idx_tetlist(sdim+2,1,2,nlist_new)=new_im
-             idx_tetlist(sdim+2,2,2,nlist_new)=new_icuts
-
-            else if (voltest.eq.zero) then
-             ! do nothing
-            else
-             print *,"voltest invalid"
-             stop
-            endif
-
-           enddo  ! itet_sub=1..nsub
-
-          enddo  ! itet=1..nlist_old
-
-          nlist_old=nlist_new
-          do itet=1,nlist_old
-
-           do itetnode=1,sdim+1
-            do dir_node=1,sdim
-             x_tetlist(itetnode,dir_node,1,itet)= &
-               x_tetlist(itetnode,dir_node,2,itet)
-            enddo
-            do iflags=1,2
-             idx_tetlist(itetnode,iflags,1,itet)= &
-               idx_tetlist(itetnode,iflags,2,itet)
-            enddo 
-           enddo
-           do iflags=1,2
-            idx_tetlist(sdim+2,iflags,1,itet)= &
-              idx_tetlist(sdim+2,iflags,2,itet)
-           enddo 
-           
-          enddo ! itet=1..nlist_old
-
-         enddo ! icuts=1..ncuts_mqaterial(im_current)
-
-        else if ((material_processed(im_current).eq.1).or. &
-                 (local_vfrac(im_current).le.VOFTOL)) then
-         ! do nothing
-        else
-         print *,"material_processed or local_vfrac invalid"
-         stop
-        endif
-
-       enddo ! im_order=1..nmat-1
-
-       im_last_processed=0
-       do im=1,nmat
-        if (material_processed(im).eq.1) then
-         ! do nothing
-        else if (material_processed(im).eq.0) then
-         if (im_last_processed.eq.0) then
-          im_last_processed=im
-         else if ((im_last_processed.ge.1).and. &
-                  (im_last_processed.le.nmat)) then
-          if (local_vfrac(im_last_processed).lt.local_vfrac(im)) then
-           im_last_processed=im
-          endif
-         else
-          print *,"im_last_processed invalid"
-          stop
-         endif
-        else
-         print *,"material_processed(im) invalid"
-         stop
-        endif
-       enddo ! im=1..nmat
-
-       do itet=1,nlist_old
-        im=idx_tetlist(sdim+2,1,1,itet)
-        if (im.eq.0) then
-         idx_tetlist(sdim+2,1,1,itet)=im_last_processed
-         idx_tetlist(sdim+2,2,1,itet)=ncuts_material(im_last_processed)
-        else if ((im.ge.1).and.(im.le.nmat)) then
-         ! do nothing
-        else
-         print *,"im invalid"
-         stop
-        endif
-       enddo ! itet=1..nlist_old
-
-      else
-       print *,"num_empty invalid"
-       stop
-      endif 
-
-      do itet=1,nlist_old
-       im=idx_tetlist(sdim+2,1,1,itet)
-
-       if ((im.ge.1).and.(im.le.nmat)) then
-
-        do itetnode=1,sdim+1
-         i_area(itetnode)=0
-         im_area(itetnode)=0
-         icuts_area(itetnode)=0
-        enddo
-        nface=0
-        do itetnode=1,sdim+1
-         do dir_node=1,sdim
-          xcandidate(itetnode,dir_node)=x_tetlist(itetnode,dir_node,1,itet)
-         enddo
-         im_face=idx_tetlist(itetnode,1,1,itet)
-         icuts=idx_tetlist(itetnode,2,1,itet)
-         if (im_face.eq.0) then
-          ! do nothing
-         else if ((im_face.ge.1).and.(im_face.le.nmat)) then
-          nface=nface+1
-          im_area(nface)=im_face
-          icuts_area(nface)=icuts
-          i_area(nface)=itetnode
-         else
-          print *,"im_face invalid"
-          stop
-         endif
-        enddo ! itetnode=1..sdim+1
-
-        call tetrahedron_volume(xcandidate,voltest, &
-             centroidtest,sdim)
-        multi_volume(im)=multi_volume(im)+voltest
-        do dir_node=1,sdim
-         multi_cen(dir_node,im)=multi_cen(dir_node,im)+ &
-           voltest*centroidtest(dir_node)
-        enddo
-        if (nface.eq.sdim) then
-         if (sdim.eq.2) then 
-          call areaXYorRZ(xcandidate,i_area(1),i_area(2), &
-           local_area,local_areacentroid)
-         else if (sdim.eq.3) then
-          call areaXYZ(xcandidate,i_area(1),i_area(2),i_area(3), &
-           local_area,local_areacentroid)
-         else
-          print *,"sdim invalid"
-          stop
-         endif
-         im_face=im_area(1)
-         multi_area(im,im_face)=multi_area(im,im_face)+local_area
-         if (im.ne.im_face) then
-          multi_area(im_face,im)=multi_area(im_face,im)+local_area
-         endif
-        endif
-       else
-        print *,"im invalid"
-        stop
-       endif
-
-      enddo ! itet=1..nlist_old
-
-      do im=1,nmat
-       if (multi_volume(im).gt.zero) then
-        do dir_node=1,sdim
-         multi_cen(dir_node,im)=multi_cen(dir_node,im)/multi_volume(im)
-        enddo
-       else if (multi_volume(im).eq.zero) then
-        do dir_node=1,sdim
-         multi_cen(dir_node,im)=zero
-        enddo
-       else
-        print *,"multi_volume(im) invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
-
       return
-      end subroutine multi_get_volume_multicuts
+      end subroutine multi_get_area_pairs
 
 
         ! multi_cen is "absolute" (not relative to cell centroid)
@@ -17423,11 +16829,12 @@ contains
         do dir=1,sdim
          print *,"im,dir,cen ",im,dir,mofdata(vofcomp+dir)
         enddo
-        print *,"im,order ",im,dir,mofdata(vofcomp+SDIM+1)
+        print *,"im,order ",im,dir,mofdata(vofcomp+sdim+1)
         do dir=1,sdim
-         print *,"im,dir,slope ",im,dir,mofdata(vofcomp+SDIM+1+dir)
+         print *,"im,dir,slope ",im,dir,mofdata(vofcomp+sdim+1+dir)
         enddo
-        print *,"im,intercept ",im,dir,mofdata(vofcomp+2*SDIM+2)
+         ! F,centroid,order,slope,intercept
+        print *,"im,intercept ",im,dir,mofdata(vofcomp+2*sdim+2)
         print *,"im,multi_volume ",im,multi_volume(im)
         do dir=1,sdim
          print *,"im,dir,multi_cen ",im,dir,multi_cen(dir,im)
