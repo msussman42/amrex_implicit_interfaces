@@ -15064,23 +15064,17 @@ contains
         !                  materials are immersed.
         !
         ! (i)  call project_slopes_to_face for all interfaces.
-        ! (ii) create thin box centered about the face and adjust the 
-        !      intercepts about the thin box:
-        !      np dot (x-x0) + dp = np dot (x-x0+xthin-xthin) + dp =
-        !      np dot (x-xthin) + np dot (thin-x0) + dp =
-        !      np dot (x-xthin) + 0 + dp = np dot (x-xthin) + dp
-        ! (ii) Omega_aux=Omega_thin_box (break up into triangles in 2D, 
-        !      and tetrahedra in 3D)
-        ! (iii) for im_plus=1..nmat (WLOG assume order number same as material
-        !                            id)
-        !       (a) cut Omega_aux into two parts by im_plus plane:
-        !           Omega_aux_im_plus,Omega_aux_im_plus_complement
-        !       (b) find area and centroid pairs of Omega_aux_im_plus 
-        !           intersected with all of the Omega_im_minus materials.
-        !       (c) replace Omega_aux with Omega_aux_im_plus_complement and 
-        !           continue im_plus for-loop. 
+        ! (ii) create thin box centered about the face.
+        ! (iii) find volumes and centroids in the thin box for
+        !       both mofdata_plus and mofdata_minus
+        ! (iv) Let Omega_aux=thin box.
+        ! (v)  For im_plus=1..nmat (WLOG assume order number same as material
+        !                           id)
+        !       (a) Omega_aux=Omega_aux-Omega_im_plus
+        !       (b) find volumes and centroids of mofdata_minus in
+        !           Omega_aux.  (pairs im_plus,im_minus are the leftovers)
         !
-        ! (iv) (a) project the centroid pairs to the face.
+        ! (vi) (a) project the centroid pairs to the face.
         !      (b) A_pair=(V_pair/V_thinbox) * A_face 
         !
         ! output: multi_area_pair,multi_area_cen_pair (absolute coordinates)
@@ -15098,8 +15092,10 @@ contains
        multi_area_pair, & ! (nmat,nmat)
        multi_area_cen_pair, & ! (nmat,nmat,sdim)
        sdim, &
-       xtetlist, &
-       nlist_alloc, &
+       xtetlist_plus, &
+       nlist_alloc_plus, &
+       xtetlist_minus, &
+       nlist_alloc_minus, &
        nmax, &
        caller_id)
 
@@ -15109,7 +15105,8 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nlist_alloc
+      INTEGER_T, intent(in) :: nlist_alloc_plus
+      INTEGER_T, intent(in) :: nlist_alloc_minus
       INTEGER_T, intent(in) :: nmax
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nmat
@@ -15123,12 +15120,34 @@ contains
       REAL_T, intent(in) :: xsten0_plus(-nhalf0:nhalf0,sdim)
       REAL_T, intent(in) :: xsten0_minus(-nhalf0:nhalf0,sdim)
       REAL_T, intent(in) :: dx(sdim)
-      REAL_T, intent(out) :: xtetlist(4,3,nlist_alloc)
+      REAL_T, intent(out) :: xtetlist_plus(4,3,nlist_alloc_plus)
+      REAL_T, intent(out) :: xtetlist_minus(4,3,nlist_alloc_minus)
       REAL_T, intent(out) :: multi_area_pair(nmat,nmat)
       REAL_T, intent(out) :: multi_area_cen_pair(nmat,nmat,sdim)
+      REAL_T :: mofdatavalid_plus(nmat*ngeom_recon)
+      REAL_T :: mofdatavalid_minus(nmat*ngeom_recon)
+      REAL_T :: mofdataproject_plus(nmat*ngeom_recon)
+      REAL_T :: mofdataproject_minus(nmat*ngeom_recon)
 
       INTEGER_T im,im_opp
-      INTEGER_T dir_node
+      INTEGER_T side
+      INTEGER_T dir_local
+      INTEGER_T nhalf_thin
+      INTEGER_T isten 
+      REAL_T dxthin
+      REAL_T xsten_thin(-1:1,sdim)
+      REAL_T xtet(sdim+1,sdim)
+      INTEGER_T shapeflag
+
+      REAL_T multi_volume_plus_thin(nmat)
+      REAL_T multi_area_plus_thin(nmat)
+      REAL_T multi_cen_plus_thin(sdim,nmat)
+
+      REAL_T multi_volume_minus_thin(nmat)
+      REAL_T multi_area_minus_thin(nmat)
+      REAL_T multi_cen_minus_thin(sdim,nmat)
+
+      nhalf_thin=1
 
       if (ngeom_recon.eq.2*sdim+3) then
        ! do nothing
@@ -15166,15 +15185,87 @@ contains
        print *,"nmat invalid multi get area pairs"
        stop
       endif
- 
+
+      if ((dir_plus.ge.1).and.(dir_plus.le.sdim)) then
+       ! do nothing
+      else
+       print *,"dir_plus invalid"
+       stop
+      endif 
+
       do im=1,nmat
        do im_opp=1,nmat
         multi_area_pair(im,im_opp)=zero
-        do dir_node=1,sdim
-         multi_area_cen_pair(im,im_opp,dir_node)=zero
+        do dir_local=1,sdim
+         multi_area_cen_pair(im,im_opp,dir_local)=zero
         enddo
        enddo
       enddo  ! im=1..nmat
+
+      dxthin=FACETOL_DVOL*half* &
+              (xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
+      do isten=-1,1
+       do dir_local=1,sdim
+        xsten_thin(isten,dir_local)=xsten0_plus(isten,dir_local)
+       enddo
+      enddo ! isten
+      xsten_thin(1,dir_plus)=xsten0_plus(-1,dir_plus)+dxthin
+      xsten_thin(-1,dir_plus)=xsten0_minus(1,dir_plus)-dxthin
+      xsten_thin(0,dir_plus)=half*(xsten0_plus(-1,dir_plus)+ &
+                                   xsten0_minus(1,dir_plus))
+
+      call make_vfrac_sum_ok_copy(mofdata_plus,mofdatavalid_plus, &
+        nmat,sdim,3000)
+      call make_vfrac_sum_ok_copy(mofdata_minus,mofdatavalid_minus, &
+        nmat,sdim,3000)
+
+      side=1
+      call project_slopes_to_face( &
+        bfact,dx,xsten0_plus,nhalf0, &
+        mofdatavalid_plus,mofdataproject_plus, &
+        nmat,sdim,dir_plus,side)
+      side=2
+      call project_slopes_to_face( &
+        bfact,dx,xsten0_minus,nhalf0, &
+        mofdatavalid_minus,mofdataproject_minus, &
+        nmat,sdim,dir_plus,side)
+
+      shapeflag=0
+
+      call multi_get_volume_grid( &
+       tessellate, &
+       bfact,dx, &
+       xsten0_plus,nhalf0, &
+       mofdataproject_plus, &
+       xsten_thin,nhalf_thin, &
+       xtet, &
+       multi_volume_plus_thin, &
+       multi_cen_plus_thin, &
+       multi_area_plus_thin, &
+       xtetlist_plus, &
+       nlist_alloc_plus, &
+       nmax, &
+       nmat, &
+       sdim, &
+       shapeflag,caller_id)
+
+      call multi_get_volume_grid( &
+       tessellate, &
+       bfact,dx, &
+       xsten0_minus,nhalf0, &
+       mofdataproject_minus, &
+       xsten_thin,nhalf_thin, &
+       xtet, &
+       multi_volume_minus_thin, &
+       multi_cen_minus_thin, &
+       multi_area_minus_thin, &
+       xtetlist_minus, &
+       nlist_alloc_minus, &
+       nmax, &
+       nmat, &
+       sdim, &
+       shapeflag,caller_id)
+
 
 
       return
