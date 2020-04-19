@@ -36240,6 +36240,8 @@ end subroutine initialize2d
        REAL_T voffluid_bound,vofsolid_bound
        REAL_T voftest_wall,voftest_bound
 
+       INTEGER_T tessellate
+
        INTEGER_T nhalf
        REAL_T xsten(-3:3,SDIM)
        INTEGER_T tid,nmax
@@ -36261,6 +36263,8 @@ end subroutine initialize2d
         print *,"level invalid in fill 7"
         stop
        endif
+
+       tessellate=0
 
        nhalf=3
        if (num_state_base.ne.2) then
@@ -36418,7 +36422,7 @@ end subroutine initialize2d
 
           enddo  ! im
 
-          call make_vfrac_sum_ok_base(mofdata,nmat,SDIM,204)
+          call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,204)
 
           call multimaterial_MOF( &
            bfact,dx,xsten,nhalf, &
@@ -38372,6 +38376,9 @@ end subroutine initialize2d
        INTEGER_T doubly_flag
        REAL_T local_state(nmat*num_state_material)
        INTEGER_T local_ibase
+       INTEGER_T tessellate
+
+       tessellate=0
 
        if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
         print *,"tid invalid"
@@ -39514,7 +39521,7 @@ end subroutine initialize2d
         enddo  ! im=1..nmat
 
         ! sum F_fluid=1  sum F_solid <= 1
-        call make_vfrac_sum_ok_base(mofdata,nmat,SDIM,201)
+        call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,201)
         do im=1,nmat
          vofcomp_recon=(im-1)*ngeom_recon+1
          voflist(im)=mofdata(vofcomp_recon)

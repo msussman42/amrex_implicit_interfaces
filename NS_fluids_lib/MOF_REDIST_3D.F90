@@ -2060,7 +2060,7 @@ stop
         else if (im_crit.eq.0) then
 
          ! sum F_fluid=1  sum F_solid<=1
-         call make_vfrac_sum_ok_copy(mofdata,mofdatavalid, &
+         call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid, &
            nmat,SDIM,3000)
 
          shapeflag=0

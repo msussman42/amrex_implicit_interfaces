@@ -5799,6 +5799,10 @@ end subroutine volume_sanity_check
 ! routine starts with tetrahedralization of a cell,
 ! then intersects this region with the plane (LS<0 side)
 ! of already initialized materials.
+! tessellate:
+! 0=solids and fluids treated separately
+! 1=non-tessellating slopes, but tessellating output
+! 2=is_rigid_local is zero for all materials
       subroutine tets_box_planes( &
        tessellate, &
        bfact,dx,xsten0,nhalf0, &
@@ -5842,6 +5846,19 @@ end subroutine volume_sanity_check
       INTEGER_T inode
       REAL_T nn(sdim)
       REAL_T intercept
+      INTEGER_T is_rigid_local(nmat)
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
@@ -5920,16 +5937,16 @@ end subroutine volume_sanity_check
        do im=1,nmat
         vofcomp=(im-1)*(2*sdim+3)+1
         if ((tessellate.eq.1).or. &
-            (is_rigid(nmat,im).eq.0)) then
+            (is_rigid_local(im).eq.0)) then
          iorder=NINT(mofdata(vofcomp+sdim+1))
          if (iorder.eq.iplane) then
           icrit=im
          endif
         else if ((tessellate.eq.0).and. &
-                 (is_rigid(nmat,im).eq.1)) then
+                 (is_rigid_local(im).eq.1)) then
          ! do nothing
         else
-         print *,"tessellate or is_rigid invalid"
+         print *,"tessellate or is_rigid_local invalid"
          stop
         endif
        enddo ! im=1..nmat
@@ -6022,6 +6039,10 @@ end subroutine volume_sanity_check
       return
       end subroutine tets_box_planes
 
+! tessellate:
+! 0=solids and fluids treated separately
+! 1=non-tessellating slopes, but tessellating output
+! 2=is_rigid_local is zero for all materials
       subroutine tets_box_planes_super( &
        tessellate, &
        tid, &
@@ -6203,6 +6224,20 @@ end subroutine volume_sanity_check
       REAL_T nn(sdim)
       REAL_T intercept
 
+      INTEGER_T is_rigid_local(nmat)
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
+
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
       else
@@ -6240,16 +6275,16 @@ end subroutine volume_sanity_check
        do im=1,nmat
         vofcomp=(im-1)*(2*sdim+3)+1
         if ((tessellate.eq.1).or. &
-            (is_rigid(nmat,im).eq.0)) then
+            (is_rigid_local(im).eq.0)) then
          iorder=NINT(mofdata(vofcomp+sdim+1))
          if (iorder.eq.iplane) then
           icrit=im
          endif
         else if ((tessellate.eq.0).and. &
-                 (is_rigid(nmat,im).eq.1)) then
+                 (is_rigid_local(im).eq.1)) then
          ! do nothing
         else
-         print *,"tessellate or is_rigid invalid"
+         print *,"tessellate or is_rigid_local invalid"
          stop
         endif
        enddo ! im=1..nmat
@@ -11375,6 +11410,7 @@ contains
       REAL_T, intent(in) :: lsnormal(nmat,sdim)
       INTEGER_T, intent(in) :: lsnormal_valid(nmat)
       INTEGER_T tessellate
+      INTEGER_T is_rigid_local(nmat)
 
 #include "mofdata.H"
 
@@ -11382,6 +11418,18 @@ contains
       nlist_vof=0
       nlist_cen=0
       tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -11536,14 +11584,14 @@ contains
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_rigid_local(im).eq.1) then
         ! do nothing
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_rigid_local(im).eq.0) then
         if (NINT(mofdata(vofcomp+sdim+1)).gt.ordermax) then
          ordermax=NINT(mofdata(vofcomp+sdim+1))
         endif
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid_local invalid"
         stop
        endif
        vofmain(im)=mofdata(vofcomp)
@@ -11563,9 +11611,9 @@ contains
       single_material_im=0
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_rigid_local(im).eq.1) then
         ! do nothing
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_rigid_local(im).eq.0) then
         if (mofdata(vofcomp+sdim+1).eq.zero) then
          single_volume=mofdata(vofcomp)*volcell_vof
          if (single_volume.ge.(one-VOFTOL)*uncaptured_volume_vof) then
@@ -11612,9 +11660,9 @@ contains
 
        do im=1,nmat
 
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid_local(im).eq.1) then
          ! do nothing
-        else if (is_rigid(nmat,im).eq.0) then
+        else if (is_rigid_local(im).eq.0) then
 
          vofcomp=(im-1)*ngeom_recon+1
 
@@ -11690,7 +11738,7 @@ contains
          print *,"nmat=",nmat
          stop
         endif
-        if (is_rigid(nmat,critical_material).ne.0) then
+        if (is_rigid_local(critical_material).ne.0) then
          print *,"is_rigid invalid"
          stop
         endif
@@ -11763,15 +11811,15 @@ contains
           vofcomp=(im-1)*ngeom_recon+1
           test_vfrac=mofdata(vofcomp)
           test_order=NINT(mofdata(vofcomp+sdim+1))
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
            ! do nothing
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            if ((test_order.eq.0).and.(test_vfrac.ge.max_vfrac)) then
             max_vfrac=test_vfrac
             critical_material=im
            endif
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid_local invalid"
            stop
           endif
          enddo ! im=1..nmat
@@ -11791,7 +11839,7 @@ contains
          enddo
          stop
         endif
-        if (is_rigid(nmat,critical_material).ne.0) then
+        if (is_rigid_local(critical_material).ne.0) then
          print *,"is_rigid invalid"
          stop
         endif
@@ -11807,9 +11855,9 @@ contains
         if (ordermax.gt.0) then
          do im=1,nmat
           vofcomp_before=(im-1)*ngeom_recon+1
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
            ! do nothing
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            if (NINT(mofdata(vofcomp_before+sdim+1)).eq.ordermax) then
             mat_before=im
            endif
@@ -11826,7 +11874,7 @@ contains
         endif
 
         if ((mat_before.ge.1).and.(mat_before.le.nmat)) then
-          if (is_rigid(nmat,mat_before).ne.0) then
+          if (is_rigid_local(mat_before).ne.0) then
            print *,"is_rigid invalid"
            stop
           endif
@@ -12700,6 +12748,9 @@ contains
       INTEGER_T continuous_mof_rigid
       INTEGER_T nlist_vof,nlist_cen
 
+      INTEGER_T tessellate
+      INTEGER_T is_rigid_local(nmat)
+
       INTEGER_T tid
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
@@ -12715,6 +12766,20 @@ contains
        print *,"tid invalid"
        stop
       endif
+
+      tessellate=0
+
+      do imaterial=1,nmat
+       is_rigid_local(imaterial)=is_rigid(nmat,imaterial)
+       if (tessellate.eq.2) then
+        is_rigid_local(imaterial)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! imaterial=1..nmat
 
       if (bfact.lt.1) then
        print *,"bfact invalid135"
@@ -12884,7 +12949,7 @@ contains
         ! if F<eps or F>1-eps, then moments and vfracs are truncated.
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
-      call make_vfrac_sum_ok_base(mofdata,nmat,sdim,6)
+      call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,sdim,6)
 
        ! clear flag for all nmat materials.
        ! vfrac,centroid,order,slope,intercept x nmat
@@ -12915,7 +12980,7 @@ contains
         multi_centroidA(imaterial,dir)=zero
        enddo
 
-       if (is_rigid(nmat,imaterial).eq.1) then
+       if (is_rigid_local(imaterial).eq.1) then
 
         order_algorithm_in(imaterial)=1
 
@@ -13025,7 +13090,7 @@ contains
          stop
         endif
   
-       else if (is_rigid(nmat,imaterial).eq.0) then
+       else if (is_rigid_local(imaterial).eq.0) then
 
         if (mofdata(vofcomp).gt.one-VOFTOL) then
          if (single_material.ne.0) then
@@ -13067,7 +13132,7 @@ contains
         endif
 
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid_local invalid"
         stop
        endif
 
@@ -13076,14 +13141,14 @@ contains
       if (num_materials_cell.le.2) then
        do imaterial=1,nmat
 
-        if (is_rigid(nmat,imaterial).eq.1) then
+        if (is_rigid_local(imaterial).eq.1) then
          ! do nothing
-        else if (is_rigid(nmat,imaterial).eq.0) then
+        else if (is_rigid_local(imaterial).eq.0) then
          if (order_algorithm(imaterial).eq.0) then
           order_algorithm_in(imaterial)=nmat+1  ! was "1"
          endif
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid_local invalid"
          stop
         endif
 
@@ -13097,9 +13162,9 @@ contains
        flexlist(imaterial)=0   ! list of materials that need an ordering
       enddo
       do imaterial=1,nmat
-       if (is_rigid(nmat,imaterial).eq.1) then
+       if (is_rigid_local(imaterial).eq.1) then
         ! do nothing
-       else if (is_rigid(nmat,imaterial).eq.0) then
+       else if (is_rigid_local(imaterial).eq.0) then
         if (order_algorithm_in(imaterial).eq.0) then
          n_ndef=n_ndef+1
          flexlist(n_ndef)=imaterial
@@ -13113,7 +13178,7 @@ contains
          stop
         endif
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid_local invalid"
         stop
        endif
       enddo ! imaterial=1..nmat
@@ -13121,15 +13186,15 @@ contains
         ! placelist: list of available places >= n_ndef
       place_index=0
       do imaterial=1,nmat
-       if (is_rigid(nmat,imaterial).eq.1) then
+       if (is_rigid_local(imaterial).eq.1) then
         ! do nothing
-       else if (is_rigid(nmat,imaterial).eq.0) then
+       else if (is_rigid_local(imaterial).eq.0) then
         if (placeholder(imaterial).eq.0) then
          place_index=place_index+1
          placelist(place_index)=imaterial
         endif
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid_local invalid"
         stop
        endif
       enddo  ! imaterial
@@ -13213,8 +13278,8 @@ contains
       if ((single_material.gt.0).and. &
           (remaining_vfrac.lt.VOFTOL)) then
 
-       if (is_rigid(nmat,single_material).ne.0) then
-        print *,"is_rigid(nmat,single_material) invalid"
+       if (is_rigid_local(single_material).ne.0) then
+        print *,"is_rigid_local(single_material) invalid"
         stop
        endif
 
@@ -13368,9 +13433,9 @@ contains
 
          mof_err=zero
          do imaterial = 1,nmat
-          if (is_rigid(nmat,imaterial).eq.1) then
+          if (is_rigid_local(imaterial).eq.1) then
            ! do nothing
-          else if (is_rigid(nmat,imaterial).eq.0) then
+          else if (is_rigid_local(imaterial).eq.0) then
            vofcomp=(imaterial-1)*ngeom_recon+1
            do dir=1,sdim
             xref_mat(dir)=mofdata_in(vofcomp+dir)
@@ -13423,9 +13488,9 @@ contains
           mofdata(dir)=mofdata_array(argmin_order,dir)
          enddo
          do imaterial = 1,nmat
-          if (is_rigid(nmat,imaterial).eq.1) then
+          if (is_rigid_local(imaterial).eq.1) then
            ! do nothing
-          else if (is_rigid(nmat,imaterial).eq.0) then
+          else if (is_rigid_local(imaterial).eq.0) then
            do dir=1,sdim
             multi_centroidA(imaterial,dir)= &
              centroidA_array(argmin_order,imaterial,dir)
@@ -13799,7 +13864,9 @@ contains
 
 
 ! vof,ref centroid,order,slope,intercept  x nmat
-      subroutine make_vfrac_sum_ok_base(mofdata,nmat, &
+      subroutine make_vfrac_sum_ok_base( &
+        tessellate, &
+        mofdata,nmat, &
         sdim,errorid)
       use probcommon_module
       use geometry_intersect_module
@@ -13807,12 +13874,25 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,sdim,errorid
+      INTEGER_T, intent(in) :: tessellate,nmat,sdim,errorid
       REAL_T, intent(inout) :: mofdata(nmat*ngeom_recon)
 
       INTEGER_T im,dir,vofcomp
       REAL_T voffluid,vofsolid,vofsolid_max
       INTEGER_T im_solid_max
+      INTEGER_T is_rigid_local(nmat)
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
        print *,"nmat bust"
@@ -13857,9 +13937,9 @@ contains
         print *,"errorid= ",errorid
         stop
        endif
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid_local(im).eq.0) then
         voffluid=voffluid+mofdata(vofcomp)
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid_local(im).eq.1) then
         vofsolid=vofsolid+mofdata(vofcomp)
         if (im_solid_max.eq.0) then
          im_solid_max=im
@@ -13876,10 +13956,10 @@ contains
         endif
 
        else
-        print *,"im invalid36"
+        print *,"is_rigid_local invalid36"
         stop
        endif
-      enddo ! im
+      enddo ! im=1..nmat
 
       if (voffluid.le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_base"
@@ -13893,7 +13973,7 @@ contains
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_rigid_local(im).eq.1) then
         if (vofsolid.gt.one) then
          mofdata(vofcomp)=mofdata(vofcomp)/vofsolid
         else if ((vofsolid.ge.zero).and.(vofsolid.le.one)) then
@@ -13902,7 +13982,7 @@ contains
          print *,"vofsolid invalid"
          stop
         endif
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_rigid_local(im).eq.0) then
         mofdata(vofcomp)=mofdata(vofcomp)/voffluid
        else
         print *,"is_rigid invalid"
@@ -13915,7 +13995,9 @@ contains
 
 
 ! vof,ref centroid,order,slope,intercept  x nmat
-      subroutine make_vfrac_sum_ok_copy(mofdata,mofdatavalid,nmat, &
+      subroutine make_vfrac_sum_ok_copy( &
+        tessellate, &
+        mofdata,mofdatavalid,nmat, &
         sdim,errorid)
       use probcommon_module
       use geometry_intersect_module
@@ -13923,13 +14005,26 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,sdim,errorid
+      INTEGER_T, intent(in) :: tessellate,nmat,sdim,errorid
       REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
       REAL_T, intent(out) :: mofdatavalid(nmat*ngeom_recon)
       INTEGER_T im
       INTEGER_T dir
       INTEGER_T vofcomp
       REAL_T voffluid,vofsolid,vof_test
+      INTEGER_T is_rigid_local(nmat)
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((nmat.ge.1).and.(nmat.le.MAX_NUM_MATERIALS)) then
        ! do nothing
@@ -13965,9 +14060,9 @@ contains
         print *,"vof_test invalid"
         stop
        endif
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid_local(im).eq.0) then
         voffluid=voffluid+vof_test
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid_local(im).eq.1) then
         vofsolid=vofsolid+vof_test
        else
         print *,"is_rigid invalid"
@@ -13987,7 +14082,8 @@ contains
        stop
       endif
 
-      call make_vfrac_sum_ok_base(mofdatavalid,nmat, &
+      call make_vfrac_sum_ok_base( &
+       tessellate,mofdatavalid,nmat, &
        sdim,errorid)
 
       return
@@ -14134,6 +14230,7 @@ contains
         ! shapeflag=0 find volumes within xsten_grid
         ! shapeflag=1 find volumes within xtet
         ! multi_cen is "absolute" (not relative to cell centroid)
+        ! tessellate==2 => is_rigid_local is zero for all materials
         ! tessellate==1 => both fluids and rigid materials considered and
         !                  they tessellate the region.
         ! tessellate==0 => both fluids and rigid materials considered;
@@ -14218,6 +14315,19 @@ contains
       INTEGER_T loop_counter
       INTEGER_T tessellate_local
       INTEGER_T sanity_check
+      INTEGER_T is_rigid_local(nmat)
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
@@ -14264,7 +14374,7 @@ contains
 
        ! sum Frigid <=1
        ! sum Ffluid = 1
-      call make_vfrac_sum_ok_copy(mofdata,mofdatavalid,nmat,sdim,1)
+      call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -14336,14 +14446,14 @@ contains
       nmat_fluid=0
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid_local(im).eq.0) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
         nmat_fluid=nmat_fluid+1
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid_local(im).eq.1) then
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
         nmat_solid=nmat_solid+1
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid_local invalid"
         stop
        endif
       enddo ! im
@@ -14375,6 +14485,8 @@ contains
        vfrac_mult=one
       else if (tessellate.eq.1) then 
        vfrac_mult=abs(one-vfrac_solid_sum)
+      else if (tessellate.eq.2) then 
+       vfrac_mult=one
       else
        print *,"tessellate invalid"
        stop
@@ -14388,13 +14500,13 @@ contains
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
 
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid_local(im).eq.0) then
          multi_volume(im)=uncaptured_volume_fluid* &
            vfrac_mult*mofdatasave(vofcomp)
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid_local(im).eq.1) then
          multi_volume(im)=uncaptured_volume_fluid*mofdatasave(vofcomp)
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid_local invalid"
          stop
         endif
 
@@ -14422,7 +14534,7 @@ contains
          vofcomp=(im_test-1)*ngeom_recon+1
 
          if ((material_used(im_test).eq.0).and. &
-             (is_rigid(nmat,im_test).eq.1)) then
+             (is_rigid_local(im_test).eq.1)) then
           if (mofdatasave(vofcomp).gt. &
               uncaptured_volume_fraction_solid-VOFTOL) then
            if (single_material.ne.0) then
@@ -14440,7 +14552,7 @@ contains
           endif
          else if (((material_used(im_test).ge.1).and. &
                    (material_used(im_test).le.nmat_solid)).or. &
-                   (is_rigid(nmat,im_test).eq.0)) then
+                   (is_rigid_local(im_test).eq.0)) then
           ! do nothing
          else
           print *,"material used bust"
@@ -14469,7 +14581,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
           mofdatalocal(vofcomp+sdim+1)=zero ! order=0
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
             ! flag>0 for solids already processed.
            if ((material_used(im).ge.1).and. &
                (material_used(im).le.nmat_solid)) then
@@ -14480,7 +14592,7 @@ contains
             print *,"material_used invalid"
             stop
            endif
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -14566,7 +14678,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
 
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
            testflag=NINT(mofdatalocal(vofcomp+sdim+1))
            testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! old flag
            if ((testflag_save.eq.1).and. & ! old flag= processed
@@ -14583,7 +14695,7 @@ contains
             print *,"testflag invalid"
             stop         
            endif 
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -14708,7 +14820,7 @@ contains
          vofcomp=(im_test-1)*ngeom_recon+1
 
          if ((material_used(im_test).eq.0).and. &
-             (is_rigid(nmat,im_test).eq.0)) then
+             (is_rigid_local(im_test).eq.0)) then
           if (mofdatasave(vofcomp).gt. &
               uncaptured_volume_fraction_fluid-VOFTOL) then
 
@@ -14727,7 +14839,7 @@ contains
           endif
          else if (((material_used(im_test).ge.1).and. &
                    (material_used(im_test).le.nmat)).or. &
-                  (is_rigid(nmat,im_test).eq.1)) then
+                  (is_rigid_local(im_test).eq.1)) then
           ! do nothing
          else
           print *,"material used bust"
@@ -14777,9 +14889,9 @@ contains
             stop
            endif
           else if (tessellate.eq.0) then
-           if (is_rigid(nmat,im).eq.1) then
+           if (is_rigid_local(im).eq.1) then
             ! do nothing
-           else if (is_rigid(nmat,im).eq.0) then
+           else if (is_rigid_local(im).eq.0) then
             if ((material_used(im).ge.1).and. &
                 (material_used(im).le.nmat_fluid)) then
              mofdatalocal(vofcomp+sdim+1)=material_used(im)
@@ -14891,7 +15003,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
 
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid_local(im).eq.0) then
            testflag=NINT(mofdatalocal(vofcomp+sdim+1))
            testflag_save=NINT(mofdatasave(vofcomp+sdim+1))
            if ((testflag_save.eq.num_processed_fluid+1).and. &
@@ -14909,7 +15021,7 @@ contains
             print *,"testflag invalid"
             stop         
            endif 
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -15048,7 +15160,6 @@ contains
       end subroutine multi_get_volume_grid
 
 
-
         ! for finding pair area fractions and centroids,
         !  input: mofdata_plus
         !         mofdata_minus
@@ -15057,11 +15168,6 @@ contains
         !         xsten0_minus,
         !         nhalf0,
         !         dir_plus=1..sdim
-        ! tessellate==1 => both fluids and rigid materials considered and
-        !                  they tessellate the region.
-        ! tessellate==0 => both fluids and rigid materials considered;
-        !                  fluids tessellate the region and the rigid
-        !                  materials are immersed.
         !
         ! (i)  call project_slopes_to_face for all interfaces.
         ! (ii) create thin box centered about the face.
@@ -15080,7 +15186,6 @@ contains
         ! output: multi_area_pair,multi_area_cen_pair (absolute coordinates)
         !
       subroutine multi_get_area_pairs( &
-       tessellate, &
        bfact,dx, &
        xsten0_plus, &
        xsten0_minus, & !phi = n dot (x-x0) + intercept (phi>0 in omega_m)
@@ -15108,7 +15213,6 @@ contains
       INTEGER_T, intent(in) :: nlist_alloc_plus
       INTEGER_T, intent(in) :: nlist_alloc_minus
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: caller_id
@@ -15146,6 +15250,10 @@ contains
       REAL_T multi_volume_minus_thin(nmat)
       REAL_T multi_area_minus_thin(nmat)
       REAL_T multi_cen_minus_thin(sdim,nmat)
+      REAL_T uncaptured_volume_start
+      REAL_T uncaptured_centroid_start(sdim)
+
+      INTEGER_T tessellate
 
       nhalf_thin=1
 
@@ -15214,10 +15322,35 @@ contains
       xsten_thin(0,dir_plus)=half*(xsten0_plus(-1,dir_plus)+ &
                                    xsten0_minus(1,dir_plus))
 
-      call make_vfrac_sum_ok_copy(mofdata_plus,mofdatavalid_plus, &
+      tessellate=0
+      call make_vfrac_sum_ok_copy(tessellate, &
+        mofdata_plus,mofdatavalid_plus, &
         nmat,sdim,3000)
-      call make_vfrac_sum_ok_copy(mofdata_minus,mofdatavalid_minus, &
+      call make_vfrac_sum_ok_copy(tessellate, &
+        mofdata_minus,mofdatavalid_minus, &
         nmat,sdim,3000)
+
+      call multi_get_volume_tessellate( &
+        bfact,dx, &
+        xsten0_plus,nhalf0, &
+        mofdatavalid_plus, &
+        xtetlist_plus, &
+        nlist_alloc_plus, &
+        nmax, &
+        nmat, &
+        sdim, &
+        caller_id)
+
+      call multi_get_volume_tessellate( &
+        bfact,dx, &
+        xsten0_minus,nhalf0, &
+        mofdatavalid_minus, &
+        xtetlist_minus, &
+        nlist_alloc_minus, &
+        nmax, &
+        nmat, &
+        sdim, &
+        caller_id)
 
       side=1
       call project_slopes_to_face( &
@@ -15231,6 +15364,10 @@ contains
         nmat,sdim,dir_plus,side)
 
       shapeflag=0
+
+      tessellate=2  ! 0=solids and fluids treated separately
+                    ! 1=non-tessellating slopes, but tessellating output
+                    ! 2=is_rigid_local is zero for all materials
 
       call multi_get_volume_grid( &
        tessellate, &
@@ -15267,6 +15404,25 @@ contains
        shapeflag,caller_id)
 
 
+
+
+
+
+
+
+
+
+      call Box_volumeFAST(bfact,dx, &
+         xsten_thin,nhalf_thin, &
+         uncaptured_volume_start, &
+         uncaptured_centroid_start,sdim)
+
+      if (uncaptured_volume_start.gt.zero) then
+       ! do nothing
+      else
+       print *,"uncaptured_volume_start invalid"
+       stop
+      endif
 
       return
       end subroutine multi_get_area_pairs
@@ -15353,7 +15509,19 @@ contains
       INTEGER_T loop_counter
       INTEGER_T tessellate_local
       INTEGER_T sanity_check
+      INTEGER_T is_rigid_local(nmat)
 
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
@@ -15412,7 +15580,7 @@ contains
 
        ! sum Frigid <=1
        ! sum Ffluid = 1
-      call make_vfrac_sum_ok_copy(mofdata,mofdatavalid,nmat,sdim,1)
+      call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -15464,10 +15632,10 @@ contains
       nmat_fluid=0
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid_local(im).eq.0) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
         nmat_fluid=nmat_fluid+1
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid_local(im).eq.1) then
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
         nmat_solid=nmat_solid+1
        else
@@ -15516,10 +15684,10 @@ contains
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
 
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid_local(im).eq.0) then
          multi_volume(im)=uncaptured_volume_target* &
            vfrac_mult*mofdatasave(vofcomp)
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid_local(im).eq.1) then
          multi_volume(im)=uncaptured_volume_target*mofdatasave(vofcomp)
         else
          print *,"is_rigid invalid"
@@ -15550,7 +15718,7 @@ contains
          vofcomp=(im_test-1)*ngeom_recon+1
 
          if ((material_used(im_test).eq.0).and. &
-             (is_rigid(nmat,im_test).eq.1)) then
+             (is_rigid_local(im_test).eq.1)) then
           if (mofdatasave(vofcomp).gt. &
               uncaptured_volume_fraction_solid-VOFTOL) then
            if (single_material.ne.0) then
@@ -15568,7 +15736,7 @@ contains
           endif
          else if (((material_used(im_test).ge.1).and. &
                    (material_used(im_test).le.nmat_solid)).or. &
-                   (is_rigid(nmat,im_test).eq.0)) then
+                   (is_rigid_local(im_test).eq.0)) then
           ! do nothing
          else
           print *,"material used bust"
@@ -15597,7 +15765,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
           mofdatalocal(vofcomp+sdim+1)=zero ! order=0
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
             ! flag>0 for solids already processed.
            if ((material_used(im).ge.1).and. &
                (material_used(im).le.nmat_solid)) then
@@ -15608,7 +15776,7 @@ contains
             print *,"material_used invalid"
             stop
            endif
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -15677,7 +15845,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
 
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
            testflag=NINT(mofdatalocal(vofcomp+sdim+1)) ! new flag
            testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! old flag
            if ((testflag_save.eq.1).and. & ! old flag= processed
@@ -15694,7 +15862,7 @@ contains
             print *,"testflag invalid"
             stop         
            endif 
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -15815,7 +15983,7 @@ contains
          vofcomp=(im_test-1)*ngeom_recon+1
 
          if ((material_used(im_test).eq.0).and. &
-             (is_rigid(nmat,im_test).eq.0)) then
+             (is_rigid_local(im_test).eq.0)) then
           if (mofdatasave(vofcomp).gt. &
               uncaptured_volume_fraction_fluid-VOFTOL) then
 
@@ -15834,7 +16002,7 @@ contains
           endif
          else if (((material_used(im_test).ge.1).and. &
                    (material_used(im_test).le.nmat)).or. &
-                  (is_rigid(nmat,im_test).eq.1)) then
+                  (is_rigid_local(im_test).eq.1)) then
           ! do nothing
          else
           print *,"material used bust"
@@ -15884,9 +16052,9 @@ contains
             stop
            endif
           else if (tessellate.eq.0) then
-           if (is_rigid(nmat,im).eq.1) then
+           if (is_rigid_local(im).eq.1) then
             ! do nothing
-           else if (is_rigid(nmat,im).eq.0) then
+           else if (is_rigid_local(im).eq.0) then
             if ((material_used(im).ge.1).and. &
                 (material_used(im).le.nmat_fluid)) then
              mofdatalocal(vofcomp+sdim+1)=material_used(im)
@@ -15980,7 +16148,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
 
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid_local(im).eq.0) then
            testflag=NINT(mofdatalocal(vofcomp+sdim+1))
            testflag_save=NINT(mofdatasave(vofcomp+sdim+1))
            if ((testflag_save.eq.num_processed_fluid+1).and. &
@@ -15998,7 +16166,7 @@ contains
             print *,"testflag invalid"
             stop         
            endif 
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -16237,6 +16405,21 @@ contains
       INTEGER_T loop_counter
       INTEGER_T tessellate_local
       INTEGER_T sanity_check
+      INTEGER_T is_rigid_local(nmat)
+
+      tessellate_local=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate_local.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate_local.eq.0).or.(tessellate_local.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
@@ -16293,7 +16476,8 @@ contains
 
        ! sum Frigid <=1
        ! sum Ffluid = 1
-      call make_vfrac_sum_ok_copy(mofdata,mofdatavalid,nmat,sdim,1)
+      call make_vfrac_sum_ok_copy(tessellate_local, &
+              mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -16353,10 +16537,10 @@ contains
       nmat_fluid=0
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid_local(im).eq.0) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
         nmat_fluid=nmat_fluid+1
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid_local(im).eq.1) then
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
         nmat_solid=nmat_solid+1
        else
@@ -16399,12 +16583,12 @@ contains
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
 
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid_local(im).eq.0) then
          multi_volume(im)=uncaptured_volume_fluid* &
            mofdatasave(vofcomp)
          multi_volume_map(im)=uncaptured_volume_fluid_map* &
            mofdatasave(vofcomp)
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid_local(im).eq.1) then
          multi_volume(im)=uncaptured_volume_fluid* &
            mofdatasave(vofcomp)
          multi_volume_map(im)=uncaptured_volume_fluid_map* &
@@ -16444,7 +16628,7 @@ contains
 
           ! material_used initialized to 0 above.
          if ((material_used(im_test).eq.0).and. &
-             (is_rigid(nmat,im_test).eq.1)) then
+             (is_rigid_local(im_test).eq.1)) then
           if (mofdatasave(vofcomp).gt. &
               uncaptured_volume_fraction_solid-VOFTOL) then
            if (single_material.ne.0) then
@@ -16462,7 +16646,7 @@ contains
           endif
          else if (((material_used(im_test).ge.1).and. &
                    (material_used(im_test).le.nmat_solid)).or. &
-                   (is_rigid(nmat,im_test).eq.0)) then
+                   (is_rigid_local(im_test).eq.0)) then
           ! do nothing
          else
           print *,"material used bust"
@@ -16499,7 +16683,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
           mofdatalocal(vofcomp+sdim+1)=zero ! order=0
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
             ! flag>0 for solids already processed.
            if ((material_used(im).ge.1).and. &
                (material_used(im).le.nmat_solid)) then
@@ -16510,7 +16694,7 @@ contains
             print *,"material_used invalid"
             stop
            endif
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -16580,7 +16764,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
 
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
            testflag=NINT(mofdatalocal(vofcomp+sdim+1))
            testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! old flag
            if ((testflag_save.eq.1).and. & ! old flag= processed
@@ -16597,7 +16781,7 @@ contains
             print *,"testflag invalid"
             stop         
            endif 
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -16735,7 +16919,7 @@ contains
           ! first check if a single fluid material
           ! takes up all the uncaptured space.
          if ((material_used(im_test).eq.0).and. &
-             (is_rigid(nmat,im_test).eq.0)) then
+             (is_rigid_local(im_test).eq.0)) then
           if (mofdatasave(vofcomp).gt. &
               uncaptured_volume_fraction_fluid-VOFTOL) then
 
@@ -16754,7 +16938,7 @@ contains
           endif
          else if (((material_used(im_test).ge.1).and. &
                    (material_used(im_test).le.nmat)).or. &
-                  (is_rigid(nmat,im_test).eq.1)) then
+                  (is_rigid_local(im_test).eq.1)) then
           ! do nothing
          else
           print *,"material used bust"
@@ -16793,9 +16977,9 @@ contains
           vofcomp=(im-1)*ngeom_recon+1
           mofdatalocal(vofcomp+sdim+1)=zero ! order=0
 
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid_local(im).eq.1) then
            ! do nothing
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid_local(im).eq.0) then
            if ((material_used(im).ge.1).and. &
                (material_used(im).le.nmat_fluid)) then
             mofdatalocal(vofcomp+sdim+1)=material_used(im)
@@ -16877,7 +17061,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
 
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid_local(im).eq.0) then
            testflag=NINT(mofdatalocal(vofcomp+sdim+1)) ! "progress" flag
            testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! original flag
            if ((testflag_save.eq.num_processed_fluid+1).and. &
@@ -16895,7 +17079,7 @@ contains
             print *,"testflag invalid"
             stop         
            endif 
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -17069,16 +17253,32 @@ contains
       REAL_T, intent(in) :: LS(nmat)
       REAL_T, intent(out) :: LS_new(nmat)
       INTEGER_T im,im_opp,im_tessellate
+      INTEGER_T tessellate
+      INTEGER_T is_rigid_local(nmat)
+
+      tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       do im=1,nmat
        LS_new(im)=LS(im)
       enddo
       do im=1,nmat
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid_local(im).eq.0) then
          ! im_tessellate=argmax_{im_opp<>im} LS(im_opp)
         im_tessellate=0
         do im_opp=1,nmat
-         if (is_rigid(nmat,im_opp).eq.0) then
+         if (is_rigid_local(im_opp).eq.0) then
           if (im_opp.ne.im) then
            if (im_tessellate.eq.0) then
             im_tessellate=im_opp
@@ -17092,10 +17292,10 @@ contains
             stop
            endif
           endif
-         else if (is_rigid(nmat,im_opp).eq.1) then
+         else if (is_rigid_local(im_opp).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im_opp) invalid"
+          print *,"is_rigid_local(im_opp) invalid"
           stop
          endif
         enddo !im_opp=1..nmat
@@ -17111,10 +17311,10 @@ contains
          print *,"im_tessellate invalid"
          stop
         endif
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid_local(im).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid(nmat,im) invalid"
+        print *,"is_rigid_local(im) invalid"
         stop
        endif
       enddo ! im=1..nmat
@@ -17132,22 +17332,38 @@ contains
       REAL_T, intent(out) :: LS_new(nmat)
       REAL_T LS_primary
       INTEGER_T im,im_primary
+      INTEGER_T tessellate
+      INTEGER_T is_rigid_local(nmat)
+
+      tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       call get_primary_material(LS,nmat,im_primary)
-      if (is_rigid(nmat,im_primary).eq.0) then
+      if (is_rigid_local(im_primary).eq.0) then
        do im=1,nmat
         LS_new(im)=LS(im)
        enddo
-      else if (is_rigid(nmat,im_primary).eq.1) then
+      else if (is_rigid_local(im_primary).eq.1) then
        LS_primary=LS(im_primary)
        if (LS_primary.lt.0) then
         print *,"LS_primary invalid"
         stop
        endif
        do im=1,nmat
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid_local(im).eq.1) then
          LS_new(im)=LS(im)
-        else if (is_rigid(nmat,im).eq.0) then
+        else if (is_rigid_local(im).eq.0) then
          if (LS(im).gt.-LS_primary) then
           LS_new(im)=-LS_primary
          else
@@ -17213,6 +17429,21 @@ contains
       INTEGER_T vofcomp_solid
       INTEGER_T imcrit,im_solid
       INTEGER_T sanity_check
+      INTEGER_T is_rigid_local(nmat)
+
+      tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
@@ -17252,15 +17483,15 @@ contains
  
        ! sum Frigid <=1
        ! sum Ffluid = 1
-      call make_vfrac_sum_ok_base(mofdata,nmat,sdim,1)
+      call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,sdim,1)
 
       fluid_vfrac_sum=zero
       solid_vfrac_sum=zero
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_rigid_local(im).eq.1) then
         solid_vfrac_sum=solid_vfrac_sum+mofdata(vofcomp)
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_rigid_local(im).eq.0) then
         fluid_vfrac_sum=fluid_vfrac_sum+mofdata(vofcomp)
        else
         print *,"is_rigid invalid"
@@ -17275,13 +17506,14 @@ contains
        stop
       endif
 
-      if (abs(solid_vfrac_sum-one).le.VOFTOL) then
+       ! only rigid material in cell
+      if (abs(solid_vfrac_sum-one).le.VOFTOL) then 
         
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid_local(im).eq.1) then
          mofdata(vofcomp)=mofdata(vofcomp)/solid_vfrac_sum
-        else if (is_rigid(nmat,im).eq.0) then
+        else if (is_rigid_local(im).eq.0) then
          mofdata(vofcomp)=zero
         else
          print *,"is_rigid invalid"
@@ -17289,13 +17521,14 @@ contains
         endif
        enddo ! im=1,nmat
 
+       ! only fluid materials in the cell.
       else if (abs(solid_vfrac_sum).le.VOFTOL) then
 
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid_local(im).eq.1) then
          mofdata(vofcomp)=zero
-        else if (is_rigid(nmat,im).eq.0) then
+        else if (is_rigid_local(im).eq.0) then
          mofdata(vofcomp)=mofdata(vofcomp)/fluid_vfrac_sum
         else
          print *,"is_rigid invalid"
@@ -17359,7 +17592,7 @@ contains
           mofdata(vofcomp+dir)=multi_cen(dir,im)-cencell(dir)
          enddo
 
-         if (is_rigid(nmat,im).eq.0) then
+         if (is_rigid_local(im).eq.0) then
           if (vfrac_save.gt.one-VOFTOL) then
            do im_solid=1,nmat
             vofcomp_solid=(im_solid-1)*ngeom_recon+1
@@ -17367,17 +17600,17 @@ contains
            enddo
            imcrit=0
            do im_solid=1,nmat
-            if (is_rigid(nmat,im_solid).eq.1) then
+            if (is_rigid_local(im_solid).eq.1) then
              if (imcrit.eq.0) then
               imcrit=im_solid
              else if (abs(vfracsolid(im_solid)-half).le. &
                       abs(vfracsolid(imcrit)-half)) then
               imcrit=im_solid
              endif
-            else if (is_rigid(nmat,im_solid).eq.0) then 
+            else if (is_rigid_local(im_solid).eq.0) then 
              ! do nothing
             else
-             print *,"is_rigid(nmat,im_solid) invalid"
+             print *,"is_rigid_local(im_solid) invalid"
              stop
             endif
            enddo ! im_solid=1..nmat
@@ -17401,10 +17634,10 @@ contains
             stop
            endif
           endif
-         else if (is_rigid(nmat,im).eq.1) then
+         else if (is_rigid_local(im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im) invalid"
+          print *,"is_rigid_local(im) invalid"
           stop
          endif
         else
@@ -17518,6 +17751,22 @@ contains
       INTEGER_T im,im3,dir,nc
       REAL_T disttest,dist_compare,LSSIGN
       REAL_T slopetest(sdim)
+      INTEGER_T is_rigid_local(nmat)
+      INTEGER_T tessellate
+
+      tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
@@ -17545,7 +17794,7 @@ contains
         print *,"im_test invalid"
         stop
        endif
-       if (is_rigid(nmat,im_test(nc)).ne.0) then
+       if (is_rigid_local(im_test(nc)).ne.0) then
         print *,"is_rigid invalid"
         stop
        endif
@@ -17604,7 +17853,7 @@ contains
         stop
        endif
 
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid_local(im).eq.0) then
 
         im_here=0
         im_opp_here=0
@@ -17714,7 +17963,7 @@ contains
          stop
         endif   
 
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid_local(im).eq.1) then
         ! do nothing
        else
         print *,"is_rigid invalid"
@@ -18187,6 +18436,22 @@ contains
        INTEGER_T sorted_list(nmat)
        REAL_T uncaptured_volume
        INTEGER_T im,vofcomp,FSI_exclude,irank,testflag,dir
+       INTEGER_T is_rigid_local(nmat)
+       INTEGER_T tessellate
+
+       tessellate=0
+
+       do im=1,nmat
+        is_rigid_local(im)=is_rigid(nmat,im)
+        if (tessellate.eq.2) then
+         is_rigid_local(im)=0
+        else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+         ! do nothing
+        else
+         print *,"tessellate invalid"
+         stop
+        endif
+       enddo ! im=1..nmat
 
        if (bfact.lt.1) then
         print *,"bfact invalid135"
@@ -18219,7 +18484,8 @@ contains
 
         ! sum F_fluid=1  
         ! sum F_solid<=1 
-       call make_vfrac_sum_ok_copy(mofdata,mofdatavalid,nmat,sdim,3)
+       call make_vfrac_sum_ok_copy(tessellate, &
+               mofdata,mofdatavalid,nmat,sdim,3)
 
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
@@ -18228,7 +18494,7 @@ contains
        FSI_exclude=1
        call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list,nmat)
        im=sorted_list(1)
-       if (is_rigid(nmat,im).ne.0) then
+       if (is_rigid_local(im).ne.0) then
         print *,"is_rigid invalid"
         stop
        endif
@@ -18244,7 +18510,7 @@ contains
         do while ((irank.le.nmat).and. &
                   (uncaptured_volume.gt.zero))
          do im=1,nmat
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid_local(im).eq.0) then
            vofcomp=(im-1)*ngeom_recon+1
            testflag=NINT(mofdatavalid(vofcomp+sdim+1))
            if (testflag.eq.irank) then
@@ -18267,7 +18533,7 @@ contains
              endif
             endif
            endif ! testflag=irank?
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -18347,8 +18613,21 @@ contains
       REAL_T xgrid_plus2(sdim)
       REAL_T xgrid_minus2(sdim)
       INTEGER_T tessellate
+      INTEGER_T is_rigid_local(nmat)
 
       tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if (nhalf_recon.lt.1) then
        print *,"nhalf_recon invalid"
@@ -18382,7 +18661,7 @@ contains
 
        ! sum F_fluid = 1
        ! sum F_solid <= 1
-      call make_vfrac_sum_ok_copy(mofdata,mofdatavalid,nmat,sdim,30)
+      call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,sdim,30)
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
@@ -18391,7 +18670,7 @@ contains
       FSI_exclude=1
       call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list,nmat)
       im=sorted_list(1)
-      if (is_rigid(nmat,im).ne.0) then
+      if (is_rigid_local(im).ne.0) then
        print *,"is_rigid invalid"
        stop
       endif
@@ -18419,7 +18698,7 @@ contains
          vofcomp=(im-1)*ngeom_recon+1
          testflag=NINT(mofdatavalid(vofcomp+sdim+1))
 
-         if (is_rigid(nmat,im).eq.0) then
+         if (is_rigid_local(im).eq.0) then
 
           if (testflag.eq.irank) then
            do dir=1,sdim
@@ -18662,7 +18941,7 @@ contains
 
            endif ! uncaptured_volume>0
           endif  ! testflag=irank
-         else if (is_rigid(nmat,im).eq.1) then
+         else if (is_rigid_local(im).eq.1) then
           ! do nothing
          else
           print *,"is_rigid invalid"
@@ -18879,8 +19158,22 @@ contains
       REAL_T intercept,ls,maxvof
       REAL_T vfrac_data(nmat)
       INTEGER_T vfrac_checked(nmat)
+      INTEGER_T is_rigid_local(nmat)
 
 #include "mofdata.H"
+
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if (ngeom_recon.ne.(2*sdim+3)) then
        print *,"ngeom_recon invalid"
@@ -18901,7 +19194,7 @@ contains
       endif
 
        ! sum voffluid=1 ,  sum vofsolid <= 1
-      call make_vfrac_sum_ok_copy(mofdata,mofdatavalid,nmat,sdim,300)
+      call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,sdim,300)
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
@@ -18921,7 +19214,7 @@ contains
        if (tessellate.eq.1) then
 
         do im=1,nmat
-         if (is_rigid(nmat,im).eq.1) then
+         if (is_rigid_local(im).eq.1) then
           if ((vfrac_data(im).ge.VOFTOL).and. &
               (vfrac_data(im).lt.one)) then
            vofcomp=(im-1)*ngeom_recon+1
@@ -18957,7 +19250,7 @@ contains
            print *,"vfrac_data invalid"
            stop
           endif
-         else if (is_rigid(nmat,im).eq.0) then
+         else if (is_rigid_local(im).eq.0) then
           ! do nothing
          else
           print *,"is_rigid invalid"
@@ -18987,7 +19280,7 @@ contains
           vofcomp=(im-1)*ngeom_recon+1
           testflag=NINT(mofdatavalid(vofcomp+sdim+1))
 
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid_local(im).eq.0) then
            if (testflag.eq.irank) then
             vfrac_checked(im)=1
             do dir=1,sdim
@@ -19007,7 +19300,7 @@ contains
                mofdatavalid(vofcomp)
             endif
            endif  ! testflag=irank
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -19024,7 +19317,7 @@ contains
          im_crit=0
          maxvof=zero
          do im=1,nmat
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid_local(im).eq.0) then
            if (vfrac_checked(im).eq.1) then
             ! do nothing
            else if (vfrac_checked(im).eq.0) then
@@ -19036,7 +19329,7 @@ contains
             print *,"vfrac_checked invalid"
             stop
            endif
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
            print *,"is_rigid invalid"
@@ -19088,6 +19381,22 @@ contains
       REAL_T, intent(in) :: LS(nmat)
       INTEGER_T, intent(out) :: im_primary
       INTEGER_T im,imtest
+      INTEGER_T tessellate
+      INTEGER_T is_rigid_local(nmat)
+
+      tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
        print *,"nmat invalid get_primary_material"
@@ -19097,7 +19406,7 @@ contains
 
       im_primary=0
       do im=1,nmat
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_rigid_local(im).eq.1) then
         if (LS(im).ge.zero) then
          if (im_primary.ne.0) then
           print *,"cannot have two rigid materials in same place"
@@ -19113,7 +19422,7 @@ contains
          print *,"LS bust"
          stop
         endif
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_rigid_local(im).eq.0) then
         ! do nothing
        else
         print *,"is_rigid invalid"
@@ -19141,7 +19450,7 @@ contains
          endif
        enddo !im=1..nmat
 
-      else if (is_rigid(nmat,im_primary).eq.1) then
+      else if (is_rigid_local(im_primary).eq.1) then
        ! do nothing
       else
        print *,"is_rigid or im_primary invalid"
@@ -19166,6 +19475,22 @@ contains
       INTEGER_T im
       INTEGER_T im_crit_fluid,im_crit_solid
       REAL_T sum_vfrac_fluid,sum_vfrac_solid,VOFSUM
+      INTEGER_T tessellate
+      INTEGER_T is_rigid_local(nmat)
+
+      tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
        print *,"nmat invalid get_primary_material_VFRAC"
@@ -19187,7 +19512,7 @@ contains
         stop
        endif
 
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_rigid_local(im).eq.1) then
 
         if (im_crit_solid.eq.0) then
          im_crit_solid=im
@@ -19198,7 +19523,7 @@ contains
         endif
         sum_vfrac_solid=sum_vfrac_solid+VFRAC(im)
 
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_rigid_local(im).eq.0) then
 
         if (im_crit_fluid.eq.0) then
          im_crit_fluid=im
@@ -19260,6 +19585,19 @@ contains
       INTEGER_T im_fluid_max,im_solid_max
       REAL_T sum_solid_vfrac,sum_fluid_vfrac
       REAL_T max_solid_vfrac,max_fluid_vfrac
+      INTEGER_T is_rigid_local(nmat)
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
        print *,"nmat invalid check_full_cell_vfrac"
@@ -19292,7 +19630,7 @@ contains
 
       do im=1,nmat
 
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_rigid_local(im).eq.1) then
         sum_solid_vfrac=sum_solid_vfrac+vfrac(im)
         if (im_solid_max.eq.0) then
          im_solid_max=im
@@ -19306,7 +19644,7 @@ contains
          print *,"im_solid_max invalid"
          stop
         endif
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_rigid_local(im).eq.0) then
         sum_fluid_vfrac=sum_fluid_vfrac+vfrac(im)
         if (im_fluid_max.eq.0) then
          im_fluid_max=im
@@ -19405,6 +19743,23 @@ contains
       INTEGER_T, intent(in) :: im_secondary
       INTEGER_T, intent(out) :: im_tertiary
       INTEGER_T im_3
+      INTEGER_T tessellate
+      INTEGER_T im
+      INTEGER_T is_rigid_local(nmat)
+
+      tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((nmat.ge.1).and.(nmat.le.MAX_NUM_MATERIALS)) then
        ! do nothing
@@ -19431,7 +19786,7 @@ contains
       im_tertiary=0
 
       do im_3=1,nmat
-       if (is_rigid(nmat,im_3).eq.0) then
+       if (is_rigid_local(im_3).eq.0) then
         if ((im_3.ne.im_primary).and. &
             (im_3.ne.im_secondary)) then
          if (im_tertiary.eq.0) then
@@ -19452,10 +19807,10 @@ contains
          print *,"im_3 invalid"
          stop
         endif
-       else if (is_rigid(nmat,im_3).eq.1) then
+       else if (is_rigid_local(im_3).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid(nmat,im_3) invalid"
+        print *,"is_rigid_local(im_3) invalid"
         stop
        endif
       enddo !im_3=1..nmat
@@ -19479,6 +19834,22 @@ contains
       REAL_T, intent(in) :: vfrac_data(nmat)
       INTEGER_T, intent(out) :: sorted_list(nmat)
       INTEGER_T im,changed,nsweeps,swap,do_swap
+      INTEGER_T tessellate
+      INTEGER_T is_rigid_local(nmat)
+
+      tessellate=0
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (tessellate.eq.2) then
+        is_rigid_local(im)=0
+       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        ! do nothing
+       else
+        print *,"tessellate invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
        print *,"nmat invalid sort_volume_fraction"
@@ -19516,12 +19887,12 @@ contains
         else if ((FSI_exclude.eq.1).or. & ! consider only fluids
                  (FSI_exclude.eq.0)) then ! consider only solids
 
-         if (is_rigid(nmat,sorted_list(im)).eq.FSI_exclude) then
+         if (is_rigid_local(sorted_list(im)).eq.FSI_exclude) then
           do_swap=1
-         else if (is_rigid(nmat,sorted_list(im+1)).eq.FSI_exclude) then
+         else if (is_rigid_local(sorted_list(im+1)).eq.FSI_exclude) then
           do_swap=0
-         else if ((is_rigid(nmat,sorted_list(im)).eq.1-FSI_exclude).and. &
-                  (is_rigid(nmat,sorted_list(im+1)).eq.1-FSI_exclude)) then
+         else if ((is_rigid_local(sorted_list(im)).eq.1-FSI_exclude).and. &
+                  (is_rigid_local(sorted_list(im+1)).eq.1-FSI_exclude)) then
           if (vfrac_data(sorted_list(im)).lt. &
               vfrac_data(sorted_list(im+1))) then
            do_swap=1

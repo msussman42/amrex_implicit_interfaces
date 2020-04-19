@@ -9221,9 +9221,10 @@ END SUBROUTINE SIMP
                use_ls_data=0
                mof_verbose=0
                continuous_mof=0
+               tessellate=0
 
                 ! sum F_fluid=1  sum F_solid<=1
-               call make_vfrac_sum_ok_base(mofdatafine,nmat,SDIM,304)
+               call make_vfrac_sum_ok_base(tessellate,mofdatafine,nmat,SDIM,304)
 
                call multimaterial_MOF( &
                 bfact_f,dxf,xstenfine,nhalf, &
@@ -9239,7 +9240,6 @@ END SUBROUTINE SIMP
                 continuous_mof, &
                 nmat,SDIM,3)
 
-               tessellate=0
                call multi_get_volume_grid_simple( &
                 tessellate, &
                 bfact_f,dxf,xstenfine,nhalf, &

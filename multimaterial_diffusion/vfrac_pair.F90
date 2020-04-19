@@ -1056,6 +1056,7 @@ contains
 
     integer                     :: is_processed(nmat)
 
+    tessellate=1
 
     if (ngeom_recon.ne.2*sdim+3) then
      print *,"ngeom_recon invalid"
@@ -1128,7 +1129,7 @@ contains
      ! do nothing, there are no internal faces
     else if (vcenter(im_crit).gt.zero) then
      ! normalize the volume fractions so that the sum is 1.
-     call make_vfrac_sum_ok_copy(mofdata,mofdatavalid,nmat,SDIM,3001)
+     call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,SDIM,3001)
 
      do im=1,nmat
       is_processed(im)=0
@@ -1157,7 +1158,6 @@ contains
          ! perturb interface into the other materials
          mofdatavalid(vofcomp+2*SDIM+2)=intercept+half*FACETOL_DVOL*dx(1)
          shapeflag=0
-         tessellate=1
 
          call multi_get_volume_grid( &
           tessellate, &

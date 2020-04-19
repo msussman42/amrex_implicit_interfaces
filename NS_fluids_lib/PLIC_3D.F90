@@ -159,8 +159,11 @@ stop
       INTEGER_T mof_verbose,use_ls_data,nhalfbox
       REAL_T dxmaxLS
       INTEGER_T debugslope
+      INTEGER_T tessellate
 
 #include "mofdata.H"
+
+      tessellate=0
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -320,7 +323,7 @@ stop
 
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
-       call make_vfrac_sum_ok_base(mofdata,nmat,SDIM,6)
+       call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,6)
 
        do im=1,nmat
         vofcomprecon=(im-1)*ngeom_recon+1
@@ -492,7 +495,7 @@ stop
 
            ! sum of F_fluid=1
            ! sum of F_rigid<=1
-          call make_vfrac_sum_ok_base(mofsten,nmat,SDIM,6)
+          call make_vfrac_sum_ok_base(tessellate,mofsten,nmat,SDIM,6)
 
           do im=1,nmat
            vofcomprecon=(im-1)*ngeom_recon+1

@@ -2891,7 +2891,7 @@ stop
         else if (im_crit.eq.0) then
 
          ! sum F_fluid=1  sum F_solid<=1
-         call make_vfrac_sum_ok_copy(mofdata,mofdatavalid, &
+         call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid, &
            nmat,SDIM,3)
 
          shapeflag=0
@@ -16660,8 +16660,10 @@ stop
       INTEGER_T partid
       INTEGER_T partid_max
       REAL_T xfluid,xghost
+      INTEGER_T tessellate
 
-     
+      tessellate=0
+
       nmax=POLYGON_LIST_MAX  ! in: RENORMALIZE_PRESCRIBE
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -17493,7 +17495,7 @@ stop
 
           ! sum of F_fluid=1
           ! sum of F_rigid<=1
-         call make_vfrac_sum_ok_base(mofnew,nmat,SDIM,12)
+         call make_vfrac_sum_ok_base(tessellate,mofnew,nmat,SDIM,12)
 
          do im=1,nmat*(1+SDIM)
           lsnew(D_DECL(i,j,k),im)=ls_hold(im)
@@ -17507,7 +17509,7 @@ stop
           print *,"i,j,k ",i,j,k
          endif
 
-         call make_vfrac_sum_ok_base(mofnew,nmat,SDIM,13)
+         call make_vfrac_sum_ok_base(tessellate,mofnew,nmat,SDIM,13)
         else
          print *,"renormalize only invalid"
          stop
@@ -17597,6 +17599,9 @@ stop
       REAL_T cengrid(SDIM)
       INTEGER_T mask_test
       INTEGER_T FSI_exclude
+      INTEGER_T tessellate
+
+      tessellate=0
 
       nhalf=3
  
@@ -17758,7 +17763,7 @@ stop
          endif
         enddo ! im=1...nmat
          ! sum F_fluid=1  sum F_solid <=1
-        call make_vfrac_sum_ok_base(mofdata,nmat,SDIM,14)
+        call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,14)
         do im=1,nmat
          vofcompraw=(im-1)*ngeom_raw+1
          vofcomprecon=(im-1)*ngeom_recon+1

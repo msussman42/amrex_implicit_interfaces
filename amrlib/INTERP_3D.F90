@@ -181,6 +181,8 @@ stop
        stop
       endif 
 
+      tessellate=0
+
       nhalf=3
       nhalfgrid=1
 
@@ -253,7 +255,7 @@ stop
        call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
 
         ! sum F_fluid=1  sum F_solid <= 1
-       call make_vfrac_sum_ok_base(mofdata,nmat,SDIM,304)
+       call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,304)
 
        call multimaterial_MOF( &
          bfact_coarse,dxc,xsten,nhalf, &
@@ -350,7 +352,6 @@ stop
                endif
               enddo ! dir
 
-              tessellate=0
               call multi_get_volume_grid_simple( &
                tessellate, &
                bfact_coarse,dxc,xsten,nhalf, &
@@ -809,6 +810,8 @@ stop
       nhalf=3
       nhalfgrid=1
 
+      tessellate=0
+
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid"
        stop
@@ -924,7 +927,6 @@ stop
                endif
               enddo ! dir
 
-              tessellate=0
               call multi_get_volume_grid_simple( &
                tessellate, &
                bfact_coarse,dxc,xsten,nhalf, &
@@ -1043,7 +1045,7 @@ stop
          domlo,bfact_fine,dxf,nhalf)
 
         ! sum F_fluid=1  sum F_solid<=1
-       call make_vfrac_sum_ok_base(mofdata,nmat,SDIM,304)
+       call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,304)
 
        call multimaterial_MOF( &
          bfact_fine,dxf,xstenfine,nhalf, &
