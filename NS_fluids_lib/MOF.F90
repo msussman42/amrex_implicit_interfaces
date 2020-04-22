@@ -15440,8 +15440,12 @@ contains
       REAL_T multi_volume_minus_thin(nmat)
       REAL_T multi_area_minus_thin(nmat)
       REAL_T multi_cen_minus_thin(sdim,nmat)
+      REAL_T uncaptured_volume_fraction_fluid
       REAL_T uncaptured_volume_START
       REAL_T uncaptured_centroid_START(sdim)
+
+      INTEGER_T num_processed_fluid
+      INTEGER_T material_used(nmat)
 
       INTEGER_T tessellate
 
@@ -15694,11 +15698,12 @@ contains
         stop
        endif
 
-       if (fastflag.eq.0) then
+       if (fastflag.eq.0) then ! num_processed_fluid>=1
 
         ! only xsten0(0,dir) dir=1..sdim used
         ! intersects xsten_thin with the compliments of already
-        ! initialized materials.
+        ! initialized materials. (i.e. materials with 
+        ! 1<=material_used(im)<=nmat)
         call tets_box_planes( &
           tessellate, &
           bfact,dx, &
@@ -15821,6 +15826,8 @@ contains
         stop
        endif
 
+       critical_material=0
+
        if ((single_material.gt.0).and. &
            (remaining_vfrac.lt.VOFTOL)) then
 
@@ -15844,7 +15851,6 @@ contains
        else if ((single_material.eq.0).or. &
                 (remaining_vfrac.ge.VOFTOL)) then
 
-        critical_material=0
         do im=1,nmat
          vofcomp=(im-1)*ngeom_recon+1
 
