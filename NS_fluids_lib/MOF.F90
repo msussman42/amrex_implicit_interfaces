@@ -15670,59 +15670,36 @@ contains
         endif
        enddo  ! im_test=1..nmat
 
-       if ((single_material.gt.0).and. &
-           (remaining_vfrac.lt.VOFTOL)) then
-
-        vofcomp=(single_material-1)*ngeom_recon+1
-        do im_opp=1,nmat
-         multi_volume_pair(single_material,im_opp)= &
-                 multi_volume_plus_thin(im_opp)
-         do dir_local=1,sdim
-          multi_volume_cen_pair(single_material,im_opp,dir_local)= &
-             multi_cen_plus_thin(dir_local,im_opp)
-         enddo
-        enddo
-
-        uncaptured_volume_fluid=zero
-        uncaptured_volume_fraction_fluid=zero
-
-        num_processed_fluid=num_processed_fluid+1
-
-        material_used(single_material)=num_processed_fluid
-
-       else if ((single_material.eq.0).or. &
-                (remaining_vfrac.ge.VOFTOL)) then
-
-        do im=1,nmat
-         vofcomp=(im-1)*ngeom_recon+1
-         mofdataproject_minus(vofcomp+sdim+1)=zero ! order=0
-         if ((material_used(im).ge.1).and. &
-             (material_used(im).le.nmat)) then
-          mofdataproject_minus(vofcomp+sdim+1)=material_used(im)
-         else if (material_used(im).eq.0) then
-          ! do nothing
-         else
-          print *,"material_used invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-
-        if ((num_processed_fluid.gt.0).and. &
-            (num_processed_fluid.lt.nmat)) then
-         fastflag=0
-        else if (num_processed_fluid.eq.0) then
-         fastflag=1
-        else          
-         print *,"num_processed_fluid invalid"
+       do im=1,nmat
+        vofcomp=(im-1)*ngeom_recon+1
+        mofdataproject_minus(vofcomp+sdim+1)=zero ! order=0
+        if ((material_used(im).ge.1).and. &
+            (material_used(im).le.nmat)) then
+         mofdataproject_minus(vofcomp+sdim+1)=material_used(im)
+        else if (material_used(im).eq.0) then
+         ! do nothing
+        else
+         print *,"material_used invalid"
          stop
         endif
+       enddo ! im=1..nmat
 
-        if (fastflag.eq.0) then
+       if ((num_processed_fluid.gt.0).and. &
+           (num_processed_fluid.lt.nmat)) then
+        fastflag=0
+       else if (num_processed_fluid.eq.0) then
+        fastflag=1
+       else          
+        print *,"num_processed_fluid invalid"
+        stop
+       endif
 
-            ! only xsten0(0,dir) dir=1..sdim used
-            ! intersects xsten_thin with the compliments of already
-            ! initialized materials.
-         call tets_box_planes( &
+       if (fastflag.eq.0) then
+
+        ! only xsten0(0,dir) dir=1..sdim used
+        ! intersects xsten_thin with the compliments of already
+        ! initialized materials.
+        call tets_box_planes( &
           tessellate, &
           bfact,dx, &
           xsten0_minus,nhalf0, &
@@ -15732,12 +15709,12 @@ contains
           nlist_alloc_minus, &
           nlist,nmax,nmat,sdim)
 
-         call get_cut_geom3D(xtetlist_minus, &
+        call get_cut_geom3D(xtetlist_minus, &
            nlist_alloc_minus,nlist,nmax, &
            volcut,cencut,sdim)
 
-         if (abs(volcut-uncaptured_volume_fluid).gt. &
-             VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+        if (abs(volcut-uncaptured_volume_fluid).gt. &
+            VOFTOL_MULTI_VOLUME_SANITY*volcell) then
           print *,"volcut invalid multi get area pairs 2 "
           print *,"volcut= ",volcut
           print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
@@ -15758,11 +15735,11 @@ contains
            print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
           enddo 
           stop
-         endif
+        endif
 
-         if ((critical_material.ge.1).and.(critical_material.le.nmat)) then
-          if ((material_used(critical_material).ge.1).and. &
-              (material_used(critical_material).le.nmat)) then
+        if ((critical_material.ge.1).and.(critical_material.le.nmat)) then
+         if ((material_used(critical_material).ge.1).and. &
+             (material_used(critical_material).le.nmat)) then
 
            call multi_get_volume_tetlist( &
             tessellate, &
@@ -15821,28 +15798,51 @@ contains
             endif
            enddo ! im_opp=1..nmat
 
-          else 
+         else 
            print *,"material_used(critical_material) invalid"
            stop
-          endif
-         else
-          print *,"critical_material invalid"
-          stop
          endif
-
-        else if (fastflag.eq.1) then
-
-         if (critical_material.eq.0) then
-          ! do nothing
-         else
-          print *,"critical_material invalid"
-          stop
-         endif
-
-        else 
-         print *,"fastflag invalid multi get area pairs"
+        else
+         print *,"critical_material invalid"
          stop
         endif
+
+       else if (fastflag.eq.1) then
+
+        if (critical_material.eq.0) then
+         ! do nothing
+        else
+         print *,"critical_material invalid"
+         stop
+        endif
+
+       else 
+        print *,"fastflag invalid multi get area pairs"
+        stop
+       endif
+
+       if ((single_material.gt.0).and. &
+           (remaining_vfrac.lt.VOFTOL)) then
+
+        vofcomp=(single_material-1)*ngeom_recon+1
+        do im_opp=1,nmat
+         multi_volume_pair(single_material,im_opp)= &
+                 multi_volume_plus_thin(im_opp)
+         do dir_local=1,sdim
+          multi_volume_cen_pair(single_material,im_opp,dir_local)= &
+             multi_cen_plus_thin(dir_local,im_opp)
+         enddo
+        enddo
+
+        uncaptured_volume_fluid=zero
+        uncaptured_volume_fraction_fluid=zero
+
+        num_processed_fluid=num_processed_fluid+1
+
+        material_used(single_material)=num_processed_fluid
+
+       else if ((single_material.eq.0).or. &
+                (remaining_vfrac.ge.VOFTOL)) then
 
         critical_material=0
         do im=1,nmat
