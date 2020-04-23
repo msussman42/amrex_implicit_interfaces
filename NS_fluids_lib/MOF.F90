@@ -15349,6 +15349,34 @@ contains
       return
       end subroutine multi_get_volume_tetlist
 
+      subroutine project_centroid_box(cen_in,xsten,nhalf,sdim)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
+      REAL_T, intent(inout) :: cen_in(sdim)
+
+      INTEGER_T dir_local
+
+      do dir_local=1,sdim
+       if (cen_in(dir_local).lt.xsten(-1,dir_local)) then
+        cen_in(dir_local)=xsten(-1,dir_local)
+       else if (cen_in(dir_local).gt.xsten(1,dir_local)) then
+        cen_in(dir_local)=xsten(1,dir_local)
+       else if ((cen_in(dir_local).ge.xsten(-1,dir_local)).and. &
+                (cen_in(dir_local).le.xsten(1,dir_local))) then
+        ! do nothing
+       else
+        print *,"cen_in invalid"
+        stop
+       endif
+      enddo
+
+      return
+      end subroutine project_centroid_box
+
+
 
         ! for finding pair area fractions and centroids,
         !  input: mofdata_plus
@@ -15437,10 +15465,22 @@ contains
       REAL_T multi_area_plus_thin(nmat)
       REAL_T multi_cen_plus_thin(sdim,nmat)
 
+      REAL_T multi_volume_plus_thin_shrink(nmat)
+      REAL_T multi_area_plus_thin_shrink(nmat)
+      REAL_T multi_cen_plus_thin_shrink(sdim,nmat)
+
       REAL_T multi_volume_minus_thin(nmat)
       REAL_T multi_area_minus_thin(nmat)
       REAL_T multi_cen_minus_thin(sdim,nmat)
+
+      REAL_T multi_area_pair(nmat,nmat)
+      REAL_T multi_volume_pair(nmat,nmat)
+
+      REAL_T multi_area_cen_pair(nmat,nmat,sdim)
+      REAL_T multi_volume_cen_pair(nmat,nmat,sdim)
+
       REAL_T uncaptured_volume_fraction_fluid
+      REAL_T uncaptured_volume_fluid
       REAL_T uncaptured_volume_START
       REAL_T uncaptured_centroid_START(sdim)
 
@@ -15448,6 +15488,18 @@ contains
       INTEGER_T material_used(nmat)
 
       INTEGER_T tessellate
+
+      INTEGER_T nlist
+      INTEGER_T loop_counter 
+      INTEGER_T single_material 
+      INTEGER_T critical_material 
+      INTEGER_T fastflag
+      INTEGER_T vofcomp
+      REAL_T remaining_vfrac
+      REAL_T vfrac_fluid_sum
+      REAL_T volcut
+      REAL_T cencut(sdim)
+      REAL_T vol_old,vol_new,vol_diff
 
       nhalf_thin=1
 
@@ -15510,6 +15562,13 @@ contains
 
       dxthin=FACETOL_DVOL*half* &
               (xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
+      if (dxthin.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxthin invalid"
+       stop
+      endif
+
       do isten=-1,1
        do dir_local=1,sdim
         xsten_thin(isten,dir_local)=xsten0_plus(isten,dir_local)
@@ -15614,13 +15673,17 @@ contains
        stop
       endif
 
+      uncaptured_volume_fluid=uncaptured_volume_START
+
       vfrac_fluid_sum=zero
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
        vfrac_fluid_sum=vfrac_fluid_sum+mofdataproject_minus(vofcomp)
       enddo ! im
 
-      if (abs(one-vfrac_fluid_sum).gt.VOFTOL) then
+      if (abs(one-vfrac_fluid_sum).le.VOFTOL) then
+       ! do nothing
+      else
        print *,"vfrac_fluid_sum invalid multi_get_area_pairs"
        stop
       endif
