@@ -15655,6 +15655,7 @@ contains
          uncaptured_volume_START, &
          uncaptured_centroid_START,sdim)
 
+       ! can use "subroutine gridarea" instead (declared in GLOBALUTIL.F90).
       uncaptured_area=uncaptured_volume_START/(2.0*dxthin)
       if (levelrz.eq.0) then
        ! do nothing

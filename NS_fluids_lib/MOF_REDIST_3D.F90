@@ -2028,6 +2028,7 @@ stop
 
         do dir=1,SDIM
         do side=1,2
+          ! areacen in absolute coordinate system.
          call gridarea(xsten,nhalf,levelrz,dir-1,side-1, &
           totalface(dir,side,1),areacen)
          do dir2=1,SDIM
@@ -2041,7 +2042,7 @@ stop
          do dir=1,SDIM
          do side=1,2
           localface(im_crit,dir,side,1)=one ! area fraction
-           ! centroid of face
+           ! centroid of face (absolute coordinate system)
           do dir2=1,SDIM
            localface(im_crit,dir,side,1+dir2)=totalface(dir,side,1+dir2)
           enddo
@@ -2095,6 +2096,8 @@ stop
            nmat,SDIM,dir,side)
 
            ! base case (also area fractions)
+           ! multi_cen in absolute coordinate system (not relative to cell
+           ! centroid)
            ! in: FORT_FACEINIT
           call multi_get_volume_grid( &
             tessellate, &
@@ -2134,10 +2137,12 @@ stop
            do im=1,nmat
             vcenter_thin(im)=multi_volume(im)/total_vol
             localface(im,dir,side,1)=vcenter_thin(im)
+             ! absolute coordinate system.
             do dir2=1,SDIM
              localface(im,dir,side,1+dir2)=multi_cen(dir2,im)
             enddo
              ! centroid in normal direction to face=centroid of face.
+             ! absolute coordinate system.
             localface(im,dir,side,1+dir)=totalface(dir,side,1+dir)
            enddo ! im=1..nmat
           else
@@ -2646,6 +2651,8 @@ stop
          enddo
         enddo 
 
+         ! centroid in absolute coordinate system.
+         ! centroid is 2,...,sdim+1 components
         iface=0
         do im=1,nmat
          do dir=1,SDIM

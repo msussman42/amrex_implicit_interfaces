@@ -2117,7 +2117,8 @@ stop
       return
       end subroutine FORT_L1_DISTANCE
 
-
+       ! facefab is initialized in FORT_FACEINIT
+       ! centroids in facefab are in an absolute coordinate system.
       subroutine FORT_FACEPROCESS( &
        tid, &
        dir, &
@@ -2347,6 +2348,7 @@ stop
           stop
          endif 
 
+          ! absolute coordinate system.
          do dir2=1,SDIM
           x_left(dir2,im)=leftface(im,dir2+1)
           x_right(dir2,im)=rightface(im,dir2+1)
