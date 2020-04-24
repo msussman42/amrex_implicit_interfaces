@@ -2167,8 +2167,9 @@ stop
       INTEGER_T, intent(in) :: rz_flag
       REAL_T, intent(in) :: time
 
-      INTEGER_T i,j,k,im,iface,side
+      INTEGER_T i,j,k,iface,side
       INTEGER_T ii,jj,kk
+      INTEGER_T im,im_opp
 
       INTEGER_T nface_src_test,nface_dst_test,vofcomp
       REAL_T mofdata_left(nmat*ngeom_recon)
@@ -2189,12 +2190,13 @@ stop
       REAL_T frac_right(nmat)
       REAL_T left_total
       REAL_T right_total
+      REAL_T vol_total
       REAL_T x_left(SDIM,nmat)
       REAL_T x_right(SDIM,nmat)
       INTEGER_T ml,mr
-      REAL_T frac_pair(nmat,nmat)
+      REAL_T frac_pair(nmat,nmat)  !(m_left,m_right)
       REAL_T dist_pair(nmat,nmat)
-      REAL_T x_pair(nmat,nmat,SDIM) 
+      REAL_T x_pair(nmat,nmat,SDIM)  ! (m_left,m_right)
       REAL_T dpair
       REAL_T delta,RR
       REAL_T xstenMAC(-1:1,SDIM)
@@ -2417,8 +2419,51 @@ stop
 
         enddo ! im=1..nmat
 
-        call vfrac_pair_along_side(nmat,frac_left,frac_right, &
-         x_left,x_right,frac_pair,x_pair,L_face,tessellate,dir+1)
+          ! x_pair in absolute coordinate system.
+        caller_id=11
+        call multi_get_area_pairs( &
+          bfact,dx, &
+          xsten_right, &
+          xsten_left, &
+          nhalf, &
+          mofdata_right, &
+          mofdata_left, &
+          nmat, &
+          dir+1, &
+          frac_pair, & ! left,right
+          x_pair, & ! left,right
+          SDIM,
+          xtetlist_plus, &
+          nlist_alloc_plus, &
+          xtetlist_minus, &
+          nlist_alloc_minus, &
+          nmax, &
+          caller_id)
+
+        if (1.eq.0) then
+                ! left=outside  right=inside
+         call vfrac_pair_along_side(nmat,frac_left,frac_right, &
+          x_left,x_right,frac_pair,x_pair,L_face,tessellate,dir+1)
+        endif
+
+        vol_total=zero
+        do im=1,nmat
+        do im_opp=1,nmat
+         vol_total=vol_total+frac_pair(im,im_opp)
+        enddo
+        enddo
+        if (vol_total.gt.zero) then
+
+         do im=1,nmat
+         do im_opp=1,nmat
+          frac_pair(im,im_opp)=frac_pair(im,im_opp)/vol_total
+         enddo
+         enddo
+
+        else
+         print *,"vol_total invalid"
+         stop
+        endif
 
         delta=xsten_right(0,dir+1)-xsten_left(0,dir+1)
         if (delta.le.zero) then

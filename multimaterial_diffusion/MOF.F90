@@ -15411,8 +15411,8 @@ contains
        mofdata_minus, & ! vfrac,centroid(unused),order,slope,intercept
        nmat, &
        dir_plus, & ! 1..sdim
-       multi_area_pair, & ! (nmat,nmat)
-       multi_area_cen_pair, & ! (nmat,nmat,sdim)
+       multi_area_pair, & ! (nmat,nmat) (left,right)
+       multi_area_cen_pair, & ! (nmat,nmat,sdim) (left,right)
        sdim, &
        xtetlist_plus, &
        nlist_alloc_plus, &
