@@ -2203,8 +2203,12 @@ stop
       INTEGER_T nhalfMAC
       INTEGER_T at_RZ_face
       REAL_T L_face
+      INTEGER_T nmax
+      INTEGER_T caller_id
  
       L_face=dx(dir+1)
+
+      nmax=POLYGON_LIST_MAX  ! in: FACE_PROCESS
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -2420,7 +2424,7 @@ stop
         enddo ! im=1..nmat
 
           ! x_pair in absolute coordinate system.
-        caller_id=11
+        caller_id=12
         call multi_get_area_pairs( &
           bfact,dx, &
           xsten_right, &
@@ -2432,11 +2436,11 @@ stop
           dir+1, &
           frac_pair, & ! left,right
           x_pair, & ! left,right
-          SDIM,
-          xtetlist_plus, &
-          nlist_alloc_plus, &
-          xtetlist_minus, &
-          nlist_alloc_minus, &
+          SDIM, &
+          geom_xtetlist(1,1,1,tid+1), &
+          nmax, &
+          geom_xtetlist_old(1,1,1,tid+1), &
+          nmax, &
           nmax, &
           caller_id)
 
