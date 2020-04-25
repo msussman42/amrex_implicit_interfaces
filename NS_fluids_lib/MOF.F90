@@ -15479,6 +15479,9 @@ contains
       REAL_T uncaptured_centroid_fluid(sdim)
       REAL_T uncaptured_area
 
+      REAL_T volume_plus
+      REAL_T centroid_plus(sdim)
+
       REAL_T voltemp
       REAL_T areatemp
       REAL_T areacentroidtemp(sdim)
@@ -15565,6 +15568,11 @@ contains
         enddo
        enddo
       enddo  ! im=1..nmat
+
+      call Box_volumeFAST(bfact,dx, &
+         xsten0_plus,nhalf0, &
+         volume_plus, &
+         centroid_plus,sdim)
 
       dxthin=FACETOL_DVOL*half* &
               (xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
@@ -15810,9 +15818,10 @@ contains
             volcut,cencut,sdim)
 
          if (abs(volcut-uncaptured_volume_fluid).gt. &
-             VOFTOL_MULTI_VOLUME_SANITY*uncaptured_volume_START) then
+             VOFTOL_MULTI_VOLUME_SANITY*volume_plus) then
            print *,"volcut invalid multi get area pairs 2 "
            print *,"volcut= ",volcut
+           print *,"volume_plus=",volume_plus
            print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
            print *,"uncaptured_volume_START= ",uncaptured_volume_START
            if (uncaptured_volume_START.gt.zero) then
@@ -15852,7 +15861,7 @@ contains
             do im_opp=1,nmat
              vol_old=multi_volume_plus_thin(im_opp)
              vol_new=multi_volume_plus_thin_shrink(im_opp)
-             if (vol_old-vol_new.ge.-VOFTOL*uncaptured_volume_START) then
+             if (vol_old-vol_new.ge.-VOFTOL*volume_plus) then
               if (vol_old-vol_new.le.zero) then
                vol_diff=zero
               else
@@ -15885,6 +15894,34 @@ contains
               endif
              else
               print *,"vol_old or vol_new invalid"
+              print *,"dir_plus ",dir_plus
+              print *,"dxthin=",dxthin
+              print *,"uncaptured_volume_START=",uncaptured_volume_START
+              print *,"uncaptured_area=",uncaptured_area
+              print *,"volume_plus=",volume_plus
+              print *,"vol_old=",vol_old
+              print *,"vol_new=",vol_new
+              print *,"critical_material=",critical_material
+              print *,"im_opp=",im_opp
+              print *,"loop_counter=",loop_counter
+              print *,"num_processed_fluid=",num_processed_fluid
+              print *,"nmat=",nmat
+              print *,"uncaptured_volume_fraction_fluid=", &
+                      uncaptured_volume_fraction_fluid
+              print *,"uncaptured_volume_fluid=", &
+                uncaptured_volume_fluid
+              do im_test=1,nmat*ngeom_recon
+               print *,"im_test,mofdata_plus,mofdata_minus ", &
+                 im_test,mofdata_plus(im_test),mofdata_minus(im_test)
+              enddo
+              do im_test=-nhalf0,nhalf0
+              do dir_local=1,sdim
+               print *,"ii,dir,xsten0_plus ",im_test,dir_local, &
+                       xsten0_plus(im_test,dir_local)
+               print *,"ii,dir,xsten0_minus ",im_test,dir_local, &
+                       xsten0_minus(im_test,dir_local)
+              enddo
+              enddo
               stop
              endif
             enddo ! im_opp=1..nmat
@@ -16117,7 +16154,7 @@ contains
        enddo
 
        if (abs(voltemp-uncaptured_volume_START).le. &
-           UNCAPT_TOL*uncaptured_volume_START) then
+           UNCAPT_TOL*volume_plus) then
         ! do nothing
        else
         print *,"voltemp or uncaptured_volume_START invalid"
@@ -16125,7 +16162,7 @@ contains
        endif
 
        if (uncaptured_volume_fluid.gt. &
-           UNCAPT_TOL*uncaptured_volume_START) then
+           UNCAPT_TOL*volume_plus) then
         print *,"not all volume accounted for multi get area pairs"
         print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
         print *,"uncaptured_volume_START ",uncaptured_volume_START

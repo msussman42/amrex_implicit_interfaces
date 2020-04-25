@@ -472,7 +472,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= March 12, 2020, 16:20pm"
+print *,"PROTOTYPE CODE DATE= April 25, 2020, 15:20pm"
 
 global_nparts=0
 
@@ -489,9 +489,9 @@ print *,"constant_K_test= ",constant_K_test
 ! fixed_dt<0
 ! example: 64x64 M_START=10
 ! example: 32x32 M_START=5 
-N_START=32
-N_FINISH=32
-M_START=5
+N_START=64
+N_FINISH=64
+M_START=10
 M_FACTOR=2
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
