@@ -60,8 +60,10 @@ contains
   !   calc all the pairs along the faces of a cell
   !====================================================================
   subroutine vfrac_pair_cell( &
+   nhalf, &
    nmat,sdim,dx, &
    ngeom_recon, &
+   xsten_cell_sten, &
    mofdata_sten, &
    ext_face_sten, &
    thin_cen_sten, &  ! absolute coordinates
@@ -71,30 +73,55 @@ contains
 
     implicit none
 
-    integer,intent(in)       :: sdim, nmat,ngeom_recon
+    integer, intent(in) :: nhalf
+    integer, intent(in) :: sdim,nmat,ngeom_recon
     real(kind=8), intent(in) :: dx(sdim)
+    REAL*8, intent(in) :: xsten_cell_sten(-1:1,-1:1,-nhalf:nhalf,sdim)
+    REAL*8 :: xsten_left(-nhalf:nhalf,sdim)
+    REAL*8 :: xsten_right(-nhalf:nhalf,sdim)
     REAL*8, intent(in) :: mofdata_sten(-1:1,-1:1,ngeom_recon*nmat)
-    real(kind=8)       :: ext_face_sten(-1:1,sdim,nmat+1,sdim,2)
+    REAL*8 :: mofdata_left(ngeom_recon*nmat)
+    REAL*8 :: mofdata_right(ngeom_recon*nmat)
+    real(kind=8), intent(in) :: ext_face_sten(-1:1,sdim,nmat+1,sdim,2)
+     ! absolute coordinates
+    real(kind=8), intent(in)  :: thin_cen_sten(-1:1,sdim,sdim,nmat,sdim,2) 
+    real(kind=8), intent(out) :: frac_pair_cell(nmat,nmat,sdim,2)
+    real(kind=8), intent(out) :: x_pair_cell(nmat,nmat,sdim,sdim,2)
 
+    real*8         :: vol_total
+    integer        :: caller_id
+    integer        :: outside_side,outside_side_nbr,left_side,right_side
+    integer        :: inside_side_nbr
     integer        :: im
     integer        :: im_outside,im_inside
+    integer        :: im_left,im_right
     integer        :: dir,side
     integer        :: dir2
     real(kind=8)   :: frac_outside(nmat),frac_inside(nmat)
     real(kind=8)   :: x_outside(sdim,nmat)
     real(kind=8)   :: x_inside(sdim,nmat)
-    real(kind=8)   :: frac_pair_cell(nmat,nmat,sdim,2)
-    real(kind=8)   :: x_pair_cell(nmat,nmat,sdim,sdim,2)
 
-     ! absolute coordinates
-    real(kind=8)   :: thin_cen_sten(-1:1,sdim,sdim,nmat,sdim,2) 
     real(kind=8)   :: frac_pair(nmat,nmat)
     real(kind=8)   :: x_pair(nmat,nmat,sdim)
     real(kind=8)   :: L_face
     integer        :: tessellate
+    integer        :: iii,jjj
+    integer        :: ii
+    integer        :: bfact,nmax
+    REAL(kind=8)   :: xtrilistuncapt1(SDIM+1,SDIM,POLYGON_LIST_MAX)
+    REAL(kind=8)   :: xtrilistuncapt2(SDIM+1,SDIM,POLYGON_LIST_MAX)
+
+    bfact = 1
+    nmax=POLYGON_LIST_MAX
 
     if (ngeom_recon.ne.2*sdim+3) then
      print *,"ngeom_recon invalid"
+     stop
+    endif
+    if (nhalf.eq.3) then
+     ! do nothing
+    else
+     print *,"nhalf invalid"
      stop
     endif
 
@@ -121,68 +148,136 @@ contains
       print *,"L_face invalid"
       stop
      endif
+     iii=0
+     jjj=0
+     if (dir.eq.1) then
+      iii=1
+     else if (dir.eq.2) then
+      jjj=1
+     else
+      print *,"dir invalid"
+      stop
+     endif
+
      do side = 1,2
-      if(side .eq. 1) then
-       do im = 1, nmat
-        frac_outside(im) = ext_face_sten(-1,dir,im,dir,2)
-        frac_inside(im) = ext_face_sten(0,dir,im,dir,1)  ! inside
-       enddo
-       do dir2=1,sdim
-       do im = 1, nmat
-        x_outside(dir2,im)=thin_cen_sten(-1,dir,dir2,im,dir,2)
-        x_inside(dir2,im)=thin_cen_sten(0,dir,dir2,im,dir,1)
-       enddo
-       enddo
-       if ((VP_i_debug.eq.VP_i_current).and. &
-           (VP_j_debug.eq.VP_j_current)) then
-        print *,"calling vfrac_pair_along_side  dir,side= ",dir,side
-       endif
+
+      if (side.eq.1) then
+       outside_side=-1
+       outside_side_nbr=2
+       left_side=-1
+       right_side=0
+      else if (side.eq.2) then
+       outside_side=1
+       outside_side_nbr=1
+       left_side=0
+       right_side=1
+      else
+       print *,"side invalid"
+       stop
+      endif
+      inside_side_nbr=3-outside_side_nbr
+
+      do im=1,nmat*ngeom_recon
+       mofdata_left(im)=mofdata_sten(iii*left_side,jjj*left_side,im)
+       mofdata_right(im)=mofdata_sten(iii*right_side,jjj*right_side,im)
+      enddo
+      do ii=-nhalf,nhalf
+      do dir2=1,sdim
+       xsten_left(ii,dir2)= &
+               xsten_cell_sten(iii*left_side,jjj*left_side,ii,dir2)
+       xsten_right(ii,dir2)= &
+               xsten_cell_sten(iii*right_side,jjj*right_side,ii,dir2)
+      enddo
+      enddo
+      do im = 1, nmat
+       frac_outside(im) = ext_face_sten(outside_side,dir,im,dir, &
+               outside_side_nbr)
+       frac_inside(im) = ext_face_sten(0,dir,im,dir, &
+               inside_side_nbr)  ! inside
+      enddo
+
+      do dir2=1,sdim
+      do im = 1, nmat
+       x_outside(dir2,im)=thin_cen_sten(outside_side,dir,dir2,im,dir, &
+               outside_side_nbr)
+       x_inside(dir2,im)=thin_cen_sten(0,dir,dir2,im,dir,inside_side_nbr)
+      enddo
+      enddo
+      if ((VP_i_debug.eq.VP_i_current).and. &
+          (VP_j_debug.eq.VP_j_current)) then
+       print *,"calling vfrac_pair_along_side  dir,side= ",dir,side
+      endif
+
+       ! x_pair in absolute coordinate system.
+      caller_id=12
+      call multi_get_area_pairs( &
+        bfact,dx, &
+        xsten_right, &
+        xsten_left, &
+        nhalf, &
+        mofdata_right, &
+        mofdata_left, &
+        nmat, &
+        dir, &
+        frac_pair, & ! left,right
+        x_pair, & ! left,right
+        sdim, &
+        xtrilistuncapt1, &
+        nmax, &
+        xtrilistuncapt2, &
+        nmax, &
+        nmax, &
+        caller_id)
+
+      if (1.eq.0) then
        call vfrac_pair_along_side(nmat,frac_outside,frac_inside, &
           x_outside,x_inside,frac_pair,x_pair,L_face,tessellate, &
           dir)
-       do im_outside=1,nmat
-       do im_inside=1,nmat
-        frac_pair_cell(im_outside,im_inside,dir,side) = &
-                frac_pair(im_outside,im_inside)
-        do dir2=1,sdim
-         x_pair_cell(im_outside,im_inside,dir2,dir,side) = &
-                x_pair(im_outside,im_inside,dir2)
-        enddo
-       enddo
-       enddo
-
-      elseif(side .eq. 2) then
-
-       do im = 1, nmat
-        frac_outside(im) = ext_face_sten(1,dir,im,dir,1)
-        frac_inside(im) = ext_face_sten(0,dir,im,dir,2)  ! inside
-       enddo
-       do dir2=1,sdim
-       do im = 1, nmat
-        x_outside(dir2,im)=thin_cen_sten(1,dir,dir2,im,dir,1)
-        x_inside(dir2,im)=thin_cen_sten(0,dir,dir2,im,dir,2) ! inside
-       enddo
-       enddo
-       if ((VP_i_debug.eq.VP_i_current).and. &
-           (VP_j_debug.eq.VP_j_current)) then
-        print *,"calling vfrac_pair_along_side  dir,side= ",dir,side
-       endif
-       call vfrac_pair_along_side(nmat,frac_outside,frac_inside, &
-            x_outside,x_inside,frac_pair,x_pair,L_face,tessellate, &
-            dir)
-       do im_outside=1,nmat
-       do im_inside=1,nmat
-        frac_pair_cell(im_outside,im_inside,dir,side) = &
-                frac_pair(im_outside,im_inside)
-        do dir2=1,sdim
-         x_pair_cell(im_outside,im_inside,dir2,dir,side) = &
-                x_pair(im_outside,im_inside,dir2)
-        enddo
-       enddo 
-       enddo 
-      else
-       print *,"side invalid in vfrac_pair_cell"   
       endif
+
+      vol_total=zero
+      do im_outside=1,nmat
+      do im_inside=1,nmat
+       vol_total=vol_total+frac_pair(im_outside,im_inside)
+      enddo
+      enddo
+      if (vol_total.gt.zero) then
+
+       do im_outside=1,nmat
+       do im_inside=1,nmat
+        frac_pair(im_outside,im_inside)= &
+                frac_pair(im_outside,im_inside)/vol_total
+       enddo
+       enddo
+
+      else
+       print *,"vol_total invalid"
+       stop
+      endif
+
+
+      do im_outside=1,nmat
+      do im_inside=1,nmat
+       if (side.eq.1) then
+        im_left=im_outside
+        im_right=im_inside
+       else if (side.eq.2) then
+        im_left=im_inside
+        im_right=im_outside
+       else
+        print *,"side invalid"
+        stop
+       endif
+
+       frac_pair_cell(im_outside,im_inside,dir,side) = &
+               frac_pair(im_left,im_right)
+       do dir2=1,sdim
+        x_pair_cell(im_outside,im_inside,dir2,dir,side) = &
+               x_pair(im_left,im_right,dir2)
+       enddo
+      enddo
+      enddo
+
       if ((VP_i_debug.eq.VP_i_current).and. &
           (VP_j_debug.eq.VP_j_current)) then
        print *,"i,j,dir,side (vfrac_pair) ",VP_i_current,VP_j_current,dir,side

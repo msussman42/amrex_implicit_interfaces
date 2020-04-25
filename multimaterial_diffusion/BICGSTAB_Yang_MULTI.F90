@@ -149,6 +149,7 @@
       REAL*8 vf,diag_local
       REAL*8 mofdata_cell(ngeom_reconCG*nmat)
       REAL*8 mofdata_sten(-1:1,-1:1,ngeom_reconCG*nmat)
+      REAL*8 xsten_cell_sten(-1:1,-1:1,-3:3,sdim)
       real(kind=8) :: rho_box(-1:1,-1:1,nmat)
 
       REAL*8 thin_cen_sten(-1:1,sdim,sdim,nmat,sdim,2)
@@ -159,6 +160,9 @@
       integer local_hflag
       integer local_linear_exact
       REAL*8 time_placeholder
+      integer nhalf
+
+      nhalf=3
 
       diag_coeff_flag=1
       local_hflag=1
@@ -233,7 +237,7 @@
        do imof=1,ngeom_reconCG*nmat
         mofdata_cell(imof)=mofdata_FAB(i,j,imof)
        enddo
-       do isten=-3,3
+       do isten=-nhalf,nhalf
        do dir=1,sdim
         xsten_cell(isten,dir)=xsten_FAB(i,j,isten,dir)
        enddo
@@ -380,6 +384,16 @@
         do imof=1,ngeom_reconCG*nmat
          mofdata_sten(ii,jj,imof)=mofdata_FAB(i+ii,j+jj,imof)
         enddo
+        do isten=-nhalf,nhalf
+        do dir=1,sdim
+         xsten_cell_sten(ii,jj,isten,dir)=xsten_FAB(i+ii,j+jj,isten,dir)
+        enddo
+        enddo
+       enddo
+       enddo
+       do isten=-nhalf,nhalf
+       do dir=1,sdim
+        xsten_cell(isten,dir)=xsten_FAB(i,j,isten,dir)
        enddo
        enddo
 
@@ -422,8 +436,9 @@
        enddo   ! dir
 
        call vfrac_pair_cell( &
-        nmat,sdim,dx, &
+        nhalf,nmat,sdim,dx, &
         ngeom_reconCG, &
+        xsten_cell_sten, &
         mofdata_sten, &
         ext_face_sten, &
         thin_cen_sten,  &  ! absolute coordinates
