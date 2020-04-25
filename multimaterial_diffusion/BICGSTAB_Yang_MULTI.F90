@@ -436,7 +436,8 @@
        enddo   ! dir
 
        call vfrac_pair_cell( &
-        nhalf,nmat,sdim,dx, &
+        nhalf, &
+        nmat,sdim,dx, &
         ngeom_reconCG, &
         xsten_cell_sten, &
         mofdata_sten, &

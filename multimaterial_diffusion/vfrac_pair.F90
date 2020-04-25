@@ -69,7 +69,6 @@ contains
    thin_cen_sten, &  ! absolute coordinates
    frac_pair_cell, &
    x_pair_cell)
-  use global_utility_module, only : vfrac_pair_along_side
 
     implicit none
 
@@ -90,7 +89,8 @@ contains
 
     real*8         :: vol_total
     integer        :: caller_id
-    integer        :: outside_side,outside_side_nbr,left_side,right_side
+    integer        :: outside_side,outside_side_nbr
+    integer        :: left_side,right_side
     integer        :: inside_side_nbr
     integer        :: im
     integer        :: im_outside,im_inside
@@ -140,19 +140,13 @@ contains
     enddo
     enddo
     do dir = 1, sdim
-     if (dir.eq.1) then
-      L_face=dx(2)
-     else if (dir.eq.2) then
-      L_face=dx(1)
-     else
-      print *,"L_face invalid"
-      stop
-     endif
      iii=0
      jjj=0
      if (dir.eq.1) then
+      L_face=dx(2)
       iii=1
      else if (dir.eq.2) then
+      L_face=dx(1)
       jjj=1
      else
       print *,"dir invalid"
@@ -205,20 +199,20 @@ contains
       enddo
       if ((VP_i_debug.eq.VP_i_current).and. &
           (VP_j_debug.eq.VP_j_current)) then
-       print *,"calling vfrac_pair_along_side  dir,side= ",dir,side
+       print *,"calling multi_get_area_pairs  dir,side= ",dir,side
       endif
 
        ! x_pair in absolute coordinate system.
       caller_id=12
       call multi_get_area_pairs( &
         bfact,dx, &
-        xsten_right, &
-        xsten_left, &
+        xsten_right, &  ! aka xsten0_plus
+        xsten_left, &   ! aka xsten0_minus
         nhalf, &
-        mofdata_right, &
-        mofdata_left, &
+        mofdata_right, & ! aka mofdata_plus
+        mofdata_left, &  ! aka mofdata_minus
         nmat, &
-        dir, &
+        dir, &  ! dir=1..sdim
         frac_pair, & ! left,right
         x_pair, & ! left,right
         sdim, &
@@ -229,24 +223,18 @@ contains
         nmax, &
         caller_id)
 
-      if (1.eq.0) then
-       call vfrac_pair_along_side(nmat,frac_outside,frac_inside, &
-          x_outside,x_inside,frac_pair,x_pair,L_face,tessellate, &
-          dir)
-      endif
-
       vol_total=zero
-      do im_outside=1,nmat
-      do im_inside=1,nmat
-       vol_total=vol_total+frac_pair(im_outside,im_inside)
+      do im_left=1,nmat
+      do im_right=1,nmat
+       vol_total=vol_total+frac_pair(im_left,im_right)
       enddo
       enddo
       if (vol_total.gt.zero) then
 
-       do im_outside=1,nmat
-       do im_inside=1,nmat
-        frac_pair(im_outside,im_inside)= &
-                frac_pair(im_outside,im_inside)/vol_total
+       do im_left=1,nmat
+       do im_right=1,nmat
+        frac_pair(im_left,im_right)= &
+                frac_pair(im_left,im_right)/vol_total
        enddo
        enddo
 

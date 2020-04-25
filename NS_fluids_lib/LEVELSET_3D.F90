@@ -2444,12 +2444,6 @@ stop
           nmax, &
           caller_id)
 
-        if (1.eq.0) then
-                ! left=outside  right=inside
-         call vfrac_pair_along_side(nmat,frac_left,frac_right, &
-          x_left,x_right,frac_pair,x_pair,L_face,tessellate,dir+1)
-        endif
-
         vol_total=zero
         do im=1,nmat
         do im_opp=1,nmat
