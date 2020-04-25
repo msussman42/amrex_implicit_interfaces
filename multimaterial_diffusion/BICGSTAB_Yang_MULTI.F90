@@ -143,7 +143,9 @@
       integer im_outside,im_inside
       integer dir,sidesten,isten
       integer dircen,dir2
-      integer ii,jj,vofcomp
+      integer ii,jj
+      integer iii,jjj
+      integer vofcomp
       REAL*8 vf,diag_local
       REAL*8 mofdata_cell(ngeom_reconCG*nmat)
       REAL*8 mofdata_sten(-1:1,-1:1,ngeom_reconCG*nmat)
@@ -373,56 +375,56 @@
        VP_i_current=i 
        VP_j_current=j 
 
+       do ii=-1,1
+       do jj=-1,1
+        do imof=1,ngeom_reconCG*nmat
+         mofdata_sten(ii,jj,imof)=mofdata_FAB(i+ii,j+jj,imof)
+        enddo
+       enddo
+       enddo
+
        do dir = 1,sdim
 
         do ii = -1,1
-         if (dir .eq. 1) then   
-          do dircen=1,sdim
-          do im=1,nmat
-          do dir2=1,sdim
-          do sidesten=1,2
-           thin_cen_sten(ii,dir,dircen,im,dir2,sidesten)= &
-             multi_cen_cell_FAB(i+ii,j,dircen,im,dir2,sidesten)
-          enddo
-          enddo
-          enddo
-          enddo
 
-          do im=1,nmat+1
-          do dir2=1,sdim
-          do sidesten=1,2
-           ext_face_sten(ii,dir,im,dir2,sidesten) =  &
-             ext_face_FAB(i+ii,j,im,dir2,sidesten)
-          enddo
-          enddo
-          enddo
-
-         elseif(dir .eq. 2)then
-
-          do dircen=1,sdim
-          do im=1,nmat
-          do dir2=1,sdim
-          do sidesten=1,2
-           thin_cen_sten(ii,dir,dircen,im,dir2,sidesten)= &
-            multi_cen_cell_FAB(i,j+ii,dircen,im,dir2,sidesten)
-          enddo
-          enddo
-          enddo
-          enddo
-          do im=1,nmat+1
-          do dir2=1,sdim
-          do sidesten=1,2
-           ext_face_sten(ii,dir,im,dir2,sidesten) = &
-             ext_face_FAB(i,j+ii,im,dir2,sidesten)
-          enddo
-          enddo
-          enddo
+         iii=0
+         jjj=0
+         if (dir.eq.1) then
+          iii=ii
+         else if (dir.eq.2) then
+          jjj=ii
+         else
+          print *,"dir invalid"
+          stop
          endif
+
+         do dircen=1,sdim
+         do im=1,nmat
+         do dir2=1,sdim
+         do sidesten=1,2
+          thin_cen_sten(ii,dir,dircen,im,dir2,sidesten)= &
+            multi_cen_cell_FAB(i+iii,j+jjj,dircen,im,dir2,sidesten)
+         enddo
+         enddo
+         enddo
+         enddo
+
+         do im=1,nmat+1
+         do dir2=1,sdim
+         do sidesten=1,2
+          ext_face_sten(ii,dir,im,dir2,sidesten) =  &
+            ext_face_FAB(i+iii,j+jjj,im,dir2,sidesten)
+         enddo
+         enddo
+         enddo
+
         enddo   ! ii
        enddo   ! dir
 
        call vfrac_pair_cell( &
         nmat,sdim,dx, &
+        ngeom_reconCG, &
+        mofdata_sten, &
         ext_face_sten, &
         thin_cen_sten,  &  ! absolute coordinates
         frac_pair_cell, &

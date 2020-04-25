@@ -19975,6 +19975,8 @@ NavierStokes::correct_dist_uninit() {
 
 
 // WARNING:  allocates, but does not delete.
+// called from NavierStokes::make_physics_varsALL if using supermesh.
+// called from NavierStokes::ColorSum
 void
 NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
   

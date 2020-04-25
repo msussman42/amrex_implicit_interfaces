@@ -61,6 +61,8 @@ contains
   !====================================================================
   subroutine vfrac_pair_cell( &
    nmat,sdim,dx, &
+   ngeom_recon, &
+   mofdata_sten, &
    ext_face_sten, &
    thin_cen_sten, &  ! absolute coordinates
    frac_pair_cell, &
@@ -69,8 +71,9 @@ contains
 
     implicit none
 
-    integer,intent(in)       :: sdim, nmat
+    integer,intent(in)       :: sdim, nmat,ngeom_recon
     real(kind=8), intent(in) :: dx(sdim)
+    REAL*8, intent(in) :: mofdata_sten(-1:1,-1:1,ngeom_recon*nmat)
     real(kind=8)       :: ext_face_sten(-1:1,sdim,nmat+1,sdim,2)
 
     integer        :: im
@@ -89,6 +92,11 @@ contains
     real(kind=8)   :: x_pair(nmat,nmat,sdim)
     real(kind=8)   :: L_face
     integer        :: tessellate
+
+    if (ngeom_recon.ne.2*sdim+3) then
+     print *,"ngeom_recon invalid"
+     stop
+    endif
 
     tessellate=0
 
