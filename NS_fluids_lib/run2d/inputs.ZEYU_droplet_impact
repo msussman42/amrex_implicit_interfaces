@@ -44,6 +44,10 @@ ns.num_species_var=0
 # 3=no limiter with slope=0 at interface
 ns.slope_limiter_option=1
 ns.advection_order=2 2 1
+# 0 = MOF (moment of fluid)
+# 2 = CMOF (continuous moment of fluid)
+# 3 = CLSVOF in 2 material cells and MOF in >2 material cells.
+# 4 = CLSVOF in 2 material cells and CMOF in >2 material cells.
 ns.continuous_mof=0
 ns.FD_curv_interp=1
 # 0=Sussman and Puckett algorithm 
