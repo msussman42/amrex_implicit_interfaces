@@ -469,7 +469,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= December 27, 2019, 23:20pm"
+print *,"PROTOTYPE CODE DATE= April 28, 2020, 13:00pm"
 
 global_nparts=0
 
@@ -479,6 +479,7 @@ constant_K_test=0
 print *,"im_measure= ",im_measure
 print *,"constant_K_test= ",constant_K_test
 
+! probtype_in=400 for gingerbread man problem
 ! N space
 ! M time
 N_START=64
@@ -509,6 +510,8 @@ else if (probtype_in.eq.4) then ! expanding or shrinking circle
 else if (probtype_in.eq.5) then ! phase change vertical planar interface
  fixed_dt_main=-1.0d0  ! TSTOP=0.5d0
 else if (probtype_in.eq.400) then ! gingerbread man
+ ! fixed_dt=0.0d0 => use CFL condition
+ ! fixed_dt=-1.0d0 => use TSTOP/M
  fixed_dt_main=0.0d0
  print *,"gingeroutline should be in run directory"
 else

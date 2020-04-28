@@ -5169,6 +5169,30 @@ stop
                   vel_phasechange(ireverse)=zero
                  endif
 
+                 ! Li-Shi Luo - invite him to talk with FSU?
+                 ! LATTICE BOLTZMANN TREATMENT:
+                 ! max velocity cannot exceed dxmin/(2 dt)
+                 if (dt.gt.zero) then
+                  if (dxmin.gt.zero) then
+                   if (vel_phasechange(ireverse).ge.dxmin/(two*dt)) then
+                    if (stefan_flag.eq.1) then
+                     vel_phasechange(ireverse)=dxmin/(two*dt)
+                    endif
+                   else if (vel_phasechange(ireverse).ge.zero) then
+                    ! do nothing
+                   else
+                    print *,"vel_phasechange bust"
+                    stop
+                   endif
+                  else
+                   print *,"dxmin invalid"
+                   stop
+                  endif
+                 else
+                  print *,"dt invalid"
+                  stop
+                 endif
+
                  valid_phase_change(ireverse)=1
              
                  if (debugrate.eq.1) then
@@ -5362,7 +5386,10 @@ stop
 
           ! factor of 2 in order to guarantee that characteristics do not
           ! collide.
-         if ((two*velmag_sum*dt.le.dxmin).and. &
+          ! LATTICE BOLTZMANN TREATMENT:
+          ! max velocity cannot exceed dxmin/(2 dt)
+          ! (see above, search for "Li-Shi Luo")
+         if ((two*velmag_sum*dt.le.(one+VOFTOL)*dxmin).and. &
              (velmag_sum.ge.zero)) then
           ! do nothing
          else if (two*velmag_sum*dt.gt.dxmin) then
