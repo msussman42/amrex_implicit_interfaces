@@ -5018,7 +5018,16 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
     int tid_current=ns_thread();
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    
      // CODY ESTEBE: LAW OF THE WALL
+     // TODO:
+     // 1. pass a FAarrayBox to WALLFUNCTION to getGhostVel
+     // 2. populate the FArrayBox with: (a) image velocity/flag,
+     //    (b) ghost velocity/flag, (c) contact angle/flag, ...
+     // 3. extrapolate the FArrayBox data from flag==1 regions to flag==0
+     //    regions.  (i) loop through grid, wherever flag==0, data_extrap=
+     //    sum_{flag==1}  data_j/sum_{flag==1} 1
+     // 4. output data in convenient format.
      // fab = fortran array block
      // Generalized Navier Boundary Condition GNBC (call get_use_DCA)
      // 1. copy solid velocity into ghost velocity where phi_solid>0

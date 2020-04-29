@@ -13775,6 +13775,7 @@ end function delta
          print *,"dir,local_dx(dir) ",dir,local_dx(dir)
          stop
         endif
+          ! D_DECL(a,b,c)=a,b  in 2d and a,b,c in 3d.
         projectdist(dir) =  &
           (x_projection(dir)-xproject_stencil(D_DECL(1,1,1),dir))/ &
           local_dx(dir)
