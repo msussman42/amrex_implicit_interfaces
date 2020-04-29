@@ -522,6 +522,9 @@
          stop
         endif
          ! time=t^{n+1}
+         ! if FSI_flag==4, then
+         !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
+         !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
