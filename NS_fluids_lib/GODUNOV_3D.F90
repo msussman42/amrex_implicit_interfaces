@@ -13518,7 +13518,6 @@ end function delta
        uimage, &
        usolid, &
        angle_ACT, &
-       maskcell, &
        im_fluid, &
        im_solid)
        
@@ -13612,7 +13611,6 @@ end function delta
        REAL_T :: ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent
        REAL_T :: ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d
        REAL_T, intent(out) :: angle_ACT
-       REAL_T, dimension(4), intent(out) :: maskcell
        REAL_T :: angle_im1
        INTEGER_T :: ZEYU_imodel
        INTEGER_T :: ZEYU_ifgnbc
@@ -13789,6 +13787,7 @@ end function delta
 
        call bilinear_interp_stencil(LSCP_prj_stencil,projectdist, &
                nmat*(SDIM+1),LSCP_prj_interp)
+
        call bilinear_interp_stencil(usolid_stencil,projectdist, &
                SDIM,usolid)
 
@@ -14005,6 +14004,7 @@ end function delta
              print *,"sinthetaACT invalid; nCL_perp2 has 0 size"
              stop
             endif
+
             if ((sinthetaACT.ge.zero).and.(costhetaACT.ge.zero)) then
              angle_ACT=asin(sinthetaACT)
             else if ((sinthetaACT.ge.zero).and.(costhetaACT.le.zero)) then
@@ -14290,7 +14290,6 @@ end function delta
       REAL_T uimage_cell(SDIM)
       REAL_T usolid_cell(SDIM)
       REAL_T angle_ACT_cell
-      REAL_T mask_cell(4)  ! usolidLaw_of_wall,uimage,usolid,angle
       REAL_T LScompare
       INTEGER_T tcomp
       INTEGER_T ijksum
@@ -14402,6 +14401,7 @@ end function delta
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
 
         ! xsten(0,dir) gives dir'th component of coordinate of the storage
         ! location of cell (i,j,k)
@@ -14629,7 +14629,6 @@ end function delta
                 uimage_cell, & ! image velocity (inside the fluid)
                 usolid_cell, & ! solid velocity (at projected point)
                 angle_ACT_cell, &   ! actual contact angle at image point
-                mask_cell, &
                 im_fluid, &
                 impart)
 

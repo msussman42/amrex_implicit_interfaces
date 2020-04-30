@@ -494,16 +494,27 @@ public:
     void MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel);
     void MaxPressureVelocityALL(Real& minpres,Real& maxpres,Real& maxvel);
 
+     // dir=-1 cell centered data
+     // dir=0..sdim-1 face centered data.
+     // a tecplot file is output in which the raw data is
+     // output as follows (2D cell center):
+     //   x x               x x
+     //   x x               x x
+     //
+     //
+     //
+     //
+     //   x x               x x
+     //   x x               x x
+     //   data from coarse meshes are interpolated using piecewise
+     //   constant interpolation.  physical BCs are either periodic
+     //   or reflect_even.
+     //   For postprocessing, adjust visual_ncell, and call writeTECPLOT_file
     void writeSanityCheckData(std::string filename_root,
 		    std::string* varnames,int ncomp,
-		    int ncomp_mask,
-		    int* maskmap,int data_mf,int mask_mf,
+		    int data_mf,
 		    int nsteps,int substeps,
-		    int cell_or_mac);
-
-    void extend_Sanity_data(int ncomp,int ncomp_mask,
-		    int* maskmap,int data_mf,
-		    int mask_mf,int cell_or_mac);
+		    int dir);
 
     virtual std::string thePlotFileType () const;
 
