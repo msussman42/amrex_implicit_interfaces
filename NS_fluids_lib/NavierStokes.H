@@ -494,6 +494,17 @@ public:
     void MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel);
     void MaxPressureVelocityALL(Real& minpres,Real& maxpres,Real& maxvel);
 
+    void writeSanityCheckData(std::string filename_root,
+		    std::string* varnames,int ncomp,
+		    int ncomp_mask,
+		    int* maskmap,int data_mf,int mask_mf,
+		    int nsteps,int substeps,
+		    int cell_or_mac);
+
+    void extend_Sanity_data(int ncomp,int ncomp_mask,
+		    int* maskmap,int data_mf,
+		    int mask_mf,int cell_or_mac);
+
     virtual std::string thePlotFileType () const;
 
     virtual void writePlotFile (

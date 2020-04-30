@@ -13514,7 +13514,11 @@ end function delta
        x_image, &  ! in the fluid
        ximage_stencil, &
        xproject_stencil, &
-       ughost, &
+       ughost, &  ! aka usolid_law_of_wall
+       uimage, &
+       usolid, &
+       angle_ACT, &
+       maskcell, &
        im_fluid, &
        im_solid)
        
@@ -13561,8 +13565,8 @@ end function delta
        REAL_T, dimension(nmat*(SDIM+1)) :: LSCP_prj_interp
        REAL_T, dimension(nmat*SDIM) :: LSFD_image_interp
 
-       REAL_T, dimension(SDIM) :: uimage
-       REAL_T, dimension(SDIM) :: usolid
+       REAL_T, dimension(SDIM), intent(out) :: uimage
+       REAL_T, dimension(SDIM), intent(out) :: usolid
        REAL_T, dimension(SDIM) :: imagedist
        REAL_T, dimension(SDIM) :: projectdist
        REAL_T :: delta_g
@@ -13607,7 +13611,9 @@ end function delta
        REAL_T :: ZEYU_thet_s,ZEYU_lambda,ZEYU_l_macro, ZEYU_l_micro
        REAL_T :: ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent
        REAL_T :: ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d
-       REAL_T :: angle_ACT,angle_im1
+       REAL_T, intent(out) :: angle_ACT
+       REAL_T, dimension(4), intent(out) :: maskcell
+       REAL_T :: angle_im1
        INTEGER_T :: ZEYU_imodel
        INTEGER_T :: ZEYU_ifgnbc
        INTEGER_T :: im_vapor,im_liquid
@@ -14281,6 +14287,10 @@ end function delta
       REAL_T ximage_stencil(D_DECL(2,2,2),SDIM)
       REAL_T xproject_stencil(D_DECL(2,2,2),SDIM)
       REAL_T usolid_law_of_wall(SDIM)
+      REAL_T uimage_cell(SDIM)
+      REAL_T usolid_cell(SDIM)
+      REAL_T angle_ACT_cell
+      REAL_T mask_cell(4)  ! usolidLaw_of_wall,uimage,usolid,angle
       REAL_T LScompare
       INTEGER_T tcomp
       INTEGER_T ijksum
@@ -14616,6 +14626,10 @@ end function delta
                 ximage_stencil, &
                 xproject_stencil, &
                 usolid_law_of_wall, &
+                uimage_cell, & ! image velocity (inside the fluid)
+                usolid_cell, & ! solid velocity (at projected point)
+                angle_ACT_cell, &   ! actual contact angle at image point
+                mask_cell, &
                 im_fluid, &
                 impart)
 
