@@ -16573,12 +16573,17 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else
    amrex::Error("do_slice invalid");
 
-  int do_input=0;
+   // in: NAVIERSTOKES_3D.F90
+   // just output data, no comparison with other data.
+   // "visual_compare" unused here since do_input==0.
+   // the data file name is uniform??????.tec
+   // X,Y,Z,U,V,W,MGVORT,LS01,...,LS??
+  int do_input=0; 
   FORT_IO_COMPARE(
    &nmat,
    &nsteps,
    &do_input,
-   &visual_compare,
+   &visual_compare,  // unused since do_input==0
    &cur_time_slab,
    visual_fab_input.dataPtr(),
    ARLIM(visual_fab_input.loVect()), 

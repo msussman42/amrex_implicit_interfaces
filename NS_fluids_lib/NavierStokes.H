@@ -506,12 +506,14 @@ public:
      //
      //   x x               x x
      //   x x               x x
-     //   data from coarse meshes are interpolated using piecewise
-     //   constant interpolation.  physical BCs are either periodic
-     //   or reflect_even.
+     //   Interpolation of data, coarse/fine BCs, fine/fine BCs,
+     //   and physical BCs
+     //   are inconsequential since the data is assumed to be 
+     //   piecewise constant in cells.
      //   For postprocessing, adjust visual_ncell, and call writeTECPLOT_file
-    void writeSanityCheckData(std::string filename_root,
-		    std::string* varnames,int ncomp,
+     //   (data will be ascii with filenames uniform??????.tec)
+    void writeSanityCheckData(int data_id,
+		    int ncomp,
 		    int data_mf,
 		    int nsteps,int substeps,
 		    int dir);
