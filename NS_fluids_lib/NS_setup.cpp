@@ -1498,8 +1498,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   ns_level.maskfiner_localMF(MASKCOEF_MF,1,tag,clearbdry);
   ns_level.prepare_mask_nbr(1);
 
-  ns_level.init_FSI_GHOST_MF(1); 
  } // ilev=level..finest_level
+
+ init_FSI_GHOST_MF_ALL(1);
 
  build_masksemALL();
 

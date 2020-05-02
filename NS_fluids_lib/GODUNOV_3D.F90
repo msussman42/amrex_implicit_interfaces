@@ -14208,6 +14208,9 @@ end function delta
        ufluid,DIMS(ufluid), &
        usolid,DIMS(usolid), &
        ughost,DIMS(ughost), &
+       history_dat, &
+       DIMS(history_dat), &
+       nhistory, &
        visc_coef)
       use probf90_module
       use global_utility_module
@@ -14216,6 +14219,7 @@ end function delta
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: nhistory
       INTEGER_T, intent(in) :: law_of_the_wall
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: ngrow_law_of_wall
@@ -14238,6 +14242,7 @@ end function delta
       INTEGER_T, intent(in) :: DIMDEC(ufluid) ! declare x,y,z dimensions of LS
       INTEGER_T, intent(in) :: DIMDEC(usolid)
       INTEGER_T, intent(in) :: DIMDEC(ughost)
+      INTEGER_T, intent(in) :: DIMDEC(history_dat)
 
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
@@ -14248,6 +14253,8 @@ end function delta
       REAL_T, intent(in) :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
       REAL_T, intent(in) :: usolid(DIMV(usolid),nparts*SDIM) 
       REAL_T, intent(out) :: ughost(DIMV(ughost),nparts*SDIM) 
+       ! nhistory=nparts_ghost * (usolid_law_of_wall,uimage,usolid,angle)
+      REAL_T, intent(out) :: history_dat(DIMV(history_dat),nhistory) 
       INTEGER_T i,j,k
       REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_local(-3:3,SDIM)
@@ -14296,6 +14303,7 @@ end function delta
       INTEGER_T plus_flag,minus_flag
       REAL_T usolid_normal,ufluid_normal
       INTEGER_T nten
+      INTEGER_T nhistory_sub
 
       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
 
@@ -14352,6 +14360,16 @@ end function delta
        print *,"nparts invalid FORT_WALLFUNCTION"
        stop
       endif
+
+      nhistory_sub=3*SDIM+1
+
+      if (nhistory.eq.nparts*nhistory_sub) then
+       ! do nothing
+      else
+       print *,"nhistory invalid"
+       stop
+      endif
+
       if (dt.gt.zero) then
        ! do nothing
       else
@@ -14391,6 +14409,7 @@ end function delta
       call checkbound(fablo,fabhi,DIMS(ufluid),ngrow_law_of_wall,-1,1254)
       call checkbound(fablo,fabhi,DIMS(usolid),ngrow_law_of_wall,-1,1255)
       call checkbound(fablo,fabhi,DIMS(ughost),1,-1,1255)
+      call checkbound(fablo,fabhi,DIMS(history_dat),0,-1,1255)
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -14636,7 +14655,17 @@ end function delta
               do dir=1,SDIM
                ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
                 usolid_law_of_wall(dir)
-              enddo  
+
+               history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+dir)= &
+                usolid_law_of_wall(dir)
+               history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+SDIM+dir)= &
+                uimage_cell(dir)
+               history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+2*SDIM+dir)= &
+                usolid_cell(dir)
+              enddo  ! dir=1..sdim
+
+              history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+3*SDIM+1)= &
+                angle_ACT_cell
            
              else if (in_grow_box.eq.0) then
               ! do nothing; use solid velocity in solid regions.

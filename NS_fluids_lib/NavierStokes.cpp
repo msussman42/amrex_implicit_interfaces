@@ -4884,6 +4884,8 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 //  NavierStokes::prescribe_solid_geometryALL
 //  NavierStokes::do_the_advance
 //  NavierStokes::MaxAdvectSpeedALL
+//  NavierStokes::sum_integrated_quantities
+//  NavierStokes::prepare_post_process
 void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow) {
 
  int finest_level=parent->finestLevel();
@@ -4892,11 +4894,20 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow) {
 
  if ((ngrow<1)||(ngrow>ngrowFSI))
   amrex::Error("ngrow invalid");
+ int nparts=im_solid_map.size();
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.init_FSI_GHOST_MF(ngrow);
+  int dealloc_history=0;
+  ns_level.init_FSI_GHOST_MF(ngrow,dealloc_history);
  } // ilev=level...finest_level
+
+ if (nparts==0) {
+  // do nothing
+ } else if (nparts>=1) {
+  delete_array(HISTORY_MF);
+ } else
+  amrex::Error("nparts invalid");
 
 } // end subroutine init_FSI_GHOST_MF_ALL
 
@@ -4909,11 +4920,9 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow) {
 // initialize Fluid Structure Interaction Ghost Multifab
 // multifab = multiple fortran array blocks.
 // called from:
-//  NavierStokes::sum_integrated_quantities
 //  NavierStokes::init_FSI_GHOST_MF_ALL
 //  NavierStokes::initData ()
-//  NavierStokes::prepare_post_process ()
-void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
+void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
 
  if ((ngrow<1)||(ngrow>ngrowFSI))
   amrex::Error("ngrow invalid");
@@ -4950,6 +4959,14 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
   MultiFab::Copy(*localMF[FSI_GHOST_MF],S_new,0,0,AMREX_SPACEDIM,0);
 
  } else if ((nparts>=1)&&(nparts<=nmat)) {
+
+  int nhistory_sub=3*AMREX_SPACEDIM+1;
+  int nhistory=nparts*nhistory_sub;
+
+  if (localMF_grow[HISTORY_MF]>=0)
+   amrex::Error("localMF_grow[HISTORY_MF]>=0");
+
+  new_localMF(HISTORY_MF,nhistory,0,-1);
 
   if (law_of_the_wall==0) {
    MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
@@ -5015,10 +5032,13 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
     FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; 
     FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MF])[mfi]; 
 
+    FArrayBox& histfab=(*localMF[HISTORY_MF])[mfi]; 
+
     int tid_current=ns_thread();
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    
+    int nhistory_local=histfab.nComp();
+
      // CODY ESTEBE: LAW OF THE WALL
      // TODO:
      // 1. pass a FAarrayBox to WALLFUNCTION to getGhostVel
@@ -5061,6 +5081,9 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
      ARLIM(solidvelfab.loVect()),ARLIM(solidvelfab.hiVect()),
      ghostsolidvelfab.dataPtr(),
      ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()),
+     histfab.dataPtr(),
+     ARLIM(histfab.loVect()),ARLIM(histfab.hiVect()),
+     &nhistory_local,
      &visc_coef);
    } // mfi
 } // omp
@@ -5074,6 +5097,13 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow) {
    delete solid_vel_mf;
   } else
    amrex::Error("law_of_the_wall invalid");
+
+  if (dealloc_history==0) {
+   // do nothing
+  } else if (dealloc_history==1) {
+   delete_localMF(HISTORY_MF,1);
+  } else 
+   amrex::Error("dealloc_history invalid");
 
  } else {
   amrex::Error("nparts invalid");
@@ -6917,7 +6947,8 @@ NavierStokes::initData () {
   // if nparts>0,
   //  Initialize FSI_GHOST_MF from Solid_State_Type
   // Otherwise initialize FSI_GHOST_MF with the fluid velocity.
- init_FSI_GHOST_MF(1);
+ int dealloc_history=1;
+ init_FSI_GHOST_MF(1,dealloc_history);
  
  init_regrid_history();
  is_first_step_after_regrid=-1;
@@ -18179,8 +18210,6 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   ns_level.maskfiner_localMF(MASKCOEF_MF,1,tag,clearbdry);
   ns_level.prepare_mask_nbr(1);
 
-  ns_level.init_FSI_GHOST_MF(1);
-
   if (post_init_flag==1) { // called from post_init_state
    // do nothing
   } else if (post_init_flag==2) { // called from post_restart
@@ -18191,7 +18220,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   } else
    amrex::Error("post_init_flag invalid");
    
- } // ilev
+ } // ilev=level ... finest_level
+
+ init_FSI_GHOST_MF_ALL(1);
 
  build_masksemALL();
 

@@ -65,6 +65,8 @@ namespace amrex{
 
 #define MASKCOEF_MF 38
 
+#define HISTORY_MF 39
+
 #define SLOPE_RECON_MF 40
 #define MASKSEM_MF 41
 
@@ -1323,7 +1325,7 @@ void apply_pressure_grad(
     static int FSI_material_exists();
 
     void init_FSI_GHOST_MF_ALL(int ngrow);
-    void init_FSI_GHOST_MF(int ngrow);
+    void init_FSI_GHOST_MF(int ngrow,int dealloc_history);
     void resize_FSI_GHOST_MF(int ngrow);
 
     void resize_FSI_MF();

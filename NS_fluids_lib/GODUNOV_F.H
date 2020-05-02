@@ -729,6 +729,9 @@ extern "C"
     Real* ufluid,AMREX_ARLIM_P(ufluidlo),AMREX_ARLIM_P(ufluidhi),
     Real* usolid,AMREX_ARLIM_P(usolidlo),AMREX_ARLIM_P(usolidhi),
     Real* ughost,AMREX_ARLIM_P(ughostlo),AMREX_ARLIM_P(ughosthi),
+    Real* history_dat,
+    AMREX_ARLIM_P(history_datlo),AMREX_ARLIM_P(history_dathi),
+    int* nhistory,
     Real* visc_coef);
 
 
