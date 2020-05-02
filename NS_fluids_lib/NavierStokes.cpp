@@ -18035,7 +18035,7 @@ NavierStokes::volWgtSumALL(
  } else
   amrex::Error("post_init_flag invalid");
 
- make_physics_varsALL(project_option,post_restart_flag);
+ make_physics_varsALL(project_option,post_restart_flag,0);
 
   // force,torque,moment of inertia,COM,mass
  allocate_array(0,4*AMREX_SPACEDIM+1,-1,DRAG_MF);
@@ -18259,14 +18259,14 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,local_truncate);
   int project_option=1;  // initial project
   int post_restart_flag=0;
-  make_physics_varsALL(project_option,post_restart_flag);
+  make_physics_varsALL(project_option,post_restart_flag,1);
  } else if (post_init_flag==0) { // called from writePlotFile
   if (1==1) {
    VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
     init_vof_ls_prev_time,SLOPE_RECON_MF);
    int project_option=1;  // initial project
    int post_restart_flag=0;
-   make_physics_varsALL(project_option,post_restart_flag);
+   make_physics_varsALL(project_option,post_restart_flag,2);
   }
  } else if (post_init_flag==2) { // called from post_restart
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
@@ -18277,7 +18277,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   }
   int project_option=1;  // initial project
   int post_restart_flag=1;
-  make_physics_varsALL(project_option,post_restart_flag);
+  make_physics_varsALL(project_option,post_restart_flag,3);
  } else
   amrex::Error("post_init_flag invalid");
 
@@ -20605,6 +20605,12 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  if (localMF[LEVELPC_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[LEVELPC_MF]->nGrow() invalid");
 
+ int nhistory=localMF[HISTORY_MF]->nComp();
+ if (nhistory==nten*2) {
+  // do nothing
+ } else
+  amrex::Error("nhistory invalid");
+
  if (localMF_grow[DIST_CURV_MF]>=0) {
   delete_localMF(DIST_CURV_MF,1);
  }
@@ -20670,6 +20676,8 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
     const Real* xlo = grid_loc[gridno].lo();
 
+    FArrayBox& histfab=(*localMF[HISTORY_MF])[mfi];
+
     // mask=tag if not covered by level+1 or outside the domain.
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
@@ -20699,6 +20707,9 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      &finest_level,
      &curv_min_local[tid_current],
      &curv_max_local[tid_current],
+     &nhistory,
+     histfab.dataPtr(),
+     ARLIM(histfab.loVect()),ARLIM(histfab.hiVect()),
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),

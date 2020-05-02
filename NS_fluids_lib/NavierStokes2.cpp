@@ -4731,7 +4731,7 @@ void NavierStokes::apply_pressure_grad(
 
 
 void NavierStokes::make_physics_varsALL(int project_option,
-  int post_restart_flag) {
+  int post_restart_flag,int caller_id) {
 
  if (level!=0)
   amrex::Error("level invalid make_physics_varsALL");
@@ -4750,6 +4750,8 @@ void NavierStokes::make_physics_varsALL(int project_option,
   amrex::Error("SDC_outer_sweeps invalid");
 
  int nmat=num_materials;
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nhistory=nten*2;
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -4784,10 +4786,14 @@ void NavierStokes::make_physics_varsALL(int project_option,
   curv_max[tid]=-1.0e+99;
  } // tid
 
+ allocate_array(1,nhistory,-1,HISTORY_MF);
+
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.makeStateCurv(project_option,post_restart_flag);
  }
+
+ delete_array(HISTORY_MF);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);

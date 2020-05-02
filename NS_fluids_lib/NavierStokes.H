@@ -906,7 +906,8 @@ protected:
       int init_vof_ls_prev_time,int dest_mf);
     void VOF_Recon_resize(int ngrow,int dest_mf);
 
-    void make_physics_varsALL(int project_option,int post_restart_flag);
+    void make_physics_varsALL(int project_option,int post_restart_flag,
+		    int caller_id);
 
     void allocate_physics_vars();
     void make_physics_vars(int project_option);

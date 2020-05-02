@@ -244,7 +244,8 @@ stop
       INTEGER_T, intent(in) :: nten
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: im,im_opp,im3
+      INTEGER_T, intent(in) :: im,im_opp
+      INTEGER_T, intent(out) :: im3
       INTEGER_T :: imhold
       INTEGER_T :: im3_present_node
       INTEGER_T, intent(in) :: iten
@@ -3755,6 +3756,8 @@ stop
       INTEGER_T RD_HEIGHT
       INTEGER_T mask1,mask2
       INTEGER_T local_mask
+      INTEGER_T ihist
+      REAL_T ZEYU_thet_d,ZEYU_u_cl
     
       if (ngrow_distance.ne.4) then
        print *,"ngrow_distance invalid in curvstrip"

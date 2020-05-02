@@ -523,7 +523,7 @@ void NavierStokes::nonlinear_advection() {
       if (conservative_div_uu==2) {
        int project_option=10;
        int post_restart_flag=0;
-       make_physics_varsALL(project_option,post_restart_flag);
+       make_physics_varsALL(project_option,post_restart_flag,4);
        multiphase_project(project_option); // project for after regrid.
       } else if (conservative_div_uu==1) {
         // do nothing
@@ -2629,7 +2629,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         SLOPE_RECON_MF);
        makeStateDistALL();
 
-       make_physics_varsALL(project_option,post_restart_flag); 
+       make_physics_varsALL(project_option,post_restart_flag,5); 
 
         // if face_flag==0: unew^{f} = unew^{c->f}
 	// if face_flag==1: 
@@ -2896,7 +2896,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 // At this stage, variables are not scaled, so facevel_index will have
 // to be scaled later.
     debug_memory();
-    make_physics_varsALL(project_option,post_restart_flag); 
+    make_physics_varsALL(project_option,post_restart_flag,6); 
 
     if (1==0) {
      int basestep_debug=nStep();
