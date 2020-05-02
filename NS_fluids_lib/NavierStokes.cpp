@@ -20691,6 +20691,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     // in: LEVELSET_3D.F90
     FORT_CURVSTRIP(
      &post_restart_flag,
      &conservative_tension_force,

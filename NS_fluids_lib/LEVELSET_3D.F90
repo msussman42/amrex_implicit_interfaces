@@ -197,7 +197,7 @@ stop
       return
       end subroutine initpforce
 
-
+       ! called from FORT_CURVSTRIP
       subroutine initheightLS( &
         conservative_tension_force, &
         icenter,jcenter,kcenter, &
@@ -220,6 +220,8 @@ stop
         curvHT, &
         curvFD, &
         mgoni_force, &
+        ZEYU_thet_d, &
+        ZEYU_u_cl, &
         im3, &
         nmat, &
         visc_coef,nten, &
@@ -230,31 +232,32 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T conservative_tension_force
-      INTEGER_T icenter,jcenter,kcenter
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T bfact
-      REAL_T xcenter(SDIM)
-      INTEGER_T dircrit
-      INTEGER_T side
-      INTEGER_T signside
-      INTEGER_T nten
-      REAL_T time
-      INTEGER_T nmat
-      INTEGER_T im,im_opp,im3,imhold
-      INTEGER_T im3_present_node
-      INTEGER_T iten
-      INTEGER_T iten_test
-      INTEGER_T RD,RDx,RD_HEIGHT
-      REAL_T visc_coef
+      INTEGER_T, intent(in) :: conservative_tension_force
+      INTEGER_T, intent(in) :: icenter,jcenter,kcenter
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xcenter(SDIM)
+      INTEGER_T, intent(in) :: dircrit
+      INTEGER_T, intent(in) :: side
+      INTEGER_T, intent(in) :: signside
+      INTEGER_T, intent(in) :: nten
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: im,im_opp,im3
+      INTEGER_T :: imhold
+      INTEGER_T :: im3_present_node
+      INTEGER_T, intent(in) :: iten
+      INTEGER_T :: iten_test
+      INTEGER_T, intent(in) :: RD,RDx,RD_HEIGHT
+      REAL_T, intent(in) :: visc_coef
       REAL_T user_tension(nten)
-      REAL_T dx(SDIM)
-      REAL_T vol_sten
-      REAL_T area_sten(SDIM,2)
-      REAL_T curvHT
-      REAL_T curvFD
-      REAL_T mgoni_force(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: vol_sten
+      REAL_T, intent(in) :: area_sten(SDIM,2)
+      REAL_T, intent(out) :: curvHT
+      REAL_T, intent(out) :: curvFD
+      REAL_T, intent(out) :: mgoni_force(SDIM)
  
       INTEGER_T dir2
 
@@ -265,22 +268,22 @@ stop
 
       REAL_T htfunc(-1:1,-1:1)
 
-      REAL_T xsten(-RDx:RDx,SDIM)
+      REAL_T, intent(in) :: xsten(-RDx:RDx,SDIM)
       REAL_T xsten_curv(-2:2,SDIM)
 
-      REAL_T velsten( &
+      REAL_T, intent(in) :: velsten( &
        D_DECL(-1:1,-1:1,-1:1),SDIM)
 
-      REAL_T mgoni_temp( &
+      REAL_T, intent(in) :: mgoni_temp( &
        D_DECL(-1:1,-1:1,-1:1),nmat)
 
-      REAL_T lssten( &
+      REAL_T, intent(in) :: lssten( &
        D_DECL(-RD:RD,-RD:RD,-RD:RD),nmat)
 
-      REAL_T nrmsten( &
+      REAL_T, intent(in) :: nrmsten( &
        D_DECL(-1:1,-1:1,-1:1),SDIM*nmat)
 
-      REAL_T nrmcenter(SDIM*nmat)
+      REAL_T, intent(in) :: nrmcenter(SDIM*nmat)
       REAL_T nrmtest(SDIM*nmat)
 
       REAL_T ngrid(SDIM)
@@ -386,8 +389,8 @@ stop
       REAL_T ZEYU_d_closest
       REAL_T ZEYU_thet_s
       REAL_T ZEYU_thet_d_apparent
-      REAL_T ZEYU_thet_d
-      REAL_T ZEYU_u_cl
+      REAL_T, intent(out) :: ZEYU_thet_d
+      REAL_T, intent(out) :: ZEYU_u_cl
       REAL_T ZEYU_u_slip
       REAL_T ZEYU_mu_l
       REAL_T ZEYU_mu_g
@@ -1354,6 +1357,40 @@ stop
             print *," cos static angle ",cos_angle
            endif 
 
+            ! ZEYU_u_cl is positive if the contact line is advancing into
+            ! the gas.
+            ! nproject points towards the im material
+           if (fort_denconst(im).ge. &
+               fort_denconst(im_opp)) then
+            im_liquid=im
+            im_vapor=im_opp
+            ZEYU_thet_s=angle_im  ! thet_s in the liquid.
+            ZEYU_u_cl=-totaludotn
+           else if (fort_denconst(im_opp).ge. &
+                    fort_denconst(im)) then
+            im_liquid=im_opp
+            im_vapor=im
+            ZEYU_thet_s=Pi-angle_im
+            ZEYU_u_cl=totaludotn
+           else
+            print *,"fort_denconst bust"
+            stop
+           endif
+           ZEYU_mu_l=fort_viscconst(im_liquid)
+           ZEYU_mu_g=fort_viscconst(im_vapor)
+           ZEYU_sigma=user_tension(iten)
+           ZEYU_thet_d_apparent=ZEYU_thet_s
+           ZEYU_thet_d=ZEYU_thet_d_apparent
+           ZEYU_u_slip=zero ! unused for standard CL models.
+
+           ZEYU_ifgnbc=0
+           ZEYU_lambda=8.0D-7
+           ZEYU_l_macro=dxmin
+           ZEYU_l_micro=1.0D-9
+           ZEYU_dgrid=dxmin
+           dist_to_CL=zero
+           ZEYU_d_closest=abs(dist_to_CL)
+
            ! modify cos_angle (initialized above as static angle)
            ! use_DCA=0 static angle
            ! use_DCA=1 Jiang
@@ -1361,6 +1398,9 @@ stop
            if ((use_DCA.eq.0).or.(use_DCA.eq.1).or.(use_DCA.eq.2)) then
             call DCA_select_model(nproject,totaludotn,cos_angle, &
              liquid_viscosity,user_tension(iten),cos_angle,use_DCA)
+
+            ZEYU_thet_d=acos(cos_angle)
+
            else if ((use_DCA.ge.101).and. & ! fort_ZEYU_DCA_SELECT>=1
                     (use_DCA.le.108)) then
             if (use_DCA.eq.101) then
@@ -1371,38 +1411,7 @@ stop
              ! case 8 model=Cox 1986
             else if ((use_DCA.ge.102).and.(use_DCA.le.108)) then
              ZEYU_imodel=use_DCA-100
-             ZEYU_ifgnbc=0
-             ZEYU_lambda=8.0D-7
-             ZEYU_l_macro=dxmin
-             ZEYU_l_micro=1.0D-9
-             ZEYU_dgrid=dxmin 
-             dist_to_CL=zero
-             ZEYU_d_closest=abs(dist_to_CL)
 
-              ! ZEYU_u_cl is positive if the contact line is advancing into
-              ! the gas.
-              ! nproject points towards the im material
-             if (fort_denconst(im).ge. &
-                 fort_denconst(im_opp)) then
-              im_liquid=im
-              im_vapor=im_opp
-              ZEYU_thet_s=angle_im  ! thet_s in the liquid.
-              ZEYU_u_cl=-totaludotn
-             else if (fort_denconst(im_opp).ge. &
-                      fort_denconst(im)) then
-              im_liquid=im_opp
-              im_vapor=im
-              ZEYU_thet_s=Pi-angle_im
-              ZEYU_u_cl=totaludotn
-             else
-              print *,"fort_denconst bust"
-              stop
-             endif
-             ZEYU_mu_l=fort_viscconst(im_liquid)
-             ZEYU_mu_g=fort_viscconst(im_vapor)
-             ZEYU_sigma=user_tension(iten)
-             ZEYU_thet_d_apparent=ZEYU_thet_s
-             ZEYU_thet_d=ZEYU_thet_d_apparent
              call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
                ZEYU_thet_s, &
                ZEYU_imodel, ZEYU_ifgnbc, ZEYU_lambda, &
@@ -3575,6 +3584,9 @@ stop
        finest_level, &
        curv_min, &
        curv_max, &
+       nhistory, &
+       history_dat, &
+       DIMS(history_dat), &
        maskcov,DIMS(maskcov), &
        vol,DIMS(vol), &
        areax,DIMS(areax), &
@@ -3607,57 +3619,60 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T post_restart_flag
-      INTEGER_T conservative_tension_force
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nten
-      INTEGER_T ngrow_distance
-      INTEGER_T RD
-      INTEGER_T num_curv
+      INTEGER_T, intent(in) :: nhistory
+      INTEGER_T, intent(in) :: post_restart_flag
+      INTEGER_T, intent(in) :: conservative_tension_force
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: RD
+      INTEGER_T, intent(in) :: num_curv
       INTEGER_T icurv
-      INTEGER_T nmat
-      REAL_T visc_coef
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: visc_coef
 
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(LSPC)
-      INTEGER_T DIMDEC(LSHO)
-      INTEGER_T DIMDEC(curvfab)
-      INTEGER_T DIMDEC(velfab)
-      INTEGER_T DIMDEC(denfab)
+      INTEGER_T, intent(in) :: DIMDEC(history_dat)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+      INTEGER_T, intent(in) :: DIMDEC(LSPC)
+      INTEGER_T, intent(in) :: DIMDEC(LSHO)
+      INTEGER_T, intent(in) :: DIMDEC(curvfab)
+      INTEGER_T, intent(in) :: DIMDEC(velfab)
+      INTEGER_T, intent(in) :: DIMDEC(denfab)
 
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(areax)
-      INTEGER_T DIMDEC(areay)
-      INTEGER_T DIMDEC(areaz)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(areax)
+      INTEGER_T, intent(in) :: DIMDEC(areay)
+      INTEGER_T, intent(in) :: DIMDEC(areaz)
 
-      REAL_T curv_min
-      REAL_T curv_max
+      REAL_T, intent(out) :: curv_min
+      REAL_T, intent(out) :: curv_max
 
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T vol(DIMV(vol))
-      REAL_T areax(DIMV(areax))
-      REAL_T areay(DIMV(areay))
-      REAL_T areaz(DIMV(areaz))
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: vol(DIMV(vol))
+      REAL_T, intent(in) :: areax(DIMV(areax))
+      REAL_T, intent(in) :: areay(DIMV(areay))
+      REAL_T, intent(in) :: areaz(DIMV(areaz))
 
-      REAL_T masknbr(DIMV(masknbr),4)
-      REAL_T LSPC(DIMV(LSPC),nmat*(1+SDIM))
-      REAL_T LSHO(DIMV(LSHO),nmat*(1+SDIM))
-      REAL_T curvfab(DIMV(curvfab),num_curv)
-      REAL_T velfab(DIMV(velfab),SDIM)
-      REAL_T denfab(DIMV(denfab),nmat*num_state_material)
+      REAL_T, intent(out) :: history_dat(DIMV(history_dat),nhistory)
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr),4)
+      REAL_T, intent(in) :: LSPC(DIMV(LSPC),nmat*(1+SDIM))
+      REAL_T, intent(in) :: LSHO(DIMV(LSHO),nmat*(1+SDIM))
+      REAL_T, intent(out) :: curvfab(DIMV(curvfab),num_curv)
+      REAL_T, intent(in) :: velfab(DIMV(velfab),SDIM)
+      REAL_T, intent(in) :: denfab(DIMV(denfab),nmat*num_state_material)
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T istenlo(3),istenhi(3)
       INTEGER_T LSstenlo(3),LSstenhi(3)
-      INTEGER_T bfact
-      INTEGER_T bfact_grid
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T rz_flag
-      REAL_T time
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: bfact_grid
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: rz_flag
+      REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k
       INTEGER_T iside,jside,kside
@@ -3773,6 +3788,13 @@ stop
        print *,"nten invalid curvstrip nten nten_test ",nten,nten_test
        stop
       endif
+      if (nhistory.eq.nten*2) then
+       ! do nothing
+      else
+       print *,"nhistory invalid"
+       stop
+      endif
+
       if ((conservative_tension_force.ne.0).and. &
           (conservative_tension_force.ne.1)) then
        print *,"conservative_tension_force invalid"
@@ -3814,6 +3836,8 @@ stop
       call checkbound(fablo,fabhi,DIMS(areax),1,0,6612)
       call checkbound(fablo,fabhi,DIMS(areay),1,1,6613)
       call checkbound(fablo,fabhi,DIMS(areaz),1,SDIM-1,6614)
+
+      call checkbound(fablo,fabhi,DIMS(history_dat),1,-1,2902)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -4447,6 +4471,8 @@ stop
               curv_cellHT, &
               curv_cellFD, &
               mgoni_force, & !(I-nn^T)(grad sigma) delta
+              ZEYU_thet_d, &
+              ZEYU_u_cl, &
               im3, &
               nmat, &
               visc_coef,nten, &
@@ -4469,6 +4495,10 @@ stop
               dircrossing-1,nmat, &
               im_main,im_main_opp, &
               pforce_cell)
+
+             ihist=(iten-1)*2
+             history_dat(D_DECL(i,j,k),ihist+1)=ZEYU_thet_d
+             history_dat(D_DECL(i,j,k),ihist+2)=ZEYU_u_cl
 
              icurv=(iten-1)*(5+SDIM)
              curvfab(D_DECL(i,j,k),icurv+1)=curv_cellHT
