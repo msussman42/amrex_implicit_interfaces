@@ -16739,6 +16739,7 @@ void NavierStokes::writeSanityCheckData(int data_id,
   
   int num_levels=tecplot_finest_level+1;
 
+   // in: NAVIERSTOKES_3D.F90
   FORT_COMBINEZONES_SANITY(
     &total_number_grids,
     grids_per_level_array.dataPtr(),
@@ -16755,7 +16756,8 @@ void NavierStokes::writeSanityCheckData(int data_id,
     &num_levels,
     &cur_time_slab,
     &visual_option,
-    &visual_revolve);
+    &visual_revolve,
+    &ncomp);
 
  } else if (!ParallelDescriptor::IOProcessor()) {
   // do nothing

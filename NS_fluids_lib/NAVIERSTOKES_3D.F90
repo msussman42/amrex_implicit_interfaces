@@ -401,26 +401,27 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T plot_sdim,klo_plot,khi_plot
+      INTEGER_T, intent(in) :: plot_sdim
+      INTEGER_T klo_plot,khi_plot
 
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-      INTEGER_T total_number_grids
-      INTEGER_T num_levels
-      INTEGER_T grids_per_level_array(num_levels)
-      INTEGER_T levels_array(total_number_grids)
-      INTEGER_T bfact_array(total_number_grids)
-      INTEGER_T gridno_array(total_number_grids)
-      INTEGER_T gridlo_array(total_number_grids*SDIM)
-      INTEGER_T gridhi_array(total_number_grids*SDIM)
-      INTEGER_T finest_level
-      INTEGER_T nsteps
-      REAL_T time
-      INTEGER_T visual_option
-      INTEGER_T visual_revolve
-      INTEGER_T plotint
-      INTEGER_T nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: total_number_grids
+      INTEGER_T, intent(in) :: num_levels
+      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, intent(in) :: levels_array(total_number_grids)
+      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nsteps
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: visual_option
+      INTEGER_T, intent(in) :: visual_revolve
+      INTEGER_T, intent(in) :: plotint
+      INTEGER_T, intent(in) :: nmat
 
       INTEGER_T strandid
 
@@ -683,10 +684,10 @@ stop
                       !face neighbor connections
 
         ! ----- IMax,JMax,KMax
-       write(11) hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+2
-       write(11) hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+2
+       write(11) (hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
+       write(11) (hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
        if (plot_sdim.eq.3) then
-        write(11) hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+2
+        write(11) (hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
        else
         print *,"plot_sdim invalid in zones_revolve"
         stop
@@ -770,15 +771,21 @@ stop
         stop
        endif
 
+       hi_index_shift(1)=(hi(1)-lo(1)+1)
+       hi_index_shift(2)=(hi(2)-lo(2)+1)
+       hi_index_shift(3)=khi_plot-klo_plot
+
        allocate(zone3d_gb(iz_gb)% &
-        var(nwrite3d,lo(1):hi(1)+1, &
-            lo(2):hi(2)+1, &
-            klo_plot:khi_plot))
+        var(nwrite3d, &
+            0:hi_index_shift(1), &
+            0:hi_index_shift(2), &
+            0:hi_index_shift(3)))
 
        allocate(zone2d_gb(iz_gb)% &
-        var(nwrite2d,lo(1):hi(1)+1, &
-            lo(SDIM):hi(SDIM)+1))
- 
+        var(nwrite2d, &
+            0:hi_index_shift(1), &
+            0:hi_index_shift(SDIM)))
+        
        write(levstr,'(I3)') ilev
        write(gridstr,'(I5)') igrid
        do i=1,3
@@ -832,11 +839,11 @@ stop
        endif
 
         ! order is IMPORTANT.
-       do j=lo(2),hi(2)+1
-       do i=lo(1),hi(1)+1
+       do j=0,hi_index_shift(2)
+       do i=0,hi_index_shift(1)
         read(4,*) (zone2d_gb(iz_gb)%var(ivar_gb,i,j),ivar_gb=1,nwrite2d)
 
-        do k=klo_plot,khi_plot
+        do k=0,hi_index_shift(3)
 
          index3d=0
          index2d=0
@@ -950,9 +957,9 @@ stop
 
        ! order is IMPORTANT.
        do ivar_gb=1,nwrite3d
-        do k=klo_plot,khi_plot
-        do j=lo_gb(iz_gb,2),hi_gb(iz_gb,2)+1
-        do i=lo_gb(iz_gb,1),hi_gb(iz_gb,1)+1
+        do k=0,khi_plot-klo_plot
+        do j=0,(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
+        do i=0,(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
          write(11) zone3d_gb(iz_gb)%var(ivar_gb,i,j,k)
         enddo
         enddo
@@ -995,6 +1002,620 @@ stop
 
       return
       end subroutine zones_revolve
+
+
+
+      subroutine zones_revolve_sanity( &
+       plot_sdim, &
+       total_number_grids, &
+       grids_per_level_array, &
+       levels_array, &
+       bfact_array, &
+       gridno_array, &
+       gridlo_array, &
+       gridhi_array, &
+       finest_level, &
+       SDC_outer_sweeps, &
+       slab_step, &
+       data_id, &
+       nsteps, &
+       num_levels, &
+       time, &
+       visual_option, &
+       visual_revolve, &
+       ncomp)
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: plot_sdim
+      INTEGER_T klo_plot,khi_plot
+
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: total_number_grids
+      INTEGER_T, intent(in) :: num_levels
+      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, intent(in) :: levels_array(total_number_grids)
+      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: SDC_outer_sweeps
+      INTEGER_T, intent(in) :: slab_step
+      INTEGER_T, intent(in) :: data_id
+      INTEGER_T, intent(in) :: nsteps
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: visual_option
+      INTEGER_T, intent(in) :: visual_revolve
+
+      INTEGER_T strandid
+
+      INTEGER_T nwrite3d,nwrite2d,index3d,index2d
+
+      INTEGER_T im
+      INTEGER_T partid
+
+      character*3 levstr
+      character*5 gridstr
+      character*18 filename18
+      character*80 rmcommand
+
+      character*6 stepstr
+      character*16 newfilename16
+
+      INTEGER_T i,j,k,dir
+      INTEGER_T ilev,igrid,ivel2d,ivel3d
+      INTEGER_T lo(plot_sdim),hi(plot_sdim)
+      INTEGER_T sysret
+
+
+! Guibo
+
+      character*80 Title,Zonename
+      REAL*4 ZONEMARKER,EOHMARKER
+      integer*4 :: nzones_gb,iz_gb,ivar_gb
+      integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
+      INTEGER_T bfact,testlev,testgridno
+      INTEGER_T testlo(SDIM),testhi(SDIM)
+
+      ! define zone structure
+      type zone3d_t
+         real*8, pointer :: var(:,:,:,:)
+      end type zone3d_t
+      type(zone3d_t), dimension(:), allocatable :: zone3d_gb
+
+      type zone2d_t
+         real*8, pointer :: var(:,:,:)
+      end type zone2d_t
+      type(zone2d_t), dimension(:), allocatable :: zone2d_gb
+
+      REAL_T theta,rr,zz,xx,yy,ur,uz,ux,uy
+
+      if (plot_sdim.ne.3) then
+       print *,"plot_sdim invalid"
+       stop
+      endif
+
+      if (SDIM.ne.2) then
+       print *,"must be called only in 2D"
+       stop
+      endif
+
+      if (levelrz.ne.1) then
+       print *,"levelrz invalid zones revolve"
+       stop
+      endif
+      if (visual_revolve.lt.1) then
+       print *,"visual_revolve: ",visual_revolve
+       print *,"visual_revolve invalid zones_revolve"
+       stop
+      endif
+
+      nwrite2d=SDIM+ncomp
+      nwrite3d=plot_sdim+ncomp
+
+      if (num_levels.ne.finest_level+1) then
+       print *,"num_levels invalid"
+       stop
+      endif
+
+      print *,"FIX ME FILE NAME"
+      stop
+
+      write(stepstr,'(I6)') nsteps
+      do i=1,6
+       if (stepstr(i:i).eq.' ') then
+        stepstr(i:i)='0'
+       endif
+      enddo
+
+      write(newfilename16,'(A6,A6,A4)') 'datafb',stepstr,'.plt'
+
+      print *,"newfilename16 ",newfilename16
+
+
+      !--------------------------------------------------
+      ! Determine nzones_gb and allocate zone_gb, lo_gb, hi_gb
+      nzones_gb=0
+      do ilev=0,finest_level
+      do igrid=0,grids_per_level_array(ilev+1)-1
+        nzones_gb = nzones_gb+1
+      enddo
+      enddo
+
+      if (nzones_gb.ne.total_number_grids) then
+       print *,"nzones_gb.ne.total_number_grids: aborting"
+       stop
+      endif
+
+      print *,"allocating grid structure for tecplot binary"
+      print *,"finest_level= ",finest_level
+      print *,"number of grids on finest level ", &
+         grids_per_level_array(finest_level+1) 
+      print *,"total number of grid blocks: ",nzones_gb
+
+      allocate(zone2d_gb(nzones_gb))
+      allocate(zone3d_gb(nzones_gb))
+      allocate(lo_gb(nzones_gb,plot_sdim))
+      allocate(hi_gb(nzones_gb,plot_sdim))
+
+       ! Determine lo_gb, hi_gb
+      iz_gb=0
+      do ilev=0,finest_level
+      do igrid=0,grids_per_level_array(ilev+1)-1
+       write(levstr,'(I3)') ilev
+       write(gridstr,'(I5)') igrid
+       do i=1,3
+        if (levstr(i:i).eq.' ') then
+         levstr(i:i)='0'
+        endif
+       enddo
+       do i=1,5
+        if (gridstr(i:i).eq.' ') then
+         gridstr(i:i)='0'
+        endif
+       enddo
+       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
+       open(unit=4,file=filename18)
+
+       do dir=1,plot_sdim
+        if (dir.ne.3) then
+         read(4,*) lo(dir),hi(dir)
+        else if (dir.eq.3) then
+         lo(dir)=0
+         hi(dir)=visual_revolve-1
+        else
+         print *,"dir invalid zones revolve"
+         stop
+        endif
+        lo_gb(iz_gb+1,dir)=lo(dir)
+        hi_gb(iz_gb+1,dir)=hi(dir)
+       enddo ! dir
+
+       bfact=bfact_array(iz_gb+1)
+       testlev=levels_array(iz_gb+1)
+       testgridno=gridno_array(iz_gb+1)
+
+       if (bfact.lt.1) then
+        print *,"bfact invalid150"
+        stop
+       endif
+       if (testlev.ne.ilev) then
+        print *,"testlev invalid"
+        stop
+       endif
+       if (testgridno.ne.igrid) then
+        print *,"testgridno invalid"
+        stop
+       endif
+
+       do dir=1,SDIM
+        testlo(dir)=gridlo_array(SDIM*iz_gb+dir)
+        testhi(dir)=gridhi_array(SDIM*iz_gb+dir)
+        if (testlo(dir).ne.lo(dir)) then
+         print *,"testlo invalid"
+         stop
+        endif
+        if (testhi(dir).ne.hi(dir)) then
+         print *,"testhi invalid"
+         stop
+        endif
+        if ((lo(dir)/bfact)*bfact.ne.lo(dir)) then
+         print *,"lo not divisible by bfact"
+         stop
+        endif
+        if (((hi(dir)+1)/bfact)*bfact.ne.hi(dir)+1) then
+         print *,"hi+1 not divisible by bfact"
+         stop
+        endif
+       enddo ! dir
+ 
+       close(4)
+
+       iz_gb=iz_gb+1
+      enddo ! igrid
+      enddo ! ilev
+
+      if (iz_gb.ne.total_number_grids) then
+       print *,"iz_gb or total_number_grids invalid"
+       stop
+      endif
+
+      !-------------------------------------------------------------
+      ZONEMARKER = 299.0
+      EOHMARKER  = 357.0
+      open(unit=11,file=newfilename16,form="unformatted",access="stream")
+
+       ! +++++++ HEADER SECTION ++++++
+
+       ! i.  Magic number, Version number
+      write(11) "#!TDV112"
+
+       ! ii. Integer value of 1.
+      write(11) 1
+
+       ! iii. Title and variable names.
+       ! File type 0 = FULL,1 = GRID,2 = SOLUTION
+      write(11) 0
+       ! The TITLE
+      Title = "DEBUGC data"
+      call dumpstring(Title)
+       ! Number of variables 
+      write(11) nwrite3d
+
+      ! Variable names: zones_revolve
+      call dumpstring_headers_sanity(plot_sdim,ncomp)
+
+       ! Zones
+      do iz_gb=1,nzones_gb
+       ! Zone marker. Value = 299.0
+       write(11) ZONEMARKER
+       ! Zone name
+       Zonename = "ZONE"
+       call dumpstring(Zonename)
+
+       if (plotint.le.0) then
+        strandid=1    
+       else
+        strandid=(nsteps/plotint)+1
+       endif
+
+       write(11) -1   ! Parent Zone
+       write(11) 0    ! StrandID
+       write(11) time ! Solution time
+       write(11) -1   ! Not used. Set to -1
+       write(11) 0    ! Zone Type
+       write(11) 0    ! Specify Var Location. 0 = Don't specify, 
+                      ! all data is located at the nodes.
+       write(11) 0    ! Are raw local 1-to-1 face neighbors supplied?
+       write(11) 0    ! Number of miscellaneous user-defined  
+                      !face neighbor connections
+
+        ! ----- IMax,JMax,KMax
+       write(11) 3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
+       write(11) 3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
+       if (plot_sdim.eq.3) then
+        write(11) 3*(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
+       else
+        print *,"plot_sdim invalid in zones_revolve_sanity"
+        stop
+       endif
+ 
+       write(11) 0
+      enddo  ! iz_gb
+
+      write(11) EOHMARKER
+
+      print *,"finished writing header section, now data section"
+      print *,"nzones_gb= ",nzones_gb
+      print *,"nwrite3d= ",nwrite3d
+
+       ! +++++++ DATA SECTION ++++++
+
+      ilev=0
+      igrid=0
+
+      do iz_gb=1,nzones_gb
+
+       if (ilev.gt.finest_level) then
+        print *,"ilev invalid"
+        print *,"ilev=",ilev
+        print *,"finest_level=",finest_level
+        stop
+       endif
+      
+       do while (grids_per_level_array(ilev+1).eq.0)
+        ilev=ilev+1
+
+        if (igrid.ne.0) then
+         print *,"igrid should be 0"
+         print *,"igrid=",igrid
+         stop
+        endif
+        if (ilev.gt.finest_level) then
+         print *,"ilev invalid in grids_per_level loop"
+         print *,"ilev=",ilev
+         print *,"finest_level=",finest_level
+         stop
+        endif
+       enddo  ! while grids_per_level_array==0
+ 
+       if (igrid.gt.grids_per_level_array(ilev+1)-1) then
+        print *,"igrid invalid"
+        print *,"igrid= ",igrid
+        print *,"ilev= ",ilev
+        print *,"finest_level=",finest_level
+        print *,"grids_per_level_array= ", &
+         grids_per_level_array(ilev+1)
+        print *,"iz_gb = ",iz_gb
+        print *,"nzones_gb= ",nzones_gb
+        print *,"num_levels= ",num_levels
+        print *,"nwrite3d= ",nwrite3d
+        stop
+       endif
+
+       if (igrid.ne.gridno_array(iz_gb)) then
+        print *,"igrid invalid"
+        stop
+       endif
+       if (ilev.ne.levels_array(iz_gb)) then
+        print *,"ilev invalid"
+        stop
+       endif
+
+       do dir=1,plot_sdim
+        lo(dir)=lo_gb(iz_gb,dir)
+        hi(dir)=hi_gb(iz_gb,dir)
+       enddo
+
+       if (plot_sdim.eq.3) then
+        klo_plot=lo(plot_sdim)
+        khi_plot=hi(plot_sdim)+1
+       else if (plot_sdim.eq.2) then
+        klo_plot=0
+        khi_plot=0
+       else
+        print *,"plot_sdim invalid"
+        stop
+       endif
+
+       hi_index_shift(1)=3*(hi(1)-lo(1)+1)
+       hi_index_shift(2)=3*(hi(2)-lo(2)+1)
+       hi_index_shift(3)=khi_plot-klo_plot
+
+       allocate(zone3d_gb(iz_gb)% &
+        var(nwrite3d, &
+            0:hi_index_shift(1), &
+            0:hi_index_shift(2), &
+            0:hi_index_shift(3)))
+
+       allocate(zone2d_gb(iz_gb)% &
+        var(nwrite2d, &
+            0:hi_index_shift(1), &
+            0:hi_index_shift(SDIM)))
+
+       write(levstr,'(I3)') ilev
+       write(gridstr,'(I5)') igrid
+       do i=1,3
+        if (levstr(i:i).eq.' ') then
+         levstr(i:i)='0'
+        endif
+       enddo
+       do i=1,5
+        if (gridstr(i:i).eq.' ') then
+         gridstr(i:i)='0'
+        endif
+       enddo
+
+       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
+       open(unit=4,file=filename18)
+       print *,"filename18 ",filename18
+
+       do dir=1,SDIM
+        read(4,*) lo(dir),hi(dir)
+
+        if (lo(dir).ne.lo_gb(iz_gb,dir)) then
+         print *,"lo and lo_gb different"
+         print *,"iz_gb,dir,lo,lo_gb ",iz_gb,dir,lo(dir), &
+          lo_gb(iz_gb,dir)
+         stop
+        endif
+        if (hi(dir).ne.hi_gb(iz_gb,dir)) then
+         print *,"hi and hi_gb different"
+         print *,"iz_gb,dir,hi,hi_gb ",iz_gb,dir,hi(dir), &
+          hi_gb(iz_gb,dir)
+         stop
+        endif
+
+       enddo  ! dir
+
+       dir=plot_sdim
+       lo(dir)=0
+       hi(dir)=visual_revolve-1
+
+       if (lo(dir).ne.lo_gb(iz_gb,dir)) then
+        print *,"lo and lo_gb different"
+        print *,"iz_gb,dir,lo,lo_gb ",iz_gb,dir,lo(dir), &
+         lo_gb(iz_gb,dir)
+        stop
+       endif
+       if (hi(dir).ne.hi_gb(iz_gb,dir)) then
+        print *,"hi and hi_gb different"
+        print *,"iz_gb,dir,hi,hi_gb ",iz_gb,dir,hi(dir), &
+         hi_gb(iz_gb,dir)
+        stop
+       endif
+
+        ! order is IMPORTANT.
+       do j=0,hi_index_shift(2)
+       do i=0,hi_index_shift(1)
+        read(4,*) (zone2d_gb(iz_gb)%var(ivar_gb,i,j),ivar_gb=1,nwrite2d)
+
+        do k=0,hi_index_shift(3)
+
+         index3d=0
+         index2d=0
+
+         theta=two*Pi*k/visual_revolve
+         rr=zone2d_gb(iz_gb)%var(1,i,j)
+         zz=zone2d_gb(iz_gb)%var(2,i,j)
+         xx=rr*cos(theta)
+         yy=rr*sin(theta)
+         zone3d_gb(iz_gb)%var(1,i,j,k)=xx
+         zone3d_gb(iz_gb)%var(2,i,j,k)=yy
+         zone3d_gb(iz_gb)%var(3,i,j,k)=zz
+
+         index3d=index3d+plot_sdim
+         index2d=index2d+SDIM
+
+         do im=1,num_materials_vel
+          ivel2d=(im-1)*SDIM
+          ivel3d=(im-1)*plot_sdim
+          ur=zone2d_gb(iz_gb)%var(index2d+1+ivel2d,i,j)
+          uz=zone2d_gb(iz_gb)%var(index2d+2+ivel2d,i,j)
+          ux=ur*cos(theta)
+          uy=ur*sin(theta)
+          zone3d_gb(iz_gb)%var(index3d+1+ivel3d,i,j,k)=ux
+          zone3d_gb(iz_gb)%var(index3d+2+ivel3d,i,j,k)=uy
+          zone3d_gb(iz_gb)%var(index3d+3+ivel3d,i,j,k)=uz
+         enddo ! im
+
+         index3d=index3d+plot_sdim*num_materials_vel
+         index2d=index2d+SDIM*num_materials_vel
+
+         do partid=0,nparts_def-1
+          ivel2d=partid*SDIM
+          ivel3d=partid*plot_sdim
+          ur=zone2d_gb(iz_gb)%var(index2d+1+ivel2d,i,j)
+          uz=zone2d_gb(iz_gb)%var(index2d+2+ivel2d,i,j)
+          ux=ur*cos(theta)
+          uy=ur*sin(theta)
+          zone3d_gb(iz_gb)%var(index3d+1+ivel3d,i,j,k)=ux
+          zone3d_gb(iz_gb)%var(index3d+2+ivel3d,i,j,k)=uy
+          zone3d_gb(iz_gb)%var(index3d+3+ivel3d,i,j,k)=uz
+         enddo ! partid=0..nparts_def-1
+
+         index3d=index3d+plot_sdim*nparts_def
+         index2d=index2d+SDIM*nparts_def
+
+          ! pressure,presder,div,divdat,mach,vof
+         do ivar_gb=1,5*num_materials_vel+nmat
+          index3d=index3d+1
+          index2d=index2d+1
+          zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
+            zone2d_gb(iz_gb)%var(index2d,i,j)
+         enddo
+
+          ! ls
+         do ivar_gb=1,nmat
+          index3d=index3d+1
+          index2d=index2d+1
+          zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
+            zone2d_gb(iz_gb)%var(index2d,i,j)
+         enddo
+          ! ls normal
+         do ivar_gb=1,nmat
+          ur=zone2d_gb(iz_gb)%var(index2d+1,i,j)
+          uz=zone2d_gb(iz_gb)%var(index2d+2,i,j)
+          ux=ur*cos(theta)
+          uy=ur*sin(theta)
+          zone3d_gb(iz_gb)%var(index3d+1,i,j,k)=ux
+          zone3d_gb(iz_gb)%var(index3d+2,i,j,k)=uy
+          zone3d_gb(iz_gb)%var(index3d+3,i,j,k)=uz
+          index3d=index3d+plot_sdim
+          index2d=index2d+SDIM
+         enddo
+          ! den,configuration tensor,visc,trace
+         do ivar_gb=1,nmat*num_state_material+ &
+              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+              nmat+5*nmat
+          index3d=index3d+1
+          index2d=index2d+1
+          zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
+            zone2d_gb(iz_gb)%var(index2d,i,j)
+         enddo
+         if ((index3d.ne.nwrite3d).or. &
+             (index2d.ne.nwrite2d)) then
+          print *,"index mismatch in zone_revolve"
+          stop
+         endif
+
+        enddo ! k
+
+       enddo
+       enddo
+!      enddo
+
+       close(4)
+
+       ! Zone marker  Value = 299.0
+       write(11) ZONEMARKER
+       ! Data format
+       do i=1,nwrite3d
+        write(11) 2
+       enddo
+       write(11) 0  ! Has passive variables: 0 = no, 1 = yes.
+       write(11) 0  ! Has variable sharing 0 = no, 1 = yes.
+       write(11) -1 ! Share connectivity list (-1 = no sharing). 
+   
+       do ivar_gb=1,nwrite3d
+        write(11) minval(zone3d_gb(iz_gb)%var(ivar_gb,:,:,:))
+        write(11) maxval(zone3d_gb(iz_gb)%var(ivar_gb,:,:,:))
+       enddo
+
+       ! order is IMPORTANT.
+       do ivar_gb=1,nwrite3d
+        do k=0,khi_plot-klo_plot
+        do j=0,3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
+        do i=0,3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+         write(11) zone3d_gb(iz_gb)%var(ivar_gb,i,j,k)
+        enddo
+        enddo
+        enddo
+       enddo
+
+       deallocate(zone3d_gb(iz_gb)%var)
+       deallocate(zone2d_gb(iz_gb)%var)
+
+       igrid=igrid+1
+       if (igrid.gt.grids_per_level_array(ilev+1)-1) then
+        ilev=ilev+1
+        igrid=0
+       endif
+
+      enddo  ! iz_gb
+
+      deallocate(zone3d_gb)
+      deallocate(zone2d_gb)
+      deallocate(lo_gb)
+      deallocate(hi_gb)
+
+      close(11)
+     
+      rmcommand='rm tempnddata*'
+
+      print *,"issuing command ",rmcommand
+
+      sysret=0
+
+#ifdef PGIFORTRAN
+      call system(rmcommand)
+#else
+      call execute_command_line(rmcommand,exitstat=sysret)
+#endif
+      if (sysret.ne.0) then
+       print *,"execute_command_line has sysret=",sysret
+       stop
+      endif
+
+      return
+      end subroutine zones_revolve_sanity
+
+
+
 
       subroutine project_tangent(vel,nn)
       IMPLICIT NONE
@@ -3153,59 +3774,59 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T bfact
-      INTEGER_T do_plot,do_slice
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: do_plot,do_slice
 
         ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,den,Temp,KE
         ! (value of material with LS>0)
         ! nslice=domhi-domlo+3
-      INTEGER_T nslice,nstate_slice,slice_dir
-      REAL_T slice_data(nslice*nstate_slice)
-      REAL_T xslice(SDIM)
+      INTEGER_T, intent(in) :: nslice,nstate_slice,slice_dir
+      REAL_T, intent(out) :: slice_data(nslice*nstate_slice)
+      REAL_T, intent(in) :: xslice(SDIM)
  
-      INTEGER_T rz_flag
-      INTEGER_T nmat
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def) 
-      INTEGER_T elastic_ncomp
-      INTEGER_T visual_tessellate_vfrac
-      INTEGER_T visual_option
-      INTEGER_T vis_ncomp
-      INTEGER_T vislo(SDIM), vishi(SDIM)
-      INTEGER_T lo(SDIM), hi(SDIM)
-      INTEGER_T DIMDEC(fabout)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(velsol)
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(pres)
-      INTEGER_T DIMDEC(div)
-      INTEGER_T DIMDEC(divdat)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(elastic)
-      INTEGER_T DIMDEC(lsdist)
-      INTEGER_T DIMDEC(visc)
-      INTEGER_T DIMDEC(trace)
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T gridno
-      REAL_T fabout(DIMV(fabout),vis_ncomp) ! x,u,mag vort,LS
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T vel(DIMV(vel), &
+      INTEGER_T, intent(in) :: rz_flag
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def) 
+      INTEGER_T, intent(in) :: elastic_ncomp
+      INTEGER_T, intent(in) :: visual_tessellate_vfrac
+      INTEGER_T, intent(in) :: visual_option
+      INTEGER_T, intent(in) :: vis_ncomp
+      INTEGER_T, intent(in) :: vislo(SDIM), vishi(SDIM)
+      INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(fabout)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(velsol)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(div)
+      INTEGER_T, intent(in) :: DIMDEC(divdat)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(elastic)
+      INTEGER_T, intent(in) :: DIMDEC(lsdist)
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(trace)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: gridno
+      REAL_T, intent(out) :: fabout(DIMV(fabout),vis_ncomp) ! x,u,mag vort,LS
+      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in) :: vel(DIMV(vel), &
         num_materials_vel*(SDIM+1))
-      REAL_T velsol(DIMV(velsol), &
+      REAL_T, intent(in) :: velsol(DIMV(velsol), &
         nparts_def*SDIM)
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T pres(DIMV(pres),num_materials_vel)
-      REAL_T div(DIMV(div),num_materials_vel)
-      REAL_T divdat(DIMV(divdat),num_materials_vel)
-      REAL_T den(DIMV(den),num_state_material*nmat)
-      REAL_T elastic(DIMV(elastic),elastic_ncomp)
-      REAL_T visc(DIMV(visc),nmat)
-      REAL_T trace(DIMV(trace),5*nmat)
-      REAL_T lsdist(DIMV(lsdist),(SDIM+1)*nmat)
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(in) :: pres(DIMV(pres),num_materials_vel)
+      REAL_T, intent(in) :: div(DIMV(div),num_materials_vel)
+      REAL_T, intent(in) :: divdat(DIMV(divdat),num_materials_vel)
+      REAL_T, intent(in) :: den(DIMV(den),num_state_material*nmat)
+      REAL_T, intent(in) :: elastic(DIMV(elastic),elastic_ncomp)
+      REAL_T, intent(in) :: visc(DIMV(visc),nmat)
+      REAL_T, intent(in) :: trace(DIMV(trace),5*nmat)
+      REAL_T, intent(in) :: lsdist(DIMV(lsdist),(SDIM+1)*nmat)
       REAL_T xposnd(SDIM)
       REAL_T xposndT(SDIM)
       REAL_T machnd(num_materials_vel)
@@ -3234,10 +3855,10 @@ END SUBROUTINE SIMP
       INTEGER_T im
       INTEGER_T im_crit
 
-      REAL_T problo(SDIM)
-      REAL_T probhi(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dxfinest(SDIM)
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: probhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dxfinest(SDIM)
       REAL_T dxelem
 
       character*3 levstr
@@ -3564,7 +4185,7 @@ END SUBROUTINE SIMP
         do dir=1,SDIM
          xposndT(dir)=xposnd(dir)
         enddo
-        if (visual_RT_transform.eq.1) then
+        if (visual_RT_transform.eq.1) then ! defined in PROBCOMMON.F90
          call RT_transform(xposnd,xposndT)
         endif
 
@@ -4658,6 +5279,273 @@ END SUBROUTINE SIMP
       end subroutine FORT_CELLGRID
 
 
+      subroutine FORT_CELLGRID_SANITY( &
+       tid, &
+       bfact, &
+       ncomp, &
+       datafab,DIMS(datafab), &
+       problo, &
+       probhi, &
+       dx, &
+       lo,hi, &
+       level, &
+       finest_level, &
+       gridno, &
+       rz_flag)
+
+      use global_utility_module
+      use probf90_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: ncomp
+
+      INTEGER_T, intent(in) :: rz_flag
+      INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(datafab)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: gridno
+      REAL_T, intent(in) :: datafab(DIMV(datafab), &
+        ncomp)
+      REAL_T xposnd(SDIM)
+      REAL_T xposndT(SDIM)
+      REAL_T datand(ncomp)
+      REAL_T writend(2*ncomp+2*SDIM)
+      INTEGER_T scomp,iw
+
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: probhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+
+      character*3 levstr
+      character*5 gridstr
+      character*18 filename18
+
+      INTEGER_T i,j,k
+      INTEGER_T dir
+      INTEGER_T i1,j1,k1
+      INTEGER_T k1lo,k1hi,ksubhi
+      INTEGER_T igridlo(3),igridhi(3)
+      INTEGER_T icell(3)
+      INTEGER_T iproblo(3)
+      INTEGER_T nhalf
+      REAL_T xstenND(-3:3,SDIM)
+      REAL_T dxleft,dxright
+
+      nhalf=3
+
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid 39"
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+ 
+      call checkbound(lo,hi,DIMS(datafab),0,-1,411)
+
+      if (rz_flag.eq.0) then
+       ! do nothing
+      else if (rz_flag.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (rz_flag.eq.3) then
+       ! do nothing
+      else
+       print *,"rz_flag invalid in cellgrid"
+       stop
+      endif
+
+      write(levstr,'(I3)') level
+      write(gridstr,'(I5)') gridno
+      
+      do i=1,3
+        if (levstr(i:i).eq.' ') then
+         levstr(i:i)='0'
+        endif
+      enddo
+      do i=1,5
+        if (gridstr(i:i).eq.' ') then
+         gridstr(i:i)='0'
+        endif
+      enddo
+      write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
+      print *,"filename18 ",filename18
+
+      open(unit=11,file=filename18)
+      do dir=1,SDIM
+       write(11,*) lo(dir),hi(dir)
+      enddo
+
+      igridlo(3)=0
+      igridhi(3)=0
+      iproblo(3)=0
+
+      if (SDIM.eq.3) then
+       k1lo=0
+       k1hi=1
+       ksubhi=2
+      else if (SDIM.eq.2) then
+       k1lo=0
+       k1hi=0
+       ksubhi=0
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      do dir=1,SDIM
+       igridlo(dir)=lo(dir)
+       igridhi(dir)=hi(dir)+1
+       iproblo(dir)=0
+      enddo
+
+       ! the order k,j,i is IMPORTANT.
+      do k=igridlo(3),igridhi(3) 
+        do ksub=0,ksubhi 
+         do j=igridlo(2),igridhi(2) 
+          do jsub=0,2
+           do i=igridlo(1),igridhi(1) 
+            do isub=0,2
+
+             ! iproblo=0
+             call gridstenND(xstenND,problo,i,j,k,iproblo,bfact,dx,nhalf)
+             do dir=1,SDIM
+              dxleft=xstenND(0,dir)-xstenND(-1,dir)
+              dxright=xstenND(1,dir)-xstenND(0,dir)
+
+              if (bfact.eq.1) then
+               if (abs(dxleft-dxright).le.VOFTOL*dx(dir)) then
+                ! do nothing 
+               else
+                print *,"xstenND invalid"
+                stop
+               endif
+              else if (bfact.gt.1) then
+               if ((dxleft.gt.zero).and.(dxright.gt.zero)) then
+                ! do nothing
+               else
+                print *,"xstenND invalid"
+                stop
+               endif
+              else
+               print *,"bfact invalid152"
+               stop
+              endif
+               ! isub,jsub,ksub=0..2
+              if (dir.eq.1) then
+               isub_nrm=isub ! 0..2
+              else if (dir.eq.2) then
+               isub_nrm=jsub
+              else if ((dir.eq.3).and.(SDIM.eq.3)) then
+               isub_nrm=ksub
+              else
+               print *,"dir invalid"
+               stop
+              endif
+
+              dxright=xstenND(2,dir)-xstenND(0,dir)
+              if (dxright.gt.zero) then
+               if (isub_nrm.eq.0) then
+                xposnd(dir)=xstenND(0,dir)
+               else if (isub_nrm.eq.1) then
+                xposnd(dir)=xstenND(0,dir)+dxright/100.0
+               else if (isub_nrm.eq.2) then
+                xposnd(dir)=xstenND(2,dir)-dxright/100.0
+               else
+                print *,"isub_nrm invalid"
+                stop
+               endif
+              else
+               print *,"dxright invalid"
+               stop
+              endif
+             enddo ! dir = 1..sdim
+
+             do dir=1,SDIM
+              xposndT(dir)=xposnd(dir)
+             enddo
+             if (visual_RT_transform.eq.1) then ! defined in PROBCOMMON.F90
+              call RT_transform(xposnd,xposndT)
+             endif
+
+             do dir=1,ncomp
+              datand(dir)=zero
+             enddo
+
+             icell(1)=i
+             icell(2)=j
+             icell(3)=k
+             do dir=1,SDIM
+              if ((icell(dir).ge.lo(dir)).and. &
+                  (icell(dir).le.hi(dir))) then
+               ! do nothing
+              else if (icell(dir).eq.hi(dir)+1) then
+               icell(dir)=hi(dir)
+              else
+               print *,"icell out of range"
+               stop
+              endif
+             enddo ! dir=1..sdim
+
+             i1=icell(1)
+             j1=jcell(2)
+             k1=kcell(3)
+
+             do dir=1,ncomp
+              datand(dir)=datafab(D_DECL(i1,j1,k1),dir)
+             enddo
+
+             scomp=0
+             do iw=1,SDIM
+              writend(scomp+iw)=xposndT(iw)
+             enddo
+
+             scomp=scomp+SDIM
+
+             do iw=1,ncomp
+              writend(scomp+iw)=datand(iw)
+             enddo
+
+             scomp=scomp+ncomp 
+
+             do iw=1,scomp
+              if (iw.lt.scomp) then
+               write(11,'(D25.16)',ADVANCE="NO") writend(iw)
+              else if (iw.eq.scomp) then
+               write(11,'(D25.16)') writend(iw)
+              else
+               print *,"iw invalid"
+               stop
+              endif
+             enddo ! iw=1..scomp
+            enddo ! isub=0..2
+           enddo  ! i=igridlo(1),igridhi(1)
+          enddo ! jsub=0..2
+         enddo  ! j=igridlo(2),igridhi(2)
+        enddo ! ksub=0..ksubhi
+      enddo  ! k=igridlo(3),igridhi(3)  (sanity output loop to "AMR" grid)
+
+      close(11)
+
+      return
+      end subroutine FORT_CELLGRID_SANITY
+
+
+
       subroutine FORT_MEMSTATUS(procnum)
       IMPLICIT NONE
 
@@ -4876,24 +5764,24 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-      INTEGER_T total_number_grids
-      INTEGER_T num_levels
-      INTEGER_T grids_per_level_array(num_levels)
-      INTEGER_T levels_array(total_number_grids)
-      INTEGER_T bfact_array(total_number_grids)
-      INTEGER_T gridno_array(total_number_grids)
-      INTEGER_T gridlo_array(total_number_grids*SDIM)
-      INTEGER_T gridhi_array(total_number_grids*SDIM)
-      INTEGER_T finest_level
-      INTEGER_T nsteps
-      REAL_T time
-      INTEGER_T visual_option
-      INTEGER_T visual_revolve
-      INTEGER_T plotint
-      INTEGER_T nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: total_number_grids
+      INTEGER_T, intent(in) :: num_levels
+      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, intent(in) :: levels_array(total_number_grids)
+      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nsteps
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: visual_option
+      INTEGER_T, intent(in) :: visual_revolve
+      INTEGER_T, intent(in) :: plotint
+      INTEGER_T, intent(in) :: nmat
 
       INTEGER_T strandid
       INTEGER_T nwrite
@@ -5400,6 +6288,544 @@ END SUBROUTINE SIMP
 
       return
       end subroutine FORT_COMBINEZONES
+
+
+
+      subroutine FORT_COMBINEZONES_SANITY( &
+       total_number_grids, &
+       grids_per_level_array, &
+       levels_array, &
+       bfact_array, &
+       gridno_array, &
+       gridlo_array, &
+       gridhi_array, &
+       finest_level, &
+       SDC_outer_sweeps, &
+       slab_step, &
+       data_id, &
+       nsteps, &
+       num_levels, &
+       time, &
+       visual_option, &
+       visual_revolve, &
+       ncomp)
+
+      use global_utility_module
+      use navierstokesf90_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: total_number_grids
+      INTEGER_T, intent(in) :: num_levels
+      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, intent(in) :: levels_array(total_number_grids)
+      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: SDC_outer_sweeps
+      INTEGER_T, intent(in) :: slab_step
+      INTEGER_T, intent(in) :: data_id
+      INTEGER_T, intent(in) :: nsteps
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: visual_option
+      INTEGER_T, intent(in) :: visual_revolve
+
+      INTEGER_T strandid
+      INTEGER_T nwrite
+
+
+      character*3 levstr
+      character*5 gridstr
+      character*18 filename18
+      character*80 rmcommand
+
+      character*6 stepstr
+      character*16 newfilename16
+
+      INTEGER_T i,j,k,dir
+      INTEGER_T ilev,igrid
+      INTEGER_T lo(SDIM),hi(SDIM)
+
+! Guibo
+
+      character*80 Title,Zonename
+      REAL*4 ZONEMARKER,EOHMARKER
+      integer*4 :: nzones_gb,iz_gb,ivar_gb
+      integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
+      INTEGER_T bfact,testlev,testgridno
+      INTEGER_T testlo(SDIM),testhi(SDIM)
+
+      ! define zone structure
+      type zone_t
+         real*8, pointer :: var(:,:,:,:)
+      end type zone_t
+      type(zone_t), dimension(:), allocatable :: zone_gb
+
+      INTEGER_T plot_sdim,klo_plot,khi_plot
+
+! Guibo
+      INTEGER_T sysret
+
+
+      plot_sdim=SDIM
+
+      if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+       if (visual_revolve.ne.0) then
+        print *,"visual_revolve= ",visual_revolve
+        print *,"visual_revolve invalid combine zones"
+        stop
+       endif
+      else if (levelrz.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+       if (visual_revolve.eq.0) then
+        ! do nothing
+       else if ((visual_revolve.ge.1).and.(visual_revolve.le.1024)) then
+        ! do nothing
+       else
+        print *,"visual_revolve= ",visual_revolve
+        print *,"visual_revolve out of range"
+        stop
+       endif
+      else 
+       print *,"levelrz invalid combine zones"
+       stop
+      endif
+
+      nwrite=plot_sdim+ncomp
+
+      if (num_levels.ne.finest_level+1) then
+       print *,"num_levels invalid"
+       stop
+      endif
+
+      if ((visual_revolve.ge.1).and.(visual_revolve.le.1024)) then
+
+       if (levelrz.ne.1) then
+        print *,"levelrz invalid combine zones 2"
+        stop
+       endif
+       if (SDIM.ne.2) then
+        print *,"parameter bust"
+        stop
+       endif
+
+       plot_sdim=3
+
+       call zones_revolve_sanity( &
+        plot_sdim, &
+        total_number_grids, &
+        grids_per_level_array, &
+        levels_array, &
+        bfact_array, &
+        gridno_array, &
+        gridlo_array, &
+        gridhi_array, &
+        finest_level, &
+        SDC_outer_sweeps, &
+        slab_step, &
+        data_id, &
+        nsteps, &
+        num_levels, &
+        time, &
+        visual_option, &
+        visual_revolve, &
+        ncomp)
+      else if (visual_revolve.eq.0) then
+
+       if (levelrz.eq.0) then
+        ! do nothing
+       else if (levelrz.eq.1) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
+         stop
+        endif
+       else if (levelrz.eq.3) then
+        ! do nothing
+       else
+        print *,"levelrz invalid combine zones 3"
+        stop
+       endif
+
+       write(stepstr,'(I6)') nsteps
+       do i=1,6
+        if (stepstr(i:i).eq.' ') then
+         stepstr(i:i)='0'
+        endif
+       enddo
+
+       write(newfilename16,'(A6,A6,A4)') 'nddata',stepstr,'.plt'
+
+       print *,"newfilename16 ",newfilename16
+
+
+       !--------------------------------------------------
+       ! Determine nzones_gb and allocate zone_gb, lo_gb, hi_gb
+       nzones_gb=0
+       do ilev=0,finest_level
+       do igrid=0,grids_per_level_array(ilev+1)-1
+        nzones_gb = nzones_gb+1
+       enddo
+       enddo
+
+       if (nzones_gb.ne.total_number_grids) then
+        print *,"nzones_gb.ne.total_number_grids: aborting"
+        stop
+       endif
+
+       print *,"allocating grid structure for tecplot binary"
+       print *,"finest_level= ",finest_level
+       print *,"number of grids on finest level ", &
+        grids_per_level_array(finest_level+1) 
+       print *,"total number of grid blocks: ",nzones_gb
+       print *,"num_materials ",num_materials
+       print *,"num_state_material ",num_state_material
+
+       allocate(zone_gb(nzones_gb))
+       allocate(lo_gb(nzones_gb,plot_sdim))
+       allocate(hi_gb(nzones_gb,plot_sdim))
+
+        ! Determine lo_gb, hi_gb
+       iz_gb=0
+       do ilev=0,finest_level
+       do igrid=0,grids_per_level_array(ilev+1)-1
+        write(levstr,'(I3)') ilev
+        write(gridstr,'(I5)') igrid
+        do i=1,3
+         if (levstr(i:i).eq.' ') then
+          levstr(i:i)='0'
+         endif
+        enddo
+        do i=1,5
+         if (gridstr(i:i).eq.' ') then
+          gridstr(i:i)='0'
+         endif
+        enddo
+        write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
+        open(unit=4,file=filename18)
+
+        do dir=1,plot_sdim
+         read(4,*) lo(dir),hi(dir)
+         lo_gb(iz_gb+1,dir)=lo(dir)
+         hi_gb(iz_gb+1,dir)=hi(dir)
+        enddo ! dir
+
+        bfact=bfact_array(iz_gb+1)
+        testlev=levels_array(iz_gb+1)
+        testgridno=gridno_array(iz_gb+1)
+
+        if (bfact.lt.1) then
+         print *,"bfact invalid156"
+         stop
+        endif
+        if (testlev.ne.ilev) then
+         print *,"testlev invalid"
+         stop
+        endif
+        if (testgridno.ne.igrid) then
+         print *,"testgridno invalid"
+         stop
+        endif
+
+        do dir=1,plot_sdim
+         testlo(dir)=gridlo_array(plot_sdim*iz_gb+dir)
+         testhi(dir)=gridhi_array(plot_sdim*iz_gb+dir)
+         if (testlo(dir).ne.lo(dir)) then
+          print *,"testlo invalid"
+          stop
+         endif
+         if (testhi(dir).ne.hi(dir)) then
+          print *,"testhi invalid"
+          stop
+         endif
+         if ((lo(dir)/bfact)*bfact.ne.lo(dir)) then
+          print *,"lo not divisible by bfact"
+          stop
+         endif
+         if (((hi(dir)+1)/bfact)*bfact.ne.hi(dir)+1) then
+          print *,"hi+1 not divisible by bfact"
+          stop
+         endif
+        enddo ! dir
+
+        close(4)
+
+        iz_gb=iz_gb+1
+       enddo ! igrid
+       enddo ! ilev
+
+       if (iz_gb.ne.total_number_grids) then
+        print *,"iz_gb or total_number_grids invalid"
+        stop
+       endif
+
+       !-----------------------------------------------------------
+       ZONEMARKER = 299.0
+       EOHMARKER  = 357.0
+       open(unit=11,file=newfilename16,form="unformatted",access="stream")
+
+        ! +++++++ HEADER SECTION ++++++
+
+        ! i.  Magic number, Version number
+       write(11) "#!TDV112"
+ 
+        ! ii. Integer value of 1.
+       write(11) 1
+
+        ! iii. Title and variable names.
+        ! File type 0 = FULL,1 = GRID,2 = SOLUTION
+       write(11) 0
+        ! The TITLE
+       Title = "CLSVOF data"
+       call dumpstring(Title)
+       ! Number of variables 
+       write(11) nwrite
+
+       ! Variable names: combinezones
+       call dumpstring_headers(plot_sdim)
+
+        ! Zones
+       do iz_gb=1,nzones_gb
+        ! Zone marker. Value = 299.0
+        write(11) ZONEMARKER
+        ! Zone name
+        Zonename = "ZONE"
+        call dumpstring(Zonename)
+
+        if (plotint.le.0) then
+         strandid=1
+        else
+         strandid=(nsteps/plotint)+1
+        endif
+ 
+        write(11) -1   ! Parent Zone
+        write(11) 0    ! StrandID
+        write(11) time ! Solution time
+        write(11) -1   ! Not used. Set to -1
+        write(11) 0    ! Zone Type
+        write(11) 0    ! Specify Var Location. 0 = Don't specify, 
+                       ! all data is located at the nodes.
+        write(11) 0    ! Are raw local 1-to-1 face neighbors supplied?
+        write(11) 0    ! Number of miscellaneous user-defined  
+                       !face neighbor connections
+
+         ! ----- IMax,JMax,KMax
+        write(11) 3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
+        write(11) 3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
+        if (plot_sdim.eq.3) then
+         write(11) 3*(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
+        else if (plot_sdim.eq.2) then
+         write(11) 1
+        else
+         print *,"plot_sdim invalid"
+         stop
+        endif
+ 
+        write(11) 0
+       enddo  ! iz_gb
+
+       write(11) EOHMARKER
+ 
+       print *,"finished writing header section, now data section"
+       print *,"nzones_gb= ",nzones_gb
+       print *,"nwrite= ",nwrite
+
+        ! +++++++ DATA SECTION ++++++
+
+       ilev=0
+       igrid=0
+
+       do iz_gb=1,nzones_gb
+
+        if (ilev.gt.finest_level) then
+         print *,"ilev invalid"
+         print *,"ilev=",ilev
+         print *,"finest_level=",finest_level
+         stop
+        endif
+      
+        do while (grids_per_level_array(ilev+1).eq.0)
+         ilev=ilev+1
+
+         if (igrid.ne.0) then
+          print *,"igrid should be 0"
+          print *,"igrid=",igrid
+          stop
+         endif
+         if (ilev.gt.finest_level) then
+          print *,"ilev invalid in grids_per_level loop"
+          print *,"ilev=",ilev
+          print *,"finest_level=",finest_level
+          stop
+         endif
+        enddo ! while grids_per_level_array(ilev+1)==0
+ 
+        if (igrid.gt.grids_per_level_array(ilev+1)-1) then
+         print *,"igrid invalid"
+         print *,"igrid= ",igrid
+         print *,"ilev= ",ilev
+         print *,"finest_level=",finest_level
+         print *,"grids_per_level_array= ", &
+          grids_per_level_array(ilev+1)
+         print *,"iz_gb = ",iz_gb
+         print *,"nzones_gb= ",nzones_gb
+         print *,"num_levels= ",num_levels
+         print *,"nwrite= ",nwrite
+         stop
+        endif
+
+        if (igrid.ne.gridno_array(iz_gb)) then
+         print *,"igrid invalid"
+         stop
+        endif
+        if (ilev.ne.levels_array(iz_gb)) then
+         print *,"ilev invalid"
+         stop
+        endif
+
+        do dir=1,plot_sdim
+         lo(dir)=lo_gb(iz_gb,dir)
+         hi(dir)=hi_gb(iz_gb,dir)
+        enddo
+      
+        if (plot_sdim.eq.3) then
+         klo_plot=lo(plot_sdim)
+         khi_plot=hi(plot_sdim)+1
+        else if (plot_sdim.eq.2) then
+         klo_plot=0
+         khi_plot=0
+        else
+         print *,"plot_sdim invalid"
+         stop
+        endif
+
+        hi_index_shift(1)=3*(hi(1)-lo(1)+1)
+        hi_index_shift(2)=3*(hi(2)-lo(2)+1)
+        hi_index_shift(3)=3*(khi_plot-klo_plot)
+ 
+        allocate(zone_gb(iz_gb)% &
+         var(nwrite, &
+            0:hi_index_shift(1), &
+            0:hi_index_shift(2), &
+            0:hi_index_shift(3)))
+         
+        write(levstr,'(I3)') ilev
+        write(gridstr,'(I5)') igrid
+        do i=1,3
+         if (levstr(i:i).eq.' ') then
+          levstr(i:i)='0'
+         endif
+        enddo
+        do i=1,5
+         if (gridstr(i:i).eq.' ') then
+          gridstr(i:i)='0'
+         endif
+        enddo
+
+        write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
+        open(unit=4,file=filename18)
+        print *,"filename18 ",filename18
+
+        do dir=1,SDIM
+         read(4,*) lo(dir),hi(dir)
+
+         if (lo(dir).ne.lo_gb(iz_gb,dir)) then
+          print *,"lo and lo_gb different"
+          print *,"iz_gb,dir,lo,lo_gb ",iz_gb,dir,lo(dir), &
+           lo_gb(iz_gb,dir)
+          stop
+         endif
+         if (hi(dir).ne.hi_gb(iz_gb,dir)) then
+          print *,"hi and hi_gb different"
+          print *,"iz_gb,dir,hi,hi_gb ",iz_gb,dir,hi(dir), &
+           hi_gb(iz_gb,dir)
+          stop
+         endif
+
+        enddo  ! dir
+
+         ! order is IMPORTANT.
+        do k=0,khi_plot-klo_plot
+        do j=0,hi_index_shift(2)
+        do i=0,hi_index_shift(1)
+         read(4,*) (zone_gb(iz_gb)%var(ivar_gb,i,j,k),ivar_gb=1,nwrite)
+        enddo
+        enddo
+        enddo
+
+        close(4)
+
+        ! Zone marker  Value = 299.0
+        write(11) ZONEMARKER
+        ! Data format
+        do i=1,nwrite
+         write(11) 2
+        enddo
+        write(11) 0  ! Has passive variables: 0 = no, 1 = yes.
+        write(11) 0  ! Has variable sharing 0 = no, 1 = yes.
+        write(11) -1 ! Share connectivity list (-1 = no sharing). 
+   
+        do ivar_gb=1,nwrite
+         write(11) minval(zone_gb(iz_gb)%var(ivar_gb,:,:,:))
+         write(11) maxval(zone_gb(iz_gb)%var(ivar_gb,:,:,:))
+        enddo
+
+        ! order is IMPORTANT
+        do ivar_gb=1,nwrite
+         do k=0,khi_plot-klo_plot
+         do j=0,3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
+         do i=0,3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+          write(11) zone_gb(iz_gb)%var(ivar_gb,i,j,k)
+         enddo
+         enddo
+         enddo
+        enddo
+
+        deallocate(zone_gb(iz_gb)%var)
+
+        igrid=igrid+1
+        if (igrid.gt.grids_per_level_array(ilev+1)-1) then
+         ilev=ilev+1
+         igrid=0
+        endif
+
+       enddo  ! iz_gb
+
+       deallocate(zone_gb)
+       deallocate(lo_gb)
+       deallocate(hi_gb)
+
+       close(11)
+     
+       rmcommand='rm tempnddata*'
+
+       print *,"issuing command ",rmcommand
+
+       sysret=0
+
+#ifdef PGIFORTRAN
+       call system(rmcommand)
+#else
+       call execute_command_line(rmcommand,exitstat=sysret)
+#endif
+       if (sysret.ne.0) then
+        print *,"execute_command_line has sysret=",sysret
+        stop
+       endif
+
+      else
+       print *,"visual_revolve invalid"
+       stop
+      endif
+
+      return
+      end subroutine FORT_COMBINEZONES_SANITY
+
 
 
       subroutine FORT_ZALESAKNODE( &

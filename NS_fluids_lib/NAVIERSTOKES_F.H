@@ -36,8 +36,10 @@
 #    define FORT_ISOGRIDSINGLE     isogridsingle
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle
 #    define FORT_CELLGRID    cellgrid
+#    define FORT_CELLGRID_SANITY cellgrid_sanity
 #    define FORT_COMBINETRIANGLES combinetriangles
 #    define FORT_COMBINEZONES combinezones
+#    define FORT_COMBINEZONES_SANITY combinezones_sanity
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
 #    define FORT_MEMSTATUS memstatus
@@ -74,9 +76,11 @@
 #    define FORT_ISOGRIDSINGLE ISOGRIDSINGLE
 #    define FORT_COMBINETRIANGLESSINGLE COMBINETRIANGLESSINGLE
 #    define FORT_CELLGRID    CELLGRID
+#    define FORT_CELLGRID_SANITY CELLGRID_SANITY
 #    define FORT_COMBINETRIANGLES COMBINETRIANGLES
 #    define FORT_MEMSTATUS MEMSTATUS
 #    define FORT_COMBINEZONES COMBINEZONES
+#    define FORT_COMBINEZONES_SANITY COMBINEZONES_SANITY
 #    define FORT_OUTPUTSLICE OUTPUTSLICE
 #    define FORT_IO_COMPARE IO_COMPARE
 #    define FORT_METRICS METRICS
@@ -112,9 +116,11 @@
 #    define FORT_ISOGRIDSINGLE     isogridsingle
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle
 #    define FORT_CELLGRID    cellgrid
+#    define FORT_CELLGRID_SANITY cellgrid_sanity
 #    define FORT_COMBINETRIANGLES combinetriangles
 #    define FORT_MEMSTATUS memstatus
 #    define FORT_COMBINEZONES combinezones
+#    define FORT_COMBINEZONES_SANITY combinezones_sanity
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
 #    define FORT_METRICS metrics
@@ -149,9 +155,11 @@
 #    define FORT_ISOGRIDSINGLE     isogridsingle_
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle_
 #    define FORT_CELLGRID    cellgrid_
+#    define FORT_CELLGRID_SANITY cellgrid_sanity_
 #    define FORT_COMBINETRIANGLES combinetriangles_
 #    define FORT_MEMSTATUS memstatus_
 #    define FORT_COMBINEZONES combinezones_
+#    define FORT_COMBINEZONES_SANITY combinezones_sanity_
 #    define FORT_OUTPUTSLICE outputslice_
 #    define FORT_IO_COMPARE io_compare_
 #    define FORT_METRICS metrics_
@@ -273,6 +281,21 @@ extern "C" {
      Real* xslice,const Real* dxfinest,
      int* do_plot,int* do_slice);
 
+
+    void FORT_CELLGRID_SANITY(
+     int* tid,
+     int* bfact,
+     int* ncomp,
+     Real* datafab,AMREX_ARLIM_P(datafablo),AMREX_ARLIM_P(datafabhi),
+     const Real* problo,
+     const Real* probhi,
+     const Real* dx,
+     const int* lo,const int* hi,
+     const int* level,
+     const int* finest_level,
+     const int* gridno,
+     int* rz_flag);
+
     void FORT_ISOGRID(
      int* tid,
      int* visual_tessellate_vfrac,
@@ -322,6 +345,27 @@ extern "C" {
      int* nparts, 
      int* nparts_def,
      int* im_solid_map);
+
+
+    void FORT_COMBINEZONES_SANITY(
+     int* total_number_grids,
+     int* grids_per_level_array,
+     int* levels_array,
+     int* bfact_array,
+     int* gridno_array,
+     int* gridlo_array,
+     int* gridhi_array,
+     int* finest_level,
+     int* SDC_outer_sweeps,
+     int* slab_step,
+     int* data_id,
+     int* nsteps,
+     int* num_levels,
+     Real* time,
+     int* visual_option,
+     int* visual_revolve,
+     int* ncomp);
+
 
     void FORT_OUTPUTSLICE(Real* time,int* nsteps,int* sliceint,
      Real* slice_data,int* nslice,int* nstate_slice,

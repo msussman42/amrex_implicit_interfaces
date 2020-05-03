@@ -7727,9 +7727,11 @@ void NavierStokes::Sanity_output_zones(
 
     FArrayBox& datafab=(*datamfminus)[mfi];
 
+     // in: NAVIERSTOKES_3D.F90
     FORT_CELLGRID_SANITY(
      &tid_current,
      &bfact,
+     &ncomp,
      datafab.dataPtr(),ARLIM(datafab.loVect()),ARLIM(datafab.hiVect()),
      prob_lo,
      prob_hi,
@@ -7738,9 +7740,7 @@ void NavierStokes::Sanity_output_zones(
      &level,
      &finest_level,
      &gridno,
-     &visual_option,
-     &rzflag,
-     dxfinest);
+     &rzflag);
    }  // mfi
    ns_reconcile_d_num(157);
 
