@@ -16650,6 +16650,123 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
 } // subroutine writeTECPLOT_File
 
+
+
+void NavierStokes::writeSanityCheckData(int data_id,
+                    int ncomp,
+                    int data_mf, 
+                    int dir) {
+
+ if (level!=0)
+  amrex::Error("level invalid writeSanityCheckData");
+
+ if ((SDC_outer_sweeps>=0)&&
+     (SDC_outer_sweeps<ns_time_order)) {
+  // do nothing
+ } else
+  amrex::Error("SDC_outer_sweeps invalid");
+
+ int nsteps=parent->levelSteps(0);
+
+ int finest_level = parent->finestLevel();
+
+ ParallelDescriptor::Barrier();
+
+ Vector<int> grids_per_level_array;
+ grids_per_level_array.resize(finest_level+1);
+ Vector<BoxArray> cgrids_minusBA_array;
+ cgrids_minusBA_array.resize(finest_level+1);
+
+ if (localMF_grow[data_mf]>=0) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow[data_mf] invalid");
+
+ int tecplot_finest_level=finest_level;
+ if (tecplot_max_level<tecplot_finest_level)
+  tecplot_finest_level=tecplot_max_level;
+
+ for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+
+  ns_level.debug_ngrow(data_mf,0,250);
+
+  ns_level.Sanity_output_zones(
+   ns_level.localMF[data_mf],
+   ncomp,
+   grids_per_level_array[ilev],
+   cgrids_minusBA_array[ilev]);
+
+ }  // ilev=tecplot_finest_level ... 0
+
+ ParallelDescriptor::Barrier();
+
+ if (ParallelDescriptor::IOProcessor()) {
+
+  int total_number_grids=0;
+  for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+   total_number_grids+=grids_per_level_array[ilev];
+  }
+
+  Vector<int> levels_array(total_number_grids);
+  Vector<int> bfact_array(total_number_grids);
+  Vector<int> gridno_array(total_number_grids);
+  Vector<int> gridlo_array(AMREX_SPACEDIM*total_number_grids);
+  Vector<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
+
+  int temp_number_grids=0;
+  for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+   BoxArray cgrids_minusBA;
+   cgrids_minusBA=cgrids_minusBA_array[ilev];
+   int bfact=parent->Space_blockingFactor(ilev);
+   for (int igrid=0;igrid<cgrids_minusBA.size();igrid++) {
+    levels_array[temp_number_grids]=ilev; 
+    bfact_array[temp_number_grids]=bfact; 
+    gridno_array[temp_number_grids]=igrid; 
+    const Box& fabgrid = cgrids_minusBA[igrid];
+    const int* lo=fabgrid.loVect();
+    const int* hi=fabgrid.hiVect();
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     gridlo_array[AMREX_SPACEDIM*temp_number_grids+dir]=lo[dir];
+     gridhi_array[AMREX_SPACEDIM*temp_number_grids+dir]=hi[dir];
+    }
+    temp_number_grids++;
+   } // igrid
+  } // ilev=0...tecplot_finest_level
+
+  if (temp_number_grids!=total_number_grids)
+   amrex::Error("temp_number_grids invalid");
+  
+  int num_levels=tecplot_finest_level+1;
+
+  FORT_COMBINEZONES_SANITY(
+    &total_number_grids,
+    grids_per_level_array.dataPtr(),
+    levels_array.dataPtr(),
+    bfact_array.dataPtr(),
+    gridno_array.dataPtr(),
+    gridlo_array.dataPtr(),
+    gridhi_array.dataPtr(),
+    &tecplot_finest_level,
+    &SDC_outer_sweeps,
+    &slab_step,
+    &data_id,
+    &nsteps,
+    &num_levels,
+    &cur_time_slab,
+    &visual_option,
+    &visual_revolve);
+
+ } else if (!ParallelDescriptor::IOProcessor()) {
+  // do nothing
+ } else
+  amrex::Error("ParallelDescriptor::IOProcessor() corrupt");
+
+ ParallelDescriptor::Barrier();
+
+} // subroutine writeSanityCheckData
+
+
 void
 NavierStokes::writePlotFile (
   const std::string& dir,

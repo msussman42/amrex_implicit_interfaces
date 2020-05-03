@@ -7609,6 +7609,162 @@ void NavierStokes::output_zones(
 }  // subroutine output_zones
 
 
+void NavierStokes::Sanity_output_zones(
+   MultiFab* datamf,
+   int ncomp,
+   int& grids_per_level,
+   BoxArray& cgrids_minusBA) {
+
+ const Real* dx = geom.CellSize();
+ const Real* prob_lo = geom.ProbLo();
+ const Real* prob_hi = geom.ProbHi();
+
+ int rzflag=0;
+ if (geom.IsRZ())
+  rzflag=1;
+ else if (geom.IsCartesian())
+  rzflag=0;
+ else if (geom.IsCYLINDRICAL())
+  rzflag=3;
+ else
+  amrex::Error("CoordSys bust 22");
+
+ int finest_level = parent->finestLevel();
+ int tecplot_finest_level=finest_level;
+ if (tecplot_max_level<tecplot_finest_level)
+  tecplot_finest_level=tecplot_max_level;
+
+ if (level<=tecplot_finest_level) {
+
+  BoxArray cgrids(grids);
+  BoxList cgrids_list(cgrids);
+
+  if (level<tecplot_finest_level) {
+   NavierStokes& ns_finer=getLevel(level+1);
+   BoxArray fgrids(ns_finer.grids);
+   fgrids.coarsen(2);
+   const Box& domain=geom.Domain();
+   BoxList fgrids_list(fgrids);
+   BoxList fgrids_complement=amrex::complementIn(domain,fgrids_list);
+   cgrids_list.intersect(fgrids_complement);
+  } // level<tecplot_finest_level
+
+  BoxArray cgrids_minusBA_temp(cgrids_list);
+  grids_per_level=cgrids_minusBA_temp.size();
+  cgrids_minusBA=cgrids_minusBA_temp;
+
+  if (level==tecplot_finest_level) {
+   if (grids.size()!=grids_per_level)
+    amrex::Error("grids_per_level incorrect");
+  }
+
+  NavierStokes& ns_finest=getLevel(tecplot_finest_level);
+  const Real* dxfinest = ns_finest.geom.CellSize();
+
+  if (grids_per_level>0) {
+
+   DistributionMapping cgrids_minus_map(cgrids_minusBA);
+
+   MultiFab* datamfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    ncomp,0,
+    MFInfo().SetTag("datamfminus"),FArrayBoxFactory());
+
+   ParallelDescriptor::Barrier();
+
+     // FabArray.H     
+     // scomp,dcomp,ncomp,s_nghost,d_nghost
+   datamfminus->ParallelCopy(*datamf,0,0,
+    ncomp,0,0,geom.periodicity());
+
+   check_for_NAN(datamf,1);
+   check_for_NAN(datamfminus,11);
+ 
+   ParallelDescriptor::Barrier();
+
+   int bfact=parent->Space_blockingFactor(level);
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(velmfminus->boxArray().d_numPts());
+
+// cannot do openmp here until each thread has its own
+// file handle.  
+// MFIter (const FabArrayBase& fabarray,unsigned char flags_=0) ,
+// is no tiling.
+   for (MFIter mfi(*datamfminus,false); mfi.isValid(); ++mfi) {
+
+    if (cgrids_minusBA[mfi.index()] != mfi.validbox())
+     amrex::Error("cgrids_minusBA[mfi.index()] != mfi.validbox()");
+
+    const Box& tilegrid = mfi.tilebox();
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    const int gridno = mfi.index();
+
+    // cgrids_minusBA=grids at finest level.
+    const Box& fabgrid = cgrids_minusBA[gridno];
+
+    const int* lo=fabgrid.loVect();
+    const int* hi=fabgrid.hiVect();
+
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+     if (lo[dir]%bfact!=0)
+      amrex::Error("lo not divisible by bfact");
+     if ((hi[dir]+1)%bfact!=0)
+      amrex::Error("hi+1 not divisible by bfact");
+ 
+    } // dir
+
+    if (level==tecplot_finest_level) {
+     if (cgrids_minusBA[gridno]!=grids[gridno])
+      amrex::Error("box mismatch1");
+    } // level=tecplot_finest_level
+
+    FArrayBox& datafab=(*datamfminus)[mfi];
+
+    FORT_CELLGRID_SANITY(
+     &tid_current,
+     &bfact,
+     datafab.dataPtr(),ARLIM(datafab.loVect()),ARLIM(datafab.hiVect()),
+     prob_lo,
+     prob_hi,
+     dx,
+     lo,hi,
+     &level,
+     &finest_level,
+     &gridno,
+     &visual_option,
+     &rzflag,
+     dxfinest);
+   }  // mfi
+   ns_reconcile_d_num(157);
+
+   delete datamfminus;
+
+  } else if (grids_per_level==0) {
+  
+   // do nothing
+
+  } else 
+   amrex::Error("grids_per_level is corrupt");
+
+ } else if (level<=finest_level) {
+
+  // do nothing
+
+ } else {
+  amrex::Error("level invalid Sanity_output_zones");
+ }
+
+}  // subroutine Sanity_output_zones
+
+
+
 // spectral_override==0 => always low order
 void NavierStokes::avgDownALL(int stateidx,int startcomp,int numcomp,
   int spectral_override) {

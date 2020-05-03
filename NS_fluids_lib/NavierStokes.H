@@ -517,7 +517,6 @@ public:
     void writeSanityCheckData(int data_id,
 		    int ncomp,
 		    int data_mf,
-		    int nsteps,int substeps,
 		    int dir);
 
     virtual std::string thePlotFileType () const;
@@ -997,6 +996,7 @@ protected:
     void getState_tracemag(int idx,int ngrow);
 
     void output_triangles();
+
     void output_zones(
       FArrayBox& visual_fab_output,
       Box& visual_domain,
@@ -1014,6 +1014,12 @@ protected:
       BoxArray& cgrids_minusBA,
       Real* slice_data,
       int do_plot,int do_slice);
+
+    void Sanity_output_zones(
+      MultiFab* datamf,
+      int ncomp,
+      int& grids_per_level,
+      BoxArray& cgrids_minusBA);
 
     void adjust_tolerance(Real& error0,Real& error0_max,
       int project_option);
