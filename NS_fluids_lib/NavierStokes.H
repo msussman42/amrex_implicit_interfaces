@@ -496,8 +496,9 @@ public:
     void MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel);
     void MaxPressureVelocityALL(Real& minpres,Real& maxpres,Real& maxvel);
 
-     // dir=-1 cell centered data
-     // dir=0..sdim-1 face centered data.
+     // data_dir=-1 cell centered data
+     // data_dir=0..sdim-1 face centered data.
+     // data_dir=sdim node data.
      // a tecplot file is output in which the raw data is
      // output as follows (2D cell center):
      //   x x               x x
@@ -1015,7 +1016,11 @@ protected:
       Real* slice_data,
       int do_plot,int do_slice);
 
+     // data_dir=-1 cell centered data
+     // data_dir=0..sdim-1 face centered data.
+     // data_dir=sdim node data
     void Sanity_output_zones(
+      int data_dir,
       MultiFab* datamf,
       int ncomp,
       int& grids_per_level,

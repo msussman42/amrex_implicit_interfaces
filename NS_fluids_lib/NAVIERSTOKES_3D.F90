@@ -1018,6 +1018,7 @@ stop
 
 
       subroutine zones_revolve_sanity( &
+       data_dir, &
        plot_sdim, &
        total_number_grids, &
        grids_per_level_array, &
@@ -1039,6 +1040,7 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: plot_sdim
       INTEGER_T klo_plot,khi_plot
 
@@ -1069,6 +1071,7 @@ stop
       character*18 filename18
       character*80 rmcommand
 
+      character*6 rootstr
       character*6 stepstr
       character*3 outerstr
       character*3 slabstr
@@ -1152,7 +1155,22 @@ stop
        endif
       enddo
 
-      write(newfilename36,'(A6,A6,A5,A3,A4,A3,A2,A3,A4)') 'datamf', &
+      if (data_dir.eq.-1) then
+        rootstr='dataCC'
+      else if (data_dir.eq.0) then
+        rootstr='dataXC'
+      else if (data_dir.eq.1) then
+        rootstr='dataYC'
+      else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
+        rootstr='dataZC'
+      else if (data_dir.eq.SDIM) then
+        rootstr='dataND'
+      else
+        print *,"data_dir invalid"
+        stop
+      endif
+      write(newfilename36,'(A6,A6,A5,A3,A4,A3,A2,A3,A4)') &
+              rootstr, &
               stepstr, &
               'outer', &
               outerstr,'slab',slabstr,'id',idstr,'.plt'
@@ -5253,6 +5271,7 @@ END SUBROUTINE SIMP
 
       subroutine FORT_CELLGRID_SANITY( &
        tid, &
+       data_dir, & ! data_dir=-1,0..sdim
        bfact, &
        ncomp, &
        datafab,DIMS(datafab), &
@@ -5273,6 +5292,7 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: ncomp
 
@@ -5303,7 +5323,11 @@ END SUBROUTINE SIMP
       INTEGER_T isub_nrm
       INTEGER_T dir
       INTEGER_T i1,j1,k1
-      INTEGER_T k1lo,k1hi,ksubhi
+      INTEGER_T k1lo,k1hi
+      INTEGER_T ksubhi
+      INTEGER_T isubhi_local
+      INTEGER_T jsubhi_local
+      INTEGER_T ksubhi_local
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T icell(3)
       INTEGER_T iproblo(3)
@@ -5326,8 +5350,19 @@ END SUBROUTINE SIMP
        print *,"bfact too small"
        stop
       endif
- 
-      call checkbound(lo,hi,DIMS(datafab),0,-1,411)
+
+      if (data_dir.eq.-1) then 
+       call checkbound(lo,hi,DIMS(datafab),0,-1,411)
+      else if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
+       call checkbound(lo,hi,DIMS(datafab),0,data_dir,411)
+      else if (data_dir.eq.SDIM) then
+       do dir=0,SDIM-1
+        call checkbound(lo,hi,DIMS(datafab),0,dir,411)
+       enddo
+      else
+       print *,"data_dir invalid"
+       stop
+      endif
 
       if (rz_flag.eq.0) then
        ! do nothing
@@ -5389,11 +5424,26 @@ END SUBROUTINE SIMP
 
        ! the order k,j,i is IMPORTANT.
       do k=igridlo(3),igridhi(3) 
-        do ksub=0,ksubhi 
+        if (k.eq.igridhi(3)) then
+         ksubhi_local=0
+        else
+         ksubhi_local=ksubhi
+        endif
+        do ksub=0,ksubhi_local 
          do j=igridlo(2),igridhi(2) 
-          do jsub=0,2
+          if (j.eq.igridhi(2)) then
+           jsubhi_local=0
+          else
+           jsubhi_local=2
+          endif
+          do jsub=0,jsubhi_local
            do i=igridlo(1),igridhi(1) 
-            do isub=0,2
+            if (i.eq.igridhi(1)) then
+             isubhi_local=0
+            else
+             isubhi_local=2
+            endif
+            do isub=0,isubhi_local
 
              ! iproblo=0
              call gridstenND(xstenND,problo,i,j,k,iproblo,bfact,dx,nhalf)
@@ -5463,12 +5513,45 @@ END SUBROUTINE SIMP
              icell(1)=i
              icell(2)=j
              icell(3)=k
+
              do dir=1,SDIM
+
+               ! isub,jsub,ksub=0..2
+              if (dir.eq.1) then
+               isub_nrm=isub ! 0..2
+              else if (dir.eq.2) then
+               isub_nrm=jsub
+              else if ((dir.eq.3).and.(SDIM.eq.3)) then
+               isub_nrm=ksub
+              else
+               print *,"dir invalid"
+               stop
+              endif
+
               if ((icell(dir).ge.lo(dir)).and. &
                   (icell(dir).le.hi(dir))) then
-               ! do nothing
+
+               if ((data_dir.eq.SDIM).or.(data_dir+1.eq.dir)) then
+                if ((isub_nrm.eq.0).or.(isub_nrm.eq.1)) then
+                 ! do nothing
+                else if (isub_nrm.eq.2) then
+                 icell(dir)=icell(dir)+1
+                else
+                 print *,"isub_nrm invalid"
+                 stop
+                endif
+               else
+                ! do nothing
+               endif
+
               else if (icell(dir).eq.hi(dir)+1) then
-               icell(dir)=hi(dir)
+
+               if ((data_dir.eq.SDIM).or.(data_dir+1.eq.dir)) then
+                ! do nothing
+               else
+                icell(dir)=hi(dir)
+               endif
+
               else
                print *,"icell out of range"
                stop
@@ -6279,6 +6362,7 @@ END SUBROUTINE SIMP
 
 
       subroutine FORT_COMBINEZONES_SANITY( &
+       data_dir, &
        total_number_grids, &
        grids_per_level_array, &
        levels_array, &
@@ -6302,6 +6386,7 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: ncomp
       INTEGER_T, intent(in) :: total_number_grids
       INTEGER_T, intent(in) :: num_levels
@@ -6329,11 +6414,12 @@ END SUBROUTINE SIMP
       character*18 filename18
       character*80 rmcommand
 
+      character*6 rootstr
       character*6 stepstr
       character*3 outerstr
       character*3 slabstr
       character*3 idstr
-      character*16 newfilename36
+      character*36 newfilename36
 
       INTEGER_T i,j,k,dir
       INTEGER_T ilev,igrid
@@ -6409,6 +6495,7 @@ END SUBROUTINE SIMP
        plot_sdim=3
 
        call zones_revolve_sanity( &
+        data_dir, &
         plot_sdim, &
         total_number_grids, &
         grids_per_level_array, &
@@ -6465,10 +6552,30 @@ END SUBROUTINE SIMP
         endif
        enddo
 
-       write(newfilename36,'(A6,A6,A5,A3,A4,A3,A2,A3,A4)') 'datamf', &
+       if (data_dir.eq.-1) then
+        rootstr='dataCC'
+       else if (data_dir.eq.0) then
+        rootstr='dataXC'
+       else if (data_dir.eq.1) then
+        rootstr='dataYC'
+       else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
+        rootstr='dataZC'
+       else if (data_dir.eq.SDIM) then
+        rootstr='dataND'
+       else
+        print *,"data_dir invalid"
+        stop
+       endif
+       write(newfilename36,'(A6,A6,A5,A3,A4,A3,A2,A3,A4)') &
+              rootstr, &
               stepstr, &
               'outer', &
-              outerstr,'slab',slabstr,'id',idstr,'.plt'
+              outerstr, &
+              'slab', &
+              slabstr, &
+              'id', &
+              idstr, &
+              '.plt'
 
        print *,"newfilename36 (step,outer,slab,data id) ",newfilename36
 

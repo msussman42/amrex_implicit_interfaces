@@ -4793,6 +4793,11 @@ void NavierStokes::make_physics_varsALL(int project_option,
   ns_level.makeStateCurv(project_option,post_restart_flag);
  }
 
+ if (1==1) {
+  writeSanityCheckData(caller_id,
+	 localMF[HISTORY_MF]->nComp(),
+	 HISTORY_MF,-1);
+ }
  delete_array(HISTORY_MF);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -7609,7 +7614,11 @@ void NavierStokes::output_zones(
 }  // subroutine output_zones
 
 
+// data_dir=-1 cell centered data
+// data_dir=0..sdim-1 face centered data.
+// data_dir=sdim node data
 void NavierStokes::Sanity_output_zones(
+   int data_dir,
    MultiFab* datamf,
    int ncomp,
    int& grids_per_level,
@@ -7662,7 +7671,18 @@ void NavierStokes::Sanity_output_zones(
 
    DistributionMapping cgrids_minus_map(cgrids_minusBA);
 
-   MultiFab* datamfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+   BoxArray minus_boxes(cgrids_minusBA);
+
+   if (data_dir==-1) {
+    // do nothing
+   } else if ((data_dir>=0)&&(data_dir<AMREX_SPACEDIM)) {
+    minus_boxes.surroundingNodes(data_dir);
+   } else if (data_dir==AMREX_SPACEDIM) {
+    minus_boxes.convert(IndexType::TheNodeType()); 
+   } else
+    amrex::Error("data_dir invalid sanity_output_zones");
+
+   MultiFab* datamfminus=new MultiFab(minus_boxes,cgrids_minus_map,
     ncomp,0,
     MFInfo().SetTag("datamfminus"),FArrayBoxFactory());
 
@@ -7682,7 +7702,7 @@ void NavierStokes::Sanity_output_zones(
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(datamfminus->boxArray().d_numPts());
+   thread_class::init_d_numPts(minus_boxes.d_numPts());
 
 // cannot do openmp here until each thread has its own
 // file handle.  
@@ -7690,8 +7710,8 @@ void NavierStokes::Sanity_output_zones(
 // is no tiling.
    for (MFIter mfi(*datamfminus,false); mfi.isValid(); ++mfi) {
 
-    if (cgrids_minusBA[mfi.index()] != mfi.validbox())
-     amrex::Error("cgrids_minusBA[mfi.index()] != mfi.validbox()");
+    if (minus_boxes[mfi.index()] != mfi.validbox())
+     amrex::Error("minus_boxes[mfi.index()] != mfi.validbox()");
 
     const Box& tilegrid = mfi.tilebox();
 
@@ -7727,6 +7747,7 @@ void NavierStokes::Sanity_output_zones(
      // in: NAVIERSTOKES_3D.F90
     FORT_CELLGRID_SANITY(
      &tid_current,
+     &data_dir,
      &bfact,
      &ncomp,
      datafab.dataPtr(),ARLIM(datafab.loVect()),ARLIM(datafab.hiVect()),

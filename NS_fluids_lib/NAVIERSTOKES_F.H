@@ -284,6 +284,7 @@ extern "C" {
 
     void FORT_CELLGRID_SANITY(
      int* tid,
+     int* data_dir,
      int* bfact,
      int* ncomp,
      Real* datafab,AMREX_ARLIM_P(datafablo),AMREX_ARLIM_P(datafabhi),
@@ -348,6 +349,7 @@ extern "C" {
 
 
     void FORT_COMBINEZONES_SANITY(
+     int* data_dir,
      int* total_number_grids,
      int* grids_per_level_array,
      int* levels_array,

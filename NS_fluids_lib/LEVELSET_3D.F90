@@ -419,6 +419,8 @@ stop
 
        ! -1 if use static angle
       call get_use_DCA(use_DCA)
+      ZEYU_thet_d=zero
+      totaludotn=zero
 
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
@@ -1294,7 +1296,7 @@ stop
          ! implement dynamic contact angle algorithm here.
          ! first project nfluid onto the solid (im3) material
 
-         if (use_DCA.ge.0) then
+         if ((use_DCA.eq.-1).or.(use_DCA.ge.0)) then
 
           dotprod=zero
           do dir2=1,SDIM
@@ -1392,11 +1394,17 @@ stop
            dist_to_CL=zero
            ZEYU_d_closest=abs(dist_to_CL)
 
-           ! modify cos_angle (initialized above as static angle)
-           ! use_DCA=0 static angle
-           ! use_DCA=1 Jiang
-           ! use_DCA=2 Kistler
-           if ((use_DCA.eq.0).or.(use_DCA.eq.1).or.(use_DCA.eq.2)) then
+           if (use_DCA.eq.-1) then
+
+            ZEYU_thet_d=acos(cos_angle)
+
+            ! modify cos_angle (initialized above as static angle)
+            ! use_DCA=-1 static angle
+            ! use_DCA=0 static angle
+            ! use_DCA=1 Jiang
+            ! use_DCA=2 Kistler
+           else if ((use_DCA.eq.0).or.(use_DCA.eq.1).or.(use_DCA.eq.2)) then
+
             call DCA_select_model(nproject,totaludotn,cos_angle, &
              liquid_viscosity,user_tension(iten),cos_angle,use_DCA)
 
@@ -1453,8 +1461,6 @@ stop
            stop
           endif 
 
-         else if (use_DCA.eq.-1) then
-          ! do nothing
          else
           print *,"use_DCA invalid"
           stop

@@ -16691,7 +16691,11 @@ void NavierStokes::writeSanityCheckData(int data_id,
 
   ns_level.debug_ngrow(data_mf,0,250);
 
+   // data_dir=-1 cell centered data
+   // data_dir=0..sdim-1 face centered data.
+   // data_dir=sdim node data
   ns_level.Sanity_output_zones(
+   data_dir,
    ns_level.localMF[data_mf],
    ncomp,
    grids_per_level_array[ilev],
@@ -16741,6 +16745,7 @@ void NavierStokes::writeSanityCheckData(int data_id,
 
    // in: NAVIERSTOKES_3D.F90
   FORT_COMBINEZONES_SANITY(
+    &data_dir,
     &total_number_grids,
     grids_per_level_array.dataPtr(),
     levels_array.dataPtr(),
