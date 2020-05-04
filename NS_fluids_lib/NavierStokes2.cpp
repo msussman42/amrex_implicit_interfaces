@@ -4860,12 +4860,23 @@ void NavierStokes::make_physics_varsALL(int project_option,
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,faceden_index,1,0,AMREX_SPACEDIM,
    spectral_override,8);
 
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,facevisc_index,1,0,AMREX_SPACEDIM,0,9);
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,faceheat_index,1,0,AMREX_SPACEDIM,0,10);
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,facevisc_index,1,0,AMREX_SPACEDIM,
+   0,9);
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,faceheat_index,1,0,AMREX_SPACEDIM,
+   0,10);
   if (num_species_var>0)
    ns_level.avgDownEdge_localMF(FACE_VAR_MF,facespecies_index,
       1,0,AMREX_SPACEDIM,0,11);
  }  // ilev=finest_level ... level
+
+ if (1==1) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   writeSanityCheckData(caller_id,
+	 localMF[FACE_VAR_MF+dir]->nComp(),
+	 FACE_VAR_MF+dir,dir);
+  }
+ }
+
  delete_array(DEN_RECON_MF);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete_array(AMRSYNC_VEL_MF+dir);
@@ -7693,8 +7704,14 @@ void NavierStokes::Sanity_output_zones(
    datamfminus->ParallelCopy(*datamf,0,0,
     ncomp,0,0,geom.periodicity());
 
-   check_for_NAN(datamf,1);
-   check_for_NAN(datamfminus,11);
+   if (data_dir==-1) {
+    check_for_NAN(datamf,1);
+    check_for_NAN(datamfminus,11);
+   } else if ((data_dir>=0)&&(data_dir<=AMREX_SPACEDIM)) {
+    check_for_NAN(datamf,1);
+    check_for_NAN(datamfminus,11);
+   } else
+    amrex::Error("data_dir invalid");
  
    ParallelDescriptor::Barrier();
 

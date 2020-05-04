@@ -5334,6 +5334,7 @@ END SUBROUTINE SIMP
       INTEGER_T nhalf
       REAL_T xstenND(-3:3,SDIM)
       REAL_T dxleft,dxright
+      INTEGER_T local_nd
 
       nhalf=3
 
@@ -5481,14 +5482,38 @@ END SUBROUTINE SIMP
                stop
               endif
 
+              if (data_dir.eq.-1) then
+               local_nd=0
+              else if ((data_dir+1.eq.dir).or.(data_dir.eq.SDIM)) then
+               local_nd=1
+              else if ((data_dir+1.ne.dir).and.(data_dir.lt.SDIM)) then
+               local_nd=0
+              else
+               print *,"data_dir invalid"
+               stop
+              endif
               dxright=xstenND(2,dir)-xstenND(0,dir)
               if (dxright.gt.zero) then
                if (isub_nrm.eq.0) then
                 xposnd(dir)=xstenND(0,dir)
                else if (isub_nrm.eq.1) then
-                xposnd(dir)=xstenND(0,dir)+dxright/100.0
+                if (local_nd.eq.0) then
+                 xposnd(dir)=xstenND(0,dir)+dxright/100.0
+                else if (local_nd.eq.1) then
+                 xposnd(dir)=xstenND(0,dir)+(half-one/100.0)*dxright
+                else
+                 print *,"local_nd invalid"
+                 stop
+                endif
                else if (isub_nrm.eq.2) then
-                xposnd(dir)=xstenND(2,dir)-dxright/100.0
+                if (local_nd.eq.0) then
+                 xposnd(dir)=xstenND(2,dir)-dxright/100.0
+                else if (local_nd.eq.1) then
+                 xposnd(dir)=xstenND(2,dir)-(half-one/100.0)*dxright
+                else
+                 print *,"local_nd invalid"
+                 stop
+                endif
                else
                 print *,"isub_nrm invalid"
                 stop
