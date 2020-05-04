@@ -517,7 +517,7 @@ public:
     void writeSanityCheckData(int data_id,
 		    int ncomp,
 		    int data_mf,
-		    int dir);
+		    int data_dir);
 
     virtual std::string thePlotFileType () const;
 

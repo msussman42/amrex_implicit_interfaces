@@ -16655,7 +16655,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 void NavierStokes::writeSanityCheckData(int data_id,
                     int ncomp,
                     int data_mf, 
-                    int dir) {
+                    int data_dir) {
 
  if (level!=0)
   amrex::Error("level invalid writeSanityCheckData");

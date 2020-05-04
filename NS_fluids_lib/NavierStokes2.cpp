@@ -7658,9 +7658,6 @@ void NavierStokes::Sanity_output_zones(
     amrex::Error("grids_per_level incorrect");
   }
 
-  NavierStokes& ns_finest=getLevel(tecplot_finest_level);
-  const Real* dxfinest = ns_finest.geom.CellSize();
-
   if (grids_per_level>0) {
 
    DistributionMapping cgrids_minus_map(cgrids_minusBA);
@@ -7685,7 +7682,7 @@ void NavierStokes::Sanity_output_zones(
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(velmfminus->boxArray().d_numPts());
+   thread_class::init_d_numPts(datamfminus->boxArray().d_numPts());
 
 // cannot do openmp here until each thread has its own
 // file handle.  

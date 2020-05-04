@@ -442,7 +442,7 @@ stop
       INTEGER_T ilev,igrid,ivel2d,ivel3d
       INTEGER_T lo(plot_sdim),hi(plot_sdim)
       INTEGER_T sysret
-
+      INTEGER_T hi_index_shift(3)
 
 ! Guibo
 
@@ -683,13 +683,22 @@ stop
        write(11) 0    ! Number of miscellaneous user-defined  
                       !face neighbor connections
 
-        ! ----- IMax,JMax,KMax
-       write(11) (hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
-       write(11) (hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
+       hi_index_shift(1)=(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
+       hi_index_shift(2)=(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
        if (plot_sdim.eq.3) then
-        write(11) (hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
+        hi_index_shift(3)=(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
        else
-        print *,"plot_sdim invalid in zones_revolve"
+        print *,"plot_sdim invalid in zones_revolve_sanity"
+        stop
+       endif
+
+        ! ----- IMax,JMax,KMax
+       write(11) hi_index_shift(1)
+       write(11) hi_index_shift(2)
+       if (plot_sdim.eq.3) then
+        write(11) hi_index_shift(3)
+       else
+        print *,"plot_sdim invalid in zones_revolve_sanity"
         stop
        endif
  
@@ -957,9 +966,12 @@ stop
 
        ! order is IMPORTANT.
        do ivar_gb=1,nwrite3d
-        do k=0,khi_plot-klo_plot
-        do j=0,(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
-        do i=0,(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+        hi_index_shift(1)=(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+        hi_index_shift(2)=(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
+        hi_index_shift(3)=khi_plot-klo_plot
+        do k=0,hi_index_shift(3)
+        do j=0,hi_index_shift(2)
+        do i=0,hi_index_shift(1)
          write(11) zone3d_gb(iz_gb)%var(ivar_gb,i,j,k)
         enddo
         enddo
@@ -1031,9 +1043,6 @@ stop
       INTEGER_T klo_plot,khi_plot
 
       INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
       INTEGER_T, intent(in) :: total_number_grids
       INTEGER_T, intent(in) :: num_levels
       INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
@@ -1055,22 +1064,22 @@ stop
 
       INTEGER_T nwrite3d,nwrite2d,index3d,index2d
 
-      INTEGER_T im
-      INTEGER_T partid
-
       character*3 levstr
       character*5 gridstr
       character*18 filename18
       character*80 rmcommand
 
       character*6 stepstr
-      character*16 newfilename16
+      character*3 outerstr
+      character*3 slabstr
+      character*3 idstr
+      character*36 newfilename36
 
       INTEGER_T i,j,k,dir
-      INTEGER_T ilev,igrid,ivel2d,ivel3d
+      INTEGER_T ilev,igrid
       INTEGER_T lo(plot_sdim),hi(plot_sdim)
       INTEGER_T sysret
-
+      INTEGER_T hi_index_shift(3)
 
 ! Guibo
 
@@ -1092,7 +1101,7 @@ stop
       end type zone2d_t
       type(zone2d_t), dimension(:), allocatable :: zone2d_gb
 
-      REAL_T theta,rr,zz,xx,yy,ur,uz,ux,uy
+      REAL_T theta,rr,zz,xx,yy
 
       if (plot_sdim.ne.3) then
        print *,"plot_sdim invalid"
@@ -1122,19 +1131,33 @@ stop
        stop
       endif
 
-      print *,"FIX ME FILE NAME"
-      stop
-
       write(stepstr,'(I6)') nsteps
       do i=1,6
        if (stepstr(i:i).eq.' ') then
         stepstr(i:i)='0'
        endif
       enddo
+      write(outerstr,'(I3)') SDC_outer_sweeps
+      write(slabstr,'(I3)') slab_step
+      write(idstr,'(I3)') data_id
+      do i=1,3
+       if (outerstr(i:i).eq.' ') then
+        outerstr(i:i)='0'
+       endif
+       if (slabstr(i:i).eq.' ') then
+        slabstr(i:i)='0'
+       endif
+       if (idstr(i:i).eq.' ') then
+        idstr(i:i)='0'
+       endif
+      enddo
 
-      write(newfilename16,'(A6,A6,A4)') 'datafb',stepstr,'.plt'
+      write(newfilename36,'(A6,A6,A5,A3,A4,A3,A2,A3,A4)') 'datamf', &
+              stepstr, &
+              'outer', &
+              outerstr,'slab',slabstr,'id',idstr,'.plt'
 
-      print *,"newfilename16 ",newfilename16
+      print *,"newfilename36 (step,outer,slab,data id) ",newfilename36
 
 
       !--------------------------------------------------
@@ -1182,7 +1205,7 @@ stop
        open(unit=4,file=filename18)
 
        do dir=1,plot_sdim
-        if (dir.ne.3) then
+        if ((dir.eq.1).or.(dir.eq.2)) then
          read(4,*) lo(dir),hi(dir)
         else if (dir.eq.3) then
          lo(dir)=0
@@ -1247,7 +1270,7 @@ stop
       !-------------------------------------------------------------
       ZONEMARKER = 299.0
       EOHMARKER  = 357.0
-      open(unit=11,file=newfilename16,form="unformatted",access="stream")
+      open(unit=11,file=newfilename36,form="unformatted",access="stream")
 
        ! +++++++ HEADER SECTION ++++++
 
@@ -1266,7 +1289,7 @@ stop
        ! Number of variables 
       write(11) nwrite3d
 
-      ! Variable names: zones_revolve
+      ! Variable names: zones_revolve_sanity
       call dumpstring_headers_sanity(plot_sdim,ncomp)
 
        ! Zones
@@ -1277,11 +1300,7 @@ stop
        Zonename = "ZONE"
        call dumpstring(Zonename)
 
-       if (plotint.le.0) then
-        strandid=1    
-       else
-        strandid=(nsteps/plotint)+1
-       endif
+       strandid=1    
 
        write(11) -1   ! Parent Zone
        write(11) 0    ! StrandID
@@ -1294,11 +1313,20 @@ stop
        write(11) 0    ! Number of miscellaneous user-defined  
                       !face neighbor connections
 
-        ! ----- IMax,JMax,KMax
-       write(11) 3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
-       write(11) 3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
+       hi_index_shift(1)=3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
+       hi_index_shift(2)=3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
        if (plot_sdim.eq.3) then
-        write(11) 3*(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
+        hi_index_shift(3)=(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
+       else
+        print *,"plot_sdim invalid in zones_revolve_sanity"
+        stop
+       endif
+
+        ! ----- IMax,JMax,KMax
+       write(11) hi_index_shift(1)
+       write(11) hi_index_shift(2)
+       if (plot_sdim.eq.3) then
+        write(11) hi_index_shift(3)
        else
         print *,"plot_sdim invalid in zones_revolve_sanity"
         stop
@@ -1471,75 +1499,16 @@ stop
          index3d=index3d+plot_sdim
          index2d=index2d+SDIM
 
-         do im=1,num_materials_vel
-          ivel2d=(im-1)*SDIM
-          ivel3d=(im-1)*plot_sdim
-          ur=zone2d_gb(iz_gb)%var(index2d+1+ivel2d,i,j)
-          uz=zone2d_gb(iz_gb)%var(index2d+2+ivel2d,i,j)
-          ux=ur*cos(theta)
-          uy=ur*sin(theta)
-          zone3d_gb(iz_gb)%var(index3d+1+ivel3d,i,j,k)=ux
-          zone3d_gb(iz_gb)%var(index3d+2+ivel3d,i,j,k)=uy
-          zone3d_gb(iz_gb)%var(index3d+3+ivel3d,i,j,k)=uz
-         enddo ! im
-
-         index3d=index3d+plot_sdim*num_materials_vel
-         index2d=index2d+SDIM*num_materials_vel
-
-         do partid=0,nparts_def-1
-          ivel2d=partid*SDIM
-          ivel3d=partid*plot_sdim
-          ur=zone2d_gb(iz_gb)%var(index2d+1+ivel2d,i,j)
-          uz=zone2d_gb(iz_gb)%var(index2d+2+ivel2d,i,j)
-          ux=ur*cos(theta)
-          uy=ur*sin(theta)
-          zone3d_gb(iz_gb)%var(index3d+1+ivel3d,i,j,k)=ux
-          zone3d_gb(iz_gb)%var(index3d+2+ivel3d,i,j,k)=uy
-          zone3d_gb(iz_gb)%var(index3d+3+ivel3d,i,j,k)=uz
-         enddo ! partid=0..nparts_def-1
-
-         index3d=index3d+plot_sdim*nparts_def
-         index2d=index2d+SDIM*nparts_def
-
-          ! pressure,presder,div,divdat,mach,vof
-         do ivar_gb=1,5*num_materials_vel+nmat
+         do ivar_gb=1,ncomp
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
             zone2d_gb(iz_gb)%var(index2d,i,j)
          enddo
 
-          ! ls
-         do ivar_gb=1,nmat
-          index3d=index3d+1
-          index2d=index2d+1
-          zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
-            zone2d_gb(iz_gb)%var(index2d,i,j)
-         enddo
-          ! ls normal
-         do ivar_gb=1,nmat
-          ur=zone2d_gb(iz_gb)%var(index2d+1,i,j)
-          uz=zone2d_gb(iz_gb)%var(index2d+2,i,j)
-          ux=ur*cos(theta)
-          uy=ur*sin(theta)
-          zone3d_gb(iz_gb)%var(index3d+1,i,j,k)=ux
-          zone3d_gb(iz_gb)%var(index3d+2,i,j,k)=uy
-          zone3d_gb(iz_gb)%var(index3d+3,i,j,k)=uz
-          index3d=index3d+plot_sdim
-          index2d=index2d+SDIM
-         enddo
-          ! den,configuration tensor,visc,trace
-         do ivar_gb=1,nmat*num_state_material+ &
-              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-              nmat+5*nmat
-          index3d=index3d+1
-          index2d=index2d+1
-          zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
-            zone2d_gb(iz_gb)%var(index2d,i,j)
-         enddo
          if ((index3d.ne.nwrite3d).or. &
              (index2d.ne.nwrite2d)) then
-          print *,"index mismatch in zone_revolve"
+          print *,"index mismatch in zone_revolve_sanity"
           stop
          endif
 
@@ -1568,9 +1537,12 @@ stop
 
        ! order is IMPORTANT.
        do ivar_gb=1,nwrite3d
-        do k=0,khi_plot-klo_plot
-        do j=0,3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
-        do i=0,3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+        hi_index_shift(1)=3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+        hi_index_shift(2)=3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
+        hi_index_shift(3)=khi_plot-klo_plot
+        do k=0,hi_index_shift(3)
+        do j=0,hi_index_shift(2)
+        do i=0,hi_index_shift(1)
          write(11) zone3d_gb(iz_gb)%var(ivar_gb,i,j,k)
         enddo
         enddo
@@ -5327,6 +5299,8 @@ END SUBROUTINE SIMP
       character*18 filename18
 
       INTEGER_T i,j,k
+      INTEGER_T isub,jsub,ksub
+      INTEGER_T isub_nrm
       INTEGER_T dir
       INTEGER_T i1,j1,k1
       INTEGER_T k1lo,k1hi,ksubhi
@@ -5502,8 +5476,8 @@ END SUBROUTINE SIMP
              enddo ! dir=1..sdim
 
              i1=icell(1)
-             j1=jcell(2)
-             k1=kcell(3)
+             j1=icell(2)
+             k1=icell(3)
 
              do dir=1,ncomp
               datand(dir)=datafab(D_DECL(i1,j1,k1),dir)
@@ -5798,6 +5772,7 @@ END SUBROUTINE SIMP
       INTEGER_T i,j,k,dir
       INTEGER_T ilev,igrid
       INTEGER_T lo(SDIM),hi(SDIM)
+      INTEGER_T hi_index_shift(3)
 
 ! Guibo
 
@@ -6082,17 +6057,21 @@ END SUBROUTINE SIMP
         write(11) 0    ! Number of miscellaneous user-defined  
                        !face neighbor connections
 
-         ! ----- IMax,JMax,KMax
-        write(11) hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+2
-        write(11) hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+2
+        hi_index_shift(1)=(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
+        hi_index_shift(2)=(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
         if (plot_sdim.eq.3) then
-         write(11) hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+2
+         hi_index_shift(3)=(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
         else if (plot_sdim.eq.2) then
-         write(11) 1
+         hi_index_shift(3)=1
         else
-         print *,"plot_sdim invalid"
+         print *,"plot_sdim invalid in zones_revolve_sanity"
          stop
         endif
+
+         ! ----- IMax,JMax,KMax
+        write(11) hi_index_shift(1)
+        write(11) hi_index_shift(2)
+        write(11) hi_index_shift(3)
  
         write(11) 0
        enddo  ! iz_gb
@@ -6172,10 +6151,15 @@ END SUBROUTINE SIMP
          stop
         endif
  
+        hi_index_shift(1)=(hi(1)-lo(1)+1)
+        hi_index_shift(2)=(hi(2)-lo(2)+1)
+        hi_index_shift(3)=khi_plot-klo_plot
+
         allocate(zone_gb(iz_gb)% &
-         var(nwrite,lo(1):hi(1)+1, &
-             lo(2):hi(2)+1, &
-             klo_plot:khi_plot))
+         var(nwrite, &
+             0:hi_index_shift(1), &
+             0:hi_index_shift(2), &
+             0:hi_index_shift(3)))
 
         write(levstr,'(I3)') ilev
         write(gridstr,'(I5)') igrid
@@ -6213,9 +6197,9 @@ END SUBROUTINE SIMP
         enddo  ! dir
 
          ! order is IMPORTANT.
-        do k=klo_plot,khi_plot
-        do j=lo(2),hi(2)+1
-        do i=lo(1),hi(1)+1
+        do k=0,hi_index_shift(3)
+        do j=0,hi_index_shift(2)
+        do i=0,hi_index_shift(1)
          read(4,*) (zone_gb(iz_gb)%var(ivar_gb,i,j,k),ivar_gb=1,nwrite)
         enddo
         enddo
@@ -6240,9 +6224,12 @@ END SUBROUTINE SIMP
 
         ! order is IMPORTANT
         do ivar_gb=1,nwrite
-         do k=klo_plot,khi_plot
-         do j=lo_gb(iz_gb,2),hi_gb(iz_gb,2)+1
-         do i=lo_gb(iz_gb,1),hi_gb(iz_gb,1)+1
+         hi_index_shift(1)=(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+         hi_index_shift(2)=(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
+         hi_index_shift(3)=khi_plot-klo_plot
+         do k=0,hi_index_shift(3)
+         do j=0,hi_index_shift(2)
+         do i=0,hi_index_shift(1)
           write(11) zone_gb(iz_gb)%var(ivar_gb,i,j,k)
          enddo
          enddo
@@ -6343,11 +6330,15 @@ END SUBROUTINE SIMP
       character*80 rmcommand
 
       character*6 stepstr
-      character*16 newfilename16
+      character*3 outerstr
+      character*3 slabstr
+      character*3 idstr
+      character*16 newfilename36
 
       INTEGER_T i,j,k,dir
       INTEGER_T ilev,igrid
       INTEGER_T lo(SDIM),hi(SDIM)
+      INTEGER_T hi_index_shift(3)
 
 ! Guibo
 
@@ -6459,9 +6450,27 @@ END SUBROUTINE SIMP
         endif
        enddo
 
-       write(newfilename16,'(A6,A6,A4)') 'nddata',stepstr,'.plt'
+       write(outerstr,'(I3)') SDC_outer_sweeps
+       write(slabstr,'(I3)') slab_step
+       write(idstr,'(I3)') data_id
+       do i=1,3
+        if (outerstr(i:i).eq.' ') then
+         outerstr(i:i)='0'
+        endif
+        if (slabstr(i:i).eq.' ') then
+         slabstr(i:i)='0'
+        endif
+        if (idstr(i:i).eq.' ') then
+         idstr(i:i)='0'
+        endif
+       enddo
 
-       print *,"newfilename16 ",newfilename16
+       write(newfilename36,'(A6,A6,A5,A3,A4,A3,A2,A3,A4)') 'datamf', &
+              stepstr, &
+              'outer', &
+              outerstr,'slab',slabstr,'id',idstr,'.plt'
+
+       print *,"newfilename36 (step,outer,slab,data id) ",newfilename36
 
 
        !--------------------------------------------------
@@ -6567,7 +6576,7 @@ END SUBROUTINE SIMP
        !-----------------------------------------------------------
        ZONEMARKER = 299.0
        EOHMARKER  = 357.0
-       open(unit=11,file=newfilename16,form="unformatted",access="stream")
+       open(unit=11,file=newfilename36,form="unformatted",access="stream")
 
         ! +++++++ HEADER SECTION ++++++
 
@@ -6586,8 +6595,8 @@ END SUBROUTINE SIMP
        ! Number of variables 
        write(11) nwrite
 
-       ! Variable names: combinezones
-       call dumpstring_headers(plot_sdim)
+       ! Variable names: combinezones_sanity
+       call dumpstring_headers_sanity(plot_sdim,ncomp)
 
         ! Zones
        do iz_gb=1,nzones_gb
@@ -6597,11 +6606,7 @@ END SUBROUTINE SIMP
         Zonename = "ZONE"
         call dumpstring(Zonename)
 
-        if (plotint.le.0) then
-         strandid=1
-        else
-         strandid=(nsteps/plotint)+1
-        endif
+        strandid=1
  
         write(11) -1   ! Parent Zone
         write(11) 0    ! StrandID
@@ -6614,17 +6619,21 @@ END SUBROUTINE SIMP
         write(11) 0    ! Number of miscellaneous user-defined  
                        !face neighbor connections
 
-         ! ----- IMax,JMax,KMax
-        write(11) 3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
-        write(11) 3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
+        hi_index_shift(1)=3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
+        hi_index_shift(2)=3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
         if (plot_sdim.eq.3) then
-         write(11) 3*(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
+         hi_index_shift(3)=3*(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
         else if (plot_sdim.eq.2) then
-         write(11) 1
+         hi_index_shift(3)=1
         else
-         print *,"plot_sdim invalid"
+         print *,"plot_sdim invalid in combinezones_sanity"
          stop
         endif
+
+         ! ----- IMax,JMax,KMax
+        write(11) hi_index_shift(1)
+        write(11) hi_index_shift(2)
+        write(11) hi_index_shift(3)
  
         write(11) 0
        enddo  ! iz_gb
@@ -6750,7 +6759,7 @@ END SUBROUTINE SIMP
         enddo  ! dir
 
          ! order is IMPORTANT.
-        do k=0,khi_plot-klo_plot
+        do k=0,hi_index_shift(3)
         do j=0,hi_index_shift(2)
         do i=0,hi_index_shift(1)
          read(4,*) (zone_gb(iz_gb)%var(ivar_gb,i,j,k),ivar_gb=1,nwrite)
@@ -6777,9 +6786,12 @@ END SUBROUTINE SIMP
 
         ! order is IMPORTANT
         do ivar_gb=1,nwrite
-         do k=0,khi_plot-klo_plot
-         do j=0,3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
-         do i=0,3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+         hi_index_shift(1)=3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+         hi_index_shift(2)=3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
+         hi_index_shift(3)=3*(khi_plot-klo_plot)
+         do k=0,hi_index_shift(3)
+         do j=0,hi_index_shift(2)
+         do i=0,hi_index_shift(1)
           write(11) zone_gb(iz_gb)%var(ivar_gb,i,j,k)
          enddo
          enddo

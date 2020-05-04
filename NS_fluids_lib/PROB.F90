@@ -151,7 +151,7 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T plot_sdim
+      INTEGER_T, intent(in) :: plot_sdim
       character*80 Varname
       character*2 specstr
       character*2 matstr
@@ -703,6 +703,63 @@ stop
 
       return
       end subroutine dumpstring_headers
+
+
+      subroutine dumpstring_headers_sanity(plot_sdim,ncomp)
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: plot_sdim
+      INTEGER_T, intent(in) :: ncomp
+      character*80 Varname
+      character*3 matstr
+      INTEGER_T ih,im,i
+
+      if ((plot_sdim.ne.2).and.(plot_sdim.ne.3)) then
+       print *,"plot_sdim invalid"
+       stop
+      endif
+      if (ncomp.ge.1) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+
+      Varname='X'
+      call dumpstring(Varname)
+      Varname='Y'
+      call dumpstring(Varname)
+
+      if (plot_sdim.eq.3) then
+       Varname='Z'
+       call dumpstring(Varname)
+      endif
+
+      do im=1,ncomp
+
+       write(matstr,'(I3)') im
+       do i=1,3
+        if (matstr(i:i).eq.' ') then
+         matstr(i:i)='0'
+        endif
+       enddo
+
+       ih=1
+       Varname='U'
+       ih=ih+1
+       do i=1,3
+        Varname(ih:ih)=matstr(i:i)
+        ih=ih+1
+       enddo
+       call dumpstring(Varname)
+
+      enddo ! im=1..ncomp
+
+      return
+      end subroutine dumpstring_headers_sanity
+
+
 
       subroutine get_mach_number(tessellate, &
         vel,den,vof,mach,nmat)
