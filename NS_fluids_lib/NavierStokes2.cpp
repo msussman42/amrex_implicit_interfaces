@@ -2493,7 +2493,7 @@ void NavierStokes::increment_face_velocity(
       FArrayBox& pres=(*U_old)[mfi];
 
        // FSI_GHOST_MF is initialized in 
-       //  init_FSI_GHOST_MF_ALL(ngrow)
+       //  init_FSI_GHOST_MF_ALL(ngrow,caller_id)
       FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
       FArrayBox& cellvelfab=(*localMF[idx_velcell_temp])[mfi];
 
@@ -6624,7 +6624,8 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   if (std::abs(time-cur_time_slab)>1.0e-8)
    amrex::Error("prescribe solid at the new time");
 
-  init_FSI_GHOST_MF_ALL(1);
+  int ngrow_FSI=1;
+  init_FSI_GHOST_MF_ALL(ngrow_FSI,3);
  
  } else if (renormalize_only==1) {
   // do nothing

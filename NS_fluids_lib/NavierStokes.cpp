@@ -243,7 +243,7 @@ int  NavierStokes::adapt_quad_depth=1;
 
 int  NavierStokes::visual_tessellate_vfrac=0;   
 int  NavierStokes::visual_revolve=0;   
-int  NavierStokes::visual_option=-2;  // -2 zonal tecplot,-1 plot files (visit)
+int  NavierStokes::visual_option=-2; // -2 zonal tecplot,-1 plot files (visit)
 
 int NavierStokes::visual_compare=0; 
 Vector<int> NavierStokes::visual_ncell;
@@ -4886,7 +4886,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 //  NavierStokes::MaxAdvectSpeedALL
 //  NavierStokes::sum_integrated_quantities
 //  NavierStokes::prepare_post_process
-void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow) {
+void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -4901,6 +4901,17 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow) {
   int dealloc_history=0;
   ns_level.init_FSI_GHOST_MF(ngrow,dealloc_history);
  } // ilev=level...finest_level
+
+ if ((1==1)&&(caller_id==3)) {
+  writeSanityCheckData(caller_id,
+    localMF[HISTORY_MF]->nComp(),
+    HISTORY_MF,
+    -1);
+  writeSanityCheckData(caller_id+100,
+    localMF[FSI_GHOST_MF]->nComp(),
+    FSI_GHOST_MF,
+    -1); // data_dir==-1
+ }
 
  if (nparts==0) {
   // do nothing
@@ -5040,15 +5051,17 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
     int nhistory_local=histfab.nComp();
 
      // CODY ESTEBE: LAW OF THE WALL
-     // TODO:
-     // 1. pass a FAarrayBox to WALLFUNCTION to getGhostVel
-     // 2. populate the FArrayBox with: (a) image velocity/flag,
-     //    (b) ghost velocity/flag, (c) contact angle/flag, ...
-     // 3. extrapolate the FArrayBox data from flag==1 regions to flag==0
-     //    regions.  (i) loop through grid, wherever flag==0, data_extrap=
-     //    sum_{flag==1}  data_j/sum_{flag==1} 1
-     // 4. output data in convenient format.
+     // "HISTORY_MF" contains image velocity data and angle data.
      // fab = fortran array block
+     // DATA: state data (velocity, level set function, temperature, density,
+     // pressure) are data that represent the state of some fluid dynamics
+     // system.
+     // "localMF" data are temporary data used to assist in updating the
+     // state data from time t=t^n to time t=t^{n+1}.
+     // state data is not discarded at the end of a time step.
+     // At the beginning of new time steps, existing state data is copied
+     // to "state data old" and then by the end of a time step, 
+     // "state data new" contains the updated state.
      // Generalized Navier Boundary Condition GNBC (call get_use_DCA)
      // 1. copy solid velocity into ghost velocity where phi_solid>0
      // 2. copy solid velocity into ghost velocity where phi_solid<-|cutoff|
@@ -17124,7 +17137,8 @@ void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
 
  if (localMF_grow[FSI_GHOST_MF]<1) {
 
-  init_FSI_GHOST_MF_ALL(1);
+  int ngrow_FSI=1;
+  init_FSI_GHOST_MF_ALL(ngrow_FSI,1);
 
  }
 
@@ -18346,7 +18360,8 @@ NavierStokes::prepare_post_process(int post_init_flag) {
    
  } // ilev=level ... finest_level
 
- init_FSI_GHOST_MF_ALL(1);
+ int ngrow_FSI=1;
+ init_FSI_GHOST_MF_ALL(ngrow_FSI,2);
 
  build_masksemALL();
 

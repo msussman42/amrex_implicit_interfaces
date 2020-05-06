@@ -1336,7 +1336,7 @@ void apply_pressure_grad(
     static int CTML_FSI_matC(int im);
     static int FSI_material_exists();
 
-    void init_FSI_GHOST_MF_ALL(int ngrow);
+    void init_FSI_GHOST_MF_ALL(int ngrow,int caller_id);
     void init_FSI_GHOST_MF(int ngrow,int dealloc_history);
     void resize_FSI_GHOST_MF(int ngrow);
 

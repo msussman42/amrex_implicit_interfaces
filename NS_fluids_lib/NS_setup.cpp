@@ -1500,7 +1500,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  } // ilev=level..finest_level
 
- init_FSI_GHOST_MF_ALL(1);
+ int ngrow_FSI=1;
+ init_FSI_GHOST_MF_ALL(ngrow_FSI,5);
 
  build_masksemALL();
 
