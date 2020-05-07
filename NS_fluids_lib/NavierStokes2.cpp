@@ -4794,9 +4794,9 @@ void NavierStokes::make_physics_varsALL(int project_option,
   ns_level.makeStateCurv(project_option,post_restart_flag);
  }
 
- if (1==1) {
+ if (1==0) {
   writeSanityCheckData(
-    "in: make_physics_varsALL, HISTORY_MF",
+    "in: make_physics_varsALL, HISTORY_MF", //angle,tangential velocity
     caller_id,
     localMF[HISTORY_MF]->nComp(),
     HISTORY_MF,-1);
@@ -4875,7 +4875,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  if (1==1) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    writeSanityCheckData(
-    "in: make_physics_varsALL, FACE_VAR_MF",
+    "in: make_physics_varsALL, FACE_VAR_MF",//faceden_index=2 facevisc_index=6
     caller_id,
     localMF[FACE_VAR_MF+dir]->nComp(),
     FACE_VAR_MF+dir,dir);

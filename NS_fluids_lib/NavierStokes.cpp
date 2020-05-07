@@ -4902,15 +4902,16 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
   ns_level.init_FSI_GHOST_MF(ngrow,dealloc_history);
  } // ilev=level...finest_level
 
+  // GNBC DEBUGGING
  if ((1==1)&&(caller_id==3)) {
   writeSanityCheckData(
-    "init_FSI_GHOST_MF_ALL, HISTORY_MF",
+    "GNBC DEBUGGING interface velocity? image velocity, solid velocity, angle, init_FSI_GHOST_MF_ALL, HISTORY_MF",
     caller_id,
-    localMF[HISTORY_MF]->nComp(),
+    localMF[HISTORY_MF]->nComp(), //int. velocity,image vel,solid vel,angle
     HISTORY_MF,
     -1);
   writeSanityCheckData(
-    "init_FSI_GHOST_MF_ALL, FSI_GHOST_MF",
+    "init_FSI_GHOST_MF_ALL, FSI_GHOST_MF", //fictitious solid velocity
     caller_id+100,
     localMF[FSI_GHOST_MF]->nComp(),
     FSI_GHOST_MF,
