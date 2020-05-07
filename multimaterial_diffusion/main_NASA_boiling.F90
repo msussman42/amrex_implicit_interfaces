@@ -767,6 +767,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  else if (probtype_in.eq.402) then ! NASA boiling
 
+   order_algorithm(1)=4
+   order_algorithm(2)=4
+   order_algorithm(3)=1
+
    nmat_in=3
    fort_heatviscconst(1)=10.0  ! liquid
    fort_heatviscconst(2)=1.0  ! gas
