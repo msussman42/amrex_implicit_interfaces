@@ -4903,11 +4903,15 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
  } // ilev=level...finest_level
 
  if ((1==1)&&(caller_id==3)) {
-  writeSanityCheckData(caller_id,
+  writeSanityCheckData(
+    "init_FSI_GHOST_MF_ALL, HISTORY_MF",
+    caller_id,
     localMF[HISTORY_MF]->nComp(),
     HISTORY_MF,
     -1);
-  writeSanityCheckData(caller_id+100,
+  writeSanityCheckData(
+    "init_FSI_GHOST_MF_ALL, FSI_GHOST_MF",
+    caller_id+100,
     localMF[FSI_GHOST_MF]->nComp(),
     FSI_GHOST_MF,
     -1); // data_dir==-1
@@ -4971,6 +4975,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
 
  } else if ((nparts>=1)&&(nparts<=nmat)) {
 
+   // usolid_law_of_the_wall,uimage_cell,usolid_cell,angle_ACT_cell
   int nhistory_sub=3*AMREX_SPACEDIM+1;
   int nhistory=nparts*nhistory_sub;
 
@@ -16665,10 +16670,17 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
 
 
-void NavierStokes::writeSanityCheckData(int data_id,
-                    int ncomp,
-                    int data_mf, 
-                    int data_dir) {
+void NavierStokes::writeSanityCheckData(
+		const std::string& caller_string,
+		int data_id,
+                int ncomp,
+                int data_mf, 
+                int data_dir) {
+
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "in: writeSanityCheckData, caller_string= " <<
+    caller_string << '\n';
+ }
 
  if (level!=0)
   amrex::Error("level invalid writeSanityCheckData");
@@ -16708,6 +16720,7 @@ void NavierStokes::writeSanityCheckData(int data_id,
    // data_dir=0..sdim-1 face centered data.
    // data_dir=sdim node data
   ns_level.Sanity_output_zones(
+   data_id,
    data_dir,
    ns_level.localMF[data_mf],
    ncomp,

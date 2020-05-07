@@ -107,6 +107,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
 
  localMF[idx_MF]=new MultiFab(edge_boxes,dmap,ncomp,ngrow,
 	MFInfo().SetTag("localMF[idx_MF]"),FArrayBoxFactory());
+ localMF[idx_MF]->setVal(0.0,0,ncomp,ngrow);
  localMF_grow[idx_MF]=ngrow;
 
 } //new_localMF
@@ -4794,9 +4795,11 @@ void NavierStokes::make_physics_varsALL(int project_option,
  }
 
  if (1==1) {
-  writeSanityCheckData(caller_id,
-	 localMF[HISTORY_MF]->nComp(),
-	 HISTORY_MF,-1);
+  writeSanityCheckData(
+    "in: make_physics_varsALL, HISTORY_MF",
+    caller_id,
+    localMF[HISTORY_MF]->nComp(),
+    HISTORY_MF,-1);
  }
  delete_array(HISTORY_MF);
 
@@ -4871,9 +4874,11 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  if (1==1) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   writeSanityCheckData(caller_id,
-	 localMF[FACE_VAR_MF+dir]->nComp(),
-	 FACE_VAR_MF+dir,dir);
+   writeSanityCheckData(
+    "in: make_physics_varsALL, FACE_VAR_MF",
+    caller_id,
+    localMF[FACE_VAR_MF+dir]->nComp(),
+    FACE_VAR_MF+dir,dir);
   }
  }
 
@@ -7156,7 +7161,7 @@ void NavierStokes::check_for_NAN(MultiFab* mf,int id) {
 
  for (int sc=0;sc<ncomp;sc++) {
   for (int ng=0;ng<=ngrow;ng++) {
-   if (mf->contains_nan(sc,1,ng)==true) {
+   if (mf->contains_nan(sc,1,ng)==true) { // scomp,ncomp,ngrow
     std::cout << "id= " << id << '\n';
     std::cout << "sc= " << sc << '\n';
     std::cout << "ng= " << ng << '\n';
@@ -7630,6 +7635,7 @@ void NavierStokes::output_zones(
 // data_dir=0..sdim-1 face centered data.
 // data_dir=sdim node data
 void NavierStokes::Sanity_output_zones(
+   int data_id,
    int data_dir,
    MultiFab* datamf,
    int ncomp,
@@ -7649,6 +7655,11 @@ void NavierStokes::Sanity_output_zones(
   rzflag=3;
  else
   amrex::Error("CoordSys bust 22");
+
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "in: Sanity_output_zones data_id=" << data_id <<
+    " data_dir=" << data_dir << " ncomp=" << ncomp << '\n';
+ }
 
  int finest_level = parent->finestLevel();
  int tecplot_finest_level=finest_level;
@@ -7927,7 +7938,6 @@ void NavierStokes::allocate_array(int ngrow,int ncomp,int dir,
     for (int i=finest_level;i>=level;i--) {
      NavierStokes& ns_level=getLevel(i);
      ns_level.new_localMF(idx_localMF,ncomp,ngrow,dir); 
-     ns_level.localMF[idx_localMF]->setVal(0.0,0,ncomp,ngrow);
     } // i
 
    } else
@@ -7957,8 +7967,7 @@ void NavierStokes::allocate_independent_var(int nsolve,int idx) {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   int nsolveMM=nsolve*num_materials_vel;
-  ns_level.new_localMF(idx,nsolveMM,1,-1);
-  ns_level.setVal_localMF(idx,0.0,0,nsolveMM,1);
+  ns_level.new_localMF(idx,nsolveMM,1,-1); // sets values to 0.0
  } // ilev
 
 }  // allocate_independent_var
@@ -7979,8 +7988,7 @@ void NavierStokes::allocate_rhs_var(int nsolve,int idx) {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   int nsolveMM=nsolve*num_materials_vel;
-  ns_level.new_localMF(idx,nsolveMM,0,-1);
-  ns_level.setVal_localMF(idx,0.0,0,nsolveMM,0);
+  ns_level.new_localMF(idx,nsolveMM,0,-1); // sets values to 0.0
  } // ilev
 
 }  // allocate_rhs_var
@@ -8112,8 +8120,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow,int dest_mf) {
 	  MFInfo().SetTag("slope_m"),FArrayBoxFactory());
   MultiFab::Copy(*slopes_mf,*localMF[dest_mf],0,0,nmat*ngeom_recon,0);
   delete_localMF(dest_mf,1);
-  new_localMF(dest_mf,nmat*ngeom_recon,ngrow,-1); 
-  localMF[dest_mf]->setVal(0.0,0,nmat*ngeom_recon,ngrow);
+  new_localMF(dest_mf,nmat*ngeom_recon,ngrow,-1); //sets values to 0.0
   MultiFab::Copy(*localMF[dest_mf],*slopes_mf,0,0,nmat*ngeom_recon,0);
  
   Vector<int> scompBC_map;
@@ -8208,8 +8215,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  if (localMF_grow[dest_mf]>=0) {
   delete_localMF(dest_mf,1);
  }
- new_localMF(dest_mf,nmat*ngeom_recon,ngrow,-1); 
- localMF[dest_mf]->setVal(0.0,0,nmat*ngeom_recon,ngrow);
+ new_localMF(dest_mf,nmat*ngeom_recon,ngrow,-1);  // sets values to 0.0
 
  if (localMF_grow[VOF_RECON_MF]>=0) 
   delete_localMF(VOF_RECON_MF,1);
@@ -9354,8 +9360,7 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
  MultiFab* EOSdata;
  MultiFab* tensor;
 
- new_localMF(idx,ncomp_visc,ngrow,-1);
- setVal_localMF(idx,0.0,0,ncomp_visc,ngrow);
+ new_localMF(idx,ncomp_visc,ngrow,-1); // sets values to 0.0
 
  if (allocate_vel==1) {
   vel=getState(ngrow+1,0,num_materials_vel*AMREX_SPACEDIM,cur_time_slab);

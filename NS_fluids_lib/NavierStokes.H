@@ -515,10 +515,12 @@ public:
      //   piecewise constant in cells.
      //   For postprocessing, adjust visual_ncell, and call writeTECPLOT_file
      //   (data will be ascii with filenames uniform??????.tec)
-    void writeSanityCheckData(int data_id,
-		    int ncomp,
-		    int data_mf,
-		    int data_dir);
+    void writeSanityCheckData(
+		const std::string& caller_string,
+		int data_id,
+		int ncomp,
+		int data_mf,
+		int data_dir);
 
     virtual std::string thePlotFileType () const;
 
@@ -1020,6 +1022,7 @@ protected:
      // data_dir=0..sdim-1 face centered data.
      // data_dir=sdim node data
     void Sanity_output_zones(
+      int data_id,
       int data_dir,
       MultiFab* datamf,
       int ncomp,
