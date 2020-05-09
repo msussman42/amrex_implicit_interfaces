@@ -516,6 +516,7 @@ public:
      //   For postprocessing, adjust visual_ncell, and call writeTECPLOT_file
      //   (data will be ascii with filenames uniform??????.tec)
     void writeSanityCheckData(
+		const std::string& root_string,
 		const std::string& caller_string,
 		int data_id,
 		int ncomp,

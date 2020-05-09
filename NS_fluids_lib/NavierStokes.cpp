@@ -4905,12 +4905,14 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
   // GNBC DEBUGGING
  if ((1==1)&&(caller_id==3)) {
   writeSanityCheckData(
-    "GNBC DEBUGGING interface velocity? image velocity, solid velocity, angle, init_FSI_GHOST_MF_ALL, HISTORY_MF",
+    "WALLFUNCTION",
+    "GNBC DEBUGGING usolidLawWall, image vel, solid vel, angle",
     caller_id,
     localMF[HISTORY_MF]->nComp(), //int. velocity,image vel,solid vel,angle
     HISTORY_MF,
     -1);
   writeSanityCheckData(
+    "WALLFUNCTION",
     "init_FSI_GHOST_MF_ALL, FSI_GHOST_MF", //fictitious solid velocity
     caller_id+100,
     localMF[FSI_GHOST_MF]->nComp(),
@@ -16672,6 +16674,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
 
 void NavierStokes::writeSanityCheckData(
+		const std::string& root_string,
 		const std::string& caller_string,
 		int data_id,
                 int ncomp,
@@ -16679,6 +16682,8 @@ void NavierStokes::writeSanityCheckData(
                 int data_dir) {
 
  if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "in: writeSanityCheckData, root_string= " <<
+    root_string << '\n';
   std::cout << "in: writeSanityCheckData, caller_string= " <<
     caller_string << '\n';
  }
