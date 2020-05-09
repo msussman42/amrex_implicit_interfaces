@@ -4910,13 +4910,15 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
     caller_id,
     localMF[HISTORY_MF]->nComp(), //int. velocity,image vel,solid vel,angle
     HISTORY_MF,
-    -1);
+    -1,  // State_Type==-1 
+    -1); // data_dir==-1
   writeSanityCheckData(
     "WALLFUNCTION",
     "init_FSI_GHOST_MF_ALL, FSI_GHOST_MF", //fictitious solid velocity
     caller_id+100,
     localMF[FSI_GHOST_MF]->nComp(),
     FSI_GHOST_MF,
+    -1,  // State_Type==-1 
     -1); // data_dir==-1
  }
 
@@ -16679,6 +16681,7 @@ void NavierStokes::writeSanityCheckData(
 		int data_id,
                 int ncomp,
                 int data_mf, 
+		int state_type_mf,
                 int data_dir) {
 
  if (ParallelDescriptor::IOProcessor()) {
@@ -16686,6 +16689,8 @@ void NavierStokes::writeSanityCheckData(
     root_string << '\n';
   std::cout << "in: writeSanityCheckData, caller_string= " <<
     caller_string << '\n';
+  std::cout << "in: writeSanityCheckData, data_mf= " <<
+    data_mf << " state_type_mf=" << state_type_mf << '\n';
  }
 
  if (level!=0)
@@ -16708,10 +16713,35 @@ void NavierStokes::writeSanityCheckData(
  Vector<BoxArray> cgrids_minusBA_array;
  cgrids_minusBA_array.resize(finest_level+1);
 
- if (localMF_grow[data_mf]>=0) {
-  // do nothing
+ MultiFab* raw_data_lev0_mf;
+
+ if (data_mf>=0) {
+  if (state_type_mf==-1) {
+   // do nothing
+  } else
+   amrex::Error("state_type_mf invalid");
+
+  if (localMF_grow[data_mf]>=0) {
+   // do nothing
+  } else
+   amrex::Error("localMF_grow[data_mf] invalid");
+
+  raw_data_lev0_mf=localMF[data_mf];
+
+ } else if (data_mf==-1) {
+
+  if (state_type_mf>=0) {
+   raw_data_lev0_mf=&get_new_data(state_type_mf,slab_step+1);
+  } else
+   amrex::Error("state_type_mf invalid");
+
+  if (raw_data_lev0_mf->nGrow()>=0) {
+   // do nothing
+  } else
+   amrex::Error("raw_data_lev0_mf->nGrow() invalid");
+
  } else
-  amrex::Error("localMF_grow[data_mf] invalid");
+  amrex::Error("data_mf invalid");
 
  int tecplot_finest_level=finest_level;
  if (tecplot_max_level<tecplot_finest_level)
@@ -16720,7 +16750,36 @@ void NavierStokes::writeSanityCheckData(
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  ns_level.debug_ngrow(data_mf,0,250);
+  MultiFab* raw_data_mf;
+
+  if (data_mf>=0) {
+   if (state_type_mf==-1) {
+    // do nothing
+   } else
+    amrex::Error("state_type_mf invalid");
+
+   if (ns_level.localMF_grow[data_mf]>=0) {
+    // do nothing
+   } else
+    amrex::Error("ns_level.localMF_grow[data_mf] invalid");
+
+   raw_data_mf=ns_level.localMF[data_mf];
+   ns_level.debug_ngrow(data_mf,0,250);
+
+  } else if (data_mf==-1) {
+
+   if (state_type_mf>=0) {
+    raw_data_mf=&ns_level.get_new_data(state_type_mf,slab_step+1);
+   } else
+    amrex::Error("state_type_mf invalid");
+
+   if (raw_data_mf->nGrow()>=0) {
+    // do nothing
+   } else
+    amrex::Error("raw_data_mf->nGrow() invalid");
+
+  } else
+   amrex::Error("data_mf invalid");
 
    // data_dir=-1 cell centered data
    // data_dir=0..sdim-1 face centered data.
@@ -16728,7 +16787,7 @@ void NavierStokes::writeSanityCheckData(
   ns_level.Sanity_output_zones(
    data_id,
    data_dir,
-   ns_level.localMF[data_mf],
+   raw_data_mf,
    ncomp,
    grids_per_level_array[ilev],
    cgrids_minusBA_array[ilev]);

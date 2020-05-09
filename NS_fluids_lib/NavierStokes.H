@@ -521,6 +521,7 @@ public:
 		int data_id,
 		int ncomp,
 		int data_mf,
+		int state_type_mf,
 		int data_dir);
 
     virtual std::string thePlotFileType () const;

@@ -4800,7 +4800,9 @@ void NavierStokes::make_physics_varsALL(int project_option,
     "in: make_physics_varsALL, HISTORY_MF, angle, utan", 
     caller_id,
     localMF[HISTORY_MF]->nComp(),
-    HISTORY_MF,-1);
+    HISTORY_MF,
+    -1, // State_Type==-1
+    -1); // data_dir==-1
  }
  delete_array(HISTORY_MF);
 
@@ -4880,7 +4882,9 @@ void NavierStokes::make_physics_varsALL(int project_option,
     "in: make_physics_varsALL, FACE_VAR_MF",//faceden_index=2 facevisc_index=6
     caller_id,
     localMF[FACE_VAR_MF+dir]->nComp(),
-    FACE_VAR_MF+dir,dir);
+    FACE_VAR_MF+dir,
+    -1, // State_Type==-1
+    dir);
   }
  }
 
