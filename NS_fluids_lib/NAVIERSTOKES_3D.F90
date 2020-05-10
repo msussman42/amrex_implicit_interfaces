@@ -1018,6 +1018,8 @@ stop
 
 
       subroutine zones_revolve_sanity( &
+       root_char_array, &
+       n_root, &
        data_dir, &
        plot_sdim, &
        total_number_grids, &
@@ -1040,6 +1042,8 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: n_root
+      character, dimension(n_root), intent(in) :: root_char_array
       INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: plot_sdim
       INTEGER_T klo_plot,khi_plot
@@ -1076,7 +1080,16 @@ stop
       character*3 outerstr
       character*3 slabstr
       character*3 idstr
-      character*36 newfilename36
+
+      character(len=n_root) :: root_char_str
+      character(len=n_root+36) :: newfilename40
+      character(len=36) :: fname_extend
+      character(len=4) :: step_chars
+      character(len=2) :: dir_chars
+      character(len=5) :: outer_chars
+      character(len=4) :: slab_chars
+      character(len=2) :: id_chars
+      character(len=4) :: plt_chars
 
       INTEGER_T i,j,k,dir
       INTEGER_T ilev,igrid
@@ -1155,28 +1168,39 @@ stop
        endif
       enddo
 
+      do i=1,n_root
+        root_char_str(i:i)=root_char_array(i)
+      enddo
+
       if (data_dir.eq.-1) then
-        rootstr='dataCC'
+        dir_chars='CC'
       else if (data_dir.eq.0) then
-        rootstr='dataXC'
+        dir_chars='XC'
       else if (data_dir.eq.1) then
-        rootstr='dataYC'
+        dir_chars='YC'
       else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
-        rootstr='dataZC'
+        dir_chars='ZC'
       else if (data_dir.eq.SDIM) then
-        rootstr='dataND'
+        dir_chars='ND'
       else
         print *,"data_dir invalid"
         stop
       endif
-      write(newfilename36,'(A6,A6,A5,A3,A4,A3,A2,A3,A4)') &
-              rootstr, &
-              stepstr, &
-              'outer', &
-              outerstr,'slab',slabstr,'id',idstr,'.plt'
+      step_chars='step'
+      outer_chars='outer'
+      slab_chars='slab'
+      id_chars='id'
+      plt_chars='.plt'
 
-      print *,"newfilename36 (step,outer,slab,data id) ",newfilename36
+      newfilename40(1:n_root)=root_char_str
+      write(fname_extend,'(A2,A2,A3,A4,A6,A5,A3,A4,A3,A4)') &
+               dir_chars,id_chars,idstr, &
+               step_chars,stepstr,outer_chars,outerstr, &
+               slab_chars,slabstr,plt_chars
 
+      newfilename40(n_root+1:n_root+36)=fname_extend
+
+      print *,"newfilename40 ",newfilename40
 
       !--------------------------------------------------
       ! Determine nzones_gb and allocate zone_gb, lo_gb, hi_gb
@@ -1288,7 +1312,7 @@ stop
       !-------------------------------------------------------------
       ZONEMARKER = 299.0
       EOHMARKER  = 357.0
-      open(unit=11,file=newfilename36,form="unformatted",access="stream")
+      open(unit=11,file=newfilename40,form="unformatted",access="stream")
 
        ! +++++++ HEADER SECTION ++++++
 
@@ -6384,9 +6408,9 @@ END SUBROUTINE SIMP
       return
       end subroutine FORT_COMBINEZONES
 
-
-
       subroutine FORT_COMBINEZONES_SANITY( &
+       root_char_array, &
+       n_root, &
        data_dir, &
        total_number_grids, &
        grids_per_level_array, &
@@ -6411,6 +6435,8 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: n_root
+      character, dimension(n_root), intent(in) :: root_char_array
       INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: ncomp
       INTEGER_T, intent(in) :: total_number_grids
@@ -6439,12 +6465,20 @@ END SUBROUTINE SIMP
       character*18 filename18
       character*80 rmcommand
 
-      character*6 rootstr
       character*6 stepstr
       character*3 outerstr
       character*3 slabstr
       character*3 idstr
-      character*36 newfilename36
+
+      character(len=n_root) :: root_char_str
+      character(len=n_root+36) :: newfilename40
+      character(len=36) :: fname_extend
+      character(len=4) :: step_chars
+      character(len=2) :: dir_chars
+      character(len=5) :: outer_chars
+      character(len=4) :: slab_chars
+      character(len=2) :: id_chars
+      character(len=4) :: plt_chars
 
       INTEGER_T i,j,k,dir
       INTEGER_T ilev,igrid
@@ -6520,6 +6554,8 @@ END SUBROUTINE SIMP
        plot_sdim=3
 
        call zones_revolve_sanity( &
+        root_char_array, &
+        n_root, &
         data_dir, &
         plot_sdim, &
         total_number_grids, &
@@ -6577,32 +6613,39 @@ END SUBROUTINE SIMP
         endif
        enddo
 
+       do i=1,n_root
+        root_char_str(i:i)=root_char_array(i)
+       enddo
+
        if (data_dir.eq.-1) then
-        rootstr='dataCC'
+        dir_chars='CC'
        else if (data_dir.eq.0) then
-        rootstr='dataXC'
+        dir_chars='XC'
        else if (data_dir.eq.1) then
-        rootstr='dataYC'
+        dir_chars='YC'
        else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
-        rootstr='dataZC'
+        dir_chars='ZC'
        else if (data_dir.eq.SDIM) then
-        rootstr='dataND'
+        dir_chars='ND'
        else
         print *,"data_dir invalid"
         stop
        endif
-       write(newfilename36,'(A6,A6,A5,A3,A4,A3,A2,A3,A4)') &
-              rootstr, &
-              stepstr, &
-              'outer', &
-              outerstr, &
-              'slab', &
-              slabstr, &
-              'id', &
-              idstr, &
-              '.plt'
+       step_chars='step'
+       outer_chars='outer'
+       slab_chars='slab'
+       id_chars='id'
+       plt_chars='.plt'
 
-       print *,"newfilename36 (step,outer,slab,data id) ",newfilename36
+       newfilename40(1:n_root)=root_char_str
+       write(fname_extend,'(A2,A2,A3,A4,A6,A5,A3,A4,A3,A4)') &
+               dir_chars,id_chars,idstr, &
+               step_chars,stepstr,outer_chars,outerstr, &
+               slab_chars,slabstr,plt_chars
+
+       newfilename40(n_root+1:n_root+36)=fname_extend
+
+       print *,"newfilename40 ",newfilename40
 
 
        !--------------------------------------------------
@@ -6708,7 +6751,7 @@ END SUBROUTINE SIMP
        !-----------------------------------------------------------
        ZONEMARKER = 299.0
        EOHMARKER  = 357.0
-       open(unit=11,file=newfilename36,form="unformatted",access="stream")
+       open(unit=11,file=newfilename40,form="unformatted",access="stream")
 
         ! +++++++ HEADER SECTION ++++++
 

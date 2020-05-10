@@ -349,6 +349,8 @@ extern "C" {
 
 
     void FORT_COMBINEZONES_SANITY(
+     char* root_char_array,
+     int* n_root,
      int* data_dir,
      int* total_number_grids,
      int* grids_per_level_array,

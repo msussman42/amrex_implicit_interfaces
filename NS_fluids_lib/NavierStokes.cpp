@@ -16829,6 +16829,10 @@ void NavierStokes::writeSanityCheckData(
    } // igrid
   } // ilev=0...tecplot_finest_level
 
+  int n_root=root_string.length();
+  char root_char_array[n_root+1];
+  strcpy(root_char_array,root_string.c_str());
+
   if (temp_number_grids!=total_number_grids)
    amrex::Error("temp_number_grids invalid");
   
@@ -16836,6 +16840,8 @@ void NavierStokes::writeSanityCheckData(
 
    // in: NAVIERSTOKES_3D.F90
   FORT_COMBINEZONES_SANITY(
+    root_char_array,
+    &n_root,
     &data_dir,
     &total_number_grids,
     grids_per_level_array.dataPtr(),
