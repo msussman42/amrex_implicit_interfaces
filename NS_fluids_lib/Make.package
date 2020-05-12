@@ -15,6 +15,7 @@ CEXE_headers += NavierStokes.H
 CEXE_sources += Zeyu_Matrix_Functions.cpp
 CEXE_headers += Zeyu_Matrix_Functions.H 
 
+# MITSUHIRO_MELTING.F90, PROB.F90, inputs.MITSUHIRO_MELTING, GLOBALDIST.F90
 F90EXE_headers += \
   tetrahedron_keast_rule.F90 \
   triangle_fekete_rule.F90 \
@@ -32,6 +33,7 @@ F90EXE_headers += \
   thermalspray.F90 \
   cav2Dstep.F90 \
   ZEYU_droplet_impact.F90 \
+  MITSUHIRO_MELTING.F90 \  
   CRYOGENIC_TANK1.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \
@@ -58,6 +60,7 @@ F90EXE_sources += \
   thermalspray.F90 \
   cav2Dstep.F90 \
   ZEYU_droplet_impact.F90 \
+  MITSUHIRO_MELTING.F90 \
   CRYOGENIC_TANK1.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \

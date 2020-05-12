@@ -4903,7 +4903,7 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
  } // ilev=level...finest_level
 
   // GNBC DEBUGGING
- if ((1==1)&&(caller_id==3)) {
+ if ((1==0)&&(caller_id==3)) {
   writeSanityCheckData(
     "WALLFUNCTION",
     "GNBC DEBUGGING usolidLawWall, image vel, solid vel, angle",

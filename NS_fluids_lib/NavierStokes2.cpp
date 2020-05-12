@@ -4875,7 +4875,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
       1,0,AMREX_SPACEDIM,0,11);
  }  // ilev=finest_level ... level
 
- if (1==1) {
+ if (1==0) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    writeSanityCheckData(
     "INIT_PHYSICS_VARS",
