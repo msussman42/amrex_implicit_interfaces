@@ -1634,6 +1634,10 @@ stop
        do im=1,nmat
         istate=1
         dencomp=(im-1)*num_state_material+istate
+         ! if evaporation, and "im" corresponds to air, then this is the
+         ! total density in the air (i.e. includes the vapor content)
+         ! e.g. dencore = rho_air * F_air + rho_vapor * F_vapor 
+         !      Y_vapor = F_vapor * rho_vapor/dencore
         dencore(im)=den(D_DECL(i,j,k),dencomp)
           ! sanity check
         if ((fort_material_type(im).eq.0).and. &

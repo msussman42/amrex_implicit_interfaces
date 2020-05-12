@@ -1635,7 +1635,15 @@ stop
       end subroutine FORT_NODEDISPLACE
 
 
- 
+        ! notes on phase change:
+        ! 1. advection (density, temperature, species, etc)
+        ! 2. (a) calculate rate of mass transfer
+        !    (b) calculates divergence source term in order to
+        !        preserve mass.
+        ! 3. diffusion (temperature, species) 
+        !    either (i) no temperature condition on interface, or
+        !           (ii) some kind of Dirichlet temperature condition on
+        !                interface that is changing phase.
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine FORT_CONVERTMATERIAL( &
@@ -2884,6 +2892,12 @@ stop
 
               else if (LL.lt.zero) then ! condensation
 
+                  ! mass fraction equation:
+                  ! in a given cell with m species.
+                  ! mass= sum_i=1^m  Y_i overall_mass = 
+                  !     = sum_i=1^m  density_i F_i V_cell
+                  ! F_i = volume fraction of material i.
+                  ! (Y_i)_t + div (u Y_i) = div D_i  grad Y_i
                if (oldvfrac(im_source).gt.EBVOFTOL) then
                 speccompsrc=(im_source-1)*num_state_material+ &
                  num_state_base+mass_frac_id
@@ -4393,6 +4407,8 @@ stop
                 dencomp_dest=(im_dest-1)*num_state_material+1
 
                  ! use_exact_temperature==0 if regular Stefan problem.
+                 ! subroutine get_interface_temperature defined here in
+                 ! MASS_TRANSFER_3D.F90
                 call get_interface_temperature( &
                   Tsat,iten+ireverse*nten, &
                   saturation_temp, &
@@ -5081,11 +5097,14 @@ stop
                  for_estdt=0
 
 #if (STANDALONE==0)
-                  ! if freezing_mod==0,5, or 1, then
+                  ! if freezing_mod==0 stefan problem
+                  !                  5, some kind of evaporation model,
+                  !                  or 1, then
                   !  DTsrc=(Tsrc-Tsat)
                   !  DTdst=(Tdst-Tsat)
                   !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
                   !  veldst=kdst*DTdst/(LL * dxprobe_dest)
+                  !  in: PROB.F90
                  call get_vel_phasechange( &
                   for_estdt, &
                   xI, &

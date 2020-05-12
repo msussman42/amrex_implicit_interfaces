@@ -30028,9 +30028,15 @@ end subroutine RatePhaseChange
          print *,"LL, dxprobe_source, or dxprobe_dest invalid"
          stop
         endif
- 
-        DTsrc=Tsrc-Tsat
-        DTdst=Tdst-Tsat
+
+         ! freezing_mod==5, if Tsrc > Tsat then
+         ! evaporation will occur.  (source==water destination==vapor within
+         !                           the air)
+         ! if freezing_mod==5, and Tsrc < Tsat then
+         !  velsrc<0 => then the "rate of mass transfer is negative" which
+         ! is disallowed; i.e. no evaporation occurs.
+        DTsrc=Tsrc-Tsat  ! Tsrc is the probe temperature in the source
+        DTdst=Tdst-Tsat  ! Tdst is the probe temperature in the destination
         velsrc=ksrc*DTsrc/(LL*dxprobe_source)
         veldst=kdst*DTdst/(LL*dxprobe_dest)
 
@@ -30129,11 +30135,23 @@ end subroutine RatePhaseChange
          ! in the vapor and the vapor is captured instead of tracked.
          ! The saturation temperature is currently constant, but later
          ! on, the saturation temperature should make use of the
-         ! Clausius Clapeyron condition. 
+         ! Clausius Clapeyron condition.
+         ! 
+         ! Interface Temperature used for solving the heat equation:
+         !  1. advection (rho Y)_t + div (rho u Y) = div (rho D grad Y)
+         !      rho_t Y + rho Y_t + div (rho u) Y + rho u grad Y =
+         !      div (rho D grad Y)
+         !      Y_t + u dot grad Y = div (rho D grad Y)/rho 
+         !  2. rate of mass transfer, input: probe Temperature, mass fraction,
+         !     density; output: rate of mass transfer, interface temperature,
+         !     interface species
+         !  3. diffusion species mass fraction, and temperature
+         !  Supermesh for Temperature and species is good.
+         !  Supermesh for viscous solver and pressure projection???
         else if (freezing_mod.eq.5) then
 
          if (LL.gt.zero) then ! evaporation
-          veldst=zero
+          veldst=zero ! ignore temperature gradient in the air.
          else if (LL.lt.zero) then ! condensation
           velsrc=zero
          else if (LL.eq.zero) then

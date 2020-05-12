@@ -13039,6 +13039,11 @@ NavierStokes::split_scalar_advection() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: GODUNOV_3D.F90
+    // note for evaporation: density_air = total density of air and
+    //   vapor mixture.
+    // note: rho Y_vapor = F_vapor Y_vapor
+    //     mass_vapor = Volume rho Y_vapor = Volume F_vapor Y_vapor
   FORT_BUILD_CONSERVE( 
    &iden_base,
    override_density.dataPtr(),

@@ -16,7 +16,19 @@
 #DEFAULT is 1 if DEBUG or BL_TESTING is defined.
 #fab.do_initval=1
 #fab.init_snan=1 #snan=silent nan (init_snan has precedence over do_initval)
-
+#  --------
+#  | ice  |
+#  --------
+#  |water |
+# -------------
+#   substrate
+# -----------
+# heated boundary condition
+# water= material 1
+# air =  material 2
+# ice =  material 3
+# substrate = material 4
+# species variable where water is collected as vapor.
 max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
@@ -79,8 +91,8 @@ ns.projection_pressure_scale=1.0e+6
 #
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate  
 #ns.num_species_var=0 #  no evaporation
-ns.num_species_var=1 # evaporation
-ns.species_evaporation_density=0.001
+ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
+ns.species_evaporation_density=0.001 # g/cm^3
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0
@@ -196,7 +208,7 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K)
 # 2.26e+3 joules/g = 2.26e+10 erg/g (water -> gas)
 #evaporation:
 # 12 13 14 23 24 34 21 31 41 32 42 43
-# 12=water to gas   31=ice to water
+# 12=water to air (i.e. vapor is only created within the air)  31=ice to water
 ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
@@ -204,10 +216,13 @@ ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 #no evaporation:
 #ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 #evaporation: 
+# freezing_model=0 => stefan law  V=[k grad T dot n]/L
+# 5 = mystery evaporation law
 ns.freezing_model=5 0 0 0 0 0 0 0 0 0 0 0
 #no evaporation: 
 #ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
 #evaporation: 
+#evaporated vapor from "12" evaporation is dumped into species 1 within the air.
 ns.mass_fraction_id=1 0 0 0 0 0 0 0 0 0 0 0
 #no evaporation: 
 #ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
@@ -267,6 +282,7 @@ ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # dimensional
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #evaporation: water vapor is solute, air is solvent units: cm^2/s
+#C_t + u dot grad C = div alpha laplacian C ?
 ns.speciesviscconst=0.0 0.282 0.0 0.0
 # ice is a very viscous fluid 
 ns.viscconst=0.018 0.00017 1000.0 1000.0 # dimensional
