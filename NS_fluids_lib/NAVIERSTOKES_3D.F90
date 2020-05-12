@@ -1075,7 +1075,6 @@ stop
       character*18 filename18
       character*80 rmcommand
 
-      character*6 rootstr
       character*6 stepstr
       character*3 outerstr
       character*3 slabstr

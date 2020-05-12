@@ -1421,6 +1421,403 @@ contains
       return
       end subroutine dumpstring
 
+      REAL_T function get_user_temperature(time,bcflag,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: time
+      REAL_T startup_time
+      INTEGER_T, intent(in) :: bcflag,im
+      INTEGER_T nmat
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
+       ! do nothing
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in get_user_temperature"
+      else if (time.lt.zero) then
+       print *,"time invalid in get_user_temperature"
+       stop
+      else
+       print *,"time bust in get_user_temperature"
+       stop
+      endif
+
+      if ((fort_initial_temperature(im).le.zero).or. &
+          (fort_tempconst(im).le.zero)) then
+       print *,"fort_initial_temperature(im) invalid or"
+       print *,"fort_tempconst(im) invalid"
+       stop
+      endif
+
+       ! in: get_user_temperature
+      if ((probtype.eq.55).and.(axis_dir.eq.5)) then
+       startup_time=zero
+       if ((startup_time.eq.zero).or.(im.ne.4)) then
+        if (bcflag.eq.0) then
+         get_user_temperature=fort_initial_temperature(im)
+        else if (bcflag.eq.1) then
+         get_user_temperature=fort_tempconst(im)
+        else
+         print *,"bcflag invalid"
+         stop
+        endif
+       else if ((startup_time.gt.zero).and.(im.eq.4)) then
+        if (time.ge.startup_time) then
+         get_user_temperature=fort_tempconst(im)
+        else if ((time.ge.zero).and.(time.le.startup_time)) then
+         get_user_temperature=fort_initial_temperature(im)+ &
+          (fort_tempconst(im)-fort_initial_temperature(im))* &
+          time/startup_time
+        else
+         print *,"time invalid in get_user_temperature"
+         stop
+        endif
+       else
+        print *,"startup_time or im invalid"
+        stop
+       endif
+      else
+
+       if (bcflag.eq.0) then
+        get_user_temperature=fort_initial_temperature(im)
+       else if (bcflag.eq.1) then
+        get_user_temperature=fort_tempconst(im)
+       else
+        print *,"bcflag invalid"
+        stop
+       endif
+
+      endif
+
+      return
+      end function get_user_temperature
+
+
+        ! temperature initialized with a default value
+        ! called from denBC and process_initdata
+        ! probtype.eq.59, probtype.eq.55, or probtype.eq.710
+        ! bcflag==0 => called from initdata
+        ! bcflag==1 => called from denbc
+      subroutine outside_temperature(time,x,y,z,temperature,im,bcflag)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: im,bcflag
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: x,y,z
+      REAL_T, intent(out) :: temperature
+      REAL_T :: temp_slope
+      REAL_T substrate_height
+      REAL_T ice_vertical
+      INTEGER_T im_solid_temperature
+      REAL_T zprime
+
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
+       ! do nothing
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in outside_temperature"
+      else if (time.lt.zero) then
+       print *,"time invalid in outside_temperature"
+       stop
+      else
+       print *,"time bust in outside_temperature"
+       stop
+      endif
+
+      im_solid_temperature=im_solid_primary()
+
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"expecting z=y in 2d routine outside_temperature"
+        stop
+       endif
+      endif
+      zprime=z
+ 
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid62"
+       stop
+      endif
+      if ((bcflag.ne.0).and. & ! called from initdata
+          (bcflag.ne.1)) then  ! called from denBC (density, temp, spec bc)
+       print *,"bcflag invalid"
+       stop
+      endif
+
+       ! block of ice melting on substrate
+      if ((probtype.eq.59).or. & ! called from PROB.F90
+          (probtype.eq.414)) then! called from MITSUHIRO_MELTING.F90 
+
+       if (SDIM.eq.2) then
+        substrate_height=yblob2
+        ice_vertical=yblob
+       else if (SDIM.eq.3) then 
+        substrate_height=zblob2
+        ice_vertical=zblob
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
+       if (substrate_height.gt.zero) then 
+
+        if (abs(substrate_height-(ice_vertical-half*radblob)).gt.VOFTOL) then
+         print *,"init bot of water+ice block should coincide with substrate"
+         stop
+        endif
+        if (radblob3.ge.radblob) then
+         print *,"already melted portion exceeds original ice dimensions"
+         stop
+        endif
+
+         ! called from initdata
+        if (bcflag.eq.0) then
+         if ((im.eq.1).or.(im.eq.2)) then ! water or air
+          temperature=get_user_temperature(time,bcflag,im)
+         else if (im.eq.3) then ! ice 
+          temperature=get_user_temperature(time,bcflag,im)
+         else if (im.eq.4) then ! substrate
+          if (im_solid_temperature.ne.4) then
+           print *,"im_solid_temperature invalid"
+           stop
+          endif
+          if (num_materials.lt.4) then
+           print *,"num_materials invalid"
+           stop
+          endif
+           
+          if (zprime.ge.yblob2) then ! above the substrate
+           temperature=get_user_temperature(time,bcflag,3) ! ice
+          else if ((zprime.ge.zero).and. &
+                   (zprime.le.yblob2)) then
+           temperature= &
+            get_user_temperature(time,bcflag,im_solid_temperature)+ &
+            (get_user_temperature(time,bcflag,3)- &
+             get_user_temperature(time,bcflag,im_solid_temperature))* &
+            zprime/yblob2 
+          else if (zprime.le.zero) then
+           temperature= &
+            get_user_temperature(time,bcflag,im_solid_temperature) !substrate
+          else
+           print *,"zprime failure"
+           stop
+          endif
+         else
+          print *,"im invalid63"
+          stop
+         endif
+        else if (bcflag.eq.1) then ! called from denBC
+         if (im_solid_temperature.ne.4) then
+          print *,"im_solid_temperature invalid"
+          stop
+         endif
+          ! radblob3=thickness of underside of block already melted.
+         if (zprime.ge.yblob2+radblob3) then
+          temperature=get_user_temperature(time,bcflag,3) ! ice
+         else if (zprime.ge.yblob2) then
+          temperature=get_user_temperature(time,bcflag,3) ! water
+         else if ((zprime.ge.zero).and. &
+                  (zprime.le.yblob2)) then
+          temperature= &
+           get_user_temperature(time,bcflag,im_solid_temperature)+ &
+           (get_user_temperature(time,bcflag,3)- &
+            get_user_temperature(time,bcflag,im_solid_temperature))* &
+            zprime/yblob2
+         else if (zprime.le.zero) then
+          ! substrate
+          temperature=get_user_temperature(time,bcflag,im_solid_temperature) 
+         else
+          print *,"zprime failure"
+          stop
+         endif
+        else
+         print *,"bcflag invalid"
+         stop
+        endif
+       endif ! yblob2>0
+
+       ! in: outside_temperature
+      else if (probtype.eq.55) then
+
+       if (axis_dir.eq.5) then ! freezing: solid, ice, water, air
+         ! substrate: 0<y<yblob2
+        if (yblob2.gt.zero) then  
+          ! called from initdata
+         if (bcflag.eq.0) then
+          if ((im.eq.1).or.(im.eq.2)) then ! water or air
+           temperature=get_user_temperature(time,bcflag,im)
+          else if (im.eq.3) then ! ice 
+           temperature=get_user_temperature(time,bcflag,im)
+          else if (im.eq.4) then ! substrate
+           if (im_solid_temperature.ne.4) then
+            print *,"im_solid_temperature invalid"
+            stop
+           endif
+           if (num_materials.lt.4) then
+            print *,"num_materials invalid"
+            stop
+           endif
+           if (zprime.ge.yblob2) then
+            temperature=get_user_temperature(time,bcflag,3) ! ice
+           else if ((zprime.ge.zero).and. &
+                    (zprime.le.yblob2)) then
+            temperature= &
+             get_user_temperature(time,bcflag,im_solid_temperature)+ &
+             (get_user_temperature(time,bcflag,3)- &
+              get_user_temperature(time,bcflag,im_solid_temperature))* &
+             zprime/yblob2 
+           else if (zprime.le.zero) then
+            temperature= &
+             get_user_temperature(time,bcflag,im_solid_temperature) !substrate
+           else
+            print *,"zprime failure"
+            stop
+           endif
+          else
+           print *,"im invalid64"
+           stop
+          endif
+         else if (bcflag.eq.1) then ! called from denBC
+          if (im_solid_temperature.ne.4) then
+           print *,"im_solid_temperature invalid"
+           stop
+          endif
+          if (zprime.ge.yblob2+radblob3) then
+           temperature=get_user_temperature(time,bcflag,1) ! water
+          else if (zprime.ge.yblob2) then
+           temperature=get_user_temperature(time,bcflag,3) ! ice
+          else if ((zprime.ge.zero).and. &
+                   (zprime.le.yblob2)) then
+           temperature= &
+            get_user_temperature(time,bcflag,im_solid_temperature)+ &
+            (get_user_temperature(time,bcflag,3)- &
+             get_user_temperature(time,bcflag,im_solid_temperature))* &
+             zprime/yblob2
+          else if (zprime.le.zero) then
+           ! substrate
+           temperature=get_user_temperature(time,bcflag,im_solid_temperature) 
+          else
+           print *,"zprime failure"
+           stop
+          endif
+         else
+          print *,"bcflag invalid"
+          stop
+         endif
+        endif ! yblob2>0
+
+        ! boiling sites problem
+        ! For Sato and Niceno problem:
+        ! solidheat_flag=0 (diffuse in solid)
+        ! zblob3<0.0 => heat source in solid cells that adjoin fluid cells.
+
+       else if ((axis_dir.eq.6).or. &
+                (axis_dir.eq.7)) then
+
+         ! liquid, vapor, substrate,  or,
+         ! liquid, vapor, gas, substrate
+        if (im_solid_temperature.ne.num_materials) then 
+         print *,"im_solid_temperature invalid"
+         stop
+        endif
+          ! thermal layer thickness
+        if (yblob3.le.zero) then
+         print *,"yblob3 invalid"
+         stop
+        endif
+        if (SDIM.eq.2) then
+         substrate_height=yblob2
+        else if (SDIM.eq.3) then 
+         substrate_height=zblob2
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+        if (radblob2.lt.zero) then
+         print *,"radblob2 invalid"
+        else if (radblob2.eq.zero) then
+         ! do nothing
+        else if (radblob2.gt.zero) then ! angle of incline
+         if (levelrz.eq.1) then
+          if ((SDIM.ne.2).or.(xblob2.ne.zero)) then
+           print *,"parameters not supported"
+           stop
+          endif
+          zprime=yblob2+(z-yblob2)*cos(radblob2)-x*sin(radblob2)
+         else if (levelrz.eq.0) then
+          if (SDIM.eq.2) then
+           zprime=yblob2+(z-yblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
+          else if (SDIM.eq.3) then
+           if (radblob3.ne.zero) then
+            print *,"radblob3.ne.zero is not supported"
+            stop
+           endif
+           zprime=zblob2+(z-zblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
+          else
+           print *,"dimension bust"
+           stop
+          endif
+         else
+          print *,"levelrz not supported"
+          stop
+         endif
+        else
+         print *,"radblob2 invalid"
+         stop
+        endif
+
+         ! (xblob2,yblob2,zblob2) is the "center" of the heated plate.
+        if (zprime.ge.substrate_height+yblob3) then
+         temperature=get_user_temperature(time,bcflag,1)
+        else if (zprime.le.substrate_height) then
+         temperature=get_user_temperature(time,bcflag,im_solid_temperature)
+        else if ((substrate_height.le.zprime).and. &
+                 (zprime.le.substrate_height+yblob3)) then
+         temp_slope=(get_user_temperature(time,bcflag,im_solid_temperature)- &
+                     get_user_temperature(time,bcflag,1))/yblob3
+         temperature= &
+          get_user_temperature(time,bcflag,im_solid_temperature)- &
+          temp_slope*(zprime-substrate_height)
+        else
+         print *,"zprime or substrate_height invalid"
+         stop
+        endif
+       endif
+
+        ! in: outside_temperature
+      else if (probtype.eq.710) then
+
+       if (im_solid_temperature.ne.3) then
+        print *,"im_solid_temperature invalid"
+        stop
+       endif
+       temperature=get_user_temperature(time,bcflag,1)
+          ! thermal layer thickness
+       if (yblob3.le.zero) then
+        print *,"yblob3 invalid"
+        stop
+       endif
+       if (zprime.le.yblob3) then
+        temperature=get_user_temperature(time,bcflag,im_solid_temperature)
+       endif
+
+      else
+       print *,"expecting probtype=55, 59, or 710 in outside_temperature"
+       stop
+      endif
+ 
+      return 
+      end subroutine outside_temperature
+
+
+
       subroutine get_rigid_velocity( &
         FSI_prescribed_flag, &
         color,dir,vel,xrigid, &

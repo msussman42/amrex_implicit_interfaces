@@ -1,6 +1,7 @@
 #
 # $Id: Make.package,v 1.41 2000/11/02 18:08:02 lijewski Exp $
 #
+# MITSUHIRO_MELTING.F90, PROB.F90, inputs.MITSUHIRO_MELTING, GLOBALDIST.F90
 
 CEXE_sources += main.cpp NS_setup.cpp NSBld.cpp 
 
@@ -15,13 +16,12 @@ CEXE_headers += NavierStokes.H
 CEXE_sources += Zeyu_Matrix_Functions.cpp
 CEXE_headers += Zeyu_Matrix_Functions.H 
 
-# MITSUHIRO_MELTING.F90, PROB.F90, inputs.MITSUHIRO_MELTING, GLOBALDIST.F90
 F90EXE_headers += \
   tetrahedron_keast_rule.F90 \
   triangle_fekete_rule.F90 \
   rainControl.F90 bubbleControl.F90 HYDRATE_REACTOR.F90 \
   UNIMATERIAL_CHANNEL.F90 \
-  SNOW.F90\
+  SNOW.F90 \
   river.F90 \
   shockdrop.F90 \
   marangoni.F90 \
@@ -33,7 +33,7 @@ F90EXE_headers += \
   thermalspray.F90 \
   cav2Dstep.F90 \
   ZEYU_droplet_impact.F90 \
-  MITSUHIRO_MELTING.F90 \  
+  MITSUHIRO_MELTING.F90 \
   CRYOGENIC_TANK1.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \
@@ -48,7 +48,7 @@ F90EXE_sources += \
   triangle_fekete_rule.F90 \
   rainControl.F90 bubbleControl.F90 HYDRATE_REACTOR.F90 \
   UNIMATERIAL_CHANNEL.F90 \
-  SNOW.F90\
+  SNOW.F90 \
   river.F90 \
   shockdrop.F90 \
   marangoni.F90 \

@@ -1669,6 +1669,7 @@ end subroutine nozzle2d
       use USERDEF_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
+      use MITSUHIRO_MELTING_module
       use CRYOGENIC_TANK1_module
       use CAV3D_module
       use TSPRAY_module
@@ -1735,6 +1736,9 @@ end subroutine nozzle2d
 
        else if (probtype.eq.413) then ! zeyu's droplet impact problem
         call ZEYU_droplet_impact_LS(xvec,time,dist_array)
+        dist=dist_array(im)
+       else if (probtype.eq.414) then ! melting
+        call MITSUHIRO_LS(xvec,time,dist_array)
         dist=dist_array(im)
 
        else if (probtype.eq.421) then 
@@ -3184,7 +3188,9 @@ end subroutine nozzle2d
       subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,xlo,xhi,ylo,yhi,dist,dist1
+      REAL_T, intent(in) :: x,y,xlo,xhi,ylo,yhi
+      REAL_T, intent(out) :: dist
+      REAL_T dist1
       REAL_T xmid,ymid
  
       if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
@@ -3237,6 +3243,53 @@ end subroutine nozzle2d
 
       return
       end subroutine squaredist
+
+! negative on the inside
+      subroutine cubedist(xmin,xmax,ymin,ymax,zmin,zmax,x,y,z,dist)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
+      REAL_T, intent(in) :: x,y,z
+      REAL_T, intent(out) :: dist
+      REAL_T xcen,ycen,zcen,xrad,yrad,zrad
+      REAL_T xdist,ydist,zdist
+
+      xcen=half*(xmin+xmax)
+      ycen=half*(ymin+ymax)
+      zcen=half*(zmin+zmax)
+      xrad=xmax-xcen
+      yrad=ymax-ycen
+      zrad=zmax-zcen
+
+      xdist=abs(x-xcen)-xrad
+      ydist=abs(y-ycen)-yrad
+      zdist=abs(z-zcen)-zrad
+
+      if ((xdist.le.zero).and.(ydist.le.zero).and.(zdist.le.zero)) then
+       dist=xdist
+       if (dist.lt.ydist) then
+        dist=ydist
+       endif
+       if (dist.lt.zdist) then
+        dist=zdist
+       endif
+      else
+       if (xdist.lt.zero) then
+        xdist=zero
+       endif
+       if (ydist.lt.zero) then
+        ydist=zero
+       endif
+       if (zdist.lt.zero) then
+        zdist=zero
+       endif
+       dist=sqrt(xdist**2+ydist**2+zdist**2)
+      endif
+
+      return
+      end subroutine cubedist
+
+
 
       subroutine nozzlerad(zval,radcross,rounded)
       IMPLICIT NONE

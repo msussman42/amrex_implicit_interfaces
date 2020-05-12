@@ -32,6 +32,7 @@ Huber_boiling/
 Nucleate_Compressible/
 diesel/
 block_ice_melt/
+block_ice_melt2d/
 flapping_wing/
 turbulent_pipe/
 testbubble/

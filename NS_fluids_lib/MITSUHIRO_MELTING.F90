@@ -58,6 +58,10 @@ else
 endif
 
 end subroutine MITSUHIRO_substrateLS
+
+! ice + water thickness = radblob
+! water thickness = radblob3  usually radblob3 << radlob (initial water
+! is "seed" for starting the melting process)
 !   ---------
 !   | ice   |
 !   ---------
@@ -68,12 +72,14 @@ end subroutine MITSUHIRO_substrateLS
  ! fluids tessellate the domain, solids are immersed. 
 subroutine MITSUHIRO_LS(x,t,LS)
 use probcommon_module
+use global_distance_module
 IMPLICIT NONE
 
-REAL_T x(SDIM)
-REAL_T t
-INTEGER_T im
-REAL_T LS(num_materials)
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(out) :: LS(num_materials)
+REAL_T :: ice_vertical
+REAL_T :: substrate_height
 
 if (abs(zblob2-yblob2).le.1.0D-14) then
  substrate_height=zblob2  ! substrate thickness
@@ -92,25 +98,25 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
   print *,"dimension bust"
   stop
  endif
- if (abs(yblob2-(ice_vertical-half*radblob)).gt.VOFTOL) then
-  print *,"bottom of original ice block must coincide w/substrate"
+ if (abs(substrate_height-(ice_vertical-half*radblob)).gt.VOFTOL) then
+  print *,"bottom of original water+ice block must coincide w/substrate"
   stop
  endif
 
   !dist<0 inside the square
   !water below the ice
  if (SDIM.eq.2) then
-  call squaredist(x,y,xblob-half*radblob,xblob+half*radblob, &
-     -yblob2-radblob3,yblob2+radblob3,LS(1))
+  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
+     -substrate_height-radblob3,substrate_height+radblob3,LS(1))
   LS(1)=-LS(1) ! water
   !ice (is above water)
-  call squaredist(x,y,xblob-half*radblob,xblob+half*radblob, &
-    yblob2+radblob3,yblob2+radblob,LS(3))
+  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
+    substrate_height+radblob3,substrate_height+radblob,LS(3))
     LS(3)=-LS(3)
 
   !air; dist<0 inside the square
-  call squaredist(x,y,xblob-half*radblob,xblob+half*radblob, &
-    -yblob2-radblob,yblob2+radblob,LS(2))
+  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
+    -substrate_height-radblob,substrate_height+radblob,LS(2))
 
  else if (SDIM.eq.3) then
 
@@ -118,12 +124,14 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
   !water below the ice
   call cubedist(xblob-half*radblob,xblob+half*radblob, &
      yblob-half*radblob,yblob+half*radblob, &
-     -zblob2-radblob3,zblob2+radblob3,x,y,z,LS(1))
+     -substrate_height-radblob3,substrate_height+radblob3, &
+     x(1),x(2),x(SDIM),LS(1))
   LS(1)=-LS(1)
   !ice
   call cubedist(xblob-half*radblob,xblob+half*radblob, &
      yblob-half*radblob,yblob+half*radblob, &
-     zblob2+radblob3,zblob2+radblob,x,y,z,LS(3))
+     substrate_height+radblob3,substrate_height+radblob, &
+     x(1),x(2),x(SDIM),LS(3))
 
   !air; dist<0 inside the square
   !air everywhere not ice or water.
@@ -131,7 +139,8 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
   ! are embedded.
   call cubedist(xblob-half*radblob,xblob+half*radblob, &
      yblob-half*radblob,yblob+half*radblob, &
-     -zblob2-radblob,zblob2+radblob,x,y,z,LS(2))  ! air
+     -substrate_height-radblob,substrate_height+radblob, &
+     x(1),x(2),x(SDIM),LS(2))  ! air
 
  else
   print *,"dimension bust"
@@ -191,10 +200,10 @@ subroutine MITSUHIRO_PRES(x,t,LS,PRES)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T x(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T PRES
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(out) :: PRES
 
 PRES=zero
 
@@ -202,303 +211,21 @@ return
 end subroutine MITSUHIRO_PRES
 
 
-subroutine MO_substrate_temperature(time,x,y,z,temperature)
+
+subroutine MITSUHIRO_STATE(x,t,LS,STATE,bcflag)
+use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: time
-REAL_T, intent(in) :: x,y,z
-REAL_T, intent(out) :: temperature
-REAL_T :: temp_slope
-REAL_T substrate_height
-INTEGER_T im_solid_temperature
-REAL_T zprime
-
- if ((time.ge.zero).and.(time.le.1.0D+20)) then
-  ! do nothing
- else if (time.ge.1.0D+20) then
-  print *,"WARNING time.ge.1.0D+20 in MO_substrate_temperature"
- else if (time.lt.zero) then
-  print *,"time invalid in MO_substrate_temperature"
-  stop
- else
-  print *,"time bust in MO_substrate_temperature"
-  stop
- endif
-
- if (SDIM.eq.2) then
-  if (abs(z-y).gt.VOFTOL) then
-   print *,"expecting z=y in 2d routine MO_substrate_temperature"
-   stop
-  endif
- endif
- zprime=z
-FIX ME 
- if (yblob2.gt.zero) then ! yblob2 is height of substrate 
-
-  if (abs(yblob2-(yblob-half*radblob)).gt.VOFTOL) then
-   print *,"initial bottom of ice block should coincide with substrate"
-   stop
-  endif
-        if (radblob3.ge.radblob) then
-         print *,"already melted portion exceeds original ice dimensions"
-         stop
-        endif
-
-         ! called from initdata
-        if (bcflag.eq.0) then
-         if ((im.eq.1).or.(im.eq.2)) then ! water or air
-          temperature=get_user_temperature(time,bcflag,im)
-         else if (im.eq.3) then ! ice 
-          temperature=get_user_temperature(time,bcflag,im)
-         else if (im.eq.4) then ! substrate
-          if (im_solid_temperature.ne.4) then
-           print *,"im_solid_temperature invalid"
-           stop
-          endif
-          if (num_materials.lt.4) then
-           print *,"num_materials invalid"
-           stop
-          endif
-           
-          if (zprime.ge.yblob2) then ! above the substrate
-           temperature=get_user_temperature(time,bcflag,3) ! ice
-          else if ((zprime.ge.zero).and. &
-                   (zprime.le.yblob2)) then
-           temperature= &
-            get_user_temperature(time,bcflag,im_solid_temperature)+ &
-            (get_user_temperature(time,bcflag,3)- &
-             get_user_temperature(time,bcflag,im_solid_temperature))* &
-            zprime/yblob2 
-          else if (zprime.le.zero) then
-           temperature= &
-            get_user_temperature(time,bcflag,im_solid_temperature) !substrate
-          else
-           print *,"zprime failure"
-           stop
-          endif
-         else
-          print *,"im invalid63"
-          stop
-         endif
-        else if (bcflag.eq.1) then ! called from denBC
-         if (im_solid_temperature.ne.4) then
-          print *,"im_solid_temperature invalid"
-          stop
-         endif
-          ! radblob3=thickness of underside of block already melted.
-         if (zprime.ge.yblob2+radblob3) then
-          temperature=get_user_temperature(time,bcflag,3) ! ice
-         else if (zprime.ge.yblob2) then
-          temperature=get_user_temperature(time,bcflag,3) ! water
-         else if ((zprime.ge.zero).and. &
-                  (zprime.le.yblob2)) then
-          temperature= &
-           get_user_temperature(time,bcflag,im_solid_temperature)+ &
-           (get_user_temperature(time,bcflag,3)- &
-            get_user_temperature(time,bcflag,im_solid_temperature))* &
-            zprime/yblob2
-         else if (zprime.le.zero) then
-          ! substrate
-          temperature=get_user_temperature(time,bcflag,im_solid_temperature) 
-         else
-          print *,"zprime failure"
-          stop
-         endif
-        else
-         print *,"bcflag invalid"
-         stop
-        endif
-       endif ! yblob2>0
-
-       ! in: outside_temperature
-      else if (probtype.eq.55) then
-
-       if (axis_dir.eq.5) then ! freezing: solid, ice, water, air
-         ! substrate: 0<y<yblob2
-        if (yblob2.gt.zero) then  
-          ! called from initdata
-         if (bcflag.eq.0) then
-          if ((im.eq.1).or.(im.eq.2)) then ! water or air
-           temperature=get_user_temperature(time,bcflag,im)
-          else if (im.eq.3) then ! ice 
-           temperature=get_user_temperature(time,bcflag,im)
-          else if (im.eq.4) then ! substrate
-           if (im_solid_temperature.ne.4) then
-            print *,"im_solid_temperature invalid"
-            stop
-           endif
-           if (num_materials.lt.4) then
-            print *,"num_materials invalid"
-            stop
-           endif
-           if (zprime.ge.yblob2) then
-            temperature=get_user_temperature(time,bcflag,3) ! ice
-           else if ((zprime.ge.zero).and. &
-                    (zprime.le.yblob2)) then
-            temperature= &
-             get_user_temperature(time,bcflag,im_solid_temperature)+ &
-             (get_user_temperature(time,bcflag,3)- &
-              get_user_temperature(time,bcflag,im_solid_temperature))* &
-             zprime/yblob2 
-           else if (zprime.le.zero) then
-            temperature= &
-             get_user_temperature(time,bcflag,im_solid_temperature) !substrate
-           else
-            print *,"zprime failure"
-            stop
-           endif
-          else
-           print *,"im invalid64"
-           stop
-          endif
-         else if (bcflag.eq.1) then ! called from denBC
-          if (im_solid_temperature.ne.4) then
-           print *,"im_solid_temperature invalid"
-           stop
-          endif
-          if (zprime.ge.yblob2+radblob3) then
-           temperature=get_user_temperature(time,bcflag,1) ! water
-          else if (zprime.ge.yblob2) then
-           temperature=get_user_temperature(time,bcflag,3) ! ice
-          else if ((zprime.ge.zero).and. &
-                   (zprime.le.yblob2)) then
-           temperature= &
-            get_user_temperature(time,bcflag,im_solid_temperature)+ &
-            (get_user_temperature(time,bcflag,3)- &
-             get_user_temperature(time,bcflag,im_solid_temperature))* &
-             zprime/yblob2
-          else if (zprime.le.zero) then
-           ! substrate
-           temperature=get_user_temperature(time,bcflag,im_solid_temperature) 
-          else
-           print *,"zprime failure"
-           stop
-          endif
-         else
-          print *,"bcflag invalid"
-          stop
-         endif
-        endif ! yblob2>0
-
-        ! boiling sites problem
-        ! For Sato and Niceno problem:
-        ! solidheat_flag=0 (diffuse in solid)
-        ! zblob3<0.0 => heat source in solid cells that adjoin fluid cells.
-
-       else if ((axis_dir.eq.6).or. &
-                (axis_dir.eq.7)) then
-
-         ! liquid, vapor, substrate,  or,
-         ! liquid, vapor, gas, substrate
-        if (im_solid_temperature.ne.num_materials) then 
-         print *,"im_solid_temperature invalid"
-         stop
-        endif
-          ! thermal layer thickness
-        if (yblob3.le.zero) then
-         print *,"yblob3 invalid"
-         stop
-        endif
-        if (SDIM.eq.2) then
-         substrate_height=yblob2
-        else if (SDIM.eq.3) then 
-         substrate_height=zblob2
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-        if (radblob2.lt.zero) then
-         print *,"radblob2 invalid"
-        else if (radblob2.eq.zero) then
-         ! do nothing
-        else if (radblob2.gt.zero) then ! angle of incline
-         if (levelrz.eq.1) then
-          if ((SDIM.ne.2).or.(xblob2.ne.zero)) then
-           print *,"parameters not supported"
-           stop
-          endif
-          zprime=yblob2+(z-yblob2)*cos(radblob2)-x*sin(radblob2)
-         else if (levelrz.eq.0) then
-          if (SDIM.eq.2) then
-           zprime=yblob2+(z-yblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
-          else if (SDIM.eq.3) then
-           if (radblob3.ne.zero) then
-            print *,"radblob3.ne.zero is not supported"
-            stop
-           endif
-           zprime=zblob2+(z-zblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
-          else
-           print *,"dimension bust"
-           stop
-          endif
-         else
-          print *,"levelrz not supported"
-          stop
-         endif
-        else
-         print *,"radblob2 invalid"
-         stop
-        endif
-
-         ! (xblob2,yblob2,zblob2) is the "center" of the heated plate.
-        if (zprime.ge.substrate_height+yblob3) then
-         temperature=get_user_temperature(time,bcflag,1)
-        else if (zprime.le.substrate_height) then
-         temperature=get_user_temperature(time,bcflag,im_solid_temperature)
-        else if ((substrate_height.le.zprime).and. &
-                 (zprime.le.substrate_height+yblob3)) then
-         temp_slope=(get_user_temperature(time,bcflag,im_solid_temperature)- &
-                     get_user_temperature(time,bcflag,1))/yblob3
-         temperature= &
-          get_user_temperature(time,bcflag,im_solid_temperature)- &
-          temp_slope*(zprime-substrate_height)
-        else
-         print *,"zprime or substrate_height invalid"
-         stop
-        endif
-       endif
-
-        ! in: outside_temperature
-      else if (probtype.eq.710) then
-
-       if (im_solid_temperature.ne.3) then
-        print *,"im_solid_temperature invalid"
-        stop
-       endif
-       temperature=get_user_temperature(time,bcflag,1)
-          ! thermal layer thickness
-       if (yblob3.le.zero) then
-        print *,"yblob3 invalid"
-        stop
-       endif
-       if (zprime.le.yblob3) then
-        temperature=get_user_temperature(time,bcflag,im_solid_temperature)
-       endif
-
-      else
-       print *,"expecting probtype=55, 59, or 710 in outside_temperature"
-       stop
-      endif
- 
-      return 
-      end subroutine outside_temperature
-
-
-
-subroutine MITSUHIRO_STATE(x,t,LS,STATE)
-use probcommon_module
-IMPLICIT NONE
-
-REAL_T x(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T STATE(num_materials*num_state_material)
+INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(out) :: STATE(num_materials*num_state_material)
 INTEGER_T im,ibase,n
 
 if ((num_materials.eq.4).and. &
-    (num_state_material.ge.3).and. & ! density, temperature, vapor
+    (num_state_material.ge.3).and. & ! density, temperature, vapor spec
     (probtype.eq.414)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
@@ -511,6 +238,9 @@ if ((num_materials.eq.4).and. &
    print *,"t invalid"
    stop
   endif
+   ! always assume Dirichlet boundary condition at zlo for temperature.
+  call outside_temperature(t,x(1),x(2),x(SDIM),STATE(ibase+2),im,bcflag)
+
    ! initial species in inputs?
   do n=1,num_species_var
    STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
@@ -525,33 +255,33 @@ return
 end subroutine MITSUHIRO_STATE
 
  ! dir=1..sdim  side=1..2
-subroutine ZEYU_droplet_impact_LS_BC(xwall,xghost,t,LS, &
+subroutine MITSUHIRO_LS_BC(xwall,xghost,t,LS, &
    LS_in,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T LS_in(num_materials)
-INTEGER_T dir,side
-REAL_T dx(SDIM)
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(out) :: LS(num_materials)
+REAL_T, intent(in) :: LS_in(num_materials)
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) ::  dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
- call ZEYU_droplet_impact_LS(xghost,t,LS)
+ call MITSUHIRO_LS(xghost,t,LS)
 else
  print *,"dir or side invalid"
  stop
 endif
 
 return
-end subroutine ZEYU_droplet_impact_LS_BC
+end subroutine MITSUHIRO_LS_BC
 
 
  ! dir=1..sdim  side=1..2 veldir=1..sdim
-subroutine ZEYU_droplet_impact_VEL_BC(xwall,xghost,t,LS, &
+subroutine MITSUHIRO_VEL_BC(xwall,xghost,t,LS, &
    VEL,VEL_in,veldir,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
@@ -572,7 +302,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
- call ZEYU_droplet_impact_LS_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx)
+ call MITSUHIRO_LS_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx)
  VEL=local_VEL(veldir)
 
 else
@@ -581,27 +311,27 @@ else
 endif
 
 return
-end subroutine ZEYU_droplet_impact_VEL_BC
+end subroutine MITSUHIRO_VEL_BC
 
  ! dir=1..sdim  side=1..2
-subroutine ZEYU_droplet_impact_PRES_BC(xwall,xghost,t,LS, &
+subroutine MITSUHIRO_PRES_BC(xwall,xghost,t,LS, &
    PRES,PRES_in,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T PRES
-REAL_T PRES_in
-INTEGER_T dir,side
-REAL_T dx(SDIM)
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(out) :: PRES
+REAL_T, intent(in) :: PRES_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- call ZEYU_droplet_impact_PRES(xghost,t,LS,PRES)
+ call MITSUHIRO_PRES(xghost,t,LS,PRES)
 
 else
  print *,"dir or side invalid"
@@ -609,32 +339,35 @@ else
 endif
 
 return
-end subroutine ZEYU_droplet_impact_PRES_BC
+end subroutine MITSUHIRO_PRES_BC
 
  ! dir=1..sdim  side=1..2
-subroutine ZEYU_droplet_impact_STATE_BC(xwall,xghost,t,LS, &
+subroutine MITSUHIRO_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T local_STATE(num_materials*num_state_material)
-REAL_T STATE
-REAL_T STATE_merge
-REAL_T STATE_in
-INTEGER_T dir,side
-REAL_T dx(SDIM)
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
+REAL_T :: local_STATE(num_materials*num_state_material)
+REAL_T, intent(out) :: STATE
+REAL_T, intent(out) :: STATE_merge
+REAL_T, intent(in) :: STATE_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
 INTEGER_T istate,im
 INTEGER_T ibase,im_crit,im_loop
+INTEGER_T local_bcflag
+
+local_bcflag=1
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
- call ZEYU_droplet_impact_STATE(xghost,t,LS,local_STATE)
+ call MITSUHIRO_STATE(xghost,t,LS,local_STATE,local_bcflag)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
  im_crit=1
@@ -651,9 +384,9 @@ else
 endif
 
 return
-end subroutine ZEYU_droplet_impact_STATE_BC
+end subroutine MITSUHIRO_STATE_BC
 
-subroutine ZEYU_droplet_impact_HEATSOURCE(im,VFRAC,time,x,temp, &
+subroutine MITSUHIRO_HEATSOURCE(im,VFRAC,time,x,temp, &
      heat_source,den,CV,dt)
 use probcommon_module
 IMPLICIT NONE
@@ -668,7 +401,7 @@ REAL_T CV(num_materials)
 REAL_T dt
 REAL_T heat_source
 
-if ((num_materials.eq.2).and.(probtype.eq.412)) then
+if ((num_materials.eq.4).and.(probtype.eq.414)) then
  heat_source=zero
 else
  print *,"num_materials or probtype invalid"
@@ -676,6 +409,6 @@ else
 endif
 
 return
-end subroutine ZEYU_droplet_impact_HEATSOURCE
+end subroutine MITSUHIRO_HEATSOURCE
 
-end module ZEYU_droplet_impact_module
+end module MITSUHIRO_MELTING_module
