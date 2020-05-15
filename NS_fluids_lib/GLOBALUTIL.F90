@@ -8723,5 +8723,777 @@ contains
       end subroutine tridiag_solve
 
 
+       ! negative on the inside of the square
+      subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: x,y,xlo,xhi,ylo,yhi
+      REAL_T, intent(out) :: dist
+      REAL_T dist1
+      REAL_T xmid,ymid
+ 
+      if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
+       print *,"invalid parameters squaredist",xlo,xhi,ylo,yhi
+       stop
+      endif
+      if ((x.le.xlo).and.(y.ge.ylo).and.(y.le.yhi)) then
+       dist=xlo-x
+      else if ((x.le.xlo).and.(y.ge.yhi)) then
+       dist=sqrt( (x-xlo)**2 + (y-yhi)**2 )
+      else if ((x.le.xlo).and.(y.le.ylo)) then
+       dist=sqrt( (x-xlo)**2 + (y-ylo)**2 )
+      else if ((x.ge.xhi).and.(y.ge.ylo).and.(y.le.yhi)) then
+       dist=x-xhi
+      else if ((x.ge.xhi).and.(y.ge.yhi)) then
+       dist=sqrt( (x-xhi)**2 + (y-yhi)**2 )
+      else if ((x.ge.xhi).and.(y.le.ylo)) then
+       dist=sqrt( (x-xhi)**2 + (y-ylo)**2 )
+      else if (y.ge.yhi) then
+       dist=y-yhi
+      else if (y.le.ylo) then
+       dist=ylo-y
+      else 
+       xmid=half*(xlo+xhi)
+       ymid=half*(ylo+yhi)
+
+       if ((x.ge.xlo).and.(x.le.xmid)) then
+        dist=x-xlo
+       else if ((x.ge.xmid).and.(x.le.xhi)) then
+        dist=xhi-x
+       else
+        print *,"dist invalid in squaredist"
+        stop
+       endif
+
+       if ((y.ge.ylo).and.(y.le.ymid)) then
+        dist1=y-ylo
+       else if ((y.ge.ymid).and.(y.le.yhi)) then
+        dist1=yhi-y
+       else
+        print *,"dist1 invalid in squaredist"
+        stop
+       endif
+       if (dist.lt.dist1) then
+        dist=-dist
+       else
+        dist=-dist1
+       endif
+      endif
+
+      return
+      end subroutine squaredist
+
+! negative on the inside
+      subroutine cubedist(xmin,xmax,ymin,ymax,zmin,zmax,x,y,z,dist)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
+      REAL_T, intent(in) :: x,y,z
+      REAL_T, intent(out) :: dist
+      REAL_T xcen,ycen,zcen,xrad,yrad,zrad
+      REAL_T xdist,ydist,zdist
+
+      xcen=half*(xmin+xmax)
+      ycen=half*(ymin+ymax)
+      zcen=half*(zmin+zmax)
+      xrad=xmax-xcen
+      yrad=ymax-ycen
+      zrad=zmax-zcen
+
+      xdist=abs(x-xcen)-xrad
+      ydist=abs(y-ycen)-yrad
+      zdist=abs(z-zcen)-zrad
+
+      if ((xdist.le.zero).and.(ydist.le.zero).and.(zdist.le.zero)) then
+       dist=xdist
+       if (dist.lt.ydist) then
+        dist=ydist
+       endif
+       if (dist.lt.zdist) then
+        dist=zdist
+       endif
+      else
+       if (xdist.lt.zero) then
+        xdist=zero
+       endif
+       if (ydist.lt.zero) then
+        ydist=zero
+       endif
+       if (zdist.lt.zero) then
+        zdist=zero
+       endif
+       dist=sqrt(xdist**2+ydist**2+zdist**2)
+      endif
+
+      return
+      end subroutine cubedist
+
+
+
+      subroutine dumpstring_headers_sanity(plot_sdim,ncomp)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: plot_sdim
+      INTEGER_T, intent(in) :: ncomp
+      character*80 Varname
+      character*3 matstr
+      INTEGER_T ih,im,i
+
+      if ((plot_sdim.ne.2).and.(plot_sdim.ne.3)) then
+       print *,"plot_sdim invalid"
+       stop
+      endif
+      if (ncomp.ge.1) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+
+      Varname='X'
+      call dumpstring(Varname)
+      Varname='Y'
+      call dumpstring(Varname)
+
+      if (plot_sdim.eq.3) then
+       Varname='Z'
+       call dumpstring(Varname)
+      endif
+
+      do im=1,ncomp
+
+       write(matstr,'(I3)') im
+       do i=1,3
+        if (matstr(i:i).eq.' ') then
+         matstr(i:i)='0'
+        endif
+       enddo
+
+       ih=1
+       Varname='U'
+       ih=ih+1
+       do i=1,3
+        Varname(ih:ih)=matstr(i:i)
+        ih=ih+1
+       enddo
+       call dumpstring(Varname)
+
+      enddo ! im=1..ncomp
+
+      return
+      end subroutine dumpstring_headers_sanity
+
+      subroutine zones_revolve_sanity( &
+       root_char_array, &
+       n_root, &
+       data_dir, &
+       plot_sdim, &
+       total_number_grids, &
+       grids_per_level_array, &
+       levels_array, &
+       bfact_array, &
+       gridno_array, &
+       gridlo_array, &
+       gridhi_array, &
+       finest_level, &
+       SDC_outer_sweeps, &
+       slab_step, &
+       data_id, &
+       nsteps, &
+       num_levels, &
+       time, &
+       visual_option, &
+       visual_revolve, &
+       ncomp)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: n_root
+      character, dimension(n_root), intent(in) :: root_char_array
+      INTEGER_T, intent(in) :: data_dir
+      INTEGER_T, intent(in) :: plot_sdim
+      INTEGER_T klo_plot,khi_plot
+
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: total_number_grids
+      INTEGER_T, intent(in) :: num_levels
+      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, intent(in) :: levels_array(total_number_grids)
+      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
+      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: SDC_outer_sweeps
+      INTEGER_T, intent(in) :: slab_step
+      INTEGER_T, intent(in) :: data_id
+      INTEGER_T, intent(in) :: nsteps
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: visual_option
+      INTEGER_T, intent(in) :: visual_revolve
+
+      INTEGER_T strandid
+
+      INTEGER_T nwrite3d,nwrite2d,index3d,index2d
+
+      character*3 levstr
+      character*5 gridstr
+      character*18 filename18
+      character*80 rmcommand
+
+      character*6 stepstr
+      character*3 outerstr
+      character*3 slabstr
+      character*3 idstr
+
+      character(len=n_root) :: root_char_str
+      character(len=n_root+36) :: newfilename40
+      character(len=36) :: fname_extend
+      character(len=4) :: step_chars
+      character(len=2) :: dir_chars
+      character(len=5) :: outer_chars
+      character(len=4) :: slab_chars
+      character(len=2) :: id_chars
+      character(len=4) :: plt_chars
+
+      INTEGER_T i,j,k,dir
+      INTEGER_T ilev,igrid
+      INTEGER_T lo(plot_sdim),hi(plot_sdim)
+      INTEGER_T sysret
+      INTEGER_T hi_index_shift(3)
+
+! Guibo
+
+      character*80 Title,Zonename
+      REAL*4 ZONEMARKER,EOHMARKER
+      integer*4 :: nzones_gb,iz_gb,ivar_gb
+      integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
+      INTEGER_T bfact,testlev,testgridno
+      INTEGER_T testlo(SDIM),testhi(SDIM)
+
+      ! define zone structure
+      type zone3d_t
+         real*8, pointer :: var(:,:,:,:)
+      end type zone3d_t
+      type(zone3d_t), dimension(:), allocatable :: zone3d_gb
+
+      type zone2d_t
+         real*8, pointer :: var(:,:,:)
+      end type zone2d_t
+      type(zone2d_t), dimension(:), allocatable :: zone2d_gb
+
+      REAL_T theta,rr,zz,xx,yy
+
+      if (plot_sdim.ne.3) then
+       print *,"plot_sdim invalid"
+       stop
+      endif
+
+      if (SDIM.ne.2) then
+       print *,"must be called only in 2D"
+       stop
+      endif
+
+      if (levelrz.ne.1) then
+       print *,"levelrz invalid zones revolve"
+       stop
+      endif
+      if (visual_revolve.lt.1) then
+       print *,"visual_revolve: ",visual_revolve
+       print *,"visual_revolve invalid zones_revolve"
+       stop
+      endif
+
+      nwrite2d=SDIM+ncomp
+      nwrite3d=plot_sdim+ncomp
+
+      if (num_levels.ne.finest_level+1) then
+       print *,"num_levels invalid"
+       stop
+      endif
+
+      write(stepstr,'(I6)') nsteps
+      do i=1,6
+       if (stepstr(i:i).eq.' ') then
+        stepstr(i:i)='0'
+       endif
+      enddo
+      write(outerstr,'(I3)') SDC_outer_sweeps
+      write(slabstr,'(I3)') slab_step
+      write(idstr,'(I3)') data_id
+      do i=1,3
+       if (outerstr(i:i).eq.' ') then
+        outerstr(i:i)='0'
+       endif
+       if (slabstr(i:i).eq.' ') then
+        slabstr(i:i)='0'
+       endif
+       if (idstr(i:i).eq.' ') then
+        idstr(i:i)='0'
+       endif
+      enddo
+
+      do i=1,n_root
+        root_char_str(i:i)=root_char_array(i)
+      enddo
+
+      if (data_dir.eq.-1) then
+        dir_chars='CC'
+      else if (data_dir.eq.0) then
+        dir_chars='XC'
+      else if (data_dir.eq.1) then
+        dir_chars='YC'
+      else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
+        dir_chars='ZC'
+      else if (data_dir.eq.SDIM) then
+        dir_chars='ND'
+      else
+        print *,"data_dir invalid"
+        stop
+      endif
+      step_chars='step'
+      outer_chars='outer'
+      slab_chars='slab'
+      id_chars='id'
+      plt_chars='.plt'
+
+      newfilename40(1:n_root)=root_char_str
+      write(fname_extend,'(A2,A2,A3,A4,A6,A5,A3,A4,A3,A4)') &
+               dir_chars,id_chars,idstr, &
+               step_chars,stepstr,outer_chars,outerstr, &
+               slab_chars,slabstr,plt_chars
+
+      newfilename40(n_root+1:n_root+36)=fname_extend
+
+      print *,"newfilename40 ",newfilename40
+
+      !--------------------------------------------------
+      ! Determine nzones_gb and allocate zone_gb, lo_gb, hi_gb
+      nzones_gb=0
+      do ilev=0,finest_level
+      do igrid=0,grids_per_level_array(ilev+1)-1
+        nzones_gb = nzones_gb+1
+      enddo
+      enddo
+
+      if (nzones_gb.ne.total_number_grids) then
+       print *,"nzones_gb.ne.total_number_grids: aborting"
+       stop
+      endif
+
+      print *,"allocating grid structure for tecplot binary"
+      print *,"finest_level= ",finest_level
+      print *,"number of grids on finest level ", &
+         grids_per_level_array(finest_level+1) 
+      print *,"total number of grid blocks: ",nzones_gb
+
+      allocate(zone2d_gb(nzones_gb))
+      allocate(zone3d_gb(nzones_gb))
+      allocate(lo_gb(nzones_gb,plot_sdim))
+      allocate(hi_gb(nzones_gb,plot_sdim))
+
+       ! Determine lo_gb, hi_gb
+      iz_gb=0
+      do ilev=0,finest_level
+      do igrid=0,grids_per_level_array(ilev+1)-1
+       write(levstr,'(I3)') ilev
+       write(gridstr,'(I5)') igrid
+       do i=1,3
+        if (levstr(i:i).eq.' ') then
+         levstr(i:i)='0'
+        endif
+       enddo
+       do i=1,5
+        if (gridstr(i:i).eq.' ') then
+         gridstr(i:i)='0'
+        endif
+       enddo
+       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
+       open(unit=4,file=filename18)
+
+       do dir=1,plot_sdim
+        if ((dir.eq.1).or.(dir.eq.2)) then
+         read(4,*) lo(dir),hi(dir)
+        else if (dir.eq.3) then
+         lo(dir)=0
+         hi(dir)=visual_revolve-1
+        else
+         print *,"dir invalid zones revolve"
+         stop
+        endif
+        lo_gb(iz_gb+1,dir)=lo(dir)
+        hi_gb(iz_gb+1,dir)=hi(dir)
+       enddo ! dir
+
+       bfact=bfact_array(iz_gb+1)
+       testlev=levels_array(iz_gb+1)
+       testgridno=gridno_array(iz_gb+1)
+
+       if (bfact.lt.1) then
+        print *,"bfact invalid150"
+        stop
+       endif
+       if (testlev.ne.ilev) then
+        print *,"testlev invalid"
+        stop
+       endif
+       if (testgridno.ne.igrid) then
+        print *,"testgridno invalid"
+        stop
+       endif
+
+       do dir=1,SDIM
+        testlo(dir)=gridlo_array(SDIM*iz_gb+dir)
+        testhi(dir)=gridhi_array(SDIM*iz_gb+dir)
+        if (testlo(dir).ne.lo(dir)) then
+         print *,"testlo invalid"
+         stop
+        endif
+        if (testhi(dir).ne.hi(dir)) then
+         print *,"testhi invalid"
+         stop
+        endif
+        if ((lo(dir)/bfact)*bfact.ne.lo(dir)) then
+         print *,"lo not divisible by bfact"
+         stop
+        endif
+        if (((hi(dir)+1)/bfact)*bfact.ne.hi(dir)+1) then
+         print *,"hi+1 not divisible by bfact"
+         stop
+        endif
+       enddo ! dir
+ 
+       close(4)
+
+       iz_gb=iz_gb+1
+      enddo ! igrid
+      enddo ! ilev
+
+      if (iz_gb.ne.total_number_grids) then
+       print *,"iz_gb or total_number_grids invalid"
+       stop
+      endif
+
+      !-------------------------------------------------------------
+      ZONEMARKER = 299.0
+      EOHMARKER  = 357.0
+      open(unit=11,file=newfilename40,form="unformatted",access="stream")
+
+       ! +++++++ HEADER SECTION ++++++
+
+       ! i.  Magic number, Version number
+      write(11) "#!TDV112"
+
+       ! ii. Integer value of 1.
+      write(11) 1
+
+       ! iii. Title and variable names.
+       ! File type 0 = FULL,1 = GRID,2 = SOLUTION
+      write(11) 0
+       ! The TITLE
+      Title = "DEBUGC data"
+      call dumpstring(Title)
+       ! Number of variables 
+      write(11) nwrite3d
+
+      ! Variable names: zones_revolve_sanity
+      call dumpstring_headers_sanity(plot_sdim,ncomp)
+
+       ! Zones
+      do iz_gb=1,nzones_gb
+       ! Zone marker. Value = 299.0
+       write(11) ZONEMARKER
+       ! Zone name
+       Zonename = "ZONE"
+       call dumpstring(Zonename)
+
+       strandid=1    
+
+       write(11) -1   ! Parent Zone
+       write(11) 0    ! StrandID
+       write(11) time ! Solution time
+       write(11) -1   ! Not used. Set to -1
+       write(11) 0    ! Zone Type
+       write(11) 0    ! Specify Var Location. 0 = Don't specify, 
+                      ! all data is located at the nodes.
+       write(11) 0    ! Are raw local 1-to-1 face neighbors supplied?
+       write(11) 0    ! Number of miscellaneous user-defined  
+                      !face neighbor connections
+
+       hi_index_shift(1)=3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)+1
+       hi_index_shift(2)=3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)+1
+       if (plot_sdim.eq.3) then
+        hi_index_shift(3)=(hi_gb(iz_gb,plot_sdim)-lo_gb(iz_gb,plot_sdim)+1)+1
+       else
+        print *,"plot_sdim invalid in zones_revolve_sanity"
+        stop
+       endif
+
+        ! ----- IMax,JMax,KMax
+       write(11) hi_index_shift(1)
+       write(11) hi_index_shift(2)
+       if (plot_sdim.eq.3) then
+        write(11) hi_index_shift(3)
+       else
+        print *,"plot_sdim invalid in zones_revolve_sanity"
+        stop
+       endif
+ 
+       write(11) 0
+      enddo  ! iz_gb
+
+      write(11) EOHMARKER
+
+      print *,"finished writing header section, now data section"
+      print *,"nzones_gb= ",nzones_gb
+      print *,"nwrite3d= ",nwrite3d
+
+       ! +++++++ DATA SECTION ++++++
+
+      ilev=0
+      igrid=0
+
+      do iz_gb=1,nzones_gb
+
+       if (ilev.gt.finest_level) then
+        print *,"ilev invalid"
+        print *,"ilev=",ilev
+        print *,"finest_level=",finest_level
+        stop
+       endif
+      
+       do while (grids_per_level_array(ilev+1).eq.0)
+        ilev=ilev+1
+
+        if (igrid.ne.0) then
+         print *,"igrid should be 0"
+         print *,"igrid=",igrid
+         stop
+        endif
+        if (ilev.gt.finest_level) then
+         print *,"ilev invalid in grids_per_level loop"
+         print *,"ilev=",ilev
+         print *,"finest_level=",finest_level
+         stop
+        endif
+       enddo  ! while grids_per_level_array==0
+ 
+       if (igrid.gt.grids_per_level_array(ilev+1)-1) then
+        print *,"igrid invalid"
+        print *,"igrid= ",igrid
+        print *,"ilev= ",ilev
+        print *,"finest_level=",finest_level
+        print *,"grids_per_level_array= ", &
+         grids_per_level_array(ilev+1)
+        print *,"iz_gb = ",iz_gb
+        print *,"nzones_gb= ",nzones_gb
+        print *,"num_levels= ",num_levels
+        print *,"nwrite3d= ",nwrite3d
+        stop
+       endif
+
+       if (igrid.ne.gridno_array(iz_gb)) then
+        print *,"igrid invalid"
+        stop
+       endif
+       if (ilev.ne.levels_array(iz_gb)) then
+        print *,"ilev invalid"
+        stop
+       endif
+
+       do dir=1,plot_sdim
+        lo(dir)=lo_gb(iz_gb,dir)
+        hi(dir)=hi_gb(iz_gb,dir)
+       enddo
+
+       if (plot_sdim.eq.3) then
+        klo_plot=lo(plot_sdim)
+        khi_plot=hi(plot_sdim)+1
+       else if (plot_sdim.eq.2) then
+        klo_plot=0
+        khi_plot=0
+       else
+        print *,"plot_sdim invalid"
+        stop
+       endif
+
+       hi_index_shift(1)=3*(hi(1)-lo(1)+1)
+       hi_index_shift(2)=3*(hi(2)-lo(2)+1)
+       hi_index_shift(3)=khi_plot-klo_plot
+
+       allocate(zone3d_gb(iz_gb)% &
+        var(nwrite3d, &
+            0:hi_index_shift(1), &
+            0:hi_index_shift(2), &
+            0:hi_index_shift(3)))
+
+       allocate(zone2d_gb(iz_gb)% &
+        var(nwrite2d, &
+            0:hi_index_shift(1), &
+            0:hi_index_shift(SDIM)))
+
+       write(levstr,'(I3)') ilev
+       write(gridstr,'(I5)') igrid
+       do i=1,3
+        if (levstr(i:i).eq.' ') then
+         levstr(i:i)='0'
+        endif
+       enddo
+       do i=1,5
+        if (gridstr(i:i).eq.' ') then
+         gridstr(i:i)='0'
+        endif
+       enddo
+
+       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
+       open(unit=4,file=filename18)
+       print *,"filename18 ",filename18
+
+       do dir=1,SDIM
+        read(4,*) lo(dir),hi(dir)
+
+        if (lo(dir).ne.lo_gb(iz_gb,dir)) then
+         print *,"lo and lo_gb different"
+         print *,"iz_gb,dir,lo,lo_gb ",iz_gb,dir,lo(dir), &
+          lo_gb(iz_gb,dir)
+         stop
+        endif
+        if (hi(dir).ne.hi_gb(iz_gb,dir)) then
+         print *,"hi and hi_gb different"
+         print *,"iz_gb,dir,hi,hi_gb ",iz_gb,dir,hi(dir), &
+          hi_gb(iz_gb,dir)
+         stop
+        endif
+
+       enddo  ! dir
+
+       dir=plot_sdim
+       lo(dir)=0
+       hi(dir)=visual_revolve-1
+
+       if (lo(dir).ne.lo_gb(iz_gb,dir)) then
+        print *,"lo and lo_gb different"
+        print *,"iz_gb,dir,lo,lo_gb ",iz_gb,dir,lo(dir), &
+         lo_gb(iz_gb,dir)
+        stop
+       endif
+       if (hi(dir).ne.hi_gb(iz_gb,dir)) then
+        print *,"hi and hi_gb different"
+        print *,"iz_gb,dir,hi,hi_gb ",iz_gb,dir,hi(dir), &
+         hi_gb(iz_gb,dir)
+        stop
+       endif
+
+        ! order is IMPORTANT.
+       do j=0,hi_index_shift(2)
+       do i=0,hi_index_shift(1)
+        read(4,*) (zone2d_gb(iz_gb)%var(ivar_gb,i,j),ivar_gb=1,nwrite2d)
+
+        do k=0,hi_index_shift(3)
+
+         index3d=0
+         index2d=0
+
+         theta=two*Pi*k/visual_revolve
+         rr=zone2d_gb(iz_gb)%var(1,i,j)
+         zz=zone2d_gb(iz_gb)%var(2,i,j)
+         xx=rr*cos(theta)
+         yy=rr*sin(theta)
+         zone3d_gb(iz_gb)%var(1,i,j,k)=xx
+         zone3d_gb(iz_gb)%var(2,i,j,k)=yy
+         zone3d_gb(iz_gb)%var(3,i,j,k)=zz
+
+         index3d=index3d+plot_sdim
+         index2d=index2d+SDIM
+
+         do ivar_gb=1,ncomp
+          index3d=index3d+1
+          index2d=index2d+1
+          zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
+            zone2d_gb(iz_gb)%var(index2d,i,j)
+         enddo
+
+         if ((index3d.ne.nwrite3d).or. &
+             (index2d.ne.nwrite2d)) then
+          print *,"index mismatch in zone_revolve_sanity"
+          stop
+         endif
+
+        enddo ! k
+
+       enddo
+       enddo
+!      enddo
+
+       close(4)
+
+       ! Zone marker  Value = 299.0
+       write(11) ZONEMARKER
+       ! Data format
+       do i=1,nwrite3d
+        write(11) 2
+       enddo
+       write(11) 0  ! Has passive variables: 0 = no, 1 = yes.
+       write(11) 0  ! Has variable sharing 0 = no, 1 = yes.
+       write(11) -1 ! Share connectivity list (-1 = no sharing). 
+   
+       do ivar_gb=1,nwrite3d
+        write(11) minval(zone3d_gb(iz_gb)%var(ivar_gb,:,:,:))
+        write(11) maxval(zone3d_gb(iz_gb)%var(ivar_gb,:,:,:))
+       enddo
+
+       ! order is IMPORTANT.
+       do ivar_gb=1,nwrite3d
+        hi_index_shift(1)=3*(hi_gb(iz_gb,1)-lo_gb(iz_gb,1)+1)
+        hi_index_shift(2)=3*(hi_gb(iz_gb,2)-lo_gb(iz_gb,2)+1)
+        hi_index_shift(3)=khi_plot-klo_plot
+        do k=0,hi_index_shift(3)
+        do j=0,hi_index_shift(2)
+        do i=0,hi_index_shift(1)
+         write(11) zone3d_gb(iz_gb)%var(ivar_gb,i,j,k)
+        enddo
+        enddo
+        enddo
+       enddo
+
+       deallocate(zone3d_gb(iz_gb)%var)
+       deallocate(zone2d_gb(iz_gb)%var)
+
+       igrid=igrid+1
+       if (igrid.gt.grids_per_level_array(ilev+1)-1) then
+        ilev=ilev+1
+        igrid=0
+       endif
+
+      enddo  ! iz_gb
+
+      deallocate(zone3d_gb)
+      deallocate(zone2d_gb)
+      deallocate(lo_gb)
+      deallocate(hi_gb)
+
+      close(11)
+     
+      rmcommand='rm tempnddata*'
+
+      print *,"issuing command ",rmcommand
+
+      sysret=0
+
+#ifdef PGIFORTRAN
+      call system(rmcommand)
+#else
+      call execute_command_line(rmcommand,exitstat=sysret)
+#endif
+      if (sysret.ne.0) then
+       print *,"execute_command_line has sysret=",sysret
+       stop
+      endif
+
+      return
+      end subroutine zones_revolve_sanity
+
+
+
 end module global_utility_module
 

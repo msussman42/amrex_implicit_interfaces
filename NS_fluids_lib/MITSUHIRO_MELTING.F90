@@ -72,7 +72,7 @@ end subroutine MITSUHIRO_substrateLS
  ! fluids tessellate the domain, solids are immersed. 
 subroutine MITSUHIRO_LS(x,t,LS)
 use probcommon_module
-use global_distance_module
+use global_utility_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: x(SDIM)

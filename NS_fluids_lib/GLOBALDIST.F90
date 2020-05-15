@@ -2218,6 +2218,7 @@ end subroutine nozzle2d
 
         ! ice behaves like rigid solid where dist>0
       subroutine ice_substrate_distance(x,y,z,dist)
+      use global_utility_module
       IMPLICIT NONE
       
       REAL_T x,y,z,dist
@@ -2250,6 +2251,7 @@ end subroutine nozzle2d
       end subroutine ice_substrate_distance
 
       subroutine jetting_plate_dist(x,y,z,dist)
+      use global_utility_module
       IMPLICIT NONE
       REAL_T x,y,z,dist,aspect,offset,distplate,hugedist
 
@@ -2629,6 +2631,7 @@ end subroutine nozzle2d
         ! dist<0 in the solid
         ! dist>0 in the fluid 
       subroutine soliddist(x,y,z,dist,im)
+      use global_utility_module
       use bubbleControl_module
 
       IMPLICIT NONE
@@ -3184,113 +3187,6 @@ end subroutine nozzle2d
       end subroutine soliddist
 
 
-       ! negative on the inside of the square
-      subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
-      IMPLICIT NONE
-
-      REAL_T, intent(in) :: x,y,xlo,xhi,ylo,yhi
-      REAL_T, intent(out) :: dist
-      REAL_T dist1
-      REAL_T xmid,ymid
- 
-      if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
-       print *,"invalid parameters squaredist",xlo,xhi,ylo,yhi
-       stop
-      endif
-      if ((x.le.xlo).and.(y.ge.ylo).and.(y.le.yhi)) then
-       dist=xlo-x
-      else if ((x.le.xlo).and.(y.ge.yhi)) then
-       dist=sqrt( (x-xlo)**2 + (y-yhi)**2 )
-      else if ((x.le.xlo).and.(y.le.ylo)) then
-       dist=sqrt( (x-xlo)**2 + (y-ylo)**2 )
-      else if ((x.ge.xhi).and.(y.ge.ylo).and.(y.le.yhi)) then
-       dist=x-xhi
-      else if ((x.ge.xhi).and.(y.ge.yhi)) then
-       dist=sqrt( (x-xhi)**2 + (y-yhi)**2 )
-      else if ((x.ge.xhi).and.(y.le.ylo)) then
-       dist=sqrt( (x-xhi)**2 + (y-ylo)**2 )
-      else if (y.ge.yhi) then
-       dist=y-yhi
-      else if (y.le.ylo) then
-       dist=ylo-y
-      else 
-       xmid=half*(xlo+xhi)
-       ymid=half*(ylo+yhi)
-
-       if ((x.ge.xlo).and.(x.le.xmid)) then
-        dist=x-xlo
-       else if ((x.ge.xmid).and.(x.le.xhi)) then
-        dist=xhi-x
-       else
-        print *,"dist invalid in squaredist"
-        stop
-       endif
-
-       if ((y.ge.ylo).and.(y.le.ymid)) then
-        dist1=y-ylo
-       else if ((y.ge.ymid).and.(y.le.yhi)) then
-        dist1=yhi-y
-       else
-        print *,"dist1 invalid in squaredist"
-        stop
-       endif
-       if (dist.lt.dist1) then
-        dist=-dist
-       else
-        dist=-dist1
-       endif
-      endif
-
-      return
-      end subroutine squaredist
-
-! negative on the inside
-      subroutine cubedist(xmin,xmax,ymin,ymax,zmin,zmax,x,y,z,dist)
-      IMPLICIT NONE
-
-      REAL_T, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
-      REAL_T, intent(in) :: x,y,z
-      REAL_T, intent(out) :: dist
-      REAL_T xcen,ycen,zcen,xrad,yrad,zrad
-      REAL_T xdist,ydist,zdist
-
-      xcen=half*(xmin+xmax)
-      ycen=half*(ymin+ymax)
-      zcen=half*(zmin+zmax)
-      xrad=xmax-xcen
-      yrad=ymax-ycen
-      zrad=zmax-zcen
-
-      xdist=abs(x-xcen)-xrad
-      ydist=abs(y-ycen)-yrad
-      zdist=abs(z-zcen)-zrad
-
-      if ((xdist.le.zero).and.(ydist.le.zero).and.(zdist.le.zero)) then
-       dist=xdist
-       if (dist.lt.ydist) then
-        dist=ydist
-       endif
-       if (dist.lt.zdist) then
-        dist=zdist
-       endif
-      else
-       if (xdist.lt.zero) then
-        xdist=zero
-       endif
-       if (ydist.lt.zero) then
-        ydist=zero
-       endif
-       if (zdist.lt.zero) then
-        zdist=zero
-       endif
-       dist=sqrt(xdist**2+ydist**2+zdist**2)
-      endif
-
-      return
-      end subroutine cubedist
-
-
-
       subroutine nozzlerad(zval,radcross,rounded)
       IMPLICIT NONE
 
@@ -3455,6 +3351,7 @@ end subroutine nozzle2d
 
 
       subroutine damdist(x,z,dist,igeom)
+      use global_utility_module
       IMPLICIT NONE
 
       REAL_T x,z,dist,y1,y2,xctr,yswap,xswap

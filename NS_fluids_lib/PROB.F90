@@ -705,62 +705,6 @@ stop
       end subroutine dumpstring_headers
 
 
-      subroutine dumpstring_headers_sanity(plot_sdim,ncomp)
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: plot_sdim
-      INTEGER_T, intent(in) :: ncomp
-      character*80 Varname
-      character*3 matstr
-      INTEGER_T ih,im,i
-
-      if ((plot_sdim.ne.2).and.(plot_sdim.ne.3)) then
-       print *,"plot_sdim invalid"
-       stop
-      endif
-      if (ncomp.ge.1) then
-       ! do nothing
-      else
-       print *,"ncomp invalid"
-       stop
-      endif
-
-      Varname='X'
-      call dumpstring(Varname)
-      Varname='Y'
-      call dumpstring(Varname)
-
-      if (plot_sdim.eq.3) then
-       Varname='Z'
-       call dumpstring(Varname)
-      endif
-
-      do im=1,ncomp
-
-       write(matstr,'(I3)') im
-       do i=1,3
-        if (matstr(i:i).eq.' ') then
-         matstr(i:i)='0'
-        endif
-       enddo
-
-       ih=1
-       Varname='U'
-       ih=ih+1
-       do i=1,3
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
-       call dumpstring(Varname)
-
-      enddo ! im=1..ncomp
-
-      return
-      end subroutine dumpstring_headers_sanity
-
-
-
       subroutine get_mach_number(tessellate, &
         vel,den,vof,mach,nmat)
       use MOF_routines_module
@@ -2370,7 +2314,7 @@ stop
       end subroutine beringfree
       
       subroutine bering(x,y,z,height,width,length,sillrad,dist)
-
+      use global_utility_module
       use global_distance_module
 
       IMPLICIT NONE
@@ -14869,6 +14813,7 @@ END SUBROUTINE Adist
       end subroutine icemask_override
 
       subroutine cavitation_bubble_dist(xsten,nhalf,dist,dx,bfact)
+      use global_utility_module
       use global_distance_module
       IMPLICIT NONE
 
@@ -16815,7 +16760,7 @@ END SUBROUTINE Adist
 ! dist>0 in material 1
 ! dist<0 in material 2
       subroutine vapordist(xsten,nhalf,dx,bfact,dist)
-
+      use global_utility_module
       use global_distance_module
       use shockdrop
       use marangoni
@@ -17867,7 +17812,7 @@ END SUBROUTINE Adist
 
       subroutine airgunsolid(x,y,xcen,ycen,xhole,yhole, &
                              height,width,gunthick,dist)
-
+      use global_utility_module
       use global_distance_module
 
       IMPLICIT NONE
@@ -28941,6 +28886,7 @@ END SUBROUTINE Adist
 ! distance to star with center at origin
 
       subroutine stardist(x,y,z,radstar,radthick,dist)
+      use global_utility_module
       use global_distance_module
       IMPLICIT NONE
 

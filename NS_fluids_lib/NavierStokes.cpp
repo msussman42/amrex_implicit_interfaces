@@ -22,6 +22,7 @@
 #include <INTERP_F.H>
 #include <MACOPERATOR_F.H>
 #include <NAVIERSTOKES_F.H>
+#include <TECPLOTUTIL_F.H>
 #include <GODUNOV_F.H>
 #include <MASS_TRANSFER_F.H>
 #include <PROB_F.H>
