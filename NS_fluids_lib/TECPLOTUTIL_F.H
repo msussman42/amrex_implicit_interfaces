@@ -3,20 +3,24 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_TECPLOTFAB  tecplotfab
+#    define FORT_TECPLOTFAB_SANITY  tecplotfab_sanity
 #    define FORT_CELLGRID_SANITY cellgrid_sanity
 #    define FORT_COMBINEZONES_SANITY combinezones_sanity
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_TECPLOTFAB  TECPLOTFAB
+#    define FORT_TECPLOTFAB_SANITY TECPLOTFAB_SANITY
 #    define FORT_CELLGRID_SANITY CELLGRID_SANITY
 #    define FORT_COMBINEZONES_SANITY COMBINEZONES_SANITY
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_TECPLOTFAB  tecplotfab
+#    define FORT_TECPLOTFAB_SANITY  tecplotfab_sanity
 #    define FORT_CELLGRID_SANITY cellgrid_sanity
 #    define FORT_COMBINEZONES_SANITY combinezones_sanity
 #  else
 #    define FORT_TECPLOTFAB  tecplotfab_
+#    define FORT_TECPLOTFAB_SANITY  tecplotfab_sanity_
 #    define FORT_CELLGRID_SANITY cellgrid_sanity_
 #    define FORT_COMBINEZONES_SANITY combinezones_sanity_
 #  endif
@@ -37,6 +41,28 @@ extern "C" {
      const Real* xlo,const Real* dx,
      int* dir,int* ncomp,
      int* interior_only,int* nsteps);
+
+
+    void FORT_TECPLOTFAB_SANITY(
+     char* root_char_array,
+     int* n_root,
+     int* data_dir,
+     int* bfact,
+     const int* fablo,const int* fabhi,
+     Real* fabdata,AMREX_ARLIM_P(fabdatalo),AMREX_ARLIM_P(fabdatahi),
+     const Real* problo,
+     const Real* probhi,
+     const Real* dx,
+     int* SDC_outer_sweeps,
+     int* slab_step,
+     int* data_id,
+     int* nsteps,
+     Real* time,
+     int* visual_option,
+     int* visual_revolve,
+     int* level, 
+     int* finest_level, 
+     int* ncomp);
 
 
     void FORT_CELLGRID_SANITY(

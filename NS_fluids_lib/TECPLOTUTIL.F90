@@ -1289,7 +1289,54 @@ stop
       return
       end subroutine FORT_COMBINEZONES_SANITY
 
+      subroutine FORT_TECPLOTFAB_SANITY( &
+       root_char_array, &
+       n_root, &
+       data_dir, &
+       bfact, &
+       fablo, &
+       fabhi, &
+       datafab,DIMS(datafab), &
+       problo, &
+       probhi, &
+       dx, &
+       SDC_outer_sweeps, &
+       slab_step, &
+       data_id, &
+       nsteps, &
+       time, &
+       visual_option, &
+       visual_revolve, &
+       level, &
+       finest_level, &
+       ncomp)
+      use probcommon_module
+      use global_utility_module
 
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: n_root
+      character, dimension(n_root), intent(in) :: root_char_array
+      INTEGER_T, intent(in) :: data_dir
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: SDC_outer_sweeps
+      INTEGER_T, intent(in) :: slab_step
+      INTEGER_T, intent(in) :: data_id
+      INTEGER_T, intent(in) :: nsteps
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: visual_option
+      INTEGER_T, intent(in) :: visual_revolve
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM) 
+      INTEGER_T, intent(in) :: DIMDEC(datafab)
+      REAL_T, intent(in) :: datafab(DIMV(datafab),ncomp)
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: probhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+
+      end subroutine FORT_TECPLOTFAB_SANITY
 
 #if (STANDALONE==1)
       end module tecplotutil_cpp_module
