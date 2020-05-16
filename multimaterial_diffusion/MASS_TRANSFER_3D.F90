@@ -1174,7 +1174,7 @@ stop
        im_target_probe, &
        im_target_probe_opp, &
        nmat, &
-       comp, &
+       comp_probe, &
        ngrow, &
        lo,hi, &
        tempfab, &
@@ -1199,11 +1199,13 @@ stop
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: im_target_probe
       INTEGER_T, intent(in) :: im_target_probe_opp
-      INTEGER_T, intent(in) :: nmat,comp,ngrow
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: comp_probe
+      INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: DIMDEC(tempfab)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
-      REAL_T, intent(in) :: tempfab(DIMV(tempfab),comp)
+      REAL_T, intent(in) :: tempfab(DIMV(tempfab),comp_probe)
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: dest
@@ -1251,8 +1253,8 @@ stop
        print *,"ngrow invalid"
        stop
       endif
-      if ((comp.lt.1).or.(comp.gt.1000)) then
-       print *,"comp out of range"
+      if ((comp_probe.lt.1).or.(comp_probe.gt.1000)) then
+       print *,"comp_probe out of range"
        stop
       endif
       if ((im_target_probe.lt.1).or. &
@@ -1287,6 +1289,7 @@ stop
        stop
       endif
 
+        ! cell that contains xI
       call containing_cell(bfact,dx,xlo,lo,xI,cell_index)
 
       do dir=1,SDIM
@@ -1323,7 +1326,8 @@ stop
        call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
          volcell,cencell,SDIM)
 
-       T_sten=tempfab(D_DECL(isten,jsten,ksten),comp)
+        ! temperature at the material centroid of cell (isten,jsten,ksten)
+       T_sten=tempfab(D_DECL(isten,jsten,ksten),comp_probe)
        VF_sten=recon(D_DECL(isten,jsten,ksten),vofcomp)
        mag=zero
        do dir=1,SDIM
@@ -1335,11 +1339,13 @@ stop
        if (mag.ge.zero) then
         if ((VF_sten.ge.-VOFTOL).and. &
             (VF_sten.le.one+VOFTOL)) then
-         if (VF_sten.ge.LSTOL) then
+         if (VF_sten.ge.VOFTOL) then
 
           ! center -> target (cc_flag==1)
           ! tsat_flag==-1
           ! call center_centroid_interchange
+          ! interpolate the level set function from the cell centers
+          ! to XC_sten which is the centroid of material im_target_probe
           call interpfab( &
            bfact, &
            level, &
@@ -1360,14 +1366,14 @@ stop
             current_dxprobe=abs(LSPROBE_OPP)
             current_temp_probe=T_sten
            else if (grad_init.eq.1) then
-            if (local_grad.lt.current_grad) then
+            if (abs(LSPROBE_OPP).gt.current_dxprobe) then
              current_grad=local_grad
              current_dxprobe=abs(LSPROBE_OPP)
              current_temp_probe=T_sten
-            else if (local_grad.ge.current_grad) then
+            else if (abs(LSPROBE_OPP).le.current_dxprobe) then
              ! do nothing
             else
-             print *,"local_grad invalid"
+             print *,"LSPROBE_OPP invalid"
              stop
             endif
            else
@@ -1380,7 +1386,7 @@ stop
            print *,"LSPROBE_OPP invalid"
            stop
           endif
-         else if (VF_sten.le.LSTOL) then
+         else if (VF_sten.le.VOFTOL) then
           ! do nothing
          else
           print *,"VF_sten invalid"
@@ -4515,7 +4521,8 @@ stop
                   print *,"iprobe invalid"
                   stop
                  endif
-               
+              
+                  ! imls1 dominates at the interface. 
                  if (imls1.eq.im_target_probe) then
                   LS_INT_OWN_counter=LS_INT_OWN_counter+1
                  else if ((imls1.ge.1).and.(imls1.le.nmat)) then
@@ -4636,7 +4643,8 @@ stop
                       (im_secondary_probe.eq.im_target_probe).and. &
                       (LSPROBE(im_target_probe).ge.-dxprobe_target)) then
 
-                    ! find the smallest gradient from valid options.
+                    ! find the temperature gradient at "sub" probe
+                    ! point farthest from interface.
                     ! (Temperature(xcentroid)-TSAT)/LS(xcentroid)
                    call interpfab_filament_probe( &
                       bfact, &

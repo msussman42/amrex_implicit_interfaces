@@ -1693,6 +1693,7 @@ stop
       INTEGER_T nten
       INTEGER_T nmat
       INTEGER_T nburning
+      INTEGER_T nLS
       INTEGER_T DIMDEC(maskcov)
       INTEGER_T DIMDEC(masknbr)
       INTEGER_T DIMDEC(burnvel)
@@ -1843,9 +1844,14 @@ stop
       INTEGER_T i_inf_nrm(nten_in)
       INTEGER_T j_inf_nrm(nten_in)
 
+      INTEGER_T n_root
+      character(len=6) :: root_char_array
+      INTEGER_T data_dir,SDC_outer_sweeps,slab_step
+      INTEGER_T data_id,visual_revolve,visual_option
+
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
 
-      diagnostic_output=0
+      diagnostic_output=1
       nhalf=3
 
       if (SDIM.eq.2) then
@@ -1870,6 +1876,9 @@ stop
        print *,"NCELL invalid"
        stop
       endif
+
+      nLS=nmat*(SDIM+1)
+
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
@@ -2346,17 +2355,60 @@ stop
        interior_only=1
 
        if (diagnostic_output.eq.1) then
-        call FORT_TECPLOTFAB( &
-         prev_time, &
+        n_root=6
+        root_char_array='burnVL'
+        data_dir=-1
+        SDC_outer_sweeps=0
+        slab_step=0
+        data_id=0
+        visual_revolve=0
+        visual_option=-2
+
+        call FORT_TECPLOTFAB_SANITY( &
+         root_char_array, &
+         n_root, &
+         data_dir, &
+         bfact, & 
+         fablo,fabhi, &
          burnvel, &
          DIMS(burnvel), &
+         problo,probhi, &
+         dx, &
+         SDC_outer_sweeps, &
+         slab_step, &
+         data_id, &
+         nsteps, &
+         prev_time, &  ! cur_time will not show on same mesh as prev_time.
+         visual_option, &
+         visual_revolve, &
+         level, &
+         finest_level, &
+         nburning)
+
+        root_char_array='LVLSET'
+        data_id=1
+
+        call FORT_TECPLOTFAB_SANITY( &
+         root_char_array, &
+         n_root, &
+         data_dir, &
+         bfact, & 
          fablo,fabhi, &
-         fablo,fabhi, &
-         bfact, &
-         xlo,dx, &
-         debug_plot_dir,nburning,interior_only,nsteps)
-        print *,"burnvel afer ratemasschange"
-        pause
+         LS, &
+         DIMS(LS), &
+         problo,probhi, &
+         dx, &
+         SDC_outer_sweeps, &
+         slab_step, &
+         data_id, &
+         nsteps, &
+         prev_time, &  ! cur_time will not show on same mesh as prev_time.
+         visual_option, &
+         visual_revolve, &
+         level, &
+         finest_level, &
+         nLS)
+
        endif
 
        !burnvel is cell centered.
@@ -2375,20 +2427,6 @@ stop
          fablo,fabhi,bfact, &
          burnvel,DIMS(burnvel), & ! ngrow_make_distance
          LS,DIMS(LS))
-
-       if (diagnostic_output.eq.1) then
-        call FORT_TECPLOTFAB( &
-         prev_time, &
-         burnvel, &
-         DIMS(burnvel), &
-         fablo,fabhi, &
-         fablo,fabhi, &
-         bfact, &
-         xlo,dx, &
-         debug_plot_dir,nburning,interior_only,nsteps)
-        print *,"burnvel afer extend burning vel"
-        pause
-       endif
 
 
         ! first nten components are the status
@@ -2508,20 +2546,6 @@ stop
 
        enddo ! isweep=0..1
 
-
-       if (diagnostic_output.eq.1) then
-        call FORT_TECPLOTFAB( &
-         prev_time, &
-         burnvel, &
-         DIMS(burnvel), &
-         fablo,fabhi, &
-         fablo,fabhi, &
-         bfact, &
-         xlo,dx, &
-         debug_plot_dir,nburning,interior_only,nsteps)
-        print *,"burnvel afer convertmaterial"
-        pause
-       endif
 
        if (DEBUG_LS_MOVE_INTERFACE.eq.1) then
         k=0
