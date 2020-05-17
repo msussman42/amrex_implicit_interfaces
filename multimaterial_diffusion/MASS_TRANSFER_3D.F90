@@ -5,6 +5,10 @@
 
 #define STANDALONE 1
 
+#define DEBUG_TRIPLE 1
+#define DEBUG_I 22
+#define DEBUG_J 13
+
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -1164,6 +1168,7 @@ stop
       end subroutine interpfabTEMP
 
       subroutine interpfab_filament_probe( &
+       igrid,jgrid,kgrid, &
        bfact, &
        level, &
        finest_level, &
@@ -1189,6 +1194,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: igrid,jgrid,kgrid
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -1359,6 +1365,14 @@ stop
            LS,DIMS(LS), &
            LSPROBE_OPP)
 
+          if (DEBUG_TRIPLE.eq.1) then
+           if ((DEBUG_I.eq.igrid).and. &
+               (DEBUG_J.eq.jgrid)) then
+            print *,"igrid,jgrid,LSPROBE_OPP ",igrid,jgrid,LSPROBE_OPP
+            print *,"isten,jsten,T_sten,Tsat ",isten,jsten,T_sten,Tsat
+            print *,"isten,jsten,VF_sten ",isten,jsten,VF_sten
+           endif
+          endif
           if (LSPROBE_OPP.lt.zero) then
            local_grad=abs((T_sten-Tsat)/LSPROBE_OPP)
            if (grad_init.eq.0) then
@@ -4622,6 +4636,14 @@ stop
 
                  call get_primary_material(LSPROBE,nmat,im_primary_probe)
 
+                 if (DEBUG_TRIPLE.eq.1) then
+                  if ((DEBUG_I.eq.i).and. &
+                      (DEBUG_J.eq.j)) then
+                   print *,"i,j,im_primary,im_target ", &
+                     im_primary_probe,im_target_probe
+                  endif
+                 endif
+
                  if (im_primary_probe.eq.im_target_probe) then
 
                   LS_pos_probe_counter=LS_pos_probe_counter+1
@@ -4647,6 +4669,7 @@ stop
                     ! point farthest from interface.
                     ! (Temperature(xcentroid)-TSAT)/LS(xcentroid)
                    call interpfab_filament_probe( &
+                      i,j,k, &
                       bfact, &
                       level, &
                       finest_level, &
