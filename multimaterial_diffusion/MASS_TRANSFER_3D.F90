@@ -5,9 +5,10 @@
 
 #define STANDALONE 1
 
-#define DEBUG_TRIPLE 1
+#define DEBUG_TRIPLE 0
 #define DEBUG_I 22
 #define DEBUG_J 13
+#define DEBUG_K 0
 
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
@@ -1379,6 +1380,7 @@ stop
             current_grad=local_grad
             current_dxprobe=abs(LSPROBE_OPP)
             current_temp_probe=T_sten
+            grad_init=1
            else if (grad_init.eq.1) then
             if (abs(LSPROBE_OPP).gt.current_dxprobe) then
              current_grad=local_grad
@@ -4690,6 +4692,14 @@ stop
                       dxprobe_target, &     ! |xprobe-xcp|
                       VOF_pos_probe_counter)
 
+                   if (DEBUG_TRIPLE.eq.1) then
+                    if ((DEBUG_I.eq.i).and. &
+                        (DEBUG_J.eq.j)) then
+                     print *,"i,j,VOF_pos_probe_counter,iprobe ", &
+                             i,j,VOF_pos_probe_counter,iprobe
+                    endif
+                   endif
+
                   else if ((im_primary_probe.eq.im_target_probe_opp).or. &
                            (im_secondary_probe.ne.im_target_probe).or. &
                            (LSPROBE(im_target_probe).le.-dxprobe_target)) then
@@ -4847,7 +4857,25 @@ stop
                 enddo ! iprobe=1..2
 
                 at_interface=0
-                
+
+                if (DEBUG_TRIPLE.eq.1) then
+                 if ((DEBUG_I.eq.i).and. &
+                     (DEBUG_J.eq.j)) then
+                  print *,"i,j,LS_pos_probe_counter ", &
+                         i,j,LS_pos_probe_counter 
+                  print *,"i,j,LS_INT_VERY_CLOSE_counter ", &
+                         i,j,LS_INT_VERY_CLOSE_counter
+                  print *,"i,j,LS_INT_OWN_counter ", &
+                         i,j,LS_INT_OWN_counter
+                  print *,"i,j,VOF_pos_probe_counter ", &
+                         i,j,VOF_pos_probe_counter
+                  print *,"i,j,tempsrc,tempdst,Tsat ", &
+                         i,j,tempsrc,tempdst,Tsat
+                  print *,"i,j,LL,dxprobe_source,dxprobe_dest ", &
+                         i,j,LL(ireverse),dxprobe_source,dxprobe_dest
+                 endif
+                endif
+
                 if ((LS_pos_probe_counter.eq.1).or. &
                     (LS_pos_probe_counter.eq.2)) then
                  if (LS_INT_VERY_CLOSE_counter.eq.2) then

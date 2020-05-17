@@ -1851,7 +1851,7 @@ stop
 
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
 
-      diagnostic_output=1
+      diagnostic_output=0
       nhalf=3
 
       if (SDIM.eq.2) then

@@ -5,6 +5,11 @@
 
 #define STANDALONE 0
 
+#define DEBUG_TRIPLE 0
+#define DEBUG_I 22
+#define DEBUG_J 13
+#define DEBUG_K 0
+
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -1164,6 +1169,7 @@ stop
       end subroutine interpfabTEMP
 
       subroutine interpfab_filament_probe( &
+       igrid,jgrid,kgrid, &
        bfact, &
        level, &
        finest_level, &
@@ -1174,7 +1180,7 @@ stop
        im_target_probe, &
        im_target_probe_opp, &
        nmat, &
-       comp, &
+       comp_probe, &
        ngrow, &
        lo,hi, &
        tempfab, &
@@ -1189,6 +1195,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: igrid,jgrid,kgrid
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -1199,11 +1206,13 @@ stop
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: im_target_probe
       INTEGER_T, intent(in) :: im_target_probe_opp
-      INTEGER_T, intent(in) :: nmat,comp,ngrow
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: comp_probe
+      INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: DIMDEC(tempfab)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
-      REAL_T, intent(in) :: tempfab(DIMV(tempfab),comp)
+      REAL_T, intent(in) :: tempfab(DIMV(tempfab),comp_probe)
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: dest
@@ -1251,8 +1260,8 @@ stop
        print *,"ngrow invalid"
        stop
       endif
-      if ((comp.lt.1).or.(comp.gt.1000)) then
-       print *,"comp out of range"
+      if ((comp_probe.lt.1).or.(comp_probe.gt.1000)) then
+       print *,"comp_probe out of range"
        stop
       endif
       if ((im_target_probe.lt.1).or. &
@@ -1287,6 +1296,7 @@ stop
        stop
       endif
 
+        ! cell that contains xI
       call containing_cell(bfact,dx,xlo,lo,xI,cell_index)
 
       do dir=1,SDIM
@@ -1323,7 +1333,8 @@ stop
        call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
          volcell,cencell,SDIM)
 
-       T_sten=tempfab(D_DECL(isten,jsten,ksten),comp)
+        ! temperature at the material centroid of cell (isten,jsten,ksten)
+       T_sten=tempfab(D_DECL(isten,jsten,ksten),comp_probe)
        VF_sten=recon(D_DECL(isten,jsten,ksten),vofcomp)
        mag=zero
        do dir=1,SDIM
@@ -1335,11 +1346,13 @@ stop
        if (mag.ge.zero) then
         if ((VF_sten.ge.-VOFTOL).and. &
             (VF_sten.le.one+VOFTOL)) then
-         if (VF_sten.ge.LSTOL) then
+         if (VF_sten.ge.VOFTOL) then
 
           ! center -> target (cc_flag==1)
           ! tsat_flag==-1
           ! call center_centroid_interchange
+          ! interpolate the level set function from the cell centers
+          ! to XC_sten which is the centroid of material im_target_probe
           call interpfab( &
            bfact, &
            level, &
@@ -1353,21 +1366,30 @@ stop
            LS,DIMS(LS), &
            LSPROBE_OPP)
 
+          if (DEBUG_TRIPLE.eq.1) then
+           if ((DEBUG_I.eq.igrid).and. &
+               (DEBUG_J.eq.jgrid)) then
+            print *,"igrid,jgrid,LSPROBE_OPP ",igrid,jgrid,LSPROBE_OPP
+            print *,"isten,jsten,T_sten,Tsat ",isten,jsten,T_sten,Tsat
+            print *,"isten,jsten,VF_sten ",isten,jsten,VF_sten
+           endif
+          endif
           if (LSPROBE_OPP.lt.zero) then
            local_grad=abs((T_sten-Tsat)/LSPROBE_OPP)
            if (grad_init.eq.0) then
             current_grad=local_grad
             current_dxprobe=abs(LSPROBE_OPP)
             current_temp_probe=T_sten
+            grad_init=1
            else if (grad_init.eq.1) then
-            if (local_grad.lt.current_grad) then
+            if (abs(LSPROBE_OPP).gt.current_dxprobe) then
              current_grad=local_grad
              current_dxprobe=abs(LSPROBE_OPP)
              current_temp_probe=T_sten
-            else if (local_grad.ge.current_grad) then
+            else if (abs(LSPROBE_OPP).le.current_dxprobe) then
              ! do nothing
             else
-             print *,"local_grad invalid"
+             print *,"LSPROBE_OPP invalid"
              stop
             endif
            else
@@ -1380,7 +1402,7 @@ stop
            print *,"LSPROBE_OPP invalid"
            stop
           endif
-         else if (VF_sten.le.LSTOL) then
+         else if (VF_sten.le.VOFTOL) then
           ! do nothing
          else
           print *,"VF_sten invalid"
@@ -4515,7 +4537,8 @@ stop
                   print *,"iprobe invalid"
                   stop
                  endif
-               
+              
+                  ! imls1 dominates at the interface. 
                  if (imls1.eq.im_target_probe) then
                   LS_INT_OWN_counter=LS_INT_OWN_counter+1
                  else if ((imls1.ge.1).and.(imls1.le.nmat)) then
@@ -4615,6 +4638,14 @@ stop
 
                  call get_primary_material(LSPROBE,nmat,im_primary_probe)
 
+                 if (DEBUG_TRIPLE.eq.1) then
+                  if ((DEBUG_I.eq.i).and. &
+                      (DEBUG_J.eq.j)) then
+                   print *,"i,j,im_primary,im_target ", &
+                     im_primary_probe,im_target_probe
+                  endif
+                 endif
+
                  if (im_primary_probe.eq.im_target_probe) then
 
                   LS_pos_probe_counter=LS_pos_probe_counter+1
@@ -4636,9 +4667,11 @@ stop
                       (im_secondary_probe.eq.im_target_probe).and. &
                       (LSPROBE(im_target_probe).ge.-dxprobe_target)) then
 
-                    ! find the smallest gradient from valid options.
+                    ! find the temperature gradient at "sub" probe
+                    ! point farthest from interface.
                     ! (Temperature(xcentroid)-TSAT)/LS(xcentroid)
                    call interpfab_filament_probe( &
+                      i,j,k, &
                       bfact, &
                       level, &
                       finest_level, &
@@ -4658,6 +4691,14 @@ stop
                       temp_target_probe, &  ! Temp(xprobe)
                       dxprobe_target, &     ! |xprobe-xcp|
                       VOF_pos_probe_counter)
+
+                   if (DEBUG_TRIPLE.eq.1) then
+                    if ((DEBUG_I.eq.i).and. &
+                        (DEBUG_J.eq.j)) then
+                     print *,"i,j,VOF_pos_probe_counter,iprobe ", &
+                             i,j,VOF_pos_probe_counter,iprobe
+                    endif
+                   endif
 
                   else if ((im_primary_probe.eq.im_target_probe_opp).or. &
                            (im_secondary_probe.ne.im_target_probe).or. &
@@ -4816,7 +4857,25 @@ stop
                 enddo ! iprobe=1..2
 
                 at_interface=0
-                
+
+                if (DEBUG_TRIPLE.eq.1) then
+                 if ((DEBUG_I.eq.i).and. &
+                     (DEBUG_J.eq.j)) then
+                  print *,"i,j,LS_pos_probe_counter ", &
+                         i,j,LS_pos_probe_counter 
+                  print *,"i,j,LS_INT_VERY_CLOSE_counter ", &
+                         i,j,LS_INT_VERY_CLOSE_counter
+                  print *,"i,j,LS_INT_OWN_counter ", &
+                         i,j,LS_INT_OWN_counter
+                  print *,"i,j,VOF_pos_probe_counter ", &
+                         i,j,VOF_pos_probe_counter
+                  print *,"i,j,tempsrc,tempdst,Tsat ", &
+                         i,j,tempsrc,tempdst,Tsat
+                  print *,"i,j,LL,dxprobe_source,dxprobe_dest ", &
+                         i,j,LL(ireverse),dxprobe_source,dxprobe_dest
+                 endif
+                endif
+
                 if ((LS_pos_probe_counter.eq.1).or. &
                     (LS_pos_probe_counter.eq.2)) then
                  if (LS_INT_VERY_CLOSE_counter.eq.2) then
