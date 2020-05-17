@@ -4887,7 +4887,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 //  NavierStokes::MaxAdvectSpeedALL
 //  NavierStokes::sum_integrated_quantities
 //  NavierStokes::prepare_post_process
-void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
+void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -4900,37 +4900,39 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   int dealloc_history=0;
-  ns_level.init_FSI_GHOST_MF(ngrow,dealloc_history);
+  ns_level.init_FSI_GHOST_MAC_MF(dealloc_history);
  } // ilev=level...finest_level
 
   // GNBC DEBUGGING
  if ((1==0)&&(caller_id==3)) {
-  writeSanityCheckData(
+
+  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+
+   writeSanityCheckData(
     "WALLFUNCTION",
     "GNBC DEBUGGING usolidLawWall, image vel, solid vel, angle",
     caller_id,
-    localMF[HISTORY_MF]->nComp(), //int. velocity,image vel,solid vel,angle
-    HISTORY_MF,
+    localMF[HISTORY_MAC_MF+data_dir]->nComp(), //velINT,image vel,velsol,angle
+    HISTORY_MAC_MF+data_dir,
     -1,  // State_Type==-1 
-    -1); // data_dir==-1
-  writeSanityCheckData(
+    data_dir); 
+
+   writeSanityCheckData(
     "WALLFUNCTION",
-    "init_FSI_GHOST_MF_ALL, FSI_GHOST_MF", //fictitious solid velocity
+    "init_FSI_GHOST_MAC_MF_ALL, FSI_GHOST_MAC_MF",//fictitious solid velocity
     caller_id+100,
-    localMF[FSI_GHOST_MF]->nComp(),
-    FSI_GHOST_MF,
+    localMF[FSI_GHOST_MAC_MF+data_dir]->nComp(),
+    FSI_GHOST_MAC_MF+data_dir,
     -1,  // State_Type==-1 
-    -1); // data_dir==-1
+    data_dir); 
+  }
  }
 
- if (nparts==0) {
-  // do nothing
- } else if (nparts>=1) {
-  delete_array(HISTORY_MF);
- } else
-  amrex::Error("nparts invalid");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  delete_array(HISTORY_MAC_MF+data_dir);
+ }
 
-} // end subroutine init_FSI_GHOST_MF_ALL
+} // end subroutine init_FSI_GHOST_MAC_MF_ALL
 
 //    create a ghost solid velocity variable:
 //    simple method: ghost solid velocity=solid velocity
@@ -4941,12 +4943,9 @@ void NavierStokes::init_FSI_GHOST_MF_ALL(int ngrow,int caller_id) {
 // initialize Fluid Structure Interaction Ghost Multifab
 // multifab = multiple fortran array blocks.
 // called from:
-//  NavierStokes::init_FSI_GHOST_MF_ALL
+//  NavierStokes::init_FSI_GHOST_MAC_MF_ALL
 //  NavierStokes::initData ()
-void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
-
- if ((ngrow<1)||(ngrow>ngrowFSI))
-  amrex::Error("ngrow invalid");
+void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -4963,11 +4962,14 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
  } else {
   amrex::Error("nparts invalid");
  }
- 
- if (localMF_grow[FSI_GHOST_MF]>=0)
-  delete_localMF(FSI_GHOST_MF,1);
 
- new_localMF(FSI_GHOST_MF,nparts_ghost*AMREX_SPACEDIM,ngrow,-1);
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
+  if (localMF_grow[FSI_GHOST_MAC_MF+data_dir]>=0)
+   delete_localMF(FSI_GHOST_MAC_MF+data_dir,1);
+
+  new_localMF(FSI_GHOST_MAC_MF+data_dir,
+    nparts_ghost*AMREX_SPACEDIM,0,data_dir);
+ }
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
@@ -4975,53 +4977,57 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
+  // usolid_law_of_the_wall,uimage_cell,usolid_cell,angle_ACT_cell
+ int nhistory_sub=3*AMREX_SPACEDIM+1;
+ int nhistory=nparts_ghost*nhistory_sub;
+ int ngrow_law_of_wall=3;
+
+ MultiFab* solid_vel_mf;
  if (nparts==0) {
-
-  MultiFab::Copy(*localMF[FSI_GHOST_MF],S_new,0,0,AMREX_SPACEDIM,0);
-
- } else if ((nparts>=1)&&(nparts<=nmat)) {
-
-   // usolid_law_of_the_wall,uimage_cell,usolid_cell,angle_ACT_cell
-  int nhistory_sub=3*AMREX_SPACEDIM+1;
-  int nhistory=nparts*nhistory_sub;
-
-  if (localMF_grow[HISTORY_MF]>=0)
-   amrex::Error("localMF_grow[HISTORY_MF]>=0");
-
-  new_localMF(HISTORY_MF,nhistory,0,-1);
-
-  if (law_of_the_wall==0) {
-   MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
-   if (nparts*AMREX_SPACEDIM!=Solid_new.nComp())
-    amrex::Error("nparts*AMREX_SPACEDIM!=Solid_new.nComp()");
-   MultiFab::Copy(*localMF[FSI_GHOST_MF],Solid_new,0,0,nparts*AMREX_SPACEDIM,0);
-  } else if ((law_of_the_wall==1)||   //turbulent wall flux
-             (law_of_the_wall==2)) {  //GNBC
-
-   if (num_materials_vel!=1)
-    amrex::Error("num_materials_vel invalid");
-
-   int ngrow_law_of_wall=3;
-   MultiFab* solid_vel_mf=getStateSolid(ngrow_law_of_wall,0,
-    nparts*AMREX_SPACEDIM,cur_time_slab);
-     // velocity and pressure
-   MultiFab* fluid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM+1,
+  if (nparts_ghost==1) {
+   solid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM,
     cur_time_slab);
-     // temperature and density for all of the materials.
-   int nden=nmat*num_state_material;
-   MultiFab* state_var_mf=getStateDen(ngrow_law_of_wall,cur_time_slab);
-   if (state_var_mf->nComp()!=nden)
-    amrex::Error("state_var_mf->nComp()!=nden");
+  } else
+   amrex::Error("nparts_ghost invalid");
+ } else if (nparts>0) {
+  solid_vel_mf=getStateSolid(ngrow_law_of_wall,0,
+    nparts*AMREX_SPACEDIM,cur_time_slab);
+ } else
+  amrex::Error("nparts invalid");
 
-    // caller_id==1
-   getStateDist_localMF(LS_NRM_CP_MF,ngrow_distance,cur_time_slab,1);
-   if (localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance)
-    amrex::Error("localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance");
-   if (localMF[LS_NRM_CP_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
-    amrex::Error("localMF[LS_NRM_CP_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
 
-   new_localMF(LS_NRM_FD_GNBC_MF,nmat*AMREX_SPACEDIM,ngrow_distance,-1);
-   build_NRM_FD_MF(LS_NRM_FD_GNBC_MF,LS_NRM_CP_MF,ngrow_distance);
+  // velocity and pressure
+ MultiFab* fluid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM+1,
+    cur_time_slab);
+
+  // temperature and density for all of the materials.
+ int nden=nmat*num_state_material;
+ MultiFab* state_var_mf=getStateDen(ngrow_law_of_wall,cur_time_slab);
+ if (state_var_mf->nComp()!=nden)
+  amrex::Error("state_var_mf->nComp()!=nden");
+
+  // caller_id==1
+ getStateDist_localMF(LS_NRM_CP_MF,ngrow_distance,cur_time_slab,1);
+ if (localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance)
+  amrex::Error("localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance");
+ if (localMF[LS_NRM_CP_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("localMF[LS_NRM_CP_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
+
+ new_localMF(LS_NRM_FD_GNBC_MF,nmat*AMREX_SPACEDIM,ngrow_distance,-1);
+ build_NRM_FD_MF(LS_NRM_FD_GNBC_MF,LS_NRM_CP_MF,ngrow_distance);
+
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
+
+  if (localMF_grow[HISTORY_MAC_MF+data_dir]>=0)
+   amrex::Error("localMF_grow[HISTORY_MAC_MF+data_dir]>=0");
+
+  new_localMF(HISTORY_MAC_MF+data_dir,nhistory,0,data_dir);
+
+  if ((law_of_the_wall==0)||   //just use the solid velocity
+      (law_of_the_wall==1)||   //turbulent wall flux
+      (law_of_the_wall==2)) {  //GNBC
 
    const Real* dx = geom.CellSize();
 
@@ -5052,9 +5058,9 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
     FArrayBox& statefab=(*state_var_mf)[mfi];
     FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; 
     FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; 
-    FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MF])[mfi]; 
+    FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
 
-    FArrayBox& histfab=(*localMF[HISTORY_MF])[mfi]; 
+    FArrayBox& histfab=(*localMF[HISTORY_MAC_MF+data_dir])[mfi]; 
 
     int tid_current=ns_thread();
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
@@ -5062,7 +5068,7 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
     int nhistory_local=histfab.nComp();
 
      // CODY ESTEBE: LAW OF THE WALL
-     // "HISTORY_MF" contains image velocity data and angle data.
+     // "HISTORY_MAC_MF" contains image velocity data and angle data.
      // fab = fortran array block
      // DATA: state data (velocity, level set function, temperature, density,
      // pressure) are data that represent the state of some fluid dynamics
@@ -5084,13 +5090,17 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
      //    ghost normal velocity = solid normal velocity everywhere.
      // in: GODUNOV_3D.F90
     FORT_WALLFUNCTION( 
+     &data_dir,
      &law_of_the_wall,
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
      &ngrow_law_of_wall,
      &ngrow_distance,
-     &nmat,&nparts,&nden,
+     &nmat,
+     &nparts,
+     &nparts_ghost,
+     &nden,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      xlo,dx,
@@ -5113,111 +5123,26 @@ void NavierStokes::init_FSI_GHOST_MF(int ngrow,int dealloc_history) {
 } // omp
    ns_reconcile_d_num(45);
 
-   delete_localMF(LS_NRM_CP_MF,1);
-   delete_localMF(LS_NRM_FD_GNBC_MF,1);
+   if (dealloc_history==0) {
+    // do nothing
+   } else if (dealloc_history==1) {
+    delete_localMF(HISTORY_MAC_MF+data_dir,1);
+   } else 
+    amrex::Error("dealloc_history invalid");
 
-   delete state_var_mf;
-   delete fluid_vel_mf;
-   delete solid_vel_mf;
   } else
    amrex::Error("law_of_the_wall invalid");
 
-  if (dealloc_history==0) {
-   // do nothing
-  } else if (dealloc_history==1) {
-   delete_localMF(HISTORY_MF,1);
-  } else 
-   amrex::Error("dealloc_history invalid");
+ } // data_dir=0..sdim-1
 
- } else {
-  amrex::Error("nparts invalid");
- }
+ delete_localMF(LS_NRM_CP_MF,1);
+ delete_localMF(LS_NRM_FD_GNBC_MF,1);
 
-  // idx,ngrow,scomp,ncomp,index,scompBC_map
-  // InterpBordersGHOST is ultimately called.
-  // dest_lstGHOST for Solid_State_Type defaults to pc_interp.
-  // scompBC_map==0 corresponds to extrap_bc, pc_interp and FORT_EXTRAPFILL
-  // scompBC_map==1,2,3 corresponds to x or y or z vel_extrap_bc, pc_interp 
-  //   and FORT_EXTRAPFILL
- for (int partid=0;partid<nparts_ghost;partid++) {
-  int ibase=partid*AMREX_SPACEDIM;
-  Vector<int> scompBC_map;
-  scompBC_map.resize(AMREX_SPACEDIM);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-   scompBC_map[dir]=dir+1;
-  PCINTERP_fill_borders(FSI_GHOST_MF,ngrow,ibase,
-   AMREX_SPACEDIM,ghost_state_type,scompBC_map);
- } // partid=0..nparts_ghost-1
+ delete state_var_mf;
+ delete fluid_vel_mf;
+ delete solid_vel_mf;
 
-} // end subroutine init_FSI_GHOST_MF
-
-void NavierStokes::resize_FSI_GHOST_MF(int ngrow) {
-
- if ((ngrow<1)||(ngrow>ngrowFSI))
-  amrex::Error("ngrow invalid");
-
- int nmat=num_materials;
- int nparts=im_solid_map.size();
-
- int nparts_ghost=nparts;
- int ghost_state_type=Solid_State_Type;
- if (nparts==0) {
-  nparts_ghost=1;
-  ghost_state_type=State_Type;
- } else if ((nparts>=1)&&(nparts<=nmat)) {
-  // do nothing
- } else {
-  amrex::Error("nparts invalid");
- }
-
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_ghost*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_ghost*AMREX_SPACEDIM");
-
- if (localMF[FSI_GHOST_MF]->nGrow()==ngrow) {
-  // do nothing
- } else if (localMF[FSI_GHOST_MF]->nGrow()>=0) {
-
-
-   //MultiFab=an array of FABS
-   //FAB="Fortran Array Block"
-   //This command allocates an array of grids in which the dimensions of 
-   //each grid is given by the BoxArray "grids".
-   //FArrayBox
-   //Box
-   //BoxArray
-   //MultiFab (derived from FabArray)
-  MultiFab* save_ghost=
-    new MultiFab(grids,dmap,nparts_ghost*AMREX_SPACEDIM,0,
-     MFInfo().SetTag("save_ghost"),FArrayBoxFactory()); 
-
-  MultiFab::Copy(*save_ghost,*localMF[FSI_GHOST_MF],0,0,
-       nparts_ghost*AMREX_SPACEDIM,0);
-  delete_localMF(FSI_GHOST_MF,1);
-  new_localMF(FSI_GHOST_MF,nparts_ghost*AMREX_SPACEDIM,ngrow,-1);
-  MultiFab::Copy(*localMF[FSI_GHOST_MF],*save_ghost,0,0,
-       nparts_ghost*AMREX_SPACEDIM,0);
-
-  // idx,ngrow,scomp,ncomp,index,scompBC_map
-  // InterpBordersGHOST is ultimately called.
-  // dest_lstGHOST for Solid_State_Type defaults to pc_interp.
-  // scompBC_map==0 corresponds to extrap_bc, pc_interp and FORT_EXTRAPFILL
-  // scompBC_map==1,2,3 corresponds to x or y or z vel_extrap_bc, pc_interp 
-  //   and FORT_EXTRAPFILL
-  for (int partid=0;partid<nparts_ghost;partid++) {
-   int ibase=partid*AMREX_SPACEDIM;
-   Vector<int> scompBC_map;
-   scompBC_map.resize(AMREX_SPACEDIM);
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-    scompBC_map[dir]=dir+1;
-   PCINTERP_fill_borders(FSI_GHOST_MF,ngrow,ibase,
-    AMREX_SPACEDIM,ghost_state_type,scompBC_map);
-  } // partid=0..nparts_ghost-1
-
-  delete save_ghost;
- } else
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow() invalid");
-
-} // end subroutine resize_FSI_GHOST_MF
+} // end subroutine init_FSI_GHOST_MAC_MF
 
 
 // get rid of the ghost cells

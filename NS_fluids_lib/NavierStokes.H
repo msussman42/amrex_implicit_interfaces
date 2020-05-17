@@ -226,8 +226,6 @@ namespace amrex{
 
 #define DIST_TOUCH_MF 214
 
-#define FSI_GHOST_MF 215
-
 #define TENSOR_RECON_MF 216
 
 #define CONS_COR_MF 217
@@ -257,9 +255,13 @@ namespace amrex{
 
 #define LOCAL_ICEFACECUT_MF 244
 
+#define FSI_GHOST_MAC_MF 247
+
+#define HISTORY_MAC_MF 250
+
 #define MAX_GMRES_BUFFER 256
 
-#define GMRES_BUFFER0_V_MF 247
+#define GMRES_BUFFER0_V_MF 253
 #define GMRES_BUFFER_LAST_V_MF (GMRES_BUFFER0_V_MF+MAX_GMRES_BUFFER-1)
 
 #define GMRES_BUFFER0_U_MF (GMRES_BUFFER_LAST_V_MF+1)
@@ -1341,9 +1343,8 @@ void apply_pressure_grad(
     static int CTML_FSI_matC(int im);
     static int FSI_material_exists();
 
-    void init_FSI_GHOST_MF_ALL(int ngrow,int caller_id);
-    void init_FSI_GHOST_MF(int ngrow,int dealloc_history);
-    void resize_FSI_GHOST_MF(int ngrow);
+    void init_FSI_GHOST_MAC_MF_ALL(int caller_id);
+    void init_FSI_GHOST_MAC_MF(int dealloc_history);
 
     void resize_FSI_MF();
 

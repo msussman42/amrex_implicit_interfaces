@@ -14192,15 +14192,22 @@ end function delta
 
        ! called from:NavierStokes::init_FSI_GHOST_MF(int ngrow) 
        ! (in NavierStokes.cpp)
-       ! called when "law_of_the_wall>0"
+       ! called when "law_of_the_wall=0,1,2"
+       ! if nparts==0 => interpolate state cell velocity to MAC grid.
+       ! if nparts>0 and law_of_the_wall==0 => interpolate solid cell velocity
+       ! to MAC grid.
       subroutine FORT_WALLFUNCTION( &
+       data_dir, &
        law_of_the_wall, &
        im_solid_map, &
        level, &
        finest_level, &
        ngrow_law_of_wall, &
        ngrow_distance, &
-       nmat,nparts,nden, &
+       nmat, &
+       nparts, &
+       nparts_ghost, &
+       nden, &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        xlo,dx, &
@@ -14223,12 +14230,16 @@ end function delta
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: nhistory
       INTEGER_T, intent(in) :: law_of_the_wall
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: ngrow_law_of_wall
       INTEGER_T, intent(in) :: ngrow_distance
-      INTEGER_T, intent(in) :: nmat,nparts,nden
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_ghost
+      INTEGER_T, intent(in) :: nden
       INTEGER_T, intent(in) :: im_solid_map(nparts)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -14251,19 +14262,21 @@ end function delta
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
-      REAL_T, intent(in) :: LSCP(DIMV(LSCP),nmat*(SDIM+1)) 
-      REAL_T, intent(in) :: LSFD(DIMV(LSFD),nmat*SDIM) 
+      REAL_T, intent(in) :: LSCP(DIMV(LSCP),nmat*(SDIM+1)) !CP=Closest Point
+      REAL_T, intent(in) :: LSFD(DIMV(LSFD),nmat*SDIM)  ! FD=Finite Difference
       REAL_T, intent(in) :: state(DIMV(state),nden)
       REAL_T, intent(in) :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
-      REAL_T, intent(in) :: usolid(DIMV(usolid),nparts*SDIM) 
-      REAL_T, intent(out) :: ughost(DIMV(ughost),nparts*SDIM) 
+      REAL_T, intent(in) :: usolid(DIMV(usolid),nparts_ghost*SDIM) 
+      REAL_T, intent(out) :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
        ! nhistory=nparts_ghost * (usolid_law_of_wall,uimage,usolid,angle)
       REAL_T, intent(out) :: history_dat(DIMV(history_dat),nhistory) 
       INTEGER_T i,j,k
+      INTEGER_T ii,jj,kk
       REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_local(-3:3,SDIM)
       INTEGER_T nhalf
-      REAL_T LScenter(nmat)
+      REAL_T LS_left(nmat)
+      REAL_T LS_right(nmat)
       REAL_T LStest(nmat)
       INTEGER_T partid
       INTEGER_T impart
@@ -14271,12 +14284,9 @@ end function delta
       INTEGER_T im_primary
       INTEGER_T im_primary_near
       INTEGER_T im
-      INTEGER_T nearwall_exists
       REAL_T LScrit
-      INTEGER_T do_corners
       INTEGER_T klosten,khisten
       INTEGER_T dir
-      INTEGER_T ii,jj,kk
       INTEGER_T i1,j1,k1
       INTEGER_T i3,j3,k3
       INTEGER_T in_grow_box
@@ -14303,7 +14313,6 @@ end function delta
       REAL_T angle_ACT_cell
       REAL_T LScompare
       INTEGER_T tcomp
-      INTEGER_T ijksum
       INTEGER_T plus_flag,minus_flag
       REAL_T usolid_normal,ufluid_normal
       INTEGER_T nten
@@ -14312,8 +14321,6 @@ end function delta
       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
 
       nhalf=3
-
-      do_corners=1
 
       delta_r=zero
       do dir=1,SDIM
@@ -14364,10 +14371,16 @@ end function delta
        print *,"nparts invalid FORT_WALLFUNCTION"
        stop
       endif
+      if ((nparts_ghost.eq.nparts).or.(nparts_ghost.eq.1)) then
+       ! do nothing
+      else
+       print *,"nparts_ghost invalid"
+       stop
+      endif
 
       nhistory_sub=3*SDIM+1
 
-      if (nhistory.eq.nparts*nhistory_sub) then
+      if (nhistory.eq.nparts_ghost*nhistory_sub) then
        ! do nothing
       else
        print *,"nhistory invalid"
@@ -14392,11 +14405,31 @@ end function delta
        print *,"visc_coef invalid"
        stop
       endif 
-      if ((law_of_the_wall.eq.1).or. &
+      if ((law_of_the_wall.eq.0).or. &
+          (law_of_the_wall.eq.1).or. &
           (law_of_the_wall.eq.2)) then
        ! do nothing
       else
        print *,"law_of_the_wall invalid"
+       stop
+      endif
+      if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
+       ! do nothing
+      else
+       print *,"data_dir invalid"
+       stop
+      endif
+      ii=0
+      jj=0
+      kk=0
+      if (data_dir.eq.0) then
+       ii=1
+      else if (data_dir.eq.1) then
+       jj=1
+      else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"data_dir invalid"
        stop
       endif
 
@@ -14412,10 +14445,10 @@ end function delta
       call checkbound(fablo,fabhi,DIMS(state),ngrow_law_of_wall,-1,1253)
       call checkbound(fablo,fabhi,DIMS(ufluid),ngrow_law_of_wall,-1,1254)
       call checkbound(fablo,fabhi,DIMS(usolid),ngrow_law_of_wall,-1,1255)
-      call checkbound(fablo,fabhi,DIMS(ughost),1,-1,1255)
-      call checkbound(fablo,fabhi,DIMS(history_dat),0,-1,1255)
+      call checkbound(fablo,fabhi,DIMS(ughost),0,data_dir,1255)
+      call checkbound(fablo,fabhi,DIMS(history_dat),0,data_dir,1255)
  
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,data_dir) 
 
        ! A FAB (fortran array box) is tessellated into tiles.
        ! i.e. a single FAB can contain multiple tiles.
@@ -14425,123 +14458,143 @@ end function delta
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-
-        ! xsten(0,dir) gives dir'th component of coordinate of the storage
-        ! location of cell (i,j,k)
-        ! e.g. 1D:
-        !       xsten(-2,1)  xsten(0,1)  xsten(2,1)
-        !     |     .     |      .     |     .    |
-        !          i-1           i          i+1
-        ! xsten(-3,1)   xsten(-1,1) xsten(1,1)  xsten(3,1)
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       do im=1,nmat
-        LScenter(im)=LSCP(D_DECL(i,j,k),im)
-       enddo
-       call get_primary_material(LScenter,nmat,im_primary)
-       if ((im_primary.lt.1).or.(im_primary.gt.nmat)) then
-        print *,"im_primary invalid"
-        stop
-       endif
-
-       do partid=1,nparts
-
-        do dir=1,SDIM
-         ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
-           usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)
-        enddo  
-        impart=im_solid_map(partid)+1  ! type integer: material id
-        if ((impart.lt.1).or.(impart.gt.nmat)) then
-         print *,"impart invalid FORT_WALLFUNCTION"
+       if (nparts.eq.0) then
+        if (nparts_ghost.eq.1) then
+         do dir=1,SDIM
+          ughost(D_DECL(i,j,k),dir)= &
+            half*(ufluid(D_DECL(i,j,k),dir)+ &
+                  ufluid(D_DECL(i-ii,j-jj,k-kk),dir))
+         enddo
+        else
+         print *,"nparts_ghost invalid"
          stop
         endif
-        if (is_lag_part(nmat,impart).eq.1) then
+       else if ((nparts.ge.1).and.(nparts.le.nmat)) then
 
-          ! law of wall or dynamic contact angle treatment
-          ! only for rigid substrates; not flexible substrates.
-         if (is_rigid(nmat,impart).eq.1) then
-           ! impart=material id of a rigid solid.
-           ! Here, we test if cell center is in the solid.
-           ! zero is defined in CONSTANTS.H
-           ! CONSTANTS.H is defined in: ./BoxLib/Src/C_BaseLib/CONSTANTS.H
-          if ((LScenter(impart).ge.zero).and.(im_primary.eq.impart)) then
-         
-            ! check if cell (i,j,k) is a ghost point. 
-           nearwall_exists=0
-           im_fluid=0
-           LScrit=zero
-           do i1=-1,1
-           do j1=-1,1
-           do k1=klosten,khisten
-            ijksum=abs(i1)+abs(j1)+abs(k1)
-            if ((ijksum.gt.0).and.(ijksum.le.SDIM)) then
-             do im=1,nmat
-              LStest(im)=LSCP(D_DECL(i+i1,j+j1,k+k1),im)
-             enddo
-             call get_primary_material(LStest,nmat,im_primary_near)
+        do partid=1,nparts
 
-             if ((ijksum.eq.1).or.(do_corners.eq.1)) then
-              if (is_rigid(nmat,im_primary_near).eq.0) then
-               if (nearwall_exists.eq.0) then
-                nearwall_exists=1
-                im_fluid=im_primary_near
-                LScrit=LScenter(im_fluid)
-               else if (nearwall_exists.eq.1) then
-                LScompare=LScenter(im_primary_near)
-                if (abs(LScompare).le.abs(LScrit)) then
-                 im_fluid=im_primary_near
-                 LScrit=LScenter(im_fluid)
-                endif
-               else
-                print *,"nearwall_exits invalid"
-                stop
-               endif
-              else if (is_rigid(nmat,im_primary_near).eq.1) then
-               ! do nothing
-              else
-               print *,"is_rigid(nmat,im_primary_near) invalid"
-               stop
-              endif
-             else if (((ijksum.eq.2).or.(ijksum.eq.SDIM)).and. &
-                      (do_corners.eq.0)) then
-              ! do nothing
-             else
-              print *,"ijksum or do_corners invalid"
-              stop
-             endif
-            else if (ijksum.eq.0) then
-             ! do nothing
-            else
-             print *,"ijksum invalid"
-             stop
-            endif
-           enddo
-           enddo
-           enddo
-         
-           if (nearwall_exists.eq.1) then
-             ! normal for solid materials with a Lagrangian representation
-             ! are calculated as follows:
-             ! 1. convert from Lagrangian representation (elements and nodes)
-             !    to an Eulerian representation (levelset function "phi")
-             ! 2. normal=grad phi/|grad phi|  (central differencing to
-             !    approximate grad phi)
-             ! NOTE: currently Lagrangian representation converted to
-             !  Eulerian representation at each time step.  BUT, if
-             !  it is known that the solid does not move, and the 
-             !  solid is wholly contained on the finest adaptive level,
-             !  then it is unnecessary to repeat the conversion process.
+         do dir=1,SDIM
+          usolid_edge(dir)= &
+            half*(usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)+
+                  usolid(D_DECL(i-ii,j-jj,k-kk),(partid-1)*SDIM+dir))
+          ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)=usolid_edge(dir)
+         enddo  
+
+         if (law_of_the_wall.eq.0) then
+          ! do nothing
+         else if ((law_of_the_wall.eq.1).or. &
+                  (law_of_the_wall.eq.2)) then
+
+          do im=1,nmat
+           LS_right(im)=LSCP(D_DECL(i,j,k),im)
+           LS_left(im)=LSCP(D_DECL(i-ii,j-jj,k-kk),im)
+          enddo
+          call get_primary_material(LS_right,nmat,im_primary_right)
+          call get_primary_material(LS_left,nmat,im_primary_left)
+          if ((im_primary_right.ge.1).and.(im_primary_right.le.nmat).and. &
+              (im_primary_left.ge.1).and.(im_primary_left.le.nmat)) then
+           ! do nothing
+          else
+           print *,"im_primary invalid"
+           stop
+          endif
+
+          impart=im_solid_map(partid)+1  ! type integer: material id
+          if ((impart.lt.1).or.(impart.gt.nmat)) then
+           print *,"impart invalid FORT_WALLFUNCTION"
+           stop
+          endif
+          if (is_lag_part(nmat,impart).eq.1) then
+
+           ! law of wall or dynamic contact angle treatment
+           ! only for rigid substrates; not flexible substrates.
+           if (is_rigid(nmat,impart).eq.1) then
+            ! impart=material id of a rigid solid.
+            ! Here, we test if cell center is in the solid.
+            ! zero is defined in CONSTANTS.H
+            ! CONSTANTS.H is defined in: ./BoxLib/Src/C_BaseLib/CONSTANTS.H
+
             do dir=1,SDIM
-             nrm_solid(dir)=LSCP(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
+             n_raster(dir)=zero ! points to solid
+            enddo      
+            if ((LS_right(impart).ge.zero).and. &
+                (im_primary_right.eq.impart)) then
+             side_solid=1
+             isideSOL=i
+             jsideSOL=j
+             ksideSOL=k
+             isideFD=i-ii
+             jsideFD=j-jj
+             ksideFD=k-kk
+             DIST_SOLID=LS_right(impart)
+
+             if (is_rigid(nmat,im_primary_left).eq.0) then
+              side_image=0
+              im_primary_fluid=im_primary_left
+              n_raster(data_dir+1)=one
+              do dir=1,SDIM
+               uimage(dir)=ufluid(D_DECL(i-ii,j-jj,k-kk),dir)
+              enddo  
+             endif
+
+            else if ((LS_left(impart).ge.zero).and. &
+                     (im_primary_left.eq.impart)) then 
+             side_solid=0
+             isideSOL=i-ii
+             jsideSOL=j-jj
+             ksideSOL=k-kk
+             isideFD=i
+             jsideFD=j
+             ksideFD=k
+             DIST_SOLID=LS_left(impart)
+
+             if (is_rigid(nmat,im_primary_right).eq.0) then
+              side_image=1
+              im_primary_fluid=im_primary_right
+              n_raster(data_dir+1)=-one
+              do dir=1,SDIM
+               uimage(dir)=ufluid(D_DECL(i,j,k),dir)
+              enddo  
+             endif
+
+            else
+             side_solid=-1
+             side_image=-1
+            endif
+
+            ! xsten(0,dir) gives dir'th component of coordinate of the storage
+            ! location of cell (i,j,k)
+            ! e.g. 1D:
+            !      xsten(-2,1)  xsten(0,1)  xsten(2,1)
+            !     |     .     |      .     |     .    |
+            !          i-1           i          i+1
+            ! xsten(-3,1)   xsten(-1,1) xsten(1,1)  xsten(3,1)
+            call gridsten_level(xsten,isideSOL,jsideSOL,ksideSOL,level,nhalf)
+
+            ! normal for solid materials with a Lagrangian representation
+            ! are calculated as follows:
+            ! 1. convert from Lagrangian representation (elements and nodes)
+            !    to an Eulerian representation (levelset function "phi")
+            ! 2. normal=grad phi/|grad phi|  (central differencing to
+            !    approximate grad phi)
+            ! NOTE: currently Lagrangian representation converted to
+            !  Eulerian representation at each time step.  BUT, if
+            !  it is known that the solid does not move, and the 
+            !  solid is wholly contained on the finest adaptive level,
+            !  then it is unnecessary to repeat the conversion process.
+            do dir=1,SDIM
+             nrm_solid(dir)=LSCP(D_DECL(isideSOL,jsideSOL,ksideSOL), &
+                     nmat+(impart-1)*SDIM+dir)
               ! projection point  xp=x-phi grad phi xp on the
               !  solid/fluid interface.  
               ! nrm_solid=grad phi points to solid.
-             x_projection(dir)=xsten(0,dir)-LScenter(impart)*nrm_solid(dir)
-              ! image point (in the fluid)
+             x_projection(dir)=xsten(0,dir)-DIST_SOLID*nrm_solid(dir)
+              ! image point (in the fluid) (where to find angle)
              x_image(dir)=x_projection(dir)- &
-              sign_funct(LScenter(impart))*delta_r*nrm_solid(dir)
+              sign_funct(DIST_SOLID)*delta_r*nrm_solid(dir)
             enddo ! dir=1..sdim
 
+            FIX ME (use image point for angle, but image velocity from nbr)
              !  x  x   x   o   o    o  x  x  x
              ! x_projection is closest point on the fluid/solid interface.
             call containing_node(bfact,dx,xlo,fablo,x_projection, &
@@ -14696,6 +14749,7 @@ end function delta
   
            plus_flag=0
            minus_flag=0
+           FIX ME no more ii,jj,kk
            do ii=-1,1
            do jj=-1,1
            do kk=klosten,khisten

@@ -710,13 +710,17 @@ extern "C"
 
 
    void FORT_WALLFUNCTION(
+    int* data_dir,
     int* law_of_the_wall,
     int* im_solid_map,
     int* level,
     int* finest_level,
     int* ngrow_law_of_wall,
     int* ngrow_distance,
-    int* nmat,int* nparts,int* nden,
+    int* nmat,
+    int* nparts,
+    int* nparts_ghost,
+    int* nden,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
