@@ -13495,8 +13495,8 @@ end function delta
 
 
 
-       ! This assumes that all velocities are in a frame of reference with
-       ! respect to the solid: ufluid_stencil, ughost
+       ! This routine transforms all velocities to a frame of reference with
+       ! respect to the solid.
       subroutine getGhostVel( &
        law_of_the_wall, &
        data_dir, &
@@ -13619,6 +13619,8 @@ end function delta
        REAL_T, dimension(3) :: nfluidFD
        REAL_T, dimension(3) :: nsolidCP
        REAL_T, dimension(3) :: nCL
+       REAL_T, dimension(3) :: nCL_raster
+       REAL_T, dimension(3) :: nCL_critical
        REAL_T, dimension(3) :: nCL_perp
        REAL_T, dimension(3) :: nCL_perp2
        REAL_T, dimension(3) :: nf_prj
@@ -13631,6 +13633,14 @@ end function delta
        INTEGER_T :: ZEYU_imodel
        INTEGER_T :: ZEYU_ifgnbc
        INTEGER_T :: im_vapor,im_liquid
+       INTEGER_T :: do_raster
+       REAL_T :: delta_g_raster
+       REAL_T :: delta_r_raster
+       REAL_T :: delta_g_critical
+       REAL_T :: delta_r_critical
+       REAL_T :: delta_r_plus_g
+       REAL_T :: reflect_factor
+       REAL_T :: nCL_dot_n_raster
       
        do_raster=1
 
@@ -13662,7 +13672,9 @@ end function delta
         print *,"is_rigid(nmat,im_solid) invalid"
         stop
        endif
-       if (delta_r.le.zero) then
+       if (delta_r.gt.zero) then
+        ! do nothing
+       else
         print *,"(delta_r.le.zero)"
         stop
        endif
@@ -13834,7 +13846,8 @@ end function delta
 
         delta_r_critical=delta_r
         delta_g_critical=delta_g
-        delta_r_plus_g=delta_r+delta_g ! ghost lives at image
+         ! ghost lives at image (but is stored at adjoining face)
+        delta_r_plus_g=delta_r+delta_g 
         reflect_factor=delta_g/delta_r
 
         ! convert to solid velocity frame of reference.
@@ -14391,23 +14404,25 @@ end function delta
       INTEGER_T nhalf
       REAL_T LS_left(nmat)
       REAL_T LS_right(nmat)
-      REAL_T LStest(nmat)
+      INTEGER_T side_solid,side_image
       INTEGER_T partid
       INTEGER_T impart
       INTEGER_T im_fluid
-      INTEGER_T im_primary
-      INTEGER_T im_primary_near
+      INTEGER_T im_primary_left
+      INTEGER_T im_primary_right
       INTEGER_T im
-      REAL_T LScrit
-      INTEGER_T klosten,khisten
       INTEGER_T dir
+      INTEGER_T isideSOL,jsideSOL,ksideSOL
+      INTEGER_T isideFD,jsideFD,ksideFD
       INTEGER_T i1,j1,k1
       INTEGER_T i3,j3,k3
       INTEGER_T in_grow_box
       REAL_T nrm_solid(SDIM)
-      REAL_T mag_norm
+      REAL_T n_raster(SDIM)
       REAL_T x_projection(SDIM)
+      REAL_T x_projection_raster(SDIM)
       REAL_T x_image(SDIM)
+      REAL_T x_image_raster(SDIM)
       REAL_T delta_r
       INTEGER_T node_index_project(SDIM)
       INTEGER_T node_index_image(SDIM)
@@ -14423,12 +14438,12 @@ end function delta
       REAL_T xproject_stencil(D_DECL(2,2,2),SDIM)
       REAL_T usolid_law_of_wall(SDIM)
       REAL_T uimage_cell(SDIM)
+      REAL_T uimage_raster(SDIM)
       REAL_T usolid_cell(SDIM)
+      REAL_T usolid_raster(SDIM)
       REAL_T angle_ACT_cell
-      REAL_T LScompare
+      REAL_T DIST_SOLID
       INTEGER_T tcomp
-      INTEGER_T plus_flag,minus_flag
-      REAL_T usolid_normal,ufluid_normal
       INTEGER_T nten
       INTEGER_T nhistory_sub
 
@@ -14441,17 +14456,6 @@ end function delta
        delta_r=delta_r+dx(dir)**2
       enddo
       delta_r=sqrt(delta_r)
-
-      if (SDIM.eq.2) then
-       klosten=0 
-       khisten=0 
-      else if (SDIM.eq.3) then
-       klosten=-1
-       khisten=1 
-      else
-       print *,"dimension bust"
-       stop
-      endif
 
       if (bfact.lt.1) then
        print *,"bfact too small"
