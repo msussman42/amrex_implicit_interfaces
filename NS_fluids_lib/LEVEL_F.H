@@ -462,7 +462,12 @@ namespace amrex{
         Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),//1=not covered
         Real* maskSEM,AMREX_ARLIM_P(maskSEMlo),AMREX_ARLIM_P(maskSEMhi),
         Real* levelPC,AMREX_ARLIM_P(levelPClo),AMREX_ARLIM_P(levelPChi),
-        Real* sol,AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
+        Real* solxfab,
+	AMREX_ARLIM_P(solxfablo),AMREX_ARLIM_P(solxfabhi),
+        Real* solyfab,
+	AMREX_ARLIM_P(solyfablo),AMREX_ARLIM_P(solyfabhi),
+        Real* solzfab,
+	AMREX_ARLIM_P(solzfablo),AMREX_ARLIM_P(solzfabhi),
         Real* cterm,AMREX_ARLIM_P(ctermlo),AMREX_ARLIM_P(ctermhi),
         Real* pold,AMREX_ARLIM_P(poldlo),AMREX_ARLIM_P(poldhi),
         Real* denold,AMREX_ARLIM_P(denoldlo),AMREX_ARLIM_P(denoldhi),

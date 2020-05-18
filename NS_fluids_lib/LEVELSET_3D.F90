@@ -9845,7 +9845,9 @@ stop
        maskcoef,DIMS(maskcoef), & ! 1=not covered  0=covered
        maskSEM,DIMS(maskSEM), &
        levelPC,DIMS(levelPC), &
-       sol,DIMS(sol), &
+       solxfab,DIMS(solxfab), &
+       solyfab,DIMS(solyfab), &
+       solzfab,DIMS(solzfab), &
        cterm,DIMS(cterm), &
        pold,DIMS(pold), &
        denold,DIMS(denold), &
@@ -9942,7 +9944,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskcoef)
       INTEGER_T, intent(in) :: DIMDEC(maskSEM)
       INTEGER_T, intent(in) :: DIMDEC(levelPC)
-      INTEGER_T, intent(in) :: DIMDEC(sol)
+      INTEGER_T, intent(in) :: DIMDEC(solxfab)
+      INTEGER_T, intent(in) :: DIMDEC(solyfab)
+      INTEGER_T, intent(in) :: DIMDEC(solzfab)
       INTEGER_T, intent(in) :: DIMDEC(cterm)
       INTEGER_T, intent(in) :: DIMDEC(pold)
       INTEGER_T, intent(in) :: DIMDEC(denold)
@@ -9976,7 +9980,9 @@ stop
       REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat*(SDIM+1))
-      REAL_T, intent(in) :: sol(DIMV(sol),SDIM*nparts_def)
+      REAL_T, intent(in) :: solxfab(DIMV(solxfab),SDIM*nparts_def)
+      REAL_T, intent(in) :: solyfab(DIMV(solyfab),SDIM*nparts_def)
+      REAL_T, intent(in) :: solzfab(DIMV(solzfab),SDIM*nparts_def)
       REAL_T, intent(inout) :: cterm(DIMV(cterm),nsolve*num_materials_face)
       REAL_T, intent(in) :: pold(DIMV(pold),nsolve*num_materials_face)
       REAL_T, intent(in) :: denold(DIMV(denold),ncomp_denold)
@@ -10024,6 +10030,7 @@ stop
 
       REAL_T DIAG_REGULARIZE
       REAL_T uface(2,num_materials_face)
+      REAL_T ufacesolid(2)
       REAL_T aface(2)
       REAL_T pfacegrav(2)
       REAL_T pfacetenleft(2)
@@ -10058,7 +10065,9 @@ stop
       INTEGER_T im_vel_right
       INTEGER_T velcomp
       INTEGER_T nsolveMM_FACE_test
-      INTEGER_T partid,nparts_temp,im_solid
+      INTEGER_T partid
+      INTEGER_T partid_ghost
+      INTEGER_T nparts_temp,im_solid
       INTEGER_T cell_velocity_override
 
       REAL_T local_div_val
@@ -10617,7 +10626,11 @@ stop
       call checkbound(fablo,fabhi,DIMS(mask),1,-1,133)
       call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,134)
       call checkbound(fablo,fabhi,DIMS(levelPC),1,-1,135)
-      call checkbound(fablo,fabhi,DIMS(sol),1,-1,136)
+
+      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,136)
+      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,136)
+      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,136)
+
       call checkbound(fablo,fabhi,DIMS(cterm),0,-1,33)
       call checkbound(fablo,fabhi,DIMS(pold),0,-1,33)
       call checkbound(fablo,fabhi,DIMS(denold),0,-1,33)
@@ -10969,113 +10982,10 @@ stop
            stop
           endif
 
-         enddo ! side
-
-         ! side=1 left half of cell, side=2 right half of cell
-         do side=1,2
-
-          if (side.eq.1) then
-           iface=i
-           jface=j
-           kface=k
-          else if (side.eq.2) then
-           iface=i+ii
-           jface=j+jj
-           kface=k+kk
-          else
-           print *,"side invalid"
-           stop
-          endif
- 
-          im_vel=1 
-
-          if (dir.eq.0) then
-           uface(side,im_vel)=xvel(D_DECL(iface,jface,kface),im_vel)
-           if (SDIM.eq.2) then
-            if (levelrz.eq.0) then
-             ! do nothing
-            else if (levelrz.eq.1) then
-             if (iface.eq.0) then
-              if (xsten(-1,1).lt.zero) then
-               uface(side,im_vel)=zero
-              endif
-             else if (iface.gt.0) then
-              if (xsten(0,1).gt.zero) then
-               ! do nothing
-              else
-               print *,"xsten invalid"
-               stop
-              endif 
-             else
-              print *,"iface invalid"
-              stop
-             endif
-            else if (levelrz.eq.3) then
-             if (xsten(0,1).gt.zero) then
-              ! do nothing
-             else
-              print *,"xsten invalid"
-              stop
-             endif 
-            else
-             print *,"levelrz invalid"
-             stop
-            endif
-           else if (SDIM.eq.3) then
-            ! do nothing
-           else
-            print *,"dimension bust"
-            stop
-           endif
-          else if (dir.eq.1) then
-           uface(side,im_vel)=yvel(D_DECL(iface,jface,kface),im_vel)
-          else if ((dir.eq.2).and.(SDIM.eq.3)) then
-           uface(side,im_vel)=zvel(D_DECL(iface,jface,kface),im_vel)
-          else
-           print *,"dir invalid mac to cell 3"
-           stop
-          endif
-
-          mass_side(side)=zero
-          do im=1,nmat 
-           if (side.eq.1) then  ! left half of cell
-            sidecomp=massface_index+2*(im-1)+2
-           else if (side.eq.2) then ! right half of cell
-            sidecomp=massface_index+2*(im-1)+1
-           else
-            print *,"side invalid"
-            stop
-           endif
-           if (added_weight(im).gt.zero) then
-            mass_side(side)=mass_side(side)+ &
-             ASIDE(side,sidecomp)*added_weight(im) 
-           else
-            print *,"added_weight invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-
-          if (use_VOF_weight.eq.1) then
-           ! do nothing
-          else if (use_VOF_weight.eq.0) then
-           mass_side(side)=one
-          else
-           print *,"use_VOF_weight invalid"
-           stop
-          endif
-
          enddo ! side=1..2
 
-         masscell=mass_side(1)+mass_side(2)
-
-         if ((mass_side(1).le.zero).or. &
-             (mass_side(2).le.zero).or. &
-             (masscell.le.zero)) then
-          print *,"mass invalid"
-          stop
-         endif
-
          partid=-1
+         partid_ghost=0
          nparts_temp=0
          im_solid=0
          do im=1,nmat
@@ -11142,6 +11052,14 @@ stop
           print *,"partid invalid"
           stop
          endif
+         if (partid.eq.-1) then
+          partid_ghost=0
+         else if ((partid.ge.0).and.(partid.lt.nparts)) then
+          partid_ghost=partid
+         else
+          print *,"partid invalid"
+          stop
+         endif
  
          im_vel=1
          velcomp=dir+1
@@ -11163,8 +11081,123 @@ stop
           stop
          endif
 
+
+         ! side=1 left half of cell, side=2 right half of cell
+         do side=1,2
+
+          if (side.eq.1) then
+           iface=i
+           jface=j
+           kface=k
+          else if (side.eq.2) then
+           iface=i+ii
+           jface=j+jj
+           kface=k+kk
+          else
+           print *,"side invalid"
+           stop
+          endif
+ 
+          im_vel=1 
+
+          if (dir.eq.0) then
+           uface(side,im_vel)=xvel(D_DECL(iface,jface,kface),im_vel)
+           ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
+                   partid_ghost*SDIM+dir+1)
+           if (SDIM.eq.2) then
+            if (levelrz.eq.0) then
+             ! do nothing
+            else if (levelrz.eq.1) then
+             if (iface.eq.0) then
+              if (xsten(-1,1).lt.zero) then
+               uface(side,im_vel)=zero
+               ufacesolid(side)=zero
+              endif
+             else if (iface.gt.0) then
+              if (xsten(0,1).gt.zero) then
+               ! do nothing
+              else
+               print *,"xsten invalid"
+               stop
+              endif 
+             else
+              print *,"iface invalid"
+              stop
+             endif
+            else if (levelrz.eq.3) then
+             if (xsten(0,1).gt.zero) then
+              ! do nothing
+             else
+              print *,"xsten invalid"
+              stop
+             endif 
+            else
+             print *,"levelrz invalid"
+             stop
+            endif
+           else if (SDIM.eq.3) then
+            ! do nothing
+           else
+            print *,"dimension bust"
+            stop
+           endif
+          else if (dir.eq.1) then
+           uface(side,im_vel)=yvel(D_DECL(iface,jface,kface),im_vel)
+           ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
+                   partid_ghost*SDIM+dir+1)
+          else if ((dir.eq.2).and.(SDIM.eq.3)) then
+           uface(side,im_vel)=zvel(D_DECL(iface,jface,kface),im_vel)
+           ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
+                   partid_ghost*SDIM+dir+1)
+          else
+           print *,"dir invalid mac to cell 3"
+           stop
+          endif
+
+          mass_side(side)=zero
+          do im=1,nmat 
+           if (side.eq.1) then  ! left half of cell
+            sidecomp=massface_index+2*(im-1)+2
+           else if (side.eq.2) then ! right half of cell
+            sidecomp=massface_index+2*(im-1)+1
+           else
+            print *,"side invalid"
+            stop
+           endif
+           if (added_weight(im).gt.zero) then
+            mass_side(side)=mass_side(side)+ &
+             ASIDE(side,sidecomp)*added_weight(im) 
+           else
+            print *,"added_weight invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+
+          if (use_VOF_weight.eq.1) then
+           ! do nothing
+          else if (use_VOF_weight.eq.0) then
+           mass_side(side)=one
+          else
+           print *,"use_VOF_weight invalid"
+           stop
+          endif
+
+         enddo ! side=1..2
+
+         masscell=mass_side(1)+mass_side(2)
+
+         if ((mass_side(1).le.zero).or. &
+             (mass_side(2).le.zero).or. &
+             (masscell.le.zero)) then
+          print *,"mass invalid"
+          stop
+         endif
+
+
          if (cell_velocity_override.eq.1) then
-          veldest(D_DECL(i,j,k),velcomp)=sol(D_DECL(i,j,k),partid*SDIM+dir+1)
+          veldest(D_DECL(i,j,k),velcomp)= &
+           (mass_side(1)*ufacesolid(1)+ &
+            mass_side(2)*ufacesolid(2))/masscell
          else if (cell_velocity_override.eq.0) then
           fluid_velocity=(mass_side(1)*uface(1,im_vel)+ &
                           mass_side(2)*uface(2,im_vel))/masscell
@@ -12506,7 +12539,7 @@ stop
        maskcoef,DIMS(maskcoef), & ! 1=not cov. or outside domain  0=covered
        maskSEM,DIMS(maskSEM), &
        levelPC,DIMS(levelPC), &
-       sol,DIMS(sol), &
+       solfab,DIMS(solfab), &
        xcut,DIMS(xcut), &   ! coeff*areafrac, local_xface in increment_face_vel
        xface,DIMS(xface), &  ! xflux for advection
        xfacemm,DIMS(xfacemm), &  
@@ -12616,7 +12649,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(den)
       INTEGER_T, intent(in) :: DIMDEC(mgoni)
       INTEGER_T, intent(in) :: DIMDEC(levelPC)
-      INTEGER_T, intent(in) :: DIMDEC(sol)
+      INTEGER_T, intent(in) :: DIMDEC(solfab)
       INTEGER_T, intent(in) :: DIMDEC(colorfab)
       INTEGER_T, intent(in) :: DIMDEC(typefab)
 
@@ -12638,7 +12671,7 @@ stop
 
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat*(1+SDIM))
-      REAL_T, intent(in) :: sol(DIMV(sol),nparts_def*SDIM)
+      REAL_T, intent(in) :: solfab(DIMV(solfab),nparts_def*SDIM)
       REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
       REAL_T, intent(inout) :: xcut(DIMV(xcut),1)
       REAL_T, intent(inout) :: xface(DIMV(xface),ncphys) ! xflux for advection
@@ -12751,7 +12784,6 @@ stop
       INTEGER_T partid_solid
       INTEGER_T partid_prescribed
       INTEGER_T partid_check
-      REAL_T wtleft,wtright
       INTEGER_T all_incomp,local_incomp
       REAL_T cutoff
       REAL_T local_tension_force
@@ -13191,7 +13223,7 @@ stop
         call checkbound(fablo,fabhi,DIMS(vel),1,-1,234)
         call checkbound(fablo,fabhi,DIMS(pres),1,-1,234)
         call checkbound(fablo,fabhi,DIMS(den),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(sol),1,-1,234)
+        call checkbound(fablo,fabhi,DIMS(solfab),0,dir,234)
         call checkbound(fablo,fabhi,DIMS(mgoni),1,-1,234)
         call checkbound(fablo,fabhi,DIMS(typefab),1,-1,6625)
         call checkbound(fablo,fabhi,DIMS(colorfab),1,-1,6626)
@@ -13267,21 +13299,6 @@ stop
          endif 
 
          hx=xstenMAC(1,dir+1)-xstenMAC(-1,dir+1)
-
-         wtleft=(xstenMAC(1,dir+1)-xstenMAC(0,dir+1))/hx
-         wtright=(xstenMAC(0,dir+1)-xstenMAC(-1,dir+1))/hx
-         if ((wtleft.le.zero).or.(wtleft.ge.one)) then
-          print *,"wtleft invalid"
-          stop
-         endif
-         if ((wtright.le.zero).or.(wtright.ge.one)) then
-          print *,"wtright invalid"
-          stop
-         endif
-         if (abs(one-wtleft-wtright).ge.VOFTOL) then
-          print *,"wtleft or wtright invalid"
-          stop
-         endif
 
          hx=hx*RR
 
@@ -13741,8 +13758,7 @@ stop
                stop
               endif
               velcomp=partid_prescribed*SDIM+dir+1 
-              uedge(im_vel)=wtright*sol(D_DECL(i,j,k),velcomp)+ &
-                            wtleft*sol(D_DECL(im1,jm1,km1),velcomp)
+              uedge(im_vel)=solfab(D_DECL(i,j,k),velcomp)
               DEBUG_PRESCRIBED_VEL_TOT=DEBUG_PRESCRIBED_VEL_TOT+uedge(im_vel)
               DEBUG_PRESCRIBED_VEL_DEN=DEBUG_PRESCRIBED_VEL_DEN+one
              else if (im_prescribed_valid.eq.0) then

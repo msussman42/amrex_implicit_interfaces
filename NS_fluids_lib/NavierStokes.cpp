@@ -4891,7 +4891,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  amrex::Error("level invalid init_FSI_GHOST_MF_ALL");
+  amrex::Error("level invalid init_FSI_GHOST_MAC_MF_ALL");
 
  if ((ngrow<1)||(ngrow>ngrowFSI))
   amrex::Error("ngrow invalid");
@@ -6896,10 +6896,10 @@ NavierStokes::initData () {
  Transfer_FSI_To_STATE(strt_time);
 
   // if nparts>0,
-  //  Initialize FSI_GHOST_MF from Solid_State_Type
-  // Otherwise initialize FSI_GHOST_MF with the fluid velocity.
+  //  Initialize FSI_GHOST_MAC_MF from Solid_State_Type
+  // Otherwise initialize FSI_GHOST_MAC_MF with the fluid velocity.
  int dealloc_history=1;
- init_FSI_GHOST_MF(1,dealloc_history);
+ init_FSI_GHOST_MAC_MF(dealloc_history);
  
  init_regrid_history();
  is_first_step_after_regrid=-1;
@@ -12192,10 +12192,12 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   } else
    amrex::Error("nparts invalid");
 
-  if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-   amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
-  if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-   amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
+   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
+  }
 
   if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
    amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)");
@@ -12356,7 +12358,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
      FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
 
-     FArrayBox& solfab=(*localMF[FSI_GHOST_MF])[mfi];
+     FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
      FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
      FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
@@ -12548,7 +12550,10 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
      FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
 
-     FArrayBox& solfab=(*localMF[FSI_GHOST_MF])[mfi];
+     FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+     FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+     FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+
      FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
      FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
 
@@ -12660,8 +12665,12 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
       levelpcfab.dataPtr(),
       ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-      solfab.dataPtr(),
-      ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
+      solxfab.dataPtr(),
+      ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+      solyfab.dataPtr(),
+      ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+      solzfab.dataPtr(),
+      ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
       deltafab.dataPtr(deltacomp), // cterm
       ARLIM(deltafab.loVect()),ARLIM(deltafab.hiVect()),
       rhsfab.dataPtr(), // pold
@@ -14892,11 +14901,12 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  MultiFab* elastic_tensor_mf=den_recon;
  int elastic_ntensor=den_recon->nComp();
 
- resize_FSI_GHOST_MF(2);
- if (localMF[FSI_GHOST_MF]->nGrow()!=2)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=ngrowFSI");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
+ }
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
@@ -14977,7 +14987,9 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
 
-  FArrayBox& solidfab=(*localMF[FSI_GHOST_MF])[mfi]; 
+  FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi]; 
+  FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+  FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& denfab=(*den_recon)[mfi];
   FArrayBox& presfab=(*pres)[mfi];
@@ -15005,6 +15017,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 
    // hoop stress, centripetal force, coriolis effect still not
    // considered.
+   // in: DERIVE_3D.F90
   FORT_GETDRAG(
    &isweep,
    integrated_quantities.dataPtr(),
@@ -15034,8 +15047,12 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
    &faceheat_index,
    &ncphys,
    xlo,dx,
-   solidfab.dataPtr(),
-   ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
+   solxfab.dataPtr(),
+   ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+   solyfab.dataPtr(),
+   ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+   solzfab.dataPtr(),
+   ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
    presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
    dragfab.dataPtr(),ARLIM(dragfab.loVect()),ARLIM(dragfab.hiVect()),

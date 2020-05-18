@@ -1214,7 +1214,9 @@ stop
        faceheat_index, &
        ncphys, &
        xlo,dx, &
-       solid,DIMS(solid), &
+       solxfab,DIMS(solxfab), &
+       solyfab,DIMS(solyfab), &
+       solzfab,DIMS(solzfab), &
        pres,DIMS(pres), &
        vel,DIMS(vel), &
        drag,DIMS(drag), &
@@ -1280,7 +1282,10 @@ stop
       INTEGER_T DIMDEC(zface)
       INTEGER_T DIMDEC(cvisc)
 
-      INTEGER_T DIMDEC(solid)
+      INTEGER_T DIMDEC(solxfab)
+      INTEGER_T DIMDEC(solyfab)
+      INTEGER_T DIMDEC(solzfab)
+
       INTEGER_T DIMDEC(pres)
       INTEGER_T DIMDEC(vel)
       INTEGER_T DIMDEC(drag)
@@ -1301,7 +1306,10 @@ stop
       REAL_T zface(DIMV(zface),ncphys)
       REAL_T cvisc(DIMV(cvisc))
 
-      REAL_T solid(DIMV(solid),nparts_def*SDIM)
+      REAL_T solxfab(DIMV(solxfab),nparts_def*SDIM)
+      REAL_T solyfab(DIMV(solyfab),nparts_def*SDIM)
+      REAL_T solzfab(DIMV(solzfab),nparts_def*SDIM)
+
       REAL_T pres(DIMV(pres),num_materials_vel)
       REAL_T vel(DIMV(vel),SDIM*num_materials_vel)
       REAL_T drag(DIMV(drag),4*SDIM+1)
@@ -1311,7 +1319,9 @@ stop
       INTEGER_T iii,jjj,kkk
       INTEGER_T i,j,k
       INTEGER_T dir,dir2
-      INTEGER_T veldir,facedir
+      INTEGER_T veldir
+      INTEGER_T facedir
+      INTEGER_T side_cell  ! 0 or 1
       INTEGER_T dirend
       INTEGER_T i1,j1,n,gradbase,vofcomp,dencomp,viscbase
       INTEGER_T icell,jcell,kcell
@@ -1403,7 +1413,10 @@ stop
       call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,1261)
       call checkbound(fablo,fabhi,DIMS(cvisc),0,-1,1262)
 
-      call checkbound(fablo,fabhi,DIMS(solid),2,-1,6604)
+      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,6604)
+      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,6604)
+      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,6604)
+
       call checkbound(fablo,fabhi,DIMS(pres),1,-1,6605)
       call checkbound(fablo,fabhi,DIMS(vel),1,-1,6606)
       call checkbound(fablo,fabhi,DIMS(drag),0,-1,6607)
@@ -1685,6 +1698,24 @@ stop
           ! is center cell in the fluid?
          if (is_rigid(nmat,im_primary).eq.0) then
 
+          call gridsten(xsten,xlo, &
+           icell,jcell,kcell,fablo,bfact,dx,nhalf)
+
+           ! returns: im_solid_crit=max_{is_rigid(im)==1} ls_sort(im)
+          call combine_solid_LS(ls_sort,nmat,solid_dist_primary,im_solid_crit)
+          if ((im_solid_crit.lt.1).or.(im_solid_crit.gt.nmat)) then
+           print *,"im_solid_crit invalid in getdrag:",im_solid_crit
+           stop
+          endif
+
+          FSI_exclude=1
+          call sort_volume_fraction(ls_sort,FSI_exclude,sorted_list,nmat)
+          im_fluid=sorted_list(1)
+          if ((im_fluid.lt.1).or.(im_fluid.gt.nmat)) then
+           print *,"im_fluid invalid in GETDRAG"
+           stop
+          endif
+
           rasterperim=zero
 
            ! first check for change of sign of the solid LS.
@@ -1703,12 +1734,11 @@ stop
             stop
            endif
 
-           ! if facedir==1,
-           !  icell => left face
-           !  icell+1 => right face
-           do i=icell,icell+ii
-           do j=jcell,jcell+jj
-           do k=kcell,kcell+kk
+           do side_cell=0,1
+
+            i=icell+side_cell*ii
+            j=icell+side_cell*jj
+            k=icell+side_cell*kk
 
             do im=1,nmat
               ! cell to left of face
@@ -1744,6 +1774,23 @@ stop
 
               rasterperim=rasterperim+facearea
 
+               ! nsolid points into the solid
+              do dir=1,SDIM 
+               nsolid(dir)=zero
+              enddo
+              if (side_cell.eq.0) then
+               nsolid(facedir)=-one
+              else if (side_cell.eq.1) then
+               nsolid(facedir)=one
+              else 
+               print *,"side_cell invalid"
+               stop
+              endif
+
+              call gridstenMAC(xsten_face,xlo,i,j,k,fablo,bfact, &
+                dx,nhalf,facedir)
+
+FIX ME
              else if (mask_cell.eq.0) then
               ! do nothing
              else
@@ -1761,134 +1808,8 @@ stop
            enddo ! i,j,k (faces)
           enddo ! facedir (finding rasterperim)
 
-           ! i.e. LS changes sign across at least one of the faces.
-          if (rasterperim.gt.zero) then
 
-           call gridsten(xsten,xlo, &
-            icell,jcell,kcell,fablo,bfact,dx,nhalf)
-
-            ! returns: im_solid_crit=max_{is_rigid(im)==1} ls_sort(im)
-           call combine_solid_LS(ls_sort,nmat,solid_dist_primary,im_solid_crit)
-           if ((im_solid_crit.lt.1).or.(im_solid_crit.gt.nmat)) then
-            print *,"im_solid_crit invalid in getdrag:",im_solid_crit
-            stop
-           endif
-
-           FSI_exclude=1
-           call sort_volume_fraction(ls_sort,FSI_exclude,sorted_list,nmat)
-           im_fluid=sorted_list(1)
-           if ((im_fluid.lt.1).or.(im_fluid.gt.nmat)) then
-            print *,"im_fluid invalid in GETDRAG"
-            stop
-           endif
-
-            ! nsolid points into the solid
-            ! find_LS_stencil_slope calls materialdistsolid: dist>0 in solid
-           call find_LS_stencil_slope( &
-             bfact, &
-             dx, &
-             xsten,nhalf, &
-             nsolid, &
-             time,im_solid_crit)
-
-           if ((FSI_flag(im_solid_crit).eq.2).or. & ! prescribed solid CAD
-               (FSI_flag(im_solid_crit).eq.4)) then ! CTML FSI
-            do dir=1,SDIM
-             nsolid(dir)= &
-              levelpc(D_DECL(icell,jcell,kcell), &
-                      nmat+SDIM*(im_solid_crit-1)+dir)
-            enddo
-           else if (FSI_flag(im_solid_crit).eq.1) then ! prescribed solid EUL
-            ! do nothing
-           else
-            print *,"FSI_flag invalid"
-            stop
-           endif
-
-
-           dirht=1
-           do dir=2,SDIM
-            if (abs(nsolid(dir)).gt.abs(nsolid(dirht))) then
-             dirht=dir
-            endif
-           enddo
-
-           if (abs(nsolid(dirht)).gt.zero) then
-            facearea_factor=zero
-            do dir=1,SDIM
-             facearea_factor=facearea_factor+ &
-               (nsolid(dir)/nsolid(dirht))**2
-            enddo
-            facearea_factor=sqrt(facearea_factor)
-            if (dirht.eq.1) then
-             facearea_factor= &
-              facearea_factor*areax(D_DECL(icell,jcell,kcell))
-            else if (dirht.eq.2) then
-             facearea_factor= &
-              facearea_factor*areay(D_DECL(icell,jcell,kcell))
-            else if ((dirht.eq.3).and.(SDIM.eq.3)) then
-             facearea_factor= &
-              facearea_factor*areaz(D_DECL(icell,jcell,kcell))
-            else
-             print *,"dirht invalid"
-             stop
-            endif
-           else
-            print *,"nsolid invalid"
-            stop
-           endif 
-
-           facearea_factor=facearea_factor/rasterperim
-
-           do facedir=1,SDIM
-            ii=0
-            jj=0
-            kk=0
-            if (facedir.eq.1) then
-             ii=1
-            else if (facedir.eq.2) then
-             jj=1
-            else if ((facedir.eq.3).and.(SDIM.eq.3)) then
-             kk=1
-            else
-             print *,"facedir invalid"
-             stop
-            endif
-
-            ! if facedir==1,
-            !  icell => left face
-            !  icell+1 => right face
-            do i=icell,icell+ii
-            do j=jcell,jcell+jj
-            do k=kcell,kcell+kk
-
-             do im=1,nmat
-              lsleft(im)=levelpc(D_DECL(i-ii,j-jj,k-kk),im)
-              lsright(im)=levelpc(D_DECL(i,j,k),im)
-             enddo
-             call get_primary_material(lsleft,nmat,im_left)
-             call get_primary_material(lsright,nmat,im_right)
-
-             if ((is_rigid(nmat,im_left).eq.1).and. &
-                 (is_rigid(nmat,im_right).eq.1)) then
-              ! do nothing - both adjoining cells in the solid
-             else if ((is_rigid(nmat,im_left).eq.0).and. &
-                      (is_rigid(nmat,im_right).eq.0)) then
-              ! do nothing - both adjoining cells in the fluid
-             else if ( ((is_rigid(nmat,im_left).eq.1).and. &
-                        (is_rigid(nmat,im_right).eq.0)).or. &
-                       ((is_rigid(nmat,im_left).eq.0).and. &
-                        (is_rigid(nmat,im_right).eq.1)) ) then
-
-              if (mask_cell.eq.1) then
-               
-               call gridstenMAC(xsten_face,xlo,i,j,k,fablo,bfact, &
-                dx,nhalf,facedir)
-
-               if (is_rigid(nmat,im_solid_crit).eq.1) then
-
-                if (FSI_flag(im_solid_crit).eq.1) then ! prescribed solid EUL
-
+FIX ME MOVE THIS STUFF UP FOR RASTER CASE
                  do dir=1,SDIM
 
                   do dir2=1,SDIM
