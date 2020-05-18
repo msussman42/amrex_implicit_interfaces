@@ -14495,7 +14495,7 @@ end function delta
               (im_primary_left.ge.1).and.(im_primary_left.le.nmat)) then
            ! do nothing
           else
-           print *,"im_primary invalid"
+           print *,"im_primary_left or im_primary_right invalid"
            stop
           endif
 
@@ -14504,6 +14504,10 @@ end function delta
            print *,"impart invalid FORT_WALLFUNCTION"
            stop
           endif
+
+          side_solid=-1
+          side_image=-1
+
           if (is_lag_part(nmat,impart).eq.1) then
 
            ! law of wall or dynamic contact angle treatment
@@ -14519,7 +14523,7 @@ end function delta
             enddo      
             if ((LS_right(impart).ge.zero).and. &
                 (im_primary_right.eq.impart)) then
-             side_solid=1
+             side_solid=1 ! right side
              isideSOL=i
              jsideSOL=j
              ksideSOL=k
@@ -14529,17 +14533,22 @@ end function delta
              DIST_SOLID=LS_right(impart)
 
              if (is_rigid(nmat,im_primary_left).eq.0) then
-              side_image=0
-              im_primary_fluid=im_primary_left
+              side_image=0  ! left side
+              im_fluid=im_primary_left
               n_raster(data_dir+1)=one
               do dir=1,SDIM
-               uimage(dir)=ufluid(D_DECL(i-ii,j-jj,k-kk),dir)
+               uimage_raster(dir)=ufluid(D_DECL(i-ii,j-jj,k-kk),dir)
               enddo  
+             else if (is_rigid(nmat,im_primary_left).eq.1) then
+              ! do nothing
+             else
+              print *,"is_rigid(nmat,im_primary_left) invalid"
+              stop
              endif
 
             else if ((LS_left(impart).ge.zero).and. &
                      (im_primary_left.eq.impart)) then 
-             side_solid=0
+             side_solid=0  ! left side
              isideSOL=i-ii
              jsideSOL=j-jj
              ksideSOL=k-kk
@@ -14549,12 +14558,17 @@ end function delta
              DIST_SOLID=LS_left(impart)
 
              if (is_rigid(nmat,im_primary_right).eq.0) then
-              side_image=1
-              im_primary_fluid=im_primary_right
+              side_image=1 ! right side
+              im_fluid=im_primary_right
               n_raster(data_dir+1)=-one
               do dir=1,SDIM
                uimage(dir)=ufluid(D_DECL(i,j,k),dir)
               enddo  
+             else if (is_rigid(nmat,im_primary_right).eq.1) then
+              ! do nothing
+             else
+              print *,"is_rigid(nmat,im_primary_right) invalid"
+              stop
              endif
 
             else
@@ -14562,126 +14576,130 @@ end function delta
              side_image=-1
             endif
 
-            ! xsten(0,dir) gives dir'th component of coordinate of the storage
-            ! location of cell (i,j,k)
-            ! e.g. 1D:
-            !      xsten(-2,1)  xsten(0,1)  xsten(2,1)
-            !     |     .     |      .     |     .    |
-            !          i-1           i          i+1
-            ! xsten(-3,1)   xsten(-1,1) xsten(1,1)  xsten(3,1)
-            call gridsten_level(xsten,isideSOL,jsideSOL,ksideSOL,level,nhalf)
+            if (((side_solid.eq.0).and.(side_image.eq.1)).or. &
+                ((side_solid.eq.1).and.(side_image.eq.0))) then
 
-            ! normal for solid materials with a Lagrangian representation
-            ! are calculated as follows:
-            ! 1. convert from Lagrangian representation (elements and nodes)
-            !    to an Eulerian representation (levelset function "phi")
-            ! 2. normal=grad phi/|grad phi|  (central differencing to
-            !    approximate grad phi)
-            ! NOTE: currently Lagrangian representation converted to
-            !  Eulerian representation at each time step.  BUT, if
-            !  it is known that the solid does not move, and the 
-            !  solid is wholly contained on the finest adaptive level,
-            !  then it is unnecessary to repeat the conversion process.
-            do dir=1,SDIM
-             nrm_solid(dir)=LSCP(D_DECL(isideSOL,jsideSOL,ksideSOL), &
+             ! xsten(0,dir) gives dir'th component of coordinate of the storage
+             ! location of cell (i,j,k)
+             ! e.g. 1D:
+             !      xsten(-2,1)  xsten(0,1)  xsten(2,1)
+             !     |     .     |      .     |     .    |
+             !          i-1           i          i+1
+             ! xsten(-3,1)   xsten(-1,1) xsten(1,1)  xsten(3,1)
+             call gridsten_level(xsten,isideSOL,jsideSOL,ksideSOL,level,nhalf)
+
+             ! normal for solid materials with a Lagrangian representation
+             ! are calculated as follows:
+             ! 1. convert from Lagrangian representation (elements and nodes)
+             !    to an Eulerian representation (levelset function "phi")
+             ! 2. normal=grad phi/|grad phi|  (central differencing to
+             !    approximate grad phi)
+             ! NOTE: currently Lagrangian representation converted to
+             !  Eulerian representation at each time step.  BUT, if
+             !  it is known that the solid does not move, and the 
+             !  solid is wholly contained on the finest adaptive level,
+             !  then it is unnecessary to repeat the conversion process.
+             do dir=1,SDIM
+              nrm_solid(dir)=LSCP(D_DECL(isideSOL,jsideSOL,ksideSOL), &
                      nmat+(impart-1)*SDIM+dir)
               ! projection point  xp=x-phi grad phi xp on the
               !  solid/fluid interface.  
               ! nrm_solid=grad phi points to solid.
-             x_projection(dir)=xsten(0,dir)-DIST_SOLID*nrm_solid(dir)
+              x_projection(dir)=xsten(0,dir)-DIST_SOLID*nrm_solid(dir)
               ! image point (in the fluid) (where to find angle)
-             x_image(dir)=x_projection(dir)- &
+              x_image(dir)=x_projection(dir)- &
               sign_funct(DIST_SOLID)*delta_r*nrm_solid(dir)
-            enddo ! dir=1..sdim
+             enddo ! dir=1..sdim
 
-            FIX ME (use image point for angle, but image velocity from nbr)
              !  x  x   x   o   o    o  x  x  x
              ! x_projection is closest point on the fluid/solid interface.
-            call containing_node(bfact,dx,xlo,fablo,x_projection, &
+             call containing_node(bfact,dx,xlo,fablo,x_projection, &
               node_index_project)
-             ! if in_grow_box==1 then a stencil can be found.
-            in_grow_box=1
-            do dir=1,SDIM
-             if (node_index_project(dir).le.fablo(dir)-ngrow_law_of_wall) then
-              in_grow_box=0
-             endif
-             if (node_index_project(dir).ge.fabhi(dir)+ngrow_law_of_wall+1) then
-              in_grow_box=0
-             endif
-            enddo ! dir=1..sdim
-
-            if (in_grow_box.eq.1) then
-              ! x_image is image point in the fluid.
-             call containing_node(bfact,dx,xlo,fablo,x_image, &
-              node_index_image)
+              ! if in_grow_box==1 then a stencil can be found.
              in_grow_box=1
              do dir=1,SDIM
-              if (node_index_image(dir).le.fablo(dir)-ngrow_law_of_wall) then
+              if (node_index_project(dir).le.fablo(dir)-ngrow_law_of_wall) then
                in_grow_box=0
               endif
-              if (node_index_image(dir).ge.fabhi(dir)+ngrow_law_of_wall+1) then
+              if (node_index_project(dir).ge. &
+                  fabhi(dir)+ngrow_law_of_wall+1) then
                in_grow_box=0
               endif
              enddo ! dir=1..sdim
 
              if (in_grow_box.eq.1) then
+              ! x_image is image point in the fluid.
+              call containing_node(bfact,dx,xlo,fablo,x_image, &
+               node_index_image)
+              in_grow_box=1
+              do dir=1,SDIM
+               if (node_index_image(dir).le.fablo(dir)-ngrow_law_of_wall) then
+                in_grow_box=0
+               endif
+               if (node_index_image(dir).ge.fabhi(dir)+ngrow_law_of_wall+1) then
+                in_grow_box=0
+               endif
+              enddo ! dir=1..sdim
 
-               ! khisten=0 in 2D
-              do i1=0,1
-              do j1=0,1
-              do k1=0,khisten
-               i3=node_index_image(1)-1
-               j3=node_index_image(2)-1
-               k3=node_index_image(SDIM)-1
+              if (in_grow_box.eq.1) then
+
+                ! khisten=0 in 2D
+               do i1=0,1
+               do j1=0,1
+               do k1=0,khisten
+                i3=node_index_image(1)-1
+                j3=node_index_image(2)-1
+                k3=node_index_image(SDIM)-1
        
                 ! cell index to the left of node i: i-1
                 ! cell index to the right of node i: i 
-               do dir=1,SDIM
-                ufluid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                 ufluid(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-               enddo
-               do dir=1,nmat*(SDIM+1)
-                LSCP_image_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                 LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-               enddo 
-               do dir=1,nmat*SDIM
-                LSFD_image_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                 LSFD(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-               enddo 
-               do im=1,nmat
-                tcomp=(im-1)*num_state_material+2
-                thermal_image(D_DECL(i1+1,j1+1,k1+1),im)= &
+                do dir=1,SDIM
+                 ufluid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                  ufluid(D_DECL(i3+i1,j3+j1,k3+k1),dir)
+                enddo
+                do dir=1,nmat*(SDIM+1)
+                 LSCP_image_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                  LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
+                enddo 
+                do dir=1,nmat*SDIM
+                 LSFD_image_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                  LSFD(D_DECL(i3+i1,j3+j1,k3+k1),dir)
+                enddo 
+                do im=1,nmat
+                 tcomp=(im-1)*num_state_material+2
+                 thermal_image(D_DECL(i1+1,j1+1,k1+1),im)= &
                   state(D_DECL(i3+i1,j3+j1,k3+k1),tcomp)
-               enddo ! im=1..nmat
-               call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
-               do dir=1,SDIM
-                ximage_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
-               enddo
+                enddo ! im=1..nmat
+                call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
+                do dir=1,SDIM
+                 ximage_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
+                enddo
 
-               i3=node_index_project(1)-1
-               j3=node_index_project(2)-1
-               k3=node_index_project(SDIM)-1
+                i3=node_index_project(1)-1
+                j3=node_index_project(2)-1
+                k3=node_index_project(SDIM)-1
 
-               do dir=1,nmat*(SDIM+1)
-                LSCP_prj_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                 LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-               enddo 
-               do dir=1,SDIM
-                usolid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                 usolid(D_DECL(i3+i1,j3+j1,k3+k1),(partid-1)*SDIM+dir)
+                do dir=1,nmat*(SDIM+1)
+                 LSCP_prj_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                  LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
+                enddo 
+                do dir=1,SDIM
+                 usolid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
+                  usolid(D_DECL(i3+i1,j3+j1,k3+k1),(partid-1)*SDIM+dir)
+                enddo
+                call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
+                do dir=1,SDIM
+                 xproject_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
+                enddo
                enddo
-               call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
-               do dir=1,SDIM
-                xproject_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
                enddo
-              enddo
-              enddo
-              enddo ! i1,j1,k1
+               enddo ! i1,j1,k1
 
-              ! call CODY ESTEBEs routine here 
-              ! (defined in this file: GODUNOV_3D.F90)
-              call getGhostVel( &
+               ! call CODY ESTEBEs routine here 
+               ! (defined in this file: GODUNOV_3D.F90)
+               call getGhostVel( &
                 law_of_the_wall, &
+                data_dir, &
                 nmat, &
                 nten, &
                 delta_r, &
@@ -14689,7 +14707,7 @@ end function delta
                 dt, &
                 time, &
                 visc_coef, &
-                nrm_solid, &
+                nrm_solid, &  ! points towards the solid
                 thermal_image, &
                 LSCP_image_stencil, &
                 LSCP_prj_stencil, &
@@ -14697,7 +14715,7 @@ end function delta
                 ufluid_stencil, & ! fluid velocity on ximage_stencil
                 usolid_stencil, & ! solid velocity on xproject_stencil
                 x_projection, &  ! on solid/fluid interface
-                xsten, &
+                xsten, & ! stencil about the solid cell that is next to fluid
                 x_image, &  ! in the fluid.
                 ximage_stencil, &
                 xproject_stencil, &
