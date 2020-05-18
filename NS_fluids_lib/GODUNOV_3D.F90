@@ -13499,6 +13499,7 @@ end function delta
        ! respect to the solid: ufluid_stencil, ughost
       subroutine getGhostVel( &
        law_of_the_wall, &
+       data_dir, &
        nmat, &
        nten, &
        delta_r, &
@@ -13507,6 +13508,7 @@ end function delta
        time, &
        visc_coef, &
        nrm_solid, & ! points to the solid
+       n_raster, & ! points to the solid
        thermal_stencil, &
        LSCP_image_stencil, &
        LSCP_prj_stencil, &
@@ -13514,13 +13516,17 @@ end function delta
        ufluid_stencil, & ! fluid velocity on ximage_stencil
        usolid_stencil, & ! solid velocity on xproject_stencil
        x_projection, &  ! on solid/fluid interface
+       x_projection_raster, &  ! on raster solid/fluid interface
        xsten, &
        x_image, &  ! in the fluid
+       x_image_raster, &  ! in the fluid
        ximage_stencil, &
        xproject_stencil, &
        ughost, &  ! aka usolid_law_of_wall
        uimage, &
+       uimage_raster, &
        usolid, &
+       usolid_raster, &
        angle_ACT, &
        im_fluid, &
        im_solid)
@@ -13535,14 +13541,18 @@ end function delta
        !in: nrm_solid, delta_r, LScenter or x_projection, dx, x_image, 
        !ximage_stencil, ufluid_stencil
        INTEGER_T, intent(in) :: law_of_the_wall
+       INTEGER_T, intent(in) :: data_dir
        INTEGER_T, intent(in) :: nmat
        INTEGER_T, intent(in) :: nten
        INTEGER_T, intent(in) :: im_fluid
        INTEGER_T, intent(in) :: im_solid
        REAL_T, intent(in) :: delta_r
        REAL_T, dimension(SDIM), intent(in) :: nrm_solid ! points to the solid
+       REAL_T, dimension(SDIM), intent(in) :: n_raster ! points to the solid
        REAL_T, dimension(SDIM), intent(in) :: x_projection
+       REAL_T, dimension(SDIM), intent(in) :: x_projection_raster
        REAL_T, dimension(SDIM), intent(in) :: x_image
+       REAL_T, dimension(SDIM), intent(in) :: x_image_raster
        REAL_T, dimension(SDIM), intent(in) :: dx
        REAL_T, intent(in) :: dt
        REAL_T, intent(in) :: time
@@ -13569,7 +13579,9 @@ end function delta
        REAL_T, dimension(nmat*SDIM) :: LSFD_image_interp
 
        REAL_T, dimension(SDIM), intent(out) :: uimage
+       REAL_T, dimension(SDIM), intent(inout) :: uimage_raster
        REAL_T, dimension(SDIM), intent(out) :: usolid
+       REAL_T, dimension(SDIM), intent(inout) :: usolid_raster
        REAL_T, dimension(SDIM) :: imagedist
        REAL_T, dimension(SDIM) :: projectdist
        REAL_T :: delta_g
@@ -13619,7 +13631,9 @@ end function delta
        INTEGER_T :: ZEYU_imodel
        INTEGER_T :: ZEYU_ifgnbc
        INTEGER_T :: im_vapor,im_liquid
-       
+      
+       do_raster=1
+
        nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
        if (nten.eq.nten_test) then
         ! do nothing
@@ -13628,6 +13642,12 @@ end function delta
         stop
        endif
 
+       if ((data_dir.ge.0).and.(data_dir.lt.SDIM)) then
+        ! do nothing
+       else
+        print *,"data_dir invalid"
+        stop
+       endif
        if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
         print *,"im_fluid invalid in getGhostVel"
         stop
@@ -13682,6 +13702,11 @@ end function delta
         print *,"abs(nrm_sanity-one).gt.VOFTOL"
         stop
        endif
+       nrm_sanity=DOT_PRODUCT(n_raster,n_raster)
+       if (abs(nrm_sanity-one).gt.VOFTOL) then
+        print *,"abs(nrm_sanity-one).gt.VOFTOL"
+        stop
+       endif
        viscosity_molecular=fort_viscconst(im_fluid)
        viscosity_eddy=fort_viscconst_eddy(im_fluid)
        density_fluid=fort_denconst(im_fluid)
@@ -13722,6 +13747,16 @@ end function delta
         ! do nothing
        else
         print *,"delta_g invalid"
+        stop
+       endif
+       delta_g_raster=abs(x_projection_raster(data_dir+1)-xsten(0,data_dir+1))
+       delta_r_raster=abs(x_image_raster(data_dir+1)- &
+                          x_projection_raster(data_dir+1))
+       if ((delta_g_raster.gt.zero).and. &
+           (delta_r_raster.gt.zero)) then
+        ! do nothing
+       else
+        print *,"delta_g_raster or delta_r_raster invalid"
         stop
        endif
        
@@ -13795,26 +13830,66 @@ end function delta
        call bilinear_interp_stencil(usolid_stencil,projectdist, &
                SDIM,usolid)
 
+       if (do_raster.eq.0) then
+
+        delta_r_critical=delta_r
+        delta_g_critical=delta_g
+        delta_r_plus_g=delta_r+delta_g ! ghost lives at image
+        reflect_factor=delta_g/delta_r
+
         ! convert to solid velocity frame of reference.
-       uimage_mag=zero
-       do dir=1,SDIM
-        uimage(dir)=uimage(dir)-usolid(dir)
-        uimage_mag=uimage_mag+uimage(dir)**2
-       enddo
-       uimage_mag=sqrt(uimage_mag)
-       if (uimage_mag.ge.zero) then
-        ! do nothing
+        uimage_mag=zero
+        do dir=1,SDIM
+         uimage(dir)=uimage(dir)-usolid(dir)
+         uimage_mag=uimage_mag+uimage(dir)**2
+        enddo
+        uimage_mag=sqrt(uimage_mag)
+        if (uimage_mag.ge.zero) then
+         ! do nothing
+        else
+         print *,"uimage_mag invalid"
+         stop
+        endif
+
+         !normal and tangential velocity components of image point
+         !magnitude, normal velocity component
+        uimage_nrml = DOT_PRODUCT(uimage,nrm_solid) 
+        do dir = 1,SDIM
+         u_tngt(dir) = uimage(dir)-uimage_nrml*nrm_solid(dir)
+        enddo
+
+       else if (do_raster.eq.1) then
+
+        delta_r_critical=delta_r_raster
+        delta_g_critical=delta_g_raster
+        delta_r_plus_g=delta_r_raster ! ghost lives on raster interface
+        reflect_factor=zero
+
+        ! convert to solid velocity frame of reference.
+        uimage_mag=zero
+        do dir=1,SDIM
+         uimage_raster(dir)=uimage_raster(dir)-usolid_raster(dir)
+         uimage_mag=uimage_mag+uimage_raster(dir)**2
+        enddo
+        uimage_mag=sqrt(uimage_mag)
+        if (uimage_mag.ge.zero) then
+         ! do nothing
+        else
+         print *,"uimage_mag invalid"
+         stop
+        endif
+
+         !normal and tangential velocity components of image point
+         !magnitude, normal velocity component
+        uimage_nrml = DOT_PRODUCT(uimage_raster,n_raster) 
+        do dir = 1,SDIM
+         u_tngt(dir) = uimage_raster(dir)-uimage_nrml*n_raster(dir)
+        enddo
+
        else
-        print *,"uimage_mag invalid"
+        print *,"do_raster invalid"
         stop
        endif
-
-        !normal and tangential velocity components of image point
-        !magnitude, normal velocity component
-       uimage_nrml = DOT_PRODUCT(uimage,nrm_solid) 
-       do dir = 1,SDIM
-        u_tngt(dir) = uimage(dir)-uimage_nrml*nrm_solid(dir)
-       enddo
 
        uimage_tngt_mag = DOT_PRODUCT(u_tngt,u_tngt)
        uimage_tngt_mag = sqrt(uimage_tngt_mag) 
@@ -13835,7 +13910,9 @@ end function delta
         print *,"uimage_nrml=",uimage_nrml
         do dir=1,SDIM
          print *,"dir,uimage(dir) ",dir,uimage(dir)
+         print *,"dir,uimage_raster(dir) ",dir,uimage_raster(dir)
          print *,"dir,usolid(dir) ",dir,usolid(dir)
+         print *,"dir,usolid_raster(dir) ",dir,usolid_raster(dir)
          print *,"dir,u_tngt(dir) ",dir,u_tngt(dir)
         enddo
         stop
@@ -13863,9 +13940,9 @@ end function delta
         print *,"viscosity_molecular.le.zero or viscosity_eddy.lt.zero"
         stop
        endif
- 
-       ughost_nrml = -(delta_g/delta_r)*uimage_nrml
 
+       ughost_nrml = -reflect_ractor*uimage_nrml
+ 
        call get_primary_material(LSCP_image_interp,nmat,im_primary_image)
 
         ! From Spaldings' paper, a representative size for the linear 
@@ -14044,11 +14121,13 @@ end function delta
           if (viscosity_eddy.gt.zero) then
            !obtain wall shear stress tau_w
            !out tau_w
-           call wallFunc_NewtonsMethod(uimage_tngt_mag,delta_r,tau_w,im_fluid) 
-           ughost_tngt = uimage_tngt_mag - tau_w*(delta_g+delta_r)/ &
+           call wallFunc_NewtonsMethod(uimage_tngt_mag, &
+                   delta_r_critical,tau_w,im_fluid) 
+           ughost_tngt = uimage_tngt_mag - &
+            tau_w*delta_r_plus_g/ &
             (viscosity_molecular+viscosity_eddy)
 
-           predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/(delta_g+delta_r)
+           predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/delta_r_plus_g
            max_deriv_utan=two*uimage_tngt_mag/critical_length
            if (predict_deriv_utan.lt.max_deriv_utan) then
             ! do nothing
@@ -14060,14 +14139,14 @@ end function delta
            endif
 
           else if (viscosity_eddy.eq.zero) then
-           ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+           ughost_tngt = -reflect_factor*uimage_tngt_mag
           else
            print *,"viscosity_eddy invalid"
            stop
           endif
 
          else if (critical_length.ge.dxmin) then
-          ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+          ughost_tngt = -reflect_factor*uimage_tngt_mag
          else
           print *,"critical_length invalid"
           stop
@@ -14137,11 +14216,37 @@ end function delta
             ! ZEYU_u_cl is positive if the contact line is advancing into
             ! the gas.
            ughost_tngt=ZEYU_u_cl
+
+           nCL_dot_n_raster=zero
+           do dir=1,SDIM
+            nCL_dot_n_raster=nCL_dot_n_raster+nCL(dir)*n_raster(dir)
+           enddo
+           mag=zero
+           do dir=1,SDIM
+            nCL_raster(dir)=nCL(dir)-nCL_dot_n_raster*n_raster(dir)
+            mag=mag+nCL_raster(dir)**2
+           enddo
+           mag=sqrt(mag)
+           if (mag.gt.zero) then
+            do dir=1,SDIM
+             nCL_raster(dir)=nCL_raster(dir)/mag
+            enddo
+           endif
+           do dir=1,SDIM
+            if (do_raster.eq.0) then
+             nCL_critical(dir)=nCL(dir)
+            else if (do_raster.eq.1) then
+             nCL_critical(dir)=nCL_raster(dir)
+            else
+             print *,"do_raster invalid"
+             stop
+            endif
+           enddo
            do dir=1,SDIM
             if (im_primary_image.eq.im_liquid) then
-             u_tngt(dir)=-nCL(dir)
+             u_tngt(dir)=-nCL_critical(dir)
             else if (im_primary_image.eq.im_vapor) then
-             u_tngt(dir)=nCL(dir)
+             u_tngt(dir)=nCL_critical(dir)
             else
              print *,"im_primary_image or im_vapor invalid"
              stop
@@ -14153,7 +14258,7 @@ end function delta
           endif
 
          else if (near_contact_line.eq.0) then
-          ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+          ughost_tngt = -reflect_factor*uimage_tngt_mag
          else
           print *,"near_contact_line invalid"
           stop
@@ -14165,7 +14270,7 @@ end function delta
         endif
 
        else if (is_rigid(nmat,im_primary_image).eq.1) then
-        ughost_tngt = -(delta_g/delta_r)*uimage_tngt_mag
+        ughost_tngt = -reflect_factor*uimage_tngt_mag
        else
         print *,"is_rigid(nmat,im_primary_image) invalid"
         stop
@@ -14183,9 +14288,18 @@ end function delta
         ! (I-P)ughost=(I-P)usolid+
         ! -(I-P)(uimage-usolid)=(I-P)(2 usolid - uimage)
        do dir=1,SDIM
-        ughost(dir) = ughost_nrml*nrm_solid(dir)+ &
-                      ughost_tngt*u_tngt(dir)+ &
-                      usolid(dir)
+        if (do_raster.eq.0) then
+         ughost(dir) = ughost_nrml*nrm_solid(dir)+ &
+                       ughost_tngt*u_tngt(dir)+ &
+                       usolid(dir)
+        else if (do_raster.eq.1) then
+         ughost(dir) = ughost_nrml*n_raster(dir)+ &
+                       ughost_tngt*u_tngt(dir)+ &
+                       usolid_raster(dir)
+        else
+         print *,"do_raster invalid"
+         stop
+        endif
        enddo
        
       end subroutine getGhostVel
@@ -14378,7 +14492,7 @@ end function delta
        stop
       endif
 
-      nhistory_sub=3*SDIM+1
+      nhistory_sub=5*SDIM+1
 
       if (nhistory.eq.nparts_ghost*nhistory_sub) then
        ! do nothing
@@ -14474,10 +14588,10 @@ end function delta
         do partid=1,nparts
 
          do dir=1,SDIM
-          usolid_edge(dir)= &
+          usolid_raster(dir)= &
             half*(usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)+
                   usolid(D_DECL(i-ii,j-jj,k-kk),(partid-1)*SDIM+dir))
-          ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)=usolid_edge(dir)
+          ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)=usolid_raster(dir)
          enddo  
 
          if (law_of_the_wall.eq.0) then
@@ -14562,7 +14676,7 @@ end function delta
               im_fluid=im_primary_right
               n_raster(data_dir+1)=-one
               do dir=1,SDIM
-               uimage(dir)=ufluid(D_DECL(i,j,k),dir)
+               uimage_raster(dir)=ufluid(D_DECL(i,j,k),dir)
               enddo  
              else if (is_rigid(nmat,im_primary_right).eq.1) then
               ! do nothing
@@ -14588,6 +14702,20 @@ end function delta
              ! xsten(-3,1)   xsten(-1,1) xsten(1,1)  xsten(3,1)
              call gridsten_level(xsten,isideSOL,jsideSOL,ksideSOL,level,nhalf)
 
+             do dir=1,SDIM
+              x_projection_raster(dir)=xsten(0,dir)
+              x_image_raster(dir)=xsten(0,dir)
+             enddo
+             if ((side_solid.eq.0).and.(side_image.eq.1)) then
+              x_projection_raster(data_dir+1)=xsten(1,data_dir+1)
+              x_image_raster(data_dir+1)=xsten(2,data_dir+1)
+             else if ((side_solid.eq.1).and.(side_image.eq.0)) then
+              x_projection_raster(data_dir+1)=xsten(-1,data_dir+1)
+              x_image_raster(data_dir+1)=xsten(-2,data_dir+1)
+             else
+              print *,"side_solid or side_image invalid"
+              stop
+             endif
              ! normal for solid materials with a Lagrangian representation
              ! are calculated as follows:
              ! 1. convert from Lagrangian representation (elements and nodes)
@@ -14708,6 +14836,7 @@ end function delta
                 time, &
                 visc_coef, &
                 nrm_solid, &  ! points towards the solid
+                n_raster, &  ! points towards the solid
                 thermal_image, &
                 LSCP_image_stencil, &
                 LSCP_prj_stencil, &
@@ -14715,158 +14844,79 @@ end function delta
                 ufluid_stencil, & ! fluid velocity on ximage_stencil
                 usolid_stencil, & ! solid velocity on xproject_stencil
                 x_projection, &  ! on solid/fluid interface
+                x_projection_raster, &  ! on raster solid/fluid interface
                 xsten, & ! stencil about the solid cell that is next to fluid
                 x_image, &  ! in the fluid.
+                x_image_raster, &  ! in the fluid.
                 ximage_stencil, &
                 xproject_stencil, &
                 usolid_law_of_wall, &
                 uimage_cell, & ! image velocity (inside the fluid)
+                uimage_raster, & ! image velocity (inside the fluid)
                 usolid_cell, & ! solid velocity (at projected point)
+                usolid_raster, & ! solid velocity (at projected point)
                 angle_ACT_cell, &   ! actual contact angle at image point
                 im_fluid, &
                 impart)
 
                ! solid "ghost" velocity in the solid regions.
-              do dir=1,SDIM
-               ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
-                usolid_law_of_wall(dir)
+               do dir=1,SDIM
+                ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
+                 usolid_law_of_wall(dir)
 
-               history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+dir)= &
-                usolid_law_of_wall(dir)
-               history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+SDIM+dir)= &
-                uimage_cell(dir)
-               history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+2*SDIM+dir)= &
-                usolid_cell(dir)
-              enddo  ! dir=1..sdim
+                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+dir)= &
+                 usolid_law_of_wall(dir)
+                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+SDIM+dir)= &
+                 uimage_cell(dir)
+                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+2*SDIM+dir)= &
+                 usolid_cell(dir)
+                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+3*SDIM+dir)= &
+                 uimage_raster(dir)
+                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+4*SDIM+dir)= &
+                 usolid_raster(dir)
+               enddo  ! dir=1..sdim
 
-              history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+3*SDIM+1)= &
-                angle_ACT_cell
+               history_dat(D_DECL(i,j,k), &
+                (partid-1)*nhistory_sub+nhistory_sub)=angle_ACT_cell
            
+              else if (in_grow_box.eq.0) then
+               ! do nothing; use solid velocity in solid regions.
+              else
+               print *,"in_grow_box invalid"
+               stop
+              endif
              else if (in_grow_box.eq.0) then
               ! do nothing; use solid velocity in solid regions.
              else
               print *,"in_grow_box invalid"
               stop
              endif
-            else if (in_grow_box.eq.0) then
-             ! do nothing; use solid velocity in solid regions.
+            else if ((side_solid.eq.-1).or.(side_image.eq.-1)) then
+             ! do nothing
             else
-             print *,"in_grow_box invalid"
+             print *,"side_solid or side_image invalid"
              stop
             endif
 
-           else if (nearwall_exists.eq.0) then
-            ! do nothing; already ughost=usolid
+           else if (is_rigid(nmat,impart).eq.0) then
+            ! do nothing
            else
-            print *,"nearwall_exists invalid"
+            print *,"is_rigid(nmat,impart) invalid"
             stop
            endif
-    
-            ! cell center is not in the solid 
-          else if ((LScenter(impart).lt.zero).or.(im_primary.ne.impart)) then
-  
-           plus_flag=0
-           minus_flag=0
-           FIX ME no more ii,jj,kk
-           do ii=-1,1
-           do jj=-1,1
-           do kk=klosten,khisten
-            LStest(impart)=LSCP(D_DECL(i+ii,j+jj,k+kk),impart)
-            if (LStest(impart).ge.zero) then
-             plus_flag=1
-            endif
-            if (LStest(impart).le.zero) then
-             minus_flag=1
-            endif
-           enddo
-           enddo
-           enddo
-
-           if ((plus_flag.eq.0).and.(minus_flag.eq.1)) then
-            if (im_primary.eq.impart) then
-             print *,"expecting im_primary<>impart"
-             stop
-            else 
-             ! do nothing, already ughost=usolid
-            endif
-           else if ((plus_flag.eq.1).and.(minus_flag.eq.0)) then
-            print *,"expecting LSCP(impart)>=0.0 and im_primary=impart"
-            stop
-           else if ((plus_flag.eq.1).and.(minus_flag.eq.1)) then
-            if (is_rigid(nmat,im_primary).eq.0) then
-             if (im_primary.ne.impart) then
-              im_fluid=im_primary
-              mag_norm=zero
-              do dir=1,SDIM
-               nrm_solid(dir)=LSCP(D_DECL(i,j,k),nmat+(impart-1)*SDIM+dir)
-               mag_norm=mag_norm+nrm_solid(dir)**2
-               ufluid_point(dir)=ufluid(D_DECL(i,j,k),dir)
-               usolid_point(dir)=usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)
-              enddo
-              mag_norm=sqrt(mag_norm)
-              if (mag_norm.gt.zero) then 
-               ! us = usn n + ust t
-               ! us dot n = usn
-               ! ust t =us-usn n
-               ! ug=usn n + u t = u + (usn-un)n
-               ! ug dot t = u dot t
-               ! ug dot n = u dot n + (usn-un)=usn
-               usolid_normal=zero
-               ufluid_normal=zero
-               do dir=1,SDIM
-                nrm_solid(dir)=nrm_solid(dir)/mag_norm
-                usolid_normal=usolid_normal+ &
-                        nrm_solid(dir)*usolid_point(dir)
-                ufluid_normal=ufluid_normal+ &
-                        nrm_solid(dir)*ufluid_point(dir)
-               enddo
-               do dir=1,SDIM
-                usolid_law_of_wall(dir)=ufluid_point(dir)+ &
-                       (usolid_normal-ufluid_normal)*nrm_solid(dir)
-               enddo 
-
-                ! solid ghost velocity in the fluid regions.
-               do dir=1,SDIM
-                ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
-                   usolid_law_of_wall(dir)
-               enddo  
-              else
-               print *,"mag_norm invalid"
-               stop
-              endif
-             else if (im_primary.eq.impart) then
-              ! do nothing, use solid vel.
-             else
-              print *,"im_primary or impart invalid"
-              stop
-             endif
-            else if (is_rigid(nmat,im_primary).eq.1) then
-             ! do nothing, already ughost=usolid
-            else
-             print *,"is_rigid(nmat,im_primary) invalid"
-             stop
-            endif
-           else
-            print *,"plus_flag or minus_flag invalid"
-            stop
-           endif
-
-          else
-           print *,"LScenter(impart) became corrupted"
+          else 
+           print *,"is_lag_part(nmat,impart) invalid"
            stop
           endif
-
-         else if (is_rigid(nmat,impart).eq.0) then
-          ! do nothing
          else
-          print *,"is_rigid(nmat,impart) invalid"
+          print *,"law_of_the_wall invalid"
           stop
          endif
-        else 
-         print *,"is_lag_part(nmat,impart) invalid"
-         stop
-        endif
-       enddo ! partid=1..nparts
+        enddo ! partid=1..nparts
+       else
+        print *,"nparts invalid"
+        stop
+       endif
       enddo ! k
       enddo ! j
       enddo ! i
