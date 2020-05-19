@@ -1829,7 +1829,50 @@ stop
                  stop
                 endif
                
+                do im=1,nmat
+                 ls_visc(im)=levelpc(D_DECL(i_side,j_side,k_side),im)
+                enddo
+                call get_primary_material(ls_visc,nmat,im_visc)
+                if (is_rigid(nmat,im_visc).eq.1) then
 
+                 partid=0
+                 do im=1,im_visc-1
+                  if (is_lag_part(nmat,im).eq.1) then
+                   partid=partid+1
+                  endif
+                 enddo
+                 if (im_solid_map(partid+1)+1.ne.im_visc) then
+                  print *,"im_solid_map(partid+1)+1.ne.im_visc"
+                  stop
+                 endif
+                 ibase=partid*SDIM
+                 do dir=1,SDIM
+                  if (dir_visc.eq.1) then
+                   vel6point(dir_visc,side_visc,dir)= &
+                    solxfab(D_DECL(i_face,j_face,k_face),ibase+dir)
+                  else if (dir_visc.eq.2) then
+                   vel6point(dir_visc,side_visc,dir)= &
+                    solyfab(D_DECL(i_face,j_face,k_face),ibase+dir)
+                  else if ((dir_visc.eq.3).and.(SDIM.eq.3)) then
+                   vel6point(dir_visc,side_visc,dir)= &
+                    solzfab(D_DECL(i_face,j_face,k_face),ibase+dir)
+                  else
+                   print *,"dir_visc invalid"
+                   stop
+                  endif
+                 enddo ! dir=1..sdim
+
+                else if (is_rigid(nmat,im_visc).eq.0) then
+                 do dir=1,SDIM
+                  vel6point(dir_visc,side_visc,dir)= &
+                    half*(vel(D_DECL(icell,jcell,kcell),dir)+ &
+                          vel(D_DECL(i_side,j_side,k_side),dir))
+                 enddo
+                else
+                 print *,"is_rigid(nmat,im_visc) invalid"
+                 stop
+                endif
+                       
 FIX ME
              else if (mask_cell.eq.0) then
               ! do nothing
