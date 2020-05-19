@@ -16544,6 +16544,7 @@ end function delta
       end subroutine FORT_AGGRESSIVE
 
 
+         ! "coarray fortran"  (MPI functionality built in)
          ! masknbr=1.0 in the interior
          !        =1.0 fine-fine ghost cells
          !        =0.0 coarse-fine ghost cells and outside the domain.
@@ -16577,7 +16578,8 @@ end function delta
        dt, &
        time, &
        passive_veltime, &
-       vofflux,DIMS(vofflux), &  
+       vofflux, &
+       DIMS(vofflux), &  !  voffluxlox,voffluxloy,voffluxloz,voffluxhix,voffluxhiy,voffluxhiz
        LS,DIMS(LS), &  ! original data
        den,DIMS(den), &
        tensor,DIMS(tensor), &
@@ -16676,7 +16678,7 @@ end function delta
       INTEGER_T bfact_f
       INTEGER_T override_density(nmat)
       REAL_T dt,time
-      INTEGER_T DIMDEC(vofflux)
+      INTEGER_T DIMDEC(vofflux) ! voffluxlox,voffluxloy,voffluxloz,voffluxhix,voffluxhiy,voffluxhiz
        ! original data
       INTEGER_T DIMDEC(LS)
       INTEGER_T DIMDEC(den)
@@ -16712,7 +16714,7 @@ end function delta
       INTEGER_T DIMDEC(ymassside) 
       INTEGER_T DIMDEC(zmassside) 
 
-      REAL_T vofflux(DIMV(vofflux),nmat)
+      REAL_T vofflux(DIMV(vofflux),nmat) !  voffluxlox:voffluxhix,voffluxloy:voffluxhiy,voffluxloz:voffluxhiz
        ! FABS
        ! original data
       REAL_T LS(DIMV(LS),nmat)
@@ -17137,6 +17139,8 @@ end function delta
        stop
       endif
 
+        ! SANITY CHECKS TO MAKE SURE THAT input FABs have the expected number of
+        ! ghost cells.
       call checkbound(fablo,fabhi,DIMS(vofflux),0,normdir,136)
        ! original data
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,136)

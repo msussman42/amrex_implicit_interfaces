@@ -34034,7 +34034,7 @@ end subroutine initialize2d
       IMPLICIT NONE
 
       INTEGER_T scomp,ncomp,bfact,level
-      INTEGER_T DIMDEC(u)
+      INTEGER_T DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T domlo(SDIM),domhi(SDIM)
       REAL_T  dx(SDIM), xlo(SDIM), time
       REAL_T  u(DIMV(u))
@@ -34087,15 +34087,15 @@ end subroutine initialize2d
        u,DIMS(u), &
        domlo,domhi,bc)
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=ARG_L1(u) ! ulox
+      fablo(2)=ARG_L2(u) ! uloy
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=ARG_L3(u) ! uloz
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=ARG_H1(u) ! uhix
+      fabhi(2)=ARG_H2(u) ! uhiy
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=ARG_H3(u) ! uhiz
 #endif
       do dir2=1,SDIM
        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
