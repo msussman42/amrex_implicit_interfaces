@@ -1512,7 +1512,7 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       ! first sweep - find the centroid of the solid 
+       ! first sweep - find the mass and centroid of the solid 
       if (isweep.eq.0) then
  
        do i=growlo(1),growhi(1)
@@ -1558,7 +1558,7 @@ stop
        enddo
        enddo  ! isweep=0 centroids
 
-      else if (isweep.eq.1) then
+      else if (isweep.eq.1) then ! above, mass and centroid
 
        do im_test=1,nmat
         if (is_rigid(nmat,im_test).eq.0) then
@@ -1711,7 +1711,9 @@ stop
           FSI_exclude=1
           call sort_volume_fraction(ls_sort,FSI_exclude,sorted_list,nmat)
           im_fluid=sorted_list(1)
-          if ((im_fluid.lt.1).or.(im_fluid.gt.nmat)) then
+          if ((im_fluid.ge.1).and.(im_fluid.le.nmat)) then
+           ! do nothing
+          else
            print *,"im_fluid invalid in GETDRAG"
            stop
           endif
@@ -1789,6 +1791,44 @@ stop
 
               call gridstenMAC(xsten_face,xlo,i,j,k,fablo,bfact, &
                 dx,nhalf,facedir)
+
+              ! im_primary is a fluid at cell (icell,jcell,kcell)
+              do dir_visc=1,SDIM
+               ii_visc=0
+               jj_visc=0
+               kk_visc=0
+               if (dir_visc.eq.1) then
+                ii_visc=1
+               else if (dir_visc.eq.2) then
+                jj_visc=1
+               else if ((dir_visc.eq.3).and.(SDIM.eq.3)) then
+                kk_visc=1
+               else
+                print *,"dir_visc invalid"
+                stop
+               endif
+
+               do side_visc=1,2
+
+                if (side_visc.eq.1) then
+                 i_side=icell-ii_visc
+                 j_side=jcell-jj_visc
+                 k_side=kcell-kk_visc
+                 i_face=icell
+                 j_face=jcell
+                 k_face=kcell
+                else if (side_visc.eq.2) then
+                 i_side=icell+ii_visc
+                 j_side=jcell+jj_visc
+                 k_side=kcell+kk_visc
+                 i_face=icell+ii_visc
+                 j_face=jcell+jj_visc
+                 k_face=kcell+kk_visc
+                else
+                 print *,"side_visc invalid"
+                 stop
+                endif
+               
 
 FIX ME
              else if (mask_cell.eq.0) then
