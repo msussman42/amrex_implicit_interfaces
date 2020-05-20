@@ -10292,7 +10292,7 @@ stop
         species_evaporation_density, &
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
-        sol,DIMS(sol), &
+        solidfab,DIMS(solidfab), &
         den,DIMS(den), &
         vof,DIMS(vof), &
         dist,DIMS(dist), &
@@ -10387,11 +10387,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(velcell)
       INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(dist)
-      INTEGER_T, intent(in) :: DIMDEC(sol)
+      INTEGER_T, intent(in) :: DIMDEC(solidfab)
       INTEGER_T, intent(in) :: DIMDEC(den)
       REAL_T, intent(in) :: velmac(DIMV(velmac),nsolveMM_FACE)
       REAL_T, intent(in) :: velcell(DIMV(velcell),num_materials_vel*SDIM)
-      REAL_T, intent(in) :: sol(DIMV(sol),nparts_def*SDIM) 
+      REAL_T, intent(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
        ! den,denA,E,temp
       REAL_T, intent(in) :: den(DIMV(den),num_state_material*nmat)  
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw)
@@ -10740,7 +10740,7 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(velmac),0,dirnormal,4)
       call checkbound(fablo,fabhi,DIMS(velcell),1,-1,4)
-      call checkbound(fablo,fabhi,DIMS(sol),1,-1,4)
+      call checkbound(fablo,fabhi,DIMS(solidfab),0,dirnormal,4)
       call checkbound(fablo,fabhi,DIMS(den),1,-1,4)
       call checkbound(fablo,fabhi,DIMS(vof),1,-1,4)
        ! need enough ghost cells for the calls to derive_dist.
@@ -10899,10 +10899,8 @@ stop
 
        do partid=0,nparts-1
         velcomp=partid*SDIM+dirnormal+1
-        uu=max(uu,abs(sol(D_DECL(i,j,k),velcomp)))
-        uu_estdt=max(uu_estdt,abs(sol(D_DECL(i,j,k),velcomp)))
-        uu=max(uu,abs(sol(D_DECL(i-ii,j-jj,k-kk),velcomp)))
-        uu_estdt=max(uu_estdt,abs(sol(D_DECL(i-ii,j-jj,k-kk),velcomp)))
+        uu=max(uu,abs(solidfab(D_DECL(i,j,k),velcomp)))
+        uu_estdt=max(uu_estdt,abs(solidfab(D_DECL(i,j,k),velcomp)))
        enddo ! partid=0..nparts-1
 
        uulocal=abs(velmac(D_DECL(i,j,k),1))

@@ -1363,12 +1363,12 @@ void NavierStokes::apply_cell_pressure_gradient(
  } else
   amrex::Error("nparts invalid");
 
- resize_FSI_GHOST_MF(1);
-
- if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
 
  resize_levelsetLO(2,LEVELPC_MF);
 
@@ -1535,7 +1535,7 @@ void NavierStokes::apply_cell_pressure_gradient(
    FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
    FArrayBox& presfab=(*presmf)[mfi];
  
-   FArrayBox& solfab=(*localMF[FSI_GHOST_MF])[mfi];
+   FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
    FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];

@@ -16165,7 +16165,8 @@ void NavierStokes::writeInterfaceReconstruction() {
 
 
 // VOF_Recon_ALL called before this routine is called.
-// init_FSI_GHOST_MF() called for all relevant levels prior to this routine.
+// init_FSI_GHOST_MAC_MF() called for all relevant 
+// levels prior to this routine.
 void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  if (level!=0)
@@ -16849,7 +16850,7 @@ NavierStokes::writePlotFile (
   // metrics_dataALL
   // MASKCOEF_MF
   // MASK_NBR_MF
-  // init_FSI_GHOST_MF_ALL
+  // init_FSI_GHOST_MAC_MF_ALL
   // LEVELPC_MF
   // MASKSEM_MF
   // VOF_Recon_ALL
@@ -17169,10 +17170,9 @@ void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
  if (dt_min<dt_max) 
   dt_min=dt_max;
 
- if (localMF_grow[FSI_GHOST_MF]<1) {
+ if (localMF_grow[FSI_GHOST_MAC_MF]<0) {
 
-  int ngrow_FSI=1;
-  init_FSI_GHOST_MF_ALL(ngrow_FSI,1);
+  init_FSI_GHOST_MAC_MF_ALL(1);
 
  }
 
@@ -17229,11 +17229,12 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
  } else
   amrex::Error("nparts invalid");
 
- resize_FSI_GHOST_MF(1);
- if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MF+data_dir]->nComp() invalid");
+ }
 
  MultiFab* distmf=getStateDist(2,cur_time_slab,14);
  MultiFab* denmf=getStateDen(1,cur_time_slab);  // nmat*num_state_material
@@ -17322,7 +17323,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
    FArrayBox& distfab=(*distmf)[mfi];
    FArrayBox& voffab=(*vofmf)[mfi];
    FArrayBox& denfab=(*denmf)[mfi];
-   FArrayBox& solidfab=(*localMF[FSI_GHOST_MF])[mfi];
+   FArrayBox& solidfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
 
    int local_enable_spectral=enable_spectral;
 
@@ -18394,8 +18395,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
    
  } // ilev=level ... finest_level
 
- int ngrow_FSI=1;
- init_FSI_GHOST_MF_ALL(ngrow_FSI,2);
+ init_FSI_GHOST_MAC_MF_ALL(2);
 
  build_masksemALL();
 
@@ -18495,7 +18495,7 @@ NavierStokes::post_init_state () {
    // metrics_data
    // allocate_mdot
    // MASKCOEF
-   // init_FSI_GHOST_MF
+   // init_FSI_GHOST_MAC_MF
    // VOF_Recon_ALL (update_flag==1)
    // makeStateDistALL
    // prescribe_solid_geometryALL
@@ -19691,7 +19691,7 @@ NavierStokes::makeStateDistALL() {
 
 // called from: NavierStokes::do_the_advance 
 // (prior to level_phase_change_rate) and
-// called from: NavierStokes::init_FSI_GHOST_MF
+// called from: NavierStokes::init_FSI_GHOST_MAC_MF
 void 
 NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
 
