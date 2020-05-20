@@ -1241,84 +1241,84 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
 
-      INTEGER_T ntensor
-      INTEGER_T ntensorMM
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: ntensorMM
 
-      INTEGER_T facevisc_index
-      INTEGER_T faceheat_index
-      INTEGER_T ncphys
+      INTEGER_T, intent(in) :: facevisc_index
+      INTEGER_T, intent(in) :: faceheat_index
+      INTEGER_T, intent(in) :: ncphys
 
-      INTEGER_T isweep
-      REAL_T globalsum(13)
-      REAL_T localsum(13)
-      REAL_T gravity_normalized
-      INTEGER_T gravdir
-      INTEGER_T ntenvisco
-      REAL_T visc_coef
-      INTEGER_T nmat,rzflag
-      REAL_T time,presmag
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: isweep
+      REAL_T, intent(in) :: globalsum(13)
+      REAL_T, intent(inout) :: localsum(13)
+      REAL_T, intent(in) :: gravity_normalized
+      INTEGER_T, intent(in) :: gravdir
+      INTEGER_T, intent(in) :: ntenvisco
+      REAL_T, intent(in) :: visc_coef
+      INTEGER_T, intent(in) :: nmat,rzflag
+      REAL_T, intent(in) :: time
+      REAL_T presmag
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      INTEGER_T bc(SDIM,2,SDIM)
-      INTEGER_T DIMDEC(tdata)
-      INTEGER_T DIMDEC(viscoten)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(slrecon)
-      INTEGER_T DIMDEC(levelpc)
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(areax)
-      INTEGER_T DIMDEC(areay)
-      INTEGER_T DIMDEC(areaz)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(tdata)
+      INTEGER_T, intent(in) :: DIMDEC(viscoten)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(slrecon)
+      INTEGER_T, intent(in) :: DIMDEC(levelpc)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(areax)
+      INTEGER_T, intent(in) :: DIMDEC(areay)
+      INTEGER_T, intent(in) :: DIMDEC(areaz)
 
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(yface)
-      INTEGER_T DIMDEC(zface)
-      INTEGER_T DIMDEC(cvisc)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(yface)
+      INTEGER_T, intent(in) :: DIMDEC(zface)
+      INTEGER_T, intent(in) :: DIMDEC(cvisc)
 
-      INTEGER_T DIMDEC(solxfab)
-      INTEGER_T DIMDEC(solyfab)
-      INTEGER_T DIMDEC(solzfab)
+      INTEGER_T, intent(in) :: DIMDEC(solxfab)
+      INTEGER_T, intent(in) :: DIMDEC(solyfab)
+      INTEGER_T, intent(in) :: DIMDEC(solzfab)
 
-      INTEGER_T DIMDEC(pres)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(drag)
+      INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(drag)
 
-      REAL_T tdata(DIMV(tdata),ntensorMM)
-      REAL_T viscoten(DIMV(viscoten),ntenvisco)
-      REAL_T den(DIMV(den),nmat*num_state_material)
-      REAL_T mask(DIMV(mask))
-      REAL_T slrecon(DIMV(slrecon),nmat*ngeom_recon)
-      REAL_T levelpc(DIMV(levelpc),nmat*(SDIM+1))
-      REAL_T vol(DIMV(vol))
-      REAL_T areax(DIMV(areax))
-      REAL_T areay(DIMV(areay))
-      REAL_T areaz(DIMV(areaz))
+      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensorMM)
+      REAL_T, intent(in) :: viscoten(DIMV(viscoten),ntenvisco)
+      REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(in) :: slrecon(DIMV(slrecon),nmat*ngeom_recon)
+      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat*(SDIM+1))
+      REAL_T, intent(in) :: vol(DIMV(vol))
+      REAL_T, intent(in) :: areax(DIMV(areax))
+      REAL_T, intent(in) :: areay(DIMV(areay))
+      REAL_T, intent(in) :: areaz(DIMV(areaz))
 
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T yface(DIMV(yface),ncphys)
-      REAL_T zface(DIMV(zface),ncphys)
-      REAL_T cvisc(DIMV(cvisc))
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in) :: cvisc(DIMV(cvisc))
 
-      REAL_T solxfab(DIMV(solxfab),nparts_def*SDIM)
-      REAL_T solyfab(DIMV(solyfab),nparts_def*SDIM)
-      REAL_T solzfab(DIMV(solzfab),nparts_def*SDIM)
+      REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+      REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+      REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM)
 
-      REAL_T pres(DIMV(pres),num_materials_vel)
-      REAL_T vel(DIMV(vel),SDIM*num_materials_vel)
-      REAL_T drag(DIMV(drag),4*SDIM+1)
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: pres(DIMV(pres),num_materials_vel)
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM*num_materials_vel)
+      REAL_T, intent(inout) :: drag(DIMV(drag),4*SDIM+1)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T ii,jj,kk
-      INTEGER_T iii,jjj,kkk
       INTEGER_T i,j,k
-      INTEGER_T dir,dir2
+      INTEGER_T dir
       INTEGER_T veldir
       INTEGER_T facedir
       INTEGER_T side_cell  ! 0 or 1
@@ -1329,7 +1329,6 @@ stop
       REAL_T lsright(nmat)
       REAL_T solid_dist_primary
       INTEGER_T im_solid_crit
-      REAL_T lsnorm(SDIM)
       REAL_T stress(3),pressure_load(3)
 
       REAL_T xsten(-3:3,SDIM)
@@ -1340,7 +1339,6 @@ stop
       REAL_T gradu(SDIM,SDIM)
 
       REAL_T facearea
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz
       INTEGER_T im
       INTEGER_T im_fluid
       INTEGER_T im_test
@@ -1348,7 +1346,6 @@ stop
       INTEGER_T im_left
       INTEGER_T im_right
       INTEGER_T FSI_exclude
-      INTEGER_T tcompMM
       REAL_T volgrid,mass
       REAL_T cengrid(SDIM)
       REAL_T global_centroid(SDIM)
@@ -1357,21 +1354,14 @@ stop
       REAL_T plocaltorque(SDIM)
       REAL_T Q(3,3)
       REAL_T viscous_stress,elastic_stress
-      REAL_T rasterperim
       REAL_T nsolid(SDIM)
-      INTEGER_T dirht
-      REAL_T facearea_factor,facearea_PLIC,facearea_pres
-      REAL_T lsnorm_pres(SDIM) 
       INTEGER_T mask_cell
       REAL_T ls_sort(nmat)
       INTEGER_T sorted_list(nmat)
       REAL_T mu
-      REAL_T xplus(SDIM)
-      REAL_T xminus(SDIM)
-      REAL_T velplus(SDIM)
-      REAL_T velminus(SDIM)
       REAL_T delx
-      INTEGER_T partid,ibase
+      INTEGER_T partid
+      INTEGER_T ibase
 
       nhalf=3
 
@@ -1504,11 +1494,6 @@ stop
        print *,"ncphys invalid"
        stop
       endif
-
-       ! mdata(i,j,k,dir)=1 if at least one adjoining cell is a fluid cell.
-       ! faceLS( (im-1)*sdim+dir )=1 if both adjoining cells have a positive
-       ! levelpc(im).
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -1701,6 +1686,9 @@ stop
           call gridsten(xsten,xlo, &
            icell,jcell,kcell,fablo,bfact,dx,nhalf)
 
+          volume=vol(D_DECL(icell,jcell,kcell))
+          presmag=pres(D_DECL(icell,jcell,kcell),1)
+
            ! returns: im_solid_crit=max_{is_rigid(im)==1} ls_sort(im)
           call combine_solid_LS(ls_sort,nmat,solid_dist_primary,im_solid_crit)
           if ((im_solid_crit.lt.1).or.(im_solid_crit.gt.nmat)) then
@@ -1717,8 +1705,6 @@ stop
            print *,"im_fluid invalid in GETDRAG"
            stop
           endif
-
-          rasterperim=zero
 
            ! first check for change of sign of the solid LS.
           do facedir=1,SDIM
@@ -1773,8 +1759,6 @@ stop
                print *,"facedir invalid"
                stop
               endif
-
-              rasterperim=rasterperim+facearea
 
                ! nsolid points into the solid
               do dir=1,SDIM 
@@ -1872,269 +1856,100 @@ stop
                  print *,"is_rigid(nmat,im_visc) invalid"
                  stop
                 endif
+
+               enddo ! side_visc=1,2
+              enddo ! dir_visc=1..sdim
                        
-FIX ME
-             else if (mask_cell.eq.0) then
-              ! do nothing
-             else
-              print *,"mask invalid"
-              stop
-             endif
-
-            else
-             print *,"im_left or im_right invalid"
-             stop
-            endif
-
-           enddo
-           enddo
-           enddo ! i,j,k (faces)
-          enddo ! facedir (finding rasterperim)
-
-
-FIX ME MOVE THIS STUFF UP FOR RASTER CASE
-                 do dir=1,SDIM
-
-                  do dir2=1,SDIM
-                   xplus(dir2)=xsten_face(0,dir2)
-                   xminus(dir2)=xsten_face(0,dir2)
-                  enddo
-                  xplus(dir)=xplus(dir)+half*dx(dir)
-                  xminus(dir)=xminus(dir)-half*dx(dir)
-
-                  call velsolid(xplus(1),xplus(2),xplus(SDIM), &
-                   velplus,time,im_solid_crit,dx)
-                  call velsolid(xminus(1),xminus(2),xminus(SDIM), &
-                   velminus,time,im_solid_crit,dx)
-                  do veldir=1,SDIM
-                   gradu(veldir,dir)= &
-                    (velplus(veldir)-velminus(veldir))/dx(dir)
-                  enddo 
-
-                 enddo ! dir=1..sdim
-
-                        !2=prescribed solid CAD
-                        !4=CTML FSI
-                else if ((FSI_flag(im_solid_crit).eq.2).or. &
-                         (FSI_flag(im_solid_crit).eq.4)) then
-
-                 partid=0
-                 do im=1,im_solid_crit-1
-                  if (is_lag_part(nmat,im).eq.1) then
-                   partid=partid+1
-                  endif
-                 enddo
-                 if (im_solid_map(partid+1)+1.ne.im_solid_crit) then
-                  print *,"im_solid_map(partid+1)+1.ne.im_solid_crit"
-                  stop
-                 endif
-                 ibase=partid*SDIM
-                  
-                 do dir=1,SDIM
-                  iii=0 
-                  jjj=0 
-                  kkk=0 
-                  if (dir.eq.1) then
-                   iii=1
-                  else if (dir.eq.2) then
-                   jjj=1
-                  else if ((dir.eq.3).and.(SDIM.eq.3)) then
-                   kkk=1
-                  else
-                   print *,"dir invalid"
-                   stop
-                  endif
-
-                  do dir2=1,SDIM
-                   xplus(dir2)=xsten_face(0,dir2)
-                   xminus(dir2)=xsten_face(0,dir2)
-                  enddo
-                  if (dir.eq.facedir) then
-                   xplus(dir)=xsten_face(1,dir)
-                   xminus(dir)=xsten_face(-1,dir)
-                   do dir2=1,SDIM
-                    velplus(dir2)=vel(D_DECL(i,j,k),dir2)
-                    velminus(dir2)=vel(D_DECL(i-ii,j-jj,k-kk),dir2)
-                   enddo
-                  else if (dir.ne.facedir) then
-                   xplus(dir)=xsten_face(2,dir)
-                   xminus(dir)=xsten_face(-2,dir)
-                   do dir2=1,SDIM
-                    if (is_prescribed(nmat,im_solid_crit).eq.1) then
-                     velplus(dir2)=half*( &
-                      solid(D_DECL(i+iii,j+jjj,k+kkk),ibase+dir2)+ &
-                      solid(D_DECL(i+iii-ii,j+jjj-jj,k+kkk-kk),ibase+dir2))
-                     velminus(dir2)=half*( &
-                      solid(D_DECL(i-iii,j-jjj,k-kkk),ibase+dir2)+ &
-                      solid(D_DECL(i-iii-ii,j-jjj-jj,k-kkk-kk),ibase+dir2))
-                    else if (is_prescribed(nmat,im_solid_crit).eq.0) then
-                     velplus(dir2)=half*( &
-                      vel(D_DECL(i+iii,j+jjj,k+kkk),dir2)+ &
-                      vel(D_DECL(i+iii-ii,j+jjj-jj,k+kkk-kk),dir2))
-                     velminus(dir2)=half*( &
-                      vel(D_DECL(i-iii,j-jjj,k-kkk),dir2)+ &
-                      vel(D_DECL(i-iii-ii,j-jjj-jj,k-kkk-kk),dir2))
-                    else
-                     print *,"is_prescribed(nmat,im_solid_crit) invalid"
-                     stop
-                    endif 
-                   enddo ! dir2=1..sdim
-                  else
-                   print *,"dir or facedir bust"
-                   stop
-                  endif
-              
-                  delx=xplus(dir)-xminus(dir)
-                  if (delx.le.zero) then
-                   print *,"delx invalid"
-                   stop
-                  endif 
-                  do veldir=1,SDIM
-                   gradu(veldir,dir)= &
-                    (velplus(veldir)-velminus(veldir))/delx
-                  enddo
-
-                 enddo ! dir=1..sdim
-
+              do veldir=1,SDIM
+               do dir=1,SDIM
+                delx=xsten(1,dir)-xsten(-1,dir)
+                if (delx.gt.zero) then
+                 gradu(veldir,dir)= &
+                  (vel6point(dir,2,veldir)-vel6point(dir,1,veldir))/delx
                 else
-                 print *,"FSI_flag(im_solid_crit) invalid"
+                 print *,"delx invalid"
                  stop
                 endif
+               enddo ! dir=1..sdim
+              enddo ! veldir=1..sdim 
 
-               else
-                print *,"is_rigid(nmat,im_solid_crit) invalid"
-                stop
-               endif
+              do j1=1,SDIM
+              do i1=1,SDIM
+               Q(i1,j1)=zero
+              enddo
+              enddo
 
-               do veldir=1,SDIM
-                if (veldir.ne.facedir) then
-                 if (facedir.eq.1) then
-                  gradbase=ux-1
-                 else if (facedir.eq.2) then
-                  gradbase=uy-1
-                 else if ((facedir.eq.3).and.(SDIM.eq.3)) then
-                  gradbase=uz-1
-                 else
-                  print *,"facedir invalid"
-                  stop
-                 endif
-
-                 tcompMM=gradbase+veldir
-
-                 gradu(veldir,facedir)= &
-                   tdata(D_DECL(icell,jcell,kcell),tcompMM)
-                endif  ! veldir<>facedir
-               enddo !veldir
-
-                ! lsnorm points into the fluid.
-               do dir=1,SDIM
-                lsnorm(dir)=zero
+              if (fort_elastic_viscosity(im_fluid).gt.zero) then
+               partid=1
+               do while ((fort_im_elastic_map(partid)+1.ne.im_fluid).and. &
+                         (partid.le.num_materials_viscoelastic))
+                partid=partid+1
                enddo
-               if (lsleft(im_solid_crit).gt.lsright(im_solid_crit)) then
-                lsnorm(facedir)=one 
-               else if (lsright(im_solid_crit).gt.lsleft(im_solid_crit)) then
-                lsnorm(facedir)=-one 
-               else
-                print *,"lsright or lsleft invalid"
-                stop
-               endif
-               volume=vol(D_DECL(icell,jcell,kcell))
-               if (facedir.eq.1) then
-                facearea=areax(D_DECL(i,j,k))
-               else if (facedir.eq.2) then
-                facearea=areay(D_DECL(i,j,k))
-               else if ((facedir.eq.3).and.(SDIM.eq.3)) then
-                facearea=areaz(D_DECL(i,j,k))
-               else
-                print *,"facedir invalid"
-                stop
-               endif
-               facearea_PLIC=facearea*facearea_factor
-
-               facearea_pres=facearea
-               do dir=1,SDIM
-                 lsnorm_pres(dir)=lsnorm(dir)
-               enddo
-
-               presmag=pres(D_DECL(icell,jcell,kcell),1)
-
-               do j1=1,SDIM
-               do i1=1,SDIM
-                Q(i1,j1)=zero
-               enddo
-               enddo
-
-               if (fort_elastic_viscosity(im_fluid).gt.zero) then
-                partid=1
-                do while ((fort_im_elastic_map(partid)+1.ne.im_fluid).and. &
-                          (partid.le.num_materials_viscoelastic))
-                 partid=partid+1
-                enddo
-                if (partid.le.num_materials_viscoelastic) then
-                 viscbase=(partid-1)*FORT_NUM_TENSOR_TYPE
-                 Q(1,1)=viscoten(D_DECL(icell,jcell,kcell),viscbase+1)
-                 Q(1,2)=viscoten(D_DECL(icell,jcell,kcell),viscbase+2)
-                 Q(2,2)=viscoten(D_DECL(icell,jcell,kcell),viscbase+3)
-                 Q(3,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+4)
-                 Q(1,3)=zero
-                 Q(2,3)=zero
+               if (partid.le.num_materials_viscoelastic) then
+                viscbase=(partid-1)*FORT_NUM_TENSOR_TYPE
+                Q(1,1)=viscoten(D_DECL(icell,jcell,kcell),viscbase+1)
+                Q(1,2)=viscoten(D_DECL(icell,jcell,kcell),viscbase+2)
+                Q(2,2)=viscoten(D_DECL(icell,jcell,kcell),viscbase+3)
+                Q(3,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+4)
+                Q(1,3)=zero
+                Q(2,3)=zero
 #if (AMREX_SPACEDIM==3)
-                 Q(1,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+5)
-                 Q(2,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+6)
+                Q(1,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+5)
+                Q(2,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+6)
 #endif
-                 Q(2,1)=Q(1,2)
-                 Q(3,1)=Q(1,3)
-                 Q(3,2)=Q(2,3)
-                else
-                 print *,"partid invalid in GETDRAG"
-                 stop
-                endif
-               else if (fort_elastic_viscosity(im_fluid).eq.zero) then
-                ! do nothing
+                Q(2,1)=Q(1,2)
+                Q(3,1)=Q(1,3)
+                Q(3,2)=Q(2,3)
                else
-                print *,"fort_elastic_viscosity(im_fluid) invalid"
+                print *,"partid invalid in GETDRAG"
                 stop
                endif
+              else if (fort_elastic_viscosity(im_fluid).eq.zero) then
+               ! do nothing
+              else
+               print *,"fort_elastic_viscosity(im_fluid) invalid"
+               stop
+              endif
 
-               mu=get_user_viscconst(im_fluid, &
+              mu=get_user_viscconst(im_fluid, &
                 fort_denconst(im_fluid),fort_tempconst(im_fluid))
 
-               do j1=1,SDIM
-                stress(j1)=zero
-                do i1=1,SDIM
-                 viscous_stress= &
-                  mu*visc_coef* &
+              do j1=1,SDIM
+               stress(j1)=zero
+               do i1=1,SDIM
+                viscous_stress= &
+                 mu*visc_coef* &
                   (gradu(i1,j1)+gradu(j1,i1))
-                 elastic_stress=Q(i1,j1)
-                 stress(j1)=stress(j1)+ &
-                  (viscous_stress+elastic_stress)*lsnorm(i1)
-                enddo
-                pressure_load(j1)=-presmag*lsnorm_pres(j1)
-                stress(j1)=stress(j1)*facearea
-                pressure_load(j1)=pressure_load(j1)*facearea_pres
-               enddo  ! j1
+                elastic_stress=Q(i1,j1)
+                stress(j1)=stress(j1)- &
+                  (viscous_stress+elastic_stress)*nsolid(i1)
+               enddo
+               pressure_load(j1)=presmag*nsolid(j1)
+               stress(j1)=stress(j1)*facearea
+               pressure_load(j1)=pressure_load(j1)*facearea
+              enddo  ! j1
 
 ! global_centroid will be incorrect if the solid geometry is reflected
 ! across a domain boundary.
 
-               do dir=1,SDIM
-                rvec(dir)=xsten_face(0,dir)-global_centroid(dir)
-               enddo
-               if (SDIM.eq.2) then
-                rvec(3)=zero
-                stress(3)=zero
-                pressure_load(3)=zero
-               endif
-               call crossprod(rvec,stress,rcross)
-               call crossprod(rvec,pressure_load,prcross)
-               localtorque(1)=rcross(3) ! x-y plane of rotation
-               plocaltorque(1)=prcross(3) ! x-y plane of rotation
-               if (SDIM.eq.3) then
-                localtorque(2)=rcross(1) ! y-z plane of rotation
-                plocaltorque(2)=prcross(1) ! y-z plane of rotation
-                localtorque(SDIM)=rcross(2) ! x-z plane of rotation
-                plocaltorque(SDIM)=prcross(2) ! x-z plane of rotation
-               endif
+              do dir=1,SDIM
+               rvec(dir)=xsten_face(0,dir)-global_centroid(dir)
+              enddo
+              if (SDIM.eq.2) then
+               rvec(3)=zero
+               stress(3)=zero
+               pressure_load(3)=zero
+              endif
+              call crossprod(rvec,stress,rcross)
+              call crossprod(rvec,pressure_load,prcross)
+              localtorque(1)=rcross(3) ! x-y plane of rotation
+              plocaltorque(1)=prcross(3) ! x-y plane of rotation
+              if (SDIM.eq.3) then
+               localtorque(2)=rcross(1) ! y-z plane of rotation
+               plocaltorque(2)=prcross(1) ! y-z plane of rotation
+               localtorque(SDIM)=rcross(2) ! x-z plane of rotation
+               plocaltorque(SDIM)=prcross(2) ! x-z plane of rotation
+              endif
 
 ! units of watts: W=J/s=N m/s
 ! r=(x,0,z)
@@ -2146,68 +1961,56 @@ FIX ME MOVE THIS STUFF UP FOR RASTER CASE
 ! w=2 pi vinletgas/60 radians/second
 ! so for gear problem, scale torque by 2 pi abs(vinletgas)/60
 
-               do n=1,SDIM
-                drag(D_DECL(icell,jcell,kcell),n)= &
-                 drag(D_DECL(icell,jcell,kcell),n)+stress(n)
-                drag(D_DECL(icell,jcell,kcell),n)= &
-                 drag(D_DECL(icell,jcell,kcell),n)+pressure_load(n)
+              do n=1,SDIM
+               drag(D_DECL(icell,jcell,kcell),n)= &
+                drag(D_DECL(icell,jcell,kcell),n)+stress(n)
+               drag(D_DECL(icell,jcell,kcell),n)= &
+                drag(D_DECL(icell,jcell,kcell),n)+pressure_load(n)
 
-                localsum(n)=localsum(n)+stress(n)
-                localsum(n)=localsum(n)+pressure_load(n)
+               localsum(n)=localsum(n)+stress(n)
+               localsum(n)=localsum(n)+pressure_load(n)
 
-                drag(D_DECL(icell,jcell,kcell),n+SDIM)= &
-                 drag(D_DECL(icell,jcell,kcell),n+SDIM)+pressure_load(n)
-               enddo
+               drag(D_DECL(icell,jcell,kcell),n+SDIM)= &
+                drag(D_DECL(icell,jcell,kcell),n+SDIM)+pressure_load(n)
+              enddo
 
-               dirend=1
-               if (SDIM.eq.3) then
-                dirend=3
-               endif
-
-               do dir=1,dirend
-                localsum(3+dir)=localsum(3+dir)+localtorque(dir)
-                localsum(3+dir)=localsum(3+dir)+plocaltorque(dir)
-
-                drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)= &
-                 drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)+ &
-                 localtorque(dir)
-                drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)= &
-                 drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)+ &
-                 plocaltorque(dir)
-                drag(D_DECL(icell,jcell,kcell),3*SDIM+dir)= &
-                 drag(D_DECL(icell,jcell,kcell),3*SDIM+dir)+ &
-                 plocaltorque(dir)
-               enddo
-
-! e.g. facearea_PLIC=facearea*facearea_factor=
-! facearea*areaz*sqrt(1+(nx/nz)**2+(ny/nz)**2)/rasterperim=
-! facearea*areaz*sqrt(1+(nx/nz)**2+(ny/nz)**2)/(sum faceareas)
-               drag(D_DECL(icell,jcell,kcell),4*SDIM+1)= &
-                drag(D_DECL(icell,jcell,kcell),4*SDIM+1)+facearea_PLIC
-
-              else if (mask_cell.eq.0) then
-               ! do nothing
-              else
-               print *,"mask_cell invalid"
-               stop
+              dirend=1
+              if (SDIM.eq.3) then
+               dirend=3
               endif
 
+              do dir=1,dirend
+               localsum(3+dir)=localsum(3+dir)+localtorque(dir)
+               localsum(3+dir)=localsum(3+dir)+plocaltorque(dir)
+
+               drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)= &
+                drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)+ &
+                localtorque(dir)
+               drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)= &
+                drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)+ &
+                plocaltorque(dir)
+               drag(D_DECL(icell,jcell,kcell),3*SDIM+dir)= &
+                drag(D_DECL(icell,jcell,kcell),3*SDIM+dir)+ &
+                plocaltorque(dir)
+              enddo ! dir=1..dirend
+
+              drag(D_DECL(icell,jcell,kcell),4*SDIM+1)= &
+               drag(D_DECL(icell,jcell,kcell),4*SDIM+1)+facearea
+
+             else if (mask_cell.eq.0) then
+              ! do nothing
              else
-              print *,"im_left or im_right invalid"
+              print *,"mask_cell invalid"
               stop
              endif
 
-            enddo
-            enddo
-            enddo ! i,j,k (faces)
-           enddo ! facedir
+            else
+             print *,"is_rigid(nmat,im_left) or is_rigid(nmat,im_right) bad"
+             stop
+            endif
 
-          else if (rasterperim.eq.zero) then
-           ! do nothing
-          else
-           print *,"rasterperim invalid"
-           stop
-          endif
+           enddo ! side_cell=0,1
+          enddo ! facedir=1..sdim 
 
          else if (is_rigid(nmat,im_primary).eq.1) then
           ! do nothing
