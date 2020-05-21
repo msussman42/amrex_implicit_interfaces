@@ -1650,7 +1650,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &nparts,
     &nparts_def,
     im_solid_map_ptr,
-    prescribed_solid_scale.dataPtr(),
     added_weight.dataPtr(),
     blob_array.dataPtr(),
     &blob_array_size,
@@ -1802,7 +1801,6 @@ void NavierStokes::apply_cell_pressure_gradient(
      &nparts,
      &nparts_def,
      im_solid_map_ptr,
-     prescribed_solid_scale.dataPtr(),
      added_weight.dataPtr(),
      &nten,
      &level, 
@@ -2046,7 +2044,6 @@ void NavierStokes::make_MAC_velocity_consistent() {
 }  // subroutine make_MAC_velocity_consistent()
 
 void NavierStokes::increment_face_velocityALL(
- int prescribed_noslip,
  int interp_option,
  int project_option,
  int idx_velcell,
@@ -2062,7 +2059,6 @@ void NavierStokes::increment_face_velocityALL(
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.increment_face_velocity(
-    prescribed_noslip,
     interp_option,project_option,
     idx_velcell,idx_velcell_temp,
     beta,blobdata,alloc_cell_vel); 
@@ -2073,7 +2069,6 @@ void NavierStokes::increment_face_velocityALL(
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.increment_face_velocity(
-    prescribed_noslip,
     interp_option,project_option,
     idx_velcell,idx_velcell_temp,
     beta,blobdata,alloc_cell_vel); 
@@ -2128,7 +2123,6 @@ void NavierStokes::increment_face_velocityALL(
 // (when project_option==0,1,10,11,13), APPLY_REGISTERS, INCREMENT_REGISTERS
 // called from NavierStokes::increment_face_velocityALL
 void NavierStokes::increment_face_velocity(
- int prescribed_noslip,
  int interp_option,
  int project_option,
  int idx_velcell,
@@ -2140,16 +2134,6 @@ void NavierStokes::increment_face_velocity(
  int finest_level = parent->finestLevel();
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
-
- Vector<Real> local_prescribed_solid_scale(nmat);
- for (int im=0;im<nmat;im++) {
-  if (prescribed_noslip==1)
-   local_prescribed_solid_scale[im]=0.0;
-  else if (prescribed_noslip==0)
-   local_prescribed_solid_scale[im]=prescribed_solid_scale[im];
-  else
-   amrex::Error("prescribed_noslip invalid");
- } // im=0..nmat-1
 
  MultiFab* levelcolor;
  MultiFab* leveltype;
@@ -2382,8 +2366,8 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid2");
 
   if (num_colors==0) {
-   levelcolor=localMF[FSI_GHOST_MF];
-   leveltype=localMF[FSI_GHOST_MF];
+   levelcolor=localMF[idx_velcell_temp];
+   leveltype=localMF[idx_velcell_temp];
   } else if (num_colors>0) {
    levelcolor=localMF[COLOR_MF];
    leveltype=localMF[TYPE_MF];
@@ -2469,7 +2453,8 @@ void NavierStokes::increment_face_velocity(
 
      if (thread_class::nthreads<1)
       amrex::Error("thread_class::nthreads invalid");
-     thread_class::init_d_numPts(localMF[FSI_GHOST_MF]->boxArray().d_numPts());
+     thread_class::init_d_numPts(
+	localMF[idx_velcell_temp]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -2510,8 +2495,8 @@ void NavierStokes::increment_face_velocity(
 
       FArrayBox& pres=(*U_old)[mfi];
 
-       // FSI_GHOST_MF is initialized in 
-       //  init_FSI_GHOST_MF_ALL(ngrow,caller_id)
+       // FSI_GHOST_MAC_MF is initialized in 
+       //  init_FSI_GHOST_MAC_MF_ALL(caller_id)
       FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
       FArrayBox& cellvelfab=(*localMF[idx_velcell_temp])[mfi];
 
@@ -2637,7 +2622,6 @@ void NavierStokes::increment_face_velocity(
        &nparts,
        &nparts_def,
        im_solid_map_ptr,
-       local_prescribed_solid_scale.dataPtr(),
        added_weight.dataPtr(),
        blob_array.dataPtr(),
        &blob_array_size,
@@ -2673,196 +2657,6 @@ void NavierStokes::increment_face_velocity(
   amrex::Error("alloc_cell_vel invalid");
 
 } // subroutine increment_face_velocity
-
-
-void NavierStokes::MAC_velocity_GFM(int idx_mac,int project_option,
-		Real& prescribed_error_in) {
-
- if (prescribed_error_in>=0.0) {
-
-  if (num_materials_vel==1) {
-
-   int finest_level = parent->finestLevel();
-   int nmat=num_materials;
-   int nsolveMM_FACE=1;
-
-   MultiFab* face_velocity[AMREX_SPACEDIM];
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    face_velocity[dir]=getStateMAC(1,dir,0,nsolveMM_FACE,cur_time_slab);
-    debug_ngrow(idx_mac+dir,0,111);
-    if (localMF[idx_mac+dir]->boxArray()!=face_velocity[dir]->boxArray())
-     amrex::Error("localMF[idx_mac+dir]->boxArray() invalid");
-   } // dir=0..sdim-1
-
-   int nparts=im_solid_map.size();
-   if ((nparts<0)||(nparts>nmat))
-    amrex::Error("nparts invalid");
-   Vector<int> im_solid_map_null;
-   im_solid_map_null.resize(1);
-
-   int* im_solid_map_ptr;
-   int nparts_def=nparts;
-   if (nparts==0) {
-    im_solid_map_ptr=im_solid_map_null.dataPtr();
-    nparts_def=1;
-   } else if ((nparts>=1)&&(nparts<=nmat)) {
-    im_solid_map_ptr=im_solid_map.dataPtr();
-   } else
-    amrex::Error("nparts invalid");
-
-   resize_FSI_GHOST_MF(1);
-   if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-    amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
-   if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-    amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
-
-   bool use_tiling=ns_tiling;
-
-   if (num_state_base!=2)
-    amrex::Error("num_state_base invalid");
-
-   resize_levelsetLO(2,LEVELPC_MF);
-   debug_ngrow(LEVELPC_MF,2,110);
-   debug_ngrow(FSI_GHOST_MF,1,112);
-   VOF_Recon_resize(1,SLOPE_RECON_MF);
-   debug_ngrow(SLOPE_RECON_MF,1,123);
-
-   resize_maskfiner(1,MASKCOEF_MF);
-   resize_mask_nbr(1);
-
-   const Real* dx = geom.CellSize();
-
-   const Box& domain = geom.Domain();
-   const int* domlo = domain.loVect();
-   const int* domhi = domain.hiVect();
-
-   Vector< Real > GFM_error;
-   GFM_error.resize(thread_class::nthreads);
-   for (int tid=0;tid<thread_class::nthreads;tid++) {
-    GFM_error[tid]=0.0;
-   } // tid
-
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-
-    if (thread_class::nthreads<1)
-     amrex::Error("thread_class::nthreads invalid");
-    thread_class::init_d_numPts(localMF[FSI_GHOST_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-    for (MFIter mfi(*localMF[FSI_GHOST_MF],use_tiling); mfi.isValid(); ++mfi) {
-      BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-      int gridno=mfi.index();
-      const Box& tilegrid = mfi.tilebox();
-      const Box& fabgrid = grids[gridno];
-      const int* tilelo=tilegrid.loVect();
-      const int* tilehi=tilegrid.hiVect();
-      const int* fablo=fabgrid.loVect();
-      const int* fabhi=fabgrid.hiVect();
-      int bfact=parent->Space_blockingFactor(level);
-      int bfact_c=bfact;
-      int bfact_f=bfact;
-      if (level>0)
-       bfact_c=parent->Space_blockingFactor(level-1);
-      if (level<finest_level)
-       bfact_f=parent->Space_blockingFactor(level+1);
-
-      const Real* xlo = grid_loc[gridno].lo();
-    
-      FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
-      FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
-
-      FArrayBox& xvel=(*localMF[idx_mac+dir])[mfi];
-      FArrayBox& xsrc=(*face_velocity[0])[mfi];
-      FArrayBox& ysrc=(*face_velocity[1])[mfi];
-      FArrayBox& zsrc=(*face_velocity[AMREX_SPACEDIM-1])[mfi];
-
-      FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-
-      // mask=tag if not covered by level+1 or outside the domain.
-      FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-      FArrayBox& masknbr=(*localMF[MASK_NBR_MF])[mfi];
-
-      Vector<int> velbc=getBCArray(State_Type,gridno,0, 
-       num_materials_vel*AMREX_SPACEDIM);
-
-      int rzflag=0;
-      if (geom.IsRZ())
-       rzflag=1;
-      else if (geom.IsCartesian())
-       rzflag=0;
-      else if (geom.IsCYLINDRICAL())
-       rzflag=3;
-      else
-       amrex::Error("CoordSys bust 20");
-
-      int tid_current=ns_thread();
-      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-       amrex::Error("tid_current invalid");
-      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-      FORT_GFMUPDATE(
-       &tid_current,
-       &dir,
-       &GFM_error[tid_current],
-       velbc.dataPtr(),  
-       &slab_step,
-       &dt_slab,
-       &cur_time_slab, 
-       xlo,dx,
-       masknbr.dataPtr(), // mask=1.0 at interior fine bc ghost cells
-       ARLIM(masknbr.loVect()),ARLIM(masknbr.hiVect()),
-        // mask=tag if not covered by level+1 or outside the domain.
-       maskcov.dataPtr(),
-       ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-       lsfab.dataPtr(),
-       ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-       sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()),
-       reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-       xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
-       xsrc.dataPtr(),ARLIM(xsrc.loVect()),ARLIM(xsrc.hiVect()), 
-       ysrc.dataPtr(),ARLIM(ysrc.loVect()),ARLIM(ysrc.hiVect()), 
-       zsrc.dataPtr(),ARLIM(zsrc.loVect()),ARLIM(zsrc.hiVect()), 
-       tilelo,tilehi,
-       fablo,fabhi,
-       &bfact,&bfact_c,&bfact_f, 
-       &level,&finest_level,
-       &rzflag,
-       domlo,domhi, 
-       &nmat,
-       &nparts,
-       &nparts_def,
-       im_solid_map_ptr,
-       prescribed_solid_scale.dataPtr(),
-       &prescribed_solid_method, //0=stair 1=2nd ord 2=mod stair 3=mod normal
-       &project_option);
-    } // mfi
-} // omp
-    ns_reconcile_d_num(135);
-
-    for (int tid=1;tid<thread_class::nthreads;tid++) {
-     if (GFM_error[tid]>GFM_error[0])
-      GFM_error[0]=GFM_error[tid];
-    } // tid
-    ParallelDescriptor::ReduceRealMax(GFM_error[0]);
-   } // dir=0..sdim-1
-
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-    delete face_velocity[dir];
-
-   if (prescribed_error_in<GFM_error[0])
-    prescribed_error_in=GFM_error[0];
-  } else
-   amrex::Error("num_materials_vel invalid");
-
- } else
-  amrex::Error("prescribed_error_in invalid");
-
-} // subroutine MAC_velocity_GFM
-
-
 
 // update the faceden_index component of FACE_VAR_MF
 // called from make_physics_vars
@@ -3158,7 +2952,6 @@ void NavierStokes::density_TO_MAC(int project_option) {
         &nparts,
         &nparts_def,
         im_solid_map_ptr,
-        prescribed_solid_scale.dataPtr(),
         added_weight.dataPtr(),
         blob_array.dataPtr(),
         &blob_array_size,
@@ -3193,23 +2986,13 @@ void NavierStokes::density_TO_MAC(int project_option) {
 
 } // subroutine density_TO_MAC
 
-void NavierStokes::VELMAC_TO_CELL(int prescribed_noslip,int use_VOF_weight) {
+void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
  
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
-
- Vector<Real> local_prescribed_solid_scale(nmat);
- for (int im=0;im<nmat;im++) {
-  if (prescribed_noslip==1)
-   local_prescribed_solid_scale[im]=0.0;
-  else if (prescribed_noslip==0)
-   local_prescribed_solid_scale[im]=prescribed_solid_scale[im];
-  else
-   amrex::Error("prescribed_noslip invalid");
- } // im=0..nmat-1
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -3360,7 +3143,6 @@ void NavierStokes::VELMAC_TO_CELL(int prescribed_noslip,int use_VOF_weight) {
    &nparts,
    &nparts_def,
    im_solid_map_ptr,
-   local_prescribed_solid_scale.dataPtr(),
    added_weight.dataPtr(),
    &nten,
    &level,
@@ -4704,7 +4486,6 @@ void NavierStokes::apply_pressure_grad(
      &nparts,
      &nparts_def,
      im_solid_map_ptr,
-     prescribed_solid_scale.dataPtr(),
      added_weight.dataPtr(),
      blob_array.dataPtr(),
      &blob_array_size,
@@ -5430,7 +5211,6 @@ void NavierStokes::make_physics_vars(int project_option) {
     &nparts_def,
     im_solid_map_ptr,
     &num_curv,
-    prescribed_solid_scale.dataPtr(),
     &level,
     &finest_level);
   }  // mfi
@@ -6252,7 +6032,6 @@ void NavierStokes::process_potential_force_face() {
     &nparts,
     &nparts_def,
     im_solid_map_ptr,
-    prescribed_solid_scale.dataPtr(),
     added_weight.dataPtr(),
     blob_array.dataPtr(),
     &blob_array_size,
@@ -6440,7 +6219,6 @@ void NavierStokes::process_potential_force_cell() {
    &nparts,
    &nparts_def,
    im_solid_map_ptr,
-   prescribed_solid_scale.dataPtr(),
    added_weight.dataPtr(),
    &nten,
    &level, 

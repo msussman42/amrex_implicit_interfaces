@@ -22187,8 +22187,7 @@ end function delta
        velbc, &
        listbc, &
        xlo,dx, &
-       cur_time, &
-       prescribed_solid_scale)
+       cur_time)
       use probf90_module
       use global_utility_module
       use geometry_intersect_module
@@ -22239,9 +22238,6 @@ end function delta
 
       INTEGER_T velbc(SDIM,2,num_materials_vel*SDIM)
       INTEGER_T listbc(SDIM,2,nsolveMM)
-
-      REAL_T prescribed_solid_scale(nmat)
-      REAL_T prescribed_factor
 
       REAL_T xlo(SDIM),dx(SDIM) 
       REAL_T dxmaxLS
@@ -22435,18 +22431,6 @@ end function delta
        print *,"num_materials_vel invalid"
        stop
       endif
-
-      do im=1,nmat
-
-       if ((prescribed_solid_scale(im).ge.zero).and. &
-           (prescribed_solid_scale(im).lt.half)) then
-        ! do nothing
-       else
-        print *,"prescribed_solid_scale invalid"
-        stop
-       endif
-
-      enddo ! im=1..nmat
 
       if (combine_idx.eq.-1) then
 
@@ -22708,13 +22692,11 @@ end function delta
         endif
 
         is_solid_cell=0
-        prescribed_factor=zero
 
         if ((im_solid_vel_plus.ge.1).and. &
             (im_solid_vel_plus.le.nmat)) then
          if (is_prescribed(nmat,im_solid_vel_plus).eq.1) then
           is_solid_cell=im_solid_vel_plus
-          prescribed_factor=prescribed_solid_scale(is_solid_cell)
           if (im_solid_map(partid_vel_plus+1)+1.ne.im_solid_vel_plus) then
            print *,"im_solid_map(partid_vel_plus+1)+1.ne.im_solid_vel_plus"
            stop
@@ -22741,7 +22723,6 @@ end function delta
              (im_solid_vel_max.le.nmat)) then
           if (is_prescribed(nmat,im_solid_vel_max).eq.1) then
            is_solid_cell=im_solid_vel_max
-           prescribed_factor=prescribed_solid_scale(is_solid_cell)
           else if (is_prescribed(nmat,im_solid_vel_max).eq.0) then
            ! do nothing
           else
@@ -22765,7 +22746,6 @@ end function delta
 
         if (is_prescribed(nmat,im_primary).eq.1) then
          is_solid_cell=im_primary
-         prescribed_factor=prescribed_solid_scale(is_solid_cell)
         else if (is_prescribed(nmat,im_primary).eq.0) then
          ! do nothing
         else
@@ -22822,22 +22802,20 @@ end function delta
           enddo ! cellcomp=1..sdim
             
           if ((is_solid_cell.ge.1).and. &
-              (is_solid_cell.le.nmat).and. &
-              (prescribed_factor.eq.zero)) then
+              (is_solid_cell.le.nmat)) then
    
            do cellcomp=1,SDIM
             ucombine(cellcomp)=vsol(cellcomp)
            enddo ! cellcomp
 
-          else if ((is_solid_cell.eq.0).or. &
-                   (prescribed_factor.gt.zero)) then
+          else if (is_solid_cell.eq.0) then
 
            do cellcomp=1,SDIM
             ucombine(cellcomp)=cellfab(D_DECL(i,j,k),cellcomp)
            enddo ! cellcomp
 
           else
-           print *,"is_solid_cell or prescribed_factor invalid"
+           print *,"is_solid_cell invalid"
            stop
           endif
 
@@ -23432,8 +23410,7 @@ end function delta
        sol,DIMS(sol), &
        xlo,dx, &
        dir, &
-       cur_time, &
-       prescribed_solid_scale)
+       cur_time)
       use probf90_module
       use global_utility_module
       use geometry_intersect_module
@@ -23488,9 +23465,6 @@ end function delta
       REAL_T LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T sol(DIMV(sol),nparts_def*SDIM)
 
-      REAL_T prescribed_solid_scale(nmat)
-      REAL_T prescribed_factor
- 
       INTEGER_T nten_test 
       INTEGER_T ii,jj,kk 
       INTEGER_T i,j,k
@@ -23623,18 +23597,6 @@ end function delta
        stop
       endif
 
-      do im=1,nmat
-
-       if ((prescribed_solid_scale(im).ge.zero).and. &
-           (prescribed_solid_scale(im).lt.half)) then
-        ! do nothing
-       else
-        print *,"prescribed_solid_scale invalid"
-        stop
-       endif 
-
-      enddo ! im=1..nmat
-
       ii=0
       jj=0
       kk=0
@@ -23698,7 +23660,6 @@ end function delta
        endif
 
        is_solid_face=0
-       prescribed_factor=zero
 
        vsol=zero
 
@@ -23854,7 +23815,6 @@ end function delta
         partidR=0
 
         if (is_prescribed(nmat,imL).eq.1) then ! is_rigid=1 CTML_FSI_mat=0
-         prescribed_factor=prescribed_solid_scale(imL)
          do im=1,imL-1
           if (is_lag_part(nmat,im).eq.1) then
            partidL=partidL+1
@@ -23877,7 +23837,6 @@ end function delta
         endif
 
         if (is_prescribed(nmat,imR).eq.1) then
-         prescribed_factor=prescribed_solid_scale(imR)
          do im=1,imR-1
           if (is_lag_part(nmat,im).eq.1) then
            partidR=partidR+1
@@ -24017,15 +23976,7 @@ end function delta
          ucombine=vsol
         else if ((is_solid_face.eq.2).or. &
                  (is_solid_face.eq.3)) then
-         if (prescribed_factor.eq.zero) then
-          ucombine=vsol
-         else if ((prescribed_factor.gt.zero).and. &
-                  (prescribed_factor.le.half)) then
-          ucombine=mac(D_DECL(i,j,k),facecomp)
-         else
-          print *,"prescribed_factor invalid"
-          stop
-         endif
+         ucombine=vsol
         else if (is_solid_face.eq.0) then
          ucombine=mac(D_DECL(i,j,k),facecomp)
         else

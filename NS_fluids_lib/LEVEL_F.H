@@ -14,7 +14,6 @@
 #    define FORT_BUILD_MODVISC build_modvisc
 #    define FORT_BUILD_MASK_UNSPLIT build_mask_unsplit
 #    define FORT_CELL_TO_MAC cell_to_mac
-#    define FORT_GFMUPDATE gfmupdate
 #    define FORT_MAC_TO_CELL mac_to_cell
 #    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
@@ -43,7 +42,6 @@
 #    define FORT_BUILD_MODVISC BUILD_MODVISC
 #    define FORT_BUILD_MASK_UNSPLIT BUILD_MASK_UNSPLIT
 #    define FORT_CELL_TO_MAC CELL_TO_MAC
-#    define FORT_GFMUPDATE GFMUPDATE
 #    define FORT_MAC_TO_CELL MAC_TO_CELL
 #    define FORT_INC_TEMP INC_TEMP
 #    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
@@ -72,7 +70,6 @@
 #    define FORT_BUILD_MODVISC build_modvisc
 #    define FORT_BUILD_MASK_UNSPLIT build_mask_unsplit
 #    define FORT_CELL_TO_MAC cell_to_mac
-#    define FORT_GFMUPDATE gfmupdate
 #    define FORT_MAC_TO_CELL mac_to_cell
 #    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
@@ -99,7 +96,6 @@
 #    define FORT_BUILD_MODVISC build_modvisc_
 #    define FORT_BUILD_MASK_UNSPLIT build_mask_unsplit_
 #    define FORT_CELL_TO_MAC cell_to_mac_
-#    define FORT_GFMUPDATE gfmupdate_
 #    define FORT_MAC_TO_CELL mac_to_cell_
 #    define FORT_INC_TEMP inc_temp_
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
@@ -351,7 +347,6 @@ namespace amrex{
         int* nparts,
         int* nparts_def,
         int* im_solid_map,
-        Real* prescribed_solid_scale,
         Real* added_weight,
         Real* blob_array,
         int* blob_array_size,
@@ -363,38 +358,6 @@ namespace amrex{
         int* project_option,
         int* SEM_upwind,
         int* SEM_advection_algorithm);
-
-      void FORT_GFMUPDATE(
-        int* tid,
-        int* dirmac,
-	Real* gfm_error,
-        int* velbc,
-        int* slab_step,
-        Real* dt,
-        Real* time,
-        const Real* xlo,const Real* dx,
-        Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
-        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
-        Real* levelPC,AMREX_ARLIM_P(levelPClo),AMREX_ARLIM_P(levelPChi),
-        Real* sol,AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
-        Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
-        Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi), 
-	Real* xsrc,AMREX_ARLIM_P(xsrclo),AMREX_ARLIM_P(xsrchi),
-	Real* ysrc,AMREX_ARLIM_P(ysrclo),AMREX_ARLIM_P(ysrchi),
-	Real* zsrc,AMREX_ARLIM_P(zsrclo),AMREX_ARLIM_P(zsrchi),
-        const int* tilelo,const int* tilehi,
-        const int* fablo,const int* fabhi,
-        int* bfact,int* bfact_c,int* bfact_f,
-        int* level,int* finest_level,
-        const int* rz_flag,
-        const int* domlo,const int* domhi,
-        int* nmat,
-        int* nparts,
-        int* nparts_def,
-        int* im_solid_map,
-        Real* prescribed_solid_scale,
-        int* prescribed_solid_method,
-        int* project_option);
 
       void FORT_MAC_TO_CELL(
         int* nsolveMM_FACE,
@@ -409,7 +372,6 @@ namespace amrex{
         int* nparts,
         int* nparts_def,
         int* im_solid_map,
-        Real* prescribed_solid_scale,
         Real* added_weight,
         int* nten,
         int* level,
@@ -575,7 +537,6 @@ namespace amrex{
        int* nparts_def,
        int* im_solid_map,
        int* num_curv,
-       Real* prescribed_solid_scale,
        int* level,
        int* finest_level);
 
@@ -681,7 +642,6 @@ namespace amrex{
         int* presbc,
         Real* visc_coef,
         int* constant_viscosity,
-        Real* prescribed_solid_scale,
         int* project_option);
 
 

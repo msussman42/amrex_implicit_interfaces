@@ -19,24 +19,6 @@
 // alpha dp - div beta grad dp = -div V + alpha(p*-p0)
 // V=u*-beta grad p0
 //
-// prescribed solid algorithm:
-// k=0
-// pk given
-// q=p*-pk
-// p=pk
-// V=H(u*-beta grad pk)+(1-H)Usolid^k
-// repeat
-//  alpha dp - div beta grad dp = -div V + alpha q
-//  k=k+1
-//  q=q-dp
-//  V=H(V-beta grad dp)+(1-H)Usolid^k 
-//  p=p+dp
-// until converge
-// 
-// at convergence:
-//  q=p*-p
-//  V=u* - beta grad p
-//
 // alpha=(1/c)^2 / (rho dt^2)
 // alpha=avgdown(alpha)*volume
 //
@@ -1945,7 +1927,6 @@ void NavierStokes::apply_div(
    &nparts,
    &nparts_def,
    im_solid_map_ptr,
-   prescribed_solid_scale.dataPtr(),
    added_weight.dataPtr(),
    &nten,
    &level, 
@@ -2635,7 +2616,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &nparts,
     &nparts_def,
     im_solid_map_ptr,
-    prescribed_solid_scale.dataPtr(),
     added_weight.dataPtr(),
     &nten,
     &level, 

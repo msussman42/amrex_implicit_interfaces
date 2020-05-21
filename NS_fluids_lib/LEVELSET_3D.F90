@@ -6427,7 +6427,6 @@ stop
        nparts_def, &
        im_solid_map, &
        num_curv, &
-       prescribed_solid_scale, &
        level, &
        finest_level)
       use global_utility_module
@@ -6450,7 +6449,6 @@ stop
       REAL_T :: curv_max
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nrefine_vof
-      REAL_T, intent(in) :: prescribed_solid_scale(nmat)
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: diffusionface_flag
       INTEGER_T, intent(in) :: temperatureface_flag
@@ -8223,13 +8221,13 @@ stop
          local_face(icefacecut_index+1)=one
 
 ! local_face(facecut_index+1)=0.0 if presbc=REFLECT_EVEN,LO_EXTRAP
-! local_face(facecut_index+1)=prescribed_solid_scale if face has adjoining
+! local_face(facecut_index+1)=0.0 if face has adjoining
 !  prescribed solid.
          if (wall_flag_face.eq.0) then
           local_face(facecut_index+1)=one
          else if ((wall_flag_face.ge.1).and. &
                   (wall_flag_face.le.nmat)) then
-          local_face(facecut_index+1)=prescribed_solid_scale(wall_flag_face)
+          local_face(facecut_index+1)=zero
          else if (wall_flag_face.eq.nmat+1) then
           local_face(facecut_index+1)=zero
          else
@@ -9792,7 +9790,6 @@ stop
        nparts, &
        nparts_def, &
        im_solid_map, &
-       prescribed_solid_scale, &
        added_weight, &
        nten, &
        level, &
@@ -9892,7 +9889,6 @@ stop
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-      REAL_T, intent(in) :: prescribed_solid_scale(nmat)
       REAL_T, intent(in) :: added_weight(nmat)
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nsolve
@@ -10185,13 +10181,6 @@ stop
         ! do nothing
        else
         print *,"imattype invalid"
-        stop
-       endif
-       if ((prescribed_solid_scale(im).ge.zero).and. &
-           (prescribed_solid_scale(im).lt.half)) then
-        ! do nothing
-       else
-        print *,"prescribed_solid_scale invalid"
         stop
        endif
        if (added_weight(im).gt.zero) then
@@ -11066,14 +11055,7 @@ stop
 
          cell_velocity_override=0
          if ((partid.ge.0).and.(partid.lt.nparts)) then
-          if (prescribed_solid_scale(im_solid).eq.zero) then
-           cell_velocity_override=1
-          else if (prescribed_solid_scale(im_solid).gt.zero) then
-           ! do nothing
-          else 
-           print *,"prescribed_solid_scale(im_solid) invalid"
-           stop
-          endif
+          cell_velocity_override=1
          else if (partid.eq.-1) then
           ! do nothing
          else
@@ -12564,7 +12546,6 @@ stop
        nparts, &
        nparts_def, &
        im_solid_map, &
-       prescribed_solid_scale, &
        added_weight, &
        blob_array, &
        blob_array_size, &
@@ -12600,7 +12581,6 @@ stop
       INTEGER_T, intent(in) :: num_colors
       REAL_T, intent(in) :: blob_array(blob_array_size)
         
-      REAL_T, intent(in) :: prescribed_solid_scale(nmat)
       REAL_T, intent(in) :: added_weight(nmat)
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nfacefrac
@@ -13151,14 +13131,6 @@ stop
       endif
 
       do im=1,nmat
-
-       if ((prescribed_solid_scale(im).ge.zero).and. &
-           (prescribed_solid_scale(im).lt.half)) then
-        ! do nothing
-       else
-        print *,"prescribed_solid_scale invalid"
-        stop
-       endif
 
        if (added_weight(im).gt.zero) then
         ! do nothing
@@ -13721,15 +13693,7 @@ stop
                print *,"im_solid_map invalid"
                stop
               endif
-              if (prescribed_solid_scale(im_prescribed).eq.zero) then
-               face_velocity_override=1
-              else if ((prescribed_solid_scale(im_prescribed).gt.zero).and. &
-                       (prescribed_solid_scale(im_prescribed).le.half)) then
-               ! do nothing
-              else
-               print *,"prescribed_solid_scale(im_prescribed) invalid"
-               stop
-              endif
+              face_velocity_override=1
              else if (im_prescribed_valid.eq.0) then
               face_velocity_override=1
              else
@@ -14373,14 +14337,7 @@ stop
                  (im_prescribed.le.nmat)) then
               if (im_solid_map(partid_prescribed+1)+1.eq.im_prescribed) then
                use_face_pres=zero ! do not use gp or div(up)
-               if (prescribed_solid_scale(im_prescribed).eq.zero) then
-                face_velocity_override=1
-               else if (prescribed_solid_scale(im_prescribed).gt.zero) then
-                ! do nothing
-               else
-                print *,"prescribed_solid_scale(im_prescribed) invalid"
-                stop
-               endif
+               face_velocity_override=1
               else
                print *,"im_solid_map(partid_prescribed+1)+1 invalid"
                stop
@@ -15129,858 +15086,6 @@ stop
       end subroutine FORT_CELL_TO_MAC
 
 
-      subroutine FORT_GFMUPDATE( &
-       tid, &
-       dirmac, &
-       gfm_error, &
-       velbc_in, &
-       slab_step, &
-       dt, &
-       time, &
-       xlo,dx, &
-       masknbr,DIMS(masknbr), & ! 1=fine/fine  0=coarse/fine
-       maskcov,DIMS(maskcov), & ! 1=not cov. or outside domain  0=covered
-       levelPC,DIMS(levelPC), &
-       sol,DIMS(sol), &
-       recon,DIMS(recon), &  
-       xvel,DIMS(xvel), &
-       xsrc,DIMS(xsrc), &
-       ysrc,DIMS(ysrc), &
-       zsrc,DIMS(zsrc), &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact,bfact_c,bfact_f, &
-       level,finest_level, &
-       rz_flag, &
-       domlo,domhi, &
-       nmat, &
-       nparts, &
-       nparts_def, &
-       im_solid_map, &
-       prescribed_solid_scale, &
-       prescribed_solid_method, & !0=stair 1=2nd order 2=mod stair 3=mod normal
-       project_option)
-      use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
-      use probf90_module
-      use probcommon_module
-      IMPLICIT NONE
-
-      INTEGER_T tid
-      INTEGER_T dirmac
-      INTEGER_T nmat
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-
-      REAL_T gfm_error
-      REAL_T prescribed_solid_scale(nmat)
-      INTEGER_T prescribed_solid_method
-      INTEGER_T slab_step
-      INTEGER_T level
-      INTEGER_T finest_level
-      REAL_T dt,time
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(recon)
-      INTEGER_T DIMDEC(xvel)
-      INTEGER_T DIMDEC(xsrc)
-      INTEGER_T DIMDEC(ysrc)
-      INTEGER_T DIMDEC(zsrc)
-      INTEGER_T DIMDEC(levelPC)
-      INTEGER_T DIMDEC(sol)
-
-      INTEGER_T velbc_in(SDIM,2,num_materials_vel*SDIM)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact,bfact_c,bfact_f
-      INTEGER_T rz_flag
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      INTEGER_T project_option
-
-      REAL_T masknbr(DIMV(masknbr))
-      REAL_T maskcov(DIMV(maskcov))
-
-      REAL_T levelPC(DIMV(levelPC),nmat*(1+SDIM))
-      REAL_T sol(DIMV(sol),nparts_def*SDIM)
-      REAL_T recon(DIMV(recon),nmat*ngeom_recon)
-
-      REAL_T xvel(DIMV(xvel))
-      REAL_T xsrc(DIMV(xsrc))
-      REAL_T ysrc(DIMV(ysrc))
-      REAL_T zsrc(DIMV(zsrc))
- 
-      INTEGER_T im
-      INTEGER_T im_left,im_right
-      INTEGER_T im_prescribed_left,im_prescribed_right
-      INTEGER_T im_prescribed_main
-      INTEGER_T im_prescribed_both
-      INTEGER_T im_fluid
-      INTEGER_T im_adjoin
-      INTEGER_T partid 
-      INTEGER_T atwall 
-      INTEGER_T idx
-      INTEGER_T i,j,k
-      INTEGER_T imac,jmac,kmac
-      INTEGER_T ifluid,jfluid,kfluid
-      INTEGER_T isolid,jsolid,ksolid
-      INTEGER_T i_adjoin,j_adjoin,k_adjoin
-      INTEGER_T im1,jm1,km1
-      INTEGER_T ii,jj,kk
-      INTEGER_T iii,jjj,kkk
-      INTEGER_T nhalf
-      REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
-      REAL_T LSadjoin(nmat)
-      INTEGER_T at_RZ_face
-      INTEGER_T localbc
-      INTEGER_T velcomp
-      INTEGER_T nrmcomp
-      INTEGER_T side
-      INTEGER_T local_dir
-      INTEGER_T fluid_stencil_ok
-      INTEGER_T nvalid
-      INTEGER_T maskleft,maskright
-      REAL_T velsum
-      REAL_T veltest
-      REAL_T local_solid_vel(SDIM)
-      REAL_T local_fluid_vel(SDIM)
-      REAL_T u_ghost
-      REAL_T un_fluid,un_solid
-      REAL_T un_fluid_simple,un_solid_simple
-      REAL_T nsolid(SDIM)
-      REAL_T local_err
-      REAL_T mag
-      REAL_T RR
-      REAL_T default_normal
-      INTEGER_T normal_ok,charfn,charfn_left,charfn_right
-      REAL_T simple_normal(SDIM)
-
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid"
-       stop
-      endif
-
-      nhalf=3
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid GFMUPDATE"
-       stop
-      endif
-      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid GFMUPDATE"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact too small"
-       stop
-      endif
-      if ((bfact_c.ne.bfact).and.(bfact_c.ne.2*bfact)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-      if ((bfact_f.ne.bfact).and.(bfact.ne.2*bfact_f)) then
-       print *,"bfact_f invalid"
-       stop
-      endif
-      if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid GFMUPDATE"
-       stop
-      endif
-      if ((dirmac.ge.0).and.(dirmac.le.SDIM-1)) then
-       ! do nothing
-      else
-       print *,"dirmac invalid"
-       stop
-      endif
-      if (gfm_error.ge.zero) then
-       ! do nothing
-      else
-       print *,"gfm_error invalid"
-       stop
-      endif
-      if ((project_option.eq.0).or. &
-          (project_option.eq.1).or. &
-          (project_option.eq.10).or. &
-          (project_option.eq.13).or. & !FSI_material_exists 1st project
-          (project_option.eq.11)) then !FSI_material_exists 2nd project
-       ! do nothing
-      else
-       print *,"project_option invalid"
-       stop
-      endif
-
-      if ((prescribed_solid_method.ge.0).and. &
-          (prescribed_solid_method.le.3)) then 
-       ! do nothing
-      else
-       print *,"prescribed_solid_method invalid"
-       stop
-      endif
-
-      do im=1,nmat
-
-       if ((prescribed_solid_scale(im).ge.zero).and. &
-           (prescribed_solid_scale(im).lt.half)) then
-        ! do nothing
-       else
-        print *,"prescribed_solid_scale invalid"
-        stop
-       endif
-
-       if (fort_denconst(im).gt.zero) then
-        ! do nothing
-       else
-        print *,"denconst invalid"
-        stop
-       endif
-
-      enddo ! im=1..nmat
-
-      if ((slab_step.ge.0).and.(slab_step.lt.bfact_time_order)) then
-       ! do nothing
-      else
-       print *,"slab_step invalid gfmupdate"
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(xvel),0,dirmac,231)
-      call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,231)
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,231)
-      call checkbound(fablo,fabhi,DIMS(recon),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(xsrc),1,0,234)
-      call checkbound(fablo,fabhi,DIMS(ysrc),1,1,234)
-      call checkbound(fablo,fabhi,DIMS(zsrc),1,SDIM-1,234)
-      call checkbound(fablo,fabhi,DIMS(sol),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(levelPC),2,-1,234)
-
-      do im=1,nmat
-
-       if (fort_material_type(im).eq.0) then
-        ! do nothing
-       else if (fort_material_type(im).eq.999) then
-        ! do nothing
-       else if ((fort_material_type(im).ge.1).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
-        ! do nothing
-       else
-        print *,"fort_material_type invalid"
-        stop
-       endif
-
-      enddo  ! im=1..nmat
-
-      ii=0
-      jj=0
-      kk=0
-      if (dirmac.eq.0) then
-       ii=1
-      else if (dirmac.eq.1) then
-       jj=1
-      else if ((dirmac.eq.2).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"dirmac out of range in GFMUPDATE"
-       stop
-      endif 
-
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dirmac)
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       im1=i-ii
-       jm1=j-jj
-       km1=k-kk
-
-       maskleft=NINT(maskcov(D_DECL(im1,jm1,km1)))
-       maskright=NINT(maskcov(D_DECL(i,j,k)))
-
-       if ((maskleft.eq.1).and.(maskright.eq.1)) then
-
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dirmac+1)
-
-        if (dirmac.eq.0) then
-         idx=i
-        else if (dirmac.eq.1) then
-         idx=j
-        else if ((dirmac.eq.2).and.(SDIM.eq.3)) then
-         idx=k
-        else
-         print *,"dirmac invalid GFMUPDATE"
-         stop
-        endif
-
-        ! levelPC() has piecewise constant BC at coarse/fine borders.
-        do im=1,nmat
-         LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
-         LSright(im)=levelPC(D_DECL(i,j,k),im)
-        enddo
-
-        at_RZ_face=0
-        if (levelrz.eq.0) then
-         ! do nothing
-        else if (levelrz.eq.1) then
-         if (SDIM.eq.2) then
-          if (dirmac.eq.0) then
-           if (xstenMAC(0,1).gt.VOFTOL*dx(1)) then
-            ! do nothing
-           else if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then 
-            at_RZ_face=1
-           else
-            print *,"xstenMAC bust"
-            stop
-           endif
-          else if (dirmac.eq.1) then
-           ! do nothing
-          else
-           print *,"dirmac invalid"
-           stop
-          endif
-         else
-          print *,"dimension bust"
-          stop
-         endif
-        else if (levelrz.eq.3) then
-         if ((dirmac.eq.0).and. &
-             (xstenMAC(0,1).le.VOFTOL*dx(1))) then
-          at_RZ_face=1
-         endif
-        else
-         print *,"levelrz invalid GFMUPDATE"
-         stop
-        endif 
-
-        if (at_RZ_face.eq.1) then
-         ! do nothing
-        else if (at_RZ_face.eq.0) then
-
-         call get_primary_material(LSleft,nmat,im_left)
-         call get_primary_material(LSright,nmat,im_right)
-
-         atwall=0
-         do side=1,2
-          localbc=velbc_in(dirmac+1,side,dirmac+1)
-          if ( ((side.eq.1).and.(idx.eq.fablo(dirmac+1))).or. &
-               ((side.eq.2).and.(idx.eq.fabhi(dirmac+1)+1)) ) then
-           if ((localbc.eq.EXT_DIR).or. &
-               (localbc.eq.REFLECT_ODD).or. &
-               (localbc.eq.REFLECT_EVEN).or. &
-               (localbc.eq.FOEXTRAP)) then
-            atwall=1
-           else if (localbc.eq.INT_DIR) then
-            ! do nothing
-           else
-            print *,"localbc invalid"
-            stop
-           endif
-          else if ((side.eq.1).and. &
-                   (idx.gt.fablo(dirmac+1)).and. &
-                   (idx.le.fabhi(dirmac+1)+1)) then
-           ! do nothing
-          else if ((side.eq.2).and. &
-                   (idx.ge.fablo(dirmac+1)).and. &
-                   (idx.lt.fabhi(dirmac+1)+1)) then
-           ! do nothing
-          else
-           print *,"idx or side invalid"
-           stop
-          endif
-         enddo ! side=1,2
-
-         if (atwall.eq.1) then
-          ! do nothing
-         else if (atwall.eq.0) then
-
-          im_prescribed_left=0
-          im_prescribed_right=0
-
-          if (is_rigid(nmat,im_left).eq.1) then
-            if (is_prescribed(nmat,im_left).eq.1) then
-             if ((prescribed_solid_scale(im_left).gt.zero).and. &
-                 (prescribed_solid_scale(im_left).le.half)) then
-              im_prescribed_left=im_left
-             else if (prescribed_solid_scale(im_left).eq.zero) then
-              ! do nothing
-             else
-              print *,"prescribed_solid_scale(im_left) invalid"
-              stop
-             endif
-            else if (is_prescribed(nmat,im_left).eq.0) then
-             ! do nothing
-            else
-             print *,"is_prescribed(nmat,im_left) invalid"
-             stop
-            endif
-          else if (is_rigid(nmat,im_left).eq.0) then
-            ! do nothing
-          else
-            print *,"is_rigid(nmat,im_left) invalid"
-            stop
-          endif
-
-          if (is_rigid(nmat,im_right).eq.1) then
-            if (is_prescribed(nmat,im_right).eq.1) then
-             if ((prescribed_solid_scale(im_right).gt.zero).and. &
-                 (prescribed_solid_scale(im_right).le.half)) then
-              im_prescribed_right=im_right
-             else if (prescribed_solid_scale(im_right).eq.zero) then
-              ! do nothing
-             else
-              print *,"prescribed_solid_scale(im_right) invalid"
-              stop
-             endif
-            else if (is_prescribed(nmat,im_right).eq.0) then
-             ! do nothing
-            else
-             print *,"is_prescribed(nmat,im_right) invalid"
-             stop
-            endif
-          else if (is_rigid(nmat,im_right).eq.0) then
-            ! do nothing
-          else
-            print *,"is_rigid(nmat,im_right) invalid"
-            stop
-          endif
-
-          im_prescribed_main=0
-          im_fluid=0
-          im_prescribed_both=0
-          default_normal=zero
-
-          if ((im_prescribed_left.eq.0).and. &
-              (im_prescribed_right.eq.0)) then
-           ! do nothing
-          else if ((im_prescribed_left.eq.im_prescribed_right).and. &
-                   (im_prescribed_left.ge.1).and. &
-                   (im_prescribed_left.le.nmat)) then
-           im_prescribed_both=im_prescribed_left
-          else if ((im_prescribed_left.ge.1).and. &
-                   (im_prescribed_left.le.nmat).and. &
-                   (im_prescribed_right.eq.0)) then
-           im_prescribed_main=im_prescribed_left
-           default_normal=-one
-           isolid=im1
-           jsolid=jm1
-           ksolid=km1
-           im_fluid=im_right
-           ifluid=i
-           jfluid=j
-           kfluid=k
-          else if ((im_prescribed_right.ge.1).and. &
-                   (im_prescribed_right.le.nmat).and. &
-                   (im_prescribed_left.eq.0)) then
-           im_prescribed_main=im_prescribed_right
-           default_normal=one
-           isolid=i
-           jsolid=j
-           ksolid=k
-           im_fluid=im_left
-           ifluid=im1
-           jfluid=jm1
-           kfluid=km1
-          else
-           print *,"im_prescribed invalid"
-           stop
-          endif
-
-          if ((im_prescribed_main.ge.1).and. &
-              (im_prescribed_main.le.nmat).and. &
-              (im_fluid.ge.1).and. &
-              (im_fluid.le.nmat)) then
-
-           if (is_rigid(nmat,im_fluid).eq.0) then
-
-            partid=0
-            do im=1,nmat
-             if (is_lag_part(nmat,im).eq.1) then
-              if (im.le.im_prescribed_main) then
-               partid=partid+1
-              endif
-             else if (is_lag_part(nmat,im).eq.0) then
-              ! do nothing
-             else
-              print *,"is_lag_part invalid"
-              stop
-             endif
-            enddo ! im=1..nmat
-            if (im_prescribed_main.ne. &
-                im_solid_map(partid)+1) then
-             print *,"im_solid_map invalid"
-             stop
-            endif
-
-            call gridsten_level(xsten,isolid,jsolid,ksolid,level,nhalf)
-
-            normal_ok=1
-            do local_dir=1,SDIM
-             iii=0
-             jjj=0
-             kkk=0
-             if (local_dir.eq.1) then
-              iii=1
-             else if (local_dir.eq.2) then
-              jjj=1
-             else if ((local_dir.eq.3).and.(SDIM.eq.3)) then
-              kkk=1
-             else
-              print *,"local_dir invalid"
-              stop
-             endif
-             
-             do side=-1,1,2
-              i_adjoin=ifluid+side*iii
-              j_adjoin=jfluid+side*jjj
-              k_adjoin=kfluid+side*kkk
-
-              do im=1,nmat
-               LSadjoin(im)=levelPC(D_DECL(i_adjoin,j_adjoin,k_adjoin),im)
-              enddo
-              call get_primary_material(LSadjoin,nmat,im_adjoin)
-
-              if (im_adjoin.eq.im_prescribed_main) then
-               charfn=1
-              else if ((im_adjoin.ge.1).and. &
-                       (im_adjoin.le.nmat).and. &
-                       (im_adjoin.ne.im_prescribed_main)) then
-               charfn=0
-              else
-               print *,"im_adjoin invalid"
-               stop
-              endif
-
-              if (side.eq.-1) then
-               charfn_left=charfn
-              else if (side.eq.1) then
-               charfn_right=charfn
-              else
-               print *,"side invalid"
-               stop
-              endif
-             enddo ! side=-1,1,2
-        
-             if ((charfn_left.eq.1).and.(charfn_right.eq.1)) then
-              normal_ok=0
-              simple_normal(local_dir)=zero
-             else if ((charfn_left.eq.1).and.(charfn_right.eq.0)) then
-              simple_normal(local_dir)=-one
-             else if ((charfn_left.eq.0).and.(charfn_right.eq.1)) then
-              simple_normal(local_dir)=one
-             else if ((charfn_left.eq.0).and.(charfn_right.eq.0)) then
-              simple_normal(local_dir)=zero
-             else
-              print *,"charfn_left or charfn_right invalid"
-              stop
-             endif
-            enddo ! local_dir=1..sdim
-
-            if (simple_normal(dirmac+1).ne.default_normal) then
-             normal_ok=0
-            endif
-
-            if (normal_ok.eq.0) then
-             do local_dir=1,SDIM
-              simple_normal(local_dir)=zero
-             enddo
-             simple_normal(dirmac+1)=default_normal
-            else if (normal_ok.eq.1) then
-             mag=zero
-             do local_dir=1,SDIM
-              mag=mag+simple_normal(local_dir)**2
-             enddo 
-             if (mag.ge.one) then
-              mag=sqrt(mag)
-              do local_dir=1,SDIM
-               simple_normal(local_dir)=simple_normal(local_dir)/mag
-              enddo
-             else
-              print *,"mag invalid"
-              stop
-             endif
-            else
-             print *,"normal_ok invalid"
-             stop
-            endif
-
-            do local_dir=1,SDIM
-             velcomp=(partid-1)*SDIM+local_dir
-             nrmcomp=nmat+(im_prescribed_main-1)*SDIM+local_dir 
-             if ((im_prescribed_main.ge.1).and. &
-                 (im_prescribed_main.le.nmat)) then
-              local_solid_vel(local_dir)= &
-                 half*(sol(D_DECL(isolid,jsolid,ksolid),velcomp)+ &
-                       sol(D_DECL(ifluid,jfluid,kfluid),velcomp))
-              nsolid(local_dir)=levelPC(D_DECL(isolid,jsolid,ksolid),nrmcomp)
-             else 
-              print *,"im_prescribed_main invalid"
-              stop
-             endif
-            enddo ! local_dir=1..sdim
-
-            fluid_stencil_ok=1
-
-            RR=one
-            if (levelrz.eq.0) then
-             ! do nothing
-            else if (levelrz.eq.1) then
-             RR=xsten(0,1)
-             if (RR.gt.zero) then
-              ! do nothing
-             else
-              print *,"RR invalid"
-              stop
-             endif
-            else if (levelrz.eq.3) then
-             ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
-             RR=xsten(0,1)
-             if (RR.gt.zero) then
-              ! do nothing
-             else
-              print *,"RR invalid"
-              stop
-             endif
-            else
-             print *,"levelrz invalid"
-             stop
-            endif
-
-            call prepare_normal(nsolid,RR,mag)
-            if (mag.eq.zero) then
-             fluid_stencil_ok=0
-            else if (mag.gt.zero) then
-             ! do nothing
-            else
-             print *,"mag invalid"
-             stop
-            endif
-
-            if (fluid_stencil_ok.eq.1) then
-
-             un_solid=zero
-             un_solid_simple=zero
-             do local_dir=1,SDIM
-              un_solid=un_solid+local_solid_vel(local_dir)*nsolid(local_dir)
-              un_solid_simple=un_solid_simple+ &
-                      local_solid_vel(local_dir)*simple_normal(local_dir)
-             enddo
-
-             do local_dir=1,SDIM
-
-              nvalid=0
-              velsum=zero
-
-              iii=0
-              jjj=0
-              kkk=0
-              if (local_dir.eq.1) then
-               iii=1
-              else if (local_dir.eq.2) then
-               jjj=1
-              else if ((local_dir.eq.3).and.(SDIM.eq.3)) then
-               kkk=1
-              else
-               print *,"local_dir invalid"
-               stop
-              endif
-             
-              do side=-1,1,2
-               i_adjoin=ifluid+side*iii
-               j_adjoin=jfluid+side*jjj
-               k_adjoin=kfluid+side*kkk
-
-               do im=1,nmat
-                LSadjoin(im)=levelPC(D_DECL(i_adjoin,j_adjoin,k_adjoin),im)
-               enddo
-               call get_primary_material(LSadjoin,nmat,im_adjoin)
-
-               if (is_rigid(nmat,im_adjoin).eq.0) then
-                imac=ifluid+(side+1)*iii/2
-                jmac=jfluid+(side+1)*jjj/2
-                kmac=kfluid+(side+1)*kkk/2
-
-                if (local_dir.eq.1) then
-                 veltest=xsrc(D_DECL(imac,jmac,kmac))
-                else if (local_dir.eq.2) then
-                 veltest=ysrc(D_DECL(imac,jmac,kmac))
-                else if ((local_dir.eq.3).and.(SDIM.eq.3)) then
-                 veltest=zsrc(D_DECL(imac,jmac,kmac))
-                else
-                 print *,"local_dir invalid"
-                 stop
-                endif
-
-                nvalid=nvalid+1
-                velsum=velsum+veltest
-               else if (is_rigid(nmat,im_adjoin).eq.1) then
-                ! do nothing
-               else
-                print *,"is_rigid(nmat,im_adjoin) invalid"
-                stop
-               endif
-              enddo ! side=-1,1,2
-
-              if (nvalid.eq.0) then
-               fluid_stencil_ok=0
-              else if ((nvalid.eq.1).or.(nvalid.eq.2)) then
-               local_fluid_vel(local_dir)=velsum/nvalid
-              else
-               print *,"nvalid invalid"
-               stop
-              endif
-             enddo ! local_dir=1..sdim
-
-             if (fluid_stencil_ok.eq.1) then
-
-               un_fluid=zero
-               un_fluid_simple=zero
-               do local_dir=1,SDIM
-                un_fluid=un_fluid+local_fluid_vel(local_dir)*nsolid(local_dir)
-                un_fluid_simple=un_fluid_simple+ &
-                        local_fluid_vel(local_dir)*simple_normal(local_dir)
-               enddo
-
-               if (normal_ok.eq.1) then
-                if (prescribed_solid_method.eq.0) then ! stair-step
-                 u_ghost=local_solid_vel(dirmac+1)
-                else if (prescribed_solid_method.eq.1) then ! 2nd order
-                 u_ghost=local_fluid_vel(dirmac+1)+ &
-                  (un_solid-un_fluid)*nsolid(dirmac+1)
-                else if (prescribed_solid_method.eq.2) then ! mod stair-step
-                 u_ghost=local_solid_vel(dirmac+1)
-                else if (prescribed_solid_method.eq.3) then ! mod normal
-                 u_ghost=local_fluid_vel(dirmac+1)+ &
-                  (un_solid_simple-un_fluid_simple)*simple_normal(dirmac+1)
-                else
-                 print *,"prescribed_solid_method invalid"
-                 stop
-                endif
-               else if (normal_ok.eq.0) then
-                u_ghost=local_solid_vel(dirmac+1)
-               else
-                print *,"normal_ok invalid"
-                stop
-               endif
-
-               local_err=abs(u_ghost-xvel(D_DECL(i,j,k)))
-               if (local_err.gt.gfm_error) then
-                gfm_error=local_err
-               endif
-               xvel(D_DECL(i,j,k))=u_ghost
-
-             else if (fluid_stencil_ok.eq.0) then
-              u_ghost=local_solid_vel(dirmac+1)
-              xvel(D_DECL(i,j,k))=u_ghost
-             else
-              print *,"fluid_stencil_ok invalid"
-              stop
-             endif
-
-            else if (fluid_stencil_ok.eq.0) then
-             u_ghost=local_solid_vel(dirmac+1)
-             xvel(D_DECL(i,j,k))=u_ghost
-            else
-             print *,"fluid_stencil_ok invalid"
-             stop
-            endif
-
-           else if (is_rigid(nmat,im_fluid).eq.1) then
-            ! do nothing
-           else
-            print *,"is_rigid(nmat,im_fluid) invalid"
-            stop
-           endif
-
-          else if (im_prescribed_main.eq.0) then
-
-           if (im_fluid.eq.0) then
-
-            if ((im_prescribed_both.ge.1).and. &
-                (im_prescribed_both.le.nmat)) then
-
-             partid=0
-             do im=1,nmat
-              if (is_lag_part(nmat,im).eq.1) then
-               if (im.le.im_prescribed_both) then
-                partid=partid+1
-               endif
-              else if (is_lag_part(nmat,im).eq.0) then
-               ! do nothing
-              else
-               print *,"is_lag_part invalid"
-               stop
-              endif
-             enddo ! im=1..nmat
-             if (im_prescribed_both.ne. &
-                 im_solid_map(partid)+1) then
-              print *,"im_solid_map invalid"
-              stop
-             endif
-
-             do local_dir=1,SDIM
-              velcomp=(partid-1)*SDIM+local_dir
-              if ((im_prescribed_both.ge.1).and. &
-                  (im_prescribed_both.le.nmat)) then
-               local_solid_vel(local_dir)= &
-                 half*(sol(D_DECL(i,j,k),velcomp)+ &
-                       sol(D_DECL(im1,jm1,km1),velcomp))
-              else 
-               print *,"im_prescribed_both invalid"
-               stop
-              endif
-             enddo ! local_dir=1..sdim
-
-             u_ghost=local_solid_vel(dirmac+1)
-             xvel(D_DECL(i,j,k))=u_ghost
-
-            else if (im_prescribed_both.eq.0) then
-             ! do nothing
-            else
-             print *,"im_prescribed_both invalid"
-             stop
-            endif
-
-           else
-            print *,"im_fluid invalid in GFMUPDATE, im_fluid=",im_fluid
-            stop
-           endif
-          else
-           print *,"im_prescribed_main or im_fluid invalid"
-           stop
-          endif
-
-         else
-          print *,"atwall invalid"
-          stop
-         endif
-
-        else
-         print *,"at_RZ_face invalid"
-         stop
-        endif
-
-       else if ((maskleft.eq.0).or.(maskright.eq.0)) then
-        ! do nothing
-       else
-        print *,"maskleft or maskright invalid"
-        stop
-       endif
-
-      enddo
-      enddo
-      enddo
-
-      return
-      end subroutine FORT_GFMUPDATE
-
-
       ! called from: NavierStokes::allocate_FACE_WEIGHT (NavierStokes3.cpp)
       !  which is called from:
       !   NavierStokes::update_SEM_forcesALL
@@ -16035,7 +15140,6 @@ stop
        presbc_arr, &
        visc_coef, &
        constant_viscosity, &
-       prescribed_solid_scale, &
        project_option)
       use global_utility_module
       use probcommon_module
@@ -16054,7 +15158,6 @@ stop
       INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: nfacefrac
       INTEGER_T, intent(in) :: ncellfrac
-      REAL_T, intent(in) :: prescribed_solid_scale(nmat)
       INTEGER_T, intent(in) :: local_face_index
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
@@ -16158,15 +15261,6 @@ stop
        stop
       endif
 
-      do im=1,nmat
-       if ((prescribed_solid_scale(im).ge.zero).and. &
-           (prescribed_solid_scale(im).lt.one)) then
-        ! do nothing
-       else
-        print *,"prescribed_solid_scale(im) invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
       if ((singular_possible.ne.0).and. &
           (singular_possible.ne.1)) then
        print *,"singular_possible invalid"

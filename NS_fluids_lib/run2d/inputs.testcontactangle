@@ -167,9 +167,6 @@ ns.probtype=55
 ns.pressure_error_cutoff=0.0 0.0 0.0 
 ns.heatviscconst=0.0 0.0 0.0 0.0
 ns.material_type=0 0 999 0
-ns.prescribed_solid_scale=0.0 0.0 0.0
-# 0=stair-step 1=2nd order 2=mod stair-step
-ns.prescribed_solid_method=0
 ns.FSI_flag=0 0 1
 ns.viscconst=1.0 0.0156552 1.0
 ns.denconst=1.0 0.001226 1.0 

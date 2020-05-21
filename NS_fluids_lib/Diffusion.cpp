@@ -721,7 +721,6 @@ void NavierStokes::viscous_boundary_fluxes(
 // combine_flag==1 (GFM -> FVM)
 // combine_flag==2 (combine if vfrac<VOFTOL)
 void NavierStokes::combine_state_variable(
- int prescribed_noslip,
  int project_option,
  int combine_idx,int combine_flag,int hflag,int update_flux) {
 
@@ -730,16 +729,6 @@ void NavierStokes::combine_state_variable(
  int finest_level=parent->finestLevel();
 
  int nmat=num_materials;
-
- Vector<Real> local_prescribed_solid_scale(nmat);
- for (int im=0;im<nmat;im++) {
-  if (prescribed_noslip==1)
-   local_prescribed_solid_scale[im]=0.0;
-  else if (prescribed_noslip==0)
-   local_prescribed_solid_scale[im]=prescribed_solid_scale[im];
-  else
-   amrex::Error("prescribed_noslip invalid");
- } // im=0..nmat-1
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
@@ -1042,8 +1031,7 @@ void NavierStokes::combine_state_variable(
       sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()),
       xlo,dx,
       &dir,
-      &cur_time_slab,
-      local_prescribed_solid_scale.dataPtr());
+      &cur_time_slab);
 
     }  // mfi
 } // omp
@@ -1194,8 +1182,7 @@ void NavierStokes::combine_state_variable(
     velbc.dataPtr(),
     listbc.dataPtr(),
     xlo,dx,
-    &cur_time_slab,
-    local_prescribed_solid_scale.dataPtr());
+    &cur_time_slab);
 
   }  // mfi
 } // omp

@@ -767,7 +767,6 @@ protected:
                 int scomp,int dcomp,int ncomp);
 
     void combine_state_variable(
-     int prescribed_noslip,
      int project_option,int idx,
      int combine_flag,int hflag,int update_flux);
 
@@ -1188,7 +1187,6 @@ void apply_pressure_grad(
 
      // unew^f=unew^f + beta * localMF[idx_velcell]
     void increment_face_velocity(
-      int prescribed_noslip,
       int interp_option,
       int project_option,
       int idx_velcell,
@@ -1198,7 +1196,6 @@ void apply_pressure_grad(
       int alloc_cell_vel);
 
     void increment_face_velocityALL(
-      int prescribed_noslip,
       int interp_option,
       int project_option,
       int idx_velcell,
@@ -1208,7 +1205,6 @@ void apply_pressure_grad(
     void make_MAC_velocity_consistent();
 
     void VELMAC_TO_CELL(
-      int prescribed_noslip,
       int use_VOF_weight);
 
     void INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf);
@@ -1239,10 +1235,6 @@ void apply_pressure_grad(
      int idx_umac,
      int idx_gpcell,
      int idx_divup);
-
-    void update_prescribed(int project_option,Real& prescribed_error);
-    void MAC_velocity_GFM(int idx_mac,int project_option,
-		Real& prescribed_error);
 
     void mac_sync();
 
@@ -1586,14 +1578,6 @@ protected:
      // 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
     static Real mglib_min_coeff_factor; 
 
-    static int prescribed_velocity_iter;
-    static int prescribed_error_met;
-    static Real prescribed_error_old;
-    static Real prescribed_error;
-    static Real prescribed_abstol;
-    static Real prescribed_reltol;
-    static Real prescribed_error0;
-
     static int custom_nucleation_model;
 
     static int FD_curv_interp; // def==1
@@ -1718,13 +1702,6 @@ protected:
      // 0=volume fraction  1=mass fraction 2=impedance fraction
     static int pressure_select_criterion; 
 
-      // local_face(facecut_index+1)=prescribed_solid_scale
-      // if face has an adjoining prescribed rigid solid cell.
-    static Vector<Real> prescribed_solid_scale; // def=0.0
-     //0=stair-step (default)
-     //1=2nd order 2=mod stair-step 3=modified normal
-    static int  prescribed_solid_method;
-    static int  min_prescribed_opt_iter; // default=10
     static int  singular_possible;
     static int  local_solvability_projection;
     static int  solvability_projection; // def=0

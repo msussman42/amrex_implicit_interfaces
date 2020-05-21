@@ -2151,7 +2151,6 @@ void NavierStokes::prelim_alloc() {
 void NavierStokes::advance_MAC_velocity(int project_option) {
 
  int interp_option=0;
- int prescribed_noslip=1;
  int idx_velcell=-1;
  Real beta=0.0;
 
@@ -2175,7 +2174,6 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  Vector<blobclass> blobdata;
 
  increment_face_velocityALL(
-   prescribed_noslip,
    interp_option,project_option,
    idx_velcell,beta,blobdata);
 
@@ -2657,7 +2655,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
        int project_option_combine=2; // temperature in do_the_advance
-       int prescribed_noslip=1;
        int combine_flag=2; // only update if vfrac<VOFTOL
        int hflag=0;
        // combine_idx==-1 => update S_new  
@@ -2665,13 +2662,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int combine_idx=-1;  
        int update_flux=0;
        ns_level.combine_state_variable(
-        prescribed_noslip,
         project_option_combine,
         combine_idx,combine_flag,hflag,update_flux); 
        for (int ns=0;ns<num_species_var;ns++) {
         project_option_combine=100+ns; // species in do_the_advance
         ns_level.combine_state_variable(
-         prescribed_noslip,
          project_option_combine,
          combine_idx,combine_flag,hflag,update_flux); 
        }
@@ -2940,8 +2935,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // (iii) usolid in solid regions
       advance_MAC_velocity(project_option);
 
-      int prescribed_noslip=1;
-
       if (face_flag==1) {
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
@@ -2956,7 +2949,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         Real beta=1.0;
         ns_level.increment_KE(beta); 
 	int use_VOF_weight=1;
-        ns_level.VELMAC_TO_CELL(prescribed_noslip,use_VOF_weight);
+        ns_level.VELMAC_TO_CELL(use_VOF_weight);
         beta=-1.0;
         ns_level.increment_KE(beta);
        }
@@ -2976,25 +2969,21 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int combine_idx=-1;  
        int update_flux=0;
        ns_level.combine_state_variable(
-        prescribed_noslip,
         project_option_combine,
         combine_idx,combine_flag,hflag,update_flux); 
        for (int ns=0;ns<num_species_var;ns++) {
         project_option_combine=100+ns;
         ns_level.combine_state_variable(
-         prescribed_noslip,
          project_option_combine,
          combine_idx,combine_flag,hflag,update_flux); 
        }
        project_option_combine=3;  // velocity
        ns_level.combine_state_variable(
-        prescribed_noslip,
         project_option_combine,
         combine_idx,combine_flag,hflag,update_flux);
        project_option_combine=0; // mac velocity
        update_flux=1;
        ns_level.combine_state_variable(
-        prescribed_noslip,
         project_option_combine,
         combine_idx,combine_flag,hflag,update_flux);
       } // ilev = finest_level ... level
@@ -3046,7 +3035,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        Real beta=0.0;
        Vector<blobclass> local_blobdata;
        increment_face_velocityALL(
-         prescribed_noslip,
          interp_option,project_option,
          idx_velcell,beta,local_blobdata);
 
@@ -3060,13 +3048,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int combine_idx=-1;  // update state variables
         int update_flux=0;
         ns_level.combine_state_variable(
-         prescribed_noslip,
          project_option_combine,
          combine_idx,combine_flag,hflag,update_flux);
         project_option_combine=0; // mac velocity
         update_flux=1;
         ns_level.combine_state_variable(
-         prescribed_noslip,
          project_option_combine,
          combine_idx,combine_flag,hflag,update_flux);
        } // ilev 
@@ -3170,14 +3156,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int combine_idx=-1;  // update state variables
         int update_flux=0;
         ns_level.combine_state_variable(
-         prescribed_noslip,
          project_option_combine,
          combine_idx,combine_flag,hflag,update_flux);
         project_option_combine=0; // mac velocity
-        prescribed_noslip=0;
         update_flux=1;
         ns_level.combine_state_variable(
-	 prescribed_noslip,project_option_combine,
          combine_idx,combine_flag,hflag,update_flux);
        } // ilev 
        debug_memory();
@@ -6044,7 +6027,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
     presbc.dataPtr(),
     &visc_coef,
     &constant_viscosity,
-    prescribed_solid_scale.dataPtr(),
     &project_option);
 
   }  // mfi
@@ -6277,71 +6259,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 
 } // subroutine allocate_project_variables
 
-
-// prescribed_error=max(prescribed_error,H_solid'|USOLID^{k+1}-UMAC|)
-//  1. OUTER_ITER_PRESSURE=p_new
-//  2. UMAC = (1-H_solid)UMAC + H_solid USOLID^{k+1}
-//  3. average down UMAC 
-void NavierStokes::update_prescribed(int project_option,
-            Real& prescribed_error_in) {
-
- int finest_level = parent->finestLevel();
- int num_materials_face=1;
- int state_index;
- Vector<int> scomp;
- Vector<int> ncomp;
- int ncomp_check;
- get_mm_scomp_solver(
-  num_materials_face,
-  project_option,
-  state_index,
-  scomp,
-  ncomp,
-  ncomp_check);
-
- if (ncomp_check!=1)
-  amrex::Error("ncomp_check invalid");
- if (scomp.size()!=1)
-  amrex::Error("scomp.size() invalid");
- if (ncomp[0]!=num_materials_vel)
-  amrex::Error("ncomp[0] invalid");
-
- if ((SDC_outer_sweeps>=0)&&
-     (SDC_outer_sweeps<ns_time_order)) {
-  // do nothing
- } else
-  amrex::Error("SDC_outer_sweeps invalid update_prescribed");
-
- if ((project_option==0)||   // regular project
-     (project_option==1)||   // initial project
-     (project_option==10)||  // sync project prior to advection
-     (project_option==13)||  // FSI_material_exists 1st project
-     (project_option==11)) { // FSI_material_exists 2nd project
-
-  if (num_materials_vel==1) {
-
-    // OUTER_ITER_PRESSURE=S_init 
-    // ngrow=0
-   delete_localMF(OUTER_ITER_PRESSURE_MF,1);
-   getState_localMF_list(OUTER_ITER_PRESSURE_MF,0,state_index,scomp,ncomp);
-
-   // UMAC_MF = (1-H_solid)UMAC_MF + H_solid USOLID^{k+1}
-   MAC_velocity_GFM(UMAC_MF,project_option,prescribed_error_in);
-
-   if (level==finest_level) {
-    // do nothing
-   } else if ((level>=0)&&(level<finest_level)) {
-    avgDownMac();  // UMAC_MF is interpolated from level+1
-   } else
-    amrex::Error("level invalid");
-
-  } else
-   amrex::Error("num_materials_vel invalid");
-
- } else
-  amrex::Error("project_option invalid");
-
-} // subroutine update_prescribed
 
 void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
 
@@ -8990,9 +8907,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // and if "im_FSI_rigid==im_primary" for one of a faces'
    // adjoining cells for example, then, icefacecut_index=0.0
    //
-  int prescribed_noslip=1;
   increment_face_velocityALL(
-    prescribed_noslip,
     interp_option,project_option,
     idx_velcell,beta,blobdata); 
 
@@ -9139,43 +9054,7 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("maxden invalid");
 
- prescribed_velocity_iter=0;
- int prescribed_velocity_iter_active=0;
-
- if ((project_option==0)||   // regular project
-     (project_option==1)||   // initial project
-     (project_option==10)||  // sync project prior to advection
-     (project_option==13)||  // FSI_material_exists 1st project
-     (project_option==11)) { // FSI_material_exists 2nd project
-  prescribed_velocity_iter_active=1;
- } else if (project_option==12) { //pressure extension
-  // do nothing
- } else if ((project_option==2)|| // thermal conduction
-	    (project_option==3)|| // viscosity
-	    ((project_option>=100)&& // species diffusion
-             (project_option<100+num_species_var))) {
-  prescribed_velocity_iter_active=0;
- } else
-  amrex::Error("project_option invalid46b");
-
-  // at this point:
-  // S_new=S^init
-  // POLDHOLD=S^adv - S^init
-  // UMAC_new=U^adv
- if (prescribed_velocity_iter_active==1) {
-  // do nothing
- } else if (prescribed_velocity_iter_active==0) {
-  //do nothing
- } else
-  amrex::Error("prescribed_velocity_iter_active invalid");
-
- prescribed_error=0.0;
- prescribed_error_old=0.0;
- prescribed_error0=0.0;
-
  int finest_total=0;
-
- prescribed_error_met=0;
 
 #if (profile_solver==1)
  bprof.stop();
@@ -9183,50 +9062,48 @@ void NavierStokes::multiphase_project(int project_option) {
 
  set_local_tolerances(project_option);
 
- do { // while (prescribed_error_met==0)
-
 #if (profile_solver==1)
-  bprof.start();
-  bprof.stop();
+ bprof.start();
+ bprof.stop();
 #endif
 
 #if (profile_solver==1)
-  bprof.start();
+ bprof.start();
 #endif
 
-  energyflag=0;
-  int homflag_residual_correction_form=0; 
+ energyflag=0;
+ int homflag_residual_correction_form=0; 
 
-  if ((project_option==10)|| // sync project
-       (project_option==11)|| // FSI_material_exists 2nd project
-       (project_option==1)) { // initial project
-    homflag_residual_correction_form=1; 
-  } else if ((project_option==0)|| // regular projection
-	     (project_option==12)|| // pressure extrapolation
-	     (project_option==13)|| // FSI_material_exists 1st project
-	     (project_option==3)||  // viscosity
-	     (project_option==2)||  // thermal diffusion
-	     ((project_option>=100)&&
-              (project_option<100+num_species_var))) {
-    homflag_residual_correction_form=0; 
-  } else
-     amrex::Error("project_option invalid");
+ if ((project_option==10)|| // sync project
+      (project_option==11)|| // FSI_material_exists 2nd project
+      (project_option==1)) { // initial project
+  homflag_residual_correction_form=1; 
+ } else if ((project_option==0)|| // regular projection
+            (project_option==12)|| // pressure extrapolation
+	    (project_option==13)|| // FSI_material_exists 1st project
+	    (project_option==3)||  // viscosity
+	    (project_option==2)||  // thermal diffusion
+	    ((project_option>=100)&&
+             (project_option<100+num_species_var))) {
+  homflag_residual_correction_form=0; 
+ } else
+  amrex::Error("project_option invalid");
 
-  CPP_OVERRIDEPBC(homflag_residual_correction_form,project_option);
+ CPP_OVERRIDEPBC(homflag_residual_correction_form,project_option);
 
    // STATE_FOR_RESID is an input to 
    //  NavierStokes::residual_correction_form
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
      // ngrow=1
-    ns_level.getState_localMF_list(STATE_FOR_RESID_MF,1,
-	   state_index,scomp,ncomp);
-    if (ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolveMM)
-     amrex::Error("ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolveMM");
+  ns_level.getState_localMF_list(STATE_FOR_RESID_MF,1,
+   state_index,scomp,ncomp);
+  if (ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolveMM)
+   amrex::Error("ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolveMM");
 
-    ns_level.resize_levelsetLO(2,LEVELPC_MF);
-    ns_level.debug_ngrow(LEVELPC_MF,2,870);
-  } // ilev=finest_level ... level
+  ns_level.resize_levelsetLO(2,LEVELPC_MF);
+  ns_level.debug_ngrow(LEVELPC_MF,2,870);
+ } // ilev=finest_level ... level
 
     // initializes diagsing,mask_div_residual,mask_residual,ONES_MF,
     // ones_sum_global
@@ -9235,10 +9112,10 @@ void NavierStokes::multiphase_project(int project_option) {
     //  
     // calls:FORT_SCALARCOEFF,FORT_MULT_FACEWT,FORT_DIVIDEDX,FORT_NSGENERATE
     // initializes arrays holding the diagonal and ONES_MF.
-  int create_hierarchy=0;
-  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
+ int create_hierarchy=0;
+ allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
-  int change_flag=0;
+ int change_flag=0;
 
     // at very beginning:
     // POLDHOLD_MF=S^adv-S^init
@@ -9246,1121 +9123,1029 @@ void NavierStokes::multiphase_project(int project_option) {
     // snew=S^init
     // STATE_FOR_RESID=S^init
     //
-  project_right_hand_side(POLDHOLD_MF,project_option,change_flag);
-  project_right_hand_side(OUTER_ITER_PRESSURE_MF,project_option,change_flag);
-  project_right_hand_side(STATE_FOR_RESID_MF,project_option,change_flag);
+ project_right_hand_side(POLDHOLD_MF,project_option,change_flag);
+ project_right_hand_side(OUTER_ITER_PRESSURE_MF,project_option,change_flag);
+ project_right_hand_side(STATE_FOR_RESID_MF,project_option,change_flag);
 
-  if (change_flag==0) {
+ if (change_flag==0) {
     // do nothing
-  } else if (change_flag==1) {
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.putState_localMF_list(STATE_FOR_RESID_MF,
-  	   state_index,scomp,ncomp);
-    } // ilev=finest_level ... level
-    delete_array(STATE_FOR_RESID_MF);
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.getState_localMF_list(STATE_FOR_RESID_MF,1,
-  	   state_index,scomp,ncomp);
-    } // ilev=finest_level ... level
-  } else
-    amrex::Error("change_flag invalid");
-
+ } else if (change_flag==1) {
   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.putState_localMF_list(STATE_FOR_RESID_MF,
+     state_index,scomp,ncomp);
+  } // ilev=finest_level ... level
+  delete_array(STATE_FOR_RESID_MF);
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.getState_localMF_list(STATE_FOR_RESID_MF,1,
+    state_index,scomp,ncomp);
+  } // ilev=finest_level ... level
+ } else
+  amrex::Error("change_flag invalid");
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
 
      // UMAC_MF-=beta grad STATE_FOR_RESID
-    if (prescribed_velocity_iter==0) {
-     ns_level.residual_correction_form(
-      homflag_residual_correction_form,
-      energyflag,
-      project_option,nsolve);
-    } else if (prescribed_velocity_iter>0) {
-     // do nothing
-    } else {
-     std::cout << "invalid: prescribed_velocity_iter= " <<
-      prescribed_velocity_iter << '\n';
-     amrex::Error("aborting because of a bad iter");
-    }
+  ns_level.residual_correction_form(
+   homflag_residual_correction_form,
+   energyflag,
+   project_option,nsolve);
 
-    if (ilev<finest_level)
-     ns_level.avgDownMac();  // interpolates UMAC_MF from ilev+1
+  if (ilev<finest_level)
+   ns_level.avgDownMac();  // interpolates UMAC_MF from ilev+1
 
-     // mac_temp store the velocity that comes from residual_correction_form
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolveMM_FACE,0);
-    }
-
-  }  // ilev=finest_level ... level
-
-  delete_array(STATE_FOR_RESID_MF);
-
+    // mac_temp store the velocity that comes from residual_correction_form
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    show_norm2_id(MAC_TEMP_MF+dir,5+dir);
+   ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolveMM_FACE,0);
   }
 
-  if (verbose>0) {
-    if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "iwt:0=denface 1=cutface 2=desing. 3=sing";
-     std::cout << "project_option= " << project_option << '\n';
-     for (int iwt=0;iwt<4;iwt++) {
-      std::cout << "iwt= " << iwt << " min " << 
-        min_face_wt[0][iwt] << " max " <<
-        max_face_wt[0][iwt] << '\n';
-     }
-    }
-  } // verbose>0
+ }  // ilev=finest_level ... level
 
-  deallocate_maccoefALL(project_option);
+ delete_array(STATE_FOR_RESID_MF);
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  show_norm2_id(MAC_TEMP_MF+dir,5+dir);
+ }
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "iwt:0=denface 1=cutface 2=desing. 3=sing";
+   std::cout << "project_option= " << project_option << '\n';
+   for (int iwt=0;iwt<4;iwt++) {
+    std::cout << "iwt= " << iwt << " min " << 
+      min_face_wt[0][iwt] << " max " <<
+      max_face_wt[0][iwt] << '\n';
+   }
+  }
+ } // verbose>0
+
+ deallocate_maccoefALL(project_option);
    
-  int meets_tol=0;
+ int meets_tol=0;
 
-  set_local_tolerances(project_option);
+ set_local_tolerances(project_option);
 
-  Real error0_max=0.0;
-  Real error0=0.0;
-  Real error_n=0.0;
-  Real rAr_error0=0.0;
-  Real rAr_error_n=0.0;
-  Real Ar_error0=0.0;
-  Real Ar_error_n=0.0;
-  Real error_at_the_beginning=0.0;
-  Real error_after_all_jacobi_sweeps=0.0;
-     
-  if (verbose>0) {
-    if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "LEVEL PROJECT from level=" << level << " to level=" <<
-       ' ' << finest_level << '\n';
-     std::cout << "PROJECT OPTION=" << project_option << '\n';
-     std::cout << "NSOLVE=" << nsolve << '\n';
-    }
-  }
+ Real error0_max=0.0;
+ Real error0=0.0;
+ Real error_n=0.0;
+ Real rAr_error0=0.0;
+ Real rAr_error_n=0.0;
+ Real Ar_error0=0.0;
+ Real Ar_error_n=0.0;
+ Real error_at_the_beginning=0.0;
+ Real error_after_all_jacobi_sweeps=0.0;
+    
+ if (verbose>0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "LEVEL PROJECT from level=" << level << " to level=" <<
+      ' ' << finest_level << '\n';
+    std::cout << "PROJECT OPTION=" << project_option << '\n';
+    std::cout << "NSOLVE=" << nsolve << '\n';
+   }
+ }
 
-  int vcycle;
-  int bicgstab_num_outer_iterSOLVER=0;
-  int outer_iter_done=0;
+ int vcycle;
+ int bicgstab_num_outer_iterSOLVER=0;
+ int outer_iter_done=0;
 
-  int min_bicgstab_outer_iter=0;
+ int min_bicgstab_outer_iter=0;
 
-      // initializes diagsing,mask_div_residual,mask_residual,ONES_MF,
-      //  ones_sum_global
-  create_hierarchy=1;
-  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
+     // initializes diagsing,mask_div_residual,mask_residual,ONES_MF,
+     //  ones_sum_global
+ create_hierarchy=1;
+ allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
-    // this must be done after allocate_maccoef (stefan_solver_init relies on
-    // inhomogeneous BCs)
-    // set BCs to homogeneous for the outer_iter loop.
-  CPP_OVERRIDEPBC(1,project_option);
+   // this must be done after allocate_maccoef (stefan_solver_init relies on
+   // inhomogeneous BCs)
+   // set BCs to homogeneous for the outer_iter loop.
+ CPP_OVERRIDEPBC(1,project_option);
 
-  int total_number_vcycles=0;
+ int total_number_vcycles=0;
 
-  bicgstab_num_outer_iterSOLVER=0;
-  outer_iter_done=0;
-  
-  lev0_cycles_list.resize(0);
+ bicgstab_num_outer_iterSOLVER=0;
+ outer_iter_done=0;
+ 
+ lev0_cycles_list.resize(0);
 
 #if (profile_solver==1)
-  bprof.stop();
+ bprof.stop();
 #endif
 
-  Vector< Array<Real,4> > outer_error_history;
-  outer_error_history.resize(bicgstab_max_num_outer_iter+1);
-  for (int ehist=0;ehist<outer_error_history.size();ehist++) {
-    outer_error_history[ehist][0]=0.0;
-    outer_error_history[ehist][1]=0.0;
-    outer_error_history[ehist][2]=0.0;
-    outer_error_history[ehist][3]=0.0;
-  }
-  Real outer_error=0.0;
+ Vector< Array<Real,4> > outer_error_history;
+ outer_error_history.resize(bicgstab_max_num_outer_iter+1);
+ for (int ehist=0;ehist<outer_error_history.size();ehist++) {
+   outer_error_history[ehist][0]=0.0;
+   outer_error_history[ehist][1]=0.0;
+   outer_error_history[ehist][2]=0.0;
+   outer_error_history[ehist][3]=0.0;
+ }
+ Real outer_error=0.0;
 
-  while (outer_iter_done==0) {
+ while (outer_iter_done==0) {
+
+#if (profile_solver==1)
+    bprof.start();
+#endif
+
+     // outer_iter_pressure holds the accumulated pressure now.
+     // ext_dir boundary conditions are homogeneous for now on.
+
+    for (int ilev=level;ilev<=finest_level;ilev++) {
+      NavierStokes& ns_level=getLevel(ilev);
+      ns_level.zero_independent_variable(project_option,nsolve);
+    }
+
+    meets_tol=0;
+
+     // UMAC should be populated with velocity to be projected.
+     // for viscous first sweep: UMAC=-dt mu grad U0   poldhold=0
+    for (int ilev=finest_level;ilev>=level;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+     if (ilev<finest_level) {
+      ns_level.setVal_localMF(MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0); 
+      ns_level.averageRhs(MAC_RHS_CRSE_MF,nsolve,project_option);
+      ns_level.avgDownMac();  // works on UMAC_MF
+     }
+      // mac_phi_crse=0
+      // mac_rhs_crse=POLDHOLD * alpha -  (note: POLDHOLD=p^advect-p^init)
+      //              vol div UMAC/dt + diffusionRHS
+     ns_level.mac_project_rhs(project_option,MAC_PHI_CRSE_MF,
+       MAC_RHS_CRSE_MF,nsolve);
+    } // ilev=finest_level ... level
+
+      // this assumes that RHS is a discretization to 
+      // volume * div (u)/dt
+      // if v in the nullspace(A) then
+      // 1. U=U0 + c v
+      // 2. U dot v = U0 dot v + c(v dot v) = 0
+      // 3. c=-(U0 dot v)/(v dot v)
+      // 4. U=U0-[(U0 dot v)/(v dot v)] v
+    change_flag=0;
+     // change_flag set to 1 if MAC_RHS_CRSE_MF is modified.
+    project_right_hand_side(MAC_RHS_CRSE_MF,project_option,change_flag);
+
+    if (initial_project_cycles<1)
+     amrex::Error("must do at least 1 jacobi cycle");
+    if (initial_viscosity_cycles<1)
+     amrex::Error("must do at least 1 jacobi cycle");
+    if (initial_thermal_cycles<1)
+     amrex::Error("must do at least 1 jacobi cycle");
+
+    int jacobi_cycles_count=initial_project_cycles;
+
+    if ((project_option==0)||
+        (project_option==1)||
+        (project_option==10)||
+        (project_option==11)||  //FSI_material_exists (2nd project)
+        (project_option==13)||  //FSI_material_exists (1st project)
+       (project_option==12)) { // pressure extrap
+      // do nothing
+    } else if (project_option==2) {
+     jacobi_cycles_count=initial_thermal_cycles;
+    } else if ((project_option>=100)&&
+               (project_option<100+num_species_var)) {
+     jacobi_cycles_count=initial_thermal_cycles;
+    } else if (project_option==3) {
+     jacobi_cycles_count=initial_viscosity_cycles;
+    } else
+     amrex::Error("project_option invalid52");
+
+    int update_vel=1; // update error0 IF bicgstab_num_outer_iterSOLVER==0
+    int call_adjust_tolerance=1;
+
+      // NavierStokes::jacobi_cycles in NavierStokes3.cpp
+    jacobi_cycles(
+      call_adjust_tolerance,
+      jacobi_cycles_count,
+      update_vel, // =1
+      project_option,
+      MAC_RHS_CRSE_MF,
+      MAC_PHI_CRSE_MF, // null space projected out.
+      error_at_the_beginning, // error before any Jacobi iterations 
+      error_after_all_jacobi_sweeps, //error after jacobi iter. 
+                                     //regardless num_outer_iterSOLVER
+      error0, // error after Jacobi iterations IF num_outer_iterSOLVER==0
+      error0_max, //max error0 during Jacobi Iterations IF 
+                  //(num_outer_iterSOLVER==0)&&(call_adjust_tol==1)
+      bicgstab_num_outer_iterSOLVER,
+      nsolve);
+
+    error_n=error0; // error after Jacobi iter. IF num_outer_iterSOLVER==0
+
+    if (verbose>0) {
+     if (ParallelDescriptor::IOProcessor()) {
+      std::cout << "AFTER jacobi_cycles error0, error_after= " << error0 << 
+       ' ' << error_after_all_jacobi_sweeps << '\n';
+     }
+    }
+
+     // alpha deltap - div beta grad deltap=
+     //   -(1/dt)div U + alpha poldhold
+     // 
+     // alpha dp - div beta grad dp=
+     //   -(1/dt)div (U+V) + alpha poldhold 
+     //
+     // UMAC=UMAC-beta grad mac_phi_crse
+     // S_new=S_new+mac_phi_crse
+     //
+     // POLDHOLD=POLDHOLD-mac_phi_crse
+     //
+     // mac_phi_crse=0
+     //
+     // updatevelALL calls mac_update.
+    updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
+
+    double after_startup=0.0;
+    if (project_timings==1) {
+     after_startup=ParallelDescriptor::second();
+     if (ParallelDescriptor::IOProcessor())
+      std::cout << "project start time " 
+       << after_startup-begin_project << '\n';
+    }
+
+    int cg_loop_max=1;
+    if (initial_cg_cycles>0) {
+     cg_loop_max=2;
+    } else if (initial_cg_cycles==0) {
+     // do nothing
+    } else
+     amrex::Error("initial_cg_cycles invalid");
+
+    Vector< Array<Real,4> > error_history;
+
+#if (profile_solver==1)
+    bprof.stop();
+#endif
+
+    for (int cg_loop=0;cg_loop<cg_loop_max;cg_loop++) {
+
+#if (profile_solver==1)
+     bprof.start();
+#endif
+
+     allocate_array(0,nsolveMM,-1,CGRESID_MF);
+     allocate_array(1,nsolveMM,-1,P_SOLN_MF);
+     allocate_array(0,nsolveMM,-1,bicg_V1_MF);
+
+     for (int ilev=finest_level;ilev>=level;ilev--) {
+      NavierStokes& ns_level=getLevel(ilev);
+      if (ilev<finest_level) {
+            // get rid of uninit.
+       ns_level.setVal_localMF(MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0);
+       ns_level.averageRhs(MAC_RHS_CRSE_MF,nsolve,project_option);
+       ns_level.avgDownMac(); // works on UMAC_MF
+      }
+       // mac_phi_crse_mf=0.0
+       // mac_rhs_crse=POLDHOLD * alpha - 
+       //              vol div UMAC/dt + diffusionRHS
+      ns_level.mac_project_rhs(project_option,MAC_PHI_CRSE_MF,
+        MAC_RHS_CRSE_MF,nsolve);
+     } // ilev=finest_level ... level
+
+       // MAC_PHI_CRSE=0.0 (from above)
+       // CGRESID=MAC_RHS_CRSE-( alpha*phi-div grad phi )
+       // if local_solvability_projection, then this
+       // routine modifies CGRESID so that it sums to zero.
+       // if singular_possible, then this routine zeros out the
+       // residual where the matrix diagonal (prior to dual time stepping
+       // modification) is 0.
+     residALL(project_option,MAC_RHS_CRSE_MF,
+      CGRESID_MF,MAC_PHI_CRSE_MF,nsolve);
+
+     Real local_error_n=0.0;
+     dot_productALL(project_option,CGRESID_MF,CGRESID_MF,
+      	      local_error_n,nsolve);
+     if (local_error_n>=0.0) {
+      local_error_n=sqrt(local_error_n);
+     } else
+      amrex::Error("local_error_n invalid");
+
+     copyALL(0,nsolveMM,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
+       // V1=A P_SOLN
+       // 1. (begin)calls project_right_hand_side(P)
+       // 2. (end)  calls project_right_hand_side(V1)
+     applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
+     dot_productALL(project_option,CGRESID_MF,bicg_V1_MF,rAr_error_n,nsolve);
+     dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,Ar_error_n,nsolve);
+
+     if (rAr_error_n<0.0) {
+      rAr_error_n=0.0;
+     } else if (rAr_error_n>=0.0) {
+      rAr_error_n=sqrt(rAr_error_n);
+     } else
+      amrex::Error("rAr_error_n invalid");
+
+     if (Ar_error_n>=0.0) {
+      Ar_error_n=sqrt(Ar_error_n);
+     } else
+      amrex::Error("Ar_error_n invalid");
+
+     if ((bicgstab_num_outer_iterSOLVER==0)&&(cg_loop==0)) {
+      Ar_error0=Ar_error_n;
+      rAr_error0=rAr_error_n;
+     } else if ((bicgstab_num_outer_iterSOLVER>0)||
+      	       (cg_loop==1)) {
+      // do nothing
+     } else
+      amrex::Error("bicgstab_num_outer_iterSOLVER or cg_loop invalid");
+
+      // if cg_loop==0 then error_n=error0 
+      // error0=error after Jacobi iter. IF num_outer_iterSOLVER==0
+     check_outer_solver_convergence(error_n,error0,
+             Ar_error_n,Ar_error0,
+             rAr_error_n,rAr_error0,
+             save_mac_abs_tol,
+             meets_tol);
+
+     if (cg_loop==0) {
+      if (error_after_all_jacobi_sweeps<save_mac_abs_tol) {
+       meets_tol=1;
+      }
+     } else if (cg_loop==1) {
+      // do nothing
+     } else
+      amrex::Error("cg_loop invalid");
+
+      // double check that residual still meets the criterion
+     if (meets_tol==1) {
+
+      if (verbose>0) {
+       if (ParallelDescriptor::IOProcessor()) {
+        std::cout << "meets_tol=1 at top of CG or BICGSTAB: error_n=" <<
+          error_n << '\n';
+        std::cout << "meets_tol=1 at top of CG or BICGSTAB: Ar_error_n=" <<
+          Ar_error_n << '\n';
+        std::cout << "meets_tol=1 at top of CG or BICGSTAB: rAr_error_n=" <<
+          rAr_error_n << '\n';
+        if (cg_loop==0)
+         std::cout << "error_after_all_jacobi_sweeps (jacobi method)=" <<
+          error_after_all_jacobi_sweeps << '\n';
+       } // ioproc
+      }  // verbose>0
+
+      error_n=local_error_n;
+      Real local_tol=1.1*save_mac_abs_tol;
+      meets_tol=0;
+      check_outer_solver_convergence(error_n,error0,
+             Ar_error_n,Ar_error0,
+             rAr_error_n,rAr_error0,
+             local_tol,
+             meets_tol);
+
+      if (verbose>0) {
+       if (ParallelDescriptor::IOProcessor()) {
+        std::cout << "double checking meets_tol=1: error_n=" <<
+          error_n << " meets_tol= " << meets_tol << '\n';
+       } // ioproc
+      }  // verbose>0
+     } else if (meets_tol==0) {
+      // do nothing
+     } else
+      amrex::Error("meets_tol invalid");
+
+     ParmParse ppmg("mg");
+     int presmooth=2;
+     int postsmooth=2;
+     ppmg.query("presmooth",presmooth);
+     ppmg.query("postsmooth",postsmooth);
+     if (presmooth!=postsmooth)
+      amrex::Error("presmooth!=postsmooth");
+
+     int local_presmooth=presmooth;
+     int local_postsmooth=postsmooth;
+     Real rho0=1.0;
+     Real rho1=1.0;
+     Real alpha=1.0;
+     Real beta=0.0;
+     Real w0=1.0;
+     Real w1=0.0;
+     Real a1=0.0;
+     Real a2=0.0;
+
+     int vcycle_max=multilevel_maxcycle;
+     if ((initial_cg_cycles==0)&&(cg_loop==0)) {
+      // do nothing
+     } else if ((initial_cg_cycles>0)&&(cg_loop==0)) {
+      vcycle_max=initial_cg_cycles;
+     } else if ((initial_cg_cycles>0)&&(cg_loop==1)) {
+      // do nothing
+     } else
+      amrex::Error("initial_cg_cycles or cg_loop invalid");
+
+     int restart_flag=0;
+     int gmres_precond_iter=gmres_precond_iter_base;
+
+     Real dnorm=0.0;
+
+       // variables initialized to 0.0
+     allocate_array(1,nsolveMM,-1,Z_MF);
+     allocate_array(0,nsolveMM,-1,P_MF);
+     allocate_array(0,nsolveMM,-1,bicg_R0hat_MF);
+     allocate_array(1,nsolveMM,-1,bicg_U0_MF);
+     allocate_array(0,nsolveMM,-1,bicg_V0_MF);
+     allocate_array(0,nsolveMM,-1,bicg_P1_MF);
+     allocate_array(0,nsolveMM,-1,bicg_R1_MF);
+     allocate_array(1,nsolveMM,-1,bicg_Y_MF);
+     allocate_array(1,nsolveMM,-1,bicg_Hvec_MF);
+     allocate_array(0,nsolveMM,-1,bicg_S_MF);
+     allocate_array(0,nsolveMM,-1,bicg_T_MF);
+
+
+     copyALL(0,nsolveMM,bicg_R0hat_MF,CGRESID_MF);  // R0hat=CGRESID(R0)
+      // MAC_PHI_CRSE(U1)=0.0
+     zeroALL(1,nsolveMM,bicg_U0_MF);
+
+     error_history.resize(vcycle_max+1);
+     for (int ehist=0;ehist<error_history.size();ehist++) {
+      error_history[ehist][0]=0.0;
+      error_history[ehist][1]=0.0;
+      error_history[ehist][2]=0.0;
+      error_history[ehist][3]=0.0;
+     }
+
+#if (profile_solver==1)
+     bprof.stop();
+#endif
+
+     int BICGSTAB_ACTIVE=0;
+     if ((enable_spectral==1)||  // SEM space and time
+         (enable_spectral==2)) { // SEM space
+      BICGSTAB_ACTIVE=1;
+     } else if ((enable_spectral==0)||
+                (enable_spectral==3)) {  // SEM time
+      if ((project_option==0)||
+          (project_option==1)||
+          (project_option==10)|| // sync project at advection
+          (project_option==11)|| // FSI_material_exists (2nd project)
+          (project_option==12)|| // pressure extrapolation
+          (project_option==13)|| // FSI_material_exists (1st project)
+          (project_option==2)||  // thermal diffusion
+          ((project_option>=100)&&
+           (project_option<100+num_species_var))) {
+
+       if (always_use_bicgstab==1) {
+        BICGSTAB_ACTIVE=1;
+       } else if (always_use_bicgstab==0) {
+        BICGSTAB_ACTIVE=0;
+       } else
+        amrex::Error("always_use_bicgstab invalid");
+
+      } else if (project_option==3) { // viscosity
+       BICGSTAB_ACTIVE=1;
+      } else
+       amrex::Error("project_option invalid");
+     } else
+      amrex::Error("enable_spectral invalid 3");
+
+     for (vcycle=0;((vcycle<=vcycle_max)&&(meets_tol==0));vcycle++) {
 
 #if (profile_solver==1)
       bprof.start();
 #endif
 
-       // outer_iter_pressure holds the accumulated pressure now.
-       // ext_dir boundary conditions are homogeneous for now on.
-
-      for (int ilev=level;ilev<=finest_level;ilev++) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.zero_independent_variable(project_option,nsolve);
-      }
-
-      meets_tol=0;
-
-       // UMAC should be populated with velocity to be projected.
-       // for viscous first sweep: UMAC=-dt mu grad U0   poldhold=0
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-       if (ilev<finest_level) {
-        ns_level.setVal_localMF(MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0); 
-        ns_level.averageRhs(MAC_RHS_CRSE_MF,nsolve,project_option);
-        ns_level.avgDownMac();  // works on UMAC_MF
-       }
-        // mac_phi_crse=0
-        // mac_rhs_crse=POLDHOLD * alpha -  (note: POLDHOLD=p^advect-p^init)
-        //              vol div UMAC/dt + diffusionRHS
-       ns_level.mac_project_rhs(project_option,MAC_PHI_CRSE_MF,
-         MAC_RHS_CRSE_MF,nsolve);
-      } // ilev=finest_level ... level
-
-        // this assumes that RHS is a discretization to 
-        // volume * div (u)/dt
-        // if v in the nullspace(A) then
-        // 1. U=U0 + c v
-        // 2. U dot v = U0 dot v + c(v dot v) = 0
-        // 3. c=-(U0 dot v)/(v dot v)
-        // 4. U=U0-[(U0 dot v)/(v dot v)] v
-      change_flag=0;
-       // change_flag set to 1 if MAC_RHS_CRSE_MF is modified.
-      project_right_hand_side(MAC_RHS_CRSE_MF,project_option,change_flag);
-
-      if (initial_project_cycles<1)
-       amrex::Error("must do at least 1 jacobi cycle");
-      if (initial_viscosity_cycles<1)
-       amrex::Error("must do at least 1 jacobi cycle");
-      if (initial_thermal_cycles<1)
-       amrex::Error("must do at least 1 jacobi cycle");
-
-      int jacobi_cycles_count=initial_project_cycles;
-
-      if ((project_option==0)||
-          (project_option==1)||
-          (project_option==10)||
-          (project_option==11)||  //FSI_material_exists (2nd project)
-          (project_option==13)||  //FSI_material_exists (1st project)
-	 (project_option==12)) { // pressure extrap
-        // do nothing
-      } else if (project_option==2) {
-       jacobi_cycles_count=initial_thermal_cycles;
-      } else if ((project_option>=100)&&
-                 (project_option<100+num_species_var)) {
-       jacobi_cycles_count=initial_thermal_cycles;
-      } else if (project_option==3) {
-       jacobi_cycles_count=initial_viscosity_cycles;
+        // CGRESID(R0) is the residual when using U0
+        // MAC_PHI_CRSE(U1) and U0 are the same at this point.
+      dot_productALL(project_option,CGRESID_MF,CGRESID_MF,error_n,nsolve);
+      if (error_n>=0.0) {
+       error_n=sqrt(error_n);
       } else
-       amrex::Error("project_option invalid52");
+       amrex::Error("error_n invalid");
 
-      int update_vel=1; // update error0 IF bicgstab_num_outer_iterSOLVER==0
-      int call_adjust_tolerance=1;
+      adjust_tolerance(error_n,error0_max,project_option);
 
-        // NavierStokes::jacobi_cycles in NavierStokes3.cpp
-      jacobi_cycles(
-        call_adjust_tolerance,
-        jacobi_cycles_count,
-        update_vel, // =1
-        project_option,
-        MAC_RHS_CRSE_MF,
-        MAC_PHI_CRSE_MF, // null space projected out.
-        error_at_the_beginning, // error before any Jacobi iterations 
-        error_after_all_jacobi_sweeps, //error after jacobi iter. 
-	                               //regardless num_outer_iterSOLVER
-        error0, // error after Jacobi iterations IF num_outer_iterSOLVER==0
-	error0_max, //max error0 during Jacobi Iterations IF 
-	            //(num_outer_iterSOLVER==0)&&(call_adjust_tol==1)
-        bicgstab_num_outer_iterSOLVER,
-        nsolve);
+      copyALL(0,nsolveMM,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
+       // V1=A P_SOLN
+       // 1. (begin)calls project_right_hand_side(P)
+       // 2. (end)  calls project_right_hand_side(V1)
+      applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
+      dot_productALL(project_option,CGRESID_MF,bicg_V1_MF,rAr_error_n,nsolve);
+      dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,Ar_error_n,nsolve);
 
-      error_n=error0; // error after Jacobi iter. IF num_outer_iterSOLVER==0
+      if (rAr_error_n<0.0) {
+       rAr_error_n=0.0;
+      } else if (rAr_error_n>=0.0) {
+       rAr_error_n=sqrt(rAr_error_n);
+      } else
+       amrex::Error("rAr_error_n invalid");
+
+      if (Ar_error_n>=0.0) {
+       Ar_error_n=sqrt(Ar_error_n);
+      } else
+       amrex::Error("Ar_error_n invalid");
+
+      error_history[vcycle][0]=error_n;
+      error_history[vcycle][1]=rAr_error_n;
+      error_history[vcycle][1]=Ar_error_n;
+      error_history[vcycle][3]=save_mac_abs_tol;
+
+      Real restart_tol=0.0;
+      restart_flag=0;
+
+      check_outer_solver_convergence(error_n,error0,
+             Ar_error_n,Ar_error0,
+             rAr_error_n,rAr_error0,
+             save_mac_abs_tol,
+             meets_tol);
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
-        std::cout << "AFTER jacobi_cycles error0, error_after= " << error0 << 
-         ' ' << error_after_all_jacobi_sweeps << '\n';
+        std::cout << "cg_loop,vcycle,E0,En,rArEn,ArEn " << cg_loop << ' ' <<
+         vcycle << ' ' << error0 << ' ' << error_n << ' ' <<
+         rAr_error_n << ' ' << Ar_error_n << '\n';
        }
-      }
-
-       // alpha deltap - div beta grad deltap=
-       //   -(1/dt)div U + alpha poldhold
-       // 
-       // alpha dp - div beta grad dp=
-       //   -(1/dt)div (U+V) + alpha poldhold 
-       //
-       // UMAC=UMAC-beta grad mac_phi_crse
-       // S_new=S_new+mac_phi_crse
-       //
-       // POLDHOLD=POLDHOLD-mac_phi_crse
-       //
-       // mac_phi_crse=0
-       //
-       // updatevelALL calls mac_update.
-      updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
-
-      double after_startup=0.0;
-      if (project_timings==1) {
-       after_startup=ParallelDescriptor::second();
-       if (ParallelDescriptor::IOProcessor())
-        std::cout << "project start time " 
-         << after_startup-begin_project << '\n';
-      }
-
-      int cg_loop_max=1;
-      if (initial_cg_cycles>0) {
-       cg_loop_max=2;
-      } else if (initial_cg_cycles==0) {
+       std::fflush(NULL);
+      } else if ((verbose==0)||(verbose==-1)) {
        // do nothing
       } else
-       amrex::Error("initial_cg_cycles invalid");
-
-      Vector< Array<Real,4> > error_history;
+	 amrex::Error("verbose invalid");
 
 #if (profile_solver==1)
       bprof.stop();
 #endif
 
-      for (int cg_loop=0;cg_loop<cg_loop_max;cg_loop++) {
+      if (meets_tol==0) {
 
 #if (profile_solver==1)
        bprof.start();
 #endif
 
-       allocate_array(0,nsolveMM,-1,CGRESID_MF);
-       allocate_array(1,nsolveMM,-1,P_SOLN_MF);
-       allocate_array(0,nsolveMM,-1,bicg_V1_MF);
+       if (BICGSTAB_ACTIVE==0) { //MGPCG
 
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        if (ilev<finest_level) {
-              // get rid of uninit.
-         ns_level.setVal_localMF(MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0);
-         ns_level.averageRhs(MAC_RHS_CRSE_MF,nsolve,project_option);
-         ns_level.avgDownMac(); // works on UMAC_MF
-        }
-         // mac_phi_crse_mf=0.0
-         // mac_rhs_crse=POLDHOLD * alpha - 
-         //              vol div UMAC/dt + diffusionRHS
-        ns_level.mac_project_rhs(project_option,MAC_PHI_CRSE_MF,
-          MAC_RHS_CRSE_MF,nsolve);
-       } // ilev=finest_level ... level
+        // Z=M^{-1}CGRESID
+        // Z=project(Z)
+        multiphase_preconditioner(
+         project_option,project_timings,
+         local_presmooth,local_postsmooth,
+         Z_MF,CGRESID_MF,nsolve);
 
-         // MAC_PHI_CRSE=0.0 (from above)
-         // CGRESID=MAC_RHS_CRSE-( alpha*phi-div grad phi )
-         // if local_solvability_projection, then this
-         // routine modifies CGRESID so that it sums to zero.
-         // if singular_possible, then this routine zeros out the
-         // residual where the matrix diagonal (prior to dual time stepping
-	 // modification) is 0.
-       residALL(project_option,MAC_RHS_CRSE_MF,
-        CGRESID_MF,MAC_PHI_CRSE_MF,nsolve);
+        // rho1=z dot r=MINV r dot r =r^T MINV^T r
+        // if rho1<=0 then safe to assume convergence has been 
+        // achieved or something very wrong.
+        dot_productALL(project_option,Z_MF,CGRESID_MF,rho1,nsolve);
 
-       Real local_error_n=0.0;
-       dot_productALL(project_option,CGRESID_MF,CGRESID_MF,
-		      local_error_n,nsolve);
-       if (local_error_n>=0.0) {
-        local_error_n=sqrt(local_error_n);
-       } else
-        amrex::Error("local_error_n invalid");
+        if (rho1>=0.0) {
+         if (rho0>restart_tol) {
+          beta=rho1/rho0;
+          // P_MF=0 initially or on restart.
+          // P_MF=Z_MF + beta P_MF
+          mf_combine(project_option,
+           Z_MF,P_MF,beta,P_MF,nsolve);
+          change_flag=0;
+          project_right_hand_side(P_MF,project_option,change_flag);
 
-       copyALL(0,nsolveMM,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
-         // V1=A P_SOLN
-         // 1. (begin)calls project_right_hand_side(P)
-         // 2. (end)  calls project_right_hand_side(V1)
-       applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
-       dot_productALL(project_option,CGRESID_MF,bicg_V1_MF,rAr_error_n,nsolve);
-       dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,Ar_error_n,nsolve);
+          copyALL(0,nsolveMM,P_SOLN_MF,P_MF); //P_SOLN=P
+          // V1=A P_SOLN
+          // 1. (begin)calls project_right_hand_side(P)
+          // 2. (end)  calls project_right_hand_side(V1)
+          applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
 
-       if (rAr_error_n<0.0) {
-        rAr_error_n=0.0;
-       } else if (rAr_error_n>=0.0) {
-        rAr_error_n=sqrt(rAr_error_n);
-       } else
-        amrex::Error("rAr_error_n invalid");
+          Real pAp=0.0;
+          dot_productALL(project_option,P_MF,bicg_V1_MF,pAp,nsolve);
 
-       if (Ar_error_n>=0.0) {
-        Ar_error_n=sqrt(Ar_error_n);
-       } else
-        amrex::Error("Ar_error_n invalid");
+          if (pAp>restart_tol) {
+           alpha=rho1/pAp;
 
-       if ((bicgstab_num_outer_iterSOLVER==0)&&(cg_loop==0)) {
-        Ar_error0=Ar_error_n;
-        rAr_error0=rAr_error_n;
-       } else if ((bicgstab_num_outer_iterSOLVER>0)||
-		       (cg_loop==1)) {
-        // do nothing
-       } else
-        amrex::Error("bicgstab_num_outer_iterSOLVER or cg_loop invalid");
+            // mac_phi_crse(U1)=mac_phi_crse+alpha P
+           mf_combine(project_option,
+             MAC_PHI_CRSE_MF,P_MF,alpha,MAC_PHI_CRSE_MF,nsolve);
+           change_flag=0;
+           project_right_hand_side(MAC_PHI_CRSE_MF,
+             project_option,change_flag);
+            // U0=MAC_PHI_CRSE(U1)
+           copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
 
-        // if cg_loop==0 then error_n=error0 
-	// error0=error after Jacobi iter. IF num_outer_iterSOLVER==0
-       check_outer_solver_convergence(error_n,error0,
-	       Ar_error_n,Ar_error0,
-	       rAr_error_n,rAr_error0,
-	       save_mac_abs_tol,
-	       meets_tol);
+           // CGRESID=RHS-A mac_phi_crse(U1)
+           // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
+           // 2. (end)   calls project_right_hand_side(CGRESID_MF)
+           residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
+            MAC_PHI_CRSE_MF,nsolve);
 
-       if (cg_loop==0) {
-        if (error_after_all_jacobi_sweeps<save_mac_abs_tol) {
+          } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
+           meets_tol=1;
+
+           // this case can happen due to round off error when
+           // A is a singular (indefinite) matrix
+          } else if (pAp<0.0) { 
+           meets_tol=1;
+          } else {
+           std::cout << "pAp= " << pAp << endl;
+           amrex::Error("pAp invalid in main solver");
+          }
+         } else if ((rho0>=0.0)&&(rho0<=restart_tol)) {
+          meets_tol=1;
+
+          // this case can happen due to round off error when
+          // A is a singular (indefinite) matrix
+         } else if (rho0<0.0) {
+          meets_tol=1;
+         } else
+          amrex::Error("rho0 invalid");
+
+         // this case can happen due to round off error when
+         // A is a singular (indefinite) matrix
+        } else if (rho1<0.0) {
          meets_tol=1;
-        }
-       } else if (cg_loop==1) {
-        // do nothing
-       } else
-        amrex::Error("cg_loop invalid");
-
-        // double check that residual still meets the criterion
-       if (meets_tol==1) {
-
-        if (verbose>0) {
-         if (ParallelDescriptor::IOProcessor()) {
-          std::cout << "meets_tol=1 at top of CG or BICGSTAB: error_n=" <<
-            error_n << '\n';
-          std::cout << "meets_tol=1 at top of CG or BICGSTAB: Ar_error_n=" <<
-            Ar_error_n << '\n';
-          std::cout << "meets_tol=1 at top of CG or BICGSTAB: rAr_error_n=" <<
-            rAr_error_n << '\n';
-          if (cg_loop==0)
-           std::cout << "error_after_all_jacobi_sweeps (jacobi method)=" <<
-            error_after_all_jacobi_sweeps << '\n';
-         } // ioproc
-        }  // verbose>0
-
-	error_n=local_error_n;
-	Real local_tol=1.1*save_mac_abs_tol;
-	meets_tol=0;
-        check_outer_solver_convergence(error_n,error0,
-	       Ar_error_n,Ar_error0,
-	       rAr_error_n,rAr_error0,
-	       local_tol,
-	       meets_tol);
-
-        if (verbose>0) {
-         if (ParallelDescriptor::IOProcessor()) {
-          std::cout << "double checking meets_tol=1: error_n=" <<
-            error_n << " meets_tol= " << meets_tol << '\n';
-         } // ioproc
-        }  // verbose>0
-       } else if (meets_tol==0) {
-        // do nothing
-       } else
-        amrex::Error("meets_tol invalid");
-
-       ParmParse ppmg("mg");
-       int presmooth=2;
-       int postsmooth=2;
-       ppmg.query("presmooth",presmooth);
-       ppmg.query("postsmooth",postsmooth);
-       if (presmooth!=postsmooth)
-        amrex::Error("presmooth!=postsmooth");
-
-       int local_presmooth=presmooth;
-       int local_postsmooth=postsmooth;
-       Real rho0=1.0;
-       Real rho1=1.0;
-       Real alpha=1.0;
-       Real beta=0.0;
-       Real w0=1.0;
-       Real w1=0.0;
-       Real a1=0.0;
-       Real a2=0.0;
-
-       int vcycle_max=multilevel_maxcycle;
-       if ((initial_cg_cycles==0)&&(cg_loop==0)) {
-        // do nothing
-       } else if ((initial_cg_cycles>0)&&(cg_loop==0)) {
-        vcycle_max=initial_cg_cycles;
-       } else if ((initial_cg_cycles>0)&&(cg_loop==1)) {
-        // do nothing
-       } else
-        amrex::Error("initial_cg_cycles or cg_loop invalid");
-
-       int restart_flag=0;
-       int gmres_precond_iter=gmres_precond_iter_base;
-
-       Real dnorm=0.0;
-
-         // variables initialized to 0.0
-       allocate_array(1,nsolveMM,-1,Z_MF);
-       allocate_array(0,nsolveMM,-1,P_MF);
-       allocate_array(0,nsolveMM,-1,bicg_R0hat_MF);
-       allocate_array(1,nsolveMM,-1,bicg_U0_MF);
-       allocate_array(0,nsolveMM,-1,bicg_V0_MF);
-       allocate_array(0,nsolveMM,-1,bicg_P1_MF);
-       allocate_array(0,nsolveMM,-1,bicg_R1_MF);
-       allocate_array(1,nsolveMM,-1,bicg_Y_MF);
-       allocate_array(1,nsolveMM,-1,bicg_Hvec_MF);
-       allocate_array(0,nsolveMM,-1,bicg_S_MF);
-       allocate_array(0,nsolveMM,-1,bicg_T_MF);
-
-
-       copyALL(0,nsolveMM,bicg_R0hat_MF,CGRESID_MF);  // R0hat=CGRESID(R0)
-        // MAC_PHI_CRSE(U1)=0.0
-       zeroALL(1,nsolveMM,bicg_U0_MF);
-
-       error_history.resize(vcycle_max+1);
-       for (int ehist=0;ehist<error_history.size();ehist++) {
-        error_history[ehist][0]=0.0;
-        error_history[ehist][1]=0.0;
-        error_history[ehist][2]=0.0;
-        error_history[ehist][3]=0.0;
-       }
-
-#if (profile_solver==1)
-       bprof.stop();
-#endif
-
-       int BICGSTAB_ACTIVE=0;
-       if ((enable_spectral==1)||  // SEM space and time
-	   (enable_spectral==2)) { // SEM space
-        BICGSTAB_ACTIVE=1;
-       } else if ((enable_spectral==0)||
-                  (enable_spectral==3)) {  // SEM time
-        if ((project_option==0)||
-  	    (project_option==1)||
-            (project_option==10)|| // sync project at advection
-            (project_option==11)|| // FSI_material_exists (2nd project)
-            (project_option==12)|| // pressure extrapolation
-            (project_option==13)|| // FSI_material_exists (1st project)
-	    (project_option==2)||  // thermal diffusion
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
-
-         if (always_use_bicgstab==1) {
-          BICGSTAB_ACTIVE=1;
-	 } else if (always_use_bicgstab==0) {
-          BICGSTAB_ACTIVE=0;
-	 } else
-	  amrex::Error("always_use_bicgstab invalid");
-
-	} else if (project_option==3) { // viscosity
-         BICGSTAB_ACTIVE=1;
         } else
-	 amrex::Error("project_option invalid");
-       } else
-	amrex::Error("enable_spectral invalid 3");
+         amrex::Error("rho1 invalid");
 
-       for (vcycle=0;((vcycle<=vcycle_max)&&(meets_tol==0));vcycle++) {
+       } else if (BICGSTAB_ACTIVE==1) { //MG-GMRES PCG
 
-#if (profile_solver==1)
-        bprof.start();
-#endif
+         // rho1=R0hat dot CGRESID(R0)
+         //  =(b-A x0) dot (b-A xn) =
+         //  b^T b + x0^T A^T A xn - x0^T A^T b - b^T A xn
+        dot_productALL(project_option,bicg_R0hat_MF,CGRESID_MF,rho1,nsolve);
 
-          // CGRESID(R0) is the residual when using U0
-          // MAC_PHI_CRSE(U1) and U0 are the same at this point.
-        dot_productALL(project_option,CGRESID_MF,CGRESID_MF,error_n,nsolve);
-        if (error_n>=0.0) {
-         error_n=sqrt(error_n);
-        } else
-         amrex::Error("error_n invalid");
+        if (vcycle==0) { // R0hat=R when vcycle==0
 
-        adjust_tolerance(error_n,error0_max,project_option);
-
-        copyALL(0,nsolveMM,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
-         // V1=A P_SOLN
-         // 1. (begin)calls project_right_hand_side(P)
-         // 2. (end)  calls project_right_hand_side(V1)
-        applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
-        dot_productALL(project_option,CGRESID_MF,bicg_V1_MF,rAr_error_n,nsolve);
-        dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,Ar_error_n,nsolve);
-
-        if (rAr_error_n<0.0) {
-         rAr_error_n=0.0;
-        } else if (rAr_error_n>=0.0) {
-         rAr_error_n=sqrt(rAr_error_n);
-        } else
-         amrex::Error("rAr_error_n invalid");
-
-        if (Ar_error_n>=0.0) {
-         Ar_error_n=sqrt(Ar_error_n);
-        } else
-         amrex::Error("Ar_error_n invalid");
-
-        error_history[vcycle][0]=error_n;
-        error_history[vcycle][1]=rAr_error_n;
-        error_history[vcycle][1]=Ar_error_n;
-        error_history[vcycle][3]=save_mac_abs_tol;
-
-        Real restart_tol=0.0;
-        restart_flag=0;
-
-        check_outer_solver_convergence(error_n,error0,
-	       Ar_error_n,Ar_error0,
-	       rAr_error_n,rAr_error0,
-	       save_mac_abs_tol,
-	       meets_tol);
-
-        if (verbose>0) {
-         if (ParallelDescriptor::IOProcessor()) {
-          std::cout << "cg_loop,vcycle,E0,En,rArEn,ArEn " << cg_loop << ' ' <<
-           vcycle << ' ' << error0 << ' ' << error_n << ' ' <<
-	   rAr_error_n << ' ' << Ar_error_n << '\n';
-          std::cout << "prescribed_velocity_iter, prescribed_error0 " << 
-            prescribed_velocity_iter << ' ' << prescribed_error0 << '\n';
-          std::cout << "prescribed_velocity_iter, prescribed_error " << 
-            prescribed_velocity_iter << ' ' << prescribed_error << '\n';
-
+         if (rho1>0.0) {
+          Real sanity_error=sqrt(rho1);
+          if (sanity_error>0.9*save_mac_abs_tol) {
+           // do nothing
+          } else
+           amrex::Error("sanity_error invalid");
+         } else {
+          std::cout << "rho1=" << rho1 << " vcycle= " << vcycle << '\n';
+          amrex::Error("rho1 invalid");
          }
-         std::fflush(NULL);
-        } else if ((verbose==0)||(verbose==-1)) {
-	 // do nothing
+
+        } else if (vcycle>0) {
+         // check nothing
         } else
-	 amrex::Error("verbose invalid");
+         amrex::Error("vcycle invalid");
+
+        if (rho0<=restart_tol) {
+         restart_flag=1;
+        } else if (rho0>restart_tol) {
+         // do nothing
+        } else
+         amrex::Error("rho0 failed Nav3");
+
+        if (w0<=restart_tol) {
+         restart_flag=1;
+        } else if (w0>restart_tol) {
+         // do nothing
+        } else
+         amrex::Error("w0 failed Nav3");
+
+        if (rho1<=0.0) {
+         restart_flag=1;
+        } else if (rho1>0.0) {
+         // do nothing
+        } else
+         amrex::Error("rho1 invalid mglib");
 
 #if (profile_solver==1)
         bprof.stop();
 #endif
 
-        if (meets_tol==0) {
+        if (restart_flag==0) {
 
 #if (profile_solver==1)
          bprof.start();
 #endif
 
-         if (BICGSTAB_ACTIVE==0) { //MGPCG
+         beta=(rho1/rho0)*(alpha/w0);
 
-          // Z=M^{-1}CGRESID
-	  // Z=project(Z)
-          multiphase_preconditioner(
-           project_option,project_timings,
-           local_presmooth,local_postsmooth,
-           Z_MF,CGRESID_MF,nsolve);
+	 if (beta>0.0) {
+	  // do nothing
+	 } else
+	  amrex::Error("beta invalid Nav3");
 
-          // rho1=z dot r=MINV r dot r =r^T MINV^T r
-	  // if rho1<=0 then safe to assume convergence has been 
-	  // achieved or something very wrong.
-          dot_productALL(project_option,Z_MF,CGRESID_MF,rho1,nsolve);
+         a1=1.0;
+         a2=-w0;
 
-          if (rho1>=0.0) {
-           if (rho0>restart_tol) {
-            beta=rho1/rho0;
-            // P_MF=0 initially or on restart.
-            // P_MF=Z_MF + beta P_MF
-            mf_combine(project_option,
-	     Z_MF,P_MF,beta,P_MF,nsolve);
-	    change_flag=0;
-            project_right_hand_side(P_MF,project_option,change_flag);
+          // P1=P - w0 V0
+         mf_combine(project_option,
+	  P_MF,bicg_V0_MF,a2,bicg_P1_MF,nsolve); 
 
-            copyALL(0,nsolveMM,P_SOLN_MF,P_MF); //P_SOLN=P
-            // V1=A P_SOLN
-            // 1. (begin)calls project_right_hand_side(P)
-            // 2. (end)  calls project_right_hand_side(V1)
-            applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
+	 change_flag=0;
+         project_right_hand_side(bicg_P1_MF,project_option,change_flag);
 
-            Real pAp=0.0;
-            dot_productALL(project_option,P_MF,bicg_V1_MF,pAp,nsolve);
+          // P1=CGRESID(R0)+beta P1
+         mf_combine(project_option,
+          CGRESID_MF,bicg_P1_MF,beta,bicg_P1_MF,nsolve); 
 
-            if (pAp>restart_tol) {
-             alpha=rho1/pAp;
-
-              // mac_phi_crse(U1)=mac_phi_crse+alpha P
-             mf_combine(project_option,
-	       MAC_PHI_CRSE_MF,P_MF,alpha,MAC_PHI_CRSE_MF,nsolve);
-             change_flag=0;
-             project_right_hand_side(MAC_PHI_CRSE_MF,
-               project_option,change_flag);
-              // U0=MAC_PHI_CRSE(U1)
-             copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
-
-             // CGRESID=RHS-A mac_phi_crse(U1)
-	     // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
-	     // 2. (end)   calls project_right_hand_side(CGRESID_MF)
-             residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
-              MAC_PHI_CRSE_MF,nsolve);
-
-            } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
-             meets_tol=1;
-
-	     // this case can happen due to round off error when
-	     // A is a singular (indefinite) matrix
-	    } else if (pAp<0.0) { 
-             meets_tol=1;
-            } else {
-             std::cout << "pAp= " << pAp << endl;
-             amrex::Error("pAp invalid in main solver");
-	    }
-           } else if ((rho0>=0.0)&&(rho0<=restart_tol)) {
-            meets_tol=1;
-
-	    // this case can happen due to round off error when
-	    // A is a singular (indefinite) matrix
-	   } else if (rho0<0.0) {
-            meets_tol=1;
-           } else
-            amrex::Error("rho0 invalid");
-
-	   // this case can happen due to round off error when
-	   // A is a singular (indefinite) matrix
-	  } else if (rho1<0.0) {
- 	   meets_tol=1;
-          } else
-           amrex::Error("rho1 invalid");
-
-         } else if (BICGSTAB_ACTIVE==1) { //MG-GMRES PCG
-
-           // rho1=R0hat dot CGRESID(R0)
-	   //  =(b-A x0) dot (b-A xn) =
-	   //  b^T b + x0^T A^T A xn - x0^T A^T b - b^T A xn
-          dot_productALL(project_option,bicg_R0hat_MF,CGRESID_MF,rho1,nsolve);
-
-          if (vcycle==0) { // R0hat=R when vcycle==0
-
-	   if (rho1>0.0) {
-            Real sanity_error=sqrt(rho1);
-            if (sanity_error>0.9*save_mac_abs_tol) {
-             // do nothing
-            } else
-             amrex::Error("sanity_error invalid");
-	   } else {
-            std::cout << "rho1=" << rho1 << " vcycle= " << vcycle << '\n';
-            amrex::Error("rho1 invalid");
-	   }
-
-          } else if (vcycle>0) {
-           // check nothing
-          } else
-           amrex::Error("vcycle invalid");
-
-	  if (rho0<=restart_tol) {
-   	   restart_flag=1;
-	  } else if (rho0>restart_tol) {
-	   // do nothing
-	  } else
-	   amrex::Error("rho0 failed Nav3");
-
-	  if (w0<=restart_tol) {
-	   restart_flag=1;
-	  } else if (w0>restart_tol) {
-	   // do nothing
-	  } else
-	   amrex::Error("w0 failed Nav3");
-
-	  if (rho1<=0.0) {
-   	   restart_flag=1;
-	  } else if (rho1>0.0) {
-	   // do nothing
-	  } else
-	   amrex::Error("rho1 invalid mglib");
+	 change_flag=0;
+         project_right_hand_side(bicg_P1_MF,project_option,change_flag);
 
 #if (profile_solver==1)
-          bprof.stop();
+         bprof.stop();
 #endif
 
-          if (restart_flag==0) {
+          // Y=M^{-1}P1
+	  // Y=project(Y)
+         multiphase_GMRES_preconditioner(
+          gmres_precond_iter,
+          project_option,project_timings,
+          local_presmooth,local_postsmooth,
+          bicg_Y_MF,bicg_P1_MF,nsolve);
 
 #if (profile_solver==1)
-           bprof.start();
+         bprof.start();
 #endif
 
-           beta=(rho1/rho0)*(alpha/w0);
+          // V1=A Y
+          // 1. (begin)calls project_right_hand_side(Y)
+          // 2. (end)  calls project_right_hand_side(V1)
+         applyALL(project_option,bicg_Y_MF,bicg_V1_MF,nsolve);
 
-	   if (beta>0.0) {
-	    // do nothing
-	   } else
-	    amrex::Error("beta invalid Nav3");
+         // alpha=R0hat dot V1=R0hat dot A M^-1 P1=
+	 //       R0hat dot A M^-1 (R0+beta(P-w0 V0))
+         dot_productALL(project_option,bicg_R0hat_MF,bicg_V1_MF,alpha,nsolve);
 
-           a1=1.0;
-           a2=-w0;
-
-            // P1=P - w0 V0
-           mf_combine(project_option,
-	    P_MF,bicg_V0_MF,a2,bicg_P1_MF,nsolve); 
-
-	   change_flag=0;
-           project_right_hand_side(bicg_P1_MF,project_option,change_flag);
-
-            // P1=CGRESID(R0)+beta P1
-           mf_combine(project_option,
-            CGRESID_MF,bicg_P1_MF,beta,bicg_P1_MF,nsolve); 
-
-	   change_flag=0;
-           project_right_hand_side(bicg_P1_MF,project_option,change_flag);
+	 if (alpha<=restart_tol) {
+	  restart_flag=1;
+	 } else if (alpha>restart_tol) {
+   	  // do nothing
+	 } else
+	  amrex::Error("alpha failed Nav3");
 
 #if (profile_solver==1)
-           bprof.stop();
+         bprof.stop();
 #endif
-
-            // Y=M^{-1}P1
-	    // Y=project(Y)
-           multiphase_GMRES_preconditioner(
-            gmres_precond_iter,
-            project_option,project_timings,
-            local_presmooth,local_postsmooth,
-            bicg_Y_MF,bicg_P1_MF,nsolve);
-
-#if (profile_solver==1)
-           bprof.start();
-#endif
-
-            // V1=A Y
-            // 1. (begin)calls project_right_hand_side(Y)
-            // 2. (end)  calls project_right_hand_side(V1)
-           applyALL(project_option,bicg_Y_MF,bicg_V1_MF,nsolve);
-
-           // alpha=R0hat dot V1=R0hat dot A M^-1 P1=
-	   //       R0hat dot A M^-1 (R0+beta(P-w0 V0))
-           dot_productALL(project_option,bicg_R0hat_MF,bicg_V1_MF,alpha,nsolve);
-
-	   if (alpha<=restart_tol) {
-	    restart_flag=1;
-	   } else if (alpha>restart_tol) {
-   	    // do nothing
-	   } else
-	    amrex::Error("alpha failed Nav3");
-
-#if (profile_solver==1)
-           bprof.stop();
-#endif
-
-           if (restart_flag==0) {
-
-#if (profile_solver==1)
-            bprof.start();
-#endif
-
-            alpha=rho1/alpha;
-
-            // Hvec=U0+alpha Y
-            a1=1.0;
-            a2=alpha;
-            mf_combine(project_option,
-	     bicg_U0_MF,bicg_Y_MF,a2,bicg_Hvec_MF,nsolve);
-
-	    change_flag=0;
-            project_right_hand_side(bicg_Hvec_MF,project_option,change_flag);
-            // mac_phi_crse(U1)=Hvec
-            copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
-
-	    change_flag=0;
-            project_right_hand_side(MAC_PHI_CRSE_MF,project_option,change_flag);
-
-            // R1=RHS-A mac_phi_crse(U1)
-	    // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
-	    // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
-            residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
-              MAC_PHI_CRSE_MF,nsolve);
-
-	    // dnorm=R1 dot R1
-            dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
-	    if (dnorm>=0.0) {
-             dnorm=sqrt(dnorm);
-	    } else
-             amrex::Error("dnorm invalid Nav3");
-
-#if (profile_solver==1)
-            bprof.stop();
-#endif
-
-            if (dnorm>save_mac_abs_tol) {
-
-#if (profile_solver==1)
-             bprof.start();
-#endif
-
-             // S=CGRESID(R0)-alpha V1
-             a1=1.0;
-             a2=-alpha;
-             mf_combine(project_option,
-  	      CGRESID_MF,bicg_V1_MF,a2,bicg_S_MF,nsolve);
-
-	     change_flag=0;
-             project_right_hand_side(bicg_S_MF,project_option,change_flag);
-
-#if (profile_solver==1)
-             bprof.stop();
-#endif
-
-             // Z=M^{-1}S
-	     // Z=project(Z)
-             multiphase_GMRES_preconditioner(
-              gmres_precond_iter,
-              project_option,project_timings,
-              local_presmooth,local_postsmooth,
-              Z_MF,bicg_S_MF,nsolve);
-
-#if (profile_solver==1)
-             bprof.start();
-#endif
-
-             // T=A Z
-             // 1. (begin)calls project_right_hand_side(Z)
-             // 2. (end)  calls project_right_hand_side(T)
-             applyALL(project_option,Z_MF,bicg_T_MF,nsolve);
-
-	     // a1 = T dot S = AZ dot MZ >=0.0 if A and M are SPD
-             dot_productALL(project_option,bicg_T_MF,bicg_S_MF,a1,nsolve);
-	     // a2 = T dot T = AZ dot AZ >=0.0 
-             dot_productALL(project_option,bicg_T_MF,bicg_T_MF,a2,nsolve);
-
-	     if (a2>restart_tol) {
-   	      // do nothing
-	     } else if ((a2>=0.0)&&(a2<=restart_tol)) {
-//	      restart_flag=1;
-              meets_tol=1;
-	     } else {
-	      amrex::Error("a2 invalid Nav3");
-	     }
-
-	     if (a1>0.0) {
-	      // do nothing
-	     } else if (a1<=0.0) {
-//	      restart_flag=1;
-              meets_tol=1;
-	     } else
-	      amrex::Error("a1 invalid");
-
-#if (profile_solver==1)
-             bprof.stop();
-#endif
-
-	     if (meets_tol==0) {
-
-              if (restart_flag==0) {
-
-#if (profile_solver==1)
-               bprof.start();
-#endif
-
-               w1=a1/a2;
-               // mac_phi_crse(U1)=Hvec+w1 Z
-               a1=1.0;
-               a2=w1;
-               mf_combine(project_option,
-   	        bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
-	       change_flag=0;
-               project_right_hand_side(MAC_PHI_CRSE_MF,
-                   project_option,change_flag);
-
-#if (profile_solver==1)
-               bprof.stop();
-#endif
-
-              } else if (restart_flag==1) {
-   	       // do nothing
-	      } else
-	       amrex::Error("restart_flag invalid");
-
-	     } else if (meets_tol==1) {
-	      // do nothing
-	     } else
-	      amrex::Error("meets_tol invalid");
-
-            } else if ((dnorm>=0.0)&&(dnorm<=save_mac_abs_tol)) {
-	     // do nothing (dnorm=R1 dot R1)
-            } else
-	     amrex::Error("dnorm invalid");
-
-#if (profile_solver==1)
-            bprof.start();
-#endif
-
-            // R1=RHS-A mac_phi_crse(U1)
-	    // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
-	    // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
-            residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
-              MAC_PHI_CRSE_MF,nsolve);
-
-	    // dnorm=R1 dot R1
-            dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
-	    if (dnorm>=0.0) {
-             dnorm=sqrt(dnorm);
-	    } else
-	     amrex::Error("dnorm invalid Nav3");
-
-            w0=w1;
-            // CGRESID(R0)=R1
-            copyALL(0,nsolveMM,CGRESID_MF,bicg_R1_MF);
-            copyALL(0,nsolveMM,P_MF,bicg_P1_MF);
-            copyALL(0,nsolveMM,bicg_V0_MF,bicg_V1_MF);
-            // U0=MAC_PHI_CRSE(U1)
-            copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
-
-#if (profile_solver==1)
-            bprof.stop();
-#endif
-
-           } else if (restart_flag==1) {
-            // do nothing
-           } else
-            amrex::Error("restart_flag invalid");
-
-          } else if (restart_flag==1) {
-           // do nothing
-	  } else
-	   amrex::Error("restart_flag invalid");
-
-         } else 
-          amrex::Error("BICGSTAB_ACTIVE invalid");
-
-         rho0=rho1;
 
          if (restart_flag==0) {
-          // do nothing
-         } else if (restart_flag==1) {
 
 #if (profile_solver==1)
           bprof.start();
 #endif
 
-	  if (verbose>0) {
-           if (ParallelDescriptor::IOProcessor()) {
-            std::cout << "WARNING:RESTARTING: bicgstab vcycle " 
-		   << vcycle << '\n';
-            std::cout << "RESTARTING: BICGSTAB_ACTIVE=" << 
-             BICGSTAB_ACTIVE << '\n';
-            std::cout << "RESTARTING: gmres_precond_iter= " << 
-             gmres_precond_iter << '\n';
-            std::cout << "RESTARTING: local_presmooth= " << 
-             local_presmooth << '\n';
-            std::cout << "RESTARTING: local_postsmooth= " << 
-             local_postsmooth << '\n';
-            std::cout << "RESTARTING: error_history[vcycle][0,1,2,3]= " << 
-             error_history[vcycle][0] << ' ' <<
-	     error_history[vcycle][1] << ' ' <<
-	     error_history[vcycle][2] << ' ' <<
-	     error_history[vcycle][3] << '\n';
-            std::cout << "RESTARTING: project_option= " << 
-		   project_option << '\n';
-           }
-	  } else if (verbose==0) {
-	   // do nothing
-	  } else
-	   amrex::Error("verbose invalid");
+          alpha=rho1/alpha;
 
-          // CGRESID(R0)=RHS-A U0
-	  // 1. (start) calls project_right_hand_side(bicg_U0_MF)
-	  // 2. (end)   calls project_right_hand_side(CGRESID_MF)
-          residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
-            bicg_U0_MF,nsolve);
-          // R0hat=CGRESID(R0)
-          copyALL(0,nsolveMM,bicg_R0hat_MF,CGRESID_MF);
-          // MAC_PHI_CRSE(U1)=U0
-          copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_U0_MF);
-          rho0=1.0;
-          rho1=1.0;
-          alpha=1.0;
-          w0=1.0;
-	  // dnorm=RESID dot RESID
-          dot_productALL(project_option,CGRESID_MF,CGRESID_MF,dnorm,nsolve);
+          // Hvec=U0+alpha Y
+          a1=1.0;
+          a2=alpha;
+          mf_combine(project_option,
+	   bicg_U0_MF,bicg_Y_MF,a2,bicg_Hvec_MF,nsolve);
+
+	  change_flag=0;
+          project_right_hand_side(bicg_Hvec_MF,project_option,change_flag);
+          // mac_phi_crse(U1)=Hvec
+          copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
+
+	  change_flag=0;
+          project_right_hand_side(MAC_PHI_CRSE_MF,project_option,change_flag);
+
+          // R1=RHS-A mac_phi_crse(U1)
+	  // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
+	  // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
+          residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
+            MAC_PHI_CRSE_MF,nsolve);
+
+	  // dnorm=R1 dot R1
+          dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
 	  if (dnorm>=0.0) {
            dnorm=sqrt(dnorm);
 	  } else
            amrex::Error("dnorm invalid Nav3");
 
-          zeroALL(0,nsolveMM,bicg_V0_MF);
-          zeroALL(0,nsolveMM,P_MF);
+#if (profile_solver==1)
+          bprof.stop();
+#endif
+
+          if (dnorm>save_mac_abs_tol) {
+
+#if (profile_solver==1)
+           bprof.start();
+#endif
+
+           // S=CGRESID(R0)-alpha V1
+           a1=1.0;
+           a2=-alpha;
+           mf_combine(project_option,
+  	    CGRESID_MF,bicg_V1_MF,a2,bicg_S_MF,nsolve);
+
+	   change_flag=0;
+           project_right_hand_side(bicg_S_MF,project_option,change_flag);
+
+#if (profile_solver==1)
+           bprof.stop();
+#endif
+
+           // Z=M^{-1}S
+	   // Z=project(Z)
+           multiphase_GMRES_preconditioner(
+            gmres_precond_iter,
+            project_option,project_timings,
+            local_presmooth,local_postsmooth,
+            Z_MF,bicg_S_MF,nsolve);
+
+#if (profile_solver==1)
+           bprof.start();
+#endif
+
+           // T=A Z
+           // 1. (begin)calls project_right_hand_side(Z)
+           // 2. (end)  calls project_right_hand_side(T)
+           applyALL(project_option,Z_MF,bicg_T_MF,nsolve);
+
+	   // a1 = T dot S = AZ dot MZ >=0.0 if A and M are SPD
+           dot_productALL(project_option,bicg_T_MF,bicg_S_MF,a1,nsolve);
+	   // a2 = T dot T = AZ dot AZ >=0.0 
+           dot_productALL(project_option,bicg_T_MF,bicg_T_MF,a2,nsolve);
+
+	   if (a2>restart_tol) {
+   	    // do nothing
+	   } else if ((a2>=0.0)&&(a2<=restart_tol)) {
+//	    restart_flag=1;
+            meets_tol=1;
+	   } else {
+	    amrex::Error("a2 invalid Nav3");
+	   }
+
+	   if (a1>0.0) {
+	    // do nothing
+	   } else if (a1<=0.0) {
+//	    restart_flag=1;
+            meets_tol=1;
+	   } else
+	    amrex::Error("a1 invalid");
+
+#if (profile_solver==1)
+           bprof.stop();
+#endif
+
+	   if (meets_tol==0) {
+
+            if (restart_flag==0) {
+
+#if (profile_solver==1)
+             bprof.start();
+#endif
+
+             w1=a1/a2;
+             // mac_phi_crse(U1)=Hvec+w1 Z
+             a1=1.0;
+             a2=w1;
+             mf_combine(project_option,
+   	      bicg_Hvec_MF,Z_MF,a2,MAC_PHI_CRSE_MF,nsolve);
+	     change_flag=0;
+             project_right_hand_side(MAC_PHI_CRSE_MF,
+                 project_option,change_flag);
+
+#if (profile_solver==1)
+             bprof.stop();
+#endif
+
+            } else if (restart_flag==1) {
+   	     // do nothing
+	    } else
+	     amrex::Error("restart_flag invalid");
+
+	   } else if (meets_tol==1) {
+	    // do nothing
+	   } else
+	    amrex::Error("meets_tol invalid");
+
+          } else if ((dnorm>=0.0)&&(dnorm<=save_mac_abs_tol)) {
+	   // do nothing (dnorm=R1 dot R1)
+          } else
+	   amrex::Error("dnorm invalid");
+
+#if (profile_solver==1)
+          bprof.start();
+#endif
+
+          // R1=RHS-A mac_phi_crse(U1)
+	  // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
+	  // 2. (end)   calls project_right_hand_side(bicg_R1_MF)
+          residALL(project_option,MAC_RHS_CRSE_MF,bicg_R1_MF,
+            MAC_PHI_CRSE_MF,nsolve);
+
+	  // dnorm=R1 dot R1
+          dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
+	  if (dnorm>=0.0) {
+           dnorm=sqrt(dnorm);
+	  } else
+	   amrex::Error("dnorm invalid Nav3");
+
+          w0=w1;
+          // CGRESID(R0)=R1
+          copyALL(0,nsolveMM,CGRESID_MF,bicg_R1_MF);
+          copyALL(0,nsolveMM,P_MF,bicg_P1_MF);
+          copyALL(0,nsolveMM,bicg_V0_MF,bicg_V1_MF);
+          // U0=MAC_PHI_CRSE(U1)
+          copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
 
 #if (profile_solver==1)
           bprof.stop();
 #endif
 
+         } else if (restart_flag==1) {
+          // do nothing
          } else
           amrex::Error("restart_flag invalid");
 
-        } // meets_tol==0
-
-	  // top level: BiCGStab  
-	  // preconditioner: preconditioned GMRES
-	  // GMRES, like CG or BiCGStab, is a Krylov subspace method in which
-	  // the solutions is approximated as
-	  // sum_i=0^M alpha_i A^{i}r
-	  // (r is the residual)
-	  // preconditioner for GMRES: multigrid
-	  // smooth for multigrid: "local_presmooth" iterations of the
-	  // ILU smoother going down the V-cycle and "local_postsmooth" 
-	  // iterations going up the V-cycle.
-	  // See: Pei, Vahab, Sussman, Hussaini JSC Hierarchical Spectral 
-	  // element method for multiphase flows. 2020
-	if (restart_flag==1) {
- 	 local_presmooth++;
-	 local_postsmooth++;
-	} else if (restart_flag==0) {
-	 // do nothing
+        } else if (restart_flag==1) {
+         // do nothing
         } else
          amrex::Error("restart_flag invalid");
+
+       } else 
+        amrex::Error("BICGSTAB_ACTIVE invalid");
+
+       rho0=rho1;
+
+       if (restart_flag==0) {
+        // do nothing
+       } else if (restart_flag==1) {
+
+#if (profile_solver==1)
+        bprof.start();
+#endif
+
+	if (verbose>0) {
+         if (ParallelDescriptor::IOProcessor()) {
+          std::cout << "WARNING:RESTARTING: bicgstab vcycle " 
+	         << vcycle << '\n';
+          std::cout << "RESTARTING: BICGSTAB_ACTIVE=" << 
+           BICGSTAB_ACTIVE << '\n';
+          std::cout << "RESTARTING: gmres_precond_iter= " << 
+           gmres_precond_iter << '\n';
+          std::cout << "RESTARTING: local_presmooth= " << 
+           local_presmooth << '\n';
+          std::cout << "RESTARTING: local_postsmooth= " << 
+           local_postsmooth << '\n';
+          std::cout << "RESTARTING: error_history[vcycle][0,1,2,3]= " << 
+           error_history[vcycle][0] << ' ' <<
+	   error_history[vcycle][1] << ' ' <<
+	   error_history[vcycle][2] << ' ' <<
+	   error_history[vcycle][3] << '\n';
+          std::cout << "RESTARTING: project_option= " << 
+	         project_option << '\n';
+         }
+	} else if (verbose==0) {
+	 // do nothing
+	} else
+	 amrex::Error("verbose invalid");
+
+        // CGRESID(R0)=RHS-A U0
+	// 1. (start) calls project_right_hand_side(bicg_U0_MF)
+	// 2. (end)   calls project_right_hand_side(CGRESID_MF)
+        residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
+          bicg_U0_MF,nsolve);
+        // R0hat=CGRESID(R0)
+        copyALL(0,nsolveMM,bicg_R0hat_MF,CGRESID_MF);
+        // MAC_PHI_CRSE(U1)=U0
+        copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_U0_MF);
+        rho0=1.0;
+        rho1=1.0;
+        alpha=1.0;
+        w0=1.0;
+	// dnorm=RESID dot RESID
+        dot_productALL(project_option,CGRESID_MF,CGRESID_MF,dnorm,nsolve);
+	if (dnorm>=0.0) {
+         dnorm=sqrt(dnorm);
+	} else
+         amrex::Error("dnorm invalid Nav3");
+
+        zeroALL(0,nsolveMM,bicg_V0_MF);
+        zeroALL(0,nsolveMM,P_MF);
+
+#if (profile_solver==1)
+        bprof.stop();
+#endif
+
+       } else
+        amrex::Error("restart_flag invalid");
+
+      } // meets_tol==0
+
+      // top level: BiCGStab  
+      // preconditioner: preconditioned GMRES
+      // GMRES, like CG or BiCGStab, is a Krylov subspace method in which
+      // the solutions is approximated as
+      // sum_i=0^M alpha_i A^{i}r
+      // (r is the residual)
+      // preconditioner for GMRES: multigrid
+      // smooth for multigrid: "local_presmooth" iterations of the
+      // ILU smoother going down the V-cycle and "local_postsmooth" 
+      // iterations going up the V-cycle.
+      // See: Pei, Vahab, Sussman, Hussaini JSC Hierarchical Spectral 
+      // element method for multiphase flows. 2020
+      if (restart_flag==1) {
+       local_presmooth++;
+       local_postsmooth++;
+      } else if (restart_flag==0) {
+       // do nothing
+      } else
+       amrex::Error("restart_flag invalid");
        
-        if ((local_presmooth>1000)||(local_postsmooth>1000)) {	
-         std::cout << "local_presmooth overflow " << 
-            local_presmooth << '\n';
-         std::cout << "local_postsmooth overflow " << 
-            local_postsmooth << '\n';
-         std::cout << "->project_option= " << project_option << '\n';
-         for (int ehist=0;ehist<error_history.size();ehist++) {
-          std::cout << "vcycle " << ehist << 
-           " error_history[vcycle][0,1,2,3] " <<
-           error_history[ehist][0] << ' ' <<
-           error_history[ehist][1] << ' ' <<
-           error_history[ehist][2] << ' ' <<
- 	   error_history[ehist][3] << '\n';
- 	 }
-         for (int ehist=0;ehist<outer_error_history.size();ehist++) {
-          std::cout << "outer_iter " << ehist << 
-           " outer_error_history[vcycle][0,1,2,3] " <<
-           outer_error_history[ehist][0] << ' ' <<
-           outer_error_history[ehist][1] << ' ' <<
-           outer_error_history[ehist][2] << ' ' <<
-	   outer_error_history[ehist][3] << '\n';
-	 }
-	 amrex::Error("abort:NavierStokes3.cpp,local_pre(post)smooth overflow");
-        }
-
-        total_number_vcycles++;
-
-       } // vcycle=0..vcycle_max or meets_tol!=0
-
-#if (profile_solver==1)
-       bprof.start();
-#endif
-
-       delete_array(Z_MF);
-       delete_array(P_MF);
-       delete_array(bicg_R0hat_MF);
-       delete_array(bicg_U0_MF);
-       delete_array(bicg_V0_MF);
-       delete_array(bicg_P1_MF);
-       delete_array(bicg_R1_MF);
-       delete_array(bicg_Y_MF);
-       delete_array(bicg_Hvec_MF);
-       delete_array(bicg_S_MF);
-       delete_array(bicg_T_MF);
-
-       delete_array(bicg_V1_MF);
-       delete_array(CGRESID_MF);
-       delete_array(P_SOLN_MF);
-
-       // alpha deltap - div beta grad deltap=
-       //   -(1/dt)div U + alpha poldhold
-       // 
-       // alpha dp - div beta grad dp=
-       //   -(1/dt)div (U+V) + alpha poldhold 
-       // 
-       // UMAC=UMAC-grad(mac_phi_crse) 
-       // S_new=S_new+mac_phi_crse 
-       //
-       // POLDHOLD=POLDHOLD-mac_phi_crse
-       //
-       // mac_phi_crse=0
-       //
-       // updatevelALL calls mac_update.
-       updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
-
-#if (profile_solver==1)
-       bprof.stop();
-#endif
-
-      } // cg_loop=0..cg_loop_max-1
-
-#if (profile_solver==1)
-      bprof.start();
-#endif
-
-      std::fflush(NULL);
-
-      if (vcycle>multilevel_maxcycle) {
-       std::cout << "WARNING: vcycle too big, multilevel_maxcycle=" <<
-        multilevel_maxcycle << '\n';
-       std::cout << "->MyProc()= " << ParallelDescriptor::MyProc() << "\n";
+      if ((local_presmooth>1000)||(local_postsmooth>1000)) {	
+       std::cout << "local_presmooth overflow " << 
+          local_presmooth << '\n';
+       std::cout << "local_postsmooth overflow " << 
+          local_postsmooth << '\n';
        std::cout << "->project_option= " << project_option << '\n';
-       std::cout << "->error_n= " << error_n << '\n';
-       std::cout << "->cg_loop_max= " << cg_loop_max << '\n';
-       std::cout << "->ERROR HISTORY " << cg_loop_max << '\n';
        for (int ehist=0;ehist<error_history.size();ehist++) {
         std::cout << "vcycle " << ehist << 
-	 " error_history[vcycle][0,1,2,3] " <<
+         " error_history[vcycle][0,1,2,3] " <<
          error_history[ehist][0] << ' ' <<
          error_history[ehist][1] << ' ' <<
          error_history[ehist][2] << ' ' <<
-	 error_history[ehist][3] << '\n';
+         error_history[ehist][3] << '\n';
        }
        for (int ehist=0;ehist<outer_error_history.size();ehist++) {
         std::cout << "outer_iter " << ehist << 
@@ -10368,472 +10153,433 @@ void NavierStokes::multiphase_project(int project_option) {
          outer_error_history[ehist][0] << ' ' <<
          outer_error_history[ehist][1] << ' ' <<
          outer_error_history[ehist][2] << ' ' <<
-	 outer_error_history[ehist][3] << '\n';
+         outer_error_history[ehist][3] << '\n';
        }
-      } else if (vcycle>=0) {
-       // do nothing
-      } else {
-       amrex::Error("vcycle bust");
+       amrex::Error("abort:NavierStokes3.cpp,local_pre(post)smooth overflow");
       }
 
-      std::fflush(NULL);
+      total_number_vcycles++;
 
-      for (int ilist=0;ilist<scomp.size();ilist++) 
-       avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
-
-        // override_bc_to_homogeneous=1
-	// call FORT_OVERRIDEBC
-      CPP_OVERRIDEPBC(1,project_option);
-
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-
-       for (int ilist=0;ilist<scomp.size();ilist++) 
-        ns_level.avgDown(state_index,scomp[ilist],ncomp[ilist],1);
-
-       ns_level.getState_localMF_list(
-        PRESPC_MF,1,
-        state_index,
-        scomp,
-        ncomp);
-      } // ilev=finest_level ... level
-
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-       int homflag_outer_iter_pressure2=1;
-       energyflag=0; // energyflag=2 => GRADPEDGE=gradp
-        // GRADPEDGE=-dt gradp/rho
-       int simple_AMR_BC_flag=0;
-       int simple_AMR_BC_flag_viscosity=0;
-       ns_level.apply_pressure_grad(
-        simple_AMR_BC_flag,
-        simple_AMR_BC_flag_viscosity,
-        homflag_outer_iter_pressure2,
-        energyflag,
-        GRADPEDGE_MF,
-        PRESPC_MF,
-        project_option,nsolve);
-
-       if (ilev<finest_level) {
-        int ncomp_edge=-1;
-        ns_level.avgDownEdge_localMF(GRADPEDGE_MF,
-         0,ncomp_edge,0,AMREX_SPACEDIM,1,16);
-       }
-
-        // UMAC=MAC_TEMP+GRADPEDGE=MAC_TEMP-dt gradp/rho
-       ns_level.correct_velocity(project_option,
-        UMAC_MF, MAC_TEMP_MF,GRADPEDGE_MF,nsolve);
-      }  // ilev=finest_level ... level
-
-       // outer_iter_pressure+=S_new
-       // S_new=0
-       // mac_temp=UMAC
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-        ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolveMM_FACE,0);
-
-       MultiFab* snew_mf;
-       if (state_index==State_Type) {
-        snew_mf=ns_level.getState_list(1,scomp,ncomp,cur_time_slab);
-       } else if (state_index==DIV_Type) {
-        if (scomp.size()!=1)
-         amrex::Error("scomp.size() invalid");
-        if (ncomp[0]!=num_materials_face)
-         amrex::Error("ncomp[0] invalid");
-        snew_mf=ns_level.getStateDIV_DATA(1,scomp[0],ncomp[0],cur_time_slab);
-       } else
-        amrex::Error("state_index invalid");
-
-       if (snew_mf->nComp()!=nsolveMM)
-        amrex::Error("snew_mf->nComp() invalid");
-
-       MultiFab::Add(
-        *ns_level.localMF[OUTER_ITER_PRESSURE_MF],*snew_mf,0,0,nsolveMM,0);
-
-       delete snew_mf;
-
-       ns_level.zero_independent_variable(project_option,nsolve);
-      }  // ilev=finest_level ... level
-
-      change_flag=0;
-      project_right_hand_side(OUTER_ITER_PRESSURE_MF,project_option,
-		     change_flag);
-
-      delete_array(PRESPC_MF);
-
-         // variables initialized to 0.0
-      allocate_array(1,nsolveMM,-1,OUTER_MAC_PHI_CRSE_MF);
-      allocate_array(0,nsolveMM,-1,OUTER_RESID_MF);
-      allocate_array(0,nsolveMM,-1,OUTER_MAC_RHS_CRSE_MF);
-
-      allocate_array(1,nsolveMM,-1,P_SOLN_MF);
-      allocate_array(0,nsolveMM,-1,bicg_V1_MF);
-
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-       if (ilev<finest_level) {
-        ns_level.setVal_localMF(OUTER_MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0); 
-        ns_level.averageRhs(OUTER_MAC_RHS_CRSE_MF,nsolve,project_option);
-        ns_level.avgDownMac(); // works on UMAC_MF
-       }
-        // OUTER_MAC_PHI_CRSE=0
-        // OUTER_MAC_RHS=POLDHOLD * alpha - 
-        //               vol div UMAC/dt + diffusionRHS
-       ns_level.mac_project_rhs(project_option,OUTER_MAC_PHI_CRSE_MF,
-         OUTER_MAC_RHS_CRSE_MF,nsolve);
-      }  // ilev=finest_level ... level
-
-       // OUTER_RESID=OUTER_RHS-
-       //          ( alpha * phi + (alpha+da) * phi - div grad phi )
-       // if local_solvability_projection, then this
-       // routine modifies OUTER_RESID so that it sums to zero.
-       // if singular_possible, then this routine zeros out the
-       // residual where the matrix diagonal (prior to dual time stepping
-       // modification) is 0.
-      residALL(project_option,OUTER_MAC_RHS_CRSE_MF,
-        OUTER_RESID_MF,OUTER_MAC_PHI_CRSE_MF,nsolve);
-      outer_error=0.0;
-      Real rAr_outer_error=0.0;
-      Real Ar_outer_error=0.0;
-      dot_productALL(project_option,
-	OUTER_RESID_MF,OUTER_RESID_MF,outer_error,nsolve);
-      if (outer_error>=0.0) {
-       outer_error=sqrt(outer_error);
-      } else
-       amrex::Error("outer_error invalid");
-
-      copyALL(0,nsolveMM,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=OUTER_RESID_MF
-         // V1=A P_SOLN
-         // 1. (begin)calls project_right_hand_side(P)
-         // 2. (end)  calls project_right_hand_side(V1)
-      applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
-      dot_productALL(project_option,OUTER_RESID_MF,bicg_V1_MF,
-		     rAr_outer_error,nsolve);
-      dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,
-		     Ar_outer_error,nsolve);
-
-      if (rAr_outer_error<0.0) {
-       rAr_outer_error=0.0;
-      } else if (rAr_outer_error>=0.0) {
-       rAr_outer_error=sqrt(rAr_outer_error);
-      } else
-       amrex::Error("rAr_outer_error invalid");
-
-      if (Ar_outer_error>=0.0) {
-       Ar_outer_error=sqrt(Ar_outer_error);
-      } else
-       amrex::Error("Ar_outer_error invalid");
-
-      delete_array(bicg_V1_MF);
-      delete_array(P_SOLN_MF);
-
-      delete_array(OUTER_MAC_RHS_CRSE_MF);
-      delete_array(OUTER_MAC_PHI_CRSE_MF);
-      delete_array(OUTER_RESID_MF);
-
-      Real outer_tol=100.0*save_mac_abs_tol;
-
-      outer_error_history[bicgstab_num_outer_iterSOLVER][0]=outer_error;
-      outer_error_history[bicgstab_num_outer_iterSOLVER][1]=rAr_outer_error;
-      outer_error_history[bicgstab_num_outer_iterSOLVER][2]=Ar_outer_error;
-      outer_error_history[bicgstab_num_outer_iterSOLVER][3]=outer_tol;
-
-      bicgstab_num_outer_iterSOLVER++;
-
-      if (verbose>0) {
-       if (ParallelDescriptor::IOProcessor()) {
-        std::cout << "project_option= " << project_option << '\n';
-        std::cout << "bicgstab_num_outer_iterSOLVER,E,rAr_E,Ar_E " << 
-         bicgstab_num_outer_iterSOLVER << ' ' << outer_error << 
-	 ' ' << rAr_outer_error << 
-	 ' ' << Ar_outer_error << '\n';
-       }
-      }
-
-      outer_iter_done=0;
-
-      check_outer_solver_convergence(outer_error,error0,
-	       Ar_outer_error,Ar_error0,
-	       rAr_outer_error,rAr_error0,
-	       outer_tol,
-	       outer_iter_done);
-
-      if (bicgstab_num_outer_iterSOLVER>bicgstab_max_num_outer_iter)
-       outer_iter_done=1;
-
-       // We cannot do iterative refinement (see Burden and Faires -
-       // iterative techniques in matrix algebra) in this case since:
-       // RHSPROJ( div(U - dt grad P) ) <> 
-       // RHSPROJ( RHSPROJ(div U)- dt div grad P ) 
-      if (local_solvability_projection==1) {
-       if (bicgstab_num_outer_iterSOLVER>1)
-        outer_iter_done=1;
-      } else if (local_solvability_projection==0) {
-       // do nothing
-      } else
-       amrex::Error("local solvability_projection invalid");
-
-      if (bicgstab_num_outer_iterSOLVER<min_bicgstab_outer_iter)
-       outer_iter_done=0;
+     } // vcycle=0..vcycle_max or meets_tol!=0
 
 #if (profile_solver==1)
-      bprof.stop();
+     bprof.start();
 #endif
 
-  }  //  while outer_iter_done==0
+     delete_array(Z_MF);
+     delete_array(P_MF);
+     delete_array(bicg_R0hat_MF);
+     delete_array(bicg_U0_MF);
+     delete_array(bicg_V0_MF);
+     delete_array(bicg_P1_MF);
+     delete_array(bicg_R1_MF);
+     delete_array(bicg_Y_MF);
+     delete_array(bicg_Hvec_MF);
+     delete_array(bicg_S_MF);
+     delete_array(bicg_T_MF);
+
+     delete_array(bicg_V1_MF);
+     delete_array(CGRESID_MF);
+     delete_array(P_SOLN_MF);
+
+     // alpha deltap - div beta grad deltap=
+     //   -(1/dt)div U + alpha poldhold
+     // 
+     // alpha dp - div beta grad dp=
+     //   -(1/dt)div (U+V) + alpha poldhold 
+     // 
+     // UMAC=UMAC-grad(mac_phi_crse) 
+     // S_new=S_new+mac_phi_crse 
+     //
+     // POLDHOLD=POLDHOLD-mac_phi_crse
+     //
+     // mac_phi_crse=0
+     //
+     // updatevelALL calls mac_update.
+     updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
 
 #if (profile_solver==1)
-  bprof.start();
+     bprof.stop();
 #endif
 
-  if (number_vcycles_all_solver_calls.size()==
-      number_solver_calls.size()) {
-
-    int prev_size=number_solver_calls.size();
-    int new_size=project_option+1;
-    if (new_size<=prev_size) {
-     // do nothing
-    } else if (new_size>prev_size) {
-     number_vcycles_all_solver_calls.resize(new_size,0);
-     max_lev0_cycles_all_solver_calls.resize(new_size,0);
-     median_lev0_cycles_all_solver_calls.resize(new_size,0);
-     outer_error_all_solver_calls.resize(new_size,0.0);
-     number_solver_calls.resize(new_size,0);
-    } else
-     amrex::Error("new_size or prev_size invalid");
-
-    int local_max_lev0_cycles=0;
-    int local_median_lev0_cycles=0;
-    int current_list_size=lev0_cycles_list.size();
-    if (current_list_size>0) {
-     local_max_lev0_cycles=lev0_cycles_list[0];
-     local_median_lev0_cycles=lev0_cycles_list[current_list_size/2];
-    }
-
-    number_solver_calls[project_option]++;
-    max_lev0_cycles_all_solver_calls[project_option]+=
-	   local_max_lev0_cycles;
-    median_lev0_cycles_all_solver_calls[project_option]+=
-	   local_median_lev0_cycles;
-    number_vcycles_all_solver_calls[project_option]+=total_number_vcycles;
-    outer_error_all_solver_calls[project_option]+=outer_error;
-
-    if (ParallelDescriptor::IOProcessor()) {
-     Real avg_iter=number_vcycles_all_solver_calls[project_option]/
-  	          number_solver_calls[project_option];
-     std::cout << "SOLVER STATISTICS  TIME, project_option = " <<
-	    cur_time_slab << " " << project_option << '\n';
-     std::cout << "project_option= " << project_option <<
-	    " SDC_outer_sweeps= " << SDC_outer_sweeps <<
-	    " slab_step= " << slab_step << '\n';
-
-     Real avg_outer_error=outer_error_all_solver_calls[project_option]/
-  	          number_solver_calls[project_option];
-
-     std::cout << "project_option= " << project_option << 
-	    " number calls= " << number_solver_calls[project_option] << 
-             " solver avg outer_error= " << avg_outer_error << '\n';
-
-     std::cout << "project_option= " << project_option << 
-	    " number calls= " << number_solver_calls[project_option] << 
-             " local outer_error= " << outer_error << '\n';
-
-     std::cout << "project_option= " << project_option << 
-	    " number calls= " << number_solver_calls[project_option] << 
-             " solver avg iter= " << avg_iter << '\n';
-     std::cout << "project_option= " << project_option <<
-	    " TIME= " << cur_time_slab << " Current iterations= " <<
-	    total_number_vcycles << '\n';
-
-     avg_iter=max_lev0_cycles_all_solver_calls[project_option]/
-	     number_solver_calls[project_option];
-     std::cout << "project_option= " << project_option << 
-	    " number calls= " << number_solver_calls[project_option] << 
-             " precon avg max= " << avg_iter << '\n';
-
-     avg_iter=median_lev0_cycles_all_solver_calls[project_option]/
-	     number_solver_calls[project_option];
-     std::cout << "project_option= " << project_option << 
-	    " number calls= " << number_solver_calls[project_option] << 
-             " precon avg median= " << avg_iter << '\n';
-
-     std::cout << "project_option= " << project_option <<
-	    " TIME= " << cur_time_slab << " local_max_lev0_cycles= " <<
-	    local_max_lev0_cycles << '\n';
-     std::cout << "project_option= " << project_option <<
-	    " TIME= " << cur_time_slab << " local_median_lev0_cycles= " <<
-	    local_median_lev0_cycles << '\n';
-    }
-
-  } else
-    amrex::Error("number_solver_calls.size() invalid");
-
-  deallocate_maccoefALL(project_option);
-
-    // copy OUTER_ITER_PRESSURE to s_new
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.putState_localMF_list(OUTER_ITER_PRESSURE_MF,state_index,
-		   scomp,ncomp);
-  }  // ilev=finest_level ... level
-
-  for (int ilist=0;ilist<scomp.size();ilist++) 
-    avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
-
-  int homflag_dual_time=0;
-
-  if ((project_option==1)||   // initial project
-      (project_option==10)||  // sync project prior to advection
-      (project_option==11)) { // FSI_material_exists (2nd project)
-    homflag_dual_time=1;
-  } else if (project_option==12) { // pressure extrapolation
-    homflag_dual_time=0;
-  } else if ((project_option==0)||  //regular project
-             (project_option==13)|| //FSI_material_exists (1st project)
-             (project_option==2)) { //thermal conductivity
-    homflag_dual_time=0;
-  } else if (project_option==3) { // viscosity
-    homflag_dual_time=0;
-  } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
-    homflag_dual_time=0;
-  } else
-    amrex::Error("project_option invalid 53");
-
-  CPP_OVERRIDEPBC(homflag_dual_time,project_option);
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    if (ilev<finest_level)
-     ns_level.avgDownMac(); // interpolates UMAC_MF from ilev+1
-  } // ilev=finest_level ... level
-
+    } // cg_loop=0..cg_loop_max-1
 
 #if (profile_solver==1)
-  bprof.stop();
+    bprof.start();
 #endif
 
-#if (profile_solver==1)
-  bprof.start();
-#endif
-
-  prescribed_velocity_iter++;
-
-  prescribed_error_old=prescribed_error;
-  prescribed_error=0.0;
-
-  if (prescribed_velocity_iter_active==1) {
-   // EQUATION TO BE SOLVED:
-   // p^{0}=p^init
-   // while not converged prescribed velocity
-   //   alpha (p^{k+1}-p^*) - div beta (1-HS) grad p^{k+1} = 
-   //     -div[(1-HS) u^*/dt + HS us^k]/dt
-   //   u^{k+1}=u^* - dt beta grad p^{k+1}
-   // end while
-   //
-   if (prescribed_velocity_iter>0) {
-
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.save_to_macvel_state(UMAC_MF);
-    }
-
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.make_MAC_velocity_consistent();
-    }
- 
-     // prescribed_error=max(prescribed_error,H_solid'|USOLID^{k+1}-UMAC|)
-     //  1. OUTER_ITER_PRESSURE=p_new
-     //  2. UMAC = (1-H_solid)UMAC + H_solid USOLID^{k+1}
-     //  3. average down UMAC 
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.update_prescribed(project_option,prescribed_error);
-    }
-    if (prescribed_velocity_iter==1) {
-     prescribed_error0=prescribed_error;
-    } else if (prescribed_velocity_iter>1) {
-     // do nothing
-    } else
-     amrex::Error("prescribed_velocity_iter invalid");
-
-   } else
-    amrex::Error("prescribed_velocity_iter invalid");
-
-   if (verbose>0) {
-    if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "endloop:prescribed_velocity_iter, prescribed_error0 " << 
-      prescribed_velocity_iter << ' ' << prescribed_error0 << '\n';
-     std::cout << "endloop:prescribed_velocity_iter, prescribed_error " << 
-      prescribed_velocity_iter << ' ' << prescribed_error << '\n';
-     std::cout << "endloop:prescribed_velocity_iter, prescribed_error_old "<< 
-      prescribed_velocity_iter << ' ' << prescribed_error_old << '\n';
-
-    }
     std::fflush(NULL);
-   } else if ((verbose==0)||(verbose==-1)) {
-    // do nothing
-   } else
-    amrex::Error("verbose invalid");
 
-  } else if (prescribed_velocity_iter_active==0) {
-   // do nothing
-  } else
-   amrex::Error("prescribed_velocity_iter_active invalid");
-
-  prescribed_abstol=save_mac_abs_tol;
-  prescribed_reltol=save_min_rel_error;
-
-  prescribed_error_met=0;
-  if (prescribed_error<=prescribed_abstol) {
-   prescribed_error_met=1;
-  } else if (prescribed_error>prescribed_abstol) {
-   if (prescribed_velocity_iter==1) {
-    // do nothing
-   } else if (prescribed_velocity_iter>1) {
-    if (prescribed_error<=prescribed_error0*prescribed_reltol)
-     prescribed_error_met=1;
-   } else
-    amrex::Error("prescribed_velocity_iter invalid");
-
-   if (prescribed_error_met==0) {
-    if (min_prescribed_opt_iter>5) {
-     if (prescribed_velocity_iter>min_prescribed_opt_iter) {
-      if (std::abs(prescribed_error-prescribed_error_old)<= 
-	  prescribed_error_old*prescribed_reltol) {
-       prescribed_error_met=1;
-      } 
-      if (std::abs(prescribed_error-prescribed_error_old)<=
-	  prescribed_abstol) {
-       prescribed_error_met=1;
-      } 
+    if (vcycle>multilevel_maxcycle) {
+     std::cout << "WARNING: vcycle too big, multilevel_maxcycle=" <<
+      multilevel_maxcycle << '\n';
+     std::cout << "->MyProc()= " << ParallelDescriptor::MyProc() << "\n";
+     std::cout << "->project_option= " << project_option << '\n';
+     std::cout << "->error_n= " << error_n << '\n';
+     std::cout << "->cg_loop_max= " << cg_loop_max << '\n';
+     std::cout << "->ERROR HISTORY " << cg_loop_max << '\n';
+     for (int ehist=0;ehist<error_history.size();ehist++) {
+      std::cout << "vcycle " << ehist << 
+       " error_history[vcycle][0,1,2,3] " <<
+       error_history[ehist][0] << ' ' <<
+       error_history[ehist][1] << ' ' <<
+       error_history[ehist][2] << ' ' <<
+       error_history[ehist][3] << '\n';
      }
+     for (int ehist=0;ehist<outer_error_history.size();ehist++) {
+      std::cout << "outer_iter " << ehist << 
+       " outer_error_history[vcycle][0,1,2,3] " <<
+       outer_error_history[ehist][0] << ' ' <<
+       outer_error_history[ehist][1] << ' ' <<
+       outer_error_history[ehist][2] << ' ' <<
+       outer_error_history[ehist][3] << '\n';
+     }
+    } else if (vcycle>=0) {
+     // do nothing
+    } else {
+     amrex::Error("vcycle bust");
+    }
+
+    std::fflush(NULL);
+
+    for (int ilist=0;ilist<scomp.size();ilist++) 
+     avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
+
+      // override_bc_to_homogeneous=1
+      // call FORT_OVERRIDEBC
+    CPP_OVERRIDEPBC(1,project_option);
+
+    for (int ilev=finest_level;ilev>=level;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+
+     for (int ilist=0;ilist<scomp.size();ilist++) 
+      ns_level.avgDown(state_index,scomp[ilist],ncomp[ilist],1);
+
+     ns_level.getState_localMF_list(
+      PRESPC_MF,1,
+      state_index,
+      scomp,
+      ncomp);
+    } // ilev=finest_level ... level
+
+    for (int ilev=finest_level;ilev>=level;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+     int homflag_outer_iter_pressure2=1;
+     energyflag=0; // energyflag=2 => GRADPEDGE=gradp
+      // GRADPEDGE=-dt gradp/rho
+     int simple_AMR_BC_flag=0;
+     int simple_AMR_BC_flag_viscosity=0;
+     ns_level.apply_pressure_grad(
+      simple_AMR_BC_flag,
+      simple_AMR_BC_flag_viscosity,
+      homflag_outer_iter_pressure2,
+      energyflag,
+      GRADPEDGE_MF,
+      PRESPC_MF,
+      project_option,nsolve);
+
+     if (ilev<finest_level) {
+      int ncomp_edge=-1;
+      ns_level.avgDownEdge_localMF(GRADPEDGE_MF,
+       0,ncomp_edge,0,AMREX_SPACEDIM,1,16);
+     }
+
+      // UMAC=MAC_TEMP+GRADPEDGE=MAC_TEMP-dt gradp/rho
+     ns_level.correct_velocity(project_option,
+      UMAC_MF, MAC_TEMP_MF,GRADPEDGE_MF,nsolve);
+    }  // ilev=finest_level ... level
+
+     // outer_iter_pressure+=S_new
+     // S_new=0
+     // mac_temp=UMAC
+    for (int ilev=finest_level;ilev>=level;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+      ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolveMM_FACE,0);
+
+     MultiFab* snew_mf;
+     if (state_index==State_Type) {
+      snew_mf=ns_level.getState_list(1,scomp,ncomp,cur_time_slab);
+     } else if (state_index==DIV_Type) {
+      if (scomp.size()!=1)
+       amrex::Error("scomp.size() invalid");
+      if (ncomp[0]!=num_materials_face)
+       amrex::Error("ncomp[0] invalid");
+      snew_mf=ns_level.getStateDIV_DATA(1,scomp[0],ncomp[0],cur_time_slab);
+     } else
+      amrex::Error("state_index invalid");
+
+     if (snew_mf->nComp()!=nsolveMM)
+      amrex::Error("snew_mf->nComp() invalid");
+
+     MultiFab::Add(
+      *ns_level.localMF[OUTER_ITER_PRESSURE_MF],*snew_mf,0,0,nsolveMM,0);
+
+     delete snew_mf;
+
+     ns_level.zero_independent_variable(project_option,nsolve);
+    }  // ilev=finest_level ... level
+
+    change_flag=0;
+    project_right_hand_side(OUTER_ITER_PRESSURE_MF,project_option,
+      	     change_flag);
+
+    delete_array(PRESPC_MF);
+
+       // variables initialized to 0.0
+    allocate_array(1,nsolveMM,-1,OUTER_MAC_PHI_CRSE_MF);
+    allocate_array(0,nsolveMM,-1,OUTER_RESID_MF);
+    allocate_array(0,nsolveMM,-1,OUTER_MAC_RHS_CRSE_MF);
+
+    allocate_array(1,nsolveMM,-1,P_SOLN_MF);
+    allocate_array(0,nsolveMM,-1,bicg_V1_MF);
+
+    for (int ilev=finest_level;ilev>=level;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+     if (ilev<finest_level) {
+      ns_level.setVal_localMF(OUTER_MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0); 
+      ns_level.averageRhs(OUTER_MAC_RHS_CRSE_MF,nsolve,project_option);
+      ns_level.avgDownMac(); // works on UMAC_MF
+     }
+      // OUTER_MAC_PHI_CRSE=0
+      // OUTER_MAC_RHS=POLDHOLD * alpha - 
+      //               vol div UMAC/dt + diffusionRHS
+     ns_level.mac_project_rhs(project_option,OUTER_MAC_PHI_CRSE_MF,
+       OUTER_MAC_RHS_CRSE_MF,nsolve);
+    }  // ilev=finest_level ... level
+
+     // OUTER_RESID=OUTER_RHS-
+     //          ( alpha * phi + (alpha+da) * phi - div grad phi )
+     // if local_solvability_projection, then this
+     // routine modifies OUTER_RESID so that it sums to zero.
+     // if singular_possible, then this routine zeros out the
+     // residual where the matrix diagonal (prior to dual time stepping
+     // modification) is 0.
+    residALL(project_option,OUTER_MAC_RHS_CRSE_MF,
+      OUTER_RESID_MF,OUTER_MAC_PHI_CRSE_MF,nsolve);
+    outer_error=0.0;
+    Real rAr_outer_error=0.0;
+    Real Ar_outer_error=0.0;
+    dot_productALL(project_option,
+      OUTER_RESID_MF,OUTER_RESID_MF,outer_error,nsolve);
+    if (outer_error>=0.0) {
+     outer_error=sqrt(outer_error);
     } else
-     amrex::Error("min_prescribed_opt_iter too small");
-   } else if (prescribed_error_met==1) {
-    // do nothing
-   } else
-    amrex::Error("prescribed_error_met invalid");
-  } else
-   amrex::Error("prescribed_error invalid");
+     amrex::Error("outer_error invalid");
+
+    copyALL(0,nsolveMM,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=OUTER_RESID_MF
+       // V1=A P_SOLN
+       // 1. (begin)calls project_right_hand_side(P)
+       // 2. (end)  calls project_right_hand_side(V1)
+    applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
+    dot_productALL(project_option,OUTER_RESID_MF,bicg_V1_MF,
+      	     rAr_outer_error,nsolve);
+    dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,
+      	     Ar_outer_error,nsolve);
+
+    if (rAr_outer_error<0.0) {
+     rAr_outer_error=0.0;
+    } else if (rAr_outer_error>=0.0) {
+     rAr_outer_error=sqrt(rAr_outer_error);
+    } else
+     amrex::Error("rAr_outer_error invalid");
+
+    if (Ar_outer_error>=0.0) {
+     Ar_outer_error=sqrt(Ar_outer_error);
+    } else
+     amrex::Error("Ar_outer_error invalid");
+
+    delete_array(bicg_V1_MF);
+    delete_array(P_SOLN_MF);
+
+    delete_array(OUTER_MAC_RHS_CRSE_MF);
+    delete_array(OUTER_MAC_PHI_CRSE_MF);
+    delete_array(OUTER_RESID_MF);
+
+    Real outer_tol=100.0*save_mac_abs_tol;
+
+    outer_error_history[bicgstab_num_outer_iterSOLVER][0]=outer_error;
+    outer_error_history[bicgstab_num_outer_iterSOLVER][1]=rAr_outer_error;
+    outer_error_history[bicgstab_num_outer_iterSOLVER][2]=Ar_outer_error;
+    outer_error_history[bicgstab_num_outer_iterSOLVER][3]=outer_tol;
+
+    bicgstab_num_outer_iterSOLVER++;
+
+    if (verbose>0) {
+     if (ParallelDescriptor::IOProcessor()) {
+      std::cout << "project_option= " << project_option << '\n';
+      std::cout << "bicgstab_num_outer_iterSOLVER,E,rAr_E,Ar_E " << 
+       bicgstab_num_outer_iterSOLVER << ' ' << outer_error << 
+       ' ' << rAr_outer_error << 
+       ' ' << Ar_outer_error << '\n';
+     }
+    }
+
+    outer_iter_done=0;
+
+    check_outer_solver_convergence(outer_error,error0,
+             Ar_outer_error,Ar_error0,
+             rAr_outer_error,rAr_error0,
+             outer_tol,
+             outer_iter_done);
+
+    if (bicgstab_num_outer_iterSOLVER>bicgstab_max_num_outer_iter)
+     outer_iter_done=1;
+
+     // We cannot do iterative refinement (see Burden and Faires -
+     // iterative techniques in matrix algebra) in this case since:
+     // RHSPROJ( div(U - dt grad P) ) <> 
+     // RHSPROJ( RHSPROJ(div U)- dt div grad P ) 
+    if (local_solvability_projection==1) {
+     if (bicgstab_num_outer_iterSOLVER>1)
+      outer_iter_done=1;
+    } else if (local_solvability_projection==0) {
+     // do nothing
+    } else
+     amrex::Error("local solvability_projection invalid");
+
+    if (bicgstab_num_outer_iterSOLVER<min_bicgstab_outer_iter)
+     outer_iter_done=0;
 
 #if (profile_solver==1)
-  bprof.stop();
+    bprof.stop();
 #endif
 
- } while (prescribed_error_met==0);
+ }  //  while outer_iter_done==0
 
 #if (profile_solver==1)
  bprof.start();
 #endif
 
- if (prescribed_velocity_iter_active==1) {
-  // do nothing
- } else if (prescribed_velocity_iter_active==0) {
-  //do nothing
+ if (number_vcycles_all_solver_calls.size()==
+     number_solver_calls.size()) {
+
+  int prev_size=number_solver_calls.size();
+  int new_size=project_option+1;
+  if (new_size<=prev_size) {
+   // do nothing
+  } else if (new_size>prev_size) {
+   number_vcycles_all_solver_calls.resize(new_size,0);
+   max_lev0_cycles_all_solver_calls.resize(new_size,0);
+   median_lev0_cycles_all_solver_calls.resize(new_size,0);
+   outer_error_all_solver_calls.resize(new_size,0.0);
+   number_solver_calls.resize(new_size,0);
+  } else
+   amrex::Error("new_size or prev_size invalid");
+
+  int local_max_lev0_cycles=0;
+  int local_median_lev0_cycles=0;
+  int current_list_size=lev0_cycles_list.size();
+  if (current_list_size>0) {
+   local_max_lev0_cycles=lev0_cycles_list[0];
+   local_median_lev0_cycles=lev0_cycles_list[current_list_size/2];
+  }
+
+  number_solver_calls[project_option]++;
+  max_lev0_cycles_all_solver_calls[project_option]+=
+         local_max_lev0_cycles;
+  median_lev0_cycles_all_solver_calls[project_option]+=
+         local_median_lev0_cycles;
+  number_vcycles_all_solver_calls[project_option]+=total_number_vcycles;
+  outer_error_all_solver_calls[project_option]+=outer_error;
+
+  if (ParallelDescriptor::IOProcessor()) {
+   Real avg_iter=number_vcycles_all_solver_calls[project_option]/
+                number_solver_calls[project_option];
+   std::cout << "SOLVER STATISTICS  TIME, project_option = " <<
+          cur_time_slab << " " << project_option << '\n';
+   std::cout << "project_option= " << project_option <<
+          " SDC_outer_sweeps= " << SDC_outer_sweeps <<
+          " slab_step= " << slab_step << '\n';
+
+   Real avg_outer_error=outer_error_all_solver_calls[project_option]/
+                number_solver_calls[project_option];
+
+   std::cout << "project_option= " << project_option << 
+          " number calls= " << number_solver_calls[project_option] << 
+           " solver avg outer_error= " << avg_outer_error << '\n';
+
+   std::cout << "project_option= " << project_option << 
+          " number calls= " << number_solver_calls[project_option] << 
+           " local outer_error= " << outer_error << '\n';
+
+   std::cout << "project_option= " << project_option << 
+          " number calls= " << number_solver_calls[project_option] << 
+           " solver avg iter= " << avg_iter << '\n';
+   std::cout << "project_option= " << project_option <<
+          " TIME= " << cur_time_slab << " Current iterations= " <<
+          total_number_vcycles << '\n';
+
+   avg_iter=max_lev0_cycles_all_solver_calls[project_option]/
+           number_solver_calls[project_option];
+   std::cout << "project_option= " << project_option << 
+          " number calls= " << number_solver_calls[project_option] << 
+           " precon avg max= " << avg_iter << '\n';
+
+   avg_iter=median_lev0_cycles_all_solver_calls[project_option]/
+           number_solver_calls[project_option];
+   std::cout << "project_option= " << project_option << 
+          " number calls= " << number_solver_calls[project_option] << 
+           " precon avg median= " << avg_iter << '\n';
+
+   std::cout << "project_option= " << project_option <<
+          " TIME= " << cur_time_slab << " local_max_lev0_cycles= " <<
+          local_max_lev0_cycles << '\n';
+   std::cout << "project_option= " << project_option <<
+          " TIME= " << cur_time_slab << " local_median_lev0_cycles= " <<
+          local_median_lev0_cycles << '\n';
+  }
+
  } else
-  amrex::Error("prescribed_velocity_iter_active invalid");
+  amrex::Error("number_solver_calls.size() invalid");
+
+ deallocate_maccoefALL(project_option);
+
+    // copy OUTER_ITER_PRESSURE to s_new
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.putState_localMF_list(OUTER_ITER_PRESSURE_MF,state_index,
+   scomp,ncomp);
+ }  // ilev=finest_level ... level
+
+ for (int ilist=0;ilist<scomp.size();ilist++) 
+  avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
+
+ int homflag_dual_time=0;
+
+ if ((project_option==1)||   // initial project
+     (project_option==10)||  // sync project prior to advection
+     (project_option==11)) { // FSI_material_exists (2nd project)
+  homflag_dual_time=1;
+ } else if (project_option==12) { // pressure extrapolation
+  homflag_dual_time=0;
+ } else if ((project_option==0)||  //regular project
+            (project_option==13)|| //FSI_material_exists (1st project)
+            (project_option==2)) { //thermal conductivity
+  homflag_dual_time=0;
+ } else if (project_option==3) { // viscosity
+  homflag_dual_time=0;
+ } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
+  homflag_dual_time=0;
+ } else
+  amrex::Error("project_option invalid 53");
+
+ CPP_OVERRIDEPBC(homflag_dual_time,project_option);
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   if (ilev<finest_level)
+    ns_level.avgDownMac(); // interpolates UMAC_MF from ilev+1
+ } // ilev=finest_level ... level
+
+
+#if (profile_solver==1)
+ bprof.stop();
+#endif
+
+#if (profile_solver==1)
+ bprof.start();
+#endif
 
  if ((project_option==0)||   //regular project
      (project_option==1)||   //initial project
@@ -10882,7 +10628,6 @@ void NavierStokes::multiphase_project(int project_option) {
        (project_option==13)) { //FSI_material_exists (1st project)
 
     int project_option_combine=2;  // temperature in multiphase_project
-    int prescribed_noslip=1;
     int combine_flag=2;
     int hflag=0;
      // combine_idx==-1 => update S_new  
@@ -10890,13 +10635,11 @@ void NavierStokes::multiphase_project(int project_option) {
     int combine_idx=-1;  
     int update_flux=0;
     ns_level.combine_state_variable(
-     prescribed_noslip,
      project_option_combine,
      combine_idx,combine_flag,hflag,update_flux); 
     for (int ns=0;ns<num_species_var;ns++) {
      project_option_combine=100+ns; // species
      ns_level.combine_state_variable(
-      prescribed_noslip,
       project_option_combine,
       combine_idx,combine_flag,hflag,update_flux); 
     }
@@ -11206,7 +10949,6 @@ void NavierStokes::veldiffuseALL() {
   ns_level.make_heat_source();  // updates S_new
 
   int project_option_combine=2;  // temperature in veldiffuseALL
-  int prescribed_noslip=1;
   int combine_flag=0;  // FVM -> GFM 
    // combine_idx==-1 => update S_new  
    // combine_idx>=0  => update localMF[combine_idx]
@@ -11222,7 +10964,6 @@ void NavierStokes::veldiffuseALL() {
 
    // MEHDI VAHAB: COMBINE TEMPERATURES HERE IF NOT SUPERMESH APPROACH
   ns_level.combine_state_variable(
-   prescribed_noslip,
    project_option_combine,
    combine_idx,combine_flag,hflag,update_flux); 
 
@@ -11237,7 +10978,6 @@ void NavierStokes::veldiffuseALL() {
     amrex::Error("convert_species invalid");
 
    ns_level.combine_state_variable(
-    prescribed_noslip,
     project_option_combine,
     combine_idx,combine_flag,hflag,update_flux); 
   }
@@ -11709,7 +11449,6 @@ void NavierStokes::veldiffuseALL() {
   ns_level.solid_temperature();
 
   int project_option_combine=2;  // temperature in veldiffuseALL
-  int prescribed_noslip=1;
   int combine_flag=1;  // GFM -> FVM
   int combine_idx=-1;  // update state variables
   int update_flux=0;
@@ -11722,7 +11461,6 @@ void NavierStokes::veldiffuseALL() {
    amrex::Error("convert_temperature invalid");
 
   ns_level.combine_state_variable(
-   prescribed_noslip,
    project_option_combine,
    combine_idx,combine_flag,hflag,update_flux); 
 
@@ -11737,7 +11475,6 @@ void NavierStokes::veldiffuseALL() {
     amrex::Error("convert_species invalid");
 
    ns_level.combine_state_variable(
-    prescribed_noslip,
     project_option_combine,
     combine_idx,combine_flag,hflag,update_flux); 
   }
@@ -11944,13 +11681,11 @@ void NavierStokes::APPLY_REGISTERSALL(
   // in: APPLY_REGISTERSALL
   int interp_option=2;
   int project_option=3; // viscosity
-  int prescribed_noslip=1;
   Real beta=1.0;
   Vector<blobclass> blobdata;
 
    // operation_flag==5
   increment_face_velocityALL(
-    prescribed_noslip,
     interp_option,project_option,
     source_mf,beta,blobdata);  
 
@@ -12112,13 +11847,11 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf) {
   // in: INCREMENT_REGISTERS_ALL
  int interp_option=2;
  int project_option=3; // viscosity
- int prescribed_noslip=1;
  Real beta=1.0;
  Vector<blobclass> blobdata;
 
   // operation_flag==5
  increment_face_velocityALL(
-   prescribed_noslip,
    interp_option,project_option,
    REGISTER_CURRENT_MF,beta,blobdata);
 

@@ -1162,8 +1162,7 @@ extern "C"
      int* velbc,
      int* listbc,
      const Real* xlo,const Real* dx,
-     Real* cur_time,
-     Real* prescribed_solid_scale);
+     Real* cur_time);
 
 
    void FORT_COMBINEVELFACE(
@@ -1199,8 +1198,7 @@ extern "C"
      Real* sol,AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
      const Real* xlo,const Real* dx,
      int* dir,
-     Real* cur_time,
-     Real* prescribed_solid_scale);
+     Real* cur_time);
 
    void FORT_CROSSTERM(
      int* nsolveMM_FACE,

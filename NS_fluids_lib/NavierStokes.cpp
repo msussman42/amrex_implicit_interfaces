@@ -450,22 +450,6 @@ int NavierStokes::ngrow_expansion=2;
 // 0=no bias 1=bias
 int NavierStokes::use_StewartLay=1; 
 
-// local_face(facecut_index+1)=prescribed_solid_scale
-// if face has an adjoining prescribed rigid solid cell.
-Vector<Real> NavierStokes::prescribed_solid_scale; // def=0.0
-//0=stair-step 1=2nd order 2=mod stair-step 3=modified normal
-int NavierStokes::prescribed_solid_method=0; 
-
-int NavierStokes::min_prescribed_opt_iter=10; 
-
-int NavierStokes::prescribed_velocity_iter=0; 
-int NavierStokes::prescribed_error_met=0; 
-Real NavierStokes::prescribed_error_old=0.0; 
-Real NavierStokes::prescribed_error=0.0; 
-Real NavierStokes::prescribed_abstol=0.0; 
-Real NavierStokes::prescribed_reltol=0.0; 
-Real NavierStokes::prescribed_error0=0.0; 
-
 Real NavierStokes::real_number_of_cells=0.0; 
 
 // 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
@@ -2933,20 +2917,6 @@ NavierStokes::read_params ()
     }
     pp.query("num_divu_outer_sweeps",num_divu_outer_sweeps);
      
-    prescribed_solid_scale.resize(nmat);
-    for (int i=0;i<nmat;i++) 
-     prescribed_solid_scale[i]=0.0;
-    pp.queryarr("prescribed_solid_scale",prescribed_solid_scale,0,nmat);
-    for (int i=0;i<nmat;i++) {
-     if ((prescribed_solid_scale[i]>=0.0)&&
-	 (prescribed_solid_scale[i]<0.5)) {
-      // do nothing
-     } else
-      amrex::Error("prescribed_solid_scale[i] out of range");
-    }
-    pp.query("prescribed_solid_method",prescribed_solid_method);
-    pp.query("min_prescribed_opt_iter",min_prescribed_opt_iter);
-
     pp.query("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
      amrex::Error("post_init_pressure_solve out of range");
@@ -3848,16 +3818,6 @@ NavierStokes::read_params ()
        post_init_pressure_solve << '\n';
 
      std::cout << "solvability_projection " << solvability_projection << '\n';
-
-     std::cout << "prescribed_solid_method= " <<
-	   prescribed_solid_method << '\n';
-     std::cout << "min_prescribed_opt_iter= " <<
-	   min_prescribed_opt_iter << '\n';
-
-     for (int i=0;i<nmat;i++) {
-      std::cout << "i=" << i << " prescribed_solid_scale= " <<
-	   prescribed_solid_scale[i] << '\n';
-     }
 
      std::cout << "curv_stencil_height " << curv_stencil_height << '\n';
      std::cout << "use_StewartLay " << use_StewartLay << '\n';
@@ -12472,7 +12432,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
-      prescribed_solid_scale.dataPtr(),
       added_weight.dataPtr(),
       blob_array.dataPtr(),
       &blob_array_size,
@@ -12606,7 +12565,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
-      prescribed_solid_scale.dataPtr(),
       added_weight.dataPtr(),
       &nten,
       &level, 
@@ -14866,16 +14824,12 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  int hflag=0;
  int combine_idx=-1;  // update state variables
  int update_flux=0;
- int prescribed_noslip=1;
  combine_state_variable(
-  prescribed_noslip,
   project_option_combine,
   combine_idx,combine_flag,hflag,update_flux);
  project_option_combine=0; // mac velocity
- prescribed_noslip=0;
  update_flux=1;
  combine_state_variable(
-  prescribed_noslip,
   project_option_combine,
   combine_idx,combine_flag,hflag,update_flux);
 
@@ -15098,16 +15052,12 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  hflag=0;
  combine_idx=-1; 
  update_flux=0;
- prescribed_noslip=1;
  combine_state_variable(
-  prescribed_noslip,
   project_option_combine,
   combine_idx,combine_flag,hflag,update_flux);
  project_option_combine=0; // mac velocity
- prescribed_noslip=0;
  update_flux=1;
  combine_state_variable(
-  prescribed_noslip,
   project_option_combine,
   combine_idx,combine_flag,hflag,update_flux);
  
@@ -15797,20 +15747,16 @@ void NavierStokes::volWgtSum(
  error_heat_map_mf -> setVal(0.0);
 
  int project_option_combine=3; // velocity in volWgtSum
- int prescribed_noslip=1;
  int combine_flag=2;
  int hflag=0;
  int combine_idx=-1;  // update state variables
  int update_flux=0;
  combine_state_variable(
-  prescribed_noslip,
   project_option_combine,
   combine_idx,combine_flag,hflag,update_flux);
  project_option_combine=0; // mac velocity
- prescribed_noslip=0;
  update_flux=1;
  combine_state_variable(
-  prescribed_noslip,
   project_option_combine,
   combine_idx,combine_flag,hflag,update_flux);
 
@@ -15994,20 +15940,16 @@ void NavierStokes::volWgtSum(
  ParallelDescriptor::Barrier();
 
  project_option_combine=3; // velocity in volWgtSum
- prescribed_noslip=1;
  combine_flag=2;
  hflag=0;
  combine_idx=-1;  // update state variables
  update_flux=0;
  combine_state_variable(
-  prescribed_noslip,
   project_option_combine,
   combine_idx,combine_flag,hflag,update_flux);
  project_option_combine=0; // mac velocity
- prescribed_noslip=0;
  update_flux=1;
  combine_state_variable(
-  prescribed_noslip,
   project_option_combine,
   combine_idx,combine_flag,hflag,update_flux);
 
@@ -16301,8 +16243,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   for (int ilev=finest_level;ilev>=0;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    int use_VOF_weight=1;
-   int prescribed_noslip=0;
-   ns_level.VELMAC_TO_CELL(prescribed_noslip,use_VOF_weight);
+   ns_level.VELMAC_TO_CELL(use_VOF_weight);
   }
  }
 
@@ -18478,7 +18419,6 @@ NavierStokes::post_init_state () {
  Number_CellsALL(real_number_of_cells);
 
  int project_option_combine=-1;
- int prescribed_noslip=1;
  int combine_flag=2;  
  int hflag=0;
  int combine_idx=-1;
@@ -18507,21 +18447,18 @@ NavierStokes::post_init_state () {
   NavierStokes& ns_level=getLevel(ilev);
 
   project_option_combine=2;  // temperature in post_init_state
-  prescribed_noslip=1;
   combine_flag=2;  
   hflag=0;
   combine_idx=-1;
   update_flux=0;
 
   ns_level.combine_state_variable(
-    prescribed_noslip,
     project_option_combine,
     combine_idx,combine_flag,hflag,update_flux); 
 
   for (int ns=0;ns<num_species_var;ns++) {
    project_option_combine=100+ns; // species in post_init_state
    ns_level.combine_state_variable(
-    prescribed_noslip,
     project_option_combine,
     combine_idx,combine_flag,hflag,update_flux); 
   }
@@ -18556,10 +18493,8 @@ NavierStokes::post_init_state () {
  int interp_option=0;
  int idx_velcell=-1;
  Real beta=0.0;
- prescribed_noslip=1;
 
  increment_face_velocityALL(
-   prescribed_noslip,
    interp_option,project_option,
    idx_velcell,beta,blobdata); 
 
@@ -18576,19 +18511,16 @@ NavierStokes::post_init_state () {
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    project_option_combine=3; // velocity in post_init_state
-   prescribed_noslip=1;
    combine_flag=2;
    hflag=0;
    combine_idx=-1;
    update_flux=0;
    ns_level.combine_state_variable(
-    prescribed_noslip,
     project_option_combine,
     combine_idx,combine_flag,hflag,update_flux);
    project_option_combine=0; // mac velocity
    update_flux=1;
    ns_level.combine_state_variable(
-    prescribed_noslip,
     project_option_combine,
     combine_idx,combine_flag,hflag,update_flux);
 
@@ -18602,20 +18534,16 @@ NavierStokes::post_init_state () {
    NavierStokes& ns_level=getLevel(ilev);
 
    project_option_combine=3; // velocity in post_init_state
-   prescribed_noslip=1;
    combine_flag=2;
    hflag=0;
    combine_idx=-1;
    update_flux=0;
    ns_level.combine_state_variable(
-    prescribed_noslip,
     project_option_combine,
     combine_idx,combine_flag,hflag,update_flux);
    project_option_combine=0; // mac velocity
-   prescribed_noslip=0;
    update_flux=1;
    ns_level.combine_state_variable(
-    prescribed_noslip,
     project_option_combine,
     combine_idx,combine_flag,hflag,update_flux);
 
