@@ -2697,11 +2697,12 @@ void NavierStokes::density_TO_MAC(int project_option) {
  } else
   amrex::Error("nparts invalid");
 
- resize_FSI_GHOST_MF(1);
- if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -2721,7 +2722,9 @@ void NavierStokes::density_TO_MAC(int project_option) {
    // deallocated in make_physics_varsALL
   debug_ngrow(AMRSYNC_VEL_MF+dir,0,111); 
  }
- debug_ngrow(FSI_GHOST_MF,1,112);
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
+ }
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,1,124);
 
@@ -2796,13 +2799,14 @@ void NavierStokes::density_TO_MAC(int project_option) {
 
       if (thread_class::nthreads<1)
        amrex::Error("thread_class::nthreads invalid");
-      thread_class::init_d_numPts(localMF[FSI_GHOST_MF]->boxArray().d_numPts());
+      thread_class::init_d_numPts(
+       localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-      for (MFIter mfi(*localMF[FSI_GHOST_MF],use_tiling); 
+      for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); 
            mfi.isValid(); ++mfi) {
        BL_ASSERT(grids[mfi.index()] == mfi.validbox());
        int gridno=mfi.index();
@@ -2824,7 +2828,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
 
        FArrayBox& xvel=(*localMF[FACE_VAR_MF+dir])[mfi];  
  
-       FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
+       FArrayBox& sol=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
        FArrayBox& cellvelfab=(*localMF[DEN_RECON_MF])[mfi];
 
        FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
@@ -3031,12 +3035,15 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
  } else
   amrex::Error("nparts invalid");
 
- resize_FSI_GHOST_MF(1);
- debug_ngrow(FSI_GHOST_MF,1,112);
- if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
+ }
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
 
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,103);
@@ -3073,13 +3080,13 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[FSI_GHOST_MF]->boxArray().d_numPts());
+ thread_class::init_d_numPts(localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[FSI_GHOST_MF],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   int gridno=mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -3103,7 +3110,9 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
   FArrayBox& veldest=S_new[mfi];
-  FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
+  FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+  FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+  FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
   FArrayBox& xvel=(*face_velocity[0])[mfi];
@@ -3199,9 +3208,16 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
    ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
    levelpcfab.dataPtr(),
    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()), 
-   sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()),
-   sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()), // cterm
-   sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()), // pold
+   solxfab.dataPtr(),
+   ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+   solyfab.dataPtr(),
+   ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+   solzfab.dataPtr(),
+   ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//cterm
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//pold
    vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()), // denold
    veldest.dataPtr(),ARLIM(veldest.loVect()),ARLIM(veldest.hiVect()), //ustar
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()), 
@@ -3429,11 +3445,12 @@ void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
  } else
   amrex::Error("nparts invalid");
 
- resize_FSI_GHOST_MF(2);
- if (localMF[FSI_GHOST_MF]->nGrow()!=2)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=2");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
 
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
@@ -3448,7 +3465,9 @@ void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
  debug_ngrow(LEVELPC_MF,2,120);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("levelpc mf has incorrect ncomp");
- debug_ngrow(FSI_GHOST_MF,2,121);
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
+ }
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
   amrex::Error("slope recon mf has incorrect ncomp");
 
@@ -3521,7 +3540,11 @@ void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
      AMREX_SPACEDIM*num_materials_vel);
 
     FArrayBox& velfab=(*localMF[idx_vel])[mfi];
-    FArrayBox& solidfab=(*localMF[FSI_GHOST_MF])[mfi];
+
+    FArrayBox& solidxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+    FArrayBox& solidyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+    FArrayBox& solidzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
@@ -3585,7 +3608,12 @@ void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
      cell_tensor_data.dataPtr(),
      ARLIM(cell_tensor_data.loVect()),ARLIM(cell_tensor_data.hiVect()),
      velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
+     solidxfab.dataPtr(),
+     ARLIM(solidxfab.loVect()),ARLIM(solidxfab.hiVect()),
+     solidyfab.dataPtr(),
+     ARLIM(solidyfab.loVect()),ARLIM(solidyfab.hiVect()),
+     solidzfab.dataPtr(),
+     ARLIM(solidzfab.loVect()),ARLIM(solidzfab.hiVect()),
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      reconfab.dataPtr(),

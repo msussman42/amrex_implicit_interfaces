@@ -725,11 +725,12 @@ stop
             (imR.ne.im_primary)) then 
          ! do not increment slopeterm
         else if ((use_StewartLay.eq.0).or. & 
-                 (imL.ge.im_primary).or. &
-                 (imR.ge.im_primary)) then
+                 (imL.eq.im_primary).or. &
+                 (imR.eq.im_primary)) then
 
          if (mdata(D_DECL(i,j,k),dir).eq.zero) then
-          ! do not increment slopeterm (both adjoining cells are solid)
+          ! do not increment slopeterm; both adjoining cells are solid or
+          ! the cell pair is outside the grid.
          else if (mdata(D_DECL(i,j,k),dir).eq.one) then 
           weight_total=zero
           sumslope=zero
@@ -24123,7 +24124,9 @@ end function delta
        tdata,DIMS(tdata), & 
        c_tdata,DIMS(c_tdata), & 
        vel,DIMS(vel), &
-       solid,DIMS(solid), &
+       solidx,DIMS(solidx), &
+       solidy,DIMS(solidy), &
+       solidz,DIMS(solidz), &
        levelpc,DIMS(levelpc), &
        recon,DIMS(recon), &
        xlo,dx, &
@@ -24192,7 +24195,9 @@ end function delta
       INTEGER_T, intent(in) :: DIMDEC(tdata)
       INTEGER_T, intent(in) :: DIMDEC(c_tdata)
       INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(solid)
+      INTEGER_T, intent(in) :: DIMDEC(solidx)
+      INTEGER_T, intent(in) :: DIMDEC(solidy)
+      INTEGER_T, intent(in) :: DIMDEC(solidz)
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
       INTEGER_T, intent(in) :: DIMDEC(recon)
  
@@ -24217,7 +24222,9 @@ end function delta
       REAL_T, intent(inout) :: tdata(DIMV(tdata),ntensorMM)
       REAL_T, intent(out) :: c_tdata(DIMV(c_tdata),ntensorMM)
       REAL_T, intent(in) :: vel(DIMV(vel),num_materials_vel*SDIM)
-      REAL_T, intent(in) :: solid(DIMV(solid),nparts_def*SDIM)
+      REAL_T, intent(in) :: solidx(DIMV(solidx),nparts_def*SDIM)
+      REAL_T, intent(in) :: solidy(DIMV(solidy),nparts_def*SDIM)
+      REAL_T, intent(in) :: solidz(DIMV(solidz),nparts_def*SDIM)
       REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
   
@@ -24226,7 +24233,11 @@ end function delta
       INTEGER_T maskcov
       INTEGER_T index_adjoin(2,3)
       INTEGER_T masktest,bctest,icrit
-      INTEGER_T ii,jj,kk,im1,jm1,km1,ip1,jp1,kp1
+      INTEGER_T ii,jj,kk
+      INTEGER_T ishift,jshift,kshift
+      INTEGER_T shift_flag
+      INTEGER_T im1,jm1,km1
+      INTEGER_T ip1,jp1,kp1
       INTEGER_T nc
       REAL_T delta
       INTEGER_T side
@@ -24467,7 +24478,9 @@ end function delta
        call checkbound(fablo,fabhi,DIMS(tdata),1,-1,1265)
        call checkbound(fablo,fabhi,DIMS(c_tdata),1,-1,1265)
        call checkbound(fablo,fabhi,DIMS(vel),1,-1,1266)
-       call checkbound(fablo,fabhi,DIMS(solid),2,-1,1267)
+       call checkbound(fablo,fabhi,DIMS(solidx),0,0,1267)
+       call checkbound(fablo,fabhi,DIMS(solidy),0,1,1267)
+       call checkbound(fablo,fabhi,DIMS(solidz),0,SDIM-1,1267)
        call checkbound(fablo,fabhi,DIMS(levelpc),2,-1,1368)
        call checkbound(fablo,fabhi,DIMS(recon),2,-1,1368)
        call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
@@ -24515,6 +24528,73 @@ end function delta
           im1=i-ii
           jm1=j-jj
           km1=k-kk
+
+           ! kluge to prevent reading out of the array
+           ! bounds for coupling terms that have solid cells
+           ! in the stencil.  
+           ! Note 1: if use_StewartLay==1, then the corner values will
+           !  never be used if owned by a different material from the material
+           !  owned on the face.
+           ! Note 2: Future, Villegas and Tanguy algorithm +
+           !  incompressible in narrow band about material boundaries.
+          shift_flag=0
+          ishift=i
+          jshift=j
+          kshift=k
+          if ((dir.eq.1).or. &
+              (dir.eq.3)) then
+           dirtan=2
+           if (j.eq.fablo(dirtan)-1) then
+            jshift=j+1
+            shift_flag=1
+           else if (j.eq.fabhi(dirtan)+1) then
+            jshift=j-1
+            shift_flag=1
+           else if ((j.ge.fablo(dirtan)).and. &
+                    (j.le.fabhi(dirtan))) then
+            ! do nothing
+           else
+            print *,"j invalid"
+            stop
+           endif
+          endif
+
+          if ((dir.eq.2).or. &
+              (dir.eq.3)) then
+           dirtan=1
+           if (i.eq.fablo(dirtan)-1) then
+            ishift=i+1
+            shift_flag=1
+           else if (i.eq.fabhi(dirtan)+1) then
+            ishift=i-1
+            shift_flag=1
+           else if ((i.ge.fablo(dirtan)).and. &
+                    (i.le.fabhi(dirtan))) then
+            ! do nothing
+           else
+            print *,"i invalid"
+            stop
+           endif
+          endif
+
+          if ((dir.eq.1).or. &
+              (dir.eq.2).and.  &
+              (SDIM.eq.3)) then
+           dirtan=SDIM
+           if (k.eq.fablo(dirtan)-1) then
+            kshift=k+1
+            shift_flag=1
+           else if (k.eq.fabhi(dirtan)+1) then
+            kshift=k-1
+            shift_flag=1
+           else if ((k.ge.fablo(dirtan)).and. &
+                    (k.le.fabhi(dirtan))) then
+            ! do nothing
+           else
+            print *,"k invalid"
+            stop
+           endif
+          endif
 
           side=1
           index_adjoin(side,1)=im1
@@ -24681,7 +24761,20 @@ end function delta
 
            if (is_prescribed(nmat,imL).eq.1) then
             left_rigid=1
-            solidvelleft(nc)=solid(D_DECL(im1,jm1,km1),partidL*SDIM+nc)
+
+            if (dir.eq.1) then
+             solidvelleft(nc)= &
+               solidx(D_DECL(ishift,jshift,kshift),partidL*SDIM+nc)
+            else if (dir.eq.2) then
+             solidvelleft(nc)= &
+               solidy(D_DECL(ishift,jshift,kshift),partidL*SDIM+nc)
+            else if ((dir.eq.3).and.(SDIM.eq.3)) then
+             solidvelleft(nc)= &
+               solidz(D_DECL(ishift,jshift,kshift),partidL*SDIM+nc)
+            else
+             print *,"dir invalid"
+             stop
+            endif
            else if (is_prescribed(nmat,imL).eq.0) then
             solidvelleft(nc)=zero
            else
@@ -24691,7 +24784,21 @@ end function delta
 
            if (is_prescribed(nmat,imR).eq.1) then
             right_rigid=1
-            solidvelright(nc)=solid(D_DECL(i,j,k),partidR*SDIM+nc)
+
+            if (dir.eq.1) then
+             solidvelright(nc)= &
+               solidx(D_DECL(ishift,jshift,kshift),partidR*SDIM+nc)
+            else if (dir.eq.2) then
+             solidvelright(nc)= &
+               solidy(D_DECL(ishift,jshift,kshift),partidR*SDIM+nc)
+            else if ((dir.eq.3).and.(SDIM.eq.3)) then
+             solidvelright(nc)= &
+               solidz(D_DECL(ishift,jshift,kshift),partidR*SDIM+nc)
+            else
+             print *,"dir invalid"
+             stop
+            endif
+
            else if (is_prescribed(nmat,imR).eq.0) then
             solidvelright(nc)=zero
            else
@@ -24726,7 +24833,16 @@ end function delta
            ! lsleft_solid and lsright_solid < 0 in the solid.
            if ((left_rigid.eq.1).and.(right_rigid.eq.1)) then
             mdata(D_DECL(i,j,k),dir)=zero
-           else if ((left_rigid.eq.0).or.(right_rigid.eq.0)) then
+           else if ((left_rigid.eq.1).or.(right_rigid.eq.1)) then
+            if (shift_flag.eq.0) then
+             ! do nothing
+            else if (shift_flag.eq.1) then
+             mdata(D_DECL(i,j,k),dir)=zero
+            else
+             print *,"shift_flag invalid"
+             stop
+            endif
+           else if ((left_rigid.eq.0).and.(right_rigid.eq.0)) then
             ! do nothing
            else
             print *,"left_rigid or right_rigid invalid"
@@ -25842,7 +25958,8 @@ end function delta
             stop
            endif
 
-           ! mdata=0 if both adjoining cells to a face are solid cells.
+           ! mdata=0 if both adjoining cells to a face are solid cells or
+           ! a cell pair is outside the grid.
            call slopecrossterm( &
              ntensor, &
              ntensorMM, &
