@@ -215,9 +215,6 @@ ns.denconst_gravity=1.0 1.0   # no Boussinesq
 ns.stokes_flow=0
 ns.tempconst=293.0 293.0 293.0 293.0
 ns.include_viscous_heating=0
-#use_StewartLay=0 no limiting of coupling terms
-#use_StewartLay=1 biased derivatives of coupling terms at interfaces
-ns.use_StewartLay=1
 ns.constant_viscosity=1
 # shock_timestep=2 2 option => never consider sound speed.
 ns.shock_timestep=2 2  # 2 2 INCOMP; 2 2 if COMPRESSIBLE (shrink=0.1)

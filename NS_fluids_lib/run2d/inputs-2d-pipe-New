@@ -41,7 +41,6 @@ mg.presmooth=2
 mg.postsmooth=2
 ns.project_solver_type=0 # 0 - MGPCG  1 - PCG     
 ns.projection_pressure_scale=1.0e+6  # default is 1.0
-ns.use_StewartLay=1
 # NOV 9
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 ns.continuous_mof=2

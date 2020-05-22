@@ -34,7 +34,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 #     close to O(1).
 #     
 ns.projection_pressure_scale=1.0e+6  # default is 1.0
-ns.use_StewartLay=1
 # JULY 22
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 

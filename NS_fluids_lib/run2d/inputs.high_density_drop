@@ -35,7 +35,6 @@ ns.num_species_var=0
 
 amr.n_cell    = 64 64
 amr.max_level =  1   
-ns.use_StewartLay=1
 
 #ns.elastic_time=0.0 0.0 5.0
 #ns.elastic_viscosity=0.0 0.0 1.0e+3

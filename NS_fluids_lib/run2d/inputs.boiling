@@ -132,7 +132,6 @@ ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
 ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
 ns.pressure_error_cutoff=0.0 0.0 0.0 
-ns.use_StewartLay=1
 ns.material_type=0 0 999
 # 1/(PR RE)=0.0004  alpha_v/alpha_l=24/580
 ns.heatviscconst=0.0004 0.000017 0.0004

@@ -164,7 +164,6 @@ ns.density_floor=0.625 0.0001
 # see: "position_Temp"  in marangoni.F90
 ns.tempconst=330.0 330.0 # not used 
 ns.include_viscous_heating=0
-ns.use_StewartLay=1 
 # shock_timestep=2 2 option => never consider sound speed.
 ns.shock_timestep=2 2  
 # imattype.eq.14 (EOS_air_rho2)

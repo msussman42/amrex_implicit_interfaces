@@ -108,9 +108,6 @@ ns.viscconst=0.01 1.0e+4 0.0 0.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.denconst=1.0 1.1 1.0 1.0
 ns.tempconst=293.0 293.0 293.0 293.0
-#use_StewartLay=0 no limiting of coupling terms
-#use_StewartLay=1 biased derivatives of coupling terms at interfaces
-ns.use_StewartLay=1
 # shock_timestep=2 2 option => never consider sound speed.
 ns.shock_timestep=2 2  # 2 2 INCOMP; 2 2 if COMPRESSIBLE (shrink=0.1)
 ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE

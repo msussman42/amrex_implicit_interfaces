@@ -107,7 +107,6 @@ ns.adv_vel=0.0
 # 2D
 ns.adv_dir=2
 ns.pressure_error_cutoff=0.0 0.0 0.0 
-ns.use_StewartLay=1
 ns.material_type=0 0 
 ns.viscconst=10.0 1.8e-4
 ns.denconst=1.0 1.2e-3

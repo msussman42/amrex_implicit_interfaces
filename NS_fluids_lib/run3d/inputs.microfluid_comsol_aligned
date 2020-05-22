@@ -7,7 +7,6 @@ ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 ns.num_materials=3
 ns.num_species_var=0
 
-ns.use_StewartLay=1 # biased derivatives at interfaces
 
 ns.FSI_flag=0 0 2
 ns.minimum_relative_error=1.0e-18

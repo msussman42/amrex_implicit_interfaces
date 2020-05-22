@@ -109,7 +109,6 @@ ns.cfl            = 0.5   # cfl number for hyperbolic system 0.5
 ns.change_max     = 1.1     
 ns.visc_coef      = 1.0
 ns.visc_abs_tol   = 1.0e-10
-ns.use_StewartLay = 1
 
 # gravity directed towards xhi here.
 ns.gravity        = 0.5  # abs(g)

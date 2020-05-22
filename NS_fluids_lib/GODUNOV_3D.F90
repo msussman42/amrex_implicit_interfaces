@@ -582,8 +582,6 @@ stop
         ! is,ie,js,je,ks,ke are bounds for face stencil in the
         ! TANGENTIAL (dirtan) direction.
         ! levelpc(im).
-        ! use_StewartLay:
-        ! 0=do not bias the derivatives 1=bias the derivative
       subroutine slopecrossterm( &
         ntensor, &
         ntensorMM, &
@@ -598,8 +596,8 @@ stop
         i,j,k,dir, &
         dirtan, &
         tcomp, &
-        is,ie,js,je,ks,ke,slopeterm, &
-        use_StewartLay)
+        is,ie,js,je,ks,ke, &
+        slopeterm)
       use global_utility_module
       use MOF_routines_module
 
@@ -607,7 +605,6 @@ stop
 
       INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: ntensorMM
-      INTEGER_T, intent(in) :: use_StewartLay
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
       INTEGER_T, intent(in) :: DIMDEC(faceLS)
@@ -648,11 +645,6 @@ stop
       endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
-       stop
-      endif
-      if ((use_StewartLay.ne.0).and. &
-          (use_StewartLay.ne.1)) then
-       print *,"use_StewartLay invalid"
        stop
       endif
 
@@ -720,18 +712,17 @@ stop
         call get_primary_material(LSLEFT,nmat,imL)
         call get_primary_material(LSRIGHT,nmat,imR)
  
-        if ((use_StewartLay.eq.1).and. &
-            (imL.ne.im_primary).and. &
+        if ((imL.ne.im_primary).and. &
             (imR.ne.im_primary)) then 
          ! do not increment slopeterm
-        else if ((use_StewartLay.eq.0).or. & 
-                 (imL.eq.im_primary).or. &
+        else if ((imL.eq.im_primary).or. &
                  (imR.eq.im_primary)) then
 
          if (mdata(D_DECL(i,j,k),dir).eq.zero) then
-          ! do not increment slopeterm; both adjoining cells are solid or
-          ! the cell pair is outside the grid.
+          ! do not increment slopeterm if both adjoining cells are 
+          ! solid or the cell pair is outside the grid.
          else if (mdata(D_DECL(i,j,k),dir).eq.one) then 
+          ! one of adjoining cells is fluid
           weight_total=zero
           sumslope=zero
 
@@ -739,7 +730,8 @@ stop
           do j1=js,je 
           do k1=ks,ke 
 
-            !=0 if (wrt i1,j1,k1) imL<>imR or coarse/fine or ext. BC
+            !im_face=0 if, wrt i1,j1,k1, imL_1<>imR_1 or 
+            !coarse/fine or exterior BC
            im_face=NINT(faceLS(D_DECL(i1,j1,k1),dirtan))
            if ((im_face.ge.0).and.(im_face.le.nmat)) then
             ! do nothing
@@ -748,21 +740,32 @@ stop
             stop
            endif
 
-           if (is_prescribed(nmat,im_primary).eq.1) then 
+            ! the solid is represented as a rasterized boundary.
+            ! if n=(1 0 0) then 2 mu D dot n=
+            ! ( 2 u_x   u_y + v_x  u_z + w_x
+            !   v_x+u_y   2 v_y    v_z + w_y
+            !   u_z + w_x  v_z+w_y   2 w_z   ) dot (1 0 0) =
+            ! (2 u_x  v_x+u_y  u_z+w_x)
+           if (im_face.eq.0) then
+            try_stencil=0
+           else if (is_prescribed(nmat,im_face).eq.1) then 
             try_stencil=0  
-           else if (is_prescribed(nmat,im_primary).eq.0) then 
-            if ((im_face.eq.im_primary).or. &
-                (use_StewartLay.eq.0)) then
-             try_stencil=1
-            else if ((im_face.ne.im_primary).and. &
-                     (use_StewartLay.eq.1)) then
-             try_stencil=0
+           else if (is_prescribed(nmat,im_face).eq.0) then 
+            if ((im_face.ge.1).and.(im_face.le.nmat)) then
+             if (im_face.eq.im_primary) then
+              try_stencil=1
+             else if (im_face.ne.im_primary) then
+              try_stencil=0
+             else
+              print *,"im_face invalid"
+              stop
+             endif
             else
-             print *,"im_face or use_StewartLay invalid"
+             print *,"im_face invalid"
              stop
             endif
            else
-            print *,"is_prescribed invalid"
+            print *,"is_prescribed(nmat,im_face) invalid"
             stop
            endif
     
@@ -799,7 +802,7 @@ stop
          endif
 
         else
-         print *,"use_StewartLay,imL,imR bust"
+         print *,"imL or imR bust"
          stop 
         endif 
  
@@ -24535,11 +24538,11 @@ end function delta
            ! kluge to prevent reading out of the array
            ! bounds for coupling terms that have solid cells
            ! in the stencil.  
-           ! Note 1: if use_StewartLay==1, then the corner values will
-           !  never be used if owned by a different material from the material
-           !  owned on the face.
-           ! Note 2: Future, Villegas and Tanguy algorithm +
-           !  incompressible in narrow band about material boundaries.
+           ! The corner values will never be used if cell pair is
+           ! owned by a different material (or not owned at all)
+           ! from the material owned on the face.
+           ! If the cell pair is owned by a prescribed solid, then
+           ! it is not used in the coupling stencil.
           shift_flag=0
           ishift=i
           jshift=j
@@ -25472,7 +25475,6 @@ end function delta
        ncellfrac, &
        ntensor, &
        ntensorMM, &
-       use_StewartLay, &
        constant_viscosity, &
        homflag)
       use probcommon_module
@@ -25500,7 +25502,6 @@ end function delta
       INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: homflag
       INTEGER_T :: nc
-      INTEGER_T, intent(in) :: use_StewartLay
       INTEGER_T, intent(in) :: constant_viscosity
       INTEGER_T, intent(in) :: nmat,nden
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM) 
@@ -25680,11 +25681,6 @@ end function delta
        ! do nothing
       else
        print *,"dt must be positive"
-       stop
-      endif
-      if ((use_StewartLay.ne.0).and. &
-          (use_StewartLay.ne.1)) then
-       print *,"use_StewartLay invalid"
        stop
       endif
       if ((constant_viscosity.ne.0).and. &
@@ -25980,8 +25976,7 @@ end function delta
              ilo,ihi, &
              jlo,jhi, &
              klo,khi, &
-             diff_flux(dirtan(nc)), &
-             use_StewartLay)
+             diff_flux(dirtan(nc)))
 
           enddo ! nc=1..sdim-1
 

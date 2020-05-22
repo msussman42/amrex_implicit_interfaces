@@ -231,7 +231,6 @@ ns.advbot=0.0  # initial falling (downward) speed of liquid drop if axis_dir=1
 ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
-ns.use_StewartLay=1
 ns.material_type=0 0 0 999
 # Latent heat: 1 J/kg = 10^7 erg/kg=10^4 erg/g
 # 1 Watt=10^7 ERG/S

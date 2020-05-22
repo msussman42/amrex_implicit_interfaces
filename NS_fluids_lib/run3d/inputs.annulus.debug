@@ -136,7 +136,6 @@ ns.init_shrink    = 0.5      # scale back initial timestep
 ns.change_max     = 1.1      # scale back initial timestep
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-10
-ns.use_StewartLay=1
 
 ns.gravity        = -980.0
 ns.tension        = 0.0 0.0 

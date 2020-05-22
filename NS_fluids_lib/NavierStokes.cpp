@@ -447,9 +447,6 @@ Vector<int> NavierStokes::im_elastic_map;
 
 int NavierStokes::ngrow_expansion=2;
  
-// 0=no bias 1=bias
-int NavierStokes::use_StewartLay=1; 
-
 Real NavierStokes::real_number_of_cells=0.0; 
 
 // 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
@@ -2322,13 +2319,6 @@ NavierStokes::read_params ()
 
     pp.get("twall",twall);
 
-    pp.query("use_StewartLay",use_StewartLay);
-
-    if ((use_StewartLay==0)||(use_StewartLay==1)) {
-     // do nothing
-    } else
-     amrex::Error("use_StewartLay invalid");
-
     pp.query("curv_stencil_height",curv_stencil_height);
     if (curv_stencil_height!=4)
      amrex::Error("must have curv_stencil_height==4");
@@ -3820,7 +3810,6 @@ NavierStokes::read_params ()
      std::cout << "solvability_projection " << solvability_projection << '\n';
 
      std::cout << "curv_stencil_height " << curv_stencil_height << '\n';
-     std::cout << "use_StewartLay " << use_StewartLay << '\n';
 
      std::cout << "projection_pressure_scale " << 
        projection_pressure_scale << '\n';

@@ -52,7 +52,6 @@ ns.post_init_pressure_solve=0 # 1=INCOMP 0=COMPRESSIBLE
 ns.advection_order=1 1 1
 ns.slope_limiter_option=1  # 0=no limiter
 
-ns.use_StewartLay=1
 
 amr.plotfile_on_restart=1
 

@@ -4217,7 +4217,6 @@ void NavierStokes::apply_pressure_grad(
      &ncellfrac,
      &ntensor,
      &ntensorMM,
-     &use_StewartLay,
      &constant_viscosity,
      &homflag);
    } // mfi

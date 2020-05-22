@@ -134,7 +134,6 @@ ns.adv_vel=0.0           # should always be 0.0
 ns.adv_dir=2             # should always be 2
 
 # -1=implicit 0=sub-cycling w/project 1=sub-cycling w/1 project
-ns.use_StewartLay=1  
 
 
 ns.heatviscconst=0.0 0.0 0.0 

@@ -58,7 +58,6 @@ ns.initial_cg_cycles=1  # number of MGPCG steps to do in order to get
 amr.n_cell    = 16 48 # min dx=16/(16 * 8)
 amr.max_level = 3
 ns.projection_pressure_scale=100.0
-ns.use_StewartLay=1
 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid

@@ -1243,7 +1243,6 @@ extern "C"
      int* ncellfrac,
      int* ntensor,
      int* ntensorMM,
-     int* use_StewartLay,
      int* constant_viscosity,
      int* homflag);
 

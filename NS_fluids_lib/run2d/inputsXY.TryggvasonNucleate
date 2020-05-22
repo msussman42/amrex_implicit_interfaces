@@ -143,7 +143,6 @@ ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
 ns.adv_vel=0.2 # inflow velocity from left
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction
 ns.pressure_error_cutoff=0.0 0.0 0.0 
-ns.use_StewartLay=1
 ns.material_type=0 0 999
 # thermal conductivity: Watts/(meter Kelvin)
 ns.heatviscconst=0.680 0.0248 0.680

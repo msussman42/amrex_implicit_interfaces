@@ -110,7 +110,6 @@ ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.denconst=2.0 1.0 1.0 1.0
 ns.tempconst=293.0 292.0 293.0 293.0
 ns.include_viscous_heating=0
-ns.use_StewartLay=1 
 # shock_timestep=2 2 option => never consider sound speed.
 ns.shock_timestep=2 2  
 ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE

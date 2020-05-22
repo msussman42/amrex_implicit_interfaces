@@ -153,7 +153,6 @@ ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
 # NOV 2018 (3 or 4 materials)
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
-ns.use_StewartLay=1
 ns.material_type=0 0 999
 # thermal conductivity: Watts/(meter Kelvin)
 ns.heatviscconst=0.0248 0.680 0.680

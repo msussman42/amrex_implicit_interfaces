@@ -39,7 +39,6 @@ ns.minimum_relative_error=1.0e-18
 # M.OHTA: scale set in order that initial residual O(1)
 ns.projection_pressure_scale=100.0
 # M.OHTA 2 should be ok, 3 is conservative choice
-ns.use_StewartLay=1
 
 # OCTOBER 22
 # OCTOBER 22 - EILE_flag=-1 performs best
