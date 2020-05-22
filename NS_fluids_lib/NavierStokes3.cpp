@@ -2039,7 +2039,6 @@ void NavierStokes::SEM_advectALL(int source_term) {
       ns_level.new_localMF(COARSE_FINE_FLUX_MF+dir,nfluxSEM,0,dir);
       ns_level.setVal_localMF(COARSE_FINE_FLUX_MF+dir,1.0e+40,0,nfluxSEM,0);
      } // dir=0..sdim-1
-     ns_level.resize_FSI_GHOST_MF(1);
      ns_level.resize_levelsetLO(2,LEVELPC_MF);
      ns_level.VOF_Recon_resize(1,SLOPE_RECON_MF);
      ns_level.resize_maskfiner(1,MASKCOEF_MF);
@@ -2337,8 +2336,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       // initialize "law of the wall" velocity derived from solid velocity.
       // in: NavierStokes::do_the_advance (prior to nonlinear_advect)
-    int ngrow_FSI=1;
-    init_FSI_GHOST_MF_ALL(ngrow_FSI,4);
+    init_FSI_GHOST_MAC_MF_ALL(4);
 
     int SEM_VISCOUS_SANITY_CHECK=0;
 
@@ -11742,11 +11740,12 @@ void NavierStokes::APPLY_REGISTERS(
  } else
   amrex::Error("nparts invalid");
 
- resize_FSI_GHOST_MF(1);
- if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
 
  if (nsolve==AMREX_SPACEDIM) {
 
@@ -11795,7 +11794,10 @@ void NavierStokes::APPLY_REGISTERS(
 
   const Real* xlo = grid_loc[gridno].lo();
 
-  FArrayBox& solidfab=(*localMF[FSI_GHOST_MF])[mfi];
+  FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+  FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+  FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+
   FArrayBox& snewfab=S_new[mfi];
   FArrayBox& lsfab=LS_new[mfi];
   FArrayBox& dufab=(*localMF[source_mf])[mfi];
@@ -11806,6 +11808,7 @@ void NavierStokes::APPLY_REGISTERS(
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // in: GODUNOV_3D.F90
    // snew=advect+du
   FORT_VELADVANCE(
     &nmat,
@@ -11816,7 +11819,9 @@ void NavierStokes::APPLY_REGISTERS(
     &nsolveMM, 
     &nstate,
     xlo,dx,
-    solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
+    solxfab.dataPtr(),ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+    solyfab.dataPtr(),ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+    solzfab.dataPtr(),ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     dufab.dataPtr(),ARLIM(dufab.loVect()),ARLIM(dufab.hiVect()),

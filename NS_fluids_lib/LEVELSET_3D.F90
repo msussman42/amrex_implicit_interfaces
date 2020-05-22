@@ -15751,7 +15751,9 @@ stop
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        vofnew,DIMS(vofnew), &
-       solid,DIMS(solid), &
+       solxfab,DIMS(solxfab), &
+       solyfab,DIMS(solyfab), &
+       solzfab,DIMS(solzfab), &
        maskcov,DIMS(maskcov), &
        LS,DIMS(LS), & ! getStateDist(time)
        mofdata,DIMS(mofdata), &
@@ -15793,7 +15795,9 @@ stop
       INTEGER_T, intent(in) :: bfact
 
       INTEGER_T, intent(in) :: DIMDEC(vofnew)
-      INTEGER_T, intent(in) :: DIMDEC(solid)
+      INTEGER_T, intent(in) :: DIMDEC(solxfab)
+      INTEGER_T, intent(in) :: DIMDEC(solyfab)
+      INTEGER_T, intent(in) :: DIMDEC(solxfab)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(mofdata)
@@ -15812,7 +15816,9 @@ stop
       REAL_T, intent(in) ::  den(DIMV(den),nmat*num_state_material)
       REAL_T, intent(inout) ::  dennew(DIMV(dennew),nmat*num_state_material)
       REAL_T, intent(inout) ::  lsnew(DIMV(lsnew),nmat*(1+SDIM))
-      REAL_T, intent(in) ::  solid(DIMV(solid),SDIM*nparts_def)
+      REAL_T, intent(in) ::  solxfab(DIMV(solxfab),SDIM*nparts_def)
+      REAL_T, intent(in) ::  solyfab(DIMV(solyfab),SDIM*nparts_def)
+      REAL_T, intent(in) ::  solzfab(DIMV(solzfab),SDIM*nparts_def)
       REAL_T, intent(in) ::  maskcov(DIMV(maskcov))
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -15997,7 +16003,11 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(vofnew),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(velnew),1,-1,26)
-      call checkbound(fablo,fabhi,DIMS(solid),1,-1,26)
+
+      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,26)
+      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,26)
+      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,26)
+
       call checkbound(fablo,fabhi,DIMS(maskcov),0,-1,26)
       call checkbound(fablo,fabhi,DIMS(LS),3,-1,26)
       call checkbound(fablo,fabhi,DIMS(mofdata),1,-1,26)
@@ -16373,9 +16383,22 @@ stop
 
            ! velocity
           if (is_prescribed(nmat,im_solid_max).eq.1) then
-           do dir=1,SDIM
-            velnew(D_DECL(i,j,k),dir)=solid(D_DECL(i,j,k),ibase+dir)
-           enddo
+
+           dir=1
+           velnew(D_DECL(i,j,k),dir)= &
+              half*(solxfab(D_DECL(i,j,k),ibase+dir)+ &
+                    solxfab(D_DECL(i+1,j,k),ibase+dir))
+           dir=2
+           velnew(D_DECL(i,j,k),dir)= &
+              half*(solyfab(D_DECL(i,j,k),ibase+dir)+ &
+                    solyfab(D_DECL(i,j+1,k),ibase+dir))
+           if (SDIM.eq.3) then
+            dir=SDIM
+            velnew(D_DECL(i,j,k),dir)= &
+              half*(solzfab(D_DECL(i,j,k),ibase+dir)+ &
+                    solzfab(D_DECL(i,j,k+1),ibase+dir))
+           endif
+
           else if (is_prescribed(nmat,im_solid_max).eq.0) then
            ! do nothing
           else

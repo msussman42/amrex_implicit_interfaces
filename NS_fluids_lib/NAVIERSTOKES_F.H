@@ -243,7 +243,6 @@ extern "C" {
      int* vis_ncomp,
      Real* maskSEM,AMREX_ARLIM_P(maskSEMlo),AMREX_ARLIM_P(maskSEMhi),
      Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
-     Real* velsolid,AMREX_ARLIM_P(velsolidlo),AMREX_ARLIM_P(velsolidhi),
      Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
      Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
      Real* div,AMREX_ARLIM_P(divlo),AMREX_ARLIM_P(divhi),

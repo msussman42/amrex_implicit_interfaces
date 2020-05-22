@@ -3135,7 +3135,6 @@ END SUBROUTINE SIMP
        vis_ncomp, & ! x,u,mag vort,LS
        maskSEM,DIMS(maskSEM), &
        vel,DIMS(vel), &
-       velsol,DIMS(velsol), &
        vof,DIMS(vof), &
        pres,DIMS(pres), &
        div,DIMS(div), &
@@ -3199,7 +3198,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(fabout)
       INTEGER_T, intent(in) :: DIMDEC(maskSEM)
       INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(velsol)
       INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(pres)
       INTEGER_T, intent(in) :: DIMDEC(div)
@@ -3216,8 +3214,6 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in) :: vel(DIMV(vel), &
         num_materials_vel*(SDIM+1))
-      REAL_T, intent(in) :: velsol(DIMV(velsol), &
-        nparts_def*SDIM)
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, intent(in) :: pres(DIMV(pres),num_materials_vel)
       REAL_T, intent(in) :: div(DIMV(div),num_materials_vel)
@@ -3232,11 +3228,9 @@ END SUBROUTINE SIMP
       REAL_T machnd(num_materials_vel)
       REAL_T machcell(num_materials_vel)
       REAL_T velnd(num_materials_vel*(SDIM+1))
-      REAL_T velsolidnd(nparts_def*SDIM)
       REAL_T velmat(SDIM)
       REAL_T velmatT(SDIM)
       REAL_T velcell(num_materials_vel*(SDIM+1))
-      REAL_T velsolidcell(nparts_def*SDIM)
       REAL_T vofnd(nmat)
       REAL_T vofcell(nmat)
       REAL_T presnd(num_materials_vel)
@@ -3445,7 +3439,6 @@ END SUBROUTINE SIMP
       call checkbound(lo,hi,DIMS(visc),1,-1,411)
       call checkbound(lo,hi,DIMS(trace),1,-1,411)
       call checkbound(lo,hi,DIMS(vel),1,-1,411)
-      call checkbound(lo,hi,DIMS(velsol),1,-1,411)
       call checkbound(lo,hi,DIMS(vof),1,-1,411)
 
       if (num_state_base.ne.2) then
@@ -3595,9 +3588,6 @@ END SUBROUTINE SIMP
         do dir=1,num_materials_vel*(SDIM+1)
          velnd(dir)=zero
         enddo
-        do dir=1,nparts_def*SDIM
-         velsolidnd(dir)=zero
-        enddo
         do dir=1,num_state_material*nmat
          dennd(dir)=zero
         enddo
@@ -3717,12 +3707,6 @@ END SUBROUTINE SIMP
          do dir=1,num_materials_vel*(SDIM+1)
           velnd(dir)=velnd(dir)+localwt*velcell(dir)
          enddo
-         do dir=1,nparts_def*SDIM
-          velsolidcell(dir)=velsol(D_DECL(i-i1,j-j1,k-k1),dir)
-         enddo
-         do dir=1,nparts_def*SDIM
-          velsolidnd(dir)=velsolidnd(dir)+localwt*velsolidcell(dir)
-         enddo
          do dir=1,num_state_material*nmat
           dencell(dir)=den(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
@@ -3804,9 +3788,6 @@ END SUBROUTINE SIMP
 
         do dir=1,num_materials_vel*(SDIM+1)
          velnd(dir)=velnd(dir)/sumweight
-        enddo
-        do dir=1,nparts_def*SDIM
-         velsolidnd(dir)=velsolidnd(dir)/sumweight
         enddo
         do dir=1,5*nmat
          tracend(dir)=tracend(dir)/sumweight
@@ -4055,22 +4036,6 @@ END SUBROUTINE SIMP
         enddo
         scomp=scomp+SDIM
   
-        do partid=0,nparts_def-1
-        
-         do dir=1,SDIM
-          velmat(dir)=velsolidnd(partid*SDIM+dir)
-          velmatT(dir)=velmat(dir)
-         enddo
-         if (visual_RT_transform.eq.1) then
-          call RT_transformVEL(xposnd,velmat,velmatT)
-         endif
-         do iw=1,SDIM
-          writend(scomp+iw)=velmatT(iw)
-         enddo
-         scomp=scomp+SDIM
-
-        enddo ! partid=0..nparts_def-1
-
           ! this is pressure from the projection.
         do iw=1,num_materials_vel
          writend(scomp+iw)=velnd(num_materials_vel*SDIM+iw)

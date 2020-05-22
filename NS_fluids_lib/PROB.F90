@@ -135,7 +135,6 @@ stop
 
       nwrite= &
        plot_sdim+num_materials_vel*plot_sdim+ & ! xpos,vel
-       nparts_def*plot_sdim+ &  ! velsolid
        5*num_materials_vel+ & !pmg,peos,div,divdat,mach
        nmat+nmat+ & ! vfrac,ls
        nmat*plot_sdim+ & ! ls slope
@@ -245,70 +244,6 @@ stop
        endif
 
       enddo ! im=1..num_materials_vel 
-
-      partid=0
-      do im=1,nmat
-
-       if ((is_lag_part(nmat,im).eq.1).or. &
-           ((im.eq.1).and.(nparts.eq.0))) then
-
-        write(matstr,'(I2)') im
-        do i=1,2
-         if (matstr(i:i).eq.' ') then
-          matstr(i:i)='0'
-         endif
-        enddo
-
-        ih=1
-        Varname='U'
-        ih=ih+1
-        Varname(ih:ih)='S'
-        ih=ih+1
-        do i=1,2
-         Varname(ih:ih)=matstr(i:i)
-         ih=ih+1
-        enddo
-        call dumpstring(Varname)
-
-        ih=1
-        Varname='V'
-        ih=ih+1
-        Varname(ih:ih)='S'
-        ih=ih+1
-        do i=1,2
-         Varname(ih:ih)=matstr(i:i)
-         ih=ih+1
-        enddo
-        call dumpstring(Varname)
-
-        if (plot_sdim.eq.3) then
-         ih=1
-         Varname='W'
-         ih=ih+1
-         Varname(ih:ih)='S'
-         ih=ih+1
-         do i=1,2
-          Varname(ih:ih)=matstr(i:i)
-          ih=ih+1
-         enddo
-         call dumpstring(Varname)
-        endif
-        partid=partid+1
-
-       else if ((is_lag_part(nmat,im).eq.0).and. &
-                ((im.gt.1).or.(nparts.gt.0))) then
-        ! do nothing
-       else
-        print *,"is_lag_part(nmat,im) invalid"
-        stop
-       endif
-
-      enddo ! im=1..nmat
-
-      if (partid.ne.nparts_def) then
-       print *,"partid invalid"
-       stop
-      endif
 
        ! multigrid pressure
       do im=1,num_materials_vel
@@ -14098,7 +14033,6 @@ END SUBROUTINE Adist
        ! called from:
        !  subroutine mask_velocity
        !  subroutine FORT_INITDATASOLID
-       !  subroutine FORT_GETDRAG 
       subroutine velsolid(x,y,z,vel,time,im,dx)
       use global_distance_module
       use probcommon_module

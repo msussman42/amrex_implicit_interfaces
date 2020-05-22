@@ -27065,7 +27065,9 @@ end function delta
        nsolveMM, &
        nstate, &
        xlo,dx, &
-       solid,DIMS(solid), &
+       solxfab,DIMS(solxfab), &
+       solyfab,DIMS(solyfab), &
+       solzfab,DIMS(solzfab), &
        snew,DIMS(snew), &
        lsnew,DIMS(lsnew), &
        du,DIMS(du), &
@@ -27077,35 +27079,39 @@ end function delta
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-      INTEGER_T nsolve
-      INTEGER_T nsolveMM
-      INTEGER_T nstate
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: nsolveMM
+      INTEGER_T, intent(in) :: nstate
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T :: growlo(3),growhi(3)
 
-      INTEGER_T DIMDEC(solid)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(lsnew)
-      INTEGER_T DIMDEC(du)
-      INTEGER_T DIMDEC(advect)
-      INTEGER_T i,j,k
-      INTEGER_T dir
-      INTEGER_T im
-      INTEGER_T ibase
-      INTEGER_T velcomp
+      INTEGER_T, intent(in) :: DIMDEC(solxfab)
+      INTEGER_T, intent(in) :: DIMDEC(solyfab)
+      INTEGER_T, intent(in) :: DIMDEC(solzfab)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(lsnew)
+      INTEGER_T, intent(in) :: DIMDEC(du)
+      INTEGER_T, intent(in) :: DIMDEC(advect)
+      INTEGER_T :: i,j,k
+      INTEGER_T :: dir
+      INTEGER_T :: im
+      INTEGER_T :: ibase
+      INTEGER_T :: velcomp
 
-      REAL_T solid(DIMV(solid),nparts_def*SDIM)
-      REAL_T snew(DIMV(snew),nstate)
-      REAL_T lsnew(DIMV(lsnew),nmat*(SDIM+1))
-      REAL_T du(DIMV(du),nsolveMM)
-      REAL_T advect(DIMV(advect),nsolveMM)
+      REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+      REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+      REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
+      REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+      REAL_T, intent(in) :: du(DIMV(du),nsolveMM)
+      REAL_T, intent(in) :: advect(DIMV(advect),nsolveMM)
 
       REAL_T Tforce,new_temperature,TEMPERATURE
       INTEGER_T partid,im_solid,partid_crit
@@ -27152,7 +27158,9 @@ end function delta
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(solid),1,-1,1251)
+      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,1251)
+      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,1251)
+      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,1251)
       call checkbound(fablo,fabhi,DIMS(snew),1,-1,1251)
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1251)
       call checkbound(fablo,fabhi,DIMS(du),0,-1,1251)
@@ -27222,10 +27230,24 @@ end function delta
           print *,"im_solid_map(partid_crit+1)+1.ne.im_solid"
           stop
          endif
-         do dir=1,SDIM
+         dir=1
+         velcomp=partid_crit*SDIM+dir
+         snew(D_DECL(i,j,k),dir)=half* &
+            (solxfab(D_DECL(i,j,k),velcomp)+ &
+             solxfab(D_DECL(i+1,j,k),velcomp))
+         dir=2
+         velcomp=partid_crit*SDIM+dir
+         snew(D_DECL(i,j,k),dir)=half* &
+            (solyfab(D_DECL(i,j,k),velcomp)+ &
+             solyfab(D_DECL(i,j+1,k),velcomp))
+         if (SDIM.eq.3) then
+          dir=SDIM
           velcomp=partid_crit*SDIM+dir
-          snew(D_DECL(i,j,k),dir)=solid(D_DECL(i,j,k),velcomp)
-         enddo ! dir
+          snew(D_DECL(i,j,k),dir)=half* &
+            (solzfab(D_DECL(i,j,k),velcomp)+ &
+             solzfab(D_DECL(i,j,k+1),velcomp))
+         endif
+
         else if (im_solid.eq.0) then ! in the fluid
          do dir=1,SDIM
           snew(D_DECL(i,j,k),dir)= &
