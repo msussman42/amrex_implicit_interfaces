@@ -6403,7 +6403,9 @@ stop
        slope,DIMS(slope), &
        denstate,DIMS(denstate), &
        viscstate,DIMS(viscstate), &
-       sol,DIMS(sol), &
+       solxfab,DIMS(solxfab), &
+       solyfab,DIMS(solyfab), &
+       solzfab,DIMS(solzfab), &
         ! voltotal/DeDT_total 1/(rho cv)
        cenDeDT, &
        DIMS(cenDeDT), & 
@@ -6500,7 +6502,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(slope)
       INTEGER_T, intent(in) :: DIMDEC(denstate)
       INTEGER_T, intent(in) :: DIMDEC(viscstate)
-      INTEGER_T, intent(in) :: DIMDEC(sol)
+      INTEGER_T, intent(in) :: DIMDEC(solxfab)
+      INTEGER_T, intent(in) :: DIMDEC(solyfab)
+      INTEGER_T, intent(in) :: DIMDEC(solzfab)
       INTEGER_T, intent(in) :: DIMDEC(cenDeDT)
       INTEGER_T, intent(in) :: DIMDEC(cenden)
       INTEGER_T, intent(in) :: DIMDEC(cenvof)
@@ -6520,7 +6524,9 @@ stop
       REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
       REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
       REAL_T, intent(in) :: viscstate(DIMV(viscstate),nmat) 
-      REAL_T, intent(in) :: sol(DIMV(sol),nparts_def*SDIM) 
+      REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
+      REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM) 
+      REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM) 
       REAL_T, intent(out) :: cenDeDT(DIMV(cenDeDT),nmat+1)
       REAL_T, intent(out) :: cenden(DIMV(cenden),nmat+1)
       REAL_T, intent(out) :: cenvof(DIMV(cenvof),nmat)  
@@ -6805,7 +6811,11 @@ stop
       call checkbound(fablo,fabhi, &
        DIMS(viscstate), &
        1,-1,224)
-      call checkbound(fablo,fabhi,DIMS(sol),1,-1,225)
+
+      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,225)
+      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,225)
+      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,225)
+
       call checkbound(fablo,fabhi,DIMS(vol),1,-1,227)
       call checkbound(fablo,fabhi, &
        DIMS(levelPC), &
@@ -7164,8 +7174,16 @@ stop
            if (im_prescribed_valid.eq.1) then
             if (im_solid_map(partid_prescribed+1)+1.eq.im_prescribed) then
              dir2=partid_prescribed*SDIM+veldir+1
-             solid_velocity=wtR*sol(D_DECL(i,j,k),dir2)+ &
-                            wtL*sol(D_DECL(im1,jm1,km1),dir2)
+             if (veldir.eq.0) then
+              solid_velocity=solxfab(D_DECL(i,j,k),dir2)
+             else if (veldir.eq.1) then
+              solid_velocity=solyfab(D_DECL(i,j,k),dir2)
+             else if ((veldir.eq.SDIM-1).and.(SDIM.eq.3)) then
+              solid_velocity=solzfab(D_DECL(i,j,k),dir2)
+             else
+              print *,"veldir invalid"
+              stop
+             endif
             else
              print *,"im_solid_map(partid_prescribed+1)+1.ne.im_prescribed"
              stop

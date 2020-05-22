@@ -3984,12 +3984,15 @@ void NavierStokes::apply_pressure_grad(
  debug_ngrow(MASKSEM_MF,1,841);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("levelpc mf has incorrect ncomp");
- resize_FSI_GHOST_MF(1);
- debug_ngrow(FSI_GHOST_MF,1,121);
- if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
+ }
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   debug_ngrow(FACE_VAR_MF+dir,0,122);
 
@@ -4401,7 +4404,7 @@ void NavierStokes::apply_pressure_grad(
     FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
     FArrayBox& presfab=(*localMF[pboth_mf])[mfi]; // in: apply_pressure_grad
 
-    FArrayBox& solfab=(*localMF[FSI_GHOST_MF])[mfi];
+    FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
     Vector<int> presbc;
@@ -5131,7 +5134,10 @@ void NavierStokes::make_physics_vars(int project_option) {
    FArrayBox& viscstatefab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
 
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-   FArrayBox& solfab=(*localMF[FSI_GHOST_MF])[mfi];
+
+   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+   FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+   FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
  
    FArrayBox& xfacevar=(*localMF[FACE_VAR_MF])[mfi];
    FArrayBox& yfacevar=(*localMF[FACE_VAR_MF+1])[mfi];
@@ -5157,6 +5163,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: LEVELSET_3D.F90
    FORT_INIT_PHYSICS_VARS(
     &tid_current,
     &FD_curv_interp, 
@@ -5215,8 +5222,12 @@ void NavierStokes::make_physics_vars(int project_option) {
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
     viscstatefab.dataPtr(),
     ARLIM(viscstatefab.loVect()),ARLIM(viscstatefab.hiVect()),
-    solfab.dataPtr(),
-    ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
+    solxfab.dataPtr(),
+    ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+    solyfab.dataPtr(),
+    ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+    solzfab.dataPtr(),
+    ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
     cDeDTfab.dataPtr(),
     ARLIM(cDeDTfab.loVect()),ARLIM(cDeDTfab.hiVect()),
     cdenfab.dataPtr(),ARLIM(cdenfab.loVect()),ARLIM(cdenfab.hiVect()),
@@ -5813,11 +5824,12 @@ void NavierStokes::process_potential_force_face() {
  } else
   amrex::Error("nparts invalid");
 
- resize_FSI_GHOST_MF(1);
- if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -5937,7 +5949,7 @@ void NavierStokes::process_potential_force_face() {
    FArrayBox& presdenfab=(*localMF[HYDROSTATIC_PRESDEN_MF])[mfi];
    FArrayBox& mgonifab=(*dendata)[mfi];
 
-   FArrayBox& solfab=(*localMF[FSI_GHOST_MF])[mfi];
+   FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
    Vector<int> presbc=getBCArray(State_Type,gridno,pcomp, 
@@ -6127,10 +6139,12 @@ void NavierStokes::process_potential_force_cell() {
  } else
   amrex::Error("nparts invalid");
 
- if (localMF[FSI_GHOST_MF]->nGrow()!=1)
-  amrex::Error("localMF[FSI_GHOST_MF]->nGrow()!=1");
- if (localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM)
-  amrex::Error("localMF[FSI_GHOST_MF]->nComp()!=nparts_def*AMREX_SPACEDIM");
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -6195,7 +6209,10 @@ void NavierStokes::process_potential_force_cell() {
   FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
   FArrayBox& presdenfab=(*localMF[HYDROSTATIC_PRESDEN_MF])[mfi];
 
-  FArrayBox& solfab=(*localMF[FSI_GHOST_MF])[mfi];
+  FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+  FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+  FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+
   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
   Vector<int> presbc=getBCArray(State_Type,gridno,pcomp,num_materials_vel);
@@ -6302,17 +6319,23 @@ void NavierStokes::process_potential_force_cell() {
    ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
    levelpcfab.dataPtr(), //levelPC
    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-   solfab.dataPtr(),ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
-   solfab.dataPtr(),ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),//cterm
+   solxfab.dataPtr(),ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+   solyfab.dataPtr(),ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+   solzfab.dataPtr(),ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//cterm
    presdenfab.dataPtr(0),  // HYDROSTATIC_PRESSURE
    ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), 
    presdenfab.dataPtr(1),  // HYDROSTATIC_DENSITY (denold)
    ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), 
    gcell.dataPtr(),ARLIM(gcell.loVect()),ARLIM(gcell.hiVect()), // ustar
    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-   solfab.dataPtr(),ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),//mdot
-   solfab.dataPtr(),ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),//maskdivres
-   solfab.dataPtr(),ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),//maskres
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//mdot
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskdivres
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskres
    &SDC_outer_sweeps,
    &homflag,
    &use_VOF_weight,
