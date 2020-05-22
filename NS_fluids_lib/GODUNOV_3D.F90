@@ -591,7 +591,7 @@ stop
         massfrac, &
         total_mass, &
         levelpc,DIMS(levelpc), &
-        faceLS,DIMS(faceLS), &
+        faceLS,DIMS(faceLS), & ! =0 if imL<>imR or coarse/fine bc or ext. bc
         mdata,DIMS(mdata), &
         tdata,DIMS(tdata), &
         ii,jj,kk, &
@@ -739,8 +739,11 @@ stop
           do j1=js,je 
           do k1=ks,ke 
 
+            !=0 if (wrt i1,j1,k1) imL<>imR or coarse/fine or ext. BC
            im_face=NINT(faceLS(D_DECL(i1,j1,k1),dirtan))
-           if ((im_face.lt.0).or.(im_face.gt.nmat)) then
+           if ((im_face.ge.0).and.(im_face.le.nmat)) then
+            ! do nothing
+           else
             print *,"im_face invalid"
             stop
            endif
@@ -24634,10 +24637,10 @@ end function delta
             icrit=index_adjoin(side,dir2)
 
             if (icrit.lt.fablo(dir2)) then
-             if (masktest.eq.0) then
+             if (masktest.eq.0) then ! not fine/fine
               do nc=1,SDIM
                bctest=velbc(dir2,1,nc)
-               if ((bctest.eq.INT_DIR).or. &
+               if ((bctest.eq.INT_DIR).or. &!coarse/fine not fine/fine,periodic
                    (bctest.eq.FOEXTRAP).or. &
                    (bctest.eq.EXT_DIR).or. &
                    (bctest.eq.REFLECT_ODD).or. &
