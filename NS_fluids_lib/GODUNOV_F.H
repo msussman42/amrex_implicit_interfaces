@@ -1195,7 +1195,8 @@ extern "C"
      Real* mac,AMREX_ARLIM_P(maclo),AMREX_ARLIM_P(machi),
      Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
      Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
-     Real* sol,AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
+     Real* solfab,
+     AMREX_ARLIM_P(solfablo),AMREX_ARLIM_P(solfabhi),
      const Real* xlo,const Real* dx,
      int* dir,
      Real* cur_time);

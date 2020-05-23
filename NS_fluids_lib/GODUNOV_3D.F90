@@ -23414,7 +23414,7 @@ end function delta
        mac,DIMS(mac), &
        xface,DIMS(xface), &
        LS,DIMS(LS), &
-       sol,DIMS(sol), &
+       solfab,DIMS(solfab), &
        xlo,dx, &
        dir, &
        cur_time)
@@ -23425,52 +23425,52 @@ end function delta
  
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T num_materials_combine
-      INTEGER_T hflag
-      INTEGER_T facecut_index
-      INTEGER_T icefacecut_index
-      INTEGER_T massface_index
-      INTEGER_T vofface_index
-      INTEGER_T ncphys
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: num_materials_combine
+      INTEGER_T, intent(in) :: hflag
+      INTEGER_T, intent(in) :: facecut_index
+      INTEGER_T, intent(in) :: icefacecut_index
+      INTEGER_T, intent(in) :: massface_index
+      INTEGER_T, intent(in) :: vofface_index
+      INTEGER_T, intent(in) :: ncphys
 
-      INTEGER_T nmat
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-      INTEGER_T nten
-      INTEGER_T nsolve
-      INTEGER_T nsolveMM
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
-      INTEGER_T project_option
-      INTEGER_T combine_idx
-      INTEGER_T combine_flag
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: nsolveMM
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T, intent(in) :: nsolveMM_FACE_test
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: combine_idx
+      INTEGER_T, intent(in) :: combine_flag
 
-      INTEGER_T level
-      INTEGER_T finest_level
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T velbc(SDIM,2,SDIM*num_materials_vel)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM*num_materials_vel)
 
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(mac)
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(sol)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(mac)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(solfab)
   
-      REAL_T xlo(SDIM),dx(SDIM) 
-      INTEGER_T dir
-      REAL_T cur_time
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: cur_time
 
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T mac(DIMV(mac),nsolveMM_FACE)
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T LS(DIMV(LS),nmat*(SDIM+1))
-      REAL_T sol(DIMV(sol),nparts_def*SDIM)
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(in) :: mac(DIMV(mac),nsolveMM_FACE)
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, intent(in) :: solfab(DIMV(solfab),nparts_def*SDIM)
 
       INTEGER_T nten_test 
       INTEGER_T ii,jj,kk 
@@ -23621,7 +23621,7 @@ end function delta
       call checkbound(fablo,fabhi,DIMS(vof),1,-1,1273)
       call checkbound(fablo,fabhi,DIMS(mac),0,dir,1273)
       call checkbound(fablo,fabhi,DIMS(xface),0,dir,1273)
-      call checkbound(fablo,fabhi,DIMS(sol),1,-1,1276)
+      call checkbound(fablo,fabhi,DIMS(solfab),0,dir,1276)
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,1276)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
@@ -23901,8 +23901,7 @@ end function delta
            stop
           endif
           velcomp=partid_crit*SDIM+dir+1
-          vsol=half*(sol(D_DECL(i,j,k),velcomp)+ &
-                     sol(D_DECL(i-ii,j-jj,k-kk),velcomp))
+          vsol=solfab(D_DECL(i,j,k),velcomp)
          else if (im_solid_crit.eq.0) then
           vsol=zero
          else
