@@ -1318,13 +1318,21 @@ stop
 
       INTEGER_T ii,jj,kk
       INTEGER_T i,j,k
+      INTEGER_T i_face,j_face,k_face
+      INTEGER_T i_side,j_side,k_side
+      INTEGER_T ii_visc,jj_visc,kk_visc
       INTEGER_T dir
       INTEGER_T veldir
       INTEGER_T facedir
       INTEGER_T side_cell  ! 0 or 1
+      INTEGER_T side_visc
       INTEGER_T dirend
-      INTEGER_T i1,j1,n,gradbase,vofcomp,dencomp,viscbase
+      INTEGER_T dir_visc
+      INTEGER_T i1,j1,n
+      INTEGER_T vofcomp,dencomp,viscbase
       INTEGER_T icell,jcell,kcell
+      REAL_T vel6point(SDIM,2,SDIM)
+      REAL_T ls_visc(nmat)
       REAL_T lsleft(nmat)
       REAL_T lsright(nmat)
       REAL_T solid_dist_primary
@@ -1340,6 +1348,7 @@ stop
 
       REAL_T facearea
       INTEGER_T im
+      INTEGER_T im_visc
       INTEGER_T im_fluid
       INTEGER_T im_test
       INTEGER_T im_primary

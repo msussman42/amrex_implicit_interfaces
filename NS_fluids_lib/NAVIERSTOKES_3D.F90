@@ -3304,7 +3304,6 @@ END SUBROUTINE SIMP
       REAL_T dxleft,dxright,dxmin
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T nmax
-      INTEGER_T partid
 
       INTEGER_T visual_ncell(SDIM)
       REAL_T visual_dx(SDIM)

@@ -13959,7 +13959,7 @@ end function delta
         stop
        endif
 
-       ughost_nrml = -reflect_ractor*uimage_nrml
+       ughost_nrml = -reflect_factor*uimage_nrml
  
        call get_primary_material(LSCP_image_interp,nmat,im_primary_image)
 
@@ -14322,7 +14322,7 @@ end function delta
        
       end subroutine getGhostVel
 
-       ! called from:NavierStokes::init_FSI_GHOST_MF(int ngrow) 
+       ! called from:NavierStokes::init_FSI_GHOST_MAC_MF(int ngrow) 
        ! (in NavierStokes.cpp)
        ! called when "law_of_the_wall=0,1,2"
        ! if nparts==0 => interpolate state cell velocity to MAC grid.
@@ -14421,6 +14421,7 @@ end function delta
       INTEGER_T isideFD,jsideFD,ksideFD
       INTEGER_T i1,j1,k1
       INTEGER_T i3,j3,k3
+      INTEGER_T khisten
       INTEGER_T in_grow_box
       REAL_T nrm_solid(SDIM)
       REAL_T n_raster(SDIM)
@@ -14436,8 +14437,6 @@ end function delta
       REAL_T LSFD_image_stencil(D_DECL(2,2,2),nmat*SDIM)
       REAL_T ufluid_stencil(D_DECL(2,2,2),SDIM)
       REAL_T usolid_stencil(D_DECL(2,2,2),SDIM)
-      REAL_T ufluid_point(SDIM)
-      REAL_T usolid_point(SDIM)
       REAL_T thermal_image(D_DECL(2,2,2),nmat)
       REAL_T ximage_stencil(D_DECL(2,2,2),SDIM)
       REAL_T xproject_stencil(D_DECL(2,2,2),SDIM)
@@ -14494,6 +14493,15 @@ end function delta
        print *,"nparts invalid FORT_WALLFUNCTION"
        stop
       endif
+      if (SDIM.eq.2) then
+       khisten=0
+      else if (SDIM.eq.3) then
+       khisten=1
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
       if ((nparts_ghost.eq.nparts).or.(nparts_ghost.eq.1)) then
        ! do nothing
       else
@@ -14598,7 +14606,7 @@ end function delta
 
          do dir=1,SDIM
           usolid_raster(dir)= &
-            half*(usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)+
+            half*(usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)+ &
                   usolid(D_DECL(i-ii,j-jj,k-kk),(partid-1)*SDIM+dir))
           ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)=usolid_raster(dir)
          enddo  
@@ -22184,7 +22192,9 @@ end function delta
        level, &
        finest_level, &
        maskcov,DIMS(maskcov), &
-       sol,DIMS(sol), &
+       solxfab,DIMS(solxfab), &
+       solyfab,DIMS(solyfab), &
+       solzfab,DIMS(solzfab), &
        LSNEW,DIMS(LSNEW), &
        LS,DIMS(LS), &
        vof,DIMS(vof), &
@@ -22204,61 +22214,65 @@ end function delta
  
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T num_materials_combine
-      INTEGER_T nmat
-      INTEGER_T nparts
-      INTEGER_T nparts_def
-      INTEGER_T im_solid_map(nparts_def)
-      INTEGER_T nten
-      INTEGER_T hflag
-      REAL_T latent_heat(2*nten)
-      INTEGER_T freezing_model(2*nten)
-      INTEGER_T distribute_from_target(2*nten)
-      REAL_T saturation_temp(2*nten)
-      INTEGER_T hydrate_flag
-      INTEGER_T nsolve
-      INTEGER_T nsolveMM
-      INTEGER_T project_option
-      INTEGER_T combine_idx
-      INTEGER_T combine_flag
-      INTEGER_T nstate_main
-      INTEGER_T ncomp_cell
-      INTEGER_T scomp_size
-      INTEGER_T scomp(scomp_size)
-      INTEGER_T ncomp(scomp_size)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      INTEGER_T level
-      INTEGER_T finest_level
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: num_materials_combine
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: hflag
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: hydrate_flag
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: nsolveMM
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: combine_idx
+      INTEGER_T, intent(in) :: combine_flag
+      INTEGER_T, intent(in) :: nstate_main
+      INTEGER_T, intent(in) :: ncomp_cell
+      INTEGER_T, intent(in) :: scomp_size
+      INTEGER_T, intent(in) :: scomp(scomp_size)
+      INTEGER_T, intent(in) :: ncomp(scomp_size)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
 
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(sol)
-      INTEGER_T DIMDEC(LSNEW)
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(cellfab)
-      INTEGER_T DIMDEC(newcell)
-      INTEGER_T DIMDEC(state)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(solxfab)
+      INTEGER_T, intent(in) :: DIMDEC(solyfab)
+      INTEGER_T, intent(in) :: DIMDEC(solzfab)
+      INTEGER_T, intent(in) :: DIMDEC(LSNEW)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(cellfab)
+      INTEGER_T, intent(in) :: DIMDEC(newcell)
+      INTEGER_T, intent(in) :: DIMDEC(state)
 
-      INTEGER_T velbc(SDIM,2,num_materials_vel*SDIM)
-      INTEGER_T listbc(SDIM,2,nsolveMM)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: listbc(SDIM,2,nsolveMM)
 
-      REAL_T xlo(SDIM),dx(SDIM) 
-      REAL_T dxmaxLS
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
+      REAL_T :: dxmaxLS
 
-      REAL_T cur_time
+      REAL_T, intent(in) :: cur_time
 
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T sol(DIMV(sol),nparts_def*SDIM)
-      REAL_T LSNEW(DIMV(LSNEW),nmat*(1+SDIM))
-      REAL_T LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T cellfab(DIMV(cellfab),ncomp_cell)
-      REAL_T newcell(DIMV(newcell),nsolveMM)
-      REAL_T state(DIMV(state),nstate_main)
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+      REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+      REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      REAL_T, intent(in) :: LSNEW(DIMV(LSNEW),nmat*(1+SDIM))
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(inout) :: cellfab(DIMV(cellfab),ncomp_cell)
+      REAL_T, intent(out) :: newcell(DIMV(newcell),nsolveMM)
+      REAL_T, intent(in) :: state(DIMV(state),nstate_main)
  
       INTEGER_T nten_test 
 
@@ -22503,7 +22517,9 @@ end function delta
       endif
 
       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,1276)
-      call checkbound(fablo,fabhi,DIMS(sol),1,-1,1276)
+      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,1276)
+      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,1276)
+      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,1276)
       call checkbound(fablo,fabhi,DIMS(LSNEW),1,-1,1276)
 
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,1276)
@@ -22795,7 +22811,23 @@ end function delta
               print *,"im_solid_map(partid_vel+1)+1.ne.im_solid_vel"
               stop
              endif
-             vsol(cellcomp)=sol(D_DECL(i,j,k),partid_vel*SDIM+cellcomp)
+             if (cellcomp.eq.1) then
+              vsol(cellcomp)=half* &
+                (solxfab(D_DECL(i,j,k),partid_vel*SDIM+cellcomp)+ &
+                 solxfab(D_DECL(i+1,j,k),partid_vel*SDIM+cellcomp))
+             else if (cellcomp.eq.2) then
+              vsol(cellcomp)=half* &
+                (solyfab(D_DECL(i,j,k),partid_vel*SDIM+cellcomp)+ &
+                 solyfab(D_DECL(i,j+1,k),partid_vel*SDIM+cellcomp))
+             else if ((cellcomp.eq.SDIM).and.(SDIM.eq.3)) then
+              vsol(cellcomp)=half* &
+                (solzfab(D_DECL(i,j,k),partid_vel*SDIM+cellcomp)+ &
+                 solzfab(D_DECL(i,j,k+1),partid_vel*SDIM+cellcomp))
+             else
+              print *,"cellcomp invalid"
+              stop
+             endif
+
             else
              print *,"im_solid_vel invalid"
              stop
@@ -23442,7 +23474,7 @@ end function delta
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: nsolveMM
       INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T, intent(in) :: nsolveMM_FACE_test
+      INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: combine_idx
       INTEGER_T, intent(in) :: combine_flag
@@ -23467,7 +23499,7 @@ end function delta
       REAL_T, intent(in) :: cur_time
 
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(in) :: mac(DIMV(mac),nsolveMM_FACE)
+      REAL_T, intent(inout) :: mac(DIMV(mac),nsolveMM_FACE)
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T, intent(in) :: solfab(DIMV(solfab),nparts_def*SDIM)
@@ -24233,7 +24265,10 @@ end function delta
       REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
   
-      INTEGER_T i,j,k,dir2,mask_boundary
+      INTEGER_T i,j,k
+      INTEGER_T dir2
+      INTEGER_T dirtan
+      INTEGER_T mask_boundary
       INTEGER_T local_maskSEM
       INTEGER_T maskcov
       INTEGER_T index_adjoin(2,3)

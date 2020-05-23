@@ -15250,7 +15250,6 @@ stop
       REAL_T local_fwt
       INTEGER_T local_presbc
       INTEGER_T im_vel
-      INTEGER_T im
       REAL_T local_mask
       INTEGER_T caller_id
 
@@ -15797,7 +15796,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vofnew)
       INTEGER_T, intent(in) :: DIMDEC(solxfab)
       INTEGER_T, intent(in) :: DIMDEC(solyfab)
-      INTEGER_T, intent(in) :: DIMDEC(solxfab)
+      INTEGER_T, intent(in) :: DIMDEC(solzfab)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(mofdata)

@@ -1138,7 +1138,9 @@ void NavierStokes::combine_state_variable(
    FArrayBox& newcell=(*new_combined)[mfi];
    FArrayBox& statefab=S_new[mfi];
 
-   FArrayBox& sol=(*localMF[FSI_GHOST_MF])[mfi];
+   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+   FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+   FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
 
    Vector<int> velbc=getBCArray(State_Type,gridno,0,
      num_materials_vel*AMREX_SPACEDIM);
@@ -1184,7 +1186,12 @@ void NavierStokes::combine_state_variable(
     &finest_level,
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()),
+    solxfab.dataPtr(),
+    ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+    solyfab.dataPtr(),
+    ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+    solzfab.dataPtr(),
+    ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
     lsnewfab.dataPtr(),
     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
     levelpcfab.dataPtr(),

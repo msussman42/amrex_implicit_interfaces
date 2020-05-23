@@ -192,7 +192,7 @@ stop
        REAL_T, intent(in) ::  den(DIMV(den),nmat+1)
        REAL_T, intent(in) ::  mu(DIMV(mu),nmat+1)
        REAL_T, intent(in) ::  xlo(SDIM)
-       REAL_T, intent(in) ::  xsten(-3:3,SDIM)
+       REAL_T ::  xsten(-3:3,SDIM)
        REAL_T, intent(in) ::  dx(SDIM)
 
        INTEGER_T i,j,k,dir

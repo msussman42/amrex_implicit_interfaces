@@ -4842,10 +4842,6 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
  if (level!=0)
   amrex::Error("level invalid init_FSI_GHOST_MAC_MF_ALL");
 
- if ((ngrow<1)||(ngrow>ngrowFSI))
-  amrex::Error("ngrow invalid");
- int nparts=im_solid_map.size();
-
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   int dealloc_history=0;
@@ -17163,7 +17159,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-   amrex::Error("localMF[FSI_GHOST_MF+data_dir]->nComp() invalid");
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
  }
 
  MultiFab* distmf=getStateDist(2,cur_time_slab,14);

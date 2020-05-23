@@ -3159,7 +3159,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         project_option_combine=0; // mac velocity
         update_flux=1;
         ns_level.combine_state_variable(
-         combine_idx,combine_flag,hflag,update_flux);
+         project_option_combine, 
+	 combine_idx,combine_flag,hflag,update_flux);
        } // ilev 
        debug_memory();
 
