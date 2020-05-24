@@ -4910,8 +4910,13 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
  }
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
-  if (localMF_grow[FSI_GHOST_MAC_MF+data_dir]>=0)
+
+  if (localMF_grow[FSI_GHOST_MAC_MF+data_dir]==0) {
    delete_localMF(FSI_GHOST_MAC_MF+data_dir,1);
+  } else if (localMF_grow[FSI_GHOST_MAC_MF+data_dir]==-1) {
+   // do nothing
+  } else
+   amrex::Error("localMF_grow[FSI_GHOST_MAC_MF+data_dir] invalid");
 
   new_localMF(FSI_GHOST_MAC_MF+data_dir,
     nparts_ghost*AMREX_SPACEDIM,0,data_dir);
@@ -4967,8 +4972,10 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
 
-  if (localMF_grow[HISTORY_MAC_MF+data_dir]>=0)
-   amrex::Error("localMF_grow[HISTORY_MAC_MF+data_dir]>=0");
+  if (localMF_grow[HISTORY_MAC_MF+data_dir]==-1) {
+   // do nothing
+  } else
+   amrex::Error("localMF_grow[HISTORY_MAC_MF+data_dir] invalid");
 
   new_localMF(HISTORY_MAC_MF+data_dir,nhistory,0,data_dir);
 

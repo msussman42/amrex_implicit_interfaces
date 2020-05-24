@@ -20709,11 +20709,11 @@ END SUBROUTINE Adist
       else if ((dir.eq.3).and.(SDIM.eq.3)) then
        kk=1
        if ((k/bfact)*bfact.ne.k) then
-        print *,"k invalid"
+        print *,"k invalid SEM_CELL_TO_MAC"
         stop
        endif
        if (k.lt.0) then
-        print *,"k invalid"
+        print *,"k invalid SEM_CELL_TO_MAC"
         stop
        endif
       else
@@ -23748,11 +23748,11 @@ END SUBROUTINE Adist
       else if ((dir_main.eq.3).and.(SDIM.eq.3)) then
        kk=1
        if ((k/bfact)*bfact.ne.k) then
-        print *,"k invalid"
+        print *,"k invalid SEM_MAC_TO_CELL"
         stop
        endif
        if (k.lt.0) then
-        print *,"k invalid"
+        print *,"k invalid SEM_MAC_TO_CELL"
         stop
        endif
       else

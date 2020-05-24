@@ -13527,12 +13527,12 @@ end function delta
        x_image_raster, &  ! in the fluid
        ximage_stencil, &
        xproject_stencil, &
-       ughost, &  ! aka usolid_law_of_wall
-       uimage, &
-       uimage_raster, &
-       usolid, &
-       usolid_raster, &
-       angle_ACT, &
+       ughost, &  ! aka usolid_law_of_wall (intent(out))
+       uimage, &  ! aka uimage_cell  "out"
+       uimage_raster, & ! inout
+       usolid, &  ! aka usolid_cell   "out"
+       usolid_raster, & ! inout
+       angle_ACT, & ! aka angle_ACT_cell "out"
        im_fluid, &
        im_solid)
        
@@ -13712,6 +13712,13 @@ end function delta
         print *,"law_of_the_wall invalid"
         stop
        endif
+        ! uimage_raster and usolid_raster are already initialized.
+       do dir=1,SDIM
+        ughost(dir)=zero
+        uimage(dir)=zero
+        usolid(dir)=zero
+       enddo
+       angle_ACT=zero
 
         ! nrm_solid points into the solid.
        nrm_sanity=DOT_PRODUCT(nrm_solid,nrm_solid)
@@ -14509,6 +14516,7 @@ end function delta
        stop
       endif
 
+       ! ughost,imgV,solV,imgVR,solVR,angle
       nhistory_sub=5*SDIM+1
 
       if (nhistory.eq.nparts_ghost*nhistory_sub) then
@@ -14631,7 +14639,9 @@ end function delta
           endif
 
           impart=im_solid_map(partid)+1  ! type integer: material id
-          if ((impart.lt.1).or.(impart.gt.nmat)) then
+          if ((impart.ge.1).and.(impart.le.nmat)) then
+           ! do nothing
+          else
            print *,"impart invalid FORT_WALLFUNCTION"
            stop
           endif
@@ -24617,8 +24627,8 @@ end function delta
            endif
           endif
 
-          if ((dir.eq.1).or. &
-              (dir.eq.2).and.  &
+          if (((dir.eq.1).or. &
+               (dir.eq.2)).and.  &
               (SDIM.eq.3)) then
            dirtan=SDIM
            if (k.eq.fablo(dirtan)-1) then
@@ -24631,7 +24641,7 @@ end function delta
                     (k.le.fabhi(dirtan))) then
             ! do nothing
            else
-            print *,"k invalid"
+            print *,"k invalid FORT_FACE_GRADIENTS"
             stop
            endif
           endif

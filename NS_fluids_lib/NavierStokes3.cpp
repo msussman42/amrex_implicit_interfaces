@@ -3081,11 +3081,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if (1==1) {
           // S_new is level 0 data
         MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+	int caller_id=1;
         writeSanityCheckData(
          "VISCSOLVE",
          "in: NavierStokes::do_the_advance, State_Type after veldiffuseALL", 
          caller_id,
-         S_new->nComp(),
+         S_new.nComp(),
          -1, // data_mf==-1
          State_Type,
          -1); // data_dir==-1

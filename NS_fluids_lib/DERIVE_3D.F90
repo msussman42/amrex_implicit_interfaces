@@ -1734,8 +1734,8 @@ stop
            do side_cell=0,1
 
             i=icell+side_cell*ii
-            j=icell+side_cell*jj
-            k=icell+side_cell*kk
+            j=jcell+side_cell*jj
+            k=kcell+side_cell*kk
 
             do im=1,nmat
               ! cell to left of face

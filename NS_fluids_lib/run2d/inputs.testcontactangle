@@ -1,4 +1,4 @@
-max_step  = 999999  # maximum timestep
+max_step  = 2  # maximum timestep
 #max_step  = 1  # maximum timestep
 stop_time =  3.0  # maximum problem time
 
@@ -79,7 +79,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 8       # block factor in grid generation
 amr.check_int       = 1000     # number of timesteps between checkpoints 1000
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 10    # CHANGE TO 1000
+amr.plot_int        = 1    # CHANGE TO 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16

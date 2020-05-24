@@ -4208,7 +4208,7 @@ INTEGER_T :: local_part_id
       k=3
      endif
      if ((k.ne.3).and.(k.ne.4)) then
-      print *,"k invalid k=",k
+      print *,"k invalid geominit k=",k
       stop
      endif
 
@@ -4540,7 +4540,7 @@ INTEGER_T :: local_part_id
      k=3
     endif
     if ((k.ne.3).and.(k.ne.4)) then
-     print *,"k invalid k=",k
+     print *,"k invalid viorel_sphere_geominit k=",k
      stop
     endif
 
@@ -4813,7 +4813,7 @@ INTEGER_T :: local_part_id
      k=3
     endif
     if ((k.ne.3).and.(k.ne.4)) then
-     print *,"k invalid k=",k
+     print *,"k invalid internal_inflow_geominit k=",k
      stop
     endif
 
