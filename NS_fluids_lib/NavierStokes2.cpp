@@ -4627,7 +4627,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  if (1==0) {
   writeSanityCheckData(
-    "INIT_PHYSICS_VARS",
+    "ANGLE_UTAN",
     "in: make_physics_varsALL, after makeStateCurv: HISTORY_MF, angle, utan", 
     caller_id,
     localMF[HISTORY_MF]->nComp(),
@@ -4709,7 +4709,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  if (1==0) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    writeSanityCheckData(
-    "INIT_PHYSICS_VARS",
+    "FACE_VAR",
     "in: make_physics_varsALL, FACE_VAR_MF",//faceden_index=2 facevisc_index=6
     caller_id,
     localMF[FACE_VAR_MF+dir]->nComp(),

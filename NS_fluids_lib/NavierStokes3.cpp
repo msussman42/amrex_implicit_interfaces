@@ -3078,7 +3078,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         }
        }
 
-       if (1==1) {
+       if (1==0) {
           // S_new is level 0 data
         MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 	int caller_id=1;
