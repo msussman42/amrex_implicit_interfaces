@@ -10,7 +10,6 @@
 #
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
 # CHANGES FROM PAST VERSION:
-# smg.useCG becomes mg.usecg, no more smg.eps
 # no more raster stuff (hdf), add mac.mac_abs_tol
 # blob.* now becomes ns.*
 #
@@ -34,12 +33,9 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 200
-mg.usecg=0
 mg.bot_atol = 1.0e-8
 mg.rtol_b = -0.01
 Lp.v = 0
-Lp.harmavg = 0
-diffuse.max_order=2
 
 # 320 64 64
 amr.n_cell    = 320 64 64  # change for realistic pipe length
@@ -63,7 +59,6 @@ amr.max_grid_size   = 1024
 ns.dt_cutoff      = 5.0e-7 # u dt_cut>dx => truncate vel
 
 mac.mac_abs_tol    = 1.0e-6
-mac.use_cg_solve   = 1
 
 ns.pcav=0.0
 ns.dencav=0.0
@@ -158,7 +153,6 @@ ns.livepressureoverride=1
 # 2 = Outflow            5 = NoSlipWall
 
 # turn any of these on to generate run-time timing stats
-RunStats.statvar = godunov_box level_project sync_project
 
 
 # select single or double precision of FAB output data

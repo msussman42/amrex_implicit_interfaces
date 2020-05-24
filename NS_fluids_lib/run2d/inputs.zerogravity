@@ -2,7 +2,6 @@
 
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
 # CHANGES FROM PAST VERSION:
-# smg.useCG becomes mg.usecg, no more smg.eps
 # no more raster stuff (hdf), add mac.mac_abs_tol
 # blob.* now becomes ns.*
 #
@@ -24,12 +23,9 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
-mg.usecg=0
 mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 Lp.v = 0
-Lp.harmavg = 0
-diffuse.max_order=2
 
 ns.solvability_projection=0
 
@@ -119,7 +115,6 @@ ns.hi_bc          = 2 2
 # 2 = Outflow            5 = NoSlipWall
 
 # turn any of these on to generate run-time timing stats
-RunStats.statvar = godunov_box level_project sync_project
 
 
 # select single or double precision of FAB output data

@@ -44,11 +44,9 @@ cg.maxiter = 400
 cg.abec_use_bicgstab=0
 ns.always_use_bicgstab=0
 
-mg.usecg=1
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 0
-Lp.harmavg = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
@@ -277,7 +275,6 @@ ns.temperature_hi_bc          = 3 2
 # 2 = Outflow            5 = NoSlipWall
 
 # turn any of these on to generate run-time timing stats
-RunStats.statvar = godunov_box level_project sync_project
 
 
 # select single or double precision of FAB output data

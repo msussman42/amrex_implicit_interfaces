@@ -92,7 +92,6 @@ Lp.bottom_bottom_tol_factor=0.1 # def=0.1
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
-mg.usecg=1
 mg.bot_atol = 1.0e-13
 #mg.bot_atol = 1.0e-14
 mg.visc_bot_atol = 1.0e-13
@@ -100,7 +99,6 @@ mg.visc_bot_atol = 1.0e-13
 #mg.visc_bot_atol = 1.0e-23
 mg.rtol_b = -0.01
 #Lp.v = 1
-Lp.harmavg = 0
 ns.projection_pressure_scale=1.0
 #ns.projection_pressure_scale=1.0e-12
 #ns.projection_pressure_scale=1.0e-19
@@ -147,7 +145,6 @@ mac.visc_abs_tol    = 1.0e-11
 #mac.visc_abs_tol    = 1.0e-13
 #mac.visc_abs_tol    = 1.0e-21
 
-mac.use_cg_solve   = 1
 
 ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 ns.visual_compare=0  # if 1, then compare to COARSEDATA.tec 
@@ -247,7 +244,6 @@ ns.hi_bc          = 5 5
 # 2 = Outflow            5 = NoSlipWall
 
 # turn any of these on to generate run-time timing stats
-RunStats.statvar = godunov_box level_project sync_project
 
 #fab.initval=0.0
 #fab.do_initval=1

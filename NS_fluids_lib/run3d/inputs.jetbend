@@ -51,12 +51,10 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
-mg.usecg=0
 mg.bot_atol = 1.0e-14
 mg.rtol_b = -0.01
 Lp.smooth_type=2
 Lp.v = 0
-Lp.harmavg = 0
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=5
@@ -118,7 +116,6 @@ ns.dt_cutoff      = 0.000000001  # not used
 
 mac.mac_tol        = 1.0e-11  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-11
-mac.use_cg_solve   = 1
 
 ns.cfl            = 0.4      # cfl number for hyperbolic system
 ns.init_shrink    = 0.1      # scale back initial timestep
@@ -203,7 +200,6 @@ ns.hi_bc          = 2 2 2  # 2 2=RZ 2 2 2=XYZ
 # 2 = Outflow            5 = NoSlipWall
 
 # turn any of these on to generate run-time timing stats
-RunStats.statvar = godunov_box level_project sync_project
 
 
 # select single or double precision of FAB output data

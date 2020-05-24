@@ -54,11 +54,9 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
-mg.usecg=1
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 0
-Lp.harmavg = 0
 # continuous_mof=0 regular MOF
 # continuous_mof=2 CMOF
 # continuous_mof=3 CLSVOF + MOF hybrid
@@ -101,7 +99,6 @@ amr.max_grid_size   = 16
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-10
-mac.use_cg_solve   = 1
 
 # 1=always take sound speed into account
 # 2=never take sound speed into account
@@ -186,7 +183,6 @@ ns.species_hi_bc  = 2 1
 # 2 = Outflow            5 = NoSlipWall
 
 # turn any of these on to generate run-time timing stats
-RunStats.statvar = godunov_box level_project sync_project
 
 
 # select single or double precision of FAB output data

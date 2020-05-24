@@ -2,7 +2,6 @@
 
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
 # CHANGES FROM PAST VERSION:
-# smg.useCG becomes mg.usecg, no more smg.eps
 # no more raster stuff (hdf), add mac.mac_abs_tol
 # blob.* now becomes ns.*
 #
@@ -24,14 +23,11 @@ geometry.prob_hi   =  3.0 6.0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 200
-mg.usecg=1
 mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
-Lp.harmavg = 0
 ns.be_cn_theta=0.5
 ns.rk_theta=1.0
-diffuse.max_order=2
 
 amr.n_cell    = 32 64
 amr.max_level =  0
@@ -62,7 +58,6 @@ proj.level_dump     = -1
 mac.mac_tol        = 1.0e-8  # tolerence for mac projections
 mac.mac_sync_tol   = 1.0e-6   # tolerence for mac SYNC projection
 mac.mac_abs_tol    = 1.0e-8
-mac.use_cg_solve   = 1
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
@@ -125,7 +120,6 @@ ns.hi_bc          = 4 4
 # 2 = Outflow            5 = NoSlipWall
 
 # turn any of these on to generate run-time timing stats
-RunStats.statvar = godunov_box level_project sync_project
 
 
 # select single or double precision of FAB output data

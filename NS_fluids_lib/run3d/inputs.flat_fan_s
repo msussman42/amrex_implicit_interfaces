@@ -19,13 +19,11 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
-mg.usecg=0
 mg.bot_atol = 1.0e-9
 mg.rtol_b = -0.01
 Lp.smooth_type=2
 
 Lp.v = 0
-Lp.harmavg = 0
 
 ns.num_materials=3
 ns.num_species_var=0
@@ -39,7 +37,6 @@ ns.projection_pressure_scale=10000.0
 
 ns.FSI_flag=0 0 2
 
-#diffuse.max_order=2
 
 # MARK: n_cell changed to 32 32 16 for testing.
 amr.n_cell    = 32 32 16  # 96^3 change to 32^3
@@ -68,7 +65,6 @@ amr.max_grid_size   = 32
 
 mac.mac_tol        = 1.0e-7
 mac.mac_abs_tol    = 1.0e-7
-mac.use_cg_solve   = 1
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
@@ -134,7 +130,6 @@ ns.hi_bc          = 2 2 2
 # 2 = Outflow            5 = NoSlipWall
 
 # turn any of these on to generate run-time timing stats
-RunStats.statvar = godunov_box level_project sync_project
 
 
 # select single or double precision of FAB output data
