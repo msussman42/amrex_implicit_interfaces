@@ -4628,7 +4628,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  if (1==0) {
   writeSanityCheckData(
     "INIT_PHYSICS_VARS",
-    "in: make_physics_varsALL, HISTORY_MF, angle, utan", 
+    "in: make_physics_varsALL, after makeStateCurv: HISTORY_MF, angle, utan", 
     caller_id,
     localMF[HISTORY_MF]->nComp(),
     HISTORY_MF,
