@@ -36444,8 +36444,10 @@ end subroutine initialize2d
        INTEGER_T extrecon_scomp
        INTEGER_T mask_scomp
        INTEGER_T burnvel_scomp
+       INTEGER_T tsat_scomp
        INTEGER_T nmat
        INTEGER_T nten
+       INTEGER_T ncomp_per
 
        nmat=num_materials
        nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -36455,6 +36457,7 @@ end subroutine initialize2d
         ! extrap, velx, vely, velz, mof recon
        mask_scomp=extrecon_scomp+nmat*ngeom_recon
        burnvel_scomp=mask_scomp+1
+       tsat_scomp=burnvel_scomp+nten*(SDIM+1)
 
        nhalf=3
        if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -36463,14 +36466,21 @@ end subroutine initialize2d
        endif
 
         ! c++ index
-       if (scomp.ne.burnvel_scomp) then
+       if (scomp.eq.burnvel_scomp) then
+        ncomp_per=SDIM
+       else if (scomp.eq.tsat_scomp) then
+        ncomp_per=1
+       else
         print *,"scomp invalid group extrapfill"
         print *,"scomp, ncomp, bfact, time ",scomp,ncomp,bfact,time
         print *,"nmat,extrecon_scomp,mask_scomp,burnvel_scomp ", &
          nmat,extrecon_scomp,mask_scomp,burnvel_scomp
         stop
        endif
-       if (ncomp.ne.(SDIM+1)*nten) then
+
+       if (ncomp.eq.nten*(1+ncomp_per)) then
+        ! do nothing
+       else
         print *,"ncomp invalid14"
         stop
        endif
@@ -36490,7 +36500,7 @@ end subroutine initialize2d
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
-       do icomp=1,(AMREX_SPACEDIM+1)*nten
+       do icomp=1,(ncomp_per+1)*nten
         call filcc(bfact, &
          u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
          DIMS(u), &
@@ -36511,7 +36521,7 @@ end subroutine initialize2d
        do dir2=1,SDIM
        do side=1,2
 
-       do icomp=1,(AMREX_SPACEDIM+1)*nten
+       do icomp=1,(ncomp_per+1)*nten
 
         borderlo(3)=0
         borderhi(3)=0
