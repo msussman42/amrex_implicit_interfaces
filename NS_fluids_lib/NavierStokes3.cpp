@@ -2498,16 +2498,22 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     mass_transfer_active=0;
 
-    if ((is_phasechange==1)||
-        (is_cavitation==1)||
-        (is_cavitation_mixture_model==1)) {
-     mass_transfer_active=1;
-    } else if ((is_phasechange==0)&&
-               (is_cavitation==0)&&
-	       (is_cavitation_mixture_model==0)) {
-     mass_transfer_active=0;
+    if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+     if ((is_phasechange==1)||
+         (is_cavitation==1)||
+         (is_cavitation_mixture_model==1)) {
+      mass_transfer_active=1;
+     } else if ((is_phasechange==0)&&
+                (is_cavitation==0)&&
+   	        (is_cavitation_mixture_model==0)) {
+      mass_transfer_active=0;
+     } else
+      amrex::Error("is_phasechange or is_cav or is_cav_mix_model invalid");
+    } else if ((slab_step==-1)||
+	       (slab_step==ns_time_order)) {
+     // do nothing
     } else
-     amrex::Error("is_phasechange or is_cav or is_cav_mix_model invalid");
+     amrex::Error("slab_step invalid");
 
     Vector<blobclass> blobdata;
     blobdata.resize(1);
@@ -2707,6 +2713,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // first nten components correspond to the status.
        int nburning=nten*(AMREX_SPACEDIM+1);
 
+	// SATURATION_TEMP_MF is passed to the following fortran
+        // routines:
+        //  AVGDOWN_SATURATION
+        //  RATEMASSCHANGE,
+        //  CONVERTMATERIAL
+        //  STEFANSOLVER
         // BURNING_VELOCITY_MF is passed to the following fortran
         // routines:
         //  AVGDOWN_BURNING, 
@@ -2718,10 +2730,17 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (int ilev=level;ilev<=finest_level;ilev++) {
 
         NavierStokes& ns_level=getLevel(ilev);
+
         ns_level.new_localMF(BURNING_VELOCITY_MF,nburning,
           ngrow_make_distance,-1);
         ns_level.setVal_localMF(BURNING_VELOCITY_MF,0.0,0,
           nburning,ngrow_make_distance);
+
+        ns_level.new_localMF(SATURATION_TEMP_MF,2*nten,
+          ngrow_make_distance,-1);
+        ns_level.setVal_localMF(SATURATION_TEMP_MF,-1.0,0,
+          2*nten,ngrow_make_distance);
+
         ns_level.new_localMF(JUMP_STRENGTH_MF,2*nten,ngrow_expansion,-1); 
         ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,2*nten,ngrow_expansion);
 
@@ -2730,6 +2749,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,30);
        debug_ngrow(SWEPT_CROSSING_MF,0,31);
        debug_ngrow(BURNING_VELOCITY_MF,ngrow_make_distance,31);
+       debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,31);
+
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         debug_ngrow(AREA_MF+dir,1,355);
         debug_ngrow(FACE_VAR_MF+dir,0,355);
@@ -3191,6 +3212,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       } else
        amrex::Error("is_zalesak invalid");
+
+      if (mass_transfer_active==1) {
+       delete_array(SATURATION_TEMP_MF);
+      } else if (mass_transfer_active==0) {
+       // do nothing
+      } else
+       amrex::Error("mass_transfer_active invalid");
 
       debug_memory();
 

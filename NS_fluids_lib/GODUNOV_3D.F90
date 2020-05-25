@@ -750,12 +750,19 @@ stop
             try_stencil=0
            else if (is_prescribed(nmat,im_face).eq.1) then 
             try_stencil=0  
-           else if (is_prescribed(nmat,im_face).eq.0) then 
+           else if (is_prescribed(nmat,im_face).eq.0) then ! im_face=fluid
             if ((im_face.ge.1).and.(im_face.le.nmat)) then
              if (im_face.eq.im_primary) then
               try_stencil=1
              else if (im_face.ne.im_primary) then
-              try_stencil=0
+              if (is_prescribed(nmat,im_primary).eq.1) then ! im_primary=solid
+               try_stencil=1
+              else if (is_prescribed(nmat,im_primary).eq.0) then
+               try_stencil=0
+              else
+               print *,"is_prescribed(nmat,im_primary) invalid"
+               stop
+              endif
              else
               print *,"im_face invalid"
               stop
@@ -25959,6 +25966,7 @@ end function delta
 
           do nc=1,SDIM-1
 
+            ! find face stencil
            ilo=i
            ihi=i
            jlo=j
@@ -25966,7 +25974,7 @@ end function delta
            klo=k
            khi=k
 
-           if (dir.eq.1) then
+           if (dir.eq.1) then ! u component  x-face
             ilo=i-1
             if (nc.eq.1) then  ! du/dy
              jhi=j+1
@@ -25976,7 +25984,7 @@ end function delta
              print *,"nc invalid"
              stop
             endif
-           else if (dir.eq.2) then 
+           else if (dir.eq.2) then  ! v component y-face
             jlo=j-1
             if (nc.eq.1) then ! dv/dx
              ihi=i+1
@@ -25986,7 +25994,7 @@ end function delta
              print *,"nc invalid"
              stop
             endif
-           else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           else if ((dir.eq.3).and.(SDIM.eq.3)) then ! w component z-face
             klo=k-1
             if (nc.eq.1) then ! dw/dx
              ihi=i+1

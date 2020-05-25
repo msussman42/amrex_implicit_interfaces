@@ -80,6 +80,8 @@ namespace amrex{
 #define GP_DEST_FACE_MF 50
 #define GP_DEST_CELL_MF 53
 
+#define SATURATION_TEMP_MF 54
+
 #define SEM_FLUXREG_MF 55
 
 #define LOCAL_FACETENSOR_MF 56
