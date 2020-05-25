@@ -2715,15 +2715,17 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
 	// SATURATION_TEMP_MF is passed to the following fortran
         // routines:
-        //  AVGDOWN_SATURATION
         //  RATEMASSCHANGE,
+        //  AVGDOWN_BURNING, 
+        //  EXT_BURNVEL_INTERP,
+        //  EXTEND_BURNING_VEL,
         //  CONVERTMATERIAL
         //  STEFANSOLVER
         // BURNING_VELOCITY_MF is passed to the following fortran
         // routines:
+        //  RATEMASSCHANGE,
         //  AVGDOWN_BURNING, 
         //  EXT_BURNVEL_INTERP,
-        //  RATEMASSCHANGE,
         //  EXTEND_BURNING_VEL,
         //  NODEDISPLACE,
         //  CONVERTMATERIAL
@@ -2738,7 +2740,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         ns_level.new_localMF(SATURATION_TEMP_MF,2*nten,
           ngrow_make_distance,-1);
-        ns_level.setVal_localMF(SATURATION_TEMP_MF,-1.0,0,
+        ns_level.setVal_localMF(SATURATION_TEMP_MF,0.0,0,
           2*nten,ngrow_make_distance);
 
         ns_level.new_localMF(JUMP_STRENGTH_MF,2*nten,ngrow_expansion,-1); 
@@ -2785,7 +2787,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
 	  // in: NavierStokes2.cpp
-        ns_level.avgDownBURNING_localMF(BURNING_VELOCITY_MF);
+        ns_level.avgDownBURNING_localMF(
+			BURNING_VELOCITY_MF,
+			SATURATION_TEMP_MF);
         ns_level.avgDown(LS_Type,0,nmat,0);
        }
 

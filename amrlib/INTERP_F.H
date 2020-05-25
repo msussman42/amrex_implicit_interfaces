@@ -138,6 +138,7 @@ extern "C"
        int* bfactc,int* bfactf);
 
     void FORT_EXT_BURNVEL_INTERP(
+       int* velflag,
        Real* time,
        const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
        Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),

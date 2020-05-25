@@ -226,6 +226,7 @@ class BurnVelInterp
 public:
     int burnvel_nmat;
     int burnvel_nten;
+    int burnvel_ncomp_per;
 
     virtual ~BurnVelInterp ();
     virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
@@ -345,6 +346,7 @@ extern PCInterpNull              pc_interp_null;
 extern multiMOFInterp            multi_mof_interp;
 extern multiEXTMOFInterp         multi_extmof_interp;
 extern BurnVelInterp             burnvel_interp;
+extern BurnVelInterp             tsat_interp;
 extern UMACInterp                umac_interp;
 extern VMACInterp                vmac_interp;
 extern WMACInterp                wmac_interp;

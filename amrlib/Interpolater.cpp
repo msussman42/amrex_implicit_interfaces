@@ -21,6 +21,7 @@ SEMInterp                 sem_interp_HIGH_PARM;
 multiMOFInterp            multi_mof_interp;
 multiEXTMOFInterp         multi_extmof_interp;
 BurnVelInterp             burnvel_interp;
+BurnVelInterp             tsat_interp;
 UMACInterp                umac_interp;
 VMACInterp                vmac_interp;
 WMACInterp                wmac_interp;
@@ -325,10 +326,19 @@ BurnVelInterp::interp (Real time,
 
     int nmat=burnvel_nmat;
     int nten=burnvel_nten;
-    int nburning=nten*(AMREX_SPACEDIM+1);
+    int ncomp_check=nten+nten*burnvel_ncomp_per;
 
-    if ((crse.nComp()>=nburning+crse_comp)&&
-        (fine.nComp()>=nburning+fine_comp)) {
+    int velflag=0;
+
+    if (burnvel_ncomp_per==1) {
+     velflag=0;
+    } else if (burnvel_ncomp_per==AMREX_SPACEDIM) {
+     velflag=1;
+    } else
+     amrex::Error("burnvel_ncomp_per invalid");
+
+    if ((crse.nComp()>=ncomp_check+crse_comp)&&
+        (fine.nComp()>=ncomp_check+fine_comp)) {
      // do nothing
     } else
      amrex::Error("crse.nComp() or fine.nComp() invalid");
@@ -339,13 +349,14 @@ BurnVelInterp::interp (Real time,
     if (nmat<1)
      amrex::Error("nmat invalid in burnvel interp");
 
-    if (ncomp!=nburning) {
+    if (ncomp!=ncomp_check) {
      std::cout << "ncomp " << ncomp << '\n';
      amrex::Error("must interpolate all burnvel data at once");
     }
      // first nmat components are the status.
      // next sdim * nmat components are the burning velocities.
     FORT_EXT_BURNVEL_INTERP(
+     &velflag,
      &time,
      cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
      fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
@@ -354,7 +365,7 @@ BurnVelInterp::interp (Real time,
      dxf,dxc,
      &nmat,
      &nten,
-     &nburning,
+     &ncomp,
      &levelc,&levelf,
      &bfactc,&bfactf);
 

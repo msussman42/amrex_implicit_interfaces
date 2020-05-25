@@ -998,7 +998,9 @@ NavierStokes::variableSetUp ()
       // first nten components represent a status.
     int nburning=nten*(AMREX_SPACEDIM+1);
 
-    int ncghost=1+AMREX_SPACEDIM+nmat*ngeom_recon+1+nburning;
+    int ncomp_tsat=2*nten;
+
+    int ncghost=1+AMREX_SPACEDIM+nmat*ngeom_recon+1+nburning+ncomp_tsat;
 
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
      1,ncghost,&pc_interp,store_in_checkpoint);
@@ -1191,9 +1193,63 @@ NavierStokes::variableSetUp ()
 
     burnvel_interp.burnvel_nmat=nmat;
     burnvel_interp.burnvel_nten=nten;
+    burnvel_interp.burnvel_ncomp_per=AMREX_SPACEDIM;
 
     desc_lstGHOST.setComponent(State_Type,burnvel_start_pos,BURNVEL_names,
      BURNVEL_bcs,BURNVEL_fill_class,&burnvel_interp);
+
+    Vector<std::string> TSAT_names;
+    TSAT_names.resize(ncomp_tsat);
+    Vector<BCRec> TSAT_bcs;
+    TSAT_bcs.resize(ncomp_tsat);
+
+    for (int im=0;im<nten;im++) {
+
+     std::stringstream im_string_stream(std::stringstream::in |
+        std::stringstream::out);
+
+     im_string_stream << im+1;
+     std::string im_string=im_string_stream.str();
+
+     std::string status_str="tsatstat"; 
+     status_str+=im_string; 
+     TSAT_names[im]=status_str;
+     set_extrap_bc(TSAT_bcs[im],phys_bc);
+
+    }  // im=0..nten-1  (status for TSAT)
+
+    for (int im=0;im<nten;im++) {
+
+     int ibase_tsat=nten+im;
+
+     std::stringstream im_string_stream(std::stringstream::in |
+        std::stringstream::out);
+
+     im_string_stream << im+1;
+     std::string im_string=im_string_stream.str();
+
+     std::string tsat_str="tsat"; 
+     tsat_str+=im_string; 
+     TSAT_names[ibase_tsat]=tsat_str;
+     set_extrap_bc(TSAT_bcs[ibase_tsat],phys_bc);
+
+     if (ibase_tsat!=nten+im)
+      amrex::Error("ibase_tsat invalid");
+
+    }  // im=0..nten-1  (TSAT)
+
+    StateDescriptor::BndryFunc TSAT_fill_class(FORT_EXTRAPFILL,
+       FORT_GROUP_EXTRAPFILL);
+
+    int tsat_start_pos=burnvel_start_pos+nburning;
+
+    tsat_interp.burnvel_nmat=nmat;
+    tsat_interp.burnvel_nten=nten;
+    tsat_interp.burnvel_ncomp_per=1;
+
+    desc_lstGHOST.setComponent(State_Type,tsat_start_pos,TSAT_names,
+     TSAT_bcs,TSAT_fill_class,&tsat_interp);
+
 
       // boundary routines are of type BndryFuncDefaultSUSSMAN
       // setComponent expects a parameter of type 

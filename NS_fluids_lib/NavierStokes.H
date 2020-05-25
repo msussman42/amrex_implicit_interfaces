@@ -630,8 +630,10 @@ protected:
     void avgDown_tag_localMF(int idxMF);
     void level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine);
 
-    void avgDownBURNING_localMF(int idxMF);
-    void level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine);
+    void avgDownBURNING_localMF(
+		int burnvel_MF,
+		int TSAT_MF);
+    void level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,int velflag);
 
     void avgDownCURV_localMF(int idxMF);
     void level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine);

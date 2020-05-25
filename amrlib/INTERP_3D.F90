@@ -1074,6 +1074,7 @@ stop
 
 
       subroutine FORT_EXT_BURNVEL_INTERP( &
+       velflag, &
        time, &
        cburn,DIMS(cburn), &
        fburn,DIMS(fburn), &
@@ -1090,6 +1091,7 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: velflag
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
       REAL_T, intent(in) :: time
@@ -1127,6 +1129,16 @@ stop
       INTEGER_T burnstat
       INTEGER_T bcomp
       REAL_T rburnstat
+      INTEGER_T ncomp_per
+
+      if (velflag.eq.0) then
+       ncomp_per=1
+      else if (velflag.eq.1) then
+       ncomp_per=SDIM
+      else
+       print *,"velflag invalid"
+       stop
+      endif
 
       nhalf=3
       nhalfgrid=1
@@ -1157,7 +1169,7 @@ stop
        print *,"nten invalid"
        stop
       endif
-      if (nburning.eq.nten*(AMREX_SPACEDIM+1)) then
+      if (nburning.eq.nten*(ncomp_per+1)) then
        ! do nothing
       else
        print *,"nburning invalid"
@@ -1252,8 +1264,8 @@ stop
                         ((burnstat.eq.-1).and.(rburnstat.eq.-one)).or. &
                         ((burnstat.eq.-2).and.(rburnstat.eq.-two))) then
                 n_burn(iten,burnstat)=n_burn(iten,burnstat)+1
-                do dir=1,SDIM
-                 bcomp=nten+(iten-1)*SDIM+dir
+                do dir=1,ncomp_per
+                 bcomp=nten+(iten-1)*ncomp_per+dir
                  burn_fine(bcomp,burnstat)= &
                    burn_fine(bcomp,burnstat)+burn_coarse(bcomp)
                 enddo ! dir
@@ -1309,8 +1321,8 @@ stop
                 (n_burn(iten,iflag*iflag_sign).le.n_overlap)) then
              hitflag=1
              fburn(D_DECL(ifine,jfine,kfine),iten)=iflag*iflag_sign
-             do dir=1,SDIM
-              bcomp=nten+(iten-1)*SDIM+dir
+             do dir=1,ncomp_per
+              bcomp=nten+(iten-1)*ncomp_per+dir
               fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
                burn_fine(bcomp,iflag*iflag_sign)/n_burn(iten,iflag*iflag_sign)
              enddo
@@ -1331,8 +1343,8 @@ stop
 
          if (hitflag.eq.0) then
           fburn(D_DECL(ifine,jfine,kfine),iten)=zero
-          do dir=1,SDIM
-           bcomp=nten+(iten-1)*SDIM+dir
+          do dir=1,ncomp_per
+           bcomp=nten+(iten-1)*ncomp_per+dir
            fburn(D_DECL(ifine,jfine,kfine),bcomp)=zero
           enddo
          else if (hitflag.eq.1) then

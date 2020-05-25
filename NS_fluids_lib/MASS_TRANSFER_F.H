@@ -125,6 +125,7 @@ extern "C"
     Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi), 
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
     Real* burnvel,AMREX_ARLIM_P(burnvello),AMREX_ARLIM_P(burnvelhi), 
+    Real* Tsatfab,AMREX_ARLIM_P(Tsatfablo),AMREX_ARLIM_P(Tsatfabhi), 
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi), 
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
     Real* LS_slopes_FD,
@@ -136,7 +137,9 @@ extern "C"
 
 
    void FORT_EXTEND_BURNING_VEL(
-    int* level,int* finest_level,
+    int* velflag,
+    int* level,
+    int* finest_level,
     const Real* xlo,const Real* dx,
     int* nmat,
     int* nten,

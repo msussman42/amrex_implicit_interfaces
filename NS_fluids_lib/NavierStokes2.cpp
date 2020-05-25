@@ -421,7 +421,8 @@ void NavierStokes::avgDown_tag_localMF(int idxMF) {
 } // subroutine avgDown_tag_localMF
 
 
-void NavierStokes::avgDownBURNING_localMF(int idxMF) {
+void NavierStokes::avgDownBURNING_localMF(
+  int burnvel_MF,int TSAT_MF) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -430,16 +431,30 @@ void NavierStokes::avgDownBURNING_localMF(int idxMF) {
 
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
-  debug_ngrow(idxMF,0,2000);
-  ns_fine.debug_ngrow(idxMF,0,2500);
-  MultiFab& S_crse=*localMF[idxMF];
-  MultiFab& S_fine=*ns_fine.localMF[idxMF];
-  if ((S_crse.nComp()==nburning)&&
-      (S_fine.nComp()==nburning)) {
-   level_avgDownBURNING(S_crse,S_fine);
+
+  debug_ngrow(burnvel_MF,0,2000);
+  ns_fine.debug_ngrow(burnvel_MF,0,2500);
+  MultiFab& S_crseB=*localMF[burnvel_MF];
+  MultiFab& S_fineB=*ns_fine.localMF[burnvel_MF];
+  if ((S_crseB.nComp()==nburning)&&
+      (S_fineB.nComp()==nburning)) {
+   int velflag=1;
+   level_avgDownBURNING(S_crseB,S_fineB,velflag);
   } else
-   amrex::Error("S_crse or S_fine invalid nComp");
- }
+   amrex::Error("S_crseB or S_fineB invalid nComp");
+
+  debug_ngrow(TSAT_MF,0,2000);
+  ns_fine.debug_ngrow(TSAT_MF,0,2500);
+  MultiFab& S_crseT=*localMF[TSAT_MF];
+  MultiFab& S_fineT=*ns_fine.localMF[TSAT_MF];
+  if ((S_crseT.nComp()==2*nten)&&
+      (S_fineT.nComp()==2*nten)) {
+   int velflag=0;
+   level_avgDownBURNING(S_crseT,S_fineT,velflag);
+  } else
+   amrex::Error("S_crseT or S_fineT invalid nComp");
+
+ } // level<finest_level
 
 } // subroutine avgDownBURNING_localMF
 

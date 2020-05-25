@@ -8523,6 +8523,7 @@ END SUBROUTINE SIMP
        ! (note: after level_avgDownBURNING comes 
        !  level_phase_change_rate_extend)
       subroutine FORT_AVGDOWN_BURNING( &
+       velflag, &
        problo, &
        dxf, &
        level_c,level_f, &
@@ -8543,6 +8544,7 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: velflag
       INTEGER_T, intent(in) :: level_c
       INTEGER_T, intent(in) :: level_f
       INTEGER_T, intent(in) :: bfact_c
@@ -8576,6 +8578,8 @@ END SUBROUTINE SIMP
       REAL_T velwt(nten)
       INTEGER_T local_comp
       INTEGER_T avgdown_sweep
+      INTEGER_T ncomp_expect
+      INTEGER_T ncomp_per_interface
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -8589,7 +8593,17 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      if (ncomp.eq.nten*(SDIM+1)) then
+      if (velflag.eq.1) then  ! burning velocity
+       ncomp_per_interface=SDIM
+      else if (velflag.eq.0) then ! saturation temperature
+       ncomp_per_interface=1
+      else
+       print *,"velflag invalid"
+       stop
+      endif
+      ncomp_expect=nten+nten*ncomp_per_interface
+
+      if (ncomp.eq.ncomp_expect) then
        ! do nothing
       else
        print *,"ncomp invalid34"
@@ -8695,8 +8709,8 @@ END SUBROUTINE SIMP
                   ! do nothing
                  else if (fine_test.eq.coarse_test) then
                   velwt(iten)=velwt(iten)+volall
-                  do dir2=1,SDIM
-                   local_comp=nten+(iten-1)*SDIM+dir2
+                  do dir2=1,ncomp_per_interface
+                   local_comp=nten+(iten-1)*ncomp_per_interface+dir2
                    crse_value(local_comp)=crse_value(local_comp)+ &
                     volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
                   enddo
@@ -8742,16 +8756,16 @@ END SUBROUTINE SIMP
             stop
            endif
            crse(D_DECL(ic,jc,kc),iten)=zero
-           do dir2=1,SDIM
-            crse(D_DECL(ic,jc,kc),nten+(iten-1)*SDIM+dir2)=zero
+           do dir2=1,ncomp_per_interface
+            crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)=zero
            enddo
           else if ((coarse_test.eq.1).or. &
                    (coarse_test.eq.-1)) then
            if (velwt(iten).gt.zero) then
             crse(D_DECL(ic,jc,kc),iten)=coarse_test
-            do dir2=1,SDIM
-             crse(D_DECL(ic,jc,kc),nten+(iten-1)*SDIM+dir2)= &
-              crse_value(nten+(iten-1)*SDIM+dir2)/velwt(iten)
+            do dir2=1,ncomp_per_interface
+             crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)= &
+              crse_value(nten+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
             enddo
            else
             print *,"velwt invalid"

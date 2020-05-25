@@ -540,6 +540,7 @@ extern "C" {
       const int* lof, const int* hif);
 
     void FORT_AVGDOWN_BURNING(
+      int* velflag,
       const Real* problo,
       const Real* dxf,
       int* level_c,int* level_f,

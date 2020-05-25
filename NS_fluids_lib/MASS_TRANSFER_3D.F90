@@ -3580,7 +3580,9 @@ stop
 
         ! ngrow corresponds to normal_probe_size+3
       subroutine FORT_EXTEND_BURNING_VEL( &
-        level,finest_level, &
+        velflag, &
+        level, &
+        finest_level, &
         xlo,dx, &
         nmat, &
         nten, &
@@ -3596,7 +3598,9 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level,finest_level 
+      INTEGER_T, intent(in) :: velflag
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level 
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: nmat
@@ -3637,8 +3641,18 @@ stop
       INTEGER_T im_local
       INTEGER_T nten_test
       INTEGER_T scomp,nhalf
+      INTEGER_T ncomp_per
 
       nhalf=3
+
+      if (velflag.eq.1) then
+       ncomp_per=SDIM
+      else if (velflag.eq.0) then
+       ncomp_per=1
+      else
+       print *,"velflag invalid"
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact invalid118"
@@ -3669,7 +3683,7 @@ stop
        print *,"nten invalid velextend nten, nten_test ",nten,nten_test
        stop
       endif
-      if (nburning.eq.nten*(SDIM+1)) then
+      if (nburning.eq.nten*(ncomp_per+1)) then
        ! do nothing
       else
        print *,"nburning invalid"
@@ -3795,8 +3809,11 @@ stop
                 if (sten_hi(dir).gt.fabhi(dir)+ngrow_make_distance) then
                  sten_hi(dir)=fabhi(dir)+ngrow_make_distance
                 endif
-                vel_sum(dir)=zero
                enddo ! dir=1..sdim
+
+               do dir=1,ncomp_per
+                vel_sum(dir)=zero
+               enddo
 
                total_weight = zero
 
@@ -3818,8 +3835,8 @@ stop
                  weight=sqrt(weight)
                  weight =one/((weight+eps)**four)
                  total_weight = total_weight+weight
-                 do dir=1,SDIM
-                  scomp=nten+(iten-1)*SDIM+dir
+                 do dir=1,ncomp_per
+                  scomp=nten+(iten-1)*ncomp_per+dir
                   vel_sum(dir) = vel_sum(dir)+ &
                    weight*vel(D_DECL(i_sp,j_sp,k_sp),scomp)
                  enddo
@@ -3841,8 +3858,8 @@ stop
                enddo ! i_sp,j_sp,k_sp
 
                if (total_weight.gt.zero) then
-                do dir=1,SDIM
-                 scomp=nten+(iten-1)*SDIM+dir
+                do dir=1,ncomp_per
+                 scomp=nten+(iten-1)*ncomp_per+dir
                  vel(D_DECL(i,j,k),scomp)=vel_sum(dir)/total_weight
                 enddo
                 vel(D_DECL(i,j,k),iten)=two*sign_local
@@ -3938,6 +3955,7 @@ stop
        typefab,DIMS(typefab), &
        maskcov,DIMS(maskcov), &
        burnvel,DIMS(burnvel), &
+       Tsatfab,DIMS(Tsatfab), &
        LS,DIMS(LS),  &
        LSnew,DIMS(LSnew), & 
        LS_slopes_FD, &
@@ -4001,6 +4019,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(typefab)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(burnvel)
+      INTEGER_T, intent(in) :: DIMDEC(Tsatfab)
       INTEGER_T, intent(in) :: DIMDEC(LS) ! declare the x,y,z dimensions of LS
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
       INTEGER_T, intent(in) :: DIMDEC(LS_slopes_FD)
@@ -4015,6 +4034,8 @@ stop
 
         ! destination vel: first nten components are the status.
       REAL_T, intent(out) :: burnvel(DIMV(burnvel),nburning)
+        ! TSAT : first nten components are the status.
+      REAL_T, intent(out) :: Tsatfab(DIMV(Tsatfab),2*nten)
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
@@ -4054,7 +4075,7 @@ stop
       REAL_T tempdst
       REAL_T densrc
       REAL_T dendst
-      REAL_T Tsat
+      REAL_T local_Tsat(0:1)
       REAL_T vel_phasechange(0:1)
       REAL_T LL(0:1)
       INTEGER_T valid_phase_change(0:1)
@@ -4228,6 +4249,9 @@ stop
       call checkbound(fablo,fabhi, &
         DIMS(burnvel), &
         ngrow_make_distance,-1,1250)
+      call checkbound(fablo,fabhi, &
+        DIMS(Tsatfab), &
+        ngrow_make_distance,-1,1250)
       call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,1251)
       call checkbound(fablo,fabhi,DIMS(LS),ngrow,-1,1252)
       call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,1253)
@@ -4349,7 +4373,7 @@ stop
                  (is_rigid(nmat,im_opp).eq.1)) then
               ! do nothing
              else if (LL(ireverse).ne.zero) then
-              Tsat=saturation_temp(iten+ireverse*nten)
+              local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
 
               found_path=0
 
@@ -4432,7 +4456,8 @@ stop
                  ! subroutine get_interface_temperature defined here in
                  ! MASS_TRANSFER_3D.F90
                 call get_interface_temperature( &
-                  Tsat,iten+ireverse*nten, &
+                  local_Tsat(ireverse), &
+                  iten+ireverse*nten, &
                   saturation_temp, &
                   use_exact_temperature, &
                   xI,cur_time,nmat,nten,7)
@@ -4600,7 +4625,7 @@ stop
                   xlo, &
                   xtarget_probe, &
                   xI, &
-                  Tsat, &
+                  local_Tsat(ireverse), &
                   im_target_probe, &
                   nmat, &
                   tcomp_probe, &
@@ -4651,13 +4676,16 @@ stop
                   LS_pos_probe_counter=LS_pos_probe_counter+1
 
                   call grad_probe_sanity(xI,xtarget_probe, &
-                    temp_target_probe,Tsat,LL(ireverse))
+                    temp_target_probe, &
+                    local_Tsat(ireverse), &
+                    LL(ireverse))
 
                  else if ((im_primary_probe.ne.im_target_probe).and. &
                           (im_primary_probe.ge.1).and. &
                           (im_primary_probe.le.nmat)) then
 
-                  temp_target_probe=Tsat
+                    ! default value for temp_target_probe
+                  temp_target_probe=local_Tsat(ireverse)
     
                   call get_secondary_material(LSPROBE,nmat, &
                      im_primary_probe, &
@@ -4678,7 +4706,7 @@ stop
                       dx, &
                       xlo, &
                       xI, &
-                      Tsat, &
+                      local_Tsat(ireverse), &
                       im_target_probe, &
                       im_target_probe_opp, &
                       nmat, &
@@ -4703,7 +4731,7 @@ stop
                   else if ((im_primary_probe.eq.im_target_probe_opp).or. &
                            (im_secondary_probe.ne.im_target_probe).or. &
                            (LSPROBE(im_target_probe).le.-dxprobe_target)) then
-                   temp_target_probe=Tsat
+                   temp_target_probe=local_Tsat(ireverse)
                   else
                    print *,"probe parameters bust"
                    stop
@@ -4713,7 +4741,8 @@ stop
                   stop
                  endif
 
-                 temp_target_INT=Tsat
+                  ! default value for temp_target_INT
+                 temp_target_INT=local_Tsat(ireverse)
 
                  ! freezing_mod=0 (sharp interface stefan model)
                  ! freezing_mod=1 (source term model)
@@ -4869,8 +4898,9 @@ stop
                          i,j,LS_INT_OWN_counter
                   print *,"i,j,VOF_pos_probe_counter ", &
                          i,j,VOF_pos_probe_counter
-                  print *,"i,j,tempsrc,tempdst,Tsat ", &
-                         i,j,tempsrc,tempdst,Tsat
+                  print *,"i,j,tempsrc,tempdst,local_Tsat(ireverse) ", &
+                         i,j,tempsrc,tempdst, &
+                         local_Tsat(ireverse)
                   print *,"i,j,LL,dxprobe_source,dxprobe_dest ", &
                          i,j,LL(ireverse),dxprobe_source,dxprobe_dest
                  endif
@@ -5159,8 +5189,8 @@ stop
                   ! if freezing_mod==0 stefan problem
                   !                  5, some kind of evaporation model,
                   !                  or 1, then
-                  !  DTsrc=(Tsrc-Tsat)
-                  !  DTdst=(Tdst-Tsat)
+                  !  DTsrc=(Tsrc-local_Tsat(ireverse))
+                  !  DTdst=(Tdst-local_Tsat(ireverse))
                   !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
                   !  veldst=kdst*DTdst/(LL * dxprobe_dest)
                   !  in: PROB.F90
@@ -5173,7 +5203,7 @@ stop
                   densrc,dendst, &
                   ksource,kdest, & ! ksrc,kdst
                   tempsrc,tempdst, & ! Tsrc,Tdst
-                  Tsat, &
+                  local_Tsat(ireverse), &
                   Tsrc_INT,Tdst_INT, &
                   LL(ireverse), &
                   source_perim_factor, &
@@ -5200,8 +5230,8 @@ stop
                   Fsource,Fdest)
 #elif (STANDALONE==1)
                  if (freezing_mod.eq.0) then
-                  DTsrc=tempsrc-Tsat
-                  DTdst=tempdst-Tsat
+                  DTsrc=tempsrc-local_Tsat(ireverse)
+                  DTdst=tempdst-local_Tsat(ireverse)
                   velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe_source)
                   veldst=kdest*DTdst/(LL(ireverse)*dxprobe_dest)
                  
@@ -5237,7 +5267,7 @@ stop
                    print *,"i,j,k,ireverse,vel_phasechange ", &
                     i,j,k,ireverse,vel_phasechange(ireverse)
                    print *,"im_source,im_dest ",im_source,im_dest
-                   print *,"Tsat ",Tsat
+                   print *,"local_Tsat(ireverse) ",local_Tsat(ireverse)
                    print *,"tempsrc,Tsrc_INT ",tempsrc,Tsrc_INT
                    print *,"tempdst,Tdst_INT ",tempdst,Tdst_INT
                   endif
@@ -5281,7 +5311,8 @@ stop
                   print *,"LL,dxmin ",LL(ireverse),dxmin
                   print *,"dxprobe_source=",dxprobe_source
                   print *,"dxprobe_dest=",dxprobe_dest
-                  print *,"ksource,kdest,Tsat ",ksource,kdest,Tsat
+                  print *,"ksource,kdest,local_Tsat(ireverse) ", &
+                          ksource,kdest,local_Tsat(ireverse)
                   print *,"tempsrc,tempdst,densrc ",tempsrc,tempdst,densrc
                   print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
                   print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
@@ -5414,16 +5445,32 @@ stop
             if ((im_dest.ge.1).and.(im_dest.le.nmat)) then
              if (ireverse.eq.0) then
               burnvel(D_DECL(i,j,k),iten)=one
+              Tsatfab(D_DECL(i,j,k),iten)=one
              else if (ireverse.eq.1) then
               burnvel(D_DECL(i,j,k),iten)=-one
+              Tsatfab(D_DECL(i,j,k),iten)=-one
              else
               print *,"ireverse invalid"
               stop
              endif
-             do dir=1,SDIM
-              burnvel(D_DECL(i,j,k),nten+(iten-1)*SDIM+dir)= &
+
+             if (local_Tsat(ireverse).gt.zero) then
+              Tsatfab(D_DECL(i,j,k),nten+iten)=local_Tsat(ireverse)
+             else
+              print *,"local_Tsat(ireverse) should be positive"
+              stop
+             endif
+
+             if ((vel_phasechange(ireverse).ge.zero).or. &
+                 (vel_phasechange(ireverse).le.zero)) then
+              do dir=1,SDIM
+               burnvel(D_DECL(i,j,k),nten+(iten-1)*SDIM+dir)= &
                 SIGNVEL*nrmFD(dir)*vel_phasechange(ireverse)
-             enddo
+              enddo
+             else
+              print *,"vel_phasechange(ireverse) cannot be NaN"
+              stop
+             endif
             else
              print *,"im_dest bust"
              stop
