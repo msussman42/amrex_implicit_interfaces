@@ -5075,7 +5075,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
      &visc_coef);
    } // mfi
 } // omp
-   ns_reconcile_d_num(45);
+   ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
+                           //ParallelDescriptor::ReduceRealSum
+			   //thread_class::reconcile_d_numPts(caller_id)
 
    if (dealloc_history==0) {
     // do nothing
