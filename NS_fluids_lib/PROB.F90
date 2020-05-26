@@ -29895,7 +29895,7 @@ end subroutine RatePhaseChange
         ! freezing_mod=1 (source term model)
         ! freezing_mod=2 (hydrate model)
         ! freezing_mod=3 (wildfire)
-        ! freezing_mod=4 (source term model)
+        ! freezing_mod=4 (source term model - Tanasawa Model)
         ! freezing_mod=5 (evaporation/condensation)
        else if ((freezing_mod.eq.0).or. &
                 (freezing_mod.eq.5).or. &

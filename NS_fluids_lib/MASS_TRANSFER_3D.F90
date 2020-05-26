@@ -2038,7 +2038,7 @@ stop
            print *,"mass_frac_id invalid"
            stop
           endif
-         else if (freezing_mod.eq.4) then ! force: V_evaporate = V_condense
+         else if (freezing_mod.eq.4) then ! force: V_evaporate = V_condense (Tanasawa model)
           if (LL.ne.zero) then
            if (ireverse.eq.0) then ! evaporation
             if (LL.le.zero) then
@@ -4748,7 +4748,7 @@ stop
                  ! freezing_mod=1 (source term model)
                  ! freezing_mod=2 (hydrate model)
                  ! freezing_mod=3 (wildfire)
-                 ! freezing_mod=4 (source term model)
+                 ! freezing_mod=4 (source term model - Tanasawa Model)
                  ! freezing_mod=5 (evaporation/condensation)
                  if ((freezing_mod.eq.0).or. &
                      (freezing_mod.eq.5)) then
