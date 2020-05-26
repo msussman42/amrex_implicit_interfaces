@@ -100,6 +100,12 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
  endif
  if (abs(substrate_height-(ice_vertical-half*radblob)).gt.VOFTOL) then
   print *,"bottom of original water+ice block must coincide w/substrate"
+  print *,"sdim= ",SDIM
+  print *,"yblob=",yblob
+  print *,"zblob=",zblob
+  print *,"ice_vertical=",ice_vertical
+  print *,"substrate_height=",substrate_height
+  print *,"radblob=",radblob
   stop
  endif
 
@@ -112,7 +118,7 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
   !ice (is above water)
   call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
     substrate_height+radblob3,substrate_height+radblob,LS(3))
-    LS(3)=-LS(3)
+  LS(3)=-LS(3)
 
   !air; dist<0 inside the square
   call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
@@ -132,6 +138,7 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
      yblob-half*radblob,yblob+half*radblob, &
      substrate_height+radblob3,substrate_height+radblob, &
      x(1),x(2),x(SDIM),LS(3))
+  LS(3)=-LS(3)
 
   !air; dist<0 inside the square
   !air everywhere not ice or water.

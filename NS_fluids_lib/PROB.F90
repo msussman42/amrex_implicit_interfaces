@@ -39175,7 +39175,7 @@ end subroutine initialize2d
         enddo !im=1..nmat
 
         if ((vfracsum_test.le.half).or.(vfracsum_test.gt.1.5)) then
-         print *,"WARNING: vfracsum_test= ",vfracsum_test
+         print *,"FAILED: vfracsum_test= ",vfracsum_test
          do im=1,nmat
           vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
           print *,"im,vfrac ",im,scalc(vofcomp_raw)
@@ -39189,6 +39189,7 @@ end subroutine initialize2d
            radblob,radblob2,radblob3,radblob4
          print *,"xblob,yblob,zblob ",xblob,yblob,zblob
          print *,"probtype ",probtype
+         stop
         endif
 
         do imls=1,nmat 

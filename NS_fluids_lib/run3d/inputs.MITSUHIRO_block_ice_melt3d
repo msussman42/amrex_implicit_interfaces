@@ -217,6 +217,7 @@ ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 # freezing_model=0 => stefan law  V=[k grad T dot n]/L
 # 1 = mystery source term model
 # 2 = hydrate
+# 3 = wildfires (combustion) ?
 # 4 = Tanasawa model  (no extra species variable required)
 #     rate of evaporation is proportional to 
 #     half*(Tsrc_INT+Tdst_INT)-Tsat  i.e.
@@ -228,8 +229,8 @@ ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 #     a) species (rho Y)_{t} + div(rho u Y) = div (D rho grad Y)
 #        Y is the mass fraction of vapor within the gas.
 #        rho is the total density of the gas/vapor mixture
-# 6 = Schrage evaporation model?
-# 7 = Tanguy's model (the most realistic): 
+# 6 = Schrage evaporation model? (no mass fraction variable)
+# 7 = Tanguy's model (the most realistic):  (mass fraction variable required)
 #     a system of 4 equations and 4 unknowns are solved
 #     for Mdot, Y_interface, T_sat, ....
 ns.freezing_model=5 0 0 0 0 0 0 0 0 0 0 0
@@ -321,7 +322,7 @@ ns.initial_temperature=273.0 273.0 273.0 353.0  # dimensionless
 # dxcoarse=2/64=1/32
 ns.xblob=0.0  # center of ice block 
 ns.yblob=0.425
-ns.zblob=0.0
+ns.zblob=0.425
 ns.xblob2=0.0 # center of surface of heated substrate (xblob2,yblob2)   
 ns.yblob2=0.125 #4 X dxcoarse=4 x (1/32) =  1/8
 ns.zblob2=0.125
