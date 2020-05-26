@@ -1394,6 +1394,7 @@ stop
            dist_to_CL=zero
            ZEYU_d_closest=abs(dist_to_CL)
 
+            ! use static angle
            if (use_DCA.eq.-1) then
 
             ZEYU_thet_d=acos(cos_angle)

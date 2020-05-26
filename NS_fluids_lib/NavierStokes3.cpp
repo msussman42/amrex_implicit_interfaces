@@ -3107,6 +3107,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           // S_new is level 0 data
         MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 	int caller_id=1;
+	 // data file name "VISCSOLVE<stuff>.plt"
+	 // after the viscous solve, but before the pressure projection.
+	 // cell data in the fluid, next to the solid, should "make sense"
+	 // xvel,yvel,zvel,pressure,(density, temperature) x nmat,
+	 // (VFRAC,centroid) x nmat, error indicator
         writeSanityCheckData(
          "VISCSOLVE",
          "in: NavierStokes::do_the_advance, State_Type after veldiffuseALL", 

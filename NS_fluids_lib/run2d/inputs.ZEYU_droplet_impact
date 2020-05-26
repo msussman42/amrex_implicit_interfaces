@@ -136,14 +136,14 @@ ns.gravity        = -980.0  # ZEYU
 #  sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 #  if theta=90 degrees,
 #  sigma_SV=sigma_SL
-#  12,13,23
+#  12=LV,13=SL,23=SV
 ns.tension=73.0 73.0 73.0  #ZEYU  dyne/cm
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
 #law_of_the_wall=0 if static angle condition or non-GNBC dynamic angle 
 #                  conditions.
 #if law_of_the_wall=2 (GNBC) then
 # calls to FORT_WALLFUNCTION and getGhostVel are made.
-ns.law_of_the_wall=0  
+ns.law_of_the_wall=2
 # =-1 static angle
 # =1 GNBC
 # =2 Jiang 1970
@@ -153,7 +153,7 @@ ns.law_of_the_wall=0
 # =6 Bracke1989
 # =7 Blake2006, Popescu2008
 # =8 Cox 1986
-ns.ZEYU_DCA_SELECT=2
+ns.ZEYU_DCA_SELECT=1
 ns.use_lsa=0
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 

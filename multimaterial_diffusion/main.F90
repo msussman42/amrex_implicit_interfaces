@@ -17,265 +17,6 @@ USE variable_temperature_drop
 
 IMPLICIT NONE
 
-! Dai and Scannapieco: no graph or table 
-!  discussing convergence characteristics
-!  of the gradient for multimaterial problems.
-! Garimella and Lipnikov: 2nd order, but rate of convergence not 
-!  investigated for filament problem?
-! Dawes: surrogate supermesh - filament problem?
-! Kinkinzon: filament over 1 cell thick
-! Zhiliakov et al: ???
-! Yang Liu
-! problem type
-! 13 = star with thin filament
-!      (vof_cisl.F90: pentaeps, dirichlet_pentafoil)
-! 14 = star for two material sanity check
-! 15 = hypocycloid with 2 materials
-! 16 = nucleate boiling diffusion with thin 
-!      filament between vapor bubble and substrate
-!      (vof_cisl.F90: thermal_delta, declared in vof_cisl but defined in main)
-! 17 = hypocycloid with 5 materials
-! 19 = annulus cvg test
-! 20 = hypocycloid with 6 materials
-!
-
-! July 5, 2019 Infinity norm for LSexact( x_face_centroid ), probtype=4
-!  512  9.3E-7  (areaface: 1.1E-7, dir,side=1,2 i,j=346,439)
-!  256  3.83E-6  (areaface: 1.0E-8, dir,side=1,2 i,j=114,26)
-!  128  1.46E-5  (areaface: 1.0E-8, dir,side=1,2 i,j=114,26)
-!  64   5.96E-5  (areaface: 2.9E-6, dir,side=1,2 i,j=21,8)
-!
-! July 10, 2019 Infinity norm for LSexact( x_face_centroid ), probtype=16
-! 256   3.0E-5 (areaface: 3.0E-6)
-! 128   1.1E-4 (areaface: 1.4E-5)
-!  64   4.4E-4 (areaface: 7.5E-5)
-! YANG LIU MODIFY TABLE
-! probtype==13 (pentafoil), dirichlet bc, ERRTOL=0.999999D0, thick (0.2d0),
-! TSTOP=1.25E-2, operator_ext=1 operator_int=3 linear exact=1,
-!       L1      L2      LINF    L1_grd  L2_grd   LINF_grd Linf_Igrd L1_Igrd
-!32(1)  8.7E-5  9.7E-5  3.5E-4   6.5E-4  1.1E-3   5.6E-3    0.48    8.0E-2
-!64(4)  2.3E-5  2.4E-5  4.4E-5   1.5E-4  2.1E-4   8.4E-4    0.57    6.7E-2
-!128(16) 5.9E-6 6.0E-6  2.2E-5   3.8E-5  6.3E-5   1.1E-3    0.54    4.0E-2
-!256(64) 1.4E-6 1.5E-6  4.5E-6   1.0E-5  1.9E-5   4.3E-4    0.62    4.0E-2
-!
-! YANG LIU MODIFY TABLE
-! probtype==13 (pentafoil), dirichlet bc, ERRTOL=0.01D0, thin (0.05d0),
-! TSTOP=1.25E-2, operator_ext=1 operator_int=3 linear exact=1,
-! note: no stencil available for getting interface flux.
-!       L1      L2      LINF    L1_grd  L2_grd   LINF_grd 
-! 32(1) 3.6E-4 5.9E-4  2.4E-3   2.4E-2 3.6E-2    1.5E-1   
-! 64(2) 1.6E-4 2.2E-4  6.0E-4   1.5E-2 2.3E-2    8.7E-2   
-!128(4) 1.5E-5 2.2E-5  1.1E-4   2.3E-3 4.5E-3    3.1E-2
-!256(8) 1.6E-6 1.7E-6  9.8E-6   1.7E-4 3.0E-4    3.5E-3  
-!
-! YANG LIU MODIFY TABLE
-! probtype==13 (pentafoil), neumann bc, ERRTOL=0.999999D0, thick (0.2d0),
-! TSTOP=1.25E-2, operator_ext=1 operator_int=3 linear exact=1
-! timesteps refined by factor of 2
-! (OTHERWISE SIMULATIONS WILL TAKE A LONG TIME)
-! 32(1), 64(2), 128(4), 256(8), 512(16)
-!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
-!32/64   2.7E-3  3.0E-3  5.2E-3 3.7E-2     3.7E-2  3.9E-2              
-!64/128  1.7E-3  1.9E-3  3.0E-3 1.8E-2     1.8E-2  2.6E-2              
-!128/256 9.5E-4  1.1E-3  1.7E-3 9.3E-3     1.0E-2  1.6E-2              
-!256/512 5.1E-4  5.6E-4  8.8E-4 4.9E-3     5.4E-3  9.2E-3              
-!
-! YANG LIU MODIFY TABLE
-! probtype==16 (multiscale), error for material 2, kratio=1000:1, 
-! material 2 is smooth.  filament thickness=0.02
-! TSTOP=2.0,  
-! timesteps refined by factor of 2.  16(4) 32(8), 64(16), 128(32), 256(64)
-! SIMPLE (smooth):
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16/32  0.03125    1.2E-1   1.2E-1   1.2E-1  1.3E-2     1.5E-2  2.5E-2
-!32/64  0.015625   3.1E-1   3.1E-1   3.1E-1  2.2E-2     2.2E-2  2.7E-2
-!64/128 0.0078125  1.9E-1   1.9E-1   1.9E-1  1.3E-2     1.3E-2  1.8E-2
-!128/256 3.90625E-3 8.0E-2  8.0E-2   8.1E-2  5.2E-3     5.3E-3  9.3E-3
-!average flux:(16) -0.131 (32) -0.155 (64) -0.177 (128) -0.192 (256) -0.197
-!
-! YANG LIU MODIFY TABLE
-! SIMPLE (material 2 has corners):
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16/32  0.03125      STENCIL NOT AVAILABLE FOR GRADIENT ERROR
-!32/64  0.015625   3.7E-1   3.7E-1   3.8E-1  1.3E-2     1.3E-2  1.3E-2
-!64/128 0.0078125  2.4E-1   2.4E-1   2.4E-1  6.4E-3     6.8E-3  1.3E-2
-!128/256 3.90625E-3 1.3E-1  1.3E-1   1.3E-1  3.7E-3     4.0E-3  9.2E-3
-!average flux:(16) -0.121 (32) -0.156 (64) -0.177 (128) -0.187 (256) -0.191
-!
-! YANG LIU MODIFY TABLE
-! DS:
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16/32  0.03125    2.1E-1   2.1E-1   2.2E-1  2.1E-2     2.3E-2  3.4E-2
-!32/64  0.015625   3.3E-1   3.3E-1   3.3E-1  2.5E-2     2.5E-2  3.0E-2
-!64/128 0.0078125  2.0E-1   2.0E-1   2.0E-1  1.4E-2     1.4E-2  2.0E-2
-!128/256 3.90625E-3 1.2E-1  1.2E-1   1.2E-1  7.7E-3     7.8E-3  2.1E-2
-!average flux:(16) -0.131 (32) -0.148 (64) -0.172 (128) -0.186 (256) -0.195
-!
-! YANG LIU MODIFY TABLE
-! OP:
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16/32  0.03125    4.6E-3   4.7E-3   5.5E-3  4.3E-3     4.7E-3  7.8E-3
-!32/64  0.015625   1.3E-1   1.3E-1   1.3E-1  9.6E-3     9.6E-3  1.3E-2
-!64/128 0.0078125  1.2E-1   1.2E-1   1.2E-1  7.9E-3     8.1E-3  1.3E-2
-!128/256 3.90625E-3 6.2E-2  6.2E-2   6.2E-2  3.9E-3     4.0E-3  7.1E-3
-!average flux:(16) -0.137 (32) -0.173 (64) -0.185 (128) -0.194 (256)-0.199
-!
-!
-! YANG LIU MODIFY TABLE
-! FUTURE WORK: LINEAR EXACT METHOD WHEN K=constant
-! AMR free test: does the error decrease without refining the Eulerian grid?
-!  i.e. does adding extra materials cause the error to go down?
-! kratio=1
-! SIMPLE (smooth):
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16     0.0625     4.7E-2  5.6E-2   1.0E-1  2.5E-1     3.3E-1  5.5E-1
-!32     0.03125    3.2E-2  4.0E-2   8.6E-2  1.7E-1     2.3E-1  4.2E-1
-!64     0.015625   1.7E-2  2.1E-2   4.7E-2  8.7E-2     1.1E-1  2.7E-1
-!128    0.0078125  7.9E-3  9.8E-3   2.3E-2  4.1E-2     5.4E-2  2.5E-1
-!256    0.00390625 4.0E-3  4.9E-3   1.1E-2  2.1E-2     2.8E-2  2.2E-1
-!average flux:(16) -9.06 (32) -9.31 (64) -9.46 (128) -9.54 (256) 9.58
-!
-! kratio=1
-! SIMPLE (corner):
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16     0.0625     6.9E-2  7.5E-2   1.0E-1  4.8E-1     7.7E-1  3.3
-!32     0.03125    5.2E-2  5.5E-2   9.4E-2  3.5E-1     6.1E-1  3.4
-!64     0.015625   2.3E-2  2.5E-2   5.0E-2  1.8E-1     3.8E-1  3.5
-!128    0.0078125  1.2E-2  1.2E-2   2.5E-2  1.0E-1     2.9E-1  3.4
-!256    0.00390625 5.8E-3  6.2E-3   1.3E-2  5.6E-2     2.0E-1  3.7
-!average flux:(16) -8.95 (32) -9.73 (64) -9.90 (128) -9.99 (256) -10.03
-
-!
-! YANG: DO NOT ADD THIS DATA
-! DS:
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16     0.0625     5.0E-2  6.0E-2   1.1E-1  2.8E-1     3.8E-1  6.4E-1
-!32     0.03125    4.7E-2  5.9E-2   1.5E-1  3.2E-1     4.1E-1  1.1
-!64     0.015625   2.1E-2  2.6E-2   6.6E-2  1.2E-1     1.5E-1  4.9E-1
-!128    0.0078125  1.1E-2  1.4E-2   4.8E-2  7.0E-3     1.2E-1  2.3
-!256    0.00390625 5.7E-3  6.9E-3   2.0E-2  3.3E-2     5.5E-2  9.3E-1
-!average flux:(16) -9.00 (32) -9.10 (64) -9.42 (128)-9.51  (256) -9.56
-!
-! YANG: DO NOT ADD THIS DATA
-! OP:
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16     0.0625     4.0E-2  4.9E-2   1.1E-1  2.5E-1     3.5E-1  5.5E-1
-!32     0.03125    2.5E-2  3.1E-2   7.0E-2  1.5E-1     2.0E-1  3.7E-1
-!64     0.015625   1.4E-2  1.7E-2   4.3E-2  7.8E-2     1.0E-1  2.1E-1
-!128    0.0078125  6.9E-3  8.7E-3   2.2E-2  3.9E-2     5.1E-2  1.6E-1
-!256    0.00390625 3.5E-3  4.4E-3   1.1E-2  2.0E-2     2.6E-2  1.5E-1
-!average flux:(16) -9.01 (32) -9.36 (64) -9.48 (128) -9.55 (256) -9.58
-!
-! YANG: DO NOT ADD THIS DATA
-! "LE":
-!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
-!16     0.0625     1.9E-1  1.9E-1   2.4E-1  2.4E-1     3.1E-1  5.6E-1
-!32     0.03125    7.7E-2  8.2E-2   1.6E-1  2.1E-1     2.7E-1  9.8E-1
-!64     0.015625   3.3E-3  3.9E-3   9.5E-3  2.3E-2     4.2E-2  4.5E-1
-!128    0.0078125  3.2E-4  4.5E-4   3.6E-3  6.3E-3     1.6E-2  2.7E-1
-!256    0.00390625 1.9E-4  2.6E-4   1.6E-3  3.6E-3     8.9E-3  2.1E-1
-!average flux:(16) -9.06 (32) -9.34 (64) -9.59 (128) -9.61 (256) -9.61
-!
-! YANG LIU CHECK TABLE IF AGREEMENT
-! probtype==15 (hypocycloid 2 mat), 2000 markers
-! ERRTOL=0.999999D0, 
-! TSTOP=1.25E-2, operator_ext=1 operator_int=1 linear exact=0,
-! timesteps refined by factor of 2.  32(1), 64(2), 128(4), 256(8), 512(16)
-!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
-!32/64   1.4E-1  2.1E-1  5.5E-1 2.7        3.7     8.8              
-!64/128  1.1E-1  1.6E-1  4.1E-1 3.0        3.9     7.7              
-!128/256 7.2E-2  9.7E-2  2.1E-1 1.8        2.2     4.3              
-!256/512 4.0E-2  5.3E-2  1.1E-1 1.0        1.2     2.5
-!
-! YANG LIU CHECK TABLE IF AGREEMENT
-! probtype==15 (hypocycloid 2 mat), 4000 markers
-! ERRTOL=0.999999D0, 
-! TSTOP=1.25E-2, operator_ext=1 operator_int=1 linear exact=1,
-! timesteps refined by factor of 2.  32(1), 64(2), 128(4), 256(8), 512(16)
-!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
-!32/64   1.4E-1  2.1E-1  5.5E-1 2.7        3.7     8.8              
-!64/128  1.1E-1  1.6E-1  4.1E-1 3.0        3.9     7.8              
-!128/256 7.2E-2  9.7E-2  2.1E-1 1.8        2.2     4.3              
-!256/512 4.0E-2  5.3E-2  1.1E-1 1.0        1.2     2.6
-!
-! YANG LIU CHECK TABLE IF AGREEMENT
-! probtype==20 (hypocycloid 6 mat), 2000 markers,type 3
-! ERRTOL=0.999999D0, 
-! TSTOP=1.25E-2, operator_ext=1 operator_int=1 linear exact=0,
-! timesteps refined by factor of 2.  32(1), 64(2), 128(4), 256(8), 512(16)
-!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
-!32/64   4.3E-1  4.3E-1  5.5E-1 3.1        3.2      4.2             
-!64/128  2.7E-1  2.7E-1  3.1E-1 1.2        1.4      2.3
-!128/256 1.5E-1  1.5E-1  1.8E-1 0.79       0.89     1.8              
-!256/512 7.9E-2  8.1E-2  1.0E-1 5.2E-1     5.9E-1   1.4              
-!
-! YANG LIU CHECK TABLE IF AGREEMENT
-! probtype==20 (hypocycloid 6 mat), 2000 markers,type 2
-! ERRTOL=0.999999D0, 
-! TSTOP=1.25E-2, operator_ext=1 operator_int=1 linear exact=0,
-! timesteps refined by factor of 2.  32(1), 64(2), 128(4), 256(8), 512(16)
-!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
-!32/64   1.9E-1  2.5E-1  5.5E-1 5.7        6.0      8.8             
-!64/128  1.3E-1  1.8E-1  4.1E-1 4.2        4.9      7.8
-!128/256 8.1E-2  1.0E-1  2.1E-1 2.2        2.5      4.3              
-!256/512 4.5E-2  5.6E-2  1.1E-1 1.1        1.3      2.5              
-!
-! probtype==1, dirichlet bc, ERRTOL=0.999999D0, thick, TSTOP=1.25E-2
-! operator_ext=1 operator_int=3 linear exact=1
-!        L1         L2   Linf   L1 grad    L2 grad Linf grad  Linf flux
-! 32(1)  2.6E-3 2.9E-3 5.5E-3   1.6E-2     2.1E-2   6.6E-2    1.2E-1
-! 64(4)  7.1E-4 8.2E-4 1.7E-3   5.7E-3     7.3E-3   2.8E-2    4.8E-2 
-!128(16) 1.7E-4 2.0E-4 4.2E-4   1.6E-3     2.1E-3   8.7E-3    2.4E-2
-!256(64) 4.3E-5 5.1E-5 1.1E-4   4.2E-4     5.5E-4   2.7E-3    1.3E-2 
-!
-! probtype==1, dirichlet bc, ERRTOL=0.01D0, thin, TSTOP=1.25E-2
-! operator_ext=1 operator_int=3 linear exact=1
-!        L1         L2   Linf   L1 grad    L2 grad Linf grad 
-! 32(1) 4.2E-4  6.9E-4   1.8E-3  3.8E-2    1.0E-1  5.4E-1
-! 64(2) 5.4E-4  7.1E-4   1.9E-3  6.5E-2    1.0E-1  4.5E-1
-!128(4) 1.8E-4  2.5E-4   6.6E-4  3.6E-2    5.4E-2  1.9E-1
-!256(8) 3.0E-6  3.6E-6   7.5E-6  4.7E-4    8.0E-4  3.6E-3
-!
-! probtype==1, dirichlet bc, ERRTOL=0.01D0, thin, TSTOP=1.25E-2
-! operator_ext=1 operator_int=1 linear exact=0
-!        L1         L2   Linf   L1 grad    L2 grad Linf grad 
-! 32(1) 1.1E-3  1.4E-3   3.3E-3  7.6E-2    1.3E-1  5.6E-1
-! 64(2) 4.4E-4  6.3E-4   1.7E-3  6.2E-2    9.5E-2  4.0E-1
-!128(4) 2.0E-4  3.1E-4   1.2E-3  4.2E-2    6.0E-2  2.1E-1
-!256(8) 8.6E-5  1.3E-4   6.2E-4  3.3E-2    5.4E-2  3.3E-1
-!
-!
-! probtype==1, thin
-! ERRTOL=0.01D0, 2*radeps=0.01, Neumann, T=1.25E-2, linear exact
-!        dx          L1      L2   Linf   L1 grad  L2 grad Linf grad 
-! 32   1 0.03125    1.1E-2  1.3E-2 2.5E-2  2.5E-1  3.9E-1   1.2
-! 64   2 0.015625   1.0E-2  1.3E-2 2.7E-2  2.7E-1  3.4E-1   9.7E-1
-! 128  4 0.0078125  8.4E-3  1.0E-2 2.4E-2  1.4E-1  1.9E-1   5.9E-1
-! 256  8 0.00390625 1.3E-3  1.5E-3 2.1E-3  4.3E-3  5.8E-3   5.5E-2
-!
-! probtype==1
-! ERRTOL=0.999999, thick, Neumann, T=1.25E-2
-! T=1.25E-2    L1      L2     LINF    L1_grd  L2_grd   LINF_grd
-! 32   1 step  9.6E-3  1.1E-2 1.6E-2  2.5E-2  3.2E-2   8.4E-2
-! 64   4 step  2.6E-3  2.9E-3 4.4E-3  6.8E-3  8.8E-3   2.7E-2
-! 128 16 step  6.7E-4  7.5E-4 1.1E-3  1.8E-3  2.3E-3   1.1E-2
-! 256 64 step  1.7E-4  1.9E-4 2.8E-4  4.5E-4  5.8E-4   3.1E-3
-!
-! YANG LIU MODIFY TABLE (MAKE GRAPH TOO!)
-! probtype=19, ERRTOL=0.999999D0, polar solver: 128x256, tstop=0.004
-! T=0.004        L1      L2     LINF    L1_grd  L2_grd   LINF_grd Linf_int_grd
-! 32   1 step  6.9E-2  8.0E-2  1.5E-1   4.7E-1   6.2E-1 2.1       2.7
-! 64   4 step  2.1E-2  2.4E-2  4.9E-2   1.8E-1   2.4E-1 7.5E-1    8.3E-1
-! 128 16 step  5.3E-3  6.4E-3  1.4E-2   5.2E-2   6.8E-2 2.2E-1    2.5E-1
-! 256 64 step  1.3E-3  1.6E-3  3.5E-3   1.4E-2   1.8E-2 6.1E-2    7.4E-2
-!
-! YANG LIU MODIFY TABLE 
-! probtype=19, ERRTOL=0.999999D0, polar solver: 256x512, tstop=0.004
-! T=0.004        L1      L2     LINF    L1_grd  L2_grd   LINF_grd Linf_int_grd
-! 32   1 step  6.9E-2  8.0E-2  1.5E-1   4.7E-1   6.2E-1 2.1       2.7
-! 64   4 step  2.1E-2  2.4E-2  5.0E-2   1.8E-1   2.4E-1 7.5E-1    8.4E-1
-! 128 16 step  5.3E-3  6.4E-3  1.3E-2   5.2E-2   6.8E-2 2.2E-1    2.6E-1
-! 256 64 step  1.3E-3  1.6E-3  3.4E-3   1.4E-2   1.8E-2 6.0E-2    8.4E-2
 !
 ! 0=flat interface  
 ! 1=annulus  
@@ -292,15 +33,13 @@ IMPLICIT NONE
 ! 15=hypocycloid with 2 materials
 ! 20=hypocycloid with 6 materials
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
-! 401=ice melt (material 1 liquid, material 2 gas, material 3 ice)
-! 402=NASA boiling (material 1 liquid, material 2 gas, material 3 substrate)
-INTEGER,PARAMETER          :: probtype_in=402
+INTEGER,PARAMETER          :: probtype_in=400
 INTEGER,PARAMETER          :: stefan_flag=1
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
 ! buffer for probtype_in=3
 real(kind=8),PARAMETER     :: radblob2_in = 0.05d0  
-real(kind=8),PARAMETER     :: xblob_in = 0.5d0
+real(kind=8),PARAMETER     :: xblob_in = 0.2d0
 real(kind=8),PARAMETER     :: yblob_in = 0.5d0
 ! for probtype=16 , top and bot temperature profile
 real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0  
@@ -311,14 +50,11 @@ real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0
 ! material 1 on the left, material 2 on the right.
 ! 1.0d0 for probtype==400 (gingerbread)
 !  (T=TSAT interior domain initially, T=TSAT+TDIFF on walls)
-! 10.0d0 for probtype==401 (ice melt)
-! 10.0d0 for probtype==402 (NASA boiling)
-real(kind=8),PARAMETER     :: TDIFF_in = 10.0d0
+real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
 ! 1.0d0 for probtype==400 (melting gingerbread)
-! 1.0d0 for probtype==402 (NASA boiling)
 real(kind=8),PARAMETER     :: latent_heat_in = 1.0d0
 !0=low,1=simple,2=Dai and Scannapieco,3=orthogonal probe
 INTEGER,PARAMETER          :: local_operator_internal = 3
@@ -474,7 +210,7 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= April 28, 2020, 13:45pm"
+print *,"PROTOTYPE CODE DATE= April 28, 2020, 13:00pm"
 
 global_nparts=0
 
@@ -484,6 +220,7 @@ constant_K_test=0
 print *,"im_measure= ",im_measure
 print *,"constant_K_test= ",constant_K_test
 
+! probtype_in=400 for gingerbread man problem
 ! N space
 ! M time
 N_START=64
@@ -514,12 +251,10 @@ else if (probtype_in.eq.4) then ! expanding or shrinking circle
 else if (probtype_in.eq.5) then ! phase change vertical planar interface
  fixed_dt_main=-1.0d0  ! TSTOP=0.5d0
 else if (probtype_in.eq.400) then ! gingerbread man
+ ! fixed_dt=0.0d0 => use CFL condition
+ ! fixed_dt=-1.0d0 => use TSTOP/M
  fixed_dt_main=0.0d0
  print *,"gingeroutline should be in run directory"
-else if (probtype_in.eq.401) then ! melting block of ice
- fixed_dt_main=0.0d0
-else if (probtype_in.eq.402) then ! NASA boiling
- fixed_dt_main=0.0d0
 else
  print *,"probtype_in invalid"
  stop
@@ -713,7 +448,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
- else if (probtype_in.eq.400) then
+ else if (probtype_in.eq.400) then ! gingerbread
 
    sci_max_level=2
    nmat_in=2
@@ -740,60 +475,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    endif
 
    FSI_flag(1)=7 ! gingerbread (in the man)
-
- else if (probtype_in.eq.401) then ! melting block of ice
-
-   nmat_in=3
-   fort_heatviscconst(1)=10.0  ! liquid
-   fort_heatviscconst(2)=1.0  ! gas
-   fort_heatviscconst(3)=100.0  ! ice
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=273.0d0+TDIFF_in
-   if ((stefan_flag.eq.1).and. &
-       (local_operator_internal.eq.3).and. &
-       (local_operator_external.eq.1).and. &
-       (local_linear_exact.eq.1)) then
-    ! do nothing
-   else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==400"
-    stop
-   endif
-
- else if (probtype_in.eq.402) then ! NASA boiling
-
-   order_algorithm(1)=4
-   order_algorithm(2)=4
-   order_algorithm(3)=1
-
-   nmat_in=3
-   fort_heatviscconst(1)=10.0  ! liquid
-   fort_heatviscconst(2)=1.0  ! gas
-   fort_heatviscconst(3)=100.0  ! substrate
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=273.0d0+TDIFF_in
-   if ((stefan_flag.eq.1).and. &
-       (local_operator_internal.eq.3).and. &
-       (local_operator_external.eq.1).and. &
-       (local_linear_exact.eq.1)) then
-    ! do nothing
-   else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==400"
-    stop
-   endif
-
-
  else if (probtype_in.eq.5) then
 
    nmat_in=2
@@ -1191,10 +872,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     ! max_front_vel
    if ((abs(latent_heat_in).gt.0.0d0).and. &
-       (fort_tempconst(1).ge.0.0d0).and. &
-       (fort_tempconst(2).ge.0.0d0)) then
+       (fort_heatviscconst(1).gt.0.0d0).and. &
+       (fort_heatviscconst(2).ge.0.0d0)) then
     max_front_vel=abs(TDIFF_in)* &
-      (fort_tempconst(1)+fort_tempconst(2))/abs(latent_heat_in)
+      (fort_heatviscconst(1)+fort_heatviscconst(2))/abs(latent_heat_in)
     if (max_front_vel.gt.0.0d0) then
      ! do nothing
     else
@@ -1228,138 +909,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    fort_time_radblob(1)=0.0d0
    fort_time_radblob(2)=0.0d0
 
-   print *,"probtype_in=",probtype_in
-   print *,"max_front_vel=",max_front_vel
-
-
- else if (probtype_in.eq.401) then
-
-    ! 1=liquid  2=gas  3=ice
-    ! 12 13 23 21 31 32
-    !  1  2  3  4  5  6
-   saturation_temp(1)=275.0d0
-   saturation_temp(2)=273.0d0
-   saturation_temp(3)=273.0d0
-   saturation_temp(4)=273.0d0
-   saturation_temp(5)=273.0d0
-   saturation_temp(6)=273.0d0
-   fort_tempconst(1)=273.0
-   fort_tempconst(2)=273.0
-   fort_tempconst(3)=273.0
-   fort_initial_temperature(1)=fort_tempconst(1)
-   fort_initial_temperature(2)=fort_tempconst(2)
-   fort_initial_temperature(3)=fort_tempconst(3)
-   latent_heat(1)=1.0D0  ! liquid to gas
-   latent_heat(2)=0.0D0
-   latent_heat(3)=0.0D0
-   latent_heat(4)=0.0D0
-   latent_heat(5)=1.0D0  ! ice to liquid
-   latent_heat(6)=0.0D0
-  
-   ireverse=0
-   isink=0
-
-
-   fort_alpha(1)=1.0d0
-   fort_alpha(2)=1.0d0
-   fort_alpha(3)=1.0d0
-   fort_stefan_number(1)=1.0D0
-   fort_stefan_number(2)=1.0D0
-   fort_stefan_number(3)=1.0D0
-   fort_jacob_number(1)=fort_stefan_number(1)
-   fort_jacob_number(2)=fort_stefan_number(2)
-   fort_jacob_number(3)=fort_stefan_number(3)
-
-   fort_beta(1)=0.0d0
-   fort_beta(2)=0.0d0
-   fort_beta(3)=0.0d0
-
-   fort_time_radblob(1)=0.0d0
-   fort_time_radblob(2)=0.0d0
-   fort_time_radblob(3)=0.0d0
-
-    ! max_front_vel
-   if (abs(latent_heat(5)).gt.0.0d0) then
-     ! FOR YANG: bound on initial speed is 
-     ! abs(TDIFF_in)*(k_water + k_ice)/(L_{ice,water} * h)
-    max_front_vel=abs(TDIFF_in)* &
-      (fort_heatviscconst(1)+fort_heatviscconst(3))/abs(latent_heat(5))
-    if (max_front_vel.gt.0.0d0) then
-     ! do nothing
-    else
-     print *,"max_front_vel invalid probtype_in=",probtype_in
-     stop
-    endif
-   else
-    print *,"latent_heat_in or fort_heatviscconst invalid"
-    stop
-   endif
-   print *,"probtype_in=",probtype_in
-   print *,"max_front_vel=",max_front_vel
-
-
- else if (probtype_in.eq.402) then
-
-    ! 1=liquid  2=gas  3=substrate
-    ! 12 13 23 21 31 32
-    !  1  2  3  4  5  6
-   saturation_temp(1)=273.0d0
-   saturation_temp(2)=273.0d0
-   saturation_temp(3)=273.0d0
-   saturation_temp(4)=273.0d0
-   saturation_temp(5)=273.0d0
-   saturation_temp(6)=273.0d0
-   fort_tempconst(1)=273.0
-   fort_tempconst(2)=273.0
-   fort_tempconst(3)=273.0
-   fort_initial_temperature(1)=fort_tempconst(1)
-   fort_initial_temperature(2)=fort_tempconst(2)
-   fort_initial_temperature(3)=fort_tempconst(3)
-   latent_heat(1)=1.0D0  ! liquid to gas
-   latent_heat(2)=0.0D0
-   latent_heat(3)=0.0D0
-   latent_heat(4)=0.0D0
-   latent_heat(5)=0.0D0  ! ice to liquid
-   latent_heat(6)=0.0D0
-  
-   ireverse=0
-   isink=0
-
-
-   fort_alpha(1)=1.0d0
-   fort_alpha(2)=1.0d0
-   fort_alpha(3)=1.0d0
-   fort_stefan_number(1)=1.0D0
-   fort_stefan_number(2)=1.0D0
-   fort_stefan_number(3)=1.0D0
-   fort_jacob_number(1)=fort_stefan_number(1)
-   fort_jacob_number(2)=fort_stefan_number(2)
-   fort_jacob_number(3)=fort_stefan_number(3)
-
-   fort_beta(1)=0.0d0
-   fort_beta(2)=0.0d0
-   fort_beta(3)=0.0d0
-
-   fort_time_radblob(1)=0.0d0
-   fort_time_radblob(2)=0.0d0
-   fort_time_radblob(3)=0.0d0
-
-    ! max_front_vel
-   if (abs(latent_heat(1)).gt.0.0d0) then
-     ! FOR YANG: bound on initial speed is 
-     ! abs(TDIFF_in)*(k_water + k_ice)/(L_{ice,water} * h)
-    max_front_vel=abs(TDIFF_in)* &
-      (fort_heatviscconst(1)+fort_heatviscconst(2))/abs(latent_heat(1))
-    if (max_front_vel.gt.0.0d0) then
-     ! do nothing
-    else
-     print *,"max_front_vel invalid probtype_in=",probtype_in
-     stop
-    endif
-   else
-    print *,"latent_heat_in or fort_heatviscconst invalid"
-    stop
-   endif
    print *,"probtype_in=",probtype_in
    print *,"max_front_vel=",max_front_vel
 
@@ -1591,7 +1140,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    CALL INIT_V(N_CURRENT,xCC,yCC,probtype_in,iten,scomp,sdim_in,T)
  enddo
 
-  ! STEP 0 FOR YANG: initial time step
  if (fixed_dt_current.eq.0.0) then
     if (max_front_vel.gt.0.0d0) then
      deltat_in = h_in*0.25d0/max_front_vel
@@ -1623,10 +1171,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     print *,"approx number time steps to double radius: ", &
      NINT(radblob/(max_front_vel*deltat_in))
  else if (probtype_in.eq.400) then
-  ! do nothing
- else if (probtype_in.eq.401) then
-  ! do nothing
- else if (probtype_in.eq.402) then
   ! do nothing
  else if (probtype_in.eq.5) then
   print *,"Velocity is 1"
@@ -1666,9 +1210,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
   print *,"M_MAX_TIME_STEP or M_CURRENT invalid"
   stop
  endif
- 
-    ! STEP 1 FOR YANG: initialize zeroeth and first order moments
-    ! STEP 2 FOR YANG: initialize levelset functions
+
     ! in: multimat_FVM.F90
     ! init_vfncen calls:
     !  AdaptQuad_2d  (in multimat_FVM.F90)
@@ -1710,7 +1252,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       subcycling_step)
  endif
 
-  ! STEP 3: Initialize Temperature
  do i= -1,N_CURRENT
  do j= -1,N_CURRENT
 
@@ -1817,16 +1358,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      else if (probtype_in.eq.400) then
 
       T_FIELD=saturation_temp(1)
-      T(i,j,im)=T_FIELD
-
-     else if (probtype_in.eq.401) then
-
-      T_FIELD=273.0d0
-      T(i,j,im)=T_FIELD
-
-     else if (probtype_in.eq.402) then
-
-      T_FIELD=273.0d0
       T(i,j,im)=T_FIELD
 
      else if (probtype_in.eq.5) then
@@ -1959,7 +1490,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  iter_average=0.0d0
 
-! STEP 4: TIME LOOP
 ! BEGIN TIME LOOP - ABOVE INITIALIZATION
 !                   BELOW INTEGRATION IN TIME
 
@@ -2063,9 +1593,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      enddo
     endif
 
-     ! STEP 5: FOR YANG
-     ! diffusion with saturation temperature dirichlet boundary
-     ! condition.
     call bicgstab(UNEW_in,hflag,iter)
 
     iter_average=iter_average+iter
@@ -2093,10 +1620,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     else if (probtype_in.eq.4) then
      call axisymmetric_disk_advance(deltat_in)
     else if (probtype_in.eq.400) then
-     ! do nothing
-    else if (probtype_in.eq.401) then
-     ! do nothing
-    else if (probtype_in.eq.402) then
      ! do nothing
     else if (probtype_in.eq.5) then
      ! do nothing
@@ -2150,10 +1673,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        ! do nothing - this is a shrinking disk, outside temperature
        ! is uniform, grad T dot n=0 on the outer walls.
       else if (probtype_in.eq.400) then
-       ! do nothing
-      else if (probtype_in.eq.401) then
-       ! do nothing
-      else if (probtype_in.eq.402) then
        ! do nothing
       else if (probtype_in.eq.5) then
        if (xcen.ge.1.0-2.0d0*h_in) then
@@ -2296,10 +1815,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
    else if (probtype_in.eq.400) then
     ! do nothing
-   else if (probtype_in.eq.401) then
-    ! do nothing
-   else if (probtype_in.eq.402) then
-    ! do nothing
    else if (probtype_in.eq.5) then
     expect_radius=0.2d0+Ts(tm+1)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
@@ -2409,9 +1924,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
-   if ((probtype_in.eq.400).or. &
-       (probtype_in.eq.401).or. &
-       (probtype_in.eq.402)) then ! gingerbread man or ice melt or NASA bubb.
+   if (probtype_in.eq.400) then ! gingerbread man
 
     max_front_vel=0.0
     do i= 0,N_CURRENT-1
@@ -2472,6 +1985,15 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     if (max_front_vel.gt.0.0d0) then
      deltat_in=h_in*0.25d0/max_front_vel
      if (finished_flag.eq.0) then
+      if (Ts(tm)+deltat_in.ge.TSTOP-1.0D-14) then
+       deltat_in=TSTOP-Ts(tm)
+      endif
+      if (deltat_in.gt.0.0d0) then
+       ! do nothing
+      else
+       print *,"deltat_in invalid"
+       stop
+      endif
       Ts(tm+1)=Ts(tm)+deltat_in
      else if (finished_flag.eq.1) then
       ! do nothing

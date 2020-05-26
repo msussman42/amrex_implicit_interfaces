@@ -4639,7 +4639,13 @@ void NavierStokes::make_physics_varsALL(int project_option,
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.makeStateCurv(project_option,post_restart_flag);
  }
-
+  // filenames: "ANGLE_UTAN<stuff>.plt"  (cell centered)
+  // if GNBC is used, then the "ghost normal" in the substrate
+  // is extrapolated from the interior.
+  // if GNBC is not used, then the "ghost normal" is either
+  // (a) corresponding to the static angle condition or
+  // (b) some dynamic angle condition depending on utan.
+  // "angle" = static angle if use_DCA=-1, dynamic angle otherwise.
  if (1==0) {
   writeSanityCheckData(
     "ANGLE_UTAN",
@@ -4723,6 +4729,12 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  if (1==0) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    // filenames: "FACE_VAR<stuff>.plt" (MAC data)
+    // curv_index,pforce_index (unused for now),
+    // faceden_index,facecut_index,
+    // icefacecut_index=4,icemask_index,facevisc_index,
+    // faceheat_index,facevel_index,facespecies_index,
+    // massface_index,vofface_index
    writeSanityCheckData(
     "FACE_VAR",
     "in: make_physics_varsALL, FACE_VAR_MF",//faceden_index=2 facevisc_index=6

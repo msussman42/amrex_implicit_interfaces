@@ -4849,10 +4849,23 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
  } // ilev=level...finest_level
 
   // GNBC DEBUGGING
+  //    --------------
+  //    | Image cell |
+  //    ------|-------   | = interface cell on MAC grid.
+  //    | solid cell |   LS_solid(x_image)<0  LS_solid(x_solid)>0
+  //    --------------
+  //
+  //    angle = ange measured at the solid normal probe in the fluid
+  //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
  if ((1==0)&&(caller_id==3)) {
 
   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
 
+    //mat<stuff>.tec has reconstructed interface.
+    // (visit can open ascii surface mesh files)
+    //
+    //MAC grid law of the wall information.
+    //WALLFUNCTION<stuff>.plt (visit can open binary tecplot files)
    writeSanityCheckData(
     "WALLFUNCTION",
     "GNBC DEBUGGING velINT,imgV,solV,imgVR,solVR,angle",
@@ -4863,6 +4876,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
     -1,  // State_Type==-1 
     data_dir); 
 
+    //MAC grid rasterized solid boundary condition.
+    //WALLVEL<stuff>.plt (visit can open binary tecplot files)
    writeSanityCheckData(
     "WALLVEL",
     "init_FSI_GHOST_MAC_MF_ALL, FSI_GHOST_MAC_MF",//fictitious solid velocity

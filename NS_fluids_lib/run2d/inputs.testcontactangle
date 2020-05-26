@@ -1,7 +1,8 @@
-max_step  = 2  # maximum timestep
+max_step  = 99999  # maximum timestep
 #max_step  = 1  # maximum timestep
 stop_time =  3.0  # maximum problem time
 
+# static droplet relaxation on slope test; see Arienti and Sussman, IJMF
 # R_theta=sqrt(pi/(2 theta - sin(2 theta))) R_0
 # e=(1+cos(pi-theta))R_theta
 # L=2 sin(pi-theta)R_theta
@@ -66,7 +67,9 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
-ns.visual_option=-2
+ns.visual_ncell=192 96  # ascii tecplot files "uniform<stuff>.tec"
+                        # uniform data.
+ns.visual_option=-2  # -1=VISIT format  -2=tecplot format
 ns.visual_tessellate_vfrac=1
 
 amr.regrid_int      = 1       # how often to regrid
@@ -76,7 +79,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 8       # block factor in grid generation
 amr.check_int       = 1000     # number of timesteps between checkpoints 1000
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1    # CHANGE TO 1000
+amr.plot_int        = 10    # CHANGE TO 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -109,7 +112,7 @@ ns.tension       = 1118.0 559.0 1118.0
 #                  conditions.
 #if law_of_the_wall=2 (GNBC) then
 # calls to FORT_WALLFUNCTION and getGhostVel are made.
-ns.law_of_the_wall=0
+ns.law_of_the_wall=0  #1=law of the wall   2=GNBC  0=neither
 
 # =-1 static angle
 # =1 GNBC
