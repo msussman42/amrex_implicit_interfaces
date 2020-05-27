@@ -18,6 +18,42 @@
 #include <AMReX_Utility.H>
 #include <AMReX_TagBox.H>
 
+/* 
+  if particles:
+  #include <AMReX_Particles.H>
+  NStructReal=number of extra Real variables (not including particle position)  
+  NStructInt=number of extra int variables (not including cpu and id)
+
+  Array-of-Structs: particle1, particle2, particle3, ....
+  Struct-of-Arrays: foo1,foo2,foo3, ...  NArrayReal=2
+                    bar1,bar2,bar3, ... 
+		    l1,l2,l3, ....   NArrayInt=2
+		    n1,n2,n3, ....
+  ParticleContainer<NStructReal,NStructInt,NArrayReal,NArrayInt> mypc
+
+    (see AMReX_Particles.H)
+    rr[n]=refinement ratio between levels n and n+1
+  Particle(const Vector<Geometry> &geom,
+           const Vector<DistributionMapping> &dmap,
+	   const Vector<BoxArray> &ba,
+	   const Vector<int> &rr);  
+ 
+  Redistribute()
+
+   (see AMReX_NeighborParticles.H for checking neighbor particles)
+
+  for Cody,
+    1. declare mypc (object of type ParticleContainer)
+    2. fill the particle container
+    3. Redistribute()
+    4. advect LS
+    5. advect particles
+    6. Redistribute()
+    7. correct LS
+
+    (how to use the GPUs?)
+*/
+
 #include <NavierStokes.H>
 #include <INTERP_F.H>
 #include <MACOPERATOR_F.H>

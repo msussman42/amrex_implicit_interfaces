@@ -1478,7 +1478,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(unode)
       INTEGER_T, intent(in) :: DIMDEC(ucell)
      
-      REAL_T, intent(in) ::  unode(DIMV(unode),2*nten*SDIM) 
+      REAL_T, intent(out) ::  unode(DIMV(unode),2*nten*SDIM) 
       REAL_T, intent(in) ::  ucell(DIMV(ucell),nburning) 
       INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
 

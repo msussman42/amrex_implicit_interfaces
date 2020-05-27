@@ -995,7 +995,7 @@ NavierStokes::variableSetUp ()
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
      1,nc,&pc_interp,store_in_checkpoint);
 
-    int ncomp_per_burning=AMREX_BL_SPACEDIM;
+    int ncomp_per_burning=AMREX_SPACEDIM;
     int ncomp_per_tsat=2; // interface temperature and mass fraction
 
       // first nten components represent a status.
@@ -1238,9 +1238,9 @@ NavierStokes::variableSetUp ()
 
      ibase_tsat++;
 
-     std::string tsat_str="massfracI"; 
-     tsat_str+=im_string; 
-     TSAT_names[ibase_tsat]=tsat_str;
+     std::string massfrac_str="massfracI"; 
+     massfrac_str+=im_string; 
+     TSAT_names[ibase_tsat]=massfrac_str;
      set_extrap_bc(TSAT_bcs[ibase_tsat],phys_bc);
 
      if (ibase_tsat!=nten+(im+1)*ncomp_per_tsat-1)
