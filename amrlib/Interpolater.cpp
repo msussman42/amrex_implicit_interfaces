@@ -330,7 +330,7 @@ BurnVelInterp::interp (Real time,
 
     int velflag=0;
 
-    if (burnvel_ncomp_per==1) {
+    if (burnvel_ncomp_per==2) { // interface temperature, mass fraction
      velflag=0;
     } else if (burnvel_ncomp_per==AMREX_SPACEDIM) {
      velflag=1;

@@ -995,10 +995,13 @@ NavierStokes::variableSetUp ()
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
      1,nc,&pc_interp,store_in_checkpoint);
 
-      // first nten components represent a status.
-    int nburning=nten*(AMREX_SPACEDIM+1);
+    int ncomp_per_burning=AMREX_BL_SPACEDIM;
+    int ncomp_per_tsat=2; // interface temperature and mass fraction
 
-    int ncomp_tsat=2*nten;
+      // first nten components represent a status.
+    int nburning=nten*(ncomp_per_burning+1);
+
+    int ncomp_tsat=nten*(ncomp_per_tsat+1);
 
     int ncghost=1+AMREX_SPACEDIM+nmat*ngeom_recon+1+nburning+ncomp_tsat;
 
@@ -1154,7 +1157,7 @@ NavierStokes::variableSetUp ()
 
     for (int im=0;im<nten;im++) {
 
-     int ibase_burnvel=nten+im*AMREX_SPACEDIM;
+     int ibase_burnvel=nten+im*ncomp_per_burning;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1181,7 +1184,7 @@ NavierStokes::variableSetUp ()
      set_z_vel_extrap_bc(BURNVEL_bcs[ibase_burnvel],phys_bc);
 #endif    
 
-     if (ibase_burnvel!=nten+(im+1)*AMREX_SPACEDIM-1)
+     if (ibase_burnvel!=nten+(im+1)*ncomp_per_burning-1)
       amrex::Error("ibase_burnvel invalid");
 
     }  // im=0..nten-1  (burning velocity)
@@ -1193,7 +1196,7 @@ NavierStokes::variableSetUp ()
 
     burnvel_interp.burnvel_nmat=nmat;
     burnvel_interp.burnvel_nten=nten;
-    burnvel_interp.burnvel_ncomp_per=AMREX_SPACEDIM;
+    burnvel_interp.burnvel_ncomp_per=ncomp_per_burning;
 
     desc_lstGHOST.setComponent(State_Type,burnvel_start_pos,BURNVEL_names,
      BURNVEL_bcs,BURNVEL_fill_class,&burnvel_interp);
@@ -1220,7 +1223,7 @@ NavierStokes::variableSetUp ()
 
     for (int im=0;im<nten;im++) {
 
-     int ibase_tsat=nten+im;
+     int ibase_tsat=nten+im*ncomp_per_tsat;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1233,7 +1236,14 @@ NavierStokes::variableSetUp ()
      TSAT_names[ibase_tsat]=tsat_str;
      set_extrap_bc(TSAT_bcs[ibase_tsat],phys_bc);
 
-     if (ibase_tsat!=nten+im)
+     ibase_tsat++;
+
+     std::string tsat_str="massfracI"; 
+     tsat_str+=im_string; 
+     TSAT_names[ibase_tsat]=tsat_str;
+     set_extrap_bc(TSAT_bcs[ibase_tsat],phys_bc);
+
+     if (ibase_tsat!=nten+(im+1)*ncomp_per_tsat-1)
       amrex::Error("ibase_tsat invalid");
 
     }  // im=0..nten-1  (TSAT)
@@ -1245,25 +1255,26 @@ NavierStokes::variableSetUp ()
 
     tsat_interp.burnvel_nmat=nmat;
     tsat_interp.burnvel_nten=nten;
-    tsat_interp.burnvel_ncomp_per=1;
+    //interface temperature and mass fraction
+    tsat_interp.burnvel_ncomp_per=ncomp_per_tsat; 
 
     desc_lstGHOST.setComponent(State_Type,tsat_start_pos,TSAT_names,
      TSAT_bcs,TSAT_fill_class,&tsat_interp);
 
 
-      // boundary routines are of type BndryFuncDefaultSUSSMAN
-      // setComponent expects a parameter of type 
-      // StateDescriptor::BndryFunc&
-      // Then it gives the following line:
-      // bc_func.set(comp,func.clone());
-      // where clone() is a member of BndryFunc:
-      // StateDescriptor::BndryFunc*
-      // StateDescriptor::BndryFunc::clone () const
-      // { return new BndryFunc(*this); }
-      // one of the constructors of BndryFunc is:
-      // BndryFunc (BndryFuncDefaultSUSSMAN inFunc);
-      // another constructor:
-      // BndryFunc (BndryFuncDefaultSUSSMAN inFunc,BndryFuncDefaultSUSSMAN gFunc);
+    // boundary routines are of type BndryFuncDefaultSUSSMAN
+    // setComponent expects a parameter of type 
+    // StateDescriptor::BndryFunc&
+    // Then it gives the following line:
+    // bc_func.set(comp,func.clone());
+    // where clone() is a member of BndryFunc:
+    // StateDescriptor::BndryFunc*
+    // StateDescriptor::BndryFunc::clone () const
+    // { return new BndryFunc(*this); }
+    // one of the constructors of BndryFunc is:
+    // BndryFunc (BndryFuncDefaultSUSSMAN inFunc);
+    // another constructor:
+    // BndryFunc (BndryFuncDefaultSUSSMAN inFunc,BndryFuncDefaultSUSSMAN gFunc);
 
     if (num_materials_vel!=1)
      amrex::Error("num_materials_vel invalid");

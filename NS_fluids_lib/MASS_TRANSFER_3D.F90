@@ -3648,7 +3648,7 @@ stop
       if (velflag.eq.1) then
        ncomp_per=SDIM
       else if (velflag.eq.0) then
-       ncomp_per=1
+       ncomp_per=2 ! interface temperature, mass fraction
       else
        print *,"velflag invalid"
        stop

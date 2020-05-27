@@ -8595,8 +8595,8 @@ END SUBROUTINE SIMP
 
       if (velflag.eq.1) then  ! burning velocity
        ncomp_per_interface=SDIM
-      else if (velflag.eq.0) then ! saturation temperature
-       ncomp_per_interface=1
+      else if (velflag.eq.0) then ! interface temperature, mass fraction
+       ncomp_per_interface=2
       else
        print *,"velflag invalid"
        stop

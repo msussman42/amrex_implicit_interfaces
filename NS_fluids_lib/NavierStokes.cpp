@@ -9722,7 +9722,10 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
  int nden=nmat*num_state_material;
- int nburning=nten*(AMREX_SPACEDIM+1);
+ int ncomp_per_burning=AMREX_SPACEDIM;
+ int ncomp_per_tsat=2;
+ int nburning=nten*(ncomp_per_burning+1);
+ int ntsat=nten*(ncomp_per_tsat+1);
  const Real* dx = geom.CellSize();
 
   // in: level_phase_change_rate()
@@ -9775,8 +9778,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
   amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
 
- if (localMF[SATURATION_TEMP_MF]->nComp()!=2*nten)
-  amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=2*nten");
+ if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
+  amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
@@ -9822,8 +9825,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     amrex::Error("burnvelfab.nComp() incorrect");
 
    FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
-   if (Tsatfab.nComp()!=2*nten)
-    amrex::Error("Tsatfab.nComp()!=2*nten");
+   if (Tsatfab.nComp()!=ntsat)
+    amrex::Error("Tsatfab.nComp()!=ntsat");
 
    FArrayBox& lsnewfab=LS_new[mfi];
    FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
@@ -9949,7 +9952,7 @@ NavierStokes::level_phase_change_rate_extend() {
   int ncomp=0;
   int ncomp_per_interface=0;
   if (velflag==0) {
-   ncomp_per_interface=1;
+   ncomp_per_interface=2; // interface temperature, mass fraction
   } else if (velflag==1) {
    ncomp_per_interface=AMREX_SPACEDIM;
   } else
