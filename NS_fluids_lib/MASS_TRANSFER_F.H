@@ -95,6 +95,7 @@ extern "C"
     int* nmat,
     int* nten,
     int* nburning,
+    int* ntsat,
     int* nden,
     Real* density_floor_expansion,
     Real* density_ceiling_expansion,

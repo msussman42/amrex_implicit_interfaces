@@ -1464,24 +1464,26 @@ stop
 
       IMPLICIT NONE
        
-      INTEGER_T level,finest_level
-      INTEGER_T nmat
-      INTEGER_T nten
-      INTEGER_T nburning
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: nburning
+      INTEGER_T ncomp_per_burning
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T dt
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dt
 
-      INTEGER_T DIMDEC(unode)
-      INTEGER_T DIMDEC(ucell)
+      INTEGER_T, intent(in) :: DIMDEC(unode)
+      INTEGER_T, intent(in) :: DIMDEC(ucell)
      
-      REAL_T  unode(DIMV(unode),2*nten*SDIM) 
-      REAL_T  ucell(DIMV(ucell),nburning) 
-      INTEGER_T velbc(SDIM,2,num_materials_vel*SDIM)
+      REAL_T, intent(in) ::  unode(DIMV(unode),2*nten*SDIM) 
+      REAL_T, intent(in) ::  ucell(DIMV(ucell),nburning) 
+      INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
 
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+
       REAL_T xstenND(-3:3,SDIM)
      
       INTEGER_T i,j,k,klosten,khisten,i1,j1,k1
@@ -1508,7 +1510,8 @@ stop
        print *,"nten invalid"
        stop
       endif
-      if (nburning.eq.nten*(SDIM+1)) then
+      ncomp_per_burning=SDIM
+      if (nburning.eq.nten*(ncomp_per_burning+1)) then
        ! do nothing
       else
        print *,"nburning invalid"
@@ -1577,7 +1580,7 @@ stop
          stop
         endif
 
-        do dir=1,SDIM
+        do dir=1,ncomp_per_burning
          velnd=zero
          totalwt=zero
          do i1=0,1
@@ -1588,7 +1591,7 @@ stop
            ! do nothing
           else if ((sign_reverse*tag_local.eq.1).or. &
                    (sign_reverse*tag_local.eq.2)) then
-           scomp=nten+(itencrit-1)*SDIM+dir
+           scomp=nten+(itencrit-1)*ncomp_per_burning+dir
            velnd=velnd+ucell(D_DECL(i-i1,j-j1,k-k1),scomp)
            totalwt=totalwt+one
           else if ((-sign_reverse*tag_local.eq.1).or. &
@@ -1642,7 +1645,7 @@ stop
           print *,"levelrz invalid node displace 3"
           stop
          endif
-         scomp=(itencrit+ireverse*nten-1)*SDIM+dir
+         scomp=(itencrit+ireverse*nten-1)*ncomp_per_burning+dir
          unode(D_DECL(i,j,k),scomp)=delta
         enddo ! dir=1..sdim
 
@@ -3926,6 +3929,7 @@ stop
        nmat, &
        nten, &
        nburning, &
+       ntsat, &
        nden, &
        density_floor_expansion, &
        density_ceiling_expansion, &
@@ -3985,6 +3989,7 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
+      INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: nden
       REAL_T, intent(in) :: density_floor_expansion(nmat)
       REAL_T, intent(in) :: density_ceiling_expansion(nmat)
@@ -4035,7 +4040,7 @@ stop
         ! destination vel: first nten components are the status.
       REAL_T, intent(out) :: burnvel(DIMV(burnvel),nburning)
         ! TSAT : first nten components are the status.
-      REAL_T, intent(out) :: Tsatfab(DIMV(Tsatfab),2*nten)
+      REAL_T, intent(out) :: Tsatfab(DIMV(Tsatfab),ntsat)
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
@@ -4130,6 +4135,9 @@ stop
       REAL_T temp_target_probe_history(2*nten,2)
       REAL_T dxprobe_target_history(2*nten,2)
 
+      INTEGER_T ncomp_per_burning
+      INTEGER_T ncomp_per_tsat
+
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
 #endif
@@ -4200,10 +4208,18 @@ stop
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
       endif
-      if (nburning.eq.nten*(SDIM+1)) then
+      ncomp_per_burning=SDIM
+      if (nburning.eq.nten*(ncomp_per_burning+1)) then
        ! do nothing
       else
        print *,"nburning invalid"
+       stop
+      endif
+      ncomp_per_tsat=2 ! interface temperature, mass fraction
+      if (ntsat.eq.nten*(ncomp_per_tsat+1)) then
+       ! do nothing
+      else
+       print *,"ntsat invalid"
        stop
       endif
       if (nden.ne.nmat*num_state_material) then
@@ -5455,7 +5471,10 @@ stop
              endif
 
              if (local_Tsat(ireverse).gt.zero) then
-              Tsatfab(D_DECL(i,j,k),nten+iten)=local_Tsat(ireverse)
+              Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+1)= &
+               local_Tsat(ireverse)
+              Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+2)= &
+               one  ! default mass fraction=1 (saturated)
              else
               print *,"local_Tsat(ireverse) should be positive"
               stop
@@ -5463,8 +5482,8 @@ stop
 
              if ((vel_phasechange(ireverse).ge.zero).or. &
                  (vel_phasechange(ireverse).le.zero)) then
-              do dir=1,SDIM
-               burnvel(D_DECL(i,j,k),nten+(iten-1)*SDIM+dir)= &
+              do dir=1,ncomp_per_burning
+               burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)= &
                 SIGNVEL*nrmFD(dir)*vel_phasechange(ireverse)
               enddo
              else
@@ -5496,9 +5515,9 @@ stop
            else if ((burnflag.eq.1).or. &
                     (burnflag.eq.-1)) then
             local_velmag=zero
-            do dir=1,SDIM
+            do dir=1,ncomp_per_burning
              local_velmag=local_velmag+ &
-              burnvel(D_DECL(i,j,k),nten+(iten-1)*SDIM+dir)**2
+              burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)**2
             enddo
             local_velmag=sqrt(local_velmag)
             velmag_sum=velmag_sum+local_velmag

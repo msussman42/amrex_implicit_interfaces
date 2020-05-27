@@ -2711,7 +2711,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("ngrow_make_distance!=3");
 
         // first nten components correspond to the status.
-       int nburning=nten*(AMREX_SPACEDIM+1);
+       int ncomp_per_burning=AMREX_SPACEDIM;
+       int ncomp_per_tsat=2;
+       int nburning=nten*(ncomp_per_burning+1);
+       int ntsat=nten*(ncomp_per_tsat+1);
 
 	// SATURATION_TEMP_MF is passed to the following fortran
         // routines:
@@ -2738,10 +2741,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.setVal_localMF(BURNING_VELOCITY_MF,0.0,0,
           nburning,ngrow_make_distance);
 
-        ns_level.new_localMF(SATURATION_TEMP_MF,2*nten,
+        ns_level.new_localMF(SATURATION_TEMP_MF,ntsat,
           ngrow_make_distance,-1);
         ns_level.setVal_localMF(SATURATION_TEMP_MF,0.0,0,
-          2*nten,ngrow_make_distance);
+          ntsat,ngrow_make_distance);
 
         ns_level.new_localMF(JUMP_STRENGTH_MF,2*nten,ngrow_expansion,-1); 
         ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,2*nten,ngrow_expansion);

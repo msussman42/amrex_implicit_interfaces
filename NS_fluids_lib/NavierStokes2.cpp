@@ -427,7 +427,10 @@ void NavierStokes::avgDownBURNING_localMF(
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- int nburning=nten*(AMREX_SPACEDIM+1);
+ int ncomp_per_burning=AMREX_SPACEDIM;
+ int ncomp_per_tsat=2;
+ int nburning=nten*(ncomp_per_burning+1);
+ int ntsat=nten*(ncomp_per_tsat+1);
 
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
@@ -447,8 +450,8 @@ void NavierStokes::avgDownBURNING_localMF(
   ns_fine.debug_ngrow(TSAT_MF,0,2500);
   MultiFab& S_crseT=*localMF[TSAT_MF];
   MultiFab& S_fineT=*ns_fine.localMF[TSAT_MF];
-  if ((S_crseT.nComp()==2*nten)&&
-      (S_fineT.nComp()==2*nten)) {
+  if ((S_crseT.nComp()==ntsat)&&
+      (S_fineT.nComp()==ntsat)) {
    int velflag=0;
    level_avgDownBURNING(S_crseT,S_fineT,velflag);
   } else

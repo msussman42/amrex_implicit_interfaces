@@ -9857,6 +9857,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &nmat,
     &nten,
     &nburning,
+    &ntsat,
     &nden,
     density_floor_expansion.dataPtr(),
     density_ceiling_expansion.dataPtr(),
@@ -9922,7 +9923,12 @@ NavierStokes::level_phase_change_rate_extend() {
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- int nburning=nten*(AMREX_SPACEDIM+1);
+
+ int ncomp_per_burning=AMREX_SPACEDIM;
+ int ncomp_per_tsat=2;
+
+ int nburning=nten*(ncomp_per_burning+1);
+ int ntsat=nten*(ncomp_per_tsat+1);
 
  const Real* dx = geom.CellSize();
 
@@ -9932,7 +9938,7 @@ NavierStokes::level_phase_change_rate_extend() {
 
  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
   amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
- if (localMF[SATURATION_TEMP_MF]->nComp()!=2*nten)
+ if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ncomp");
 
  if (ngrow_make_distance!=3)
@@ -9952,9 +9958,9 @@ NavierStokes::level_phase_change_rate_extend() {
   int ncomp=0;
   int ncomp_per_interface=0;
   if (velflag==0) {
-   ncomp_per_interface=2; // interface temperature, mass fraction
+   ncomp_per_interface=ncomp_per_tsat; // interface temperature, mass fraction
   } else if (velflag==1) {
-   ncomp_per_interface=AMREX_SPACEDIM;
+   ncomp_per_interface=ncomp_per_burning;
   } else
    amrex::Error("velflag invalid");
 
@@ -9968,7 +9974,7 @@ NavierStokes::level_phase_change_rate_extend() {
   int burnvel_start_pos_base=1+AMREX_SPACEDIM+nmat*ngeom_recon+1;
   int extend_start_pos=burnvel_start_pos_base;
   if (velflag==0) {
-   extend_start_pos=burnvel_start_pos_base+nten*(AMREX_SPACEDIM+1);
+   extend_start_pos=burnvel_start_pos_base+nburning;
   } else if (velflag==1) { 
    extend_start_pos=burnvel_start_pos_base;
   } else
@@ -10110,7 +10116,13 @@ NavierStokes::level_phase_change_convert(int isweep) {
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- int nburning=nten*(AMREX_SPACEDIM+1);
+
+ int ncomp_per_burning=AMREX_SPACEDIM;
+ int ncomp_per_tsat=2;
+
+ int nburning=nten*(ncomp_per_burning+1);
+ int ntsat=nten*(ncomp_per_tsat+1);
+
  int nden=nmat*num_state_material;
  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
@@ -18735,13 +18747,16 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- int nburning=nten*(AMREX_SPACEDIM+1);
+ int ncomp_per_burning=AMREX_SPACEDIM;
+ int ncomp_per_tsat=2;
+ int nburning=nten*(ncomp_per_burning+1);
+ int ntsat=nten*(ncomp_per_tsat+1);
  int scomp=0;
  int ncomp=0;
  if (velflag==1) {
   ncomp=nburning;
  } else if (velflag==0) {
-  ncomp=2*nten;
+  ncomp=ntsat;
  } else
   amrex::Error("velflag invalid");
 
