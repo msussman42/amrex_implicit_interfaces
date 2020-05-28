@@ -1806,7 +1806,10 @@ stop
       REAL_T new_centroid(nmat,SDIM)
       REAL_T EBVOFTOL
       REAL_T SWEPTFACTOR
-      REAL_T LL,Tsat,ksource,kdest
+      REAL_T LL
+      REAL_T Tsat_default
+      INTEGER_T Tsat_flag
+      REAL_T ksource,kdest
       REAL_T energy_source
 #if (STANDALONE==0)
       INTEGER_T ccomp
@@ -2718,8 +2721,31 @@ stop
             stop
            endif
 
+           Tsat_default=saturation_temp(iten+ireverse*nten)
+           Tsat_flag=NINT(TSATFAB(D_DECL(i,j,k),iten))
+           if (ireverse.eq.0) then
+             ! do nothing
+           else if (ireverse.eq.1) then
+             Tsat_flag=-Tsat_flag
+           else
+             print *,"ireverse invalid"
+             stop
+           endif
+            
+           if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
+             Tsat_default=TSATFAB(D_DECL(i,j,k), &
+              nten+(iten-1)*ncomp_per_tsat+1)
+           else if ((Tsat_flag.eq.-1).or. &
+                    (Tsat_flag.eq.-2)) then
+             ! do nothing
+           else if (Tsat_flag.eq.0) then
+             ! do nothing
+           else
+             print *,"Tsat_flag invalid"
+             stop
+           endif
+
            LL=latent_heat(iten+ireverse*nten)
-           Tsat=saturation_temp(iten+ireverse*nten)
            freezing_mod=freezing_model(iten+ireverse*nten)
            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
@@ -2765,7 +2791,7 @@ stop
               temperature_mat(u_imaterial)/volmat(u_imaterial)
             else if (tempvfrac.eq.zero) then
              unsplit_density(u_imaterial)=fort_denconst(u_imaterial)
-             unsplit_temperature(u_imaterial)=Tsat
+             unsplit_temperature(u_imaterial)=Tsat_default
             else
              print *,"tempvfrac bust3 tempvfrac=",tempvfrac
              stop
@@ -3096,7 +3122,7 @@ stop
              endif
 
             else if (newvfrac(im_dest).le.EBVOFTOL) then
-             snew(D_DECL(i,j,k),tcomp)=Tsat
+             snew(D_DECL(i,j,k),tcomp)=Tsat_default
              if (freezing_mod.eq.5) then
               speccompdst=num_materials_vel*(SDIM+1)+ &
                    (im_dest-1)*num_state_material+2+mass_frac_id
@@ -3158,7 +3184,7 @@ stop
               stop
              endif
             else if (newvfrac(im_source).le.EBVOFTOL) then
-             snew(D_DECL(i,j,k),tcomp)=Tsat
+             snew(D_DECL(i,j,k),tcomp)=Tsat_default
              if (freezing_mod.eq.5) then
               speccompsrc=num_materials_vel*(SDIM+1)+ &
                        (im_source-1)*num_state_material+2+mass_frac_id
@@ -3197,8 +3223,31 @@ stop
             stop
            endif
 
+           Tsat_default=saturation_temp(iten+ireverse*nten)
+           Tsat_flag=NINT(TSATFAB(D_DECL(i,j,k),iten))
+           if (ireverse.eq.0) then
+             ! do nothing
+           else if (ireverse.eq.1) then
+             Tsat_flag=-Tsat_flag
+           else
+             print *,"ireverse invalid"
+             stop
+           endif
+            
+           if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
+             Tsat_default=TSATFAB(D_DECL(i,j,k), &
+              nten+(iten-1)*ncomp_per_tsat+1)
+           else if ((Tsat_flag.eq.-1).or. &
+                    (Tsat_flag.eq.-2)) then
+             ! do nothing
+           else if (Tsat_flag.eq.0) then
+             ! do nothing
+           else
+             print *,"Tsat_flag invalid"
+             stop
+           endif
+
            LL=latent_heat(iten+ireverse*nten)
-           Tsat=saturation_temp(iten+ireverse*nten)
            freezing_mod=freezing_model(iten+ireverse*nten)
            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
