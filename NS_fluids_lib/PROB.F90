@@ -36448,16 +36448,21 @@ end subroutine initialize2d
        INTEGER_T nmat
        INTEGER_T nten
        INTEGER_T ncomp_per
+       INTEGER_T ncomp_per_burning
+       INTEGER_T ncomp_per_tsat
 
        nmat=num_materials
        nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+
+       ncomp_per_burning=SDIM
+       ncomp_per_tsat=2  ! interface temperature, mass fraction
 
         ! extrap, velx, vely, velz
        extrecon_scomp=SDIM+1
         ! extrap, velx, vely, velz, mof recon
        mask_scomp=extrecon_scomp+nmat*ngeom_recon
        burnvel_scomp=mask_scomp+1
-       tsat_scomp=burnvel_scomp+nten*(SDIM+1)
+       tsat_scomp=burnvel_scomp+nten*(ncomp_per_burning+1)
 
        nhalf=3
        if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -36467,9 +36472,9 @@ end subroutine initialize2d
 
         ! c++ index
        if (scomp.eq.burnvel_scomp) then
-        ncomp_per=SDIM
+        ncomp_per=ncomp_per_burning
        else if (scomp.eq.tsat_scomp) then
-        ncomp_per=1
+        ncomp_per=ncomp_per_tsat ! interface temperature, mass fraction
        else
         print *,"scomp invalid group extrapfill"
         print *,"scomp, ncomp, bfact, time ",scomp,ncomp,bfact,time
