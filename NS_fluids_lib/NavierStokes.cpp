@@ -11588,6 +11588,14 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
  int nsolve=1;
  int nsolveMM=nsolve*num_materials_scalar_solve;
 
+ int ncomp_per_tsat=2;
+ int ntsat=nten*(ncomp_per_tsat+1);
+
+ if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
+  amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
+ if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
+  amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
+
  resize_metrics(1);
  VOF_Recon_resize(1,SLOPE_RECON_MF);
 
@@ -11741,18 +11749,26 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
    FArrayBox& zfacemm=(*localMF[mm_areafrac_index+AMREX_SPACEDIM-1])[mfi];
    FArrayBox& cellfracmm=(*localMF[mm_cell_areafrac_index])[mfi];
 
+   FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
+   if (Tsatfab.nComp()!=ntsat)
+    amrex::Error("Tsatfab.nComp()!=ntsat");
+
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: GODUNOV_3D.F90
    FORT_STEFANSOLVER( 
     &solidheat_flag, //0=diffuse in solid 1=dirichlet 2=Neumann
     microlayer_size.dataPtr(), 
     microlayer_substrate.dataPtr(), 
     microlayer_temperature_substrate.dataPtr(), 
     &adjust_temperature,
-    &nmat,&nten,&nstate,
+    &nmat,
+    &nten,
+    &nstate,
+    &ntsat,
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -11765,6 +11781,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
     &ncellfrac,
     xlo,dx,
     &dt_slab,
+    Tsatfab.dataPtr(),
+    ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
     cellfracmm.dataPtr(),
     ARLIM(cellfracmm.loVect()),ARLIM(cellfracmm.hiVect()),
     xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),

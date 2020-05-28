@@ -12301,7 +12301,10 @@ stop
        microlayer_substrate, & ! 1..nmat
        microlayer_temperature_substrate, & ! 1..nmat
        adjust_temperature, &
-       nmat,nten,nstate, &
+       nmat, &
+       nten, &
+       nstate, &
+       ntsat, &
        latent_heat, &
        freezing_model, &
        distribute_from_target, &
@@ -12315,6 +12318,7 @@ stop
        ncellfrac, &
        xlo,dx, &
        dt, &
+       TSATFAB,DIMS(TSATFAB), &
        cellmm,DIMS(cellmm), &
        xfacemm,DIMS(xfacemm), &
        yfacemm,DIMS(yfacemm), &
@@ -12339,69 +12343,74 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      INTEGER_T nten
-      INTEGER_T nstate
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: nstate
+      INTEGER_T, intent(in) :: ntsat
 
-      INTEGER_T solidheat_flag
-      REAL_T microlayer_size(nmat)
-      INTEGER_T microlayer_substrate(nmat)
-      REAL_T microlayer_temperature_substrate(nmat)
+      INTEGER_T, intent(in) :: solidheat_flag
+      REAL_T, intent(in) :: microlayer_size(nmat)
+      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
+      REAL_T, intent(in) :: microlayer_temperature_substrate(nmat)
       
-      INTEGER_T adjust_temperature
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nfacefrac
-      INTEGER_T ncellfrac
-      REAL_T latent_heat(2*nten)
-      INTEGER_T freezing_model(2*nten)
-      INTEGER_T distribute_from_target(2*nten)
-      REAL_T saturation_temp(2*nten)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dt
-      INTEGER_T DIMDEC(cellmm)
-      INTEGER_T DIMDEC(xfacemm)
-      INTEGER_T DIMDEC(yfacemm)
-      INTEGER_T DIMDEC(zfacemm)
-      INTEGER_T DIMDEC(swept)
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(thermal)
-      INTEGER_T DIMDEC(Snew)
-      INTEGER_T DIMDEC(DeDT)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(coeff)
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(heatx)
-      INTEGER_T DIMDEC(heaty)
-      INTEGER_T DIMDEC(heatz)
-      INTEGER_T DIMDEC(areax)
-      INTEGER_T DIMDEC(areay)
-      INTEGER_T DIMDEC(areaz)
-      REAL_T cellmm(DIMV(cellmm),ncellfrac) 
-      REAL_T xfacemm(DIMV(xfacemm),nfacefrac) 
-      REAL_T yfacemm(DIMV(yfacemm),nfacefrac) 
-      REAL_T zfacemm(DIMV(zfacemm),nfacefrac) 
-      REAL_T swept(DIMV(swept))
-      REAL_T LS(DIMV(LS),nmat*(SDIM+1))
-      REAL_T thermal(DIMV(thermal),nmat)
-      REAL_T Snew(DIMV(Snew),nstate)
-      REAL_T DeDT(DIMV(DeDT),nmat+1)  ! 1/(rho cv) (cv=DeDT)
-      REAL_T den(DIMV(den),nmat+1)  ! 1/den (i.e. den actually stores 1/den)
+      INTEGER_T, intent(in) :: adjust_temperature
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nfacefrac
+      INTEGER_T, intent(in) :: ncellfrac
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: DIMDEC(TSATFAB)
+      INTEGER_T, intent(in) :: DIMDEC(cellmm)
+      INTEGER_T, intent(in) :: DIMDEC(xfacemm)
+      INTEGER_T, intent(in) :: DIMDEC(yfacemm)
+      INTEGER_T, intent(in) :: DIMDEC(zfacemm)
+      INTEGER_T, intent(in) :: DIMDEC(swept)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(thermal)
+      INTEGER_T, intent(in) :: DIMDEC(Snew)
+      INTEGER_T, intent(in) :: DIMDEC(DeDT)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(coeff)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(heatx)
+      INTEGER_T, intent(in) :: DIMDEC(heaty)
+      INTEGER_T, intent(in) :: DIMDEC(heatz)
+      INTEGER_T, intent(in) :: DIMDEC(areax)
+      INTEGER_T, intent(in) :: DIMDEC(areay)
+      INTEGER_T, intent(in) :: DIMDEC(areaz)
+      REAL_T, intent(in) :: TSATFAB(DIMV(TSATFAB),ntsat) 
+      REAL_T, intent(in) :: cellmm(DIMV(cellmm),ncellfrac) 
+      REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
+      REAL_T, intent(in) :: yfacemm(DIMV(yfacemm),nfacefrac) 
+      REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
+      REAL_T, intent(in) :: swept(DIMV(swept))
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, intent(in) :: thermal(DIMV(thermal),nmat)
+      REAL_T, intent(out) :: Snew(DIMV(Snew),nstate)
+      REAL_T, intent(in) :: DeDT(DIMV(DeDT),nmat+1)  ! 1/(rho cv) (cv=DeDT)
+      ! 1/den (i.e. den actually stores 1/den)
+      REAL_T, intent(in) :: den(DIMV(den),nmat+1)  
        ! alphanovolume or outer_iter_pressure
-      REAL_T coeff(DIMV(coeff),num_materials_scalar_solve)  
-      REAL_T vol(DIMV(vol))
+      REAL_T, intent(out) :: coeff(DIMV(coeff),num_materials_scalar_solve)  
+      REAL_T, intent(in) :: vol(DIMV(vol))
        ! thermal conductivity
-      REAL_T heatx(DIMV(heatx))
-      REAL_T heaty(DIMV(heaty))
-      REAL_T heatz(DIMV(heatz))
-      REAL_T areax(DIMV(areax))
-      REAL_T areay(DIMV(areay))
-      REAL_T areaz(DIMV(areaz))
+      REAL_T, intent(out) :: heatx(DIMV(heatx))
+      REAL_T, intent(out) :: heaty(DIMV(heaty))
+      REAL_T, intent(out) :: heatz(DIMV(heatz))
+      REAL_T, intent(in) :: areax(DIMV(areax))
+      REAL_T, intent(in) :: areay(DIMV(areay))
+      REAL_T, intent(in) :: areaz(DIMV(areaz))
+
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
       INTEGER_T k1lo,k1hi
@@ -12452,12 +12461,22 @@ stop
       INTEGER_T tcomp
       INTEGER_T start_freezing
       REAL_T SWEPTFACTOR,hx
+      INTEGER_T ncomp_per_tsat
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
+      
 
       nhalf=3
 
       thetacut=0.001
+
+      ncomp_per_tsat=2
+      if (ntsat.eq.nten*(ncomp_per_tsat+1)) then
+       ! do nothing
+      else
+       print *,"nstat invalid"
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact invalid67"
@@ -12536,6 +12555,7 @@ stop
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(TSATFAB),1,-1,234)
       call checkbound(fablo,fabhi,DIMS(cellmm),0,-1,234)
       call checkbound(fablo,fabhi,DIMS(xfacemm),0,0,264)
       call checkbound(fablo,fabhi,DIMS(yfacemm),0,1,264)
