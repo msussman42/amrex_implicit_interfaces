@@ -1682,6 +1682,7 @@ stop
        nten, &
        nden, &
        nstate, &
+       ntsat, &
        density_floor_expansion, &
        density_ceiling_expansion, &
        latent_heat, &
@@ -1702,6 +1703,7 @@ stop
        deltaVOF,DIMS(deltaVOF), &
        nodevel,DIMS(nodevel), &
        JUMPFAB,DIMS(JUMPFAB), &
+       TSATFAB,DIMS(TSATFAB), &
        LSold,DIMS(LSold), &
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon), &
@@ -1729,6 +1731,7 @@ stop
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nden
       INTEGER_T, intent(in) :: nstate
+      INTEGER_T, intent(in) :: ntsat
       REAL_T, intent(in) :: density_floor_expansion(nmat)
       REAL_T, intent(in) :: density_ceiling_expansion(nmat)
       REAL_T, intent(in) :: latent_heat(2*nten)
@@ -1752,6 +1755,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(deltaVOF)
       INTEGER_T, intent(in) :: DIMDEC(nodevel)
       INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
+      INTEGER_T, intent(in) :: DIMDEC(TSATFAB)
       INTEGER_T, intent(in) :: DIMDEC(LSold)
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
       INTEGER_T, intent(in) :: DIMDEC(recon)
@@ -1765,6 +1769,7 @@ stop
 
       REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
       REAL_T, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
+      REAL_T, intent(out) :: TSATFAB(DIMV(TSATFAB),2*nten)
       REAL_T, intent(in) :: LSold(DIMV(LSold),nmat*(1+SDIM))
       REAL_T, intent(out) :: LSnew(DIMV(LSnew),nmat)
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
@@ -1900,6 +1905,7 @@ stop
       REAL_T evap_den
       REAL_T local_cv_or_cp
       INTEGER_T speccompsrc,speccompdst
+      INTEGER_T ncomp_per_tsat
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -1917,6 +1923,8 @@ stop
       nhalf0=1
 
       recon_ncomp=nmat*ngeom_recon
+
+      ncomp_per_tsat=2
 
       if ((solvability_projection.ne.0).and. &
           (solvability_projection.ne.1)) then
@@ -1987,6 +1995,12 @@ stop
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
+       stop
+      endif
+      if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
+       ! do nothing
+      else
+       print *,"ntsat invalid"
        stop
       endif
       if (nden.ne.nmat*num_state_material) then
@@ -2111,6 +2125,8 @@ stop
 
       call checkbound(fablo,fabhi, &
        DIMS(JUMPFAB),ngrow_expansion,-1,1256)
+      call checkbound(fablo,fabhi, &
+       DIMS(TSATFAB),ngrow_expansion,-1,1256)
       call checkbound(fablo,fabhi, &
        DIMS(LSold),normal_probe_size+3,-1,1257)
       call checkbound(fablo,fabhi, &

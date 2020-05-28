@@ -10176,6 +10176,11 @@ NavierStokes::level_phase_change_convert(int isweep) {
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten)
   amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp() invalid");
 
+ if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
+  amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
+ if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
+  amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
+
  if (localMF[nodevel_MF]->nGrow()!=1)
   amrex::Error("localMF[nodevel_MF]->nGrow()  invalid");
  if (localMF[nodevel_MF]->nComp()!=2*nten*AMREX_SPACEDIM)
@@ -10363,6 +10368,11 @@ NavierStokes::level_phase_change_convert(int isweep) {
    FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
 
    FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
+
+   FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
+   if (Tsatfab.nComp()!=ntsat)
+    amrex::Error("Tsatfab.nComp()!=ntsat");
+
    int bfact=parent->Space_blockingFactor(level);
 
    int tid_update=0;
@@ -10391,6 +10401,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
     &nten,
     &nden,
     &nstate,
+    &ntsat,
     density_floor_expansion.dataPtr(),
     density_ceiling_expansion.dataPtr(),
     latent_heat.dataPtr(),
@@ -10414,6 +10425,8 @@ NavierStokes::level_phase_change_convert(int isweep) {
     ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
     JUMPfab.dataPtr(),
     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
+    Tsatfab.dataPtr(),
+    ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
     olddistfab.dataPtr(),
     ARLIM(olddistfab.loVect()),ARLIM(olddistfab.hiVect()),
     lsnewfab.dataPtr(),

@@ -36578,7 +36578,7 @@ end subroutine initialize2d
          enddo
          enddo
         endif            
-       enddo ! icomp
+       enddo ! icomp=1,(ncomp_per+1)*nten
 
        enddo ! side
        enddo ! dir2
