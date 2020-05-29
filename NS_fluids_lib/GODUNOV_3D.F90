@@ -12341,6 +12341,7 @@ stop
       use probf90_module
       use global_utility_module
       use MOF_routines_module
+      use mass_transfer_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nmat
@@ -12444,6 +12445,9 @@ stop
       REAL_T TGRAD_MAX,TGRAD_test,T_test
       REAL_T LL
       REAL_T TSAT
+      INTEGER_T TSAT_STATUS
+      INTEGER_T tsat_comp
+      INTEGER_T ngrow_tsat
       REAL_T TMIN(nmat)
       REAL_T TMAX(nmat)
       INTEGER_T TSTATUS(nmat)
@@ -12456,19 +12460,24 @@ stop
       REAL_T LS_side(nmat)
       REAL_T LS_no_tess(nmat)
       REAL_T LS1,LS2
-      REAL_T theta,thetacut,heatcoeff
+      REAL_T theta
+      REAL_T theta_cutoff
+      REAL_T heatcoeff
       REAL_T side_coeff,T_adjust
       INTEGER_T tcomp
       INTEGER_T start_freezing
       REAL_T SWEPTFACTOR,hx
       INTEGER_T ncomp_per_tsat
       REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten_side(-3:3,SDIM)
+      REAL_T x_interface(SDIM)
       INTEGER_T nhalf
+      INTEGER_T dir_inner
       
 
       nhalf=3
 
-      thetacut=0.001
+      theta_cutoff=0.001
 
       ncomp_per_tsat=2
       if (ntsat.eq.nten*(ncomp_per_tsat+1)) then
@@ -12720,7 +12729,8 @@ stop
 
                 TSAT=saturation_temp(iten+ireverse*nten)
                 if (TSAT.gt.zero) then
-                 TSAT=TSATFAB(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_tsat+1)
+                 tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+                 TSAT=TSATFAB(D_DECL(i,j,k),tsat_comp)
                  if (TSAT.gt.zero) then
                   ! do nothing
                  else
@@ -12979,6 +12989,8 @@ stop
              stop
             endif
 
+            call gridsten_level(xsten_side,ic,jc,kc,level,nhalf)
+
             if (dir.eq.1) then
              aface=areax(D_DECL(iface,jface,kface))
             else if (dir.eq.2) then
@@ -13052,18 +13064,49 @@ stop
              endif
 
              if (LS1*LS2.le.zero) then
+
               if ((LS1.eq.zero).and.(LS2.eq.zero)) then
-               theta=thetacut
-              else
+               theta=half
+              else if ((LS1.ne.zero).or.(LS2.ne.zero)) then
                theta=LS1/(LS1-LS2)
+              else
+               print *,"LS1 or LS2 invalid"
+               stop
               endif
-              if ((theta.lt.zero).or.(theta.gt.one+VOFTOL)) then
+              if ((theta.ge.zero).and.(theta.le.one+VOFTOL)) then
+               ! do nothing
+              else
                print *,"theta invalid"
                stop
               endif
-              if (theta.le.thetacut) then
-               theta=thetacut
+              if (theta.le.theta_cutoff) then
+               theta=theta_cutoff
               endif
+
+              do dir_inner=1,SDIM
+               x_interface(dir_inner)=theta*xsten_side(0,dir_inner)+ &
+                       (one-theta)*xsten(0,dir_inner)
+              enddo
+
+              tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+              ngrow_tsat=1
+              call interpfab_tsat( &
+               i,j,k, &
+               ireverse, &
+               iten, &
+               nten, &
+               ntsat, &
+               bfact, &
+               level, &
+               finest_level, &
+               dx,xlo, &
+               x_interface, &
+               tsat_comp, &
+               ngrow_tsat, &
+               fablo,fabhi, &
+               TSATFAB,DIMS(TSATFAB), &
+               TSAT)
+
               hx=abs(xsten(0,dir)-xsten(2*side,dir))
               if ((levelrz.eq.3).and.(dir.eq.2)) then
                hx=hx*xsten(side,1)
