@@ -12669,195 +12669,235 @@ stop
            endif
            call get_iten(im,im_opp,iten,nmat)
            LL=latent_heat(iten+ireverse*nten)
-           freezing_mod=freezing_model(iten+ireverse*nten)
-           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-
-           if ((distribute_from_targ.ne.0).and. &
-               (distribute_from_targ.ne.1)) then
-            print *,"distribute_from_targ invalid"
+           TSAT_STATUS=NINT(TSATFAB(D_DECL(i,j,k),iten))
+           if (ireverse.eq.0) then
+            ! do nothing
+           else if (ireverse.eq.1) then
+            TSAT_STATUS=-TSAT_STATUS
+           else
+            print *,"ireverse invalid"
             stop
            endif
 
-           if ((is_rigid(nmat,im).eq.1).or. &
-               (is_rigid(nmat,im_opp).eq.1)) then
-            ! do nothing
-           else if (LL.ne.zero) then
-            if (ireverse.eq.0) then
-             im_source=im
-             im_dest=im_opp
-            else if (ireverse.eq.1) then
-             im_source=im_opp
-             im_dest=im
-            else
-             print *,"ireverse invalid"
+           if ((TSAT_STATUS.eq.1).or.(TSAT_STATUS.eq.2)) then
+
+            freezing_mod=freezing_model(iten+ireverse*nten)
+            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
+
+            if ((distribute_from_targ.ne.0).and. &
+                (distribute_from_targ.ne.1)) then
+             print *,"distribute_from_targ invalid"
              stop
             endif
-            call check_recalesce_status(im_source,start_freezing)
 
-            if (start_freezing.eq.1) then
+            if ((is_rigid(nmat,im).eq.0).and. &
+                (is_rigid(nmat,im_opp).eq.0)) then
 
-              ! freezing_mod=0 (sharp interface stefan model)
-              ! freezing_mod=1 (source term model)
-              ! freezing_mod=2 (hydrate model)
-              ! freezing_mod=3 (wildfire)
-              ! freezing_mod=4 (source term model)
-              ! freezing_mod=5 (evaporation/condensation)
-             if ((freezing_mod.eq.0).or. &
-                 (freezing_mod.eq.5)) then
+             if (LL.ne.zero) then
 
-              TSAT=saturation_temp(iten+ireverse*nten)
-              if (TSAT.le.zero) then
-               print *,"saturation temperature must be positive"
+              if (ireverse.eq.0) then
+               im_source=im
+               im_dest=im_opp
+              else if (ireverse.eq.1) then
+               im_source=im_opp
+               im_dest=im
+              else
+               print *,"ireverse invalid"
                stop
               endif
+              call check_recalesce_status(im_source,start_freezing)
 
-              if (num_materials_scalar_solve.eq.1) then
+              if (start_freezing.eq.1) then
 
-               im_source_substrate=im_source
-               im_dest_substrate=im_dest
+               ! freezing_mod=0 (sharp interface stefan model)
+               ! freezing_mod=1 (source term model)
+               ! freezing_mod=2 (hydrate model)
+               ! freezing_mod=3 (wildfire)
+               ! freezing_mod=4 (source term model)
+               ! freezing_mod=5 (evaporation/condensation)
+               if ((freezing_mod.eq.0).or. &
+                   (freezing_mod.eq.5)) then
 
-               if (freezing_mod.eq.0) then
-
-                ! TSAT BC at thin filament interface.
-                if (solidheat_flag.eq.0) then ! diffuse in solid
-                 if (microlayer_substrate(im_source).ne.0) then
-                  im_source_substrate=microlayer_substrate(im_source)
-                  if (is_rigid(nmat,im_source_substrate).ne.1) then
-                   print *,"is_rigid(nmat,im_source_substrate) invalid"
-                   stop
-                  endif
+                TSAT=saturation_temp(iten+ireverse*nten)
+                if (TSAT.gt.zero) then
+                 TSAT=TSATFAB(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_tsat+1)
+                 if (TSAT.gt.zero) then
+                  ! do nothing
+                 else
+                  print *,"TSAT must be positive1"
+                  stop
                  endif
-                 if (microlayer_substrate(im_dest).ne.0) then
-                  im_dest_substrate=microlayer_substrate(im_dest)
-                  if (is_rigid(nmat,im_dest_substrate).ne.1) then
-                   print *,"is_rigid(nmat,im_dest_substrate) invalid"
-                   stop
-                  endif
-                 endif
-                else if ((solidheat_flag.eq.1).or. & ! dirichlet 
-                         (solidheat_flag.eq.2)) then ! neumann 
-                 ! do nothing
                 else
-                 print *,"solidheat_flag invalid"
+                 print *,"saturation temperature must be positive2"
                  stop
                 endif
 
-               else if (freezing_mod.eq.5) then
-                ! do nothing
-               else
-                print *,"freezing_mod invalid"
-                stop
-               endif
+                if (num_materials_scalar_solve.eq.1) then
 
-               if ((im_source.eq.im_primary).or. &
-                   (im_source_substrate.eq.im_primary).or. &
-                   (im_dest.eq.im_primary).or. &
-                   (im_dest_substrate.eq.im_primary)) then
+                 im_source_substrate=im_source
+                 im_dest_substrate=im_dest
 
-                im_crit=im_primary
+                 if (freezing_mod.eq.0) then
 
-                if (TSTATUS(im_crit).eq.1) then
-
-                 if (LL.lt.zero) then ! freezing or condensation
-                  TGRAD_test=TSAT-TMIN(im_crit)
-                 else if (LL.gt.zero) then  ! melting or boiling
-                  TGRAD_test=TMAX(im_crit)-TSAT
-                 else
-                  print *,"LL invalid"
-                  stop
-                 endif
-
-                  ! freezing_mod=0 (sharp interface stefan model)
-                  ! freezing_mod=1 (source term model)
-                  ! freezing_mod=2 (hydrate model)
-                  ! freezing_mod=3 (wildfire)
-                  ! freezing_mod=4 (source term model)
-                  ! freezing_mod=5 (evaporation/condensation)
-
-                 if ((freezing_mod.eq.0).or. &
-                     ((freezing_mod.eq.5).and.(TGRAD_test.gt.zero))) then
-
-                  if (im_dest_crit.eq.-1) then
-                   im_crit_save=im_crit
-                   im_dest_crit=im_dest
-                   im_source_crit=im_source
-                   im_dest_substrate_crit=im_dest_substrate
-                   im_source_substrate_crit=im_source_substrate
-                   iten_crit=iten
-                   ireverse_crit=ireverse
-                   TGRAD_MAX=TGRAD_test
-                  else if ((im_dest_crit.ge.1).and. &
-                           (im_dest_crit.le.nmat)) then
-                   if (TGRAD_test.gt.TGRAD_MAX) then
-                    im_crit_save=im_crit
-                    im_dest_crit=im_dest
-                    im_source_crit=im_source
-                    im_dest_substrate_crit=im_dest_substrate
-                    im_source_substrate_crit=im_source_substrate
-                    iten_crit=iten
-                    ireverse_crit=ireverse
-                    TGRAD_MAX=TGRAD_test
+                  ! TSAT BC at thin filament interface.
+                  if (solidheat_flag.eq.0) then ! diffuse in solid
+                   if (microlayer_substrate(im_source).ne.0) then
+                    im_source_substrate=microlayer_substrate(im_source)
+                    if (is_rigid(nmat,im_source_substrate).ne.1) then
+                     print *,"is_rigid(nmat,im_source_substrate) invalid"
+                     stop
+                    endif
                    endif
+                   if (microlayer_substrate(im_dest).ne.0) then
+                    im_dest_substrate=microlayer_substrate(im_dest)
+                    if (is_rigid(nmat,im_dest_substrate).ne.1) then
+                     print *,"is_rigid(nmat,im_dest_substrate) invalid"
+                     stop
+                    endif
+                   endif
+                  else if ((solidheat_flag.eq.1).or. & ! dirichlet 
+                           (solidheat_flag.eq.2)) then ! neumann 
+                   ! do nothing
                   else
-                   print *,"im_dest_crit invalid"
+                   print *,"solidheat_flag invalid"
                    stop
                   endif
 
-                 else if ((freezing_mod.eq.5).and.(TGRAD_test.le.zero)) then
+                 else if (freezing_mod.eq.5) then
                   ! do nothing
                  else
                   print *,"freezing_mod invalid"
                   stop
                  endif
 
-                else if (TSTATUS(im_crit).eq.0) then
-                 ! do nothing
-                else
-                 print *,"TSTATUS(im_crit) invalid"
-                 stop
-                endif
+                 if ((im_source.eq.im_primary).or. &
+                     (im_source_substrate.eq.im_primary).or. &
+                     (im_dest.eq.im_primary).or. &
+                     (im_dest_substrate.eq.im_primary)) then
 
-               else if ((im_source.ne.im_primary).and. &
-                        (im_source_substrate.ne.im_primary).and. &
-                        (im_dest.ne.im_primary).and. &
-                        (im_dest_substrate.ne.im_primary)) then
+                  im_crit=im_primary
+
+                  if (TSTATUS(im_crit).eq.1) then
+
+                   if (LL.lt.zero) then ! freezing or condensation
+                    TGRAD_test=TSAT-TMIN(im_crit)
+                   else if (LL.gt.zero) then  ! melting or boiling
+                    TGRAD_test=TMAX(im_crit)-TSAT
+                   else
+                    print *,"LL invalid"
+                    stop
+                   endif
+
+                    ! freezing_mod=0 (sharp interface stefan model)
+                    ! freezing_mod=1 (source term model)
+                    ! freezing_mod=2 (hydrate model)
+                    ! freezing_mod=3 (wildfire)
+                    ! freezing_mod=4 (source term model)
+                    ! freezing_mod=5 (evaporation/condensation)
+
+                   if ((freezing_mod.eq.0).or. &
+                       ((freezing_mod.eq.5).and.(TGRAD_test.gt.zero))) then
+
+                    if (im_dest_crit.eq.-1) then
+                     im_crit_save=im_crit
+                     im_dest_crit=im_dest
+                     im_source_crit=im_source
+                     im_dest_substrate_crit=im_dest_substrate
+                     im_source_substrate_crit=im_source_substrate
+                     iten_crit=iten
+                     ireverse_crit=ireverse
+                     TGRAD_MAX=TGRAD_test
+                    else if ((im_dest_crit.ge.1).and. &
+                             (im_dest_crit.le.nmat)) then
+                     if (TGRAD_test.gt.TGRAD_MAX) then
+                      im_crit_save=im_crit
+                      im_dest_crit=im_dest
+                      im_source_crit=im_source
+                      im_dest_substrate_crit=im_dest_substrate
+                      im_source_substrate_crit=im_source_substrate
+                      iten_crit=iten
+                      ireverse_crit=ireverse
+                      TGRAD_MAX=TGRAD_test
+                     endif
+                    else
+                     print *,"im_dest_crit invalid"
+                     stop
+                    endif
+
+                   else if ((freezing_mod.eq.5).and.(TGRAD_test.le.zero)) then
+                    ! do nothing
+                   else
+                    print *,"freezing_mod invalid"
+                    stop
+                   endif
+
+                  else if (TSTATUS(im_crit).eq.0) then
+                   ! do nothing
+                  else
+                   print *,"TSTATUS(im_crit) invalid"
+                   stop
+                  endif
+
+                 else if ((im_source.ne.im_primary).and. &
+                          (im_source_substrate.ne.im_primary).and. &
+                          (im_dest.ne.im_primary).and. &
+                          (im_dest_substrate.ne.im_primary)) then
+                  ! do nothing
+                 else
+                  print *,"LS_center invalid"
+                  stop
+                 endif
+
+                else if (num_materials_scalar_solve.eq.nmat) then
+                 print *,"FIX ME: im_dest_crit, im_source_crit using FVM"
+                 stop
+                else
+                 print *,"num_materials_scalar_solve invalid"
+                 stop
+                endif 
+
+               else if ((freezing_mod.eq.1).or. &
+                        (freezing_mod.eq.2).or. &
+                        (freezing_mod.eq.4)) then
                 ! do nothing
                else
-                print *,"LS_center invalid"
+                print *,"freezing_model invalid in stefansolver"
+                print *,"freezing_mod= ",freezing_mod
+                print *,"iten,ireverse,nten ",iten,ireverse,nten
                 stop
                endif
 
-              else if (num_materials_scalar_solve.eq.nmat) then
-               print *,"FIX ME: im_dest_crit, im_source_crit using FVM"
-               stop
+              else if (start_freezing.eq.0) then
+               ! do nothing
               else
-               print *,"num_materials_scalar_solve invalid"
+               print *,"start_freezing invalid"
                stop
-              endif 
+              endif
 
-             else if ((freezing_mod.eq.1).or. &
-                      (freezing_mod.eq.2).or. &
-                      (freezing_mod.eq.4)) then
+             else if (LL.eq.zero) then
               ! do nothing
              else
-              print *,"freezing_model invalid in stefansolver"
-              print *,"freezing_mod= ",freezing_mod
-              print *,"iten,ireverse,nten ",iten,ireverse,nten
+              print *,"LL invalid"
               stop
              endif
 
-            else if (start_freezing.eq.0) then
+            else if ((is_rigid(nmat,im).eq.1).or. &
+                     (is_rigid(nmat,im_opp).eq.1)) then
              ! do nothing
             else
-             print *,"start_freezing invalid"
+             print *,"is_rigid(nmat,im) or is_rigid(nmat,im_opp) invalid"
              stop
             endif
-           else if (LL.eq.zero) then
+
+           else if ((TSAT_STATUS.eq.-1).or.(TSAT_STATUS.eq.-2)) then
+            ! do nothing
+           else if (TSAT_STATUS.eq.0) then
             ! do nothing
            else
-            print *,"LL invalid"
+            print *,"TSAT_STATUS invalid"
             stop
            endif
+
           enddo !ireverse=0,1
          enddo ! im_opp=im+1..nmat
         enddo ! im=1..nmat-1
