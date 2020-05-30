@@ -4614,7 +4614,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
    NavierStokes& ns_level=getLevel(ilev);
    int tessellate=1;
    ns_level.makeFaceFrac(tessellate,1,FACEFRAC_MM_MF,do_face_decomp);
-   ns_level.ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF);
+   ns_level.ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
    ns_level.makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
   } // ilev
  } else if (num_materials_scalar_solve==1) {

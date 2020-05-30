@@ -5,7 +5,6 @@
 #    define FORT_CURVSTRIP curvstrip
 #    define FORT_L1_DISTANCE l1_distance
 #    define FORT_DOTMASK_BUILD dotmask_build
-#    define FORT_FACEPROCESS faceprocess
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
@@ -33,7 +32,6 @@
 #    define FORT_CURVSTRIP CURVSTRIP
 #    define FORT_L1_DISTANCE L1_DISTANCE
 #    define FORT_DOTMASK_BUILD DOTMASK_BUILD
-#    define FORT_FACEPROCESS FACEPROCESS
 #    define FORT_CELLFACEINIT CELLFACEINIT
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
 #    define FORT_BUILDFACEWT BUILDFACEWT
@@ -61,7 +59,6 @@
 #    define FORT_CURVSTRIP curvstrip
 #    define FORT_L1_DISTANCE l1_distance
 #    define FORT_DOTMASK_BUILD dotmask_build
-#    define FORT_FACEPROCESS faceprocess
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
@@ -87,7 +84,6 @@
 #    define FORT_CURVSTRIP curvstrip_
 #    define FORT_L1_DISTANCE l1_distance_
 #    define FORT_DOTMASK_BUILD dotmask_build_
-#    define FORT_FACEPROCESS faceprocess_
 #    define FORT_CELLFACEINIT cellfaceinit_
 #    define FORT_NEUMANNEXTRAP neumannextrap_
 #    define FORT_BUILDFACEWT buildfacewt_
@@ -679,23 +675,6 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        int* nmat);
-
-     void FORT_FACEPROCESS(
-       int* tid,
-       int* dir,
-       int* tessellate,
-       int* level,
-       int* finest_level,
-       Real* dstfab,AMREX_ARLIM_P(dstfablo),AMREX_ARLIM_P(dstfabhi),
-       Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
-       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
-       const int* tilelo,const int* tilehi,
-       const int* fablo,const int* fabhi,
-       int* bfact,
-       const int* rz_flag,
-       const Real* xlo,const Real* dx,
-       Real* time,
-       int* nmat,int* nface_src,int* nface_dst);
 
      void FORT_CELLFACEINIT(
        int* tid,

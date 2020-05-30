@@ -465,6 +465,7 @@ stop
          max_problen, &
          level, &
          finest_level, &
+         truncate_volume_fractions, &
          latent_heat, &
          maskfab,DIMS(maskfab), &
          facefab,DIMS(facefab), &
@@ -501,6 +502,7 @@ stop
       REAL_T, intent(inout) :: minLS(nmat)
       REAL_T, intent(inout) :: maxLS(nmat)
       REAL_T, intent(in) :: max_problen
+      INTEGER_T, intent(in) :: truncate_volume_fractions(nmat)
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(facefab)
@@ -580,7 +582,7 @@ stop
       INTEGER_T donateflag(nmat+1+nstar)
       INTEGER_T crse_dist_valid
       INTEGER_T ctouch
-      REAL_T init_dist
+      REAL_T init_dist_from_crse
       INTEGER_T rigid_in_stencil
       REAL_T VFRAC_STENCIL_CUTOFF
       REAL_T VFRAC_INTERP,theta_nbr,theta_cen
@@ -748,12 +750,22 @@ stop
          if (level.eq.0) then
           crse_dist_valid=0
          else if ((level.gt.0).and.(level.le.finest_level)) then
-          init_dist=crsedist(D_DECL(i,j,k),im)
-          if ((im.eq.im_crit).and.(init_dist.lt.zero)) then
+          init_dist_from_crse=crsedist(D_DECL(i,j,k),im)
+          if ((im.eq.im_crit).and. &
+              (init_dist_from_crse.lt.zero)) then
            crse_dist_valid=0
-          endif 
-          if ((im.ne.im_crit).and.(init_dist.ge.zero)) then
+          else if ((im.ne.im_crit).and. &
+                   (init_dist_from_crse.ge.zero)) then
            crse_dist_valid=0
+          else if ((im.eq.im_crit).and. &
+                   (init_dist_from_crse.ge.zero)) then
+           ! do nothing
+          else if ((im.ne.im_crit).and. &
+                   (init_dist_from_crse.le.zero)) then
+           ! do nothing
+          else
+           print *,"im,im_crit, or init_dist_from_crse invalid"
+           stop
           endif 
           ctouch=NINT(crsetouch(D_DECL(i,j,k),im))
           if (ctouch.eq.0) then
@@ -774,42 +786,45 @@ stop
            dir2=nmat+(im-1)*SDIM+dir
            newfab(D_DECL(i,j,k),dir2)=crsedist(D_DECL(i,j,k),dir2)
           enddo
-          init_dist=crsedist(D_DECL(i,j,k),im)
+          init_dist_from_crse=crsedist(D_DECL(i,j,k),im)
+           ! touchfab=1 => modify with candidate distance even if 
+           ! new distance will be larger.
           touchfab(D_DECL(i,j,k),im)=one
-          if (init_dist.lt.minLS(im)) then
-           minLS(im)=init_dist
+          if (init_dist_from_crse.lt.minLS(im)) then
+           minLS(im)=init_dist_from_crse
           endif
-          if (init_dist.gt.maxLS(im)) then
-           maxLS(im)=init_dist
+          if (init_dist_from_crse.gt.maxLS(im)) then
+           maxLS(im)=init_dist_from_crse
           endif
          else if (crse_dist_valid.eq.0) then
           if (im.eq.im_crit) then
-           init_dist=max_problen
+           init_dist_from_crse=max_problen
           else
-           init_dist=-max_problen
+           init_dist_from_crse=-max_problen
           endif
          else
           print *,"crse_dist_valid invalid"
           stop
          endif
  
-         newfab(D_DECL(i,j,k),im)=init_dist
+         newfab(D_DECL(i,j,k),im)=init_dist_from_crse
 
          if ((i.eq.i_DEB_DIST).and. &
              (j.eq.j_DEB_DIST).and. &
              (k.eq.k_DEB_DIST)) then
-          print *,"DEB_DIST: im,init_dist=",im,init_dist
+          print *,"DEB_DIST: im,init_dist_from_crse=", &
+                  im,init_dist_from_crse
          endif 
 
         else if (is_rigid(nmat,im).eq.1) then
 
-         init_dist=newfab(D_DECL(i,j,k),im)
+         init_dist_from_crse=newfab(D_DECL(i,j,k),im)
          touchfab(D_DECL(i,j,k),im)=two
-         if (init_dist.lt.minLS(im)) then
-          minLS(im)=init_dist
+         if (init_dist_from_crse.lt.minLS(im)) then
+          minLS(im)=init_dist_from_crse
          endif
-         if (init_dist.gt.maxLS(im)) then
-          maxLS(im)=init_dist
+         if (init_dist_from_crse.gt.maxLS(im)) then
+          maxLS(im)=init_dist_from_crse
          endif
 
         else
@@ -862,9 +877,16 @@ stop
         print *,"is_rigid invalid"
         stop
        endif
-         
+
+        ! in Sussman and Puckett, 
+        ! a reconstructed interface segment was valid if
+        ! LS_{ij}(LS_{ij}+LS_{i+i',j+j'}) <= 0 for
+        ! some |i'|<=1 |j'|<=1
+        ! in the present algorithm, a reconstructed segment is valid if
+        ! (A) F>VOFTOL_REDIST and
+        ! (B)        
        do im=1,nmat
-        cell_test(im)=0 !F>facetol ?
+        cell_test(im)=0 !F>VOFTOL_REDIST?
         face_test(im)=0 !face areafrac between cells consistent?
         full_neighbor(im)=0 !neighbor F(im)>1-facetol ?
         stencil_test(im)=0 ! F(im)>1/2-eps on cell bdry?
@@ -897,11 +919,15 @@ stop
        enddo
        call put_istar(istar,istar_array)
        im_test=NINT(stenfab(D_DECL(i,j,k),istar))
-       if ((im_test.lt.1).or.(im_test.gt.nmat)) then
+       if ((im_test.ge.1).and.(im_test.le.nmat)) then
+        ! do nothing
+       else
         print *,"im_test out of range (0)"
         stop
        endif
-       if (is_rigid(nmat,im_test).ne.0) then
+       if (is_rigid(nmat,im_test).eq.0) then
+        ! do nothing
+       else
         print *,"is_rigid(nmat,im_test).ne.0 (0)"
         stop
        endif
@@ -3011,6 +3037,537 @@ stop
 
       return
       end subroutine FORT_FACEINITTEST
+
+       ! facefab is initialized in FORT_FACEINIT
+       ! centroids in facefab are in an absolute coordinate system.
+      subroutine FORT_FACEPROCESS( &
+       ngrow_source, &
+       ngrow_dest, &
+       tid, &
+       dir, &
+       tessellate, &
+       level, &
+       finest_level, &
+       dstfab,DIMS(dstfab), &
+       facefab,DIMS(facefab), &
+       vofrecon,DIMS(vofrecon), &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       rz_flag, &
+       xlo,dx, &
+       time, &
+       nmat,nface_src,nface_dst)
+
+      use global_utility_module
+      use global_distance_module
+      use probcommon_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      use levelset_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: ngrow_source
+      INTEGER_T, intent(in) :: ngrow_dest
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nface_src,nface_dst
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: DIMDEC(dstfab)
+      INTEGER_T, intent(in) :: DIMDEC(facefab)
+      INTEGER_T, intent(in) :: DIMDEC(vofrecon)
+
+      REAL_T, intent(out) :: dstfab(DIMV(dstfab),nface_dst)
+      REAL_T, intent(in) :: facefab(DIMV(facefab),nface_src)
+      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: rz_flag
+      REAL_T, intent(in) :: time
+
+      INTEGER_T i,j,k
+      INTEGER_T iface_left,iface_right
+      INTEGER_T inormal
+      INTEGER_T left_face_ok,right_face_ok
+      INTEGER_T side
+      INTEGER_T ii,jj,kk
+      INTEGER_T im,im_opp
+
+      INTEGER_T nface_src_test,nface_dst_test,vofcomp
+      REAL_T mofdata_left(nmat*ngeom_recon)
+      REAL_T mofdata_right(nmat*ngeom_recon)
+      REAL_T xsten_left(-3:3,SDIM)
+      REAL_T xsten_right(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T dir2
+      REAL_T multi_cen_left(SDIM,nmat)
+      REAL_T multi_cen_right(SDIM,nmat)
+      REAL_T cencell_left(SDIM)
+      REAL_T cencell_right(SDIM)
+      REAL_T volcell_left
+      REAL_T volcell_right
+      REAL_T leftface(nmat,SDIM+1)
+      REAL_T rightface(nmat,SDIM+1)
+      REAL_T frac_left(nmat)
+      REAL_T frac_right(nmat)
+      REAL_T left_total
+      REAL_T right_total
+      REAL_T vol_total
+      REAL_T x_left(SDIM,nmat)
+      REAL_T x_right(SDIM,nmat)
+      INTEGER_T ml,mr
+      REAL_T frac_pair(nmat,nmat)  !(m_left,m_right)
+      REAL_T dist_pair(nmat,nmat)
+      REAL_T x_pair(nmat,nmat,SDIM)  ! (m_left,m_right)
+      REAL_T dpair
+      REAL_T delta,RR
+      REAL_T xstenMAC(-1:1,SDIM)
+      INTEGER_T nhalfMAC
+      INTEGER_T at_RZ_face
+      REAL_T L_face
+      INTEGER_T nmax
+      INTEGER_T caller_id
+ 
+      L_face=dx(dir+1)
+
+      nmax=POLYGON_LIST_MAX  ! in: FACE_PROCESS
+
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+ 
+      nhalf=3 
+      nhalfMAC=1 
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid87"
+       stop
+      endif
+      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
+       print *,"tessellate invalid"
+       stop
+      endif
+
+      nface_src_test=nmat*SDIM*2*(1+SDIM)
+      if (nface_src_test.ne.nface_src) then
+       print *,"nface_src invalid nface_src nface_src_test ", &
+         nface_src,nface_src_test
+       stop
+      endif
+      nface_dst_test=nmat*nmat*2
+      if (nface_dst_test.ne.nface_dst) then
+       print *,"nface_dst invalid nface_dst nface_dst_test ", &
+         nface_dst,nface_dst_test
+       stop
+      endif
+
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in faceprocess"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(dstfab),ngrow_dest,dir,2880)
+      call checkbound(fablo,fabhi,DIMS(facefab),ngrow_source,-1,2881)
+      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow_source,-1,2882)
+      
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid faceprocess"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.ne.SDIM+1) then
+       print *,"ngeom_raw invalid faceprocess"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      if (rz_flag.eq.0) then
+       ! do nothing
+      else if (rz_flag.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (rz_flag.eq.3) then 
+       ! do nothing
+      else
+       print *,"rz_flag invalid in faceinit"
+       stop
+      endif
+
+      ii=0
+      jj=0
+      kk=0
+      if (dir.eq.0) then
+       ii=1
+      else if (dir.eq.1) then
+       jj=1
+      else if ((dir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"dir invalid faceprocess"
+       stop
+      endif
+ 
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_dest,dir) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalfMAC,dir+1)
+
+       if (dir.eq.0) then
+        inormal=i
+       else if (dir.eq.1) then
+        inormal=j
+       else if ((dir.eq.2).and.(SDIM.eq.3)) then
+        inormal=k
+       else
+        print *,"dir invalid"
+        stop
+       endif
+
+       if ((inormal.gt.fablo(dir+1)-ngrow_source).and. &
+           (inormal.le.fabhi(dir+1)+ngrow_source+1)) then
+        left_face_ok=1
+       else if (inormal.eq.fablo(dir+1)-ngrow_source) then
+        left_face_ok=0
+       else
+        print *,"inormal invalid"
+        stop
+       endif
+
+       if ((inormal.ge.fablo(dir+1)-ngrow_source).and. &
+           (inormal.le.fabhi(dir+1)+ngrow_source)) then
+        right_face_ok=1
+       else if (inormal.eq.fabhi(dir+1)+ngrow_source+1) then
+        right_face_ok=0
+       else
+        print *,"inormal invalid"
+        stop
+       endif
+
+       at_RZ_face=0
+       if (levelrz.eq.0) then
+        ! do nothing
+       else if (levelrz.eq.1) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
+         stop
+        endif
+        if (dir.eq.0) then
+         if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+          at_RZ_face=1
+         endif
+         if (i.le.0) then
+          at_RZ_face=1
+         endif
+        endif
+       else if (levelrz.eq.3) then
+        if (dir.eq.0) then
+         if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+          at_RZ_face=1
+         endif
+         if (i.le.0) then
+          at_RZ_face=1
+         endif
+        endif
+       else
+        print *,"levelrz invalid"
+        stop
+       endif
+
+       if (at_RZ_face.eq.0) then
+
+        left_total=zero
+        right_total=zero
+         ! (im,dir,side,dir2)
+        do im=1,nmat
+         do dir2=1,SDIM+1
+          side=2
+          call abs_array_index4(im,dir+1,side,dir2, &
+           nmat,SDIM,2,SDIM+1,iface_left)
+          side=1
+          call abs_array_index4(im,dir+1,side,dir2, &
+           nmat,SDIM,2,SDIM+1,iface_right)
+
+          if (left_face_ok.eq.1) then
+           leftface(im,dir2)=facefab(D_DECL(i-ii,j-jj,k-kk),iface_left)
+          else if (left_face_ok.eq.0) then
+           leftface(im,dir2)=facefab(D_DECL(i,j,k),iface_right)
+          else
+           print *,"left_face_ok invalid"
+           stop
+          endif
+
+          if (right_face_ok.eq.1) then
+           rightface(im,dir2)=facefab(D_DECL(i,j,k),iface_right)
+          else if (right_face_ok.eq.0) then
+           rightface(im,dir2)=facefab(D_DECL(i-ii,j-jj,k-kk),iface_left)
+          else
+           print *,"right_face_ok invalid"
+           stop
+          endif
+
+         enddo ! dir2
+
+         frac_left(im)=leftface(im,1)
+         frac_right(im)=rightface(im,1)
+
+         if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
+          left_total=left_total+frac_left(im)
+          right_total=right_total+frac_right(im)
+         else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
+          ! do nothing
+         else
+          print *,"tessellate or is_rigid invalid"
+          stop
+         endif 
+
+          ! absolute coordinate system.
+         do dir2=1,SDIM
+          x_left(dir2,im)=leftface(im,dir2+1)
+          x_right(dir2,im)=rightface(im,dir2+1)
+         enddo
+        enddo ! im=1..nmat
+
+        if ((left_total.le.zero).or.(right_total.le.zero)) then
+         print *,"left_total or right_total invalid"
+         stop
+        endif
+        do im=1,nmat
+         frac_left(im)=frac_left(im)/left_total
+         frac_right(im)=frac_right(im)/right_total
+        enddo ! im
+
+
+        if ((left_face_ok.eq.1).and. &
+            (right_face_ok.eq.1)) then
+
+         do im=1,nmat*ngeom_recon
+          mofdata_left(im)=vofrecon(D_DECL(i-ii,j-jj,k-kk),im)
+          mofdata_right(im)=vofrecon(D_DECL(i,j,k),im)
+         enddo
+         do im=1,nmat
+          vofcomp=(im-1)*ngeom_recon+1
+          do dir2=1,SDIM
+           multi_cen_left(dir2,im)=mofdata_left(vofcomp+dir2)
+           multi_cen_right(dir2,im)=mofdata_right(vofcomp+dir2)
+          enddo
+         enddo ! im
+
+         call CISBOX(xsten_left,nhalf, &
+          xlo,dx,i-ii,j-jj,k-kk, &
+          bfact,level, &
+          volcell_left,cencell_left,SDIM) 
+
+         call CISBOX(xsten_right,nhalf, &
+          xlo,dx,i,j,k, &
+          bfact,level, &
+          volcell_right,cencell_right,SDIM) 
+
+         do im = 1,nmat
+
+          if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
+
+           if ((frac_left(im).gt.one+FACETOL_SANITY).or. &
+               (frac_left(im).lt.zero).or. &
+               (frac_right(im).gt.one+FACETOL_SANITY).or. &
+               (frac_right(im).lt.zero)) then
+            print *,"frac_left or frac_right out of range"
+            stop
+           endif
+           if (frac_left(im).le.FACETOL_DVOL) then
+            frac_left(im) = zero
+           else if (frac_left(im).ge.one-FACETOL_DVOL) then
+            frac_left(im) = one
+           endif
+           if (frac_right(im).lt.FACETOL_DVOL) then
+            frac_right(im) = zero
+           else if (frac_right(im).gt.one-FACETOL_DVOL)then
+            frac_right(im) = one
+           endif
+
+          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
+           ! do nothing
+          else
+           print *,"tessellate or is_rigid invalid"
+           stop
+          endif 
+
+         enddo ! im=1..nmat
+
+           ! x_pair in absolute coordinate system.
+         caller_id=12
+         call multi_get_area_pairs( &
+           bfact,dx, &
+           xsten_right, &
+           xsten_left, &
+           nhalf, &
+           mofdata_right, &
+           mofdata_left, &
+           nmat, &
+           dir+1, &
+           frac_pair, & ! left,right
+           x_pair, & ! left,right
+           SDIM, &
+           geom_xtetlist(1,1,1,tid+1), &
+           nmax, &
+           geom_xtetlist_old(1,1,1,tid+1), &
+           nmax, &
+           nmax, &
+           caller_id)
+
+         vol_total=zero
+         do im=1,nmat
+         do im_opp=1,nmat
+          vol_total=vol_total+frac_pair(im,im_opp)
+         enddo
+         enddo
+         if (vol_total.gt.zero) then
+
+          do im=1,nmat
+          do im_opp=1,nmat
+           frac_pair(im,im_opp)=frac_pair(im,im_opp)/vol_total
+          enddo
+          enddo
+
+         else
+          print *,"vol_total invalid"
+          stop
+         endif
+
+         delta=xsten_right(0,dir+1)-xsten_left(0,dir+1)
+         if (delta.le.zero) then
+          print *,"delta invalid faceprocess"
+          stop
+         endif 
+
+         do ml = 1, nmat
+
+          if ((tessellate.eq.1).or.(is_rigid(nmat,ml).eq.0)) then
+
+           do mr = 1, nmat
+
+            if ((tessellate.eq.1).or.(is_rigid(nmat,mr).eq.0)) then
+
+             if ((frac_pair(ml,mr).lt.-FACETOL_SANITY).or. &
+                 (frac_pair(ml,mr).gt.one+FACETOL_SANITY)) then
+              print *,"frac_pair invalid"
+              stop
+             endif
+  
+             if (frac_pair(ml,mr).lt.FACETOL_DVOL) then
+              frac_pair(ml,mr)=zero
+              dist_pair(ml,mr)=delta
+             else
+              dpair=zero
+              do dir2=1,SDIM
+               dpair=dpair+ &
+                (xsten_right(0,dir2)+multi_cen_right(dir2,mr)- &
+                 xsten_left(0,dir2)-multi_cen_left(dir2,ml))**2
+              enddo
+              dpair=sqrt(dpair)
+              dist_pair(ml,mr)=dpair
+             endif
+    
+             if (dir.eq.1) then ! theta direction
+   
+              if ((levelrz.eq.0).or. &
+                  (levelrz.eq.1)) then !XY or RZ
+               RR=one 
+              else if (levelrz.eq.3) then ! R-theta
+               RR=half*(xsten_right(0,1)+xsten_left(0,1))
+              else
+               print *,"levelrz invalid"
+               stop
+              endif
+              dist_pair(ml,mr)=dist_pair(ml,mr)*RR
+
+             else if ((dir.eq.0).or.(dir.eq.SDIM-1)) then
+              ! do nothing
+             else
+              print *,"dir invalid face process"
+              stop
+             endif ! dir==1 ?
+
+            else if ((tessellate.eq.0).and.(is_rigid(nmat,mr).eq.1)) then
+             ! do nothing
+            else
+             print *,"tessellate or is_rigid invalid"
+             stop
+            endif 
+
+           enddo ! mr
+
+          else if ((tessellate.eq.0).and.(is_rigid(nmat,ml).eq.1)) then
+           ! do nothing
+          else
+           print *,"tessellate or is_rigid invalid"
+           stop
+          endif 
+
+         enddo ! ml
+
+        else if ((left_face_ok.eq.0).or. &
+                 (right_face_ok.eq.0)) then
+         ! do nothing
+        else
+         print *,"left_face_ok or right_face_ok invalid"
+         stop
+        endif
+
+       else if (at_RZ_face.eq.1) then
+
+        do ml = 1, nmat
+         do mr = 1, nmat
+          frac_pair(ml,mr)=zero
+          dist_pair(ml,mr)=zero
+         enddo
+        enddo
+
+       else
+        print *,"at_RZ_face invalid"
+        stop
+       endif
+
+       iface_left=0
+       do ml = 1, nmat
+        do mr = 1, nmat
+          !(ml,mr,2) 
+         iface_left=iface_left+1
+         dstfab(D_DECL(i,j,k),iface_left)=frac_pair(ml,mr)
+         iface_left=iface_left+1
+         dstfab(D_DECL(i,j,k),iface_left)=dist_pair(ml,mr)
+        enddo ! mr
+       enddo ! ml
+       if (iface_left.ne.nface_dst) then
+        print *,"iface_left invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+      return
+      end subroutine FORT_FACEPROCESS
+
+
 
 #if (STANDALONE==1)
       end module mof_redist_cpp_module

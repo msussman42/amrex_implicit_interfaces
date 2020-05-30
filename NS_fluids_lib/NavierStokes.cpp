@@ -20125,6 +20125,7 @@ NavierStokes::makeStateDist() {
     &max_problen,
     &level,
     &finest_level,
+    truncate_volume_fractions.dataPtr(),
     latent_heat.dataPtr(),
     maskfab.dataPtr(),
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
@@ -20272,7 +20273,8 @@ NavierStokes::correct_dist_uninit() {
 // called from NavierStokes::make_physics_varsALL if using supermesh.
 // called from NavierStokes::ColorSum
 void
-NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
+NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
+		int ngrow_dest) {
   
  bool use_tiling=ns_tiling;
 
@@ -20294,18 +20296,27 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
   if (localMF_grow[idxdst+dir]>=0) {
    delete_localMF(idxdst+dir,1);
   }
-  new_localMF(idxdst+dir,nface_dst,0,dir);
+  new_localMF(idxdst+dir,nface_dst,ngrow_dest,dir);
   localMF[idxdst+dir]->setVal(0.0);
  }
 
- debug_ngrow(idxsrc,1,90);
+ int ngrow_source=ngrow_dest;
+ if (ngrow_dest==0)
+  ngrow_source=1;
+
+ debug_ngrow(idxsrc,ngrow_source,90);
  if (localMF[idxsrc]->nComp()!=nface_src)
   amrex::Error("idxsrc has invalid ncomp");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,90);
- resize_mask_nbr(1);
- debug_ngrow(MASK_NBR_MF,1,90);
+ VOF_Recon_resize(ngrow_source,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_source,90);
+
+   // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+   // (2) =1 interior  =0 otherwise
+   // (3) =1 interior+ngrow-1  =0 otherwise
+   // (4) =1 interior+ngrow    =0 otherwise
+ resize_mask_nbr(ngrow_source);
+ debug_ngrow(MASK_NBR_MF,ngrow_source,90);
 
  int rzflag=0;
  if (geom.IsRZ())
@@ -20351,8 +20362,10 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: LEVELSET_3D.F90
+    // in: MOF_REDIST_3D.F90
    FORT_FACEPROCESS( 
+    &ngrow_source,
+    &ngrow_dest,
     &tid_current,
     &dir,
     &tessellate,
@@ -20375,7 +20388,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst) {
   ns_reconcile_d_num(118);
 
   localMF[idxdst+dir]->FillBoundary(geom.periodicity());
- } //dir
+ } //dir=0..sdim-1
 
 } // subroutine ProcessFaceFrac
 

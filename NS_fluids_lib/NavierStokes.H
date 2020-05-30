@@ -1277,7 +1277,8 @@ void apply_pressure_grad(
     void makeCellFrac(int tessellate,int ngrow,int idx);
     void makeFaceFrac(int tessellate,int ngrow,int idx,int do_face_decomp);
     void makeFaceTest(int tessellate,int ngrow,int idx);
-    void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst);
+    void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
+		    int ngrow_dest);
     void makeStateDistALL();
     void makeStateDist();
     void correct_dist_uninit();

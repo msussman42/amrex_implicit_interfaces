@@ -4710,7 +4710,7 @@ NavierStokes::ColorSum(
   getState_localMF(VEL_COLORSUM_MF,1,0,AMREX_SPACEDIM,cur_time_slab);
 
   makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF,do_face_decomp);
-  ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF);
+  ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
   makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
  } else if (sweep_num==1) {
   // do nothing
