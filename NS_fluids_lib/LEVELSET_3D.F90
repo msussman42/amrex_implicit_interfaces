@@ -16911,7 +16911,9 @@ stop
         FSI_exclude=1
         call sort_volume_fraction(volmat,FSI_exclude,sorted_list,nmat)
         imcrit=sorted_list(1)
-        if (is_rigid(nmat,imcrit).ne.0) then
+        if (is_rigid(nmat,imcrit).eq.0) then
+         ! do nothing
+        else
          print *,"is_rigid(nmat,imcrit) invalid"
          stop
         endif
@@ -16947,7 +16949,12 @@ stop
                stop
               endif
 
-             endif ! im2<>im
+             else if (im2.eq.im) then
+              ! do nothing
+             else
+              print *,"im2 and im mismatch"
+              stop
+             endif 
 
             else if (is_rigid(nmat,im2).eq.1) then
              ! do nothing

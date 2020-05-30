@@ -191,7 +191,9 @@ int  NavierStokes::projection_enable_spectral=0;
 int  NavierStokes::SEM_upwind=1;
 //0=div(uS)-S div(u)    1=u dot grad S
 int  NavierStokes::SEM_advection_algorithm=0;
-Vector<int> NavierStokes::truncate_volume_fractions; // def=1  
+// default: tessellating fluid => default==1
+//          non-tesselating or tesselating solid => default==0
+Vector<int> NavierStokes::truncate_volume_fractions; 
 Real NavierStokes::truncate_thickness=2.0;  
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;

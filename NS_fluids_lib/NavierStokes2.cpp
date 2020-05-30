@@ -6785,6 +6785,10 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+// trunate_volume_fractions:
+// default: tessellating fluid => default==1
+//          non-tesselating or tesselating solid => default==0
+//  in: LEVELSET_3D.F90
    FORT_PURGEFLOTSAM(
      local_delta_mass[tid_current].dataPtr(),
      truncate_volume_fractions.dataPtr(),

@@ -1454,7 +1454,8 @@ protected:
     static int  MOF_TURN_OFF_LS;
     static int  MOF_DEBUG_RECON;
     static int  MOFITERMAX;
-      // default is 1 
+// default: tessellating fluid => default==1
+//          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
     static Real truncate_thickness;  // default is 2.0
 
