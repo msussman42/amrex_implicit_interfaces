@@ -8793,6 +8793,19 @@ contains
       REAL_T xcen,ycen,zcen,xrad,yrad,zrad
       REAL_T xdist,ydist,zdist
 
+      if ((xmax.gt.xmin).and. &
+          (ymax.gt.ymin).and. &
+          (zmax.gt.zmin).and. &
+          (abs(x)+abs(y)+abs(z).le.1.0D+20)) then
+       ! do nothing
+      else
+       print *,"xmin,xmax ",xmin,xmax
+       print *,"ymin,ymax ",ymin,ymax
+       print *,"zmin,zmax ",zmin,zmax
+       print *,"cubedist failed"
+       stop
+      endif
+
       xcen=half*(xmin+xmax)
       ycen=half*(ymin+ymax)
       zcen=half*(zmin+zmax)

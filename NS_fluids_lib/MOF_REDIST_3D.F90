@@ -69,7 +69,9 @@ stop
       REAL_T, intent(inout) :: minLS(nmat)
       REAL_T, intent(inout) :: maxLS(nmat)
       INTEGER_T, intent(in) :: donateflag(nmat+1+nstar)
-      INTEGER_T :: center_stencil,im0,imslope
+      INTEGER_T :: center_stencil
+      INTEGER_T :: im0_center
+      INTEGER_T :: imslope
 
       INTEGER_T nstar_test
       INTEGER_T istar_array(3)
@@ -140,7 +142,7 @@ stop
        istar_array(dir)=0
       enddo
       call put_istar(istar,istar_array) 
-      im0=donateflag(nmat+1+istar)
+      im0_center=donateflag(nmat+1+istar)
 
       if (SDIM.eq.2) then
        klosten=0
@@ -185,7 +187,7 @@ stop
          im_test(1)=donateIND
          if (center_stencil.eq.1) then
           n_im=n_im+1
-          im_test(n_im)=im0
+          im_test(n_im)=im0_center
          endif
          call compare_distance( &
           bfact,dx,xsten_donate,nhalf, &
@@ -198,7 +200,8 @@ stop
           maxLS, &
           im_test,n_im,LSslope, &
           imslope, &
-          im0,SDIM, &
+          im0_center, &
+          SDIM, &
           center_stencil, &
           donateflag,6)
 
@@ -593,10 +596,15 @@ stop
       INTEGER_T i4high(3)
       INTEGER_T i4_array(3)
       INTEGER_T im_corner
-      INTEGER_T im_test
+      INTEGER_T im_test_stencil
+      INTEGER_T im_test_center
       REAL_T FSUM(nmat)
       INTEGER_T on_border
        ! 1..nmat,fluid materials in cell,nstar
+       ! donateflag(nmat+2 ... nmat+1+nstar)=fluid material id that owns
+       ! the respective star stencil position.
+       ! donateflag(1..nmat)=1 if the respective material is a fluid
+       ! which has a "non-flotsam" presence in the cell.
       INTEGER_T donateflag(nmat+1+nstar)
       INTEGER_T crse_dist_valid
       INTEGER_T ctouch
@@ -626,6 +634,14 @@ stop
        ! do nothing
       else
        print *,"bfact invalid142"
+       stop
+      endif
+
+      if ((keep_all_interfaces.eq.0).or. &
+          (keep_all_interfaces.eq.1)) then
+       ! do nothing
+      else
+       print *,"keep_all_interfaces invalid"
        stop
       endif
 
@@ -895,11 +911,15 @@ stop
        FSI_exclude=1
        call sort_volume_fraction(vcenter,FSI_exclude,sorted_list,nmat)
        im_crit=sorted_list(1)
-       if ((im_crit.lt.1).or.(im_crit.gt.nmat)) then
+       if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+        ! do nothing
+       else
         print *,"im_crit invalid"
         stop
        endif
-       if (is_rigid(nmat,im_crit).ne.0) then
+       if (is_rigid(nmat,im_crit).eq.0) then
+        ! do nothing
+       else
         print *,"is_rigid invalid"
         stop
        endif
@@ -944,26 +964,27 @@ stop
         istar_array(dir)=0
        enddo
        call put_istar(istar,istar_array)
-       im_test=NINT(stenfab(D_DECL(i,j,k),istar))
-       if ((im_test.ge.1).and.(im_test.le.nmat)) then
+       im_test_center=NINT(stenfab(D_DECL(i,j,k),istar))
+       if ((im_test_center.ge.1).and.(im_test_center.le.nmat)) then
         ! do nothing
        else
-        print *,"im_test out of range (0)"
+        print *,"im_test_center out of range (0)"
         stop
        endif
-       if (is_rigid(nmat,im_test).eq.0) then
+        ! im_test_center must be a fluid material.
+       if (is_rigid(nmat,im_test_center).eq.0) then 
         ! do nothing
        else
-        print *,"is_rigid(nmat,im_test).ne.0 (0)"
+        print *,"is_rigid(nmat,im_test_center).ne.0 (0)"
         stop
        endif
         ! 1..nmat,fluid materials in cell, nstar
-       donateflag(nmat+1+istar)=im_test
+       donateflag(nmat+1+istar)=im_test_center
 
        if ((i.eq.i_DEB_DIST).and. &
            (j.eq.j_DEB_DIST).and. &
            (k.eq.k_DEB_DIST)) then
-        print *,"DEB_DIST: im_test=",im_test
+        print *,"DEB_DIST: im_test=",im_test_center
        endif 
 
        rigid_in_stencil=0
@@ -1161,20 +1182,20 @@ stop
           enddo ! dir
 
            ! STENINIT called with tessellate==0 prior to LEVELSTRIP.
-           ! im_test is the material that occupies the
+           ! im_test_stencil is the material that occupies the
            ! node in question.
           call put_istar(istar,istar_array_offset)
-          im_test=NINT(stenfab(D_DECL(isten,jsten,ksten),istar))
-          if ((im_test.ge.1).and.(im_test.le.nmat)) then
+          im_test_stencil=NINT(stenfab(D_DECL(isten,jsten,ksten),istar))
+          if ((im_test_stencil.ge.1).and.(im_test_stencil.le.nmat)) then
            ! do nothing
           else
-           print *,"im_test out of range 1"
+           print *,"im_test_stencil out of range 1"
            stop
           endif
-          if (is_rigid(nmat,im_test).eq.0) then
+          if (is_rigid(nmat,im_test_stencil).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im_test).ne.0 (1)"
+           print *,"is_rigid(nmat,im_test_stencil).ne.0 (1)"
            stop
           endif
 
@@ -1183,13 +1204,13 @@ stop
               (k.eq.k_DEB_DIST)) then
            print *,"DEB_DIST: i3,j3,k3 ",i3,j3,k3
            print *,"DEB_DIST: i4,j4,k4 ",i4,j4,k4
-           print *,"DEB_DIST: im_test ",im_test
+           print *,"DEB_DIST: im_test_stencil ",im_test_stencil
           endif
 
           if (im_corner.eq.0) then
-           im_corner=im_test
+           im_corner=im_test_stencil
           else if ((im_corner.ge.1).and.(im_corner.le.nmat)) then
-           if (im_corner.eq.im_test) then
+           if (im_corner.eq.im_test_stencil) then
             ! do nothing
            else
             im_corner=-1
@@ -1322,12 +1343,15 @@ stop
           im,stringent_test_passed(im),face_test(im)
         endif
 
+         ! face_test=0 if cell_test==0
         if (is_rigid(nmat,im).eq.0) then
          if ((vcenter(im).ge.half).or. &
              (im.eq.im_crit).or. &
              (stringent_test_passed(im).eq.1).or. &
              (face_test(im).eq.1).or. &
-             (full_neighbor(im).eq.1)) then
+             (full_neighbor(im).eq.1).or. &
+             ((cell_test(im).eq.1).and. &
+              (keep_all_interfaces.eq.1))) then
           fluid_materials_in_cell_stencil= &
            fluid_materials_in_cell_stencil+1
           donateflag(im)=1
@@ -3085,11 +3109,9 @@ stop
        nmat,nface_src,nface_dst)
 
       use global_utility_module
-      use global_distance_module
       use probcommon_module
       use geometry_intersect_module
       use MOF_routines_module
-      use levelset_module
 
       IMPLICIT NONE
 

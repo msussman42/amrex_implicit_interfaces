@@ -19374,7 +19374,9 @@ contains
 
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
-       if (tessellate.eq.2) then
+        ! force non-tessellating materials to behave like tessellating
+        ! material.
+       if (tessellate.eq.2) then 
         is_rigid_local(im)=0
        else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
         ! do nothing
@@ -19425,7 +19427,9 @@ contains
       FSI_exclude=1
       call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list,nmat)
       im=sorted_list(1)
-      if (is_rigid_local(im).ne.0) then
+      if (is_rigid_local(im).eq.0) then
+       ! do nothing
+      else
        print *,"is_rigid invalid"
        stop
       endif

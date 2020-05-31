@@ -24,6 +24,25 @@ print *,"dimension bust"
 stop
 #endif
 
+module tsat_module
+implicit none
+
+      INTEGER_T :: nburning
+      INTEGER_T :: ntsat
+      INTEGER_T :: ncomp_per_burning
+      INTEGER_T :: ncomp_per_tsat
+      INTEGER_T :: velflag
+
+      INTEGER_T DIMDEC(burnvel)
+      INTEGER_T DIMDEC(tsatfab)
+
+      REAL_T, dimension(:,:,:), allocatable :: burnvel
+      REAL_T, dimension(:,:,:), allocatable :: tsatfab
+
+contains
+
+end module tsat_module
+
       subroutine set_dimdec(DIMS(fabdim), &
                       fablo,fabhi,ngrow)
       IMPLICIT NONE
@@ -128,12 +147,13 @@ stop
       subroutine set_boundary_burning( &
         vel,DIMS(vel), &
         fablo,fabhi, &
-        nten,nmat,nburning,ngrow)
+        nten,nmat,ncomp_per, &
+        nburning,ngrow)
       USE probcommon_module 
       USE global_utility_module 
       IMPLICIT NONE
 
-      INTEGER_T nten,nmat,nburning,ngrow
+      INTEGER_T nten,nmat,nburning,ngrow,ncomp_per
       INTEGER_T fablo(SDIM)
       INTEGER_T fabhi(SDIM)
       INTEGER_T DIMDEC(vel)
@@ -152,7 +172,7 @@ stop
        print *,"nten invalid"
        stop
       endif
-      if (nburning.eq.nten*(SDIM+1)) then
+      if (nburning.eq.nten*(ncomp_per+1)) then
        ! do nothing
       else
        print *,"nburning invalid"
@@ -1680,6 +1700,8 @@ stop
       use mass_transfer_cpp_module
       use mof_redist_cpp_module
       use plic_cpp_module
+      use tsat_module
+
       IMPLICIT NONE
 
       INTEGER_T nten_in,stefan_flag
@@ -1692,11 +1714,9 @@ stop
       REAL_T UNEW(-1:NCELL,-1:NCELL,1:state_ncomp)
       INTEGER_T nten
       INTEGER_T nmat
-      INTEGER_T nburning
       INTEGER_T nLS
       INTEGER_T DIMDEC(maskcov)
       INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(burnvel)
       INTEGER_T DIMDEC(nodevel)
       INTEGER_T DIMDEC(deltaVOF)
       INTEGER_T DIMDEC(LS)
@@ -1712,11 +1732,12 @@ stop
       INTEGER_T DIMDEC(dist_touch)
       INTEGER_T DIMDEC(stencil)
       INTEGER_T DIMDEC(facefrac)
+      INTEGER_T DIMDEC(facepairX)
+      INTEGER_T DIMDEC(facepairY)
       INTEGER_T DIMDEC(facetest)
       INTEGER_T DIMDEC(slopes)
       REAL_T, dimension(:,:), allocatable :: maskcov
       REAL_T, dimension(:,:,:), allocatable :: masknbr
-      REAL_T, dimension(:,:,:), allocatable :: burnvel
       REAL_T, dimension(:,:,:), allocatable :: nodevel
       REAL_T, dimension(:,:,:), allocatable :: deltaVOF
       REAL_T, dimension(:,:,:), allocatable :: LS
@@ -1737,6 +1758,9 @@ stop
       REAL_T, dimension(:,:,:), allocatable :: stencil
         ! ncomp=nface, ngrow=ngrow_distance
       REAL_T, dimension(:,:,:), allocatable :: facefrac
+        ! nmat x nmat x 2 ngrow=ngrow_distance
+      REAL_T, dimension(:,:,:), allocatable :: facepairX
+      REAL_T, dimension(:,:,:), allocatable :: facepairY
         ! ncomp=nmat*sdim, ngrow=ngrow_distance
       REAL_T, dimension(:,:,:), allocatable :: facetest
         ! ncomp=nmat*ngeom_recon, ngrow=ngrow_distance
@@ -1746,6 +1770,8 @@ stop
       REAL_T DVOF_local(num_materials)
       REAL_T delta_mass(2*num_materials)
       REAL_T delta_mass_local(2*num_materials)
+
+      INTEGER_T truncate_volume_fractions(num_materials)
 
       REAL_T blob_array(2)
       INTEGER_T arraysize
@@ -1782,7 +1808,7 @@ stop
       REAL_T LSerr,LSexact,VELerr,NRMerr,NRM_FD_err,SPEEDerr
       REAL_T NRM_FD(SDIM)
       REAL_T NRM_FD_mag
-      INTEGER_T nden,nface,nface_decomp
+      INTEGER_T nden,nface,nface_decomp,npair
       INTEGER_T ngrow,ngrow_distance,ngrow_recon
       INTEGER_T nprocessed
       INTEGER_T nstate
@@ -1844,6 +1870,8 @@ stop
       INTEGER_T i_inf_nrm(nten_in)
       INTEGER_T j_inf_nrm(nten_in)
 
+      INTEGER_T keep_all_interfaces
+
       INTEGER_T n_root
       character(len=6) :: root_char_array
       INTEGER_T data_dir,SDC_outer_sweeps,slab_step
@@ -1853,6 +1881,9 @@ stop
 
       diagnostic_output=0
       nhalf=3
+
+      ncomp_per_burning=SDIM
+      ncomp_per_tsat=2
 
       if (SDIM.eq.2) then
        ! do nothing
@@ -1870,7 +1901,8 @@ stop
         print *,"nten_in or nten invalid"
         stop
        endif
-       nburning=nten*(SDIM+1)
+       nburning=nten*(ncomp_per_burning+1)
+       ntsat=nten*(ncomp_per_tsat+1)
        nstar=9
       else
        print *,"NCELL invalid"
@@ -1899,6 +1931,7 @@ stop
       do_face_decomp=0
       nface=nmat*SDIM*2*(1+SDIM)
       nface_decomp=0
+      npair=nmat*nmat*2
 
       problo(1)=problox
       problo(2)=probloy
@@ -1992,6 +2025,10 @@ stop
        nden=nmat*2
 
        do im=1,nmat
+        truncate_volume_fractions(im)=0
+       enddo
+
+       do im=1,nmat
         radius_cutoff(im)=0
         microlayer_substrate(im)=0
         microlayer_angle(im)=0.0d0
@@ -2018,6 +2055,7 @@ stop
        call set_dimdec(DIMS(maskcov),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(masknbr),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(burnvel),fablo,fabhi,ngrow_make_distance)
+       call set_dimdec(DIMS(tsatfab),fablo,fabhi,ngrow_make_distance)
        call set_dimdec(DIMS(nodevel),fablo,fabhi,1)
        call set_dimdec(DIMS(deltaVOF),fablo,fabhi,0)
        call set_dimdec(DIMS(LS),fablo,fabhi,ngrow)
@@ -2033,12 +2071,15 @@ stop
        call set_dimdec(DIMS(dist_touch),fablo,fabhi,0)
        call set_dimdec(DIMS(stencil),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(facefrac),fablo,fabhi,ngrow_distance)
+       call set_dimdec(DIMS(facepairX),fablo,fabhi,ngrow_distance+1)
+       call set_dimdec(DIMS(facepairY),fablo,fabhi,ngrow_distance+1)
        call set_dimdec(DIMS(facetest),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(slopes),fablo,fabhi,ngrow_distance)
 
        allocate(maskcov(DIMV(maskcov)))
        allocate(masknbr(DIMV(masknbr),4))
        allocate(burnvel(DIMV(burnvel),nburning))
+       allocate(tsatfab(DIMV(tsatfab),ntsat))
        allocate(nodevel(DIMV(nodevel),2*nten*SDIM))
        allocate(deltaVOF(DIMV(deltaVOF),nmat))
        allocate(LS(DIMV(LS),nmat*(SDIM+1)))
@@ -2054,6 +2095,8 @@ stop
        allocate(dist_touch(DIMV(dist_touch),nmat))
        allocate(stencil(DIMV(stencil),nstar))
        allocate(facefrac(DIMV(facefrac),nface))
+       allocate(facepairX(DIMV(facepairX),npair))
+       allocate(facepairY(DIMV(facepairY),npair))
        allocate(facetest(DIMV(facetest),nmat*SDIM))
        allocate(slopes(DIMV(slopes),nmat*ngeom_recon))
 
@@ -2098,6 +2141,14 @@ stop
        enddo
        enddo
        enddo
+       do i=fablo(1)-ngrow_distance-1,fabhi(1)+ngrow_distance+1
+       do j=fablo(2)-ngrow_distance-1,fabhi(2)+ngrow_distance+1
+        do im=1,npair
+         facepairX(i,j,im)=0.0d0
+         facepairY(i,j,im)=0.0d0
+        enddo
+       enddo
+       enddo
        do i=fablo(1)-ngrow_distance,fabhi(1)+ngrow_distance
        do j=fablo(2)-ngrow_distance,fabhi(2)+ngrow_distance
         do im=1,nstar
@@ -2118,6 +2169,9 @@ stop
        do j=fablo(2)-ngrow_make_distance,fabhi(2)+ngrow_make_distance
        do im=1,nburning
         burnvel(i,j,im)=0.0d0
+       enddo
+       do im=1,ntsat
+        tsatfab(i,j,im)=0.0d0
        enddo
        enddo
        enddo
@@ -2268,6 +2322,7 @@ stop
          nmat, &
          nten, &
          nburning, &
+         ntsat, &
          nden, &
          fort_density_floor, &
          fort_density_ceiling, &
@@ -2297,6 +2352,7 @@ stop
          maskcov,DIMS(maskcov), & ! ! typefab 1 grow unused
          maskcov,DIMS(maskcov), & ! 1 grow
          burnvel,DIMS(burnvel), & ! ngrow_make_distance
+         tsatfab,DIMS(tsatfab), & ! ngrow_make_distance
          LS,DIMS(LS),  & ! ngrow
          LSnew,DIMS(LSnew), &  ! ngrow
          LS_slopes_FD, &
@@ -2348,7 +2404,16 @@ stop
         burnvel, &
         DIMS(burnvel), &
         fablo,fabhi, &
-        nten,nmat,nburning, &
+        nten,nmat,ncomp_per_burning, &
+        nburning, &
+        ngrow_make_distance)
+
+       call set_boundary_burning( &
+        tsatfab, &
+        DIMS(tsatfab), &
+        fablo,fabhi, &
+        nten,nmat,ncomp_per_tsat, &
+        ntsat, &
         ngrow_make_distance)
 
        debug_plot_dir=-1
@@ -2414,7 +2479,9 @@ stop
        !burnvel is cell centered.
        !burnvel flag set from 0 to 2 if
        !foot of characteristic within range.
+       velflag=1
        call FORT_EXTEND_BURNING_VEL( &
+         velflag, &
          level, &
          finest_level, &
          xlo,dx, &
@@ -2428,14 +2495,39 @@ stop
          burnvel,DIMS(burnvel), & ! ngrow_make_distance
          LS,DIMS(LS))
 
+       velflag=0
+       call FORT_EXTEND_BURNING_VEL( &
+         velflag, &
+         level, &
+         finest_level, &
+         xlo,dx, &
+         nmat, &
+         nten, &
+         ntsat, &
+         ngrow, &
+         latent_heat, &
+         fablo,fabhi, &
+         fablo,fabhi,bfact, &
+         tsatfab,DIMS(tsatfab), & ! ngrow_make_distance
+         LS,DIMS(LS))
 
         ! first nten components are the status
        call set_boundary_burning( &
         burnvel, &
         DIMS(burnvel), &
         fablo,fabhi, &
-        nten,nmat,nburning, &
+        nten,nmat, &
+        ncomp_per_burning,nburning, &
         ngrow_make_distance)
+
+       call set_boundary_burning( &
+        tsatfab, &
+        DIMS(tsatfab), &
+        fablo,fabhi, &
+        nten,nmat, &
+        ncomp_per_tsat,ntsat, &
+        ngrow_make_distance)
+
 
        do isweep=0,1
 
@@ -2503,6 +2595,7 @@ stop
          nten, &
          nden, &
          nstate, &
+         ntsat, &
          fort_density_floor, &
          fort_density_ceiling, &
          latent_heat, &
@@ -2524,6 +2617,7 @@ stop
          nodevel,DIMS(nodevel), &
          jump_strength, &
          DIMS(jump_strength), &
+         tsatfab,DIMS(tsatfab), &
          LS,DIMS(LS), &
          LSnew,DIMS(LSnew), &
          recon,DIMS(recon), &
@@ -2676,6 +2770,45 @@ stop
         nface, &
         nface_decomp)
 
+       dir=0
+       call FORT_FACEPROCESS( &
+        ngrow_distance, &
+        ngrow_distance, &
+        tid, &
+        dir, &
+        tessellate, &
+        level, &
+        finest_level, &
+        facepairX,DIMS(facepairX), &
+        facefrac,DIMS(facefrac), &
+        slopes,DIMS(slopes), &
+        fablo,fabhi, &
+        fablo,fabhi,bfact, &
+        rzflag, &
+        xlo,dx, &
+        cur_time, &
+        nmat,nface,npair)
+
+
+       dir=1
+       call FORT_FACEPROCESS( &
+        ngrow_distance, &
+        ngrow_distance, &
+        tid, &
+        dir, &
+        tessellate, &
+        level, &
+        finest_level, &
+        facepairY,DIMS(facepairY), &
+        facefrac,DIMS(facefrac), &
+        slopes,DIMS(slopes), &
+        fablo,fabhi, &
+        fablo,fabhi,bfact, &
+        rzflag, &
+        xlo,dx, &
+        cur_time, &
+        nmat,nface,npair)
+
        call FORT_FACEINITTEST(  &
         tid, &
         tessellate, &
@@ -2717,16 +2850,26 @@ stop
 
        nprocessed=0
 
+       keep_all_interfaces=1
+
        call FORT_LEVELSTRIP(  &
+        keep_all_interfaces, &
         nprocessed, &
         minLS, &
         maxLS, &
         max_problen, &
         level, &
         finest_level, &
+        truncate_volume_fractions, &
         latent_heat, &
         masknbr, &
         DIMS(masknbr), &
+        facepairX, &
+        DIMS(facepairX), &
+        facepairY, &
+        DIMS(facepairY), &
+        facepairY, &
+        DIMS(facepairY), &
         facefrac, &
         DIMS(facefrac), &
         facetest, &
@@ -2752,7 +2895,7 @@ stop
         xlo,dx, &
         cur_time, &
         ngrow_distance, &
-        nmat,nten,nstar,nface)
+        nmat,nten,nstar,nface,npair)
 
        call FORT_CORRECT_UNINIT(  &
         minLS, &
@@ -3175,6 +3318,7 @@ stop
        deallocate(maskcov)
        deallocate(masknbr)
        deallocate(burnvel)
+       deallocate(tsatfab)
        deallocate(nodevel)
        deallocate(deltaVOF)
        deallocate(LS)
@@ -3190,6 +3334,8 @@ stop
        deallocate(dist_touch)
        deallocate(stencil)
        deallocate(facefrac)
+       deallocate(facepairX)
+       deallocate(facepairY)
        deallocate(facetest)
        deallocate(slopes)
 
