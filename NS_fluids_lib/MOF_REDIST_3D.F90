@@ -3241,10 +3241,10 @@ stop
         stop
        endif
 
-       if ((inormal.gt.fablo(dir+1)-ngrow_source).and. &
-           (inormal.le.fabhi(dir+1)+ngrow_source+1)) then
+       if ((inormal-1.ge.fablo(dir+1)-ngrow_source).and. &
+           (inormal-1.le.fabhi(dir+1)+ngrow_source)) then
         left_face_ok=1
-       else if (inormal.eq.fablo(dir+1)-ngrow_source) then
+       else if (inormal-1.eq.fablo(dir+1)-ngrow_source-1) then
         left_face_ok=0
        else
         print *,"inormal invalid"
@@ -3273,8 +3273,13 @@ stop
          if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
           at_RZ_face=1
          endif
-         if (i.le.0) then
-          at_RZ_face=1
+         if (inormal.eq.i) then
+          if (i.le.0) then
+           at_RZ_face=1
+          endif
+         else
+          print *,"inormal invalid"
+          stop
          endif
         endif
        else if (levelrz.eq.3) then
@@ -3282,8 +3287,13 @@ stop
          if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
           at_RZ_face=1
          endif
-         if (i.le.0) then
-          at_RZ_face=1
+         if (inormal.eq.i) then
+          if (i.le.0) then
+           at_RZ_face=1
+          endif
+         else
+          print *,"inormal invalid"
+          stop
          endif
         endif
        else
@@ -3306,18 +3316,38 @@ stop
            nmat,SDIM,2,SDIM+1,iface_right)
 
           if (left_face_ok.eq.1) then
+
            leftface(im,dir2)=facefab(D_DECL(i-ii,j-jj,k-kk),iface_left)
+           if (right_face_ok.eq.1) then
+            ! do nothing
+           else if (right_face_ok.eq.0) then
+            rightface(im,dir2)=leftface(im,dir2)
+           else
+            print *,"right_face_ok invalid"
+            stop
+           endif
+           
           else if (left_face_ok.eq.0) then
-           leftface(im,dir2)=facefab(D_DECL(i,j,k),iface_right)
+           ! do nothing
           else
            print *,"left_face_ok invalid"
            stop
           endif
 
           if (right_face_ok.eq.1) then
+
            rightface(im,dir2)=facefab(D_DECL(i,j,k),iface_right)
+           if (left_face_ok.eq.1) then
+            ! do nothing
+           else if (left_face_ok.eq.0) then
+            leftface(im,dir2)=rightface(im,dir2)
+           else
+            print *,"left_face_ok invalid"
+            stop
+           endif
+
           else if (right_face_ok.eq.0) then
-           rightface(im,dir2)=facefab(D_DECL(i-ii,j-jj,k-kk),iface_left)
+           ! do nothing
           else
            print *,"right_face_ok invalid"
            stop
@@ -3406,7 +3436,7 @@ stop
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
           if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
-                  ! do nothing
+           ! do nothing
           else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
            do dir2=1,ngeom_recon
             mofdata_left(vofcomp+dir2-1)=zero 
@@ -3436,7 +3466,7 @@ stop
            nmat, &
            dir+1, &
            frac_pair, & ! left,right
-           x_pair, & ! left,right
+           x_pair, & ! left,right (unused for now)
            SDIM, &
            geom_xtetlist(1,1,1,tid+1), &
            nmax, &
@@ -3551,7 +3581,7 @@ stop
             stop
            endif 
 
-          enddo ! mr
+          enddo ! mr=1..nmat
 
          else if ((tessellate.eq.0).and.(is_rigid(nmat,ml).eq.1)) then
           ! do nothing
@@ -3560,7 +3590,7 @@ stop
           stop
          endif 
 
-        enddo ! ml
+        enddo ! ml=1..nmat
 
        else if (at_RZ_face.eq.1) then
 
