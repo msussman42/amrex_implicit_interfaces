@@ -3354,6 +3354,46 @@ stop
          frac_right(im)=frac_right(im)/right_total
         enddo ! im
 
+        call CISBOX(xsten_left,nhalf, &
+         xlo,dx,i-ii,j-jj,k-kk, &
+         bfact,level, &
+         volcell_left,cencell_left,SDIM) 
+
+        call CISBOX(xsten_right,nhalf, &
+         xlo,dx,i,j,k, &
+         bfact,level, &
+         volcell_right,cencell_right,SDIM) 
+
+        do im = 1,nmat
+
+         if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
+
+          if ((frac_left(im).gt.one+FACETOL_SANITY).or. &
+              (frac_left(im).lt.zero).or. &
+              (frac_right(im).gt.one+FACETOL_SANITY).or. &
+              (frac_right(im).lt.zero)) then
+           print *,"frac_left or frac_right out of range"
+           stop
+          endif
+          if (frac_left(im).le.FACETOL_DVOL) then
+           frac_left(im) = zero
+          else if (frac_left(im).ge.one-FACETOL_DVOL) then
+           frac_left(im) = one
+          endif
+          if (frac_right(im).lt.FACETOL_DVOL) then
+           frac_right(im) = zero
+          else if (frac_right(im).gt.one-FACETOL_DVOL)then
+           frac_right(im) = one
+          endif
+
+         else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
+          ! do nothing
+         else
+          print *,"tessellate or is_rigid invalid"
+          stop
+         endif 
+
+        enddo ! im=1..nmat
 
         if ((left_face_ok.eq.1).and. &
             (right_face_ok.eq.1)) then
@@ -3362,52 +3402,25 @@ stop
           mofdata_left(im)=vofrecon(D_DECL(i-ii,j-jj,k-kk),im)
           mofdata_right(im)=vofrecon(D_DECL(i,j,k),im)
          enddo
+
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
+          if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
+                  ! do nothing
+          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
+           do dir2=1,ngeom_recon
+            mofdata_left(vofcomp+dir2-1)=zero 
+            mofdata_right(vofcomp+dir2-1)=zero 
+           enddo
+          else
+           print *,"tessellate or is_rigid invalid"
+           stop
+          endif
+
           do dir2=1,SDIM
            multi_cen_left(dir2,im)=mofdata_left(vofcomp+dir2)
            multi_cen_right(dir2,im)=mofdata_right(vofcomp+dir2)
           enddo
-         enddo ! im
-
-         call CISBOX(xsten_left,nhalf, &
-          xlo,dx,i-ii,j-jj,k-kk, &
-          bfact,level, &
-          volcell_left,cencell_left,SDIM) 
-
-         call CISBOX(xsten_right,nhalf, &
-          xlo,dx,i,j,k, &
-          bfact,level, &
-          volcell_right,cencell_right,SDIM) 
-
-         do im = 1,nmat
-
-          if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
-
-           if ((frac_left(im).gt.one+FACETOL_SANITY).or. &
-               (frac_left(im).lt.zero).or. &
-               (frac_right(im).gt.one+FACETOL_SANITY).or. &
-               (frac_right(im).lt.zero)) then
-            print *,"frac_left or frac_right out of range"
-            stop
-           endif
-           if (frac_left(im).le.FACETOL_DVOL) then
-            frac_left(im) = zero
-           else if (frac_left(im).ge.one-FACETOL_DVOL) then
-            frac_left(im) = one
-           endif
-           if (frac_right(im).lt.FACETOL_DVOL) then
-            frac_right(im) = zero
-           else if (frac_right(im).gt.one-FACETOL_DVOL)then
-            frac_right(im) = one
-           endif
-
-          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
-           ! do nothing
-          else
-           print *,"tessellate or is_rigid invalid"
-           stop
-          endif 
 
          enddo ! im=1..nmat
 
@@ -3432,104 +3445,122 @@ stop
            nmax, &
            caller_id)
 
-         vol_total=zero
+        else if ((left_face_ok.eq.0).or. &
+                 (right_face_ok.eq.0)) then
+
+         do im=1,nmat
+          vofcomp=(im-1)*ngeom_recon+1
+          do dir2=1,SDIM
+           multi_cen_left(dir2,im)=zero
+           multi_cen_right(dir2,im)=zero
+          enddo
+         enddo ! im
+
+         do ml = 1, nmat
+          do mr = 1, nmat
+           frac_pair(ml,mr)=zero
+          enddo
+         enddo
+         do ml=1,nmat
+          frac_pair(ml,ml)=frac_left(ml)
+         enddo
+
+        else
+         print *,"left or right face ok invalid"
+         stop
+        endif
+
+        vol_total=zero
+        do im=1,nmat
+        do im_opp=1,nmat
+         vol_total=vol_total+frac_pair(im,im_opp)
+        enddo
+        enddo
+
+        if (vol_total.gt.zero) then
+
          do im=1,nmat
          do im_opp=1,nmat
-          vol_total=vol_total+frac_pair(im,im_opp)
+          frac_pair(im,im_opp)=frac_pair(im,im_opp)/vol_total
          enddo
          enddo
-         if (vol_total.gt.zero) then
 
-          do im=1,nmat
-          do im_opp=1,nmat
-           frac_pair(im,im_opp)=frac_pair(im,im_opp)/vol_total
-          enddo
-          enddo
+        else
+         print *,"vol_total invalid"
+         stop
+        endif
 
+        delta=xsten_right(0,dir+1)-xsten_left(0,dir+1)
+        if (delta.le.zero) then
+         print *,"delta invalid faceprocess"
+         stop
+        endif 
+
+        do ml = 1, nmat
+
+         if ((tessellate.eq.1).or.(is_rigid(nmat,ml).eq.0)) then
+
+          do mr = 1, nmat
+
+           if ((tessellate.eq.1).or.(is_rigid(nmat,mr).eq.0)) then
+
+            if ((frac_pair(ml,mr).lt.-FACETOL_SANITY).or. &
+                (frac_pair(ml,mr).gt.one+FACETOL_SANITY)) then
+             print *,"frac_pair invalid"
+             stop
+            endif
+  
+            if (frac_pair(ml,mr).lt.FACETOL_DVOL) then
+             frac_pair(ml,mr)=zero
+             dist_pair(ml,mr)=delta
+            else
+             dpair=zero
+             do dir2=1,SDIM
+              dpair=dpair+ &
+               (xsten_right(0,dir2)+multi_cen_right(dir2,mr)- &
+                xsten_left(0,dir2)-multi_cen_left(dir2,ml))**2
+             enddo
+             dpair=sqrt(dpair)
+             dist_pair(ml,mr)=dpair
+            endif
+    
+            if (dir.eq.1) then ! theta direction
+   
+             if ((levelrz.eq.0).or. &
+                 (levelrz.eq.1)) then !XY or RZ
+              RR=one 
+             else if (levelrz.eq.3) then ! R-theta
+              RR=half*(xsten_right(0,1)+xsten_left(0,1))
+             else
+              print *,"levelrz invalid"
+              stop
+             endif
+             dist_pair(ml,mr)=dist_pair(ml,mr)*RR
+
+            else if ((dir.eq.0).or.(dir.eq.SDIM-1)) then
+             ! do nothing
+            else
+             print *,"dir invalid face process"
+             stop
+            endif ! dir==1 ?
+
+           else if ((tessellate.eq.0).and.(is_rigid(nmat,mr).eq.1)) then
+            ! do nothing
+           else
+            print *,"tessellate or is_rigid invalid"
+            stop
+           endif 
+
+          enddo ! mr
+
+         else if ((tessellate.eq.0).and.(is_rigid(nmat,ml).eq.1)) then
+          ! do nothing
          else
-          print *,"vol_total invalid"
-          stop
-         endif
-
-         delta=xsten_right(0,dir+1)-xsten_left(0,dir+1)
-         if (delta.le.zero) then
-          print *,"delta invalid faceprocess"
+          print *,"tessellate or is_rigid invalid"
           stop
          endif 
 
-         do ml = 1, nmat
-
-          if ((tessellate.eq.1).or.(is_rigid(nmat,ml).eq.0)) then
-
-           do mr = 1, nmat
-
-            if ((tessellate.eq.1).or.(is_rigid(nmat,mr).eq.0)) then
-
-             if ((frac_pair(ml,mr).lt.-FACETOL_SANITY).or. &
-                 (frac_pair(ml,mr).gt.one+FACETOL_SANITY)) then
-              print *,"frac_pair invalid"
-              stop
-             endif
-  
-             if (frac_pair(ml,mr).lt.FACETOL_DVOL) then
-              frac_pair(ml,mr)=zero
-              dist_pair(ml,mr)=delta
-             else
-              dpair=zero
-              do dir2=1,SDIM
-               dpair=dpair+ &
-                (xsten_right(0,dir2)+multi_cen_right(dir2,mr)- &
-                 xsten_left(0,dir2)-multi_cen_left(dir2,ml))**2
-              enddo
-              dpair=sqrt(dpair)
-              dist_pair(ml,mr)=dpair
-             endif
-    
-             if (dir.eq.1) then ! theta direction
-   
-              if ((levelrz.eq.0).or. &
-                  (levelrz.eq.1)) then !XY or RZ
-               RR=one 
-              else if (levelrz.eq.3) then ! R-theta
-               RR=half*(xsten_right(0,1)+xsten_left(0,1))
-              else
-               print *,"levelrz invalid"
-               stop
-              endif
-              dist_pair(ml,mr)=dist_pair(ml,mr)*RR
-
-             else if ((dir.eq.0).or.(dir.eq.SDIM-1)) then
-              ! do nothing
-             else
-              print *,"dir invalid face process"
-              stop
-             endif ! dir==1 ?
-
-            else if ((tessellate.eq.0).and.(is_rigid(nmat,mr).eq.1)) then
-             ! do nothing
-            else
-             print *,"tessellate or is_rigid invalid"
-             stop
-            endif 
-
-           enddo ! mr
-
-          else if ((tessellate.eq.0).and.(is_rigid(nmat,ml).eq.1)) then
-           ! do nothing
-          else
-           print *,"tessellate or is_rigid invalid"
-           stop
-          endif 
-
-         enddo ! ml
-
-        else if ((left_face_ok.eq.0).or. &
-                 (right_face_ok.eq.0)) then
-         ! do nothing
-        else
-         print *,"left_face_ok or right_face_ok invalid"
-         stop
-        endif
+        enddo ! ml
 
        else if (at_RZ_face.eq.1) then
 
