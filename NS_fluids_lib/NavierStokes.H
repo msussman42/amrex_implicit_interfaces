@@ -1279,8 +1279,8 @@ void apply_pressure_grad(
     void makeFaceTest(int tessellate,int ngrow,int idx);
     void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		    int ngrow_dest);
-    void makeStateDistALL();
-    void makeStateDist();
+    void makeStateDistALL(int keep_all_interfaces);
+    void makeStateDist(int keep_all_interfaces);
     void correct_dist_uninit();
     void makeStateCurv(int project_option,int post_restart_flag);
     void make_marangoni_force(int isweep);

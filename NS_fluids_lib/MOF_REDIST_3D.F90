@@ -459,6 +459,7 @@ stop
         ! newfab has nmat*(sdim+1) components
         !
       subroutine FORT_LEVELSTRIP( &
+         keep_all_interfaces, &
          nprocessed, &
          minLS, &
          maxLS, &
@@ -468,6 +469,9 @@ stop
          truncate_volume_fractions, &
          latent_heat, &
          maskfab,DIMS(maskfab), &
+         facepairX,DIMS(facepairX), &
+         facepairY,DIMS(facepairY), &
+         facepairZ,DIMS(facepairZ), &
          facefab,DIMS(facefab), &
          facetest,DIMS(facetest), &
          stenfab,DIMS(stenfab), &
@@ -485,7 +489,10 @@ stop
          xlo,dx, &
          time, &
          ngrow_distance, &
-         nmat,nten,nstar,nface)
+         nmat,nten, &
+         nstar, &
+         nface, &
+         nface_dst)
 
       use global_utility_module
       use probcommon_module
@@ -495,8 +502,13 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(inout) :: nprocessed
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nten,nstar,nface
+      INTEGER_T, intent(in) :: keep_all_interfaces 
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: nstar
+      INTEGER_T, intent(in) :: nface
+      INTEGER_T, intent(in) :: nface_dst
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ngrow_distance
       REAL_T, intent(inout) :: minLS(nmat)
@@ -505,6 +517,9 @@ stop
       INTEGER_T, intent(in) :: truncate_volume_fractions(nmat)
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
+      INTEGER_T, intent(in) :: DIMDEC(facepairX)
+      INTEGER_T, intent(in) :: DIMDEC(facepairY)
+      INTEGER_T, intent(in) :: DIMDEC(facepairZ)
       INTEGER_T, intent(in) :: DIMDEC(facefab)
       INTEGER_T, intent(in) :: DIMDEC(facetest)
       INTEGER_T, intent(in) :: DIMDEC(stenfab)
@@ -516,6 +531,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(crsedist)
 
       REAL_T, intent(in) :: maskfab(DIMV(maskfab),4)
+      REAL_T, intent(in) :: facepairX(DIMV(facepairX),nface_dst)
+      REAL_T, intent(in) :: facepairY(DIMV(facepairY),nface_dst)
+      REAL_T, intent(in) :: facepairZ(DIMV(facepairZ),nface_dst)
       REAL_T, intent(in) :: facefab(DIMV(facefab),nface)
       REAL_T, intent(in) :: facetest(DIMV(facetest),nmat*SDIM)
       REAL_T, intent(in) :: stenfab(DIMV(stenfab),nstar)
@@ -622,7 +640,12 @@ stop
        print *,"nface invalid levelstrip nface nface_test ",nface,nface_test
        stop
       endif
-
+      if (nface_dst.eq.2*nmat*nmat) then
+       ! do nothing
+      else
+       print *,"nface_dst invalid"
+       stop
+      endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
        print *,"nten invalid levelstrip nten nten_test ",nten,nten_test
@@ -654,6 +677,9 @@ stop
        stop
       endif
       call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(facepairX),ngrow_distance,0,2871)
+      call checkbound(fablo,fabhi,DIMS(facepairY),ngrow_distance,1,2871)
+      call checkbound(fablo,fabhi,DIMS(facepairZ),ngrow_distance,SDIM-1,2871)
       call checkbound(fablo,fabhi,DIMS(facefab),ngrow_distance,-1,2871)
       call checkbound(fablo,fabhi,DIMS(facetest),ngrow_distance,-1,2872)
       call checkbound(fablo,fabhi,DIMS(stenfab),ngrow_distance,-1,2873)

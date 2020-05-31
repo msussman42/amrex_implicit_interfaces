@@ -18504,7 +18504,8 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  if (post_init_flag==1) { // called from post_init_state
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
    init_vof_ls_prev_time,SLOPE_RECON_MF);
-  makeStateDistALL();
+  int keep_all_interfaces=1;
+  makeStateDistALL(keep_all_interfaces);
   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,local_truncate);
   int project_option=1;  // initial project
   int post_restart_flag=0;
@@ -18521,7 +18522,8 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
     init_vof_ls_prev_time,SLOPE_RECON_MF);
   if (1==0) {
-   makeStateDistALL();
+   int keep_all_interfaces=0;
+   makeStateDistALL(keep_all_interfaces);
    prescribe_solid_geometryALL(cur_time_slab,renormalize_only,local_truncate);
   }
   int project_option=1;  // initial project
@@ -19691,7 +19693,7 @@ void NavierStokes::putStateDIV_DATA(
 // NavierStokes::prepare_post_process  (post_init_flag==1)
 // NavierStokes::do_the_advance
 void
-NavierStokes::makeStateDistALL() {
+NavierStokes::makeStateDistALL(int keep_all_interfaces) {
 
  if (level!=0)
   amrex::Error("level invalid in makeStateDistALL");
@@ -19737,7 +19739,7 @@ NavierStokes::makeStateDistALL() {
   // function values.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.makeStateDist();
+  ns_level.makeStateDist(keep_all_interfaces);
  }
   // CORRECT_UNINIT is in MOF_REDIST_3D.F90
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -19748,6 +19750,9 @@ NavierStokes::makeStateDistALL() {
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.delete_localMF(FACEFRAC_MF,1);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   ns_level.delete_localMF(FACEFRAC_SOLVE_MM_MF+dir,1);
+  }
   ns_level.delete_localMF(FACETEST_MF,1);
   ns_level.delete_localMF(ORIGDIST_MF,1);
   ns_level.delete_localMF(STENCIL_MF,1);
@@ -19841,7 +19846,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
 } // subroutine build_NRM_FD_MF
 
 void
-NavierStokes::makeStateDist() {
+NavierStokes::makeStateDist(int keep_all_interfaces) {
 
  bool use_tiling=ns_tiling;
 
@@ -19955,6 +19960,9 @@ NavierStokes::makeStateDist() {
   nstar*=3;
  int nface=nmat*AMREX_SPACEDIM*2*(1+AMREX_SPACEDIM); 
 
+  // (nmat,nmat,2)  left material, right material, frac_pair+dist_pair
+ int nface_dst=nmat*nmat*2;
+
  new_localMF(STENCIL_MF,nstar,ngrow_distance,-1);
  localMF[STENCIL_MF]->setVal(0.0);
 
@@ -19962,6 +19970,7 @@ NavierStokes::makeStateDist() {
  int tessellate=0;
   // FACEINIT is in: MOF_REDIST_3D.F90
  makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MF,do_face_decomp);
+ ProcessFaceFrac(tessellate,FACEFRAC_MF,FACEFRAC_SOLVE_MM_MF,ngrow_distance);
 
  if (profile_dist==1) {
   after_profile = ParallelDescriptor::second();
@@ -20062,6 +20071,12 @@ NavierStokes::makeStateDist() {
  if (localMF[FACEFRAC_MF]->nComp()!=nface)
   amrex::Error("localMF[FACEFRAC_MF]->nComp() invalid");
 
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  debug_ngrow(FACEFRAC_SOLVE_MM_MF+dir,ngrow_distance,722);
+  if (localMF[FACEFRAC_SOLVE_MM_MF+dir]->nComp()!=nface_dst)
+   amrex::Error("localMF[FACEFRAC_SOLVE_MM_MF+dir]->nComp()!=nface_dst");
+ }
+
  debug_ngrow(STENCIL_MF,ngrow_distance,90);
 
  Vector<int> nprocessed;
@@ -20102,6 +20117,12 @@ NavierStokes::makeStateDist() {
 
    FArrayBox& stencilfab=(*localMF[STENCIL_MF])[mfi];
    FArrayBox& facefracfab=(*localMF[FACEFRAC_MF])[mfi];
+
+   FArrayBox& facepairXfab=(*localMF[FACEFRAC_SOLVE_MM_MF])[mfi];
+   FArrayBox& facepairYfab=(*localMF[FACEFRAC_SOLVE_MM_MF+1])[mfi];
+   FArrayBox& facepairZfab=
+      (*localMF[FACEFRAC_SOLVE_MM_MF+AMREX_SPACEDIM-1])[mfi];
+
    FArrayBox& facetestfab=(*localMF[FACETEST_MF])[mfi];
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
 
@@ -20119,6 +20140,7 @@ NavierStokes::makeStateDist() {
 
     // in: MOF_REDIST_3D.F90
    FORT_LEVELSTRIP( 
+    &keep_all_interfaces,
     &nprocessed[tid_current],
     minLS[tid_current].dataPtr(),
     maxLS[tid_current].dataPtr(),
@@ -20129,6 +20151,12 @@ NavierStokes::makeStateDist() {
     latent_heat.dataPtr(),
     maskfab.dataPtr(),
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    facepairXfab.dataPtr(),
+    ARLIM(facepairXfab.loVect()),ARLIM(facepairXfab.hiVect()),
+    facepairYfab.dataPtr(),
+    ARLIM(facepairYfab.loVect()),ARLIM(facepairYfab.hiVect()),
+    facepairZfab.dataPtr(),
+    ARLIM(facepairZfab.loVect()),ARLIM(facepairZfab.hiVect()),
     facefracfab.dataPtr(),
     ARLIM(facefracfab.loVect()),ARLIM(facefracfab.hiVect()),
     facetestfab.dataPtr(),
@@ -20154,7 +20182,10 @@ NavierStokes::makeStateDist() {
     xlo,dx,
     &cur_time_slab,
     &ngrow_distance,
-    &nmat,&nten,&nstar,&nface);
+    &nmat,&nten,
+    &nstar,
+    &nface,
+    &nface_dst);
  } // mfi
 } // omp
 
@@ -20272,6 +20303,7 @@ NavierStokes::correct_dist_uninit() {
 // WARNING:  allocates, but does not delete.
 // called from NavierStokes::make_physics_varsALL if using supermesh.
 // called from NavierStokes::ColorSum
+// called from NavierStokes::makeStateDist
 void
 NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		int ngrow_dest) {

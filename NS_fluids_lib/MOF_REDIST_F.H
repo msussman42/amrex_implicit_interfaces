@@ -57,6 +57,7 @@ namespace amrex{
        int* nmat);
 
      void FORT_LEVELSTRIP(
+       int* keep_all_interfaces,
        int* nprocessed,
        Real* minLS,
        Real* maxLS,
@@ -66,6 +67,12 @@ namespace amrex{
        int* truncate_volume_fractions,
        Real* latent_heat,
        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
+       Real* facepairX,
+       AMREX_ARLIM_P(facepairXlo),AMREX_ARLIM_P(facepairXhi),
+       Real* facepairY,
+       AMREX_ARLIM_P(facepairYlo),AMREX_ARLIM_P(facepairYhi),
+       Real* facepairZ,
+       AMREX_ARLIM_P(facepairZlo),AMREX_ARLIM_P(facepairZhi),
        Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
        Real* facetest,AMREX_ARLIM_P(facetestlo),AMREX_ARLIM_P(facetesthi),
        Real* stenfab,AMREX_ARLIM_P(stenfablo),AMREX_ARLIM_P(stenfabhi),
@@ -82,7 +89,10 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        int* ngrowLS,
-       int* nmat,int* nten,int* nstar,int* nface);
+       int* nmat,int* nten,
+       int* nstar,
+       int* nface,
+       int* nface_dst);
 
      void FORT_CORRECT_UNINIT(
        Real* minLS,

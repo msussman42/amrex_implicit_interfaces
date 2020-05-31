@@ -2630,7 +2630,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int init_vof_ls_prev_time=0;
        VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
         SLOPE_RECON_MF);
-       makeStateDistALL();
+       int keep_all_interfaces=1;
+       makeStateDistALL(keep_all_interfaces);
 
        make_physics_varsALL(project_option,post_restart_flag,5); 
 
@@ -2652,7 +2653,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int init_vof_ls_prev_time=0;
        VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
         SLOPE_RECON_MF);
-       makeStateDistALL();
+       int keep_all_interfaces=0;
+       makeStateDistALL(keep_all_interfaces);
       } else
        amrex::Error("mass_transfer_active invalid");
 
@@ -2895,7 +2897,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
         local_truncate);
 
-       makeStateDistALL();
+       int keep_all_interfaces=0;
+       makeStateDistALL(keep_all_interfaces);
 
       } else if (mass_transfer_active==0) {
        // do nothing
