@@ -586,106 +586,93 @@ stop
         do dir=1,SDIM
          local_normal(dir)=zero
         enddo
+        local_mag=zero
+
         do dir=1,SDIM
          do i1=0,1
          do j1=0,1
          do k1=0,k1hi
-          
-       do i1=-1,1
-       do j1=-1,1
-       do k1=k1lo,k1hi
-       do im=1,nmat
-        ls_stencil(D_DECL(i1,j1,k1),im)= &
-                LS_new(D_DECL(i+i1,j+j1,k+k1),im)
-       enddo
-       enddo
-       enddo
-       enddo
-
-       do im=1,nmat
-        local_LS(im)=ls_stencil(D_DECL(0,0,0),im)
-       enddo
-       call get_primary_material(local_LS,nmat,im_primary)
-       call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
-       triple_point_flag=0
-       do im=1,nmat
-        if ((im.ne.im_primary).and.(im.ne.im_secondary)) then
-         if (abs(local_LS(im)).le.dxmaxLS) then
-          triple_point_flag=1
-         else if (abs(local_LS(im)).ge.dxmaxLS) then
-          ! do nothing
-         else
-          print *,"local_LS bust"
-          stop
-         endif
-        else if ((im.ge.1).and.(im.le.nmat)) then
-         ! do nothing
-        else
-         print *,"im bust"
-         stop
-        endif
-       enddo ! im=1..nmat
-      
-       if (triple_point_flag.eq.0) then 
-        do im=1,nmat
-         if (is_rigid(nmat,im).eq.0) then
-          if (abs(local_LS(im)).le.two*dxmaxLS) then
-           if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
-            call find_cut_geom_slope_CLSVOF( &
-             ls_stencil, & ! (-1,1)^3,nmat
-             lsnormal, &  ! (nmat,sdim)
-             lsnormal_valid, &  ! nmat
-             ls_intercept, & ! nmat
-             bfact,dx, &
-             xsten,nhalf, &
-             im, &
-             dxmaxLS, &
-             nmat,SDIM)
-
-            if (lsnormal_valid(im).eq.1) then
-             do dir=1,SDIM
-              dcomp=(im-1)*SDIM+dir
-              LS_NRM_FD(D_DECL(i,j,k),dcomp)=lsnormal(im,dir)
-             enddo
-            else if (lsnormal_valid(im).eq.0) then
-             ! do nothing
-            else
-             print *,"lsnormal_valid invalid"
-             stop
-            endif
-           else if ((im.ge.1).and.(im.le.nmat)) then
-            ! do nothing
-           else
-            print *,"im invalid"
-            stop
-           endif
-
-          else if (abs(local_LS(im)).ge.two*dxmaxLS) then
-           ! do nothing
+          if ((im.ge.1).and.(im.ne.nmat)) then
+           local_LS=LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im) 
+          else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
+           iten=im-nmat
+           call get_inverse_iten(im1,im2,iten,nmat)
+           local_LS=half*(LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im1)- &
+                LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im2))
           else
-           print *,"local_LS invalid"
+           print *,"im invalid"
            stop
           endif
-         else if (is_rigid(nmat,im).eq.1) then
-          ! do nothing
+          sign_nm=one
+          if (((dir.eq.1).and.(i1.eq.0)).or. &
+              ((dir.eq.2).and.(j1.eq.0)).or. &
+              ((dir.eq.3).and.(SDIM.eq.3).and.(k1.eq.0))) then
+           sign_nm=-one
+          endif
+          local_normal(dir)=local_normal(dir)+sign_nm*local_LS
+         enddo !  k1
+         enddo !  j1
+         enddo !  i1
+         xplus=xsten_nd(1,dir)
+         xminus=xsten_nd(-1,dir)
+         if (xplus.gt.xminus) then
+          local_normal(dir)=local_normal(dir)/(xplus-xminus)
          else
-          print *,"is_rigid invalid"
+          print *,"xplus or xminus invalid"
           stop
          endif
-        enddo ! im=1..nmat
-       else if (triple_point_flag.eq.1) then
-        ! do nothing
-       else
-        print *,"triple_point_flag invalid"
-        stop
-       endif
+         if (levelrz.eq.0) then
+          RR=one
+         else if (levelrz.eq.1) then
+          RR=one
+          if ((dir.eq.1).and.(i.le.0)) then
+           local_normal(dir)=zero
+          endif
+         else if (levelrz.eq.3) then
+          RR=one
+          if ((dir.eq.1).and.(xminus.lt.zero)) then
+           local_normal(dir)=zero
+          endif
+          if (dir.eq.2) then ! theta direction
+           RR=xsten_nd(0,1)
+           if (RR.gt.zero) then
+            ! do nothing
+           else
+            print *,"RR invalid"
+            stop
+           endif
+          endif 
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+         local_normal(dir)=local_normal(dir)/RR
+         local_mag=local_mag+local_normal(dir)**2
+        enddo ! dir=1..sdim 
+        if (local_mag.eq.zero) then
+         ! do nothing
+        else if (local_mag.gt.zero) then
+         local_mag=sqrt(local_mag)
+         do dir=1,SDIM
+          local_normal(dir)=local_normal(dir)/local_mag
+         enddo
+        else
+         print *,"local_mag invalid"
+         stop
+        endif
+        ibase=(im-1)*(SDIM+1)
+        do dir=1,SDIM
+         LS_NRM_FD(D_DECL(i,j,k),ibase+dir)=local_normal(dir)
+        enddo 
+        LS_NRM_FD(D_DECL(i,j,k),ibase+SDIM+1)=local_mag
+       enddo ! im=1..nmat+nten
 
       enddo
       enddo
       enddo  !i,j,k 
 
       return
-      end subroutine FORT_FD_NORMAL
+      end subroutine FORT_FD_NODE_NORMAL
 
 
 
@@ -3567,7 +3554,7 @@ stop
           at_RZ_face=1
          endif
          if (inormal.eq.i) then
-          if (i.le.0) then
+          if (xstenMAC(0,1).lt.zero) then
            at_RZ_face=1
           endif
          else
