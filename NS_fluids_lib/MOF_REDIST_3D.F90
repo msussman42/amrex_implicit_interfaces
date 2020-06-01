@@ -497,6 +497,19 @@ stop
       REAL_T xsten_nd(-3:3,SDIM)
       INTEGER_T nten_test
       INTEGER_T n_normal_test
+      INTEGER_T nhalf
+      INTEGER_T k1hi
+      INTEGER_T i,j,k
+      INTEGER_T i1,j1,k1
+      INTEGER_T im,im1,im2
+      INTEGER_T iten
+      INTEGER_T ibase
+      INTEGER_T dir
+      REAL_T local_normal(SDIM)
+      REAL_T local_LS
+      REAL_T local_mag
+      REAL_T sign_nm
+      REAL_T xplus,xminus,RR
 
 
       nhalf=3 
@@ -542,14 +555,14 @@ stop
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
-       print *,"ngeom_recon invalid FORT_FD_NORMAL"
+       print *,"ngeom_recon invalid FORT_FD_NODE_NORMAL"
        print *,"ngeom_recon=",ngeom_recon
        stop
       endif
       if (ngeom_raw.eq.SDIM+1) then
        ! do nothing
       else
-       print *,"ngeom_raw invalid FORT_FD_NORMAL"
+       print *,"ngeom_raw invalid FORT_FD_NODE_NORMAL"
        print *,"ngeom_raw=",ngeom_raw
        stop
       endif
