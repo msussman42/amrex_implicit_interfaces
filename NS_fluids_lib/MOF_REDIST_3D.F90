@@ -458,6 +458,237 @@ stop
       return
       end subroutine FORT_FD_NORMAL
 
+      subroutine FORT_FD_NODE_NORMAL( &
+       level, &
+       finest_level, &
+       LS_new, &
+       DIMS(LS_new), &
+       LS_NRM_FD, &
+       DIMS(LS_NRM_FD), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       nmat, &
+       nten, &
+       n_normal, &
+       ngrow_dest)
+      use global_utility_module
+      use probcommon_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: n_normal
+      INTEGER_T, intent(in) :: ngrow_dest
+      INTEGER_T, intent(in) :: DIMDEC(LS_new)
+      INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
+      REAL_T, intent(in) :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, intent(out) :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+
+      REAL_T xsten_nd(-3:3,SDIM)
+      INTEGER_T nten_test
+      INTEGER_T n_normal_test
+
+
+      nhalf=3 
+
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid141"
+       stop
+      endif
+      if ((level.le.finest_level).and.(level.ge.0)) then
+       ! do nothing
+      else
+       print *,"level invalid in FORT_FD_NODE_NORMAL"
+       stop
+      endif
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid fd_node_normal nten nten_test ",nten,nten_test
+       stop
+      endif
+      n_normal_test=(SDIM+1)*(nten+nmat)
+      if (n_normal_test.ne.n_normal) then
+       print *,"n_normal invalid fd_node_normal n_normal ",n_normal
+       stop
+      endif
+ 
+      if (ngrow_dest.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow_dest invalid"
+       stop
+      endif
+      
+      call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_dest+1,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_dest+1,-1,2870)
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.eq.2*SDIM+3) then
+       ! do nothing
+      else
+       print *,"ngeom_recon invalid FORT_FD_NORMAL"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.eq.SDIM+1) then
+       ! do nothing
+      else
+       print *,"ngeom_raw invalid FORT_FD_NORMAL"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      if (levelrz.eq.0) then
+       ! do nothing
+      else if (levelrz.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (levelrz.eq.3) then
+       ! do nothing
+      else
+       print *,"levelrz invalid in FORT_FD_NODE_NORMAL"
+       stop
+      endif
+
+      k1hi=0
+      if (SDIM.eq.3) then
+       k1hi=1
+      endif
+
+      call growntileboxNODE(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_dest)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridstenND_level(xsten_nd,i,j,k,level,nhalf)
+
+       do im=1,nmat+nten
+        do dir=1,SDIM
+         local_normal(dir)=zero
+        enddo
+        do dir=1,SDIM
+         do i1=0,1
+         do j1=0,1
+         do k1=0,k1hi
+          
+       do i1=-1,1
+       do j1=-1,1
+       do k1=k1lo,k1hi
+       do im=1,nmat
+        ls_stencil(D_DECL(i1,j1,k1),im)= &
+                LS_new(D_DECL(i+i1,j+j1,k+k1),im)
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do im=1,nmat
+        local_LS(im)=ls_stencil(D_DECL(0,0,0),im)
+       enddo
+       call get_primary_material(local_LS,nmat,im_primary)
+       call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+       triple_point_flag=0
+       do im=1,nmat
+        if ((im.ne.im_primary).and.(im.ne.im_secondary)) then
+         if (abs(local_LS(im)).le.dxmaxLS) then
+          triple_point_flag=1
+         else if (abs(local_LS(im)).ge.dxmaxLS) then
+          ! do nothing
+         else
+          print *,"local_LS bust"
+          stop
+         endif
+        else if ((im.ge.1).and.(im.le.nmat)) then
+         ! do nothing
+        else
+         print *,"im bust"
+         stop
+        endif
+       enddo ! im=1..nmat
+      
+       if (triple_point_flag.eq.0) then 
+        do im=1,nmat
+         if (is_rigid(nmat,im).eq.0) then
+          if (abs(local_LS(im)).le.two*dxmaxLS) then
+           if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
+            call find_cut_geom_slope_CLSVOF( &
+             ls_stencil, & ! (-1,1)^3,nmat
+             lsnormal, &  ! (nmat,sdim)
+             lsnormal_valid, &  ! nmat
+             ls_intercept, & ! nmat
+             bfact,dx, &
+             xsten,nhalf, &
+             im, &
+             dxmaxLS, &
+             nmat,SDIM)
+
+            if (lsnormal_valid(im).eq.1) then
+             do dir=1,SDIM
+              dcomp=(im-1)*SDIM+dir
+              LS_NRM_FD(D_DECL(i,j,k),dcomp)=lsnormal(im,dir)
+             enddo
+            else if (lsnormal_valid(im).eq.0) then
+             ! do nothing
+            else
+             print *,"lsnormal_valid invalid"
+             stop
+            endif
+           else if ((im.ge.1).and.(im.le.nmat)) then
+            ! do nothing
+           else
+            print *,"im invalid"
+            stop
+           endif
+
+          else if (abs(local_LS(im)).ge.two*dxmaxLS) then
+           ! do nothing
+          else
+           print *,"local_LS invalid"
+           stop
+          endif
+         else if (is_rigid(nmat,im).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
+       else if (triple_point_flag.eq.1) then
+        ! do nothing
+       else
+        print *,"triple_point_flag invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+      return
+      end subroutine FORT_FD_NORMAL
+
+
+
         ! vofrecon=vof,ref centroid,order,slope,intercept
         ! newfab has nmat*(sdim+1) components
         !
