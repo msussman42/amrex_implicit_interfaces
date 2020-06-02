@@ -2,6 +2,7 @@
 #define _MOF_REDIST_F_H_ 
 
 #ifdef BL_LANG_FORT
+#    define FORT_NODE_TO_CELL node_to_cell
 #    define FORT_FD_NODE_NORMAL fd_node_normal
 #    define FORT_FD_NORMAL fd_normal
 #    define FORT_LEVELSTRIP levelstrip
@@ -12,6 +13,7 @@
 #    define FORT_CORRECT_UNINIT correct_uninit
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
+#    define FORT_NODE_TO_CELL NODE_TO_CELL
 #    define FORT_FD_NODE_NORMAL FD_NODE_NORMAL
 #    define FORT_FD_NORMAL FD_NORMAL
 #    define FORT_LEVELSTRIP LEVELSTRIP
@@ -22,6 +24,7 @@
 #    define FORT_CORRECT_UNINIT CORRECT_UNINIT
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
+#    define FORT_NODE_TO_CELL node_to_cell
 #    define FORT_FD_NODE_NORMAL fd_node_normal
 #    define FORT_FD_NORMAL fd_normal
 #    define FORT_LEVELSTRIP levelstrip
@@ -31,6 +34,7 @@
 #    define FORT_FACEPROCESS faceprocess
 #    define FORT_CORRECT_UNINIT correct_uninit
 #  else
+#    define FORT_NODE_TO_CELL node_to_cell_
 #    define FORT_FD_NODE_NORMAL fd_node_normal_
 #    define FORT_FD_NORMAL fd_normal_
 #    define FORT_LEVELSTRIP levelstrip_
@@ -74,6 +78,22 @@ namespace amrex{
        int* nten,
        int* n_normal,
        int* ngrow_dest);
+
+     void FORT_NODE_TO_CELL(
+       int* level,
+       int* finest_level,
+       Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
+       Real* lsnrmFD,AMREX_ARLIM_P(lsnrmFDlo),AMREX_ARLIM_P(lsnrmFDhi),
+       Real* curvcell,AMREX_ARLIM_P(curvcelllo),AMREX_ARLIM_P(curvcellhi),
+       const int* tilelo,const int* tilehi,
+       const int* fablo,const int* fabhi,
+       int* bfact,
+       const Real* xlo,const Real* dx,
+       int* nmat,
+       int* nten,
+       int* n_normal,
+       int* ngrow_nrm);
+
 
      void FORT_LEVELSTRIP(
        int* keep_all_interfaces,
