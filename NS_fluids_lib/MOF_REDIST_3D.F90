@@ -638,7 +638,7 @@ stop
           RR=one
          else if (levelrz.eq.1) then
           RR=one
-          if ((dir.eq.1).and.(i.le.0)) then
+          if ((dir.eq.1).and.(xminus.lt.zero)) then
            local_normal(dir)=zero
           endif
          else if (levelrz.eq.3) then
@@ -686,6 +686,241 @@ stop
 
       return
       end subroutine FORT_FD_NODE_NORMAL
+
+      subroutine FORT_NODE_TO_CELL( &
+       level, &
+       finest_level, &
+       LS_new, &
+       DIMS(LS_new), &
+       LS_NRM_FD, &
+       DIMS(LS_NRM_FD), &
+       CURV_CELL, &
+       DIMS(CURV_CELL), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       nmat, &
+       nten, &
+       n_normal, &
+       ngrow_nrm)
+      use global_utility_module
+      use probcommon_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: n_normal
+      INTEGER_T, intent(in) :: ngrow_nrm
+      INTEGER_T, intent(in) :: DIMDEC(LS_new)
+      INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
+      INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
+      REAL_T, intent(in) :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, intent(in) :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
+      REAL_T, intent(out) :: CURV_CELL(DIMV(CURV_CELL),n_normal)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+
+      REAL_T xsten_nd(-3:3,SDIM)
+      INTEGER_T nten_test
+      INTEGER_T n_normal_test
+      INTEGER_T nhalf
+      INTEGER_T k1hi
+      INTEGER_T i,j,k
+      INTEGER_T i1,j1,k1
+      INTEGER_T im,im1,im2
+      INTEGER_T iten
+      INTEGER_T ibase
+      INTEGER_T dir
+      REAL_T local_normal(SDIM)
+      REAL_T local_LS
+      REAL_T local_mag
+      REAL_T sign_nm
+      REAL_T xplus,xminus,RR
+
+
+      nhalf=3 
+
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid141"
+       stop
+      endif
+      if ((level.le.finest_level).and.(level.ge.0)) then
+       ! do nothing
+      else
+       print *,"level invalid in FORT_NODE_TO_CELL"
+       stop
+      endif
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid node_to_cell nten nten_test ",nten,nten_test
+       stop
+      endif
+      n_normal_test=(SDIM+1)*(nten+nmat)
+      if (n_normal_test.ne.n_normal) then
+       print *,"n_normal invalid node_to_cell n_normal ",n_normal
+       stop
+      endif
+ 
+      if (ngrow_nrm.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow_nrm invalid"
+       stop
+      endif
+      
+      call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_nrm+1,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_nrm+1,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(CURV_CELL),ngrow_nrm,-1,2870)
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.eq.2*SDIM+3) then
+       ! do nothing
+      else
+       print *,"ngeom_recon invalid FORT_NODE_TO_CELL"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.eq.SDIM+1) then
+       ! do nothing
+      else
+       print *,"ngeom_raw invalid FORT_NODE_TO_CELL"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      if (levelrz.eq.0) then
+       ! do nothing
+      else if (levelrz.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (levelrz.eq.3) then
+       ! do nothing
+      else
+       print *,"levelrz invalid in FORT_NODE_TO_CELL"
+       stop
+      endif
+
+      k1hi=0
+      if (SDIM.eq.3) then
+       k1hi=1
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_nrm)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridstenND_level(xsten_nd,i,j,k,level,nhalf)
+
+       do im=1,nmat+nten
+        do dir=1,SDIM
+         local_normal(dir)=zero
+        enddo
+        local_mag=zero
+
+        do dir=1,SDIM
+         do i1=0,1
+         do j1=0,1
+         do k1=0,k1hi
+          if ((im.ge.1).and.(im.ne.nmat)) then
+           local_LS=LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im) 
+          else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
+           iten=im-nmat
+           call get_inverse_iten(im1,im2,iten,nmat)
+           local_LS=half*(LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im1)- &
+                LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im2))
+          else
+           print *,"im invalid"
+           stop
+          endif
+          sign_nm=one
+          if (((dir.eq.1).and.(i1.eq.0)).or. &
+              ((dir.eq.2).and.(j1.eq.0)).or. &
+              ((dir.eq.3).and.(SDIM.eq.3).and.(k1.eq.0))) then
+           sign_nm=-one
+          endif
+          local_normal(dir)=local_normal(dir)+sign_nm*local_LS
+         enddo !  k1
+         enddo !  j1
+         enddo !  i1
+         xplus=xsten_nd(1,dir)
+         xminus=xsten_nd(-1,dir)
+         if (xplus.gt.xminus) then
+          local_normal(dir)=local_normal(dir)/(xplus-xminus)
+         else
+          print *,"xplus or xminus invalid"
+          stop
+         endif
+         if (levelrz.eq.0) then
+          RR=one
+         else if (levelrz.eq.1) then
+          RR=one
+          if ((dir.eq.1).and.(xminus.lt.zero)) then
+           local_normal(dir)=zero
+          endif
+         else if (levelrz.eq.3) then
+          RR=one
+          if ((dir.eq.1).and.(xminus.lt.zero)) then
+           local_normal(dir)=zero
+          endif
+          if (dir.eq.2) then ! theta direction
+           RR=xsten_nd(0,1)
+           if (RR.gt.zero) then
+            ! do nothing
+           else
+            print *,"RR invalid"
+            stop
+           endif
+          endif 
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+         local_normal(dir)=local_normal(dir)/RR
+         local_mag=local_mag+local_normal(dir)**2
+        enddo ! dir=1..sdim 
+        if (local_mag.eq.zero) then
+         ! do nothing
+        else if (local_mag.gt.zero) then
+         local_mag=sqrt(local_mag)
+         do dir=1,SDIM
+          local_normal(dir)=local_normal(dir)/local_mag
+         enddo
+        else
+         print *,"local_mag invalid"
+         stop
+        endif
+        ibase=(im-1)*(SDIM+1)
+        do dir=1,SDIM
+         LS_NRM_FD(D_DECL(i,j,k),ibase+dir)=local_normal(dir)
+        enddo 
+        LS_NRM_FD(D_DECL(i,j,k),ibase+SDIM+1)=local_mag
+       enddo ! im=1..nmat+nten
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+      return
+      end subroutine FORT_FD_NODE_NORMAL
+
 
 
 
