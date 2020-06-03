@@ -44,6 +44,7 @@ extern "C"
     int* nten,
     int* nden,
     int* nstate,
+    int* ntsat,
     Real* density_floor_expansion,
     Real* density_ceiling_expansion,
     Real* latent_heat,
@@ -63,7 +64,8 @@ extern "C"
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
     Real* deltaVOF,AMREX_ARLIM_P(deltaVOFlo),AMREX_ARLIM_P(deltaVOFhi), 
     Real* nodevel,AMREX_ARLIM_P(nodevello),AMREX_ARLIM_P(nodevelhi), 
-    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* jumpfab,AMREX_ARLIM_P(jumpfablo),AMREX_ARLIM_P(jumpfabhi),
+    Real* tsatfab,AMREX_ARLIM_P(tsatfablo),AMREX_ARLIM_P(tsatfabhi),
     Real* LSold,AMREX_ARLIM_P(LSoldlo),AMREX_ARLIM_P(LSoldhi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),      
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),      
@@ -95,6 +97,7 @@ extern "C"
     int* nmat,
     int* nten,
     int* nburning,
+    int* ntsat,
     int* nden,
     Real* density_floor_expansion,
     Real* density_ceiling_expansion,
@@ -125,6 +128,7 @@ extern "C"
     Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi), 
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
     Real* burnvel,AMREX_ARLIM_P(burnvello),AMREX_ARLIM_P(burnvelhi), 
+    Real* Tsatfab,AMREX_ARLIM_P(Tsatfablo),AMREX_ARLIM_P(Tsatfabhi), 
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi), 
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
     Real* LS_slopes_FD,
@@ -132,11 +136,14 @@ extern "C"
     AMREX_ARLIM_P(LS_slopes_FDhi), 
     Real* EOS,AMREX_ARLIM_P(EOSlo),AMREX_ARLIM_P(EOShi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
-    Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi)); 
+    Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
+    Real* curvfab,AMREX_ARLIM_P(curvfablo),AMREX_ARLIM_P(curvfabhi) ); 
 
 
    void FORT_EXTEND_BURNING_VEL(
-    int* level,int* finest_level,
+    int* velflag,
+    int* level,
+    int* finest_level,
     const Real* xlo,const Real* dx,
     int* nmat,
     int* nten,

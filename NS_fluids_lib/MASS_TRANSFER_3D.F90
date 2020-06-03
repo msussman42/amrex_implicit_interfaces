@@ -1098,7 +1098,6 @@ stop
 
        ! i,j,k is the cell containing xtarget
       subroutine interpfab_curv( &
-       i,j,k, &
        curv_comp, &
        nten, &
        nmat, &
@@ -1115,7 +1114,6 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k
       INTEGER_T, intent(in) :: curv_comp
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nmat
@@ -1183,9 +1181,7 @@ stop
        stop
       endif
 
-      cell_index(1)=i
-      cell_index(2)=j
-      cell_index(3)=k
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
 
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow) then
@@ -4371,7 +4367,8 @@ stop
        DIMS(LS_slopes_FD), & 
        EOS,DIMS(EOS), &
        recon,DIMS(recon), &
-       pres,DIMS(pres) )
+       pres,DIMS(pres), &
+       curvfab,DIMS(curvfab) )
 #if (STANDALONE==0)
       use probf90_module
 #elif (STANDALONE==1)
@@ -4436,6 +4433,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(EOS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(curvfab)
 
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: colorfab(DIMV(colorfab))
@@ -4456,6 +4454,7 @@ stop
        ! F,X,order,SL,I x nmat
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: pres(DIMV(pres)) 
+      REAL_T, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
 
       INTEGER_T i,j,k
       INTEGER_T dir,dir2
@@ -4542,6 +4541,8 @@ stop
 
       INTEGER_T ncomp_per_burning
       INTEGER_T ncomp_per_tsat
+
+      REAL_T CURV_OUT_I
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -4673,6 +4674,11 @@ stop
       call checkbound(fablo,fabhi, &
         DIMS(Tsatfab), &
         ngrow_make_distance,-1,1250)
+
+      call checkbound(fablo,fabhi, &
+        DIMS(curvfab), &
+        ngrow_make_distance,-1,1250)
+
       call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,1251)
       call checkbound(fablo,fabhi,DIMS(LS),ngrow,-1,1252)
       call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,1253)
@@ -4872,6 +4878,20 @@ stop
 
                 dencomp_source=(im_source-1)*num_state_material+1
                 dencomp_dest=(im_dest-1)*num_state_material+1
+
+                call interpfab_curv( &
+                 nmat+iten, &
+                 nten, &
+                 nmat, &
+                 bfact, &
+                 level, &
+                 finest_level, &
+                 dx,xlo, &
+                 xI, &
+                 ngrow_make_distance, &
+                 fablo,fabhi, &
+                 curvfab,DIMS(curvfab), &
+                 CURV_OUT_I)
 
                  ! use_exact_temperature==0 if regular Stefan problem.
                  ! subroutine get_interface_temperature defined here in

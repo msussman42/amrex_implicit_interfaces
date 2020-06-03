@@ -136,7 +136,8 @@ extern "C"
     AMREX_ARLIM_P(LS_slopes_FDhi), 
     Real* EOS,AMREX_ARLIM_P(EOSlo),AMREX_ARLIM_P(EOShi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
-    Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi)); 
+    Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
+    Real* curvfab,AMREX_ARLIM_P(curvfablo),AMREX_ARLIM_P(curvfabhi) ); 
 
 
    void FORT_EXTEND_BURNING_VEL(

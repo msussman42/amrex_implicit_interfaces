@@ -1096,6 +1096,176 @@ stop
       return 
       end subroutine interpfab_tsat
 
+       ! i,j,k is the cell containing xtarget
+      subroutine interpfab_curv( &
+       curv_comp, &
+       nten, &
+       nmat, &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       xtarget, &
+       ngrow, &
+       lo,hi, &
+       data,DIMS(data), &
+       CURV_OUT)
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: curv_comp
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: DIMDEC(data)
+       ! first nmat+nten components are curvatures
+       ! second nmat+nten components are status (0=bad 1=good)
+      REAL_T, intent(in) :: data(DIMV(data),2*(nmat+nten))
+      REAL_T, intent(out) :: CURV_OUT
+
+      INTEGER_T k1lo,k1hi
+      INTEGER_T cell_index(3)
+      INTEGER_T sten_index(3)
+      INTEGER_T dir
+      INTEGER_T nhalf
+      REAL_T CURV_times_weight
+      REAL_T CURV_weight
+      INTEGER_T i1,j1,k1
+      INTEGER_T isten,jsten,ksten
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T CURV_FLAG
+      REAL_T local_CURV
+      REAL_T local_weight
+      REAL_T eps
+      INTEGER_T nten_test
+
+      call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid interpfab_curv nten, nten_test ",nten,nten_test
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       k1lo=0
+       k1hi=0
+      else if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      if (bfact.lt.1) then 
+       print *,"bfact invalid114"
+       stop
+      endif
+      if ((curv_comp.ge.1).and.(curv_comp.le.nmat+nten)) then
+       ! do nothing
+      else
+       print *,"curv_comp out of range"
+       stop
+      endif
+
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
+
+      do dir=1,SDIM
+       if (cell_index(dir).lt.lo(dir)-ngrow) then
+        cell_index(dir)=lo(dir)-ngrow
+       endif
+       if (cell_index(dir).gt.hi(dir)+ngrow) then
+        cell_index(dir)=hi(dir)+ngrow
+       endif
+      enddo ! dir
+
+      nhalf=3
+
+      CURV_times_weight=zero
+      CURV_weight=zero
+
+      do i1=-1,1
+      do j1=-1,1
+      do k1=k1lo,k1hi
+
+       isten=i1+cell_index(1)
+       jsten=j1+cell_index(2)
+       ksten=k1+cell_index(3)
+       sten_index(1)=isten
+       sten_index(2)=jsten
+       sten_index(3)=ksten
+
+       CURV_FLAG=1
+
+       do dir=1,SDIM
+        if ((sten_index(dir).lt.lo(dir)-ngrow).or. &
+            (sten_index(dir).gt.hi(dir)+ngrow)) then
+         CURV_FLAG=0
+        endif
+       enddo ! dir
+
+       if (CURV_FLAG.eq.1) then
+
+        call gridsten_level(xsten,isten,jsten,ksten,level,nhalf)
+
+        CURV_FLAG=NINT(data(D_DECL(isten,jsten,ksten),nmat+nten+curv_comp))
+
+        if (CURV_FLAG.eq.1) then
+         local_CURV=data(D_DECL(isten,jsten,ksten),curv_comp)
+         local_weight=zero
+         eps=dx(1)*0.001
+         do dir=1,SDIM
+          local_weight=local_weight+(xsten(0,dir)-xtarget(dir))**2
+         enddo 
+         local_weight=local_weight+eps**2
+         local_weight=one/local_weight
+         CURV_weight=CURV_weight+local_weight
+         CURV_times_weight=CURV_times_weight+local_weight*local_CURV
+        else if (CURV_FLAG.eq.0) then
+         ! do nothing
+        else
+         print *,"CURV_FLAG invalid"
+         stop
+        endif
+
+       else if (CURV_FLAG.eq.0) then
+        ! do nothing
+       else
+        print *,"CURV_FLAG invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! i1,j1,k1
+
+      if (CURV_weight.gt.zero) then
+       CURV_OUT=CURV_times_weight/CURV_weight
+      else if (CURV_weight.eq.zero) then
+       CURV_OUT=zero
+      else
+       print *,"CURV_weight invalid"
+       stop
+      endif
+
+      return 
+      end subroutine interpfab_curv
+
+
+
 
       subroutine interpfab_piecewise_constant( &
        bfact, &
@@ -4197,7 +4367,8 @@ stop
        DIMS(LS_slopes_FD), & 
        EOS,DIMS(EOS), &
        recon,DIMS(recon), &
-       pres,DIMS(pres) )
+       pres,DIMS(pres), &
+       curvfab,DIMS(curvfab) )
 #if (STANDALONE==0)
       use probf90_module
 #elif (STANDALONE==1)
@@ -4262,6 +4433,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(EOS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(curvfab)
 
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: colorfab(DIMV(colorfab))
@@ -4282,6 +4454,7 @@ stop
        ! F,X,order,SL,I x nmat
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: pres(DIMV(pres)) 
+      REAL_T, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
 
       INTEGER_T i,j,k
       INTEGER_T dir,dir2
@@ -4368,6 +4541,8 @@ stop
 
       INTEGER_T ncomp_per_burning
       INTEGER_T ncomp_per_tsat
+
+      REAL_T CURV_OUT_I
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -4499,6 +4674,11 @@ stop
       call checkbound(fablo,fabhi, &
         DIMS(Tsatfab), &
         ngrow_make_distance,-1,1250)
+
+      call checkbound(fablo,fabhi, &
+        DIMS(curvfab), &
+        ngrow_make_distance,-1,1250)
+
       call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,1251)
       call checkbound(fablo,fabhi,DIMS(LS),ngrow,-1,1252)
       call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,1253)
@@ -4698,6 +4878,20 @@ stop
 
                 dencomp_source=(im_source-1)*num_state_material+1
                 dencomp_dest=(im_dest-1)*num_state_material+1
+
+                call interpfab_curv( &
+                 nmat+iten, &
+                 nten, &
+                 nmat, &
+                 bfact, &
+                 level, &
+                 finest_level, &
+                 dx,xlo, &
+                 xI, &
+                 ngrow_make_distance, &
+                 fablo,fabhi, &
+                 curvfab,DIMS(curvfab), &
+                 CURV_OUT_I)
 
                  ! use_exact_temperature==0 if regular Stefan problem.
                  ! subroutine get_interface_temperature defined here in

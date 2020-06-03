@@ -178,6 +178,9 @@ namespace amrex{
 
 #define P_SOLN_MF 151
 
+#define FD_NRM_ND_MF 152
+#define FD_CURV_CELL_MF 153
+
 #define FACEFRAC_SOLVE_MM_MF 155
 #define FACEFRAC_MM_MF 158
 #define CELLFRAC_MM_MF 159
