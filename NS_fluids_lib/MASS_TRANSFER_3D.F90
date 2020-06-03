@@ -1096,6 +1096,173 @@ stop
       return 
       end subroutine interpfab_tsat
 
+       ! i,j,k is the cell containing xtarget
+      subroutine interpfab_curv( &
+       i,j,k, &
+       curv_comp, &
+       nten, &
+       nmat, &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       xtarget, &
+       ngrow, &
+       lo,hi, &
+       data,DIMS(data), &
+       LS,DIMS(LS), &
+       CURV_OUT)
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: curv_comp
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: DIMDEC(data)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat)
+      REAL_T, intent(in) :: data(DIMV(data),nmat+nten)
+      REAL_T, intent(out) :: CURV_OUT
+
+      INTEGER_T ngrow_per_tsat
+      INTEGER_T k1lo,k1hi
+      INTEGER_T cell_index(3)
+      INTEGER_T dir
+      INTEGER_T nhalf
+      REAL_T TSAT_times_weight
+      REAL_T TSAT_weight
+      INTEGER_T i1,j1,k1
+      INTEGER_T isten,jsten,ksten
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T TSAT_FLAG
+      REAL_T local_TSAT
+      REAL_T local_weight
+      REAL_T eps
+      INTEGER_T nten_test
+
+      call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
+      call checkbound(lo,hi,DIMS(LS),ngrow,-1,122)
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid interpfab_curv nten, nten_test ",nten,nten_test
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       k1lo=0
+       k1hi=0
+      else if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      if (bfact.lt.1) then 
+       print *,"bfact invalid114"
+       stop
+      endif
+      if ((curv_comp.ge.1).and.(curv_comp.le.nmat+nten)) then
+       ! do nothing
+      else
+       print *,"curv_comp out of range"
+       stop
+      endif
+
+      cell_index(1)=i
+      cell_index(2)=j
+      cell_index(3)=k
+
+      do dir=1,SDIM
+       if ((cell_index(dir).ge.lo(dir)).and. &
+           (cell_index(dir).le.hi(dir))) then
+        ! do nothing
+       else
+        print *,"cell_index out of range"
+        stop
+       endif
+      enddo ! dir
+
+      nhalf=3
+
+      TSAT_times_weight=zero
+      TSAT_weight=zero
+
+      do i1=-1,1
+      do j1=-1,1
+      do k1=k1lo,k1hi
+
+       isten=i1+i
+       jsten=j1+j
+       ksten=k1+k
+       call gridsten_level(xsten,isten,jsten,ksten,level,nhalf)
+
+       TSAT_FLAG=NINT(data(D_DECL(isten,jsten,ksten),iten))
+       if (ireverse.eq.0) then
+        ! do nothing
+       else if (ireverse.eq.1) then
+        TSAT_FLAG=-TSAT_FLAG
+       else
+        print *,"ireverse invalid"
+        stop
+       endif
+       if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
+        local_TSAT=data(D_DECL(isten,jsten,ksten),comp)
+        local_weight=zero
+        eps=dx(1)*0.001
+        do dir=1,SDIM
+         local_weight=local_weight+(xsten(0,dir)-xtarget(dir))**2
+        enddo 
+        local_weight=local_weight+eps**2
+        local_weight=one/local_weight
+        TSAT_weight=TSAT_weight+local_weight
+        TSAT_times_weight=TSAT_times_weight+local_weight*local_TSAT
+       else if ((TSAT_FLAG.eq.-1).or.(TSAT_FLAG.eq.-2)) then
+        ! do nothing
+       else if (TSAT_FLAG.eq.0) then
+        ! do nothing
+       else
+        print *,"TSAT_FLAG invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! i1,j1,k1
+
+      if (TSAT_weight.gt.zero) then
+       if (TSAT_times_weight.gt.zero) then
+        TSAT=TSAT_times_weight/TSAT_weight
+       else
+        print *,"TSAT_times_weight invalid"
+        stop
+       endif
+      else 
+       print *,"TSAT_weight invalid"
+       stop
+      endif
+
+      return 
+      end subroutine interpfab_tsat
+
+
+
 
       subroutine interpfab_piecewise_constant( &
        bfact, &
