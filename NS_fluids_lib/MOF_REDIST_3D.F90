@@ -720,7 +720,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
       REAL_T, intent(in) :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
       REAL_T, intent(in) :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
-      REAL_T, intent(out) :: CURV_CELL(DIMV(CURV_CELL),nmat+nten)
+       ! first nmat+nten components are curvature
+       ! second nmat+nten components are status (0=bad 1=good)
+      REAL_T, intent(out) :: CURV_CELL(DIMV(CURV_CELL),2*(nmat+nten))
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -735,14 +737,21 @@ stop
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
       INTEGER_T im
+      INTEGER_T im_local
+      INTEGER_T im1,im2
+      INTEGER_T im_primary,im_secondary
+      INTEGER_T iten
       INTEGER_T ibase
       INTEGER_T dir
       REAL_T local_curv(SDIM)
       REAL_T local_normal(SDIM)
+      REAL_T local_mag
       REAL_T sign_nm
       REAL_T xplus,xminus,xmiddle,RR
       REAL_T denom_factor
       REAL_T total_curv
+      INTEGER_T local_status
+      REAL_T local_LS(nmat)
 
 
       nhalf=3 
@@ -837,6 +846,50 @@ stop
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do im=1,nmat+nten
+
+        do im_local=1,nmat
+         local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
+        enddo
+        call get_primary_material(local_LS,nmat,im_primary)
+        call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+
+        local_status=1
+        if ((im.ge.1).and.(im.ne.nmat)) then
+         if ((im.ne.im_primary).and. &
+             (im.ne.im_secondary)) then
+          local_status=0
+         endif
+         if (is_rigid(nmat,im).eq.1) then
+          ! do nothing
+         else if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid(nmat,im_primary).eq.0) then
+           ! do nothing
+          else if (is_rigid(nmat,im_primary).eq.1) then
+           local_status=0
+          else
+           print *,"is_rigid(nmat,im_primary) invalid"
+           stop
+          endif
+         else
+          print *,"is_rigid(nmat,im) invalid"
+          stop
+         endif
+        else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
+         iten=im-nmat
+         call get_inverse_iten(im1,im2,iten,nmat)
+         if ((im1.ne.im_primary).and. &
+             (im1.ne.im_secondary)) then
+          local_status=0
+         endif
+         if ((im2.ne.im_primary).and. &
+             (im2.ne.im_secondary)) then
+          local_status=0
+         endif
+        else
+         print *,"im invalid"
+         stop
+        endif
+        
         do dir=1,SDIM
          local_curv(dir)=zero
         enddo
@@ -848,6 +901,16 @@ stop
          do j1=0,1
          do k1=0,k1hi
           local_normal(dir)=LS_NRM_FD(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
+          local_mag=LS_NRM_FD(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
+          if (local_mag.gt.zero) then
+           ! do nothing
+          else if (local_mag.eq.zero) then
+           local_status=0
+          else
+           print *,"local_mag invalid"
+           stop
+          endif
+
           sign_nm=one
           if (((dir.eq.1).and.(i1.eq.0)).or. &
               ((dir.eq.2).and.(j1.eq.0)).or. &
@@ -940,6 +1003,7 @@ stop
          total_curv=total_curv+local_curv(dir)
         enddo
         CURV_CELL(D_DECL(i,j,k),im)=total_curv
+        CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=local_status
        enddo ! im=1..nmat+nten
 
       enddo
