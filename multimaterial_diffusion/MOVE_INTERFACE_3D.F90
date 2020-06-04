@@ -1816,6 +1816,7 @@ end module tsat_module
       REAL_T NRM_FD_mag
       INTEGER_T nden,nface,nface_decomp,npair
       INTEGER_T ngrow,ngrow_distance,ngrow_recon
+      INTEGER_T ngrow_dest
       INTEGER_T n_normal
       INTEGER_T nprocessed
       INTEGER_T nstate
@@ -2343,9 +2344,22 @@ end module tsat_module
          nmat, &
          nten, &
          n_normal, &
-         nrow_dest)
-
+         ngrow_dest)
  
+       call FORT_NODE_TO_CELL( &
+         level, &
+         finest_level, &
+         LS,DIMS(LS),  & ! ngrow==ngrow_distance
+         FD_NRM_ND,DIMS(FD_NRM_ND),  & ! ngrow==ngrow_distance
+         FD_CURV_CELL,DIMS(FD_CURV_CELL),  & ! ngrow==ngrow_distance
+         fablo,fabhi, &
+         fablo,fabhi,bfact, &
+         xlo,dx, &
+         nmat, &
+         nten, &
+         n_normal, &
+         ngrow_dest)
+
        if (1.eq.1) then 
         ! burnvel flag==1 if valid rate of phase change.
         call FORT_RATEMASSCHANGE( &
@@ -2394,7 +2408,8 @@ end module tsat_module
          DIMS(LS_slopes_FD), &  ! ngrow
          EOS,DIMS(EOS), & ! ngrow
          recon,DIMS(recon), & ! ngrow
-         pres,DIMS(pres) ) ! ngrow
+         pres,DIMS(pres), &
+         FD_CURV_CELL,DIMS(FD_CURV_CELL)) ! ngrow==ngrow_distance
        endif
 
 
