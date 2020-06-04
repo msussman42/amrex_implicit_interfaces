@@ -1727,6 +1727,8 @@ end module tsat_module
       INTEGER_T DIMDEC(EOS)
       INTEGER_T DIMDEC(recon)
       INTEGER_T DIMDEC(pres)
+      INTEGER_T DIMDEC(FD_NRM_ND)
+      INTEGER_T DIMDEC(FD_CURV_CELL)
       INTEGER_T DIMDEC(jump_strength)
       INTEGER_T DIMDEC(swept)
       INTEGER_T DIMDEC(dist_touch)
@@ -1748,6 +1750,10 @@ end module tsat_module
       REAL_T, dimension(:,:,:), allocatable :: EOS
       REAL_T, dimension(:,:,:), allocatable :: recon
       REAL_T, dimension(:,:), allocatable :: pres
+        ! (nmat+nten)*(sdim+1), ngrow_distance
+      REAL_T, dimension(:,:,:), allocatable :: FD_NRM_ND
+        ! 2*(nmat+nten), ngrow_distance
+      REAL_T, dimension(:,:,:), allocatable :: FD_CURV_CELL
         ! 2*nten, ngrow_expansion
       REAL_T, dimension(:,:,:), allocatable :: jump_strength 
         ! ncomp=1, ngrow=0
@@ -1810,6 +1816,7 @@ end module tsat_module
       REAL_T NRM_FD_mag
       INTEGER_T nden,nface,nface_decomp,npair
       INTEGER_T ngrow,ngrow_distance,ngrow_recon
+      INTEGER_T n_normal
       INTEGER_T nprocessed
       INTEGER_T nstate
       INTEGER_T num_elements_blobclass
@@ -1910,6 +1917,8 @@ end module tsat_module
       endif
 
       nLS=nmat*(SDIM+1)
+
+      n_normal=(nmat+nten)*(SDIM+1)
 
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
@@ -2066,6 +2075,8 @@ end module tsat_module
        call set_dimdec(DIMS(EOS),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(recon),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(pres),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(FD_NRM_ND),fablo,fabhi,ngrow_distance)
+       call set_dimdec(DIMS(FD_CURV_CELL),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(jump_strength),fablo,fabhi,ngrow_expansion)
        call set_dimdec(DIMS(swept),fablo,fabhi,0)
        call set_dimdec(DIMS(dist_touch),fablo,fabhi,0)
@@ -2090,6 +2101,8 @@ end module tsat_module
        allocate(EOS(DIMV(EOS),nden))
        allocate(recon(DIMV(recon),nmat*ngeom_recon)) ! F,X,order,SL,I x nmat
        allocate(pres(DIMV(pres)))
+       allocate(FD_NRM_ND(DIMV(FD_NRM_ND),n_normal))
+       allocate(FD_CURV_CELL(DIMV(FD_CURV_CELL),2*(nmat+nten)))
        allocate(jump_strength(DIMV(jump_strength),2*nten))
        allocate(swept(DIMV(swept)))
        allocate(dist_touch(DIMV(dist_touch),nmat))
@@ -2167,12 +2180,18 @@ end module tsat_module
        enddo
        do i=fablo(1)-ngrow_make_distance,fabhi(1)+ngrow_make_distance
        do j=fablo(2)-ngrow_make_distance,fabhi(2)+ngrow_make_distance
-       do im=1,nburning
-        burnvel(i,j,im)=0.0d0
-       enddo
-       do im=1,ntsat
-        tsatfab(i,j,im)=0.0d0
-       enddo
+        do im=1,nburning
+         burnvel(i,j,im)=0.0d0
+        enddo
+        do im=1,ntsat
+         tsatfab(i,j,im)=0.0d0
+        enddo
+        do im=1,n_normal
+         FD_NRM_ND(i,j,im)=0.0d0
+        enddo
+        do im=1,2*(nmat+nten)
+         FD_CURV_CELL(i,j,im)=0.0d0
+        enddo
        enddo
        enddo
        do i=fablo(1)-1,fabhi(1)+1
@@ -2310,7 +2329,23 @@ end module tsat_module
         enddo ! im=1..nmat
        enddo
        enddo
-       
+     
+       ngrow_dest=ngrow_distance-1
+ 
+       call FORT_FD_NODE_NORMAL( &
+         level, &
+         finest_level, &
+         LS,DIMS(LS),  & ! ngrow==ngrow_distance
+         FD_NRM_ND,DIMS(FD_NRM_ND),  & ! ngrow==ngrow_distance
+         fablo,fabhi, &
+         fablo,fabhi,bfact, &
+         xlo,dx, &
+         nmat, &
+         nten, &
+         n_normal, &
+         nrow_dest)
+
+ 
        if (1.eq.1) then 
         ! burnvel flag==1 if valid rate of phase change.
         call FORT_RATEMASSCHANGE( &
@@ -3329,6 +3364,8 @@ end module tsat_module
        deallocate(EOS)
        deallocate(recon)
        deallocate(pres)
+       deallocate(FD_NRM_ND)
+       deallocate(FD_CURV_CELL)
        deallocate(jump_strength)
        deallocate(swept)
        deallocate(dist_touch)
