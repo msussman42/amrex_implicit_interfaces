@@ -24,25 +24,6 @@ print *,"dimension bust"
 stop
 #endif
 
-module tsat_module
-implicit none
-
-      INTEGER_T :: nburning
-      INTEGER_T :: ntsat
-      INTEGER_T :: ncomp_per_burning
-      INTEGER_T :: ncomp_per_tsat
-      INTEGER_T :: velflag
-
-      INTEGER_T DIMDEC(burnvel)
-      INTEGER_T DIMDEC(tsatfab)
-
-      REAL_T, dimension(:,:,:), allocatable :: burnvel
-      REAL_T, dimension(:,:,:), allocatable :: tsatfab
-
-contains
-
-end module tsat_module
-
       subroutine set_dimdec(DIMS(fabdim), &
                       fablo,fabhi,ngrow)
       IMPLICIT NONE
@@ -2091,7 +2072,9 @@ end module tsat_module
        allocate(maskcov(DIMV(maskcov)))
        allocate(masknbr(DIMV(masknbr),4))
        allocate(burnvel(DIMV(burnvel),nburning))
-       allocate(tsatfab(DIMV(tsatfab),ntsat))
+       if (1.eq.0) then
+        allocate(tsatfab(DIMV(tsatfab),ntsat))
+       endif
        allocate(nodevel(DIMV(nodevel),2*nten*SDIM))
        allocate(deltaVOF(DIMV(deltaVOF),nmat))
        allocate(LS(DIMV(LS),nmat*(SDIM+1)))
@@ -3368,7 +3351,11 @@ end module tsat_module
        deallocate(maskcov)
        deallocate(masknbr)
        deallocate(burnvel)
-       deallocate(tsatfab)
+
+       if (1.eq.0) then
+        deallocate(tsatfab)
+       endif
+
        deallocate(nodevel)
        deallocate(deltaVOF)
        deallocate(LS)

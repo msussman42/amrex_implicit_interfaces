@@ -14,6 +14,7 @@ USE mmat_FVM  ! multimat_FVM.F90
 USE bicgstab_module
 USE supercooled_exact_sol
 USE variable_temperature_drop
+USE tsat_module
 
 IMPLICIT NONE
 
@@ -352,6 +353,8 @@ N_CURRENT=N_START
 M_CURRENT=M_START
 
 DO WHILE (N_CURRENT.le.N_FINISH)
+
+ call init_tsatfab(N_CURRENT)
 
  if (fixed_dt_main.eq.-1.0d0) then
   fixed_dt_current=TSTOP/M_CURRENT
@@ -2245,6 +2248,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  N_CURRENT=N_CURRENT*2
  M_CURRENT=M_CURRENT*M_FACTOR
+
+ call delete_tsatfab()
 
 ENDDO ! N_CURRENT.le.N_FINISH
 

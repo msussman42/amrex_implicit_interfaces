@@ -34,11 +34,38 @@ stop
       contains
 
       subroutine get_interface_temperature( &
-        T_I,latent_comp,TSAT_array, &
-        TSAT_flag_array, &
+        use_tsatfab, &
+        i,j,k, &
+        ireverse, &
+        iten, &
+        ntsat, &
+        bfact, &
+        level, &
+        finest_level, &
+        dx,xlo, &
+        ngrow_tsat, &
+        fablo,fabhi, &
+        TSATFAB,DIMS(TSATFAB), &
+        T_I, &
+        latent_comp, &
+        TSAT_array, &
+        TSAT_flag_array, &  ! =0 if derived, =1 if T_interface(x,y,z,t) given.
         x_I,time,nmat,nten,caller_id)
+      use global_utility_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: use_tsatfab
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: ireverse
+      INTEGER_T, intent(in) :: iten
+      INTEGER_T, intent(in) :: ntsat
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: ngrow_tsat
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(TSATFAB)
+      REAL_T, intent(in) :: TSATFAB(DIMV(TSATFAB),ntsat)
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
@@ -46,34 +73,82 @@ stop
       REAL_T, intent(out) :: T_I
       REAL_T, intent(in)  :: TSAT_array(2*nten)
       INTEGER_T, intent(in)  :: TSAT_flag_array(2*nten)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: x_I(SDIM)
       REAL_T, intent(in) :: time
       INTEGER_T :: local_flag
       INTEGER_T :: dir
+      INTEGER_T :: ncomp_per_tsat
+      INTEGER_T :: tsat_comp
 
 #if (STANDALONE==1)
       REAL_T, external   :: exact_temperature
 #endif
 
+      call checkbound(fablo,fabhi,DIMS(TSATFAB),ngrow_tsat,-1,122)
+      ncomp_per_tsat=2
+      tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+
+      if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
+       ! do nothing
+      else
+       print *,"ntsat invalid"
+       stop
+      endif
+      if (bfact.lt.1) then 
+       print *,"bfact invalid114"
+       stop
+      endif
+      if ((iten.ge.1).and.(iten.le.nten)) then
+       ! do nothing
+      else
+       print *,"iten invalid"
+       stop
+      endif
+
       if (nmat.eq.num_materials) then
        if (nten.eq.(((nmat-1)*(nmat-1)+nmat-1)/2)) then 
         if ((latent_comp.ge.1).and.(latent_comp.le.2*nten)) then
          if (time.ge.zero) then
-          local_flag=TSAT_flag_array(latent_comp)
-          if (local_flag.eq.0) then
-           T_I=TSAT_array(latent_comp)
-          else if ((local_flag.ge.1).and.(local_flag.le.nmat)) then
+          if (use_tsatfab.eq.1) then
+           call interpfab_tsat( &
+             i,j,k, &
+             ireverse, &
+             iten, &
+             nten, &
+             ntsat, &
+             bfact, &
+             level, &
+             finest_level, &
+             dx,xlo, &
+             x_I, &
+             tsat_comp, &
+             ngrow_tsat, &
+             fablo,fabhi, &
+             TSATFAB,DIMS(TSATFAB), &
+             T_I)
+          else if (use_tsatfab.eq.0) then
+           local_flag=TSAT_flag_array(latent_comp)
+           if (local_flag.eq.0) then
+            T_I=TSAT_array(latent_comp)
+           else if ((local_flag.ge.1).and.(local_flag.le.nmat)) then
 #if (STANDALONE==0)
-           print *,"local_flag <> 0 not supported yet"
-           stop
+            print *,"local_flag <> 0 not supported yet"
+            stop
 #elif (STANDALONE==1)
-           T_I=exact_temperature(x_I,time,local_flag,probtype,nmat, &
+            T_I=exact_temperature(x_I,time,local_flag,probtype,nmat, &
                    fort_heatviscconst)
 #endif
+           else
+            print *,"local_flag invalid"
+            stop
+           endif
           else
-           print *,"local_flag invalid"
+           print *,"use_tsatfab invalid"
            stop
           endif
+
           if (T_I.ge.TEMPERATURE_FLOOR) then
            ! do nothing
           else
@@ -967,7 +1042,7 @@ stop
       REAL_T, intent(in) :: data(DIMV(data),ntsat)
       REAL_T, intent(out) :: TSAT
 
-      INTEGER_T ngrow_per_tsat
+      INTEGER_T ncomp_per_tsat
       INTEGER_T k1lo,k1hi
       INTEGER_T cell_index(3)
       INTEGER_T dir
@@ -984,8 +1059,8 @@ stop
 
       call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
 
-      ngrow_per_tsat=2
-      if (ntsat.eq.nten*(1+ngrow_per_tsat)) then
+      ncomp_per_tsat=2
+      if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
        ! do nothing
       else
        print *,"ntsat invalid"
@@ -4539,6 +4614,7 @@ stop
       REAL_T temp_target_probe_history(2*nten,2)
       REAL_T dxprobe_target_history(2*nten,2)
 
+      INTEGER_T use_tsatfab
       INTEGER_T ncomp_per_burning
       INTEGER_T ncomp_per_tsat
 
@@ -4893,10 +4969,24 @@ stop
                  curvfab,DIMS(curvfab), &
                  CURV_OUT_I)
 
+                use_tsatfab=0
+
                  ! use_exact_temperature==0 if regular Stefan problem.
                  ! subroutine get_interface_temperature defined here in
                  ! MASS_TRANSFER_3D.F90
                 call get_interface_temperature( &
+                  use_tsatfab, &
+                  i,j,k, &
+                  ireverse, &
+                  iten, &
+                  ntsat, &
+                  bfact, &
+                  level, &
+                  finest_level, &
+                  dx,xlo, &
+                  ngrow_make_distance, & ! ngrow_tsat
+                  fablo,fabhi, &
+                  Tsatfab,DIMS(Tsatfab), &
                   local_Tsat(ireverse), &
                   iten+ireverse*nten, &
                   saturation_temp, &

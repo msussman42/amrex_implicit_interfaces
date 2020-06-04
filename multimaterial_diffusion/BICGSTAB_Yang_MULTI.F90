@@ -5,6 +5,7 @@
 
       module bicgstab_module
       USE probmain_module
+      USE tsat_module
 
       REAL*8 :: VOFTOL_local
 
@@ -509,6 +510,10 @@
 
       do i=lox,hix
       do j=loy,hiy
+
+       i_tsat=i
+       j_tsat=j
+       k_tsat=0
 
        VP_i_current=i
        VP_j_current=j
@@ -1399,6 +1404,10 @@
 
        do i=lox,hix
        do j=loy,hiy
+
+        i_tsat=i
+        j_tsat=j
+        k_tsat=0
 
         VP_i_current=i
         VP_j_current=j

@@ -15,6 +15,7 @@ module MOF_pair_module
   USE probmain_module 
   use mof_routines_module
   use geometry_intersect_module
+  use tsat_module
 
   implicit none
 
@@ -836,10 +837,17 @@ contains
   internal_multimaterial=0
   im_source=0
   im_dest=0
+
+  ireverse_tsat=0
+  iten_tsat=0
+
   if (im1.eq.im2) then
     ! do nothing
   else if (im1.ne.im2) then
     call get_iten(im1,im2,iten,nmat)
+
+    iten_tsat=iten
+
     internal_multimaterial=-iten
     im_source=im1
     im_dest=im2
@@ -849,6 +857,7 @@ contains
       if (latent_heat(iten+ireverse*global_nten).eq.zero) then
        ! do nothing
       else if (latent_heat(iten+ireverse*global_nten).ne.zero) then
+       ireverse_tsat=ireverse
        internal_multimaterial=iten+ireverse*global_nten
        if (ireverse.eq.0) then
         if (im1.lt.im2) then
@@ -2714,48 +2723,96 @@ contains
                         (internal_multimaterial.ge.1).and. &
                         (internal_multimaterial.le.2*global_nten)) then
                 call get_interface_temperature( &
-                   Tdata(1), &
-                   internal_multimaterial, &
-                   saturation_temp, &
-                   use_exact_temperature, &
-                   x2_I, &
-                   time_div, &
-                   nmat, &
-                   global_nten,1)
+                  use_tsatfab, &
+                  i_tsat,j_tsat,k_tsat, &
+                  ireverse_tsat, &
+                  iten_tsat, &
+                  ntsat, &
+                  bfact_tsat, &
+                  level_tsat, &
+                  finest_level_tsat, &
+                  dx_tsat,xlo_tsat, &
+                  ngrow_tsat, &
+                  fablo_tsat,fabhi_tsat, &
+                  TSATFAB,DIMS(TSATFAB), &
+                  Tdata(1), &
+                  internal_multimaterial, &
+                  saturation_temp, &
+                  use_exact_temperature, &
+                  x2_I, &
+                  time_div, &
+                  nmat, &
+                  global_nten,1)
 
                 call get_interface_temperature( &
-                   Tdata(2), &
-                   internal_multimaterial, &
-                   saturation_temp, &
-                   use_exact_temperature, &
-                   x3_I, &
-                   time_div, &
-                   nmat, &
-                   global_nten,2)
+                  use_tsatfab, &
+                  i_tsat,j_tsat,k_tsat, &
+                  ireverse_tsat, &
+                  iten_tsat, &
+                  ntsat, &
+                  bfact_tsat, &
+                  level_tsat, &
+                  finest_level_tsat, &
+                  dx_tsat,xlo_tsat, &
+                  ngrow_tsat, &
+                  fablo_tsat,fabhi_tsat, &
+                  TSATFAB,DIMS(TSATFAB), &
+                  Tdata(2), &
+                  internal_multimaterial, &
+                  saturation_temp, &
+                  use_exact_temperature, &
+                  x3_I, &
+                  time_div, &
+                  nmat, &
+                  global_nten,2)
 
                 call get_interface_temperature( &
-                   Tdata(3), &
-                   internal_multimaterial, &
-                   saturation_temp, &
-                   use_exact_temperature, &
-                   xminusI, &
-                   time_div, &
-                   nmat, &
-                   global_nten,3)
+                  use_tsatfab, &
+                  i_tsat,j_tsat,k_tsat, &
+                  ireverse_tsat, &
+                  iten_tsat, &
+                  ntsat, &
+                  bfact_tsat, &
+                  level_tsat, &
+                  finest_level_tsat, &
+                  dx_tsat,xlo_tsat, &
+                  ngrow_tsat, &
+                  fablo_tsat,fabhi_tsat, &
+                  TSATFAB,DIMS(TSATFAB), &
+                  Tdata(3), &
+                  internal_multimaterial, &
+                  saturation_temp, &
+                  use_exact_temperature, &
+                  xminusI, &
+                  time_div, &
+                  nmat, &
+                  global_nten,3)
 
                 if (nplus_valid.eq.0) then
                  Tdata(4)=zero
                  facearea_plus=zero
                 else if (nplus_valid.eq.1) then 
                  call get_interface_temperature( &
-                   Tdata(4), &
-                   internal_multimaterial, &
-                   saturation_temp, &
-                   use_exact_temperature, &
-                   xplusI, &
-                   time_div, &
-                   nmat, &
-                   global_nten,4)
+                  use_tsatfab, &
+                  i_tsat,j_tsat,k_tsat, &
+                  ireverse_tsat, &
+                  iten_tsat, &
+                  ntsat, &
+                  bfact_tsat, &
+                  level_tsat, &
+                  finest_level_tsat, &
+                  dx_tsat,xlo_tsat, &
+                  ngrow_tsat, &
+                  fablo_tsat,fabhi_tsat, &
+                  TSATFAB,DIMS(TSATFAB), &
+                  Tdata(4), &
+                  internal_multimaterial, &
+                  saturation_temp, &
+                  use_exact_temperature, &
+                  xplusI, &
+                  time_div, &
+                  nmat, &
+                  global_nten,4)
                 else
                  print *,"nplus_valid invalid"
                  stop
@@ -2887,6 +2944,18 @@ contains
              endif
 
              call get_interface_temperature( &
+               use_tsatfab, &
+               i_tsat,j_tsat,k_tsat, &
+               ireverse_tsat, &
+               iten_tsat, &
+               ntsat, &
+               bfact_tsat, &
+               level_tsat, &
+               finest_level_tsat, &
+               dx_tsat,xlo_tsat, &
+               ngrow_tsat, &
+               fablo_tsat,fabhi_tsat, &
+               TSATFAB,DIMS(TSATFAB), &
                rho_I, &
                internal_multimaterial, &
                saturation_temp, &
@@ -3105,6 +3174,18 @@ contains
           ! do nothing
          else if (local_hflag.eq.0) then
           call get_interface_temperature( &
+            use_tsatfab, &
+            i_tsat,j_tsat,k_tsat, &
+            ireverse_tsat, &
+            iten_tsat, &
+            ntsat, &
+            bfact_tsat, &
+            level_tsat, &
+            finest_level_tsat, &
+            dx_tsat,xlo_tsat, &
+            ngrow_tsat, &
+            fablo_tsat,fabhi_tsat, &
+            TSATFAB,DIMS(TSATFAB), &
             rho_I, &
             internal_multimaterial, &
             saturation_temp, &

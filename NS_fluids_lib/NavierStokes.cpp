@@ -11892,7 +11892,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
     &nmat,
     &nten,
     &nstate,
-    &ntsat,
+    &ntsat, // nten*(ncomp_per_tsat+1)
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
