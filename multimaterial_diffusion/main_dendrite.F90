@@ -517,8 +517,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
    sci_max_level=0
    nmat_in=2
-   fort_heatviscconst(1)=1.0  ! outside dendrite (T0=1.5) 
-   fort_heatviscconst(2)=1.0  ! inside dendrite  (T0=1.0)
+   fort_heatviscconst(1)=1.0d0  ! outside dendrite (T0=1.5) 
+   fort_heatviscconst(2)=1.0d0  ! inside dendrite  (T0=1.0)
    do dir=1,sdim_in
    do side=1,2
     physbc(dir,side)=REFLECT_EVEN
@@ -982,6 +982,68 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
    print *,"probtype_in=",probtype_in
    print *,"max_front_vel=",max_front_vel
+
+ else if (probtype_in.eq.403) then
+
+    ! ST=-.5
+    ! in dimensionless units:
+    ! Twater=-0.5
+    ! Tsolid=-1.0
+    ! Tsat=0.0
+    ! add 2.0:
+    ! Twater=1.5
+    ! Tsolid=1.0
+    ! Tsat=2.0
+   saturation_temp(1)=2.0 ! liquid -> solid
+   saturation_temp(2)=0.0
+    ! phi_{12}=(phi_1 - phi_2)/2  < 0 in the dendrite
+    ! phi_{12} > 0 in the liquid
+    ! div grad phi12/|grad phi12| > 0 everywhere
+    ! Tinterface=TSAT - 0.002/R=TSAT-0.002*K(phi12)  R=radius of curvature
+   saturation_temp_curv(1)=-0.002d0  
+   saturation_temp_curv(2)=0.0d0 
+ 
+   fort_tempconst(1)=1.5d0  ! liquid (outside dendrite)
+   fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
+
+    ! max_front_vel
+   if ((abs(latent_heat_in).gt.0.0d0).and. &
+       (fort_tempconst(1).gt.0.0d0).and. &
+       (fort_tempconst(2).gt.0.0d0)) then
+    max_front_vel=2.0d0 * 1.0d0/dx_in(1)
+    if (max_front_vel.gt.0.0d0) then
+     ! do nothing
+    else
+     print *,"max_front_vel invalid probtype_in=",probtype_in
+     stop
+    endif
+   else
+    print *,"latent_heat_in or fort_tempconst invalid"
+    stop
+   endif
+
+   fort_initial_temperature(1)=fort_tempconst(1)
+   fort_initial_temperature(2)=fort_tempconst(2)
+     ! material 1 converted to material 2 (freezing)
+   latent_heat(1)=-abs(latent_heat_in) 
+   latent_heat(2)=0.0d0 ! material 2 converted to material 1
+   ireverse=0
+   isink=0
+   fort_alpha(1)=1.0d0
+   fort_alpha(2)=1.0d0
+   fort_stefan_number(1)=1.0d0/abs(latent_heat_in)
+   fort_stefan_number(2)=1.0d0/abs(latent_heat_in)
+   fort_jacob_number(1)=fort_stefan_number(1)
+   fort_jacob_number(2)=fort_stefan_number(2)
+
+   fort_beta(1)=0.0d0
+   fort_beta(2)=0.0d0
+   fort_time_radblob(1)=0.0d0
+   fort_time_radblob(2)=0.0d0
+
+   print *,"probtype_in=",probtype_in
+   print *,"max_front_vel=",max_front_vel
+
 
  else if (probtype_in.eq.5) then
 
