@@ -390,8 +390,6 @@ M_CURRENT=M_START
 
 DO WHILE (N_CURRENT.le.N_FINISH)
 
- call init_tsatfab(N_CURRENT)
-
  if (fixed_dt_main.eq.-1.0d0) then
   fixed_dt_current=TSTOP/M_CURRENT
  else if (fixed_dt_main.ge.0.0d0) then
@@ -847,6 +845,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    saturation_temp(iten+local_nten)=0.0d0
    saturation_temp_curv(iten)=0.0d0
    saturation_temp_curv(iten+local_nten)=0.0d0
+   saturation_temp_vel(iten)=0.0d0
+   saturation_temp_vel(iten+local_nten)=0.0d0
    latent_heat(iten)=0.0d0
    latent_heat(iten+local_nten)=0.0d0
    reaction_rate(iten)=0.0d0
@@ -1002,8 +1002,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! phi_{12} > 0 in the liquid
     ! div grad phi12/|grad phi12| > 0 everywhere
     ! Tinterface=TSAT - 0.002/R=TSAT-0.002*K(phi12)  R=radius of curvature
-   saturation_temp_curv(1)=-0.002d0  
+   saturation_temp_curv(1)=0.002d0  
    saturation_temp_curv(2)=0.0d0 
+   saturation_temp_vel(1)=0.002d0  
+   saturation_temp_vel(2)=0.0d0 
  
    fort_tempconst(1)=1.5d0  ! liquid (outside dendrite)
    fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
@@ -1450,7 +1452,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
         stop
        endif
       else
-       print *,"im invalid"
+       print *,"im invalid 114"
        stop
       endif
       T(i,j,im)=T_FIELD
@@ -1478,7 +1480,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
         stop
        endif
       else
-       print *,"im invalid"
+       print *,"im invalid 115"
        stop
       endif
       T(i,j,im)=T_FIELD
@@ -1509,7 +1511,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        ! (xcen,ycen)
        T_FIELD=272.0d0+exp(-(xcen-0.2d0))
       else
-       print *,"im invalid"
+       print *,"im invalid 116"
        stop
       endif
       T(i,j,im)=T_FIELD
@@ -1538,7 +1540,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       else if ((im.eq.1).or.(im.eq.3)) then
        ! do nothing
       else
-       print *,"im invalid"
+       print *,"im invalid 117"
        stop
       endif
 
@@ -1708,6 +1710,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     nsteps=tm-1
     if (tm.eq.1) then
+
+     call init_tsatfab(N_CURRENT)
+
         ! in: BICGSTAB_Yang_MULTI.F90
      if (fixed_dt_main.eq.0.0d0) then
       total_nsteps_parm=M_MAX_TIME_STEP
@@ -1943,7 +1948,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      else if (im.eq.2) then
       eff_radius=1.0d0-voltotal
      else
-      print *,"im invalid"
+      print *,"im invalid 113"
       stop
      endif
     endif

@@ -72,6 +72,31 @@ contains
       ncomp_per_tsat=2
       ntsat=nten*(ncomp_per_tsat+1)
 
+      if (nmat.ge.2) then
+       ! do nothing
+      else
+       print *,"require nmat>=2"
+       stop
+      endif
+      if (nten.ge.1) then
+       ! do nothing
+      else
+       print *,"require nten>=1"
+       stop
+      endif
+      if (ntsat.ge.3) then
+       ! do nothing
+      else
+       print *,"ntsat invalid"
+       stop
+      endif
+      if (NCELL.ge.4) then
+       ! do nothing
+      else
+       print *,"need NCELL>=4"
+       stop
+      endif
+
       do dir=1,SDIM
        fablo_tsat(dir)=0
        fabhi_tsat(dir)=NCELL-1

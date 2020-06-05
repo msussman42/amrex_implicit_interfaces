@@ -507,7 +507,7 @@ stop
        else if (im.eq.2) then
         ! do nothing
        else
-        print *,"im invalid"
+        print *,"im invalid 104"
         stop
        endif
       else if (probtype.eq.4) then
@@ -518,7 +518,7 @@ stop
        else if (im.eq.2) then
         ! do nothing
        else
-        print *,"im invalid"
+        print *,"im invalid 105"
         stop
        endif
       else if (probtype.eq.400) then
@@ -537,7 +537,7 @@ stop
        else if (im.eq.1) then
         ! do nothing
        else
-        print *,"im invalid"
+        print *,"im invalid 106"
         stop
        endif
       else if (probtype.eq.19) then
@@ -597,7 +597,7 @@ stop
        else if (im.eq.2) then
         ! do nothing
        else
-        print *,"im invalid"
+        print *,"im invalid 107"
         stop
        endif
       else if (probtype.eq.4) then
@@ -616,7 +616,7 @@ stop
        else if (im.eq.2) then
         ! do nothing: material 2 normal points into material 2.
        else
-        print *,"im invalid"
+        print *,"im invalid 108"
         stop
        endif
 
@@ -628,7 +628,7 @@ stop
        else if (im.eq.2) then
         NRM(1)=1.0d0
        else
-        print *,"im invalid"
+        print *,"im invalid 109"
         stop
        endif
 
@@ -1885,7 +1885,7 @@ stop
 
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
 
-      diagnostic_output=0
+      diagnostic_output=1
       nhalf=3
 
       ncomp_per_burning=SDIM
@@ -2386,6 +2386,7 @@ stop
          reaction_rate, &
          saturation_temp, &
          saturation_temp_curv, &
+         saturation_temp_vel, &
          freezing_model, &
          distribute_from_target, &
          mass_fraction_id, &
@@ -2472,6 +2473,7 @@ stop
        interior_only=1
 
        if (diagnostic_output.eq.1) then
+
         n_root=6
         root_char_array='burnVL'
         data_dir=-1

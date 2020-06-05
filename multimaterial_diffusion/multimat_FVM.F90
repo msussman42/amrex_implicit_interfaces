@@ -1920,20 +1920,39 @@ subroutine dendrite_dist(imat,x,y,dist)
 
  c1 = 2.0d0
  c2 = 2.0d0
- 
- tt = atan((y0-c2)/(x0-c1));  
- if((x0-c1) .ge. 0.0d0 .and. (y0-c2) .ge. 0.0d0)then
+
+ if (x0.eq.c1) then
+  if ((y0-c2).ge.0.0d0) then
+   tt=Pi*0.5d0
+  else if ((y0-c2).le.0.0d0) then
+   tt=Pi*1.5d0
+  else
+   print *,"y0 or c2 bust"
+   stop
+  endif 
+ else if (x0.ne.c1) then
+  tt = atan((y0-c2)/(x0-c1));  
+  if((x0-c1) .ge. 0.0d0 .and. (y0-c2) .ge. 0.0d0)then
     ! do nothing
- elseif((x0-c1) .le. 0.0d0 .and. (y0-c2) .gt. 0.0d0)then
+  elseif((x0-c1) .le. 0.0d0 .and. (y0-c2) .gt. 0.0d0)then
     tt = tt + Pi;
- elseif((x0-c1) .lt. 0.0d0 .and. (y0-c2) .lt. 0.0d0)then
+  elseif((x0-c1) .lt. 0.0d0 .and. (y0-c2) .lt. 0.0d0)then
     tt = tt +Pi;
- else
+  else
     tt = 2.0d0*Pi + tt;
+  endif
+ else
+  print *,"x0 or c1 bust"
+  stop
  endif
 
- dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
+ if (1.eq.0) then
+  dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
          (0.1d0 + 0.02d0*cos(4.0d0*tt))
+ else
+  dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
+         1.0d0
+ endif
 
  if(imat .eq. 2)then  ! the solid/ice seed
   dist = dist1  
@@ -2368,7 +2387,7 @@ else if (probtype_in.eq.3) then
   mx=-mx
   my=-my
  else
-  print *,"im invalid"
+  print *,"im invalid 100"
   stop
  endif
 
@@ -2384,7 +2403,7 @@ else if (probtype_in.eq.4) then
   mx=-mx
   my=-my
  else
-  print *,"im invalid"
+  print *,"im invalid 101"
   stop
  endif
 
@@ -2405,7 +2424,7 @@ else if (probtype_in.eq.5) then
  else if (im.eq.2) then
   mx=1.0d0
  else
-  print *,"im invalid"
+  print *,"im invalid 102"
   stop
  endif
 
@@ -4920,7 +4939,7 @@ real(kind=8)              :: radial_slope
    else if ((im.eq.1).or.(im.eq.3)) then
     exact_temperature=0.0
    else
-    print *,"im invalid"
+    print *,"im invalid 103"
     stop
    endif
 

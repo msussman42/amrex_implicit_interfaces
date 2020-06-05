@@ -515,6 +515,7 @@ Vector<Real> NavierStokes::cap_wave_speed;
 
 Vector<Real> NavierStokes::saturation_temp;
 Vector<Real> NavierStokes::saturation_temp_curv;
+Vector<Real> NavierStokes::saturation_temp_vel;
 
 Vector<int> NavierStokes::microlayer_substrate;
 Vector<Real> NavierStokes::microlayer_angle;
@@ -2525,6 +2526,7 @@ NavierStokes::read_params ()
 
     saturation_temp.resize(2*nten);
     saturation_temp_curv.resize(2*nten);
+    saturation_temp_vel.resize(2*nten);
     nucleation_temp.resize(2*nten);
     nucleation_pressure.resize(2*nten);
     nucleation_pmg.resize(2*nten);
@@ -2570,6 +2572,8 @@ NavierStokes::read_params ()
      saturation_temp[i+nten]=0.0;
      saturation_temp_curv[i]=0.0;
      saturation_temp_curv[i+nten]=0.0;
+     saturation_temp_vel[i]=0.0;
+     saturation_temp_vel[i+nten]=0.0;
      nucleation_temp[i]=0.0;
      nucleation_temp[i+nten]=0.0;
      nucleation_pressure[i]=0.0;
@@ -2806,6 +2810,7 @@ NavierStokes::read_params ()
 
     pp.queryarr("saturation_temp",saturation_temp,0,2*nten);
     pp.queryarr("saturation_temp_curv",saturation_temp_curv,0,2*nten);
+    pp.queryarr("saturation_temp_vel",saturation_temp_vel,0,2*nten);
 
     pp.query("nucleation_period",nucleation_period);
     pp.query("nucleation_init_time",nucleation_init_time);
@@ -3764,6 +3769,11 @@ NavierStokes::read_params ()
        saturation_temp_curv[i] << '\n';
       std::cout << "saturation_temp_curv i+nten=" << i+nten << "  " << 
        saturation_temp_curv[i+nten] << '\n';
+
+      std::cout << "saturation_temp_vel i=" << i << "  " << 
+       saturation_temp_vel[i] << '\n';
+      std::cout << "saturation_temp_vel i+nten=" << i+nten << "  " << 
+       saturation_temp_vel[i+nten] << '\n';
 
       std::cout << "nucleation_temp i=" << i << "  " << 
        nucleation_temp[i] << '\n';
@@ -10039,6 +10049,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     reaction_rate.dataPtr(),
     saturation_temp.dataPtr(),
     saturation_temp_curv.dataPtr(),
+    saturation_temp_vel.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
     mass_fraction_id.dataPtr(),

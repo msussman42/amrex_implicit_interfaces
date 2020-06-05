@@ -111,6 +111,7 @@ extern "C"
     Real* reaction_rate,
     Real* saturation_temp,
     Real* saturation_temp_curv,
+    Real* saturation_temp_vel,
     int* freezing_model,
     int* distribute_from_target,
     int* mass_fraction_id,

@@ -1608,6 +1608,7 @@ protected:
       // 2-1 3-1 4-1 3-2 4-2 4-3
     static Vector<Real> saturation_temp; 
     static Vector<Real> saturation_temp_curv; 
+    static Vector<Real> saturation_temp_vel; 
     static Vector<Real> nucleation_pressure; 
     static Vector<Real> nucleation_pmg; 
     static Vector<Real> nucleation_mach; 

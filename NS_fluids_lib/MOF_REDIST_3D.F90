@@ -427,7 +427,7 @@ stop
            else if ((im.ge.1).and.(im.le.nmat)) then
             ! do nothing
            else
-            print *,"im invalid"
+            print *,"im invalid 110"
             stop
            endif
 
@@ -605,7 +605,7 @@ stop
          do i1=0,1
          do j1=0,1
          do k1=0,k1hi
-          if ((im.ge.1).and.(im.ne.nmat)) then
+          if ((im.ge.1).and.(im.le.nmat)) then
            local_LS=LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im) 
           else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
            iten=im-nmat
@@ -613,7 +613,7 @@ stop
            local_LS=half*(LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im1)- &
                 LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im2))
           else
-           print *,"im invalid"
+           print *,"im invalid 111"
            stop
           endif
           sign_nm=one
@@ -854,7 +854,7 @@ stop
         call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
 
         local_status=1
-        if ((im.ge.1).and.(im.ne.nmat)) then
+        if ((im.ge.1).and.(im.le.nmat)) then
          if ((im.ne.im_primary).and. &
              (im.ne.im_secondary)) then
           local_status=0
@@ -886,7 +886,7 @@ stop
           local_status=0
          endif
         else
-         print *,"im invalid"
+         print *,"im invalid 112"
          stop
         endif
         
