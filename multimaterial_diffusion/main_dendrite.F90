@@ -59,7 +59,7 @@ IMPLICIT NONE
 ! 402=NASA boiling (material 1 liquid, material 2 gas, material 3 substrate)
 ! 403=Dendrite problem From Tryggvason
 INTEGER,PARAMETER          :: probtype_in=403
-INTEGER,PARAMETER          :: stefan_flag=1
+INTEGER        :: stefan_flag
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
 ! buffer for probtype_in=3 (not used for shrinking circle w/T=TSAT outside)
@@ -244,7 +244,9 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= June 4, 2020, 17:10pm"
+print *,"PROTOTYPE CODE DATE= June 5, 2020, 14:00pm"
+
+stefan_flag=1
 
 ! material 1 is liquid (outer material)
 ! material 2 is ice (seed)

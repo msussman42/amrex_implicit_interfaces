@@ -527,6 +527,8 @@ stop
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.402) then
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
+      else if (probtype.eq.403) then
+       call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.5) then
        ! material 1: left  material 2: right
        LS=0.2d0+time-xblob
@@ -635,7 +637,8 @@ stop
                (probtype.eq.1).or. &
                (probtype.eq.400).or. &
                (probtype.eq.401).or. &
-               (probtype.eq.402)) then
+               (probtype.eq.402).or. &
+               (probtype.eq.403)) then
        h_opt=1.0D-6
        dir=1
        call dist_concentric(im,xgrid(1)+h_opt,xgrid(2),LSp1,probtype)
@@ -747,6 +750,19 @@ stop
         stop
        endif
       else if (probtype.eq.400) then
+
+       if (iten.eq.1) then
+        test_front_vel=0.0d0
+        VEL(1)=0.0d0
+        VEL(2)=0.0d0
+       else
+        print *,"iten invalid (get exact vel 2)"
+        print *,"iten=",iten
+        print *,"probtype=",probtype
+        stop
+       endif
+
+      else if (probtype.eq.403) then
 
        if (iten.eq.1) then
         test_front_vel=0.0d0
@@ -1799,6 +1815,7 @@ stop
       INTEGER_T ngrow,ngrow_distance,ngrow_recon
       INTEGER_T ngrow_dest
       INTEGER_T n_normal
+      INTEGER_T n_curvcell
       INTEGER_T nprocessed
       INTEGER_T nstate
       INTEGER_T num_elements_blobclass
@@ -1901,6 +1918,7 @@ stop
       nLS=nmat*(SDIM+1)
 
       n_normal=(nmat+nten)*(SDIM+1)
+      n_curvcell=2*(nmat+nten)
 
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
@@ -2507,6 +2525,54 @@ stop
          level, &
          finest_level, &
          nLS)
+
+        root_char_array='CURVCL'
+        data_id=2
+
+        call FORT_TECPLOTFAB_SANITY( &
+         root_char_array, &
+         n_root, &
+         data_dir, &
+         bfact, & 
+         fablo,fabhi, &
+         FD_CURV_CELL, &
+         DIMS(FD_CURV_CELL), &
+         problo,probhi, &
+         dx, &
+         SDC_outer_sweeps, &
+         slab_step, &
+         data_id, &
+         nsteps, &
+         prev_time, &  ! cur_time will not show on same mesh as prev_time.
+         visual_option, &
+         visual_revolve, &
+         level, &
+         finest_level, &
+         n_curvcell)
+
+        root_char_array='TSATFB'
+        data_id=3
+
+        call FORT_TECPLOTFAB_SANITY( &
+         root_char_array, &
+         n_root, &
+         data_dir, &
+         bfact, & 
+         fablo,fabhi, &
+         tsatfab, &
+         DIMS(tsatfab), &
+         problo,probhi, &
+         dx, &
+         SDC_outer_sweeps, &
+         slab_step, &
+         data_id, &
+         nsteps, &
+         prev_time, &  ! cur_time will not show on same mesh as prev_time.
+         visual_option, &
+         visual_revolve, &
+         level, &
+         finest_level, &
+         ntsat)
 
        endif
 

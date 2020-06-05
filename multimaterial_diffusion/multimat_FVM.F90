@@ -1906,6 +1906,47 @@ real(kind=8)                     :: wt,total_wt,total_LS,dataLS
  return
 end subroutine interp_from_fsi
 
+subroutine dendrite_dist(imat,x,y,dist)
+ implicit none
+ real(kind=8),intent(in)   :: x,y
+ integer,intent(in)        :: imat
+ real(kind=8)              :: x0,y0,c1,c2,tt,pi
+ real(kind=8)              :: dist,dist1
+  
+ pi=4.0*atan(1.0d0)
+
+ x0=x
+ y0=y
+
+ c1 = 2.0d0
+ c2 = 2.0d0
+ 
+ tt = atan((y0-c2)/(x0-c1));  
+ if((x0-c1) .ge. 0.0d0 .and. (y0-c2) .ge. 0.0d0)then
+    ! do nothing
+ elseif((x0-c1) .le. 0.0d0 .and. (y0-c2) .gt. 0.0d0)then
+    tt = tt + Pi;
+ elseif((x0-c1) .lt. 0.0d0 .and. (y0-c2) .lt. 0.0d0)then
+    tt = tt +Pi;
+ else
+    tt = 2.0d0*Pi + tt;
+ endif
+
+ dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
+         (0.1d0 + 0.02d0*cos(4.0d0*tt))
+
+ if(imat .eq. 2)then  ! the solid/ice seed
+  dist = dist1  
+ elseif(imat .eq. 1)then  ! the surrounding liquid
+  dist = -dist1
+ else
+  print *,"imat invalid",imat
+  stop
+ endif
+
+end subroutine dendrite_dist
+
+
 !---------------------------------------------------------
 subroutine dist_concentric(imat,x,y,dist,probtype_in)
 USE probmain_module 
@@ -2037,6 +2078,10 @@ else if (probtype_in.eq.402) then
  center(1)=x
  center(2)=y
  call dist_fns_NASA_boiling(imat,center,dist)
+
+else if (probtype_in.eq.403) then
+
+ call dendrite_dist(imat,x,y,dist)
 
 else
  print *,"probtype_in invalid6 ",probtype_in
@@ -2348,6 +2393,8 @@ else if (probtype_in.eq.400) then
 else if (probtype_in.eq.401) then
         ! call dist_concentric
 else if (probtype_in.eq.402) then
+        ! call dist_concentric
+else if (probtype_in.eq.403) then
         ! call dist_concentric
 else if (probtype_in.eq.5) then
 
@@ -2730,7 +2777,8 @@ if ((probtype_in.eq.0).or. &
     (probtype_in.eq.2).or. &
     (probtype_in.eq.3).or. &
     (probtype_in.eq.4).or. &
-    (probtype_in.eq.400).or. &
+    (probtype_in.eq.400).or. & ! gingerbread man
+    (probtype_in.eq.403).or. & ! dendrite
     (probtype_in.eq.5).or. &
     (probtype_in.eq.14).or. &
     (probtype_in.eq.15)) then
@@ -3090,6 +3138,8 @@ else if (probtype_in.eq.401) then
  ! do nothing
 else if (probtype_in.eq.402) then
  ! do nothing
+else if (probtype_in.eq.403) then
+ ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
 elseif(probtype_in .eq. 15)then   
@@ -3227,6 +3277,8 @@ else if (probtype_in.eq.400) then
 else if (probtype_in.eq.401) then
  ! do nothing
 else if (probtype_in.eq.402) then
+ ! do nothing
+else if (probtype_in.eq.403) then
  ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
@@ -3567,10 +3619,19 @@ real(kind=8) :: radial_slope
   else if (im.eq.3) then
    G_in=0.0
   else
-   print *,"im invalid 4 probtype==401"
+   print *,"im invalid 4 probtype==402"
    stop
   endif
 
+ else if (probtype_in.eq.403) then
+  if (im.eq.1) then
+   G_in=0.0
+  else if (im.eq.2) then
+   G_in=0.0
+  else
+   print *,"im invalid 4 probtype_in==403"
+   stop
+  endif
  else if (probtype_in.eq.5) then
   if (im.eq.1) then
    G_in=0.0
@@ -4330,6 +4391,8 @@ else if (local_probtype.eq.401) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.402) then
         Uprescribe=0.0d0
+else if (local_probtype.eq.403) then
+        Uprescribe=0.0d0
 else if (local_probtype.eq.5) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.13) then
@@ -4395,6 +4458,8 @@ else if (local_probtype.eq.400) then
 else if (local_probtype.eq.401) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.402) then
+        Vprescribe=0.0d0
+else if (local_probtype.eq.403) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.5) then
         Vprescribe=0.0d0
@@ -4909,6 +4974,9 @@ real(kind=8)              :: radial_slope
 
   exact_temperature=0.0d0
 
+ else if (probtype_in.eq.403)then
+
+  exact_temperature=0.0d0
  else
   print *,"probtype_in invalid13 ",probtype_in
   stop
