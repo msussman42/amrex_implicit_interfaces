@@ -29,6 +29,7 @@ implicit none
       INTEGER_T freezing_model(100)
       INTEGER_T use_exact_temperature(100)
       REAL_T saturation_temp(100)
+      REAL_T saturation_temp_curv(100)
       REAL_T latent_heat(100)
       REAL_T reaction_rate(100)
       REAL_T visc_coef

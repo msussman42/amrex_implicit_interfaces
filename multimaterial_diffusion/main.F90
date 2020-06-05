@@ -778,6 +778,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    use_exact_temperature(iten+local_nten)=0
    saturation_temp(iten)=0.0d0
    saturation_temp(iten+local_nten)=0.0d0
+   saturation_temp_curv(iten)=0.0d0
+   saturation_temp_curv(iten+local_nten)=0.0d0
    latent_heat(iten)=0.0d0
    latent_heat(iten+local_nten)=0.0d0
    reaction_rate(iten)=0.0d0

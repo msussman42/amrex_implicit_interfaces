@@ -4418,6 +4418,7 @@ stop
        use_exact_temperature, &
        reaction_rate, &
        saturation_temp, &
+       saturation_temp_curv, &
        freezing_model, &
        distribute_from_target, &
        mass_fraction_id, &
@@ -4480,6 +4481,7 @@ stop
       REAL_T, intent(in) :: reaction_rate(2*nten)
       REAL_T :: K_f(0:1)
       REAL_T, intent(in) :: saturation_temp(2*nten)
+      REAL_T, intent(in) :: saturation_temp_curv(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
@@ -4992,6 +4994,10 @@ stop
                   saturation_temp, &
                   use_exact_temperature, &
                   xI,cur_time,nmat,nten,7)
+
+                local_Tsat(ireverse)=local_Tsat(ireverse)+ &
+                  saturation_temp_curv(iten+ireverse*nten)* &
+                  CURV_OUT_I
 
                 dxprobe_source=zero
                 do dir=1,SDIM

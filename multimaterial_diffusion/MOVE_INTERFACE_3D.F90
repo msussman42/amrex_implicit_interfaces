@@ -2367,6 +2367,7 @@ stop
          use_exact_temperature, &
          reaction_rate, &
          saturation_temp, &
+         saturation_temp_curv, &
          freezing_model, &
          distribute_from_target, &
          mass_fraction_id, &

@@ -110,6 +110,7 @@ extern "C"
     int* use_exact_temperature,
     Real* reaction_rate,
     Real* saturation_temp,
+    Real* saturation_temp_curv,
     int* freezing_model,
     int* distribute_from_target,
     int* mass_fraction_id,
