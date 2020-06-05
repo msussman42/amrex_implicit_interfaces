@@ -1010,7 +1010,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    if ((abs(latent_heat_in).gt.0.0d0).and. &
        (fort_tempconst(1).gt.0.0d0).and. &
        (fort_tempconst(2).gt.0.0d0)) then
-    max_front_vel=2.0d0 * 1.0d0/dx_in(1)
+    max_front_vel=4.0d0 * 1.0d0/dx_in(1)
     if (max_front_vel.gt.0.0d0) then
      ! do nothing
     else
@@ -1043,7 +1043,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
    print *,"probtype_in=",probtype_in
    print *,"max_front_vel=",max_front_vel
-
 
  else if (probtype_in.eq.5) then
 
@@ -1305,6 +1304,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      NINT(radblob/(max_front_vel*deltat_in))
  else if (probtype_in.eq.400) then
   ! do nothing
+ else if (probtype_in.eq.403) then
+  ! do nothing
  else if (probtype_in.eq.5) then
   print *,"Velocity is 1"
   print *,"number of steps to move 1 unit: ", &
@@ -1491,6 +1492,11 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      else if (probtype_in.eq.400) then
 
       T_FIELD=saturation_temp(1)
+      T(i,j,im)=T_FIELD
+
+     else if (probtype_in.eq.403) then
+
+      T_FIELD=fort_tempconst(im)
       T(i,j,im)=T_FIELD
 
      else if (probtype_in.eq.5) then
@@ -1709,6 +1715,13 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      call output_solution(UNEW_in,time_n,nsteps,plot_int, &
              total_nsteps_parm, &
              fixed_dt_main)
+
+     if (probtype_in.eq.403) then ! initialize correct Tsat_fab
+      stefan_flag=0
+      call update_interface(UOLD,UNEW,N_CURRENT,local_state_ncomp, &
+       dx_in,time_n,deltat_in,nsteps,local_nten,stefan_flag)
+      stefan_flag=1
+     endif
     endif
 
      ! Dirichlet BC use t^n+1 data
@@ -1753,6 +1766,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     else if (probtype_in.eq.4) then
      call axisymmetric_disk_advance(deltat_in)
     else if (probtype_in.eq.400) then
+     ! do nothing
+    else if (probtype_in.eq.403) then
      ! do nothing
     else if (probtype_in.eq.5) then
      ! do nothing
@@ -1806,6 +1821,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        ! do nothing - this is a shrinking disk, outside temperature
        ! is uniform, grad T dot n=0 on the outer walls.
       else if (probtype_in.eq.400) then
+       ! do nothing
+      else if (probtype_in.eq.403) then
        ! do nothing
       else if (probtype_in.eq.5) then
        if (xcen.ge.1.0-2.0d0*h_in) then
@@ -1948,6 +1965,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
    else if (probtype_in.eq.400) then
     ! do nothing
+   else if (probtype_in.eq.403) then
+    ! do nothing
    else if (probtype_in.eq.5) then
     expect_radius=0.2d0+Ts(tm+1)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
@@ -2057,7 +2076,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
-   if (probtype_in.eq.400) then ! gingerbread man
+    ! gingerbread man or dendrite
+   if ((probtype_in.eq.400).or. &
+       (probtype_in.eq.403)) then 
 
     max_front_vel=0.0
     do i= 0,N_CURRENT-1
@@ -2076,7 +2097,11 @@ DO WHILE (N_CURRENT.le.N_FINISH)
          do ireverse=0,1
           LL=abs(latent_heat(iten+ireverse*local_nten))
           TSAT=saturation_temp(iten+ireverse*local_nten)
+           
           if (LL.gt.0.0d0) then
+           if (probtype.eq.403) then !dendrite
+            TSAT=tsatfab(i,j,local_nten+1)
+           endif
            test_vel=fort_heatviscconst(im)*abs(T(i,j,im)-TSAT)/LL+ &
                     fort_heatviscconst(im_opp)*abs(T(i,j,im_opp)-TSAT)/LL
            test_vel=test_vel*4.0d0/dx_in(1)
@@ -2140,7 +2165,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      stop
     endif
 
-   else if (probtype_in.ne.400) then
+   else if ((probtype_in.ne.400).and. &
+            (probtype_in.ne.403)) then
     ! do not alter dt
    else
     print *,"probtype_in invalid"
