@@ -5820,20 +5820,26 @@ stop
                  TSAT_correct=TSAT_predict- &
                     saturation_temp_vel(iten+ireverse*nten)* &
                     (VEL_correct-VEL_predict)
-             
+            
+                 VEL_predict=VEL_correct
+ 
                  TSAT_ERR=abs(TSAT_correct-TSAT_predict)
+
+                 TSAT_predict=TSAT_correct
+
                  if (TSAT_iter.eq.0) then
                    TSAT_INIT_ERR=TSAT_ERR
                  endif
+
                  TSAT_converge=0
-                 if (TSAT_correct.eq.TSAT_predict) then
+                 if (TSAT_ERR.eq.zero) then
                    TSAT_converge=1
                  endif
                  TSAT_iter=TSAT_iter+1
                  if (TSAT_iter.gt.TSAT_iter_max) then
                    TSAT_converge=1
                  endif
-                 if ((TSAT_iter.gt.1).and.(TSAT_converge.eq.0)) then
+                 if (TSAT_iter.gt.1) then
                    if (TSAT_err.lt.(0.001d0)*TSAT_INIT_ERR) then
                     TSAT_converge=1
                    endif
@@ -5842,7 +5848,14 @@ stop
                    TSAT_converge=1
                  endif
 
-                enddo
+                 if (at_interface.eq.1) then
+                  if (1.eq.0) then
+                   print *,"i,j,k,TSAT_iter,TSAT_ERR ", &
+                    i,j,k,TSAT_iter,TSAT_ERR
+                  endif
+                 endif
+
+                enddo ! do while (TSAT_converge.eq.0)
 
                 if (at_interface.eq.1) then
 

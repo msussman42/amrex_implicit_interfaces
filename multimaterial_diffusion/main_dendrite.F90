@@ -1002,7 +1002,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! phi_{12} > 0 in the liquid
     ! div grad phi12/|grad phi12| > 0 everywhere if phi12=sqrt(x^2+y^2) - r
     ! Tinterface=TSAT - 0.002/R=TSAT-0.002*K(phi12)  R=radius of curvature
-   saturation_temp_curv(1)=0.002d0  
+    ! curvature is positive when the center of curvature lies in the solid
+    ! (ice) phase.  In Juric and Tryggvason, 1996, they say that K is twice
+    ! the mean curvature so we multiply by 2.
+   saturation_temp_curv(1)=0.002d0 * 2.0d0 
    saturation_temp_curv(2)=0.0d0 
    saturation_temp_vel(1)=0.002d0  
    saturation_temp_vel(2)=0.0d0 
