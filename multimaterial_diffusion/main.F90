@@ -1000,7 +1000,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    saturation_temp(2)=0.0
     ! phi_{12}=(phi_1 - phi_2)/2  < 0 in the dendrite
     ! phi_{12} > 0 in the liquid
-    ! div grad phi12/|grad phi12| > 0 everywhere
+    ! div grad phi12/|grad phi12| > 0 everywhere if phi12=sqrt(x^2+y^2) - r
     ! Tinterface=TSAT - 0.002/R=TSAT-0.002*K(phi12)  R=radius of curvature
    saturation_temp_curv(1)=0.002d0  
    saturation_temp_curv(2)=0.0d0 
