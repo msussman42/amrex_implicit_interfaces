@@ -1844,6 +1844,108 @@ stop
         enddo
         enddo  ! i3,j3,k3
 
+         ! ih_dir=1..sdim, ih_side=1..2
+         ! on_border==0
+        do im=1,nmat
+         height_check(im)=0
+        enddo
+        do dir=1,3
+         istar_array(dir)=0
+        enddo
+        call put_istar(istar,istar_array) 
+        do ih_dir=1,SDIM
+         i3=0
+         j3=0
+         k3=0
+         if (ih_dir.eq.1) then
+          i3=1
+         else if (ih_dir.eq.2) then
+          j3=1
+         else if ((ih_dir.eq.3).and.(SDIM.eq.3)) then
+          k3=1
+         else
+          print *,"ih_dir invalid"
+          stop
+         endif
+
+         itanlo(3)=0
+         itanhi(3)=0
+         do dir=1,SDIM
+          itanlo(dir)=-1
+          itanhi(dir)=1
+         enddo
+         itanlo(ih_dir)=0
+         itanhi(ih_dir)=0
+
+         do ih_side=1,2
+
+          if (ih_side.eq.1) then
+           iface=i
+           jface=j
+           kface=k
+           iside=i-i3
+           jside=j-j3
+           kside=k+k3
+          else if (ih_side.eq.2) then
+           iface=i+i3
+           jface=j+j3
+           kface=k+k3
+           iside=i+i3
+           jside=j+j3
+           kside=k+k3
+          else
+           print *,"ih_side invalid"
+           stop
+          endif
+
+          ifacepair=1
+          do ml = 1, nmat
+          do mr = 1, nmat
+           if (ih_dir.eq.1) then
+            frac_pair(ml,mr)=facepairX(D_DECL(iface,jface,kface),ifacepair)
+           else if (ih_dir.eq.2) then
+            frac_pair(ml,mr)=facepairY(D_DECL(iface,jface,kface),ifacepair)
+           else if ((ih_dir.eq.3).and.(SDIM.eq.3)) then
+            frac_pair(ml,mr)=facepairZ(D_DECL(iface,jface,kface),ifacepair)
+           else
+            print *,"ih_dir invalid"
+            stop
+           endif
+           ifacepair=ifacepair+2
+          enddo
+          enddo
+          if (ifacepair.eq.nface_dst+1) then
+           ! do nothing
+          else
+           print *,"ifacepair invalid"
+           stop
+          endif 
+
+          do im=1,nmat
+           if (is_rigid(nmat,im).eq.0) then
+            if (frac_pair(im,im).ge.VOFTOL_REDIST) then 
+             do i3=itanlo(1),itanhi(1)
+             do j3=itanlo(2),itanhi(2)
+             do k3=itanlo(3),itanhi(3)
+              im_star=NINT(stenfab(D_DECL(iside+i3,jside+j3,kside+k3),istar))
+              if ((im_star.eq.im).or.(im_test_center.eq.im)) then
+               height_check(im)=1
+              endif
+             enddo
+             enddo
+             enddo
+            endif
+           else if (is_rigid(nmat,im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid(nmat,im) invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+         enddo ! ih_side=1,2     
+        enddo ! ih_dir=1..sdim
+          
+        
          ! full_neighbor
         do i3=-1,1
         do j3=-1,1

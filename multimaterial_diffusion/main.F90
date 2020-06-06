@@ -525,14 +525,16 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     physbc_value(dir,side)=0.0
    enddo
    enddo
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=1.5d0
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=1.5d0
-   physbc(1,1)=EXT_DIR
-   physbc_value(2,1)=1.5d0
-   physbc(1,2)=EXT_DIR
-   physbc_value(2,2)=1.5d0
+   if (1.eq.0) then
+    physbc(2,1)=EXT_DIR
+    physbc_value(2,1)=1.5d0
+    physbc(2,2)=EXT_DIR
+    physbc_value(2,2)=1.5d0
+    physbc(1,1)=EXT_DIR
+    physbc_value(2,1)=1.5d0
+    physbc(1,2)=EXT_DIR
+    physbc_value(2,2)=1.5d0
+   endif
    if ((stefan_flag.eq.1).and. &
        (local_operator_internal.eq.3).and. &
        (local_operator_external.eq.1).and. &
@@ -1005,7 +1007,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! curvature is positive when the center of curvature lies in the solid
     ! (ice) phase.  In Juric and Tryggvason, 1996, they say that K is twice
     ! the mean curvature so we multiply by 2.
-   saturation_temp_curv(1)=0.002d0 * 2.0d0 
+   saturation_temp_curv(1)=0.02d0 * 2.0d0  ! 0.002 * 2 in Juric and Tryggvason
    saturation_temp_curv(2)=0.0d0 
    saturation_temp_vel(1)=0.002d0  
    saturation_temp_vel(2)=0.0d0 

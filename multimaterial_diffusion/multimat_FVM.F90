@@ -1946,7 +1946,7 @@ subroutine dendrite_dist(imat,x,y,dist)
   stop
  endif
 
- if (1.eq.0) then
+ if (1.eq.1) then
   dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
          (0.1d0 + 0.02d0*cos(4.0d0*tt))
  else
