@@ -1007,7 +1007,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! curvature is positive when the center of curvature lies in the solid
     ! (ice) phase.  In Juric and Tryggvason, 1996, they say that K is twice
     ! the mean curvature so we multiply by 2.
-   saturation_temp_curv(1)=0.02d0 * 2.0d0  ! 0.002 * 2 in Juric and Tryggvason
+   saturation_temp_curv(1)=-0.002d0 * 2.0d0  ! 0.002 * 2 in Juric and Tryggvason
    saturation_temp_curv(2)=0.0d0 
    saturation_temp_vel(1)=0.002d0  
    saturation_temp_vel(2)=0.0d0 
@@ -1718,7 +1718,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
      call init_tsatfab(N_CURRENT)
 
-        ! in: BICGSTAB_Yang_MULTI.F90
+        ! output_solution declared in: BICGSTAB_Yang_MULTI.F90
      if (fixed_dt_main.eq.0.0d0) then
       total_nsteps_parm=M_MAX_TIME_STEP
      else
@@ -1892,7 +1892,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     enddo
 
     nsteps=tm
-        ! in: BICGSTAB_Yang_MULTI.F90
+        ! output_solution declared in: BICGSTAB_Yang_MULTI.F90
     if (fixed_dt_main.eq.0.0d0) then
      if (Ts(tm+1).ge.TSTOP-1.0D-14) then
       total_nsteps_parm=nsteps

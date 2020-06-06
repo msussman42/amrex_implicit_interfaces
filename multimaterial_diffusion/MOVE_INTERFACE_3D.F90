@@ -1885,7 +1885,7 @@ stop
 
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
 
-      diagnostic_output=0
+      diagnostic_output=1
       nhalf=3
 
       ncomp_per_burning=SDIM
