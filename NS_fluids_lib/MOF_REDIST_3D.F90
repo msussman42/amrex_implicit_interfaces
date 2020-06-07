@@ -1176,6 +1176,15 @@ stop
       INTEGER_T j_DEB_DIST
       INTEGER_T k_DEB_DIST
 
+      INTEGER_T versionA_test,versionB_test,version_of_choice
+      INTEGER_T height_check(nmat)
+      INTEGER_T boundary_face_count(nmat)
+      INTEGER_T center_face_count(nmat)
+      INTEGER_T iface,jface,kface
+      INTEGER_T f_index(3)
+      INTEGER_T ml,mr,ifacepair
+      REAL_T frac_pair(nmat,nmat)  !(m_left,m_right)
+
       if (1.eq.0) then    
        i_DEB_DIST=45 
        j_DEB_DIST=68
@@ -1689,7 +1698,7 @@ stop
         enddo ! im=1..nmat
 
 
-         ! stringent_test_passed
+         ! stringent_test_passed (on_border==0)
         do i3=-1,1
         do j3=-1,1
         do k3=klosten,khisten
@@ -1844,107 +1853,131 @@ stop
         enddo
         enddo  ! i3,j3,k3
 
-         ! ih_dir=1..sdim, ih_side=1..2
+         ! dir=1..sdim, side=1..2
          ! on_border==0
         do im=1,nmat
          height_check(im)=0
         enddo
-        do dir=1,3
-         istar_array(dir)=0
-        enddo
-        call put_istar(istar,istar_array) 
-        do ih_dir=1,SDIM
-         i3=0
-         j3=0
-         k3=0
-         if (ih_dir.eq.1) then
-          i3=1
-         else if (ih_dir.eq.2) then
-          j3=1
-         else if ((ih_dir.eq.3).and.(SDIM.eq.3)) then
-          k3=1
+
+        do dir=1,SDIM
+
+         ii=0
+         jj=0
+         kk=0
+         if (dir.eq.1) then
+          ii=1
+         else if (dir.eq.2) then
+          jj=1
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+          kk=1
          else
-          print *,"ih_dir invalid"
+          print *,"dir invalid levelstrip"
           stop
          endif
 
-         itanlo(3)=0
-         itanhi(3)=0
-         do dir=1,SDIM
-          itanlo(dir)=-1
-          itanhi(dir)=1
-         enddo
-         itanlo(ih_dir)=0
-         itanhi(ih_dir)=0
+         do side=1,2
 
-         do ih_side=1,2
+          do im=1,nmat
+           boundary_face_count(im)=0
+           center_face_count(im)=0
+          enddo
 
-          if (ih_side.eq.1) then
+          if (side.eq.1) then
            iface=i
            jface=j
            kface=k
-           iside=i-i3
-           jside=j-j3
-           kside=k+k3
-          else if (ih_side.eq.2) then
-           iface=i+i3
-           jface=j+j3
-           kface=k+k3
-           iside=i+i3
-           jside=j+j3
-           kside=k+k3
+          else if (side.eq.2) then
+           iface=i+ii
+           jface=j+jj
+           kface=k+kk
           else
-           print *,"ih_side invalid"
+           print *,"side invalid"
            stop
           endif
+          do i3=-1,1
+          do j3=-1,1
+          do k3=klosten,khisten
+      
+           f_index(1)=i3 
+           f_index(2)=j3 
+           f_index(3)=k3 
 
-          ifacepair=1
-          do ml = 1, nmat
-          do mr = 1, nmat
-           if (ih_dir.eq.1) then
-            frac_pair(ml,mr)=facepairX(D_DECL(iface,jface,kface),ifacepair)
-           else if (ih_dir.eq.2) then
-            frac_pair(ml,mr)=facepairY(D_DECL(iface,jface,kface),ifacepair)
-           else if ((ih_dir.eq.3).and.(SDIM.eq.3)) then
-            frac_pair(ml,mr)=facepairZ(D_DECL(iface,jface,kface),ifacepair)
-           else
-            print *,"ih_dir invalid"
-            stop
-           endif
-           ifacepair=ifacepair+2
-          enddo
-          enddo
-          if (ifacepair.eq.nface_dst+1) then
-           ! do nothing
-          else
-           print *,"ifacepair invalid"
-           stop
-          endif 
+           i4=i3+iface
+           j4=j3+jface
+           k4=k3+kface
 
-          do im=1,nmat
-           if (is_rigid(nmat,im).eq.0) then
-            if (frac_pair(im,im).ge.VOFTOL_REDIST) then 
-             do i3=itanlo(1),itanhi(1)
-             do j3=itanlo(2),itanhi(2)
-             do k3=itanlo(3),itanhi(3)
-              im_star=NINT(stenfab(D_DECL(iside+i3,jside+j3,kside+k3),istar))
-              if ((im_star.eq.im).or.(im_test_center.eq.im)) then
-               height_check(im)=1
-              endif
-             enddo
-             enddo
-             enddo
+           ifacepair=1
+           do ml = 1, nmat
+           do mr = 1, nmat
+            if (dir.eq.1) then
+             frac_pair(ml,mr)=facepairX(D_DECL(i4,j4,k4),ifacepair)
+            else if (dir.eq.2) then
+             frac_pair(ml,mr)=facepairY(D_DECL(i4,j4,k4),ifacepair)
+            else if ((dir.eq.3).and.(SDIM.eq.3)) then
+             frac_pair(ml,mr)=facepairZ(D_DECL(i4,j4,k4),ifacepair)
+            else
+             print *,"dir invalid"
+             stop
             endif
-           else if (is_rigid(nmat,im).eq.1) then
+            ifacepair=ifacepair+2
+           enddo
+           enddo
+           if (ifacepair.eq.nface_dst+1) then
             ! do nothing
            else
-            print *,"is_rigid(nmat,im) invalid"
+            print *,"ifacepair invalid"
+            stop
+           endif 
+
+           do im=1,nmat
+            if (is_rigid(nmat,im).eq.0) then
+             if ((frac_pair(im,im).ge.VOFTOL_REDIST).and. &
+                 (frac_pair(im,im).le.one+VOFTOL_REDIST)) then 
+              if ((i3.eq.0).and. &
+                  (j3.eq.0).and. &
+                  (k3.eq.0).and. &
+                  (f_index(dir).eq.0)) then
+               center_face_count(im)=1
+              else if (f_index(dir).eq.0) then
+               ! do nothing 
+              else if ((f_index(dir).eq.1).or. &
+                       (f_index(dir).eq.-1)) then
+               boundary_face_count(im)=1
+              else
+               print *,"f_index invalid"
+               stop
+              endif
+             else if ((frac_pair(im,im).ge.zero).and. &
+                      (frac_pair(im,im).le.VOFTOL_REDIST)) then
+              ! do nothing
+             else
+              print *,"frac_pair invalid"
+              stop
+             endif
+            else if (is_rigid(nmat,im).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid(nmat,im) invalid"
+             stop
+            endif
+           enddo ! im=1..nmat
+          enddo
+          enddo
+          enddo ! i3,j3,k3
+          do im=1,nmat
+           if ((center_face_count(im).eq.1).and. &
+               (boundary_face_count(im).eq.1)) then
+            height_check(im)=1
+           else if ((center_face_count(im).eq.0).or. &
+                    (boundary_face_count(im).eq.0)) then
+            ! do nothing
+           else
+            print *,"center_face_count or boundary_face_count bad"
             stop
            endif
           enddo ! im=1..nmat
-         enddo ! ih_side=1,2     
-        enddo ! ih_dir=1..sdim
-          
+         enddo ! side=1,2     
+        enddo ! dir=1..sdim
         
          ! full_neighbor
         do i3=-1,1
@@ -2005,10 +2038,29 @@ stop
 
          ! face_test=0 if cell_test==0
         if (is_rigid(nmat,im).eq.0) then
+
+         if ((stringent_test_passed(im).eq.1).or. &
+             (face_test(im).eq.1)) then
+          versionA_test=1
+         else
+          versionA_test=0
+         endif
+
+         if (height_check(im).eq.1) then
+          versionB_test=1
+         else
+          versionB_test=0
+         endif
+
+         if (1.eq.1) then
+          version_of_choice=versionB_test
+         else
+          version_of_choice=versionA_test
+         endif
+
          if ((vcenter(im).ge.half).or. &
              (im.eq.im_crit).or. &
-             (stringent_test_passed(im).eq.1).or. &
-             (face_test(im).eq.1).or. &
+             (version_of_choice.eq.1).or. &
              (full_neighbor(im).eq.1).or. &
              ((cell_test(im).eq.1).and. &
               (keep_all_interfaces.eq.1))) then
