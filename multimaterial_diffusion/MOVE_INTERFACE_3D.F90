@@ -2479,7 +2479,7 @@ stop
         data_dir=-1
         SDC_outer_sweeps=0
         slab_step=0
-        data_id=0
+        data_id=stefan_flag
         visual_revolve=0
         visual_option=-2
 

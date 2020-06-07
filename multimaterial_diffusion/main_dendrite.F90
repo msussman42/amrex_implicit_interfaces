@@ -112,7 +112,7 @@ INTEGER,PARAMETER          :: plot_int = 1
 ! probtype_in==4: TSTOP=1.25D-3
 ! probtype_in==400: TSTOP=0.5d0
 ! probtype_in==403: TSTOP=0.81d0 ?
-real(kind=8),parameter     :: TSTOP = 1.0D0
+real(kind=8),parameter     :: TSTOP = 0.5D0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -262,8 +262,8 @@ print *,"constant_K_test= ",constant_K_test
 ! M time
 ! for dendrite growth test problem, time step is variable
 ! (fixed_dt_main==0.0)
-N_START=64
-N_FINISH=64
+N_START=128
+N_FINISH=128
 M_START=10
 M_FACTOR=2
 
@@ -1007,7 +1007,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! curvature is positive when the center of curvature lies in the solid
     ! (ice) phase.  In Juric and Tryggvason, 1996, they say that K is twice
     ! the mean curvature so we multiply by 2.
-   saturation_temp_curv(1)=-0.002d0 * 2.0d0  ! 0.002 * 2 in Juric and Tryggvason
+   saturation_temp_curv(1)=0.002d0 * 2.0d0  ! 0.002 * 2 in Juric and Tryggvason
    saturation_temp_curv(2)=0.0d0 
    saturation_temp_vel(1)=0.002d0  
    saturation_temp_vel(2)=0.0d0 
@@ -1728,12 +1728,14 @@ DO WHILE (N_CURRENT.le.N_FINISH)
              total_nsteps_parm, &
              fixed_dt_main)
 
-     if (probtype_in.eq.403) then ! initialize correct Tsat_fab
-      stefan_flag=0
-      call update_interface(UOLD,UNEW,N_CURRENT,local_state_ncomp, &
-       dx_in,time_n,deltat_in,nsteps,local_nten,stefan_flag)
-      stefan_flag=1
-     endif
+    endif
+
+
+    if (probtype_in.eq.403) then ! initialize correct Tsat_fab
+     stefan_flag=0
+     call update_interface(UOLD,UNEW,N_CURRENT,local_state_ncomp, &
+      dx_in,time_n,deltat_in,nsteps,local_nten,stefan_flag)
+     stefan_flag=1
     endif
 
      ! Dirichlet BC use t^n+1 data
