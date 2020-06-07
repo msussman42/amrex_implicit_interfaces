@@ -2046,7 +2046,8 @@ stop
           versionA_test=0
          endif
 
-         if (height_check(im).eq.1) then
+         if ((height_check(im).eq.1).and. &
+             (cell_test(im).eq.1)) then
           versionB_test=1
          else
           versionB_test=0
