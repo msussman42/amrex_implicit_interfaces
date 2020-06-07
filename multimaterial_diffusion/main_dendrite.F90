@@ -57,7 +57,8 @@ IMPLICIT NONE
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
 ! 401=ice melt (material 1 liquid, material 2 gas, material 3 ice)
 ! 402=NASA boiling (material 1 liquid, material 2 gas, material 3 substrate)
-! 403=Dendrite problem From Tryggvason
+! 403=Dendrite problem From Tryggvason or Chen Merriman Osher Smereka 1997
+!  Figure 8.
 INTEGER,PARAMETER          :: probtype_in=403
 INTEGER        :: stefan_flag
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
@@ -111,8 +112,8 @@ INTEGER,PARAMETER          :: plot_int = 1
 ! TSTOP=0.004d0
 ! probtype_in==4: TSTOP=1.25D-3
 ! probtype_in==400: TSTOP=0.5d0
-! probtype_in==403: TSTOP=0.81d0 ?
-real(kind=8),parameter     :: TSTOP = 0.5D0
+! probtype_in==403: TSTOP=0.8d0 (Chen, Merriman, Osher, Smereka)
+real(kind=8),parameter     :: TSTOP = 0.8D0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -1005,9 +1006,12 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! div grad phi12/|grad phi12| > 0 everywhere if phi12=sqrt(x^2+y^2) - r
     ! Tinterface=TSAT - 0.002/R=TSAT-0.002*K(phi12)  R=radius of curvature
     ! curvature is positive when the center of curvature lies in the solid
-    ! (ice) phase.  In Juric and Tryggvason, 1996, they say that K is twice
-    ! the mean curvature so we multiply by 2.
-   saturation_temp_curv(1)=0.002d0 * 2.0d0  ! 0.002 * 2 in Juric and Tryggvason
+    ! (ice) phase.  In Juric and Tryggvason, 1996, they say that K is "twice
+    ! the mean curvature" but in Chen, Merriman, Osher, and Smereka, the
+    ! extra factor of 2 is not included.   Recommended to compare
+    ! with Chen et al since they observed less numerically induced 
+    ! instability, than what observed by Juric and Tryggvason.
+   saturation_temp_curv(1)=0.002d0 
    saturation_temp_curv(2)=0.0d0 
    saturation_temp_vel(1)=0.002d0  
    saturation_temp_vel(2)=0.0d0 
