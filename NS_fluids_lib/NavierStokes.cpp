@@ -9846,7 +9846,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
  if (localMF[FD_NRM_ND_MF]->nComp()!=n_normal)
   amrex::Error("localMF[FD_NRM_ND_MF]->nComp()!=n_normal");
- if (localMF[FD_NRM_ND_MF]->nGrow()!=ngrow_make_distance)
+ if (localMF[FD_NRM_ND_MF]->nGrow()!=ngrow_make_distance+1)
   amrex::Error("localMF[FD_NRM_ND_MF] incorrect ngrow");
 
  if (localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten))
@@ -9864,6 +9864,11 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   amrex::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
 
  VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
+
+ if (ngrow_distance==ngrow_make_distance+1) {
+  // do nothing
+ } else
+  amrex::Error("ngrow_distance!=ngrow_make_distance+1");
 
  int ngrow_dest=ngrow_distance-1;
 

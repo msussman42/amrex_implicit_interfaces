@@ -2075,7 +2075,7 @@ stop
        call set_dimdec(DIMS(EOS),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(recon),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(pres),fablo,fabhi,ngrow)
-       call set_dimdec(DIMS(FD_NRM_ND),fablo,fabhi,ngrow_distance)
+       call set_dimdec(DIMS(FD_NRM_ND),fablo,fabhi,ngrow_distance+1)
        call set_dimdec(DIMS(FD_CURV_CELL),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(jump_strength),fablo,fabhi,ngrow_expansion)
        call set_dimdec(DIMS(swept),fablo,fabhi,0)
@@ -2180,6 +2180,15 @@ stop
         enddo
        enddo
        enddo
+
+       do i=fablo(1)-ngrow_make_distance-1,fabhi(1)+ngrow_make_distance+1
+       do j=fablo(2)-ngrow_make_distance-1,fabhi(2)+ngrow_make_distance+1
+        do im=1,n_normal
+         FD_NRM_ND(i,j,im)=0.0d0
+        enddo
+       enddo
+       enddo
+
        do i=fablo(1)-ngrow_make_distance,fabhi(1)+ngrow_make_distance
        do j=fablo(2)-ngrow_make_distance,fabhi(2)+ngrow_make_distance
         do im=1,nburning
@@ -2187,9 +2196,6 @@ stop
         enddo
         do im=1,ntsat
          tsatfab(i,j,im)=0.0d0
-        enddo
-        do im=1,n_normal
-         FD_NRM_ND(i,j,im)=0.0d0
         enddo
         do im=1,2*(nmat+nten)
          FD_CURV_CELL(i,j,im)=0.0d0
@@ -2338,7 +2344,7 @@ stop
          level, &
          finest_level, &
          LS,DIMS(LS),  & ! ngrow==ngrow_distance
-         FD_NRM_ND,DIMS(FD_NRM_ND),  & ! ngrow==ngrow_distance
+         FD_NRM_ND,DIMS(FD_NRM_ND),  & ! ngrow==ngrow_distance+1
          fablo,fabhi, &
          fablo,fabhi,bfact, &
          xlo,dx, &
@@ -2351,7 +2357,7 @@ stop
          level, &
          finest_level, &
          LS,DIMS(LS),  & ! ngrow==ngrow_distance
-         FD_NRM_ND,DIMS(FD_NRM_ND),  & ! ngrow==ngrow_distance
+         FD_NRM_ND,DIMS(FD_NRM_ND),  & ! ngrow==ngrow_distance+1
          FD_CURV_CELL,DIMS(FD_CURV_CELL),  & ! ngrow==ngrow_distance
          fablo,fabhi, &
          fablo,fabhi,bfact, &

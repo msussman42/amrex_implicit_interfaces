@@ -2746,9 +2746,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	int n_normal=(nmat+nten)*(AMREX_SPACEDIM+1);
 
         ns_level.new_localMF(FD_NRM_ND_MF,n_normal,
-          ngrow_make_distance,-1);
+          ngrow_make_distance+1,-1);
         ns_level.setVal_localMF(FD_NRM_ND_MF,0.0,0,
-          n_normal,ngrow_make_distance);
+          n_normal,ngrow_make_distance+1);
 
         ns_level.new_localMF(FD_CURV_CELL_MF,2*(nmat+nten),
           ngrow_make_distance,-1);
@@ -2769,7 +2769,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        debug_ngrow(SWEPT_CROSSING_MF,0,31);
        debug_ngrow(BURNING_VELOCITY_MF,ngrow_make_distance,31);
        debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,31);
-       debug_ngrow(FD_NRM_ND_MF,ngrow_make_distance,31);
+       debug_ngrow(FD_NRM_ND_MF,ngrow_make_distance+1,31);
        debug_ngrow(FD_CURV_CELL_MF,ngrow_make_distance,31);
 
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {

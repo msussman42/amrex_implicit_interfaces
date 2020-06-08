@@ -304,8 +304,8 @@ stop
        print *,"level invalid in FORT_FD_NORMAL"
        stop
       endif
-      call checkbound(fablo,fabhi,DIMS(LS_new),1,-1,2870)
-      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),0,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(LS_new),1,-1,2871)
+      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),0,-1,2872)
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -544,8 +544,8 @@ stop
        stop
       endif
       
-      call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_dest+1,-1,2870)
-      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_dest+1,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_dest+1,-1,2873)
+      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_dest+1,-1,2874)
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -786,9 +786,9 @@ stop
        stop
       endif
       
-      call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_nrm+1,-1,2870)
-      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_nrm+1,-1,2870)
-      call checkbound(fablo,fabhi,DIMS(CURV_CELL),ngrow_nrm,-1,2870)
+      call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_nrm+1,-1,2875)
+      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_nrm+1,-1,2876)
+      call checkbound(fablo,fabhi,DIMS(CURV_CELL),ngrow_nrm,-1,2877)
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -1259,19 +1259,19 @@ stop
        print *,"ngrow_make_distance<>3 error in levelstrip"
        stop
       endif
-      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2870)
-      call checkbound(fablo,fabhi,DIMS(facepairX),ngrow_distance,0,2871)
-      call checkbound(fablo,fabhi,DIMS(facepairY),ngrow_distance,1,2871)
-      call checkbound(fablo,fabhi,DIMS(facepairZ),ngrow_distance,SDIM-1,2871)
-      call checkbound(fablo,fabhi,DIMS(facefab),ngrow_distance,-1,2871)
-      call checkbound(fablo,fabhi,DIMS(facetest),ngrow_distance,-1,2872)
-      call checkbound(fablo,fabhi,DIMS(stenfab),ngrow_distance,-1,2873)
-      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow_distance,-1,2874)
-      call checkbound(fablo,fabhi,DIMS(origdist),ngrow_distance,-1,2875)
-      call checkbound(fablo,fabhi,DIMS(newfab),1,-1,2876)
-      call checkbound(fablo,fabhi,DIMS(touchfab),0,-1,2876)
-      call checkbound(fablo,fabhi,DIMS(crsetouch),0,-1,2876)
-      call checkbound(fablo,fabhi,DIMS(crsedist),0,-1,2876)
+      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2878)
+      call checkbound(fablo,fabhi,DIMS(facepairX),ngrow_distance,0,1871)
+      call checkbound(fablo,fabhi,DIMS(facepairY),ngrow_distance,1,1871)
+      call checkbound(fablo,fabhi,DIMS(facepairZ),ngrow_distance,SDIM-1,1871)
+      call checkbound(fablo,fabhi,DIMS(facefab),ngrow_distance,-1,1871)
+      call checkbound(fablo,fabhi,DIMS(facetest),ngrow_distance,-1,1872)
+      call checkbound(fablo,fabhi,DIMS(stenfab),ngrow_distance,-1,1873)
+      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow_distance,-1,1874)
+      call checkbound(fablo,fabhi,DIMS(origdist),ngrow_distance,-1,1875)
+      call checkbound(fablo,fabhi,DIMS(newfab),1,-1,1876)
+      call checkbound(fablo,fabhi,DIMS(touchfab),0,-1,1876)
+      call checkbound(fablo,fabhi,DIMS(crsetouch),0,-1,1876)
+      call checkbound(fablo,fabhi,DIMS(crsedist),0,-1,1876)
       
       if (nmat.eq.num_materials) then
        ! do nothing
