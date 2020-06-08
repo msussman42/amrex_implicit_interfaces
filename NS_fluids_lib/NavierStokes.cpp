@@ -19,6 +19,85 @@
 #include <AMReX_TagBox.H>
 
 /* 
+  Narrow Band WENO LEVEL SET METHOD:
+  1. t=0 distance function is given.
+  2. traverse grid and add (i,j,k) indices for extended narrow band points and regular
+     narrow band points.
+     For this step, 
+     a) two Particle Container objects are created: extended_narrow_band_pc and
+     regular_narrow_band_pc 
+       NStructReal=0
+       NStructInt=0
+       NArrayReal=0
+       NArrayInt=sdim   (i,j,k)
+     b) traverse grid and add to the respective particle container objects.
+
+      for (MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi) {
+
+       // ``particles'' starts off empty
+       auto& particles = GetParticles(lev)[std::make_pair(mfi.index(),
+                                        mfi.LocalTileIndex())];
+
+       (optional) for all indices on tile:
+
+       ParticleType p;
+       p.id()   = ParticleType::NextID();
+       p.cpu()  = ParallelDescriptor::MyProc();
+       p.pos(0) = ...
+       etc...
+
+       // AoS real data
+       p.rdata(0) = ...
+       p.rdata(1)  = ...
+
+       // AoS int data
+       p.idata(0) = ...
+       p.idata(1) = ...
+
+       // Particle real attributes (SoA)
+       std::array<double, 2> real_attribs;
+       real_attribs[0] = ...
+       real_attribs[1] = ...
+
+       // Particle int attributes (SoA)
+       std::array<int, 2> int_attribs;
+       int_attribs[0] = ...
+       int_attribs[1]  = ...
+
+       particles.push_back(p);
+       particles.push_back_real(real_attribs);
+       particles.push_back_int(int_attribs);
+
+       // ... add more particles if desired ...
+      }
+
+  3. using MyParIter = ParIter<0, 0, 0, sdim>;
+       // loop through every grid (or tile if tiling enabled) that has particles.
+     for (MyParIter pti(regular_narrow_band_pc, lev); pti.isValid(); ++pti) {
+      auto& particle_attributes = pti.GetStructOfArrays();
+      // Vector<Real>& real_comp0 = particle_attributes.GetRealData(0);
+      for (int i=0;i<SDIM;i++) 
+       Vector<int>& int_comp[i]  = particle_attributes.GetIntData(i);
+      for (int i = 0; i < pti.numParticles; ++i) {
+        // do stuff with your SoA data... (int_comp[j], j=0..sdim-1)
+	advect LS data with WENO.
+      }
+     }
+
+     for (MyParIter pti(extended_narrow_band_pc, lev); pti.isValid(); ++pti) {
+      auto& particle_attributes = pti.GetStructOfArrays();
+      // Vector<Real>& real_comp0 = particle_attributes.GetRealData(0);
+      for (int i=0;i<SDIM;i++)
+       Vector<int>& int_comp[i]  = particle_attributes.GetIntData(i);
+      for (int i = 0; i < pti.numParticles; ++i) {
+        // do stuff with your SoA data... (int_comp[j], j=0..sdim-1)
+        reinitialize LS data with WENO.
+      }
+     }
+
+
+  https://amrex-codes.github.io/amrex/docs_html/Particle.html
+
   if particles:
   #include <AMReX_Particles.H>
   NStructReal=number of extra Real variables (not including particle position)  
