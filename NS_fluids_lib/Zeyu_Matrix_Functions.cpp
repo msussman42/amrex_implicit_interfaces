@@ -823,8 +823,8 @@ void LeastSquaresQR(double **A, double *x, const double *b, const int m, const i
     }
 
     for(int it = 0; it < sn; ++it){
-        double y = R[it][it];
         for(int i = it+1; i < sm; ++i){
+            double y = R[it][it];
             double z = R[i][it];
             if(std::abs(z) < 1.0e-16) 
                 continue;
