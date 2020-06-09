@@ -805,6 +805,7 @@ void ZeroColumn(double *Bd, double *Bs, const int n)
 // 1. A = QR;
 // 2. d=QTb;
 // 3. solve Rx=d.
+// used for breakdown free GMRES.
 void LeastSquaresQR(double **A, double *x, const double *b, const int m, const int n, const int sm, const int sn)
 {
     //define R(mx(n+1)), d is included in the last column of R

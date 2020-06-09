@@ -144,6 +144,17 @@
   end subroutine least_squares_QR
 
 ! if 2D, nk should be 1, pos_z should be 0
+! inputs:
+!   nmat = number of materials
+!   pos_xyz(ni,nj,nk,dim)
+!   ls(ni,nj,nk,nmat)
+!   weights(ni,nj,nk)
+!   is_fluid(nmat)   =  1 if fluid and needs to be extrapolated, 0 otherwise
+!    is_fluid(im)=1 if material "im" is a fluid material (i.e. gets extrap)
+!    is_fluid(im)=0 if material "im" is not a fluid (i.e. does not get extrap)
+! output:
+!   ls_f(im=1...nmat) = extrapolated distance for materials in which 
+!                       is_fluid(im).eq.1
   subroutine level_set_extrapolation(pos_x, pos_y, pos_z, ls1, ls3, &
                                      ls_f, ni, nj, nk, dim)
     implicit none
@@ -162,6 +173,24 @@
     !calculate phi_fluid at x0
     !var(dim+1) = {a(dim), b}
 
+    if (((ni+1)/2)*2.eq.ni+1) then
+            ! do nothing
+    else
+            print *,"ni invalid"
+            stop
+    endif
+    if (((nj+1)/2)*2.eq.nj+1) then
+            ! do nothing
+    else
+            print *,"nj invalid"
+            stop
+    endif
+    if (((nk+1)/2)*2.eq.nk+1) then
+            ! do nothing
+    else
+            print *,"nk invalid"
+            stop
+    endif
     pos0(1) = pos_x((ni+1)/2, (nj+1)/2, (nk+1)/2)
     pos0(2) = pos_y((ni+1)/2, (nj+1)/2, (nk+1)/2)
     if (dim .eq. 3) then
