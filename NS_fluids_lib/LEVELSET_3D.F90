@@ -15321,6 +15321,7 @@ stop
       use probf90_module
       use geometry_intersect_module
       use MOF_routines_module
+      use ZEYU_LS_extrapolation, only : level_set_extrapolation
 
       IMPLICIT NONE
 
@@ -15416,7 +15417,11 @@ stop
       REAL_T LS_virtual(nmat)
       REAL_T LS_virtual_new(nmat)
       REAL_T LS_virtual_max
-      REAL_T near_fluid
+      REAL_T dist_to_fluid_min
+      REAL_T dist_to_fluid_max
+      REAL_T local_dist_solid
+      REAL_T total_weightFLUID
+      REAL_T total_weightSOLID
       REAL_T WT
       INTEGER_T nmat_fluid,nmat_solid,nmat_lag
       INTEGER_T at_center
@@ -15425,6 +15430,7 @@ stop
       INTEGER_T partid_max
       REAL_T xfluid,xghost
       INTEGER_T tessellate
+      INTEGER_T extrap_radius,least_sqr_radius
 
       tessellate=0
 
@@ -15562,18 +15568,21 @@ stop
       call checkbound(fablo,fabhi,DIMS(dennew),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,26)
 
+      extrap_radius=1
+      least_sqr_radius=2
+
       istenlo(3)=0
       istenhi(3)=0
       do dir=1,SDIM
-       istenlo(dir)=-1
-       istenhi(dir)=1
+       istenlo(dir)=-extrap_radius
+       istenhi(dir)=extrap_radius
       enddo
 
       LSstenlo(3)=0
       LSstenhi(3)=0
       do dir=1,SDIM
-       LSstenlo(dir)=-2
-       LSstenhi(dir)=2
+       LSstenlo(dir)=-least_sqr_radius
+       LSstenhi(dir)=least_sqr_radius
       enddo
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
@@ -16008,15 +16017,13 @@ stop
           if ((LS_solid_new(im_solid_max).ge.zero).or. &
               (sum_vfrac_solid_new.ge.half)) then
 
-            ! default radius: 1 cell
+            ! default radius: extrap_radius=1 cell
             ! this inner loop is needed since the volume fraction
             ! at (i,j,k) depends on the levelset function values
             ! in the (i+i1,j+j1,k+k1) stencil.
            do i1=istenlo(1),istenhi(1)
            do j1=istenlo(2),istenhi(2)
            do k1=istenlo(3),istenhi(3)
-
-            near_fluid=zero
 
             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
              at_center=1
@@ -16029,7 +16036,7 @@ stop
             enddo
             call get_primary_material(LS_predict,nmat,im_primary_stencil)
 
-             !fluid stencil cell
+             !fluid stencil cell, we trust this LS value.
             if ((is_rigid(nmat,im_primary_stencil).eq.0).and. & 
                 (at_center.eq.0)) then
 
@@ -16037,7 +16044,7 @@ stop
               LS_virtual_new(im)=LS_predict(im)
              enddo
 
-             !solid stencil cell
+             !solid stencil cell, extrapolate from the fluid side.
             else if ((is_rigid(nmat,im_primary_stencil).eq.1).or. & 
                      (at_center.eq.1)) then
 
@@ -16045,7 +16052,12 @@ stop
               LS_virtual_new(im)=zero
              enddo
 
-              ! default radius: 2 cells.
+             dist_to_fluid_min=zero
+             dist_to_fluid_max=zero
+             total_weightFLUID=zero
+             total_weightSOLID=zero
+
+              ! default radius: least_sqr_radius=2 cells.
               ! In order to find the level set function values at the
               ! (i+i1,j+j1,k+k1) stencil points in the solid, 
               ! extrapolation from the
@@ -16057,10 +16069,15 @@ stop
               do im=1,nmat
                LS_virtual(im)=LS(D_DECL(i+i1+i2,j+j1+j2,k+k1+k2),im)
               enddo
+
                ! the fluid cells closest to the target cell have the
                ! most weight.
               call get_primary_material(LS_virtual,nmat,im_primary_sub_stencil)
+
               if (is_rigid(nmat,im_primary_sub_stencil).eq.0) then
+
+               dist_to_fluid_min=-one
+
                 ! WT=1/((dx/10)^2 + ||xfluid-xghost||^2)
                WT=0.01*(dxmaxLS**2)
                 ! nhalf==7
@@ -16092,11 +16109,29 @@ stop
                endif
                WT=one/WT
  
-               near_fluid=near_fluid+WT
+               total_weightFLUID=total_weightFLUID+WT
+               ZEYU_WT_FLUID(D_DECL(i2,j2,k2))=WT
                do im=1,nmat
                 LS_virtual_new(im)=LS_virtual_new(im)+WT*LS_virtual(im)
+                ZEYU_LS(D_DECL(i2,j2,k2),im)=LS_virtual(im)
                enddo
               else if (is_rigid(nmat,im_primary_sub_stencil).eq.1) then
+               WT=0.01*(dxmaxLS**2)
+               ZEYU_WT_FLUID(D_DECL(i2,j2,k2))=zero
+               local_dist_solid=abs(LS_virtual(im_primary_sub_stencil))
+               WT=WT+(local_dist_solid)**2
+               WT=one/WT
+               if (local_dist_solid.lt.dist_to_fluid_min) then
+                dist_to_fluid_min=local_dist_solid
+               endif
+               if (local_dist_solid.gt.dist_to_fluid_max) then
+                dist_to_fluid_max=local_dist_solid
+               endif
+               do im=1,nmat
+                LS_virtual_newSOLID(im)=LS_virtual_newSOLID(im)+ &
+                     WT*LS_virtual(im)
+               enddo
+
                ! do nothing
               else
                print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
@@ -16105,14 +16140,16 @@ stop
           
              enddo 
              enddo 
-             enddo  !i2,j2,k2=-2..2
-           
+             enddo  !i2,j2,k2=-least_sqr_radius..least_sqr_radius
+          
+              ! fluid cells exist in Least squares stencil
              if (near_fluid.gt.zero) then
               do im=1,nmat
                LS_virtual_new(im)=LS_virtual_new(im)/near_fluid
               enddo
+
+              ! no fluid cells exist in Least squares stencil
              else if (near_fluid.eq.zero) then
-              ! LS_predict=LS(i+i1,j+j1,k+k1)
               do im=1,nmat
                LS_virtual_new(im)=LS_predict(im)
               enddo
@@ -16131,9 +16168,9 @@ stop
                 
            enddo
            enddo
-           enddo ! i1,j1,k1=-1..1
+           enddo ! i1,j1,k1=-extrap_radius..extrap_radius
 
-            ! default radius: 1 cell
+            ! default radius: extrap_radius=1 cell
             ! make the extension fluid level set tessellating
            do i1=istenlo(1),istenhi(1)
            do j1=istenlo(2),istenhi(2)
@@ -16211,7 +16248,7 @@ stop
 
            enddo
            enddo
-           enddo ! i1,j1,k1=-1..1
+           enddo ! i1,j1,k1=-extend_radius..extend_radius
                
            do im=1,nmat
 
@@ -16236,6 +16273,7 @@ stop
               mofnew(vofcomp+dir)=LScentroid(dir)-cencell(dir)
              enddo
 
+              ! this is the extrapolated level set function
              ls_hold(im)=LS_temp(D_DECL(0,0,0))
  
              if (mofnew(vofcomp).lt.zero) then
