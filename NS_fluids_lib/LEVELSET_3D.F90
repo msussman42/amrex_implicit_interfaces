@@ -15315,7 +15315,8 @@ stop
        nparts_def, &
        im_solid_map, &
        renormalize_only, &
-       solidheat_flag)
+       solidheat_flag, &
+       ngrow_distance)
       use global_utility_module
       use global_distance_module
       use probf90_module
@@ -15327,6 +15328,7 @@ stop
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: solidheat_flag
+      INTEGER_T, intent(in) :: ngrow_distance
 
       INTEGER_T, intent(in) :: renormalize_only
       INTEGER_T, intent(in) :: level,finest_level
@@ -15384,7 +15386,7 @@ stop
       REAL_T cencell(SDIM)
       REAL_T censolid_new(nmat,SDIM)
 
-      REAL_T xsten(-7:7,SDIM)
+      REAL_T xsten(-9:9,SDIM)
       INTEGER_T nhalf
       REAL_T mofnew(nmat*ngeom_recon)
       INTEGER_T istenlo(3),istenhi(3)
@@ -15431,6 +15433,8 @@ stop
       REAL_T xfluid,xghost
       INTEGER_T tessellate
       INTEGER_T extrap_radius,least_sqr_radius
+      REAL_T XLIST(SDIM+1,SDIM)
+      INTEGER_T XLIST_ncomp
 
       tessellate=0
 
@@ -15440,7 +15444,7 @@ stop
        stop
       endif
 
-      nhalf=7
+      nhalf=9
 
       if (bfact.lt.1) then
        print *,"bfact invalid102"
@@ -15449,6 +15453,12 @@ stop
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
+      if (ngrow_distance.eq.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid"
+       stop
+      endif
       if (solidheat_flag.eq.0) then 
        !do nothing (heat conduction in solid)
       else if (solidheat_flag.eq.1) then
@@ -15561,7 +15571,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,26)
 
       call checkbound(fablo,fabhi,DIMS(maskcov),0,-1,26)
-      call checkbound(fablo,fabhi,DIMS(LS),3,-1,26)
+      call checkbound(fablo,fabhi,DIMS(LS),ngrow_distance,-1,26)
       call checkbound(fablo,fabhi,DIMS(mofdata),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(vel),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(den),1,-1,26)
@@ -15569,7 +15579,13 @@ stop
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,26)
 
       extrap_radius=1
-      least_sqr_radius=2
+      least_sqr_radius=3
+      if (extrap_radius+least_sqr_radius.le.ngrow_distance) then
+       ! do nothing
+      else
+       print *,"extrap_radius or least_sqr_radius invalid"
+       stop
+      endif
 
       istenlo(3)=0
       istenhi(3)=0
@@ -16050,6 +16066,7 @@ stop
 
              do im=1,nmat
               LS_virtual_new(im)=zero
+              LS_virtual_newSOLID(im)=zero
              enddo
 
              dist_to_fluid_min=zero
@@ -16057,7 +16074,9 @@ stop
              total_weightFLUID=zero
              total_weightSOLID=zero
 
-              ! default radius: least_sqr_radius=2 cells.
+             XLIST_ncomp=0
+
+              ! default radius: least_sqr_radius=3 cells.
               ! In order to find the level set function values at the
               ! (i+i1,j+j1,k+k1) stencil points in the solid, 
               ! extrapolation from the
@@ -16065,7 +16084,20 @@ stop
              do i2=LSstenlo(1),LSstenhi(1)
              do j2=LSstenlo(2),LSstenhi(2)
              do k2=LSstenlo(3),LSstenhi(3)
-     
+    
+              dir=1
+              local_XPOS(dir)=xsten(i1+i2,dir)
+              dir=2
+              local_XPOS(dir)=xsten(j1+j2,dir)
+              if (SDIM.eq.3) then
+               dir=SDIM
+               local_XPOS(dir)=xsten(k1+k2,dir)
+              endif
+              do dir=1,SDIM
+               ZEYU_XPOS(D_DECL(i2,j2,k2),dir)=local_XPOS(dir)
+              enddo
+
+
               do im=1,nmat
                LS_virtual(im)=LS(D_DECL(i+i1+i2,j+j1+j2,k+k1+k2),im)
               enddo
@@ -16076,38 +16108,62 @@ stop
 
               if (is_rigid(nmat,im_primary_sub_stencil).eq.0) then
 
-               dist_to_fluid_min=-one
-
-                ! WT=1/((dx/10)^2 + ||xfluid-xghost||^2)
-               WT=0.01*(dxmaxLS**2)
-                ! nhalf==7
-                ! xfluid: fluid cell
-                ! xghost: solid cell
-               do dir=1,SDIM
-                if (dir.eq.1) then
-                 xfluid=xsten(2*(i1+i2),dir)
-                 xghost=xsten(2*i1,dir)
-                else if (dir.eq.2) then 
-                 xfluid=xsten(2*(j1+j2),dir)
-                 xghost=xsten(2*j1,dir)
-                else if ((dir.eq.3).and.(SDIM.eq.3)) then
-                 xfluid=xsten(2*(k1+k2),dir)
-                 xghost=xsten(2*k1,dir)
+               if (XLIST_ncomp.eq.0) then
+                XLIST_ncomp=1
+                do dir=1,SDIM
+                 XLIST(XLIST_ncomp,dir)=local_XPOS(dir)
+                enddo
+               else if ((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)) then
+                do dir=1,SDIM
+                 U1(dir)=(local_XPOS(dir)-XLIST(1,dir))/dx(dir)
+                enddo
+                ! V1=U1 - sum alpha_i V_i
+                ! alpha_i=(U1,V_i)/(V_i,V_i)
+                do ibasis=1,XLIST_ncomp-1
+                 U_DOT_V=zero
+                 V_DOT_V=zero
+                 do dir=1,SDIM
+                  U_DOT_V=U_DOT_V+U1(dir)*VLIST(ibasis,dir)
+                  V_DOT_V=V_DOT_V+VLIST(ibasis,dir)**2
+                 enddo
+                 if (abs(V_DOT_V-one).le.1.0D-10) then
+                  alpha=U_DOT_V/V_DOT_V
+                  do dir=1,SDIM
+                   U1(dir)=U1(dir)-alpha*VLIST(ibasis,dir)
+                  enddo
+                 else
+                  print *,"V_DOT_V bust"
+                  stop
+                 endif
+                enddo ! ibasis=1..XLIST_ncomp-1
+                U_DOT_U=zero
+                do dir=1,SDIM
+                 U_DOT_U=U_DOT_U+U1(dir)**2
+                enddo 
+                U_DOT_U=sqrt(U_DOT_U)
+                if (U_DOT_U.gt.1.0D-10) then
+                 XLIST_ncomp=XLIST_ncomp+1
+                 do dir=1,SDIM
+                  XLIST(XLIST_ncomp,dir)=local_XPOS(dir)
+                  VLIST(XLIST_ncomp-1,dir)=U1(dir)/U_DOT_U
+                 enddo
+                else if ((U_DOT_U.ge.zero).and.(U_DOT_U.le.1.0D-10)) then
+                 ! do nothing
                 else
-                 print *,"dir invalid"
+                 print *,"U_DOT_U invalid"
                  stop
                 endif
-
-                WT=WT+(xfluid-xghost)**2
-               enddo ! dir=1..sdim
-
-               if (WT.gt.zero) then
+              
+               else if (XLIST_ncomp.eq.SDIM+1) then
                 ! do nothing
                else
-                print *,"WT invalid"
+                print *,"XLIST_ncomp invalid"
                 stop
                endif
-               WT=one/WT
+
+               dist_to_fluid_min=-one
+
+               WT=one
  
                total_weightFLUID=total_weightFLUID+WT
                ZEYU_WT_FLUID(D_DECL(i2,j2,k2))=WT
@@ -16130,9 +16186,9 @@ stop
                do im=1,nmat
                 LS_virtual_newSOLID(im)=LS_virtual_newSOLID(im)+ &
                      WT*LS_virtual(im)
+                ZEYU_LS(D_DECL(i2,j2,k2),im)=LS_virtual(im)
                enddo
-
-               ! do nothing
+               total_weightSOLID=total_weightSOLID+WT
               else
                print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
                stop 

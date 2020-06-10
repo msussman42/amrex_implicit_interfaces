@@ -6581,7 +6581,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
    num_materials_vel*(AMREX_SPACEDIM+1),time); 
  MultiFab* mofdata=getState(1,scomp_mofvars,nmat*ngeom_raw,time);
  MultiFab* dendata=getStateDen(1,time);
- MultiFab* lsdata=getStateDist(3,time,18);
+ MultiFab* lsdata=getStateDist(ngrow_distance,time,18);
 
  // nparts x (velocity + LS + temperature + flag)
  int nparts=im_solid_map.size();
@@ -6701,7 +6701,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
      &nparts_def,
      im_solid_map_ptr,
      &renormalize_only, 
-     &solidheat_flag);
+     &solidheat_flag,
+     &ngrow_distance);
 
  }  // mfi
 } // omp

@@ -254,7 +254,8 @@ namespace amrex{
        int* nparts_def,
        int* im_solid_map,
        int* renormalize_only,
-       int* solidheat_flag);
+       int* solidheat_flag,
+       int* ngrow_distance);
 
 
      void FORT_PURGEFLOTSAM(
