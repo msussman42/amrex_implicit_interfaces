@@ -15418,7 +15418,8 @@ stop
       REAL_T LS_predict(nmat)
       REAL_T LS_virtual(nmat)
       REAL_T LS_virtual_new(nmat)
-      REAL_T LS_virtual_max
+      REAL_T LS_virtual_newSOLID(nmat)
+      REAL_T LS_virtual_max ! used for insuring tessellation property of LS
       REAL_T dist_to_fluid_min
       REAL_T dist_to_fluid_max
       REAL_T local_dist_solid
@@ -15430,11 +15431,22 @@ stop
       INTEGER_T ibase
       INTEGER_T partid
       INTEGER_T partid_max
-      REAL_T xfluid,xghost
       INTEGER_T tessellate
       INTEGER_T extrap_radius,least_sqr_radius
+      INTEGER_T least_sqrZ
+      REAL_T local_XPOS(SDIM)
       REAL_T XLIST(SDIM+1,SDIM)
+      REAL_T VLIST(SDIM,SDIM)
       INTEGER_T XLIST_ncomp
+      INTEGER_T nij
+      INTEGER_T nk
+      REAL_T, allocatable :: ZEYU_XPOS(:,:,:,:)
+      REAL_T, allocatable :: ZEYU_LS(:,:,:,:)
+      REAL_T, allocatable :: ZEYU_WT_FLUID(:,:,:)
+      INTEGER_T local_is_fluid(nmat)
+      REAL_T U1(SDIM)
+      INTEGER_T ibasis
+      REAL_T U_DOT_V,V_DOT_V,U_DOT_U,alpha
 
       tessellate=0
 
@@ -15522,6 +15534,17 @@ stop
       nmat_lag=0
 
       do im=1,nmat
+       if (is_rigid(nmat,im).eq.0) then
+        local_is_fluid(im)=1
+       else if (is_rigid(nmat,im).eq.1) then
+        local_is_fluid(im)=0
+       else
+        print *,"is_rigid(nmat,im) invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
+
+      do im=1,nmat
 
        if (num_state_material.ne. &
            num_state_base+num_species_var) then
@@ -15580,12 +15603,35 @@ stop
 
       extrap_radius=1
       least_sqr_radius=3
+      nij=2*least_sqr_radius+1
+      nk=1
+      least_sqrZ=0
+      if (SDIM.eq.2) then
+       ! do nothing
+      else if (SDIM.eq.3) then
+       nk=nij
+       least_sqrZ=3
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
       if (extrap_radius+least_sqr_radius.le.ngrow_distance) then
        ! do nothing
       else
        print *,"extrap_radius or least_sqr_radius invalid"
        stop
       endif
+
+      allocate(ZEYU_XPOS(-least_sqr_radius:least_sqr_radius, &
+              -least_sqr_radius:least_sqr_radius, &
+              -least_sqrZ:least_sqrZ,SDIM))
+      allocate(ZEYU_LS(-least_sqr_radius:least_sqr_radius, &
+              -least_sqr_radius:least_sqr_radius, &
+              -least_sqrZ:least_sqrZ,nmat))
+      allocate(ZEYU_WT_FLUID(-least_sqr_radius:least_sqr_radius, &
+              -least_sqr_radius:least_sqr_radius, &
+              -least_sqrZ:least_sqrZ))
 
       istenlo(3)=0
       istenhi(3)=0
@@ -16094,9 +16140,8 @@ stop
                local_XPOS(dir)=xsten(k1+k2,dir)
               endif
               do dir=1,SDIM
-               ZEYU_XPOS(D_DECL(i2,j2,k2),dir)=local_XPOS(dir)
+               ZEYU_XPOS(i2,j2,k2,dir)=local_XPOS(dir)
               enddo
-
 
               do im=1,nmat
                LS_virtual(im)=LS(D_DECL(i+i1+i2,j+j1+j2,k+k1+k2),im)
@@ -16166,14 +16211,14 @@ stop
                WT=one
  
                total_weightFLUID=total_weightFLUID+WT
-               ZEYU_WT_FLUID(D_DECL(i2,j2,k2))=WT
+               ZEYU_WT_FLUID(i2,j2,k2)=WT
                do im=1,nmat
                 LS_virtual_new(im)=LS_virtual_new(im)+WT*LS_virtual(im)
-                ZEYU_LS(D_DECL(i2,j2,k2),im)=LS_virtual(im)
+                ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
                enddo
               else if (is_rigid(nmat,im_primary_sub_stencil).eq.1) then
                WT=0.01*(dxmaxLS**2)
-               ZEYU_WT_FLUID(D_DECL(i2,j2,k2))=zero
+               ZEYU_WT_FLUID(i2,j2,k2)=zero
                local_dist_solid=abs(LS_virtual(im_primary_sub_stencil))
                WT=WT+(local_dist_solid)**2
                WT=one/WT
@@ -16186,7 +16231,7 @@ stop
                do im=1,nmat
                 LS_virtual_newSOLID(im)=LS_virtual_newSOLID(im)+ &
                      WT*LS_virtual(im)
-                ZEYU_LS(D_DECL(i2,j2,k2),im)=LS_virtual(im)
+                ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
                enddo
                total_weightSOLID=total_weightSOLID+WT
               else
@@ -16199,18 +16244,50 @@ stop
              enddo  !i2,j2,k2=-least_sqr_radius..least_sqr_radius
           
               ! fluid cells exist in Least squares stencil
-             if (near_fluid.gt.zero) then
-              do im=1,nmat
-               LS_virtual_new(im)=LS_virtual_new(im)/near_fluid
-              enddo
-
-              ! no fluid cells exist in Least squares stencil
-             else if (near_fluid.eq.zero) then
-              do im=1,nmat
-               LS_virtual_new(im)=LS_predict(im)
-              enddo
+             if ((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)) then
+              if (total_weightFLUID.gt.zero) then
+               do im=1,nmat
+                LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID
+               enddo
+              else
+               print *,"total_weightFLUID invalid"
+               stop
+              endif
+             else if (XLIST_ncomp.eq.0) then
+              if (total_weightFLUID.eq.zero) then
+               if (total_weightSOLID.gt.zero) then
+                if (dist_to_fluid_min.ge.zero) then
+                 if (dist_to_fluid_max.gt.dist_to_fluid_min) then
+                  do im=1,nmat
+                   LS_virtual_new(im)=LS_virtual_newSOLID(im)/ &
+                           total_weightSOLID
+                  enddo
+                 else if (dist_to_fluid_max.eq.dist_to_fluid_min) then
+                  do im=1,nmat
+                   LS_virtual_new(im)=LS_predict(im)
+                  enddo
+                 else
+                  print *,"dist_to_fluid_max invalid"
+                  stop
+                 endif
+                else 
+                 print *,"dist_to_fluid_min invalid"
+                 stop
+                endif
+               else
+                print *,"total_weightSOLID invalid"
+                stop
+               endif
+              else
+               print *,"total_weightFLUID invalid"
+               stop
+              endif
+             else if (XLIST_ncomp.eq.SDIM+1) then
+              call level_set_extrapolation(ZEYU_XPOS,ZEYU_LS, &
+               ZEYU_WT_FLUID,local_is_fluid, &
+               LS_virtual_new,nij,nij,nk,nmat,SDIM)
              else
-              print *,"near_fluid invalid  near_fluid=",near_fluid
+              print *,"XLIST_ncomp invalid"
               stop
              endif
             else
@@ -16414,6 +16491,10 @@ stop
       enddo
       enddo
       enddo  ! i,j,k
+
+      deallocate(ZEYU_XPOS)
+      deallocate(ZEYU_LS)
+      deallocate(ZEYU_WT_FLUID)
 
       return
       end subroutine FORT_RENORMALIZE_PRESCRIBE
