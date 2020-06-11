@@ -5952,7 +5952,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
   for (int im=0;im<2*nten;im++) {
    if (latent_heat[im]!=0.0)
     if ((freezing_model[im]==0)||
-        (freezing_model[im]==5))
+        (freezing_model[im]==5)||
+        (freezing_model[im]==6))
      GFM_flag=1;
   }
   if (GFM_flag==1) {
@@ -6280,7 +6281,8 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0) 
      if ((freezing_model[im]==0)||
-         (freezing_model[im]==5))
+         (freezing_model[im]==5)||
+         (freezing_model[im]==6))
       GFM_flag=1;
    }
 

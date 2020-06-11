@@ -650,8 +650,8 @@ Real NavierStokes::perturbation_eps_vel=0.0;
 // latent_heat>0 if boiling or melting
 Vector<Real> NavierStokes::latent_heat;
 Vector<Real> NavierStokes::reaction_rate;
-// 0=sharp interface model (TSAT dirichlet BC)
-//   interpolation assumes T=TSAT at the interface.
+// 0=T_interface=TSAT-epsC K -epsV V
+//  
 // 1=source term model (single equation for T with source term).
 //   interpolation does not assume T=TSAT at the interface.
 // 2=hydrate model 
@@ -664,6 +664,7 @@ Vector<Real> NavierStokes::reaction_rate;
 //   TSAT used to determine if phase change happens.
 //   expansion source, and offsetting sink evenly distributed.
 // 5=evaporation/condensation
+// 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
 Vector<int> NavierStokes::freezing_model;
 Vector<int> NavierStokes::mass_fraction_id;
 //link diffused material to non-diff. (array 1..num_species_var)
@@ -715,6 +716,7 @@ Vector<Real> NavierStokes::density_floor;  // def=0.0
 Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
 Vector<Real> NavierStokes::density_floor_expansion;  // def=denconst
 Vector<Real> NavierStokes::density_ceiling_expansion;  // def=denconst
+Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Real NavierStokes::denconst_max=0.0;
 Real NavierStokes::denconst_min=0.0;
@@ -751,6 +753,7 @@ Vector<Real> NavierStokes::viscconst_interface;
 Vector<Real> NavierStokes::heatviscconst_interface;
 Vector<Real> NavierStokes::speciesconst;  // unused currently
 Vector<Real> NavierStokes::speciesviscconst_interface;
+Vector<Real> NavierStokes::species_molar_mass; // def=1
 // 0=diffuse in solid 1=dirichlet 2=neumann
 int NavierStokes::solidheat_flag=0; 
 int NavierStokes::diffusionface_flag=1; // 0=use LS  1=use VOF
@@ -2539,16 +2542,24 @@ NavierStokes::read_params ()
     speciesconst.resize((num_species_var+1)*nmat);
     speciesviscconst.resize((num_species_var+1)*nmat);
     speciesviscconst_interface.resize((num_species_var+1)*nten);
+    species_molar_mass.resize(num_species_var+1);
+
+    for (int j=0;j<=num_species_var;j++)
+     species_molar_mass[j]=1.0;
+
     for (int i=0;i<nten;i++) {
      viscconst_interface[i]=0.0;
      for (int j=0;j<=num_species_var;j++)
       speciesviscconst_interface[j*nten+i]=0.0;
     }
     pp.queryarr("viscconst_interface",viscconst_interface,0,nten);
-    if (num_species_var>0)
+    if (num_species_var>0) {
      pp.queryarr("speciesviscconst_interface",
       speciesviscconst_interface,0,num_species_var*nten);
 
+     pp.queryarr("species_molar_mass",
+      species_molar_mass,0,num_species_var);
+    }
      // in: read_params
 
     species_evaporation_density.resize(num_species_var+1);
@@ -2680,6 +2691,7 @@ NavierStokes::read_params ()
     pp.queryarr("density_floor",density_floor,0,nmat);
     density_ceiling.resize(nmat);
     density_ceiling_expansion.resize(nmat);
+    molar_mass.resize(nmat);
     for (int i=0;i<nmat;i++)
      density_ceiling[i]=1.0e+20;
     pp.queryarr("density_ceiling",density_ceiling,0,nmat);
@@ -2709,10 +2721,12 @@ NavierStokes::read_params ()
      }
      density_ceiling_expansion[i]=denconst[i];
      density_floor_expansion[i]=denconst[i];
+     molar_mass[i]=1.0;
     } // i=0..nmat-1
 
     pp.queryarr("density_floor_expansion",density_floor_expansion,0,nmat);
     pp.queryarr("density_ceiling_expansion",density_ceiling_expansion,0,nmat);
+    pp.queryarr("molar_mass",molar_mass,0,nmat);
 
     for (int i=0;i<nmat;i++) {
      if (density_ceiling_expansion[i]<=0.0) {
@@ -2980,9 +2994,9 @@ NavierStokes::read_params ()
      amrex::Error("num_state_base invalid 10");
 
     for (int i=0;i<nten;i++) {
-     if ((freezing_model[i]<0)||(freezing_model[i]>5))
+     if ((freezing_model[i]<0)||(freezing_model[i]>6))
       amrex::Error("freezing_model invalid in read_params (i)");
-     if ((freezing_model[i+nten]<0)||(freezing_model[i+nten]>5))
+     if ((freezing_model[i+nten]<0)||(freezing_model[i+nten]>6))
       amrex::Error("freezing_model invalid in read_params (i+nten)");
      if ((distribute_from_target[i]<0)||(distribute_from_target[i]>1))
       amrex::Error("distribute_from_target invalid in read_params (i)");
@@ -3481,7 +3495,8 @@ NavierStokes::read_params ()
      if (latent_heat[i]!=0.0) {
       is_phasechange=1;
       if ((freezing_model[i]==0)||   // Stefan model for phase change
-          (freezing_model[i]==5)) {  // Stefan model for evap/cond.
+          (freezing_model[i]==5)||   // Stefan model for evap/cond.
+          (freezing_model[i]==6)) {  // Palmore, Desjardins
        if (temperatureface_flag!=0)
         amrex::Error("must have temperatureface_flag==0");
       } else if ((freezing_model[i]==1)||
@@ -3522,7 +3537,8 @@ NavierStokes::read_params ()
        int indexEXP=iten+ireverse*nten-1;
 
        Real LL=latent_heat[indexEXP];
-       if (freezing_model[indexEXP]==5) {
+       if ((freezing_model[indexEXP]==5)||
+           (freezing_model[indexEXP]==6)) {
         if (LL!=0.0) {
          int massfrac_id=mass_fraction_id[indexEXP];
          if ((massfrac_id<1)||(massfrac_id>num_species_var))
@@ -3534,7 +3550,7 @@ NavierStokes::read_params ()
          else
           amrex::Error("LL invalid");
         } // LL!=0.0
-       } // if (freezing_model[indexEXP]==5)
+       } // if (freezing_model[indexEXP]==5 or 6)
       } // ireverse
      } //im_opp
     } // im
@@ -3668,6 +3684,9 @@ NavierStokes::read_params ()
       std::cout << " j= " << j << 
          " species_evaporation_density "  <<
          species_evaporation_density[j] << '\n';
+      std::cout << " j= " << j << 
+         " species_molar_mass "  <<
+         species_molar_mass[j] << '\n';
      }  
 
      std::cout << "CTML_FSI_numsolids " << CTML_FSI_numsolids << '\n';
@@ -3748,6 +3767,8 @@ NavierStokes::read_params ()
         density_floor_expansion[i] << '\n';
       std::cout << "density_ceiling_expansion i="<<i<<" "<< 
         density_ceiling_expansion[i] << '\n';
+      std::cout << "molar_mass i="<<i<<" "<< 
+        molar_mass[i] << '\n';
       std::cout << "tempconst i=" << i << " " << tempconst[i] << '\n';
       std::cout << "initial_temperature i=" << i << " " << 
         initial_temperature[i] << '\n';
@@ -11770,7 +11791,7 @@ NavierStokes::nucleate_bubbles(Vector<blobclass> blobdata,
 
 }  // subroutine nucleate_bubbles
 
-// 1. called if freezing_model==0,5.
+// 1. called if freezing_model==0,5,6.
 // 2. multiphase_project->allocate_project_variables->stefan_solver_init
 //    (adjust_temperature==1)
 //    coeffMF==localMF[OUTER_ITER_PRESSURE_MF]
@@ -11858,7 +11879,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
   for (int im=0;im<2*nten;im++) {
    if (latent_heat[im]!=0.0)
     if ((freezing_model[im]==0)||
-        (freezing_model[im]==5))
+        (freezing_model[im]==5)||
+        (freezing_model[im]==6))
      GFM_flag=1;
   }
  } else if (is_phasechange==0) {

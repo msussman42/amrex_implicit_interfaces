@@ -1911,6 +1911,7 @@ protected:
     static Vector<Real> density_ceiling;  // def=1.0e+20
     static Vector<Real> density_floor_expansion;  // def=denconst
     static Vector<Real> density_ceiling_expansion;  // def=denconst
+    static Vector<Real> molar_mass;  // def=1
     static Vector<Real> denconst;
     static Real denconst_max;
     static Real denconst_min;
@@ -1950,6 +1951,8 @@ protected:
     static Vector<Real> speciesviscconst;
       // num_species * nten
     static Vector<Real> speciesviscconst_interface;
+      // num_species
+    static Vector<Real> species_molar_mass;  // def=1
      // default is solidheat_flag=0
     static int solidheat_flag;  // 0=diffuse in solid 1=dirichlet 2=neumann
     static int diffusionface_flag; // 0=use LS 1=use VOF (def=1)
