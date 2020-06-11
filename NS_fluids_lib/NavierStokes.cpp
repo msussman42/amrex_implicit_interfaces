@@ -602,7 +602,7 @@ Vector<Real> NavierStokes::microlayer_size;
 Vector<Real> NavierStokes::macrolayer_size;
 Vector<Real> NavierStokes::max_contact_line_size;
 
-// if freezing_model==0:
+// if freezing_model==0: (ambient air is 100 percent saturated)
 //
 // given im1,im2 pair:
 // if microlayer_substrate(im1)>0 and
@@ -650,7 +650,8 @@ Real NavierStokes::perturbation_eps_vel=0.0;
 // latent_heat>0 if boiling or melting
 Vector<Real> NavierStokes::latent_heat;
 Vector<Real> NavierStokes::reaction_rate;
-// 0=T_interface=TSAT-epsC K -epsV V
+// 0=T_interface=TSAT-epsC K -epsV V ambient air is 100 percent
+//   saturated.
 //  
 // 1=source term model (single equation for T with source term).
 //   interpolation does not assume T=TSAT at the interface.
@@ -3494,9 +3495,9 @@ NavierStokes::read_params ()
      }
      if (latent_heat[i]!=0.0) {
       is_phasechange=1;
-      if ((freezing_model[i]==0)||   // Stefan model for phase change
-          (freezing_model[i]==5)||   // Stefan model for evap/cond.
-          (freezing_model[i]==6)) {  // Palmore, Desjardins
+      if ((freezing_model[i]==0)|| // Stefan model for phase change (fully sat)
+          (freezing_model[i]==5)|| // Stefan model for evap/cond.
+          (freezing_model[i]==6)) {// Palmore, Desjardins
        if (temperatureface_flag!=0)
         amrex::Error("must have temperatureface_flag==0");
       } else if ((freezing_model[i]==1)||
@@ -3537,8 +3538,9 @@ NavierStokes::read_params ()
        int indexEXP=iten+ireverse*nten-1;
 
        Real LL=latent_heat[indexEXP];
-       if ((freezing_model[indexEXP]==5)||
-           (freezing_model[indexEXP]==6)) {
+       if ((freezing_model[indexEXP]==4)||  // Tannasawa
+           (freezing_model[indexEXP]==5)||  
+           (freezing_model[indexEXP]==6)) { // Palmore and Desjardins
         if (LL!=0.0) {
          int massfrac_id=mass_fraction_id[indexEXP];
          if ((massfrac_id<1)||(massfrac_id>num_species_var))
@@ -3550,7 +3552,7 @@ NavierStokes::read_params ()
          else
           amrex::Error("LL invalid");
         } // LL!=0.0
-       } // if (freezing_model[indexEXP]==5 or 6)
+       } // if (freezing_model[indexEXP]==4,5 or 6)
       } // ireverse
      } //im_opp
     } // im
@@ -10159,6 +10161,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     distribute_from_target.dataPtr(),
     mass_fraction_id.dataPtr(),
     species_evaporation_density.dataPtr(),
+    molar_mass.dataPtr(),
+    species_molar_mass.dataPtr(),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     xlo,dx,
@@ -11878,9 +11882,9 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
  if (is_phasechange==1) {
   for (int im=0;im<2*nten;im++) {
    if (latent_heat[im]!=0.0)
-    if ((freezing_model[im]==0)||
+    if ((freezing_model[im]==0)|| //fully saturated
         (freezing_model[im]==5)||
-        (freezing_model[im]==6))
+        (freezing_model[im]==6))  //Palmore and Desjardins
      GFM_flag=1;
   }
  } else if (is_phasechange==0) {

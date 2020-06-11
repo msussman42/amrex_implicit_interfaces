@@ -22393,6 +22393,8 @@ end function delta
       REAL_T, intent(inout) :: cellfab(DIMV(cellfab),ncomp_cell)
       REAL_T, intent(out) :: newcell(DIMV(newcell),nsolveMM)
       REAL_T, intent(in) :: state(DIMV(state),nstate_main)
+
+      REAL_T DATA_FLOOR
  
       INTEGER_T nten_test 
 
@@ -22484,6 +22486,8 @@ end function delta
       REAL_T LSCRIT_solid_plus
       REAL_T LSCRIT_solid
       REAL_T LSTEST
+
+      DATA_FLOOR=zero
 
       nhalf=3
       nmax=POLYGON_LIST_MAX ! in: COMBINEVEL
@@ -23304,6 +23308,7 @@ end function delta
 
              ! in: FORT_COMBINEVEL
             call center_centroid_interchange( &
+             DATA_FLOOR, &
              nsolve, &
              combine_flag,  & ! 0=>centroid -> center   1=>center->centroid
              tsat_flag, &

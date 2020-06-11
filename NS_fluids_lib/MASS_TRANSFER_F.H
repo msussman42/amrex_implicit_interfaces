@@ -116,6 +116,8 @@ extern "C"
     int* distribute_from_target,
     int* mass_fraction_id,
     Real* species_evaporation_density,
+    Real* molar_mass,
+    Real* species_molar_mass,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,

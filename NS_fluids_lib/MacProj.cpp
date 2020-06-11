@@ -367,9 +367,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    int GFM_flag=0;
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0)
-     if ((freezing_model[im]==0)||
+     if ((freezing_model[im]==0)|| // fully saturated
          (freezing_model[im]==5)||
-         (freezing_model[im]==6))
+         (freezing_model[im]==6))  // Palmore and Desjardins
       GFM_flag=1;
    }
    if (GFM_flag==1)
