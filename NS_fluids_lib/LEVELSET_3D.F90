@@ -16244,7 +16244,8 @@ stop
              enddo  !i2,j2,k2=-least_sqr_radius..least_sqr_radius
           
               ! fluid cells exist in Least squares stencil
-             if ((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)) then
+             if (((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)).or. &
+                 ((XLIST_ncomp.eq.SDIM+1).and.(1.eq.0))) then
               if (total_weightFLUID.gt.zero) then
                do im=1,nmat
                 LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID

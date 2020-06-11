@@ -6616,8 +6616,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
   amrex::Error("mofdata incorrect ncomp");
  if (lsdata->nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("lsdata incorrect ncomp");
- if (lsdata->nGrow()!=3)
-  amrex::Error("lsdata->nGrow()!=3");
+ if (lsdata->nGrow()!=ngrow_distance)
+  amrex::Error("lsdata->nGrow()!=ngrow_distance");
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
 

@@ -167,6 +167,7 @@
     double precision, intent(out) :: ls_extrap(nmat)
 
     integer i, j, k, m, n, im
+    integer dir
     double precision A(ni*nj*nk,dim+1), b(ni*nj*nk), pos0(dim), var(dim+1)
     !ls_extrap = a . (x - x0) + b
     !find a(3) and b while minimize SUM(w_ij*(phi_ij-phi_fluid_ij)^2)
@@ -216,11 +217,10 @@
      stop
     endif
 
-    pos0(1) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 1)
-    pos0(2) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 2)
-    if (dim .eq. 3) then
-       pos0(dim) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 3)
-    endif
+    do dir=1,dim
+     pos0(dir) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, dir)
+    enddo
+
     m = ni * nj * nk
     n = dim + 1
     do i = 1, m
@@ -236,6 +236,7 @@
        ls_extrap(im) = 0.d0
     enddo
 
+     ! dp/dx * (x-x0) + dp/dy * (y-y0) + dp/dz * (z-z0) + p0 = p
     do im = 1, nmat
        if (is_fluid(im) .eq. 1) then
           do i = 1, ni
@@ -245,16 +246,12 @@
                       print *, "Error! Weight factor less than zero!"
                       stop
                    endif
-                   A((i-1)*nj*nk+(j-1)*nk+k,1) = weights(i,j,k) &
-                                         * (pos_xyz(i,j,k,1)-pos0(1))
-                   A((i-1)*nj*nk+(j-1)*nk+k,2) = weights(i,j,k) &
-                                         * (pos_xyz(i,j,k,2)-pos0(2))
-                   if (dim .eq. 3) then
-                      A((i-1)*nj*nk+(j-1)*nk+k,dim) = weights(i,j,k) &
-                                          * (pos_xyz(i,j,k,dim)-pos0(dim))
-                   endif
-                   A((i-1)*nj*nk+(j-1)*nk+k, dim+1) = 1.d0
-                   b((i-1)*nj*nk+(j-1)*nk+k) = sqrt(weights(i,j,k)) &
+                   do dir=1,dim
+                    A((i-1)*nj*nk+(j-1)*nk+k,dir) = weights(i,j,k) &
+                                   * (pos_xyz(i,j,k,dir)-pos0(dir))
+                   enddo
+                   A((i-1)*nj*nk+(j-1)*nk+k, dim+1) = weights(i,j,k)
+                   b((i-1)*nj*nk+(j-1)*nk+k) = weights(i,j,k) &
                                              * ls(i,j,k,im)
                 enddo
              enddo       

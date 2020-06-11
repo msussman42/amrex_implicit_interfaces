@@ -717,6 +717,26 @@ void NavierStokes::nonlinear_advection() {
   ns_level.resize_FSI_MF();
  }
 
+
+
+ if (1==0) {
+    // S_new is level 0 data
+  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  int caller_id=1;
+   // data file name "BEFOREPRESCRIBE<stuff>.plt"
+   // xvel,yvel,zvel,pressure,(density, temperature) x nmat,
+   // (VFRAC,centroid) x nmat, error indicator
+  writeSanityCheckData(
+   "BEFOREPRESCRIBE",
+   "in: NavierStokes::nonlinear_advection, State_Type ", 
+   caller_id,
+   S_new.nComp(),
+   -1, // data_mf==-1
+   State_Type,
+   -1); // data_dir==-1
+ }
+
+
   // in: nonlinear_advection
   // level set function, volume fractions, and centroids are
   // made "consistent" amongst the levels.
@@ -726,6 +746,24 @@ void NavierStokes::nonlinear_advection() {
 
  avgDownALL(State_Type,0,
   num_materials_vel*(AMREX_SPACEDIM+1),1);
+
+
+ if (1==0) {
+    // S_new is level 0 data
+  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  int caller_id=1;
+   // data file name "AFTERPRESCRIBE<stuff>.plt"
+   // xvel,yvel,zvel,pressure,(density, temperature) x nmat,
+   // (VFRAC,centroid) x nmat, error indicator
+  writeSanityCheckData(
+   "AFTERPRESCRIBE",
+   "in: NavierStokes::nonlinear_advection, State_Type ", 
+   caller_id,
+   S_new.nComp(),
+   -1, // data_mf==-1
+   State_Type,
+   -1); // data_dir==-1
+ }
 
 }  // subroutine nonlinear_advection
 
