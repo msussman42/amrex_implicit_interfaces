@@ -664,6 +664,8 @@ Vector<Real> NavierStokes::reaction_rate;
 //   Tanasawa model is used for evaporation and condensation.
 //   TSAT used to determine if phase change happens.
 //   expansion source, and offsetting sink evenly distributed.
+//   For Tannasawa model implemented here, it is assumed that Y=1
+//   at the interface.
 // 5=evaporation/condensation
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
 Vector<int> NavierStokes::freezing_model;
@@ -3497,7 +3499,7 @@ NavierStokes::read_params ()
      if (latent_heat[i]!=0.0) {
       is_phasechange=1;
       if ((freezing_model[i]==0)|| // Stefan model for phase change (fully sat)
-          (freezing_model[i]==5)|| // Stefan model for evap/cond.
+          (freezing_model[i]==5)|| // Stefan model for evap/cond.(cavitation)
           (freezing_model[i]==6)) {// Palmore, Desjardins
        if (temperatureface_flag!=0)
         amrex::Error("must have temperatureface_flag==0");
@@ -3540,7 +3542,7 @@ NavierStokes::read_params ()
 
        Real LL=latent_heat[indexEXP];
        if ((freezing_model[indexEXP]==4)||  // Tannasawa
-           (freezing_model[indexEXP]==5)||  
+           (freezing_model[indexEXP]==5)||  // cavitation
            (freezing_model[indexEXP]==6)) { // Palmore and Desjardins
         if (LL!=0.0) {
          int massfrac_id=mass_fraction_id[indexEXP];
@@ -11908,7 +11910,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
   for (int im=0;im<2*nten;im++) {
    if (latent_heat[im]!=0.0)
     if ((freezing_model[im]==0)|| //fully saturated
-        (freezing_model[im]==5)||
+        (freezing_model[im]==5)|| //cavitation
         (freezing_model[im]==6))  //Palmore and Desjardins
      GFM_flag=1;
   }
@@ -13349,10 +13351,13 @@ NavierStokes::split_scalar_advection() {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: GODUNOV_3D.F90
-    // note for evaporation: density_air = total density of air and
+    // note for evaporation: density_air = total density of ambient gas and
     //   vapor mixture.
-    // note: rho Y_vapor = F_vapor Y_vapor
-    //     mass_vapor = Volume rho Y_vapor = Volume F_vapor Y_vapor
+    // note: Y_vapor = mass_fraction=mass_vapor/mass_total
+    // mass_vapor=V_vapor * den_vapor=F_vapor * V_total * den_vapor
+    // mass_total=V_total * den_total
+    // so, Y_vapor=F_vapor * V_total * den_vapor/(V_total * den_total)=
+    //     F_vapor * den_vapor/den_total 
   FORT_BUILD_CONSERVE( 
    &iden_base,
    override_density.dataPtr(),
