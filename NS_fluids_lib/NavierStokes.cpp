@@ -21,7 +21,8 @@
 /* 
   Narrow Band WENO LEVEL SET METHOD:
   1. t=0 distance function is given.
-  2. traverse grid and add (i,j,k) indices for extended narrow band points and regular
+  2. traverse grid and add (i,j,k) indices for extended 
+     narrow band points and regular
      narrow band points.
      For this step, 
      a) two Particle Container objects are created: extended_narrow_band_pc and

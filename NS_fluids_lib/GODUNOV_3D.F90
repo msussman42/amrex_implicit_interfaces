@@ -14521,7 +14521,7 @@ end function delta
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_ghost
       INTEGER_T, intent(in) :: nden
-      INTEGER_T, intent(in) :: im_solid_map(nparts)
+      INTEGER_T, intent(in) :: im_solid_map(nparts_ghost)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
@@ -14638,8 +14638,18 @@ end function delta
        print *,"nden invalid"
        stop
       endif
-      if ((nparts.lt.1).or.(nparts.gt.nmat)) then 
+      if ((nparts.ge.0).and.(nparts.le.nmat)) then 
+       ! do nothing
+      else
        print *,"nparts invalid FORT_WALLFUNCTION"
+       stop
+      endif
+      if ((nparts_ghost.ge.1).and. &
+          (nparts_ghost.le.nmat).and. &
+          (nparts_ghost.ge.nparts)) then 
+       ! do nothing
+      else
+       print *,"nparts_ghost invalid FORT_WALLFUNCTION"
        stop
       endif
       if (SDIM.eq.2) then

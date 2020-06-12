@@ -16,6 +16,7 @@
 #include <PhysBCFunctSUSSMAN.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_RealBox.H>
+#include <AMReX_Particles.H>
 
 #include <StateDescriptor.H>
 
@@ -206,6 +207,15 @@ private:
     // Pointer to new-time data.
     // MAX_NUM_SLAB entries.
     Vector< MultiFab* > new_data;
+     // for each material, there are two particle containers: (1) interface
+     // particles, (2) interior particles.
+     // each particle has: x,y,z; original x,y,x; time introduced; gradient
+     // information (if interface particle)
+     // last two parameters are for structure of arrays.
+     // NStructReal=number of extra Real variables 
+     // (not including particle position)
+    Vector< ParticleContainer< 2*AMREX_SPACEDIM+1,0,0,0 >* > new_dataPC_INT;
+    Vector< ParticleContainer< AMREX_SPACEDIM+1,0,0,0 >* > new_dataPC_BULK;
     //
     // Boundary conditions for the grids at this level.
     //

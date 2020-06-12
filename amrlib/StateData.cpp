@@ -21,6 +21,19 @@ namespace amrex {
 
 const Real INVALID_TIME = -1.0e200;
 
+// for each AmrLevel, there is a class of type "StateData" and within StateData
+// there is an array of MultiFabs called "new_data
+// 1. class Amr
+// 2. Vector<std::unique_ptr<AmrLevel> > amr_level; 
+// 3. Vector<StateData> state;  
+//    cell centered data, MAC data, stress tensor data 
+// 4. Vector< MultiFab* > new_data; 
+//    for low order in time: new_data[0]  (previous data)
+//                           new_data[1]  (new data)
+//    spectral deferred correction (a SLAB) in time:
+//                           new_data[0] ....
+//                           new_data[order+1]
+//                           new_dataPC[0] ... new_dataPC[order+1]
 StateData::StateData () 
 {
    StateData_MAX_NUM_SLAB=33;
