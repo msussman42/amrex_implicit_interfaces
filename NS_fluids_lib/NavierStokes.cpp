@@ -669,6 +669,7 @@ Vector<Real> NavierStokes::reaction_rate;
 Vector<int> NavierStokes::freezing_model;
 Vector<int> NavierStokes::mass_fraction_id;
 //link diffused material to non-diff. (array 1..num_species_var)
+//spec_material_id is both input AND derived.
 Vector<int> NavierStokes::spec_material_id; 
 // 0 - distribute to the destination material (default)
 //     V=mdot/rho_src
@@ -737,8 +738,8 @@ Real NavierStokes::angular_velocity=0.0;
 Vector<Real> NavierStokes::DrhoDT;  // def=0.0
 Vector<Real> NavierStokes::DrhoDz;  // def=0.0
 
- // 1=>rho=rho(T,z)
- // 2=>P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
+ // 1=>rho=rho(T,Y,z)
+ // 2=>P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
 Vector<int> NavierStokes::override_density; // def=0
 Vector<Real> NavierStokes::prerecalesce_viscconst;
 Vector<Real> NavierStokes::viscconst;
@@ -3556,6 +3557,27 @@ NavierStokes::read_params ()
       } // ireverse
      } //im_opp
     } // im
+
+    for (int i=0;i<num_species_var;i++) {
+     int im=spec_material_id[i];
+     if (im==0) {
+      // check nothing
+     } else if ((im>=1)&&(im<=nmat)) {
+      if (material_type[im-1]==0) {
+       if ((override_density[im-1]==1)||
+           (override_density[im-1]==2)) {
+        // do nothing
+       } else
+        amrex::Error("override_density invalid");
+      } else if (material_type[im-1]==999) {
+       // do nothing
+      } else if (material_type[im-1]>=1) {
+       // do nothing
+      } else
+       amrex::Error("material_type[im-1] invalid");
+     } else
+      amrex::Error("im invalid");
+    } // i=0..num_species_var-1
 
     truncate_volume_fractions.resize(nmat);
     for (int i=0;i<nmat;i++) {
@@ -9552,12 +9574,12 @@ NavierStokes::correct_density() {
    amrex::Error("DrhoDT mismatch"); 
   if ((DrhoDz[im]!=0.0)&&(override_density[im]==0))
    amrex::Error("DrhoDz mismatch"); 
-  if (override_density[im]==1) { // rho=rho(T,z)
+  if (override_density[im]==1) { // rho=rho(T,Y,z)
    non_conservative_density=1;
   } else if (override_density[im]==0) {
    // do nothing
 
-   // P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
+   // P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
   } else if (override_density[im]==2) { 
    // do nothing
   } else
@@ -9622,7 +9644,7 @@ NavierStokes::correct_density() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // if override_density[im]==1, then rho_im=rho(T,z) 
+     // if override_density[im]==1, then rho_im=rho(T,Y,z) 
     FORT_DENCOR(
       presbc.dataPtr(),
       tilelo,tilehi,
