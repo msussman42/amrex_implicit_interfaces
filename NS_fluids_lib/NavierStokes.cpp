@@ -9644,8 +9644,11 @@ NavierStokes::correct_density() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     // in: GODUNOV_3D.F90
      // if override_density[im]==1, then rho_im=rho(T,Y,z) 
     FORT_DENCOR(
+      spec_material_id.dataPtr(),
+      species_evaporation_density.dataPtr(),
       presbc.dataPtr(),
       tilelo,tilehi,
       fablo,fabhi,&bfact,

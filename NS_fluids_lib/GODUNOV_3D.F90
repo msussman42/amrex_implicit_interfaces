@@ -12079,6 +12079,8 @@ stop
        ! masknbr=1 fine-fine border cells and interior cells.
        ! masknbr=0 coarse-fine cells and cells outside domain.
       subroutine FORT_DENCOR( &
+       spec_material_id, &
+       species_evaporation_density, &
        presbc_arr, &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
@@ -12098,31 +12100,32 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: spec_material_id(num_species_var+1)
+      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
 
-      INTEGER_T level,finest_level
-      INTEGER_T nmat
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-
-      REAL_T dt
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(dennew)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(masknbr)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(dennew)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
      
-      REAL_T  mask(DIMV(mask)) 
-      REAL_T  masknbr(DIMV(masknbr)) 
-      REAL_T  vol(DIMV(vol)) 
-      REAL_T  dennew(DIMV(dennew),num_state_material*nmat)
+      REAL_T, intent(in) ::  mask(DIMV(mask)) 
+      REAL_T, intent(in) ::  masknbr(DIMV(masknbr)) 
+      REAL_T, intent(in) ::  vol(DIMV(vol)) 
+      REAL_T, intent(inout) :: dennew(DIMV(dennew),num_state_material*nmat)
 
-      INTEGER_T presbc_arr(SDIM,2)
+      INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
 
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T override_density(nmat)
-      REAL_T DrhoDT(nmat)
-      REAL_T gravity_normalized
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: override_density(nmat)
+      REAL_T, intent(in) :: DrhoDT(nmat)
+      REAL_T, intent(in) :: gravity_normalized
      
       INTEGER_T i,j,k
       INTEGER_T kstencil_lo,kstencil_hi

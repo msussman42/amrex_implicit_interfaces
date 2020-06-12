@@ -1111,6 +1111,8 @@ extern "C"
      const int* domlo,const int* domhi);
 
    void FORT_DENCOR(
+     int* spec_material_id,
+     Real* species_evaporation_density,
      int* presbc,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
