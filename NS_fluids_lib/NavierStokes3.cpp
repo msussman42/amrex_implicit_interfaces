@@ -10759,8 +10759,9 @@ void NavierStokes::multiphase_project(int project_option) {
      // non-conservative correction to density.
      // if override_density(im)==1,
      // rho_im=rho(z)+drho/dT * (T_im - T0_im)
+     // rho_im=f(rho_im,Y)
      // if override_density(im)=0 or 2, nothing changes:
-     //   P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
+     //   P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
     ns_level.correct_density();  
 
       // velocity and pressure
@@ -11136,9 +11137,9 @@ void NavierStokes::veldiffuseALL() {
  for (int im=0;im<nmat;im++) {
   if (override_density[im]==0) { // Drho/DT=-divu rho
    // check nothing
-  } else if (override_density[im]==1) { // rho=rho(T,z)
+  } else if (override_density[im]==1) { // rho=rho(T,Y,z)
    // check nothing
-  } else if (override_density[im]==2) { // P_hydro=P_hydro(rho(T,Z))
+  } else if (override_density[im]==2) { // P_hydro=P_hydro(rho(T,Y,Z))
     // convert_temperature==0 if all thermal diffusivities are zero.
     // P_hydro is expecting a reasonable temperature defined for each
     //  separate material?

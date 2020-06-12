@@ -1668,16 +1668,29 @@ stop
          !        denV * denA/(denV(1-Y)+denA Y)
         dencore(im)=den(D_DECL(i,j,k),dencomp)
           ! sanity check
-        if ((fort_material_type(im).eq.0).and. &
-            ((override_density(im).eq.0).or. &
-             (override_density(im).eq.2))) then
-         if (abs(dencore(im)-fort_denconst(im)).gt.VOFTOL) then
-          print *,"dencore(im) invalid"
-          print *,"im,i,j,k,den ",im,i,j,k,dencore(im)
-          print *,"dencomp=",dencomp
-          print *,"normdir=",normdir
+        if (fort_material_type(im).eq.0) then
+         if ((override_density(im).eq.0).or. &
+             (override_density(im).eq.2)) then  ! PHYDRO(rho(T,Y,Z))
+          if (abs(dencore(im)-fort_denconst(im)).le.VOFTOL) then
+           ! do nothing
+          else
+           print *,"dencore(im) invalid"
+           print *,"im,i,j,k,den ",im,i,j,k,dencore(im)
+           print *,"dencomp=",dencomp
+           print *,"normdir=",normdir
+           stop
+          endif
+         else if (override_density(im).eq.1) then ! dencore=dencore(T,Y,Z)
+          ! do nothing
+         else
+          print *,"override_density invalid"
           stop
          endif
+        else if (fort_material_type(im).ge.1) then
+         ! do nothing
+        else
+         print *,"fort_material_type(im) invalid"
+         stop
         endif
 
         if (dencore(im).le.zero) then
@@ -1694,17 +1707,17 @@ stop
         istate=1
         do while (istate.le.num_state_material)
 
-         if (istate.eq.1) then
+         if (istate.eq.1) then ! Density
           dencomp=(im-1)*num_state_material+istate
           conserve(D_DECL(i,j,k),iden_base+dencomp)=dencore(im)
           istate=istate+1
-         else if (istate.eq.2) then ! Temp
+         else if (istate.eq.2) then ! Temperature
           tempcomp=(im-1)*num_state_material+istate
           local_temperature=den(D_DECL(i,j,k),tempcomp)
-          if (temperature_primitive_variable(im).eq.1) then
+          if (temperature_primitive_variable(im).eq.1) then ! non-conservative
            conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
             dencore(im)*local_temperature
-          else if (temperature_primitive_variable(im).eq.0) then
+          else if (temperature_primitive_variable(im).eq.0) then ! conservative
            call INTERNAL_material(dencore(im), &
             local_temperature,local_internal, &
             fort_material_type(im),im)
@@ -1730,7 +1743,9 @@ stop
 
         enddo ! do while (istate.le.num_state_material)
 
-        if (dencore(im).le.zero) then
+        if (dencore(im).gt.zero) then 
+         ! do nothing
+        else
          print *,"dencore must be positive"
          stop
         endif
@@ -1740,7 +1755,6 @@ stop
       enddo         
       enddo         
       enddo ! i,j,k (cell center "conserved" variables) 
-
 
       return
       end subroutine FORT_BUILD_CONSERVE

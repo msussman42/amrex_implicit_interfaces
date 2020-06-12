@@ -4294,7 +4294,7 @@ end subroutine dynamic_contact_angle
         pres=-gravity_normalized*rho*xpos(gravity_dir_parm)
        else if (override_density.eq.1) then
 
-         ! rho=rho(T,z)
+         ! rho=rho(T,Y,z)
         call default_hydrostatic_pressure_density(xpos, &
          rho,pres,liquid_temp, &
          gravity_normalized, &
@@ -4634,7 +4634,7 @@ end subroutine dynamic_contact_angle
        rho=denfree+DrhoDz*(zfree-xpos(SDIM))
       endif
 
-       ! rho=rho(T,z)
+       ! rho=rho(T,Y,z)
       if (override_density.eq.1) then
 
        if ((DrhoDz.eq.zero).and. &

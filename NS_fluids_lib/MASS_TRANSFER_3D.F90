@@ -2327,10 +2327,10 @@ stop
       INTEGER_T away_from_interface
       REAL_T solid_vof_new,solid_vof_old
       INTEGER_T mtype
-      REAL_T mfrac_vapor_to_gas
+      REAL_T Yfrac_vapor_to_gas
       REAL_T vfrac_vapor_to_gas
       REAL_T new_vfrac_vapor
-      REAL_T mfrac_old
+      REAL_T Yfrac_old
       REAL_T density_new,density_old
       REAL_T density_dest,density_source
       REAL_T evap_den
@@ -2399,13 +2399,17 @@ stop
       endif
 
       do im=1,nmat
-       if ((density_floor_expansion(im).le.zero).or. &
-           (density_floor_expansion(im).gt.fort_denconst(im))) then
+       if ((density_floor_expansion(im).gt.zero).and. &
+           (density_floor_expansion(im).le.fort_denconst(im))) then
+        ! do nothing
+       else
         print *,"density_floor_expansion invalid"
         stop
        endif
-       if ((density_ceiling_expansion(im).le.zero).or. &
-           (density_ceiling_expansion(im).lt.fort_denconst(im))) then
+       if ((density_ceiling_expansion(im).gt.zero).and. &
+           (density_ceiling_expansion(im).ge.fort_denconst(im))) then
+        ! do nothing
+       else
         print *,"density_ceiling_expansion invalid"
         stop
        endif
@@ -2472,7 +2476,9 @@ stop
              (local_freezing_model.eq.1).or. &
              (local_freezing_model.eq.2)) then
           ! do nothing
-         else if (local_freezing_model.eq.5) then
+         else if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                  (local_freezing_model.eq.5).or. & ! cavitation
+                  (local_freezing_model.eq.6)) then ! Palmore/Desjardins
           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
           if ((mass_frac_id.ge.1).and.(mass_frac_id.le.num_species_var)) then
            evap_den=species_evaporation_density(mass_frac_id)
@@ -2486,59 +2492,68 @@ stop
            print *,"mass_frac_id invalid"
            stop
           endif
-! force: V_evaporate = V_condense (Tanasawa model)
-         else if (local_freezing_model.eq.4) then 
-          if (LL.ne.zero) then
-           if (ireverse.eq.0) then ! evaporation
-            if (LL.le.zero) then
-             print *,"LL invalid"
-             stop
-            endif
-            if (distribute_from_targ.ne.0) then
-             print *,"distribute_from_targ invalid"
-             stop
-            endif
-            im_source=im
-            im_dest=im_opp
-           else if (ireverse.eq.1) then ! condensation
-            if (LL.ge.zero) then
-             print *,"LL invalid"
-             stop
-            endif
-            if (distribute_from_targ.ne.1) then
-             print *,"distribute_from_targ invalid"
-             stop
-            endif
-            im_source=im_opp
-            im_dest=im
-           else
-            print *,"ireverse invalid"
-            stop
-           endif
-
-           if (isweep.eq.0) then
-            ! do nothing
-           else if (isweep.eq.1) then
-
-            if (solvability_projection.eq.0) then
-             ! do nothing
-            else if (solvability_projection.eq.1) then
-             if (DVOF(im_dest).lt.DVOF(im_source)) then
-              DVOF_FACT(im_source)=DVOF(im_dest)/DVOF(im_source)
-             else if (DVOF(im_source).lt.DVOF(im_dest)) then
-              DVOF_FACT(im_dest)=DVOF(im_source)/DVOF(im_dest)
+           ! require V_evaporate = V_condense (Tanasawa model)
+          if (local_freezing_model.eq.4) then 
+           if (LL.ne.zero) then
+            if (ireverse.eq.0) then ! evaporation
+             if (LL.le.zero) then
+              print *,"LL invalid"
+              stop
              endif
+             if (distribute_from_targ.ne.0) then
+              print *,"distribute_from_targ invalid"
+              stop
+             endif
+             im_source=im
+             im_dest=im_opp
+            else if (ireverse.eq.1) then ! condensation
+             if (LL.ge.zero) then
+              print *,"LL invalid"
+              stop
+             endif
+             if (distribute_from_targ.ne.1) then
+              print *,"distribute_from_targ invalid"
+              stop
+             endif
+             im_source=im_opp
+             im_dest=im
             else
-             print *,"solvability_projection invalid"
+             print *,"ireverse invalid"
              stop
             endif
 
-           else
-            print *,"isweep invalid"
-            stop
-           endif
+            if (isweep.eq.0) then
+             ! do nothing
+            else if (isweep.eq.1) then
 
-          endif ! LL <> 0
+             if (solvability_projection.eq.0) then
+              ! do nothing
+             else if (solvability_projection.eq.1) then
+              if (DVOF(im_dest).lt.DVOF(im_source)) then
+               DVOF_FACT(im_source)=DVOF(im_dest)/DVOF(im_source)
+              else if (DVOF(im_source).lt.DVOF(im_dest)) then
+               DVOF_FACT(im_dest)=DVOF(im_source)/DVOF(im_dest)
+              endif
+             else
+              print *,"solvability_projection invalid"
+              stop
+             endif
+
+            else
+             print *,"isweep invalid"
+             stop
+            endif
+
+           endif ! LL <> 0
+          else if (local_freezing_model.eq.5) then 
+           ! do nothing
+          else if (local_freezing_model.eq.6) then 
+           ! do nothing
+          else
+           print *,"local_freezing_model invalid in convertmaterial"
+           stop
+          endif
+
          else
           print *,"local_freezing_model invalid in convertmaterial"
           print *,"local_freezing_model= ",local_freezing_model
@@ -3302,7 +3317,7 @@ stop
            endif
 
             ! old mass and volume fraction of vapor to gas
-           mfrac_vapor_to_gas=one
+           Yfrac_vapor_to_gas=one
            vfrac_vapor_to_gas=one
 
            mtype=fort_material_type(im_dest)
@@ -3352,9 +3367,9 @@ stop
 
            if (local_freezing_model.eq.0) then ! standard Stefan model
             ! do nothing
-           else if (local_freezing_model.eq.4) then  ! Tannasawa model
-            ! do nothing
-           else if (local_freezing_model.eq.5) then  ! one material is captured.
+           else if ((local_freezing_model.eq.4).or. & ! Tannasawa model
+                    (local_freezing_model.eq.5).or. & ! cavitation
+                    (local_freezing_model.eq.6)) then ! Palmore/Desjardins
 
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
@@ -3368,18 +3383,19 @@ stop
                if (oldvfrac(im_dest).gt.EBVOFTOL) then
                 speccompdst=(im_dest-1)*num_state_material+ &
                  num_state_base+mass_frac_id
-                mfrac_old=EOS(D_DECL(i,j,k),speccompdst)
-                if ((mfrac_old.ge.zero).and.(mfrac_old.le.one)) then
-                 density_old=density_dest*evap_den/ &
-                  (mfrac_old*density_dest+(one-mfrac_old)*evap_den)
-                 mfrac_vapor_to_gas=mfrac_old 
-                 vfrac_vapor_to_gas=density_old*mfrac_old/evap_den
+                Yfrac_old=EOS(D_DECL(i,j,k),speccompdst)
+                if ((Yfrac_old.ge.zero).and.(Yfrac_old.le.one)) then
+                 density_old=density_dest
+                 call make_mixture_density(Yfrac_old, &
+                   density_old,evap_den)
+                 Yfrac_vapor_to_gas=Yfrac_old 
+                 vfrac_vapor_to_gas=density_old*Yfrac_old/evap_den
                 else
-                 print *,"mfrac_old invalid"
+                 print *,"Yfrac_old invalid"
                  stop
                 endif
                else if (oldvfrac(im_dest).le.EBVOFTOL) then
-                mfrac_vapor_to_gas=zero
+                Yfrac_vapor_to_gas=zero
                 vfrac_vapor_to_gas=zero
                else
                 print *,"oldvfrac(im_dest) invalid"
@@ -3393,22 +3409,24 @@ stop
                   ! mass= sum_i=1^m  Y_i overall_mass = 
                   !     = sum_i=1^m  density_i F_i V_cell
                   ! F_i = volume fraction of material i.
-                  ! (Y_i)_t + div (u Y_i) = div D_i  grad Y_i
+                  ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
+                  ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
                if (oldvfrac(im_source).gt.EBVOFTOL) then
                 speccompsrc=(im_source-1)*num_state_material+ &
                  num_state_base+mass_frac_id
-                mfrac_old=EOS(D_DECL(i,j,k),speccompsrc)
-                if ((mfrac_old.ge.zero).and.(mfrac_old.le.one)) then
-                 density_old=density_source*evap_den/ &
-                  (mfrac_old*density_source+(one-mfrac_old)*evap_den)
-                 mfrac_vapor_to_gas=mfrac_old
-                 vfrac_vapor_to_gas=density_old*mfrac_old/evap_den
+                Yfrac_old=EOS(D_DECL(i,j,k),speccompsrc)
+                if ((Yfrac_old.ge.zero).and.(Yfrac_old.le.one)) then
+                 density_old=density_source
+                 call make_mixture_density(Yfrac_old, &
+                   density_old,evap_den)
+                 Yfrac_vapor_to_gas=Yfrac_old
+                 vfrac_vapor_to_gas=density_old*Yfrac_old/evap_den
                 else
-                 print *,"mfrac_old invalid"
+                 print *,"Yfrac_old invalid"
                  stop
                 endif
                else if (oldvfrac(im_source).le.EBVOFTOL) then
-                mfrac_vapor_to_gas=zero
+                Yfrac_vapor_to_gas=zero
                 vfrac_vapor_to_gas=zero
                else
                 print *,"oldvfrac(im_source) invalid"
@@ -3493,7 +3511,9 @@ stop
 
               ! evaporation: im_source=liquid im_dest=surrounding gas
               ! condensation: im_source=surrounding gas im_dest=liquid
-             if (local_freezing_model.eq.5) then 
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                 (local_freezing_model.eq.5).or. & ! cavitation
+                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins
               speccompdst=num_materials_vel*(SDIM+1)+ &
                   (im_dest-1)*num_state_material+2+mass_frac_id
             
@@ -3552,7 +3572,9 @@ stop
 
             else if (newvfrac(im_dest).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if (local_freezing_model.eq.5) then
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                 (local_freezing_model.eq.5).or. & ! cavitation
+                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins
               speccompdst=num_materials_vel*(SDIM+1)+ &
                    (im_dest-1)*num_state_material+2+mass_frac_id
               snew(D_DECL(i,j,k),speccompdst)=zero
@@ -3580,7 +3602,9 @@ stop
 
              snew(D_DECL(i,j,k),tcomp)=unsplit_temperature(im_source) 
 
-             if (local_freezing_model.eq.5) then ! evap. or condensation
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                 (local_freezing_model.eq.5).or. & ! cavitation
+                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins
               speccompsrc=num_materials_vel*(SDIM+1)+ &
                    (im_source-1)*num_state_material+2+mass_frac_id
             
@@ -3614,7 +3638,9 @@ stop
              endif
             else if (newvfrac(im_source).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if (local_freezing_model.eq.5) then
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                 (local_freezing_model.eq.5).or. & ! cavitation
+                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins
               speccompsrc=num_materials_vel*(SDIM+1)+ &
                        (im_source-1)*num_state_material+2+mass_frac_id
               snew(D_DECL(i,j,k),speccompsrc)=zero
@@ -3681,7 +3707,7 @@ stop
            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
-           if ((local_freezing_model.lt.0).or.(local_freezing_model.gt.5)) then
+           if ((local_freezing_model.lt.0).or.(local_freezing_model.gt.6)) then
             print *,"local_freezing_model invalid"
             stop
            endif
@@ -3783,7 +3809,9 @@ stop
             stop
            endif
 
-           if (local_freezing_model.eq.5) then
+           if ((local_freezing_model.eq.4).or. & ! Tanasawa
+               (local_freezing_model.eq.5).or. & ! cavitation
+               (local_freezing_model.eq.6)) then ! Palmore/Desjardins
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
              evap_den=species_evaporation_density(mass_frac_id)
@@ -3804,7 +3832,7 @@ stop
              print *,"mass_frac_id invalid"
              stop
             endif
-           endif ! local_freezing_model==5
+           endif ! local_freezing_model==4,5,6
 
            if ((densrc_restrict.le.zero).or.(dendst_restrict.le.zero)) then
             print *,"densrc_restrict and dendst_restrict must be positive"
@@ -3892,7 +3920,8 @@ stop
 
             ! divide and conquer temperature equation (TSAT Dirichlet BC)
             if ((local_freezing_model.eq.0).or. &
-                (local_freezing_model.eq.5)) then  
+                (local_freezing_model.eq.5).or. & ! cavitation
+                (local_freezing_model.eq.6)) then ! Palmore/Desjardins 
 
              if ((oldvfrac(im_dest).lt.half).and. &
                  (newvfrac(im_dest).gt.half)) then
@@ -4001,7 +4030,7 @@ stop
              stop
 #endif
 
-            else if (local_freezing_model.eq.4) then
+            else if (local_freezing_model.eq.4) then ! Tanasawa
               ! if LL>0 => evaporation => delete energy 
               ! if LL<0 => condensation => add energy 
               ! latent_heat: erg/g

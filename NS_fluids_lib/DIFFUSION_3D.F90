@@ -420,9 +420,9 @@ stop
          RCEN=xsten(0,1)
 
          if ((override_density.eq.0).or. & ! rho_t + div (rho u) = 0
-             (override_density.eq.1)) then ! rho=rho(T,z)
+             (override_density.eq.1)) then ! rho=rho(T,Y,z)
           DTEMP=zero
-         else if (override_density.eq.2) then ! P_hydro=P_hydro(rho(T,Z))
+         else if (override_density.eq.2) then ! P_hydro=P_hydro(rho(T,Y,Z))
           im=1
           vofcomp=(im-1)*ngeom_recon+1
           FWATER=recon(D_DECL(i,j,k),vofcomp)
@@ -979,12 +979,12 @@ stop
          endif
 
          if ((override_density.eq.0).or. & ! Drho/DT=-divu rho
-             (override_density.eq.1)) then ! rho=rho(T,z)
+             (override_density.eq.1)) then ! rho=rho(T,Y,z)
 
           DTEMP=zero
           dotprod=zero
 
-           ! P_hydro=P_hydro(rho(T,Z)
+           ! P_hydro=P_hydro(rho(T,Y,Z)
            ! Boussinesq approximation.
            ! if gtemp_offset <> 0 then an extra term is added to 
            ! the temperature equation which comes from advection.

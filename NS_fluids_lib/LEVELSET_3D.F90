@@ -14420,7 +14420,7 @@ stop
               if (override_density(local_maskSEM).eq.0) then
                ! do nothing
 
-               ! rho=rho(T,z)
+               ! rho=rho(T,Y,z)
               else if (override_density(local_maskSEM).eq.1) then
                ok_to_HO_interp=0
 
