@@ -12107,7 +12107,7 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: growlo(3),growhi(3)
+      INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
 
       REAL_T, intent(in) :: dt
