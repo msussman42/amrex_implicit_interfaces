@@ -224,11 +224,13 @@ contains
  INTEGER_T im
  REAL_T LS(num_materials)
 
- if ((num_materials.eq.2).and.(probtype.eq.411)) then
+ if ((num_materials.eq.3).and.(probtype.eq.411)) then
   do im=1,num_materials
    if (im.eq.1) then !liquid
     LS(im)=99999.0
-   else if (im.eq.2) then ! geometry (placeholder)
+   else if (im.eq.2) then !ambient
+    LS(im)=-99999.0
+   else if (im.eq.num_materials) then ! geometry (placeholder)
     LS(im)=-99999.0
    else
     print *,"im invalid"
@@ -317,7 +319,7 @@ contains
  REAL_T STATE(num_materials*num_state_material)
  INTEGER_T im,ibase,n
 
- if ((num_materials.eq.2).and. &
+ if ((num_materials.eq.3).and. &
      (num_state_material.ge.2).and. &
      (probtype.eq.411)) then
   do im=1,num_materials
@@ -488,7 +490,7 @@ contains
  REAL_T dt
  REAL_T heat_source
 
- if ((num_materials.eq.2).and.(probtype.eq.411)) then
+ if ((num_materials.eq.3).and.(probtype.eq.411)) then
   heat_source=zero
  else
   print *,"num_materials or probtype invalid"

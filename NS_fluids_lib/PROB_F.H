@@ -38,7 +38,6 @@
 #    define FORT_GROUP_EXTMOFFILL group_extmoffill
 #    define FORT_LS_HO_FILL ls_ho_fill
 #    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill
-#    define FORT_NUCLEATE     nucleate
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_SET_PERIODIC_VAR SET_PERIODIC_VAR
@@ -78,7 +77,6 @@
 #    define FORT_GROUP_EXTMOFFILL GROUP_EXTMOFFILL
 #    define FORT_LS_HO_FILL LS_HO_FILL
 #    define FORT_GROUP_LS_HO_FILL GROUP_LS_HO_FILL
-#    define FORT_NUCLEATE     NUCLEATE
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_SET_PERIODIC_VAR set_periodic_var
@@ -117,7 +115,6 @@
 #    define FORT_GROUP_EXTMOFFILL group_extmoffill
 #    define FORT_LS_HO_FILL ls_ho_fill
 #    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill
-#    define FORT_NUCLEATE     nucleate
 #  else
 #    define FORT_SET_PERIODIC_VAR set_periodic_var_
 #    define FORT_SETFORTSCALES setfortscales_
@@ -155,7 +152,6 @@
 #    define FORT_GROUP_EXTMOFFILL group_extmoffill_
 #    define FORT_LS_HO_FILL ls_ho_fill_
 #    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill_
-#    define FORT_NUCLEATE     nucleate_
 #  endif
 #  endif
 
@@ -600,48 +596,6 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_NUCLEATE(
-      Real* delta_mass,
-      int* custom_nucleation_model,
-      Real* time,
-      Real* cur_time,
-      int* level,int* finest_level,
-      int* nmat,int* nten,int* nden,int* nstate,
-      Real* latent_heat,
-      Real* saturation_temp,
-      int* do_the_nucleate,
-      Real* nucleate_pos,
-      const int* nucleate_pos_size,
-      Real* nucleation_temp,
-      Real* nucleation_pressure,
-      Real* nucleation_pmg,
-      Real* nucleation_mach,
-      Real* cavitation_pressure,
-      Real* cavitation_vapor_density,
-      Real* cavitation_tension,
-      int* cavitation_species,
-      int* cavitation_model,
-      const int* tilelo,const int* tilehi,
-      const int* fablo,const int* fabhi,
-      int* bfact,
-      int* vofbc,
-      const Real* xlo,const Real* dx,
-      Real* dt,
-      int* arraysize,
-      Real* blob_array,
-      int* num_elements_blobclass,
-      int* color_count,
-      Real* colorfab,AMREX_ARLIM_P(colorfablo),AMREX_ARLIM_P(colorfabhi), 
-      Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi), 
-      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
-      Real* LSold,AMREX_ARLIM_P(LSoldlo),AMREX_ARLIM_P(LSoldhi),
-      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),      
-      Real* VOFold,AMREX_ARLIM_P(VOFoldlo),AMREX_ARLIM_P(VOFoldhi),      
-      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),      
-      Real* EOS,AMREX_ARLIM_P(EOSlo),AMREX_ARLIM_P(EOShi),
-      Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
-      Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
-      Real* preseos,AMREX_ARLIM_P(preseoslo),AMREX_ARLIM_P(preseoshi) );
   }
 
 }/* namespace amrex */

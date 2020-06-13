@@ -131,11 +131,13 @@ REAL_T t
 INTEGER_T im
 REAL_T LS(num_materials)
 
-if ((num_materials.eq.2).and.(probtype.eq.412)) then
+if ((num_materials.eq.3).and.(probtype.eq.412)) then
  do im=1,num_materials
   if (im.eq.1) then !liquid
    LS(im)=99999.0
-  else if (im.eq.2) then ! geometry 
+  else if (im.eq.2) then ! ambient
+   LS(im)=-99999.0
+  else if (im.eq.num_materials) then ! geometry 
    call nozzle2d_step(x(1),x(SDIM),LS(im))
   else
    print *,"im invalid"
@@ -229,7 +231,7 @@ REAL_T LS(num_materials)
 REAL_T STATE(num_materials*num_state_material)
 INTEGER_T im,ibase,n
 
-if ((num_materials.eq.2).and. &
+if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
     (probtype.eq.412)) then
  do im=1,num_materials
@@ -399,7 +401,7 @@ REAL_T CV(num_materials)
 REAL_T dt
 REAL_T heat_source
 
-if ((num_materials.eq.2).and.(probtype.eq.412)) then
+if ((num_materials.eq.3).and.(probtype.eq.412)) then
  heat_source=zero
 else
  print *,"num_materials or probtype invalid"

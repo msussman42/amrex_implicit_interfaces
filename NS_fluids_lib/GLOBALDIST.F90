@@ -1982,7 +1982,7 @@ end subroutine nozzle2d
          call spheredist(x,y,z,dist) ! dist<0 in the sphere
          dist=-dist
         else
-         print *,"expecting im_project=3"
+         print *,"expecting im_project=nmat; nmat=",nmat
          stop
         endif
        else

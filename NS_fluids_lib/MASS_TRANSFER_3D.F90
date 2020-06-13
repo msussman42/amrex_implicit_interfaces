@@ -4440,7 +4440,6 @@ stop
       return 
       end subroutine FORT_EXTEND_BURNING_VEL
 
-
  
         ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine FORT_RATEMASSCHANGE( &
@@ -4449,6 +4448,7 @@ stop
        finest_level, &
        normal_probe_size, &
        ngrow_distance, &
+       nstate, &
        nmat, &
        nten, &
        nburning, &
@@ -4456,6 +4456,17 @@ stop
        nden, &
        density_floor_expansion, &
        density_ceiling_expansion, &
+       custom_nucleation_model, &
+       do_the_nucleate, &
+       nucleate_pos, &
+       nucleate_pos_size, &
+       nucleation_temp, &
+       nucleation_pressure, &
+       nucleation_pmg, &
+       nucleation_mach, &
+       cavitation_pressure, &
+       cavitation_vapor_density, &
+       cavitation_tension, &
        microlayer_substrate, &
        microlayer_angle, &
        microlayer_size, &
@@ -4489,11 +4500,13 @@ stop
        Tsatfab,DIMS(Tsatfab), &
        LS,DIMS(LS),  &
        LSnew,DIMS(LSnew), & 
+       Snew,DIMS(Snew), & 
        LS_slopes_FD, &
        DIMS(LS_slopes_FD), & 
        EOS,DIMS(EOS), &
        recon,DIMS(recon), &
        pres,DIMS(pres), &
+       pres_eos,DIMS(pres_eos), &
        curvfab,DIMS(curvfab) )
 #if (STANDALONE==0)
       use probf90_module
@@ -4514,6 +4527,7 @@ stop
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: normal_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
@@ -4521,6 +4535,17 @@ stop
       INTEGER_T, intent(in) :: nden
       REAL_T, intent(in) :: density_floor_expansion(nmat)
       REAL_T, intent(in) :: density_ceiling_expansion(nmat)
+      INTEGER_T, intent(in) :: custom_nucleation_model
+      INTEGER_T, intent(in) :: do_the_nucleate
+      INTEGER_T, intent(in) :: nucleate_pos_size
+      REAL_T, intent(in) :: nucleate_pos(nucleate_pos_size)
+      REAL_T, intent(in) :: nucleation_temp(2*nten)
+      REAL_T, intent(in) :: nucleation_pressure(2*nten)
+      REAL_T, intent(in) :: nucleation_pmg(2*nten)
+      REAL_T, intent(in) :: nucleation_mach(2*nten)
+      REAL_T, intent(in) :: cavitation_pressure(nmat)
+      REAL_T, intent(in) :: cavitation_vapor_density(nmat)
+      REAL_T, intent(in) :: cavitation_tension(nmat)
       INTEGER_T, intent(in) ::  microlayer_substrate(nmat)
       REAL_T, intent(in) :: microlayer_angle(nmat)
       REAL_T, intent(in) :: microlayer_size(nmat)
@@ -4559,10 +4584,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(Tsatfab)
       INTEGER_T, intent(in) :: DIMDEC(LS) ! declare the x,y,z dimensions of LS
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
+      INTEGER_T, intent(in) :: DIMDEC(Snew)
       INTEGER_T, intent(in) :: DIMDEC(LS_slopes_FD)
       INTEGER_T, intent(in) :: DIMDEC(EOS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(pres_eos)
       INTEGER_T, intent(in) :: DIMDEC(curvfab)
 
       REAL_T, intent(in) :: typefab(DIMV(typefab))
@@ -4579,11 +4606,13 @@ stop
         !DIMV(LS)=x,y,z  nmat=num. materials
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
       REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
+      REAL_T, intent(inout) :: Snew(DIMV(Snew),nstate)
       REAL_T, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
       REAL_T, intent(in) :: EOS(DIMV(EOS),nden)
        ! F,X,order,SL,I x nmat
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: pres(DIMV(pres)) 
+      REAL_T, intent(in) :: pres_eos(DIMV(pres_eos)) 
       REAL_T, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
 
       INTEGER_T i,j,k
@@ -4732,6 +4761,22 @@ stop
        stop
       endif
 
+      if (nucleate_pos_size.lt.4) then
+       print *,"nucleate_pos_size invalid: ",nucleate_pos_size
+       stop
+      endif
+      if (n_sites.gt.0) then
+       if (nucleate_pos_size.ne.n_sites*4) then
+        print *,"nucleate_pos_size invalid"
+        stop
+       endif
+      endif
+      if ((custom_nucleation_model.ne.0).and. &
+          (custom_nucleation_model.ne.1)) then
+       print *,"custom_nucleation_model invalid"
+       stop
+      endif
+
       ngrow=normal_probe_size+3
 
       if (ngrow_distance.ne.4) then
@@ -4785,6 +4830,14 @@ stop
        print *,"dt invalid"
        stop
       endif
+      
+      if (nstate.eq.num_materials_vel*(SDIM+1)+nmat* &
+          (num_state_material+ngeom_raw)+1) then
+       ! do nothing
+      else 
+       print *,"nstate invalid"
+       stop
+      endif
 
       do im=1,nmat
        if ((density_floor_expansion(im).le.zero).or. &
@@ -4828,9 +4881,11 @@ stop
       call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,1251)
       call checkbound(fablo,fabhi,DIMS(LS),ngrow,-1,1252)
       call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,1253)
+      call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1253)
       call checkbound(fablo,fabhi,DIMS(LS_slopes_FD),1,-1,1253)
       call checkbound(fablo,fabhi,DIMS(EOS),ngrow,-1,1254)
       call checkbound(fablo,fabhi,DIMS(pres),ngrow,-1,1255)
+      call checkbound(fablo,fabhi,DIMS(pres_eos),1,-1,1255)
 
       !blob_matrix,blob_RHS,blob_velocity,
       !blob_integral_momentum,blob_energy,
@@ -4861,7 +4916,30 @@ stop
        print *,"STANDALONE invalid"
        stop
       endif
- 
+
+         ! SANDIPAN HOOK HERE
+         ! pseudo code:
+         ! if typefab(D_DECL(i,j,k))=im_vapor then
+         !  color = colorfab(D_DECL(i,j,k))
+         !  vapor bubble statistics are in 
+         !   blob_array((color-1)*num_elements_blobclass + l)
+         !  l=1..num_elements_blobclass
+         ! for example l=3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+
+         !               2*(2*SDIM)+1+
+         !               3+1  corresponds to blob_volume.
+         ! MDOT=(1-den_vapor/den_liquid)*(F^Vapor_new - F^Vapor_old)*
+         !  volume/dt^2
+         ! =(1-den_vapor/den_liquid)*(Vvapor_new - Vvapor_old)/dt^2
+         ! MDOT should have the same units as volume * div u/dt
+         ! units of volume * div u/dt = m^3 (1/m)(m/s)(1/s)=1/s^2
+         ! for standard phase change:
+         ! units: cm^3/s^2
+         ! jump_strength=(denratio_factor/dt)*dF*volgrid/dt
+         ! if evaporation then expansion_term should be positive.
+         ! FOR CODY: if pressure falls below some cavitation pressure, then
+         ! material is cavitated. (velocity of phase change is dx/dt?)
+
+
       call get_dxmin(dx,bfact,dxmin)
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -5192,8 +5270,12 @@ FIX ME
     freezing_mod=6  partially saturated evaporation?
     freezing_mod=7  Cavitation (a seed must exist)
 2. fix inputs files that have cavitation_species
+   (probtype=46,411,412)
 3. spec_material_id_LIQUID
    spec_material_id_AMBIENT
+4. modify extension routine if fully wetting or fully dry conditions:
+    a) if F_solid>0 then find tessellating VFRAC and centroids
+    b) replace Solid with the wetting material.
                 if (local_freezing_mod.eq.6) then ! Palmore/Desjardins
                  !find minimum possible Y on the interface  
                  !Y_probe<=Y_interface<=1

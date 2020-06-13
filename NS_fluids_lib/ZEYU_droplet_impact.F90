@@ -359,7 +359,7 @@ REAL_T CV(num_materials)
 REAL_T dt
 REAL_T heat_source
 
-if ((num_materials.eq.2).and.(probtype.eq.412)) then
+if ((num_materials.eq.2).and.(probtype.eq.413)) then
  heat_source=zero
 else
  print *,"num_materials or probtype invalid"

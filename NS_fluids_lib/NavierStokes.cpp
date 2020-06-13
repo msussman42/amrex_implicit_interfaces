@@ -626,8 +626,6 @@ int NavierStokes::FD_curv_interp=1;
 Vector<Real> NavierStokes::cavitation_pressure;
 Vector<Real> NavierStokes::cavitation_vapor_density;
 Vector<Real> NavierStokes::cavitation_tension;
-Vector<int> NavierStokes::cavitation_species;
-Vector<int> NavierStokes::cavitation_model;
 
 Vector<Real> NavierStokes::species_evaporation_density;
 
@@ -682,8 +680,6 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 //     V=mdot/rho_dst
 Vector<int> NavierStokes::distribute_from_target;
 int NavierStokes::is_phasechange=0;
-int NavierStokes::is_cavitation=0;
-int NavierStokes::is_cavitation_mixture_model=0;
 int NavierStokes::normal_probe_size=1;
 // 0=dirichlet at inflow
 // 1=dirichlet at inflow and outflow
@@ -2610,21 +2606,14 @@ NavierStokes::read_params ()
     cavitation_pressure.resize(nmat);
     cavitation_vapor_density.resize(nmat);
     cavitation_tension.resize(nmat);
-    cavitation_species.resize(nmat);
-    cavitation_model.resize(nmat);
     for (int i=0;i<nmat;i++) {
      cavitation_pressure[i]=0.0; 
      cavitation_vapor_density[i]=0.0; 
      cavitation_tension[i]=0.0; 
-     cavitation_species[i]=0; // 1..num_species_var 
-     cavitation_model[i]=0; 
     }
     pp.queryarr("cavitation_pressure",cavitation_pressure,0,nmat);
     pp.queryarr("cavitation_vapor_density",cavitation_vapor_density,0,nmat);
     pp.queryarr("cavitation_tension",cavitation_tension,0,nmat);
-     // 1..num_species_var
-    pp.queryarr("cavitation_species",cavitation_species,0,nmat);
-    pp.queryarr("cavitation_model",cavitation_model,0,nmat);
  
      // in: read_params
 
@@ -3489,28 +3478,13 @@ NavierStokes::read_params ()
      amrex::Error("temperatureface_flag invalid"); 
 
     is_phasechange=0;
-    is_cavitation=0;
-    is_cavitation_mixture_model=0;
-    for (int i=0;i<nmat;i++) {
-     int ispec=cavitation_species[i];
-     if (ispec==0) {
-      // do nothing
-     } else if ((ispec>=1)&&(ispec<=num_species_var)) {
-      is_cavitation_mixture_model=1;
-     } else
-      amrex::Error("ispec invalid");
-    }
     for (int i=0;i<2*nten;i++) {
-     if ((nucleation_pressure[i]!=0.0)&&
-         (nucleation_pmg[i]!=0.0)&&
-         (nucleation_mach[i]!=0.0)) {
-      is_cavitation=1;
-     }
      if (latent_heat[i]!=0.0) {
       is_phasechange=1;
       if ((freezing_model[i]==0)|| // Stefan model for phase change (fully sat)
-          (freezing_model[i]==5)|| // Stefan model for evap/cond.(cavitation)
-          (freezing_model[i]==6)) {// Palmore, Desjardins
+          (freezing_model[i]==5)|| // Stefan model for saturated evap/cond.
+          (freezing_model[i]==6)|| // Palmore and Desjardins
+	  (freezing_model[i]==7)) {// cavitation
        if (temperatureface_flag!=0)
         amrex::Error("must have temperatureface_flag==0");
       } else if ((freezing_model[i]==1)||
@@ -3552,8 +3526,9 @@ NavierStokes::read_params ()
 
        Real LL=latent_heat[indexEXP];
        if ((freezing_model[indexEXP]==4)||  // Tannasawa
-           (freezing_model[indexEXP]==5)||  // cavitation
-           (freezing_model[indexEXP]==6)) { // Palmore and Desjardins
+           (freezing_model[indexEXP]==5)||  // Stefan model evap/cond.
+           (freezing_model[indexEXP]==6)||  // Palmore and Desjardins
+	   (freezing_model[indexEXP]==7) {  // cavitation
         if (LL!=0.0) {
          int massfrac_id=mass_fraction_id[indexEXP];
          if ((massfrac_id<1)||(massfrac_id>num_species_var))
@@ -3842,7 +3817,6 @@ NavierStokes::read_params ()
      std::cout << "stokes_flow= " << stokes_flow << '\n';
 
      std::cout << "is_phasechange= " << is_phasechange << '\n';
-     std::cout << "is_cavitation= " << is_cavitation << '\n';
 
      for (int i=0;i<3*nmat;i++) {
       std::cout << "recalesce_model_parameters i=" << i << "  " << 
@@ -3977,10 +3951,6 @@ NavierStokes::read_params ()
        cavitation_vapor_density[i] << '\n';
       std::cout << "cavitation_tension i=" << i << "  " << 
        cavitation_tension[i] << '\n';
-      std::cout << "cavitation_species i=" << i << "  " << 
-       cavitation_species[i] << '\n';
-      std::cout << "cavitation_model i=" << i << "  " << 
-       cavitation_model[i] << '\n';
      } // i=0..nmat-1
 
      std::cout << "Uref " << Uref << '\n';
@@ -9916,6 +9886,23 @@ void
 NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 		int color_count) {
 
+ Real problo[AMREX_SPACEDIM];
+ Real probhi[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  problo[dir]=geom.ProbLo(dir);
+  probhi[dir]=geom.ProbHi(dir);
+ }
+
+ int rz_flag=0;
+ if (geom.IsRZ())
+  rz_flag=1;
+ else if (geom.IsCartesian())
+  rz_flag=0;
+ else if (geom.IsCYLINDRICAL())
+  rz_flag=3;
+ else
+  amrex::Error("CoordSys bust 1");
+
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -9928,6 +9915,13 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  int ncomp_per_tsat=2;
  int nburning=nten*(ncomp_per_burning+1);
  int ntsat=nten*(ncomp_per_tsat+1);
+ int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+  nmat*(num_state_material+ngeom_raw)+1;
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
 
  int n_normal=(nmat+nten)*(AMREX_SPACEDIM+1);
 
@@ -9961,22 +9955,149 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  if (localMF[TYPE_MF]->nGrow()!=1)
   amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
 
- MultiFab* presmf;
- if (hydrate_flag==1) {
-  presmf=getState(normal_probe_size+3,num_materials_vel*AMREX_SPACEDIM,1,
-   cur_time_slab);
- } else if (hydrate_flag==0) {
-  presmf=localMF[DEN_RECON_MF];
- } else {
-  amrex::Error("hydrate_flag invalid");
- }
+ MultiFab* presmf=
+  getState(normal_probe_size+3,num_materials_vel*AMREX_SPACEDIM,
+           1,cur_time_slab);
+
+ MultiFab* pres_eos_mf=derive_EOS_pressure();
+ if (pres_eos_mf->nGrow()!=1)
+  amrex::Error("pres_eos_mf->nGrow()!=1");
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,28); 
 
+ if ((prev_time_slab<0.0)||
+     (cur_time_slab<=0.0)||
+     (cur_time_slab<=prev_time_slab))
+  amrex::Error("prev_time_slab or cur_time_slab invalid");
+
+ int do_the_nucleate;
+ Vector<Real> nucleate_pos;
+ nucleate_pos.resize(4);
+ if (n_sites>0)
+  nucleate_pos.resize(4*n_sites);
+
+ do_the_nucleate=0;
+ for (int i=0;i<nucleate_pos.size();i++) 
+  nucleate_pos[i]=0.0;
+
+ if (n_sites==0) {
+  // do nothing
+ } else if (n_sites>0) {
+
+  int first_time_nucleate=0;
+  if (nucleation_init_time==0.0) {
+   if (prev_time_slab==0.0) 
+    first_time_nucleate=1;
+  } else if (nucleation_init_time>0.0) {
+   if ((prev_time_slab<=nucleation_init_time)&&
+       (cur_time_slab>nucleation_init_time)) 
+    first_time_nucleate=1;
+  } else
+   amrex::Error("nucleation_init_time invalid");
+ 
+  if (nucleation_period==0.0) {
+   if (first_time_nucleate==1) {
+    do_the_nucleate=1;
+    for (int dir=0;dir<4*n_sites;dir++)
+     nucleate_pos[dir]=pos_sites[dir]; 
+   }
+  } else if (nucleation_period>0.0) {
+   if (first_time_nucleate==1) {
+    do_the_nucleate=1;
+    for (int dir=0;dir<4*n_sites;dir++)
+     nucleate_pos[dir]=pos_sites[dir]; 
+   } else if ((first_time_nucleate==0)&&
+              (prev_time_slab>nucleation_init_time)) {
+  
+    if (level==finest_level) {
+ 
+     int num_periods=0;
+     Real mult_period=nucleation_init_time;
+
+     while (mult_period<prev_time_slab) {
+      num_periods++;
+      mult_period=nucleation_init_time+ 
+        num_periods*nucleation_period;
+     }
+
+     if (1==0) {
+      std::cout << "num_periods= " << num_periods << '\n';
+      std::cout << "nucleation_period= " << nucleation_period << '\n';
+      std::cout << "prev_time_slab= " << prev_time_slab << '\n';
+      std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+      std::cout << "mult_period= " << mult_period << '\n';
+      std::cout << "nucleation_init_time= " << 
+       nucleation_init_time << '\n';
+     }
+
+     if (mult_period<cur_time_slab) {
+
+      do_the_nucleate=1;
+
+      for (int nc=0;nc<n_sites;nc++) {
+
+       double rr=pos_sites[nc*4+3];  // radius
+
+       Vector<Real> xnucleate(AMREX_SPACEDIM);
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+        xnucleate[dir]=-1.0e+99;
+
+       if (ParallelDescriptor::IOProcessor()) {
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+         Real save_random=amrex::Random();
+         if ((save_random<0.0)||(save_random>1.0)) {
+          std::cout << "save_random invalid save_random= " << 
+           save_random << '\n';
+          amrex::Error("save_random bust");
+         }
+         
+         xnucleate[dir]=problo[dir]+save_random*(probhi[dir]-problo[dir]);
+         if ((rz_flag==1)&&(dir==0)) {
+          xnucleate[dir]=0.0;
+         } else if (dir==AMREX_SPACEDIM-1) {
+          xnucleate[dir]=pos_sites[nc*4+dir];
+         } else {       
+          if (xnucleate[dir]-rr<problo[dir])
+           xnucleate[dir]=problo[dir]+rr;
+          if (xnucleate[dir]+rr>probhi[dir])
+           xnucleate[dir]=probhi[dir]-rr;
+         }
+        } // dir
+       } // io proc?
+
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+        ParallelDescriptor::ReduceRealMax(xnucleate[dir]);
+
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+        nucleate_pos[nc*4+dir]=xnucleate[dir];
+       nucleate_pos[nc*4+3]=rr;  // radius
+
+      } // nc=0..n_sites-1
+
+     } // mult_period<cur_time_slab
+
+    } else if ((level>=0)&&(level<finest_level)) {
+     // do nothing
+    } else
+     amrex::Error("level invalid nucleate_bubbles 2");
+
+   } else if (prev_time_slab<=nucleation_init_time) {
+    // do nothing
+   } else
+    amrex::Error("prev_time_slab invalid");
+  } else 
+   amrex::Error("nucleation_period invalid");
+ } else
+  amrex::Error("n_sites invalid");
+
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(1+AMREX_SPACEDIM)) 
   amrex::Error("LS_new invalid ncomp");
+
+ MultiFab& S_new = get_new_data(State_Type,slab_step+1);
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
 
  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
   amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
@@ -10006,6 +10127,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  debug_ngrow(LS_NRM_FD_MF,1,30);
  if (localMF[LS_NRM_FD_MF]->nComp()!=nmat*AMREX_SPACEDIM) 
   amrex::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
+
+ debug_ngrow(MDOT_MF,0,355);
 
  VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
 
@@ -10154,11 +10277,14 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     amrex::Error("Tsatfab.nComp()!=ntsat");
 
    FArrayBox& lsnewfab=LS_new[mfi];
+   FArrayBox& snewfab=S_new[mfi];
+
    FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
    FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
    FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
    FArrayBox& presfab=(*presmf)[mfi]; 
+   FArrayBox& pres_eos_fab=(*pres_eos_mf)[mfi]; 
 
    FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
 
@@ -10181,6 +10307,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &finest_level,
     &normal_probe_size,
     &ngrow_distance,
+    &nstate,
     &nmat,
     &nten,
     &nburning,
@@ -10188,6 +10315,17 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &nden,
     density_floor_expansion.dataPtr(),
     density_ceiling_expansion.dataPtr(),
+    &custom_nucleation_model,
+    &do_the_nucleate,
+    nucleate_pos.dataPtr(),
+    &nucleate_pos_size, 
+    nucleation_temp.dataPtr(), 
+    nucleation_pressure.dataPtr(), 
+    nucleation_pmg.dataPtr(), 
+    nucleation_mach.dataPtr(), 
+    cavitation_pressure.dataPtr(), 
+    cavitation_vapor_density.dataPtr(), 
+    cavitation_tension.dataPtr(), 
     microlayer_substrate.dataPtr(),
     microlayer_angle.dataPtr(),
     microlayer_size.dataPtr(),
@@ -10226,10 +10364,13 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+    snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
     nrmFDfab.dataPtr(),ARLIM(nrmFDfab.loVect()),ARLIM(nrmFDfab.hiVect()),
     eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
+    pres_eos_fab.dataPtr(),
+    ARLIM(pres_eos_fab.loVect()),ARLIM(pres_eos_fab.hiVect()),
     curvfab.dataPtr(),ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect())
     );
  } // mfi
@@ -10238,9 +10379,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
  delete_localMF(DEN_RECON_MF,1);
 
- if (hydrate_flag==1) {
-  delete presmf;
- }
+ delete presmf;
+ delete pres_eos_mf;
 
 } // subroutine level_phase_change_rate
 
@@ -11497,345 +11637,6 @@ NavierStokes::level_init_icemask() {
 
 } // subroutine level_init_icemask
 
-void
-NavierStokes::nucleate_bubbles(Vector<blobclass> blobdata,
-                int color_count) {
-
- int finest_level=parent->finestLevel();
-
- if ((level<0)||(level>finest_level))
-  amrex::Error("level invalid nucleate_bubbles");
-
- bool use_tiling=ns_tiling;
-
- if ((is_phasechange!=1)&&
-     (is_cavitation!=1)&&
-     (is_cavitation_mixture_model!=1))
-  amrex::Error("is_phasech, is_cav, or is_cav_mm invalid: nucleate_bubbles");
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
-  nmat*(num_state_material+ngeom_raw)+1;
- int nden=nmat*num_state_material;
- int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+
-  nmat*num_state_material;
-
- int blob_arraysize=num_elements_blobclass;
-
- if (color_count!=blobdata.size())
-  amrex::Error("color_count!=blobdata.size()");
- blob_arraysize=color_count*num_elements_blobclass;
-
- Vector<Real> blob_array;
- blob_array.resize(blob_arraysize);
-
- int counter=0;
- for (int i=0;i<color_count;i++) {
-  copy_from_blobdata(i,counter,blob_array,blobdata);
- } // i=0..color_count-1
-
- if (counter!=blob_arraysize)
-  amrex::Error("counter invalid");
-
- if (localMF[COLOR_MF]->nGrow()!=1)
-  amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
- if (localMF[TYPE_MF]->nGrow()!=1)
-  amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
-
- const Real* dx = geom.CellSize();
-
- Real problo[AMREX_SPACEDIM];
- Real probhi[AMREX_SPACEDIM];
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  problo[dir]=geom.ProbLo(dir);
-  probhi[dir]=geom.ProbHi(dir);
- }
-
- int rz_flag=0;
- if (geom.IsRZ())
-  rz_flag=1;
- else if (geom.IsCartesian())
-  rz_flag=0;
- else if (geom.IsCYLINDRICAL())
-  rz_flag=3;
- else
-  amrex::Error("CoordSys bust 1");
-
- MultiFab* presmf=getState(1,num_materials_vel*AMREX_SPACEDIM,
-   num_materials_vel,cur_time_slab);
- MultiFab* pres_eos_mf=derive_EOS_pressure();
- if (pres_eos_mf->nGrow()!=1)
-  amrex::Error("pres_eos_mf->nGrow()!=1");
-
- MultiFab* LSMF=getStateDist(2,cur_time_slab,6);
- MultiFab* EOSMF=getStateDen(1,cur_time_slab);
- if (EOSMF->nComp()!=nmat*num_state_material)
-  amrex::Error("EOSMF invalid ncomp");
- MultiFab* VOFMF=getState(1,scomp_mofvars,nmat*ngeom_raw,cur_time_slab);
-
- MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
- if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)) 
-  amrex::Error("LS_new invalid ncomp");
- MultiFab& S_new = get_new_data(State_Type,slab_step+1);
- if (nstate!=S_new.nComp())
-  amrex::Error("nstate invalid");
-
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,6001);
-
- if ((prev_time_slab<0.0)||
-     (cur_time_slab<=0.0)||
-     (cur_time_slab<=prev_time_slab))
-  amrex::Error("prev_time_slab or cur_time_slab invalid");
-
- int do_the_nucleate;
- Vector<Real> nucleate_pos;
- nucleate_pos.resize(4);
- if (n_sites>0)
-  nucleate_pos.resize(4*n_sites);
-
- do_the_nucleate=0;
- for (int i=0;i<nucleate_pos.size();i++) 
-  nucleate_pos[i]=0.0;
-
- if (n_sites==0) {
-  // do nothing
- } else if (n_sites>0) {
-
-  int first_time_nucleate=0;
-  if (nucleation_init_time==0.0) {
-   if (prev_time_slab==0.0) 
-    first_time_nucleate=1;
-  } else if (nucleation_init_time>0.0) {
-   if ((prev_time_slab<=nucleation_init_time)&&
-       (cur_time_slab>nucleation_init_time)) 
-    first_time_nucleate=1;
-  } else
-   amrex::Error("nucleation_init_time invalid");
- 
-  if (nucleation_period==0.0) {
-   if (first_time_nucleate==1) {
-    do_the_nucleate=1;
-    for (int dir=0;dir<4*n_sites;dir++)
-     nucleate_pos[dir]=pos_sites[dir]; 
-   }
-  } else if (nucleation_period>0.0) {
-   if (first_time_nucleate==1) {
-    do_the_nucleate=1;
-    for (int dir=0;dir<4*n_sites;dir++)
-     nucleate_pos[dir]=pos_sites[dir]; 
-   } else if ((first_time_nucleate==0)&&
-              (prev_time_slab>nucleation_init_time)) {
-  
-    if (level==finest_level) {
- 
-     int num_periods=0;
-     Real mult_period=nucleation_init_time;
-
-     while (mult_period<prev_time_slab) {
-      num_periods++;
-      mult_period=nucleation_init_time+ 
-        num_periods*nucleation_period;
-     }
-
-     if (1==0) {
-      std::cout << "num_periods= " << num_periods << '\n';
-      std::cout << "nucleation_period= " << nucleation_period << '\n';
-      std::cout << "prev_time_slab= " << prev_time_slab << '\n';
-      std::cout << "cur_time_slab= " << cur_time_slab << '\n';
-      std::cout << "mult_period= " << mult_period << '\n';
-      std::cout << "nucleation_init_time= " << 
-       nucleation_init_time << '\n';
-     }
-
-     if (mult_period<cur_time_slab) {
-
-      do_the_nucleate=1;
-
-      for (int nc=0;nc<n_sites;nc++) {
-
-       double rr=pos_sites[nc*4+3];  // radius
-
-       Vector<Real> xnucleate(AMREX_SPACEDIM);
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-        xnucleate[dir]=-1.0e+99;
-
-       if (ParallelDescriptor::IOProcessor()) {
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-         Real save_random=amrex::Random();
-         if ((save_random<0.0)||(save_random>1.0)) {
-          std::cout << "save_random invalid save_random= " << 
-           save_random << '\n';
-          amrex::Error("save_random bust");
-         }
-         
-         xnucleate[dir]=problo[dir]+save_random*(probhi[dir]-problo[dir]);
-         if ((rz_flag==1)&&(dir==0)) {
-          xnucleate[dir]=0.0;
-         } else if (dir==AMREX_SPACEDIM-1) {
-          xnucleate[dir]=pos_sites[nc*4+dir];
-         } else {       
-          if (xnucleate[dir]-rr<problo[dir])
-           xnucleate[dir]=problo[dir]+rr;
-          if (xnucleate[dir]+rr>probhi[dir])
-           xnucleate[dir]=probhi[dir]-rr;
-         }
-        } // dir
-       } // io proc?
-
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-        ParallelDescriptor::ReduceRealMax(xnucleate[dir]);
-
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-        nucleate_pos[nc*4+dir]=xnucleate[dir];
-       nucleate_pos[nc*4+3]=rr;  // radius
-
-      } // nc=0..n_sites-1
-
-     } // mult_period<cur_time_slab
-
-    } else if ((level>=0)&&(level<finest_level)) {
-     // do nothing
-    } else
-     amrex::Error("level invalid nucleate_bubbles 2");
-
-   } else if (prev_time_slab<=nucleation_init_time) {
-    // do nothing
-   } else
-    amrex::Error("prev_time_slab invalid");
-  } else 
-   amrex::Error("nucleation_period invalid");
- } else
-  amrex::Error("n_sites invalid");
-
- Vector< Vector<Real> > delta_mass_local;
- delta_mass_local.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  delta_mass_local[tid].resize(2*nmat); // source 1..nmat  dest 1..nmat
-  for (int im=0;im<2*nmat;im++)
-   delta_mass_local[tid][im]=0.0;
- } // tid
-
- debug_ngrow(MDOT_MF,0,355);
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(LS_new,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-
-   const Real* xlo = grid_loc[gridno].lo();
-   Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
-   FArrayBox& lsfab=(*LSMF)[mfi];
-   FArrayBox& lsnewfab=LS_new[mfi];
-   FArrayBox& eosfab=(*EOSMF)[mfi];
-   FArrayBox& presfab=(*presmf)[mfi];
-   FArrayBox& preseosfab=(*pres_eos_mf)[mfi];
-
-   FArrayBox& snewfab=S_new[mfi];
-   FArrayBox& voffab=(*VOFMF)[mfi]; 
-
-   FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
-   FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
-
-    // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
-   FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
-
-   int nucleate_pos_size=nucleate_pos.size();
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   FORT_NUCLEATE( 
-    delta_mass_local[tid_current].dataPtr(),
-    &custom_nucleation_model,
-    &prev_time_slab,
-    &cur_time_slab,
-    &level,&finest_level,
-    &nmat,&nten,&nden,&nstate,
-    latent_heat.dataPtr(),
-    saturation_temp.dataPtr(),
-    &do_the_nucleate,
-    nucleate_pos.dataPtr(),
-    &nucleate_pos_size, 
-    nucleation_temp.dataPtr(), 
-    nucleation_pressure.dataPtr(), 
-    nucleation_pmg.dataPtr(), 
-    nucleation_mach.dataPtr(), 
-    cavitation_pressure.dataPtr(), 
-    cavitation_vapor_density.dataPtr(), 
-    cavitation_tension.dataPtr(), 
-    cavitation_species.dataPtr(), 
-    cavitation_model.dataPtr(), 
-    tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    vofbc.dataPtr(),
-    xlo,dx,
-    &dt_slab,
-    &blob_arraysize,
-    blob_array.dataPtr(),
-    &num_elements_blobclass,
-    &color_count,
-    colorfab.dataPtr(),
-    ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
-    typefab.dataPtr(),
-    ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
-    maskcov.dataPtr(),
-    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-    snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-    eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
-    mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
-    presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
-    preseosfab.dataPtr(),
-    ARLIM(preseosfab.loVect()),ARLIM(preseosfab.hiVect()) );
- } // mfi
-} // omp
- ns_reconcile_d_num(80);
-
- for (int tid=1;tid<thread_class::nthreads;tid++) {
-  for (int im=0;im<2*nmat;im++) {
-   delta_mass_local[0][im]+=delta_mass_local[tid][im];
-  }
- } // tid
-
- for (int im=0;im<2*nmat;im++) {
-  ParallelDescriptor::ReduceRealSum(delta_mass_local[0][im]);
-  delta_mass[0][im]+=delta_mass_local[0][im];
- }
-
- delete LSMF;
- delete presmf;
- delete pres_eos_mf;
- delete EOSMF;
- delete VOFMF;
-
-}  // subroutine nucleate_bubbles
 
 // 1. called if freezing_model==0,5,6.
 // 2. multiphase_project->allocate_project_variables->stefan_solver_init

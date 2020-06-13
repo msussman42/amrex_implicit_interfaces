@@ -605,9 +605,6 @@ public:
     void resize_mask_nbr(int ngrow);
     void prepare_displacement(int mac_grow,int unsplit_displacement);
 
-    void nucleate_bubbles(Vector<blobclass> blobdata,
-                    int color_count);
-
     // VAHAB HEAT SOURCE
     void heat_source_term_flux_source();
 
@@ -1594,11 +1591,6 @@ protected:
      // index: 1..nmat
     static Vector<Real> cavitation_vapor_density; 
     static Vector<Real> cavitation_tension; 
-     // index: 1..nmat
-     // value: 1..num_species_var
-    static Vector<int> cavitation_species; 
-     // index: 1..nmat
-    static Vector<int> cavitation_model; 
 
      // used if freezing_model==5 (evaporation or condensation)
     static Vector<Real> species_evaporation_density; 
@@ -1682,8 +1674,6 @@ protected:
      //     V=mdot/rho_dst
     static Vector<int> distribute_from_target;
     static int is_phasechange;
-    static int is_cavitation;
-    static int is_cavitation_mixture_model;
     static int normal_probe_size;  // should always be 1
     static int ngrow_distance;  // should always be 4
     static int ngrow_make_distance;  // should always be 3

@@ -2537,16 +2537,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     mass_transfer_active=0;
 
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-     if ((is_phasechange==1)||
-         (is_cavitation==1)||
-         (is_cavitation_mixture_model==1)) {
+     if (is_phasechange==1) {
       mass_transfer_active=1;
-     } else if ((is_phasechange==0)&&
-                (is_cavitation==0)&&
-   	        (is_cavitation_mixture_model==0)) {
+     } else if (is_phasechange==0) {
       mass_transfer_active=0;
      } else
-      amrex::Error("is_phasechange or is_cav or is_cav_mix_model invalid");
+      amrex::Error("is_phasechange invalid");
     } else if ((slab_step==-1)||
 	       (slab_step==ns_time_order)) {
      // do nothing
@@ -2558,14 +2554,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     int color_count=0;
     int coarsest_level=0;
 
-
       // 2. If mass transfer
-      //    (a) nucleation (nucleate_bubbles)
-      //    (b) slopes/redistance
-      //    (c) mass transfer rate (stefan problem) (level_phase_change_rate)
-      //    (d) unsplit advection
-      //    (e) slopes/redistance
-      //    (f) redistribute mass increments
+      //    (a) slopes/redistance
+      //    (b) mass transfer rate (stefan problem) (level_phase_change_rate)
+      //    (c) unsplit advection
+      //    (d) slopes/redistance
+      //    (e) redistribute mass increments
       //    If no mass transfer
       //    (a) slopes/redistance
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
@@ -2638,13 +2632,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-        ns_level.nucleate_bubbles(blobdata,color_count);
-
         ns_level.avgDown(LS_Type,0,nmat,0);
         ns_level.MOFavgDown();
         int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
         ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
-       }  // ilev=finest_level ... level  (nucleate_bubbles)
+       }  // ilev=finest_level ... level  
 
        if (1==0) {
         int basestep_debug=nStep();
