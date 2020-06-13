@@ -1674,7 +1674,8 @@ protected:
     static Vector<int> mass_fraction_id; 
      // index: 1..num_species_var
      // value: 1..nmat
-    static Vector<int> spec_material_id; 
+    static Vector<int> spec_material_id_LIQUID; 
+    static Vector<int> spec_material_id_AMBIENT; 
      // 0 - distribute to the destination material (default)
      //     V=mdot/rho_src
      // 1 - distribute to the source material

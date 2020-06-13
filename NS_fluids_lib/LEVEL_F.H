@@ -552,7 +552,7 @@ namespace amrex{
         int* nrefine_vof,
         int* nrefine_cen,
         int* nten,
-        int* spec_material_id,
+        int* spec_material_id_AMBIENT,
         int* mass_fraction_id,
         Real* species_evaporation_density,
         Real* cavitation_vapor_density,

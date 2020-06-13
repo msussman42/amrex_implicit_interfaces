@@ -536,7 +536,7 @@ stop
          if ((override_density(im).eq.0).or. &
              (override_density(im).eq.2)) then
           density=fort_denconst(im)
-         else if (override_density(im).eq.1) then ! rho=rho(T,z)
+         else if (override_density(im).eq.1) then ! rho=rho(T,Y,z)
           density=massdepart/voldepart
          else
           print *,"override_density invalid"
@@ -12094,7 +12094,7 @@ stop
        ! masknbr=1 fine-fine border cells and interior cells.
        ! masknbr=0 coarse-fine cells and cells outside domain.
       subroutine FORT_DENCOR( &
-       spec_material_id, &
+       spec_material_id_AMBIENT, &
        species_evaporation_density, &
        presbc_arr, &
        tilelo,tilehi, &
@@ -12115,7 +12115,7 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: spec_material_id(num_species_var+1)
+      INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat
@@ -12296,7 +12296,7 @@ stop
            endif
 
            do ispec=1,num_species_var
-            im_spec=spec_material_id(ispec)
+            im_spec=spec_material_id_AMBIENT(ispec)
             if (im_spec.eq.im) then
              massfrac=dennew(D_DECL(i,j,k),dencomp+1+ispec)
              call make_mixture_density(massfrac, &

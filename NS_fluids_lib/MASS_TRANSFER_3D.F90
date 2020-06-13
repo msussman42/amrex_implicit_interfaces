@@ -5031,6 +5031,20 @@ stop
                 tcomp_source=(im_source-1)*num_state_material+2
                 tcomp_dest=(im_dest-1)*num_state_material+2
 
+                im_ambient=0
+                if ((local_freezing_mod.eq.4).or. & !Tanasawa
+                    (local_freezing_mod.eq.5).or. & !cavitation
+                    (local_freezing_mod.eq.6)) then !Palmore/Desjardins
+                 if (LL(ireverse).gt.zero) then ! evaporation
+                  im_ambient=im_dest
+                 else if (LL(ireverse).lt.zero) then ! condensation
+                  im_ambient=im_source
+                 else
+                  print *,"LL invalid"
+                  stop
+                 endif
+                 if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+                   
                 if (ispec.eq.0) then
                  Ycomp_source=0
                  Ycomp_dest=0
@@ -5170,6 +5184,21 @@ stop
                 TSAT_iter=0
                 TSAT_iter_max=5
                 TSAT_converge=0
+
+FIX ME
+1. eliminate cavitation_species -> merge this into freezing_mod==7
+    freezing_mod=4  Tanasawa
+    freezing_mod=5  fully saturated evaporation?
+    freezing_mod=6  partially saturated evaporation?
+    freezing_mod=7  Cavitation (a seed must exist)
+2. fix inputs files that have cavitation_species
+3. spec_material_id_LIQUID
+   spec_material_id_AMBIENT
+                if (local_freezing_mod.eq.6) then ! Palmore/Desjardins
+                 !find minimum possible Y on the interface  
+                 !Y_probe<=Y_interface<=1
+                 YMIN_converge=0
+                 do while (YMIN_converge.eq.0)
 
                 do while (TSAT_converge.eq.0) 
 

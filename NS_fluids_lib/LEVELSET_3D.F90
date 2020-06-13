@@ -8363,7 +8363,7 @@ stop
        nrefine_vof, &
        nrefine_cen, &
        nten, &
-       spec_material_id, &
+       spec_material_id_AMBIENT, &
        mass_fraction_id, &
        species_evaporation_density, &
        cavitation_vapor_density, &
@@ -8395,7 +8395,7 @@ stop
       INTEGER_T, intent(in) :: nrefine_cen
       INTEGER_T, intent(in) :: nten
       INTEGER_T :: nten_test
-      INTEGER_T, intent(in) :: spec_material_id(num_species_var+1)
+      INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       REAL_T, intent(in) :: cavitation_vapor_density(nmat)
@@ -8677,6 +8677,7 @@ stop
             !   if override_density=1 then density=mass_depart/vol_depart
             ! if compressible,
             !   density=massdepart/voltarget
+            ! in: GODUNOV_3D.F90
             call derive_density( &
              voldepart,voldepart,voldonate, &
              override_density,delta_mass, &
@@ -8718,7 +8719,7 @@ stop
             endif
 
             do ispecies=1,num_species_var
-             im_species=spec_material_id(ispecies)
+             im_species=spec_material_id_AMBIENT(ispecies)
              if (im_species.eq.0) then
               ! do nothing
              else if (im_species.eq.im) then

@@ -672,8 +672,10 @@ Vector<Real> NavierStokes::reaction_rate;
 Vector<int> NavierStokes::freezing_model;
 Vector<int> NavierStokes::mass_fraction_id;
 //link diffused material to non-diff. (array 1..num_species_var)
-//spec_material_id is both input AND derived.
-Vector<int> NavierStokes::spec_material_id; 
+//spec_material_id_LIQUID, spec_material_id_AMBIENT are are 
+//both input AND derived.
+Vector<int> NavierStokes::spec_material_id_LIQUID; 
+Vector<int> NavierStokes::spec_material_id_AMBIENT; 
 // 0 - distribute to the destination material (default)
 //     V=mdot/rho_src
 // 1 - distribute to the source material
@@ -2575,12 +2577,19 @@ NavierStokes::read_params ()
      pp.queryarr("species_evaporation_density",species_evaporation_density,
       0,num_species_var);
 
-    spec_material_id.resize(num_species_var+1);
-    for (int i=0;i<num_species_var+1;i++)
-     spec_material_id[i]=0;
+    spec_material_id_LIQUID.resize(num_species_var+1);
+    spec_material_id_AMBIENT.resize(num_species_var+1);
+    for (int i=0;i<num_species_var+1;i++) {
+     spec_material_id_LIQUID[i]=0;
+     spec_material_id_AMBIENT[i]=0;
+    }
 
-    if (num_species_var>0)
-     pp.queryarr("spec_material_id",spec_material_id,0,num_species_var);
+    if (num_species_var>0) {
+     pp.queryarr("spec_material_id_LIQUID",spec_material_id_LIQUID,
+       0,num_species_var);
+     pp.queryarr("spec_material_id_AMBIENT",spec_material_id_AMBIENT,
+       0,num_species_var);
+    }
     
     vorterr.resize(nmat);
     pressure_error_cutoff.resize(nmat);
@@ -3549,11 +3558,13 @@ NavierStokes::read_params ()
          int massfrac_id=mass_fraction_id[indexEXP];
          if ((massfrac_id<1)||(massfrac_id>num_species_var))
           amrex::Error("massfrac_id invalid");
-         if (LL>0.0)  //evaporation
-          spec_material_id[massfrac_id-1]=im_source;
-         else if (LL<0.0)  // condensation
-          spec_material_id[massfrac_id-1]=im_dest;
-         else
+         if (LL>0.0) { //evaporation
+          spec_material_id_LIQUID[massfrac_id-1]=im_source;
+          spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
+         } else if (LL<0.0) { // condensation
+          spec_material_id_LIQUID[massfrac_id-1]=im_dest;
+          spec_material_id_AMBIENT[massfrac_id-1]=im_source;
+         } else
           amrex::Error("LL invalid");
         } // LL!=0.0
        } // if (freezing_model[indexEXP]==4,5 or 6)
@@ -3562,7 +3573,7 @@ NavierStokes::read_params ()
     } // im
 
     for (int i=0;i<num_species_var;i++) {
-     int im=spec_material_id[i];
+     int im=spec_material_id_AMBIENT[i];
      if (im==0) {
       // check nothing
      } else if ((im>=1)&&(im<=nmat)) {
@@ -3877,9 +3888,12 @@ NavierStokes::read_params ()
        microlayer_temperature_substrate[i] << '\n';
      } // i=0..nmat-1
 
-     for (int i=0;i<num_species_var;i++)
-      std::cout << "spec_material_id i= " << i << " " <<
-       spec_material_id[i] << '\n';
+     for (int i=0;i<num_species_var;i++) {
+      std::cout << "spec_material_id_LIQUID i= " << i << " " <<
+       spec_material_id_LIQUID[i] << '\n';
+      std::cout << "spec_material_id_AMBIENT i= " << i << " " <<
+       spec_material_id_AMBIENT[i] << '\n';
+     }
 
      for (int i=0;i<2*AMREX_SPACEDIM;i++) {
       std::cout << "i= " << i << " outflow_velocity_buffer_size= " <<
@@ -9650,7 +9664,7 @@ NavierStokes::correct_density() {
      // in: GODUNOV_3D.F90
      // if override_density[im]==1, then rho_im=rho(T,Y,z) 
     FORT_DENCOR(
-      spec_material_id.dataPtr(),
+      spec_material_id_AMBIENT.dataPtr(),
       species_evaporation_density.dataPtr(),
       presbc.dataPtr(),
       tilelo,tilehi,
@@ -13505,6 +13519,7 @@ NavierStokes::split_scalar_advection() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: LEVELSET_3D.F90
     // centroid in absolute coordinates.
    FORT_BUILD_SEMIREFINEVOF(
     &tid_current,
@@ -13513,7 +13528,7 @@ NavierStokes::split_scalar_advection() {
     &nrefine_vof,
     &nrefine_cen,
     &nten,
-    spec_material_id.dataPtr(),
+    spec_material_id_AMBIENT.dataPtr(),
     mass_fraction_id.dataPtr(),
     species_evaporation_density.dataPtr(),
     cavitation_vapor_density.dataPtr(),
@@ -14481,7 +14496,7 @@ NavierStokes::unsplit_scalar_advection() {
     &nrefine_vof,
     &nrefine_cen,
     &nten,
-    spec_material_id.dataPtr(),
+    spec_material_id_AMBIENT.dataPtr(),
     mass_fraction_id.dataPtr(),
     species_evaporation_density.dataPtr(),
     cavitation_vapor_density.dataPtr(),
