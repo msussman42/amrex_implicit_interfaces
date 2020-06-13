@@ -5276,6 +5276,7 @@ FIX ME
 4. modify extension routine if fully wetting or fully dry conditions:
     a) if F_solid>0 then find tessellating VFRAC and centroids
     b) replace Solid with the wetting material.
+5. seed material must never be truncated.
                 if (local_freezing_mod.eq.6) then ! Palmore/Desjardins
                  !find minimum possible Y on the interface  
                  !Y_probe<=Y_interface<=1
