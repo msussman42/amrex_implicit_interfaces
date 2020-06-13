@@ -11436,7 +11436,6 @@ NavierStokes::level_phase_change_redistribute(
     // NavierStokes::allocate_mdot() called at the beginning of
     //  NavierStokes::do_the_advance
     // mdot initialized in NavierStokes::prelim_alloc()
-    // mdot updated in nucleate_bubbles.
     FORT_INITJUMPTERM( 
      &mdotplus_local[tid_current],
      &mdotminus_local[tid_current],
