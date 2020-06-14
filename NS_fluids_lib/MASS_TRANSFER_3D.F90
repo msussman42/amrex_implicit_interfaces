@@ -2477,8 +2477,9 @@ stop
              (local_freezing_model.eq.2)) then
           ! do nothing
          else if ((local_freezing_model.eq.4).or. & ! Tanasawa
-                  (local_freezing_model.eq.5).or. & ! cavitation
-                  (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+                  (local_freezing_model.eq.5).or. & ! Stefan model evap/cond.
+                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                  (local_freezing_model.eq.7)) then ! Cavitation
           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
           if ((mass_frac_id.ge.1).and.(mass_frac_id.le.num_species_var)) then
            evap_den=species_evaporation_density(mass_frac_id)
@@ -2545,9 +2546,11 @@ stop
             endif
 
            endif ! LL <> 0
-          else if (local_freezing_model.eq.5) then 
+          else if (local_freezing_model.eq.5) then  ! stefan evap/cond
            ! do nothing
-          else if (local_freezing_model.eq.6) then 
+          else if (local_freezing_model.eq.6) then  ! Palmore/Desjardin
+           ! do nothing
+          else if (local_freezing_model.eq.7) then  ! Cavitation
            ! do nothing
           else
            print *,"local_freezing_model invalid in convertmaterial"
@@ -3368,8 +3371,9 @@ stop
            if (local_freezing_model.eq.0) then ! standard Stefan model
             ! do nothing
            else if ((local_freezing_model.eq.4).or. & ! Tannasawa model
-                    (local_freezing_model.eq.5).or. & ! cavitation
-                    (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+                    (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
+                    (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                    (local_freezing_model.eq.7)) then ! Cavitation
 
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
@@ -3380,12 +3384,12 @@ stop
 
               if (LL.gt.zero) then ! evaporation
 
-               if (oldvfrac(im_dest).gt.EBVOFTOL) then
+               if (oldvfrac(im_dest).gt.EBVOFTOL) then ! valid Y,F vapor
                 speccompdst=(im_dest-1)*num_state_material+ &
                  num_state_base+mass_frac_id
                 Yfrac_old=EOS(D_DECL(i,j,k),speccompdst)
                 if ((Yfrac_old.ge.zero).and.(Yfrac_old.le.one)) then
-                 density_old=density_dest
+                 density_old=density_dest !denconst if material_id==0
                  call make_mixture_density(Yfrac_old, &
                    density_old,evap_den)
                  Yfrac_vapor_to_gas=Yfrac_old 
@@ -3394,7 +3398,7 @@ stop
                  print *,"Yfrac_old invalid"
                  stop
                 endif
-               else if (oldvfrac(im_dest).le.EBVOFTOL) then
+               else if (oldvfrac(im_dest).le.EBVOFTOL) then ! default Y,F vapor
                 Yfrac_vapor_to_gas=zero
                 vfrac_vapor_to_gas=zero
                else
@@ -3511,13 +3515,19 @@ stop
 
               ! evaporation: im_source=liquid im_dest=surrounding gas
               ! condensation: im_source=surrounding gas im_dest=liquid
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa
-                 (local_freezing_model.eq.5).or. & ! cavitation
-                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+             if ((local_freezing_model.eq.4).or. & !Tanasawa
+                 (local_freezing_model.eq.5).or. & !Stefan model evap/cond.
+                 (local_freezing_model.eq.6).or. & !Palmore/Desjardins
+                 (local_freezing_model.eq.7)) then !Cavitation
               speccompdst=num_materials_vel*(SDIM+1)+ &
                   (im_dest-1)*num_state_material+2+mass_frac_id
             
                ! evaporation 
+               ! assume all liquid becomes pure vapor: dF (expansion comes 
+               ! later)
+               ! total new gases: oldvfrac(im_dest)+dF
+               ! total new vapor: oldvfrac(im_dest)*vfrac_vapor_to_gas+dF
+               ! new vapor/(total new gases) = new_vfrac_vapor
               if (LL.gt.zero) then
                new_vfrac_vapor=(oldvfrac(im_dest)*vfrac_vapor_to_gas+dF)/ &
                 (oldvfrac(im_dest)+dF)
@@ -3532,9 +3542,9 @@ stop
                 stop
                endif
 
-                ! condensation: vapor fraction=0 in the liquid.
+                ! condensation: vapor fraction=1 in the liquid.
               else if (LL.lt.zero) then 
-               snew(D_DECL(i,j,k),speccompdst)=zero
+               snew(D_DECL(i,j,k),speccompdst)=one
               else
                print *,"LL invalid"
                stop
@@ -3543,7 +3553,7 @@ stop
 
              mtype=fort_material_type(im_dest)
              if (mtype.eq.0) then
-              ! do nothing
+              ! density modified in FORT_DENCOR
              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
               snew(D_DECL(i,j,k),dencomp)=density_dest 
              else
@@ -3573,11 +3583,21 @@ stop
             else if (newvfrac(im_dest).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
              if ((local_freezing_model.eq.4).or. & ! Tanasawa
-                 (local_freezing_model.eq.5).or. & ! cavitation
-                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+                 (local_freezing_model.eq.5).or. & ! Stefan Evap/Cond.
+                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                 (local_freezing_model.eq.7)) then ! Cavitation
               speccompdst=num_materials_vel*(SDIM+1)+ &
                    (im_dest-1)*num_state_material+2+mass_frac_id
-              snew(D_DECL(i,j,k),speccompdst)=zero
+
+              if (LL.gt.zero) then ! evaporation
+               snew(D_DECL(i,j,k),speccompdst)=zero
+              else if (LL.lt.zero) then ! condensation
+               snew(D_DECL(i,j,k),speccompdst)=one
+              else
+               print *,"LL invalid"
+               stop
+              endif
+
              endif
             else
              print *,"newvfrac(im_dest) invalid"
@@ -3592,7 +3612,7 @@ stop
 
              mtype=fort_material_type(im_source)
              if (mtype.eq.0) then
-              ! do nothing
+              ! source density modified in FORT_DENCOR
              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
               snew(D_DECL(i,j,k),dencomp)=density_source
              else
@@ -3603,8 +3623,9 @@ stop
              snew(D_DECL(i,j,k),tcomp)=unsplit_temperature(im_source) 
 
              if ((local_freezing_model.eq.4).or. & ! Tanasawa
-                 (local_freezing_model.eq.5).or. & ! cavitation
-                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+                 (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
+                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                 (local_freezing_model.eq.7)) then ! Cavitation
               speccompsrc=num_materials_vel*(SDIM+1)+ &
                    (im_source-1)*num_state_material+2+mass_frac_id
             
@@ -3623,7 +3644,7 @@ stop
                 stop
                endif
               else if (LL.gt.zero) then ! evaporation
-               snew(D_DECL(i,j,k),speccompsrc)=zero
+               snew(D_DECL(i,j,k),speccompsrc)=one
               else
                print *,"LL invalid"
                stop
@@ -3639,11 +3660,20 @@ stop
             else if (newvfrac(im_source).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
              if ((local_freezing_model.eq.4).or. & ! Tanasawa
-                 (local_freezing_model.eq.5).or. & ! cavitation
-                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+                 (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
+                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                 (local_freezing_model.eq.7)) then ! Cavitation
               speccompsrc=num_materials_vel*(SDIM+1)+ &
                        (im_source-1)*num_state_material+2+mass_frac_id
-              snew(D_DECL(i,j,k),speccompsrc)=zero
+              if (LL.gt.zero) then ! evaporation
+               snew(D_DECL(i,j,k),speccompsrc)=one
+              else if (LL.lt.zero) then ! condensation
+               snew(D_DECL(i,j,k),speccompsrc)=zero
+              else
+               print *,"LL invalid"
+               stop
+              endif
+
              endif
             else
              print *,"newvfrac(im_source) invalid"
@@ -3707,7 +3737,7 @@ stop
            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
-           if ((local_freezing_model.lt.0).or.(local_freezing_model.gt.6)) then
+           if ((local_freezing_model.lt.0).or.(local_freezing_model.gt.7)) then
             print *,"local_freezing_model invalid"
             stop
            endif
@@ -3810,8 +3840,9 @@ stop
            endif
 
            if ((local_freezing_model.eq.4).or. & ! Tanasawa
-               (local_freezing_model.eq.5).or. & ! cavitation
-               (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+               (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
+               (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+               (local_freezing_model.eq.7)) then ! cavitation
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
              evap_den=species_evaporation_density(mass_frac_id)
@@ -3832,7 +3863,7 @@ stop
              print *,"mass_frac_id invalid"
              stop
             endif
-           endif ! local_freezing_model==4,5,6
+           endif ! local_freezing_model==4,5,6,7
 
            if ((densrc_restrict.le.zero).or.(dendst_restrict.le.zero)) then
             print *,"densrc_restrict and dendst_restrict must be positive"
@@ -3920,7 +3951,7 @@ stop
 
             ! divide and conquer temperature equation (TSAT Dirichlet BC)
             if ((local_freezing_model.eq.0).or. &
-                (local_freezing_model.eq.5).or. & ! cavitation
+                (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins 
 
              if ((oldvfrac(im_dest).lt.half).and. &
@@ -4050,6 +4081,9 @@ stop
               print *,"dF invalid"
               stop
              endif
+            else if (local_freezing_model.eq.7) then ! Cavitation
+             print *,"FIX ME"
+             stop
             else
              print *,"local_freezing_model invalid in convertmaterial(2)"
              print *,"local_freezing_model= ",local_freezing_model
@@ -4618,6 +4652,7 @@ stop
       INTEGER_T i,j,k
       INTEGER_T dir,dir2
       INTEGER_T im,im_opp,ireverse,iten,imls
+      INTEGER_T im_ambient
       INTEGER_T im_primary
       INTEGER_T imls1
       INTEGER_T im_substrate_source
@@ -4718,6 +4753,7 @@ stop
       REAL_T TSAT_predict,TSAT_correct
       REAL_T TSAT_ERR,TSAT_INIT_ERR
       INTEGER_T TSAT_iter,TSAT_converge,TSAT_iter_max
+      INTEGER_T YMIN_converge
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -4981,6 +5017,7 @@ stop
            call get_iten(im,im_opp,iten,nmat)
 
            do ireverse=0,1
+
             temp_target_probe_history(iten+ireverse*nten,1)=zero
             dxprobe_target_history(iten+ireverse*nten,1)=zero
             temp_target_probe_history(iten+ireverse*nten,2)=zero
@@ -4991,7 +5028,9 @@ stop
             K_f(ireverse)=reaction_rate(iten+ireverse*nten)
 
             local_freezing_model=freezing_model(iten+ireverse*nten)
+
             ispec=mass_fraction_id(iten+ireverse*nten)
+
             if ((ispec.ge.0).and.(ispec.le.num_species_var)) then
              ! do nothing
             else
@@ -5031,8 +5070,11 @@ stop
 
              if ((is_rigid(nmat,im).eq.1).or. &
                  (is_rigid(nmat,im_opp).eq.1)) then
+
               ! do nothing
+
              else if (LL(ireverse).ne.zero) then
+
               local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
 
               found_path=0
@@ -5080,6 +5122,8 @@ stop
                  enddo ! dir
                 else
                  print *,"LShere bust"
+                 print *,"LShere(im_dest) ",LShere(im_dest)
+                 print *,"LShere(im_source) ",LShere(im_source)
                  stop
                 endif
 
@@ -5092,6 +5136,8 @@ stop
 
                else
                 print *,"LShere bust"
+                print *,"LShere(im_dest) ",LShere(im_dest)
+                print *,"LShere(im_source) ",LShere(im_source)
                 stop
                endif
            
@@ -5110,9 +5156,10 @@ stop
                 tcomp_dest=(im_dest-1)*num_state_material+2
 
                 im_ambient=0
-                if ((local_freezing_mod.eq.4).or. & !Tanasawa
-                    (local_freezing_mod.eq.5).or. & !cavitation
-                    (local_freezing_mod.eq.6)) then !Palmore/Desjardins
+                if ((local_freezing_model.eq.4).or. & !Tanasawa
+                    (local_freezing_model.eq.5).or. & !Stefan evap/cond
+                    (local_freezing_model.eq.6).or. & !Palmore/Desjardins
+                    (local_freezing_model.eq.7)) then !Cavitation
                  if (LL(ireverse).gt.zero) then ! evaporation
                   im_ambient=im_dest
                  else if (LL(ireverse).lt.zero) then ! condensation
@@ -5121,16 +5168,28 @@ stop
                   print *,"LL invalid"
                   stop
                  endif
-                 if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
                    
-                if (ispec.eq.0) then
-                 Ycomp_source=0
-                 Ycomp_dest=0
-                else if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-                 Ycomp_source=(im_source-1)*num_state_material+2+ispec
-                 Ycomp_dest=(im_dest-1)*num_state_material+2+ispec
+                 if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+                  Ycomp_source=(im_source-1)*num_state_material+2+ispec
+                  Ycomp_dest=(im_dest-1)*num_state_material+2+ispec
+                 else
+                  print *,"ispec invalid"
+                  stop
+                 endif
+                else if ((local_freezing_model.eq.0).or. & ! Stefan model
+                         (local_freezing_model.eq.1).or. & ! source term
+                         (local_freezing_model.eq.2).or. & ! hydrate
+                         (local_freezing_model.eq.3)) then ! wild fire
+
+                 if (ispec.eq.0) then
+                  Ycomp_source=0
+                  Ycomp_dest=0
+                 else if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+                  print *,"expecting ispec ==0 "
+                  stop
+                 endif
                 else
-                 print *,"ispec invalid"
+                 print *,"local_freezing_model invalid"
                  stop
                 endif
 
@@ -5263,25 +5322,23 @@ stop
                 TSAT_iter_max=5
                 TSAT_converge=0
 
-FIX ME
-1. eliminate cavitation_species -> merge this into freezing_mod==7
-    freezing_mod=4  Tanasawa
-    freezing_mod=5  fully saturated evaporation?
-    freezing_mod=6  partially saturated evaporation?
-    freezing_mod=7  Cavitation (a seed must exist)
-2. fix inputs files that have cavitation_species
-   (probtype=46,411,412)
-3. spec_material_id_LIQUID
-   spec_material_id_AMBIENT
-4. modify extension routine if fully wetting or fully dry conditions:
-    a) if F_solid>0 then find tessellating VFRAC and centroids
-    b) replace Solid with the wetting material.
-5. seed material must never be truncated.
-                if (local_freezing_mod.eq.6) then ! Palmore/Desjardins
+!FIX ME
+! 1. Y BC in diffusion solver
+! 2. div ( rho D grad Y )/rho
+!    freezing_mod=4  Tanasawa
+!    freezing_mod=5  fully saturated evaporation?
+!    freezing_mod=6  partially saturated evaporation?
+!    freezing_mod=7  Cavitation (a seed must exist)
+
+                if (local_freezing_model.eq.6) then ! Palmore/Desjardins
                  !find minimum possible Y on the interface  
                  !Y_probe<=Y_interface<=1
                  YMIN_converge=0
                  do while (YMIN_converge.eq.0)
+
+                 enddo
+
+                endif
 
                 do while (TSAT_converge.eq.0) 
 
@@ -6222,16 +6279,16 @@ FIX ME
                  endif
    
                 else if (at_interface.eq.0) then
-                  ! do nothing
+                 ! do nothing
                 else
-                  print *,"at_interface invalid"
-                  stop
+                 print *,"at_interface invalid"
+                 stop
                 endif
 
                else if (found_path.eq.0) then
                 ! do nothing
                else
-                print *,"found_path invalid"
+                print *,"found_path invalid: ",found_path
                 stop
                endif
 
@@ -6239,11 +6296,14 @@ FIX ME
                        (abs(LShere(im_dest)).gt.two*dxmaxLS)) then
                ! do nothing
               else
-               print *,"LShere bust"
+               print *,"LShere bust:"
+               print *,"LShere(im_source) ",LShere(im_source)
+               print *,"LShere(im_dest) ",LShere(im_dest)
                stop
               endif
+
              else
-              print *,"LL bust"
+              print *,"LL(ireverse) bust: ",LL(ireverse)
               stop
              endif
 
@@ -6253,7 +6313,8 @@ FIX ME
              print *,"LL bust"
              stop
             endif
-           enddo ! ireverse
+
+           enddo ! ireverse=0,...,1
             
            ireverse=-1 
            if ((valid_phase_change(0).eq.0).and. &

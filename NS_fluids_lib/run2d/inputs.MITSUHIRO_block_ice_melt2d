@@ -215,7 +215,7 @@ ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 #ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 #evaporation: 
 # freezing_model=0 => stefan law  V=[k grad T dot n]/L
-# 5 = mystery evaporation law
+# 5 = Stefan evaporation law
 ns.freezing_model=5 0 0 0 0 0 0 0 0 0 0 0
 #no evaporation: 
 #ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
@@ -281,6 +281,8 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #evaporation: water vapor is solute, air is solvent units: cm^2/s
 #C_t + u dot grad C = div alpha laplacian C ?
 ns.speciesviscconst=0.0 0.282 0.0 0.0
+# 1=water 2=gas  3=ice  4=substrate 
+ns.speciesconst=1.0 0.0 0.0 0.0
 # ice is a very viscous fluid 
 ns.viscconst=0.018 0.00017 1000.0 1000.0 # dimensional
 # ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before

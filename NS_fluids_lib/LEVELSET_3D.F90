@@ -5929,11 +5929,10 @@ stop
        microlayer_size, & ! 1..nmat
        microlayer_substrate, & ! 1..nmat
        microlayer_temperature_substrate, & ! 1..nmat
-       spec_material_id, & ! 1..num_species_var+1
+       spec_material_id_AMBIENT, & ! 1..num_species_var+1
        mass_fraction_id, &
        species_evaporation_density, &
        cavitation_vapor_density, &
-       cavitation_species, &
        override_density, &
        time, &
        project_option, &
@@ -6030,11 +6029,10 @@ stop
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T :: veldir
       INTEGER_T, intent(in) :: override_density(nmat)
-      INTEGER_T, intent(in) :: spec_material_id(num_species_var+1)
+      INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       REAL_T, intent(in) :: cavitation_vapor_density(nmat)
-      INTEGER_T, intent(in) :: cavitation_species(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
@@ -6204,8 +6202,6 @@ stop
       INTEGER_T im_prescribed_valid
       INTEGER_T partid_solid
       INTEGER_T partid_prescribed
-      REAL_T total_density,evap_den,local_mfrac
-      INTEGER_T ispecies,im_species,speccomp
       INTEGER_T im_prescribed_primary
 
 ! INIT_PHYSICS_VARS code starts here:
@@ -8184,74 +8180,13 @@ stop
           im,nmat,den, &
           for_hydrostatic_pres) 
 
-         if (den.le.zero) then
+         if (den.gt.zero) then
+          ! do nothing
+         else
           print *,"density must be positive init_phyiscs_vars2"
           print *,"i,j,k,im,den ",i,j,k,im,den
           stop
          endif
-
-         total_density=den
-
-         ispecies=cavitation_species(im)
-         if (ispecies.eq.0) then
-          ! do nothing
-         else if ((ispecies.ge.1).and.(ispecies.le.num_species_var)) then
-          speccomp=(im-1)*num_state_material+num_state_base+ispecies
-          local_mfrac=denstate(D_DECL(i,j,k),speccomp)
-          if ((local_mfrac.ge.zero).and.(local_mfrac.le.one)) then
-           evap_den=cavitation_vapor_density(im)
-           if (evap_den.gt.zero) then
-            total_density=den*evap_den/ &
-             (local_mfrac*den+(one-local_mfrac)*evap_den)
-            den=total_density
-           else
-            print *,"evap_den invalid"
-            stop
-           endif
-          else
-           print *,"local_mfrac invalid 1"
-           print *,"local_mfrac=",local_mfrac
-           stop
-          endif
-         else
-          print *,"ispecies invalid"
-          stop
-         endif
- 
-         do ispecies=1,num_species_var
-          im_species=spec_material_id(ispecies)
-          if (im_species.eq.0) then
-           ! do nothing
-          else if (im_species.eq.im) then
-           ! do nothing
-          else if ((im_species.ge.1).and. &
-                   (im_species.le.nmat).and. &
-                   (im_species.ne.im)) then
-           speccomp=(im-1)*num_state_material+num_state_base+ispecies
-           local_mfrac=denstate(D_DECL(i,j,k),speccomp)
-           if ((local_mfrac.ge.zero).and.(local_mfrac.le.one)) then
-            evap_den=species_evaporation_density(ispecies)
-            if (evap_den.gt.zero) then
-             total_density=den*evap_den/ &
-              (local_mfrac*den+(one-local_mfrac)*evap_den)
-            else
-             print *,"evap_den invalid"
-             stop
-            endif
-           else
-            print *,"local_mfrac invalid 2"
-            print *,"local_mfrac=",local_mfrac
-            stop
-           endif
-          else
-           print *,"im_species (spec_material_id(ispecies)) invalid1"
-           print *,"im_species= ",im_species
-           print *,"ispecies=",ispecies
-           stop
-          endif
-         enddo ! ispecies=1,num_species_var
-
-         den=total_density
 
          cenden(D_DECL(i,j,k),im+1)=one/den 
 
@@ -8367,7 +8302,6 @@ stop
        mass_fraction_id, &
        species_evaporation_density, &
        cavitation_vapor_density, &
-       cavitation_species, &
        override_density, &
        xlo,dx, &
        slope,DIMS(slope), &
@@ -8399,7 +8333,6 @@ stop
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       REAL_T, intent(in) :: cavitation_vapor_density(nmat)
-      INTEGER_T, intent(in) :: cavitation_species(nmat)
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat
       INTEGER_T :: veldir
@@ -8455,8 +8388,6 @@ stop
       REAL_T xsten_donate(-1:1,SDIM)
       INTEGER_T for_hydrostatic_pres
       REAL_T mu
-      REAL_T total_density,evap_den,local_mfrac
-      INTEGER_T ispecies,im_species,speccomp
 
       for_hydrostatic_pres=0
 
@@ -8683,76 +8614,6 @@ stop
              override_density,delta_mass, &
              im,nmat,den,for_hydrostatic_pres)
  
-            total_density=den
-
-            ispecies=cavitation_species(im)
-            if (ispecies.eq.0) then
-             ! do nothing
-            else if ((ispecies.ge.1).and.(ispecies.le.num_species_var)) then
-             speccomp=(im-1)*num_state_material+num_state_base+ispecies
-             local_mfrac=denstate(D_DECL(i,j,k),speccomp)
-             if ((local_mfrac.ge.zero).and.(local_mfrac.le.one)) then
-              evap_den=cavitation_vapor_density(im)
-              if (evap_den.gt.zero) then
-               total_density=den*evap_den/ &
-                (local_mfrac*den+(one-local_mfrac)*evap_den)
-               den=total_density
-              else
-               print *,"evap_den invalid"
-               stop
-              endif
-             else
-              print *,"local_mfrac invalid 3 FORT_BUILD_SEMIREFINEVOF"
-              print *,"local_mfrac=",local_mfrac
-              print *,"ngrow_refine=",ngrow_refine
-              print *,"im=",im
-              print *,"speccomp=",speccomp
-              print *,"ispecies=",ispecies
-              print *,"den=",den
-              print *,"i,j,k ",i,j,k
-              print *,"level,finest_level ",level,finest_level
-              stop
-             endif
-            else
-             print *,"ispecies invalid"
-             stop
-            endif
-
-            do ispecies=1,num_species_var
-             im_species=spec_material_id_AMBIENT(ispecies)
-             if (im_species.eq.0) then
-              ! do nothing
-             else if (im_species.eq.im) then
-              ! do nothing
-             else if ((im_species.ge.1).and. &
-                      (im_species.le.nmat).and. &
-                      (im_species.ne.im)) then
-              speccomp=(im-1)*num_state_material+num_state_base+ispecies
-              local_mfrac=denstate(D_DECL(i,j,k),speccomp)
-              if ((local_mfrac.ge.zero).and.(local_mfrac.le.one)) then
-               evap_den=species_evaporation_density(ispecies)
-               if (evap_den.gt.zero) then
-                total_density=den*evap_den/ &
-                 (local_mfrac*den+(one-local_mfrac)*evap_den)
-               else
-                print *,"evap_den invalid"
-                stop
-               endif
-              else
-               print *,"local_mfrac invalid 4"
-               print *,"local_mfrac=",local_mfrac
-               stop
-              endif
-             else
-              print *,"im_species (spec_material_id(ispecies)) invalid2"
-              print *,"im_species= ",im_species
-              print *,"ispecies=",ispecies
-              stop
-             endif
-            enddo ! ispecies=1,num_species_var
-
-            den=total_density
-
             if (is_rigid(nmat,im).eq.0) then
              voltotal_fluid=voltotal_fluid+multi_volume(im)
              mass_total_fluid=mass_total_fluid+den*multi_volume(im)
@@ -15312,6 +15173,7 @@ stop
        xlo,dx, &
        time, &
        nmat, &
+       nten, &
        nparts, &
        nparts_def, &
        im_solid_map, &
@@ -15339,6 +15201,7 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
@@ -15448,6 +15311,34 @@ stop
       REAL_T U1(SDIM)
       INTEGER_T ibasis
       REAL_T U_DOT_V,V_DOT_V,U_DOT_U,alpha
+      INTEGER_T center_stencil_im,center_stencil_wetting_im
+      INTEGER_T im1_substencil
+      INTEGER_T im2_substencil
+      INTEGER_T im_local
+      INTEGER_T continuous_mof_parm
+      REAL_T user_tension(nten)
+      INTEGER_T nten_test
+      INTEGER_T iten
+      REAL_T cos_angle,sin_angle
+      REAL_T F_fluid_new
+      REAL_T x_fluid_new(SDIM)
+      INTEGER_T iten_13,iten_23
+      INTEGER_T mof_verbose
+      INTEGER_T use_ls_data
+      INTEGER_T vofcomprecon
+      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      REAL_T, DIMENSION(nmat,SDIM) :: multi_centroidA
+      REAL_T orderflag
+      REAL_T local_temperature(nmat)
+      REAL_T local_mof(nmat*ngeom_recon)
+
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.eq.nten) then
+       ! do nothing
+      else
+       print *,"nten invalid"
+       stop
+      endif
 
       tessellate=0
 
@@ -15665,6 +15556,7 @@ stop
         ! --------------------------------------------------------- 
         ! first: fluid state variable extrapolation into empty cells.
         ! ----------------------------------------------------------
+
         do im=1,nmat
 
          vofcompraw=(im-1)*ngeom_raw+1
@@ -16126,8 +16018,8 @@ stop
 
              XLIST_ncomp=0
 
-             im1_in_substencil=0
-             im2_in_substencil=0
+             im1_substencil=0
+             im2_substencil=0
 
               ! default radius: least_sqr_radius=3 cells.
               ! In order to find the level set function values at the
@@ -16154,12 +16046,12 @@ stop
                LS_virtual(im)=LS(D_DECL(i+i1+i2,j+j1+j2,k+k1+k2),im)
                if (is_rigid(nmat,im).eq.0) then
                 if (LS_virtual(im).ge.-dxmaxLS) then
-                 if (im1_in_substencil.eq.0) then
-                  im1_in_substencil=im
-                 else if (im1_in_substencil.eq.im) then
+                 if (im1_substencil.eq.0) then
+                  im1_substencil=im
+                 else if (im1_substencil.eq.im) then
                   ! do nothing
-                 else if (im2_in_substencil.eq.0) then
-                  im2_in_substencil=im
+                 else if (im2_substencil.eq.0) then
+                  im2_substencil=im
                  endif
                 else if (LS_virtual(im).le.-dxmaxLS) then
                  ! do nothing
@@ -16299,9 +16191,9 @@ stop
               ! do low order extrapolation if just one material.
              else if ((XLIST_ncomp.ge.1).and. &
                       (XLIST_ncomp.le.SDIM+1).and. &
-                      (im1_sub_stencil.ge.1).and. &
-                      (im1_sub_stencil.le.nmat).and. &
-                      (im2_sub_stencil.eq.0)) then
+                      (im1_substencil.ge.1).and. &
+                      (im1_substencil.le.nmat).and. &
+                      (im2_substencil.eq.0)) then
 
               if (total_weightFLUID.gt.zero) then
                do im=1,nmat
@@ -16361,38 +16253,44 @@ stop
             if (at_center.eq.0) then
              ! do nothing
             else if (at_center.eq.1) then
-             if (im1_in_substencil.eq.0) then
+             if (im1_substencil.eq.0) then
               print *,"all materials disappeared"
               stop
-             else if ((im1_in_substencil.ge.1).and. &
-                      (im1_in_substencil.le.nmat)) then
-              if (im2_in_substencil.eq.0) then
-               center_stencil_im=im1_in_substencil
-              else if ((im2_in_substencil.ge.1).and. &
-                       (im2_in_substencil.le.nmat)) then
-               if (im1_in_substencil.lt.im2_in_substencil) then
-                im=im1_in_substencil
-                im_opp=im2_in_substencil
-               else if (im1_in_substencil.gt.im2_in_substencil) then
-                im=im2_in_substencil
-                im_opp=im1_in_substencil
+             else if ((im1_substencil.ge.1).and. &
+                      (im1_substencil.le.nmat)) then
+              if (im2_substencil.eq.0) then
+               center_stencil_im=im1_substencil
+              else if ((im2_substencil.ge.1).and. &
+                       (im2_substencil.le.nmat)) then
+               if (im1_substencil.lt.im2_substencil) then
+                im=im1_substencil
+                im_opp=im2_substencil
+               else if (im1_substencil.gt.im2_substencil) then
+                im=im2_substencil
+                im_opp=im1_substencil
                else
-                print *,"im1_in_substencil or im2_in_substencil invalid"
+                print *,"im1_substencil or im2_substencil invalid"
                 stop
                endif
                call get_iten(im,im_opp,iten,nmat)
-               do im_sort=1,nmat
-                temperature_cen(im_sort)=mgoni_temp(D_DECL(0,0,0),im_sort)
+               do im_local=1,nmat
+                dencomp=(im_local-1)*num_state_material+1
+                local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
                enddo
-               call get_user_tension(xcenter,time, &
+               do dir=1,SDIM
+                local_XPOS(dir)=xsten(0,dir)
+               enddo
+               call get_user_tension( &
+                 local_XPOS, &
+                 time, &
                  fort_tension,user_tension, &
-                 temperature_cen, &
+                 local_temperature, &
                  nmat,nten,2)
                ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
                ! theta_{ik}=0 => material i wets material k.
                ! im is material "i"  ("fluid" material)
                ! im_opp is material "j"
-               call get_CL_iten(im,im_opp,im_primary_stencil, &
+               call get_CL_iten(im,im_opp,im_solid_max, &
                  iten_13,iten_23, &
                  user_tension,nten,cos_angle,sin_angle)
                if ((sin_angle.eq.zero).and.(cos_angle.eq.one)) then
@@ -16409,11 +16307,11 @@ stop
                 stop
                endif
               else
-               print *,"im2_in_substencil invalid"
+               print *,"im2_substencil invalid"
                stop
               endif
              else
-              print *,"im1_in_substencil invalid"
+              print *,"im1_substencil invalid"
               stop
              endif
             else
@@ -16504,7 +16402,106 @@ stop
            enddo
            enddo
            enddo ! i1,j1,k1=-extend_radius..extend_radius
-               
+
+           if ((center_stencil_wetting_im.ge.1).and. &
+               (center_stencil_wetting_im.le.nmat)) then 
+
+            use_ls_data=0
+
+            do im=1,nmat
+             vofcomprecon=(im-1)*ngeom_recon+1
+             vofcompraw=(im-1)*ngeom_raw+1
+
+             if (is_rigid(nmat,im).eq.0) then
+              do dir=0,SDIM
+               local_mof(vofcomprecon+dir)= &
+                      mofdata(D_DECL(i,j,k),vofcompraw+dir)
+              enddo
+             else if (is_rigid(nmat,im).eq.1) then
+              local_mof(vofcomprecon)=vfrac_solid_new(im) 
+              do dir=1,SDIM
+               local_mof(vofcomp+dir)=censolid_new(im,dir)
+              enddo
+             else
+              print *,"is_rigid invalid"
+              stop
+             endif
+
+             if ((local_mof(vofcomprecon).lt.-0.1).or. &
+                 (local_mof(vofcomprecon).gt.1.1)) then
+              print *,"local_mof(vofcomprecon) invalid"
+              print *,"local_mof(vofcomprecon)=",local_mof(vofcomprecon)
+              stop
+             endif
+
+             orderflag=zero
+             local_mof(vofcomprecon+SDIM+1)=orderflag
+
+             do dir=SDIM+3,ngeom_recon
+              local_mof(vofcomprecon+dir-1)=zero
+             enddo
+
+            enddo  ! im=1..nmat
+
+            ! sum of F_fluid=1
+            ! sum of F_rigid<=1
+            tessellate=0
+            call make_vfrac_sum_ok_base(tessellate,local_mof,nmat,SDIM,6)
+            continuous_mof_parm=0
+            mof_verbose=0
+
+            call multimaterial_MOF( &
+             bfact,dx,xsten,nhalf, &
+             mof_verbose, &
+             use_ls_data, &
+             LS_stencil, &
+             geom_xtetlist(1,1,1,tid+1), &
+             geom_xtetlist_old(1,1,1,tid+1), &
+             nmax, &
+             nmax, &
+             local_mof, &
+             multi_centroidA, &
+             continuous_mof_parm, &
+             nmat,SDIM,2)
+      
+            call multi_get_volume_tessellate( &
+             bfact,dx,xsten,nhalf, &
+             local_mof, &
+             geom_xtetlist(1,1,1,tid+1), &
+             nmax, &
+             nmax, &
+             nmat, &
+             SDIM, &
+             2)
+
+             ! change the solid material into the wetting fluid
+             ! vfrac_solid_new(im_solid_max)
+             ! censolid_new(im_solid_max,dir)
+             ! vof_fluid_new=vof_fluid_old + vof_solid
+             ! x_fluid_new F_fluid_new = x_fluid_old F_fluid_old + x_sol F_sol
+            vofcomprecon=(center_stencil_wetting_im-1)*ngeom_recon+1
+
+            F_fluid_new=local_mof(vofcomprecon)+vfrac_solid_new(im_solid_max)
+            if (F_fluid_new.gt.zero) then
+             do dir=1,SDIM
+              x_fluid_new(dir)= &
+               local_mof(vofcomprecon+dir)*local_mof(vofcomprecon)+ &
+               censolid_new(im_solid_max,dir)*vfrac_solid_new(im_solid_max)
+              x_fluid_new(dir)=x_fluid_new(dir)/F_fluid_new
+              local_mof(vofcomprecon+dir)=x_fluid_new(dir)
+             enddo
+             local_mof(vofcomprecon)=F_fluid_new
+            else
+             print *,"F_fluid_new invalid"
+             stop
+            endif
+           else if (center_stencil_wetting_im.eq.0) then
+            ! do nothing
+           else
+            print *,"center_stencil_wetting_im invalid"
+            stop
+           endif
+
            do im=1,nmat
 
             if (is_rigid(nmat,im).eq.1) then
@@ -16533,7 +16530,10 @@ stop
               enddo
              else if ((center_stencil_wetting_im.ge.1).and. &
                       (center_stencil_wetting_im.le.nmat)) then 
-              ! get tessellating recontruction of i,j,k cell ...
+              mofnew(vofcomp)=local_mof(vofcomp)
+              do dir=1,SDIM
+               mofnew(vofcomp+dir)=local_mof(vofcomp+dir)
+              enddo
              else if ((center_stencil_im.eq.0).and. &
                       (center_stencil_wetting_im.eq.0)) then
               call getvolume(bfact,dx,xsten,nhalf, &
@@ -16576,7 +16576,7 @@ stop
                    (sum_vfrac_solid_new.le.half)) then
            ! do nothing
           else
-           print *,"LS_solid_new or sum_vfrac_Solid_new invalid"
+           print *,"LS_solid_new or sum_vfrac_solid_new invalid"
            stop
           endif
 

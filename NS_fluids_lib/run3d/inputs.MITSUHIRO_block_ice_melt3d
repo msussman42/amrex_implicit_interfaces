@@ -298,6 +298,8 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #evaporation: water vapor is solute, air is solvent units: cm^2/s
 #C_t + u dot grad C = div alpha laplacian C ?
 ns.speciesviscconst=0.0 0.282 0.0 0.0
+# 1=water 2=gas  3=ice  4=substrate 
+ns.speciesconst=1.0 0.0 0.0 0.0
 # ice is a very viscous fluid 
 ns.viscconst=0.018 0.00017 1000.0 1000.0 # dimensional
 # ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before

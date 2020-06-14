@@ -5018,11 +5018,10 @@ void NavierStokes::make_physics_vars(int project_option) {
    &nrefine_vof,
    &nrefine_cen,
    &nten,
-   spec_material_id.dataPtr(),
+   spec_material_id_AMBIENT.dataPtr(),
    mass_fraction_id.dataPtr(),
    species_evaporation_density.dataPtr(),
    cavitation_vapor_density.dataPtr(),
-   cavitation_species.dataPtr(),
    override_density.dataPtr(),
    xlo,dx,
    slopefab.dataPtr(),
@@ -5232,11 +5231,10 @@ void NavierStokes::make_physics_vars(int project_option) {
     microlayer_size.dataPtr(), 
     microlayer_substrate.dataPtr(), 
     microlayer_temperature_substrate.dataPtr(), 
-    spec_material_id.dataPtr(),
+    spec_material_id_AMBIENT.dataPtr(),
     mass_fraction_id.dataPtr(),
     species_evaporation_density.dataPtr(),
     cavitation_vapor_density.dataPtr(),
-    cavitation_species.dataPtr(),
     override_density.dataPtr(),
     &cur_time_slab,
     &project_option,
@@ -6560,6 +6558,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
  MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
  int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material;
  int dencomp=num_materials_vel*(AMREX_SPACEDIM+1);
 
@@ -6697,6 +6696,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
      xlo,dx,
      &cur_time_slab,
      &nmat,
+     &nten,
      &nparts,
      &nparts_def,
      im_solid_map_ptr,

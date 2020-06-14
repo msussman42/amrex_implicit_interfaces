@@ -665,12 +665,13 @@ Vector<Real> NavierStokes::reaction_rate;
 //   expansion source, and offsetting sink evenly distributed.
 //   For Tannasawa model implemented here, it is assumed that Y=1
 //   at the interface.
-// 5=evaporation/condensation
+// 5=evaporation/condensation (Stefan model speed)
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
+// 7=cavitation
 Vector<int> NavierStokes::freezing_model;
 Vector<int> NavierStokes::mass_fraction_id;
 //link diffused material to non-diff. (array 1..num_species_var)
-//spec_material_id_LIQUID, spec_material_id_AMBIENT are are 
+//spec_material_id_LIQUID, spec_material_id_AMBIENT are 
 //both input AND derived.
 Vector<int> NavierStokes::spec_material_id_LIQUID; 
 Vector<int> NavierStokes::spec_material_id_AMBIENT; 
@@ -2997,9 +2998,9 @@ NavierStokes::read_params ()
      amrex::Error("num_state_base invalid 10");
 
     for (int i=0;i<nten;i++) {
-     if ((freezing_model[i]<0)||(freezing_model[i]>6))
+     if ((freezing_model[i]<0)||(freezing_model[i]>7))
       amrex::Error("freezing_model invalid in read_params (i)");
-     if ((freezing_model[i+nten]<0)||(freezing_model[i+nten]>6))
+     if ((freezing_model[i+nten]<0)||(freezing_model[i+nten]>7))
       amrex::Error("freezing_model invalid in read_params (i+nten)");
      if ((distribute_from_target[i]<0)||(distribute_from_target[i]>1))
       amrex::Error("distribute_from_target invalid in read_params (i)");
@@ -3481,16 +3482,16 @@ NavierStokes::read_params ()
     for (int i=0;i<2*nten;i++) {
      if (latent_heat[i]!=0.0) {
       is_phasechange=1;
-      if ((freezing_model[i]==0)|| // Stefan model for phase change (fully sat)
-          (freezing_model[i]==5)|| // Stefan model for saturated evap/cond.
-          (freezing_model[i]==6)|| // Palmore and Desjardins
-	  (freezing_model[i]==7)) {// cavitation
+      if ((freezing_model[i]==0)||  // Stefan model for phase change (fully sat)
+          (freezing_model[i]==5)||  // Stefan model for saturated evap/cond.
+          (freezing_model[i]==6)) { // Palmore and Desjardins
        if (temperatureface_flag!=0)
         amrex::Error("must have temperatureface_flag==0");
       } else if ((freezing_model[i]==1)||
                  (freezing_model[i]==2)||  // hydrate
                  (freezing_model[i]==3)||
-                 (freezing_model[i]==4)) { // Tannasawa model
+                 (freezing_model[i]==4)||  // Tannasawa model
+		 (freezing_model[i]==7)) { // cavitation
        if (temperatureface_flag!=1)
         amrex::Error("must have temperatureface_flag==1");
       } else
@@ -3528,7 +3529,7 @@ NavierStokes::read_params ()
        if ((freezing_model[indexEXP]==4)||  // Tannasawa
            (freezing_model[indexEXP]==5)||  // Stefan model evap/cond.
            (freezing_model[indexEXP]==6)||  // Palmore and Desjardins
-	   (freezing_model[indexEXP]==7) {  // cavitation
+	   (freezing_model[indexEXP]==7)) { // cavitation
         if (LL!=0.0) {
          int massfrac_id=mass_fraction_id[indexEXP];
          if ((massfrac_id<1)||(massfrac_id>num_species_var))
@@ -10091,6 +10092,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  } else
   amrex::Error("n_sites invalid");
 
+ int nucleate_pos_size=nucleate_pos.size();
+
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(1+AMREX_SPACEDIM)) 
   amrex::Error("LS_new invalid ncomp");
@@ -13332,7 +13335,6 @@ NavierStokes::split_scalar_advection() {
     mass_fraction_id.dataPtr(),
     species_evaporation_density.dataPtr(),
     cavitation_vapor_density.dataPtr(),
-    cavitation_species.dataPtr(),
     override_density.dataPtr(),
     xlo,dx,
     slopefab.dataPtr(),
@@ -14300,7 +14302,6 @@ NavierStokes::unsplit_scalar_advection() {
     mass_fraction_id.dataPtr(),
     species_evaporation_density.dataPtr(),
     cavitation_vapor_density.dataPtr(),
-    cavitation_species.dataPtr(),
     override_density.dataPtr(),
     xlo,dx,
     slopefab.dataPtr(),

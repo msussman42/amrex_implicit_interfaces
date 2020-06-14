@@ -25,9 +25,10 @@ stop_time =  1.4e-3  # 20 x (0.7cm / 10^4 cm/s)
 
 ns.extend_pressure_into_solid=1
 
-# liquid,solid
-ns.num_materials=2
-ns.num_species_var=1
+# liquid,vacuum,solid
+ns.truncate_volume_fractions=1 0 0 # CAVITATION
+ns.num_materials=3  # CAVITATION
+ns.num_species_var=1 # CAVITATION
 ns.num_divu_outer_sweeps=2
 
 # 0=cell
@@ -115,11 +116,17 @@ ns.temperature_primitive_variable=1 1 1
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = 0.0
 ns.gravityangle = 0.0
-ns.cavitation_species=0 0 # disable cavitation
-#ns.cavitation_species=1 0
-ns.cavitation_pressure=35400.0 0.0 # saturation pressure g/(cm s^2)
-ns.cavitation_vapor_density=0.00002558 0.0
-ns.cavitation_tension=71.7 0.0
+
+# 12 13 23 21 31 32
+ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0 # disable CAVITATION
+#ns.latent_heat=1.0 0.0 0.0 0.0 0.0 0.0 # enable CAVITATION
+ns.mass_fraction_id=1 0 0 0 0 0 # CAVITATION
+ns.freezing_model=7 0 0 0 0 0 # CAVITATION
+
+#CAVITATION saturation pressure g/(cm s^2)
+ns.cavitation_pressure=35400.0 0.0 0.0
+ns.cavitation_vapor_density=0.00002558 0.0 0.0
+ns.cavitation_tension=71.7 0.0 0.0
 ns.inflow_pressure=2.2e+6  # 0.22 MPa = 2.2e+6 cgs units
 ns.outflow_pressure=1.0e+6  # this will be used at all outflow boundaries.
 ns.tension        = 0.0 0.0 0.0 
@@ -136,17 +143,18 @@ ns.advbot=0.0
 # aspect ratio is 2mm/150 microns=13.3
 ns.adv_vel=0.75e+3 
 ns.adv_dir=2  # adv_dir=1..sdim+1
-ns.viscconst=0.00853 0.00853
+ns.viscconst=0.00853 0.00853 0.00853 #CAVITATION
 ns.tempconst=293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
-ns.material_type=0 999 # INCOMPRESSIBLE
+ns.material_type=0 0 999 # INCOMPRESSIBLE CAVITATION
 #ns.material_type=1 999 # COMPRESSIBLE (EOS_tait)
-ns.density_floor=0.9999577 0.9999999 # corresponds ~ 250 dyne/cm^2
-ns.density_ceiling=1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
+ns.density_floor=0.9999577 0.9999577 0.9999999 # corresponds ~ 250 dyne/cm^2
+ns.density_ceiling=1.006 1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
 # see FORT_WALLFUNCTION in GODUNOV_3D.F90
 # see getGhostVel called from FORT_WALLFUNCTION in GODUNOV_3D.F90
 ns.law_of_the_wall=0  # make 1 for law of the wall
-ns.FSI_flag=0 2  # 1 (GLOBALDIST), 2 (cas file)
+#CAVITATION
+ns.FSI_flag=0 0 2  # 1 (GLOBALDIST), 2 (cas file)
 ns.FSI_refine_factor=1 0
 ns.FSI_bounding_box_ngrow=3 3
 # 1 Watt=10^7 ERG/S
@@ -155,9 +163,11 @@ ns.FSI_bounding_box_ngrow=3 3
 # air: k=0.024 W/(M K)
 # water: k=0.58 W/(M K)
 # OPTION 1
-ns.heatviscconst=58000.0 58000.0
+# CAVITATION
+ns.heatviscconst=58000.0 58000.0 58000.0
 ns.include_viscous_heating=0
-ns.denconst=1.0 1.0
+# CAVITATION
+ns.denconst=1.0 1.0 1.0
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # minmod (if advection_order=2)
 ns.xblob=0.0
