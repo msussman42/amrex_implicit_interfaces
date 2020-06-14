@@ -16080,6 +16080,9 @@ stop
           if ((LS_solid_new(im_solid_max).ge.zero).or. &
               (sum_vfrac_solid_new.ge.half)) then
 
+           center_stencil_im=0
+           center_stencil_wetting_im=0
+
             ! default radius: extrap_radius=1 cell
             ! this inner loop is needed since the volume fraction
             ! at (i,j,k) depends on the levelset function values
@@ -16123,6 +16126,9 @@ stop
 
              XLIST_ncomp=0
 
+             im1_in_substencil=0
+             im2_in_substencil=0
+
               ! default radius: least_sqr_radius=3 cells.
               ! In order to find the level set function values at the
               ! (i+i1,j+j1,k+k1) stencil points in the solid, 
@@ -16146,7 +16152,28 @@ stop
 
               do im=1,nmat
                LS_virtual(im)=LS(D_DECL(i+i1+i2,j+j1+j2,k+k1+k2),im)
-              enddo
+               if (is_rigid(nmat,im).eq.0) then
+                if (LS_virtual(im).ge.-dxmaxLS) then
+                 if (im1_in_substencil.eq.0) then
+                  im1_in_substencil=im
+                 else if (im1_in_substencil.eq.im) then
+                  ! do nothing
+                 else if (im2_in_substencil.eq.0) then
+                  im2_in_substencil=im
+                 endif
+                else if (LS_virtual(im).le.-dxmaxLS) then
+                 ! do nothing
+                else
+                 print *,"LS_virtual invalid"
+                 stop
+                endif
+               else if (is_rigid(nmat,im).eq.1) then 
+                ! do nothing
+               else
+                print *,"is_rigid(nmat,im) invalid"
+                stop
+               endif
+              enddo ! im=1..nmat
 
                ! the fluid cells closest to the target cell have the
                ! most weight.
@@ -16244,9 +16271,10 @@ stop
              enddo 
              enddo  !i2,j2,k2=-least_sqr_radius..least_sqr_radius
           
-              ! fluid cells exist in Least squares stencil
-             if (((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)).or. &
-                 ((XLIST_ncomp.eq.SDIM+1).and.(1.eq.0))) then
+              ! fluid cells exist in Least squares stencil, but
+              ! not enough of them.
+             if ((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)) then
+
               if (total_weightFLUID.gt.zero) then
                do im=1,nmat
                 LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID
@@ -16255,6 +16283,35 @@ stop
                print *,"total_weightFLUID invalid"
                stop
               endif
+
+              ! always do low order extrapolation
+             else if ((XLIST_ncomp.eq.SDIM+1).and.(1.eq.0)) then
+
+              if (total_weightFLUID.gt.zero) then
+               do im=1,nmat
+                LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID
+               enddo
+              else
+               print *,"total_weightFLUID invalid"
+               stop
+              endif
+
+              ! do low order extrapolation if just one material.
+             else if ((XLIST_ncomp.ge.1).and. &
+                      (XLIST_ncomp.le.SDIM+1).and. &
+                      (im1_sub_stencil.ge.1).and. &
+                      (im1_sub_stencil.le.nmat).and. &
+                      (im2_sub_stencil.eq.0)) then
+
+              if (total_weightFLUID.gt.zero) then
+               do im=1,nmat
+                LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID
+               enddo
+              else
+               print *,"total_weightFLUID invalid"
+               stop
+              endif
+
              else if (XLIST_ncomp.eq.0) then
               if (total_weightFLUID.eq.zero) then
                if (total_weightSOLID.gt.zero) then
@@ -16300,7 +16357,70 @@ stop
             do im=1,nmat
              LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
             enddo
-                
+
+            if (at_center.eq.0) then
+             ! do nothing
+            else if (at_center.eq.1) then
+             if (im1_in_substencil.eq.0) then
+              print *,"all materials disappeared"
+              stop
+             else if ((im1_in_substencil.ge.1).and. &
+                      (im1_in_substencil.le.nmat)) then
+              if (im2_in_substencil.eq.0) then
+               center_stencil_im=im1_in_substencil
+              else if ((im2_in_substencil.ge.1).and. &
+                       (im2_in_substencil.le.nmat)) then
+               if (im1_in_substencil.lt.im2_in_substencil) then
+                im=im1_in_substencil
+                im_opp=im2_in_substencil
+               else if (im1_in_substencil.gt.im2_in_substencil) then
+                im=im2_in_substencil
+                im_opp=im1_in_substencil
+               else
+                print *,"im1_in_substencil or im2_in_substencil invalid"
+                stop
+               endif
+               call get_iten(im,im_opp,iten,nmat)
+               do im_sort=1,nmat
+                temperature_cen(im_sort)=mgoni_temp(D_DECL(0,0,0),im_sort)
+               enddo
+               call get_user_tension(xcenter,time, &
+                 fort_tension,user_tension, &
+                 temperature_cen, &
+                 nmat,nten,2)
+               ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
+               ! theta_{ik}=0 => material i wets material k.
+               ! im is material "i"  ("fluid" material)
+               ! im_opp is material "j"
+               call get_CL_iten(im,im_opp,im_primary_stencil, &
+                 iten_13,iten_23, &
+                 user_tension,nten,cos_angle,sin_angle)
+               if ((sin_angle.eq.zero).and.(cos_angle.eq.one)) then
+                center_stencil_wetting_im=im
+               else if ((sin_angle.eq.zero).and.(cos_angle.eq.-one)) then 
+                center_stencil_wetting_im=im_opp
+               else if ((sin_angle.ge.zero).and. &
+                        (sin_angle.le.one).and. &
+                        (cos_angle.ge.-one).and. &
+                        (cos_angle.le.one)) then
+                ! do nothing
+               else
+                print *,"sin_angle or cos_angle invalid"
+                stop
+               endif
+              else
+               print *,"im2_in_substencil invalid"
+               stop
+              endif
+             else
+              print *,"im1_in_substencil invalid"
+              stop
+             endif
+            else
+             print *,"at_center invalid"
+             stop
+            endif
+                           
            enddo
            enddo
            enddo ! i1,j1,k1=-extrap_radius..extrap_radius
@@ -16390,6 +16510,7 @@ stop
             if (is_rigid(nmat,im).eq.1) then
              ! do nothing
             else if (is_rigid(nmat,im).eq.0) then
+
              do i1=istenlo(1),istenhi(1)
              do j1=istenlo(2),istenhi(2)
              do k1=istenlo(3),istenhi(3)
@@ -16399,14 +16520,33 @@ stop
              enddo 
 
              vofcomp=(im-1)*ngeom_recon+1
-              
-             call getvolume(bfact,dx,xsten,nhalf, &
-              LS_temp,mofnew(vofcomp),LSfacearea, &
-              LScentroid,LSareacentroid,VOFTOL,SDIM)
 
-             do dir=1,SDIM
-              mofnew(vofcomp+dir)=LScentroid(dir)-cencell(dir)
-             enddo
+             if ((center_stencil_im.ge.1).and. &
+                 (center_stencil_im.le.nmat)) then
+              if (center_stencil_im.eq.im) then
+               mofnew(vofcomp)=one
+              else 
+               mofnew(vofcomp)=zero
+              endif
+              do dir=1,SDIM
+               mofnew(vofcomp+dir)=zero
+              enddo
+             else if ((center_stencil_wetting_im.ge.1).and. &
+                      (center_stencil_wetting_im.le.nmat)) then 
+              ! get tessellating recontruction of i,j,k cell ...
+             else if ((center_stencil_im.eq.0).and. &
+                      (center_stencil_wetting_im.eq.0)) then
+              call getvolume(bfact,dx,xsten,nhalf, &
+               LS_temp,mofnew(vofcomp),LSfacearea, &
+               LScentroid,LSareacentroid,VOFTOL,SDIM)
+
+              do dir=1,SDIM
+               mofnew(vofcomp+dir)=LScentroid(dir)-cencell(dir)
+              enddo
+             else
+              print *,"center_stencil data invalid"
+              stop
+             endif
 
               ! this is the extrapolated level set function
              ls_hold(im)=LS_temp(D_DECL(0,0,0))
