@@ -29658,7 +29658,7 @@ end subroutine RatePhaseChange
       subroutine get_vel_phasechange( &
        for_estdt, &
        xI, &
-       freezing_mod, &
+       local_freezing_model, &
        distribute_from_target, &
        vel, &
        densrc,dendst, &
@@ -29696,7 +29696,7 @@ end subroutine RatePhaseChange
 
       INTEGER_T, intent(in) :: for_estdt
       REAL_T, intent(in) :: xI(SDIM)
-      INTEGER_T, intent(in) :: freezing_mod
+      INTEGER_T, intent(in) :: local_freezing_model
       INTEGER_T, intent(in) :: distribute_from_target
       INTEGER_T, intent(in) :: im_source,im_dest
       INTEGER_T :: start_freezing
@@ -29748,12 +29748,14 @@ end subroutine RatePhaseChange
        print *,"distribute_from_target invalid"
        stop
       endif
-      if ((freezing_mod.lt.0).or. &
-          (freezing_mod.gt.5)) then
-       print *,"freezing_mod invalid"
+      if ((local_freezing_model.ge.0).and. &
+          (local_freezing_model.le.7)) then
+       ! do nothing
+      else
+       print *,"local_freezing_model invalid"
        stop
       endif
-      if ((freezing_mod.eq.2).and. &
+      if ((local_freezing_model.eq.2).and. &
           (num_species_var.ne.1)) then
        print *,"must define species var if hydrate model"
        stop
@@ -29821,15 +29823,18 @@ end subroutine RatePhaseChange
          ! fixed rate of phase change (sanity check)
         vel=vinletgas  ! MDOT/rho_src
 
-        ! freezing_mod=0 (sharp interface stefan model)
-        ! freezing_mod=1 (source term model)
-        ! freezing_mod=2 (hydrate model)
-        ! freezing_mod=3 (wildfire)
-        ! freezing_mod=4 (source term model - Tanasawa Model)
-        ! freezing_mod=5 (evaporation/condensation)
-       else if ((freezing_mod.eq.0).or. &
-                (freezing_mod.eq.5).or. &
-                (freezing_mod.eq.1)) then
+        ! local_freezing_model=0 (sharp interface stefan model)
+        ! local_freezing_model=1 (source term model)
+        ! local_freezing_model=2 (hydrate model)
+        ! local_freezing_model=3 (wildfire)
+        ! local_freezing_model=4 (source term model - Tanasawa Model)
+        ! local_freezing_model=5 (Stefan model evaporation/condensation)
+        ! local_freezing_model=6 (Palmore and Desjardins)
+        ! local_freezing_model=7 (Cavitation)
+       else if ((local_freezing_model.eq.0).or. &
+                (local_freezing_model.eq.1).or. &
+                (local_freezing_model.eq.5).or. &
+                (local_freezing_model.eq.6)) then
          ! LL<0 if freezing
 
         if ((LL.eq.zero).or. &
@@ -29839,10 +29844,10 @@ end subroutine RatePhaseChange
          stop
         endif
 
-         ! freezing_mod==5, if Tsrc > Tsat then
+         ! local_freezing_model==5, if Tsrc > Tsat then
          ! evaporation will occur.  (source==water destination==vapor within
          !                           the air)
-         ! if freezing_mod==5, and Tsrc < Tsat then
+         ! if local_freezing_model==5, and Tsrc < Tsat then
          !  velsrc<0 => then the "rate of mass transfer is negative" which
          ! is disallowed; i.e. no evaporation occurs.
         DTsrc=Tsrc-Tsat  ! Tsrc is the probe temperature in the source
@@ -29850,7 +29855,7 @@ end subroutine RatePhaseChange
         velsrc=ksrc*DTsrc/(LL*dxprobe_source)
         veldst=kdst*DTdst/(LL*dxprobe_dest)
 
-        if (freezing_mod.eq.0) then
+        if (local_freezing_model.eq.0) then
 
          velsrc_micro=zero
          veldst_micro=zero
@@ -29937,7 +29942,7 @@ end subroutine RatePhaseChange
           stop
          endif
 
-        else if (freezing_mod.eq.1) then
+        else if (local_freezing_model.eq.1) then
          ! do nothing
 
          ! our evaporation model corresponds to "boiling"
@@ -29958,7 +29963,7 @@ end subroutine RatePhaseChange
          !  3. diffusion species mass fraction, and temperature
          !  Supermesh for Temperature and species is good.
          !  Supermesh for viscous solver and pressure projection???
-        else if (freezing_mod.eq.5) then
+        else if (local_freezing_model.eq.5) then
 
          if (LL.gt.zero) then ! evaporation
           veldst=zero ! ignore temperature gradient in the air.
@@ -29971,9 +29976,13 @@ end subroutine RatePhaseChange
           print *,"LL invalid"
           stop
          endif 
-
+        else if (local_freezing_model.eq.6) then ! Palmore and Desjardins
+         ! do nothing
+        else if (local_freezing_model.eq.7) then ! cavitation
+         print *,"cavitation model in development"
+         stop
         else
-         print *,"freezing_mod invalid"
+         print *,"local_freezing_model invalid"
          stop
         endif
 
@@ -30012,7 +30021,7 @@ end subroutine RatePhaseChange
 
         vel=velsum
 
-       else if (freezing_mod.eq.4) then
+       else if (local_freezing_model.eq.4) then
 
          ! Tanasawa model for a fully saturated gas:
         gamma_tanasawa=0.1
@@ -30086,7 +30095,7 @@ end subroutine RatePhaseChange
 
         vel=velsrc
 
-       else if (freezing_mod.eq.2) then
+       else if (local_freezing_model.eq.2) then
 
         if (distribute_from_target.ne.0) then
          print *,"distribute_from_target invalid"
@@ -30117,7 +30126,7 @@ end subroutine RatePhaseChange
         endif
 
        else
-        print *,"freezing_mod invalid"
+        print *,"local_freezing_model invalid"
         stop
        endif
 
@@ -34148,7 +34157,7 @@ end subroutine initialize2d
       INTEGER_T im,im1,im2,ireverse
       INTEGER_T im_solid_tempflux
       REAL_T LL,TSAT,TSUPER,thermal_layer
-      INTEGER_T freezing_mod,heat_flux_model,iten
+      INTEGER_T local_freezing_model,heat_flux_model,iten
 
       im_solid_tempflux=im_solid_primary()
  
@@ -34271,11 +34280,11 @@ end subroutine initialize2d
           do im2=im1+1,nmat
            call get_iten(im1,im2,iten,nmat)
            LL=latent_heat(iten+ireverse*nten)
-           freezing_mod=freezing_model(iten+ireverse*nten)
+           local_freezing_model=freezing_model(iten+ireverse*nten)
            TSAT=saturation_temp(iten+ireverse*nten)
 
            if ((LL.ne.zero).and. &
-               (freezing_mod.eq.0).and. &
+               (local_freezing_model.eq.0).and. &
                ((microlayer_substrate(im1).eq.im).or. &
                 (microlayer_substrate(im2).eq.im))) then
             heat_flux_model=1
@@ -34310,12 +34319,12 @@ end subroutine initialize2d
              stop
             endif
            else if ((LL.eq.zero).or. &
-                    (freezing_mod.gt.0).or. &
+                    (local_freezing_model.gt.0).or. &
                     ((microlayer_substrate(im1).ne.im).and. &
                      (microlayer_substrate(im2).ne.im))) then
             ! do nothing
            else
-            print *,"LL, freezing_mod, or microlayer_substrate invalid"
+            print *,"LL, local_freezing_model, or microlayer_substrate invalid"
             stop
            endif
           enddo ! im2
@@ -36959,7 +36968,7 @@ end subroutine initialize2d
        REAL_T saturation_temp(2*nten)
        REAL_T lmSt
 
-       INTEGER_T ireverse,im,im_opp,iten,freezing_mod
+       INTEGER_T ireverse,im,im_opp,iten,local_freezing_model
        INTEGER_T im_source,im_dest
        REAL_T LL,TSAT
        REAL_T cp_source,k_source,TDIFF,rho_source,rho_dest
@@ -37019,9 +37028,9 @@ end subroutine initialize2d
         endif
         call get_iten(im,im_opp,iten,nmat)
         LL=latent_heat(iten+ireverse*nten)
-        freezing_mod=freezing_model(iten+ireverse*nten)
+        local_freezing_model=freezing_model(iten+ireverse*nten)
         TSAT=saturation_temp(iten+ireverse*nten)
-        if ((freezing_mod.eq.2).and. &
+        if ((local_freezing_model.eq.2).and. &
             (num_species_var.ne.1)) then
          print *,"must define species var if hydrate model"
          stop

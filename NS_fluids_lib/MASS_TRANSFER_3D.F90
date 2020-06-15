@@ -5156,6 +5156,9 @@ stop
                 tcomp_dest=(im_dest-1)*num_state_material+2
 
                 im_ambient=0
+                Ycomp_source=0
+                Ycomp_dest=0
+
                 if ((local_freezing_model.eq.4).or. & !Tanasawa
                     (local_freezing_model.eq.5).or. & !Stefan evap/cond
                     (local_freezing_model.eq.6).or. & !Palmore/Desjardins
@@ -5322,6 +5325,14 @@ stop
                 TSAT_iter_max=5
                 TSAT_converge=0
 
+                 ! 0=cannot do least squares interp or supermesh interp.
+                 ! 1=can do least squares interp
+                 ! 2=can do supermesh interp.
+                 ! iprobe=1 source
+                 ! iprobe=2 dest
+                interp_valid_flag(1)=0
+                interp_valid_flag(2)=0
+
 !FIX ME
 ! 1. Y BC in diffusion solver
 ! 2. div ( rho D grad Y )/rho
@@ -5334,6 +5345,7 @@ stop
                  !find minimum possible Y on the interface  
                  !Y_probe<=Y_interface<=1
                  YMIN_converge=0
+                 Y_interface_min=zero
                  do while (YMIN_converge.eq.0)
 
                  enddo
@@ -5525,6 +5537,8 @@ stop
 
                   if (im_primary_probe.eq.im_target_probe) then
 
+                   interp_valid_flag(iprobe)=1
+
                    LS_pos_probe_counter=LS_pos_probe_counter+1
 
                    call grad_probe_sanity(xI,xtarget_probe, &
@@ -5553,6 +5567,8 @@ stop
                    if ((im_primary_probe.ne.im_target_probe_opp).and. &
                        (im_secondary_probe.eq.im_target_probe).and. &
                        (LSPROBE(im_target_probe).ge.-dxprobe_target)) then
+
+                    interp_valid_flag(iprobe)=2
 
                     dummy_VOF_pos_probe_counter=VOF_pos_probe_counter
 
@@ -5813,35 +5829,46 @@ stop
                   endif
                  endif
 
-                 if ((LS_pos_probe_counter.eq.1).or. &
-                     (LS_pos_probe_counter.eq.2)) then
-                  if (LS_INT_VERY_CLOSE_counter.eq.2) then
-                   if (LS_INT_OWN_counter.eq.1) then
-                    if (LS_pos_probe_counter+VOF_pos_probe_counter.eq.2) then
-                     at_interface=1
-                    else if (VOF_pos_probe_counter.eq.0) then
+                 if ((interp_valid_flag(1).ge.1).and. &
+                     (interp_valid_flag(2).ge.1)) then
+
+                  if ((LS_pos_probe_counter.eq.1).or. &
+                      (LS_pos_probe_counter.eq.2)) then
+                   if (LS_INT_VERY_CLOSE_counter.eq.2) then
+                    if (LS_INT_OWN_counter.eq.1) then
+                     if (LS_pos_probe_counter+VOF_pos_probe_counter.eq.2) then
+                      at_interface=1
+                     else if (VOF_pos_probe_counter.eq.0) then
+                      ! do nothing
+                     else
+                      print *,"VOF_pos_probe_counter invalid"
+                      stop
+                     endif
+                    else if (LS_INT_OWN_counter.eq.0) then
                      ! do nothing
                     else
-                     print *,"VOF_pos_probe_counter invalid"
+                     print *,"LS_INT_OWN_counter invalid"
                      stop
-                    endif
-                   else if (LS_INT_OWN_counter.eq.0) then
+                    endif 
+                   else if ((LS_INT_VERY_CLOSE_counter.eq.1).or. &
+                            (LS_INT_VERY_CLOSE_counter.eq.0)) then
                     ! do nothing
                    else
-                    print *,"LS_INT_OWN_counter invalid"
+                    print *,"LS_INT_VERY_CLOSE_counter invalid"
                     stop
-                   endif 
-                  else if ((LS_INT_VERY_CLOSE_counter.eq.1).or. &
-                           (LS_INT_VERY_CLOSE_counter.eq.0)) then
+                   endif
+                  else if (LS_pos_probe_counter.eq.0) then
                    ! do nothing
                   else
-                   print *,"LS_INT_VERY_CLOSE_counter invalid"
+                   print *,"LS_pos_probe_counter invalid"
                    stop
                   endif
-                 else if (LS_pos_probe_counter.eq.0) then
+
+                 else if ((interp_valid_flag(1).eq.0).or. &
+                          (interp_valid_flag(2).eq.0)) then
                   ! do nothing
                  else
-                  print *,"LS_pos_probe_counter invalid"
+                  print *,"interp_valid_flag invalid"
                   stop
                  endif
                      
