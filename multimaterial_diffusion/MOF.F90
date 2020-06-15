@@ -18261,7 +18261,7 @@ contains
        stop
       endif
 
-       ! only rigid material in cell
+       ! only rigid materials in cell
       if (abs(solid_vfrac_sum-one).le.VOFTOL) then 
         
        do im=1,nmat

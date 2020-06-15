@@ -35,7 +35,7 @@ IMPLICIT NONE
 ! 20=hypocycloid with 6 materials
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
 INTEGER,PARAMETER          :: probtype_in=400
-INTEGER,PARAMETER          :: stefan_flag=1
+INTEGER          :: stefan_flag   !VARIABLE TSAT
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
 ! buffer for probtype_in=3
@@ -66,7 +66,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=1 non-deforming boundary tests
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
-INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 2000
+INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 4000
 INTEGER,PARAMETER          :: plot_int = 1
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
@@ -211,7 +211,9 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= April 28, 2020, 13:00pm"
+print *,"PROTOTYPE CODE DATE= June 15, 2020, 14:00pm"
+
+stefan_flag=1  ! VARIABLE TSAT
 
 global_nparts=0
 
@@ -353,8 +355,6 @@ N_CURRENT=N_START
 M_CURRENT=M_START
 
 DO WHILE (N_CURRENT.le.N_FINISH)
-
- call init_tsatfab(N_CURRENT)
 
  if (fixed_dt_main.eq.-1.0d0) then
   fixed_dt_current=TSTOP/M_CURRENT
@@ -1574,6 +1574,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     nsteps=tm-1
     if (tm.eq.1) then
+
+     call init_tsatfab(N_CURRENT) ! VARIABLE TSAT
+
         ! in: BICGSTAB_Yang_MULTI.F90
      if (fixed_dt_main.eq.0.0d0) then
       total_nsteps_parm=M_MAX_TIME_STEP
@@ -2253,7 +2256,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  N_CURRENT=N_CURRENT*2
  M_CURRENT=M_CURRENT*M_FACTOR
 
- call delete_tsatfab()
+ call delete_tsatfab() ! VARIABLE TSAT
 
 ENDDO ! N_CURRENT.le.N_FINISH
 

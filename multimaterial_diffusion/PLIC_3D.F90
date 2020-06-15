@@ -319,7 +319,7 @@ stop
          mofdata(vofcomprecon+dir-1)=zero
         enddo
 
-       enddo  ! im
+       enddo  ! im=1..nmat
 
         ! sum of F_fluid=1
         ! sum of F_rigid<=1

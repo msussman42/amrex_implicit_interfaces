@@ -60,7 +60,7 @@ IMPLICIT NONE
 ! 403=Dendrite problem From Tryggvason or Chen Merriman Osher Smereka 1997
 !  Figure 8.
 INTEGER,PARAMETER          :: probtype_in=403
-INTEGER        :: stefan_flag
+INTEGER        :: stefan_flag ! VARIABLE TSAT
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
 ! buffer for probtype_in=3 (not used for shrinking circle w/T=TSAT outside)
@@ -247,7 +247,7 @@ integer :: sci_max_level
 
 print *,"PROTOTYPE CODE DATE= June 5, 2020, 14:00pm"
 
-stefan_flag=1
+stefan_flag=1 ! VARIABLE TSAT
 
 ! material 1 is liquid (outer material)
 ! material 2 is ice (seed)
@@ -263,8 +263,8 @@ print *,"constant_K_test= ",constant_K_test
 ! M time
 ! for dendrite growth test problem, time step is variable
 ! (fixed_dt_main==0.0)
-N_START=128
-N_FINISH=128
+N_START=256
+N_FINISH=256
 M_START=10
 M_FACTOR=2
 
@@ -1011,9 +1011,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! extra factor of 2 is not included.   Recommended to compare
     ! with Chen et al since they observed less numerically induced 
     ! instability, than what observed by Juric and Tryggvason.
-   saturation_temp_curv(1)=0.002d0 
+   saturation_temp_curv(1)=0.0d0  ! 0.002 in Chen et al
    saturation_temp_curv(2)=0.0d0 
-   saturation_temp_vel(1)=0.002d0  
+   saturation_temp_vel(1)=0.0d0   ! 0.002 in Chen et al
    saturation_temp_vel(2)=0.0d0 
  
    fort_tempconst(1)=1.5d0  ! liquid (outside dendrite)
@@ -1720,7 +1720,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     nsteps=tm-1
     if (tm.eq.1) then
 
-     call init_tsatfab(N_CURRENT)
+     call init_tsatfab(N_CURRENT) ! VARIABLE TSAT
 
         ! output_solution declared in: BICGSTAB_Yang_MULTI.F90
      if (fixed_dt_main.eq.0.0d0) then
@@ -1735,6 +1735,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     endif
 
 
+      ! VARIABLE TSAT
     if (probtype_in.eq.403) then ! initialize correct Tsat_fab
      stefan_flag=0
      call update_interface(UOLD,UNEW,N_CURRENT,local_state_ncomp, &
@@ -2424,7 +2425,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  N_CURRENT=N_CURRENT*2
  M_CURRENT=M_CURRENT*M_FACTOR
 
- call delete_tsatfab()
+ call delete_tsatfab() ! VARIABLE TSAT
 
 ENDDO ! N_CURRENT.le.N_FINISH
 

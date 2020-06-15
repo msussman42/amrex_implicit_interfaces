@@ -1259,6 +1259,18 @@ stop
        print *,"ngrow_make_distance<>3 error in levelstrip"
        stop
       endif
+
+      do im=1,nmat
+       if (truncate_volume_fractions(im).eq.0) then
+        ! do nothing
+       else if (truncate_volume_fractions(im).eq.1) then
+        ! do nothing
+       else
+        print *,"truncate_volume_fractions invalid"
+        stop
+       endif
+      enddo !im=1..nmat
+
       call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2878)
       call checkbound(fablo,fabhi,DIMS(facepairX),ngrow_distance,0,1871)
       call checkbound(fablo,fabhi,DIMS(facepairY),ngrow_distance,1,1871)
@@ -2064,7 +2076,9 @@ stop
              (version_of_choice.eq.1).or. &
              (full_neighbor(im).eq.1).or. &
              ((cell_test(im).eq.1).and. &
-              (keep_all_interfaces.eq.1))) then
+              (keep_all_interfaces.eq.1)).or. &
+             ((cell_test(im).eq.1).and. &
+              (truncate_volume_fractions(im).eq.0))) then
           fluid_materials_in_cell_stencil= &
            fluid_materials_in_cell_stencil+1
           donateflag(im)=1
