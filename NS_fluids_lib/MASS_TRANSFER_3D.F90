@@ -4654,7 +4654,7 @@ stop
       INTEGER_T im,im_opp,ireverse,iten,imls
       INTEGER_T im_ambient
       INTEGER_T im_primary
-      INTEGER_T imls1
+      INTEGER_T imls_I
       INTEGER_T im_substrate_source
       INTEGER_T im_substrate_dest
       INTEGER_T im_source,im_dest,ngrow
@@ -5310,7 +5310,7 @@ stop
                   LSINT(imls))
                 enddo ! imls=1..nmat*(SDIM+1)
 
-                call get_primary_material(LSINT,nmat,imls1)
+                call get_primary_material(LSINT,nmat,imls_I)
 
                 local_Tsat(ireverse)=local_Tsat(ireverse)- &
                   saturation_temp_curv(iten+ireverse*nten)* &
@@ -5377,13 +5377,13 @@ stop
                    stop
                   endif
                
-                   ! imls1 dominates at the interface. 
-                  if (imls1.eq.im_target_probe(iprobe)) then
+                   ! imls_I dominates at the interface. 
+                  if (imls_I.eq.im_target_probe(iprobe)) then
                    LS_INT_OWN_counter=LS_INT_OWN_counter+1
-                  else if ((imls1.ge.1).and.(imls1.le.nmat)) then
+                  else if ((imls_I.ge.1).and.(imls_I.le.nmat)) then
                    ! do nothing
                   else
-                   print *,"imls1 invalid"
+                   print *,"imls_I invalid"
                    stop
                   endif
   
@@ -5858,8 +5858,12 @@ stop
                  if ((interp_valid_flag(1).ge.1).and. &
                      (interp_valid_flag(2).ge.1)) then
 
+                   ! LS_pos_probe_counter is incremented when
+                   ! im_primary_probe(iprobe)==im_target_probe(iprobe)
                   if ((LS_pos_probe_counter.eq.1).or. &
                       (LS_pos_probe_counter.eq.2)) then
+                    ! LS_INT_VERY_CLOSE_counter is incremented when
+                    ! LSINT(im_target_probe(iprobe)).ge.-dxmaxLS
                    if (LS_INT_VERY_CLOSE_counter.eq.2) then
                     if (LS_INT_OWN_counter.eq.1) then
                      if (LS_pos_probe_counter+VOF_pos_probe_counter.eq.2) then
