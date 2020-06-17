@@ -1745,10 +1745,11 @@ stop
          if (dxprobe_target.gt.zero) then
           dest=T_sten
           material_found_in_cell=1
-         else if (dxprobe_target.eq.0) then
+         else if (dxprobe_target.eq.zero) then
           ! do nothing
          else
-          print *,"dxprobe_target invalid"
+          print *,"dxprobe_target invalid 1"
+          print *,"dxprobe_target= ",dxprobe_target
           stop
          endif
         else if (VF_sten.le.VOFTOL) then
@@ -1782,7 +1783,12 @@ stop
       if (dxprobe_target.gt.zero) then
        ! do nothing
       else
-       print *,"dxprobe_target invalid"
+       print *,"dxprobe_target invalid 2"
+       print *,"dxprobe_target ",dxprobe_target
+       do dir=1,SDIM
+        print *,"dir,xtarget ",dir,xtarget(dir)
+        print *,"dir,xI ",dir,xI(dir)
+       enddo
        stop
       endif
       VOF_pos_probe_counter=VOF_pos_probe_counter+1
@@ -3380,7 +3386,7 @@ stop
             endif
 
            else
-            print *,"local_freezing_model invalid"
+            print *,"local_freezing_model invalid 1"
             stop
            endif
              
@@ -3665,7 +3671,7 @@ stop
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
            if ((local_freezing_model.lt.0).or.(local_freezing_model.gt.7)) then
-            print *,"local_freezing_model invalid"
+            print *,"local_freezing_model invalid 2"
             stop
            endif
            if ((distribute_from_targ.lt.0).or.(distribute_from_targ.gt.1)) then
@@ -4487,7 +4493,7 @@ stop
       INTEGER_T, intent(in) :: stefan_flag
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: normal_probe_size
-      INTEGER_T :: microscale_probe_size
+      REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: nmat
@@ -5137,7 +5143,7 @@ stop
                   stop
                  endif
                 else
-                 print *,"local_freezing_model invalid"
+                 print *,"local_freezing_model invalid 3"
                  stop
                 endif
 
@@ -6150,7 +6156,7 @@ stop
                     endif 
                     VEL_correct=velsum
                   else
-                    print *,"local_freezing_model invalid"
+                    print *,"local_freezing_model invalid 4"
                     stop
                   endif
 #else
@@ -6202,10 +6208,10 @@ stop
                     stop
                    endif
  
-                  else if (local_freezing_model.ge.1) then
+                  else if (local_freezing_model.ge.0) then
                    ! do nothing
                   else
-                   print *,"local_freezing_model invalid"
+                   print *,"local_freezing_model invalid 7"
                    stop
                   endif
 

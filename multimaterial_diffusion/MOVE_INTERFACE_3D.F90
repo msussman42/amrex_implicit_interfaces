@@ -1883,10 +1883,45 @@ stop
       INTEGER_T data_dir,SDC_outer_sweeps,slab_step
       INTEGER_T data_id,visual_revolve,visual_option
 
+      REAL_T :: molar_mass(num_materials)
+      REAL_T :: species_molar_mass(1)
+
+      INTEGER_T :: custom_nucleation_model
+      INTEGER_T :: do_the_nucleate
+      INTEGER_T :: nucleate_pos_size
+      REAL_T :: nucleate_pos(4)
+      REAL_T :: nucleation_temp(2*nten_in)
+      REAL_T :: nucleation_pressure(2*nten_in)
+      REAL_T :: nucleation_pmg(2*nten_in)
+      REAL_T :: nucleation_mach(2*nten_in)
+      REAL_T :: cavitation_pressure(num_materials)
+      REAL_T :: cavitation_vapor_density(num_materials)
+      REAL_T :: cavitation_tension(num_materials)
+
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
 
       diagnostic_output=1
       nhalf=3
+
+      do im=1,num_materials
+       molar_mass(im)=1.0d0
+       cavitation_tension(im)=0.0d0
+       cavitation_vapor_density(im)=1.0d0
+       cavitation_pressure(im)=1.0d0
+      enddo
+
+      do im=1,2*nten_in
+       nucleation_mach(im)=zero
+       nucleation_pmg(im)=1.0d0
+       nucleation_pressure(im)=1.0d0
+       nucleation_temp(im)=1.0d0
+      enddo
+
+      species_molar_mass(1)=1.0d0
+      custom_nucleation_model=0
+      do_the_nucleate=0
+      nucleate_pos_size=4
+
 
       ncomp_per_burning=SDIM
       ncomp_per_tsat=2
@@ -2375,6 +2410,7 @@ stop
          finest_level, &
          normal_probe_size, &
          ngrow_distance, &
+         nstate, &
          nmat, &
          nten, &
          nburning, &
@@ -2382,6 +2418,17 @@ stop
          nden, &
          fort_density_floor, &
          fort_density_ceiling, &
+         custom_nucleation_model, &
+         do_the_nucleate, &
+         nucleate_pos, &
+         nucleate_pos_size, &
+         nucleation_temp, &
+         nucleation_pressure, &
+         nucleation_pmg, &
+         nucleation_mach, &
+         cavitation_pressure, &
+         cavitation_vapor_density, &
+         cavitation_tension, &
          microlayer_substrate, &
          microlayer_angle, &
          microlayer_size, &
@@ -2397,6 +2444,8 @@ stop
          distribute_from_target, &
          mass_fraction_id, &
          species_evaporation_density, &
+         molar_mass, &
+         species_molar_mass, &
          fablo,fabhi, &
          fablo,fabhi,bfact, &
          xlo,dx, &
@@ -2413,11 +2462,13 @@ stop
          tsatfab,DIMS(tsatfab), & ! ngrow_make_distance
          LS,DIMS(LS),  & ! ngrow
          LSnew,DIMS(LSnew), &  ! ngrow
+         Snew,DIMS(Snew), & ! 1 ghost
          LS_slopes_FD, &
          DIMS(LS_slopes_FD), &  ! ngrow
          EOS,DIMS(EOS), & ! ngrow
          recon,DIMS(recon), & ! ngrow
          pres,DIMS(pres), &
+         recon,DIMS(recon), & ! (pres_eos) ngrow
          FD_CURV_CELL,DIMS(FD_CURV_CELL)) ! ngrow==ngrow_distance
        endif
 

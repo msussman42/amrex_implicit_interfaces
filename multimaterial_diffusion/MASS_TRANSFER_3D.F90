@@ -245,6 +245,7 @@ stop
        ! if centroid to center: xtarget = xcenter
        ! if center to centroid: xtarget = xcentroid
       subroutine center_centroid_interchange( &
+       DATA_FLOOR, &
        nsolve, &
        cc_flag, &
        tsat_flag, &
@@ -264,6 +265,7 @@ stop
       use global_utility_module
       implicit none
 
+      REAL_T, intent(in) :: DATA_FLOOR
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T :: nc
       INTEGER_T, intent(in) :: cc_flag
@@ -331,7 +333,8 @@ stop
        print *,"nhalf invalid"
        stop
       endif
-      if (TSAT.lt.TEMPERATURE_FLOOR) then
+       ! was TEMPERATURE_FLOOR
+      if (TSAT.lt.DATA_FLOOR) then
        print *,"TSAT invalid in center_centroid_interchange"
        print *,"TSAT=",TSAT
        stop
@@ -526,7 +529,7 @@ stop
        enddo
 
        if (tsat_flag.eq.1) then
-        if (T_avg.lt.TEMPERATURE_FLOOR) then
+        if (T_avg.lt.DATA_FLOOR) then
          print *,"T_avg invalid"
          print *,"T_avg=",T_avg
          stop
@@ -707,6 +710,8 @@ stop
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: dest
 
+      REAL_T :: DATA_FLOOR
+
       REAL_T :: T_out(1)
 
       INTEGER_T dir
@@ -729,6 +734,8 @@ stop
       INTEGER_T tsat_flag
       INTEGER_T nsolve
       REAL_T Tsat
+
+      DATA_FLOOR=zero
 
       call checkbound(lo,hi,DIMS(data),ngrow,-1,1221)
       call checkbound(lo,hi,DIMS(recon),ngrow,-1,1222)
@@ -806,6 +813,7 @@ stop
       nsolve=1
       Tsat=293.0 ! representative value for sanity check
       call center_centroid_interchange( &
+       DATA_FLOOR, &
        nsolve, &
        cc_flag, &
        tsat_flag, &
@@ -863,9 +871,9 @@ stop
        grad_probe_local=(temp_probe-Tsat)/mag
 
        if (grad_probe_local/LL.ge.zero) then
-        ! do nothing (good case)
+        ! do nothing (expected case for temperature gradient)
        else if (grad_probe_local/LL.lt.zero) then
-        ! do nothing (bad case)
+        ! do nothing 
        else
         print *,"grad_probe_local bust"
         stop
@@ -906,6 +914,8 @@ stop
       REAL_T, intent(in) :: data(DIMV(data),comp)
       REAL_T, intent(out) :: dest
 
+      REAL_T :: DATA_FLOOR
+
       REAL_T :: T_out(1)
 
       INTEGER_T dir
@@ -923,6 +933,8 @@ stop
       INTEGER_T tsat_flag
       INTEGER_T nsolve
       REAL_T Tsat
+
+      DATA_FLOOR=zero
 
       call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
 
@@ -983,6 +995,7 @@ stop
       nsolve=1
       Tsat=293.0 !unused if tsat_flag==-1 (but set to 293.0 for sanity check)
       call center_centroid_interchange( &
+       DATA_FLOOR, &
        nsolve, &
        cc_flag, &
        tsat_flag, &
@@ -1446,6 +1459,8 @@ stop
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: dest
 
+      REAL_T :: DATA_FLOOR
+
       REAL_T :: T_out(1)
 
       INTEGER_T dir
@@ -1468,6 +1483,7 @@ stop
       INTEGER_T tsat_flag
       INTEGER_T nsolve
 
+      DATA_FLOOR=zero
 
       if (bfact.lt.1) then 
        print *,"bfact invalid116"
@@ -1557,6 +1573,7 @@ stop
       nsolve=1
        ! YANG LIUs routine
       call center_centroid_interchange( &
+       DATA_FLOOR, &
        nsolve, &
        cc_flag, &
        tsat_flag, &
@@ -1580,16 +1597,15 @@ stop
       end subroutine interpfabTEMP
 
       subroutine interpfab_filament_probe( &
-       igrid,jgrid,kgrid, &
        bfact, &
        level, &
        finest_level, &
        dx, &
        xlo, &
+       xtarget, &
        xI, &
        Tsat, &
        im_target_probe, &
-       im_target_probe_opp, &
        nmat, &
        comp_probe, &
        ngrow, &
@@ -1606,17 +1622,16 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: igrid,jgrid,kgrid
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
       REAL_T, intent(in) :: xI(SDIM)
       REAL_T, intent(in) :: Tsat
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: im_target_probe
-      INTEGER_T, intent(in) :: im_target_probe_opp
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: comp_probe
       INTEGER_T, intent(in) :: ngrow
@@ -1630,11 +1645,9 @@ stop
       REAL_T, intent(inout) :: dxprobe_target
       INTEGER_T, intent(inout) :: VOF_pos_probe_counter
 
-      INTEGER_T dir
       INTEGER_T ic,jc,kc
-      INTEGER_T i1,j1,k1
-      INTEGER_T isten,jsten,ksten
-      INTEGER_T k1lo,k1hi
+
+      INTEGER_T dir
       INTEGER_T nhalf
       INTEGER_T vofcomp
       INTEGER_T cell_index(SDIM)
@@ -1644,16 +1657,8 @@ stop
       REAL_T T_sten
       REAL_T VF_sten
       REAL_T XC_sten(SDIM)
-      REAL_T dxmax
-      INTEGER_T grad_init
-      REAL_T local_grad
-      REAL_T current_grad
-      REAL_T current_dxprobe
-      REAL_T current_temp_probe
       REAL_T mag
-      REAL_T LSPROBE_OPP
-
-      call get_dxmax(dx,bfact,dxmax)
+      INTEGER_T material_found_in_cell
 
       if (bfact.lt.1) then 
        print *,"bfact invalid116"
@@ -1680,11 +1685,6 @@ stop
        print *,"im_target_probe invalid21"
        stop
       endif
-      if ((im_target_probe_opp.lt.1).or. &
-          (im_target_probe_opp.gt.nmat)) then
-       print *,"im_target_probe_opp invalid21"
-       stop
-      endif
       if ((Tsat.ge.zero).and.(Tsat.le.1.0D+99)) then
        ! do nothing
       else
@@ -1696,26 +1696,15 @@ stop
       call checkbound(lo,hi,DIMS(LS),ngrow,-1,1224)
       call checkbound(lo,hi,DIMS(recon),ngrow,-1,1224)
 
-      if (SDIM.eq.2) then
-       k1lo=0
-       k1hi=0
-      else if (SDIM.eq.3) then
-       k1lo=-1
-       k1hi=1
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-        ! cell that contains xI
-      call containing_cell(bfact,dx,xlo,lo,xI,cell_index)
+        ! cell that contains xtarget
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
 
       do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
-        cell_index(dir)=lo(dir)-ngrow+1
+       if (cell_index(dir).lt.lo(dir)-ngrow) then
+        cell_index(dir)=lo(dir)-ngrow
        endif
-       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
-        cell_index(dir)=hi(dir)+ngrow-1
+       if (cell_index(dir).gt.hi(dir)+ngrow) then
+        cell_index(dir)=hi(dir)+ngrow
        endif
       enddo ! dir
 
@@ -1727,121 +1716,82 @@ stop
 
       nhalf=3
 
-      grad_init=0
-      current_grad=zero
-      current_dxprobe=zero
-      current_temp_probe=zero
+      call gridsten_level(xsten_stencil,ic,jc,kc,level,nhalf)
+      call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
+        volcell,cencell,SDIM)
 
-      do i1=-1,1
-      do j1=-1,1
-      do k1=k1lo,k1hi
+       ! temperature at the material centroid of cell (isten,jsten,ksten)
+      T_sten=tempfab(D_DECL(ic,jc,kc),comp_probe)
+      VF_sten=recon(D_DECL(ic,jc,kc),vofcomp)
+      mag=zero
+      do dir=1,SDIM
+       XC_sten(dir)= &
+        recon(D_DECL(ic,jc,kc),vofcomp+dir)+cencell(dir)
+       mag=mag+(XC_sten(dir)-cencell(dir))**2
+      enddo
+      mag=sqrt(mag)
 
-       isten=i1+ic
-       jsten=j1+jc
-       ksten=k1+kc
+      material_found_in_cell=0
 
-       call gridsten_level(xsten_stencil,isten,jsten,ksten,level,nhalf)
-       call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
-         volcell,cencell,SDIM)
-
-        ! temperature at the material centroid of cell (isten,jsten,ksten)
-       T_sten=tempfab(D_DECL(isten,jsten,ksten),comp_probe)
-       VF_sten=recon(D_DECL(isten,jsten,ksten),vofcomp)
-       mag=zero
-       do dir=1,SDIM
-        XC_sten(dir)= &
-         recon(D_DECL(isten,jsten,ksten),vofcomp+dir)+cencell(dir)
-        mag=mag+(XC_sten(dir)-cencell(dir))**2
-       enddo
-       mag=sqrt(mag)
-       if (mag.ge.zero) then
-        if ((VF_sten.ge.-VOFTOL).and. &
-            (VF_sten.le.one+VOFTOL)) then
-         if (VF_sten.ge.VOFTOL) then
-
-          ! center -> target (cc_flag==1)
-          ! tsat_flag==-1
-          ! call center_centroid_interchange
-          ! interpolate the level set function from the cell centers
-          ! to XC_sten which is the centroid of material im_target_probe
-          call interpfab( &
-           bfact, &
-           level, &
-           finest_level, &
-           dx, &
-           xlo, &
-           XC_sten, &
-           im_target_probe_opp, &
-           ngrow, &
-           lo,hi, &
-           LS,DIMS(LS), &
-           LSPROBE_OPP)
-
-          if (DEBUG_TRIPLE.eq.1) then
-           if ((DEBUG_I.eq.igrid).and. &
-               (DEBUG_J.eq.jgrid)) then
-            print *,"igrid,jgrid,LSPROBE_OPP ",igrid,jgrid,LSPROBE_OPP
-            print *,"isten,jsten,T_sten,Tsat ",isten,jsten,T_sten,Tsat
-            print *,"isten,jsten,VF_sten ",isten,jsten,VF_sten
-           endif
-          endif
-          if (LSPROBE_OPP.lt.zero) then
-           local_grad=abs((T_sten-Tsat)/LSPROBE_OPP)
-           if (grad_init.eq.0) then
-            current_grad=local_grad
-            current_dxprobe=abs(LSPROBE_OPP)
-            current_temp_probe=T_sten
-            grad_init=1
-           else if (grad_init.eq.1) then
-            if (abs(LSPROBE_OPP).gt.current_dxprobe) then
-             current_grad=local_grad
-             current_dxprobe=abs(LSPROBE_OPP)
-             current_temp_probe=T_sten
-            else if (abs(LSPROBE_OPP).le.current_dxprobe) then
-             ! do nothing
-            else
-             print *,"LSPROBE_OPP invalid"
-             stop
-            endif
-           else
-            print *,"grad_init invalid"
-            stop
-           endif
-          else if (LSPROBE_OPP.ge.zero) then
-           ! do nothing
-          else
-           print *,"LSPROBE_OPP invalid"
-           stop
-          endif
-         else if (VF_sten.le.VOFTOL) then
+      if (mag.ge.zero) then
+       if ((VF_sten.ge.-VOFTOL).and. &
+           (VF_sten.le.one+VOFTOL)) then
+        if (VF_sten.ge.VOFTOL) then
+         dxprobe_target=zero
+         do dir=1,SDIM
+          dxprobe_target=dxprobe_target+(XC_sten(dir)-xI(dir))**2
+         enddo
+         dxprobe_target=sqrt(dxprobe_target)
+         if (dxprobe_target.gt.zero) then
+          dest=T_sten
+          material_found_in_cell=1
+         else if (dxprobe_target.eq.zero) then
           ! do nothing
          else
-          print *,"VF_sten invalid"
+          print *,"dxprobe_target invalid 1"
+          print *,"dxprobe_target= ",dxprobe_target
           stop
          endif
+        else if (VF_sten.le.VOFTOL) then
+         ! do nothing
         else
          print *,"VF_sten invalid"
          stop
         endif
        else
-        print *,"mag invalid"
+        print *,"VF_sten invalid"
         stop
        endif
-
-      enddo
-      enddo
-      enddo ! i1,j1,k1
-
-      if (grad_init.eq.0) then
-       dest=Tsat
-      else if (grad_init.eq.1) then
-       dest=current_temp_probe
-       dxprobe_target=current_dxprobe
-       VOF_pos_probe_counter=VOF_pos_probe_counter+1
       else
-       print *,"grad_init invalid"
+       print *,"mag invalid"
        stop
       endif
+
+      if (material_found_in_cell.eq.1) then
+       ! do nothing
+      else if (material_found_in_cell.eq.0) then
+       dest=Tsat
+       dxprobe_target=zero
+       do dir=1,SDIM
+        dxprobe_target=dxprobe_target+(xtarget(dir)-xI(dir))**2
+       enddo
+       dxprobe_target=sqrt(dxprobe_target)
+      else
+       print *,"material_found_in_cell invalid"
+       stop
+      endif
+      if (dxprobe_target.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxprobe_target invalid 2"
+       print *,"dxprobe_target ",dxprobe_target
+       do dir=1,SDIM
+        print *,"dir,xtarget ",dir,xtarget(dir)
+        print *,"dir,xI ",dir,xI(dir)
+       enddo
+       stop
+      endif
+      VOF_pos_probe_counter=VOF_pos_probe_counter+1
 
       return 
       end subroutine interpfab_filament_probe
@@ -2231,7 +2181,7 @@ stop
       INTEGER_T tcomp_wt
       INTEGER_T vofcomp_raw
       INTEGER_T vofcomp_recon
-      INTEGER_T freezing_mod
+      INTEGER_T local_freezing_model
       INTEGER_T mass_frac_id
       INTEGER_T distribute_from_targ
       INTEGER_T debugrate
@@ -2310,10 +2260,10 @@ stop
       INTEGER_T away_from_interface
       REAL_T solid_vof_new,solid_vof_old
       INTEGER_T mtype
-      REAL_T mfrac_vapor_to_gas
+      REAL_T Yfrac_vapor_to_gas
       REAL_T vfrac_vapor_to_gas
       REAL_T new_vfrac_vapor
-      REAL_T mfrac_old
+      REAL_T Yfrac_old
       REAL_T density_new,density_old
       REAL_T density_dest,density_source
       REAL_T evap_den
@@ -2382,13 +2332,17 @@ stop
       endif
 
       do im=1,nmat
-       if ((density_floor_expansion(im).le.zero).or. &
-           (density_floor_expansion(im).gt.fort_denconst(im))) then
+       if ((density_floor_expansion(im).gt.zero).and. &
+           (density_floor_expansion(im).le.fort_denconst(im))) then
+        ! do nothing
+       else
         print *,"density_floor_expansion invalid"
         stop
        endif
-       if ((density_ceiling_expansion(im).le.zero).or. &
-           (density_ceiling_expansion(im).lt.fort_denconst(im))) then
+       if ((density_ceiling_expansion(im).gt.zero).and. &
+           (density_ceiling_expansion(im).ge.fort_denconst(im))) then
+        ! do nothing
+       else
         print *,"density_ceiling_expansion invalid"
         stop
        endif
@@ -2448,14 +2402,17 @@ stop
        do im_opp=im+1,nmat
         do ireverse=0,1
          call get_iten(im,im_opp,iten,nmat)
-         freezing_mod=freezing_model(iten+ireverse*nten)
+         local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
          LL=latent_heat(iten+ireverse*nten)
-         if ((freezing_mod.eq.0).or. &
-             (freezing_mod.eq.1).or. &
-             (freezing_mod.eq.2)) then
+         if ((local_freezing_model.eq.0).or. &
+             (local_freezing_model.eq.1).or. &
+             (local_freezing_model.eq.2)) then
           ! do nothing
-         else if (freezing_mod.eq.5) then
+         else if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                  (local_freezing_model.eq.5).or. & ! Stefan model evap/cond.
+                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                  (local_freezing_model.eq.7)) then ! Cavitation
           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
           if ((mass_frac_id.ge.1).and.(mass_frac_id.le.num_species_var)) then
            evap_den=species_evaporation_density(mass_frac_id)
@@ -2469,61 +2426,73 @@ stop
            print *,"mass_frac_id invalid"
            stop
           endif
-         else if (freezing_mod.eq.4) then ! force: V_evaporate = V_condense (Tanasawa model)
-          if (LL.ne.zero) then
-           if (ireverse.eq.0) then ! evaporation
-            if (LL.le.zero) then
-             print *,"LL invalid"
-             stop
-            endif
-            if (distribute_from_targ.ne.0) then
-             print *,"distribute_from_targ invalid"
-             stop
-            endif
-            im_source=im
-            im_dest=im_opp
-           else if (ireverse.eq.1) then ! condensation
-            if (LL.ge.zero) then
-             print *,"LL invalid"
-             stop
-            endif
-            if (distribute_from_targ.ne.1) then
-             print *,"distribute_from_targ invalid"
-             stop
-            endif
-            im_source=im_opp
-            im_dest=im
-           else
-            print *,"ireverse invalid"
-            stop
-           endif
-
-           if (isweep.eq.0) then
-            ! do nothing
-           else if (isweep.eq.1) then
-
-            if (solvability_projection.eq.0) then
-             ! do nothing
-            else if (solvability_projection.eq.1) then
-             if (DVOF(im_dest).lt.DVOF(im_source)) then
-              DVOF_FACT(im_source)=DVOF(im_dest)/DVOF(im_source)
-             else if (DVOF(im_source).lt.DVOF(im_dest)) then
-              DVOF_FACT(im_dest)=DVOF(im_source)/DVOF(im_dest)
+           ! require V_evaporate = V_condense (Tanasawa model)
+          if (local_freezing_model.eq.4) then 
+           if (LL.ne.zero) then
+            if (ireverse.eq.0) then ! evaporation
+             if (LL.le.zero) then
+              print *,"LL invalid"
+              stop
              endif
+             if (distribute_from_targ.ne.0) then
+              print *,"distribute_from_targ invalid"
+              stop
+             endif
+             im_source=im
+             im_dest=im_opp
+            else if (ireverse.eq.1) then ! condensation
+             if (LL.ge.zero) then
+              print *,"LL invalid"
+              stop
+             endif
+             if (distribute_from_targ.ne.1) then
+              print *,"distribute_from_targ invalid"
+              stop
+             endif
+             im_source=im_opp
+             im_dest=im
             else
-             print *,"solvability_projection invalid"
+             print *,"ireverse invalid"
              stop
             endif
 
-           else
-            print *,"isweep invalid"
-            stop
-           endif
+            if (isweep.eq.0) then
+             ! do nothing
+            else if (isweep.eq.1) then
 
-          endif ! LL <> 0
+             if (solvability_projection.eq.0) then
+              ! do nothing
+             else if (solvability_projection.eq.1) then
+              if (DVOF(im_dest).lt.DVOF(im_source)) then
+               DVOF_FACT(im_source)=DVOF(im_dest)/DVOF(im_source)
+              else if (DVOF(im_source).lt.DVOF(im_dest)) then
+               DVOF_FACT(im_dest)=DVOF(im_source)/DVOF(im_dest)
+              endif
+             else
+              print *,"solvability_projection invalid"
+              stop
+             endif
+
+            else
+             print *,"isweep invalid"
+             stop
+            endif
+
+           endif ! LL <> 0
+          else if (local_freezing_model.eq.5) then  ! stefan evap/cond
+           ! do nothing
+          else if (local_freezing_model.eq.6) then  ! Palmore/Desjardin
+           ! do nothing
+          else if (local_freezing_model.eq.7) then  ! Cavitation
+           ! do nothing
+          else
+           print *,"local_freezing_model invalid in convertmaterial"
+           stop
+          endif
+
          else
-          print *,"freezing_model invalid in convertmaterial"
-          print *,"freezing_mod= ",freezing_mod
+          print *,"local_freezing_model invalid in convertmaterial"
+          print *,"local_freezing_model= ",local_freezing_model
           print *,"iten,ireverse,nten ",iten,ireverse,nten
           stop
          endif
@@ -3157,7 +3126,7 @@ stop
            endif
 
            LL=latent_heat(iten+ireverse*nten)
-           freezing_mod=freezing_model(iten+ireverse*nten)
+           local_freezing_model=freezing_model(iten+ireverse*nten)
            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
@@ -3284,7 +3253,7 @@ stop
            endif
 
             ! old mass and volume fraction of vapor to gas
-           mfrac_vapor_to_gas=one
+           Yfrac_vapor_to_gas=one
            vfrac_vapor_to_gas=one
 
            mtype=fort_material_type(im_dest)
@@ -3332,11 +3301,12 @@ stop
            dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
            dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
 
-           if (freezing_mod.eq.0) then ! standard Stefan model
+           if (local_freezing_model.eq.0) then ! standard Stefan model
             ! do nothing
-           else if (freezing_mod.eq.4) then  ! Tannasawa model
-            ! do nothing
-           else if (freezing_mod.eq.5) then  ! one material is captured.
+           else if ((local_freezing_model.eq.4).or. & ! Tannasawa model
+                    (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
+                    (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                    (local_freezing_model.eq.7)) then ! Cavitation
 
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
@@ -3347,21 +3317,22 @@ stop
 
               if (LL.gt.zero) then ! evaporation
 
-               if (oldvfrac(im_dest).gt.EBVOFTOL) then
+               if (oldvfrac(im_dest).gt.EBVOFTOL) then ! valid Y,F vapor
                 speccompdst=(im_dest-1)*num_state_material+ &
                  num_state_base+mass_frac_id
-                mfrac_old=EOS(D_DECL(i,j,k),speccompdst)
-                if ((mfrac_old.ge.zero).and.(mfrac_old.le.one)) then
-                 density_old=density_dest*evap_den/ &
-                  (mfrac_old*density_dest+(one-mfrac_old)*evap_den)
-                 mfrac_vapor_to_gas=mfrac_old 
-                 vfrac_vapor_to_gas=density_old*mfrac_old/evap_den
+                Yfrac_old=EOS(D_DECL(i,j,k),speccompdst)
+                if ((Yfrac_old.ge.zero).and.(Yfrac_old.le.one)) then
+                 density_old=density_dest !denconst if material_id==0
+                 call make_mixture_density(Yfrac_old, &
+                   density_old,evap_den)
+                 Yfrac_vapor_to_gas=Yfrac_old 
+                 vfrac_vapor_to_gas=density_old*Yfrac_old/evap_den
                 else
-                 print *,"mfrac_old invalid"
+                 print *,"Yfrac_old invalid"
                  stop
                 endif
-               else if (oldvfrac(im_dest).le.EBVOFTOL) then
-                mfrac_vapor_to_gas=zero
+               else if (oldvfrac(im_dest).le.EBVOFTOL) then ! default Y,F vapor
+                Yfrac_vapor_to_gas=zero
                 vfrac_vapor_to_gas=zero
                else
                 print *,"oldvfrac(im_dest) invalid"
@@ -3375,22 +3346,24 @@ stop
                   ! mass= sum_i=1^m  Y_i overall_mass = 
                   !     = sum_i=1^m  density_i F_i V_cell
                   ! F_i = volume fraction of material i.
-                  ! (Y_i)_t + div (u Y_i) = div D_i  grad Y_i
+                  ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
+                  ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
                if (oldvfrac(im_source).gt.EBVOFTOL) then
                 speccompsrc=(im_source-1)*num_state_material+ &
                  num_state_base+mass_frac_id
-                mfrac_old=EOS(D_DECL(i,j,k),speccompsrc)
-                if ((mfrac_old.ge.zero).and.(mfrac_old.le.one)) then
-                 density_old=density_source*evap_den/ &
-                  (mfrac_old*density_source+(one-mfrac_old)*evap_den)
-                 mfrac_vapor_to_gas=mfrac_old
-                 vfrac_vapor_to_gas=density_old*mfrac_old/evap_den
+                Yfrac_old=EOS(D_DECL(i,j,k),speccompsrc)
+                if ((Yfrac_old.ge.zero).and.(Yfrac_old.le.one)) then
+                 density_old=density_source
+                 call make_mixture_density(Yfrac_old, &
+                   density_old,evap_den)
+                 Yfrac_vapor_to_gas=Yfrac_old
+                 vfrac_vapor_to_gas=density_old*Yfrac_old/evap_den
                 else
-                 print *,"mfrac_old invalid"
+                 print *,"Yfrac_old invalid"
                  stop
                 endif
                else if (oldvfrac(im_source).le.EBVOFTOL) then
-                mfrac_vapor_to_gas=zero
+                Yfrac_vapor_to_gas=zero
                 vfrac_vapor_to_gas=zero
                else
                 print *,"oldvfrac(im_source) invalid"
@@ -3413,7 +3386,7 @@ stop
             endif
 
            else
-            print *,"freezing_mod invalid"
+            print *,"local_freezing_model invalid 1"
             stop
            endif
              
@@ -3475,11 +3448,19 @@ stop
 
               ! evaporation: im_source=liquid im_dest=surrounding gas
               ! condensation: im_source=surrounding gas im_dest=liquid
-             if (freezing_mod.eq.5) then 
+             if ((local_freezing_model.eq.4).or. & !Tanasawa
+                 (local_freezing_model.eq.5).or. & !Stefan model evap/cond.
+                 (local_freezing_model.eq.6).or. & !Palmore/Desjardins
+                 (local_freezing_model.eq.7)) then !Cavitation
               speccompdst=num_materials_vel*(SDIM+1)+ &
                   (im_dest-1)*num_state_material+2+mass_frac_id
             
                ! evaporation 
+               ! assume all liquid becomes pure vapor: dF (expansion comes 
+               ! later)
+               ! total new gases: oldvfrac(im_dest)+dF
+               ! total new vapor: oldvfrac(im_dest)*vfrac_vapor_to_gas+dF
+               ! new vapor/(total new gases) = new_vfrac_vapor
               if (LL.gt.zero) then
                new_vfrac_vapor=(oldvfrac(im_dest)*vfrac_vapor_to_gas+dF)/ &
                 (oldvfrac(im_dest)+dF)
@@ -3494,9 +3475,9 @@ stop
                 stop
                endif
 
-                ! condensation: vapor fraction=0 in the liquid.
+                ! condensation: vapor fraction=1 in the liquid.
               else if (LL.lt.zero) then 
-               snew(D_DECL(i,j,k),speccompdst)=zero
+               snew(D_DECL(i,j,k),speccompdst)=one
               else
                print *,"LL invalid"
                stop
@@ -3505,7 +3486,7 @@ stop
 
              mtype=fort_material_type(im_dest)
              if (mtype.eq.0) then
-              ! do nothing
+              ! density modified in FORT_DENCOR
              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
               snew(D_DECL(i,j,k),dencomp)=density_dest 
              else
@@ -3534,10 +3515,22 @@ stop
 
             else if (newvfrac(im_dest).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if (freezing_mod.eq.5) then
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                 (local_freezing_model.eq.5).or. & ! Stefan Evap/Cond.
+                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                 (local_freezing_model.eq.7)) then ! Cavitation
               speccompdst=num_materials_vel*(SDIM+1)+ &
                    (im_dest-1)*num_state_material+2+mass_frac_id
-              snew(D_DECL(i,j,k),speccompdst)=zero
+
+              if (LL.gt.zero) then ! evaporation
+               snew(D_DECL(i,j,k),speccompdst)=zero
+              else if (LL.lt.zero) then ! condensation
+               snew(D_DECL(i,j,k),speccompdst)=one
+              else
+               print *,"LL invalid"
+               stop
+              endif
+
              endif
             else
              print *,"newvfrac(im_dest) invalid"
@@ -3552,7 +3545,7 @@ stop
 
              mtype=fort_material_type(im_source)
              if (mtype.eq.0) then
-              ! do nothing
+              ! source density modified in FORT_DENCOR
              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
               snew(D_DECL(i,j,k),dencomp)=density_source
              else
@@ -3562,7 +3555,10 @@ stop
 
              snew(D_DECL(i,j,k),tcomp)=unsplit_temperature(im_source) 
 
-             if (freezing_mod.eq.5) then ! evap. or condensation
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                 (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
+                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                 (local_freezing_model.eq.7)) then ! Cavitation
               speccompsrc=num_materials_vel*(SDIM+1)+ &
                    (im_source-1)*num_state_material+2+mass_frac_id
             
@@ -3581,7 +3577,7 @@ stop
                 stop
                endif
               else if (LL.gt.zero) then ! evaporation
-               snew(D_DECL(i,j,k),speccompsrc)=zero
+               snew(D_DECL(i,j,k),speccompsrc)=one
               else
                print *,"LL invalid"
                stop
@@ -3596,10 +3592,21 @@ stop
              endif
             else if (newvfrac(im_source).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if (freezing_mod.eq.5) then
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+                 (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
+                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                 (local_freezing_model.eq.7)) then ! Cavitation
               speccompsrc=num_materials_vel*(SDIM+1)+ &
                        (im_source-1)*num_state_material+2+mass_frac_id
-              snew(D_DECL(i,j,k),speccompsrc)=zero
+              if (LL.gt.zero) then ! evaporation
+               snew(D_DECL(i,j,k),speccompsrc)=one
+              else if (LL.lt.zero) then ! condensation
+               snew(D_DECL(i,j,k),speccompsrc)=zero
+              else
+               print *,"LL invalid"
+               stop
+              endif
+
              endif
             else
              print *,"newvfrac(im_source) invalid"
@@ -3659,12 +3666,12 @@ stop
            endif
 
            LL=latent_heat(iten+ireverse*nten)
-           freezing_mod=freezing_model(iten+ireverse*nten)
+           local_freezing_model=freezing_model(iten+ireverse*nten)
            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
-           if ((freezing_mod.lt.0).or.(freezing_mod.gt.5)) then
-            print *,"freezing_mod invalid"
+           if ((local_freezing_model.lt.0).or.(local_freezing_model.gt.7)) then
+            print *,"local_freezing_model invalid 2"
             stop
            endif
            if ((distribute_from_targ.lt.0).or.(distribute_from_targ.gt.1)) then
@@ -3765,7 +3772,10 @@ stop
             stop
            endif
 
-           if (freezing_mod.eq.5) then
+           if ((local_freezing_model.eq.4).or. & ! Tanasawa
+               (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
+               (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+               (local_freezing_model.eq.7)) then ! cavitation
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
              evap_den=species_evaporation_density(mass_frac_id)
@@ -3786,7 +3796,7 @@ stop
              print *,"mass_frac_id invalid"
              stop
             endif
-           endif ! freezing_mod==5
+           endif ! local_freezing_model==4,5,6,7
 
            if ((densrc_restrict.le.zero).or.(dendst_restrict.le.zero)) then
             print *,"densrc_restrict and dendst_restrict must be positive"
@@ -3873,8 +3883,9 @@ stop
             endif
 
             ! divide and conquer temperature equation (TSAT Dirichlet BC)
-            if ((freezing_mod.eq.0).or. &
-                (freezing_mod.eq.5)) then  
+            if ((local_freezing_model.eq.0).or. &
+                (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
+                (local_freezing_model.eq.6)) then ! Palmore/Desjardins 
 
              if ((oldvfrac(im_dest).lt.half).and. &
                  (newvfrac(im_dest).gt.half)) then
@@ -3907,7 +3918,7 @@ stop
 ! latent_heat>0 boiling or melting
 ! units of specific heat: J/(kg K)
 ! units of latent heat: J/kg
-            else if (freezing_mod.eq.1) then
+            else if (local_freezing_model.eq.1) then
 
              if (dF.gt.zero) then
               energy_source=-LL*dF
@@ -3928,7 +3939,7 @@ stop
 ! source term at the interface.  Hydrates.
 ! rho c T^new - rho c T^old = rho (dt A LL/V) dS/dt = LL * dF
 ! c T^new - c T^old = (dt A LL/V) dS/dt = LL * dF 
-            else if (freezing_mod.eq.2) then
+            else if (local_freezing_model.eq.2) then
 
 #if (STANDALONE==0)
 
@@ -3976,14 +3987,14 @@ stop
               stop
              endif
 #elif (STANDALONE==1)
-             print *,"freezing_mod cannot be 2 (convertmaterial)"
+             print *,"local_freezing_model cannot be 2 (convertmaterial)"
              stop
 #else
              print *,"bust compiling convertmaterial"
              stop
 #endif
 
-            else if (freezing_mod.eq.4) then
+            else if (local_freezing_model.eq.4) then ! Tanasawa
               ! if LL>0 => evaporation => delete energy 
               ! if LL<0 => condensation => add energy 
               ! latent_heat: erg/g
@@ -4003,9 +4014,12 @@ stop
               print *,"dF invalid"
               stop
              endif
+            else if (local_freezing_model.eq.7) then ! Cavitation
+             print *,"FIX ME"
+             stop
             else
-             print *,"freezing_model invalid in convertmaterial(2)"
-             print *,"freezing_mod= ",freezing_mod
+             print *,"local_freezing_model invalid in convertmaterial(2)"
+             print *,"local_freezing_model= ",local_freezing_model
              print *,"iten,ireverse,nten ",iten,ireverse,nten
              stop
             endif
@@ -4393,7 +4407,6 @@ stop
       return 
       end subroutine FORT_EXTEND_BURNING_VEL
 
-
  
         ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine FORT_RATEMASSCHANGE( &
@@ -4402,6 +4415,7 @@ stop
        finest_level, &
        normal_probe_size, &
        ngrow_distance, &
+       nstate, &
        nmat, &
        nten, &
        nburning, &
@@ -4409,6 +4423,17 @@ stop
        nden, &
        density_floor_expansion, &
        density_ceiling_expansion, &
+       custom_nucleation_model, &
+       do_the_nucleate, &
+       nucleate_pos, &
+       nucleate_pos_size, &
+       nucleation_temp, &
+       nucleation_pressure, &
+       nucleation_pmg, &
+       nucleation_mach, &
+       cavitation_pressure, &
+       cavitation_vapor_density, &
+       cavitation_tension, &
        microlayer_substrate, &
        microlayer_angle, &
        microlayer_size, &
@@ -4424,6 +4449,8 @@ stop
        distribute_from_target, &
        mass_fraction_id, &
        species_evaporation_density, &
+       molar_mass, &
+       species_molar_mass, &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        xlo,dx, &
@@ -4440,11 +4467,13 @@ stop
        Tsatfab,DIMS(Tsatfab), &
        LS,DIMS(LS),  &
        LSnew,DIMS(LSnew), & 
+       Snew,DIMS(Snew), & 
        LS_slopes_FD, &
        DIMS(LS_slopes_FD), & 
        EOS,DIMS(EOS), &
        recon,DIMS(recon), &
        pres,DIMS(pres), &
+       pres_eos,DIMS(pres_eos), &
        curvfab,DIMS(curvfab) )
 #if (STANDALONE==0)
       use probf90_module
@@ -4464,7 +4493,9 @@ stop
       INTEGER_T, intent(in) :: stefan_flag
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: normal_probe_size
+      REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
@@ -4472,6 +4503,17 @@ stop
       INTEGER_T, intent(in) :: nden
       REAL_T, intent(in) :: density_floor_expansion(nmat)
       REAL_T, intent(in) :: density_ceiling_expansion(nmat)
+      INTEGER_T, intent(in) :: custom_nucleation_model
+      INTEGER_T, intent(in) :: do_the_nucleate
+      INTEGER_T, intent(in) :: nucleate_pos_size
+      REAL_T, intent(in) :: nucleate_pos(nucleate_pos_size)
+      REAL_T, intent(in) :: nucleation_temp(2*nten)
+      REAL_T, intent(in) :: nucleation_pressure(2*nten)
+      REAL_T, intent(in) :: nucleation_pmg(2*nten)
+      REAL_T, intent(in) :: nucleation_mach(2*nten)
+      REAL_T, intent(in) :: cavitation_pressure(nmat)
+      REAL_T, intent(in) :: cavitation_vapor_density(nmat)
+      REAL_T, intent(in) :: cavitation_tension(nmat)
       INTEGER_T, intent(in) ::  microlayer_substrate(nmat)
       REAL_T, intent(in) :: microlayer_angle(nmat)
       REAL_T, intent(in) :: microlayer_size(nmat)
@@ -4487,6 +4529,8 @@ stop
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
+      REAL_T, intent(in) :: molar_mass(nmat)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -4508,10 +4552,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(Tsatfab)
       INTEGER_T, intent(in) :: DIMDEC(LS) ! declare the x,y,z dimensions of LS
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
+      INTEGER_T, intent(in) :: DIMDEC(Snew)
       INTEGER_T, intent(in) :: DIMDEC(LS_slopes_FD)
       INTEGER_T, intent(in) :: DIMDEC(EOS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(pres_eos)
       INTEGER_T, intent(in) :: DIMDEC(curvfab)
 
       REAL_T, intent(in) :: typefab(DIMV(typefab))
@@ -4528,24 +4574,29 @@ stop
         !DIMV(LS)=x,y,z  nmat=num. materials
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
       REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
+      REAL_T, intent(inout) :: Snew(DIMV(Snew),nstate)
       REAL_T, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
       REAL_T, intent(in) :: EOS(DIMV(EOS),nden)
        ! F,X,order,SL,I x nmat
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: pres(DIMV(pres)) 
+      REAL_T, intent(in) :: pres_eos(DIMV(pres_eos)) 
       REAL_T, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
 
       INTEGER_T i,j,k
       INTEGER_T dir,dir2
       INTEGER_T im,im_opp,ireverse,iten,imls
+      INTEGER_T im_ambient
       INTEGER_T im_primary
-      INTEGER_T imls1
+      INTEGER_T imls_I
       INTEGER_T im_substrate_source
       INTEGER_T im_substrate_dest
       INTEGER_T im_source,im_dest,ngrow
       INTEGER_T nten_test
       INTEGER_T tcomp_source
       INTEGER_T tcomp_dest
+      INTEGER_T Ycomp_source
+      INTEGER_T Ycomp_dest
       REAL_T velmag_sum,local_velmag
       INTEGER_T burnflag
       REAL_T dxmin,dxmax,dxmaxLS
@@ -4553,6 +4604,8 @@ stop
       REAL_T xI(SDIM)
       REAL_T xsrc(SDIM)
       REAL_T xdst(SDIM)
+      REAL_T xsrc_micro(SDIM)
+      REAL_T xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
       REAL_T nrmFD(SDIM)  ! finite difference normal
       REAL_T theta_nrmFD(SDIM)
@@ -4569,14 +4622,16 @@ stop
       INTEGER_T valid_phase_change(0:1)
       REAL_T dxprobe_source
       REAL_T dxprobe_dest
-      REAL_T dxprobe_target
+      REAL_T dxprobe_target(2)
       REAL_T ksource,kdest
       REAL_T LS_pos
       REAL_T C_w0,Cmethane_in_hydrate,PHYDWATER
       REAL_T temp_target_INT
+      REAL_T Y_target_INT
       REAL_T Tsrc_INT,Tdst_INT
+      REAL_T Ysrc_INT,Ydst_INT
       INTEGER_T concen_comp
-      INTEGER_T freezing_mod
+      INTEGER_T local_freezing_model
       INTEGER_T distribute_from_targ
       INTEGER_T pcomp
       INTEGER_T at_interface
@@ -4602,18 +4657,23 @@ stop
       REAL_T normal_probe_factor
       INTEGER_T iprobe
       REAL_T xtarget_probe(SDIM)
-      INTEGER_T im_target_probe
-      INTEGER_T tcomp_probe
-      INTEGER_T dencomp_probe
-      REAL_T temp_target_probe
+      REAL_T xtarget_probe_micro(SDIM)
+      INTEGER_T im_target_probe(2) ! source,dest
+      INTEGER_T Ycomp_probe(2)
+      INTEGER_T tcomp_probe(2)
+      INTEGER_T dencomp_probe(2)
+      REAL_T temp_target_probe(2)
+      REAL_T Y_target_probe(2)
+      REAL_T Y_TOLERANCE
       REAL_T den_targetINT
-      INTEGER_T im_primary_probe
-      INTEGER_T im_secondary_probe
-      INTEGER_T im_target_probe_opp
+      INTEGER_T im_primary_probe(2)
+      INTEGER_T im_secondary_probe(2)
+      INTEGER_T im_target_probe_opp(2)
       INTEGER_T LS_pos_probe_counter
       INTEGER_T LS_INT_VERY_CLOSE_counter
       INTEGER_T LS_INT_OWN_counter
       INTEGER_T VOF_pos_probe_counter
+      INTEGER_T dummy_VOF_pos_probe_counter
        ! iten=1..nten  ireverse=0..1
       REAL_T temp_target_probe_history(2*nten,2)
       REAL_T dxprobe_target_history(2*nten,2)
@@ -4625,8 +4685,14 @@ stop
       REAL_T CURV_OUT_I
 
       REAL_T VEL_predict,VEL_correct
-      REAL_T TSAT_predict,TSAT_correct,TSAT_ERR,TSAT_INIT_ERR
+      REAL_T Y_predict
+      REAL_T Y_correct
+      REAL_T TSAT_predict,TSAT_correct
+      REAL_T TSAT_ERR,TSAT_INIT_ERR
       INTEGER_T TSAT_iter,TSAT_converge,TSAT_iter_max
+      INTEGER_T YMIN_converge
+      REAL_T Y_interface_min
+      INTEGER_T interp_valid_flag(2)
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -4640,6 +4706,8 @@ stop
        print *,"prev_time cannot be negative, prev_time=",prev_time
        stop
       endif
+
+      Y_TOLERANCE=0.01
 
       if ((stefan_flag.eq.0).or.(stefan_flag.eq.1)) then
        ! do nothing
@@ -4667,6 +4735,24 @@ stop
       endif
       if (normal_probe_size.ne.1) then
        print *,"normal_probe_size invalid"
+       stop
+      endif
+
+      microscale_probe_size=1.0D-2
+
+      if (nucleate_pos_size.lt.4) then
+       print *,"nucleate_pos_size invalid: ",nucleate_pos_size
+       stop
+      endif
+      if (n_sites.gt.0) then
+       if (nucleate_pos_size.ne.n_sites*4) then
+        print *,"nucleate_pos_size invalid"
+        stop
+       endif
+      endif
+      if ((custom_nucleation_model.ne.0).and. &
+          (custom_nucleation_model.ne.1)) then
+       print *,"custom_nucleation_model invalid"
        stop
       endif
 
@@ -4723,6 +4809,14 @@ stop
        print *,"dt invalid"
        stop
       endif
+      
+      if (nstate.eq.num_materials_vel*(SDIM+1)+nmat* &
+          (num_state_material+ngeom_raw)+1) then
+       ! do nothing
+      else 
+       print *,"nstate invalid"
+       stop
+      endif
 
       do im=1,nmat
        if ((density_floor_expansion(im).le.zero).or. &
@@ -4766,9 +4860,11 @@ stop
       call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,1251)
       call checkbound(fablo,fabhi,DIMS(LS),ngrow,-1,1252)
       call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,1253)
+      call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1253)
       call checkbound(fablo,fabhi,DIMS(LS_slopes_FD),1,-1,1253)
       call checkbound(fablo,fabhi,DIMS(EOS),ngrow,-1,1254)
       call checkbound(fablo,fabhi,DIMS(pres),ngrow,-1,1255)
+      call checkbound(fablo,fabhi,DIMS(pres_eos),1,-1,1255)
 
       !blob_matrix,blob_RHS,blob_velocity,
       !blob_integral_momentum,blob_energy,
@@ -4799,7 +4895,30 @@ stop
        print *,"STANDALONE invalid"
        stop
       endif
- 
+
+         ! SANDIPAN HOOK HERE
+         ! pseudo code:
+         ! if typefab(D_DECL(i,j,k))=im_vapor then
+         !  color = colorfab(D_DECL(i,j,k))
+         !  vapor bubble statistics are in 
+         !   blob_array((color-1)*num_elements_blobclass + l)
+         !  l=1..num_elements_blobclass
+         ! for example l=3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+
+         !               2*(2*SDIM)+1+
+         !               3+1  corresponds to blob_volume.
+         ! MDOT=(1-den_vapor/den_liquid)*(F^Vapor_new - F^Vapor_old)*
+         !  volume/dt^2
+         ! =(1-den_vapor/den_liquid)*(Vvapor_new - Vvapor_old)/dt^2
+         ! MDOT should have the same units as volume * div u/dt
+         ! units of volume * div u/dt = m^3 (1/m)(m/s)(1/s)=1/s^2
+         ! for standard phase change:
+         ! units: cm^3/s^2
+         ! jump_strength=(denratio_factor/dt)*dF*volgrid/dt
+         ! if evaporation then expansion_term should be positive.
+         ! FOR CODY: if pressure falls below some cavitation pressure, then
+         ! material is cavitated. (velocity of phase change is dx/dt?)
+
+
       call get_dxmin(dx,bfact,dxmin)
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -4841,6 +4960,7 @@ stop
            call get_iten(im,im_opp,iten,nmat)
 
            do ireverse=0,1
+
             temp_target_probe_history(iten+ireverse*nten,1)=zero
             dxprobe_target_history(iten+ireverse*nten,1)=zero
             temp_target_probe_history(iten+ireverse*nten,2)=zero
@@ -4849,7 +4969,18 @@ stop
             valid_phase_change(ireverse)=0
             LL(ireverse)=latent_heat(iten+ireverse*nten)
             K_f(ireverse)=reaction_rate(iten+ireverse*nten)
-            freezing_mod=freezing_model(iten+ireverse*nten)
+
+            local_freezing_model=freezing_model(iten+ireverse*nten)
+
+            ispec=mass_fraction_id(iten+ireverse*nten)
+
+            if ((ispec.ge.0).and.(ispec.le.num_species_var)) then
+             ! do nothing
+            else
+             print *,"ispec invalid"
+             stop
+            endif
+
             distribute_from_targ=distribute_from_target(iten+ireverse*nten)
 
             if ((distribute_from_targ.ne.0).and. &
@@ -4882,8 +5013,11 @@ stop
 
              if ((is_rigid(nmat,im).eq.1).or. &
                  (is_rigid(nmat,im_opp).eq.1)) then
+
               ! do nothing
+
              else if (LL(ireverse).ne.zero) then
+
               local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
 
               found_path=0
@@ -4916,6 +5050,10 @@ stop
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
                   xsrc(dir)=xI(dir)+ &
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
+                  xdst_micro(dir)=xI(dir)- &
+                     microscale_probe_size*dxmin*nrmFD(dir) 
+                  xsrc_micro(dir)=xI(dir)+ &
+                     microscale_probe_size*dxmin*nrmFD(dir)
                  enddo ! dir=1..sdim
                 else if (LShere(im_source).ge.zero) then
                  LS_pos=LShere(im_dest)
@@ -4928,9 +5066,15 @@ stop
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
                   xsrc(dir)=xI(dir)- &
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
+                  xdst_micro(dir)=xI(dir)+ &
+                     microscale_probe_size*dxmin*nrmFD(dir) 
+                  xsrc_micro(dir)=xI(dir)- &
+                     microscale_probe_size*dxmin*nrmFD(dir)
                  enddo ! dir
                 else
                  print *,"LShere bust"
+                 print *,"LShere(im_dest) ",LShere(im_dest)
+                 print *,"LShere(im_source) ",LShere(im_source)
                  stop
                 endif
 
@@ -4943,6 +5087,8 @@ stop
 
                else
                 print *,"LShere bust"
+                print *,"LShere(im_dest) ",LShere(im_dest)
+                print *,"LShere(im_source) ",LShere(im_source)
                 stop
                endif
            
@@ -4959,6 +5105,47 @@ stop
 
                 tcomp_source=(im_source-1)*num_state_material+2
                 tcomp_dest=(im_dest-1)*num_state_material+2
+
+                im_ambient=0
+                Ycomp_source=0
+                Ycomp_dest=0
+
+                if ((local_freezing_model.eq.4).or. & !Tanasawa
+                    (local_freezing_model.eq.5).or. & !Stefan evap/cond
+                    (local_freezing_model.eq.6).or. & !Palmore/Desjardins
+                    (local_freezing_model.eq.7)) then !Cavitation
+                 if (LL(ireverse).gt.zero) then ! evaporation
+                  im_ambient=im_dest
+                 else if (LL(ireverse).lt.zero) then ! condensation
+                  im_ambient=im_source
+                 else
+                  print *,"LL invalid"
+                  stop
+                 endif
+                   
+                 if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+                  Ycomp_source=(im_source-1)*num_state_material+2+ispec
+                  Ycomp_dest=(im_dest-1)*num_state_material+2+ispec
+                 else
+                  print *,"ispec invalid"
+                  stop
+                 endif
+                else if ((local_freezing_model.eq.0).or. & ! Stefan model
+                         (local_freezing_model.eq.1).or. & ! source term
+                         (local_freezing_model.eq.2).or. & ! hydrate
+                         (local_freezing_model.eq.3)) then ! wild fire
+
+                 if (ispec.eq.0) then
+                  Ycomp_source=0
+                  Ycomp_dest=0
+                 else if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+                  print *,"expecting ispec ==0 "
+                  stop
+                 endif
+                else
+                 print *,"local_freezing_model invalid 3"
+                 stop
+                endif
 
                 dencomp_source=(im_source-1)*num_state_material+1
                 dencomp_dest=(im_dest-1)*num_state_material+1
@@ -5070,12 +5257,15 @@ stop
                   LSINT(imls))
                 enddo ! imls=1..nmat*(SDIM+1)
 
-                call get_primary_material(LSINT,nmat,imls1)
+                call get_primary_material(LSINT,nmat,imls_I)
 
                 local_Tsat(ireverse)=local_Tsat(ireverse)- &
                   saturation_temp_curv(iten+ireverse*nten)* &
                   CURV_OUT_I
 
+                Y_predict=one
+                Y_correct=Y_predict
+               
                 TSAT_predict=local_Tsat(ireverse)
                 TSAT_correct=TSAT_predict
                 VEL_predict=zero
@@ -5083,6 +5273,22 @@ stop
                 TSAT_iter=0
                 TSAT_iter_max=5
                 TSAT_converge=0
+
+                 ! 0=cannot do least squares interp or supermesh interp.
+                 ! 1=can do least squares interp
+                 ! 2=can do supermesh interp.
+                 ! iprobe=1 source
+                 ! iprobe=2 dest
+                interp_valid_flag(1)=0
+                interp_valid_flag(2)=0
+
+!FIX ME
+! 1. Y BC in diffusion solver
+! 2. div ( rho D grad Y )/rho
+!    freezing_mod=4  Tanasawa
+!    freezing_mod=5  fully saturated evaporation?
+!    freezing_mod=6  partially saturated evaporation?
+!    freezing_mod=7  Cavitation (a seed must exist)
 
                 do while (TSAT_converge.eq.0) 
 
@@ -5093,51 +5299,55 @@ stop
 
                  do iprobe=1,2
 
-                  if (iprobe.eq.1) then
+                  if (iprobe.eq.1) then ! source
                    do dir=1,SDIM
                     xtarget_probe(dir)=xsrc(dir)
+                    xtarget_probe_micro(dir)=xsrc_micro(dir)
                    enddo
-                   im_target_probe=im_source
-                   im_target_probe_opp=im_dest
-                   tcomp_probe=tcomp_source
-                   dencomp_probe=dencomp_source
-                   dxprobe_target=dxprobe_source
-                  else if (iprobe.eq.2) then
+                   im_target_probe(iprobe)=im_source
+                   im_target_probe_opp(iprobe)=im_dest
+                   tcomp_probe(iprobe)=tcomp_source
+                   Ycomp_probe(iprobe)=Ycomp_source
+                   dencomp_probe(iprobe)=dencomp_source
+                   dxprobe_target(iprobe)=dxprobe_source
+                  else if (iprobe.eq.2) then  ! dest
                    do dir=1,SDIM
                     xtarget_probe(dir)=xdst(dir)
+                    xtarget_probe_micro(dir)=xdst_micro(dir)
                    enddo
-                   im_target_probe=im_dest
-                   im_target_probe_opp=im_source
-                   tcomp_probe=tcomp_dest
-                   dencomp_probe=dencomp_dest
-                   dxprobe_target=dxprobe_dest
+                   im_target_probe(iprobe)=im_dest
+                   im_target_probe_opp(iprobe)=im_source
+                   tcomp_probe(iprobe)=tcomp_dest
+                   Ycomp_probe(iprobe)=Ycomp_dest
+                   dencomp_probe(iprobe)=dencomp_dest
+                   dxprobe_target(iprobe)=dxprobe_dest
                   else
                    print *,"iprobe invalid"
                    stop
                   endif
                
-                   ! imls1 dominates at the interface. 
-                  if (imls1.eq.im_target_probe) then
+                   ! imls_I dominates at the interface. 
+                  if (imls_I.eq.im_target_probe(iprobe)) then
                    LS_INT_OWN_counter=LS_INT_OWN_counter+1
-                  else if ((imls1.ge.1).and.(imls1.le.nmat)) then
+                  else if ((imls_I.ge.1).and.(imls_I.le.nmat)) then
                    ! do nothing
                   else
-                   print *,"imls1 invalid"
+                   print *,"imls_I invalid"
                    stop
                   endif
   
-                  if (LSINT(im_target_probe).ge.-dxmaxLS) then
+                  if (LSINT(im_target_probe(iprobe)).ge.-dxmaxLS) then
                    LS_INT_VERY_CLOSE_counter=LS_INT_VERY_CLOSE_counter+1
-                  else if (LSINT(im_target_probe).le.-dxmaxLS) then
+                  else if (LSINT(im_target_probe(iprobe)).le.-dxmaxLS) then
                    ! do nothing
                   else
                    print *,"LSINT(im_target_probe) invalid"
                    stop
                   endif
    
-                  mtype=fort_material_type(im_target_probe)
+                  mtype=fort_material_type(im_target_probe(iprobe))
                   if (mtype.eq.0) then
-                   den_targetINT=fort_denconst(im_target_probe)
+                   den_targetINT=fort_denconst(im_target_probe(iprobe))
                   else if ((mtype.ge.1).and. &
                            (mtype.le.fort_max_num_eos)) then
                    call interpfabFWEIGHT( &
@@ -5146,8 +5356,9 @@ stop
                     finest_level, &
                     dx, &
                     xlo,xI, &
-                    im_target_probe,nmat, &
-                    dencomp_probe, &
+                    im_target_probe(iprobe), &
+                    nmat, &
+                    dencomp_probe(iprobe), &
                     ngrow, &
                     fablo,fabhi, &
                     EOS,DIMS(EOS), &
@@ -5155,12 +5366,14 @@ stop
                     den_targetINT)
 
                    if (den_targetINT.lt. &
-                       density_floor_expansion(im_target_probe)) then
-                    den_targetINT=density_floor_expansion(im_target_probe)
+                       density_floor_expansion(im_target_probe(iprobe))) then
+                    den_targetINT= &
+                      density_floor_expansion(im_target_probe(iprobe))
                    endif
                    if (den_targetINT.gt. &
-                       density_ceiling_expansion(im_target_probe)) then
-                    den_targetINT=density_ceiling_expansion(im_target_probe)
+                       density_ceiling_expansion(im_target_probe(iprobe))) then
+                    den_targetINT= &
+                       density_ceiling_expansion(im_target_probe(iprobe))
                    endif
                   else
                    print *,"mtype invalid"
@@ -5179,20 +5392,59 @@ stop
                    xtarget_probe, &
                    xI, &
                    TSAT_predict, &
-                   im_target_probe, &
+                   im_target_probe(iprobe), &
                    nmat, &
-                   tcomp_probe, &
+                   tcomp_probe(iprobe), &
                    ngrow, &
                    fablo,fabhi, &
                    EOS,DIMS(EOS), &
                    LS,DIMS(LS), &
                    recon,DIMS(recon), &
-                   temp_target_probe, &
+                   temp_target_probe(iprobe), &
                    debugrate)
 
-                  if (temp_target_probe.lt.zero) then
+                  if (temp_target_probe(iprobe).lt.zero) then
                    print *,"temp_target_probe went negative"
-                   print *,"temp_target_probe ",temp_target_probe
+                   print *,"temp_target_probe ",temp_target_probe(iprobe)
+                   stop
+                  endif
+
+                  if (Ycomp_probe(iprobe).ge.1) then
+
+                   ! centroid -> target (cc_flag==0)
+                   ! tsat_flag==1
+                   ! call center_centroid_interchange
+                   call interpfabTEMP( &
+                    bfact, &
+                    level, &
+                    finest_level, &
+                    dx, &
+                    xlo, &
+                    xtarget_probe, &
+                    xI, &
+                    Y_predict, &
+                    im_target_probe(iprobe), &
+                    nmat, &
+                    Ycomp_probe(iprobe), &
+                    ngrow, &
+                    fablo,fabhi, &
+                    EOS,DIMS(EOS), &
+                    LS,DIMS(LS), &
+                    recon,DIMS(recon), &
+                    Y_target_probe(iprobe), &
+                    debugrate)
+
+                   if ((Y_target_probe(iprobe).lt.zero).or. &
+                       (Y_target_probe(iprobe).gt.one)) then
+                    print *,"Y_target_probe out of bounds"
+                    print *,"Y_target_probe ",Y_target_probe(iprobe)
+                    stop
+                   endif
+
+                  else if (Ycomp_probe(iprobe).eq.0) then
+                   Y_target_probe(iprobe)=one
+                  else
+                   print *,"Ycomp_probe invalid"
                    stop
                   endif
 
@@ -5214,63 +5466,86 @@ stop
                      LSPROBE(imls))
                   enddo ! imls=1..nmat
 
-                  call get_primary_material(LSPROBE,nmat,im_primary_probe)
+                  call get_primary_material(LSPROBE,nmat, &
+                    im_primary_probe(iprobe))
 
                   if (DEBUG_TRIPLE.eq.1) then
                    if ((DEBUG_I.eq.i).and. &
                        (DEBUG_J.eq.j)) then
                     print *,"i,j,im_primary,im_target ", &
-                      im_primary_probe,im_target_probe
+                      im_primary_probe(iprobe), &
+                      im_target_probe(iprobe)
                    endif
                   endif
 
-                  if (im_primary_probe.eq.im_target_probe) then
+                  if (im_primary_probe(iprobe).eq. &
+                      im_target_probe(iprobe)) then
+
+                   interp_valid_flag(iprobe)=1
 
                    LS_pos_probe_counter=LS_pos_probe_counter+1
 
-                   call grad_probe_sanity(xI,xtarget_probe, &
-                     temp_target_probe, &
+                   call grad_probe_sanity(xI, &
+                     xtarget_probe, &
+                     temp_target_probe(iprobe), &
                      TSAT_predict, &
                      LL(ireverse))
 
-                  else if ((im_primary_probe.ne.im_target_probe).and. &
-                           (im_primary_probe.ge.1).and. &
-                           (im_primary_probe.le.nmat)) then
+                   call grad_probe_sanity(xI, &
+                     xtarget_probe, &
+                     Y_target_probe(iprobe), &
+                     Y_predict, &
+                     LL(ireverse))
+
+                  else if ((im_primary_probe(iprobe).ne. &
+                            im_target_probe(iprobe)).and. &
+                           (im_primary_probe(iprobe).ge.1).and. &
+                           (im_primary_probe(iprobe).le.nmat)) then
 
                      ! default value for temp_target_probe
-                   temp_target_probe=TSAT_predict
+                   temp_target_probe(iprobe)=TSAT_predict
+                     ! default value for Y_target_probe
+                   Y_target_probe(iprobe)=Y_predict
      
                    call get_secondary_material(LSPROBE,nmat, &
-                      im_primary_probe, &
-                      im_secondary_probe)
+                      im_primary_probe(iprobe), &
+                      im_secondary_probe(iprobe))
 
-                   if ((im_primary_probe.ne.im_target_probe_opp).and. &
-                       (im_secondary_probe.eq.im_target_probe).and. &
-                       (LSPROBE(im_target_probe).ge.-dxprobe_target)) then
+                   if ((im_secondary_probe(iprobe).eq. &
+                        im_target_probe(iprobe)).and. &
+                       (LSPROBE(im_target_probe(iprobe)).ge. &
+                        -dxprobe_target(iprobe))) then
 
-                     ! find the temperature gradient at "sub" probe
-                     ! point farthest from interface.
-                     ! (Temperature(xcentroid)-TSAT)/LS(xcentroid)
+                    interp_valid_flag(iprobe)=2
+
+                    dummy_VOF_pos_probe_counter=VOF_pos_probe_counter
+
+                     ! (a) find containing cell for xtarget_probe_micro
+                     ! (b) if F(im_target_probe)<TOL in containing cell, then
+                     !     temp_target_probe=TSAT and dxprobe_target=
+                     !     ||x_probe-x_I||
+                     ! (c) if F(im_target_probe)>TOL in containing cell, then
+                     !     temp_target_probe=T(containing_cell,im_target)
+                     !     dxprobe_target=||x_centroid-x_I||
                     call interpfab_filament_probe( &
-                       i,j,k, &
                        bfact, &
                        level, &
                        finest_level, &
                        dx, &
                        xlo, &
+                       xtarget_probe_micro, &
                        xI, &
                        TSAT_predict, &
-                       im_target_probe, &
-                       im_target_probe_opp, &
+                       im_target_probe(iprobe), &
                        nmat, &
-                       tcomp_probe, &
+                       tcomp_probe(iprobe), &
                        ngrow, &
                        fablo,fabhi, &
                        EOS,DIMS(EOS), &
                        LS,DIMS(LS), &
                        recon,DIMS(recon), &
-                       temp_target_probe, &  ! Temp(xprobe)
-                       dxprobe_target, &     ! |xprobe-xcp|
+                       temp_target_probe(iprobe), &  ! Temp(xprobe)
+                       dxprobe_target(iprobe), &  ! |xprobe-xcp|
                        VOF_pos_probe_counter)
 
                     if (DEBUG_TRIPLE.eq.1) then
@@ -5281,10 +5556,52 @@ stop
                      endif
                     endif
 
-                   else if ((im_primary_probe.eq.im_target_probe_opp).or. &
-                            (im_secondary_probe.ne.im_target_probe).or. &
-                            (LSPROBE(im_target_probe).le.-dxprobe_target)) then
-                    temp_target_probe=TSAT_predict
+                    if (Ycomp_probe(iprobe).ge.1) then
+                     ! find the mass fraction at a probe (centroid)
+                     ! location.
+                     call interpfab_filament_probe( &
+                       bfact, &
+                       level, &
+                       finest_level, &
+                       dx, &
+                       xlo, &
+                       xtarget_probe_micro, &
+                       xI, &
+                       Y_predict, &
+                       im_target_probe(iprobe), &
+                       nmat, &
+                       Ycomp_probe(iprobe), &
+                       ngrow, &
+                       fablo,fabhi, &
+                       EOS,DIMS(EOS), &
+                       LS,DIMS(LS), &
+                       recon,DIMS(recon), &
+                       Y_target_probe(iprobe), &  ! Y(xprobe)
+                       dxprobe_target(iprobe), &  ! |xprobe-xcp|
+                       dummy_VOF_pos_probe_counter)
+
+                     if ((Y_target_probe(iprobe).ge.zero).and. &
+                         (Y_target_probe(iprobe).le.one)) then
+                      ! do nothing
+                     else
+                      print *,"Y_target_probe out of bounds"
+                      print *,"Y_target_probe ",Y_target_probe(iprobe)
+                      stop
+                     endif
+
+                    else if (Ycomp_probe(iprobe).eq.0) then
+                     Y_target_probe(iprobe)=one
+                    else
+                     print *,"Ycomp_probe invalid"
+                     stop
+                    endif
+
+                   else if ((im_secondary_probe(iprobe).ne. &
+                             im_target_probe(iprobe)).or. &
+                            (LSPROBE(im_target_probe(iprobe)).le. &
+                             -dxprobe_target(iprobe))) then
+                    temp_target_probe(iprobe)=TSAT_predict
+                    Y_target_probe(iprobe)=Y_predict
                    else
                     print *,"probe parameters bust"
                     stop
@@ -5296,19 +5613,24 @@ stop
 
                    ! default value for temp_target_INT
                   temp_target_INT=TSAT_predict
+                   ! default value for Y_target_INT
+                  Y_target_INT=Y_predict
 
-                  ! freezing_mod=0 (sharp interface stefan model)
-                  ! freezing_mod=1 (source term model)
-                  ! freezing_mod=2 (hydrate model)
-                  ! freezing_mod=3 (wildfire)
-                  ! freezing_mod=4 (source term model - Tanasawa Model)
-                  ! freezing_mod=5 (evaporation/condensation)
-                  if ((freezing_mod.eq.0).or. &
-                      (freezing_mod.eq.5)) then
+                  ! local_freezing_model=0 (sharp interface stefan model)
+                  ! local_freezing_model=1 (source term model)
+                  ! local_freezing_model=2 (hydrate model)
+                  ! local_freezing_model=3 (wildfire)
+                  ! local_freezing_model=4 (source term model - Tanasawa Model)
+                  ! local_freezing_model=5 (evaporation/condensation)
+                  ! local_freezing_model=6 (evaporation/condensation Palmore)
+                  if ((local_freezing_model.eq.0).or. & !fully saturated
+                      (local_freezing_model.eq.5).or. & !Stefan evap/cond
+                      (local_freezing_model.eq.6)) then !Palmore and Desjardins
                    ! do nothing
-                  else if ((freezing_mod.eq.1).or. &
-                           (freezing_mod.eq.2).or. &
-                           (freezing_mod.eq.4)) then
+                  else if ((local_freezing_model.eq.1).or. &
+                           (local_freezing_model.eq.2).or. & !hydrate
+                           (local_freezing_model.eq.4).or. & !Tanasawa
+                           (local_freezing_model.eq.7)) then !Cavitation
 
                    ! centroid -> target (cc_flag==0)
                    ! tsat_flag==0 do not use TSAT
@@ -5323,14 +5645,14 @@ stop
                     dx, &
                     xlo, &
                     xtarget_probe, &
-                    im_target_probe, &
+                    im_target_probe(iprobe), &
                     nmat, &
-                    tcomp_probe, &
+                    tcomp_probe(iprobe), &
                     ngrow, &
                     fablo,fabhi, &
                     EOS,DIMS(EOS), &
                     recon,DIMS(recon), &
-                    temp_target_probe)
+                    temp_target_probe(iprobe))
 
                    call interpfabFWEIGHT( &
                     bfact, &
@@ -5339,9 +5661,9 @@ stop
                     dx, &
                     xlo, &
                     xI, &
-                    im_target_probe, &
+                    im_target_probe(iprobe), &
                     nmat, &
-                    tcomp_probe, &
+                    tcomp_probe(iprobe), &
                     ngrow, &
                     fablo,fabhi, &
                     EOS,DIMS(EOS), &
@@ -5349,7 +5671,7 @@ stop
                     temp_target_INT)
 
                     ! hydrate
-                   if (freezing_mod.eq.2) then
+                   if (local_freezing_model.eq.2) then
                     if (distribute_from_targ.ne.0) then
                      print *,"distribute_from_targ invalid"
                      stop
@@ -5364,7 +5686,8 @@ stop
                            
                      ! dest
                     else if (iprobe.eq.2) then
-                     concen_comp=(im_target_probe-1)*num_state_material+3
+                     concen_comp= &
+                      (im_target_probe(iprobe)-1)*num_state_material+3
                      call interpfabFWEIGHT( &
                       bfact, &
                       level, &
@@ -5372,7 +5695,7 @@ stop
                       dx, &
                       xlo, &
                       xI, &
-                      im_target_probe, &
+                      im_target_probe(iprobe), &
                       nmat, &
                       concen_comp, &
                       ngrow, &
@@ -5397,42 +5720,61 @@ stop
                      print *,"iprobe invalid"
                      stop
                     endif
-                   else if (freezing_mod.ne.2) then
+                   else if (local_freezing_model.eq.7) then ! cavitation
+                    print *,"cavitation model still under construction"
+                    stop
+                   else if (local_freezing_model.ne.2) then
                     ! do nothing
                    else
-                    print *,"freezing_mod bust"
+                    print *,"local_freezing_model bust"
                     stop
                    endif  ! hydrate
                   else
-                   print *,"freezing_model invalid in ratemasschange"
-                   print *,"freezing_mod= ",freezing_mod
+                   print *,"local_freezing_model invalid in ratemasschange"
+                   print *,"local_freezing_model= ",local_freezing_model
                    print *,"iten,ireverse,nten ",iten,ireverse,nten
                    stop
                   endif
 
                   if (iprobe.eq.1) then
-                   tempsrc=temp_target_probe
+                   tempsrc=temp_target_probe(iprobe)
                    densrc=den_targetINT
                    Tsrc_INT=temp_target_INT
-                   dxprobe_source=dxprobe_target
+                   Ysrc_INT=Y_target_INT
+                   dxprobe_source=dxprobe_target(iprobe)
                   else if (iprobe.eq.2) then 
-                   tempdst=temp_target_probe
+                   tempdst=temp_target_probe(iprobe)
                    dendst=den_targetINT
                    Tdst_INT=temp_target_INT
-                   dxprobe_dest=dxprobe_target
+                   Ydst_INT=Y_target_INT
+                   dxprobe_dest=dxprobe_target(iprobe)
                   else
                    print *,"iprobe invalid"
                    stop
                   endif
 
-                  if (temp_target_probe.lt.zero) then
+                  if (temp_target_probe(iprobe).lt.zero) then
                    print *,"temp_target_probe went negative"
-                   print *,"temp_target_probe ",temp_target_probe
+                   print *,"temp_target_probe ",temp_target_probe(iprobe)
                    stop
                   endif
                   if (temp_target_INT.lt.zero) then
                    print *,"temp_target_INT went negative"
                    print *,"temp_target_INT ",temp_target_INT
+                   stop
+                  endif
+                  if ((Y_target_probe(iprobe).ge.zero).and. &
+                      (Y_target_probe(iprobe).le.one)) then
+                   ! do nothing
+                  else
+                   print *,"Y_target_probe went negative"
+                   print *,"Y_target_probe ",Y_target_probe(iprobe)
+                   stop
+                  endif
+                  if ((Y_target_INT.lt.zero).or. &
+                      (Y_target_INT.gt.one)) then
+                   print *,"Y_target_INT went negative"
+                   print *,"Y_target_INT ",Y_target_INT
                    stop
                   endif
 
@@ -5459,35 +5801,50 @@ stop
                   endif
                  endif
 
-                 if ((LS_pos_probe_counter.eq.1).or. &
-                     (LS_pos_probe_counter.eq.2)) then
-                  if (LS_INT_VERY_CLOSE_counter.eq.2) then
-                   if (LS_INT_OWN_counter.eq.1) then
-                    if (LS_pos_probe_counter+VOF_pos_probe_counter.eq.2) then
-                     at_interface=1
-                    else if (VOF_pos_probe_counter.eq.0) then
+                 if ((interp_valid_flag(1).ge.1).and. &
+                     (interp_valid_flag(2).ge.1)) then
+
+                   ! LS_pos_probe_counter is incremented when
+                   ! im_primary_probe(iprobe)==im_target_probe(iprobe)
+                  if ((LS_pos_probe_counter.eq.1).or. &
+                      (LS_pos_probe_counter.eq.2)) then
+                    ! LS_INT_VERY_CLOSE_counter is incremented when
+                    ! LSINT(im_target_probe(iprobe)).ge.-dxmaxLS
+                   if (LS_INT_VERY_CLOSE_counter.eq.2) then
+                    if (LS_INT_OWN_counter.eq.1) then
+                     if (LS_pos_probe_counter+VOF_pos_probe_counter.eq.2) then
+                      at_interface=1
+                     else if (VOF_pos_probe_counter.eq.0) then
+                      ! do nothing
+                     else
+                      print *,"VOF_pos_probe_counter invalid"
+                      stop
+                     endif
+                    else if (LS_INT_OWN_counter.eq.0) then
                      ! do nothing
                     else
-                     print *,"VOF_pos_probe_counter invalid"
+                     print *,"LS_INT_OWN_counter invalid"
                      stop
-                    endif
-                   else if (LS_INT_OWN_counter.eq.0) then
+                    endif 
+                   else if ((LS_INT_VERY_CLOSE_counter.eq.1).or. &
+                            (LS_INT_VERY_CLOSE_counter.eq.0)) then
                     ! do nothing
                    else
-                    print *,"LS_INT_OWN_counter invalid"
+                    print *,"LS_INT_VERY_CLOSE_counter invalid"
                     stop
-                   endif 
-                  else if ((LS_INT_VERY_CLOSE_counter.eq.1).or. &
-                           (LS_INT_VERY_CLOSE_counter.eq.0)) then
+                   endif
+                  else if (LS_pos_probe_counter.eq.0) then
                    ! do nothing
                   else
-                   print *,"LS_INT_VERY_CLOSE_counter invalid"
+                   print *,"LS_pos_probe_counter invalid"
                    stop
                   endif
-                 else if (LS_pos_probe_counter.eq.0) then
+
+                 else if ((interp_valid_flag(1).eq.0).or. &
+                          (interp_valid_flag(2).eq.0)) then
                   ! do nothing
                  else
-                  print *,"LS_pos_probe_counter invalid"
+                  print *,"interp_valid_flag invalid"
                   stop
                  endif
                      
@@ -5570,8 +5927,8 @@ stop
                    stop
                   endif
 
-                  if (freezing_mod.eq.5) then
-                   ispec=mass_fraction_id(iten+ireverse*nten)
+                  if ((local_freezing_model.eq.5).or. & !stefan evap/cond
+                      (local_freezing_model.eq.6)) then !Palmore/Desjardins
                    if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
                     evap_den=species_evaporation_density(ispec)
                     if (evap_den.gt.zero) then
@@ -5591,7 +5948,7 @@ stop
                     print *,"ispec invalid"
                     stop
                    endif
-                  endif ! freezing_mod==5
+                  endif ! local_freezing_model==5,6
 
                   source_perim_factor=one
                   dest_perim_factor=one
@@ -5739,7 +6096,7 @@ stop
                   for_estdt=0
 
 #if (STANDALONE==0)
-                   ! if freezing_mod==0 stefan problem
+                   ! if local_freezing_model==0 stefan problem
                    !                  5, some kind of evaporation model,
                    !                  or 1, then
                    !  DTsrc=(Tsrc-TSAT_predict)
@@ -5750,7 +6107,7 @@ stop
                   call get_vel_phasechange( &
                     for_estdt, &
                     xI, &
-                    freezing_mod, &
+                    local_freezing_model, &
                     distribute_from_targ, &
                     VEL_correct, & ! vel
                     densrc,dendst, &
@@ -5782,7 +6139,7 @@ stop
                     PHYDWATER, &
                     Fsource,Fdest)
 #elif (STANDALONE==1)
-                  if (freezing_mod.eq.0) then
+                  if (local_freezing_model.eq.0) then
                     DTsrc=tempsrc-TSAT_predict
                     DTdst=tempdst-TSAT_predict
                     velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe_source)
@@ -5799,7 +6156,7 @@ stop
                     endif 
                     VEL_correct=velsum
                   else
-                    print *,"freezing_mod invalid"
+                    print *,"local_freezing_model invalid 4"
                     stop
                   endif
 #else
@@ -5815,6 +6172,54 @@ stop
 
                  if (VEL_correct.lt.zero) then
                   VEL_correct=zero
+                 endif
+
+                 if (at_interface.eq.1) then
+                  if (local_freezing_model.eq.6) then ! Palmore/Desjardins
+                   if (LL(ireverse).gt.zero) then ! evaporation
+                    iprobe=2  ! destination
+                   else if (LL(ireverse).lt.zero) then ! condensation
+                    iprobe=1  ! source
+                   else
+                    print *,"LL invalid"
+                    stop
+                   endif
+
+                   if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
+                       (Y_target_probe(iprobe).le.one)) then
+                    ! do nothing
+                   else if ((Y_target_probe(iprobe).le.one-Y_TOLERANCE).and. &
+                            (Y_target_probe(iprobe).ge.zero)) then
+                      !Y_probe<=Y_interface<=1
+                    if (TSAT_iter.eq.0) then
+                     YMIN_converge=0
+                     Y_interface_min=zero
+                     do while (YMIN_converge.eq.0)
+
+                     enddo
+                    else if (TSAT_iter.ge.1) then
+                     ! do nothing
+                    else
+                     print *,"TSAT_iter invalid"
+                     stop
+                    endif
+                   else
+                    print *,"Y_target_probe invalid"
+                    stop
+                   endif
+ 
+                  else if (local_freezing_model.ge.0) then
+                   ! do nothing
+                  else
+                   print *,"local_freezing_model invalid 7"
+                   stop
+                  endif
+
+                 else if (at_interface.eq.0) then
+
+                 else
+                  print *,"at_interface invalid"
+                  stop
                  endif
 
                  TSAT_correct=TSAT_predict- &
@@ -5872,7 +6277,7 @@ stop
                    i,j,k,ireverse,vel_phasechange(ireverse)
                  endif
                  if (1.eq.0) then
-                  if (freezing_mod.eq.4) then
+                  if (local_freezing_model.eq.4) then
                    print *,"i,j,k,ireverse,vel_phasechange ", &
                     i,j,k,ireverse,vel_phasechange(ireverse)
                    print *,"im_source,im_dest ",im_source,im_dest
@@ -5926,16 +6331,16 @@ stop
                  endif
    
                 else if (at_interface.eq.0) then
-                  ! do nothing
+                 ! do nothing
                 else
-                  print *,"at_interface invalid"
-                  stop
+                 print *,"at_interface invalid"
+                 stop
                 endif
 
                else if (found_path.eq.0) then
                 ! do nothing
                else
-                print *,"found_path invalid"
+                print *,"found_path invalid: ",found_path
                 stop
                endif
 
@@ -5943,11 +6348,14 @@ stop
                        (abs(LShere(im_dest)).gt.two*dxmaxLS)) then
                ! do nothing
               else
-               print *,"LShere bust"
+               print *,"LShere bust:"
+               print *,"LShere(im_source) ",LShere(im_source)
+               print *,"LShere(im_dest) ",LShere(im_dest)
                stop
               endif
+
              else
-              print *,"LL bust"
+              print *,"LL(ireverse) bust: ",LL(ireverse)
               stop
              endif
 
@@ -5957,7 +6365,8 @@ stop
              print *,"LL bust"
              stop
             endif
-           enddo ! ireverse
+
+           enddo ! ireverse=0,...,1
             
            ireverse=-1 
            if ((valid_phase_change(0).eq.0).and. &
