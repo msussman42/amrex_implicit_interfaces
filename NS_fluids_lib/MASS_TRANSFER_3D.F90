@@ -1645,11 +1645,9 @@ stop
       REAL_T, intent(inout) :: dxprobe_target
       INTEGER_T, intent(inout) :: VOF_pos_probe_counter
 
-      INTEGER_T dir
       INTEGER_T ic,jc,kc
-      INTEGER_T i1,j1,k1
-      INTEGER_T isten,jsten,ksten
-      INTEGER_T k1lo,k1hi
+
+      INTEGER_T dir
       INTEGER_T nhalf
       INTEGER_T vofcomp
       INTEGER_T cell_index(SDIM)
@@ -1659,13 +1657,8 @@ stop
       REAL_T T_sten
       REAL_T VF_sten
       REAL_T XC_sten(SDIM)
-      INTEGER_T grad_init
-      REAL_T local_grad
-      REAL_T current_grad
-      REAL_T current_dxprobe
-      REAL_T current_temp_probe
       REAL_T mag
-      REAL_T LSPROBE_OPP
+      INTEGER_T material_found_in_cell
 
       if (bfact.lt.1) then 
        print *,"bfact invalid116"
@@ -1703,26 +1696,15 @@ stop
       call checkbound(lo,hi,DIMS(LS),ngrow,-1,1224)
       call checkbound(lo,hi,DIMS(recon),ngrow,-1,1224)
 
-      if (SDIM.eq.2) then
-       k1lo=0
-       k1hi=0
-      else if (SDIM.eq.3) then
-       k1lo=-1
-       k1hi=1
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-        ! cell that contains xI
-      call containing_cell(bfact,dx,xlo,lo,xI,cell_index)
+        ! cell that contains xtarget
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
 
       do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
-        cell_index(dir)=lo(dir)-ngrow+1
+       if (cell_index(dir).lt.lo(dir)-ngrow) then
+        cell_index(dir)=lo(dir)-ngrow
        endif
-       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
-        cell_index(dir)=hi(dir)+ngrow-1
+       if (cell_index(dir).gt.hi(dir)+ngrow) then
+        cell_index(dir)=hi(dir)+ngrow
        endif
       enddo ! dir
 
@@ -1734,121 +1716,76 @@ stop
 
       nhalf=3
 
-      grad_init=0
-      current_grad=zero
-      current_dxprobe=zero
-      current_temp_probe=zero
+      call gridsten_level(xsten_stencil,ic,jc,kc,level,nhalf)
+      call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
+        volcell,cencell,SDIM)
 
-      do i1=-1,1
-      do j1=-1,1
-      do k1=k1lo,k1hi
+       ! temperature at the material centroid of cell (isten,jsten,ksten)
+      T_sten=tempfab(D_DECL(ic,jc,kc),comp_probe)
+      VF_sten=recon(D_DECL(ic,jc,kc),vofcomp)
+      mag=zero
+      do dir=1,SDIM
+       XC_sten(dir)= &
+        recon(D_DECL(ic,jc,kc),vofcomp+dir)+cencell(dir)
+       mag=mag+(XC_sten(dir)-cencell(dir))**2
+      enddo
+      mag=sqrt(mag)
 
-       isten=i1+ic
-       jsten=j1+jc
-       ksten=k1+kc
+      material_found_in_cell=0
 
-       call gridsten_level(xsten_stencil,isten,jsten,ksten,level,nhalf)
-       call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
-         volcell,cencell,SDIM)
-
-        ! temperature at the material centroid of cell (isten,jsten,ksten)
-       T_sten=tempfab(D_DECL(isten,jsten,ksten),comp_probe)
-       VF_sten=recon(D_DECL(isten,jsten,ksten),vofcomp)
-       mag=zero
-       do dir=1,SDIM
-        XC_sten(dir)= &
-         recon(D_DECL(isten,jsten,ksten),vofcomp+dir)+cencell(dir)
-        mag=mag+(XC_sten(dir)-cencell(dir))**2
-       enddo
-       mag=sqrt(mag)
-       if (mag.ge.zero) then
-        if ((VF_sten.ge.-VOFTOL).and. &
-            (VF_sten.le.one+VOFTOL)) then
-         if (VF_sten.ge.VOFTOL) then
-
-          ! center -> target (cc_flag==1)
-          ! tsat_flag==-1
-          ! call center_centroid_interchange
-          ! interpolate the level set function from the cell centers
-          ! to XC_sten which is the centroid of material im_target_probe
-          call interpfab( &
-           bfact, &
-           level, &
-           finest_level, &
-           dx, &
-           xlo, &
-           XC_sten, &
-           im_target_probe_opp, &
-           ngrow, &
-           lo,hi, &
-           LS,DIMS(LS), &
-           LSPROBE_OPP)
-
-          if (DEBUG_TRIPLE.eq.1) then
-           if ((DEBUG_I.eq.igrid).and. &
-               (DEBUG_J.eq.jgrid)) then
-            print *,"igrid,jgrid,LSPROBE_OPP ",igrid,jgrid,LSPROBE_OPP
-            print *,"isten,jsten,T_sten,Tsat ",isten,jsten,T_sten,Tsat
-            print *,"isten,jsten,VF_sten ",isten,jsten,VF_sten
-           endif
-          endif
-          if (LSPROBE_OPP.lt.zero) then
-           local_grad=abs((T_sten-Tsat)/LSPROBE_OPP)
-           if (grad_init.eq.0) then
-            current_grad=local_grad
-            current_dxprobe=abs(LSPROBE_OPP)
-            current_temp_probe=T_sten
-            grad_init=1
-           else if (grad_init.eq.1) then
-            if (abs(LSPROBE_OPP).gt.current_dxprobe) then
-             current_grad=local_grad
-             current_dxprobe=abs(LSPROBE_OPP)
-             current_temp_probe=T_sten
-            else if (abs(LSPROBE_OPP).le.current_dxprobe) then
-             ! do nothing
-            else
-             print *,"LSPROBE_OPP invalid"
-             stop
-            endif
-           else
-            print *,"grad_init invalid"
-            stop
-           endif
-          else if (LSPROBE_OPP.ge.zero) then
-           ! do nothing
-          else
-           print *,"LSPROBE_OPP invalid"
-           stop
-          endif
-         else if (VF_sten.le.VOFTOL) then
+      if (mag.ge.zero) then
+       if ((VF_sten.ge.-VOFTOL).and. &
+           (VF_sten.le.one+VOFTOL)) then
+        if (VF_sten.ge.VOFTOL) then
+         dxprobe_target=zero
+         do dir=1,SDIM
+          dxprobe_target=dxprobe_target+(XC_sten(dir)-xI(dir))**2
+         enddo
+         dxprobe_target=sqrt(dxprobe_target)
+         if (dxprobe_target.gt.zero) then
+          dest=T_sten
+          material_found_in_cell=1
+         else if (dxprobe_target.eq.0) then
           ! do nothing
          else
-          print *,"VF_sten invalid"
+          print *,"dxprobe_target invalid"
           stop
          endif
+        else if (VF_sten.le.VOFTOL) then
+         ! do nothing
         else
          print *,"VF_sten invalid"
          stop
         endif
        else
-        print *,"mag invalid"
+        print *,"VF_sten invalid"
         stop
        endif
-
-      enddo
-      enddo
-      enddo ! i1,j1,k1
-
-      if (grad_init.eq.0) then
-       dest=Tsat
-      else if (grad_init.eq.1) then
-       dest=current_temp_probe
-       dxprobe_target=current_dxprobe
-       VOF_pos_probe_counter=VOF_pos_probe_counter+1
       else
-       print *,"grad_init invalid"
+       print *,"mag invalid"
        stop
       endif
+
+      if (material_found_in_cell.eq.1) then
+       ! do nothing
+      else if (material_found_in_cell.eq.0) then
+       dest=Tsat
+       dxprobe_target=zero
+       do dir=1,SDIM
+        dxprobe_target=dxprobe_target+(xtarget(dir)-xI(dir))**2
+       enddo
+       dxprobe_target=sqrt(dxprobe_target)
+      else
+       print *,"material_found_in_cell invalid"
+       stop
+      endif
+      if (dxprobe_target.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxprobe_target invalid"
+       stop
+      endif
+      VOF_pos_probe_counter=VOF_pos_probe_counter+1
 
       return 
       end subroutine interpfab_filament_probe
@@ -4714,6 +4651,7 @@ stop
       REAL_T normal_probe_factor
       INTEGER_T iprobe
       REAL_T xtarget_probe(SDIM)
+      REAL_T xtarget_probe_micro(SDIM)
       INTEGER_T im_target_probe(2) ! source,dest
       INTEGER_T Ycomp_probe(2)
       INTEGER_T tcomp_probe(2)
@@ -5579,7 +5517,7 @@ stop
                      ! (a) find containing cell for xtarget_probe_micro
                      ! (b) if F(im_target_probe)<TOL in containing cell, then
                      !     temp_target_probe=TSAT and dxprobe_target=
-                     !     ||x_cell_centroid-x_I||
+                     !     ||x_probe-x_I||
                      ! (c) if F(im_target_probe)>TOL in containing cell, then
                      !     temp_target_probe=T(containing_cell,im_target)
                      !     dxprobe_target=||x_centroid-x_I||
@@ -5613,9 +5551,8 @@ stop
                     endif
 
                     if (Ycomp_probe(iprobe).ge.1) then
-                     ! find the mass fraction gradient at "sub" probe
-                     ! point farthest from interface.
-                     ! (Y(xcentroid)-YGAMMA)/LS(xcentroid)
+                     ! find the mass fraction at a probe (centroid)
+                     ! location.
                      call interpfab_filament_probe( &
                        bfact, &
                        level, &
