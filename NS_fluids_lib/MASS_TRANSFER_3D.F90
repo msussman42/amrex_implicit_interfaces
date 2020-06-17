@@ -1615,6 +1615,7 @@ stop
        LS,DIMS(LS), &
        recon,DIMS(recon), &
        dest, &
+       dxprobe_target, &
        VOF_pos_probe_counter)
       use global_utility_module
       use geometry_intersect_module
@@ -5604,6 +5605,7 @@ stop
                        LS,DIMS(LS), &
                        recon,DIMS(recon), &
                        temp_target_probe(iprobe), &  ! Temp(xprobe)
+                       dxprobe_target(iprobe), &  ! |xprobe-xcp|
                        VOF_pos_probe_counter)
 
                     if (DEBUG_TRIPLE.eq.1) then
@@ -5636,6 +5638,7 @@ stop
                        LS,DIMS(LS), &
                        recon,DIMS(recon), &
                        Y_target_probe(iprobe), &  ! Y(xprobe)
+                       dxprobe_target(iprobe), &  ! |xprobe-xcp|
                        dummy_VOF_pos_probe_counter)
 
                      if ((Y_target_probe(iprobe).ge.zero).and. &
