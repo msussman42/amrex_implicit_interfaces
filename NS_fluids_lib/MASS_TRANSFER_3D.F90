@@ -1597,16 +1597,15 @@ stop
       end subroutine interpfabTEMP
 
       subroutine interpfab_filament_probe( &
-       igrid,jgrid,kgrid, &
        bfact, &
        level, &
        finest_level, &
        dx, &
        xlo, &
+       xtarget, &
        xI, &
        Tsat, &
        im_target_probe, &
-       im_target_probe_opp, &
        nmat, &
        comp_probe, &
        ngrow, &
@@ -1616,24 +1615,22 @@ stop
        LS,DIMS(LS), &
        recon,DIMS(recon), &
        dest, &
-       dxprobe_target, &
        VOF_pos_probe_counter)
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: igrid,jgrid,kgrid
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
       REAL_T, intent(in) :: xI(SDIM)
       REAL_T, intent(in) :: Tsat
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: im_target_probe
-      INTEGER_T, intent(in) :: im_target_probe_opp
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: comp_probe
       INTEGER_T, intent(in) :: ngrow
@@ -4560,6 +4557,7 @@ stop
       INTEGER_T, intent(in) :: stefan_flag
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: normal_probe_size
+      INTEGER_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: nmat
@@ -4670,6 +4668,8 @@ stop
       REAL_T xI(SDIM)
       REAL_T xsrc(SDIM)
       REAL_T xdst(SDIM)
+      REAL_T xsrc_micro(SDIM)
+      REAL_T xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
       REAL_T nrmFD(SDIM)  ! finite difference normal
       REAL_T theta_nrmFD(SDIM)
@@ -4800,6 +4800,8 @@ stop
        print *,"normal_probe_size invalid"
        stop
       endif
+
+      microscale_probe_size=1.0D-8
 
       if (nucleate_pos_size.lt.4) then
        print *,"nucleate_pos_size invalid: ",nucleate_pos_size
@@ -5111,6 +5113,10 @@ stop
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
                   xsrc(dir)=xI(dir)+ &
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
+                  xdst_micro(dir)=xI(dir)- &
+                     microscale_probe_size*dxmin*nrmFD(dir) 
+                  xsrc_micro(dir)=xI(dir)+ &
+                     microscale_probe_size*dxmin*nrmFD(dir)
                  enddo ! dir=1..sdim
                 else if (LShere(im_source).ge.zero) then
                  LS_pos=LShere(im_dest)
@@ -5123,6 +5129,10 @@ stop
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
                   xsrc(dir)=xI(dir)- &
                      normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
+                  xdst_micro(dir)=xI(dir)+ &
+                     microscale_probe_size*dxmin*nrmFD(dir) 
+                  xsrc_micro(dir)=xI(dir)- &
+                     microscale_probe_size*dxmin*nrmFD(dir)
                  enddo ! dir
                 else
                  print *,"LShere bust"
@@ -5355,6 +5365,7 @@ stop
                   if (iprobe.eq.1) then ! source
                    do dir=1,SDIM
                     xtarget_probe(dir)=xsrc(dir)
+                    xtarget_probe_micro(dir)=xsrc_micro(dir)
                    enddo
                    im_target_probe(iprobe)=im_source
                    im_target_probe_opp(iprobe)=im_dest
@@ -5365,6 +5376,7 @@ stop
                   else if (iprobe.eq.2) then  ! dest
                    do dir=1,SDIM
                     xtarget_probe(dir)=xdst(dir)
+                    xtarget_probe_micro(dir)=xdst_micro(dir)
                    enddo
                    im_target_probe(iprobe)=im_dest
                    im_target_probe_opp(iprobe)=im_source
@@ -5562,9 +5574,7 @@ stop
                       im_primary_probe(iprobe), &
                       im_secondary_probe(iprobe))
 
-                   if ((im_primary_probe(iprobe).ne. &
-                        im_target_probe_opp(iprobe)).and. &
-                       (im_secondary_probe(iprobe).eq. &
+                   if ((im_secondary_probe(iprobe).eq. &
                         im_target_probe(iprobe)).and. &
                        (LSPROBE(im_target_probe(iprobe)).ge. &
                         -dxprobe_target(iprobe))) then
@@ -5577,16 +5587,15 @@ stop
                      ! point farthest from interface.
                      ! (Temperature(xcentroid)-TSAT)/LS(xcentroid)
                     call interpfab_filament_probe( &
-                       i,j,k, &
                        bfact, &
                        level, &
                        finest_level, &
                        dx, &
                        xlo, &
+                       xtarget_probe_micro, &
                        xI, &
                        TSAT_predict, &
                        im_target_probe(iprobe), &
-                       im_target_probe_opp(iprobe), &
                        nmat, &
                        tcomp_probe(iprobe), &
                        ngrow, &
@@ -5595,7 +5604,6 @@ stop
                        LS,DIMS(LS), &
                        recon,DIMS(recon), &
                        temp_target_probe(iprobe), &  ! Temp(xprobe)
-                       dxprobe_target(iprobe), &     ! |xprobe-xcp|
                        VOF_pos_probe_counter)
 
                     if (DEBUG_TRIPLE.eq.1) then
@@ -5611,16 +5619,15 @@ stop
                      ! point farthest from interface.
                      ! (Y(xcentroid)-YGAMMA)/LS(xcentroid)
                      call interpfab_filament_probe( &
-                       i,j,k, &
                        bfact, &
                        level, &
                        finest_level, &
                        dx, &
                        xlo, &
+                       xtarget_probe_micro, &
                        xI, &
                        Y_predict, &
                        im_target_probe(iprobe), &
-                       im_target_probe_opp(iprobe), &
                        nmat, &
                        Ycomp_probe(iprobe), &
                        ngrow, &
@@ -5629,7 +5636,6 @@ stop
                        LS,DIMS(LS), &
                        recon,DIMS(recon), &
                        Y_target_probe(iprobe), &  ! Y(xprobe)
-                       dxprobe_target(iprobe), &     ! |xprobe-xcp|
                        dummy_VOF_pos_probe_counter)
 
                      if ((Y_target_probe(iprobe).ge.zero).and. &
@@ -5648,9 +5654,7 @@ stop
                      stop
                     endif
 
-                   else if ((im_primary_probe(iprobe).eq. &
-                             im_target_probe_opp(iprobe)).or. &
-                            (im_secondary_probe(iprobe).ne. &
+                   else if ((im_secondary_probe(iprobe).ne. &
                              im_target_probe(iprobe)).or. &
                             (LSPROBE(im_target_probe(iprobe)).le. &
                              -dxprobe_target(iprobe))) then
