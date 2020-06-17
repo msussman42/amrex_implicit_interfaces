@@ -1659,7 +1659,6 @@ stop
       REAL_T T_sten
       REAL_T VF_sten
       REAL_T XC_sten(SDIM)
-      REAL_T dxmax
       INTEGER_T grad_init
       REAL_T local_grad
       REAL_T current_grad
@@ -1667,8 +1666,6 @@ stop
       REAL_T current_temp_probe
       REAL_T mag
       REAL_T LSPROBE_OPP
-
-      call get_dxmax(dx,bfact,dxmax)
 
       if (bfact.lt.1) then 
        print *,"bfact invalid116"
@@ -1693,11 +1690,6 @@ stop
       if ((im_target_probe.lt.1).or. &
           (im_target_probe.gt.nmat)) then
        print *,"im_target_probe invalid21"
-       stop
-      endif
-      if ((im_target_probe_opp.lt.1).or. &
-          (im_target_probe_opp.gt.nmat)) then
-       print *,"im_target_probe_opp invalid21"
        stop
       endif
       if ((Tsat.ge.zero).and.(Tsat.le.1.0D+99)) then
@@ -4802,7 +4794,7 @@ stop
        stop
       endif
 
-      microscale_probe_size=1.0D-8
+      microscale_probe_size=1.0D-2
 
       if (nucleate_pos_size.lt.4) then
        print *,"nucleate_pos_size invalid: ",nucleate_pos_size
@@ -5584,9 +5576,13 @@ stop
 
                     dummy_VOF_pos_probe_counter=VOF_pos_probe_counter
 
-                     ! find the temperature gradient at "sub" probe
-                     ! point farthest from interface.
-                     ! (Temperature(xcentroid)-TSAT)/LS(xcentroid)
+                     ! (a) find containing cell for xtarget_probe_micro
+                     ! (b) if F(im_target_probe)<TOL in containing cell, then
+                     !     temp_target_probe=TSAT and dxprobe_target=
+                     !     ||x_cell_centroid-x_I||
+                     ! (c) if F(im_target_probe)>TOL in containing cell, then
+                     !     temp_target_probe=T(containing_cell,im_target)
+                     !     dxprobe_target=||x_centroid-x_I||
                     call interpfab_filament_probe( &
                        bfact, &
                        level, &
