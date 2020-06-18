@@ -4617,6 +4617,7 @@ stop
       REAL_T densrc
       REAL_T dendst
       REAL_T local_Tsat(0:1)
+      REAL_T local_Tsat_base(0:1)
       REAL_T vel_phasechange(0:1)
       REAL_T LL(0:1)
       INTEGER_T valid_phase_change(0:1)
@@ -4687,11 +4688,22 @@ stop
       REAL_T VEL_predict,VEL_correct
       REAL_T Y_predict
       REAL_T Y_correct
+      REAL_T X_predict
+      REAL_T X_correct
       REAL_T TSAT_predict,TSAT_correct
       REAL_T TSAT_ERR,TSAT_INIT_ERR
       INTEGER_T TSAT_iter,TSAT_converge,TSAT_iter_max
       INTEGER_T YMIN_converge
       REAL_T Y_interface_min
+      REAL_T X_interface_min
+      INTEGER_T YMIN_iter
+      INTEGER_T YMIN_iter_max
+      REAL_T denom
+      REAL_T molar_mass_ambient
+      REAL_T molar_mass_vapor
+      REAL_T T_interface_min
+      REAL_T YMIN_ERR
+      REAL_T YMIN_INIT_ERR
       INTEGER_T interp_valid_flag(2)
 
 #if (STANDALONE==1)
@@ -5276,6 +5288,7 @@ stop
                 VEL_correct=zero
                 TSAT_iter=0
                 TSAT_iter_max=5
+                YMIN_iter_max=5
                 TSAT_converge=0
 
                  ! 0=cannot do least squares interp or supermesh interp.
@@ -6302,7 +6315,7 @@ stop
                                (Y_target_probe(iprobe).ge.zero)) then
                        X_interface_min=molar_mass_ambient*Y_interface_min/ &
                         ((one-Y_interface_min)*molar_mass_vapor+ &
-                         Y_interface_min*molar_mass_ambient
+                         Y_interface_min*molar_mass_ambient)
                        if ((X_interface_min.ge.one-Y_TOLERANCE).and. &
                            (X_interface_min.le.one)) then
                         ! do nothing
@@ -6347,7 +6360,7 @@ stop
                         ((one-X_correct)*molar_mass_ambient+ &
                          X_correct*molar_mass_vapor)
                        if (denom.gt.zero) then
-                        T_correct=(   )/denom
+!                        TSAT_correct=(   )/denom
                        else
                         print *,"denom invalid"
                         stop

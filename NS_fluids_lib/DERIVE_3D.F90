@@ -1700,7 +1700,9 @@ stop
 
            ! returns: im_solid_crit=max_{is_rigid(im)==1} ls_sort(im)
           call combine_solid_LS(ls_sort,nmat,solid_dist_primary,im_solid_crit)
-          if ((im_solid_crit.lt.1).or.(im_solid_crit.gt.nmat)) then
+          if ((im_solid_crit.ge.0).and.(im_solid_crit.le.nmat)) then
+           ! do nothing
+          else
            print *,"im_solid_crit invalid in getdrag:",im_solid_crit
            stop
           endif

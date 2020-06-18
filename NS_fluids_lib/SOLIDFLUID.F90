@@ -137,6 +137,13 @@
         else if (probtype_in.eq.401) then ! helix
          print *,"this geometry has no 2D analogue"
          stop
+        else if (probtype_in.eq.415) then ! shock sphere
+         xmap3D(1)=1
+         xmap3D(2)=2
+         xmap3D(3)=0
+         xslice3D(3)=zero
+         problo3D(3)=-half*dx_max_level(1)
+         probhi3D(3)=half*dx_max_level(1)
         else if (probtype_in.eq.411) then
 #if (STANDALONE==0)
          call CAV3D_SLICE(xmap3D,xslice3D,problo3D,probhi3D, &

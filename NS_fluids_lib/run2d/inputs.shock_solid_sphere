@@ -1,0 +1,190 @@
+# REFER TO probtype.eq.1 axis_dir.eq.150  (shock/drop interaction)
+# REFER TO probtype.eq.401  (helix)
+max_step  =  99999    # maximum timestep
+#max_step  =  2    # maximum timestep
+# C_AIR=37398 cm/s
+# radius: 0.1 cm
+# domain: 1x1 cm
+#stop_time =  3.0e-5  # maximum problem time
+#Sep 16, 2018
+stop_time =  5.0e-3  # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+#geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+#Sep 16, 2018
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+#geometry.prob_lo   =  0.0 0.0
+#geometry.prob_hi   =  1.0 1.0   
+#Sep 16, 2018
+geometry.prob_lo   =  -3.7 0.0
+geometry.prob_hi   =  3.7 14.8
+# 0=cell
+# 1=face
+ns.face_flag=0
+ns.make_interface_incomp=1
+# continuous_mof=0 regular MOF
+# continuous_mof=2 CMOF
+# continuous_mof=3 CLSVOF + MOF hybrid
+# continuous_mof=4 CLSVOF + CMOF hybrid
+ns.continuous_mof=0
+ns.MOFITERMAX=15
+# EILE_flag=0 Sussman and Puckett  EILE_flag=-1 Weymouth and Yue
+# EILE_flag=1 alternate EI-LE
+ns.EILE_flag=1
+ns.ns_tiling=false
+
+# May 17: for shockdrop_M=3.0, make this 1.0e+12
+#ns.projection_pressure_scale=1.0e+12
+#Sep 16, 2018 (larger dimensions)
+ns.projection_pressure_scale=1.0e+6
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+
+ns.num_materials=3
+ns.num_materials_vel=1
+ns.num_species_var=0
+
+ns.post_init_pressure_solve=0
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.minimum_relative_error=1.0e-24
+ns.initial_project_cycles=3  # number of initial jacobi iterations
+ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+# 0=GSRB 1=ICRB 2=ILU
+# Lp.smooth_type=2
+# Lp.bottom_smooth_type=2
+#
+ns.visual_option=-2
+
+#May 17: n_cell and max_level changed
+amr.n_cell    = 48 96
+amr.max_level =  2
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 4       # block factor in grid generation
+amr.check_int       = 1000     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 100     # 50
+amr.slice_int       = 100     # 50
+# e.g. slice_dir==1 => look at Y line of data
+ns.slice_dir=1 # 0..sdim-1
+ns.xslice=0.0 0.0 0.0
+
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 1024
+#amr.restart         = chk0014
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-9
+
+# May 17:
+# 1=always take sound speed into account
+# 2=never take sound speed into account
+# 0=take sound speed into account at t=0 only if compressible material
+# LIQUID COMPRESSIBLE: make shock_timestep(1)=1
+ns.shock_timestep=1 1 1
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+#ns.fixed_dt	  = 1e-08   # Sep 16, 2018
+#ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
+ns.init_shrink    = 0.1      # scale back initial timestep
+ns.change_max     = 1.025      # scale back initial timestep
+ns.visc_coef      = 1.0    # coef of viscosity
+ns.gravity        = 0.0  # must be nonzero, otherwise not used.
+# liquid, gas, solid
+# 12,13,23
+ns.tension        = 0.0 0.0 0.0
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=150
+ns.vorterr=1.0e+10 1.0e+10 1.0e+10
+ns.rgasinlet=1.57
+# May 17: this parameter is not used.
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=1
+ns.tempconst=278.0 278.0 278.0
+ns.num_divu_outer_sweeps=2
+# on each level, and for each uncovered cell, code computes:
+# sum_star_stencil |pmg_i'j'k'-pmg_ijk|/(2 dim patmos)
+ns.pressure_error_flag=1 # look at pressure variation
+# Nov 15, 2018 almost always adapt the liq
+ns.pressure_error_cutoff=1.0e-6 0.1 1.0e+10 
+# May 17:
+# for water: material_type=7 EOS_tait_rho (base density is denconst(1))
+# for air: material_type=5 EOS_air
+# LIQUID COMPRESSIBLE: make material_type(1)=7
+ns.material_type=7 5 999
+ns.heatviscconst=0.0 0.0 0.0
+# May 17:
+# a non-zero gas viscosity will work fine too.
+ns.viscconst=0.01 0.0 0.01
+ns.denconst=1.0 0.00123 1.0
+ns.density_ceiling=10.0 1.0 1.0
+ns.density_floor=0.1 0.0001 1.0
+# Nov 15, 2018 advection_order=2 in order to try and 
+# reduce numerical dissipation
+ns.advection_order=2 2 2
+ns.density_advection_order=2 2 2
+ns.xblob=0.0
+ns.yblob=5.0
+ns.zblob=0.0
+# zblob2 is the initial position of the shock.
+#ns.zblob2=0.3 
+#Sep 16, 2018
+ns.zblob2=2.0
+#ns.radblob=0.1 
+#Sep 16, 2018
+ns.radblob=1.1 
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=415
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+prescribe_temperature_outflow=1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+#ns.lo_bc          = 3 2
+#ns.hi_bc          = 3 2
+#Sep 16, 2018 (slipwall not allowed if viscosity present, and
+# NoSlipWall causes artifacts to form on the walls)
+# Either symmetry or outflow is ok for xlo and xhi walls.
+ns.lo_bc          = 3 2
+ns.hi_bc          = 3 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

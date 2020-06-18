@@ -3085,7 +3085,8 @@ INTEGER_T :: orig_elements,local_elements
    denpaddle=one
    dampingpaddle=zero
 
-   if (probtype.eq.401) then ! helix
+   if ((probtype.eq.401).or. &
+       (probtype.eq.415)) then ! helix or shock sphere interaction
     dwave="helix.dat"
     print *,"opening ",dwave
     OPEN(unit=14,file=dwave,access='sequential',form="formatted",status='old')
@@ -5724,7 +5725,7 @@ REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
  else if (probtype.eq.400) then
   call init_gingerbread2D(CLSVOF_curtime,sci_dt,ifirst,sci_sdim,sci_istop, &
     sci_istep,ioproc,part_id,isout) 
- else if (probtype.eq.401) then
+ else if ((probtype.eq.401).or.(probtype.eq.415)) then
   call init_helix(CLSVOF_curtime,sci_dt,ifirst,sci_sdim,sci_istop, &
     sci_istep,ioproc,part_id,isout) 
  else
@@ -5904,7 +5905,7 @@ INTEGER_T :: fsi_part_id
    else if (probtype.eq.400) then
     call init_gingerbread2D(CLSVOFtime,sci_dt,ifirst,sci_sdim,sci_istop, &
      sci_istep,ioproc,part_id,isout) 
-   else if (probtype.eq.401) then
+   else if ((probtype.eq.401).or.(probtype.eq.415)) then
     call init_helix(CLSVOFtime,sci_dt,ifirst,sci_sdim,sci_istop, &
      sci_istep,ioproc,part_id,isout) 
    else
