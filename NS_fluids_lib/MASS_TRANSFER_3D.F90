@@ -6178,23 +6178,100 @@ stop
                   if (local_freezing_model.eq.6) then ! Palmore/Desjardins
                    if (LL(ireverse).gt.zero) then ! evaporation
                     iprobe=2  ! destination
+                    do dir=1,SDIM
+                     xtarget_probe(dir)=xdst(dir)
+                     xtarget_probe_micro(dir)=xdst_micro(dir)
+                    enddo
                    else if (LL(ireverse).lt.zero) then ! condensation
                     iprobe=1  ! source
+                    do dir=1,SDIM
+                     xtarget_probe(dir)=xsrc(dir)
+                     xtarget_probe_micro(dir)=xsrc_micro(dir)
+                    enddo
                    else
                     print *,"LL invalid"
                     stop
                    endif
 
-                   if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
-                       (Y_target_probe(iprobe).le.one)) then
-                    ! do nothing
-                   else if ((Y_target_probe(iprobe).le.one-Y_TOLERANCE).and. &
-                            (Y_target_probe(iprobe).ge.zero)) then
+                   if (Ycomp_probe(iprobe).ge.1) then
+
+                    if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
+                        (Y_target_probe(iprobe).le.one)) then
+                     ! do nothing
+                    else if ((Y_target_probe(iprobe).le.one-Y_TOLERANCE).and. &
+                             (Y_target_probe(iprobe).ge.zero)) then
                       !Y_probe<=Y_interface<=1
-                    if (TSAT_iter.eq.0) then
-                     YMIN_converge=0
-                     Y_interface_min=zero
-                     do while (YMIN_converge.eq.0)
+                     if (TSAT_iter.eq.0) then
+                      YMIN_converge=0
+                      Y_interface_min=zero
+                      YMIN_iter=0
+                      do while (YMIN_converge.eq.0)
+                       if (interp_valid_flag(iprobe).eq.1) then
+                        call interpfabTEMP( &
+                         bfact, &
+                         level, &
+                         finest_level, &
+                         dx, &
+                         xlo, &
+                         xtarget_probe, &
+                         xI, &
+                         Y_interface_min, &
+                         im_target_probe(iprobe), &
+                         nmat, &
+                         Ycomp_probe(iprobe), &
+                         ngrow, &
+                         fablo,fabhi, &
+                         EOS,DIMS(EOS), &
+                         LS,DIMS(LS), &
+                         recon,DIMS(recon), &
+                         Y_target_probe(iprobe), &
+                         debugrate)
+                       else if (interp_valid_flag(iprobe).eq.2) then
+                        dummy_VOF_pos_probe_counter=0
+                        call interpfab_filament_probe( &
+                         bfact, &
+                         level, &
+                         finest_level, &
+                         dx, &
+                         xlo, &
+                         xtarget_probe_micro, &
+                         xI, &
+                         Y_interface_min, &
+                         im_target_probe(iprobe), &
+                         nmat, &
+                         Ycomp_probe(iprobe), &
+                         ngrow, &
+                         fablo,fabhi, &
+                         EOS,DIMS(EOS), &
+                         LS,DIMS(LS), &
+                         recon,DIMS(recon), &
+                         Y_target_probe(iprobe), &  ! Y(xprobe)
+                         dxprobe_target(iprobe), &  ! |xprobe-xcp|
+                         dummy_VOF_pos_probe_counter)
+                       else
+                        print *,"interp_valid_flag invalid"
+                        stop
+                       endif
+                       YMIN_ERR=abs(Y_target_probe(iprobe)-Y_interface_min)
+                       Y_interface_min=Y_target_probe(iprobe)
+                       if (YMIN_iter.eq.0) then
+                        YMIN_INIT_ERR=YMIN_ERR
+                       endif
+                       YMIN_converge=0
+                       if (YMIN_ERR.eq.zero) then
+                        YMIN_converge=1
+                       endif
+                       YMIN_iter=YMIN_iter+1
+                       if (YMIN_iter.gt.YMIN_iter_max) then
+                        YMIN_converge=1
+                       endif
+                       if (YMIN_iter.gt.1) then
+                        if (YMIN_err.lt.(0.001d0)*YMIN_INIT_ERR) then
+                         YMIN_converge=1
+                        endif
+                       endif
+                      enddo ! do while (YMIN_converge.eq.0)
+
 
                      enddo
                     else if (TSAT_iter.ge.1) then
