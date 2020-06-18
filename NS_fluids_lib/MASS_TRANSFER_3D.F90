@@ -5019,6 +5019,7 @@ stop
              else if (LL(ireverse).ne.zero) then
 
               local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
+              local_Tsat_base(ireverse)=saturation_temp(iten+ireverse*nten)
 
               found_path=0
 
@@ -5266,6 +5267,9 @@ stop
                 Y_predict=one
                 Y_correct=Y_predict
                
+                X_predict=one
+                X_correct=X_predict
+
                 TSAT_predict=local_Tsat(ireverse)
                 TSAT_correct=TSAT_predict
                 VEL_predict=zero
@@ -6174,16 +6178,21 @@ stop
                   VEL_correct=zero
                  endif
 
+                 TSAT_correct=TSAT_predict
+
                  if (at_interface.eq.1) then
                   if (local_freezing_model.eq.6) then ! Palmore/Desjardins
+                   molar_mass_vapor=species_molar_mass(ispec)
                    if (LL(ireverse).gt.zero) then ! evaporation
                     iprobe=2  ! destination
+                    molar_mass_ambient=molar_mass(im_dest)
                     do dir=1,SDIM
                      xtarget_probe(dir)=xdst(dir)
                      xtarget_probe_micro(dir)=xdst_micro(dir)
                     enddo
                    else if (LL(ireverse).lt.zero) then ! condensation
                     iprobe=1  ! source
+                    molar_mass_ambient=molar_mass(im_source)
                     do dir=1,SDIM
                      xtarget_probe(dir)=xsrc(dir)
                      xtarget_probe_micro(dir)=xsrc_micro(dir)
@@ -6193,7 +6202,10 @@ stop
                     stop
                    endif
 
-                   if (Ycomp_probe(iprobe).ge.1) then
+                   if ((Ycomp_probe(iprobe).ge.1).and. &
+                       (molar_mass_ambient.gt.zero).and. &
+                       (molar_mass_vapor.gt.zero).and. &
+                       (R_Palmore_Desjardins.gt.zero)) then
 
                     if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
                         (Y_target_probe(iprobe).le.one)) then
@@ -6265,6 +6277,16 @@ stop
                        if (YMIN_iter.gt.YMIN_iter_max) then
                         YMIN_converge=1
                        endif
+                       if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
+                           (Y_target_probe(iprobe).le.one)) then
+                        YMIN_converge=1
+                       else if ((Y_target_probe(iprobe).ge.zero).and. &
+                                (Y_target_probe(iprobe).le.one)) then
+                        ! do nothing
+                       else
+                        print *,"Y_target_probe invalid"
+                        stop
+                       endif
                        if (YMIN_iter.gt.1) then
                         if (YMIN_err.lt.(0.001d0)*YMIN_INIT_ERR) then
                          YMIN_converge=1
@@ -6272,16 +6294,79 @@ stop
                        endif
                       enddo ! do while (YMIN_converge.eq.0)
 
-
-                     enddo
-                    else if (TSAT_iter.ge.1) then
-                     ! do nothing
+                      if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
+                          (Y_target_probe(iprobe).le.one)) then
+                       ! do nothing
+                      else if ((Y_target_probe(iprobe).le. &
+                                one-Y_TOLERANCE).and. &
+                               (Y_target_probe(iprobe).ge.zero)) then
+                       X_interface_min=molar_mass_ambient*Y_interface_min/ &
+                        ((one-Y_interface_min)*molar_mass_vapor+ &
+                         Y_interface_min*molar_mass_ambient
+                       if ((X_interface_min.ge.one-Y_TOLERANCE).and. &
+                           (X_interface_min.le.one)) then
+                        ! do nothing
+                       else if ((X_interface_min.le. &
+                                 one-Y_TOLERANCE).and. &
+                                (X_interface_min.gt.zero)) then
+                        TSAT_correct=one/ &
+                         (one/local_Tsat_base(ireverse)- &
+                         R_Palmore_Desjardins*log(X_interface_min)/ &
+                         (abs(LL(ireverse))*molar_mass_vapor)) 
+                        T_interface_min=TSAT_correct
+                        X_correct=X_interface_min
+                        Y_correct=Y_interface_min
+                       else if (X_interface_min.eq.zero) then
+                        TSAT_correct=zero
+                        T_interface_min=zero
+                        X_correct=zero
+                        Y_correct=zero
+                       else
+                        print *,"X_interface_min invalid"
+                        stop
+                       endif
+                      else
+                       print *,"Y_target_probe invalid"
+                       stop
+                      endif
+                     else if (TSAT_iter.ge.1) then
+                      denom=one/dxprobe_target(1)+one/dxprobe_target(2)
+                      if (TSAT_correct.gt.zero) then
+                       X_correct=exp(-abs(LL(ireverse))*molar_mass_vapor/ &
+                        R_Palmore_Desjardins)*(one/TSAT_correct- &
+                         one/local_Tsat_base(ireverse))
+                      else if (TSAT_correct.eq.zero) then
+                       X_correct=zero
+                       Y_correct=zero
+                      else
+                       print *,"TSAT_correct invalid"
+                       stop
+                      endif
+                      if ((X_correct.ge.zero).and.(X_correct.le.one)) then
+                       Y_correct=X_correct*molar_mass_vapor/ &
+                        ((one-X_correct)*molar_mass_ambient+ &
+                         X_correct*molar_mass_vapor)
+                       if (denom.gt.zero) then
+                        T_correct=(   )/denom
+                       else
+                        print *,"denom invalid"
+                        stop
+                       endif
+                      else
+                       print *,"X_correct invalid"
+                       stop
+                      endif 
+                     else
+                      print *,"TSAT_iter invalid"
+                      stop
+                     endif
                     else
-                     print *,"TSAT_iter invalid"
+                     print *,"Y_target_probe invalid"
                      stop
                     endif
+
                    else
-                    print *,"Y_target_probe invalid"
+                    print *,"Ycomp_probe, molar masses, or R invalid"
                     stop
                    endif
  
@@ -6299,7 +6384,7 @@ stop
                   stop
                  endif
 
-                 TSAT_correct=TSAT_predict- &
+                 TSAT_correct=TSAT_correct- &
                     saturation_temp_vel(iten+ireverse*nten)* &
                     (VEL_correct-VEL_predict)
             
