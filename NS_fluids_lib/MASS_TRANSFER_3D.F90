@@ -4699,6 +4699,8 @@ stop
       INTEGER_T YMIN_iter
       INTEGER_T YMIN_iter_max
       REAL_T denom
+      REAL_T FicksLawD 
+      REAL_T Tprobe_avg 
       REAL_T molar_mass_ambient
       REAL_T molar_mass_vapor
       REAL_T T_interface_min
@@ -6344,31 +6346,42 @@ stop
                       endif
                      else if (TSAT_iter.ge.1) then
                       denom=one/dxprobe_target(1)+one/dxprobe_target(2)
-                      if (TSAT_correct.gt.zero) then
-                       X_correct=exp(-abs(LL(ireverse))*molar_mass_vapor/ &
-                        R_Palmore_Desjardins)*(one/TSAT_correct- &
-                         one/local_Tsat_base(ireverse))
-                      else if (TSAT_correct.eq.zero) then
-                       X_correct=zero
-                       Y_correct=zero
-                      else
-                       print *,"TSAT_correct invalid"
-                       stop
-                      endif
-                      if ((X_correct.ge.zero).and.(X_correct.le.one)) then
-                       Y_correct=X_correct*molar_mass_vapor/ &
-                        ((one-X_correct)*molar_mass_ambient+ &
-                         X_correct*molar_mass_vapor)
-                       if (denom.gt.zero) then
+                      if (denom.gt.zero) then
+                       Tprobe_avg=temp_target_probe(1)/dxprobe_target(1)+ &
+                           temp_target_probe(2)/dxprobe_target(2)
+                       if (Tprobe_avg.ge.zero) then
+                        Tprobe_avg=Tprobe_avg/denom
+                        FicksLawD= &
+                          fort_speciesviscconst((ispec-1)*nmat+ &
+                              im_target_probe(iprobe)) 
+                        if (TSAT_correct.gt.zero) then
+                         X_correct=exp(-abs(LL(ireverse))*molar_mass_vapor/ &
+                          R_Palmore_Desjardins)*(one/TSAT_correct- &
+                           one/local_Tsat_base(ireverse))
+                        else if (TSAT_correct.eq.zero) then
+                         X_correct=zero
+                         Y_correct=zero
+                        else
+                         print *,"TSAT_correct invalid"
+                         stop
+                        endif
+                        if ((X_correct.ge.zero).and.(X_correct.le.one)) then
+                         Y_correct=X_correct*molar_mass_vapor/ &
+                          ((one-X_correct)*molar_mass_ambient+ &
+                           X_correct*molar_mass_vapor)
 !                        TSAT_correct=(   )/denom
+                        else
+                         print *,"X_correct invalid"
+                         stop
+                        endif 
                        else
-                        print *,"denom invalid"
+                        print *,"Tprobe_avg invalid"
                         stop
                        endif
                       else
-                       print *,"X_correct invalid"
+                       print *,"denom invalid"
                        stop
-                      endif 
+                      endif
                      else
                       print *,"TSAT_iter invalid"
                       stop

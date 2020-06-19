@@ -12622,6 +12622,34 @@ contains
       end subroutine pop_order_stack
 
 
+
+!
+! continuous_mof=0
+!  regular MOF  minimize E=||x_ij^ref-x_ij^derived||
+!  subject to the constraint that F_ij^ref=F_ij^derived
+!   x_ij^ref=reference centroid in cell ij
+!   x_ij^derived=derived centroid in cell ij for a given slope and
+!     intercept.
+!   F_ij^ref=reference volume fraction in cell ij
+!   F_ij^derived=derived volume fraction in cell ij for a given slope and
+!     intercept.   
+!continuous_mof=2 (if same number of materials in center cell as in stencil)
+!  CMOF  minimize E=||xS_ij^ref-xS_ij^derived||  "S"=super cell
+!  subject to the constraint that F_ij^ref=F_ij^derived
+!   xS_ij^ref=reference centroid in cell stencil i'=i-1,..,i+1,
+!     j'=j-1,..,j+1
+!   xS_ij^derived=derived centroid in cell stencil for a given slope and
+!     intercept. 
+!   F_ij^ref=reference volume fraction in cell
+!   F_ij^derived=derived volume fraction in cell for a given
+!     slope and intercept.
+!continuous_mof=3 
+!  use CLSVOF in 2 material cells and MOF in >2 mat cells.
+!continuous_mof=4 
+!  use CLSVOF in 2 material cells and CMOF in >2 mat cells.
+!continuous_mof=5 
+!  use CLSVOF everywhere.
+
 ! normal points from light to dark   phi=n dot (x-x0) + intercept
 ! vof, ref centroid, order,slope,intercept  x nmat
 ! ref centroid,multi_centroidA relative to supercell centroid(not cell center).
@@ -12683,6 +12711,8 @@ contains
       INTEGER_T, INTENT (IN) :: nmax
       INTEGER_T, INTENT (IN) :: continuous_mof
 
+       ! D_DECL(i,j,k) = i,j  in 2D
+       !               = i,j,k in 3D
       REAL_T, INTENT (IN) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
 
       REAL_T, INTENT (IN), DIMENSION(sdim) :: dx
