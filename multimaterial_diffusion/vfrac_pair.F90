@@ -2009,7 +2009,7 @@ contains
     integer,intent(in)       :: nmat,ngeom_recon
     integer,intent(in)       :: hflag
     integer                  :: local_hflag
-    integer                  :: linear_exact
+    integer,intent(in)       :: linear_exact
     integer                  :: operator_internal
     integer                  :: operator_external
     integer,intent(in)       :: diag_coeff_flag
@@ -2387,7 +2387,14 @@ contains
            ! do nothing
           else if (linear_exact.eq.0) then
            ! do nothing
-          else if ((im_inside.eq.im_outside).and.(linear_exact.eq.1)) then
+          else if (gap_alarm_sten(0,0).eq.1) then
+           ! do nothing
+          else if (gap_alarm_sten(ii,jj).eq.1) then
+           ! do nothing
+          else if ((im_inside.eq.im_outside).and. &
+                   (linear_exact.eq.1).and. &
+                   (gap_alarm_sten(0,0).eq.0).and. &
+                   (gap_alarm_sten(ii,jj).eq.0)) then
              ! if a valid opposite material is found, then
              ! im_tilde!=im_inside and facearea>0
            call check_for_least_squares( &
