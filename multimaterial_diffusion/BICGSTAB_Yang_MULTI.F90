@@ -56,6 +56,7 @@
       REAL*8, dimension(:,:,:,:,:,:), allocatable :: frac_pair_cell_FAB
        ! i,j,im_outside,im_inside,xdir,dir,side
       REAL*8, dimension(:,:,:,:,:,:,:), allocatable :: x_pair_cell_FAB
+      integer, dimension(:,:), allocatable :: gap_alarm_FAB
       REAL*8, dimension(:,:,:,:), allocatable :: centroid_mult_FAB
       REAL*8 dx(3)
  
@@ -108,6 +109,7 @@
       DEALLOCATE(ext_face_FAB)
       DEALLOCATE(multi_cen_cell_FAB)
       DEALLOCATE(frac_pair_cell_FAB)
+      DEALLOCATE(gap_alarm_FAB)
       DEALLOCATE(x_pair_cell_FAB)
       DEALLOCATE(centroid_mult_FAB)
       
@@ -226,8 +228,9 @@
        enddo
        enddo
        enddo
+       gap_alarm_FAB(i,j)=0  ! gap error within threshold.
       enddo
-      enddo ! i,j
+      enddo ! i,j=lo-1,...,hi+1
 
       do i=lox-1,hix+1
       do j=loy-1,hiy+1
