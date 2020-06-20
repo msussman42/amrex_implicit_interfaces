@@ -450,22 +450,26 @@
         frac_pair_cell, &
         x_pair_cell)
 
-       do im_outside=1,nmat
-       do im_inside=1,nmat
+       local_gap_alarm=0
+
        do dir=1,sdim
        do sidesten=1,2
-        frac_pair_cell_FAB(i,j,im_outside,im_inside,dir,sidesten)= &
+        frac_same=0.0d0
+        frac_gap=0.0d0
+        do im_outside=1,nmat
+        do im_inside=1,nmat
+         frac_pair_cell_FAB(i,j,im_outside,im_inside,dir,sidesten)= &
           frac_pair_cell(im_outside,im_inside,dir,sidesten)
-        do dir2=1,sdim
-         x_pair_cell_FAB(i,j,im_outside,im_inside,dir2,dir,sidesten)= &
-          x_pair_cell(im_outside,im_inside,dir2,dir,sidesten)
+         do dir2=1,sdim
+          x_pair_cell_FAB(i,j,im_outside,im_inside,dir2,dir,sidesten)= &
+           x_pair_cell(im_outside,im_inside,dir2,dir,sidesten)
+         enddo
+        enddo
         enddo
        enddo
        enddo
-       enddo
-       enddo
       enddo
-      enddo ! i,j
+      enddo ! i,j=lo,...,hi
 
       do i=lox,hix
        do im_outside=1,nmat
