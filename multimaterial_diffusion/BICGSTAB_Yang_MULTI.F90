@@ -26,7 +26,8 @@
       integer precond_type,nsmooth
       REAL*8 deltat
       REAL*8 bicgstab_tol
-      REAL*8 h,meshvol
+      REAL*8 h
+      REAL*8 meshvol
       REAL*8 alpha(100)
       REAL*8, dimension(:,:,:), allocatable :: beta
       REAL*8, dimension(:,:,:), allocatable :: UNEW
@@ -136,6 +137,7 @@
       REAL*8 ext_facefrac_cell(nmat+1,sdim,2)
       REAL*8 dist_to_int_cell(nmat,nmat)
       REAL*8 dist_to_int_sten(-1:1,-1:1,nmat,nmat)
+      integer gap_alarm_sten(-1:1,-1:1)
         ! absolute coord
       REAL*8 xclosest(nmat,nmat,sdim)
       REAL*8 xclosest_sten(-1:1,-1:1,nmat,nmat,sdim)
@@ -163,6 +165,10 @@
       integer local_hflag
       integer local_linear_exact
       REAL*8 time_placeholder
+      REAL*8 frac_gap
+      REAL*8 frac_same
+      REAL*8 local_frac
+      integer local_gap_alarm
       integer nhalf
 
       nhalf=3
@@ -458,16 +464,41 @@
         frac_gap=0.0d0
         do im_outside=1,nmat
         do im_inside=1,nmat
+         local_frac=frac_pair_cell(im_outside,im_inside,dir,sidesten)
+         if (im_inside.eq.im_outside) then
+          frac_same=frac_same+local_frac
+         else if (im_inside.ne.im_outside) then
+          frac_gap=frac_gap+local_frac
+         else
+          print *,"im_inside or im_outside invalid"
+          stop
+         endif
          frac_pair_cell_FAB(i,j,im_outside,im_inside,dir,sidesten)= &
-          frac_pair_cell(im_outside,im_inside,dir,sidesten)
+          local_frac
          do dir2=1,sdim
           x_pair_cell_FAB(i,j,im_outside,im_inside,dir2,dir,sidesten)= &
            x_pair_cell(im_outside,im_inside,dir2,dir,sidesten)
          enddo
         enddo
         enddo
+         ! gap error if h=beta R is
+         ! beta (5/48) h
+         ! e.g. beta=1/3 => gap error=(5/144) h < h/28
+         !      beta=1/2 => gap error=(5/96) h < h/19
+         !      beta=1   => gap error=(5/48) h < h/9
+        if ((frac_gap.ge.0.0d0).and. &
+            (frac_same.ge.0.0d0).and. &
+            (abs(frac_gap+frac_same-1.0d0).le.1.0D-8)) then
+         if (frac_gap.ge.0.1d0) then
+          local_gap_alarm=1
+         endif
+        else
+         print *,"frac_gap or frac_same invalid"
+         stop
+        endif 
        enddo
        enddo
+       gap_alarm_FAB(i,j)=local_gap_alarm
       enddo
       enddo ! i,j=lo,...,hi
 
@@ -560,6 +591,8 @@
        do ii=-1,1
        do jj=-1,1
 
+        gap_alarm_sten(ii,jj)=gap_alarm_FAB(i+ii,j+jj)
+
         do im1=1,nmat
         do im2=1,nmat
          dist_to_int_sten(ii,jj,im1,im2)= &
@@ -611,6 +644,7 @@
          im_in, &
          frac_pair_cell, &
          x_pair_cell, &
+         gap_alarm_sten, &
          int_face_sten, &
          int_centroid_sten, &
          int_face_normal_cell, &
@@ -639,7 +673,7 @@
        enddo ! im_in
 
       enddo
-      enddo
+      enddo ! i,j=lo,...,hi
 
       if (1.eq.1) then
        print *,"nmat=",nmat
@@ -832,6 +866,7 @@
         sdim,nmat,sdim,2))
       allocate(frac_pair_cell_FAB(lox-1:hix+1,loy-1:hiy+1, &
         nmat,nmat,sdim,2))
+      allocate(gap_alarm_FAB(lox-1:hix+1,loy-1:hiy+1))
       allocate(x_pair_cell_FAB(lox-1:hix+1,loy-1:hiy+1, &
         nmat,nmat,sdim,sdim,2))
       allocate(centroid_mult_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,sdim))
@@ -1365,6 +1400,7 @@
       REAL*8 mat_cen_sten(-1:1,-1:1,nmat,sdim)
       REAL*8 frac_pair_cell(nmat,nmat,sdim,2)
       REAL*8 x_pair_cell(nmat,nmat,sdim,sdim,2)
+      integer gap_alarm_sten(-1:1,-1:1)
       REAL*8 int_face_sten(-1:1,-1:1,nmat,nmat)
       REAL*8 int_centroid_sten(-1:1,-1:1,nmat,nmat,sdim)
       REAL*8 int_face_normal_cell(nmat,nmat,sdim)
@@ -1468,6 +1504,7 @@
         enddo
         do ii=-1,1
         do jj=-1,1
+         gap_alarm_sten(ii,jj)=gap_alarm_FAB(i+ii,j+jj)
          do im1=1,nmat
          do im2=1,nmat
           dist_to_int_sten(ii,jj,im1,im2)= &
@@ -1505,6 +1542,7 @@
            im, &
            frac_pair_cell, &
            x_pair_cell, &
+           gap_alarm_sten, &
            int_face_sten, &
            int_centroid_sten, & ! absolute coord.
            int_face_normal_cell, &

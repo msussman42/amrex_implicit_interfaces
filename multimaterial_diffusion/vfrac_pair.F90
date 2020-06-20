@@ -1990,6 +1990,7 @@ contains
    im_in,  &
    frac_pair_cell, &
    x_pair_cell, & ! absolute coord.
+   gap_alarm_sten, &
    int_face_sten, &
    int_centroid_sten, &
    int_face_normal, &
@@ -2019,6 +2020,7 @@ contains
       ! im_outside,im_inside
     real(kind=8),intent(in)  :: frac_pair_cell(nmat,nmat,sdim,2)
     real(kind=8),intent(in)  :: x_pair_cell(nmat,nmat,sdim,sdim,2)
+    integer, intent(in) :: gap_alarm_sten(-1:1,-1:1)
     real(kind=8),intent(in)  :: int_face_sten(-1:1,-1:1,nmat,nmat)
     real(kind=8),intent(in)  :: int_centroid_sten(-1:1,-1:1,nmat,nmat,sdim)
     real(kind=8),intent(in)  :: int_face_normal(nmat,nmat,sdim)
