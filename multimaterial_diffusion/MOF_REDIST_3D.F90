@@ -121,7 +121,8 @@ stop
       if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
        center_stencil=1
         ! get the slope of the fluid material whose interface is closest to
-        ! the center of the cell.
+        ! the center of the cell.  Slope comes from mofdata and points
+        ! towards material "imslope"
        call get_primary_slope( &
         bfact,dx,xsten_donate,nhalf, &
         mofdata, &

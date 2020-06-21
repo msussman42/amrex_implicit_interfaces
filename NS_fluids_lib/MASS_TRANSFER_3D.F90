@@ -4408,7 +4408,12 @@ stop
       end subroutine FORT_EXTEND_BURNING_VEL
 
  
-        ! vof,ref centroid,order,slope,intercept  x nmat
+      ! vof,ref centroid,order,slope,intercept  x nmat
+      ! LS_slopes_FD comes from FORT_FD_NORMAL (MOF_REDIST)
+      ! FORT_FD_NORMAL calls find_cut_geom_slope_CLSVOF:
+      ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
+      ! grad=(d/dr,d/dz) or
+      ! grad=(d/dr,d/dtheta,d/dz)
       subroutine FORT_RATEMASSCHANGE( &
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
@@ -4608,7 +4613,8 @@ stop
       REAL_T xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
       REAL_T nrmFD(SDIM)  ! finite difference normal
-      REAL_T theta_nrmFD(SDIM)
+      REAL_T nrmPROBE(SDIM)  ! must choose nrmCP is microstructure.
+      REAL_T theta_nrmPROBE(SDIM)
       REAL_T LSINT(nmat*(SDIM+1))
       REAL_T LSPROBE(nmat)
       REAL_T LShere(nmat)
@@ -5061,14 +5067,17 @@ stop
                   nrmFD(dir)= &
                    LS_slopes_FD(D_DECL(i,j,k),(im_source-1)*SDIM+dir)
                   xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
+
+                  nrmPROBE(dir)=nrmCP(dir)
+
                   xdst(dir)=xI(dir)- &
-                     normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
+                   normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir) 
                   xsrc(dir)=xI(dir)+ &
-                     normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
+                   normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir)
                   xdst_micro(dir)=xI(dir)- &
-                     microscale_probe_size*dxmin*nrmFD(dir) 
+                   microscale_probe_size*dxmin*nrmPROBE(dir) 
                   xsrc_micro(dir)=xI(dir)+ &
-                     microscale_probe_size*dxmin*nrmFD(dir)
+                   microscale_probe_size*dxmin*nrmPROBE(dir)
                  enddo ! dir=1..sdim
                 else if (LShere(im_source).ge.zero) then
                  LS_pos=LShere(im_dest)
@@ -5076,16 +5085,19 @@ stop
                   nrmCP(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
                   nrmFD(dir)= &
                    LS_slopes_FD(D_DECL(i,j,k),(im_dest-1)*SDIM+dir)
+
+                  nrmPROBE(dir)=nrmCP(dir)
+
                   xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
                   xdst(dir)=xI(dir)+ &
-                     normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
+                     normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir) 
                   xsrc(dir)=xI(dir)- &
-                     normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
+                     normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir)
                   xdst_micro(dir)=xI(dir)+ &
-                     microscale_probe_size*dxmin*nrmFD(dir) 
+                     microscale_probe_size*dxmin*nrmPROBE(dir) 
                   xsrc_micro(dir)=xI(dir)- &
-                     microscale_probe_size*dxmin*nrmFD(dir)
-                 enddo ! dir
+                     microscale_probe_size*dxmin*nrmPROBE(dir)
+                 enddo ! dir=1..sdim
                 else
                  print *,"LShere bust"
                  print *,"LShere(im_dest) ",LShere(im_dest)
@@ -5211,7 +5223,7 @@ stop
                 dxprobe_dest=dxprobe_source
 
                 RR=one
-                call prepare_normal(nrmFD,RR,mag)
+                call prepare_normal(nrmPROBE,RR,mag)
 
                 if (levelrz.eq.0) then
                  ! do nothing
@@ -5223,15 +5235,15 @@ stop
                 else if (levelrz.eq.3) then
                  if (mag.gt.zero) then
                   do dir=1,SDIM
-                   theta_nrmFD(dir)=nrmFD(dir)
+                   theta_nrmPROBE(dir)=nrmPROBE(dir)
                   enddo
                   RR=xsten(0,1)
-                  call prepare_normal(theta_nrmFD,RR,mag)
+                  call prepare_normal(theta_nrmPROBE,RR,mag)
                   if (mag.gt.zero) then
-                   ! mag=theta_nrmFD dot nrmFD
+                   ! mag=theta_nrmPROBE dot nrmPROBE
                    mag=zero
                    do dir=1,SDIM
-                    mag=mag+theta_nrmFD(dir)*nrmFD(dir)
+                    mag=mag+theta_nrmPROBE(dir)*nrmPROBE(dir)
                    enddo
                    if (abs(mag).gt.one+VOFTOL) then
                     print *,"dot product bust"
@@ -6515,6 +6527,7 @@ stop
                   print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
                   print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
                   print *,"nrmFD ",nrmFD(1),nrmFD(2),nrmFD(SDIM)
+                  print *,"nrmPROBE ",nrmPROBE(1),nrmPROBE(2),nrmPROBE(SDIM)
                   print *,"im_dest= ",im_dest
                  endif
    
@@ -6617,22 +6630,25 @@ stop
              stop
             endif
 
-            if (LShere(im_dest).ge.zero) then
-             SIGNVEL=one
-             do dir=1,SDIM
+            do dir=1,SDIM
+             if (LShere(im_dest).ge.zero) then
+              SIGNVEL=one
               nrmFD(dir)= &
                  LS_slopes_FD(D_DECL(i,j,k),(im_source-1)*SDIM+dir)
-             enddo
-            else if (LShere(im_source).ge.zero) then
-             SIGNVEL=-one
-             do dir=1,SDIM
+              nrmCP(dir)= &
+                 LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
+             else if (LShere(im_source).ge.zero) then
+              SIGNVEL=-one
               nrmFD(dir)= &
                  LS_slopes_FD(D_DECL(i,j,k),(im_dest-1)*SDIM+dir)
-             enddo
-            else
-             print *,"LShere bust"
-             stop
-            endif
+              nrmCP(dir)= &
+                 LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
+             else
+              print *,"LShere bust"
+              stop
+             endif
+             nrmPROBE(dir)=nrmCP(dir)
+            enddo ! dir=1..sdim
 
              ! units of k (thermal conductivity): watts/(m kelvin)
              ! watts=kg m^2/s^3
@@ -6670,7 +6686,7 @@ stop
                  (vel_phasechange(ireverse).le.zero)) then
               do dir=1,ncomp_per_burning
                burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)= &
-                SIGNVEL*nrmFD(dir)*vel_phasechange(ireverse)
+                SIGNVEL*nrmPROBE(dir)*vel_phasechange(ireverse)
               enddo
              else
               print *,"vel_phasechange(ireverse) cannot be NaN"

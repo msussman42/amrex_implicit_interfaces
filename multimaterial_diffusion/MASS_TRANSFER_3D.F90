@@ -4408,7 +4408,12 @@ stop
       end subroutine FORT_EXTEND_BURNING_VEL
 
  
-        ! vof,ref centroid,order,slope,intercept  x nmat
+      ! vof,ref centroid,order,slope,intercept  x nmat
+      ! LS_slopes_FD comes from FORT_FD_NORMAL (MOF_REDIST)
+      ! FORT_FD_NORMAL calls find_cut_geom_slope_CLSVOF:
+      ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
+      ! grad=(d/dr,d/dz) or
+      ! grad=(d/dr,d/dtheta,d/dz)
       subroutine FORT_RATEMASSCHANGE( &
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
@@ -4608,7 +4613,8 @@ stop
       REAL_T xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
       REAL_T nrmFD(SDIM)  ! finite difference normal
-      REAL_T theta_nrmFD(SDIM)
+      REAL_T nrmPROBE(SDIM)  ! must choose nrmCP is microstructure.
+      REAL_T theta_nrmPROBE(SDIM)
       REAL_T LSINT(nmat*(SDIM+1))
       REAL_T LSPROBE(nmat)
       REAL_T LShere(nmat)
@@ -4617,6 +4623,7 @@ stop
       REAL_T densrc
       REAL_T dendst
       REAL_T local_Tsat(0:1)
+      REAL_T local_Tsat_base(0:1)
       REAL_T vel_phasechange(0:1)
       REAL_T LL(0:1)
       INTEGER_T valid_phase_change(0:1)
@@ -4687,11 +4694,24 @@ stop
       REAL_T VEL_predict,VEL_correct
       REAL_T Y_predict
       REAL_T Y_correct
+      REAL_T X_predict
+      REAL_T X_correct
       REAL_T TSAT_predict,TSAT_correct
       REAL_T TSAT_ERR,TSAT_INIT_ERR
       INTEGER_T TSAT_iter,TSAT_converge,TSAT_iter_max
       INTEGER_T YMIN_converge
       REAL_T Y_interface_min
+      REAL_T X_interface_min
+      INTEGER_T YMIN_iter
+      INTEGER_T YMIN_iter_max
+      REAL_T denom
+      REAL_T FicksLawD 
+      REAL_T Tprobe_avg 
+      REAL_T molar_mass_ambient
+      REAL_T molar_mass_vapor
+      REAL_T T_interface_min
+      REAL_T YMIN_ERR
+      REAL_T YMIN_INIT_ERR
       INTEGER_T interp_valid_flag(2)
 
 #if (STANDALONE==1)
@@ -5019,6 +5039,7 @@ stop
              else if (LL(ireverse).ne.zero) then
 
               local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
+              local_Tsat_base(ireverse)=saturation_temp(iten+ireverse*nten)
 
               found_path=0
 
@@ -5046,14 +5067,17 @@ stop
                   nrmFD(dir)= &
                    LS_slopes_FD(D_DECL(i,j,k),(im_source-1)*SDIM+dir)
                   xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
+
+                  nrmPROBE(dir)=nrmCP(dir)
+
                   xdst(dir)=xI(dir)- &
-                     normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
+                   normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir) 
                   xsrc(dir)=xI(dir)+ &
-                     normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
+                   normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir)
                   xdst_micro(dir)=xI(dir)- &
-                     microscale_probe_size*dxmin*nrmFD(dir) 
+                   microscale_probe_size*dxmin*nrmPROBE(dir) 
                   xsrc_micro(dir)=xI(dir)+ &
-                     microscale_probe_size*dxmin*nrmFD(dir)
+                   microscale_probe_size*dxmin*nrmPROBE(dir)
                  enddo ! dir=1..sdim
                 else if (LShere(im_source).ge.zero) then
                  LS_pos=LShere(im_dest)
@@ -5061,16 +5085,19 @@ stop
                   nrmCP(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
                   nrmFD(dir)= &
                    LS_slopes_FD(D_DECL(i,j,k),(im_dest-1)*SDIM+dir)
+
+                  nrmPROBE(dir)=nrmCP(dir)
+
                   xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
                   xdst(dir)=xI(dir)+ &
-                     normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir) 
+                     normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir) 
                   xsrc(dir)=xI(dir)- &
-                     normal_probe_factor*normal_probe_size*dxmin*nrmFD(dir)
+                     normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir)
                   xdst_micro(dir)=xI(dir)+ &
-                     microscale_probe_size*dxmin*nrmFD(dir) 
+                     microscale_probe_size*dxmin*nrmPROBE(dir) 
                   xsrc_micro(dir)=xI(dir)- &
-                     microscale_probe_size*dxmin*nrmFD(dir)
-                 enddo ! dir
+                     microscale_probe_size*dxmin*nrmPROBE(dir)
+                 enddo ! dir=1..sdim
                 else
                  print *,"LShere bust"
                  print *,"LShere(im_dest) ",LShere(im_dest)
@@ -5196,7 +5223,7 @@ stop
                 dxprobe_dest=dxprobe_source
 
                 RR=one
-                call prepare_normal(nrmFD,RR,mag)
+                call prepare_normal(nrmPROBE,RR,mag)
 
                 if (levelrz.eq.0) then
                  ! do nothing
@@ -5208,15 +5235,15 @@ stop
                 else if (levelrz.eq.3) then
                  if (mag.gt.zero) then
                   do dir=1,SDIM
-                   theta_nrmFD(dir)=nrmFD(dir)
+                   theta_nrmPROBE(dir)=nrmPROBE(dir)
                   enddo
                   RR=xsten(0,1)
-                  call prepare_normal(theta_nrmFD,RR,mag)
+                  call prepare_normal(theta_nrmPROBE,RR,mag)
                   if (mag.gt.zero) then
-                   ! mag=theta_nrmFD dot nrmFD
+                   ! mag=theta_nrmPROBE dot nrmPROBE
                    mag=zero
                    do dir=1,SDIM
-                    mag=mag+theta_nrmFD(dir)*nrmFD(dir)
+                    mag=mag+theta_nrmPROBE(dir)*nrmPROBE(dir)
                    enddo
                    if (abs(mag).gt.one+VOFTOL) then
                     print *,"dot product bust"
@@ -5266,12 +5293,16 @@ stop
                 Y_predict=one
                 Y_correct=Y_predict
                
+                X_predict=one
+                X_correct=X_predict
+
                 TSAT_predict=local_Tsat(ireverse)
                 TSAT_correct=TSAT_predict
                 VEL_predict=zero
                 VEL_correct=zero
                 TSAT_iter=0
                 TSAT_iter_max=5
+                YMIN_iter_max=5
                 TSAT_converge=0
 
                  ! 0=cannot do least squares interp or supermesh interp.
@@ -6174,37 +6205,206 @@ stop
                   VEL_correct=zero
                  endif
 
+                 TSAT_correct=TSAT_predict
+
                  if (at_interface.eq.1) then
                   if (local_freezing_model.eq.6) then ! Palmore/Desjardins
+                   molar_mass_vapor=species_molar_mass(ispec)
                    if (LL(ireverse).gt.zero) then ! evaporation
                     iprobe=2  ! destination
+                    molar_mass_ambient=molar_mass(im_dest)
+                    do dir=1,SDIM
+                     xtarget_probe(dir)=xdst(dir)
+                     xtarget_probe_micro(dir)=xdst_micro(dir)
+                    enddo
                    else if (LL(ireverse).lt.zero) then ! condensation
                     iprobe=1  ! source
+                    molar_mass_ambient=molar_mass(im_source)
+                    do dir=1,SDIM
+                     xtarget_probe(dir)=xsrc(dir)
+                     xtarget_probe_micro(dir)=xsrc_micro(dir)
+                    enddo
                    else
                     print *,"LL invalid"
                     stop
                    endif
 
-                   if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
-                       (Y_target_probe(iprobe).le.one)) then
-                    ! do nothing
-                   else if ((Y_target_probe(iprobe).le.one-Y_TOLERANCE).and. &
-                            (Y_target_probe(iprobe).ge.zero)) then
-                      !Y_probe<=Y_interface<=1
-                    if (TSAT_iter.eq.0) then
-                     YMIN_converge=0
-                     Y_interface_min=zero
-                     do while (YMIN_converge.eq.0)
+                   if ((Ycomp_probe(iprobe).ge.1).and. &
+                       (molar_mass_ambient.gt.zero).and. &
+                       (molar_mass_vapor.gt.zero).and. &
+                       (R_Palmore_Desjardins.gt.zero)) then
 
-                     enddo
-                    else if (TSAT_iter.ge.1) then
+                    if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
+                        (Y_target_probe(iprobe).le.one)) then
                      ! do nothing
+                    else if ((Y_target_probe(iprobe).le.one-Y_TOLERANCE).and. &
+                             (Y_target_probe(iprobe).ge.zero)) then
+                      !Y_probe<=Y_interface<=1
+                     if (TSAT_iter.eq.0) then
+                      YMIN_converge=0
+                      Y_interface_min=zero
+                      YMIN_iter=0
+                      do while (YMIN_converge.eq.0)
+                       if (interp_valid_flag(iprobe).eq.1) then
+                        call interpfabTEMP( &
+                         bfact, &
+                         level, &
+                         finest_level, &
+                         dx, &
+                         xlo, &
+                         xtarget_probe, &
+                         xI, &
+                         Y_interface_min, &
+                         im_target_probe(iprobe), &
+                         nmat, &
+                         Ycomp_probe(iprobe), &
+                         ngrow, &
+                         fablo,fabhi, &
+                         EOS,DIMS(EOS), &
+                         LS,DIMS(LS), &
+                         recon,DIMS(recon), &
+                         Y_target_probe(iprobe), &
+                         debugrate)
+                       else if (interp_valid_flag(iprobe).eq.2) then
+                        dummy_VOF_pos_probe_counter=0
+                        call interpfab_filament_probe( &
+                         bfact, &
+                         level, &
+                         finest_level, &
+                         dx, &
+                         xlo, &
+                         xtarget_probe_micro, &
+                         xI, &
+                         Y_interface_min, &
+                         im_target_probe(iprobe), &
+                         nmat, &
+                         Ycomp_probe(iprobe), &
+                         ngrow, &
+                         fablo,fabhi, &
+                         EOS,DIMS(EOS), &
+                         LS,DIMS(LS), &
+                         recon,DIMS(recon), &
+                         Y_target_probe(iprobe), &  ! Y(xprobe)
+                         dxprobe_target(iprobe), &  ! |xprobe-xcp|
+                         dummy_VOF_pos_probe_counter)
+                       else
+                        print *,"interp_valid_flag invalid"
+                        stop
+                       endif
+                       YMIN_ERR=abs(Y_target_probe(iprobe)-Y_interface_min)
+                       Y_interface_min=Y_target_probe(iprobe)
+                       if (YMIN_iter.eq.0) then
+                        YMIN_INIT_ERR=YMIN_ERR
+                       endif
+                       YMIN_converge=0
+                       if (YMIN_ERR.eq.zero) then
+                        YMIN_converge=1
+                       endif
+                       YMIN_iter=YMIN_iter+1
+                       if (YMIN_iter.gt.YMIN_iter_max) then
+                        YMIN_converge=1
+                       endif
+                       if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
+                           (Y_target_probe(iprobe).le.one)) then
+                        YMIN_converge=1
+                       else if ((Y_target_probe(iprobe).ge.zero).and. &
+                                (Y_target_probe(iprobe).le.one)) then
+                        ! do nothing
+                       else
+                        print *,"Y_target_probe invalid"
+                        stop
+                       endif
+                       if (YMIN_iter.gt.1) then
+                        if (YMIN_err.lt.(0.001d0)*YMIN_INIT_ERR) then
+                         YMIN_converge=1
+                        endif
+                       endif
+                      enddo ! do while (YMIN_converge.eq.0)
+
+                      if ((Y_target_probe(iprobe).ge.one-Y_TOLERANCE).and. &
+                          (Y_target_probe(iprobe).le.one)) then
+                       ! do nothing
+                      else if ((Y_target_probe(iprobe).le. &
+                                one-Y_TOLERANCE).and. &
+                               (Y_target_probe(iprobe).ge.zero)) then
+                       X_interface_min=molar_mass_ambient*Y_interface_min/ &
+                        ((one-Y_interface_min)*molar_mass_vapor+ &
+                         Y_interface_min*molar_mass_ambient)
+                       if ((X_interface_min.ge.one-Y_TOLERANCE).and. &
+                           (X_interface_min.le.one)) then
+                        ! do nothing
+                       else if ((X_interface_min.le. &
+                                 one-Y_TOLERANCE).and. &
+                                (X_interface_min.gt.zero)) then
+                        TSAT_correct=one/ &
+                         (one/local_Tsat_base(ireverse)- &
+                         R_Palmore_Desjardins*log(X_interface_min)/ &
+                         (abs(LL(ireverse))*molar_mass_vapor)) 
+                        T_interface_min=TSAT_correct
+                        X_correct=X_interface_min
+                        Y_correct=Y_interface_min
+                       else if (X_interface_min.eq.zero) then
+                        TSAT_correct=zero
+                        T_interface_min=zero
+                        X_correct=zero
+                        Y_correct=zero
+                       else
+                        print *,"X_interface_min invalid"
+                        stop
+                       endif
+                      else
+                       print *,"Y_target_probe invalid"
+                       stop
+                      endif
+                     else if (TSAT_iter.ge.1) then
+                      denom=one/dxprobe_target(1)+one/dxprobe_target(2)
+                      if (denom.gt.zero) then
+                       Tprobe_avg=temp_target_probe(1)/dxprobe_target(1)+ &
+                           temp_target_probe(2)/dxprobe_target(2)
+                       if (Tprobe_avg.ge.zero) then
+                        Tprobe_avg=Tprobe_avg/denom
+                        FicksLawD= &
+                          fort_speciesviscconst((ispec-1)*nmat+ &
+                              im_target_probe(iprobe)) 
+                        if (TSAT_correct.gt.zero) then
+                         X_correct=exp(-abs(LL(ireverse))*molar_mass_vapor/ &
+                          R_Palmore_Desjardins)*(one/TSAT_correct- &
+                           one/local_Tsat_base(ireverse))
+                        else if (TSAT_correct.eq.zero) then
+                         X_correct=zero
+                         Y_correct=zero
+                        else
+                         print *,"TSAT_correct invalid"
+                         stop
+                        endif
+                        if ((X_correct.ge.zero).and.(X_correct.le.one)) then
+                         Y_correct=X_correct*molar_mass_vapor/ &
+                          ((one-X_correct)*molar_mass_ambient+ &
+                           X_correct*molar_mass_vapor)
+!                        TSAT_correct=(   )/denom
+                        else
+                         print *,"X_correct invalid"
+                         stop
+                        endif 
+                       else
+                        print *,"Tprobe_avg invalid"
+                        stop
+                       endif
+                      else
+                       print *,"denom invalid"
+                       stop
+                      endif
+                     else
+                      print *,"TSAT_iter invalid"
+                      stop
+                     endif
                     else
-                     print *,"TSAT_iter invalid"
+                     print *,"Y_target_probe invalid"
                      stop
                     endif
+
                    else
-                    print *,"Y_target_probe invalid"
+                    print *,"Ycomp_probe, molar masses, or R invalid"
                     stop
                    endif
  
@@ -6222,7 +6422,7 @@ stop
                   stop
                  endif
 
-                 TSAT_correct=TSAT_predict- &
+                 TSAT_correct=TSAT_correct- &
                     saturation_temp_vel(iten+ireverse*nten)* &
                     (VEL_correct-VEL_predict)
             
@@ -6327,6 +6527,7 @@ stop
                   print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
                   print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
                   print *,"nrmFD ",nrmFD(1),nrmFD(2),nrmFD(SDIM)
+                  print *,"nrmPROBE ",nrmPROBE(1),nrmPROBE(2),nrmPROBE(SDIM)
                   print *,"im_dest= ",im_dest
                  endif
    
@@ -6429,22 +6630,25 @@ stop
              stop
             endif
 
-            if (LShere(im_dest).ge.zero) then
-             SIGNVEL=one
-             do dir=1,SDIM
+            do dir=1,SDIM
+             if (LShere(im_dest).ge.zero) then
+              SIGNVEL=one
               nrmFD(dir)= &
                  LS_slopes_FD(D_DECL(i,j,k),(im_source-1)*SDIM+dir)
-             enddo
-            else if (LShere(im_source).ge.zero) then
-             SIGNVEL=-one
-             do dir=1,SDIM
+              nrmCP(dir)= &
+                 LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
+             else if (LShere(im_source).ge.zero) then
+              SIGNVEL=-one
               nrmFD(dir)= &
                  LS_slopes_FD(D_DECL(i,j,k),(im_dest-1)*SDIM+dir)
-             enddo
-            else
-             print *,"LShere bust"
-             stop
-            endif
+              nrmCP(dir)= &
+                 LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
+             else
+              print *,"LShere bust"
+              stop
+             endif
+             nrmPROBE(dir)=nrmCP(dir)
+            enddo ! dir=1..sdim
 
              ! units of k (thermal conductivity): watts/(m kelvin)
              ! watts=kg m^2/s^3
@@ -6482,7 +6686,7 @@ stop
                  (vel_phasechange(ireverse).le.zero)) then
               do dir=1,ncomp_per_burning
                burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)= &
-                SIGNVEL*nrmFD(dir)*vel_phasechange(ireverse)
+                SIGNVEL*nrmPROBE(dir)*vel_phasechange(ireverse)
               enddo
              else
               print *,"vel_phasechange(ireverse) cannot be NaN"

@@ -19279,7 +19279,9 @@ contains
        FSI_exclude=1
        call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list,nmat)
        im=sorted_list(1)
-       if (is_rigid_local(im).ne.0) then
+       if (is_rigid_local(im).eq.0) then
+        ! do nothing
+       else
         print *,"is_rigid invalid"
         stop
        endif
