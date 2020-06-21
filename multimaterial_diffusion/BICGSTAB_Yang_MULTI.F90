@@ -2,6 +2,8 @@
 #define BL_LANG_FORT
 
 #include "AMReX_BC_TYPES.H"
+#include "TECPLOTUTIL_F.H"
+#include "AMReX_ArrayLim.H"
 
       module bicgstab_module
       USE probmain_module
@@ -24,6 +26,7 @@
       integer nx,ny,nz,lox,loy,loz,hix,hiy,hiz
       integer nmat
       integer precond_type,nsmooth
+      integer nsteps_global
       REAL*8 deltat
       REAL*8 bicgstab_tol
       REAL*8 h
@@ -57,7 +60,7 @@
       REAL*8, dimension(:,:,:,:,:,:), allocatable :: frac_pair_cell_FAB
        ! i,j,im_outside,im_inside,xdir,dir,side
       REAL*8, dimension(:,:,:,:,:,:,:), allocatable :: x_pair_cell_FAB
-      integer, dimension(:,:), allocatable :: gap_alarm_FAB
+      REAL*8, dimension(:,:), allocatable :: gap_alarm_FAB
       REAL*8, dimension(:,:,:,:), allocatable :: centroid_mult_FAB
       REAL*8 dx(3)
  
@@ -120,6 +123,8 @@
       subroutine build_MM_diag()
       use MOF_pair_module
       use mmat_FVM, only: dist_concentric
+      use global_utility_module, only: set_dimdec
+      use tecplotutil_cpp_module
 
       IMPLICIT NONE
 
@@ -137,7 +142,7 @@
       REAL*8 ext_facefrac_cell(nmat+1,sdim,2)
       REAL*8 dist_to_int_cell(nmat,nmat)
       REAL*8 dist_to_int_sten(-1:1,-1:1,nmat,nmat)
-      integer gap_alarm_sten(-1:1,-1:1)
+      REAL*8 gap_alarm_sten(-1:1,-1:1)
         ! absolute coord
       REAL*8 xclosest(nmat,nmat,sdim)
       REAL*8 xclosest_sten(-1:1,-1:1,nmat,nmat,sdim)
@@ -168,8 +173,20 @@
       REAL*8 frac_gap
       REAL*8 frac_same
       REAL*8 local_frac
-      integer local_gap_alarm
+      REAL*8 local_gap_alarm
       integer nhalf
+      integer DIMDEC(GAPFAB)
+      integer fablo(2),fabhi(2)
+      INTEGER_T n_root
+      character(len=6) :: root_char_array
+      INTEGER_T data_dir,SDC_outer_sweeps,slab_step
+      INTEGER_T data_id,visual_revolve,visual_option
+      integer local_bfact
+      REAL*8 dx_local(2)
+      REAL*8 problo_local(2)
+      REAL*8 probhi_local(2)
+      integer local_level
+      integer ncomp_gap
 
       nhalf=3
 
@@ -234,7 +251,7 @@
        enddo
        enddo
        enddo
-       gap_alarm_FAB(i,j)=0  ! gap error within threshold.
+       gap_alarm_FAB(i,j)=0.0d0  ! gap error within threshold.
       enddo
       enddo ! i,j=lo-1,...,hi+1
 
@@ -456,7 +473,7 @@
         frac_pair_cell, &
         x_pair_cell)
 
-       local_gap_alarm=0
+       local_gap_alarm=0.0d0
 
        do dir=1,sdim
        do sidesten=1,2
@@ -490,7 +507,7 @@
             (frac_same.ge.0.0d0).and. &
             (abs(frac_gap+frac_same-1.0d0).le.1.0D-8)) then
          if (frac_gap.ge.0.1d0) then
-          local_gap_alarm=1
+          local_gap_alarm=1.0d0
          endif
         else
          print *,"frac_gap or frac_same invalid"
@@ -501,6 +518,51 @@
        gap_alarm_FAB(i,j)=local_gap_alarm
       enddo
       enddo ! i,j=lo,...,hi
+
+      fablo(1)=lox
+      fablo(2)=loy
+      fabhi(1)=hix
+      fabhi(2)=hiy
+      n_root=6
+      root_char_array='GAPALM'
+      data_dir=-1
+      SDC_outer_sweeps=0
+      slab_step=0
+      data_id=0
+      visual_revolve=0
+      visual_option=-2
+      call set_dimdec(DIMS(GAPFAB),fablo,fabhi,1)
+
+      local_bfact=1
+      dx_local(1)=h 
+      dx_local(2)=h 
+      problo_local(1)=0.0d0
+      probhi_local(1)=dx_local(1)*(hix+1)
+      problo_local(2)=0.0d0
+      probhi_local(2)=dx_local(2)*(hiy+1)
+      local_level=0
+      ncomp_gap=1
+      call FORT_TECPLOTFAB_SANITY( &
+       root_char_array, &
+       n_root, &
+       data_dir, &
+       local_bfact, &
+       fablo,fabhi, &
+       gap_alarm_FAB, &
+       DIMS(GAPFAB), &
+       problo_local,probhi_local, &
+       dx_local, &
+       SDC_outer_sweeps, &
+       slab_step, &
+       data_id, &
+       nsteps_global, &
+       current_time, & ! this time might be out of sync 
+       visual_option, &
+       visual_revolve, &
+       local_level, &
+       local_level, &
+       ncomp_gap)
+
 
       do i=lox,hix
        do im_outside=1,nmat
@@ -723,6 +785,7 @@
       end subroutine get_filament_source_local
  
       subroutine INIT_GLOBALS( &
+        nsteps, &
         local_state_ncomp, &
         local_operator_internal, &
         local_operator_external, &
@@ -736,6 +799,7 @@
         mofdata_FAB_in, current_time_in)
       IMPLICIT NONE
 
+      integer, intent(in) :: nsteps
       integer, intent(in) :: local_operator_internal
       integer, intent(in) :: local_operator_external
       integer, intent(in) :: local_linear_exact
@@ -780,6 +844,8 @@
       probtypeCG=probtype_in
       print *,"in INIT_GLOBALS: probtype_in, probtypeCG= ", &
         probtype_in,probtypeCG
+
+      nsteps_global=nsteps
 
       state_ncomp=local_state_ncomp
       sdim=sdim_in
@@ -1400,7 +1466,7 @@
       REAL*8 mat_cen_sten(-1:1,-1:1,nmat,sdim)
       REAL*8 frac_pair_cell(nmat,nmat,sdim,2)
       REAL*8 x_pair_cell(nmat,nmat,sdim,sdim,2)
-      integer gap_alarm_sten(-1:1,-1:1)
+      REAL*8 gap_alarm_sten(-1:1,-1:1)
       REAL*8 int_face_sten(-1:1,-1:1,nmat,nmat)
       REAL*8 int_centroid_sten(-1:1,-1:1,nmat,nmat,sdim)
       REAL*8 int_face_normal_cell(nmat,nmat,sdim)
@@ -1651,6 +1717,7 @@
       end subroutine check_fab
 
         ! precond_type=0 M=I, =1 Jacobi
+        ! when called from main.F90: hflag==0
       subroutine bicgstab(U,hflag,iter)
       IMPLICIT NONE
 
@@ -1707,7 +1774,9 @@
       do im=1,nmat
       do i=lox-1,hix+1
       do j=loy-1,hiy+1
-       U0(i,j,im)=AA
+!       U0(i,j,im)=AA
+       U0(i,j,im)=UOLD(i,j,im)
+
        V0(i,j,im)=AA
        P0(i,j,im)=AA
       enddo
@@ -1721,6 +1790,11 @@
       endif
 
        ! R0=G-A U0
+       ! a) call ATIMESU(AU,U,hflag)
+       !    i) MAKE_CONSISTENT (if F<eps, overwrite with VOLWTD AVG)
+       !    ii) set_boundary(U,hflag,nmat)
+       !    iii) call cell_div_cal_simple
+       ! b) R0=G-A U0
       call RESID(R0,G,U0,hflag)
 
       if (1.eq.0) then

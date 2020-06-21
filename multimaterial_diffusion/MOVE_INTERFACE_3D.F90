@@ -24,36 +24,6 @@ print *,"dimension bust"
 stop
 #endif
 
-      subroutine set_dimdec(DIMS(fabdim), &
-                      fablo,fabhi,ngrow)
-      IMPLICIT NONE
-
-      INTEGER_T DIMDEC(fabdim)
-      INTEGER_T fablo(SDIM)
-      INTEGER_T fabhi(SDIM)
-      INTEGER_T ngrow
-      INTEGER_T dir
-
-      dir=1
-      ARG_L1(fabdim)=fablo(dir)-ngrow
-      ARG_H1(fabdim)=fabhi(dir)+ngrow
-      dir=2
-      ARG_L2(fabdim)=fablo(dir)-ngrow
-      ARG_H2(fabdim)=fabhi(dir)+ngrow
-#if (AMREX_SPACEDIM==3)
-      ARG_L3(fabdim)=fablo(dir)-ngrow
-      ARG_H3(fabdim)=fabhi(dir)+ngrow
-      print *,"prototype code only for 2d"
-      stop
-#elif (AMREX_SPACEDIM==2)
-      ! do nothing
-#else
-      print *,"dimension bust"
-      stop
-#endif
-      return
-      end subroutine set_dimdec
-
       subroutine set_boundary_recon( &
         recon,DIMS(recon), &
         fablo,fabhi, &
@@ -2293,7 +2263,7 @@ stop
        call set_boundary_EOS( &
         EOS,DIMS(EOS), &
         fablo,fabhi, &
-        nmat,ngrow)
+        nmat,ngrow)  ! set_boundary_EOS assumes 2 * nmat components
        call set_boundary_LS( &
         LSnew,DIMS(LSnew), &
         fablo,fabhi, &
@@ -2633,6 +2603,29 @@ stop
          finest_level, &
          ntsat)
 
+        root_char_array='DENTMP'
+        data_id=4
+
+        call FORT_TECPLOTFAB_SANITY( &
+         root_char_array, &
+         n_root, &
+         data_dir, &
+         bfact, & 
+         fablo,fabhi, &
+         EOS, &
+         DIMS(EOS), &
+         problo,probhi, &
+         dx, &
+         SDC_outer_sweeps, &
+         slab_step, &
+         data_id, &
+         nsteps, &
+         prev_time, &  ! cur_time will not show on same mesh as prev_time.
+         visual_option, &
+         visual_revolve, &
+         level, &
+         finest_level, &
+         2*nmat)
        endif
 
        !burnvel is cell centered.

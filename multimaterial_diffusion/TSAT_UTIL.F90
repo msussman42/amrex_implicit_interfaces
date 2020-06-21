@@ -58,6 +58,7 @@ contains
 
       subroutine init_tsatfab(NCELL)
       USE probcommon_module 
+      use global_utility_module, only: set_dimdec
       IMPLICIT NONE
       INTEGER_T, intent(in) :: NCELL
       INTEGER_T nten,nmat,dir

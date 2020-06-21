@@ -1650,6 +1650,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  do while (finished_flag.eq.0)
 
     current_time_in=Ts(tm) ! t^{n} (Ts(i)=(i-1) * deltat)
+    nsteps=tm-1 ! NSTEPS
 
     print *,"STEP (>=1), TIME, DT ",tm,current_time_in,deltat_in
 
@@ -1702,6 +1703,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
      ! in: BICGSTAB_Yang_MULTI.F90
     call INIT_GLOBALS( &
+     nsteps, & ! NSTEPS
      local_state_ncomp, &
      local_operator_internal, &
      local_operator_external, &
@@ -1717,7 +1719,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     time_n=current_time_in
     time_np1=current_time_in+deltat_in
 
-    nsteps=tm-1
     if (tm.eq.1) then
 
      call init_tsatfab(N_CURRENT) ! VARIABLE TSAT

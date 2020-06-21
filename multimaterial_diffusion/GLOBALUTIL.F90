@@ -3273,6 +3273,35 @@ contains
 
       end subroutine get_dxmaxLS
 
+      subroutine set_dimdec(DIMS(fabdim), &
+                      fablo,fabhi,ngrow)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(out) :: DIMDEC(fabdim)
+      INTEGER_T, intent(in) :: fablo(SDIM)
+      INTEGER_T, intent(in) :: fabhi(SDIM)
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T dir
+
+      dir=1
+      ARG_L1(fabdim)=fablo(dir)-ngrow
+      ARG_H1(fabdim)=fabhi(dir)+ngrow
+      dir=2
+      ARG_L2(fabdim)=fablo(dir)-ngrow
+      ARG_H2(fabdim)=fabhi(dir)+ngrow
+#if (AMREX_SPACEDIM==3)
+      ARG_L3(fabdim)=fablo(dir)-ngrow
+      ARG_H3(fabdim)=fabhi(dir)+ngrow
+      print *,"prototype code only for 2d"
+      stop
+#elif (AMREX_SPACEDIM==2)
+      ! do nothing
+#else
+      print *,"dimension bust"
+      stop
+#endif
+      return
+      end subroutine set_dimdec
 
       subroutine RT_transformVEL(x,vel,velT)
       use probcommon_module
