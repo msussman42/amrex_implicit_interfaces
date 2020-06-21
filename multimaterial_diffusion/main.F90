@@ -79,7 +79,7 @@ INTEGER,PARAMETER          :: plot_int = 1
 !
 ! non-axisymmetric, polar solver for validation (probtype_in.eq.19):
 ! TSTOP=0.004d0
-real(kind=8),parameter     :: TSTOP = 0.5d0
+real(kind=8),parameter     :: TSTOP = 0.2d0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current

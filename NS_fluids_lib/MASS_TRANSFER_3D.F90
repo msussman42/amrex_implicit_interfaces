@@ -6367,6 +6367,10 @@ stop
                         if (den_targetINT(iprobe).gt.zero) then
                          FicksLawD=FicksLawD* &
                            den_targetINT(iprobe)*abs(LL(ireverse)) 
+                        else
+                         print *,"den_targetINT(iprobe) invalid"
+                         stop
+                        endif
                         if (TSAT_correct.gt.zero) then
                          X_correct=exp(-abs(LL(ireverse))*molar_mass_vapor/ &
                           R_Palmore_Desjardins)*(one/TSAT_correct- &
@@ -6383,12 +6387,20 @@ stop
                           ((one-X_correct)*molar_mass_ambient+ &
                            X_correct*molar_mass_vapor)
                          if (Y_correct.le.Y_interface_min) then
-
-                         else if (Y_correct.ge.one-eps) then
-
-                         else ...
-                         
-!                        TSAT_correct=(   )/denom
+                          Y_correct=Y_interface_min
+                          X_correct=X_interface_min
+                          TSAT_correct=T_interface_min
+                         else if (Y_correct.ge.one-Y_TOLERANCE) then
+                          Y_correct=one
+                          X_correct=one
+                          TSAT_correct=local_Tsat(ireverse)
+                         else if ((Y_correct.gt.Y_interface_min).and. &
+                                  (Y_correct.lt.one-Y_TOLERANCE)) then
+!                         TSAT_correct=(   )/denom
+                         else 
+                          print *,"Y_correct invalid"
+                          stop
+                         endif
                         else
                          print *,"X_correct invalid"
                          stop

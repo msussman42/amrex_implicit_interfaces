@@ -4672,7 +4672,7 @@ stop
       REAL_T temp_target_probe(2)
       REAL_T Y_target_probe(2)
       REAL_T Y_TOLERANCE
-      REAL_T den_targetINT
+      REAL_T den_targetINT(2)
       INTEGER_T im_primary_probe(2)
       INTEGER_T im_secondary_probe(2)
       INTEGER_T im_target_probe_opp(2)
@@ -5377,10 +5377,8 @@ stop
                   endif
    
                   mtype=fort_material_type(im_target_probe(iprobe))
-                  if (mtype.eq.0) then
-                   den_targetINT=fort_denconst(im_target_probe(iprobe))
-                  else if ((mtype.ge.1).and. &
-                           (mtype.le.fort_max_num_eos)) then
+                  if ((mtype.ge.0).and. &
+                      (mtype.le.fort_max_num_eos)) then
                    call interpfabFWEIGHT( &
                     bfact, &
                     level, &
@@ -5394,16 +5392,16 @@ stop
                     fablo,fabhi, &
                     EOS,DIMS(EOS), &
                     recon,DIMS(recon), &
-                    den_targetINT)
+                    den_targetINT(iprobe))
 
-                   if (den_targetINT.lt. &
+                   if (den_targetINT(iprobe).lt. &
                        density_floor_expansion(im_target_probe(iprobe))) then
-                    den_targetINT= &
+                    den_targetINT(iprobe)= &
                       density_floor_expansion(im_target_probe(iprobe))
                    endif
-                   if (den_targetINT.gt. &
+                   if (den_targetINT(iprobe).gt. &
                        density_ceiling_expansion(im_target_probe(iprobe))) then
-                    den_targetINT= &
+                    den_targetINT(iprobe)= &
                        density_ceiling_expansion(im_target_probe(iprobe))
                    endif
                   else
@@ -5769,13 +5767,13 @@ stop
 
                   if (iprobe.eq.1) then
                    tempsrc=temp_target_probe(iprobe)
-                   densrc=den_targetINT
+                   densrc=den_targetINT(iprobe)
                    Tsrc_INT=temp_target_INT
                    Ysrc_INT=Y_target_INT
                    dxprobe_source=dxprobe_target(iprobe)
                   else if (iprobe.eq.2) then 
                    tempdst=temp_target_probe(iprobe)
-                   dendst=den_targetINT
+                   dendst=den_targetINT(iprobe)
                    Tdst_INT=temp_target_INT
                    Ydst_INT=Y_target_INT
                    dxprobe_dest=dxprobe_target(iprobe)
@@ -6366,6 +6364,13 @@ stop
                         FicksLawD= &
                           fort_speciesviscconst((ispec-1)*nmat+ &
                               im_target_probe(iprobe)) 
+                        if (den_targetINT(iprobe).gt.zero) then
+                         FicksLawD=FicksLawD* &
+                           den_targetINT(iprobe)*abs(LL(ireverse)) 
+                        else
+                         print *,"den_targetINT(iprobe) invalid"
+                         stop
+                        endif
                         if (TSAT_correct.gt.zero) then
                          X_correct=exp(-abs(LL(ireverse))*molar_mass_vapor/ &
                           R_Palmore_Desjardins)*(one/TSAT_correct- &
@@ -6381,7 +6386,21 @@ stop
                          Y_correct=X_correct*molar_mass_vapor/ &
                           ((one-X_correct)*molar_mass_ambient+ &
                            X_correct*molar_mass_vapor)
-!                        TSAT_correct=(   )/denom
+                         if (Y_correct.le.Y_interface_min) then
+                          Y_correct=Y_interface_min
+                          X_correct=X_interface_min
+                          TSAT_correct=T_interface_min
+                         else if (Y_correct.ge.one-Y_TOLERANCE) then
+                          Y_correct=one
+                          X_correct=one
+                          TSAT_correct=local_Tsat(ireverse)
+                         else if ((Y_correct.gt.Y_interface_min).and. &
+                                  (Y_correct.lt.one-Y_TOLERANCE)) then
+!                         TSAT_correct=(   )/denom
+                         else 
+                          print *,"Y_correct invalid"
+                          stop
+                         endif
                         else
                          print *,"X_correct invalid"
                          stop

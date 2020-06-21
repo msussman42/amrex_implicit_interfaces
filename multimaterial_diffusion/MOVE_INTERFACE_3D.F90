@@ -1870,7 +1870,7 @@ stop
 
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
 
-      diagnostic_output=0
+      diagnostic_output=1
       nhalf=3
 
       do im=1,num_materials
@@ -2558,50 +2558,53 @@ stop
         root_char_array='CURVCL'
         data_id=2
 
-        call FORT_TECPLOTFAB_SANITY( &
-         root_char_array, &
-         n_root, &
-         data_dir, &
-         bfact, & 
-         fablo,fabhi, &
-         FD_CURV_CELL, &
-         DIMS(FD_CURV_CELL), &
-         problo,probhi, &
-         dx, &
-         SDC_outer_sweeps, &
-         slab_step, &
-         data_id, &
-         nsteps, &
-         prev_time, &  ! cur_time will not show on same mesh as prev_time.
-         visual_option, &
-         visual_revolve, &
-         level, &
-         finest_level, &
-         n_curvcell)
+        if (1.eq.0) then
+         call FORT_TECPLOTFAB_SANITY( &
+          root_char_array, &
+          n_root, &
+          data_dir, &
+          bfact, & 
+          fablo,fabhi, &
+          FD_CURV_CELL, &
+          DIMS(FD_CURV_CELL), &
+          problo,probhi, &
+          dx, &
+          SDC_outer_sweeps, &
+          slab_step, &
+          data_id, &
+          nsteps, &
+          prev_time, &  ! cur_time will not show on same mesh as prev_time.
+          visual_option, &
+          visual_revolve, &
+          level, &
+          finest_level, &
+          n_curvcell)
 
-        root_char_array='TSATFB'
-        data_id=3
+         root_char_array='TSATFB'
+         data_id=3
 
-        call FORT_TECPLOTFAB_SANITY( &
-         root_char_array, &
-         n_root, &
-         data_dir, &
-         bfact, & 
-         fablo,fabhi, &
-         tsatfab, &
-         DIMS(tsatfab), &
-         problo,probhi, &
-         dx, &
-         SDC_outer_sweeps, &
-         slab_step, &
-         data_id, &
-         nsteps, &
-         prev_time, &  ! cur_time will not show on same mesh as prev_time.
-         visual_option, &
-         visual_revolve, &
-         level, &
-         finest_level, &
-         ntsat)
+         call FORT_TECPLOTFAB_SANITY( &
+          root_char_array, &
+          n_root, &
+          data_dir, &
+          bfact, & 
+          fablo,fabhi, &
+          tsatfab, &
+          DIMS(tsatfab), &
+          problo,probhi, &
+          dx, &
+          SDC_outer_sweeps, &
+          slab_step, &
+          data_id, &
+          nsteps, &
+          prev_time, &  ! cur_time will not show on same mesh as prev_time.
+          visual_option, &
+          visual_revolve, &
+          level, &
+          finest_level, &
+          ntsat)
+
+        endif
 
         root_char_array='DENTMP'
         data_id=4
