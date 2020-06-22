@@ -1164,6 +1164,11 @@ stop
        ! the respective star stencil position.
        ! donateflag(1..nmat)=1 if the respective material is a fluid
        ! which has a "non-flotsam" presence in the cell.
+       ! If (cell_test(im)==1) and 
+       !    ((keep_all_interfaces==1)or
+       !     (truncate_volume_fractions(im)==0)) and
+       !     (the local star point is owned by material im) then
+       !  donateflag(nmat+1+istar)=im 
       INTEGER_T donateflag(nmat+1+nstar)
       INTEGER_T crse_dist_valid
       INTEGER_T ctouch
@@ -1177,7 +1182,10 @@ stop
       INTEGER_T j_DEB_DIST
       INTEGER_T k_DEB_DIST
 
-      INTEGER_T versionA_test,versionB_test,version_of_choice
+      INTEGER_T versionA_test
+      INTEGER_T versionB_test
+      INTEGER_T version_of_choice
+      INTEGER_T keep_flotsam
       INTEGER_T height_check(nmat)
       INTEGER_T boundary_face_count(nmat)
       INTEGER_T center_face_count(nmat)
@@ -1472,6 +1480,17 @@ stop
        nprocessed=nprocessed+1
 
        call gridsten_level(xsten_donate,i,j,k,level,nhalf)
+
+       ! im=1..nmat: donateflag(im)=1 => find closest distance to the 
+       !             im interface.
+       ! donateflag(nmat+1)=number fluid materials in the cell.
+       ! donateflag(nmat+2 ... nmat+1+nstar)=fluid material id that owns
+       ! the respective star stencil position.
+       ! If (cell_test(im)==1) and 
+       !    ((keep_all_interfaces==1)or
+       !     (truncate_volume_fractions(im)==0)) and
+       !     (the LOCAL star point is owned by material im) then
+       !  donateflag(nmat+1+istar)=im 
 
        do im=1,nmat+1+nstar
         donateflag(im)=0
@@ -2072,14 +2091,65 @@ stop
           version_of_choice=versionA_test
          endif
 
+         keep_flotsam=0
+         if (cell_test(im).eq.1) then
+          if ((keep_all_interfaces.eq.1).or. &
+              (truncate_volume_fractions(im).eq.0)) then
+           keep_flotsam=1
+          else if ((keep_all_interfaces.eq.0).and. &
+                   (truncate_volume_fractions(im).eq.1)) then
+           keep_flotsam=0
+          else
+           print *,"keep_all_interfaces, truncate_volume_fraction, err"
+           stop
+          endif
+         else if (cell_test(im).eq.0) then
+          keep_flotsam=0
+         else
+          print *,"cell_test invalid"
+          stop
+         endif
+
+         if (keep_flotsam.eq.1) then
+
+          do i3=-1,1
+          do j3=-1,1
+          do k3=klosten,khisten
+           istar_array(1)=i3
+           istar_array(2)=j3
+           istar_array(3)=k3
+           call put_istar(istar,istar_array)
+           if ((istar.ge.1).and.(istar.le.nstar)) then
+            im_test_stencil=NINT(stenfab(D_DECL(i,j,k),istar))
+            if (is_rigid(nmat,im_test_stencil).eq.0) then
+             if (im_test_stencil.eq.im) then
+               ! 1<=istar<=nstar
+              donateflag(nmat+1+istar)=im
+             endif
+            else
+             print *,"is_rigid(nmat,im_test_stencil).ne.0 (1)"
+             stop
+            endif
+           else
+            print *,"istar invalid"
+            stop
+           endif
+          enddo ! k3
+          enddo ! j3
+          enddo ! i3
+
+         else if (keep_flotsam.eq.0) then
+          ! do nothing
+         else
+          print *,"keep_flotsam invalid"
+          stop
+         endif
+
          if ((vcenter(im).ge.half).or. &
              (im.eq.im_crit).or. &
              (version_of_choice.eq.1).or. &
              (full_neighbor(im).eq.1).or. &
-             ((cell_test(im).eq.1).and. &
-              (keep_all_interfaces.eq.1)).or. &
-             ((cell_test(im).eq.1).and. &
-              (truncate_volume_fractions(im).eq.0))) then
+             (keep_flotsam.eq.1)) then
           fluid_materials_in_cell_stencil= &
            fluid_materials_in_cell_stencil+1
           donateflag(im)=1
