@@ -4617,6 +4617,7 @@ stop
       REAL_T theta_nrmPROBE(SDIM)
       REAL_T LSINT(nmat*(SDIM+1))
       REAL_T LSPROBE(nmat)
+      REAL_T dist_probe_sanity
       REAL_T LShere(nmat)
       REAL_T tempsrc
       REAL_T tempdst
@@ -5540,10 +5541,12 @@ stop
                       im_primary_probe(iprobe), &
                       im_secondary_probe(iprobe))
 
+                   dist_probe_sanity=two*dxprobe_target(iprobe)
+
                    if ((im_secondary_probe(iprobe).eq. &
                         im_target_probe(iprobe)).and. &
                        (LSPROBE(im_target_probe(iprobe)).ge. &
-                        -dxprobe_target(iprobe))) then
+                        -dist_probe_sanity)) then
 
                     interp_valid_flag(iprobe)=2
 
@@ -5628,7 +5631,7 @@ stop
                    else if ((im_secondary_probe(iprobe).ne. &
                              im_target_probe(iprobe)).or. &
                             (LSPROBE(im_target_probe(iprobe)).le. &
-                             -dxprobe_target(iprobe))) then
+                             -dist_probe_sanity)) then
                     temp_target_probe(iprobe)=TSAT_predict
                     Y_target_probe(iprobe)=Y_predict
                    else

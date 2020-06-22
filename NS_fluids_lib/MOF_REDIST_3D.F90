@@ -1186,6 +1186,7 @@ stop
       INTEGER_T versionB_test
       INTEGER_T version_of_choice
       INTEGER_T keep_flotsam
+      INTEGER_T legitimate_material
       INTEGER_T height_check(nmat)
       INTEGER_T boundary_face_count(nmat)
       INTEGER_T center_face_count(nmat)
@@ -2114,7 +2115,25 @@ stop
           stop
          endif
 
-         if (keep_flotsam.eq.1) then
+         legitimate_material=0
+         if ((vcenter(im).ge.half).or. &
+             (im.eq.im_crit).or. &
+             (version_of_choice.eq.1).or. &
+             (full_neighbor(im).eq.1).or. &
+             (keep_flotsam.eq.1)) then
+          legitimate_material=1
+         else if ((vcenter(im).le.half).and. &
+                  (im.ne.im_crit).and. &
+                  (version_of_choice.eq.0).and. &
+                  (full_neighbor(im).eq.0).and. &
+                  (keep_flotsam.eq.0)) then
+          legitimate_material=0
+         else
+          print *,"legitimate check failed"
+          stop
+         endif
+
+         if (legitimate_material.eq.1) then
 
           do i3=-1,1
           do j3=-1,1
@@ -2142,22 +2161,24 @@ stop
           enddo ! j3
           enddo ! i3
 
-         else if (keep_flotsam.eq.0) then
+         else if (legitimate_material.eq.0) then
           ! do nothing
          else
-          print *,"keep_flotsam invalid"
+          print *,"legitimate_material invalid"
           stop
          endif
 
-         if ((vcenter(im).ge.half).or. &
-             (im.eq.im_crit).or. &
-             (version_of_choice.eq.1).or. &
-             (full_neighbor(im).eq.1).or. &
-             (keep_flotsam.eq.1)) then
+         if (legitimate_material.eq.1) then
           fluid_materials_in_cell_stencil= &
            fluid_materials_in_cell_stencil+1
           donateflag(im)=1
-         endif ! one of vcenter>1/2,im=im_crit,stringent=1,face=1, neighbor
+         else if (legitimate_material.eq.0) then
+          ! do nothing
+         else
+          print *,"legitimate_material invalid"
+          stop
+         endif 
+
         else if (is_rigid(nmat,im).eq.1) then
          ! do nothing
         else
