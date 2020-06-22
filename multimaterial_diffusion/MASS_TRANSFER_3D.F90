@@ -4713,6 +4713,7 @@ stop
       REAL_T T_interface_min
       REAL_T YMIN_ERR
       REAL_T YMIN_INIT_ERR
+      REAL_T GRAD_Y_dot_n
       INTEGER_T interp_valid_flag(2)
 
 #if (STANDALONE==1)
@@ -6368,8 +6369,9 @@ stop
                           fort_speciesviscconst((ispec-1)*nmat+ &
                               im_target_probe(iprobe)) 
                         if (den_targetINT(iprobe).gt.zero) then
+                          ! LL>0 melting   LL<0 freezing
                          FicksLawD=FicksLawD* &
-                           den_targetINT(iprobe)*abs(LL(ireverse)) 
+                           den_targetINT(iprobe)*LL(ireverse)
                         else
                          print *,"den_targetINT(iprobe) invalid"
                          stop
@@ -6399,7 +6401,22 @@ stop
                           TSAT_correct=local_Tsat(ireverse)
                          else if ((Y_correct.gt.Y_interface_min).and. &
                                   (Y_correct.lt.one-Y_TOLERANCE)) then
-!                         TSAT_correct=(   )/denom
+                          if (dxprobe_target(iprobe).gt.zero) then
+                           GRAD_Y_dot_n= &
+                             (Y_correct-Y_target_probe(iprobe))/ &
+                             dxprobe_target(iprobe) 
+                           if (GRAD_Y_dot_n.ge.zero) then
+                            TSAT_correct=Tprobe_avg- &
+                              (one/denom)* &
+                              FicksLawD*GRAD_Y_dot_n/(one-Y_correct)
+                           else
+                            print *,"GRAD_Y_dot_n invalid"
+                            stop
+                           endif 
+                          else
+                           print *,"dxprobe_target(iprobe) invalid"
+                           stop
+                          endif
                          else 
                           print *,"Y_correct invalid"
                           stop
