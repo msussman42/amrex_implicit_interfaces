@@ -1730,7 +1730,11 @@ stop
         enddo ! im=1..nmat
 
 
-         ! stringent_test_passed (on_border==0)
+         ! stringent_test_passed (on_border==0):
+         ! investigate all points coinciding at the intersection of the
+         ! line connecting cells (i,j,k) and (i+i3,j+j3,k+k3) with the
+         ! boundary of cell (i,j,k). 
+         ! 
         do i3=-1,1
         do j3=-1,1
         do k3=klosten,khisten
