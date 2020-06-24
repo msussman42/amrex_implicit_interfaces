@@ -663,9 +663,11 @@ stop
 
              do iw=1,scomp
               if (iw.lt.scomp) then
-               write(11,'(D25.16)',ADVANCE="NO") writend(iw)
+!              write(11,'(D25.16)',ADVANCE="NO") writend(iw)
+               write(11,'(E25.16)',ADVANCE="NO") writend(iw)
               else if (iw.eq.scomp) then
-               write(11,'(D25.16)') writend(iw)
+!              write(11,'(D25.16)') writend(iw)
+               write(11,'(E25.16)') writend(iw)
               else
                print *,"iw invalid"
                stop

@@ -660,15 +660,16 @@ Vector<Real> NavierStokes::reaction_rate;
 //    c) single equation for C with source term.
 // 3=wildfire combustion
 // 4=source term model (single equation for T with source term).
-//   Tanasawa model is used for evaporation and condensation.
+//   Tanasawa model or Schrage is used for evaporation and condensation.
 //   TSAT used to determine if phase change happens.
 //   expansion source, and offsetting sink evenly distributed.
 //   For Tannasawa model implemented here, it is assumed that Y=1
-//   at the interface.
+//   at the interface.  Schrage Model does not assume Y=1 at interface.
 // 5=evaporation/condensation (Stefan model speed)
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
 // 7=cavitation
 Vector<int> NavierStokes::freezing_model;
+Vector<int> NavierStokes::Tanasawa_or_Schrage;
 Vector<int> NavierStokes::mass_fraction_id;
 //link diffused material to non-diff. (array 1..num_species_var)
 //spec_material_id_LIQUID, spec_material_id_AMBIENT are 
@@ -2628,6 +2629,7 @@ NavierStokes::read_params ()
     latent_heat.resize(2*nten);
     reaction_rate.resize(2*nten);
     freezing_model.resize(2*nten);
+    Tanasawa_or_Schrage.resize(2*nten);
     mass_fraction_id.resize(2*nten);
     distribute_from_target.resize(2*nten);
     tension.resize(nten);
@@ -2682,6 +2684,8 @@ NavierStokes::read_params ()
      reaction_rate[i+nten]=0.0;
      freezing_model[i]=0;
      freezing_model[i+nten]=0;
+     Tanasawa_or_Schrage[i]=0;
+     Tanasawa_or_Schrage[i+nten]=0;
      mass_fraction_id[i]=0;
      mass_fraction_id[i+nten]=0;
      distribute_from_target[i]=0;
@@ -2954,6 +2958,7 @@ NavierStokes::read_params ()
     pp.queryarr("latent_heat",latent_heat,0,2*nten);
     pp.queryarr("reaction_rate",reaction_rate,0,2*nten);
     pp.queryarr("freezing_model",freezing_model,0,2*nten);
+    pp.queryarr("Tanasawa_or_Schrage",Tanasawa_or_Schrage,0,2*nten);
     pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*nten);
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
 
@@ -3490,7 +3495,7 @@ NavierStokes::read_params ()
       } else if ((freezing_model[i]==1)||
                  (freezing_model[i]==2)||  // hydrate
                  (freezing_model[i]==3)||
-                 (freezing_model[i]==4)||  // Tannasawa model
+                 (freezing_model[i]==4)||  // Tannasawa or Schrage model
 		 (freezing_model[i]==7)) { // cavitation
        if (temperatureface_flag!=1)
         amrex::Error("must have temperatureface_flag==1");
@@ -3526,7 +3531,7 @@ NavierStokes::read_params ()
        int indexEXP=iten+ireverse*nten-1;
 
        Real LL=latent_heat[indexEXP];
-       if ((freezing_model[indexEXP]==4)||  // Tannasawa
+       if ((freezing_model[indexEXP]==4)||  // Tannasawa or Schrage
            (freezing_model[indexEXP]==5)||  // Stefan model evap/cond.
            (freezing_model[indexEXP]==6)||  // Palmore and Desjardins
 	   (freezing_model[indexEXP]==7)) { // cavitation
@@ -3925,6 +3930,10 @@ NavierStokes::read_params ()
        freezing_model[i] << '\n';
       std::cout << "freezing_model i+nten=" << i+nten << "  " << 
        freezing_model[i+nten] << '\n';
+      std::cout << "Tanasawa_or_Schrage i=" << i << "  " << 
+       Tanasawa_or_Schrage[i] << '\n';
+      std::cout << "Tanasawa_or_Schrage i+nten=" << i+nten << "  " << 
+       Tanasawa_or_Schrage[i+nten] << '\n';
       std::cout << "mass_fraction_id i=" << i << "  " << 
        mass_fraction_id[i] << '\n';
       std::cout << "mass_fraction_id i+nten=" << i+nten << "  " << 
@@ -10341,6 +10350,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     saturation_temp_curv.dataPtr(),
     saturation_temp_vel.dataPtr(),
     freezing_model.dataPtr(),
+    Tanasawa_or_Schrage.dataPtr(),
     distribute_from_target.dataPtr(),
     mass_fraction_id.dataPtr(),
     species_evaporation_density.dataPtr(),
@@ -17521,6 +17531,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     latent_heat.dataPtr(),
     reaction_rate.dataPtr(),
     freezing_model.dataPtr(),
+    Tanasawa_or_Schrage.dataPtr(),
     distribute_from_target.dataPtr(),
     saturation_temp.dataPtr(),
     mass_fraction_id.dataPtr(),

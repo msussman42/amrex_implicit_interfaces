@@ -10328,6 +10328,7 @@ stop
         latent_heat, &
         reaction_rate, &
         freezing_model, &
+        Tanasawa_or_Schrage, &
         distribute_from_target, &
         saturation_temp, &
         mass_fraction_id, &
@@ -10395,6 +10396,7 @@ stop
       REAL_T, intent(in) :: reaction_rate(2*nten)
       REAL_T :: K_f
       INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
@@ -10478,7 +10480,8 @@ stop
       INTEGER_T ifaceR,jfaceR,kfaceR
       REAL_T uleft,uright
       REAL_T C_w0,PHYDWATER,Cmethane_in_hydrate
-      INTEGER_T freezing_mod
+      INTEGER_T local_freezing_model
+      INTEGER_T local_Tanasawa_or_Schrage
       INTEGER_T distribute_from_targ
       INTEGER_T vofcompsrc,vofcompdst
       REAL_T TSAT,Tsrcalt,Tdstalt
@@ -10539,6 +10542,8 @@ stop
        print *,"terminal_velocity_dt invalid"
        stop
       endif
+
+      evap_den=one
 
       denjump=zero
       denjump_gravity=zero
@@ -11049,12 +11054,29 @@ stop
 
          LL=latent_heat(iten+ireverse*nten)
          K_f=reaction_rate(iten+ireverse*nten)
-         freezing_mod=freezing_model(iten+ireverse*nten)
+         local_freezing_model=freezing_model(iten+ireverse*nten)
+         local_Tanasawa_or_Schrage= &
+                 Tanasawa_or_Schrage(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
          TSAT=saturation_temp(iten+ireverse*nten)
 
-         if ((freezing_mod.eq.2).and.(num_species_var.ne.1)) then
+         if ((local_freezing_model.eq.2).and.(num_species_var.ne.1)) then
           print *,"must define species var if hydrate model"
+          stop
+         endif
+
+         ispec=mass_fraction_id(iten+ireverse*nten)
+         if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+          evap_den=species_evaporation_density(ispec)
+         else if (ispec.eq.0) then
+          if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
+              (local_freezing_model.eq.5).or. & ! Stefan evap model
+              (local_freezing_model.eq.2)) then ! hydrate
+           print *,"ispec invalid"
+           stop
+          endif
+         else
+          print *,"ispec invalid"
           stop
          endif
 
@@ -11120,10 +11142,8 @@ stop
            Dsrc=den(D_DECL(icell,jcell,kcell),dcompsrc)
            Ddst=den(D_DECL(icell,jcell,kcell),dcompdst)
 
-           if (freezing_mod.eq.5) then
-            ispec=mass_fraction_id(iten+ireverse*nten)
+           if (local_freezing_model.eq.5) then ! stefan evap model
             if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-             evap_den=species_evaporation_density(ispec)
              if (evap_den.gt.zero) then
               if (LL.gt.zero) then ! evaporation
                Ddst=evap_den
@@ -11141,13 +11161,13 @@ stop
              print *,"ispec invalid"
              stop
             endif
-           endif ! freezing_mod==5
+           endif ! local_freezing_model==5
 
            Csrc=zero
            Cdst=zero
 
             ! hydrates
-           if (freezing_mod.eq.2) then
+           if (local_freezing_model.eq.2) then
             if (distribute_from_targ.ne.0) then
              print *,"distribute_from_targ invalid"
              stop
@@ -11205,7 +11225,9 @@ stop
              call get_vel_phasechange( &
               for_estdt, &
               xI, &
-              freezing_mod, &
+              local_freezing_model, &
+              local_Tanasawa_or_Schrage, &
+              evap_den, &
               distribute_from_targ, &
               USTEFAN_hold, &
               Dsrc,Ddst, &
@@ -12486,7 +12508,7 @@ stop
       INTEGER_T im_dest_crit
       INTEGER_T im_source_substrate_crit
       INTEGER_T im_dest_substrate_crit
-      INTEGER_T freezing_mod
+      INTEGER_T local_freezing_model
       INTEGER_T distribute_from_targ
       REAL_T TGRAD_MAX,TGRAD_test,T_test
       REAL_T LL
@@ -12736,7 +12758,7 @@ stop
 
            if ((TSAT_STATUS.eq.1).or.(TSAT_STATUS.eq.2)) then
 
-            freezing_mod=freezing_model(iten+ireverse*nten)
+            local_freezing_model=freezing_model(iten+ireverse*nten)
             distribute_from_targ=distribute_from_target(iten+ireverse*nten)
 
             if ((distribute_from_targ.ne.0).and. &
@@ -12764,14 +12786,16 @@ stop
 
               if (start_freezing.eq.1) then
 
-               ! freezing_mod=0 (sharp interface stefan model)
-               ! freezing_mod=1 (source term model)
-               ! freezing_mod=2 (hydrate model)
-               ! freezing_mod=3 (wildfire)
-               ! freezing_mod=4 (source term model)
-               ! freezing_mod=5 (evaporation/condensation)
-               if ((freezing_mod.eq.0).or. &
-                   (freezing_mod.eq.5)) then
+               ! local_freezing_model=0 (sharp interface stefan model)
+               ! local_freezing_model=1 (source term model)
+               ! local_freezing_model=2 (hydrate model)
+               ! local_freezing_model=3 (wildfire)
+               ! local_freezing_model=4 (Tanasawa/Schrage)
+               ! local_freezing_model=5 (evaporation/condensation)
+               ! local_freezing_model=6 (Palmore Desjardins)
+               ! local_freezing_model=7 (Cavitation)
+               if ((local_freezing_model.eq.0).or. &
+                   (local_freezing_model.eq.5)) then
 
                 TSAT=saturation_temp(iten+ireverse*nten)
                 if (TSAT.gt.zero) then
@@ -12793,7 +12817,7 @@ stop
                  im_source_substrate=im_source
                  im_dest_substrate=im_dest
 
-                 if (freezing_mod.eq.0) then
+                 if (local_freezing_model.eq.0) then
 
                   ! TSAT BC at thin filament interface.
                   if (solidheat_flag.eq.0) then ! diffuse in solid
@@ -12819,10 +12843,10 @@ stop
                    stop
                   endif
 
-                 else if (freezing_mod.eq.5) then
+                 else if (local_freezing_model.eq.5) then
                   ! do nothing
                  else
-                  print *,"freezing_mod invalid"
+                  print *,"local_freezing_model invalid"
                   stop
                  endif
 
@@ -12844,15 +12868,17 @@ stop
                     stop
                    endif
 
-                    ! freezing_mod=0 (sharp interface stefan model)
-                    ! freezing_mod=1 (source term model)
-                    ! freezing_mod=2 (hydrate model)
-                    ! freezing_mod=3 (wildfire)
-                    ! freezing_mod=4 (source term model)
-                    ! freezing_mod=5 (evaporation/condensation)
-
-                   if ((freezing_mod.eq.0).or. &
-                       ((freezing_mod.eq.5).and.(TGRAD_test.gt.zero))) then
+                    ! local_freezing_model=0 (sharp interface stefan model)
+                    ! local_freezing_model=1 (source term model)
+                    ! local_freezing_model=2 (hydrate model)
+                    ! local_freezing_model=3 (wildfire)
+                    ! local_freezing_model=4 (Tanasawa or Schrage)
+                    ! local_freezing_model=5 (evaporation/condensation)
+                    ! local_freezing_model=6 (Palmore/Desjardins)
+                    ! local_freezing_model=7 (Cavitation)
+                   if ((local_freezing_model.eq.0).or. &
+                       ((local_freezing_model.eq.5).and. &
+                        (TGRAD_test.gt.zero))) then
 
                     if (im_dest_crit.eq.-1) then
                      im_crit_save=im_crit
@@ -12880,10 +12906,11 @@ stop
                      stop
                     endif
 
-                   else if ((freezing_mod.eq.5).and.(TGRAD_test.le.zero)) then
+                   else if ((local_freezing_model.eq.5).and. &
+                            (TGRAD_test.le.zero)) then
                     ! do nothing
                    else
-                    print *,"freezing_mod invalid"
+                    print *,"local_freezing_model invalid"
                     stop
                    endif
 
@@ -12912,13 +12939,13 @@ stop
                  stop
                 endif 
 
-               else if ((freezing_mod.eq.1).or. &
-                        (freezing_mod.eq.2).or. &
-                        (freezing_mod.eq.4)) then
+               else if ((local_freezing_model.eq.1).or. &
+                        (local_freezing_model.eq.2).or. &
+                        (local_freezing_model.eq.4)) then !Tanasawa or Schrage
                 ! do nothing
                else
                 print *,"freezing_model invalid in stefansolver"
-                print *,"freezing_mod= ",freezing_mod
+                print *,"local_freezing_model= ",local_freezing_model
                 print *,"iten,ireverse,nten ",iten,ireverse,nten
                 stop
                endif
@@ -12995,7 +13022,7 @@ stop
          im_dest_substrate=im_dest_substrate_crit
 
          LL=latent_heat(iten+ireverse*nten)
-         freezing_mod=freezing_model(iten+ireverse*nten)
+         local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
          TSAT=saturation_temp(iten+ireverse*nten)
 
@@ -15228,7 +15255,7 @@ end function delta
         do ireverse=0,1
          call get_iten(im,im_opp,iten,nmat)
          if ((freezing_model(iten+ireverse*nten).lt.0).or. &
-             (freezing_model(iten+ireverse*nten).gt.5)) then
+             (freezing_model(iten+ireverse*nten).gt.7)) then
           print *,"freezing_model invalid init jump term"
           print *,"iten,ireverse,nten ",iten,ireverse,nten
           stop
@@ -15484,7 +15511,7 @@ end function delta
         do ireverse=0,1
          call get_iten(im,im_opp,iten,nmat)
          if ((freezing_model(iten+ireverse*nten).lt.0).or. &
-             (freezing_model(iten+ireverse*nten).gt.5)) then
+             (freezing_model(iten+ireverse*nten).gt.7)) then
           print *,"freezing_model invalid init ice mask"
           print *,"iten,ireverse,nten ",iten,ireverse,nten
           stop
@@ -15834,7 +15861,7 @@ end function delta
        REAL_T expan(DIMV(expan),2*nten)
        REAL_T LS(DIMV(LS),nmat*(1+SDIM))
        REAL_T recon(DIMV(recon),nmat*ngeom_recon)
-       INTEGER_T freezing_mod
+       INTEGER_T local_freezing_model
        INTEGER_T distribute_from_targ
        INTEGER_T vofbc(SDIM,2)
        INTEGER_T i,j,k
@@ -15915,10 +15942,11 @@ end function delta
       call checkbound(fablo,fabhi,DIMS(expan),ngrow_expansion,-1,1274)
       call checkbound(fablo,fabhi,DIMS(tag),2*ngrow_expansion,-1,1275)
 
-      freezing_mod=freezing_model(indexEXP+1)
+      local_freezing_model=freezing_model(indexEXP+1)
       distribute_from_targ=distribute_from_target(indexEXP+1)
-      if ((freezing_mod.lt.0).or.(freezing_mod.gt.5)) then
-       print *,"freezing_mod invalid"
+      if ((local_freezing_model.lt.0).or. &
+          (local_freezing_model.gt.7)) then
+       print *,"local_freezing_model invalid"
        stop
       endif
       if ((distribute_from_targ.lt.0).or.(distribute_from_targ.gt.1)) then
@@ -22510,7 +22538,7 @@ end function delta
       REAL_T LS_source,LS_dest
 
       REAL_T LL
-      INTEGER_T freezing_mod
+      INTEGER_T local_freezing_model
       INTEGER_T distribute_from_targ
       REAL_T TSAT
       REAL_T TSAT_master
@@ -23146,7 +23174,7 @@ end function delta
                  call check_recalesce_status(im_source,start_freezing)
 
                  if (start_freezing.eq.1) then
-                  freezing_mod=freezing_model(iten+ireverse*nten)
+                  local_freezing_model=freezing_model(iten+ireverse*nten)
                   distribute_from_targ= &
                           distribute_from_target(iten+ireverse*nten)
                   if ((distribute_from_targ.lt.0).or. &
@@ -23154,8 +23182,9 @@ end function delta
                    print *,"distribute_from_targ invalid"
                    stop
                   endif
-                  if ((freezing_mod.eq.0).or. &
-                      (freezing_mod.eq.5)) then
+                  if ((local_freezing_model.eq.0).or. &
+                      (local_freezing_model.eq.5).or. &
+                      (local_freezing_model.eq.6)) then ! Palmore/Desjardins
 
                    if ((im_primary.eq.im).or.(im_primary.eq.im_opp)) then
 
@@ -23208,12 +23237,13 @@ end function delta
                     endif ! im_secondary==im or im_opp
                    endif ! im_primary=im or im_opp
 
-                  else if ((freezing_mod.eq.1).or. &
-                           (freezing_mod.eq.2).or. &
-                           (freezing_mod.eq.4)) then
+                  else if ((local_freezing_model.eq.1).or. &
+                           (local_freezing_model.eq.2).or. &
+                           (local_freezing_model.eq.4).or. & !Tanasawa/Schrage
+                           (local_freezing_model.eq.7)) then ! cavitation
                    ! do nothing
                   else 
-                   print *,"freezing_mod not supported"
+                   print *,"local_freezing_model not supported"
                    stop
                   endif
                  else if (start_freezing.eq.0) then

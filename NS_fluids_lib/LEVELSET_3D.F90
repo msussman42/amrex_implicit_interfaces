@@ -10101,6 +10101,30 @@ stop
         print *,"VOLTERM invalid"
         stop
        endif
+       if ((AXL.ge.zero).and. &
+           (AXR.ge.zero).and. &
+           (AYL.ge.zero).and. &
+           (AYR.ge.zero).and. &
+           (AZL.ge.zero).and. &
+           (AZR.ge.zero)) then
+        ! do nothing
+       else
+        print *,"AX,AY or AZ invalid"
+        print *,"AXL,AXR,AYL,AYR,AZL,AZR ", &
+                AXL,AXR,AYL,AYR,AZL,AZR
+        print *,"i,j,k ",i,j,k
+        print *,"xsten(0,?) : ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+        print *,"nhalf= ",nhalf
+        print *,"level= ",level
+        print *,"finest_level= ",finest_level
+        print *,"tilelo = ",tilelo(1),tilelo(2),tilelo(SDIM)
+        print *,"tilehi = ",tilehi(1),tilehi(2),tilehi(SDIM)
+        print *,"fablo = ",fablo(1),fablo(2),fablo(SDIM)
+        print *,"fabhi = ",fabhi(1),fabhi(2),fabhi(SDIM)
+        print *,"growlo = ",growlo(1),growlo(2),growlo(SDIM)
+        print *,"growhi = ",growhi(1),growhi(2),growhi(SDIM)
+        stop
+       endif
 
        if (operation_flag.eq.1) then ! DIV
 
@@ -10263,6 +10287,9 @@ stop
             stop
            endif
 
+            ! if project_option==0,
+            !  div (1/rho) grad p = div ustar/dt
+            ! 
             ! AXR,AXL,AYR,AYL,AZR,AZL are face areas.
            divu= &
             AXR*xvel(D_DECL(i+1,j,k),veldir_left)-  &

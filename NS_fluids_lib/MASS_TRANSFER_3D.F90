@@ -2451,7 +2451,7 @@ stop
              (local_freezing_model.eq.1).or. &
              (local_freezing_model.eq.2)) then
           ! do nothing
-         else if ((local_freezing_model.eq.4).or. & ! Tanasawa
+         else if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                   (local_freezing_model.eq.5).or. & ! Stefan model evap/cond.
                   (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                   (local_freezing_model.eq.7)) then ! Cavitation
@@ -2468,7 +2468,7 @@ stop
            print *,"mass_frac_id invalid"
            stop
           endif
-           ! require V_evaporate = V_condense (Tanasawa model)
+           ! require V_evaporate = V_condense (Tanasawa model or Schrage)
           if (local_freezing_model.eq.4) then 
            if (LL.ne.zero) then
             if (ireverse.eq.0) then ! evaporation
@@ -3345,7 +3345,7 @@ stop
 
            if (local_freezing_model.eq.0) then ! standard Stefan model
             ! do nothing
-           else if ((local_freezing_model.eq.4).or. & ! Tannasawa model
+           else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
                     (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
                     (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                     (local_freezing_model.eq.7)) then ! Cavitation
@@ -3490,7 +3490,7 @@ stop
 
               ! evaporation: im_source=liquid im_dest=surrounding gas
               ! condensation: im_source=surrounding gas im_dest=liquid
-             if ((local_freezing_model.eq.4).or. & !Tanasawa
+             if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
                  (local_freezing_model.eq.5).or. & !Stefan model evap/cond.
                  (local_freezing_model.eq.6).or. & !Palmore/Desjardins
                  (local_freezing_model.eq.7)) then !Cavitation
@@ -3557,7 +3557,7 @@ stop
 
             else if (newvfrac(im_dest).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                  (local_freezing_model.eq.5).or. & ! Stefan Evap/Cond.
                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                  (local_freezing_model.eq.7)) then ! Cavitation
@@ -3597,7 +3597,7 @@ stop
 
              snew(D_DECL(i,j,k),tcomp)=unsplit_temperature(im_source) 
 
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                  (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                  (local_freezing_model.eq.7)) then ! Cavitation
@@ -3634,7 +3634,7 @@ stop
              endif
             else if (newvfrac(im_source).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                  (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                  (local_freezing_model.eq.7)) then ! Cavitation
@@ -3814,7 +3814,7 @@ stop
             stop
            endif
 
-           if ((local_freezing_model.eq.4).or. & ! Tanasawa
+           if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
                (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                (local_freezing_model.eq.7)) then ! cavitation
@@ -4036,7 +4036,7 @@ stop
              stop
 #endif
 
-            else if (local_freezing_model.eq.4) then ! Tanasawa
+            else if (local_freezing_model.eq.4) then ! Tanasawa or Schrage
               ! if LL>0 => evaporation => delete energy 
               ! if LL<0 => condensation => add energy 
               ! latent_heat: erg/g
@@ -4493,6 +4493,7 @@ stop
        saturation_temp_curv, &
        saturation_temp_vel, &
        freezing_model, &
+       Tanasawa_or_Schrage, &
        distribute_from_target, &
        mass_fraction_id, &
        species_evaporation_density, &
@@ -4574,6 +4575,7 @@ stop
       REAL_T, intent(in) :: saturation_temp_curv(2*nten)
       REAL_T, intent(in) :: saturation_temp_vel(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: molar_mass(nmat)
@@ -4684,6 +4686,7 @@ stop
       REAL_T Ysrc_INT,Ydst_INT
       INTEGER_T concen_comp
       INTEGER_T local_freezing_model
+      INTEGER_T local_Tanasawa_or_Schrage
       INTEGER_T distribute_from_targ
       INTEGER_T pcomp
       INTEGER_T at_interface
@@ -5038,11 +5041,29 @@ stop
             K_f(ireverse)=reaction_rate(iten+ireverse*nten)
 
             local_freezing_model=freezing_model(iten+ireverse*nten)
+            local_Tanasawa_or_Schrage=Tanasawa_or_Schrage(iten+ireverse*nten)
 
             ispec=mass_fraction_id(iten+ireverse*nten)
 
+            evap_den=one
+
             if ((ispec.ge.0).and.(ispec.le.num_species_var)) then
              ! do nothing
+            else
+             print *,"ispec invalid"
+             stop
+            endif
+
+            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+             evap_den=species_evaporation_density(ispec)
+            else if (ispec.eq.0) then
+             if ((local_freezing_model.eq.2).or. & !hydrate
+                 (local_freezing_model.eq.4).or. & !Tanasawa or Schrage
+                 (local_freezing_model.eq.5).or. & !stefan evap/cond
+                 (local_freezing_model.eq.6)) then !Palmore/Desjardins
+              print *,"ispec invalid"
+              stop
+             endif
             else
              print *,"ispec invalid"
              stop
@@ -5184,7 +5205,7 @@ stop
                 Ycomp_source=0
                 Ycomp_dest=0
 
-                if ((local_freezing_model.eq.4).or. & !Tanasawa
+                if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
                     (local_freezing_model.eq.5).or. & !Stefan evap/cond
                     (local_freezing_model.eq.6).or. & !Palmore/Desjardins
                     (local_freezing_model.eq.7)) then !Cavitation
@@ -5387,10 +5408,10 @@ stop
 !FIX ME
 ! 1. Y BC in diffusion solver
 ! 2. div ( rho D grad Y )/rho
-!    freezing_mod=4  Tanasawa
-!    freezing_mod=5  fully saturated evaporation?
-!    freezing_mod=6  partially saturated evaporation?
-!    freezing_mod=7  Cavitation (a seed must exist)
+!    local_freezing_model=4  Tanasawa or Schrage
+!    local_freezing_model=5  fully saturated evaporation?
+!    local_freezing_model=6  partially saturated evaporation?
+!    local_freezing_model=7  Cavitation (a seed must exist)
 
                 do while (TSAT_converge.eq.0) 
 
@@ -5722,7 +5743,8 @@ stop
                   ! local_freezing_model=1 (source term model)
                   ! local_freezing_model=2 (hydrate model)
                   ! local_freezing_model=3 (wildfire)
-                  ! local_freezing_model=4 (source term model - Tanasawa Model)
+                  ! local_freezing_model=4 (source term model - Tanasawa Model
+                  !  or Schrage)
                   ! local_freezing_model=5 (evaporation/condensation)
                   ! local_freezing_model=6 (evaporation/condensation Palmore)
                   if ((local_freezing_model.eq.0).or. & !fully saturated
@@ -5731,7 +5753,7 @@ stop
                    ! do nothing
                   else if ((local_freezing_model.eq.1).or. &
                            (local_freezing_model.eq.2).or. & !hydrate
-                           (local_freezing_model.eq.4).or. & !Tanasawa
+                           (local_freezing_model.eq.4).or. & !Tanasawa,Schrage
                            (local_freezing_model.eq.7)) then !Cavitation
 
                    ! centroid -> target (cc_flag==0)
@@ -6032,7 +6054,6 @@ stop
                   if ((local_freezing_model.eq.5).or. & !stefan evap/cond
                       (local_freezing_model.eq.6)) then !Palmore/Desjardins
                    if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-                    evap_den=species_evaporation_density(ispec)
                     if (evap_den.gt.zero) then
                      if (LL(ireverse).gt.zero) then ! evaporation
                       dendst=evap_den
@@ -6199,8 +6220,8 @@ stop
 
 #if (STANDALONE==0)
                    ! if local_freezing_model==0 stefan problem
-                   !                  5, some kind of evaporation model,
-                   !                  or 1, then
+                   !  5, some kind of evaporation model,
+                   !  or 1, then
                    !  DTsrc=(Tsrc-TSAT_predict)
                    !  DTdst=(Tdst-TSAT_predict)
                    !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
@@ -6210,6 +6231,8 @@ stop
                     for_estdt, &
                     xI, &
                     local_freezing_model, &
+                    local_Tanasawa_or_Schrage, &
+                    evap_den, &
                     distribute_from_targ, &
                     VEL_correct, & ! vel
                     densrc,dendst, &
@@ -6586,6 +6609,7 @@ stop
                  endif
                  if (1.eq.0) then
                   if (local_freezing_model.eq.4) then
+                   print *,"Tanasawa or Schrage"
                    print *,"i,j,k,ireverse,vel_phasechange ", &
                     i,j,k,ireverse,vel_phasechange(ireverse)
                    print *,"im_source,im_dest ",im_source,im_dest

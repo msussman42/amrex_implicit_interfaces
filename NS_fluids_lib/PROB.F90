@@ -790,6 +790,17 @@ stop
        ! do nothing
       else
        print *,"flux_in overflow SEM_VISC_SANITY"
+       print *,"caller_id=",caller_id
+       print *,"dt=",dt
+       print *,"dir=",dir
+       print *,"flux_in=",flux_in
+       print *,"velcomp=",velcomp
+       print *,"use_dt=",use_dt
+       print *,"use_HO=",use_HO
+       print *,"project_option=",project_option
+       print *,"bfact=",bfact
+       print *,"enable_spectral=",enable_spectral
+       print *,"constant_viscosity=",constant_viscosity
        stop
       endif
       if ((dir.eq.-1).or. &
@@ -3278,9 +3289,11 @@ double precision lambda, l_macro, l_micro !parameter of gnbc
 integer iter
 double precision Ca, thet_d_micro, beta, chi !parameters of model1
 double precision thet_d_micro_old, Ca_old, a, b, c
-double precision f1, f2, Ja11, Ja12, Ja21, Ja22, b1, b2, u11, u12, u22, l21, y1, y2
+double precision f1, f2, Ja11, Ja12, Ja21, Ja22
+double precision b1, b2, u11, u12, u22, l21, y1, y2
 double precision a1, a2, a3, a4, u, u0, thet_d_old !parameters of model3
-double precision temp, fHI, fHI_old !parameters of model5
+double precision temp,temp2
+double precision fHI, fHI_old !parameters of model5
 double precision sigma_0, v_0 !parameters of model7
 integer diag_output
 
@@ -3387,7 +3400,13 @@ select case (imodel)
         if (diag_output.eq.1) then
          print *, "Implement model 2 ..."
         endif 
-        thet_d = acos(cos(thet_s) - Ca / abs(Ca) * (1. + cos(thet_s)) * tanh(4.96 * abs(Ca)**0.702))
+        temp2=abs(Ca)**0.702d0
+        temp=tanh(4.96*temp2)
+        temp=temp*(1.0d0+cos(thet_s))
+        temp=cos(thet_s)-(Ca/abs(Ca))*temp
+        if (temp.gt.1.0d0) temp = 1.0d0 
+        if (temp.lt.-1.0d0) temp = -1.0d0 
+        thet_d=acos(temp)
         u_slip = 0.
 
     case (3) !Shikmurzaev2008
@@ -29659,6 +29678,8 @@ end subroutine RatePhaseChange
        for_estdt, &
        xI, &
        local_freezing_model, &
+       local_Tanasawa_or_Schrage, &
+       species_evaporation_density, &
        distribute_from_target, &
        vel, &
        densrc,dendst, &
@@ -29697,6 +29718,8 @@ end subroutine RatePhaseChange
       INTEGER_T, intent(in) :: for_estdt
       REAL_T, intent(in) :: xI(SDIM)
       INTEGER_T, intent(in) :: local_freezing_model
+      INTEGER_T, intent(in) :: local_Tanasawa_or_Schrage
+      REAL_T, intent(in) :: species_evaporation_density
       INTEGER_T, intent(in) :: distribute_from_target
       INTEGER_T, intent(in) :: im_source,im_dest
       INTEGER_T :: start_freezing
@@ -29827,7 +29850,7 @@ end subroutine RatePhaseChange
         ! local_freezing_model=1 (source term model)
         ! local_freezing_model=2 (hydrate model)
         ! local_freezing_model=3 (wildfire)
-        ! local_freezing_model=4 (source term model - Tanasawa Model)
+        ! local_freezing_model=4 (source term model-Tanasawa/Schrage Model)
         ! local_freezing_model=5 (Stefan model evaporation/condensation)
         ! local_freezing_model=6 (Palmore and Desjardins)
         ! local_freezing_model=7 (Cavitation)
@@ -30021,7 +30044,7 @@ end subroutine RatePhaseChange
 
         vel=velsum
 
-       else if (local_freezing_model.eq.4) then
+       else if (local_freezing_model.eq.4) then ! Tanasawa or Schrage
 
          ! Tanasawa model for a fully saturated gas:
         gamma_tanasawa=0.1
@@ -30037,23 +30060,33 @@ end subroutine RatePhaseChange
           print *,"distribute_from_target invalid"
           stop
          endif
-         if ((Tsrc_INT.gt.Tsat).and.(Tdst_INT.gt.Tsat)) then
-          velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
-          velsrc=velsrc*sqrt(fluid_molar_mass/(two*Pi*universal_gas))
-          velsrc=velsrc*dendst*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
-          velsrc=velsrc/(Tsat**(1.5))
-          velsrc=velsrc/densrc ! rate=mdot/densrc
-          veldst=velsrc
-          if (for_estdt.eq.1) then
-           velsrc=max(velsrc,velsrc/(one-expansion_fact))
+
+         if (local_Tanasawa_or_Schrage.eq.1) then ! Tanasawa
+
+          if ((Tsrc_INT.gt.Tsat).and.(Tdst_INT.gt.Tsat)) then
+           velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
+           velsrc=velsrc*sqrt(fluid_molar_mass/(two*Pi*universal_gas))
+           velsrc=velsrc*dendst*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
+           velsrc=velsrc/(Tsat**(1.5))
+           velsrc=velsrc/densrc ! rate=mdot/densrc
            veldst=velsrc
-          else if (for_estdt.eq.0) then
-           ! do nothing
-          else
-           print *,"for_estdt invalid"
-           stop
+           if (for_estdt.eq.1) then
+            velsrc=max(velsrc,velsrc/(one-expansion_fact))
+            veldst=velsrc
+           else if (for_estdt.eq.0) then
+            ! do nothing
+           else
+            print *,"for_estdt invalid"
+            stop
+           endif
+
           endif
 
+         else if (local_Tanasawa_or_Schrage.eq.2) then !schrage
+
+         else
+          print *,"local_Tanasawa_or_Schrage invalid"
+          stop
          endif
         else if (LL.lt.zero) then ! condensation
          if (distribute_from_target.ne.1) then

@@ -3155,8 +3155,10 @@
          xpoint=i*h
          ypoint=j*h
          lscomp=nmat+global_nten*sdim+ngeom_reconCG*nmat
-         write(11,'(D25.16)',ADVANCE="NO") xpoint
-         write(11,'(D25.16)',ADVANCE="NO") ypoint
+!        write(11,'(D25.16)',ADVANCE="NO") xpoint
+         write(11,'(E25.16)',ADVANCE="NO") xpoint
+!        write(11,'(D25.16)',ADVANCE="NO") ypoint
+         write(11,'(E25.16)',ADVANCE="NO") ypoint
          do im=1,nmat+global_nten*sdim
           sum_wt=0.0d0
           do ii=0,1
@@ -3185,7 +3187,8 @@
           enddo
           enddo
           node_data=node_data/sum_wt
-          write(11,'(D25.16)',ADVANCE="NO") node_data
+!         write(11,'(D25.16)',ADVANCE="NO") node_data
+          write(11,'(E25.16)',ADVANCE="NO") node_data
          enddo
          do im=1,nmat
           sum_wt=0.0d0
@@ -3199,7 +3202,8 @@
           enddo
           enddo
           node_data=node_data/sum_wt
-          write(11,'(D25.16)',ADVANCE="NO") node_data
+!         write(11,'(D25.16)',ADVANCE="NO") node_data
+          write(11,'(E25.16)',ADVANCE="NO") node_data
          enddo
          do im=1,nmat*(sdim+1)
           sum_wt=0.0d0
@@ -3214,9 +3218,11 @@
           enddo
           node_data=node_data/sum_wt
           if (im.lt.nmat*(sdim+1)) then
-           write(11,'(D25.16)',ADVANCE="NO") node_data
+!          write(11,'(D25.16)',ADVANCE="NO") node_data
+           write(11,'(E25.16)',ADVANCE="NO") node_data
           else
-           write(11,'(D25.16)') node_data
+!          write(11,'(D25.16)') node_data
+           write(11,'(E25.16)') node_data
           endif
          enddo
         enddo
@@ -3324,25 +3330,31 @@
          ypoint=(j+0.5d0)*h
          lscomp=nmat+global_nten*sdim+ngeom_reconCG*nmat
            ! D25.16=" -0.1234..(16)D+123"
-         write(11,'(D25.16)',ADVANCE="NO") xpoint
-         write(11,'(D25.16)',ADVANCE="NO") ypoint
+!        write(11,'(D25.16)',ADVANCE="NO") xpoint
+         write(11,'(E25.16)',ADVANCE="NO") xpoint
+!        write(11,'(D25.16)',ADVANCE="NO") ypoint
+         write(11,'(E25.16)',ADVANCE="NO") ypoint
           ! temperature and velocity
          do im=1,nmat+global_nten*sdim
           cen_data=local_UNEW(i,j,im)
-          write(11,'(D25.16)',ADVANCE="NO") cen_data
+!         write(11,'(D25.16)',ADVANCE="NO") cen_data
+          write(11,'(E25.16)',ADVANCE="NO") cen_data
          enddo
           ! volume fractions
          do im=1,nmat
           cen_data=VFRAC_MOF(i,j,im)
-          write(11,'(D25.16)',ADVANCE="NO") cen_data
+!         write(11,'(D25.16)',ADVANCE="NO") cen_data
+          write(11,'(E25.16)',ADVANCE="NO") cen_data
          enddo
           ! level set data
          do im=1,nmat*(sdim+1)
           cen_data=local_UNEW(i,j,lscomp+im)
           if (im.lt.nmat*(sdim+1)) then
-           write(11,'(D25.16)',ADVANCE="NO") cen_data
+!          write(11,'(D25.16)',ADVANCE="NO") cen_data
+           write(11,'(E25.16)',ADVANCE="NO") cen_data
           else
-           write(11,'(D25.16)') cen_data
+!          write(11,'(D25.16)') cen_data
+           write(11,'(E25.16)') cen_data
           endif
          enddo
         enddo

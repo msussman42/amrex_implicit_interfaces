@@ -1959,11 +1959,13 @@ END SUBROUTINE SIMP
         endif
 
         if (SDIM.eq.3) then
-         write(11,'(A33,D25.16,A10,I10)')  &
+!        write(11,'(A33,D25.16,A10,I10)')  &
+         write(11,'(A33,E25.16,A10,I10)')  &
           'ZONETYPE=FETRIANGLE SOLUTIONTIME=',time, &
           " STRANDID=",strandid
         else if (SDIM.eq.2) then
-         write(11,'(A32,D25.16,A10,I10)')  &
+!        write(11,'(A32,D25.16,A10,I10)')  &
+         write(11,'(A32,E25.16,A10,I10)')  &
           'ZONETYPE=FELINESEG SOLUTIONTIME=',time, &
           " STRANDID=",strandid
         else
@@ -1992,7 +1994,8 @@ END SUBROUTINE SIMP
          strandid=(nsteps/plotint)+1
         endif
 
-        write(12,'(A19,I14,A26,D25.16,A10,I10)') & 
+!       write(12,'(A19,I14,A26,D25.16,A10,I10)') & 
+        write(12,'(A19,I14,A26,E25.16,A10,I10)') & 
           'ZONE F="POINT", I= ', nparticles,  &
           ', J=1, K=1, SOLUTIONTIME= ',time,' STRANDID=',strandid
 
@@ -2818,9 +2821,11 @@ END SUBROUTINE SIMP
          endif
          do n=1,vis_ncomp
           if ((n.ge.1).and.(n.lt.vis_ncomp)) then
-           read(11,'(D25.16)',ADVANCE="NO") local_data(n)
+!          read(11,'(D25.16)',ADVANCE="NO") local_data(n)
+           read(11,'(E25.16)',ADVANCE="NO") local_data(n)
           else if (n.eq.vis_ncomp) then
-           read(11,'(D25.16)') local_data(n)
+!          read(11,'(D25.16)') local_data(n)
+           read(11,'(E25.16)') local_data(n)
           else
            print *,"n invalid"
            stop
@@ -2935,9 +2940,11 @@ END SUBROUTINE SIMP
         do n=1,vis_ncomp
          if (abs(local_data(n)).le.1.0D+20) then
           if ((n.ge.1).and.(n.lt.vis_ncomp)) then
-           write(11,'(D25.16)',ADVANCE="NO") local_data(n)
+!          write(11,'(D25.16)',ADVANCE="NO") local_data(n)
+           write(11,'(E25.16)',ADVANCE="NO") local_data(n)
           else if (n.eq.vis_ncomp) then
-           write(11,'(D25.16)') local_data(n)
+!          write(11,'(D25.16)') local_data(n)
+           write(11,'(E25.16)') local_data(n)
           else
            print *,"n invalid"
            stop
@@ -4117,7 +4124,7 @@ END SUBROUTINE SIMP
 
 
 ! pgf90 will automatically break up lines if they exceed 80 chars.
-! a format must be specified.  e.g. '(D25.16)'
+! a format must be specified.  e.g. '(D25.16)' or '(E25.16)'
 
         if (debug_slice.eq.1) then
          print *,"debug_slice: scomp= ",scomp
@@ -4128,9 +4135,11 @@ END SUBROUTINE SIMP
   
         do iw=1,scomp
          if (iw.lt.scomp) then
-          write(11,'(D25.16)',ADVANCE="NO") writend(iw)
+!         write(11,'(D25.16)',ADVANCE="NO") writend(iw)
+          write(11,'(E25.16)',ADVANCE="NO") writend(iw)
          else if (iw.eq.scomp) then
-          write(11,'(D25.16)') writend(iw)
+!         write(11,'(D25.16)') writend(iw)
+          write(11,'(E25.16)') writend(iw)
          else
           print *,"iw invalid"
           stop
@@ -4824,11 +4833,13 @@ END SUBROUTINE SIMP
 
       do i=-1,nslice-2
        do n=1,nstate_slice-1
-        write(11,'(D25.16)',ADVANCE="NO")  &
+!       write(11,'(D25.16)',ADVANCE="NO")  &
+        write(11,'(E25.16)',ADVANCE="NO")  &
           slice_data((i+1)*nstate_slice+n)
        enddo
        n=nstate_slice
-       write(11,'(D25.16)') slice_data((i+1)*nstate_slice+n)
+!      write(11,'(D25.16)') slice_data((i+1)*nstate_slice+n)
+       write(11,'(E25.16)') slice_data((i+1)*nstate_slice+n)
       enddo ! i
 
 
