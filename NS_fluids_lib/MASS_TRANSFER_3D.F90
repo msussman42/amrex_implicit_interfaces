@@ -31,26 +31,47 @@ stop
       module mass_transfer_module
       use probcommon_module
 
-      ! also if t1 is a c++ parameter and p1 is a "type" component:
-      ! REAL_T, pointer :: p1(DIMV(p1),ncomp)
-      ! REAL_T, target :: t1(DIMV(p1),ncomp)
+      ! if t1 is a c++ parameter and p1 is a "type" component:
+      ! REAL_T, pointer :: p1(DIMV(t1),ncomp)
+      ! REAL_T, target :: t1(DIMV(t1),ncomp)
       ! p1=>t1
-      type param_list_type
-       REAL_T :: xsrc(SDIM)
-       REAL_T :: xdst(SDIM)
-       REAL_T :: xsrc_micro(SDIM)
-       REAL_T :: xdst_micro(SDIM)
-       INTEGER_T :: im_source
-       INTEGER_T :: im_dest
-       INTEGER_T :: tcomp_source
-       INTEGER_T :: Ycomp_source
-       INTEGER_T :: dencomp_source
-       REAL_T :: dxprobe_source
-       INTEGER_T :: tcomp_dest
-       INTEGER_T :: Ycomp_dest
-       INTEGER_T :: dencomp_dest
-       REAL_T :: dxprobe_dest
-      end type param_list_type
+      type probe_parm_type
+       REAL_T, pointer :: xsrc(:)
+       REAL_T, pointer :: xdst(:)
+       REAL_T, pointer :: xsrc_micro(:)
+       REAL_T, pointer :: xdst_micro(:)
+       INTEGER_T, pointer :: im_source
+       INTEGER_T, pointer :: im_dest
+       INTEGER_T, pointer :: tcomp_source
+       INTEGER_T, pointer :: Ycomp_source
+       INTEGER_T, pointer :: dencomp_source
+       REAL_T, pointer :: dxprobe_source
+       INTEGER_T, pointer :: tcomp_dest
+       INTEGER_T, pointer :: Ycomp_dest
+       INTEGER_T, pointer :: dencomp_dest
+       REAL_T, pointer :: dxprobe_dest
+       REAL_T, pointer, dimension(:) :: LSINT
+       INTEGER_T, pointer :: imls_I
+       REAL_T, pointer :: dxmaxLS
+       INTEGER_T, pointer :: bfact
+       INTEGER_T, pointer :: level
+       INTEGER_T, pointer :: finest_level
+       REAL_T, pointer :: dx(:)
+       REAL_T, pointer :: xlo(:)
+       REAL_T, pointer :: xI(:)
+       INTEGER_T, pointer :: nmat
+       INTEGER_T, pointer :: ngrow
+       INTEGER_T, pointer :: fablo(:)
+       INTEGER_T, pointer :: fabhi(:)
+       INTEGER_T, pointer :: DIMDEC(EOS)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
+       INTEGER_T, pointer :: DIMDEC(RECON)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: RECON
+       INTEGER_T, pointer :: DIMDEC(LS)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+       REAL_T, pointer, dimension(:) :: density_floor_expansion
+       REAL_T, pointer, dimension(:) :: density_ceiling_expansion
+      end type probe_parm_type
 
       contains
 
@@ -4628,8 +4649,8 @@ stop
       REAL_T dxmin,dxmax,dxmaxLS
       REAL_T xsten(-3:3,SDIM)
       REAL_T xI(SDIM)
-      REAL_T xsrc(SDIM)
-      REAL_T xdst(SDIM)
+      REAL_T, target :: xsrc(SDIM)
+      REAL_T, target :: xdst(SDIM)
       REAL_T xsrc_micro(SDIM)
       REAL_T xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
@@ -4736,6 +4757,7 @@ stop
       REAL_T YMIN_INIT_ERR
       REAL_T GRAD_Y_dot_n
       INTEGER_T interp_valid_flag(2)
+      type(probe_parm_type) :: PROBE_PARMS
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -5335,6 +5357,9 @@ stop
                  ! iprobe=2 dest
                 interp_valid_flag(1)=0
                 interp_valid_flag(2)=0
+
+                PROBE_PARMS%xsrc=>xsrc 
+                PROBE_PARMS%xdst=>xdst
 
 !FIX ME
 ! 1. Y BC in diffusion solver
