@@ -31,6 +31,27 @@ stop
       module mass_transfer_module
       use probcommon_module
 
+      ! also if t1 is a c++ parameter and p1 is a "type" component:
+      ! REAL_T, pointer :: p1(DIMV(p1),ncomp)
+      ! REAL_T, target :: t1(DIMV(p1),ncomp)
+      ! p1=>t1
+      type param_list_type
+       REAL_T :: xsrc(SDIM)
+       REAL_T :: xdst(SDIM)
+       REAL_T :: xsrc_micro(SDIM)
+       REAL_T :: xdst_micro(SDIM)
+       INTEGER_T :: im_source
+       INTEGER_T :: im_dest
+       INTEGER_T :: tcomp_source
+       INTEGER_T :: Ycomp_source
+       INTEGER_T :: dencomp_source
+       REAL_T :: dxprobe_source
+       INTEGER_T :: tcomp_dest
+       INTEGER_T :: Ycomp_dest
+       INTEGER_T :: dencomp_dest
+       REAL_T :: dxprobe_dest
+      end type param_list_type
+
       contains
 
       subroutine get_interface_temperature( &
