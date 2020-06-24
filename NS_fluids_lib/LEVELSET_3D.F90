@@ -10123,6 +10123,11 @@ stop
         print *,"fabhi = ",fabhi(1),fabhi(2),fabhi(SDIM)
         print *,"growlo = ",growlo(1),growlo(2),growlo(SDIM)
         print *,"growhi = ",growhi(1),growhi(2),growhi(SDIM)
+        print *,"homflag=",homflag
+        print *,"project_option=",project_option
+        print *,"operation_flag=",project_option
+        print *,"energyflag=",energyflag
+        print *,"nsolve=",nsolve
         stop
        endif
 

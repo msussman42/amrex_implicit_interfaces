@@ -55,8 +55,8 @@ ns.MOFITERMAX=15
 # in IJMF paper, 8 ... 256 cells across drop diameter.
 # if domain is  6x3, base grid 96x48, max_level=1, diameter=2, then
 # 64 points per drop diameter.
-amr.n_cell    = 96 48
-amr.max_level =  1
+amr.n_cell    = 48 24
+amr.max_level =  0
 ns.ns_tiling=false
 
 ns.minimum_relative_error=1.0e-18
@@ -124,6 +124,7 @@ ns.law_of_the_wall=0  #1=law of the wall   2=GNBC  0=neither
 # =7 Blake2006, Popescu2008
 # =8 Cox 1986
 ns.ZEYU_DCA_SELECT=2  #DCA=dynamic contact angle
+#ns.ZEYU_DCA_SELECT=-1  #DCA=dynamic contact angle
 
 ns.use_lsa=0
 ns.capillary_artificial_viscosity=0.0 0.0 0.0  # gets multiplied by visc_coef
