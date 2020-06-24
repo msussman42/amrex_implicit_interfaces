@@ -63,11 +63,11 @@ stop
        INTEGER_T, pointer :: ngrow
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
-       INTEGER_T, pointer :: DIMDEC(EOS)
+       INTEGER_T :: DIMDEC(EOS)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
-       INTEGER_T, pointer :: DIMDEC(RECON)
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: RECON
-       INTEGER_T, pointer :: DIMDEC(LS)
+       INTEGER_T :: DIMDEC(recon)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: recon
+       INTEGER_T :: DIMDEC(LS)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
        REAL_T, pointer, dimension(:) :: density_floor_expansion
        REAL_T, pointer, dimension(:) :: density_ceiling_expansion
@@ -4538,18 +4538,18 @@ stop
 
 
       INTEGER_T, intent(in) :: stefan_flag
-      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, target, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: normal_probe_size
       REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
       INTEGER_T, intent(in) :: nstate
-      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, target, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
       INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: nden
-      REAL_T, intent(in) :: density_floor_expansion(nmat)
-      REAL_T, intent(in) :: density_ceiling_expansion(nmat)
+      REAL_T, target, intent(in) :: density_floor_expansion(nmat)
+      REAL_T, target, intent(in) :: density_ceiling_expansion(nmat)
       INTEGER_T, intent(in) :: custom_nucleation_model
       INTEGER_T, intent(in) :: do_the_nucleate
       INTEGER_T, intent(in) :: nucleate_pos_size
@@ -4580,11 +4580,11 @@ stop
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, target, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, target, intent(in) :: bfact
+      REAL_T, target, intent(in) :: xlo(SDIM)
+      REAL_T, target, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: prev_time
       REAL_T :: cur_time
       REAL_T, intent(in) :: dt
@@ -4619,13 +4619,13 @@ stop
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
+      REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
       REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
       REAL_T, intent(inout) :: Snew(DIMV(Snew),nstate)
       REAL_T, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
-      REAL_T, intent(in) :: EOS(DIMV(EOS),nden)
+      REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
        ! F,X,order,SL,I x nmat
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
+      REAL_T, target, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: pres(DIMV(pres)) 
       REAL_T, intent(in) :: pres_eos(DIMV(pres_eos)) 
       REAL_T, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
@@ -4635,29 +4635,31 @@ stop
       INTEGER_T im,im_opp,ireverse,iten,imls
       INTEGER_T im_ambient
       INTEGER_T im_primary
-      INTEGER_T imls_I
+      INTEGER_T, target :: imls_I
       INTEGER_T im_substrate_source
       INTEGER_T im_substrate_dest
-      INTEGER_T im_source,im_dest,ngrow
+      INTEGER_T, target :: im_source,im_dest
+      INTEGER_T, target :: ngrow
       INTEGER_T nten_test
-      INTEGER_T tcomp_source
-      INTEGER_T tcomp_dest
-      INTEGER_T Ycomp_source
-      INTEGER_T Ycomp_dest
+      INTEGER_T, target :: tcomp_source
+      INTEGER_T, target :: tcomp_dest
+      INTEGER_T, target :: Ycomp_source
+      INTEGER_T, target :: Ycomp_dest
       REAL_T velmag_sum,local_velmag
       INTEGER_T burnflag
-      REAL_T dxmin,dxmax,dxmaxLS
+      REAL_T dxmin,dxmax
+      REAL_T, target :: dxmaxLS
       REAL_T xsten(-3:3,SDIM)
-      REAL_T xI(SDIM)
+      REAL_T, target :: xI(SDIM)
       REAL_T, target :: xsrc(SDIM)
       REAL_T, target :: xdst(SDIM)
-      REAL_T xsrc_micro(SDIM)
-      REAL_T xdst_micro(SDIM)
+      REAL_T, target :: xsrc_micro(SDIM)
+      REAL_T, target :: xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
       REAL_T nrmFD(SDIM)  ! finite difference normal
       REAL_T nrmPROBE(SDIM)  ! must choose nrmCP is microstructure.
       REAL_T theta_nrmPROBE(SDIM)
-      REAL_T LSINT(nmat*(SDIM+1))
+      REAL_T, target :: LSINT(nmat*(SDIM+1))
       REAL_T LSPROBE(nmat)
       REAL_T dist_probe_sanity
       REAL_T LShere(nmat)
@@ -4670,8 +4672,8 @@ stop
       REAL_T vel_phasechange(0:1)
       REAL_T LL(0:1)
       INTEGER_T valid_phase_change(0:1)
-      REAL_T dxprobe_source
-      REAL_T dxprobe_dest
+      REAL_T, target :: dxprobe_source
+      REAL_T, target :: dxprobe_dest
       REAL_T dxprobe_target(2)
       REAL_T ksource,kdest
       REAL_T LS_pos
@@ -4698,7 +4700,7 @@ stop
       REAL_T gradphi_substrate(SDIM)
       REAL_T newphi_substrate
       INTEGER_T mtype
-      INTEGER_T dencomp_source,dencomp_dest
+      INTEGER_T, target :: dencomp_source,dencomp_dest
       INTEGER_T ispec
       REAL_T evap_den
       REAL_T source_perim_factor,dest_perim_factor
@@ -5358,8 +5360,29 @@ stop
                 interp_valid_flag(1)=0
                 interp_valid_flag(2)=0
 
+                call copy_dimdec(DIMS(PROBE_PARMS%EOS),DIMS(EOS))
+                call copy_dimdec(DIMS(PROBE_PARMS%recon),DIMS(recon))
+                call copy_dimdec(DIMS(PROBE_PARMS%LS),DIMS(LS))
+                PROBE_PARMS%EOS=>EOS 
+                PROBE_PARMS%LS=>LS
+                PROBE_PARMS%recon=>recon
                 PROBE_PARMS%xsrc=>xsrc 
                 PROBE_PARMS%xdst=>xdst
+                PROBE_PARMS%LSINT=>LSINT
+                PROBE_PARMS%imls_I=>imls_I
+                PROBE_PARMS%dxmaxLS=>dxmaxLS
+                PROBE_PARMS%bfact=>bfact
+                PROBE_PARMS%level=>level
+                PROBE_PARMS%finest_level=>finest_level
+                PROBE_PARMS%dx=>dx
+                PROBE_PARMS%xlo=>xlo
+                PROBE_PARMS%xI=>xI
+                PROBE_PARMS%nmat=>nmat
+                PROBE_PARMS%ngrow=>ngrow
+                PROBE_PARMS%fablo=>fablo
+                PROBE_PARMS%fabhi=>fabhi
+                PROBE_PARMS%density_floor_expansion=>density_floor_expansion
+                PROBE_PARMS%density_ceiling_expansion=>density_ceiling_expansion
 
 !FIX ME
 ! 1. Y BC in diffusion solver

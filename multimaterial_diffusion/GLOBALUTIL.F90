@@ -3289,19 +3289,62 @@ contains
       dir=2
       ARG_L2(fabdim)=fablo(dir)-ngrow
       ARG_H2(fabdim)=fabhi(dir)+ngrow
+      dir=SDIM
 #if (AMREX_SPACEDIM==3)
-      ARG_L3(fabdim)=fablo(dir)-ngrow
-      ARG_H3(fabdim)=fabhi(dir)+ngrow
-      print *,"prototype code only for 2d"
-      stop
+      if (SDIM.eq.3) then
+       ARG_L3(fabdim)=fablo(dir)-ngrow
+       ARG_H3(fabdim)=fabhi(dir)+ngrow
+      else
+       print *,"dimension bust"
+       stop
+      endif
 #elif (AMREX_SPACEDIM==2)
-      ! do nothing
+      if (SDIM.eq.2) then
+       ! do nothing
+      else
+       print *,"dimension bust"
+       stop
+      endif
 #else
       print *,"dimension bust"
       stop
 #endif
       return
       end subroutine set_dimdec
+
+      subroutine copy_dimdec(DIMS(dest),DIMS(source))
+      IMPLICIT NONE
+
+      INTEGER_T, intent(out) :: DIMDEC(dest)
+      INTEGER_T, intent(in) :: DIMDEC(source)
+
+      ARG_L1(dest)=ARG_L1(source)
+      ARG_L2(dest)=ARG_L2(source)
+      ARG_H1(dest)=ARG_H1(source)
+      ARG_H2(dest)=ARG_H2(source)
+
+#if (AMREX_SPACEDIM==3)
+      if (SDIM.eq.3) then
+       ARG_L3(dest)=ARG_L3(source)
+       ARG_H3(dest)=ARG_H3(source)
+      else
+       print *,"dimension bust"
+       stop
+      endif
+#elif (AMREX_SPACEDIM==2)
+      if (SDIM.eq.2) then
+       ! do nothing
+      else
+       print *,"dimension bust"
+       stop
+      endif
+#else
+      print *,"dimension bust"
+      stop
+#endif
+      return
+      end subroutine copy_dimdec
+
 
       subroutine RT_transformVEL(x,vel,velT)
       use probcommon_module
