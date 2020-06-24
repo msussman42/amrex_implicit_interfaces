@@ -3955,28 +3955,15 @@ contains
       subroutine gridarea(xsten,nhalf,rzflag,dir,side,area,areacen)
       IMPLICIT NONE
 
-      REAL_T area
-      REAL_T areacen(SDIM)
-      INTEGER_T nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T rzflag
-      INTEGER_T dir,side,iside,itan,jtan,dir2
+      REAL_T, intent(out) :: area
+      REAL_T, intent(out) :: areacen(SDIM)
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: rzflag
+      INTEGER_T, intent(in) :: dir,side
+      INTEGER_T iside,dir2
       REAL_T RR,R1,R2,RC
 
-      if (dir.eq.0) then
-       itan=2
-       jtan=SDIM
-      else if (dir.eq.1) then
-       itan=1
-       jtan=SDIM
-      else if ((dir.eq.2).and.(SDIM.eq.3)) then
-       itan=1
-       jtan=2
-      else
-       print *,"dir invalid gridarea"
-       stop
-      endif
- 
       if (side.eq.0) then
        iside=-1
       else if (side.eq.1) then
