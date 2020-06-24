@@ -13493,28 +13493,29 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      INTEGER_T ngrow,rzflag
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(areax)
-      INTEGER_T DIMDEC(areay)
-      INTEGER_T DIMDEC(areaz)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: ngrow,rzflag
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(areax)
+      INTEGER_T, intent(in) :: DIMDEC(areay)
+      INTEGER_T, intent(in) :: DIMDEC(areaz)
       
-      REAL_T  vol(DIMV(vol))
-      REAL_T  areax(DIMV(areax))
-      REAL_T  areay(DIMV(areay))
-      REAL_T  areaz(DIMV(areaz))
-      REAL_T  xlo(SDIM),dx(SDIM)
+      REAL_T, intent(out) :: vol(DIMV(vol))
+      REAL_T, intent(out) :: areax(DIMV(areax))
+      REAL_T, intent(out) :: areay(DIMV(areay))
+      REAL_T, intent(out) :: areaz(DIMV(areaz))
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k,dir
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf,side
       REAL_T local_area
       REAL_T areacen(SDIM)
+      INTEGER_T at_z_axis
 
       nhalf=3
       if (bfact.lt.1) then
@@ -13554,16 +13555,51 @@ END SUBROUTINE SIMP
         call gridsten_level(xsten,i,j,k,level,nhalf)
         side=0
         call gridarea(xsten,nhalf,rzflag,dir,side,local_area,areacen)
-        if (dir.eq.0) then
-         areax(D_DECL(i,j,k))=local_area
-        else if (dir.eq.1) then
-         areay(D_DECL(i,j,k))=local_area
-        else if ((dir.eq.2).and.(SDIM.eq.3)) then
-         areaz(D_DECL(i,j,k))=local_area
+        at_z_axis=0
+        if (rzflag.eq.0) then
+         ! do nothing
+        else if (rzflag.eq.1) then
+         if (dir.eq.1) then
+          ! do nothing
+         else if (dir.eq.0) then
+          if (abs(xsten(-1,1)).le.1.0D-10*dx(dir+1)) then
+           at_z_axis=1
+          endif
+         else
+          print *,"dir invalid"
+          stop
+         endif
+        else if (rzflag.eq.3) then
+         if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
+          ! do nothing
+         else if (dir.eq.0) then
+          if (abs(xsten(-1,1)).le.1.0D-10*dx(dir+1)) then
+           at_z_axis=1
+          endif
+         else
+          print *,"dir invalid"
+          stop
+         endif
         else
-         print *,"dir invalid metrics"
+         print *,"rzflag invalid"
          stop
-        endif 
+        endif
+        if ((local_area.gt.zero).or. &
+            ((local_area.eq.zero).and.(at_z_axis.eq.1))) then
+         if (dir.eq.0) then
+          areax(D_DECL(i,j,k))=local_area
+         else if (dir.eq.1) then
+          areay(D_DECL(i,j,k))=local_area
+         else if ((dir.eq.2).and.(SDIM.eq.3)) then
+          areaz(D_DECL(i,j,k))=local_area
+         else
+          print *,"dir invalid metrics"
+          stop
+         endif 
+        else
+         print *,"local_area invalid"
+         stop
+        endif
        enddo
        enddo
        enddo ! i,j,k
