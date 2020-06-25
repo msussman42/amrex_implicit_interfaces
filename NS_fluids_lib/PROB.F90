@@ -3398,16 +3398,26 @@ select case (imodel)
 
     case (2) !Jiang1970
         if (diag_output.eq.1) then
-         print *, "Implement model 2 ..."
-        endif 
-        temp2=abs(Ca)**0.702d0
-        temp=tanh(4.96*temp2)
-        temp=temp*(1.0d0+cos(thet_s))
-        temp=cos(thet_s)-(Ca/abs(Ca))*temp
-        if (temp.gt.1.0d0) temp = 1.0d0 
-        if (temp.lt.-1.0d0) temp = -1.0d0 
-        thet_d=acos(temp)
+         print *, "Implement model 2, Ca= ...",Ca
+        endif
+        if (Ca.eq.0.0d0) then
+         thet_d=thet_s
+        else if (Ca.ne.0.0d0) then
+         temp2=abs(Ca)**0.702d0
+         temp=tanh(4.96*temp2)
+         temp=temp*(1.0d0+cos(thet_s))
+         temp=cos(thet_s)-(Ca/abs(Ca))*temp
+         if (temp.gt.1.0d0) temp = 1.0d0 
+         if (temp.lt.-1.0d0) temp = -1.0d0 
+         thet_d=acos(temp)
+        else
+         print *,"Ca invalid"
+         stop
+        endif
         u_slip = 0.
+        if (diag_output.eq.1) then
+         print *, "End Implement model 2, thet_d= ...",thet_d
+        endif 
 
     case (3) !Shikmurzaev2008
         if (diag_output.eq.1) then

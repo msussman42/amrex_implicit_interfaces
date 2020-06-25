@@ -10125,7 +10125,7 @@ stop
         print *,"growhi = ",growhi(1),growhi(2),growhi(SDIM)
         print *,"homflag=",homflag
         print *,"project_option=",project_option
-        print *,"operation_flag=",project_option
+        print *,"operation_flag=",operation_flag
         print *,"energyflag=",energyflag
         print *,"nsolve=",nsolve
         stop
@@ -10317,8 +10317,43 @@ stop
            ! use_HO=0
            ! constant_viscosity=1
           local_div_val=divu/VOLTERM
-          call SEM_VISC_SANITY(110,dt,xsten,nhalf,local_div_val, &
+
+          if ((local_div_val.ge.zero).or.(local_div_val.le.zero)) then
+           call SEM_VISC_SANITY(110,dt,xsten,nhalf,local_div_val, &
             -1,veldir,1,0,project_option,bfact,enable_spectral,1)
+          else
+           print *,"local_div_val invalid ",local_div_val
+           print *,"divu invalid ",divu
+           print *,"VOLTERM ",VOLTERM
+           print *,"operation_flag ",operation_flag
+           print *,"project_option ",project_option
+           print *,"AXL,AXR,AYL,AYR,AZL,AZR ", &
+                AXL,AXR,AYL,AYR,AZL,AZR
+           print *,"i,j,k ",i,j,k
+           print *,"xsten(0,?) : ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+           print *,"nhalf= ",nhalf
+           print *,"level= ",level
+           print *,"finest_level= ",finest_level
+           print *,"tilelo = ",tilelo(1),tilelo(2),tilelo(SDIM)
+           print *,"tilehi = ",tilehi(1),tilehi(2),tilehi(SDIM)
+           print *,"fablo = ",fablo(1),fablo(2),fablo(SDIM)
+           print *,"fabhi = ",fabhi(1),fabhi(2),fabhi(SDIM)
+           print *,"growlo = ",growlo(1),growlo(2),growlo(SDIM)
+           print *,"growhi = ",growhi(1),growhi(2),growhi(SDIM)
+           print *,"homflag=",homflag
+           print *,"energyflag=",energyflag
+           print *,"nsolve=",nsolve
+           print *,"veldir_left,veldir_right ",veldir_left,veldir_right
+           print *,"xvel(D_DECL(i+1,j,k),veldir_left) ", &
+                   xvel(D_DECL(i+1,j,k),veldir_left)
+           print *,"xvel(D_DECL(i,j,k),veldir_right) ", &
+                   xvel(D_DECL(i,j,k),veldir_right)
+           print *,"yvel(D_DECL(i,j+1,k),veldir_left) ", &
+                   yvel(D_DECL(i,j+1,k),veldir_left)
+           print *,"yvel(D_DECL(i,j,k),veldir_right) ", &
+                   yvel(D_DECL(i,j,k),veldir_right)
+           stop
+          endif
 
           call SEM_VISC_SANITY_CC(1,dt,CC,MSKDV,MSKRES,MDOT, &
            VOLTERM,project_option,xsten,nhalf,veldir)

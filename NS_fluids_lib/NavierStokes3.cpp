@@ -2455,6 +2455,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     } else
      amrex::Error("slab_step invalid");
 
+
      // in: NavierStokes::do_the_advance
     allocate_levelsetLO_ALL(1,LEVELPC_MF);
 
@@ -2997,6 +2998,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     debug_memory();
 
+
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
        // if face_flag==0: unew^{f} = unew^{c->f}
@@ -3144,7 +3146,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        //   h. Marangoni force and conservative surface tension force
        //
        veldiffuseALL();  
-  
+
        debug_memory();
   
        double end_velocity_diff = ParallelDescriptor::second();
@@ -8610,6 +8612,7 @@ void NavierStokes::multiphase_project(int project_option) {
   ADVECT_DIV_ALL();
  } // project_option==11
 
+
   // pressure extension
  if (project_option==12) {
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
@@ -8813,6 +8816,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  std::fflush(NULL);
 
+
   // automatically initializes mac_phi_crse_array=0.0
  allocate_independent_var(nsolve,MAC_PHI_CRSE_MF);
   // automatically initializes mac_rhs_crse_array=0.0
@@ -8840,6 +8844,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // gravity and surface tension
   process_potential_forceALL();
 
+
 // 1. overwrites cell/face velocity perhaps
 // 2. must be called before adding gravity and surface tension.
 // 3. cannot be called after the project because the velocity
@@ -8863,6 +8868,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   deallocate_potential_forceALL(); 
 
+
    // div up and grad p  cell/face
    // T=T-(1/(rho cv))(int div(up)-dt div(up))
    // u=u-(1/rho)(int gp - dt gp)
@@ -8882,6 +8888,7 @@ void NavierStokes::multiphase_project(int project_option) {
    amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
  }  // project_option==0 or project_option==13
+
 
  if (project_option==11) {
    check_value_max(3,DIFFUSIONRHS_MF,0,1,0,0.0);
@@ -8981,6 +8988,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   if (nsolve!=1)
    amrex::Error("nsolve invalid");
+
 
   if ((project_option==0)||
       (project_option==10)||

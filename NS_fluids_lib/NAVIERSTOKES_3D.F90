@@ -13603,7 +13603,7 @@ END SUBROUTINE SIMP
        enddo
        enddo
        enddo ! i,j,k
-      enddo ! dir  
+      enddo ! dir=0..sdim-1 
 
       return
       end subroutine FORT_METRICS

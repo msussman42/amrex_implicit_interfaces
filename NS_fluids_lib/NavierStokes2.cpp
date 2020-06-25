@@ -5635,6 +5635,7 @@ void NavierStokes::process_potential_forceALL() {
     amrex::Error("ns_level.localMF_grow[AMRSYNC_PRES_MF+dir] bad");
   } // dir=0..sdim-1
  } // ilev=level..finest_level
+ 
 
  // must go from coarsest to finest level since
  // hydrostatic pressure and density are interpolated (pcinterp)
@@ -6139,7 +6140,7 @@ void NavierStokes::process_potential_force_cell() {
 
  int finest_level=parent->finestLevel();
 
- int operation_flag=2;
+ int operation_flag=4;
  
  bool use_tiling=ns_tiling;
 
@@ -6185,6 +6186,13 @@ void NavierStokes::process_potential_force_cell() {
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
  debug_ngrow(SLOPE_RECON_MF,1,132);
+
+ debug_ngrow(VOLUME_MF,0,751);
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (localMF[AREA_MF+dir]->boxArray()!=
+      localMF[FACE_VAR_MF+dir]->boxArray())
+   amrex::Error("boxarrays do not match");
+ }
 
  int fluxvel_index=0;
  int fluxden_index=AMREX_SPACEDIM;
@@ -6252,7 +6260,10 @@ void NavierStokes::process_potential_force_cell() {
   Vector<int> velbc=getBCArray(State_Type,gridno,0,
     num_materials_vel*AMREX_SPACEDIM);
 
-  FArrayBox& vol=(*localMF[VOLUME_MF])[mfi];
+  FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
+  FArrayBox& areax=(*localMF[AREA_MF])[mfi];
+  FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
+  FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& xp=(*localMF[POTENTIAL_EDGE_MF])[mfi];
   FArrayBox& yp=(*localMF[POTENTIAL_EDGE_MF+1])[mfi];
@@ -6265,7 +6276,6 @@ void NavierStokes::process_potential_force_cell() {
   FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi]; // 1=fine/fine
   FArrayBox& maskcoef=(*localMF[MASKCOEF_MF])[mfi]; // 1=not cov
 
-  operation_flag=4;
   int energyflag=0;
   int homflag=0; // default
   int local_project_option=0;
@@ -6337,11 +6347,11 @@ void NavierStokes::process_potential_force_cell() {
    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
-   xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //ax
-   yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()), //ay
-   zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()), //az
-   vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
-   vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()), //rhs
+   areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()), //ax
+   areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()), //ay
+   areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()), //az
+   volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
+   volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()), //rhs
    gcell.dataPtr(),ARLIM(gcell.loVect()),ARLIM(gcell.hiVect()), // veldest
    gcell.dataPtr(),ARLIM(gcell.loVect()),ARLIM(gcell.hiVect()), // dendest
    maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
@@ -6397,6 +6407,20 @@ void NavierStokes::metrics_dataALL(int ngrow) {
   ns_level.metrics_data(ngrow);
  }
 }
+
+
+void NavierStokes::metrics_data_min_max_ALL(int caller_id) {
+
+ std::fflush(NULL);
+
+ int finest_level=parent->finestLevel();
+ for (int ilev=0;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.metrics_data_min_max(caller_id);
+ }
+ std::fflush(NULL);
+}
+
 
 void NavierStokes::metrics_data(int ngrow) {
  
@@ -6474,6 +6498,26 @@ void NavierStokes::metrics_data(int ngrow) {
  ns_reconcile_d_num(153);
 
 } // subroutine metrics_data
+
+
+void NavierStokes::metrics_data_min_max(int caller_id) {
+
+ int ngrow=localMF_grow[VOLUME_MF];
+ std::cout << "metrics_data_min_max caller_id " << caller_id <<'\n';
+ std::cout << "metrics_data_min_max ngrow,level " << ngrow << ' ' << 
+	 level <<'\n';
+
+ std::cout << "volume_mf min= " << localMF[VOLUME_MF]->min(0,ngrow) << '\n'; 
+ std::cout << "volume_mf max= " << localMF[VOLUME_MF]->max(0,ngrow) << '\n'; 
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  std::cout << "area_mf dir,min= " << dir << ' ' <<
+	  localMF[AREA_MF+dir]->min(0,ngrow) << '\n'; 
+  std::cout << "area_mf dir,max= " << dir << ' ' <<
+	  localMF[AREA_MF+dir]->max(0,ngrow) << '\n'; 
+ }
+
+} // subroutine metrics_data_min_max
+
 
 void NavierStokes::prescribe_solid_geometryALL(Real time,
   int renormalize_only,int local_truncate) {

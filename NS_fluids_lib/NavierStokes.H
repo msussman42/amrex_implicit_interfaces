@@ -849,6 +849,7 @@ protected:
 
     void show_norm2(MultiFab* mf,int scomp,int ncomp,int id);
     void show_norm2_id(int mf_id,int id);
+     // mf_check_inf_bounds must be 1.
     void check_value_max(int id,int mf_id,int scomp, 
 		int ncomp,int ngrow,Real max_value);
     void check_value_max_level(int id,MultiFab* mf,
@@ -1318,7 +1319,9 @@ void apply_pressure_grad(
 
     void resize_metrics(int ngrow);
     void metrics_data(int ngrow);
+    void metrics_data_min_max(int caller_id);
     void metrics_dataALL(int ngrow);
+    void metrics_data_min_max_ALL(int caller_id);
 
     MultiFab* maskfiner(int ngrow,Real tag,int clear_phys_boundary);
 
