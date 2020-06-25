@@ -4456,6 +4456,18 @@ stop
       ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
       ! grad=(d/dr,d/dz) or
       ! grad=(d/dr,d/dtheta,d/dz)
+      ! for evaporation the following equations are needed:
+      ! T_interface=f_{1}(Y_interface)  (Clasius Clapyron condition)
+      ! mdot_T = mdot_Y
+      ! T_interface=f_{2}(Y_interface)
+      ! f_{1} is an increasing function
+      ! f_{2} is a decreasing function.
+      ! Look for intersection of f_{1} and f_{2}
+      ! g(Y)=f_{1}(y)-f_{2}(y)
+      ! Y0 given
+      ! Y_{n+1} = Y_{n} - g(Y_n)/( (g(Y_{n})-g(Y_{n-1}))/(Y_{n}-Y_{n-1}))
+      ! Palmore and Desjardins
+      ! Secant method will be implemented.
       subroutine FORT_RATEMASSCHANGE( &
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
@@ -5385,7 +5397,7 @@ stop
                 call copy_dimdec(DIMS(PROBE_PARMS%recon),DIMS(recon))
                 call copy_dimdec(DIMS(PROBE_PARMS%LS),DIMS(LS))
                 PROBE_PARMS%EOS=>EOS 
-                PROBE_PARMS%LS=>LS
+                PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
                 PROBE_PARMS%recon=>recon
                 PROBE_PARMS%xsrc=>xsrc 
                 PROBE_PARMS%xdst=>xdst
