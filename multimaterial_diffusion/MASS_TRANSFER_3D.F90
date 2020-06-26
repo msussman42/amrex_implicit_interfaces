@@ -31,6 +31,48 @@ stop
       module mass_transfer_module
       use probcommon_module
 
+      ! if t1 is a c++ parameter and p1 is a "type" component:
+      ! REAL_T, pointer :: p1(DIMV(t1),ncomp)
+      ! REAL_T, target :: t1(DIMV(t1),ncomp)
+      ! p1=>t1
+      type probe_parm_type
+       REAL_T, pointer :: xsrc(:)
+       REAL_T, pointer :: xdst(:)
+       REAL_T, pointer :: xsrc_micro(:)
+       REAL_T, pointer :: xdst_micro(:)
+       INTEGER_T, pointer :: im_source
+       INTEGER_T, pointer :: im_dest
+       INTEGER_T, pointer :: tcomp_source
+       INTEGER_T, pointer :: Ycomp_source
+       INTEGER_T, pointer :: dencomp_source
+       REAL_T, pointer :: dxprobe_source
+       INTEGER_T, pointer :: tcomp_dest
+       INTEGER_T, pointer :: Ycomp_dest
+       INTEGER_T, pointer :: dencomp_dest
+       REAL_T, pointer :: dxprobe_dest
+       REAL_T, pointer, dimension(:) :: LSINT
+       INTEGER_T, pointer :: imls_I
+       REAL_T, pointer :: dxmaxLS
+       INTEGER_T, pointer :: bfact
+       INTEGER_T, pointer :: level
+       INTEGER_T, pointer :: finest_level
+       REAL_T, pointer :: dx(:)
+       REAL_T, pointer :: xlo(:)
+       REAL_T, pointer :: xI(:)
+       INTEGER_T, pointer :: nmat
+       INTEGER_T, pointer :: ngrow
+       INTEGER_T, pointer :: fablo(:)
+       INTEGER_T, pointer :: fabhi(:)
+       INTEGER_T :: DIMDEC(EOS)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
+       INTEGER_T :: DIMDEC(recon)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: recon
+       INTEGER_T :: DIMDEC(LS)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+       REAL_T, pointer, dimension(:) :: density_floor_expansion
+       REAL_T, pointer, dimension(:) :: density_ceiling_expansion
+      end type probe_parm_type
+
       contains
 
       subroutine get_interface_temperature( &
@@ -1796,7 +1838,21 @@ stop
       return 
       end subroutine interpfab_filament_probe
 
+      subroutine probe_interpolation(PROBE_PARMS, &
+       T_I,Y_I,T_probe,Y_probe,den_probe,interp_valid_flag)
+      use global_utility_module
 
+      IMPLICIT NONE
+ 
+      type(probe_parm_type), intent(in) :: PROBE_PARMS
+      REAL_T, intent(in) :: T_I
+      REAL_T, intent(in) :: Y_I
+      REAL_T, intent(out) :: T_probe(2)
+      REAL_T, intent(out) :: Y_probe(2)
+      REAL_T, intent(out) :: den_probe(2)
+      INTEGER_T, intent(out) :: interp_valid_flag(2)
+
+      end subroutine probe_interpolation
 
       end module mass_transfer_module
 
@@ -2409,7 +2465,7 @@ stop
              (local_freezing_model.eq.1).or. &
              (local_freezing_model.eq.2)) then
           ! do nothing
-         else if ((local_freezing_model.eq.4).or. & ! Tanasawa
+         else if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                   (local_freezing_model.eq.5).or. & ! Stefan model evap/cond.
                   (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                   (local_freezing_model.eq.7)) then ! Cavitation
@@ -2426,7 +2482,7 @@ stop
            print *,"mass_frac_id invalid"
            stop
           endif
-           ! require V_evaporate = V_condense (Tanasawa model)
+           ! require V_evaporate = V_condense (Tanasawa model or Schrage)
           if (local_freezing_model.eq.4) then 
            if (LL.ne.zero) then
             if (ireverse.eq.0) then ! evaporation
@@ -3303,7 +3359,7 @@ stop
 
            if (local_freezing_model.eq.0) then ! standard Stefan model
             ! do nothing
-           else if ((local_freezing_model.eq.4).or. & ! Tannasawa model
+           else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
                     (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
                     (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                     (local_freezing_model.eq.7)) then ! Cavitation
@@ -3448,7 +3504,7 @@ stop
 
               ! evaporation: im_source=liquid im_dest=surrounding gas
               ! condensation: im_source=surrounding gas im_dest=liquid
-             if ((local_freezing_model.eq.4).or. & !Tanasawa
+             if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
                  (local_freezing_model.eq.5).or. & !Stefan model evap/cond.
                  (local_freezing_model.eq.6).or. & !Palmore/Desjardins
                  (local_freezing_model.eq.7)) then !Cavitation
@@ -3515,7 +3571,7 @@ stop
 
             else if (newvfrac(im_dest).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                  (local_freezing_model.eq.5).or. & ! Stefan Evap/Cond.
                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                  (local_freezing_model.eq.7)) then ! Cavitation
@@ -3555,7 +3611,7 @@ stop
 
              snew(D_DECL(i,j,k),tcomp)=unsplit_temperature(im_source) 
 
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                  (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                  (local_freezing_model.eq.7)) then ! Cavitation
@@ -3592,7 +3648,7 @@ stop
              endif
             else if (newvfrac(im_source).le.EBVOFTOL) then
              snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa
+             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                  (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                  (local_freezing_model.eq.7)) then ! Cavitation
@@ -3772,7 +3828,7 @@ stop
             stop
            endif
 
-           if ((local_freezing_model.eq.4).or. & ! Tanasawa
+           if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
                (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                (local_freezing_model.eq.7)) then ! cavitation
@@ -3994,7 +4050,7 @@ stop
              stop
 #endif
 
-            else if (local_freezing_model.eq.4) then ! Tanasawa
+            else if (local_freezing_model.eq.4) then ! Tanasawa or Schrage
               ! if LL>0 => evaporation => delete energy 
               ! if LL<0 => condensation => add energy 
               ! latent_heat: erg/g
@@ -4414,6 +4470,18 @@ stop
       ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
       ! grad=(d/dr,d/dz) or
       ! grad=(d/dr,d/dtheta,d/dz)
+      ! for evaporation the following equations are needed:
+      ! T_interface=f_{1}(Y_interface)  (Clasius Clapyron condition)
+      ! mdot_T = mdot_Y
+      ! T_interface=f_{2}(Y_interface)
+      ! f_{1} is an increasing function
+      ! f_{2} is a decreasing function.
+      ! Look for intersection of f_{1} and f_{2}
+      ! g(Y)=f_{1}(y)-f_{2}(y)
+      ! Y0 given
+      ! Y_{n+1} = Y_{n} - g(Y_n)/( (g(Y_{n})-g(Y_{n-1}))/(Y_{n}-Y_{n-1}))
+      ! Palmore and Desjardins
+      ! Secant method will be implemented.
       subroutine FORT_RATEMASSCHANGE( &
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
@@ -4451,6 +4519,7 @@ stop
        saturation_temp_curv, &
        saturation_temp_vel, &
        freezing_model, &
+       Tanasawa_or_Schrage, &
        distribute_from_target, &
        mass_fraction_id, &
        species_evaporation_density, &
@@ -4496,18 +4565,18 @@ stop
 
 
       INTEGER_T, intent(in) :: stefan_flag
-      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, target, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: normal_probe_size
       REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
       INTEGER_T, intent(in) :: nstate
-      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, target, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
       INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: nden
-      REAL_T, intent(in) :: density_floor_expansion(nmat)
-      REAL_T, intent(in) :: density_ceiling_expansion(nmat)
+      REAL_T, target, intent(in) :: density_floor_expansion(nmat)
+      REAL_T, target, intent(in) :: density_ceiling_expansion(nmat)
       INTEGER_T, intent(in) :: custom_nucleation_model
       INTEGER_T, intent(in) :: do_the_nucleate
       INTEGER_T, intent(in) :: nucleate_pos_size
@@ -4532,17 +4601,18 @@ stop
       REAL_T, intent(in) :: saturation_temp_curv(2*nten)
       REAL_T, intent(in) :: saturation_temp_vel(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: molar_mass(nmat)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, target, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, target, intent(in) :: bfact
+      REAL_T, target, intent(in) :: xlo(SDIM)
+      REAL_T, target, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: prev_time
       REAL_T :: cur_time
       REAL_T, intent(in) :: dt
@@ -4577,13 +4647,13 @@ stop
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
+      REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
       REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
       REAL_T, intent(inout) :: Snew(DIMV(Snew),nstate)
       REAL_T, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
-      REAL_T, intent(in) :: EOS(DIMV(EOS),nden)
+      REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
        ! F,X,order,SL,I x nmat
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
+      REAL_T, target, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: pres(DIMV(pres)) 
       REAL_T, intent(in) :: pres_eos(DIMV(pres_eos)) 
       REAL_T, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
@@ -4593,29 +4663,31 @@ stop
       INTEGER_T im,im_opp,ireverse,iten,imls
       INTEGER_T im_ambient
       INTEGER_T im_primary
-      INTEGER_T imls_I
+      INTEGER_T, target :: imls_I
       INTEGER_T im_substrate_source
       INTEGER_T im_substrate_dest
-      INTEGER_T im_source,im_dest,ngrow
+      INTEGER_T, target :: im_source,im_dest
+      INTEGER_T, target :: ngrow
       INTEGER_T nten_test
-      INTEGER_T tcomp_source
-      INTEGER_T tcomp_dest
-      INTEGER_T Ycomp_source
-      INTEGER_T Ycomp_dest
+      INTEGER_T, target :: tcomp_source
+      INTEGER_T, target :: tcomp_dest
+      INTEGER_T, target :: Ycomp_source
+      INTEGER_T, target :: Ycomp_dest
       REAL_T velmag_sum,local_velmag
       INTEGER_T burnflag
-      REAL_T dxmin,dxmax,dxmaxLS
+      REAL_T dxmin,dxmax
+      REAL_T, target :: dxmaxLS
       REAL_T xsten(-3:3,SDIM)
-      REAL_T xI(SDIM)
-      REAL_T xsrc(SDIM)
-      REAL_T xdst(SDIM)
-      REAL_T xsrc_micro(SDIM)
-      REAL_T xdst_micro(SDIM)
+      REAL_T, target :: xI(SDIM)
+      REAL_T, target :: xsrc(SDIM)
+      REAL_T, target :: xdst(SDIM)
+      REAL_T, target :: xsrc_micro(SDIM)
+      REAL_T, target :: xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
       REAL_T nrmFD(SDIM)  ! finite difference normal
       REAL_T nrmPROBE(SDIM)  ! must choose nrmCP is microstructure.
       REAL_T theta_nrmPROBE(SDIM)
-      REAL_T LSINT(nmat*(SDIM+1))
+      REAL_T, target :: LSINT(nmat*(SDIM+1))
       REAL_T LSPROBE(nmat)
       REAL_T dist_probe_sanity
       REAL_T LShere(nmat)
@@ -4628,8 +4700,8 @@ stop
       REAL_T vel_phasechange(0:1)
       REAL_T LL(0:1)
       INTEGER_T valid_phase_change(0:1)
-      REAL_T dxprobe_source
-      REAL_T dxprobe_dest
+      REAL_T, target :: dxprobe_source
+      REAL_T, target :: dxprobe_dest
       REAL_T dxprobe_target(2)
       REAL_T ksource,kdest
       REAL_T LS_pos
@@ -4640,6 +4712,7 @@ stop
       REAL_T Ysrc_INT,Ydst_INT
       INTEGER_T concen_comp
       INTEGER_T local_freezing_model
+      INTEGER_T local_Tanasawa_or_Schrage
       INTEGER_T distribute_from_targ
       INTEGER_T pcomp
       INTEGER_T at_interface
@@ -4656,7 +4729,7 @@ stop
       REAL_T gradphi_substrate(SDIM)
       REAL_T newphi_substrate
       INTEGER_T mtype
-      INTEGER_T dencomp_source,dencomp_dest
+      INTEGER_T, target :: dencomp_source,dencomp_dest
       INTEGER_T ispec
       REAL_T evap_den
       REAL_T source_perim_factor,dest_perim_factor
@@ -4715,6 +4788,7 @@ stop
       REAL_T YMIN_INIT_ERR
       REAL_T GRAD_Y_dot_n
       INTEGER_T interp_valid_flag(2)
+      type(probe_parm_type) :: PROBE_PARMS
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -4993,11 +5067,29 @@ stop
             K_f(ireverse)=reaction_rate(iten+ireverse*nten)
 
             local_freezing_model=freezing_model(iten+ireverse*nten)
+            local_Tanasawa_or_Schrage=Tanasawa_or_Schrage(iten+ireverse*nten)
 
             ispec=mass_fraction_id(iten+ireverse*nten)
 
+            evap_den=one
+
             if ((ispec.ge.0).and.(ispec.le.num_species_var)) then
              ! do nothing
+            else
+             print *,"ispec invalid"
+             stop
+            endif
+
+            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+             evap_den=species_evaporation_density(ispec)
+            else if (ispec.eq.0) then
+             if ((local_freezing_model.eq.2).or. & !hydrate
+                 (local_freezing_model.eq.4).or. & !Tanasawa or Schrage
+                 (local_freezing_model.eq.5).or. & !stefan evap/cond
+                 (local_freezing_model.eq.6)) then !Palmore/Desjardins
+              print *,"ispec invalid"
+              stop
+             endif
             else
              print *,"ispec invalid"
              stop
@@ -5139,7 +5231,7 @@ stop
                 Ycomp_source=0
                 Ycomp_dest=0
 
-                if ((local_freezing_model.eq.4).or. & !Tanasawa
+                if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
                     (local_freezing_model.eq.5).or. & !Stefan evap/cond
                     (local_freezing_model.eq.6).or. & !Palmore/Desjardins
                     (local_freezing_model.eq.7)) then !Cavitation
@@ -5315,13 +5407,37 @@ stop
                 interp_valid_flag(1)=0
                 interp_valid_flag(2)=0
 
+                call copy_dimdec(DIMS(PROBE_PARMS%EOS),DIMS(EOS))
+                call copy_dimdec(DIMS(PROBE_PARMS%recon),DIMS(recon))
+                call copy_dimdec(DIMS(PROBE_PARMS%LS),DIMS(LS))
+                PROBE_PARMS%EOS=>EOS 
+                PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
+                PROBE_PARMS%recon=>recon
+                PROBE_PARMS%xsrc=>xsrc 
+                PROBE_PARMS%xdst=>xdst
+                PROBE_PARMS%LSINT=>LSINT
+                PROBE_PARMS%imls_I=>imls_I
+                PROBE_PARMS%dxmaxLS=>dxmaxLS
+                PROBE_PARMS%bfact=>bfact
+                PROBE_PARMS%level=>level
+                PROBE_PARMS%finest_level=>finest_level
+                PROBE_PARMS%dx=>dx
+                PROBE_PARMS%xlo=>xlo
+                PROBE_PARMS%xI=>xI
+                PROBE_PARMS%nmat=>nmat
+                PROBE_PARMS%ngrow=>ngrow
+                PROBE_PARMS%fablo=>fablo
+                PROBE_PARMS%fabhi=>fabhi
+                PROBE_PARMS%density_floor_expansion=>density_floor_expansion
+                PROBE_PARMS%density_ceiling_expansion=>density_ceiling_expansion
+
 !FIX ME
 ! 1. Y BC in diffusion solver
 ! 2. div ( rho D grad Y )/rho
-!    freezing_mod=4  Tanasawa
-!    freezing_mod=5  fully saturated evaporation?
-!    freezing_mod=6  partially saturated evaporation?
-!    freezing_mod=7  Cavitation (a seed must exist)
+!    local_freezing_model=4  Tanasawa or Schrage
+!    local_freezing_model=5  fully saturated evaporation?
+!    local_freezing_model=6  partially saturated evaporation?
+!    local_freezing_model=7  Cavitation (a seed must exist)
 
                 do while (TSAT_converge.eq.0) 
 
@@ -5653,7 +5769,8 @@ stop
                   ! local_freezing_model=1 (source term model)
                   ! local_freezing_model=2 (hydrate model)
                   ! local_freezing_model=3 (wildfire)
-                  ! local_freezing_model=4 (source term model - Tanasawa Model)
+                  ! local_freezing_model=4 (source term model - Tanasawa Model
+                  !  or Schrage)
                   ! local_freezing_model=5 (evaporation/condensation)
                   ! local_freezing_model=6 (evaporation/condensation Palmore)
                   if ((local_freezing_model.eq.0).or. & !fully saturated
@@ -5662,7 +5779,7 @@ stop
                    ! do nothing
                   else if ((local_freezing_model.eq.1).or. &
                            (local_freezing_model.eq.2).or. & !hydrate
-                           (local_freezing_model.eq.4).or. & !Tanasawa
+                           (local_freezing_model.eq.4).or. & !Tanasawa,Schrage
                            (local_freezing_model.eq.7)) then !Cavitation
 
                    ! centroid -> target (cc_flag==0)
@@ -5963,7 +6080,6 @@ stop
                   if ((local_freezing_model.eq.5).or. & !stefan evap/cond
                       (local_freezing_model.eq.6)) then !Palmore/Desjardins
                    if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-                    evap_den=species_evaporation_density(ispec)
                     if (evap_den.gt.zero) then
                      if (LL(ireverse).gt.zero) then ! evaporation
                       dendst=evap_den
@@ -6130,8 +6246,8 @@ stop
 
 #if (STANDALONE==0)
                    ! if local_freezing_model==0 stefan problem
-                   !                  5, some kind of evaporation model,
-                   !                  or 1, then
+                   !  5, some kind of evaporation model,
+                   !  or 1, then
                    !  DTsrc=(Tsrc-TSAT_predict)
                    !  DTdst=(Tdst-TSAT_predict)
                    !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
@@ -6141,6 +6257,8 @@ stop
                     for_estdt, &
                     xI, &
                     local_freezing_model, &
+                    local_Tanasawa_or_Schrage, &
+                    evap_den, &
                     distribute_from_targ, &
                     VEL_correct, & ! vel
                     densrc,dendst, &
@@ -6517,6 +6635,7 @@ stop
                  endif
                  if (1.eq.0) then
                   if (local_freezing_model.eq.4) then
+                   print *,"Tanasawa or Schrage"
                    print *,"i,j,k,ireverse,vel_phasechange ", &
                     i,j,k,ireverse,vel_phasechange(ireverse)
                    print *,"im_source,im_dest ",im_source,im_dest

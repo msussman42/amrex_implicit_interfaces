@@ -125,6 +125,7 @@ extern "C"
     Real* saturation_temp_curv,
     Real* saturation_temp_vel,
     int* freezing_model,
+    int* Tanasawa_or_Schrage,
     int* distribute_from_target,
     int* mass_fraction_id,
     Real* species_evaporation_density,

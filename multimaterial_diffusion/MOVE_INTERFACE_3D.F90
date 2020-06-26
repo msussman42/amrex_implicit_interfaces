@@ -1819,6 +1819,7 @@ stop
       REAL_T microlayer_temperature_substrate(num_materials)
       INTEGER_T distribute_from_target(2*nten_in)
       INTEGER_T mass_fraction_id(2*nten_in)
+      INTEGER_T Tanasawa_or_Schrage(2*nten_in)
       REAL_T species_evaporation_density(num_materials)
 
       REAL_T l1_interface(nten_in)
@@ -2054,6 +2055,7 @@ stop
        do iten=1,2*nten
         distribute_from_target(iten)=0
         mass_fraction_id(iten)=0
+        Tanasawa_or_Schrage(iten)=0
        enddo
        do im=1,nmat
         species_evaporation_density(im)=1.0d0
@@ -2411,6 +2413,7 @@ stop
          saturation_temp_curv, &
          saturation_temp_vel, &
          freezing_model, &
+         Tanasawa_or_Schrage, &
          distribute_from_target, &
          mass_fraction_id, &
          species_evaporation_density, &
