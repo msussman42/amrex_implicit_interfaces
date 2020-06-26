@@ -76,6 +76,7 @@ ns.stiffCP = 4.1855 2.225 2.080 # kluge factor 10e+13
 ns.latent_heat=0.0 -3.915 0.0 0.0 0.0 0.0 # kluge factor 10e+13
 ns.reaction_rate=0.0 6.5e-8 0.0 0.0 0.0 0.0 
 ns.freezing_model=0 2 0 0 0 0 
+ns.mass_fraction_id=0 1 0 0 0 0 
 ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0  # make zero in order to disable hydrate formation.
 # E=(1/2) u^2 + e(rho,T)
 ns.temperature_primitive_variable=1 1 1 1

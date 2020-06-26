@@ -36,6 +36,7 @@ stop
       ! REAL_T, target :: t1(DIMV(t1),ncomp)
       ! p1=>t1
       type probe_parm_type
+       INTEGER_T, pointer :: i,j,k
        REAL_T, pointer :: xsrc(:)
        REAL_T, pointer :: xdst(:)
        REAL_T, pointer :: xsrc_micro(:)
@@ -1839,7 +1840,10 @@ stop
       end subroutine interpfab_filament_probe
 
       subroutine probe_interpolation(PROBE_PARMS, &
-       T_I,Y_I,T_probe,Y_probe,den_probe,interp_valid_flag)
+       T_I,Y_I,T_probe,Y_probe,den_I,temp_I,Y_I, &
+       dxprobe_target, &
+       interp_valid_flag, &
+       at_interface)
       use global_utility_module
 
       IMPLICIT NONE
@@ -1849,8 +1853,596 @@ stop
       REAL_T, intent(in) :: Y_I
       REAL_T, intent(out) :: T_probe(2)
       REAL_T, intent(out) :: Y_probe(2)
-      REAL_T, intent(out) :: den_probe(2)
+      REAL_T, intent(out) :: den_I(2)
+      REAL_T, intent(out) :: temp_I(2)
+      REAL_T, intent(out) :: dxprobe_target(2)
       INTEGER_T, intent(out) :: interp_valid_flag(2)
+      INTEGER_T, intent(out) :: at_interface
+      INTEGER_T :: iprobe
+      INTEGER_T LS_pos_probe_counter
+      INTEGER_T LS_INT_VERY_CLOSE_counter
+      INTEGER_T LS_INT_OWN_counter
+      INTEGER_T VOF_pos_probe_counter
+      INTEGER_T dummy_VOF_pos_probe_counter
+      REAL_T xtarget_probe(SDIM)
+      REAL_T xtarget_probe_micro(SDIM)
+      INTEGER_T im_target_probe(2) ! source,dest
+      INTEGER_T im_primary_probe(2)
+      INTEGER_T im_secondary_probe(2)
+      INTEGER_T im_target_probe_opp(2)
+      INTEGER_T Ycomp_probe(2)
+      INTEGER_T tcomp_probe(2)
+      INTEGER_T dencomp_probe(2)
+      REAL_T LSPROBE(nmat)
+      REAL_T dist_probe_sanity
+
+       ! 0=cannot do least squares interp or supermesh interp.
+       ! 1=can do least squares interp
+       ! 2=can do supermesh interp.
+       ! iprobe=1 source
+       ! iprobe=2 dest
+      interp_valid_flag(1)=0
+      interp_valid_flag(2)=0
+
+      LS_pos_probe_counter=0
+      LS_INT_VERY_CLOSE_counter=0
+      LS_INT_OWN_counter=0
+      VOF_pos_probe_counter=0
+
+      do iprobe=1,2
+
+       if (iprobe.eq.1) then ! source
+        do dir=1,SDIM
+         xtarget_probe(dir)=PROBE_PARMS%xsrc(dir)
+         xtarget_probe_micro(dir)=PROBE_PARMS%xsrc_micro(dir)
+        enddo
+        im_target_probe(iprobe)=PROBE_PARMS%im_source
+        im_target_probe_opp(iprobe)=PROBE_PARMS%im_dest
+        tcomp_probe(iprobe)=PROBE_PARMS%tcomp_source
+        Ycomp_probe(iprobe)=PROBE_PARMS%Ycomp_source
+        dencomp_probe(iprobe)=PROBE_PARMS%dencomp_source
+        dxprobe_target(iprobe)=PROBE_PARMS%dxprobe_source
+     else if (iprobe.eq.2) then  ! dest
+      do dir=1,SDIM
+       xtarget_probe(dir)=xdst(dir)
+       xtarget_probe_micro(dir)=xdst_micro(dir)
+      enddo
+      im_target_probe(iprobe)=im_dest
+      im_target_probe_opp(iprobe)=im_source
+      tcomp_probe(iprobe)=tcomp_dest
+      Ycomp_probe(iprobe)=Ycomp_dest
+      dencomp_probe(iprobe)=dencomp_dest
+      dxprobe_target(iprobe)=dxprobe_dest
+     else
+      print *,"iprobe invalid"
+      stop
+     endif
+  
+      ! imls_I dominates at the interface. 
+     if (imls_I.eq.im_target_probe(iprobe)) then
+      LS_INT_OWN_counter=LS_INT_OWN_counter+1
+     else if ((imls_I.ge.1).and.(imls_I.le.nmat)) then
+      ! do nothing
+     else
+      print *,"imls_I invalid"
+      stop
+     endif
+
+     if (LSINT(im_target_probe(iprobe)).ge.-dxmaxLS) then
+      LS_INT_VERY_CLOSE_counter=LS_INT_VERY_CLOSE_counter+1
+     else if (LSINT(im_target_probe(iprobe)).le.-dxmaxLS) then
+      ! do nothing
+     else
+      print *,"LSINT(im_target_probe) invalid"
+      stop
+     endif
+
+     mtype=fort_material_type(im_target_probe(iprobe))
+     if ((mtype.ge.0).and. &
+         (mtype.le.fort_max_num_eos)) then
+      call interpfabFWEIGHT( &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo,xI, &
+       im_target_probe(iprobe), &
+       nmat, &
+       dencomp_probe(iprobe), &
+       ngrow, &
+       fablo,fabhi, &
+       EOS,DIMS(EOS), &
+       recon,DIMS(recon), &
+       den_targetINT(iprobe))
+
+      if (den_targetINT(iprobe).lt. &
+          density_floor_expansion(im_target_probe(iprobe))) then
+       den_targetINT(iprobe)= &
+         density_floor_expansion(im_target_probe(iprobe))
+      endif
+      if (den_targetINT(iprobe).gt. &
+          density_ceiling_expansion(im_target_probe(iprobe))) then
+       den_targetINT(iprobe)= &
+          density_ceiling_expansion(im_target_probe(iprobe))
+      endif
+     else
+      print *,"mtype invalid"
+      stop
+     endif
+
+      ! centroid -> target (cc_flag==0)
+      ! tsat_flag==1
+      ! call center_centroid_interchange
+     call interpfabTEMP( &
+      bfact, &
+      level, &
+      finest_level, &
+      dx, &
+      xlo, &
+      xtarget_probe, &
+      xI, &
+      TSAT_predict, &
+      im_target_probe(iprobe), &
+      nmat, &
+      tcomp_probe(iprobe), &
+      ngrow, &
+      fablo,fabhi, &
+      EOS,DIMS(EOS), &
+      LS,DIMS(LS), &
+      recon,DIMS(recon), &
+      temp_target_probe(iprobe), &
+      debugrate)
+
+     if (temp_target_probe(iprobe).lt.zero) then
+      print *,"temp_target_probe went negative"
+      print *,"temp_target_probe ",temp_target_probe(iprobe)
+      stop
+     endif
+
+     if (Ycomp_probe(iprobe).ge.1) then
+
+      ! centroid -> target (cc_flag==0)
+      ! tsat_flag==1
+      ! call center_centroid_interchange
+      call interpfabTEMP( &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       xtarget_probe, &
+       xI, &
+       Y_predict, &
+       im_target_probe(iprobe), &
+       nmat, &
+       Ycomp_probe(iprobe), &
+       ngrow, &
+       fablo,fabhi, &
+       EOS,DIMS(EOS), &
+       LS,DIMS(LS), &
+       recon,DIMS(recon), &
+       Y_target_probe(iprobe), &
+       debugrate)
+
+      if ((Y_target_probe(iprobe).lt.zero).or. &
+          (Y_target_probe(iprobe).gt.one)) then
+       print *,"Y_target_probe out of bounds"
+       print *,"Y_target_probe ",Y_target_probe(iprobe)
+       stop
+      endif
+
+     else if (Ycomp_probe(iprobe).eq.0) then
+      Y_target_probe(iprobe)=one
+     else
+      print *,"Ycomp_probe invalid"
+      stop
+     endif
+
+     do imls=1,nmat
+       ! center -> target (cc_flag==1)
+       ! tsat_flag==-1
+       ! call center_centroid_interchange
+      call interpfab( &
+        bfact, &
+        level, &
+        finest_level, &
+        dx, &
+        xlo, &
+        xtarget_probe, &
+        imls, &
+        ngrow, &
+        fablo,fabhi, &
+        LS,DIMS(LS), &
+        LSPROBE(imls))
+     enddo ! imls=1..nmat
+
+     call get_primary_material(LSPROBE,nmat, &
+       im_primary_probe(iprobe))
+
+     if (DEBUG_TRIPLE.eq.1) then
+      if ((DEBUG_I.eq.i).and. &
+          (DEBUG_J.eq.j)) then
+       print *,"i,j,im_primary,im_target ", &
+         im_primary_probe(iprobe), &
+         im_target_probe(iprobe)
+      endif
+     endif
+
+     if (im_primary_probe(iprobe).eq. &
+         im_target_probe(iprobe)) then
+
+      interp_valid_flag(iprobe)=1
+
+      LS_pos_probe_counter=LS_pos_probe_counter+1
+
+      call grad_probe_sanity(xI, &
+        xtarget_probe, &
+        temp_target_probe(iprobe), &
+        TSAT_predict, &
+        LL(ireverse))
+
+      call grad_probe_sanity(xI, &
+        xtarget_probe, &
+        Y_target_probe(iprobe), &
+        Y_predict, &
+        LL(ireverse))
+
+     else if ((im_primary_probe(iprobe).ne. &
+               im_target_probe(iprobe)).and. &
+              (im_primary_probe(iprobe).ge.1).and. &
+              (im_primary_probe(iprobe).le.nmat)) then
+
+        ! default value for temp_target_probe
+      temp_target_probe(iprobe)=TSAT_predict
+        ! default value for Y_target_probe
+      Y_target_probe(iprobe)=Y_predict
+
+      call get_secondary_material(LSPROBE,nmat, &
+         im_primary_probe(iprobe), &
+         im_secondary_probe(iprobe))
+
+      dist_probe_sanity=two*dxprobe_target(iprobe)
+
+      if ((im_secondary_probe(iprobe).eq. &
+           im_target_probe(iprobe)).and. &
+          (LSPROBE(im_target_probe(iprobe)).ge. &
+           -dist_probe_sanity)) then
+
+       interp_valid_flag(iprobe)=2
+
+       dummy_VOF_pos_probe_counter=VOF_pos_probe_counter
+
+        ! (a) find containing cell for xtarget_probe_micro
+        ! (b) if F(im_target_probe)<TOL in containing cell, then
+        !     temp_target_probe=TSAT and dxprobe_target=
+        !     ||x_probe-x_I||
+        ! (c) if F(im_target_probe)>TOL in containing cell, then
+        !     temp_target_probe=T(containing_cell,im_target)
+        !     dxprobe_target=||x_centroid-x_I||
+       call interpfab_filament_probe( &
+          bfact, &
+          level, &
+          finest_level, &
+          dx, &
+          xlo, &
+          xtarget_probe_micro, &
+          xI, &
+          TSAT_predict, &
+          im_target_probe(iprobe), &
+          nmat, &
+          tcomp_probe(iprobe), &
+          ngrow, &
+          fablo,fabhi, &
+          EOS,DIMS(EOS), &
+          LS,DIMS(LS), &
+          recon,DIMS(recon), &
+          temp_target_probe(iprobe), &  ! Temp(xprobe)
+          dxprobe_target(iprobe), &  ! |xprobe-xcp|
+          VOF_pos_probe_counter)
+
+       if (DEBUG_TRIPLE.eq.1) then
+        if ((DEBUG_I.eq.i).and. &
+            (DEBUG_J.eq.j)) then
+         print *,"i,j,VOF_pos_probe_counter,iprobe ", &
+                 i,j,VOF_pos_probe_counter,iprobe
+        endif
+       endif
+
+       if (Ycomp_probe(iprobe).ge.1) then
+        ! find the mass fraction at a probe (centroid)
+        ! location.
+        call interpfab_filament_probe( &
+          bfact, &
+          level, &
+          finest_level, &
+          dx, &
+          xlo, &
+          xtarget_probe_micro, &
+          xI, &
+          Y_predict, &
+          im_target_probe(iprobe), &
+          nmat, &
+          Ycomp_probe(iprobe), &
+          ngrow, &
+          fablo,fabhi, &
+          EOS,DIMS(EOS), &
+          LS,DIMS(LS), &
+          recon,DIMS(recon), &
+          Y_target_probe(iprobe), &  ! Y(xprobe)
+          dxprobe_target(iprobe), &  ! |xprobe-xcp|
+          dummy_VOF_pos_probe_counter)
+
+        if ((Y_target_probe(iprobe).ge.zero).and. &
+            (Y_target_probe(iprobe).le.one)) then
+         ! do nothing
+        else
+         print *,"Y_target_probe out of bounds"
+         print *,"Y_target_probe ",Y_target_probe(iprobe)
+         stop
+        endif
+
+       else if (Ycomp_probe(iprobe).eq.0) then
+        Y_target_probe(iprobe)=one
+       else
+        print *,"Ycomp_probe invalid"
+        stop
+       endif
+
+      else if ((im_secondary_probe(iprobe).ne. &
+                im_target_probe(iprobe)).or. &
+               (LSPROBE(im_target_probe(iprobe)).le. &
+                -dist_probe_sanity)) then
+       temp_target_probe(iprobe)=TSAT_predict
+       Y_target_probe(iprobe)=Y_predict
+      else
+       print *,"probe parameters bust"
+       stop
+      endif
+     else 
+      print *,"im_primary_probe invalid"
+      stop
+     endif
+
+      ! default value for temp_target_INT
+     temp_target_INT=TSAT_predict
+      ! default value for Y_target_INT
+     Y_target_INT=Y_predict
+
+     ! local_freezing_model=0 (sharp interface stefan model)
+     ! local_freezing_model=1 (source term model)
+     ! local_freezing_model=2 (hydrate model)
+     ! local_freezing_model=3 (wildfire)
+     ! local_freezing_model=4 (source term model - Tanasawa Model
+     !  or Schrage)
+     ! local_freezing_model=5 (evaporation/condensation)
+     ! local_freezing_model=6 (evaporation/condensation Palmore)
+     if ((local_freezing_model.eq.0).or. & !fully saturated
+         (local_freezing_model.eq.5).or. & !Stefan evap/cond
+         (local_freezing_model.eq.6)) then !Palmore and Desjardins
+      ! do nothing
+     else if ((local_freezing_model.eq.1).or. &
+              (local_freezing_model.eq.2).or. & !hydrate
+              (local_freezing_model.eq.4).or. & !Tanasawa,Schrage
+              (local_freezing_model.eq.7)) then !Cavitation
+
+      ! centroid -> target (cc_flag==0)
+      ! tsat_flag==0 do not use TSAT
+      ! call center_centroid_interchange
+      ! distance and volume fraction weighted linear least
+      ! squares.  If matrix system is singular, then
+      ! zeroth order least squares is used.
+      call interpfabFWEIGHT( &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       xtarget_probe, &
+       im_target_probe(iprobe), &
+       nmat, &
+       tcomp_probe(iprobe), &
+       ngrow, &
+       fablo,fabhi, &
+       EOS,DIMS(EOS), &
+       recon,DIMS(recon), &
+       temp_target_probe(iprobe))
+
+      call interpfabFWEIGHT( &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       xI, &
+       im_target_probe(iprobe), &
+       nmat, &
+       tcomp_probe(iprobe), &
+       ngrow, &
+       fablo,fabhi, &
+       EOS,DIMS(EOS), &
+       recon,DIMS(recon), &
+       temp_target_INT)
+
+       ! hydrate
+      if (local_freezing_model.eq.2) then
+       if (distribute_from_targ.ne.0) then
+        print *,"distribute_from_targ invalid"
+        stop
+       endif
+       if (num_species_var.ne.1) then
+        print *,"num_species_var invalid"
+        stop
+       endif
+
+       if (iprobe.eq.1) then
+        ! do nothing (source)
+              
+        ! dest
+       else if (iprobe.eq.2) then
+        concen_comp= &
+         (im_target_probe(iprobe)-1)*num_state_material+3
+        call interpfabFWEIGHT( &
+         bfact, &
+         level, &
+         finest_level, &
+         dx, &
+         xlo, &
+         xI, &
+         im_target_probe(iprobe), &
+         nmat, &
+         concen_comp, &
+         ngrow, &
+         fablo,fabhi, &
+         EOS,DIMS(EOS), &
+         recon,DIMS(recon), &
+         Cmethane_in_hydrate)
+        pcomp=1
+        call interpfab( &
+         bfact, &
+         level, &
+         finest_level, &
+         dx, &
+         xlo, &
+         xI, &
+         pcomp, &
+         ngrow, &
+         fablo,fabhi, &
+         pres,DIMS(pres), &
+         PHYDWATER)
+       else
+        print *,"iprobe invalid"
+        stop
+       endif
+      else if (local_freezing_model.eq.7) then ! cavitation
+       print *,"cavitation model still under construction"
+       stop
+      else if (local_freezing_model.ne.2) then
+       ! do nothing
+      else
+       print *,"local_freezing_model bust"
+       stop
+      endif  ! hydrate
+     else
+      print *,"local_freezing_model invalid in ratemasschange"
+      print *,"local_freezing_model= ",local_freezing_model
+      print *,"iten,ireverse,nten ",iten,ireverse,nten
+      stop
+     endif
+
+     if (iprobe.eq.1) then
+      tempsrc=temp_target_probe(iprobe)
+      densrc=den_targetINT(iprobe)
+      Tsrc_INT=temp_target_INT
+      Ysrc_INT=Y_target_INT
+      dxprobe_source=dxprobe_target(iprobe)
+     else if (iprobe.eq.2) then 
+      tempdst=temp_target_probe(iprobe)
+      dendst=den_targetINT(iprobe)
+      Tdst_INT=temp_target_INT
+      Ydst_INT=Y_target_INT
+      dxprobe_dest=dxprobe_target(iprobe)
+     else
+      print *,"iprobe invalid"
+      stop
+     endif
+
+     if (temp_target_probe(iprobe).lt.zero) then
+      print *,"temp_target_probe went negative"
+      print *,"temp_target_probe ",temp_target_probe(iprobe)
+      stop
+     endif
+     if (temp_target_INT.lt.zero) then
+      print *,"temp_target_INT went negative"
+      print *,"temp_target_INT ",temp_target_INT
+      stop
+     endif
+     if ((Y_target_probe(iprobe).ge.zero).and. &
+         (Y_target_probe(iprobe).le.one)) then
+      ! do nothing
+     else
+      print *,"Y_target_probe went negative"
+      print *,"Y_target_probe ",Y_target_probe(iprobe)
+      stop
+     endif
+     if ((Y_target_INT.lt.zero).or. &
+         (Y_target_INT.gt.one)) then
+      print *,"Y_target_INT went negative"
+      print *,"Y_target_INT ",Y_target_INT
+      stop
+     endif
+
+    enddo ! iprobe=1..2
+
+    at_interface=0
+
+    if (DEBUG_TRIPLE.eq.1) then
+     if ((DEBUG_I.eq.i).and. &
+         (DEBUG_J.eq.j)) then
+      print *,"i,j,LS_pos_probe_counter ", &
+             i,j,LS_pos_probe_counter 
+      print *,"i,j,LS_INT_VERY_CLOSE_counter ", &
+             i,j,LS_INT_VERY_CLOSE_counter
+      print *,"i,j,LS_INT_OWN_counter ", &
+             i,j,LS_INT_OWN_counter
+      print *,"i,j,VOF_pos_probe_counter ", &
+             i,j,VOF_pos_probe_counter
+      print *,"i,j,tempsrc,tempdst,TSAT_predict ", &
+             i,j,tempsrc,tempdst, &
+             TSAT_predict
+      print *,"i,j,LL,dxprobe_source,dxprobe_dest ", &
+             i,j,LL(ireverse),dxprobe_source,dxprobe_dest
+     endif
+    endif
+
+    if ((interp_valid_flag(1).ge.1).and. &
+        (interp_valid_flag(2).ge.1)) then
+
+      ! LS_pos_probe_counter is incremented when
+      ! im_primary_probe(iprobe)==im_target_probe(iprobe)
+     if ((LS_pos_probe_counter.eq.1).or. &
+         (LS_pos_probe_counter.eq.2)) then
+       ! LS_INT_VERY_CLOSE_counter is incremented when
+       ! LSINT(im_target_probe(iprobe)).ge.-dxmaxLS
+      if (LS_INT_VERY_CLOSE_counter.eq.2) then
+       if (LS_INT_OWN_counter.eq.1) then
+        if (LS_pos_probe_counter+VOF_pos_probe_counter.eq.2) then
+         at_interface=1
+        else if (VOF_pos_probe_counter.eq.0) then
+         ! do nothing
+        else
+         print *,"VOF_pos_probe_counter invalid"
+         stop
+        endif
+       else if (LS_INT_OWN_counter.eq.0) then
+        ! do nothing
+       else
+        print *,"LS_INT_OWN_counter invalid"
+        stop
+       endif 
+      else if ((LS_INT_VERY_CLOSE_counter.eq.1).or. &
+               (LS_INT_VERY_CLOSE_counter.eq.0)) then
+       ! do nothing
+      else
+       print *,"LS_INT_VERY_CLOSE_counter invalid"
+       stop
+      endif
+     else if (LS_pos_probe_counter.eq.0) then
+      ! do nothing
+     else
+      print *,"LS_pos_probe_counter invalid"
+      stop
+     endif
+
+    else if ((interp_valid_flag(1).eq.0).or. &
+             (interp_valid_flag(2).eq.0)) then
+     ! do nothing
+    else
+     print *,"interp_valid_flag invalid"
+     stop
+    endif
+
+
+
 
       end subroutine probe_interpolation
 
@@ -4688,8 +5280,6 @@ stop
       REAL_T nrmPROBE(SDIM)  ! must choose nrmCP is microstructure.
       REAL_T theta_nrmPROBE(SDIM)
       REAL_T, target :: LSINT(nmat*(SDIM+1))
-      REAL_T LSPROBE(nmat)
-      REAL_T dist_probe_sanity
       REAL_T LShere(nmat)
       REAL_T tempsrc
       REAL_T tempdst
@@ -4737,24 +5327,8 @@ stop
       INTEGER_T icolor,base_type,ic,im1,im2
       REAL_T normal_probe_factor
       INTEGER_T iprobe
-      REAL_T xtarget_probe(SDIM)
-      REAL_T xtarget_probe_micro(SDIM)
-      INTEGER_T im_target_probe(2) ! source,dest
-      INTEGER_T Ycomp_probe(2)
-      INTEGER_T tcomp_probe(2)
-      INTEGER_T dencomp_probe(2)
-      REAL_T temp_target_probe(2)
-      REAL_T Y_target_probe(2)
       REAL_T Y_TOLERANCE
-      REAL_T den_targetINT(2)
-      INTEGER_T im_primary_probe(2)
-      INTEGER_T im_secondary_probe(2)
-      INTEGER_T im_target_probe_opp(2)
-      INTEGER_T LS_pos_probe_counter
-      INTEGER_T LS_INT_VERY_CLOSE_counter
-      INTEGER_T LS_INT_OWN_counter
-      INTEGER_T VOF_pos_probe_counter
-      INTEGER_T dummy_VOF_pos_probe_counter
+      REAL_T den_I(2)
        ! iten=1..nten  ireverse=0..1
       REAL_T temp_target_probe_history(2*nten,2)
       REAL_T dxprobe_target_history(2*nten,2)
@@ -5399,17 +5973,12 @@ stop
                 YMIN_iter_max=5
                 TSAT_converge=0
 
-                 ! 0=cannot do least squares interp or supermesh interp.
-                 ! 1=can do least squares interp
-                 ! 2=can do supermesh interp.
-                 ! iprobe=1 source
-                 ! iprobe=2 dest
-                interp_valid_flag(1)=0
-                interp_valid_flag(2)=0
-
                 call copy_dimdec(DIMS(PROBE_PARMS%EOS),DIMS(EOS))
                 call copy_dimdec(DIMS(PROBE_PARMS%recon),DIMS(recon))
                 call copy_dimdec(DIMS(PROBE_PARMS%LS),DIMS(LS))
+                PROBE_PARMS%i=>i
+                PROBE_PARMS%j=>j
+                PROBE_PARMS%k=>k
                 PROBE_PARMS%EOS=>EOS 
                 PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
                 PROBE_PARMS%recon=>recon

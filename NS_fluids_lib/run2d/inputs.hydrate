@@ -76,6 +76,7 @@ ns.stiffCP = 4.1855e+7 2.225e+7 2.080e+7
 ns.latent_heat=0.0 -3.915e7 0.0 0.0 0.0 0.0
 ns.reaction_rate=0.0 6.5e-8 0.0 0.0 0.0 0.0
 ns.freezing_model=0 2 0 0 0 0 
+ns.mass_fraction_id=0 1 0 0 0 0 
 ns.saturation_temp = 0.0 274.0 0.0 0.0 0.0 0.0
 # E=(1/2) u^2 + e(rho,T)
 ns.temperature_primitive_variable=1 1 1 1
