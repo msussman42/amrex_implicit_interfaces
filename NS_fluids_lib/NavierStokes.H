@@ -1461,6 +1461,15 @@ protected:
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
+     // =0 do not hybridize with particles (default)
+     // =1 hybridize with particles only on the interface
+     // =2 hybridize with particles on the interface and interior
+     // particleLS_flag[im]   im=0...num_materials-1
+    static Vector<int> particleLS_flag;  
+     // =0 do not store structure of array (i,j,k) data
+     // =1 store structure of array (i,j,k) data
+    static Vector<int> structure_of_array_flag;  
+    static Vector<int> particle_spray_flag;  
     static Real truncate_thickness;  // default is 2.0
 
     // 0  low order space and time
@@ -1474,6 +1483,11 @@ protected:
      //0=div(uS)-S div(u)    1=u dot grad S  def=0
     static int  SEM_advection_algorithm;
     static int  VOF_reflux; // default is 0
+     // continuous_mof = 0 => regular MOF
+     // continuous_mof = 2 => CMOF ("continuous MOF ")
+     // continuous_mof = 3 => CLSVOF except use MOF in cells with >2 materials.
+     // continuous_mof = 4 => CLSVOF except use CMOF in cells w/ >2 materials.
+     // continuous_mof = 5 => use CLSVOF everywhere (not recommended)
     static int  continuous_mof; // default is 0
     static Real change_max;    // maximum change in dt over a timestep
     static Real change_max_init; // maximum change in dt over a timestep

@@ -274,6 +274,9 @@ int  NavierStokes::SEM_advection_algorithm=0;
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
+Vector<int> NavierStokes::particleLS_flag; 
+Vector<int> NavierStokes::structure_of_array_flag; 
+Vector<int> NavierStokes::particle_spray_flag; 
 Real NavierStokes::truncate_thickness=2.0;  
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
@@ -3575,7 +3578,13 @@ NavierStokes::read_params ()
     } // i=0..num_species_var-1
 
     truncate_volume_fractions.resize(nmat);
+    particleLS_flag.resize(nmat);
+    structure_of_array_flag.resize(nmat);
+    particle_spray_flag.resize(nmat);
     for (int i=0;i<nmat;i++) {
+     particleLS_flag[i]=0;
+     structure_of_array_flag[i]=0;
+     particle_spray_flag[i]=0;
      if ((FSI_flag[i]==0)|| // tessellating
          (FSI_flag[i]==7))  // fluid, tessellating
       truncate_volume_fractions[i]=1;
@@ -3593,11 +3602,23 @@ NavierStokes::read_params ()
       amrex::Error("FSI_flag invalid");
     }
 
+    pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
+    pp.queryarr("structure_of_array_flag",structure_of_array_flag,0,nmat);
+    pp.queryarr("particle_spray_flag",particle_spray_flag,0,nmat);
     pp.queryarr("truncate_volume_fractions",truncate_volume_fractions,0,nmat);
     for (int i=0;i<nmat;i++) {
      if ((truncate_volume_fractions[i]<0)||
          (truncate_volume_fractions[i]>1))
       amrex::Error("truncate_volume_fractions invalid");
+     if ((particleLS_flag[i]<0)||
+         (particleLS_flag[i]>2))
+      amrex::Error("particleLS_flag invalid");
+     if ((structure_of_array_flag[i]<0)||
+         (structure_of_array_flag[i]>1))
+      amrex::Error("structure_of_array_flag invalid");
+     if ((particle_spray_flag[i]<0)||
+         (particle_spray_flag[i]>1))
+      amrex::Error("particle_spray_flag invalid");
     }
 
     pp.query("truncate_thickness",truncate_thickness);
@@ -3756,6 +3777,12 @@ NavierStokes::read_params ()
         mof_ordering[i] << '\n';
       std::cout << "truncate_volume_fractions i= " << i << ' ' <<
         truncate_volume_fractions[i] << '\n';
+      std::cout << "particleLS_flag i= " << i << ' ' <<
+        particleLS_flag[i] << '\n';
+      std::cout << "structure_of_array_flag i= " << i << ' ' <<
+        structure_of_array_flag[i] << '\n';
+      std::cout << "particle_spray_flag i= " << i << ' ' <<
+        particle_spray_flag[i] << '\n';
       std::cout << "viscosity_state_model i= " << i << ' ' <<
         viscosity_state_model[i] << '\n';
       std::cout << "viscoelastic_model i= " << i << ' ' <<

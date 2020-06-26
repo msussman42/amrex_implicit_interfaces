@@ -20,6 +20,12 @@
 
 #include <StateDescriptor.H>
 
+// x,y,z is not extra; original (x,y,z), time added, #steps, are extra.
+#define N_EXTRA_REAL_BDRY (AMREX_SPACEDIM+2)
+#define N_EXTRA_REAL_BULK (AMREX_SPACEDIM+2)
+// x,y,z is not extra; mass, volume, energy
+#define N_EXTRA_REAL_SPRAY (3)
+#define N_EXTRA_SOA_ijk (AMREX_SPACEDIM)
 namespace amrex {
 
 //
@@ -207,15 +213,24 @@ private:
     // Pointer to new-time data.
     // MAX_NUM_SLAB entries.
     Vector< MultiFab* > new_data;
+     // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
+     // STRUCTURE OF ARRAYS: no base
      // for each material, there are two particle containers: (1) interface
      // particles, (2) interior particles.
-     // each particle has: x,y,z; original x,y,x; time introduced; gradient
-     // information (if interface particle)
+     // interface particles:
+     // x,y,z is not extra; original (x,y,z) and time added are extra.
+     // interior particles:
+     // x,y,z is not extra; original (x,y,z) and time added are extra.
      // last two parameters are for structure of arrays.
      // NStructReal=number of extra Real variables 
      // (not including particle position)
-    Vector< ParticleContainer< 2*AMREX_SPACEDIM+1,0,0,0 >* > new_dataPC_INT;
-    Vector< ParticleContainer< AMREX_SPACEDIM+1,0,0,0 >* > new_dataPC_BULK;
+    Vector< ParticleContainer<N_EXTRA_REAL_BDRY,0,0,0 >* > new_dataPC_BDRY;
+    Vector< ParticleContainer<N_EXTRA_REAL_BULK,0,0,0 >* > new_dataPC_BULK;
+    Vector< ParticleContainer<N_EXTRA_REAL_SPRAY,0,0,0 >* > new_dataPC_SPRAY;
+    Vector< ParticleContainer<0,0,0,N_EXTRA_SOA_ijk >* > 
+	    structure_of_arrayLS_inner;
+    Vector< ParticleContainer<0,0,0,N_EXTRA_SOA_ijk >* > 
+	    structure_of_arrayLS_outer;
     //
     // Boundary conditions for the grids at this level.
     //
