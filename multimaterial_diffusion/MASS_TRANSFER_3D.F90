@@ -36,6 +36,7 @@ stop
       ! REAL_T, target :: t1(DIMV(t1),ncomp)
       ! p1=>t1
       type probe_parm_type
+       REAL_T, pointer :: LL
        INTEGER_T, pointer :: debugrate
        INTEGER_T, pointer :: i,j,k
        REAL_T, pointer :: xsrc(:)
@@ -1874,8 +1875,8 @@ stop
       INTEGER_T Ycomp_probe(2)
       INTEGER_T tcomp_probe(2)
       INTEGER_T dencomp_probe(2)
-      REAL_T LSPROBE(nmat)
       REAL_T dist_probe_sanity
+      INTEGER_T imls
 
        ! 0=cannot do least squares interp or supermesh interp.
        ! 1=can do least squares interp
@@ -2054,170 +2055,188 @@ stop
         stop
        endif
 
-     do imls=1,nmat
-       ! center -> target (cc_flag==1)
-       ! tsat_flag==-1
-       ! call center_centroid_interchange
-      call interpfab( &
-        bfact, &
-        level, &
-        finest_level, &
-        dx, &
-        xlo, &
-        xtarget_probe, &
-        imls, &
-        ngrow, &
-        fablo,fabhi, &
-        LS,DIMS(LS), &
-        LSPROBE(imls))
-     enddo ! imls=1..nmat
+       do imls=1,nmat
+         ! center -> target (cc_flag==1)
+         ! tsat_flag==-1
+         ! call center_centroid_interchange
+        call interpfab( &
+         PROBE_PARMS%bfact, &
+         PROBE_PARMS%level, &
+         PROBE_PARMS%finest_level, &
+         PROBE_PARMS%dx, &
+         PROBE_PARMS%xlo, &
+         xtarget_probe, &
+         imls, &
+         PROBE_PARMS%ngrow, &
+         PROBE_PARMS%fablo, &
+         PROBE_PARMS%fabhi, &
+         PROBE_PARMS%LS, &
+         DIMS(PROBE_PARMS%LS), &
+         LSPROBE(imls))
+       enddo ! imls=1..nmat
 
-     call get_primary_material(LSPROBE,nmat, &
-       im_primary_probe(iprobe))
+       call get_primary_material(LSPROBE, &
+        PROBE_PARMS%nmat, &
+        im_primary_probe(iprobe))
 
-     if (DEBUG_TRIPLE.eq.1) then
-      if ((DEBUG_I.eq.i).and. &
-          (DEBUG_J.eq.j)) then
-       print *,"i,j,im_primary,im_target ", &
-         im_primary_probe(iprobe), &
-         im_target_probe(iprobe)
-      endif
-     endif
+       if (DEBUG_TRIPLE.eq.1) then
+        if ((DEBUG_I.eq.PROBE_PARMS%i).and. &
+            (DEBUG_J.eq.PROBE_PARMS%j)) then
+         print *,"i,j,im_primary,im_target ", &
+          PROBE_PARMS%i,PROBE_PARMS%j, &
+          im_primary_probe(iprobe), &
+          im_target_probe(iprobe)
+        endif
+       endif
 
-     if (im_primary_probe(iprobe).eq. &
-         im_target_probe(iprobe)) then
+       if (im_primary_probe(iprobe).eq. &
+           im_target_probe(iprobe)) then
 
-      interp_valid_flag(iprobe)=1
+        interp_valid_flag(iprobe)=1
 
-      LS_pos_probe_counter=LS_pos_probe_counter+1
+        LS_pos_probe_counter=LS_pos_probe_counter+1
 
-      call grad_probe_sanity(xI, &
-        xtarget_probe, &
-        temp_target_probe(iprobe), &
-        TSAT_predict, &
-        LL(ireverse))
+        call grad_probe_sanity( &
+         PROBE_PARMS%xI, &
+         xtarget_probe, &
+         T_probe(iprobe), &
+         T_I, &
+         PROBE_PARMS%LL)
 
-      call grad_probe_sanity(xI, &
-        xtarget_probe, &
-        Y_target_probe(iprobe), &
-        Y_predict, &
-        LL(ireverse))
+        call grad_probe_sanity( &
+         PROBE_PARMS%xI, &
+         xtarget_probe, &
+         Y_probe(iprobe), &
+         Y_I, &
+         PROBE_PARMS%LL)
 
-     else if ((im_primary_probe(iprobe).ne. &
-               im_target_probe(iprobe)).and. &
-              (im_primary_probe(iprobe).ge.1).and. &
-              (im_primary_probe(iprobe).le.nmat)) then
+       else if ((im_primary_probe(iprobe).ne. &
+                 im_target_probe(iprobe)).and. &
+                (im_primary_probe(iprobe).ge.1).and. &
+                (im_primary_probe(iprobe).le. &
+                PROBE_PARMS%nmat)) then
 
-        ! default value for temp_target_probe
-      temp_target_probe(iprobe)=TSAT_predict
-        ! default value for Y_target_probe
-      Y_target_probe(iprobe)=Y_predict
+        ! default value for T_probe
+        T_probe(iprobe)=T_I
+        ! default value for Y_probe
+        Y_probe(iprobe)=Y_I
 
-      call get_secondary_material(LSPROBE,nmat, &
+        call get_secondary_material(LSPROBE, &
+         PROBE_PARMS%nmat, &
          im_primary_probe(iprobe), &
          im_secondary_probe(iprobe))
 
-      dist_probe_sanity=two*dxprobe_target(iprobe)
+        dist_probe_sanity=two*dxprobe_target(iprobe)
 
-      if ((im_secondary_probe(iprobe).eq. &
-           im_target_probe(iprobe)).and. &
-          (LSPROBE(im_target_probe(iprobe)).ge. &
-           -dist_probe_sanity)) then
+        if ((im_secondary_probe(iprobe).eq. &
+             im_target_probe(iprobe)).and. &
+            (LSPROBE(im_target_probe(iprobe)).ge. &
+             -dist_probe_sanity)) then
 
-       interp_valid_flag(iprobe)=2
+         interp_valid_flag(iprobe)=2
 
-       dummy_VOF_pos_probe_counter=VOF_pos_probe_counter
+         dummy_VOF_pos_probe_counter=VOF_pos_probe_counter
 
-        ! (a) find containing cell for xtarget_probe_micro
-        ! (b) if F(im_target_probe)<TOL in containing cell, then
-        !     temp_target_probe=TSAT and dxprobe_target=
-        !     ||x_probe-x_I||
-        ! (c) if F(im_target_probe)>TOL in containing cell, then
-        !     temp_target_probe=T(containing_cell,im_target)
-        !     dxprobe_target=||x_centroid-x_I||
-       call interpfab_filament_probe( &
-          bfact, &
-          level, &
-          finest_level, &
-          dx, &
-          xlo, &
+         ! (a) find containing cell for xtarget_probe_micro
+         ! (b) if F(im_target_probe)<TOL in containing cell, then
+         !     temp_target_probe=TSAT and dxprobe_target=
+         !     ||x_probe-x_I||
+         ! (c) if F(im_target_probe)>TOL in containing cell, then
+         !     temp_target_probe=T(containing_cell,im_target)
+         !     dxprobe_target=||x_centroid-x_I||
+         call interpfab_filament_probe( &
+          PROBE_PARMS%bfact, &
+          PROBE_PARMS%level, &
+          PROBE_PARMS%finest_level, &
+          PROBE_PARMS%dx, &
+          PROBE_PARMS%xlo, &
           xtarget_probe_micro, &
-          xI, &
-          TSAT_predict, &
+          PROBE_PARMS%xI, &
+          T_I, &
           im_target_probe(iprobe), &
-          nmat, &
+          PROBE_PARMS%nmat, &
           tcomp_probe(iprobe), &
-          ngrow, &
-          fablo,fabhi, &
-          EOS,DIMS(EOS), &
-          LS,DIMS(LS), &
-          recon,DIMS(recon), &
-          temp_target_probe(iprobe), &  ! Temp(xprobe)
-          dxprobe_target(iprobe), &  ! |xprobe-xcp|
+          PROBE_PARMS%ngrow, &
+          PROBE_PARMS%fablo, &
+          PROBE_PARMS%fabhi, &
+          PROBE_PARMS%EOS, &
+          DIMS(PROBE_PARMS%EOS), &
+          PROBE_PARMS%LS, &
+          DIMS(PROBE_PARMS%LS), &
+          PROBE_PARMS%recon, &
+          DIMS(PROBE_PARMS%recon), &
+          T_probe(iprobe), &
+          dxprobe_target(iprobe), &
           VOF_pos_probe_counter)
 
-       if (DEBUG_TRIPLE.eq.1) then
-        if ((DEBUG_I.eq.i).and. &
-            (DEBUG_J.eq.j)) then
-         print *,"i,j,VOF_pos_probe_counter,iprobe ", &
-                 i,j,VOF_pos_probe_counter,iprobe
-        endif
-       endif
 
-       if (Ycomp_probe(iprobe).ge.1) then
-        ! find the mass fraction at a probe (centroid)
-        ! location.
-        call interpfab_filament_probe( &
-          bfact, &
-          level, &
-          finest_level, &
-          dx, &
-          xlo, &
-          xtarget_probe_micro, &
-          xI, &
-          Y_predict, &
-          im_target_probe(iprobe), &
-          nmat, &
-          Ycomp_probe(iprobe), &
-          ngrow, &
-          fablo,fabhi, &
-          EOS,DIMS(EOS), &
-          LS,DIMS(LS), &
-          recon,DIMS(recon), &
-          Y_target_probe(iprobe), &  ! Y(xprobe)
-          dxprobe_target(iprobe), &  ! |xprobe-xcp|
-          dummy_VOF_pos_probe_counter)
 
-        if ((Y_target_probe(iprobe).ge.zero).and. &
-            (Y_target_probe(iprobe).le.one)) then
-         ! do nothing
+         if (DEBUG_TRIPLE.eq.1) then
+          if ((DEBUG_I.eq.PROBE_PARMS%i).and. &
+              (DEBUG_J.eq.PROBE_PARMS%j)) then
+           print *,"i,j,VOF_pos_probe_counter,iprobe ", &
+            PROBE_PARMS%i,PROBE_PARMS%j,VOF_pos_probe_counter,iprobe
+          endif
+         endif
+
+         if (Ycomp_probe(iprobe).ge.1) then
+          ! find the mass fraction at a probe (centroid)
+          ! location.
+          call interpfab_filament_probe( &
+           PROBE_PARMS%bfact, &
+           PROBE_PARMS%level, &
+           PROBE_PARMS%finest_level, &
+           PROBE_PARMS%dx, &
+           PROBE_PARMS%xlo, &
+           xtarget_probe_micro, &
+           PROBE_PARMS%xI, &
+           Y_I, &
+           im_target_probe(iprobe), &
+           PROBE_PARMS%nmat, &
+           Ycomp_probe(iprobe), &
+           PROBE_PARMS%ngrow, &
+           PROBE_PARMS%fablo, &
+           PROBE_PARMS%fabhi, &
+           PROBE_PARMS%EOS, &
+           DIMS(PROBE_PARMS%EOS), &
+           PROBE_PARMS%LS, &
+           DIMS(PROBE_PARMS%LS), &
+           PROBE_PARMS%recon, &
+           DIMS(PROBE_PARMS%recon), &
+           Y_probe(iprobe), &
+           dxprobe_target(iprobe), &
+           dummy_VOF_pos_probe_counter)
+
+          if ((Y_probe(iprobe).ge.zero).and. &
+              (Y_probe(iprobe).le.one)) then
+           ! do nothing
+          else
+           print *,"Y_probe out of bounds"
+           print *,"Y_probe ",Y_probe(iprobe)
+           stop
+          endif
+
+         else if (Ycomp_probe(iprobe).eq.0) then
+          Y_probe(iprobe)=one
+         else
+          print *,"Ycomp_probe invalid"
+          stop
+         endif
+
+        else if ((im_secondary_probe(iprobe).ne. &
+                  im_target_probe(iprobe)).or. &
+                 (LSPROBE(im_target_probe(iprobe)).le. &
+                  -dist_probe_sanity)) then
+         T_probe(iprobe)=T_I
+         Y_probe(iprobe)=Y_I
         else
-         print *,"Y_target_probe out of bounds"
-         print *,"Y_target_probe ",Y_target_probe(iprobe)
+         print *,"probe parameters bust"
          stop
         endif
-
-       else if (Ycomp_probe(iprobe).eq.0) then
-        Y_target_probe(iprobe)=one
-       else
-        print *,"Ycomp_probe invalid"
+       else 
+        print *,"im_primary_probe invalid"
         stop
        endif
-
-      else if ((im_secondary_probe(iprobe).ne. &
-                im_target_probe(iprobe)).or. &
-               (LSPROBE(im_target_probe(iprobe)).le. &
-                -dist_probe_sanity)) then
-       temp_target_probe(iprobe)=TSAT_predict
-       Y_target_probe(iprobe)=Y_predict
-      else
-       print *,"probe parameters bust"
-       stop
-      endif
-     else 
-      print *,"im_primary_probe invalid"
-      stop
-     endif
 
       ! default value for temp_target_INT
      temp_target_INT=TSAT_predict
@@ -5268,7 +5287,7 @@ stop
 
       INTEGER_T i,j,k
       INTEGER_T dir,dir2
-      INTEGER_T im,im_opp,ireverse,iten,imls
+      INTEGER_T im,im_opp,ireverse,iten
       INTEGER_T im_ambient
       INTEGER_T im_primary
       INTEGER_T, target :: imls_I
@@ -5992,6 +6011,7 @@ stop
                 call copy_dimdec(DIMS(PROBE_PARMS%EOS),DIMS(EOS))
                 call copy_dimdec(DIMS(PROBE_PARMS%recon),DIMS(recon))
                 call copy_dimdec(DIMS(PROBE_PARMS%LS),DIMS(LS))
+                PROBE_PARMS%LL=>LL(ireverse)
                 PROBE_PARMS%debugrate=>debugrate
                 PROBE_PARMS%i=>i
                 PROBE_PARMS%j=>j
