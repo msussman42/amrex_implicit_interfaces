@@ -2879,7 +2879,7 @@ INTEGER_T :: stand_alone_flag
     newxxblob1(1)=0.5
     newxxblob1(2)=0.5
     newxxblob1(3)=0.0
-    radradblob1=8000.0 
+    radradblob1=4000.0 
    else
     print *,"probtype invalid"
     stop

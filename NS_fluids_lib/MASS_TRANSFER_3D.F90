@@ -6595,6 +6595,7 @@ stop
                  if (TSAT_ERR.eq.zero) then
                    TSAT_converge=1
                  endif
+                  ! TSAT_iter starts at 0
                  TSAT_iter=TSAT_iter+1
                  if (TSAT_iter.gt.TSAT_iter_max) then
                    TSAT_converge=1
@@ -6610,8 +6611,8 @@ stop
 
                  if (at_interface.eq.1) then
                   if (1.eq.0) then
-                   print *,"i,j,k,TSAT_iter,TSAT_ERR ", &
-                    i,j,k,TSAT_iter,TSAT_ERR
+                   print *,"i,j,k,TSAT_iter,TSAT_iter_max,TSAT_ERR ", &
+                    i,j,k,TSAT_iter,TSAT_iter_max,TSAT_ERR
                   endif
                  endif
 

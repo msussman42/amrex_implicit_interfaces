@@ -263,8 +263,9 @@ print *,"constant_K_test= ",constant_K_test
 ! M time
 ! for dendrite growth test problem, time step is variable
 ! (fixed_dt_main==0.0)
-N_START=256
-N_FINISH=256
+! 64,128,256
+N_START=64
+N_FINISH=64
 M_START=10
 M_FACTOR=2
 
@@ -1011,9 +1012,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! extra factor of 2 is not included.   Recommended to compare
     ! with Chen et al since they observed less numerically induced 
     ! instability, than what observed by Juric and Tryggvason.
-   saturation_temp_curv(1)=0.0d0  ! 0.002 in Chen et al
+   saturation_temp_curv(1)=0.002d0  ! 0.002 in Chen et al
    saturation_temp_curv(2)=0.0d0 
-   saturation_temp_vel(1)=0.0d0   ! 0.002 in Chen et al
+   saturation_temp_vel(1)=0.002d0   ! 0.002 in Chen et al
    saturation_temp_vel(2)=0.0d0 
  
    fort_tempconst(1)=1.5d0  ! liquid (outside dendrite)
