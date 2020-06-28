@@ -491,7 +491,8 @@ stop
         print *,"im invalid 105"
         stop
        endif
-      else if (probtype.eq.400) then
+      else if ((probtype.eq.400).or. & ! gingerbreadman
+               (probtype.eq.404)) then ! Xue
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.401) then
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
@@ -606,6 +607,7 @@ stop
                (probtype.eq.13).or. &
                (probtype.eq.1).or. &
                (probtype.eq.400).or. &
+               (probtype.eq.404).or. &
                (probtype.eq.401).or. &
                (probtype.eq.402).or. &
                (probtype.eq.403)) then
@@ -719,7 +721,8 @@ stop
         print *,"probtype=",probtype
         stop
        endif
-      else if (probtype.eq.400) then
+      else if ((probtype.eq.400).or. &
+               (probtype.eq.404)) then
 
        if (iten.eq.1) then
         test_front_vel=0.0d0

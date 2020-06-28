@@ -2869,16 +2869,32 @@ INTEGER_T :: stand_alone_flag
    xxblob1(2)=0.0
    xxblob1(3)=0.0
 
-   newxxblob1(1)=2.0/30.0
-   newxxblob1(2)=2.0/30.0
-   newxxblob1(3)=0.0
-   radradblob1=30.0 
+    ! gingerbread man and Xue: 1x1 box  0<x,y<1
+   if (probtype.eq.400) then
+    newxxblob1(1)=2.0/30.0
+    newxxblob1(2)=2.0/30.0
+    newxxblob1(3)=0.0
+    radradblob1=30.0 
+   else if (probtype.eq.404) then
+    newxxblob1(1)=0.5
+    newxxblob1(2)=0.5
+    newxxblob1(3)=0.0
+    radradblob1=8000.0 
+   else
+    print *,"probtype invalid"
+    stop
+   endif
+
 
    denpaddle=one
    dampingpaddle=zero
 
    if (probtype.eq.400) then ! gingerbread
     dwave="gingeroutline"
+    print *,"opening ",dwave
+    OPEN(unit=14,file=dwave,access='sequential',form="formatted",status='old')
+   else if (probtype.eq.404) then ! Xue
+    dwave="xueoutline"
     print *,"opening ",dwave
     OPEN(unit=14,file=dwave,access='sequential',form="formatted",status='old')
    else
@@ -5722,7 +5738,8 @@ REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
           (probtype.eq.50).or. & ! paddle
           (probtype.eq.9)) then ! ship
   call advance_solid(sci_sdim,sci_curtime,sci_dt,sci_istop,sci_istep,part_id)
- else if (probtype.eq.400) then
+ else if ((probtype.eq.400).or. &
+          (probtype.eq.404)) then
   call init_gingerbread2D(CLSVOF_curtime,sci_dt,ifirst,sci_sdim,sci_istop, &
     sci_istep,ioproc,part_id,isout) 
  else if ((probtype.eq.401).or.(probtype.eq.415)) then
@@ -5902,7 +5919,8 @@ INTEGER_T :: fsi_part_id
    else if (probtype.eq.9) then
     call initship(sci_curtime,sci_dt,sci_sdim,sci_istop,sci_istep, &
       paddle_pos,paddle_vel)
-   else if (probtype.eq.400) then
+   else if ((probtype.eq.400).or. &
+            (probtype.eq.404)) then
     call init_gingerbread2D(CLSVOFtime,sci_dt,ifirst,sci_sdim,sci_istop, &
      sci_istep,ioproc,part_id,isout) 
    else if ((probtype.eq.401).or.(probtype.eq.415)) then

@@ -127,7 +127,8 @@
          xslice3D(3)=0.31
          problo3D(3)=0.0
          probhi3D(3)=0.62
-        else if (probtype_in.eq.400) then ! gingerbread man
+        else if ((probtype_in.eq.400).or. &
+                 (probtype_in.eq.404)) then ! gingerbread man or Xue
          xmap3D(1)=1
          xmap3D(2)=2
          xmap3D(3)=0
@@ -137,6 +138,13 @@
         else if (probtype_in.eq.401) then ! helix
          print *,"this geometry has no 2D analogue"
          stop
+        else if (probtype_in.eq.415) then ! shock sphere
+         xmap3D(1)=1
+         xmap3D(2)=2
+         xmap3D(3)=0
+         xslice3D(3)=zero
+         problo3D(3)=-half*dx_max_level(1)
+         probhi3D(3)=half*dx_max_level(1)
         else if (probtype_in.eq.411) then
 #if (STANDALONE==0)
          call CAV3D_SLICE(xmap3D,xslice3D,problo3D,probhi3D, &
@@ -522,6 +530,9 @@
          stop
         endif
          ! time=t^{n+1}
+         ! if FSI_flag==4, then
+         !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
+         !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &

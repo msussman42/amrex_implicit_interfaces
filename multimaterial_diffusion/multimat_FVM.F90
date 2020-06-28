@@ -2082,7 +2082,8 @@ else if ((probtype_in.eq.19).or. &
          (probtype_in.eq.20)) then
  call dist_fns(imat,x,y,dist,probtype_in)
 
-else if (probtype_in.eq.400) then
+else if ((probtype_in.eq.400).or. & ! gingerbread man
+         (probtype_in.eq.404)) then ! Xue
 
  call interp_from_fsi(imat,x,y,y,dist,2,probtype_in)
 
@@ -2407,7 +2408,8 @@ else if (probtype_in.eq.4) then
   stop
  endif
 
-else if (probtype_in.eq.400) then
+else if ((probtype_in.eq.400).or. &
+         (probtype_in.eq.404)) then
         ! call dist_concentric
 else if (probtype_in.eq.401) then
         ! call dist_concentric
@@ -2797,6 +2799,7 @@ if ((probtype_in.eq.0).or. &
     (probtype_in.eq.3).or. &
     (probtype_in.eq.4).or. &
     (probtype_in.eq.400).or. & ! gingerbread man
+    (probtype_in.eq.404).or. & ! Xue
     (probtype_in.eq.403).or. & ! dendrite
     (probtype_in.eq.5).or. &
     (probtype_in.eq.14).or. &
@@ -3153,6 +3156,8 @@ else if (probtype_in.eq.4) then
  ! do nothing
 else if (probtype_in.eq.400) then
  ! do nothing
+else if (probtype_in.eq.404) then
+ ! do nothing
 else if (probtype_in.eq.401) then
  ! do nothing
 else if (probtype_in.eq.402) then
@@ -3292,6 +3297,8 @@ else if (probtype_in.eq.3) then
 else if (probtype_in.eq.4) then
  ! do nothing
 else if (probtype_in.eq.400) then
+ ! do nothing
+else if (probtype_in.eq.404) then
  ! do nothing
 else if (probtype_in.eq.401) then
  ! do nothing
@@ -3608,13 +3615,14 @@ real(kind=8) :: radial_slope
    print *,"im invalid 4 probtype_in==4"
    stop
   endif
- else if (probtype_in.eq.400) then
+ else if ((probtype_in.eq.400).or. &
+          (probtype_in.eq.404)) then
   if (im.eq.1) then
    G_in=0.0
   else if (im.eq.2) then
    G_in=0.0
   else
-   print *,"im invalid 4 probtype_in==400"
+   print *,"im invalid 4 probtype_in==400 or 404"
    stop
   endif
 
@@ -4406,6 +4414,8 @@ else if (local_probtype.eq.4) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.400) then
         Uprescribe=0.0d0
+else if (local_probtype.eq.404) then
+        Uprescribe=0.0d0
 else if (local_probtype.eq.401) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.402) then
@@ -4473,6 +4483,8 @@ else if (local_probtype.eq.3) then
 else if (local_probtype.eq.4) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.400) then
+        Vprescribe=0.0d0
+else if (local_probtype.eq.404) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.401) then
         Vprescribe=0.0d0
@@ -4981,7 +4993,8 @@ real(kind=8)              :: radial_slope
    print *,"im invalid in exact temp"
    stop
   endif
- else if (probtype_in.eq.400)then
+ else if ((probtype_in.eq.400).or. &
+          (probtype_in.eq.404))then
 
   exact_temperature=0.0d0
 

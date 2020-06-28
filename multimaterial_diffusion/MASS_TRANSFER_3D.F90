@@ -5985,8 +5985,18 @@ stop
                 PROBE_PARMS%pres=>pres
                 PROBE_PARMS%xsrc=>xsrc 
                 PROBE_PARMS%xdst=>xdst
+                PROBE_PARMS%xsrc_micro=>xsrc_micro 
+                PROBE_PARMS%xdst_micro=>xdst_micro
                 PROBE_PARMS%LSINT=>LSINT
                 PROBE_PARMS%imls_I=>imls_I
+                PROBE_PARMS%im_source=>im_source
+                PROBE_PARMS%im_dest=>im_dest
+                PROBE_PARMS%tcomp_source=>tcomp_source
+                PROBE_PARMS%Ycomp_source=>Ycomp_source
+                PROBE_PARMS%dencomp_source=>dencomp_source
+                PROBE_PARMS%tcomp_dest=>tcomp_dest
+                PROBE_PARMS%Ycomp_dest=>Ycomp_dest
+                PROBE_PARMS%dencomp_dest=>dencomp_dest
                 PROBE_PARMS%dxmaxLS=>dxmaxLS
                 PROBE_PARMS%bfact=>bfact
                 PROBE_PARMS%level=>level
@@ -6317,9 +6327,9 @@ stop
                     fort_beta(iten+ireverse*nten), &
                     fort_expansion_factor(iten+ireverse*nten), &
                     K_f(ireverse), &
-                    Cmethane_in_hydrate, &
+                    Y_I_interp(2), & ! Cmethane_in_hydrate (dest)
                     C_w0, &
-                    PHYDWATER, &
+                    pres_I_interp(1), & ! PHYDWATER
                     Fsource,Fdest)
 #elif (STANDALONE==1)
                   if (local_freezing_model.eq.0) then
