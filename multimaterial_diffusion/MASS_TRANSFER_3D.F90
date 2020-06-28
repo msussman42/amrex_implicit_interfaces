@@ -1690,7 +1690,7 @@ stop
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: dest
-      REAL_T, intent(inout) :: dxprobe_target
+      REAL_T, intent(inout) :: dxprobe_target !interpfab_filament_probe
       INTEGER_T, intent(inout) :: VOF_pos_probe_counter
 
       INTEGER_T ic,jc,kc
@@ -5338,7 +5338,7 @@ stop
       REAL_T YMIN_ERR
       REAL_T YMIN_INIT_ERR
       REAL_T GRAD_Y_dot_n
-      INTEGER_T interp_valid_flag(2)
+      INTEGER_T interp_valid_flag(2) ! iprobe=1 source iprobe=2 dest
       type(probe_parm_type) :: PROBE_PARMS
 
 #if (STANDALONE==1)
@@ -5772,7 +5772,9 @@ stop
                 Fdest=recon(D_DECL(i,j,k),vofcomp_dest)
 
                 C_w0=fort_denconst(1)  ! density of water
-                pres_I_interp(2)=2.0D+19
+                pres_I_interp(1)=2.0D+19 ! source
+                pres_I_interp(2)=2.0D+19 ! dest
+                Y_I_interp(1)=zero
                 Y_I_interp(2)=zero ! destination, C_methane_in_hyd
 
                 tcomp_source=(im_source-1)*num_state_material+2
@@ -5947,13 +5949,16 @@ stop
 
                 TSAT_predict=local_Tsat(ireverse)
                 TSAT_correct=TSAT_predict
+
                 VEL_predict=zero
                 VEL_correct=zero
+
                 TSAT_iter=0
                 TSAT_iter_max=5
                 YMIN_iter_max=5
                 TSAT_converge=0
 
+                  ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
                 call copy_dimdec( &
                   DIMS(PROBE_PARMS%EOS), &
                   DIMS(EOS))
