@@ -3037,6 +3037,13 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   debug_ngrow(FACE_VAR_MF+dir,0,1111);
 
+ debug_ngrow(VOLUME_MF,0,751);
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (localMF[AREA_MF+dir]->boxArray()!=
+      localMF[FACE_VAR_MF+dir]->boxArray())
+   amrex::Error("boxarrays do not match");
+ }
+
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
@@ -3136,7 +3143,11 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
   FArrayBox& xvel=(*face_velocity[0])[mfi];
   FArrayBox& yvel=(*face_velocity[1])[mfi];
   FArrayBox& zvel=(*face_velocity[AMREX_SPACEDIM-1])[mfi];
-  FArrayBox& vol=(*localMF[VOLUME_MF])[mfi];
+
+  FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
+  FArrayBox& areax=(*localMF[AREA_MF])[mfi];
+  FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
+  FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
@@ -3147,7 +3158,7 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
   int local_enable_spectral=enable_spectral;
   int num_materials_face=1;
 
-  int ncomp_denold=vol.nComp();
+  int ncomp_denold=volfab.nComp();
   int ncomp_veldest=veldest.nComp();
   int ncomp_dendest=veldest.nComp();
 
@@ -3211,10 +3222,10 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
-   xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),  // ax
-   yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),  // ay
-   zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),  // az
-   vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
+   areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()), //ax
+   areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()), //ay
+   areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()), //az
+   volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()), // rhs
    veldest.dataPtr(),ARLIM(veldest.loVect()),ARLIM(veldest.hiVect()), 
    veldest.dataPtr(),ARLIM(veldest.loVect()),ARLIM(veldest.hiVect()), //dendest
@@ -3236,7 +3247,8 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//cterm
    levelpcfab.dataPtr(),
    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//pold
-   vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()), // denold
+   volfab.dataPtr(),
+   ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()), // denold
    veldest.dataPtr(),ARLIM(veldest.loVect()),ARLIM(veldest.hiVect()), //ustar
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()), 
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//mdot
