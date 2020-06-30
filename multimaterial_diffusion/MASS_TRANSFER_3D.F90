@@ -6712,19 +6712,8 @@ stop
                         ! do nothing
                        else if ((X_interface_min.le. &
                                  one-Y_TOLERANCE).and. &
-                                (X_interface_min.gt.zero)) then
-                        TSAT_correct=one/ &
-                         (one/local_Tsat_base(ireverse)- &
-                         R_Palmore_Desjardins*log(X_interface_min)/ &
-                         (abs(LL(ireverse))*molar_mass_vapor)) 
-                        T_interface_min=TSAT_correct
-                        X_correct=X_interface_min
-                        Y_correct=Y_interface_min
-                       else if (X_interface_min.eq.zero) then
-                        TSAT_correct=zero
-                        T_interface_min=zero
-                        X_correct=zero
-                        Y_correct=zero
+                                (X_interface_min.ge.zero)) then
+                        ! do nothing
                        else
                         print *,"X_interface_min invalid"
                         stop
@@ -6734,83 +6723,27 @@ stop
                        stop
                       endif
                      else if (TSAT_iter.ge.1) then
-                      denom=one/dxprobe_target(1)+one/dxprobe_target(2)
-                      if (denom.gt.zero) then
-                       Tprobe_avg=T_probe(1)/dxprobe_target(1)+ &
-                           T_probe(2)/dxprobe_target(2)
-                       if (Tprobe_avg.ge.zero) then
-                        Tprobe_avg=Tprobe_avg/denom
-                        if (den_I_interp(iprobe).gt.zero) then
-                          ! LL>0 melting   LL<0 freezing
-                          ! do nothing
-                        else
-                         print *,"den_I_interp(iprobe) invalid"
-                         stop
-                        endif
-                        if (TSAT_correct.gt.zero) then
-                         X_correct=exp(-abs(LL(ireverse))*molar_mass_vapor/ &
-                          R_Palmore_Desjardins)*(one/TSAT_correct- &
-                           one/local_Tsat_base(ireverse))
-                        else if (TSAT_correct.eq.zero) then
-                         X_correct=zero
-                         Y_correct=zero
-                        else
-                         print *,"TSAT_correct invalid"
-                         stop
-                        endif
-                        if ((X_correct.ge.zero).and.(X_correct.le.one)) then
-                         Y_correct=X_correct*molar_mass_vapor/ &
-                          ((one-X_correct)*molar_mass_ambient+ &
-                           X_correct*molar_mass_vapor)
-                         if (Y_correct.le.Y_interface_min) then
-                          Y_correct=Y_interface_min
-                          X_correct=X_interface_min
-                          TSAT_correct=T_interface_min
-                         else if (Y_correct.ge.one-Y_TOLERANCE) then
-                          Y_correct=one
-                          X_correct=one
-                          TSAT_correct=local_Tsat(ireverse)
-                         else if ((Y_correct.gt.Y_interface_min).and. &
-                                  (Y_correct.lt.one-Y_TOLERANCE)) then
-                          if (dxprobe_target(iprobe).gt.zero) then
-                           GRAD_Y_dot_n= &
-                             (Y_correct-Y_probe(iprobe))/ &
-                             dxprobe_target(iprobe) 
-                           if (GRAD_Y_dot_n.ge.zero) then
-                            TSAT_correct=Tprobe_avg- &
-                              (one/denom)* &
-                              FicksLawD(iprobe)* &
-                              den_I_interp(iprobe)* &
-                              LL(ireverse)* &
-                              GRAD_Y_dot_n/(one-Y_correct)
-                           else
-                            print *,"GRAD_Y_dot_n invalid"
-                            stop
-                           endif 
-                          else
-                           print *,"dxprobe_target(iprobe) invalid"
-                           stop
-                          endif
-                         else 
-                          print *,"Y_correct invalid"
-                          stop
-                         endif
-                        else
-                         print *,"X_correct invalid"
-                         stop
-                        endif 
-                       else
-                        print *,"Tprobe_avg invalid"
-                        stop
-                       endif
-                      else
-                       print *,"denom invalid"
-                       stop
-                      endif
+                      ! do nothing
                      else
                       print *,"TSAT_iter invalid"
                       stop
                      endif
+
+                     if ((Y_probe(iprobe).ge.one-Y_TOLERANCE).and. &
+                         (Y_probe(iprobe).le.one)) then
+                      ! do nothing
+                     else if ((Y_probe(iprobe).le. &
+                               one-Y_TOLERANCE).and. &
+                              (Y_probe(iprobe).ge.zero)) then
+
+
+                      ! FIX ME HERE DO ONE "NEWTON" METHOD ITERATION
+
+                     else
+                      print *,"Y_probe invalid"
+                      stop
+                     endif
+
                     else
                      print *,"Y_probe invalid"
                      stop
