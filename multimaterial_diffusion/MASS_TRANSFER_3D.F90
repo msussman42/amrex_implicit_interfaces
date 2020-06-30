@@ -1992,8 +1992,8 @@ stop
          PROBE_PARMS%ngrow, &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
-         PROBE_PARMS%EOS, &
-         DIMS(PROBE_PARMS%EOS), &
+         PROBE_PARMS%EOS, &        ! Fortran array box
+         DIMS(PROBE_PARMS%EOS), &  ! Fortran array box
          PROBE_PARMS%recon, &
          DIMS(PROBE_PARMS%recon), &
          den_I_interp(iprobe))
@@ -2452,6 +2452,25 @@ stop
       type(T_Y_MDOT_parm_type), intent(in) :: T_Y_PARMS
       REAL_T, intent(in) :: Y_I
       REAL_T, intent(inout) :: T_I
+      REAL_T D_MASS
+      INTEGER_T T_I_iter_max,T_I_iter,T_I_converge
+      REAL_T T_I_old
+      REAL_T T_I_new
+      REAL_T T_probe(2)
+      REAL_T Y_probe(2)
+      REAL_T den_I_interp(2)
+      REAL_T T_I_interp(2)
+      REAL_T Y_I_interp(2)
+      REAL_T pres_I_interp(2)
+      REAL_T T_probe_raw(2)
+      REAL_T dxprobe_target(2)
+      INTEGER_T interp_valid_flag(2)
+      INTEGER_T at_interface
+      REAL_T LL
+      INTEGER_T iprobe_vapor
+      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T T_I_ERR,T_I_INIT_ERR
+
 
       if ((Y_I.ge.zero).and.(Y_I.le.one)) then
 
@@ -2462,7 +2481,8 @@ stop
         if (Y_I.eq.one) then
          T_I=T_Y_PARMS%TSAT_base
         else if ((Y_I.ge.zero).and.(Y_I.lt.one)) then
-         MAX_ITER=5
+         T_I_iter_max=5
+         T_I_iter=0
          T_I_old=T_I
          T_I_new=T_I
          T_I_converge=0
@@ -2503,8 +2523,74 @@ stop
                     T_probe(2)/dxprobe_target(2))/LL
               if (T_I_coef.ne.zero) then
                T_I_new=(MDOT_Y-TAVG)/T_I_coef 
+               if (T_I_new.lt.T_Y_PARMS%TI_min) then
+                T_I_new=T_Y_PARMS%TI_min
+               endif
+               if (T_I_new.gt.T_Y_PARMS%TI_max) then
+                T_I_new=T_Y_PARMS%TI_max
+               endif
+               if ((T_I_new.ge.zero).and.(T_I_new.le.1.0d+20)) then
+                ! do nothing
+               else
+                print *,"T_I_new invalid"
+                stop
+               endif
+              else
+               print *,"T_I_coef invalid"
+               stop
+              endif
+             else
+              print *,"MDOT_Y invalid"
+              stop
+             endif
+            else
+             print *,"den_G invalid"
+             stop
+            endif
+           else
+            print *,"dxprobe_target invalid"
+            stop
+           endif
+          else
+           print *,"at_interface invalid"
+           stop
+          endif
+          T_I_ERR=abs(T_I_new-T_I_old)
 
+          T_I_old=T_I_new
+          if (T_I_iter.eq.0) then
+           T_I_INIT_ERR=T_I_ERR
+          endif
+          T_I_converge=0
+          if (T_I_ERR.eq.zero) then
+           T_I_converge=1
+          endif
 
+          ! T_I_iter starts at 0
+          T_I_iter=T_I_iter+1
+          if (T_I_iter.gt.T_I_iter_max) then
+           T_I_converge=1
+          endif
+          if (T_I_iter.gt.1) then
+           if (T_I_err.lt.(0.001d0)*T_I_INIT_ERR) then
+            T_I_converge=1
+           endif
+          endif
+
+         enddo ! do while (T_I_converge.eq.0)
+
+        else
+         print *,"Y_I invalid"
+         stop
+        endif
+       else
+        print *,"D_MASS invalid"
+        stop
+       endif
+      else
+       print *,"Y_I invalid"
+       stop
+      endif
 
       end subroutine T_Y_MDOT_associate
 
