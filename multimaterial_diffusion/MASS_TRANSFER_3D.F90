@@ -79,6 +79,14 @@ stop
        REAL_T, pointer, dimension(:) :: density_ceiling_expansion
       end type probe_parm_type
 
+      type TSAT_MASS_FRAC_parm_type
+       type(probe_parm_type), pointer :: PROBE_PARMS
+       REAL_T, pointer :: universal_gas_constant_R
+       REAL_T, pointer :: molar_mass_ambient   
+       REAL_T, pointer :: molar_mass_vapor
+       REAL_T, pointer :: TSAT_base
+      end type TSAT_MASS_FRAC_parm_type
+
       contains
 
       subroutine get_interface_temperature( &
@@ -2425,6 +2433,30 @@ stop
  
       return
       end subroutine probe_interpolation
+
+      subroutine TSAT_MASS_FRAC_association( &
+       TSAT_Y_PARMS, &
+       Y_I,T_I)
+      IMPLICIT NONE
+
+      type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
+      REAL_T, intent(in) :: Y_I
+      REAL_T, intent(in) :: T_I
+      REAL_T :: X_I
+
+      if ((Y_I.ge.zero).and.(Y_I.le.one)) then
+       WA=TSAT_Y_PARMS%molar_mass_ambient
+       WV=TSAT_Y_PARMS%molar_mass_vapor
+       R=TSAT_Y_PARMS%universal_gas_constant_R
+       LL=TSAT_Y_PARMS&PROBE_PARMS%LL
+       TSAT_base=TSAT_Y_PARMS%TSAT_base
+       if ((WA.gt.zero).and.(WV.gt.zero).and.(R.gt.zero)) then
+        X_I=WA*Y_I/(WV*(one-Y_I)+WA*Y_I)
+        if ((X_I.ge.zero).and.(X_I.le.one)) then
+         if (TSAT_base.gt.zero) then
+           
+      end subroutine TSAT_MASS_FRAC_association
+
 
       end module mass_transfer_module
 
