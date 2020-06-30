@@ -89,6 +89,14 @@ stop
        REAL_T, pointer :: TI_max
       end type TSAT_MASS_FRAC_parm_type
 
+      type T_Y_MDOT_parm_type
+       type(probe_parm_type), pointer :: PROBE_PARMS
+       REAL_T, pointer :: TSAT_base
+       REAL_T, pointer :: D_MASS
+       REAL_T, pointer :: TI_min
+       REAL_T, pointer :: TI_max
+      end type T_Y_MDOT_parm_type
+
       contains
 
       subroutine get_interface_temperature( &
@@ -2435,6 +2443,70 @@ stop
  
       return
       end subroutine probe_interpolation
+
+      subroutine T_Y_MDOT_associate( &
+       T_Y_PARMS, &
+       Y_I,T_I)
+      IMPLICIT NONE
+
+      type(T_Y_MDOT_parm_type), intent(in) :: T_Y_PARMS
+      REAL_T, intent(in) :: Y_I
+      REAL_T, intent(inout) :: T_I
+
+      if ((Y_I.ge.zero).and.(Y_I.le.one)) then
+
+       D_MASS=T_Y_PARMS%D_MASS
+       if (D_MASS.eq.zero) then
+        T_I=T_Y_PARMS%TSAT_base
+       else if (D_MASS.gt.zero) then
+        if (Y_I.eq.one) then
+         T_I=T_Y_PARMS%TSAT_base
+        else if ((Y_I.ge.zero).and.(Y_I.lt.one)) then
+         MAX_ITER=5
+         T_I_old=T_I
+         T_I_new=T_I
+         T_I_converge=0
+         do while (T_I_converge.eq.0)
+
+          !iprobe=1 source
+          !iprobe=2 dest
+          call probe_interpolation( &
+           T_Y_PARMS%PROBE_PARMS, &
+           T_I_old,Y_I, &
+           T_probe,Y_probe, &
+           den_I_interp,T_I_interp,Y_I_interp, &
+           pres_I_interp, &
+           T_probe_raw, &
+           dxprobe_target, &
+           interp_valid_flag, &
+           at_interface)
+
+          if (at_interface.eq.1) then
+           LL=T_Y_PARMS%PROBE_PARMS%LL
+           if (LL.gt.zero) then
+            iprobe_vapor=2 ! dest (evaporation)
+           else if (LL.lt.zero) then
+            iprobe_vapor=1 ! source (condensation)
+           else
+            print *,"LL invalid"
+            stop
+           endif
+           if ((dxprobe_target(1).gt.zero).and. &
+               (dxprobe_target(2).gt.zero)) then
+            den_G=den_I_interp(iprobe_vapor)
+            if (den_G.gt.zero) then
+             MDOT_Y=den_G*D_MASS*(Y_I-Y_probe(iprobe_vapor))/ &
+              ((one-Y_I)*dxprobe_target(iprobe_vapor))
+             if (MDOT_Y.ge.zero) then
+              T_I_coef=-(one/dxprobe_target(1)+one/dxprobe_target(2))/LL
+              TAVG=(T_probe(1)/dxprobe_target(1)+ &
+                    T_probe(2)/dxprobe_target(2))/LL
+              if (T_I_coef.ne.zero) then
+               T_I_new=(MDOT_Y-TAVG)/T_I_coef 
+
+
+
+      end subroutine T_Y_MDOT_associate
 
       subroutine TSAT_MASS_FRAC_association( &
        TSAT_Y_PARMS, &
