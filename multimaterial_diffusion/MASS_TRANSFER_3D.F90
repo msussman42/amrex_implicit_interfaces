@@ -85,6 +85,8 @@ stop
        REAL_T, pointer :: molar_mass_ambient   
        REAL_T, pointer :: molar_mass_vapor
        REAL_T, pointer :: TSAT_base
+       REAL_T, pointer :: TI_min
+       REAL_T, pointer :: TI_max
       end type TSAT_MASS_FRAC_parm_type
 
       contains
@@ -2441,19 +2443,81 @@ stop
 
       type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
       REAL_T, intent(in) :: Y_I
-      REAL_T, intent(in) :: T_I
+      REAL_T, intent(out) :: T_I
       REAL_T :: X_I
+      REAL_T :: LL,R,TSAT_base,WA,WV
 
       if ((Y_I.ge.zero).and.(Y_I.le.one)) then
        WA=TSAT_Y_PARMS%molar_mass_ambient
        WV=TSAT_Y_PARMS%molar_mass_vapor
        R=TSAT_Y_PARMS%universal_gas_constant_R
-       LL=TSAT_Y_PARMS&PROBE_PARMS%LL
-       TSAT_base=TSAT_Y_PARMS%TSAT_base
-       if ((WA.gt.zero).and.(WV.gt.zero).and.(R.gt.zero)) then
-        X_I=WA*Y_I/(WV*(one-Y_I)+WA*Y_I)
-        if ((X_I.ge.zero).and.(X_I.le.one)) then
-         if (TSAT_base.gt.zero) then
+       LL=TSAT_Y_PARMS%PROBE_PARMS%LL
+
+       if ((LL.gt.zero).or.(LL.lt.zero)) then
+
+        TSAT_base=TSAT_Y_PARMS%TSAT_base
+        if ((WA.gt.zero).and.(WV.gt.zero).and.(R.gt.zero)) then
+         X_I=WA*Y_I/(WV*(one-Y_I)+WA*Y_I)
+         if ((X_I.ge.zero).and.(X_I.le.one)) then
+          if (TSAT_base.gt.zero) then
+           if (X_I.eq.zero) then
+            if (LL.gt.zero) then
+             T_I=TSAT_Y_PARMS%TI_min
+            else if (LL.lt.zero) then
+             T_I=TSAT_Y_PARMS%TI_max
+            else
+             print *,"LL invalid"
+             stop
+            endif
+           else if (X_I.eq.one) then
+            T_I=TSAT_base
+           else if ((X_I.gt.zero).and.(X_I.lt.one)) then
+            T_I=-log(X_I)*R/(LL*WV)
+            T_I=T_I+one/TSAT_base
+            if (T_I.gt.zero) then
+             T_I=one/T_I
+            else if (T_I.le.zero) then
+             T_I=TSAT_Y_PARMS%TI_min
+            else
+             print *,"T_I invalid"
+             stop
+            endif
+           else
+            print *,"X_I invalid"
+            stop
+           endif
+           if (T_I.lt.TSAT_Y_PARMS%TI_min) then
+            T_I=TSAT_Y_PARMS%TI_min
+           endif
+           if (T_I.gt.TSAT_Y_PARMS%TI_max) then
+            T_I=TSAT_Y_PARMS%TI_max
+           endif
+           if ((T_I.gt.zero).and.(T_I.le.1.0D+20)) then
+            ! do nothing
+           else
+            print *,"T_I invalid"
+            stop
+           endif
+          else
+           print *,"TSAT_base invalid"
+           stop
+          endif
+         else
+          print *,"X_I invalid"
+          stop
+         endif
+        else
+         print *,"WA,WV,or R invalid"
+         stop
+        endif
+       else
+        print *,"LL invalid"
+        stop
+       endif
+      else
+       print *,"Y_I invalid"
+       stop
+      endif
            
       end subroutine TSAT_MASS_FRAC_association
 
@@ -5122,6 +5186,8 @@ stop
        saturation_temp, &
        saturation_temp_curv, &
        saturation_temp_vel, &
+       saturation_temp_min, &
+       saturation_temp_max, &
        freezing_model, &
        Tanasawa_or_Schrage, &
        distribute_from_target, &
@@ -5204,6 +5270,8 @@ stop
       REAL_T, intent(in) :: saturation_temp(2*nten)
       REAL_T, intent(in) :: saturation_temp_curv(2*nten)
       REAL_T, intent(in) :: saturation_temp_vel(2*nten)
+      REAL_T, intent(in) :: saturation_temp_min(2*nten)
+      REAL_T, intent(in) :: saturation_temp_max(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: Tanasawa_or_Schrage(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)

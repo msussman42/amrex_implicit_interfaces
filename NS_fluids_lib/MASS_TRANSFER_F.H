@@ -124,6 +124,8 @@ extern "C"
     Real* saturation_temp,
     Real* saturation_temp_curv,
     Real* saturation_temp_vel,
+    Real* saturation_temp_min,
+    Real* saturation_temp_max,
     int* freezing_model,
     int* Tanasawa_or_Schrage,
     int* distribute_from_target,

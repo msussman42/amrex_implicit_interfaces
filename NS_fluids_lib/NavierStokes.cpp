@@ -599,6 +599,8 @@ Vector<Real> NavierStokes::cap_wave_speed;
 Vector<Real> NavierStokes::saturation_temp;
 Vector<Real> NavierStokes::saturation_temp_curv;
 Vector<Real> NavierStokes::saturation_temp_vel;
+Vector<Real> NavierStokes::saturation_temp_min; //aka T_I_min
+Vector<Real> NavierStokes::saturation_temp_max; //aka T_I_max
 
 Vector<int> NavierStokes::microlayer_substrate;
 Vector<Real> NavierStokes::microlayer_angle;
@@ -2625,6 +2627,8 @@ NavierStokes::read_params ()
     saturation_temp.resize(2*nten);
     saturation_temp_curv.resize(2*nten);
     saturation_temp_vel.resize(2*nten);
+    saturation_temp_min.resize(2*nten);
+    saturation_temp_max.resize(2*nten);
     nucleation_temp.resize(2*nten);
     nucleation_pressure.resize(2*nten);
     nucleation_pmg.resize(2*nten);
@@ -2673,6 +2677,10 @@ NavierStokes::read_params ()
      saturation_temp_curv[i+nten]=0.0;
      saturation_temp_vel[i]=0.0;
      saturation_temp_vel[i+nten]=0.0;
+     saturation_temp_min[i]=0.0;
+     saturation_temp_min[i+nten]=0.0;
+     saturation_temp_max[i]=1.0e+20;
+     saturation_temp_max[i+nten]=1.0e+20;
      nucleation_temp[i]=0.0;
      nucleation_temp[i+nten]=0.0;
      nucleation_pressure[i]=0.0;
@@ -2915,6 +2923,8 @@ NavierStokes::read_params ()
     pp.queryarr("saturation_temp",saturation_temp,0,2*nten);
     pp.queryarr("saturation_temp_curv",saturation_temp_curv,0,2*nten);
     pp.queryarr("saturation_temp_vel",saturation_temp_vel,0,2*nten);
+    pp.queryarr("saturation_temp_min",saturation_temp_min,0,2*nten);
+    pp.queryarr("saturation_temp_max",saturation_temp_max,0,2*nten);
 
     pp.query("nucleation_period",nucleation_period);
     pp.query("nucleation_init_time",nucleation_init_time);
@@ -3922,6 +3932,11 @@ NavierStokes::read_params ()
        saturation_temp_vel[i] << '\n';
       std::cout << "saturation_temp_vel i+nten=" << i+nten << "  " << 
        saturation_temp_vel[i+nten] << '\n';
+
+      std::cout << "saturation_temp_min i=" << i << "  " << 
+       saturation_temp_min[i] << '\n';
+      std::cout << "saturation_temp_max i+nten=" << i+nten << "  " << 
+       saturation_temp_max[i+nten] << '\n';
 
       std::cout << "nucleation_temp i=" << i << "  " << 
        nucleation_temp[i] << '\n';
@@ -10376,6 +10391,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     saturation_temp.dataPtr(),
     saturation_temp_curv.dataPtr(),
     saturation_temp_vel.dataPtr(),
+    saturation_temp_min.dataPtr(),
+    saturation_temp_max.dataPtr(),
     freezing_model.dataPtr(),
     Tanasawa_or_Schrage.dataPtr(),
     distribute_from_target.dataPtr(),

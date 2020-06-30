@@ -1823,6 +1823,8 @@ stop
       INTEGER_T distribute_from_target(2*nten_in)
       INTEGER_T mass_fraction_id(2*nten_in)
       INTEGER_T Tanasawa_or_Schrage(2*nten_in)
+      REAL_T saturation_temp_min(2*nten_in)
+      REAL_T saturation_temp_max(2*nten_in)
       REAL_T species_evaporation_density(num_materials)
 
       REAL_T l1_interface(nten_in)
@@ -2059,6 +2061,8 @@ stop
         distribute_from_target(iten)=0
         mass_fraction_id(iten)=0
         Tanasawa_or_Schrage(iten)=0
+        saturation_temp_min(iten)=0.0d0
+        saturation_temp_max(iten)=1.0d+20
        enddo
        do im=1,nmat
         species_evaporation_density(im)=1.0d0
@@ -2415,6 +2419,8 @@ stop
          saturation_temp, &
          saturation_temp_curv, &
          saturation_temp_vel, &
+         saturation_temp_min, &
+         saturation_temp_max, &
          freezing_model, &
          Tanasawa_or_Schrage, &
          distribute_from_target, &

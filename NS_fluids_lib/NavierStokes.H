@@ -1618,6 +1618,8 @@ protected:
     static Vector<Real> saturation_temp; 
     static Vector<Real> saturation_temp_curv; 
     static Vector<Real> saturation_temp_vel; 
+    static Vector<Real> saturation_temp_min;  //aka T_I_min
+    static Vector<Real> saturation_temp_max;  //aka T_I_max
     static Vector<Real> nucleation_pressure; 
     static Vector<Real> nucleation_pmg; 
     static Vector<Real> nucleation_mach; 
