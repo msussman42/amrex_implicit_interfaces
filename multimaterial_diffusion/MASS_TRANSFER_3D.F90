@@ -82,22 +82,22 @@ stop
 
       type TSAT_MASS_FRAC_parm_type
        type(probe_parm_type), pointer :: PROBE_PARMS
-       REAL_T, pointer :: universal_gas_constant_R
-       REAL_T, pointer :: molar_mass_ambient   
-       REAL_T, pointer :: molar_mass_vapor
-       REAL_T, pointer :: TSAT_base
-       REAL_T, pointer :: YI_min
-       REAL_T, pointer :: TI_min
-       REAL_T, pointer :: TI_max
+       REAL_T :: universal_gas_constant_R
+       REAL_T :: molar_mass_ambient   
+       REAL_T :: molar_mass_vapor
+       REAL_T :: TSAT_base
+       REAL_T :: YI_min
+       REAL_T :: TI_min
+       REAL_T :: TI_max
       end type TSAT_MASS_FRAC_parm_type
 
       type T_Y_MDOT_parm_type
        type(probe_parm_type), pointer :: PROBE_PARMS
-       REAL_T, pointer :: TSAT_base
-       REAL_T, pointer :: D_MASS
-       REAL_T, pointer :: YI_min
-       REAL_T, pointer :: TI_min
-       REAL_T, pointer :: TI_max
+       REAL_T :: TSAT_base
+       REAL_T :: D_MASS
+       REAL_T :: YI_min
+       REAL_T :: TI_min
+       REAL_T :: TI_max
       end type T_Y_MDOT_parm_type
 
       contains
@@ -2602,6 +2602,71 @@ stop
 
       end subroutine T_Y_MDOT_associate
 
+      subroutine T_Y_MDOT_DERIVATIVE( &
+       T_Y_PARMS, &
+       Y_I,DTDY)
+      IMPLICIT NONE
+
+      type(T_Y_MDOT_parm_type), intent(in) :: T_Y_PARMS
+      REAL_T, intent(in) :: Y_I
+      REAL_T, intent(out) :: DTDY
+      REAL_T :: Y_TOLERANCE
+      REAL_T :: YI_min
+      REAL_T :: Y_I_plus,Y_I_minus
+      REAL_T :: T_I_plus,T_I_minus
+      REAL_T :: LL
+
+      Y_TOLERANCE=T_Y_PARMS%PROBE_PARMS%Y_TOLERANCE
+      YI_min=T_Y_PARMS%YI_min
+      if ((YI_min.ge.zero).and.(YI_min.le.one)) then
+       if ((Y_I.ge.YI_min).and.(Y_I.le.one)) then
+        if ((Y_I.ge.YI_min).and. &
+            (Y_I.le.YI_min+Y_TOLERANCE)) then
+         DTDY=zero
+        else if ((Y_I.le.one).and. &
+                 (Y_I.ge.one-Y_TOLERANCE)) then
+         DTDY=zero
+        else if ((Y_I.ge.YI_min+Y_TOLERANCE).and. &
+                 (Y_I.le.one-Y_TOLERANCE)) then
+         Y_I_plus=Y_I+Y_TOLERANCE*half
+         Y_I_minus=Y_I-Y_TOLERANCE*half
+         call T_Y_MDOT_associate(T_Y_PARMS,Y_I_plus,T_I_plus)           
+         call T_Y_MDOT_associate(T_Y_PARMS,Y_I_minus,T_I_minus)
+         DTDY=(T_I_plus-T_I_minus)/Y_TOLERANCE
+         LL=T_Y_PARMS%PROBE_PARMS%LL
+         if (LL.gt.zero) then
+          if (DTDY.le.zero) then
+           ! do nothing
+          else 
+           print *,"DTDY MDOT wrong sign"
+           stop
+          endif
+         else if (LL.lt.zero) then
+          if (DTDY.ge.zero) then
+           ! do nothing
+          else 
+           print *,"DTDY MDOT wrong sign"
+           stop
+          endif
+         else
+          print *,"LL invalid"
+          stop
+         endif
+        else
+         print *,"Y_I invalid"
+         stop
+        endif
+       else
+        print *,"Y_I invalid"
+        stop
+       endif
+      else
+       print *,"YI_min invalid"
+       stop
+      endif
+
+      end subroutine T_Y_MDOT_DERIVATIVE
+
       subroutine TSAT_MASS_FRAC_association( &
        TSAT_Y_PARMS, &
        Y_I,T_I)
@@ -2693,6 +2758,71 @@ stop
       endif
            
       end subroutine TSAT_MASS_FRAC_association
+
+      subroutine TSAT_MASS_FRAC_DERIVATIVE( &
+       T_Y_PARMS, &
+       Y_I,DTDY)
+      IMPLICIT NONE
+
+      type(TSAT_MASS_FRAC_parm_type), intent(in) :: T_Y_PARMS
+      REAL_T, intent(in) :: Y_I
+      REAL_T, intent(out) :: DTDY
+      REAL_T :: Y_TOLERANCE
+      REAL_T :: YI_min
+      REAL_T :: Y_I_plus,Y_I_minus
+      REAL_T :: T_I_plus,T_I_minus
+      REAL_T :: LL
+
+      Y_TOLERANCE=T_Y_PARMS%PROBE_PARMS%Y_TOLERANCE
+      YI_min=T_Y_PARMS%YI_min
+      if ((YI_min.ge.zero).and.(YI_min.le.one)) then
+       if ((Y_I.ge.YI_min).and.(Y_I.le.one)) then
+        if ((Y_I.ge.YI_min).and. &
+            (Y_I.le.YI_min+Y_TOLERANCE)) then
+         DTDY=zero
+        else if ((Y_I.le.one).and. &
+                 (Y_I.ge.one-Y_TOLERANCE)) then
+         DTDY=zero
+        else if ((Y_I.ge.YI_min+Y_TOLERANCE).and. &
+                 (Y_I.le.one-Y_TOLERANCE)) then
+         Y_I_plus=Y_I+Y_TOLERANCE*half
+         Y_I_minus=Y_I-Y_TOLERANCE*half
+         call TSAT_MASS_FRAC_association(T_Y_PARMS,Y_I_plus,T_I_plus)           
+         call TSAT_MASS_FRAC_association(T_Y_PARMS,Y_I_minus,T_I_minus)
+         DTDY=(T_I_plus-T_I_minus)/Y_TOLERANCE
+         LL=T_Y_PARMS%PROBE_PARMS%LL
+         if (LL.gt.zero) then
+          if (DTDY.ge.zero) then
+           ! do nothing
+          else 
+           print *,"DTDY Clausius Clapyron wrong sign"
+           stop
+          endif
+         else if (LL.lt.zero) then
+          if (DTDY.le.zero) then
+           ! do nothing
+          else 
+           print *,"DTDY Clausius Clapyron wrong sign"
+           stop
+          endif
+         else
+          print *,"LL invalid"
+          stop
+         endif
+        else
+         print *,"Y_I invalid"
+         stop
+        endif
+       else
+        print *,"Y_I invalid"
+        stop
+       endif
+      else
+       print *,"YI_min invalid"
+       stop
+      endif
+
+      end subroutine TSAT_MASS_FRAC_DERIVATIVE
 
       subroutine TSAT_MASS_FRAC_YMIN( &
        TSAT_Y_PARMS, &
@@ -5673,7 +5803,7 @@ stop
       REAL_T TSAT_ERR,TSAT_INIT_ERR
       INTEGER_T TSAT_iter,TSAT_converge,TSAT_iter_max
       INTEGER_T YMIN_converge
-      REAL_T Y_interface_min
+      REAL_T :: Y_interface_min
       REAL_T X_interface_min
       INTEGER_T YMIN_iter
       INTEGER_T YMIN_iter_max
@@ -5683,7 +5813,8 @@ stop
       REAL_T YMIN_ERR
       REAL_T YMIN_INIT_ERR
       INTEGER_T interp_valid_flag(2) ! iprobe=1 source iprobe=2 dest
-      type(probe_parm_type) :: PROBE_PARMS
+      type(probe_parm_type), target :: PROBE_PARMS
+      type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -6811,6 +6942,21 @@ stop
                         print *,"X_interface_min invalid"
                         stop
                        endif
+                        ! type(TSAT_MASS_FRAC_parm_type)
+                       TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
+                       TSAT_Y_PARMS%YI_min=Y_interface_min
+                       TSAT_Y_PARMS%TI_min= &
+                          saturation_temp_min(iten+ireverse*nten)
+                       TSAT_Y_PARMS%TI_max= &
+                          saturation_temp_max(iten+ireverse*nten)
+                       TSAT_Y_PARMS%universal_gas_constant_R= &
+                               R_Palmore_Desjardins
+                       TSAT_Y_PARMS%molar_mass_ambient=molar_mass_ambient
+                       TSAT_Y_PARMS%molar_mass_vapor=molar_mass_vapor
+                       TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
+                       call TSAT_MASS_FRAC_YMIN( &
+                               TSAT_Y_PARMS,Y_interface_min)
+                       TSAT_Y_PARMS%YI_min=Y_interface_min
                       else
                        print *,"Y_probe invalid"
                        stop
