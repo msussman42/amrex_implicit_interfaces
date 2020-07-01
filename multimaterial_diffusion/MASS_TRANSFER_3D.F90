@@ -2679,6 +2679,67 @@ stop
            
       end subroutine TSAT_MASS_FRAC_association
 
+      subroutine TSAT_MASS_FRAC_YMIN( &
+       TSAT_Y_PARMS, &
+       Y_I_MIN)
+      IMPLICIT NONE
+
+      type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
+      REAL_T, intent(out) :: Y_I_MIN
+      REAL_T :: X_I_MIN
+      REAL_T :: LL,R,TSAT_base,T_I_MAX,WA,WV
+
+      WA=TSAT_Y_PARMS%molar_mass_ambient
+      WV=TSAT_Y_PARMS%molar_mass_vapor
+      R=TSAT_Y_PARMS%universal_gas_constant_R
+      LL=TSAT_Y_PARMS%PROBE_PARMS%LL
+
+      if ((LL.gt.zero).or.(LL.lt.zero)) then
+
+       TSAT_base=TSAT_Y_PARMS%TSAT_base
+       T_I_MAX=TSAT_Y_PARMS%TI_max
+
+       if ((TSAT_base.gt.zero).and. &
+           (T_I_MAX.ge.TSAT_base)) then
+
+        if ((WA.gt.zero).and.(WV.gt.zero).and.(R.gt.zero)) then
+
+         if (LL.gt.zero) then
+          Y_I_MIN=zero
+         else if (LL.lt.zero) then
+          X_I_MIN=exp(-(LL*WV/R)*(one/T_I_MAX - one/TSAT_base))
+          if ((X_I_MIN.gt.zero).and.(X_I_MIN.le.one)) then
+           Y_I_MIN=X_I_MIN*WV/(X_I_MIN*WV+(one-X_I_MIN)*WA)
+          else
+           print *,"X_I_MIN invalid"
+           stop
+          endif
+         else
+          print *,"LL invalid"
+          stop
+         endif
+         if ((Y_I_MIN.ge.zero).and.(Y_I_MIN.le.one)) then
+          ! do nothing
+         else
+          print *,"Y_I_MIN invalid"
+          stop
+         endif
+        else
+         print *,"WA,WV,or R invalid"
+         stop
+        endif
+       else
+        print *,"TSAT_base or T_I_MAX invalid"
+        stop
+       endif
+      else
+       print *,"LL invalid"
+       stop
+      endif
+           
+      end subroutine TSAT_MASS_FRAC_YMIN
+
+
 
       end module mass_transfer_module
 
@@ -5524,6 +5585,7 @@ stop
       REAL_T T_probe_raw(2) ! iprobe=1 source; iprobe=2 dest.
       REAL_T Y_probe(2)
       REAL_T den_I_interp(2)
+      REAL_T den_I_interp_SAT(2)
       REAL_T T_I_interp(2)
       REAL_T Y_I_interp(2)
       REAL_T pres_I_interp(2)
@@ -5587,15 +5649,11 @@ stop
       REAL_T X_interface_min
       INTEGER_T YMIN_iter
       INTEGER_T YMIN_iter_max
-      REAL_T denom
       REAL_T FicksLawD(2)  ! iprobe=1 source iprobe=2 dest 
-      REAL_T Tprobe_avg 
       REAL_T molar_mass_ambient
       REAL_T molar_mass_vapor
-      REAL_T T_interface_min
       REAL_T YMIN_ERR
       REAL_T YMIN_INIT_ERR
-      REAL_T GRAD_Y_dot_n
       INTEGER_T interp_valid_flag(2) ! iprobe=1 source iprobe=2 dest
       type(probe_parm_type) :: PROBE_PARMS
 
@@ -6292,6 +6350,10 @@ stop
                   interp_valid_flag, &
                   at_interface)
 
+                 do iprobe=1,2
+                  den_I_interp_SAT(iprobe)=den_I_interp(iprobe)
+                 enddo
+
                  !iprobe=1 source
                  !iprobe=2 dest
 
@@ -6379,9 +6441,9 @@ stop
                    if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
                     if (evap_den.gt.zero) then
                      if (LL(ireverse).gt.zero) then ! evaporation
-                      den_I_interp(2)=evap_den ! dest
+                      den_I_interp_SAT(2)=evap_den ! dest
                      else if (LL(ireverse).lt.zero) then ! condensation
-                      den_I_interp(1)=evap_den ! source
+                      den_I_interp_SAT(1)=evap_den ! source
                      else
                       print *,"LL invalid"
                       stop
@@ -6558,8 +6620,8 @@ stop
                     evap_den, &
                     distribute_from_targ, &
                     VEL_correct, & ! vel
-                    den_I_interp(1), & ! source 
-                    den_I_interp(2), & ! dest
+                    den_I_interp_SAT(1), & ! source 
+                    den_I_interp_SAT(2), & ! dest
                     ksource,kdest, & ! ksrc,kdst
                     T_probe(1), & ! source
                     T_probe(2), & ! dest
@@ -6875,6 +6937,8 @@ stop
                          ksource,kdest,local_Tsat(ireverse)
                   print *,"T_Probe(1),T_probe(2) ",T_Probe(1),T_probe(2)
                   print *,"den_I_interp(1) ",den_I_interp(1)
+                  print *,"den_I_interp_SAT(1) ",den_I_interp_SAT(1)
+                  print *,"den_I_interp_SAT(2) ",den_I_interp_SAT(2)
                   print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
                   print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
                   print *,"nrmFD ",nrmFD(1),nrmFD(2),nrmFD(SDIM)
