@@ -675,7 +675,8 @@ Vector<Real> NavierStokes::reaction_rate;
 // 7=cavitation
 Vector<int> NavierStokes::freezing_model;
 Vector<int> NavierStokes::Tanasawa_or_Schrage;
-Vector<int> NavierStokes::mass_fraction_id;
+//ispec=mass_fraction_id[0..2 nten-1]=1..num_species_var
+Vector<int> NavierStokes::mass_fraction_id; 
 //link diffused material to non-diff. (array 1..num_species_var)
 //spec_material_id_LIQUID, spec_material_id_AMBIENT are 
 //both input AND derived.
@@ -11716,7 +11717,9 @@ NavierStokes::level_init_icemask() {
 // else if adjust_temperature==-1,
 //  faceheat_index component of FACE_VAR_MF
 void
-NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
+NavierStokes::stefan_solver_init(MultiFab* coeffMF,
+		int adjust_temperature,
+		int project_option) {
  
  int finest_level=parent->finestLevel();
 
@@ -11779,13 +11782,38 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
 
  int GFM_flag=0;
  if (is_phasechange==1) {
-  for (int im=0;im<2*nten;im++) {
-   if (latent_heat[im]!=0.0)
-    if ((freezing_model[im]==0)|| //fully saturated
-        (freezing_model[im]==5)|| //cavitation
-        (freezing_model[im]==6))  //Palmore and Desjardins
-     GFM_flag=1;
-  }
+  if (project_option==2) { // thermal conduction
+   for (int im=0;im<2*nten;im++) {
+    if (latent_heat[im]!=0.0) {
+     if ((freezing_model[im]==0)|| //fully saturated
+         (freezing_model[im]==5)|| //cavitation
+         (freezing_model[im]==6))  //Palmore and Desjardins
+      GFM_flag=1;
+    } else if (latent_heat[im]==0.0) {
+     // do nothing
+    } else
+     amrex::Error("latent_heat[im] invalid");
+   } // im=0..2 nten-1
+  } else if ((project_option>=100)&&
+	     (project_option<100+num_species_var)) {
+   for (int im=0;im<2*nten;im++) {
+    if (latent_heat[im]!=0.0) {
+     if (freezing_model[im]==6) {  // Palmore and Desjardins
+      int ispec=mass_fraction_id[im];
+      if ((ispec>=1)&&(ispec<=num_species_var)) {
+       if (ispec==project_option-100+1)
+        GFM_flag=1;
+      } else
+       amrex::Error("ispec invalid");
+     }
+    } else if (latent_heat[im]==0.0) {
+     // do nothing
+    } else
+     amrex::Error("latent_heat[im] invalid");
+   } // im=0.. 2 nten -1
+  } else
+   amrex::Error("project_option invalid");
+
  } else if (is_phasechange==0) {
   amrex::Error("is_phasechange invalid in stefan_solver_init (1)");
  } else
@@ -11913,6 +11941,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,int adjust_temperature) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+ // FIX ME EVAPORATION
+ // (OTHER PLACES?)
     // in: GODUNOV_3D.F90
    FORT_STEFANSOLVER( 
     &solidheat_flag, //0=diffuse in solid 1=dirichlet 2=Neumann

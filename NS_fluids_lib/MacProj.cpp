@@ -358,27 +358,67 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 } // omp
  ns_reconcile_d_num(32);
 
+ int GFM_flag=0;
+ int adjust_temperature=0; 
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+
   // alpha T - div beta grad T = f
  if (project_option==2) {
+
   if (is_phasechange==1) {
     // alphanovolume=(rho cv/(dt*fact))+(1/vol) sum_face Aface k_m/(theta dx)
-   int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
-   int adjust_temperature=0; 
-   int GFM_flag=0;
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0)
+    if (latent_heat[im]!=0.0) {
      if ((freezing_model[im]==0)|| // fully saturated
          (freezing_model[im]==5)||
          (freezing_model[im]==6))  // Palmore and Desjardins
       GFM_flag=1;
-   }
-   if (GFM_flag==1)
-    stefan_solver_init(localMF[ALPHANOVOLUME_MF],adjust_temperature);
+    } else if (latent_heat[im]==0.0) {
+     // do nothing
+    } else
+     amrex::Error("latent_heat[im] invalid");
+   } // im=0..2 nten-1
   } else if (is_phasechange==0) {
    // do nothing
   } else
    amrex::Error("is_phasechange invalid");
  }
+
+ if ((project_option>=100)&&
+     (project_option<100+num_species_var)) {
+
+  if (is_phasechange==1) {
+
+   for (int im=0;im<2*nten;im++) {
+    if (latent_heat[im]!=0.0) {
+     if (freezing_model[im]==6) {  // Palmore and Desjardins
+      int ispec=mass_fraction_id[im];
+      if ((ispec>=1)&&(ispec<=num_species_var)) {
+       if (ispec==project_option-100+1)
+        GFM_flag=1;
+      } else
+       amrex::Error("ispec invalid");
+     }
+    } else if (latent_heat[im]==0.0) {
+     // do nothing
+    } else
+     amrex::Error("latent_heat[im] invalid");
+   } // im=0.. 2 nten -1
+
+  } else if (is_phasechange==0) {
+   // do nothing
+  } else
+   amrex::Error("is_phasechange invalid");
+ }
+
+ if (GFM_flag==1) {
+  stefan_solver_init(localMF[ALPHANOVOLUME_MF],
+		  adjust_temperature,
+		  project_option);
+ } else if (GFM_flag==0) {
+  // do nothing
+ } else
+  amrex::Error("GFM_flag invalid");
 
   // average down from level+1 to level.
  avgDown_localMF(ALPHANOVOLUME_MF,0,nsolveMM,0);

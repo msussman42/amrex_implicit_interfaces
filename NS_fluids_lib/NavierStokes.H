@@ -608,7 +608,8 @@ public:
     // VAHAB HEAT SOURCE
     void heat_source_term_flux_source();
 
-    void stefan_solver_init(MultiFab* coeffMF,int adjust_temperature);
+    void stefan_solver_init(MultiFab* coeffMF,int adjust_temperature,
+		    int project_option);
 
     void prepare_viscous_solver();
     void prepare_advect_vars(Real time);

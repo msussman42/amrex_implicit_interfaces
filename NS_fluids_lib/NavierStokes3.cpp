@@ -5935,39 +5935,61 @@ void NavierStokes::allocate_FACE_WEIGHT(
   } // nn
  } // gridno
 
+ int GFM_flag=0;
+ int adjust_temperature=-1;  // adjust faceheat_index
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
   // adjust faceheat_index if thermal diffusion
   // and phase change using sharp interface method.
  if (project_option==2) { 
 
-  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
-  int adjust_temperature=-1;  // adjust faceheat_index
-  int GFM_flag=0;
   for (int im=0;im<2*nten;im++) {
-   if (latent_heat[im]!=0.0)
+   if (latent_heat[im]!=0.0) {
     if ((freezing_model[im]==0)|| // fully saturated
         (freezing_model[im]==5)||
         (freezing_model[im]==6))  // Palmore and Desjardins
-     GFM_flag=1;
-  }
-  if (GFM_flag==1) {
-   stefan_solver_init(
-    localMF[CELL_DEN_MF],
-    adjust_temperature);
-  }
+     GFM_flag=1; 
+   } else if (latent_heat[im]==0.0) {
+    // do nothing
+   } else
+    amrex::Error("latent_heat[im] invalid");
+  } // im=0..2 nten -1
 
+ } else if ((project_option>=100)&&
+            (project_option<100+num_species_var)) {
+
+  for (int im=0;im<2*nten;im++) {
+   if (latent_heat[im]!=0.0) {
+    if (freezing_model[im]==6) {  // Palmore and Desjardins
+     int ispec=mass_fraction_id[im];
+     if ((ispec>=1)&&(ispec<=num_species_var)) {
+      if (ispec==project_option-100+1)
+       GFM_flag=1;
+     } else
+      amrex::Error("ispec invalid");
+    }
+   } else if (latent_heat[im]==0.0) {
+    // do nothing
+   } else
+    amrex::Error("latent_heat[im] invalid");
+  } // im=0..2 nten -1
  } else if ((project_option==0)||
             (project_option==1)||
             (project_option==10)||
             (project_option==11)|| //FSI_material_exists: 2nd project
             (project_option==13)|| //FSI_material_exists: 1st project
             (project_option==12)|| //pressure extrapolation
-            (project_option==3)||
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+            (project_option==3)) {
   // do nothing
  } else
   amrex::Error("project_option invalid31");
+
+ if (GFM_flag==1) {
+  stefan_solver_init(
+   localMF[CELL_DEN_MF],
+   adjust_temperature,
+   project_option);
+ }
 
  const Real* dx = geom.CellSize();
 
@@ -6244,6 +6266,10 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
    // this holds S^*
  new_localMF(OUTER_ITER_PRESSURE_MF,nsolveMM,0,-1);
 
+ int adjust_temperature=1; 
+ int GFM_flag=0;
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+
   // temperature diffusion
  if (project_option==2) {
 
@@ -6269,26 +6295,59 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
     //   b) unsplit advection to find F^*
     //   c) T_ice=(F T_ice + (F^*-F) Tsat)/F^*
     //      T_water does not change
-   int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
-   int adjust_temperature=1; 
-   int GFM_flag=0;
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0) 
+    if (latent_heat[im]!=0.0) {
      if ((freezing_model[im]==0)|| // fully saturated.
          (freezing_model[im]==5)||
          (freezing_model[im]==6))  // Palmore and Desjardins
       GFM_flag=1;
-   }
+    } else if (latent_heat[im]==0.0) {
+     // do nothing
+    } else
+     amrex::Error("latent_heat[im] invalid");
+   } // im=0..2 nten -1
+  } else if (is_phasechange==0) {
+   // do nothing
+  } else
+   amrex::Error("is_phasechange invalid");
 
-    // both S_new and OUTER_ITER_PRESSURE_MF are modified when 
-    // adjust_temperature==1
-   if (GFM_flag==1) {
-    stefan_solver_init(
-     localMF[OUTER_ITER_PRESSURE_MF],
-     adjust_temperature);
-   }
-  }
  } // project_option==2
+
+ if ((project_option>=100)&&
+     (project_option<100+num_species_var)) {
+
+  if (is_phasechange==1) {
+
+   for (int im=0;im<2*nten;im++) {
+    if (latent_heat[im]!=0.0) {
+     if (freezing_model[im]==6) {  // Palmore and Desjardins
+      int ispec=mass_fraction_id[im];
+      if ((ispec>=1)&&(ispec<=num_species_var)) {
+       if (ispec==project_option-100+1)
+        GFM_flag=1;
+      } else
+       amrex::Error("ispec invalid");
+     }
+    } else if (latent_heat[im]==0.0) {
+     // do nothing
+    } else
+     amrex::Error("latent_heat[im] invalid");
+   } // im=0.. 2 nten -1
+
+  } else if (is_phasechange==0) {
+   // do nothing
+  } else
+   amrex::Error("is_phasechange invalid");
+ }
+
+  // both S_new and OUTER_ITER_PRESSURE_MF are modified when 
+  // adjust_temperature==1
+ if (GFM_flag==1) {
+  stefan_solver_init(
+   localMF[OUTER_ITER_PRESSURE_MF],
+   adjust_temperature,
+   project_option);
+ }
 
  MultiFab* current_contents_mf;
 
