@@ -5782,7 +5782,7 @@ stop
       REAL_T contact_line_perim
       INTEGER_T icolor,base_type,ic,im1,im2
       REAL_T normal_probe_factor
-      INTEGER_T iprobe
+      INTEGER_T iprobe_vapor
       REAL_T, target :: Y_TOLERANCE
        ! iten=1..nten  ireverse=0..1
       REAL_T temp_target_probe_history(2*nten,2)
@@ -6512,9 +6512,8 @@ stop
                   interp_valid_flag, &
                   at_interface)
 
-                 do iprobe=1,2
-                  den_I_interp_SAT(iprobe)=den_I_interp(iprobe)
-                 enddo
+                 den_I_interp_SAT(1)=den_I_interp(1) ! iprobe=1 source
+                 den_I_interp_SAT(2)=den_I_interp(2) ! iprobe=2 dest
 
                  !iprobe=1 source
                  !iprobe=2 dest
@@ -6852,13 +6851,14 @@ stop
                  TSAT_correct=TSAT_predict
 
                  if (at_interface.eq.1) then
+
                   if (local_freezing_model.eq.6) then ! Palmore/Desjardins
                    molar_mass_vapor=species_molar_mass(ispec)
                    if (LL(ireverse).gt.zero) then ! evaporation
-                    iprobe=2  ! destination
+                    iprobe_vapor=2  ! destination
                     molar_mass_ambient=molar_mass(im_dest)
                    else if (LL(ireverse).lt.zero) then ! condensation
-                    iprobe=1  ! source
+                    iprobe_vapor=1  ! source
                     molar_mass_ambient=molar_mass(im_source)
                    else
                     print *,"LL invalid"
@@ -6869,11 +6869,11 @@ stop
                        (molar_mass_vapor.gt.zero).and. &
                        (R_Palmore_Desjardins.gt.zero)) then
 
-                    if ((Y_probe(iprobe).ge.one-Y_TOLERANCE).and. &
-                        (Y_probe(iprobe).le.one)) then
+                    if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
+                        (Y_probe(iprobe_vapor).le.one)) then
                      ! do nothing
-                    else if ((Y_probe(iprobe).le.one-Y_TOLERANCE).and. &
-                             (Y_probe(iprobe).ge.zero)) then
+                    else if ((Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
+                             (Y_probe(iprobe_vapor).ge.zero)) then
                       !Y_probe<=Y_interface<=1
                      if (TSAT_iter.eq.0) then
                       YMIN_converge=0
@@ -6892,8 +6892,8 @@ stop
                         interp_valid_flag, &
                         at_interface)
 
-                       YMIN_ERR=abs(Y_probe(iprobe)-Y_interface_min)
-                       Y_interface_min=Y_probe(iprobe)
+                       YMIN_ERR=abs(Y_probe(iprobe_vapor)-Y_interface_min)
+                       Y_interface_min=Y_probe(iprobe_vapor)
                        if (YMIN_iter.eq.0) then
                         YMIN_INIT_ERR=YMIN_ERR
                        endif
@@ -6905,11 +6905,11 @@ stop
                        if (YMIN_iter.gt.YMIN_iter_max) then
                         YMIN_converge=1
                        endif
-                       if ((Y_probe(iprobe).ge.one-Y_TOLERANCE).and. &
-                           (Y_probe(iprobe).le.one)) then
+                       if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
+                           (Y_probe(iprobe_vapor).le.one)) then
                         YMIN_converge=1
-                       else if ((Y_probe(iprobe).ge.zero).and. &
-                                (Y_probe(iprobe).le.one)) then
+                       else if ((Y_probe(iprobe_vapor).ge.zero).and. &
+                                (Y_probe(iprobe_vapor).le.one)) then
                         ! do nothing
                        else
                         print *,"Y_probe invalid"
@@ -6922,12 +6922,12 @@ stop
                        endif
                       enddo ! do while (YMIN_converge.eq.0)
 
-                      if ((Y_probe(iprobe).ge.one-Y_TOLERANCE).and. &
-                          (Y_probe(iprobe).le.one)) then
+                      if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
+                          (Y_probe(iprobe_vapor).le.one)) then
                        ! do nothing
-                      else if ((Y_probe(iprobe).le. &
+                      else if ((Y_probe(iprobe_vapor).le. &
                                 one-Y_TOLERANCE).and. &
-                               (Y_probe(iprobe).ge.zero)) then
+                               (Y_probe(iprobe_vapor).ge.zero)) then
                        X_interface_min=molar_mass_ambient*Y_interface_min/ &
                         ((one-Y_interface_min)*molar_mass_vapor+ &
                          Y_interface_min*molar_mass_ambient)
@@ -6957,6 +6957,8 @@ stop
                        call TSAT_MASS_FRAC_YMIN( &
                                TSAT_Y_PARMS,Y_interface_min)
                        TSAT_Y_PARMS%YI_min=Y_interface_min
+                        ! initial starting guess
+                       Y_probe(iprobe_vapor)=half*(Y_interface_min+one)
                       else
                        print *,"Y_probe invalid"
                        stop
@@ -6968,12 +6970,12 @@ stop
                       stop
                      endif
 
-                     if ((Y_probe(iprobe).ge.one-Y_TOLERANCE).and. &
-                         (Y_probe(iprobe).le.one)) then
+                     if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
+                         (Y_probe(iprobe_vapor).le.one)) then
                       ! do nothing
-                     else if ((Y_probe(iprobe).le. &
+                     else if ((Y_probe(iprobe_vapor).le. &
                                one-Y_TOLERANCE).and. &
-                              (Y_probe(iprobe).ge.zero)) then
+                              (Y_probe(iprobe_vapor).ge.zero)) then
 
 
                       ! FIX ME HERE DO ONE "NEWTON" METHOD ITERATION
