@@ -11716,6 +11716,12 @@ NavierStokes::level_init_icemask() {
 //  coeffMF=c1+c2
 // else if adjust_temperature==-1,
 //  faceheat_index component of FACE_VAR_MF
+//
+// for mass fraction:
+// (rho Y)_t + div (rho u Y) = div rho D grad Y
+// since rho_t + div (rho u)=0,
+// rho (Y_t + u dot grad Y)=div rho D grad Y
+
 void
 NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 		int adjust_temperature,
@@ -11855,14 +11861,13 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  debug_ngrow(mm_cell_areafrac_index,0,113);
 
  int num_materials_combine=nmat;
- int project_option_thermal=2;
  int state_index;
  Vector<int> scomp;
  Vector<int> ncomp;
  int ncomp_check;
  get_mm_scomp_solver(
    num_materials_combine,
-   project_option_thermal,
+   project_option,
    state_index,
    scomp,ncomp,ncomp_check);
 
