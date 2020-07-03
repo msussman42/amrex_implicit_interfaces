@@ -31,6 +31,10 @@ stop
 
       end module derive_module
 
+       ! WALE model
+       ! Wall Adapting Local Eddy-viscosity models for simulations in complex
+       ! geometries.   Ducros, Nicoud, Poinsot 1998
+       ! called from getStateVISC
       subroutine FORT_DERTURBVISC( &
        level, &
        im, &
@@ -489,7 +493,7 @@ stop
       return
       end subroutine FORT_GETSHEAR
 
-
+       ! called from getStateVISC
       subroutine FORT_DERVISCOSITY( &
         level, &
         finest_level, &

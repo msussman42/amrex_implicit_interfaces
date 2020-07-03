@@ -16051,6 +16051,7 @@ stop
           ! extend fluid LS,F,X into the solid.
          if ((im_solid_max.ge.1).and.(im_solid_max.le.nmat)) then
 
+           ! (i,j,k) is a "solid" cell
           if ((LS_solid_new(im_solid_max).ge.zero).or. &
               (sum_vfrac_solid_new.ge.half)) then
 
@@ -16077,6 +16078,7 @@ stop
             call get_primary_material(LS_predict,nmat,im_primary_stencil)
 
              !fluid stencil cell, we trust this LS value.
+             !if (at_center==1) then cell is (i,j,k) cell which is solid.
             if ((is_rigid(nmat,im_primary_stencil).eq.0).and. & 
                 (at_center.eq.0)) then
 
@@ -16287,6 +16289,7 @@ stop
               endif
 
              else if (XLIST_ncomp.eq.0) then
+
               if (total_weightFLUID.eq.zero) then
                if (total_weightSOLID.gt.zero) then
                 if (dist_to_fluid_min.ge.zero) then
@@ -16487,6 +16490,13 @@ stop
 
            if ((center_stencil_wetting_im.ge.1).and. &
                (center_stencil_wetting_im.le.nmat)) then 
+
+            if (1.eq.0) then
+             print *,"center_stencil_wetting_im=", &
+                center_stencil_wetting_im
+             print *,"i,j,k ",i,j,k
+             print *,"level,finest_level ",level,finest_level
+            endif
 
             use_ls_data=0
 

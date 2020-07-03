@@ -9582,6 +9582,7 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+      // in: DERIVE_3D.F90
     FORT_DERTURBVISC(
       &level,
       &fortran_im,
