@@ -7001,8 +7001,14 @@ stop
            ! do nothing (faceheat_local already defined)
           else if (solidheat_flag.eq.1) then ! dirichlet
            faceheat_local=zero
+           do imspec=1,num_species_var
+            facespecies_local(imspec)=zero
+           enddo
           else if (solidheat_flag.eq.2) then ! neumann
            faceheat_local=zero
+           do imspec=1,num_species_var
+            facespecies_local(imspec)=zero
+           enddo
           else
            print *,"solidheat_flag invalid"
            stop
@@ -7068,6 +7074,9 @@ stop
             ! do nothing
            else if ((iten_micro.ge.1).and.(iten_micro.le.nten)) then
             faceheat_local=zero ! internal TSAT dirichlet bc 
+            do imspec=1,num_species_var
+             facespecies_local(imspec)=zero
+            enddo
            else
             print *,"iten_micro invalid"
             stop
@@ -7075,8 +7084,14 @@ stop
           else if (solidheat_flag.eq.1) then
            ! dirichlet temperature bc
            call microcell_heat_model(faceheat_local,dx,veldir)
+           do imspec=1,num_species_var
+            facespecies_local(imspec)=zero
+           enddo
           else if (solidheat_flag.eq.2) then
            faceheat_local=zero  ! neumann temperature bc
+           do imspec=1,num_species_var
+            facespecies_local(imspec)=zero
+           enddo
           else
            print *,"solidheat_flag invalid"
            stop

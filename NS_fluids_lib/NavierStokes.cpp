@@ -11721,6 +11721,9 @@ NavierStokes::level_init_icemask() {
 // (rho Y)_t + div (rho u Y) = div rho D grad Y
 // since rho_t + div (rho u)=0,
 // rho (Y_t + u dot grad Y)=div rho D grad Y
+// "rho D" coefficient is in FACE_VAR_MF,
+//   facespecies_index ... facespecies_index+num_species_var-1
+// "1/rho" coefficient is in CELL_DEN_MF 
 
 void
 NavierStokes::stefan_solver_init(MultiFab* coeffMF,
