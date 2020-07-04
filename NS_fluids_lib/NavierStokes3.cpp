@@ -6009,11 +6009,11 @@ void NavierStokes::allocate_FACE_WEIGHT(
    // 1/rho (only used in eval_face_coeff for sanity check purposes)
   local_face_index=faceden_index;  
  } else if (project_option==2) {
-  local_face_index=faceheat_index; // thermal conductivity
+  local_face_index=faceheat_index; // thermal conductivity "k"
  } else if (project_option==3) {
-  local_face_index=facevisc_index; // viscosity
+  local_face_index=facevisc_index; // viscosity "mu"
  } else if ((project_option>=100)&&
-            (project_option<100+num_species_var)) {
+            (project_option<100+num_species_var)) { // rho D
   local_face_index=facespecies_index+project_option-100;
  } else
   amrex::Error("project_option invalid allocate_FACE_WEIGHT");

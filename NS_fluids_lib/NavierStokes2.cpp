@@ -4737,9 +4737,10 @@ void NavierStokes::make_physics_varsALL(int project_option,
    0,9);
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,faceheat_index,1,0,AMREX_SPACEDIM,
    0,10);
-  if (num_species_var>0)
+  if (num_species_var>0) {
    ns_level.avgDownEdge_localMF(FACE_VAR_MF,facespecies_index,
-      1,0,AMREX_SPACEDIM,0,11);
+      num_species_var,0,AMREX_SPACEDIM,0,11);
+  }
  }  // ilev=finest_level ... level
 
  if (1==0) {

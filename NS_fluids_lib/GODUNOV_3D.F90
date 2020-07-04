@@ -1540,21 +1540,22 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T nmat,ngrow
-      INTEGER_T normdir
-      INTEGER_T nc_conserve
-      INTEGER_T nc_den
-      INTEGER_T temperature_primitive_variable(nmat) 
-      INTEGER_T override_density(nmat)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(conserve) 
-      INTEGER_T DIMDEC(den) 
-      INTEGER_T DIMDEC(vel) 
-      REAL_T conserve(DIMV(conserve),nc_conserve)
-      REAL_T den(DIMV(den),nc_den)
-      REAL_T vel(DIMV(den),num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: nmat,ngrow
+      INTEGER_T, intent(in) :: normdir
+      INTEGER_T, intent(in) :: nc_conserve
+      INTEGER_T, intent(in) :: nc_den
+      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
+      INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(conserve) 
+      INTEGER_T, intent(in) :: DIMDEC(den) 
+      INTEGER_T, intent(in) :: DIMDEC(vel) 
+      REAL_T, intent(out) :: conserve(DIMV(conserve),nc_conserve)
+      REAL_T, intent(in) :: den(DIMV(den),nc_den)
+      REAL_T, intent(in) :: vel(DIMV(den),num_materials_vel*SDIM)
+
       INTEGER_T i,j,k,im
       INTEGER_T istate,ispecies
       INTEGER_T dencomp,tempcomp,speccomp
@@ -1637,6 +1638,7 @@ stop
       do j=igridlo(2),igridhi(2)
       do k=igridlo(3),igridhi(3)
 
+        ! KE=u dot u/2
        KE=zero
        do veldir=1,SDIM
         vel1D=vel(D_DECL(i,j,k),veldir)
@@ -1715,9 +1717,11 @@ stop
           tempcomp=(im-1)*num_state_material+istate
           local_temperature=den(D_DECL(i,j,k),tempcomp)
           if (temperature_primitive_variable(im).eq.1) then ! non-conservative
+            ! den * T
            conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
             dencore(im)*local_temperature
           else if (temperature_primitive_variable(im).eq.0) then ! conservative
+            ! den * (u dot u/2 + cv T)
            call INTERNAL_material(dencore(im), &
             local_temperature,local_internal, &
             fort_material_type(im),im)
@@ -1730,6 +1734,7 @@ stop
           istate=istate+1
          else if ((istate.eq.num_state_base+1).and. &
                   (num_species_var.gt.0)) then 
+           ! den * Y
           do ispecies=1,num_species_var
            speccomp=(im-1)*num_state_material+num_state_base+ispecies
            conserve(D_DECL(i,j,k),iden_base+speccomp)= &
@@ -19286,6 +19291,8 @@ end function delta
               if (temperature_primitive_variable(im).eq.1) then
                ETcore=veldata(iden_base+tempcomp_data)/massdepart
               else if (temperature_primitive_variable(im).eq.0) then
+               ! integral_omega_depart rho (u dot u/2 + c_v T) F_m /
+               ! integral_omega_depart rho F_m
                ETcore=veldata(iden_base+tempcomp_data)/massdepart
                local_internal=ETcore-KE
                if (local_internal.gt.zero) then
@@ -22120,6 +22127,9 @@ end function delta
                ! integral_omega_depart rho F_m
                if (temperature_primitive_variable(u_im).eq.1) then
                 ETcore=veldata(iden_base+tempcomp_data)/massdepart
+
+               ! integral_omega_depart rho (u dot u/2+cv T) F_m /
+               ! integral_omega_depart rho F_m
                else if (temperature_primitive_variable(u_im).eq.0) then
                 ETcore=veldata(iden_base+tempcomp_data)/massdepart
                 local_internal=ETcore-KE

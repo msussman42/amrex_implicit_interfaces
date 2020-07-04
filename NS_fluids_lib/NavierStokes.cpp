@@ -11790,8 +11790,11 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
   amrex::Error("num_state_base invalid");
 
  int GFM_flag=0;
+ int face_comp_index=0;
+
  if (is_phasechange==1) {
   if (project_option==2) { // thermal conduction
+   face_comp_index=faceheat_index;
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0) {
      if ((freezing_model[im]==0)|| //fully saturated
@@ -11805,6 +11808,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    } // im=0..2 nten-1
   } else if ((project_option>=100)&&
 	     (project_option<100+num_species_var)) {
+   face_comp_index=facespecies_index+project_option-100;
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0) {
      if (freezing_model[im]==6) {  // Palmore and Desjardins
@@ -11991,9 +11995,9 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
     coefffab.dataPtr(),ARLIM(coefffab.loVect()),ARLIM(coefffab.hiVect()),
     volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
-    heatx.dataPtr(faceheat_index),ARLIM(heatx.loVect()),ARLIM(heatx.hiVect()),
-    heaty.dataPtr(faceheat_index),ARLIM(heaty.loVect()),ARLIM(heaty.hiVect()),
-    heatz.dataPtr(faceheat_index),ARLIM(heatz.loVect()),ARLIM(heatz.hiVect()),
+    heatx.dataPtr(face_comp_index),ARLIM(heatx.loVect()),ARLIM(heatx.hiVect()),
+    heaty.dataPtr(face_comp_index),ARLIM(heaty.loVect()),ARLIM(heaty.hiVect()),
+    heatz.dataPtr(face_comp_index),ARLIM(heatz.loVect()),ARLIM(heatz.hiVect()),
     areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()),
     areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()),
     areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()) );

@@ -275,7 +275,7 @@ stop
           print *,"dt invalid"
           stop
          endif
-          ! 1/(rho cv)  note: De/DT=cv
+          ! 1/(den cv)  note: De/DT=cv
          dedt_inverse=DeDT(D_DECL(i,j,k),1)
          if (dedt_inverse.le.zero) then
           print *,"dedt_inverse invalid"
@@ -288,7 +288,7 @@ stop
 
          do im_vel=1,num_materials_scalar_solve
 
-          local_cterm(im_vel)=one/(dt*dedt_inverse)
+          local_cterm(im_vel)=one/(dt*dedt_inverse) ! den cv / dt
 
            ! solidheat_flag==0 diffuse in solid
            ! solidheat_flag==1 dirichlet bc at solid-fluid
@@ -333,7 +333,7 @@ stop
           print *,"dt invalid"
           stop
          endif
-         den_inverse=den(D_DECL(i,j,k),1)
+         den_inverse=den(D_DECL(i,j,k),1) ! 1/den
          if (den_inverse.le.zero) then
           print *,"den_inverse invalid"
           stop
@@ -343,7 +343,7 @@ stop
           if (in_prescribed.eq.1) then
            local_cterm(velcomp)=one/(den_inverse*dt)
           else if (in_prescribed.eq.0) then
-           local_cterm(velcomp)=one/(den_inverse*dt)
+           local_cterm(velcomp)=one/(den_inverse*dt) ! den/dt
            if (levelrz.eq.0) then
             ! do nothing
            else if (levelrz.eq.1) then
@@ -382,7 +382,7 @@ stop
           print *,"dt invalid"
           stop
          endif
-         den_inverse=den(D_DECL(i,j,k),1)
+         den_inverse=den(D_DECL(i,j,k),1) ! 1/den
          if (den_inverse.le.zero) then
           print *,"den_inverse invalid"
           stop
@@ -393,7 +393,7 @@ stop
          endif
           ! diffuse mass fraction
          do im_vel=1,num_materials_scalar_solve
-          local_cterm(im_vel)=one/(den_inverse*dt)
+          local_cterm(im_vel)=one/(den_inverse*dt) ! den/dt
          enddo
         else
          print *,"project_option invalid scalar coeff"

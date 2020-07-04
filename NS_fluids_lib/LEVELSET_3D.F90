@@ -14878,9 +14878,9 @@ stop
         do k=growlo(3),growhi(3)
   
           ! projection: dedge is 1/rho  (faceden_index) 
-          ! viscosity: dedge is facevisc_index
-          ! temperature: dedge is faceheat_index
-          ! species: dedge is facespecies_index
+          ! viscosity: dedge is facevisc_index   ( mu )
+          ! temperature: dedge is faceheat_index ( k )
+          ! species: dedge is facespecies_index  ( rho D )
 
           if (dir.eq.0) then
            inorm=i
