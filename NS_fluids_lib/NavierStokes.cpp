@@ -9937,7 +9937,7 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
 
 void
 NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
-		int color_count) {
+	int color_count,int nucleation_flag) {
 
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
@@ -9986,27 +9986,32 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
 
- int blob_arraysize=num_elements_blobclass;
-
- if (color_count!=blobdata.size())
-  amrex::Error("color_count!=blobdata.size()");
- blob_arraysize=color_count*num_elements_blobclass;
-
  Vector<Real> blob_array;
+ int blob_arraysize=num_elements_blobclass;
  blob_array.resize(blob_arraysize);
 
- int counter=0;
- for (int i=0;i<color_count;i++) {
-  copy_from_blobdata(i,counter,blob_array,blobdata);
- } // i=0..color_count-1
+ if (nucleation_flag.eq.0) then
+  if (color_count!=blobdata.size())
+   amrex::Error("color_count!=blobdata.size()");
+  blob_arraysize=color_count*num_elements_blobclass;
+  blob_array.resize(blob_arraysize);
 
- if (counter!=blob_arraysize)
-  amrex::Error("counter invalid");
+  int counter=0;
+  for (int i=0;i<color_count;i++) {
+   copy_from_blobdata(i,counter,blob_array,blobdata);
+  } // i=0..color_count-1
 
- if (localMF[COLOR_MF]->nGrow()!=1)
-  amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
- if (localMF[TYPE_MF]->nGrow()!=1)
-  amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
+  if (counter!=blob_arraysize)
+   amrex::Error("counter invalid");
+
+  if (localMF[COLOR_MF]->nGrow()!=1)
+   amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
+  if (localMF[TYPE_MF]->nGrow()!=1)
+   amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
+ } else if (nucleation_flag.eq.1) then
+  // do nothing
+ } else
+  amrex::Error("nucleation_flag invalid");
 
  MultiFab* presmf=
   getState(normal_probe_size+3,num_materials_vel*AMREX_SPACEDIM,

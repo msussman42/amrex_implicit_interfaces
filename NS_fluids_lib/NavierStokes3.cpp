@@ -2556,16 +2556,24 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     int coarsest_level=0;
 
       // 2. If mass transfer
-      //    (a) slopes/redistance
-      //    (b) mass transfer rate (stefan problem) (level_phase_change_rate)
-      //    (c) unsplit advection
-      //    (d) slopes/redistance
-      //    (e) redistribute mass increments
+      //    (a) mass transfer rate (nucleation)
+      //    (b) slopes/redistance
+      //    (c) mass transfer rate (stefan problem) (level_phase_change_rate)
+      //    (d) unsplit advection
+      //    (e) slopes/redistance
+      //    (f) redistribute mass increments
       //    If no mass transfer
       //    (a) slopes/redistance
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
       if (mass_transfer_active==1) {
+
+       for (int ilev=level;ilev<=finest_level;ilev++) {
+        int nucleation_flag=1;
+        NavierStokes& ns_level=getLevel(ilev);
+        ns_level.level_phase_change_rate(blobdata,color_count,
+          nucleation_flag);
+       }
 
        int at_least_one_ice=0;
        for (int im=0;im<nmat;im++) {
@@ -2827,8 +2835,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
        for (int ilev=level;ilev<=finest_level;ilev++) {
+        int nucleation_flag=0;
         NavierStokes& ns_level=getLevel(ilev);
-        ns_level.level_phase_change_rate(blobdata,color_count);
+        ns_level.level_phase_change_rate(blobdata,color_count,
+          nucleation_flag);
        }
 
        delete_array(TYPE_MF);

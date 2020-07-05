@@ -12706,6 +12706,7 @@ stop
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(STATEFAB),1,-1,234)
       call checkbound(fablo,fabhi,DIMS(TSATFAB),1,-1,234)
       call checkbound(fablo,fabhi,DIMS(cellmm),0,-1,234)
       call checkbound(fablo,fabhi,DIMS(xfacemm),0,0,264)
