@@ -11843,6 +11843,12 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  if (LSmf->nGrow()!=1)
   amrex::Error("LSmf->nGrow()!=1");
 
+  // temperature and density for all of the materials.
+ int nden=nmat*num_state_material;
+ MultiFab* state_var_mf=getStateDen(1,cur_time_slab);
+ if (state_var_mf->nComp()!=nden)
+  amrex::Error("state_var_mf->nComp()!=nden");
+
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  if (S_new.nComp()!=nstate)
   amrex::Error("S_new invalid ncomp");
@@ -11903,6 +11909,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& statefab=(*state_var_mf)[mfi];
 
    FArrayBox& lsfab=(*LSmf)[mfi];
    FArrayBox& thermalfab=(*thermal_list_mf)[mfi];
@@ -11968,6 +11976,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     &nten,
     &nstate,
     &ntsat, // nten*(ncomp_per_tsat+1)
+    &nden,  // nmat*num_state_material
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -11980,6 +11989,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     &ncellfrac,
     xlo,dx,
     &dt_slab,
+    statefab.dataPtr(),
+    ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
     Tsatfab.dataPtr(),
     ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
     cellfracmm.dataPtr(),
@@ -12007,6 +12018,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 } // omp
  ns_reconcile_d_num(81);
 
+ delete state_var_mf;
  delete LSmf;
  delete thermal_list_mf;
  

@@ -958,11 +958,14 @@ stop
       end subroutine derive_mappings
 
       subroutine get_default_scalar_diffusion(project_option, &
-                     LS1,im_source,im_dest,heatcoeff)
+                     LS1,im_source,im_dest, &
+                     den, &
+                     heatcoeff)
       IMPLICIT NONE
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: im_source
       INTEGER_T, intent(in) :: im_dest
+      REAL_T, intent(in) :: den
       REAL_T, intent(in) :: LS1
       REAL_T, intent(out) :: heatcoeff
       INTEGER_T :: ispec
@@ -970,21 +973,26 @@ stop
 
       nmat=num_materials
 
+      if (den.gt.zero) then
+       ! do nothing
+      else
+       print *,"den invalid"
+       stop
+      endif
+
       if (project_option.eq.2) then
-       if (LS1.ge.zero) then
+       if (LS1.ge.zero) then ! center cell owned by im_source
         heatcoeff=get_user_heatviscconst(im_source)
-       else
+       else  ! center cell owned by im_dest
         heatcoeff=get_user_heatviscconst(im_dest)
        endif
       else if ((project_option.ge.100).and. &
                (project_option.lt.100+num_species_var)) then
        ispec=project_option-100
-       if (LS1.ge.zero) then
-        heatcoeff=fort_speciesviscconst(ispec*nmat+im_source)* &
-                  fort_denconst(im_source)
-       else
-        heatcoeff=fort_speciesviscconst(ispec*nmat+im_dest)* &
-                  fort_denconst(im_dest)
+       if (LS1.ge.zero) then ! center cell owned by im_source
+        heatcoeff=fort_speciesviscconst(ispec*nmat+im_source)*den
+       else ! center cell owned by im_dest
+        heatcoeff=fort_speciesviscconst(ispec*nmat+im_dest)*den
        endif
       else
        print *,"project_option invalid"
@@ -12414,6 +12422,7 @@ stop
        nten, &
        nstate, &
        ntsat, &
+       nden, &
        latent_heat, &
        freezing_model, &
        distribute_from_target, &
@@ -12427,6 +12436,7 @@ stop
        ncellfrac, &
        xlo,dx, &
        dt, &
+       STATEFAB,DIMS(STATEFAB), &
        TSATFAB,DIMS(TSATFAB), &
        cellmm,DIMS(cellmm), &
        xfacemm,DIMS(xfacemm), &
@@ -12459,6 +12469,7 @@ stop
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: ntsat
+      INTEGER_T, intent(in) :: nden
 
       INTEGER_T, intent(in) :: solidheat_flag
       REAL_T, intent(in) :: microlayer_size(nmat)
@@ -12481,6 +12492,7 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: DIMDEC(STATEFAB)
       INTEGER_T, intent(in) :: DIMDEC(TSATFAB)
       INTEGER_T, intent(in) :: DIMDEC(cellmm)
       INTEGER_T, intent(in) :: DIMDEC(xfacemm)
@@ -12500,6 +12512,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(areax)
       INTEGER_T, intent(in) :: DIMDEC(areay)
       INTEGER_T, intent(in) :: DIMDEC(areaz)
+      REAL_T, intent(in) :: STATEFAB(DIMV(STATEFAB),nden) 
       REAL_T, intent(in) :: TSATFAB(DIMV(TSATFAB),ntsat) 
       REAL_T, intent(in) :: cellmm(DIMV(cellmm),ncellfrac) 
       REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
@@ -12564,7 +12577,9 @@ stop
       INTEGER_T TSTATUS(nmat)
 
       INTEGER_T nten_test
-      REAL_T over_den,over_cv,local_vol
+      REAL_T over_den,over_cv
+      REAL_T single_material_den
+      REAL_T local_vol
       REAL_T original_coeff,delta_coeff,coeff_TSAT
       REAL_T aface
       REAL_T LS_center(nmat)
@@ -12595,6 +12610,12 @@ stop
        ! do nothing
       else
        print *,"nstat invalid"
+       stop
+      endif
+      if (nden.eq.nmat*num_state_material) then
+       ! do nothing
+      else
+       print *,"nden invalid"
        stop
       endif
 
@@ -13075,11 +13096,16 @@ stop
          over_den=den(D_DECL(i,j,k),1)  ! 1/(rho)
          over_cv=DeDT(D_DECL(i,j,k),1)  ! 1/(rho cv)
          local_vol=vol(D_DECL(i,j,k))
+         single_material_den=STATEFAB(D_DECL(i,j,k), &
+           (im_primary-1)*num_state_material+1)
 
-         if ((over_den.le.zero).or. &
-             (over_cv.le.zero).or. &
-             (local_vol.le.zero)) then
-          print *,"over_den, over_cv, or local_vol invalid"
+         if ((over_den.gt.zero).and. &
+             (over_cv.gt.zero).and. &
+             (local_vol.gt.zero).and. &
+             (single_material_den.gt.zero)) then
+          ! do nothing
+         else
+          print *,"over_den, over_cv, local_vol, or single_mat_den invalid"
           stop
          endif
 
@@ -13174,9 +13200,10 @@ stop
              at_interface=1
              LS1=LS_center(im_source)-LS_center(im_dest)
              LS2=LS_side(im_source)-LS_side(im_dest)
-              ! FIX ME
              call get_default_scalar_diffusion(project_option, &
-                     LS1,im_source,im_dest,heatcoeff)
+                     LS1,im_source,im_dest, &
+                     single_material_den, &
+                     heatcoeff)
             else if ((LS_center(im_source_substrate)* &
                       LS_side(im_source_substrate).le.zero).and. &
                      (LS_center(im_dest_substrate)* &
@@ -13185,7 +13212,9 @@ stop
              LS1=LS_center(im_source_substrate)-LS_center(im_dest_substrate)
              LS2=LS_side(im_source_substrate)-LS_side(im_dest_substrate)
              call get_default_scalar_diffusion(project_option, &
-                     LS1,im_source_substrate,im_dest_substrate,heatcoeff)
+                     LS1,im_source_substrate,im_dest_substrate, &
+                     single_material_den, &
+                     heatcoeff)
             endif
 
             if (at_interface.eq.1) then
