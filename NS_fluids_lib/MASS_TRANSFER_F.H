@@ -89,6 +89,7 @@ extern "C"
      int* level,int* finest_level);
 
    void FORT_RATEMASSCHANGE(
+    int* nucleation_flag,
     int* stefan_flag,
     int* level,
     int* finest_level,

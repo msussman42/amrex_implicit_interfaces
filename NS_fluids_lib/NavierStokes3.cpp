@@ -2570,6 +2570,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        for (int ilev=level;ilev<=finest_level;ilev++) {
         int nucleation_flag=1;
+	color_count=1; // filler
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.level_phase_change_rate(blobdata,color_count,
           nucleation_flag);

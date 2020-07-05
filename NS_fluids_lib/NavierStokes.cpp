@@ -9990,7 +9990,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  int blob_arraysize=num_elements_blobclass;
  blob_array.resize(blob_arraysize);
 
- if (nucleation_flag.eq.0) then
+ if (nucleation_flag==0) {
+
   if (color_count!=blobdata.size())
    amrex::Error("color_count!=blobdata.size()");
   blob_arraysize=color_count*num_elements_blobclass;
@@ -10008,8 +10009,10 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
   if (localMF[TYPE_MF]->nGrow()!=1)
    amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
- } else if (nucleation_flag.eq.1) then
-  // do nothing
+
+ } else if (nucleation_flag==1) {
+  if (color_count!=1)
+   amrex::Error("color_count!=1");
  } else
   amrex::Error("nucleation_flag invalid");
 
@@ -10159,55 +10162,57 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
-  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
- if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
-  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
-
- if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
-  amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
- if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
-  amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
-
- if (localMF[FD_NRM_ND_MF]->nComp()!=n_normal)
-  amrex::Error("localMF[FD_NRM_ND_MF]->nComp()!=n_normal");
- if (localMF[FD_NRM_ND_MF]->nGrow()!=ngrow_make_distance+1)
-  amrex::Error("localMF[FD_NRM_ND_MF] incorrect ngrow");
-
- if (localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten))
-  amrex::Error("localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten)");
- if (localMF[FD_CURV_CELL_MF]->nGrow()!=ngrow_make_distance)
-  amrex::Error("localMF[FD_CURV_CELL_MF] incorrect ngrow");
-
- debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
- debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
- if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
-  amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
-
- debug_ngrow(LS_NRM_FD_MF,1,30);
- if (localMF[LS_NRM_FD_MF]->nComp()!=nmat*AMREX_SPACEDIM) 
-  amrex::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
-
- debug_ngrow(MDOT_MF,0,355);
-
- VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
-
  if (ngrow_distance==ngrow_make_distance+1) {
   // do nothing
  } else
   amrex::Error("ngrow_distance!=ngrow_make_distance+1");
 
- int ngrow_dest=ngrow_distance-1;
+ if (nucleation_flag==0) {
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
+  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
+   amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
+  if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
+   amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
+
+  if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
+   amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
+  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
+   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
+
+  if (localMF[FD_NRM_ND_MF]->nComp()!=n_normal)
+   amrex::Error("localMF[FD_NRM_ND_MF]->nComp()!=n_normal");
+  if (localMF[FD_NRM_ND_MF]->nGrow()!=ngrow_make_distance+1)
+   amrex::Error("localMF[FD_NRM_ND_MF] incorrect ngrow");
+
+  if (localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten))
+   amrex::Error("localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten)");
+  if (localMF[FD_CURV_CELL_MF]->nGrow()!=ngrow_make_distance)
+   amrex::Error("localMF[FD_CURV_CELL_MF] incorrect ngrow");
+
+  debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
+  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+  if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
+   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+
+  debug_ngrow(LS_NRM_FD_MF,1,30);
+  if (localMF[LS_NRM_FD_MF]->nComp()!=nmat*AMREX_SPACEDIM) 
+   amrex::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
+
+  debug_ngrow(MDOT_MF,0,355);
+
+  VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
+
+  int ngrow_dest=ngrow_distance-1;
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(LS_new,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(LS_new,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -10242,19 +10247,19 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &nten,
     &n_normal,
     &ngrow_dest);
- } // mfi
+  } // mfi
 } // omp
- ns_reconcile_d_num(70);
+  ns_reconcile_d_num(70);
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(LS_new,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(LS_new,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -10295,11 +10300,16 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &nten,
     &n_normal,
     &ngrow_dest);
- } // mfi
+  } // mfi
 } // omp
- ns_reconcile_d_num(70);
+  ns_reconcile_d_num(70);
 
- localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());
+  localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());
+
+ } else if (nucleation_flag==1) {
+  // do nothing
+ } else
+  amrex::Error("nucleation_flag invalid");
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -10324,33 +10334,12 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
-   FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
-   FArrayBox& nrmFDfab=(*localMF[LS_NRM_FD_MF])[mfi];
-
-   FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
-   if (burnvelfab.nComp()!=nburning)
-    amrex::Error("burnvelfab.nComp() incorrect");
-
-   FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
-   if (Tsatfab.nComp()!=ntsat)
-    amrex::Error("Tsatfab.nComp()!=ntsat");
-
    FArrayBox& lsnewfab=LS_new[mfi];
    FArrayBox& snewfab=S_new[mfi];
-
-   FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
-   FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
    FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
    FArrayBox& presfab=(*presmf)[mfi]; 
    FArrayBox& pres_eos_fab=(*pres_eos_mf)[mfi]; 
 
-   FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
-
-     // lsnewfab and burnvelfab are updated.
-     // lsfab is not updated.
-     // burnvelfab=BURNING_VELOCITY_MF is cell centered velocity.
    int stefan_flag=1;
    Vector<int> use_exact_temperature(2*nten);
    for (int im=0;im<2*nten;im++)
@@ -10361,81 +10350,192 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   FORT_RATEMASSCHANGE( 
-    &stefan_flag,
-    &level,
-    &finest_level,
-    &normal_probe_size,
-    &ngrow_distance,
-    &nstate,
-    &nmat,
-    &nten,
-    &nburning,
-    &ntsat,
-    &nden,
-    density_floor_expansion.dataPtr(),
-    density_ceiling_expansion.dataPtr(),
-    &custom_nucleation_model,
-    &do_the_nucleate,
-    nucleate_pos.dataPtr(),
-    &nucleate_pos_size, 
-    nucleation_temp.dataPtr(), 
-    nucleation_pressure.dataPtr(), 
-    nucleation_pmg.dataPtr(), 
-    nucleation_mach.dataPtr(), 
-    cavitation_pressure.dataPtr(), 
-    cavitation_vapor_density.dataPtr(), 
-    cavitation_tension.dataPtr(), 
-    microlayer_substrate.dataPtr(),
-    microlayer_angle.dataPtr(),
-    microlayer_size.dataPtr(),
-    macrolayer_size.dataPtr(),
-    max_contact_line_size.dataPtr(),
-    latent_heat.dataPtr(),
-    use_exact_temperature.dataPtr(),
-    reaction_rate.dataPtr(),
-    saturation_temp.dataPtr(),
-    saturation_temp_curv.dataPtr(),
-    saturation_temp_vel.dataPtr(),
-    saturation_temp_min.dataPtr(),
-    saturation_temp_max.dataPtr(),
-    freezing_model.dataPtr(),
-    Tanasawa_or_Schrage.dataPtr(),
-    distribute_from_target.dataPtr(),
-    mass_fraction_id.dataPtr(),
-    species_evaporation_density.dataPtr(),
-    molar_mass.dataPtr(),
-    species_molar_mass.dataPtr(),
-    tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    xlo,dx,
-    &prev_time_slab,
-    &dt_slab,
-    &blob_arraysize,
-    blob_array.dataPtr(),
-    &num_elements_blobclass,
-    &color_count,
-    colorfab.dataPtr(),
-    ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
-    typefab.dataPtr(),
-    ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
-    maskcov.dataPtr(),
-    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    burnvelfab.dataPtr(),
-    ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
-    Tsatfab.dataPtr(),
-    ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
-    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-    snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-    nrmFDfab.dataPtr(),ARLIM(nrmFDfab.loVect()),ARLIM(nrmFDfab.hiVect()),
-    eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
-    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
-    pres_eos_fab.dataPtr(),
-    ARLIM(pres_eos_fab.loVect()),ARLIM(pres_eos_fab.hiVect()),
-    curvfab.dataPtr(),ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect())
-    );
+   if (nucleation_flag==0) {
+
+    FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+    FArrayBox& nrmFDfab=(*localMF[LS_NRM_FD_MF])[mfi];
+
+    FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
+    if (burnvelfab.nComp()!=nburning)
+     amrex::Error("burnvelfab.nComp() incorrect");
+
+    FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
+    if (Tsatfab.nComp()!=ntsat)
+     amrex::Error("Tsatfab.nComp()!=ntsat");
+
+    FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
+    FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
+    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
+
+    FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
+
+     // if stefan_flag==1:
+     // lsnewfab and burnvelfab are updated.
+     // lsfab is not updated.
+     // burnvelfab=BURNING_VELOCITY_MF is cell centered velocity.
+    FORT_RATEMASSCHANGE( 
+     &nucleation_flag,
+     &stefan_flag,
+     &level,
+     &finest_level,
+     &normal_probe_size,
+     &ngrow_distance,
+     &nstate,
+     &nmat,
+     &nten,
+     &nburning,
+     &ntsat,
+     &nden,
+     density_floor_expansion.dataPtr(),
+     density_ceiling_expansion.dataPtr(),
+     &custom_nucleation_model,
+     &do_the_nucleate,
+     nucleate_pos.dataPtr(),
+     &nucleate_pos_size, 
+     nucleation_temp.dataPtr(), 
+     nucleation_pressure.dataPtr(), 
+     nucleation_pmg.dataPtr(), 
+     nucleation_mach.dataPtr(), 
+     cavitation_pressure.dataPtr(), 
+     cavitation_vapor_density.dataPtr(), 
+     cavitation_tension.dataPtr(), 
+     microlayer_substrate.dataPtr(),
+     microlayer_angle.dataPtr(),
+     microlayer_size.dataPtr(),
+     macrolayer_size.dataPtr(),
+     max_contact_line_size.dataPtr(),
+     latent_heat.dataPtr(),
+     use_exact_temperature.dataPtr(),
+     reaction_rate.dataPtr(),
+     saturation_temp.dataPtr(),
+     saturation_temp_curv.dataPtr(),
+     saturation_temp_vel.dataPtr(),
+     saturation_temp_min.dataPtr(),
+     saturation_temp_max.dataPtr(),
+     freezing_model.dataPtr(),
+     Tanasawa_or_Schrage.dataPtr(),
+     distribute_from_target.dataPtr(),
+     mass_fraction_id.dataPtr(),
+     species_evaporation_density.dataPtr(),
+     molar_mass.dataPtr(),
+     species_molar_mass.dataPtr(),
+     tilelo,tilehi,
+     fablo,fabhi,&bfact,
+     xlo,dx,
+     &prev_time_slab,
+     &dt_slab,
+     &blob_arraysize,
+     blob_array.dataPtr(),
+     &num_elements_blobclass,
+     &color_count,
+     colorfab.dataPtr(),
+     ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
+     typefab.dataPtr(),
+     ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
+     maskcov.dataPtr(),
+     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+     burnvelfab.dataPtr(),
+     ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
+     Tsatfab.dataPtr(),
+     ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
+     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+     lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+     nrmFDfab.dataPtr(),ARLIM(nrmFDfab.loVect()),ARLIM(nrmFDfab.hiVect()),
+     eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
+     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+     presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
+     pres_eos_fab.dataPtr(),
+     ARLIM(pres_eos_fab.loVect()),ARLIM(pres_eos_fab.hiVect()),
+     curvfab.dataPtr(),ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()));
+
+   } else if (nucleation_flag==1) {
+
+    FORT_RATEMASSCHANGE( 
+     &nucleation_flag,
+     &stefan_flag,
+     &level,
+     &finest_level,
+     &normal_probe_size,
+     &ngrow_distance,
+     &nstate,
+     &nmat,
+     &nten,
+     &nburning,
+     &ntsat,
+     &nden,
+     density_floor_expansion.dataPtr(),
+     density_ceiling_expansion.dataPtr(),
+     &custom_nucleation_model,
+     &do_the_nucleate,
+     nucleate_pos.dataPtr(),
+     &nucleate_pos_size, 
+     nucleation_temp.dataPtr(), 
+     nucleation_pressure.dataPtr(), 
+     nucleation_pmg.dataPtr(), 
+     nucleation_mach.dataPtr(), 
+     cavitation_pressure.dataPtr(), 
+     cavitation_vapor_density.dataPtr(), 
+     cavitation_tension.dataPtr(), 
+     microlayer_substrate.dataPtr(),
+     microlayer_angle.dataPtr(),
+     microlayer_size.dataPtr(),
+     macrolayer_size.dataPtr(),
+     max_contact_line_size.dataPtr(),
+     latent_heat.dataPtr(),
+     use_exact_temperature.dataPtr(),
+     reaction_rate.dataPtr(),
+     saturation_temp.dataPtr(),
+     saturation_temp_curv.dataPtr(),
+     saturation_temp_vel.dataPtr(),
+     saturation_temp_min.dataPtr(),
+     saturation_temp_max.dataPtr(),
+     freezing_model.dataPtr(),
+     Tanasawa_or_Schrage.dataPtr(),
+     distribute_from_target.dataPtr(),
+     mass_fraction_id.dataPtr(),
+     species_evaporation_density.dataPtr(),
+     molar_mass.dataPtr(),
+     species_molar_mass.dataPtr(),
+     tilelo,tilehi,
+     fablo,fabhi,&bfact,
+     xlo,dx,
+     &prev_time_slab,
+     &dt_slab,
+     &blob_arraysize,
+     blob_array.dataPtr(),
+     &num_elements_blobclass,
+     &color_count,
+     lsnewfab.dataPtr(), //colorfab
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     lsnewfab.dataPtr(), //typefab
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     maskcov.dataPtr(),
+     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+     lsnewfab.dataPtr(), //burnvelfab
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     lsnewfab.dataPtr(), //Tsatfab
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     lsnewfab.dataPtr(), //lsfab
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     lsnewfab.dataPtr(),
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     snewfab.dataPtr(),
+     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+     lsnewfab.dataPtr(), //nrmFDfab
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
+     lsnewfab.dataPtr(), //reconfab
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     presfab.dataPtr(),
+     ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
+     pres_eos_fab.dataPtr(),
+     ARLIM(pres_eos_fab.loVect()),ARLIM(pres_eos_fab.hiVect()),
+     lsnewfab.dataPtr(), //curvfab
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()));
+   } else
+    amrex::Error("nucleation_flag invalid");
+
  } // mfi
 } // omp
  ns_reconcile_d_num(70);
