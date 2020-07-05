@@ -741,6 +741,7 @@ extern "C"
 
 
    void FORT_STEFANSOLVER(
+    int* project_option,
     int* solidheat_flag,
     Real* microlayer_size,
     int* microlayer_substrate,

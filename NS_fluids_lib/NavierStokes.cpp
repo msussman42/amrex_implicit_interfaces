@@ -11910,7 +11910,10 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    FArrayBox& snewfab=S_new[mfi];
    FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  // 1/(rho cv)
    FArrayBox& denfab=(*localMF[CELL_DEN_MF])[mfi];  // 1/rho
-   FArrayBox& coefffab=(*coeffMF)[mfi];  // either TN or alphanovolume
+    // localMF[ALPHANOVOLUME_MF] if adjust_temperature==0
+    // localMF[CELL_DEN_MF] if adjust_temperature==-1
+    // localMF[OUTER_ITER_PRESSURE_MF] if adjust_temperature==1
+   FArrayBox& coefffab=(*coeffMF)[mfi];  
 
    if ((adjust_temperature==0)||
        (adjust_temperature==1)) {
@@ -11953,10 +11956,9 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
- // FIX ME EVAPORATION
- // (OTHER PLACES?)
     // in: GODUNOV_3D.F90
    FORT_STEFANSOLVER( 
+    &project_option, //2=thermal diffusion  or 100 ... 100+num_species_var-1
     &solidheat_flag, //0=diffuse in solid 1=dirichlet 2=Neumann
     microlayer_size.dataPtr(), 
     microlayer_substrate.dataPtr(), 

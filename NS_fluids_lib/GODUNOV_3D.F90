@@ -957,6 +957,41 @@ stop
       return
       end subroutine derive_mappings
 
+      subroutine get_default_scalar_diffusion(project_option, &
+                     LS1,im_source,im_dest,heatcoeff)
+      IMPLICIT NONE
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: im_source
+      INTEGER_T, intent(in) :: im_dest
+      REAL_T, intent(in) :: LS1
+      REAL_T, intent(out) :: heatcoeff
+      INTEGER_T :: ispec
+      INTEGER_T :: nmat
+
+      nmat=num_materials
+
+      if (project_option.eq.2) then
+       if (LS1.ge.zero) then
+        heatcoeff=get_user_heatviscconst(im_source)
+       else
+        heatcoeff=get_user_heatviscconst(im_dest)
+       endif
+      else if ((project_option.ge.100).and. &
+               (project_option.lt.100+num_species_var)) then
+       ispec=project_option-100
+       if (LS1.ge.zero) then
+        heatcoeff=fort_speciesviscconst(ispec*nmat+im_source)* &
+                  fort_denconst(im_source)
+       else
+        heatcoeff=fort_speciesviscconst(ispec*nmat+im_dest)* &
+                  fort_denconst(im_dest)
+       endif
+      else
+       print *,"project_option invalid"
+       stop
+      endif
+
+      end subroutine get_default_scalar_diffusion
 
       end module godunov_module
 
@@ -12369,6 +12404,7 @@ stop
        ! adjust_temperature==0  modify coefficient (coeff)
        ! adjust_temperature==-1 modify heatx,heaty,heatz
       subroutine FORT_STEFANSOLVER( &
+       project_option, & ! 2=thermal diffusion or 100...100+num_species_var-1
        solidheat_flag, & ! 0=diffuse in solid 1=dirichlet 2=Neumann
        microlayer_size, & ! 1..nmat
        microlayer_substrate, & ! 1..nmat
@@ -12415,8 +12451,10 @@ stop
       use global_utility_module
       use MOF_routines_module
       use mass_transfer_module
+      use godunov_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nstate
@@ -12546,7 +12584,7 @@ stop
       REAL_T x_interface(SDIM)
       INTEGER_T nhalf
       INTEGER_T dir_inner
-      
+      REAL_T T_or_Y_min
 
       nhalf=3
 
@@ -12626,6 +12664,16 @@ stop
        stop
       endif
 
+      if (project_option.eq.2) then
+       T_or_Y_min=zero
+      else if ((project_option.ge.100).and. &
+               (project_option.le.100+num_species_var-1)) then
+       T_or_Y_min=zero
+      else
+       print *,"project_option invalid"
+       stop
+      endif
+
       if (SDIM.eq.2) then 
        k1lo=0
        k1hi=0
@@ -12648,8 +12696,8 @@ stop
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,1226)
       call checkbound(fablo,fabhi,DIMS(thermal),1,-1,1226)
       call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1227)
-      call checkbound(fablo,fabhi,DIMS(DeDT),1,-1,1228)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,1229)
+      call checkbound(fablo,fabhi,DIMS(DeDT),1,-1,1228) ! 1/(density * cv)
+      call checkbound(fablo,fabhi,DIMS(den),1,-1,1229)  ! 1/(density)
       call checkbound(fablo,fabhi,DIMS(coeff),0,-1,1230)
       call checkbound(fablo,fabhi,DIMS(vol),0,-1,1231)
       call checkbound(fablo,fabhi,DIMS(heatx),0,0,1232)
@@ -12693,7 +12741,7 @@ stop
          TMIN(im)=zero
          TMAX(im)=zero
          TSTATUS(im)=0
-        enddo
+        enddo ! im=1..nmat
 
         do i1=-1,1 
         do j1=-1,1 
@@ -12709,7 +12757,9 @@ stop
           endif
          enddo
          T_test=thermal(D_DECL(i+i1,j+j1,k+k1),im_side_primary)
-         if (T_test.le.zero) then
+         if (T_test.ge.T_or_Y_min) then
+          ! do nothing
+         else
           print *,"T_test= ",T_test
           print *,"adjust_temperature=",adjust_temperature
           print *,"i,j,k ",i,j,k
@@ -12800,29 +12850,46 @@ stop
                ! local_freezing_model=6 (Palmore Desjardins)
                ! local_freezing_model=7 (Cavitation)
                if ((local_freezing_model.eq.0).or. &
-                   (local_freezing_model.eq.5)) then
+                   (local_freezing_model.eq.5).or. &
+                   (local_freezing_model.eq.6)) then
 
-                TSAT=saturation_temp(iten+ireverse*nten)
-                if (TSAT.gt.zero) then
-                 tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
-                 TSAT=TSATFAB(D_DECL(i,j,k),tsat_comp)
+                if (project_option.eq.2) then
+                 TSAT=saturation_temp(iten+ireverse*nten)
                  if (TSAT.gt.zero) then
+                  tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+                  TSAT=TSATFAB(D_DECL(i,j,k),tsat_comp)
+                  if (TSAT.gt.zero) then
+                   ! do nothing
+                  else
+                   print *,"TSAT must be positive1"
+                   stop
+                  endif
+                 else
+                  print *,"saturation temperature must be positive2"
+                  stop
+                 endif
+                else if ((project_option.ge.100).and. &
+                         (project_option.lt.100+num_species_var)) then
+                 tsat_comp=nten+(iten-1)*ncomp_per_tsat+2
+                 TSAT=TSATFAB(D_DECL(i,j,k),tsat_comp)
+                 if (TSAT.ge.zero) then
                   ! do nothing
                  else
-                  print *,"TSAT must be positive1"
+                  print *,"TSAT (aka Y) must be >= 0"
                   stop
                  endif
                 else
-                 print *,"saturation temperature must be positive2"
+                 print *,"project_option invalid"
                  stop
                 endif
+
 
                 if (num_materials_scalar_solve.eq.1) then
 
                  im_source_substrate=im_source
                  im_dest_substrate=im_dest
 
-                 if (local_freezing_model.eq.0) then
+                 if (local_freezing_model.eq.0) then ! stefan
 
                   ! TSAT BC at thin filament interface.
                   if (solidheat_flag.eq.0) then ! diffuse in solid
@@ -12848,7 +12915,9 @@ stop
                    stop
                   endif
 
-                 else if (local_freezing_model.eq.5) then
+                 else if (local_freezing_model.eq.5) then ! stefan evap/diff
+                  ! do nothing
+                 else if (local_freezing_model.eq.6) then !Palmore/Desjardins
                   ! do nothing
                  else
                   print *,"local_freezing_model invalid"
@@ -12862,6 +12931,7 @@ stop
 
                   im_crit=im_primary
 
+                   ! im_primary is found in the stencil
                   if (TSTATUS(im_crit).eq.1) then
 
                    if (LL.lt.zero) then ! freezing or condensation
@@ -12878,12 +12948,13 @@ stop
                     ! local_freezing_model=2 (hydrate model)
                     ! local_freezing_model=3 (wildfire)
                     ! local_freezing_model=4 (Tanasawa or Schrage)
-                    ! local_freezing_model=5 (evaporation/condensation)
+                    ! local_freezing_model=5 (stefan evaporation/condensation)
                     ! local_freezing_model=6 (Palmore/Desjardins)
                     ! local_freezing_model=7 (Cavitation)
-                   if ((local_freezing_model.eq.0).or. &
-                       ((local_freezing_model.eq.5).and. &
-                        (TGRAD_test.gt.zero))) then
+                   if ((local_freezing_model.eq.0).or. & !stefan model
+                       ((local_freezing_model.eq.5).and. & !stefan:evap or cond
+                        (TGRAD_test.gt.zero)).or. &
+                       (local_freezing_model.eq.6)) then !Palmore/Desjardins
 
                     if (im_dest_crit.eq.-1) then
                      im_crit_save=im_crit
@@ -13001,7 +13072,7 @@ stop
           print *,"SWEPTFACTOR INVALID"
           stop
          endif
-         over_den=den(D_DECL(i,j,k),1)
+         over_den=den(D_DECL(i,j,k),1)  ! 1/(rho)
          over_cv=DeDT(D_DECL(i,j,k),1)  ! 1/(rho cv)
          local_vol=vol(D_DECL(i,j,k))
 
@@ -13012,7 +13083,17 @@ stop
           stop
          endif
 
-         original_coeff=one/(dt*over_cv*SWEPTFACTOR)
+         original_coeff=one/(dt*SWEPTFACTOR)
+         if (project_option.eq.2) then
+          original_coeff=original_coeff/over_cv
+         else if ((project_option.ge.100).and. &
+                  (project_option.lt.100+num_species_var)) then
+          original_coeff=original_coeff/over_den
+         else
+          print *,"project_option invalid"
+          stop
+         endif
+
          delta_coeff=zero
          coeff_TSAT=zero
 
@@ -13093,11 +13174,9 @@ stop
              at_interface=1
              LS1=LS_center(im_source)-LS_center(im_dest)
              LS2=LS_side(im_source)-LS_side(im_dest)
-             if (LS1.ge.zero) then
-              heatcoeff=get_user_heatviscconst(im_source)
-             else
-              heatcoeff=get_user_heatviscconst(im_dest)
-             endif
+              ! FIX ME
+             call get_default_scalar_diffusion(project_option, &
+                     LS1,im_source,im_dest,heatcoeff)
             else if ((LS_center(im_source_substrate)* &
                       LS_side(im_source_substrate).le.zero).and. &
                      (LS_center(im_dest_substrate)* &
@@ -13105,11 +13184,8 @@ stop
              at_interface=1
              LS1=LS_center(im_source_substrate)-LS_center(im_dest_substrate)
              LS2=LS_side(im_source_substrate)-LS_side(im_dest_substrate)
-             if (LS1.ge.zero) then
-              heatcoeff=get_user_heatviscconst(im_source_substrate)
-             else
-              heatcoeff=get_user_heatviscconst(im_dest_substrate)
-             endif
+             call get_default_scalar_diffusion(project_option, &
+                     LS1,im_source_substrate,im_dest_substrate,heatcoeff)
             endif
 
             if (at_interface.eq.1) then
@@ -13166,7 +13242,16 @@ stop
                        (one-theta)*xsten(0,dir_inner)
               enddo
 
-              tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+              if (project_option.eq.2) then
+               tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+              else if ((project_option.ge.100).and. &
+                       (project_option.lt.100+num_species_var)) then
+               tsat_comp=nten+(iten-1)*ncomp_per_tsat+2
+              else
+               print *,"project_option invalid"
+               stop
+              endif
+
               ngrow_tsat=1
               call interpfab_tsat( &
                i,j,k, &
@@ -13224,8 +13309,10 @@ stop
             if (adjust_temperature.eq.1) then
 
              T_test=thermal(D_DECL(i,j,k),im_crit)
-             if (T_test.le.zero) then
-              print *,"T_test must be positive"
+             if (T_test.ge.T_or_Y_min) then
+              ! do nothing
+             else
+              print *,"T_test<T_or_Y_min"
               stop
              endif
 
@@ -13233,8 +13320,17 @@ stop
                       (original_coeff+delta_coeff) 
 
              do im_adjust=1,nmat
-              tcomp=num_materials_vel*(SDIM+1)+ &
-               (im_adjust-1)*num_state_material+2
+              if (project_option.eq.2) then
+               tcomp=num_materials_vel*(SDIM+1)+ &
+                (im_adjust-1)*num_state_material+2
+              else if ((project_option.ge.100).and. &
+                       (project_option.le.100+num_species_var-1)) then
+               tcomp=num_materials_vel*(SDIM+1)+ &
+                (im_adjust-1)*num_state_material+3+project_option-100
+              else
+               print *,"project_option invalid"
+               stop
+              endif
               Snew(D_DECL(i,j,k),tcomp)=T_adjust
              enddo
 
