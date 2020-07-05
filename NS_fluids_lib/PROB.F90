@@ -29470,6 +29470,10 @@ END SUBROUTINE Adist
 ! (water: 0.00853 at 300K)
 ! saturation pressure: 35400 g/(cm s^2)
 ! See also Bicer and Sou, 2016
+! P=liquid pressure
+! f_v=vapor mass fraction
+! mu=liquid viscosity
+! sigma=liquid/vapor surface tension.
 subroutine RatePhaseChange(P,f_v,saturation_pressure, &
   rho_l,rho_v,mu,sigma,R_e,R_c)
  implicit none
