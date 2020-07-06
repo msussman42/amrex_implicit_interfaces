@@ -1230,6 +1230,35 @@ module global_utility_module
 
 implicit none
 
+      type nucleation_parm_type
+       INTEGER_T, pointer :: local_freezing_model
+       REAL_T, pointer :: LL
+       INTEGER_T, pointer :: i,j,k
+       INTEGER_T, pointer :: im_source
+       INTEGER_T, pointer :: im_dest
+       REAL_T, pointer :: dxmaxLS
+       INTEGER_T, pointer :: bfact
+       INTEGER_T, pointer :: level
+       INTEGER_T, pointer :: finest_level
+       REAL_T, pointer :: dx(:)
+       REAL_T, pointer :: xlo(:)
+       INTEGER_T, pointer :: nmat
+       INTEGER_T, pointer :: nten
+       INTEGER_T, pointer :: nstate
+       INTEGER_T, pointer :: fablo(:)
+       INTEGER_T, pointer :: fabhi(:)
+       INTEGER_T :: DIMDEC(EOS)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
+       INTEGER_T :: DIMDEC(LS)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+       INTEGER_T :: DIMDEC(pres)
+       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
+       REAL_T, pointer, dimension(:) :: density_floor_expansion
+       REAL_T, pointer, dimension(:) :: density_ceiling_expansion
+      end type nucleation_parm_type
+
+
+
 REAL_T :: MOF_PI=zero
 
 contains
