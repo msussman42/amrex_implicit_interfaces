@@ -7514,8 +7514,78 @@ stop
         else if (nucleation_flag.eq.1) then
          ! see RatePhaseChange in PROB.F90
          ! 3b2b380e73f9a3cae51bca74e4f6327b071bb423
+         ! LEVELSET FUNCTION AT CELL CENTERS.
+         do im=1,nmat
+          LShere(im)=LSnew(D_DECL(i,j,k),im)
+         enddo
+         call get_primary_material(LShere,nmat,im_primary)
+         if (is_rigid(nmat,im_primary).eq.0) then
+          do im=1,nmat-1
+           do im_opp=im+1,nmat
+            if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+             print *,"im or im_opp bust 9"
+             stop
+            endif
+            call get_iten(im,im_opp,iten,nmat)
+            do ireverse=0,1
+             LL(ireverse)=latent_heat(iten+ireverse*nten)
+             local_freezing_model=freezing_model(iten+ireverse*nten)
+             local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
 
+             if (LL(ireverse).ne.zero) then
+            
+              if (ireverse.eq.0) then
+               im_source=im
+               im_dest=im_opp
+              else if (ireverse.eq.1) then
+               im_source=im_opp
+               im_dest=im
+              else
+               print *,"ireverse invalid"
+               stop
+              endif
 
+              if ((is_rigid(nmat,im).eq.1).or. &
+                  (is_rigid(nmat,im_opp).eq.1)) then
+
+               ! do nothing
+
+              else if ((is_rigid(nmat,im).eq.0).and. &
+                       (is_rigid(nmat,im_opp).eq.0)) then
+               if (im_primary.eq.im_source) then
+                nucleation_PARMS_in%LL=LL(ireverse)
+                nucleation_PARMS_in%local_freezing_model=local_freezing_model
+                nucleation_PARMS_in%local_TSAT=local_Tsat(ireverse)
+                nucleation_PARMS_in%im_source=im_source
+                nucleation_PARMS_in%im_dest=im_dest
+                call get_vel_phasechange_NUCLEATE( &
+                 nucleation_PARMS_in,nucleation_PARMS_out)
+               else if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
+                ! do nothing
+               else
+                print *,"im_primary invalid"
+                stop
+               endif
+              else
+               print *,"is_rigid(nmat,im or im_opp) invalid"
+               stop
+              endif
+             else if (LL(ireverse).eq.zero) then
+              ! do nothing
+             else
+              print *,"LL invalid"
+              stop
+             endif
+            enddo ! ireverse=0,1
+           enddo ! im_opp
+          enddo ! im
+
+         else if (is_rigid(nmat,im_primary).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid(nmat,im_primary) invalid"
+          stop
+         endif
 
         else
          print *,"nucleation_flag invalid"

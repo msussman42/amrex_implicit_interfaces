@@ -16539,14 +16539,14 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
 
-      INTEGER_T bfact,nhalf
-      REAL_T dx(SDIM)
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: bfact,nhalf
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T x,y,z
-      REAL_T dist
+      REAL_T, intent(out) :: dist
       INTEGER_T icomp
       REAL_T distarr(n_sites)
-      REAL_T nucleate_pos(4*n_sites)
+      REAL_T, intent(in) :: nucleate_pos(4*n_sites)
       REAL_T hugedist
       REAL_T xx(SDIM)
       REAL_T rr
@@ -29684,6 +29684,97 @@ end subroutine RatePhaseChange
 ! end CODY ESTEBE
 ! -----------------
 
+
+      subroutine get_vel_phasechange_NUCLEATE( &
+                      nucleate_in,nucleate_out)
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      type(nucleation_parm_type_input), intent(in) :: nucleate_in
+      type(nucleation_parm_type_inout), intent(inout) :: nucleate_out
+
+      call checkbound(nucleate_in%fablo,nucleate_in%fabhi, &
+        DIMS(nucleate_in%EOS), &
+        1,-1,1301)
+      call checkbound(nucleate_in%fablo,nucleate_in%fabhi, &
+        DIMS(nucleate_in%pres), &
+        1,-1,1301)
+      call checkbound(nucleate_in%fablo,nucleate_in%fabhi, &
+        DIMS(nucleate_in%pres_eos), &
+        1,-1,1301)
+      call checkbound(nucleate_in%fablo,nucleate_in%fabhi, &
+        DIMS(nucleate_in%LSnew), &
+        1,-1,1301)
+      call checkbound(nucleate_in%fablo,nucleate_in%fabhi, &
+        DIMS(nucleate_in%Snew), &
+        1,-1,1301)
+      nmat=nucleate_in%nmat
+
+      nstate_test=num_materials_vel*(SDIM+1)+ &
+              nmat*(num_state_material+ngeom_raw)+1
+      if (nstate.eq.nstate_test) then
+       ! do nothing
+      else
+       print *,"nstate invalid"
+       stop
+      endif
+      if (n_sites.gt.0) then
+       if (nucleate_in%nucleate_pos_size.ne.n_sites*4) then
+        print *,"nucleate_pos_size invalid"
+        stop
+       endif
+      endif
+
+      VOFTOL_NUCLEATE=VOFTOL_REDIST*two
+
+      denbase=num_materials_vel*(SDIM+1)
+      mofbase=denbase+nmat*num_state_material
+      im_dest=nucleate_in%im_dest
+      vofcomp=mofbase+(im_dest-1)*ngeom_raw+1
+
+      i=nucleate_in%i
+      j=nucleate_in%j
+      k=nucleate_in%k
+      if (nucleate_in%Snew(D_DECL(i,j,k),vofcomp).ge.VOFTOL_NUCLEATE) then
+       ! do nothing
+      else if (nucleate_in%Snew(D_DECL(i,j,k),vofcomp).le.VOFTOL_NUCLEATE) then
+       make_seed=0
+
+       call gridsten_level(xsten,i,j,k,nucleate_in%level,nhalf)
+
+       if ((probtype.eq.55).and. &
+           ((axis_dir.eq.6).or. &  ! incompressible
+            (axis_dir.eq.7))) then ! compressible
+        if ((nucleate_in%im_source.ne.1).or. &
+            (nucleate_in%im_dest.ne.2)) then
+         print *,"im_source or im_dest invalid"
+         stop
+        endif
+        if ((nucleate_in%do_the_nucleate.eq.1).and. &
+            (n_sites.gt.0)) then
+         call nucleation_sites(xsten,nhalf, &
+                 nucleate_in%dx, &
+                 nucleate_in%bhalf,
+                 dist, &
+                 nucleate_in%nucleate_pos)
+         if (dist.le.zero) then
+          make_seed=1
+         endif
+        else if ((nucleate_in%do_the_nucleate.eq.0).or. &
+                 (n_sites.eq.0)) then
+         ! do nothing
+        else
+         print *,"do_the_nucleate or n_sites invalid"
+         stop
+        endif
+       endif ! probtype==55, axis_dir=6,7
+      else
+       print *,"Snew(vofcomp) invalid"
+       stop
+      endif
+
+      end subroutine get_vel_phasechange_NUCLEATE
 
        ! expansion_fact=
        ! either: 1-den_dst/den_src (distribute_from_target==0)
