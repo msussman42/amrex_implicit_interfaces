@@ -29680,6 +29680,78 @@ subroutine RatePhaseChange(P,f_v,saturation_pressure, &
  endif
  
 end subroutine RatePhaseChange
+
+
+       ! vapor_mass_source<0 if condensation
+       ! vapor_mass_source>0 if evaporation
+      subroutine get_vapor_mass_source( &
+       liq_viscosity, &
+       liq_vap_tension, &
+       total_density, &
+       liquid_density,vapor_density, &
+       liquid_pressure, &
+       saturation_pressure, &
+       vapor_mass_frac, &
+       vapor_vol_frac, &
+       vapor_mass_source)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: liq_viscosity
+      REAL_T, intent(in) :: liq_vap_tension
+      REAL_T, intent(in) :: total_density
+      REAL_T, intent(in) :: liquid_density,vapor_density
+      REAL_T, intent(in) :: liquid_pressure,saturation_pressure
+      REAL_T, intent(in) :: vapor_mass_frac
+      REAL_T, intent(in) :: vapor_vol_frac
+      REAL_T, intent(out) :: vapor_mass_source
+
+      REAL_T R_e,R_c
+
+      if ((liquid_density.gt.zero).and.(vapor_density.gt.zero)) then
+       ! do nothing
+      else
+       print *,"liquid_density or vapor_density invalid"
+       stop
+      endif
+      if (liq_vap_tension.ge.zero) then
+       ! do nothing
+      else
+       print *,"liq_vap_tension invalid"
+       stop
+      endif
+
+      if ((vapor_mass_frac.ge.zero).and.(vapor_mass_frac.le.one)) then
+
+       if ((vapor_vol_frac.ge.zero).and.(vapor_vol_frac.le.one)) then
+
+         ! R_e>=0  R_c>=0
+        call RatePhaseChange( &
+         liquid_pressure, &
+         vapor_mass_frac, &
+         saturation_pressure, &
+         liquid_density,vapor_density, &
+         liq_viscosity,liq_vap_tension,R_e,R_c)
+
+        if ((R_e.ge.zero).and.(R_c.ge.zero)) then
+         vapor_mass_source=R_e-R_c
+        else
+         print *,"R_e or R_c invalid"
+         stop
+        endif 
+
+       else
+        print *,"vapor_vol_frac invalid"
+        stop
+       endif
+ 
+      else
+       print *,"vapor_mass_frac invalid"
+       stop
+      endif
+
+      return
+      end subroutine get_vapor_mass_source
+
 ! -------------------
 ! end CODY ESTEBE
 ! -----------------
@@ -29733,42 +29805,133 @@ end subroutine RatePhaseChange
       im_dest=nucleate_in%im_dest
       vofcomp=mofbase+(im_dest-1)*ngeom_raw+1
 
+      local_freezing_model=nucleate_in%local_freezing_model
+
       i=nucleate_in%i
       j=nucleate_in%j
       k=nucleate_in%k
       if (nucleate_in%Snew(D_DECL(i,j,k),vofcomp).ge.VOFTOL_NUCLEATE) then
        ! do nothing
       else if (nucleate_in%Snew(D_DECL(i,j,k),vofcomp).le.VOFTOL_NUCLEATE) then
+
+       LL=nucleate_in%LL
        make_seed=0
 
        call gridsten_level(xsten,i,j,k,nucleate_in%level,nhalf)
 
-       if ((probtype.eq.55).and. &
-           ((axis_dir.eq.6).or. &  ! incompressible
-            (axis_dir.eq.7))) then ! compressible
-        if ((nucleate_in%im_source.ne.1).or. &
-            (nucleate_in%im_dest.ne.2)) then
-         print *,"im_source or im_dest invalid"
-         stop
-        endif
-        if ((nucleate_in%do_the_nucleate.eq.1).and. &
-            (n_sites.gt.0)) then
-         call nucleation_sites(xsten,nhalf, &
+       if (local_freezing_model.eq.0) then
+
+        if ((probtype.eq.55).and. &
+            ((axis_dir.eq.6).or. &  ! incompressible
+             (axis_dir.eq.7))) then ! compressible
+         if ((nucleate_in%im_source.ne.1).or. &
+             (nucleate_in%im_dest.ne.2)) then
+          print *,"im_source or im_dest invalid"
+          stop
+         endif
+         if (LL.gt.zero) then
+          ! do nothing
+         else
+          print *,"expecting latent heat to be positive"
+          stop
+         endif
+         if ((nucleate_in%do_the_nucleate.eq.1).and. &
+             (n_sites.gt.0)) then
+          call nucleation_sites(xsten,nhalf, &
                  nucleate_in%dx, &
                  nucleate_in%bhalf,
                  dist, &
                  nucleate_in%nucleate_pos)
-         if (dist.le.zero) then
-          make_seed=1
+          if (dist.le.zero) then
+           make_seed=1
+          endif
+         else if ((nucleate_in%do_the_nucleate.eq.0).or. &
+                  (n_sites.eq.0)) then
+          ! do nothing
+         else
+          print *,"do_the_nucleate or n_sites invalid"
+          stop
          endif
-        else if ((nucleate_in%do_the_nucleate.eq.0).or. &
-                 (n_sites.eq.0)) then
-         ! do nothing
-        else
-         print *,"do_the_nucleate or n_sites invalid"
-         stop
-        endif
-       endif ! probtype==55, axis_dir=6,7
+        endif ! probtype==55, axis_dir=6,7
+       else if (local_freezing_model.eq.7) then ! cavitation
+        prev_time=nucleate_in%prev_time
+        cur_time=nucleate_in%cur_time
+        dt=nucleate_in%dt
+        if (prev_time.gt.zero) then
+         if (curv_time.gt.prev_time) then
+          if (dt.gt.zero) then
+           test_pressure=nucleate_in%preseos(D_DECL(i,j,k))
+           if (LL.gt.zero) then
+            im_vapor=im_dest ! evaporation
+            im_liquid=im_source
+            vapor_mass_frac=zero
+            liquid_mass_frac=one
+            vapor_density=fort_denconst(im_vapor)
+            test_den=nucleate_in%EOS(D_DECL(i,j,k), &
+                   (im_liquid-1)*num_state_material+1)
+            test_temp=nucleate_in%EOS(D_DECL(i,j,k), &
+                   (im_liquid-1)*num_state_material+2)
+           else if (LL.lt.zero) then
+            im_vapor=im_source ! condensation
+            im_liquid=im_dest
+            vapor_mass_frac=one
+            liquid_mass_frac=zero
+            vapor_density=nucleate_in%EOS(D_DECL(i,j,k), &
+                   (im_vapor-1)*num_state_material+1)
+            test_den=fort_denconst(im_liquid)
+            test_temp=nucleate_in%EOS(D_DECL(i,j,k), &
+                   (im_vapor-1)*num_state_material+2)
+           else
+            print *,"LL invalid"
+            stop
+           endif
+           saturation_pres=cavitation_pressure(im_liquid)
+           if (vapor_density.gt.zero) then
+            ! let Y=vapor_mass_frac dV=vapor density dL=liquid den
+            ! alpha*dV=Y*d
+            ! d=alpha dV + (1-alpha) dL=alpha(dV-dL)+dL=
+            ! Y*d(dV-dL)/dV+dL
+            ! d(1-Y(dV-dL)/dV)=dL
+            ! d=dL dV/(dV-Y(dV-dL))=dL dV/((1-Y)dV+Y dL)
+            ! 
+            total_density=test_den*vapor_density/ &
+               (vapor_mass_frac*test_den+liquid_mass_frac*vapor_density)
+            vapor_vol_frac=total_density*vapor_mass_frac/vapor_density
+
+            if ((vapor_vol_frac.ge.zero).and. &
+                (vapor_vol_frac.le.one)) then
+
+             if (nuclate_in%cavitation_tension(im_liquid).ge.zero) then
+              test_visc=get_user_viscconst(im_liquid,test_den,test_temp)
+
+              if (test_visc.ge.zero) then
+               call get_vapor_mass_source( &
+                 test_visc, &
+                 nucleate_in%cavitation_tension(im_liquid), &
+                 total_density, &
+                 test_den,vapor_density, &
+                 test_pressure, &
+                 saturation_pres, &
+                 vapor_mass_frac, &
+                 vapor_vol_frac, &
+                 vapor_mass_source)
+              else
+               print *,"test_visc invalid"
+               stop
+              endif
+
+
+       else if ((local_freezing_model.eq.1).or. & !source term
+                (local_freezing_model.eq.2).or. & !Hydrate
+                (local_freezing_model.eq.3).or. & !wildfire
+                (local_freezing_model.eq.4).or. & !Tanasawa or Schrage
+                (local_freezing_model.eq.5).or. & !fully saturated evap/cond
+                (local_freezing_model.eq.6)) then !Palmore/Desjardins
+        ! do nothing
+       else
+        print *,"local_freezing_model invalid"
+        stop
+       endif
       else
        print *,"Snew(vofcomp) invalid"
        stop

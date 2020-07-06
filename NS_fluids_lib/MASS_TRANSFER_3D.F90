@@ -6563,7 +6563,7 @@ stop
 
 !    local_freezing_model=4  Tanasawa or Schrage
 !    local_freezing_model=5  fully saturated evaporation?
-!    local_freezing_model=6  partially saturated evaporation?
+!    local_freezing_model=6  Palmore/Desjardins
 !    local_freezing_model=7  Cavitation (a seed must exist)
 
                  do while (TSAT_converge.eq.0) 
@@ -7513,7 +7513,6 @@ stop
 
         else if (nucleation_flag.eq.1) then
          ! see RatePhaseChange in PROB.F90
-         ! 3b2b380e73f9a3cae51bca74e4f6327b071bb423
          ! LEVELSET FUNCTION AT CELL CENTERS.
          do im=1,nmat
           LShere(im)=LSnew(D_DECL(i,j,k),im)
