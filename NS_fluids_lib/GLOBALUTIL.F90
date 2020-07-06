@@ -19,7 +19,7 @@ stop
 
 
 
-      MODULE LagrangeInterpolationPolynomial
+      module LagrangeInterpolationPolynomial
       IMPLICIT NONE
 
       CONTAINS
@@ -243,9 +243,9 @@ stop
       END SUBROUTINE  PolyDerivativeMatrix!LIDerivativeMatrixNodes
 
 
-      END MODULE LagrangeInterpolationPolynomial
+      end module LagrangeInterpolationPolynomial
 
-       MODULE LegendreNodes
+       module LegendreNodes
        IMPLICIT NONE
    
 !___________________________________________________________________
@@ -1223,41 +1223,59 @@ CONTAINS
 
       end subroutine sanity_check 
  
-      END MODULE LegendreNodes
+      end module LegendreNodes
 
 
 module global_utility_module
 
 implicit none
 
-      type nucleation_parm_type
-       INTEGER_T, pointer :: local_freezing_model
-       REAL_T, pointer :: LL
-       INTEGER_T, pointer :: i,j,k
-       INTEGER_T, pointer :: im_source
-       INTEGER_T, pointer :: im_dest
-       REAL_T, pointer :: dxmaxLS
-       INTEGER_T, pointer :: bfact
-       INTEGER_T, pointer :: level
-       INTEGER_T, pointer :: finest_level
+      type nucleation_parm_type_input
+       INTEGER_T :: local_freezing_model
+       REAL_T :: LL
+       INTEGER_T :: i,j,k
+       INTEGER_T :: im_source
+       INTEGER_T :: im_dest
+       REAL_T :: dxmaxLS
+       INTEGER_T :: bfact
+       INTEGER_T :: level
+       INTEGER_T :: finest_level
        REAL_T, pointer :: dx(:)
        REAL_T, pointer :: xlo(:)
-       INTEGER_T, pointer :: nmat
-       INTEGER_T, pointer :: nten
-       INTEGER_T, pointer :: nstate
+       INTEGER_T :: nmat
+       INTEGER_T :: nten
+       INTEGER_T :: nstate
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
        INTEGER_T :: DIMDEC(EOS)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
-       INTEGER_T :: DIMDEC(LS)
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+       INTEGER_T :: DIMDEC(LSnew)
+       INTEGER_T :: DIMDEC(Snew)
        INTEGER_T :: DIMDEC(pres)
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
-       REAL_T, pointer, dimension(:) :: density_floor_expansion
-       REAL_T, pointer, dimension(:) :: density_ceiling_expansion
-      end type nucleation_parm_type
+       INTEGER_T :: DIMDEC(pres_eos)
+       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres_eos
+       INTEGER_T :: custom_nucleation_model
+       INTEGER_T :: do_the_nucleate
+       INTEGER_T :: nucleate_pos_size
+       REAL_T, pointer :: nucleate_pos(:)
+       REAL_T, pointer :: nucleation_temp(:)
+       REAL_T, pointer :: nucleation_pressure(:)
+       REAL_T, pointer :: nucleation_pmg(:)
+       REAL_T, pointer :: nucleation_mach(:)
+       REAL_T, pointer :: cavitation_pressure(:)
+       REAL_T, pointer :: cavitation_vapor_density(:)
+       REAL_T, pointer :: cavitation_tension(:)
+       REAL_T :: local_TSAT
+       REAL_T :: prev_time
+       REAL_T :: cur_time
+       REAL_T :: dt
+      end type nucleation_parm_type_input
 
-
+      type nucleation_parm_type_inout
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSnew
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: Snew
+      end type nucleation_parm_type_inout
 
 REAL_T :: MOF_PI=zero
 

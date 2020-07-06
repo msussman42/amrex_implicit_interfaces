@@ -5614,7 +5614,8 @@ stop
 
       INTEGER_T, intent(in) :: nucleation_flag
       INTEGER_T, intent(in) :: stefan_flag
-      INTEGER_T, target, intent(in) :: level,finest_level
+      INTEGER_T, target, intent(in) :: level
+      INTEGER_T, target, intent(in) :: finest_level
       INTEGER_T, intent(in) :: normal_probe_size
       REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
@@ -5629,14 +5630,14 @@ stop
       INTEGER_T, intent(in) :: custom_nucleation_model
       INTEGER_T, intent(in) :: do_the_nucleate
       INTEGER_T, intent(in) :: nucleate_pos_size
-      REAL_T, intent(in) :: nucleate_pos(nucleate_pos_size)
-      REAL_T, intent(in) :: nucleation_temp(2*nten)
-      REAL_T, intent(in) :: nucleation_pressure(2*nten)
-      REAL_T, intent(in) :: nucleation_pmg(2*nten)
-      REAL_T, intent(in) :: nucleation_mach(2*nten)
-      REAL_T, intent(in) :: cavitation_pressure(nmat)
-      REAL_T, intent(in) :: cavitation_vapor_density(nmat)
-      REAL_T, intent(in) :: cavitation_tension(nmat)
+      REAL_T, target, intent(in) :: nucleate_pos(nucleate_pos_size)
+      REAL_T, target, intent(in) :: nucleation_temp(2*nten)
+      REAL_T, target, intent(in) :: nucleation_pressure(2*nten)
+      REAL_T, target, intent(in) :: nucleation_pmg(2*nten)
+      REAL_T, target, intent(in) :: nucleation_mach(2*nten)
+      REAL_T, target, intent(in) :: cavitation_pressure(nmat)
+      REAL_T, target, intent(in) :: cavitation_vapor_density(nmat)
+      REAL_T, target, intent(in) :: cavitation_tension(nmat)
       INTEGER_T, intent(in) ::  microlayer_substrate(nmat)
       REAL_T, intent(in) :: microlayer_angle(nmat)
       REAL_T, intent(in) :: microlayer_size(nmat)
@@ -5699,14 +5700,14 @@ stop
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
       REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
-      REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
-      REAL_T, intent(inout) :: Snew(DIMV(Snew),nstate)
+      REAL_T, target, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
+      REAL_T, target, intent(inout) :: Snew(DIMV(Snew),nstate)
       REAL_T, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
       REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
        ! F,X,order,SL,I x nmat
       REAL_T, target, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, target, intent(in) :: pres(DIMV(pres)) 
-      REAL_T, intent(in) :: pres_eos(DIMV(pres_eos)) 
+      REAL_T, target, intent(in) :: pres_eos(DIMV(pres_eos)) 
       REAL_T, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
 
       INTEGER_T, target :: i,j,k
@@ -5816,6 +5817,8 @@ stop
       type(probe_parm_type), target :: PROBE_PARMS
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
       type(T_Y_MDOT_parm_type) :: T_Y_PARMS
+      type(nucleation_parm_type_input) :: nucleation_PARMS_in
+      type(nucleation_parm_type_inout) :: nucleation_PARMS_inout
       REAL_T DTDY,DTDY_MDOT,DTDY_TSAT
       REAL_T T_I_MDOT,T_I_TSAT,TDIFF_FN
 
@@ -6072,10 +6075,95 @@ stop
        temp_target_probe_history(iten,2)=zero
        dxprobe_target_history(iten,2)=zero
       enddo
+        ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
+      call copy_dimdec( &
+        DIMS(nucleation_PARMS_in%EOS), &
+        DIMS(EOS))
+      call copy_dimdec( &
+        DIMS(nucleation_PARMS_in%pres), &
+        DIMS(pres))
+      call copy_dimdec( &
+        DIMS(nucleation_PARMS_in%pres_eos), &
+        DIMS(pres_eos))
+      call copy_dimdec( &
+        DIMS(nucleation_PARMS_in%Snew), &
+        DIMS(Snew))
+      call copy_dimdec( &
+        DIMS(nucleation_PARMS_in%LSnew), &
+        DIMS(Snew))
+      nucleation_PARMS_in%EOS=>EOS
+      nucleation_PARMS_in%pres=>pres
+      nucleation_PARMS_in%pres_eos=>pres_eos
+      nucleation_PARMS_inout%Snew=>Snew
+      nucleation_PARMS_inout%LSnew=>LSnew
+
+      nucleation_PARMS_in%dxmaxLS=dxmaxLS
+      nucleation_PARMS_in%bfact=bfact
+      nucleation_PARMS_in%level=level
+      nucleation_PARMS_in%finest_level=finest_level
+      nucleation_PARMS_in%dx=>dx
+      nucleation_PARMS_in%xlo=>xlo
+      nucleation_PARMS_in%nmat=nmat
+      nucleation_PARMS_in%nten=nten
+      nucleation_PARMS_in%nstate=nstate
+      nucleation_PARMS_in%fablo=>fablo
+      nucleation_PARMS_in%fabhi=>fabhi
+      nucleation_PARMS_in%custom_nucleation_model=custom_nucleation_model
+      nucleation_PARMS_in%do_the_nucleate=do_the_nucleate
+      nucleation_PARMS_in%nucleate_pos_size=nucleate_pos_size
+      nucleation_PARMS_in%nucleate_pos=>nucleate_pos
+      nucleation_PARMS_in%nucleation_temp=>nucleation_temp
+      nucleation_PARMS_in%nucleation_pressure=>nucleation_pressure
+      nucleation_PARMS_in%nucleation_pmg=>nucleation_pmg
+      nucleation_PARMS_in%nucleation_mach=>nucleation_mach
+      nucleation_PARMS_in%cavitation_pressure=>cavitation_pressure
+      nucleation_PARMS_in%cavitation_vapor_density=>cavitation_vapor_density
+      nucleation_PARMS_in%cavitation_tension=>cavitation_tension
+      nucleation_PARMS_in%prev_time=prev_time
+      nucleation_PARMS_in%cur_time=cur_time
+      nucleation_PARMS_in%dt=dt
+
+        ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
+      call copy_dimdec( &
+        DIMS(PROBE_PARMS%EOS), &
+        DIMS(EOS))
+      call copy_dimdec( &
+        DIMS(PROBE_PARMS%recon), &
+        DIMS(recon))
+      call copy_dimdec( &
+        DIMS(PROBE_PARMS%LS), &
+        DIMS(LS))
+      call copy_dimdec( &
+        DIMS(PROBE_PARMS%pres), &
+        DIMS(pres))
+
+      PROBE_PARMS%Y_TOLERANCE=>Y_TOLERANCE
+
+      PROBE_PARMS%debugrate=>debugrate
+      PROBE_PARMS%EOS=>EOS 
+      PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
+      PROBE_PARMS%recon=>recon
+      PROBE_PARMS%pres=>pres
+      PROBE_PARMS%dxmaxLS=>dxmaxLS
+      PROBE_PARMS%bfact=>bfact
+      PROBE_PARMS%level=>level
+      PROBE_PARMS%finest_level=>finest_level
+      PROBE_PARMS%dx=>dx
+      PROBE_PARMS%xlo=>xlo
+      PROBE_PARMS%nmat=>nmat
+      PROBE_PARMS%ngrow=>ngrow
+      PROBE_PARMS%fablo=>fablo
+      PROBE_PARMS%fabhi=>fabhi
+      PROBE_PARMS%density_floor_expansion=>density_floor_expansion
+      PROBE_PARMS%density_ceiling_expansion=>density_ceiling_expansion
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
+       nucleation_PARMS_in%i=i
+       nucleation_PARMS_in%j=j
+       nucleation_PARMS_in%k=k
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -6450,34 +6538,13 @@ stop
                  YMIN_iter_max=5
                  TSAT_converge=0
 
-                   ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
-                 call copy_dimdec( &
-                   DIMS(PROBE_PARMS%EOS), &
-                   DIMS(EOS))
-                 call copy_dimdec( &
-                   DIMS(PROBE_PARMS%recon), &
-                   DIMS(recon))
-                 call copy_dimdec( &
-                   DIMS(PROBE_PARMS%LS), &
-                   DIMS(LS))
-                 call copy_dimdec( &
-                   DIMS(PROBE_PARMS%pres), &
-                   DIMS(pres))
-
-                 PROBE_PARMS%Y_TOLERANCE=>Y_TOLERANCE
-
                  PROBE_PARMS%dxprobe_source=>dxprobe_source
                  PROBE_PARMS%dxprobe_dest=>dxprobe_dest
                  PROBE_PARMS%local_freezing_model=>local_freezing_model
                  PROBE_PARMS%LL=>LL(ireverse)
-                 PROBE_PARMS%debugrate=>debugrate
                  PROBE_PARMS%i=>i
                  PROBE_PARMS%j=>j
                  PROBE_PARMS%k=>k
-                 PROBE_PARMS%EOS=>EOS 
-                 PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
-                 PROBE_PARMS%recon=>recon
-                 PROBE_PARMS%pres=>pres
                  PROBE_PARMS%xsrc=>xsrc 
                  PROBE_PARMS%xdst=>xdst
                  PROBE_PARMS%xsrc_micro=>xsrc_micro 
@@ -6492,23 +6559,8 @@ stop
                  PROBE_PARMS%tcomp_dest=>tcomp_dest
                  PROBE_PARMS%Ycomp_dest=>Ycomp_dest
                  PROBE_PARMS%dencomp_dest=>dencomp_dest
-                 PROBE_PARMS%dxmaxLS=>dxmaxLS
-                 PROBE_PARMS%bfact=>bfact
-                 PROBE_PARMS%level=>level
-                 PROBE_PARMS%finest_level=>finest_level
-                 PROBE_PARMS%dx=>dx
-                 PROBE_PARMS%xlo=>xlo
                  PROBE_PARMS%xI=>xI
-                 PROBE_PARMS%nmat=>nmat
-                 PROBE_PARMS%ngrow=>ngrow
-                 PROBE_PARMS%fablo=>fablo
-                 PROBE_PARMS%fabhi=>fabhi
-                 PROBE_PARMS%density_floor_expansion=>density_floor_expansion
-                 PROBE_PARMS%density_ceiling_expansion=>density_ceiling_expansion
 
-!FIX ME
-! 1. Y BC in diffusion solver
-! 2. div ( rho D grad Y )/rho
 !    local_freezing_model=4  Tanasawa or Schrage
 !    local_freezing_model=5  fully saturated evaporation?
 !    local_freezing_model=6  partially saturated evaporation?
