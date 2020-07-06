@@ -29475,7 +29475,7 @@ END SUBROUTINE Adist
 ! mu=liquid viscosity
 ! sigma=liquid/vapor surface tension.
 subroutine RatePhaseChange(P,f_v,saturation_pressure, &
-  rho_l,rho_v,mu,sigma,R_e,R_c)
+  rho_l,rho_v,mu,sigma,R_e,R_c,D_alpha_D_t)
  implicit none
  REAL_T, intent(in) :: P, f_v !pressure, vapor mass fraction
  REAL_T, intent(in) :: rho_l, rho_v ! density liquid, density vapor
@@ -29499,6 +29499,7 @@ subroutine RatePhaseChange(P,f_v,saturation_pressure, &
  REAL_T :: DfDt
  INTEGER_T :: lowpressure
  REAL_T, intent(out) :: R_e, R_c !evaporation, condensation rates
+ REAL_T, intent(out) :: D_alpha_D_t !volume fraction rate
 
  if ((rho_l.le.zero).or.(rho_v.le.zero)) then
   print *,"rho_l or rho_v invalid"
@@ -29537,7 +29538,7 @@ subroutine RatePhaseChange(P,f_v,saturation_pressure, &
   print *,"rho.le.zero"
   stop
  endif
- alpha_v=f_v*rho/rho_v
+ alpha_v=f_v*rho/rho_v ! alpha_v=vapor volume fraction f_v=vapor mass fraction
  if ((alpha_v.lt.zero).or.(alpha_v.gt.one)) then
   print *,"(alpha_v.lt.zero).or.(alpha_v.gt.one)"
   stop
@@ -29657,7 +29658,12 @@ subroutine RatePhaseChange(P,f_v,saturation_pressure, &
    print *,"lowpressure invalid"
    stop
   endif
+   ! DfDt = rate of change of the vapor mass fraction
+   ! rho DfDt = volume D (rho f)/Dt = rate of change of the vapor mass
   DfDt = (f_bar-f_v)/theta
+   ! the effective velocity (assuming unidirectional normal) is:
+   ! velocity=dx * D_alpha_D_t
+  D_alpha_D_t=rho*DfDt/rho_v
   if (DfDt.eq.zero) then
    ! do nothing
   else if (DfDt.gt.zero) then
@@ -29693,7 +29699,8 @@ end subroutine RatePhaseChange
        saturation_pressure, &
        vapor_mass_frac, &
        vapor_vol_frac, &
-       vapor_mass_source)
+       vapor_mass_source, &
+       vapor_vfrac_source)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: liq_viscosity
@@ -29704,6 +29711,7 @@ end subroutine RatePhaseChange
       REAL_T, intent(in) :: vapor_mass_frac
       REAL_T, intent(in) :: vapor_vol_frac
       REAL_T, intent(out) :: vapor_mass_source
+      REAL_T, intent(out) :: vapor_vfrac_source
 
       REAL_T R_e,R_c
 
@@ -29730,7 +29738,9 @@ end subroutine RatePhaseChange
          vapor_mass_frac, &
          saturation_pressure, &
          liquid_density,vapor_density, &
-         liq_viscosity,liq_vap_tension,R_e,R_c)
+         liq_viscosity,liq_vap_tension, &
+         R_e,R_c, &
+         vapor_vfrac_source)
 
         if ((R_e.ge.zero).and.(R_c.ge.zero)) then
          vapor_mass_source=R_e-R_c
@@ -29765,6 +29775,38 @@ end subroutine RatePhaseChange
 
       type(nucleation_parm_type_input), intent(in) :: nucleate_in
       type(nucleation_parm_type_inout), intent(inout) :: nucleate_out
+      INTEGER_T nmat
+      INTEGER_T nstate_test
+      REAL_T VOFTOL_NUCLEATE
+      REAL_T dist
+      INTEGER_T i,j,k
+      INTEGER_T denbase
+      INTEGER_T mofbase
+      INTEGER_T vofcomp
+      INTEGER_T local_freezing_model
+      INTEGER_T im_dest
+      INTEGER_T im_source
+      INTEGER_T im_vapor
+      INTEGER_T im_liquid
+      REAL_T LL
+      INTEGER_T make_seed
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+      REAL_T prev_time,cur_time,dt
+      REAL_T saturation_pres
+      REAL_T total_density
+      REAL_T test_pressure
+      REAL_T test_den
+      REAL_T vapor_density
+      REAL_T test_temp
+      REAL_T test_visc
+      REAL_T vapor_vol_frac
+      REAL_T vapor_mass_frac
+      REAL_T liquid_mass_frac
+      REAL_T vapor_mass_source
+      REAL_T vapor_vfrac_source
+
+      nhalf=3
 
       call checkbound(nucleate_in%fablo,nucleate_in%fabhi, &
         DIMS(nucleate_in%EOS), &
@@ -29785,7 +29827,7 @@ end subroutine RatePhaseChange
 
       nstate_test=num_materials_vel*(SDIM+1)+ &
               nmat*(num_state_material+ngeom_raw)+1
-      if (nstate.eq.nstate_test) then
+      if (nucleate_in%nstate.eq.nstate_test) then
        ! do nothing
       else
        print *,"nstate invalid"
@@ -29810,9 +29852,9 @@ end subroutine RatePhaseChange
       i=nucleate_in%i
       j=nucleate_in%j
       k=nucleate_in%k
-      if (nucleate_in%Snew(D_DECL(i,j,k),vofcomp).ge.VOFTOL_NUCLEATE) then
+      if (nucleate_out%Snew(D_DECL(i,j,k),vofcomp).ge.VOFTOL_NUCLEATE) then
        ! do nothing
-      else if (nucleate_in%Snew(D_DECL(i,j,k),vofcomp).le.VOFTOL_NUCLEATE) then
+      else if (nucleate_out%Snew(D_DECL(i,j,k),vofcomp).le.VOFTOL_NUCLEATE) then
 
        LL=nucleate_in%LL
        make_seed=0
@@ -29839,7 +29881,7 @@ end subroutine RatePhaseChange
              (n_sites.gt.0)) then
           call nucleation_sites(xsten,nhalf, &
                  nucleate_in%dx, &
-                 nucleate_in%bhalf,
+                 nucleate_in%bfact, &
                  dist, &
                  nucleate_in%nucleate_pos)
           if (dist.le.zero) then
@@ -29858,9 +29900,9 @@ end subroutine RatePhaseChange
         cur_time=nucleate_in%cur_time
         dt=nucleate_in%dt
         if (prev_time.gt.zero) then
-         if (curv_time.gt.prev_time) then
+         if (cur_time.gt.prev_time) then
           if (dt.gt.zero) then
-           test_pressure=nucleate_in%preseos(D_DECL(i,j,k))
+           test_pressure=nucleate_in%pres_eos(D_DECL(i,j,k))
            if (LL.gt.zero) then
             im_vapor=im_dest ! evaporation
             im_liquid=im_source
@@ -29885,7 +29927,7 @@ end subroutine RatePhaseChange
             print *,"LL invalid"
             stop
            endif
-           saturation_pres=cavitation_pressure(im_liquid)
+           saturation_pres=nucleate_in%cavitation_pressure(im_liquid)
            if (vapor_density.gt.zero) then
             ! let Y=vapor_mass_frac dV=vapor density dL=liquid den
             ! alpha*dV=Y*d
@@ -29901,7 +29943,7 @@ end subroutine RatePhaseChange
             if ((vapor_vol_frac.ge.zero).and. &
                 (vapor_vol_frac.le.one)) then
 
-             if (nuclate_in%cavitation_tension(im_liquid).ge.zero) then
+             if (nucleate_in%cavitation_tension(im_liquid).ge.zero) then
               test_visc=get_user_viscconst(im_liquid,test_den,test_temp)
 
               if (test_visc.ge.zero) then
@@ -29914,13 +29956,47 @@ end subroutine RatePhaseChange
                  saturation_pres, &
                  vapor_mass_frac, &
                  vapor_vol_frac, &
-                 vapor_mass_source)
+                 vapor_mass_source, &
+                 vapor_vfrac_source)
               else
                print *,"test_visc invalid"
                stop
               endif
 
-
+              if (vapor_vfrac_source*LL.gt.zero) then
+               make_seed=1
+              else if (vapor_vfrac_source*LL.le.zero) then
+               ! do nothing
+              else
+               print *,"vapor_vfrac_source invalid"
+               stop
+              endif
+             else
+              print *,"cavitation_tension invalid"
+              stop
+             endif
+            else
+             print *,"vapor_vol_frac invalid"
+             stop
+            endif
+           else
+            print *,"vapor_density invalid"
+            stop
+           endif
+          else
+           print *,"dt invalid"
+           stop
+          endif
+         else
+          print *,"cur_time invalid"
+          stop
+         endif
+        else if (prev_time.eq.zero) then
+         ! do nothing
+        else
+         print *,"prev_time invalid"
+         stop
+        endif
        else if ((local_freezing_model.eq.1).or. & !source term
                 (local_freezing_model.eq.2).or. & !Hydrate
                 (local_freezing_model.eq.3).or. & !wildfire
@@ -29930,6 +30006,17 @@ end subroutine RatePhaseChange
         ! do nothing
        else
         print *,"local_freezing_model invalid"
+        stop
+       endif
+
+       if (make_seed.eq.1) then
+        ! create unidirectional seed
+        ! initialize volume fraction, level set function, centroid,
+        ! density, temperature, and vapor mass fraction.
+       else if (make_seed.eq.0) then
+        ! do nothing
+       else
+        print *,"make_seed invalid"
         stop
        endif
       else

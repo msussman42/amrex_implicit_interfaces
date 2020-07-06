@@ -7558,7 +7558,7 @@ stop
                 nucleation_PARMS_in%im_source=im_source
                 nucleation_PARMS_in%im_dest=im_dest
                 call get_vel_phasechange_NUCLEATE( &
-                 nucleation_PARMS_in,nucleation_PARMS_out)
+                 nucleation_PARMS_in,nucleation_PARMS_inout)
                else if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
                 ! do nothing
                else
