@@ -1231,6 +1231,7 @@ module global_utility_module
 implicit none
 
       type nucleation_parm_type_input
+       INTEGER_T :: tid
        INTEGER_T :: local_freezing_model
        REAL_T :: LL
        INTEGER_T :: i,j,k

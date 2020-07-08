@@ -5528,6 +5528,7 @@ stop
       ! Palmore and Desjardins
       ! Secant method will be implemented.
       subroutine FORT_RATEMASSCHANGE( &
+       tid, &
        nucleation_flag, &
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
@@ -5611,7 +5612,7 @@ stop
 
       IMPLICIT NONE
 
-
+      INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: nucleation_flag
       INTEGER_T, intent(in) :: stefan_flag
       INTEGER_T, target, intent(in) :: level
@@ -6097,6 +6098,7 @@ stop
       nucleation_PARMS_inout%Snew=>Snew
       nucleation_PARMS_inout%LSnew=>LSnew
 
+      nucleation_PARMS_in%tid=tid
       nucleation_PARMS_in%dxmaxLS=dxmaxLS
       nucleation_PARMS_in%bfact=bfact
       nucleation_PARMS_in%level=level

@@ -89,6 +89,7 @@ extern "C"
      int* level,int* finest_level);
 
    void FORT_RATEMASSCHANGE(
+    int* tid,
     int* nucleation_flag,
     int* stefan_flag,
     int* level,
@@ -159,7 +160,9 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
     Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
     Real* pres_eos,AMREX_ARLIM_P(pres_eoslo),AMREX_ARLIM_P(pres_eoshi),
-    Real* curvfab,AMREX_ARLIM_P(curvfablo),AMREX_ARLIM_P(curvfabhi) ); 
+    Real* curvfab,
+    AMREX_ARLIM_P(curvfablo),
+    AMREX_ARLIM_P(curvfabhi) ); 
 
 
    void FORT_EXTEND_BURNING_VEL(

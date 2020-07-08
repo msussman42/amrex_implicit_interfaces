@@ -8898,7 +8898,7 @@ void NavierStokes::update_SEM_delta_force(
  debug_ngrow(idx_div,0,3);
  debug_ngrow(idx_gp,0,3);
 
- int idx_hoop;
+ int idx_hoop=idx_div;
 
  if (project_option==0) { // grad p, div(up)
   idx_hoop=idx_div;
@@ -10374,6 +10374,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      // lsfab is not updated.
      // burnvelfab=BURNING_VELOCITY_MF is cell centered velocity.
     FORT_RATEMASSCHANGE( 
+     &tid_current,
      &nucleation_flag,
      &stefan_flag,
      &level,
@@ -10447,11 +10448,14 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
      pres_eos_fab.dataPtr(),
      ARLIM(pres_eos_fab.loVect()),ARLIM(pres_eos_fab.hiVect()),
-     curvfab.dataPtr(),ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()));
+     curvfab.dataPtr(),
+     ARLIM(curvfab.loVect()),
+     ARLIM(curvfab.hiVect()));
 
    } else if (nucleation_flag==1) {
 
     FORT_RATEMASSCHANGE( 
+     &tid_current,
      &nucleation_flag,
      &stefan_flag,
      &level,

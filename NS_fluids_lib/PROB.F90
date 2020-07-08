@@ -29770,6 +29770,8 @@ end subroutine RatePhaseChange
       subroutine get_vel_phasechange_NUCLEATE( &
                       nucleate_in,nucleate_out)
       use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
 
       IMPLICIT NONE
 
@@ -29784,6 +29786,7 @@ end subroutine RatePhaseChange
       INTEGER_T mofbase
       INTEGER_T vofcomp
       INTEGER_T local_freezing_model
+      INTEGER_T im_local
       INTEGER_T im_dest
       INTEGER_T im_source
       INTEGER_T im_vapor
@@ -29806,6 +29809,26 @@ end subroutine RatePhaseChange
       REAL_T vapor_mass_source
       REAL_T vapor_vfrac_source
       INTEGER_T nmax
+      INTEGER_T use_ls_data
+      INTEGER_T mof_verbose
+      INTEGER_T continuous_mof
+      INTEGER_T tessellate
+      INTEGER_T ibasesrc,ibasedst
+      INTEGER_T ibase_raw,ibase_recon
+      REAL_T mofdata(num_materials*ngeom_raw)
+      REAL_T :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T :: multi_centroidA(num_materials,SDIM)
+      REAL_T :: volcell
+      REAL_T :: cencell(SDIM)
+      REAL_T :: mag_cen,wt_side
+      INTEGER_T :: dir,side
+      REAL_T cen_src(SDIM)
+      REAL_T cen_dst(SDIM)
+      REAL_T LS_source
+      REAL_T LS_dist_source
+      REAL_T LS_normal_source(SDIM)
+      REAL_T vfluid_sum
+      REAL_T VOF_source,VOF_dest
 
       nhalf=3
       nmax=POLYGON_LIST_MAX 
@@ -30020,15 +30043,16 @@ end subroutine RatePhaseChange
         continuous_mof=0
         tessellate=0
 
-        do im=1,nmat
-         ibasesrc=(im-1)*ngeom_raw+1
-         ibasedst=(im-1)*ngeom_recon+1
+        do im_local=1,nmat
+         ibase_raw=(im_local-1)*ngeom_raw+1
+         ibase_recon=(im_local-1)*ngeom_recon+1
          do dir=0,SDIM
-          mofdata(ibasedst+dir)=nucleate_out%Snew(D_DECL(i,j,k),ibasesrc+dir)
+          mofdata(ibase_recon+dir)= &
+            nucleate_out%Snew(D_DECL(i,j,k),ibase_raw+dir)
          enddo
           ! order=0
-         mofdata(ibasedst+SDIM+1)=zero
-        enddo  ! im=1..nmat
+         mofdata(ibase_recon+SDIM+1)=zero
+        enddo  ! im_local=1..nmat
 
         call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,204)
 
@@ -30039,8 +30063,8 @@ end subroutine RatePhaseChange
          mof_verbose, &
          use_ls_data, &
          LS_stencil, &
-         geom_xtetlist(1,1,1,tid+1), &
-         geom_xtetlist(1,1,1,tid+1), &
+         geom_xtetlist(1,1,1,nucleate_in%tid+1), &
+         geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          nmax, &
          nmax, &
          mofdata, &
@@ -30053,7 +30077,7 @@ end subroutine RatePhaseChange
          nucleate_in%dx, &
          xsten,nhalf, &
          mofdata, &
-         geom_xtetlist(1,1,1,tid+1), &
+         geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          nmax, &
          nmax, &
          nmat, &
@@ -30103,6 +30127,77 @@ end subroutine RatePhaseChange
           print *,"mag_cen invalid"
           stop
          endif
+         LS_dist_source=zero
+         do dir=1,SDIM
+          LS_normal_source(dir)= &
+           xsten(0,dir)-(cen_dst(dir)+cencell(dir))
+          LS_dist_source=LS_dist_source+LS_normal_source(dir)**2
+         enddo
+         LS_dist_source=sqrt(LS_dist_source)
+         if (LS_dist_source.gt.zero) then
+          LS_source=nucleate_out%LSnew(D_DECL(i,j,k),im_source)
+          if (LS_source.ge.zero) then
+           if (LS_source.gt.LS_dist_source) then
+            LS_source=LS_dist_source
+            nucleate_out%LSnew(D_DECL(i,j,k),im_source)=LS_source
+            do dir=1,SDIM
+             nucleate_out%LSnew(D_DECL(i,j,k),nmat+SDIM*(im_source-1)+dir)= &
+               LS_normal_source(dir)/LS_dist_source
+            enddo
+           else if (LS_source.le.LS_dist_source) then
+            ! do nothing
+           else
+            print *,"LS_source invalid"
+            stop
+           endif 
+           nucleate_out%LSnew(D_DECL(i,j,k),im_dest)=-LS_dist_source
+           do dir=1,SDIM
+            nucleate_out%LSnew(D_DECL(i,j,k),nmat+SDIM*(im_dest-1)+dir)= &
+              -LS_normal_source(dir)/LS_dist_source
+           enddo
+           vfluid_sum=zero
+           do im_local=1,nmat
+            if (is_rigid(nmat,im_local).eq.0) then
+             ibase_raw=(im_local-1)*ngeom_raw+1
+             vfluid_sum=vfluid_sum+ &
+              nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibase_raw)
+            else if (is_rigid(nmat,im_local).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid(nmat,im_local) invalid"
+             stop
+            endif
+           enddo ! im_local=1..nmat
+           if (vfluid_sum.gt.VOFTOL_NUCLEATE) then
+            ibasesrc=(im_source-1)*ngeom_raw+1
+            VOF_source=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasesrc)
+            if (VOF_source.gt.VOFTOL_NUCLEATE) then
+             nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasesrc)= &
+               VOF_source-VOFTOL_NUCLEATE
+             ibasedst=(im_dest-1)*ngeom_raw+1
+             VOF_dest=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst)
+             nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst)= &
+               VOF_dest+VOFTOL_NUCLEATE
+             do dir=1,SDIM
+              nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst+dir)= &
+               cen_dst(dir)
+             enddo 
+            else
+             print *,"VOF_source invalid"
+             stop
+            endif
+           else
+            print *,"vfluid_sum invalid"
+            stop
+           endif
+          else
+           print *,"LS_source invalid"
+           stop
+          endif
+         else
+          print *,"LS_dist_source invalid"
+          stop
+         endif   
         else
          print *,"mofdata(ibasesrc) invalid"
          stop
