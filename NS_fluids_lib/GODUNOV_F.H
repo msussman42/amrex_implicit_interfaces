@@ -672,6 +672,8 @@ extern "C"
       int* distribute_from_target,
       Real* saturation_temp,
       int* mass_fraction_id,
+      Real* molar_mass,
+      Real* species_molar_mass,
       Real* species_evaporation_density,
       const Real* Umac, AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
       const Real* Ucell, AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),

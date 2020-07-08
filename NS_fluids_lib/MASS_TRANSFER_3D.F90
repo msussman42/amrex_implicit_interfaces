@@ -1869,7 +1869,9 @@ stop
        PROBE_PARMS, &
        T_I,Y_I, &
        T_probe,Y_probe, &
-       den_I_interp,T_I_interp,Y_I_interp, &
+       den_I_interp, &
+       den_probe, &
+       T_I_interp,Y_I_interp, &
        pres_I_interp, &
        T_probe_raw, &
        dxprobe_target, &
@@ -1887,6 +1889,7 @@ stop
       REAL_T, intent(out) :: T_probe_raw(2)
       REAL_T, intent(out) :: Y_probe(2)
       REAL_T, intent(out) :: den_I_interp(2)
+      REAL_T, intent(out) :: den_probe(2)
       REAL_T, intent(out) :: T_I_interp(2)
       REAL_T, intent(out) :: Y_I_interp(2)
       REAL_T, intent(out) :: pres_I_interp(2)
@@ -2011,6 +2014,37 @@ stop
          den_I_interp(iprobe)= &
           PROBE_PARMS%density_ceiling_expansion(im_target_probe(iprobe))
         endif
+
+        call interpfabFWEIGHT( &
+         PROBE_PARMS%bfact, &
+         PROBE_PARMS%level, &
+         PROBE_PARMS%finest_level, &
+         PROBE_PARMS%dx, &
+         PROBE_PARMS%xlo, &
+         xtarget_probe, &
+         im_target_probe(iprobe), &
+         PROBE_PARMS%nmat, &
+         dencomp_probe(iprobe), &
+         PROBE_PARMS%ngrow, &
+         PROBE_PARMS%fablo, &
+         PROBE_PARMS%fabhi, &
+         PROBE_PARMS%EOS, &        ! Fortran array box
+         DIMS(PROBE_PARMS%EOS), &  ! Fortran array box
+         PROBE_PARMS%recon, &
+         DIMS(PROBE_PARMS%recon), &
+         den_probe(iprobe))
+
+        if (den_probe(iprobe).lt. &
+            PROBE_PARMS%density_floor_expansion(im_target_probe(iprobe))) then
+         den_probe(iprobe)= &
+          PROBE_PARMS%density_floor_expansion(im_target_probe(iprobe))
+        endif
+        if (den_probe(iprobe).gt. &
+            PROBE_PARMS%density_ceiling_expansion(im_target_probe(iprobe))) then
+         den_probe(iprobe)= &
+          PROBE_PARMS%density_ceiling_expansion(im_target_probe(iprobe))
+        endif
+
        else
         print *,"mtype invalid"
         stop
@@ -2462,6 +2496,7 @@ stop
       REAL_T T_probe(2)
       REAL_T Y_probe(2)
       REAL_T den_I_interp(2)
+      REAL_T den_probe(2)
       REAL_T T_I_interp(2)
       REAL_T Y_I_interp(2)
       REAL_T pres_I_interp(2)
@@ -2502,7 +2537,9 @@ stop
            T_Y_PARMS%PROBE_PARMS, &
            T_I_old,Y_I, &
            T_probe,Y_probe, &
-           den_I_interp,T_I_interp,Y_I_interp, &
+           den_I_interp, &
+           den_probe, &
+           T_I_interp,Y_I_interp, &
            pres_I_interp, &
            T_probe_raw, &
            dxprobe_target, &
@@ -3186,7 +3223,8 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: isweep,solvability_projection,tid
+      INTEGER_T, intent(in) :: isweep,tid
+      INTEGER_T, intent(in) :: solvability_projection
       INTEGER_T, intent(in) :: level,finest_level,ngrow_expansion
       INTEGER_T, intent(in) :: normal_probe_size
       INTEGER_T, intent(in) :: nmat
@@ -5747,6 +5785,7 @@ stop
       REAL_T T_probe_raw(2) ! iprobe=1 source; iprobe=2 dest.
       REAL_T Y_probe(2)
       REAL_T den_I_interp(2)
+      REAL_T den_probe(2)
       REAL_T den_I_interp_SAT(2)
       REAL_T T_I_interp(2)
       REAL_T Y_I_interp(2)
@@ -6576,7 +6615,9 @@ stop
                    PROBE_PARMS, &
                    TSAT_predict,Y_predict, &
                    T_probe,Y_probe, &
-                   den_I_interp,T_I_interp,Y_I_interp, &
+                   den_I_interp, &
+                   den_probe, &
+                   T_I_interp,Y_I_interp, &
                    pres_I_interp, &
                    T_probe_raw, &
                    dxprobe_target, &
@@ -6847,6 +6888,9 @@ stop
                    call get_vel_phasechange( &
                      for_estdt, &
                      xI, &
+                     ispec, &
+                     molar_mass, &
+                     species_molar_mass, &
                      local_freezing_model, &
                      local_Tanasawa_or_Schrage, &
                      evap_den, &
@@ -6854,6 +6898,8 @@ stop
                      VEL_correct, & ! vel
                      den_I_interp_SAT(1), & ! source 
                      den_I_interp_SAT(2), & ! dest
+                     den_probe(1), & ! source 
+                     den_probe(2), & ! dest
                      ksource,kdest, & ! ksrc,kdst
                      T_probe(1), & ! source
                      T_probe(2), & ! dest
@@ -6958,7 +7004,9 @@ stop
                          PROBE_PARMS, &
                          TSAT_predict,Y_interface_min, &
                          T_probe,Y_probe, &
-                         den_I_interp,T_I_interp,Y_I_interp, &
+                         den_I_interp, &
+                         den_probe, &
+                         T_I_interp,Y_I_interp, &
                          pres_I_interp, &
                          T_probe_raw, &
                          dxprobe_target, &
@@ -7612,4 +7660,5 @@ stop
 #endif
 
 #undef STANDALONE
+
 

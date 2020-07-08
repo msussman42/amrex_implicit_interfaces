@@ -10380,6 +10380,8 @@ stop
         distribute_from_target, &
         saturation_temp, &
         mass_fraction_id, &
+        molar_mass, &
+        species_molar_mass, &
         species_evaporation_density, &
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
@@ -10448,6 +10450,8 @@ stop
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
+      REAL_T, intent(in) :: molar_mass(nmat)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       REAL_T, intent(in) :: time
@@ -11273,11 +11277,15 @@ stop
              call get_vel_phasechange( &
               for_estdt, &
               xI, &
+              ispec, &
+              molar_mass, &
+              species_molar_mass, &
               local_freezing_model, &
               local_Tanasawa_or_Schrage, &
               evap_den, &
               distribute_from_targ, &
               USTEFAN_hold, &
+              Dsrc,Ddst, &
               Dsrc,Ddst, &
               ksource,kdest, &
               Tsrc,Tdst, &

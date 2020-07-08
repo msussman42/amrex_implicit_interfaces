@@ -3287,7 +3287,9 @@ integer imodel, ifgnbc
 double precision mu_l, mu_g, sigma, thet_s, dgrid, d_closest, thet_d_apparent, u_cl, u_slip, thet_d, delta
 double precision lambda, l_macro, l_micro !parameter of gnbc
 integer iter
-double precision Ca, thet_d_micro, beta, chi !parameters of model1
+double precision Ca
+double precision sign_Ca
+double precision thet_d_micro, beta, chi !parameters of model1
 double precision thet_d_micro_old, Ca_old, a, b, c
 double precision f1, f2, Ja11, Ja12, Ja21, Ja22
 double precision b1, b2, u11, u12, u22, l21, y1, y2
@@ -3315,6 +3317,14 @@ end if
  ! sanity check
 if (sigma.gt.0.0d0) then
  Ca = mu_l * u_cl / sigma
+ if (Ca.ge.0.0d0) then
+  sign_Ca=1.0d0
+ else if (Ca.lt.0.0d0) then
+  sign_Ca=-1.0d0
+ else
+  print *,"Ca corrupt"
+  stop
+ endif
 else
         print *,"sigma invalid"
         stop
@@ -3446,6 +3456,9 @@ select case (imodel)
         u_slip = 0.
 
     case (4) !Kalliadasis1994-'abs(tan(the_d))=...', so how to determine the_d<90 or thet_d>90? It seems have problems...
+        print *,"Kalliadasis 1994 fails if Ca<=0, also no theta_s input!"
+        stop
+
         if (diag_output.eq.1) then
          print *, "Implement model 4 ..."
         endif
@@ -3473,17 +3486,27 @@ select case (imodel)
         thet_d = acos(1. - 2. * tanh(5.16 * ((Ca + fHI)/(1. + 1.31 * (Ca + fHI)**0.99))**0.706))
         u_slip = 0.
 
-    case (6) !Bracke1989
+    case (6) !modified Bracke1989
+
+           ! Ca<0 then the model is not validated.
         if (diag_output.eq.1) then
          print *, "Implement model 6 ..."
         endif 
-        thet_d = acos(cos(thet_s) - 2. * (1. + cos(thet_s)) * Ca**0.5)
-        u_slip = 0.
+        thet_d = acos(cos(thet_s) -  &
+           sign_Ca * 2.0d0 * (1.0d0 + cos(thet_s)) * abs(Ca)**0.5)
+        u_slip = 0.0d0
 
     case (7) !Blake2006, Popescu2008
+        print *,"Popescu 2008 model has dimensional parameters; disallowed!"
+        stop
+
         if (diag_output.eq.1) then
          print *, "Implement model 7 ..."
         endif
+         ! sigma_0=1.7e-2=0.017  n/m  for water
+         ! sigma_0=1.0e-2=0.01   n/m  for oil
+         ! v_0=5.0e-3 m/s for water
+         ! v_0=1.35e-5 m/s for oil
         sigma_0 = 1.7e-2 !sigma_0 = 1.7e-2 for water and 1.e-2 for oil in Popescu2008
         v_0 = 5.e-3 !v_0 = 5e-3 for water and 1.35e-5 for oil in Popescu2008
         thet_d = acos(cos(thet_s) - sigma_0 / sigma * asinh(u_cl / v_0))
@@ -30222,12 +30245,16 @@ end subroutine RatePhaseChange
       subroutine get_vel_phasechange( &
        for_estdt, &
        xI, &
+       ispec, &
+       molar_mass, &
+       species_molar_mass, &
        local_freezing_model, &
-       local_Tanasawa_or_Schrage, &
+       local_Tanasawa_or_Schrage, & ! 1=Tanasawa  2=Schrage
        species_evaporation_density, &
        distribute_from_target, &
        vel, &
        densrc,dendst, &
+       densrc_probe,dendst_probe, &
        ksrc,kdst, &
        Tsrc,Tdst, &
        Tsat, &
@@ -30263,14 +30290,21 @@ end subroutine RatePhaseChange
       INTEGER_T, intent(in) :: for_estdt
       REAL_T, intent(in) :: xI(SDIM)
       INTEGER_T, intent(in) :: local_freezing_model
-      INTEGER_T, intent(in) :: local_Tanasawa_or_Schrage
+      INTEGER_T, intent(in) :: local_Tanasawa_or_Schrage !1=Tanasawa 2=Schrage
+       ! MEHDI EVAPORATION
+      INTEGER_T, intent(in) :: ispec ! 0 if no species  1..num_species_var
+       ! MEHDI EVAPORATION
+      REAL_T, intent(in) :: molar_mass(num_materials)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density
       INTEGER_T, intent(in) :: distribute_from_target
+       ! MEHDI EVAPORATION  im_source,im_dest = 1..nmat
       INTEGER_T, intent(in) :: im_source,im_dest
       INTEGER_T :: start_freezing
       INTEGER_T :: nmat
       REAL_T, intent(out) :: vel
       REAL_T, intent(in) :: densrc,dendst
+      REAL_T, intent(in) :: densrc_probe,dendst_probe
       REAL_T, intent(in) :: time,dt,alpha,beta
       REAL_T, intent(in) :: expansion_fact
       REAL_T, intent(in) :: ksrc,kdst
@@ -30294,7 +30328,7 @@ end subroutine RatePhaseChange
       REAL_T velsrc_micro,veldst_micro
       REAL_T psi_upper,psi_lower,micro_slope
       REAL_T gamma_tanasawa
-      REAL_T fluid_molar_mass
+      REAL_T fluid_molar_mass_Tanasawa ! Tanasawa model
       REAL_T universal_gas
       INTEGER_T verb_hydrate
 
@@ -30308,6 +30342,10 @@ end subroutine RatePhaseChange
        stop
       endif
       if ((densrc.le.zero).or.(dendst.le.zero)) then
+       print *,"density must be positive"
+       stop
+      endif
+      if ((densrc_probe.le.zero).or.(dendst_probe.le.zero)) then
        print *,"density must be positive"
        stop
       endif
@@ -30593,8 +30631,8 @@ end subroutine RatePhaseChange
 
          ! Tanasawa model for a fully saturated gas:
         gamma_tanasawa=0.1
-        fluid_molar_mass=0.07215  ! kg/mol
-        fluid_molar_mass=1000.0*fluid_molar_mass  ! g/mol
+        fluid_molar_mass_Tanasawa=0.07215  ! kg/mol
+        fluid_molar_mass_Tanasawa=1000.0*fluid_molar_mass_Tanasawa ! g/mol
         universal_gas=8.314   ! J/(mol K)
         universal_gas=1.0D+7*universal_gas  ! erg/(mol K)
 
@@ -30605,12 +30643,12 @@ end subroutine RatePhaseChange
           print *,"distribute_from_target invalid"
           stop
          endif
-
+          !EVAPORATION
          if (local_Tanasawa_or_Schrage.eq.1) then ! Tanasawa
 
           if ((Tsrc_INT.gt.Tsat).and.(Tdst_INT.gt.Tsat)) then
            velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
-           velsrc=velsrc*sqrt(fluid_molar_mass/(two*Pi*universal_gas))
+           velsrc=velsrc*sqrt(fluid_molar_mass_Tanasawa/(two*Pi*universal_gas))
            velsrc=velsrc*dendst*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
            velsrc=velsrc/(Tsat**(1.5))
            velsrc=velsrc/densrc ! rate=mdot/densrc
@@ -30628,7 +30666,7 @@ end subroutine RatePhaseChange
           endif
 
          else if (local_Tanasawa_or_Schrage.eq.2) then !schrage
-
+          ! MEHDI EVAPORATION
          else
           print *,"local_Tanasawa_or_Schrage invalid"
           stop
@@ -30638,24 +30676,33 @@ end subroutine RatePhaseChange
           print *,"distribute_from_target invalid"
           stop
          endif
-         if ((Tsrc_INT.lt.Tsat).and.(Tdst_INT.lt.Tsat)) then
-          velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
-          velsrc=velsrc*sqrt(fluid_molar_mass/(two*Pi*universal_gas))
-          velsrc=velsrc*densrc*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
-          velsrc=velsrc/(Tsat**(1.5))
-          velsrc=velsrc/dendst ! rate=mdot/dendst
-          veldst=velsrc
-          if (for_estdt.eq.1) then
-           velsrc=max(velsrc,velsrc/(one-expansion_fact))
+         if (local_Tanasawa_or_Schrage.eq.1) then ! Tanasawa
+
+          if ((Tsrc_INT.lt.Tsat).and.(Tdst_INT.lt.Tsat)) then
+           velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
+           velsrc=velsrc*sqrt(fluid_molar_mass_Tanasawa/(two*Pi*universal_gas))
+           velsrc=velsrc*densrc*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
+           velsrc=velsrc/(Tsat**(1.5))
+           velsrc=velsrc/dendst ! rate=mdot/dendst
            veldst=velsrc
-          else if (for_estdt.eq.0) then
-           ! do nothing
-          else
-           print *,"for_estdt invalid"
-           stop
+           if (for_estdt.eq.1) then
+            velsrc=max(velsrc,velsrc/(one-expansion_fact))
+            veldst=velsrc
+           else if (for_estdt.eq.0) then
+            ! do nothing
+           else
+            print *,"for_estdt invalid"
+            stop
+           endif
           endif
 
+         else if (local_Tanasawa_or_Schrage.eq.2) then !schrage
+          ! MEHDI EVAPORATION (CONDENSATION)
+         else
+          print *,"local_Tanasawa_or_Schrage invalid"
+          stop
          endif
+
         else if (LL.eq.zero) then
          print *,"LL invalid"
          stop

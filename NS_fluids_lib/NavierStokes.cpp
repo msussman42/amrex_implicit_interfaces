@@ -632,6 +632,7 @@ Vector<Real> NavierStokes::cavitation_pressure;
 Vector<Real> NavierStokes::cavitation_vapor_density;
 Vector<Real> NavierStokes::cavitation_tension;
 
+// 1.. num_species_var
 Vector<Real> NavierStokes::species_evaporation_density;
 
 Vector<Real> NavierStokes::nucleation_pressure;
@@ -670,11 +671,38 @@ Vector<Real> NavierStokes::reaction_rate;
 //   expansion source, and offsetting sink evenly distributed.
 //   For Tannasawa model implemented here, it is assumed that Y=1
 //   at the interface.  Schrage Model does not assume Y=1 at interface.
+// MEHDI EVAPORATION: freezing_model=4
+//   1=liquid  2=ambient gas  3=solid wall  num_species_var=1
+//   ->  12 13 23 21 31 32
+//   latent_heat
+//   ->  +L 0  0  -L 0  0
+//   freezing_model
+//   ->  4  0  0  4  0  0
+//   mass_fraction_id
+//   ->  1  0  0  1  0  0
+//   Tanasawa_or_Schrage
+//   ->  2  0  0  2  0  0
+//   speciesviscconst
+//   ->  0.0 D 0.0
+//   distribute_from_target (distribution of the expansion term)
+//   ->  0 0 0 1 0 0
+//   molar_mass
+//   ->  mL  m_ambient 0.0
+//   species_molar_mass
+//   ->  m_vapor
+//   species_evaporation_density
+//   ->  density_vapor
+//   solvability_projection=0
+//   material_type
+//   0 ?? 999
+//   temperature_primitive_variable
+//   1 1 1
+//
 // 5=evaporation/condensation (Stefan model speed)
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
 // 7=cavitation
 Vector<int> NavierStokes::freezing_model;
-Vector<int> NavierStokes::Tanasawa_or_Schrage;
+Vector<int> NavierStokes::Tanasawa_or_Schrage; //1=Tanasawa  2=Schrage
 //ispec=mass_fraction_id[0..2 nten-1]=1..num_species_var
 Vector<int> NavierStokes::mass_fraction_id; 
 //link diffused material to non-diff. (array 1..num_species_var)
@@ -764,6 +792,7 @@ Vector<Real> NavierStokes::viscconst_interface;
 Vector<Real> NavierStokes::heatviscconst_interface;
 Vector<Real> NavierStokes::speciesconst;  // unused currently
 Vector<Real> NavierStokes::speciesviscconst_interface;
+// 1..num_species_var
 Vector<Real> NavierStokes::species_molar_mass; // def=1
 // 0=diffuse in solid 1=dirichlet 2=neumann
 int NavierStokes::solidheat_flag=0; 
@@ -17744,6 +17773,8 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     distribute_from_target.dataPtr(),
     saturation_temp.dataPtr(),
     mass_fraction_id.dataPtr(),
+    molar_mass.dataPtr(),
+    species_molar_mass.dataPtr(),
     species_evaporation_density.dataPtr(),
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
