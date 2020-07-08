@@ -29805,8 +29805,10 @@ end subroutine RatePhaseChange
       REAL_T liquid_mass_frac
       REAL_T vapor_mass_source
       REAL_T vapor_vfrac_source
+      INTEGER_T nmax
 
       nhalf=3
+      nmax=POLYGON_LIST_MAX 
 
       call checkbound(nucleate_in%fablo,nucleate_in%fabhi, &
         DIMS(nucleate_in%EOS), &
@@ -30013,6 +30015,99 @@ end subroutine RatePhaseChange
         ! create unidirectional seed
         ! initialize volume fraction, level set function, centroid,
         ! density, temperature, and vapor mass fraction.
+        use_ls_data=0
+        mof_verbose=0
+        continuous_mof=0
+        tessellate=0
+
+        do im=1,nmat
+         ibasesrc=(im-1)*ngeom_raw+1
+         ibasedst=(im-1)*ngeom_recon+1
+         do dir=0,SDIM
+          mofdata(ibasedst+dir)=nucleate_out%Snew(D_DECL(i,j,k),ibasesrc+dir)
+         enddo
+          ! order=0
+         mofdata(ibasedst+SDIM+1)=zero
+        enddo  ! im=1..nmat
+
+        call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,204)
+
+        call multimaterial_MOF( &
+         nucleate_in%bfact, &
+         nucleate_in%dx, &
+         xsten,nhalf, &
+         mof_verbose, &
+         use_ls_data, &
+         LS_stencil, &
+         geom_xtetlist(1,1,1,tid+1), &
+         geom_xtetlist(1,1,1,tid+1), &
+         nmax, &
+         nmax, &
+         mofdata, &
+         multi_centroidA, &
+         continuous_mof, &
+         nmat,SDIM,4)
+
+        call multi_get_volume_tessellate( &
+         nucleate_in%bfact, &
+         nucleate_in%dx, &
+         xsten,nhalf, &
+         mofdata, &
+         geom_xtetlist(1,1,1,tid+1), &
+         nmax, &
+         nmax, &
+         nmat, &
+         SDIM, &
+         4)
+
+        call CISBOX( &
+         xsten,nhalf, &
+         nucleate_in%xlo, &
+         nucleate_in%dx, &
+         i,j,k, &
+         nucleate_in%bfact, &
+         nucleate_in%level, &
+         volcell,cencell,SDIM)
+ 
+        ibasesrc=(im_source-1)*ngeom_recon+1
+        if (mofdata(ibasesrc).gt.VOFTOL_NUCLEATE) then
+         mag_cen=zero
+         wt_side=0.99d0
+         do dir=1,SDIM
+          cen_src(dir)=mofdata(ibasesrc+dir)
+          mag_cen=mag_cen+cen_src(dir)**2
+          if (cen_src(dir).gt.zero) then
+           side=1
+          else if (cen_src(dir).lt.zero) then
+           side=-1
+          else if (cen_src(dir).eq.zero) then
+           side=0
+          else
+           print *,"cen_src invalid"
+           stop
+          endif
+          cen_src(dir)=cen_src(dir)+cencell(dir)
+          cen_dst(dir)=(one-wt_side)*cen_src(dir)+wt_side*xsten(side,dir)
+          cen_dst(dir)=cen_dst(dir)-cencell(dir)
+         enddo ! dir=1..sdim
+         mag_cen=sqrt(mag_cen)
+         if (mag_cen.gt.zero) then
+          ! do nothing
+         else if (mag_cen.eq.zero) then
+          do dir=1,SDIM
+           side=-1
+           cen_dst(dir)=(one-wt_side)*cencell(dir)+wt_side*xsten(side,dir)
+           cen_dst(dir)=cen_dst(dir)-cencell(dir)
+          enddo
+         else
+          print *,"mag_cen invalid"
+          stop
+         endif
+        else
+         print *,"mofdata(ibasesrc) invalid"
+         stop
+        endif
+           
        else if (make_seed.eq.0) then
         ! do nothing
        else
