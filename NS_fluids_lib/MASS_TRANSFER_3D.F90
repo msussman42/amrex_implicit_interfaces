@@ -6772,6 +6772,17 @@ stop
 
                  call get_primary_material(LSINT,nmat,imls_I)
 
+                  ! for T_INTERFACE= TSAT - eps1 K - eps2 V
+                  ! 1. T_I^(0)=TSAT - eps1 K - eps2 ( 0 )
+                  ! 2. n=0, V^{0}=0
+                  ! 2. while not converged
+                  ! 3.  V^{n+1}=-[k grad T dot n]/L=
+                  !     [(Tprobe^1(T_I^{n}) - T_I^{n})/dxprobe^1 -
+                  !     (Tprobe^2(T_I^{n}) - T_I^{n})/dxprobe^2 ]/L
+                  !     n points from material 1 to material 2.
+                  ! 4.  T_I^{n+1}=T_I^{n} - eps2 (V^{n+1}-V^{n})
+                  ! 5.  convergence when |T_{I}^{n+1}-T_{I}^{n}|<tol
+                  !
                  local_Tsat(ireverse)=local_Tsat(ireverse)- &
                    saturation_temp_curv(iten+ireverse*nten)* &
                    CURV_OUT_I
