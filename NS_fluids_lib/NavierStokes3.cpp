@@ -2668,6 +2668,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // generates SLOPE_RECON_MF
        update_flag=0;
        int init_vof_ls_prev_time=0;
+        // Fluids tessellate; solids overlay.
        VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
         SLOPE_RECON_MF);
        int keep_all_interfaces=1;

@@ -10394,6 +10394,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
     FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
     FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
+     // fluids tessellate; solids overlap
     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
 
     FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];

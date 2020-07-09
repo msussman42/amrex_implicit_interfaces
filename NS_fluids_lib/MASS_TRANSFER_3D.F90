@@ -36,6 +36,7 @@ stop
       ! REAL_T, target :: t1(DIMV(t1),ncomp)
       ! p1=>t1
       type probe_parm_type
+       INTEGER_T :: tid
        REAL_T, pointer :: Y_TOLERANCE
        INTEGER_T, pointer :: local_freezing_model
        REAL_T, pointer :: LL
@@ -904,6 +905,108 @@ stop
 
       return 
       end subroutine interpfabFWEIGHT
+
+      subroutine interpfabVFRAC_tess( &
+       tid, &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo,x, &
+       nmat,&
+       ngrow, &
+       lo,hi, &
+       recon,DIMS(recon), & ! fluids tess, solids overlay
+       dest)
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(out) :: dest(nmat)
+
+      INTEGER_T im
+      INTEGER_T dir
+      INTEGER_T ic,jc,kc
+      INTEGER_T nhalf
+      INTEGER_T vofcomp
+      INTEGER_T cell_index(SDIM)
+
+      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T volcell
+      REAL_T cencell(SDIM)
+      INTEGER_T nmax
+
+      call checkbound(lo,hi,DIMS(recon),ngrow,-1,1222)
+
+      if (bfact.lt.1) then 
+       print *,"bfact invalid113"
+       stop
+      endif
+
+      nmax=POLYGON_LIST_MAX 
+      if ((nmax.lt.100).or.(nmax.gt.2000)) then
+       print *,"nmax invalid"
+       stop
+      endif
+
+      call containing_cell(bfact,dx,xlo,lo,x,cell_index)
+
+      do dir=1,SDIM
+       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
+        cell_index(dir)=lo(dir)-ngrow+1
+       endif
+       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
+        cell_index(dir)=hi(dir)+ngrow-1
+       endif
+      enddo ! dir
+
+      ic=cell_index(1)
+      jc=cell_index(2)
+      kc=cell_index(SDIM)
+
+      nhalf=3
+      call gridsten_level(xsten,ic,jc,kc,level,nhalf)
+      call Box_volumeFAST(bfact,dx,xsten,nhalf, &
+        volcell,cencell,SDIM)
+
+      do im=1,nmat*ngeom_recon
+       mofdata(im)=recon(D_DECL(ic,jc,kc),im)
+      enddo
+
+      call multi_get_volume_tessellate( &
+        bfact, &
+        dx, &
+        xsten,nhalf, &
+        mofdata, &
+        geom_xtetlist(1,1,1,tid+1), &
+        nmax, &
+        nmax, &
+        nmat, &
+        SDIM, &
+        4)
+
+      do im=1,nmat
+       vofcomp=(im-1)*ngeom_recon+1
+       dest(im)=mofdata(vofcomp)
+      enddo
+
+      return 
+      end subroutine interpfabVFRAC_tess
+
 
       subroutine grad_probe_sanity(xI,xprobe,temp_probe,Tsat,LL)
       IMPLICIT NONE
@@ -1873,6 +1976,7 @@ stop
        den_probe, &
        T_I_interp,Y_I_interp, &
        pres_I_interp, &
+       vfrac_I, &  ! solids and fluids tessellate
        T_probe_raw, &
        dxprobe_target, &
        interp_valid_flag, &
@@ -1893,6 +1997,7 @@ stop
       REAL_T, intent(out) :: T_I_interp(2)
       REAL_T, intent(out) :: Y_I_interp(2)
       REAL_T, intent(out) :: pres_I_interp(2)
+      REAL_T, intent(out) :: vfrac_I(2)
       REAL_T, intent(out) :: dxprobe_target(2)
       INTEGER_T, intent(out) :: interp_valid_flag(2)
       INTEGER_T, intent(out) :: at_interface
@@ -1917,6 +2022,7 @@ stop
       INTEGER_T mtype
       INTEGER_T pcomp
       REAL_T LSPROBE(num_materials)
+      REAL_T F_tess(num_materials)
 
        ! 0=cannot do least squares interp or supermesh interp.
        ! 1=can do least squares interp
@@ -1930,6 +2036,22 @@ stop
       LS_INT_VERY_CLOSE_counter=0
       LS_INT_OWN_counter=0
       VOF_pos_probe_counter=0
+
+      call interpfabVFRAC_tess( &
+       PROBE_PARMS%tid, &
+       PROBE_PARMS%bfact, &
+       PROBE_PARMS%level, &
+       PROBE_PARMS%finest_level, &
+       PROBE_PARMS%dx, &
+       PROBE_PARMS%xlo, &
+       PROBE_PARMS%xI, &
+       PROBE_PARMS%nmat, &
+       PROBE_PARMS%ngrow, &
+       PROBE_PARMS%fablo, &
+       PROBE_PARMS%fabhi, &
+       PROBE_PARMS%recon, &
+       DIMS(PROBE_PARMS%recon), &
+       F_tess)
 
       do iprobe=1,2
 
@@ -1981,6 +2103,8 @@ stop
         print *,"LSINT(im_target_probe) invalid"
         stop
        endif
+
+       vfrac_I(iprobe)=F_tess(im_target_probe(iprobe))
 
        mtype=fort_material_type(im_target_probe(iprobe))
        if ((mtype.ge.0).and. &
@@ -2398,7 +2522,7 @@ stop
            (PROBE_PARMS%local_freezing_model.eq.5).or. & !Stefan evap/cond
            (PROBE_PARMS%local_freezing_model.eq.6)) then !Palmore,Desjardins
         ! do nothing
-       else if ((PROBE_PARMS%local_freezing_model.eq.1).or. &
+       else if ((PROBE_PARMS%local_freezing_model.eq.1).or. & !source term
                 (PROBE_PARMS%local_freezing_model.eq.2).or. & !hydrate
                 (PROBE_PARMS%local_freezing_model.eq.4).or. & !Tanasawa,Schrage
                 (PROBE_PARMS%local_freezing_model.eq.7)) then !Cavitation
@@ -2500,6 +2624,7 @@ stop
       REAL_T T_I_interp(2)
       REAL_T Y_I_interp(2)
       REAL_T pres_I_interp(2)
+      REAL_T vfrac_I(2)
       REAL_T T_probe_raw(2)
       REAL_T dxprobe_target(2)
       INTEGER_T interp_valid_flag(2)
@@ -2541,6 +2666,7 @@ stop
            den_probe, &
            T_I_interp,Y_I_interp, &
            pres_I_interp, &
+           vfrac_I, &
            T_probe_raw, &
            dxprobe_target, &
            interp_valid_flag, &
@@ -3279,11 +3405,14 @@ stop
 
       INTEGER_T i,j,k,dir
       INTEGER_T i1,j1,k1
-      INTEGER_T im,im_opp,ireverse,iten
+      INTEGER_T im,im_opp
+      INTEGER_T ireverse
+      INTEGER_T iten
       INTEGER_T im_source
       INTEGER_T im_dest
       INTEGER_T im_dest_crit
       INTEGER_T im_source_crit
+      INTEGER_T im_primary
       INTEGER_T iten_crit
       INTEGER_T ireverse_crit
       REAL_T max_velnode
@@ -3408,6 +3537,7 @@ stop
       REAL_T evap_den
       REAL_T local_cv_or_cp
       INTEGER_T speccompsrc,speccompdst
+      INTEGER_T speccomp_mod
       INTEGER_T ncomp_per_tsat
 
       if ((tid.lt.0).or. &
@@ -3544,16 +3674,17 @@ stop
          local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
          LL=latent_heat(iten+ireverse*nten)
-         if ((local_freezing_model.eq.0).or. &
-             (local_freezing_model.eq.1).or. &
-             (local_freezing_model.eq.2)) then
+         if ((local_freezing_model.eq.0).or. & ! Stefan model
+             (local_freezing_model.eq.1).or. & ! source term
+             (local_freezing_model.eq.2)) then ! hydrate
           ! do nothing
          else if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                   (local_freezing_model.eq.5).or. & ! Stefan model evap/cond.
                   (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
                   (local_freezing_model.eq.7)) then ! Cavitation
           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
-          if ((mass_frac_id.ge.1).and.(mass_frac_id.le.num_species_var)) then
+          if ((mass_frac_id.ge.1).and. &
+              (mass_frac_id.le.num_species_var)) then
            evap_den=species_evaporation_density(mass_frac_id)
            if (evap_den.gt.zero) then
             ! do nothing
@@ -3566,6 +3697,7 @@ stop
            stop
           endif
            ! require V_evaporate = V_condense (Tanasawa model or Schrage)
+           ! if solvability_projection==1
           if (local_freezing_model.eq.4) then 
            if (LL.ne.zero) then
             if (ireverse.eq.0) then ! evaporation
@@ -3699,9 +3831,9 @@ stop
         do im=1,nmat
          lsmat(im)=LSold(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(lsmat,nmat,im)
+        call get_primary_material(lsmat,nmat,im_primary)
 
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid(nmat,im_primary).eq.0) then
 
          do im=1,nmat
           F_STEN(im)=zero
@@ -5057,7 +5189,7 @@ stop
 ! latent_heat>0 boiling or melting
 ! units of specific heat: J/(kg K)
 ! units of latent heat: J/kg
-            else if (local_freezing_model.eq.1) then
+            else if (local_freezing_model.eq.1) then ! source term
 
              if (dF.gt.zero) then
               energy_source=-LL*dF
@@ -5078,7 +5210,7 @@ stop
 ! source term at the interface.  Hydrates.
 ! rho c T^new - rho c T^old = rho (dt A LL/V) dS/dt = LL * dF
 ! c T^new - c T^old = (dt A LL/V) dS/dt = LL * dF 
-            else if (local_freezing_model.eq.2) then
+            else if (local_freezing_model.eq.2) then ! hydrate
 
 #if (STANDALONE==0)
 
@@ -5188,10 +5320,85 @@ stop
           stop
          endif
 
-        else if (is_rigid(nmat,im).eq.1) then
+         ! set vapor mass fraction to 1 in the corresponding liquid material.
+         do im=1,nmat-1
+          do im_opp=im+1,nmat
+
+           call get_iten(im,im_opp,iten,nmat)
+
+           do ireverse=0,1
+            if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+             print *,"im or im_opp bust 10"
+             stop
+            endif
+
+            LL=latent_heat(iten+ireverse*nten)
+
+            if ((is_rigid(nmat,im).eq.1).or. &
+                (is_rigid(nmat,im_opp).eq.1)) then
+             ! do nothing
+            else if (LL.ne.zero) then
+             if (ireverse.eq.0) then
+              im_source=im
+              im_dest=im_opp
+             else if (ireverse.eq.1) then
+              im_source=im_opp
+              im_dest=im
+             else
+              print *,"ireverse invalid"
+              stop
+             endif
+             local_freezing_model=freezing_model(iten+ireverse*nten)
+             mass_frac_id=mass_fraction_id(iten+ireverse*nten)
+
+             if (local_freezing_model.eq.0) then ! standard Stefan model
+              ! do nothing
+             else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
+                      (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
+                      (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                      (local_freezing_model.eq.7)) then ! Cavitation
+
+              if ((mass_frac_id.ge.1).and. &
+                  (mass_frac_id.le.num_species_var)) then
+
+               speccompdst=(im_dest-1)*num_state_material+ &
+                num_state_base+mass_frac_id
+               speccompsrc=(im_source-1)*num_state_material+ &
+                num_state_base+mass_frac_id
+
+               if (LL.gt.zero) then ! evaporation
+                speccomp_mod=num_materials_vel*(SDIM+1)+speccompsrc
+               else if (LL.lt.zero) then ! condensation
+                speccomp_mod=num_materials_vel*(SDIM+1)+speccompdst
+               else
+                print *,"LL invalid"
+                stop
+               endif
+               snew(D_DECL(i,j,k),speccomp_mod)=one
+
+              else
+               print *,"mass_frac_id invalid"
+               stop
+              endif
+
+             else
+              print *,"local_freezing_model invalid 1"
+              stop
+             endif
+
+            else if (LL.eq.zero) then
+             ! do nothing
+            else
+             print *,"LL invalid"
+             stop
+            endif
+           enddo ! ireverse=0,1
+          enddo ! im_opp
+         enddo ! im
+        else if (is_rigid(nmat,im_primary).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid(nmat,im) invalid"
+         print *,"is_rigid(nmat,im_primary) invalid"
          stop
         endif
 
@@ -5790,6 +5997,7 @@ stop
       REAL_T T_I_interp(2)
       REAL_T Y_I_interp(2)
       REAL_T pres_I_interp(2)
+      REAL_T vfrac_I(2)
       REAL_T local_Tsat(0:1)
       REAL_T local_Tsat_base(0:1)
       REAL_T vel_phasechange(0:1)
@@ -6177,6 +6385,8 @@ stop
       call copy_dimdec( &
         DIMS(PROBE_PARMS%pres), &
         DIMS(pres))
+
+      PROBE_PARMS%tid=tid
 
       PROBE_PARMS%Y_TOLERANCE=>Y_TOLERANCE
 
@@ -6619,6 +6829,7 @@ stop
                    den_probe, &
                    T_I_interp,Y_I_interp, &
                    pres_I_interp, &
+                   vfrac_I, &
                    T_probe_raw, &
                    dxprobe_target, &
                    interp_valid_flag, &
@@ -7008,6 +7219,7 @@ stop
                          den_probe, &
                          T_I_interp,Y_I_interp, &
                          pres_I_interp, &
+                         vfrac_I, &
                          T_probe_raw, &
                          dxprobe_target, &
                          interp_valid_flag, &
