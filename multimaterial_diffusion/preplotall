@@ -5,6 +5,8 @@ do
 #~/tec360/bin/preplot ${file}
 #~/tecplot360ex/bin/preplot ${file}
 #/usr/local/tecplot/360ex_2017r2/bin/preplot ${file}
-/Applications/Tecplot\ 360\ EX\ 2019\ R1/bin/preplot ${file}
-#/usr/local/tecplot/360ex_2018r2/bin/preplot ${file}
+/usr/local/tecplot/360ex_2018r2/bin/preplot ${file}
+#/Applications/Tecplot\ 360\ EX\ 2019\ R1/bin/preplot ${file}
+# TECPLOT ON A MAC:
+#/Applications/Tecplot ..../Tecplot ...app/Contents/MacOS/Tecplot ....
 done
