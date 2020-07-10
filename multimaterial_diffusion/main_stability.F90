@@ -39,12 +39,19 @@ IMPLICIT NONE
 ! 19 = annulus cvg test
 ! 20 = hypocycloid with 6 materials
 !
-! page 94 of Alexiades, Solomon 1993
-!  T_t = T_yy   y=Vt   let y1=y-vt  t1=t
-!  T_t=T_t1 t1_t + T_y1 y1_t = T_t1 + T_y1 (-v)
-!  T_y=T_y1
-!  drop the special subscripts:
-!  T_t - v T_y = T_yy  solid y<0  melt y>0
+! page 94 of Alexiades, Solomon 1993 for *steady state* stefan model:
+!  exact solution in fixed frame of reference:
+!  y_I=Vt   u_I = 0
+!  uMELT=0  y-Vt > 0
+!  uSOLID=V (y-Vt)   y-Vt < 0
+!  note that: uSOLID_yy =0  uSOLID(Vt)=0  uSOLID(Vt-DY)=-V DY
+!          d uSOLID / dy = V
+!  let y1=y-Vt  t1=t
+!  drop the "1" subscript:
+!  y_I=0   u_I=0
+!  uMELT=0  y>0
+!  uSOLID=V y   y<0
+!  uSOLID_yy=0  uSOLID(0)=0  uSOLID(-DY)= -V DY
 !
 ! 0=flat interface  
 ! 1=annulus  
