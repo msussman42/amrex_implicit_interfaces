@@ -542,26 +542,29 @@
       probhi_local(2)=dx_local(2)*(hiy+1)
       local_level=0
       ncomp_gap=1
-      call FORT_TECPLOTFAB_SANITY( &
-       root_char_array, &
-       n_root, &
-       data_dir, &
-       local_bfact, &
-       fablo,fabhi, &
-       gap_alarm_FAB, &
-       DIMS(GAPFAB), &
-       problo_local,probhi_local, &
-       dx_local, &
-       SDC_outer_sweeps, &
-       slab_step, &
-       data_id, &
-       nsteps_global, &
-       current_time, & ! this time might be out of sync 
-       visual_option, &
-       visual_revolve, &
-       local_level, &
-       local_level, &
-       ncomp_gap)
+       ! VERIFICATION
+      if (1.eq.0) then
+       call FORT_TECPLOTFAB_SANITY( &
+        root_char_array, &
+        n_root, &
+        data_dir, &
+        local_bfact, &
+        fablo,fabhi, &
+        gap_alarm_FAB, &
+        DIMS(GAPFAB), &
+        problo_local,probhi_local, &
+        dx_local, &
+        SDC_outer_sweeps, &
+        slab_step, &
+        data_id, &
+        nsteps_global, &
+        current_time, & ! this time might be out of sync 
+        visual_option, &
+        visual_revolve, &
+        local_level, &
+        local_level, &
+        ncomp_gap)
+      endif
 
 
       do i=lox,hix
