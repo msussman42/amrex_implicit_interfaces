@@ -13804,23 +13804,6 @@ stop
        tau_w = rho_w*u_tau**2
       end subroutine wallFunc_NewtonsMethod
 
-function delta(r)
-implicit none
-
-double precision delta
-double precision, intent(in) :: r
-
-if (abs(r) <= 1.0) then
-    delta = (3.0 - 2.0 * abs(r) + sqrt(1.0 + 4.0 * abs(r) - 4.0 * r * r)) / 8.0
-else if (1.0 < abs(r) .AND. abs(r) <= 2.0) then
-    delta = (5.0 - 2.0 * abs(r) - sqrt(-7.0 + 12.0 * abs(r) - 4.0 * r * r)) / 8.0
-else
-    delta = 0.0
-end if
-
-end function delta
-
-
 
        ! This routine transforms all velocities to a frame of reference with
        ! respect to the solid.
@@ -14170,6 +14153,8 @@ end function delta
           local_dx(dir)
        enddo ! dir=1..sdim
 
+         ! levelset function on the solid interface separating fluid
+         ! from rigid structure.
        call bilinear_interp_stencil(LSCP_prj_stencil,projectdist, &
                nmat*(SDIM+1),LSCP_prj_interp)
 
@@ -14289,7 +14274,8 @@ end function delta
        endif
 
        ughost_nrml = -reflect_factor*uimage_nrml
- 
+
+        ! LSCP_image_interp: Level set function at the image point in the fluid
        call get_primary_material(LSCP_image_interp,nmat,im_primary_image)
 
         ! From Spaldings' paper, a representative size for the linear 
@@ -14367,11 +14353,15 @@ end function delta
          nfluidFD(3)=zero
          nsolidCP(3)=zero
          do dir=1,SDIM
-          nfluidFD(dir)=LSFD_image_interp((im_primary_image-1)*SDIM+dir)
+           ! fluid normal in the fluid.
+          nfluidFD(dir)=LSFD_image_interp((im_primary_image-1)*SDIM+dir) 
+           ! solid normal
           nsolidCP(dir)=nrm_solid(dir)
           nf_dot_ns=nf_dot_ns+nfluidFD(dir)*nsolidCP(dir)
          enddo
          mag=zero
+          ! nCL is tangential to the solid/fluid interface
+          ! (solid normal has been projected away from nfluidFD)
          do dir=1,3
           nCL(dir)=nfluidFD(dir)-nf_dot_ns*nsolidCP(dir)
           mag=mag+nCL(dir)**2
@@ -14386,6 +14376,8 @@ end function delta
            nCL(dir)=nCL(dir)/mag
           enddo
            ! nCL_perp is tangent to the contact line in the substrate plane.
+           ! nCL is normal to the contact line in the substrate plane
+           ! nsolidCP is normal to the substrate
           call crossprod(nCL,nsolidCP,nCL_perp)
           mag=zero
           do dir=1,3
@@ -14400,7 +14392,13 @@ end function delta
            do dir=1,3
             nf_dot_nCL_perp=nf_dot_nCL_perp+nfluidFD(dir)*nCL_perp(dir)
            enddo
+            ! nCL_perp is tangent to the contact line in the substrate plane.
             ! nfluidFD points into im_primary_image material.
+            ! nf_prj is the fluid normal with the tangent contact line
+            ! vector projected away; nf_prj, in a plane perpendicular
+            ! to the substrate and perpendicular to the contact line,
+            ! is the normal point away from "im_secondary_image" into
+            ! "im_primary_image"
            mag=zero
            do dir=1,3
             nf_prj(dir)=nfluidFD(dir)-nf_dot_nCL_perp*nCL_perp(dir)
@@ -14411,13 +14409,46 @@ end function delta
             do dir=1,3
              nf_prj(dir)=nf_prj(dir)/mag
             enddo
+             ! nCL_perp2 will also be tangent to the contact line.
             call crossprod(nsolidCP,nf_prj,nCL_perp2)
             sinthetaACT=zero
             costhetaACT=zero
+             ! because nsolidCP and nf_prj have unit magnitude,
+             ! sinthetaACT is the sine of the angle between nsolidCP
+             ! and nf_prj (fluid normal in plane perpendicular to contact line
+             ! and solid)
             do dir=1,3
              sinthetaACT=sinthetaACT+nCL_perp2(dir)**2
              costhetaACT=costhetaACT+nsolidCP(dir)*nf_prj(dir)
             enddo
+             ! assuming that the fluid interface is almost linear, then
+             ! we get the distance to the contact line using
+             ! the distance function at the projection point.
+             ! THIS PIECE OF CODE NEEDS TO BE IMPROVED.
+             ! New CODE request (3D please):
+             !  input:  7x7x7 stencil of positions,
+             !   level set functions and their
+             !   normals.
+             !   LS1 = liquid
+             !   LS2 = gas
+             !   LS3 = solid
+             !   x_project = projection point on the solid
+             !   x = positions
+             !  output: 
+             !   1. the "actual" angle that the fluid interface makes
+             !      with the solid.
+             !   2. the closest distance from x_project to the contact line.
+             !   EASY METHOD THAT SHOULD WORK:
+             !  DISTMIN=1.0D+20
+             !  for i',j',k'=-3,...,3
+             !   if LS1_{i',j',k'} * LS1(x_project) <=0.0 then
+             !    if |LS3_{i',j',k'}| < dx then
+             !     DISTTEST=||x_project-x_{i',j',k'}||
+             !     if (DISTTEST<DISTMIN) then
+             !      DISTMIN=DISTTEST 
+             ! ....
+             ! DISTMIN=MIN(DISTMIN,LSCP_prj_interp(im_primary_image)/
+             !    sinthetaACT)
             sinthetaACT=sqrt(sinthetaACT)
             if (sinthetaACT.gt.zero) then
              if (costhetaACT.ge.zero) then
@@ -14551,6 +14582,7 @@ end function delta
            endif
            ZEYU_u_cl=zero
            ZEYU_thet_d=ZEYU_thet_d_apparent
+            ! in: PROB.F90
            call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
              ZEYU_thet_s, &
              ZEYU_imodel, ZEYU_ifgnbc, ZEYU_lambda, &

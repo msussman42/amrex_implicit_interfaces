@@ -55,7 +55,7 @@ ns.MOFITERMAX=15
 # in IJMF paper, 8 ... 256 cells across drop diameter.
 # if domain is  6x3, base grid 96x48, max_level=1, diameter=2, then
 # 64 points per drop diameter.
-amr.n_cell    = 48 24
+amr.n_cell    = 96 48
 amr.max_level =  0
 ns.ns_tiling=false
 
@@ -112,7 +112,7 @@ ns.tension       = 1118.0 559.0 1118.0
 #                  conditions.
 #if law_of_the_wall=2 (GNBC) then
 # calls to FORT_WALLFUNCTION and getGhostVel are made.
-ns.law_of_the_wall=0  #1=law of the wall   2=GNBC  0=neither
+ns.law_of_the_wall=2  #1=law of the wall   2=GNBC  0=neither
 
 # =-1 static angle
 # =1 GNBC
@@ -123,7 +123,7 @@ ns.law_of_the_wall=0  #1=law of the wall   2=GNBC  0=neither
 # =6 Bracke1989
 # =7 Blake2006, Popescu2008
 # =8 Cox 1986
-ns.ZEYU_DCA_SELECT=2  #DCA=dynamic contact angle
+ns.ZEYU_DCA_SELECT=1  #DCA=dynamic contact angle
 #ns.ZEYU_DCA_SELECT=-1  #DCA=dynamic contact angle
 
 ns.use_lsa=0

@@ -3254,6 +3254,26 @@ stop
        end subroutine get_scaled_pforce
 
 
+function ZEYU_delta(r)
+implicit none
+
+double precision ZEYU_delta
+double precision, intent(in) :: r
+
+if (abs(r) <= 1.0d0) then
+    ZEYU_delta = (3.0d0 - 2.0d0 * abs(r) + &
+      sqrt(1.0d0 + 4.0d0 * abs(r) - 4.0d0 * r * r)) / 8.0d0
+else if (1.0d0 < abs(r) .AND. abs(r) <= 2.0d0) then
+    ZEYU_delta = (5.0d0 - 2.0d0 * abs(r) -  &
+      sqrt(-7.0d0 + 12.0d0 * abs(r) - 4.0d0 * r * r)) / 8.0d0
+else
+    ZEYU_delta = 0.0d0
+end if
+
+end function ZEYU_delta
+
+
+
 ! ZEYU HUANG
 !mu_l: dynamic viscocity of liquid
 !mu_g: dynamic viscocity of gas
@@ -3266,7 +3286,7 @@ stop
 !l_macro: parameter in gnbc, can be set as grid length
 !l_micro: parameter in gnbc, can be set as 1.e-9
 !dgrid: grid length
-!d_closest: closest distance
+!d_closest: closest distance to the contact line
 !thet_d_apparent: dynamic contact angle from simulation (input in gnbc)
 !(liquid region)
 !u_cl: velocity of contact line (input in dynamic contact angle models)
@@ -3277,6 +3297,8 @@ stop
 !(liquid region) (unused, GNBC)
 !For the test results of different dynamic contact angle models, model 4 and 
 !model 7 have large difference between other models.
+!
+!called from: GODUNOV_3D.F90
 subroutine dynamic_contact_angle(mu_l, mu_g, sigma, thet_s, &
                                  imodel, ifgnbc, lambda, l_macro, l_micro, &
                                  dgrid, d_closest, thet_d_apparent, &
@@ -3335,7 +3357,7 @@ select case (imodel)
         if (diag_output.eq.1) then
          print *, "Implement model 1 ..."
         endif
-       if (abs(l_macro) < 1.e-9) then
+       if (abs(l_macro) < 1.0D-9) then
            l_macro = dgrid
        end if
 
@@ -3344,35 +3366,36 @@ select case (imodel)
             stop
         else if (ifgnbc.eq.1) then !Implement GNBC
             beta = mu_l / lambda
-            chi = (mu_l + mu_g) / (2. * beta * dgrid)
-            a = 9. * log(l_macro / l_micro)
-            b = thet_d_apparent**3
+            chi = (mu_l + mu_g) / (2.0d0 * beta * dgrid)
+            a = 9.0d0 * log(l_macro / l_micro)
+            b = thet_d_apparent**3.0d0
             c = chi * cos(thet_s)
             
             iter = 0
-            thet_d_micro = 0.
-            Ca = 0.
+            thet_d_micro = 0.0d0
+            Ca = 0.0d0
             thet_d_micro_old = thet_d_apparent
             Ca_old = chi * (cos(thet_s) - cos(thet_d_apparent))
             do iter = 0, 1000
-                f1 = thet_d_micro_old**3 + a * Ca_old - b
+                f1 = thet_d_micro_old**3.0d0 + a * Ca_old - b
                 f2 = Ca_old + chi * cos(thet_d_micro_old) - c
-                Ja11 = 3. * thet_d_micro_old**2
+                Ja11 = 3.0d0 * thet_d_micro_old**2.0d0
                 Ja12 = a
                 Ja21 = - chi * sin(thet_d_micro_old)
-                Ja22 = 1.
+                Ja22 = 1.0d0
                 b1 = Ja11 * thet_d_micro_old + Ja12 * Ca_old - f1
                 b2 = Ja21 * thet_d_micro_old + Ja22 * Ca_old - f2
                 u11 = Ja11
                 u12 = Ja12
-                l21 = Ja21 / (u11 + 1.e-20)
+                l21 = Ja21 / (u11 + 1.0D-20)
                 u22 = Ja22 - l21 * u12
                 y1 = b1
                 y2 = b2 - l21 * y1
-                Ca = y2 / (u22 + 1.e-20)
-                thet_d_micro = (y1 - u12 * Ca) / (u11 + 1.e-20)
-                if (abs((thet_d_micro - thet_d_micro_old)/(thet_d_micro_old+1.e-20)) < 1.e-4 &
-                   .AND. abs((Ca - Ca_old)/(Ca_old+1.e-20)) < 1.e-4) then
+                Ca = y2 / (u22 + 1.0D-20)
+                thet_d_micro = (y1 - u12 * Ca) / (u11 + 1.0D-20)
+                if (abs((thet_d_micro - thet_d_micro_old)/ &
+                        (thet_d_micro_old+1.0D-20)) < 1.0D-4 &
+                   .AND. abs((Ca - Ca_old)/(Ca_old+1.0D-20)) < 1.0D-4) then
                     exit
                 end if
                 thet_d_micro_old = thet_d_micro
@@ -3380,7 +3403,9 @@ select case (imodel)
             end do
             print *, "Calculating Ca and thet_d_micro..."
             print *, "number of iteration is: ", iter
-            u_slip = 1. / (beta * dgrid + 1.e-20) * delta(d_closest/dgrid) * sigma * (cos(thet_s) - cos(thet_d_micro))
+            u_slip = 1. / (beta * dgrid + 1.0D-20) *  &
+                  ZEYU_delta(d_closest/dgrid) * sigma *  &
+                  (cos(thet_s) - cos(thet_d_micro))
             thet_d = thet_d_apparent
         else
             print *,"ifgnbc invalid"

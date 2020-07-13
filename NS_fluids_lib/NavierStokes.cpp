@@ -90,10 +90,26 @@
       // Vector<Real>& real_comp0 = particle_attributes.GetRealData(0);
       for (int i=0;i<SDIM;i++)
        Vector<int>& int_comp[i]  = particle_attributes.GetIntData(i);
-      for (int i = 0; i < pti.numParticles; ++i) {
+      for (int i = 0; i < pti.numParticles(); ++i) {
         // do stuff with your SoA data... (int_comp[j], j=0..sdim-1)
         reinitialize LS data with WENO.
       }
+      FORT_DOSTUFF_WITH_SOA(
+			real_comp0.size(),  // =pti.numParticles()
+			real_comp0.dataPtr(),
+			int_comp[0].dataPtr(), 
+			int_comp[1].dataPtr(), 
+			int_comp[AMREX_SPACEDIM-1].dataPtr(), .... );
+
+         or
+      Array<int> int_compALL(AMREX_SPACEDIM * pti.numParticles())
+      for (int i=0;i<SDIM;i++) {
+       for (int j = 0; j < pti.numParticles; ++j) {
+	       int k=i*pti.numParticles()+j;
+	       int_compALL[k]=int_comp[i][j];
+       }
+      }
+
      }
 
 
