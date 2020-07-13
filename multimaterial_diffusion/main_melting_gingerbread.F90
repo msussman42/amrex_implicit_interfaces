@@ -79,7 +79,10 @@ INTEGER,PARAMETER          :: plot_int = 1
 !
 ! non-axisymmetric, polar solver for validation (probtype_in.eq.19):
 ! TSTOP=0.004d0
-real(kind=8),parameter     :: TSTOP = 0.5d0
+! VALIDATION TSTOP:
+!real(kind=8),parameter     :: TSTOP = 0.5d0
+! VERIFICATION TSTOP:
+real(kind=8),parameter     :: TSTOP = 0.02d0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -228,7 +231,8 @@ print *,"constant_K_test= ",constant_K_test
 ! M time
 N_START=64
 N_FINISH=64
-M_START=64
+! VERIFICATION: M_START=50,100,200 corresponding to 64,128,256
+M_START=50
 M_FACTOR=2
 
 if (probtype_in.eq.4) then
@@ -256,7 +260,10 @@ else if (probtype_in.eq.5) then ! phase change vertical planar interface
 else if (probtype_in.eq.400) then ! gingerbread man
  ! fixed_dt=0.0d0 => use CFL condition
  ! fixed_dt=-1.0d0 => use TSTOP/M
- fixed_dt_main=0.0d0
+ ! VALIDATION:
+ ! fixed_dt_main=0.0d0
+ ! VERIFICATION:
+ fixed_dt_main=-1.0d0
  print *,"gingeroutline should be in run directory"
 else
  print *,"probtype_in invalid"
@@ -1995,6 +2002,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     if (max_front_vel.gt.0.0d0) then
      deltat_in=h_in*0.25d0/max_front_vel
+      ! VERIFICATION
+     deltat_in=TSTOP/M_START
      if (finished_flag.eq.0) then
       if (Ts(tm)+deltat_in.ge.TSTOP-1.0D-14) then
        deltat_in=TSTOP-Ts(tm)
