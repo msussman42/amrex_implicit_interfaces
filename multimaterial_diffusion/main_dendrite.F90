@@ -98,7 +98,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
 INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 2000
-INTEGER,PARAMETER          :: plot_int = 1
+INTEGER,PARAMETER          :: plot_int = 20
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1
@@ -113,6 +113,7 @@ INTEGER,PARAMETER          :: plot_int = 1
 ! probtype_in==4: TSTOP=1.25D-3
 ! probtype_in==400: TSTOP=0.5d0
 ! probtype_in==403: TSTOP=0.8d0 (Chen, Merriman, Osher, Smereka)
+! VERIFICATION TSTOP:
 real(kind=8),parameter     :: TSTOP = 0.8D0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
@@ -264,9 +265,10 @@ print *,"constant_K_test= ",constant_K_test
 ! for dendrite growth test problem, time step is variable
 ! (fixed_dt_main==0.0)
 ! 64,128,256
+! VERIFICATION: M_START=1600, 1600, 1600 corresponding to 64,128,256
 N_START=64
 N_FINISH=64
-M_START=10
+M_START=1600
 M_FACTOR=2
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
@@ -294,6 +296,8 @@ else if (probtype_in.eq.400) then ! gingerbread man
  fixed_dt_main=0.0d0
 else if (probtype_in.eq.403) then ! dendrite
  fixed_dt_main=0.0d0
+ ! VERIFICATION:
+ fixed_dt_main=-1.0d0
 else
  print *,"probtype_in invalid"
  stop
@@ -2163,6 +2167,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     if (max_front_vel.gt.0.0d0) then
      deltat_in=h_in*0.25d0/max_front_vel
+      ! VERIFICATION
+     deltat_in=TSTOP/M_START
      if (finished_flag.eq.0) then
 
       if (Ts(tm)+deltat_in.ge.TSTOP-1.0D-14) then
