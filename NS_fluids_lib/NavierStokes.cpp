@@ -16757,7 +16757,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  Box visual_node_box(visual_fab_lo,visual_fab_hi);
  visual_fab_hi-=IntVect::TheUnitVector();
  Box visual_domain(visual_fab_lo,visual_fab_hi);
- int visual_ncomp=2*AMREX_SPACEDIM+1+nmat;  // x,u,mag vort,LS
+  // x,u,p,den,T,Y1..Yn,mag vort,LS
+ int visual_ncomp=2*AMREX_SPACEDIM+3+num_species_var+1+nmat;  
  FArrayBox visual_fab_output(visual_node_box,visual_ncomp);
  FArrayBox visual_fab_input(visual_node_box,visual_ncomp); 
 
@@ -17024,7 +17025,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    // just output data, no comparison with other data.
    // "visual_compare" unused here since do_input==0.
    // the data file name is uniform??????.tec
-   // X,Y,Z,U,V,W,MGVORT,LS01,...,LS??
+   // X,Y,Z,U,V,W,pres,density,T,Y1,..,Yn,MGVORT,LS01,...,LS_m
   int do_input=0; 
   FORT_IO_COMPARE(
    &nmat,

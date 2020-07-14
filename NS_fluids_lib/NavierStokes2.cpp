@@ -7200,6 +7200,12 @@ void NavierStokes::output_zones(
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
+  // x,u,p,den,T,Y1..Yn,mag vort,LS
+ if (visual_ncomp==2*AMREX_SPACEDIM+3+num_species_var+1+nmat) {
+  // do nothing
+ } else
+  AMReX::Error("visual_ncomp invalid");
+
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
