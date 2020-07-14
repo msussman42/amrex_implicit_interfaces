@@ -240,7 +240,7 @@ extern "C" {
      int* bfact,
      Real* fabout,AMREX_ARLIM_P(faboutlo),AMREX_ARLIM_P(fabouthi),
      const int* vislo,const int* vishi,
-     int* vis_ncomp,
+     int* visual_ncomp,
      Real* maskSEM,AMREX_ARLIM_P(maskSEMlo),AMREX_ARLIM_P(maskSEMhi),
      Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
      Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
@@ -335,11 +335,11 @@ extern "C" {
      int* visual_compare,
      Real* time,
      Real* fabinput,
-    AMREX_ARLIM_P(fabinput_lo),AMREX_ARLIM_P(fabinput_hi),
+     AMREX_ARLIM_P(fabinput_lo),AMREX_ARLIM_P(fabinput_hi),
      Real* faboutput,
-    AMREX_ARLIM_P(faboutput_lo),AMREX_ARLIM_P(faboutput_hi),
+     AMREX_ARLIM_P(faboutput_lo),AMREX_ARLIM_P(faboutput_hi),
      const int* vislo,const int* vishi,
-     int* vis_ncomp);
+     int* visual_ncomp);
  
     void FORT_ZALESAKNODE(
        const Real* xlo,const Real* dx,

@@ -7204,7 +7204,7 @@ void NavierStokes::output_zones(
  if (visual_ncomp==2*AMREX_SPACEDIM+3+num_species_var+1+nmat) {
   // do nothing
  } else
-  AMReX::Error("visual_ncomp invalid");
+  amrex::Error("visual_ncomp invalid");
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
@@ -7497,6 +7497,7 @@ void NavierStokes::output_zones(
     FArrayBox& viscfab=(*viscmfminus)[mfi];
     FArrayBox& magtracefab=(*magtracemfminus)[mfi];
 
+      // in: NAVIERSTOKES_3D.F90
     FORT_CELLGRID(
      &tid_current,
      &bfact,

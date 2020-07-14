@@ -2681,7 +2681,7 @@ END SUBROUTINE SIMP
        fabin,DIMS(fabin), &
        fabout,DIMS(fabout), &
        vislo,vishi, &
-       vis_ncomp)
+       visual_ncomp)
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -2691,15 +2691,16 @@ END SUBROUTINE SIMP
       INTEGER_T do_input
       INTEGER_T visual_compare
       REAL_T time
-      INTEGER_T vis_ncomp
+      INTEGER_T visual_ncomp
       INTEGER_T vislo(SDIM),vishi(SDIM) 
       INTEGER_T visual_ncell(SDIM)
       REAL_T visual_dx(SDIM)
       INTEGER_T gridlo(3),gridhi(3) 
       INTEGER_T DIMDEC(fabin)
       INTEGER_T DIMDEC(fabout)
-      REAL_T fabout(DIMV(fabout),vis_ncomp) ! x,u,mag vort,LS
-      REAL_T fabin(DIMV(fabin),vis_ncomp)
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      REAL_T fabout(DIMV(fabout),visual_ncomp) 
+      REAL_T fabin(DIMV(fabin),visual_ncomp)
       REAL_T problo(SDIM),probhi(SDIM)
       INTEGER_T i,j,k
       INTEGER_T im
@@ -2710,17 +2711,18 @@ END SUBROUTINE SIMP
       INTEGER_T LSgridsum(nmat)
       INTEGER_T gridsum_total
       REAL_T xtest(SDIM)
-      REAL_T local_data(vis_ncomp+1) ! x,u,mag vort,LS,mag u
-      REAL_T local_data_in(vis_ncomp+1)
-      REAL_T local_data_out(vis_ncomp+1)
-      REAL_T L1norm_local(vis_ncomp+1)
-      REAL_T L2norm_local(vis_ncomp+1)
-      INTEGER_T icrit(nmat*(vis_ncomp+1))
-      INTEGER_T jcrit(nmat*(vis_ncomp+1))
-      INTEGER_T kcrit(nmat*(vis_ncomp+1))
-      REAL_T L1norm(nmat*(vis_ncomp+1))
-      REAL_T L2norm(nmat*(vis_ncomp+1))
-      REAL_T Linfnorm(nmat*(vis_ncomp+1))
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      REAL_T local_data(visual_ncomp+1) 
+      REAL_T local_data_in(visual_ncomp+1)
+      REAL_T local_data_out(visual_ncomp+1)
+      REAL_T L1norm_local(visual_ncomp+1)
+      REAL_T L2norm_local(visual_ncomp+1)
+      INTEGER_T icrit(nmat*(visual_ncomp+1))
+      INTEGER_T jcrit(nmat*(visual_ncomp+1))
+      INTEGER_T kcrit(nmat*(visual_ncomp+1))
+      REAL_T L1norm(nmat*(visual_ncomp+1))
+      REAL_T L2norm(nmat*(visual_ncomp+1))
+      REAL_T Linfnorm(nmat*(visual_ncomp+1))
       REAL_T LSnorm(nmat)
       REAL_T LS_in,LS_out
       INTEGER_T LS_base,state_ncomp,ebase
@@ -2737,9 +2739,9 @@ END SUBROUTINE SIMP
        stop
       endif
 
-       ! x,u,mag vort,LS
-      if (vis_ncomp.ne.2*SDIM+1+nmat) then
-       print *,"vis_ncomp invalid" 
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+       print *,"visual_ncomp invalid" 
        stop
       endif
 
@@ -2819,18 +2821,18 @@ END SUBROUTINE SIMP
           dir=SDIM
           xtest(dir)=problo(dir)+k*visual_dx(dir)
          endif
-         do n=1,vis_ncomp
-          if ((n.ge.1).and.(n.lt.vis_ncomp)) then
+         do n=1,visual_ncomp
+          if ((n.ge.1).and.(n.lt.visual_ncomp)) then
 !          read(11,'(D25.16)',ADVANCE="NO") local_data(n)
            read(11,'(E25.16)',ADVANCE="NO") local_data(n)
-          else if (n.eq.vis_ncomp) then
+          else if (n.eq.visual_ncomp) then
 !          read(11,'(D25.16)') local_data(n)
            read(11,'(E25.16)') local_data(n)
           else
            print *,"n invalid"
            stop
           endif
-         enddo ! n=1..vis_ncomp
+         enddo ! n=1..visual_ncomp
 
          do dir=1,SDIM
           if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
@@ -2838,14 +2840,14 @@ END SUBROUTINE SIMP
            stop
           endif
          enddo
-         do n=1,vis_ncomp
+         do n=1,visual_ncomp
           if (abs(local_data(n)).le.1.0D+20) then
            fabin(D_DECL(i,j,k),n)=local_data(n)
           else
            print *,"local_data(n) overflow"
            stop
           endif
-         enddo ! n=1..vis_ncomp
+         enddo ! n=1..visual_ncomp
         enddo !i
         enddo !j
         enddo !k
@@ -2872,16 +2874,32 @@ END SUBROUTINE SIMP
 
        write(11,*) '"uniform data"'
 
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
        if (SDIM.eq.2) then
-        write(11,'(A34)',ADVANCE="NO")  &
-         'VARIABLES="X","Y","U","V","MGVORT"'
+        write(11,'(A25)',ADVANCE="NO")  &
+         'VARIABLES="X","Y","U","V"'
        else if (SDIM.eq.3) then
-        write(11,'(A42)',ADVANCE="NO") &
-         'VARIABLES="X","Y","Z","U","V","W","MGVORT"'
+        write(11,'(A33)',ADVANCE="NO") &
+         'VARIABLES="X","Y","Z","U","V","W"'
        else
         print *,"dimension bust"
         stop
        endif
+       write(11,'(A20)',ADVANCE="NO") ',"PRES","DEN","TEMP"'
+
+       do im=1,num_species_var
+        write(im_str,'(I2)') im
+        do i=1,2
+         if (im_str(i:i).eq.' ') then
+          im_str(i:i)='0'
+         endif
+        enddo
+        write(11,'(A6)',ADVANCE="NO") ',"SPEC'
+        write(11,'(A2)',ADVANCE="NO") im_str
+        write(11,'(A1)',ADVANCE="NO") '"'
+       enddo ! im=1..num_species_var
+
+       write(11,'(A9)',ADVANCE="NO") ',"MGVORT"'
 
        do im=1,nmat
         write(im_str,'(I2)') im
@@ -2928,7 +2946,7 @@ END SUBROUTINE SIMP
          dir=SDIM
          xtest(dir)=problo(dir)+k*visual_dx(dir)
         endif
-        do n=1,vis_ncomp
+        do n=1,visual_ncomp
          local_data(n)=fabout(D_DECL(i,j,k),n)
         enddo
         do dir=1,SDIM
@@ -2937,12 +2955,12 @@ END SUBROUTINE SIMP
           stop
          endif
         enddo
-        do n=1,vis_ncomp
+        do n=1,visual_ncomp
          if (abs(local_data(n)).le.1.0D+20) then
-          if ((n.ge.1).and.(n.lt.vis_ncomp)) then
+          if ((n.ge.1).and.(n.lt.visual_ncomp)) then
 !          write(11,'(D25.16)',ADVANCE="NO") local_data(n)
            write(11,'(E25.16)',ADVANCE="NO") local_data(n)
-          else if (n.eq.vis_ncomp) then
+          else if (n.eq.visual_ncomp) then
 !          write(11,'(D25.16)') local_data(n)
            write(11,'(E25.16)') local_data(n)
           else
@@ -2953,7 +2971,7 @@ END SUBROUTINE SIMP
           print *,"local_data(n) overflow"
           stop
          endif
-        enddo ! n=1..vis_ncomp
+        enddo ! n=1..visual_ncomp
  
        enddo ! i
        enddo ! j
@@ -2963,17 +2981,17 @@ END SUBROUTINE SIMP
 
        if (visual_compare.eq.1) then
 
-        LS_base=vis_ncomp-nmat
-        state_ncomp=vis_ncomp-nmat+1
+        LS_base=visual_ncomp-nmat
+        state_ncomp=visual_ncomp-nmat+1
 
-        do n=1,nmat*(vis_ncomp+1)
+        do n=1,nmat*(visual_ncomp+1)
          L1norm(n)=zero
          L2norm(n)=zero
          Linfnorm(n)=zero
          icrit(n)=-1
          jcrit(n)=-1
          kcrit(n)=-1
-        enddo ! n=1..nmat*(vis_ncomp+1)
+        enddo ! n=1..nmat*(visual_ncomp+1)
 
         do im=1,nmat
          gridsum(im)=0
@@ -2986,8 +3004,8 @@ END SUBROUTINE SIMP
         do k=gridlo(3),gridhi(3)
         do j=gridlo(2),gridhi(2)
         do i=gridlo(1),gridhi(1)
-           ! x,u,mag vort,LS
-         do n=1,vis_ncomp
+          ! x,u,p,den,T,Y1..Yn,mag vort,LS
+         do n=1,visual_ncomp
           local_data_in(n)=fabin(D_DECL(i,j,k),n)
           local_data_out(n)=fabout(D_DECL(i,j,k),n)
           if ((abs(local_data_in(n)).le.1.0D+20).and. &
@@ -3006,10 +3024,10 @@ END SUBROUTINE SIMP
            print *,"local_data_in or local_data_out corrupt"
            stop
           endif 
-         enddo ! n=1..vis_ncomp
+         enddo ! n=1..visual_ncomp
 
-          ! x,u,mag vort,LS,mag u
-         n=vis_ncomp+1
+          ! x,u,p,den,T,Y1..Yn,mag vort,LS
+         n=visual_ncomp+1
          local_data(n)=zero
          do dir=1,SDIM
           local_data(n)=local_data(n)+ &
@@ -3025,8 +3043,8 @@ END SUBROUTINE SIMP
           stop
          endif
 
-         if ((LS_base.eq.vis_ncomp-nmat).and. &
-             (state_ncomp.eq.vis_ncomp-nmat+1)) then
+         if ((LS_base.eq.visual_ncomp-nmat).and. &
+             (state_ncomp.eq.visual_ncomp-nmat+1)) then
           do im=1,nmat
            LS_in=local_data_in(LS_base+im)
            LS_out=local_data_out(LS_base+im)
@@ -3036,7 +3054,7 @@ END SUBROUTINE SIMP
              if (n.lt.state_ncomp) then
               n_data=n
              else
-              n_data=vis_ncomp+1
+              n_data=visual_ncomp+1
              endif
              L1norm(ebase+n)=L1norm(ebase+n)+L1norm_local(n_data)
              L2norm(ebase+n)=L2norm(ebase+n)+L2norm_local(n_data)
@@ -3081,8 +3099,8 @@ END SUBROUTINE SIMP
         enddo ! k
 
         if (gridsum_total.ge.1) then
-         if ((LS_base.eq.vis_ncomp-nmat).and. &
-             (state_ncomp.eq.vis_ncomp-nmat+1)) then
+         if ((LS_base.eq.visual_ncomp-nmat).and. &
+             (state_ncomp.eq.visual_ncomp-nmat+1)) then
           do im=1,nmat
            if (gridsum(im).gt.0) then
             ebase=(im-1)*state_ncomp
@@ -3134,12 +3152,14 @@ END SUBROUTINE SIMP
       return
       end subroutine FORT_IO_COMPARE
 
+       ! called from: NavierStokes2.cpp
       subroutine FORT_CELLGRID( &
        tid, &
        bfact, &
        fabout,DIMS(fabout), &
        vislo,vishi, &
-       vis_ncomp, & ! x,u,mag vort,LS
+        ! x,u,p,den,T,Y1..Yn,mag vort,LS
+       visual_ncomp, & 
        maskSEM,DIMS(maskSEM), &
        vel,DIMS(vel), &
        vof,DIMS(vof), &
@@ -3199,7 +3219,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: elastic_ncomp
       INTEGER_T, intent(in) :: visual_tessellate_vfrac
       INTEGER_T, intent(in) :: visual_option
-      INTEGER_T, intent(in) :: vis_ncomp
+      INTEGER_T, intent(in) :: visual_ncomp
       INTEGER_T, intent(in) :: vislo(SDIM), vishi(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(fabout)
@@ -3217,7 +3237,8 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: gridno
-      REAL_T, intent(out) :: fabout(DIMV(fabout),vis_ncomp) ! x,u,mag vort,LS
+          ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      REAL_T, intent(out) :: fabout(DIMV(fabout),visual_ncomp) 
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in) :: vel(DIMV(vel), &
         num_materials_vel*(SDIM+1))
@@ -3248,6 +3269,7 @@ END SUBROUTINE SIMP
       REAL_T dencell(num_state_material*nmat)
       REAL_T elasticcell(elastic_ncomp)
       REAL_T lsdistnd((SDIM+1)*nmat)
+      REAL_T local_LS_data((SDIM+1)*nmat)
       REAL_T viscnd(nmat)
       REAL_T tracend(5*nmat)
       REAL_T writend(nmat*200)
@@ -3255,6 +3277,7 @@ END SUBROUTINE SIMP
       INTEGER_T istate,idissolution
       INTEGER_T im
       INTEGER_T im_crit
+      INTEGER_T im_crit_SEM
 
       REAL_T, intent(in) :: problo(SDIM)
       REAL_T, intent(in) :: probhi(SDIM)
@@ -3315,10 +3338,12 @@ END SUBROUTINE SIMP
       INTEGER_T visual_ncell(SDIM)
       REAL_T visual_dx(SDIM)
       REAL_T xcrit(SDIM)
-      REAL_T localfab(vis_ncomp)
-      REAL_T SEM_value(vis_ncomp-SDIM) ! u,mag vort,LS
-      INTEGER_T ncomp_SEM  ! vis_ncomp-SDIM
-      INTEGER_T VORT_comp_SEM ! SDIM+1
+      REAL_T localfab(visual_ncomp)
+      REAL_T vel_uniform(visual_ncomp)
+      REAL_T SEM_value(visual_ncomp-SDIM) ! u,mag vort,LS
+      INTEGER_T ncomp_SEM  ! visual_ncomp-SDIM
+       ! SDIM+3+num_species_var+1
+      INTEGER_T VORT_comp_SEM 
       INTEGER_T gridtype
       INTEGER_T SEMhi(SDIM)
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: SEMloc
@@ -3326,6 +3351,7 @@ END SUBROUTINE SIMP
       INTEGER_T local_maskSEM
       REAL_T local_data
       INTEGER_T caller_id
+      INTEGER_T current_index
 
       caller_id=3
 
@@ -3427,9 +3453,9 @@ END SUBROUTINE SIMP
       call checkbound(vislo,vishi,DIMS(fabout),0,0,411)
       call checkbound(vislo,vishi,DIMS(fabout),0,1,411)
       call checkbound(vislo,vishi,DIMS(fabout),0,SDIM-1,411)
-       ! x,u,mag vort,LS
-      if (vis_ncomp.ne.2*SDIM+1+nmat) then
-       print *,"vis_ncomp invalid" 
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+       print *,"visual_ncomp invalid" 
        stop
       endif
 
@@ -3799,8 +3825,34 @@ END SUBROUTINE SIMP
          tracend(dir)=tracend(dir)/sumweight
         enddo
 
+        do dir=1,num_state_material*nmat
+         dennd(dir)=dennd(dir)/sumweight
+        enddo
+
+        do dir=1,elastic_ncomp
+         elasticnd(dir)=elasticnd(dir)/sumweight
+        enddo
+
+        do dir=1,num_materials_vel
+         presnd(dir)=presnd(dir)/sumweight
+         divnd(dir)=divnd(dir)/sumweight
+         divdatnd(dir)=divdatnd(dir)/sumweight
+         machnd(dir)=machnd(dir)/sumweight
+        enddo
+
+        do dir=1,nmat
+         vofnd(dir)=vofnd(dir)/sumweight
+         viscnd(dir)=viscnd(dir)/sumweight
+        enddo
+        do dir=1,nmat*(SDIM+1)
+         lsdistnd(dir)=lsdistnd(dir)/sumweightLS
+        enddo
+
         if (bfact.eq.1) then
          ! do nothing
+ 
+         ! if high order, and in the bulk, we use SEM interpolation
+         ! to get values at the nodes.
         else if (bfact.gt.1) then
          local_maskSEM= &
           NINT(maskSEM(D_DECL(icell(1),icell(2),icell(3))))
@@ -3873,8 +3925,8 @@ END SUBROUTINE SIMP
 
           enddo ! dir2=1..sdim
 
-          ncomp_SEM=vis_ncomp-SDIM
-          VORT_comp_SEM=SDIM+1
+          ncomp_SEM=visual_ncomp-SDIM
+          VORT_comp_SEM=SDIM+3+num_species_var+1
           do n=1,ncomp_SEM
            SEM_value(n)=zero
           enddo
@@ -3892,7 +3944,13 @@ END SUBROUTINE SIMP
            ilocal=iSEM-stenlo(1)
            jlocal=jSEM-stenlo(2)
            klocal=kSEM-stenlo(3)
-           do dir=1,SDIM
+           do im=1,nmat
+            local_LS_data(im)=lsdist(D_DECL(iSEM,jSEM,kSEM),im)
+           enddo
+           call get_primary_material(local_LS_data,nmat,im_crit_SEM)
+
+            ! velocity and pressure
+           do dir=1,SDIM+1
             local_data=vel(D_DECL(iSEM,jSEM,kSEM),dir)
             if (abs(local_data).lt.1.0D+20) then
              SEMloc(D_DECL(ilocal,jlocal,klocal),dir)=local_data
@@ -3900,9 +3958,21 @@ END SUBROUTINE SIMP
              print *,"abs(local_data) overflow1"
              stop
             endif
-           enddo ! dir=1..sdim
+           enddo ! dir=1..sdim+1
+
+           do dir=1,2+num_species_var
+            local_data=den(D_DECL(iSEM,jSEM,kSEM), &
+              (im_crit_SEM-1)*num_state_material+dir)
+            if (abs(local_data).lt.1.0D+20) then
+             SEMloc(D_DECL(ilocal,jlocal,klocal),SDIM+1+dir)=local_data
+            else
+             print *,"abs(local_data) overflow1"
+             stop
+            endif
+           enddo ! dir=1..2+num_species_var
+
            local_data=trace(D_DECL(iSEM,jSEM,kSEM),(local_maskSEM-1)*5+5)
-           if (VORT_comp_SEM.eq.SDIM+1) then
+           if (VORT_comp_SEM.eq.SDIM+3+num_species_var+1) then
             if (abs(local_data).lt.1.0D+20) then
              SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)=local_data
             else
@@ -3916,9 +3986,9 @@ END SUBROUTINE SIMP
             ! we interpolate the LS using SEM, but we discard the interpolated
             ! value.
            do im=1,nmat
-            local_data=lsdist(D_DECL(iSEM,jSEM,kSEM),im)
-            if (abs(local_data).lt.1.0D+20) then
-             SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)=local_data
+            if (abs(local_LS_data(im)).lt.1.0D+20) then
+             SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)= &
+               local_LS_data(im)
             else
              print *,"abs(local_data) overflow25"
              stop
@@ -3935,6 +4005,7 @@ END SUBROUTINE SIMP
 
           deallocate(SEMloc)
 
+           ! WE ARE IN THE BULK HERE, CAN USE SEM INTERPOLATION
           do dir=1,SDIM
            if (abs(SEM_value(dir)).lt.1.0D+20) then
             velnd(dir)=SEM_value(dir)
@@ -3950,11 +4021,12 @@ END SUBROUTINE SIMP
             stop
            endif
           enddo ! dir=1..sdim
-          if (vis_ncomp-SDIM.ne.SDIM+1+nmat) then
-           print *,"incorrect vis_ncomp"
+          presnd(1)=SEM_value(SDIM+1)
+          if (visual_ncomp-SDIM.ne.SDIM+3+num_state_material+1+nmat) then
+           print *,"incorrect visual_ncomp"
            stop
           endif
-          if (ncomp_SEM.ne.SDIM+1+nmat) then
+          if (ncomp_SEM.ne.SDIM+3+num_state_material+1+nmat) then
            print *,"incorrect ncomp_SEM"
            stop
           endif
@@ -3971,7 +4043,9 @@ END SUBROUTINE SIMP
            print *,"SEM_value(VORT_comp_SEM) ",SEM_value(VORT_comp_SEM)
            stop
           endif
-
+          do dir=1,2+num_species_var
+           dennd(dir)=SEM_value(SDIM+1+dir)
+          enddo
          else if (local_maskSEM.eq.0) then
           ! do nothing
          else
@@ -3983,29 +4057,6 @@ END SUBROUTINE SIMP
          print *,"bfact invalid154"
          stop
         endif
-
-        do dir=1,num_state_material*nmat
-         dennd(dir)=dennd(dir)/sumweight
-        enddo
-
-        do dir=1,elastic_ncomp
-         elasticnd(dir)=elasticnd(dir)/sumweight
-        enddo
-
-        do dir=1,num_materials_vel
-         presnd(dir)=presnd(dir)/sumweight
-         divnd(dir)=divnd(dir)/sumweight
-         divdatnd(dir)=divdatnd(dir)/sumweight
-         machnd(dir)=machnd(dir)/sumweight
-        enddo
-
-        do dir=1,nmat
-         vofnd(dir)=vofnd(dir)/sumweight
-         viscnd(dir)=viscnd(dir)/sumweight
-        enddo
-        do dir=1,nmat*(SDIM+1)
-         lsdistnd(dir)=lsdistnd(dir)/sumweightLS
-        enddo
 
         if (probtype.eq.5700) then
          if (nmat.eq.3) then
@@ -4186,6 +4237,7 @@ END SUBROUTINE SIMP
           lsdistnd(dir)=lsdist(D_DECL(i,j,k),dir)
          enddo
 
+          ! primary material w.r.t. both fluids and solids.
          call get_primary_material(lsdistnd,nmat,im_crit)
 
          do dir=1,num_materials_vel*(SDIM+1)
@@ -4459,7 +4511,7 @@ END SUBROUTINE SIMP
           icell_hi(dir)=icell_lo(dir)+1
          enddo
 
-         do dir=SDIM+1,vis_ncomp
+         do dir=SDIM+1,visual_ncomp
           localfab(dir)=zero
          enddo
 
@@ -4490,9 +4542,24 @@ END SUBROUTINE SIMP
             stop
            endif
           enddo ! dir=1..sdim
-          do dir=1,SDIM
+          do dir=1,nmat
+           lsdistnd(dir)=lsdist(D_DECL(iBL,jBL,kBL),dir)
+          enddo
+           ! primary material w.r.t. both fluids and solids.
+          call get_primary_material(lsdistnd,nmat,im_crit)
+          do dir=1,SDIM+1
+           vel_uniform(dir)=vel(D_DECL(iBL,jBL,kBL),dir)
+          enddo
+          do dir=1,2+num_species_var
+           vel_uniform(SDIM+1+dir)=den(D_DECL(iBL,jBL,kBL), &
+               (im_crit-1)*num_state_material+dir)
+          enddo
+
+          current_index=SDIM
+          do dir=1,SDIM+1+2+num_species_var
            localfab(SDIM+dir)=localfab(SDIM+dir)+ &
-              localwt*vel(D_DECL(iBL,jBL,kBL),dir)
+              localwt*vel_uniform(dir)
+           current_index=current_index+1
           enddo
           ! 1. \dot{gamma}
           ! 2. Tr(A) if viscoelastic
@@ -4503,11 +4570,11 @@ END SUBROUTINE SIMP
           ! 4. (3) * f(A)  if viscoelastic
           !    \dot{gamma} o.t.
           ! 5. vorticity magnitude.
-          localfab(2*SDIM+1)=localfab(2*SDIM+1)+ &
+          localfab(current_index+1)=localfab(current_index+1)+ &
               localwt*trace(D_DECL(iBL,jBL,kBL),5)
           do im=1,nmat
-           localfab(2*SDIM+1+im)=localfab(2*SDIM+1+im)+ &
-              localwt*lsdist(D_DECL(iBL,jBL,kBL),im)
+           localfab(current_index+1+im)=localfab(current_index+1+im)+ &
+              localwt*lsdistnd(im)
           enddo
 
           sumweight=sumweight+localwt
@@ -4515,7 +4582,7 @@ END SUBROUTINE SIMP
          enddo !jBL
          enddo !iBL
          if (sumweight.gt.zero) then
-          do dir=1,vis_ncomp-SDIM
+          do dir=1,visual_ncomp-SDIM
            localfab(SDIM+dir)=localfab(SDIM+dir)/sumweight
           enddo
          else
@@ -4532,7 +4599,7 @@ END SUBROUTINE SIMP
            if (xcrit(dir).ge.xsten(1,dir)) then
             xcrit(dir)=xsten(1,dir)-1.0E-14*visual_dx(dir)
            endif
-          enddo
+          enddo ! dir=1..sdim
 
           ! find stencil for surrounding spectral element.
           stenlo(3)=0
@@ -4576,8 +4643,8 @@ END SUBROUTINE SIMP
 
           enddo ! dir2=1..sdim
 
-          ncomp_SEM=vis_ncomp-SDIM
-          VORT_comp_SEM=SDIM+1
+          ncomp_SEM=visual_ncomp-SDIM
+          VORT_comp_SEM=SDIM+3+num_species_var+1
 
           do n=1,ncomp_SEM
            SEM_value(n)=zero
@@ -4596,15 +4663,30 @@ END SUBROUTINE SIMP
            ilocal=iSEM-stenlo(1)
            jlocal=jSEM-stenlo(2)
            klocal=kSEM-stenlo(3)
-           do n=1,SDIM
+
+           do dir=1,nmat
+            lsdistnd(dir)=lsdist(D_DECL(iSEM,jSEM,kSEM),dir)
+           enddo
+            ! primary material w.r.t. both fluids and solids.
+           call get_primary_material(lsdistnd,nmat,im_crit)
+
+           do dir=1,SDIM+1
+            vel_uniform(dir)=vel(D_DECL(iSEM,jSEM,kSEM),dir)
+           enddo
+           do dir=1,2+num_species_var
+            vel_uniform(SDIM+1+dir)=den(D_DECL(iSEM,jSEM,kSEM), &
+               (im_crit-1)*num_state_material+dir)
+           enddo
+
+           do n=1,SDIM+1+2+num_species_var
             SEMloc(D_DECL(ilocal,jlocal,klocal),n)= &
-             vel(D_DECL(iSEM,jSEM,kSEM),n)
+             vel_uniform(n)
            enddo
            SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)= &
             trace(D_DECL(iSEM,jSEM,kSEM),5)
            do im=1,nmat
             SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)= &
-             lsdist(D_DECL(iSEM,jSEM,kSEM),im)
+             lsdistnd(im)
            enddo
           enddo
           enddo
@@ -4618,7 +4700,7 @@ END SUBROUTINE SIMP
           deallocate(SEMloc)
 
            ! we discard the SEM interpolated values of lsdist.
-          do dir=SDIM+1,vis_ncomp-nmat
+          do dir=SDIM+1,visual_ncomp-nmat
            localfab(dir)=SEM_value(dir-SDIM)
           enddo
 
@@ -4627,7 +4709,7 @@ END SUBROUTINE SIMP
           stop
          endif
 
-         do dir=1,vis_ncomp
+         do dir=1,visual_ncomp
           fabout(D_DECL(ic,jc,kc),dir)=localfab(dir)
          enddo
 
