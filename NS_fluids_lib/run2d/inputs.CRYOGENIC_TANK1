@@ -1,118 +1,146 @@
-max_step  =  999999   # maximum timestep
-#max_step  =  2
-stop_time =  1000     # maximum problem time
+# ----------------------------------------------------------
+# -------- Problem setup -----------------------------------
+# ----------------------------------------------------------
+max_step=99999999
+stop_time=1.0e+20
 
-# ------------------  INPUTS TO CLASS AMR ---------------------
-geometry.coord_sys   = 1           # 0 => cart, 1 => RZ
-geometry.prob_lo     =  0.0 0.0 
-geometry.prob_hi     =  4.21 29.47 # 4.21*7 instead of 29.56
-geometry.is_periodic = 0 0
+ns.probtype         = 421
+ns.axis_dir         = 0
 
-# multigrid class
-mg.verbose = 0
-cg.verbose = 0
-# set above to 2 for maximum verbosity
-mg.nu_f = 40
-mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 9000
-mg.bot_atol = 1.0e-12
-mg.rtol_b = -0.01
-Lp.v = 1
+# 1=liquid hydrogen 2=gaseous hydrogen  3=solid wall
+ns.num_materials    = 3  
+ns.num_species_var  = 1
 
-# 3 materials: 1=liquid 2=gas 3=wall
-ns.num_materials=3  
-ns.num_species_var=0
-# 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
-# 3=no limiter with slope=0 at interface
-ns.slope_limiter_option=1
-ns.advection_order=2 2 1
-ns.continuous_mof=0
-ns.FD_curv_interp=1
-# 0=Sussman and Puckett algorithm 
-# 1=EILE (default), -1=Weymouth Yue
-# 2=always EI   3=always LE
-ns.EILE_flag=-1
-ns.projection_pressure_scale=1 
-#ns.show_mem=1
-ns.MOFITERMAX=15
-amr.n_cell=16 112 
-amr.max_level=0
-ns.truncate_thickness=2.0
+# Material type:
+# 0  => incompressible
+# 24 => compressible 
+# ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
+# PROB.F90 and declared in CRYOGENIC_TANK1.F90)
+#
+ns.material_type    = 0 24 999
 
-ns.minimum_relative_error=1.0e-18
-ns.initial_cg_cycles=10
-ns.initial_project_cycles=3
-ns.initial_viscosity_cycles=1
-ns.initial_thermal_cycles=1
-ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-# 0=GSRB 1=ICRB 2=ILU 3=Jackobi
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
+# Solid defifnition for FSI
+# 1 => By levelset definition in PROB.F90 (and module file)
+ns.FSI_flag         = 0 0 1
 
-ns.visual_option=-2 # -2=tecplot -1=plot files (visit or paraview)
-#2=ignore 1=always account for sound speed 0=only at t=0
+solvability_projection = 0  # Compressible gas
+
+# temperature_primitive_variable=0:
+#   (rho E)_{t} + div (rho u E) = 0  (energy advection)
+#   E=1/2  u dot u + e  e=e(T)
+# temperature_primitive_variable=1:
+#   (rho T)_{t} + div (rho u T) = 0  (energy advection)
+ns.temperature_primitive_variable = 1 1 1
+
+ns.xblob            = 4.21   # outer tank diameter
+ns.yblob            = 29.47  # outer tank height
+ns.zblob            = 14.735 # initial interface location (29.47/2)
+ns.radblob          = 1.0    # wall thickness (0.1 in paper)
+
+# ----------------------------------------------------------
+# -------- Domain and space/time discretization ------------
+# ----------------------------------------------------------
+# 0 => cart, 1 => RZ
+geometry.coord_sys  = 1
+geometry.prob_lo    = 0.0 0.0 
+# 256/32 = 8   8 * 4.21 = 32 + 1.68
+geometry.prob_hi    = 4.21 33.68 
+geometry.is_periodic= 0 0
+
+amr.n_cell          = 32 256 
+amr.max_level       = 0
+
+amr.regrid_int      = 1     # How often to regrid
+amr.max_grid_size   = 64
+
+# Note: (max_level+1) values needed
+amr.n_error_buf     = 4 4  # number of buffer cells in error est 
+amr.blocking_factor = 8 8  # block factor in grid generation
+
+amr.grid_eff        = 0.55  # smaller => less boxes
+
+ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
+
+# Adaptive dt
+ns.cfl              = 0.5      # cfl number for hyperbolic system
+ns.init_shrink      = 1.0      # scale back initial timestep
+ns.change_max       = 1.1      
+ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
+
+#0=only at t=0 1=always account for sound speed 2=ignore
 ns.shock_timestep=2 2 2 
 
-amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
-amr.grid_eff        = 0.55   # what constitutes an efficient grid
-# above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8     # block factor in grid generation
-amr.check_int       = 100     # number of timesteps between checkpoints
+#ns.fixed_dt	    = 5.0e-5   # Hardwire dt
+
+# ----------------------------------------------------------
+# -------- Input/output (IO) -------------------------------
+# ----------------------------------------------------------
+# output file -2=> tecplot -1=> HDF5 plot files (visit or paraview)
+ns.visual_option    =-1 
+
+amr.check_int       = 1000    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1     
-amr.plot_file       = plt 
+
+amr.plot_int        = 100     # number of timesteps between plot files
+amr.plot_file       = plt     # root name of HDF5 plot file
+
+ns.sum_interval     = 10      # timesteps between computing mass 
+
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+
 amr.file_name_digits= 7
-#amr.restart        = chk00400
-#amr.trace   =1
 
-# ------------------  INPUTS TO PHYSICS CLASS -------------------
-ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
+#ns.v=1
+#amr.restart        = chk00400 # Name of the restart checkpoint file
+#amr.trace   	    = 1
+#ns.show_mem        = 1
 
-mac.mac_tol=1.0e-10
-mac.mac_abs_tol    = 1.0e-10
+# ----------------------------------------------------------
+# -------- Inputs to physics class -------------------------
+# ----------------------------------------------------------
+ns.gravity          = -9.8
+ns.twall            = 0.0
+ns.rgasinlet        = 0.0
+ns.vinletgas        = 0.0
+ns.advbot           = 0.0
+ns.adv_vel          = 0.0
+ns.adv_dir          = 1
+ns.denfact          = 1.0
+ns.velfact          = 0.0
+ns.visc_coef        = 1.0
 
-ns.cfl            = 0.5      # cfl number for hyperbolic system
-ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1      # scale back initial timestep
-ns.visc_coef=1.0
-ns.gravity        = -9.8
-ns.use_lsa=0
-#ns.fixed_dt	  = 5.0e-5   # hardwire dt
-ns.sum_interval   = 1       # timesteps between computing mass 
-ns.twall=0.0
+# ----------------------------------------------------------
+# -------- Material properties -----------------------------
+# ----------------------------------------------------------
+# 3 materials
+# 1=liquid hydrogen 2=gaseous hydrogen  3=solid aluminium
 
-ns.axis_dir=0
-ns.vorterr=0.0 0.0 0.0
-ns.rgasinlet=0.0
-ns.vinletgas=0.0
-ns.advbot=0.0
-ns.adv_vel=0.0
-ns.adv_dir=1       # inflow direction in the falling drop direction.
+# Hydrogen properties:
+# [1] LeachmanETAL2017 - Thermodynamic Properties of Cryogenic Fluids
+# [2] https://en.wikipedia.org/wiki/Aluminium
 
-ns.xblob3=11.22 # -q dot n=Watts/m^2
-ns.xblob=4.21 # outher thank diameter
-ns.yblob=29.47 # ouer tank height
-ns.zblob=14.735 # initial interface location (29.47/2)
-ns.radblob=1.0 # wall thickness (0.1 in paper)
+# Aluminum properties:
+# [3] VenturaPerfetti2014 - Thermal Properties of Solids at Room and Cryogenic Temperatures
 
-ns.denfact=1.0
-ns.velfact=0.0
-ns.probtype=421
-ns.material_type=0 24 999
-ns.FSI_flag=0 0 1
-
-# 3 materials: 1=liquid 2=gas 3=wall
+# Molar mass [kg/mol]
+# [1] p.57
+ns.molar_mass = 2.015882E-03 2.015882E-03 0.0
 
 # Density [kg/m^3]
-# For vapor, assuming 2 atm initial pressure
-#  rho_0 = p_0/(R_spf * T_0)=2*101325/(4124*20)
-ns.denconst= 71.1 1.2285 2700 
+# Liquid => # [1] p.62
+# For vapor, assuming 0.2E6 Pa initial pressure 
+# rho_0 = p_0/(R_spf * T_0)=0.2E+06/(4124.47882266918*20)
+# Aluminum => [2]
+# 1. input to the Schrage velocity model: Temperature, gas mixture density,
+#    mass fraction, liquid density
+# 2. input to the expansion model: Delta F * (liquid density/vapor density)
+#    It is assume that Y_{Interface}=1.
+ns.species_evaporation_density=2.42454875632709
+ns.denconst= 71.409 2.42454875632709 2700 
 
 # Specific heat capacity [J/(kg.K)]
-# c_p of Al @ 25K from VenturaPerfetti2014
+# Are these c_p values used for compressible material calculations?
+# Aluminum [3] @ 25K
 ns.stiffCP=9450 6490 17
 
 # Thermal conductivity [W/(m.K)]
@@ -129,22 +157,108 @@ ns.tempconst=20.0 20.0 21.0
 # Surface tension [N/m]
 ns.tension=0.0 0.0 0.0
 
-ns.pressure_error_cutoff=0.0 0.0 0.0
+# ----------------------------------------------------------
+# -------- Phase change model ------------------------------
+# ----------------------------------------------------------
+# latent_heat [Joule/kg]
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# 12 13 23 21 31 32
+# 12 liquid->vapor (boiling)
+# 21 vapor->liquid (condensation)
+ns.latent_heat=1.0286E+08 0.0 0.0 0.0 0.0 0.0
 
-# ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 3 2
-ns.hi_bc          = 2 2
-#ns.v=1
+# distribution of the expansion term
+ns.distribute_from_target= 0 0 0 0 0 0
 
-# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# Schrage model (evaporation only)
+ns.mass_fraction_id =   1 0 0 0 0 0
+ns.freezing_model=      4 0 0 0 0 0
+ns.Tanasawa_or_Schrage= 2 0 0 0 0 0
+
+# saturation temperature will not be used, but need placeholder.
+ns.saturation_temp=273.0 0.0 0.0 0.0 0.0 0.0
+
+# ----------------------------------------------------------
+# -------- Initial and boundary conditions (IC/BC) ---------
+# ----------------------------------------------------------
 # 0 = Interior           3 = Symmetry
 # 1 = Inflow             4 = SlipWall
 # 2 = Outflow            5 = NoSlipWall
+ns.lo_bc          = 3 2
+ns.hi_bc          = 2 2
+
+# Outer wall Dirichlet BC
+ns.solidheat_flag   =1
+
+# No heat flux source at the radial outer wall
+ns.xblob3           = 0.0 # -q dot n=Watts/m^2
+
+# ----------------------------------------------------------
+# -------- Reconstruction -----------------------------------
+# ----------------------------------------------------------
+ns.continuous_mof   = 0
+ns.FD_curv_interp   = 1
+
+#-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
+# 1=EILE (default), 2=always EI, 3=always LE
+ns.EILE_flag        = -1
+
+ns.MOFITERMAX       = 15
+
+ns.truncate_thickness=2.0
+
+# ----------------------------------------------------------
+# -------- Advection ---------------------------------------
+# ----------------------------------------------------------
+ns.advection_order  = 2 2 1
+
+# 0=no limiter,  1=minmod
+# 2=minmod with slope=0 at interface 
+# 3=no limiter with slope=0 at interface
+ns.slope_limiter_option = 1
+
+# ----------------------------------------------------------
+# -------- Projection --------------------------------------
+# ----------------------------------------------------------
+ns.projection_pressure_scale=1
+ns.minimum_relative_error=1.0e-18
+ns.initial_cg_cycles=10
+ns.initial_project_cycles=3
+ns.initial_viscosity_cycles=1
+ns.initial_thermal_cycles=1
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+
+# 0=GSRB 1=ICRB 2=ILU 3=Jackobi
+Lp.smooth_type       = 2
+Lp.bottom_smooth_type= 2
+
+# ----------------------------------------------------------
+# -------- Other inputs ------------------------------------
+# ----------------------------------------------------------
+# multigrid class (set to 2 for maximum verbosity)
+mg.verbose = 0
+cg.verbose = 0
+
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 9000
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 1
+
+mac.mac_tol=1.0e-10
+mac.mac_abs_tol    = 1.0e-10
+
+ns.use_lsa=0
+
+ns.pressure_error_cutoff=0.0 0.0 0.0
 
 # turn any of these on to generate run-time timing stats
-
+RunStats.statvar = godunov_box level_project sync_project
 
 # select single or double precision of FAB output data
 #        default is whatever precision code is compiled with.
 #fab.precision = FLOAT     # output in FLOAT or DOUBLE
 fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

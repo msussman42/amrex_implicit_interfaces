@@ -3306,7 +3306,8 @@ subroutine dynamic_contact_angle(mu_l, mu_g, sigma, thet_s, &
 implicit none
 
 integer imodel, ifgnbc
-double precision mu_l, mu_g, sigma, thet_s, dgrid, d_closest, thet_d_apparent, u_cl, u_slip, thet_d, delta
+double precision mu_l, mu_g, sigma, thet_s, dgrid, d_closest
+double precision thet_d_apparent, u_cl, u_slip, thet_d
 double precision lambda, l_macro, l_micro !parameter of gnbc
 integer iter
 double precision Ca
@@ -30355,6 +30356,9 @@ end subroutine RatePhaseChange
       REAL_T gamma_tanasawa
       REAL_T fluid_molar_mass_Tanasawa ! Tanasawa model
       REAL_T universal_gas
+      REAL_T gamma_schrage
+      REAL_T Tsrc_ref,psrc_ref
+      REAL_T psrc_sat,densrc_sat
       INTEGER_T verb_hydrate
 
       nmat=num_materials
@@ -30678,6 +30682,7 @@ end subroutine RatePhaseChange
            velsrc=velsrc/(Tsat**(1.5))
            velsrc=velsrc/densrc ! rate=mdot/densrc
            veldst=velsrc
+
            if (for_estdt.eq.1) then
             velsrc=max(velsrc,velsrc/(one-expansion_fact))
             veldst=velsrc
@@ -30690,8 +30695,156 @@ end subroutine RatePhaseChange
 
           endif
 
-         else if (local_Tanasawa_or_Schrage.eq.2) then !schrage
+         else if (local_Tanasawa_or_Schrage.eq.2) then !approximate schrage
           ! MEHDI EVAPORATION
+
+          ! gamma: Accomodation coefficient
+          ! M: Molecular weight (molar mass) [kg/mol]  
+          ! m: Mass of a molecule [kg]
+          ! n: Material mass [mol]
+          ! R: Universal gas constant 8.314462618 [J/(mol K)] 
+          ! N_A: Avogadro constant 6.02214076E23 [1/mol]
+          ! k_B: Boltzmann constant 1.380649E−23 [J/K]
+          ! P_x: Pressure (near the interface) [Pa]
+          ! T_x: Temperature (near interface) [K]
+          !
+          ! (M = m N_A)  , (R = N_A k_B) , (k_B / m = R / M)
+          !
+          ! - Approximate schrage model (using P and T)
+          ! mdot=(2 gamma/(2-gamma))
+          !      sqrt(M/(2 pi R))
+          !      (P_v/sqrt(T_v) - P_l/sqrt(T_l))           {1}
+          !
+          ! Note: The formulation is at the boundary very close to
+          !       the phase-change interface just inside the vapor
+          !       region. I think that is why writing the ideal gas
+          !       equation makes sense for the liquid region. 
+          !             
+          ! P V=n R T
+          ! P V=n N_A k_B T
+          ! P = (n N_A)/V k_B T                            {2}
+          !
+          ! rho = mass/volume = (n M)/V = (n m N_a)/V
+          ! rho/m = (n N_A)/V                              {3}
+          !
+          ! - Replacing {3} in {2} gives:
+          ! P = rho/m k_B T = rho T R / M
+          ! P/sqrt(T) = rho/m k_B sqrt(T)                  {4}
+          ! 
+          ! - Replacing {4} in {1} gives:
+          ! mdot=(2 gamma/(2-gamma))
+          !      sqrt(M/(2 pi R))
+          !      (k_B/m)
+          !      (rho_v sqrt(T_v) - rho_l sqrt(T_l))       {5}
+          !
+          ! - Simplifying the 2nd and 3rd product terms:          
+          ! sqrt((M k_B^2)/(2 pi R m^2))= 
+          ! sqrt((M k_B^2)/(2 pi N_A k_B m^2))=
+          ! sqrt((M k_B)/(2 pi N_A m^2))=
+          ! sqrt((k_B)/(2 pi m))
+          ! sqrt(R/(2 pi M))
+          !
+          ! - Approximate schrage model (using rho and T)
+          ! => Mass flux (condensation)
+          ! mdot=(2 gamma/(2-gamma))
+          !      sqrt(R/(2 pi M))
+          !      (rho_v sqrt(T_v) - rho_l sqrt(T_l))       {6}
+          !
+          ! => Mass flux (evaporation)
+          ! mdot=(2 gamma/(2-gamma))
+          !      sqrt(R/(2 pi M))
+          !      (rho_l sqrt(T_l) - rho_v sqrt(T_v))       {6}
+          !                &
+          ! => Heat flux
+          ! qddot = L mdot
+          !
+          ! Evaporation:
+          !     rhol_l => Saturation vapor density at T_l
+          !     T_l    => Liquid temeparture at the interface
+          !     rho_v  => Vapor density (interface or probe?)
+          !     T_v    => Vapor temperature (interface or probe?)
+          !
+          ! Clausius-Clayperon equation
+          ! P_2/P_1=exp(-L/R_specific (1/T_2 - 1/T_1)
+          ! P_sat/P_ref = exp ( -L/(R/M) (1/T_sat - 1/T_ref)
+          !
+         
+          if (LL.gt.zero) then
+           ! do nothing
+          else
+           print *,"This Schrage model only for evaporation"
+           stop
+          endif 
+          universal_gas = 8.314462618d0
+          Tsrc_ref=20.0d0  ! Kelvin
+          psrc_ref=0.090717D+6  ! Pascal  MKS  N/m^2
+
+          ! P_sat/P_ref = exp ( -L/(R/M) (1/T_sat - 1/T_ref)
+          ! units of temperature: KELVIN
+          if ((Tsrc.gt.zero).and.(Tsrc.lt.1.0D+20)) then
+           psrc_sat=psrc_ref*exp(-LL/(universal_gas/molar_mass(im_source))* &
+                   (1.0d0/Tsrc - 1.0d0/Tsrc_ref))
+          else
+           print *,"Tsrc invalid"
+           stop
+          endif
+
+          !rho = (P M) / (T R)
+          densrc_sat=(psrc_sat * molar_mass(im_source))/(Tsrc*universal_gas)
+          if ((densrc_sat.gt.zero).and.(densrc_sat.lt.1.0D+20)) then
+           ! do nothing
+          else
+           print *,"densrc_sat invalid"
+           print *,"densrc_sat=",densrc_sat
+           print *,"psrc_sat=",psrc_sat
+           print *,"im_source=",im_source
+           print *,"Tsrc=",Tsrc
+           print *,"universal_gas=",universal_gas
+           print *,"molar_mass(im_source)=",molar_mass(im_source)
+           stop
+          endif
+          
+          ! mdot=(2 gamma/(2-gamma))
+          !      sqrt(R/(2 pi M))
+          !      (rho_l_sat sqrt(T_l) - rho_v sqrt(T_v))       {6}
+          ! NOT SURE ABOUT UNIT OF "mdot"
+          ! LiangETAL2017  (J => molar flux [mol/cm^2 s])
+          ! KharangateMudawar2017 (mdor => mass transfer rate [kg/m^2 s]
+          !
+          gamma_schrage=0.01d0 
+          velsrc=two*gamma_schrage/(two-gamma_schrage)
+          if (molar_mass(im_source).gt.zero) then
+           velsrc=velsrc*sqrt(universal_gas/(2.0d0*Pi*molar_mass(im_source)))
+           velsrc=velsrc*(densrc_sat*sqrt(Tsrc)-dendst_probe*sqrt(Tdst))
+           if (velsrc.gt.zero) then
+            if (densrc.gt.zero) then
+             velsrc=velsrc/densrc ! rate=mdot/densrc
+             veldst=velsrc
+            else
+             print *,"densrc invalid"
+             stop
+            endif
+           else if (velsrc.le.zero) then
+            velsrc=zero
+           else
+            print *,"velsrc bust"
+            stop
+           endif
+          else
+           print *,"molar_mass invalid"
+           stop
+          endif
+
+          if (for_estdt.eq.1) then
+           velsrc=max(velsrc,velsrc/(one-expansion_fact))
+           veldst=velsrc
+          else if (for_estdt.eq.0) then
+           ! do nothing
+          else
+           print *,"for_estdt invalid"
+           stop
+          endif
+
          else
           print *,"local_Tanasawa_or_Schrage invalid"
           stop

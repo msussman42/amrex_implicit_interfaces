@@ -229,7 +229,7 @@ subroutine EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- pressure=rho*(TANK1_VAPOR_GAMMA-1)*internal_energy
+ pressure=rho*(TANK1_VAPOR_GAMMA-1.0D0)*internal_energy
 
  return
 end subroutine EOS_CRYOGENIC_TANK1
