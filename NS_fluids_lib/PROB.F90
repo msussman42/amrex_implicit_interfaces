@@ -31115,11 +31115,12 @@ end subroutine RatePhaseChange
        local_buffer(ibuf)=outflow_velocity_buffer_size(ibuf)
       enddo
 
+      buf=problen(1)/128.0
+
       if (probtype.eq.201) then
        if (SDIM.eq.3) then
         dirbc=2
         side=1 
-        buf=problen(1)/128.0
         ibuf=(side-1)*SDIM+dirbc
         if (local_buffer(ibuf).eq.zero) then
          local_buffer(ibuf)=buf
@@ -31300,6 +31301,7 @@ end subroutine RatePhaseChange
          print *,"local_buffer invalid"
          print *,"ibuf,dirbc,side,problen,local_buffer ", &
           ibuf,dirbc,side,problen(dirbc),local_buffer(ibuf)
+         print *,"probtype= ",probtype
          stop
         endif
        enddo ! side=1..2
