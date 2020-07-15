@@ -5242,6 +5242,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
  if (state_var_mf->nComp()!=nden)
   amrex::Error("state_var_mf->nComp()!=nden");
 
+  if (ngrow_distance!=4)
+   amrex::Error("ngrow_distance invalid");
+
   // caller_id==1
  getStateDist_localMF(LS_NRM_CP_MF,ngrow_distance,cur_time_slab,1);
  if (localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance)

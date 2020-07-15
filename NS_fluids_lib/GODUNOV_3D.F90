@@ -15146,6 +15146,11 @@ stop
               endif
              enddo ! dir=1..sdim
 
+              ! since ngrow_law_of_wall==3 and the
+              ! solid levelset function "impart" changes sign
+              ! across the face (i,j,k), in_grow_box must be
+              ! equal to 1.  (the closest distance should less than
+              ! dx/2)
              if (in_grow_box.eq.1) then
               ! x_image is image point in the fluid.
               call containing_node(bfact,dx,xlo,fablo,x_image, &
@@ -15271,13 +15276,34 @@ stop
                 (partid-1)*nhistory_sub+nhistory_sub)=angle_ACT_cell
            
               else if (in_grow_box.eq.0) then
-               ! do nothing; use solid velocity in solid regions.
+               print *,"expecting in_grow_box == 1"
+               print *,"x_image(1) ",x_image(1)
+               print *,"x_image(2) ",x_image(2)
+               print *,"x_image(SDIM) ",x_image(SDIM)
+               print *,"in_grow_box=",in_grow_box
+               print *,"ngrow_law_of_wall ",ngrow_law_of_wall
+               print *,"impart= ",impart
+               print *,"im_fluid= ",im_fluid
+               print *,"i,j,k ",i,j,k
+               print *,"DIST_SOLID ",DIST_SOLID
+               print *,"delta_r ",delta_r
+               stop
               else
                print *,"in_grow_box invalid"
                stop
               endif
              else if (in_grow_box.eq.0) then
-              ! do nothing; use solid velocity in solid regions.
+              print *,"expecting in_grow_box == 1"
+              print *,"x_projection(1) ",x_projection(1)
+              print *,"x_projection(2) ",x_projection(2)
+              print *,"x_projection(sdim) ",x_projection(SDIM)
+              print *,"in_grow_box=",in_grow_box
+              print *,"ngrow_law_of_wall ",ngrow_law_of_wall
+              print *,"impart= ",impart
+              print *,"im_fluid= ",im_fluid
+              print *,"i,j,k ",i,j,k
+              print *,"DIST_SOLID ",DIST_SOLID
+              stop
              else
               print *,"in_grow_box invalid"
               stop
