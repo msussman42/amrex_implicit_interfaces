@@ -5214,7 +5214,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
   // uimage raster,usolid raster,angle_ACT_cell
  int nhistory_sub=5*AMREX_SPACEDIM+1;
  int nhistory=nparts_ghost*nhistory_sub;
- int ngrow_law_of_wall=3;
+ int ngrow_law_of_wall=4;
 
  MultiFab* solid_vel_mf;
  if (nparts==0) {

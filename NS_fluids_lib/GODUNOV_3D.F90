@@ -14791,6 +14791,7 @@ stop
       REAL_T x_image(SDIM)
       REAL_T x_image_raster(SDIM)
       REAL_T delta_r
+      REAL_T dxmin
       INTEGER_T node_index_project(SDIM)
       INTEGER_T node_index_image(SDIM)
       REAL_T LSCP_image_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
@@ -14816,9 +14817,20 @@ stop
 
       nhalf=3
 
+       ! dxmin=min_d min_i dxsub_{gridtype,d,i} d=1..sdim  i=0..bfact-1
+       ! gridtype=MAC or CELL
+       ! if cylindrical coordinates, then dx_{\theta}*=problox
+      call get_dxmin(dx,bfact,dxmin)
+      if (dxmin.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxmin must be positive"
+       stop
+      endif
+
       delta_r=zero
       do dir=1,SDIM
-       delta_r=delta_r+dx(dir)**2
+       delta_r=delta_r+dxmin**2
       enddo
       delta_r=sqrt(delta_r)
 
@@ -14838,7 +14850,7 @@ stop
        print *,"ngrow_distance invalid"
        stop
       endif
-      if (ngrow_law_of_wall.ne.3) then
+      if (ngrow_law_of_wall.ne.4) then
        print *,"ngrow_law_of_wall invalid"
        stop
       endif
@@ -15146,7 +15158,7 @@ stop
               endif
              enddo ! dir=1..sdim
 
-              ! since ngrow_law_of_wall==3 and the
+              ! since ngrow_law_of_wall==4 and the
               ! solid levelset function "impart" changes sign
               ! across the face (i,j,k), in_grow_box must be
               ! equal to 1.  (the closest distance should be less than
@@ -15303,6 +15315,7 @@ stop
               print *,"im_fluid= ",im_fluid
               print *,"i,j,k ",i,j,k
               print *,"DIST_SOLID ",DIST_SOLID
+              print *,"delta_r ",delta_r
               stop
              else
               print *,"in_grow_box invalid"
