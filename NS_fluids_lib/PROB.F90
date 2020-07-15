@@ -30279,10 +30279,10 @@ end subroutine RatePhaseChange
        species_evaporation_density, &
        distribute_from_target, &
        vel, &
-       densrc,dendst, &
+       densrc_I,dendst_I, & ! replaced with evap_den if freezing_model=5,6
        densrc_probe,dendst_probe, &
        ksrc,kdst, &
-       Tsrc,Tdst, &
+       Tsrc_probe,Tdst_probe, &
        Tsat, &
        Tsrc_INT,Tdst_INT, &
        LL, &
@@ -30329,12 +30329,12 @@ end subroutine RatePhaseChange
       INTEGER_T :: start_freezing
       INTEGER_T :: nmat
       REAL_T, intent(out) :: vel
-      REAL_T, intent(in) :: densrc,dendst
+      REAL_T, intent(in) :: densrc_I,dendst_I
       REAL_T, intent(in) :: densrc_probe,dendst_probe
       REAL_T, intent(in) :: time,dt,alpha,beta
       REAL_T, intent(in) :: expansion_fact
       REAL_T, intent(in) :: ksrc,kdst
-      REAL_T, intent(in) :: Tsrc,Tdst,Tsat
+      REAL_T, intent(in) :: Tsrc_probe,Tdst_probe,Tsat
       REAL_T, intent(in) :: LL
       REAL_T, intent(in) :: source_perim_factor,dest_perim_factor
       INTEGER_T, intent(in) :: microlayer_substrate_source
@@ -30370,7 +30370,7 @@ end subroutine RatePhaseChange
        print *,"im_dest invalid"
        stop
       endif
-      if ((densrc.le.zero).or.(dendst.le.zero)) then
+      if ((densrc_I.le.zero).or.(dendst_I.le.zero)) then
        print *,"density must be positive"
        stop
       endif
@@ -30404,12 +30404,12 @@ end subroutine RatePhaseChange
        stop
       endif
 
-      if ((Tsrc.lt.zero).or.(Tdst.lt.zero).or. &
+      if ((Tsrc_probe.lt.zero).or.(Tdst_probe.lt.zero).or. &
           (Tsat.lt.zero).or.(Tsrc_INT.lt.zero).or. &
           (Tdst_INT.lt.zero)) then
        print *,"temperature cannot be negative in get_vel_phasechange"
-       print *,"Tsrc,Tdst,Tsat,TsrcI,TdstI ", &
-         Tsrc, Tdst, Tsat, Tsrc_INT, Tdst_INT
+       print *,"Tsrc_probe,Tdst_probe,Tsat,TsrcI,TdstI ", &
+         Tsrc_probe, Tdst_probe, Tsat, Tsrc_INT, Tdst_INT
        print *,"for_estdt= ",for_estdt
        stop
       endif
@@ -30479,14 +30479,16 @@ end subroutine RatePhaseChange
          stop
         endif
 
-         ! local_freezing_model==5, if Tsrc > Tsat then
+         ! local_freezing_model==5, if Tsrc_probe > Tsat then
          ! evaporation will occur.  (source==water destination==vapor within
          !                           the air)
-         ! if local_freezing_model==5, and Tsrc < Tsat then
+         ! if local_freezing_model==5, and Tsrc_probe < Tsat then
          !  velsrc<0 => then the "rate of mass transfer is negative" which
          ! is disallowed; i.e. no evaporation occurs.
-        DTsrc=Tsrc-Tsat  ! Tsrc is the probe temperature in the source
-        DTdst=Tdst-Tsat  ! Tdst is the probe temperature in the destination
+        ! Tsrc_probe is the probe temperature in the source
+        DTsrc=Tsrc_probe-Tsat 
+        ! Tdst_probe is the probe temperature in the destination
+        DTdst=Tdst_probe-Tsat  
         velsrc=ksrc*DTsrc/(LL*dxprobe_source)
         veldst=kdst*DTdst/(LL*dxprobe_dest)
 
@@ -30622,11 +30624,11 @@ end subroutine RatePhaseChange
         endif
 
         if (distribute_from_target.eq.0) then ! default
-         velsrc=velsrc/densrc
-         veldst=veldst/densrc
+         velsrc=velsrc/densrc_I
+         veldst=veldst/densrc_I
         else if (distribute_from_target.eq.1) then
-         velsrc=velsrc/dendst
-         veldst=veldst/dendst
+         velsrc=velsrc/dendst_I
+         veldst=veldst/dendst_I
         else
          print *,"distribute_from_target invalid"
          stop
@@ -30678,9 +30680,9 @@ end subroutine RatePhaseChange
           if ((Tsrc_INT.gt.Tsat).and.(Tdst_INT.gt.Tsat)) then
            velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
            velsrc=velsrc*sqrt(fluid_molar_mass_Tanasawa/(two*Pi*universal_gas))
-           velsrc=velsrc*dendst*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
+           velsrc=velsrc*dendst_I*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
            velsrc=velsrc/(Tsat**(1.5))
-           velsrc=velsrc/densrc ! rate=mdot/densrc
+           velsrc=velsrc/densrc_I ! rate=mdot/densrc_I
            veldst=velsrc
 
            if (for_estdt.eq.1) then
@@ -30781,16 +30783,17 @@ end subroutine RatePhaseChange
 
           ! P_sat/P_ref = exp ( -L/(R/M) (1/T_sat - 1/T_ref)
           ! units of temperature: KELVIN
-          if ((Tsrc.gt.zero).and.(Tsrc.lt.1.0D+20)) then
+          if ((Tsrc_probe.gt.zero).and.(Tsrc_probe.lt.1.0D+20)) then
            psrc_sat=psrc_ref*exp(-LL/(universal_gas/molar_mass(im_source))* &
-                   (1.0d0/Tsrc - 1.0d0/Tsrc_ref))
+                   (1.0d0/Tsrc_probe - 1.0d0/Tsrc_ref))
           else
-           print *,"Tsrc invalid"
+           print *,"Tsrc_probe invalid"
            stop
           endif
 
           !rho = (P M) / (T R)
-          densrc_sat=(psrc_sat * molar_mass(im_source))/(Tsrc*universal_gas)
+          densrc_sat=(psrc_sat * molar_mass(im_source))/ &
+                     (Tsrc_probe*universal_gas)
           if ((densrc_sat.gt.zero).and.(densrc_sat.lt.1.0D+20)) then
            ! do nothing
           else
@@ -30798,7 +30801,7 @@ end subroutine RatePhaseChange
            print *,"densrc_sat=",densrc_sat
            print *,"psrc_sat=",psrc_sat
            print *,"im_source=",im_source
-           print *,"Tsrc=",Tsrc
+           print *,"Tsrc_probe=",Tsrc_probe
            print *,"universal_gas=",universal_gas
            print *,"molar_mass(im_source)=",molar_mass(im_source)
            stop
@@ -30815,13 +30818,14 @@ end subroutine RatePhaseChange
           velsrc=two*gamma_schrage/(two-gamma_schrage)
           if (molar_mass(im_source).gt.zero) then
            velsrc=velsrc*sqrt(universal_gas/(2.0d0*Pi*molar_mass(im_source)))
-           velsrc=velsrc*(densrc_sat*sqrt(Tsrc)-dendst_probe*sqrt(Tdst))
+           velsrc=velsrc*(densrc_sat*sqrt(Tsrc_probe)- &
+                          dendst_probe*sqrt(Tdst_probe))
            if (velsrc.gt.zero) then
-            if (densrc.gt.zero) then
-             velsrc=velsrc/densrc ! rate=mdot/densrc
+            if (densrc_I.gt.zero) then
+             velsrc=velsrc/densrc_I ! rate=mdot/densrc_I
              veldst=velsrc
             else
-             print *,"densrc invalid"
+             print *,"densrc_I invalid"
              stop
             endif
            else if (velsrc.le.zero) then
@@ -30859,9 +30863,9 @@ end subroutine RatePhaseChange
           if ((Tsrc_INT.lt.Tsat).and.(Tdst_INT.lt.Tsat)) then
            velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
            velsrc=velsrc*sqrt(fluid_molar_mass_Tanasawa/(two*Pi*universal_gas))
-           velsrc=velsrc*densrc*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
+           velsrc=velsrc*densrc_I*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
            velsrc=velsrc/(Tsat**(1.5))
-           velsrc=velsrc/dendst ! rate=mdot/dendst
+           velsrc=velsrc/dendst_I ! rate=mdot/dendst_I
            veldst=velsrc
            if (for_estdt.eq.1) then
             velsrc=max(velsrc,velsrc/(one-expansion_fact))
@@ -30909,7 +30913,7 @@ end subroutine RatePhaseChange
         if (((VOFsrc.ge.VOFTOL).and.(VOFdst.ge.VOFTOL)).or. &
             (for_estdt.eq.0)) then
          call HYDRATE_FORMATION_RATE(time,Cmethane_in_hydrate, &
-          C_w0,Tsrc,PHYDWATER,vel,Tsat,K_f,verb_hydrate)
+          C_w0,Tsrc_probe,PHYDWATER,vel,Tsat,K_f,verb_hydrate)
 
          if (for_estdt.eq.1) then
           vel=max(vel,vel/(one-expansion_fact))

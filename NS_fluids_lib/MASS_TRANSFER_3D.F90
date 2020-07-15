@@ -3457,6 +3457,7 @@ stop
       REAL_T unsplit_snew(nmat*ngeom_raw)
       REAL_T unsplit_density(nmat)
       REAL_T unsplit_temperature(nmat)
+      REAL_T unsplit_species(nmat*(num_species_var+1))
       REAL_T unsplit_lsnew(nmat)
       REAL_T oldLS_point(nmat)
       REAL_T dxmax,dxmaxLS
@@ -3466,8 +3467,10 @@ stop
       INTEGER_T tcomp,dencomp
       REAL_T density_data(nmat)
       REAL_T temperature_data(nmat)
+      REAL_T species_data(nmat*(num_species_var+1))
       REAL_T density_mat(nmat)
       REAL_T temperature_mat(nmat)
+      REAL_T species_mat(nmat*(num_species_var+1))
       REAL_T mofdata(nmat*ngeom_recon)
       REAL_T volmat(nmat)
       REAL_T lsmat(nmat)
@@ -3539,6 +3542,7 @@ stop
       INTEGER_T speccompsrc,speccompdst
       INTEGER_T speccomp_mod
       INTEGER_T ncomp_per_tsat
+      INTEGER_T ispec
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -3678,6 +3682,9 @@ stop
              (local_freezing_model.eq.1).or. & ! source term
              (local_freezing_model.eq.2)) then ! hydrate
           ! do nothing
+         else if (local_freezing_model.eq.3) then ! wildfire
+          print *,"fix me"
+          stop
          else if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
                   (local_freezing_model.eq.5).or. & ! Stefan model evap/cond.
                   (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
@@ -3899,6 +3906,9 @@ stop
           enddo ! im_opp
          enddo ! im
 
+          ! do the 3x3x3 stencil volume fractions satisfy:
+          !  0 < F_source < 1 and
+          !  0 < F_dest < 1
          if (do_unsplit_advection.eq.1) then
 
           ! determine the interface that is changing phase:
@@ -4042,6 +4052,9 @@ stop
            do u_im=1,nmat
             density_mat(u_im)=zero
             temperature_mat(u_im)=zero
+            do ispec=1,num_species_var
+             species_mat((ispec-1)*nmat+u_im)=zero
+            enddo
             volmat(u_im)=zero
             do udir=1,SDIM
              cenmat(udir,u_im)=zero
@@ -4234,9 +4247,14 @@ stop
 
                dencomp=(u_im-1)*num_state_material+1
                tcomp=dencomp+1
+                ! mixture density of gas if u_im corresponds to gas
                density_data(u_im)=EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),dencomp)
                temperature_data(u_im)= &
                  EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),tcomp)
+               do ispec=1,num_species_var
+                species_data((ispec-1)*nmat+u_im)= &
+                 EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),tcomp+ispec)
+               enddo
           
                vofcomp_recon=(u_im-1)*ngeom_recon+1
                mofdata(vofcomp_recon)= &
@@ -4323,6 +4341,11 @@ stop
                   multi_volume(u_im)*density_data(u_im)
                 temperature_mat(u_im)=temperature_mat(u_im)+ &
                   multi_volume(u_im)*temperature_data(u_im)
+                do ispec=1,num_species_var
+                 species_mat((ispec-1)*nmat+u_im)= &
+                  species_mat((ispec-1)*nmat+u_im)+ &
+                  multi_volume(u_im)*species_data((ispec-1)*nmat+u_im)
+                enddo
                enddo ! u_im=1..nmat
 
                voltotal=voltotal+multi_volume_total
@@ -4440,9 +4463,16 @@ stop
               density_mat(u_imaterial)/volmat(u_imaterial)
              unsplit_temperature(u_imaterial)= &
               temperature_mat(u_imaterial)/volmat(u_imaterial)
+             do ispec=1,num_species_var
+              unsplit_species((ispec-1)*nmat+u_imaterial)= &
+               species_mat((ispec-1)*nmat+u_imaterial)/volmat(u_imaterial)
+             enddo
             else if (tempvfrac.eq.zero) then
              unsplit_density(u_imaterial)=fort_denconst(u_imaterial)
              unsplit_temperature(u_imaterial)=Tsat_default
+             do ispec=1,num_species_var
+              unsplit_species((ispec-1)*nmat+u_imaterial)=zero
+             enddo
             else
              print *,"tempvfrac bust3 tempvfrac=",tempvfrac
              stop
@@ -4529,6 +4559,7 @@ stop
 
            mtype=fort_material_type(im_dest)
            if (mtype.eq.0) then
+                   FIX ME
             density_dest=fort_denconst(im_dest)
            else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
             if (newvfrac(im_dest).gt.EBVOFTOL) then
@@ -4574,6 +4605,15 @@ stop
 
            if (local_freezing_model.eq.0) then ! standard Stefan model
             ! do nothing
+           else if (local_freezing_model.eq.1) then ! source term
+            print *,"fix me"
+            stop
+           else if (local_freezing_model.eq.2) then ! hydrate
+            print *,"fix me"
+            stop
+           else if (local_freezing_model.eq.3) then ! wildfire
+            print *,"fix me"
+            stop
            else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
                     (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
                     (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
@@ -4588,7 +4628,9 @@ stop
 
               if (LL.gt.zero) then ! evaporation
 
-               if (oldvfrac(im_dest).gt.EBVOFTOL) then ! valid Y,F vapor
+               ! density_dest is the mixture density of the vapor ambient
+               ! gas mixture.
+               if (oldvfrac(im_dest).gt.EBVOFTOL) then ! valid Y,F gas mixture
                 speccompdst=(im_dest-1)*num_state_material+ &
                  num_state_base+mass_frac_id
                 Yfrac_old=EOS(D_DECL(i,j,k),speccompdst)
@@ -4667,10 +4709,10 @@ stop
            endif
 
            dF=max(dFdst,dFsrc)
-           if (LL.gt.zero) then ! evaporation, boiling, melting
+           if (LL.gt.zero) then ! evaporation, boiling, melting, cavitation
             dF=min(dF,oldvfrac(im_source))
-           else if (LL.lt.zero) then ! freezing, condensation
-            dF=min(dF,vfrac_vapor_to_gas*oldvfrac(im_source))
+           else if (LL.lt.zero) then ! freezing, condensation, implosion
+            dF=min(dF,oldvfrac(im_source))
            else
             print *,"LL invalid"
             stop
@@ -4729,10 +4771,19 @@ stop
                ! evaporation 
                ! assume all liquid becomes pure vapor: dF (expansion comes 
                ! later)
-               ! total new gases: oldvfrac(im_dest)+dF
-               ! total new vapor: oldvfrac(im_dest)*vfrac_vapor_to_gas+dF
-               ! new vapor/(total new gases) = new_vfrac_vapor
               if (LL.gt.zero) then
+               ! newvfrac(im_dest)=new volume fraction of gas mixture
+               ! oldvfrac(im_dest)=old volume fraction of gas mixture
+               ! EOS(D_DECL(i,j,k),speccompdst)=old mass fraction before CISL
+               ! unsplit_species((mass_frac_id-1)*nmat+im_dest)=new mass frac
+               !  after CISL
+               ! EOS(D_DECL(i,j,k),(im_dest-1)*nmat+1)=old mixture 
+               !  density before CISL
+               ! density_dest=new mixture density after CISL
+               ! den_mix_new=(den_mix_old F_old + den_evap dF )/ 
+               !             (F_old + dF)
+               ! den_mix_old=den_vap_old * Y_old + den_gas (1-Y_old) 
+
                new_vfrac_vapor=(oldvfrac(im_dest)*vfrac_vapor_to_gas+dF)/ &
                 (oldvfrac(im_dest)+dF)
                if ((new_vfrac_vapor.ge.zero).and. &
@@ -6951,7 +7002,22 @@ stop
                      print *,"ispec invalid"
                      stop
                     endif
-                   endif ! local_freezing_model==5,6
+                   else if (local_freezing_model.eq.4) then ! Tanasawa/Schrage
+                    ! do nothing
+                   else if (local_freezing_model.eq.7) then ! cavitation
+                    ! do nothing
+                   else if (local_freezing_model.eq.3) then ! wild fire
+                    ! do nothing
+                   else if (local_freezing_model.eq.2) then ! hydrate
+                    ! do nothing
+                   else if (local_freezing_model.eq.1) then ! source term
+                    ! do nothing
+                   else if (local_freezing_model.eq.0) then ! stefan cond
+                    ! do nothing
+                   else
+                    print *,"local_freezing_model invalid"
+                    stop
+                   endif 
 
                    source_perim_factor=one
                    dest_perim_factor=one
