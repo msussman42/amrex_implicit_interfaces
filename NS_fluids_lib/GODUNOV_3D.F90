@@ -15149,8 +15149,8 @@ stop
               ! since ngrow_law_of_wall==3 and the
               ! solid levelset function "impart" changes sign
               ! across the face (i,j,k), in_grow_box must be
-              ! equal to 1.  (the closest distance should less than
-              ! dx/2)
+              ! equal to 1.  (the closest distance should be less than
+              ! dx)
              if (in_grow_box.eq.1) then
               ! x_image is image point in the fluid.
               call containing_node(bfact,dx,xlo,fablo,x_image, &
