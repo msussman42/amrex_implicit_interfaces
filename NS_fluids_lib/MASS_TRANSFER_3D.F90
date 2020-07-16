@@ -4553,19 +4553,14 @@ stop
             stop
            endif
 
-            ! old mass and volume fraction of vapor to gas
-           Yfrac_vapor_to_gas=one
-           vfrac_vapor_to_gas=one
-
            mtype=fort_material_type(im_dest)
            if (mtype.eq.0) then
-                   FIX ME
-            density_dest=fort_denconst(im_dest)
+            density_dest_new=unsplit_density(im_dest) 
            else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
             if (newvfrac(im_dest).gt.EBVOFTOL) then
-             density_dest=unsplit_density(im_dest) 
+             density_dest_new=unsplit_density(im_dest) 
             else if (newvfrac(im_dest).le.EBVOFTOL) then
-             density_dest=fort_denconst(im_dest)
+             density_dest_new=fort_denconst(im_dest)
             else
              print *,"newvfrac(im_dest) invalid"
              stop
@@ -4577,16 +4572,16 @@ stop
 
            mtype=fort_material_type(im_source)
            if (mtype.eq.0) then
-            density_source=fort_denconst(im_source)
+            density_source_new=unsplit_density(im_source) 
            else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
             if (newvfrac(im_source).gt.EBVOFTOL) then
-             density_source=unsplit_density(im_source) 
+             density_source_new=unsplit_density(im_source) 
             else if (newvfrac(im_source).le.EBVOFTOL) then
              if (oldvfrac(im_source).gt.EBVOFTOL) then
               dencomp=(im_source-1)*num_state_material+1
-              density_source=EOS(D_DECL(i,j,k),dencomp) 
+              density_source_new=EOS(D_DECL(i,j,k),dencomp) 
              else if (oldvfrac(im_source).le.EBVOFTOL) then
-              density_source=fort_denconst(im_source)
+              density_source_new=fort_denconst(im_source)
              else
               print *,"oldvfrac(im_source) invalid"
               stop
@@ -4751,9 +4746,23 @@ stop
 
            if (abs(dF).gt.EBVOFTOL) then
 
-            dencomp=num_materials_vel*(SDIM+1)+ &
-                    (im_dest-1)*num_state_material+1
-            tcomp=dencomp+1
+            do iprobe=1,2
+
+             if (iprobe.eq.1) then ! source
+              im_probe=im_source
+             else if (iprobe.eq.2) then ! dest
+              im_probe=im_dest
+             else
+              print *,"iprobe invalid"
+              stop
+             endif
+
+             dencomp_probe=num_materials_vel*(SDIM+1)+ &
+               (im_probe-1)*num_state_material+1
+             tcomp_probe=dencomp_probe+1
+
+             
+FIX ME probe
 
             if (newvfrac(im_dest).gt.EBVOFTOL) then
 
