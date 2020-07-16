@@ -4769,8 +4769,13 @@ stop
                   (im_dest-1)*num_state_material+2+mass_frac_id
             
                ! evaporation 
-               ! assume all liquid becomes pure vapor: dF (expansion comes 
+               ! 1. assume all liquid becomes pure vapor: dF (expansion comes 
                ! later)
+               ! 2. assume c^2 = infinity in narrow band about interface.
+               ! 3. for compressible materials, to preserve mass,
+               !    solve rho_t + div(rho u)=0
+               !      or if not necessary to preserve mass, or rho=const,
+               !     rho_t + u dot grad rho=0
               if (LL.gt.zero) then
                ! newvfrac(im_dest)=new volume fraction of gas mixture
                ! oldvfrac(im_dest)=old volume fraction of gas mixture
@@ -4784,8 +4789,7 @@ stop
                !             (F_old + dF)
                ! den_mix_old=den_vap_old * Y_old + den_gas (1-Y_old) 
 
-               new_vfrac_vapor=(oldvfrac(im_dest)*vfrac_vapor_to_gas+dF)/ &
-                (oldvfrac(im_dest)+dF)
+               new_vfrac_vapor=newvfrac(im_dest)
                if ((new_vfrac_vapor.ge.zero).and. &
                    (new_vfrac_vapor.le.one)) then
                 density_new=new_vfrac_vapor*evap_den+ &
