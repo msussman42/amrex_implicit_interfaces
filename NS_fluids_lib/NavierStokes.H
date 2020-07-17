@@ -1433,6 +1433,16 @@ protected:
 
     ABecLaplacian* mac_op;
 
+      // localMF defined here MARC DAY JULIA REAM
+      // localMF[mf_id] is a MultiFab defined on the BoxArray of the
+      // present level.  The idea behind this data structure is as follows:
+      // suppose one wants to interpolate data from level-1 to the present
+      // level: then one can pass "mf_id" on the present level, and grab
+      // the coarse level as follows:
+      // ns_coarse=getLevel(level-1)
+      // coarse data is then ns_coarse.localMF[mf_id]
+      // The main purpose of localMF structure is to have the same 
+      // convenience for non-state-data as state data.
     Array<int,MAX_NUM_LOCAL_MF> localMF_grow;
     Array<MultiFab*,MAX_NUM_LOCAL_MF> localMF;
 
