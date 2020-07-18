@@ -4553,6 +4553,12 @@ stop
             stop
            endif
 
+
+
+
+
+
+
            mtype=fort_material_type(im_dest)
            if (mtype.eq.0) then
             density_dest_new=unsplit_density(im_dest) 
@@ -4760,8 +4766,51 @@ stop
              dencomp_probe=num_materials_vel*(SDIM+1)+ &
                (im_probe-1)*num_state_material+1
              tcomp_probe=dencomp_probe+1
+             if ((mass_frac_id.ge.1).and. &
+                 (mass_frac_id.le.num_species_var)) then
+              mfrac_comp_probe=tcomp_probe+mass_frac_id
+             else if (mass_frac_id.eq.0) then
+              mfrac_comp_probe=0
+             else
+              print *,"mass_frac_id invalid"
+              stop
+             endif
 
-             
+             if (newvfrac(im_probe).ge.EBVOFTOL) then
+              mtype=fort_material_type(im_probe)
+              if (mtype.eq.0) then
+               density_new(iprobe)=unsplit_density(im_probe) 
+              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
+               density_new(iprobe)=unsplit_density(im_probe) 
+              else
+               print *,"mtype invalid"
+               stop
+              endif
+              temperature_new(iprobe)=unsplit_temperature(im_probe)
+             else if ((newvfrac(im_probe).le.EBVOFTOL).and. &
+                      (newvfrac(im_probe).ge.-EBOFTOL)) then
+              density_new(iprobe)=fort_denconst(im_probe)
+              temperature_new(iprobe)=Tsat_default
+             else
+              print *,"newvfrac invalid"
+              stop
+             endif
+
+
+
+
+            if (newvfrac(im_dest).gt.EBVOFTOL) then
+             density_dest_new=unsplit_density(im_dest) 
+            else if (newvfrac(im_dest).le.EBVOFTOL) then
+             density_dest_new=fort_denconst(im_dest)
+            else
+             print *,"newvfrac(im_dest) invalid"
+             stop
+            endif
+           else
+            print *,"mtype invalid"
+            stop
+           endif
 FIX ME probe
 
             if (newvfrac(im_dest).gt.EBVOFTOL) then
