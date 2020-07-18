@@ -3537,7 +3537,7 @@ stop
       REAL_T Yfrac_old
       REAL_T density_new,density_old
       REAL_T density_dest,density_source
-      REAL_T evap_den
+      REAL_T vapor_den
       REAL_T local_cv_or_cp
       INTEGER_T speccompsrc,speccompdst
       INTEGER_T speccomp_mod
@@ -3692,11 +3692,11 @@ stop
           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
           if ((mass_frac_id.ge.1).and. &
               (mass_frac_id.le.num_species_var)) then
-           evap_den=species_evaporation_density(mass_frac_id)
-           if (evap_den.gt.zero) then
+           vapor_den=species_evaporation_density(mass_frac_id)
+           if (vapor_den.gt.zero) then
             ! do nothing
            else
-            print *,"evap_den invalid"
+            print *,"vapor_den invalid"
             stop
            endif
           else
@@ -4553,161 +4553,16 @@ stop
             stop
            endif
 
-
-
-
-
-
-
-           mtype=fort_material_type(im_dest)
-           if (mtype.eq.0) then
-            density_dest_new=unsplit_density(im_dest) 
-           else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
-            if (newvfrac(im_dest).gt.EBVOFTOL) then
-             density_dest_new=unsplit_density(im_dest) 
-            else if (newvfrac(im_dest).le.EBVOFTOL) then
-             density_dest_new=fort_denconst(im_dest)
-            else
-             print *,"newvfrac(im_dest) invalid"
-             stop
-            endif
-           else
-            print *,"mtype invalid"
-            stop
-           endif
-
-           mtype=fort_material_type(im_source)
-           if (mtype.eq.0) then
-            density_source_new=unsplit_density(im_source) 
-           else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
-            if (newvfrac(im_source).gt.EBVOFTOL) then
-             density_source_new=unsplit_density(im_source) 
-            else if (newvfrac(im_source).le.EBVOFTOL) then
-             if (oldvfrac(im_source).gt.EBVOFTOL) then
-              dencomp=(im_source-1)*num_state_material+1
-              density_source_new=EOS(D_DECL(i,j,k),dencomp) 
-             else if (oldvfrac(im_source).le.EBVOFTOL) then
-              density_source_new=fort_denconst(im_source)
-             else
-              print *,"oldvfrac(im_source) invalid"
-              stop
-             endif
-            else
-             print *,"newvfrac(im_source) invalid"
-             stop
-            endif
-           else
-            print *,"mtype invalid"
-            stop
-           endif
-            
            dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
            dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
 
-           if (local_freezing_model.eq.0) then ! standard Stefan model
-            ! do nothing
-           else if (local_freezing_model.eq.1) then ! source term
-            print *,"fix me"
-            stop
-           else if (local_freezing_model.eq.2) then ! hydrate
-            print *,"fix me"
-            stop
-           else if (local_freezing_model.eq.3) then ! wildfire
-            print *,"fix me"
-            stop
-           else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
-                    (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
-                    (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
-                    (local_freezing_model.eq.7)) then ! Cavitation
-
-            if ((mass_frac_id.ge.1).and. &
-                (mass_frac_id.le.num_species_var)) then
-
-             evap_den=species_evaporation_density(mass_frac_id)
-
-             if (evap_den.gt.zero) then
-
-              if (LL.gt.zero) then ! evaporation
-
-               ! density_dest is the mixture density of the vapor ambient
-               ! gas mixture.
-               if (oldvfrac(im_dest).gt.EBVOFTOL) then ! valid Y,F gas mixture
-                speccompdst=(im_dest-1)*num_state_material+ &
-                 num_state_base+mass_frac_id
-                Yfrac_old=EOS(D_DECL(i,j,k),speccompdst)
-                if ((Yfrac_old.ge.zero).and.(Yfrac_old.le.one)) then
-                 density_old=density_dest !denconst if material_id==0
-                 call make_mixture_density(Yfrac_old, &
-                   density_old,evap_den)
-                 Yfrac_vapor_to_gas=Yfrac_old 
-                 vfrac_vapor_to_gas=density_old*Yfrac_old/evap_den
-                else
-                 print *,"Yfrac_old invalid"
-                 stop
-                endif
-               else if (oldvfrac(im_dest).le.EBVOFTOL) then ! default Y,F vapor
-                Yfrac_vapor_to_gas=zero
-                vfrac_vapor_to_gas=zero
-               else
-                print *,"oldvfrac(im_dest) invalid"
-                stop
-               endif
-
-              else if (LL.lt.zero) then ! condensation
-
-                  ! mass fraction equation:
-                  ! in a given cell with m species.
-                  ! mass= sum_i=1^m  Y_i overall_mass = 
-                  !     = sum_i=1^m  density_i F_i V_cell
-                  ! F_i = volume fraction of material i.
-                  ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
-                  ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
-               if (oldvfrac(im_source).gt.EBVOFTOL) then
-                speccompsrc=(im_source-1)*num_state_material+ &
-                 num_state_base+mass_frac_id
-                Yfrac_old=EOS(D_DECL(i,j,k),speccompsrc)
-                if ((Yfrac_old.ge.zero).and.(Yfrac_old.le.one)) then
-                 density_old=density_source
-                 call make_mixture_density(Yfrac_old, &
-                   density_old,evap_den)
-                 Yfrac_vapor_to_gas=Yfrac_old
-                 vfrac_vapor_to_gas=density_old*Yfrac_old/evap_den
-                else
-                 print *,"Yfrac_old invalid"
-                 stop
-                endif
-               else if (oldvfrac(im_source).le.EBVOFTOL) then
-                Yfrac_vapor_to_gas=zero
-                vfrac_vapor_to_gas=zero
-               else
-                print *,"oldvfrac(im_source) invalid"
-                stop
-               endif
-
-              else
-               print *,"LL invalid"
-               stop
-              endif
-
-             else
-              print *,"evap_den invalid"
-              stop
-             endif
-
-            else
-             print *,"mass_frac_id invalid"
-             stop
-            endif
-
-           else
-            print *,"local_freezing_model invalid 1"
-            stop
-           endif
-             
-           if (1.eq.0) then
-            print *,"i,j,k,dFdst,dFsrc,olddst,oldsrc ",i,j,k,dFdst,dFsrc, &
-             oldvfrac(im_dest),oldvfrac(im_source)
-           endif
+            ! mass fraction equation:
+            ! in a given cell with m species.
+            ! mass= sum_i=1^m  Y_i overall_mass = 
+            !     = sum_i=1^m  density_i F_i V_cell
+            ! F_i = volume fraction of material i.
+            ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
+            ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
 
            dF=max(dFdst,dFsrc)
            if (LL.gt.zero) then ! evaporation, boiling, melting, cavitation
@@ -4763,8 +4618,7 @@ stop
               stop
              endif
 
-             dencomp_probe=num_materials_vel*(SDIM+1)+ &
-               (im_probe-1)*num_state_material+1
+             dencomp_probe=(im_probe-1)*num_state_material+1
              tcomp_probe=dencomp_probe+1
              if ((mass_frac_id.ge.1).and. &
                  (mass_frac_id.le.num_species_var)) then
@@ -4787,216 +4641,225 @@ stop
                stop
               endif
               temperature_new(iprobe)=unsplit_temperature(im_probe)
+              if (mfrac_comp_probe.eq.0) then
+               species_new(iprobe)=one
+              else if (mfrac_comp_probe.gt.0) then
+               species_new(iprobe)= &
+                 unsplit_species((mass_frac_id-1)*nmat+im_probe)
+              else
+               print *,"mfrac_comp_probe invalid"
+               stop
+              endif
              else if ((newvfrac(im_probe).le.EBVOFTOL).and. &
                       (newvfrac(im_probe).ge.-EBOFTOL)) then
               density_new(iprobe)=fort_denconst(im_probe)
               temperature_new(iprobe)=Tsat_default
+              species_new(iprobe)=one
              else
               print *,"newvfrac invalid"
               stop
              endif
 
-
-
-
-            if (newvfrac(im_dest).gt.EBVOFTOL) then
-             density_dest_new=unsplit_density(im_dest) 
-            else if (newvfrac(im_dest).le.EBVOFTOL) then
-             density_dest_new=fort_denconst(im_dest)
-            else
-             print *,"newvfrac(im_dest) invalid"
-             stop
-            endif
-           else
-            print *,"mtype invalid"
-            stop
-           endif
-FIX ME probe
-
-            if (newvfrac(im_dest).gt.EBVOFTOL) then
-
-             snew(D_DECL(i,j,k),tcomp)=unsplit_temperature(im_dest) 
-
-              ! evaporation: im_source=liquid im_dest=surrounding gas
-              ! condensation: im_source=surrounding gas im_dest=liquid
-             if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
-                 (local_freezing_model.eq.5).or. & !Stefan model evap/cond.
-                 (local_freezing_model.eq.6).or. & !Palmore/Desjardins
-                 (local_freezing_model.eq.7)) then !Cavitation
-              speccompdst=num_materials_vel*(SDIM+1)+ &
-                  (im_dest-1)*num_state_material+2+mass_frac_id
-            
-               ! evaporation 
-               ! 1. assume all liquid becomes pure vapor: dF (expansion comes 
-               ! later)
-               ! 2. assume c^2 = infinity in narrow band about interface.
-               ! 3. for compressible materials, to preserve mass,
-               !    solve rho_t + div(rho u)=0
-               !      or if not necessary to preserve mass, or rho=const,
-               !     rho_t + u dot grad rho=0
-              if (LL.gt.zero) then
-               ! newvfrac(im_dest)=new volume fraction of gas mixture
-               ! oldvfrac(im_dest)=old volume fraction of gas mixture
-               ! EOS(D_DECL(i,j,k),speccompdst)=old mass fraction before CISL
-               ! unsplit_species((mass_frac_id-1)*nmat+im_dest)=new mass frac
-               !  after CISL
-               ! EOS(D_DECL(i,j,k),(im_dest-1)*nmat+1)=old mixture 
-               !  density before CISL
-               ! density_dest=new mixture density after CISL
-               ! den_mix_new=(den_mix_old F_old + den_evap dF )/ 
-               !             (F_old + dF)
-               ! den_mix_old=den_vap_old * Y_old + den_gas (1-Y_old) 
-
-               new_vfrac_vapor=newvfrac(im_dest)
-               if ((new_vfrac_vapor.ge.zero).and. &
-                   (new_vfrac_vapor.le.one)) then
-                density_new=new_vfrac_vapor*evap_den+ &
-                 (one-new_vfrac_vapor)*density_dest
-                snew(D_DECL(i,j,k),speccompdst)= &
-                 new_vfrac_vapor*evap_den/density_new
-               else
-                print *,"new_vfrac_vapor invalid"
-                stop
-               endif
-
-                ! condensation: vapor fraction=1 in the liquid.
-              else if (LL.lt.zero) then 
-               snew(D_DECL(i,j,k),speccompdst)=one
+             if (oldvfrac(im_probe).ge.EBVOFTOL) then
+              mtype=fort_material_type(im_probe)
+              if (mtype.eq.0) then
+               density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
+              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
+               density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
               else
-               print *,"LL invalid"
+               print *,"mtype invalid"
                stop
               endif
-             endif
-
-             mtype=fort_material_type(im_dest)
-             if (mtype.eq.0) then
-              ! density modified in FORT_DENCOR
-             else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
-              snew(D_DECL(i,j,k),dencomp)=density_dest 
+              temperature_old(iprobe)=EOS(D_DECL(i,j,k),tcomp_probe)
+              if (mfrac_comp_probe.eq.0) then
+               species_old(iprobe)=one
+              else if (mfrac_comp_probe.gt.0) then
+               species_old(iprobe)=EOS(D_DECL(i,j,k),mfrac_comp_probe)
+              else
+               print *,"mfrac_comp_probe invalid"
+               stop
+              endif
+             else if ((oldvfrac(im_probe).le.EBVOFTOL).and. &
+                      (oldvfrac(im_probe).ge.-EBOFTOL)) then
+              density_old(iprobe)=fort_denconst(im_probe)
+              temperature_old(iprobe)=Tsat_default
+              species_old(iprobe)=one
              else
-              print *,"mtype invalid"
+              print *,"oldvfrac invalid"
               stop
              endif
 
-             if ((unsplit_temperature(im_dest).lt.TEMPERATURE_FLOOR).or. &
-                 (unsplit_density(im_dest).le.zero)) then
-              print *,"unsplit_temperature(im_dest) invalid   or"
-              print *,"unsplit_density(im_dest) invalid"
-              print *,"oldvfrac(im_dest) ",oldvfrac(im_dest)
-              print *,"newvfrac(im_dest) ",newvfrac(im_dest)
-              print *,"unsplit_density(im_dest)=", &
-               unsplit_density(im_dest)
-              print *,"unsplit_temperature(im_dest)=", &
-               unsplit_temperature(im_dest)
-              print *,"oldvfrac(im_source) ",oldvfrac(im_source)
-              print *,"newvfrac(im_source) ",newvfrac(im_source)
-              print *,"unsplit_density(im_source)=", &
-               unsplit_density(im_source)
-              print *,"unsplit_temperature(im_source)=", &
-               unsplit_temperature(im_source)
+            enddo ! iprobe=1,2
+
+             ! for evaporation:
+             ! den_new=(den_old * F_old + vapor_den * dF)/(F_old+dF)
+            if (LL.gt.zero) then !evaporation
+              im_vapor=im_dest
+              iprobe_vapor=2
+              iprobe_condensed=1
+            else if (LL.lt.zero) then ! condensation
+              im_vapor=im_source
+              iprobe_vapor=1
+              iprobe_condensed=2
+            else
+              print *,"im_vapor invalid"
               stop
-             endif
+            endif
 
-            else if (newvfrac(im_dest).le.EBVOFTOL) then
-             snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
-                 (local_freezing_model.eq.5).or. & ! Stefan Evap/Cond.
-                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
-                 (local_freezing_model.eq.7)) then ! Cavitation
-              speccompdst=num_materials_vel*(SDIM+1)+ &
-                   (im_dest-1)*num_state_material+2+mass_frac_id
+            if (local_freezing_model.eq.0) then !Stefan model
+              vapor_den=density_old(iprobe_vapor)
+              condensed_den=density_old(iprobe_condensed)
+            else if (local_freezing_model.eq.1) then !source term
+              vapor_den=density_old(iprobe_vapor)
+              condensed_den=density_old(iprobe_condensed)
+            else if (local_freezing_model.eq.2) then !hydrate
+              vapor_den=density_old(iprobe_vapor)
+              condensed_den=density_old(iprobe_condensed)
+            else if (local_freezing_model.eq.3) then !wildfire
+              vapor_den=density_old(iprobe_vapor)
+              condensed_den=density_old(iprobe_condensed)
+            else if ((local_freezing_model.eq.4).or. & !Tannasawa or Schrage
+                     (local_freezing_model.eq.5).or. & !Stefan evap/cond model
+                     (local_freezing_model.eq.6).or. & !Palmore/Desjardins
+                     (local_freezing_model.eq.7)) then !Cavitation
 
-              if (LL.gt.zero) then ! evaporation
-               snew(D_DECL(i,j,k),speccompdst)=zero
-              else if (LL.lt.zero) then ! condensation
-               snew(D_DECL(i,j,k),speccompdst)=one
+             if ((mass_frac_id.ge.1).and. &
+                 (mass_frac_id.le.num_species_var)) then
+
+              vapor_den=species_evaporation_density(mass_frac_id)
+              condensed_den=density_old(iprobe_condensed)
+
+              if (vapor_den.gt.zero) then
+               ! do nothing
               else
-               print *,"LL invalid"
+               print *,"vapor_den invalid"
                stop
               endif
 
-             endif
-            else
-             print *,"newvfrac(im_dest) invalid"
-             stop
-            endif
-
-            dencomp=num_materials_vel*(SDIM+1)+ &
-                    (im_source-1)*num_state_material+1
-            tcomp=dencomp+1
-
-            if (newvfrac(im_source).gt.EBVOFTOL) then
-
-             mtype=fort_material_type(im_source)
-             if (mtype.eq.0) then
-              ! source density modified in FORT_DENCOR
-             else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
-              snew(D_DECL(i,j,k),dencomp)=density_source
              else
-              print *,"mtype invalid"
+              print *,"mass_frac_id invalid"
               stop
              endif
 
-             snew(D_DECL(i,j,k),tcomp)=unsplit_temperature(im_source) 
-
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
-                 (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
-                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
-                 (local_freezing_model.eq.7)) then ! Cavitation
-              speccompsrc=num_materials_vel*(SDIM+1)+ &
-                   (im_source-1)*num_state_material+2+mass_frac_id
-            
-               ! condensation
-              if (LL.lt.zero) then
-               new_vfrac_vapor=(oldvfrac(im_source)*vfrac_vapor_to_gas-dF)/ &
-                (oldvfrac(im_source)-dF)
-               if ((new_vfrac_vapor.ge.zero).and. &
-                   (new_vfrac_vapor.le.one)) then
-                density_new=new_vfrac_vapor*evap_den+ &
-                 (one-new_vfrac_vapor)*density_source
-                snew(D_DECL(i,j,k),speccompsrc)= &
-                 new_vfrac_vapor*evap_den/density_new
-               else
-                print *,"new_vfrac_vapor invalid"
-                stop
-               endif
-              else if (LL.gt.zero) then ! evaporation
-               snew(D_DECL(i,j,k),speccompsrc)=one
-              else
-               print *,"LL invalid"
-               stop
-              endif
-             endif
-
-             if ((unsplit_temperature(im_source).lt.TEMPERATURE_FLOOR).or. &
-                 (unsplit_density(im_source).le.zero)) then
-              print *,"unsplit_temperature(im_source) invalid    or "
-              print *,"unsplit_density(im_source) invalid "
-              stop
-             endif
-            else if (newvfrac(im_source).le.EBVOFTOL) then
-             snew(D_DECL(i,j,k),tcomp)=Tsat_default
-             if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
-                 (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
-                 (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
-                 (local_freezing_model.eq.7)) then ! Cavitation
-              speccompsrc=num_materials_vel*(SDIM+1)+ &
-                       (im_source-1)*num_state_material+2+mass_frac_id
-              if (LL.gt.zero) then ! evaporation
-               snew(D_DECL(i,j,k),speccompsrc)=one
-              else if (LL.lt.zero) then ! condensation
-               snew(D_DECL(i,j,k),speccompsrc)=zero
-              else
-               print *,"LL invalid"
-               stop
-              endif
-
-             endif
             else
-             print *,"newvfrac(im_source) invalid"
+             print *,"local_freezing_model invalid 1"
              stop
             endif
 
+            temp_mix_new(2)=temperature_new(2)
+            temp_mix_new(1)=temperature_new(1)
+
+            if (LL.gt.zero) then ! evaporation
+
+             temp_new_vfrac=oldvfrac(im_dest)+dF
+             if (temp_new_vfrac.gt.EBVOFTOL) then 
+              den_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
+                vapor_den*dF)/temp_new_vfrac
+              mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
+                dF)/temp_new_vfrac
+             else if (temp_new_vfrac.le.EBVOFTOL) then
+              den_mix_new(2)=density_old(2)
+              mass_frac_new(2)=species_old(2)
+             else
+              print *,"temp_new_vfrac invalid"
+              stop
+             endif
+             
+             temp_new_vfrac=oldvfrac(im_source)-dF
+             if (temp_new_vfrac.gt.EBVOFTOL) then 
+              den_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
+               condensed_den*dF)/temp_new_vfrac
+             else if (temp_new_vfrac.le.EBVOFTOL) then
+              den_mix_new(1)=density_old(1)
+             else
+              print *,"temp_new_vfrac invalid"
+              stop
+             endif
+             mass_frac_new(1)=one
+            else if (LL.lt.zero) then ! condensation
+             temp_new_vfrac=oldvfrac(im_dest)+dF
+             if (temp_new_vfrac.gt.EBVOFTOL) then 
+              den_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
+                condensed_den*dF)/temp_new_vfrac
+             else if (temp_new_vfrac.le.EBVOFTOL) then
+              den_mix_new(2)=density_old(2)
+             else
+              print *,"temp_new_vfrac invalid"
+              stop
+             endif
+
+             temp_new_vfrac=oldvfrac(im_source)-dF
+             if (temp_new_vfrac.gt.EBVOFTOL) then 
+              den_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
+               vapor_den*dF)/temp_new_vfrac
+              mass_frac_new(1)=(species_old(1)*oldvfrac(im_source)- &
+               dF)/temp_new_vfrac
+              if (mass_frac_new(1).lt.zero) then
+               mass_frac_new(1)=zero
+              endif
+             else if (temp_new_vfrac.le.EBVOFTOL) then
+              den_mix_new(1)=density_old(1)
+              mass_frac_new(1)=zero
+             else
+              print *,"temp_new_vfrac invalid"
+              stop
+             endif
+             mass_frac_new(2)=one
+            else
+             print *,"LL invalid"
+             stop
+            endif
+
+            do iprobe=1,2
+
+             if (iprobe.eq.1) then ! source
+              im_probe=im_source
+             else if (iprobe.eq.2) then ! dest
+              im_probe=im_dest
+             else
+              print *,"iprobe invalid"
+              stop
+             endif
+
+             dencomp_probe=(im_probe-1)*num_state_material+1
+             tcomp_probe=dencomp_probe+1
+             if ((mass_frac_id.ge.1).and. &
+                 (mass_frac_id.le.num_species_var)) then
+              mfrac_comp_probe=tcomp_probe+mass_frac_id
+             else if (mass_frac_id.eq.0) then
+              mfrac_comp_probe=0
+             else
+              print *,"mass_frac_id invalid"
+              stop
+             endif
+             base_index=num_materials_vel*(SDIM+1)
+
+             snew(D_DECL(i,j,k),base_index+dencomp_probe)=den_mix_new(iprobe)
+             snew(D_DECL(i,j,k),base_index+tcomp_probe)=temp_mix_new(iprobe)
+             if (mfrac_comp_probe.eq.0) then
+              ! do nothing
+             else if (mfrac_comp_probe.gt.0) then
+              snew(D_DECL(i,j,k),base_index+mfrac_comp_probe)= 
+               mass_frac_new(iprobe)
+             else
+              print *,"mfrac_comp_probe invalid"
+              stop
+             endif
+
+             if ((temp_mix_new(iprobe).lt.TEMPERATURE_FLOOR).or. &
+                 (den_mix_new(iprobe).le.zero)) then
+              print *,"temp_mix_new or den_mix_new invalid"
+              print *,"oldvfrac(im_probe) ",oldvfrac(im_probe)
+              print *,"newvfrac(im_probe) ",newvfrac(im_probe)
+              print *,"den_mix_new(im_probe) ",den_mix_new(im_probe)
+              print *,"temp_mix_new(im_probe) ",temp_mix_new(im_probe)
+             endif
+
+            enddo !iprobe=1,2
+
+             ! volume fractions updated on the 2nd sweep using
+             ! deltaVOF which has "dF"
+             ! centroids updated here.
             do dir=1,SDIM
              snew(D_DECL(i,j,k),vcompdst_snew+dir)= &
               new_centroid(im_dest,dir)-cengrid(dir)
@@ -5162,18 +5025,18 @@ FIX ME probe
                (local_freezing_model.eq.7)) then ! cavitation
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
-             evap_den=species_evaporation_density(mass_frac_id)
-             if (evap_den.gt.zero) then
+             vapor_den=species_evaporation_density(mass_frac_id)
+             if (vapor_den.gt.zero) then
               if (LL.gt.zero) then ! evaporation
-               dendst_restrict=evap_den
+               dendst_restrict=vapor_den
               else if (LL.lt.zero) then ! condensation
-               densrc_restrict=evap_den
+               densrc_restrict=vapor_den
               else
                print *,"LL invalid"
                stop
               endif
              else
-              print *,"evap_den invalid"
+              print *,"vapor_den invalid"
               stop
              endif
             else
@@ -6141,7 +6004,7 @@ FIX ME probe
       REAL_T newphi_substrate
       INTEGER_T, target :: dencomp_source,dencomp_dest
       INTEGER_T ispec
-      REAL_T evap_den
+      REAL_T vapor_den
       REAL_T source_perim_factor,dest_perim_factor
       REAL_T contact_line_perim
       INTEGER_T icolor,base_type,ic,im1,im2
@@ -6570,7 +6433,7 @@ FIX ME probe
 
              ispec=mass_fraction_id(iten+ireverse*nten)
 
-             evap_den=one
+             vapor_den=one
 
              if ((ispec.ge.0).and.(ispec.le.num_species_var)) then
               ! do nothing
@@ -6580,7 +6443,7 @@ FIX ME probe
              endif
 
              if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-              evap_den=species_evaporation_density(ispec)
+              vapor_den=species_evaporation_density(ispec)
              else if (ispec.eq.0) then
               if ((local_freezing_model.eq.2).or. & !hydrate
                   (local_freezing_model.eq.4).or. & !Tanasawa or Schrage
@@ -7047,17 +6910,17 @@ FIX ME probe
                    if ((local_freezing_model.eq.5).or. & !stefan evap/cond
                        (local_freezing_model.eq.6)) then !Palmore/Desjardins
                     if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-                     if (evap_den.gt.zero) then
+                     if (vapor_den.gt.zero) then
                       if (LL(ireverse).gt.zero) then ! evaporation
-                       den_I_interp_SAT(2)=evap_den ! dest
+                       den_I_interp_SAT(2)=vapor_den ! dest
                       else if (LL(ireverse).lt.zero) then ! condensation
-                       den_I_interp_SAT(1)=evap_den ! source
+                       den_I_interp_SAT(1)=vapor_den ! source
                       else
                        print *,"LL invalid"
                        stop
                       endif
                      else
-                      print *,"evap_den invalid"
+                      print *,"vapor_den invalid"
                       stop
                      endif  
                     else
@@ -7243,7 +7106,7 @@ FIX ME probe
                      species_molar_mass, &
                      local_freezing_model, &
                      local_Tanasawa_or_Schrage, &
-                     evap_den, &
+                     vapor_den, &
                      distribute_from_targ, &
                      VEL_correct, & ! vel
                      den_I_interp_SAT(1), & ! source 

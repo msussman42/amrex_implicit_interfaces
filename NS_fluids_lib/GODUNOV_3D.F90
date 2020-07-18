@@ -10548,7 +10548,7 @@ stop
       REAL_T mu
       INTEGER_T partid
       INTEGER_T ispec
-      REAL_T evap_den
+      REAL_T vapor_den
       REAL_T elastic_wave_speed
       REAL_T source_perim_factor
       REAL_T dest_perim_factor
@@ -10595,7 +10595,7 @@ stop
        stop
       endif
 
-      evap_den=one
+      vapor_den=one
 
       denjump=zero
       denjump_gravity=zero
@@ -11119,7 +11119,7 @@ stop
 
          ispec=mass_fraction_id(iten+ireverse*nten)
          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-          evap_den=species_evaporation_density(ispec)
+          vapor_den=species_evaporation_density(ispec)
          else if (ispec.eq.0) then
           if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
               (local_freezing_model.eq.5).or. & ! Stefan evap model
@@ -11196,17 +11196,17 @@ stop
 
            if (local_freezing_model.eq.5) then ! stefan evap model
             if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-             if (evap_den.gt.zero) then
+             if (vapor_den.gt.zero) then
               if (LL.gt.zero) then ! evaporation
-               Ddst=evap_den
+               Ddst=vapor_den
               else if (LL.lt.zero) then ! condensation
-               Dsrc=evap_den
+               Dsrc=vapor_den
               else
                print *,"LL invalid"
                stop
               endif
              else
-              print *,"evap_den invalid"
+              print *,"vapor_den invalid"
               stop
              endif  
             else
@@ -11282,7 +11282,7 @@ stop
               species_molar_mass, &
               local_freezing_model, &
               local_Tanasawa_or_Schrage, &
-              evap_den, &
+              vapor_den, &
               distribute_from_targ, &
               USTEFAN_hold, &
               Dsrc,Ddst, &

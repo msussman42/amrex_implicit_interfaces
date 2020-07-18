@@ -30279,7 +30279,7 @@ end subroutine RatePhaseChange
        species_evaporation_density, &
        distribute_from_target, &
        vel, &
-       densrc_I,dendst_I, & ! replaced with evap_den if freezing_model=5,6
+       densrc_I,dendst_I, & ! replaced with vapor_den if freezing_model=5,6
        densrc_probe,dendst_probe, &
        ksrc,kdst, &
        Tsrc_probe,Tdst_probe, &
