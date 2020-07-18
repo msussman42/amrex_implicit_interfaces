@@ -10839,7 +10839,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
  if (localMF[nodevel_MF]->nComp()!=2*nten*AMREX_SPACEDIM)
   amrex::Error("localMF[nodevel_MF]->nComp()  invalid");
 
- if (localMF[deltaVOF_MF]->nComp()!=nmat)
+ if (localMF[deltaVOF_MF]->nComp()!=3*nmat)
   amrex::Error("localMF[deltaVOF_MF]->nComp()  invalid");
 
  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)

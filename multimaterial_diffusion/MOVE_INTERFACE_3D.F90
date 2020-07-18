@@ -2109,7 +2109,7 @@ stop
         allocate(tsatfab(DIMV(tsatfab),ntsat))
        endif
        allocate(nodevel(DIMV(nodevel),2*nten*SDIM))
-       allocate(deltaVOF(DIMV(deltaVOF),nmat))
+       allocate(deltaVOF(DIMV(deltaVOF),3*nmat))
        allocate(LS(DIMV(LS),nmat*(SDIM+1)))
        allocate(LSnew(DIMV(LSnew),nmat*(SDIM+1)))
        allocate(LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM))

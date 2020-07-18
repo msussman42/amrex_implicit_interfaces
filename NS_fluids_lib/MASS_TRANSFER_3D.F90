@@ -3391,7 +3391,10 @@ stop
 
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
 
-      REAL_T, intent(inout) :: deltaVOF(DIMV(deltaVOF),nmat)
+       ! 1..nmat             dF
+       ! nmat+1 .. 2 nmat    den_new F_new - den_old F_old  source
+       !                     den_new F_new - den_old F_old  target 
+      REAL_T, intent(inout) :: deltaVOF(DIMV(deltaVOF),3*nmat)
 
       REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
       REAL_T, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
@@ -3419,10 +3422,6 @@ stop
       REAL_T velnode_test
       INTEGER_T nten_test
       INTEGER_T vcompsrc_snew,vcompdst_snew
-      INTEGER_T dcompsrc,dcompdst
-      INTEGER_T dcompdst_snew,tcompdst_snew
-      REAL_T densrc,dendst
-      REAL_T densrc_restrict,dendst_restrict
       REAL_T denratio_factor
       REAL_T oldvfrac(nmat)
       REAL_T newvfrac(nmat)
@@ -3438,7 +3437,6 @@ stop
       REAL_T LL
       REAL_T Tsat_default
       INTEGER_T Tsat_flag
-      REAL_T ksource,kdest
       REAL_T energy_source
 #if (STANDALONE==0)
       INTEGER_T ccomp
@@ -3520,7 +3518,9 @@ stop
       REAL_T uncaptured_centroid(SDIM)
       INTEGER_T shapeflag
       INTEGER_T tessellate
-      REAL_T volcell,tempvfrac
+      REAL_T volcell
+      REAL_T tempvfrac
+      REAL_T temp_new_vfrac
       REAL_T cencell(SDIM)
       REAL_T tempcen(SDIM)
       INTEGER_T do_unsplit_advection
@@ -3531,18 +3531,31 @@ stop
       INTEGER_T away_from_interface
       REAL_T solid_vof_new,solid_vof_old
       INTEGER_T mtype
-      REAL_T Yfrac_vapor_to_gas
-      REAL_T vfrac_vapor_to_gas
-      REAL_T new_vfrac_vapor
-      REAL_T Yfrac_old
-      REAL_T density_new,density_old
-      REAL_T density_dest,density_source
       REAL_T vapor_den
+      REAL_T condensed_den
       REAL_T local_cv_or_cp
-      INTEGER_T speccompsrc,speccompdst
       INTEGER_T speccomp_mod
       INTEGER_T ncomp_per_tsat
       INTEGER_T ispec
+      INTEGER_T iprobe
+      INTEGER_T iprobe_vapor
+      INTEGER_T iprobe_condensed
+      INTEGER_T im_probe
+      INTEGER_T im_vapor
+      INTEGER_T im_condensed
+      INTEGER_T base_index
+      INTEGER_T dencomp_probe
+      INTEGER_T tcomp_probe
+      INTEGER_T mfrac_comp_probe
+      REAL_T temp_mix_new(2)
+      REAL_T density_mix_new(2)
+      REAL_T mass_frac_new(2)
+      REAL_T density_new(2)
+      REAL_T density_old(2)
+      REAL_T temperature_new(2)
+      REAL_T temperature_old(2)
+      REAL_T species_new(2)
+      REAL_T species_old(2)
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4695,10 +4708,12 @@ stop
              ! den_new=(den_old * F_old + vapor_den * dF)/(F_old+dF)
             if (LL.gt.zero) then !evaporation
               im_vapor=im_dest
+              im_condensed=im_source
               iprobe_vapor=2
               iprobe_condensed=1
             else if (LL.lt.zero) then ! condensation
               im_vapor=im_source
+              im_condensed=im_dest
               iprobe_vapor=1
               iprobe_condensed=2
             else
@@ -4834,6 +4849,10 @@ stop
              endif
              base_index=num_materials_vel*(SDIM+1)
 
+             deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_probe)= &
+                     den_mix_new(iprobe)*new_vfrac(im_probe)- &
+                     density_old(iprobe)*oldvfrac(im_probe)
+
              snew(D_DECL(i,j,k),base_index+dencomp_probe)=den_mix_new(iprobe)
              snew(D_DECL(i,j,k),base_index+tcomp_probe)=temp_mix_new(iprobe)
              if (mfrac_comp_probe.eq.0) then
@@ -4917,138 +4936,89 @@ stop
            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
-           if ((local_freezing_model.lt.0).or.(local_freezing_model.gt.7)) then
+           if ((local_freezing_model.lt.0).or. &
+               (local_freezing_model.gt.7)) then
             print *,"local_freezing_model invalid 2"
             stop
            endif
-           if ((distribute_from_targ.lt.0).or.(distribute_from_targ.gt.1)) then
+           if ((distribute_from_targ.lt.0).or. &
+               (distribute_from_targ.gt.1)) then
             print *,"distribute_from_targ invalid"
             stop
            endif
 
-           vcompsrc_snew=num_materials_vel*(SDIM+1)+ &
-            nmat*num_state_material+(im_source-1)*ngeom_raw+1
-           vcompdst_snew=num_materials_vel*(SDIM+1)+ &
-            nmat*num_state_material+(im_dest-1)*ngeom_raw+1
+           do iprobe=1,2  ! source,dest
 
-           dcompsrc=(im_source-1)*num_state_material+1
-           dcompdst=(im_dest-1)*num_state_material+1
-
-           dcompdst_snew=num_materials_vel*(SDIM+1)+dcompdst
-           tcompdst_snew=dcompdst_snew+1
-    
-           do u_imaterial=1,nmat
-            oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
-            vofcomp_recon=(u_imaterial-1)*ngeom_recon+1
-            oldvfrac(u_imaterial)=recon(D_DECL(i,j,k),vofcomp_recon)
-           enddo
-
-            ! deltaVOF init when isweep==0
-           dF=deltaVOF(D_DECL(i,j,k),im_dest)
-           dF=DVOF_FACT(im_dest)*dF
-           if ((DVOF_FACT(im_dest).lt.zero).or. &
-               (DVOF_FACT(im_dest).gt.one)) then
-            print *,"DVOF_FACT invalid"
-            stop
-           endif
-           newvfrac(im_dest)=oldvfrac(im_dest)+dF
-           newvfrac(im_source)=oldvfrac(im_source)-dF
-
-           if (newvfrac(im_dest).gt.one+VOFTOL) then
-            print *,"newvfrac(im_dest) overflow"
-            stop
-           else if (newvfrac(im_dest).gt.one) then
-            newvfrac(im_dest)=one
-           endif
-           if (newvfrac(im_source).lt.-VOFTOL) then
-            print *,"newvfrac(im_source) underflow"
-            stop
-           else if (newvfrac(im_source).lt.zero) then
-            newvfrac(im_source)=zero
-           endif
-
-#if (STANDALONE==0)
-           ksource=get_user_heatviscconst(im_source)
-           kdest=get_user_heatviscconst(im_dest)
-#elif (STANDALONE==1)
-           ksource=fort_heatviscconst(im_source)
-           kdest=fort_heatviscconst(im_dest)
-#else
-           print *,"bust compiling convertmaterial"
-           stop
-#endif
-
-           densrc=EOS(D_DECL(i,j,k),dcompsrc)
-           dendst=EOS(D_DECL(i,j,k),dcompdst)
-
-           densrc_restrict=densrc
-           dendst_restrict=dendst
-
-           if ((densrc.le.zero).or.(dendst.le.zero)) then
-            print *,"densrc and dendst must be positive"
-            stop
-           endif
-
-           mtype=fort_material_type(im_source)
-           if (mtype.eq.0) then
-            ! do nothing
-           else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
-            if (densrc_restrict.lt.density_floor_expansion(im_source)) then
-             densrc_restrict=density_floor_expansion(im_source)
-            endif
-            if (densrc_restrict.gt.density_ceiling_expansion(im_source)) then
-             densrc_restrict=density_ceiling_expansion(im_source)
-            endif
-           else
-            print *,"mtype invalid"
-            stop
-           endif
-
-           mtype=fort_material_type(im_dest)
-           if (mtype.eq.0) then
-            ! do nothing
-           else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
-            if (dendst_restrict.lt.density_floor_expansion(im_dest)) then
-             dendst_restrict=density_floor_expansion(im_dest)
-            endif
-            if (dendst_restrict.gt.density_ceiling_expansion(im_dest)) then
-             dendst_restrict=density_ceiling_expansion(im_dest)
-            endif
-           else
-            print *,"mtype invalid"
-            stop
-           endif
-
-           if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
-               (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
-               (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
-               (local_freezing_model.eq.7)) then ! cavitation
-            if ((mass_frac_id.ge.1).and. &
-                (mass_frac_id.le.num_species_var)) then
-             vapor_den=species_evaporation_density(mass_frac_id)
-             if (vapor_den.gt.zero) then
-              if (LL.gt.zero) then ! evaporation
-               dendst_restrict=vapor_den
-              else if (LL.lt.zero) then ! condensation
-               densrc_restrict=vapor_den
-              else
-               print *,"LL invalid"
-               stop
-              endif
-             else
-              print *,"vapor_den invalid"
-              stop
-             endif
+            if (iprobe.eq.1) then ! source
+             im_probe=im_source
+            else if (iprobe.eq.2) then ! dest
+             im_probe=im_dest
             else
-             print *,"mass_frac_id invalid"
+             print *,"iprobe invalid"
              stop
             endif
-           endif ! local_freezing_model==4,5,6,7
 
-           if ((densrc_restrict.le.zero).or.(dendst_restrict.le.zero)) then
-            print *,"densrc_restrict and dendst_restrict must be positive"
+            vcomp_snew=num_materials_vel*(SDIM+1)+ &
+              nmat*num_state_material+(im_probe-1)*ngeom_raw+1
+
+            base_index=num_materials_vel*(SDIM+1)
+            dencomp_probe=(im_probe-1)*num_state_material+1
+            tcomp_probe=dencomp_probe+1
+
+            oldvfrac(im_probe)=recon(D_DECL(i,j,k), &
+                 (im_probe-1)*ngeom_recon+1)
+
+            den_dF(iprobe)= &
+                 deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_probe)
+
+             ! deltaVOF init when isweep==0
+            if (iprobe.eq.2) then ! dest
+             dF=deltaVOF(D_DECL(i,j,k),im_probe)
+             dF=DVOF_FACT(im_probe)*dF
+             newvfrac(im_probe)=oldvfrac(im_probe)+dF
+             newvfrac(im_source)=oldvfrac(im_source)-dF
+
+             if ((DVOF_FACT(im_probe).lt.zero).or. &
+                 (DVOF_FACT(im_probe).gt.one)) then
+              print *,"DVOF_FACT invalid"
+              stop
+             endif
+            else if (iprobe.eq.1) then ! source
+             ! do nothing
+            else
+             print *,"iprobe invalid"
+             stop
+            endif
+
+            if (newvfrac(im_probe).gt.one+VOFTOL) then
+             print *,"newvfrac(im_probe) overflow"
+             stop
+            else if (newvfrac(im_probe).gt.one) then
+             newvfrac(im_probe)=one
+            else if (newvfrac(im_probe).lt.-VOFTOL) then
+             print *,"newvfrac(im_probe) underflow"
+             stop
+            else if (newvfrac(im_probe).lt.zero) then
+             newvfrac(im_probe)=zero
+            else if ((newvfrac(im_probe).ge.zero).and. &
+                     (newvfrac(im_probe).le.one)) then
+             ! do nothing
+            else
+             print *,"newvfrac(im_probe) invalid"
+             stop
+            endif
+
+#if (STANDALONE==0)
+            thermal_k(im_probe)=get_user_heatviscconst(im_probe)
+#elif (STANDALONE==1)
+            thermal_k(im_probe)=fort_heatvisconst(im_probe)
+#else
+            print *,"bust compiling convertmaterial"
             stop
-           endif
+#endif
+
+           enddo ! iprobe=1,2
+
 
            jump_strength=zero
 
@@ -5061,7 +5031,25 @@ stop
            !(rho_dest/rho_source)mdot-rho_dest*dF=0
            if (distribute_from_targ.eq.0) then ! default
             ! distribute div u source to the cells in which F_dest>1/2  
-            denratio_factor=densrc_restrict/dendst_restrict-one
+
+            if (dF.le.EBVOFTOL) then
+             denratio_factor=zero
+            else if (dF.ge.EBVOFTOL) then
+             if ((den_dF(2).gt.zero).and. &
+                 (den_dF(1).gt.zero)) then
+              denratio_factor=den_dF(1)/den_dF(2)-one ! den_src/den_dst
+             else if ((den_dF(2).eq.zero).or. &
+                      (den_dF(1).eq.zero)) then
+              ! do nothing
+             else
+              print *,"den_dF invalid"
+              stop
+             endif
+            else
+             print *,"dF is corrupt"
+             stop
+            endif
+
 
            !dF=mdot/rho_dest
            !dF_expand_source=(1-rho_dest/rho_source)*dF
@@ -5073,7 +5061,23 @@ stop
            else if (distribute_from_targ.eq.1) then
             ! distribute div u source to the cells in which F_dest<1/2  
 
-            denratio_factor=one-dendst_restrict/densrc_restrict
+            if (dF.le.EBVOFTOL) then
+             denratio_factor=zero
+            else if (dF.ge.EBVOFTOL) then
+             if ((den_dF(2).gt.zero).and. &
+                 (den_dF(1).gt.zero)) then
+              denratio_factor=one-den_dF(2)/den_dF(1) ! den_dst/den_src
+             else if ((den_dF(2).eq.zero).or. &
+                      (den_dF(1).eq.zero)) then
+              ! do nothing
+             else
+              print *,"den_dF invalid"
+              stop
+             endif
+            else
+             print *,"dF is corrupt"
+             stop
+            endif
 
            else 
             print *,"distribute_from_targ invalid"
@@ -5200,7 +5204,8 @@ stop
                stop
               endif
    
-              call Hydrate_energy_source_term(dF,dt,ksource, &
+              call Hydrate_energy_source_term(dF,dt, &
+               thermal_k(im_source), &
                energy_source,LL)
               call Methane_usage(dF,dt, &
                fort_speciesviscconst(im_dest),amount_used)
@@ -5329,6 +5334,12 @@ stop
 
              if (local_freezing_model.eq.0) then ! standard Stefan model
               ! do nothing
+             else if (local_freezing_model.eq.1) then ! source term
+              ! do nothing
+             else if (local_freezing_model.eq.2) then !hydrate
+              ! do nothing
+             else if (local_freezing_model.eq.3) then !wildfire
+              ! do nothing
              else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
                       (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
                       (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
@@ -5337,19 +5348,19 @@ stop
               if ((mass_frac_id.ge.1).and. &
                   (mass_frac_id.le.num_species_var)) then
 
-               speccompdst=(im_dest-1)*num_state_material+ &
-                num_state_base+mass_frac_id
-               speccompsrc=(im_source-1)*num_state_material+ &
-                num_state_base+mass_frac_id
-
                if (LL.gt.zero) then ! evaporation
-                speccomp_mod=num_materials_vel*(SDIM+1)+speccompsrc
+                im_condensed=im_source
                else if (LL.lt.zero) then ! condensation
-                speccomp_mod=num_materials_vel*(SDIM+1)+speccompdst
+                im_condensed=im_dest
                else
                 print *,"LL invalid"
                 stop
                endif
+                       
+               speccomp_mod=num_materials_vel*(SDIM+1)+ &
+                 (im_condensed-1)*num_state_material+num_state_base+ &
+                 mass_frac_id
+
                snew(D_DECL(i,j,k),speccomp_mod)=one
 
               else
@@ -5982,6 +5993,7 @@ stop
       REAL_T, target :: dxprobe_source
       REAL_T, target :: dxprobe_dest
       REAL_T dxprobe_target(2)
+      REAL_T thermal_k(nmat)
       REAL_T ksource,kdest
       REAL_T LS_pos
       REAL_T C_w0

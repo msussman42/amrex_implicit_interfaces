@@ -2865,8 +2865,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.level_phase_change_rate_extend();
        }
 
-       allocate_array(0,nmat,-1,deltaVOF_MF);
-       setVal_array(0,nmat,0.0,deltaVOF_MF);
+       // 1..nmat             dF
+       // nmat+1 .. 2 nmat    den_new F_new - den_old F_old  source
+       //                     den_new F_new - den_old F_old  target 
+       allocate_array(0,3*nmat,-1,deltaVOF_MF);
+       setVal_array(0,3*nmat,0.0,deltaVOF_MF);
        allocate_array(1,2*nten*AMREX_SPACEDIM,-1,nodevel_MF);
        setVal_array(1,2*nten*AMREX_SPACEDIM,0.0,nodevel_MF);
 
