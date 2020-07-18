@@ -3426,6 +3426,7 @@ stop
       REAL_T oldvfrac(nmat)
       REAL_T newvfrac(nmat)
       REAL_T dF,dFdst,dFsrc
+      REAL_T den_dF(2)
       REAL_T jump_strength
       REAL_T xsten(-3:3,SDIM)
 
@@ -3477,6 +3478,8 @@ stop
       REAL_T multi_volume(nmat)
       REAL_T multi_area(nmat)
       REAL_T multi_cen(SDIM,nmat)
+
+      REAL_T thermal_k(nmat)
 
       INTEGER_T nmax,nhalf,nhalf0
       INTEGER_T klosten,khisten
@@ -4664,7 +4667,7 @@ stop
                stop
               endif
              else if ((newvfrac(im_probe).le.EBVOFTOL).and. &
-                      (newvfrac(im_probe).ge.-EBOFTOL)) then
+                      (newvfrac(im_probe).ge.-EBVOFTOL)) then
               density_new(iprobe)=fort_denconst(im_probe)
               temperature_new(iprobe)=Tsat_default
               species_new(iprobe)=one
@@ -4693,7 +4696,7 @@ stop
                stop
               endif
              else if ((oldvfrac(im_probe).le.EBVOFTOL).and. &
-                      (oldvfrac(im_probe).ge.-EBOFTOL)) then
+                      (oldvfrac(im_probe).ge.-EBVOFTOL)) then
               density_old(iprobe)=fort_denconst(im_probe)
               temperature_old(iprobe)=Tsat_default
               species_old(iprobe)=one
@@ -4744,10 +4747,10 @@ stop
               vapor_den=species_evaporation_density(mass_frac_id)
               condensed_den=density_old(iprobe_condensed)
 
-              if (vapor_den.gt.zero) then
+              if ((vapor_den.gt.zero).and.(condensed_den.gt.zero)) then
                ! do nothing
               else
-               print *,"vapor_den invalid"
+               print *,"vapor_den or condensed_den invalid"
                stop
               endif
 
@@ -4768,12 +4771,12 @@ stop
 
              temp_new_vfrac=oldvfrac(im_dest)+dF
              if (temp_new_vfrac.gt.EBVOFTOL) then 
-              den_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
+              density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
                 vapor_den*dF)/temp_new_vfrac
               mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
                 dF)/temp_new_vfrac
              else if (temp_new_vfrac.le.EBVOFTOL) then
-              den_mix_new(2)=density_old(2)
+              density_mix_new(2)=density_old(2)
               mass_frac_new(2)=species_old(2)
              else
               print *,"temp_new_vfrac invalid"
@@ -4782,22 +4785,24 @@ stop
              
              temp_new_vfrac=oldvfrac(im_source)-dF
              if (temp_new_vfrac.gt.EBVOFTOL) then 
-              den_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
+              density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
                condensed_den*dF)/temp_new_vfrac
              else if (temp_new_vfrac.le.EBVOFTOL) then
-              den_mix_new(1)=density_old(1)
+              density_mix_new(1)=density_old(1)
              else
               print *,"temp_new_vfrac invalid"
               stop
              endif
              mass_frac_new(1)=one
+
             else if (LL.lt.zero) then ! condensation
+
              temp_new_vfrac=oldvfrac(im_dest)+dF
              if (temp_new_vfrac.gt.EBVOFTOL) then 
-              den_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
+              density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
                 condensed_den*dF)/temp_new_vfrac
              else if (temp_new_vfrac.le.EBVOFTOL) then
-              den_mix_new(2)=density_old(2)
+              density_mix_new(2)=density_old(2)
              else
               print *,"temp_new_vfrac invalid"
               stop
@@ -4805,7 +4810,7 @@ stop
 
              temp_new_vfrac=oldvfrac(im_source)-dF
              if (temp_new_vfrac.gt.EBVOFTOL) then 
-              den_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
+              density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
                vapor_den*dF)/temp_new_vfrac
               mass_frac_new(1)=(species_old(1)*oldvfrac(im_source)- &
                dF)/temp_new_vfrac
@@ -4813,7 +4818,7 @@ stop
                mass_frac_new(1)=zero
               endif
              else if (temp_new_vfrac.le.EBVOFTOL) then
-              den_mix_new(1)=density_old(1)
+              density_mix_new(1)=density_old(1)
               mass_frac_new(1)=zero
              else
               print *,"temp_new_vfrac invalid"
@@ -4850,15 +4855,17 @@ stop
              base_index=num_materials_vel*(SDIM+1)
 
              deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_probe)= &
-                     den_mix_new(iprobe)*new_vfrac(im_probe)- &
+                     density_mix_new(iprobe)*newvfrac(im_probe)- &
                      density_old(iprobe)*oldvfrac(im_probe)
 
-             snew(D_DECL(i,j,k),base_index+dencomp_probe)=den_mix_new(iprobe)
-             snew(D_DECL(i,j,k),base_index+tcomp_probe)=temp_mix_new(iprobe)
+             snew(D_DECL(i,j,k),base_index+dencomp_probe)= &
+                     density_mix_new(iprobe)
+             snew(D_DECL(i,j,k),base_index+tcomp_probe)= &
+                     temp_mix_new(iprobe)
              if (mfrac_comp_probe.eq.0) then
               ! do nothing
              else if (mfrac_comp_probe.gt.0) then
-              snew(D_DECL(i,j,k),base_index+mfrac_comp_probe)= 
+              snew(D_DECL(i,j,k),base_index+mfrac_comp_probe)=  &
                mass_frac_new(iprobe)
              else
               print *,"mfrac_comp_probe invalid"
@@ -4866,11 +4873,11 @@ stop
              endif
 
              if ((temp_mix_new(iprobe).lt.TEMPERATURE_FLOOR).or. &
-                 (den_mix_new(iprobe).le.zero)) then
-              print *,"temp_mix_new or den_mix_new invalid"
+                 (density_mix_new(iprobe).le.zero)) then
+              print *,"temp_mix_new or density_mix_new invalid"
               print *,"oldvfrac(im_probe) ",oldvfrac(im_probe)
               print *,"newvfrac(im_probe) ",newvfrac(im_probe)
-              print *,"den_mix_new(im_probe) ",den_mix_new(im_probe)
+              print *,"density_mix_new(im_probe) ",density_mix_new(im_probe)
               print *,"temp_mix_new(im_probe) ",temp_mix_new(im_probe)
              endif
 
@@ -4958,9 +4965,6 @@ stop
              stop
             endif
 
-            vcomp_snew=num_materials_vel*(SDIM+1)+ &
-              nmat*num_state_material+(im_probe-1)*ngeom_raw+1
-
             base_index=num_materials_vel*(SDIM+1)
             dencomp_probe=(im_probe-1)*num_state_material+1
             tcomp_probe=dencomp_probe+1
@@ -5036,8 +5040,8 @@ stop
              denratio_factor=zero
             else if (dF.ge.EBVOFTOL) then
              if ((den_dF(2).gt.zero).and. &
-                 (den_dF(1).gt.zero)) then
-              denratio_factor=den_dF(1)/den_dF(2)-one ! den_src/den_dst
+                 (den_dF(1).lt.zero)) then
+              denratio_factor=-den_dF(1)/den_dF(2)-one ! den_src/den_dst
              else if ((den_dF(2).eq.zero).or. &
                       (den_dF(1).eq.zero)) then
               ! do nothing
@@ -5065,8 +5069,8 @@ stop
              denratio_factor=zero
             else if (dF.ge.EBVOFTOL) then
              if ((den_dF(2).gt.zero).and. &
-                 (den_dF(1).gt.zero)) then
-              denratio_factor=one-den_dF(2)/den_dF(1) ! den_dst/den_src
+                 (den_dF(1).lt.zero)) then
+              denratio_factor=one+den_dF(2)/den_dF(1) ! den_dst/den_src
              else if ((den_dF(2).eq.zero).or. &
                       (den_dF(1).eq.zero)) then
               ! do nothing
@@ -5276,8 +5280,21 @@ stop
              stop
             endif
 
-            snew(D_DECL(i,j,k),vcompsrc_snew)=newvfrac(im_source)
-            snew(D_DECL(i,j,k),vcompdst_snew)=newvfrac(im_dest)
+            do iprobe=1,2
+
+             if (iprobe.eq.1) then ! source
+              im_probe=im_source
+             else if (iprobe.eq.2) then ! dest
+              im_probe=im_dest
+             else
+              print *,"iprobe invalid"
+              stop
+             endif
+             base_index=num_materials_vel*(SDIM+1)
+             snew(D_DECL(i,j,k), &
+                 base_index+nmat*num_state_material+ &
+                 (im_probe-1)*ngeom_raw+1)=newvfrac(im_probe)
+            enddo ! iprobe=1,2
 
             delta_mass(im_source)=delta_mass(im_source)+ &
              volgrid*(newvfrac(im_source)-oldvfrac(im_source))
@@ -5994,7 +6011,6 @@ stop
       REAL_T, target :: dxprobe_dest
       REAL_T dxprobe_target(2)
       REAL_T thermal_k(nmat)
-      REAL_T ksource,kdest
       REAL_T LS_pos
       REAL_T C_w0
       INTEGER_T, target :: local_freezing_model
@@ -6843,11 +6859,11 @@ stop
                   if (at_interface.eq.1) then
                       
 #if (STANDALONE==0)
-                   ksource=get_user_heatviscconst(im_source)
-                   kdest=get_user_heatviscconst(im_dest)
+                   thermal_k(im_source)=get_user_heatviscconst(im_source)
+                   thermal_k(im_dest)=get_user_heatviscconst(im_dest)
 #elif (STANDALONE==1)
-                   ksource=fort_heatviscconst(im_source)
-                   kdest=fort_heatviscconst(im_dest)
+                   thermal_k(im_source)=fort_heatviscconst(im_source)
+                   thermal_k(im_dest)=fort_heatviscconst(im_dest)
 #else
                    print *,"bust compiling ratemasschange"
                    stop
@@ -7125,7 +7141,8 @@ stop
                      den_I_interp_SAT(2), & ! dest
                      den_probe(1), & ! source 
                      den_probe(2), & ! dest
-                     ksource,kdest, & ! ksrc,kdst
+                     thermal_k(1), &
+                     thermal_k(2), & ! ksrc,kdst
                      T_probe(1), & ! source
                      T_probe(2), & ! dest
                      TSAT_predict, &
@@ -7158,8 +7175,8 @@ stop
                    if (local_freezing_model.eq.0) then
                      DTsrc=T_probe(1)-TSAT_predict
                      DTdst=T_probe(2)-TSAT_predict
-                     velsrc=ksource*DTsrc/(LL(ireverse)*dxprobe_target(1))
-                     veldst=kdest*DTdst/(LL(ireverse)*dxprobe_target(2))
+                     velsrc=thermal_k(1)*DTsrc/(LL(ireverse)*dxprobe_target(1))
+                     veldst=thermal_k(2)*DTdst/(LL(ireverse)*dxprobe_target(2))
                    
                      velsum=velsrc+veldst
                      if (velsum.gt.zero) then
@@ -7506,8 +7523,8 @@ stop
                    print *,"LL,dxmin ",LL(ireverse),dxmin
                    print *,"dxprobe_target(1)=",dxprobe_target(1)
                    print *,"dxprobe_target(2)=",dxprobe_target(2)
-                   print *,"ksource,kdest,local_Tsat(ireverse) ", &
-                          ksource,kdest,local_Tsat(ireverse)
+                   print *,"thermal_k ",thermal_k(1),thermal_k(2)
+                   print *,"local_Tsat(ireverse) ",local_Tsat(ireverse)
                    print *,"T_Probe(1),T_probe(2) ",T_Probe(1),T_probe(2)
                    print *,"den_I_interp(1) ",den_I_interp(1)
                    print *,"den_I_interp_SAT(1) ",den_I_interp_SAT(1)
