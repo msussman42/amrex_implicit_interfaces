@@ -2064,7 +2064,7 @@ else if (probtype_in.eq.4) then
 
 else if (probtype_in.eq.5) then
 
- dist1=0.2d0-x 
+ dist1=0.1d0-x 
  if (imat.eq.1) then
   dist=dist1
  else if (imat.eq.2) then
@@ -4840,10 +4840,10 @@ real(kind=8)              :: radial_slope
    print *,"nmat_in invalid"
    stop
   endif
-  if (x_vec(1).le.0.2d0+t) then
+  if (x_vec(1).le.0.1d0+t) then
    exact_temperature=273.0d0
-  else if (x_vec(1).ge.0.2d0+t) then
-   exact_temperature=272.0d0+exp(-(x_vec(1)-0.2d0-t))
+  else if (x_vec(1).ge.0.1d0+t) then
+   exact_temperature=272.0d0+exp(-(x_vec(1)-0.1d0-t))
   else
    print *,"x_vec bust"
    stop

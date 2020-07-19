@@ -47,7 +47,7 @@ IMPLICIT NONE
 ! 4=expanding or shrinking circle (material 1 inside, T=TSAT outside)
 !    (TSTOP=1.25D-3)
 ! 5=phase change for vertical planar interface (initial location xblob_in)
-!    (TSTOP=0.5d0)
+!    (TSTOP=0.1d0)
 ! 13=pentafoil (pentaeps, dirichlet_pentafoil init below) 
 ! 16=multiscale (thin filament effect)
 !    (filament thickness is thermal_delta init below)
@@ -56,9 +56,14 @@ IMPLICIT NONE
 ! 20=hypocycloid with 6 materials
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
 !
+! x-1/10 < t   T=273
+! x-1/10 > t   T=272+exp(-(x-1/10-t))  front x=1/10 + t
+! 1x1 domain dx=1/64   dt=(1/10)/32   dx/dt=5  dt=dx/5
+! TSTOP=0.1d0
 ! 1D test errors:
-! N_START=16 M_START=32 compute=0.584  exact=0.7
-! N_START=32 M_START=64 compute=0.601  exact=0.7
+! N_START=16 M_START=8    compute=0.191  exact=0.2
+! N_START=32 M_START=16   compute=0.195  exact=0.2
+! N_START=64 M_START=32   compute=0.197  exact=0.2
 !   
 INTEGER,PARAMETER          :: probtype_in=5
 INTEGER          :: stefan_flag ! VARIABLE TSAT
@@ -74,9 +79,9 @@ real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0
 ! 1.0d0 for probtype==3
 ! -4.0d0 for probtype==4 (TDIFF=T_DISK_CENTER - TSAT)
 ! 10.0d0 for probtype==16
-! for probtype==5, T(x,t)=272.0+e^{-V(x-Vt-1/5)}, x-1/5>=Vt
-!                  T(x,t)=273.0  x-1/5<Vt
-!                  T(x=1,t)=272.0+e^{-V(1-Vt-1/5)}
+! for probtype==5, T(x,t)=272.0+e^{-V(x-Vt-1/10)}, x-1/10>=Vt
+!                  T(x,t)=273.0  x-1/10<Vt
+!                  T(x=1,t)=272.0+e^{-V(1-Vt-1/10)}
 !                  
 ! material 1 on the left k=0.0, material 2 on the right, k=1.0.
 !
@@ -98,7 +103,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
 INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 2000
-INTEGER,PARAMETER          :: plot_int = 16
+INTEGER,PARAMETER          :: plot_int = 8
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1
@@ -112,7 +117,7 @@ INTEGER,PARAMETER          :: plot_int = 16
 ! TSTOP=0.004d0
 ! probtype_in==4: TSTOP=1.25D-3
 ! probtype_in==400: TSTOP=0.5d0
-real(kind=8),parameter     :: TSTOP = 0.5d0
+real(kind=8),parameter     :: TSTOP = 0.1d0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -261,12 +266,13 @@ print *,"constant_K_test= ",constant_K_test
 ! for vertical 1d interface, time step is hardwired (fixed_dt_main==-1); 
 ! M_START is critical.
 ! fixed_dt<0
-! example: 64x64 M_START=128
-! example: 32x32 M_START=64
-! example: 16x16 M_START=32
-N_START=64
-N_FINISH=64
-M_START=128
+! example: 128x128 M_START=64
+! example: 64x64 M_START=32
+! example: 32x32 M_START=16
+! example: 16x16 M_START=8
+N_START=128
+N_FINISH=128
+M_START=64
 M_FACTOR=2
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
@@ -289,7 +295,7 @@ else if (probtype_in.eq.2) then ! vertical
 else if (probtype_in.eq.3) then ! expanding circle
  fixed_dt_main=-1.0d0  ! TSTOP=1.25D-3
 else if (probtype_in.eq.5) then ! phase change vertical planar interface
- fixed_dt_main=-1.0d0  ! TSTOP=0.5d0
+ fixed_dt_main=-1.0d0  ! TSTOP=0.1d0
 else if (probtype_in.eq.400) then ! gingerbread man
  fixed_dt_main=0.0d0
 else
@@ -1408,7 +1414,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        T_FIELD=saturation_temp(1)
       else if (im.eq.2) then
        ! (xcen,ycen)
-       T_FIELD=272.0d0+exp(-(xcen-0.2d0))
+       T_FIELD=272.0d0+exp(-(xcen-0.1d0))
       else
        print *,"im invalid"
        stop
@@ -1721,8 +1727,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       else if (probtype_in.eq.400) then
        ! do nothing
       else if (probtype_in.eq.5) then
-       if (xcen.ge.1.0-2.0d0*h_in) then
-        T_FIELD=272.0d0+exp(-(xcen-0.2d0-Ts(tm+1)))
+       if (xcen.ge.1.0d0-1.0d0/16.0d0) then !buffer size:1 cell of coarse grid
+        T_FIELD=272.0d0+exp(-(xcen-0.1d0-Ts(tm+1)))
         UNEW(i,j,im)=T_FIELD
        endif 
       else if (probtype_in.eq.19) then   ! annulus cvg test
@@ -1862,7 +1868,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    else if (probtype_in.eq.400) then
     ! do nothing
    else if (probtype_in.eq.5) then
-    expect_radius=0.2d0+Ts(tm+1)
+    expect_radius=0.1d0+Ts(tm+1)
     print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
    else if (probtype_in.eq.19) then   ! annulus cvg test
     ! do nothing

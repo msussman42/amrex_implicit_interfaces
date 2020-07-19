@@ -502,7 +502,7 @@ stop
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.5) then
        ! material 1: left  material 2: right
-       LS=0.2d0+time-xblob
+       LS=0.1d0+time-xblob
        if (im.eq.2) then
         LS=-LS
        else if (im.eq.1) then
