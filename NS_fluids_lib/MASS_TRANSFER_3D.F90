@@ -4795,7 +4795,8 @@ stop
                 print *,"numerator/denominator invalid"
                 stop
                endif
-              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
+              else if (((mtype.ge.1).and.(mtype.le.fort_max_num_eos)).or. &
+                       (abs(ambient_den-vapor_den).le.1.0D-3*vapor_den)) then
                mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
                 dF)/temp_new_vfrac
               else
