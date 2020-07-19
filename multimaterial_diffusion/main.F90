@@ -61,9 +61,10 @@ IMPLICIT NONE
 ! 1x1 domain dx=1/64   dt=(1/10)/32   dx/dt=5  dt=dx/5
 ! TSTOP=0.1d0
 ! 1D test errors:
-! N_START=16 M_START=8    compute=0.191  exact=0.2
-! N_START=32 M_START=16   compute=0.195  exact=0.2
-! N_START=64 M_START=32   compute=0.197  exact=0.2
+! N_START=16 M_START=8     compute=0.1913  exact=0.2
+! N_START=32 M_START=16    compute=0.1951  exact=0.2
+! N_START=64 M_START=32    compute=0.1974  exact=0.2
+! N_START=128 M_START=64   compute=0.1987  exact=0.2
 !   
 INTEGER,PARAMETER          :: probtype_in=5
 INTEGER          :: stefan_flag ! VARIABLE TSAT
