@@ -3559,6 +3559,8 @@ stop
       REAL_T temperature_old(2)
       REAL_T species_new(2)
       REAL_T species_old(2)
+      REAL_T numerator,denominator
+      REAL_T ambient_den
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4724,6 +4726,8 @@ stop
               stop
             endif
 
+            ambient_den=fort_denconst(im_vapor)
+
             if (local_freezing_model.eq.0) then !Stefan model
               vapor_den=density_old(iprobe_vapor)
               condensed_den=density_old(iprobe_condensed)
@@ -4773,15 +4777,31 @@ stop
              if (temp_new_vfrac.gt.EBVOFTOL) then 
               density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
                 vapor_den*dF)/temp_new_vfrac
-               ! todo: if liquid and gas mixture are incompressible, then
+               ! If liquid and gas mixture are incompressible, then
                ! determine Y_new so that den_mix= 
                !   (denV denA)/(Y denA + (1-Y) denV )
                ! den_mix * ( Y(denA-denV) + denV ) = denA denV
                ! Y(denA -denV) + denV = denA denV/den_mix
                ! Y=((denA denV)/den_mix - denV)/(denA-denV)
                !  =denV (denA-den_mix)/((denA-denV)den_mix)
-              mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
+              mtype=fort_material_type(im_vapor)
+              if ((mtype.eq.0).and. &
+                  (abs(ambient_den-vapor_den).gt.1.0D-3*vapor_den)) then
+               numerator=vapor_den*(ambient_den-density_mix_new(2)) 
+               denominator=density_mix_new(2)*(ambient_den-vapor_den) 
+               if (numerator*denominator.gt.zero) then
+                mass_frac_new(2)=numerator/denominator
+               else
+                print *,"numerator/denominator invalid"
+                stop
+               endif
+              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
+               mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
                 dF)/temp_new_vfrac
+              else
+               print *,"type invalid"
+               stop
+              endif
              else if (temp_new_vfrac.le.EBVOFTOL) then
               density_mix_new(2)=density_old(2)
               mass_frac_new(2)=species_old(2)
