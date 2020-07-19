@@ -4773,6 +4773,13 @@ stop
              if (temp_new_vfrac.gt.EBVOFTOL) then 
               density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
                 vapor_den*dF)/temp_new_vfrac
+               ! todo: if liquid and gas mixture are incompressible, then
+               ! determine Y_new so that den_mix= 
+               !   (denV denA)/(Y denA + (1-Y) denV )
+               ! den_mix * ( Y(denA-denV) + denV ) = denA denV
+               ! Y(denA -denV) + denV = denA denV/den_mix
+               ! Y=((denA denV)/den_mix - denV)/(denA-denV)
+               !  =denV (denA-den_mix)/((denA-denV)den_mix)
               mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
                 dF)/temp_new_vfrac
              else if (temp_new_vfrac.le.EBVOFTOL) then

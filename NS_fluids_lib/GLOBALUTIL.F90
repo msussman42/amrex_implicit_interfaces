@@ -8956,6 +8956,15 @@ contains
       REAL_T, intent(in) :: denvapor
       REAL_T, intent(inout) :: den_ambient
 
+       ! input: denvapor = vapor density
+       !        den_ambient = ambient density
+       ! output: den_ambient = total density
+       !   (  denvapor * F =den_total * Y  ) * den_ambient +
+       !   (  den_ambient (1-F) = den_total * (1-Y) ) * denvapor
+       !   denvapor * den_ambient = 
+       !     den_total (Y * den_ambient + (1-Y) * denvapor)
+       !   den_total=denvapor * den_ambient/ 
+       !     (Y * den_ambient + (1-Y) * denvapor)
       if ((massfrac.ge.zero).and.(massfrac.le.one)) then
        if (denvapor.gt.zero) then
         if (den_ambient.gt.zero) then
