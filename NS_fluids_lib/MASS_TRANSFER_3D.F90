@@ -3561,6 +3561,7 @@ stop
       REAL_T species_old(2)
       REAL_T numerator,denominator
       REAL_T ambient_den
+      REAL_T gas_den_ratio
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4727,6 +4728,12 @@ stop
             endif
 
             ambient_den=fort_denconst(im_vapor)
+            if (ambient_den.gt.zero) then
+             ! do nothing
+            else
+             print *,"ambient_den invalid"
+             stop
+            endif
 
             if (local_freezing_model.eq.0) then !Stefan model
               vapor_den=density_old(iprobe_vapor)
@@ -4785,14 +4792,32 @@ stop
                ! Y=((denA denV)/den_mix - denV)/(denA-denV)
                !  =denV (denA-den_mix)/((denA-denV)den_mix)
               mtype=fort_material_type(im_vapor)
-              if ((mtype.eq.0).and. &
-                  (abs(ambient_den-vapor_den).gt.1.0D-3*vapor_den)) then
-               numerator=vapor_den*(ambient_den-density_mix_new(2)) 
-               denominator=density_mix_new(2)*(ambient_den-vapor_den) 
-               if (numerator*denominator.gt.zero) then
-                mass_frac_new(2)=numerator/denominator
+              if (mtype.eq.0) then
+               gas_den_ratio=vapor_den/ambient_den
+               if (abs(gas_den_ratio-one).gt.1.0D-3) then
+                numerator=vapor_den*(ambient_den-density_mix_new(2)) 
+                denominator=density_mix_new(2)*(ambient_den-vapor_den) 
+                if (numerator*denominator.gt.zero) then
+                 mass_frac_new(2)=numerator/denominator
+                else
+                 print *,"numerator/denominator invalid"
+                 stop
+                endif
+                if ((mass_frac_new(2).ge.zero).and. &
+                    (mass_frac_new(2).le.one)) then
+                 ! do nothing
+                else if (mass_frac_new(2).gt.one) then
+                 mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
+                   dF)/temp_new_vfrac
+                else
+                 print *,"mass_frac_new(2) invalid"
+                 stop
+                endif
+               else if (abs(gas_den_ratio-one).le.1.0D-3) then
+                mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
+                  dF)/temp_new_vfrac
                else
-                print *,"numerator/denominator invalid"
+                print *,"abs(gas_den_ratio-one) invalid"
                 stop
                endif
               else if (((mtype.ge.1).and.(mtype.le.fort_max_num_eos)).or. &
