@@ -3273,6 +3273,379 @@ end if
 end function ZEYU_delta
 
 
+!assume x_proj locates in centeral cell ((ni+1)/2,(nj+1)/2,(nk+1)/2)
+!The stencil is better to be 7x7x7 (or larger), 
+!because the range of delta function in GNBC model is 2*dx, 
+!if cannot find contact line in stencil, or closest_distance > 2*dx, or 
+!the cell cloest to CL is (i = 1 or ni, or j = ..., or k = ...(dim=3)), 
+!then return?
+!LS1_xp: fluid level set value of projection point
+!x(ni, nj, nk, dim): positions of stencil
+!x_proj(dim): position of projection point
+!dx: cell scale
+!if dim = 2, then nk = 1
+subroutine closest_distance_to_CL( &
+     LS1, & ! positive in fluid
+     LS3, & ! positive in solid
+     LS1_xp, &! bilinear interp of LS1 to x_projection
+     x, & ! stencil of x values
+     x_proj, &
+     dx, &
+     ni, nj, nk, & ! dimension of stencil e.g. 7
+     actual_angle, &
+     closest_distance, &
+     prob_dim)
+use global_utility_module
+implicit none
+
+integer,          intent(in ) :: ni, nj, nk, prob_dim
+double precision, intent(in ) :: LS1(ni, nj, nk), LS3(ni, nj, nk), &
+         dx, x(ni, nj, nk, prob_dim), x_proj(prob_dim), &
+         LS1_xp
+double precision, intent(out) :: actual_angle, closest_distance
+
+integer i, j, k, d, i_method, icl, jcl, kcl
+integer find_cl ! estimate if contact line exits
+double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
+                 nphi(3), npsi(3), nphi_xp(3), tpsi(3), nalpha(3), &
+                 x_inf_proj(prob_dim), x_inf_proj_alpha(prob_dim), &
+                 x_psi_proj(prob_dim), x_contact_point(prob_dim)
+!nphi: normal vector of contact line, grad(LS1)/|grad(LS1)|
+!npsi: normal vector of substrate, grad(LS3)/|grad(LS3)|
+!nphi_xp: unit vector in gradient direction of projection point, 
+!    grad(LS1)/|grad(LS1)|, assume it equal the value at centeral cell
+!tpsi: unit vector which is tangent to substrate, on plane_alpha 
+!    (constructed by npsi and nphi_xp), point outward to interface
+!nalpha: normal vector of plane_alpha
+!x_inf_proj: projection point of (icl,jcl,kcl) on interface
+!x_inf_proj_alpha: projection point of x_inf_proj_alpha on plane_alpha
+!x_psi_proj: projection point of x_inf_proj_alpha on substrate
+!x_contact_point: location of closest contact point
+
+    if (prob_dim.eq.3) then
+     if ((ni.eq.nj).and.(ni.eq.nk)) then
+      ! do nothing
+     else
+      print *,"ni,nj,nk must all be the same"
+      stop
+     endif
+    else if (prob_dim.eq.2) then
+     if ((ni.eq.nj).and.(nk.eq.1)) then
+      ! do nothing
+     else
+      print *,"ni,nj,nk must all be the same"
+      stop
+     endif
+    else
+     print *,"prob_dim invalid"
+     stop
+    endif
+    if (((ni+1)/2)*2.eq.ni+1) then
+       ! do nothing
+    else
+       print *,"ni invalid"
+       stop
+    endif
+    if (((nj+1)/2)*2.eq.nj+1) then
+       ! do nothing
+    else
+       print *,"nj invalid"
+       stop
+    endif
+    if (((nk+1)/2)*2.eq.nk+1) then
+       ! do nothing
+    else
+       print *,"nk invalid"
+       stop
+    endif
+    if (prob_dim .eq. 2 .and. nk .ne. 1) then
+       print *, "nk does not correspond to prob_dim"
+       stop
+    endif
+    if (prob_dim .eq. 3 .and. nk .eq. 1) then
+       print *, "nk does not correspond to prob_dim"
+       stop
+    endif
+
+    i_method = 2
+    find_cl = 0
+    eps = 1.1d0*dx
+    closest_distance = 1.d10
+    actual_angle = 0.d0
+
+!calculate normal vector of substrate
+    tmp(1) = (LS3((ni+1)/2+1,(nj+1)/2,(nk+1)/2)- &
+              LS3((ni+1)/2-1,(nj+1)/2,(nk+1)/2))/(2.d0*dx)
+    tmp(2) = (LS3((ni+1)/2,(nj+1)/2+1,(nk+1)/2)- &
+              LS3((ni+1)/2,(nj+1)/2-1,(nk+1)/2))/(2.d0*dx)
+    if (prob_dim .eq. 3) then
+       tmp(3) = (LS3((ni+1)/2,(nj+1)/2,(nk+1)/2+1)- &
+                 LS3((ni+1)/2,(nj+1)/2,(nk+1)/2-1))/(2.d0*dx)
+    else
+       tmp(3) = 0.d0
+    endif
+    mag = 0.d0
+    do d = 1, prob_dim
+       mag = mag+tmp(d)*tmp(d)
+    enddo
+    mag = sqrt(mag)
+    do d = 1, prob_dim
+       npsi(d) = tmp(d)/mag
+    enddo
+
+!find closest distance and actual angle
+
+!method 1: approximate value, find closest cell center (with different LS 
+!          sign and close to substrate)
+    if (i_method .eq. 1) then
+       closest_distance = 1.d10
+       do i = 1, ni
+          do j = 1, nj
+             do k = 1, nk
+                if (LS1(i,j,k)*LS1_xp .le. 0.d0 .and. &
+                    abs(LS3(i,j,k)) .lt. eps) then
+                   find_cl = 1
+                   dis = 0.d0
+                   do d = 1, prob_dim
+                      dis = dis+(x(i,j,k,d)-x_proj(d))**2.d0
+                   enddo
+                   dis = sqrt(dis)
+                   if (dis .lt. closest_distance) then
+                      closest_distance = dis
+                      if (LS3(i,j,k) .lt. 0.d0) then
+                         icl = i
+                         jcl = j
+                         kcl = k
+                      endif
+                   endif
+                endif
+             enddo
+          enddo
+       enddo
+       if (find_cl .ne. 1) then
+          print *, "Cannot find contact line!"
+          return
+       endif
+       if (icl .eq. 1 .or. icl .eq. ni .or. &
+           jcl .eq. 1 .or. jcl .eq. nj .or. &
+           (prob_dim .eq. 3 .and. (kcl .eq. 1 .or. kcl .eq. nk))) then
+          print *, "Too far from contact line!"
+          return
+       endif
+!calculate normal vector of contact line
+       tmp(1) = (LS1(icl+1,jcl,kcl)-LS1(icl-1,jcl,kcl))/(2.d0*dx)
+       tmp(2) = (LS1(icl,jcl+1,kcl)-LS1(icl,jcl-1,kcl))/(2.d0*dx)
+       if (prob_dim .eq. 3) then
+          tmp(3) = (LS1(icl,jcl,kcl+1)-LS1(icl,jcl,kcl-1))/(2.d0*dx)
+       else
+          tmp(3) = 0.d0
+       endif
+       mag = 0.d0
+       do d = 1, prob_dim
+          mag = mag+tmp(d)*tmp(d)
+       enddo
+       mag = sqrt(mag)
+!calculate actual contact angle
+       costheta = 0.d0
+       do d = 1, prob_dim
+          nphi(d) = tmp(d)/mag
+          costheta = costheta + nphi(d) * npsi(d)
+       enddo
+       actual_angle = acos(costheta)
+
+!method 2:
+!  define: phi = LS1, psi = LS3
+!  step1: calculate nphi_xp based on LS1 value in centeral cell, 
+!         with nphi_xp and npsi, determine plane-alpha (which is 
+!         perpendicular to substrate and interface)
+!  step2: calculate tpsi on substrate and plane-alpha, with point x_proj
+!         and vector tpsi, we can determine line L (contact point is on L)
+!  step3: when -eps<psi<0 and |phi|<eps and |(x-x_proj) X tpsi|<eps,
+!         find (icl,jcl,kcl) makes |phi| minimum
+!  step4: calculate nphi based on LS1 value in (icl,jcl,kcl)
+!  step5: calculate actual_angle based on nphi and npsi
+!  step6: project (icl,jcl,kcl) to interface based on nphi and 
+!         LS1(icl,jcl,kcl), get point x_inf_proj
+!  step7: project x_inf_proj to plane_alpha, get x_inf_proj_alpha
+!  step8: get distance between x_inf_proj_alpha and line L, dis, and 
+!         intersection x_psi_proj
+!  step9:get x_contact_point = x_psi_proj + dis/tan(actual_angle) * tpsi
+!  step10:get closest_distance = |x_proj - x_contact_point|
+
+    else if (i_method .eq. 2) then
+
+!calculate unit vector in gradient direction of projection point, nphi_xp
+       tmp(1) = (LS1((ni+1)/2+1,(nj+1)/2,(nk+1)/2)- &
+                 LS1((ni+1)/2-1,(nj+1)/2,(nk+1)/2))/(2.d0*dx)
+       tmp(2) = (LS1((ni+1)/2,(nj+1)/2+1,(nk+1)/2)- &
+                 LS1((ni+1)/2,(nj+1)/2-1,(nk+1)/2))/(2.d0*dx)
+       if (prob_dim .eq. 3) then
+          tmp(3) = (LS1((ni+1)/2,(nj+1)/2,(nk+1)/2+1)- &
+                    LS1((ni+1)/2,(nj+1)/2,(nk+1)/2-1))/(2.d0*dx)
+       else
+          tmp(3) = 0.d0
+       endif
+       mag = 0.d0
+       do d = 1, prob_dim
+          mag = mag+tmp(d)*tmp(d)
+       enddo
+       mag = sqrt(mag)
+       do d = 1, prob_dim
+          nphi_xp(d) = tmp(d)/mag
+       enddo
+!calculate tpsi
+!  nalpha = nphi_xp X npsi (X: cross product)
+!  nalpha = nalpha / |nalpha|
+!  tpsi = nalpha X npsi
+!  tpsi = tpsi / |tpsi|
+       call crossprod(nphi_xp, npsi, nalpha)
+       mag = 0.d0
+       do d = 1, prob_dim
+          mag = mag+nalpha(d)*nalpha(d)
+       enddo
+       mag = sqrt(mag)
+       do d = 1, prob_dim
+          nalpha(d) = nalpha(d)/mag
+       enddo
+       call crossprod(nalpha, npsi, tpsi)
+       mag = 0.d0
+       do d = 1, prob_dim
+          mag = mag+tpsi(d)*tpsi(d)
+       enddo
+       mag = sqrt(mag)
+       do d = 1, prob_dim
+          tpsi(d) = tpsi(d)/mag
+       enddo
+!find icl, jcl, kcl
+       phimin = 1.d10
+       do i = 1, ni
+          do j = 1, nj
+             do k = 1, nk
+                do d = 1, 2
+                   tmp(d) = x(i,j,k,d) - x_proj(d)
+                enddo
+                if (prob_dim .eq. 3) then
+                   tmp(3) = x(i,j,k,3) - x_proj(3)
+                else
+                   tmp(3) = 0.d0
+                endif
+                call crossprod(tmp, tpsi, tmp1)
+                dis = 0.d0
+                do d = 1, prob_dim
+                   dis = dis+tmp1(d)*tmp1(d)
+                enddo
+                dis = sqrt(dis)
+                if (LS3(i,j,k) .le. 0.d0 .and. LS3(i,j,k) .gt. -eps .and. &
+                    abs(LS1(i,j,k)) .lt. eps .and. dis .lt. eps) then
+                   find_cl = 1
+                   if (abs(LS1(i,j,k)) .lt. phimin) then
+                      phimin = abs(LS1(i,j,k))
+                      icl = i
+                      jcl = j
+                      kcl = k
+                      !print *, "phimin = ", phimin
+                      !print *, "icl, jcl, kcl = ", icl, jcl, kcl
+                   endif
+                endif
+             enddo
+          enddo
+       enddo
+       if (find_cl .ne. 1) then
+          print *, "Cannot find contact line!"
+          return
+       endif
+       if (icl .eq. 1 .or. icl .eq. ni .or. &
+           jcl .eq. 1 .or. jcl .eq. nj .or. &
+           (prob_dim .eq. 3 .and. (kcl .eq. 1 .or. kcl .eq. nk))) then
+          print *, "Too far from contact line!"
+          return
+       endif
+!calculate nphi and actual angle
+       tmp(1) = (LS1(icl+1,jcl,kcl)-LS1(icl-1,jcl,kcl))/(2.d0*dx)
+       tmp(2) = (LS1(icl,jcl+1,kcl)-LS1(icl,jcl-1,kcl))/(2.d0*dx)
+       if (prob_dim .eq. 3) then
+          tmp(3) = (LS1(icl,jcl,kcl+1)-LS1(icl,jcl,kcl-1))/(2.d0*dx)
+       else
+          tmp(3) = 0.d0
+       endif
+       mag = 0.d0
+       do d = 1, prob_dim
+          mag = mag+tmp(d)*tmp(d)
+       enddo
+       mag = sqrt(mag)
+
+       costheta = 0.d0
+       do d = 1, prob_dim
+          nphi(d) = tmp(d)/mag
+          costheta = costheta + nphi(d) * npsi(d)
+          !print *, "d, nphi(d), npsi(d) = ", d, nphi(d), npsi(d)
+       enddo
+       actual_angle = acos(costheta)
+!get point x_inf_proj
+       do d = 1, prob_dim
+          x_inf_proj(d) = x(icl,jcl,kcl,d)-LS1(icl,jcl,kcl)*nphi(d)
+          !print *, "d = ", d, "x_inf_proj = ", x_inf_proj(d)
+       enddo
+!get point x_inf_proj_alpha
+       if (prob_dim .eq. 2) then
+          do d = 1, prob_dim
+             x_inf_proj_alpha(d) = x_inf_proj(d)
+          enddo
+       else if (prob_dim .eq. 3) then
+          dis = 0.d0
+          do d = 1, prob_dim
+             tmp(d) = x_inf_proj(d) - x_proj(d)
+             dis = dis + tmp(d) * nalpha(d)
+          enddo
+          !if x_inf_proj locates in left side of plane_alpha, dis < 0
+          do d = 1, prob_dim
+             x_inf_proj_alpha(d) = x_inf_proj(d)-dis*nalpha(d)
+             !print *, "d = ", d, "x_inf_proj_alpha = ", x_inf_proj_alpha(d)
+          enddo
+       else
+          print *, "prob_dim invalid"
+          stop
+       endif
+!get point x_psi_proj
+       dis = 0.d0
+       do d = 1, prob_dim
+          tmp(d) = x_inf_proj_alpha(d) - x_proj(d)
+          dis = dis + tmp(d) * npsi(d)
+       enddo
+       !if x_inf_proj_alpha locates in fluid zone, dis < 0
+       do d = 1, prob_dim
+          x_psi_proj(d) = x_inf_proj_alpha(d)-dis*npsi(d)
+          !print *, "d = ", d, "x_psi_proj = ", x_psi_proj(d)
+       enddo
+!get point x_contact_point
+       if (costheta .eq. 1.d0) then
+          print *, "contact angle equal zero"
+          stop
+       else if (costheta .eq. 0.d0) then
+          do d = 1, prob_dim
+             x_contact_point(d) = x_psi_proj(d)
+          enddo
+       else
+          do d = 1, prob_dim
+             x_contact_point(d) = x_psi_proj(d)-dis/tan(actual_angle) &
+                                  *tpsi(d)
+             !print *, "d = ", d, "x_contact_point = ", x_contact_point(d)
+          enddo
+       endif
+       closest_distance = 0.d0
+       do d = 1, prob_dim
+          closest_distance = closest_distance+(x_proj(d)- &
+                             x_contact_point(d))**2.d0
+       enddo
+       closest_distance = sqrt(closest_distance)
+
+    else
+       print *, "i_method invalid"
+       stop
+    endif
+
+  end subroutine closest_distance_to_CL
+
 
 ! ZEYU HUANG
 !mu_l: dynamic viscocity of liquid

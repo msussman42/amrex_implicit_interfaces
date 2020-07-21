@@ -2426,6 +2426,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     int mass_transfer_active=0;
 
      // 1. ADVECTION (both Eulerian and Lagrangian materials)
+     // 2. IF MDOT <> 0 in previous time step, then there
+     //    is expansion/compression
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
      if (disable_advection==0) {
@@ -2568,6 +2570,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
+	// CREATE SEEDS, NUCLEATION.
        for (int ilev=level;ilev<=finest_level;ilev++) {
         int nucleation_flag=1;
 	color_count=1; // filler
@@ -2855,6 +2858,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.avgDown(LS_Type,0,nmat,0);
        }
 
+         // FIND RATE OF PHASE CHANGE V=[k grad T]/L for fully saturated
+	 // boiling for example.
+         // EVAPORATION (partially saturated), or
+	 // EVAPORATION (fully saturated), or
+	 // BOILING (fully saturated), or
+	 // CONDENSATION (partially saturated), .....
          // traverse from coarsest to finest so that coarse/fine
          // BC are well defined.
          // sets the burning velocity flag from 0 to 2 if
@@ -2906,8 +2915,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
 
-          // unsplit advection of temperature, volume fraction and moments,
+          // unsplit advection using:
+	  // BURNING_VELOCITY_MF (interpolated to the nodes)
+	  //
+	  // of temperature, mass fraction,
+	  // volume fraction and moments,
           // and level set functions.
+	  // updates: JUMP_STRENGTH_MF  (rho_1/rho_2  - 1) expansion factor
          ns_level.level_phase_change_convert(isweep);
 
          ns_level.avgDown(LS_Type,0,nmat,0);

@@ -14968,7 +14968,7 @@ stop
        ! A FAB (fortran array box) is tessellated into tiles.
        ! i.e. a single FAB can contain multiple tiles.
        ! BOXLIB stores the FAB.   FAB's store data on a rectangular grid
-       ! traverse interior cells of a given tile.
+       ! traverse faces of a given tile.
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
@@ -14997,8 +14997,8 @@ stop
 
          if (law_of_the_wall.eq.0) then
           ! do nothing
-         else if ((law_of_the_wall.eq.1).or. &
-                  (law_of_the_wall.eq.2)) then
+         else if ((law_of_the_wall.eq.1).or. & !turbulent boundary layer CODY
+                  (law_of_the_wall.eq.2)) then !GNBC for contact line ZEYU
 
           do im=1,nmat
            LS_right(im)=LSCP(D_DECL(i,j,k),im)
