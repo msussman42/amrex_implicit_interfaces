@@ -224,6 +224,10 @@ private:
      // last two parameters are for structure of arrays.
      // NStructReal=number of extra Real variables 
      // (not including particle position)
+     //
+     // If ns.viscoelastic_model[im]==2 (elastic material) and
+     //    ns.particleLS_flag[im]==2 (particles inside and on interface),
+     //    then define "new_dataPC_BDRY" and "new_dataPC_BULK"
     Vector< ParticleContainer<N_EXTRA_REAL_BDRY,0,0,0 >* > new_dataPC_BDRY;
     Vector< ParticleContainer<N_EXTRA_REAL_BULK,0,0,0 >* > new_dataPC_BULK;
     Vector< ParticleContainer<N_EXTRA_REAL_SPRAY,0,0,0 >* > new_dataPC_SPRAY;

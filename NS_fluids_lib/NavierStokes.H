@@ -1872,6 +1872,7 @@ protected:
 
     static Vector<Real> elastic_time; // viscoelastic parameter
 
+     // 0,1 => viscoelastic FENE-CR material  2=> elastic material
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
     static Vector<int> les_model;

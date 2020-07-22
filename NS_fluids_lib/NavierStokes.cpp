@@ -18176,9 +18176,9 @@ NavierStokes::post_init (Real stop_time)
  ns_time_order=parent->Time_blockingFactor();
  slab_step=ns_time_order-1;
 
- if (level==0) {
+ const int finest_level = parent->finestLevel();
 
-  const int finest_level = parent->finestLevel();
+ if (level==0) {
 
    // in post_init: delete FSI_MF used by initData
   for (int ilev = 0; ilev <= finest_level; ilev++) {
@@ -18231,7 +18231,11 @@ NavierStokes::post_init (Real stop_time)
   }
 
   ParallelDescriptor::Barrier();
- } // level=0
+ } else if ((level>=1)&&(level<=finest_level)) {
+  // do nothing
+ } else {
+  amrex::Error("level invalid");
+ } 
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {

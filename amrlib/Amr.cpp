@@ -1073,6 +1073,8 @@ Amr::initialInit (Real strt_time,
   amr_level[lev]->post_regrid(0,finest_level,strt_time);
 
  // recomputes the timestep on all levels and updates statedata and dt_AMR
+ // ns.post_init calls: post_init_state, computeInitialDt, and
+ // sum_integrated_quantities.
  for (int lev = 0; lev <= finest_level; lev++)
   amr_level[lev]->post_init(stop_time);
 
