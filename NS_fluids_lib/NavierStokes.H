@@ -583,6 +583,8 @@ public:
     virtual void post_init (Real stop_time);
     void prepare_post_process(int post_init_flag);
 
+    void init_particle_container();
+
     //
     // Advance grids at this level in time.
     //
@@ -1481,6 +1483,9 @@ protected:
      // =1 store structure of array (i,j,k) data
     static Vector<int> structure_of_array_flag;  
     static Vector<int> particle_spray_flag;  
+
+    static int NS_ncomp_particles;
+
     static Real truncate_thickness;  // default is 2.0
 
     // 0  low order space and time

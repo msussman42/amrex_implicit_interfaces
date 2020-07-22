@@ -290,9 +290,12 @@ int  NavierStokes::SEM_advection_algorithm=0;
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
+
 Vector<int> NavierStokes::particleLS_flag; 
 Vector<int> NavierStokes::structure_of_array_flag; 
 Vector<int> NavierStokes::particle_spray_flag; 
+int NavierStokes::NS_ncomp_particles=0;
+
 Real NavierStokes::truncate_thickness=2.0;  
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
@@ -3661,6 +3664,17 @@ NavierStokes::read_params ()
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
     pp.queryarr("structure_of_array_flag",structure_of_array_flag,0,nmat);
     pp.queryarr("particle_spray_flag",particle_spray_flag,0,nmat);
+
+    NS_ncomp_particles=0;
+    for (int i=0;i<nmat;i++) {
+     if (particleLS_flag[i]>0)
+      NS_ncomp_particles++;
+     if (structure_of_array_flag[i]>0)
+      NS_ncomp_particles++;
+     if (particle_spray_flag[i]>0)
+      NS_ncomp_particles++;
+    } // i=0..nmat-1
+
     pp.queryarr("truncate_volume_fractions",truncate_volume_fractions,0,nmat);
     for (int i=0;i<nmat;i++) {
      if ((truncate_volume_fractions[i]<0)||
@@ -3833,12 +3847,16 @@ NavierStokes::read_params ()
         mof_ordering[i] << '\n';
       std::cout << "truncate_volume_fractions i= " << i << ' ' <<
         truncate_volume_fractions[i] << '\n';
+
       std::cout << "particleLS_flag i= " << i << ' ' <<
         particleLS_flag[i] << '\n';
       std::cout << "structure_of_array_flag i= " << i << ' ' <<
         structure_of_array_flag[i] << '\n';
       std::cout << "particle_spray_flag i= " << i << ' ' <<
         particle_spray_flag[i] << '\n';
+
+      std::cout << "NS_ncomp_particles= " << NS_ncomp_particles << '\n';
+
       std::cout << "viscosity_state_model i= " << i << ' ' <<
         viscosity_state_model[i] << '\n';
       std::cout << "viscoelastic_model i= " << i << ' ' <<
@@ -18204,6 +18222,7 @@ NavierStokes::post_init (Real stop_time)
 
   // Ensure state is consistent, i.e. velocity field is non-divergent,
   // Coarse levels are fine level averages, 
+  // initialize particles.
   //
   post_init_state();
 
@@ -18911,6 +18930,15 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 
 }  // subroutine prepare_post_process
 
+// initialize particles and copy to all "slab locations"
+// ONLY LEVEL==0 STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
+// PARTICLES THAT APPEAR ON ALL THE LEVELS.
+// ALSO: Only state[State_Type] has the particles.
+// DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
+void
+NavierStokes::init_particle_container() {
+
+}  // end subroutine init_particle_container()
 
  
 // should be cur_time=0 and prev_time=-1
@@ -18988,6 +19016,11 @@ NavierStokes::post_init_state () {
  ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
  if (color_count!=blobdata.size())
   amrex::Error("color_count!=blobdata.size()");
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.init_particle_container();
+ } 
 
  if (is_zalesak()) {
   for (int ilev=finest_level;ilev>=level;ilev--) {

@@ -20,12 +20,12 @@
 
 #include <StateDescriptor.H>
 
-// x,y,z is not extra; original (x,y,z), time added, #steps, are extra.
-#define N_EXTRA_REAL_BDRY (AMREX_SPACEDIM+2)
-#define N_EXTRA_REAL_BULK (AMREX_SPACEDIM+2)
-// x,y,z is not extra; mass, volume, energy
-#define N_EXTRA_REAL_SPRAY (3)
-#define N_EXTRA_SOA_ijk (AMREX_SPACEDIM)
+// When supermesh is done, there will be no need to convert flotsam
+// to particles since microscopic particles are recognized by the solver.
+// x,y,z is not extra; (x0,y0,z0) is extra.
+// Structure of Array components can be added real time.
+#define N_EXTRA_REAL (AMREX_SPACEDIM)
+
 namespace amrex {
 
 //
@@ -119,7 +119,8 @@ public:
     //
     void checkPoint (const std::string& name,
                      const std::string& fullpathname,
-                     std::ostream&      os);
+                     std::ostream&      os,
+		     int level);
     //
     // Initializes state data from a checkpoint file.
     //
@@ -213,28 +214,16 @@ private:
     // Pointer to new-time data.
     // MAX_NUM_SLAB entries.
     Vector< MultiFab* > new_data;
+     // ONLY LEVEL==0 STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
+     // PARTICLES THAT APPEAR ON ALL THE LEVELS.
+     // 
      // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
      // STRUCTURE OF ARRAYS: no base
-     // for each material, there are two particle containers: (1) interface
-     // particles, (2) interior particles.
-     // interface particles:
-     // x,y,z is not extra; original (x,y,z) and time added are extra.
-     // interior particles:
-     // x,y,z is not extra; original (x,y,z) and time added are extra.
-     // last two parameters are for structure of arrays.
-     // NStructReal=number of extra Real variables 
-     // (not including particle position)
      //
      // If ns.viscoelastic_model[im]==2 (elastic material) and
      //    ns.particleLS_flag[im]==2 (particles inside and on interface),
-     //    then define "new_dataPC_BDRY" and "new_dataPC_BULK"
-    Vector< ParticleContainer<N_EXTRA_REAL_BDRY,0,0,0 >* > new_dataPC_BDRY;
-    Vector< ParticleContainer<N_EXTRA_REAL_BULK,0,0,0 >* > new_dataPC_BULK;
-    Vector< ParticleContainer<N_EXTRA_REAL_SPRAY,0,0,0 >* > new_dataPC_SPRAY;
-    Vector< ParticleContainer<0,0,0,N_EXTRA_SOA_ijk >* > 
-	    structure_of_arrayLS_inner;
-    Vector< ParticleContainer<0,0,0,N_EXTRA_SOA_ijk >* > 
-	    structure_of_arrayLS_outer;
+     //    then define "new_dataPC"
+    Vector< ParticleContainer<N_EXTRA_REAL,0,0,0 >* > new_dataPC;
     //
     // Boundary conditions for the grids at this level.
     //

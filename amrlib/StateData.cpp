@@ -22,7 +22,7 @@ namespace amrex {
 const Real INVALID_TIME = -1.0e200;
 
 // for each AmrLevel, there is a class of type "StateData" and within StateData
-// there is an array of MultiFabs called "new_data
+// there is an array of MultiFabs called "new_data"
 // 1. class Amr
 // 2. Vector<std::unique_ptr<AmrLevel> > amr_level; 
 // 3. Vector<StateData> state;  
@@ -873,8 +873,13 @@ StateData::CopyOldToNew() {
 void
 StateData::checkPoint (const std::string& name,
                        const std::string& fullpathname,
-                       std::ostream&  os)
+                       std::ostream&  os,int level)
 {
+
+    if (level>=0) {
+     // do nothing
+    } else
+     amrex::Error("level invalid");
 
     std::string NewSuffix[StateData_MAX_NUM_SLAB];
     std::string mf_name[StateData_MAX_NUM_SLAB];
@@ -888,46 +893,40 @@ StateData::checkPoint (const std::string& name,
      mf_name[i]+=NewSuffix[i];
     }
 
-    if (desc->store_in_checkpoint()) {
-
-     for (int i=0;i<=bfact_time_order;i++) 
-      if (new_data[i]==0)
+    for (int i=0;i<=bfact_time_order;i++) {
+     if (new_data[i]==0)
        amrex::Error("new_data not allocated");
+    }
 
-     if (ParallelDescriptor::IOProcessor()) {
+    if (ParallelDescriptor::IOProcessor()) {
 
-        os << domain << '\n';
+     os << domain << '\n';
 
-        grids.writeOn(os);
+     grids.writeOn(os);
 
-        for (int i=0;i<=bfact_time_order;i++)  {
-         os << time_array[i] << '\n';
-        }
+     for (int i=0;i<=bfact_time_order;i++)  {
+       os << time_array[i] << '\n';
+     }
 
          
-         // output to the header file:
-        os << bfact_time_order << '\n';
-        for (int i=0;i<=bfact_time_order;i++) {
-          os << mf_name[i] << '\n';
-        }  // i
-
-     }  // IOProcessor ?
-
+      // output to the header file:
+     os << bfact_time_order << '\n';
      for (int i=0;i<=bfact_time_order;i++) {
-      BL_ASSERT(new_data[i]);
+       os << mf_name[i] << '\n';
+     }  // i
 
-      std::string mf_fullpath_new = fullpathname; 
-      mf_fullpath_new += NewSuffix[i];
-       // this file is not the header file
-      VisMF::Write(*new_data[i],mf_fullpath_new);
-     } 
-   
+    }  // IOProcessor ?
 
-    } else if (! desc->store_in_checkpoint()) {
-     amrex::Error("should never reach this point");
-    } else
-     amrex::Error("store in checkpoint invalid");
-}
+    for (int i=0;i<=bfact_time_order;i++) {
+     BL_ASSERT(new_data[i]);
+
+     std::string mf_fullpath_new = fullpathname; 
+     mf_fullpath_new += NewSuffix[i];
+     // this file is not the header file
+     VisMF::Write(*new_data[i],mf_fullpath_new);
+    }  // i=0..bface_time_order
+
+} // end subroutine StateData::checkPoint
 
 void
 StateData::printTimeInterval (std::ostream &os) const

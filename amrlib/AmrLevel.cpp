@@ -99,14 +99,8 @@ AmrLevel::restart (Amr&          papa,
 
     int ndesc = desc_lst.size();
 
-    int ndesc_checkpoint=0;
-    for (int j=0;j<ndesc;j++) {
-     if (desc_lst[j].store_in_checkpoint()==true)
-      ndesc_checkpoint++;
-    } 
-
-    if (nstate!=ndesc_checkpoint)
-     amrex::Error("nstate and ndesc_checkpoint do not match");
+    if (nstate!=ndesc)
+     amrex::Error("nstate and ndesc do not match");
 
     dmap.define(grids);
 
@@ -118,9 +112,8 @@ AmrLevel::restart (Amr&          papa,
     state.resize(ndesc);
     for (int icomp = 0; icomp < ndesc; icomp++)
     {
-     if (desc_lst[icomp].store_in_checkpoint()==true) {
-      int time_order = parent->Time_blockingFactor();
-      state[icomp].restart(
+     int time_order = parent->Time_blockingFactor();
+     state[icomp].restart(
         time_order,
         level_slab_dt_type,
         level_MAX_NUM_SLAB,
@@ -132,28 +125,10 @@ AmrLevel::restart (Amr&          papa,
         desc_lst[icomp],
         desc_lstGHOST[icomp],
         papa.theRestartFile());
-     } else if (desc_lst[icomp].store_in_checkpoint()==false) {
-      Real time=parent->cumTime();
-      Real dt=parent->getDt();
-      int time_order = parent->Time_blockingFactor();
-      state[icomp].define(
-        level,
-        geom.Domain(),
-        grids,
-        dmap,
-        desc_lst[icomp],
-        desc_lstGHOST[icomp],
-        time, 
-        dt,
-        time_order,
-        level_slab_dt_type,
-        level_MAX_NUM_SLAB);
-     } else
-      amrex::Error("store_in_checkpoint invalid"); 
     }
 
     finishConstructor();
-}
+}  // end subroutine AmrLevel::restart
 
 void
 AmrLevel::finishConstructor () {
@@ -215,11 +190,7 @@ AmrLevel::checkPoint (const std::string& dir,
                       std::ostream&      os)
 {
     int ndesc = desc_lst.size();
-    int ndesc_checkpoint=0;
-    for (int j=0;j<ndesc;j++) {
-     if (desc_lst[j].store_in_checkpoint()==true)
-      ndesc_checkpoint++;
-    } 
+
     //
     // Build directory to hold the MultiFabs in the StateData at this level.
     // The directory is relative the the directory containing the Header file.
@@ -251,7 +222,7 @@ AmrLevel::checkPoint (const std::string& dir,
     {
         os << level << '\n' << geom  << '\n';
         grids.writeOn(os);
-        os << ndesc_checkpoint << '\n';
+        os << ndesc << '\n';
     }
     //
     // Output state data.
@@ -266,15 +237,14 @@ AmrLevel::checkPoint (const std::string& dir,
         //
         // There is only one MultiFab written out at each level in HyperCLaw.
         //
-        if (desc_lst[icomp].store_in_checkpoint()==true) {
-         std::string PathNameInHdr = 
-           amrex::Concatenate(Level_string + "/SD_", icomp, 1);
-         std::string FullPathName  = 
-           amrex::Concatenate(FullPath + "/SD_", icomp, 1);
+        std::string PathNameInHdr = 
+          amrex::Concatenate(Level_string + "/SD_", icomp, 1);
+        std::string FullPathName  = 
+          amrex::Concatenate(FullPath + "/SD_", icomp, 1);
 
-          // os=HeaderFile 
-         state[icomp].checkPoint(PathNameInHdr, FullPathName, os);
-        }
+         // os=HeaderFile 
+        state[icomp].checkPoint(PathNameInHdr, FullPathName, os,level);
+        
     }
 }
 

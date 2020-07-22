@@ -467,7 +467,7 @@ NavierStokes::variableSetUp ()
     int nmat=num_materials;
     int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
-    bool store_in_checkpoint=true;
+    int null_ncomp_particles=0; 
 
     if ((nmat<1)||(nmat>MAX_NUM_MATERIALS)) {
      std::cout << "nmat= " << nmat << '\n';
@@ -517,9 +517,9 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(Umac_Type,IndexType::TheUMACType(),
-       0,nsolveMM_FACE,&umac_interp,store_in_checkpoint);
+       0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
     desc_lstGHOST.addDescriptor(Umac_Type,IndexType::TheUMACType(),
-       0,nsolveMM_FACE,&umac_interp,store_in_checkpoint);
+       0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
     set_x_vel_bc(bc,phys_bc);
 
     std::string u_mac_str="umac"; 
@@ -532,9 +532,9 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,nsolveMM_FACE,&vmac_interp,store_in_checkpoint);
+      0,nsolveMM_FACE,&vmac_interp,null_ncomp_particles);
     desc_lstGHOST.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,nsolveMM_FACE,&vmac_interp,store_in_checkpoint);
+      0,nsolveMM_FACE,&vmac_interp,null_ncomp_particles);
     set_y_vel_bc(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
@@ -550,9 +550,9 @@ NavierStokes::variableSetUp ()
 
       // ngrow=0
     desc_lst.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,nsolveMM_FACE,&wmac_interp,store_in_checkpoint);
+      0,nsolveMM_FACE,&wmac_interp,null_ncomp_particles);
     desc_lstGHOST.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,nsolveMM_FACE,&wmac_interp,store_in_checkpoint);
+      0,nsolveMM_FACE,&wmac_interp,null_ncomp_particles);
     set_z_vel_bc(bc,phys_bc);
 
     std::string w_mac_str="wmac";
@@ -574,10 +574,10 @@ NavierStokes::variableSetUp ()
 // DIV -------------------------------------------
 
     desc_lst.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,num_materials_vel,&sem_interp_DEFAULT,store_in_checkpoint);
+     1,num_materials_vel,&sem_interp_DEFAULT,null_ncomp_particles);
 
     desc_lstGHOST.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,1,&sem_interp_DEFAULT,store_in_checkpoint);
+     1,1,&sem_interp_DEFAULT,null_ncomp_particles);
 
     set_extrap_bc(bc,phys_bc);
     std::string divghost_str="divghost"; 
@@ -597,12 +597,12 @@ NavierStokes::variableSetUp ()
     if ((nparts>=1)&&(nparts<nmat)) {
  
      desc_lst.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,nparts*AMREX_SPACEDIM,&pc_interp,store_in_checkpoint);
+      1,nparts*AMREX_SPACEDIM,&pc_interp,null_ncomp_particles);
 
      int ncghost_solid=1+AMREX_SPACEDIM;
 
      desc_lstGHOST.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,ncghost_solid,&pc_interp,store_in_checkpoint);
+      1,ncghost_solid,&pc_interp,null_ncomp_particles);
 
      int dcomp=0;
      set_extrap_bc(bc,phys_bc);
@@ -699,12 +699,12 @@ NavierStokes::variableSetUp ()
  
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,num_materials_viscoelastic*NUM_TENSOR_TYPE,&pc_interp,
-      store_in_checkpoint);
+      null_ncomp_particles);
 
      int ncghost_elastic=1;
 
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
-      1,ncghost_elastic,&pc_interp,store_in_checkpoint);
+      1,ncghost_elastic,&pc_interp,null_ncomp_particles);
 
      int dcomp=0;
      set_extrap_bc(bc,phys_bc);
@@ -813,7 +813,7 @@ NavierStokes::variableSetUp ()
     int ncomp_ls_ho=(AMREX_SPACEDIM+1)*nmat;
 
     desc_lst.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_ls_ho,&pc_interp,store_in_checkpoint);
+     1,ncomp_ls_ho,&pc_interp,null_ncomp_particles);
 
      // components 0..nmat * AMREX_SPACEDIM-1 are for interface normal vectors.
      // components nmat * AMREX_SPACEDIM .. nmat * AMREX_SPACEDIM + 
@@ -822,7 +822,7 @@ NavierStokes::variableSetUp ()
     int ncomp_LS_ghost=(2*AMREX_SPACEDIM+1)*nmat;
 
     desc_lstGHOST.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_LS_ghost,&pc_interp,store_in_checkpoint);
+     1,ncomp_LS_ghost,&pc_interp,null_ncomp_particles);
 
     int dcomp=0;
     for (int imls=0;imls<nmat;imls++) { 
@@ -991,9 +991,10 @@ NavierStokes::variableSetUp ()
 
 
 // State_Type  ------------------------------------------------- 
-
+// newdata FABS have ncomp=desc->nComp() components.
+//
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,nc,&pc_interp,store_in_checkpoint);
+     1,nc,&pc_interp,NS_ncomp_particles);
 
     int ncomp_per_burning=AMREX_SPACEDIM;
     int ncomp_per_tsat=2; // interface temperature and mass fraction
@@ -1006,7 +1007,7 @@ NavierStokes::variableSetUp ()
     int ncghost=1+AMREX_SPACEDIM+nmat*ngeom_recon+1+nburning+ncomp_tsat;
 
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,ncghost,&pc_interp,store_in_checkpoint);
+     1,ncghost,&pc_interp,null_ncomp_particles);
 
     dcomp=0;
     set_extrap_bc(bc,phys_bc);

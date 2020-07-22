@@ -167,12 +167,12 @@ DescriptorList::addDescriptor (int indx,
       int                         nextra,
       int                         num_comp, 
       Interpolater*               interp,
-      bool                        store_in_checkpoint)
+      int                         ncomp_PC)
 {
     if (indx >= desc.size())
         desc.resize(indx+1);
     desc[indx].reset(new StateDescriptor(typ,indx,nextra,num_comp,
-     interp,store_in_checkpoint));
+     interp,ncomp_PC));
 }  
 
 StateDescriptor::StateDescriptor () noexcept
@@ -181,7 +181,7 @@ StateDescriptor::StateDescriptor () noexcept
     ncomp(0),
     ngrow(0),
     mapper(0),
-    m_store_in_checkpoint(true)
+    m_ncomp_PC(0)
 {}
 
 StateDescriptor::StateDescriptor (IndexType btyp,
@@ -189,14 +189,14 @@ StateDescriptor::StateDescriptor (IndexType btyp,
         int                         nextra, 
         int                         num_comp,
         Interpolater*               interp,
-        bool                        store_in_checkpoint)
+        int                         ncomp_PC)
     :
     type(btyp),
     id(ident),
     ncomp(num_comp),
     ngrow(nextra),
     mapper(interp),
-    m_store_in_checkpoint(store_in_checkpoint)
+    m_ncomp_PC(ncomp_PC)
 {
     BL_ASSERT (num_comp > 0);
    
@@ -307,10 +307,10 @@ StateDescriptor::getBCs () const noexcept
 }
 
 
-bool
-StateDescriptor::store_in_checkpoint () const noexcept
+int
+StateDescriptor::get_ncomp_PC () const noexcept
 {
-    return m_store_in_checkpoint;
+    return m_ncomp_PC;
 }
 
 
@@ -338,14 +338,14 @@ StateDescriptor::define (IndexType btyp,
       int                         nextra,
       int                         num_comp,
       Interpolater*               interp,
-      bool                        store_in_checkpoint)
+      int                         ncomp_PC)
 {
     type     = btyp;
     id       = ident;
     ngrow    = nextra;
     ncomp    = num_comp;
     mapper   = interp;
-    m_store_in_checkpoint = store_in_checkpoint;
+    m_ncomp_PC = ncomp_PC;
 
     BL_ASSERT (num_comp > 0);
    

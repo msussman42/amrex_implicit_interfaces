@@ -106,7 +106,7 @@ public:
                      int           nextra,
                      int           num_comp,
                      Interpolater* interp,
-                     bool          store_in_checkpoint); // default true
+                     int           ncomp_PC); // default true
     //
     // The destructor.
     //
@@ -119,7 +119,7 @@ public:
                  int           nextra,
                  int           num_comp,
                  Interpolater* interp,
-                 bool          store_in_checkpoint);  // default true
+                 int           ncomp_PC);  // default true
     //
     // Sets details of comp component.
     //
@@ -226,7 +226,7 @@ public:
     //
     // Should store this StateData in the checkpoint file
     //
-    bool store_in_checkpoint () const noexcept;
+    int get_ncomp_PC () const noexcept;
 
     bool master (int i) const { return m_master[i]; }
 
@@ -239,7 +239,7 @@ private:
     int                ncomp;    // Number of components
     int                ngrow;    // Grow factor
     Interpolater*      mapper;   // Default interpolator
-    bool               m_store_in_checkpoint; // store in checkpoint file?
+    int                m_ncomp_PC; // store in checkpoint file?
     Vector<std::string> names;    // Printable names of components
     Vector<BCRec>       bc;       // Array of bndry types for entire level
      //!< Array of pointers to bndry fill functions
@@ -297,7 +297,7 @@ public:
           int                         nextra,
           int                         num_comp,
           Interpolater*               interp,
-          bool                        store_in_checkpoint); // default true
+          int                         ncomp_PC); // default true
     //
     // Calls resetComponentBCs() on StateDescriptor at index indx.
     //
