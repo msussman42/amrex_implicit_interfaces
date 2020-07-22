@@ -4735,6 +4735,12 @@ stop
              stop
             endif
 
+             ! at CONSTANT DENSITY:
+             ! "vapor" is what material transforms TO if system is HEATED.
+             ! "condensed" is what material transforms FROM if system is HEATED.
+             ! "vapor" is what material transforms FROM if system is COOLED.
+             ! "condensed" is what material transforms TO if system is COOLED.
+             ! 
             if (local_freezing_model.eq.0) then !Stefan model
               vapor_den=density_old(iprobe_vapor)
               condensed_den=density_old(iprobe_condensed)
@@ -4785,7 +4791,7 @@ stop
               density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
                 vapor_den*dF)/temp_new_vfrac
                ! If liquid and gas mixture are incompressible, then
-               ! determine Y_new so that den_mix= 
+               ! determine Y so that den_mix= 
                !   (denV denA)/(Y denA + (1-Y) denV )
                ! den_mix * ( Y(denA-denV) + denV ) = denA denV
                ! Y(denA -denV) + denV = denA denV/den_mix
@@ -4953,7 +4959,12 @@ stop
              stop
             endif
 
-           endif ! |dF|>EBVOFTOL
+           else if (abs(dF).le.EBVOFTOL) then
+            ! do nothing
+           else
+            print *,"dF became corrupt"
+            stop
+           endif 
 
           else if (isweep.eq.1) then
 
