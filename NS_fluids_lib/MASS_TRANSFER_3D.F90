@@ -4715,13 +4715,13 @@ stop
             if (LL.gt.zero) then !evaporation
               im_vapor=im_dest
               im_condensed=im_source
-              iprobe_vapor=2
-              iprobe_condensed=1
+              iprobe_vapor=2 ! dest
+              iprobe_condensed=1 !source
             else if (LL.lt.zero) then ! condensation
               im_vapor=im_source
               im_condensed=im_dest
-              iprobe_vapor=1
-              iprobe_condensed=2
+              iprobe_vapor=1 ! source
+              iprobe_condensed=2 ! dest
             else
               print *,"im_vapor invalid"
               stop
