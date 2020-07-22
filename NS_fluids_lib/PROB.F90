@@ -15905,6 +15905,19 @@ END SUBROUTINE Adist
          print *,"num_materials should be 3"
          stop
         endif
+        if (SDIM.eq.2) then
+         if (yblob2.eq.zblob2) then
+          ! do nothing
+         else 
+          print *,"expecting yblob2==zblob2 in 2D"
+          stop
+         endif
+        else if (SDIM.eq.3) then
+         ! check nothing
+        else
+         print *,"dimension bust"
+         stop
+        endif
         distline=zblob2-z
         dist(3)=dist(1)
         if (distline.lt.dist(1)) then
