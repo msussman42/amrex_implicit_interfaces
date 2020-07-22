@@ -3562,6 +3562,7 @@ stop
       REAL_T numerator,denominator
       REAL_T ambient_den
       REAL_T gas_den_ratio
+      REAL_T delta_mass_local
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4841,36 +4842,72 @@ stop
               print *,"temp_new_vfrac invalid"
               stop
              endif
-             
-             temp_new_vfrac=oldvfrac(im_source)-dF
-             if (temp_new_vfrac.gt.EBVOFTOL) then 
-              density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
-               condensed_den*dF)/temp_new_vfrac
-             else if (temp_new_vfrac.le.EBVOFTOL) then
-              density_mix_new(1)=density_old(1)
+            
+             if (im_source.eq.im_condensed) then 
+              temp_new_vfrac=oldvfrac(im_source)-dF
+              if (temp_new_vfrac.gt.EBVOFTOL) then 
+               mtype=fort_material_type(im_source)
+               if (mtype.eq.0) then
+                density_mix_new(1)=density_old(1)
+               else if ((mtype.ge.1).and. &
+                        (mtype.le.fort_max_num_eos)) then
+                density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
+                 condensed_den*dF)/temp_new_vfrac
+               else
+                print *,"mtype invalid"
+                stop
+               endif
+              else if (temp_new_vfrac.le.EBVOFTOL) then
+               density_mix_new(1)=density_old(1)
+              else
+               print *,"temp_new_vfrac invalid"
+               stop
+              endif
              else
-              print *,"temp_new_vfrac invalid"
+              print *,"expecting im_source==im_condensed"
               stop
              endif
              mass_frac_new(1)=one
 
             else if (LL.lt.zero) then ! condensation
 
-             temp_new_vfrac=oldvfrac(im_dest)+dF
-             if (temp_new_vfrac.gt.EBVOFTOL) then 
-              density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
-                condensed_den*dF)/temp_new_vfrac
-             else if (temp_new_vfrac.le.EBVOFTOL) then
-              density_mix_new(2)=density_old(2)
+             if (im_dest.eq.im_condensed) then 
+              temp_new_vfrac=oldvfrac(im_dest)+dF
+              if (temp_new_vfrac.gt.EBVOFTOL) then 
+               mtype=fort_material_type(im_dest)
+               if (mtype.eq.0) then
+                density_mix_new(2)=density_old(2)
+               else if ((mtype.ge.1).and. &
+                        (mtype.le.fort_max_num_eos)) then
+                density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
+                 condensed_den*dF)/temp_new_vfrac
+               else
+                print *,"mtype invalid"
+                stop
+               endif
+              else if (temp_new_vfrac.le.EBVOFTOL) then
+               density_mix_new(2)=density_old(2)
+              else
+               print *,"temp_new_vfrac invalid"
+               stop
+              endif
              else
-              print *,"temp_new_vfrac invalid"
+              print *,"expecting im_dest==im_condensed"
               stop
              endif
 
              temp_new_vfrac=oldvfrac(im_source)-dF
              if (temp_new_vfrac.gt.EBVOFTOL) then 
-              density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
-               vapor_den*dF)/temp_new_vfrac
+              denratio_factor=density_old(1)/vapor_den-one
+              if (abs(denratio_factor).le.EBVOFTOL) then
+               density_mix_new(1)=density_old(1)
+              else if (abs(denratio_factor).gt.EBVOFTOL) then
+               density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
+                vapor_den*dF)/temp_new_vfrac
+              else
+               print *,"denratio_factor invalid"
+               stop
+              endif
               mass_frac_new(1)=(species_old(1)*oldvfrac(im_source)- &
                dF)/temp_new_vfrac
               if (mass_frac_new(1).lt.zero) then
@@ -4913,9 +4950,20 @@ stop
              endif
              base_index=num_materials_vel*(SDIM+1)
 
+             denratio_factor=density_mix_new(iprobe)/density_old(iprobe)-one
+               ! avoid loss of precision errors.
+             if (abs(denratio_factor).le.EBVOFTOL) then
+              delta_mass_local=density_old(iprobe)*dF
+             else if (abs(denratio_factor).ge.EBVOFTOL) then
+              delta_mass_local= &
+                density_mix_new(iprobe)*newvfrac(im_probe)- &
+                density_old(iprobe)*oldvfrac(im_probe)
+             else
+              print *,"denratio_factor invalid"
+              stop
+             endif
              deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_probe)= &
-                     density_mix_new(iprobe)*newvfrac(im_probe)- &
-                     density_old(iprobe)*oldvfrac(im_probe)
+                delta_mass_local
 
              snew(D_DECL(i,j,k),base_index+dencomp_probe)= &
                      density_mix_new(iprobe)
