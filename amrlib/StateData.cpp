@@ -256,8 +256,12 @@ StateData::restart (
        // read the file name from the header file.
      is >> mf_name;
       //
-      // Note that mf_name is relative to the Header file.
+      // Note that mf_name is relative to the Header file:
+      // mf_name=Level_<level num>/SD_<state index>_New_MF<slab index>
+      //
       // We need to prepend the name of the chkfile directory.
+      //
+      // e.g. chkfile=./chk<nsteps>
       //
      FullPathName = chkfile;
      if (!chkfile.empty() && chkfile[chkfile.length()-1] != '/')
@@ -265,6 +269,25 @@ StateData::restart (
      FullPathName += mf_name;
        // read from a file other than the header file.
      VisMF::Read(*new_data[i], FullPathName);
+
+     if (desc->get_ncomp_PC()==0) {
+      // do nothing
+     } else if (desc->get_ncomp_PC()>0) {
+
+      for (int PC_mat_index=0;PC_mat_index<desc->get_ncomp_PC();
+           PC_mat_index++) {
+       int raw_index=desc->get_ncomp_PC() * i + PC_mat_index;
+       std::string Part_name="FusionPart";
+       std::stringstream raw_string_stream(std::stringstream::in |
+          std::stringstream::out);
+       raw_string_stream << raw_index;
+       std::string raw_string=raw_string_stream.str();
+       Part_name+=raw_string;
+       new_dataPC[raw_index]->Restart(FullPathName,Part_name);
+      } // PC_mat_index=0..desc->get_ncomp_PC()-1 
+     } else
+      amrex::Error("desc->get_ncompPC() invalid");
+
 
     }  // i=0 ... bfact_time_order
 
