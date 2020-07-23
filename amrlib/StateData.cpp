@@ -891,6 +891,10 @@ StateData::checkPoint (const std::string& name,
     } else
      amrex::Error("level invalid");
 
+     // on input:  
+     //   name=Level_<level num>/SD_<state index>
+     //
+     // mf_name=Level_<level num>/SD_<state index>_New_MF<slab index>
     std::string NewSuffix[StateData_MAX_NUM_SLAB];
     std::string mf_name[StateData_MAX_NUM_SLAB];
     for (int i=0;i<=bfact_time_order;i++) {
@@ -928,12 +932,35 @@ StateData::checkPoint (const std::string& name,
     }  // IOProcessor ?
 
     for (int i=0;i<=bfact_time_order;i++) {
-     BL_ASSERT(new_data[i]);
+     if (new_data[i]==0)
+       amrex::Error("new_data not allocated");
 
+      // mf_fullpath_new=./chk<nsteps>/Level_<level num>/SD_<state index>
+      //   _New_MF<slab index> 
+      // fullpathname=./chk<nsteps>/Level_<level num>/SD_<state index>
      std::string mf_fullpath_new = fullpathname; 
      mf_fullpath_new += NewSuffix[i];
      // this file is not the header file
      VisMF::Write(*new_data[i],mf_fullpath_new);
+
+     if (desc->get_ncomp_PC()==0) {
+      // do nothing
+     } else if (desc->get_ncomp_PC()>0) {
+
+      for (int PC_mat_index=0;PC_mat_index<desc->get_ncomp_PC();
+           PC_mat_index++) {
+       int raw_index=desc->get_ncomp_PC() * i + PC_mat_index;
+       std::string Part_name="FusionPart";
+       std::stringstream raw_string_stream(std::stringstream::in |
+          std::stringstream::out);
+       raw_string_stream << raw_index;
+       std::string raw_string=raw_string_stream.str();
+       Part_name+=raw_string;
+       new_dataPC[raw_index]->Checkpoint(mf_fullpath_new,Part_name);
+      } // PC_mat_index=0..desc->get_ncomp_PC()-1 
+     } else
+      amrex::Error("desc->get_ncompPC() invalid");
+
     }  // i=0..bface_time_order
 
 } // end subroutine StateData::checkPoint

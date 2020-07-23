@@ -224,7 +224,7 @@ public:
       sameInterps (Vector<int> scompBC_map, int ncomp_in) const;
 
     //
-    // Should store this StateData in the checkpoint file
+    // number of particle containers per slab.
     //
     int get_ncomp_PC () const noexcept;
 
