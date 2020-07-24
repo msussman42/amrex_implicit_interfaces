@@ -153,10 +153,18 @@ public:
     // Returns the new data.
     //
     MultiFab& newData (int slab_index);
+
+    ParticleContainer<N_EXTRA_REAL,0,0,0>&
+       newDataPC (int slab_index,int sub_index);
+
     //
     // Returns the new data.
     //
     const MultiFab& newData (int slab_index) const;
+
+    const ParticleContainer<N_EXTRA_REAL,0,0,0>&
+       newDataPC (int slab_index,int sub_index) const;
+
     //
     // Returns an array of boundary condition records for the 
     // specified component.  Each element in the array corresponds
@@ -174,10 +182,6 @@ public:
     // Prints out the time interval.
     //
     void printTimeInterval (std::ostream& os) const;
-    //
-    // True if there is any new data available.
-    //
-    bool hasNewData (int slab_index) const;
 
     int get_bfact_time_order() const;
 
@@ -223,7 +227,12 @@ private:
      // If ns.viscoelastic_model[im]==2 (elastic material) and
      //    ns.particleLS_flag[im]==2 (particles inside and on interface),
      //    then define "new_dataPC"
-    Vector< ParticleContainer<N_EXTRA_REAL,0,0,0 >* > new_dataPC;
+
+    using PLS_ParticleContainerType=ParticleContainer<N_EXTRA_REAL,0,0,0 >;
+
+    Vector< 
+	Vector<PLS_ParticleContainerType*> 
+	  > new_dataPC;
     //
     // Boundary conditions for the grids at this level.
     //

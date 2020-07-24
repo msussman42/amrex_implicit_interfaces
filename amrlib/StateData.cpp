@@ -44,6 +44,7 @@ StateData::StateData ()
 
    time_array.resize(StateData_MAX_NUM_SLAB);
    new_data.resize(StateData_MAX_NUM_SLAB);
+   new_dataPC.resize(StateData_MAX_NUM_SLAB);
 
    for (int i=0;i<StateData_MAX_NUM_SLAB;i++) {
     new_data[i]=0;
@@ -110,6 +111,7 @@ StateData::define (
     }
     time_array.resize(StateData_MAX_NUM_SLAB);
     new_data.resize(StateData_MAX_NUM_SLAB);
+    new_dataPC.resize(StateData_MAX_NUM_SLAB);
 
     domain = p_domain;
     desc = &d;
@@ -162,10 +164,21 @@ StateData::define (
     }
  
     int ncomp = desc->nComp();
+    int ncomp_PC = desc->get_ncomp_PC();
 
-    for (int i=0;i<=bfact_time_order;i++)
+    for (int i=0;i<=bfact_time_order;i++) {
      new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
        MFInfo().SetTag("new_data"),FArrayBoxFactory());
+     if (ncomp_PC>0) {
+      new_dataPC[i].resize(ncomp_PC);
+      for (int j=0;j<ncomp_PC;j++) {
+       new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
+      }
+     } else if (ncomp_PC==0) {
+      // do nothing
+     } else
+      amrex::Error("ncomp_PC invalid");
+    }
 
     buildBC();
 }
@@ -195,6 +208,7 @@ StateData::restart (
 
     time_array.resize(StateData_MAX_NUM_SLAB);
     new_data.resize(StateData_MAX_NUM_SLAB);
+    new_dataPC.resize(StateData_MAX_NUM_SLAB);
 
     bfact_time_order=time_order;
 
@@ -248,10 +262,22 @@ StateData::restart (
     std::string mf_name;
     std::string FullPathName;
 
+    int ncomp_PC = desc->get_ncomp_PC();
+
     for (int i=0;i<=bfact_time_order;i++) {
 
      new_data[i]=new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
         MFInfo().SetTag("new_data"),FArrayBoxFactory());
+
+     if (ncomp_PC>0) {
+      new_dataPC[i].resize(ncomp_PC);
+      for (int j=0;j<ncomp_PC;j++) {
+       new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
+      }
+     } else if (ncomp_PC==0) {
+      // do nothing
+     } else
+      amrex::Error("ncomp_PC invalid");
 
        // read the file name from the header file.
      is >> mf_name;
@@ -270,24 +296,22 @@ StateData::restart (
        // read from a file other than the header file.
      VisMF::Read(*new_data[i], FullPathName);
 
-     if (desc->get_ncomp_PC()==0) {
+     if (ncomp_PC==0) {
       // do nothing
-     } else if (desc->get_ncomp_PC()>0) {
+     } else if (ncomp_PC>0) {
 
-      for (int PC_mat_index=0;PC_mat_index<desc->get_ncomp_PC();
-           PC_mat_index++) {
-       int raw_index=desc->get_ncomp_PC() * i + PC_mat_index;
+      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+       int raw_index=ncomp_PC * i + PC_mat_index;
        std::string Part_name="FusionPart";
        std::stringstream raw_string_stream(std::stringstream::in |
           std::stringstream::out);
        raw_string_stream << raw_index;
        std::string raw_string=raw_string_stream.str();
        Part_name+=raw_string;
-       new_dataPC[raw_index]->Restart(FullPathName,Part_name);
-      } // PC_mat_index=0..desc->get_ncomp_PC()-1 
+       new_dataPC[i][PC_mat_index]->Restart(FullPathName,Part_name);
+      } // PC_mat_index=0..ncomp_PC-1 
      } else
-      amrex::Error("desc->get_ncompPC() invalid");
-
+      amrex::Error("ncompPC invalid");
 
     }  // i=0 ... bfact_time_order
 
@@ -324,12 +348,23 @@ StateData::buildBC ()
     }
 }
 
-StateData::~StateData()
-{
-   desc = 0;
-   descGHOST = 0;
-   for (int i=0;i<=bfact_time_order;i++) 
-    delete new_data[i];
+StateData::~StateData() {
+
+ int ncomp_PC = desc->get_ncomp_PC();
+ desc = 0;
+ descGHOST = 0;
+ for (int i=0;i<=bfact_time_order;i++) {
+  delete new_data[i];
+
+  if (ncomp_PC>0) {
+   for (int j=0;j<ncomp_PC;j++) {
+    delete new_dataPC[i][j];
+   }
+  } else if (ncomp_PC==0) {
+   // do nothing
+  } else
+   amrex::Error("ncomp_PC invalid");
+ } // i=0..bfact_time_order
 }
 
 const StateDescriptor*
@@ -403,6 +438,45 @@ StateData::newData (int slab_index) const
  return *new_data[project_slab_index];
 }
 
+
+
+ParticleContainer<N_EXTRA_REAL,0,0,0>&
+StateData::newDataPC (int slab_index,int sub_index)
+{
+ int project_slab_index=slab_index;
+ if (project_slab_index==-1)
+  project_slab_index=0;
+ if (project_slab_index==bfact_time_order+1)
+  project_slab_index=bfact_time_order;
+ if ((project_slab_index<0)||
+     (project_slab_index>bfact_time_order)) {
+  std::cout << "bfact_time_order= " << bfact_time_order << '\n';
+  std::cout << "project_slab_index= " << project_slab_index << '\n';
+  amrex::Error("project_slab_index invalid1");
+ }
+ BL_ASSERT(new_dataPC[project_slab_index].size()>sub_index);
+ return *new_dataPC[project_slab_index][sub_index];
+}
+
+const ParticleContainer<N_EXTRA_REAL,0,0,0>&
+StateData::newDataPC (int slab_index,int sub_index) const
+{
+ int project_slab_index=slab_index;
+ if (project_slab_index==-1)
+  project_slab_index=0;
+ if (project_slab_index==bfact_time_order+1)
+  project_slab_index=bfact_time_order;
+ if ((project_slab_index<0)||
+     (project_slab_index>bfact_time_order)) {
+  std::cout << "bfact_time_order= " << bfact_time_order << '\n';
+  std::cout << "project_slab_index= " << project_slab_index << '\n';
+  amrex::Error("project_slab_index invalid2");
+ }
+ BL_ASSERT(new_dataPC[project_slab_index].size()>sub_index);
+ return *new_dataPC[project_slab_index][sub_index];
+}
+
+
 Vector<BCRec>&
 StateData::getBCs (int comp)
 {
@@ -428,15 +502,6 @@ StateData::getBCGHOST (int comp, int i) const
     return bcGHOST[comp][i];
 }
 
-
-
-bool
-StateData::hasNewData (int slab_index) const
-{
- if ((slab_index<0)||(slab_index>bfact_time_order))
-  amrex::Error("slab_index invalid");
- return new_data[slab_index] != 0;
-}
 
 // dt will be modified if t_new>0 and t_new-dt<0
 void
@@ -868,27 +933,51 @@ StateData::CopyNewToOld() {
  MultiFab & newmulti = *new_data[bfact_time_order];
  int ncomp=newmulti.nComp();
  int ngrow=newmulti.nGrow();
+ int ncomp_PC = desc->get_ncomp_PC();
   
  for (int i=0;i<bfact_time_order;i++) {
   MultiFab & oldmulti = *new_data[i];
   MultiFab::Copy(oldmulti,newmulti,0,0,ncomp,ngrow);
+
+  if (ncomp_PC==0) {
+   // do nothing
+  } else if (ncomp_PC>0) {
+   for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+    new_dataPC[i][PC_mat_index]->copyParticles(
+      *new_dataPC[bfact_time_order][PC_mat_index]);
+   }
+  } else
+   amrex::Error("ncompPC invalid");
  }
 
-}
-
+} // end subroutine CopyNewToOld
 
 void
 StateData::CopyOldToNew() {
 
  MultiFab & oldmulti = *new_data[0];
+
  int ncomp=oldmulti.nComp();
  int ngrow=oldmulti.nGrow();
+ int ncomp_PC = desc->get_ncomp_PC();
+
  for (int i=1;i<=bfact_time_order;i++) {
   MultiFab & newmulti = *new_data[i];
   MultiFab::Copy(newmulti,oldmulti,0,0,ncomp,ngrow);
+
+  if (ncomp_PC==0) {
+   // do nothing
+  } else if (ncomp_PC>0) {
+   for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+    new_dataPC[i][PC_mat_index]->copyParticles(
+      *new_dataPC[0][PC_mat_index]);
+   }
+  } else
+   amrex::Error("ncompPC invalid");
+
  }
 
-}
+} // end subroutine CopyOldToNew
 
 // template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt>
 // void
@@ -954,6 +1043,8 @@ StateData::checkPoint (const std::string& name,
 
     }  // IOProcessor ?
 
+    int ncomp_PC = desc->get_ncomp_PC();
+
     for (int i=0;i<=bfact_time_order;i++) {
      if (new_data[i]==0)
        amrex::Error("new_data not allocated");
@@ -966,23 +1057,22 @@ StateData::checkPoint (const std::string& name,
      // this file is not the header file
      VisMF::Write(*new_data[i],mf_fullpath_new);
 
-     if (desc->get_ncomp_PC()==0) {
+     if (ncomp_PC==0) {
       // do nothing
-     } else if (desc->get_ncomp_PC()>0) {
+     } else if (ncomp_PC>0) {
 
-      for (int PC_mat_index=0;PC_mat_index<desc->get_ncomp_PC();
-           PC_mat_index++) {
-       int raw_index=desc->get_ncomp_PC() * i + PC_mat_index;
+      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+       int raw_index=ncomp_PC * i + PC_mat_index;
        std::string Part_name="FusionPart";
        std::stringstream raw_string_stream(std::stringstream::in |
           std::stringstream::out);
        raw_string_stream << raw_index;
        std::string raw_string=raw_string_stream.str();
        Part_name+=raw_string;
-       new_dataPC[raw_index]->Checkpoint(mf_fullpath_new,Part_name);
-      } // PC_mat_index=0..desc->get_ncomp_PC()-1 
+       new_dataPC[i][PC_mat_index]->Checkpoint(mf_fullpath_new,Part_name);
+      } // PC_mat_index=0..ncomp_PC-1 
      } else
-      amrex::Error("desc->get_ncompPC() invalid");
+      amrex::Error("ncompPC invalid");
 
     }  // i=0..bface_time_order
 

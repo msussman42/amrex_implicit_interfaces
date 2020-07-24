@@ -19129,6 +19129,11 @@ NavierStokes::post_init_state () {
   const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
   const Vector<BoxArray>& ns_ba=parent->boxArray();
  
+ } else if (NS_ncomp_particles==0) {
+  // do nothing
+ } else
+  amrex::Error("NS_ncomp_particles invalid");
+ 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.init_particle_container();
