@@ -7826,6 +7826,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+       // in: GODUNOV_3D.F90
      FORT_MAKETENSOR(
       &ncomp_visc,&im, 
       xlo,dx,
@@ -9440,6 +9441,7 @@ void NavierStokes::tensor_advection_update() {
        amrex::Error("tid_current invalid");
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+        // in: GODUNOV_3D.F90
       FORT_UPDATETENSOR(
        &level,
        &finest_level,
@@ -19124,10 +19126,19 @@ NavierStokes::post_init_state () {
   amrex::Error("color_count!=blobdata.size()");
 
  if (NS_ncomp_particles>0) {
-    // do not forget to delete this during regridding.
+
   const Vector<Geometry>& ns_geom=parent->Geom();
   const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
   const Vector<BoxArray>& ns_ba=parent->boxArray();
+  Vector<int> rr;
+  rr.resize(ns_ba.size());
+  for (int ilev=0;ilev<rr.size();ilev++)
+   rr[ilev]=2;
+  for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+   ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+	   get_new_dataPC(State_Type,slab_step,ipart);
+   localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
+  }
  
  } else if (NS_ncomp_particles==0) {
   // do nothing

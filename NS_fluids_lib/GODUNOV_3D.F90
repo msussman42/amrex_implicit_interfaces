@@ -9203,6 +9203,10 @@ stop
 
         ! viscoelastic_model==0: 
         !   visc(nmat+im_parm+1)=(eta/lambda_mod)*visc_coef
+        ! For a purely elastic model, it is assumed that the Deborah number
+        ! is \infty.
+        ! For a purely viscous model, it is assume that the Deborah number is
+        ! zero.
         ! viscoelastic_model==2: 
         !   visc(nmat+im_parm+1)=eta*visc_coef
        do ii=1,3
@@ -9613,29 +9617,29 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nmat,im,ncomp_visc
-      INTEGER_T i,j,k,n
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(visc)
-      INTEGER_T DIMDEC(tendata)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(tnew)
-      INTEGER_T DIMDEC(told)
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      REAL_T dx(SDIM),xlo(SDIM)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat,im,ncomp_visc
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(tendata)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(tnew)
+      INTEGER_T, intent(in) :: DIMDEC(told)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T visc(DIMV(visc),ncomp_visc)
-      REAL_T tendata(DIMV(tendata),20)
-      REAL_T vel(DIMV(vel),SDIM)
-      REAL_T tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
-      REAL_T told(DIMV(told),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, intent(in) :: tendata(DIMV(tendata),20)
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(out) :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in) :: told(DIMV(told),FORT_NUM_TENSOR_TYPE)
 
+      INTEGER_T :: i,j,k,n
       REAL_T dt,elastic_time
       INTEGER_T viscoelastic_model
       REAL_T polymer_factor
