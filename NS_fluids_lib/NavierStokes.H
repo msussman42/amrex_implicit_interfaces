@@ -1479,10 +1479,10 @@ protected:
      // =2 hybridize with particles on the interface and interior
      // particleLS_flag[im]   im=0...num_materials-1
     static Vector<int> particleLS_flag;  
+    static Vector<int> particle_nsubdivide;  
      // =0 do not store structure of array (i,j,k) data
      // =1 store structure of array (i,j,k) data
     static Vector<int> structure_of_array_flag;  
-    static Vector<int> particle_spray_flag;  
 
     static int NS_ncomp_particles;
 

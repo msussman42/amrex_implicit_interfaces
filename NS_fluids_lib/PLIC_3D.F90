@@ -697,6 +697,65 @@ stop
       return
       end subroutine FORT_SLOPERECON
 
+
+      subroutine FORT_INIT_PARTICLE_CONTAINER( &
+        tid, &
+        particle_nsubdivide, &
+        particleLS_flag, &
+        structure_of_array_flag, &
+        n_part_FAB, &
+        nmat, &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        level, &
+        finest_level, &
+        xlo,dx, &
+        particlefab,DIMS(particlefab), &
+        maskfab,DIMS(maskfab), &
+        voffab,DIMS(voffab), &
+        lsfab,DIMS(lsfab))
+#if (STANDALONE==0)
+      use probf90_module
+#elif (STANDALONE==1)
+      use probcommon_module
+#endif
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: level,finest_level
+
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: n_part_FAB
+
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: particle_nsubdivide(nmat)
+      INTEGER_T, intent(in) :: particleLS_flag(nmat)
+      INTEGER_T, intent(in) :: structure_of_array_flag(nmat)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: &
+          DIMDEC(particlefab)
+      INTEGER_T, intent(in) :: DIMDEC(maskfab)
+      INTEGER_T, intent(in) :: DIMDEC(voffab)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+     
+       ! maskfab=tag if not covered by level+1 or outside the domain.
+      REAL_T, intent(in) :: maskfab(DIMV(maskfab)) 
+      REAL_T, intent(in) :: voffab(DIMV(voffab),nmat*ngeom_recon) 
+      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+      REAL_T, intent(out) :: particlefab( &
+          DIMV(particlefab), &
+          n_part_FAB) 
+      
+      return
+      end subroutine FORT_INIT_PARTICLE_CONTAINER
+
+
 #if (STANDALONE==1)
       end module plic_cpp_module
 #endif

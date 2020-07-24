@@ -159,6 +159,7 @@
 #include <MASS_TRANSFER_F.H>
 #include <PROB_F.H>
 #include <MOF_F.H>
+#include <PLIC_F.H>
 #include <LEVEL_F.H>
 #include <MOF_REDIST_F.H>
 #include <ShallowWater_F.H>
@@ -291,9 +292,9 @@ int  NavierStokes::SEM_advection_algorithm=0;
 //          non-tesselating or tesselating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
+Vector<int> NavierStokes::particle_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
 Vector<int> NavierStokes::structure_of_array_flag; 
-Vector<int> NavierStokes::particle_spray_flag; 
 int NavierStokes::NS_ncomp_particles=0;
 
 Real NavierStokes::truncate_thickness=2.0;  
@@ -3637,13 +3638,13 @@ NavierStokes::read_params ()
     } // i=0..num_species_var-1
 
     truncate_volume_fractions.resize(nmat);
+    particle_nsubdivide.resize(nmat);
     particleLS_flag.resize(nmat);
     structure_of_array_flag.resize(nmat);
-    particle_spray_flag.resize(nmat);
     for (int i=0;i<nmat;i++) {
+     particle_nsubdivide[i]=1;
      particleLS_flag[i]=0;
      structure_of_array_flag[i]=0;
-     particle_spray_flag[i]=0;
      if ((FSI_flag[i]==0)|| // tessellating
          (FSI_flag[i]==7))  // fluid, tessellating
       truncate_volume_fractions[i]=1;
@@ -3661,17 +3662,17 @@ NavierStokes::read_params ()
       amrex::Error("FSI_flag invalid");
     }
 
+    pp.queryarr("particle_nsubdivide",particle_nsubdivide,0,nmat);
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
     pp.queryarr("structure_of_array_flag",structure_of_array_flag,0,nmat);
-    pp.queryarr("particle_spray_flag",particle_spray_flag,0,nmat);
 
     NS_ncomp_particles=0;
     for (int i=0;i<nmat;i++) {
+      // =1 particles on interface
+      // =2 particles on interface and in interior.
      if (particleLS_flag[i]>0)
-      NS_ncomp_particles++;
+      NS_ncomp_particles+=particleLS_flag[i];
      if (structure_of_array_flag[i]>0)
-      NS_ncomp_particles++;
-     if (particle_spray_flag[i]>0)
       NS_ncomp_particles++;
     } // i=0..nmat-1
 
@@ -3680,15 +3681,15 @@ NavierStokes::read_params ()
      if ((truncate_volume_fractions[i]<0)||
          (truncate_volume_fractions[i]>1))
       amrex::Error("truncate_volume_fractions invalid");
+     if ((particle_nsubdivide[i]<1)||
+         (particle_nsubdivide[i]>6))
+      amrex::Error("particle_nsubdivide invalid");
      if ((particleLS_flag[i]<0)||
          (particleLS_flag[i]>2))
       amrex::Error("particleLS_flag invalid");
      if ((structure_of_array_flag[i]<0)||
          (structure_of_array_flag[i]>1))
       amrex::Error("structure_of_array_flag invalid");
-     if ((particle_spray_flag[i]<0)||
-         (particle_spray_flag[i]>1))
-      amrex::Error("particle_spray_flag invalid");
     }
 
     pp.query("truncate_thickness",truncate_thickness);
@@ -3848,12 +3849,12 @@ NavierStokes::read_params ()
       std::cout << "truncate_volume_fractions i= " << i << ' ' <<
         truncate_volume_fractions[i] << '\n';
 
+      std::cout << "particle_nsubdivide i= " << i << ' ' <<
+        particle_nsubdivide[i] << '\n';
       std::cout << "particleLS_flag i= " << i << ' ' <<
         particleLS_flag[i] << '\n';
       std::cout << "structure_of_array_flag i= " << i << ' ' <<
         structure_of_array_flag[i] << '\n';
-      std::cout << "particle_spray_flag i= " << i << ' ' <<
-        particle_spray_flag[i] << '\n';
 
       std::cout << "NS_ncomp_particles= " << NS_ncomp_particles << '\n';
 
@@ -18935,8 +18936,113 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 // PARTICLES THAT APPEAR ON ALL THE LEVELS.
 // ALSO: Only state[State_Type] has the particles.
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
+// This routine called for level=finest_level .... 0
 void
 NavierStokes::init_particle_container() {
+
+ bool use_tiling=ns_tiling;
+ int finest_level=parent->finestLevel();
+ if ((level<0)||(level>finest_level))
+  amrex::Error("level invalid init_particle_container");
+ int nmat=num_materials;
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
+ const Real* dx = geom.CellSize();
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,28); 
+ VOF_Recon_resize(1,SLOPE_RECON_MF);
+
+ if (NS_ncomp_particles>0) {
+  MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
+  if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
+   amrex::Error("LSmf invalid ncomp");
+  if (LSmf->nGrow()!=1)
+   amrex::Error("LSmf->nGrow()!=1");
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+ 
+   int n_part_FAB=0;
+   for (int im=0;im<nmat;im++) {
+    if (particleLS_flag[im]>0) {
+     int subdivide_mult=1;
+     for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
+      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+       subdivide_mult*=2;
+     }
+     n_part_FAB+=particleLS_flag[im]*subdivide_mult*(AMREX_SPACEDIM+1);
+    } else if (particleLS_flag[im]==0) {
+     // do nothing
+    } else
+     amrex::Error("particleLS_flag[im] invalid");
+
+    if (structure_of_array_flag[im]==1) {
+     n_part_FAB+=2*(AMREX_SPACEDIM+1);
+    } else if (structure_of_array_flag[im]==0) {
+     // do nothing
+    } else
+     amrex::Error("structure_of_array_flag[im] invalid");
+
+   }  // im=0..nmat-1
+   FArrayBox particlefab(tilegrid,n_part_FAB);
+
+   FArrayBox& lsfab=(*LSmf)[mfi];
+   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+    // mask=tag if not covered by level+1 or outside the domain.
+   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // in: PLIC_3D.F90
+   FORT_INIT_PARTICLE_CONTAINER( 
+    &tid_current,
+    particle_nsubdivide.dataPtr(),
+    particleLS_flag.dataPtr(),
+    structure_of_array_flag.dataPtr(),
+    &n_part_FAB,
+    &nmat,
+    tilelo,tilehi,
+    fablo,fabhi,&bfact,
+    &level,
+    &finest_level,
+    xlo,dx,
+    particlefab.dataPtr(),
+    ARLIM(particlefab.loVect()),ARLIM(particlefab.hiVect()),
+    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
+  } // mfi
+} // omp
+  ns_reconcile_d_num(81);
+
+  delete LSmf;
+ } else if (NS_ncomp_particles==0) {
+  // do nothing
+ } else
+  amrex::Error("NS_ncomp_particles invalid");
 
 }  // end subroutine init_particle_container()
 
