@@ -19123,6 +19123,12 @@ NavierStokes::post_init_state () {
  if (color_count!=blobdata.size())
   amrex::Error("color_count!=blobdata.size()");
 
+ if (NS_ncomp_particles>0) {
+    // do not forget to delete this during regridding.
+  const Vector<Geometry>& ns_geom=parent->Geom();
+  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+  const Vector<BoxArray>& ns_ba=parent->boxArray();
+ 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.init_particle_container();
