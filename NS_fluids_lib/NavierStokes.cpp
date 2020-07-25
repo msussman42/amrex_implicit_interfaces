@@ -19043,6 +19043,35 @@ NavierStokes::init_particle_container() {
    int ipart=0;
    int ipart_FAB=0;
    for (int im=0;im<nmat;im++) {
+     // bulk particles
+     // interface particles
+     // narrow band particles
+     // extended narrow band particles
+    for (int ipart_type=0;ipart_type<4;ipart_type++) {
+     int subdivide_mult=0;
+     if ((ipart_type==0)||(ipart_type==1)) {
+      if (particleLS_flag[im]>ipart_type) {
+       subdivide_mult=1;
+       for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+         subdivide_mult*=2;
+       }
+      } else if ((particleLS_flag[im]==0)||
+                 (particleLS_flag[im]==1)) {
+       // do nothing
+      } else
+       amrex::Error("particleLS_flag invalid");
+     } else if ((ipart_type==2)||(ipart_type==3)) {
+      if (structure_of_array_flag[im]==1) {
+       subdivide_mult=1;
+      } else if (structure_of_array_flag[im]==0) {
+       // do nothing
+      } else
+       amrex::Error("structure_of_array_flag[im] invalid");
+     } else
+      amrex::Error("ipart_type invalid");
+ 
+ 
     for (int ibulk=0;ibulk<particleLS_flag[im];ibulk++) {
      ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
        ns_lev0.get_new_dataPC(State_Type,slab_step,ipart);
