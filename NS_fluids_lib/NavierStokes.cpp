@@ -138,6 +138,8 @@
 
    (see AMReX_NeighborParticles.H for checking neighbor particles)
 
+  amrex/Tutorials/Particles/NeighborList
+
   for Cody,
     1. declare mypc (object of type ParticleContainer)
     2. fill the particle container
