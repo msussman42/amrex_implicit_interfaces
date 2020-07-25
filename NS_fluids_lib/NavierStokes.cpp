@@ -136,9 +136,21 @@
  
   Redistribute()
 
-   (see AMReX_NeighborParticles.H for checking neighbor particles)
-
   amrex/Tutorials/Particles/NeighborList
+
+
+  strategy for avoiding neighbor particle list:
+  each cell will store:
+   4x4 symmetric matrix, 4x1 RHS of accumulation -> 
+       depart from cell (i,j,k) target to cell (i+i',j+j',k+k')
+  1. traverse all tiles and all particles on tiles and initialize the
+     accumulation variables.
+  2. for level=finest_level to 0
+     a) piecewise constant interpolation to fill ghost cells.
+     b) special average down from level+1 to level.
+     c) compute grad Y + (grad Y)^T
+
+
 
   for Cody,
     1. declare mypc (object of type ParticleContainer)
@@ -7829,6 +7841,8 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
        // in: GODUNOV_3D.F90
+       // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
+       // viscoelastic_model==2 => (eta)*visc_coef*Q
      FORT_MAKETENSOR(
       &ncomp_visc,&im, 
       xlo,dx,
@@ -9444,6 +9458,8 @@ void NavierStokes::tensor_advection_update() {
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
         // in: GODUNOV_3D.F90
+	// last step in this routine: (Q^n+1-Q^n)/dt = -Q^n+1/lambda
+	// if viscoelastic_model==2, then modtime=elastic_time
       FORT_UPDATETENSOR(
        &level,
        &finest_level,
