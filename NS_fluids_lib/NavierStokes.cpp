@@ -18946,6 +18946,9 @@ NavierStokes::init_particle_container() {
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid init_particle_container");
+
+ NavierStokes& ns_lev0=getLevel(0);
+
  int nmat=num_materials;
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -19036,6 +19039,46 @@ NavierStokes::init_particle_container() {
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
+
+   int ipart=0;
+   int ipart_FAB=0;
+   for (int im=0;im<nmat;im++) {
+    for (int ibulk=0;ibulk<particleLS_flag[im];ibulk++) {
+     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+       ns_lev0.get_new_dataPC(State_Type,slab_step,ipart);
+
+     auto& particles = localPC.GetParticles(level)
+	    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+
+     Array4<Real> const& pfab=particlefab.array();
+     const auto lo_p=lbound(pfab);
+     const auto hi_p=ubound(pfab);
+
+     int subdivide_mult=1;
+     for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
+      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+       subdivide_mult*=2;
+     }
+
+     for (int k = lo_p.z; k <= hi_p.z; ++k) {
+     for (int j = lo_p.y; j <= hi_p.y; ++j) {
+     for (int i = lo_p.x; i <= hi_p.x; ++i) {
+      for (int isub=0;isub<subdivide_mult;isub++) {
+       int flag_comp=ipart_FAB+isub*(AMREX_SPACEDIM+1)+AMREX_SPACEDIM;
+       int base_dir_comp=ipart_FAB+isub*(AMREX_SPACEDIM+1);
+       if (pfab(i,j,k,flag_comp) == 1.0) {
+        ParticleType p;
+        p.id()   = ParticleType::NextID();
+        p.cpu()  = ParallelDescriptor::MyProc();
+        p.pos(0) = ...
+
+          a(i,j,k,n) *= 2.0;
+        } else {
+          a(i,j,k,n) = 2.0*a(i,j,k,n) + 0.5*(b(i-1,j,k,n)+b(i+1,j,k,n));
+        }
+      }
+
+   }
   } // mfi
 } // omp
   ns_reconcile_d_num(81);
