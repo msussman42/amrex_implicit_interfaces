@@ -704,6 +704,7 @@ stop
         particleLS_flag, &
         structure_of_array_flag, &
         n_part_FAB, &
+        NS_ncomp_particles, &
         nmat, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
@@ -730,6 +731,7 @@ stop
 
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: n_part_FAB
+      INTEGER_T, intent(in) :: NS_ncomp_particles
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)

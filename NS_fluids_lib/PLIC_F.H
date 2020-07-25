@@ -56,6 +56,7 @@ extern "C"
         int* particleLS_flag,
         int* structure_of_array_flag,
         int* n_part_FAB,
+        int* NS_ncomp_particles,
         int* nmat,
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,

@@ -19028,6 +19028,7 @@ NavierStokes::init_particle_container() {
     particleLS_flag.dataPtr(),
     structure_of_array_flag.dataPtr(),
     &n_part_FAB,
+    &NS_ncomp_particles,
     &nmat,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
@@ -19071,43 +19072,63 @@ NavierStokes::init_particle_container() {
      } else
       amrex::Error("ipart_type invalid");
  
- 
-    for (int ibulk=0;ibulk<particleLS_flag[im];ibulk++) {
-     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-       ns_lev0.get_new_dataPC(State_Type,slab_step,ipart);
+     for (int isub=0;isub<subdivide_mult;isub++) {
 
-     auto& particles = localPC.GetParticles(level)
-	    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+      ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+        ns_lev0.get_new_dataPC(State_Type,slab_step,ipart);
 
-     Array4<Real> const& pfab=particlefab.array();
-     const auto lo_p=lbound(pfab);
-     const auto hi_p=ubound(pfab);
+      auto& particles = localPC.GetParticles(level)
+        [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
 
-     int subdivide_mult=1;
-     for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
-      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-       subdivide_mult*=2;
-     }
+       // lbound and ubound put 0 in the 3rd dimension if 2D.
+      Array4<Real> const& pfab=particlefab.array();
+      const auto lo_p=lbound(pfab);
+      const auto hi_p=ubound(pfab);
 
-     for (int k = lo_p.z; k <= hi_p.z; ++k) {
-     for (int j = lo_p.y; j <= hi_p.y; ++j) {
-     for (int i = lo_p.x; i <= hi_p.x; ++i) {
-      for (int isub=0;isub<subdivide_mult;isub++) {
-       int flag_comp=ipart_FAB+isub*(AMREX_SPACEDIM+1)+AMREX_SPACEDIM;
-       int base_dir_comp=ipart_FAB+isub*(AMREX_SPACEDIM+1);
+      for (int k = lo_p.z; k <= hi_p.z; ++k) {
+      for (int j = lo_p.y; j <= hi_p.y; ++j) {
+      for (int i = lo_p.x; i <= hi_p.x; ++i) {
+       int flag_comp=ipart_FAB+AMREX_SPACEDIM;
        if (pfab(i,j,k,flag_comp) == 1.0) {
-        ParticleType p;
-        p.id()   = ParticleType::NextID();
+
+        using My_ParticleContainer =
+          ParticleContainer<N_EXTRA_REAL,0,0,0>;
+
+        My_ParticleContainer::ParticleType p;
+        p.id()   = My_ParticleContainer::ParticleType::NextID();
+
         p.cpu()  = ParallelDescriptor::MyProc();
-        p.pos(0) = ...
-
-          a(i,j,k,n) *= 2.0;
-        } else {
-          a(i,j,k,n) = 2.0*a(i,j,k,n) + 0.5*(b(i-1,j,k,n)+b(i+1,j,k,n));
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+         p.pos(dir) = pfab(i,j,k,ipart_FAB+dir);
+         p.rdata(dir)=p.pos(dir);
         }
-      }
+        particles.push_back(p);
+       } else if (pfab(i,j,k,flag_comp) == 0.0) {
+        // do nothing
+       } else
+        amrex::Error("pfab(flag_comp) invalid");
+      } // i
+      } // j
+      } // k
+      ipart_FAB+=(AMREX_SPACEDIM+1);
+      if (isub==subdivide_mult-1) {
+       ipart++;
+      } else if ((isub>=0)&&(isub<subdivide_mult-1)) {
+       // do nothing
+      } else
+       amrex::Error("isub invalid");
+     }  // isub=0..subdivide_mult-1
+    } // ipart_type=0..3
+   } // im=0..nmat-1
+   if (ipart_FAB==n_part_FAB) {
+    // do nothing
+   } else
+    amrex::Error("ipart_FAB invalid");
+   if (ipart==NS_ncomp_particles) {
+    // do nothing
+   } else
+    amrex::Error("ipart invalid");
 
-   }
   } // mfi
 } // omp
   ns_reconcile_d_num(81);
