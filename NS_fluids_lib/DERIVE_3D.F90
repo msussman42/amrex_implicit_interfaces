@@ -825,6 +825,8 @@ stop
             ! elastic_time*(1-Tr(A)/L^2)
            call get_mod_elastic_time(elastic_time,traceA, &
             polymer_factor,modtime)
+
+           ! modtime=elastic_time >> 1
           else if (viscoelastic_model.eq.2) then
            modtime=elastic_time
           else

@@ -9272,7 +9272,8 @@ void NavierStokes::update_SEM_delta_force(
 
 } // subroutine update_SEM_delta_force
 
-
+// called from:
+//  NavierStokes::tensor_advection_updateALL()  (NavierStokes3.cpp)
 void NavierStokes::tensor_advection_update() {
 
  bool use_tiling=ns_tiling;
@@ -18950,6 +18951,31 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   amrex::Error("post_init_flag invalid");
 
 }  // subroutine prepare_post_process
+
+void 
+NavierStokes::accumulate_PC_info(int im,int matrix_mf) {
+
+ int stencil_points=3*3*3;
+ int matrix_points=10;
+ int RHS_points=4;
+ int ncomp_accumulate=stencil_points*(matrix_points+RHS_points);
+ if (localMF_grow[matrix_mf]==1) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow[matrix_mf] invalid");
+
+ if (localMF[matrix_mf]->nComp()==ncomp_accumulate) {
+  // do nothing
+ } else
+  amrex::Error("localMF[matrix_mf]->nComp() invalid");
+
+
+} // end subroutine accumulate_PC_info
+
+void 
+NavierStokes::process_PC_info(int im,int matrix_mf) {
+
+} // end subroutine process_PC_info
 
 // initialize particles and copy to all "slab locations"
 // ONLY LEVEL==0 STATEDATA PARTICLES GET INITIALIZED: THEY HOLD

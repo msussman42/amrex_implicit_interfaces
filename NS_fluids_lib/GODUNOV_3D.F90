@@ -9974,6 +9974,9 @@ stop
          Q(ii,ii)=Q(ii,ii)-one
         enddo
 
+        ! for viscoelastic_model==2,
+        !  modtime=lambda=elastic_time >> 1
+        !
         ! Q^n+1=lambda Q^n/(lambda+dt)
         ! lambda (Q^n+1-Q^n)=-dt Q^n+1
         ! (Q^n+1-Q^n)/dt = -Q^n+1/lambda
