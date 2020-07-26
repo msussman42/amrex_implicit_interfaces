@@ -19052,161 +19052,48 @@ NavierStokes::accumulate_PC_info(int im_elastic,int matrix_mf) {
     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
       ns_lev0.get_new_dataPC(State_Type,slab_step,ipart+ipart_type);
 
+     // particles is of type "ParticleTileType::AoS"
+     // see AMReX_ArrayOfStructs.H
+     // particles is of type:
+     //  amrex::ParticleTile<SDIM,0,0,0>
     auto& particles = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+    auto& particles_AoS = particles.GetArrayOfStructs();
+
+    int nstride=particles_AoS.dataShape().first;
+    const long np=particles_AoS.numParticles();
+
+    FArrayBox& matrixfab=(*localMF[matrix_mf])[mfi];
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+     // in: GODUNOV_3D.F90
+    fort_assimilate_tensor_from_particles( 
+     &tid_current,
+     tilelo,tilehi,
+     fablo,fabhi,&bfact,
+     &level,
+     &finest_level,
+     xlo,dx,
+     particles_AoS.data(),
+     nstride,  //pass by value
+     np,       //pass by value
+     &stencil_points,
+     &matrix_points,
+     &RHS_points,
+     &ncomp_accumulate,
+     matrixfab.dataPtr(),
+     ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
+   } // ipart_type=0..1
 
 
-
-
-
-
-
-
-   int n_part_FAB=0;
-   for (int im=0;im<nmat;im++) {
-    if (particleLS_flag[im]>0) {
-     int subdivide_mult=1;
-     for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
-      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-       subdivide_mult*=2;
-     }
-     n_part_FAB+=particleLS_flag[im]*subdivide_mult*(AMREX_SPACEDIM+1);
-    } else if (particleLS_flag[im]==0) {
-     // do nothing
-    } else
-     amrex::Error("particleLS_flag[im] invalid");
-
-    if (structure_of_array_flag[im]==1) {
-     n_part_FAB+=2*(AMREX_SPACEDIM+1);
-    } else if (structure_of_array_flag[im]==0) {
-     // do nothing
-    } else
-     amrex::Error("structure_of_array_flag[im] invalid");
-
-   }  // im=0..nmat-1
-   FArrayBox particlefab(tilegrid,n_part_FAB);
-
-   FArrayBox& lsfab=(*LSmf)[mfi];
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
-    // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // in: PLIC_3D.F90
-   FORT_INIT_PARTICLE_CONTAINER( 
-    &tid_current,
-    particle_nsubdivide.dataPtr(),
-    particleLS_flag.dataPtr(),
-    structure_of_array_flag.dataPtr(),
-    &n_part_FAB,
-    &NS_ncomp_particles,
-    &nmat,
-    tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    &level,
-    &finest_level,
-    xlo,dx,
-    particlefab.dataPtr(),
-    ARLIM(particlefab.loVect()),ARLIM(particlefab.hiVect()),
-    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
-
-   int ipart=0;
-   int ipart_FAB=0;
-   for (int im=0;im<nmat;im++) {
-     // bulk particles
-     // interface particles
-     // narrow band particles
-     // extended narrow band particles
-    for (int ipart_type=0;ipart_type<4;ipart_type++) {
-     int subdivide_mult=0;
-     if ((ipart_type==0)||(ipart_type==1)) {
-      if (particleLS_flag[im]>ipart_type) {
-       subdivide_mult=1;
-       for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-         subdivide_mult*=2;
-       }
-      } else if ((particleLS_flag[im]==0)||
-                 (particleLS_flag[im]==1)) {
-       // do nothing
-      } else
-       amrex::Error("particleLS_flag invalid");
-     } else if ((ipart_type==2)||(ipart_type==3)) {
-      if (structure_of_array_flag[im]==1) {
-       subdivide_mult=1;
-      } else if (structure_of_array_flag[im]==0) {
-       // do nothing
-      } else
-       amrex::Error("structure_of_array_flag[im] invalid");
-     } else
-      amrex::Error("ipart_type invalid");
- 
-     for (int isub=0;isub<subdivide_mult;isub++) {
-
-      ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-        ns_lev0.get_new_dataPC(State_Type,slab_step,ipart);
-
-      auto& particles = localPC.GetParticles(level)
-        [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-
-       // lbound and ubound put 0 in the 3rd dimension if 2D.
-      Array4<Real> const& pfab=particlefab.array();
-      const auto lo_p=lbound(pfab);
-      const auto hi_p=ubound(pfab);
-
-      for (int k = lo_p.z; k <= hi_p.z; ++k) {
-      for (int j = lo_p.y; j <= hi_p.y; ++j) {
-      for (int i = lo_p.x; i <= hi_p.x; ++i) {
-       int flag_comp=ipart_FAB+AMREX_SPACEDIM;
-       if (pfab(i,j,k,flag_comp) == 1.0) {
-
-        using My_ParticleContainer =
-          ParticleContainer<N_EXTRA_REAL,0,0,0>;
-
-        My_ParticleContainer::ParticleType p;
-        p.id()   = My_ParticleContainer::ParticleType::NextID();
-
-        p.cpu()  = ParallelDescriptor::MyProc();
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-         p.pos(dir) = pfab(i,j,k,ipart_FAB+dir);
-         p.rdata(dir)=p.pos(dir);
-        }
-        particles.push_back(p);
-       } else if (pfab(i,j,k,flag_comp) == 0.0) {
-        // do nothing
-       } else
-        amrex::Error("pfab(flag_comp) invalid");
-      } // i
-      } // j
-      } // k
-      ipart_FAB+=(AMREX_SPACEDIM+1);
-      if (isub==subdivide_mult-1) {
-       ipart++;
-      } else if ((isub>=0)&&(isub<subdivide_mult-1)) {
-       // do nothing
-      } else
-       amrex::Error("isub invalid");
-     }  // isub=0..subdivide_mult-1
-    } // ipart_type=0..3
-   } // im=0..nmat-1
-   if (ipart_FAB==n_part_FAB) {
-    // do nothing
-   } else
-    amrex::Error("ipart_FAB invalid");
-   if (ipart==NS_ncomp_particles) {
-    // do nothing
-   } else
-    amrex::Error("ipart invalid");
-
-  } // mfi
+ } // mfi
 } // omp
-  ns_reconcile_d_num(81);
+ ns_reconcile_d_num(81);
+
 } // end subroutine accumulate_PC_info
 
 void 
@@ -19380,6 +19267,8 @@ NavierStokes::init_particle_container() {
         p.id()   = My_ParticleContainer::ParticleType::NextID();
 
         p.cpu()  = ParallelDescriptor::MyProc();
+
+         //pos(AMREX_SPACEDIM)
         for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
          p.pos(dir) = pfab(i,j,k,ipart_FAB+dir);
          p.rdata(dir)=p.pos(dir);

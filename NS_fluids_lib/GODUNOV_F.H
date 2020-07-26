@@ -187,6 +187,7 @@
 #  endif
 
 #include <AMReX_ArrayLim.H>
+#include <AMReX_BLFort.H>
 
 namespace amrex{
 
@@ -1394,6 +1395,25 @@ extern "C"
      int* divu_outer_sweeps,
      int* num_divu_outer_sweeps);
 
+
+   void fort_assimilate_tensor_from_particles(
+     int* tid,
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,
+     int* bfact,
+     int* level,
+     int* finest_level,
+     const Real* xlo,const Real* dx,
+     const amrex::Real* particles,
+     int ns,
+     int np, // must be pass by value since "long" on the c++ side.
+     int* stencil_points,
+     int* matrix_points,
+     int* RHS_points,
+     int* ncomp_accumulate,
+     Real* matrixfab,
+     AMREX_ARLIM_P(matrixfablo),
+     AMREX_ARLIM_P(matrixfabhi));
 
 }
 

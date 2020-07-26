@@ -1031,29 +1031,30 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T spectral_cells_level(nmat)
-      INTEGER_T mask_sweep
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T enable_spectral
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      INTEGER_T bfact_fine
-      INTEGER_T vofbc(SDIM,2)
-      INTEGER_T DIMDEC(maskcov) 
-      INTEGER_T DIMDEC(masknbr) 
-      INTEGER_T DIMDEC(mask) 
-      INTEGER_T DIMDEC(oldmask) 
-      INTEGER_T DIMDEC(vfrac) 
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T masknbr(DIMV(masknbr))
-      REAL_T mask(DIMV(mask))
-      REAL_T oldmask(DIMV(oldmask))
-      REAL_T vfrac(DIMV(vfrac),nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(inout) :: spectral_cells_level(nmat)
+      INTEGER_T, intent(in) :: mask_sweep
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: bfact_fine
+      INTEGER_T, intent(in) :: vofbc(SDIM,2)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov) 
+      INTEGER_T, intent(in) :: DIMDEC(masknbr) 
+      INTEGER_T, intent(in) :: DIMDEC(mask) 
+      INTEGER_T, intent(in) :: DIMDEC(oldmask) 
+      INTEGER_T, intent(in) :: DIMDEC(vfrac) 
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr))
+      REAL_T, intent(out) :: mask(DIMV(mask))
+      REAL_T, intent(in) :: oldmask(DIMV(oldmask))
+      REAL_T, intent(in) :: vfrac(DIMV(vfrac),nmat)
+
       INTEGER_T im,imcrit,im_max
       INTEGER_T sumtag
       INTEGER_T tag(nmat)
@@ -2137,32 +2138,33 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T unsplit_advection
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T normdir
-      INTEGER_T nrefine_vof
-      INTEGER_T nrefine_cen
-      INTEGER_T nmat,ngrow
-      INTEGER_T ngrowmac,veldir
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(vofF) 
-      INTEGER_T DIMDEC(cenF) 
-      INTEGER_T DIMDEC(xold) 
-      INTEGER_T DIMDEC(xvof) 
-      INTEGER_T DIMDEC(xvel)   ! xvelleft,xvelright
-      INTEGER_T DIMDEC(xvelslp)   ! xvelslope,xcen
-      REAL_T vofF(DIMV(vofF),nrefine_vof)
-      REAL_T cenF(DIMV(cenF),nrefine_cen)
-      REAL_T xold(DIMV(xold))
-      REAL_T xvof(DIMV(xvof),nmat)
-      REAL_T xvel(DIMV(xvel)) 
-      REAL_T xvelslp(DIMV(xvelslp),1+nmat) ! xvelslope,xcen
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
+      INTEGER_T, intent(in) :: unsplit_advection
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: normdir
+      INTEGER_T, intent(in) :: nrefine_vof
+      INTEGER_T, intent(in) :: nrefine_cen
+      INTEGER_T, intent(in) :: nmat,ngrow
+      INTEGER_T, intent(in) :: ngrowmac,veldir
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(vofF) 
+      INTEGER_T, intent(in) :: DIMDEC(cenF) 
+      INTEGER_T, intent(in) :: DIMDEC(xold) 
+      INTEGER_T, intent(in) :: DIMDEC(xvof) 
+      INTEGER_T, intent(in) :: DIMDEC(xvel)   ! xvelleft,xvelright
+      INTEGER_T, intent(in) :: DIMDEC(xvelslp)   ! xvelslope,xcen
+      REAL_T, intent(in) :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, intent(in) :: cenF(DIMV(cenF),nrefine_cen)
+      REAL_T, intent(in) :: xold(DIMV(xold))
+      REAL_T, intent(out) :: xvof(DIMV(xvof),nmat)
+      REAL_T, intent(out) :: xvel(DIMV(xvel)) 
+      REAL_T, intent(out) :: xvelslp(DIMV(xvelslp),1+nmat) ! xvelslope,xcen
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+
       INTEGER_T icell,jcell,kcell,i,j,k,ii,jj,kk
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T im
@@ -27759,3 +27761,63 @@ stop
   
       return 
       end subroutine FORT_VELADVANCE
+
+      module FSI_PC_module
+
+       use iso_c_binding
+       use amrex_fort_module, only : amrex_real,amrex_particle_real
+       use iso_c_binding, only: c_int
+
+       implicit none
+
+       type, bind(C) :: particle_t
+         real(amrex_particle_real) :: pos(SDIM)
+         real(amrex_particle_real) :: pos_foot(SDIM)
+         integer(c_int) :: id
+         integer(c_int) :: cpu
+       end type particle_t
+
+      contains
+
+      subroutine fort_assimilate_tensor_from_particles( &
+        tid, &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        level, &
+        finest_level, &
+        xlo,dx, &
+        particles, &
+        ns,np, & ! pass by value
+        stencil_points, &
+        matrix_points, &
+        RHS_points, &
+        ncomp_accumulate, &
+        matrixfab, &
+        DIMS(matrixfab)) &
+      bind(c,name='fort_assimilate_tensor_from_particles')
+
+      INTEGER_T, intent(in) :: stencil_points
+      INTEGER_T, intent(in) :: matrix_points
+      INTEGER_T, intent(in) :: RHS_points
+      INTEGER_T, intent(in) :: ncomp_accumulate
+      INTEGER_T, value, intent(in) :: ns,np ! pass by value
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      REAL_T, intent(inout) :: matrixfab( &
+        DIMV(matrixfab), &
+        ncomp_accumulate)
+!     real(amrex_real), intent(in) :: particles(ns,np)
+      type(particle_t), intent(in) :: particles(np)
+
+      end subroutine fort_assimilate_tensor_from_particles
+
+      end module FSI_PC_module
+
