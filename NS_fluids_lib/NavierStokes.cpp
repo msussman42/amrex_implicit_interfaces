@@ -18953,7 +18953,62 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 }  // subroutine prepare_post_process
 
 void 
-NavierStokes::accumulate_PC_info(int im,int matrix_mf) {
+NavierStokes::accumulate_PC_info(int im_elastic,int matrix_mf) {
+
+ bool use_tiling=ns_tiling;
+ int finest_level=parent->finestLevel();
+ if ((level<0)||(level>finest_level))
+  amrex::Error("level invalid accumulate_PC_info");
+
+ int nmat=num_materials;
+ if ((im_elastic>=0)&&(im_elastic<nmat)) {
+  // do nothing
+ } else
+  amrex::Error("im_elastic invalid");
+
+ NavierStokes& ns_lev0=getLevel(0);
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
+
+ const Real* dx = geom.CellSize();
+
+ int ipart=0;
+ for (int im_local=0;im_local<im_elastic;im_local++) {
+  // bulk particles
+  // interface particles
+  // narrow band particles
+  // extended narrow band particles
+  for (int ipart_type=0;ipart_type<4;ipart_type++) {
+   if ((ipart_type==0)||(ipart_type==1)) {
+    if (particleLS_flag[im_local]>ipart_type) {
+     ipart++; 
+    } else if ((particleLS_flag[im_local]==0)||
+               (particleLS_flag[im_local]==1)) {
+     // do nothing
+    } else
+     amrex::Error("particleLS_flag invalid");
+   } else if ((ipart_type==2)||(ipart_type==3)) {
+    if (structure_of_array_flag[im_local]==1) {
+     ipart++;
+    } else if (structure_of_array_flag[im_local]==0) {
+     // do nothing
+    } else
+     amrex::Error("structure_of_array_flag[im_local] invalid");
+   } else
+    amrex::Error("ipart_type invalid");
+  } // ipart_type=0..3
+ } // im_local=0..im_elastic-1
+
+ if (particleLS_flag[im_elastic]==2) {
+  if (NS_ncomp_particles>=ipart+2) {
+   // do nothing
+  } else
+   amrex::Error("NS_ncomp_particles invalid");
+ } else
+  amrex::Error("particleLS_flag[im_elastic] invalid");
 
  int stencil_points=3*3*3;
  int matrix_points=10;
@@ -18969,7 +19024,189 @@ NavierStokes::accumulate_PC_info(int im,int matrix_mf) {
  } else
   amrex::Error("localMF[matrix_mf]->nComp() invalid");
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[matrix_mf]->boxArray().d_numPts());
 
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*localMF[matrix_mf],use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+    // ipart_type==0 bulk
+    // ipart_type==1 interface
+   for (int ipart_type=0;ipart_type<2;ipart_type++) { 
+
+    ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+      ns_lev0.get_new_dataPC(State_Type,slab_step,ipart+ipart_type);
+
+    auto& particles = localPC.GetParticles(level)
+      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+
+
+
+
+
+
+
+
+   int n_part_FAB=0;
+   for (int im=0;im<nmat;im++) {
+    if (particleLS_flag[im]>0) {
+     int subdivide_mult=1;
+     for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
+      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+       subdivide_mult*=2;
+     }
+     n_part_FAB+=particleLS_flag[im]*subdivide_mult*(AMREX_SPACEDIM+1);
+    } else if (particleLS_flag[im]==0) {
+     // do nothing
+    } else
+     amrex::Error("particleLS_flag[im] invalid");
+
+    if (structure_of_array_flag[im]==1) {
+     n_part_FAB+=2*(AMREX_SPACEDIM+1);
+    } else if (structure_of_array_flag[im]==0) {
+     // do nothing
+    } else
+     amrex::Error("structure_of_array_flag[im] invalid");
+
+   }  // im=0..nmat-1
+   FArrayBox particlefab(tilegrid,n_part_FAB);
+
+   FArrayBox& lsfab=(*LSmf)[mfi];
+   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+    // mask=tag if not covered by level+1 or outside the domain.
+   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // in: PLIC_3D.F90
+   FORT_INIT_PARTICLE_CONTAINER( 
+    &tid_current,
+    particle_nsubdivide.dataPtr(),
+    particleLS_flag.dataPtr(),
+    structure_of_array_flag.dataPtr(),
+    &n_part_FAB,
+    &NS_ncomp_particles,
+    &nmat,
+    tilelo,tilehi,
+    fablo,fabhi,&bfact,
+    &level,
+    &finest_level,
+    xlo,dx,
+    particlefab.dataPtr(),
+    ARLIM(particlefab.loVect()),ARLIM(particlefab.hiVect()),
+    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
+
+   int ipart=0;
+   int ipart_FAB=0;
+   for (int im=0;im<nmat;im++) {
+     // bulk particles
+     // interface particles
+     // narrow band particles
+     // extended narrow band particles
+    for (int ipart_type=0;ipart_type<4;ipart_type++) {
+     int subdivide_mult=0;
+     if ((ipart_type==0)||(ipart_type==1)) {
+      if (particleLS_flag[im]>ipart_type) {
+       subdivide_mult=1;
+       for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+         subdivide_mult*=2;
+       }
+      } else if ((particleLS_flag[im]==0)||
+                 (particleLS_flag[im]==1)) {
+       // do nothing
+      } else
+       amrex::Error("particleLS_flag invalid");
+     } else if ((ipart_type==2)||(ipart_type==3)) {
+      if (structure_of_array_flag[im]==1) {
+       subdivide_mult=1;
+      } else if (structure_of_array_flag[im]==0) {
+       // do nothing
+      } else
+       amrex::Error("structure_of_array_flag[im] invalid");
+     } else
+      amrex::Error("ipart_type invalid");
+ 
+     for (int isub=0;isub<subdivide_mult;isub++) {
+
+      ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+        ns_lev0.get_new_dataPC(State_Type,slab_step,ipart);
+
+      auto& particles = localPC.GetParticles(level)
+        [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+
+       // lbound and ubound put 0 in the 3rd dimension if 2D.
+      Array4<Real> const& pfab=particlefab.array();
+      const auto lo_p=lbound(pfab);
+      const auto hi_p=ubound(pfab);
+
+      for (int k = lo_p.z; k <= hi_p.z; ++k) {
+      for (int j = lo_p.y; j <= hi_p.y; ++j) {
+      for (int i = lo_p.x; i <= hi_p.x; ++i) {
+       int flag_comp=ipart_FAB+AMREX_SPACEDIM;
+       if (pfab(i,j,k,flag_comp) == 1.0) {
+
+        using My_ParticleContainer =
+          ParticleContainer<N_EXTRA_REAL,0,0,0>;
+
+        My_ParticleContainer::ParticleType p;
+        p.id()   = My_ParticleContainer::ParticleType::NextID();
+
+        p.cpu()  = ParallelDescriptor::MyProc();
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+         p.pos(dir) = pfab(i,j,k,ipart_FAB+dir);
+         p.rdata(dir)=p.pos(dir);
+        }
+        particles.push_back(p);
+       } else if (pfab(i,j,k,flag_comp) == 0.0) {
+        // do nothing
+       } else
+        amrex::Error("pfab(flag_comp) invalid");
+      } // i
+      } // j
+      } // k
+      ipart_FAB+=(AMREX_SPACEDIM+1);
+      if (isub==subdivide_mult-1) {
+       ipart++;
+      } else if ((isub>=0)&&(isub<subdivide_mult-1)) {
+       // do nothing
+      } else
+       amrex::Error("isub invalid");
+     }  // isub=0..subdivide_mult-1
+    } // ipart_type=0..3
+   } // im=0..nmat-1
+   if (ipart_FAB==n_part_FAB) {
+    // do nothing
+   } else
+    amrex::Error("ipart_FAB invalid");
+   if (ipart==NS_ncomp_particles) {
+    // do nothing
+   } else
+    amrex::Error("ipart invalid");
+
+  } // mfi
+} // omp
+  ns_reconcile_d_num(81);
 } // end subroutine accumulate_PC_info
 
 void 
@@ -18998,6 +19235,7 @@ NavierStokes::init_particle_container() {
   amrex::Error("num_state_base invalid");
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
+
  const Real* dx = geom.CellSize();
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,28); 
