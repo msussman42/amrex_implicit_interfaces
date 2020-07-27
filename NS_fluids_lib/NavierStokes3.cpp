@@ -407,6 +407,7 @@ void NavierStokes::nonlinear_advection() {
   amrex::Error("divu_outer_sweeps invalid nonlinear_advection");
 
  int finest_level=parent->finestLevel();
+
  if (std::abs(cur_time_slab-prev_time_slab-dt_slab)>1.0E-5) {
   std::cout << "cur_time_slab " << cur_time_slab << '\n';
   std::cout << "prev_time_slab " << prev_time_slab << '\n';
@@ -567,6 +568,35 @@ void NavierStokes::nonlinear_advection() {
  } else
   amrex::Error("face_flag invalid");
 
+ NavierStokes& ns_finest=getLevel(finest_level);
+ int ipart_id=0;
+ for (int im=0;im<nmat;im++) {
+  for (int isub=0;isub<4;isub++) {
+   int do_part_advect=0;
+   if ((isub==0)||(isub==1)) {
+    if (particleLS_flag[im]>isub)
+     do_part_advect=1;
+   } else if ((isub==2)||(isub==3)) {
+    if (structure_of_array_flag[im]==1) 
+     do_part_advect=1;
+   } else
+    amrex::Error("isub invalid");
+
+   if (do_part_advect==1) {
+    ns_finest.move_particles(im,ipart_id,isub);
+    ipart_id++;
+   } else if (do_part_advect==0) {
+    // do nothing
+   } else
+    amrex::Error("do_part_advect invalid");
+  } //isub=0..3
+ } //im=0..nmat-1
+
+ if (ipart_id==NS_ncomp_particles) {
+  // do nothing
+ } else
+  amrex::Error("ipart_id invalid");
+
  for (dir_absolute_direct_split=0;
       dir_absolute_direct_split<AMREX_SPACEDIM;
       dir_absolute_direct_split++) {
@@ -618,7 +648,8 @@ void NavierStokes::nonlinear_advection() {
      // projects volume fractions so that sum F_m_fluid=1.
     renormalize_only=1;
     int local_truncate=0;
-    prescribe_solid_geometryALL(prev_time_slab,renormalize_only,local_truncate);
+    prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
+      local_truncate);
 
      // velocity and pressure
     avgDownALL(State_Type,0,num_materials_vel*(AMREX_SPACEDIM+1),1);
@@ -740,9 +771,11 @@ void NavierStokes::nonlinear_advection() {
   // in: nonlinear_advection
   // level set function, volume fractions, and centroids are
   // made "consistent" amongst the levels.
+  // in: NavierStokes2.cpp
  renormalize_only=0;
  int local_truncate=1;
- prescribe_solid_geometryALL(cur_time_slab,renormalize_only,local_truncate);
+ prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
+   local_truncate);
 
  avgDownALL(State_Type,0,
   num_materials_vel*(AMREX_SPACEDIM+1),1);
@@ -1130,7 +1163,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     // projects volume fractions so that sum F_m_fluid=1.
    int renormalize_only=0;
    int local_truncate=0;
-   prescribe_solid_geometryALL(upper_slab_time,renormalize_only,local_truncate);
+   prescribe_solid_geometryALL(upper_slab_time,renormalize_only,
+      local_truncate);
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {

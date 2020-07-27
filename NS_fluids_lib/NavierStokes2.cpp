@@ -6585,10 +6585,52 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
    ns_level.avgDown(LS_Type,0,nmat,0);
    ns_level.MOFavgDown();
   }
-  ns_level.prescribe_solid_geometry(time,renormalize_only);
+  int local_ipart_id=-1;
+  int local_im_PLS=-1;
+  ns_level.prescribe_solid_geometry(time,renormalize_only,
+    local_im_PLS,local_ipart_id);
  }
+ if (renormalize_only==0) {
 
-} // subroutine prescribe_solid_geometryALL
+  NavierStokes& ns_finest=getLevel(finest_level);
+
+  int ipart_id=0;
+  for (int im=0;im<nmat;im++) {
+   for (int isub=0;isub<4;isub++) {
+    int do_part_advect=0;
+    if ((isub==0)||(isub==1)) {
+     if (particleLS_flag[im]>isub)
+      do_part_advect=1;
+    } else if ((isub==2)||(isub==3)) {
+     if (structure_of_array_flag[im]==1) 
+      do_part_advect=1;
+    } else
+     amrex::Error("isub invalid");
+
+    if (do_part_advect==1) {
+     if (isub==0) {
+      ns_finest.prescribe_solid_geometry(time,renormalize_only,
+        im,ipart_id);
+     }
+     ipart_id++;
+    } else if (do_part_advect==0) {
+     // do nothing
+    } else
+     amrex::Error("do_part_advect invalid");
+   } //isub=0..3
+  } //im=0..nmat-1
+
+  if (ipart_id==NS_ncomp_particles) {
+   // do nothing
+  } else
+   amrex::Error("ipart_id invalid");
+
+ } else if (renormalize_only==1) {
+  // do nothing
+ } else
+  amrex::Error("renormalize_only invalid");
+
+} // end subroutine prescribe_solid_geometryALL
 
 
 // 1. renormalize variables
@@ -6604,7 +6646,8 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 //  NavierStokes::nonlinear_advection
 //  NavierStokes::advance
 //
-void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
+void NavierStokes::prescribe_solid_geometry(Real time,
+  int renormalize_only,int im_PLS,int ipart_id) {
  
  bool use_tiling=ns_tiling;
 
@@ -6772,8 +6815,11 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  delete lsdata;
 
 
-}  // subroutine prescribe_solid_geometry()
+}  // end subroutine prescribe_solid_geometry()
 
+void NavierStokes::move_particles(int im_PLS,int ipart_id,int isub) {
+
+} // end subroutine move_particles
 
 // called from NavierStokes::prescribe_solid_geometryALL
 void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {

@@ -1002,9 +1002,13 @@ protected:
     void avgDown_list(int stateidx,Vector<int> scomp,
       Vector<int> ncomp,int spectral_override); 
 
+     // particle_id==-1 => no info from particles
     void prescribe_solid_geometryALL(Real time,int renormalize_only,
       int local_truncate);
-    void prescribe_solid_geometry(Real time,int renormalize_only);
+    void prescribe_solid_geometry(Real time,int renormalize_only,
+      int im_PLS,int ipart_id);
+    void move_particles(int im_PLS,int ipart_id,int isub);
+
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
     void getState_tracemag_ALL(int idx,int ngrow);
