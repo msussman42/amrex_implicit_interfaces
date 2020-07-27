@@ -677,7 +677,7 @@ void NavierStokes::nonlinear_advection() {
 
  if (read_from_CAD()==1) {
   int iter=0;
-  int FSI_operation=4; // eul vel -> structure vel
+  int FSI_operation=4; // eul vel t=cur_time_slab -> structure vel
   int FSI_sub_operation=0;
   for (FSI_sub_operation=0;FSI_sub_operation<3;FSI_sub_operation++) {
    for (int ilev=level;ilev<=finest_level;ilev++) {

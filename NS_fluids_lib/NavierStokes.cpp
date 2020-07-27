@@ -6673,7 +6673,7 @@ void NavierStokes::ns_header_msg_level(
       vofbc.dataPtr(), 
       FSIfab.dataPtr(), // placeholder
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-      velfab.dataPtr(), // ngrowFSI ghost cells
+      velfab.dataPtr(), // ngrowFSI ghost cells VELADVECT_MF
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       mnbrfab.dataPtr(),
       ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
@@ -19041,9 +19041,9 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  int matrix_points=10;  // 4x4 - (3+2+1) =10
  int RHS_points=4;
  int ncomp_accumulate=matrix_points+RHS_points;
- MultiFab* LS_sum_mf=new MultiFab(grids,dmap,ncomp_accumulate,0,
-	  MFInfo().SetTag("LS_sum_mf"),FArrayBoxFactory());
- LS_sum_mf->setVal(0.0);
+ MultiFab* accumulate_mf=new MultiFab(grids,dmap,ncomp_accumulate,0,
+	  MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
+ accumulate_mf->setVal(0.0);
 
   // for elastic materials, all the particles should live on the finest level.
   // ipart_type==0 bulk
@@ -19070,13 +19070,13 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(LS_sum_mf->boxArray().d_numPts());
+  thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*LS_sum_mf,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -19106,7 +19106,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 	localPC.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
    int Nn=neighbors_local.size();
 
-   FArrayBox& matrixfab=(*LS_sum_mf)[mfi];
+   FArrayBox& matrixfab=(*accumulate_mf)[mfi];
    FArrayBox& TNEWfab=Tensor_new[mfi];
 
    int tid_current=ns_thread();
@@ -19145,7 +19145,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   localPC.clearNeighbors();
  } // end for ipart_type=0,1
 
- delete LS_sum_mf;
+ delete accumulate_mf;
 
 } // end subroutine accumulate_PC_info
 
