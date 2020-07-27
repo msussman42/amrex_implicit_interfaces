@@ -17027,5 +17027,162 @@ stop
       return
       end subroutine FORT_INITRECALESCE
 
+      module FSI_PC_LS_module
+
+       use iso_c_binding
+       use amrex_fort_module, only : amrex_real,amrex_particle_real
+       use iso_c_binding, only: c_int
+
+       implicit none
+
+         ! ParticleContainer<N_EXTRA_REAL,0,0,0>
+         ! where N_EXTRA_REAL=AMREX_SPACEDIM
+       type, bind(C) :: particle_t
+         real(amrex_particle_real) :: pos(SDIM)
+         real(amrex_particle_real) :: pos_foot(SDIM)
+         integer(c_int) :: id
+         integer(c_int) :: cpu
+       end type particle_t
+
+      contains
+
+      subroutine fort_assimilate_lvlset_from_particles( &
+        tid, &  ! thread id
+        level, &          ! 0<=level<=finest_level
+        finest_level, &
+        solid_time, &
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        vofnew,DIMS(vofnew), &
+        LS,DIMS(LS), & ! getStateDist(time)
+        mofdata,DIMS(mofdata), &
+        den,DIMS(den), &
+        vel,DIMS(vel), &
+        velnew,DIMS(velnew), &
+        dennew,DIMS(dennew), &
+        lsnew,DIMS(lsnew), &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        time, &
+        nmat, &
+        ngrow_distance, &
+        particles_bulk, & ! a list of particles in the elastic structure
+        nbr_particles_bulk, &  ! list of nbr particles in the elastic structure
+        Np_bulk,Nn_bulk, & !  Np = number of particles, Nn=number nbr part.
+        particles_interface, & ! a list of particles in the elastic structure
+        nbr_particles_interface, & 
+        Np_interface,Nn_interface, & 
+        matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
+        RHS_points, &    ! least squares in 3D: 4
+        ncomp_accumulate, & ! sdim * (matrix_points + RHS_points)
+        matrixfab, &     ! accumulation FAB
+        DIMS(matrixfab)) &
+      bind(c,name='fort_assimilate_lvlset_from_particles')
+
+      use global_utility_module
+      use global_distance_module
+      use probf90_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      use ZEYU_LS_extrapolation, only : level_set_extrapolation
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: ngrow_distance
+
+      INTEGER_T, intent(in) :: level,finest_level
+      REAL_T, intent(in) :: solid_time
+
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: bfact
+
+      INTEGER_T, intent(in) :: DIMDEC(vofnew)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(mofdata)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(velnew)
+      INTEGER_T, intent(in) :: DIMDEC(dennew)
+      INTEGER_T, intent(in) :: DIMDEC(lsnew)
+      REAL_T, intent(inout) ::  vofnew(DIMV(vofnew),nmat*ngeom_raw)
+      REAL_T, intent(in) ::  vel(DIMV(vel), &
+       num_materials_vel*(SDIM+1))
+      REAL_T, intent(out) ::  velnew(DIMV(velnew), &
+       num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) ::  LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(in) ::  mofdata(DIMV(mofdata),nmat*ngeom_raw)
+      REAL_T, intent(in) ::  den(DIMV(den),nmat*num_state_material)
+      REAL_T, intent(inout) ::  dennew(DIMV(dennew),nmat*num_state_material)
+      REAL_T, intent(inout) ::  lsnew(DIMV(lsnew),nmat*(1+SDIM))
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+
+      INTEGER_T, intent(in) :: matrix_points
+      INTEGER_T, intent(in) :: RHS_points
+      INTEGER_T, intent(in) :: ncomp_accumulate
+      INTEGER_T, value, intent(in) :: Np_bulk,Nn_bulk ! pass by value
+      INTEGER_T, value, intent(in) :: Np_interface,Nn_interface ! pass by value
+      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      REAL_T, intent(inout) :: matrixfab( &
+        DIMV(matrixfab), &
+        ncomp_accumulate)
+      type(particle_t), intent(in) :: particles_bulk(Np_bulk)
+      type(particle_t), intent(in) :: nbr_particles_bulk(Nn_bulk)
+      type(particle_t), intent(in) :: particles_interface(Np_interface)
+      type(particle_t), intent(in) :: nbr_particles_interface(Nn_interface)
+
+      INTEGER_T interior_ID
+      INTEGER_T dir
+      REAL_T xpart(SDIM)
+
+      if (matrix_points.eq.10) then
+       ! do nothing
+      else
+       print *,"matrix_points invalid"
+       stop
+      endif
+      if (RHS_points.eq.4) then
+       ! do nothing
+      else
+       print *,"RHS_points invalid"
+       stop
+      endif
+       ! for assimilating elastic stress, ncomp=sdim*(matrix_points+
+       !  RHS_points)
+       ! level set function= phi_0 + n dot (x-x0) = LS(x)  (LINEAR)
+       ! cost function=sum_3x3x3_stencil 
+       !          w_ii,jj,kk  (phi_{i+ii,j+jj,k+kk}-LS(x_{i+ii,j+jj,k+kk}))^2
+       !    + sum_particles_interface_in_3x3x3_stencil
+       !          w_p (0-LS(x_particle_interface))^2
+      if (ncomp_accumulate.eq.(matrix_points+RHS_points)) then
+       ! do nothing
+      else
+       print *,"ncomp_accumulate invalid"
+       stop
+      endif
+
+      do interior_ID=1,Np_bulk
+       do dir=1,SDIM
+        xpart(dir)=particles_bulk(interior_ID)%pos(dir)
+       enddo
+        ! find index (i,j,k) in which xpart lives.
+        ! for all neighbors of (i,j,k), within the tilelo,tilehi borders,
+        ! increment the least squares matrix components stored in
+        ! matrixfab(D_DECL(i+ii,j+jj,k+kk),ncomp_accumulate)
+        ! a weight is calculated from xpart and xcen(i+ii,j+jj,k+kk) which
+        ! is the coordinate of the cell center of cell (i+ii,j+jj,k+kk).
+        ! assume that x_i=xlo(1)+dx(1)*(i-fablo(1)+0.5d0)
+        ! i_contain=NINT((xpart-xlo(1))/dx(1)+fablo(1)-0.5d0)
+
+      enddo
+
+      end subroutine fort_assimilate_lvlset_from_particles
+
+      end module FSI_PC_LS_module
 
 

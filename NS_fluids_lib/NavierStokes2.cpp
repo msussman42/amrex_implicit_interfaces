@@ -6983,7 +6983,6 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
      neighbors_local_interface.data(),
      Np_interface,       //pass by value
      Nn_interface,       //pass by value
-     &ncomp_tensor,
      &matrix_points,
      &RHS_points,
      &ncomp_accumulate,

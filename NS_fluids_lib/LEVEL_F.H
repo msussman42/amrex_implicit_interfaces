@@ -727,6 +727,40 @@ namespace amrex{
        int* ngrow_distance,
        int* curv_sten);
 
+
+     void fort_assimilate_lvlset_from_particles(
+       int* tid,
+       int* level,int* finest_level,
+       Real* solid_time,
+       const int* tilelo,const int* tilehi,
+       const int* fablo,const int* fabhi,int* bfact,
+       Real* vofnew,AMREX_ARLIM_P(vofnewlo),AMREX_ARLIM_P(vofnewhi),
+       Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+       Real* mof,AMREX_ARLIM_P(moflo),AMREX_ARLIM_P(mofhi),
+       Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
+       Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
+       Real* velnew,AMREX_ARLIM_P(velnewlo),AMREX_ARLIM_P(velnewhi),
+       Real* dennew,AMREX_ARLIM_P(dennewlo),AMREX_ARLIM_P(dennewhi),
+       Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
+       const Real* xlo,const Real* dx, 
+       Real* time,
+       int* nmat,
+       int* ngrow_distance,
+       const void* particles_bulk,
+       const void* nbr_particles_bulk,
+       int Np_bulk, 
+       int Nn_bulk, 
+       const void* particles_interface,
+       const void* nbr_particles_interface,
+       int Np_interface, 
+       int Nn_interface, 
+       int* matrix_points,
+       int* RHS_points,
+       int* ncomp_accumulate,
+       Real* matrixfab,
+       AMREX_ARLIM_P(matrixfablo),
+       AMREX_ARLIM_P(matrixfabhi));
+
   };
 
 }/* namespace amrex */

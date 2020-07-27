@@ -19061,6 +19061,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   for (int ilev=0;ilev<rr.size();ilev++)
    rr[ilev]=2;
   int nnbr=1;
+   // DO NOT LOOK AT THE TUTORIALS, DO NOT LOOK ONLINE, INSTEAD
+   // LOOK AT THE PELE CODE. (see Julia)
   NeighborParticleContainer<N_EXTRA_REAL,0> 
    localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
   bool local_copy_flag=true; // the two PC have same hierarchy
@@ -19079,6 +19081,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
+    // std::cout << tilegrid << '\n';
+    // std::cout << gridno << '\n';
    const Box& tilegrid = mfi.tilebox();
    const Box& fabgrid = grids[gridno];
    const int* tilelo=tilegrid.loVect();

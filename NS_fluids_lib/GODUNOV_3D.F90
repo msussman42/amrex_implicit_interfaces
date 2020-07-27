@@ -27770,6 +27770,8 @@ stop
 
        implicit none
 
+         ! ParticleContainer<N_EXTRA_REAL,0,0,0>
+         ! where N_EXTRA_REAL=AMREX_SPACEDIM
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
          real(amrex_particle_real) :: pos_foot(SDIM)
@@ -27780,24 +27782,24 @@ stop
       contains
 
       subroutine fort_assimilate_tensor_from_particles( &
-        tid, &
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        level, &
+        tid, &  ! thread id
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        level, &          ! 0<=level<=finest_level
         finest_level, &
-        xlo,dx, &
-        particles, &
-        nbr_particles, &
-        Np,Nn, & ! pass by value
-        ncomp_tensor, &
-        matrix_points, &
-        RHS_points, &
-        ncomp_accumulate, &
-        ipart_type, &
-        TNEWfab, &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        particles, &      ! a list of particles in the elastic structure
+        nbr_particles, &  ! a list of nbr particles in the elastic structure
+        Np,Nn, & ! pass by value Np = number of particles, Nn=number nbr part.
+        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
+        RHS_points, &    ! least squares in 3D: 4
+        ncomp_accumulate, & ! sdim * (matrix_points + RHS_points)
+        ipart_type, &    ! ipart_type==0 => bulk part. ipart_type==1 int. part.
+        TNEWfab, &       ! FAB that hold elastic tensor when complete
         DIMS(TNEWfab), &
-        matrixfab, &
+        matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
       bind(c,name='fort_assimilate_tensor_from_particles')
 
@@ -27826,6 +27828,12 @@ stop
       type(particle_t), intent(in) :: particles(Np)
       type(particle_t), intent(in) :: nbr_particles(Nn)
 
+      INTEGER_T interior_ID
+      INTEGER_T dir
+      REAL_T xpart(SDIM)
+      REAL_T xpartfoot(SDIM)
+      REAL_T xdisp(SDIM)
+
        ! 6 in 3D, 4 in 2D
       if (ncomp_tensor.eq.2*SDIM) then
        ! do nothing
@@ -27851,6 +27859,23 @@ stop
        print *,"ncomp_accumulate invalid"
        stop
       endif
+
+      do interior_ID=1,Np
+       do dir=1,SDIM
+        xpart(dir)=particles(interior_ID)%pos(dir)
+        xpartfoot(dir)=particles(interior_ID)%pos_foot(dir)
+        xdisp(dir)=xpart(dir)-xpartfoot(dir)
+       enddo
+        ! find index (i,j,k) in which xpart lives.
+        ! for all neighbors of (i,j,k), within the tilelo,tilehi borders,
+        ! increment the least squares matrix components stored in
+        ! matrixfab(D_DECL(i+ii,j+jj,k+kk),ncomp_accumulate)
+        ! a weight is calculated from xpart and xcen(i+ii,j+jj,k+kk) which
+        ! is the coordinate of the cell center of cell (i+ii,j+jj,k+kk).
+        ! assume that x_i=xlo(1)+dx(1)*(i-fablo(1)+0.5d0)
+        ! i_contain=NINT((xpart-xlo(1))/dx(1)+fablo(1)-0.5d0)
+
+      enddo
 
       end subroutine fort_assimilate_tensor_from_particles
 
