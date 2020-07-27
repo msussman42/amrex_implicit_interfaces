@@ -888,21 +888,28 @@ void NavierStokes::tensor_advection_updateALL() {
 
   for (int im=0;im<nmat;im++) {
    if (particleLS_flag[im]==2) { // bulk and interface particles
-    int stencil_points=3*3*3;
-    int matrix_points=10;
-    int RHS_points=4;
-    int ncomp_accumulate=stencil_points*(matrix_points+RHS_points);
-    allocate_array(1,ncomp_accumulate,-1,CELLTENSOR_MF);
-    setVal_array(1,ncomp_accumulate,0.0,CELLTENSOR_MF);
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.accumulate_PC_info(im,CELLTENSOR_MF);
-    }
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.process_PC_info(im,CELLTENSOR_MF);
-    }
-    delete_array(CELLTENSOR_MF);
+    if (ns_is_rigid(im)==0) {
+     if ((elastic_time[im]>0.0)&&
+         (elastic_viscosity[im]>0.0)) {
+      if (viscoelastic_model[im]==2) {
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        ns_level.accumulate_PC_info(im);
+       }
+      } else if ((viscoelastic_model[im]==1)||
+		 (viscoelastic_model[im]==0)) {
+       // do nothing
+      } else
+       amrex::Error("viscoelastic_model[im] invalid");
+     } else if ((elastic_time[im]==0.0)||
+                (elastic_viscosity[im]==0.0)) {
+      // do nothing
+     } else
+      amrex::Error("elastic_time or elastic_viscosity invalid");
+    } else if (ns_is_rigid(im)==1) {
+     // do nothing
+    } else
+     amrex::Error("ns_is_rigid(im) invalid");
    } else if (particleLS_flag[im]==1) {
     // do nothing
    } else if (particleLS_flag[im]==0) {

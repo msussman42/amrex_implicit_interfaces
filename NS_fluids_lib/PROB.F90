@@ -12973,7 +12973,12 @@ END SUBROUTINE Adist
       enddo ! im=1..nmat
 
       call get_primary_material(LS_temp,nmat,im_primary)
+
       material_present_flag(im_primary)=1
+
+      if (radius_cutoff(im_primary).eq.-1) then
+       inear=2
+      endif
 
       if ((is_rigid(nmat,im_primary).eq.0).or. &   ! fluid primary
           ((is_rigid(nmat,im_primary).eq.1).and. & ! solid primary, but fluids
@@ -13061,27 +13066,55 @@ END SUBROUTINE Adist
        inear=max(inear,2)
       endif
 
+       ! BEFORE:
        ! always adapt to finest level an interface changing phase.
        ! temperature gradient not accurate across coarse/fine boundary.
        ! (pc_interp used for temperature interpolation)
+       ! NOW: 
+       ! always adapt to finest level a fluid-fluid interface too.
       do im=1,nmat-1
        do im_opp=im+1,nmat
-        do ireverse=0,1
+        if ((material_present_flag(im).eq.1).and. &
+            (material_present_flag(im_opp).eq.1)) then
+
+         if ((is_rigid(nmat,im).eq.0).and. &
+             (is_rigid(nmat,im_opp).eq.0)) then
+          inear=max(inear,2)
+         else if ((is_rigid(nmat,im).eq.1).or. &
+                  (is_rigid(nmat,im_opp).eq.1)) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+
          if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
           print *,"im or im_opp bust 87"
           stop
          endif
-         call get_iten(im,im_opp,iten,nmat)
-         LL=latent_heat(iten+ireverse*nten)
-         if (LL.ne.zero) then
-          if ((material_present_flag(im).eq.1).and. &
-              (material_present_flag(im_opp).eq.1)) then
+
+         do ireverse=0,1
+          call get_iten(im,im_opp,iten,nmat)
+          LL=latent_heat(iten+ireverse*nten)
+          if (LL.ne.zero) then
            inear=max(inear,2)
+          else if (LL.eq.zero) then
+           ! do nothing
+          else
+           print *,"LL invalid"
+           stop
           endif
-         endif
-        enddo ! ireverse
-       enddo ! im_opp
-      enddo ! im
+         enddo ! ireverse=0..1
+
+        else if ((material_present_flag(im).eq.0).or. &
+                 (material_present_flag(im_opp).eq.0)) then
+         ! do nothing
+        else
+         print *,"material_present_flag invalid"
+         stop
+        endif
+       enddo ! im_opp=im+1..nmat
+      enddo ! im=1..nmat-1
 
       if (inear.eq.1) then ! 2 materials
 
@@ -13110,7 +13143,8 @@ END SUBROUTINE Adist
         if (material_present_flag(im).eq.1) then
 
          if (radius_cutoff(im).eq.0) then
-          ! do nothing, never adapt
+          ! do nothing, never adapt if level<max_level_two_materials, and
+          ! not a fluid.
          else if (radius_cutoff(im).ge.1) then
           do i1=-1,1
           do j1=-1,1
@@ -13158,6 +13192,8 @@ END SUBROUTINE Adist
        stop
       endif 
 
+       ! if err>0.0 and level<max_level_two_materials => adapt
+       ! if err>=1.0 => adapt
       if (inear.eq.1) then
        err=VOFTOL
       else if (inear.eq.2) then

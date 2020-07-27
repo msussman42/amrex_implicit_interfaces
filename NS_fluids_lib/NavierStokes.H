@@ -584,8 +584,7 @@ public:
     void prepare_post_process(int post_init_flag);
 
     void init_particle_container();
-    void accumulate_PC_info(int im,int matrix_mf);
-    void process_PC_info(int im,int matrix_mf);
+    void accumulate_PC_info(int im);
 
     //
     // Advance grids at this level in time.

@@ -27777,6 +27777,13 @@ stop
          integer(c_int) :: cpu
        end type particle_t
 
+       type, bind(C) :: nparticle_t
+         real(amrex_particle_real) :: pos(SDIM)
+         real(amrex_particle_real) :: pos_foot(SDIM)
+         integer(c_int) :: id
+         integer(c_int) :: cpu
+       end type nparticle_t
+
       contains
 
       subroutine fort_assimilate_tensor_from_particles( &
@@ -27788,20 +27795,25 @@ stop
         finest_level, &
         xlo,dx, &
         particles, &
-        ns,np, & ! pass by value
-        stencil_points, &
+        nparticles, &
+        Np,Nn, & ! pass by value
+        nTNEW, &
         matrix_points, &
         RHS_points, &
         ncomp_accumulate, &
+        ipart_type, &
+        TNEWfab, &
+        DIMS(TNEWfab), &
         matrixfab, &
         DIMS(matrixfab)) &
       bind(c,name='fort_assimilate_tensor_from_particles')
 
-      INTEGER_T, intent(in) :: stencil_points
+      INTEGER_T, intent(in) :: nTNEW
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, value, intent(in) :: ns,np ! pass by value
+      INTEGER_T, intent(in) :: ipart_type
+      INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -27811,11 +27823,16 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
+      REAL_T, intent(inout) :: TNEWfab( &
+        DIMV(TNEWfab), &
+        nTNEW)
 !     real(amrex_real), intent(in) :: particles(ns,np)
-      type(particle_t), intent(in) :: particles(np)
+      type(particle_t), intent(in) :: particles(Np)
+      type(nparticle_t), intent(in) :: nparticles(Nn)
 
       end subroutine fort_assimilate_tensor_from_particles
 

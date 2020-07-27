@@ -17,6 +17,7 @@
 #include <AMReX_Geometry.H>
 #include <AMReX_RealBox.H>
 #include <AMReX_Particles.H>
+#include <AMReX_NeighborParticles.H>
 
 #include <StateDescriptor.H>
 
@@ -154,7 +155,7 @@ public:
     //
     MultiFab& newData (int slab_index);
 
-    ParticleContainer<N_EXTRA_REAL,0,0,0>&
+    NeighborParticleContainer<N_EXTRA_REAL,0>&
        newDataPC (int slab_index,int sub_index);
 
     //
@@ -162,7 +163,7 @@ public:
     //
     const MultiFab& newData (int slab_index) const;
 
-    const ParticleContainer<N_EXTRA_REAL,0,0,0>&
+    const NeighborParticleContainer<N_EXTRA_REAL,0>&
        newDataPC (int slab_index,int sub_index) const;
 
     //
@@ -228,7 +229,8 @@ private:
      //    ns.particleLS_flag[im]==2 (particles inside and on interface),
      //    then define "new_dataPC"
 
-    using PLS_ParticleContainerType=ParticleContainer<N_EXTRA_REAL,0,0,0 >;
+    using PLS_ParticleContainerType=
+	    NeighborParticleContainer<N_EXTRA_REAL,0>;
 
     Vector< 
 	Vector<PLS_ParticleContainerType*> 

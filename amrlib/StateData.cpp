@@ -172,7 +172,7 @@ StateData::define (
      if (ncomp_PC>0) {
       new_dataPC[i].resize(ncomp_PC);
       for (int j=0;j<ncomp_PC;j++) {
-       new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
+       new_dataPC[i][j]=new NeighborParticleContainer<N_EXTRA_REAL,0>();
       }
      } else if (ncomp_PC==0) {
       // do nothing
@@ -272,7 +272,7 @@ StateData::restart (
      if (ncomp_PC>0) {
       new_dataPC[i].resize(ncomp_PC);
       for (int j=0;j<ncomp_PC;j++) {
-       new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
+       new_dataPC[i][j]=new NeighborParticleContainer<N_EXTRA_REAL,0>();
       }
      } else if (ncomp_PC==0) {
       // do nothing
@@ -440,7 +440,7 @@ StateData::newData (int slab_index) const
 
 
 
-ParticleContainer<N_EXTRA_REAL,0,0,0>&
+NeighborParticleContainer<N_EXTRA_REAL,0>&
 StateData::newDataPC (int slab_index,int sub_index)
 {
  int project_slab_index=slab_index;
@@ -458,7 +458,7 @@ StateData::newDataPC (int slab_index,int sub_index)
  return *new_dataPC[project_slab_index][sub_index];
 }
 
-const ParticleContainer<N_EXTRA_REAL,0,0,0>&
+const NeighborParticleContainer<N_EXTRA_REAL,0>&
 StateData::newDataPC (int slab_index,int sub_index) const
 {
  int project_slab_index=slab_index;

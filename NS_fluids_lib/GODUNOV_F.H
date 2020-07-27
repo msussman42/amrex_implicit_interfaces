@@ -1405,12 +1405,17 @@ extern "C"
      int* finest_level,
      const Real* xlo,const Real* dx,
      const amrex::Real* particles,
-     int ns,
-     int np, // must be pass by value since "long" on the c++ side.
-     int* stencil_points,
+     const amrex::Real* Nparticles,
+     int Np, // must be pass by value just in case "long" on the c++ side.
+     int Nn, // must be pass by value just in case "long" on the c++ side.
+     int* nTNEW,
      int* matrix_points,
      int* RHS_points,
      int* ncomp_accumulate,
+     int* ipart_type,
+     Real* TNEWfab,
+     AMREX_ARLIM_P(TNEWfablo),
+     AMREX_ARLIM_P(TNEWfabhi),
      Real* matrixfab,
      AMREX_ARLIM_P(matrixfablo),
      AMREX_ARLIM_P(matrixfabhi));
