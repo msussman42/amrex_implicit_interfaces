@@ -1005,8 +1005,8 @@ protected:
      // particle_id==-1 => no info from particles
     void prescribe_solid_geometryALL(Real time,int renormalize_only,
       int local_truncate);
-    void prescribe_solid_geometry(Real time,int renormalize_only,
-      int im_PLS,int ipart_id);
+    void prescribe_solid_geometry(Real time,int renormalize_only);
+    void PLS_correct(Real time,int im_PLS,int ipart_id);
     void move_particles(int im_PLS,int ipart_id,int isub);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);

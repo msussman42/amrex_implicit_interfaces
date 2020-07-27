@@ -19040,7 +19040,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  int matrix_points=10;  // 4x4 - (3+2+1) =10
  int RHS_points=4;
- int ncomp_accumulate=matrix_points+RHS_points;
+ int ncomp_accumulate=AMREX_SPACEDIM*(matrix_points+RHS_points);
  MultiFab* accumulate_mf=new MultiFab(grids,dmap,ncomp_accumulate,0,
 	  MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
  accumulate_mf->setVal(0.0);

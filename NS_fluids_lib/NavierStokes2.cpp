@@ -6585,10 +6585,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
    ns_level.avgDown(LS_Type,0,nmat,0);
    ns_level.MOFavgDown();
   }
-  int local_ipart_id=-1;
-  int local_im_PLS=-1;
-  ns_level.prescribe_solid_geometry(time,renormalize_only,
-    local_im_PLS,local_ipart_id);
+  ns_level.prescribe_solid_geometry(time,renormalize_only);
  }
  if (renormalize_only==0) {
 
@@ -6609,8 +6606,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 
     if (do_part_advect==1) {
      if (isub==0) {
-      ns_finest.prescribe_solid_geometry(time,renormalize_only,
-        im,ipart_id);
+      ns_finest.PLS_correct(time,im,ipart_id);
      }
      ipart_id++;
     } else if (do_part_advect==0) {
@@ -6646,8 +6642,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 //  NavierStokes::nonlinear_advection
 //  NavierStokes::advance
 //
-void NavierStokes::prescribe_solid_geometry(Real time,
-  int renormalize_only,int im_PLS,int ipart_id) {
+void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  
  bool use_tiling=ns_tiling;
 
@@ -6816,6 +6811,205 @@ void NavierStokes::prescribe_solid_geometry(Real time,
 
 
 }  // end subroutine prescribe_solid_geometry()
+
+
+void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
+ 
+ bool use_tiling=ns_tiling;
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ int finest_level = parent->finestLevel();
+
+ if (level==finest_level) {
+  // do nothing
+ } else
+  amrex::Error("expecting level==finest_level");
+
+ MultiFab &S_new = get_new_data(State_Type,slab_step+1);
+ MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
+ int nmat=num_materials;
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material;
+ int dencomp=num_materials_vel*(AMREX_SPACEDIM+1);
+
+ const Real* dx = geom.CellSize();
+
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
+
+ MultiFab* veldata=getState(1,0,
+   num_materials_vel*(AMREX_SPACEDIM+1),time); 
+ MultiFab* mofdata=getState(1,scomp_mofvars,nmat*ngeom_raw,time);
+ MultiFab* dendata=getStateDen(1,time);
+ MultiFab* lsdata=getStateDist(ngrow_distance,time,18);
+
+ if (veldata->nComp()!=num_materials_vel*(AMREX_SPACEDIM+1))
+  amrex::Error("veldata incorrect ncomp");
+ if (dendata->nComp()!=nmat*num_state_material)
+  amrex::Error("dendata incorrect ncomp");
+ if (mofdata->nComp()!=nmat*ngeom_raw)
+  amrex::Error("mofdata incorrect ncomp");
+ if (lsdata->nComp()!=nmat*(1+AMREX_SPACEDIM))
+  amrex::Error("lsdata incorrect ncomp");
+ if (lsdata->nGrow()!=ngrow_distance)
+  amrex::Error("lsdata->nGrow()!=ngrow_distance");
+ if (ngrow_distance!=4)
+  amrex::Error("ngrow_distance invalid");
+
+ int matrix_points=10;  // 4x4 - (3+2+1) =10
+ int RHS_points=4;
+ int ncomp_accumulate=(matrix_points+RHS_points);
+ MultiFab* accumulate_mf=new MultiFab(grids,dmap,ncomp_accumulate,0,
+    MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
+ accumulate_mf->setVal(0.0);
+
+ ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr_bulk=
+   get_new_dataPC(State_Type,slab_step,ipart_id);
+ ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr_interface=
+   get_new_dataPC(State_Type,slab_step,ipart_id+1);
+
+ const Vector<Geometry>& ns_geom=parent->Geom();
+ const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+ const Vector<BoxArray>& ns_ba=parent->boxArray();
+ Vector<int> rr;
+ rr.resize(ns_ba.size());
+ for (int ilev=0;ilev<rr.size();ilev++)
+  rr[ilev]=2;
+ int nnbr=1;
+ NeighborParticleContainer<N_EXTRA_REAL,0> 
+  localPC_bulk(ns_geom,ns_dmap,ns_ba,rr,nnbr);
+ NeighborParticleContainer<N_EXTRA_REAL,0> 
+  localPC_interface(ns_geom,ns_dmap,ns_ba,rr,nnbr);
+
+ bool local_copy_flag=true; // the two PC have same hierarchy
+ localPC_bulk.copyParticles(localPC_no_nbr_bulk,local_copy_flag);
+ localPC_bulk.fillNeighbors();
+
+ localPC_interface.copyParticles(localPC_no_nbr_interface,local_copy_flag);
+ localPC_interface.fillNeighbors();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   FArrayBox& vofnew=S_new[mfi];
+   FArrayBox& velnew=S_new[mfi];
+   FArrayBox& dennew=S_new[mfi];
+   FArrayBox& lsnew=LS_new[mfi];
+
+   FArrayBox& lsfab=(*lsdata)[mfi];
+   FArrayBox& moffab=(*mofdata)[mfi];
+   FArrayBox& denfab=(*dendata)[mfi];
+   FArrayBox& velfab=(*veldata)[mfi];
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   auto& particles_bulk = localPC_bulk.GetParticles(level)
+     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+   auto& particles_AoS_bulk = particles_bulk.GetArrayOfStructs();
+   int Np_bulk=particles_AoS_bulk.size();
+
+    // ParticleVector&
+   auto& neighbors_local_bulk = 
+	localPC_bulk.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
+   int Nn_bulk=neighbors_local_bulk.size();
+
+   auto& particles_interface = localPC_interface.GetParticles(level)
+     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+   auto& particles_AoS_interface = particles_interface.GetArrayOfStructs();
+   int Np_interface=particles_AoS_interface.size();
+
+    // ParticleVector&
+   auto& neighbors_local_interface = 
+	localPC_interface.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
+   int Nn_interface=neighbors_local_interface.size();
+
+   FArrayBox& matrixfab=(*accumulate_mf)[mfi];
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // in: LEVELSET_3D.F90
+   fort_assimilate_lvlset_from_particles(
+     &tid_current,
+     &level,&finest_level,
+     &time,
+     tilelo,tilehi,
+     fablo,fabhi,&bfact,
+     vofnew.dataPtr(scomp_mofvars),
+     ARLIM(vofnew.loVect()),ARLIM(vofnew.hiVect()),
+     lsfab.dataPtr(),
+     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+     moffab.dataPtr(),
+     ARLIM(moffab.loVect()),ARLIM(moffab.hiVect()),
+     denfab.dataPtr(),
+     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+     velfab.dataPtr(),
+     ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+     velnew.dataPtr(),
+     ARLIM(velnew.loVect()),ARLIM(velnew.hiVect()),
+     dennew.dataPtr(dencomp),
+     ARLIM(dennew.loVect()),ARLIM(dennew.hiVect()),
+     lsnew.dataPtr(),
+     ARLIM(lsnew.loVect()),ARLIM(lsnew.hiVect()),
+     xlo,dx,
+     &cur_time_slab,
+     &nmat,
+     &ngrow_distance,
+     particles_AoS_bulk.data(),
+     neighbors_local_bulk.data(),
+     Np_bulk,       //pass by value
+     Nn_bulk,       //pass by value
+     particles_AoS_interface.data(),
+     neighbors_local_interface.data(),
+     Np_interface,       //pass by value
+     Nn_interface,       //pass by value
+     &ncomp_tensor,
+     &matrix_points,
+     &RHS_points,
+     &ncomp_accumulate,
+     matrixfab.dataPtr(),
+     ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
+
+ }  // mfi
+} // omp
+ ns_reconcile_d_num(154);
+
+ localPC_bulk.clearNeighbors();
+ localPC_interface.clearNeighbors();
+
+ delete accumulate_mf;
+ delete veldata;
+ delete mofdata;
+ delete dendata;
+ delete lsdata;
+
+
+}  // end subroutine PLS_correct()
+
+
+
+
+
 
 void NavierStokes::move_particles(int im_PLS,int ipart_id,int isub) {
 

@@ -27826,6 +27826,32 @@ stop
       type(particle_t), intent(in) :: particles(Np)
       type(particle_t), intent(in) :: nbr_particles(Nn)
 
+       ! 6 in 3D, 4 in 2D
+      if (ncomp_tensor.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ncomp_tensor invalid"
+       stop
+      endif
+      if (matrix_points.eq.10) then
+       ! do nothing
+      else
+       print *,"matrix_points invalid"
+       stop
+      endif
+      if (RHS_points.eq.4) then
+       ! do nothing
+      else
+       print *,"RHS_points invalid"
+       stop
+      endif
+      if (ncomp_accumulate.eq.SDIM*(matrix_points+RHS_points)) then
+       ! do nothing
+      else
+       print *,"ncomp_accumulate invalid"
+       stop
+      endif
+
       end subroutine fort_assimilate_tensor_from_particles
 
       end module FSI_PC_module
