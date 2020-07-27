@@ -27777,13 +27777,6 @@ stop
          integer(c_int) :: cpu
        end type particle_t
 
-       type, bind(C) :: nparticle_t
-         real(amrex_particle_real) :: pos(SDIM)
-         real(amrex_particle_real) :: pos_foot(SDIM)
-         integer(c_int) :: id
-         integer(c_int) :: cpu
-       end type nparticle_t
-
       contains
 
       subroutine fort_assimilate_tensor_from_particles( &
@@ -27795,9 +27788,9 @@ stop
         finest_level, &
         xlo,dx, &
         particles, &
-        nparticles, &
+        nbr_particles, &
         Np,Nn, & ! pass by value
-        nTNEW, &
+        ncomp_tensor, &
         matrix_points, &
         RHS_points, &
         ncomp_accumulate, &
@@ -27808,7 +27801,7 @@ stop
         DIMS(matrixfab)) &
       bind(c,name='fort_assimilate_tensor_from_particles')
 
-      INTEGER_T, intent(in) :: nTNEW
+      INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
@@ -27829,10 +27822,9 @@ stop
         ncomp_accumulate)
       REAL_T, intent(inout) :: TNEWfab( &
         DIMV(TNEWfab), &
-        nTNEW)
-!     real(amrex_real), intent(in) :: particles(ns,np)
+        ncomp_tensor)
       type(particle_t), intent(in) :: particles(Np)
-      type(nparticle_t), intent(in) :: nparticles(Nn)
+      type(particle_t), intent(in) :: nbr_particles(Nn)
 
       end subroutine fort_assimilate_tensor_from_particles
 

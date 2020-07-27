@@ -139,19 +139,6 @@
   amrex/Tutorials/Particles/NeighborList
 
 
-  strategy for avoiding neighbor particle list:
-  each cell will store:
-   4x4 symmetric matrix, 4x1 RHS of accumulation -> 
-       depart from cell (i,j,k) target to cell (i+i',j+j',k+k')
-  1. traverse all tiles and all particles on tiles and initialize the
-     accumulation variables.
-  2. for level=finest_level to 0
-     a) piecewise constant interpolation to fill ghost cells.
-     b) special average down from level+1 to level.
-     c) compute grad Y + (grad Y)^T
-
-
-
   for Cody,
     1. declare mypc (object of type ParticleContainer)
     2. fill the particle container
@@ -18976,16 +18963,16 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
- if ((level<0)||(level>finest_level))
-  amrex::Error("level invalid accumulate_PC_info");
+ if (level==finest_level) {
+  // do nothing
+ } else
+  amrex::Error("expecting level==finest_level");
 
  int nmat=num_materials;
  if ((im_elastic>=0)&&(im_elastic<nmat)) {
   // do nothing
  } else
   amrex::Error("im_elastic invalid");
-
- NavierStokes& ns_lev0=getLevel(0);
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -19063,8 +19050,21 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   // ipart_type==1 interface
  for (int ipart_type=0;ipart_type<2;ipart_type++) { 
 
-  NeighborParticleContainer<N_EXTRA_REAL,0>& localPC=
-    ns_lev0.get_new_dataPC(State_Type,slab_step,ipart+ipart_type);
+  ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+    get_new_dataPC(State_Type,slab_step,ipart+ipart_type);
+
+  const Vector<Geometry>& ns_geom=parent->Geom();
+  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+  const Vector<BoxArray>& ns_ba=parent->boxArray();
+  Vector<int> rr;
+  rr.resize(ns_ba.size());
+  for (int ilev=0;ilev<rr.size();ilev++)
+   rr[ilev]=2;
+  int nnbr=1;
+  NeighborParticleContainer<N_EXTRA_REAL,0> 
+   localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
+  bool local_copy_flag=true; // the two PC have same hierarchy
+  localPC.copyParticles(localPC_no_nbr,local_copy_flag);
 
   localPC.fillNeighbors();
 
@@ -19120,7 +19120,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
    fort_assimilate_tensor_from_particles( 
      &tid_current,
      tilelo,tilehi,
-     fablo,fabhi,&bfact,
+     fablo,fabhi,
+     &bfact,
      &level,
      &finest_level,
      xlo,dx,
@@ -19150,20 +19151,20 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
 
 // initialize particles and copy to all "slab locations"
-// ONLY LEVEL==0 STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
+// ONLY LEVEL==max_level STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
 // PARTICLES THAT APPEAR ON ALL THE LEVELS.
 // ALSO: Only state[State_Type] has the particles.
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
-// This routine called for level=finest_level .... 0
+// This routine called for level=finest_level 
 void
 NavierStokes::init_particle_container() {
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
- if ((level<0)||(level>finest_level))
-  amrex::Error("level invalid init_particle_container");
-
- NavierStokes& ns_lev0=getLevel(0);
+ if (level==finest_level) {
+  // do nothing
+ } else 
+  amrex::Error("particle container on finest level only");
 
  int nmat=num_materials;
  if (num_state_base!=2)
@@ -19291,8 +19292,8 @@ NavierStokes::init_particle_container() {
  
      for (int isub=0;isub<subdivide_mult;isub++) {
 
-      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC=
-        ns_lev0.get_new_dataPC(State_Type,slab_step,ipart);
+      ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+        get_new_dataPC(State_Type,slab_step,ipart);
 
       auto& particles = localPC.GetParticles(level)
         [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
@@ -19309,7 +19310,7 @@ NavierStokes::init_particle_container() {
        if (pfab(i,j,k,flag_comp) == 1.0) {
 
         using My_ParticleContainer =
-          NeighborParticleContainer<N_EXTRA_REAL,0>;
+          ParticleContainer<N_EXTRA_REAL,0,0,0>;
 
         My_ParticleContainer::ParticleType p;
         p.id()   = My_ParticleContainer::ParticleType::NextID();
@@ -19438,6 +19439,7 @@ NavierStokes::post_init_state () {
   amrex::Error("color_count!=blobdata.size()");
 
  if (NS_ncomp_particles>0) {
+  NavierStokes& ns_finest=getLevel(finest_level);
 
   const Vector<Geometry>& ns_geom=parent->Geom();
   const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
@@ -19447,22 +19449,17 @@ NavierStokes::post_init_state () {
   for (int ilev=0;ilev<rr.size();ilev++)
    rr[ilev]=2;
   for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
-   NeighborParticleContainer<N_EXTRA_REAL,0>& localPC=
-     get_new_dataPC(State_Type,slab_step,ipart);
-   int nneighbor=1;
-   localPC.Define(ns_geom,ns_dmap,ns_ba,rr,nneighbor);
+   ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+     ns_finest.get_new_dataPC(State_Type,slab_step,ipart);
+   localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
   }
+  ns_finest.init_particle_container();
  
  } else if (NS_ncomp_particles==0) {
   // do nothing
  } else
   amrex::Error("NS_ncomp_particles invalid");
  
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.init_particle_container();
- } 
-
  if (is_zalesak()) {
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);

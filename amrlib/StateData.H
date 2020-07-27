@@ -46,6 +46,7 @@ public:
     // Constructor that properly initializes data members.
     //
     StateData (int level,
+	       int max_level,
                const Box& p_domain,
                const BoxArray&        grds,
                const DistributionMapping& dm,
@@ -65,6 +66,7 @@ public:
     // Initializes data members if you used default constructor.
     //
     void define (int level,
+		 int max_level,
                  const Box& p_domain,
                  const BoxArray&        grds,
                  const DistributionMapping& dm,
@@ -121,7 +123,8 @@ public:
     void checkPoint (const std::string& name,
                      const std::string& fullpathname,
                      std::ostream&      os,
-		     int level);
+		     int level,
+		     int max_level);
     //
     // Initializes state data from a checkpoint file.
     //
@@ -129,6 +132,7 @@ public:
                   int slab_dt_type, // 0=SEM 1=evenly spaced
                   int MAX_NUM_SLAB,
                   int level,
+                  int max_level,
                   std::istream& is,
                   const Box&             p_domain,
                   const BoxArray&        grds,
@@ -155,7 +159,8 @@ public:
     //
     MultiFab& newData (int slab_index);
 
-    NeighborParticleContainer<N_EXTRA_REAL,0>&
+      // lives only on max_level
+    ParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index);
 
     //
@@ -163,7 +168,8 @@ public:
     //
     const MultiFab& newData (int slab_index) const;
 
-    const NeighborParticleContainer<N_EXTRA_REAL,0>&
+      // lives only on max_level
+    const ParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index) const;
 
     //
@@ -192,6 +198,8 @@ public:
       int& best_index);
 
 private:
+
+    int StateData_level;
 
     int StateData_MAX_NUM_SLAB;
     int StateData_slab_dt_type;
@@ -228,10 +236,15 @@ private:
      // If ns.viscoelastic_model[im]==2 (elastic material) and
      //    ns.particleLS_flag[im]==2 (particles inside and on interface),
      //    then define "new_dataPC"
+     //
+     // For small droplets, they will evaporate down to nothing (using 
+     // supermesh method), thereby
+     // converting liquid to vapor automatically.
 
     using PLS_ParticleContainerType=
-	    NeighborParticleContainer<N_EXTRA_REAL,0>;
+	    ParticleContainer<N_EXTRA_REAL,0,0,0>;
 
+     // lives only on max_level
     Vector< 
 	Vector<PLS_ParticleContainerType*> 
 	  > new_dataPC;

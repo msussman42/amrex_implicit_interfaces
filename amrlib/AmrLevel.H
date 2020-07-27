@@ -241,11 +241,10 @@ public:
     MultiFab& get_new_data (int state_indx,int slab_index);
     const MultiFab& get_new_data (int state_indx,int slab_index) const;
 
-    NeighborParticleContainer<N_EXTRA_REAL,0>& get_new_dataPC(int state_indx,
+    ParticleContainer<N_EXTRA_REAL,0,0,0>& get_new_dataPC(int state_indx,
       int slab_indx,int particle_index);
-    const NeighborParticleContainer<N_EXTRA_REAL,0>& 
-      get_new_dataPC(int state_indx,
-        int slab_indx,int particle_index) const;
+    const ParticleContainer<N_EXTRA_REAL,0,0,0>& get_new_dataPC(int state_indx,
+      int slab_indx,int particle_index) const;
 
     //
     // Returns list of Descriptors.
@@ -361,7 +360,7 @@ AmrLevel::get_state_data (int state_indx)
 }
 
 inline
-NeighborParticleContainer<N_EXTRA_REAL,0>&
+ParticleContainer<N_EXTRA_REAL,0,0,0>&
 AmrLevel::get_new_dataPC(int state_indx,int slab_indx,int particle_index) {
 
  return state[state_indx].newDataPC(slab_indx,particle_index);
@@ -382,7 +381,7 @@ AmrLevel::get_new_data (int state_indx,int slab_index) const
 }
 
 inline
-const NeighborParticleContainer<N_EXTRA_REAL,0>&
+const ParticleContainer<N_EXTRA_REAL,0,0,0>&
 AmrLevel::get_new_dataPC(
   int state_indx,int slab_indx,int particle_index) const {
 

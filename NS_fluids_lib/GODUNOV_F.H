@@ -1404,11 +1404,13 @@ extern "C"
      int* level,
      int* finest_level,
      const Real* xlo,const Real* dx,
-     const amrex::Real* particles,
-     const amrex::Real* Nparticles,
+     const void* particles,
+     //const amrex::Real* particles,
+     const void* nbr_particles,
+     //const amrex::Real* nbr_particles,
      int Np, // must be pass by value just in case "long" on the c++ side.
      int Nn, // must be pass by value just in case "long" on the c++ side.
-     int* nTNEW,
+     int* ncomp_tensor,
      int* matrix_points,
      int* RHS_points,
      int* ncomp_accumulate,

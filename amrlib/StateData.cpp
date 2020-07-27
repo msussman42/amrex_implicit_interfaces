@@ -36,6 +36,8 @@ const Real INVALID_TIME = -1.0e200;
 //                           new_dataPC[0] ... new_dataPC[order+1]
 StateData::StateData () 
 {
+   StateData_level=0;
+
    StateData_MAX_NUM_SLAB=33;
    StateData_slab_dt_type=0;
 
@@ -55,6 +57,7 @@ StateData::StateData ()
 
 StateData::StateData (
   int level,
+  int max_level,
   const Box& p_domain,
   const BoxArray& grds,
   const DistributionMapping& dm,
@@ -66,13 +69,15 @@ StateData::StateData (
   int slab_dt_type, // 0=SEM 1=evenly spaced
   int MAX_NUM_SLAB)
 {
-    define(level,p_domain, grds, dm, *d, *dGHOST, cur_time, dt,
+    define(level,max_level,
+	   p_domain, grds, dm, *d, *dGHOST, cur_time, dt,
            time_order,slab_dt_type,MAX_NUM_SLAB);
 }
 
 void
 StateData::define (
   int level,
+  int max_level,
   const Box& p_domain,
   const BoxArray& grds,
   const DistributionMapping& dm,
@@ -93,7 +98,9 @@ StateData::define (
      std::cout << "time = " << time << '\n';
      amrex::Error("time invalid in StateData define");
     }
-    
+   
+    StateData_level=level;
+
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
     if (StateData_MAX_NUM_SLAB<33)
      amrex::Error("StateData_MAX_NUM_SLAB too small");
@@ -170,10 +177,15 @@ StateData::define (
      new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
        MFInfo().SetTag("new_data"),FArrayBoxFactory());
      if (ncomp_PC>0) {
-      new_dataPC[i].resize(ncomp_PC);
-      for (int j=0;j<ncomp_PC;j++) {
-       new_dataPC[i][j]=new NeighborParticleContainer<N_EXTRA_REAL,0>();
-      }
+      if (level==max_level) {
+       new_dataPC[i].resize(ncomp_PC);
+       for (int j=0;j<ncomp_PC;j++) {
+        new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
+       }
+      } else if (level<max_level) {
+       // do nothing
+      } else
+       amrex::Error("level invalid");
      } else if (ncomp_PC==0) {
       // do nothing
      } else
@@ -189,6 +201,7 @@ StateData::restart (
   int slab_dt_type, // 0=SEM 1=evenly spaced
   int MAX_NUM_SLAB,
   int level,
+  int max_level,
   std::istream& is,
   const Box& p_domain,
   const BoxArray&        grds,
@@ -270,10 +283,15 @@ StateData::restart (
         MFInfo().SetTag("new_data"),FArrayBoxFactory());
 
      if (ncomp_PC>0) {
-      new_dataPC[i].resize(ncomp_PC);
-      for (int j=0;j<ncomp_PC;j++) {
-       new_dataPC[i][j]=new NeighborParticleContainer<N_EXTRA_REAL,0>();
-      }
+      if (level==max_level) {
+       new_dataPC[i].resize(ncomp_PC);
+       for (int j=0;j<ncomp_PC;j++) {
+        new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
+       }
+      } else if (level<max_level) {
+       // do nothing
+      } else
+       amrex::Error("level invalid");
      } else if (ncomp_PC==0) {
       // do nothing
      } else
@@ -300,16 +318,21 @@ StateData::restart (
       // do nothing
      } else if (ncomp_PC>0) {
 
-      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-       int raw_index=ncomp_PC * i + PC_mat_index;
-       std::string Part_name="FusionPart";
-       std::stringstream raw_string_stream(std::stringstream::in |
-          std::stringstream::out);
-       raw_string_stream << raw_index;
-       std::string raw_string=raw_string_stream.str();
-       Part_name+=raw_string;
-       new_dataPC[i][PC_mat_index]->Restart(FullPathName,Part_name);
-      } // PC_mat_index=0..ncomp_PC-1 
+      if (level==max_level) {
+       for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+        int raw_index=ncomp_PC * i + PC_mat_index;
+        std::string Part_name="FusionPart";
+        std::stringstream raw_string_stream(std::stringstream::in |
+           std::stringstream::out);
+        raw_string_stream << raw_index;
+        std::string raw_string=raw_string_stream.str();
+        Part_name+=raw_string;
+        new_dataPC[i][PC_mat_index]->Restart(FullPathName,Part_name);
+       } // PC_mat_index=0..ncomp_PC-1 
+      } else if (level<max_level) {
+       // do nothing
+      } else
+       amrex::Error("level invalid");
      } else
       amrex::Error("ncompPC invalid");
 
@@ -440,7 +463,7 @@ StateData::newData (int slab_index) const
 
 
 
-NeighborParticleContainer<N_EXTRA_REAL,0>&
+ParticleContainer<N_EXTRA_REAL,0,0,0>&
 StateData::newDataPC (int slab_index,int sub_index)
 {
  int project_slab_index=slab_index;
@@ -458,7 +481,7 @@ StateData::newDataPC (int slab_index,int sub_index)
  return *new_dataPC[project_slab_index][sub_index];
 }
 
-const NeighborParticleContainer<N_EXTRA_REAL,0>&
+const ParticleContainer<N_EXTRA_REAL,0,0,0>&
 StateData::newDataPC (int slab_index,int sub_index) const
 {
  int project_slab_index=slab_index;
@@ -995,7 +1018,8 @@ StateData::CopyOldToNew() {
 void
 StateData::checkPoint (const std::string& name,
                        const std::string& fullpathname,
-                       std::ostream&  os,int level)
+                       std::ostream&  os,
+		       int level,int max_level)
 {
 
     if (level>=0) {
@@ -1061,16 +1085,21 @@ StateData::checkPoint (const std::string& name,
       // do nothing
      } else if (ncomp_PC>0) {
 
-      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-       int raw_index=ncomp_PC * i + PC_mat_index;
-       std::string Part_name="FusionPart";
-       std::stringstream raw_string_stream(std::stringstream::in |
+      if (level==max_level) {
+       for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+        int raw_index=ncomp_PC * i + PC_mat_index;
+        std::string Part_name="FusionPart";
+        std::stringstream raw_string_stream(std::stringstream::in |
           std::stringstream::out);
-       raw_string_stream << raw_index;
-       std::string raw_string=raw_string_stream.str();
-       Part_name+=raw_string;
-       new_dataPC[i][PC_mat_index]->Checkpoint(mf_fullpath_new,Part_name);
-      } // PC_mat_index=0..ncomp_PC-1 
+        raw_string_stream << raw_index;
+        std::string raw_string=raw_string_stream.str();
+        Part_name+=raw_string;
+        new_dataPC[i][PC_mat_index]->Checkpoint(mf_fullpath_new,Part_name);
+       } // PC_mat_index=0..ncomp_PC-1 
+      } else if (level<max_level) {
+       // do nothing
+      } else
+       amrex::Error("level invalid");
      } else
       amrex::Error("ncompPC invalid");
 

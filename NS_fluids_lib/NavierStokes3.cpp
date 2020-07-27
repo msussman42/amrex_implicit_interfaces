@@ -892,10 +892,9 @@ void NavierStokes::tensor_advection_updateALL() {
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
       if (viscoelastic_model[im]==2) {
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.accumulate_PC_info(im);
-       }
+	  // particles only stored on the finest level.
+       NavierStokes& ns_finest=getLevel(finest_level);
+       ns_finest.accumulate_PC_info(im);
       } else if ((viscoelastic_model[im]==1)||
 		 (viscoelastic_model[im]==0)) {
        // do nothing

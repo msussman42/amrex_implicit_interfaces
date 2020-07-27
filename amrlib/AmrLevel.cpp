@@ -48,6 +48,7 @@ AmrLevel::AmrLevel (Amr&            papa,
     level  = lev;
     parent = &papa;
 
+    int max_level=parent->maxLevel();
 
     state.resize(desc_lst.size());
 
@@ -68,6 +69,7 @@ AmrLevel::AmrLevel (Amr&            papa,
     {
         int time_order=parent->Time_blockingFactor();
         state[icomp].define(level,
+			max_level,
                         geom.Domain(),
                         grids,
                         dm,
@@ -88,6 +90,8 @@ AmrLevel::restart (Amr&          papa,
                    std::istream& is) {
 
     parent = &papa;
+
+    int max_level=parent->maxLevel();
 
     is >> level;
     is >> geom;
@@ -118,6 +122,7 @@ AmrLevel::restart (Amr&          papa,
         level_slab_dt_type,
         level_MAX_NUM_SLAB,
         level,
+	max_level,
         is, 
         geom.Domain(),
         grids,
@@ -189,6 +194,8 @@ void
 AmrLevel::checkPoint (const std::string& dir,
                       std::ostream&      os)
 {
+    int max_level=parent->maxLevel();
+
     int ndesc = desc_lst.size();
 
     //
@@ -243,7 +250,8 @@ AmrLevel::checkPoint (const std::string& dir,
           amrex::Concatenate(FullPath + "/SD_", icomp, 1);
 
          // os=HeaderFile 
-        state[icomp].checkPoint(PathNameInHdr, FullPathName, os,level);
+        state[icomp].checkPoint(PathNameInHdr, FullPathName, os,
+			level,max_level);
         
     }
 }
