@@ -5158,7 +5158,10 @@ stop
                       (den_dF(1).eq.zero)) then
               ! do nothing
              else
-              print *,"den_dF invalid"
+              print *,"den_dF invalid 1"
+              print *,"dF= ",dF
+              print *,"den_dF(1) = ",den_dF(1)
+              print *,"den_dF(2) = ",den_dF(2)
               stop
              endif
             else
@@ -5187,7 +5190,10 @@ stop
                       (den_dF(1).eq.zero)) then
               ! do nothing
              else
-              print *,"den_dF invalid"
+              print *,"den_dF invalid 2"
+              print *,"dF= ",dF
+              print *,"den_dF(1) = ",den_dF(1)
+              print *,"den_dF(2) = ",den_dF(2)
               stop
              endif
             else

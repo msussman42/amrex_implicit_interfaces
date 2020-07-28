@@ -76,8 +76,8 @@ ns.projection_pressure_scale=1.0e+6
 # 4. mass_fraction_id substrate,water set accordingly (material id for vapor)
 #
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate  
-#ns.num_species_var=0 #  no evaporation
-ns.num_species_var=1 # evaporation
+ns.num_species_var=0 #  no evaporation
+#ns.num_species_var=1 # evaporation 
 ns.species_evaporation_density=0.001
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
@@ -192,29 +192,29 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K)
 #evaporation:
 # 12 13 14 23 24 34 21 31 41 32 42 43
 # 12=water to gas   31=ice to water
-ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
+#ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
 ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 #no evaporation:
-#ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
+ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 #evaporation: 
-ns.freezing_model=5 0 0 0 0 0 0 0 0 0 0 0
+#ns.freezing_model=5 0 0 0 0 0 0 0 0 0 0 0
 #no evaporation: 
-#ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
+ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
 #evaporation: 
-ns.mass_fraction_id=1 0 0 0 0 0 0 0 0 0 0 0
+#ns.mass_fraction_id=1 0 0 0 0 0 0 0 0 0 0 0
 #no evaporation: 
-#ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
+ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
 # 1->2 liquid-> gas
 # 1->3 liquid->ice 
 # ....
 #12 13 14 23 24 34  21 31 41 32 42 43
 # substrate temp is 280
 #evaporation:
-ns.saturation_temp = 276.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
+#ns.saturation_temp = 276.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
 #no evaporation:
-#ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
+ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
 # 
 ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt

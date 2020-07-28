@@ -188,6 +188,8 @@ ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # if nucleation_period==0.0, only nucleate one bubble, 
 # if nucleation_period>0.0, periodically nucleate bubbles.
 # NUCLEATION: UNDER CONSTRUCTION
+# NavierStokes::level_phase_change_rate
+# FORT_RATEMASSCHANGE in MASS_TRANSFER_3D.F90
 ns.nucleation_period=0.07	#Every 90ms?
 ns.nucleation_period=0.05	#Every 90ms?
 # NOV 2018 (3 or 4 materials)
@@ -350,7 +352,10 @@ ns.outflow_velocity_buffer_size=0.0 0.0 0.0 0.0
 # if initial angle far from static condition, then bubble can
 # prematurely lift off.
 # yblob=yblob2+R cos(contact_angle)=2.08333e-4+2E-4 cos(49.995 deg)=3.369e-4
+# NavierStokes::level_phase_change_rate
 ns.n_sites=1
+# pos_sites=x1 y1 z1 r1 x2 y2 z2 r2 ....
+# in new version: it could be that r is not used.
 ns.pos_sites=0.0 4.594e-4 0.0 0.25e-3 
 
 # x,y center of surface of HOT plate (xblob2,yblob2) (inclined)

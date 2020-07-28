@@ -770,6 +770,7 @@ Vector<Real> NavierStokes::tempconst;
 Vector<Real> NavierStokes::initial_temperature;
 Real NavierStokes::initial_temperature_diffuse_duration=0.0;
 
+// default is zero which means "get_local_heat_source" returns a zero source.
 Real NavierStokes::temperature_source=0.0;
 Vector<Real> NavierStokes::temperature_source_cen;
 Vector<Real> NavierStokes::temperature_source_rad;
