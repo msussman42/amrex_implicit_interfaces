@@ -4449,7 +4449,7 @@ stop
             vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
 
             tempvfrac=volmat(u_imaterial)/voltotal
-            if ((tempvfrac.ge.EBVOFTOL).and.(tempvfrac.le.1.1)) then
+            if ((tempvfrac.ge.EBVOFTOL).and.(tempvfrac.le.1.1d0)) then
              if (tempvfrac.gt.one) then
               tempvfrac=one
              endif
@@ -5162,6 +5162,8 @@ stop
               print *,"dF= ",dF
               print *,"den_dF(1) = ",den_dF(1)
               print *,"den_dF(2) = ",den_dF(2)
+              print *,"EBVOFTOL = ",EBVOFTOL
+              print *,"dt = ",dt
               stop
              endif
             else
@@ -5194,6 +5196,8 @@ stop
               print *,"dF= ",dF
               print *,"den_dF(1) = ",den_dF(1)
               print *,"den_dF(2) = ",den_dF(2)
+              print *,"EBVOFTOL = ",EBVOFTOL
+              print *,"dt = ",dt
               stop
              endif
             else
