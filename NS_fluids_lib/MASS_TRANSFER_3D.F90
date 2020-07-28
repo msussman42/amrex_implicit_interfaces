@@ -3684,7 +3684,9 @@ stop
        ! DVOF is accumulated material to change phase.
        ! for heat pipe: we must have sum_m (sign L_m) DVOF_m = 0
       do im=1,nmat
-       if (DVOF(im).lt.zero) then
+       if (DVOF(im).ge.zero) then
+        ! do nothing
+       else
         print *,"DVOF invalid"
         stop
        endif
@@ -4625,7 +4627,7 @@ stop
            DVOF(im_dest)=DVOF(im_dest)+dF
            deltaVOF(D_DECL(i,j,k),im_dest)=dF
 
-           if (abs(dF).gt.EBVOFTOL) then
+           if (dF.gt.EBVOFTOL) then
 
             do iprobe=1,2
 
@@ -4853,6 +4855,17 @@ stop
                         (mtype.le.fort_max_num_eos)) then
                 density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
                  condensed_den*dF)/temp_new_vfrac
+                if (density_mix_new(1).gt.zero) then
+                 ! do nothing
+                else
+                 print *,"density_mix_new(1) invalid",density_mix_new(1)
+                 print *,"LL=",LL
+                 print *,"density_old(1)=",density_old(1)
+                 print *,"oldvfrac(im_source)=",oldvfrac(im_source)
+                 print *,"dF=",dF
+                 print *,"condensed_den=",condensed_den
+                 stop
+                endif
                else
                 print *,"mtype invalid"
                 stop
@@ -4953,7 +4966,14 @@ stop
              denratio_factor=density_mix_new(iprobe)/density_old(iprobe)-one
                ! avoid loss of precision errors.
              if (abs(denratio_factor).le.EBVOFTOL) then
-              delta_mass_local=density_old(iprobe)*dF
+              if (iprobe.eq.1) then ! source
+               delta_mass_local=-density_old(iprobe)*dF
+              else if (iprobe.eq.2) then ! dest
+               delta_mass_local=density_old(iprobe)*dF
+              else
+               print *,"iprobe invalid"
+               stop
+              endif
              else if (abs(denratio_factor).ge.EBVOFTOL) then
               delta_mass_local= &
                 density_mix_new(iprobe)*newvfrac(im_probe)- &
@@ -4962,7 +4982,26 @@ stop
               print *,"denratio_factor invalid"
               stop
              endif
-             deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_probe)= &
+             if (iprobe.eq.1) then ! source
+              if (delta_mass_local.le.zero) then
+               ! do nothing
+              else
+               print *,"delta_mass_local invalid"
+               stop
+              endif
+             else if (iprobe.eq.2) then ! dest
+              if (delta_mass_local.ge.zero) then
+               ! do nothing
+              else
+               print *,"delta_mass_local invalid"
+               stop
+              endif
+             else
+              print *,"iprobe invalid"
+              stop
+             endif
+
+             deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_dest)= &
                 delta_mass_local
 
              snew(D_DECL(i,j,k),base_index+dencomp_probe)= &
@@ -5007,10 +5046,11 @@ stop
              stop
             endif
 
-           else if (abs(dF).le.EBVOFTOL) then
+           else if ((dF.ge.zero).and.(dF.le.EBVOFTOL)) then
             ! do nothing
            else
             print *,"dF became corrupt"
+            print *,"dF invalid"
             stop
            endif 
 
@@ -5066,6 +5106,25 @@ stop
             stop
            endif
 
+             ! deltaVOF init when isweep==0
+           dF=deltaVOF(D_DECL(i,j,k),im_dest)
+           dF=DVOF_FACT(im_dest)*dF
+           if (dF.ge.zero) then
+            ! do nothing
+           else
+            print *,"dF invalid: ",dF
+            stop
+           endif
+           if ((DVOF_FACT(im_dest).ge.zero).and. &
+               (DVOF_FACT(im_dest).le.one)) then
+            ! do nothing
+           else
+            print *,"DVOF_FACT invalid"
+            stop
+           endif
+           newvfrac(im_dest)=oldvfrac(im_dest)+dF
+           newvfrac(im_source)=oldvfrac(im_source)-dF
+
            do iprobe=1,2  ! source,dest
 
             if (iprobe.eq.1) then ! source
@@ -5085,26 +5144,7 @@ stop
                  (im_probe-1)*ngeom_recon+1)
 
             den_dF(iprobe)= &
-                 deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_probe)
-
-             ! deltaVOF init when isweep==0
-            if (iprobe.eq.2) then ! dest
-             dF=deltaVOF(D_DECL(i,j,k),im_probe)
-             dF=DVOF_FACT(im_probe)*dF
-             newvfrac(im_probe)=oldvfrac(im_probe)+dF
-             newvfrac(im_source)=oldvfrac(im_source)-dF
-
-             if ((DVOF_FACT(im_probe).lt.zero).or. &
-                 (DVOF_FACT(im_probe).gt.one)) then
-              print *,"DVOF_FACT invalid"
-              stop
-             endif
-            else if (iprobe.eq.1) then ! source
-             ! do nothing
-            else
-             print *,"iprobe invalid"
-             stop
-            endif
+                 deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_dest)
 
             if (newvfrac(im_probe).gt.one+VOFTOL) then
              print *,"newvfrac(im_probe) overflow"
