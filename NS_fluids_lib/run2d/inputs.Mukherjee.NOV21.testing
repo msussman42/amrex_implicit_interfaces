@@ -49,7 +49,7 @@ stop_time = 1.0
 
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi   =  5.0e-3 20.0e-3   # MKS
+geometry.prob_hi   =  5.0e-3 10.0e-3   # MKS
 ns.EILE_flag=-1
 # OCT 2018  continuous_mof=2 CMOF everywhere 
 #           continuous_mof=4 CLSVOF in 2 material cells, CMOF in >2 mat cells
@@ -65,9 +65,9 @@ ns.solvability_projection=0 # 0 since must allow for expansion
 ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
 ns.projection_pressure_scale=1.0 
 # OCT 2018 (4 materials)
-ns.num_materials=4 # 1: liquid 2: vapor 3: gas 4: solid
+#ns.num_materials=4 # 1: liquid 2: vapor 3: gas 4: solid
 # NOV 2018 (3 materials)
-#ns.num_materials=3 # 1: liquid 2: vapor 3: solid
+ns.num_materials=3 # 1: liquid 2: vapor 3: solid
 ns.num_species_var=0
 ns.configuration_tensor_var=0
 ns.post_init_pressure_solve=1
@@ -92,8 +92,8 @@ amr.plotfile_on_restart=1
 ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 ns.visual_tessellate_vfrac=1
 
-amr.n_cell    = 32 128
-amr.max_level =  3
+amr.n_cell    = 32 64
+amr.max_level =  1
 # NOV 2018 (3 or 4 materials)
 # liquid, vapor, gas, substrate 4 mat
 # liquid, vapor, substrate 3 mat
@@ -121,7 +121,7 @@ ns.diffusion_enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
 amr.check_int       = 500    # number of timesteps between checkpoints
 amr.check_file      = chk    # root name of checkpoint file
-amr.plot_int        = 500  # 500 for production runs
+amr.plot_int        = 50  # 500 for production runs
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 64
@@ -167,14 +167,14 @@ ns.override_density=2 0 0 0
 # OCT 2018 (4 materials)
 # 49.995 degrees contact angle (Liquid-vapor-solid)
 # 90 degrees contact angle (Liquid-gas-solid)
-ns.tension=58.8e-3 58.8e-3 58.8e-3 0.0 93.4e-3 58.8e-3 
+#ns.tension=58.8e-3 58.8e-3 58.8e-3 0.0 93.4e-3 58.8e-3 
 # NOV 2018 (3 materials)
-#ns.tension=58.8e-3 58.8e-3 96.6e-3
+ns.tension=58.8e-3 58.8e-3 96.6e-3
 # Joule/(kg Kelvin)
 # OCT 2018 (4 materials)
-ns.stiffCP=4217.0 2029.0 2029.0 385.0
+#ns.stiffCP=4217.0 2029.0 2029.0 385.0
 # NOV 2018 (3 materials)
-#ns.stiffCP=4217.0 2029.0 385.0
+ns.stiffCP=4217.0 2029.0 385.0
 
 # 12 13 14 23 24 34 21 31 41 32 42 43 
 # (12 liquid->vapor (boiling) 21 vapor->liquid condensate)
@@ -231,14 +231,14 @@ ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
 # NOV 2018 (3 or 4 materials)
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # OCT 2018 (4 materials)
-ns.material_type=0 0 0 999
+#ns.material_type=0 0 0 999
 # NOV 2018 (3 materials)
-#ns.material_type=0 0 999
+ns.material_type=0 0 999
 # thermal conductivity: Watts/(meter Kelvin)
 # OCT 2018 (4 materials)
-ns.heatviscconst=0.680 0.0248 0.0248 377
+#ns.heatviscconst=0.680 0.0248 0.0248 377
 # NOV 2018 (3 materials)
-#ns.heatviscconst=0.680 0.0248 377
+ns.heatviscconst=0.680 0.0248 377
 # liquid-vapor, liquid-solid, vapor-solid
 # 0.0 means do not use.
 #JULY 17 
@@ -248,18 +248,18 @@ ns.heatviscconst=0.680 0.0248 0.0248 377
 #ns.heatviscconst_interface=0.0 0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
 # OCT 2018 (4 materials)
-ns.viscconst=279E-6 12.02e-6 12.02e-6 279E-6
+#ns.viscconst=279E-6 12.02e-6 12.02e-6 279E-6
 # NOV 2018 (3 materials)
-#ns.viscconst=279E-6 12.02e-6 279E-6
+ns.viscconst=279E-6 12.02e-6 279E-6
 # density: kg/m^3
 # OCT 2018 (4 materials)
-ns.denconst=958 0.5956 0.5956 8960
+#ns.denconst=958 0.5956 0.5956 8960
 # NOV 2018 (3 materials)
-#ns.denconst=958 0.5956 8960
+ns.denconst=958 0.5956 8960
 # 4 materials
-ns.FSI_flag=0 0 0 1
+#ns.FSI_flag=0 0 0 1
 # 3 materials
-#ns.FSI_flag=0 0 1
+ns.FSI_flag=0 0 1
 # 0=diffuse in solid, 1=dirichlet, 2=neumann
 # if solidheat_flag=2, then "tempfluxsolid" is called.
 ns.solidheat_flag=1  # diffuse in solid (substrate)
@@ -268,9 +268,9 @@ ns.solidheat_flag=1  # diffuse in solid (substrate)
 # material id for the substrate material that neighbors the thin film
 # microlayer liquid:
 # OCT 2018 (4 materials)
-ns.microlayer_substrate=4 0 0 0
+#ns.microlayer_substrate=4 0 0 0
 # NOV 2018 (3 materials)
-#ns.microlayer_substrate=3 0 0 0
+ns.microlayer_substrate=3 0 0 0
 
 # microlayer contact angle (radians): 38 degrees
 # microscale contact angle between liquid and substrate    
@@ -300,9 +300,9 @@ ns.microlayer_temperature_substrate=0.0 0.0 0.0 0.0
 # Temp=373 at substrate/vapor interface
 #ns.microlayer_temperature_substrate=373.0 0.0 0.0 
 # OCT 2018 (4 materials)
-ns.tempconst=373.0 373.0 373.0 383.0
+#ns.tempconst=373.0 373.0 373.0 383.0
 # NOV 2018 (3 materials)
-#ns.tempconst=373.0 373.0 383.0
+ns.tempconst=373.0 373.0 383.0
 ns.temperature_source=383.0 
 ns.temperature_source_cen=0.0 1.5625e-4 0.0
 ns.temperature_source_rad=0.001 1.5625e-4 0.0
@@ -318,9 +318,9 @@ ns.rzblocks=0.0
 
 #JULY 17
 # OCT 2018 (4 materials)
-ns.initial_temperature=373.0 373.0 373.0 383.0
+#ns.initial_temperature=373.0 373.0 373.0 383.0
 # NOV 2018 (3 materials)
-#ns.initial_temperature=373.0 373.0 383.0
+ns.initial_temperature=373.0 373.0 383.0
 #JULY 17
 # make this positive in order to initialize the bubble/liquid/substrate
 # system with a smoothed temperature that obeys the appropriate
@@ -342,9 +342,9 @@ ns.radblob=0.25e-3  # radius of nucleated seed (initial perimeter L(0)=0.00126)
 # OCT 2018 (4 materials)
 # thickness of initial gas layer at outflow (orientation determined by
 # ns.gravity_dir)
-#ns.radblob10=1.0e-3 
+#ns.radblob10=10.0e-3 
 # NOV 2018 3 materials, no gas layer at outflow
-ns.radblob10=10.0e-3
+ns.radblob10=0.0
 # NOV 2018 use outflow_velocity_buffer_size
 # (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)   3D
 # (1,1),(2,1),(1,2),(2,2)   2D

@@ -13945,13 +13945,13 @@ contains
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
 
-       if ((mofdata(vofcomp).ge.-0.1).and. &
+       if ((mofdata(vofcomp).ge.-0.1d0).and. &
            (mofdata(vofcomp).le.VOFTOL)) then
         mofdata(vofcomp)=zero
         do dir=1,sdim
          mofdata(vofcomp+dir)=zero
         enddo
-       else if ((mofdata(vofcomp).le.1.1).and. &
+       else if ((mofdata(vofcomp).le.1.1d0).and. &
                 (mofdata(vofcomp).ge.one-VOFTOL)) then
         mofdata(vofcomp)=one
         do dir=1,sdim

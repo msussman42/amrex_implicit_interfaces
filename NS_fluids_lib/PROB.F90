@@ -15595,6 +15595,8 @@ END SUBROUTINE Adist
           endif
          else
           print *,"nmat or im_solid_materialdist invalid"
+          print *,"nmat=",nmat
+          print *,"im_solid_materialdist=",im_solid_materialdist
           stop
          endif
         else if (radblob10.eq.zero) then

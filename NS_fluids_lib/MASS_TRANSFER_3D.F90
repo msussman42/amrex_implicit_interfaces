@@ -5122,6 +5122,9 @@ stop
             print *,"DVOF_FACT invalid"
             stop
            endif
+
+           oldvfrac(im_dest)=recon(D_DECL(i,j,k),(im_dest-1)*ngeom_recon+1)
+           oldvfrac(im_source)=recon(D_DECL(i,j,k),(im_source-1)*ngeom_recon+1)
            newvfrac(im_dest)=oldvfrac(im_dest)+dF
            newvfrac(im_source)=oldvfrac(im_source)-dF
 
@@ -5139,9 +5142,6 @@ stop
             base_index=num_materials_vel*(SDIM+1)
             dencomp_probe=(im_probe-1)*num_state_material+1
             tcomp_probe=dencomp_probe+1
-
-            oldvfrac(im_probe)=recon(D_DECL(i,j,k), &
-                 (im_probe-1)*ngeom_recon+1)
 
             den_dF(iprobe)= &
                  deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_dest)
@@ -5304,9 +5304,19 @@ stop
                 (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins 
 
+              !F dt=Fn (tnp1-t) + Fnp1 (t-tn)
+              !dt/2 = Fn tnp1 - Fnp1 tn + t(Fnp1-Fn)
+              !t=(dt/2 - Fn tnp1 + Fnp1 tn)/(Fnp1-Fn)=
+              !  (dt/2 - Fn (tn+dt) + Fnp1 tn)/dF=
+              !  (dt/2 + dF tn - Fn dt)/dF
+              !t-tn=dt(1/2 - Fn)/dF
+              !tnp1-t=-dt(1/2-Fn)/dF+dt=
+              !dt(dF-1/2+Fn)/dF=dt(Fnp1-1/2)/dF
              if ((oldvfrac(im_dest).lt.half).and. &
                  (newvfrac(im_dest).gt.half)) then
-              if (dF.le.zero) then
+              if ((dF.gt.zero).and.(dF.le.one+VOFTOL)) then
+               ! do nothing
+              else
                print *,"dF invalid"
                stop
               endif
@@ -5317,7 +5327,12 @@ stop
               if ((SWEPTFACTOR.ge.LSTOL).and.(SWEPTFACTOR.le.one)) then
                ! do nothing
               else
-               print *,"SWEPTFACTOR invalid"
+               print *,"SWEPTFACTOR invalid: ",SWEPTFACTOR
+               print *,"dF=",dF
+               print *,"im_dest=",im_dest
+               print *,"newvfrac(im_dest) ",newvfrac(im_dest)
+               print *,"oldvfrac(im_dest) ",oldvfrac(im_dest)
+               print *,"LSTOL ",LSTOL
                stop
               endif
               swept(D_DECL(i,j,k))=SWEPTFACTOR
