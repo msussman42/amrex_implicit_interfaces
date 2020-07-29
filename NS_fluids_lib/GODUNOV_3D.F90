@@ -27860,12 +27860,41 @@ stop
        stop
       endif
 
+       ! Prior to this routine being called, "matrixfab" is initialized with
+       ! all zeroes.  After sweeping through all the particles, 
+       ! matrixfab(i,j,k,1..10) will contain the least squares matrix A^T A
+       ! (10 components since A^T A is a 4x4 symmetric matrix) and
+       ! matrixfab(i,j,k,11..14) will contain the right hand side A^T b.
+       ! For cell (i,j,k),
+       ! (A^T A)_11 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * 1
+       ! (A^T A)_12 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * 1 * (xp-xijk)
+       ! (A^T A)_13 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * 1 * (yp-yijk)
+       ! (A^T A)_14 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * 1 * (zp-zijk)
+       ! (A^T A)_22 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * (xp-xijk) * (xp-xijk)
+       ! ....
+       ! \OmegaStencil_{i,j,k}=Union_{i'=i-1}^{i+1} 
+       !                       Union_{j'=j-1}^{j+1}
+       !                       Union_{k'=k-1}^{k+1}  Omega_{i',j',k'}
+       ! where \Omega_{i,j,k}=( (x,y,z) | x_{i}-dx/2 <=x<= x_{i}+dx/2
+       !                                  y_{i}-dy/2 <=y<= y_{i}+dy/2
+       !                                  z_{i}-dz/2 <=x<= z_{i}+dz/2
+       ! \Omega_{i,j,k} is a cell within the tile.   The tile domain is
+       ! Union_{i'=tilelo(1) ...tilehi(1)}
+       ! Union_{j'=tilelo(2) ...tilehi(2)}
+       ! Union_{k'=tilelo(3) ...tilehi(3)} Omega_{i',j',k'}
       do interior_ID=1,Np
        do dir=1,SDIM
         xpart(dir)=particles(interior_ID)%pos(dir)
         xpartfoot(dir)=particles(interior_ID)%pos_foot(dir)
         xdisp(dir)=xpart(dir)-xpartfoot(dir)
        enddo
+        ! Prior to this routine being called, "matrixfab" is initialized with
+        ! all zeroes.
         ! find index (i,j,k) in which xpart lives.
         ! for all neighbors of (i,j,k), within the tilelo,tilehi borders,
         ! increment the least squares matrix components stored in
@@ -27874,7 +27903,29 @@ stop
         ! is the coordinate of the cell center of cell (i+ii,j+jj,k+kk).
         ! assume that x_i=xlo(1)+dx(1)*(i-fablo(1)+0.5d0)
         ! i_contain=NINT((xpart-xlo(1))/dx(1)+fablo(1)-0.5d0)
-
+        !   TILE CONTAINING PARTICLES: 
+        !    ---------------------
+        !    |   .   .    .      |
+        !    |   .        .      |
+        !    |   .   .    .      |
+        !    |       .    .      |
+        !    |   .   .    .      |
+        !    |   .   .    .      |
+        !    ---------------------
+        ! faster to traverse all the particles, and for each particle
+        ! increment the corresponding 3x3x3 stencil of cells rather than
+        ! traverse all the cells in the tile, and for each cell, traverse
+        ! all the particles in the tile.
+        ! COST OF FORMER: NP * 27 + NCELLS (solving the least square system)
+        ! COST OF LATTER: NCELLS * NP + NCELLS ( "                  "  )
+        ! If the number of cells in the tile is >> 27, then better to traverse
+        ! the particles.
+        ! at t0=0.0 phi_0
+        ! (a) find narrow band and extended narrow band, store in Particle
+        !     container
+        ! (b) for RK_stage=1..max_RK_stage
+        !     (i) phi^{RK_stage+1} =f(phi^{RK_stage=0...RK_stage})
+        ! 
       enddo
 
       end subroutine fort_assimilate_tensor_from_particles
