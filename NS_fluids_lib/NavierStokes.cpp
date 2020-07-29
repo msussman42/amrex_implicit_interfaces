@@ -1801,7 +1801,7 @@ NavierStokes::read_geometry ()
     }
 
 
-} // subroutine read_geometry
+} // end subroutine read_geometry
 
 void
 NavierStokes::read_params ()
@@ -3596,68 +3596,6 @@ NavierStokes::read_params ()
        hydrate_flag=1;
     } // i
 
-    for (int im=1;im<=nmat;im++) {
-     for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
-      for (int ireverse=0;ireverse<=1;ireverse++) {
-       if ((im>nmat)||(im_opp>nmat))
-        amrex::Error("im or im_opp bust 200cpp");
-       int iten;
-       get_iten_cpp(im,im_opp,iten,nmat);
-       if ((iten<1)||(iten>nten))
-        amrex::Error("iten invalid");
-       int im_source=im;
-       int im_dest=im_opp;
-       if (ireverse==1) {
-        im_source=im_opp;
-        im_dest=im;
-       }
-
-       int indexEXP=iten+ireverse*nten-1;
-
-       Real LL=latent_heat[indexEXP];
-       if ((freezing_model[indexEXP]==4)||  // Tannasawa or Schrage
-           (freezing_model[indexEXP]==5)||  // Stefan model evap/cond.
-           (freezing_model[indexEXP]==6)||  // Palmore and Desjardins
-	   (freezing_model[indexEXP]==7)) { // cavitation
-        if (LL!=0.0) {
-         int massfrac_id=mass_fraction_id[indexEXP];
-         if ((massfrac_id<1)||(massfrac_id>num_species_var))
-          amrex::Error("massfrac_id invalid");
-         if (LL>0.0) { //evaporation
-          spec_material_id_LIQUID[massfrac_id-1]=im_source;
-          spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
-         } else if (LL<0.0) { // condensation
-          spec_material_id_LIQUID[massfrac_id-1]=im_dest;
-          spec_material_id_AMBIENT[massfrac_id-1]=im_source;
-         } else
-          amrex::Error("LL invalid");
-        } // LL!=0.0
-       } // if (freezing_model[indexEXP]==4,5 or 6)
-      } // ireverse
-     } //im_opp
-    } // im
-
-    for (int i=0;i<num_species_var;i++) {
-     int im=spec_material_id_AMBIENT[i];
-     if (im==0) {
-      // check nothing
-     } else if ((im>=1)&&(im<=nmat)) {
-      if (material_type[im-1]==0) {
-       if ((override_density[im-1]==1)||
-           (override_density[im-1]==2)) {
-        // do nothing
-       } else
-        amrex::Error("override_density invalid");
-      } else if (material_type[im-1]==999) {
-       // do nothing
-      } else if (material_type[im-1]>=1) {
-       // do nothing
-      } else
-       amrex::Error("material_type[im-1] invalid");
-     } else
-      amrex::Error("im invalid");
-    } // i=0..num_species_var-1
-
     truncate_volume_fractions.resize(nmat);
     particle_nsubdivide.resize(nmat);
     particleLS_flag.resize(nmat);
@@ -3716,6 +3654,94 @@ NavierStokes::read_params ()
     pp.query("truncate_thickness",truncate_thickness);
     if (truncate_thickness<1.0)
      amrex::Error("truncate_thickness too small");
+
+    for (int im=1;im<=nmat;im++) {
+     for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
+      for (int ireverse=0;ireverse<=1;ireverse++) {
+
+       if ((im>nmat)||(im_opp>nmat))
+        amrex::Error("im or im_opp bust 200cpp");
+       int iten;
+       get_iten_cpp(im,im_opp,iten,nmat);
+       if ((iten<1)||(iten>nten))
+        amrex::Error("iten invalid");
+       int im_source=im;
+       int im_dest=im_opp;
+       if (ireverse==1) {
+        im_source=im_opp;
+        im_dest=im;
+       }
+
+       int indexEXP=iten+ireverse*nten-1;
+
+       Real LL=latent_heat[indexEXP];
+
+       if (LL!=0.0) {
+        if ((truncate_volume_fractions[im-1]==0)&&
+  	    (truncate_volume_fractions[im_opp-1]==0)) {
+	 // do nothing
+	} else {
+	 std::cout << "all materials at mass transfer interface\n";
+	 std::cout << "must have truncate_volume_fractions==0\n";
+	 std::cout << "im= " << im << '\n';
+	 std::cout << "truncate_volume_fractions[im-1]= " << 
+  	   truncate_volume_fractions[im-1] << '\n';
+	 std::cout << "im_opp= " << im_opp << '\n';
+	 std::cout << "truncate_volume_fractions[im_opp-1]= " << 
+  	   truncate_volume_fractions[im_opp-1] << '\n';
+ 	 amrex::Error("need truncate_volume_fractions==1 for im or im_opp");
+	}
+       } else if (LL==0.0) {
+        // do nothing
+       } else
+        amrex::Error("LL invalid");
+       
+       if ((freezing_model[indexEXP]==4)||  // Tannasawa or Schrage
+           (freezing_model[indexEXP]==5)||  // Stefan model evap/cond.
+           (freezing_model[indexEXP]==6)||  // Palmore and Desjardins
+	   (freezing_model[indexEXP]==7)) { // cavitation
+        if (LL!=0.0) {
+         int massfrac_id=mass_fraction_id[indexEXP];
+         if ((massfrac_id<1)||(massfrac_id>num_species_var))
+          amrex::Error("massfrac_id invalid");
+         if (LL>0.0) { //evaporation
+          spec_material_id_LIQUID[massfrac_id-1]=im_source;
+          spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
+         } else if (LL<0.0) { // condensation
+          spec_material_id_LIQUID[massfrac_id-1]=im_dest;
+          spec_material_id_AMBIENT[massfrac_id-1]=im_source;
+         } else
+          amrex::Error("LL invalid");
+        } else if (LL==0.0) {
+         // do nothing
+	} else
+	 amrex::Error("LL invalid");
+       } // if (freezing_model[indexEXP]==4,5 or 6)
+      } // ireverse
+     } //im_opp
+    } // im=1..nmat
+
+    for (int i=0;i<num_species_var;i++) {
+     int im=spec_material_id_AMBIENT[i];
+     if (im==0) {
+      // check nothing
+     } else if ((im>=1)&&(im<=nmat)) {
+      if (material_type[im-1]==0) {
+       if ((override_density[im-1]==1)||
+           (override_density[im-1]==2)) {
+        // do nothing
+       } else
+        amrex::Error("override_density invalid");
+      } else if (material_type[im-1]==999) {
+       // do nothing
+      } else if (material_type[im-1]>=1) {
+       // do nothing
+      } else
+       amrex::Error("material_type[im-1] invalid");
+     } else
+      amrex::Error("im invalid");
+    } // i=0..num_species_var-1
+
 
     pp.query("normal_probe_size",normal_probe_size);
     if (normal_probe_size!=1)

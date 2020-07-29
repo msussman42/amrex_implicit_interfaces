@@ -30265,7 +30265,7 @@ end subroutine RatePhaseChange
       INTEGER_T im_vapor
       INTEGER_T im_liquid
       REAL_T LL
-      INTEGER_T make_seed
+      INTEGER_T make_seed ! 0 no seed, 1 yes to seed
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
       REAL_T prev_time,cur_time,dt
@@ -30573,112 +30573,58 @@ end subroutine RatePhaseChange
          volcell,cencell,SDIM)
  
         ibasesrc=(im_source-1)*ngeom_recon+1
+
         if (mofdata(ibasesrc).gt.VOFTOL_NUCLEATE) then
-         mag_cen=zero
-         wt_side=0.99d0
+
+         nucleate_out%LSnew(D_DECL(i,j,k),im_source)=-nucleate_in%dx(1)
+         nucleate_out%LSnew(D_DECL(i,j,k),im_dest)=nucleate_in%dx(1)
          do dir=1,SDIM
-          cen_src(dir)=mofdata(ibasesrc+dir)
-          mag_cen=mag_cen+cen_src(dir)**2
-          if (cen_src(dir).gt.zero) then
-           side=1
-          else if (cen_src(dir).lt.zero) then
-           side=-1
-          else if (cen_src(dir).eq.zero) then
-           side=0
+          nucleate_out%LSnew(D_DECL(i,j,k),nmat+SDIM*(im_source-1)+dir)=zero
+          nucleate_out%LSnew(D_DECL(i,j,k),nmat+SDIM*(im_dest-1)+dir)=zero
+         enddo
+
+         vfluid_sum=zero
+         do im_local=1,nmat
+          if (is_rigid(nmat,im_local).eq.0) then
+           ibase_raw=(im_local-1)*ngeom_raw+1
+           vfluid_sum=vfluid_sum+ &
+            nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibase_raw)
+          else if (is_rigid(nmat,im_local).eq.1) then
+           ! do nothing
           else
-           print *,"cen_src invalid"
+           print *,"is_rigid(nmat,im_local) invalid"
            stop
           endif
-          cen_src(dir)=cen_src(dir)+cencell(dir)
-          cen_dst(dir)=(one-wt_side)*cen_src(dir)+wt_side*xsten(side,dir)
-          cen_dst(dir)=cen_dst(dir)-cencell(dir)
-         enddo ! dir=1..sdim
-         mag_cen=sqrt(mag_cen)
-         if (mag_cen.gt.zero) then
-          ! do nothing
-         else if (mag_cen.eq.zero) then
-          do dir=1,SDIM
-           side=-1
-           cen_dst(dir)=(one-wt_side)*cencell(dir)+wt_side*xsten(side,dir)
-           cen_dst(dir)=cen_dst(dir)-cencell(dir)
-          enddo
-         else
-          print *,"mag_cen invalid"
-          stop
-         endif
-         LS_dist_source=zero
-         do dir=1,SDIM
-          LS_normal_source(dir)= &
-           xsten(0,dir)-(cen_dst(dir)+cencell(dir))
-          LS_dist_source=LS_dist_source+LS_normal_source(dir)**2
-         enddo
-         LS_dist_source=sqrt(LS_dist_source)
-         if (LS_dist_source.gt.zero) then
-          LS_source=nucleate_out%LSnew(D_DECL(i,j,k),im_source)
-           ! only nucleate im_dest material if im_source material
-           ! dominates the cell.
-          if (LS_source.ge.zero) then
-           if (LS_source.gt.LS_dist_source) then ! distance from seed.
-            LS_source=LS_dist_source
-            nucleate_out%LSnew(D_DECL(i,j,k),im_source)=LS_source
+         enddo ! im_local=1..nmat
+         if (vfluid_sum.gt.VOFTOL_NUCLEATE) then
+          ibasesrc=(im_source-1)*ngeom_raw+1
+          VOF_source=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasesrc)
+          if (VOF_source.gt.VOFTOL_NUCLEATE) then
+           nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasesrc)=zero
+           ibasedst=(im_dest-1)*ngeom_raw+1
+           VOF_dest=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst)
+           nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst)= &
+              VOF_dest+VOF_source
+           if (VOF_dest+VOF_source.gt.zero) then
             do dir=1,SDIM
-             nucleate_out%LSnew(D_DECL(i,j,k),nmat+SDIM*(im_source-1)+dir)= &
-               LS_normal_source(dir)/LS_dist_source
-            enddo
-           else if (LS_source.le.LS_dist_source) then
-            ! do nothing
+             cen_dst(dir)=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst+dir)
+             cen_src(dir)=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasesrc+dir)
+             nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst+dir)= &
+               (VOF_dest*cen_dst(dir)+VOF_source*cen_src(dir))/ &
+               (VOF_dest+VOF_source)
+            enddo ! dir=1..sdim
            else
-            print *,"LS_source invalid"
-            stop
-           endif 
-           nucleate_out%LSnew(D_DECL(i,j,k),im_dest)=-LS_dist_source
-           do dir=1,SDIM
-            nucleate_out%LSnew(D_DECL(i,j,k),nmat+SDIM*(im_dest-1)+dir)= &
-              -LS_normal_source(dir)/LS_dist_source
-           enddo
-           vfluid_sum=zero
-           do im_local=1,nmat
-            if (is_rigid(nmat,im_local).eq.0) then
-             ibase_raw=(im_local-1)*ngeom_raw+1
-             vfluid_sum=vfluid_sum+ &
-              nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibase_raw)
-            else if (is_rigid(nmat,im_local).eq.1) then
-             ! do nothing
-            else
-             print *,"is_rigid(nmat,im_local) invalid"
-             stop
-            endif
-           enddo ! im_local=1..nmat
-           if (vfluid_sum.gt.VOFTOL_NUCLEATE) then
-            ibasesrc=(im_source-1)*ngeom_raw+1
-            VOF_source=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasesrc)
-            if (VOF_source.gt.VOFTOL_NUCLEATE) then
-             nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasesrc)= &
-               VOF_source-VOFTOL_NUCLEATE
-             ibasedst=(im_dest-1)*ngeom_raw+1
-             VOF_dest=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst)
-             nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst)= &
-               VOF_dest+VOFTOL_NUCLEATE
-             do dir=1,SDIM
-              nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasedst+dir)= &
-               cen_dst(dir)
-             enddo 
-            else
-             print *,"VOF_source invalid"
-             stop
-            endif
-           else
-            print *,"vfluid_sum invalid"
+            print *,"VOF_dest+VOF_source invalid"
             stop
            endif
           else
-           print *,"LS_source invalid"
+           print *,"VOF_source invalid"
            stop
           endif
          else
-          print *,"LS_dist_source invalid"
+          print *,"vfluid_sum invalid"
           stop
-         endif   
+         endif
         else
          print *,"mofdata(ibasesrc) invalid"
          stop
