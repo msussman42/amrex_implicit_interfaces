@@ -30288,7 +30288,7 @@ end subroutine RatePhaseChange
       INTEGER_T tessellate
       INTEGER_T ibasesrc,ibasedst
       INTEGER_T ibase_raw,ibase_recon
-      REAL_T mofdata(num_materials*ngeom_raw)
+      REAL_T mofdata(num_materials*ngeom_recon)
       REAL_T :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T :: multi_centroidA(num_materials,SDIM)
       REAL_T :: volcell
@@ -30338,6 +30338,8 @@ end subroutine RatePhaseChange
        endif
       endif
 
+       ! redistancing for phase change sees materials in which
+       ! F>VOFTOL_REDIST
       VOFTOL_NUCLEATE=VOFTOL_REDIST*two
 
       denbase=num_materials_vel*(SDIM+1)
@@ -30525,6 +30527,9 @@ end subroutine RatePhaseChange
          enddo
           ! order=0
          mofdata(ibase_recon+SDIM+1)=zero
+         do dir=SDIM+2,ngeom_recon-1
+          mofdata(ibase_recon+dir)=zero  ! slope, intercept
+         enddo
         enddo  ! im_local=1..nmat
 
         call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,204)
@@ -30609,8 +30614,10 @@ end subroutine RatePhaseChange
          LS_dist_source=sqrt(LS_dist_source)
          if (LS_dist_source.gt.zero) then
           LS_source=nucleate_out%LSnew(D_DECL(i,j,k),im_source)
+           ! only nucleate im_dest material if im_source material
+           ! dominates the cell.
           if (LS_source.ge.zero) then
-           if (LS_source.gt.LS_dist_source) then
+           if (LS_source.gt.LS_dist_source) then ! distance from seed.
             LS_source=LS_dist_source
             nucleate_out%LSnew(D_DECL(i,j,k),im_source)=LS_source
             do dir=1,SDIM
