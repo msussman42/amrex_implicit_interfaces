@@ -30345,6 +30345,7 @@ end subroutine RatePhaseChange
       denbase=num_materials_vel*(SDIM+1)
       mofbase=denbase+nmat*num_state_material
       im_dest=nucleate_in%im_dest
+      im_source=nucleate_in%im_source
       vofcomp=mofbase+(im_dest-1)*ngeom_raw+1
 
       local_freezing_model=nucleate_in%local_freezing_model
@@ -30523,7 +30524,7 @@ end subroutine RatePhaseChange
          ibase_recon=(im_local-1)*ngeom_recon+1
          do dir=0,SDIM
           mofdata(ibase_recon+dir)= &
-            nucleate_out%Snew(D_DECL(i,j,k),ibase_raw+dir)
+            nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibase_raw+dir)
          enddo
           ! order=0
          mofdata(ibase_recon+SDIM+1)=zero
