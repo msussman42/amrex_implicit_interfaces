@@ -3285,23 +3285,30 @@ end function ZEYU_delta
 !dx: cell scale
 !if dim = 2, then nk = 1
 subroutine closest_distance_to_CL( &
-     LS1, & ! positive in fluid
-     LS3, & ! positive in solid
-     LS1_xp, &! bilinear interp of LS1 to x_projection
-     x, & ! stencil of x values
+     LS_stencil, &
+     LS_xp, &! bilinear interp of LS to x_projection
+     x_stencil, & ! stencil of x values
      x_proj, &
      dx, &
-     ni, nj, nk, & ! dimension of stencil e.g. 7
+     n_rad, &
      actual_angle, &
      closest_distance, &
+     im_primary, &
+     im_secondary, &
+     im_solid, &
+     nmat, &
      prob_dim)
 use global_utility_module
 implicit none
 
-integer,          intent(in ) :: ni, nj, nk, prob_dim
-double precision, intent(in ) :: LS1(ni, nj, nk), LS3(ni, nj, nk), &
-         dx, x(ni, nj, nk, prob_dim), x_proj(prob_dim), &
-         LS1_xp
+integer, intent(in) :: nmat,n_rad, prob_dim
+integer, intent(in) :: im_primary,im_secondary,im_solid
+double precision, intent(in) :: &
+   LS_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,nmat)
+double precision, intent(in) :: &
+   x_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,prob_dim)
+double precision, intent(in) :: LS_xp(nmat)
+
 double precision, intent(out) :: actual_angle, closest_distance
 
 integer i, j, k, d, i_method, icl, jcl, kcl

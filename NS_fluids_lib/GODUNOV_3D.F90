@@ -13829,6 +13829,9 @@ stop
        nrm_solid, & ! points to the solid
        n_raster, & ! points to the solid
        thermal_stencil, &
+       stencil_in_grow_box, &
+       LS_big_stencil, &
+       x_big_stencil, &
        LSCP_image_stencil, &
        LSCP_prj_stencil, &
        LSFD_image_stencil, &
@@ -13876,6 +13879,9 @@ stop
        REAL_T, intent(in) :: dt
        REAL_T, intent(in) :: time
        REAL_T, intent(in) :: visc_coef 
+       INTEGER_T, intent(in) :: stencil_in_grow_box
+       REAL_T, dimension(-3:3,-3:3,-3:3,nmat), intent(in) :: LS_big_stencil
+       REAL_T, dimension(-3:3,-3:3,-3:3,SDIM), intent(in) :: x_big_stencil
        REAL_T, dimension(D_DECL(2,2,2),nmat), intent(in) :: thermal_stencil
        REAL_T, dimension(D_DECL(2,2,2),nmat*(SDIM+1)), intent(in) :: &
                LSCP_image_stencil
@@ -13960,7 +13966,8 @@ stop
        REAL_T :: delta_r_plus_g
        REAL_T :: reflect_factor
        REAL_T :: nCL_dot_n_raster
-      
+       INTEGER_T :: nrad
+     
        do_raster=1
 
        nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -13970,7 +13977,7 @@ stop
         print *,"nten invalid"
         stop
        endif
-
+        
        if ((data_dir.ge.0).and.(data_dir.lt.SDIM)) then
         ! do nothing
        else
@@ -14026,6 +14033,9 @@ stop
         print *,"law_of_the_wall invalid"
         stop
        endif
+
+       nrad=3
+
         ! uimage_raster and usolid_raster are already initialized.
        do dir=1,SDIM
         ughost(dir)=zero
@@ -14473,6 +14483,28 @@ stop
              stop
             endif
 
+            if (stencil_in_grow_box.eq.1) then
+             if (1.eq.0) then
+              call closest_distance_to_CL( &
+               LS_big_stencil, &
+               LSCP_prj_interp, &
+               x_projection, &
+               dx, &
+               n_rad, &
+               angleACT, &
+               dist_to_CL, &
+               im_primary, &
+               im_secondary, &
+               im_solid, &
+               nmat,&
+               SDIM)
+             endif
+            else if (stencil_in_grow_box.eq.0) then
+             ! do nothing
+            else
+             print *,"stencil_in_grow_box invalid"
+             stop
+            endif
             if ((sinthetaACT.ge.zero).and.(costhetaACT.ge.zero)) then
              angle_ACT=asin(sinthetaACT)
             else if ((sinthetaACT.ge.zero).and.(costhetaACT.le.zero)) then
@@ -15300,6 +15332,9 @@ stop
                 nrm_solid, &  ! points towards the solid
                 n_raster, &  ! points towards the solid
                 thermal_image, &
+                stencil_in_grow_box, &
+                LS_big_stencil, &
+                x_big_stencil, &
                 LSCP_image_stencil, &
                 LSCP_prj_stencil, &
                 LSFD_image_stencil, &
