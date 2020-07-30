@@ -681,9 +681,17 @@ void SVD(double **A, double *D, const int m, const int n)
         
         int bi = 0;
         for(int i = 0; i < n-p-q; ++i){
-            //if any diagonal entry is zero, then zero the superdiagnoal entry in the same row and same column
             if(std::abs(Bd[p+i]) <= tol * Bn){
                 Bd[p+i] = 0.0;
+            }
+        }
+        for(int i = 0; i < n-p-q; ++i){
+            if(Bs[p+i] == 0.0 && Bd[p+i] != 0.0 && i < n-p-q-1){
+                GKSVD(Bd+p+bi, Bs+p+bi, i-bi+1);
+                bi = i + 1;
+            }
+            //if any diagonal entry is zero, then zero the superdiagnoal entry in the same row and same column
+            if(Bd[p+i] == 0.0){
                 if(i != n-p-q-1 && Bs[p+i] != 0.0)
                     ZeroRow(Bd+p+i, Bs+p+i, n-p-q-i);
                 if(i == bi){//if Bd[p+bi] = 0.0
