@@ -14488,13 +14488,13 @@ stop
               call closest_distance_to_CL( &
                LS_big_stencil, &
                LSCP_prj_interp, &
+               x_big_stencil, &
                x_projection, &
-               dx, &
-               n_rad, &
-               angleACT, &
+               nrad, &
+               angle_ACT, &
                dist_to_CL, &
-               im_primary, &
-               im_secondary, &
+               im_primary_image, &
+               im_secondary_image, &
                im_solid, &
                nmat,&
                SDIM)

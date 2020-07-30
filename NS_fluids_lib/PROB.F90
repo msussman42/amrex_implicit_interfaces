@@ -3289,7 +3289,6 @@ subroutine closest_distance_to_CL( &
      LS_xp, &! bilinear interp of LS to x_projection
      x_stencil, & ! stencil of x values
      x_proj, &
-     dx, &
      n_rad, &
      actual_angle, &
      closest_distance, &
@@ -3307,10 +3306,14 @@ double precision, intent(in) :: &
    LS_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,nmat)
 double precision, intent(in) :: &
    x_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,prob_dim)
+double precision, intent(in) :: x_proj(prob_dim)
 double precision, intent(in) :: LS_xp(nmat)
 
 double precision, intent(out) :: actual_angle, closest_distance
 
+double precision :: dx
+
+integer dir
 integer i, j, k, d, i_method, icl, jcl, kcl
 integer find_cl ! estimate if contact line exits
 double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
@@ -3329,51 +3332,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 !x_psi_proj: projection point of x_inf_proj_alpha on substrate
 !x_contact_point: location of closest contact point
 
-    if (prob_dim.eq.3) then
-     if ((ni.eq.nj).and.(ni.eq.nk)) then
-      ! do nothing
-     else
-      print *,"ni,nj,nk must all be the same"
-      stop
-     endif
-    else if (prob_dim.eq.2) then
-     if ((ni.eq.nj).and.(nk.eq.1)) then
-      ! do nothing
-     else
-      print *,"ni,nj,nk must all be the same"
-      stop
-     endif
+    if (n_rad.eq.3) then
+     ! do nothing
     else
-     print *,"prob_dim invalid"
+     print *,"n_rad invalid"
      stop
     endif
-    if (((ni+1)/2)*2.eq.ni+1) then
-       ! do nothing
-    else
-       print *,"ni invalid"
-       stop
-    endif
-    if (((nj+1)/2)*2.eq.nj+1) then
-       ! do nothing
-    else
-       print *,"nj invalid"
-       stop
-    endif
-    if (((nk+1)/2)*2.eq.nk+1) then
-       ! do nothing
-    else
-       print *,"nk invalid"
-       stop
-    endif
-    if (prob_dim .eq. 2 .and. nk .ne. 1) then
-       print *, "nk does not correspond to prob_dim"
-       stop
-    endif
-    if (prob_dim .eq. 3 .and. nk .eq. 1) then
-       print *, "nk does not correspond to prob_dim"
-       stop
-    endif
 
+    dir=1
+    dx=0.5d0*(x_stencil(1,0,0,dir)-x_stencil(-1,0,0,dir))
     i_method = 2
     find_cl = 0
     eps = 1.1d0*dx
@@ -3381,13 +3348,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
     actual_angle = 0.d0
 
 !calculate normal vector of substrate
-    tmp(1) = (LS3((ni+1)/2+1,(nj+1)/2,(nk+1)/2)- &
-              LS3((ni+1)/2-1,(nj+1)/2,(nk+1)/2))/(2.d0*dx)
-    tmp(2) = (LS3((ni+1)/2,(nj+1)/2+1,(nk+1)/2)- &
-              LS3((ni+1)/2,(nj+1)/2-1,(nk+1)/2))/(2.d0*dx)
+    dir=1
+    tmp(dir) = (LS_stencil(1,0,0,im_solid)-LS_stencil(-1,0,0,im_solid))/ &
+               (x_stencil(1,0,0,dir)-x_stencil(-1,0,0,dir))
+    dir=2
+    tmp(dir) = (LS_stencil(0,1,0,im_solid)-LS_stencil(0,-1,0,im_solid))/ &
+               (x_stencil(0,1,0,dir)-x_stencil(0,-1,0,dir))
     if (prob_dim .eq. 3) then
-       tmp(3) = (LS3((ni+1)/2,(nj+1)/2,(nk+1)/2+1)- &
-                 LS3((ni+1)/2,(nj+1)/2,(nk+1)/2-1))/(2.d0*dx)
+     dir=prob_dim
+     tmp(dir) = (LS_stencil(0,0,1,im_solid)-LS_stencil(0,0,-1,im_solid))/ &
+                (x_stencil(0,0,1,dir)-x_stencil(0,0,-1,dir))
     else
        tmp(3) = 0.d0
     endif
@@ -3406,44 +3376,54 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 !          sign and close to substrate)
     if (i_method .eq. 1) then
        closest_distance = 1.d10
-       do i = 1, ni
-          do j = 1, nj
-             do k = 1, nk
-                if (LS1(i,j,k)*LS1_xp .le. 0.d0 .and. &
-                    abs(LS3(i,j,k)) .lt. eps) then
-                   find_cl = 1
-                   dis = 0.d0
-                   do d = 1, prob_dim
-                      dis = dis+(x(i,j,k,d)-x_proj(d))**2.d0
-                   enddo
-                   dis = sqrt(dis)
-                   if (dis .lt. closest_distance) then
-                      closest_distance = dis
-                      if (LS3(i,j,k) .lt. 0.d0) then
-                         icl = i
-                         jcl = j
-                         kcl = k
-                      endif
-                   endif
-                endif
-             enddo
-          enddo
+       do i = -n_rad,n_rad
+       do j = -n_rad,n_rad
+       do k = -n_rad,n_rad
+        if ((LS_stencil(i,j,k,im_primary)*LS_xp(im_primary).le.0.d0).and. &
+            (abs(LS_stencil(i,j,k,im_solid)).lt.eps)) then
+         find_cl = 1
+         dis = 0.d0
+         do d = 1, prob_dim
+          dis = dis+(x_stencil(i,j,k,d)-x_proj(d))**2.d0
+         enddo
+         dis = sqrt(dis)
+         if (dis .lt. closest_distance) then
+          closest_distance = dis
+          if (LS_stencil(i,j,k,im_solid) .lt. 0.d0) then
+           icl = i
+           jcl = j
+           kcl = k
+          endif
+         endif
+        endif
+       enddo
+       enddo
        enddo
        if (find_cl .ne. 1) then
           print *, "Cannot find contact line!"
           return
        endif
-       if (icl .eq. 1 .or. icl .eq. ni .or. &
-           jcl .eq. 1 .or. jcl .eq. nj .or. &
-           (prob_dim .eq. 3 .and. (kcl .eq. 1 .or. kcl .eq. nk))) then
+       if (icl .eq. -n_rad .or. icl .eq. n_rad .or. &
+           jcl .eq. -n_rad .or. jcl .eq. n_rad .or. &
+           (prob_dim .eq. 3 .and. &
+           (kcl .eq. -n_rad .or. kcl .eq. n_rad))) then
           print *, "Too far from contact line!"
           return
        endif
 !calculate normal vector of contact line
-       tmp(1) = (LS1(icl+1,jcl,kcl)-LS1(icl-1,jcl,kcl))/(2.d0*dx)
-       tmp(2) = (LS1(icl,jcl+1,kcl)-LS1(icl,jcl-1,kcl))/(2.d0*dx)
+       dir=1
+       tmp(dir) = (LS_stencil(icl+1,jcl,kcl,im_primary)- &
+                   LS_stencil(-1+icl,jcl,kcl,im_primary))/ &
+         (x_stencil(icl+1,jcl,kcl,dir)-x_stencil(-1+icl,jcl,kcl,dir))
+       dir=2
+       tmp(dir) = (LS_stencil(icl,jcl+1,kcl,im_primary)- &
+                   LS_stencil(icl,-1+jcl,kcl,im_primary))/ &
+         (x_stencil(icl,jcl+1,kcl,dir)-x_stencil(icl,-1+jcl,kcl,dir))
        if (prob_dim .eq. 3) then
-          tmp(3) = (LS1(icl,jcl,kcl+1)-LS1(icl,jcl,kcl-1))/(2.d0*dx)
+        dir=prob_dim
+        tmp(dir) = (LS_stencil(icl,jcl,kcl+1,im_primary)- &
+                    LS_stencil(icl,jcl,-1+kcl,im_primary))/ &
+         (x_stencil(icl,jcl,kcl+1,dir)-x_stencil(icl,jcl,-1+kcl,dir))
        else
           tmp(3) = 0.d0
        endif
@@ -3482,16 +3462,26 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
     else if (i_method .eq. 2) then
 
 !calculate unit vector in gradient direction of projection point, nphi_xp
-       tmp(1) = (LS1((ni+1)/2+1,(nj+1)/2,(nk+1)/2)- &
-                 LS1((ni+1)/2-1,(nj+1)/2,(nk+1)/2))/(2.d0*dx)
-       tmp(2) = (LS1((ni+1)/2,(nj+1)/2+1,(nk+1)/2)- &
-                 LS1((ni+1)/2,(nj+1)/2-1,(nk+1)/2))/(2.d0*dx)
+       icl=0
+       jcl=0
+       kcl=0
+       dir=1
+       tmp(dir) = (LS_stencil(icl+1,jcl,kcl,im_primary)- &
+                   LS_stencil(-1+icl,jcl,kcl,im_primary))/ &
+         (x_stencil(icl+1,jcl,kcl,dir)-x_stencil(-1+icl,jcl,kcl,dir))
+       dir=2
+       tmp(dir) = (LS_stencil(icl,jcl+1,kcl,im_primary)- &
+                   LS_stencil(icl,-1+jcl,kcl,im_primary))/ &
+         (x_stencil(icl,jcl+1,kcl,dir)-x_stencil(icl,-1+jcl,kcl,dir))
        if (prob_dim .eq. 3) then
-          tmp(3) = (LS1((ni+1)/2,(nj+1)/2,(nk+1)/2+1)- &
-                    LS1((ni+1)/2,(nj+1)/2,(nk+1)/2-1))/(2.d0*dx)
+        dir=prob_dim
+        tmp(dir) = (LS_stencil(icl,jcl,kcl+1,im_primary)- &
+                    LS_stencil(icl,jcl,-1+kcl,im_primary))/ &
+         (x_stencil(icl,jcl,kcl+1,dir)-x_stencil(icl,jcl,-1+kcl,dir))
        else
           tmp(3) = 0.d0
        endif
+
        mag = 0.d0
        do d = 1, prob_dim
           mag = mag+tmp(d)*tmp(d)
@@ -3525,56 +3515,71 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo
 !find icl, jcl, kcl
        phimin = 1.d10
-       do i = 1, ni
-          do j = 1, nj
-             do k = 1, nk
-                do d = 1, 2
-                   tmp(d) = x(i,j,k,d) - x_proj(d)
-                enddo
-                if (prob_dim .eq. 3) then
-                   tmp(3) = x(i,j,k,3) - x_proj(3)
-                else
-                   tmp(3) = 0.d0
-                endif
-                call crossprod(tmp, tpsi, tmp1)
-                dis = 0.d0
-                do d = 1, prob_dim
-                   dis = dis+tmp1(d)*tmp1(d)
-                enddo
-                dis = sqrt(dis)
-                if (LS3(i,j,k) .le. 0.d0 .and. LS3(i,j,k) .gt. -eps .and. &
-                    abs(LS1(i,j,k)) .lt. eps .and. dis .lt. eps) then
-                   find_cl = 1
-                   if (abs(LS1(i,j,k)) .lt. phimin) then
-                      phimin = abs(LS1(i,j,k))
-                      icl = i
-                      jcl = j
-                      kcl = k
-                      !print *, "phimin = ", phimin
-                      !print *, "icl, jcl, kcl = ", icl, jcl, kcl
-                   endif
-                endif
-             enddo
-          enddo
+       do i = -n_rad,n_rad
+       do j = -n_rad,n_rad
+       do k = -n_rad,n_rad
+        do d = 1, 2
+         tmp(d) = x_stencil(i,j,k,d) - x_proj(d)
+        enddo
+        if (prob_dim .eq. 3) then
+         tmp(3) = x_stencil(i,j,k,prob_dim) - x_proj(prob_dim)
+        else
+         tmp(3) = 0.d0
+        endif
+        call crossprod(tmp, tpsi, tmp1)
+        dis = 0.d0
+        do d = 1, prob_dim
+         dis = dis+tmp1(d)*tmp1(d)
+        enddo
+        dis = sqrt(dis)
+        if (LS_stencil(i,j,k,im_solid) .le. 0.d0 .and. &
+            LS_stencil(i,j,k,im_solid) .gt. -eps .and. &
+            abs(LS_stencil(i,j,k,im_primary)) .lt. eps .and. &
+            dis .lt. eps) then
+         find_cl = 1
+         if (abs(LS_stencil(i,j,k,im_primary)) .lt. phimin) then
+          phimin = abs(LS_stencil(i,j,k,im_primary))
+          icl = i
+          jcl = j
+          kcl = k
+          !print *, "phimin = ", phimin
+          !print *, "icl, jcl, kcl = ", icl, jcl, kcl
+         endif
+        endif
+       enddo
+       enddo
        enddo
        if (find_cl .ne. 1) then
           print *, "Cannot find contact line!"
           return
        endif
-       if (icl .eq. 1 .or. icl .eq. ni .or. &
-           jcl .eq. 1 .or. jcl .eq. nj .or. &
-           (prob_dim .eq. 3 .and. (kcl .eq. 1 .or. kcl .eq. nk))) then
+       if (icl .eq. -n_rad .or. icl .eq. n_rad .or. &
+           jcl .eq. -n_rad .or. jcl .eq. n_rad .or. &
+           (prob_dim .eq. 3 .and. &
+           (kcl .eq. -n_rad .or. kcl .eq. n_rad))) then
           print *, "Too far from contact line!"
           return
        endif
 !calculate nphi and actual angle
-       tmp(1) = (LS1(icl+1,jcl,kcl)-LS1(icl-1,jcl,kcl))/(2.d0*dx)
-       tmp(2) = (LS1(icl,jcl+1,kcl)-LS1(icl,jcl-1,kcl))/(2.d0*dx)
+
+       dir=1
+       tmp(dir) = (LS_stencil(icl+1,jcl,kcl,im_primary)- &
+                   LS_stencil(-1+icl,jcl,kcl,im_primary))/ &
+         (x_stencil(icl+1,jcl,kcl,dir)-x_stencil(-1+icl,jcl,kcl,dir))
+       dir=2
+       tmp(dir) = (LS_stencil(icl,jcl+1,kcl,im_primary)- &
+                   LS_stencil(icl,-1+jcl,kcl,im_primary))/ &
+         (x_stencil(icl,jcl+1,kcl,dir)-x_stencil(icl,-1+jcl,kcl,dir))
        if (prob_dim .eq. 3) then
-          tmp(3) = (LS1(icl,jcl,kcl+1)-LS1(icl,jcl,kcl-1))/(2.d0*dx)
+        dir=prob_dim
+        tmp(dir) = (LS_stencil(icl,jcl,kcl+1,im_primary)- &
+                    LS_stencil(icl,jcl,-1+kcl,im_primary))/ &
+         (x_stencil(icl,jcl,kcl+1,dir)-x_stencil(icl,jcl,-1+kcl,dir))
        else
           tmp(3) = 0.d0
        endif
+
+
        mag = 0.d0
        do d = 1, prob_dim
           mag = mag+tmp(d)*tmp(d)
@@ -3590,7 +3595,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        actual_angle = acos(costheta)
 !get point x_inf_proj
        do d = 1, prob_dim
-          x_inf_proj(d) = x(icl,jcl,kcl,d)-LS1(icl,jcl,kcl)*nphi(d)
+          x_inf_proj(d) = x_stencil(icl,jcl,kcl,d)- &
+                  LS_stencil(icl,jcl,kcl,im_primary)*nphi(d)
           !print *, "d = ", d, "x_inf_proj = ", x_inf_proj(d)
        enddo
 !get point x_inf_proj_alpha
