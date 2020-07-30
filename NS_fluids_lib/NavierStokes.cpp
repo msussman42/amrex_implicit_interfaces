@@ -3681,15 +3681,16 @@ NavierStokes::read_params ()
   	    (truncate_volume_fractions[im_opp-1]==0)) {
 	 // do nothing
 	} else {
+	 std::cout << "WARNING: (if microscopic seeds) \n";
 	 std::cout << "all materials at mass transfer interface\n";
-	 std::cout << "must have truncate_volume_fractions==0\n";
+	 std::cout << "should have truncate_volume_fractions==0\n";
 	 std::cout << "im= " << im << '\n';
 	 std::cout << "truncate_volume_fractions[im-1]= " << 
   	   truncate_volume_fractions[im-1] << '\n';
 	 std::cout << "im_opp= " << im_opp << '\n';
 	 std::cout << "truncate_volume_fractions[im_opp-1]= " << 
   	   truncate_volume_fractions[im_opp-1] << '\n';
- 	 amrex::Error("need truncate_volume_fractions==1 for im or im_opp");
+ 	 amrex::Warning("truncate_volume_fractions==1 for im or im_opp");
 	}
        } else if (LL==0.0) {
         // do nothing

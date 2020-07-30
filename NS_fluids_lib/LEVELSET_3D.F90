@@ -16261,7 +16261,9 @@ stop
               endif
 
               ! always do low order extrapolation
-             else if ((XLIST_ncomp.eq.SDIM+1).and.(1.eq.0)) then
+              ! in future, for high order extrapolation, only include
+              ! values immediately next to wall?
+             else if ((XLIST_ncomp.eq.SDIM+1).and.(1.eq.1)) then
 
               if (total_weightFLUID.gt.zero) then
                do im=1,nmat
