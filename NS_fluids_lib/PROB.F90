@@ -30293,13 +30293,9 @@ end subroutine RatePhaseChange
       REAL_T :: multi_centroidA(num_materials,SDIM)
       REAL_T :: volcell
       REAL_T :: cencell(SDIM)
-      REAL_T :: mag_cen,wt_side
-      INTEGER_T :: dir,side
+      INTEGER_T :: dir
       REAL_T cen_src(SDIM)
       REAL_T cen_dst(SDIM)
-      REAL_T LS_source
-      REAL_T LS_dist_source
-      REAL_T LS_normal_source(SDIM)
       REAL_T vfluid_sum
       REAL_T VOF_source,VOF_dest
 

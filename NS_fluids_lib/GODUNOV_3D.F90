@@ -14793,6 +14793,7 @@ stop
       INTEGER_T i3,j3,k3
       INTEGER_T khisten
       INTEGER_T in_grow_box
+      INTEGER_T stencil_in_grow_box
       REAL_T nrm_solid(SDIM)
       REAL_T n_raster(SDIM)
       REAL_T x_projection(SDIM)
@@ -14801,8 +14802,11 @@ stop
       REAL_T x_image_raster(SDIM)
       REAL_T delta_r
       REAL_T dxmin
+      INTEGER_T cell_index_project(SDIM)
       INTEGER_T node_index_project(SDIM)
       INTEGER_T node_index_image(SDIM)
+      REAL_T LS_big_stencil(-3:3,-3:3,-3:3,nmat)
+      REAL_T x_big_stencil(-3:3,-3:3,-3:3,SDIM)
       REAL_T LSCP_image_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
       REAL_T LSCP_prj_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
       REAL_T LSFD_image_stencil(D_DECL(2,2,2),nmat*SDIM)
@@ -14855,7 +14859,9 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-      if (ngrow_distance.ne.4) then
+      if (ngrow_distance.eq.4) then
+       ! do nothing
+      else
        print *,"ngrow_distance invalid"
        stop
       endif
@@ -15150,6 +15156,45 @@ stop
               x_image(dir)=x_projection(dir)- &
               sign_funct(DIST_SOLID)*delta_r*nrm_solid(dir)
              enddo ! dir=1..sdim
+
+             call containing_cell(bfact,dx,xlo,fablo,x_projection, &
+              cell_index_project)
+             stencil_in_grow_box=1
+
+             do dir=1,SDIM
+              if (cell_index_project(dir)-3.lt. &
+                  fablo(dir)-ngrow_distance) then
+               stencil_in_grow_box=0
+              endif
+              if (cell_index_project(dir)+3.gt. &
+                  fabhi(dir)+ngrow_distance) then
+               stencil_in_grow_box=0
+              endif
+             enddo ! dir=1..sdim
+
+             if (stencil_in_grow_box.eq.0) then
+              ! do nothing
+             else if (stencil_in_grow_box.eq.1) then
+              do i1=-3,3
+              do j1=-3,3
+              do k1=-3,3
+               i3=i1+cell_index_project(1)
+               j3=j1+cell_index_project(2)
+               k3=k1+cell_index_project(SDIM)
+               do im=1,nmat
+                LS_big_stencil(i1,j1,k1,im)=LSCP(D_DECL(i3,j3,k3),im)
+               enddo
+               call gridsten_level(xsten_local,i3,j3,k3,level,nhalf)
+               do dir=1,SDIM
+                x_big_stencil(i1,j1,k1,dir)=xsten_local(0,dir)
+               enddo
+              enddo
+              enddo
+              enddo
+             else
+              print *,"stencil_in_grow_box invalid"
+              stop
+             endif
 
              !  x  x   x   o   o    o  x  x  x
              ! x_projection is closest point on the fluid/solid interface.
