@@ -17048,8 +17048,10 @@ stop
 
       contains
 
+       ! called from NavierStokes::PLS_correct (NavierStokes2.cpp)
       subroutine fort_assimilate_lvlset_from_particles( &
         tid, &  ! thread id
+        im_PLS, &
         level, &          ! 0<=level<=finest_level
         finest_level, &
         solid_time, &
@@ -17076,7 +17078,7 @@ stop
         Np_interface,Nn_interface, & 
         matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
         RHS_points, &    ! least squares in 3D: 4
-        ncomp_accumulate, & ! sdim * (matrix_points + RHS_points)
+        ncomp_accumulate, & ! (matrix_points + RHS_points)
         matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
       bind(c,name='fort_assimilate_lvlset_from_particles')
@@ -17091,6 +17093,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: im_PLS
       INTEGER_T, intent(in) :: ngrow_distance
 
       INTEGER_T, intent(in) :: level,finest_level

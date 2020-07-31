@@ -730,7 +730,9 @@ namespace amrex{
 
      void fort_assimilate_lvlset_from_particles(
        int* tid,
-       int* level,int* finest_level,
+       int* im_PLS,
+       int* level,
+       int* finest_level,
        Real* solid_time,
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,int* bfact,

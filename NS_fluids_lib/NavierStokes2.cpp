@@ -6951,7 +6951,9 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
     // in: LEVELSET_3D.F90
    fort_assimilate_lvlset_from_particles(
      &tid_current,
-     &level,&finest_level,
+     &im_PLS,
+     &level,
+     &finest_level,
      &time,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
