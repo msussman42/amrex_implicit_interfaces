@@ -85,8 +85,8 @@ public:
     //
     //
 
-    void CopyNewToOld ();
-    void CopyOldToNew ();
+    void CopyNewToOld (int level,int max_level);
+    void CopyOldToNew (int level,int max_level);
 
 
     // Sets time of old and new data.

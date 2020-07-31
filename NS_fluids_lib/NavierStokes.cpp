@@ -7214,13 +7214,13 @@ NavierStokes::initData () {
  if (nstate!=NUM_STATE_TYPE)
   amrex::Error("nstate invalid");
  for (int k=0;k<nstate;k++) {
-  state[k].CopyNewToOld();  // olddata=newdata 
+  state[k].CopyNewToOld(level,max_level);  // olddata=newdata 
    // time_array[0]=strt_time-dt_amr  
    // time_array[bfact_time_order]=strt_time
   state[k].setTimeLevel(strt_time,dt_amr); 
  }
 
-}  // subroutine initData
+}  // end subroutine initData
 
 void NavierStokes::init_boundary_list(Vector<int> scomp,
   Vector<int> ncomp) {
@@ -7513,6 +7513,7 @@ NavierStokes::init (const BoxArray& ba_in,
 void NavierStokes::CopyNewToOldALL() {
 
  int finest_level=parent->finestLevel();
+ const int max_level = parent->maxLevel();
  if (level!=0)
   amrex::Error("level invalid CopyNewToOldALL");
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -7522,7 +7523,7 @@ void NavierStokes::CopyNewToOldALL() {
   if (nstate!=NUM_STATE_TYPE)
    amrex::Error("nstate invalid");
   for (int k = 0; k < nstate; k++) {
-   ns_level.state[k].CopyNewToOld();  
+   ns_level.state[k].CopyNewToOld(level,max_level);  
   }
  }
  int nmat=num_materials;
@@ -7545,6 +7546,7 @@ void NavierStokes::CopyNewToOldALL() {
 void NavierStokes::CopyOldToNewALL() {
 
  int finest_level=parent->finestLevel();
+ const int max_level = parent->maxLevel();
  if (level!=0)
   amrex::Error("level invalid CopyOldToNewALL");
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -7554,7 +7556,7 @@ void NavierStokes::CopyOldToNewALL() {
   if (nstate!=NUM_STATE_TYPE)
    amrex::Error("nstate invalid");
   for (int k = 0; k < nstate; k++) {
-   ns_level.state[k].CopyOldToNew();  
+   ns_level.state[k].CopyOldToNew(level,max_level);
   }
  }
 
@@ -18060,13 +18062,14 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
 
 void NavierStokes::post_regrid (int lbase,int new_finest,Real time) {
 
+  const int max_level = parent->maxLevel();
   Real dt_amr=parent->getDt(); // returns dt_AMR
   int nstate=state.size();
   if (nstate!=NUM_STATE_TYPE)
    amrex::Error("nstate invalid");
    // olddata=newdata  
   for (int k=0;k<nstate;k++) {
-   state[k].CopyNewToOld(); 
+   state[k].CopyNewToOld(level,max_level); 
    state[k].setTimeLevel(time,dt_amr);
   }
 }

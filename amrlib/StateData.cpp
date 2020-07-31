@@ -195,6 +195,7 @@ StateData::define (
     buildBC();
 }
 
+// this constructs a variable of type "StateData" from checkpoint data.
 void
 StateData::restart (
   int time_order,
@@ -230,6 +231,8 @@ StateData::restart (
      std::cout << "bfact_time_order= " << bfact_time_order << '\n';
      amrex::Error("bfact_time_order invalid in restart");
     }
+
+    StateData_level=level;
 
     desc = &d;
     descGHOST = &dGHOST;
@@ -379,16 +382,20 @@ StateData::~StateData() {
  for (int i=0;i<=bfact_time_order;i++) {
   delete new_data[i];
 
-  if (ncomp_PC>0) {
-   for (int j=0;j<ncomp_PC;j++) {
-    delete new_dataPC[i][j];
-   }
-  } else if (ncomp_PC==0) {
+  int ncomp_PC_test=new_dataPC[i].size();
+  if (ncomp_PC_test==0) {
    // do nothing
+  } else if (ncomp_PC_test==ncomp_PC) {
+   if (ncomp_PC>0) {
+    for (int j=0;j<ncomp_PC;j++) {
+     delete new_dataPC[i][j];
+    }
+   } else
+    amrex::Error("ncomp_PC invalid");
   } else
-   amrex::Error("ncomp_PC invalid");
+   amrex::Error("ncomp_PC_test invalid");
  } // i=0..bfact_time_order
-}
+} // end subroutine StateData::~StateData() 
 
 const StateDescriptor*
 StateData::descriptor () const
@@ -477,7 +484,11 @@ StateData::newDataPC (int slab_index,int sub_index)
   std::cout << "project_slab_index= " << project_slab_index << '\n';
   amrex::Error("project_slab_index invalid1");
  }
- BL_ASSERT(new_dataPC[project_slab_index].size()>sub_index);
+ if (new_dataPC[project_slab_index].size()>sub_index) {
+  // do nothing
+ } else
+  amrex::Error("new_dataPC[project_slab_index].size() invalid");
+
  return *new_dataPC[project_slab_index][sub_index];
 }
 
@@ -495,7 +506,11 @@ StateData::newDataPC (int slab_index,int sub_index) const
   std::cout << "project_slab_index= " << project_slab_index << '\n';
   amrex::Error("project_slab_index invalid2");
  }
- BL_ASSERT(new_dataPC[project_slab_index].size()>sub_index);
+ if (new_dataPC[project_slab_index].size()>sub_index) {
+  // do nothing
+ } else
+  amrex::Error("new_dataPC[project_slab_index].size() invalid");
+
  return *new_dataPC[project_slab_index][sub_index];
 }
 
@@ -951,7 +966,7 @@ StateData::get_time_bounding_box(Real time,Real &nudge_time,
 } // get_time_bounding_box
 
 void
-StateData::CopyNewToOld() {
+StateData::CopyNewToOld(int level,int max_level) {
 
  MultiFab & newmulti = *new_data[bfact_time_order];
  int ncomp=newmulti.nComp();
@@ -965,10 +980,19 @@ StateData::CopyNewToOld() {
   if (ncomp_PC==0) {
    // do nothing
   } else if (ncomp_PC>0) {
-   for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-    new_dataPC[i][PC_mat_index]->copyParticles(
-      *new_dataPC[bfact_time_order][PC_mat_index]);
-   }
+   if (level==max_level) {
+    int ncomp_PC_test=new_dataPC[i].size();
+    if (ncomp_PC_test==ncomp_PC) {
+     for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+      new_dataPC[i][PC_mat_index]->copyParticles(
+       *new_dataPC[bfact_time_order][PC_mat_index]);
+     }
+    } else
+     amrex::Error("ncomp_PC_test or ncomp_PC invalid");
+   } else if (level<max_level) {
+    // do nothing
+   } else
+    amrex::Error("level invalid");
   } else
    amrex::Error("ncompPC invalid");
  }
@@ -976,7 +1000,7 @@ StateData::CopyNewToOld() {
 } // end subroutine CopyNewToOld
 
 void
-StateData::CopyOldToNew() {
+StateData::CopyOldToNew(int level,int max_level) {
 
  MultiFab & oldmulti = *new_data[0];
 
@@ -991,10 +1015,19 @@ StateData::CopyOldToNew() {
   if (ncomp_PC==0) {
    // do nothing
   } else if (ncomp_PC>0) {
-   for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-    new_dataPC[i][PC_mat_index]->copyParticles(
-      *new_dataPC[0][PC_mat_index]);
-   }
+   if (level==max_level) {
+    int ncomp_PC_test=new_dataPC[i].size();
+    if (ncomp_PC_test==ncomp_PC) {
+     for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+      new_dataPC[i][PC_mat_index]->copyParticles(
+       *new_dataPC[0][PC_mat_index]);
+     }
+    } else
+     amrex::Error("ncomp_PC_test or ncomp_PC invalid");
+   } else if (level<max_level) {
+    // do nothing
+   } else
+    amrex::Error("level invalid");
   } else
    amrex::Error("ncompPC invalid");
 
@@ -1086,16 +1119,20 @@ StateData::checkPoint (const std::string& name,
      } else if (ncomp_PC>0) {
 
       if (level==max_level) {
-       for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-        int raw_index=ncomp_PC * i + PC_mat_index;
-        std::string Part_name="FusionPart";
-        std::stringstream raw_string_stream(std::stringstream::in |
+       int ncomp_PC_test=new_dataPC[i].size();
+       if (ncomp_PC_test==ncomp_PC) {
+        for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+         int raw_index=ncomp_PC * i + PC_mat_index;
+         std::string Part_name="FusionPart";
+         std::stringstream raw_string_stream(std::stringstream::in |
           std::stringstream::out);
-        raw_string_stream << raw_index;
-        std::string raw_string=raw_string_stream.str();
-        Part_name+=raw_string;
-        new_dataPC[i][PC_mat_index]->Checkpoint(mf_fullpath_new,Part_name);
-       } // PC_mat_index=0..ncomp_PC-1 
+         raw_string_stream << raw_index;
+         std::string raw_string=raw_string_stream.str();
+         Part_name+=raw_string;
+         new_dataPC[i][PC_mat_index]->Checkpoint(mf_fullpath_new,Part_name);
+        } // PC_mat_index=0..ncomp_PC-1 
+       } else
+        amrex::Error("ncomp_PC_test or ncomp_PC invalid");
       } else if (level<max_level) {
        // do nothing
       } else
