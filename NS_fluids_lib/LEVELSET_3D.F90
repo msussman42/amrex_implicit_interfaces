@@ -17088,7 +17088,7 @@ stop
       use probf90_module
       use geometry_intersect_module
       use MOF_routines_module
-      use ZEYU_LS_extrapolation, only : level_set_extrapolation
+      use ZEYU_LS_extrapolation, only : least_squares_QR
 
       IMPLICIT NONE
 
@@ -17143,7 +17143,18 @@ stop
 
       INTEGER_T interior_ID
       INTEGER_T dir
+      INTEGER_T ncomp_ID
       REAL_T xpart(SDIM)
+      INTEGER_T ijk_x(SDIM), ijk_c(SDIM), ijk_s(SDIM)
+      INTEGER_T i, j, k, ii, jj, kk, n
+      REAL_T xc(SDIM), xs(SDIM)
+      REAL_T tmp, eps, w_p, A(SDIM+1,SDIM+1), b(SDIM+1), x(SDIM+1)
+      type(particle_t) totalprt(Np_interface+Nn_interface)
+
+      totalprt(   1:Np_interface)=particles_interface
+      totalprt(Np_interface+1:  )=nbr_particles_interface
+
+      eps=1.d-16 !too small?
 
       if (matrix_points.eq.10) then
        ! do nothing
@@ -17157,8 +17168,8 @@ stop
        print *,"RHS_points invalid"
        stop
       endif
-       ! for assimilating elastic stress, ncomp=sdim*(matrix_points+
-       !  RHS_points)
+       ! for assimilating elastic stress, ncomp=matrix_points+ 
+       !   sdim*RHS_points
        ! level set function= phi_0 + n dot (x-x0) = LS(x)  (LINEAR)
        ! cost function=sum_3x3x3_stencil 
        !          w_ii,jj,kk  (phi_{i+ii,j+jj,k+kk}-LS(x_{i+ii,j+jj,k+kk}))^2
@@ -17171,10 +17182,148 @@ stop
        stop
       endif
 
-      do interior_ID=1,Np_bulk
+      do interior_ID=1,Np_interface+Nn_interface
        do dir=1,SDIM
-        xpart(dir)=particles_bulk(interior_ID)%pos(dir)
+        xpart(dir)=totalprt(interior_ID)%pos(dir)
+        ijk_x(dir)=NINT((xpart(dir)-xlo(dir))/dx(dir)+fablo(dir)-0.5d0)
        enddo
+       do i=ijk_x(1)-1,ijk_x(1)+1
+        do j=ijk_x(2)-1,ijk_x(2)+1
+         do k=ijk_x(SDIM)-1,ijk_x(SDIM)+1
+          if (i.ge.tilelo(1).and.i.le.tilehi(1).and.&
+              j.ge.tilelo(2).and.j.le.tilehi(2).and.&
+              k.ge.tilelo(SDIM).and.k.le.tilehi(SDIM)) then
+           ijk_c(1)=i
+           ijk_c(2)=j
+           ijk_c(SDIM)=k
+           tmp=0.d0
+           do dir=1,SDIM
+            xc(dir)=xlo(dir)+dx(dir)*(ijk_c(dir)-fablo(dir)+0.5d0)
+            tmp=tmp+(xpart(dir)-xc(dir))**2
+           enddo
+           w_p=1.d0/(eps+tmp)
+           matrixfab(i,j,k,1)= & !ATA_11
+            matrixfab(i,j,k,1)+w_p*1.d0
+           matrixfab(i,j,k,2)= & !ATA_12
+            matrixfab(i,j,k,2)+ &
+            w_p*(xpart(1)-xc(1))
+           matrixfab(i,j,k,3)= & !ATA_13
+            matrixfab(i,j,k,3)+ &
+            w_p*(xpart(2)-xc(2))
+           matrixfab(i,j,k,4)= & !ATA_14
+            matrixfab(i,j,k,4)+w_p* &
+            (xpart(SDIM)-xc(SDIM))
+           matrixfab(i,j,k,5)= & !ATA_22
+            matrixfab(i,j,k,5)+w_p* &
+            (xpart(1)-xc(1))**2
+           matrixfab(i,j,k,6)= & !ATA_23
+            matrixfab(i,j,k,6)+w_p* &
+            (xpart(1)-xc(1))*(xpart(2)-xc(2))
+           matrixfab(i,j,k,7)= & !ATA_24
+            matrixfab(i,j,k,7)+w_p* &
+            (xpart(1)-xc(1))*(xpart(SDIM)-xc(SDIM))
+           matrixfab(i,j,k,8)= & !ATA_33
+            matrixfab(i,j,k,8)+w_p* &
+            (xpart(2)-xc(2))**2
+           matrixfab(i,j,k,9)= & !ATA_34
+            matrixfab(i,j,k,9)+w_p* &
+            (xpart(2)-xc(2))*(xpart(SDIM)-xc(SDIM))
+           matrixfab(i,j,k,10)= & !ATA_44
+            matrixfab(i,j,k,10)+w_p &
+            *(xpart(SDIM)-xc(SDIM))**2
+           !ATb_1 = 0.d0
+           !ATb_2 = 0.d0
+           !ATb_3 = 0.d0
+           !ATb_4 = 0.d0
+          endif
+         enddo
+        enddo
+       enddo
+      enddo
+
+      do i=tilelo(1),tilehi(1)
+       do j=tilelo(2),tilehi(2)
+        do k=tilelo(SDIM),tilehi(SDIM) !i,j,k = stencil center
+         do ii=i-1,i+1 !may out of range whole domain?(if i == 0)
+          do jj=j-1,+1
+           do kk=k-1,k+1!ii,jj,kk = 3x3x3 stencil
+            ijk_c(1)=i
+            ijk_c(2)=j
+            ijk_c(SDIM)=k
+            ijk_s(1)=ii
+            ijk_s(2)=jj
+            ijk_s(SDIM)=kk
+            tmp=0.d0
+            do dir=1,SDIM
+             xc(dir)=xlo(dir)+dx(dir)*(ijk_c(dir)-fablo(dir)+0.5d0)
+             xs(dir)=xlo(dir)+dx(dir)*(ijk_s(dir)-fablo(dir)+0.5d0)
+             tmp=tmp+(xs(dir)-xc(dir))**2
+            enddo
+            w_p=1.d0/(eps+tmp)
+            matrixfab(i,j,k,1)= & !ATA_11
+             matrixfab(i,j,k,1)+w_p*1.d0
+            matrixfab(i,j,k,2)= & !ATA_12
+             matrixfab(i,j,k,2)+ &
+             w_p*(xs(1)-xc(1))
+            matrixfab(i,j,k,3)= & !ATA_13
+             matrixfab(i,j,k,3)+ &
+             w_p*(xs(2)-xc(2))
+            matrixfab(i,j,k,4)= & !ATA_14
+             matrixfab(i,j,k,4)+w_p* &
+             (xs(SDIM)-xc(SDIM))
+            matrixfab(i,j,k,5)= & !ATA_22
+             matrixfab(i,j,k,5)+w_p* &
+             (xs(1)-xc(1))**2
+            matrixfab(i,j,k,6)= & !ATA_23
+             matrixfab(i,j,k,6)+w_p* &
+             (xs(1)-xc(1))*(xs(2)-xc(2))
+            matrixfab(i,j,k,7)= & !ATA_24
+             matrixfab(i,j,k,7)+w_p* &
+             (xs(1)-xc(1))*(xs(SDIM)-xc(SDIM))
+            matrixfab(i,j,k,8)= & !ATA_33
+             matrixfab(i,j,k,8)+w_p* &
+             (xs(2)-xc(2))**2
+            matrixfab(i,j,k,9)= & !ATA_34
+             matrixfab(i,j,k,9)+w_p* &
+             (xs(2)-xc(2))*(xs(SDIM)-xc(SDIM))
+            matrixfab(i,j,k,10)= & !ATA_44
+             matrixfab(i,j,k,10)+w_p &
+             *(xs(SDIM)-xc(SDIM))**2
+            matrixfab(i,j,k,11)= &!ATb_1
+             matrixfab(i,j,k,11)+w_p*1.d0*LS(ii,jj,kk,im_PLS)
+            matrixfab(i,j,k,12)= &!ATb_2
+             matrixfab(i,j,k,12)+w_p*(xs(1)-xc(1))*LS(ii,jj,kk,im_PLS)
+            matrixfab(i,j,k,13)= &!ATb_3
+             matrixfab(i,j,k,13)+w_p*(xs(2)-xc(2))*LS(ii,jj,kk,im_PLS)
+            matrixfab(i,j,k,14)= &!ATb_4
+             matrixfab(i,j,k,14)+w_p*(xs(SDIM)-xc(SDIM))* &
+             LS(ii,jj,kk,im_PLS)
+           enddo
+          enddo
+         enddo
+        enddo
+       enddo
+      enddo
+
+      n=SDIM+1
+      do i=tilelo(1),tilehi(1)
+       do j=tilelo(2),tilehi(2)
+        do k=tilelo(SDIM),tilehi(SDIM)
+         do ii=1,n
+          do jj=ii,n
+           A(ii,jj)=matrixfab(i,j,k, &
+              nint((ii-1)*RHS_points-ii*(ii-1)/2.d0+jj))
+           A(jj,ii)=A(ii,jj)
+          enddo
+         enddo
+         do ii=1,n
+          b(ii)=matrixfab(i,j,k,matrix_points+ii)
+         enddo
+         call least_squares_QR(A,x,b,n,n)
+         lsnew(i,j,k,im_PLS)=x(1)
+        enddo
+       enddo
+      enddo
         ! find index (i,j,k) in which xpart lives.
         ! for all neighbors of (i,j,k), within the tilelo,tilehi borders,
         ! increment the least squares matrix components stored in
@@ -17183,9 +17332,6 @@ stop
         ! is the coordinate of the cell center of cell (i+ii,j+jj,k+kk).
         ! assume that x_i=xlo(1)+dx(1)*(i-fablo(1)+0.5d0)
         ! i_contain=NINT((xpart-xlo(1))/dx(1)+fablo(1)-0.5d0)
-
-      enddo
-
       end subroutine fort_assimilate_lvlset_from_particles
 
       end module FSI_PC_LS_module

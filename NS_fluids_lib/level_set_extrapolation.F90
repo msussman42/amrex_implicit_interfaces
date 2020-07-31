@@ -167,7 +167,6 @@
     double precision, intent(out) :: ls_extrap(nmat)
 
     integer i, j, k, m, n, im
-    integer dir
     double precision A(ni*nj*nk,dim+1), b(ni*nj*nk), pos0(dim), var(dim+1)
     !ls_extrap = a . (x - x0) + b
     !find a(3) and b while minimize SUM(w_ij*(phi_ij-phi_fluid_ij)^2)
@@ -175,52 +174,28 @@
     !var(dim+1) = {a(dim), b}
 
     if (((ni+1)/2)*2.eq.ni+1) then
-     ! do nothing
+            ! do nothing
     else
-     print *,"ni invalid"
-     stop
+            print *,"ni invalid"
+            stop
     endif
     if (((nj+1)/2)*2.eq.nj+1) then
-     ! do nothing
+            ! do nothing
     else
-     print *,"nj invalid"
-     stop
+            print *,"nj invalid"
+            stop
     endif
     if (((nk+1)/2)*2.eq.nk+1) then
-     ! do nothing
+            ! do nothing
     else
-     print *,"nk invalid"
-     stop
+            print *,"nk invalid"
+            stop
     endif
-    if (ni.eq.nj) then
-     ! do nothing
-    else 
-     print *,"ni or nj invalid"
-     stop
+    pos0(1) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 1)
+    pos0(2) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 2)
+    if (dim .eq. 3) then
+       pos0(dim) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 3)
     endif
-    if (dim.eq.3) then
-     if (ni.eq.nk) then
-      ! do nothing
-     else 
-      print *,"ni or nk invalid"
-      stop
-     endif
-    else if (dim.eq.2) then
-     if (nk.eq.1) then
-      ! do nothing
-     else
-      print *,"nk invalid"
-      stop
-     endif
-    else
-     print *,"dim invalid"
-     stop
-    endif
-
-    do dir=1,dim
-     pos0(dir) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, dir)
-    enddo
-
     m = ni * nj * nk
     n = dim + 1
     do i = 1, m
@@ -236,7 +211,6 @@
        ls_extrap(im) = 0.d0
     enddo
 
-     ! dp/dx * (x-x0) + dp/dy * (y-y0) + dp/dz * (z-z0) + p0 = p
     do im = 1, nmat
        if (is_fluid(im) .eq. 1) then
           do i = 1, ni
@@ -246,12 +220,16 @@
                       print *, "Error! Weight factor less than zero!"
                       stop
                    endif
-                   do dir=1,dim
-                    A((i-1)*nj*nk+(j-1)*nk+k,dir) = weights(i,j,k) &
-                                   * (pos_xyz(i,j,k,dir)-pos0(dir))
-                   enddo
-                   A((i-1)*nj*nk+(j-1)*nk+k, dim+1) = weights(i,j,k)
-                   b((i-1)*nj*nk+(j-1)*nk+k) = weights(i,j,k) &
+                   A((i-1)*nj*nk+(j-1)*nk+k,1) = sqrt(weights(i,j,k)) &
+                                         * (pos_xyz(i,j,k,1)-pos0(1))
+                   A((i-1)*nj*nk+(j-1)*nk+k,2) = sqrt(weights(i,j,k)) &
+                                         * (pos_xyz(i,j,k,2)-pos0(2))
+                   if (dim .eq. 3) then
+                      A((i-1)*nj*nk+(j-1)*nk+k,dim) = sqrt(weights(i,j,k)) &
+                                          * (pos_xyz(i,j,k,dim)-pos0(dim))
+                   endif
+                   A((i-1)*nj*nk+(j-1)*nk+k, dim+1) = 1.d0
+                   b((i-1)*nj*nk+(j-1)*nk+k) = sqrt(weights(i,j,k)) &
                                              * ls(i,j,k,im)
                 enddo
              enddo       
@@ -263,7 +241,7 @@
        else!is_fluid(im) = 0, soild
           ls_extrap(im) = ls((ni+1)/2, (nj+1)/2, (nk+1)/2, im)
        endif
-    enddo ! im=1..nmat
+    enddo
 
   end subroutine level_set_extrapolation
 

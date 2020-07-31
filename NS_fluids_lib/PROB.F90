@@ -3292,9 +3292,9 @@ subroutine closest_distance_to_CL( &
      n_rad, &
      actual_angle, &
      closest_distance, &
-     im_primary, &
-     im_secondary, &
-     im_solid, &
+     im_primary, & ! im_primary owns adjoining cell to given structure cell
+     im_secondary, & ! im_secondary is a fluid too.
+     im_solid, &  ! structure material id.
      nmat, &
      prob_dim)
 use global_utility_module
@@ -3348,6 +3348,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
     actual_angle = 0.d0
 
 !calculate normal vector of substrate
+!this used to be LS3
     dir=1
     tmp(dir) = (LS_stencil(1,0,0,im_solid)-LS_stencil(-1,0,0,im_solid))/ &
                (x_stencil(1,0,0,dir)-x_stencil(-1,0,0,dir))
@@ -3411,6 +3412,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           return
        endif
 !calculate normal vector of contact line
+!this used to be LS1
        dir=1
        tmp(dir) = (LS_stencil(icl+1,jcl,kcl,im_primary)- &
                    LS_stencil(-1+icl,jcl,kcl,im_primary))/ &
@@ -3466,6 +3468,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        jcl=0
        kcl=0
        dir=1
+         ! used to be LS1
        tmp(dir) = (LS_stencil(icl+1,jcl,kcl,im_primary)- &
                    LS_stencil(-1+icl,jcl,kcl,im_primary))/ &
          (x_stencil(icl+1,jcl,kcl,dir)-x_stencil(-1+icl,jcl,kcl,dir))
@@ -3532,6 +3535,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dis = dis+tmp1(d)*tmp1(d)
         enddo
         dis = sqrt(dis)
+         ! used to be LS3
         if (LS_stencil(i,j,k,im_solid) .le. 0.d0 .and. &
             LS_stencil(i,j,k,im_solid) .gt. -eps .and. &
             abs(LS_stencil(i,j,k,im_primary)) .lt. eps .and. &
@@ -3562,6 +3566,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 !calculate nphi and actual angle
 
+        ! used to be LS1
        dir=1
        tmp(dir) = (LS_stencil(icl+1,jcl,kcl,im_primary)- &
                    LS_stencil(-1+icl,jcl,kcl,im_primary))/ &
@@ -3595,6 +3600,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        actual_angle = acos(costheta)
 !get point x_inf_proj
        do d = 1, prob_dim
+           ! used to be LS1
           x_inf_proj(d) = x_stencil(icl,jcl,kcl,d)- &
                   LS_stencil(icl,jcl,kcl,im_primary)*nphi(d)
           !print *, "d = ", d, "x_inf_proj = ", x_inf_proj(d)

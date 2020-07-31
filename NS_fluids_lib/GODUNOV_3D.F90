@@ -27859,86 +27859,37 @@ stop
          integer(c_int) :: cpu
        end type particle_t
 
+       type accum_parm_type
+        INTEGER_T, pointer :: fablo(:)
+        INTEGER_T, pointer :: fabhi(:)
+        INTEGER_T, pointer :: tilelo(:)
+        INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: bfact
+        INTEGER_T :: level
+        INTEGER_T :: finest_level
+        INTEGER_T :: matrix_points
+        INTEGER_T :: RHS_points
+        INTEGER_T :: ncomp_accumulate
+        REAL_T, pointer :: dx(:)
+        REAL_T, pointer :: xlo(:)
+        INTEGER_T :: Npart
+        type(particle_t), pointer, dimension(:) :: particles
+       end type accum_parm_type
+
       contains
 
-      subroutine fort_assimilate_tensor_from_particles( &
-        tid, &  ! thread id
-        tilelo,tilehi, &  ! tile box dimensions
-        fablo,fabhi, &    ! fortran array box dimensions containing the tile
-        bfact, &          ! space order
-        level, &          ! 0<=level<=finest_level
-        finest_level, &
-        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        particles, &      ! a list of particles in the elastic structure
-        nbr_particles, &  ! a list of nbr particles in the elastic structure
-        Np,Nn, & ! pass by value Np = number of particles, Nn=number nbr part.
-        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
-        matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
-        RHS_points, &    ! least squares in 3D: 4
-        ncomp_accumulate, & ! sdim * (matrix_points + RHS_points)
-        ipart_type, &    ! ipart_type==0 => bulk part. ipart_type==1 int. part.
-        TNEWfab, &       ! FAB that hold elastic tensor when complete
-        DIMS(TNEWfab), &
-        matrixfab, &     ! accumulation FAB
-        DIMS(matrixfab)) &
-      bind(c,name='fort_assimilate_tensor_from_particles')
+      subroutine traverse_particles( &
+       accum_PARM, &
+       matrixfab, &
+       DIMS(matrixfab), &
+       ncomp_accumulate)
 
-      INTEGER_T, intent(in) :: ncomp_tensor
-      INTEGER_T, intent(in) :: matrix_points
-      INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, intent(in) :: ipart_type
-      INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      type(accum_parm_type), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
-      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
-      REAL_T, intent(inout) :: TNEWfab( &
-        DIMV(TNEWfab), &
-        ncomp_tensor)
-      type(particle_t), intent(in) :: particles(Np)
-      type(particle_t), intent(in) :: nbr_particles(Nn)
-
-      INTEGER_T interior_ID
-      INTEGER_T dir
-      REAL_T xpart(SDIM)
-      REAL_T xpartfoot(SDIM)
-      REAL_T xdisp(SDIM)
-
-       ! 6 in 3D, 4 in 2D
-      if (ncomp_tensor.eq.2*SDIM) then
-       ! do nothing
-      else
-       print *,"ncomp_tensor invalid"
-       stop
-      endif
-      if (matrix_points.eq.10) then
-       ! do nothing
-      else
-       print *,"matrix_points invalid"
-       stop
-      endif
-      if (RHS_points.eq.4) then
-       ! do nothing
-      else
-       print *,"RHS_points invalid"
-       stop
-      endif
-      if (ncomp_accumulate.eq.SDIM*(matrix_points+RHS_points)) then
-       ! do nothing
-      else
-       print *,"ncomp_accumulate invalid"
-       stop
-      endif
 
        ! Prior to this routine being called, "matrixfab" is initialized with
        ! all zeroes.  After sweeping through all the particles, 
@@ -27967,12 +27918,275 @@ stop
        ! Union_{i'=tilelo(1) ...tilehi(1)}
        ! Union_{j'=tilelo(2) ...tilehi(2)}
        ! Union_{k'=tilelo(3) ...tilehi(3)} Omega_{i',j',k'}
-      do interior_ID=1,Np
+
+      nhalf=3
+
+      eps=1.d-16 !too small?
+      do interior_ID=1,accum_PARM%Npart
        do dir=1,SDIM
-        xpart(dir)=particles(interior_ID)%pos(dir)
-        xpartfoot(dir)=particles(interior_ID)%pos_foot(dir)
+        xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+        xpartfoot(dir)=accum_PARM%particles(interior_ID)%pos_foot(dir)
         xdisp(dir)=xpart(dir)-xpartfoot(dir)
+        ijk_x(dir)=NINT((xpart(dir)-xlo(dir))/dx(dir)+fablo(dir)-0.5d0)
        enddo
+       call containing_cell(accum_PARM%bfact, &
+         accum_PARM%dx, &
+         accum_PARM%xlo, &
+         accum_PARM%fablo, &
+         xpart, &
+         cell_index)
+       sublo(3)=0
+       subhi(3)=0
+       do dir=1,SDIM
+        sublo(dir)=cell_index(dir)-1
+        subhi(dir)=cell_index(dir)+1
+       enddo
+       do idx(1)=sublo(1),subhi(1)
+       do idx(2)=sublo(2),subhi(2)
+       do idx(3)=sublo(3),subhi(3)
+        interior_ok=1
+        do dir=1,SDIM
+         if ((idx(dir).lt.accum_PARM%tilelo(dir)).or. &
+             (idx(dir).gt.accum_PARM%tilehi(dir))) then
+          interior_ok=0
+         endif
+        enddo
+        if (interior_ok.eq.1) then
+         i=idx(1)
+         j=idx(2)
+         k=idx(3)
+         call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+         tmp=0.d0
+         do dir=1,SDIM
+          xc(dir)=xsten(0,dir)
+          tmp=tmp+(xpart(dir)-xc(dir))**2
+         enddo
+         w_p=1.d0/(eps+tmp)
+         matrixfab(D_DECL(i,j,k),1)= & !ATA_11
+            matrixfab(D_DECL(i,j,k),1)+w_p*1.d0
+         matrixfab(D_DECL(i,j,k),2)= & !ATA_12
+            matrixfab(D_DECL(i,j,k),2)+ &
+            w_p*(xpart(1)-xc(1))
+         matrixfab(D_DECL(i,j,k),3)= & !ATA_13
+            matrixfab(D_DECL(i,j,k),3)+ &
+            w_p*(xpart(2)-xc(2))
+         matrixfab(D_DECL(i,j,k),4)= & !ATA_14
+            matrixfab(D_DECL(i,j,k),4)+w_p* &
+            (xpart(SDIM)-xc(SDIM))
+         matrixfab(D_DECL(i,j,k),5)= & !ATA_22
+            matrixfab(D_DECL(i,j,k),5)+w_p* &
+            (xpart(1)-xc(1))**2
+         matrixfab(D_DECL(i,j,k),6)= & !ATA_23
+            matrixfab(D_DECL(i,j,k),6)+w_p* &
+            (xpart(1)-xc(1))*(xpart(2)-xc(2))
+         matrixfab(D_DECL(i,j,k),7)= & !ATA_24
+            matrixfab(D_DECL(i,j,k),7)+w_p* &
+            (xpart(1)-xc(1))*(xpart(SDIM)-xc(SDIM))
+         matrixfab(D_DECL(i,j,k),8)= & !ATA_33
+            matrixfab(D_DECL(i,j,k),8)+w_p* &
+            (xpart(2)-xc(2))**2
+         matrixfab(D_DECL(i,j,k),9)= & !ATA_34
+            matrixfab(D_DECL(i,j,k),9)+w_p* &
+            (xpart(2)-xc(2))*(xpart(SDIM)-xc(SDIM))
+         matrixfab(D_DECL(i,j,k),10)= & !ATA_44
+            matrixfab(D_DECL(i,j,k),10)+w_p &
+            *(xpart(SDIM)-xc(SDIM))**2
+         ibase=11
+         do dir=1,SDIM
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*xdisp(dir)
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*xdisp(dir)
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*xdisp(dir)
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*xdisp(dir)
+          ibase=ibase+1
+         enddo ! dir=1..sdim
+         if (ibase.eq.10+4*SDIM+1) then
+          ! do nothing
+         else
+          print *,"ibase invalid"
+          stop
+         endif
+        else if (interior_ok.eq.0) then
+         ! do nothing
+        else
+         print *,"interior_ok invalid"
+         stop
+        endif
+       enddo
+       enddo
+       enddo ! idx(1),idx(2),idx(3)
+      enddo ! do interior_ID=1,accum_PARM%Npart
+
+      return
+      end subroutine traverse_particles
+
+      subroutine fort_assimilate_tensor_from_particles( &
+        tid, &  ! thread id
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        level, &          ! 0<=level<=finest_level
+        finest_level, &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        particles, &      ! a list of particles in the elastic structure
+        nbr_particles, &  ! a list of nbr particles in the elastic structure
+        Np,Nn, & ! pass by value Np = number of particles, Nn=number nbr part.
+        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
+        RHS_points, &    ! least squares in 3D: 4
+        ncomp_accumulate, & ! matrix_points+sdim * RHS_points
+        ipart_type, &    ! ipart_type==0 => bulk part. ipart_type==1 int. part.
+        TNEWfab, &       ! FAB that hold elastic tensor when complete
+        DIMS(TNEWfab), &
+        matrixfab, &     ! accumulation FAB
+        DIMS(matrixfab)) &
+      bind(c,name='fort_assimilate_tensor_from_particles')
+
+      use ZEYU_LS_extrapolation, only : least_squares_QR
+      implicit none
+
+      INTEGER_T, intent(in) :: ncomp_tensor
+      INTEGER_T, intent(in) :: matrix_points
+      INTEGER_T, intent(in) :: RHS_points
+      INTEGER_T, intent(in) :: ncomp_accumulate
+      INTEGER_T, intent(in) :: ipart_type
+      INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in), target :: xlo(SDIM)
+      REAL_T, intent(in), target :: dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
+      REAL_T, intent(inout) :: matrixfab( &
+        DIMV(matrixfab), &
+        ncomp_accumulate)
+      REAL_T, intent(inout) :: TNEWfab( &
+        DIMV(TNEWfab), &
+        ncomp_tensor)
+      type(particle_t), intent(in), target :: particles(Np)
+      type(particle_t), intent(in), target :: nbr_particles(Nn)
+
+      type(accum_parm_type) :: accum_PARM
+
+      INTEGER_T interior_ID
+      INTEGER_T dir
+      INTEGER_T ncomp_ID
+      REAL_T xpart(SDIM)
+      REAL_T xpartfoot(SDIM)
+      REAL_T xdisp(SDIM)
+      INTEGER_T ijk_x(SDIM), ijk_c(SDIM), i, j, k, ii, jj, n
+      REAL_T xc(SDIM)
+      REAL_T tmp, eps, w_p, A(SDIM+1,SDIM+1), b(SDIM+1), x(SDIM+1,SDIM)
+
+       ! 6 in 3D, 4 in 2D
+      if (ncomp_tensor.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ncomp_tensor invalid"
+       stop
+      endif
+      if (matrix_points.eq.10) then
+       ! do nothing
+      else
+       print *,"matrix_points invalid"
+       stop
+      endif
+      if (RHS_points.eq.4) then
+       ! do nothing
+      else
+       print *,"RHS_points invalid"
+       stop
+      endif
+      if (ncomp_accumulate.eq.matrix_points+SDIM*RHS_points) then
+       ! do nothing
+      else
+       print *,"ncomp_accumulate invalid"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
+
+      accum_PARM%fablo=>fablo 
+      accum_PARM%fabhi=>fabhi
+      accum_PARM%tilelo=>tilelo 
+      accum_PARM%tilehi=>tilehi
+      accum_PARM%bfact=bfact
+      accum_PARM%level=level
+      accum_PARM%finest_level=finest_level
+      accum_PARM%matrix_points=matrix_points
+      accum_PARM%RHS_points=RHS_points
+      accum_PARM%ncomp_accumulate=ncomp_accumulate
+      accum_PARM%dx=>dx
+      accum_PARM%xlo=>xlo
+
+      accum_PARM%particles=>particles
+      accum_PARM%Npart=Np
+
+      call traverse_particles(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+      accum_PARM%particles=>nbr_particles
+      accum_PARM%Npart=Nn
+
+      call traverse_particles(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+      do i=tilelo(1),tilehi(1)
+       do j=tilelo(2),tilehi(2)
+        do k=tilelo(SDIM),tilehi(SDIM)
+         do dir=2,SDIM
+          do ncomp_ID=1,matrix_points
+           matrixfab(i,j,k,(dir-1)* &
+            (matrix_points+RHS_points)+ncomp_ID)= &
+            matrixfab(i,j,k,ncomp_ID)
+          enddo 
+         enddo
+        enddo
+       enddo
+      enddo
+
+      n=SDIM+1
+      do i=tilelo(1),tilehi(1)
+       do j=tilelo(2),tilehi(2)
+        do k=tilelo(SDIM),tilehi(SDIM)
+         do ii=1,n
+          do jj=ii,n
+           A(ii,jj)=matrixfab(i,j,k, &
+               nint((ii-1)*RHS_points-ii*(ii-1)/2.d0+jj))
+           A(jj,ii)=A(ii,jj)
+          enddo
+         enddo
+         do dir=1,SDIM
+          do ii=1,n
+           b(ii)=matrixfab(i,j,k,(dir-1)* &
+            (matrix_points+RHS_points)+matrix_points+ii)
+          enddo
+          call least_squares_QR(A,x(:,dir),b,n,n)
+         enddo
+         TNEWfab(i,j,k,1)=2.d0*x(2,1)!a11
+         TNEWfab(i,j,k,2)=x(3,1)+x(2,2)!a12
+         TNEWfab(i,j,k,3)=x(n,1)+x(2,3)!a13
+         TNEWfab(i,j,k,4)=2.d0*x(3,2)!a22
+         TNEWfab(i,j,k,5)=x(n,2)+x(3,3)!a23
+         TNEWfab(i,j,k,6)=2.d0*x(n,3)!a33
+        enddo
+       enddo
+      enddo
         ! Prior to this routine being called, "matrixfab" is initialized with
         ! all zeroes.
         ! find index (i,j,k) in which xpart lives.
@@ -28006,8 +28220,6 @@ stop
         ! (b) for RK_stage=1..max_RK_stage
         !     (i) phi^{RK_stage+1} =f(phi^{RK_stage=0...RK_stage})
         ! 
-      enddo
-
       end subroutine fort_assimilate_tensor_from_particles
 
       end module FSI_PC_module

@@ -19071,7 +19071,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  int matrix_points=10;  // 4x4 - (3+2+1) =10
  int RHS_points=4;
- int ncomp_accumulate=AMREX_SPACEDIM*(matrix_points+RHS_points);
+ int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
  MultiFab* accumulate_mf=new MultiFab(grids,dmap,ncomp_accumulate,0,
 	  MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
  accumulate_mf->setVal(0.0);
@@ -19275,6 +19275,12 @@ NavierStokes::init_particle_container() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: PLIC_3D.F90
+    // 1. subdivide each cell with "particle_nsubdivide" divisions.
+    //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
+    //                 "         "   =4 => 64 pieces in 2D.
+    // 2. for each small sub-box, find the material centroid, and initialize
+    //    a bulk particle at the centroid.  for cut cells, let
+    //    x_interface_particle=x_bulk - phi grad phi/|grad phi|
    FORT_INIT_PARTICLE_CONTAINER( 
     &tid_current,
     particle_nsubdivide.dataPtr(),
