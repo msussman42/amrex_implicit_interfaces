@@ -27884,6 +27884,8 @@ stop
        DIMS(matrixfab), &
        ncomp_accumulate)
 
+      use global_utility_module
+
       INTEGER_T, intent(in) :: ncomp_accumulate
       type(accum_parm_type), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
@@ -27959,9 +27961,10 @@ stop
         sublo(dir)=cell_index(dir)-1
         subhi(dir)=cell_index(dir)+1
        enddo
-       do idx(1)=sublo(1),subhi(1)
-       do idx(2)=sublo(2),subhi(2)
-       do idx(3)=sublo(3),subhi(3)
+       idx(1)=sublo(1)
+       idx(2)=sublo(2)
+       idx(3)=sublo(3)
+       do while (idx(3).le.subhi(3))
         interior_ok=1
         do dir=1,SDIM
          if ((idx(dir).lt.accum_PARM%tilelo(dir)).or. &
@@ -28072,9 +28075,16 @@ stop
          print *,"interior_ok invalid"
          stop
         endif
-       enddo
-       enddo
-       enddo ! idx(1),idx(2),idx(3)
+        idx(1)=idx(1)+1
+        if (idx(1).gt.subhi(1)) then
+         idx(1)=sublo(1)
+         idx(2)=idx(2)+1
+         if (idx(2).gt.subhi(2)) then
+          idx(2)=sublo(2)
+          idx(3)=idx(3)+1
+         endif
+        endif
+       enddo ! idx(1),idx(2),idx(3): while idx(3)<=subhi(3)
       enddo ! do interior_ID=1,accum_PARM%Npart
 
       return
@@ -28103,6 +28113,8 @@ stop
       bind(c,name='fort_assimilate_tensor_from_particles')
 
       use ZEYU_LS_extrapolation, only : least_squares_QR
+      use global_utility_module
+      use probcommon_module
       implicit none
 
       INTEGER_T, intent(in) :: ncomp_tensor
@@ -28136,12 +28148,13 @@ stop
       INTEGER_T gridhi(3)
       INTEGER_T i,j,k
       INTEGER_T n
+      INTEGER_T dir
       INTEGER_T ibase
       INTEGER_T ii,jj
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
-      REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), xLS(SDIM+1,SDIM)
+      REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), xLS(SDIM+1,SDIM), xlocal(SDIM+1)
       REAL_T gradu(SDIM,SDIM)
       REAL_T DISP_TEN(SDIM,SDIM)
       REAL_T hoop_12,hoop_22
@@ -28343,7 +28356,7 @@ stop
 
        ibase=ibase+1
        if (SDIM.eq.3) then
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(3,3)
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(SDIM,SDIM)
        else if (SDIM.eq.2) then
         if (levelrz.eq.0) then
          TNEWfab(D_DECL(i,j,k),ibase)=zero
@@ -28362,9 +28375,9 @@ stop
                      
        if (SDIM.eq.3) then                
         ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,3)
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,SDIM)
         ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,3)
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,SDIM)
        endif
        if (ibase-1.eq.2*SDIM) then
         ! do nothing

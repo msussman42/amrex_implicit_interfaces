@@ -5306,11 +5306,15 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
   // temperature and density for all of the materials.
  int nden=nmat*num_state_material;
  MultiFab* state_var_mf=getStateDen(ngrow_law_of_wall,cur_time_slab);
- if (state_var_mf->nComp()!=nden)
+ if (state_var_mf->nComp()==nden) {
+  // do nothing
+ } else
   amrex::Error("state_var_mf->nComp()!=nden");
 
-  if (ngrow_distance!=4)
-   amrex::Error("ngrow_distance invalid");
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("ngrow_distance invalid");
 
   // caller_id==1
  getStateDist_localMF(LS_NRM_CP_MF,ngrow_distance,cur_time_slab,1);

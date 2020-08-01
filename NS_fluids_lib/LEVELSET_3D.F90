@@ -17066,6 +17066,7 @@ stop
         REAL_T, pointer :: xlo(:)
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
+        INTEGER_T :: im_PLS
         INTEGER_T :: DIMDEC(LS)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
        end type accum_parm_type_LS
@@ -17078,8 +17079,10 @@ stop
        DIMS(matrixfab), &
        ncomp_accumulate)
 
+      use global_utility_module
+
       INTEGER_T, intent(in) :: ncomp_accumulate
-      type(accum_parm_type), intent(in) :: accum_PARM
+      type(accum_parm_type_LS), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
@@ -17090,18 +17093,21 @@ stop
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
       REAL_T xpart(SDIM)
-      REAL_T xpartfoot(SDIM)
-      REAL_T xdisp(SDIM)
       INTEGER_T cell_index(SDIM)
       INTEGER_T sublo(3)
       INTEGER_T subhi(3)
       INTEGER_T idx(3)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
+      INTEGER_T ig,jg,kg
       REAL_T xsten(-3:3,SDIM)
-      REAL_T tmp,w_p
+      REAL_T tmp,w_p,wt_lag
+      REAL_T LSpart
       REAL_T xc(SDIM)
+      INTEGER_T npart_local
       INTEGER_T ibase
+      INTEGER_T growlo(3)
+      INTEGER_T growhi(3)
 
        ! Prior to this routine being called, "matrixfab" is initialized with
        ! all zeroes.  After sweeping through all the particles, 
@@ -17135,27 +17141,66 @@ stop
 
       eps=accum_PARM%dx(1)*1.0d-3
 
-      do interior_ID=1,accum_PARM%Npart
-       do dir=1,SDIM
-        xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-        xpartfoot(dir)=accum_PARM%particles(interior_ID)%pos_foot(dir)
-        xdisp(dir)=xpart(dir)-xpartfoot(dir)
-       enddo
-       call containing_cell(accum_PARM%bfact, &
+      do dir=1,3
+       growlo(dir)=0
+       growhi(dir)=0
+      enddo
+      if (accum_PARM%Npart.eq.-1) then
+       call growntilebox(accum_PARM%tilelo,accum_PARM%tilehi, &
+        accum_PARM%fablo,accum_PARM%fabhi, &
+        growlo,growhi,1)
+       npart_local=1
+      else if (accum_PARM%Npart.ge.0) then
+       npart_local=accum_PARM%Npart
+      else
+       print *,"accum_PARM%Npart invalid"
+       stop
+      endif
+
+      do ig=growlo(1),growhi(1)
+      do jg=growlo(2),growhi(2)
+      do kg=growlo(3),growhi(3)
+      do interior_ID=1,npart_local
+
+       if (accum_PARM%Npart.ge.0) then
+        do dir=1,SDIM
+         xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+        enddo
+        LSpart=zero
+        call containing_cell(accum_PARM%bfact, &
          accum_PARM%dx, &
          accum_PARM%xlo, &
          accum_PARM%fablo, &
          xpart, &
          cell_index)
+        wt_lag=one
+       else if (accum_PARM%Npart.eq.-1) then
+        call gridsten_level(xsten,ig,jg,kg,accum_PARM%level,nhalf)
+        do dir=1,SDIM
+         xpart(dir)=xsten(0,dir)
+        enddo
+        cell_index(1)=ig
+        cell_index(2)=jg
+        if (SDIM.eq.3) then
+         cell_index(SDIM)=kg
+        endif
+        LSpart=accum_PARM%LS(D_DECL(ig,jg,kg),accum_PARM%im_PLS)
+        wt_lag=0.1d0
+       else
+        print *,"accum_PARM%Npart invalid"
+        stop
+       endif
+
        sublo(3)=0
        subhi(3)=0
        do dir=1,SDIM
         sublo(dir)=cell_index(dir)-1
         subhi(dir)=cell_index(dir)+1
        enddo
-       do idx(1)=sublo(1),subhi(1)
-       do idx(2)=sublo(2),subhi(2)
-       do idx(3)=sublo(3),subhi(3)
+       idx(1)=sublo(1)
+       idx(2)=sublo(2)
+       idx(3)=sublo(3)
+       do while (idx(3).le.subhi(3))
         interior_ok=1
         do dir=1,SDIM
          if ((idx(dir).lt.accum_PARM%tilelo(dir)).or. &
@@ -17168,12 +17213,24 @@ stop
          j=idx(2)
          k=idx(3)
          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+
          tmp=0.0d0
-         do dir=1,SDIM
-          xc(dir)=xsten(0,dir)
-          tmp=tmp+(xpart(dir)-xc(dir))**2
-         enddo
-         w_p=1.0d0/(eps+tmp)
+         if (accum_PARM%Npart.ge.0) then
+          do dir=1,SDIM
+           xc(dir)=xsten(0,dir)
+           tmp=tmp+(xpart(dir)-xc(dir))**2
+          enddo
+         else if (accum_PARM%Npart.eq.-1) then
+          do dir=1,SDIM
+           tmp=tmp+(xsten(1,dir)-xsten(-1,dir))**2
+          enddo
+         else
+          print *,"accum_PARM%Npart invalid"
+          stop
+         endif
+
+         w_p=wt_lag*1.0d0/(eps+tmp)
+
          ibase=1
          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_11
             matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0
@@ -17239,22 +17296,21 @@ stop
          endif
 
          ibase=11
-         do dir=1,SDIM
-          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*xdisp(dir)
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*xdisp(dir)
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*xdisp(dir)
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*xdisp(dir)
-          ibase=ibase+1
-         enddo ! dir=1..sdim
+
+         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*LSpart
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*LSpart
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*LSpart
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*LSpart
+         ibase=ibase+1
          if (ibase.eq. &
-             accum_PARM%matrix_points+accum_PARM%RHS_points*SDIM+1) then
+             accum_PARM%matrix_points+accum_PARM%RHS_points+1) then
           ! do nothing
          else
           print *,"ibase invalid"
@@ -17266,22 +17322,24 @@ stop
          print *,"interior_ok invalid"
          stop
         endif
-       enddo
-       enddo
-       enddo ! idx(1),idx(2),idx(3)
+        idx(1)=idx(1)+1
+        if (idx(1).gt.subhi(1)) then
+         idx(1)=sublo(1)
+         idx(2)=idx(2)+1
+         if (idx(2).gt.subhi(2)) then
+          idx(2)=sublo(2)
+          idx(3)=idx(3)+1
+         endif
+        endif
+       enddo ! idx(1),idx(2),idx(3): while idx(3)<=subhi(3)
+
       enddo ! do interior_ID=1,accum_PARM%Npart
+      enddo ! kg
+      enddo ! jg
+      enddo ! ig
 
       return
       end subroutine traverse_particlesLS
-
-
-
-
-
-
-
-
-
 
 
 
@@ -17337,8 +17395,8 @@ stop
       INTEGER_T, intent(in) :: level,finest_level
       REAL_T, intent(in) :: solid_time
 
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in), target :: xlo(SDIM)
+      REAL_T, intent(in), target :: dx(SDIM)
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: bfact
@@ -17356,14 +17414,13 @@ stop
        num_materials_vel*(SDIM+1))
       REAL_T, intent(out) ::  velnew(DIMV(velnew), &
        num_materials_vel*(SDIM+1))
-      REAL_T, intent(in) ::  LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(in), target ::  LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) ::  mofdata(DIMV(mofdata),nmat*ngeom_raw)
       REAL_T, intent(in) ::  den(DIMV(den),nmat*num_state_material)
       REAL_T, intent(inout) ::  dennew(DIMV(dennew),nmat*num_state_material)
       REAL_T, intent(inout) ::  lsnew(DIMV(lsnew),nmat*(1+SDIM))
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
 
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
@@ -17376,23 +17433,34 @@ stop
         ncomp_accumulate)
       type(particle_t), intent(in) :: particles_bulk(Np_bulk)
       type(particle_t), intent(in) :: nbr_particles_bulk(Nn_bulk)
-      type(particle_t), intent(in) :: particles_interface(Np_interface)
-      type(particle_t), intent(in) :: nbr_particles_interface(Nn_interface)
+      type(particle_t), intent(in), target :: &
+              particles_interface(Np_interface)
+      type(particle_t), intent(in), target :: &
+              nbr_particles_interface(Nn_interface)
 
-      INTEGER_T interior_ID
-      INTEGER_T dir
-      INTEGER_T ncomp_ID
-      REAL_T xpart(SDIM)
-      INTEGER_T ijk_x(SDIM), ijk_c(SDIM), ijk_s(SDIM)
-      INTEGER_T i, j, k, ii, jj, kk, n
-      REAL_T xc(SDIM), xs(SDIM)
-      REAL_T tmp, eps, w_p, A(SDIM+1,SDIM+1), b(SDIM+1), x(SDIM+1)
-      type(particle_t) totalprt(Np_interface+Nn_interface)
+      type(accum_parm_type_LS) :: accum_PARM
 
-      totalprt(   1:Np_interface)=particles_interface
-      totalprt(Np_interface+1:  )=nbr_particles_interface
+      INTEGER_T gridlo(3)
+      INTEGER_T gridhi(3)
+      INTEGER_T i,j,k
+      INTEGER_T n
+      INTEGER_T ibase
+      INTEGER_T ii,jj
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+      REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), xlocal(SDIM+1)
 
-      eps=1.d-16 !too small?
+      nhalf=3
+
+      call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(dennew),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(velnew),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(vel),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(den),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(mofdata),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(vofnew),1,-1,1271)
 
       if (matrix_points.eq.10) then
        ! do nothing
@@ -17420,148 +17488,103 @@ stop
        stop
       endif
 
-      do interior_ID=1,Np_interface+Nn_interface
-       do dir=1,SDIM
-        xpart(dir)=totalprt(interior_ID)%pos(dir)
-        ijk_x(dir)=NINT((xpart(dir)-xlo(dir))/dx(dir)+fablo(dir)-0.5d0)
-       enddo
-       do i=ijk_x(1)-1,ijk_x(1)+1
-        do j=ijk_x(2)-1,ijk_x(2)+1
-         do k=ijk_x(SDIM)-1,ijk_x(SDIM)+1
-          if (i.ge.tilelo(1).and.i.le.tilehi(1).and.&
-              j.ge.tilelo(2).and.j.le.tilehi(2).and.&
-              k.ge.tilelo(SDIM).and.k.le.tilehi(SDIM)) then
-           ijk_c(1)=i
-           ijk_c(2)=j
-           ijk_c(SDIM)=k
-           tmp=0.d0
-           do dir=1,SDIM
-            xc(dir)=xlo(dir)+dx(dir)*(ijk_c(dir)-fablo(dir)+0.5d0)
-            tmp=tmp+(xpart(dir)-xc(dir))**2
-           enddo
-           w_p=1.d0/(eps+tmp)
-           matrixfab(i,j,k,1)= & !ATA_11
-            matrixfab(i,j,k,1)+w_p*1.d0
-           matrixfab(i,j,k,2)= & !ATA_12
-            matrixfab(i,j,k,2)+ &
-            w_p*(xpart(1)-xc(1))
-           matrixfab(i,j,k,3)= & !ATA_13
-            matrixfab(i,j,k,3)+ &
-            w_p*(xpart(2)-xc(2))
-           matrixfab(i,j,k,4)= & !ATA_14
-            matrixfab(i,j,k,4)+w_p* &
-            (xpart(SDIM)-xc(SDIM))
-           matrixfab(i,j,k,5)= & !ATA_22
-            matrixfab(i,j,k,5)+w_p* &
-            (xpart(1)-xc(1))**2
-           matrixfab(i,j,k,6)= & !ATA_23
-            matrixfab(i,j,k,6)+w_p* &
-            (xpart(1)-xc(1))*(xpart(2)-xc(2))
-           matrixfab(i,j,k,7)= & !ATA_24
-            matrixfab(i,j,k,7)+w_p* &
-            (xpart(1)-xc(1))*(xpart(SDIM)-xc(SDIM))
-           matrixfab(i,j,k,8)= & !ATA_33
-            matrixfab(i,j,k,8)+w_p* &
-            (xpart(2)-xc(2))**2
-           matrixfab(i,j,k,9)= & !ATA_34
-            matrixfab(i,j,k,9)+w_p* &
-            (xpart(2)-xc(2))*(xpart(SDIM)-xc(SDIM))
-           matrixfab(i,j,k,10)= & !ATA_44
-            matrixfab(i,j,k,10)+w_p &
-            *(xpart(SDIM)-xc(SDIM))**2
-           !ATb_1 = 0.d0
-           !ATb_2 = 0.d0
-           !ATb_3 = 0.d0
-           !ATb_4 = 0.d0
-          endif
-         enddo
-        enddo
-       enddo
-      enddo
+      accum_PARM%fablo=>fablo 
+      accum_PARM%fabhi=>fabhi
+      accum_PARM%tilelo=>tilelo 
+      accum_PARM%tilehi=>tilehi
+      accum_PARM%bfact=bfact
+      accum_PARM%level=level
+      accum_PARM%finest_level=finest_level
+      accum_PARM%matrix_points=matrix_points
+      accum_PARM%RHS_points=RHS_points
+      accum_PARM%ncomp_accumulate=ncomp_accumulate
+      accum_PARM%dx=>dx
+      accum_PARM%xlo=>xlo
 
-      do i=tilelo(1),tilehi(1)
-       do j=tilelo(2),tilehi(2)
-        do k=tilelo(SDIM),tilehi(SDIM) !i,j,k = stencil center
-         do ii=i-1,i+1 !may out of range whole domain?(if i == 0)
-          do jj=j-1,+1
-           do kk=k-1,k+1!ii,jj,kk = 3x3x3 stencil
-            ijk_c(1)=i
-            ijk_c(2)=j
-            ijk_c(SDIM)=k
-            ijk_s(1)=ii
-            ijk_s(2)=jj
-            ijk_s(SDIM)=kk
-            tmp=0.d0
-            do dir=1,SDIM
-             xc(dir)=xlo(dir)+dx(dir)*(ijk_c(dir)-fablo(dir)+0.5d0)
-             xs(dir)=xlo(dir)+dx(dir)*(ijk_s(dir)-fablo(dir)+0.5d0)
-             tmp=tmp+(xs(dir)-xc(dir))**2
-            enddo
-            w_p=1.d0/(eps+tmp)
-            matrixfab(i,j,k,1)= & !ATA_11
-             matrixfab(i,j,k,1)+w_p*1.d0
-            matrixfab(i,j,k,2)= & !ATA_12
-             matrixfab(i,j,k,2)+ &
-             w_p*(xs(1)-xc(1))
-            matrixfab(i,j,k,3)= & !ATA_13
-             matrixfab(i,j,k,3)+ &
-             w_p*(xs(2)-xc(2))
-            matrixfab(i,j,k,4)= & !ATA_14
-             matrixfab(i,j,k,4)+w_p* &
-             (xs(SDIM)-xc(SDIM))
-            matrixfab(i,j,k,5)= & !ATA_22
-             matrixfab(i,j,k,5)+w_p* &
-             (xs(1)-xc(1))**2
-            matrixfab(i,j,k,6)= & !ATA_23
-             matrixfab(i,j,k,6)+w_p* &
-             (xs(1)-xc(1))*(xs(2)-xc(2))
-            matrixfab(i,j,k,7)= & !ATA_24
-             matrixfab(i,j,k,7)+w_p* &
-             (xs(1)-xc(1))*(xs(SDIM)-xc(SDIM))
-            matrixfab(i,j,k,8)= & !ATA_33
-             matrixfab(i,j,k,8)+w_p* &
-             (xs(2)-xc(2))**2
-            matrixfab(i,j,k,9)= & !ATA_34
-             matrixfab(i,j,k,9)+w_p* &
-             (xs(2)-xc(2))*(xs(SDIM)-xc(SDIM))
-            matrixfab(i,j,k,10)= & !ATA_44
-             matrixfab(i,j,k,10)+w_p &
-             *(xs(SDIM)-xc(SDIM))**2
-            matrixfab(i,j,k,11)= &!ATb_1
-             matrixfab(i,j,k,11)+w_p*1.d0*LS(ii,jj,kk,im_PLS)
-            matrixfab(i,j,k,12)= &!ATb_2
-             matrixfab(i,j,k,12)+w_p*(xs(1)-xc(1))*LS(ii,jj,kk,im_PLS)
-            matrixfab(i,j,k,13)= &!ATb_3
-             matrixfab(i,j,k,13)+w_p*(xs(2)-xc(2))*LS(ii,jj,kk,im_PLS)
-            matrixfab(i,j,k,14)= &!ATb_4
-             matrixfab(i,j,k,14)+w_p*(xs(SDIM)-xc(SDIM))* &
-             LS(ii,jj,kk,im_PLS)
-           enddo
-          enddo
-         enddo
-        enddo
-       enddo
-      enddo
+      accum_PARM%im_PLS=im_PLS
+      call copy_dimdec( &
+        DIMS(accum_PARM%LS), &
+        DIMS(LS))
+      accum_PARM%LS=>LS  ! accum_PARM%LS is pointer, LS is target
+
+      accum_PARM%particles=>particles_interface
+      accum_PARM%Npart=Np_interface
+
+      call traverse_particlesLS(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+      accum_PARM%particles=>nbr_particles_interface
+      accum_PARM%Npart=Nn_interface
+
+      call traverse_particlesLS(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+      accum_PARM%Npart=-1
+
+      call traverse_particlesLS(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,gridlo,gridhi,0) 
 
       n=SDIM+1
-      do i=tilelo(1),tilehi(1)
-       do j=tilelo(2),tilehi(2)
-        do k=tilelo(SDIM),tilehi(SDIM)
-         do ii=1,n
-          do jj=ii,n
-           A(ii,jj)=matrixfab(i,j,k, &
-              nint((ii-1)*RHS_points-ii*(ii-1)/2.d0+jj))
-           A(jj,ii)=A(ii,jj)
-          enddo
-         enddo
-         do ii=1,n
-          b(ii)=matrixfab(i,j,k,matrix_points+ii)
-         enddo
-         call least_squares_QR(A,x,b,n,n)
-         lsnew(i,j,k,im_PLS)=x(1)
-        enddo
+      do i=gridlo(1),gridhi(1)
+      do j=gridlo(2),gridhi(2)
+      do k=gridlo(3),gridhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       ibase=1
+       do ii=1,n
+       do jj=ii,n
+        A(ii,jj)=matrixfab(D_DECL(i,j,k),ibase)
+        A(jj,ii)=A(ii,jj)
+        ibase=ibase+1
        enddo
+       enddo
+       if (SDIM.eq.2) then
+        if (ibase-1.eq.6) then
+         ! do nothing
+        else
+         print *,"ibase invalid"
+         stop
+        endif
+       else if (SDIM.eq.3) then
+        if (ibase-1.eq.10) then
+         ! do nothing
+        else
+         print *,"ibase invalid"
+         stop
+        endif
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
+       ibase=11
+       do ii=1,n
+        b(ii)=matrixfab(D_DECL(i,j,k),ibase+ii-1)
+       enddo
+       ibase=ibase+RHS_points
+       
+       call least_squares_QR(A,xlocal,b,n,n)
+
+       if (ibase-1.eq.matrix_points+RHS_points) then
+        ! do nothing
+       else
+        print *,"ibase invalid"
+        stop
+       endif
+
+       lsnew(D_DECL(i,j,k),im_PLS)=xlocal(1)
+
       enddo
+      enddo
+      enddo
+
         ! find index (i,j,k) in which xpart lives.
         ! for all neighbors of (i,j,k), within the tilelo,tilehi borders,
         ! increment the least squares matrix components stored in
