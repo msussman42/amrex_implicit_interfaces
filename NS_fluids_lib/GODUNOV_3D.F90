@@ -28135,7 +28135,7 @@ stop
       INTEGER_T gridhi(3)
       INTEGER_T i,j,k
       INTEGER_T n
-      REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), x(SDIM+1,SDIM)
+      REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), xLS(SDIM+1,SDIM)
 
        ! 6 in 3D, 4 in 2D
       if (ncomp_tensor.eq.2*SDIM) then
@@ -28218,7 +28218,7 @@ stop
        
         call least_squares_QR(A,xlocal,b,n,n)
         do jj=1,n
-         x(jj,dir)=xlocal(jj)
+         xLS(jj,dir)=xlocal(jj)
         enddo
        enddo  ! dir=1..sdim
 ! grad u=| u_r  u_t/r-v/r  u_z  |
@@ -28232,6 +28232,18 @@ stop
 !         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
 !         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
 
+       do ii=1,SDIM ! velocity component u,v,w
+       do jj=1,SDIM ! direction x,y,z
+        gradu(ii,jj)=xLS(jj+1,ii)
+       enddo
+       enddo
+       hoop_12=0.0d0
+       hoop_22=0.0d0
+       if (SDIM.eq.2) then
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.1) then
+         hoop_22=xLS(1,1)  ! xdisplace/r
        ibase=1
        TNEWfab(D_DECL(i,j,k),ibase)=2.0d0*x(2,1)!a11
        ibase=ibase+1
