@@ -28221,6 +28221,17 @@ stop
          x(jj,dir)=xlocal(jj)
         enddo
        enddo  ! dir=1..sdim
+! grad u=| u_r  u_t/r-v/r  u_z  |
+!        | v_r  v_t/r+u/r  v_z  |
+!        | w_r  w_t/r      w_z  |
+! in RZ:  T33 gets u/r=x_displace/r
+! in RTZ: T12=u_t/r - v/r
+!         T22=v_t/r + u/r
+! later:
+! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
+!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
+!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
+
        ibase=1
        TNEWfab(D_DECL(i,j,k),ibase)=2.0d0*x(2,1)!a11
        ibase=ibase+1
@@ -28233,7 +28244,7 @@ stop
         TNEWfab(D_DECL(i,j,k),ibase)=2.d0*x(n,3)!a33
        else if (SDIM.eq.2) then
         if (levelrz.eq.0) then
-         ! do nothing
+         TNEWfab(D_DECL(i,j,k),ibase)=0.0d0 !a33
         else if (levelrz.eq.1) then
 
         else if (levelrz.eq.3) then
