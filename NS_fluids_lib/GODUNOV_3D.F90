@@ -27891,6 +27891,24 @@ stop
         DIMV(matrixfab), &
         ncomp_accumulate)
 
+      INTEGER_T :: nhalf
+      REAL_T :: eps
+      INTEGER_T :: interior_ID
+      INTEGER_T :: dir
+      REAL_T xpart(SDIM)
+      REAL_T xpartfoot(SDIM)
+      REAL_T xdisp(SDIM)
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T sublo(3)
+      INTEGER_T subhi(3)
+      INTEGER_T idx(3)
+      INTEGER_T interior_ok
+      INTEGER_T i,j,k
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T tmp,w_p
+      REAL_T xc(SDIM)
+      INTEGER_T ibase
+
        ! Prior to this routine being called, "matrixfab" is initialized with
        ! all zeroes.  After sweeping through all the particles, 
        ! matrixfab(i,j,k,1..10) will contain the least squares matrix A^T A
@@ -27921,13 +27939,13 @@ stop
 
       nhalf=3
 
-      eps=1.d-16 !too small?
+      eps=accum_PARM%dx(1)*1.0d-3
+
       do interior_ID=1,accum_PARM%Npart
        do dir=1,SDIM
         xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
         xpartfoot(dir)=accum_PARM%particles(interior_ID)%pos_foot(dir)
         xdisp(dir)=xpart(dir)-xpartfoot(dir)
-        ijk_x(dir)=NINT((xpart(dir)-xlo(dir))/dx(dir)+fablo(dir)-0.5d0)
        enddo
        call containing_cell(accum_PARM%bfact, &
          accum_PARM%dx, &
@@ -27956,41 +27974,76 @@ stop
          j=idx(2)
          k=idx(3)
          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
-         tmp=0.d0
+         tmp=0.0d0
          do dir=1,SDIM
           xc(dir)=xsten(0,dir)
           tmp=tmp+(xpart(dir)-xc(dir))**2
          enddo
-         w_p=1.d0/(eps+tmp)
-         matrixfab(D_DECL(i,j,k),1)= & !ATA_11
-            matrixfab(D_DECL(i,j,k),1)+w_p*1.d0
-         matrixfab(D_DECL(i,j,k),2)= & !ATA_12
-            matrixfab(D_DECL(i,j,k),2)+ &
+         w_p=1.0d0/(eps+tmp)
+         ibase=1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_11
+            matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_12
+            matrixfab(D_DECL(i,j,k),ibase)+ &
             w_p*(xpart(1)-xc(1))
-         matrixfab(D_DECL(i,j,k),3)= & !ATA_13
-            matrixfab(D_DECL(i,j,k),3)+ &
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_13
+            matrixfab(D_DECL(i,j,k),ibase)+ &
             w_p*(xpart(2)-xc(2))
-         matrixfab(D_DECL(i,j,k),4)= & !ATA_14
-            matrixfab(D_DECL(i,j,k),4)+w_p* &
+         if (SDIM.eq.3) then
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_14
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(SDIM)-xc(SDIM))
-         matrixfab(D_DECL(i,j,k),5)= & !ATA_22
-            matrixfab(D_DECL(i,j,k),5)+w_p* &
+         endif
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_22
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(1)-xc(1))**2
-         matrixfab(D_DECL(i,j,k),6)= & !ATA_23
-            matrixfab(D_DECL(i,j,k),6)+w_p* &
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_23
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(1)-xc(1))*(xpart(2)-xc(2))
-         matrixfab(D_DECL(i,j,k),7)= & !ATA_24
-            matrixfab(D_DECL(i,j,k),7)+w_p* &
+         if (SDIM.eq.3) then
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_24
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(1)-xc(1))*(xpart(SDIM)-xc(SDIM))
-         matrixfab(D_DECL(i,j,k),8)= & !ATA_33
-            matrixfab(D_DECL(i,j,k),8)+w_p* &
+         endif
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_33
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(2)-xc(2))**2
-         matrixfab(D_DECL(i,j,k),9)= & !ATA_34
-            matrixfab(D_DECL(i,j,k),9)+w_p* &
+         if (SDIM.eq.3) then
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_34
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(2)-xc(2))*(xpart(SDIM)-xc(SDIM))
-         matrixfab(D_DECL(i,j,k),10)= & !ATA_44
-            matrixfab(D_DECL(i,j,k),10)+w_p &
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_44
+            matrixfab(D_DECL(i,j,k),ibase)+w_p &
             *(xpart(SDIM)-xc(SDIM))**2
+         endif
+         if (SDIM.eq.3) then
+          if (ibase.eq.10) then
+           ! do nothing
+          else
+           print *,"ibase invalid"
+           stop
+          endif
+         else if (SDIM.eq.2) then
+          if (ibase.eq.6) then
+           ! do nothing
+          else
+           print *,"ibase invalid"
+           stop
+          endif
+         else
+          print *,"dimension bust"
+          stop
+         endif
+
          ibase=11
          do dir=1,SDIM
           matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
@@ -28078,15 +28131,11 @@ stop
 
       type(accum_parm_type) :: accum_PARM
 
-      INTEGER_T interior_ID
-      INTEGER_T dir
-      INTEGER_T ncomp_ID
-      REAL_T xpart(SDIM)
-      REAL_T xpartfoot(SDIM)
-      REAL_T xdisp(SDIM)
-      INTEGER_T ijk_x(SDIM), ijk_c(SDIM), i, j, k, ii, jj, n
-      REAL_T xc(SDIM)
-      REAL_T tmp, eps, w_p, A(SDIM+1,SDIM+1), b(SDIM+1), x(SDIM+1,SDIM)
+      INTEGER_T gridlo(3)
+      INTEGER_T gridhi(3)
+      INTEGER_T i,j,k
+      INTEGER_T n
+      REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), x(SDIM+1,SDIM)
 
        ! 6 in 3D, 4 in 2D
       if (ncomp_tensor.eq.2*SDIM) then
@@ -28146,46 +28195,66 @@ stop
          DIMS(matrixfab), &
          ncomp_accumulate)
 
-      do i=tilelo(1),tilehi(1)
-       do j=tilelo(2),tilehi(2)
-        do k=tilelo(SDIM),tilehi(SDIM)
-         do dir=2,SDIM
-          do ncomp_ID=1,matrix_points
-           matrixfab(i,j,k,(dir-1)* &
-            (matrix_points+RHS_points)+ncomp_ID)= &
-            matrixfab(i,j,k,ncomp_ID)
-          enddo 
-         enddo
-        enddo
-       enddo
-      enddo
+      call growntilebox(tilelo,tilehi,fablo,fabhi,gridlo,gridhi,0) 
 
       n=SDIM+1
-      do i=tilelo(1),tilehi(1)
-       do j=tilelo(2),tilehi(2)
-        do k=tilelo(SDIM),tilehi(SDIM)
-         do ii=1,n
-          do jj=ii,n
-           A(ii,jj)=matrixfab(i,j,k, &
-               nint((ii-1)*RHS_points-ii*(ii-1)/2.d0+jj))
-           A(jj,ii)=A(ii,jj)
-          enddo
-         enddo
-         do dir=1,SDIM
-          do ii=1,n
-           b(ii)=matrixfab(i,j,k,(dir-1)* &
-            (matrix_points+RHS_points)+matrix_points+ii)
-          enddo
-          call least_squares_QR(A,x(:,dir),b,n,n)
-         enddo
-         TNEWfab(i,j,k,1)=2.d0*x(2,1)!a11
-         TNEWfab(i,j,k,2)=x(3,1)+x(2,2)!a12
-         TNEWfab(i,j,k,3)=x(n,1)+x(2,3)!a13
-         TNEWfab(i,j,k,4)=2.d0*x(3,2)!a22
-         TNEWfab(i,j,k,5)=x(n,2)+x(3,3)!a23
-         TNEWfab(i,j,k,6)=2.d0*x(n,3)!a33
-        enddo
+      do i=gridlo(1),gridhi(1)
+      do j=gridlo(2),gridhi(2)
+      do k=gridlo(3),gridhi(3)
+       ibase=1
+       do ii=1,n
+       do jj=ii,n
+        A(ii,jj)=matrixfab(D_DECL(i,j,k),ibase)
+        A(jj,ii)=A(ii,jj)
+        ibase=ibase+1
        enddo
+       enddo
+       ibase=11
+       do dir=1,SDIM
+        do ii=1,n
+         b(ii)=matrixfab(D_DECL(i,j,k),ibase+ii-1)
+        enddo
+        ibase=ibase+RHS_points
+       
+        call least_squares_QR(A,xlocal,b,n,n)
+        do jj=1,n
+         x(jj,dir)=xlocal(jj)
+        enddo
+       enddo  ! dir=1..sdim
+       ibase=1
+       TNEWfab(D_DECL(i,j,k),ibase)=2.0d0*x(2,1)!a11
+       ibase=ibase+1
+       TNEWfab(D_DECL(i,j,k),ibase)=x(3,1)+x(2,2)!a12
+       ibase=ibase+1
+       TNEWfab(D_DECL(i,j,k),ibase)=2.d0*x(3,2)!a22
+
+       ibase=ibase+1
+       if (SDIM.eq.3) then
+        TNEWfab(D_DECL(i,j,k),ibase)=2.d0*x(n,3)!a33
+       else if (SDIM.eq.2) then
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.1) then
+
+        else if (levelrz.eq.3) then
+
+        else
+         print *,"levelrz invalid"
+         stop
+        endif
+       else
+        print *,"dimension bust"
+        stop
+       endif
+                     
+       if (SDIM.eq.3) then                
+        ibase=ibase+1
+        TNEWfab(D_DECL(i,j,k),ibase)=x(n,1)+x(2,3)!a13
+        ibase=ibase+1
+        TNEWfab(D_DECL(i,j,k),ibase)=x(n,2)+x(3,3)!a23
+       endif
+      enddo
+      enddo
       enddo
         ! Prior to this routine being called, "matrixfab" is initialized with
         ! all zeroes.
