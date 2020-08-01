@@ -28059,7 +28059,8 @@ stop
            matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*xdisp(dir)
           ibase=ibase+1
          enddo ! dir=1..sdim
-         if (ibase.eq.10+4*SDIM+1) then
+         if (ibase.eq. &
+             accum_PARM%matrix_points+accum_PARM%RHS_points*SDIM+1) then
           ! do nothing
          else
           print *,"ibase invalid"
@@ -28135,7 +28136,17 @@ stop
       INTEGER_T gridhi(3)
       INTEGER_T i,j,k
       INTEGER_T n
+      INTEGER_T ibase
+      INTEGER_T ii,jj
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+
       REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), xLS(SDIM+1,SDIM)
+      REAL_T gradu(SDIM,SDIM)
+      REAL_T DISP_TEN(SDIM,SDIM)
+      REAL_T hoop_12,hoop_22
+
+      nhalf=3
 
        ! 6 in 3D, 4 in 2D
       if (ncomp_tensor.eq.2*SDIM) then
@@ -28201,6 +28212,7 @@ stop
       do i=gridlo(1),gridhi(1)
       do j=gridlo(2),gridhi(2)
       do k=gridlo(3),gridhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
        ibase=1
        do ii=1,n
        do jj=ii,n
@@ -28209,6 +28221,25 @@ stop
         ibase=ibase+1
        enddo
        enddo
+       if (SDIM.eq.2) then
+        if (ibase-1.eq.6) then
+         ! do nothing
+        else
+         print *,"ibase invalid"
+         stop
+        endif
+       else if (SDIM.eq.3) then
+        if (ibase-1.eq.10) then
+         ! do nothing
+        else
+         print *,"ibase invalid"
+         stop
+        endif
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
        ibase=11
        do dir=1,SDIM
         do ii=1,n
@@ -28221,6 +28252,14 @@ stop
          xLS(jj,dir)=xlocal(jj)
         enddo
        enddo  ! dir=1..sdim
+
+       if (ibase-1.eq.matrix_points+SDIM*RHS_points) then
+        ! do nothing
+       else
+        print *,"ibase invalid"
+        stop
+       endif
+
 ! grad u=| u_r  u_t/r-v/r  u_z  |
 !        | v_r  v_t/r+u/r  v_z  |
 !        | w_r  w_t/r      w_z  |
@@ -28243,24 +28282,75 @@ stop
         if (levelrz.eq.0) then
          ! do nothing
         else if (levelrz.eq.1) then
-         hoop_22=xLS(1,1)  ! xdisplace/r
+         if (xsten(0,1).gt.zero) then
+          hoop_22=xLS(1,1)/xsten(0,1)  ! xdisplace/r
+         else 
+          print *,"xsten(0,1) invalid"
+          stop
+         endif
+        else if (levelrz.eq.3) then
+         if (xsten(0,1).gt.zero) then
+          hoop_12=-xLS(1,2)/xsten(0,1)  ! -ydisplace/r
+          hoop_22=xLS(1,1)/xsten(0,1)  ! xdisplace/r
+          do ii=1,SDIM
+           gradu(ii,2)=gradu(ii,2)/xsten(0,1)
+          enddo
+          gradu(1,2)=gradu(1,2)+hoop_12
+          gradu(2,2)=gradu(2,2)+hoop_22
+         else 
+          print *,"xsten(0,1) invalid"
+          stop
+         endif
+        else
+         print *,"levelrz invalid"
+         stop
+        endif
+       else if (SDIM.eq.3) then
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.3) then
+         if (xsten(0,1).gt.zero) then
+          hoop_12=-xLS(1,2)/xsten(0,1)  ! -ydisplace/r
+          hoop_22=xLS(1,1)/xsten(0,1)  ! xdisplace/r
+          do ii=1,SDIM
+           gradu(ii,2)=gradu(ii,2)/xsten(0,1)
+          enddo
+          gradu(1,2)=gradu(1,2)+hoop_12
+          gradu(2,2)=gradu(2,2)+hoop_22
+         else 
+          print *,"xsten(0,1) invalid"
+          stop
+         endif
+        else
+         print *,"levelrz invalid"
+         stop
+        endif
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       do ii=1,SDIM 
+       do jj=1,SDIM
+        DISP_TEN(ii,jj)=gradu(ii,jj)+gradu(jj,ii)
+       enddo
+       enddo
        ibase=1
-       TNEWfab(D_DECL(i,j,k),ibase)=2.0d0*x(2,1)!a11
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,1)
        ibase=ibase+1
-       TNEWfab(D_DECL(i,j,k),ibase)=x(3,1)+x(2,2)!a12
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,2)
        ibase=ibase+1
-       TNEWfab(D_DECL(i,j,k),ibase)=2.d0*x(3,2)!a22
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,2)
 
        ibase=ibase+1
        if (SDIM.eq.3) then
-        TNEWfab(D_DECL(i,j,k),ibase)=2.d0*x(n,3)!a33
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(3,3)
        else if (SDIM.eq.2) then
         if (levelrz.eq.0) then
-         TNEWfab(D_DECL(i,j,k),ibase)=0.0d0 !a33
+         TNEWfab(D_DECL(i,j,k),ibase)=zero
         else if (levelrz.eq.1) then
-
+         TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22
         else if (levelrz.eq.3) then
-
+         TNEWfab(D_DECL(i,j,k),ibase)=zero
         else
          print *,"levelrz invalid"
          stop
@@ -28272,9 +28362,15 @@ stop
                      
        if (SDIM.eq.3) then                
         ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=x(n,1)+x(2,3)!a13
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,3)
         ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=x(n,2)+x(3,3)!a23
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,3)
+       endif
+       if (ibase-1.eq.2*SDIM) then
+        ! do nothing
+       else
+        print *,"ibase invalid"
+        stop
        endif
       enddo
       enddo
