@@ -17046,7 +17046,245 @@ stop
          integer(c_int) :: cpu
        end type particle_t
 
+        ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
+        ! call copy_dimdec( &
+        !  DIMS(PROBE_PARMS%LS), &
+        !  DIMS(LS))
+        ! PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
+       type accum_parm_type_LS
+        INTEGER_T, pointer :: fablo(:)
+        INTEGER_T, pointer :: fabhi(:)
+        INTEGER_T, pointer :: tilelo(:)
+        INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: bfact
+        INTEGER_T :: level
+        INTEGER_T :: finest_level
+        INTEGER_T :: matrix_points
+        INTEGER_T :: RHS_points
+        INTEGER_T :: ncomp_accumulate
+        REAL_T, pointer :: dx(:)
+        REAL_T, pointer :: xlo(:)
+        INTEGER_T :: Npart
+        type(particle_t), pointer, dimension(:) :: particles
+        INTEGER_T :: DIMDEC(LS)
+        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+       end type accum_parm_type_LS
+
       contains
+
+      subroutine traverse_particlesLS( &
+       accum_PARM, &
+       matrixfab, &
+       DIMS(matrixfab), &
+       ncomp_accumulate)
+
+      INTEGER_T, intent(in) :: ncomp_accumulate
+      type(accum_parm_type), intent(in) :: accum_PARM
+      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      REAL_T, intent(inout) :: matrixfab( &
+        DIMV(matrixfab), &
+        ncomp_accumulate)
+
+      INTEGER_T :: nhalf
+      REAL_T :: eps
+      INTEGER_T :: interior_ID
+      INTEGER_T :: dir
+      REAL_T xpart(SDIM)
+      REAL_T xpartfoot(SDIM)
+      REAL_T xdisp(SDIM)
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T sublo(3)
+      INTEGER_T subhi(3)
+      INTEGER_T idx(3)
+      INTEGER_T interior_ok
+      INTEGER_T i,j,k
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T tmp,w_p
+      REAL_T xc(SDIM)
+      INTEGER_T ibase
+
+       ! Prior to this routine being called, "matrixfab" is initialized with
+       ! all zeroes.  After sweeping through all the particles, 
+       ! matrixfab(i,j,k,1..10) will contain the least squares matrix A^T A
+       ! (10 components since A^T A is a 4x4 symmetric matrix) and
+       ! matrixfab(i,j,k,11..14) will contain the right hand side A^T b.
+       ! For cell (i,j,k),
+       ! (A^T A)_11 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * 1
+       ! (A^T A)_12 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * 1 * (xp-xijk)
+       ! (A^T A)_13 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * 1 * (yp-yijk)
+       ! (A^T A)_14 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * 1 * (zp-zijk)
+       ! (A^T A)_22 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
+       !    w_p * (xp-xijk) * (xp-xijk)
+       ! ....
+       ! \OmegaStencil_{i,j,k}=Union_{i'=i-1}^{i+1} 
+       !                       Union_{j'=j-1}^{j+1}
+       !                       Union_{k'=k-1}^{k+1}  Omega_{i',j',k'}
+       ! where \Omega_{i,j,k}=( (x,y,z) | x_{i}-dx/2 <=x<= x_{i}+dx/2
+       !                                  y_{i}-dy/2 <=y<= y_{i}+dy/2
+       !                                  z_{i}-dz/2 <=x<= z_{i}+dz/2
+       ! \Omega_{i,j,k} is a cell within the tile.   The tile domain is
+       ! Union_{i'=tilelo(1) ...tilehi(1)}
+       ! Union_{j'=tilelo(2) ...tilehi(2)}
+       ! Union_{k'=tilelo(3) ...tilehi(3)} Omega_{i',j',k'}
+
+      nhalf=3
+
+      eps=accum_PARM%dx(1)*1.0d-3
+
+      do interior_ID=1,accum_PARM%Npart
+       do dir=1,SDIM
+        xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+        xpartfoot(dir)=accum_PARM%particles(interior_ID)%pos_foot(dir)
+        xdisp(dir)=xpart(dir)-xpartfoot(dir)
+       enddo
+       call containing_cell(accum_PARM%bfact, &
+         accum_PARM%dx, &
+         accum_PARM%xlo, &
+         accum_PARM%fablo, &
+         xpart, &
+         cell_index)
+       sublo(3)=0
+       subhi(3)=0
+       do dir=1,SDIM
+        sublo(dir)=cell_index(dir)-1
+        subhi(dir)=cell_index(dir)+1
+       enddo
+       do idx(1)=sublo(1),subhi(1)
+       do idx(2)=sublo(2),subhi(2)
+       do idx(3)=sublo(3),subhi(3)
+        interior_ok=1
+        do dir=1,SDIM
+         if ((idx(dir).lt.accum_PARM%tilelo(dir)).or. &
+             (idx(dir).gt.accum_PARM%tilehi(dir))) then
+          interior_ok=0
+         endif
+        enddo
+        if (interior_ok.eq.1) then
+         i=idx(1)
+         j=idx(2)
+         k=idx(3)
+         call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+         tmp=0.0d0
+         do dir=1,SDIM
+          xc(dir)=xsten(0,dir)
+          tmp=tmp+(xpart(dir)-xc(dir))**2
+         enddo
+         w_p=1.0d0/(eps+tmp)
+         ibase=1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_11
+            matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_12
+            matrixfab(D_DECL(i,j,k),ibase)+ &
+            w_p*(xpart(1)-xc(1))
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_13
+            matrixfab(D_DECL(i,j,k),ibase)+ &
+            w_p*(xpart(2)-xc(2))
+         if (SDIM.eq.3) then
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_14
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
+            (xpart(SDIM)-xc(SDIM))
+         endif
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_22
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
+            (xpart(1)-xc(1))**2
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_23
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
+            (xpart(1)-xc(1))*(xpart(2)-xc(2))
+         if (SDIM.eq.3) then
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_24
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
+            (xpart(1)-xc(1))*(xpart(SDIM)-xc(SDIM))
+         endif
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_33
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
+            (xpart(2)-xc(2))**2
+         if (SDIM.eq.3) then
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_34
+            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
+            (xpart(2)-xc(2))*(xpart(SDIM)-xc(SDIM))
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_44
+            matrixfab(D_DECL(i,j,k),ibase)+w_p &
+            *(xpart(SDIM)-xc(SDIM))**2
+         endif
+         if (SDIM.eq.3) then
+          if (ibase.eq.10) then
+           ! do nothing
+          else
+           print *,"ibase invalid"
+           stop
+          endif
+         else if (SDIM.eq.2) then
+          if (ibase.eq.6) then
+           ! do nothing
+          else
+           print *,"ibase invalid"
+           stop
+          endif
+         else
+          print *,"dimension bust"
+          stop
+         endif
+
+         ibase=11
+         do dir=1,SDIM
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*xdisp(dir)
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*xdisp(dir)
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*xdisp(dir)
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*xdisp(dir)
+          ibase=ibase+1
+         enddo ! dir=1..sdim
+         if (ibase.eq. &
+             accum_PARM%matrix_points+accum_PARM%RHS_points*SDIM+1) then
+          ! do nothing
+         else
+          print *,"ibase invalid"
+          stop
+         endif
+        else if (interior_ok.eq.0) then
+         ! do nothing
+        else
+         print *,"interior_ok invalid"
+         stop
+        endif
+       enddo
+       enddo
+       enddo ! idx(1),idx(2),idx(3)
+      enddo ! do interior_ID=1,accum_PARM%Npart
+
+      return
+      end subroutine traverse_particlesLS
+
+
+
+
+
+
+
+
+
+
+
+
 
        ! called from NavierStokes::PLS_correct (NavierStokes2.cpp)
       subroutine fort_assimilate_lvlset_from_particles( &
