@@ -15817,7 +15817,8 @@ stop
 
             nrefine_geom=1
 
-            ! in: PROB.F90, calls find_LS_stencil_volume_coarse, which
+            ! find_LS_stencil_volume is in: PROB.F90, and
+            ! calls find_LS_stencil_volume_coarse, which
             ! calls materialdistsolid many times.
             ! centroid in absolute coordinate system
             ! returns a volume fraction
@@ -17447,10 +17448,17 @@ stop
       INTEGER_T i,j,k
       INTEGER_T n
       INTEGER_T ibase
-      INTEGER_T ii,jj
+      INTEGER_T ii,jj,kk
       REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten_local(-3:3,SDIM)
       INTEGER_T nhalf
       REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), xlocal(SDIM+1)
+      REAL_T LS_temp(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T LS_local
+      REAL_T LSfacearea
+      REAL_T LScentroid(SDIM)
+      REAL_T LSareacentroid(SDIM)
+      INTEGER_T istenlo(3),istenhi(3)
 
       nhalf=3
 
@@ -17532,6 +17540,13 @@ stop
          DIMS(matrixfab), &
          ncomp_accumulate)
 
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       istenlo(dir)=-1
+       istenhi(dir)=1
+      enddo
+
       call growntilebox(tilelo,tilehi,fablo,fabhi,gridlo,gridhi,0) 
 
       n=SDIM+1
@@ -17582,6 +17597,119 @@ stop
        endif
 
        lsnew(D_DECL(i,j,k),im_PLS)=xlocal(1)
+
+       do ii=istenlo(1),istenhi(1)
+       do jj=istenlo(2),istenhi(2)
+       do kk=istenlo(3),istenhi(3)
+        call gridsten_level(xsten_local,i+ii,j+jj,k+kk,level,nhalf)
+        LS_local=xlocal(1)
+        do dir=1,SDIM
+         LS_local=LS_local+(xsten_local(0,dir)-xsten(0,dir))*xlocal(1+dir)
+        enddo
+        LS_temp(D_DECL(ii,jj,kk))=LS_local
+       enddo
+       enddo
+       enddo
+       call getvolume(bfact,dx,xsten,nhalf, &
+         LS_temp,F_local,LSfacearea, &
+         LScentroid,LSareacentroid,VOFTOL,SDIM)
+       call CISBOX(xsten,nhalf, &
+         xlo,dx,i,j,k, &
+         bfact,level, &
+         volcell,cencell,SDIM)   
+       if (is_rigid(nmat,im_PLS).eq.0) then
+        vofcomp=(im_PLS-1)*ngeom_raw+1
+        F_old=vofnew(D_DECL(i,j,k),vofcomp)
+        F_sum_complement=zero
+        do im=1,nmat
+         if (im.ne.im_PLS) then
+          if (is_rigid(nmat,im).eq.0) then
+           vofcomp_local=(im-1)*ngeom_raw+1
+           F_sum_complement= &
+            F_sum_complement+vofnew(D_DECL(i,j,k),vofcomp_local)
+          else if (is_rigid(nmat,im).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid(nmat,im) invalid"
+           stop
+          endif
+         endif
+        enddo !im=1..nmat
+         
+
+        if (F_local.ge.F_old) then 
+         if (F_sum_complement.gt.zero) then
+
+          F_sum_complement_new=F_sum_complement+F_old-F_local
+
+          vofnew(D_DECL(i,j,k),vofcomp)=F_local
+          do dir=1,SDIM
+           vofnew(D_DECL(i,j,k),vofcomp+dir)=LScentroid(dir)-cencell(dir)
+          enddo
+          
+          do im=1,nmat
+           if (im.ne.im_PLS) then
+            if (is_rigid(nmat,im).eq.0) then
+             vofcomp_local=(im-1)*ngeom_raw+1
+             vofnew(D_DECL(i,j,k),vofcomp_local)= &
+              F_sum_complement_new* &
+              vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
+            else if (is_rigid(nmat,im).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid(nmat,im) invalid"
+             stop
+            endif
+           endif
+          enddo !im=1..nmat
+         else if (F_sum_complement.eq.zero) then
+          ! do nothing
+         else
+          print *,"F_sum_complement invalid"
+          stop
+         endif
+        else if (F_local.le.F_old) then
+         ! sum_complement_new=sum_complement_old+F_old-F_local
+         ! if F_old=1 and F_local=0 then new sum complement=0+1-0=1
+         if ((F_sum_complement.eq.zero).or. &
+             (F_old.ge.one-VOFTOL)) then
+          ! do nothing since we do not know which material replaces im_PLS
+         else if ((F_sum_complement.gt.zero).and. &
+                  (F_old.le.one-VOFTOL)) then
+          F_sum_complement_new=F_sum_complement+F_old-F_local
+          
+          vofnew(D_DECL(i,j,k),vofcomp)=F_local
+          do dir=1,SDIM
+           vofnew(D_DECL(i,j,k),vofcomp+dir)=LScentroid(dir)-cencell(dir)
+          enddo
+          
+          do im=1,nmat
+           if (im.ne.im_PLS) then
+            if (is_rigid(nmat,im).eq.0) then
+             vofcomp_local=(im-1)*ngeom_raw+1
+             vofnew(D_DECL(i,j,k),vofcomp_local)= &
+              F_sum_complement_new* &
+              vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
+            else if (is_rigid(nmat,im).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid(nmat,im) invalid"
+             stop
+            endif
+           endif
+          enddo !im=1..nmat
+         else
+          print *,"F_sum_complement or F_old invalid"
+          stop
+         endif
+        else
+         print *,"F_old or F_local invalid"
+         stop
+        endif
+       else
+        print *,"expecting is_rigid(nmat,im_PLS)==0"
+        stop
+       endif
 
       enddo
       enddo
