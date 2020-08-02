@@ -15817,6 +15817,8 @@ stop
 
             nrefine_geom=1
 
+            ! in: PROB.F90, calls find_LS_stencil_volume_coarse, which
+            ! calls materialdistsolid many times.
             ! centroid in absolute coordinate system
             ! returns a volume fraction
             call find_LS_stencil_volume( &
