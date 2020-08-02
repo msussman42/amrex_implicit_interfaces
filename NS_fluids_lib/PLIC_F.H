@@ -52,6 +52,7 @@ extern "C"
 
       void FORT_INIT_PARTICLE_CONTAINER(
         int* tid,
+        int* nextra_parm,
         int* particle_nsubdivide,
         int* particleLS_flag,
         int* structure_of_array_flag,

@@ -19199,11 +19199,18 @@ void
 NavierStokes::init_particle_container() {
 
  bool use_tiling=ns_tiling;
+ int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
+
  if (level==finest_level) {
   // do nothing
  } else 
   amrex::Error("particle container on finest level only");
+
+ if (level==max_level) {
+  // do nothing
+ } else 
+  amrex::Error("particle container on max level only");
 
  int nmat=num_materials;
  if (num_state_base!=2)
@@ -19252,14 +19259,14 @@ NavierStokes::init_particle_container() {
       for (int dir=0;dir<AMREX_SPACEDIM;dir++)
        subdivide_mult*=2;
      }
-     n_part_FAB+=particleLS_flag[im]*subdivide_mult*(AMREX_SPACEDIM+1);
+     n_part_FAB+=particleLS_flag[im]*subdivide_mult*(N_EXTRA_REAL+1);
     } else if (particleLS_flag[im]==0) {
      // do nothing
     } else
      amrex::Error("particleLS_flag[im] invalid");
 
     if (structure_of_array_flag[im]==1) {
-     n_part_FAB+=2*(AMREX_SPACEDIM+1);
+     n_part_FAB+=2*(N_EXTRA_REAL+1);
     } else if (structure_of_array_flag[im]==0) {
      // do nothing
     } else
@@ -19285,8 +19292,10 @@ NavierStokes::init_particle_container() {
     // 2. for each small sub-box, find the material centroid, and initialize
     //    a bulk particle at the centroid.  for cut cells, let
     //    x_interface_particle=x_bulk - phi grad phi/|grad phi|
+   int nextra_parm=N_EXTRA_REAL;
    FORT_INIT_PARTICLE_CONTAINER( 
     &tid_current,
+    &nextra_parm,
     particle_nsubdivide.dataPtr(),
     particleLS_flag.dataPtr(),
     structure_of_array_flag.dataPtr(),
@@ -19351,7 +19360,7 @@ NavierStokes::init_particle_container() {
       for (int k = lo_p.z; k <= hi_p.z; ++k) {
       for (int j = lo_p.y; j <= hi_p.y; ++j) {
       for (int i = lo_p.x; i <= hi_p.x; ++i) {
-       int flag_comp=ipart_FAB+AMREX_SPACEDIM;
+       int flag_comp=ipart_FAB+N_EXTRA_REAL;
        if (pfab(i,j,k,flag_comp) == 1.0) {
 
         using My_ParticleContainer =
@@ -19365,7 +19374,9 @@ NavierStokes::init_particle_container() {
          //pos(AMREX_SPACEDIM)
         for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
          p.pos(dir) = pfab(i,j,k,ipart_FAB+dir);
-         p.rdata(dir)=p.pos(dir);
+        }
+        for (int dir=0;dir<N_EXTRA_REAL;dir++) {
+         p.rdata(dir) = pfab(i,j,k,ipart_FAB+dir);
         }
         particles.push_back(p);
        } else if (pfab(i,j,k,flag_comp) == 0.0) {
@@ -19375,7 +19386,7 @@ NavierStokes::init_particle_container() {
       } // i
       } // j
       } // k
-      ipart_FAB+=(AMREX_SPACEDIM+1);
+      ipart_FAB+=(N_EXTRA_REAL+1);
       if (isub==subdivide_mult-1) {
        ipart++;
       } else if ((isub>=0)&&(isub<subdivide_mult-1)) {

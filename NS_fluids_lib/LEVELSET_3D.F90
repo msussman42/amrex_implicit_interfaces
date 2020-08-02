@@ -17041,10 +17041,11 @@ stop
        implicit none
 
          ! ParticleContainer<N_EXTRA_REAL,0,0,0>
-         ! where N_EXTRA_REAL=AMREX_SPACEDIM
+         ! where N_EXTRA_REAL=AMREX_SPACEDIM+1
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
          real(amrex_particle_real) :: pos_foot(SDIM)
+         real(amrex_particle_real) :: closest_dist
          integer(c_int) :: id
          integer(c_int) :: cpu
        end type particle_t
@@ -17142,7 +17143,7 @@ stop
 
       nhalf=3
 
-      eps=accum_PARM%dx(1)*1.0d-3
+      eps=(accum_PARM%dx(1)**2)/100.0d0
 
       do dir=1,3
        growlo(dir)=0
@@ -17169,14 +17170,14 @@ stop
         do dir=1,SDIM
          xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
         enddo
-        LSpart=zero
+        LSpart=accum_PARM%particles(interior_ID)%closest_dist
         call containing_cell(accum_PARM%bfact, &
          accum_PARM%dx, &
          accum_PARM%xlo, &
          accum_PARM%fablo, &
          xpart, &
          cell_index)
-        wt_lag=one
+        wt_lag=one/(eps+LSpart**2)
        else if (accum_PARM%Npart.eq.-1) then
         call gridsten_level(xsten,ig,jg,kg,accum_PARM%level,nhalf)
         do dir=1,SDIM
@@ -17188,7 +17189,7 @@ stop
          cell_index(SDIM)=kg
         endif
         LSpart=accum_PARM%LS(D_DECL(ig,jg,kg),accum_PARM%im_PLS)
-        wt_lag=0.1d0
+        wt_lag=one/(eps*100.0d0+LSpart**2)
        else
         print *,"accum_PARM%Npart invalid"
         stop
@@ -17434,8 +17435,8 @@ stop
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
-      type(particle_t), intent(in) :: particles_bulk(Np_bulk)
-      type(particle_t), intent(in) :: nbr_particles_bulk(Nn_bulk)
+      type(particle_t), intent(in), target :: particles_bulk(Np_bulk)
+      type(particle_t), intent(in), target :: nbr_particles_bulk(Nn_bulk)
       type(particle_t), intent(in), target :: &
               particles_interface(Np_interface)
       type(particle_t), intent(in), target :: &
@@ -17447,6 +17448,8 @@ stop
       INTEGER_T gridhi(3)
       INTEGER_T i,j,k
       INTEGER_T n
+      INTEGER_T dir
+      INTEGER_T im
       INTEGER_T ibase
       INTEGER_T ii,jj,kk
       REAL_T xsten(-3:3,SDIM)
@@ -17455,10 +17458,17 @@ stop
       REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), xlocal(SDIM+1)
       REAL_T LS_temp(D_DECL(-1:1,-1:1,-1:1))
       REAL_T LS_local
+      REAL_T F_local
       REAL_T LSfacearea
       REAL_T LScentroid(SDIM)
       REAL_T LSareacentroid(SDIM)
+      REAL_T volcell
+      REAL_T cencell(SDIM)
       INTEGER_T istenlo(3),istenhi(3)
+      INTEGER_T vofcomp,vofcomp_local
+      REAL_T F_old
+      REAL_T F_sum_complement
+      REAL_T F_sum_complement_new
 
       nhalf=3
 
@@ -17527,6 +17537,22 @@ stop
 
       accum_PARM%particles=>nbr_particles_interface
       accum_PARM%Npart=Nn_interface
+
+      call traverse_particlesLS(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+      accum_PARM%particles=>particles_bulk
+      accum_PARM%Npart=Np_bulk
+
+      call traverse_particlesLS(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+      accum_PARM%particles=>nbr_particles_bulk
+      accum_PARM%Npart=Nn_bulk
 
       call traverse_particlesLS(accum_PARM, &
          matrixfab, &

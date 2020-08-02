@@ -21,11 +21,10 @@
 
 #include <StateDescriptor.H>
 
-// When supermesh is done, there will be no need to convert flotsam
-// to particles since microscopic particles are recognized by the solver.
-// x,y,z is not extra; (x0,y0,z0) is extra.
+// x,y,z is not extra; (x0,y0,z0,r) is extra. (r can be
+// a distance, or a radius)
 // Structure of Array components can be added real time.
-#define N_EXTRA_REAL (AMREX_SPACEDIM)
+#define N_EXTRA_REAL (AMREX_SPACEDIM+1)
 
 namespace amrex {
 

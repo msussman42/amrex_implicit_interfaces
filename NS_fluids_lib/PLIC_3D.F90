@@ -700,6 +700,7 @@ stop
 
       subroutine FORT_INIT_PARTICLE_CONTAINER( &
         tid, &
+        nextra_parm, &
         particle_nsubdivide, &
         particleLS_flag, &
         structure_of_array_flag, &
@@ -727,6 +728,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: nextra_parm
       INTEGER_T, intent(in) :: level,finest_level
 
       INTEGER_T, intent(in) :: nmat

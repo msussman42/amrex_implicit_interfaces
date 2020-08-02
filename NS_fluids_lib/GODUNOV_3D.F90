@@ -27851,10 +27851,11 @@ stop
        implicit none
 
          ! ParticleContainer<N_EXTRA_REAL,0,0,0>
-         ! where N_EXTRA_REAL=AMREX_SPACEDIM
+         ! where N_EXTRA_REAL=AMREX_SPACEDIM+1
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
          real(amrex_particle_real) :: pos_foot(SDIM)
+         real(amrex_particle_real) :: closest_dist
          integer(c_int) :: id
          integer(c_int) :: cpu
        end type particle_t
@@ -27941,7 +27942,7 @@ stop
 
       nhalf=3
 
-      eps=accum_PARM%dx(1)*1.0d-3
+      eps=(accum_PARM%dx(1)**2)/100.0d0
 
       do interior_ID=1,accum_PARM%Npart
        do dir=1,SDIM
