@@ -6593,27 +6593,13 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 
   int ipart_id=0;
   for (int im=0;im<nmat;im++) {
-   for (int isub=0;isub<4;isub++) {
-    int do_part_advect=0;
-    if ((isub==0)||(isub==1)) {
-     if (particleLS_flag[im]>isub)
-      do_part_advect=1;
-    } else if ((isub==2)||(isub==3)) {
-     if (structure_of_array_flag[im]==1) 
-      do_part_advect=1;
-    } else
-     amrex::Error("isub invalid");
-
-    if (do_part_advect==1) {
-     if (isub==0) {
-      ns_finest.PLS_correct(time,im,ipart_id);
-     }
-     ipart_id++;
-    } else if (do_part_advect==0) {
-     // do nothing
-    } else
-     amrex::Error("do_part_advect invalid");
-   } //isub=0..3
+   if (particleLS_flag[im]==1) {
+    ns_finest.PLS_correct(time,im,ipart_id);
+    ipart_id+=2;
+   } else if (particleLS_flag[im]==0) {
+    // do nothing
+   } else
+    amrex::Error("particleLS_flag[im] invalid");
   } //im=0..nmat-1
 
   if (ipart_id==NS_ncomp_particles) {
@@ -7011,8 +6997,7 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
 
 
 
-
-void NavierStokes::move_particles(int im_PLS,int ipart_id,int isub) {
+void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
 } // end subroutine move_particles
 

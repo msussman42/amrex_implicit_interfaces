@@ -703,7 +703,6 @@ stop
         nextra_parm, &
         particle_nsubdivide, &
         particleLS_flag, &
-        structure_of_array_flag, &
         n_part_FAB, &
         NS_ncomp_particles, &
         nmat, &
@@ -740,7 +739,6 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: particle_nsubdivide(nmat)
       INTEGER_T, intent(in) :: particleLS_flag(nmat)
-      INTEGER_T, intent(in) :: structure_of_array_flag(nmat)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: &
           DIMDEC(particlefab)

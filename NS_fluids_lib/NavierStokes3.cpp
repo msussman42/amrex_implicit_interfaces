@@ -571,25 +571,19 @@ void NavierStokes::nonlinear_advection() {
  NavierStokes& ns_finest=getLevel(finest_level);
  int ipart_id=0;
  for (int im=0;im<nmat;im++) {
-  for (int isub=0;isub<4;isub++) {
-   int do_part_advect=0;
-   if ((isub==0)||(isub==1)) {
-    if (particleLS_flag[im]>isub)
-     do_part_advect=1;
-   } else if ((isub==2)||(isub==3)) {
-    if (structure_of_array_flag[im]==1) 
-     do_part_advect=1;
-   } else
-    amrex::Error("isub invalid");
+  if (particleLS_flag[im]==1) {
 
-   if (do_part_advect==1) {
-    ns_finest.move_particles(im,ipart_id,isub);
-    ipart_id++;
-   } else if (do_part_advect==0) {
-    // do nothing
-   } else
-    amrex::Error("do_part_advect invalid");
-  } //isub=0..3
+   // 1. void addParticles (const ParticleContainerType& other, 
+   //     bool local=false);  (local==true => do not redistribute at end?)
+   // 2. Copy Eulerian level set to Lagrangian particles.
+   // 3. advect the particles using RK
+   // (note: bulk, interface)
+   ns_finest.move_particles(im,ipart_id);
+   ipart_id+=2;
+  } else if (particleLS_flag[im]==0) {
+   // do nothing
+  } else
+   amrex::Error("particleLS_flag[im] invalid");
  } //im=0..nmat-1
 
  if (ipart_id==NS_ncomp_particles) {
@@ -920,7 +914,7 @@ void NavierStokes::tensor_advection_updateALL() {
   delete_array(FACETENSOR_MF);
 
   for (int im=0;im<nmat;im++) {
-   if (particleLS_flag[im]==2) { // bulk and interface particles
+   if (particleLS_flag[im]==1) { // bulk and interface particles
     if (ns_is_rigid(im)==0) {
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
@@ -942,8 +936,6 @@ void NavierStokes::tensor_advection_updateALL() {
      // do nothing
     } else
      amrex::Error("ns_is_rigid(im) invalid");
-   } else if (particleLS_flag[im]==1) {
-    // do nothing
    } else if (particleLS_flag[im]==0) {
     // do nothing
    } else

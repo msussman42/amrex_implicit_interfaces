@@ -1007,7 +1007,7 @@ protected:
       int local_truncate);
     void prescribe_solid_geometry(Real time,int renormalize_only);
     void PLS_correct(Real time,int im_PLS,int ipart_id);
-    void move_particles(int im_PLS,int ipart_id,int isub);
+    void move_particles(int im_PLS,int ipart_id);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
@@ -1480,14 +1480,10 @@ protected:
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
      // =0 do not hybridize with particles (default)
-     // =1 hybridize with particles only on the interface
-     // =2 hybridize with particles on the interface and interior
+     // =1 hybridize with particles on the interface and interior
      // particleLS_flag[im]   im=0...num_materials-1
     static Vector<int> particleLS_flag;  
     static Vector<int> particle_nsubdivide;  
-     // =0 do not store structure of array (i,j,k) data
-     // =1 store structure of array (i,j,k) data
-    static Vector<int> structure_of_array_flag;  
 
     static int NS_ncomp_particles;
 

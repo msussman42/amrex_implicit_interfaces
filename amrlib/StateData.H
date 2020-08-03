@@ -226,20 +226,16 @@ private:
     // Pointer to new-time data.
     // MAX_NUM_SLAB entries.
     Vector< MultiFab* > new_data;
-     // ONLY LEVEL==0 STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
+     // ONLY LEVEL==MAX_LEVEL STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
      // PARTICLES THAT APPEAR ON ALL THE LEVELS.
      // 
      // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
      // STRUCTURE OF ARRAYS: no base
      //
      // If ns.viscoelastic_model[im]==2 (elastic material) and
-     //    ns.particleLS_flag[im]==2 (particles inside and on interface),
+     //    ns.particleLS_flag[im]==1 (bulk/interface particles),
      //    then define "new_dataPC"
      //
-     // For small droplets, they will evaporate down to nothing (using 
-     // supermesh method), thereby
-     // converting liquid to vapor automatically.
-
     using PLS_ParticleContainerType=
 	    ParticleContainer<N_EXTRA_REAL,0,0,0>;
 

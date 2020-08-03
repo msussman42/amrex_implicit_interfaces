@@ -295,7 +295,6 @@ Vector<int> NavierStokes::truncate_volume_fractions;
 
 Vector<int> NavierStokes::particle_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
-Vector<int> NavierStokes::structure_of_array_flag; 
 int NavierStokes::NS_ncomp_particles=0;
 
 Real NavierStokes::truncate_thickness=2.0;  
@@ -3599,11 +3598,9 @@ NavierStokes::read_params ()
     truncate_volume_fractions.resize(nmat);
     particle_nsubdivide.resize(nmat);
     particleLS_flag.resize(nmat);
-    structure_of_array_flag.resize(nmat);
     for (int i=0;i<nmat;i++) {
      particle_nsubdivide[i]=1;
      particleLS_flag[i]=0;
-     structure_of_array_flag[i]=0;
      if ((FSI_flag[i]==0)|| // tessellating
          (FSI_flag[i]==7))  // fluid, tessellating
       truncate_volume_fractions[i]=1;
@@ -3623,16 +3620,11 @@ NavierStokes::read_params ()
 
     pp.queryarr("particle_nsubdivide",particle_nsubdivide,0,nmat);
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
-    pp.queryarr("structure_of_array_flag",structure_of_array_flag,0,nmat);
 
     NS_ncomp_particles=0;
     for (int i=0;i<nmat;i++) {
-      // =1 particles on interface
-      // =2 particles on interface and in interior.
-     if (particleLS_flag[i]>0)
-      NS_ncomp_particles+=particleLS_flag[i];
-     if (structure_of_array_flag[i]>0)
-      NS_ncomp_particles++;
+     if (particleLS_flag[i]==1)
+      NS_ncomp_particles+=2;  // (1) bulk and (2) interface particles
     } // i=0..nmat-1
 
     pp.queryarr("truncate_volume_fractions",truncate_volume_fractions,0,nmat);
@@ -3644,11 +3636,8 @@ NavierStokes::read_params ()
          (particle_nsubdivide[i]>6))
       amrex::Error("particle_nsubdivide invalid");
      if ((particleLS_flag[i]<0)||
-         (particleLS_flag[i]>2))
+         (particleLS_flag[i]>1))
       amrex::Error("particleLS_flag invalid");
-     if ((structure_of_array_flag[i]<0)||
-         (structure_of_array_flag[i]>1))
-      amrex::Error("structure_of_array_flag invalid");
     }
 
     pp.query("truncate_thickness",truncate_thickness);
@@ -3901,8 +3890,6 @@ NavierStokes::read_params ()
         particle_nsubdivide[i] << '\n';
       std::cout << "particleLS_flag i= " << i << ' ' <<
         particleLS_flag[i] << '\n';
-      std::cout << "structure_of_array_flag i= " << i << ' ' <<
-        structure_of_array_flag[i] << '\n';
 
       std::cout << "NS_ncomp_particles= " << NS_ncomp_particles << '\n';
 
@@ -19018,32 +19005,17 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  int ipart=0;
  for (int im_local=0;im_local<im_elastic;im_local++) {
-  // bulk particles
-  // interface particles
-  // narrow band particles
-  // extended narrow band particles
-  for (int ipart_type=0;ipart_type<4;ipart_type++) {
-   if ((ipart_type==0)||(ipart_type==1)) {
-    if (particleLS_flag[im_local]>ipart_type) {
-     ipart++; 
-    } else if ((particleLS_flag[im_local]==0)||
-               (particleLS_flag[im_local]==1)) {
-     // do nothing
-    } else
-     amrex::Error("particleLS_flag invalid");
-   } else if ((ipart_type==2)||(ipart_type==3)) {
-    if (structure_of_array_flag[im_local]==1) {
-     ipart++;
-    } else if (structure_of_array_flag[im_local]==0) {
-     // do nothing
-    } else
-     amrex::Error("structure_of_array_flag[im_local] invalid");
-   } else
-    amrex::Error("ipart_type invalid");
-  } // ipart_type=0..3
+  // 1. bulk particles
+  // 2. interface particles
+  if (particleLS_flag[im_local]==1) {
+   ipart+=2; 
+  } else if (particleLS_flag[im_local]==0) {
+   // do nothing
+  } else
+   amrex::Error("particleLS_flag invalid");
  } // im_local=0..im_elastic-1
 
- if (particleLS_flag[im_elastic]==2) {
+ if (particleLS_flag[im_elastic]==1) {
   if (NS_ncomp_particles>=ipart+2) {
    // do nothing
   } else
@@ -19053,21 +19025,21 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
- int partid=0;
+ int elastic_partid=0;
  int scomp_tensor=0;
 
  if (ns_is_rigid(im_elastic)==0) {
   if ((elastic_time[im_elastic]>0.0)&&
       (elastic_viscosity[im_elastic]>0.0)) {
-   partid=0;
-   while ((im_elastic_map[partid]!=im_elastic)&&
-          (partid<im_elastic_map.size())) {
-    partid++;
+   elastic_partid=0;
+   while ((im_elastic_map[elastic_partid]!=im_elastic)&&
+          (elastic_partid<im_elastic_map.size())) {
+    elastic_partid++;
    }
-   if (partid<im_elastic_map.size()) {
-    scomp_tensor=partid*NUM_TENSOR_TYPE;
+   if (elastic_partid<im_elastic_map.size()) {
+    scomp_tensor=elastic_partid*NUM_TENSOR_TYPE;
    } else
-    amrex::Error("partid too large");
+    amrex::Error("elastic_partid too large");
   } else
    amrex::Error("elastic_time or elastic_viscosity invalid");
  } else
@@ -19253,26 +19225,21 @@ NavierStokes::init_particle_container() {
  
    int n_part_FAB=0;
    for (int im=0;im<nmat;im++) {
-    if (particleLS_flag[im]>0) {
+    if (particleLS_flag[im]==1) {
      int subdivide_mult=1;
      for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
       for (int dir=0;dir<AMREX_SPACEDIM;dir++)
        subdivide_mult*=2;
      }
-     n_part_FAB+=particleLS_flag[im]*subdivide_mult*(N_EXTRA_REAL+1);
+       // 1. bulk, 2. interface
+     n_part_FAB+=2*subdivide_mult*(N_EXTRA_REAL+1);
     } else if (particleLS_flag[im]==0) {
      // do nothing
     } else
      amrex::Error("particleLS_flag[im] invalid");
 
-    if (structure_of_array_flag[im]==1) {
-     n_part_FAB+=2*(N_EXTRA_REAL+1);
-    } else if (structure_of_array_flag[im]==0) {
-     // do nothing
-    } else
-     amrex::Error("structure_of_array_flag[im] invalid");
-
    }  // im=0..nmat-1
+
    FArrayBox particlefab(tilegrid,n_part_FAB);
 
    FArrayBox& lsfab=(*LSmf)[mfi];
@@ -19298,7 +19265,6 @@ NavierStokes::init_particle_container() {
     &nextra_parm,
     particle_nsubdivide.dataPtr(),
     particleLS_flag.dataPtr(),
-    structure_of_array_flag.dataPtr(),
     &n_part_FAB,
     &NS_ncomp_particles,
     &nmat,
@@ -19315,91 +19281,81 @@ NavierStokes::init_particle_container() {
 
    int ipart=0;
    int ipart_FAB=0;
+
    for (int im=0;im<nmat;im++) {
+
+    if (particleLS_flag[im]==1) {
      // bulk particles
      // interface particles
-     // narrow band particles
-     // extended narrow band particles
-    for (int ipart_type=0;ipart_type<4;ipart_type++) {
-     int subdivide_mult=0;
-     if ((ipart_type==0)||(ipart_type==1)) {
-      if (particleLS_flag[im]>ipart_type) {
-       subdivide_mult=1;
-       for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-         subdivide_mult*=2;
-       }
-      } else if ((particleLS_flag[im]==0)||
-                 (particleLS_flag[im]==1)) {
-       // do nothing
-      } else
-       amrex::Error("particleLS_flag invalid");
-     } else if ((ipart_type==2)||(ipart_type==3)) {
-      if (structure_of_array_flag[im]==1) {
-       subdivide_mult=1;
-      } else if (structure_of_array_flag[im]==0) {
-       // do nothing
-      } else
-       amrex::Error("structure_of_array_flag[im] invalid");
-     } else
-      amrex::Error("ipart_type invalid");
+     int subdivide_mult=1;
+     for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
+      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+       subdivide_mult*=2;
+     }
  
-     for (int isub=0;isub<subdivide_mult;isub++) {
+     for (int ipart_sub=0;ipart_sub<2;ipart_sub++) {
 
       ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-        get_new_dataPC(State_Type,slab_step,ipart);
+       get_new_dataPC(State_Type,slab_step,ipart);
 
       auto& particles = localPC.GetParticles(level)
         [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
 
+      using My_ParticleContainer =
+        ParticleContainer<N_EXTRA_REAL,0,0,0>;
+
+      for (int isub=0;isub<subdivide_mult;isub++) {
+
        // lbound and ubound put 0 in the 3rd dimension if 2D.
-      Array4<Real> const& pfab=particlefab.array();
-      const auto lo_p=lbound(pfab);
-      const auto hi_p=ubound(pfab);
+       Array4<Real> const& pfab=particlefab.array();
+       const auto lo_p=lbound(pfab);
+       const auto hi_p=ubound(pfab);
 
-      for (int k = lo_p.z; k <= hi_p.z; ++k) {
-      for (int j = lo_p.y; j <= hi_p.y; ++j) {
-      for (int i = lo_p.x; i <= hi_p.x; ++i) {
-       int flag_comp=ipart_FAB+N_EXTRA_REAL;
-       if (pfab(i,j,k,flag_comp) == 1.0) {
+       for (int k = lo_p.z; k <= hi_p.z; ++k) {
+       for (int j = lo_p.y; j <= hi_p.y; ++j) {
+       for (int i = lo_p.x; i <= hi_p.x; ++i) {
+        int flag_comp=ipart_FAB+N_EXTRA_REAL;
+        if (pfab(i,j,k,flag_comp) == 1.0) {
 
-        using My_ParticleContainer =
-          ParticleContainer<N_EXTRA_REAL,0,0,0>;
+         My_ParticleContainer::ParticleType p;
+         p.id() = My_ParticleContainer::ParticleType::NextID();
 
-        My_ParticleContainer::ParticleType p;
-        p.id()   = My_ParticleContainer::ParticleType::NextID();
-
-        p.cpu()  = ParallelDescriptor::MyProc();
+         p.cpu() = ParallelDescriptor::MyProc();
 
          //pos(AMREX_SPACEDIM)
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-         p.pos(dir) = pfab(i,j,k,ipart_FAB+dir);
-        }
-        for (int dir=0;dir<N_EXTRA_REAL;dir++) {
-         p.rdata(dir) = pfab(i,j,k,ipart_FAB+dir);
-        }
-        particles.push_back(p);
-       } else if (pfab(i,j,k,flag_comp) == 0.0) {
-        // do nothing
-       } else
-        amrex::Error("pfab(flag_comp) invalid");
-      } // i
-      } // j
-      } // k
-      ipart_FAB+=(N_EXTRA_REAL+1);
-      if (isub==subdivide_mult-1) {
-       ipart++;
-      } else if ((isub>=0)&&(isub<subdivide_mult-1)) {
-       // do nothing
-      } else
-       amrex::Error("isub invalid");
-     }  // isub=0..subdivide_mult-1
-    } // ipart_type=0..3
+         for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+          p.pos(dir) = pfab(i,j,k,ipart_FAB+dir);
+         }
+         for (int dir=0;dir<N_EXTRA_REAL;dir++) {
+          p.rdata(dir) = pfab(i,j,k,ipart_FAB+dir);
+         }
+         particles.push_back(p);
+        } else if (pfab(i,j,k,flag_comp) == 0.0) {
+         // do nothing
+        } else
+         amrex::Error("pfab(flag_comp) invalid");
+       } // i
+       } // j
+       } // k
+       ipart_FAB+=(N_EXTRA_REAL+1);
+
+      } // isub=0...subdivide_mult-1
+
+      ipart++;
+     } // ipart_sub=0..1
+
+    } else if (particleLS_flag[im]==0) {
+     // do nothing
+    } else 
+     amrex::Error("particleLS_flag[im] invalid");
+
    } // im=0..nmat-1
+
    if (ipart_FAB==n_part_FAB) {
     // do nothing
    } else
     amrex::Error("ipart_FAB invalid");
+
    if (ipart==NS_ncomp_particles) {
     // do nothing
    } else
