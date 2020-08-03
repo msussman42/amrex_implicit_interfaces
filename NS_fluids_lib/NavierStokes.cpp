@@ -19167,7 +19167,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
 // This routine called for level=finest_level 
 void
-NavierStokes::init_particle_container(int imPLS,int ipart) {
+NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
@@ -19200,161 +19200,145 @@ NavierStokes::init_particle_container(int imPLS,int ipart) {
  VOF_Recon_resize(1,SLOPE_RECON_MF);
 
  if (NS_ncomp_particles>0) {
-  MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
-  if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
-   amrex::Error("LSmf invalid ncomp");
-  if (LSmf->nGrow()!=1)
-   amrex::Error("LSmf->nGrow()!=1");
 
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
+  if (particleLS_flag[imPLS]==1) {
+
+   MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
+   if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
+    amrex::Error("LSmf invalid ncomp");
+   if (LSmf->nGrow()!=1)
+    amrex::Error("LSmf->nGrow()!=1");
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
+   for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    int bfact=parent->Space_blockingFactor(level);
 
-   const Real* xlo = grid_loc[gridno].lo();
- 
-   int n_part_FAB=0;
-   if (particleLS_flag[imPLS]==1) {
-    int subdivide_mult=1;
-    for (int imult2=1;imult2<particle_nsubdivide[imPLS];imult2++) { 
-     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-      subdivide_mult*=2;
-    }
-     // particle levelset == 0.0 for interface particles.
-    n_part_FAB=subdivide_mult*(N_EXTRA_REAL+1);
-   } else
-    amrex::Error("particleLS_flag[imPLS] invalid");
+    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox particlefab(tilegrid,n_part_FAB);
+    FArrayBox& lsfab=(*LSmf)[mfi];
+    FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+     // mask=tag if not covered by level+1 or outside the domain.
+    FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
 
-   FArrayBox& lsfab=(*LSmf)[mfi];
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
-    // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
+    BaseFab<int> cell_particle_count(tilegrid,1);
+    cell_particle_count.setVal(0);
 
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+     // allocate for just one particle for now.
+    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL;
+    Vector< Real > new_particle_data;
+    new_particle_data.resize(single_particle_size);
 
-    // in: PLIC_3D.F90
-    // 1. subdivide each cell with "particle_nsubdivide" divisions.
-    //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
-    //                 "         "   =4 => 64 pieces in 2D.
-    // 2. for each small sub-box, find the material centroid, and initialize
-    //    a bulk particle at the centroid.  for cut cells, let
-    //    x_interface_particle=x_bulk - phi grad phi/|grad phi|
-   int nextra_parm=N_EXTRA_REAL;
-   FORT_INIT_PARTICLE_CONTAINER( 
-    &tid_current,
-    &nextra_parm,
-    particle_nsubdivide.dataPtr(),
-    particleLS_flag.dataPtr(),
-    &imPLS,
-    &n_part_FAB,
-    &NS_ncomp_particles,
-    &nmat,
-    tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    &level,
-    &finest_level,
-    xlo,dx,
-    particlefab.dataPtr(),
-    ARLIM(particlefab.loVect()),ARLIM(particlefab.hiVect()),
-    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
+    ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+      get_new_dataPC(State_Type,slab_step+1,ipart);
 
-   if (particleLS_flag[imPLS]==1) {
+    auto& particles = localPC.GetParticles(level)
+      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
 
-     int ipart_FAB=0;
+    auto& particles_AoS = particles.GetArrayOfStructs();
+    int Np=particles_AoS.size();
 
-     int subdivide_mult=1;
-     for (int imult2=1;imult2<particle_nsubdivide[imPLS];imult2++) { 
-      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-       subdivide_mult*=2;
+    int Np_append=0;  // number of particles to append
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    for (int isweep=0;isweep<2;isweep++) {
+
+     int Np_new=new_particle_data.size();
+
+     // in: LEVELSET_3D.F90
+     // 1. subdivide each cell with "particle_nsubdivide" divisions.
+     //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
+     //                 "         "   =4 => 64 pieces in 2D.
+     // 2. for each small sub-box, find the material centroid, and initialize
+     //    a bulk particle at the centroid.  for cut cells, let
+     //    x_interface_particle=x_bulk - phi grad phi/|grad phi|
+     fort_init_particle_container( 
+       &tid_current,
+       &single_particle_size,
+       &isweep,
+       &append_flag,
+       particle_nsubdivide.dataPtr(),
+       particleLS_flag.dataPtr(),
+       &imPLS,
+       &nmat,
+       tilelo,tilehi,
+       fablo,fabhi,&bfact,
+       &level,
+       &finest_level,
+       xlo,dx,
+       particles_AoS.data(),
+       Np,  // pass by value
+       new_particle_data.dataPtr(),
+       &Np_new,
+       &Np_append,  // number of particles to append
+       cell_particle_count.dataPtr(),
+       ARLIM(cell_particle_count.loVect()),
+       ARLIM(cell_particle_count.hiVect()),
+       maskfab.dataPtr(),
+       ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+       voffab.dataPtr(),
+       ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+       lsfab.dataPtr(),
+       ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
+
+     if (isweep==0) {
+      new_particle_data.resize(Np_append*single_particle_size);
      }
- 
-     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-       get_new_dataPC(State_Type,slab_step+1,ipart);
+    } // isweep=0...1
 
-     auto& particles = localPC.GetParticles(level)
-       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+    using My_ParticleContainer =
+      ParticleContainer<N_EXTRA_REAL,0,0,0>;
 
-     using My_ParticleContainer =
-       ParticleContainer<N_EXTRA_REAL,0,0,0>;
+    for (int i_append=0;i_append<Np_append;i_append++) {
 
-     for (int isub=0;isub<subdivide_mult;isub++) {
+     My_ParticleContainer::ParticleType p;
+     p.id() = My_ParticleContainer::ParticleType::NextID();
 
-       // lbound and ubound put 0 in the 3rd dimension if 2D.
-       Array4<Real> const& pfab=particlefab.array();
-       const auto lo_p=lbound(pfab);
-       const auto hi_p=ubound(pfab);
+     p.cpu() = ParallelDescriptor::MyProc();
 
-       for (int k = lo_p.z; k <= hi_p.z; ++k) {
-       for (int j = lo_p.y; j <= hi_p.y; ++j) {
-       for (int i = lo_p.x; i <= hi_p.x; ++i) {
-        int flag_comp=ipart_FAB+N_EXTRA_REAL;
-        if (pfab(i,j,k,flag_comp) == 1.0) {
+     int ibase=i_append*single_particle_size;
+      //pos(AMREX_SPACEDIM)
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+      p.pos(dir) = new_particle_data[ibase+dir];
+     }
+     for (int dir=0;dir<N_EXTRA_REAL;dir++) {
+      p.rdata(dir) = new_particle_data[ibase+AMREX_SPACEDIM+dir];
+     }
+     particles.push_back(p);
+    } // i_append=0..Np_append-1
 
-         My_ParticleContainer::ParticleType p;
-         p.id() = My_ParticleContainer::ParticleType::NextID();
+    if (ipart<NS_ncomp_particles) {
+     // do nothing
+    } else
+     amrex::Error("ipart invalid");
 
-         p.cpu() = ParallelDescriptor::MyProc();
-
-         //pos(AMREX_SPACEDIM)
-         for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-          p.pos(dir) = pfab(i,j,k,ipart_FAB+dir);
-         }
-         for (int dir=0;dir<N_EXTRA_REAL;dir++) {
-          p.rdata(dir) = pfab(i,j,k,ipart_FAB+dir);
-         }
-         particles.push_back(p);
-        } else if (pfab(i,j,k,flag_comp) == 0.0) {
-         // do nothing
-        } else
-         amrex::Error("pfab(flag_comp) invalid");
-       } // i
-       } // j
-       } // k
-       ipart_FAB+=(N_EXTRA_REAL+1);
-
-     } // isub=0...subdivide_mult-1
-
-     if (ipart_FAB==n_part_FAB) {
-      // do nothing
-     } else
-      amrex::Error("ipart_FAB invalid");
-
-   } else 
-    amrex::Error("particleLS_flag[imPLS] invalid");
-
-   if (ipart<=NS_ncomp_particles) {
-    // do nothing
-   } else
-    amrex::Error("ipart invalid");
-
-  } // mfi
+   } // mfi
 } // omp
-  ns_reconcile_d_num(81);
+   ns_reconcile_d_num(81);
 
-  delete LSmf;
- } else if (NS_ncomp_particles==0) {
-  // do nothing
+   delete LSmf;
+
+  } else
+   amrex::Error("particleLS_flag[imPLS] invalid");
+
  } else
   amrex::Error("NS_ncomp_particles invalid");
 
@@ -19456,7 +19440,8 @@ NavierStokes::post_init_state () {
     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
      ns_finest.get_new_dataPC(State_Type,slab_step+1,ipart);
     localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
-    ns_finest.init_particle_container(im,ipart);
+    int append_flag=0;
+    ns_finest.init_particle_container(im,ipart,append_flag);
 
     int lev_min=0;
     int lev_max=-1;

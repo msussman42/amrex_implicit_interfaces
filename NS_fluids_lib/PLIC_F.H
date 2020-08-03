@@ -3,18 +3,14 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_SLOPERECON   sloperecon
-#    define FORT_INIT_PARTICLE_CONTAINER init_particle_container
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_SLOPERECON   SLOPERECON
-#    define FORT_INIT_PARTICLE_CONTAINER FORT_INIT_PARTICLE_CONTAINER
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_SLOPERECON   sloperecon
-#    define FORT_INIT_PARTICLE_CONTAINER init_particle_container
 #  else
 #    define FORT_SLOPERECON   sloperecon_
-#    define FORT_INIT_PARTICLE_CONTAINER init_particle_container_
 #  endif
 #  endif
 
@@ -48,28 +44,6 @@ extern "C"
         int* total_iterations,
         int* continuous_mof,
         int* radius_cutoff);
-
-
-      void FORT_INIT_PARTICLE_CONTAINER(
-        int* tid,
-        int* nextra_parm,
-        int* particle_nsubdivide,
-        int* particleLS_flag,
-        int* imPLS,
-        int* n_part_FAB,
-        int* NS_ncomp_particles,
-        int* nmat,
-        const int* tilelo,const int* tilehi,
-        const int* fablo,const int* fabhi,
-        int* bfact,
-        int* level,
-        int* finest_level,
-        const Real* xlo,const Real* dx,
-        Real* particlefab,
-	AMREX_ARLIM_P(particlefablo),AMREX_ARLIM_P(particlefabhi),
-        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
-        Real* voffab,AMREX_ARLIM_P(voffablo),AMREX_ARLIM_P(voffabhi),
-        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
 
 }
 }/* namespace amrex */

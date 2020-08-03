@@ -583,7 +583,7 @@ public:
     virtual void post_init (Real stop_time);
     void prepare_post_process(int post_init_flag);
 
-    void init_particle_container(int imPLS,int ipart);
+    void init_particle_container(int imPLS,int ipart,int append_flag);
     void accumulate_PC_info(int im);
 
     //

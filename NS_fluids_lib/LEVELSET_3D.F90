@@ -17727,6 +17727,130 @@ stop
         ! i_contain=NINT((xpart-xlo(1))/dx(1)+fablo(1)-0.5d0)
       end subroutine fort_assimilate_lvlset_from_particles
 
+
+      subroutine fort_init_particle_container( &
+        tid, &
+        single_particle_size, &
+        isweep, &
+        append_flag, &
+        particle_nsubdivide, &
+        particleLS_flag, &
+        imPLS, &
+        nmat, &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        level, &
+        finest_level, &
+        xlo,dx, &
+        particles, & ! a list of particles in the elastic structure
+        Np, & !  Np = number of particles
+        new_particles, &
+        Np_new, &
+        Np_append, &
+        cell_particle_count, &
+        DIMS(cell_particle_count), &
+        maskfab,DIMS(maskfab), &
+        voffab,DIMS(voffab), &
+        lsfab,DIMS(lsfab)) &
+      bind(c,name='fort_init_particle_container')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: single_particle_size
+      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, intent(in) :: append_flag
+      INTEGER_T, intent(in) :: level,finest_level
+
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: imPLS
+
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: particle_nsubdivide(nmat)
+      INTEGER_T, intent(in) :: particleLS_flag(nmat)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, value, intent(in) :: Np ! pass by value
+      type(particle_t), intent(in), target :: particles(Np)
+      INTEGER_T, intent(in) :: Np_new
+      REAL_T, intent(in) :: new_particles(Np_new);
+      INTEGER_T, intent(in) :: Np_append
+
+      INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
+      INTEGER_T, intent(in) :: DIMDEC(maskfab)
+      INTEGER_T, intent(in) :: DIMDEC(voffab)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+     
+      INTEGER_T, intent(in) :: cell_particle_count( &
+              DIMV(cell_particle_count)) 
+       ! maskfab=tag if not covered by level+1 or outside the domain.
+      REAL_T, intent(in) :: maskfab(DIMV(maskfab)) 
+      REAL_T, intent(in) :: voffab(DIMV(voffab),nmat*ngeom_recon) 
+      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+      
+      return
+      end subroutine fort_init_particle_container
+
+
+      subroutine fort_move_particle_container( &
+        tid, &
+        imPLS, &
+        nmat, &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        level, &
+        finest_level, &
+        xlo,dx, &
+        particles, & ! a list of particles in the elastic structure
+        Np, & !  Np = number of particles
+        dt, &
+        umac,DIMS(umac), &
+        vmac,DIMS(vmac), &
+        wmac,DIMS(wmac), &
+        lsfab,DIMS(lsfab)) &
+      bind(c,name='fort_move_particle_container')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: level,finest_level
+
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: imPLS
+
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, value, intent(in) :: Np ! pass by value
+      type(particle_t), intent(in), target :: particles(Np)
+
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(umac)
+      INTEGER_T, intent(in) :: DIMDEC(vmac)
+      INTEGER_T, intent(in) :: DIMDEC(wmac)
+     
+      REAL_T, intent(in) :: umac(DIMV(umac)) 
+      REAL_T, intent(in) :: vmac(DIMV(vmac)) 
+      REAL_T, intent(in) :: wmac(DIMV(wmac)) 
+
+      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+      
+      return
+      end subroutine fort_move_particle_container
+
       end module FSI_PC_LS_module
 
 

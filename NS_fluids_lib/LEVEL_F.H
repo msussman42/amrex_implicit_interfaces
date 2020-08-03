@@ -759,6 +759,52 @@ namespace amrex{
        AMREX_ARLIM_P(matrixfablo),
        AMREX_ARLIM_P(matrixfabhi));
 
+
+     void fort_init_particle_container(
+        int* tid,
+        int* single_particle_size,
+        int* isweep,
+        int* append_flag,
+        int* particle_nsubdivide,
+        int* particleLS_flag,
+        int* imPLS,
+        int* nmat,
+        const int* tilelo,const int* tilehi,
+        const int* fablo,const int* fabhi,
+        int* bfact,
+        int* level,
+        int* finest_level,
+        const Real* xlo,const Real* dx,
+        const void* particles,
+        int Np, 
+        Real* new_particles,
+        int* Np_new, 
+        int* Np_append, 
+	int* cell_particle_count,
+	AMREX_ARLIM_P(cell_particle_countlo),
+	AMREX_ARLIM_P(cell_particle_counthi),
+        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
+        Real* voffab,AMREX_ARLIM_P(voffablo),AMREX_ARLIM_P(voffabhi),
+        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
+
+
+     void fort_move_particle_container(
+        int* tid,
+        int* imPLS,
+        int* nmat,
+        const int* tilelo,const int* tilehi,
+        const int* fablo,const int* fabhi,
+        int* bfact,
+        int* level,
+        int* finest_level,
+        const Real* xlo,const Real* dx,
+        const void* particles,
+        int Np, 
+	Real* dt,
+        Real* umac,AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
+        Real* vmac,AMREX_ARLIM_P(vmaclo),AMREX_ARLIM_P(vmachi),
+        Real* wmac,AMREX_ARLIM_P(wmaclo),AMREX_ARLIM_P(wmachi),
+        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
   };
 
 }/* namespace amrex */

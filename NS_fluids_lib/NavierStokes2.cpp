@@ -6977,8 +6977,6 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
 
 void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
- // 1. void addParticles (const ParticleContainerType& other, 
- //     bool local=false);  (local==true => do not redistribute at end?)
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
@@ -7001,6 +6999,11 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
  int nsolveMM_FACE=num_materials_vel;
 
  if (NS_ncomp_particles>0) {
+
+  int append_flag=1;
+  init_particle_container(im_PLS,ipart_id,append_flag);
+
+  const Real* dx = geom.CellSize();
 
   MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
   if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
@@ -7052,6 +7055,27 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   fort_move_particle_container( 
+     &tid_current,
+     &im_PLS,
+     &nmat,
+     tilelo,tilehi,
+     fablo,fabhi,&bfact,
+     &level,
+     &finest_level,
+     xlo,dx,
+     particles_AoS.data(),
+     Np,  // pass by value
+     &dt_slab,
+     xvelfab.dataPtr(),
+     ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
+     yvelfab.dataPtr(),
+     ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
+     zvelfab.dataPtr(),
+     ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
+     lsfab.dataPtr(),
+     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
 
   }  // mfi
 } // omp
