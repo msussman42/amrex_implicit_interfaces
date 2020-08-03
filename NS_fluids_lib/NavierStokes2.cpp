@@ -7004,6 +7004,17 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
   init_particle_container(im_PLS,ipart_id,append_flag);
 
   const Real* dx = geom.CellSize();
+  const Box& domain = geom.Domain();
+  const int* domlo = domain.loVect();
+  const int* domhi = domain.hiVect();
+
+  int scomp_mofvars=
+	num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material;
+  Vector<int> dombc(2*AMREX_SPACEDIM);
+  const BCRec& descbc = get_desc_lst()[State_Type].getBC(scomp_mofvars);
+  const int* b_rec=descbc.vect();
+  for (int m=0;m<2*AMREX_SPACEDIM;m++)
+   dombc[m]=b_rec[m];
 
   MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
   if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
@@ -7050,6 +7061,9 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
    auto& particles_AoS = particles.GetArrayOfStructs();
    int Np=particles_AoS.size();
 
+   int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
+   Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
+      nmat*num_state_material);
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -7075,7 +7089,10 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
      zvelfab.dataPtr(),
      ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
      lsfab.dataPtr(),
-     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
+     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+     denbc.dataPtr(),
+     dombc.dataPtr(),
+     domlo,domhi);
 
   }  // mfi
 } // omp

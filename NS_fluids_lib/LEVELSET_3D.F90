@@ -17813,7 +17813,10 @@ stop
         umac,DIMS(umac), &
         vmac,DIMS(vmac), &
         wmac,DIMS(wmac), &
-        lsfab,DIMS(lsfab)) &
+        lsfab,DIMS(lsfab), &
+        denbc_in, &
+        dombc, &
+        domlo,domhi) &
       bind(c,name='fort_move_particle_container')
 
       use probf90_module
@@ -17847,6 +17850,10 @@ stop
       REAL_T, intent(in) :: wmac(DIMV(wmac)) 
 
       REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+      INTEGER_T, intent(in) :: denbc_in(SDIM,2)
+      INTEGER_T, intent(in) :: dombc(SDIM,2)
+      INTEGER_T, intent(in) :: domlo(SDIM)
+      INTEGER_T, intent(in) :: domhi(SDIM)
       
       return
       end subroutine fort_move_particle_container
