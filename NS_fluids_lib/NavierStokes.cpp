@@ -3598,9 +3598,12 @@ NavierStokes::read_params ()
     truncate_volume_fractions.resize(nmat);
     particle_nsubdivide.resize(nmat);
     particleLS_flag.resize(nmat);
+
     for (int i=0;i<nmat;i++) {
+
      particle_nsubdivide[i]=1;
      particleLS_flag[i]=0;
+
      if ((FSI_flag[i]==0)|| // tessellating
          (FSI_flag[i]==7))  // fluid, tessellating
       truncate_volume_fractions[i]=1;
@@ -3624,7 +3627,7 @@ NavierStokes::read_params ()
     NS_ncomp_particles=0;
     for (int i=0;i<nmat;i++) {
      if (particleLS_flag[i]==1)
-      NS_ncomp_particles+=2;  // (1) bulk and (2) interface particles
+      NS_ncomp_particles++;  // levelset == 0.0 for interface particles
     } // i=0..nmat-1
 
     pp.queryarr("truncate_volume_fractions",truncate_volume_fractions,0,nmat);
@@ -19008,7 +19011,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   // 1. bulk particles
   // 2. interface particles
   if (particleLS_flag[im_local]==1) {
-   ipart+=2; 
+   ipart++; 
   } else if (particleLS_flag[im_local]==0) {
    // do nothing
   } else
@@ -19016,7 +19019,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  } // im_local=0..im_elastic-1
 
  if (particleLS_flag[im_elastic]==1) {
-  if (NS_ncomp_particles>=ipart+2) {
+  if (NS_ncomp_particles>=ipart+1) {
    // do nothing
   } else
    amrex::Error("NS_ncomp_particles invalid");
@@ -19053,39 +19056,37 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  accumulate_mf->setVal(0.0);
 
   // for elastic materials, all the particles should live on the finest level.
-  // ipart_type==0 bulk
-  // ipart_type==1 interface
- for (int ipart_type=0;ipart_type<2;ipart_type++) { 
+  // particle levelset==0.0 for interface particles.
 
-  ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    get_new_dataPC(State_Type,slab_step,ipart+ipart_type);
+ ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+    get_new_dataPC(State_Type,slab_step,ipart);
 
-  const Vector<Geometry>& ns_geom=parent->Geom();
-  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-  const Vector<BoxArray>& ns_ba=parent->boxArray();
-  Vector<int> rr;
-  rr.resize(ns_ba.size());
-  for (int ilev=0;ilev<rr.size();ilev++)
-   rr[ilev]=2;
-  int nnbr=1;
+ const Vector<Geometry>& ns_geom=parent->Geom();
+ const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+ const Vector<BoxArray>& ns_ba=parent->boxArray();
+ Vector<int> rr;
+ rr.resize(ns_ba.size());
+ for (int ilev=0;ilev<rr.size();ilev++)
+  rr[ilev]=2;
+ int nnbr=1;
    // DO NOT LOOK AT THE TUTORIALS, DO NOT LOOK ONLINE, INSTEAD
    // LOOK AT THE PELE CODE. (see Julia)
-  NeighborParticleContainer<N_EXTRA_REAL,0> 
+ NeighborParticleContainer<N_EXTRA_REAL,0> 
    localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
-  bool local_copy_flag=true; // the two PC have same hierarchy
-  localPC.copyParticles(localPC_no_nbr,local_copy_flag);
+ bool local_copy_flag=true; // the two PC have same hierarchy
+ localPC.copyParticles(localPC_no_nbr,local_copy_flag);
 
-  localPC.fillNeighbors();
+ localPC.fillNeighbors();
 
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
     // std::cout << tilegrid << '\n';
@@ -19149,12 +19150,11 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
      matrixfab.dataPtr(),
      ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
-  } // mfi
+ } // mfi
 } // omp
-  ns_reconcile_d_num(81);
+ ns_reconcile_d_num(81);
 
-  localPC.clearNeighbors();
- } // end for ipart_type=0,1
+ localPC.clearNeighbors();
 
  delete accumulate_mf;
 
@@ -19231,8 +19231,8 @@ NavierStokes::init_particle_container() {
       for (int dir=0;dir<AMREX_SPACEDIM;dir++)
        subdivide_mult*=2;
      }
-       // 1. bulk, 2. interface
-     n_part_FAB+=2*subdivide_mult*(N_EXTRA_REAL+1);
+       // particle levelset == 0.0 for interface particles.
+     n_part_FAB+=subdivide_mult*(N_EXTRA_REAL+1);
     } else if (particleLS_flag[im]==0) {
      // do nothing
     } else
@@ -19293,18 +19293,16 @@ NavierStokes::init_particle_container() {
        subdivide_mult*=2;
      }
  
-     for (int ipart_sub=0;ipart_sub<2;ipart_sub++) {
-
-      ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
        get_new_dataPC(State_Type,slab_step,ipart);
 
-      auto& particles = localPC.GetParticles(level)
-        [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+     auto& particles = localPC.GetParticles(level)
+       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
 
-      using My_ParticleContainer =
-        ParticleContainer<N_EXTRA_REAL,0,0,0>;
+     using My_ParticleContainer =
+       ParticleContainer<N_EXTRA_REAL,0,0,0>;
 
-      for (int isub=0;isub<subdivide_mult;isub++) {
+     for (int isub=0;isub<subdivide_mult;isub++) {
 
        // lbound and ubound put 0 in the 3rd dimension if 2D.
        Array4<Real> const& pfab=particlefab.array();
@@ -19339,10 +19337,9 @@ NavierStokes::init_particle_container() {
        } // k
        ipart_FAB+=(N_EXTRA_REAL+1);
 
-      } // isub=0...subdivide_mult-1
+     } // isub=0...subdivide_mult-1
 
-      ipart++;
-     } // ipart_sub=0..1
+     ipart++;
 
     } else if (particleLS_flag[im]==0) {
      // do nothing

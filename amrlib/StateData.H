@@ -233,8 +233,9 @@ private:
      // STRUCTURE OF ARRAYS: no base
      //
      // If ns.viscoelastic_model[im]==2 (elastic material) and
-     //    ns.particleLS_flag[im]==1 (bulk/interface particles),
-     //    then define "new_dataPC"
+     //    ns.particleLS_flag[im]==1 (particle levelset==0.0 for
+     //    interface particles),
+     //    then define "new_dataPC"; 
      //
     using PLS_ParticleContainerType=
 	    ParticleContainer<N_EXTRA_REAL,0,0,0>;
