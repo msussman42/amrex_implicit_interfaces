@@ -55,6 +55,7 @@ extern "C"
         int* nextra_parm,
         int* particle_nsubdivide,
         int* particleLS_flag,
+        int* imPLS,
         int* n_part_FAB,
         int* NS_ncomp_particles,
         int* nmat,

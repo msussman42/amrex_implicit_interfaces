@@ -1414,7 +1414,6 @@ extern "C"
      int* matrix_points,
      int* RHS_points,
      int* ncomp_accumulate,
-     int* ipart_type,
      Real* TNEWfab,
      AMREX_ARLIM_P(TNEWfablo),
      AMREX_ARLIM_P(TNEWfabhi),

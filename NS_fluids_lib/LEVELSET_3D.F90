@@ -17370,12 +17370,9 @@ stop
         time, &
         nmat, &
         ngrow_distance, &
-        particles_bulk, & ! a list of particles in the elastic structure
-        nbr_particles_bulk, &  ! list of nbr particles in the elastic structure
-        Np_bulk,Nn_bulk, & !  Np = number of particles, Nn=number nbr part.
-        particles_interface, & ! a list of particles in the elastic structure
-        nbr_particles_interface, & 
-        Np_interface,Nn_interface, & 
+        particles, & ! a list of particles in the elastic structure
+        nbr_particles, &  ! list of nbr particles in the elastic structure
+        Np,Nn, & !  Np = number of particles, Nn=number nbr part.
         matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
         RHS_points, &    ! least squares in 3D: 4
         ncomp_accumulate, & ! (matrix_points + RHS_points)
@@ -17429,18 +17426,13 @@ stop
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, value, intent(in) :: Np_bulk,Nn_bulk ! pass by value
-      INTEGER_T, value, intent(in) :: Np_interface,Nn_interface ! pass by value
+      INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
-      type(particle_t), intent(in), target :: particles_bulk(Np_bulk)
-      type(particle_t), intent(in), target :: nbr_particles_bulk(Nn_bulk)
-      type(particle_t), intent(in), target :: &
-              particles_interface(Np_interface)
-      type(particle_t), intent(in), target :: &
-              nbr_particles_interface(Nn_interface)
+      type(particle_t), intent(in), target :: particles(Np)
+      type(particle_t), intent(in), target :: nbr_particles(Nn)
 
       type(accum_parm_type_LS) :: accum_PARM
 
@@ -17527,32 +17519,16 @@ stop
         DIMS(LS))
       accum_PARM%LS=>LS  ! accum_PARM%LS is pointer, LS is target
 
-      accum_PARM%particles=>particles_interface
-      accum_PARM%Npart=Np_interface
+      accum_PARM%particles=>particles
+      accum_PARM%Npart=Np
 
       call traverse_particlesLS(accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
          ncomp_accumulate)
 
-      accum_PARM%particles=>nbr_particles_interface
-      accum_PARM%Npart=Nn_interface
-
-      call traverse_particlesLS(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         ncomp_accumulate)
-
-      accum_PARM%particles=>particles_bulk
-      accum_PARM%Npart=Np_bulk
-
-      call traverse_particlesLS(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         ncomp_accumulate)
-
-      accum_PARM%particles=>nbr_particles_bulk
-      accum_PARM%Npart=Nn_bulk
+      accum_PARM%particles=>nbr_particles
+      accum_PARM%Npart=Nn
 
       call traverse_particlesLS(accum_PARM, &
          matrixfab, &

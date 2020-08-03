@@ -6595,7 +6595,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   for (int im=0;im<nmat;im++) {
    if (particleLS_flag[im]==1) {
     ns_finest.PLS_correct(time,im,ipart_id);
-    ipart_id+=2;
+    ipart_id++;
    } else if (particleLS_flag[im]==0) {
     // do nothing
    } else
@@ -6851,10 +6851,8 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
     MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
  accumulate_mf->setVal(0.0);
 
- ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr_bulk=
-   get_new_dataPC(State_Type,slab_step,ipart_id);
- ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr_interface=
-   get_new_dataPC(State_Type,slab_step,ipart_id+1);
+ ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+   get_new_dataPC(State_Type,slab_step+1,ipart_id);
 
  const Vector<Geometry>& ns_geom=parent->Geom();
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
@@ -6865,16 +6863,11 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
   rr[ilev]=2;
  int nnbr=1;
  NeighborParticleContainer<N_EXTRA_REAL,0> 
-  localPC_bulk(ns_geom,ns_dmap,ns_ba,rr,nnbr);
- NeighborParticleContainer<N_EXTRA_REAL,0> 
-  localPC_interface(ns_geom,ns_dmap,ns_ba,rr,nnbr);
+  localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
 
  bool local_copy_flag=true; // the two PC have same hierarchy
- localPC_bulk.copyParticles(localPC_no_nbr_bulk,local_copy_flag);
- localPC_bulk.fillNeighbors();
-
- localPC_interface.copyParticles(localPC_no_nbr_interface,local_copy_flag);
- localPC_interface.fillNeighbors();
+ localPC.copyParticles(localPC_no_nbr,local_copy_flag);
+ localPC.fillNeighbors();
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -6907,25 +6900,15 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   auto& particles_bulk = localPC_bulk.GetParticles(level)
+   auto& particles = localPC.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-   auto& particles_AoS_bulk = particles_bulk.GetArrayOfStructs();
-   int Np_bulk=particles_AoS_bulk.size();
+   auto& particles_AoS = particles.GetArrayOfStructs();
+   int Np=particles_AoS.size();
 
     // ParticleVector&
-   auto& neighbors_local_bulk = 
-	localPC_bulk.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
-   int Nn_bulk=neighbors_local_bulk.size();
-
-   auto& particles_interface = localPC_interface.GetParticles(level)
-     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-   auto& particles_AoS_interface = particles_interface.GetArrayOfStructs();
-   int Np_interface=particles_AoS_interface.size();
-
-    // ParticleVector&
-   auto& neighbors_local_interface = 
-	localPC_interface.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
-   int Nn_interface=neighbors_local_interface.size();
+   auto& neighbors_local = 
+	localPC.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
+   int Nn=neighbors_local.size();
 
    FArrayBox& matrixfab=(*accumulate_mf)[mfi];
 
@@ -6963,14 +6946,10 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
      &cur_time_slab,
      &nmat,
      &ngrow_distance,
-     particles_AoS_bulk.data(),
-     neighbors_local_bulk.data(),
-     Np_bulk,       //pass by value
-     Nn_bulk,       //pass by value
-     particles_AoS_interface.data(),
-     neighbors_local_interface.data(),
-     Np_interface,       //pass by value
-     Nn_interface,       //pass by value
+     particles_AoS.data(),
+     neighbors_local.data(),
+     Np,       //pass by value
+     Nn,       //pass by value
      &matrix_points,
      &RHS_points,
      &ncomp_accumulate,
@@ -6981,8 +6960,7 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
 } // omp
  ns_reconcile_d_num(154);
 
- localPC_bulk.clearNeighbors();
- localPC_interface.clearNeighbors();
+ localPC.clearNeighbors();
 
  delete accumulate_mf;
  delete veldata;
@@ -6998,6 +6976,100 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
 
 
 void NavierStokes::move_particles(int im_PLS,int ipart_id) {
+
+ // 1. void addParticles (const ParticleContainerType& other, 
+ //     bool local=false);  (local==true => do not redistribute at end?)
+ bool use_tiling=ns_tiling;
+ int max_level = parent->maxLevel();
+ int finest_level=parent->finestLevel();
+
+ if (level==finest_level) {
+  // do nothing
+ } else 
+  amrex::Error("particle container on finest level only");
+
+ if (level==max_level) {
+  // do nothing
+ } else 
+  amrex::Error("particle container on max level only");
+
+ int nmat=num_materials;
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
+ int nsolveMM_FACE=num_materials_vel;
+
+ if (NS_ncomp_particles>0) {
+
+  MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
+  if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
+   amrex::Error("LSmf invalid ncomp");
+  if (LSmf->nGrow()!=1)
+   amrex::Error("LSmf->nGrow()!=1");
+
+  MultiFab* mac_velocity[AMREX_SPACEDIM];
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   mac_velocity[dir]=getStateMAC(1,dir,0,nsolveMM_FACE,vel_time_slab);
+  }
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
+
+  ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+   get_new_dataPC(State_Type,slab_step+1,ipart_id);
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   FArrayBox& lsfab=(*LSmf)[mfi];
+   FArrayBox& xvelfab=(*mac_velocity[0])[mfi];
+   FArrayBox& yvelfab=(*mac_velocity[1])[mfi];
+   FArrayBox& zvelfab=(*mac_velocity[AMREX_SPACEDIM-1])[mfi];
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   auto& particles = localPC.GetParticles(level)
+     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+   auto& particles_AoS = particles.GetArrayOfStructs();
+   int Np=particles_AoS.size();
+
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  }  // mfi
+} // omp
+  ns_reconcile_d_num(154);
+
+  delete LSmf;
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   delete mac_velocity[dir];
+  }
+  int lev_min=0;
+  int lev_max=-1;
+  int nGrow_Redistribute=0;
+  int local_Redistribute=1;
+  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_Redistribute);
+
+ } else
+  amrex::Error("expecting NS_ncomp_particles>0");
 
 } // end subroutine move_particles
 

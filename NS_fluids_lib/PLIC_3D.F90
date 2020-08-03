@@ -703,6 +703,7 @@ stop
         nextra_parm, &
         particle_nsubdivide, &
         particleLS_flag, &
+        imPLS, &
         n_part_FAB, &
         NS_ncomp_particles, &
         nmat, &
@@ -731,6 +732,7 @@ stop
       INTEGER_T, intent(in) :: level,finest_level
 
       INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: imPLS
       INTEGER_T, intent(in) :: n_part_FAB
       INTEGER_T, intent(in) :: NS_ncomp_particles
 

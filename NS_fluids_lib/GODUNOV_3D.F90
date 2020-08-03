@@ -28106,7 +28106,6 @@ stop
         matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
         RHS_points, &    ! least squares in 3D: 4
         ncomp_accumulate, & ! matrix_points+sdim * RHS_points
-        ipart_type, &    ! ipart_type==0 => bulk part. ipart_type==1 int. part.
         TNEWfab, &       ! FAB that hold elastic tensor when complete
         DIMS(TNEWfab), &
         matrixfab, &     ! accumulation FAB
@@ -28122,7 +28121,6 @@ stop
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, intent(in) :: ipart_type
       INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)

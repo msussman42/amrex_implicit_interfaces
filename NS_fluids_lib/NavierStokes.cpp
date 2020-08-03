@@ -19059,7 +19059,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   // particle levelset==0.0 for interface particles.
 
  ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    get_new_dataPC(State_Type,slab_step,ipart);
+    get_new_dataPC(State_Type,slab_step+1,ipart);
 
  const Vector<Geometry>& ns_geom=parent->Geom();
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
@@ -19145,7 +19145,6 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      &matrix_points,
      &RHS_points,
      &ncomp_accumulate,
-     &ipart_type,
      TNEWfab.dataPtr(scomp_tensor),
      ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
      matrixfab.dataPtr(),
@@ -19168,11 +19167,16 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
 // This routine called for level=finest_level 
 void
-NavierStokes::init_particle_container() {
+NavierStokes::init_particle_container(int imPLS,int ipart) {
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
+
+ if (slab_step==ns_time_order-1) {
+  // do nothing
+ } else
+  amrex::Error("expecting slab_step==ns_time_order-1");
 
  if (level==finest_level) {
   // do nothing
@@ -19224,21 +19228,16 @@ NavierStokes::init_particle_container() {
    const Real* xlo = grid_loc[gridno].lo();
  
    int n_part_FAB=0;
-   for (int im=0;im<nmat;im++) {
-    if (particleLS_flag[im]==1) {
-     int subdivide_mult=1;
-     for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
-      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-       subdivide_mult*=2;
-     }
-       // particle levelset == 0.0 for interface particles.
-     n_part_FAB+=subdivide_mult*(N_EXTRA_REAL+1);
-    } else if (particleLS_flag[im]==0) {
-     // do nothing
-    } else
-     amrex::Error("particleLS_flag[im] invalid");
-
-   }  // im=0..nmat-1
+   if (particleLS_flag[imPLS]==1) {
+    int subdivide_mult=1;
+    for (int imult2=1;imult2<particle_nsubdivide[imPLS];imult2++) { 
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+      subdivide_mult*=2;
+    }
+     // particle levelset == 0.0 for interface particles.
+    n_part_FAB=subdivide_mult*(N_EXTRA_REAL+1);
+   } else
+    amrex::Error("particleLS_flag[imPLS] invalid");
 
    FArrayBox particlefab(tilegrid,n_part_FAB);
 
@@ -19265,6 +19264,7 @@ NavierStokes::init_particle_container() {
     &nextra_parm,
     particle_nsubdivide.dataPtr(),
     particleLS_flag.dataPtr(),
+    &imPLS,
     &n_part_FAB,
     &NS_ncomp_particles,
     &nmat,
@@ -19279,22 +19279,18 @@ NavierStokes::init_particle_container() {
     voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
 
-   int ipart=0;
-   int ipart_FAB=0;
+   if (particleLS_flag[imPLS]==1) {
 
-   for (int im=0;im<nmat;im++) {
+     int ipart_FAB=0;
 
-    if (particleLS_flag[im]==1) {
-     // bulk particles
-     // interface particles
      int subdivide_mult=1;
-     for (int imult2=1;imult2<particle_nsubdivide[im];imult2++) { 
+     for (int imult2=1;imult2<particle_nsubdivide[imPLS];imult2++) { 
       for (int dir=0;dir<AMREX_SPACEDIM;dir++)
        subdivide_mult*=2;
      }
  
      ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-       get_new_dataPC(State_Type,slab_step,ipart);
+       get_new_dataPC(State_Type,slab_step+1,ipart);
 
      auto& particles = localPC.GetParticles(level)
        [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
@@ -19339,21 +19335,15 @@ NavierStokes::init_particle_container() {
 
      } // isub=0...subdivide_mult-1
 
-     ipart++;
+     if (ipart_FAB==n_part_FAB) {
+      // do nothing
+     } else
+      amrex::Error("ipart_FAB invalid");
 
-    } else if (particleLS_flag[im]==0) {
-     // do nothing
-    } else 
-     amrex::Error("particleLS_flag[im] invalid");
+   } else 
+    amrex::Error("particleLS_flag[imPLS] invalid");
 
-   } // im=0..nmat-1
-
-   if (ipart_FAB==n_part_FAB) {
-    // do nothing
-   } else
-    amrex::Error("ipart_FAB invalid");
-
-   if (ipart==NS_ncomp_particles) {
+   if (ipart<=NS_ncomp_particles) {
     // do nothing
    } else
     amrex::Error("ipart invalid");
@@ -19457,12 +19447,36 @@ NavierStokes::post_init_state () {
   rr.resize(ns_ba.size());
   for (int ilev=0;ilev<rr.size();ilev++)
    rr[ilev]=2;
-  for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
-   ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_finest.get_new_dataPC(State_Type,slab_step,ipart);
-   localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
-  }
-  ns_finest.init_particle_container();
+
+  int ipart=0;
+  for (int im=0;im<nmat;im++) {
+
+   if (particleLS_flag[im]==1) {
+
+    ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+     ns_finest.get_new_dataPC(State_Type,slab_step+1,ipart);
+    localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
+    ns_finest.init_particle_container(im,ipart);
+
+    int lev_min=0;
+    int lev_max=-1;
+    int nGrow_Redistribute=0;
+    int local_Redistribute=1;
+    localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_Redistribute);
+
+    ipart++;
+   } else if (particleLS_flag[im]==0) {
+    // do nothing
+   } else
+    amrex::Error("particleLS_flag[im] invalid");
+
+  } // im=0..nmat-1
+
+  if (ipart==NS_ncomp_particles) {
+   // do nothing
+  } else
+   amrex::Error("ipart invalid");
  
  } else if (NS_ncomp_particles==0) {
   // do nothing

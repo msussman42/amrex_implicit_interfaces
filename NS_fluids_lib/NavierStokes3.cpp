@@ -577,9 +577,9 @@ void NavierStokes::nonlinear_advection() {
    //     bool local=false);  (local==true => do not redistribute at end?)
    // 2. Copy Eulerian level set to Lagrangian particles.
    // 3. advect the particles using RK
-   // (note: bulk, interface)
+   // (note: interface particles distinguished by levelset==0.0)
    ns_finest.move_particles(im,ipart_id);
-   ipart_id+=2;
+   ipart_id++;
   } else if (particleLS_flag[im]==0) {
    // do nothing
   } else
