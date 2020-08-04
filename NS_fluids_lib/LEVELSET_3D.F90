@@ -17749,8 +17749,6 @@ stop
         Np_append, &
         cell_particle_count, &
         DIMS(cell_particle_count), &
-        maskfab,DIMS(maskfab), &
-        voffab,DIMS(voffab), &
         lsfab,DIMS(lsfab)) &
       bind(c,name='fort_init_particle_container')
 
@@ -17783,17 +17781,17 @@ stop
       INTEGER_T, intent(in) :: Np_append
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
-      INTEGER_T, intent(in) :: DIMDEC(maskfab)
-      INTEGER_T, intent(in) :: DIMDEC(voffab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
      
       INTEGER_T, intent(in) :: cell_particle_count( &
-              DIMV(cell_particle_count)) 
-       ! maskfab=tag if not covered by level+1 or outside the domain.
-      REAL_T, intent(in) :: maskfab(DIMV(maskfab)) 
-      REAL_T, intent(in) :: voffab(DIMV(voffab),nmat*ngeom_recon) 
+              DIMV(cell_particle_count), &
+              2) 
       REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
-      
+     
+      call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
+      call checkbound(fablo,fabhi,DIMS(cell_particle_count),0,-1,2872)
+
+ 
       return
       end subroutine fort_init_particle_container
 

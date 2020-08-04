@@ -783,8 +783,6 @@ namespace amrex{
 	int* cell_particle_count,
 	AMREX_ARLIM_P(cell_particle_countlo),
 	AMREX_ARLIM_P(cell_particle_counthi),
-        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
-        Real* voffab,AMREX_ARLIM_P(voffablo),AMREX_ARLIM_P(voffabhi),
         Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
 
 
