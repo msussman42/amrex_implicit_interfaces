@@ -17749,6 +17749,7 @@ stop
         Np_append, &
         cell_particle_count, &
         DIMS(cell_particle_count), &
+        xfootfab,DIMS(xfootfab), &
         lsfab,DIMS(lsfab)) &
       bind(c,name='fort_init_particle_container')
 
@@ -17781,13 +17782,17 @@ stop
       INTEGER_T, intent(in) :: Np_append
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
+      INTEGER_T, intent(in) :: DIMDEC(xfootfab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
      
       INTEGER_T, intent(in) :: cell_particle_count( &
               DIMV(cell_particle_count), &
               2) 
+      REAL_T, intent(in) :: xfootfab(DIMV(xfootfab),SDIM) 
       REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
-     
+    
+       ! data for xfootfab is at the nodes. 
+      call checkbound(fablo,fabhi,DIMS(xfootfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(cell_particle_count),0,-1,2872)
 

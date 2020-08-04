@@ -28143,8 +28143,8 @@ stop
 
       type(accum_parm_type) :: accum_PARM
 
-      INTEGER_T gridlo(3)
-      INTEGER_T gridhi(3)
+      INTEGER_T growlo(3)
+      INTEGER_T growhi(3)
       INTEGER_T i,j,k
       INTEGER_T n
       INTEGER_T dir
@@ -28218,12 +28218,12 @@ stop
          DIMS(matrixfab), &
          ncomp_accumulate)
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,gridlo,gridhi,0) 
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
       n=SDIM+1
-      do i=gridlo(1),gridhi(1)
-      do j=gridlo(2),gridhi(2)
-      do k=gridlo(3),gridhi(3)
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
        call gridsten_level(xsten,i,j,k,level,nhalf)
        ibase=1
        do ii=1,n
@@ -28455,8 +28455,8 @@ stop
       REAL_T tmp,w_p
       REAL_T xc(SDIM)
       INTEGER_T ibase
-      INTEGER_T gridlo(3)
-      INTEGER_T gridhi(3)
+      INTEGER_T growlo(3)
+      INTEGER_T growhi(3)
 
        ! Prior to this routine being called, "matrixfab" is initialized with
        ! all zeroes.  After sweeping through all the particles, 
@@ -28487,7 +28487,7 @@ stop
        ! Union_{k'=tilelo(3) ...tilehi(3)} Omega_{i',j',k'}
 
       call growntileboxNODE(accum_PARM%tilelo,accum_PARM%tilehi, &
-        accum_PARM%fablo,accum_PARM%fabhi,gridlo,gridhi,0) 
+        accum_PARM%fablo,accum_PARM%fabhi,growlo,growhi,0) 
 
       nhalf=3
 
@@ -28517,8 +28517,8 @@ stop
        do while (idx(3).le.subhi(3))
         interior_ok=1
         do dir=1,SDIM
-         if ((idx(dir).lt.gridlo(dir)).or. &
-             (idx(dir).gt.gridhi(dir))) then
+         if ((idx(dir).lt.growlo(dir)).or. &
+             (idx(dir).gt.growhi(dir))) then
           interior_ok=0
          endif
         enddo
@@ -28663,7 +28663,7 @@ stop
         DIMS(TNEWfab), &
         matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
-      bind(c,name='fort_assimilate_tensor_from_particles')
+      bind(c,name='fort_assimilate_x_foot_from_particles')
 
       use ZEYU_LS_extrapolation, only : least_squares_QR
       use global_utility_module
@@ -28696,8 +28696,8 @@ stop
 
       type(accum_parm_type) :: accum_PARM
 
-      INTEGER_T gridlo(3)
-      INTEGER_T gridhi(3)
+      INTEGER_T growlo(3)
+      INTEGER_T growhi(3)
       INTEGER_T i,j,k
       INTEGER_T n
       INTEGER_T dir
@@ -28767,12 +28767,12 @@ stop
          DIMS(matrixfab), &
          ncomp_accumulate)
 
-      call growntileboxNODE(tilelo,tilehi,fablo,fabhi,gridlo,gridhi,0) 
+      call growntileboxNODE(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
       n=SDIM+1
-      do i=gridlo(1),gridhi(1)
-      do j=gridlo(2),gridhi(2)
-      do k=gridlo(3),gridhi(3)
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
        call gridstenND_level(xsten,i,j,k,level,nhalf)
        ibase=1
        do ii=1,n

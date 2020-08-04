@@ -19348,6 +19348,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& lsfab=(*LSmf)[mfi];
+    FArrayBox& xfootfab=(*x_foot_mf)[mfi];
 
      // bulk, interface
     BaseFab<int> cell_particle_count(tilegrid,2);
@@ -19404,6 +19405,8 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
        cell_particle_count.dataPtr(),
        ARLIM(cell_particle_count.loVect()),
        ARLIM(cell_particle_count.hiVect()),
+       xfootfab.dataPtr(),
+       ARLIM(xfootfab.loVect()),ARLIM(xfootfab.hiVect()),
        lsfab.dataPtr(),
        ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
 
