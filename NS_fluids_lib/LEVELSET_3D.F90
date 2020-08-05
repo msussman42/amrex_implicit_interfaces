@@ -17075,6 +17075,28 @@ stop
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
        end type accum_parm_type_LS
 
+
+       type accum_parm_type_count
+        INTEGER_T, pointer :: fablo(:)
+        INTEGER_T, pointer :: fabhi(:)
+        INTEGER_T, pointer :: tilelo(:)
+        INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: bfact
+        INTEGER_T :: level
+        INTEGER_T :: finest_level
+        REAL_T, pointer :: dx(:)
+        REAL_T, pointer :: xlo(:)
+        INTEGER_T :: Npart
+        type(particle_t), pointer, dimension(:) :: particles
+        INTEGER_T :: im_PLS
+        INTEGER_T :: DIMDEC(LS)
+        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+        INTEGER_T :: DIMDEC(xfoot)
+        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: xfootfab
+        INTEGER_T :: DIMDEC(cell_particle_count)
+       end type accum_parm_type_count
+
+
       contains
 
       subroutine traverse_particlesLS( &
@@ -17727,6 +17749,75 @@ stop
         ! i_contain=NINT((xpart-xlo(1))/dx(1)+fablo(1)-0.5d0)
       end subroutine fort_assimilate_lvlset_from_particles
 
+      subroutine count_particles( &
+       accum_PARM, &
+       cell_particle_count)
+
+      use global_utility_module
+
+      type(accum_parm_type_count), intent(in) :: accum_PARM
+      INTEGER_T, intent(inout), pointer, &
+        dimension(D_DECL(:,:,:),:) :: cell_particle_count
+
+      INTEGER_T :: interior_ID
+      INTEGER_T :: dir
+      REAL_T xpart(SDIM)
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T interior_ok
+      INTEGER_T i,j,k
+      REAL_T LSpart
+      INTEGER_T :: modcomp
+
+
+      do interior_ID=1,accum_PARM%Npart
+
+       do dir=1,SDIM
+        xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+       enddo
+       call containing_cell(accum_PARM%bfact, &
+         accum_PARM%dx, &
+         accum_PARM%xlo, &
+         accum_PARM%fablo, &
+         xpart, &
+         cell_index)
+
+       interior_ok=1
+       do dir=1,SDIM
+        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
+            (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
+         interior_ok=0
+        endif
+       enddo
+       if (interior_ok.eq.1) then
+        LSpart=accum_PARM%particles(interior_ID)%closest_dist
+
+        i=cell_index(1)
+        j=cell_index(2)
+        k=cell_index(SDIM)
+        if (LSpart.gt.zero) then
+         modcomp=1
+        else if (LSpart.lt.zero) then
+         modcomp=2
+        else if (LSpart.eq.zero) then
+         modcomp=3
+        else
+         print *,"LSpart invalid"
+         stop
+        endif 
+        cell_particle_count(D_DECL(i,j,k),modcomp)= &
+          cell_particle_count(D_DECL(i,j,k),modcomp)+1
+
+       else if (interior_ok.eq.0) then
+        ! do nothing
+       else
+        print *,"interior_ok invalid"
+        stop
+       endif
+
+      enddo ! do interior_ID=1,accum_PARM%Npart
+
+      return
+      end subroutine count_particles
 
       subroutine fort_init_particle_container( &
         tid, &
@@ -17735,7 +17826,7 @@ stop
         append_flag, &
         particle_nsubdivide, &
         particleLS_flag, &
-        imPLS, &
+        im_PLS, &
         nmat, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
@@ -17767,35 +17858,89 @@ stop
       INTEGER_T, intent(in) :: level,finest_level
 
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: imPLS
+      INTEGER_T, intent(in) :: im_PLS
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: particle_nsubdivide(nmat)
       INTEGER_T, intent(in) :: particleLS_flag(nmat)
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
       type(particle_t), intent(in), target :: particles(Np)
-      INTEGER_T, intent(in) :: Np_new
-      REAL_T, intent(in) :: new_particles(Np_new);
+      INTEGER_T, intent(inout) :: Np_new
+      REAL_T, intent(out) :: new_particles(Np_new);
       INTEGER_T, intent(in) :: Np_append
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
       INTEGER_T, intent(in) :: DIMDEC(xfootfab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
-     
-      INTEGER_T, intent(in) :: cell_particle_count( &
+    
+        ! positive, negative, zero 
+      INTEGER_T, intent(inout), target :: cell_particle_count( &
               DIMV(cell_particle_count), &
-              2) 
-      REAL_T, intent(in) :: xfootfab(DIMV(xfootfab),SDIM) 
-      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+              3) 
+      REAL_T, intent(in), target :: xfootfab(DIMV(xfootfab),SDIM) 
+      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+
+      type(accum_parm_type_count) :: accum_PARM
+      INTEGER_T, pointer, &
+        dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
     
        ! data for xfootfab is at the nodes. 
       call checkbound(fablo,fabhi,DIMS(xfootfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(cell_particle_count),0,-1,2872)
 
+      accum_PARM%fablo=>fablo 
+      accum_PARM%fabhi=>fabhi
+      accum_PARM%tilelo=>tilelo 
+      accum_PARM%tilehi=>tilehi
+      accum_PARM%bfact=bfact
+      accum_PARM%level=level
+      accum_PARM%finest_level=finest_level
+      accum_PARM%dx=>dx
+      accum_PARM%xlo=>xlo
+
+      accum_PARM%im_PLS=im_PLS
+      call copy_dimdec( &
+        DIMS(accum_PARM%LS), &
+        DIMS(lsfab))
+      accum_PARM%LS=>lsfab  ! accum_PARM%LS is pointer, LS is target
+
+      call copy_dimdec( &
+        DIMS(accum_PARM%xfoot), &
+        DIMS(xfootfab))
+      accum_PARM%xfootfab=>xfootfab  
+
+      call copy_dimdec( &
+        DIMS(accum_PARM%cell_particle_count), &
+        DIMS(cell_particle_count))
+
+      accum_PARM%particles=>particles
+      accum_PARM%Npart=Np
+
+
+      if (isweep.eq.0) then
+       if (append_flag.eq.1) then
+        cell_particle_count_ptr=>cell_particle_count
+        call count_particles(accum_PARM, &
+         cell_particle_count_ptr)
+
+       else if (append_flag.eq.0) then
+        ! do nothing
+       else
+        print *,"append_flag invalid"
+        stop
+       endif
+
+      else if (isweep.eq.1) then
+
+
+      else
+       print *,"isweep invalid"
+       stop
+      endif
  
       return
       end subroutine fort_init_particle_container
@@ -17803,7 +17948,7 @@ stop
 
       subroutine fort_move_particle_container( &
         tid, &
-        imPLS, &
+        im_PLS, &
         nmat, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
@@ -17834,7 +17979,7 @@ stop
 
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: imPLS
+      INTEGER_T, intent(in) :: im_PLS
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)

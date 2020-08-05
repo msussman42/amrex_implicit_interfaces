@@ -19350,8 +19350,8 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
     FArrayBox& lsfab=(*LSmf)[mfi];
     FArrayBox& xfootfab=(*x_foot_mf)[mfi];
 
-     // bulk, interface
-    BaseFab<int> cell_particle_count(tilegrid,2);
+     // positive, negative, interface
+    BaseFab<int> cell_particle_count(tilegrid,3);
     cell_particle_count.setVal(0);
 
      // allocate for just one particle for now.
