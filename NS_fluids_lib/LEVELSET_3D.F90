@@ -17751,13 +17751,18 @@ stop
 
       subroutine count_particles( &
        accum_PARM, &
-       cell_particle_count)
+       cell_particle_count, &
+       particles, &
+       Np)
 
       use global_utility_module
+      use mass_transfer_module
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
       INTEGER_T, intent(inout), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
+      INTEGER_T, intent(in) :: Np 
+      type(particle_t), intent(inout), target :: particles(Np)
 
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
@@ -17765,8 +17770,9 @@ stop
       INTEGER_T cell_index(SDIM)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
-      REAL_T LSpart
+      REAL_T LSpart,LSpart_trial
       INTEGER_T :: modcomp
+      INTEGER_T :: local_ngrow
 
 
       do interior_ID=1,accum_PARM%Npart
@@ -17806,7 +17812,46 @@ stop
         endif 
         cell_particle_count(D_DECL(i,j,k),modcomp)= &
           cell_particle_count(D_DECL(i,j,k),modcomp)+1
-
+ 
+        if ((modcomp.eq.1).or.(modcomp.eq.2)) then
+         local_ngrow=1
+         call interpfab( &
+          accum_PARM%bfact, &
+          accum_PARM%level, &
+          accum_PARM%finest_level, &
+          accum_PARM%dx, &
+          accum_PARM%xlo, &
+          xpart, &
+          accum_PARM%im_PLS, &
+          local_ngrow, &
+          accum_PARM%fablo, &
+          accum_PARM%fabhi, &
+          accum_PARM%LS, &
+          DIMS(accum_PARM%LS), &
+          LSpart_trial)
+         if (LSpart_trial*LSpart.le.zero) then
+          LSpart_trial=half*(LSpart_trial+LSpart)
+          if (LSpart_trial*LSpart.le.zero) then
+           LSpart_trial=half*LSpart
+          else if (LSpart_trial*LSpart.gt.zero) then
+           ! do nothing
+          else
+           print *,"LSpart_trial or LSpart invalid"
+           stop
+          endif
+         else if (LSpart_trial*LSpart.gt.zero) then
+          ! do nothing
+         else
+          print *,"LSpart_trial or LSpart invalid"
+          stop
+         endif
+         particles(interior_ID)%closest_dist=LSpart_trial
+        else if (modcomp.eq.3) then
+         ! do nothing
+        else
+         print *,"modcomp invalid"
+         stop
+        endif
        else if (interior_ok.eq.0) then
         ! do nothing
        else
@@ -17867,7 +17912,7 @@ stop
       INTEGER_T, intent(in) :: particleLS_flag(nmat)
       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
-      type(particle_t), intent(in), target :: particles(Np)
+      type(particle_t), intent(inout), target :: particles(Np)
       INTEGER_T, intent(inout) :: Np_new
       REAL_T, intent(out) :: new_particles(Np_new);
       INTEGER_T, intent(in) :: Np_append
@@ -17925,8 +17970,9 @@ stop
        if (append_flag.eq.1) then
         cell_particle_count_ptr=>cell_particle_count
         call count_particles(accum_PARM, &
-         cell_particle_count_ptr)
-
+         cell_particle_count_ptr, &
+         particles, &  ! output since levelset value is modified.
+         Np)
        else if (append_flag.eq.0) then
         ! do nothing
        else
