@@ -19351,7 +19351,9 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
     FArrayBox& xfootfab=(*x_foot_mf)[mfi];
 
      // positive, negative, interface
-    BaseFab<int> cell_particle_count(tilegrid,3);
+     // positive link, negative link, interface link
+     // The link index will start at 1.
+    BaseFab<int> cell_particle_count(tilegrid,6);
     cell_particle_count.setVal(0);
 
      // allocate for just one particle for now.
@@ -19364,6 +19366,14 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
     auto& particles_AoS = particles.GetArrayOfStructs();
     int Np=particles_AoS.size();
+
+     // The link index will start at 1.
+    Vector< int > particle_link_data;
+     // i_particle_link_1,i1,j1,k1,   (child link, parent link)
+     // i_particle_link_2,i2,j2,k2,  ...
+    particle_link_data.resize(Np*(1+AMREX_SPACEDIM));
+    for (int i_link=0;i_link<Np*(1+AMREX_SPACEDIM);i_link++)
+     particle_link_data[i_link]=0;
 
     int Np_append=0;  // number of particles to append
 
@@ -19402,6 +19412,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
        new_particle_data.dataPtr(),
        &Np_new,
        &Np_append,  // number of particles to append
+       particle_link_data.dataPtr(),
        cell_particle_count.dataPtr(),
        ARLIM(cell_particle_count.loVect()),
        ARLIM(cell_particle_count.hiVect()),

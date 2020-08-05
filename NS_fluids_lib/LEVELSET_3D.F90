@@ -17753,6 +17753,7 @@ stop
        accum_PARM, &
        cell_particle_count, &
        particles, &
+       particle_link_data, &
        Np)
 
       use global_utility_module
@@ -17762,7 +17763,10 @@ stop
       INTEGER_T, intent(inout), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
       INTEGER_T, intent(in) :: Np 
-      type(particle_t), intent(inout), target :: particles(Np)
+      type(particle_t), intent(inout) :: particles(Np)
+       ! child link 1, parent link 1,
+       ! child link 2, parent link 2, ...
+      INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
 
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
@@ -17773,7 +17777,11 @@ stop
       REAL_T LSpart,LSpart_trial
       INTEGER_T :: modcomp
       INTEGER_T :: local_ngrow
-
+      INTEGER_T :: ok_to_add_link
+      INTEGER_T :: previous_link
+      INTEGER_T :: ibase
+      INTEGER_T :: ibase_new
+      INTEGER_T :: i_parent,j_parent,k_parent
 
       do interior_ID=1,accum_PARM%Npart
 
@@ -17810,9 +17818,63 @@ stop
          print *,"LSpart invalid"
          stop
         endif 
-        cell_particle_count(D_DECL(i,j,k),modcomp)= &
-          cell_particle_count(D_DECL(i,j,k),modcomp)+1
- 
+
+        ok_to_add_link=1
+
+        previous_link=cell_particle_count(D_DECL(i,j,k),3+modcomp)
+        if (previous_link.eq.0) then
+         ! do nothing
+        else if ((previous_link.ge.1).and. &
+                 (previous_link.le.Np)) then
+         ibase=(previous_link-1)*(SDIM+1)
+         i_parent=particle_link_data(ibase+2) 
+         j_parent=particle_link_data(ibase+3) 
+         k_parent=particle_link_data(ibase+1+SDIM) 
+         if ((i.eq.i_parent).and. &
+             (j.eq.j_parent)) then
+          ! do nothing
+         else
+          ok_to_add_link=0
+         endif
+         if (SDIM.eq.3) then
+          if (k.eq.k_parent) then
+           ! do nothing
+          else
+           ok_to_add_link=0
+          endif
+         endif
+        else
+         print *,"previous_link invalid"
+         stop
+        endif
+
+        if (ok_to_add_link.eq.1) then
+
+         if (previous_link.eq.interior_ID) then
+          print *,"links should be unique"
+          stop
+         endif
+
+         cell_particle_count(D_DECL(i,j,k),modcomp)= &
+           cell_particle_count(D_DECL(i,j,k),modcomp)+1
+
+         cell_particle_count(D_DECL(i,j,k),modcomp+3)=interior_ID
+
+         ibase_new=(interior_ID-1)*(SDIM+1)
+         particle_link_data(ibase_new+1)=previous_link
+         particle_link_data(ibase_new+2)=i 
+         particle_link_data(ibase_new+3)=j
+         if (SDIM.eq.3) then 
+          particle_link_data(ibase_new+SDIM+1)=k
+         endif
+
+        else if (ok_to_add_link.eq.0) then
+         ! do nothing
+        else
+         print *,"ok_to_add_link invalid"
+         stop
+        endif
+
         if ((modcomp.eq.1).or.(modcomp.eq.2)) then
          local_ngrow=1
          call interpfab( &
@@ -17883,6 +17945,7 @@ stop
         new_particles, &
         Np_new, &
         Np_append, &
+        particle_link_data, &
         cell_particle_count, &
         DIMS(cell_particle_count), &
         xfootfab,DIMS(xfootfab), &
@@ -17914,17 +17977,21 @@ stop
       INTEGER_T, value, intent(in) :: Np ! pass by value
       type(particle_t), intent(inout), target :: particles(Np)
       INTEGER_T, intent(inout) :: Np_new
-      REAL_T, intent(out) :: new_particles(Np_new);
+      REAL_T, intent(out) :: new_particles(Np_new)
       INTEGER_T, intent(in) :: Np_append
+
+       ! child link 1, parent link 1,
+       ! child link 2, parent link 2, ...
+      INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
       INTEGER_T, intent(in) :: DIMDEC(xfootfab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
     
-        ! positive, negative, zero 
+        ! positive, negative, 0, positive link, negative link, 0 link
       INTEGER_T, intent(inout), target :: cell_particle_count( &
               DIMV(cell_particle_count), &
-              3) 
+              6) 
       REAL_T, intent(in), target :: xfootfab(DIMV(xfootfab),SDIM) 
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
 
@@ -17969,9 +18036,11 @@ stop
       if (isweep.eq.0) then
        if (append_flag.eq.1) then
         cell_particle_count_ptr=>cell_particle_count
-        call count_particles(accum_PARM, &
+        call count_particles( &
+         accum_PARM, &
          cell_particle_count_ptr, &
          particles, &  ! output since levelset value is modified.
+         particle_link_data, &
          Np)
        else if (append_flag.eq.0) then
         ! do nothing
@@ -17979,7 +18048,11 @@ stop
         print *,"append_flag invalid"
         stop
        endif
-
+       ! 1. traverse by cell
+       ! 2. within each cell, initialize counts for each subdivision.
+       ! 3. add particles within the subdivided cell using LS and
+       !    xfoot from previous particle (Lagrangian) data in the 
+       !    cell and previous Eulerian data.
       else if (isweep.eq.1) then
 
 

@@ -780,6 +780,7 @@ namespace amrex{
         Real* new_particles,
         int* Np_new, 
         int* Np_append, 
+	int* particle_link_data,
 	int* cell_particle_count,
 	AMREX_ARLIM_P(cell_particle_countlo),
 	AMREX_ARLIM_P(cell_particle_counthi),
