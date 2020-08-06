@@ -17099,7 +17099,6 @@ stop
         INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: cell_particle_count
        end type accum_parm_type_count
 
-
       contains
 
       subroutine traverse_particlesLS( &
@@ -17919,6 +17918,221 @@ stop
       return
       end subroutine count_particles
 
+      subroutine containing_sub_box( &
+         accum_PARM, &
+         xpart, &
+         i,j,k, &
+         isub,jsub,ksub, &
+         sub_found)
+      type(accum_parm_type_count), intent(in) :: accum_PARM
+      REAL_T, intent(in) :: xpart(SDIM)
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(out) :: isub,jsub,ksub
+      INTEGER_T, intent(out) :: sub_found
+      INTEGER_T :: nhalf
+      INTEGER_T :: dir
+      REAL_T :: xsten(-3:3,SDIM)
+      INTEGER_T :: isub_local(3)
+      REAL_T :: dx_sub
+
+      nhalf=3
+      call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+      sub_found=1
+      isub_local(3)=0
+       ! x=xlo + (isub+1/2)*dx
+       ! isub=(x-xlo)/dx -1/2
+      do dir=1,SDIM
+       dx_sub=(xsten(1,dir)-xsten(-1,dir))/accum_PARM%nsubdivide
+       if (dx_sub.gt.zero) then
+        if (abs(xpart(dir)-xsten(-1,dir)).le.1.0D-8*dx_sub) then
+         isub_local(dir)=0
+        else if (abs(xpart(dir)-xsten(1,dir)).le.1.0D-8*dx_sub) then
+         isub_local(dir)=accum_PARM%nsubdivide-1
+        else if ((xpart(dir).ge.xsten(-1,dir)).and. &
+                 (xpart(dir).le.xsten(1,dir))) then
+         isub_local(dir)=NINT((xpart(dir)-xsten(-1,dir))/dx_sub-half)
+        else
+         isub_local(dir)=0
+         sub_found=0
+        endif
+       else
+        print *,"dx_sub invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      isub=isub_local(1)
+      jsub=isub_local(2)
+      ksub=isub_local(3)
+
+      end subroutine containing_sub_box
+
+      subroutine sub_box_cell_center( &
+         accum_PARM, &
+         i,j,k, &
+         isub,jsub,ksub, &
+         xsub)
+      type(accum_parm_type_count), intent(in) :: accum_PARM
+      REAL_T, intent(out) :: xsub(SDIM)
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: isub,jsub,ksub
+      INTEGER_T :: nhalf
+      INTEGER_T :: dir
+      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: dx_sub
+      INTEGER_T isub_local(3)
+
+      isub_local(1)=isub
+      isub_local(2)=jsub
+      isub_local(3)=ksub
+
+      nhalf=3
+      call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+       ! x=xlo + (isub+1/2)*dx
+      do dir=1,SDIM
+       dx_sub=(xsten(1,dir)-xsten(-1,dir))/accum_PARM%nsubdivide
+       if (dx_sub.gt.zero) then
+        xsub(dir)=xsten(-1,dir)+(isub_local(dir)+half)*dx_sub
+       else
+        print *,"dx_sub invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      end subroutine sub_box_cell_center
+
+      subroutine interp_eul_lag_dist( &
+         accum_PARM, &
+         i,j,k, &
+         xtarget, &
+         particle_link_data, &
+         Np, &
+         dist_interp, &
+         grad_dist_interp, &
+         x_foot_interp)  ! x_foot_interp=xtarget if append_flag==0
+      type(accum_parm_type_count), intent(in) :: accum_PARM
+      INTEGER_T, intent(in) :: i,j,k
+      REAL_T, intent(in) :: xtarget(SDIM)
+      INTEGER_T, intent(in) :: Np
+      INTEGER_T, intent(in) :: particle_link_data(Np*(1+SDIM))
+      REAL_T, intent(out) :: dist_interp
+      REAL_T, intent(out) :: grad_dist_interp(SDIM)
+      REAL_T, intent(out) :: x_foot_interp(SDIM)
+
+      INTEGER_T :: nhalf
+      INTEGER_T :: dir
+      INTEGER_T :: ii,jj
+      INTEGER_T :: n
+      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T A_LS(SDIM+1,SDIM+1),b_LS(SDIM+1)
+      REAL_T A_X(SDIM+1,SDIM+1),b_X(SDIM,SDIM+1)
+
+      nhalf=3
+      call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+
+      do ii=1,SDIM+1
+      do jj=1,SDIM+1
+       A_LS(ii,jj)=zero
+       A_X(ii,jj)=zero
+      enddo
+      enddo
+      do ii=1,SDIM+1
+       b_LS(ii)=zero
+       do dir=1,SDIM
+        b_X(dir,ii)=zero
+       enddo
+      enddo
+      current_link=accum_PARM%cell_particle_count(D_DECL(i,j,k),2)
+      do while (current_link.ge.1)
+       do dir=1,SDIM
+        xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
+        xfoot(dir)=accum_PARM%particles(current_link)%pos_foot(dir)
+       enddo 
+       LS=accum_PARM%particles(current_link)%closest_dist
+       ipart_flag=1
+       call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag)
+       call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag)
+
+       ibase=(current_link-1)*(1+SDIM)
+       current_link=particle_link_data(ibase+1)
+      enddo ! while (current_link.ge.1)
+
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       istenlo(dir)=-1
+       istenhi(dir)=1
+      enddo
+      do ii=i+istenlo(1),i+istenhi(1)
+      do jj=j+istenlo(2),j+istenhi(2)
+      do kk=k+istenlo(3),k+istenhi(3)
+       call gridsten_level(xsten,ii,jj,kk,accum_PARM%level,nhalf)
+       do dir=1,SDIM
+        xpart(dir)=xsten(0,dir)
+       enddo 
+       LS=accum_PARM%LS(D_DECL(ii,jj,kk),accum_PARM%im_PLS)
+       ipart_flag=0
+       call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag)
+      enddo
+      enddo
+      enddo
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       istenlo(dir)=0
+       istenhi(dir)=1
+      enddo
+
+      do ii=i+istenlo(1),i+istenhi(1)
+      do jj=j+istenlo(2),j+istenhi(2)
+      do kk=k+istenlo(3),k+istenhi(3)
+       call gridstenND_level(xsten,ii,jj,kk,accum_PARM%level,nhalf)
+       do dir=1,SDIM
+        xpart(dir)=xsten(0,dir)
+        xfoot(dir)=accum_PARM%xfootfab(D_DECL(ii,jj,kk),dir)
+       enddo 
+       ipart_flag=0
+       call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag)
+      enddo
+      enddo
+      enddo
+      n=SDIM+1
+      call least_squares_QR(A_LS,xlocal,b_LS,n,n)
+      dist_interp=xlocal(1)
+      mag=zero
+      do dir=1,SDIM
+       grad_dist_interp(dir)=xlocal(1+dir)
+       mag=mag+grad_dist_interp(dir)**2
+      enddo
+      mag=sqrt(mag)
+      if (mag.gt.zero) then
+       do dir=1,SDIM
+        grad_dist_interp(dir)=grad_dist_interp(dir)/mag
+       enddo
+      else if (mag.eq.zero) then
+       ! do nothing
+      else
+       print *,"mag invalid"
+       stop
+      endif
+      do dir=1,SDIM
+       do dir_inner=1,SDIM+1
+        b_local(dir_inner)=b_X(dir,dir_inner)
+       enddo 
+       call least_squares_QR(A_X,xlocal,b_local,n,n)
+       if (accum_PARM%append_flag.eq.0) then
+        x_foot_interp(dir)=xtarget(dir)
+       else if (accum_PARM%append_flag.eq.1) then
+        x_foot_interp(dir)=xlocal(1)
+       else
+        print *,"accum_PARM%append_flag invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      end subroutine interp_eul_lag_dist
+
+
       subroutine fort_init_particle_container( &
         tid, &
         single_particle_size, &
@@ -18127,6 +18341,7 @@ stop
         ibase=(current_link-1)*(1+SDIM)
         current_link=particle_link_data(ibase+1)
        enddo ! while (current_link.ge.1)
+
        if (cell_count_check.eq. &
            cell_particle_count(D_DECL(i,j,k),1)) then
         do isub=sublo(1),subhi(1)
@@ -18175,7 +18390,8 @@ stop
            call project_to_cell( &
             accum_PARM, &
             i,j,k, &
-            xsub_I)
+            xsub_I, &
+            mod_flag)
 
            call interp_eul_lag_dist( &
             accum_PARM, &
@@ -18197,7 +18413,14 @@ stop
              new_particles(ibase+dir)=xsub_I(dir)
              new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
             enddo
-            new_particles(ibase+2*SDIM+1)=zero
+            if (mod_flag.eq.0) then
+             new_particles(ibase+2*SDIM+1)=zero
+            else if (mod_flag.eq.1) then
+             new_particles(ibase+2*SDIM+1)=dist_sub
+            else
+             print *,"mod_flag invalid"
+             stop
+            endif
            else
             print *,"isweep invalid"
             stop
