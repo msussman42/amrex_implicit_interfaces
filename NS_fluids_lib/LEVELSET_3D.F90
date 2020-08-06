@@ -17081,6 +17081,7 @@ stop
         INTEGER_T, pointer :: fabhi(:)
         INTEGER_T, pointer :: tilelo(:)
         INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: append_flag
         INTEGER_T :: bfact
         INTEGER_T :: level
         INTEGER_T :: finest_level
@@ -18011,6 +18012,8 @@ stop
        stop
       endif
 
+      accum_PARM%append_flag=append_flag
+
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
       accum_PARM%tilelo=>tilelo 
@@ -18109,11 +18112,11 @@ stop
          xpart(dir)=particles(current_link)%pos(dir)
         enddo 
         call containing_sub_box( &
-                accum_PARM, &
-                xpart, &
-                i,j,k, &
-                isub,jsub,ksub, &
-                sub_found)
+          accum_PARM, &
+          xpart, &
+          i,j,k, &
+          isub,jsub,ksub, &
+          sub_found)
         if (sub_found.eq.1) then
          sub_counter(isub,jsub,ksub)=sub_counter(isub,jsub,ksub)+1
          cell_count_check=cell_count_check+1
@@ -18131,6 +18134,84 @@ stop
         do ksub=sublo(3),subhi(3)
          ! increment Np_append if isweep == 0
          ! always increment Np_append_test
+         local_count=sub_counter(isub,jsub,ksub)
+         if (local_count.ge.1) then
+          ! do nothing
+         else if (local_count.eq.0) then
+          call sub_box_cell_center( &
+            accum_PARM, &
+            i,j,k, &
+            isub,jsub,ksub, &
+            xsub)
+          call interp_eul_lag_dist( &
+            accum_PARM, &
+            i,j,k, &
+            xsub, &
+            particle_link_data, &
+            Np, &
+            dist_sub, &
+            grad_dist_sub, &
+            x_foot_sub)  ! x_foot_sub=xsub if append_flag==0
+
+          Np_append_test=Np_append_test+1
+
+          if (isweep.eq.0) then
+           ! do nothing
+          else if (isweep.eq.1) then
+           ibase=(Np_append_test-1)*single_particle_size
+           do dir=1,SDIM
+            new_particles(ibase+dir)=xsub(dir)
+            new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
+           enddo
+           new_particles(ibase+2*SDIM+1)=dist_sub
+          else
+           print *,"isweep invalid"
+           stop
+          endif
+          if (abs(dist_sub).le.dist_sub_cutoff) then
+           do dir=1,SDIM
+            xsub_I(dir)=xsub(dir)-dist_sub*grad_dist_sub(dir)
+           enddo 
+           call project_to_cell( &
+            accum_PARM, &
+            i,j,k, &
+            xsub_I)
+
+           call interp_eul_lag_dist( &
+            accum_PARM, &
+            i,j,k, &
+            xsub_I, &
+            particle_link_data, &
+            Np, &
+            dist_sub, &
+            grad_dist_sub, &
+            x_foot_sub)  ! x_foot_sub=xsub if append_flag==0
+
+           Np_append_test=Np_append_test+1
+
+           if (isweep.eq.0) then
+            ! do nothing
+           else if (isweep.eq.1) then
+            ibase=(Np_append_test-1)*single_particle_size
+            do dir=1,SDIM
+             new_particles(ibase+dir)=xsub_I(dir)
+             new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
+            enddo
+            new_particles(ibase+2*SDIM+1)=zero
+           else
+            print *,"isweep invalid"
+            stop
+           endif
+          else if (abs(dist_sub).gt.dist_sub_cutoff) then
+           ! do not try to add an interface particle
+          else
+           print *,"dist_sub is corrupt"
+           stop
+          endif
+         else
+          print *,"local_count invalid"
+          stop
+         endif
         enddo
         enddo
         enddo
@@ -18141,6 +18222,22 @@ stop
       enddo 
       enddo 
       enddo 
+
+      if (isweep.eq.0) then
+       Np_append=Np_append_test
+      else if (isweep.eq.1) then
+       if ((Np_append.eq.Np_append_test).and. &
+           (new_Pdata_size.eq. &
+            Np_append*single_particle_size)) then
+        ! do nothing
+       else
+        print *,"Np_append or new_Pdata_size invalid"
+        stop
+       endif
+      else
+       print *,"isweep invalid"
+       stop
+      endif
 
       deallocate(sub_counter)
       return

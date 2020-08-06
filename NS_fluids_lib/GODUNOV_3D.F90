@@ -27911,6 +27911,7 @@ stop
       REAL_T tmp,w_p
       REAL_T xc(SDIM)
       INTEGER_T ibase
+      REAL_T local_dist
 
        ! Prior to this routine being called, "matrixfab" is initialized with
        ! all zeroes.  After sweeping through all the particles, 
@@ -27950,142 +27951,154 @@ stop
         xpartfoot(dir)=accum_PARM%particles(interior_ID)%pos_foot(dir)
         xdisp(dir)=xpart(dir)-xpartfoot(dir)
        enddo
-       call containing_cell(accum_PARM%bfact, &
+       local_dist=accum_PARM%particles(interior_ID)%closest_dist
+
+       if (local_dist.ge.zero) then
+
+        call containing_cell(accum_PARM%bfact, &
          accum_PARM%dx, &
          accum_PARM%xlo, &
          accum_PARM%fablo, &
          xpart, &
          cell_index)
-       sublo(3)=0
-       subhi(3)=0
-       do dir=1,SDIM
-        sublo(dir)=cell_index(dir)-1
-        subhi(dir)=cell_index(dir)+1
-       enddo
-       idx(1)=sublo(1)
-       idx(2)=sublo(2)
-       idx(3)=sublo(3)
-       do while (idx(3).le.subhi(3))
-        interior_ok=1
+        sublo(3)=0
+        subhi(3)=0
         do dir=1,SDIM
-         if ((idx(dir).lt.accum_PARM%tilelo(dir)).or. &
-             (idx(dir).gt.accum_PARM%tilehi(dir))) then
-          interior_ok=0
-         endif
+         sublo(dir)=cell_index(dir)-1
+         subhi(dir)=cell_index(dir)+1
         enddo
-        if (interior_ok.eq.1) then
-         i=idx(1)
-         j=idx(2)
-         k=idx(3)
-         call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
-         tmp=0.0d0
+        idx(1)=sublo(1)
+        idx(2)=sublo(2)
+        idx(3)=sublo(3)
+        do while (idx(3).le.subhi(3))
+         interior_ok=1
          do dir=1,SDIM
-          xc(dir)=xsten(0,dir)
-          tmp=tmp+(xpart(dir)-xc(dir))**2
+          if ((idx(dir).lt.accum_PARM%tilelo(dir)).or. &
+              (idx(dir).gt.accum_PARM%tilehi(dir))) then
+           interior_ok=0
+          endif
          enddo
-         w_p=1.0d0/(eps+tmp)
-         ibase=1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_11
+         if (interior_ok.eq.1) then
+          i=idx(1)
+          j=idx(2)
+          k=idx(3)
+          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+          tmp=0.0d0
+          do dir=1,SDIM
+           xc(dir)=xsten(0,dir)
+           tmp=tmp+(xpart(dir)-xc(dir))**2
+          enddo
+          w_p=1.0d0/(eps+tmp)
+          ibase=1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_11
             matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_12
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_12
             matrixfab(D_DECL(i,j,k),ibase)+ &
             w_p*(xpart(1)-xc(1))
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_13
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_13
             matrixfab(D_DECL(i,j,k),ibase)+ &
             w_p*(xpart(2)-xc(2))
-         if (SDIM.eq.3) then
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_14
+          if (SDIM.eq.3) then
+           ibase=ibase+1
+           matrixfab(D_DECL(i,j,k),ibase)= & !ATA_14
             matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(SDIM)-xc(SDIM))
-         endif
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_22
+          endif
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_22
             matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(1)-xc(1))**2
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_23
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_23
             matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(1)-xc(1))*(xpart(2)-xc(2))
-         if (SDIM.eq.3) then
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_24
+          if (SDIM.eq.3) then
+           ibase=ibase+1
+           matrixfab(D_DECL(i,j,k),ibase)= & !ATA_24
             matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(1)-xc(1))*(xpart(SDIM)-xc(SDIM))
-         endif
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_33
+          endif
+          ibase=ibase+1
+          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_33
             matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(2)-xc(2))**2
-         if (SDIM.eq.3) then
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_34
+          if (SDIM.eq.3) then
+           ibase=ibase+1
+           matrixfab(D_DECL(i,j,k),ibase)= & !ATA_34
             matrixfab(D_DECL(i,j,k),ibase)+w_p* &
             (xpart(2)-xc(2))*(xpart(SDIM)-xc(SDIM))
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_44
+           ibase=ibase+1
+           matrixfab(D_DECL(i,j,k),ibase)= & !ATA_44
             matrixfab(D_DECL(i,j,k),ibase)+w_p &
             *(xpart(SDIM)-xc(SDIM))**2
-         endif
-         if (SDIM.eq.3) then
-          if (ibase.eq.10) then
-           ! do nothing
+          endif
+          if (SDIM.eq.3) then
+           if (ibase.eq.10) then
+            ! do nothing
+           else
+            print *,"ibase invalid"
+            stop
+           endif
+          else if (SDIM.eq.2) then
+           if (ibase.eq.6) then
+            ! do nothing
+           else
+            print *,"ibase invalid"
+            stop
+           endif
           else
-           print *,"ibase invalid"
+           print *,"dimension bust"
            stop
           endif
-         else if (SDIM.eq.2) then
-          if (ibase.eq.6) then
-           ! do nothing
-          else
-           print *,"ibase invalid"
-           stop
-          endif
-         else
-          print *,"dimension bust"
-          stop
-         endif
 
-         ibase=11
-         do dir=1,SDIM
-          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*xdisp(dir)
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*xdisp(dir)
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*xdisp(dir)
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*xdisp(dir)
-          ibase=ibase+1
-         enddo ! dir=1..sdim
-         if (ibase.eq. &
-             accum_PARM%matrix_points+accum_PARM%RHS_points*SDIM+1) then
+          ibase=11
+          do dir=1,SDIM
+           matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
+            matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*xdisp(dir)
+           ibase=ibase+1
+           matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
+            matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*xdisp(dir)
+           ibase=ibase+1
+           matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
+            matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*xdisp(dir)
+           ibase=ibase+1
+           matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
+            matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*xdisp(dir)
+           ibase=ibase+1
+          enddo ! dir=1..sdim
+          if (ibase.eq. &
+              accum_PARM%matrix_points+accum_PARM%RHS_points*SDIM+1) then
+           ! do nothing
+          else
+           print *,"ibase invalid"
+           stop
+          endif
+         else if (interior_ok.eq.0) then
           ! do nothing
          else
-          print *,"ibase invalid"
+          print *,"interior_ok invalid"
           stop
          endif
-        else if (interior_ok.eq.0) then
-         ! do nothing
-        else
-         print *,"interior_ok invalid"
-         stop
-        endif
-        idx(1)=idx(1)+1
-        if (idx(1).gt.subhi(1)) then
-         idx(1)=sublo(1)
-         idx(2)=idx(2)+1
-         if (idx(2).gt.subhi(2)) then
-          idx(2)=sublo(2)
-          idx(3)=idx(3)+1
+         idx(1)=idx(1)+1
+         if (idx(1).gt.subhi(1)) then
+          idx(1)=sublo(1)
+          idx(2)=idx(2)+1
+          if (idx(2).gt.subhi(2)) then
+           idx(2)=sublo(2)
+           idx(3)=idx(3)+1
+          endif
          endif
-        endif
-       enddo ! idx(1),idx(2),idx(3): while idx(3)<=subhi(3)
+        enddo ! idx(1),idx(2),idx(3): while idx(3)<=subhi(3)
+
+       else if (local_dist.lt.zero) then
+        ! do nothing
+       else
+        print *,"local_dist invalid"
+        stop
+       endif
+
       enddo ! do interior_ID=1,accum_PARM%Npart
 
       return
