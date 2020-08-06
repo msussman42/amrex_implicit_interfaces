@@ -17089,6 +17089,7 @@ stop
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
         INTEGER_T :: im_PLS
+        INTEGER_T :: nsubdivide
         INTEGER_T :: DIMDEC(LS)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
         INTEGER_T :: DIMDEC(xfoot)
@@ -17969,7 +17970,7 @@ stop
       type(particle_t), intent(inout), target :: particles(Np)
       INTEGER_T, intent(inout) :: new_Pdata_size
       REAL_T, intent(out) :: new_particles(new_Pdata_size)
-      INTEGER_T, intent(in) :: Np_append
+      INTEGER_T, intent(inout) :: Np_append
 
        ! child link 1, parent link 1,
        ! child link 2, parent link 2, ...
@@ -17993,6 +17994,9 @@ stop
       INTEGER_T :: i,j,k
       INTEGER_T growlo(3) 
       INTEGER_T growhi(3) 
+      INTEGER_T sublo(3) 
+      INTEGER_T subhi(3) 
+      INTEGER_T, allocatable :: sub_counter(:,:,:)
 
        ! data for xfootfab is at the nodes. 
       call checkbound(fablo,fabhi,DIMS(xfootfab),1,-1,2872)
@@ -18018,6 +18022,8 @@ stop
       accum_PARM%xlo=>xlo
 
       accum_PARM%im_PLS=im_PLS
+      accum_PARM%nsubdivide=particle_nsubdivide(im_PLS)
+
       call copy_dimdec( &
         DIMS(accum_PARM%LS), &
         DIMS(lsfab))
@@ -18066,14 +18072,77 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
 
+      sublo(3)=0
+      subhi(3)=0
+      do dir=1,SDIM
+       sublo(dir)=0
+       subhi(dir)=particle_nsubdivide(im_PLS)-1
+      enddo
+      allocate(sub_counter(sublo(1):subhi(1), &
+              sublo(2):subhi(2), &
+              sublo(3):subhi(3)))
+
+      if (isweep.eq.0) then
+       Np_append=0
+      else if (isweep.eq.1) then
+       ! do nothing
+      else
+       print *,"isweep invalid"
+       stop
+      endif
+      Np_append_test=0
+
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
-
+       do isub=sublo(1),subhi(1)
+       do jsub=sublo(2),subhi(2)
+       do ksub=sublo(3),subhi(3)
+        sub_counter(isub,jsub,ksub)=0
+       enddo
+       enddo
+       enddo
+       cell_count_check=0
+       current_link=cell_particle_count(D_DECL(i,j,k),2)
+       do while (current_link.ge.1)
+        do dir=1,SDIM
+         xpart(dir)=particles(current_link)%pos(dir)
+        enddo 
+        call containing_sub_box( &
+                accum_PARM, &
+                xpart, &
+                i,j,k, &
+                isub,jsub,ksub, &
+                sub_found)
+        if (sub_found.eq.1) then
+         sub_counter(isub,jsub,ksub)=sub_counter(isub,jsub,ksub)+1
+         cell_count_check=cell_count_check+1
+        else
+         print *,"sub_box not found"
+         stop
+        endif
+        ibase=(current_link-1)*(1+SDIM)
+        current_link=particle_link_data(ibase+1)
+       enddo ! while (current_link.ge.1)
+       if (cell_count_check.eq. &
+           cell_particle_count(D_DECL(i,j,k),1)) then
+        do isub=sublo(1),subhi(1)
+        do jsub=sublo(2),subhi(2)
+        do ksub=sublo(3),subhi(3)
+         ! increment Np_append if isweep == 0
+         ! always increment Np_append_test
+        enddo
+        enddo
+        enddo
+       else
+        print *,"cell_count_check invalid"
+        stop
+       endif
       enddo 
       enddo 
       enddo 
 
+      deallocate(sub_counter)
       return
       end subroutine fort_init_particle_container
 
