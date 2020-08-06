@@ -19350,10 +19350,9 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
     FArrayBox& lsfab=(*LSmf)[mfi];
     FArrayBox& xfootfab=(*x_foot_mf)[mfi];
 
-     // positive, negative, interface
-     // positive link, negative link, interface link
-     // The link index will start at 1.
-    BaseFab<int> cell_particle_count(tilegrid,6);
+     // component 1: number of particles linked to the cell.
+     // component 2: the link to the list of particles.
+    BaseFab<int> cell_particle_count(tilegrid,2);
     cell_particle_count.setVal(0);
 
      // allocate for just one particle for now.
@@ -19384,15 +19383,14 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
     for (int isweep=0;isweep<2;isweep++) {
 
-     int Np_new=new_particle_data.size();
+     int new_Pdata_size=new_particle_data.size();
 
      // in: LEVELSET_3D.F90
      // 1. subdivide each cell with "particle_nsubdivide" divisions.
      //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
      //                 "         "   =4 => 64 pieces in 2D.
-     // 2. for each small sub-box, find the material centroid, and initialize
-     //    a bulk particle at the centroid.  for cut cells, let
-     //    x_interface_particle=x_bulk - phi grad phi/|grad phi|
+     // 2. for each small sub-box, add a particles at the sub-box center
+     //    and add a particle "x-phi grad phi/|grad phi|"
      fort_init_particle_container( 
        &tid_current,
        &single_particle_size,
@@ -19407,11 +19405,11 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
        &level,
        &finest_level,
        xlo,dx,
-       particles_AoS.data(),
+       particles_AoS.data(), // existing particles
        Np,  // pass by value
-       new_particle_data.dataPtr(),
-       &Np_new,
-       &Np_append,  // number of particles to append
+       new_particle_data.dataPtr(), // size is "new_Pdata_size"
+       &new_Pdata_size,
+       &Np_append,  // Np_append number of new particles to add.
        particle_link_data.dataPtr(),
        cell_particle_count.dataPtr(),
        ARLIM(cell_particle_count.loVect()),

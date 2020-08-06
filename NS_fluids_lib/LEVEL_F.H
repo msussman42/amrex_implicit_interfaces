@@ -777,8 +777,8 @@ namespace amrex{
         const Real* xlo,const Real* dx,
         const void* particles,
         int Np, 
-        Real* new_particles,
-        int* Np_new, 
+        Real* new_particles, // size is "new_Pdata_size"
+        int* new_Pdata_size, 
         int* Np_append, 
 	int* particle_link_data,
 	int* cell_particle_count,

@@ -17094,6 +17094,7 @@ stop
         INTEGER_T :: DIMDEC(xfoot)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: xfootfab
         INTEGER_T :: DIMDEC(cell_particle_count)
+        INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: cell_particle_count
        end type accum_parm_type_count
 
 
@@ -17775,7 +17776,6 @@ stop
       INTEGER_T interior_ok
       INTEGER_T i,j,k
       REAL_T LSpart,LSpart_trial
-      INTEGER_T :: modcomp
       INTEGER_T :: local_ngrow
       INTEGER_T :: ok_to_add_link
       INTEGER_T :: previous_link
@@ -17808,20 +17808,10 @@ stop
         i=cell_index(1)
         j=cell_index(2)
         k=cell_index(SDIM)
-        if (LSpart.gt.zero) then
-         modcomp=1
-        else if (LSpart.lt.zero) then
-         modcomp=2
-        else if (LSpart.eq.zero) then
-         modcomp=3
-        else
-         print *,"LSpart invalid"
-         stop
-        endif 
 
         ok_to_add_link=1
 
-        previous_link=cell_particle_count(D_DECL(i,j,k),3+modcomp)
+        previous_link=cell_particle_count(D_DECL(i,j,k),2)
         if (previous_link.eq.0) then
          ! do nothing
         else if ((previous_link.ge.1).and. &
@@ -17855,10 +17845,10 @@ stop
           stop
          endif
 
-         cell_particle_count(D_DECL(i,j,k),modcomp)= &
-           cell_particle_count(D_DECL(i,j,k),modcomp)+1
+         cell_particle_count(D_DECL(i,j,k),1)= &
+           cell_particle_count(D_DECL(i,j,k),1)+1
 
-         cell_particle_count(D_DECL(i,j,k),modcomp+3)=interior_ID
+         cell_particle_count(D_DECL(i,j,k),2)=interior_ID
 
          ibase_new=(interior_ID-1)*(SDIM+1)
          particle_link_data(ibase_new+1)=previous_link
@@ -17875,9 +17865,8 @@ stop
          stop
         endif
 
-        if ((modcomp.eq.1).or.(modcomp.eq.2)) then
-         local_ngrow=1
-         call interpfab( &
+        local_ngrow=1
+        call interpfab( &
           accum_PARM%bfact, &
           accum_PARM%level, &
           accum_PARM%finest_level, &
@@ -17891,6 +17880,10 @@ stop
           accum_PARM%LS, &
           DIMS(accum_PARM%LS), &
           LSpart_trial)
+
+        if (LSpart.eq.zero) then
+         LSpart_trial=zero
+        else if (LSpart.ne.zero) then
          if (LSpart_trial*LSpart.le.zero) then
           LSpart_trial=half*(LSpart_trial+LSpart)
           if (LSpart_trial*LSpart.le.zero) then
@@ -17908,10 +17901,8 @@ stop
           stop
          endif
          particles(interior_ID)%closest_dist=LSpart_trial
-        else if (modcomp.eq.3) then
-         ! do nothing
         else
-         print *,"modcomp invalid"
+         print *,"LSpart invalid"
          stop
         endif
        else if (interior_ok.eq.0) then
@@ -17942,9 +17933,9 @@ stop
         xlo,dx, &
         particles, & ! a list of particles in the elastic structure
         Np, & !  Np = number of particles
-        new_particles, &
-        Np_new, &
-        Np_append, &
+        new_particles, & ! size is "new_Pdata_size"
+        new_Pdata_size, &
+        Np_append, & ! number of particles to add
         particle_link_data, &
         cell_particle_count, &
         DIMS(cell_particle_count), &
@@ -17976,8 +17967,8 @@ stop
       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
       type(particle_t), intent(inout), target :: particles(Np)
-      INTEGER_T, intent(inout) :: Np_new
-      REAL_T, intent(out) :: new_particles(Np_new)
+      INTEGER_T, intent(inout) :: new_Pdata_size
+      REAL_T, intent(out) :: new_particles(new_Pdata_size)
       INTEGER_T, intent(in) :: Np_append
 
        ! child link 1, parent link 1,
@@ -17991,18 +17982,30 @@ stop
         ! positive, negative, 0, positive link, negative link, 0 link
       INTEGER_T, intent(inout), target :: cell_particle_count( &
               DIMV(cell_particle_count), &
-              6) 
+              2) 
       REAL_T, intent(in), target :: xfootfab(DIMV(xfootfab),SDIM) 
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
 
       type(accum_parm_type_count) :: accum_PARM
       INTEGER_T, pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
-    
+   
+      INTEGER_T :: i,j,k
+      INTEGER_T growlo(3) 
+      INTEGER_T growhi(3) 
+
        ! data for xfootfab is at the nodes. 
       call checkbound(fablo,fabhi,DIMS(xfootfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(cell_particle_count),0,-1,2872)
+
+      if ((new_Pdata_size/single_particle_size)* &
+          single_particle_size.eq.new_Pdata_size) then
+       ! do nothing
+      else
+       print *,"new_Pdata_size invalid"
+       stop
+      endif
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -18028,6 +18031,7 @@ stop
       call copy_dimdec( &
         DIMS(accum_PARM%cell_particle_count), &
         DIMS(cell_particle_count))
+      accum_PARM%cell_particle_count=>cell_particle_count
 
       accum_PARM%particles=>particles
       accum_PARM%Npart=Np
@@ -18048,19 +18052,28 @@ stop
         print *,"append_flag invalid"
         stop
        endif
+      else if (isweep.eq.1) then
+       ! do nothing
+      else
+       print *,"isweep invalid"
+       stop
+      endif
        ! 1. traverse by cell
        ! 2. within each cell, initialize counts for each subdivision.
        ! 3. add particles within the subdivided cell using LS and
        !    xfoot from previous particle (Lagrangian) data in the 
        !    cell and previous Eulerian data.
-      else if (isweep.eq.1) then
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,0)
 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
 
-      else
-       print *,"isweep invalid"
-       stop
-      endif
- 
+      enddo 
+      enddo 
+      enddo 
+
       return
       end subroutine fort_init_particle_container
 
