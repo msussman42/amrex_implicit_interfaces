@@ -18011,6 +18011,10 @@ stop
       REAL_T, intent(in) :: xtarget(SDIM)
       REAL_T, intent(in) :: LS
       REAL_T, intent(inout) :: A_LS(SDIM+1,SDIM+1),b_LS(SDIM+1)
+      REAL_T :: eps,tmp,w_p
+      INTEGER_T :: dir
+      INTEGER_T :: ii,jj
+      REAL_T :: base_1,base_2
 
       eps=(accum_PARM%dx(1)**2)/100.0d0
 
@@ -18028,46 +18032,38 @@ stop
        stop
       endif
 
-      w_p=wt_lag*1.0d0/(eps+tmp)
+      w_p=1.0d0/(eps+tmp)
 
-      A_LS(1,1)=A_LS(1,1)+w_p*1.0d0
-      A_LS(1,2)=A_LS(1,2)+w_p*(xdata(1)-xtarget(1))
-      A_LS(1,3)=A_LS(1,3)+w_p*(xdata(2)-xtarget(2))
-      if (SDIM.eq.3) then
-       A_LS(1,4)=A_LS(1,4)+w_p*(xdata(SDIM)-xtarget(SDIM))
-      endif
-      A_LS(2,2)=A_LS(2,2)+w_p*(xdata(1)-xtarget(1))**2
-      A_LS(2,3)=A_LS(2,3)+w_p*(xdata(1)-xtarget(1))* &
-                              (xdata(2)-xtarget(2))
-      if (SDIM.eq.3) then
-       A_LS(2,4)=A_LS(2,4)+w_p*(xdata(1)-xtarget(1))* &
-                               (xdata(SDIM)-xtarget(SDIM))
-      endif
-      A_LS(3,3)=A_LS(3,3)+w_p*(xdata(2)-xtarget(2))**2
-      if (SDIM.eq.3) then
-       A_LS(3,4)=A_LS(3,4)+w_p*(xdata(2)-xtarget(2))* &
-                (xdata(SDIM)-xtarget(SDIM))
-       A_LS(4,4)=A_LS(4,4)+w_p*(xdata(SDIM)-xtarget(SDIM))**2
+      do ii=1,SDIM+1
 
-         ibase=11
+       if (ii.eq.1) then
+        base_1=one
+       else if ((ii.ge.2).and.(ii.le.SDIM+1)) then
+        base_1=xdata(ii-1)-xtarget(ii-1)
+       else
+        print *,"ii invalid"
+        stop
+       endif
 
-         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*LSpart
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*LSpart
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*LSpart
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*LSpart
-         ibase=ibase+1
-         if (ibase.eq. &
-             accum_PARM%matrix_points+accum_PARM%RHS_points+1) then
-          ! do nothing
-         else
+       do jj=1,SDIM+1
 
+        if (jj.eq.1) then
+         base_2=one
+        else if ((jj.ge.2).and.(jj.le.SDIM+1)) then
+         base_2=xdata(jj-1)-xtarget(jj-1)
+        else
+         print *,"jj invalid"
+         stop
+        endif
+
+        A_LS(ii,jj)=A_LS(ii,jj)+w_p*base_1*base_2
+
+       enddo ! jj=1..sdim+1
+
+       b_LS(ii)=b_LS(ii)+w_p*LS*base_1
+      enddo ! ii=1..sdim+1
+
+      end subroutine accum_LS
 
       subroutine interp_eul_lag_dist( &
          accum_PARM, &
