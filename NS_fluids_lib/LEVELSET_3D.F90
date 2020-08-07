@@ -17924,6 +17924,10 @@ stop
          i,j,k, &
          isub,jsub,ksub, &
          sub_found)
+      use global_utility_module
+
+      IMPLICIT NONE
+
       type(accum_parm_type_count), intent(in) :: accum_PARM
       REAL_T, intent(in) :: xpart(SDIM)
       INTEGER_T, intent(in) :: i,j,k
@@ -17972,6 +17976,10 @@ stop
          i,j,k, &
          isub,jsub,ksub, &
          xsub)
+      use global_utility_module
+
+      IMPLICIT NONE
+
       type(accum_parm_type_count), intent(in) :: accum_PARM
       REAL_T, intent(out) :: xsub(SDIM)
       INTEGER_T, intent(in) :: i,j,k
@@ -18001,6 +18009,73 @@ stop
 
       end subroutine sub_box_cell_center
 
+
+      subroutine project_to_cell( &
+         accum_PARM, &
+         i,j,k, &
+         x_cell, &
+         x_I, &
+         mod_flag)
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      type(accum_parm_type_count), intent(in) :: accum_PARM
+      REAL_T, intent(in) :: x_cell(SDIM)
+      REAL_T, intent(inout) :: x_I(SDIM)
+      INTEGER_T, intent(out) :: mod_flag
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T :: nhalf
+      INTEGER_T :: dir
+      INTEGER_T :: dir_inner
+      REAL_T :: factor
+      REAL_T :: xsten(-3:3,SDIM)
+
+      nhalf=3
+      call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+
+      mod_flag=0
+
+      do dir=1,SDIM
+       if ((x_cell(dir).ge.xsten(-1,dir)).and. &
+           (x_cell(dir).le.xsten(1,dir))) then
+     
+        if (x_I(dir).lt.xsten(-1,dir)) then
+         factor=(x_cell(dir)-xsten(-1,dir))/(x_cell(dir)-x_I(dir))
+         if (factor.lt.one) then
+          do dir_inner=1,SDIM
+           x_I(dir_inner)=x_cell(dir_inner)+ &
+            factor*(x_I(dir_inner)-x_cell(dir_inner)) 
+          enddo
+          mod_flag=1
+         else
+          print *,"factor invalid"
+          stop
+         endif
+        endif
+
+        if (x_I(dir).gt.xsten(1,dir)) then
+         factor=(x_cell(dir)-xsten(1,dir))/(x_cell(dir)-x_I(dir))
+         if (factor.lt.one) then
+          do dir_inner=1,SDIM
+           x_I(dir_inner)=x_cell(dir_inner)+ &
+            factor*(x_I(dir_inner)-x_cell(dir_inner)) 
+          enddo
+          mod_flag=1
+         else
+          print *,"factor invalid"
+          stop
+         endif
+        endif
+       else
+        print *,"x_cell invalid"
+        stop
+       endif
+
+      enddo ! dir=1..sdim
+
+      end subroutine project_to_cell
+
       subroutine accum_LS(A_LS,b_LS,xdata,xtarget, &
                    LS,ipart_flag,dx)
       IMPLICIT NONE
@@ -18016,7 +18091,7 @@ stop
       INTEGER_T :: ii,jj
       REAL_T :: base_1,base_2
 
-      eps=(accum_PARM%dx(1)**2)/100.0d0
+      eps=(dx(1)**2)/100.0d0
 
       tmp=0.0d0
       if (ipart_flag.eq.1) then
@@ -18028,7 +18103,7 @@ stop
         tmp=tmp+(dx(dir)**2)
        enddo
       else
-       print *,"accum_PARM%Npart invalid"
+       print *,"ipart_flag invalid"
        stop
       endif
 
@@ -18065,6 +18140,75 @@ stop
 
       end subroutine accum_LS
 
+
+      subroutine accum_X(A_X,b_X,xdata,xtarget, &
+                   xfoot,ipart_flag,dx)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: ipart_flag
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xdata(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      REAL_T, intent(in) :: xfoot(SDIM)
+      REAL_T, intent(inout) :: A_X(SDIM+1,SDIM+1),b_X(SDIM,SDIM+1)
+      REAL_T :: eps,tmp,w_p
+      INTEGER_T :: dir
+      INTEGER_T :: ii,jj
+      REAL_T :: base_1,base_2
+
+      eps=(dx(1)**2)/100.0d0
+
+      tmp=0.0d0
+      if (ipart_flag.eq.1) then
+       do dir=1,SDIM
+        tmp=tmp+(xdata(dir)-xtarget(dir))**2
+       enddo
+      else if (ipart_flag.eq.0) then
+       do dir=1,SDIM
+        tmp=tmp+(dx(dir)**2)
+       enddo
+      else
+       print *,"ipart_flag invalid"
+       stop
+      endif
+
+      w_p=1.0d0/(eps+tmp)
+
+      do ii=1,SDIM+1
+
+       if (ii.eq.1) then
+        base_1=one
+       else if ((ii.ge.2).and.(ii.le.SDIM+1)) then
+        base_1=xdata(ii-1)-xtarget(ii-1)
+       else
+        print *,"ii invalid"
+        stop
+       endif
+
+       do jj=1,SDIM+1
+
+        if (jj.eq.1) then
+         base_2=one
+        else if ((jj.ge.2).and.(jj.le.SDIM+1)) then
+         base_2=xdata(jj-1)-xtarget(jj-1)
+        else
+         print *,"jj invalid"
+         stop
+        endif
+
+        A_X(ii,jj)=A_X(ii,jj)+w_p*base_1*base_2
+
+       enddo ! jj=1..sdim+1
+
+       do dir=1,SDIM
+        b_X(dir,ii)=b_X(dir,ii)+w_p*xfoot(dir)*base_1
+       enddo
+
+      enddo ! ii=1..sdim+1
+
+      end subroutine accum_X
+
+
       subroutine interp_eul_lag_dist( &
          accum_PARM, &
          i,j,k, &
@@ -18074,6 +18218,11 @@ stop
          dist_interp, &
          grad_dist_interp, &
          x_foot_interp)  ! x_foot_interp=xtarget if append_flag==0
+      use global_utility_module
+      use ZEYU_LS_extrapolation, only : least_squares_QR
+
+      IMPLICIT NONE
+
       type(accum_parm_type_count), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: i,j,k
       REAL_T, intent(in) :: xtarget(SDIM)
@@ -18085,11 +18234,22 @@ stop
 
       INTEGER_T :: nhalf
       INTEGER_T :: dir
-      INTEGER_T :: ii,jj
+      INTEGER_T :: dir_inner
+      INTEGER_T :: ii,jj,kk
       INTEGER_T :: n
       REAL_T :: xsten(-3:3,SDIM)
       REAL_T A_LS(SDIM+1,SDIM+1),b_LS(SDIM+1)
       REAL_T A_X(SDIM+1,SDIM+1),b_X(SDIM,SDIM+1)
+      REAL_T b_local(SDIM+1)
+      INTEGER_T :: current_link
+      REAL_T :: xpart(SDIM)
+      REAL_T :: xfoot(SDIM)
+      REAL_T :: LS
+      INTEGER_T :: ipart_flag
+      INTEGER_T :: ibase
+      INTEGER_T :: istenlo(3),istenhi(3)
+      REAL_T :: mag
+      REAL_T :: xlocal(SDIM+1)
 
       nhalf=3
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
@@ -18271,11 +18431,34 @@ stop
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
    
       INTEGER_T :: i,j,k
+      INTEGER_T :: isub,jsub,ksub
+      INTEGER_T :: dir
+      INTEGER_T :: ibase
       INTEGER_T growlo(3) 
       INTEGER_T growhi(3) 
       INTEGER_T sublo(3) 
       INTEGER_T subhi(3) 
       INTEGER_T, allocatable :: sub_counter(:,:,:)
+      INTEGER_T cell_count_check
+      INTEGER_T current_link
+      INTEGER_T local_count
+      INTEGER_T mod_flag
+      INTEGER_T sub_found
+      INTEGER_T Np_append_test
+      REAL_T dist_sub
+      REAL_T :: grad_dist_sub(SDIM)
+      REAL_T :: x_foot_sub(SDIM)
+      REAL_T dist_sub_cutoff
+      REAL_T :: xpart(SDIM)
+      REAL_T :: xsub(SDIM)
+      REAL_T :: xsub_I(SDIM)
+
+      if (particle_nsubdivide(im_PLS).ge.1) then
+       dist_sub_cutoff=dx(1)/particle_nsubdivide(im_PLS)
+      else
+       print *,"particle_nsubdivide(im_PLS) invalid"
+       stop
+      endif
 
        ! data for xfootfab is at the nodes. 
       call checkbound(fablo,fabhi,DIMS(xfootfab),1,-1,2872)
@@ -18454,6 +18637,7 @@ stop
            call project_to_cell( &
             accum_PARM, &
             i,j,k, &
+            xsub, &
             xsub_I, &
             mod_flag)
 
