@@ -18001,6 +18001,74 @@ stop
 
       end subroutine sub_box_cell_center
 
+      subroutine accum_LS(A_LS,b_LS,xdata,xtarget, &
+                   LS,ipart_flag,dx)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: ipart_flag
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xdata(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      REAL_T, intent(in) :: LS
+      REAL_T, intent(inout) :: A_LS(SDIM+1,SDIM+1),b_LS(SDIM+1)
+
+      eps=(accum_PARM%dx(1)**2)/100.0d0
+
+      tmp=0.0d0
+      if (ipart_flag.eq.1) then
+       do dir=1,SDIM
+        tmp=tmp+(xdata(dir)-xtarget(dir))**2
+       enddo
+      else if (ipart_flag.eq.0) then
+       do dir=1,SDIM
+        tmp=tmp+(dx(dir)**2)
+       enddo
+      else
+       print *,"accum_PARM%Npart invalid"
+       stop
+      endif
+
+      w_p=wt_lag*1.0d0/(eps+tmp)
+
+      A_LS(1,1)=A_LS(1,1)+w_p*1.0d0
+      A_LS(1,2)=A_LS(1,2)+w_p*(xdata(1)-xtarget(1))
+      A_LS(1,3)=A_LS(1,3)+w_p*(xdata(2)-xtarget(2))
+      if (SDIM.eq.3) then
+       A_LS(1,4)=A_LS(1,4)+w_p*(xdata(SDIM)-xtarget(SDIM))
+      endif
+      A_LS(2,2)=A_LS(2,2)+w_p*(xdata(1)-xtarget(1))**2
+      A_LS(2,3)=A_LS(2,3)+w_p*(xdata(1)-xtarget(1))* &
+                              (xdata(2)-xtarget(2))
+      if (SDIM.eq.3) then
+       A_LS(2,4)=A_LS(2,4)+w_p*(xdata(1)-xtarget(1))* &
+                               (xdata(SDIM)-xtarget(SDIM))
+      endif
+      A_LS(3,3)=A_LS(3,3)+w_p*(xdata(2)-xtarget(2))**2
+      if (SDIM.eq.3) then
+       A_LS(3,4)=A_LS(3,4)+w_p*(xdata(2)-xtarget(2))* &
+                (xdata(SDIM)-xtarget(SDIM))
+       A_LS(4,4)=A_LS(4,4)+w_p*(xdata(SDIM)-xtarget(SDIM))**2
+
+         ibase=11
+
+         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*LSpart
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*LSpart
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*LSpart
+         ibase=ibase+1
+         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*LSpart
+         ibase=ibase+1
+         if (ibase.eq. &
+             accum_PARM%matrix_points+accum_PARM%RHS_points+1) then
+          ! do nothing
+         else
+
+
       subroutine interp_eul_lag_dist( &
          accum_PARM, &
          i,j,k, &
@@ -18050,8 +18118,8 @@ stop
        enddo 
        LS=accum_PARM%particles(current_link)%closest_dist
        ipart_flag=1
-       call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag)
-       call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag)
+       call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag,accum_PARM%dx)
+       call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag,accum_PARM%dx)
 
        ibase=(current_link-1)*(1+SDIM)
        current_link=particle_link_data(ibase+1)
@@ -18072,7 +18140,7 @@ stop
        enddo 
        LS=accum_PARM%LS(D_DECL(ii,jj,kk),accum_PARM%im_PLS)
        ipart_flag=0
-       call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag)
+       call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag,accum_PARM%dx)
       enddo
       enddo
       enddo
@@ -18092,7 +18160,7 @@ stop
         xfoot(dir)=accum_PARM%xfootfab(D_DECL(ii,jj,kk),dir)
        enddo 
        ipart_flag=0
-       call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag)
+       call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag,accum_PARM%dx)
       enddo
       enddo
       enddo
