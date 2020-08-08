@@ -17099,6 +17099,21 @@ stop
         INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: cell_particle_count
        end type accum_parm_type_count
 
+       type grid_parm_type
+        INTEGER_T, pointer :: fablo(:)
+        INTEGER_T, pointer :: fabhi(:)
+        INTEGER_T, pointer :: tilelo(:)
+        INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: bfact
+        INTEGER_T :: level
+        INTEGER_T :: finest_level
+        REAL_T, pointer :: dx(:)
+        REAL_T, pointer :: xlo(:)
+        REAL_T, pointer :: umac(:,:,:)
+        REAL_T, pointer :: vmac(:,:,:)
+        REAL_T, pointer :: wmac(:,:,:)
+       end type grid_parm_type
+
       contains
 
       subroutine traverse_particlesLS( &
@@ -18715,12 +18730,125 @@ stop
       end subroutine fort_init_particle_container
 
 
+      subroutine interp_mac_velocity(grid_PARM, xpart, u)
+      use global_utility_module
+
+      implicit none
+
+      type(grid_parm_type), intent(in) :: grid_PARM
+      REAL_T, intent(in) :: xpart(SDIM)
+      REAL_T, intent(out) :: u(SDIM)
+
+      INTEGER_T i,j,k
+      INTEGER_T imac,jmac,kmac
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T dir,dir_inner
+      INTEGER_T imaclo(3)
+      INTEGER_T imachi(3)
+      INTEGER_T cell_index(SDIM)
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T xstenMAC_lo(-3:3,SDIM)
+      REAL_T xstenMAC_hi(-3:3,SDIM)
+      INTEGER_T nhalf
+      REAL_T dx_inner
+      REAL_T wt_dist(SDIM)
+      REAL_T local_data
+      REAL_T, dimension(D_DECL(2,2,2),1) :: data_stencil
+      INTEGER_T ncomp_interp
+
+      nhalf=3      
+      call containing_cell(grid_PARM%bfact, &
+         grid_PARM%dx, &
+         grid_PARM%xlo, &
+         grid_PARM%fablo, &
+         xpart, &
+         cell_index)
+
+      i=cell_index(1)
+      j=cell_index(2)
+      k=cell_index(SDIM)
+
+      call gridsten_level(xsten,i,j,k,grid_PARM%level,nhalf)
+
+      do dir=1,SDIM
+
+       imaclo(3)=0
+       imachi(3)=0
+       do dir_inner=1,SDIM
+        imaclo(dir_inner)=i
+        imachi(dir_inner)=i+1
+        if (dir_inner.eq.dir) then
+         ! do nothing
+        else if (dir_inner.ne.dir) then
+         if (xpart(dir_inner).le.xsten(0,dir_inner)) then
+          imaclo(dir_inner)=i-1
+          imachi(dir_inner)=i
+         else if (xpart(dir_inner).ge.xsten(0,dir_inner)) then
+          ! do nothing
+         else
+          print *,"xpart or xsten invalid"
+          stop
+         endif
+        else
+         print *,"dir_inner or dir invalid"
+         stop
+        endif
+       enddo ! dir_inner=1..sdim
+
+       call gridstenMAC_level(xstenMAC_lo, &
+        imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir)
+       call gridstenMAC_level(xstenMAC_hi, &
+        imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir)
+
+       do dir_inner=1,SDIM
+        dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)
+        if (dx_inner.gt.zero) then
+         wt_dist(dir_inner)=(xpart(dir_inner)-xstenMAC_lo(0,dir_inner))/ &
+           dx_inner
+        else
+         print *,"dx_inner invalid"
+         stop
+        endif
+       enddo  ! dir_inner=1..sdim
+
+       do imac=imaclo(1),imachi(1)
+       do jmac=imaclo(2),imachi(2)
+       do kmac=imaclo(3),imachi(3)
+        isten=imac-imaclo(1)+1
+        jsten=jmac-imaclo(2)+1
+        ksten=kmac-imaclo(3)+1
+        if (dir.eq.1) then
+         local_data=grid_PARM%umac(D_DECL(imac,jmac,kmac))
+        else if (dir.eq.2) then
+         local_data=grid_PARM%vmac(D_DECL(imac,jmac,kmac))
+        else if ((dir.eq.3).and.(SDIM.eq.3)) then
+         local_data=grid_PARM%wmac(D_DECL(imac,jmac,kmac))
+        else
+         print *,"dir invalid"
+         stop
+        endif
+
+        data_stencil(D_DECL(isten,jsten,ksten),1)=local_data
+       enddo ! kmac
+       enddo ! jmac
+       enddo ! imac
+    
+       ncomp_interp=1
+       call bilinear_interp_stencil(data_stencil, &
+         wt_dist,ncomp_interp,u(dir))
+
+      enddo ! dir=1..sdim
+
+      end subroutine interp_mac_velocity
+
+
       subroutine fort_move_particle_container( &
         tid, &
         im_PLS, &
         nmat, &
         tilelo,tilehi, &
-        fablo,fabhi,bfact, &
+        fablo,fabhi, &
+        bfact, &
         level, &
         finest_level, &
         xlo,dx, &
@@ -18750,30 +18878,83 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im_PLS
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
-      type(particle_t), intent(in), target :: particles(Np)
+      type(particle_t), intent(inout), target :: particles(Np)
 
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
       INTEGER_T, intent(in) :: DIMDEC(umac)
       INTEGER_T, intent(in) :: DIMDEC(vmac)
       INTEGER_T, intent(in) :: DIMDEC(wmac)
      
-      REAL_T, intent(in) :: umac(DIMV(umac)) 
-      REAL_T, intent(in) :: vmac(DIMV(vmac)) 
-      REAL_T, intent(in) :: wmac(DIMV(wmac)) 
+      REAL_T, intent(in), target :: umac(DIMV(umac)) 
+      REAL_T, intent(in), target :: vmac(DIMV(vmac)) 
+      REAL_T, intent(in), target :: wmac(DIMV(wmac)) 
 
       REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
       INTEGER_T, intent(in) :: denbc_in(SDIM,2)
       INTEGER_T, intent(in) :: dombc(SDIM,2)
       INTEGER_T, intent(in) :: domlo(SDIM)
       INTEGER_T, intent(in) :: domhi(SDIM)
-      
+
+      INTEGER_T interior_ID
+      INTEGER_T dir
+      REAL_T xpart1(SDIM), xpart2(SDIM), xpart3(SDIM), xpart4(SDIM)
+      REAL_T u1(SDIM), u2(SDIM), u3(SDIM), u4(SDIM)
+      type(grid_parm_type) grid_PARM
+
+      grid_PARM%fablo=>fablo
+      grid_PARM%fabhi=>fabhi
+      grid_PARM%tilelo=>tilelo
+      grid_PARM%tilehi=>tilehi
+      grid_PARM%bfact=bfact
+      grid_PARM%level=level
+      grid_PARM%finest_level=finest_level
+      grid_PARM%dx=>dx
+      grid_PARM%xlo=>xlo
+      grid_PARM%umac=>umac
+      grid_PARM%vmac=>vmac
+      grid_PARM%wmac=>wmac
+
+      do interior_ID=1,Np
+       !4th-RK
+       do dir=1,SDIM
+        xpart1(dir)=particles(interior_ID)%pos(dir)
+       enddo
+
+       call interp_mac_velocity(grid_PARM,xpart1,u1)
+
+       do dir=1,SDIM
+        xpart2(dir)=xpart1(dir)+0.5d0*dt*u1(dir)
+       enddo
+
+       call interp_mac_velocity(grid_PARM,xpart2,u2)
+
+       do dir=1,SDIM
+        xpart3(dir)=xpart1(dir)+0.5d0*dt*u2(dir)
+       enddo
+
+       call interp_mac_velocity(grid_PARM,xpart3,u3)
+
+       do dir=1,SDIM
+        xpart4(dir)=xpart1(dir)+dt*u3(dir)
+       enddo
+
+       call interp_mac_velocity(grid_PARM,xpart4,u4)
+
+       do dir=1,SDIM
+        particles(interior_ID)%pos(dir)=xpart1(dir)+1/6.d0*dt &
+         *(u1(dir)+2.d0*u2(dir)+2.d0*u3(dir)+u4(dir))
+       enddo
+
+      enddo!traverse all particles
+
       return
       end subroutine fort_move_particle_container
+
 
       end module FSI_PC_LS_module
 
