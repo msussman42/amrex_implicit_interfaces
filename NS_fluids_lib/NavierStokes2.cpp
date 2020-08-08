@@ -7064,6 +7064,8 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
    int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
    Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
       nmat*num_state_material);
+   Vector<int> velbc=
+     getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -7090,6 +7092,7 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
      ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
      lsfab.dataPtr(),
      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+     velbc.dataPtr(),
      denbc.dataPtr(),
      dombc.dataPtr(),
      domlo,domhi);

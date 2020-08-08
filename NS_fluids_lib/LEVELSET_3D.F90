@@ -17112,6 +17112,12 @@ stop
         REAL_T, pointer :: umac(:,:,:)
         REAL_T, pointer :: vmac(:,:,:)
         REAL_T, pointer :: wmac(:,:,:)
+        INTEGER_T, pointer :: velbc(:,:,:)
+        INTEGER_T, pointer :: dombc(:,:)
+        INTEGER_T, pointer :: domlo(:)
+        INTEGER_T, pointer :: domhi(:)
+        REAL_T, pointer :: problo(:)
+        REAL_T, pointer :: probhi(:)
        end type grid_parm_type
 
       contains
@@ -18051,6 +18057,7 @@ stop
 
       mod_flag=0
 
+       ! x_cell is starting point
       do dir=1,SDIM
        if ((x_cell(dir).ge.xsten(-1,dir)).and. &
            (x_cell(dir).le.xsten(1,dir))) then
@@ -18842,6 +18849,114 @@ stop
       end subroutine interp_mac_velocity
 
 
+      subroutine check_cfl_BC(grid_PARM, xpart1, xpart2)
+      use global_utility_module
+
+      implicit none
+
+      type(grid_parm_type), intent(in) :: grid_PARM
+      REAL_T, intent(in) :: xpart1(SDIM)
+      REAL_T, intent(inout) :: xpart2(SDIM)
+      INTEGER_T bc_local
+      INTEGER_T dir
+      INTEGER_T dir_inner
+      REAL_T factor
+      REAL_T mag
+      REAL_T max_travel
+
+      max_travel=grid_PARM%dx(1)
+
+      do dir=1,SDIM
+       if (xpart2(dir).lt.grid_PARM%problo(dir)) then
+        bc_local=grid_PARM%velbc(dir,1,dir)
+        if (bc_local.eq.REFLECT_ODD) then
+         if (xpart1(dir).ge.grid_PARM%problo(dir)) then
+          factor=(xpart1(dir)-grid_PARM%problo(dir))/ &
+                 (xpart1(dir)-xpart2(dir))
+          if ((factor.ge.zero).and. &
+              (factor.le.one)) then
+           do dir_inner=1,SDIM
+            xpart2(dir_inner)=xpart1(dir_inner)+ &
+             factor*(xpart2(dir_inner)-xpart1(dir_inner))
+           enddo
+          else
+           print *,"factor invalid"
+           stop
+          endif
+         else
+          print *,"xpart1(dir) invalid"
+          stop
+         endif
+        else if ((bc_local.eq.INT_DIR).or. &
+                 (bc_local.eq.EXT_DIR).or. &
+                 (bc_local.eq.REFLECT_EVEN).or. &
+                 (bc_local.eq.FOEXTRAP)) then
+         ! do nothing
+        else
+         print *,"bc_local invalid"
+         stop
+        endif
+       endif
+
+       if (xpart2(dir).gt.grid_PARM%probhi(dir)) then
+        bc_local=grid_PARM%velbc(dir,2,dir)
+        if (bc_local.eq.REFLECT_ODD) then
+         if (xpart1(dir).le.grid_PARM%probhi(dir)) then
+          factor=(xpart1(dir)-grid_PARM%probhi(dir))/ &
+                 (xpart1(dir)-xpart2(dir))
+          if ((factor.ge.zero).and. &
+              (factor.le.one)) then
+           do dir_inner=1,SDIM
+            xpart2(dir_inner)=xpart1(dir_inner)+ &
+             factor*(xpart2(dir_inner)-xpart1(dir_inner))
+           enddo
+          else
+           print *,"factor invalid"
+           stop
+          endif
+         else
+          print *,"xpart1(dir) invalid"
+          stop
+         endif
+        else if ((bc_local.eq.INT_DIR).or. &
+                 (bc_local.eq.EXT_DIR).or. &
+                 (bc_local.eq.REFLECT_EVEN).or. &
+                 (bc_local.eq.FOEXTRAP)) then
+         ! do nothing
+        else
+         print *,"bc_local invalid"
+         stop
+        endif
+       endif
+      enddo !dir=1..sdim
+
+      mag=zero
+      do dir=1,SDIM
+       mag=mag+(xpart1(dir)-xpart2(dir))**2
+      enddo
+      mag=sqrt(mag)
+      if (mag.gt.max_travel) then
+       factor=max_travel/mag
+       if ((factor.ge.zero).and.(factor.le.one)) then
+        do dir=1,SDIM
+         xpart2(dir)=xpart1(dir)+ &
+             factor*(xpart2(dir)-xpart1(dir))
+        enddo
+       else
+        print *,"factor invalid"
+        stop
+       endif
+      else if (mag.le.max_travel) then
+       ! do nothing
+      else
+       print *,"mag invalid"
+       stop
+      endif
+
+      end subroutine check_cfl_BC
+
+
+
       subroutine fort_move_particle_container( &
         tid, &
         im_PLS, &
@@ -18859,6 +18974,7 @@ stop
         vmac,DIMS(vmac), &
         wmac,DIMS(wmac), &
         lsfab,DIMS(lsfab), &
+        velbc_in, &
         denbc_in, &
         dombc, &
         domlo,domhi) &
@@ -18895,16 +19011,33 @@ stop
       REAL_T, intent(in), target :: wmac(DIMV(wmac)) 
 
       REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+      INTEGER_T, intent(in), target :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: denbc_in(SDIM,2)
-      INTEGER_T, intent(in) :: dombc(SDIM,2)
-      INTEGER_T, intent(in) :: domlo(SDIM)
-      INTEGER_T, intent(in) :: domhi(SDIM)
+      INTEGER_T, intent(in), target :: dombc(SDIM,2)
+      INTEGER_T, intent(in), target :: domlo(SDIM)
+      INTEGER_T, intent(in), target :: domhi(SDIM)
+
+      REAL_T, target :: problo_arr(3)
+      REAL_T, target :: probhi_arr(3)
 
       INTEGER_T interior_ID
       INTEGER_T dir
-      REAL_T xpart1(SDIM), xpart2(SDIM), xpart3(SDIM), xpart4(SDIM)
+      REAL_T xpart1(SDIM)
+      REAL_T xpart2(SDIM)
+      REAL_T xpart3(SDIM)
+      REAL_T xpart4(SDIM)
+      REAL_T xpart_last(SDIM)
       REAL_T u1(SDIM), u2(SDIM), u3(SDIM), u4(SDIM)
       type(grid_parm_type) grid_PARM
+      INTEGER_T num_RK_stages
+
+      problo_arr(1)=problox
+      problo_arr(2)=probloy
+      problo_arr(3)=probloz
+
+      probhi_arr(1)=probhix
+      probhi_arr(2)=probhiy
+      probhi_arr(3)=probhiz
 
       grid_PARM%fablo=>fablo
       grid_PARM%fabhi=>fabhi
@@ -18919,35 +19052,72 @@ stop
       grid_PARM%vmac=>vmac
       grid_PARM%wmac=>wmac
 
+      grid_PARM%velbc=>velbc_in
+      grid_PARM%dombc=>dombc
+      grid_PARM%domlo=>domlo
+      grid_PARM%domhi=>domhi
+      grid_PARM%problo=>problo_arr
+      grid_PARM%probhi=>probhi_arr
+
+      num_RK_stages=4
+      
       do interior_ID=1,Np
        !4th-RK
        do dir=1,SDIM
         xpart1(dir)=particles(interior_ID)%pos(dir)
        enddo
-
        call interp_mac_velocity(grid_PARM,xpart1,u1)
 
+       if (num_RK_stages.eq.4) then
+
+        do dir=1,SDIM
+         xpart2(dir)=xpart1(dir)+0.5d0*dt*u1(dir)
+        enddo
+        call check_cfl_BC(grid_PARM,xpart1,xpart2)
+
+        call interp_mac_velocity(grid_PARM,xpart2,u2)
+
+        do dir=1,SDIM
+         xpart3(dir)=xpart1(dir)+0.5d0*dt*u2(dir)
+        enddo
+
+        call check_cfl_BC(grid_PARM,xpart1,xpart3)
+
+        call interp_mac_velocity(grid_PARM,xpart3,u3)
+
+        do dir=1,SDIM
+         xpart4(dir)=xpart1(dir)+dt*u3(dir)
+        enddo
+
+        call check_cfl_BC(grid_PARM,xpart1,xpart4)
+
+        call interp_mac_velocity(grid_PARM,xpart4,u4)
+
+        do dir=1,SDIM
+         xpart_last(dir)=xpart1(dir)+(1.0d0/6.d0)*dt &
+          *(u1(dir)+2.d0*u2(dir)+2.d0*u3(dir)+u4(dir))
+        enddo
+       else if (num_RK_stages.eq.2) then
+        do dir=1,SDIM
+         xpart2(dir)=xpart1(dir)+dt*u1(dir)
+        enddo
+        call check_cfl_BC(grid_PARM,xpart1,xpart2)
+
+        call interp_mac_velocity(grid_PARM,xpart2,u2)
+
+        do dir=1,SDIM
+         xpart_last(dir)=xpart1(dir)+0.5d0*dt &
+          *(u1(dir)+u2(dir))
+        enddo
+       else
+        print *,"num_RK_stages invalid"
+        stop
+       endif
+
+       call check_cfl_BC(grid_PARM,xpart1,xpart_last)
+
        do dir=1,SDIM
-        xpart2(dir)=xpart1(dir)+0.5d0*dt*u1(dir)
-       enddo
-
-       call interp_mac_velocity(grid_PARM,xpart2,u2)
-
-       do dir=1,SDIM
-        xpart3(dir)=xpart1(dir)+0.5d0*dt*u2(dir)
-       enddo
-
-       call interp_mac_velocity(grid_PARM,xpart3,u3)
-
-       do dir=1,SDIM
-        xpart4(dir)=xpart1(dir)+dt*u3(dir)
-       enddo
-
-       call interp_mac_velocity(grid_PARM,xpart4,u4)
-
-       do dir=1,SDIM
-        particles(interior_ID)%pos(dir)=xpart1(dir)+1/6.d0*dt &
-         *(u1(dir)+2.d0*u2(dir)+2.d0*u3(dir)+u4(dir))
+        particles(interior_ID)%pos(dir)=xpart_last(dir)
        enddo
 
       enddo!traverse all particles
