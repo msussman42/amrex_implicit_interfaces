@@ -116,8 +116,8 @@ public:
     virtual  void post_restart () = 0;
 
     virtual void post_regrid (int lbase,
-                              int new_finest,
-                              Real time) = 0;
+         int start_level,int new_finest,
+         int initialInit_flag,Real time) = 0;
     //
     // Operations to be done after initialization.
     // This is a pure virtual function and hence MUST be

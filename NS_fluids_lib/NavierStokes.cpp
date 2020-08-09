@@ -7309,6 +7309,8 @@ NavierStokes::init(
  
  NavierStokes* oldns     = (NavierStokes*) &old;
 
+ int max_level = parent->maxLevel();
+
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
  slab_step=ns_time_order-1;
@@ -7400,7 +7402,14 @@ NavierStokes::init(
       scomp_part[part_iter],
       ncomp_part[part_iter]);
   }
- }  // k
+ }  // k=0..nstate-1
+
+ if (level==0) {
+   // FIX ME new_dataPC
+ } else if ((level>=1)&&(level<=max_level)) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
 
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
  is_first_step_after_regrid = 1;
@@ -7497,7 +7506,7 @@ NavierStokes::init (const BoxArray& ba_in,
    FillCoarsePatch(S_new,scomp_part[part_iter],upper_slab_time,k,
      scomp_part[part_iter],ncomp_part[part_iter]);
   }
- } // k
+ } // k=0..nstate-1
 
  init_regrid_history();
  is_first_step_after_regrid = 2;
@@ -18054,13 +18063,27 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
 
 } // subroutine estTimeStep
 
-void NavierStokes::post_regrid (int lbase,int new_finest,Real time) {
+void NavierStokes::post_regrid (int lbase,
+  int start_level,int new_finest,int initialInit_flag,Real time) {
 
   const int max_level = parent->maxLevel();
   Real dt_amr=parent->getDt(); // returns dt_AMR
   int nstate=state.size();
   if (nstate!=NUM_STATE_TYPE)
    amrex::Error("nstate invalid");
+
+  if (initialInit_flag==1) {
+   // do nothing
+  } else if (initialInit_flag==0) {
+   if (level==start_level) {
+    // FIX ME 
+   } else if ((level>start_level)&&(level<=new_finest)) {
+    // do nothing
+   } else
+    amrex::Error("level invalid");
+  } else
+   amrex::Error("initialInit_flag invalid");
+ 
    // olddata=newdata  
   for (int k=0;k<nstate;k++) {
    state[k].CopyNewToOld(level,max_level); 
@@ -18986,6 +19009,8 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 void 
 NavierStokes::accumulate_PC_info(int im_elastic) {
 
+ NavierStokes& ns_level0=getLevel(0);
+
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if (level==finest_level) {
@@ -19055,11 +19080,11 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 	  MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
  accumulate_mf->setVal(0.0);
 
-  // All the particles should live on the finest level.
+  // All the particles should live on level==0.
   // particle levelset==0.0 for interface particles.
 
  ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    get_new_dataPC(State_Type,slab_step+1,ipart);
+    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
  const Vector<Geometry>& ns_geom=parent->Geom();
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
@@ -19169,6 +19194,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 void
 NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
+ NavierStokes& ns_level0=getLevel(0);
+
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
@@ -19206,10 +19233,10 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
    if (LSmf->nGrow()!=1)
     amrex::Error("LSmf->nGrow()!=1");
 
-    // All the particles should live on the finest level.
+    // All the particles should live on level==0.
     // particle levelset==0.0 for interface particles.
    ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     get_new_dataPC(State_Type,slab_step+1,ipart);
+     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
     // cell centered MF, but grid locations will be 
     // considered at the nodes.
@@ -19497,6 +19524,9 @@ NavierStokes::post_init_state () {
 
  const int finest_level = parent->finestLevel();
 
+ NavierStokes& ns_finest=getLevel(finest_level);
+ NavierStokes& ns_level0=getLevel(0);
+
    // inside of post_init_state
 
    // metrics_data
@@ -19543,7 +19573,6 @@ NavierStokes::post_init_state () {
   amrex::Error("color_count!=blobdata.size()");
 
  if (NS_ncomp_particles>0) {
-  NavierStokes& ns_finest=getLevel(finest_level);
 
   const Vector<Geometry>& ns_geom=parent->Geom();
   const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
@@ -19559,7 +19588,7 @@ NavierStokes::post_init_state () {
    if (particleLS_flag[im]==1) {
 
     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_finest.get_new_dataPC(State_Type,slab_step+1,ipart);
+     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
     localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
     int append_flag=0;
     ns_finest.init_particle_container(im,ipart,append_flag);

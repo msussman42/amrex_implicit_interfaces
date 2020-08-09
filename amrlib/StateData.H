@@ -158,7 +158,7 @@ public:
     //
     MultiFab& newData (int slab_index);
 
-      // lives only on max_level
+      // lives only on level==0
     ParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index);
 
@@ -167,7 +167,7 @@ public:
     //
     const MultiFab& newData (int slab_index) const;
 
-      // lives only on max_level
+      // lives only on level==0
     const ParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index) const;
 
@@ -226,7 +226,7 @@ private:
     // Pointer to new-time data.
     // MAX_NUM_SLAB entries.
     Vector< MultiFab* > new_data;
-     // ONLY LEVEL==MAX_LEVEL STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
+     // ONLY LEVEL==0 STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
      // PARTICLES THAT APPEAR ON ALL THE LEVELS.
      // 
      // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
@@ -240,7 +240,7 @@ private:
     using PLS_ParticleContainerType=
 	    ParticleContainer<N_EXTRA_REAL,0,0,0>;
 
-     // lives only on max_level
+     // lives only on level==0
     Vector< 
 	Vector<PLS_ParticleContainerType*> 
 	  > new_dataPC;

@@ -177,12 +177,12 @@ StateData::define (
      new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
        MFInfo().SetTag("new_data"),FArrayBoxFactory());
      if (ncomp_PC>0) {
-      if (level==max_level) {
+      if (level==0) {
        new_dataPC[i].resize(ncomp_PC);
        for (int j=0;j<ncomp_PC;j++) {
         new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
        }
-      } else if (level<max_level) {
+      } else if ((level>=1)&&(level<=max_level)) {
        // do nothing
       } else
        amrex::Error("level invalid");
@@ -193,7 +193,7 @@ StateData::define (
     }
 
     buildBC();
-}
+} // end subroutine StateData::define 
 
 // this constructs a variable of type "StateData" from checkpoint data.
 void
@@ -286,12 +286,12 @@ StateData::restart (
         MFInfo().SetTag("new_data"),FArrayBoxFactory());
 
      if (ncomp_PC>0) {
-      if (level==max_level) {
+      if (level==0) {
        new_dataPC[i].resize(ncomp_PC);
        for (int j=0;j<ncomp_PC;j++) {
         new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
        }
-      } else if (level<max_level) {
+      } else if ((level>=1)&&(level<=max_level)) {
        // do nothing
       } else
        amrex::Error("level invalid");
@@ -321,7 +321,7 @@ StateData::restart (
       // do nothing
      } else if (ncomp_PC>0) {
 
-      if (level==max_level) {
+      if (level==0) {
        for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
         int raw_index=ncomp_PC * i + PC_mat_index;
         std::string Part_name="FusionPart";
@@ -332,7 +332,7 @@ StateData::restart (
         Part_name+=raw_string;
         new_dataPC[i][PC_mat_index]->Restart(FullPathName,Part_name);
        } // PC_mat_index=0..ncomp_PC-1 
-      } else if (level<max_level) {
+      } else if ((level>=1)&&(level<=max_level)) {
        // do nothing
       } else
        amrex::Error("level invalid");
@@ -980,7 +980,7 @@ StateData::CopyNewToOld(int level,int max_level) {
   if (ncomp_PC==0) {
    // do nothing
   } else if (ncomp_PC>0) {
-   if (level==max_level) {
+   if (level==0) {
     int ncomp_PC_test=new_dataPC[i].size();
     if (ncomp_PC_test==ncomp_PC) {
      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
@@ -989,7 +989,7 @@ StateData::CopyNewToOld(int level,int max_level) {
      }
     } else
      amrex::Error("ncomp_PC_test or ncomp_PC invalid");
-   } else if (level<max_level) {
+   } else if ((level>=1)&&(level<=max_level)) {
     // do nothing
    } else
     amrex::Error("level invalid");
@@ -1015,7 +1015,7 @@ StateData::CopyOldToNew(int level,int max_level) {
   if (ncomp_PC==0) {
    // do nothing
   } else if (ncomp_PC>0) {
-   if (level==max_level) {
+   if (level==0) {
     int ncomp_PC_test=new_dataPC[i].size();
     if (ncomp_PC_test==ncomp_PC) {
      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
@@ -1024,7 +1024,7 @@ StateData::CopyOldToNew(int level,int max_level) {
      }
     } else
      amrex::Error("ncomp_PC_test or ncomp_PC invalid");
-   } else if (level<max_level) {
+   } else if ((level>=1)&&(level<=max_level)) {
     // do nothing
    } else
     amrex::Error("level invalid");
@@ -1118,7 +1118,7 @@ StateData::checkPoint (const std::string& name,
       // do nothing
      } else if (ncomp_PC>0) {
 
-      if (level==max_level) {
+      if (level==0) {
        int ncomp_PC_test=new_dataPC[i].size();
        if (ncomp_PC_test==ncomp_PC) {
         for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
@@ -1133,7 +1133,7 @@ StateData::checkPoint (const std::string& name,
         } // PC_mat_index=0..ncomp_PC-1 
        } else
         amrex::Error("ncomp_PC_test or ncomp_PC invalid");
-      } else if (level<max_level) {
+      } else if ((level>=1)&&(level<=max_level)) {
        // do nothing
       } else
        amrex::Error("level invalid");

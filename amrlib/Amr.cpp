@@ -1069,8 +1069,10 @@ Amr::initialInit (Real strt_time,
  for (int lev = 0; lev <= finest_level; lev++)
   amr_level[lev]->setTimeLevel(strt_time,dt_AMR);
 
+ int initialInit_flag=1;
+
  for (int lev = 0; lev <= finest_level; lev++)
-  amr_level[lev]->post_regrid(0,finest_level,strt_time);
+  amr_level[lev]->post_regrid(0,0,finest_level,initialInit_flag,strt_time);
 
  // recomputes the timestep on all levels and updates statedata and dt_AMR
  // ns.post_init calls: post_init_state, computeInitialDt, and
@@ -1535,7 +1537,8 @@ Amr::timeStep (Real time,
 
    // calls CopyNewToOld 
    // calls setTimeLevel(cumtime,dt_AMR) 
-  amr_level[0]->post_regrid(0,0,cumtime);
+  int initialInit_flag=0;
+  amr_level[0]->post_regrid(0,0,0,initialInit_flag,cumtime);
 
   if (ParallelDescriptor::IOProcessor()) {
    if (verbose > 1) {
@@ -2055,7 +2058,9 @@ Amr::regrid (int  lbase,
 
     // amr_level[lev-1] should already be init.
    a->init(*amr_level[lev],new_grids[lev],new_dmap[lev]);
+
    amr_level[lev].reset(a);
+
    this->SetBoxArray(lev, amr_level[lev]->boxArray());
    this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
 
@@ -2070,8 +2075,12 @@ Amr::regrid (int  lbase,
 
  } // lev=start..new_finest
 
- for (int lev = start; lev <= new_finest; lev++)
-  amr_level[lev]->post_regrid(lbase,new_finest,time);
+ int initialInit_flag=0;
+
+ for (int lev = start; lev <= new_finest; lev++) {
+  amr_level[lev]->post_regrid(lbase,start,new_finest,
+    initialInit_flag,time);
+ }
 
  if (record_run_info && ParallelDescriptor::IOProcessor()) {
   printGridInfo(runlog,start,finest_level);

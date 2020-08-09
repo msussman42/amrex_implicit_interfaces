@@ -565,7 +565,8 @@ public:
     virtual Real advance (Real time,Real dt);
 
     virtual void post_timestep (Real stop_time);
-    virtual void post_regrid (int lbase,int new_finest,Real time);
+    virtual void post_regrid (int lbase,int start_level,
+      int new_finest,int initialInit_flag,Real time);
 
 
     //

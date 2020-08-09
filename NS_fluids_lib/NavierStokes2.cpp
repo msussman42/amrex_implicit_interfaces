@@ -6813,6 +6813,8 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
  } else
   amrex::Error("expecting level==finest_level");
 
+ NavierStokes& ns_level0=getLevel(0);
+
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
  MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
@@ -6852,7 +6854,7 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
  accumulate_mf->setVal(0.0);
 
  ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-   get_new_dataPC(State_Type,slab_step+1,ipart_id);
+   ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart_id);
 
  const Vector<Geometry>& ns_geom=parent->Geom();
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
@@ -6991,6 +6993,8 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
  } else 
   amrex::Error("particle container on max level only");
 
+ NavierStokes& ns_level0=getLevel(0);
+
  int nmat=num_materials;
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -7032,7 +7036,7 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
   thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
 
   ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-   get_new_dataPC(State_Type,slab_step+1,ipart_id);
+   ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart_id);
 
 #ifdef _OPENMP
 #pragma omp parallel
