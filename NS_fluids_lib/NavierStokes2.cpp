@@ -7238,6 +7238,14 @@ void NavierStokes::output_triangles() {
  int finest_level = parent->finestLevel();
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid output_triangles");
+ NavierStokes& ns_level0=getLevel(0);
+
+ bool use_tiling=ns_tiling;
+ if (use_tiling) {
+  if (NS_ncomp_particles>0) {
+   amrex::Error("cannot output particles if tiling");
+  }
+ }
 
   // mask=tag if not covered by level+1 or outside the domain.
  Real tag=1.0;
@@ -7282,6 +7290,7 @@ void NavierStokes::output_triangles() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: NAVIERSTOKES_3D.F90
    FORT_ISOGRID(
     &tid_current,
     &visual_tessellate_vfrac,
@@ -7293,6 +7302,32 @@ void NavierStokes::output_triangles() {
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     &level,&gridno,&nmat);
+
+   if (level==finest_level) {
+    for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+      ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+
+     auto& particles = localPC.GetParticles(level)
+      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+     auto& particles_AoS = particles.GetArrayOfStructs();
+
+     int Np=particles_AoS.size();
+
+      // in: NAVIERSTOKES_3D.F90
+     fort_particle_grid(
+      &tid_current,
+      xlo,dx,
+      particles_AoS.data(),
+      Np,       //pass by value
+      tilelo,tilehi,
+      fablo,fabhi,&bfact,
+      &level,&gridno,&ipart);
+    } // ipart=0..NS_ncomp_particles-1
+   } else if ((level>=0)&&(level<finest_level)) {
+    // do nothing
+   } else
+    amrex::Error("level invalid"); 
  }  // mfi
  ns_reconcile_d_num(156);
 

@@ -1315,21 +1315,22 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T visual_tessellate_vfrac
-      INTEGER_T nmat
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(recon)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T level,gridno
-      INTEGER_T im
-      REAL_T recon(DIMV(recon),nmat*ngeom_recon) ! vof,refcen,order,slope,int
-      REAL_T mask(DIMV(mask))
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: visual_tessellate_vfrac
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: level,gridno
+      INTEGER_T :: im
+       ! vof,refcen,order,slope,int
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
+      REAL_T, intent(in) :: mask(DIMV(mask))
       REAL_T valu
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       character*2 matstr
 
@@ -1847,10 +1848,11 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
 
-      REAL_T time
-      INTEGER_T    plotint,strandid
-      INTEGER_T    arrdim,finest_level,nsteps,im
-      INTEGER_T    grids_per_level(arrdim)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: plotint
+      INTEGER_T :: strandid
+      INTEGER_T, intent(in) :: arrdim,finest_level,nsteps,im
+      INTEGER_T, intent(in) :: grids_per_level(arrdim)
 
       character*11 namestr11
       character*7 newnamestr7
@@ -13690,4 +13692,126 @@ END SUBROUTINE SIMP
       return
       end subroutine FORT_METRICS
 
+      module OUTPUT_PC_module
+
+       use iso_c_binding
+       use amrex_fort_module, only : amrex_real,amrex_particle_real
+       use iso_c_binding, only: c_int
+
+       implicit none
+
+         ! ParticleContainer<N_EXTRA_REAL,0,0,0>
+         ! where N_EXTRA_REAL=AMREX_SPACEDIM+1
+       type, bind(C) :: particle_t
+         real(amrex_particle_real) :: pos(SDIM)
+         real(amrex_particle_real) :: pos_foot(SDIM)
+         real(amrex_particle_real) :: closest_dist
+         integer(c_int) :: id
+         integer(c_int) :: cpu
+       end type particle_t
+
+      contains
+
+      subroutine fort_particle_grid( &
+        tid, &
+        xlo,dx, &
+        particles, & ! a list of particles in the elastic structure
+        Np, & !  Np = number of particles
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        level,gridno,ipart) &
+      bind(c,name='fort_particle_grid')
+
+      use probf90_module
+      use navierstokesf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: ipart
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level,gridno
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, value, intent(in) :: Np ! pass by value
+      type(particle_t), intent(in) :: particles(Np)
+
+      character*2 matstr
+
+      character*15 cennamestr15
+      character*3 levstr
+      character*5 gridstr
+      character*23 cenfilename23
+
+      REAL_T xref(SDIM)
+      REAL_T xrefT(SDIM)
+      INTEGER_T ipart_counter
+      INTEGER_T i,dir
+
+
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid151"
+       stop
+      endif
+
+      write(matstr,'(I2)') ipart
+      do i=1,2
+       if (matstr(i:i).eq.' ') then
+        matstr(i:i)='0'
+       endif
+      enddo
+
+      write(cennamestr15,'(A10,A2,A3)') 'tempPARCON',matstr,'pos'
+
+      write(levstr,'(I3)') level
+      write(gridstr,'(I5)') gridno
+
+      do i=1,3
+       if (levstr(i:i).eq.' ') then
+        levstr(i:i)='0'
+       endif
+      enddo
+      do i=1,5
+       if (gridstr(i:i).eq.' ') then
+        gridstr(i:i)='0'
+       endif
+      enddo
+      write(cenfilename23,'(A15,A3,A5)') cennamestr15,levstr,gridstr
+      print *,"cenfilename23 ",cenfilename23
+
+      open(unit=12,file=cenfilename23)
+      write(12,*) Np
+
+      do ipart_counter=1,Np
+       do dir=1,SDIM
+        xref(dir)=particles(ipart_counter)%pos(dir)
+        xrefT(dir)=xref(dir)
+       enddo
+       if (visual_RT_transform.eq.1) then
+        call RT_transform(xref,xrefT)
+       endif
+       if (SDIM.eq.3) then
+        write(12,*) xrefT(1),xrefT(2),xrefT(SDIM)
+       else if (SDIM.eq.2) then
+        write(12,*) xrefT(1),xrefT(2)
+       else
+        print *,"dimension bust"
+        stop
+       endif
+      enddo ! ipart_counter=1,Np
+
+      close(12)
+
+      return
+      end subroutine fort_particle_grid
+
+      end module OUTPUT_PC_module
 

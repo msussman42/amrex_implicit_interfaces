@@ -16685,7 +16685,7 @@ void NavierStokes::writeInterfaceReconstruction() {
  for (int ilev=finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   grids_per_level[ilev]=ns_level.grids.size();
-  ns_level.output_triangles();  // all nmat materials at once
+  ns_level.output_triangles();  // NavierStokes2.cpp: nmat materials at once
  }
  ParallelDescriptor::Barrier();
  if (ParallelDescriptor::IOProcessor()) {
@@ -16695,6 +16695,7 @@ void NavierStokes::writeInterfaceReconstruction() {
   int plotint=parent->plotInt();
   int nmat=num_materials;
   for (int im=1;im<=nmat;im++) {
+    // in: NAVIERSTOKES_3D.F90
    FORT_COMBINETRIANGLES(grids_per_level.dataPtr(),
     &finest_level,
     &nsteps,
