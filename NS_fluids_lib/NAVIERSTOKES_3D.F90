@@ -2157,7 +2157,7 @@ END SUBROUTINE SIMP
       endif
  
       return
-      end
+      end subroutine FORT_COMBINETRIANGLES
 
 
 
@@ -13812,6 +13812,197 @@ END SUBROUTINE SIMP
 
       return
       end subroutine fort_particle_grid
+
+      subroutine fort_combine_particles( &
+       grids_per_level,finest_level,nsteps, &
+       ipart, &
+       NS_ncomp_particles, &
+       arrdim,time,plotint) &
+      bind(c,name='fort_combine_particles')
+
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: plotint
+      INTEGER_T :: strandid
+      INTEGER_T, intent(in) :: arrdim,finest_level,nsteps
+      INTEGER_T, intent(in) :: ipart
+      INTEGER_T, intent(in) :: NS_ncomp_particles
+      INTEGER_T, intent(in) :: grids_per_level(arrdim)
+
+      character*15 cennamestr15
+      character*11 newcennamestr11
+
+      character*3 levstr
+      character*5 gridstr
+
+      character*23 cenfilename23
+
+      character*2 matstr
+      character*6 stepstr
+
+      character*21 newcenfilename21
+
+      character*80 rmcommand_refcen
+
+      INTEGER_T i
+      INTEGER_T ilev,igrid,ipass
+      REAL_T xref(SDIM)
+      INTEGER_T nparticles,Part_nparticles
+      INTEGER_T alloc_flag
+      INTEGER_T sysret
+
+      alloc_flag=0
+
+      if ((ipart.lt.0).or.(ipart.gt.99).or. &
+          (ipart.ge.num_materials).or. &
+          (ipart.ge.NS_ncomp_particles)) then
+       print *,"ipart out of range"
+       stop
+      endif
+
+      write(matstr,'(I2)') ipart
+      do i=1,2
+       if (matstr(i:i).eq.' ') then
+        matstr(i:i)='0'
+       endif
+      enddo
+      
+      write(cennamestr15,'(A10,A2,A3)') 'tempPARCON',matstr,'pos'
+      write(newcennamestr11,'(A6,A2,A3)') 'PARCON',matstr,'pos'
+
+      nparticles=0
+
+      if (arrdim.ne.finest_level+1) then
+       print *,"arrdim invalid"
+       stop
+      endif
+
+      do ipass=0,1
+
+       if (ipass.eq.1) then
+
+        alloc_flag=alloc_flag+1
+
+        write(stepstr,'(I6)') nsteps
+        do i=1,6
+         if (stepstr(i:i).eq.' ') then
+          stepstr(i:i)='0'
+         endif
+        enddo
+
+        if (plotint.le.0) then
+         strandid=1
+        else
+         strandid=(nsteps/plotint)+1
+        endif
+
+        write(newcenfilename21,'(A11,A6,A4)') newcennamestr11,stepstr,'.tec'
+        print *,"newcenfilename21 ",newcenfilename21
+        open(unit=12,file=newcenfilename21)
+
+        if (SDIM.eq.3) then
+         write(12,*) 'TITLE = "3D particles" '
+         write(12,*) 'VARIABLES = "X", "Y", "Z" '
+        else if (SDIM.eq.2) then
+         write(12,*) 'TITLE = "2D particles" '
+         write(12,*) 'VARIABLES = "X", "Y" '
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+        if (plotint.le.0) then
+         strandid=1
+        else
+         strandid=(nsteps/plotint)+1
+        endif
+
+!       write(12,'(A19,I14,A26,D25.16,A10,I10)') & 
+        write(12,'(A19,I14,A26,E25.16,A10,I10)') & 
+          'ZONE F="POINT", I= ', nparticles,  &
+          ', J=1, K=1, SOLUTIONTIME= ',time,' STRANDID=',strandid
+
+       endif  !ipass=1
+
+       do ilev=0,finest_level
+       do igrid=0,grids_per_level(ilev+1)-1
+         write(levstr,'(I3)') ilev
+         write(gridstr,'(I5)') igrid
+
+         do i=1,3
+          if (levstr(i:i).eq.' ') then
+           levstr(i:i)='0'
+          endif
+         enddo
+         do i=1,5
+          if (gridstr(i:i).eq.' ') then
+           gridstr(i:i)='0'
+          endif
+         enddo
+
+         write(cenfilename23,'(A15,A3,A5)') cennamestr15,levstr,gridstr
+         print *,"cenfilename23 ",cenfilename23
+         open(unit=5,file=cenfilename23)
+
+         read(5,*) Part_nparticles
+
+         if (ipass.eq.0) then
+          nparticles=nparticles+Part_nparticles
+         else if (ipass.eq.1) then
+
+          do i=1,Part_nparticles
+           if (SDIM.eq.3) then
+            read(5,*) xref(1),xref(2),xref(SDIM)
+            write(12,*) xref(1),xref(2),xref(SDIM)
+           else if (SDIM.eq.2) then
+            read(5,*) xref(1),xref(2)
+            write(12,*) xref(1),xref(2)
+           else
+            print *,"dimension bust"
+            stop
+           endif
+          enddo
+
+         else
+          print *,"ipass invalid"
+          stop
+         endif
+         close(5)
+       enddo
+       enddo
+      enddo ! ipass=0..1
+
+      alloc_flag=alloc_flag-1
+
+      if (alloc_flag.gt.0) then
+       print *,"alloc_flag bust"
+       stop
+      endif
+
+      sysret=0
+
+      if (ipart.eq.NS_ncomp_particles-1) then
+
+       rmcommand_refcen='rm tempPARCON*'
+       print *,"issuing command ",rmcommand_refcen
+
+#ifdef PGIFORTRAN
+       call system(rmcommand_refcen)
+#else
+       call execute_command_line(rmcommand_refcen,exitstat=sysret)
+#endif
+      endif
+
+      if (sysret.ne.0) then
+       print *,"execute_command_line has sysret=",sysret
+       stop
+      endif
+ 
+      return
+      end subroutine fort_combine_particles
 
       end module OUTPUT_PC_module
 

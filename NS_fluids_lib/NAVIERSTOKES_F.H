@@ -722,6 +722,13 @@ extern "C" {
        const int* gridno,
        int* ipart);
 
+    void fort_combine_particles(
+     int* grids_per_level,int* finest_level,
+     int* nsteps,int* ipart,
+     int* NS_ncomp_particles,
+     int* arrdim,
+     Real* time,int* plotint);
+
 }
 }/* namespace amrex */
     

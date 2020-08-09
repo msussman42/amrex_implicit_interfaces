@@ -16703,7 +16703,20 @@ void NavierStokes::writeInterfaceReconstruction() {
     &arrdim,
     &cur_time_slab,
     &plotint);
-  }
+  } // im=1..nmat
+
+  for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+    // in: NAVIERSTOKES_3D.F90
+   fort_combine_particles(grids_per_level.dataPtr(),
+    &finest_level,
+    &nsteps,
+    &ipart,
+    &NS_ncomp_particles,
+    &arrdim,
+    &cur_time_slab,
+    &plotint);
+  } // ipart=0..NS_ncomp_particles-1
+
  }
  ParallelDescriptor::Barrier();
 
