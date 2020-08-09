@@ -7405,7 +7405,27 @@ NavierStokes::init(
  }  // k=0..nstate-1
 
  if (level==0) {
-   // FIX ME new_dataPC
+   // in Amr::regrid (or Amr::timeStep with finest_level==0 and 
+   // regrid_on_restart), levels traversed from coarsest to finest,
+   // so that if at level==0, the "old" dmap and ba should still be intact.
+   // This needs to be done in the rare case that level==0 is replaced.
+  for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+   ParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
+    oldns->get_new_dataPC(State_Type,ns_time_order,ipart);
+   ParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
+    get_new_dataPC(State_Type,ns_time_order,ipart);
+
+   const Vector<Geometry>& ns_geom=parent->Geom();
+   const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+   const Vector<BoxArray>& ns_ba=parent->boxArray();
+   Vector<int> rr;
+   rr.resize(ns_ba.size());
+   for (int ilev=0;ilev<rr.size();ilev++)
+    rr[ilev]=2;
+   new_PC.Define(ns_geom,ns_dmap,ns_ba,rr);
+   bool local_copy_flag=true; 
+   new_PC.copyParticles(old_PC,local_copy_flag);
+  } // ipart=0..NS_ncomp_particles-1
  } else if ((level>=1)&&(level<=max_level)) {
   // do nothing
  } else
@@ -18066,6 +18086,8 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
 void NavierStokes::post_regrid (int lbase,
   int start_level,int new_finest,int initialInit_flag,Real time) {
 
+  NavierStokes& ns_level0=getLevel(0);
+
   const int max_level = parent->maxLevel();
   Real dt_amr=parent->getDt(); // returns dt_AMR
   int nstate=state.size();
@@ -18076,7 +18098,24 @@ void NavierStokes::post_regrid (int lbase,
    // do nothing
   } else if (initialInit_flag==0) {
    if (level==start_level) {
-    // FIX ME 
+    for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+     const Vector<Geometry>& ns_geom=parent->Geom();
+     const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+     const Vector<BoxArray>& ns_ba=parent->boxArray();
+     Vector<int> rr;
+     rr.resize(ns_ba.size());
+     for (int ilev=0;ilev<rr.size();ilev++)
+      rr[ilev]=2;
+     ParticleContainer<N_EXTRA_REAL,0,0,0> local_PC(ns_geom,ns_dmap,ns_ba,rr);
+     ParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
+      ns_level0.get_new_dataPC(State_Type,ns_time_order,ipart);
+     bool local_copy_flag=false;  // redistribute after the copy
+     local_PC.copyParticles(current_PC,local_copy_flag);
+     current_PC.Define(ns_geom,ns_dmap,ns_ba,rr);
+     local_copy_flag=true;
+     current_PC.copyParticles(local_PC,local_copy_flag);
+    } // ipart=0..NS_ncomp_particles-1
+    
    } else if ((level>start_level)&&(level<=new_finest)) {
     // do nothing
    } else
@@ -19098,7 +19137,9 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
    // LOOK AT THE PELE CODE. (see Julia)
  NeighborParticleContainer<N_EXTRA_REAL,0> 
    localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
- bool local_copy_flag=true; // the two PC have same hierarchy
+  // the two PC have same hierarchy, no need to call Redistribute after the
+  // copy.
+ bool local_copy_flag=true; 
  localPC.copyParticles(localPC_no_nbr,local_copy_flag);
 
  localPC.fillNeighbors();

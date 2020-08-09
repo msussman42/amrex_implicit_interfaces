@@ -2066,10 +2066,13 @@ Amr::regrid (int  lbase,
 
   } else {
 
-   a->init(new_grids[lev],new_dmap[lev]);
-   amr_level[lev].reset(a);
-   this->SetBoxArray(lev, amr_level[lev]->boxArray());
-   this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
+   if (lev>0) {
+    a->init(new_grids[lev],new_dmap[lev]);
+    amr_level[lev].reset(a);
+    this->SetBoxArray(lev, amr_level[lev]->boxArray());
+    this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
+   } else
+    amrex::Error("expecting lev>0 if amr_level[lev]==FALSE");
 
   }
 
