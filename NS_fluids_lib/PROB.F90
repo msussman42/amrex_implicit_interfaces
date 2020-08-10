@@ -9590,7 +9590,8 @@ end subroutine dynamic_contact_angle
       else if (imattype.eq.23) then
        call EOS_peng_robinson(rho,internal_energy,pressure)
       else if (imattype.eq.24) then
-       call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure)
+       call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure, &
+         imattype,im)
       else
        print *,"imattype invalid EOS_material"
        stop
@@ -9719,7 +9720,8 @@ end subroutine dynamic_contact_angle
       else if (imattype.eq.23) then
        call SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
       else if (imattype.eq.24) then
-       call SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr)
+       call SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr, &
+         imattype,im)
       else
        print *,"imattype invalid SOUNDSQR_material"
        stop
@@ -9867,7 +9869,8 @@ end subroutine dynamic_contact_angle
       else if (imattype.eq.23) then
        call INTERNAL_peng_robinson(rho,temperature,local_internal_energy)
       else if (imattype.eq.24) then
-       call INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy)
+       call INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy, &
+         imattype,im)
       else
        print *,"imattype invalid INTERNAL_material"
        stop
@@ -10104,7 +10107,8 @@ end subroutine dynamic_contact_angle
       else if (imattype.eq.23) then
        call TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
       else if (imattype.eq.24) then
-       call TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy)
+       call TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy, &
+         imattype,im)
       else
        print *,"imattype invalid TEMPERATURE_material"
        print *,"imattype= ",imattype
@@ -33666,11 +33670,13 @@ end subroutine initialize2d
        INTEGER_T nten
        INTEGER_T level,bfactmax
        INTEGER_T, target :: used_probtypes(1000)
+
+       probtype=ccprobtype
 ! PROCEDURE POINTER
        probtype_procptr_list=>used_probtypes
 ! USER DEFINED
        probtype_list_size=1
-       use_probtypes(1)=2000
+       used_probtypes(1)=2000
 
 
        global_pressure_scale=one
@@ -33868,7 +33874,6 @@ end subroutine initialize2d
        ractivey=ccractivey
        ractivez=ccractivez
 
-       probtype=ccprobtype
        adv_dir=ccadv_dir
        adv_vel=ccadv_vel
        axis_dir=ccaxis_dir

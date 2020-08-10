@@ -196,6 +196,60 @@ implicit none
       INTEGER_T, pointer :: probtype_procptr_list(:)
       INTEGER_T :: probtype_list_size
 
+      ABSTRACT INTERFACE
+
+      subroutine TEMPLATE_INIT_MODULE()
+      end subroutine TEMPLATE_INIT_MODULE
+
+      subroutine TEMPLATE_LS(x,t,LS)
+      REAL_T, intent(in) :: x(:)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(out) :: LS(:)
+      end subroutine TEMPLATE_LS
+
+      subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx)
+      REAL_T, intent(in) :: x(:)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(in) :: dx(:)
+      REAL_T, intent(in) :: LS(:)
+      REAL_T, intent(out) :: VEL(:)
+      INTEGER_T, intent(in) :: velsolid_flag
+      end subroutine TEMPLATE_VEL
+
+      subroutine TEMPLATE_EOS(rho,internal_energy,pressure, &
+        imattype,im)
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: internal_energy
+      REAL_T, intent(out) :: pressure
+      end subroutine TEMPLATE_EOS
+
+      subroutine TEMPLATE_SOUNDSQR(rho,internal_energy,soundsqr, &
+        imattype,im)
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: internal_energy
+      REAL_T, intent(out) :: soundsqr
+      end subroutine TEMPLATE_SOUNDSQR
+
+      subroutine TEMPLATE_INTERNAL(rho,temperature,local_internal_energy, &
+        imattype,im)
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: temperature 
+      REAL_T, intent(out) :: local_internal_energy
+      end subroutine TEMPLATE_INTERNAL
+
+      subroutine TEMPLATE_TEMPERATURE(rho,temperature,internal_energy, &
+        imattype,im)
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(out) :: temperature 
+      REAL_T, intent(in) :: internal_energy
+      end subroutine TEMPLATE_TEMPERATURE
+
+      END INTERFACE
+
 contains
 
 end module probcommon_module

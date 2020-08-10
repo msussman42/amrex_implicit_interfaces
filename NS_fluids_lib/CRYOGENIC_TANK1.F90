@@ -223,48 +223,76 @@ end function DIST_FINITE_CYLINDER
 
 !***********************************************
 ! compressible material functions for (ns.material_type = 24)
-subroutine EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure)
+subroutine EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure, &
+  imattype,im)
  IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- pressure=rho*(TANK1_VAPOR_GAMMA-1.0D0)*internal_energy
+ if (imattype.eq.24) then
+  pressure=rho*(TANK1_VAPOR_GAMMA-1.0D0)*internal_energy
+ else
+  print *,"imattype invalid"
+  stop
+ endif
 
  return
 end subroutine EOS_CRYOGENIC_TANK1
 
-subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr)
+subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr, &
+  imattype,im)
  IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
  REAL_T pressure
 
- call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure)
- soundsqr=TANK1_VAPOR_GAMMA*pressure/rho
+ if (imattype.eq.24) then
+  call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure,imattype,im)
+  soundsqr=TANK1_VAPOR_GAMMA*pressure/rho
+ else
+  print *,"imattype invalid"
+  stop
+ endif
 
  return
 end subroutine SOUNDSQR_CRYOGENIC_TANK1
 
-subroutine INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy)
+subroutine INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy, &
+  imattype,im)
  IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
- 
- local_internal_energy=TANK1_VAPOR_CV*temperature
+
+ if (imattype.eq.24) then 
+  local_internal_energy=TANK1_VAPOR_CV*temperature
+ else
+  print *,"imattype invalid"
+  stop
+ endif
 
  return
 end subroutine INTERNAL_CRYOGENIC_TANK1
 
-subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy)
+subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy, &
+  imattype,im)
  IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- temperature=internal_energy/TANK1_VAPOR_CV
+ if (imattype.eq.24) then 
+  temperature=internal_energy/TANK1_VAPOR_CV
+ else
+  print *,"imattype invalid"
+  stop
+ endif
 
  return
 end subroutine TEMPERATURE_CRYOGENIC_TANK1
