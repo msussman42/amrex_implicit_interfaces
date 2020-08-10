@@ -155,23 +155,52 @@
 ! output:
 !   ls_extrap(im=1...nmat) = extrapolated distance for materials in which 
 !                            is_fluid(im).eq.1
-  subroutine level_set_extrapolation(pos_xyz, ls, weights, is_fluid, &
-                                     ls_extrap, ni, nj, nk, nmat, dim)
+  subroutine level_set_extrapolation( &
+         pos_xyz, &
+         ls, &
+         weights, &
+         is_fluid, &
+         ls_extrap, &
+         rij, &
+         rk, &
+         nmat, dim_in)
     implicit none
 
-    integer,          intent(in ) :: ni, nj, nk, nmat, dim
+    integer,          intent(in ) :: rij,rk, nmat, dim_in
     integer,          intent(in ) :: is_fluid(nmat)
-    double precision, intent(in ) :: pos_xyz(ni, nj, nk, dim), &
-                                     ls(ni, nj, nk, nmat), &
-                                     weights(ni, nj, nk)
+    double precision, intent(in ) ::  &
+            pos_xyz(-rij:rij,-rij:rij,-rk:rk, dim_in), &
+            ls(-rij:rij,-rij:rij,-rk:rk, nmat), &
+            weights(-rij:rij,-rij:rij,-rk:rk)
     double precision, intent(out) :: ls_extrap(nmat)
 
-    integer i, j, k, m, n, im
-    double precision A(ni*nj*nk,dim+1), b(ni*nj*nk), pos0(dim), var(dim+1)
+    integer i, j, k
+    integer isten, jsten, ksten
+    integer m, n, im
+    integer ni,nj,nk
+    double precision pos0(dim_in)
+    double precision var(dim_in+1)
+    double precision, allocatable :: A(:,:)
+    double precision, allocatable :: b(:)
+
     !ls_extrap = a . (x - x0) + b
     !find a(3) and b while minimize SUM(w_ij*(phi_ij-phi_fluid_ij)^2)
     !calculate phi_fluid at x0
     !var(dim+1) = {a(dim), b}
+
+    ni=2*rij+1
+    nj=ni
+    nk=2*rk+1
+
+    allocate(A(ni*nj*nk,dim_in+1))
+    allocate(b(ni*nj*nk))
+
+    if (nmat.ge.1) then
+     ! do nothing
+    else
+     print *,"nmat invalid"
+     stop
+    endif
 
     if (((ni+1)/2)*2.eq.ni+1) then
             ! do nothing
@@ -191,13 +220,13 @@
             print *,"nk invalid"
             stop
     endif
-    pos0(1) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 1)
-    pos0(2) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 2)
-    if (dim .eq. 3) then
-       pos0(dim) = pos_xyz((ni+1)/2, (nj+1)/2, (nk+1)/2, 3)
+    pos0(1) = pos_xyz(0,0,0,1)
+    pos0(2) = pos_xyz(0,0,0,2)
+    if (dim_in .eq. 3) then
+     pos0(dim_in) = pos_xyz(0,0,0,dim_in)
     endif
     m = ni * nj * nk
-    n = dim + 1
+    n = dim_in + 1
     do i = 1, m
        do j = 1, n
           A(i, j) = 0.d0
@@ -214,34 +243,45 @@
     do im = 1, nmat
        if (is_fluid(im) .eq. 1) then
           do i = 1, ni
+             isten=i-rij-1
              do j = 1, nj
+                jsten=j-rij-1
                 do k = 1, nk
-                   if (weights(i,j,k) .lt. 0.d0) then
+                   ksten=k-rk-1
+                   if (weights(isten,jsten,ksten) .lt. 0.d0) then
                       print *, "Error! Weight factor less than zero!"
                       stop
                    endif
-                   A((i-1)*nj*nk+(j-1)*nk+k,1) = sqrt(weights(i,j,k)) &
-                                         * (pos_xyz(i,j,k,1)-pos0(1))
-                   A((i-1)*nj*nk+(j-1)*nk+k,2) = sqrt(weights(i,j,k)) &
-                                         * (pos_xyz(i,j,k,2)-pos0(2))
-                   if (dim .eq. 3) then
-                      A((i-1)*nj*nk+(j-1)*nk+k,dim) = sqrt(weights(i,j,k)) &
-                                          * (pos_xyz(i,j,k,dim)-pos0(dim))
+                   A((i-1)*nj*nk+(j-1)*nk+k,1) = &
+                           sqrt(weights(isten,jsten,ksten)) &
+                           * (pos_xyz(isten,jsten,ksten,1)-pos0(1))
+                   A((i-1)*nj*nk+(j-1)*nk+k,2) = &
+                           sqrt(weights(isten,jsten,ksten)) &
+                           * (pos_xyz(isten,jsten,ksten,2)-pos0(2))
+                   if (dim_in .eq. 3) then
+                      A((i-1)*nj*nk+(j-1)*nk+k,dim_in) = &
+                           sqrt(weights(isten,jsten,ksten)) &
+                           * (pos_xyz(isten,jsten,ksten,dim_in)-pos0(dim_in))
                    endif
-                   A((i-1)*nj*nk+(j-1)*nk+k, dim+1) = 1.d0
-                   b((i-1)*nj*nk+(j-1)*nk+k) = sqrt(weights(i,j,k)) &
-                                             * ls(i,j,k,im)
+                   A((i-1)*nj*nk+(j-1)*nk+k, dim_in+1) = &
+                           sqrt(weights(isten,jsten,ksten)) 
+                   b((i-1)*nj*nk+(j-1)*nk+k) = &
+                           sqrt(weights(isten,jsten,ksten)) &
+                           * ls(isten,jsten,ksten,im)
                 enddo
              enddo       
           enddo
 
           call least_squares_QR(A, var, b, m, n)
 
-          ls_extrap(im) = var(dim + 1)
+          ls_extrap(im) = var(dim_in + 1)
        else!is_fluid(im) = 0, soild
-          ls_extrap(im) = ls((ni+1)/2, (nj+1)/2, (nk+1)/2, im)
+          ls_extrap(im) = ls(0,0,0, im)
        endif
-    enddo
+    enddo ! im=1..nmat
+
+    deallocate(A)
+    deallocate(b)
 
   end subroutine level_set_extrapolation
 

@@ -15386,8 +15386,6 @@ stop
       REAL_T XLIST(SDIM+1,SDIM)
       REAL_T VLIST(SDIM,SDIM)
       INTEGER_T XLIST_ncomp
-      INTEGER_T nij
-      INTEGER_T nk
       REAL_T, allocatable :: ZEYU_XPOS(:,:,:,:)
       REAL_T, allocatable :: ZEYU_LS(:,:,:,:)
       REAL_T, allocatable :: ZEYU_WT_FLUID(:,:,:)
@@ -15579,13 +15577,10 @@ stop
 
       extrap_radius=1
       least_sqr_radius=3
-      nij=2*least_sqr_radius+1
-      nk=1
       least_sqrZ=0
       if (SDIM.eq.2) then
        ! do nothing
       else if (SDIM.eq.3) then
-       nk=nij
        least_sqrZ=3
       else
        print *,"dimension bust"
@@ -16102,6 +16097,7 @@ stop
 
              dist_to_fluid_min=zero
              dist_to_fluid_max=zero
+
              total_weightFLUID=zero
              total_weightSOLID=zero
 
@@ -16132,7 +16128,9 @@ stop
               enddo
 
               do im=1,nmat
+
                LS_virtual(im)=LS(D_DECL(i+i1+i2,j+j1+j2,k+k1+k2),im)
+
                if (is_rigid(nmat,im).eq.0) then
                 if (LS_virtual(im).ge.-dxmaxLS) then
                  if (im1_substencil.eq.0) then
@@ -16156,7 +16154,7 @@ stop
                endif
               enddo ! im=1..nmat
 
-               ! the fluid cells closest to the target cell have the
+               ! the fluid cells closest to the substrate have the
                ! most weight.
               call get_primary_material(LS_virtual,nmat,im_primary_sub_stencil)
 
@@ -16217,32 +16215,56 @@ stop
 
                dist_to_fluid_min=-one
 
-               WT=one
- 
-               total_weightFLUID=total_weightFLUID+WT
-               ZEYU_WT_FLUID(i2,j2,k2)=WT
-               do im=1,nmat
-                LS_virtual_new(im)=LS_virtual_new(im)+WT*LS_virtual(im)
-                ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
-               enddo
+               local_dist_solid=LS_virtual(im_solid_max)
+               if (local_dist_solid.gt.zero) then
+                local_dist_solid=zero
+               endif
+               WT=one/(local_dist_solid**2+0.01d0*(dxmaxLS**2))
+
+               if (WT.gt.zero) then 
+                total_weightFLUID=total_weightFLUID+WT
+
+                ZEYU_WT_FLUID(i2,j2,k2)=WT
+               
+                do im=1,nmat
+                 LS_virtual_new(im)=LS_virtual_new(im)+WT*LS_virtual(im)
+                 ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
+                enddo
+
+               else 
+                print *,"WT bust"
+                stop
+               endif
+
               else if (is_rigid(nmat,im_primary_sub_stencil).eq.1) then
-               WT=0.01*(dxmaxLS**2)
+
                ZEYU_WT_FLUID(i2,j2,k2)=zero
+
                local_dist_solid=abs(LS_virtual(im_primary_sub_stencil))
-               WT=WT+(local_dist_solid)**2
-               WT=one/WT
-               if (local_dist_solid.lt.dist_to_fluid_min) then
-                dist_to_fluid_min=local_dist_solid
-               endif
-               if (local_dist_solid.gt.dist_to_fluid_max) then
-                dist_to_fluid_max=local_dist_solid
-               endif
-               do im=1,nmat
-                LS_virtual_newSOLID(im)=LS_virtual_newSOLID(im)+ &
+               WT=one/(local_dist_solid**2+0.01d0*(dxmaxLS**2))
+
+               if (WT.gt.zero) then 
+
+                if (local_dist_solid.lt.dist_to_fluid_min) then
+                 dist_to_fluid_min=local_dist_solid
+                endif
+                if (local_dist_solid.gt.dist_to_fluid_max) then
+                 dist_to_fluid_max=local_dist_solid
+                endif
+
+                do im=1,nmat
+                 LS_virtual_newSOLID(im)=LS_virtual_newSOLID(im)+ &
                      WT*LS_virtual(im)
-                ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
-               enddo
-               total_weightSOLID=total_weightSOLID+WT
+                 ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
+                enddo
+
+                total_weightSOLID=total_weightSOLID+WT
+
+               else
+                print *,"WT bust"
+                stop
+               endif
+
               else
                print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
                stop 
@@ -16269,9 +16291,6 @@ stop
                stop
               endif
 
-              ! always do low order extrapolation
-              ! in future, for high order extrapolation, only include
-              ! values immediately next to wall?
              else if ((XLIST_ncomp.eq.SDIM+1).and. &
                       (ZEYU_always_low_order_extrapolation.eq.1)) then
 
@@ -16330,11 +16349,20 @@ stop
                print *,"total_weightFLUID invalid"
                stop
               endif
+
              else if ((XLIST_ncomp.eq.SDIM+1).and. &
                       (ZEYU_always_low_order_extrapolation.eq.0)) then
-              call level_set_extrapolation(ZEYU_XPOS,ZEYU_LS, &
-               ZEYU_WT_FLUID,local_is_fluid, &
-               LS_virtual_new,nij,nij,nk,nmat,SDIM)
+
+              call level_set_extrapolation( &
+               ZEYU_XPOS, &
+               ZEYU_LS, &
+               ZEYU_WT_FLUID, &
+               local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
+               LS_virtual_new, &
+               least_sqr_radius, &
+               least_sqrZ, &
+               nmat,SDIM)
+
              else
               print *,"XLIST_ncomp invalid or the flag"
               print *,"ZEYU_always_low_order_extrapolation invalid"
