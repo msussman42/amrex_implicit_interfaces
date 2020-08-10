@@ -256,6 +256,7 @@ namespace amrex{
        int* im_solid_map,
        int* renormalize_only,
        int* solidheat_flag,
+       int* ZEYU_always_low_order_extrapolation,
        int* ngrow_distance);
 
 

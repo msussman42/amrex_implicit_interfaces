@@ -70,7 +70,9 @@ Lp.bottom_smooth_type=2
 ns.visual_ncell=192 96  # ascii tecplot files "uniform<stuff>.tec"
                         # uniform data.
 ns.visual_option=-2  # -1=VISIT format  -2=tecplot format
-ns.visual_tessellate_vfrac=1
+# make ns.visual_tessellate_vfrac==0 in order to see extrapolated level set
+# function in the mat*.tec files.
+ns.visual_tessellate_vfrac=0
 
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2  # number of buffer cells in error est
@@ -125,6 +127,7 @@ ns.law_of_the_wall=2  #1=law of the wall   2=GNBC  0=neither
 # =8 Cox 1986
 ns.ZEYU_DCA_SELECT=1  #DCA=dynamic contact angle
 #ns.ZEYU_DCA_SELECT=-1  #DCA=dynamic contact angle
+ns.ZEYU_always_low_order_extrapolation=0
 
 ns.use_lsa=0
 ns.capillary_artificial_viscosity=0.0 0.0 0.0  # gets multiplied by visc_coef

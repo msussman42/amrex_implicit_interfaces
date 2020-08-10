@@ -15261,6 +15261,7 @@ stop
        im_solid_map, &
        renormalize_only, &
        solidheat_flag, &
+       ZEYU_always_low_order_extrapolation, &
        ngrow_distance)
       use global_utility_module
       use global_distance_module
@@ -15273,6 +15274,7 @@ stop
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: solidheat_flag
+      INTEGER_T, intent(in) :: ZEYU_always_low_order_extrapolation
       INTEGER_T, intent(in) :: ngrow_distance
 
       INTEGER_T, intent(in) :: renormalize_only
@@ -16252,6 +16254,10 @@ stop
           
               ! fluid cells exist in Least squares stencil, but
               ! not enough of them.
+              ! XLIST_ncomp = number of row vectors in the least squares
+              ! matrix A that can be orthogonalized by way of Gram Schmidt.
+              ! If XLIST_ncomp <= sdim => least squares for 2nd order 
+              ! extrapolation cannot be done.
              if ((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)) then
 
               if (total_weightFLUID.gt.zero) then
@@ -16266,7 +16272,8 @@ stop
               ! always do low order extrapolation
               ! in future, for high order extrapolation, only include
               ! values immediately next to wall?
-             else if ((XLIST_ncomp.eq.SDIM+1).and.(1.eq.1)) then
+             else if ((XLIST_ncomp.eq.SDIM+1).and. &
+                      (ZEYU_always_low_order_extrapolation.eq.1)) then
 
               if (total_weightFLUID.gt.zero) then
                do im=1,nmat
@@ -16323,12 +16330,14 @@ stop
                print *,"total_weightFLUID invalid"
                stop
               endif
-             else if (XLIST_ncomp.eq.SDIM+1) then
+             else if ((XLIST_ncomp.eq.SDIM+1).and. &
+                      (ZEYU_always_low_order_extrapolation.eq.0)) then
               call level_set_extrapolation(ZEYU_XPOS,ZEYU_LS, &
                ZEYU_WT_FLUID,local_is_fluid, &
                LS_virtual_new,nij,nij,nk,nmat,SDIM)
              else
-              print *,"XLIST_ncomp invalid"
+              print *,"XLIST_ncomp invalid or the flag"
+              print *,"ZEYU_always_low_order_extrapolation invalid"
               stop
              endif
             else
@@ -17109,9 +17118,9 @@ stop
         INTEGER_T :: finest_level
         REAL_T, pointer :: dx(:)
         REAL_T, pointer :: xlo(:)
-        REAL_T, pointer :: umac(:,:,:)
-        REAL_T, pointer :: vmac(:,:,:)
-        REAL_T, pointer :: wmac(:,:,:)
+        REAL_T, pointer :: umac(D_DECL(:,:,:))
+        REAL_T, pointer :: vmac(D_DECL(:,:,:))
+        REAL_T, pointer :: wmac(D_DECL(:,:,:))
         INTEGER_T, pointer :: velbc(:,:,:)
         INTEGER_T, pointer :: dombc(:,:)
         INTEGER_T, pointer :: domlo(:)

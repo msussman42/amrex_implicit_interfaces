@@ -15191,6 +15191,7 @@ stop
 
              call containing_cell(bfact,dx,xlo,fablo,x_projection, &
               cell_index_project)
+
              stencil_in_grow_box=1
 
              do dir=1,SDIM
