@@ -33665,6 +33665,13 @@ end subroutine initialize2d
        INTEGER_T im,iten
        INTEGER_T nten
        INTEGER_T level,bfactmax
+       INTEGER_T, target :: used_probtypes(1000)
+! PROCEDURE POINTER
+       probtype_procptr_list=>used_probtypes
+! USER DEFINED
+       probtype_list_size=1
+       use_probtypes(1)=2000
+
 
        global_pressure_scale=one
        global_velocity_scale=one
