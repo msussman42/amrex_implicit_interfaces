@@ -359,13 +359,13 @@ subroutine CRYOGENIC_TANK1_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T LS_in(num_materials)
-INTEGER_T dir,side
-REAL_T dx(SDIM)
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(inout) :: LS(num_materials)
+REAL_T, intent(in) :: LS_in(num_materials)
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -385,14 +385,14 @@ subroutine CRYOGENIC_TANK1_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T VEL
-REAL_T VEL_in
-INTEGER_T veldir,dir,side
-REAL_T dx(SDIM)
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(inout) :: VEL
+REAL_T, intent(in) :: VEL_in
+INTEGER_T, intent(in) :: veldir,dir,side
+REAL_T, intent(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
@@ -418,14 +418,14 @@ subroutine CRYOGENIC_TANK1_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T PRES
-REAL_T PRES_in
-INTEGER_T dir,side
-REAL_T dx(SDIM)
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(inout) :: PRES
+REAL_T, intent(in) :: PRES_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -446,17 +446,17 @@ subroutine CRYOGENIC_TANK1_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(num_materials)
 REAL_T local_STATE(num_materials*num_state_material)
-REAL_T STATE
-REAL_T STATE_merge
-REAL_T STATE_in
-INTEGER_T dir,side
-REAL_T dx(SDIM)
-INTEGER_T istate,im
+REAL_T, intent(inout) :: STATE
+REAL_T, intent(inout) :: STATE_merge
+REAL_T, intent(in) :: STATE_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, intent(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 
 if ((istate.ge.1).and. &

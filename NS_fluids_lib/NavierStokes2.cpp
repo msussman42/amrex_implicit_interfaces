@@ -7241,11 +7241,6 @@ void NavierStokes::output_triangles() {
  NavierStokes& ns_level0=getLevel(0);
 
  bool use_tiling=ns_tiling;
- if (use_tiling) {
-  if (NS_ncomp_particles>0) {
-   amrex::Error("cannot output particles if tiling");
-  }
- }
 
   // mask=tag if not covered by level+1 or outside the domain.
  Real tag=1.0;
@@ -7266,10 +7261,11 @@ void NavierStokes::output_triangles() {
  thread_class::init_d_numPts(localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
 
 // cannot do openmp here until each thread has its own file number.
-// The default for,
-// MFIter (const FabArrayBase& fabarray,unsigned char flags_=0) ,
-// is no tiling.
- for (MFIter mfi(*localMF[SLOPE_RECON_MF],false); mfi.isValid(); ++mfi) {
+// So, we remove the ifdef OPENMP clause ("omp parallel"), but we
+// still need tiling==true if configured as such so that the
+// Particle tiling structure is consistent with the Eulerian tiling
+// structure.
+ for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
