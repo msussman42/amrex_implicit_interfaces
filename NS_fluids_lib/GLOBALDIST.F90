@@ -1670,7 +1670,6 @@ end subroutine nozzle2d
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CAV3D_module
       use TSPRAY_module
       use CONE3D_module
@@ -1722,7 +1721,12 @@ end subroutine nozzle2d
 
       if (FSI_flag(im).eq.1) then  ! no external FSI (prescribed EUL)
 
-       if (probtype.eq.411) then ! user defined cavitation problem
+       if (is_in_probtype_list().eq.1) then
+
+        call SUB_LS(xvec,time,dist_array,num_materials)
+        dist=dist_array(im)
+
+       else if (probtype.eq.411) then ! user defined cavitation problem
         call CAV3D_LS(xvec,time,dist_array)
         dist=dist_array(im)
 
@@ -1739,10 +1743,6 @@ end subroutine nozzle2d
         dist=dist_array(im)
        else if (probtype.eq.414) then ! melting
         call MITSUHIRO_LS(xvec,time,dist_array)
-        dist=dist_array(im)
-
-       else if (probtype.eq.421) then 
-        call CRYOGENIC_TANK1_LS(xvec,time,dist_array,num_materials)
         dist=dist_array(im)
 
        else if (probtype.eq.222) then ! cone3D

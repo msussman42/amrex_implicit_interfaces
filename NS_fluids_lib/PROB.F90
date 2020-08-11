@@ -1579,6 +1579,7 @@ stop
        LS,VFRAC,TEMPERATURE,DENSITY, &
        CV, &
        HEAT_SOURCE_OUT)
+      use global_utility_module
       use global_distance_module
       use USERDEF_module
       use CAV3D_module
@@ -1587,7 +1588,6 @@ stop
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use rigid_FSI_module
       IMPLICIT NONE
 
@@ -1676,7 +1676,17 @@ stop
        endif
        HEAT_SOURCE_OUT(im)=zero
 
-       if (probtype.eq.411) then
+       if (is_in_probtype_list().eq.1) then
+
+        call SUB_HEATSOURCE(im,VFRAC,time, &
+               x, &
+               xsten, & ! xsten(-nhalf:nhalf,SDIM)
+               nhalf, &
+               TEMPERATURE, &
+               HEAT_SOURCE_OUT(im),DENSITY,CV,dt, &
+               num_materials)
+
+       else if (probtype.eq.411) then
 
         call CAV3D_HEATSOURCE(im,VFRAC,time, &
                x, &
@@ -1693,16 +1703,6 @@ stop
         call TSPRAY_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
                HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
 
-       else if (probtype.eq.421) then
-        
-        call CRYOGENIC_TANK1_HEATSOURCE(im,VFRAC,time, &
-               x, &
-               xsten, & ! xsten(-nhalf:nhalf,SDIM)
-               nhalf, &
-               TEMPERATURE, &
-               HEAT_SOURCE_OUT(im),DENSITY,CV,dt, &
-               num_materials)
-      
        else if (probtype.eq.533) then
 
         call rigid_FSI_HEATSOURCE(im,VFRAC,time,x,TEMPERATURE, &
@@ -9526,7 +9526,7 @@ end subroutine dynamic_contact_angle
         ! pressure=p(density=rho,internal_energy)
       subroutine EOS_material(rho,internal_energy_in,pressure, &
         imattype,im)
-      use CRYOGENIC_TANK1_module       
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T imattype,im
@@ -9544,7 +9544,10 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
-      if (imattype.eq.1) then
+      if (is_in_probtype_list().eq.1) then
+       call SUB_EOS(rho,internal_energy,pressure, &
+         imattype,im)
+      else if (imattype.eq.1) then
        call EOS_tait(rho,internal_energy,pressure)
       else if (imattype.eq.2) then
        call EOS_jwlADIABAT(rho,internal_energy,pressure)
@@ -9590,9 +9593,6 @@ end subroutine dynamic_contact_angle
        call EOS_tillotson(rho,internal_energy,pressure)
       else if (imattype.eq.23) then
        call EOS_peng_robinson(rho,internal_energy,pressure)
-      else if (imattype.eq.24) then
-       call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure, &
-         imattype,im)
       else
        print *,"imattype invalid EOS_material"
        stop
@@ -9655,7 +9655,7 @@ end subroutine dynamic_contact_angle
         ! sound squared=c^2(density=rho,internal_energy)
       subroutine SOUNDSQR_material(rho,internal_energy_in,soundsqr, &
         imattype,im)
-      use CRYOGENIC_TANK1_module       
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T imattype,im
@@ -9674,7 +9674,10 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
-      if (imattype.eq.1) then
+      if (is_in_probtype_list().eq.1) then
+       call SUB_SOUNDSQR(rho,internal_energy,soundsqr, &
+         imattype,im)
+      else if (imattype.eq.1) then
        call SOUNDSQR_tait(rho,internal_energy,soundsqr)
       else if (imattype.eq.2) then
        call SOUNDSQR_jwlADIABAT(rho,internal_energy,soundsqr)
@@ -9720,9 +9723,6 @@ end subroutine dynamic_contact_angle
        call SOUNDSQR_tillotson(rho,internal_energy,soundsqr)
       else if (imattype.eq.23) then
        call SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
-      else if (imattype.eq.24) then
-       call SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr, &
-         imattype,im)
       else
        print *,"imattype invalid SOUNDSQR_material"
        stop
@@ -9802,7 +9802,7 @@ end subroutine dynamic_contact_angle
         ! internal energy = e(temperature,density=rho)
       subroutine INTERNAL_material(rho,temperature,internal_energy, &
         imattype,im)
-      use CRYOGENIC_TANK1_module       
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -9819,7 +9819,10 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
-      if (imattype.eq.999) then
+      if (is_in_probtype_list().eq.1) then
+       call SUB_INTERNAL(rho,temperature,local_internal_energy, &
+         imattype,im)
+      else if (imattype.eq.999) then
        call INTERNAL_default(rho,temperature,local_internal_energy,imattype,im)
       else if (imattype.eq.0) then
        call INTERNAL_default(rho,temperature,local_internal_energy,imattype,im)
@@ -9869,9 +9872,6 @@ end subroutine dynamic_contact_angle
        call INTERNAL_tillotson(rho,temperature,local_internal_energy)
       else if (imattype.eq.23) then
        call INTERNAL_peng_robinson(rho,temperature,local_internal_energy)
-      else if (imattype.eq.24) then
-       call INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy, &
-         imattype,im)
       else
        print *,"imattype invalid INTERNAL_material"
        stop
@@ -10031,7 +10031,7 @@ end subroutine dynamic_contact_angle
        ! returns T(e*scale)
       subroutine TEMPERATURE_material(rho,temperature,internal_energy_in, &
         imattype,im)
-      use CRYOGENIC_TANK1_module       
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -10055,7 +10055,10 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
-      if (imattype.eq.999) then 
+      if (is_in_probtype_list().eq.1) then
+       call SUB_TEMPERATURE(rho,temperature,internal_energy, &
+         imattype,im)
+      else if (imattype.eq.999) then 
        call TEMPERATURE_default(rho,temperature,internal_energy, &
          imattype,im)
       else if (imattype.eq.0) then
@@ -10107,9 +10110,6 @@ end subroutine dynamic_contact_angle
        call TEMPERATURE_tillotson(rho,temperature,internal_energy)
       else if (imattype.eq.23) then
        call TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
-      else if (imattype.eq.24) then
-       call TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy, &
-         imattype,im)
       else
        print *,"imattype invalid TEMPERATURE_material"
        print *,"imattype= ",imattype
@@ -14248,7 +14248,6 @@ END SUBROUTINE Adist
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CONE3D_module
       use WAVY_Channel_module
 
@@ -14282,7 +14281,15 @@ END SUBROUTINE Adist
       if ((im_solid_temp.ge.1).and. &
           (im_solid_temp.le.nmat)) then
 
-       if (probtype.eq.411) then ! cavitation user defined
+       if (is_in_probtype_list().eq.1) then
+
+        call SUB_LS(xvec,time,LS,num_materials)
+        call SUB_STATE(xvec,time,LS,STATE, &
+                num_materials,num_state_material)
+        ibase=(im-1)*num_state_material
+        temp=STATE(ibase+2) 
+
+       else if (probtype.eq.411) then ! cavitation user defined
         call CAV3D_LS(xvec,time,LS)
         call CAV3D_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
@@ -14313,12 +14320,6 @@ END SUBROUTINE Adist
         call MITSUHIRO_STATE(xvec,time,LS,STATE,bcflag)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2)
-       else if (probtype.eq.421) then 
-        call CRYOGENIC_TANK1_LS(xvec,time,LS,num_materials)
-        call CRYOGENIC_TANK1_STATE(xvec,time,LS,STATE, &
-                num_materials,num_state_material)
-        ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2) 
        else if (probtype.eq.311) then ! user defined
         call USERDEF_LS(xvec,time,LS)
         call USERDEF_STATE(xvec,time,LS,STATE)
@@ -14477,6 +14478,7 @@ END SUBROUTINE Adist
        !  subroutine mask_velocity
        !  subroutine FORT_INITDATASOLID
       subroutine velsolid(x,y,z,vel,time,im,dx)
+      use global_utility_module
       use global_distance_module
       use probcommon_module
       use USERDEF_module
@@ -14486,7 +14488,6 @@ END SUBROUTINE Adist
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CONE3D_module
       use WAVY_Channel_module
       IMPLICIT NONE
@@ -14537,8 +14538,15 @@ END SUBROUTINE Adist
 
       if (FSI_flag(im).eq.1) then  ! prescribed solid (EUL)
 
+       if (is_in_probtype_list().eq.1) then
+
+         ! pass dx
+        call SUB_LS(xvec,time,LS,num_materials)
+        call SUB_VEL(xvec,time,LS,vel,velsolid_flag,dx, &
+                num_materials)
+
          ! velsolid, no sci_clsvof.F90 
-       if (probtype.eq.411) then
+       else if (probtype.eq.411) then
         call CAV3D_LS(xvec,time,LS)
         call CAV3D_VEL(xvec,time,LS,vel,velsolid_flag)
 
@@ -14562,11 +14570,6 @@ END SUBROUTINE Adist
          ! pass dx
         call MITSUHIRO_LS(xvec,time,LS)
         call MITSUHIRO_LS_VEL(xvec,time,LS,vel,velsolid_flag,dx)
-       else if (probtype.eq.421) then 
-         ! pass dx
-        call CRYOGENIC_TANK1_LS(xvec,time,LS,num_materials)
-        call CRYOGENIC_TANK1_VEL(xvec,time,LS,vel,velsolid_flag,dx, &
-                num_materials)
        else if (probtype.eq.311) then ! user defined
         call USERDEF_LS(xvec,time,LS)
         call USERDEF_VEL(xvec,time,LS,vel,velsolid_flag)
@@ -15268,7 +15271,6 @@ END SUBROUTINE Adist
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -15374,7 +15376,9 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if (probtype.eq.411) then
+      if (is_in_probtype_list().eq.1) then
+       call SUB_LS(x_in,initial_time,dist,num_materials)
+      else if (probtype.eq.411) then
        call CAV3D_LS(x_in,initial_time,dist)
       else if (probtype.eq.401) then
        call HELIX_LS(x_in,initial_time,dist)
@@ -15386,8 +15390,6 @@ END SUBROUTINE Adist
        call ZEYU_droplet_impact_LS(x_in,initial_time,dist)
       else if (probtype.eq.414) then ! melting
        call MITSUHIRO_LS(x_in,initial_time,dist)
-      else if (probtype.eq.421) then
-       call CRYOGENIC_TANK1_LS(x_in,initial_time,dist,num_materials)
       else if (probtype.eq.533) then
        call rigid_FSI_LS(x_in,initial_time,dist)
       else if (probtype.eq.534) then
@@ -19557,7 +19559,6 @@ END SUBROUTINE Adist
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -19639,7 +19640,11 @@ END SUBROUTINE Adist
        LS(imls)=LSwall(imls)
       enddo
 
-      if (probtype.eq.411) then
+      if (is_in_probtype_list().eq.1) then
+       call SUB_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx, &
+        num_materials)
+       call check_lsbc_extrap(LS,LSWALL,nmat)
+      else if (probtype.eq.411) then
        call CAV3D_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.401) then
@@ -19656,10 +19661,6 @@ END SUBROUTINE Adist
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.414) then ! melting
        call MITSUHIRO_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
-      else if (probtype.eq.421) then 
-       call CRYOGENIC_TANK1_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx, &
-        num_materials)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.533) then
        call rigid_FSI_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
@@ -25306,6 +25307,7 @@ END SUBROUTINE Adist
        ! output: vel_in
       subroutine velbc_override(time,dir,side,veldir,vel_in, &
         xsten,nhalf,dx,bfact)
+      use global_utility_module
       use rainControl_module
       use bubbleControl_module
       use hydrateReactor_module
@@ -25319,7 +25321,6 @@ END SUBROUTINE Adist
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -25390,7 +25391,11 @@ END SUBROUTINE Adist
         velcell(dir2)=zero
        enddo
 
-       if (probtype.eq.411) then
+       if (is_in_probtype_list().eq.1) then
+        call SUB_LS(xvec,time,local_LS,num_materials)
+        call SUB_VEL_BC(xwall,xvec,time,local_LS, &
+         velcell(veldir),vel,veldir,dir,side,dx,num_materials)
+       else if (probtype.eq.411) then
         call CAV3D_LS(xvec,time,local_LS)
         call CAV3D_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
@@ -25417,11 +25422,6 @@ END SUBROUTINE Adist
         ! pass dx
         call MITSUHIRO_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
-       else if (probtype.eq.421) then 
-
-        call CRYOGENIC_TANK1_LS(xvec,time,local_LS,num_materials)
-        call CRYOGENIC_TANK1_VEL_BC(xwall,xvec,time,local_LS, &
-         velcell(veldir),vel,veldir,dir,side,dx,num_materials)
 
        else if (probtype.eq.533) then
         call rigid_FSI_LS(xvec,time,local_LS)
@@ -26660,6 +26660,7 @@ END SUBROUTINE Adist
 
       subroutine presBDRYCOND(time,dir,side,ADV,ADVwall_in, &
         xsten,nhalf,dx,bfact)
+      use global_utility_module
       use hydrateReactor_module
       use unimaterialChannel_module
       use River
@@ -26671,7 +26672,6 @@ END SUBROUTINE Adist
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -26760,7 +26760,11 @@ END SUBROUTINE Adist
        ADV=zero
       else if (pres_homflag.eq.0) then
 
-       if (probtype.eq.411) then
+       if (is_in_probtype_list().eq.1) then
+        call SUB_LS(xpos,time,local_LS,num_materials)
+        call SUB_PRES_BC(xwall,xpos,time,local_LS, &
+         ADV,ADVwall,dir,side,dx,num_materials)
+       else if (probtype.eq.411) then
 
         call CAV3D_LS(xpos,time,local_LS)
         call CAV3D_PRES_BC(xwall,xpos,time,local_LS, &
@@ -26787,11 +26791,6 @@ END SUBROUTINE Adist
         call MITSUHIRO_LS(xpos,time,local_LS)
         call MITSUHIRO_PRES_BC(xwall,xpos,time,local_LS, &
           ADV,ADVwall,dir,side,dx)
-
-       else if (probtype.eq.421) then 
-        call CRYOGENIC_TANK1_LS(xpos,time,local_LS,num_materials)
-        call CRYOGENIC_TANK1_PRES_BC(xwall,xpos,time,local_LS, &
-         ADV,ADVwall,dir,side,dx,num_materials)
 
        else if (probtype.eq.533) then
         call rigid_FSI_LS(xpos,time,local_LS)
@@ -27417,7 +27416,6 @@ END SUBROUTINE Adist
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -27555,7 +27553,13 @@ END SUBROUTINE Adist
         stop
        endif
 
-       if (probtype.eq.411) then
+       if (is_in_probtype_list().eq.1) then
+
+        call SUB_LS(xvec,time,local_LS,num_materials)
+        call SUB_STATE_BC(xwall,xvec,time,local_LS, &
+         ADV,ADV_merge,ADVwall,im,istate,dir,side,dx,num_materials)
+
+       else if (probtype.eq.411) then
 
         call CAV3D_LS(xvec,time,local_LS)
         call CAV3D_STATE_BC(xwall,xvec,time,local_LS, &
@@ -27590,12 +27594,6 @@ END SUBROUTINE Adist
         call MITSUHIRO_LS(xvec,time,local_LS)
         call MITSUHIRO_STATE_BC(xwall,xvec,time,local_LS, &
           ADV,ADV_merge,ADVwall,im,istate,dir,side,dx)
-
-       else if (probtype.eq.421) then 
-
-        call CRYOGENIC_TANK1_LS(xvec,time,local_LS,num_materials)
-        call CRYOGENIC_TANK1_STATE_BC(xwall,xvec,time,local_LS, &
-         ADV,ADV_merge,ADVwall,im,istate,dir,side,dx,num_materials)
 
        else if (probtype.eq.533) then
 
@@ -34177,6 +34175,7 @@ end subroutine initialize2d
         call SUB_INIT_MODULE()
 
        else if ((probtype.eq.110).and.(SDIM.eq.2)) then
+
         print *,"opening InflowBC.dat and OutflowBC.dat"
         namestr1='InflowBC.dat' 
         namestr2='OutflowBC.dat' 
@@ -34230,10 +34229,6 @@ end subroutine initialize2d
        else if (probtype.eq.414) then
 
         call INIT_MITSUHIRO_MELTING_MODULE()
-
-       else if (probtype.eq.421) then
-
-        call INIT_CRYOGENIC_TANK1_MODULE()
 
        else if (probtype.eq.533) then
 
@@ -38638,7 +38633,6 @@ end subroutine initialize2d
        use CAV2Dstep_module
        use ZEYU_droplet_impact_module
        use MITSUHIRO_MELTING_module
-       use CRYOGENIC_TANK1_module
        use CONE3D_module
        use WAVY_Channel_module
        use rigid_FSI_module
@@ -38859,7 +38853,52 @@ end subroutine initialize2d
          scalc(ipresbase+im)=zero
         enddo
 
-        if (probtype.eq.411) then
+        if (is_in_probtype_list().eq.1) then
+
+         call SUB_LS(xpos,time,distbatch,num_materials)
+         call SUB_STATE(xpos,time,distbatch,local_state, &
+                 num_materials,num_state_material)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+
+          if (scalc(ibase+1).gt.zero) then
+           ! do nothing
+          else
+           print *,"density invalid probtype==421 "
+           print *,"im,ibase,nmat ",im,ibase,nmat
+           print *,"density=",scalc(ibase+1)
+           stop
+          endif
+
+          if (scalc(ibase+2).gt.zero) then
+           ! do nothing
+          else
+           print *,"temperature invalid probtype==421 "
+           print *,"im,ibase,nmat ",im,ibase,nmat
+           print *,"temperature=",scalc(ibase+1)
+           stop
+          endif
+
+         enddo ! im=1..nmat
+         call SUB_PRES(xpos,time,distbatch,p_hyd,num_materials)
+         scalc(ipresbase+impres)=p_hyd
+
+         if (p_hyd.gt.zero) then
+          ! do nothing
+         else
+          print *,"p_hyd invalid probtype==421   p_hyd=",p_hyd
+          stop
+         endif
+
+        else if (probtype.eq.411) then
 
          call CAV3D_LS(xpos,time,distbatch)
          call CAV3D_STATE(xpos,time,distbatch,local_state)
@@ -38966,51 +39005,6 @@ end subroutine initialize2d
          enddo ! im=1..nmat
          call MITSUHIRO_PRES(xpos,time,distbatch,p_hyd)
          scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.421) then 
-
-         call CRYOGENIC_TANK1_LS(xpos,time,distbatch,num_materials)
-         call CRYOGENIC_TANK1_STATE(xpos,time,distbatch,local_state, &
-                 num_materials,num_state_material)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-          ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-
-          if (scalc(ibase+1).gt.zero) then
-           ! do nothing
-          else
-           print *,"density invalid probtype==421 "
-           print *,"im,ibase,nmat ",im,ibase,nmat
-           print *,"density=",scalc(ibase+1)
-           stop
-          endif
-
-          if (scalc(ibase+2).gt.zero) then
-           ! do nothing
-          else
-           print *,"temperature invalid probtype==421 "
-           print *,"im,ibase,nmat ",im,ibase,nmat
-           print *,"temperature=",scalc(ibase+1)
-           stop
-          endif
-
-         enddo ! im=1..nmat
-         call CRYOGENIC_TANK1_PRES(xpos,time,distbatch,p_hyd,num_materials)
-         scalc(ipresbase+impres)=p_hyd
-
-         if (p_hyd.gt.zero) then
-          ! do nothing
-         else
-          print *,"p_hyd invalid probtype==421   p_hyd=",p_hyd
-          stop
-         endif
 
         else if (probtype.eq.533) then
 
@@ -40273,7 +40267,6 @@ end subroutine initialize2d
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
       use MITSUHIRO_MELTING_module
-      use CRYOGENIC_TANK1_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -40766,7 +40759,17 @@ end subroutine initialize2d
          xvec(dir)=xsten(0,dir)
         enddo
 
-        if (probtype.eq.411) then
+        if (is_in_probtype_list().eq.1) then
+
+         call SUB_LS(xvec,time,distbatch,num_materials)
+          ! pass dx
+         call SUB_VEL(xvec,time,distbatch,velcell, &
+          velsolid_flag,dx,num_materials)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.411) then
          call CAV3D_LS(xvec,time,distbatch)
          call CAV3D_VEL(xvec,time,distbatch,velcell,velsolid_flag)
          x_vel=velcell(1)
@@ -40808,15 +40811,6 @@ end subroutine initialize2d
           ! pass dx
          call MITSUHIRO_LS_VEL(xvec,time,distbatch,velcell, &
           velsolid_flag,dx)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.421) then
-         call CRYOGENIC_TANK1_LS(xvec,time,distbatch,num_materials)
-          ! pass dx
-         call CRYOGENIC_TANK1_VEL(xvec,time,distbatch,velcell, &
-          velsolid_flag,dx,num_materials)
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)
