@@ -285,6 +285,18 @@ implicit none
       REAL_T, intent(in) :: dx(:)
       end subroutine TEMPLATE_VEL_BC
 
+      subroutine TEMPLATE_PRES_BC(xwall,xghost,t,LS, &
+        PRES,PRES_in,dir,side,dx)
+      REAL_T, intent(in) :: xwall
+      REAL_T, intent(in) :: xghost(:)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(in) :: LS(:)
+      REAL_T, intent(inout) :: PRES
+      REAL_T, intent(in) :: PRES_in
+      INTEGER_T, intent(in) :: dir,side
+      REAL_T, intent(in) :: dx(:)
+      end subroutine TEMPLATE_PRES_BC
+
       subroutine TEMPLATE_STATE_BC(xwall,xghost,t,LS, &
        STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
       REAL_T, intent(in) :: xwall
@@ -298,6 +310,27 @@ implicit none
       REAL_T, intent(in) :: dx(:)
       INTEGER_T, intent(in) :: istate,im
       end subroutine TEMPLATE_STATE_BC
+
+      subroutine TEMPLATE_HEATSOURCE( &
+        im,VFRAC, &
+        time, &
+        x, &
+        xsten, & ! xsten(-nhalf:nhalf,SDIM)
+        nhalf, &
+        temp, &
+        heat_source,den,CV,dt)
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(in) :: VFRAC(:)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: x(:)
+      REAL_T, intent(in) :: xsten(:,:)
+      REAL_T, intent(in) :: temp(:)
+      REAL_T, intent(in) :: den(:)
+      REAL_T, intent(in) :: CV(:)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(out) :: heat_source
+      end subroutine TEMPLATE_HEATSOURCE
 
       END INTERFACE
 contains
