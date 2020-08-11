@@ -116,17 +116,25 @@ contains
 
  ! if SOLID VELOCITY requested everywhere (including outside of the solid),
  ! then velsolid==1
- subroutine CRYOGENIC_TANK1_VEL(x,t,LS,VEL,velsolid_flag,dx)
+ subroutine CRYOGENIC_TANK1_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
   use probcommon_module
   IMPLICIT NONE
 
+  INTEGER_T, intent(in) :: nmat
   REAL_T, intent(in) :: x(SDIM)
   REAL_T, intent(in) :: t
   REAL_T, intent(in) :: dx(SDIM)
-  REAL_T, intent(in) :: LS(num_materials)
+  REAL_T, intent(in) :: LS(nmat)
   REAL_T, intent(out) :: VEL(SDIM)
   INTEGER_T, intent(in) :: velsolid_flag
   INTEGER_T dir
+
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
 
   if ((velsolid_flag.eq.0).or. &
    (velsolid_flag.eq.1)) then
@@ -308,14 +316,22 @@ end subroutine TEMPERATURE_CRYOGENIC_TANK1
 !***********************************************
 ! called by the boundary condition routine
 ! might be called at initialization, so put a placeholder pressure here.
-subroutine CRYOGENIC_TANK1_PRES(x,t,LS,PRES)
+subroutine CRYOGENIC_TANK1_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: PRES
+
+if (num_materials.eq.nmat) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 
 PRES=TANK1_INITIAL_VAPOR_PRESSURE 
 
@@ -323,18 +339,35 @@ return
 end subroutine CRYOGENIC_TANK1_PRES
 
 
-subroutine CRYOGENIC_TANK1_STATE(x,t,LS,STATE)
+subroutine CRYOGENIC_TANK1_STATE(x,t,LS,STATE,nmat,nstate_mat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
+INTEGER_T, intent(in) :: nstate_mat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: STATE(num_materials*num_state_material)
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 
  ! num_state_material=2 (default)  density and temperature
  ! num_state_material>2 if scalar (species) variables added.
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+if (nstate_mat.eq.num_state_material) then
+ ! do nothing
+else
+ print *,"nstate_mat invalid"
+ stop
+endif
+
 if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
     (probtype.eq.421)) then
@@ -397,14 +430,15 @@ end subroutine CRYOGENIC_TANK1_LS_BC
 
  ! dir=1..sdim  side=1..2 veldir=1..sdim
 subroutine CRYOGENIC_TANK1_VEL_BC(xwall,xghost,t,LS, &
-   VEL,VEL_in,veldir,dir,side,dx)
+   VEL,VEL_in,veldir,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: xwall
 REAL_T, intent(in) :: xghost(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(inout) :: VEL
 REAL_T, intent(in) :: VEL_in
 INTEGER_T, intent(in) :: veldir,dir,side
@@ -412,12 +446,19 @@ REAL_T, intent(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
 velsolid_flag=0
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
- call CRYOGENIC_TANK1_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx)
+ call CRYOGENIC_TANK1_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
  VEL=local_VEL(veldir)
 
 else
@@ -430,23 +471,31 @@ end subroutine CRYOGENIC_TANK1_VEL_BC
 
  ! dir=1..sdim  side=1..2
 subroutine CRYOGENIC_TANK1_PRES_BC(xwall,xghost,t,LS, &
-   PRES,PRES_in,dir,side,dx)
+   PRES,PRES_in,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: xwall
 REAL_T, intent(in) :: xghost(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(inout) :: PRES
 REAL_T, intent(in) :: PRES_in
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- call CRYOGENIC_TANK1_PRES(xghost,t,LS,PRES)
+ call CRYOGENIC_TANK1_PRES(xghost,t,LS,PRES,nmat)
 
 else
  print *,"dir or side invalid"
@@ -458,15 +507,16 @@ end subroutine CRYOGENIC_TANK1_PRES_BC
 
  ! dir=1..sdim  side=1..2
 subroutine CRYOGENIC_TANK1_STATE_BC(xwall,xghost,t,LS, &
-   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
+   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: xwall
 REAL_T, intent(in) :: xghost(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T local_STATE(num_materials*num_state_material)
+REAL_T, intent(in) :: LS(nmat)
+REAL_T local_STATE(nmat*num_state_material)
 REAL_T, intent(inout) :: STATE
 REAL_T, intent(inout) :: STATE_merge
 REAL_T, intent(in) :: STATE_in
@@ -475,11 +525,19 @@ REAL_T, intent(in) :: dx(SDIM)
 INTEGER_T, intent(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
- call CRYOGENIC_TANK1_STATE(xghost,t,LS,local_STATE)
+ call CRYOGENIC_TANK1_STATE(xghost,t,LS,local_STATE, &
+         nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
  im_crit=1
@@ -514,19 +572,21 @@ subroutine CRYOGENIC_TANK1_HEATSOURCE( &
      xsten, & ! xsten(-nhalf:nhalf,SDIM)
      nhalf, &
      temp, &
-     heat_source,den,CV,dt)
+     heat_source,den,CV,dt, &
+     nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 INTEGER_T, intent(in) :: im
-REAL_T, intent(in) :: VFRAC(num_materials)
+REAL_T, intent(in) :: VFRAC(nmat)
 REAL_T, intent(in) :: time
 INTEGER_T, intent(in) :: nhalf
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, intent(in) :: temp(num_materials)
-REAL_T, intent(in) :: den(num_materials)
-REAL_T, intent(in) :: CV(num_materials)
+REAL_T, intent(in) :: temp(nmat)
+REAL_T, intent(in) :: den(nmat)
+REAL_T, intent(in) :: CV(nmat)
 REAL_T, intent(in) :: dt
 REAL_T, intent(out) :: heat_source
 
@@ -535,6 +595,12 @@ REAL_T local_dx(SDIM)
 REAL_T flux_magnitude
 REAL_T denom
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 
 do dir=1,SDIM
  local_dx(dir)=xsten(1,dir)-xsten(-1,dir)

@@ -1700,7 +1700,8 @@ stop
                xsten, & ! xsten(-nhalf:nhalf,SDIM)
                nhalf, &
                TEMPERATURE, &
-               HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
+               HEAT_SOURCE_OUT(im),DENSITY,CV,dt, &
+               num_materials)
       
        else if (probtype.eq.533) then
 
@@ -14314,7 +14315,8 @@ END SUBROUTINE Adist
         temp=STATE(ibase+2)
        else if (probtype.eq.421) then 
         call CRYOGENIC_TANK1_LS(xvec,time,LS,num_materials)
-        call CRYOGENIC_TANK1_STATE(xvec,time,LS,STATE)
+        call CRYOGENIC_TANK1_STATE(xvec,time,LS,STATE, &
+                num_materials,num_state_material)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2) 
        else if (probtype.eq.311) then ! user defined
@@ -14563,7 +14565,8 @@ END SUBROUTINE Adist
        else if (probtype.eq.421) then 
          ! pass dx
         call CRYOGENIC_TANK1_LS(xvec,time,LS,num_materials)
-        call CRYOGENIC_TANK1_VEL(xvec,time,LS,vel,velsolid_flag,dx)
+        call CRYOGENIC_TANK1_VEL(xvec,time,LS,vel,velsolid_flag,dx, &
+                num_materials)
        else if (probtype.eq.311) then ! user defined
         call USERDEF_LS(xvec,time,LS)
         call USERDEF_VEL(xvec,time,LS,vel,velsolid_flag)
@@ -25418,7 +25421,7 @@ END SUBROUTINE Adist
 
         call CRYOGENIC_TANK1_LS(xvec,time,local_LS,num_materials)
         call CRYOGENIC_TANK1_VEL_BC(xwall,xvec,time,local_LS, &
-         velcell(veldir),vel,veldir,dir,side,dx)
+         velcell(veldir),vel,veldir,dir,side,dx,num_materials)
 
        else if (probtype.eq.533) then
         call rigid_FSI_LS(xvec,time,local_LS)
@@ -26788,7 +26791,7 @@ END SUBROUTINE Adist
        else if (probtype.eq.421) then 
         call CRYOGENIC_TANK1_LS(xpos,time,local_LS,num_materials)
         call CRYOGENIC_TANK1_PRES_BC(xwall,xpos,time,local_LS, &
-         ADV,ADVwall,dir,side,dx)
+         ADV,ADVwall,dir,side,dx,num_materials)
 
        else if (probtype.eq.533) then
         call rigid_FSI_LS(xpos,time,local_LS)
@@ -27592,7 +27595,7 @@ END SUBROUTINE Adist
 
         call CRYOGENIC_TANK1_LS(xvec,time,local_LS,num_materials)
         call CRYOGENIC_TANK1_STATE_BC(xwall,xvec,time,local_LS, &
-         ADV,ADV_merge,ADVwall,im,istate,dir,side,dx)
+         ADV,ADV_merge,ADVwall,im,istate,dir,side,dx,num_materials)
 
        else if (probtype.eq.533) then
 
@@ -38967,7 +38970,8 @@ end subroutine initialize2d
         else if (probtype.eq.421) then 
 
          call CRYOGENIC_TANK1_LS(xpos,time,distbatch,num_materials)
-         call CRYOGENIC_TANK1_STATE(xpos,time,distbatch,local_state)
+         call CRYOGENIC_TANK1_STATE(xpos,time,distbatch,local_state, &
+                 num_materials,num_state_material)
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
@@ -38998,7 +39002,7 @@ end subroutine initialize2d
           endif
 
          enddo ! im=1..nmat
-         call CRYOGENIC_TANK1_PRES(xpos,time,distbatch,p_hyd)
+         call CRYOGENIC_TANK1_PRES(xpos,time,distbatch,p_hyd,num_materials)
          scalc(ipresbase+impres)=p_hyd
 
          if (p_hyd.gt.zero) then
@@ -40812,7 +40816,7 @@ end subroutine initialize2d
          call CRYOGENIC_TANK1_LS(xvec,time,distbatch,num_materials)
           ! pass dx
          call CRYOGENIC_TANK1_VEL(xvec,time,distbatch,velcell, &
-          velsolid_flag,dx)
+          velsolid_flag,dx,num_materials)
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)

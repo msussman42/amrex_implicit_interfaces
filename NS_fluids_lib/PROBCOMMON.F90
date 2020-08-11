@@ -208,12 +208,13 @@ implicit none
       REAL_T, intent(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
 
-      subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx)
+      subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
+      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: t
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: LS(:)
-      REAL_T, intent(out) :: VEL(:)
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(out) :: VEL(SDIM)
       INTEGER_T, intent(in) :: velsolid_flag
       end subroutine TEMPLATE_VEL
 
@@ -249,18 +250,21 @@ implicit none
       REAL_T, intent(in) :: internal_energy
       end subroutine TEMPLATE_TEMPERATURE
 
-      subroutine TEMPLATE_PRES(x,t,LS,PRES)
+      subroutine TEMPLATE_PRES(x,t,LS,PRES,nmat)
+      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(:)
+      REAL_T, intent(in) :: LS(nmat)
       REAL_T, intent(out) :: PRES
       end subroutine TEMPLATE_PRES
 
-      subroutine TEMPLATE_STATE(x,t,LS,STATE)
+      subroutine TEMPLATE_STATE(x,t,LS,STATE,nmat,nstate_mat)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nstate_mat
       REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(:)
-      REAL_T, intent(out) :: STATE(:)
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(out) :: STATE(nmat*nstate_mat)
       end subroutine TEMPLATE_STATE
 
       subroutine TEMPLATE_LS_BC(xwall,xghost,t,LS, &
@@ -276,11 +280,12 @@ implicit none
       end subroutine TEMPLATE_LS_BC
 
       subroutine TEMPLATE_VEL_BC(xwall,xghost,t,LS, &
-        VEL,VEL_in,veldir,dir,side,dx)
+        VEL,VEL_in,veldir,dir,side,dx,nmat)
+      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xwall
       REAL_T, intent(in) :: xghost(SDIM)
       REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(:)
+      REAL_T, intent(in) :: LS(nmat)
       REAL_T, intent(inout) :: VEL
       REAL_T, intent(in) :: VEL_in
       INTEGER_T, intent(in) :: veldir,dir,side
@@ -288,11 +293,12 @@ implicit none
       end subroutine TEMPLATE_VEL_BC
 
       subroutine TEMPLATE_PRES_BC(xwall,xghost,t,LS, &
-        PRES,PRES_in,dir,side,dx)
+        PRES,PRES_in,dir,side,dx,nmat)
+      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xwall
       REAL_T, intent(in) :: xghost(SDIM)
       REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(:)
+      REAL_T, intent(in) :: LS(nmat)
       REAL_T, intent(inout) :: PRES
       REAL_T, intent(in) :: PRES_in
       INTEGER_T, intent(in) :: dir,side
@@ -300,11 +306,13 @@ implicit none
       end subroutine TEMPLATE_PRES_BC
 
       subroutine TEMPLATE_STATE_BC(xwall,xghost,t,LS, &
-       STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
+       STATE,STATE_merge,STATE_in,im,istate,dir,side,dx, &
+       nmat)
+      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xwall
       REAL_T, intent(in) :: xghost(SDIM)
       REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(:)
+      REAL_T, intent(in) :: LS(nmat)
       REAL_T, intent(inout) :: STATE
       REAL_T, intent(inout) :: STATE_merge
       REAL_T, intent(in) :: STATE_in
@@ -320,16 +328,18 @@ implicit none
         xsten, & ! xsten(-nhalf:nhalf,SDIM)
         nhalf, &
         temp, &
-        heat_source,den,CV,dt)
+        heat_source,den,CV,dt, &
+        nmat)
+      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im
-      REAL_T, intent(in) :: VFRAC(:)
+      REAL_T, intent(in) :: VFRAC(nmat)
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: nhalf
       REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: xsten(:,:)
-      REAL_T, intent(in) :: temp(:)
-      REAL_T, intent(in) :: den(:)
-      REAL_T, intent(in) :: CV(:)
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: temp(nmat)
+      REAL_T, intent(in) :: den(nmat)
+      REAL_T, intent(in) :: CV(nmat)
       REAL_T, intent(in) :: dt
       REAL_T, intent(out) :: heat_source
       end subroutine TEMPLATE_HEATSOURCE
