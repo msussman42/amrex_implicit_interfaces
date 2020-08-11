@@ -14313,7 +14313,7 @@ END SUBROUTINE Adist
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2)
        else if (probtype.eq.421) then 
-        call CRYOGENIC_TANK1_LS(xvec,time,LS)
+        call CRYOGENIC_TANK1_LS(xvec,time,LS,num_materials)
         call CRYOGENIC_TANK1_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2) 
@@ -14562,7 +14562,7 @@ END SUBROUTINE Adist
         call MITSUHIRO_LS_VEL(xvec,time,LS,vel,velsolid_flag,dx)
        else if (probtype.eq.421) then 
          ! pass dx
-        call CRYOGENIC_TANK1_LS(xvec,time,LS)
+        call CRYOGENIC_TANK1_LS(xvec,time,LS,num_materials)
         call CRYOGENIC_TANK1_VEL(xvec,time,LS,vel,velsolid_flag,dx)
        else if (probtype.eq.311) then ! user defined
         call USERDEF_LS(xvec,time,LS)
@@ -15384,7 +15384,7 @@ END SUBROUTINE Adist
       else if (probtype.eq.414) then ! melting
        call MITSUHIRO_LS(x_in,initial_time,dist)
       else if (probtype.eq.421) then
-       call CRYOGENIC_TANK1_LS(x_in,initial_time,dist)
+       call CRYOGENIC_TANK1_LS(x_in,initial_time,dist,num_materials)
       else if (probtype.eq.533) then
        call rigid_FSI_LS(x_in,initial_time,dist)
       else if (probtype.eq.534) then
@@ -19655,7 +19655,8 @@ END SUBROUTINE Adist
        call MITSUHIRO_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.421) then 
-       call CRYOGENIC_TANK1_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
+       call CRYOGENIC_TANK1_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx, &
+        num_materials)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.533) then
        call rigid_FSI_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
@@ -25415,7 +25416,7 @@ END SUBROUTINE Adist
          velcell(veldir),vel,veldir,dir,side,dx)
        else if (probtype.eq.421) then 
 
-        call CRYOGENIC_TANK1_LS(xvec,time,local_LS)
+        call CRYOGENIC_TANK1_LS(xvec,time,local_LS,num_materials)
         call CRYOGENIC_TANK1_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
 
@@ -26785,7 +26786,7 @@ END SUBROUTINE Adist
           ADV,ADVwall,dir,side,dx)
 
        else if (probtype.eq.421) then 
-        call CRYOGENIC_TANK1_LS(xpos,time,local_LS)
+        call CRYOGENIC_TANK1_LS(xpos,time,local_LS,num_materials)
         call CRYOGENIC_TANK1_PRES_BC(xwall,xpos,time,local_LS, &
          ADV,ADVwall,dir,side,dx)
 
@@ -27589,7 +27590,7 @@ END SUBROUTINE Adist
 
        else if (probtype.eq.421) then 
 
-        call CRYOGENIC_TANK1_LS(xvec,time,local_LS)
+        call CRYOGENIC_TANK1_LS(xvec,time,local_LS,num_materials)
         call CRYOGENIC_TANK1_STATE_BC(xwall,xvec,time,local_LS, &
          ADV,ADV_merge,ADVwall,im,istate,dir,side,dx)
 
@@ -33556,6 +33557,7 @@ end subroutine initialize2d
          ioproc)
        use LegendreNodes
        use probf90_module
+       use global_utility_module
        use geometry_intersect_module
        use hydrateReactor_module
        use unimaterialChannel_module
@@ -33672,12 +33674,48 @@ end subroutine initialize2d
        INTEGER_T, target :: used_probtypes(1000)
 
        probtype=ccprobtype
-! PROCEDURE POINTER
-       probtype_procptr_list=>used_probtypes
-! USER DEFINED
-       probtype_list_size=1
-       used_probtypes(1)=2000
+       num_materials=ccnum_materials
 
+       probtype_procptr_list=>used_probtypes
+! USER DEFINED (used by "is_in_probtype_list")
+       probtype_list_size=2
+       used_probtypes(1)=2000
+       used_probtypes(2)=421
+
+       if (probtype.eq.421) then
+        SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
+        SUB_LS=>CRYOGENIC_TANK1_LS
+        SUB_VEL=>CRYOGENIC_TANK1_VEL
+        SUB_EOS=>EOS_CRYOGENIC_TANK1
+        SUB_SOUNDSQR=>SOUNDSQR_CRYOGENIC_TANK1
+        SUB_INTERNAL=>INTERNAL_CRYOGENIC_TANK1
+        SUB_TEMPERATURE=>TEMPERATURE_CRYOGENIC_TANK1
+        SUB_PRES=>CRYOGENIC_TANK1_PRES
+        SUB_STATE=>CRYOGENIC_TANK1_STATE
+        SUB_LS_BC=>CRYOGENIC_TANK1_LS_BC
+        SUB_VEL_BC=>CRYOGENIC_TANK1_VEL_BC
+        SUB_PRES_BC=>CRYOGENIC_TANK1_PRES_BC
+        SUB_STATE_BC=>CRYOGENIC_TANK1_STATE_BC
+        SUB_HEATSOURCE=>CRYOGENIC_TANK1_HEATSOURCE
+       else if (probtype.eq.2000) then
+
+       else
+        ! assign default stub routines here.
+        SUB_INIT_MODULE=>NULL()
+        SUB_LS=>NULL()
+        SUB_VEL=>NULL()
+        SUB_EOS=>NULL()
+        SUB_SOUNDSQR=>NULL()
+        SUB_INTERNAL=>NULL()
+        SUB_TEMPERATURE=>NULL()
+        SUB_PRES=>NULL()
+        SUB_STATE=>NULL()
+        SUB_LS_BC=>NULL()
+        SUB_VEL_BC=>NULL()
+        SUB_PRES_BC=>NULL()
+        SUB_STATE_BC=>NULL()
+        SUB_HEATSOURCE=>NULL()
+       endif
 
        global_pressure_scale=one
        global_velocity_scale=one
@@ -33885,7 +33923,6 @@ end subroutine initialize2d
        outflow_pressure=ccoutflow_pressure
        period_time=ccperiod_time
 
-       num_materials=ccnum_materials
        fort_max_num_eos=ccfort_max_num_eos
 
        do im=1,num_materials
@@ -34132,7 +34169,11 @@ end subroutine initialize2d
        last_inflow_index=1
        last_outflow_index=1
 
-       if ((probtype.eq.110).and.(SDIM.eq.2)) then
+       if (is_in_probtype_list().eq.1) then
+ 
+        call SUB_INIT_MODULE()
+
+       else if ((probtype.eq.110).and.(SDIM.eq.2)) then
         print *,"opening InflowBC.dat and OutflowBC.dat"
         namestr1='InflowBC.dat' 
         namestr2='OutflowBC.dat' 
@@ -34157,21 +34198,21 @@ end subroutine initialize2d
 
         call shallow_water_solve()
 
-       endif ! probtype=110
+        ! above: probtype==110
+       else if ((probtype.eq.1).and. &
+                ((axis_dir.eq.150).or. &
+                 (axis_dir.eq.151))) then
 
-       if ((probtype.eq.1).and. &
-           ((axis_dir.eq.150).or. &
-            (axis_dir.eq.151))) then
         call shockdrop_init()
-       endif
 
-        ! in: subroutine FORT_OVERRIDE
-       if (probtype.eq.411) then
+       else if (probtype.eq.411) then
 
         call INIT_CAV3D_MODULE()
+
        else if (probtype.eq.401) then
 
         call INIT_HELIX_MODULE()
+
        else if (probtype.eq.402) then
 
         call INIT_TSPRAY_MODULE()
@@ -38925,7 +38966,7 @@ end subroutine initialize2d
 
         else if (probtype.eq.421) then 
 
-         call CRYOGENIC_TANK1_LS(xpos,time,distbatch)
+         call CRYOGENIC_TANK1_LS(xpos,time,distbatch,num_materials)
          call CRYOGENIC_TANK1_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
@@ -40768,7 +40809,7 @@ end subroutine initialize2d
          z_vel=velcell(SDIM)
 
         else if (probtype.eq.421) then
-         call CRYOGENIC_TANK1_LS(xvec,time,distbatch)
+         call CRYOGENIC_TANK1_LS(xvec,time,distbatch,num_materials)
           ! pass dx
          call CRYOGENIC_TANK1_VEL(xvec,time,distbatch,velcell, &
           velsolid_flag,dx)

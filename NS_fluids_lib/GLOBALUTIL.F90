@@ -8387,6 +8387,25 @@ contains
       return
       end function rigid_count
 
+      function is_in_probtype_list()
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T is_in_probtype_list
+      INTEGER_T iprob
+
+      is_in_probtype_list=0
+      iprob=probtype_list_size
+      do while ((is_in_probtype_list.eq.0).and.(iprob.ge.1))
+       if (probtype_procptr_list(iprob).eq.probtype) then
+        is_in_probtype_list=1
+       endif
+       iprob=iprob-1
+      enddo
+
+      return
+      end function is_in_probtype_list
+
       function im_solid_primary()
       use probcommon_module
 

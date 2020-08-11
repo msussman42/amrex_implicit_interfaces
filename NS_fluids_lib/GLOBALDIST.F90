@@ -1742,7 +1742,7 @@ end subroutine nozzle2d
         dist=dist_array(im)
 
        else if (probtype.eq.421) then 
-        call CRYOGENIC_TANK1_LS(xvec,time,dist_array)
+        call CRYOGENIC_TANK1_LS(xvec,time,dist_array,num_materials)
         dist=dist_array(im)
 
        else if (probtype.eq.222) then ! cone3D

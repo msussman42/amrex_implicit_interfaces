@@ -65,14 +65,22 @@ contains
  ! material 2 is gas
  ! material 3 is solid
 
- subroutine CRYOGENIC_TANK1_LS(x,t,LS)
+ subroutine CRYOGENIC_TANK1_LS(x,t,LS,nmat)
   use probcommon_module
   IMPLICIT NONE
 
+  INTEGER_T, intent(in) :: nmat
   REAL_T, intent(in) :: x(SDIM)
   REAL_T, intent(in) :: t
-  REAL_T, intent(out) :: LS(num_materials)
+  REAL_T, intent(out) :: LS(nmat)
   REAL_T ls_o,ls_i
+
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
 
   if ((num_materials.eq.3).and.(probtype.eq.421)) then
    ! liquid
@@ -355,21 +363,29 @@ end subroutine CRYOGENIC_TANK1_STATE
 
  ! dir=1..sdim  side=1..2
 subroutine CRYOGENIC_TANK1_LS_BC(xwall,xghost,t,LS, &
-   LS_in,dir,side,dx)
+   LS_in,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: xwall
 REAL_T, intent(in) :: xghost(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(num_materials)
-REAL_T, intent(in) :: LS_in(num_materials)
+REAL_T, intent(inout) :: LS(nmat)
+REAL_T, intent(in) :: LS_in(nmat)
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
- call CRYOGENIC_TANK1_LS(xghost,t,LS)
+ call CRYOGENIC_TANK1_LS(xghost,t,LS,nmat)
 else
  print *,"dir or side invalid"
  stop

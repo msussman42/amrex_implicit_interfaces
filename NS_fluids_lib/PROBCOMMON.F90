@@ -201,16 +201,17 @@ implicit none
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
 
-      subroutine TEMPLATE_LS(x,t,LS)
-      REAL_T, intent(in) :: x(:)
+      subroutine TEMPLATE_LS(x,t,LS,nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: t
-      REAL_T, intent(out) :: LS(:)
+      REAL_T, intent(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
 
       subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx)
-      REAL_T, intent(in) :: x(:)
+      REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: dx(:)
+      REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: LS(:)
       REAL_T, intent(out) :: VEL(:)
       INTEGER_T, intent(in) :: velsolid_flag
@@ -249,65 +250,66 @@ implicit none
       end subroutine TEMPLATE_TEMPERATURE
 
       subroutine TEMPLATE_PRES(x,t,LS,PRES)
-      REAL_T, intent(in) :: x(:)
+      REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: t
       REAL_T, intent(in) :: LS(:)
       REAL_T, intent(out) :: PRES
       end subroutine TEMPLATE_PRES
 
       subroutine TEMPLATE_STATE(x,t,LS,STATE)
-      REAL_T, intent(in) :: x(:)
+      REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: t
       REAL_T, intent(in) :: LS(:)
       REAL_T, intent(out) :: STATE(:)
       end subroutine TEMPLATE_STATE
 
       subroutine TEMPLATE_LS_BC(xwall,xghost,t,LS, &
-       LS_in,dir,side,dx)
+       LS_in,dir,side,dx,nmat)
+      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xwall
-      REAL_T, intent(in) :: xghost(:)
+      REAL_T, intent(in) :: xghost(SDIM)
       REAL_T, intent(in) :: t
-      REAL_T, intent(inout) :: LS(:)
-      REAL_T, intent(in) :: LS_in(:)
+      REAL_T, intent(inout) :: LS(nmat)
+      REAL_T, intent(in) :: LS_in(nmat)
       INTEGER_T, intent(in) :: dir,side
-      REAL_T, intent(in) :: dx(:)
+      REAL_T, intent(in) :: dx(SDIM)
       end subroutine TEMPLATE_LS_BC
 
       subroutine TEMPLATE_VEL_BC(xwall,xghost,t,LS, &
         VEL,VEL_in,veldir,dir,side,dx)
       REAL_T, intent(in) :: xwall
-      REAL_T, intent(in) :: xghost(:)
+      REAL_T, intent(in) :: xghost(SDIM)
       REAL_T, intent(in) :: t
       REAL_T, intent(in) :: LS(:)
       REAL_T, intent(inout) :: VEL
       REAL_T, intent(in) :: VEL_in
       INTEGER_T, intent(in) :: veldir,dir,side
-      REAL_T, intent(in) :: dx(:)
+      REAL_T, intent(in) :: dx(SDIM)
       end subroutine TEMPLATE_VEL_BC
 
       subroutine TEMPLATE_PRES_BC(xwall,xghost,t,LS, &
         PRES,PRES_in,dir,side,dx)
       REAL_T, intent(in) :: xwall
-      REAL_T, intent(in) :: xghost(:)
+      REAL_T, intent(in) :: xghost(SDIM)
       REAL_T, intent(in) :: t
       REAL_T, intent(in) :: LS(:)
       REAL_T, intent(inout) :: PRES
       REAL_T, intent(in) :: PRES_in
       INTEGER_T, intent(in) :: dir,side
-      REAL_T, intent(in) :: dx(:)
+      REAL_T, intent(in) :: dx(SDIM)
       end subroutine TEMPLATE_PRES_BC
 
       subroutine TEMPLATE_STATE_BC(xwall,xghost,t,LS, &
        STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
       REAL_T, intent(in) :: xwall
-      REAL_T, intent(in) :: xghost(:)
+      REAL_T, intent(in) :: xghost(SDIM)
       REAL_T, intent(in) :: t
       REAL_T, intent(in) :: LS(:)
       REAL_T, intent(inout) :: STATE
       REAL_T, intent(inout) :: STATE_merge
       REAL_T, intent(in) :: STATE_in
       INTEGER_T, intent(in) :: dir,side
-      REAL_T, intent(in) :: dx(:)
+      REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: istate,im
       end subroutine TEMPLATE_STATE_BC
 
@@ -323,7 +325,7 @@ implicit none
       REAL_T, intent(in) :: VFRAC(:)
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(in) :: x(:)
+      REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: xsten(:,:)
       REAL_T, intent(in) :: temp(:)
       REAL_T, intent(in) :: den(:)
@@ -333,6 +335,22 @@ implicit none
       end subroutine TEMPLATE_HEATSOURCE
 
       END INTERFACE
+
+      PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
+      PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
+      PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
+      PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
+      PROCEDURE(TEMPLATE_SOUNDSQR), POINTER :: SUB_SOUNDSQR
+      PROCEDURE(TEMPLATE_INTERNAL), POINTER :: SUB_INTERNAL
+      PROCEDURE(TEMPLATE_TEMPERATURE), POINTER :: SUB_TEMPERATURE
+      PROCEDURE(TEMPLATE_PRES), POINTER :: SUB_PRES
+      PROCEDURE(TEMPLATE_STATE), POINTER :: SUB_STATE
+      PROCEDURE(TEMPLATE_LS_BC), POINTER :: SUB_LS_BC
+      PROCEDURE(TEMPLATE_VEL_BC), POINTER :: SUB_VEL_BC
+      PROCEDURE(TEMPLATE_PRES_BC), POINTER :: SUB_PRES_BC
+      PROCEDURE(TEMPLATE_STATE_BC), POINTER :: SUB_STATE_BC
+      PROCEDURE(TEMPLATE_HEATSOURCE), POINTER :: SUB_HEATSOURCE
+
 contains
 
 end module probcommon_module
