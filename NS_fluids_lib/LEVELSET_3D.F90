@@ -28,8 +28,122 @@ stop
         module levelset_module
         use probf90_module
 
+        type node_CP_parm_type
+         INTEGER_T i,j,k
+         INTEGER_T bfact
+         INTEGER_T level
+         INTEGER_T finest_level
+         REAL_T, pointer :: dx(:)
+         REAL_T :: time
+         INTEGER_T :: im
+         INTEGER_T :: nmat
+         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+        end type node_CP_parm_type
+
         contains
 
+        subroutine node_xCP(node_CP_parm,xCP)
+        use global_utility_module
+        use global_distance_module
+        use probf90_module
+        use geometry_intersect_module
+        use MOF_routines_module
+        IMPLICIT NONE
+        type(node_CP_parm_type), intent(in) :: node_CP_parm
+        REAL_T, intent(out) :: xCP(SDIM)
+        INTEGER_T :: nhalf
+        REAL_T :: xsten(-3:3,SDIM)
+        INTEGER_T :: dir
+        REAL_T :: mag
+        REAL_T :: nslope_node(SDIM)
+        REAL_T :: LS_node
+        REAL_T :: denom
+        INTEGER_T :: k1hi
+        INTEGER_T :: i1,j1,k1
+
+        ASSOCIATE(CP=>node_CP_parm)
+
+        nhalf=3
+        call gridstenND_level(xsten,CP%i,CP%j,CP%k,CP%level,nhalf)
+
+         ! positive in the rigid body
+        call materialdistsolid( &
+          xsten(0,1),xsten(0,2),xsten(0,SDIM), &
+          LS_node,CP%time,CP%im)
+
+         ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
+         ! slope points into the solid
+         ! this slope ignores 1/R term for dphi/dtheta
+        call find_LS_stencil_slope( &
+          CP%bfact, &
+          CP%dx, &
+          xsten,nhalf, &
+          nslope_node, &
+          CP%time, &
+          CP%im)
+
+        k1hi=0
+        if (SDIM.eq.3) then
+         k1hi=1
+        endif
+
+        if ((FSI_flag(CP%im).eq.2).or. & ! prescribed solid CAD
+            (FSI_flag(CP%im).eq.4)) then ! CTML FSI
+         denom=0
+         LS_node=zero
+         do dir=1,SDIM
+          nslope_node(dir)=zero
+         enddo 
+         do i1=0,1
+         do j1=0,1
+         do k1=0,k1hi
+          denom=denom+1
+          LS_node=LS_node+CP%LS(D_DECL(CP%i+i1-1,CP%j+j1-1,CP%k+k1-1),CP%im)
+          do dir=1,SDIM
+           nslope_node(dir)=nslope_node(dir)+ &
+             CP%LS(D_DECL(CP%i+i1-1,CP%j+j1-1,CP%k+k1-1), &
+               CP%nmat+SDIM*(CP%im-1)+dir)
+          enddo
+         enddo
+         enddo
+         enddo
+         if (denom.gt.0) then
+          LS_node=LS_node/denom
+          mag=zero
+          do dir=1,SDIM
+           nslope_node(dir)=nslope_node(dir)/denom
+           mag=mag+nslope_node(dir)**2
+          enddo
+          mag=sqrt(mag)
+          if (mag.gt.zero) then
+           do dir=1,SDIM
+            nslope_node(dir)=nslope_node(dir)/mag
+           enddo
+          else if (mag.eq.zero) then
+           ! do nothing
+          else
+           print *,"mag invalid"
+           stop
+          endif 
+         else
+          print *,"denom invalid"
+          stop
+         endif
+        else if (FSI_flag(CP%im).eq.1) then ! prescribed solid EUL
+         ! do nothing
+        else
+         print *,"FSI_flag invalid"
+         stop
+        endif
+
+        do dir=1,SDIM
+         xCP(dir)=xsten(0,dir)-LS_node*nslope_node(dir)
+        enddo
+
+        END ASSOCIATE
+
+        return 
+        end subroutine node_xCP
 
         INTEGER_T function is_default(contactangle)
         IMPLICIT NONE
@@ -15847,6 +15961,7 @@ stop
              censolid_new(im,dir)=centroid(dir)-cencell(dir)
             enddo
 
+            ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
             ! slope points into the solid
             ! this slope ignores 1/R term for dphi/dtheta
             call find_LS_stencil_slope( &
