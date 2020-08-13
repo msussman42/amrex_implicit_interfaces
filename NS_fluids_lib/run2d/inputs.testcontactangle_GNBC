@@ -127,7 +127,6 @@ ns.law_of_the_wall=2  #1=law of the wall   2=GNBC  0=neither
 # =8 Cox 1986
 ns.ZEYU_DCA_SELECT=1  #DCA=dynamic contact angle
 #ns.ZEYU_DCA_SELECT=-1  #DCA=dynamic contact angle
-ns.ZEYU_always_low_order_extrapolation=0
 
 ns.use_lsa=0
 ns.capillary_artificial_viscosity=0.0 0.0 0.0  # gets multiplied by visc_coef

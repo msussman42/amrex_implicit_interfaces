@@ -6803,7 +6803,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       im_solid_map_ptr,
       &renormalize_only, 
       &solidheat_flag,
-      &ZEYU_always_low_order_extrapolation,
       &num_LS_extrap,
       &num_LS_extrap_iter,
       LS_extrap_iter,

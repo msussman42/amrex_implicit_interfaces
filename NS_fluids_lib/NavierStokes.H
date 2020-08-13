@@ -1559,7 +1559,6 @@ protected:
     static int         law_of_the_wall;  // def=0
      // 1..7 "1" corresponds to the GNBC option.
     static int         ZEYU_DCA_SELECT;  // DCA=dynamic contact angle
-    static int         ZEYU_always_low_order_extrapolation; //def=0
      // 0=fluid, tessellating 
      // 1=prescribed motion, non-tessellating, PROB.F90 solid 
      // 2=prescribed motion, non-tessellating, sci_clsvof.F90 solid 

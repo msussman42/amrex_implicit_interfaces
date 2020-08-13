@@ -40,7 +40,14 @@ stop
          REAL_T :: time
          INTEGER_T :: im
          INTEGER_T :: nmat
+         INTEGER_T :: least_sqr_radius
+         INTEGER_T :: least_sqrZ
          REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+         REAL_T, pointer, dimension(:,:,:,:) :: ZEYU_XPOS
+         REAL_T, pointer, dimension(:,:,:,:) :: ZEYU_LS
+         REAL_T, pointer, dimension(:,:,:) :: ZEYU_WT
+         INTEGER_T, pointer, dimension(:) :: local_is_fluid
+
         end type cell_CP_parm_type
 
         contains
@@ -127,8 +134,8 @@ stop
         INTEGER_T, intent(in) :: cell_index(SDIM)
         REAL_T, intent(out) :: LS_interp(num_materials)
         INTEGER_T, intent(in) :: im_solid 
-        INTEGER_T, intent(out) :: im1_stencil
-        INTEGER_T, intent(out) :: im2_stencil
+        INTEGER_T, intent(inout) :: im1_stencil
+        INTEGER_T, intent(inout) :: im2_stencil
         INTEGER_T :: nhalf
         REAL_T :: xsten(-3:3,SDIM)
         INTEGER_T :: dir
@@ -158,11 +165,6 @@ stop
          LSstenhi(dir)=1
         enddo ! dir=1..sdim
 
-        do im=1,nmat
-         LS_interp(im)=zero
-        enddo
-        total_weight=zero
-
         do i2=LSstenlo(1),LSstenhi(1)
         do j2=LSstenlo(2),LSstenhi(2)
         do k2=LSstenlo(3),LSstenhi(3)
@@ -176,20 +178,20 @@ stop
            CP%level,nhalf)
 
          do dir=1,SDIM
-          ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
+          CP%ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
          enddo
 
          do im=1,nmat
-          LS_virtual(im)=LS(D_DECL(isten,jsten,ksten),im)
+          LS_virtual(im)=CP%LS(D_DECL(isten,jsten,ksten),im)
 
           if (is_rigid(nmat,im).eq.0) then
            if (LS_virtual(im).ge.-dxmaxLS) then
-            if (im1_substencil.eq.0) then
-             im1_substencil=im
-            else if (im1_substencil.eq.im) then
+            if (im1_stencil.eq.0) then
+             im1_stencil=im
+            else if (im1_stencil.eq.im) then
              ! do nothing
-            else if (im2_substencil.eq.0) then
-             im2_substencil=im
+            else if (im2_stencil.eq.0) then
+             im2_stencil=im
             endif
            else if (LS_virtual(im).le.-dxmaxLS) then
             ! do nothing
@@ -228,11 +230,9 @@ stop
          endif
           
          if (WT.gt.zero) then 
-          total_weight=total_weight+WT
-          ZEYU_WT(i2,j2,k2)=WT
+          CP%ZEYU_WT(i2,j2,k2)=WT
           do im=1,nmat
-           LS_interp(im)=LS_interp(im)+WT*LS_virtual(im)
-           ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
+           CP%ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
           enddo
          else 
           print *,"WT bust"
@@ -242,132 +242,20 @@ stop
         enddo 
         enddo  !i2,j2,k2=LSstenlo ... LSstenhi
          
-        if (ZEYU_always_low_order_extrapolation.eq.1) then
- 
-         if (total_weight.gt.zero) then
-          do im=1,nmat
-           LS_interp(im)=LS_interp(im)/total_weight
-          enddo
-         else
-          print *,"total_weight invalid"
-          stop
-         endif
-
-        else if (ZEYU_always_low_order_extrapolation.eq.0) then
-              ! do low order extrapolation if just one material.
-             else if ((XLIST_ncomp.ge.1).and. &
-                      (XLIST_ncomp.le.SDIM+1).and. &
-                      (im1_substencil.ge.1).and. &
-                      (im1_substencil.le.nmat).and. &
-                      (im2_substencil.eq.0)) then
-
-              if (total_weightFLUID.gt.zero) then
-               do im=1,nmat
-                LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID
-               enddo
-              else
-               print *,"total_weightFLUID invalid"
-               stop
-              endif
-
-             else if (XLIST_ncomp.eq.0) then
-FIX ME
-              if (total_weightFLUID.eq.zero) then
-               if (total_weightSOLID.gt.zero) then
-                if (dist_to_fluid_min.ge.zero) then
-                 if (dist_to_fluid_max.gt.dist_to_fluid_min) then
-                  do im=1,nmat
-                   LS_virtual_new(im)=LS_virtual_newSOLID(im)/ &
-                           total_weightSOLID
-                  enddo
-                 else if (dist_to_fluid_max.eq.dist_to_fluid_min) then
-                  do im=1,nmat
-                   LS_virtual_new(im)=LS_predict(im)
-                  enddo
-                 else
-                  print *,"dist_to_fluid_max invalid"
-                  stop
-                 endif
-                else 
-                 print *,"dist_to_fluid_min invalid"
-                 stop
-                endif
-               else
-                print *,"total_weightSOLID invalid"
-                stop
-               endif
-              else
-               print *,"total_weightFLUID invalid"
-               stop
-              endif
-
-             else if ((XLIST_ncomp.eq.SDIM+1).and. &
-                      (ZEYU_always_low_order_extrapolation.eq.0)) then
-
-              call level_set_extrapolation( &
-               ZEYU_XPOS, &
-               ZEYU_LS, &
-               ZEYU_WT_FLUID, &
-               local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
-               LS_virtual_new, &
-               least_sqr_radius, &
-               least_sqrZ, &
-               nmat,SDIM)
-
-             else
-              print *,"XLIST_ncomp invalid or the flag"
-              print *,"ZEYU_always_low_order_extrapolation invalid"
-              stop
-             endif
-            else
-             print *,"is_rigid(nmat,im_primary_stencil) or at_center invalid"
-             stop
-            endif
-
-
-
-
-
-
-         ! positive in the rigid body
-        call materialdistsolid( &
-          xsten(0,1),xsten(0,2),xsten(0,SDIM), &
-          LS_cell,CP%time,CP%im)
-
-         ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
-         ! slope points into the solid
-         ! this slope ignores 1/R term for dphi/dtheta
-        call find_LS_stencil_slope( &
-          CP%bfact, &
-          CP%dx, &
-          xsten,nhalf, &
-          nslope_cell, &
-          CP%time, &
-          CP%im)
-
-        if ((FSI_flag(CP%im).eq.2).or. & ! prescribed solid CAD
-            (FSI_flag(CP%im).eq.4)) then ! CTML FSI
-         LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im)
-         do dir=1,SDIM
-          nslope_cell(dir)= &
-            CP%LS(D_DECL(CP%i,CP%j,CP%k), &
-            CP%nmat+SDIM*(CP%im-1)+dir)
-         enddo
-        else if (FSI_flag(CP%im).eq.1) then ! prescribed solid EUL
-         ! do nothing
-        else
-         print *,"FSI_flag invalid"
-         stop
-        endif
-
-        do dir=1,SDIM
-         xCP(dir)=xsten(0,dir)-LS_cell*nslope_cell(dir)
-        enddo
+        call level_set_extrapolation( &
+          CP%ZEYU_XPOS, &
+          CP%ZEYU_LS, &
+          CP%ZEYU_WT, &
+          CP%local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
+          LS_interp, &
+          CP%least_sqr_radius, &
+          CP%least_sqrZ, &
+          CP%nmat,SDIM)
 
         END ASSOCIATE
 
         return 
-        end subroutine cell_xCP
+        end subroutine interp_fluid_LS
 
 
 
@@ -15603,7 +15491,6 @@ FIX ME
        im_solid_map, &
        renormalize_only, &
        solidheat_flag, &
-       ZEYU_always_low_order_extrapolation, &
        num_LS_extrap, &
        num_LS_extrap_iter, &
        LS_extrap_iter, &
@@ -15619,7 +15506,6 @@ FIX ME
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: solidheat_flag
-      INTEGER_T, intent(in) :: ZEYU_always_low_order_extrapolation
       INTEGER_T, intent(in) :: ngrow_distance
 
       INTEGER_T, intent(in) :: renormalize_only
@@ -15735,17 +15621,10 @@ FIX ME
       INTEGER_T extrap_radius
       INTEGER_T least_sqr_radius
       INTEGER_T least_sqrZ
-      REAL_T local_XPOS(SDIM)
-      REAL_T XLIST(SDIM+1,SDIM)
-      REAL_T VLIST(SDIM,SDIM)
-      INTEGER_T XLIST_ncomp
-      REAL_T, allocatable :: ZEYU_XPOS(:,:,:,:)
-      REAL_T, allocatable :: ZEYU_LS(:,:,:,:)
-      REAL_T, allocatable :: ZEYU_WT_FLUID(:,:,:)
-      INTEGER_T local_is_fluid(nmat)
-      REAL_T U1(SDIM)
-      INTEGER_T ibasis
-      REAL_T U_DOT_V,V_DOT_V,U_DOT_U,alpha
+      REAL_T, allocatable, target :: ZEYU_XPOS(:,:,:,:)
+      REAL_T, allocatable, target :: ZEYU_LS(:,:,:,:)
+      REAL_T, allocatable, target :: ZEYU_WT_FLUID(:,:,:)
+      INTEGER_T, target local_is_fluid(nmat)
       INTEGER_T center_stencil_im,center_stencil_wetting_im
       INTEGER_T im1_substencil
       INTEGER_T im2_substencil
@@ -15891,20 +15770,29 @@ FIX ME
        stop
       endif
 
-      cell_CP_parm%bfact=bfact
-      cell_CP_parm%level=level
-      cell_CP_parm%finest_level=finest_level
-      cell_CP_parm%ngrow_LS=ngrow_distance
-      cell_CP_parm%fablo=>fablo
-      cell_CP_parm%fabhi=>fabhi
-      cell_CP_parm%dx=>dx
-      cell_CP_parm%time=time
-      cell_CP_parm%nmat=nmat
-      cell_CP_parm%LS=>LS
+      extrap_radius=1
+      LS_extrap_radius=1
 
-      nmat_fluid=0
-      nmat_solid=0
-      nmat_lag=0
+      least_sqr_radius=1
+      least_sqrZ=0
+      if (SDIM.eq.2) then
+       ! do nothing
+      else if (SDIM.eq.3) then
+       least_sqrZ=1
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      allocate(ZEYU_XPOS(-least_sqr_radius:least_sqr_radius, &
+              -least_sqr_radius:least_sqr_radius, &
+              -least_sqrZ:least_sqrZ,SDIM))
+      allocate(ZEYU_LS(-least_sqr_radius:least_sqr_radius, &
+              -least_sqr_radius:least_sqr_radius, &
+              -least_sqrZ:least_sqrZ,nmat))
+      allocate(ZEYU_WT_FLUID(-least_sqr_radius:least_sqr_radius, &
+              -least_sqr_radius:least_sqr_radius, &
+              -least_sqrZ:least_sqrZ))
 
       do im=1,nmat
        if (is_rigid(nmat,im).eq.0) then
@@ -15916,6 +15804,25 @@ FIX ME
         stop
        endif
       enddo ! im=1..nmat
+
+      cell_CP_parm%bfact=bfact
+      cell_CP_parm%level=level
+      cell_CP_parm%finest_level=finest_level
+      cell_CP_parm%ngrow_LS=ngrow_distance
+      cell_CP_parm%fablo=>fablo
+      cell_CP_parm%fabhi=>fabhi
+      cell_CP_parm%dx=>dx
+      cell_CP_parm%time=time
+      cell_CP_parm%nmat=nmat
+      cell_CP_parm%LS=>LS
+      cell_CP_parm%ZEYU_XPOS=>ZEYU_XPOS
+      cell_CP_parm%ZEYU_LS=>ZEYU_LS
+      cell_CP_parm%ZEYU_WT=>ZEYU_WT
+      cell_CP_parm%local_is_fluid=>local_is_fluid
+
+      nmat_fluid=0
+      nmat_solid=0
+      nmat_lag=0
 
       do im=1,nmat
 
@@ -15973,30 +15880,6 @@ FIX ME
       call checkbound(fablo,fabhi,DIMS(den),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(dennew),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,26)
-
-      extrap_radius=1
-      LS_extrap_radius=1
-
-      least_sqr_radius=1
-      least_sqrZ=0
-      if (SDIM.eq.2) then
-       ! do nothing
-      else if (SDIM.eq.3) then
-       least_sqrZ=1
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-      allocate(ZEYU_XPOS(-least_sqr_radius:least_sqr_radius, &
-              -least_sqr_radius:least_sqr_radius, &
-              -least_sqrZ:least_sqrZ,SDIM))
-      allocate(ZEYU_LS(-least_sqr_radius:least_sqr_radius, &
-              -least_sqr_radius:least_sqr_radius, &
-              -least_sqrZ:least_sqrZ,nmat))
-      allocate(ZEYU_WT_FLUID(-least_sqr_radius:least_sqr_radius, &
-              -least_sqr_radius:least_sqr_radius, &
-              -least_sqrZ:least_sqrZ))
 
       istenlo(3)=0
       istenhi(3)=0
@@ -16483,6 +16366,9 @@ FIX ME
               xCP, &
               cell_index)
 
+            im1_substencil=0
+            im2_substencil=0
+
             call interp_fluid_LS( &
              cell_CP_parm, &
              xCP, &
@@ -16492,11 +16378,11 @@ FIX ME
              im1_sub_stencil, &
              im2_sub_stencil)
 
-             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
-              at_center=1
-             else
-              at_center=0
-             endif
+            if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+             at_center=1
+            else
+             at_center=0
+            endif
 
             do im=1,nmat
              LS_predict(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
@@ -16517,364 +16403,81 @@ FIX ME
                      (at_center.eq.1)) then
 
              do im=1,nmat
-              LS_virtual_new(im)=zero
-              LS_virtual_newSOLID(im)=zero
+              LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
              enddo
 
-             dist_to_fluid_min=zero
-             dist_to_fluid_max=zero
-
-             total_weightFLUID=zero
-             total_weightSOLID=zero
-
-             XLIST_ncomp=0
-
-             im1_substencil=0
-             im2_substencil=0
-
-              ! default radius: least_sqr_radius=3 cells.
-              ! In order to find the level set function values at the
-              ! (i+i1,j+j1,k+k1) stencil points in the solid, 
-              ! extrapolation from the
-              ! fluid region must be done.
-             do i2=LSstenlo(1),LSstenhi(1)
-             do j2=LSstenlo(2),LSstenhi(2)
-             do k2=LSstenlo(3),LSstenhi(3)
-    
-              dir=1
-              local_XPOS(dir)=xsten(i1+i2,dir)
-              dir=2
-              local_XPOS(dir)=xsten(j1+j2,dir)
-              if (SDIM.eq.3) then
-               dir=SDIM
-               local_XPOS(dir)=xsten(k1+k2,dir)
-              endif
-              do dir=1,SDIM
-               ZEYU_XPOS(i2,j2,k2,dir)=local_XPOS(dir)
-              enddo
-
-              do im=1,nmat
-
-               LS_virtual(im)=LS(D_DECL(i+i1+i2,j+j1+j2,k+k1+k2),im)
-
-               if (is_rigid(nmat,im).eq.0) then
-                if (LS_virtual(im).ge.-dxmaxLS) then
-                 if (im1_substencil.eq.0) then
-                  im1_substencil=im
-                 else if (im1_substencil.eq.im) then
-                  ! do nothing
-                 else if (im2_substencil.eq.0) then
-                  im2_substencil=im
-                 endif
-                else if (LS_virtual(im).le.-dxmaxLS) then
-                 ! do nothing
+             if (at_center.eq.0) then
+              ! do nothing
+             else if (at_center.eq.1) then
+              if (im1_substencil.eq.0) then
+               print *,"all materials disappeared"
+               stop
+              else if ((im1_substencil.ge.1).and. &
+                       (im1_substencil.le.nmat)) then
+               if (im2_substencil.eq.0) then
+                center_stencil_im=im1_substencil
+               else if ((im2_substencil.ge.1).and. &
+                        (im2_substencil.le.nmat)) then
+                if (im1_substencil.lt.im2_substencil) then
+                 im=im1_substencil
+                 im_opp=im2_substencil
+                else if (im1_substencil.gt.im2_substencil) then
+                 im=im2_substencil
+                 im_opp=im1_substencil
                 else
-                 print *,"LS_virtual invalid"
+                 print *,"im1_substencil or im2_substencil invalid"
                  stop
                 endif
-               else if (is_rigid(nmat,im).eq.1) then 
-                ! do nothing
-               else
-                print *,"is_rigid(nmat,im) invalid"
-                stop
-               endif
-              enddo ! im=1..nmat
-
-               ! the fluid cells closest to the substrate have the
-               ! most weight.
-              call get_primary_material(LS_virtual,nmat,im_primary_sub_stencil)
-
-              if (is_rigid(nmat,im_primary_sub_stencil).eq.0) then
-
-               if (XLIST_ncomp.eq.0) then
-                XLIST_ncomp=1
+                call get_iten(im,im_opp,iten,nmat)
+                do im_local=1,nmat
+                 dencomp=(im_local-1)*num_state_material+1
+                 local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
+                enddo
                 do dir=1,SDIM
-                 XLIST(XLIST_ncomp,dir)=local_XPOS(dir)
+                 local_XPOS(dir)=xsten(0,dir)
                 enddo
-               else if ((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)) then
-                do dir=1,SDIM
-                 U1(dir)=(local_XPOS(dir)-XLIST(1,dir))/dx(dir)
-                enddo
-                ! V1=U1 - sum alpha_i V_i
-                ! alpha_i=(U1,V_i)/(V_i,V_i)
-                do ibasis=1,XLIST_ncomp-1
-                 U_DOT_V=zero
-                 V_DOT_V=zero
-                 do dir=1,SDIM
-                  U_DOT_V=U_DOT_V+U1(dir)*VLIST(ibasis,dir)
-                  V_DOT_V=V_DOT_V+VLIST(ibasis,dir)**2
-                 enddo
-                 if (abs(V_DOT_V-one).le.1.0D-10) then
-                  alpha=U_DOT_V/V_DOT_V
-                  do dir=1,SDIM
-                   U1(dir)=U1(dir)-alpha*VLIST(ibasis,dir)
-                  enddo
-                 else
-                  print *,"V_DOT_V bust"
-                  stop
-                 endif
-                enddo ! ibasis=1..XLIST_ncomp-1
-                U_DOT_U=zero
-                do dir=1,SDIM
-                 U_DOT_U=U_DOT_U+U1(dir)**2
-                enddo 
-                U_DOT_U=sqrt(U_DOT_U)
-                if (U_DOT_U.gt.1.0D-10) then
-                 XLIST_ncomp=XLIST_ncomp+1
-                 do dir=1,SDIM
-                  XLIST(XLIST_ncomp,dir)=local_XPOS(dir)
-                  VLIST(XLIST_ncomp-1,dir)=U1(dir)/U_DOT_U
-                 enddo
-                else if ((U_DOT_U.ge.zero).and.(U_DOT_U.le.1.0D-10)) then
-                 ! do nothing
-                else
-                 print *,"U_DOT_U invalid"
-                 stop
-                endif
-              
-               else if (XLIST_ncomp.eq.SDIM+1) then
-                ! do nothing
-               else
-                print *,"XLIST_ncomp invalid"
-                stop
-               endif
-
-               dist_to_fluid_min=-one
-
-               local_dist_solid=LS_virtual(im_solid_max)
-               if (local_dist_solid.gt.zero) then
-                local_dist_solid=zero
-               endif
-               WT=one/(local_dist_solid**2+0.01d0*(dxmaxLS**2))
-
-               if (WT.gt.zero) then 
-                total_weightFLUID=total_weightFLUID+WT
-
-                ZEYU_WT_FLUID(i2,j2,k2)=WT
-               
-                do im=1,nmat
-                 LS_virtual_new(im)=LS_virtual_new(im)+WT*LS_virtual(im)
-                 ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
-                enddo
-
-               else 
-                print *,"WT bust"
-                stop
-               endif
-
-              else if (is_rigid(nmat,im_primary_sub_stencil).eq.1) then
-
-               ZEYU_WT_FLUID(i2,j2,k2)=zero
-
-               local_dist_solid=abs(LS_virtual(im_primary_sub_stencil))
-               WT=one/(local_dist_solid**2+0.01d0*(dxmaxLS**2))
-
-               if (WT.gt.zero) then 
-
-                if (local_dist_solid.lt.dist_to_fluid_min) then
-                 dist_to_fluid_min=local_dist_solid
-                endif
-                if (local_dist_solid.gt.dist_to_fluid_max) then
-                 dist_to_fluid_max=local_dist_solid
-                endif
-
-                do im=1,nmat
-                 LS_virtual_newSOLID(im)=LS_virtual_newSOLID(im)+ &
-                     WT*LS_virtual(im)
-                 ZEYU_LS(i2,j2,k2,im)=LS_virtual(im)
-                enddo
-
-                total_weightSOLID=total_weightSOLID+WT
-
-               else
-                print *,"WT bust"
-                stop
-               endif
-
-              else
-               print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
-               stop 
-              endif
-          
-             enddo 
-             enddo 
-             enddo  !i2,j2,k2=-least_sqr_radius..least_sqr_radius
-          
-              ! fluid cells exist in Least squares stencil, but
-              ! not enough of them.
-              ! XLIST_ncomp = number of row vectors in the least squares
-              ! matrix A that can be orthogonalized by way of Gram Schmidt.
-              ! If XLIST_ncomp <= sdim => least squares for 2nd order 
-              ! extrapolation cannot be done.
-             if ((XLIST_ncomp.ge.1).and.(XLIST_ncomp.le.SDIM)) then
-
-              if (total_weightFLUID.gt.zero) then
-               do im=1,nmat
-                LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID
-               enddo
-              else
-               print *,"total_weightFLUID invalid"
-               stop
-              endif
-
-             else if ((XLIST_ncomp.eq.SDIM+1).and. &
-                      (ZEYU_always_low_order_extrapolation.eq.1)) then
-
-              if (total_weightFLUID.gt.zero) then
-               do im=1,nmat
-                LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID
-               enddo
-              else
-               print *,"total_weightFLUID invalid"
-               stop
-              endif
-
-              ! do low order extrapolation if just one material.
-             else if ((XLIST_ncomp.ge.1).and. &
-                      (XLIST_ncomp.le.SDIM+1).and. &
-                      (im1_substencil.ge.1).and. &
-                      (im1_substencil.le.nmat).and. &
-                      (im2_substencil.eq.0)) then
-
-              if (total_weightFLUID.gt.zero) then
-               do im=1,nmat
-                LS_virtual_new(im)=LS_virtual_new(im)/total_weightFLUID
-               enddo
-              else
-               print *,"total_weightFLUID invalid"
-               stop
-              endif
-
-             else if (XLIST_ncomp.eq.0) then
-
-              if (total_weightFLUID.eq.zero) then
-               if (total_weightSOLID.gt.zero) then
-                if (dist_to_fluid_min.ge.zero) then
-                 if (dist_to_fluid_max.gt.dist_to_fluid_min) then
-                  do im=1,nmat
-                   LS_virtual_new(im)=LS_virtual_newSOLID(im)/ &
-                           total_weightSOLID
-                  enddo
-                 else if (dist_to_fluid_max.eq.dist_to_fluid_min) then
-                  do im=1,nmat
-                   LS_virtual_new(im)=LS_predict(im)
-                  enddo
-                 else
-                  print *,"dist_to_fluid_max invalid"
-                  stop
-                 endif
-                else 
-                 print *,"dist_to_fluid_min invalid"
-                 stop
-                endif
-               else
-                print *,"total_weightSOLID invalid"
-                stop
-               endif
-              else
-               print *,"total_weightFLUID invalid"
-               stop
-              endif
-
-             else if ((XLIST_ncomp.eq.SDIM+1).and. &
-                      (ZEYU_always_low_order_extrapolation.eq.0)) then
-
-              call level_set_extrapolation( &
-               ZEYU_XPOS, &
-               ZEYU_LS, &
-               ZEYU_WT_FLUID, &
-               local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
-               LS_virtual_new, &
-               least_sqr_radius, &
-               least_sqrZ, &
-               nmat,SDIM)
-
-             else
-              print *,"XLIST_ncomp invalid or the flag"
-              print *,"ZEYU_always_low_order_extrapolation invalid"
-              stop
-             endif
-            else
-             print *,"is_rigid(nmat,im_primary_stencil) or at_center invalid"
-             stop
-            endif
-
-            do im=1,nmat
-             LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
-            enddo
-
-            if (at_center.eq.0) then
-             ! do nothing
-            else if (at_center.eq.1) then
-             if (im1_substencil.eq.0) then
-              print *,"all materials disappeared"
-              stop
-             else if ((im1_substencil.ge.1).and. &
-                      (im1_substencil.le.nmat)) then
-              if (im2_substencil.eq.0) then
-               center_stencil_im=im1_substencil
-              else if ((im2_substencil.ge.1).and. &
-                       (im2_substencil.le.nmat)) then
-               if (im1_substencil.lt.im2_substencil) then
-                im=im1_substencil
-                im_opp=im2_substencil
-               else if (im1_substencil.gt.im2_substencil) then
-                im=im2_substencil
-                im_opp=im1_substencil
-               else
-                print *,"im1_substencil or im2_substencil invalid"
-                stop
-               endif
-               call get_iten(im,im_opp,iten,nmat)
-               do im_local=1,nmat
-                dencomp=(im_local-1)*num_state_material+1
-                local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
-               enddo
-               do dir=1,SDIM
-                local_XPOS(dir)=xsten(0,dir)
-               enddo
-               call get_user_tension( &
+                call get_user_tension( &
                  local_XPOS, &
                  time, &
                  fort_tension,user_tension, &
                  local_temperature, &
                  nmat,nten,2)
-               ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
-               ! theta_{ik}=0 => material i wets material k.
-               ! im is material "i"  ("fluid" material)
-               ! im_opp is material "j"
-               call get_CL_iten(im,im_opp,im_solid_max, &
+                ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
+                ! theta_{ik}=0 => material i wets material k.
+                ! im is material "i"  ("fluid" material)
+                ! im_opp is material "j"
+                call get_CL_iten(im,im_opp,im_solid_max, &
                  iten_13,iten_23, &
                  user_tension,nten,cos_angle,sin_angle)
-               if ((sin_angle.eq.zero).and.(cos_angle.eq.one)) then
-                center_stencil_wetting_im=im
-               else if ((sin_angle.eq.zero).and.(cos_angle.eq.-one)) then 
-                center_stencil_wetting_im=im_opp
-               else if ((sin_angle.ge.zero).and. &
-                        (sin_angle.le.one).and. &
-                        (cos_angle.ge.-one).and. &
-                        (cos_angle.le.one)) then
-                ! do nothing
+                if ((sin_angle.eq.zero).and.(cos_angle.eq.one)) then
+                 center_stencil_wetting_im=im
+                else if ((sin_angle.eq.zero).and.(cos_angle.eq.-one)) then 
+                 center_stencil_wetting_im=im_opp
+                else if ((sin_angle.ge.zero).and. &
+                         (sin_angle.le.one).and. &
+                         (cos_angle.ge.-one).and. &
+                         (cos_angle.le.one)) then
+                 ! do nothing
+                else
+                 print *,"sin_angle or cos_angle invalid"
+                 stop
+                endif
                else
-                print *,"sin_angle or cos_angle invalid"
+                print *,"im2_substencil invalid"
                 stop
                endif
               else
-               print *,"im2_substencil invalid"
+               print *,"im1_substencil invalid"
                stop
               endif
              else
-              print *,"im1_substencil invalid"
+              print *,"at_center invalid"
               stop
              endif
-            else
-             print *,"at_center invalid"
-             stop
-            endif
                            
-           enddo
-           enddo
-           enddo ! i1,j1,k1=-extrap_radius..extrap_radius
+            enddo
+            enddo
+            enddo ! i1,j1,k1=LSstenlo ... LSstenhi
 
             ! default radius: extrap_radius=1 cell
             ! make the extension fluid level set tessellating

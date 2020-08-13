@@ -860,7 +860,6 @@ Real NavierStokes::bottom_bottom_tol_factor=0.01;
 //   modify "get_use_DCA" in PROB.F90.
 int NavierStokes::law_of_the_wall=0;
 int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
-int NavierStokes::ZEYU_always_low_order_extrapolation=0; 
 
 // 0 fluid, tessellating (default)
 // 1 prescribed rigid solid, non-tessellating (PROB.F90)
@@ -2342,13 +2341,6 @@ NavierStokes::read_params ()
      amrex::Error("law_of_the_wall invalid");
     }
 
-    pp.query("ZEYU_always_low_order_extrapolation",
-	 ZEYU_always_low_order_extrapolation);
-    if ((ZEYU_always_low_order_extrapolation==0)||
-        (ZEYU_always_low_order_extrapolation==1)) {
-     // do nothing
-    } else
-     amrex::Error("ZEYU_always_low_order_extrapolation invalid");
 
     pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
     if ((ZEYU_DCA_SELECT==-1)||
@@ -2504,8 +2496,6 @@ NavierStokes::read_params ()
      std::cout << "invert_solid_levelset " << invert_solid_levelset << '\n';
      std::cout << "law_of_the_wall " << law_of_the_wall << '\n';
      std::cout << "ZEYU_DCA_SELECT " << ZEYU_DCA_SELECT << '\n';
-     std::cout << "ZEYU_always_low_order_extrapolation " << 
-	     ZEYU_always_low_order_extrapolation << '\n';
      std::cout << "adapt_quad_depth= " << adapt_quad_depth << '\n';
     }
 
