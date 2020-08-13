@@ -28,7 +28,7 @@ stop
         module levelset_module
         use probf90_module
 
-        type node_CP_parm_type
+        type cell_CP_parm_type
          INTEGER_T i,j,k
          INTEGER_T bfact
          INTEGER_T level
@@ -38,38 +38,35 @@ stop
          INTEGER_T :: im
          INTEGER_T :: nmat
          REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
-        end type node_CP_parm_type
+        end type cell_CP_parm_type
 
         contains
 
-        subroutine node_xCP(node_CP_parm,xCP)
+        subroutine cell_xCP(cell_CP_parm,xCP)
         use global_utility_module
         use global_distance_module
         use probf90_module
         use geometry_intersect_module
         use MOF_routines_module
         IMPLICIT NONE
-        type(node_CP_parm_type), intent(in) :: node_CP_parm
+        type(cell_CP_parm_type), intent(in) :: cell_CP_parm
         REAL_T, intent(out) :: xCP(SDIM)
         INTEGER_T :: nhalf
         REAL_T :: xsten(-3:3,SDIM)
         INTEGER_T :: dir
         REAL_T :: mag
-        REAL_T :: nslope_node(SDIM)
-        REAL_T :: LS_node
-        REAL_T :: denom
-        INTEGER_T :: k1hi
-        INTEGER_T :: i1,j1,k1
+        REAL_T :: nslope_cell(SDIM)
+        REAL_T :: LS_cell
 
-        ASSOCIATE(CP=>node_CP_parm)
+        ASSOCIATE(CP=>cell_CP_parm)
 
         nhalf=3
-        call gridstenND_level(xsten,CP%i,CP%j,CP%k,CP%level,nhalf)
+        call gridsten_level(xsten,CP%i,CP%j,CP%k,CP%level,nhalf)
 
          ! positive in the rigid body
         call materialdistsolid( &
           xsten(0,1),xsten(0,2),xsten(0,SDIM), &
-          LS_node,CP%time,CP%im)
+          LS_cell,CP%time,CP%im)
 
          ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
          ! slope points into the solid
@@ -78,57 +75,18 @@ stop
           CP%bfact, &
           CP%dx, &
           xsten,nhalf, &
-          nslope_node, &
+          nslope_cell, &
           CP%time, &
           CP%im)
 
-        k1hi=0
-        if (SDIM.eq.3) then
-         k1hi=1
-        endif
-
         if ((FSI_flag(CP%im).eq.2).or. & ! prescribed solid CAD
             (FSI_flag(CP%im).eq.4)) then ! CTML FSI
-         denom=0
-         LS_node=zero
+         LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im)
          do dir=1,SDIM
-          nslope_node(dir)=zero
-         enddo 
-         do i1=0,1
-         do j1=0,1
-         do k1=0,k1hi
-          denom=denom+1
-          LS_node=LS_node+CP%LS(D_DECL(CP%i+i1-1,CP%j+j1-1,CP%k+k1-1),CP%im)
-          do dir=1,SDIM
-           nslope_node(dir)=nslope_node(dir)+ &
-             CP%LS(D_DECL(CP%i+i1-1,CP%j+j1-1,CP%k+k1-1), &
-               CP%nmat+SDIM*(CP%im-1)+dir)
-          enddo
+          nslope_cell(dir)= &
+            CP%LS(D_DECL(CP%i,CP%j,CP%k), &
+            CP%nmat+SDIM*(CP%im-1)+dir)
          enddo
-         enddo
-         enddo
-         if (denom.gt.0) then
-          LS_node=LS_node/denom
-          mag=zero
-          do dir=1,SDIM
-           nslope_node(dir)=nslope_node(dir)/denom
-           mag=mag+nslope_node(dir)**2
-          enddo
-          mag=sqrt(mag)
-          if (mag.gt.zero) then
-           do dir=1,SDIM
-            nslope_node(dir)=nslope_node(dir)/mag
-           enddo
-          else if (mag.eq.zero) then
-           ! do nothing
-          else
-           print *,"mag invalid"
-           stop
-          endif 
-         else
-          print *,"denom invalid"
-          stop
-         endif
         else if (FSI_flag(CP%im).eq.1) then ! prescribed solid EUL
          ! do nothing
         else
@@ -137,13 +95,13 @@ stop
         endif
 
         do dir=1,SDIM
-         xCP(dir)=xsten(0,dir)-LS_node*nslope_node(dir)
+         xCP(dir)=xsten(0,dir)-LS_cell*nslope_cell(dir)
         enddo
 
         END ASSOCIATE
 
         return 
-        end subroutine node_xCP
+        end subroutine cell_xCP
 
         INTEGER_T function is_default(contactangle)
         IMPLICIT NONE
@@ -15537,7 +15495,7 @@ stop
       REAL_T orderflag
       REAL_T local_temperature(nmat)
       REAL_T local_mof(nmat*ngeom_recon)
-      type(node_CP_parm_type) :: node_CP_parm
+      type(cell_CP_parm_type) :: cell_CP_parm
 
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.eq.nten) then
@@ -15661,13 +15619,13 @@ stop
        stop
       endif
 
-      node_CP_parm%bfact=bfact
-      node_CP_parm%level=level
-      node_CP_parm%finest_level=finest_level
-      node_CP_parm%dx=>dx
-      node_CP_parm%time=time
-      node_CP_parm%nmat=nmat
-      node_CP_parm%LS=>LS
+      cell_CP_parm%bfact=bfact
+      cell_CP_parm%level=level
+      cell_CP_parm%finest_level=finest_level
+      cell_CP_parm%dx=>dx
+      cell_CP_parm%time=time
+      cell_CP_parm%nmat=nmat
+      cell_CP_parm%LS=>LS
 
       nmat_fluid=0
       nmat_solid=0
@@ -15742,7 +15700,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,26)
 
       extrap_radius=1
-      least_sqr_radius=3
+      least_sqr_radius=1
       least_sqrZ=0
       if (SDIM.eq.2) then
        ! do nothing
