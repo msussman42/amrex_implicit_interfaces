@@ -257,6 +257,9 @@ namespace amrex{
        int* renormalize_only,
        int* solidheat_flag,
        int* ZEYU_always_low_order_extrapolation,
+       int* num_LS_extrap,
+       int* num_LS_extrap_iter,
+       int* LS_extrap_iter,
        int* ngrow_distance);
 
 

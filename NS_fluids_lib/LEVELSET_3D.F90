@@ -15376,12 +15376,16 @@ stop
        renormalize_only, &
        solidheat_flag, &
        ZEYU_always_low_order_extrapolation, &
+       num_LS_extrap, &
+       num_LS_extrap_iter, &
+       LS_extrap_iter, &
        ngrow_distance)
       use global_utility_module
       use global_distance_module
       use probf90_module
       use geometry_intersect_module
       use MOF_routines_module
+      use levelset_module
       use ZEYU_LS_extrapolation, only : level_set_extrapolation
 
       IMPLICIT NONE
@@ -15392,11 +15396,16 @@ stop
       INTEGER_T, intent(in) :: ngrow_distance
 
       INTEGER_T, intent(in) :: renormalize_only
-      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(inout) :: num_LS_extrap
+      INTEGER_T, intent(in) :: num_LS_extrap_iter
+      INTEGER_T, intent(in) :: LS_extrap_iter
+
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: solid_time
 
       REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in), target :: dx(SDIM)
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
@@ -15422,7 +15431,8 @@ stop
        num_materials_vel*(SDIM+1))
       REAL_T, intent(out) ::  velnew(DIMV(velnew), &
        num_materials_vel*(SDIM+1))
-      REAL_T, intent(in) ::  LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(in), target ::  &
+              LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) ::  mofdata(DIMV(mofdata),nmat*ngeom_raw)
       REAL_T, intent(in) ::  den(DIMV(den),nmat*num_state_material)
       REAL_T, intent(inout) ::  dennew(DIMV(dennew),nmat*num_state_material)
@@ -15527,12 +15537,46 @@ stop
       REAL_T orderflag
       REAL_T local_temperature(nmat)
       REAL_T local_mof(nmat*ngeom_recon)
+      type(node_CP_parm_type) :: node_CP_parm
 
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.eq.nten) then
        ! do nothing
       else
        print *,"nten invalid"
+       stop
+      endif
+
+      if (renormalize_only.eq.1) then
+       if (num_LS_extrap_iter.eq.1) then
+        ! do nothing
+       else
+        print *,"num_LS_extrap_iter invalid"
+        stop
+       endif
+      else if (renormalize_only.eq.0) then
+       if (num_LS_extrap_iter.ge.2) then
+        ! do nothing
+       else
+        print *,"num_LS_extrap_iter invalid"
+        stop
+       endif
+      else
+       print *,"renormalize_only invalid"
+       stop
+      endif
+
+      if ((LS_extrap_iter.ge.0).and. &
+          (LS_extrap_iter.lt.num_LS_extrap_iter)) then
+      ! do nothing
+      else
+       print *,"LS_extrap_iter invalid"
+       stop
+      endif
+      if (num_LS_extrap.ge.0) then
+       ! do nothing
+      else
+       print *,"num_LS_extrap invalid"
        stop
       endif
 
@@ -15616,6 +15660,14 @@ stop
        print *,"nparts_def invalid RENORMALIZE_PRESCRIBE"
        stop
       endif
+
+      node_CP_parm%bfact=bfact
+      node_CP_parm%level=level
+      node_CP_parm%finest_level=finest_level
+      node_CP_parm%dx=>dx
+      node_CP_parm%time=time
+      node_CP_parm%nmat=nmat
+      node_CP_parm%LS=>LS
 
       nmat_fluid=0
       nmat_solid=0
@@ -15725,6 +15777,11 @@ stop
        istenhi(dir)=extrap_radius
       enddo
 
+      k1hi_node=0
+      if (SDIM.eq.3) then
+       k1hi_node=1
+      endif
+
       LSstenlo(3)=0
       LSstenhi(3)=0
       do dir=1,SDIM
@@ -15750,125 +15807,134 @@ stop
         ! first: fluid state variable extrapolation into empty cells.
         ! ----------------------------------------------------------
 
-        do im=1,nmat
+        if (LS_extrap_iter.eq.0) then
 
-         vofcompraw=(im-1)*ngeom_raw+1
-         F_stencil=mofdata(D_DECL(i,j,k),vofcompraw)
+         do im=1,nmat
 
-         if (is_rigid(nmat,im).eq.1) then
-          ! do nothing
-         else if (is_rigid(nmat,im).eq.0) then
+          vofcompraw=(im-1)*ngeom_raw+1
+          F_stencil=mofdata(D_DECL(i,j,k),vofcompraw)
 
-          if (F_stencil.gt.VOFTOL) then
+          if (is_rigid(nmat,im).eq.1) then
            ! do nothing
-          else if (abs(F_stencil).le.VOFTOL) then
-           ! extrapolate into the empty cell.
+          else if (is_rigid(nmat,im).eq.0) then
 
-           F_stencil_sum=zero
-           do istate=1,num_state_material
-            state_stencil_sum(istate)=zero
-           enddo
-  
-           do i1=istenlo(1),istenhi(1)
-           do j1=istenlo(2),istenhi(2)
-           do k1=istenlo(3),istenhi(3)
+           if (F_stencil.gt.VOFTOL) then
+            ! do nothing
+           else if (abs(F_stencil).le.VOFTOL) then
+            ! extrapolate into the empty cell.
 
-            F_stencil=mofdata(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
+            F_stencil_sum=zero
+            do istate=1,num_state_material
+             state_stencil_sum(istate)=zero
+            enddo
+   
+            do i1=istenlo(1),istenhi(1)
+            do j1=istenlo(2),istenhi(2)
+            do k1=istenlo(3),istenhi(3)
 
-             ! in: subroutine FORT_RENORMALIZE_PRESCRIBE
+             F_stencil=mofdata(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
 
-            istate=1
-            do while (istate.le.num_state_material)
+              ! in: subroutine FORT_RENORMALIZE_PRESCRIBE
 
-             if (istate.eq.1) then
-              dencomp=(im-1)*num_state_material+istate
-               ! incompressible
-              if (fort_material_type(im).eq.0) then 
-               state_stencil(istate)=fort_denconst(im)
-               ! compressible
-              else if ((fort_material_type(im).gt.0).and. &
-                       (fort_material_type(im).le.fort_max_num_eos)) then 
-               state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),dencomp)
-              else
-               print *,"fort_material_type invalid"
+             istate=1
+             do while (istate.le.num_state_material)
+
+              if (istate.eq.1) then
+               dencomp=(im-1)*num_state_material+istate
+                ! incompressible
+               if (fort_material_type(im).eq.0) then 
+                state_stencil(istate)=fort_denconst(im)
+                ! compressible
+               else if ((fort_material_type(im).gt.0).and. &
+                        (fort_material_type(im).le.fort_max_num_eos)) then 
+                state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),dencomp)
+               else
+                print *,"fort_material_type invalid"
+                stop
+               endif
+               istate=istate+1
+              else if (istate.eq.2) then
+               tempcomp=(im-1)*num_state_material+istate
+               state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),tempcomp)
+               istate=istate+1
+              else if ((istate.eq.num_state_base+1).and. &
+                       (num_species_var.gt.0)) then 
+               do ispecies=1,num_species_var
+                speccomp=(im-1)*num_state_material+num_state_base+ispecies
+                state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),speccomp)
+                istate=istate+1
+               enddo
+              else 
+               print *,"istate invalid"
                stop
               endif
-              istate=istate+1
-             else if (istate.eq.2) then
-              tempcomp=(im-1)*num_state_material+istate
-              state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),tempcomp)
-              istate=istate+1
-             else if ((istate.eq.num_state_base+1).and. &
-                      (num_species_var.gt.0)) then 
-              do ispecies=1,num_species_var
-               speccomp=(im-1)*num_state_material+num_state_base+ispecies
-               state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),speccomp)
-               istate=istate+1
-              enddo
-             else 
-              print *,"istate invalid"
-              stop
-             endif
 
-            enddo ! do while (istate.le.num_state_material)
+             enddo ! do while (istate.le.num_state_material)
 
-            F_stencil_sum=F_stencil_sum+F_stencil
-            do istate=1,num_state_material
-             state_stencil_sum(istate)= &
-              state_stencil_sum(istate)+ &
-              F_stencil*state_stencil(istate)
-            enddo ! istate
+             F_stencil_sum=F_stencil_sum+F_stencil
+             do istate=1,num_state_material
+              state_stencil_sum(istate)= &
+               state_stencil_sum(istate)+ &
+               F_stencil*state_stencil(istate)
+             enddo ! istate
 
-           enddo !i1,j1,k1=-1..1 (init: state_stencil_sum, F_stencil_sum)
-           enddo
-           enddo
+            enddo !i1,j1,k1=-1..1 (init: state_stencil_sum, F_stencil_sum)
+            enddo
+            enddo
 
-           if (F_stencil_sum.gt.VOFTOL) then
-            do istate=1,num_state_material
-             statecomp=(im-1)*num_state_material+istate
-             dennew(D_DECL(i,j,k),statecomp)= &
-               state_stencil_sum(istate)/F_stencil_sum
-            enddo ! istate
-           else if ((F_stencil_sum.ge.zero).and. &
-                    (F_stencil_sum.le.VOFTOL)) then
-            ! do nothing
+            if (F_stencil_sum.gt.VOFTOL) then
+             do istate=1,num_state_material
+              statecomp=(im-1)*num_state_material+istate
+              dennew(D_DECL(i,j,k),statecomp)= &
+                state_stencil_sum(istate)/F_stencil_sum
+             enddo ! istate
+            else if ((F_stencil_sum.ge.zero).and. &
+                     (F_stencil_sum.le.VOFTOL)) then
+             ! do nothing
+            else
+             print *,"F_stencil_sum invalid:",F_stencil_sum
+             stop
+            endif
+
            else
-            print *,"F_stencil_sum invalid:",F_stencil_sum
+            print *,"F_stencil must be >= 0 F_stencil= ",F_stencil
             stop
            endif
 
           else
-           print *,"F_stencil must be >= 0 F_stencil= ",F_stencil
+           print *,"is_rigid invalid"
            stop
           endif
 
-         else
-          print *,"is_rigid invalid"
-          stop
-         endif
+         enddo ! im=1..nmat (extrapolation loop)
 
-        enddo ! im=1..nmat (extrapolation loop)
-
-        do dir=1,nmat*ngeom_recon
-         mofnew(dir)=zero
-        enddo
-
-        do im=1,nmat
-
-         vofcomp=(im-1)*ngeom_recon+1
-         vofcompraw=(im-1)*ngeom_raw+1
-
-         mofnew(vofcomp)=vofnew(D_DECL(i,j,k),vofcompraw)
-         do dir=1,SDIM
-          mofnew(vofcomp+dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)
+         do dir=1,nmat*ngeom_recon
+          mofnew(dir)=zero
          enddo
 
-         do istate=1,num_state_material
-          statecomp=(im-1)*num_state_material+istate
-          den_hold(statecomp)=dennew(D_DECL(i,j,k),statecomp)
-         enddo
+         do im=1,nmat
 
-        enddo  ! im=1..nmat
+          vofcomp=(im-1)*ngeom_recon+1
+          vofcompraw=(im-1)*ngeom_raw+1
+
+          mofnew(vofcomp)=vofnew(D_DECL(i,j,k),vofcompraw)
+          do dir=1,SDIM
+           mofnew(vofcomp+dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)
+          enddo
+
+          do istate=1,num_state_material
+           statecomp=(im-1)*num_state_material+istate
+           den_hold(statecomp)=dennew(D_DECL(i,j,k),statecomp)
+          enddo
+
+         enddo  ! im=1..nmat
+
+        else if (LS_extrap_iter.gt.0) then
+         ! do nothing
+        else
+         print *,"LS_extrap_iter invalid"
+         stop
+        endif
        
          ! 1. prescribe solid materials. (F,X,LS,velocity,temperature)
          ! 2. extend the fluid level set functions into the solids.
@@ -16076,6 +16142,8 @@ stop
          if ((sum_vfrac_solid_new.ge.half).or. &
              (max_solid_LS.ge.zero)) then 
 
+          num_LS_extrap=num_LS_extrap+1
+
           if ((im_solid_max.lt.1).or. &
               (im_solid_max.gt.nmat).or. &
               (partid_max.lt.1).or. &
@@ -16173,13 +16241,12 @@ stop
            center_stencil_im=0
            center_stencil_wetting_im=0
 
-            ! default radius: extrap_radius=1 cell
-            ! this inner loop is needed since the volume fraction
+            ! inner loop is needed since the volume fraction
             ! at (i,j,k) depends on the levelset function values
-            ! in the (i+i1,j+j1,k+k1) stencil.
-           do i1=istenlo(1),istenhi(1)
-           do j1=istenlo(2),istenhi(2)
-           do k1=istenlo(3),istenhi(3)
+            ! in the (i+i1,j+j1,k+k1) node stencil.
+           do i1=0,1
+           do j1=0,1
+           do k1=0,k1hi_node
 
             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
              at_center=1
