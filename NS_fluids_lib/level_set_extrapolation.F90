@@ -195,6 +195,25 @@
     allocate(A(ni*nj*nk,dim_in+1))
     allocate(b(ni*nj*nk))
 
+    if (dim_in.eq.2) then
+     if ((rij.ge.1).and.(rk.eq.0)) then
+      ! do nothing
+     else
+      print *,"rij or rk invalid"
+      stop
+     endif
+    else if (dim_in.eq.3) then
+     if ((rij.ge.1).and.(rk.eq.rij)) then
+      ! do nothing
+     else
+      print *,"rij or rk invalid"
+      stop
+     endif
+    else
+     print *,"dim_in invalid"
+     stop
+    endif
+
     if (nmat.ge.1) then
      ! do nothing
     else

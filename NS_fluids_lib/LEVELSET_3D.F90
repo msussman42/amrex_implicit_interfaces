@@ -15462,7 +15462,9 @@ stop
       INTEGER_T partid
       INTEGER_T partid_max
       INTEGER_T tessellate
-      INTEGER_T extrap_radius,least_sqr_radius
+      INTEGER_T LS_extrap_radius
+      INTEGER_T extrap_radius
+      INTEGER_T least_sqr_radius
       INTEGER_T least_sqrZ
       REAL_T local_XPOS(SDIM)
       REAL_T XLIST(SDIM+1,SDIM)
@@ -15561,6 +15563,7 @@ stop
        print *,"ngrow_distance invalid"
        stop
       endif
+
       if (solidheat_flag.eq.0) then 
        !do nothing (heat conduction in solid)
       else if (solidheat_flag.eq.1) then
@@ -15700,21 +15703,16 @@ stop
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,26)
 
       extrap_radius=1
+      LS_extrap_radius=1
+
       least_sqr_radius=1
       least_sqrZ=0
       if (SDIM.eq.2) then
        ! do nothing
       else if (SDIM.eq.3) then
-       least_sqrZ=3
+       least_sqrZ=1
       else
        print *,"dimension bust"
-       stop
-      endif
-
-      if (extrap_radius+least_sqr_radius.le.ngrow_distance) then
-       ! do nothing
-      else
-       print *,"extrap_radius or least_sqr_radius invalid"
        stop
       endif
 
@@ -15735,16 +15733,11 @@ stop
        istenhi(dir)=extrap_radius
       enddo
 
-      k1hi_node=0
-      if (SDIM.eq.3) then
-       k1hi_node=1
-      endif
-
       LSstenlo(3)=0
       LSstenhi(3)=0
       do dir=1,SDIM
-       LSstenlo(dir)=-least_sqr_radius
-       LSstenhi(dir)=least_sqr_radius
+       LSstenlo(dir)=-LS_extrap_radius
+       LSstenhi(dir)=LS_extrap_radius
       enddo
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
@@ -16202,15 +16195,34 @@ stop
             ! inner loop is needed since the volume fraction
             ! at (i,j,k) depends on the levelset function values
             ! in the (i+i1,j+j1,k+k1) node stencil.
-           do i1=0,1
-           do j1=0,1
-           do k1=0,k1hi_node
+           do i1=LSstenlo(1),LSstenhi(1)
+           do j1=LSstenlo(2),LSstenhi(2)
+           do k1=LSstenlo(3),LSstenhi(3)
 
-            if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
-             at_center=1
-            else
-             at_center=0
-            endif
+            cell_CP_parm%i=i+i1
+            cell_CP_parm%j=j+j1
+            cell_CP_parm%k=k+k1
+            call cell_xCP(cell_CP_parm,xCP)
+
+            call containing_cell(bfact, &
+              dx, &
+              xlo, &
+              fablo, &
+              xCP, &
+              cell_index)
+
+             call interp_fluid_LS( &
+              cell_CP_parm, &
+              xCP, &
+              LS_virtual_new, & 
+              im1_sub_stencil, &
+              im2_sub_stencil)
+
+             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+              at_center=1
+             else
+              at_center=0
+             endif
 
             do im=1,nmat
              LS_predict(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
