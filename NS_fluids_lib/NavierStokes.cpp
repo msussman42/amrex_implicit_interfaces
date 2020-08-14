@@ -5194,7 +5194,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
     //WALLFUNCTION<stuff>.plt (visit can open binary tecplot files)
    writeSanityCheckData(
     "WALLFUNCTION",
-    "GNBC DEBUGGING velINT,imgV,solV,imgVR,solVR,angle",
+    "GNBC DEBUGGING velINT,imgVR,solVR,angle",
     caller_id,
      //velINT,image vel,velsol,image vel raster,velsol raster,angle
     localMF[HISTORY_MAC_MF+data_dir]->nComp(), 
@@ -5269,9 +5269,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
-  // usolid_law_of_the_wall,uimage_cell,usolid_cell,
+  // usolid_law_of_the_wall,
   // uimage raster,usolid raster,angle_ACT_cell
- int nhistory_sub=5*AMREX_SPACEDIM+1;
+ int nhistory_sub=3*AMREX_SPACEDIM+1;
  int nhistory=nparts_ghost*nhistory_sub;
  int ngrow_law_of_wall=4;
 

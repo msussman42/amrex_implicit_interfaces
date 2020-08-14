@@ -29,6 +29,8 @@ stop
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
+      INTEGER_T :: nmat
+      INTEGER_T :: nten
       REAL_T, pointer :: dx(:)
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
@@ -13833,38 +13835,14 @@ stop
        ! This routine transforms all velocities to a frame of reference with
        ! respect to the solid.
       subroutine getGhostVel( &
+       law_of_wall_parm, &
        law_of_the_wall, &
+       iSD,jSD,kSD, &
+       iFD,jFD,kFD, &
+       side_solid, &
+       side_image, &
        data_dir, &
-       nmat, &
-       nten, &
-       delta_r, &
-       dx, &
-       dt, &
-       time, &
-       visc_coef, &
-       nrm_solid, & ! points to the solid
-       n_raster, & ! points to the solid
-       thermal_stencil, &
-       stencil_in_grow_box, &
-       LS_big_stencil, &
-       x_big_stencil, &
-       LSCP_image_stencil, &
-       LSCP_prj_stencil, &
-       LSFD_image_stencil, &
-       ufluid_stencil, & ! fluid velocity on ximage_stencil
-       usolid_stencil, & ! solid velocity on xproject_stencil
-       x_projection, &  ! on solid/fluid interface
-       x_projection_raster, &  ! on raster solid/fluid interface
-       xsten, &
-       x_image, &  ! in the fluid
-       x_image_raster, &  ! in the fluid
-       ximage_stencil, &
-       xproject_stencil, &
-       ughost, &  ! aka usolid_law_of_wall (intent(out))
-       uimage, &  ! aka uimage_cell  "out"
-       uimage_raster, & ! inout
-       usolid, &  ! aka usolid_cell   "out"
-       usolid_raster, & ! inout
+       usolid_law_of_wall, & ! out
        angle_ACT, & ! aka angle_ACT_cell "out"
        im_fluid, &
        im_solid)
@@ -13878,38 +13856,17 @@ stop
        
        !in: nrm_solid, delta_r, LScenter or x_projection, dx, x_image, 
        !ximage_stencil, ufluid_stencil
+       type(law_of_wall_parm_type), intent(in) :: LOW
        INTEGER_T, intent(in) :: law_of_the_wall
        INTEGER_T, intent(in) :: data_dir
-       INTEGER_T, intent(in) :: nmat
-       INTEGER_T, intent(in) :: nten
        INTEGER_T, intent(in) :: im_fluid
        INTEGER_T, intent(in) :: im_solid
-       REAL_T, intent(in) :: delta_r
-       REAL_T, dimension(SDIM), intent(in) :: nrm_solid ! points to the solid
-       REAL_T, dimension(SDIM), intent(in) :: n_raster ! points to the solid
-       REAL_T, dimension(SDIM), intent(in) :: x_projection
-       REAL_T, dimension(SDIM), intent(in) :: x_projection_raster
-       REAL_T, dimension(SDIM), intent(in) :: x_image
-       REAL_T, dimension(SDIM), intent(in) :: x_image_raster
-       REAL_T, dimension(SDIM), intent(in) :: dx
-       REAL_T, intent(in) :: dt
-       REAL_T, intent(in) :: time
-       REAL_T, intent(in) :: visc_coef 
-       INTEGER_T, intent(in) :: stencil_in_grow_box
-       REAL_T, dimension(-3:3,-3:3,-3:3,nmat), intent(in) :: LS_big_stencil
-       REAL_T, dimension(-3:3,-3:3,-3:3,SDIM), intent(in) :: x_big_stencil
-       REAL_T, dimension(D_DECL(2,2,2),nmat), intent(in) :: thermal_stencil
-       REAL_T, dimension(D_DECL(2,2,2),nmat*(SDIM+1)), intent(in) :: &
-               LSCP_image_stencil
-       REAL_T, dimension(D_DECL(2,2,2),nmat*(SDIM+1)), intent(in) :: &
-               LSCP_prj_stencil
-       REAL_T, dimension(D_DECL(2,2,2),nmat*SDIM), intent(in) :: &
-               LSFD_image_stencil
-       REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: ufluid_stencil
-       REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: usolid_stencil
-       REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: ximage_stencil
-       REAL_T, dimension(D_DECL(2,2,2),SDIM), intent(in) :: xproject_stencil
-       REAL_T, dimension(-3:3,SDIM), intent(in) :: xsten
+       INTEGER_T, intent(in) :: side_solid
+       INTEGER_T, intent(in) :: side_image
+       INTEGER_T, intent(in) :: iSD,jSD,kSD
+       INTEGER_T, intent(in) :: iFD,jFD,kFD
+       REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
+       REAL_T, intent(out) :: angle_ACT
       
        !D_DECL is defined in SPACE.H in the BoxLib/Src/C_BaseLib
 
@@ -13919,10 +13876,6 @@ stop
        REAL_T, dimension(nmat*(SDIM+1)) :: LSCP_prj_interp
        REAL_T, dimension(nmat*SDIM) :: LSFD_image_interp
 
-       REAL_T, dimension(SDIM), intent(out) :: uimage
-       REAL_T, dimension(SDIM), intent(inout) :: uimage_raster
-       REAL_T, dimension(SDIM), intent(out) :: usolid
-       REAL_T, dimension(SDIM), intent(inout) :: usolid_raster
        REAL_T, dimension(SDIM) :: imagedist
        REAL_T, dimension(SDIM) :: projectdist
        REAL_T :: delta_g
@@ -13933,7 +13886,6 @@ stop
        REAL_T :: viscosity_molecular, viscosity_eddy
        REAL_T :: density_fluid
        INTEGER_T :: dir
-       REAL_T, dimension(SDIM), intent(out) :: ughost
        REAL_T, dimension(SDIM) :: local_dx
        REAL_T :: nrm_sanity
        REAL_T :: dxmin
@@ -13948,7 +13900,6 @@ stop
        INTEGER_T :: iten
        INTEGER_T :: iten_13,iten_23
        INTEGER_T :: nten_test
-       REAL_T, dimension(nten) :: user_tension
        REAL_T :: cos_angle,sin_angle
        INTEGER_T :: near_contact_line
        REAL_T :: mag
@@ -13969,7 +13920,6 @@ stop
        REAL_T :: ZEYU_thet_s,ZEYU_lambda,ZEYU_l_macro, ZEYU_l_micro
        REAL_T :: ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent
        REAL_T :: ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d
-       REAL_T, intent(out) :: angle_ACT
        REAL_T :: angle_im1
        INTEGER_T :: ZEYU_imodel
        INTEGER_T :: ZEYU_ifgnbc
@@ -13982,9 +13932,14 @@ stop
        REAL_T :: reflect_factor
        REAL_T :: nCL_dot_n_raster
        INTEGER_T :: nrad
-     
-       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
-       if (nten.eq.nten_test) then
+       INTEGER_T nhalf
+       REAL_T :: xsten(-3:3,SDIM)
+       REAL_T, allocatable, dimension(:) :: user_tension
+    
+       nhalf=3 
+       nten_test=( (LOW%nmat-1)*(LOW%nmat-1)+LOW%nmat-1 )/2
+       allocate(user_tension(nten_test))
+       if (LOW%nten.eq.nten_test) then
         ! do nothing
        else
         print *,"nten invalid"
@@ -14005,29 +13960,29 @@ stop
         print *,"im_solid invalid in getGhostVel"
         stop
        endif
-       if (is_rigid(nmat,im_solid).eq.1) then
+       if (is_rigid(LOW%nmat,im_solid).eq.1) then
         ! do nothing
        else
         print *,"is_rigid(nmat,im_solid) invalid"
         stop
        endif
-       if (nmat.ne.num_materials) then
+       if (LOW%nmat.ne.num_materials) then
         print *,"nmat invalid"
         stop
        endif
-       if (dt.gt.zero) then
+       if (LOW%dt.gt.zero) then
         ! do nothing
        else
         print *,"dt invalid"
         stop
        endif 
-       if (time.ge.zero) then
+       if (LOW%time.ge.zero) then
         ! do nothing
        else
         print *,"time invalid"
         stop
        endif 
-       if (visc_coef.ge.zero) then
+       if (LOW%visc_coef.ge.zero) then
         ! do nothing
        else
         print *,"visc_coef invalid"
@@ -14086,10 +14041,12 @@ stop
         print *,"dxmin invalid"
         stop
        endif
+       call gridsten_level(xsten,iSD,jSD,kSD,LOW%level,nhalf)
 
         !x_projection is closest point on the fluid/solid interface. 
-       delta_g_raster=abs(x_projection_raster(data_dir+1)-xsten(0,data_dir+1))
-       delta_r_raster=abs(x_image_raster(data_dir+1)- &
+       delta_g_raster=abs(LOW%x_projection_raster(data_dir+1)- &
+                          xsten(0,data_dir+1))
+       delta_r_raster=abs(LOW%x_image_raster(data_dir+1)- &
                           x_projection_raster(data_dir+1))
        if ((delta_g_raster.gt.zero).and. &
            (delta_r_raster.gt.zero)) then
@@ -14712,7 +14669,9 @@ stop
          stop
         endif
        enddo
-       
+      
+       deallocate(user_tension)
+ 
       end subroutine getGhostVel
 
        ! called from:NavierStokes::init_FSI_GHOST_MAC_MF(int ngrow) 
@@ -14800,13 +14759,12 @@ stop
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
       REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten_local(-3:3,SDIM)
       INTEGER_T nhalf
       REAL_T LS_left(nmat)
       REAL_T LS_right(nmat)
       INTEGER_T side_solid,side_image
       INTEGER_T partid
-      INTEGER_T impart
+      INTEGER_T im_solid
       INTEGER_T im_fluid
       INTEGER_T im_primary_left
       INTEGER_T im_primary_right
@@ -14814,40 +14772,13 @@ stop
       INTEGER_T dir
       INTEGER_T isideSOL,jsideSOL,ksideSOL
       INTEGER_T isideFD,jsideFD,ksideFD
-      INTEGER_T i1,j1,k1
-      INTEGER_T i3,j3,k3
-      INTEGER_T khisten
-      INTEGER_T in_grow_box
-      INTEGER_T stencil_in_grow_box
-      REAL_T nrm_solid(SDIM)
-      REAL_T n_raster(SDIM)
-      REAL_T x_projection(SDIM)
-      REAL_T x_projection_raster(SDIM)
-      REAL_T x_image(SDIM)
-      REAL_T x_image_raster(SDIM)
-      REAL_T delta_r
-      REAL_T dxmin
-      INTEGER_T cell_index_project(SDIM)
-      INTEGER_T node_index_project(SDIM)
-      INTEGER_T node_index_image(SDIM)
-      REAL_T LS_big_stencil(-3:3,-3:3,-3:3,nmat)
-      REAL_T x_big_stencil(-3:3,-3:3,-3:3,SDIM)
-      REAL_T LSCP_image_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
-      REAL_T LSCP_prj_stencil(D_DECL(2,2,2),nmat*(SDIM+1))
-      REAL_T LSFD_image_stencil(D_DECL(2,2,2),nmat*SDIM)
-      REAL_T ufluid_stencil(D_DECL(2,2,2),SDIM)
-      REAL_T usolid_stencil(D_DECL(2,2,2),SDIM)
-      REAL_T thermal_image(D_DECL(2,2,2),nmat)
-      REAL_T ximage_stencil(D_DECL(2,2,2),SDIM)
-      REAL_T xproject_stencil(D_DECL(2,2,2),SDIM)
+      REAL_T, target :: n_raster(SDIM)
+      REAL_T, target :: x_projection_raster(SDIM)
+      REAL_T, target :: x_image_raster(SDIM)
       REAL_T usolid_law_of_wall(SDIM)
-      REAL_T uimage_cell(SDIM)
       REAL_T uimage_raster(SDIM)
-      REAL_T usolid_cell(SDIM)
       REAL_T usolid_raster(SDIM)
       REAL_T angle_ACT_cell
-      REAL_T DIST_SOLID
-      INTEGER_T tcomp
       INTEGER_T nten
       INTEGER_T nhistory_sub
       type(law_of_wall_parm_type) :: law_of_wall_parm
@@ -14855,23 +14786,6 @@ stop
       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
 
       nhalf=3
-
-       ! dxmin=min_d min_i dxsub_{gridtype,d,i} d=1..sdim  i=0..bfact-1
-       ! gridtype=MAC or CELL
-       ! if cylindrical coordinates, then dx_{\theta}*=problox
-      call get_dxmin(dx,bfact,dxmin)
-      if (dxmin.gt.zero) then
-       ! do nothing
-      else
-       print *,"dxmin must be positive"
-       stop
-      endif
-
-      delta_r=zero
-      do dir=1,SDIM
-       delta_r=delta_r+dxmin**2
-      enddo
-      delta_r=sqrt(delta_r)
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -14917,14 +14831,6 @@ stop
        print *,"nparts_ghost invalid FORT_WALLFUNCTION"
        stop
       endif
-      if (SDIM.eq.2) then
-       khisten=0
-      else if (SDIM.eq.3) then
-       khisten=1
-      else
-       print *,"dimension bust"
-       stop
-      endif
 
       if ((nparts_ghost.eq.nparts).or.(nparts_ghost.eq.1)) then
        ! do nothing
@@ -14933,8 +14839,8 @@ stop
        stop
       endif
 
-       ! ughost,imgV,solV,imgVR,solVR,angle
-      nhistory_sub=5*SDIM+1
+       ! ughost,imgVR,solVR,angle
+      nhistory_sub=3*SDIM+1
 
       if (nhistory.eq.nparts_ghost*nhistory_sub) then
        ! do nothing
@@ -15004,6 +14910,11 @@ stop
       call checkbound(fablo,fabhi,DIMS(ughost),0,data_dir,1255)
       call checkbound(fablo,fabhi,DIMS(history_dat),0,data_dir,1255)
 
+      law_of_wall_parm%visc_coef=visc_coef
+      law_of_wall_parm%time=time
+      law_of_wall_parm%dt=dt
+      law_of_wall_parm%nmat=nmat
+      law_of_wall_parm%nten=nten
       law_of_wall_parm%level=level
       law_of_wall_parm%finest_level=finest_level
       law_of_wall_parm%bfact=bfact
@@ -15069,23 +14980,23 @@ stop
            stop
           endif
 
-          impart=im_solid_map(partid)+1  ! type integer: material id
-          if ((impart.ge.1).and.(impart.le.nmat)) then
+          im_solid=im_solid_map(partid)+1  ! type integer: material id
+          if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
            ! do nothing
           else
-           print *,"impart invalid FORT_WALLFUNCTION"
+           print *,"im_solid invalid FORT_WALLFUNCTION"
            stop
           endif
 
           side_solid=-1
           side_image=-1
 
-          if (is_lag_part(nmat,impart).eq.1) then
+          if (is_lag_part(nmat,im_solid).eq.1) then
 
            ! law of wall or dynamic contact angle treatment
            ! only for rigid substrates; not flexible substrates.
-           if (is_rigid(nmat,impart).eq.1) then
-            ! impart=material id of a rigid solid.
+           if (is_rigid(nmat,im_solid).eq.1) then
+            ! im_solid=material id of a rigid solid.
             ! Here, we test if cell center is in the solid.
             ! zero is defined in CONSTANTS.H
             ! CONSTANTS.H is defined in: ./BoxLib/Src/C_BaseLib/CONSTANTS.H
@@ -15093,8 +15004,8 @@ stop
             do dir=1,SDIM
              n_raster(dir)=zero ! points to solid
             enddo      
-            if ((LS_right(impart).ge.zero).and. &
-                (im_primary_right.eq.impart)) then
+            if ((LS_right(im_solid).ge.zero).and. &
+                (im_primary_right.eq.im_solid)) then
              side_solid=1 ! right side
              isideSOL=i
              jsideSOL=j
@@ -15102,7 +15013,6 @@ stop
              isideFD=i-ii
              jsideFD=j-jj
              ksideFD=k-kk
-             DIST_SOLID=LS_right(impart)
 
              if (is_rigid(nmat,im_primary_left).eq.0) then
               side_image=0  ! left side
@@ -15118,8 +15028,8 @@ stop
               stop
              endif
 
-            else if ((LS_left(impart).ge.zero).and. &
-                     (im_primary_left.eq.impart)) then 
+            else if ((LS_left(im_solid).ge.zero).and. &
+                     (im_primary_left.eq.im_solid)) then 
              side_solid=0  ! left side
              isideSOL=i-ii
              jsideSOL=j-jj
@@ -15127,7 +15037,6 @@ stop
              isideFD=i
              jsideFD=j
              ksideFD=k
-             DIST_SOLID=LS_left(impart)
 
              if (is_rigid(nmat,im_primary_right).eq.0) then
               side_image=1 ! right side
@@ -15174,215 +15083,48 @@ stop
               print *,"side_solid or side_image invalid"
               stop
              endif
-             do dir=1,SDIM
-              nrm_solid(dir)=LSCP(D_DECL(isideSOL,jsideSOL,ksideSOL), &
-                     nmat+(impart-1)*SDIM+dir)
-             enddo ! dir=1..sdim
 
+             law_of_wall_parm%x_image_raster=>x_image_raster
+             law_of_wall_parm%x_projection_raster=>x_projection_raster
+             law_of_wall_parm%uimage_raster=>uimage_raster
+             law_of_wall_parm%usolid_raster=>usolid_raster
+             law_of_wall_parm%n_raster=>n_raster
 
-              do i1=-3,3
-              do j1=-3,3
-              do k1=-3,3
-               i3=i1+cell_index_project(1)
-               j3=j1+cell_index_project(2)
-               k3=k1+cell_index_project(SDIM)
-               do im=1,nmat
-                LS_big_stencil(i1,j1,k1,im)=LSCP(D_DECL(i3,j3,k3),im)
-               enddo
-               call gridsten_level(xsten_local,i3,j3,k3,level,nhalf)
-               do dir=1,SDIM
-                x_big_stencil(i1,j1,k1,dir)=xsten_local(0,dir)
-               enddo
-              enddo
-              enddo
-              enddo
-             else
-              print *,"stencil_in_grow_box invalid"
-              stop
-             endif
-
-             !  x  x   x   o   o    o  x  x  x
-             ! x_projection is closest point on the fluid/solid interface.
-             call containing_node(bfact,dx,xlo,fablo,x_projection, &
-              node_index_project)
-              ! if in_grow_box==1 then a stencil can be found.
-             in_grow_box=1
-             do dir=1,SDIM
-              if (node_index_project(dir).le.fablo(dir)-ngrow_law_of_wall) then
-               in_grow_box=0
-              endif
-              if (node_index_project(dir).ge. &
-                  fabhi(dir)+ngrow_law_of_wall+1) then
-               in_grow_box=0
-              endif
-             enddo ! dir=1..sdim
-
-              ! since ngrow_law_of_wall==4 and the
-              ! solid levelset function "impart" changes sign
-              ! across the face (i,j,k), in_grow_box must be
-              ! equal to 1.  (the closest distance should be less than
-              ! dx)
-             if (in_grow_box.eq.1) then
-              ! x_image is image point in the fluid.
-              call containing_node(bfact,dx,xlo,fablo,x_image, &
-               node_index_image)
-              in_grow_box=1
-              do dir=1,SDIM
-               if (node_index_image(dir).le.fablo(dir)-ngrow_law_of_wall) then
-                in_grow_box=0
-               endif
-               if (node_index_image(dir).ge.fabhi(dir)+ngrow_law_of_wall+1) then
-                in_grow_box=0
-               endif
-              enddo ! dir=1..sdim
-
-              if (in_grow_box.eq.1) then
-
-                ! khisten=0 in 2D
-               do i1=0,1
-               do j1=0,1
-               do k1=0,khisten
-                i3=node_index_image(1)-1
-                j3=node_index_image(2)-1
-                k3=node_index_image(SDIM)-1
-       
-                ! cell index to the left of node i: i-1
-                ! cell index to the right of node i: i 
-                do dir=1,SDIM
-                 ufluid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                  ufluid(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-                enddo
-                do dir=1,nmat*(SDIM+1)
-                 LSCP_image_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                  LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-                enddo 
-                do dir=1,nmat*SDIM
-                 LSFD_image_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                  LSFD(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-                enddo 
-                do im=1,nmat
-                 tcomp=(im-1)*num_state_material+2
-                 thermal_image(D_DECL(i1+1,j1+1,k1+1),im)= &
-                  state(D_DECL(i3+i1,j3+j1,k3+k1),tcomp)
-                enddo ! im=1..nmat
-                call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
-                do dir=1,SDIM
-                 ximage_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
-                enddo
-
-                i3=node_index_project(1)-1
-                j3=node_index_project(2)-1
-                k3=node_index_project(SDIM)-1
-
-                do dir=1,nmat*(SDIM+1)
-                 LSCP_prj_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                  LSCP(D_DECL(i3+i1,j3+j1,k3+k1),dir)
-                enddo 
-                do dir=1,SDIM
-                 usolid_stencil(D_DECL(i1+1,j1+1,k1+1),dir)= &
-                  usolid(D_DECL(i3+i1,j3+j1,k3+k1),(partid-1)*SDIM+dir)
-                enddo
-                call gridsten_level(xsten_local,i3+i1,j3+j1,k3+k1,level,nhalf)
-                do dir=1,SDIM
-                 xproject_stencil(D_DECL(i1+1,j1+1,k1+1),dir)=xsten_local(0,dir)
-                enddo
-               enddo
-               enddo
-               enddo ! i1,j1,k1
-
-               ! call CODY ESTEBEs routine here 
-               ! (defined in this file: GODUNOV_3D.F90)
-               call getGhostVel( &
-                law_of_the_wall, &
-                data_dir, &
-                nmat, &
-                nten, &
-                delta_r, &
-                dx, &
-                dt, &
-                time, &
-                visc_coef, &
-                nrm_solid, &  ! points towards the solid
-                n_raster, &  ! points towards the solid
-                thermal_image, &
-                stencil_in_grow_box, &
-                LS_big_stencil, &
-                x_big_stencil, &
-                LSCP_image_stencil, &
-                LSCP_prj_stencil, &
-                LSFD_image_stencil, &
-                ufluid_stencil, & ! fluid velocity on ximage_stencil
-                usolid_stencil, & ! solid velocity on xproject_stencil
-                x_projection, &  ! on solid/fluid interface
-                x_projection_raster, &  ! on raster solid/fluid interface
-                xsten, & ! stencil about the solid cell that is next to fluid
-                x_image, &  ! in the fluid.
-                x_image_raster, &  ! in the fluid.
-                ximage_stencil, &
-                xproject_stencil, &
-                usolid_law_of_wall, &
-                uimage_cell, & ! image velocity (inside the fluid)
-                uimage_raster, & ! image velocity (inside the fluid)
-                usolid_cell, & ! solid velocity (at projected point)
-                usolid_raster, & ! solid velocity (at projected point)
-                angle_ACT_cell, &   ! actual contact angle at image point
-                im_fluid, &
-                impart)
+              ! call CODY ESTEBEs routine here 
+              ! (defined in this file: GODUNOV_3D.F90)
+             call getGhostVel( &
+               law_of_wall_parm, &
+               law_of_the_wall, &
+               isideSOL, &
+               jsideSOL, &
+               ksideSOL, &
+               isideFD, &
+               jsideFD, &
+               ksideFD, &
+               side_solid, &
+               side_image, &
+               data_dir, &
+               usolid_law_of_wall, &
+               angle_ACT_cell, &   ! actual contact angle at image point
+               im_fluid, &
+               im_solid)
 
                ! solid "ghost" velocity in the solid regions.
-               do dir=1,SDIM
-                ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
-                 usolid_law_of_wall(dir)
+             do dir=1,SDIM
+              ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
+               usolid_law_of_wall(dir)
 
-                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+dir)= &
-                 usolid_law_of_wall(dir)
-                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+SDIM+dir)= &
-                 uimage_cell(dir)
-                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+2*SDIM+dir)= &
-                 usolid_cell(dir)
-                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+3*SDIM+dir)= &
-                 uimage_raster(dir)
-                history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+4*SDIM+dir)= &
-                 usolid_raster(dir)
-               enddo  ! dir=1..sdim
+              history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+dir)= &
+                usolid_law_of_wall(dir)
+              history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+SDIM+dir)= &
+                uimage_raster(dir)
+              history_dat(D_DECL(i,j,k),(partid-1)*nhistory_sub+2*SDIM+dir)= &
+                usolid_raster(dir)
+             enddo  ! dir=1..sdim
 
-               history_dat(D_DECL(i,j,k), &
+             history_dat(D_DECL(i,j,k), &
                 (partid-1)*nhistory_sub+nhistory_sub)=angle_ACT_cell
            
-              else if (in_grow_box.eq.0) then
-               print *,"expecting in_grow_box == 1"
-               print *,"x_image(1) ",x_image(1)
-               print *,"x_image(2) ",x_image(2)
-               print *,"x_image(SDIM) ",x_image(SDIM)
-               print *,"in_grow_box=",in_grow_box
-               print *,"ngrow_law_of_wall ",ngrow_law_of_wall
-               print *,"impart= ",impart
-               print *,"im_fluid= ",im_fluid
-               print *,"i,j,k ",i,j,k
-               print *,"DIST_SOLID ",DIST_SOLID
-               print *,"delta_r ",delta_r
-               stop
-              else
-               print *,"in_grow_box invalid"
-               stop
-              endif
-             else if (in_grow_box.eq.0) then
-              print *,"expecting in_grow_box == 1"
-              print *,"x_projection(1) ",x_projection(1)
-              print *,"x_projection(2) ",x_projection(2)
-              print *,"x_projection(sdim) ",x_projection(SDIM)
-              print *,"in_grow_box=",in_grow_box
-              print *,"ngrow_law_of_wall ",ngrow_law_of_wall
-              print *,"impart= ",impart
-              print *,"im_fluid= ",im_fluid
-              print *,"i,j,k ",i,j,k
-              print *,"DIST_SOLID ",DIST_SOLID
-              print *,"delta_r ",delta_r
-              stop
-             else
-              print *,"in_grow_box invalid"
-              stop
-             endif
             else if ((side_solid.eq.-1).or.(side_image.eq.-1)) then
              ! do nothing
             else
@@ -15390,14 +15132,14 @@ stop
              stop
             endif
 
-           else if (is_rigid(nmat,impart).eq.0) then
+           else if (is_rigid(nmat,im_solid).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid(nmat,impart) invalid"
+            print *,"is_rigid(nmat,im_solid) invalid"
             stop
            endif
           else 
-           print *,"is_lag_part(nmat,impart) invalid"
+           print *,"is_lag_part(nmat,im_solid) invalid"
            stop
           endif
          else
