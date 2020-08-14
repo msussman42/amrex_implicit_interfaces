@@ -39,7 +39,6 @@ stop
          INTEGER_T, pointer :: fabhi(:)
          REAL_T, pointer :: dx(:)
          REAL_T :: time
-         INTEGER_T :: im
          INTEGER_T :: im_solid_max
          INTEGER_T :: nmat
          INTEGER_T :: least_sqr_radius
@@ -63,49 +62,61 @@ stop
         INTEGER_T :: nhalf
         REAL_T :: xsten(-3:3,SDIM)
         INTEGER_T :: dir
-        REAL_T :: mag
         REAL_T :: nslope_cell(SDIM)
         REAL_T :: LS_cell
 
         ASSOCIATE(CP=>cell_CP_parm)
 
-        nhalf=3
-        call gridsten_level(xsten,CP%i,CP%j,CP%k,CP%level,nhalf)
+        if ((CP%im_solid_max.ge.1).and. &
+            (CP%im_solid_max.le.CP%nmat)) then
 
-         ! positive in the rigid body
-        call materialdistsolid( &
-          xsten(0,1),xsten(0,2),xsten(0,SDIM), &
-          LS_cell,CP%time,CP%im)
+         if (is_rigid(CP%nmat,CP%im_solid_max).eq.1) then
 
-         ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
-         ! slope points into the solid
-         ! this slope ignores 1/R term for dphi/dtheta
-        call find_LS_stencil_slope( &
-          CP%bfact, &
-          CP%dx, &
-          xsten,nhalf, &
-          nslope_cell, &
-          CP%time, &
-          CP%im)
+          nhalf=3
+          call gridsten_level(xsten,CP%i,CP%j,CP%k,CP%level,nhalf)
 
-        if ((FSI_flag(CP%im).eq.2).or. & ! prescribed solid CAD
-            (FSI_flag(CP%im).eq.4)) then ! CTML FSI
-         LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im)
-         do dir=1,SDIM
-          nslope_cell(dir)= &
-            CP%LS(D_DECL(CP%i,CP%j,CP%k), &
-            CP%nmat+SDIM*(CP%im-1)+dir)
-         enddo
-        else if (FSI_flag(CP%im).eq.1) then ! prescribed solid EUL
-         ! do nothing
+           ! positive in the rigid body
+          call materialdistsolid( &
+            xsten(0,1),xsten(0,2),xsten(0,SDIM), &
+            LS_cell,CP%time,CP%im_solid_max)
+
+           ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
+           ! slope points into the solid
+           ! this slope ignores 1/R term for dphi/dtheta
+          call find_LS_stencil_slope( &
+            CP%bfact, &
+            CP%dx, &
+            xsten,nhalf, &
+            nslope_cell, &
+            CP%time, &
+            CP%im_solid_max)
+
+          if ((FSI_flag(CP%im_solid_max).eq.2).or. & ! prescribed solid CAD
+              (FSI_flag(CP%im_solid_max).eq.4)) then ! CTML FSI
+           LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im_solid_max)
+           do dir=1,SDIM
+            nslope_cell(dir)= &
+              CP%LS(D_DECL(CP%i,CP%j,CP%k), &
+              CP%nmat+SDIM*(CP%im_solid_max-1)+dir)
+           enddo
+          else if (FSI_flag(CP%im_solid_max).eq.1) then ! prescribed solid EUL
+           ! do nothing
+          else
+           print *,"FSI_flag invalid"
+           stop
+          endif
+
+          do dir=1,SDIM
+           xCP(dir)=xsten(0,dir)-LS_cell*nslope_cell(dir)
+          enddo
+         else 
+          print *,"is_rigid(CP%nmat,CP%im_solid_max) invalid"
+          stop
+         endif
         else
-         print *,"FSI_flag invalid"
+         print *,"CP%im_solid_max invalid"
          stop
         endif
-
-        do dir=1,SDIM
-         xCP(dir)=xsten(0,dir)-LS_cell*nslope_cell(dir)
-        enddo
 
         END ASSOCIATE
 
@@ -157,104 +168,106 @@ stop
 
         ASSOCIATE(CP=>cell_CP_parm)
 
-        LSstenlo(3)=0
-        LSstenhi(3)=0
+        if (CP%ngrow_LS.eq.4) then
 
-        nhalf=3
+         LSstenlo(3)=0
+         LSstenhi(3)=0
 
-        do dir=1,SDIM
-         if (cell_index(dir)-1.lt.CP%fablo(dir)-CP%ngrow_LS) then
-          local_index(dir)=CP%fablo(dir)-CP%ngrow_LS+1
-         else
-          local_index(dir)=cell_index(dir)
-         endif
-         if (cell_index(dir)+1.gt.CP%fabhi(dir)+CP%ngrow_LS) then
-          local_index(dir)=CP%fabhi(dir)+CP%ngrow_LS-1
-         else
-          local_index(dir)=cell_index(dir)
-         endif
-         LSstenlo(dir)=-1
-         LSstenhi(dir)=1
-        enddo ! dir=1..sdim
+         nhalf=3
 
-        do i2=LSstenlo(1),LSstenhi(1)
-        do j2=LSstenlo(2),LSstenhi(2)
-        do k2=LSstenlo(3),LSstenhi(3)
+         do dir=1,SDIM
+          if (cell_index(dir)-1.lt.CP%fablo(dir)-CP%ngrow_LS) then
+           local_index(dir)=CP%fablo(dir)-CP%ngrow_LS+1
+          else
+           local_index(dir)=cell_index(dir)
+          endif
+          if (cell_index(dir)+1.gt.CP%fabhi(dir)+CP%ngrow_LS) then
+           local_index(dir)=CP%fabhi(dir)+CP%ngrow_LS-1
+          else
+           local_index(dir)=cell_index(dir)
+          endif
+          LSstenlo(dir)=-1
+          LSstenhi(dir)=1
+         enddo ! dir=1..sdim
 
-         isten=local_index(1)+i2
-         jsten=local_index(2)+j2
-         ksten=local_index(SDIM)+k2
+         do i2=LSstenlo(1),LSstenhi(1)
+         do j2=LSstenlo(2),LSstenhi(2)
+         do k2=LSstenlo(3),LSstenhi(3)
 
-         call gridsten_level(xsten, &
+          isten=local_index(1)+i2
+          jsten=local_index(2)+j2
+          ksten=local_index(SDIM)+k2
+
+          call gridsten_level(xsten, &
            isten,jsten,ksten, &
            CP%level,nhalf)
 
-         do dir=1,SDIM
-          ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
-         enddo
+          do dir=1,SDIM
+           ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
+          enddo
 
-         do im_local=1,CP%nmat
-          LS_virtual(im_local)=CP%LS(D_DECL(isten,jsten,ksten),im_local)
+          do im_local=1,CP%nmat
+           LS_virtual(im_local)=CP%LS(D_DECL(isten,jsten,ksten),im_local)
 
-          if (is_rigid(CP%nmat,im_local).eq.0) then
-           if (LS_virtual(im_local).ge.-CP%dxmaxLS) then
-            if (im1_stencil.eq.0) then
-             im1_stencil=im_local
-            else if (im1_stencil.eq.im_local) then
+           if (is_rigid(CP%nmat,im_local).eq.0) then
+            if (LS_virtual(im_local).ge.-CP%dxmaxLS) then
+             if (im1_stencil.eq.0) then
+              im1_stencil=im_local
+             else if (im1_stencil.eq.im_local) then
+              ! do nothing
+             else if (im2_stencil.eq.0) then
+              im2_stencil=im_local
+             endif
+            else if (LS_virtual(im_local).le.-CP%dxmaxLS) then
              ! do nothing
-            else if (im2_stencil.eq.0) then
-             im2_stencil=im_local
+            else
+             print *,"LS_virtual invalid"
+             stop
             endif
-           else if (LS_virtual(im_local).le.-CP%dxmaxLS) then
+           else if (is_rigid(CP%nmat,im_local).eq.1) then 
             ! do nothing
            else
-            print *,"LS_virtual invalid"
+            print *,"is_rigid(CP%nmat,im_local) invalid"
             stop
            endif
-          else if (is_rigid(CP%nmat,im_local).eq.1) then 
-           ! do nothing
+          enddo ! im_local=1..nmat
+
+          ! the fluid cells closest to the substrate, but not
+          ! in the substrate, have the most weight.
+          call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
+
+          if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.0) then
+
+           local_dist_solid=LS_virtual(CP%im_solid_max)
+           if (local_dist_solid.gt.zero) then
+            local_dist_solid=zero
+           endif
+           WT=one/(local_dist_solid**2+0.01d0*(CP%dxmaxLS**2))
+
+          else if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.1) then
+
+           local_dist_solid=10.0d0*CP%dxmaxLS
+           WT=one/(local_dist_solid**2+0.01d0*(CP%dxmaxLS**2))
+ 
           else
-           print *,"is_rigid(CP%nmat,im_local) invalid"
+           print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
+           stop 
+          endif
+          
+          if (WT.gt.zero) then 
+           ZEYU_WT(i2,j2,k2)=WT
+           do im_local=1,CP%nmat
+            ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
+           enddo
+          else 
+           print *,"WT bust"
            stop
           endif
-         enddo ! im_local=1..nmat
-
-         ! the fluid cells closest to the substrate, but not
-         ! in the substrate, have the most weight.
-         call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
-
-         if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.0) then
-
-          local_dist_solid=LS_virtual(CP%im_solid_max)
-          if (local_dist_solid.gt.zero) then
-            local_dist_solid=zero
-          endif
-          WT=one/(local_dist_solid**2+0.01d0*(CP%dxmaxLS**2))
-
-         else if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.1) then
-
-          local_dist_solid=10.0d0*CP%dxmaxLS
-          WT=one/(local_dist_solid**2+0.01d0*(CP%dxmaxLS**2))
- 
-         else
-          print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
-          stop 
-         endif
-          
-         if (WT.gt.zero) then 
-          ZEYU_WT(i2,j2,k2)=WT
-          do im_local=1,CP%nmat
-           ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
-          enddo
-         else 
-          print *,"WT bust"
-          stop
-         endif
-        enddo 
-        enddo 
-        enddo  !i2,j2,k2=LSstenlo ... LSstenhi
+         enddo 
+         enddo 
+         enddo  !i2,j2,k2=LSstenlo ... LSstenhi
          
-        call level_set_extrapolation( &
+         call level_set_extrapolation( &
           ZEYU_XPOS, &
           ZEYU_LS, &
           ZEYU_WT, &
@@ -263,13 +276,15 @@ stop
           CP%least_sqr_radius, &
           CP%least_sqrZ, &
           CP%nmat,SDIM)
+        else
+         print *,"CP%ngrow_LS invalid"
+         stop
+        endif
 
         END ASSOCIATE
 
         return 
         end subroutine interp_fluid_LS
-
-
 
 
 
@@ -15614,7 +15629,6 @@ stop
       REAL_T LS_virtual(nmat)
       REAL_T LS_virtual_new(nmat)
       REAL_T LS_virtual_max ! used for insuring tessellation property of LS
-      REAL_T local_dist_solid
       INTEGER_T nmat_fluid,nmat_solid,nmat_lag
       INTEGER_T at_center
       INTEGER_T ibase
@@ -15812,6 +15826,8 @@ stop
        endif
       enddo ! im=1..nmat
 
+      cell_CP_parm%least_sqrZ=least_sqrZ
+      cell_CP_parm%least_sqr_radius=least_sqr_radius
       cell_CP_parm%dxmaxLS=dxmaxLS
       cell_CP_parm%bfact=bfact
       cell_CP_parm%level=level
@@ -16346,6 +16362,7 @@ stop
          if ((im_solid_max.ge.1).and.(im_solid_max.le.nmat)) then
 
            ! (i,j,k) is a "solid" cell
+           ! ls_hold will be modified
           if ((LS_solid_new(im_solid_max).ge.zero).or. &
               (sum_vfrac_solid_new.ge.half)) then
 
@@ -16425,7 +16442,8 @@ stop
               else if ((im1_substencil.ge.1).and. &
                        (im1_substencil.le.nmat)) then
                if (im2_substencil.eq.0) then
-                center_stencil_im=im1_substencil
+                 !fluid: center_stencil_im owns the cell
+                center_stencil_im=im1_substencil 
                else if ((im2_substencil.ge.1).and. &
                         (im2_substencil.le.nmat)) then
                 if (im1_substencil.lt.im2_substencil) then
@@ -16443,6 +16461,7 @@ stop
                  dencomp=(im_local-1)*num_state_material+1
                  local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
                 enddo
+                 ! coordinate of (i,j,k)
                 do dir=1,SDIM
                  local_XPOS(dir)=xsten(0,dir)
                 enddo

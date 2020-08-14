@@ -25,6 +25,22 @@ stop
       module godunov_module
       use probf90_module
 
+      type law_of_wall_parm_type
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      INTEGER_T :: ngrowfab ! should be 4
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSCP
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSFD
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ufluid
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: usolid
+      end type law_of_wall_parm_type
+
       contains
 
 
@@ -13958,7 +13974,6 @@ stop
        INTEGER_T :: ZEYU_imodel
        INTEGER_T :: ZEYU_ifgnbc
        INTEGER_T :: im_vapor,im_liquid
-       INTEGER_T :: do_raster
        REAL_T :: delta_g_raster
        REAL_T :: delta_r_raster
        REAL_T :: delta_g_critical
@@ -13968,8 +13983,6 @@ stop
        REAL_T :: nCL_dot_n_raster
        INTEGER_T :: nrad
      
-       do_raster=1
-
        nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
        if (nten.eq.nten_test) then
         ! do nothing
@@ -13996,12 +14009,6 @@ stop
         ! do nothing
        else
         print *,"is_rigid(nmat,im_solid) invalid"
-        stop
-       endif
-       if (delta_r.gt.zero) then
-        ! do nothing
-       else
-        print *,"(delta_r.le.zero)"
         stop
        endif
        if (nmat.ne.num_materials) then
@@ -14081,22 +14088,6 @@ stop
        endif
 
         !x_projection is closest point on the fluid/solid interface. 
-        !distance between ghost point and projection point
-        !alternatively: delta_g = LScenter(impart) , can 
-        !either use level set or difference between 
-        !ghost and projection point.
-        !xsten(0,dir) is a ghost point in the solid.
-       delta_g = zero
-       do dir = 1,SDIM
-        delta_g = delta_g + (x_projection(dir)-xsten(0,dir))**2
-       enddo
-       delta_g = sqrt(delta_g)
-       if (delta_g.ge.zero) then
-        ! do nothing
-       else
-        print *,"delta_g invalid"
-        stop
-       endif
        delta_g_raster=abs(x_projection_raster(data_dir+1)-xsten(0,data_dir+1))
        delta_r_raster=abs(x_image_raster(data_dir+1)- &
                           x_projection_raster(data_dir+1))
@@ -14776,11 +14767,11 @@ stop
       INTEGER_T, intent(in) :: nden
       INTEGER_T, intent(in) :: im_solid_map(nparts_ghost)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in), target :: xlo(SDIM)
+      REAL_T, intent(in), target :: dx(SDIM)
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: visc_coef
@@ -14796,11 +14787,13 @@ stop
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
-      REAL_T, intent(in) :: LSCP(DIMV(LSCP),nmat*(SDIM+1)) !CP=Closest Point
-      REAL_T, intent(in) :: LSFD(DIMV(LSFD),nmat*SDIM)  ! FD=Finite Difference
-      REAL_T, intent(in) :: state(DIMV(state),nden)
-      REAL_T, intent(in) :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
-      REAL_T, intent(in) :: usolid(DIMV(usolid),nparts_ghost*SDIM) 
+      !CP=Closest Point
+      REAL_T, intent(in), target :: LSCP(DIMV(LSCP),nmat*(SDIM+1)) 
+      ! FD=Finite Difference
+      REAL_T, intent(in), target :: LSFD(DIMV(LSFD),nmat*SDIM)  
+      REAL_T, intent(in), target :: state(DIMV(state),nden)
+      REAL_T, intent(in), target :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
+      REAL_T, intent(in), target :: usolid(DIMV(usolid),nparts_ghost*SDIM) 
       REAL_T, intent(out) :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
        ! nhistory=nparts_ghost * (usolid_law_of_wall,uimage,usolid,angle)
       REAL_T, intent(out) :: history_dat(DIMV(history_dat),nhistory) 
@@ -14857,6 +14850,7 @@ stop
       INTEGER_T tcomp
       INTEGER_T nten
       INTEGER_T nhistory_sub
+      type(law_of_wall_parm_type) :: law_of_wall_parm
 
       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
 
@@ -15009,7 +15003,21 @@ stop
       call checkbound(fablo,fabhi,DIMS(usolid),ngrow_law_of_wall,-1,1255)
       call checkbound(fablo,fabhi,DIMS(ughost),0,data_dir,1255)
       call checkbound(fablo,fabhi,DIMS(history_dat),0,data_dir,1255)
- 
+
+      law_of_wall_parm%level=level
+      law_of_wall_parm%finest_level=finest_level
+      law_of_wall_parm%bfact=bfact
+      law_of_wall_parm%dx=>dx
+      law_of_wall_parm%xlo=>xlo
+      law_of_wall_parm%fablo=>fablo
+      law_of_wall_parm%fabhi=>fabhi
+      law_of_wall_parm%ngrowfab=ngrow_distance
+      law_of_wall_parm%LSCP=>LSCP
+      law_of_wall_parm%LSFD=>LSFD
+      law_of_wall_parm%state=>state
+      law_of_wall_parm%ufluid=>ufluid
+      law_of_wall_parm%usolid=>usolid
+       
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,data_dir) 
 
        ! A FAB (fortran array box) is tessellated into tiles.
@@ -15166,48 +15174,12 @@ stop
               print *,"side_solid or side_image invalid"
               stop
              endif
-             ! normal for solid materials with a Lagrangian representation
-             ! are calculated as follows:
-             ! 1. convert from Lagrangian representation (elements and nodes)
-             !    to an Eulerian representation (levelset function "phi")
-             ! 2. normal=grad phi/|grad phi|  (central differencing to
-             !    approximate grad phi)
-             ! NOTE: currently Lagrangian representation converted to
-             !  Eulerian representation at each time step.  BUT, if
-             !  it is known that the solid does not move, and the 
-             !  solid is wholly contained on the finest adaptive level,
-             !  then it is unnecessary to repeat the conversion process.
              do dir=1,SDIM
               nrm_solid(dir)=LSCP(D_DECL(isideSOL,jsideSOL,ksideSOL), &
                      nmat+(impart-1)*SDIM+dir)
-              ! projection point  xp=x-phi grad phi xp on the
-              !  solid/fluid interface.  
-              ! nrm_solid=grad phi points to solid.
-              x_projection(dir)=xsten(0,dir)-DIST_SOLID*nrm_solid(dir)
-              ! image point (in the fluid) (where to find angle)
-              x_image(dir)=x_projection(dir)- &
-              sign_funct(DIST_SOLID)*delta_r*nrm_solid(dir)
              enddo ! dir=1..sdim
 
-             call containing_cell(bfact,dx,xlo,fablo,x_projection, &
-              cell_index_project)
 
-             stencil_in_grow_box=1
-
-             do dir=1,SDIM
-              if (cell_index_project(dir)-3.lt. &
-                  fablo(dir)-ngrow_distance) then
-               stencil_in_grow_box=0
-              endif
-              if (cell_index_project(dir)+3.gt. &
-                  fabhi(dir)+ngrow_distance) then
-               stencil_in_grow_box=0
-              endif
-             enddo ! dir=1..sdim
-
-             if (stencil_in_grow_box.eq.0) then
-              ! do nothing
-             else if (stencil_in_grow_box.eq.1) then
               do i1=-3,3
               do j1=-3,3
               do k1=-3,3
