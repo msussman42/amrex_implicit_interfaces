@@ -13960,6 +13960,12 @@ stop
         print *,"im_solid invalid in getGhostVel"
         stop
        endif
+       if (LOW%ngrowfab.eq.4) then
+        ! do nothing
+       else
+        print *,"LOW%ngrowfab invalid"
+        stop
+       endif
        if (is_rigid(LOW%nmat,im_solid).eq.1) then
         ! do nothing
        else
@@ -14000,11 +14006,100 @@ stop
 
         ! uimage_raster and usolid_raster are already initialized.
        do dir=1,SDIM
-        ughost(dir)=zero
-        uimage(dir)=zero
-        usolid(dir)=zero
+        usolid_law_of_wall(dir)=zero
        enddo
        angle_ACT=zero
+
+       call gridsten_level(xstenFD,iFD,jFD,kFD,LOW%level,nhalf)
+       do im=1,LOW%nmat
+        LS_fluid(im)=LSCP(D_DECL(iFD,jFD,kFD),im)
+       enddo
+       call get_primary_material(LS_fluid,LOW%nmat,im_primary_image)
+       if (is_rigid(LOW%nmat,im_primary_image).eq.0) then
+        if (im_fluid.eq.im_primary_image) then
+         do dir=1,SDIM
+          nrm_fluid(dir)=LSCP(D_DECL(iFD,jFD,kFD),im_fluid)
+          nrm_solid(dir)=LSCP(D_DECL(iFD,jFD,kFD),im_solid)
+          xCP_fluid(dir)=xstenFD(0,dir)-LS_fluid(im_fluid)*nrm_fluid(dir)
+          xCP_solid(dir)=xstenFD(0,dir)-LS_fluid(im_solid)*nrm_solid(dir)
+         enddo
+         call containing_cell( &
+          LOW%bfact, &
+          LOW%dx, &
+          LOW%xlo, &
+          LOW%fablo, &
+          xCP_fluid, &
+          cell_index)
+   
+         istenlo(3)=0
+         istenhi(3)=0
+         do dir=1,SDIM
+          if (cell_index(dir)-1.lt.LOW%fablo(dir)-LOW%ngrowfab) then
+           cell_index(dir)=LOW%fablo(dir)-LOW%ngrowfab+1
+          endif
+          if (cell_index(dir)+1.gt.LOW%fabhi(dir)+LOW%ngrowfab) then
+           cell_index(dir)=LOW%fabhi(dir)+LOW%ngrowfab-1
+          endif
+          istenlo(dir)=cell_index(dir)-1
+          istenhi(dir)=cell_index(dir)+1
+         enddo ! dir=1..sdim
+
+         im_secondary=-1
+         total_WT=zero
+         do dir=1,SDIM
+          nrm_fluid_CP(dir)=zero
+         enddo 
+         do isten=istenlo(1),istenhi(1)
+         do jsten=istenlo(2),istenhi(2)
+         do ksten=istenlo(3),istenhi(3)
+          do im=1,LOW%nmat*(1+SDIM)
+           LS_sten(im)=LSCP(D_DECL(isten,jsten,ksten),im)
+          enddo
+          WT=one/(LS_sten(im_fluid)**2+0.01d0*(LOW%dxmaxLS**2))
+
+          call get_primary_material(LS_sten,LOW%nmat,im_primary_sten)
+          if (im_primary_sten.eq.im_fluid) then
+           ! do nothing
+          else if (im_primary_sten.eq.im_solid) then
+           WT=WT/100.0d0
+          else if ((im_primary_sten.ge.1).and. &
+                   (im_primary_sten.le.nmat)) then
+           if (is_rigid(LOW%nmat,im_primary_sten).eq.1) then
+            ! do nothing
+           else if (is_rigid(LOW%nmat,im_primary_sten).eq.0) then
+            if (im_secondary.eq.-1) then
+             im_secondary=im_primary_sten
+            endif
+           else
+            print *,"is_rigid(LOW%nmat,im_primary_sten) invalid"
+            stop
+           endif
+          else
+           print *,"im_primary_sten invalid"
+           stop
+          endif
+          do dir=1,SDIM
+           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)+ &
+               WT*LS_sten(LOW%nmat+(im_fluid-1)*SDIM+dir)
+          enddo
+          total_WT=total_WT+WT
+
+         enddo ! ksten
+         enddo ! jsten
+         enddo ! isten
+         if (total_WT.gt.zero) then
+          do dir=1,SDIM
+           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/total_WT
+          enddo
+          nrm_sanity=DOT_PRODUCT(nrm_fluid_CP,nrm_fluid_CP)
+          nrm_sanity=sqrt(nrm_sanity)
+          do dir=1,SDIM
+           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/nrm_sanity
+          enddo
+         else
+          print *,"total_WT invalid"
+          stop
+         endif
 
         ! nrm_solid points into the solid.
        nrm_sanity=DOT_PRODUCT(nrm_solid,nrm_solid)
@@ -14041,11 +14136,11 @@ stop
         print *,"dxmin invalid"
         stop
        endif
-       call gridsten_level(xsten,iSD,jSD,kSD,LOW%level,nhalf)
+       call gridsten_level(xstenSD,iSD,jSD,kSD,LOW%level,nhalf)
 
         !x_projection is closest point on the fluid/solid interface. 
        delta_g_raster=abs(LOW%x_projection_raster(data_dir+1)- &
-                          xsten(0,data_dir+1))
+                          xstenSD(0,data_dir+1))
        delta_r_raster=abs(LOW%x_image_raster(data_dir+1)- &
                           x_projection_raster(data_dir+1))
        if ((delta_g_raster.gt.zero).and. &
