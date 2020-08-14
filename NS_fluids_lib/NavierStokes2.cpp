@@ -6805,7 +6805,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       &solidheat_flag,
       &num_LS_extrap,
       &num_LS_extrap_iter,
-      LS_extrap_iter,
+      &LS_extrap_iter,
       &ngrow_distance);
 
    }  // mfi
