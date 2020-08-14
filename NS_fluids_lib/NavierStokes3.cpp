@@ -2438,6 +2438,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     }
 
       // initialize "law of the wall" velocity derived from solid velocity.
+      //  or
+      // initialize "GNBC" velocity.
       // in: NavierStokes::do_the_advance (prior to nonlinear_advect)
     init_FSI_GHOST_MAC_MF_ALL(4);
 
@@ -3058,6 +3060,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      int n_input;
      std::cin >> n_input;
     }
+
+     // initialize "law of the wall" velocity derived from solid velocity.
+     //  or
+     // initialize "GNBC" velocity.
+     // in: NavierStokes::do_the_advance (prior to viscous force step, and
+     //  after reinitialization)
+    init_FSI_GHOST_MAC_MF_ALL(4);
 
 // At this stage, variables are not scaled, so facevel_index will have
 // to be scaled later.

@@ -5156,8 +5156,9 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
 } // end subroutine create_fortran_grid_struct
 
 // called from:
-//  NavierStokes::prescribe_solid_geometryALL
-//  NavierStokes::do_the_advance
+//  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
+//  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
+//  NavierStokes::do_the_advance (prior to viscous diffusion)
 //  NavierStokes::MaxAdvectSpeedALL
 //  NavierStokes::sum_integrated_quantities
 //  NavierStokes::prepare_post_process
