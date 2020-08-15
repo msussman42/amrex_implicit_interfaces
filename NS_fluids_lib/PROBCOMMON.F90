@@ -193,7 +193,7 @@ implicit none
        ! level
       INTEGER_T, allocatable, dimension(:) :: level_container_allocated
 
-      INTEGER_T, pointer :: probtype_procptr_list(:)
+      INTEGER_T :: used_probtypes(1000)
       INTEGER_T :: probtype_list_size
 
       ABSTRACT INTERFACE

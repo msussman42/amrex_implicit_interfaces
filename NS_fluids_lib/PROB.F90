@@ -19579,6 +19579,7 @@ END SUBROUTINE Adist
       INTEGER_T im_solid_lsbc
       REAL_T xvec(SDIM)
       INTEGER_T local_dir
+      INTEGER_T iprob
 
       im_solid_lsbc=im_solid_primary()
 
@@ -19641,6 +19642,15 @@ END SUBROUTINE Adist
       enddo
 
       if (is_in_probtype_list().eq.1) then
+       if (1.eq.0) then
+        print *,"probtype= ",probtype
+        print *,"probtype_list_size= ",probtype_list_size
+        do iprob=1,probtype_list_size
+         print *,"iprob,used_probtypes(iprob) ",iprob, &
+                 used_probtypes(iprob)
+        enddo
+        stop
+       endif
        call SUB_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx, &
         num_materials)
        call check_lsbc_extrap(LS,LSWALL,nmat)
@@ -33672,12 +33682,10 @@ end subroutine initialize2d
        INTEGER_T im,iten
        INTEGER_T nten
        INTEGER_T level,bfactmax
-       INTEGER_T, target :: used_probtypes(1000)
 
        probtype=ccprobtype
        num_materials=ccnum_materials
 
-       probtype_procptr_list=>used_probtypes
 ! USER DEFINED (used by "is_in_probtype_list")
        probtype_list_size=2
        used_probtypes(1)=2000

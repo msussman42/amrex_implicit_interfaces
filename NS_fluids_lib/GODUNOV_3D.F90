@@ -1342,6 +1342,8 @@ stop
          mag=sqrt(mag)
          if (abs(mag-one).lt.VOFTOL) then
           ! do nothing
+         else if (abs(mag).lt.VOFTOL) then
+          ! do nothing
          else
           print *,"nrm_fluid (mag) invalid"
           stop
@@ -1353,6 +1355,8 @@ stop
          enddo
          mag=sqrt(mag)
          if (abs(mag-one).lt.VOFTOL) then
+          ! do nothing
+         else if (abs(mag).lt.VOFTOL) then
           ! do nothing
          else
           print *,"nrm_solid (mag) invalid"
@@ -1456,6 +1460,8 @@ stop
            do dir=1,SDIM
             nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/nrm_sanity
            enddo
+          else if (nrm_sanity.eq.zero) then
+           ! do nothing
           else
            print *,"nrm_sanity invalid"
            stop
@@ -23464,8 +23470,13 @@ stop
 
               test_temp=cellfab(D_DECL(i,j,k),cellcomp)
               if (hflag.eq.0) then
-               if (test_temp.le.zero) then
+               if (test_temp.gt.zero) then
+                ! do nothing
+               else
                 print *,"test_temp must be positive: combinevel"
+                print *,"test_temp=",test_temp
+                print *,"im_crit=",im_crit
+                print *,"cellcomp=",cellcomp
                 stop
                endif
               else if (hflag.eq.1) then
@@ -23482,7 +23493,7 @@ stop
              if (weight_sum.gt.zero) then
               velsum(1)=velsum(1)/weight_sum
              else
-              print *,"weight_sum invalid"
+              print *,"weight_sum invalid 1"
               stop
              endif 
 
@@ -23553,7 +23564,7 @@ stop
              if (weight_sum.gt.zero) then
               velsum(1)=velsum(1)/weight_sum
              else
-              print *,"weight_sum invalid"
+              print *,"weight_sum invalid 2"
               stop
              endif 
 
@@ -24291,7 +24302,7 @@ stop
          enddo ! side=1,2
 
          if (weight_sum.le.zero) then
-          print *,"weight_sum invalid"
+          print *,"weight_sum invalid 3"
           stop
          endif
 

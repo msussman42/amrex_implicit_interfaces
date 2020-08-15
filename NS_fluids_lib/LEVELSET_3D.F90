@@ -28,6 +28,12 @@ stop
         module levelset_module
         use probf90_module
 
+        type prealloc_type
+         REAL_T, pointer :: ZEYU_XPOS(:,:,:,:)
+         REAL_T, pointer :: ZEYU_LS(:,:,:,:)
+         REAL_T, pointer :: ZEYU_WT(:,:,:)
+        end type prealloc_type
+
         type cell_CP_parm_type
          REAL_T dxmaxLS
          INTEGER_T i,j,k
@@ -136,9 +142,7 @@ stop
 
 
         subroutine interp_fluid_LS( &
-         ZEYU_XPOS, &
-         ZEYU_LS, &
-         ZEYU_WT, &
+         ZEYU_DAT, &
          cell_CP_parm, &
          xCP, &
          cell_index, &
@@ -154,9 +158,7 @@ stop
         use ZEYU_LS_extrapolation, only : level_set_extrapolation
         IMPLICIT NONE
         type(cell_CP_parm_type), intent(in) :: cell_CP_parm
-        REAL_T, intent(out), dimension(:,:,:,:) :: ZEYU_XPOS
-        REAL_T, intent(out), dimension(:,:,:,:) :: ZEYU_LS
-        REAL_T, intent(out), dimension(:,:,:) :: ZEYU_WT
+        type(prealloc_type), intent(out) :: ZEYU_DAT
         REAL_T, intent(in) :: xCP(SDIM)
         INTEGER_T, intent(in) :: cell_index(SDIM)
         REAL_T, intent(out) :: LS_interp(num_materials)
@@ -214,7 +216,7 @@ stop
            CP%level,nhalf)
 
           do dir=1,SDIM
-           ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
+           ZEYU_DAT%ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
           enddo
 
           do im_local=1,CP%nmat
@@ -266,9 +268,9 @@ stop
           endif
           
           if (WT.gt.zero) then 
-           ZEYU_WT(i2,j2,k2)=WT
+           ZEYU_DAT%ZEYU_WT(i2,j2,k2)=WT
            do im_local=1,CP%nmat
-            ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
+            ZEYU_DAT%ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
            enddo
           else 
            print *,"WT bust"
@@ -279,9 +281,9 @@ stop
          enddo  !i2,j2,k2=LSstenlo ... LSstenhi
          
          call level_set_extrapolation( &
-          ZEYU_XPOS, &
-          ZEYU_LS, &
-          ZEYU_WT, &
+          ZEYU_DAT%ZEYU_XPOS, &
+          ZEYU_DAT%ZEYU_LS, &
+          ZEYU_DAT%ZEYU_WT, &
           CP%local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
           LS_interp, &
           CP%least_sqr_radius, &
@@ -15675,6 +15677,7 @@ stop
       REAL_T local_temperature(nmat)
       REAL_T local_mof(nmat*ngeom_recon)
       type(cell_CP_parm_type) :: cell_CP_parm
+      type(prealloc_type) :: ZEYU_DAT
       INTEGER_T cell_index(3)
       REAL_T xCP(SDIM)
       REAL_T local_XPOS(SDIM)
@@ -15825,6 +15828,10 @@ stop
       allocate(ZEYU_WT(-least_sqr_radius:least_sqr_radius, &
               -least_sqr_radius:least_sqr_radius, &
               -least_sqrZ:least_sqrZ))
+
+      ZEYU_DAT%ZEYU_XPOS=>ZEYU_XPOS
+      ZEYU_DAT%ZEYU_LS=>ZEYU_LS
+      ZEYU_DAT%ZEYU_WT=>ZEYU_WT
 
       do im=1,nmat
        if (is_rigid(nmat,im).eq.0) then
@@ -16046,34 +16053,35 @@ stop
 
          enddo ! im=1..nmat (extrapolation loop)
 
-         do dir=1,nmat*ngeom_recon
-          mofnew(dir)=zero
-         enddo
-
-         do im=1,nmat
-
-          vofcomp=(im-1)*ngeom_recon+1
-          vofcompraw=(im-1)*ngeom_raw+1
-
-          mofnew(vofcomp)=vofnew(D_DECL(i,j,k),vofcompraw)
-          do dir=1,SDIM
-           mofnew(vofcomp+dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)
-          enddo
-
-          do istate=1,num_state_material
-           statecomp=(im-1)*num_state_material+istate
-           den_hold(statecomp)=dennew(D_DECL(i,j,k),statecomp)
-          enddo
-
-         enddo  ! im=1..nmat
-
         else if (LS_extrap_iter.gt.0) then
          ! do nothing
         else
          print *,"LS_extrap_iter invalid"
          stop
         endif
-       
+      
+        do dir=1,nmat*ngeom_recon
+         mofnew(dir)=zero
+        enddo
+
+        do im=1,nmat
+
+         vofcomp=(im-1)*ngeom_recon+1
+         vofcompraw=(im-1)*ngeom_raw+1
+
+         mofnew(vofcomp)=vofnew(D_DECL(i,j,k),vofcompraw)
+         do dir=1,SDIM
+          mofnew(vofcomp+dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)
+         enddo
+
+         do istate=1,num_state_material
+          statecomp=(im-1)*num_state_material+istate
+          den_hold(statecomp)=dennew(D_DECL(i,j,k),statecomp)
+         enddo
+
+        enddo  ! im=1..nmat
+
+
          ! 1. prescribe solid materials. (F,X,LS,velocity,temperature)
          ! 2. extend the fluid level set functions into the solids.
          !   (F,X,LS fluid)
@@ -16405,9 +16413,7 @@ stop
             im2_substencil=0
 
             call interp_fluid_LS( &
-             ZEYU_XPOS, &
-             ZEYU_LS, &
-             ZEYU_WT, &
+             ZEYU_DAT, &
              cell_CP_parm, &
              xCP, &
              cell_index, &
@@ -16835,7 +16841,7 @@ stop
          do dir=1,SDIM
           vofnew(D_DECL(i,j,k),vofcompraw+dir)=mofnew(vofcomp+dir)
          enddo
-        enddo ! im
+        enddo ! im=1..nmat
 
        else if (local_maskcov.eq.0) then
         ! do nothing
