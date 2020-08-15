@@ -1209,10 +1209,7 @@ stop
        INTEGER_T :: ZEYU_imodel
        INTEGER_T :: ZEYU_ifgnbc
        INTEGER_T :: im_vapor,im_liquid
-       REAL_T :: delta_g_raster
        REAL_T :: delta_r_raster
-       REAL_T :: delta_r_plus_g
-       REAL_T :: reflect_factor
        REAL_T :: nCL_dot_n_raster
        INTEGER_T :: nrad
        INTEGER_T nhalf
@@ -1221,6 +1218,7 @@ stop
        INTEGER_T isten,jsten,ksten
        INTEGER_T im_primary_sten
        REAL_T :: thermal_interp(num_materials)
+       REAL_T :: local_temperature
        REAL_T :: WT,total_WT
        REAL_T :: LS_fluid(num_materials)
        REAL_T :: LS_sten(num_materials*(1+SDIM))
@@ -1394,6 +1392,9 @@ stop
          do isten=istenlo(1),istenhi(1)
          do jsten=istenlo(2),istenhi(2)
          do ksten=istenlo(3),istenhi(3)
+           ! fluids tessellate the domain, so LS_sten(im_fluid) is
+           ! distance to nearest *fluid* even if is_rigid==1 
+           ! materials are nearby.
           do im=1,LOW%nmat*(1+SDIM)
            LS_sten(im)=LOW%LSCP(D_DECL(isten,jsten,ksten),im)
           enddo
@@ -1407,7 +1408,7 @@ stop
           else if ((im_primary_sten.ge.1).and. &
                    (im_primary_sten.le.LOW%nmat)) then
            if (is_rigid(LOW%nmat,im_primary_sten).eq.1) then
-            ! do nothing
+            WT=WT/100.0d0
            else if (is_rigid(LOW%nmat,im_primary_sten).eq.0) then
             if (im_secondary_image.eq.0) then
              im_secondary_image=im_primary_sten
@@ -1425,10 +1426,16 @@ stop
                WT*LS_sten(LOW%nmat+(im_fluid-1)*SDIM+dir)
           enddo
           do im=1,LOW%nmat
-           thermal_interp(im)=thermal_interp(im)+ &
-             WT*LOW%state(D_DECL(isten,jsten,ksten), &
+           local_temperature= &
+             LOW%state(D_DECL(isten,jsten,ksten), &
               (im-1)*num_state_material+2) 
-          enddo
+           if (local_temperature.ge.zero) then
+            thermal_interp(im)=thermal_interp(im)+WT*local_temperature
+           else
+            print *,"local_temperature invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
           total_WT=total_WT+WT
 
          enddo ! ksten
@@ -1445,9 +1452,14 @@ stop
           enddo
           nrm_sanity=DOT_PRODUCT(nrm_fluid_CP,nrm_fluid_CP)
           nrm_sanity=sqrt(nrm_sanity)
-          do dir=1,SDIM
-           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/nrm_sanity
-          enddo
+          if (nrm_sanity.gt.zero) then
+           do dir=1,SDIM
+            nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/nrm_sanity
+           enddo
+          else
+           print *,"nrm_sanity invalid"
+           stop
+          endif
          else
           print *,"total_WT invalid"
           stop
@@ -1467,21 +1479,15 @@ stop
          call gridsten_level(xstenSD,iSD,jSD,kSD,LOW%level,nhalf)
 
          !x_projection is closest point on the fluid/solid interface. 
-         delta_g_raster=abs(LOW%x_projection_raster(data_dir+1)- &
-                            xstenSD(0,data_dir+1))
          delta_r_raster=abs(LOW%x_image_raster(data_dir+1)- &
                             LOW%x_projection_raster(data_dir+1))
-         if ((delta_g_raster.gt.zero).and. &
-             (delta_r_raster.gt.zero)) then
+         if (delta_r_raster.gt.zero) then
           ! do nothing
          else
-          print *,"delta_g_raster or delta_r_raster invalid"
+          print *,"delta_r_raster invalid"
           stop
          endif
-       
-         delta_r_plus_g=delta_r_raster ! ghost lives on raster interface
-         reflect_factor=zero
-
+      
          ! convert to solid velocity frame of reference.
          uimage_mag=zero
          do dir=1,SDIM
@@ -1551,7 +1557,8 @@ stop
           stop
          endif
 
-         ughost_nrml = -reflect_factor*uimage_nrml
+          ! ghost velocity lives *on* the rasterized interface.
+         ughost_nrml = zero
 
          ! From Spaldings' paper, a representative size for the linear 
          ! region is:
@@ -1755,32 +1762,41 @@ stop
            if (viscosity_eddy.gt.zero) then
             !obtain wall shear stress tau_w
             !out tau_w
-            call wallFunc_NewtonsMethod(uimage_tngt_mag, &
-                   delta_r_raster,tau_w,im_fluid) 
-            ughost_tngt = uimage_tngt_mag - &
-             tau_w*delta_r_plus_g/ &
-             (viscosity_molecular+viscosity_eddy)
 
-            predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/delta_r_plus_g
-            max_deriv_utan=two*uimage_tngt_mag/critical_length
-            if (predict_deriv_utan.lt.max_deriv_utan) then
-             ! do nothing
+            if (delta_r_raster.gt.zero) then
+             call wallFunc_NewtonsMethod(uimage_tngt_mag, &
+                   delta_r_raster,tau_w,im_fluid) 
+             ughost_tngt = uimage_tngt_mag - &
+              tau_w*delta_r_raster/ &
+              (viscosity_molecular+viscosity_eddy)
+
+             predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/ &
+                delta_r_raster
+             max_deriv_utan=two*uimage_tngt_mag/critical_length
+             if (predict_deriv_utan.lt.max_deriv_utan) then
+              ! do nothing
+             else
+              print *,"predict_deriv_utan or max_deriv_utan invalid"
+              print *,"predict_deriv_utan= ",predict_deriv_utan
+              print *,"max_deriv_utan= ",max_deriv_utan
+              stop
+             endif
             else
-             print *,"predict_deriv_utan or max_deriv_utan invalid"
-             print *,"predict_deriv_utan= ",predict_deriv_utan
-             print *,"max_deriv_utan= ",max_deriv_utan
+             print *,"delta_r_raster invalid"
              stop
             endif
 
            else if (viscosity_eddy.eq.zero) then
-            ughost_tngt = -reflect_factor*uimage_tngt_mag
+             ! ghost velocity lives *on* the rasterized interface.
+            ughost_tngt = zero
            else
             print *,"viscosity_eddy invalid"
             stop
            endif
 
           else if (critical_length.ge.dxmin) then
-           ughost_tngt = -reflect_factor*uimage_tngt_mag
+            ! ghost velocity lives *on* the rasterized interface.
+           ughost_tngt = zero
           else
            print *,"critical_length invalid"
            stop
@@ -1883,7 +1899,8 @@ stop
            endif
 
           else if (near_contact_line.eq.0) then
-           ughost_tngt = -reflect_factor*uimage_tngt_mag
+            ! ghost velocity lives *on* the rasterized interface.
+           ughost_tngt = zero
           else
            print *,"near_contact_line invalid"
            stop
