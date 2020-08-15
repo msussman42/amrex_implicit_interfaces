@@ -22,6 +22,104 @@ stop
 #endif
 
 
+
+      function wallFunc(u_tau,u,y,K,B,rho_w,mu_w) result(f)
+      implicit none
+        !incompressible wall function, to be called in 
+        !Newton's method, solving for friction 
+        !velocity u_tau at the image point
+        !u_tau: friction velocity, u: velocity parallel to wall, 
+        !y: coord direction normal to wall
+       REAL_T, intent(in) :: u_tau, u, y 
+        !rho_w: wall density, mu_w: wall molecular viscosity 
+       REAL_T, intent(in) :: K, B, rho_w, mu_w 
+       REAL_T :: f
+       REAL_T :: u_plus, y_plus
+
+       if (u_tau.eq.zero) then
+        print *,"u_tau.eq.zero"
+        stop
+       endif
+       if (mu_w.eq.zero) then
+        print *,"mu_w.eq.zero"
+        stop
+       endif
+       u_plus = u/u_tau
+       y_plus = rho_w*u_tau*y/mu_w
+
+       f = -y_plus + u_plus + exp(-K*B)* &
+        ( exp(K*u_plus)-one-K*u_plus-half*(K*u_plus)**2-(K*u_plus)**3/six )
+      end function wallFunc
+  
+      function wallFuncDeriv(u_tau,u,y,K,B,rho_w,mu_w) result(fprime)
+      implicit none
+        !derivative of incompressible wall function w.r.t. u_tau, to be 
+        !called in Newton's method
+       REAL_T, intent(in) :: u_tau, u, y 
+       REAL_T, intent(in) :: K, B, rho_w, mu_w
+       REAL_T :: fprime
+       REAL_T :: u_plus
+   
+       if (u_tau.eq.zero) then
+        print *,"u_tau cannot be 0"
+        stop
+       endif 
+       u_plus = u/u_tau
+    
+       fprime = -rho_w*y/mu_w - u_plus/u_tau + &
+         exp(-K*B)*( -(K*u_plus/u_tau)*exp(K*u_plus)+ &
+                     K*u_plus/u_tau+(K*u_plus)**2/u_tau+ &
+                     (K*u_plus)**3/(two*u_tau) )
+      end function wallFuncDeriv
+      
+      subroutine wallFunc_NewtonsMethod(u,y,tau_w,im_fluid)
+       use probf90_module
+       use global_utility_module
+       use MOF_routines_module
+       implicit none
+       INTEGER_T, intent(in) :: im_fluid
+       REAL_T, intent(in) :: u, y !uimage_tngt, delta_r
+       REAL_T, intent(out) :: tau_w
+       REAL_T :: u_tau,x_n,x_np1 !x_n, x_(n+1) --> u_tau
+       REAL_T :: f, fprime
+       REAL_T :: wallFunc, wallFuncDeriv
+       INTEGER_T :: iter, iter_max=1000
+        !initialize wall function parameters here
+       REAL_T :: K=0.41, B=5.5, &
+       rho_w, mu_w !rho_w: wall density, mu_w: wall 
+                   !molecular viscosity, tau_w: wall shear stress
+
+       if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
+        print *,"im_fluid invalid in wallFunc_NewtonsMethod"
+        stop
+       endif
+
+       mu_w=fort_viscconst(im_fluid) 
+
+       x_n = u !initial guess for u_tau
+       do while ((abs(x_np1-x_n).gt.VOFTOL).and.(iter.lt.iter_max))
+        f = wallFunc(x_n,u,y,K,B,rho_w,mu_w)
+        fprime = wallFuncDeriv(x_n,u,y,K,B,rho_w,mu_w)
+   
+        if (abs(fprime).le.1.0e-15) then 
+         print *, "divide by zero error: wallFunc_NewtonsMethod" !avoid /0
+         stop
+        else
+         x_np1 = x_n-f/fprime
+        endif
+    
+        iter = iter+1
+        if(iter.ge.iter_max)then
+          print *, "wallFunc_NewtonsMethod: no convergence"
+          stop
+        endif
+       enddo ! while (abs(x_np1-x_n)>VOFTOL .and. iter<iter_max)
+    
+       u_tau = x_np1
+       tau_w = rho_w*u_tau**2
+      end subroutine wallFunc_NewtonsMethod
+
+
       module godunov_module
       use probf90_module
 
@@ -31,6 +129,9 @@ stop
       INTEGER_T :: bfact
       INTEGER_T :: nmat
       INTEGER_T :: nten
+      REAL_T :: visc_coef
+      REAL_T :: time
+      REAL_T :: dt
       REAL_T, pointer :: usolid_raster(:)
       REAL_T, pointer :: n_raster(:)
       REAL_T, pointer :: x_image_raster(:)
@@ -1022,6 +1123,784 @@ stop
       endif
 
       end subroutine get_default_scalar_diffusion
+
+
+
+       ! This routine transforms all velocities to a frame of reference with
+       ! respect to the solid.
+      subroutine getGhostVel( &
+       LOW, &
+       law_of_the_wall, &
+       iSD,jSD,kSD, &
+       iFD,jFD,kFD, &
+       side_solid, &
+       side_image, &
+       data_dir, &
+       uimage_raster, &
+       usolid_law_of_wall, & ! out
+       angle_ACT, & ! aka angle_ACT_cell "out"
+       im_fluid, &
+       im_solid)
+       
+       use probf90_module
+       use global_utility_module
+       use MOF_routines_module
+       
+       implicit none
+       
+       !in: nrm_solid, delta_r, LScenter or x_projection, dx, x_image, 
+       !ximage_stencil, ufluid_stencil
+       type(law_of_wall_parm_type), intent(in) :: LOW
+       INTEGER_T, intent(in) :: law_of_the_wall
+       INTEGER_T, intent(in) :: data_dir
+       INTEGER_T, intent(in) :: im_fluid
+       INTEGER_T, intent(in) :: im_solid
+       INTEGER_T, intent(in) :: side_solid
+       INTEGER_T, intent(in) :: side_image
+       INTEGER_T, intent(in) :: iSD,jSD,kSD
+       INTEGER_T, intent(in) :: iFD,jFD,kFD
+       REAL_T, dimension(SDIM), intent(inout) :: uimage_raster
+       REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
+       REAL_T, intent(out) :: angle_ACT
+      
+       !D_DECL is defined in SPACE.H in the BoxLib/Src/C_BaseLib
+
+
+       REAL_T, dimension(SDIM) :: u_tngt
+       REAL_T :: uimage_nrml, ughost_nrml,ughost_tngt
+       REAL_T :: uimage_tngt_mag
+       REAL_T :: tau_w
+       REAL_T :: viscosity_molecular, viscosity_eddy
+       REAL_T :: density_fluid
+       INTEGER_T :: dir
+       REAL_T :: nrm_sanity
+       REAL_T :: dxmin
+       REAL_T :: predict_deriv_utan
+       REAL_T :: max_deriv_utan
+       REAL_T :: critical_length
+       REAL_T :: uimage_mag
+       INTEGER_T :: im
+       INTEGER_T :: im_primary_image
+       INTEGER_T :: im_secondary_image
+       INTEGER_T :: im_fluid1,im_fluid2
+       INTEGER_T :: iten
+       INTEGER_T :: iten_13,iten_23
+       INTEGER_T :: nten_test
+       REAL_T :: cos_angle,sin_angle
+       INTEGER_T :: near_contact_line
+       REAL_T :: mag
+       REAL_T :: sinthetaACT
+       REAL_T :: costhetaACT
+       REAL_T :: dist_to_CL
+       REAL_T :: nf_dot_ns
+       REAL_T :: nf_dot_nCL_perp
+       REAL_T, dimension(3) :: nfluidFD
+       REAL_T, dimension(3) :: nsolidCP
+       REAL_T, dimension(3) :: nCL
+       REAL_T, dimension(3) :: nCL_raster
+       REAL_T, dimension(3) :: nCL_perp
+       REAL_T, dimension(3) :: nCL_perp2
+       REAL_T, dimension(3) :: nf_prj
+       REAL_T :: ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma
+       REAL_T :: ZEYU_thet_s,ZEYU_lambda,ZEYU_l_macro, ZEYU_l_micro
+       REAL_T :: ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent
+       REAL_T :: ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d
+       REAL_T :: angle_im1
+       INTEGER_T :: ZEYU_imodel
+       INTEGER_T :: ZEYU_ifgnbc
+       INTEGER_T :: im_vapor,im_liquid
+       REAL_T :: delta_g_raster
+       REAL_T :: delta_r_raster
+       REAL_T :: delta_r_plus_g
+       REAL_T :: reflect_factor
+       REAL_T :: nCL_dot_n_raster
+       INTEGER_T :: nrad
+       INTEGER_T nhalf
+       REAL_T :: xstenFD(-3:3,SDIM)
+       REAL_T :: xstenSD(-3:3,SDIM)
+       INTEGER_T isten,jsten,ksten
+       INTEGER_T im_primary_sten
+       REAL_T :: thermal_interp(num_materials)
+       REAL_T :: WT,total_WT
+       REAL_T :: LS_fluid(num_materials)
+       REAL_T :: LS_sten(num_materials*(1+SDIM))
+       REAL_T :: xCP_fluid(SDIM)
+       REAL_T :: xCP_solid(SDIM)
+       REAL_T :: nrm_solid(SDIM)
+       REAL_T :: nrm_fluid(SDIM)
+       REAL_T :: nrm_fluid_CP(SDIM)
+       INTEGER_T :: istenlo(3)
+       INTEGER_T :: istenhi(3)
+       INTEGER_T :: cell_index(SDIM)
+       REAL_T, allocatable, dimension(:) :: user_tension
+    
+       nhalf=3 
+       nten_test=( (LOW%nmat-1)*(LOW%nmat-1)+LOW%nmat-1 )/2
+       allocate(user_tension(nten_test))
+       if (LOW%nten.eq.nten_test) then
+        ! do nothing
+       else
+        print *,"nten invalid"
+        stop
+       endif
+        
+       if ((data_dir.ge.0).and.(data_dir.lt.SDIM)) then
+        ! do nothing
+       else
+        print *,"data_dir invalid"
+        stop
+       endif
+       if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
+        print *,"im_fluid invalid in getGhostVel"
+        stop
+       endif
+       if ((im_solid.lt.1).or.(im_solid.gt.num_materials)) then
+        print *,"im_solid invalid in getGhostVel"
+        stop
+       endif
+       if (LOW%ngrowfab.eq.4) then
+        ! do nothing
+       else
+        print *,"LOW%ngrowfab invalid"
+        stop
+       endif
+       if (is_rigid(LOW%nmat,im_solid).eq.1) then
+        ! do nothing
+       else
+        print *,"is_rigid(nmat,im_solid) invalid"
+        stop
+       endif
+       if (LOW%nmat.ne.num_materials) then
+        print *,"nmat invalid"
+        stop
+       endif
+       if (LOW%dt.gt.zero) then
+        ! do nothing
+       else
+        print *,"dt invalid"
+        stop
+       endif 
+       if (LOW%time.ge.zero) then
+        ! do nothing
+       else
+        print *,"time invalid"
+        stop
+       endif 
+       if (LOW%visc_coef.ge.zero) then
+        ! do nothing
+       else
+        print *,"visc_coef invalid"
+        stop
+       endif 
+       if ((law_of_the_wall.eq.1).or. &
+           (law_of_the_wall.eq.2)) then
+        ! do nothing
+       else
+        print *,"law_of_the_wall invalid"
+        stop
+       endif
+
+       dxmin=LOW%dx(1)
+       if (LOW%dx(2).lt.dxmin) then
+        dxmin=LOW%dx(2)
+       endif
+       if (LOW%dx(SDIM).lt.dxmin) then
+        dxmin=LOW%dx(SDIM)
+       endif
+       if (dxmin.gt.zero) then
+        ! do nothing
+       else
+        print *,"dxmin invalid"
+        stop
+       endif
+
+       nrad=3
+
+        ! uimage_raster and usolid_raster are already initialized.
+       do dir=1,SDIM
+        usolid_law_of_wall(dir)=zero
+       enddo
+       angle_ACT=zero
+
+       call gridsten_level(xstenFD,iFD,jFD,kFD,LOW%level,nhalf)
+       do im=1,LOW%nmat
+        LS_fluid(im)=LOW%LSCP(D_DECL(iFD,jFD,kFD),im)
+       enddo
+       call get_primary_material(LS_fluid,LOW%nmat,im_primary_image)
+       if (is_rigid(LOW%nmat,im_primary_image).eq.0) then
+        if (im_fluid.eq.im_primary_image) then
+         do dir=1,SDIM
+          nrm_fluid(dir)=LOW%LSCP(D_DECL(iFD,jFD,kFD),im_fluid)
+          nrm_solid(dir)=LOW%LSCP(D_DECL(iFD,jFD,kFD),im_solid)
+          xCP_fluid(dir)=xstenFD(0,dir)-LS_fluid(im_fluid)*nrm_fluid(dir)
+          xCP_solid(dir)=xstenFD(0,dir)-LS_fluid(im_solid)*nrm_solid(dir)
+         enddo
+         call containing_cell( &
+          LOW%bfact, &
+          LOW%dx, &
+          LOW%xlo, &
+          LOW%fablo, &
+          xCP_fluid, &
+          cell_index)
+   
+         istenlo(3)=0
+         istenhi(3)=0
+         do dir=1,SDIM
+          if (cell_index(dir)-1.lt.LOW%fablo(dir)-LOW%ngrowfab) then
+           cell_index(dir)=LOW%fablo(dir)-LOW%ngrowfab+1
+          endif
+          if (cell_index(dir)+1.gt.LOW%fabhi(dir)+LOW%ngrowfab) then
+           cell_index(dir)=LOW%fabhi(dir)+LOW%ngrowfab-1
+          endif
+          istenlo(dir)=cell_index(dir)-1
+          istenhi(dir)=cell_index(dir)+1
+         enddo ! dir=1..sdim
+
+         im_secondary_image=0
+         total_WT=zero
+         do dir=1,SDIM
+          nrm_fluid_CP(dir)=zero
+         enddo 
+         do im=1,LOW%nmat
+          thermal_interp(im)=zero
+         enddo
+
+         do isten=istenlo(1),istenhi(1)
+         do jsten=istenlo(2),istenhi(2)
+         do ksten=istenlo(3),istenhi(3)
+          do im=1,LOW%nmat*(1+SDIM)
+           LS_sten(im)=LOW%LSCP(D_DECL(isten,jsten,ksten),im)
+          enddo
+          WT=one/(LS_sten(im_fluid)**2+0.01d0*(dxmin**2))
+
+          call get_primary_material(LS_sten,LOW%nmat,im_primary_sten)
+          if (im_primary_sten.eq.im_fluid) then
+           ! do nothing
+          else if (im_primary_sten.eq.im_solid) then
+           WT=WT/100.0d0
+          else if ((im_primary_sten.ge.1).and. &
+                   (im_primary_sten.le.LOW%nmat)) then
+           if (is_rigid(LOW%nmat,im_primary_sten).eq.1) then
+            ! do nothing
+           else if (is_rigid(LOW%nmat,im_primary_sten).eq.0) then
+            if (im_secondary_image.eq.0) then
+             im_secondary_image=im_primary_sten
+            endif
+           else
+            print *,"is_rigid(LOW%nmat,im_primary_sten) invalid"
+            stop
+           endif
+          else
+           print *,"im_primary_sten invalid"
+           stop
+          endif
+          do dir=1,SDIM
+           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)+ &
+               WT*LS_sten(LOW%nmat+(im_fluid-1)*SDIM+dir)
+          enddo
+          do im=1,LOW%nmat
+           thermal_interp(im)=thermal_interp(im)+ &
+             WT*LOW%state(D_DECL(isten,jsten,ksten), &
+              (im-1)*num_state_material+2) 
+          enddo
+          total_WT=total_WT+WT
+
+         enddo ! ksten
+         enddo ! jsten
+         enddo ! isten
+
+         if (total_WT.gt.zero) then
+
+          do dir=1,SDIM
+           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/total_WT
+          enddo
+          do im=1,LOW%nmat
+           thermal_interp(im)=thermal_interp(im)/total_WT
+          enddo
+          nrm_sanity=DOT_PRODUCT(nrm_fluid_CP,nrm_fluid_CP)
+          nrm_sanity=sqrt(nrm_sanity)
+          do dir=1,SDIM
+           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/nrm_sanity
+          enddo
+         else
+          print *,"total_WT invalid"
+          stop
+         endif
+
+         viscosity_molecular=fort_viscconst(im_fluid)
+         viscosity_eddy=fort_viscconst_eddy(im_fluid)
+         density_fluid=fort_denconst(im_fluid)
+
+         if (density_fluid.gt.zero) then
+          ! do nothing
+         else
+          print *,"density_fluid invalid"
+          stop
+         endif
+
+         call gridsten_level(xstenSD,iSD,jSD,kSD,LOW%level,nhalf)
+
+         !x_projection is closest point on the fluid/solid interface. 
+         delta_g_raster=abs(LOW%x_projection_raster(data_dir+1)- &
+                            xstenSD(0,data_dir+1))
+         delta_r_raster=abs(LOW%x_image_raster(data_dir+1)- &
+                            LOW%x_projection_raster(data_dir+1))
+         if ((delta_g_raster.gt.zero).and. &
+             (delta_r_raster.gt.zero)) then
+          ! do nothing
+         else
+          print *,"delta_g_raster or delta_r_raster invalid"
+          stop
+         endif
+       
+         delta_r_plus_g=delta_r_raster ! ghost lives on raster interface
+         reflect_factor=zero
+
+         ! convert to solid velocity frame of reference.
+         uimage_mag=zero
+         do dir=1,SDIM
+          uimage_raster(dir)=uimage_raster(dir)-LOW%usolid_raster(dir)
+          uimage_mag=uimage_mag+uimage_raster(dir)**2
+         enddo
+         uimage_mag=sqrt(uimage_mag)
+         if (uimage_mag.ge.zero) then
+          ! do nothing
+         else
+          print *,"uimage_mag invalid"
+          stop
+         endif
+
+         !normal and tangential velocity components of image point
+         !magnitude, normal velocity component
+         uimage_nrml = DOT_PRODUCT(uimage_raster,LOW%n_raster) 
+         do dir = 1,SDIM
+          u_tngt(dir) = uimage_raster(dir)-uimage_nrml*LOW%n_raster(dir)
+         enddo
+
+         uimage_tngt_mag = DOT_PRODUCT(u_tngt,u_tngt)
+         uimage_tngt_mag = sqrt(uimage_tngt_mag) 
+
+         if (uimage_tngt_mag.lt.zero) then
+          print *,"uimage_tngt_mag.lt.zero"
+          stop
+         else if (uimage_tngt_mag.eq.zero) then
+          ! do nothing
+         else if (uimage_tngt_mag.gt.zero) then 
+          !normalize tangential velocity vector
+          do dir = 1,SDIM
+           u_tngt(dir) = u_tngt(dir)/uimage_tngt_mag 
+          enddo
+         else
+          print *,"uimage_tngt_mag invalid"
+          print *,"uimage_tngt_mag=",uimage_tngt_mag
+          print *,"uimage_nrml=",uimage_nrml
+          do dir=1,SDIM
+           print *,"dir,uimage_raster(dir) ",dir,uimage_raster(dir)
+           print *,"dir,usolid_raster(dir) ",dir,LOW%usolid_raster(dir)
+           print *,"dir,u_tngt(dir) ",dir,u_tngt(dir)
+          enddo
+          stop
+         endif
+
+         ! laminar boundary layer thickness:
+         ! delta=4.91 (mu x / (U rho))^(1/2)
+         ! dx=4.91 (mu dx/ (U rho))^(1/2)
+         ! dx=4.91^2 mu/(U rho)
+         !   =(g/(cm s))/(cm/s  g/cm^3)=(g/(cm s))/(g/(cm^2 s))=cm
+         if (uimage_tngt_mag.gt.zero) then
+          critical_length=((4.91D0)**2)*viscosity_molecular/ &
+                (density_fluid*uimage_tngt_mag)
+         else if (uimage_tngt_mag.eq.zero) then
+          critical_length=dxmin*1.0D+10
+         else
+          print *,"uimage_tngt_mag invalid"
+          stop
+         endif
+
+         if ((viscosity_molecular.gt.zero).and. &
+             (viscosity_eddy.ge.zero)) then
+          ! do nothing
+         else
+          print *,"viscosity_molecular.le.zero or viscosity_eddy.lt.zero"
+          stop
+         endif
+
+         ughost_nrml = -reflect_factor*uimage_nrml
+
+         ! From Spaldings' paper, a representative size for the linear 
+         ! region is:
+         ! y+ = 10.0
+         ! y+ = y sqrt(tau rho)/mu_molecular
+         !  or y+ is the intersection point of the linear (viscous) 
+         !  and log layer profiles.
+
+         near_contact_line=1
+         if (im_secondary_image.eq.0) then
+          near_contact_line=0
+         else if ((im_secondary_image.ge.1).and. &
+                  (im_secondary_image.le.LOW%nmat)) then
+          if (is_rigid(LOW%nmat,im_secondary_image).eq.1) then
+           near_contact_line=0
+          else if (is_rigid(LOW%nmat,im_secondary_image).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid(nmat,im_secondary_image) invalid"
+           stop
+          endif
+         else
+          print *,"im_secondary_image invalid"
+          stop
+         endif
+
+         if (near_contact_line.eq.1) then
+          if (im_primary_image.lt.im_secondary_image) then
+           im_fluid1=im_primary_image
+           im_fluid2=im_secondary_image
+          else if (im_primary_image.gt.im_secondary_image) then
+           im_fluid2=im_primary_image
+           im_fluid1=im_secondary_image
+          else
+           print *,"im_primary_image or im_secondary_image invalid"
+           stop
+          endif
+          call get_iten(im_fluid1,im_fluid2,iten,LOW%nmat)
+           ! in: subroutine getGhostVel
+          call get_user_tension(xCP_fluid,LOW%time, &
+                 fort_tension,user_tension, &
+                 thermal_interp,LOW%nmat,LOW%nten,6)
+          ! cos_angle and sin_angle correspond to the angle in im_fluid1
+          call get_CL_iten(im_fluid1,im_fluid2,im_solid,iten_13,iten_23, &
+           user_tension,LOW%nten,cos_angle,sin_angle)
+          ! nrm_solid points to the solid
+          nf_dot_ns=zero
+          nfluidFD(3)=zero
+          nsolidCP(3)=zero
+          do dir=1,SDIM
+           ! fluid normal in the fluid.
+           nfluidFD(dir)=nrm_fluid_CP(dir)
+           ! solid normal
+           nsolidCP(dir)=nrm_solid(dir)
+           nf_dot_ns=nf_dot_ns+nfluidFD(dir)*nsolidCP(dir)
+          enddo ! dir=1..sdim
+          mag=zero
+          !    \
+          !nCL  \
+          !  <-- \
+          ! ------O----
+          ! 
+          ! nCL is tangential to the solid/fluid interface
+          ! (solid normal has been projected away from nfluidFD)
+          ! nCL_perp points out of the screen.
+          do dir=1,3
+           nCL(dir)=nfluidFD(dir)-nf_dot_ns*nsolidCP(dir)
+           mag=mag+nCL(dir)**2
+          enddo 
+          mag=sqrt(mag)
+          if (mag.eq.zero) then ! theta=0
+           near_contact_line=0 
+          else if (mag.gt.zero) then
+           ! nCL is normal to the contact line in the substrate plane.
+           ! nCL points to the im_primary_image material.
+           do dir=1,3
+            nCL(dir)=nCL(dir)/mag
+           enddo
+           ! nCL_perp is tangent to the contact line in the substrate plane.
+           ! nCL is normal to the contact line in the substrate plane
+           ! nsolidCP is normal to the substrate
+           call crossprod(nCL,nsolidCP,nCL_perp)
+           mag=zero
+           do dir=1,3
+            mag=mag+nCL_perp(dir)**2
+           enddo
+           mag=sqrt(mag)
+           if (mag.gt.zero) then
+            do dir=1,3
+             ! tangent to contact line in substrate plane
+             nCL_perp(dir)=nCL_perp(dir)/mag 
+            enddo
+            nf_dot_nCL_perp=zero
+            do dir=1,3
+             nf_dot_nCL_perp=nf_dot_nCL_perp+nfluidFD(dir)*nCL_perp(dir)
+            enddo
+            ! nCL_perp is tangent to the contact line in the substrate plane.
+            ! nfluidFD points into im_primary_image material.
+            ! nf_prj is the fluid normal with the tangent contact line
+            ! vector projected away; nf_prj, in a plane perpendicular
+            ! to the substrate and perpendicular to the contact line,
+            ! is the normal point away from "im_secondary_image" into
+            ! "im_primary_image"
+            mag=zero
+            do dir=1,3
+             nf_prj(dir)=nfluidFD(dir)-nf_dot_nCL_perp*nCL_perp(dir)
+             mag=mag+nf_prj(dir)**2
+            enddo
+            mag=sqrt(mag)
+            if (mag.gt.zero) then
+             do dir=1,3
+              nf_prj(dir)=nf_prj(dir)/mag
+             enddo
+             ! nCL_perp2 will also be tangent to the contact line.
+             call crossprod(nsolidCP,nf_prj,nCL_perp2)
+             sinthetaACT=zero
+             costhetaACT=zero
+             ! because nsolidCP and nf_prj have unit magnitude,
+             ! sinthetaACT is the sine of the angle between nsolidCP
+             ! and nf_prj (fluid normal in plane perpendicular to contact line
+             ! and solid)
+             do dir=1,3
+              sinthetaACT=sinthetaACT+nCL_perp2(dir)**2
+              costhetaACT=costhetaACT+nsolidCP(dir)*nf_prj(dir)
+             enddo
+             ! assuming that the fluid interface is almost linear, then
+             ! we get the distance to the contact line using
+             ! the distance function at the projection point.
+             ! THIS PIECE OF CODE NEEDS TO BE IMPROVED.
+             ! New CODE request (3D please):
+             !  input:  7x7x7 stencil of positions,
+             !   level set functions and their
+             !   normals.
+             !   LS1 = liquid
+             !   LS2 = gas
+             !   LS3 = solid
+             !   x_project = projection point on the solid
+             !   x = positions
+             !  output: 
+             !   1. the "actual" angle that the fluid interface makes
+             !      with the solid.
+             !   2. the closest distance from x_project to the contact line.
+             !   EASY METHOD THAT SHOULD WORK:
+             !  DISTMIN=1.0D+20
+             !  for i',j',k'=-3,...,3
+             !   if LS1_{i',j',k'} * LS1(x_project) <=0.0 then
+             !    if |LS3_{i',j',k'}| < dx then
+             !     DISTTEST=||x_project-x_{i',j',k'}||
+             !     if (DISTTEST<DISTMIN) then
+             !      DISTMIN=DISTTEST 
+             ! ....
+             ! DISTMIN=MIN(DISTMIN,LSCP_prj_interp(im_primary_image)/
+             !    sinthetaACT)
+             sinthetaACT=sqrt(sinthetaACT)
+             if (sinthetaACT.gt.zero) then
+              if (costhetaACT.ge.zero) then !  0< theta<90
+               dist_to_CL=abs(LS_fluid(im_primary_image))/sinthetaACT
+              else if (costhetaACT.le.zero) then ! 90<theta<180
+               dist_to_CL=abs(LS_fluid(im_primary_image))
+              else
+               print *,"costhetaACT invalid"
+               stop
+              endif
+             else
+              print *,"sinthetaACT invalid; nCL_perp2 has 0 size"
+              stop
+             endif
+
+             if ((sinthetaACT.ge.zero).and.(costhetaACT.ge.zero)) then
+              angle_ACT=asin(sinthetaACT)
+             else if ((sinthetaACT.ge.zero).and.(costhetaACT.le.zero)) then
+              angle_ACT=Pi-asin(sinthetaACT)
+             else
+              print *,"sinthetaACT or costhetaACT invalid"
+              stop
+             endif
+
+            else
+             print *,"nf_prj should not have 0 size"
+             stop
+            endif
+           else
+            print *,"nCL_perp should not have 0 size"
+            stop
+           endif
+          else
+           print *,"mag invalid"
+           stop
+          endif
+         else if (near_contact_line.eq.0) then
+          ! do nothing
+         else
+          print *,"near_contact_line invalid"
+          stop
+         endif
+
+         if (law_of_the_wall.eq.1) then ! turbulence modeling here.
+
+          if (critical_length.lt.dxmin) then
+
+           if (viscosity_eddy.gt.zero) then
+            !obtain wall shear stress tau_w
+            !out tau_w
+            call wallFunc_NewtonsMethod(uimage_tngt_mag, &
+                   delta_r_raster,tau_w,im_fluid) 
+            ughost_tngt = uimage_tngt_mag - &
+             tau_w*delta_r_plus_g/ &
+             (viscosity_molecular+viscosity_eddy)
+
+            predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/delta_r_plus_g
+            max_deriv_utan=two*uimage_tngt_mag/critical_length
+            if (predict_deriv_utan.lt.max_deriv_utan) then
+             ! do nothing
+            else
+             print *,"predict_deriv_utan or max_deriv_utan invalid"
+             print *,"predict_deriv_utan= ",predict_deriv_utan
+             print *,"max_deriv_utan= ",max_deriv_utan
+             stop
+            endif
+
+           else if (viscosity_eddy.eq.zero) then
+            ughost_tngt = -reflect_factor*uimage_tngt_mag
+           else
+            print *,"viscosity_eddy invalid"
+            stop
+           endif
+
+          else if (critical_length.ge.dxmin) then
+           ughost_tngt = -reflect_factor*uimage_tngt_mag
+          else
+           print *,"critical_length invalid"
+           stop
+          endif
+
+         else if (law_of_the_wall.eq.2) then ! GNBC model
+
+          if (near_contact_line.eq.1) then
+           if ((fort_denconst(im_fluid1).gt.zero).and. &
+               (fort_denconst(im_fluid2).gt.zero)) then
+ 
+            if ((sin_angle.ge.zero).and.(cos_angle.ge.zero)) then
+             angle_im1=asin(sin_angle)
+             ! sin_angle=sin(a)  cos_angle=cos(a)
+             ! a=pi-asin(sin_angle)
+            else if ((sin_angle.ge.zero).and.(cos_angle.le.zero)) then
+             angle_im1=Pi-asin(sin_angle)
+            else
+             print *,"sin_angle or cos_angle invalid"
+             stop
+            endif
+
+            ZEYU_imodel=1 ! GNBC
+            ZEYU_ifgnbc=1 ! GNBC
+            ZEYU_lambda=8.0D-7
+            ZEYU_l_macro=dxmin
+            ZEYU_l_micro=1.0D-9
+            ZEYU_dgrid=dxmin 
+            ZEYU_d_closest=abs(dist_to_CL)
+
+            if (fort_denconst(im_fluid1).ge. &
+                fort_denconst(im_fluid2)) then
+             im_liquid=im_fluid1
+             im_vapor=im_fluid2
+             ZEYU_thet_s=angle_im1  ! thet_s in the liquid.
+            else if (fort_denconst(im_fluid2).ge. &
+                     fort_denconst(im_fluid1)) then
+             im_liquid=im_fluid2
+             im_vapor=im_fluid1
+             ZEYU_thet_s=Pi-angle_im1
+            else
+             print *,"fort_denconst bust"
+             stop
+            endif
+            ZEYU_mu_l=fort_viscconst(im_liquid)
+            ZEYU_mu_g=fort_viscconst(im_vapor)
+            ZEYU_sigma=user_tension(iten)
+            if (im_primary_image.eq.im_liquid) then
+             ZEYU_thet_d_apparent=angle_ACT
+            else if (im_primary_image.eq.im_vapor) then
+             ZEYU_thet_d_apparent=Pi-angle_ACT
+            else
+             print *,"im_primary_image or im_vapor invalid"
+             stop
+            endif
+            ZEYU_u_cl=zero
+            ZEYU_thet_d=ZEYU_thet_d_apparent
+             ! in: PROB.F90
+            call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
+             ZEYU_thet_s, &
+             ZEYU_imodel, ZEYU_ifgnbc, ZEYU_lambda, &
+             ZEYU_l_macro, ZEYU_l_micro, &
+             ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent, &
+             ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d)
+
+            ! nCL is normal to the contact line in the substrate plane.
+            ! nCL points to the im_primary_image material.
+            ! ZEYU_u_cl is positive if the contact line is advancing into
+            ! the gas.
+            ughost_tngt=ZEYU_u_cl
+
+            nCL_dot_n_raster=zero
+            do dir=1,SDIM
+             nCL_dot_n_raster=nCL_dot_n_raster+nCL(dir)*LOW%n_raster(dir)
+            enddo
+            mag=zero
+            do dir=1,SDIM
+             nCL_raster(dir)=nCL(dir)-nCL_dot_n_raster*LOW%n_raster(dir)
+             mag=mag+nCL_raster(dir)**2
+            enddo
+            mag=sqrt(mag)
+            if (mag.gt.zero) then
+             do dir=1,SDIM
+              nCL_raster(dir)=nCL_raster(dir)/mag
+             enddo
+            endif
+            do dir=1,SDIM
+             if (im_primary_image.eq.im_liquid) then
+              u_tngt(dir)=-nCL_raster(dir)
+             else if (im_primary_image.eq.im_vapor) then
+              u_tngt(dir)=nCL_raster(dir)
+             else
+              print *,"im_primary_image or im_vapor invalid"
+              stop
+             endif
+            enddo
+           else
+            print *,"fort_denconst invalid"
+            stop
+           endif
+
+          else if (near_contact_line.eq.0) then
+           ughost_tngt = -reflect_factor*uimage_tngt_mag
+          else
+           print *,"near_contact_line invalid"
+           stop
+          endif
+
+         else
+          print *,"law_of_the_wall invalid"
+          stop
+         endif
+
+        else if (im_fluid.ne.im_primary_image) then
+         print *,"im_fluid.ne.im_primary_image"
+         stop
+        else
+         print *,"im_fluid invalid"
+         stop
+        endif
+       else
+        print *,"is_rigid(nmat,im_primary_image) invalid"
+        stop
+       endif
+
+       
+        !get ghost velocity using normal and tangential components
+        !default:
+        !ughost dot n = ughost_nrml + 
+        !               ughost_tngt * u_tngt dot n +
+        !               usolid dot n=
+        ! -(uimage-usolid) dot n +
+        ! -(I-P)(uimage-usolid)dot n+
+        ! usolid dot n = (2 usolid - uimage) dot n
+        ! (I-P)ughost=(I-P)usolid+
+        ! -(I-P)(uimage-usolid)=(I-P)(2 usolid - uimage)
+       do dir=1,SDIM
+        usolid_law_of_wall(dir) = &
+                ughost_nrml*LOW%n_raster(dir)+ &
+                ughost_tngt*u_tngt(dir)+ &
+                LOW%usolid_raster(dir)
+       enddo
+      
+       deallocate(user_tension)
+ 
+      end subroutine getGhostVel
 
       end module godunov_module
 
@@ -13738,882 +14617,6 @@ stop
 
 
 
-      function wallFunc(u_tau,u,y,K,B,rho_w,mu_w) result(f)
-      implicit none
-        !incompressible wall function, to be called in 
-        !Newton's method, solving for friction 
-        !velocity u_tau at the image point
-        !u_tau: friction velocity, u: velocity parallel to wall, 
-        !y: coord direction normal to wall
-       REAL_T, intent(in) :: u_tau, u, y 
-        !rho_w: wall density, mu_w: wall molecular viscosity 
-       REAL_T, intent(in) :: K, B, rho_w, mu_w 
-       REAL_T :: f
-       REAL_T :: u_plus, y_plus
-
-       if (u_tau.eq.zero) then
-        print *,"u_tau.eq.zero"
-        stop
-       endif
-       if (mu_w.eq.zero) then
-        print *,"mu_w.eq.zero"
-        stop
-       endif
-       u_plus = u/u_tau
-       y_plus = rho_w*u_tau*y/mu_w
-
-       f = -y_plus + u_plus + exp(-K*B)* &
-        ( exp(K*u_plus)-one-K*u_plus-half*(K*u_plus)**2-(K*u_plus)**3/six )
-      end function wallFunc
-  
-      function wallFuncDeriv(u_tau,u,y,K,B,rho_w,mu_w) result(fprime)
-      implicit none
-        !derivative of incompressible wall function w.r.t. u_tau, to be 
-        !called in Newton's method
-       REAL_T, intent(in) :: u_tau, u, y 
-       REAL_T, intent(in) :: K, B, rho_w, mu_w
-       REAL_T :: fprime
-       REAL_T :: u_plus
-   
-       if (u_tau.eq.zero) then
-        print *,"u_tau cannot be 0"
-        stop
-       endif 
-       u_plus = u/u_tau
-    
-       fprime = -rho_w*y/mu_w - u_plus/u_tau + &
-         exp(-K*B)*( -(K*u_plus/u_tau)*exp(K*u_plus)+ &
-                     K*u_plus/u_tau+(K*u_plus)**2/u_tau+ &
-                     (K*u_plus)**3/(two*u_tau) )
-      end function wallFuncDeriv
-      
-      subroutine wallFunc_NewtonsMethod(u,y,tau_w,im_fluid)
-       use probf90_module
-       use global_utility_module
-       use MOF_routines_module
-       use godunov_module
-       implicit none
-       INTEGER_T, intent(in) :: im_fluid
-       REAL_T, intent(in) :: u, y !uimage_tngt, delta_r
-       REAL_T, intent(out) :: tau_w
-       REAL_T :: u_tau,x_n,x_np1 !x_n, x_(n+1) --> u_tau
-       REAL_T :: f, fprime
-       REAL_T :: wallFunc, wallFuncDeriv
-       INTEGER_T :: iter, iter_max=1000
-        !initialize wall function parameters here
-       REAL_T :: K=0.41, B=5.5, &
-       rho_w, mu_w !rho_w: wall density, mu_w: wall 
-                   !molecular viscosity, tau_w: wall shear stress
-
-       if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
-        print *,"im_fluid invalid in wallFunc_NewtonsMethod"
-        stop
-       endif
-
-       mu_w=fort_viscconst(im_fluid) 
-
-       x_n = u !initial guess for u_tau
-       do while ((abs(x_np1-x_n).gt.VOFTOL).and.(iter.lt.iter_max))
-        f = wallFunc(x_n,u,y,K,B,rho_w,mu_w)
-        fprime = wallFuncDeriv(x_n,u,y,K,B,rho_w,mu_w)
-   
-        if (abs(fprime).le.1.0e-15) then 
-         print *, "divide by zero error: wallFunc_NewtonsMethod" !avoid /0
-         stop
-        else
-         x_np1 = x_n-f/fprime
-        endif
-    
-        iter = iter+1
-        if(iter.ge.iter_max)then
-          print *, "wallFunc_NewtonsMethod: no convergence"
-          stop
-        endif
-       enddo ! while (abs(x_np1-x_n)>VOFTOL .and. iter<iter_max)
-    
-       u_tau = x_np1
-       tau_w = rho_w*u_tau**2
-      end subroutine wallFunc_NewtonsMethod
-
-
-       ! This routine transforms all velocities to a frame of reference with
-       ! respect to the solid.
-      subroutine getGhostVel( &
-       law_of_wall_parm, &
-       law_of_the_wall, &
-       iSD,jSD,kSD, &
-       iFD,jFD,kFD, &
-       side_solid, &
-       side_image, &
-       data_dir, &
-       uimage_raster, &
-       usolid_law_of_wall, & ! out
-       angle_ACT, & ! aka angle_ACT_cell "out"
-       im_fluid, &
-       im_solid)
-       
-       use probf90_module
-       use global_utility_module
-       use MOF_routines_module
-       use godunov_module
-       
-       implicit none
-       
-       !in: nrm_solid, delta_r, LScenter or x_projection, dx, x_image, 
-       !ximage_stencil, ufluid_stencil
-       type(law_of_wall_parm_type), intent(in) :: LOW
-       INTEGER_T, intent(in) :: law_of_the_wall
-       INTEGER_T, intent(in) :: data_dir
-       INTEGER_T, intent(in) :: im_fluid
-       INTEGER_T, intent(in) :: im_solid
-       INTEGER_T, intent(in) :: side_solid
-       INTEGER_T, intent(in) :: side_image
-       INTEGER_T, intent(in) :: iSD,jSD,kSD
-       INTEGER_T, intent(in) :: iFD,jFD,kFD
-       REAL_T, dimension(SDIM), intent(inout) :: uimage_raster
-       REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
-       REAL_T, intent(out) :: angle_ACT
-      
-       !D_DECL is defined in SPACE.H in the BoxLib/Src/C_BaseLib
-
-       REAL_T, dimension(nmat) :: thermal_interp
-
-       REAL_T, dimension(nmat*(SDIM+1)) :: LSCP_image_interp
-       REAL_T, dimension(nmat*(SDIM+1)) :: LSCP_prj_interp
-       REAL_T, dimension(nmat*SDIM) :: LSFD_image_interp
-
-       REAL_T, dimension(SDIM) :: imagedist
-       REAL_T, dimension(SDIM) :: projectdist
-       REAL_T :: delta_g
-       REAL_T, dimension(SDIM) :: u_tngt
-       REAL_T :: uimage_nrml, ughost_nrml,ughost_tngt
-       REAL_T :: uimage_tngt_mag
-       REAL_T :: tau_w
-       REAL_T :: viscosity_molecular, viscosity_eddy
-       REAL_T :: density_fluid
-       INTEGER_T :: dir
-       REAL_T, dimension(SDIM) :: local_dx
-       REAL_T :: nrm_sanity
-       REAL_T :: dxmin
-       REAL_T :: predict_deriv_utan
-       REAL_T :: max_deriv_utan
-       REAL_T :: critical_length
-       REAL_T :: uimage_mag
-       INTEGER_T :: im
-       INTEGER_T :: im_primary_image
-       INTEGER_T :: im_secondary_image
-       INTEGER_T :: im_fluid1,im_fluid2
-       INTEGER_T :: iten
-       INTEGER_T :: iten_13,iten_23
-       INTEGER_T :: nten_test
-       REAL_T :: cos_angle,sin_angle
-       INTEGER_T :: near_contact_line
-       REAL_T :: mag
-       REAL_T :: sinthetaACT
-       REAL_T :: costhetaACT
-       REAL_T :: dist_to_CL
-       REAL_T :: nf_dot_ns
-       REAL_T :: nf_dot_nCL_perp
-       REAL_T, dimension(3) :: nfluidFD
-       REAL_T, dimension(3) :: nsolidCP
-       REAL_T, dimension(3) :: nCL
-       REAL_T, dimension(3) :: nCL_raster
-       REAL_T, dimension(3) :: nCL_critical
-       REAL_T, dimension(3) :: nCL_perp
-       REAL_T, dimension(3) :: nCL_perp2
-       REAL_T, dimension(3) :: nf_prj
-       REAL_T :: ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma
-       REAL_T :: ZEYU_thet_s,ZEYU_lambda,ZEYU_l_macro, ZEYU_l_micro
-       REAL_T :: ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent
-       REAL_T :: ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d
-       REAL_T :: angle_im1
-       INTEGER_T :: ZEYU_imodel
-       INTEGER_T :: ZEYU_ifgnbc
-       INTEGER_T :: im_vapor,im_liquid
-       REAL_T :: delta_g_raster
-       REAL_T :: delta_r_raster
-       REAL_T :: delta_r_plus_g
-       REAL_T :: reflect_factor
-       REAL_T :: nCL_dot_n_raster
-       INTEGER_T :: nrad
-       INTEGER_T nhalf
-       REAL_T :: xsten(-3:3,SDIM)
-       REAL_T, allocatable, dimension(:) :: user_tension
-    
-       nhalf=3 
-       nten_test=( (LOW%nmat-1)*(LOW%nmat-1)+LOW%nmat-1 )/2
-       allocate(user_tension(nten_test))
-       if (LOW%nten.eq.nten_test) then
-        ! do nothing
-       else
-        print *,"nten invalid"
-        stop
-       endif
-        
-       if ((data_dir.ge.0).and.(data_dir.lt.SDIM)) then
-        ! do nothing
-       else
-        print *,"data_dir invalid"
-        stop
-       endif
-       if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
-        print *,"im_fluid invalid in getGhostVel"
-        stop
-       endif
-       if ((im_solid.lt.1).or.(im_solid.gt.num_materials)) then
-        print *,"im_solid invalid in getGhostVel"
-        stop
-       endif
-       if (LOW%ngrowfab.eq.4) then
-        ! do nothing
-       else
-        print *,"LOW%ngrowfab invalid"
-        stop
-       endif
-       if (is_rigid(LOW%nmat,im_solid).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid(nmat,im_solid) invalid"
-        stop
-       endif
-       if (LOW%nmat.ne.num_materials) then
-        print *,"nmat invalid"
-        stop
-       endif
-       if (LOW%dt.gt.zero) then
-        ! do nothing
-       else
-        print *,"dt invalid"
-        stop
-       endif 
-       if (LOW%time.ge.zero) then
-        ! do nothing
-       else
-        print *,"time invalid"
-        stop
-       endif 
-       if (LOW%visc_coef.ge.zero) then
-        ! do nothing
-       else
-        print *,"visc_coef invalid"
-        stop
-       endif 
-       if ((law_of_the_wall.eq.1).or. &
-           (law_of_the_wall.eq.2)) then
-        ! do nothing
-       else
-        print *,"law_of_the_wall invalid"
-        stop
-       endif
-
-       dxmin=LOW%dx(1)
-       if (LOW%dx(2).lt.dxmin) then
-        dxmin=LOW%dx(2)
-       endif
-       if (LOW%dx(SDIM).lt.dxmin) then
-        dxmin=LOW%dx(SDIM)
-       endif
-       if (dxmin.gt.zero) then
-        ! do nothing
-       else
-        print *,"dxmin invalid"
-        stop
-       endif
-
-       nrad=3
-
-        ! uimage_raster and usolid_raster are already initialized.
-       do dir=1,SDIM
-        usolid_law_of_wall(dir)=zero
-       enddo
-       angle_ACT=zero
-
-       call gridsten_level(xstenFD,iFD,jFD,kFD,LOW%level,nhalf)
-       do im=1,LOW%nmat
-        LS_fluid(im)=LSCP(D_DECL(iFD,jFD,kFD),im)
-       enddo
-       call get_primary_material(LS_fluid,LOW%nmat,im_primary_image)
-       if (is_rigid(LOW%nmat,im_primary_image).eq.0) then
-        if (im_fluid.eq.im_primary_image) then
-         do dir=1,SDIM
-          nrm_fluid(dir)=LSCP(D_DECL(iFD,jFD,kFD),im_fluid)
-          nrm_solid(dir)=LSCP(D_DECL(iFD,jFD,kFD),im_solid)
-          xCP_fluid(dir)=xstenFD(0,dir)-LS_fluid(im_fluid)*nrm_fluid(dir)
-          xCP_solid(dir)=xstenFD(0,dir)-LS_fluid(im_solid)*nrm_solid(dir)
-         enddo
-         call containing_cell( &
-          LOW%bfact, &
-          LOW%dx, &
-          LOW%xlo, &
-          LOW%fablo, &
-          xCP_fluid, &
-          cell_index)
-   
-         istenlo(3)=0
-         istenhi(3)=0
-         do dir=1,SDIM
-          if (cell_index(dir)-1.lt.LOW%fablo(dir)-LOW%ngrowfab) then
-           cell_index(dir)=LOW%fablo(dir)-LOW%ngrowfab+1
-          endif
-          if (cell_index(dir)+1.gt.LOW%fabhi(dir)+LOW%ngrowfab) then
-           cell_index(dir)=LOW%fabhi(dir)+LOW%ngrowfab-1
-          endif
-          istenlo(dir)=cell_index(dir)-1
-          istenhi(dir)=cell_index(dir)+1
-         enddo ! dir=1..sdim
-
-         im_secondary_image=0
-         total_WT=zero
-         do dir=1,SDIM
-          nrm_fluid_CP(dir)=zero
-         enddo 
-         thermal_interp=zero
-
-         do isten=istenlo(1),istenhi(1)
-         do jsten=istenlo(2),istenhi(2)
-         do ksten=istenlo(3),istenhi(3)
-          do im=1,LOW%nmat*(1+SDIM)
-           LS_sten(im)=LSCP(D_DECL(isten,jsten,ksten),im)
-          enddo
-          WT=one/(LS_sten(im_fluid)**2+0.01d0*(dxmin**2))
-
-          call get_primary_material(LS_sten,LOW%nmat,im_primary_sten)
-          if (im_primary_sten.eq.im_fluid) then
-           ! do nothing
-          else if (im_primary_sten.eq.im_solid) then
-           WT=WT/100.0d0
-          else if ((im_primary_sten.ge.1).and. &
-                   (im_primary_sten.le.nmat)) then
-           if (is_rigid(LOW%nmat,im_primary_sten).eq.1) then
-            ! do nothing
-           else if (is_rigid(LOW%nmat,im_primary_sten).eq.0) then
-            if (im_secondary_image.eq.0) then
-             im_secondary_image=im_primary_sten
-            endif
-           else
-            print *,"is_rigid(LOW%nmat,im_primary_sten) invalid"
-            stop
-           endif
-          else
-           print *,"im_primary_sten invalid"
-           stop
-          endif
-          do dir=1,SDIM
-           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)+ &
-               WT*LS_sten(LOW%nmat+(im_fluid-1)*SDIM+dir)
-          enddo
-          thermal_interp=thermal_interp+ &
-             WT*LOW%state(D_DECL(isten,jsten,ksten), &
-              (im_primary_sten-1)*num_state_material+2) 
-          total_WT=total_WT+WT
-
-         enddo ! ksten
-         enddo ! jsten
-         enddo ! isten
-         if (total_WT.gt.zero) then
-
-          do dir=1,SDIM
-           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/total_WT
-          enddo
-          thermal_interp=thermal_interp/total_WT
-
-          nrm_sanity=DOT_PRODUCT(nrm_fluid_CP,nrm_fluid_CP)
-          nrm_sanity=sqrt(nrm_sanity)
-          do dir=1,SDIM
-           nrm_fluid_CP(dir)=nrm_fluid_CP(dir)/nrm_sanity
-          enddo
-         else
-          print *,"total_WT invalid"
-          stop
-         endif
-
-         viscosity_molecular=fort_viscconst(im_fluid)
-         viscosity_eddy=fort_viscconst_eddy(im_fluid)
-         density_fluid=fort_denconst(im_fluid)
-
-         if (density_fluid.gt.zero) then
-          ! do nothing
-         else
-          print *,"density_fluid invalid"
-          stop
-         endif
-
-         call gridsten_level(xstenSD,iSD,jSD,kSD,LOW%level,nhalf)
-
-         !x_projection is closest point on the fluid/solid interface. 
-         delta_g_raster=abs(LOW%x_projection_raster(data_dir+1)- &
-                            xstenSD(0,data_dir+1))
-         delta_r_raster=abs(LOW%x_image_raster(data_dir+1)- &
-                            x_projection_raster(data_dir+1))
-         if ((delta_g_raster.gt.zero).and. &
-             (delta_r_raster.gt.zero)) then
-          ! do nothing
-         else
-          print *,"delta_g_raster or delta_r_raster invalid"
-          stop
-         endif
-       
-         delta_r_plus_g=delta_r_raster ! ghost lives on raster interface
-         reflect_factor=zero
-
-         ! convert to solid velocity frame of reference.
-         uimage_mag=zero
-         do dir=1,SDIM
-          uimage_raster(dir)=uimage_raster(dir)-LOW%usolid_raster(dir)
-          uimage_mag=uimage_mag+uimage_raster(dir)**2
-         enddo
-         uimage_mag=sqrt(uimage_mag)
-         if (uimage_mag.ge.zero) then
-          ! do nothing
-         else
-          print *,"uimage_mag invalid"
-          stop
-         endif
-
-         !normal and tangential velocity components of image point
-         !magnitude, normal velocity component
-         uimage_nrml = DOT_PRODUCT(uimage_raster,LOW%n_raster) 
-         do dir = 1,SDIM
-          u_tngt(dir) = uimage_raster(dir)-uimage_nrml*LOW%n_raster(dir)
-         enddo
-
-         uimage_tngt_mag = DOT_PRODUCT(u_tngt,u_tngt)
-         uimage_tngt_mag = sqrt(uimage_tngt_mag) 
-
-         if (uimage_tngt_mag.lt.zero) then
-          print *,"uimage_tngt_mag.lt.zero"
-          stop
-         else if (uimage_tngt_mag.eq.zero) then
-          ! do nothing
-         else if (uimage_tngt_mag.gt.zero) then 
-          !normalize tangential velocity vector
-          do dir = 1,SDIM
-           u_tngt(dir) = u_tngt(dir)/uimage_tngt_mag 
-          enddo
-         else
-          print *,"uimage_tngt_mag invalid"
-          print *,"uimage_tngt_mag=",uimage_tngt_mag
-          print *,"uimage_nrml=",uimage_nrml
-          do dir=1,SDIM
-           print *,"dir,uimage_raster(dir) ",dir,uimage_raster(dir)
-           print *,"dir,usolid_raster(dir) ",dir,LOW%usolid_raster(dir)
-           print *,"dir,u_tngt(dir) ",dir,u_tngt(dir)
-          enddo
-          stop
-         endif
-
-         ! laminar boundary layer thickness:
-         ! delta=4.91 (mu x / (U rho))^(1/2)
-         ! dx=4.91 (mu dx/ (U rho))^(1/2)
-         ! dx=4.91^2 mu/(U rho)
-         !   =(g/(cm s))/(cm/s  g/cm^3)=(g/(cm s))/(g/(cm^2 s))=cm
-         if (uimage_tngt_mag.gt.zero) then
-          critical_length=((4.91D0)**2)*viscosity_molecular/ &
-                (density_fluid*uimage_tngt_mag)
-         else if (uimage_tngt_mag.eq.zero) then
-          critical_length=dxmin*1.0D+10
-         else
-          print *,"uimage_tngt_mag invalid"
-          stop
-         endif
-
-         if ((viscosity_molecular.gt.zero).and. &
-             (viscosity_eddy.ge.zero)) then
-          ! do nothing
-         else
-          print *,"viscosity_molecular.le.zero or viscosity_eddy.lt.zero"
-          stop
-         endif
-
-         ughost_nrml = -reflect_factor*uimage_nrml
-
-         ! From Spaldings' paper, a representative size for the linear 
-         ! region is:
-         ! y+ = 10.0
-         ! y+ = y sqrt(tau rho)/mu_molecular
-         !  or y+ is the intersection point of the linear (viscous) 
-         !  and log layer profiles.
-
-         near_contact_line=1
-         if (im_secondary_image.eq.0) then
-          near_contact_line=0
-         else if ((im_secondary_image.ge.1).and. &
-                  (im_secondary_image.le.nmat)) then
-          if (is_rigid(nmat,im_secondary_image).eq.1) then
-           near_contact_line=0
-          else if (is_rigid(nmat,im_secondary_image).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid(nmat,im_secondary_image) invalid"
-           stop
-          endif
-         else
-          print *,"im_secondary_image invalid"
-          stop
-         endif
-
-         if (near_contact_line.eq.1) then
-          if (im_primary_image.lt.im_secondary_image) then
-           im_fluid1=im_primary_image
-           im_fluid2=im_secondary_image
-          else if (im_primary_image.gt.im_secondary_image) then
-           im_fluid2=im_primary_image
-           im_fluid1=im_secondary_image
-          else
-           print *,"im_primary_image or im_secondary_image invalid"
-           stop
-          endif
-          call get_iten(im_fluid1,im_fluid2,iten,nmat)
-           ! in: subroutine getGhostVel
-          call get_user_tension(xCP_fluid,LOW%time, &
-                 fort_tension,user_tension, &
-                 thermal_interp,LOW%nmat,LOW%nten,6)
-          ! cos_angle and sin_angle correspond to the angle in im_fluid1
-          call get_CL_iten(im_fluid1,im_fluid2,im_solid,iten_13,iten_23, &
-           user_tension,LOW%nten,cos_angle,sin_angle)
-          ! nrm_solid points to the solid
-          nf_dot_ns=zero
-          nfluidFD(3)=zero
-          nsolidCP(3)=zero
-          do dir=1,SDIM
-           ! fluid normal in the fluid.
-           nfluidFD(dir)=nrm_fluid_CP(dir)
-           ! solid normal
-           nsolidCP(dir)=nrm_solid(dir)
-           nf_dot_ns=nf_dot_ns+nfluidFD(dir)*nsolidCP(dir)
-          enddo ! dir=1..sdim
-          mag=zero
-          ! nCL is tangential to the solid/fluid interface
-          ! (solid normal has been projected away from nfluidFD)
-          do dir=1,3
-           nCL(dir)=nfluidFD(dir)-nf_dot_ns*nsolidCP(dir)
-           mag=mag+nCL(dir)**2
-          enddo 
-          mag=sqrt(mag)
-          if (mag.eq.zero) then ! theta=0
-           near_contact_line=0 
-          else if (mag.gt.zero) then
-           ! nCL is normal to the contact line in the substrate plane.
-           ! nCL points to the im_primary_image material.
-           do dir=1,3
-            nCL(dir)=nCL(dir)/mag
-           enddo
-           ! nCL_perp is tangent to the contact line in the substrate plane.
-           ! nCL is normal to the contact line in the substrate plane
-           ! nsolidCP is normal to the substrate
-           call crossprod(nCL,nsolidCP,nCL_perp)
-           mag=zero
-           do dir=1,3
-            mag=mag+nCL_perp(dir)**2
-           enddo
-           mag=sqrt(mag)
-           if (mag.gt.zero) then
-            do dir=1,3
-             ! tangent to contact line in substrate plane
-             nCL_perp(dir)=nCL_perp(dir)/mag 
-            enddo
-            nf_dot_nCL_perp=zero
-            do dir=1,3
-             nf_dot_nCL_perp=nf_dot_nCL_perp+nfluidFD(dir)*nCL_perp(dir)
-            enddo
-            ! nCL_perp is tangent to the contact line in the substrate plane.
-            ! nfluidFD points into im_primary_image material.
-            ! nf_prj is the fluid normal with the tangent contact line
-            ! vector projected away; nf_prj, in a plane perpendicular
-            ! to the substrate and perpendicular to the contact line,
-            ! is the normal point away from "im_secondary_image" into
-            ! "im_primary_image"
-            mag=zero
-            do dir=1,3
-             nf_prj(dir)=nfluidFD(dir)-nf_dot_nCL_perp*nCL_perp(dir)
-             mag=mag+nf_prj(dir)**2
-            enddo
-            mag=sqrt(mag)
-            if (mag.gt.zero) then
-             do dir=1,3
-              nf_prj(dir)=nf_prj(dir)/mag
-             enddo
-             ! nCL_perp2 will also be tangent to the contact line.
-             call crossprod(nsolidCP,nf_prj,nCL_perp2)
-             sinthetaACT=zero
-             costhetaACT=zero
-             ! because nsolidCP and nf_prj have unit magnitude,
-             ! sinthetaACT is the sine of the angle between nsolidCP
-             ! and nf_prj (fluid normal in plane perpendicular to contact line
-             ! and solid)
-             do dir=1,3
-              sinthetaACT=sinthetaACT+nCL_perp2(dir)**2
-              costhetaACT=costhetaACT+nsolidCP(dir)*nf_prj(dir)
-             enddo
-             ! assuming that the fluid interface is almost linear, then
-             ! we get the distance to the contact line using
-             ! the distance function at the projection point.
-             ! THIS PIECE OF CODE NEEDS TO BE IMPROVED.
-             ! New CODE request (3D please):
-             !  input:  7x7x7 stencil of positions,
-             !   level set functions and their
-             !   normals.
-             !   LS1 = liquid
-             !   LS2 = gas
-             !   LS3 = solid
-             !   x_project = projection point on the solid
-             !   x = positions
-             !  output: 
-             !   1. the "actual" angle that the fluid interface makes
-             !      with the solid.
-             !   2. the closest distance from x_project to the contact line.
-             !   EASY METHOD THAT SHOULD WORK:
-             !  DISTMIN=1.0D+20
-             !  for i',j',k'=-3,...,3
-             !   if LS1_{i',j',k'} * LS1(x_project) <=0.0 then
-             !    if |LS3_{i',j',k'}| < dx then
-             !     DISTTEST=||x_project-x_{i',j',k'}||
-             !     if (DISTTEST<DISTMIN) then
-             !      DISTMIN=DISTTEST 
-             ! ....
-             ! DISTMIN=MIN(DISTMIN,LSCP_prj_interp(im_primary_image)/
-             !    sinthetaACT)
-             sinthetaACT=sqrt(sinthetaACT)
-             if (sinthetaACT.gt.zero) then
-              if (costhetaACT.ge.zero) then
-               dist_to_CL=LSCP_prj_interp(im_primary_image)/sinthetaACT
-              else if (costhetaACT.le.zero) then
-               dist_to_CL=LSCP_prj_interp(im_primary_image)
-              else
-               print *,"costhetaACT invalid"
-               stop
-              endif
-             else
-              print *,"sinthetaACT invalid; nCL_perp2 has 0 size"
-              stop
-             endif
-
-             if ((sinthetaACT.ge.zero).and.(costhetaACT.ge.zero)) then
-              angle_ACT=asin(sinthetaACT)
-             else if ((sinthetaACT.ge.zero).and.(costhetaACT.le.zero)) then
-              angle_ACT=Pi-asin(sinthetaACT)
-             else
-              print *,"sinthetaACT or costhetaACT invalid"
-              stop
-             endif
-
-            else
-             print *,"nf_prj should not have 0 size"
-             stop
-            endif
-           else
-            print *,"nCL_perp should not have 0 size"
-            stop
-           endif
-          else
-           print *,"mag invalid"
-           stop
-          endif
-         else if (near_contact_line.eq.0) then
-          ! do nothing
-         else
-          print *,"near_contact_line invalid"
-          stop
-         endif
-
-         if (law_of_the_wall.eq.1) then ! turbulence modeling here.
-
-          if (critical_length.lt.dxmin) then
-
-           if (viscosity_eddy.gt.zero) then
-            !obtain wall shear stress tau_w
-            !out tau_w
-            call wallFunc_NewtonsMethod(uimage_tngt_mag, &
-                   delta_r_critical,tau_w,im_fluid) 
-            ughost_tngt = uimage_tngt_mag - &
-             tau_w*delta_r_plus_g/ &
-             (viscosity_molecular+viscosity_eddy)
-
-            predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/delta_r_plus_g
-            max_deriv_utan=two*uimage_tngt_mag/critical_length
-            if (predict_deriv_utan.lt.max_deriv_utan) then
-             ! do nothing
-            else
-             print *,"predict_deriv_utan or max_deriv_utan invalid"
-             print *,"predict_deriv_utan= ",predict_deriv_utan
-             print *,"max_deriv_utan= ",max_deriv_utan
-             stop
-            endif
-
-           else if (viscosity_eddy.eq.zero) then
-            ughost_tngt = -reflect_factor*uimage_tngt_mag
-           else
-            print *,"viscosity_eddy invalid"
-            stop
-           endif
-
-          else if (critical_length.ge.dxmin) then
-           ughost_tngt = -reflect_factor*uimage_tngt_mag
-          else
-           print *,"critical_length invalid"
-           stop
-          endif
-
-         else if (law_of_the_wall.eq.2) then ! GNBC model
-
-          if (near_contact_line.eq.1) then
-           if ((fort_denconst(im_fluid1).gt.zero).and. &
-               (fort_denconst(im_fluid2).gt.zero)) then
- 
-            if ((sin_angle.ge.zero).and.(cos_angle.ge.zero)) then
-             angle_im1=asin(sin_angle)
-             ! sin_angle=sin(a)  cos_angle=cos(a)
-             ! a=pi-asin(sin_angle)
-            else if ((sin_angle.ge.zero).and.(cos_angle.le.zero)) then
-             angle_im1=Pi-asin(sin_angle)
-            else
-             print *,"sin_angle or cos_angle invalid"
-             stop
-            endif
-
-            ZEYU_imodel=1 ! GNBC
-            ZEYU_ifgnbc=1 ! GNBC
-            ZEYU_lambda=8.0D-7
-            ZEYU_l_macro=dxmin
-            ZEYU_l_micro=1.0D-9
-            ZEYU_dgrid=dxmin 
-            ZEYU_d_closest=abs(dist_to_CL)
-
-            if (fort_denconst(im_fluid1).ge. &
-                fort_denconst(im_fluid2)) then
-             im_liquid=im_fluid1
-             im_vapor=im_fluid2
-             ZEYU_thet_s=angle_im1  ! thet_s in the liquid.
-            else if (fort_denconst(im_fluid2).ge. &
-                     fort_denconst(im_fluid1)) then
-             im_liquid=im_fluid2
-             im_vapor=im_fluid1
-             ZEYU_thet_s=Pi-angle_im1
-            else
-             print *,"fort_denconst bust"
-             stop
-            endif
-            ZEYU_mu_l=fort_viscconst(im_liquid)
-            ZEYU_mu_g=fort_viscconst(im_vapor)
-            ZEYU_sigma=user_tension(iten)
-            if (im_primary_image.eq.im_liquid) then
-             ZEYU_thet_d_apparent=angle_ACT
-            else if (im_primary_image.eq.im_vapor) then
-             ZEYU_thet_d_apparent=Pi-angle_ACT
-            else
-             print *,"im_primary_image or im_vapor invalid"
-             stop
-            endif
-            ZEYU_u_cl=zero
-            ZEYU_thet_d=ZEYU_thet_d_apparent
-             ! in: PROB.F90
-            call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
-             ZEYU_thet_s, &
-             ZEYU_imodel, ZEYU_ifgnbc, ZEYU_lambda, &
-             ZEYU_l_macro, ZEYU_l_micro, &
-             ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent, &
-             ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d)
-
-            ! nCL is normal to the contact line in the substrate plane.
-            ! nCL points to the im_primary_image material.
-            ! ZEYU_u_cl is positive if the contact line is advancing into
-            ! the gas.
-            ughost_tngt=ZEYU_u_cl
-
-            nCL_dot_n_raster=zero
-            do dir=1,SDIM
-             nCL_dot_n_raster=nCL_dot_n_raster+nCL(dir)*n_raster(dir)
-            enddo
-            mag=zero
-            do dir=1,SDIM
-             nCL_raster(dir)=nCL(dir)-nCL_dot_n_raster*n_raster(dir)
-             mag=mag+nCL_raster(dir)**2
-            enddo
-            mag=sqrt(mag)
-            if (mag.gt.zero) then
-             do dir=1,SDIM
-              nCL_raster(dir)=nCL_raster(dir)/mag
-             enddo
-            endif
-            do dir=1,SDIM
-             if (do_raster.eq.0) then
-              nCL_critical(dir)=nCL(dir)
-             else if (do_raster.eq.1) then
-              nCL_critical(dir)=nCL_raster(dir)
-             else
-              print *,"do_raster invalid"
-              stop
-             endif
-            enddo
-            do dir=1,SDIM
-             if (im_primary_image.eq.im_liquid) then
-              u_tngt(dir)=-nCL_critical(dir)
-             else if (im_primary_image.eq.im_vapor) then
-              u_tngt(dir)=nCL_critical(dir)
-             else
-              print *,"im_primary_image or im_vapor invalid"
-              stop
-             endif
-            enddo
-           else
-            print *,"fort_denconst invalid"
-            stop
-           endif
-
-          else if (near_contact_line.eq.0) then
-           ughost_tngt = -reflect_factor*uimage_tngt_mag
-          else
-           print *,"near_contact_line invalid"
-           stop
-          endif
-
-         else
-          print *,"law_of_the_wall invalid"
-          stop
-         endif
-
-        else if (im_fluid.ne.im_primary_image) then
-         print *,"im_fluid.ne.im_primary_image"
-         stop
-        else
-         print *,"im_fluid invalid"
-         stop
-        endif
-       else
-        print *,"is_rigid(nmat,im_primary_image) invalid"
-        stop
-       endif
-
-       
-        !get ghost velocity using normal and tangential components
-        !default:
-        !ughost dot n = ughost_nrml + 
-        !               ughost_tngt * u_tngt dot n +
-        !               usolid dot n=
-        ! -(uimage-usolid) dot n +
-        ! -(I-P)(uimage-usolid)dot n+
-        ! usolid dot n = (2 usolid - uimage) dot n
-        ! (I-P)ughost=(I-P)usolid+
-        ! -(I-P)(uimage-usolid)=(I-P)(2 usolid - uimage)
-       do dir=1,SDIM
-        if (do_raster.eq.0) then
-         ughost(dir) = ughost_nrml*nrm_solid(dir)+ &
-                       ughost_tngt*u_tngt(dir)+ &
-                       usolid(dir)
-        else if (do_raster.eq.1) then
-         ughost(dir) = ughost_nrml*n_raster(dir)+ &
-                       ughost_tngt*u_tngt(dir)+ &
-                       usolid_raster(dir)
-        else
-         print *,"do_raster invalid"
-         stop
-        endif
-       enddo
-      
-       deallocate(user_tension)
- 
-      end subroutine getGhostVel
-
        ! called from:NavierStokes::init_FSI_GHOST_MAC_MF(int ngrow) 
        ! (in NavierStokes.cpp)
        ! called when "law_of_the_wall=0,1,2"
@@ -14717,7 +14720,7 @@ stop
       REAL_T, target :: x_image_raster(SDIM)
       REAL_T usolid_law_of_wall(SDIM)
       REAL_T uimage_raster(SDIM)
-      REAL_T usolid_raster(SDIM)
+      REAL_T, target :: usolid_raster(SDIM)
       REAL_T angle_ACT_cell
       INTEGER_T nten
       INTEGER_T nhistory_sub
