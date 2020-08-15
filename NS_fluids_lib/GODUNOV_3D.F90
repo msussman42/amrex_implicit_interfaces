@@ -1316,7 +1316,7 @@ stop
 
        nrad=3
 
-        ! uimage_raster and usolid_raster are already initialized.
+        ! uimage_raster and LOW%usolid_raster are already initialized.
        do dir=1,SDIM
         usolid_law_of_wall(dir)=zero
        enddo
@@ -1330,11 +1330,37 @@ stop
        if (is_rigid(LOW%nmat,im_primary_image).eq.0) then
         if (im_fluid.eq.im_primary_image) then
          do dir=1,SDIM
-          nrm_fluid(dir)=LOW%LSCP(D_DECL(iFD,jFD,kFD),im_fluid)
-          nrm_solid(dir)=LOW%LSCP(D_DECL(iFD,jFD,kFD),im_solid)
+          nrm_fluid(dir)=LOW%LSCP(D_DECL(iFD,jFD,kFD), &
+           LOW%nmat+(im_fluid-1)*SDIM+dir)
+          nrm_solid(dir)=LOW%LSCP(D_DECL(iFD,jFD,kFD), &
+           LOW%nmat+(im_solid-1)*SDIM+dir)
           xCP_fluid(dir)=xstenFD(0,dir)-LS_fluid(im_fluid)*nrm_fluid(dir)
           xCP_solid(dir)=xstenFD(0,dir)-LS_fluid(im_solid)*nrm_solid(dir)
          enddo
+         mag=zero
+         do dir=1,SDIM
+          mag=mag+nrm_fluid(dir)**2
+         enddo
+         mag=sqrt(mag)
+         if (abs(mag-one).lt.VOFTOL) then
+          ! do nothing
+         else
+          print *,"nrm_fluid (mag) invalid"
+          stop
+         endif
+
+         mag=zero
+         do dir=1,SDIM
+          mag=mag+nrm_solid(dir)**2
+         enddo
+         mag=sqrt(mag)
+         if (abs(mag-one).lt.VOFTOL) then
+          ! do nothing
+         else
+          print *,"nrm_solid (mag) invalid"
+          stop
+         endif
+
          call containing_cell( &
           LOW%bfact, &
           LOW%dx, &
