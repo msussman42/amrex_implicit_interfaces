@@ -64,6 +64,7 @@ stop
         INTEGER_T :: dir
         REAL_T :: nslope_cell(SDIM)
         REAL_T :: LS_cell
+        REAL_T :: mag
 
         ASSOCIATE(CP=>cell_CP_parm)
 
@@ -106,9 +107,19 @@ stop
            stop
           endif
 
+          mag=zero
           do dir=1,SDIM
            xCP(dir)=xsten(0,dir)-LS_cell*nslope_cell(dir)
+           mag=mag+nslope_cell(dir)**2
           enddo
+          mag=sqrt(mag)
+          if (abs(mag-one).lt.VOFTOL) then
+           ! do nothing
+          else
+           print *,"nslope_cell (mag) invalid"
+           stop
+          endif
+
          else 
           print *,"is_rigid(CP%nmat,CP%im_solid_max) invalid"
           stop
@@ -15503,7 +15514,7 @@ stop
        solzfab,DIMS(solzfab), &
        maskcov,DIMS(maskcov), &
        LS,DIMS(LS), & ! getStateDist(time)
-       mofdata,DIMS(mofdata), &
+       state_mof,DIMS(state_mof), &
        den,DIMS(den), &
        vel,DIMS(vel), &
        velnew,DIMS(velnew), &
@@ -15560,7 +15571,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(solzfab)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(mofdata)
+      INTEGER_T, intent(in) :: DIMDEC(state_mof)
       INTEGER_T, intent(in) :: DIMDEC(den)
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(velnew)
@@ -15573,7 +15584,7 @@ stop
        num_materials_vel*(SDIM+1))
       REAL_T, intent(in), target ::  &
               LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) ::  mofdata(DIMV(mofdata),nmat*ngeom_raw)
+      REAL_T, intent(in) ::  state_mof(DIMV(state_mof),nmat*ngeom_raw)
       REAL_T, intent(in) ::  den(DIMV(den),nmat*num_state_material)
       REAL_T, intent(inout) ::  dennew(DIMV(dennew),nmat*num_state_material)
       REAL_T, intent(inout) ::  lsnew(DIMV(lsnew),nmat*(1+SDIM))
@@ -15896,7 +15907,7 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(maskcov),0,-1,26)
       call checkbound(fablo,fabhi,DIMS(LS),ngrow_distance,-1,26)
-      call checkbound(fablo,fabhi,DIMS(mofdata),1,-1,26)
+      call checkbound(fablo,fabhi,DIMS(state_mof),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(vel),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(den),1,-1,26)
       call checkbound(fablo,fabhi,DIMS(dennew),1,-1,26)
@@ -15939,7 +15950,7 @@ stop
          do im=1,nmat
 
           vofcompraw=(im-1)*ngeom_raw+1
-          F_stencil=mofdata(D_DECL(i,j,k),vofcompraw)
+          F_stencil=state_mof(D_DECL(i,j,k),vofcompraw)
 
           if (is_rigid(nmat,im).eq.1) then
            ! do nothing
@@ -15959,7 +15970,7 @@ stop
             do j1=istenlo(2),istenhi(2)
             do k1=istenlo(3),istenhi(3)
 
-             F_stencil=mofdata(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
+             F_stencil=state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
 
               ! in: subroutine FORT_RENORMALIZE_PRESCRIBE
 
@@ -16359,7 +16370,8 @@ stop
          enddo ! im=1..nmat
 
           ! extend fluid LS,F,X into the solid.
-         if ((im_solid_max.ge.1).and.(im_solid_max.le.nmat)) then
+         if ((im_solid_max.ge.1).and. &
+             (im_solid_max.le.nmat)) then
 
            ! (i,j,k) is a "solid" cell
            ! ls_hold will be modified
@@ -16404,7 +16416,9 @@ stop
              im1_substencil, &
              im2_substencil)
 
-            if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+            if ((i1.eq.0).and. &
+                (j1.eq.0).and. &
+                (k1.eq.0)) then
              at_center=1
             else
              at_center=0
@@ -16433,6 +16447,8 @@ stop
               LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
              enddo
 
+              ! im1_substencil and im2_substencil are initialized
+              ! for fluid materials in which LS>=-dxmaxLS.
              if (at_center.eq.0) then
               ! do nothing
              else if (at_center.eq.1) then
@@ -16611,12 +16627,12 @@ stop
              if (is_rigid(nmat,im).eq.0) then
               do dir=0,SDIM
                local_mof(vofcomprecon+dir)= &
-                      mofdata(D_DECL(i,j,k),vofcompraw+dir)
+                  state_mof(D_DECL(i,j,k),vofcompraw+dir)
               enddo
              else if (is_rigid(nmat,im).eq.1) then
               local_mof(vofcomprecon)=vfrac_solid_new(im) 
               do dir=1,SDIM
-               local_mof(vofcomp+dir)=censolid_new(im,dir)
+               local_mof(vofcomprecon+dir)=censolid_new(im,dir)
               enddo
              else
               print *,"is_rigid invalid"
@@ -16714,6 +16730,8 @@ stop
 
              vofcomp=(im-1)*ngeom_recon+1
 
+              ! if there is just one fluid material in the stencil, then
+              ! "center_stencil_im" holds the material id
              if ((center_stencil_im.ge.1).and. &
                  (center_stencil_im.le.nmat)) then
               if (center_stencil_im.eq.im) then
