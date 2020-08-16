@@ -45,25 +45,45 @@ end subroutine INIT_flexible_plate_impact_MODULE
 ! Phi>0 in the plate
 subroutine flexible_substrateLS(x,Phi) 
 use probcommon_module
+use global_utility_module
 implicit none
 REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
 REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
 
 REAL_T substrate_height
 
-if (abs(zblob2-yblob2).le.1.0D-14) then
- substrate_height=zblob2  ! substrate thickness
+if ((radblob2.gt.zero).and. &
+    (radblob3.gt.zero).and. &
+    (radblob4.gt.zero)) then
+ ! do nothing
 else
- print *,"zblob2 or yblob2 invalid"
+ print *,"radblob2, radblob3, or radblob4 invalid"
  stop
 endif
 
-if (abs(x(SDIM)).le.1.0D+20) then
- Phi=substrate_height-x(SDIM)
+if (SDIM.eq.2) then
+ call squaredist(x(1),x(2), & ! substrate_height<0 in object
+   xblob2-radblob2, &
+   xblob2+radblob2, &
+   yblob2-radblob3, &
+   yblob2+radblob3, &
+   substrate_height)
+else if (SDIM.eq.3) then
+ call cubedist( &
+   xblob2-radblob2, &
+   xblob2+radblob2, &
+   yblob2-radblob3, &
+   yblob2+radblob3, &
+   zblob2-radblob4, &
+   zblob2+radblob4, &
+   x(1),x(2),x(SDIM), &
+   substrate_height) ! substrate_height<0 in object
 else
- print *,"x(SDIM) invalid"
+ print *,"dimension bust"
  stop
 endif
+
+ Phi=-substrate_height
 
 end subroutine flexible_substrateLS
 
@@ -85,7 +105,7 @@ IMPLICIT NONE
    stop
   endif
 
-if ((num_materials.eq.3).and.(probtype.eq.413)) then
+if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  ! liquid
  if (SDIM.eq.3) then
   LS(1)=radblob-sqrt((x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)
@@ -188,7 +208,7 @@ end subroutine flexible_plate_impact_VEL
 
 
 
-
+! These next routines only used for compressible materials.
 !***********************************************
 ! compressible material functions for (ns.material_type = 24)
 subroutine EOS_flexible_plate_impact(rho,internal_energy,pressure, &
@@ -265,6 +285,8 @@ subroutine TEMPERATURE_flexible_plate_impact(rho,temperature,internal_energy, &
  return
 end subroutine TEMPERATURE_flexible_plate_impact
 
+! This routine will not effect the simulation since
+! all of the domain BC will be no-slip.
 subroutine flexible_plate_impact_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -314,7 +336,7 @@ endif
 
 if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
-    (probtype.eq.413)) then
+    (probtype.eq.2000)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+1)=fort_denconst(im)
@@ -532,7 +554,7 @@ else
  stop
 endif
 
-if ((num_materials.eq.2).and.(probtype.eq.413)) then
+if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  heat_source=zero
 else
  print *,"num_materials or probtype invalid"

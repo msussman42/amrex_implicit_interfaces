@@ -8464,6 +8464,8 @@ stop
        ! MEHDI VAHAB HEAT SOURCE
        ! T^new=T^* + dt * Q/(rho cv)
        ! Q units: J/(m^3 s)
+       ! called from: make_heat_source
+       ! make_heat_source is called from veldiffuseALL
       subroutine FORT_HEATSOURCE( &
        nstate, &
        nmat, &

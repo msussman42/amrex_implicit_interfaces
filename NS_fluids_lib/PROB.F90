@@ -1573,7 +1573,7 @@ stop
        x, &
        xsten, &  ! xsten(-nhalf:nhalf,SDIM)
        nhalf, &
-       temperature_source, &
+       temperature_source, &  ! inputs file variable; default = 0.0
        temperature_source_cen, &
        temperature_source_rad, &
        LS,VFRAC,TEMPERATURE,DENSITY, &
