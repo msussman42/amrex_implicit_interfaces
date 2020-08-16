@@ -694,11 +694,13 @@ NavierStokes::variableSetUp ()
     if (num_materials_viscoelastic!=im_elastic_map.size())
      amrex::Error("num_materials_viscoelastic!=im_elastic_map.size()");
 
-    if ((num_materials_viscoelastic>=1)&&
+    if ((num_materials_viscoelastic>=0)&&
         (num_materials_viscoelastic<=nmat)) {
- 
+
+	// XDISPLACE appended 
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
-      1,num_materials_viscoelastic*NUM_TENSOR_TYPE,&pc_interp,
+      1,num_materials_viscoelastic*NUM_TENSOR_TYPE+BL_SPACEDIM,
+      &pc_interp,
       null_ncomp_particles);
 
      int ncghost_elastic=1;
@@ -791,7 +793,8 @@ NavierStokes::variableSetUp ()
 
 #endif
 
-      StateDescriptor::BndryFunc MOFvelocity_fill_class_tensor(FORT_TENSORFILL,
+      StateDescriptor::BndryFunc MOFvelocity_fill_class_tensor(
+       FORT_TENSORFILL,
        FORT_GROUP_TENSORFILL);
 
       desc_lst.setComponent(Tensor_Type,
@@ -800,10 +803,45 @@ NavierStokes::variableSetUp ()
        MOFvelocity_bcs_tensor,
        MOFvelocity_fill_class_tensor,
        &pc_interp);
+
      } // partid=0..nparts-1
 
-    } else if (num_materials_viscoelastic==0) {
-     // do nothing
+     Vector<std::string> MOFxdisplace_names_tensor;
+     MOFxdisplace_names_tensor.resize(AMREX_SPACEDIM);
+
+     Vector<BCRec> MOFxdisplace_bcs_tensor;
+     MOFxdisplace_bcs_tensor.resize(AMREX_SPACEDIM);
+
+     dir=0;
+     std::string xdisplace_str="XDISPLACE";
+     MOFxdisplace_names_tensor[dir]=xdisplace_str;
+     set_x_vel_bc(MOFxdisplace_bcs_tensor[dir],phys_bc);
+
+     dir++;
+     std::string ydisplace_str="YDISPLACE";
+     MOFxdisplace_names_tensor[dir]=ydisplace_str;
+     set_y_vel_bc(MOFxdisplace_bcs_tensor[dir],phys_bc);
+
+#if (AMREX_SPACEDIM == 3)
+     if (AMREX_SPACEDIM==3) {
+      dir++;
+      std::string zdisplace_str="ZDISPLACE";
+      MOFxdisplace_names_tensor[dir]=zdisplace_str;
+      set_z_vel_bc(MOFxdisplace_bcs_tensor[dir],phys_bc);
+     }
+#endif
+
+     StateDescriptor::BndryFunc 
+      MOFxdisplace_fill_class_tensor(FORT_XDISPLACEFILL,
+        FORT_GROUP_TENSORFILL);
+
+     desc_lst.setComponent(Tensor_Type,
+        num_materials_viscoelastic*NUM_TENSOR_TYPE,
+        MOFxdisplace_names_tensor,
+        MOFxdisplace_bcs_tensor,
+        MOFxdisplace_fill_class_tensor,
+        &pc_interp);
+
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
@@ -1390,7 +1428,7 @@ NavierStokes::variableSetUp ()
      if (ibase_transport!=(im+1)*num_state_material-1)
       amrex::Error("ibase_transport bust");
 
-    } // im (scalar state variables + tensor)
+    } // im (scalar state variables)
 
     StateDescriptor::BndryFunc MOFstate_fill_class(FORT_STATEFILL,
        FORT_GROUP_STATEFILL);

@@ -11457,7 +11457,13 @@ void NavierStokes::veldiffuseALL() {
       ns_level.make_viscoelastic_tensor(im);
       ns_level.make_viscoelastic_force(im);
      }
-    }
+     delete_array(VISCOTEN_MF);
+    } else if ((elastic_time[im]==0.0)||
+	       (elastic_viscosity[im]==0.0)) {
+     // do nothing
+    } else
+     amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
+
    } else if (ns_is_rigid(im)==1) {
     // do nothing
    } else
@@ -11773,13 +11779,21 @@ void NavierStokes::veldiffuseALL() {
          (elastic_viscosity[im]>0.0)) {
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
+        // initializes VISCOTEN_MF
        ns_level.make_viscoelastic_tensor(im);
         // VISCHEAT_MF is initialized to zero.
         // VISCHEAT_MF is incremented with heating terms due to viscosity
         // and viscoelastic heating.
+        // uses VISCOTEN_MF
        ns_level.make_viscoelastic_heating(im,VISCHEAT_MF);
       }  
-     }   
+      delete_array(VISCOTEN_MF);
+     } else if ((elastic_time[im]==0.0)||
+                (elastic_viscosity[im]==0.0)) {
+      // do nothing
+     } else
+      amrex::Error("elastic_time or elastic_viscosity invalid");
+
     } else if (ns_is_rigid(im)==1) {
      // do nothing
     } else

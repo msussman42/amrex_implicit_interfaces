@@ -285,9 +285,8 @@ namespace amrex{
 // velocity, pressure, state x nmat, interface vars x nmat, error ind
 // Solid_State_Type:
 // velocity
-// future:
 // Tensor_Type:
-// Tij x num_materials_viscoelastic
+// Tij x num_materials_viscoelastic + sdim
 
 enum StateNames {
 

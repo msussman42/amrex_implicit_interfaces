@@ -17291,7 +17291,8 @@ stop
 
       if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.nmat)) then
-       if (ntensor.ne.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
+       if (ntensor.ne.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+
+           SDIM) then
         print *,"ntensor invalid"
         stop
        endif
@@ -27589,6 +27590,7 @@ stop
         REAL_T, pointer :: xlo(:)
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
+        REAL_T, pointer :: TUSEfab(D_DECL(:,:,:),:)
        end type accum_parm_type
 
       contains
@@ -27621,11 +27623,15 @@ stop
       INTEGER_T idx(3)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
+      INTEGER_T ig,jg,kg
       REAL_T xsten(-3:3,SDIM)
       REAL_T tmp,w_p
       REAL_T xc(SDIM)
       INTEGER_T ibase
       REAL_T local_dist
+      INTEGER_T npart_local
+      INTEGER_T growlo(3)
+      INTEGER_T growhi(3)
 
        ! Prior to this routine being called, "matrixfab" is initialized with
        ! all zeroes.  After sweeping through all the particles, 
@@ -27659,31 +27665,55 @@ stop
 
       eps=(accum_PARM%dx(1)**2)/100.0d0
 
-      do interior_ID=1,accum_PARM%Npart
-       do dir=1,SDIM
-        xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-        xpartfoot(dir)=accum_PARM%particles(interior_ID)%pos_foot(dir)
-        xdisp(dir)=xpart(dir)-xpartfoot(dir)
-       enddo
-       local_dist=accum_PARM%particles(interior_ID)%closest_dist
+      do dir=1,3
+       growlo(dir)=0
+       growhi(dir)=0
+      enddo
 
-       if (local_dist.ge.zero) then
+      if (accum_PARM%Npart.eq.-1) then
+       call growntilebox(accum_PARM%tilelo,accum_PARM%tilehi, &
+        accum_PARM%fablo,accum_PARM%fabhi, &
+        growlo,growhi,1)
+       npart_local=1
+      else if (accum_PARM%Npart.ge.0) then
+       npart_local=accum_PARM%Npart
+      else
+       print *,"accum_PARM%Npart invalid"
+       stop
+      endif
 
-        call containing_cell(accum_PARM%bfact, &
-         accum_PARM%dx, &
-         accum_PARM%xlo, &
-         accum_PARM%fablo, &
-         xpart, &
-         cell_index)
-        sublo(3)=0
-        subhi(3)=0
+      do ig=growlo(1),growhi(1)
+      do jg=growlo(2),growhi(2)
+      do kg=growlo(3),growhi(3)
+      do interior_ID=1,npart_local
+FIX ME ADD XDISPLACE STATE VAR AND ADVECT IT
+       if (accum_PARM%Npart.ge.0) then
         do dir=1,SDIM
-         sublo(dir)=cell_index(dir)-1
-         subhi(dir)=cell_index(dir)+1
+         xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+         xpartfoot(dir)=accum_PARM%particles(interior_ID)%pos_foot(dir)
+         xdisp(dir)=xpart(dir)-xpartfoot(dir)
         enddo
-        idx(1)=sublo(1)
-        idx(2)=sublo(2)
-        idx(3)=sublo(3)
+        local_dist=accum_PARM%particles(interior_ID)%closest_dist
+
+        if (local_dist.ge.zero) then
+
+         call containing_cell(accum_PARM%bfact, &
+          accum_PARM%dx, &
+          accum_PARM%xlo, &
+          accum_PARM%fablo, &
+          xpart, &
+          cell_index)
+
+
+         sublo(3)=0
+         subhi(3)=0
+         do dir=1,SDIM
+          sublo(dir)=cell_index(dir)-1
+          subhi(dir)=cell_index(dir)+1
+         enddo
+         idx(1)=sublo(1)
+         idx(2)=sublo(2)
+         idx(3)=sublo(3)
         do while (idx(3).le.subhi(3))
          interior_ok=1
          do dir=1,SDIM
@@ -27833,8 +27863,10 @@ stop
         matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
         RHS_points, &    ! least squares in 3D: 4
         ncomp_accumulate, & ! matrix_points+sdim * RHS_points
-        TNEWfab, &       ! FAB that hold elastic tensor when complete
+        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
         DIMS(TNEWfab), &
+        TUSEfab, &       ! FAB that holds current elastic tensor Q
+        DIMS(TUSEfab), &
         matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
       bind(c,name='fort_assimilate_tensor_from_particles')
@@ -27859,11 +27891,15 @@ stop
       REAL_T, intent(in), target :: dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
       INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(TUSEfab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
-      REAL_T, intent(inout) :: TNEWfab( &
+      REAL_T, intent(inout) :: TNEWfab( &  ! Q assimilated from particles/cells
         DIMV(TNEWfab), &
+        ncomp_tensor)
+      REAL_T, intent(in), target :: TUSEfab( &
+        DIMV(TUSEfab), &
         ncomp_tensor)
       type(particle_t), intent(in), target :: particles(Np)
       type(particle_t), intent(in), target :: nbr_particles(Nn)
@@ -27928,6 +27964,7 @@ stop
       accum_PARM%ncomp_accumulate=ncomp_accumulate
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
+      accum_PARM%TUSEfab=>TUSEfab
 
       accum_PARM%particles=>particles
       accum_PARM%Npart=Np
@@ -27940,6 +27977,12 @@ stop
       accum_PARM%particles=>nbr_particles
       accum_PARM%Npart=Nn
 
+      call traverse_particles(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+      accum_PARM%Npart=-1
       call traverse_particles(accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
