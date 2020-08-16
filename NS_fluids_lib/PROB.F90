@@ -33581,6 +33581,7 @@ end subroutine initialize2d
        use ZEYU_droplet_impact_module
        use MITSUHIRO_MELTING_module
        use CRYOGENIC_TANK1_module
+       use flexible_plate_impact_module
        use CONE3D_module
        use WAVY_Channel_module
        use rigid_FSI_module
@@ -33688,8 +33689,8 @@ end subroutine initialize2d
 
 ! USER DEFINED (used by "is_in_probtype_list")
        probtype_list_size=2
-       used_probtypes(1)=2000
-       used_probtypes(2)=421
+       used_probtypes(1)=2000 ! flexible_plate_impact
+       used_probtypes(2)=421  ! CRYOGENIC_TANK1
 
        if (probtype.eq.421) then
         SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
@@ -33707,7 +33708,20 @@ end subroutine initialize2d
         SUB_STATE_BC=>CRYOGENIC_TANK1_STATE_BC
         SUB_HEATSOURCE=>CRYOGENIC_TANK1_HEATSOURCE
        else if (probtype.eq.2000) then
-
+        SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
+        SUB_LS=>flexible_plate_impact_LS
+        SUB_VEL=>flexible_plate_impact_VEL
+        SUB_EOS=>EOS_flexible_plate_impact
+        SUB_SOUNDSQR=>SOUNDSQR_flexible_plate_impact
+        SUB_INTERNAL=>INTERNAL_flexible_plate_impact
+        SUB_TEMPERATURE=>TEMPERATURE_flexible_plate_impact
+        SUB_PRES=>flexible_plate_impact_PRES
+        SUB_STATE=>flexible_plate_impact_STATE
+        SUB_LS_BC=>flexible_plate_impact_LS_BC
+        SUB_VEL_BC=>flexible_plate_impact_VEL_BC
+        SUB_PRES_BC=>flexible_plate_impact_PRES_BC
+        SUB_STATE_BC=>flexible_plate_impact_STATE_BC
+        SUB_HEATSOURCE=>flexible_plate_impact_HEATSOURCE
        else
         ! assign default stub routines here.
         SUB_INIT_MODULE=>NULL()
