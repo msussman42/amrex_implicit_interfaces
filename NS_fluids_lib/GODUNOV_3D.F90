@@ -19433,28 +19433,20 @@ stop
            stop
           endif
 
-          if (im.eq.nmat) then
-
-           do istate=1,SDIM
-            statecomp_data= &
-              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
-            tennew_hold(statecomp_data)= &
-              veldata(itensor_base+statecomp_data)/voltotal_depart
-            if (istate.eq.normdir+1) then
-             tennew_hold(statecomp_data)= &
-                tennew_hold(statecomp_data)+ &
-                dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
-            endif
-           enddo !istate=1..sdim
-
-          else if ((im.ge.1).and.(im.lt.nmat)) then
-           ! do nothing
-          else
-           print *,"im invalid"
-           stop
-          endif
-
          enddo  ! im=1..nmat
+
+         do istate=1,SDIM
+          statecomp_data= &
+            num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+          tennew_hold(statecomp_data)= &
+            veldata(itensor_base+statecomp_data)/voltotal_depart
+          if (istate.eq.normdir+1) then
+           tennew_hold(statecomp_data)= &
+              tennew_hold(statecomp_data)+ &
+              dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
+          endif
+         enddo !istate=1..sdim
+
 
           ! velocity and pressure
          do istate=1,num_materials_vel*(SDIM+1)
@@ -22318,25 +22310,19 @@ stop
             stop
            endif
 
-           if (u_im.eq.nmat) then
-
-            do istate=1,SDIM
-             statecomp_data= &
-              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
-             tennew_hold(statecomp_data)= &
-              veldata(itensor_base+statecomp_data)/voltotal_depart
-             tennew_hold(statecomp_data)= &
-               tennew_hold(statecomp_data)+ &
-               dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
-            enddo !istate=1..sdim
-
-           else if ((u_im.ge.1).and.(u_im.lt.nmat)) then
-            ! do nothing
-           else
-            print *,"u_im invalid"
-            stop
-           endif
           enddo  ! u_im=1..nmat
+
+
+          do istate=1,SDIM
+           statecomp_data= &
+            num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+           tennew_hold(statecomp_data)= &
+            veldata(itensor_base+statecomp_data)/voltotal_depart
+           tennew_hold(statecomp_data)= &
+             tennew_hold(statecomp_data)+ &
+             dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
+          enddo !istate=1..sdim
+
 
           ! velocity and pressure
           do istate=1,num_materials_vel*(SDIM+1)

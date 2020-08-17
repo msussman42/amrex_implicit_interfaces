@@ -28426,7 +28426,8 @@ END SUBROUTINE Adist
        print *,"bfact invalid200"
        stop
       endif
-      if ((ipart.lt.1).or.(ipart.gt.num_materials_viscoelastic)) then
+      if ((ipart.lt.1).or. &
+          (ipart.gt.num_materials_viscoelastic)) then
        print *,"ipart invalid"
        stop
       endif
@@ -37831,7 +37832,8 @@ end subroutine initialize2d
        endif
 
        ipart=(scomp-icomplo)/FORT_NUM_TENSOR_TYPE+1
-       if ((ipart.lt.1).or.(ipart.gt.num_materials_viscoelastic)) then
+       if ((ipart.lt.1).or. &
+           (ipart.gt.num_materials_viscoelastic)) then
         print *,"ipart out of range"
         stop
        endif
@@ -38366,7 +38368,8 @@ end subroutine initialize2d
         print *,"scomp invalid group tensorfill"
         stop
        endif
-       if (ncomp.ne.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
+       if (ncomp.ne. &
+           num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
         print *,"ncomp invalid19"
         stop
        endif

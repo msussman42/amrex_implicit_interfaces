@@ -1,4 +1,5 @@
-// tensor, num_materials_viscoelastic, Tensor_Type, im_elastic_map
+// tensor, num_materials_viscoelastic, Tensor_Type, im_elastic_map,
+// Tensor_new
 //#include <winstd.H>
 
 #include <algorithm>
@@ -13437,20 +13438,11 @@ NavierStokes::split_scalar_advection() {
   // in: split_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
 
- int local_tensor_type=State_Type;
- int local_tensor_mf=DEN_RECON_MF;
-
- if ((num_materials_viscoelastic>=0)&&
-     (num_materials_viscoelastic<=nmat)) {
-  local_tensor_type=Tensor_Type;
-  local_tensor_mf=TENSOR_RECON_MF;
-  getStateTensor_localMF(TENSOR_RECON_MF,1,0,
+ getStateTensor_localMF(TENSOR_RECON_MF,1,0,
    num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM,
    advect_time_slab);
- } else
-  amrex::Error("num_materials_viscoelastic invalid");
 
- MultiFab& Tensor_new=get_new_data(local_tensor_type,slab_step+1);
+ MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
  getStateDist_localMF(LS_RECON_MF,1,advect_time_slab,10);
 
@@ -14026,7 +14018,7 @@ NavierStokes::split_scalar_advection() {
     // this is the original data
   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
   FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
-  FArrayBox& tenfab=(*localMF[local_tensor_mf])[mfi];
+  FArrayBox& tenfab=(*localMF[TENSOR_RECON_MF])[mfi];
   FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
 
     // this is the slope data
@@ -14451,20 +14443,11 @@ NavierStokes::unsplit_scalar_advection() {
   // in: unsplit_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
 
- int local_tensor_type=State_Type;
- int local_tensor_mf=DEN_RECON_MF;
-
- if ((num_materials_viscoelastic>=0)&&
-     (num_materials_viscoelastic<=nmat)) {
-  local_tensor_type=Tensor_Type;
-  local_tensor_mf=TENSOR_RECON_MF;
-  getStateTensor_localMF(TENSOR_RECON_MF,1,0,
+ getStateTensor_localMF(TENSOR_RECON_MF,1,0,
    num_materials_viscoelastic*NUM_TENSOR_TYPE+
    AMREX_SPACEDIM,advect_time_slab);
- } else
-  amrex::Error("num_materials_viscoelastic invalid");
 
- MultiFab& Tensor_new=get_new_data(local_tensor_type,slab_step+1);
+ MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
  getStateDist_localMF(LS_RECON_MF,1,advect_time_slab,10);
 
@@ -14862,7 +14845,7 @@ NavierStokes::unsplit_scalar_advection() {
   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
   FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
 
-  FArrayBox& tenfab=(*localMF[local_tensor_mf])[mfi];
+  FArrayBox& tenfab=(*localMF[TENSOR_RECON_MF])[mfi];
 
   FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
 

@@ -612,16 +612,18 @@ void NavierStokes::nonlinear_advection() {
 
      // uses SLOPE_RECON_MF
      // in: NavierStokes::nonlinear_advection()
-    if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+    if ((num_materials_viscoelastic>=1)&&
+	(num_materials_viscoelastic<=nmat)) {
      for (int ilev=finest_level;ilev>=level;ilev--) {
       NavierStokes& ns_level=getLevel(ilev);
       ns_level.tensor_extrapolate();
      }
-     avgDownALL_TENSOR();
     } else if (num_materials_viscoelastic==0) {
      // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
+
+    avgDownALL_TENSOR();
 
    } else
     amrex::Error("dir_absolute_direct_split invalid");
@@ -11145,9 +11147,10 @@ void NavierStokes::diffusion_heatingALL(
 void NavierStokes::avgDownALL_TENSOR() {
 
  int nmat=num_materials;
- if ((num_materials_viscoelastic>=1)&&
+ if ((num_materials_viscoelastic>=0)&&
      (num_materials_viscoelastic<=nmat)) {
-  avgDownALL(Tensor_Type,0,num_materials_viscoelastic*NUM_TENSOR_TYPE,0);
+  avgDownALL(Tensor_Type,0,
+    num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM,0);
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -11771,7 +11774,8 @@ void NavierStokes::veldiffuseALL() {
   init_gradu_tensorALL(VISCHEAT_SOURCE_MF,do_alloc,
     CELLTENSOR_MF,FACETENSOR_MF,simple_AMR_BC_flag_viscosity);
 
-  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=nmat)) {
 
    for (int im=0;im<nmat;im++) {
     if (ns_is_rigid(im)==0) {
