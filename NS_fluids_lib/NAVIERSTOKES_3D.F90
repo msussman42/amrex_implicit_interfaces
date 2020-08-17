@@ -504,6 +504,7 @@ stop
        stop
       endif
 
+       ! in PROB.F90
       call get_nwrite(SDIM,nwrite2d)
       call get_nwrite(plot_sdim,nwrite3d)
 
@@ -928,7 +929,7 @@ stop
          enddo
           ! den,configuration tensor,visc,trace
          do ivar_gb=1,nmat*num_state_material+ &
-              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM+ &
               nmat+5*nmat
           index3d=index3d+1
           index2d=index2d+1
@@ -3384,20 +3385,9 @@ END SUBROUTINE SIMP
        print *,"nparts_def invalid FORT_CELLGRID"
        stop
       endif
-      if ((num_materials_viscoelastic.ge.1).and. &
-          (num_materials_viscoelastic.le.nmat)) then
-       if (elastic_ncomp.ne. &
-           num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
-        print *,"elastic_ncomp invalid 1"
-        stop
-       endif
-      else if (num_materials_viscoelastic.eq.0) then
-       if (elastic_ncomp.ne.num_state_material*nmat) then
-        print *,"elastic_ncomp invalid 2"
-        stop
-       endif
-      else
-       print *,"num_materials_viscoelastic invalid"
+      if (elastic_ncomp.ne. &
+          num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
+       print *,"elastic_ncomp invalid 1"
        stop
       endif
  
@@ -4152,18 +4142,10 @@ END SUBROUTINE SIMP
 
         scomp=scomp+num_state_material*nmat
 
-        if ((num_materials_viscoelastic.ge.1).and. &
-            (num_materials_viscoelastic.le.nmat)) then
-         do iw=1,elastic_ncomp
-          writend(scomp+iw)=elasticnd(iw) 
-         enddo
-         scomp=scomp+elastic_ncomp
-        else if (num_materials_viscoelastic.eq.0) then
-         ! do nothing
-        else
-         print *,"num_materials_viscoelastic invalid"
-         stop
-        endif
+        do iw=1,elastic_ncomp
+         writend(scomp+iw)=elasticnd(iw) 
+        enddo
+        scomp=scomp+elastic_ncomp
 
         do iw=1,nmat
          writend(scomp+iw)=viscnd(iw)

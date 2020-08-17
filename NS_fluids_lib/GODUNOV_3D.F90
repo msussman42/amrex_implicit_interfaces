@@ -19447,6 +19447,11 @@ stop
             endif
            enddo !istate=1..sdim
 
+          else if ((im.ge.1).and.(im.lt.nmat)) then
+           ! do nothing
+          else
+           print *,"im invalid"
+           stop
           endif
 
          enddo  ! im=1..nmat
@@ -19507,7 +19512,7 @@ stop
               statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
               tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
                tennew_hold(statecomp_data)
-             enddo !istate
+             enddo !istate=1..FORT_NUM_TENSOR_TYPE
             else 
              print *,"imap invalid"
              stop
@@ -19527,6 +19532,13 @@ stop
           endif
 
          enddo ! im=1..nmat
+
+         do istate=1,SDIM
+          statecomp_data= &
+               num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+          tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+              tennew_hold(statecomp_data)
+         enddo !istate=1..sdim
 
          do im=1,nmat
           if (is_rigid(nmat,im).eq.0) then
@@ -20119,14 +20131,13 @@ stop
        stop
       endif
 
-      if ((num_materials_viscoelastic.ge.1).and. &
+      if ((num_materials_viscoelastic.ge.0).and. &
           (num_materials_viscoelastic.le.nmat)) then
-       if (ntensor.ne.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
+       if (ntensor.ne.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+               SDIM) then
         print *,"ntensor invalid"
         stop
        endif
-      else if (num_materials_viscoelastic.eq.0) then
-       ! do nothing
       else
        print *,"num_materials_viscoelastic invalid"
        stop
@@ -20296,7 +20307,8 @@ stop
       cutoff=DXMAXLS
 
       itensor_base=iden_base+nmat*num_state_material
-      imof_base=itensor_base+num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
+      imof_base=itensor_base+num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+              SDIM
       iLS_base=imof_base+nmat*ngeom_raw
       iFtarget_base=iLS_base+nmat
       iden_mom_base=iFtarget_base+nmat
@@ -21769,7 +21781,7 @@ stop
                    veldata(itensor_base+statecomp_data)= &
                     veldata(itensor_base+statecomp_data)+ &
                     massdepart_mom*donate_data 
-                  enddo !istate
+                  enddo !istate=1..FORT_NUM_TENSOR_TYPE
                  else 
                   print *,"imap invalid"
                   stop
@@ -21787,7 +21799,27 @@ stop
                 print *,"num_materials_viscoelastic invalid"
                 stop
                endif
-   
+  
+               if (u_im.eq.nmat) then
+
+                do istate=1,SDIM
+                 statecomp_data= &
+                    num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+                 donate_data= &
+                   tensor(D_DECL(idonate_CELL,jdonate_CELL,kdonate_CELL), &
+                          statecomp_data)
+                 veldata(itensor_base+statecomp_data)= &
+                   veldata(itensor_base+statecomp_data)+ &
+                   LS_voltotal_depart*donate_data 
+                enddo !istate=1..SDIM
+
+               else if ((u_im.ge.1).and.(u_im.lt.nmat)) then
+                ! do nothing
+               else
+                print *,"u_im invalid"
+                stop
+               endif
+
                ! level set function for u_im material.
                donate_data= &
                  LS(D_DECL(idonate_CELL,jdonate_CELL,kdonate_CELL),u_im) 
@@ -22267,8 +22299,7 @@ stop
                 print *,"no_material_flag invalid"
                 stop
                endif
-  
-              enddo !istate
+              enddo !istate=1..FORT_NUM_TENSOR_TYPE
              else 
               print *,"imap invalid"
               stop
@@ -22287,6 +22318,24 @@ stop
             stop
            endif
 
+           if (u_im.eq.nmat) then
+
+            do istate=1,SDIM
+             statecomp_data= &
+              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+             tennew_hold(statecomp_data)= &
+              veldata(itensor_base+statecomp_data)/voltotal_depart
+             tennew_hold(statecomp_data)= &
+               tennew_hold(statecomp_data)+ &
+               dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
+            enddo !istate=1..sdim
+
+           else if ((u_im.ge.1).and.(u_im.lt.nmat)) then
+            ! do nothing
+           else
+            print *,"u_im invalid"
+            stop
+           endif
           enddo  ! u_im=1..nmat
 
           ! velocity and pressure
@@ -22365,6 +22414,14 @@ stop
            endif
 
           enddo ! u_im=1..nmat
+
+          do istate=1,SDIM
+           statecomp_data= &
+               num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+           tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+              tennew_hold(statecomp_data)
+          enddo !istate=1..sdim
+
 
           do u_im=1,nmat
            if (is_rigid(nmat,u_im).eq.0) then

@@ -7725,15 +7725,10 @@ void NavierStokes::output_zones(
      nden,1,
      MFInfo().SetTag("denmfminus"),FArrayBoxFactory());
 
-   MultiFab* viscoelasticmfminus=denmfminus;
-   if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
-    viscoelasticmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     num_materials_viscoelastic*NUM_TENSOR_TYPE,1,
+   MultiFab* viscoelasticmfminus=
+    new MultiFab(cgrids_minusBA,cgrids_minus_map,
+     num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM,1,
      MFInfo().SetTag("viscoelasticmfminus"),FArrayBoxFactory());
-   } else if (num_materials_viscoelastic==0) {
-    // do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
 
    int elastic_ncomp=viscoelasticmfminus->nComp();
 
@@ -7802,16 +7797,12 @@ void NavierStokes::output_zones(
    check_for_NAN(denmf,6);
    check_for_NAN(denmfminus,16);
 
-   if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-    viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
-      num_materials_viscoelastic*NUM_TENSOR_TYPE,1,1,geom.periodicity()); 
-    check_for_NAN(viscoelasticmf,6);
-    check_for_NAN(viscoelasticmfminus,16);
-   } else if (num_materials_viscoelastic==0) {
-    // do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
+   viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
+     num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM,
+     1,1,geom.periodicity()); 
+   check_for_NAN(viscoelasticmf,6);
+   check_for_NAN(viscoelasticmfminus,16);
 
    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
    lsdistmfminus->ParallelCopy(*lsdistmf,0,0,nmat*(1+AMREX_SPACEDIM),
@@ -7950,12 +7941,7 @@ void NavierStokes::output_zones(
    }  // mfi
    ns_reconcile_d_num(157);
 
-   if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
-    delete viscoelasticmfminus;
-   } else if (num_materials_viscoelastic==0) {
-    // do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
+   delete viscoelasticmfminus;
 
    delete maskSEM_minus;
    delete velmfminus;

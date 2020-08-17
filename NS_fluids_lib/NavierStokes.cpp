@@ -14454,7 +14454,8 @@ NavierStokes::unsplit_scalar_advection() {
  int local_tensor_type=State_Type;
  int local_tensor_mf=DEN_RECON_MF;
 
- if ((num_materials_viscoelastic>=0)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=0)&&
+     (num_materials_viscoelastic<=nmat)) {
   local_tensor_type=Tensor_Type;
   local_tensor_mf=TENSOR_RECON_MF;
   getStateTensor_localMF(TENSOR_RECON_MF,1,0,
@@ -14516,7 +14517,8 @@ NavierStokes::unsplit_scalar_advection() {
 
  int iden_base=AMREX_SPACEDIM;
  int itensor_base=iden_base+nmat*num_state_material;
- int imof_base=itensor_base+num_materials_viscoelastic*NUM_TENSOR_TYPE;
+ int imof_base=itensor_base+num_materials_viscoelastic*NUM_TENSOR_TYPE+
+	 AMREX_SPACEDIM;
  int iLS_base=imof_base+nmat*ngeom_raw;
  int iFtarget_base=iLS_base+nmat;
  int iden_mom_base=iFtarget_base+nmat;
@@ -14859,7 +14861,9 @@ NavierStokes::unsplit_scalar_advection() {
     // this is the original data
   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
   FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
+
   FArrayBox& tenfab=(*localMF[local_tensor_mf])[mfi];
+
   FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
 
     // this is the slope data
@@ -15104,10 +15108,9 @@ NavierStokes::unsplit_scalar_advection() {
  delete_localMF(VELADVECT_MF,1);
  delete_localMF(DEN_RECON_MF,1);
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=0)&&
+     (num_materials_viscoelastic<=nmat)) {
   delete_localMF(TENSOR_RECON_MF,1);
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
  
@@ -16991,14 +16994,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    std::cout << "level= " << ilev << " div_datanorm0+1grow= " << 
     div_data->norm0(0,1) << '\n'; 
   }
-  MultiFab* viscoelasticmf=denmf;
-  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
-   viscoelasticmf=ns_level.getStateTensor(1,0,
-     num_materials_viscoelastic*NUM_TENSOR_TYPE,cur_time_slab);
-  } else if (num_materials_viscoelastic==0) {
-   // do nothing
-  } else
-   amrex::Error("num_materials_viscoelastic invalid");
+  MultiFab* viscoelasticmf=ns_level.getStateTensor(1,0,
+     num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM,cur_time_slab);
 
   ns_level.output_zones(
    visual_fab_output,
@@ -17024,12 +17021,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else
    amrex::Error("slice_dir invalid");
 
-  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
-   delete viscoelasticmf;
-  } else if (num_materials_viscoelastic==0) {
-   // do nothing
-  } else
-   amrex::Error("num_materials_viscoelastic invalid");
+  delete viscoelasticmf;
 
   delete div_data;
   delete velmf;

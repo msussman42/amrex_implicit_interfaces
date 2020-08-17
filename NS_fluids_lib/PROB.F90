@@ -140,6 +140,7 @@ stop
        nmat*plot_sdim+ & ! ls slope
        nmat*num_state_material+ & ! den 
        num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+       SDIM+ &
        nmat+ & ! visc
        5*nmat  ! trace vars and vorticity
 
@@ -559,6 +560,15 @@ stop
         stop
        endif
       enddo ! partid=1..num_materials_viscoelastic 
+
+      Varname='XDISPLACE'
+      call dumpstring(Varname)
+      Varname='YDISPLACE'
+      call dumpstring(Varname)
+      if (SDIM.eq.3) then
+       Varname='ZDISPLACE'
+       call dumpstring(Varname)
+      endif
 
        ! viscosity
       do im=1,nmat
