@@ -2413,17 +2413,7 @@ NavierStokes::read_params ()
     num_materials_viscoelastic=0;
     for (int i=0;i<nmat;i++) {
      if (elastic_viscosity[i]>0.0) {
-      num_materials_viscoelastic++;
-     } else if (elastic_viscosity[i]==0.0) {
-      // do nothing
-     } else
-      amrex::Error("elastic_viscosity invalid");
-    } // im=0..nmat-1 
-    im_elastic_map.resize(num_materials_viscoelastic);
-
-    num_materials_viscoelastic=0;
-    for (int i=0;i<nmat;i++) {
-     if (elastic_viscosity[i]>0.0) {
+      im_elastic_map.resize(num_materials_viscoelastic+1);
       im_elastic_map[num_materials_viscoelastic]=i;
       num_materials_viscoelastic++;
      } else if (elastic_viscosity[i]==0.0) {
@@ -7821,7 +7811,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic  invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -7980,7 +7970,8 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
  int ntensorMM=ntensor*num_materials_vel;
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
@@ -8162,7 +8153,8 @@ void NavierStokes::make_viscoelastic_force(int im) {
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
@@ -9373,7 +9365,8 @@ void NavierStokes::tensor_advection_update() {
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
@@ -9663,7 +9656,8 @@ void NavierStokes::tensor_extrapolate() {
 
  int nmat=num_materials;
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
@@ -13446,7 +13440,8 @@ NavierStokes::split_scalar_advection() {
  int local_tensor_type=State_Type;
  int local_tensor_mf=DEN_RECON_MF;
 
- if ((num_materials_viscoelastic>=0)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=0)&&
+     (num_materials_viscoelastic<=nmat)) {
   local_tensor_type=Tensor_Type;
   local_tensor_mf=TENSOR_RECON_MF;
   getStateTensor_localMF(TENSOR_RECON_MF,1,0,
@@ -13529,7 +13524,8 @@ NavierStokes::split_scalar_advection() {
 
  int iden_base=AMREX_SPACEDIM;
  int itensor_base=iden_base+nmat*num_state_material;
- int imof_base=itensor_base+num_materials_viscoelastic*NUM_TENSOR_TYPE;
+ int imof_base=itensor_base+num_materials_viscoelastic*NUM_TENSOR_TYPE+
+	 AMREX_SPACEDIM;
  int iLS_base=imof_base+nmat*ngeom_raw;
  int iFtarget_base=iLS_base+nmat;
  int iden_mom_base=iFtarget_base+nmat;
@@ -13946,11 +13942,10 @@ NavierStokes::split_scalar_advection() {
    amrex::Error("ns_is_rigid(im) invalid");
  } // im=0..nmat-1
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=0)&&
+     (num_materials_viscoelastic<=nmat)) {
   Tensor_new.setVal(0.0,0,num_materials_viscoelastic*NUM_TENSOR_TYPE+
 		  AMREX_SPACEDIM,1);
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -14300,10 +14295,9 @@ NavierStokes::split_scalar_advection() {
  delete_localMF(VELADVECT_MF,1);
  delete_localMF(DEN_RECON_MF,1);
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=0)&&
+     (num_materials_viscoelastic<=nmat)) {
   delete_localMF(TENSOR_RECON_MF,1);
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
  
@@ -20680,7 +20674,7 @@ MultiFab* NavierStokes::getStateTensor (
 
   // nparts x NUM_TENSOR_TYPE
  int nparts=im_elastic_map.size();
- if ((nparts<1)||(nparts>nmat))
+ if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
  if ((ncomp==nparts*NUM_TENSOR_TYPE+AMREX_SPACEDIM)&&
      (scomp==0)) {
