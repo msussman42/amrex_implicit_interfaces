@@ -19393,6 +19393,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
      int ncomp_tensor=AMREX_SPACEDIM;
 
+     // FIX ME: interpolate from both particle AND Eulerian xfoot data.
      // in: GODUNOV_3D.F90
      fort_assimilate_x_foot_from_particles( 
        &tid_current,

@@ -7103,6 +7103,7 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     // in: LEVELSET_3D.F90
    fort_move_particle_container( 
      &tid_current,
      &im_PLS,

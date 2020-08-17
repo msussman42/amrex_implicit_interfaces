@@ -1321,9 +1321,35 @@ stop
        angle_ACT=zero
 
        call gridsten_level(xstenFD,iFD,jFD,kFD,LOW%level,nhalf)
-       do im=1,LOW%nmat
+       do im=1,LOW%nmat*(1+SDIM)
         LS_fluid(im)=LOW%LSCP(D_DECL(iFD,jFD,kFD),im)
        enddo
+       call gridsten_level(xstenSD,iSD,jSD,kSD,LOW%level,nhalf)
+       do im=1,LOW%nmat*(1+SDIM)
+        LS_solid(im)=LOW%LSCP(D_DECL(iSD,jSD,kSD),im)
+       enddo
+
+       if (LS_solid(im_solid).ge.zero) then
+        if (LS_fluid(im_fluid).ge.zero) then
+         if (LS_fluid(im_solid).le.zero) then
+          cross_denom=LS_solid(im_solid)-LS_fluid(im_solid)
+          if (cross_denom.gt.zero) then
+           cross_factor=LS_solid(im_solid)/cross_denom
+           if ((cross_factor.ge.zero).and. &
+               (cross_factor.le.one)) then
+            do dir=1,SDIM
+             xcrossing(dir)=cross_factor*xstenFD(0,dir)+ &
+                     (one-cross_factor)*xstenSD(0,dir)
+            enddo
+            do im=1,LOW%nmat*(1+SDIM)
+             LS_crossing(im)=cross_factor*LS_fluid(im)+ &
+                     (one-cross_factor)*LS_solid(im)
+            enddo
+            if (LS_crossing(im_fluid).ge.zero) then
+
+
+
+
        call get_primary_material(LS_fluid,LOW%nmat,im_primary_image)
        if (is_rigid(LOW%nmat,im_primary_image).eq.0) then
         if (im_fluid.eq.im_primary_image) then
@@ -1481,8 +1507,6 @@ stop
           print *,"density_fluid invalid"
           stop
          endif
-
-         call gridsten_level(xstenSD,iSD,jSD,kSD,LOW%level,nhalf)
 
          !x_projection is closest point on the fluid/solid interface. 
          delta_r_raster=abs(LOW%x_image_raster(data_dir+1)- &
