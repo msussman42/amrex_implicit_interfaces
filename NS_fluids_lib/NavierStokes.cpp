@@ -19238,6 +19238,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      &ncomp_accumulate,
      TNEWfab.dataPtr(scomp_tensor),
      ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
+     TNEWfab.dataPtr(scomp_xdisplace),
+     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
      XDISP_fab.dataPtr(),
      ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()),
      matrixfab.dataPtr(),

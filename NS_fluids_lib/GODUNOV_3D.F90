@@ -27959,6 +27959,8 @@ stop
         ncomp_accumulate, & ! matrix_points+sdim * RHS_points
         TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
         DIMS(TNEWfab), &
+        XDNEWfab, &       
+        DIMS(XDNEWfab), &
         XDISP_fab, &      
         DIMS(XDISP_fab), &
         matrixfab, &     ! accumulation FAB
@@ -27985,6 +27987,7 @@ stop
       REAL_T, intent(in), target :: dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
       INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(XDNEWfab) 
       INTEGER_T, intent(in) :: DIMDEC(XDISP_fab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
@@ -27992,6 +27995,9 @@ stop
       REAL_T, intent(inout) :: TNEWfab( &  ! Q assimilated from particles/cells
         DIMV(TNEWfab), &
         ncomp_tensor)
+      REAL_T, intent(inout) :: XDNEWfab( &  
+        DIMV(XDNEWfab), &
+        SDIM)
       REAL_T, intent(in), target :: XDISP_fab( &
         DIMV(XDISP_fab), &
         SDIM)
@@ -28045,6 +28051,8 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
       call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(XDNEWfab),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(XDISP_fab),1,-1,1271)
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -28248,6 +28256,10 @@ stop
         print *,"ibase invalid"
         stop
        endif
+
+       do ii=1,SDIM
+        XDNEWFAB(D_DECL(i,j,k),ii)=xLS(1,ii)
+       enddo
       enddo
       enddo
       enddo
