@@ -3292,7 +3292,7 @@ NavierStokes::read_params ()
      } else if (elastic_viscosity[i]==0.0) {
       // do nothing
      } else
-      amrex::Error("elastic_viscosity invalid")
+      amrex::Error("elastic_viscosity invalid");
     } // i=0..nmat-1
 
     pp.queryarr("polymer_factor",polymer_factor,0,nmat);
@@ -19164,7 +19164,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  } else 
   amrex::Error("VISCOTEN_MF should not be allocated");
 
- getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,NUM_TENSOR_TYPE,
+ int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+ getStateTensor_localMF(VISCOTEN_MF,1,scomp_xdisplace,AMREX_SPACEDIM,
    cur_time_slab);
 
  if (thread_class::nthreads<1)
@@ -19209,7 +19210,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
    FArrayBox& matrixfab=(*accumulate_mf)[mfi];
    FArrayBox& TNEWfab=Tensor_new[mfi];
-   FArrayBox& T_use_fab=(*localMF[VISCOTEN_MF])[mfi];
+   FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -19237,8 +19238,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      &ncomp_accumulate,
      TNEWfab.dataPtr(scomp_tensor),
      ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     T_use_fab.dataPtr(),
-     ARLIM(T_use_fab.loVect()),ARLIM(T_use_fab.hiVect()),
+     XDISP_fab.dataPtr(),
+     ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()),
      matrixfab.dataPtr(),
      ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
  } // mfi

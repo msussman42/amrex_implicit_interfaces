@@ -1417,9 +1417,9 @@ extern "C"
      Real* TNEWfab,
      AMREX_ARLIM_P(TNEWfablo),
      AMREX_ARLIM_P(TNEWfabhi),
-     Real* TUSEfab,
-     AMREX_ARLIM_P(TUSEfablo),
-     AMREX_ARLIM_P(TUSEfabhi),
+     Real* XDISP_fab,
+     AMREX_ARLIM_P(XDISP_fablo),
+     AMREX_ARLIM_P(XDISP_fabhi),
      Real* matrixfab,
      AMREX_ARLIM_P(matrixfablo),
      AMREX_ARLIM_P(matrixfabhi));

@@ -812,22 +812,22 @@ NavierStokes::variableSetUp ()
      Vector<BCRec> MOFxdisplace_bcs_tensor;
      MOFxdisplace_bcs_tensor.resize(AMREX_SPACEDIM);
 
-     dir=0;
+     int dir_local=0;
      std::string xdisplace_str="XDISPLACE";
-     MOFxdisplace_names_tensor[dir]=xdisplace_str;
-     set_x_vel_bc(MOFxdisplace_bcs_tensor[dir],phys_bc);
+     MOFxdisplace_names_tensor[dir_local]=xdisplace_str;
+     set_x_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
 
-     dir++;
+     dir_local++;
      std::string ydisplace_str="YDISPLACE";
-     MOFxdisplace_names_tensor[dir]=ydisplace_str;
-     set_y_vel_bc(MOFxdisplace_bcs_tensor[dir],phys_bc);
+     MOFxdisplace_names_tensor[dir_local]=ydisplace_str;
+     set_y_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
 
 #if (AMREX_SPACEDIM == 3)
      if (AMREX_SPACEDIM==3) {
-      dir++;
+      dir_local++;
       std::string zdisplace_str="ZDISPLACE";
-      MOFxdisplace_names_tensor[dir]=zdisplace_str;
-      set_z_vel_bc(MOFxdisplace_bcs_tensor[dir],phys_bc);
+      MOFxdisplace_names_tensor[dir_local]=zdisplace_str;
+      set_z_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
      }
 #endif
 

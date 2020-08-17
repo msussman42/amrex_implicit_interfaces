@@ -37949,7 +37949,6 @@ end subroutine initialize2d
        INTEGER_T borderlo(3)
        INTEGER_T borderhi(3)
        INTEGER_T IWALL(3)
-       INTEGER_T im,ipart
        INTEGER_T icomplo,icomphi
        INTEGER_T nhalf
        REAL_T xsten(-3:3,SDIM)
