@@ -1132,8 +1132,7 @@ stop
        thermal_interp, &
        im_fluid, &
        im_solid, &
-       nrm_fluid, &
-       LS_fluid)
+       LS_interp)
        
        use probf90_module
        use global_utility_module
@@ -1147,8 +1146,7 @@ stop
        REAL_T, intent(in) :: x_fluid(SDIM)
        INTEGER_T, intent(inout) :: im_secondary_image
        REAL_T, intent(out) :: thermal_interp(num_materials)
-       REAL_T, intent(out) :: nrm_fluid(SDIM)
-       REAL_T, intent(out) :: LS_fluid
+       REAL_T, intent(out) :: LS_interp(num_materials*(1+SDIM))
 
 
 
@@ -1483,7 +1481,55 @@ stop
 
               ! now we update nrm_fluid by finding the triple point
               ! and measuring nrm_fluid just above the solid.
+             if ((GNBC_RADIUS.ge.one).and. &
+                 (GNBC_RADIUS.le.three)) then
+              do dir=1,SDIM
+               xprobe(dir)=xcrossing(dir)-GNBC_RADIUS*dxmin*nCL(dir)
+              enddo
+              call  interp_from_fluid( &
+               LOW, &
+               xprobe, &
+               im_secondary_image, &
+               thermal_interp, &
+               im_fluid, &
+               im_solid, &
+               LS_interp)
+              if (LS_interp(im_fluid).le.zero) then
+               cross_denom=LS_crossing(im_fluid)-LS_interp(im_fluid)
+               if (cross_denom.gt.zero) then
+                cross_factor=LS_crossing(im_fluid)/cross_denom
+                if ((cross_factor.ge.zero).and. &
+                    (cross_factor.le.one)) then
+                 do dir=1,SDIM
+                  xtriple(dir)=cross_factor*xprobe(dir)+ &
+                     (one-cross_factor)*xcrossing(dir)
+                 enddo
+                 do im=1,LOW%nmat*(1+SDIM)
+                  LS_triple(im)=cross_factor*LS_interp(im)+ &
+                     (one-cross_factor)*LS_crossing(im)
+                 enddo
+                 do im=1,LOW%nmat
+                  nrm_sanity=zero
+                  do dir=1,SDIM
+                   nrm_sanity=nrm_sanity+ &
+                     LS_triple(LOW%nmat+(im-1)*SDIM+dir)**2
+                  enddo
+                  nrm_sanity=sqrt(nrm_sanity)
+                  if (nrm_sanity.gt.zero) then
+                   do dir=1,SDIM
+                    LS_triple(LOW%nmat+(im-1)*SDIM+dir)= &
+                     LS_triple(LOW%nmat+(im-1)*SDIM+dir)/nrm_sanity
+                   enddo
+                  else if (nrm_sanity.eq.zero) then
+                   ! do nothing
+                  else
+                   print *,"nrm_sanity invalid"
+                   stop
+                  endif
+                 enddo ! im=1..nmat
 
+ 
+ 
 
 
 

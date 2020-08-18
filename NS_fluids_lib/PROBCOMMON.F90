@@ -29,6 +29,8 @@ implicit none
 
 #include "probdataf95.H"
 
+      REAL_T, PARAMETER :: GNBC_RADIUS=2.0d0
+
       INTEGER_T, PARAMETER :: ngrow_make_distance=3
 
       INTEGER_T, PARAMETER :: FORT_NUM_TENSOR_TYPE=2*SDIM

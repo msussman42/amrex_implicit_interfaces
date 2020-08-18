@@ -3265,15 +3265,26 @@ stop
        end subroutine get_scaled_pforce
 
 
-function ZEYU_delta(r)
+function ZEYU_delta(s)
 implicit none
 
 double precision ZEYU_delta
-double precision, intent(in) :: r
+double precision, intent(in) :: s
+double precision :: r
 
 ! integral_r=0 to r=2 d(r)dr =1 
-! s=alpha r
-! integral_s=0 to s=2 alpha d(s/alpha) ds/alpha = 1
+! s=alpha (r/2)
+! integral_s=0 to s= alpha d(2s/alpha) 2 ds/alpha = 1
+
+if (GNBC_RADIUS.ge.1.0d0) then
+ ! do nothing
+else
+ print *,"GNBC_RADIUS invalid"
+ stop
+endif
+
+r = 2.0d0*s/GNBC_RADIUS
+
 if (abs(r) <= 1.0d0) then
     ZEYU_delta = (3.0d0 - 2.0d0 * abs(r) + &
       sqrt(1.0d0 + 4.0d0 * abs(r) - 4.0d0 * r * r)) / 8.0d0
@@ -3283,6 +3294,8 @@ else if (1.0d0 < abs(r) .AND. abs(r) <= 2.0d0) then
 else
     ZEYU_delta = 0.0d0
 end if
+
+ZEYU_delta=ZEYU_delta * 2.0d0/GNBC_RADIUS
 
 end function ZEYU_delta
 
