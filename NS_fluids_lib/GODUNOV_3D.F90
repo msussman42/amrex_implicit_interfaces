@@ -1127,12 +1127,13 @@ stop
 
       subroutine interp_from_fluid( &
        LOW, &
-       xCP_fluid, &
+       x_fluid, &
        im_secondary_image, &
        thermal_interp, &
        im_fluid, &
        im_solid, &
-       nrm_fluid_CP)
+       nrm_fluid, &
+       LS_fluid)
        
        use probf90_module
        use global_utility_module
@@ -1140,13 +1141,20 @@ stop
        
        implicit none
        
-       !in: nrm_solid, delta_r, LScenter or x_projection, dx, x_image, 
-       !ximage_stencil, ufluid_stencil
        type(law_of_wall_parm_type), intent(in) :: LOW
        INTEGER_T, intent(in) :: im_fluid
        INTEGER_T, intent(in) :: im_solid
+       REAL_T, intent(in) :: x_fluid(SDIM)
+       INTEGER_T, intent(inout) :: im_secondary_image
+       REAL_T, intent(out) :: thermal_interp(num_materials)
+       REAL_T, intent(out) :: nrm_fluid(SDIM)
+       REAL_T, intent(out) :: LS_fluid
 
-       FIX ME (cut and paste from getGhostVel)
+
+
+
+
+
        ! This routine transforms all velocities to a frame of reference with
        ! respect to the solid.
       subroutine getGhostVel( &
@@ -1386,12 +1394,100 @@ stop
               endif
              enddo ! im=1..nmat
 
+             nf_dot_ns=zero
+             nrm_fluid(3)=zero
+             nrm_solid(3)=zero
              do dir=1,SDIM
+               ! points into im_fluid material
               nrm_fluid(dir)=LS_crossing(LOW%nmat+(im_fluid-1)*SDIM+dir)
+               ! points into im_solid material
               nrm_solid(dir)=LS_crossing(LOW%nmat+(im_solid-1)*SDIM+dir)
-              xCP_fluid(dir)=xcrossing(dir)- &
-                      LS_crossing(im_fluid)*nrm_fluid(dir)
+              nf_dot_ns=nf_dot_ns+nrm_fluid(dir)*nrm_solid(dir)
              enddo ! dir=1..sdim
+
+              !    \
+              !nCL  \
+              !  <-- \
+              ! ------O----
+              ! 
+              ! nCL is tangential to the solid/fluid interface
+              ! since nrm_solid has been projected away from nrm_fluid
+              ! nCL_perp points out of the screen.
+             nrm_sanity=zero
+             do dir=1,3
+              nCL(dir)=nrm_fluid(dir)-nf_dot_ns*nrm_solid(dir)
+              nrm_sanity=nrm_sanity+nCL(dir)**2
+             enddo 
+             nrm_sanity=sqrt(nrm_sanity)
+             if (nrm_sanity.gt.zero) then
+              do dir=1,3
+               nCL(dir)=nCL(dir)/nrm_sanity
+              enddo
+             else if (nrm_sanity.eq.zero) then
+              ! do nothing
+             else
+              print *,"nrm_sanity invalid"
+              stop
+             endif
+
+             ! nCL_perp is tangent to the contact line in the substrate plane.
+             ! nCL is normal to the contact line in the substrate plane
+             ! nsolidCP is normal to the substrate
+             call crossprod(nCL,nsolidCP,nCL_perp)
+
+             nrm_sanity=zero
+             do dir=1,3
+              nrm_sanity=nrm_sanity+nCL_perp(dir)**2
+             enddo 
+             nrm_sanity=sqrt(nrm_sanity)
+             if (nrm_sanity.gt.zero) then
+              do dir=1,3
+               nCL_perp(dir)=nCL_perp(dir)/nrm_sanity
+              enddo
+             else if (nrm_sanity.eq.zero) then
+              ! do nothing
+             else
+              print *,"nrm_sanity invalid"
+              stop
+             endif
+
+             nf_dot_nCL_perp=zero
+             do dir=1,3
+              nf_dot_nCL_perp=nf_dot_nCL_perp+nrm_fluid(dir)*nCL_perp(dir)
+             enddo
+             ! nCL_perp is tangent to the contact line in the substrate plane.
+             ! nrm_fluid points into im_fluid material.
+             ! nf_prj is the fluid normal with the tangent contact line
+             ! vector projected away; nf_prj, in a plane perpendicular
+             ! to the substrate and perpendicular to the contact line,
+             ! is the normal point into im_primary
+             ! "im_primary_image"
+             nrm_sanity=zero
+             do dir=1,3
+              nf_prj(dir)=nrm_fluid(dir)-nf_dot_nCL_perp*nCL_perp(dir)
+              nrm_sanity=nrm_sanity+nf_prj(dir)**2
+             enddo
+             nrm_sanity=sqrt(nrm_sanity)
+             if (nrm_sanity.gt.zero) then
+              do dir=1,3
+               nf_prj(dir)=nf_prj(dir)/nrm_sanity
+              enddo
+             else if (nrm_sanity.eq.zero) then
+              ! do nothing
+             else
+              print *,"nrm_sanity invalid"
+              stop
+             endif
+             ! nCL_perp2 will also be tangent to the contact line.
+             call crossprod(nrm_solid,nf_prj,nCL_perp2)
+
+              ! now we update nrm_fluid by finding the triple point
+              ! and measuring nrm_fluid just above the solid.
+
+
+
+
+
 
              call interp_from_fluid( &
                LOW, &

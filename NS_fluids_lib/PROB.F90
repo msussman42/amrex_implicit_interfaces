@@ -3271,6 +3271,9 @@ implicit none
 double precision ZEYU_delta
 double precision, intent(in) :: r
 
+! integral_r=0 to r=2 d(r)dr =1 
+! s=alpha r
+! integral_s=0 to s=2 alpha d(s/alpha) ds/alpha = 1
 if (abs(r) <= 1.0d0) then
     ZEYU_delta = (3.0d0 - 2.0d0 * abs(r) + &
       sqrt(1.0d0 + 4.0d0 * abs(r) - 4.0d0 * r * r)) / 8.0d0
@@ -3688,7 +3691,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 !specific problems
 !l_macro: parameter in gnbc, can be set as grid length
 !l_micro: parameter in gnbc, can be set as 1.e-9
-!dgrid: grid length
+!dgrid: grid length = dxmin when called from getGhostVel
 !d_closest: closest distance to the contact line
 !thet_d_apparent: dynamic contact angle from simulation (input in gnbc)
 !(liquid region)
