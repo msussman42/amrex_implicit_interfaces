@@ -3718,10 +3718,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 !model 7 have large difference between other models.
 !
 !called from: GODUNOV_3D.F90
-subroutine dynamic_contact_angle(mu_l, mu_g, sigma, thet_s, &
-                                 imodel, ifgnbc, lambda, l_macro, l_micro, &
-                                 dgrid, d_closest, thet_d_apparent, &
-                                 u_cl, u_slip, thet_d)
+subroutine dynamic_contact_angle(mu_l, mu_g, sigma, &
+                thet_s, &
+                imodel, ifgnbc, lambda, &
+                l_macro, l_micro, &
+                dgrid, d_closest, thet_d_apparent, &
+                u_cl, u_slip, thet_d)
 implicit none
 
 integer imodel, ifgnbc

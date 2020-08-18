@@ -2036,6 +2036,7 @@ stop
            stop
           endif
           ZEYU_u_cl=zero
+          ZEYU_u_slip=zero
           ZEYU_thet_d=ZEYU_thet_d_apparent
            ! in: PROB.F90
           call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
@@ -2047,9 +2048,9 @@ stop
 
           ! nCL is normal to the contact line in the substrate plane.
           ! nCL points to the im_primary_image material.
-          ! ZEYU_u_cl is positive if the contact line is advancing into
+          ! ZEYU_u_slip is positive if the contact line is advancing into
           ! the gas.
-          ughost_tngt=ZEYU_u_cl
+          ughost_tngt=ZEYU_u_slip
 
           nCL_dot_n_raster=zero
           do dir=1,SDIM
