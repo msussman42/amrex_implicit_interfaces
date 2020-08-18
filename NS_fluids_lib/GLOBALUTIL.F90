@@ -2196,7 +2196,7 @@ contains
       subroutine normalize_vector(vin)
       IMPLICIT NONE
 
-      REAL_T vin(SDIM)
+      REAL_T, intent(inout) :: vin(SDIM)
       INTEGER_T dir
       REAL_T mag
 
@@ -2209,15 +2209,38 @@ contains
        do dir=1,SDIM
         vin(dir)=vin(dir)/mag
        enddo
-      else
+      else if (mag.eq.zero) then
        do dir=1,SDIM
         vin(dir)=zero
        enddo
+      else
+       print *,"mag bust"
+       stop
       endif
 
       return 
       end subroutine normalize_vector
 
+      subroutine normalize_LS_normals(nmat,LS)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(inout) :: LS(nmat*(1+SDIM))
+      INTEGER_T :: im,dir
+      REAL_T :: local_normal(SDIM)
+
+      do im=1,nmat
+       do dir=1,SDIM
+        local_normal(dir)=LS(nmat+(im-1)*SDIM+dir)
+       enddo
+       call normalize_vector(local_normal)
+       do dir=1,SDIM
+        LS(nmat+(im-1)*SDIM+dir)=local_normal(dir)
+       enddo
+      enddo ! im=1..nmat
+
+      return 
+      end subroutine normalize_LS_normals
 
       subroutine crossprod2d(a,b,c)
       IMPLICIT NONE
