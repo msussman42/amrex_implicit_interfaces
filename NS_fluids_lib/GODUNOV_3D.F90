@@ -1125,7 +1125,28 @@ stop
       end subroutine get_default_scalar_diffusion
 
 
+      subroutine interp_from_fluid( &
+       LOW, &
+       xCP_fluid, &
+       im_secondary_image, &
+       thermal_interp, &
+       im_fluid, &
+       im_solid, &
+       nrm_fluid_CP)
+       
+       use probf90_module
+       use global_utility_module
+       use MOF_routines_module
+       
+       implicit none
+       
+       !in: nrm_solid, delta_r, LScenter or x_projection, dx, x_image, 
+       !ximage_stencil, ufluid_stencil
+       type(law_of_wall_parm_type), intent(in) :: LOW
+       INTEGER_T, intent(in) :: im_fluid
+       INTEGER_T, intent(in) :: im_solid
 
+       FIX ME (cut and paste from getGhostVel)
        ! This routine transforms all velocities to a frame of reference with
        ! respect to the solid.
       subroutine getGhostVel( &
@@ -1223,7 +1244,6 @@ stop
        REAL_T :: LS_fluid(num_materials)
        REAL_T :: LS_sten(num_materials*(1+SDIM))
        REAL_T :: xCP_fluid(SDIM)
-       REAL_T :: xCP_solid(SDIM)
        REAL_T :: nrm_solid(SDIM)
        REAL_T :: nrm_fluid(SDIM)
        REAL_T :: nrm_fluid_CP(SDIM)
@@ -1346,48 +1366,44 @@ stop
                      (one-cross_factor)*LS_solid(im)
             enddo
             if (LS_crossing(im_fluid).ge.zero) then
+             do im=1,LOW%nmat
+              nrm_sanity=zero
+              do dir=1,SDIM
+               nrm_sanity=nrm_sanity+ &
+                  LS_crossing(LOW%nmat+(im-1)*SDIM+dir)**2
+              enddo
+              nrm_sanity=sqrt(nrm_sanity)
+              if (nrm_sanity.gt.zero) then
+               do dir=1,SDIM
+                LS_crossing(LOW%nmat+(im-1)*SDIM+dir)= &
+                  LS_crossing(LOW%nmat+(im-1)*SDIM+dir)/nrm_sanity
+               enddo
+              else if (nrm_sanity.eq.zero) then
+               ! do nothing
+              else
+               print *,"nrm_sanity invalid"
+               stop
+              endif
+             enddo ! im=1..nmat
+
+             do dir=1,SDIM
+              nrm_fluid(dir)=LS_crossing(LOW%nmat+(im_fluid-1)*SDIM+dir)
+              nrm_solid(dir)=LS_crossing(LOW%nmat+(im_solid-1)*SDIM+dir)
+              xCP_fluid(dir)=xcrossing(dir)- &
+                      LS_crossing(im_fluid)*nrm_fluid(dir)
+             enddo ! dir=1..sdim
+
+             call interp_from_fluid( &
+               LOW, &
+               xCP_fluid, &
+               im_secondary_image, &
+               thermal_interp, &
+               im_fluid, &
+               im_solid, &
+               nrm_fluid_CP)
 
 
 
-
-       call get_primary_material(LS_fluid,LOW%nmat,im_primary_image)
-       if (is_rigid(LOW%nmat,im_primary_image).eq.0) then
-        if (im_fluid.eq.im_primary_image) then
-         do dir=1,SDIM
-          nrm_fluid(dir)=LOW%LSCP(D_DECL(iFD,jFD,kFD), &
-           LOW%nmat+(im_fluid-1)*SDIM+dir)
-          nrm_solid(dir)=LOW%LSCP(D_DECL(iFD,jFD,kFD), &
-           LOW%nmat+(im_solid-1)*SDIM+dir)
-          xCP_fluid(dir)=xstenFD(0,dir)-LS_fluid(im_fluid)*nrm_fluid(dir)
-          xCP_solid(dir)=xstenFD(0,dir)-LS_fluid(im_solid)*nrm_solid(dir)
-         enddo
-         mag=zero
-         do dir=1,SDIM
-          mag=mag+nrm_fluid(dir)**2
-         enddo
-         mag=sqrt(mag)
-         if (abs(mag-one).lt.VOFTOL) then
-          ! do nothing
-         else if (abs(mag).lt.VOFTOL) then
-          ! do nothing
-         else
-          print *,"nrm_fluid (mag) invalid"
-          stop
-         endif
-
-         mag=zero
-         do dir=1,SDIM
-          mag=mag+nrm_solid(dir)**2
-         enddo
-         mag=sqrt(mag)
-         if (abs(mag-one).lt.VOFTOL) then
-          ! do nothing
-         else if (abs(mag).lt.VOFTOL) then
-          ! do nothing
-         else
-          print *,"nrm_solid (mag) invalid"
-          stop
-         endif
 
          call containing_cell( &
           LOW%bfact, &
