@@ -1262,6 +1262,7 @@ stop
        do im=1,LOW%nmat
         thermal_interp(im)=thermal_interp(im)/total_WT
        enddo
+
       else
        print *,"total_WT invalid"
        stop
@@ -1312,7 +1313,8 @@ stop
 
 
        REAL_T, dimension(SDIM) :: u_tngt
-       REAL_T :: uimage_nrml, ughost_nrml,ughost_tngt
+       REAL_T :: uimage_nrml, ughost_nrml
+       REAL_T :: ughost_tngt
        REAL_T :: uimage_tngt_mag
        REAL_T :: tau_w
        REAL_T :: viscosity_molecular, viscosity_eddy
@@ -1339,8 +1341,6 @@ stop
        REAL_T :: dist_to_CL
        REAL_T :: nf_dot_ns
        REAL_T :: nf_dot_nCL_perp
-       REAL_T, dimension(3) :: nfluidFD
-       REAL_T, dimension(3) :: nsolidCP
        REAL_T, dimension(3) :: nCL
        REAL_T, dimension(3) :: nCL_raster
        REAL_T, dimension(3) :: nCL_perp
@@ -1540,8 +1540,8 @@ stop
 
            ! nCL_perp is tangent to the contact line in the substrate plane.
            ! nCL is normal to the contact line in the substrate plane
-           ! nsolidCP is normal to the substrate
-           call crossprod(nCL,nsolidCP,nCL_perp)
+           ! nrm_solid is normal to the substrate
+           call crossprod(nCL,nrm_solid,nCL_perp)
 
            nrm_sanity=zero
            do dir=1,3
@@ -1686,7 +1686,7 @@ stop
                stop
               endif
 
-              call crossprod(nCL,nsolidCP,nCL_perp)
+              call crossprod(nCL,nrm_solid,nCL_perp)
 
               nrm_sanity=zero
               do dir=1,3
@@ -1766,13 +1766,13 @@ stop
                  user_tension,LOW%nten,cos_angle,sin_angle)
                sinthetaACT=zero
                costhetaACT=zero
-                ! because nsolidCP and nf_prj have unit magnitude,
-                ! sinthetaACT is the sine of the angle between nsolidCP
+                ! because nrm_solid and nf_prj have unit magnitude,
+                ! sinthetaACT is the sine of the angle between nrm_solid
                 ! and nf_prj; fluid normal in plane perpendicular to 
                 ! contact line and solid.
                do dir=1,3
                 sinthetaACT=sinthetaACT+nCL_perp2(dir)**2
-                costhetaACT=costhetaACT+nsolidCP(dir)*nf_prj(dir)
+                costhetaACT=costhetaACT+nrm_solid(dir)*nf_prj(dir)
                enddo
                sinthetaACT=sqrt(sinthetaACT)
 
@@ -1789,6 +1789,15 @@ stop
                else
                 print *,"sinthetaACT or costhetaACT invalid"
                 stop
+               endif
+               if (1.eq.1) then
+                print *,"xcrossing ",xcrossing(1),xcrossing(2),xcrossing(SDIM)
+                print *,"xtriple ",xtriple(1),xtriple(2),xtriple(SDIM)
+                print *,"angle_ACT(rad,deg) ",angle_ACT, &
+                        angle_ACT*180.0d0/Pi
+                print *,"dx(1),dist_to_CL ",LOW%dx(1),dist_to_CL
+                print *,"im_primary_image,im_secondary_image ", &
+                        im_primary_image,im_secondary_image
                endif
               else if (near_contact_line.eq.0) then
                ! do nothing
@@ -1978,6 +1987,7 @@ stop
        else if (law_of_the_wall.eq.2) then ! GNBC model
 
         if (near_contact_line.eq.1) then
+
          if ((fort_denconst(im_fluid1).gt.zero).and. &
              (fort_denconst(im_fluid2).gt.zero)) then
  
@@ -2065,10 +2075,22 @@ stop
             print *,"im_primary_image or im_vapor invalid"
             stop
            endif
-          enddo
+          enddo ! dir=1..sdim
          else
           print *,"fort_denconst invalid"
           stop
+         endif
+         if (1.eq.1) then
+          print *,"xcrossing ",xcrossing(1),xcrossing(2),xcrossing(SDIM)
+          print *,"angle_ACT(rad,deg) ",angle_ACT, &
+                    angle_ACT*180.0d0/Pi
+          print *,"dx(1),dist_to_CL ",LOW%dx(1),dist_to_CL
+          print *,"im_primary_image,im_secondary_image ", &
+               im_primary_image,im_secondary_image
+          print *," ZEYU_thet_s(rad,deg) ", &
+           ZEYU_thet_s,ZEYU_thet_s*180.0d0/Pi
+          print *,"u_tngt ",u_tngt(1),u_tngt(2),u_tngt(SDIM)
+          print *,"ughost_tngt=",ughost_tngt
          endif
 
         else if (near_contact_line.eq.0) then
