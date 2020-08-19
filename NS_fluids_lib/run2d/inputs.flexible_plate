@@ -1,0 +1,230 @@
+max_step  =  99999   # maximum timestep ZEYU
+#stop_time =  0.05  # maximum problem time Yongsheng
+stop_time=0.02 # ZEYU 60 ms
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ ZEYU
+geometry.prob_lo   =  0.0 0.0  # ZEYU
+#geometry.prob_hi   =  0.8 0.8  # Yongsheng
+# Figure 15, JCP 2013, 252-271  Kensuke
+# 2 * 0.3936864 = 0.7873728
+# dz_fine=0.3936864/128=0.003075675
+# DIAMETER OF DROP IS 2mm page 651, Pasandidah-Fard 1996, POF
+geometry.prob_hi   =  0.4 0.4  # ZEYU, cm
+geometry.is_periodic = 0 0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 9000
+ns.post_init_pressure_solve=1  # make sure initial velocity is solonoidal
+cg.abec_use_bicgstab=0  # Multigrid PCG best for bottom solver.
+ns.always_use_bicgstab=0  # Probably PCG best for "main" solver too
+                          # once fixes are complete.
+                          # note: BICGSTAB must be used for "top" solver
+                          # if doing the spectral element method, but 
+                          # Zeyu's application, does not require space/time
+                          # spectral accuracy.
+                          # top solver: levels 0...max_level
+                          # bottom solver: levels -p,-p+1, ..., 0
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 1
+
+ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
+ns.num_species_var=0
+# 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
+# 3=no limiter with slope=0 at interface
+ns.slope_limiter_option=1
+ns.advection_order=2 2 1
+# 0 = MOF (moment of fluid)
+# 2 = CMOF (continuous moment of fluid)
+# 3 = CLSVOF in 2 material cells and MOF in >2 material cells.
+# 4 = CLSVOF in 2 material cells and CMOF in >2 material cells.
+ns.continuous_mof=0
+ns.FD_curv_interp=1
+# 0=Sussman and Puckett algorithm 
+# 1=EILE (default), -1=Weymouth Yue
+# 2=always EI   3=always LE
+ns.EILE_flag=-1
+ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
+#ns.show_mem=1
+ns.MOFITERMAX=15
+#amr.n_cell    = 24 24 # Yongsheng
+#amr.n_cell=32 24 # Kensuke
+amr.n_cell=32 32 # ZEYU Production run effective fine grid resolution 512^2
+#amr.max_level =  1   # Yongsheng 2= 43.2 points per diameter
+amr.max_level=1 # ZEYU
+ns.truncate_thickness=2.0
+
+ns.minimum_relative_error=1.0e-18
+ns.initial_cg_cycles=10
+ns.initial_project_cycles=3
+ns.initial_viscosity_cycles=1
+ns.initial_thermal_cycles=1
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+
+# FOR INDEFINITE MATRICES:
+# solvability_projection=1 if all walls symmetric.
+# solvability_projection=0 if some walls outflow.
+# since all walls are "symmetry": we force sum p_{ij} = 0 
+# (null space vector as extra row) and we force
+# sum rhs_{ij}=0 (null space vector as extra column)
+# Note: the "A" weighted error (appropriately scaled) is now checked
+# for convergence criteria too,  R^{T} A R < C * tolerance , along
+# with the standard check: R^{T} R < tolerance
+#  R=residual 
+ns.solvability_projection=1 
+
+# 0=GSRB 1=ICRB 2=ILU
+Lp.smooth_type=2
+Lp.bottom_smooth_type=2
+
+# ZEYU
+ns.visual_option=-2 # -2=tecplot -1=plot files (visit or paraview)
+ns.shock_timestep=2 2 2
+
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8 8 4       # block factor in grid generation
+amr.check_int       = 50 # number of timesteps between checkpoints - ZEYU
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 10      # ZEYU
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 32
+#amr.restart         = chk00400
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
+
+mac.mac_tol=1.0e-10
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.1      # scale back initial timestep
+#ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
+ns.visc_coef=1.0 # ZEYU - leave as 1.0
+#ns.gravity=0.0  # Yongsheng
+ns.gravity        = -980.0  # ZEYU
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# 45 degrees=>sigma_{SV}=sigma_{LV}  and
+# sigma_{SL}/sigma_{LV}=1-2^{-1/2}
+#ns.tension        = 71.7 68.2 71.7   # LV SL SV Yongsheng
+#ns.tension        = 71.7 71.7 71.7   # LV SL SV Yongsheng
+# Kensuke: sigmaSV-sigmaSL=72 cos(163)
+# sigma_SL/sigma_SV=1-cos(163)
+# sigma_SV=72
+# sigma_SL=140.9
+# if hydrophobic,
+# sigma_SL/sigma_SV=2
+# sigma_SL=2 * 72
+#   -----
+#  | 13 | 23 
+#  ZEYU: material 1=liquid material 2=gas  3=substrate
+#  sigma_{SV}=sigma_{23}
+#  sigma_{SL}=sigma_{13}
+#  sigma_{LV}=sigma_{12}
+#  sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+#  if theta=90 degrees,
+#  sigma_SV=sigma_SL
+#  12=LV,13=SL,23=SV
+ns.tension=73.0 73.0 73.0  #ZEYU  dyne/cm
+# law_of_the_wall and ZEYU_DCA_SELECT not used for flexible plate problem
+#ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
+#law_of_the_wall=0 if static angle condition or non-GNBC dynamic angle 
+#                  conditions.
+#if law_of_the_wall=2 (GNBC) then
+# calls to FORT_WALLFUNCTION and getGhostVel are made.
+ns.law_of_the_wall=0
+# =-1 static angle
+# =1 GNBC
+# =2 Jiang 1970
+# =3 Shikmurzaev 2008 
+# =4 Kalliadasis1994
+# =5 Kistler1993
+# =6 Bracke1989
+# =7 Blake2006, Popescu2008
+# =8 Cox 1986
+ns.ZEYU_DCA_SELECT=-1
+ns.use_lsa=0
+#ns.fixed_dt	  = 5.0e-5   # hardwire dt
+ns.sum_interval   = 10       # timesteps between computing mass 
+ns.twall=0.0
+
+ns.axis_dir=0
+# 0.0 means do not use vorticity as a criterion for AMR
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=0.0
+ns.vinletgas=0.0
+#INITIAL DROP SPEED
+#ns.advbot=77.0 # Yongsheng
+ns.advbot=100.0 # ZEYU  cm/s
+ns.adv_vel=0.0
+ns.adv_dir=2       # inflow direction in the falling drop direction.
+# 0.0 0.4 Yongsheng
+# 0.0 0.1053027 Kensuke
+ns.xblob=0.0  # center of falling droplet ZEYU
+ns.yblob=0.125
+ns.zblob=0.125  # 0.025+0.1
+# 0.18 Yongsheng
+# 0.186/2=0.093 Kensuke
+ns.radblob=0.1 # ZEYU
+ns.xblob2=0.0
+# SUBSTRATE THICKNESS SHOULD BE A MULTIPLE OF dx_{coarsest}
+# if n_cell=32 32 and domain height=0.4 cm then
+# dx_coarsest=0.4/32=0.0125
+ns.yblob2=0.0125  # center of plate
+ns.zblob2=0.0125  # thickness of substrate=1 coarse cell ZEYU
+ns.radblob2=0.1 
+ns.radblob3=0.0125 
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=2000
+ns.material_type=0 0 0
+ns.FSI_flag=0 0 0
+ns.heatviscconst=0.0 0.0 0.0
+#ns.viscconst=1.0 0.0156552 1.0 # Yongsheng
+#material 1 is water
+#material 2 is gas
+#material 3 is substrate
+ns.elastic_viscosity=0.0 0.0 1.0
+ns.elastic_time=0.0 0.0 1.0e+9
+ns.viscoelastic_model=0 0 2
+ns.viscconst=8.9e-3 0.000181 1.0 # ZEYU
+#ns.denconst=1.0 0.001226 1.0 #Yongsheng
+ns.denconst=0.997 0.00125 1.0 #ZEYU
+# if pressure_error_cutoff=0.0 then pressure is not used as an AMR
+# criteria, otherwise if pressure_error_flag==0, then check the
+# magnitude of pressure, if pressure_error_flag==1, then check the
+# pressure variation (not exactly gradient).
+# if temperature_error_cutoff=0.0 then temperature is not used as an AMR
+# criteria, otherwise check the
+# temperature variation (not exactly gradient).
+ns.pressure_error_cutoff=0.0 0.0 0.0
+ns.tempconst=293.0 293.0 293.0
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 3
+ns.hi_bc          = 3 3
+#ns.v=1
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
