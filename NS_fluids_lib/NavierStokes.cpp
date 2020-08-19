@@ -19313,131 +19313,12 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
    ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
      ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
-    // cell centered MF, but grid locations will be 
-    // considered at the nodes.
-   MultiFab* x_foot_mf = new MultiFab(state[State_Type].boxArray(),
-     dmap,AMREX_SPACEDIM,1,
-     MFInfo().SetTag("x_foot_mf"),FArrayBoxFactory());
-
-   if (append_flag==0) {
-    // do nothing
-   } else if (append_flag==1) {
-
-	// ngrow=1
-	// scomp=num_materials_viscoelastic*NUM_TENSOR_TYPE
-	// ncomp=sdim
-    MultiFab* tensormf=getStateTensor(1,
+    // ngrow=1
+    // scomp=num_materials_viscoelastic*NUM_TENSOR_TYPE
+    // ncomp=sdim
+   MultiFab* x_displace_mf=getStateTensor(1,
       num_materials_viscoelastic*NUM_TENSOR_TYPE,
       AMREX_SPACEDIM,cur_time_slab);
-
-    int matrix_points=10;  // 4x4 - (3+2+1) =10
-    int RHS_points=4;
-    int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
-      // accumulate at the nodes, not cell centers.
-    MultiFab* accumulate_mf=new MultiFab(grids,dmap,ncomp_accumulate,1,
-      MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
-    accumulate_mf->setVal(0.0);
-
-    const Vector<Geometry>& ns_geom=parent->Geom();
-    const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-    const Vector<BoxArray>& ns_ba=parent->boxArray();
-    Vector<int> rr;
-    rr.resize(ns_ba.size());
-    for (int ilev=0;ilev<rr.size();ilev++)
-     rr[ilev]=2;
-    int nnbr=1;
-    NeighborParticleContainer<N_EXTRA_REAL,0> 
-      localPC_nbr(ns_geom,ns_dmap,ns_ba,rr,nnbr);
-    bool local_copy_flag=true; // the two PC have same hierarchy
-    localPC_nbr.copyParticles(localPC,local_copy_flag);
-
-    localPC_nbr.fillNeighbors();
-
-    if (thread_class::nthreads<1)
-     amrex::Error("thread_class::nthreads invalid");
-    thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-    for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
-     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-     const int gridno = mfi.index();
-     // std::cout << tilegrid << '\n';
-     // std::cout << gridno << '\n';
-     const Box& tilegrid = mfi.tilebox();
-     const Box& fabgrid = grids[gridno];
-     const int* tilelo=tilegrid.loVect();
-     const int* tilehi=tilegrid.hiVect();
-     const int* fablo=fabgrid.loVect();
-     const int* fabhi=fabgrid.hiVect();
-     int bfact=parent->Space_blockingFactor(level);
-
-     const Real* xlo = grid_loc[gridno].lo();
-
-      // particles is of type "ParticleTileType::AoS"
-      // see AMReX_ArrayOfStructs.H
-      // particles is of type:
-      //  amrex::ParticleTile<SDIM,0,0,0>
-      //
-
-     auto& particles = localPC_nbr.GetParticles(level)
-       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-     auto& particles_AoS = particles.GetArrayOfStructs();
-
-     int Np=particles_AoS.size();
-
-      // ParticleVector&
-     auto& neighbors_local = 
-	localPC_nbr.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
-     int Nn=neighbors_local.size();
-
-     FArrayBox& matrixfab=(*accumulate_mf)[mfi];
-     FArrayBox& TNEWfab=(*x_foot_mf)[mfi];
-     FArrayBox& xfootfab=(*tensormf)[mfi];
-
-     int tid_current=ns_thread();
-     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-      amrex::Error("tid_current invalid");
-     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-     int ncomp_tensor=AMREX_SPACEDIM;
-
-     // in: GODUNOV_3D.F90
-     fort_assimilate_x_foot_from_particles( 
-       &tid_current,
-       tilelo,tilehi,
-       fablo,fabhi,
-       &bfact,
-       &level,
-       &finest_level,
-       xlo,dx,
-       particles_AoS.data(),
-       neighbors_local.data(),
-       Np,       //pass by value
-       Nn,       //pass by value
-       &ncomp_tensor,
-       &matrix_points,
-       &RHS_points,
-       &ncomp_accumulate,
-       xfootfab.dataPtr(),
-       ARLIM(xfootfab.loVect()),ARLIM(xfootfab.hiVect()),
-       TNEWfab.dataPtr(),
-       ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-       matrixfab.dataPtr(),
-       ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
-    } // mfi
-} // omp
-    ns_reconcile_d_num(81);
-
-    localPC_nbr.clearNeighbors();
-
-    delete tensormf;
-    delete accumulate_mf;
-
-   } else
-    amrex::Error("append_flag invalid");
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -19461,7 +19342,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& lsfab=(*LSmf)[mfi];
-    FArrayBox& xfootfab=(*x_foot_mf)[mfi];
+    FArrayBox& xdisplacefab=(*x_displace_mf)[mfi];
 
      // component 1: number of particles linked to the cell.
      // component 2: the link to the list of particles.
@@ -19527,8 +19408,8 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
        cell_particle_count.dataPtr(),
        ARLIM(cell_particle_count.loVect()),
        ARLIM(cell_particle_count.hiVect()),
-       xfootfab.dataPtr(),
-       ARLIM(xfootfab.loVect()),ARLIM(xfootfab.hiVect()),
+       xdisplacefab.dataPtr(),
+       ARLIM(xdisplacefab.loVect()),ARLIM(xdisplacefab.hiVect()),
        lsfab.dataPtr(),
        ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
 
@@ -19567,7 +19448,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 } // omp
    ns_reconcile_d_num(81);
 
-   delete x_foot_mf;
+   delete x_displace_mf;
    delete LSmf;
 
   } else

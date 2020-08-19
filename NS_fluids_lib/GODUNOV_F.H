@@ -1331,7 +1331,8 @@ extern "C"
      int* nstate,
      const Real* xlo,const Real* dx,
      Real* lsfab,AMREX_ARLIM_P(lsfablo),AMREX_ARLIM_P(lsfabhi),
-     Real* DeDTinverse,AMREX_ARLIM_P(DeDTinverselo),AMREX_ARLIM_P(DeDTinversehi),
+     Real* DeDTinverse,
+     AMREX_ARLIM_P(DeDTinverselo),AMREX_ARLIM_P(DeDTinversehi),
      Real* heatnew,AMREX_ARLIM_P(heatnewlo),AMREX_ARLIM_P(heatnewhi),
      Real* xstress,AMREX_ARLIM_P(xstresslo),AMREX_ARLIM_P(xstresshi),
      Real* ystress,AMREX_ARLIM_P(ystresslo),AMREX_ARLIM_P(ystresshi),
@@ -1427,33 +1428,6 @@ extern "C"
      AMREX_ARLIM_P(matrixfablo),
      AMREX_ARLIM_P(matrixfabhi));
 
-   void fort_assimilate_x_foot_from_particles(
-     int* tid,
-     const int* tilelo,const int* tilehi,
-     const int* fablo,const int* fabhi,
-     int* bfact,
-     int* level,
-     int* finest_level,
-     const Real* xlo,const Real* dx,
-     const void* particles,
-     //const amrex::Real* particles,
-     const void* nbr_particles,
-     //const amrex::Real* nbr_particles,
-     int Np, // must be pass by value just in case "long" on the c++ side.
-     int Nn, // must be pass by value just in case "long" on the c++ side.
-     int* ncomp_tensor,
-     int* matrix_points,
-     int* RHS_points,
-     int* ncomp_accumulate,
-     Real* xfootfab,
-     AMREX_ARLIM_P(xfootfabfablo),
-     AMREX_ARLIM_P(xfootfabfabhi),
-     Real* TNEWfab,
-     AMREX_ARLIM_P(TNEWfablo),
-     AMREX_ARLIM_P(TNEWfabhi),
-     Real* matrixfab,
-     AMREX_ARLIM_P(matrixfablo),
-     AMREX_ARLIM_P(matrixfabhi));
 }
 
 }/* namespace amrex */

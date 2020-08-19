@@ -787,7 +787,9 @@ namespace amrex{
 	int* cell_particle_count,
 	AMREX_ARLIM_P(cell_particle_countlo),
 	AMREX_ARLIM_P(cell_particle_counthi),
-        Real* xfoot,AMREX_ARLIM_P(xfootlo),AMREX_ARLIM_P(xfoothi),
+        Real* xdisplace,
+	AMREX_ARLIM_P(xdisplacelo),
+	AMREX_ARLIM_P(xdisplacehi),
         Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
 
 

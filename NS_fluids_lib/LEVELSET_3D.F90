@@ -17216,8 +17216,8 @@ stop
         INTEGER_T :: nsubdivide
         INTEGER_T :: DIMDEC(LS)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
-        INTEGER_T :: DIMDEC(xfoot)
-        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: xfootfab
+        INTEGER_T :: DIMDEC(xdisplace)
+        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: xdisplacefab
         INTEGER_T :: DIMDEC(cell_particle_count)
         INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: cell_particle_count
        end type accum_parm_type_count
@@ -18448,17 +18448,19 @@ stop
       istenlo(3)=0
       istenhi(3)=0
       do dir=1,SDIM
-       istenlo(dir)=0
+       istenlo(dir)=-1
        istenhi(dir)=1
       enddo
 
       do ii=i+istenlo(1),i+istenhi(1)
       do jj=j+istenlo(2),j+istenhi(2)
       do kk=k+istenlo(3),k+istenhi(3)
-       call gridstenND_level(xsten,ii,jj,kk,accum_PARM%level,nhalf)
+       call gridsten_level(xsten,ii,jj,kk,accum_PARM%level,nhalf)
        do dir=1,SDIM
         xpart(dir)=xsten(0,dir)
-        xfoot(dir)=accum_PARM%xfootfab(D_DECL(ii,jj,kk),dir)
+         ! xdisplace=x - xfoot
+         ! xfoot=x-displace
+        xfoot(dir)=xpart(dir)-accum_PARM%xdisplacefab(D_DECL(ii,jj,kk),dir)
        enddo 
        ipart_flag=0
        call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag,accum_PARM%dx)
@@ -18524,7 +18526,7 @@ stop
         particle_link_data, &
         cell_particle_count, &
         DIMS(cell_particle_count), &
-        xfootfab,DIMS(xfootfab), &
+        xdisplacefab,DIMS(xdisplacefab), &
         lsfab,DIMS(lsfab)) &
       bind(c,name='fort_init_particle_container')
 
@@ -18561,14 +18563,14 @@ stop
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
-      INTEGER_T, intent(in) :: DIMDEC(xfootfab)
+      INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
     
         ! positive, negative, 0, positive link, negative link, 0 link
       INTEGER_T, intent(inout), target :: cell_particle_count( &
               DIMV(cell_particle_count), &
               2) 
-      REAL_T, intent(in), target :: xfootfab(DIMV(xfootfab),SDIM) 
+      REAL_T, intent(in), target :: xdisplacefab(DIMV(xdisplacefab),SDIM) 
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
 
       type(accum_parm_type_count) :: accum_PARM
@@ -18605,8 +18607,7 @@ stop
        stop
       endif
 
-       ! data for xfootfab is at the nodes. 
-      call checkbound(fablo,fabhi,DIMS(xfootfab),1,-1,2872)
+      call checkbound(fablo,fabhi,DIMS(xdisplacefab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(cell_particle_count),0,-1,2872)
 
@@ -18639,9 +18640,9 @@ stop
       accum_PARM%LS=>lsfab  ! accum_PARM%LS is pointer, LS is target
 
       call copy_dimdec( &
-        DIMS(accum_PARM%xfoot), &
-        DIMS(xfootfab))
-      accum_PARM%xfootfab=>xfootfab  
+        DIMS(accum_PARM%xdisplace), &
+        DIMS(xdisplacefab))
+      accum_PARM%xdisplacefab=>xdisplacefab  
 
       call copy_dimdec( &
         DIMS(accum_PARM%cell_particle_count), &
@@ -18750,6 +18751,8 @@ stop
             i,j,k, &
             isub,jsub,ksub, &
             xsub)
+
+            ! add bulk particles
           call interp_eul_lag_dist( &
             accum_PARM, &
             i,j,k, &
@@ -18786,6 +18789,7 @@ stop
             xsub_I, &
             mod_flag)
 
+            ! add interface particles
            call interp_eul_lag_dist( &
             accum_PARM, &
             i,j,k, &
