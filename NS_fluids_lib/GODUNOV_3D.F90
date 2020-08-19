@@ -28712,7 +28712,9 @@ stop
         matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
         RHS_points, &    ! least squares in 3D: 4
         ncomp_accumulate, & ! matrix_points+sdim * RHS_points
-        TNEWfab, &       ! FAB that hold elastic tensor when complete
+        xfootfab, &       ! FAB that holds the displacement vector.
+        DIMS(xfootfab), &
+        TNEWfab, &       ! FAB that holds elastic tensor when complete
         DIMS(TNEWfab), &
         matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
@@ -28737,6 +28739,7 @@ stop
       REAL_T, intent(in), target :: xlo(SDIM)
       REAL_T, intent(in), target :: dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      INTEGER_T, intent(in) :: DIMDEC(xfootfab) 
       INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
@@ -28744,6 +28747,9 @@ stop
       REAL_T, intent(inout) :: TNEWfab( &
         DIMV(TNEWfab), &
         ncomp_tensor)
+      REAL_T, intent(in) :: xfootfab( &
+        DIMV(xfootfab), &
+        SDIM)
       type(particle_t), intent(in), target :: particles(Np)
       type(particle_t), intent(in), target :: nbr_particles(Nn)
 
@@ -28790,6 +28796,7 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(matrixfab),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(xfootfab),1,-1,1271)
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi

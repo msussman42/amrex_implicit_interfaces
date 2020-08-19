@@ -7300,6 +7300,7 @@ void NavierStokes::init_boundary() {
    if (nparts!=num_materials_viscoelastic)
     amrex::Error("nparts!=num_materials_viscoelastic");
    MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
+     // ngrow=1 scomp=0
    MultiFab* tensormf=getStateTensor(1,0,nparts*NUM_TENSOR_TYPE+
 		   AMREX_SPACEDIM,cur_time_slab);
    MultiFab::Copy(Tensor_new,*tensormf,0,0,nparts*NUM_TENSOR_TYPE+
@@ -19220,6 +19221,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
    int ncomp_tensor=NUM_TENSOR_TYPE;
 
     // in: GODUNOV_3D.F90
+    // updates (1) configuration tensor and
+    // (2) XDISPLACE data.
    fort_assimilate_tensor_from_particles( 
      &tid_current,
      tilelo,tilehi,
@@ -19320,6 +19323,13 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
     // do nothing
    } else if (append_flag==1) {
 
+	// ngrow=1
+	// scomp=num_materials_viscoelastic*NUM_TENSOR_TYPE
+	// ncomp=sdim
+    MultiFab* tensormf=getStateTensor(1,
+      num_materials_viscoelastic*NUM_TENSOR_TYPE,
+      AMREX_SPACEDIM,cur_time_slab);
+
     int matrix_points=10;  // 4x4 - (3+2+1) =10
     int RHS_points=4;
     int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
@@ -19385,6 +19395,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
      FArrayBox& matrixfab=(*accumulate_mf)[mfi];
      FArrayBox& TNEWfab=(*x_foot_mf)[mfi];
+     FArrayBox& xfootfab=(*tensormf)[mfi];
 
      int tid_current=ns_thread();
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -19393,7 +19404,6 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
      int ncomp_tensor=AMREX_SPACEDIM;
 
-     // FIX ME: interpolate from both particle AND Eulerian xfoot data.
      // in: GODUNOV_3D.F90
      fort_assimilate_x_foot_from_particles( 
        &tid_current,
@@ -19411,6 +19421,8 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
        &matrix_points,
        &RHS_points,
        &ncomp_accumulate,
+       xfootfab.dataPtr(),
+       ARLIM(xfootfab.loVect()),ARLIM(xfootfab.hiVect()),
        TNEWfab.dataPtr(),
        ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
        matrixfab.dataPtr(),
@@ -19421,6 +19433,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
     localPC_nbr.clearNeighbors();
 
+    delete tensormf;
     delete accumulate_mf;
 
    } else
