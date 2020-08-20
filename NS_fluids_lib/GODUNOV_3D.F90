@@ -1652,7 +1652,7 @@ stop
                xprobe(dir)=xtriple(dir)-dxmin*nrm_solid(dir)
               enddo
               
-              call  interp_from_fluid( &
+              call interp_from_fluid( &
                LOW, &
                xprobe, &
                im_secondary_image, &
@@ -1796,6 +1796,8 @@ stop
                if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
                 print *,"xcrossing ",xcrossing(1),xcrossing(2),xcrossing(SDIM)
                 print *,"xtriple ",xtriple(1),xtriple(2),xtriple(SDIM)
+                print *,"nrm_solid ",nrm_solid(1),nrm_solid(2),nrm_solid(SDIM)
+                print *,"nrm_fluid ",nrm_fluid(1),nrm_fluid(2),nrm_fluid(SDIM)
                 print *,"angle_ACT(rad,deg) ",angle_ACT, &
                         angle_ACT*180.0d0/Pi
                 print *,"dx(1),dist_to_CL ",LOW%dx(1),dist_to_CL
@@ -2092,6 +2094,9 @@ stop
          endif
          if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
           print *,"xcrossing ",xcrossing(1),xcrossing(2),xcrossing(SDIM)
+          print *,"xtriple ",xtriple(1),xtriple(2),xtriple(SDIM)
+          print *,"nrm_solid ",nrm_solid(1),nrm_solid(2),nrm_solid(SDIM)
+          print *,"nrm_fluid ",nrm_fluid(1),nrm_fluid(2),nrm_fluid(SDIM)
           print *,"angle_ACT(rad,deg) ",angle_ACT, &
                     angle_ACT*180.0d0/Pi
           print *,"dx(1),dist_to_CL ",LOW%dx(1),dist_to_CL

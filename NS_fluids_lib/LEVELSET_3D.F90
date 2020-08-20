@@ -189,15 +189,12 @@ stop
          nhalf=3
 
          do dir=1,SDIM
+          local_index(dir)=cell_index(dir)
           if (cell_index(dir)-1.lt.CP%fablo(dir)-CP%ngrow_LS) then
            local_index(dir)=CP%fablo(dir)-CP%ngrow_LS+1
-          else
-           local_index(dir)=cell_index(dir)
           endif
           if (cell_index(dir)+1.gt.CP%fabhi(dir)+CP%ngrow_LS) then
            local_index(dir)=CP%fabhi(dir)+CP%ngrow_LS-1
-          else
-           local_index(dir)=cell_index(dir)
           endif
           LSstenlo(dir)=-1
           LSstenhi(dir)=1
