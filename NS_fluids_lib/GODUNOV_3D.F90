@@ -9977,7 +9977,7 @@ stop
                   (imattype.le.fort_max_num_eos)) then
           ok_to_update(icomp)=1 ! density (I-scheme)
          else
-          print *,"imattype invalid"
+          print *,"imattype invalid fort_sdc_time_quad"
           stop
          endif
 

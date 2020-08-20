@@ -295,6 +295,7 @@ int  NavierStokes::SEM_advection_algorithm=0;
 //          non-tesselating or tesselating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
+// default=1
 Vector<int> NavierStokes::particle_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
 int NavierStokes::NS_ncomp_particles=0;

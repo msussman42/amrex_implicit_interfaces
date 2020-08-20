@@ -56,9 +56,12 @@ ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
 ns.MOFITERMAX=15
 #amr.n_cell    = 24 24 # Yongsheng
 #amr.n_cell=32 24 # Kensuke
-amr.n_cell=32 32 # ZEYU Production run effective fine grid resolution 512^2
-#amr.max_level =  1   # Yongsheng 2= 43.2 points per diameter
-amr.max_level=1 # ZEYU
+amr.n_cell=64 64 # ZEYU Production run effective fine grid resolution 512^2
+#amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
+amr.max_level=0 # ZEYU
+ns.particleLS_flag=0 0 1
+ns.particle_nsubdivide=1 1 1
+ns.radius_cutoff=0 0 -1
 ns.truncate_thickness=2.0
 
 ns.minimum_relative_error=1.0e-18
@@ -98,7 +101,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10      # ZEYU
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 32
+amr.max_grid_size   = 1024
 #amr.restart         = chk00400
 #amr.trace   =1
 
@@ -173,8 +176,8 @@ ns.adv_dir=2       # inflow direction in the falling drop direction.
 # 0.0 0.4 Yongsheng
 # 0.0 0.1053027 Kensuke
 ns.xblob=0.0  # center of falling droplet ZEYU
-ns.yblob=0.125
-ns.zblob=0.125  # 0.025+0.1
+ns.yblob=0.225
+ns.zblob=0.225  # 0.125+0.1
 # 0.18 Yongsheng
 # 0.186/2=0.093 Kensuke
 ns.radblob=0.1 # ZEYU
@@ -182,10 +185,11 @@ ns.xblob2=0.0
 # SUBSTRATE THICKNESS SHOULD BE A MULTIPLE OF dx_{coarsest}
 # if n_cell=32 32 and domain height=0.4 cm then
 # dx_coarsest=0.4/32=0.0125
-ns.yblob2=0.0125  # center of plate
-ns.zblob2=0.0125  # thickness of substrate=1 coarse cell ZEYU
+ns.yblob2=0.1125  # center of plate
+ns.zblob2=0.1125  # center of plate
 ns.radblob2=0.1 
 ns.radblob3=0.0125 
+ns.radblob4=0.0125 
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=2000

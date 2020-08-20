@@ -9900,7 +9900,7 @@ stop
                 (imattype.le.fort_max_num_eos)) then
         ! do nothing
        else
-        print *,"imattype invalid"
+        print *,"imattype invalid fort_mac_to_cell"
         stop
        endif
        if (added_weight(im).gt.zero) then
@@ -12101,7 +12101,7 @@ stop
                 (imattype.le.fort_max_num_eos)) then
         ! do nothing
        else
-        print *,"imattype invalid"
+        print *,"imattype invalid fort_inc_temp"
         stop
        endif
        if ((temperature_primitive_variable(im).ne.0).and. &
@@ -12211,7 +12211,7 @@ stop
                internal_e,imattype,im)
              state(D_DECL(i,j,k),dencomp+1)=TEMPERATURE
             else
-             print *,"imattype invalid"
+             print *,"imattype invalid fort_inc_temp"
              stop
             endif
            else
@@ -14662,7 +14662,7 @@ stop
                        (imattype.le.fort_max_num_eos)) then
                ! do nothing
               else
-               print *,"imattype invalid"
+               print *,"imattype invalid cell_to_mac"
                stop
               endif
              else if ((operation_flag.ge.0).and. &

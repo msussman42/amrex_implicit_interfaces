@@ -222,7 +222,7 @@ subroutine EOS_flexible_plate_impact(rho,internal_energy,pressure, &
  if (imattype.eq.24) then
   pressure=rho*(DEF_VAPOR_GAMMA-1.0D0)*internal_energy
  else
-  print *,"imattype invalid"
+  print *,"imattype invalid EOS_flexible_plate_impact"
   stop
  endif
 
@@ -242,7 +242,7 @@ subroutine SOUNDSQR_flexible_plate_impact(rho,internal_energy,soundsqr, &
   call EOS_flexible_plate_impact(rho,internal_energy,pressure,imattype,im)
   soundsqr=DEF_VAPOR_GAMMA*pressure/rho
  else
-  print *,"imattype invalid"
+  print *,"imattype invalid SOUNDSQR_flexible_plate_impact"
   stop
  endif
 
@@ -257,10 +257,11 @@ subroutine INTERNAL_flexible_plate_impact(rho,temperature,local_internal_energy,
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- if (imattype.eq.24) then 
+ if ((imattype.eq.0).or. &
+     (imattype.eq.24)) then 
   local_internal_energy=DEF_VAPOR_CV*temperature
  else
-  print *,"imattype invalid"
+  print *,"imattype invalid INTERNAL_flexible_plate_impact"
   stop
  endif
 
@@ -278,7 +279,7 @@ subroutine TEMPERATURE_flexible_plate_impact(rho,temperature,internal_energy, &
  if (imattype.eq.24) then 
   temperature=internal_energy/DEF_VAPOR_CV
  else
-  print *,"imattype invalid"
+  print *,"imattype invalid TEMPERATURE_flexible_plate_impact"
   stop
  endif
 

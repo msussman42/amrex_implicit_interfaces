@@ -9413,7 +9413,7 @@ end subroutine dynamic_contact_angle
                  (imattype.le.fort_max_num_eos)) then
          call general_hydrostatic_pressure(atmos_pres)
         else 
-         print *,"imattype invalid"
+         print *,"imattype invalid EOS_error_ind"
          stop
         endif
 
@@ -10050,7 +10050,7 @@ end subroutine dynamic_contact_angle
       else if (imattype.eq.0) then
        temperature=internal_energy/cv
       else
-       print *,"imattype invalid"
+       print *,"imattype invalid TEMPERATURE_default"
        stop
       endif
 
@@ -24892,7 +24892,7 @@ END SUBROUTINE Adist
                       (imattype.le.fort_max_num_eos)) then
               dendest(D_DECL(ic,jc,kc),ibase+1)=den_new
              else
-              print *,"imattype invalid"
+              print *,"imattype invalid SEM_MAC_TO_CELL"
               stop
              endif
 
@@ -39943,7 +39943,7 @@ end subroutine initialize2d
              e_room=e_room*p_hyd/p_room
              scalc(ibase+2)=temproom  ! temperature
             else 
-             print *,"imattype invalid"
+             print *,"imattype invalid fort_initdata"
              stop
             endif
 
