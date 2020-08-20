@@ -1374,6 +1374,9 @@ stop
        REAL_T :: xcrossing(SDIM)
        REAL_T :: xprobe(SDIM)
        REAL_T :: xtriple(SDIM)
+       INTEGER_T :: debug_slip_velocity_enforcement
+
+       debug_slip_velocity_enforcement=0
     
        nhalf=3 
        nten_test=( (LOW%nmat-1)*(LOW%nmat-1)+LOW%nmat-1 )/2
@@ -1790,7 +1793,7 @@ stop
                 print *,"sinthetaACT or costhetaACT invalid"
                 stop
                endif
-               if (1.eq.1) then
+               if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
                 print *,"xcrossing ",xcrossing(1),xcrossing(2),xcrossing(SDIM)
                 print *,"xtriple ",xtriple(1),xtriple(2),xtriple(SDIM)
                 print *,"angle_ACT(rad,deg) ",angle_ACT, &
@@ -2004,7 +2007,8 @@ stop
 
           ZEYU_imodel=1 ! GNBC
           ZEYU_ifgnbc=1 ! GNBC
-          ZEYU_lambda=8.0D-7
+          ZEYU_lambda=8.0D-7  ! slip length
+          ZEYU_lambda=dxmin  ! slip length
           ZEYU_l_macro=dxmin
           ZEYU_l_micro=1.0D-9
           ZEYU_dgrid=dxmin 
@@ -2050,6 +2054,11 @@ stop
           ! nCL points to the im_primary_image material.
           ! ZEYU_u_slip is positive if the contact line is advancing into
           ! the gas.
+          ! NOTE: if the velocity, ZEYU_u_slip=0.0, the interface might
+          ! still move slowly since the curvature will not be numerically
+          ! a constant on the interface.  This is what people call 
+          ! "parasitic currents" when the interface moves due to surface
+          ! tension, even though the curvature = constant.
           ughost_tngt=ZEYU_u_slip
 
           nCL_dot_n_raster=zero
@@ -2081,7 +2090,7 @@ stop
           print *,"fort_denconst invalid"
           stop
          endif
-         if (1.eq.1) then
+         if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
           print *,"xcrossing ",xcrossing(1),xcrossing(2),xcrossing(SDIM)
           print *,"angle_ACT(rad,deg) ",angle_ACT, &
                     angle_ACT*180.0d0/Pi
@@ -2100,6 +2109,12 @@ stop
         else
          print *,"near_contact_line invalid"
          stop
+        endif
+
+        if (debug_slip_velocity_enforcement.eq.1) then
+         ughost_tngt = ten
+         u_tngt(1)=one
+         u_tngt(2)=zero
         endif
 
        else

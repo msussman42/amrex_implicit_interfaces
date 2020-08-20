@@ -55,7 +55,7 @@ ns.MOFITERMAX=15
 # in IJMF paper, 8 ... 256 cells across drop diameter.
 # if domain is  6x3, base grid 96x48, max_level=1, diameter=2, then
 # 64 points per drop diameter.
-amr.n_cell    = 48 24
+amr.n_cell    = 96 48
 amr.max_level =  0
 ns.ns_tiling=false
 
@@ -70,7 +70,9 @@ Lp.bottom_smooth_type=2
 ns.visual_ncell=192 96  # ascii tecplot files "uniform<stuff>.tec"
                         # uniform data.
 ns.visual_option=-2  # -1=VISIT format  -2=tecplot format
-ns.visual_tessellate_vfrac=1
+# make ns.visual_tessellate_vfrac==0 in order to see extrapolated level set
+# function in the mat*.tec files.
+ns.visual_tessellate_vfrac=0
 
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2  # number of buffer cells in error est

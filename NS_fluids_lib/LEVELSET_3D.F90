@@ -1698,6 +1698,17 @@ stop
                ZEYU_l_macro, ZEYU_l_micro, &
                ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent, &
                ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d)
+
+             if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
+              print *,"ZEYU_imodel= ",ZEYU_imodel
+              print *,"non GNBC dynamic model"
+              print *,"ZEYU_thet_s (rad,deg) ",ZEYU_thet_s, &
+                      ZEYU_thet_s*180.0d0/Pi
+              print *,"ZEYU_thet_d (rad,deg) ",ZEYU_thet_d, &
+                      ZEYU_thet_d*180.0d0/Pi
+              print *,"ZEYU_u_cl ",ZEYU_u_cl
+              print *,"im3,iten ",im3,iten
+             endif
              if (im.eq.im_liquid) then
               cos_angle=cos(ZEYU_thet_d)
              else if (im.eq.im_vapor) then

@@ -3825,6 +3825,8 @@ select case (imodel)
             end do
             print *, "Calculating Ca and thet_d_micro..."
             print *, "number of iteration is: ", iter
+             ! beta = mu_l / lambda  e.g. lambda=8.0D-7
+             ! integral_{-2 dx}^{2 dx} u_slip = u_CL_JIANG * 4 dx ?
             u_slip = 1. / (beta * dgrid + 1.0D-20) *  &
                   ZEYU_delta(d_closest/dgrid) * sigma *  &
                   (cos(thet_s) - cos(thet_d_micro))
