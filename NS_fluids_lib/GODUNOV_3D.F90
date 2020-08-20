@@ -1798,7 +1798,7 @@ stop
                 print *,"xtriple ",xtriple(1),xtriple(2),xtriple(SDIM)
                 print *,"nrm_solid ",nrm_solid(1),nrm_solid(2),nrm_solid(SDIM)
                 print *,"nrm_fluid ",nrm_fluid(1),nrm_fluid(2),nrm_fluid(SDIM)
-                print *,"angle_ACT(rad,deg) ",angle_ACT, &
+                print *,"im_fluid,angle_ACT(rad,deg) ",im_fluid,angle_ACT, &
                         angle_ACT*180.0d0/Pi
                 print *,"dx(1),dist_to_CL ",LOW%dx(1),dist_to_CL
                 print *,"im_primary_image,im_secondary_image ", &
@@ -2097,8 +2097,10 @@ stop
           print *,"xtriple ",xtriple(1),xtriple(2),xtriple(SDIM)
           print *,"nrm_solid ",nrm_solid(1),nrm_solid(2),nrm_solid(SDIM)
           print *,"nrm_fluid ",nrm_fluid(1),nrm_fluid(2),nrm_fluid(SDIM)
-          print *,"angle_ACT(rad,deg) ",angle_ACT, &
+          print *,"im_fluid,angle_ACT(rad,deg) ",im_fluid,angle_ACT, &
                     angle_ACT*180.0d0/Pi
+          print *,"im_liquid,ZEYU_thet_d_apparent(rad,deg) ",im_liquid, &
+               ZEYU_thet_d_apparent,ZEYU_thet_d_apparent*180.0d0/Pi
           print *,"dx(1),dist_to_CL ",LOW%dx(1),dist_to_CL
           print *,"im_primary_image,im_secondary_image ", &
                im_primary_image,im_secondary_image
