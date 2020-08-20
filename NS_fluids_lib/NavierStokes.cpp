@@ -7210,7 +7210,55 @@ NavierStokes::initData () {
   // Otherwise initialize FSI_GHOST_MAC_MF with the fluid velocity.
  int dealloc_history=1;
  init_FSI_GHOST_MAC_MF(dealloc_history);
+
+ if (NS_ncomp_particles>0) {
+
+  const Vector<Geometry>& ns_geom=parent->Geom();
+  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+  const Vector<BoxArray>& ns_ba=parent->boxArray();
+  Vector<int> rr;
+  rr.resize(ns_ba.size());
+  for (int ilev=0;ilev<rr.size();ilev++)
+   rr[ilev]=2;
+
+  int ipart=0;
+  for (int im=0;im<nmat;im++) {
+
+   if (particleLS_flag[im]==1) {
+
+    NavierStokes& ns_level0=getLevel(0);
+    ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+    localPC.clearParticles();
+    localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
+    int append_flag=0;
+    init_particle_container(im,ipart,append_flag);
+
+    int lev_min=0;
+    int lev_max=-1;
+    int nGrow_Redistribute=0;
+    int local_Redistribute=1;
+    localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_Redistribute);
+
+    ipart++;
+   } else if (particleLS_flag[im]==0) {
+    // do nothing
+   } else
+    amrex::Error("particleLS_flag[im] invalid");
+
+  } // im=0..nmat-1
+
+  if (ipart==NS_ncomp_particles) {
+   // do nothing
+  } else
+   amrex::Error("ipart invalid");
  
+ } else if (NS_ncomp_particles==0) {
+  // do nothing
+ } else
+  amrex::Error("NS_ncomp_particles invalid");
+
  init_regrid_history();
  is_first_step_after_regrid=-1;
 
@@ -19281,15 +19329,10 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
  } else
   amrex::Error("expecting slab_step==ns_time_order-1");
 
- if (level==finest_level) {
+ if (level<=finest_level) {
   // do nothing
  } else 
-  amrex::Error("particle container on finest level only");
-
- if (level==max_level) {
-  // do nothing
- } else 
-  amrex::Error("particle container on max level only");
+  amrex::Error("level<=finest_level failed");
 
  int nmat=num_materials;
  if (num_state_base!=2)
@@ -19493,7 +19536,6 @@ NavierStokes::post_init_state () {
  const int finest_level = parent->finestLevel();
 
  NavierStokes& ns_finest=getLevel(finest_level);
- NavierStokes& ns_level0=getLevel(0);
 
    // inside of post_init_state
 
@@ -19540,52 +19582,6 @@ NavierStokes::post_init_state () {
  if (color_count!=blobdata.size())
   amrex::Error("color_count!=blobdata.size()");
 
- if (NS_ncomp_particles>0) {
-
-  const Vector<Geometry>& ns_geom=parent->Geom();
-  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-  const Vector<BoxArray>& ns_ba=parent->boxArray();
-  Vector<int> rr;
-  rr.resize(ns_ba.size());
-  for (int ilev=0;ilev<rr.size();ilev++)
-   rr[ilev]=2;
-
-  int ipart=0;
-  for (int im=0;im<nmat;im++) {
-
-   if (particleLS_flag[im]==1) {
-
-    ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
-    localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
-    int append_flag=0;
-    ns_finest.init_particle_container(im,ipart,append_flag);
-
-    int lev_min=0;
-    int lev_max=-1;
-    int nGrow_Redistribute=0;
-    int local_Redistribute=1;
-    localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute);
-
-    ipart++;
-   } else if (particleLS_flag[im]==0) {
-    // do nothing
-   } else
-    amrex::Error("particleLS_flag[im] invalid");
-
-  } // im=0..nmat-1
-
-  if (ipart==NS_ncomp_particles) {
-   // do nothing
-  } else
-   amrex::Error("ipart invalid");
- 
- } else if (NS_ncomp_particles==0) {
-  // do nothing
- } else
-  amrex::Error("NS_ncomp_particles invalid");
- 
  if (is_zalesak()) {
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);

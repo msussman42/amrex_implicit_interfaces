@@ -38383,15 +38383,34 @@ end subroutine initialize2d
        nhalf=3
 
         ! c++ index
-       if (scomp.ne.0) then
+       if ((scomp.eq.0).or. &
+           (scomp.eq.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE)) then
+        ! do nothing
+       else
         print *,"scomp invalid group tensorfill"
+        print *,"scomp=",scomp
+        print *,"ncomp=",ncomp
+        print *,"num_materials_viscoelastic=",num_materials_viscoelastic
+        print *,"FORT_NUM_TENSOR_TYPE= ",FORT_NUM_TENSOR_TYPE
+        print *,"level=",level
+        print *,"fort_finest_level=",fort_finest_level
         stop
        endif
-       if (ncomp.ne. &
-           num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
+       if ((ncomp.eq.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+            SDIM).or.(ncomp.eq.SDIM)) then
+        ! do nothing
+       else
         print *,"ncomp invalid19"
         stop
        endif
+       if (scomp+ncomp.le. &
+           num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
+        ! do nothing
+       else
+        print *,"scomp+ncomp invalid19"
+        stop
+       endif
+
        if ((level.lt.0).or.(level.gt.fort_finest_level)) then
         print *,"level invalid in fill 16"
         stop
@@ -38412,11 +38431,11 @@ end subroutine initialize2d
        fabhi(SDIM)=ARG_H3(u)
 #endif
 
-       do icomp=1,num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM
+       do icomp=scomp+1,scomp+ncomp
         call filcc(bfact, &
-         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
+         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp-scomp), &
          DIMS(u), &
-         domlo,domhi,bc(1,1,icomp))
+         domlo,domhi,bc(1,1,icomp-scomp))
        enddo
 
        do dir2=1,SDIM
@@ -38427,61 +38446,11 @@ end subroutine initialize2d
        do istate=1,FORT_NUM_TENSOR_TYPE
 
         icomp=icomp+1
-        im=fort_im_elastic_map(ipart)+1
 
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side,icomp).eq.EXT_DIR) then
-         if (side.eq.1) then
-          if (fablo(dir2).lt.domlo(dir2)) then
-           ext_dir_flag=1
-           borderhi(dir2)=domlo(dir2)-1
-           inside_index=domlo(dir2)
-          endif
-         else if (side.eq.2) then
-          if (fabhi(dir2).gt.domhi(dir2)) then
-           ext_dir_flag=1
-           borderlo(dir2)=domhi(dir2)+1
-           inside_index=domhi(dir2)
-          endif
-         else
-          print *,"side invalid"
-          stop
-         endif
-        endif
+        if ((icomp.ge.scomp+1).and. &
+            (icomp.le.scomp+ncomp)) then
 
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call tensorBC(time,dir2,side, &
-           u(D_DECL(i,j,k),icomp), &
-           u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
-           xsten,nhalf,dx,bfact,ipart,im)
-         enddo
-         enddo
-         enddo
-        endif            
-       enddo ! istate
-       enddo ! ipart
-
-       if (icomp.eq.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
-
-        do istate=1,SDIM
-
-         icomp=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+         im=fort_im_elastic_map(ipart)+1
 
          borderlo(3)=0
          borderhi(3)=0
@@ -38490,7 +38459,7 @@ end subroutine initialize2d
           borderhi(dir3)=fabhi(dir3)
          enddo
          ext_dir_flag=0
-         if (bc(dir2,side,icomp).eq.EXT_DIR) then
+         if (bc(dir2,side,icomp-scomp).eq.EXT_DIR) then
           if (side.eq.1) then
            if (fablo(dir2).lt.domlo(dir2)) then
             ext_dir_flag=1
@@ -38520,13 +38489,97 @@ end subroutine initialize2d
            IWALL(3)=k
            IWALL(dir2)=inside_index
 
-           call xdisplaceBC(time,dir2,side, &
-            u(D_DECL(i,j,k),icomp), &
-            u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
-            xsten,nhalf,dx,bfact,istate)
+           call tensorBC(time,dir2,side, &
+            u(D_DECL(i,j,k),icomp-scomp), &
+            u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp-scomp), &
+            xsten,nhalf,dx,bfact,ipart,im)
           enddo
           enddo
           enddo
+         else if (ext_dir_flag.eq.0) then
+          ! do nothing
+         else
+          print *,"ext_dir_flag invalid"
+          stop
+         endif  
+        else if ((icomp.ge.1).and. &
+                 (icomp.le. &
+                  num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE)) then
+         ! do nothing
+        else
+         print *,"icomp invalid"
+         stop
+        endif
+       enddo ! istate
+       enddo ! ipart
+
+       if (icomp.eq.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
+
+        do istate=1,SDIM
+
+         icomp=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+
+         if ((icomp.ge.scomp+1).and. &
+             (icomp.le.scomp+ncomp)) then
+
+          borderlo(3)=0
+          borderhi(3)=0
+          do dir3=1,SDIM
+           borderlo(dir3)=fablo(dir3)
+           borderhi(dir3)=fabhi(dir3)
+          enddo
+          ext_dir_flag=0
+          if (bc(dir2,side,icomp-scomp).eq.EXT_DIR) then
+           if (side.eq.1) then
+            if (fablo(dir2).lt.domlo(dir2)) then
+             ext_dir_flag=1
+             borderhi(dir2)=domlo(dir2)-1
+             inside_index=domlo(dir2)
+            endif
+           else if (side.eq.2) then
+            if (fabhi(dir2).gt.domhi(dir2)) then
+             ext_dir_flag=1
+             borderlo(dir2)=domhi(dir2)+1
+             inside_index=domhi(dir2)
+            endif
+           else
+            print *,"side invalid"
+            stop
+           endif
+          endif
+
+          if (ext_dir_flag.eq.1) then
+           do i=borderlo(1),borderhi(1)
+           do j=borderlo(2),borderhi(2)
+           do k=borderlo(3),borderhi(3)
+
+            call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+            IWALL(1)=i
+            IWALL(2)=j
+            IWALL(3)=k
+            IWALL(dir2)=inside_index
+
+            call xdisplaceBC(time,dir2,side, &
+             u(D_DECL(i,j,k),icomp-scomp), &
+             u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp-scomp), &
+             xsten,nhalf,dx,bfact,istate)
+           enddo
+           enddo
+           enddo
+          else if (ext_dir_flag.eq.0) then
+           ! do nothing
+          else
+           print *,"ext_dir_flag invalid"
+           stop
+          endif  
+         else if ((icomp.ge. &
+                   num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+1).and. &
+                  (icomp.le. &
+                   num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM)) then
+          ! do nothing
+         else
+          print *,"icomp invalid"
+          stop
          endif            
 
         enddo ! istate=1..sdim
@@ -39247,10 +39300,12 @@ end subroutine initialize2d
          call SUB_PRES(xpos,time,distbatch,p_hyd,num_materials)
          scalc(ipresbase+impres)=p_hyd
 
-         if (p_hyd.gt.zero) then
+         if (p_hyd.ge.zero) then
           ! do nothing
          else
-          print *,"p_hyd invalid probtype==421   p_hyd=",p_hyd
+          print *,"p_hyd invalid"
+          print *,"probtype=",probtype
+          print *,"p_hyd=",p_hyd
           stop
          endif
 

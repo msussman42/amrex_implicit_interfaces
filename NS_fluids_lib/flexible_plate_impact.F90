@@ -118,6 +118,16 @@ if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  LS(2)=-LS(1)
 
  call flexible_substrateLS(x,LS(3))
+
+ if (LS(2).ge.zero) then
+  LS(2)=min(-LS(1),-LS(3))
+ else if (LS(2).le.zero) then
+  ! do nothing
+ else
+  print *,"LS(2) invalid"
+  stop
+ endif
+
 else
  print *,"num_materials or probtype invalid"
  stop

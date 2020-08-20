@@ -1932,6 +1932,12 @@ Amr::coarseTimeStep (Real stop_time)
 void
 Amr::defBaseLevel (Real strt_time)
 {
+
+    if (finest_level==0) {
+     // do nothing
+    } else
+     amrex::Error("finest_level invalid");
+
     const Box& domain = geom[0].Domain();
     IntVect d_length  = domain.size();
     const int* d_len  = d_length.getVect();
