@@ -36,9 +36,10 @@
 ! 1. A = QR;
 ! 2. d=QTb;
 ! 3. solve Rx=d.
-  subroutine least_squares_QR(A, x, b, m, n)
+  subroutine least_squares_QR(A, x, b, m, n, caller_id)
     implicit none
 
+    integer,          intent(in ) :: caller_id
     integer,          intent(in ) :: m, n
     double precision, intent(in ) :: A(m, n), b(m)
     double precision, intent(out) :: x(n)
@@ -46,6 +47,33 @@
     integer i, j, k, it
     double precision R(m, n+1), y, z, c, s, temp1, temp2
     double precision ATA(n, n), residual_verify, ATAx(n), ATb(n)
+    double precision relative_error_factor
+
+    relative_error_factor=0.0d0
+    do i=1,m
+    do j=1,n
+     if (abs(A(i,j)).gt.relative_error_factor) then
+      relative_error_factor=abs(A(i,j))
+     else if (abs(A(i,j)).le.relative_error_factor) then
+      ! do nothing
+     else
+      print *,"abs(A(i,j)) bust"
+      stop
+     endif
+    enddo
+    enddo
+    if (relative_error_factor.eq.0.0d0) then
+     print *,"cannot have A be the zero matrix"
+     stop
+    else if ((relative_error_factor.gt.0.0d0).and. &
+             (relative_error_factor.le.1.0d0)) then
+     relative_error_factor=1.0d0
+    else if (relative_error_factor.ge.1.0d0) then
+     ! do nothing
+    else
+     print *,"relative_error_factor invalid"
+     stop
+    endif
 
     do i = 1, m
        do j = 1, n + 1
@@ -132,11 +160,24 @@
        residual_verify = residual_verify + (ATAx(i) - ATb(i))**2
     enddo
 
-    residual_verify = sqrt(residual_verify) / n
+    residual_verify = sqrt(residual_verify) / (relative_error_factor * n)
     if (residual_verify .le. 1.d-8) then
        ! do nothing
     else
        print *, "Error! ||ATAx - ATb|| = ", residual_verify
+       print *,"caller_id=",caller_id
+       print *,"m,n = ",m,n
+       do i=1,m
+       do j=1,n
+        print *,"i,j,Aij= ",i,j,A(i,j)
+       enddo
+       enddo
+       do i=1,m
+        print *,"i,bi= ",i,b(i)
+       enddo
+       do i=1,m
+        print *,"i,xi= ",i,x(i)
+       enddo
        stop
     endif
 ! end sanity check
@@ -174,6 +215,7 @@
             weights(-rij:rij,-rij:rij,-rk:rk)
     double precision, intent(out) :: ls_extrap(nmat)
 
+    integer caller_id
     integer i, j, k
     integer isten, jsten, ksten
     integer m, n, im
@@ -291,7 +333,8 @@
              enddo       
           enddo
 
-          call least_squares_QR(A, var, b, m, n)
+          caller_id=0
+          call least_squares_QR(A, var, b, m, n,caller_id)
 
           ls_extrap(im) = var(dim_in + 1)
        else!is_fluid(im) = 0, soild

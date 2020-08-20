@@ -28219,6 +28219,7 @@ stop
       REAL_T gradu(SDIM,SDIM)
       REAL_T DISP_TEN(SDIM,SDIM)
       REAL_T hoop_12,hoop_22
+      INTEGER_T caller_id
 
       nhalf=3
 
@@ -28329,8 +28330,9 @@ stop
          b(ii)=matrixfab(D_DECL(i,j,k),ibase+ii-1)
         enddo
         ibase=ibase+RHS_points
-       
-        call least_squares_QR(A,xlocal,b,n,n)
+      
+        caller_id=4 
+        call least_squares_QR(A,xlocal,b,n,n,caller_id)
         do jj=1,n
          xLS(jj,dir)=xlocal(jj)
         enddo

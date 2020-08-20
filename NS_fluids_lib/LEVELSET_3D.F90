@@ -17637,6 +17637,7 @@ stop
       REAL_T F_old
       REAL_T F_sum_complement
       REAL_T F_sum_complement_new
+      INTEGER_T caller_id
 
       nhalf=3
 
@@ -17764,8 +17765,9 @@ stop
         b(ii)=matrixfab(D_DECL(i,j,k),ibase+ii-1)
        enddo
        ibase=ibase+RHS_points
-       
-       call least_squares_QR(A,xlocal,b,n,n)
+      
+       caller_id=1 
+       call least_squares_QR(A,xlocal,b,n,n,caller_id)
 
        if (ibase-1.eq.matrix_points+RHS_points) then
         ! do nothing
@@ -18403,6 +18405,7 @@ stop
       INTEGER_T :: istenlo(3),istenhi(3)
       REAL_T :: mag
       REAL_T :: xlocal(SDIM+1)
+      INTEGER_T :: caller_id
 
       nhalf=3
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
@@ -18476,7 +18479,8 @@ stop
       enddo
       enddo
       n=SDIM+1
-      call least_squares_QR(A_LS,xlocal,b_LS,n,n)
+      caller_id=2
+      call least_squares_QR(A_LS,xlocal,b_LS,n,n,caller_id)
       dist_interp=xlocal(1)
       mag=zero
       do dir=1,SDIM
@@ -18498,7 +18502,8 @@ stop
        do dir_inner=1,SDIM+1
         b_local(dir_inner)=b_X(dir,dir_inner)
        enddo 
-       call least_squares_QR(A_X,xlocal,b_local,n,n)
+       caller_id=3
+       call least_squares_QR(A_X,xlocal,b_local,n,n,caller_id)
        if (accum_PARM%append_flag.eq.0) then
         x_foot_interp(dir)=xtarget(dir)
        else if (accum_PARM%append_flag.eq.1) then
