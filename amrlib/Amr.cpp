@@ -1168,6 +1168,8 @@ Amr::restart (const std::string& filename)
     int mx_lev;
     is >> mx_lev;
     is >> finest_level;
+    int old_finest_level=finest_level;
+
     FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
 
     Vector<Box> inputs_domain(max_level+1);
@@ -1257,7 +1259,8 @@ Amr::restart (const std::string& filename)
             // internal to amr_level -> restart are the commands:
             // parent->SetBoxArray(level, grids);
             // parent->SetDistributionMap(level, dmap);
-           amr_level[lev]->restart(*this, is);
+	    // new_finest_level = finest_level
+           amr_level[lev]->restart(*this, is,old_finest_level,finest_level);
            this->SetBoxArray(lev, amr_level[lev]->boxArray());
            this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
        }
@@ -1318,7 +1321,11 @@ Amr::restart (const std::string& filename)
        for (lev = 0; lev <= new_finest_level; lev++)
        {
            amr_level[lev].reset((*levelbld)());
-           amr_level[lev]->restart(*this, is);
+            // internal to amr_level -> restart are the commands:
+            // parent->SetBoxArray(level, grids);
+            // parent->SetDistributionMap(level, dmap);
+	    // new_finest_level = finest_level
+           amr_level[lev]->restart(*this, is,old_finest_level,finest_level);
            this->SetBoxArray(lev, amr_level[lev]->boxArray());
            this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
        }

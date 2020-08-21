@@ -2061,7 +2061,7 @@ stop
           ! a constant on the interface.  This is what people call 
           ! "parasitic currents" when the interface moves due to surface
           ! tension, even though the curvature = constant.
-          ughost_tngt=ZEYU_u_slip
+          ughost_tngt=ZEYU_u_slip     ! debugging: ZEYU_u_slip  * 1000.0 ??
 
           nCL_dot_n_raster=zero
           do dir=1,SDIM

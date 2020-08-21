@@ -1,21 +1,18 @@
 
-AMRLIB_BASE=EXE
-ifeq ($(LBASE),amr)
-  AMRLIB_BASE=LIB
-endif
-
-C$(AMRLIB_BASE)_sources += Amr.cpp AmrLevel.cpp Cluster.cpp \
+CEXE_sources += Amr.cpp AmrLevel.cpp Cluster.cpp \
                 Interpolater.cpp StateData.cpp \
                 StateDescriptor.cpp AMReX_TagBox.cpp FillPatchUtil.cpp
 
-C$(AMRLIB_BASE)_headers += Amr.H AmrLevel.H \
+CEXE_headers += Amr.H AmrLevel.H \
                 Cluster.H  \
                 LevelBld.H Interpolater.H StateData.H \
                 StateDescriptor.H AMReX_TagBox.H FillPatchUtil.H 
 
-F$(AMRLIB_BASE)_headers += INTERP_F.H
+CEXE_headers += AMReX_AmrParGDB.H
 
-F90$(AMRLIB_BASE)_sources += FILCC_$(DIM)D.F90 INTERP_3D.F90 \
+FEXE_headers += INTERP_F.H
+
+F90EXE_sources += FILCC_$(DIM)D.F90 INTERP_3D.F90 \
                              ARRAYLIM_$(DIM)D.F90
 
 VPATH_LOCATIONS += $(MOF_HOME)/amrlib
