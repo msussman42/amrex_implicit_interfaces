@@ -7229,7 +7229,7 @@ NavierStokes::initData () {
    if (particleLS_flag[im]==1) {
 
     if (debug_PC==1) {
-     std::cout << "slab_step, ns_time_order, im, ipart " <<
+     std::cout << "PC: slab_step, ns_time_order, im, ipart " <<
       slab_step << ' ' << ns_time_order << ' ' << im << ' ' << ipart << '\n';
     }
 
@@ -7274,8 +7274,8 @@ NavierStokes::initData () {
   amrex::Error("nstate invalid");
  for (int k=0;k<nstate;k++) {
   if (debug_PC==1) {
-   std::cout << "before CopyNewToOld k,nstate,level,max_level " << 
-     k << ' ' << nstate <<
+   std::cout << "PC: before CopyNewToOld k,nstate,level,max_level " << 
+     k << ' ' << nstate << ' ' <<
      level << ' ' << max_level << '\n';
   }
   state[k].CopyNewToOld(level,max_level);  // olddata=newdata 

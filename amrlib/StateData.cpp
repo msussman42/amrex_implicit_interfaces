@@ -975,7 +975,7 @@ StateData::CopyNewToOld(int level,int max_level) {
  int ngrow=newmulti.nGrow();
  int ncomp_PC = desc->get_ncomp_PC();
  if (debug_PC==1) {
-  std::cout << "level, max_level " << level << max_level << '\n';
+  std::cout << "PC: level, max_level " << level << ' ' << max_level << '\n';
   std::cout << "ncompPC,bfact_time_order " << ncomp_PC << ' ' <<
    bfact_time_order << '\n';
  }
@@ -990,6 +990,10 @@ StateData::CopyNewToOld(int level,int max_level) {
     int ncomp_PC_test=new_dataPC[i].size();
     if (ncomp_PC_test==ncomp_PC) {
      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+      if (debug_PC==1) {
+       std::cout << "PC: i,PC_mat_index,bfact_time_order " << i << ' ' << 
+	       PC_mat_index << ' ' << bfact_time_order << '\n';
+      }
       new_dataPC[i][PC_mat_index]->copyParticles(
        *new_dataPC[bfact_time_order][PC_mat_index]);
      }
