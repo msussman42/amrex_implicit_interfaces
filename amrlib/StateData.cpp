@@ -17,6 +17,8 @@
 
 #include <INTERP_F.H>
 
+#define debug_PC 1
+
 namespace amrex {
 
 const Real INVALID_TIME = -1.0e200;
@@ -972,7 +974,11 @@ StateData::CopyNewToOld(int level,int max_level) {
  int ncomp=newmulti.nComp();
  int ngrow=newmulti.nGrow();
  int ncomp_PC = desc->get_ncomp_PC();
-  
+ if (debug_PC==1) {
+  std::cout << "level, max_level " << level << max_level << '\n';
+  std::cout << "ncompPC,bfact_time_order " << ncomp_PC << ' ' <<
+   bfact_time_order << '\n';
+ }
  for (int i=0;i<bfact_time_order;i++) {
   MultiFab & oldmulti = *new_data[i];
   MultiFab::Copy(oldmulti,newmulti,0,0,ncomp,ngrow);

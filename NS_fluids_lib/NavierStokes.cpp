@@ -181,6 +181,8 @@ namespace amrex{
 #define mf_check_inf_bounds 1
 
 #define DEFAULT_MOFITERMAX 15
+
+#define debug_PC 1
 //
 // Static objects.
 //
@@ -7226,6 +7228,11 @@ NavierStokes::initData () {
 
    if (particleLS_flag[im]==1) {
 
+    if (debug_PC==1) {
+     std::cout << "slab_step, ns_time_order, im, ipart " <<
+      slab_step << ' ' << ns_time_order << ' ' << im << ' ' << ipart << '\n';
+    }
+
     NavierStokes& ns_level0=getLevel(0);
     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
      ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
@@ -7266,6 +7273,11 @@ NavierStokes::initData () {
  if (nstate!=NUM_STATE_TYPE)
   amrex::Error("nstate invalid");
  for (int k=0;k<nstate;k++) {
+  if (debug_PC==1) {
+   std::cout << "before CopyNewToOld k,nstate,level,max_level " << 
+     k << ' ' << nstate <<
+     level << ' ' << max_level << '\n';
+  }
   state[k].CopyNewToOld(level,max_level);  // olddata=newdata 
    // time_array[0]=strt_time-dt_amr  
    // time_array[bfact_time_order]=strt_time
@@ -19465,6 +19477,10 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
     using My_ParticleContainer =
       ParticleContainer<N_EXTRA_REAL,0,0,0>;
 
+    if (debug_PC==1) {
+     std::cout << "gridno " << gridno << " Np_append " <<
+       Np_append << '\n';
+    }
     for (int i_append=0;i_append<Np_append;i_append++) {
 
      My_ParticleContainer::ParticleType p;
