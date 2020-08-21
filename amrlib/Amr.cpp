@@ -182,6 +182,7 @@ Amr::Amr () {
     Initialize();
      // Geometry::Setup()
      // levelbld = getLevelBld();
+     // geom[i].define(index_domain)  i=0...max_level
      // ...
     InitAmr();
 
@@ -1013,6 +1014,10 @@ Amr::checkInput ()
        std::cout << "Successfully read inputs file ... " << '\n';
 } // end subroutine checkInput ()
 
+// called from main.cpp after having called:
+// Amr* amrptr = new Amr(); which calls
+// InitAmr() which calls
+// geom[i].define(index_domain)  i=0...max_level
 void
 Amr::init (Real strt_time,
            Real stop_time)
@@ -1214,6 +1219,7 @@ Amr::restart (const std::string& filename)
 
     is >> dt_AMR;
 
+     //restarting with greater or equal to the previous number of levels.
     if (max_level >= mx_lev) {
 
        for (i = 0; i <= mx_lev; i++) is >> geom[i];
@@ -1248,6 +1254,9 @@ Amr::restart (const std::string& filename)
        for (int lev(0); lev <= finest_level; ++lev)
        {
            amr_level[lev].reset((*levelbld)());
+            // internal to amr_level -> restart are the commands:
+            // parent->SetBoxArray(level, grids);
+            // parent->SetDistributionMap(level, dmap);
            amr_level[lev]->restart(*this, is);
            this->SetBoxArray(lev, amr_level[lev]->boxArray());
            this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
@@ -1259,11 +1268,14 @@ Amr::restart (const std::string& filename)
        for (int lev(0); lev <= finest_level; lev++)
            amr_level[lev]->post_restart();
 
+     // restarting with a coarser mesh (less levels)
     } else if ((max_level>=0)&&(max_level<mx_lev)) {
 
        if (ParallelDescriptor::IOProcessor())
           amrex::Warning("Amr::restart(): max_level is lower than before");
 
+        //just in case max_level reduced to be below the restarted
+        //max_level which is  "mx_lev"
        int new_finest_level = std::min(max_level,finest_level);
 
        finest_level = new_finest_level;
@@ -1275,6 +1287,7 @@ Amr::restart (const std::string& filename)
        IntVect intvect_dummy;
 
        for (i = 0          ; i <= max_level; i++) is >> geom[i];
+         // discard the previous levels in which level>max_level.
        for (i = max_level+1; i <= mx_lev   ; i++) is >> geom_dummy;
 
        for (i = max_level; i <  mx_lev   ; i++) is >> intvect_dummy;

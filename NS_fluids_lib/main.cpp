@@ -81,7 +81,8 @@ main (int   argc,
             "Exiting because neither max_step nor stop_time is non-negative.");
     }
 
-     
+      // calls InitAmr() which calls
+      // geom[i].define(index_domain)   i=0..max_level 
     Amr* amrptr = new Amr();
 
     amrex::ParallelDescriptor::Barrier();
