@@ -7001,9 +7001,6 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
 }  // end subroutine PLS_correct()
 
 
-
-
-
 void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
  bool use_tiling=ns_tiling;

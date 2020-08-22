@@ -7217,14 +7217,6 @@ NavierStokes::initData () {
 
  if (NS_ncomp_particles>0) {
 
-  const Vector<Geometry>& ns_geom=parent->Geom();
-  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-  const Vector<BoxArray>& ns_ba=parent->boxArray();
-  Vector<int> rr;
-  rr.resize(ns_ba.size());
-  for (int ilev=0;ilev<rr.size();ilev++)
-   rr[ilev]=2;
-
   int ipart=0;
   for (int im=0;im<nmat;im++) {
 
@@ -7238,15 +7230,16 @@ NavierStokes::initData () {
     NavierStokes& ns_level0=getLevel(0);
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
      ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+    
+     // for now, particles only stored on the finest level.
     localPC.clearParticles();
-    localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
     int append_flag=0;
     init_particle_container(im,ipart,append_flag);
 
     int lev_min=0;
     int lev_max=-1;
     int nGrow_Redistribute=0;
-    int local_Redistribute=1;
+    int local_Redistribute=0;
     localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
 
@@ -7480,26 +7473,28 @@ NavierStokes::init(
  }  // k=0..nstate-1
 
  if (level==0) {
-   // in Amr::regrid (or Amr::timeStep with finest_level==0 and 
-   // regrid_on_restart), levels traversed from coarsest to finest,
-   // so that if at level==0, the "old" dmap and ba should still be intact.
-   // This needs to be done in the rare case that level==0 is replaced.
+   // old particle data will be deleted, so that the data
+   // must be saved here.
   for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+   int lev_min=0;
+   int lev_max=-1;
+   int nGrow_Redistribute=0;
+   int local_Redistribute=0;
+
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
     oldns->get_new_dataPC(State_Type,ns_time_order,ipart);
+
+    // new_PC inherits the old box structure.
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
     get_new_dataPC(State_Type,ns_time_order,ipart);
 
-   const Vector<Geometry>& ns_geom=parent->Geom();
-   const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-   const Vector<BoxArray>& ns_ba=parent->boxArray();
-   Vector<int> rr;
-   rr.resize(ns_ba.size());
-   for (int ilev=0;ilev<rr.size();ilev++)
-    rr[ilev]=2;
-   new_PC.Define(ns_geom,ns_dmap,ns_ba,rr);
-   bool local_copy_flag=true; 
+    // Redistribute called since level=0 grids might have changed.
+   old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_Redistribute);
+    //new_PC cleared prior to copy
+   bool local_copy_flag=false; 
    new_PC.copyParticles(old_PC,local_copy_flag);
+
   } // ipart=0..NS_ncomp_particles-1
  } else if ((level>=1)&&(level<=max_level)) {
   // do nothing
@@ -18174,32 +18169,21 @@ void NavierStokes::post_regrid (int lbase,
   if (initialInit_flag==1) {
    // do nothing
   } else if (initialInit_flag==0) {
-   if (level==start_level) {
-    for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
-     const Vector<Geometry>& ns_geom=parent->Geom();
-     const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-     const Vector<BoxArray>& ns_ba=parent->boxArray();
-     Vector<int> rr;
-     rr.resize(ns_ba.size());
-     for (int ilev=0;ilev<rr.size();ilev++)
-      rr[ilev]=2;
-     AmrParticleContainer<N_EXTRA_REAL,0,0,0> local_PC(ns_geom,ns_dmap,ns_ba,rr);
-     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
-      ns_level0.get_new_dataPC(State_Type,ns_time_order,ipart);
-     bool local_copy_flag=false;  // redistribute after the copy
-     local_PC.copyParticles(current_PC,local_copy_flag);
-     current_PC.Define(ns_geom,ns_dmap,ns_ba,rr);
-     local_copy_flag=true;
-     current_PC.copyParticles(local_PC,local_copy_flag);
-    } // ipart=0..NS_ncomp_particles-1
-    
-   } else if ((level>start_level)&&(level<=new_finest)) {
-    // do nothing
-   } else
-    amrex::Error("level invalid");
+   // do nothing
   } else
    amrex::Error("initialInit_flag invalid");
- 
+
+  for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
+      ns_level0.get_new_dataPC(State_Type,ns_time_order,ipart);
+   int lev_min=0;
+   int lev_max=-1;
+   int nGrow_Redistribute=0;
+   int local_Redistribute=0;
+   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_Redistribute);
+  } // ipart=0..NS_ncomp_particles-1
+    
    // olddata=newdata  
   for (int k=0;k<nstate;k++) {
    state[k].CopyNewToOld(level,max_level); 
@@ -19207,13 +19191,12 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  const Vector<Geometry>& ns_geom=parent->Geom();
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
  const Vector<BoxArray>& ns_ba=parent->boxArray();
+
  Vector<int> rr;
  rr.resize(ns_ba.size());
  for (int ilev=0;ilev<rr.size();ilev++)
   rr[ilev]=2;
  int nnbr=1;
-   // DO NOT LOOK AT THE TUTORIALS, DO NOT LOOK ONLINE, INSTEAD
-   // LOOK AT THE PELE CODE. (see Julia)
  NeighborParticleContainer<N_EXTRA_REAL,0> 
    localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
   // the two PC have same hierarchy, no need to call Redistribute after the

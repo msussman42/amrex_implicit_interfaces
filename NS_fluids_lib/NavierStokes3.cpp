@@ -1173,6 +1173,18 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
    }
 
+   for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+    int lev_min=0;
+    int lev_max=-1;
+    int nGrow_Redistribute=0;
+    int local_Redistribute=0;
+
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
+       get_new_dataPC(State_Type,ns_time_order,ipart);
+    old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+      local_Redistribute);
+   }
+
    CopyNewToOldALL();
    for (int ilev=level;ilev<=finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);

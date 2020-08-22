@@ -1003,8 +1003,10 @@ StateData::CopyNewToOld(int level,int max_level) {
        std::cout << "PC: i,PC_mat_index,bfact_time_order " << i << ' ' << 
 	       PC_mat_index << ' ' << bfact_time_order << '\n';
       }
+       // dest PC is cleared prior to copy.
+      bool local=false;  // redistribute after copy
       new_dataPC[i][PC_mat_index]->copyParticles(
-       *new_dataPC[bfact_time_order][PC_mat_index]);
+       *new_dataPC[bfact_time_order][PC_mat_index],local);
      }
     } else
      amrex::Error("ncomp_PC_test or ncomp_PC invalid");
@@ -1038,8 +1040,10 @@ StateData::CopyOldToNew(int level,int max_level) {
     int ncomp_PC_test=new_dataPC[i].size();
     if (ncomp_PC_test==ncomp_PC) {
      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
+       // dest PC is cleared prior to copy.
+      bool local=false;  // redistribute after copy
       new_dataPC[i][PC_mat_index]->copyParticles(
-       *new_dataPC[0][PC_mat_index]);
+       *new_dataPC[0][PC_mat_index],local);
      }
     } else
      amrex::Error("ncomp_PC_test or ncomp_PC invalid");

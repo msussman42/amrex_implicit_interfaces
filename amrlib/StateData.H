@@ -46,8 +46,7 @@ public:
     //
     // Constructor that properly initializes data members.
     //
-    StateData (
-               Amr& papa,
+    StateData (Amr& papa,
 	       int level,
 	       int max_level,
                const Box& p_domain,
@@ -132,8 +131,7 @@ public:
     //
     // Initializes state data from a checkpoint file.
     //
-    void restart (
-                  Amr& papa,
+    void restart (Amr& papa,
 		  int time_order,
                   int slab_dt_type, // 0=SEM 1=evenly spaced
                   int MAX_NUM_SLAB,
