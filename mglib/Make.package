@@ -2,32 +2,27 @@
 # $Id: Make.package,v 1.2 1999/04/01 21:43:11 car Exp $
 #
 
-MGLIB_BASE=EXE
-ifeq ($(LBASE),mg)
-    MGLIB_BASE=LIB
-endif
+CEXE_sources += ABecLaplacian.cpp 
 
-C$(MGLIB_BASE)_sources += ABecLaplacian.cpp 
+#cEXE_sources += cudasimulate.c 
 
-#c$(MGLIB_BASE)_sources += cudasimulate.c 
+CEXE_headers += ABecLaplacian.H 
 
-C$(MGLIB_BASE)_headers += ABecLaplacian.H 
+FEXE_headers += ABec_F.H CG_F.H LO_F.H MG_F.H 
 
-F$(MGLIB_BASE)_headers += ABec_F.H CG_F.H LO_F.H MG_F.H 
-
-F$(MGLIB_BASE)_sources += \
+FEXE_sources += \
 #			ABec_3D.F 
 #			CG_3D.F \
 #                       LO_3D.F \
 #                          LO_UTIL.F MG_3D.F 
 
-F90$(MGLIB_BASE)_sources +=  \
+F90EXE_sources +=  \
 			ABec_3D.F90 \
 			CG_3D.F90 \
 			LO_3D.F90 \
 			LO_UTIL.F90 MG_3D.F90
 				
-F90$(MGLIB_BASE)_headers +=  \
+F90EXE_headers +=  \
 			ABec_F.H \
 			CG_F.H \
 			LO_F.H \

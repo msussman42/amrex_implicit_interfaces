@@ -15,6 +15,8 @@
 
 namespace amrex {
 
+class AmrParGDB;
+
 class AmrLevel;
 class LevelBld;
 class BoxDomain;
@@ -39,6 +41,9 @@ public:
     // The destructor.
     //
     virtual ~Amr ();
+
+    AmrParGDB* GetParGDB () const noexcept { return m_gdb.get(); }
+
     //
     // Init data after construction. Must be called before timestepping.
     //
@@ -58,28 +63,43 @@ public:
     int AMR_volume_history_recorded;
 
     int maxGridSize (int lev) const;
-    int maxLevel () const;
-    int finestLevel () const;
     Real cumTime () const;
     Real getDt();
 
-    const Vector<Geometry>& Geom () const { return geom; }
-    const Vector<DistributionMapping>& DistributionMap () const { return dmap; }
-    const Vector<BoxArray>& boxArray () const { return grids; }
+    const Vector<Geometry>& Geom () const noexcept { return geom; }
+    const Vector<DistributionMapping>& 
+	    DistributionMap () const noexcept { return dmap; }
+    const Vector<BoxArray>& boxArray () const noexcept { return grids; }
 
-    const Geometry& Geom (int lev) const { return geom[lev]; }
-    const DistributionMapping& DistributionMap (int lev) const 
+    const Geometry& Geom (int lev) const noexcept { return geom[lev]; }
+    const DistributionMapping& DistributionMap (int lev) const noexcept
       { return dmap[lev]; }
-    const BoxArray& boxArray (int lev) const { return grids[lev]; }
+    const BoxArray& boxArray (int lev) const noexcept { return grids[lev]; }
 
-    Vector<Geometry>& Geom () { return geom; }
-    Geometry& Geom (int lev) { return geom[lev]; }
+    Vector<Geometry>& Geom () noexcept { return geom; }
+    Geometry& Geom (int lev) noexcept { return geom[lev]; }
 
-    void SetDistributionMap (int lev, const DistributionMapping& dmap_in) noexcept;
+    void SetDistributionMap (int lev, 
+	const DistributionMapping& dmap_in) noexcept;
     void SetBoxArray (int lev, const BoxArray& ba_in) noexcept;
 
     void ClearDistributionMap (int lev) noexcept;
     void ClearBoxArray (int lev) noexcept;
+
+    bool LevelDefined (int lev) noexcept;
+
+        //! Return the max level
+    int maxLevel () const noexcept { return max_level; }
+    //! Return the finest level
+    int finestLevel () const noexcept { return finest_level; }
+
+        //! Return the refinement ratio for level lev
+    IntVect refRatio (int lev) const noexcept { 
+	    IntVect ratio_vec(D_DECL(2,2,2));
+	    return ratio_vec; }
+
+        //! Return the maximum refinement ratio in any direction.
+    int MaxRefRatio (int lev) const noexcept;
 
     int levelSteps (int lev) const;
     int levelCount (int lev) const;
@@ -154,11 +174,6 @@ public:
     void print_cells_advanced();
 
     AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
-
-#ifdef AMREX_PARTICLES
-    //! Redistribute particles
-    void RedistributeParticles ();
-#endif
 
 protected:
     //
@@ -246,6 +261,8 @@ protected:
     // OLD: PArray<AmrLevel> amr_level;    // Array of levels
     Vector<std::unique_ptr<AmrLevel> > amr_level;    //!< Vector of levels
 
+    std::unique_ptr<AmrParGDB> m_gdb;
+
     Vector<Geometry>  geom;         // Index extent of domain at all levels.
     Vector<DistributionMapping> dmap;
     Vector<BoxArray> grids;
@@ -321,20 +338,6 @@ int
 Amr::maxGridSize (int lev) const
 {
     return max_grid_size[lev];
-}
-
-inline
-int
-Amr::maxLevel () const
-{
-    return max_level;
-}
-
-inline
-int
-Amr::finestLevel () const
-{
-    return finest_level;
 }
 
 inline

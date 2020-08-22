@@ -78,7 +78,9 @@ public:
     // Restart from a checkpoint file.
     //
     virtual void restart (Amr&          papa,
-                          std::istream& is);
+                          std::istream& is,
+			  int old_finest_level,
+			  int new_finest_level);
     //
     // Is name a state variable?
     //
@@ -241,10 +243,11 @@ public:
     MultiFab& get_new_data (int state_indx,int slab_index);
     const MultiFab& get_new_data (int state_indx,int slab_index) const;
 
-    ParticleContainer<N_EXTRA_REAL,0,0,0>& get_new_dataPC(int state_indx,
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& get_new_dataPC(int state_indx,
       int slab_indx,int particle_index);
-    const ParticleContainer<N_EXTRA_REAL,0,0,0>& get_new_dataPC(int state_indx,
-      int slab_indx,int particle_index) const;
+    const AmrParticleContainer<N_EXTRA_REAL,0,0,0>& 
+	get_new_dataPC(int state_indx,
+         int slab_indx,int particle_index) const;
 
     //
     // Returns list of Descriptors.
@@ -272,12 +275,6 @@ public:
     // Modify list of variables to be plotted
     // 
     virtual void setPlotVariables ();
-
-
-#ifdef AMREX_PARTICLES
-    //! This function can be called from the parent 
-    virtual void particle_redistribute (int lbase = 0, bool init = false) {;}
-#endif
 
     //
 protected:
@@ -360,7 +357,7 @@ AmrLevel::get_state_data (int state_indx)
 }
 
 inline
-ParticleContainer<N_EXTRA_REAL,0,0,0>&
+AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
 AmrLevel::get_new_dataPC(int state_indx,int slab_indx,int particle_index) {
 
  return state[state_indx].newDataPC(slab_indx,particle_index);
@@ -381,7 +378,7 @@ AmrLevel::get_new_data (int state_indx,int slab_index) const
 }
 
 inline
-const ParticleContainer<N_EXTRA_REAL,0,0,0>&
+const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
 AmrLevel::get_new_dataPC(
   int state_indx,int slab_indx,int particle_index) const {
 

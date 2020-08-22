@@ -58,6 +58,7 @@ StateData::StateData ()
 }
 
 StateData::StateData (
+  Amr& papa,
   int level,
   int max_level,
   const Box& p_domain,
@@ -71,13 +72,14 @@ StateData::StateData (
   int slab_dt_type, // 0=SEM 1=evenly spaced
   int MAX_NUM_SLAB)
 {
-    define(level,max_level,
+    define(papa,level,max_level,
 	   p_domain, grds, dm, *d, *dGHOST, cur_time, dt,
            time_order,slab_dt_type,MAX_NUM_SLAB);
 }
 
 void
 StateData::define (
+  Amr& papa,
   int level,
   int max_level,
   const Box& p_domain,
@@ -91,6 +93,8 @@ StateData::define (
   int slab_dt_type, // 0=SEM 1=evenly spaced
   int MAX_NUM_SLAB)
 {
+ 
+    Amr* parent=&papa;
 
     if (dt<=0.0) {
      std::cout << "dt = " << dt << '\n';
@@ -182,7 +186,8 @@ StateData::define (
       if (level==0) {
        new_dataPC[i].resize(ncomp_PC);
        for (int j=0;j<ncomp_PC;j++) {
-        new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
+        new_dataPC[i][j]=
+	 new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
        }
       } else if ((level>=1)&&(level<=max_level)) {
        // do nothing
@@ -200,6 +205,7 @@ StateData::define (
 // this constructs a variable of type "StateData" from checkpoint data.
 void
 StateData::restart (
+  Amr& papa,
   int time_order,
   int slab_dt_type, // 0=SEM 1=evenly spaced
   int MAX_NUM_SLAB,
@@ -213,6 +219,8 @@ StateData::restart (
   const StateDescriptor& dGHOST,
   const std::string&     chkfile)
 {
+    Amr* parent=&papa;
+
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
     if (StateData_MAX_NUM_SLAB<33)
      amrex::Error("StateData_MAX_NUM_SLAB too small");
@@ -291,7 +299,8 @@ StateData::restart (
       if (level==0) {
        new_dataPC[i].resize(ncomp_PC);
        for (int j=0;j<ncomp_PC;j++) {
-        new_dataPC[i][j]=new ParticleContainer<N_EXTRA_REAL,0,0,0>();
+        new_dataPC[i][j]=
+	 new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
        }
       } else if ((level>=1)&&(level<=max_level)) {
        // do nothing
@@ -472,7 +481,7 @@ StateData::newData (int slab_index) const
 
 
 
-ParticleContainer<N_EXTRA_REAL,0,0,0>&
+AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
 StateData::newDataPC (int slab_index,int sub_index)
 {
  int project_slab_index=slab_index;
@@ -494,7 +503,7 @@ StateData::newDataPC (int slab_index,int sub_index)
  return *new_dataPC[project_slab_index][sub_index];
 }
 
-const ParticleContainer<N_EXTRA_REAL,0,0,0>&
+const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
 StateData::newDataPC (int slab_index,int sub_index) const
 {
  int project_slab_index=slab_index;

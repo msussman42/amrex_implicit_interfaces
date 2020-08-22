@@ -4577,9 +4577,11 @@ NavierStokes::init_regrid_history() {
 
 void
 NavierStokes::restart (Amr&          papa,
-                       std::istream& is) {
+                       std::istream& is,
+		       int old_finest_level,
+		       int new_finest_level) {
 
-    AmrLevel::restart(papa,is);
+    AmrLevel::restart(papa,is,old_finest_level,new_finest_level);
     init_regrid_history();
 
 }
@@ -7234,7 +7236,7 @@ NavierStokes::initData () {
     }
 
     NavierStokes& ns_level0=getLevel(0);
-    ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
      ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
     localPC.clearParticles();
     localPC.Define(ns_geom,ns_dmap,ns_ba,rr);
@@ -7483,9 +7485,9 @@ NavierStokes::init(
    // so that if at level==0, the "old" dmap and ba should still be intact.
    // This needs to be done in the rare case that level==0 is replaced.
   for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
-   ParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
     oldns->get_new_dataPC(State_Type,ns_time_order,ipart);
-   ParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
     get_new_dataPC(State_Type,ns_time_order,ipart);
 
    const Vector<Geometry>& ns_geom=parent->Geom();
@@ -18181,8 +18183,8 @@ void NavierStokes::post_regrid (int lbase,
      rr.resize(ns_ba.size());
      for (int ilev=0;ilev<rr.size();ilev++)
       rr[ilev]=2;
-     ParticleContainer<N_EXTRA_REAL,0,0,0> local_PC(ns_geom,ns_dmap,ns_ba,rr);
-     ParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
+     AmrParticleContainer<N_EXTRA_REAL,0,0,0> local_PC(ns_geom,ns_dmap,ns_ba,rr);
+     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
       ns_level0.get_new_dataPC(State_Type,ns_time_order,ipart);
      bool local_copy_flag=false;  // redistribute after the copy
      local_PC.copyParticles(current_PC,local_copy_flag);
@@ -19199,7 +19201,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   // All the particles should live on level==0.
   // particle levelset==0.0 for interface particles.
 
- ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+ AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
  const Vector<Geometry>& ns_geom=parent->Geom();
@@ -19366,7 +19368,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
     // All the particles should live on level==0.
     // particle levelset==0.0 for interface particles.
-   ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
      ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
     // ngrow=1
@@ -19475,7 +19477,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
     } // isweep=0...1
 
     using My_ParticleContainer =
-      ParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
 
     if (debug_PC==1) {
      std::cout << "gridno " << gridno << " Np_append " <<

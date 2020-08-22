@@ -28,6 +28,9 @@
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_Print.H>
 #include <AMReX_TagBox.H>
+
+#include <AMReX_AmrParGDB.H>
+
 #include <Cluster.H>
 #include <LevelBld.H>
 #include <AmrLevel.H>
@@ -167,15 +170,6 @@ Amr::getAmrLevels () noexcept
 }
 
 
-#ifdef AMREX_PARTICLES
-void 
-Amr::RedistributeParticles () 
-{
-    amr_level[0]->particle_redistribute(0,true);
-}
-#endif
-
-
 Amr::Amr () {
 
      // init default values for some parameters.
@@ -303,7 +297,8 @@ Amr::InitAmr () {
     pp.query("mffile_nstreams", mffile_nstreams);
     pp.query("probinit_natonce", probinit_natonce);
 
-    probinit_natonce = std::max(1, std::min(ParallelDescriptor::NProcs(), probinit_natonce));
+    probinit_natonce = 
+     std::max(1, std::min(ParallelDescriptor::NProcs(), probinit_natonce));
 
     pp.query("file_name_digits", file_name_digits);
 
@@ -564,7 +559,16 @@ Amr::InitAmr () {
         slab_dt_type << '\n';
     }
 
+    m_gdb.reset(new AmrParGDB(this));
+
 } // subroutine InitAmr
+
+int
+Amr::MaxRefRatio (int lev) const noexcept
+{
+    int maxval = 2;
+    return maxval;
+}
 
 void
 Amr::SetDistributionMap (int lev, const DistributionMapping& dmap_in) noexcept
@@ -589,6 +593,14 @@ void
 Amr::ClearBoxArray (int lev) noexcept
 {
     grids[lev] = BoxArray();
+}
+
+bool
+Amr::LevelDefined (int lev) noexcept
+{
+    return lev <= max_level && 
+	    !grids[lev].empty() && 
+	    !dmap[lev].empty();
 }
 
 
@@ -1017,7 +1029,8 @@ Amr::checkInput ()
 // called from main.cpp after having called:
 // Amr* amrptr = new Amr(); which calls
 // InitAmr() which calls
-// geom[i].define(index_domain)  i=0...max_level
+// geom[i].define(index_domain)  i=0...max_level and
+// m_gdb.reset(new AmrParGDB(this));
 void
 Amr::init (Real strt_time,
            Real stop_time)

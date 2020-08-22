@@ -8,7 +8,7 @@ CEXE_headers += Amr.H AmrLevel.H \
                 LevelBld.H Interpolater.H StateData.H \
                 StateDescriptor.H AMReX_TagBox.H FillPatchUtil.H 
 
-CEXE_headers += AMReX_AmrParGDB.H
+CEXE_headers += AMReX_AmrParGDB.H AMReX_AmrParticles.H
 
 FEXE_headers += INTERP_F.H
 

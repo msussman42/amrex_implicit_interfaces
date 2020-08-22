@@ -17,9 +17,11 @@
 #include <AMReX_Geometry.H>
 #include <AMReX_RealBox.H>
 #include <AMReX_Particles.H>
+#include <AMReX_AmrParticles.H>
 #include <AMReX_NeighborParticles.H>
 
 #include <StateDescriptor.H>
+#include <Amr.H>
 
 // x,y,z is not extra; (x0,y0,z0,r) is extra. (r can be
 // a distance, or a radius)
@@ -44,7 +46,9 @@ public:
     //
     // Constructor that properly initializes data members.
     //
-    StateData (int level,
+    StateData (
+               Amr& papa,
+	       int level,
 	       int max_level,
                const Box& p_domain,
                const BoxArray&        grds,
@@ -64,7 +68,8 @@ public:
     //
     // Initializes data members if you used default constructor.
     //
-    void define (int level,
+    void define (Amr& papa,
+		 int level,
 		 int max_level,
                  const Box& p_domain,
                  const BoxArray&        grds,
@@ -127,7 +132,9 @@ public:
     //
     // Initializes state data from a checkpoint file.
     //
-    void restart (int time_order,
+    void restart (
+                  Amr& papa,
+		  int time_order,
                   int slab_dt_type, // 0=SEM 1=evenly spaced
                   int MAX_NUM_SLAB,
                   int level,
@@ -159,7 +166,7 @@ public:
     MultiFab& newData (int slab_index);
 
       // lives only on level==0
-    ParticleContainer<N_EXTRA_REAL,0,0,0>&
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index);
 
     //
@@ -168,7 +175,7 @@ public:
     const MultiFab& newData (int slab_index) const;
 
       // lives only on level==0
-    const ParticleContainer<N_EXTRA_REAL,0,0,0>&
+    const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index) const;
 
     //
@@ -238,7 +245,7 @@ private:
      //    then define "new_dataPC"; 
      //
     using PLS_ParticleContainerType=
-	    ParticleContainer<N_EXTRA_REAL,0,0,0>;
+	    AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
 
      // lives only on level==0
     Vector< 

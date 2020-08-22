@@ -405,7 +405,9 @@ public:
     virtual ~NavierStokes ();
 
     virtual void restart (Amr&          papa,
-                          std::istream& is);
+                          std::istream& is,
+			  int old_finest_level,
+			  int new_finest_level);
     //
     // Define data descriptors.
     //

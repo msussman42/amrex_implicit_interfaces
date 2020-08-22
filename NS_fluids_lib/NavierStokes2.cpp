@@ -6880,7 +6880,7 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
     MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
  accumulate_mf->setVal(0.0);
 
- ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+ AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart_id);
 
  const Vector<Geometry>& ns_geom=parent->Geom();
@@ -7062,7 +7062,7 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
 
-  ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart_id);
 
 #ifdef _OPENMP
@@ -7329,7 +7329,7 @@ void NavierStokes::output_triangles() {
 
    if (level==finest_level) {
     for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
-     ParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
       ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
      auto& particles = localPC.GetParticles(level)

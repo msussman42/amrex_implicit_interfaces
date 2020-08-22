@@ -68,7 +68,9 @@ AmrLevel::AmrLevel (Amr&            papa,
     for (int icomp = 0; icomp < state.size(); icomp++)
     {
         int time_order=parent->Time_blockingFactor();
-        state[icomp].define(level,
+        state[icomp].define(
+			papa,
+			level,
 			max_level,
                         geom.Domain(),
                         grids,
@@ -87,7 +89,9 @@ AmrLevel::AmrLevel (Amr&            papa,
 
 void
 AmrLevel::restart (Amr&          papa,
-                   std::istream& is) {
+                   std::istream& is,
+		   int old_finest_level,
+		   int new_finest_level) {
 
     parent = &papa;
 
@@ -118,6 +122,7 @@ AmrLevel::restart (Amr&          papa,
     {
      int time_order = parent->Time_blockingFactor();
      state[icomp].restart(
+        papa,
         time_order,
         level_slab_dt_type,
         level_MAX_NUM_SLAB,
