@@ -7215,58 +7215,13 @@ NavierStokes::initData () {
  int dealloc_history=1;
  init_FSI_GHOST_MAC_MF(dealloc_history);
 
- if (NS_ncomp_particles>0) {
-
-  int ipart=0;
-  for (int im=0;im<nmat;im++) {
-
-   if (particleLS_flag[im]==1) {
-
-    if (debug_PC==1) {
-     std::cout << "PC: slab_step, ns_time_order, im, ipart " <<
-      slab_step << ' ' << ns_time_order << ' ' << im << ' ' << ipart << '\n';
-    }
-
-    NavierStokes& ns_level0=getLevel(0);
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
-    
-     // for now, particles only stored on the finest level.
-    localPC.clearParticles();
-    int append_flag=0;
-    init_particle_container(im,ipart,append_flag);
-
-    int lev_min=0;
-    int lev_max=-1;
-    int nGrow_Redistribute=0;
-    int local_Redistribute=0;
-    localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute);
-
-    ipart++;
-   } else if (particleLS_flag[im]==0) {
-    // do nothing
-   } else
-    amrex::Error("particleLS_flag[im] invalid");
-
-  } // im=0..nmat-1
-
-  if (ipart==NS_ncomp_particles) {
-   // do nothing
-  } else
-   amrex::Error("ipart invalid");
- 
- } else if (NS_ncomp_particles==0) {
-  // do nothing
- } else
-  amrex::Error("NS_ncomp_particles invalid");
-
  init_regrid_history();
  is_first_step_after_regrid=-1;
 
  int nstate=state.size();
  if (nstate!=NUM_STATE_TYPE)
   amrex::Error("nstate invalid");
+
  for (int k=0;k<nstate;k++) {
   if (debug_PC==1) {
    std::cout << "PC: before CopyNewToOld k,nstate,level,max_level " << 
@@ -18355,7 +18310,6 @@ NavierStokes::post_timestep (Real stop_time) {
 //
 // Ensure state, and pressure are consistent.
 //
-
 void
 NavierStokes::post_init (Real stop_time)
 {
@@ -19510,8 +19464,10 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 void
 NavierStokes::post_init_state () {
     
- if (level>0)
-  amrex::Error("level>0 in post_init_state");
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("require level==0 in post_init_state");
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -19550,6 +19506,51 @@ NavierStokes::post_init_state () {
    // make_physics_varsALL
  int post_init_flag=1; // in: post_init_state
  prepare_post_process(post_init_flag);
+
+ if (NS_ncomp_particles>0) {
+
+  int ipart=0;
+  for (int im=0;im<nmat;im++) {
+
+   if (particleLS_flag[im]==1) {
+
+    if (debug_PC==1) {
+     std::cout << "PC: slab_step, ns_time_order, im, ipart " <<
+      slab_step << ' ' << ns_time_order << ' ' << im << ' ' << ipart << '\n';
+    }
+
+    NavierStokes& ns_level0=getLevel(0);
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+    
+    int append_flag=0;
+    ns_finest.init_particle_container(im,ipart,append_flag);
+
+    int lev_min=0;
+    int lev_max=-1;
+    int nGrow_Redistribute=0;
+    int local_Redistribute=0;
+    localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_Redistribute);
+
+    ipart++;
+   } else if (particleLS_flag[im]==0) {
+    // do nothing
+   } else
+    amrex::Error("particleLS_flag[im] invalid");
+
+  } // im=0..nmat-1
+
+  if (ipart==NS_ncomp_particles) {
+   // do nothing
+  } else
+   amrex::Error("ipart invalid");
+ 
+ } else if (NS_ncomp_particles==0) {
+  // do nothing
+ } else
+  amrex::Error("NS_ncomp_particles invalid");
+
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -19680,6 +19681,8 @@ NavierStokes::post_init_state () {
 
  delete_array(MASKCOEF_MF);
  delete_array(MASK_NBR_MF);
+
+ CopyNewToOldALL();
 
 }  // subroutine post_init_state
 

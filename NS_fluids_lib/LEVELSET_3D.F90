@@ -17253,6 +17253,31 @@ stop
 
       contains
 
+      subroutine update_matrix( &
+                      mat_data, &
+                      w_p, &
+                      basis_fn, &
+                      ii,jj) 
+      IMPLICIT NONE
+
+      REAL_T, intent(inout) :: mat_data
+      REAL_T, intent(in)    :: w_p
+      INTEGER_T, intent(in) :: ii,jj
+      REAL_T, intent(in) :: basis_fn(SDIM+1)
+
+      if ((mat_data.ge.zero).or.(mat_data.le.zero)) then
+       mat_data=mat_data+w_p*basis_fn(ii)*basis_fn(jj)
+       if ((mat_data.ge.zero).or.(mat_data.le.zero)) then
+        ! do nothing
+       else
+        print *,"mat_data bust"
+        stop
+       endif
+      endif
+
+      return
+      end subroutine update_matrix
+
       subroutine traverse_particlesLS( &
        accum_PARM, &
        matrixfab, &
@@ -17288,6 +17313,8 @@ stop
       INTEGER_T ibase
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
+      REAL_T basis_fn(SDIM+1)
+      INTEGER_T ii,jj
 
        ! Prior to this routine being called, "matrixfab" is initialized with
        ! all zeroes.  After sweeping through all the particles, 
@@ -17320,6 +17347,12 @@ stop
       nhalf=3
 
       eps=(accum_PARM%dx(1)**2)/100.0d0
+      if (eps.gt.zero) then
+       ! do nothing
+      else
+       print *,"eps invalid"
+       stop
+      endif
 
       do dir=1,3
        growlo(dir)=0
@@ -17371,6 +17404,18 @@ stop
         stop
        endif
 
+       if (wt_lag.gt.zero) then
+        ! do nothing
+       else
+        print *,"wt_lag invalid"
+        stop
+       endif
+       if ((LSpart.ge.zero).or.(LSpart.le.zero)) then
+        ! do nothing
+       else
+        print *,"LSpart invalid"
+        stop
+       endif 
        sublo(3)=0
        subhi(3)=0
        do dir=1,SDIM
@@ -17394,10 +17439,13 @@ stop
          k=idx(3)
          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
 
+         do dir=1,SDIM
+          xc(dir)=xsten(0,dir)
+         enddo
+
          tmp=0.0d0
          if (accum_PARM%Npart.ge.0) then
           do dir=1,SDIM
-           xc(dir)=xsten(0,dir)
            tmp=tmp+(xpart(dir)-xc(dir))**2
           enddo
          else if (accum_PARM%Npart.eq.-1) then
@@ -17411,51 +17459,41 @@ stop
 
          w_p=wt_lag*1.0d0/(eps+tmp)
 
+         if (w_p.gt.zero) then
+          ! do nothing
+         else
+          print *,"w_p invalid"
+          stop
+         endif
+
+         basis_fn(1)=1.0d0
+         do dir=1,SDIM
+          basis_fn(dir+1)=xpart(dir)-xc(dir)
+         enddo
+
+         do dir=1,SDIM+1
+          if ((basis_fn(dir).le.zero).or. &
+              (basis_fn(dir).ge.zero)) then
+           ! do nothing
+          else
+           print *,"basisfn invalid"
+           stop
+          endif
+         enddo
+
          ibase=1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_11
-            matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_12
-            matrixfab(D_DECL(i,j,k),ibase)+ &
-            w_p*(xpart(1)-xc(1))
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_13
-            matrixfab(D_DECL(i,j,k),ibase)+ &
-            w_p*(xpart(2)-xc(2))
-         if (SDIM.eq.3) then
+         do ii=1,SDIM+1
+         do jj=ii,SDIM+1
+          call update_matrix( &
+            matrixfab(D_DECL(i,j,k),ibase), &
+            w_p, &
+            basis_fn, &
+            ii,jj)
+
           ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_14
-            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
-            (xpart(SDIM)-xc(SDIM))
-         endif
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_22
-            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
-            (xpart(1)-xc(1))**2
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_23
-            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
-            (xpart(1)-xc(1))*(xpart(2)-xc(2))
-         if (SDIM.eq.3) then
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_24
-            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
-            (xpart(1)-xc(1))*(xpart(SDIM)-xc(SDIM))
-         endif
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= & !ATA_33
-            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
-            (xpart(2)-xc(2))**2
-         if (SDIM.eq.3) then
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_34
-            matrixfab(D_DECL(i,j,k),ibase)+w_p* &
-            (xpart(2)-xc(2))*(xpart(SDIM)-xc(SDIM))
-          ibase=ibase+1
-          matrixfab(D_DECL(i,j,k),ibase)= & !ATA_44
-            matrixfab(D_DECL(i,j,k),ibase)+w_p &
-            *(xpart(SDIM)-xc(SDIM))**2
-         endif
+         enddo
+         enddo
+
          if (SDIM.eq.3) then
           if (ibase.eq.10) then
            ! do nothing
@@ -17476,19 +17514,11 @@ stop
          endif
 
          ibase=11
-
-         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*1.0d0*LSpart
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_2
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(1)-xc(1))*LSpart
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_3
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(2)-xc(2))*LSpart
-         ibase=ibase+1
-         matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_4
-           matrixfab(D_DECL(i,j,k),ibase)+w_p*(xpart(SDIM)-xc(SDIM))*LSpart
-         ibase=ibase+1
+         do ii=1,SDIM+1
+          matrixfab(D_DECL(i,j,k),ibase)= &  ! ATb_1
+           matrixfab(D_DECL(i,j,k),ibase)+w_p*basis_fn(ii)*LSpart
+          ibase=ibase+1
+         enddo
          if (ibase.eq. &
              accum_PARM%matrix_points+accum_PARM%RHS_points+1) then
           ! do nothing

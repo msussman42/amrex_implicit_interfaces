@@ -57,6 +57,7 @@
      else if (abs(A(i,j)).le.relative_error_factor) then
       ! do nothing
      else
+      print *,"i,j,A(i,j),m,n,caller_id ",i,j,A(i,j),m,n,caller_id
       print *,"abs(A(i,j)) bust"
       stop
      endif
