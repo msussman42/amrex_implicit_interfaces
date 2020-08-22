@@ -28079,14 +28079,14 @@ stop
           if (ibase.eq.10) then
            ! do nothing
           else
-           print *,"ibase invalid"
+           print *,"ibase invalid (1) ibase=",ibase
            stop
           endif
          else if (SDIM.eq.2) then
           if (ibase.eq.6) then
            ! do nothing
           else
-           print *,"ibase invalid"
+           print *,"ibase invalid (2) ibase=",ibase
            stop
           endif
          else
@@ -28113,7 +28113,8 @@ stop
              accum_PARM%matrix_points+accum_PARM%RHS_points*SDIM+1) then
           ! do nothing
          else
-          print *,"ibase invalid"
+          print *,"ibase invalid (3)"
+          print *,"ibase=",ibase
           stop
          endif
         else if (interior_ok.eq.0) then
@@ -28309,14 +28310,14 @@ stop
         if (ibase-1.eq.6) then
          ! do nothing
         else
-         print *,"ibase invalid"
+         print *,"ibase invalid (4) ibase=",ibase
          stop
         endif
        else if (SDIM.eq.3) then
         if (ibase-1.eq.10) then
          ! do nothing
         else
-         print *,"ibase invalid"
+         print *,"ibase invalid(5) ibase=",ibase
          stop
         endif
        else
@@ -28341,7 +28342,7 @@ stop
        if (ibase-1.eq.matrix_points+SDIM*RHS_points) then
         ! do nothing
        else
-        print *,"ibase invalid"
+        print *,"ibase invalid (6) ibase=",ibase
         stop
        endif
 
@@ -28454,7 +28455,7 @@ stop
        if (ibase-1.eq.2*SDIM) then
         ! do nothing
        else
-        print *,"ibase invalid"
+        print *,"ibase invalid (7) ibase=",ibase
         stop
        endif
 

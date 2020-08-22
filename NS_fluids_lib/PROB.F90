@@ -38397,10 +38397,14 @@ end subroutine initialize2d
         stop
        endif
        if ((ncomp.eq.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-            SDIM).or.(ncomp.eq.SDIM)) then
+            SDIM).or. &
+           (ncomp.eq.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE).or. &
+           (ncomp.eq.SDIM)) then
         ! do nothing
        else
-        print *,"ncomp invalid19"
+        print *,"ncomp invalid19 ncomp=",ncomp
+        print *,"num_materials_viscoelastic=",num_materials_viscoelastic
+        print *,"scomp=",scomp
         stop
        endif
        if (scomp+ncomp.le. &

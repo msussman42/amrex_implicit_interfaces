@@ -17495,17 +17495,17 @@ stop
          enddo
 
          if (SDIM.eq.3) then
-          if (ibase.eq.10) then
+          if (ibase.eq.11) then
            ! do nothing
           else
-           print *,"ibase invalid"
+           print *,"ibase invalid (8) ibase=",ibase
            stop
           endif
          else if (SDIM.eq.2) then
-          if (ibase.eq.6) then
+          if (ibase.eq.7) then
            ! do nothing
           else
-           print *,"ibase invalid"
+           print *,"ibase invalid (9) ibase=",ibase
            stop
           endif
          else
@@ -17519,13 +17519,15 @@ stop
            matrixfab(D_DECL(i,j,k),ibase)+w_p*basis_fn(ii)*LSpart
           ibase=ibase+1
          enddo
+
          if (ibase.eq. &
-             accum_PARM%matrix_points+accum_PARM%RHS_points+1) then
+             accum_PARM%matrix_points+accum_PARM%RHS_points+1+SDIM-3) then
           ! do nothing
          else
-          print *,"ibase invalid"
+          print *,"ibase invalid (12) ibase=",ibase
           stop
          endif
+
         else if (interior_ok.eq.0) then
          ! do nothing
         else
@@ -17775,14 +17777,14 @@ stop
         if (ibase-1.eq.6) then
          ! do nothing
         else
-         print *,"ibase invalid"
+         print *,"ibase invalid (13) ibase=",ibase
          stop
         endif
        else if (SDIM.eq.3) then
         if (ibase-1.eq.10) then
          ! do nothing
         else
-         print *,"ibase invalid"
+         print *,"ibase invalid (14) ibase=",ibase
          stop
         endif
        else
@@ -17802,7 +17804,7 @@ stop
        if (ibase-1.eq.matrix_points+RHS_points) then
         ! do nothing
        else
-        print *,"ibase invalid"
+        print *,"ibase invalid (15) ibase=",ibase 
         stop
        endif
 
