@@ -18827,15 +18827,15 @@ stop
            do dir=1,SDIM
             xsub_I(dir)=xsub(dir)-dist_sub*grad_dist_sub(dir)
            enddo 
-           FIX ME, DO NOT PROJECT TO CELL, DO A REDISTRIBUTE WHEN DONE
+
            call project_to_cell( &
             accum_PARM, &
             i,j,k, &
             xsub, &
             xsub_I, &
-            mod_flag)
+            mod_flag) !if mod_flag==1 then level set is not set to "0"
 
-           if (1.eq.1) then
+           if (1.eq.0) then
             print *,"i,j,k,xI,yI,zI ",i,j,k,xsub_I(1), &
                   xsub_I(2),xsub_I(SDIM)
             print *,"im_PLS_cpp,dist_sub,phix,phiy,phiz ", &
@@ -18865,9 +18865,9 @@ stop
              new_particles(ibase+dir)=xsub_I(dir)
              new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
             enddo
-            if (mod_flag.eq.0) then
+            if (mod_flag.eq.0) then ! xCP did not have to be projected.
              new_particles(ibase+2*SDIM+1)=zero
-            else if (mod_flag.eq.1) then
+            else if (mod_flag.eq.1) then ! xCP had to be projected.
              new_particles(ibase+2*SDIM+1)=dist_sub
             else
              print *,"mod_flag invalid"
