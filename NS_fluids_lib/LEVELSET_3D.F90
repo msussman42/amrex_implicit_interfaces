@@ -17306,7 +17306,7 @@ stop
       INTEGER_T i,j,k
       INTEGER_T ig,jg,kg
       REAL_T xsten(-3:3,SDIM)
-      REAL_T tmp,w_p,wt_lag
+      REAL_T tmp,w_p
       REAL_T LSpart
       REAL_T xc(SDIM)
       INTEGER_T npart_local
@@ -17346,7 +17346,7 @@ stop
 
       nhalf=3
 
-      eps=(accum_PARM%dx(1)**2)/100.0d0
+      eps=accum_PARM%dx(1)/10.0d0
       if (eps.gt.zero) then
        ! do nothing
       else
@@ -17386,7 +17386,6 @@ stop
          accum_PARM%fablo, &
          xpart, &
          cell_index)
-        wt_lag=one/(eps+LSpart**2)
        else if (accum_PARM%Npart.eq.-1) then
         call gridsten_level(xsten,ig,jg,kg,accum_PARM%level,nhalf)
         do dir=1,SDIM
@@ -17398,18 +17397,11 @@ stop
          cell_index(SDIM)=kg
         endif
         LSpart=accum_PARM%LS(D_DECL(ig,jg,kg),accum_PARM%im_PLS_cpp+1)
-        wt_lag=one/(eps*100.0d0+LSpart**2)
        else
         print *,"accum_PARM%Npart invalid"
         stop
        endif
 
-       if (wt_lag.gt.zero) then
-        ! do nothing
-       else
-        print *,"wt_lag invalid"
-        stop
-       endif
        if ((LSpart.ge.zero).or.(LSpart.le.zero)) then
         ! do nothing
        else
@@ -17444,20 +17436,12 @@ stop
          enddo
 
          tmp=0.0d0
-         if (accum_PARM%Npart.ge.0) then
-          do dir=1,SDIM
-           tmp=tmp+(xpart(dir)-xc(dir))**2
-          enddo
-         else if (accum_PARM%Npart.eq.-1) then
-          do dir=1,SDIM
-           tmp=tmp+(xsten(1,dir)-xsten(-1,dir))**2
-          enddo
-         else
-          print *,"accum_PARM%Npart invalid"
-          stop
-         endif
+         do dir=1,SDIM
+          tmp=tmp+(xpart(dir)-xc(dir))**2
+         enddo
+         tmp=sqrt(tmp)
 
-         w_p=wt_lag*1.0d0/(eps+tmp)
+         w_p=1.0d0/(eps+tmp)
 
          if (w_p.gt.zero) then
           ! do nothing
@@ -18278,21 +18262,13 @@ stop
       INTEGER_T :: ii,jj
       REAL_T :: base_1,base_2
 
-      eps=(dx(1)**2)/100.0d0
+      eps=dx(1)/10.0d0
 
       tmp=0.0d0
-      if (ipart_flag.eq.1) then
-       do dir=1,SDIM
-        tmp=tmp+(xdata(dir)-xtarget(dir))**2
-       enddo
-      else if (ipart_flag.eq.0) then
-       do dir=1,SDIM
-        tmp=tmp+(dx(dir)**2)
-       enddo
-      else
-       print *,"ipart_flag invalid"
-       stop
-      endif
+      do dir=1,SDIM
+       tmp=tmp+(xdata(dir)-xtarget(dir))**2
+      enddo
+      tmp=sqrt(tmp)
 
       w_p=1.0d0/(eps+tmp)
 
@@ -18343,21 +18319,13 @@ stop
       INTEGER_T :: ii,jj
       REAL_T :: base_1,base_2
 
-      eps=(dx(1)**2)/100.0d0
+      eps=dx(1)/10.0d0
 
       tmp=0.0d0
-      if (ipart_flag.eq.1) then
-       do dir=1,SDIM
-        tmp=tmp+(xdata(dir)-xtarget(dir))**2
-       enddo
-      else if (ipart_flag.eq.0) then
-       do dir=1,SDIM
-        tmp=tmp+(dx(dir)**2)
-       enddo
-      else
-       print *,"ipart_flag invalid"
-       stop
-      endif
+      do dir=1,SDIM
+       tmp=tmp+(xdata(dir)-xtarget(dir))**2
+      enddo
+      tmp=sqrt(tmp)
 
       w_p=1.0d0/(eps+tmp)
 
@@ -18964,14 +18932,14 @@ stop
        imaclo(3)=0
        imachi(3)=0
        do dir_inner=1,SDIM
-        imaclo(dir_inner)=i
-        imachi(dir_inner)=i+1
+        imaclo(dir_inner)=cell_index(dir_inner)
+        imachi(dir_inner)=imaclo(dir_inner)+1
         if (dir_inner.eq.dir) then
          ! do nothing
         else if (dir_inner.ne.dir) then
          if (xpart(dir_inner).le.xsten(0,dir_inner)) then
-          imaclo(dir_inner)=i-1
-          imachi(dir_inner)=i
+          imaclo(dir_inner)=imaclo(dir_inner)-1
+          imachi(dir_inner)=imachi(dir_inner)-1
          else if (xpart(dir_inner).ge.xsten(0,dir_inner)) then
           ! do nothing
          else
@@ -19024,7 +18992,7 @@ stop
     
        ncomp_interp=1
        call bilinear_interp_stencil(data_stencil, &
-         wt_dist,ncomp_interp,u(dir))
+         wt_dist,ncomp_interp,u(dir),dir)  ! caller_id=dir
 
       enddo ! dir=1..sdim
 

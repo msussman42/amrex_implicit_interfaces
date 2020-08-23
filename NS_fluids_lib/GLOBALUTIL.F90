@@ -7128,10 +7128,11 @@ contains
       end subroutine get_longdir
 
       subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
-                      ncomp,data_interp)
+                      ncomp,data_interp,caller_id)
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: ncomp
       REAL_T, dimension(D_DECL(2,2,2),ncomp), intent(in) :: data_stencil
       REAL_T, intent(in) :: wt_dist(SDIM)
@@ -7145,6 +7146,9 @@ contains
         ! do nothing
        else
         print *,"wt_dist out of range"
+        print *,"dir,wt_dist ",dir,wt_dist(dir)
+        print *,"caller_id= ",caller_id
+        print *,"ncomp= ",ncomp
         stop
        endif
       enddo ! dir=1..sdim
