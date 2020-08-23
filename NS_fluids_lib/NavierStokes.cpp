@@ -19267,7 +19267,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
 // This routine called for level=finest_level 
 void
-NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
+NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
 
  NavierStokes& ns_level0=getLevel(0);
 
@@ -19295,7 +19295,12 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
 
  if (NS_ncomp_particles>0) {
 
-  if (particleLS_flag[imPLS]==1) {
+  if ((im_PLS>=0)&&(im_PLS<nmat)) {
+   // do nothing
+  } else
+   amrex::Error("im_PLS invalid");
+
+  if (particleLS_flag[im_PLS]==1) {
 
    MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
    if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
@@ -19387,7 +19392,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
        &append_flag,
        particle_nsubdivide.dataPtr(),
        particleLS_flag.dataPtr(),
-       &imPLS,
+       &im_PLS,
        &nmat,
        tilelo,tilehi,
        fablo,fabhi,&bfact,
@@ -19451,7 +19456,7 @@ NavierStokes::init_particle_container(int imPLS,int ipart,int append_flag) {
    delete LSmf;
 
   } else
-   amrex::Error("particleLS_flag[imPLS] invalid");
+   amrex::Error("particleLS_flag[im_PLS] invalid");
 
  } else
   amrex::Error("NS_ncomp_particles invalid");

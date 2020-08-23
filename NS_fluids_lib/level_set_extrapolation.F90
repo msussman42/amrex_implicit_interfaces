@@ -167,6 +167,7 @@
     else
        print *, "Error! ||ATAx - ATb|| = ", residual_verify
        print *,"caller_id=",caller_id
+       print *,"relative_error_factor ",relative_error_factor
        print *,"m,n = ",m,n
        do i=1,m
        do j=1,n

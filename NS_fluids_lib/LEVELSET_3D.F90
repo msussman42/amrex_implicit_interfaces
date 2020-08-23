@@ -17201,7 +17201,7 @@ stop
         REAL_T, pointer :: xlo(:)
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
-        INTEGER_T :: im_PLS
+        INTEGER_T :: im_PLS_cpp
         INTEGER_T :: DIMDEC(LS)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
        end type accum_parm_type_LS
@@ -17220,7 +17220,7 @@ stop
         REAL_T, pointer :: xlo(:)
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
-        INTEGER_T :: im_PLS
+        INTEGER_T :: im_PLS_cpp
         INTEGER_T :: nsubdivide
         INTEGER_T :: DIMDEC(LS)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
@@ -17397,7 +17397,7 @@ stop
         if (SDIM.eq.3) then
          cell_index(SDIM)=kg
         endif
-        LSpart=accum_PARM%LS(D_DECL(ig,jg,kg),accum_PARM%im_PLS)
+        LSpart=accum_PARM%LS(D_DECL(ig,jg,kg),accum_PARM%im_PLS_cpp+1)
         wt_lag=one/(eps*100.0d0+LSpart**2)
        else
         print *,"accum_PARM%Npart invalid"
@@ -17559,7 +17559,7 @@ stop
        ! called from NavierStokes::PLS_correct (NavierStokes2.cpp)
       subroutine fort_assimilate_lvlset_from_particles( &
         tid, &  ! thread id
-        im_PLS, &
+        im_PLS_cpp, &
         level, &          ! 0<=level<=finest_level
         finest_level, &
         solid_time, &
@@ -17598,7 +17598,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: im_PLS
+      INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: ngrow_distance
 
       INTEGER_T, intent(in) :: level,finest_level
@@ -17722,7 +17722,7 @@ stop
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
 
-      accum_PARM%im_PLS=im_PLS
+      accum_PARM%im_PLS_cpp=im_PLS_cpp
       call copy_dimdec( &
         DIMS(accum_PARM%LS), &
         DIMS(LS))
@@ -17808,7 +17808,7 @@ stop
         stop
        endif
 
-       lsnew(D_DECL(i,j,k),im_PLS)=xlocal(1)
+       lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=xlocal(1)
 
        do ii=istenlo(1),istenhi(1)
        do jj=istenlo(2),istenhi(2)
@@ -17829,12 +17829,12 @@ stop
          xlo,dx,i,j,k, &
          bfact,level, &
          volcell,cencell,SDIM)   
-       if (is_rigid(nmat,im_PLS).eq.0) then
-        vofcomp=(im_PLS-1)*ngeom_raw+1
+       if (is_rigid(nmat,im_PLS_cpp+1).eq.0) then
+        vofcomp=im_PLS_cpp*ngeom_raw+1
         F_old=vofnew(D_DECL(i,j,k),vofcomp)
         F_sum_complement=zero
         do im=1,nmat
-         if (im.ne.im_PLS) then
+         if (im.ne.im_PLS_cpp+1) then
           if (is_rigid(nmat,im).eq.0) then
            vofcomp_local=(im-1)*ngeom_raw+1
            F_sum_complement= &
@@ -17860,7 +17860,7 @@ stop
           enddo
           
           do im=1,nmat
-           if (im.ne.im_PLS) then
+           if (im.ne.im_PLS_cpp+1) then
             if (is_rigid(nmat,im).eq.0) then
              vofcomp_local=(im-1)*ngeom_raw+1
              vofnew(D_DECL(i,j,k),vofcomp_local)= &
@@ -17885,7 +17885,7 @@ stop
          ! if F_old=1 and F_local=0 then new sum complement=0+1-0=1
          if ((F_sum_complement.eq.zero).or. &
              (F_old.ge.one-VOFTOL)) then
-          ! do nothing since we do not know which material replaces im_PLS
+          ! do nothing since we do not know which material replaces im_PLS_cpp
          else if ((F_sum_complement.gt.zero).and. &
                   (F_old.le.one-VOFTOL)) then
           F_sum_complement_new=F_sum_complement+F_old-F_local
@@ -17896,7 +17896,7 @@ stop
           enddo
           
           do im=1,nmat
-           if (im.ne.im_PLS) then
+           if (im.ne.im_PLS_cpp+1) then
             if (is_rigid(nmat,im).eq.0) then
              vofcomp_local=(im-1)*ngeom_raw+1
              vofnew(D_DECL(i,j,k),vofcomp_local)= &
@@ -17919,7 +17919,7 @@ stop
          stop
         endif
        else
-        print *,"expecting is_rigid(nmat,im_PLS)==0"
+        print *,"expecting is_rigid(nmat,im_PLS_cpp+1)==0"
         stop
        endif
 
@@ -18060,7 +18060,7 @@ stop
           accum_PARM%dx, &
           accum_PARM%xlo, &
           xpart, &
-          accum_PARM%im_PLS, &
+          accum_PARM%im_PLS_cpp+1, &
           local_ngrow, &
           accum_PARM%fablo, &
           accum_PARM%fabhi, &
@@ -18482,7 +18482,7 @@ stop
        do dir=1,SDIM
         xpart(dir)=xsten(0,dir)
        enddo 
-       LS=accum_PARM%LS(D_DECL(ii,jj,kk),accum_PARM%im_PLS)
+       LS=accum_PARM%LS(D_DECL(ii,jj,kk),accum_PARM%im_PLS_cpp+1)
        ipart_flag=0
        call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag,accum_PARM%dx)
       enddo
@@ -18556,7 +18556,7 @@ stop
         append_flag, &
         particle_nsubdivide, &
         particleLS_flag, &
-        im_PLS, &
+        im_PLS_cpp, &
         nmat, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
@@ -18589,7 +18589,7 @@ stop
       INTEGER_T, intent(in) :: level,finest_level
 
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: im_PLS
+      INTEGER_T, intent(in) :: im_PLS_cpp
 
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -18645,10 +18645,10 @@ stop
       REAL_T :: xsub(SDIM)
       REAL_T :: xsub_I(SDIM)
 
-      if (particle_nsubdivide(im_PLS).ge.1) then
-       dist_sub_cutoff=dx(1)/particle_nsubdivide(im_PLS)
+      if (particle_nsubdivide(im_PLS_cpp+1).ge.1) then
+       dist_sub_cutoff=dx(1)/particle_nsubdivide(im_PLS_cpp+1)
       else
-       print *,"particle_nsubdivide(im_PLS) invalid"
+       print *,"particle_nsubdivide(im_PLS_cpp+1) invalid"
        stop
       endif
 
@@ -18676,8 +18676,8 @@ stop
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
 
-      accum_PARM%im_PLS=im_PLS
-      accum_PARM%nsubdivide=particle_nsubdivide(im_PLS)
+      accum_PARM%im_PLS_cpp=im_PLS_cpp
+      accum_PARM%nsubdivide=particle_nsubdivide(im_PLS_cpp+1)
 
       call copy_dimdec( &
         DIMS(accum_PARM%LS), &
@@ -18731,7 +18731,7 @@ stop
       subhi(3)=0
       do dir=1,SDIM
        sublo(dir)=0
-       subhi(dir)=particle_nsubdivide(im_PLS)-1
+       subhi(dir)=particle_nsubdivide(im_PLS_cpp+1)-1
       enddo
       allocate(sub_counter(sublo(1):subhi(1), &
               sublo(2):subhi(2), &
@@ -18805,7 +18805,7 @@ stop
             particle_link_data, &
             Np, &
             dist_sub, &
-            grad_dist_sub, &
+            grad_dist_sub, & ! this output is used to find closest point.
             x_foot_sub)  ! x_foot_sub=xsub if append_flag==0
 
           Np_append_test=Np_append_test+1
@@ -18827,12 +18827,22 @@ stop
            do dir=1,SDIM
             xsub_I(dir)=xsub(dir)-dist_sub*grad_dist_sub(dir)
            enddo 
+           FIX ME, DO NOT PROJECT TO CELL, DO A REDISTRIBUTE WHEN DONE
            call project_to_cell( &
             accum_PARM, &
             i,j,k, &
             xsub, &
             xsub_I, &
             mod_flag)
+
+           if (1.eq.1) then
+            print *,"i,j,k,xI,yI,zI ",i,j,k,xsub_I(1), &
+                  xsub_I(2),xsub_I(SDIM)
+            print *,"im_PLS_cpp,dist_sub,phix,phiy,phiz ", &
+               im_PLS_cpp,dist_sub,grad_dist_sub(1), &
+               grad_dist_sub(2),grad_dist_sub(SDIM)
+
+           endif
 
             ! add interface particles
            call interp_eul_lag_dist( &
@@ -18842,7 +18852,7 @@ stop
             particle_link_data, &
             Np, &
             dist_sub, &
-            grad_dist_sub, &
+            grad_dist_sub, &  ! this output is discarded.
             x_foot_sub)  ! x_foot_sub=xsub if append_flag==0
 
            Np_append_test=Np_append_test+1
@@ -19131,7 +19141,7 @@ stop
 
       subroutine fort_move_particle_container( &
         tid, &
-        im_PLS, &
+        im_PLS_cpp, &
         nmat, &
         tilelo,tilehi, &
         fablo,fabhi, &
@@ -19164,7 +19174,7 @@ stop
 
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: im_PLS
+      INTEGER_T, intent(in) :: im_PLS_cpp
 
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)

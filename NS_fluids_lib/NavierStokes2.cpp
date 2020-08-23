@@ -7028,6 +7028,11 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
  if (NS_ncomp_particles>0) {
 
+  if ((im_PLS>=0)&&(im_PLS<nmat)) {
+   // do nothing
+  } else
+   amrex::Error("im_PLS invalid");
+
   int append_flag=1;
   init_particle_container(im_PLS,ipart_id,append_flag);
 
