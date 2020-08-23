@@ -13953,8 +13953,13 @@ END SUBROUTINE SIMP
           stop
          endif
          close(5)
-       enddo
-       enddo
+       enddo ! igrid
+       enddo ! ilev
+
+       if (ipass.eq.1) then
+        close(12)
+       endif
+
       enddo ! ipass=0..1
 
       alloc_flag=alloc_flag-1

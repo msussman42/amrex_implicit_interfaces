@@ -387,7 +387,7 @@ StateData::buildBC ()
 
 StateData::~StateData() {
 
- int ncomp_PC = desc->get_ncomp_PC();
+// int ncomp_PC = desc->get_ncomp_PC();
  desc = 0;
  descGHOST = 0;
  for (int i=0;i<=bfact_time_order;i++) {
@@ -396,13 +396,10 @@ StateData::~StateData() {
   int ncomp_PC_test=new_dataPC[i].size();
   if (ncomp_PC_test==0) {
    // do nothing
-  } else if (ncomp_PC_test==ncomp_PC) {
-   if (ncomp_PC>0) {
-    for (int j=0;j<ncomp_PC;j++) {
+  } else if (ncomp_PC_test>=1) {
+    for (int j=0;j<ncomp_PC_test;j++) {
      delete new_dataPC[i][j];
     }
-   } else
-    amrex::Error("ncomp_PC invalid");
   } else
    amrex::Error("ncomp_PC_test invalid");
  } // i=0..bfact_time_order
