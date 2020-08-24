@@ -1909,21 +1909,32 @@ stop
        if ((VF_sten.ge.-VOFTOL).and. &
            (VF_sten.le.one+VOFTOL)) then
         if (VF_sten.ge.VOFTOL) then
-         dxprobe_target=zero
-         do dir=1,SDIM
-          dxprobe_target=dxprobe_target+(XC_sten(dir)-xI(dir))**2
-         enddo
-         dxprobe_target=sqrt(dxprobe_target)
-         if (dxprobe_target.gt.zero) then
-          dest=T_sten
-          material_found_in_cell=1
-         else if (dxprobe_target.eq.zero) then
+
+         if (STANDALONE.eq.1) then  ! SUPERMESH
+
+          dxprobe_target=zero
+          do dir=1,SDIM
+           dxprobe_target=dxprobe_target+(XC_sten(dir)-xI(dir))**2
+          enddo
+          dxprobe_target=sqrt(dxprobe_target)
+          if (dxprobe_target.gt.zero) then
+           dest=T_sten
+           material_found_in_cell=1
+          else if (dxprobe_target.eq.zero) then
+           ! do nothing
+          else
+           print *,"dxprobe_target invalid 1"
+           print *,"dxprobe_target= ",dxprobe_target
+           stop
+          endif
+
+         else if (STANDALONE.eq.0) then ! GFM
           ! do nothing
          else
-          print *,"dxprobe_target invalid 1"
-          print *,"dxprobe_target= ",dxprobe_target
+          print *,"STANDALONE invalid"
           stop
          endif
+
         else if (VF_sten.le.VOFTOL) then
          ! do nothing
         else
@@ -6731,6 +6742,9 @@ stop
 
                    nrmPROBE(dir)=nrmCP(dir)
 
+                    ! e.g.
+                    ! normal_probe_factor=1/2
+                    ! normal_probe_size=1
                    xdst(dir)=xI(dir)- &
                     normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir) 
                    xsrc(dir)=xI(dir)+ &
