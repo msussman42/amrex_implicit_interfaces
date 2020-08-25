@@ -16552,8 +16552,8 @@ void NavierStokes::volWgtSum(
 
   for (int idest=1;idest<total_comp;idest++) {
 
-   if (((sumdata_sweep[idest]==0)&&(isweep==0))||  // default
-       ((sumdata_sweep[idest]==1)&&(isweep==1))) { 
+   if (((sumdata_sweep[idest]==0)&&(isweep==0))|| //default (update 1st sweep)
+       ((sumdata_sweep[idest]==1)&&(isweep==1))) {//(update 2nd sweep) 
 
     if (sumdata_type[idest]==1) { // reduce real sum (default)
      local_result[0][idest]+=local_result[tid][idest];

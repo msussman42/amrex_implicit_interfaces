@@ -644,6 +644,7 @@ extern "C" {
 
     void FORT_SUMMASS (
      int* tid,
+     int* ncomp_sum_int_user,
      int* adapt_quad_depth,
      int* slice_dir,Real* xslice,
      Real* problo,Real* probhi,

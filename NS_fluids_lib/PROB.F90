@@ -13700,18 +13700,19 @@ END SUBROUTINE Adist
       IMPLICIT NONE
 
 
-      INTEGER_T nmat,nhalf0,nhalf,bfact
-      REAL_T time
-      REAL_T mofdata(nmat*ngeom_recon)
-      REAL_T mofdata_tess(nmat*ngeom_recon)
-      REAL_T xsten0(-nhalf0:nhalf0,SDIM)  ! top level
-      REAL_T xsten(-nhalf:nhalf,SDIM)     ! refined
-      REAL_T xsten_test(-1:1,SDIM)
+      INTEGER_T, intent(in) :: nmat,nhalf0,nhalf,bfact
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
+      REAL_T, intent(in) :: mofdata_tess(nmat*ngeom_recon)
+      REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,SDIM)  ! top level
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)     ! refined
+      REAL_T :: xsten_test(-1:1,SDIM)
       INTEGER_T nhalf_test,isten
-      REAL_T dx(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
       REAL_T dxlevel(SDIM)
-      REAL_T errorparm(2*nmat)
-      INTEGER_T imaterial,cutflag
+      REAL_T, intent(out) :: errorparm(2*nmat)
+      INTEGER_T, intent(out) :: cutflag
+      INTEGER_T imaterial
       INTEGER_T minusflag(2)
       INTEGER_T plusflag(2)
       INTEGER_T i1,j1,k1,k1lo,k1hi,ii,dir
@@ -13725,7 +13726,8 @@ END SUBROUTINE Adist
       REAL_T cencut(SDIM)
       REAL_T facearea
       REAL_T areacentroid(SDIM)
-      REAL_T xtrilist(SDIM+1,SDIM,POLYGON_LIST_MAX) ! get_symmetric_error
+      ! get_symmetric_error
+      REAL_T, intent(inout) :: xtrilist(SDIM+1,SDIM,POLYGON_LIST_MAX) 
       INTEGER_T nmax
       INTEGER_T tessellate
       INTEGER_T vofcomp
@@ -13993,20 +13995,22 @@ END SUBROUTINE Adist
         ! called from: SUMMASS (NAVIERSTOKES_3D.F90)
       recursive subroutine stackerror( &
        xtrilist, &
-       xsten0,nhalf0,dxin,bfact, &
+       xsten0,nhalf0, &
+       dxin,bfact, &
        xsten,nhalf, &
        mofdata, &
        mofdata_tess, &
-       errorparm,level,max_level,nmat,time)
+       errorparm,level, &
+       max_level,nmat,time)
       IMPLICIT NONE
 
 
-      REAL_T, intent(inout) :: time
-      INTEGER_T, intent(inout) :: nmat 
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nmat 
       INTEGER_T, intent(in) :: nhalf0,nhalf,bfact
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,SDIM)
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, intent(inout) :: dxin(SDIM)
+      REAL_T, intent(in) :: dxin(SDIM)
       REAL_T, intent(inout) :: errorparm(2*nmat)
       INTEGER_T, intent(inout) :: max_level
       INTEGER_T, intent(in) :: level
@@ -14078,7 +14082,8 @@ END SUBROUTINE Adist
 
       call get_symmetric_error( &
         xtrilist, &
-        xsten0,nhalf0,dxin,bfact, &
+        xsten0,nhalf0, &
+        dxin,bfact, &
         xsten,nhalf, &
         mofdata, &
         mofdata_tess, &

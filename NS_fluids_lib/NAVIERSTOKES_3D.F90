@@ -9595,48 +9595,49 @@ END SUBROUTINE SIMP
        IMPLICIT NONE
 
        INTEGER_T, intent(in) :: ncomp_sum_int_user
-       INTEGER_T tid
-       INTEGER_T adapt_quad_depth
-       INTEGER_T max_level
-       INTEGER_T slice_dir
-       REAL_T xslice(SDIM)
-       INTEGER_T resultsize
-       INTEGER_T den_ncomp
-       INTEGER_T nmat
-       INTEGER_T ntensorMM
-       INTEGER_T isweep
-       INTEGER_T NN,dirx,diry,cut_flag
-       REAL_T ZZ(0:NN)
-       REAL_T FF(0:NN)
+       INTEGER_T, intent(in) :: tid
+       INTEGER_T, intent(in) :: adapt_quad_depth
+       INTEGER_T :: max_level_adapt
+       INTEGER_T, intent(in) :: slice_dir
+       REAL_T, intent(in) :: xslice(SDIM)
+       INTEGER_T, intent(in) :: resultsize
+       INTEGER_T, intent(in) :: den_ncomp
+       INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: ntensorMM
+       INTEGER_T, intent(in) :: isweep
+       INTEGER_T, intent(in) :: NN,dirx,diry,cut_flag
+       REAL_T, intent(out) :: ZZ(0:NN)
+       REAL_T, intent(out) :: FF(0:NN)
 
-       REAL_T problo(SDIM)
-       REAL_T probhi(SDIM)
-       INTEGER_T bfact
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T DIMDEC(cellten)
-       INTEGER_T DIMDEC(lsfab)
-       INTEGER_T DIMDEC(mask)
-       INTEGER_T DIMDEC(maskSEM)
-       INTEGER_T DIMDEC(drag)
-       INTEGER_T DIMDEC(slopes)
-       INTEGER_T DIMDEC(den)
-       INTEGER_T DIMDEC(vel)
-       REAL_T  local_result(resultsize)
-       REAL_T  resultALL(resultsize)
-       INTEGER_T sumdata_type(resultsize)
-       INTEGER_T sumdata_sweep(resultsize)
-       REAL_T  time
-       REAL_T  cellten(DIMV(cellten),ntensorMM)  
-       REAL_T  lsfab(DIMV(lsfab),nmat)  
-       REAL_T  maskSEM(DIMV(maskSEM))
-       REAL_T  mask(DIMV(mask))
-       REAL_T  drag(DIMV(drag),4*SDIM+1)
-       REAL_T  slopes(DIMV(slopes),nmat*ngeom_recon)  
-       REAL_T  den(DIMV(den),den_ncomp)  
-       REAL_T  vel(DIMV(vel),num_materials_vel*(SDIM+1)) ! includes pressure 
-       REAL_T  xlo(SDIM),dx(SDIM)
+       REAL_T, intent(in) :: problo(SDIM)
+       REAL_T, intent(in) :: probhi(SDIM)
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: DIMDEC(cellten)
+       INTEGER_T, intent(in) :: DIMDEC(lsfab)
+       INTEGER_T, intent(in) :: DIMDEC(mask)
+       INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+       INTEGER_T, intent(in) :: DIMDEC(drag)
+       INTEGER_T, intent(in) :: DIMDEC(slopes)
+       INTEGER_T, intent(in) :: DIMDEC(den)
+       INTEGER_T, intent(in) :: DIMDEC(vel)
+       REAL_T, intent(inout) ::  local_result(resultsize)
+       REAL_T, intent(in) ::  resultALL(resultsize)
+       INTEGER_T, intent(in) :: sumdata_type(resultsize)
+       INTEGER_T, intent(in) :: sumdata_sweep(resultsize)
+       REAL_T, intent(in) ::  time
+       REAL_T, intent(in) ::  cellten(DIMV(cellten),ntensorMM)  
+       REAL_T, intent(in) ::  lsfab(DIMV(lsfab),nmat)  
+       REAL_T, intent(in) ::  maskSEM(DIMV(maskSEM))
+       REAL_T, intent(in) ::  mask(DIMV(mask))
+       REAL_T, intent(in) ::  drag(DIMV(drag),4*SDIM+1)
+       REAL_T, intent(in) ::  slopes(DIMV(slopes),nmat*ngeom_recon)  
+       REAL_T, intent(in) ::  den(DIMV(den),den_ncomp)  
+       ! includes pressure 
+       REAL_T, intent(in) ::  vel(DIMV(vel),num_materials_vel*(SDIM+1)) 
+       REAL_T, intent(in) ::  xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k
        INTEGER_T ii,jj,kk
@@ -9676,6 +9677,7 @@ END SUBROUTINE SIMP
        INTEGER_T vel_error
        INTEGER_T energy_moment
        INTEGER_T enstrophy
+       INTEGER_T user_comp
        INTEGER_T total_comp
 
        INTEGER_T isrc,idest
@@ -9817,9 +9819,9 @@ END SUBROUTINE SIMP
        enddo  ! idest
 
        if (isweep.eq.0) then
-        max_level=adapt_quad_depth
+        max_level_adapt=adapt_quad_depth
        else if (isweep.eq.1) then
-        max_level=1
+        max_level_adapt=1
        else
         print *,"isweep invalid"
         stop
@@ -9936,7 +9938,7 @@ END SUBROUTINE SIMP
           xsten,nhalf, &
           mofdata, &
           mofdata_tess, &
-          errorparm,level,max_level,nmat,time)
+          errorparm,level,max_level_adapt,nmat,time)
 
           ! F1,E1,F2,E2,F3,E3,...
          do dir=1,2*nmat
@@ -10074,7 +10076,13 @@ END SUBROUTINE SIMP
            stop
           endif
          enddo ! dir=1..3
-FIX ME ncomp_sum_int_user
+        
+         do im=1,ncomp_sum_int_user
+          ! idest=user_comp+im
+          ! call user defined routine here: pass xsten, i,j,k,volgrid
+          ! increment local_result(idest)
+         enddo
+
          local_vort=sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
          do dir=1,SDIM
           local_vel(dir)=vel(D_DECL(i,j,k),dir)
