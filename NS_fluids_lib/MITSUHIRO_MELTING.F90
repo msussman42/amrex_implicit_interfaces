@@ -25,11 +25,19 @@ module MITSUHIRO_MELTING_module
 
 implicit none                   
 
+REAL_T :: DEF_VAPOR_GAMMA
+REAL_T :: DEF_VAPOR_CP
+REAL_T :: DEF_VAPOR_CV
+
 contains
 
   ! do any initial preparation needed
 subroutine INIT_MITSUHIRO_MELTING_MODULE()
 IMPLICIT NONE
+
+  DEF_VAPOR_GAMMA =  1.666666667D0
+  DEF_VAPOR_CV = 6.490D3 ! [J∕(kg·K)]
+  DEF_VAPOR_CP =  DEF_VAPOR_CV * DEF_VAPOR_GAMMA ! [J∕(kg·K)]
 
 return
 end subroutine INIT_MITSUHIRO_MELTING_MODULE
@@ -70,16 +78,24 @@ end subroutine MITSUHIRO_substrateLS
 !   substrate
 
  ! fluids tessellate the domain, solids are immersed. 
-subroutine MITSUHIRO_LS(x,t,LS)
+subroutine MITSUHIRO_MELTING_LS(x,t,LS,nmat)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(out) :: LS(num_materials)
+REAL_T, intent(out) :: LS(nmat)
 REAL_T :: ice_vertical
 REAL_T :: substrate_height
+
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
 
 if (abs(zblob2-yblob2).le.1.0D-14) then
  substrate_height=zblob2  ! substrate thickness
@@ -161,20 +177,28 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_LS
+end subroutine MITSUHIRO_MELTING_LS
 
 ! initial velocity is zero
-subroutine MITSUHIRO_LS_VEL(x,t,LS,VEL,velsolid_flag,dx)
+subroutine MITSUHIRO_MELTING_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
+
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
 
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
@@ -198,39 +222,140 @@ do dir=1,SDIM
 enddo
 
 return 
-end subroutine MITSUHIRO_LS_VEL
+end subroutine MITSUHIRO_MELTING_VEL
+
+
+! These next routines only used for compressible materials.
+!***********************************************
+! compressible material functions for (ns.material_type = 24)
+subroutine EOS_MITSUHIRO_MELTING(rho,internal_energy,pressure, &
+  imattype,im)
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: internal_energy
+ REAL_T, intent(out) :: pressure
+
+ if (imattype.eq.24) then
+  pressure=rho*(DEF_VAPOR_GAMMA-1.0D0)*internal_energy
+ else
+  print *,"imattype invalid EOS_MITSUHIRO_MELTING"
+  stop
+ endif
+
+ return
+end subroutine EOS_MITSUHIRO_MELTING
+
+subroutine SOUNDSQR_MITSUHIRO_MELTING(rho,internal_energy,soundsqr, &
+  imattype,im)
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: internal_energy
+ REAL_T, intent(out) :: soundsqr
+ REAL_T pressure
+
+ if (imattype.eq.24) then
+  call EOS_MITSUHIRO_MELTING(rho,internal_energy,pressure,imattype,im)
+  soundsqr=DEF_VAPOR_GAMMA*pressure/rho
+ else
+  print *,"imattype invalid SOUNDSQR_MITSUHIRO_MELTING"
+  stop
+ endif
+
+ return
+end subroutine SOUNDSQR_MITSUHIRO_MELTING
+
+subroutine INTERNAL_MITSUHIRO_MELTING(rho,temperature,local_internal_energy, &
+  imattype,im)
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: temperature 
+ REAL_T, intent(out) :: local_internal_energy
+
+ if ((imattype.eq.0).or. &
+     (imattype.eq.24)) then 
+  local_internal_energy=DEF_VAPOR_CV*temperature
+ else
+  print *,"imattype invalid INTERNAL_MITSUHIRO_MELTING"
+  stop
+ endif
+
+ return
+end subroutine INTERNAL_MITSUHIRO_MELTING
+
+subroutine TEMPERATURE_MITSUHIRO_MELTING(rho,temperature,internal_energy, &
+  imattype,im)
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(out) :: temperature 
+ REAL_T, intent(in) :: internal_energy
+
+ if (imattype.eq.24) then 
+  temperature=internal_energy/DEF_VAPOR_CV
+ else
+  print *,"imattype invalid TEMPERATURE_MITSUHIRO_MELTING"
+  stop
+ endif
+
+ return
+end subroutine TEMPERATURE_MITSUHIRO_MELTING
+
 
 ! this routine used if pressure boundary conditions are prescribed,
 ! since only top wall is "outflow" (outflow in quotes since ice shrinks when
 ! melting), and flow is incompressible, ok to make the top wall pressure zero.
-subroutine MITSUHIRO_PRES(x,t,LS,PRES)
+subroutine MITSUHIRO_MELTING_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
+REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: PRES
 
+if (num_materials.eq.nmat) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 PRES=zero
 
 return 
-end subroutine MITSUHIRO_PRES
+end subroutine MITSUHIRO_MELTING_PRES
 
 
 
-subroutine MITSUHIRO_STATE(x,t,LS,STATE,bcflag)
+subroutine MITSUHIRO_MELTING_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, intent(in) :: nmat
+INTEGER_T, intent(in) :: nstate_mat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: STATE(num_materials*num_state_material)
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if (nstate_mat.eq.num_state_material) then
+ ! do nothing
+else
+ print *,"nstate_mat invalid"
+ stop
+endif
 if ((num_materials.eq.4).and. &
     (num_state_material.ge.3).and. & ! density, temperature, vapor spec
     (probtype.eq.414)) then
@@ -259,57 +384,71 @@ else
 endif
  
 return
-end subroutine MITSUHIRO_STATE
+end subroutine MITSUHIRO_MELTING_STATE
 
  ! dir=1..sdim  side=1..2
-subroutine MITSUHIRO_LS_BC(xwall,xghost,t,LS, &
-   LS_in,dir,side,dx)
+subroutine MITSUHIRO_MELTING_LS_BC(xwall,xghost,t,LS, &
+   LS_in,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: xwall
 REAL_T, intent(in) :: xghost(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(out) :: LS(num_materials)
-REAL_T, intent(in) :: LS_in(num_materials)
+REAL_T, intent(inout) :: LS(nmat)
+REAL_T, intent(in) :: LS_in(nmat)
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) ::  dx(SDIM)
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
- call MITSUHIRO_LS(xghost,t,LS)
+ call MITSUHIRO_MELTING_LS(xghost,t,LS,nmat)
 else
  print *,"dir or side invalid"
  stop
 endif
 
 return
-end subroutine MITSUHIRO_LS_BC
+end subroutine MITSUHIRO_MELTING_LS_BC
 
 
  ! dir=1..sdim  side=1..2 veldir=1..sdim
-subroutine MITSUHIRO_VEL_BC(xwall,xghost,t,LS, &
-   VEL,VEL_in,veldir,dir,side,dx)
+subroutine MITSUHIRO_MELTING_VEL_BC(xwall,xghost,t,LS, &
+   VEL,VEL_in,veldir,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: xwall
 REAL_T, intent(in) :: xghost(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: VEL
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(inout) :: VEL
 REAL_T, intent(in) :: VEL_in
 INTEGER_T, intent(in) :: veldir,dir,side
 REAL_T, intent(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 velsolid_flag=0
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
- call MITSUHIRO_LS_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx)
+ call MITSUHIRO_MELTING_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
  VEL=local_VEL(veldir)
 
 else
@@ -318,27 +457,34 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_VEL_BC
+end subroutine MITSUHIRO_MELTING_VEL_BC
 
  ! dir=1..sdim  side=1..2
-subroutine MITSUHIRO_PRES_BC(xwall,xghost,t,LS, &
-   PRES,PRES_in,dir,side,dx)
+subroutine MITSUHIRO_MELTING_PRES_BC(xwall,xghost,t,LS, &
+   PRES,PRES_in,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: xwall
 REAL_T, intent(in) :: xghost(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: PRES
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(inout) :: PRES
 REAL_T, intent(in) :: PRES_in
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- call MITSUHIRO_PRES(xghost,t,LS,PRES)
+ call MITSUHIRO_MELTING_PRES(xghost,t,LS,PRES,nmat)
 
 else
  print *,"dir or side invalid"
@@ -346,35 +492,43 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_PRES_BC
+end subroutine MITSUHIRO_MELTING_PRES_BC
 
  ! dir=1..sdim  side=1..2
-subroutine MITSUHIRO_STATE_BC(xwall,xghost,t,LS, &
-   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
+subroutine MITSUHIRO_MELTING_STATE_BC(xwall,xghost,t,LS, &
+   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: xwall
 REAL_T, intent(in) :: xghost(SDIM)
 REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T :: local_STATE(num_materials*num_state_material)
-REAL_T, intent(out) :: STATE
-REAL_T, intent(out) :: STATE_merge
+REAL_T, intent(in) :: LS(nmat)
+REAL_T :: local_STATE(nmat*num_state_material)
+REAL_T, intent(inout) :: STATE
+REAL_T, intent(inout) :: STATE_merge
 REAL_T, intent(in) :: STATE_in
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T istate,im
+INTEGER_T, intent(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 local_bcflag=1
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
- call MITSUHIRO_STATE(xghost,t,LS,local_STATE,local_bcflag)
+ call MITSUHIRO_MELTING_STATE(xghost,t,LS,local_STATE,local_bcflag, &
+         nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
  im_crit=1
@@ -391,22 +545,33 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_STATE_BC
+end subroutine MITSUHIRO_MELTING_STATE_BC
 
-subroutine MITSUHIRO_HEATSOURCE(im,VFRAC,time,x,temp, &
-     heat_source,den,CV,dt)
+subroutine MITSUHIRO_MELTING_HEATSOURCE(im,VFRAC,time,x, &
+     xsten,nhalf,temp, &
+     heat_source,den,CV,dt,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T im
-REAL_T VFRAC(num_materials)
-REAL_T time
-REAL_T x(SDIM)
-REAL_T temp(num_materials)
-REAL_T den(num_materials)
-REAL_T CV(num_materials)
-REAL_T dt
-REAL_T heat_source
+INTEGER_T, intent(in) :: nmat
+INTEGER_T, intent(in) :: im
+REAL_T, intent(in) :: VFRAC(nmat)
+REAL_T, intent(in) :: time
+INTEGER_T, intent(in) :: nhalf
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, intent(in) :: temp(nmat)
+REAL_T, intent(in) :: den(nmat)
+REAL_T, intent(in) :: CV(nmat)
+REAL_T, intent(in) :: dt
+REAL_T, intent(out) :: heat_source
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 
 if ((num_materials.eq.4).and.(probtype.eq.414)) then
  heat_source=zero
@@ -416,6 +581,6 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_HEATSOURCE
+end subroutine MITSUHIRO_MELTING_HEATSOURCE
 
 end module MITSUHIRO_MELTING_module

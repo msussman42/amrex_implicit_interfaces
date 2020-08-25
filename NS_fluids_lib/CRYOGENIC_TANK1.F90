@@ -339,10 +339,11 @@ return
 end subroutine CRYOGENIC_TANK1_PRES
 
 
-subroutine CRYOGENIC_TANK1_STATE(x,t,LS,STATE,nmat,nstate_mat)
+subroutine CRYOGENIC_TANK1_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
 INTEGER_T, intent(in) :: nmat
 INTEGER_T, intent(in) :: nstate_mat
 REAL_T, intent(in) :: x(SDIM)
@@ -524,6 +525,7 @@ INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
 INTEGER_T, intent(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
+INTEGER_T local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -532,12 +534,14 @@ else
  stop
 endif
 
+local_bcflag=1
+
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
  call CRYOGENIC_TANK1_STATE(xghost,t,LS,local_STATE, &
-         nmat,num_state_material)
+         local_bcflag,nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
  im_crit=1

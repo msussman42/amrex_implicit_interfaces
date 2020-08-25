@@ -1598,7 +1598,6 @@ stop
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use rigid_FSI_module
       IMPLICIT NONE
 
@@ -14283,7 +14282,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use CONE3D_module
       use WAVY_Channel_module
 
@@ -14300,6 +14298,8 @@ END SUBROUTINE Adist
       REAL_T STATE(num_materials*num_state_material)
       INTEGER_T ibase
       INTEGER_T bcflag
+
+      bcflag=0
 
       nmat=num_materials
       im_solid_temp=im_solid_primary()
@@ -14321,7 +14321,7 @@ END SUBROUTINE Adist
 
         call SUB_LS(xvec,time,LS,num_materials)
         call SUB_STATE(xvec,time,LS,STATE, &
-                num_materials,num_state_material)
+                bcflag,num_materials,num_state_material)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2) 
 
@@ -14348,12 +14348,6 @@ END SUBROUTINE Adist
        else if (probtype.eq.413) then ! Zeyu's gnbc validation case
         call ZEYU_droplet_impact_LS(xvec,time,LS)
         call ZEYU_droplet_impact_STATE(xvec,time,LS,STATE)
-        ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2)
-       else if (probtype.eq.414) then ! ice melting
-        bcflag=0
-        call MITSUHIRO_LS(xvec,time,LS)
-        call MITSUHIRO_STATE(xvec,time,LS,STATE,bcflag)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2)
        else if (probtype.eq.311) then ! user defined
@@ -14523,7 +14517,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use CONE3D_module
       use WAVY_Channel_module
       IMPLICIT NONE
@@ -14602,10 +14595,6 @@ END SUBROUTINE Adist
          ! pass dx
         call ZEYU_droplet_impact_LS(xvec,time,LS)
         call ZEYU_droplet_impact_LS_VEL(xvec,time,LS,vel,velsolid_flag,dx)
-       else if (probtype.eq.414) then ! Melting
-         ! pass dx
-        call MITSUHIRO_LS(xvec,time,LS)
-        call MITSUHIRO_LS_VEL(xvec,time,LS,vel,velsolid_flag,dx)
        else if (probtype.eq.311) then ! user defined
         call USERDEF_LS(xvec,time,LS)
         call USERDEF_VEL(xvec,time,LS,vel,velsolid_flag)
@@ -15306,7 +15295,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -15424,8 +15412,6 @@ END SUBROUTINE Adist
        call CAV2Dstep_LS(x_in,initial_time,dist)
       else if (probtype.eq.413) then ! zeyu
        call ZEYU_droplet_impact_LS(x_in,initial_time,dist)
-      else if (probtype.eq.414) then ! melting
-       call MITSUHIRO_LS(x_in,initial_time,dist)
       else if (probtype.eq.533) then
        call rigid_FSI_LS(x_in,initial_time,dist)
       else if (probtype.eq.534) then
@@ -19594,7 +19580,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -19704,9 +19689,6 @@ END SUBROUTINE Adist
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.413) then ! zeyu
        call ZEYU_droplet_impact_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
-      else if (probtype.eq.414) then ! melting
-       call MITSUHIRO_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.533) then
        call rigid_FSI_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
@@ -25366,7 +25348,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -25462,11 +25443,6 @@ END SUBROUTINE Adist
         call ZEYU_droplet_impact_LS(xvec,time,local_LS)
         ! pass dx
         call ZEYU_droplet_impact_VEL_BC(xwall,xvec,time,local_LS, &
-         velcell(veldir),vel,veldir,dir,side,dx)
-       else if (probtype.eq.414) then ! melting
-        call MITSUHIRO_LS(xvec,time,local_LS)
-        ! pass dx
-        call MITSUHIRO_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
 
        else if (probtype.eq.533) then
@@ -26717,7 +26693,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -26832,10 +26807,6 @@ END SUBROUTINE Adist
        else if (probtype.eq.413) then ! zeyu
         call ZEYU_droplet_impact_LS(xpos,time,local_LS)
         call ZEYU_droplet_impact_PRES_BC(xwall,xpos,time,local_LS, &
-          ADV,ADVwall,dir,side,dx)
-       else if (probtype.eq.414) then ! melting
-        call MITSUHIRO_LS(xpos,time,local_LS)
-        call MITSUHIRO_PRES_BC(xwall,xpos,time,local_LS, &
           ADV,ADVwall,dir,side,dx)
 
        else if (probtype.eq.533) then
@@ -27461,7 +27432,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -27633,12 +27603,6 @@ END SUBROUTINE Adist
 
         call ZEYU_droplet_impact_LS(xvec,time,local_LS)
         call ZEYU_droplet_impact_STATE_BC(xwall,xvec,time,local_LS, &
-          ADV,ADV_merge,ADVwall,im,istate,dir,side,dx)
-
-       else if (probtype.eq.414) then ! melting
-
-        call MITSUHIRO_LS(xvec,time,local_LS)
-        call MITSUHIRO_STATE_BC(xwall,xvec,time,local_LS, &
           ADV,ADV_merge,ADVwall,im,istate,dir,side,dx)
 
        else if (probtype.eq.533) then
@@ -33835,9 +33799,10 @@ end subroutine initialize2d
        num_materials=ccnum_materials
 
 ! USER DEFINED (used by "is_in_probtype_list")
-       probtype_list_size=2
+       probtype_list_size=3
        used_probtypes(1)=2000 ! flexible_plate_impact
        used_probtypes(2)=421  ! CRYOGENIC_TANK1
+       used_probtypes(3)=414  ! MITSUHIRO_MELTING
 
        if (probtype.eq.421) then
         SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
@@ -33854,6 +33819,21 @@ end subroutine initialize2d
         SUB_PRES_BC=>CRYOGENIC_TANK1_PRES_BC
         SUB_STATE_BC=>CRYOGENIC_TANK1_STATE_BC
         SUB_HEATSOURCE=>CRYOGENIC_TANK1_HEATSOURCE
+       else if (probtype.eq.414) then
+        SUB_INIT_MODULE=>INIT_MITSUHIRO_MELTING_MODULE
+        SUB_LS=>MITSUHIRO_MELTING_LS
+        SUB_VEL=>MITSUHIRO_MELTING_VEL
+        SUB_EOS=>EOS_MITSUHIRO_MELTING
+        SUB_SOUNDSQR=>SOUNDSQR_MITSUHIRO_MELTING
+        SUB_INTERNAL=>INTERNAL_MITSUHIRO_MELTING
+        SUB_TEMPERATURE=>TEMPERATURE_MITSUHIRO_MELTING
+        SUB_PRES=>MITSUHIRO_MELTING_PRES
+        SUB_STATE=>MITSUHIRO_MELTING_STATE
+        SUB_LS_BC=>MITSUHIRO_MELTING_LS_BC
+        SUB_VEL_BC=>MITSUHIRO_MELTING_VEL_BC
+        SUB_PRES_BC=>MITSUHIRO_MELTING_PRES_BC
+        SUB_STATE_BC=>MITSUHIRO_MELTING_STATE_BC
+        SUB_HEATSOURCE=>MITSUHIRO_MELTING_HEATSOURCE
        else if (probtype.eq.2000) then
         SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
         SUB_LS=>flexible_plate_impact_LS
@@ -34394,10 +34374,6 @@ end subroutine initialize2d
        else if (probtype.eq.413) then
 
         call INIT_ZEYU_droplet_impact_MODULE()
-
-       else if (probtype.eq.414) then
-
-        call INIT_MITSUHIRO_MELTING_MODULE()
 
        else if (probtype.eq.533) then
 
@@ -39051,7 +39027,6 @@ end subroutine initialize2d
        use TSPRAY_module
        use CAV2Dstep_module
        use ZEYU_droplet_impact_module
-       use MITSUHIRO_MELTING_module
        use CONE3D_module
        use WAVY_Channel_module
        use rigid_FSI_module
@@ -39275,8 +39250,9 @@ end subroutine initialize2d
         if (is_in_probtype_list().eq.1) then
 
          call SUB_LS(xpos,time,distbatch,num_materials)
+             ! bcflag=0 (calling from FORT_INITDATA)
          call SUB_STATE(xpos,time,distbatch,local_state, &
-                 num_materials,num_state_material)
+                 bcflag,num_materials,num_state_material)
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
@@ -39407,24 +39383,6 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call ZEYU_droplet_impact_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.414) then ! melting
-
-         call MITSUHIRO_LS(xpos,time,distbatch)
-         call MITSUHIRO_STATE(xpos,time,distbatch,local_state,bcflag)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-          ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call MITSUHIRO_PRES(xpos,time,distbatch,p_hyd)
          scalc(ipresbase+impres)=p_hyd
 
         else if (probtype.eq.533) then
@@ -40687,7 +40645,6 @@ end subroutine initialize2d
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use MITSUHIRO_MELTING_module
       use CONE3D_module
       use WAVY_Channel_module
       use rigid_FSI_module
@@ -41222,15 +41179,6 @@ end subroutine initialize2d
          call ZEYU_droplet_impact_LS(xvec,time,distbatch)
           ! pass dx
          call ZEYU_droplet_impact_LS_VEL(xvec,time,distbatch,velcell, &
-          velsolid_flag,dx)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.414) then ! melting
-         call MITSUHIRO_LS(xvec,time,distbatch)
-          ! pass dx
-         call MITSUHIRO_LS_VEL(xvec,time,distbatch,velcell, &
           velsolid_flag,dx)
          x_vel=velcell(1)
          y_vel=velcell(2)

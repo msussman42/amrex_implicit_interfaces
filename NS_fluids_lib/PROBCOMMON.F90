@@ -305,7 +305,8 @@ implicit none
       REAL_T, intent(out) :: PRES
       end subroutine TEMPLATE_PRES
 
-      subroutine TEMPLATE_STATE(x,t,LS,STATE,nmat,nstate_mat)
+      subroutine TEMPLATE_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
+      INTEGER_T, intent(in) :: bcflag
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nstate_mat
       REAL_T, intent(in) :: x(SDIM)
