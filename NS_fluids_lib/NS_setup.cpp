@@ -2172,7 +2172,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   for (int im=0;im<ncomp_sum_int_user;im++) {
    std::cout << "TIME= "<<upper_slab_time<<
     "user_comp (1..ncomp_sum_int_user) " << im+1 <<
-    " USER_COMP " << sumdata[user_comp+im] << '\n';
+    " sum_int_user " << sumdata[user_comp+im] << '\n';
   }
 
   std::cout << "TIME= "<<upper_slab_time<<" VORT ERR= " << 

@@ -200,6 +200,30 @@ implicit none
       INTEGER_T :: used_probtypes(1000)
       INTEGER_T :: probtype_list_size
 
+      type user_defined_sum_int_type
+       INTEGER_T ncomp_sum_int_user
+       REAL_T, pointer :: problo(SDIM)      
+       REAL_T, pointer :: probhi(SDIM) 
+       INTEGER_T :: igrid,jgrid,kgrid
+       INTEGER_T :: nhalf
+       INTEGER_T :: nmat
+       INTEGER_T :: bfact
+       INTEGER_T :: ntensorMM
+       INTEGER_T :: den_ncomp
+       INTEGER_T, pointer :: tilelo(SDIM)
+       INTEGER_T, pointer :: tilehi(SDIM)
+       INTEGER_T, pointer :: fablo(SDIM)
+       INTEGER_T, pointer :: fabhi(SDIM)
+       REAL_T, pointer :: xlo(SDIM)
+       REAL_T, pointer :: dx(SDIM)
+       REAL_T, pointer :: xsten(:,:)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: cellten
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: den
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: vel
+      end type user_defined_sum_int_type
+
       ABSTRACT INTERFACE
 
       subroutine TEMPLATE_INIT_MODULE()

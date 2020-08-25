@@ -9609,11 +9609,11 @@ END SUBROUTINE SIMP
        REAL_T, intent(out) :: ZZ(0:NN)
        REAL_T, intent(out) :: FF(0:NN)
 
-       REAL_T, intent(in) :: problo(SDIM)
-       REAL_T, intent(in) :: probhi(SDIM)
+       REAL_T, intent(in), target :: problo(SDIM)
+       REAL_T, intent(in), target :: probhi(SDIM)
        INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T, intent(in) :: DIMDEC(cellten)
        INTEGER_T, intent(in) :: DIMDEC(lsfab)
@@ -9628,16 +9628,16 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: sumdata_type(resultsize)
        INTEGER_T, intent(in) :: sumdata_sweep(resultsize)
        REAL_T, intent(in) ::  time
-       REAL_T, intent(in) ::  cellten(DIMV(cellten),ntensorMM)  
-       REAL_T, intent(in) ::  lsfab(DIMV(lsfab),nmat)  
+       REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensorMM)  
+       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)  
        REAL_T, intent(in) ::  maskSEM(DIMV(maskSEM))
        REAL_T, intent(in) ::  mask(DIMV(mask))
        REAL_T, intent(in) ::  drag(DIMV(drag),4*SDIM+1)
-       REAL_T, intent(in) ::  slopes(DIMV(slopes),nmat*ngeom_recon)  
-       REAL_T, intent(in) ::  den(DIMV(den),den_ncomp)  
+       REAL_T, intent(in), target :: slopes(DIMV(slopes),nmat*ngeom_recon)  
+       REAL_T, intent(in), target :: den(DIMV(den),den_ncomp)  
        ! includes pressure 
-       REAL_T, intent(in) ::  vel(DIMV(vel),num_materials_vel*(SDIM+1)) 
-       REAL_T, intent(in) ::  xlo(SDIM),dx(SDIM)
+       REAL_T, intent(in), target :: vel(DIMV(vel),num_materials_vel*(SDIM+1)) 
+       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k
        INTEGER_T ii,jj,kk
