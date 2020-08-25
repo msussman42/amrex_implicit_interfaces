@@ -3,6 +3,8 @@
 
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_ArrayLim.H"
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
@@ -13,7 +15,40 @@ print *,"dimension bust"
 stop
 #endif
 
+
+module probcommon_module_types
+
+      type user_defined_sum_int_type
+       INTEGER_T ncomp_sum_int_user
+       REAL_T, pointer :: problo(:)      
+       REAL_T, pointer :: probhi(:) 
+       INTEGER_T :: igrid,jgrid,kgrid
+       REAL_T :: volgrid
+       INTEGER_T :: nhalf
+       INTEGER_T :: nmat
+       INTEGER_T :: bfact
+       INTEGER_T :: ntensorMM
+       INTEGER_T :: den_ncomp
+       INTEGER_T, pointer :: tilelo(:)
+       INTEGER_T, pointer :: tilehi(:)
+       INTEGER_T, pointer :: fablo(:)
+       INTEGER_T, pointer :: fabhi(:)
+       REAL_T, pointer :: xlo(:)
+       REAL_T, pointer :: dx(:)
+       REAL_T, pointer :: xsten(:,:)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: cellten
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: den
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: vel
+      end type user_defined_sum_int_type
+
+     contains
+
+end module probcommon_module_types
+
 module probcommon_module
+use probcommon_module_types
 
 implicit none
 
@@ -200,35 +235,19 @@ implicit none
       INTEGER_T :: used_probtypes(1000)
       INTEGER_T :: probtype_list_size
 
-      type user_defined_sum_int_type
-       INTEGER_T ncomp_sum_int_user
-       REAL_T, pointer :: problo(SDIM)      
-       REAL_T, pointer :: probhi(SDIM) 
-       INTEGER_T :: igrid,jgrid,kgrid
-       INTEGER_T :: nhalf
-       INTEGER_T :: nmat
-       INTEGER_T :: bfact
-       INTEGER_T :: ntensorMM
-       INTEGER_T :: den_ncomp
-       INTEGER_T, pointer :: tilelo(SDIM)
-       INTEGER_T, pointer :: tilehi(SDIM)
-       INTEGER_T, pointer :: fablo(SDIM)
-       INTEGER_T, pointer :: fabhi(SDIM)
-       REAL_T, pointer :: xlo(SDIM)
-       REAL_T, pointer :: dx(SDIM)
-       REAL_T, pointer :: xsten(:,:)
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: cellten
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: den
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: vel
-      end type user_defined_sum_int_type
-
       ABSTRACT INTERFACE
 
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
 
+      subroutine TEMPLATE_SUMINT(GRID_DATA_IN,increment_out,nsum)
+      use probcommon_module_types
+
+      INTEGER_T, intent(in) :: nsum
+      type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
+      REAL_T, intent(out) :: increment_out(nsum)
+      end subroutine TEMPLATE_SUMINT
+      
       subroutine TEMPLATE_LS(x,t,LS,nmat)
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: x(SDIM)
@@ -375,6 +394,7 @@ implicit none
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
+      PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS

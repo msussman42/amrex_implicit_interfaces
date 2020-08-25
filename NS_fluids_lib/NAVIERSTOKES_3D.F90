@@ -9647,7 +9647,7 @@ END SUBROUTINE SIMP
        INTEGER_T vofcomp
        INTEGER_T dirMAC
        REAL_T xcen,xcrit
-       REAL_T xsten(-3:3,SDIM)
+       REAL_T, target :: xsten(-3:3,SDIM)
        REAL_T xstenMAC(-3:3,SDIM)
        REAL_T mofdata(nmat*ngeom_recon)
        REAL_T mofdata_tess(nmat*ngeom_recon)
@@ -9719,6 +9719,9 @@ END SUBROUTINE SIMP
        INTEGER_T nmax
 
        REAL_T LS_LOCAL(nmat)
+
+       type(user_defined_sum_int_type) :: GRID_DATA_PARM
+       REAL_T local_user_out(ncomp_sum_int_user)
 
        nhalf=3
        nmax=POLYGON_LIST_MAX  ! in: SUMMASS
@@ -9857,6 +9860,26 @@ END SUBROUTINE SIMP
        call checkbound(fablo,fabhi,DIMS(den),1,-1,413) 
        call checkbound(fablo,fabhi,DIMS(vel),1,-1,413) 
 
+       GRID_DATA_PARM%ncomp_sum_int_user=ncomp_sum_int_user
+       GRID_DATA_PARM%problo=>problo
+       GRID_DATA_PARM%probhi=>probhi
+       GRID_DATA_PARM%nhalf=nhalf
+       GRID_DATA_PARM%nmat=nmat
+       GRID_DATA_PARM%bfact=bfact
+       GRID_DATA_PARM%ntensorMM=ntensorMM
+       GRID_DATA_PARM%den_ncomp=den_ncomp
+       GRID_DATA_PARM%tilelo=>tilelo
+       GRID_DATA_PARM%tilehi=>tilehi
+       GRID_DATA_PARM%fablo=>fablo
+       GRID_DATA_PARM%fabhi=>fabhi
+       GRID_DATA_PARM%xlo=>xlo
+       GRID_DATA_PARM%dx=>dx
+       GRID_DATA_PARM%cellten=>cellten
+       GRID_DATA_PARM%lsfab=>lsfab
+       GRID_DATA_PARM%slopes=>slopes
+       GRID_DATA_PARM%den=>den
+       GRID_DATA_PARM%vel=>vel
+
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
@@ -9989,6 +10012,12 @@ END SUBROUTINE SIMP
           print *,"maskSEM invalid"
           stop
          endif
+       
+         GRID_DATA_PARM%volgrid=volgrid
+         GRID_DATA_PARM%igrid=i
+         GRID_DATA_PARM%jgrid=j
+         GRID_DATA_PARM%kgrid=k
+         GRID_DATA_PARM%xsten=>xsten
 
          do im=1,nmat
 
@@ -10076,13 +10105,23 @@ END SUBROUTINE SIMP
            stop
           endif
          enddo ! dir=1..3
-        
-         do im=1,ncomp_sum_int_user
-          ! idest=user_comp+im
-          ! call user defined routine here: pass xsten, i,j,k,volgrid
-          ! increment local_result(idest)
-         enddo
-
+       
+         if (ncomp_sum_int_user.ge.1) then
+          if (is_in_probtype_list().eq.1) then
+           call SUB_SUMINT(GRID_DATA_PARM,local_user_out, &
+            ncomp_sum_int_user) 
+           do im=1,ncomp_sum_int_user
+            idest=user_comp+im
+            local_result(idest)=local_result(idest)+local_user_out(im)
+           enddo
+          endif
+         else if (ncomp_sum_int_user.eq.0) then
+          ! do nothing
+         else
+          print *,"ncomp_sum_int_user invalid"
+          stop
+         endif
+  
          local_vort=sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
          do dir=1,SDIM
           local_vel(dir)=vel(D_DECL(i,j,k),dir)

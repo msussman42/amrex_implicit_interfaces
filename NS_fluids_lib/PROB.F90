@@ -83,6 +83,7 @@ stop
 
 
       module probf90_module
+      use probcommon_module_types
       use probcommon_module
 
       contains
