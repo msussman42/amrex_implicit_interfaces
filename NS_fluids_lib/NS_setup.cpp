@@ -1674,7 +1674,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int vel_error=vort_error+1;
  int energy_moment=vel_error+1; 
  int enstrophy=energy_moment+1; // integral of w dot w
- int total_comp=enstrophy+nmat; 
+ int user_comp=enstrophy+nmat;
+ int total_comp=user_comp+ncomp_sum_int_user; 
 
  Vector<Real> sumdata;
  sumdata.resize(total_comp);
@@ -2167,6 +2168,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    std::cout << "TIME= "<<upper_slab_time<<
     "material id (1..nmat) " << im+1 <<
     " ENSTROPHY " << sumdata[enstrophy+im] << '\n';
+  }
+  for (int im=0;im<ncomp_sum_int_user;im++) {
+   std::cout << "TIME= "<<upper_slab_time<<
+    "user_comp (1..ncomp_sum_int_user) " << im+1 <<
+    " USER_COMP " << sumdata[user_comp+im] << '\n';
   }
 
   std::cout << "TIME= "<<upper_slab_time<<" VORT ERR= " << 

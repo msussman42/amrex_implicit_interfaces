@@ -9557,6 +9557,7 @@ END SUBROUTINE SIMP
 
        subroutine FORT_SUMMASS( &
         tid, &
+        ncomp_sum_int_user, &
         adapt_quad_depth, &
         slice_dir,xslice, &
         problo,probhi, &
@@ -9593,6 +9594,7 @@ END SUBROUTINE SIMP
 
        IMPLICIT NONE
 
+       INTEGER_T, intent(in) :: ncomp_sum_int_user
        INTEGER_T tid
        INTEGER_T adapt_quad_depth
        INTEGER_T max_level
@@ -9792,8 +9794,9 @@ END SUBROUTINE SIMP
        vort_error=vort_sum_comp+3
        vel_error=vort_error+1
        energy_moment=vel_error+1
-       enstrophy=energy_moment+1 ! integral of w dot w
-       total_comp=enstrophy+nmat
+       enstrophy=energy_moment+1; ! integral of w dot w
+       user_comp=enstrophy+nmat;
+       total_comp=user_comp+ncomp_sum_int_user; 
 
        if (resultsize.ne.total_comp) then
         print *,"mismatch between resultsize and total_comp"
@@ -10071,7 +10074,7 @@ END SUBROUTINE SIMP
            stop
           endif
          enddo ! dir=1..3
-
+FIX ME ncomp_sum_int_user
          local_vort=sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
          do dir=1,SDIM
           local_vel(dir)=vel(D_DECL(i,j,k),dir)

@@ -135,6 +135,7 @@ extern "C"
     Real* species_evaporation_density,
     Real* molar_mass,
     Real* species_molar_mass,
+    int* use_supermesh,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,

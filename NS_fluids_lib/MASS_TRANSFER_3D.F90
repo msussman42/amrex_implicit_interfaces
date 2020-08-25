@@ -37,6 +37,7 @@ stop
       ! p1=>t1
       type probe_parm_type
        INTEGER_T :: tid
+       INTEGER_T :: use_supermesh
        REAL_T, pointer :: Y_TOLERANCE
        INTEGER_T, pointer :: local_freezing_model
        REAL_T, pointer :: LL
@@ -1788,7 +1789,8 @@ stop
        recon,DIMS(recon), &
        dest, &
        dxprobe_target, &
-       VOF_pos_probe_counter)
+       VOF_pos_probe_counter, &
+       use_supermesh)
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -1816,6 +1818,7 @@ stop
       REAL_T, intent(out) :: dest
       REAL_T, intent(inout) :: dxprobe_target !interpfab_filament_probe
       INTEGER_T, intent(inout) :: VOF_pos_probe_counter
+      INTEGER_T, intent(in) :: use_supermesh
 
       INTEGER_T ic,jc,kc
 
@@ -1910,7 +1913,7 @@ stop
            (VF_sten.le.one+VOFTOL)) then
         if (VF_sten.ge.VOFTOL) then
 
-         if (STANDALONE.eq.1) then  ! SUPERMESH
+         if (use_supermesh.eq.1) then 
 
           dxprobe_target=zero
           do dir=1,SDIM
@@ -1928,10 +1931,10 @@ stop
            stop
           endif
 
-         else if (STANDALONE.eq.0) then ! GFM
+         else if (use_supermesh.eq.0) then ! GFM
           ! do nothing
          else
-          print *,"STANDALONE invalid"
+          print *,"use_supermesh invalid"
           stop
          endif
 
@@ -2392,7 +2395,8 @@ stop
           DIMS(PROBE_PARMS%recon), &
           T_probe(iprobe), &
           dxprobe_target(iprobe), &
-          VOF_pos_probe_counter)
+          VOF_pos_probe_counter, &
+          PROBE_PARMS%use_supermesh)
 
          if (DEBUG_TRIPLE.eq.1) then
           if ((DEBUG_I.eq.PROBE_PARMS%i).and. &
@@ -2428,7 +2432,8 @@ stop
            DIMS(PROBE_PARMS%recon), &
            Y_probe(iprobe), &
            dxprobe_target(iprobe), &
-           dummy_VOF_pos_probe_counter)
+           dummy_VOF_pos_probe_counter, &
+           PROBE_PARMS%use_supermesh)
 
           if ((Y_probe(iprobe).ge.zero).and. &
               (Y_probe(iprobe).le.one)) then
@@ -6011,6 +6016,7 @@ stop
        species_evaporation_density, &
        molar_mass, &
        species_molar_mass, &
+       use_supermesh, &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        xlo,dx, &
@@ -6097,6 +6103,7 @@ stop
       REAL_T, intent(in) :: molar_mass(nmat)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
+      INTEGER_T, intent(in) :: use_supermesh
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, target, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -6281,6 +6288,14 @@ stop
        ! do nothing
       else
        print *,"stefan_flag invalid"
+       stop
+      endif
+
+      if ((use_supermesh.eq.0).or. &
+          (use_supermesh.eq.1)) then
+       ! do nothing
+      else
+       print *,"use_supermesh invalid"
        stop
       endif
 
@@ -6579,6 +6594,7 @@ stop
         DIMS(pres))
 
       PROBE_PARMS%tid=tid
+      PROBE_PARMS%use_supermesh=use_supermesh
 
       PROBE_PARMS%Y_TOLERANCE=>Y_TOLERANCE
 

@@ -471,6 +471,9 @@ int  NavierStokes::num_materials=0;
 int  NavierStokes::num_materials_vel=1;
 int  NavierStokes::num_materials_scalar_solve=1;
 
+int  NavierStokes::use_supermesh=0;
+int  NavierStokes::ncomp_sum_int_user=0;
+
 // set using elastic_viscosity
 int  NavierStokes::num_materials_viscoelastic=0;
 
@@ -1891,6 +1894,17 @@ NavierStokes::read_params ()
         (num_materials_scalar_solve!=nmat))
      amrex::Error("num_materials_scalar_solve invalid");
 
+    pp.query("use_supermesh",use_supermesh);
+    if ((use_supermesh!=0)&&
+        (use_supermesh!=1))
+     amrex::Error("use_supermesh invalid");
+
+    pp.query("ncomp_sum_int_user",ncomp_sum_int_user);
+    if (ncomp_sum_int_user>=0) {
+     // do nothing
+    } else
+     amrex::Error("ncomp_sum_int_user invalid");
+
     // blob_matrix,blob_RHS,blob_velocity,
     // blob_integral_momentum,blob_energy,
     // blob_mass_for_velocity (3 components)
@@ -1971,6 +1985,10 @@ NavierStokes::read_params ()
      amrex::Error("max_level_two_materials invalid"); 
 
     if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "use_supermesh " << 
+       use_supermesh << '\n';
+     std::cout << "ncomp_sum_int_user " << 
+       ncomp_sum_int_user << '\n';
      std::cout << "tecplot_max_level " << 
        tecplot_max_level << '\n';
      std::cout << "max_level_two_materials " << 
@@ -10605,6 +10623,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      species_evaporation_density.dataPtr(),
      molar_mass.dataPtr(),
      species_molar_mass.dataPtr(),
+     &use_supermesh,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      xlo,dx,
@@ -10686,6 +10705,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      species_evaporation_density.dataPtr(),
      molar_mass.dataPtr(),
      species_molar_mass.dataPtr(),
+     &use_supermesh,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      xlo,dx,
@@ -16348,7 +16368,8 @@ void NavierStokes::volWgtSum(
  int vel_error=vort_error+1; 
  int energy_moment=vel_error+1; 
  int enstrophy=energy_moment+1; // integral of w dot w
- int total_comp=enstrophy+nmat; 
+ int user_comp=enstrophy+nmat;
+ int total_comp=user_comp+ncomp_sum_int_user; 
 
  if (total_comp!=result.size())
   amrex::Error("result size invalid");
@@ -16490,6 +16511,7 @@ void NavierStokes::volWgtSum(
 
    FORT_SUMMASS(
     &tid_current,
+    &ncomp_sum_int_user,
     &adapt_quad_depth,
     &slice_dir,
     xslice.dataPtr(),
@@ -16530,12 +16552,12 @@ void NavierStokes::volWgtSum(
 
   for (int idest=1;idest<total_comp;idest++) {
 
-   if (((sumdata_sweep[idest]==0)&&(isweep==0))||
+   if (((sumdata_sweep[idest]==0)&&(isweep==0))||  // default
        ((sumdata_sweep[idest]==1)&&(isweep==1))) { 
 
-    if (sumdata_type[idest]==1) { // reduce real sum
+    if (sumdata_type[idest]==1) { // reduce real sum (default)
      local_result[0][idest]+=local_result[tid][idest];
-    } else if (sumdata_type[idest]==2) { // reduce real min
+    } else if (sumdata_type[idest]==2) { // reduce real min 
      if (local_result[tid][idest]<local_result[0][idest])
       local_result[0][idest]=local_result[tid][idest];
     } else if (sumdata_type[idest]==3) { // reduce real max

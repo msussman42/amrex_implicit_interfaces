@@ -1822,7 +1822,7 @@ protected:
 
     static Vector<int> visual_ncell;
     static int visual_compare;
-
+ 
     static int slice_dir;  // 0,..,sdim-1
     static Vector<Real> xslice;
 
@@ -1853,6 +1853,8 @@ protected:
     static int num_materials;
     static int num_materials_vel;
     static int num_materials_scalar_solve;
+    static int use_supermesh; //def=0
+    static int ncomp_sum_int_user; //def=0
 
      // this is set according to elastic_viscosity
     static int num_materials_viscoelastic;
