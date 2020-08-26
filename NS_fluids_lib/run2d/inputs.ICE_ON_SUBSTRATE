@@ -1,0 +1,355 @@
+# Figures 4 and 5 from Vu, Tryggvason, Homma, Wells, Takakura,
+# JCEJ 46 (11) 726-731 (2013)
+# Figure 1 from Enriquez et al: Physics of Fluids 24,091102 (2012)
+# if we rescale, then tau=rho CP R^2/K=(1)4.1855e+7(0.2)^2/58000
+# tau=28.9
+# U=R/tau=.2/28.9=0.007
+# PR=CP mu/K=4.1855e+7 0.02/58000=14.4
+# ST=(TSAT-TCOLD)CP/L=20(4.1855e+7)/3.34e+9=.25
+# BO=rho g R^2/sigma=1(980)(.2^2)/72.8=0.54
+# WE=rho U^2 R/sigma=.007^2 (.2)/72.8=1.4e-7
+# U=R/(rho CP R^2/K)=K/(rho CP R)
+# WE=(1/sigma) rho R K^2 /(rho CP R)^2 = K^2/(sigma rho R CP^2)
+
+#ns.check_nan=1
+#fab.initval=0.0
+#DEFAULT is 1 if DEBUG or BL_TESTING is defined.
+#fab.do_initval=1
+#fab.init_snan=1 #snan=silent nan (init_snan has precedence over do_initval)
+#  --------
+#  |water |
+#  --------
+#  |ice   |
+# -------------
+#   substrate
+# -----------
+# heated boundary condition
+# water= material 1
+# air =  material 2
+# ice =  material 3
+# substrate = material 4
+# species variable where water is collected as vapor.
+max_step  = 200000    # maximum timestep
+#max_step  = 2    # maximum timestep
+
+stop_time = 10  
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => XYZ, 1 => RZ
+#geometry.prob_lo=-1.0 -1.0 0.0    # XYZ
+#geometry.prob_hi=1.0 1.0 1.5  # cm XYZ
+geometry.prob_lo   =  0.0 0.0    # RZ
+geometry.prob_hi=1.0 1.5  # cm RZ
+ns.slice_dir=1
+ns.xslice=0.0 0.0
+ns.num_materials_vel=1
+ns.EILE_flag=-1
+ns.truncate_thickness=2.0
+ns.face_flag=1
+ns.diffusionface_flag=1  # 0=LS face diffcoeff 1=VOF for face diffcoeff
+ns.elasticface_flag=1  # 0=LS face elastic coeff 1=VOF for face elastic coeff
+ns.temperatureface_flag=0 # 0=LS face diffcoeff 1=VOF for face diffcoeff
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+
+ns.minimum_relative_error=1.0e-22
+
+ns.gmres_precond_iter_base=4
+ns.initial_project_cycles=5   # initial jacobi iterations
+ns.initial_cg_cycles=10
+ns.solvability_projection=0 # 0 since one must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0e+6
+# changes to inputs file for evaporation and condensation:
+# 1. ns.num_species_var increased accordingly, 
+#    ns.species_evaporation_density (1..num_species_var) set.
+# 2. latent_heat liquid,air  positive for evaporation.
+# 3. freezing_model liquid, air = 5
+# 4. TSAT liquid,air set accordingly.
+# 5. mass_fraction_id liquid,air set accordingly 1<=id<=num_species_var
+#FUTURE: for ice nucleation at substrate/liquid interface:
+# 1. decrease liquid volume fraction and increase ice volume fraction.
+#    expansion (mdot) source terms are nonzero in the liquid.
+# 2. temperature at the substrate/liquid interface is the saturation
+#    temperature.
+# changes to inputs file:
+# 1. latent_heat substrate,water negative for freezing
+# 2. freezing_model substrate,water = 6
+# 3. TSAT substrate,water set accordingly
+# 4. mass_fraction_id substrate, water set accordingly (material id for ice)
+# FUTURE: for vapor nucleation at substrate/liquid interface:
+# 1. decrease liquid volume fraction and increase vapor volume fraction.
+#    expansion (mdot) source terms are nonzero in the liquid.
+# 2. temperature at the substrate/liquid interface is the saturation
+#    temperature.
+# changes to inputs file:
+# 1. latent_heat substrate,water positive for boiling
+# 2. freezing_model substrate,water = 6
+# 3. TSAT substrate,water set accordingly
+# 4. mass_fraction_id substrate,water set accordingly (material id for vapor)
+#
+ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate  
+#ns.num_species_var=0 #  no evaporation
+ns.num_species_var=0 # evaporation (each material will have a "vapor" "amount")
+ns.post_init_pressure_solve=1 
+ns.MOFITERMAX=15
+ns.MOF_TURN_OFF_LS=0
+ns.MOF_DEBUG_RECON=0
+ns.continuous_mof=2 # 0=MOF 2=CMOF 
+ns.mof_error_ordering=0
+# water,air,ice,substrate
+ns.mof_ordering=0 2 0 1 
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0 # 1=check initial residual  2=check all the residuals
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
+
+#amr.n_cell=64 64 48  # XYZ
+amr.n_cell=32 48  # RZ
+amr.max_level = 1
+#ns.max_level_two_materials=1
+# water, gas, ice, substrate
+# -1=> always adapt  0=> never adapt
+ns.radius_cutoff=-1 0 -1 0 
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+ns.ns_tiling=false
+amr.blocking_factor = 8 8 8 8   # block factor in grid generation
+amr.check_int       = 100
+#amr.check_int       = 10000  # static freezing test 10 
+amr.check_file      = chk     # root name of checkpoint file
+# blow up: ~ 84000 steps
+amr.plot_int        = 100 # was 100  (plot_int=1 for testing)
+#amr.plot_int        = 1000 # static freezing test 10
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 1024
+amr.file_name_digits=7
+#amr.restart         = chk0119700
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.01 
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-8
+ns.gravity        = -980.0   # cgs
+ns.use_lsa=0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# 1=water 2=gas  3=ice  4=substrate 
+# 12,13,14   23,24  3,4 
+ns.conservative_tension_force=0
+ns.tension=72.8 29.1 72.8 29.1 119.6 47.8   
+# ns.tension=72.8 29.1 72.8 29.1 72.8 29.1 # before
+# Mehdi recommends the following ratios:
+# 1.0 0.34 0.34 1.32 0.97 0
+# expected final ice volume here: 0.91497
+#  \
+# ---
+#   \
+#    \
+# sin(theta_water)/sigma_ice_air = sin(theta_air)/sigma_water_ice = 
+# sin(theta_ice)/sigma_water_air
+# sin(theta_water)/26400=sin(theta_air)/6800=sin(theta_ice)/20000
+#ns.tension=20000.0 6800.0 6800.0 26400.0 19400.0 6800.0
+# sigma_ice_water * cos(theta)+sigma_air_water=sigma_air_ice
+# theta=90 cos(90)=0
+# sigma_air_water=20000
+# sigma_air_ice=sigma_ice_water=20000
+# sin(theta_water)/20000=sin(theta_air)/3000=sin(theta_ice)/20000
+# sigma_water_air, sigma_water_ice, sigma_water_substrate,
+# sigma_air_ice, sigma_air_substrate, sigma_ice_substrate
+# material 1=liquid 2=gas  3=ice 4=solid
+# default is 4.1855e+7 erg/(g K)
+#ns.stiffCP = 4.1855e+7 1.0e+7 2.0e+7 2.0e+7  # dimensional
+# specific heat of glass: 0.84 J/(gm K)
+# specific heat of water: 4.186 J/(gm K)
+# specific heat of ice: 2.05 J/(gm K)
+# 1=water 2=gas  3=ice  4=substrate 
+ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K)
+# units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
+# L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
+#ns.latent_heat = -3.34e+9 0.0 # 12,21 liquid-> ice, ice -> liquid FREEZING
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# latent_heat[2*max_num_tension]
+# ST=0.025=CP Delta T/L
+# in the beginning: k_ice grad T/L = 4 (1/0.1) 0.025=1 and dt=2.3E-6
+#  dx=2/128=1/64 volume changes by 2.3E-6 each step?
+#  volume fraction changes by 2.3E-6/(1/64)=1.5E-5
+#12 13 14 23 24 34 then reverse 21 31 41 32 42 43
+# dimensional:
+#ns.latent_heat = 0.0 -3.34e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+# 1=water 2=gas  3=ice  4=substrate 
+# dimensionless:
+# 3.34e+2 joules/g = 3.34e+9 erg/g (ice -> water)
+# 2.26e+3 joules/g = 2.26e+10 erg/g (water -> gas)
+#evaporation:
+# 12 13 14 23 24 34 21 31 41 32 42 43
+# 12=water to air (i.e. vapor is only created within the air)  31=ice to water
+ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
+# 0=distribute to the destination material (def)
+# 1=distribute to the source material.
+ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
+#no evaporation:
+#ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
+#evaporation: 
+# freezing_model=0 => stefan law  V=[k grad T dot n]/L
+# 5 = Stefan evaporation law
+ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
+#no evaporation: 
+#ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
+#evaporation: 
+#evaporated vapor from "12" evaporation is dumped into species 1 within the air.
+ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
+#no evaporation: 
+#ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
+# 1->2 liquid-> gas
+# 1->3 liquid->ice 
+# ....
+#12 13 14 23 24 34  21 31 41 32 42 43
+# substrate temp is 280
+#evaporation:
+ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
+#no evaporation:
+#ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
+# 
+ns.temperature_primitive_variable=1 1 1 1
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+# initial ice block on heated substrate.
+# probtype=2001
+ns.axis_dir=0   
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=263  # not used
+ns.advbot=0.0  # initial falling (downward) speed of liquid drop if axis_dir=1
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.material_type=0 0 0 999
+# Latent heat: 1 J/kg = 10^7 erg/kg=10^4 erg/g
+# 1 Watt=10^7 ERG/S
+# 1 W/(M K)=10^5 ERG/(S CM K)
+# 1 ERG= 1 (gram cm^2/s^2)
+# air: k=0.024 W/(M K)
+# water: k=0.58 W/(M K)
+# cp default to be 4.1855E+7 erg/(g K) (all incompressible materials)
+# MKS: cp=4.1855 J/((kg/1000)K)=4.1855E+3 J/(kg K)
+#ns.heatviscconst=58000.0 2400.0 218000.0 218000.0 # liquid/air/ice/solid 
+#ns.heatviscconst=58000.0 2400.0 218000.0 218000.0 # dimensional
+# glass: 105000.0
+# aluminum: 20500000.0
+# substrate thickness in one paper is 0.4 mm=0.04cm
+# Our substrate thickness is L=0.1 * 0.2 = 0.02 cm
+# So, we use KSUBSTRATE=1.8/2=0.9
+# if thermal contact resistance L2=L/100  K2=K/25 then
+# KTOT approx L/(.25 L/K + L/K)=(4/5)K
+# 0.9 if no resistance, 0.72 if resistance.
+# Note: L=0.1 * 0.2 =0.02 cm  L/100 =2E-4 cm
+# in physical cgs units, R=2E-4/2400 cgs=2E-6/.024 mks
+# conductance: hj=1/(RA)=1/(1E-4 * .2^2)=1E6/4=2.5E5
+# Now, the conductance 2.5E5 is too big, so let us try:
+# L2=L/10 K2=K/25   
+# KTOT approx L/(2.5 L/K + L/K)=K/3.5=0.9/3.5=0.26
+# 1=water 2=gas  3=ice  4=substrate 
+ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # dimensional
+# 12 13 14 23 24 34  
+ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
+#evaporation: water vapor is solute, air is solvent units: cm^2/s
+#C_t + u dot grad C = div alpha laplacian C ?
+ns.speciesviscconst=0.0 0.0 0.0 0.0
+# 1=water 2=gas  3=ice  4=substrate 
+ns.speciesconst=1.0 0.0 0.0 0.0
+# ice is a very viscous fluid 
+ns.viscconst=0.018 0.00017 1000.0 1000.0 # dimensional
+# ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before
+ns.elastic_viscosity=0.0 0.0 0.0 0.0
+ns.viscoelastic_model=0 0 0 0
+ns.added_weight=1.0 1.0 1.0 1.0
+ns.elastic_time=0.0 0.0 0.0 0.0
+ns.denconst=1.0 0.001 0.934 8.96
+ns.FSI_flag=0 0 3 1  # ice is a very viscous fluid
+ns.recalesce_flag=0 0 0 0
+# remember saturation temp is 273 and we scale
+# by Delta T=T_m - T_c
+# initial temperature of liquid/gas/ice/solid
+# solid is kept at 272.0
+# solidheat_flag=0=>diffuse in solid 
+# solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
+# solidheat_flag=2=>neumann
+ns.solidheat_flag=0  
+# 1=water 2=gas  3=ice  4=substrate 
+ns.tempconst=353.0 273.0 273.0 273.0  
+ns.initial_temperature=353.0 273.0 273.0 273.0  # dimensionless
+# dxcoarse=2/64=1/32
+ns.xblob=0.0  # center of ice block 
+ns.yblob=0.425
+ns.zblob=0.0
+ns.xblob2=0.0 # center of surface of heated substrate (xblob2,yblob2)   
+ns.yblob2=0.125 #4 X dxcoarse=4 x (1/32) =  1/8
+ns.zblob2=0.125
+ns.radblob2=0.0 # zero degrees incline (radians)
+# thickness of top-side of ice block that is already melted
+ns.radblob3=0.1
+ns.radblob=0.6 #side length of ice block
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=2001
+
+#ns.mem_debug = 1
+ns.v = 1
+ns.output_drop_distribution=1
+#ns.show_mem=1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+# boundary conditions 
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=3
+#ns.lo_bc          = 3 3 5  # XYZ
+#ns.hi_bc          = 3 3 2  # XYZ
+#ns.species_lo_bc  = 3 3 5  # XYZ
+#ns.species_hi_bc  = 3 3 2  # XYZ
+ns.lo_bc          = 3 5  # RZ
+ns.hi_bc          = 3 2  # RZ
+ns.species_lo_bc  = 3 5  # RZ
+ns.species_hi_bc  = 3 2  # RZ
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
