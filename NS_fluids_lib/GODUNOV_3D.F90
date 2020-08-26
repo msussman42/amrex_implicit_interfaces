@@ -8854,10 +8854,14 @@ stop
         heat_source_total=heat_source_total+VFRAC(im)*heat_source_local(im)
         vfrac_total=vfrac_total+VFRAC(im)
        enddo
-       if (vfrac_total.le.zero) then
+
+       if (vfrac_total.gt.zero) then
+        ! do nothing
+       else
         print *,"vfrac_total invalid"
         stop
        endif
+
        heat_source_total=heat_source_total/vfrac_total
  
          ! DeDTinverse = 1/(rho cv)

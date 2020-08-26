@@ -1578,6 +1578,10 @@ stop
        ! T^new=T^* + dt * (Q)/(rho cv)
        ! Q units: J/(m^3 s)
        ! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
+       ! in FORT_HEATSOURCE:
+       ! T_local(im)=T_local(im)+ &
+       !   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..nmat
+
       subroutine get_local_heat_source( &
        time,dt, &
        nmat, &
@@ -33690,6 +33694,7 @@ end subroutine initialize2d
        use TSPRAY_module
        use CAV2Dstep_module
        use ZEYU_droplet_impact_module
+       use ICE_ON_SUBSTRATE_module
        use MITSUHIRO_MELTING_module
        use CRYOGENIC_TANK1_module
        use flexible_plate_impact_module
@@ -33799,10 +33804,11 @@ end subroutine initialize2d
        num_materials=ccnum_materials
 
 ! USER DEFINED (used by "is_in_probtype_list")
-       probtype_list_size=3
+       probtype_list_size=4
        used_probtypes(1)=2000 ! flexible_plate_impact
        used_probtypes(2)=421  ! CRYOGENIC_TANK1
        used_probtypes(3)=414  ! MITSUHIRO_MELTING
+       used_probtypes(4)=2001 ! ICE_ON_SUBSTRATE
 
        if (probtype.eq.421) then
         SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
@@ -33834,6 +33840,21 @@ end subroutine initialize2d
         SUB_PRES_BC=>MITSUHIRO_MELTING_PRES_BC
         SUB_STATE_BC=>MITSUHIRO_MELTING_STATE_BC
         SUB_HEATSOURCE=>MITSUHIRO_MELTING_HEATSOURCE
+       else if (probtype.eq.2001) then
+        SUB_INIT_MODULE=>INIT_ICE_ON_SUBSTRATE_MODULE
+        SUB_LS=>ICE_ON_SUBSTRATE_LS
+        SUB_VEL=>ICE_ON_SUBSTRATE_VEL
+        SUB_EOS=>EOS_ICE_ON_SUBSTRATE
+        SUB_SOUNDSQR=>SOUNDSQR_ICE_ON_SUBSTRATE
+        SUB_INTERNAL=>INTERNAL_ICE_ON_SUBSTRATE
+        SUB_TEMPERATURE=>TEMPERATURE_ICE_ON_SUBSTRATE
+        SUB_PRES=>ICE_ON_SUBSTRATE_PRES
+        SUB_STATE=>ICE_ON_SUBSTRATE_STATE
+        SUB_LS_BC=>ICE_ON_SUBSTRATE_LS_BC
+        SUB_VEL_BC=>ICE_ON_SUBSTRATE_VEL_BC
+        SUB_PRES_BC=>ICE_ON_SUBSTRATE_PRES_BC
+        SUB_STATE_BC=>ICE_ON_SUBSTRATE_STATE_BC
+        SUB_HEATSOURCE=>ICE_ON_SUBSTRATE_HEATSOURCE
        else if (probtype.eq.2000) then
         SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
         SUB_LS=>flexible_plate_impact_LS
