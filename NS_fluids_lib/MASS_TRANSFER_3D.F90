@@ -3495,7 +3495,7 @@ stop
       REAL_T multi_area(nmat)
       REAL_T multi_cen(SDIM,nmat)
 
-      REAL_T thermal_k(nmat)
+      REAL_T thermal_k(2)  ! source,dest
 
       INTEGER_T nmax,nhalf,nhalf0
       INTEGER_T klosten,khisten
@@ -5181,9 +5181,9 @@ stop
             endif
 
 #if (STANDALONE==0)
-            thermal_k(im_probe)=get_user_heatviscconst(im_probe)
+            thermal_k(iprobe)=get_user_heatviscconst(im_probe)
 #elif (STANDALONE==1)
-            thermal_k(im_probe)=fort_heatvisconst(im_probe)
+            thermal_k(iprobe)=fort_heatvisconst(im_probe)
 #else
             print *,"bust compiling convertmaterial"
             stop
@@ -5402,7 +5402,7 @@ stop
               endif
    
               call Hydrate_energy_source_term(dF,dt, &
-               thermal_k(im_source), &
+               thermal_k(1), &  ! source
                energy_source,LL)
               call Methane_usage(dF,dt, &
                fort_speciesviscconst(im_dest),amount_used)
@@ -6205,7 +6205,7 @@ stop
       REAL_T, target :: dxprobe_source
       REAL_T, target :: dxprobe_dest
       REAL_T dxprobe_target(2)
-      REAL_T thermal_k(nmat)
+      REAL_T thermal_k(2) ! source,dest
       REAL_T LS_pos
       REAL_T C_w0
       INTEGER_T, target :: local_freezing_model
@@ -7066,11 +7066,11 @@ stop
                   if (at_interface.eq.1) then
                       
 #if (STANDALONE==0)
-                   thermal_k(im_source)=get_user_heatviscconst(im_source)
-                   thermal_k(im_dest)=get_user_heatviscconst(im_dest)
+                   thermal_k(1)=get_user_heatviscconst(im_source)
+                   thermal_k(2)=get_user_heatviscconst(im_dest)
 #elif (STANDALONE==1)
-                   thermal_k(im_source)=fort_heatviscconst(im_source)
-                   thermal_k(im_dest)=fort_heatviscconst(im_dest)
+                   thermal_k(1)=fort_heatviscconst(im_source)
+                   thermal_k(2)=fort_heatviscconst(im_dest)
 #else
                    print *,"bust compiling ratemasschange"
                    stop
