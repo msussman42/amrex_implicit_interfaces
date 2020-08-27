@@ -16618,7 +16618,50 @@ stop
 
             enddo ! im=1..nmat
 
-             ! FIX ME if center_stencil_wetting_im>=1
+            if ((center_stencil_wetting_im.ge.1).and. &
+                (center_stencil_wetting_im.le.nmat)) then 
+             if (LS_virtual_new(im_solid_max).ge.zero) then
+              do im=1,nmat
+               if (is_rigid(nmat,im).eq.0) then
+                if (im.eq.center_stencil_wetting_im) then
+                 if (LS_virtual_new(im).lt.zero) then
+                  LS_virtual_new(im)=zero
+                 else if (LS_virtual_new(im).ge.zero) then
+                  ! do nothing
+                 else
+                  print *,"LS_virtual_new invalid"
+                  stop
+                 endif
+                else
+                 if (LS_virtual_new(im).ge.zero) then
+                  LS_virtual_new(im)=zero
+                 else if (LS_virtual_new(im).lt.zero) then
+                  ! do nothing
+                 else
+                  print *,"LS_virtual_new invalid"
+                  stop
+                 endif
+                endif
+               else if (is_rigid(nmat,im).eq.1) then
+                ! do nothing
+               else
+                print *,"is_rigid(nmat,im) invalid"
+                stop
+               endif
+              enddo ! im=1..nmat
+             else if (LS_virtual_new(im_solid_max).lt.zero) then
+              ! do nothing
+             else
+              print *,"LS_virtual_new(im_solid_max) invalid"
+              stop
+             endif
+            else if (center_stencil_wetting_im.eq.0) then
+             ! do nothing
+            else
+             print *,"center_stencil_wetting_im invalid"
+             stop
+            endif
+
             do im=1,nmat
              LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
             enddo
