@@ -188,6 +188,7 @@ stop
 
          nhalf=3
 
+          ! cell_index is containing cell for xCP
          do dir=1,SDIM
           local_index(dir)=cell_index(dir)
           if (cell_index(dir)-1.lt.CP%fablo(dir)-CP%ngrow_LS) then
@@ -220,7 +221,7 @@ stop
            LS_virtual(im_local)=CP%LS(D_DECL(isten,jsten,ksten),im_local)
 
            if (is_rigid(CP%nmat,im_local).eq.0) then
-            if (LS_virtual(im_local).ge.-CP%dxmaxLS) then
+            if (LS_virtual(im_local).ge.zero) then
              if (im1_stencil.eq.0) then
               im1_stencil=im_local
              else if (im1_stencil.eq.im_local) then
@@ -228,7 +229,7 @@ stop
              else if (im2_stencil.eq.0) then
               im2_stencil=im_local
              endif
-            else if (LS_virtual(im_local).le.-CP%dxmaxLS) then
+            else if (LS_virtual(im_local).le.zero) then
              ! do nothing
             else
              print *,"LS_virtual invalid"
@@ -15664,7 +15665,8 @@ stop
       REAL_T, allocatable, target :: ZEYU_LS(:,:,:,:)
       REAL_T, allocatable, target :: ZEYU_WT(:,:,:)
       INTEGER_T, target :: local_is_fluid(nmat)
-      INTEGER_T center_stencil_im,center_stencil_wetting_im
+      INTEGER_T center_stencil_im_only
+      INTEGER_T center_stencil_wetting_im
       INTEGER_T im1_substencil
       INTEGER_T im2_substencil
       INTEGER_T im_local
@@ -16394,7 +16396,7 @@ stop
           if ((LS_solid_new(im_solid_max).ge.zero).or. &
               (sum_vfrac_solid_new.ge.half)) then
 
-           center_stencil_im=0
+           center_stencil_im_only=0
            center_stencil_wetting_im=0
 
             ! inner loop is needed since the volume fraction
@@ -16420,6 +16422,8 @@ stop
             im1_substencil=0
             im2_substencil=0
 
+             ! im1_substencil and im2_substencil are initialized
+             ! for fluid materials in which LS_XCP_stencil>=0.0.
             call interp_fluid_LS( &
              ZEYU_DAT, &
              cell_CP_parm, &
@@ -16462,7 +16466,7 @@ stop
              enddo
 
               ! im1_substencil and im2_substencil are initialized
-              ! for fluid materials in which LS>=-dxmaxLS.
+              ! for fluid materials in which LS_XCP_stencil>=0.0.
              if (at_center.eq.0) then
               ! do nothing
              else if (at_center.eq.1) then
@@ -16472,8 +16476,8 @@ stop
               else if ((im1_substencil.ge.1).and. &
                        (im1_substencil.le.nmat)) then
                if (im2_substencil.eq.0) then
-                 !fluid: center_stencil_im owns the cell
-                center_stencil_im=im1_substencil 
+                 !fluid: center_stencil_im_only owns the whole cell
+                center_stencil_im_only=im1_substencil 
                else if ((im2_substencil.ge.1).and. &
                         (im2_substencil.le.nmat)) then
                 if (im1_substencil.lt.im2_substencil) then
@@ -16614,6 +16618,7 @@ stop
 
             enddo ! im=1..nmat
 
+             ! FIX ME if center_stencil_wetting_im>=1
             do im=1,nmat
              LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
             enddo
@@ -16745,10 +16750,10 @@ stop
              vofcomp=(im-1)*ngeom_recon+1
 
               ! if there is just one fluid material in the stencil, then
-              ! "center_stencil_im" holds the material id
-             if ((center_stencil_im.ge.1).and. &
-                 (center_stencil_im.le.nmat)) then
-              if (center_stencil_im.eq.im) then
+              ! "center_stencil_im_only" holds the material id
+             if ((center_stencil_im_only.ge.1).and. &
+                 (center_stencil_im_only.le.nmat)) then
+              if (center_stencil_im_only.eq.im) then
                mofnew(vofcomp)=one
               else 
                mofnew(vofcomp)=zero
@@ -16762,7 +16767,7 @@ stop
               do dir=1,SDIM
                mofnew(vofcomp+dir)=local_mof(vofcomp+dir)
               enddo
-             else if ((center_stencil_im.eq.0).and. &
+             else if ((center_stencil_im_only.eq.0).and. &
                       (center_stencil_wetting_im.eq.0)) then
               call getvolume(bfact,dx,xsten,nhalf, &
                LS_temp,mofnew(vofcomp),LSfacearea, &
