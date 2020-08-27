@@ -30689,7 +30689,21 @@ end subroutine RatePhaseChange
         else if (velsum.le.zero) then
          velsum=zero
         else
-         print *,"velsum invalid"
+         print *,"velsum invalid in get_vel_phasechange"
+         print *,"velsum=",velsum
+         print *,"velsrc=",velsrc
+         print *,"veldst=",veldst
+         print *,"for_estdt=",for_estdt
+         print *,"expansion_fact=",expansion_fact
+         print *,"densrc_I=",densrc_I
+         print *,"densrc_I=",dendst_I
+         print *,"distribute_from_target=",distribute_from_target
+         print *,"LL=",LL
+         print *,"local_freezing_model=",local_freezing_model
+         print *,"ksrc,kdst ",ksrc,kdst
+         print *,"DTsrc,DTdst ",DTsrc,DTdst
+         print *,"dxprobe_source, dxprobe_dest ", &
+                 dxprobe_source, dxprobe_dest
          stop
         endif 
 

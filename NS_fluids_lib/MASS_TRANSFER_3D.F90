@@ -7391,7 +7391,8 @@ stop
                      else if (velsum.le.zero) then
                       velsum=zero
                      else
-                      print *,"velsum invalid"
+                      print *,"velsum invalid in stand_alone code"
+                      print *,"velsum= ",velsum
                       stop
                      endif 
                      VEL_correct=velsum

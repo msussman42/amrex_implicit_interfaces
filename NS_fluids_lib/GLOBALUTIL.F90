@@ -1600,7 +1600,8 @@ contains
 
        ! block of ice melting on substrate
       if ((probtype.eq.59).or. & ! called from PROB.F90
-          (probtype.eq.414)) then! called from MITSUHIRO_MELTING.F90 
+          (probtype.eq.414).or. &
+          (probtype.eq.2001)) then! called from MITSUHIRO_MELTING.F90 
 
        if (SDIM.eq.2) then
         substrate_height=yblob2
@@ -1857,7 +1858,8 @@ contains
        endif
 
       else
-       print *,"expecting probtype=55, 59, or 710 in outside_temperature"
+       print *,"expecting probtype=55, 59, 414, 2001, or 710 "
+       print *,"in outside_temperature"
        stop
       endif
  
