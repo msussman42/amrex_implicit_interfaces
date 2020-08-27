@@ -9697,6 +9697,511 @@ contains
       end subroutine zones_revolve_sanity
 
 
+       ! normal is contact line normal pointing towards "im" material
+       ! (material 0 liquid)
+       ! vel_n is velocity in normal direction.
+       ! cos_thetae is the cosine of the static angle inbetween
+       ! material 0 and material 2 (the solid material)
+       ! cos_thetad is the output cosine of the dynamic angle.
+       ! vis is viscosity of material 0 (liquid)
+       ! imodel=0 static imodel=1 Jiang   imodel=2 Kistler
+      subroutine DCA_select_model(normal,vel_n,cos_thetae,vis, &
+        user_tension_scalar, &
+        cos_thetad,imodel)
+      implicit none
+
+      INTEGER_T imodel
+      REAL_T normal(SDIM)
+      REAL_T vel_n
+      REAL_T cos_thetae  
+      REAL_T cos_thetad  
+      REAL_T vis 
+      REAL_T user_tension_scalar
+      REAL_T capillary,f_Hoff_inver,temp,temp1 
+
+      complex(kind=8) :: temp2
+
+      if (user_tension_scalar.le.zero) then
+       print *,"user_tension_scalar should be positive"
+       stop
+      endif
+
+      f_Hoff_inver = 0.0276
+      capillary = vel_n*vis/user_tension_scalar
+
+      if (imodel.eq.0) then
+       cos_thetad=cos_thetae
+      else if (imodel.eq.1) then ! Jiang's model
+       temp2 = cmplx(capillary,0.0)
+       temp2 = temp2**0.702
+       temp = real(temp2)
+       temp = tanh(4.96*temp)
+       temp = temp*(1.0+cos_thetae)
+       temp = cos_thetae-temp
+       if (temp.gt.1.0) temp = 1.0  
+       if (temp.lt.-1.0) temp = -1.0  
+       cos_thetad=temp
+      else if (imodel.eq.2) then ! Kistler's model
+       temp2 = cmplx(capillary+f_Hoff_inver,0.0)
+       temp2 = temp2**0.99
+       temp = real(temp2)
+       temp1 = temp
+       temp = 1.0+1.31*temp
+       temp = temp1/temp
+       temp2 = cmplx(temp,0.0)
+       temp2 = temp2*0.706
+       temp = real(temp2)
+       temp = 1.0-2.0*tanh(5.16*temp)
+       if (temp.gt.1.0) temp = 1.0  
+       if (temp.lt.-1.0) temp = -1.0  
+       cos_thetad=temp
+      else
+       print*, 'dynamic contact angle model type not valid'
+       stop
+      end if
+
+      return
+      end subroutine DCA_select_model
+
+
+
+       ! Dynamic Contact Angle
+      subroutine get_use_DCA(use_DCA)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T use_DCA
+      INTEGER_T im_solid_DCA
+
+      im_solid_DCA=im_solid_primary()
+
+      if ((probtype.eq.5501).and.(SDIM.eq.3)) then
+       if (im_solid_DCA.ne.3) then
+        print *,"im_solid_DCA invalid"
+        stop
+       endif
+       use_DCA=NINT(xblob10)
+      else
+       use_DCA=-1
+       if (fort_ZEYU_DCA_SELECT.eq.-1) then
+        ! do nothing
+       else if ((fort_ZEYU_DCA_SELECT.ge.1).and. &
+                (fort_ZEYU_DCA_SELECT.le.8)) then
+        use_DCA=fort_ZEYU_DCA_SELECT+100
+       else
+        print *,"fort_ZEYU_DCA_SELECT invalid"
+        stop
+       endif 
+      endif
+
+      return
+      end subroutine get_use_DCA
+
+      subroutine VISC_dodecane(rho_in,T_in,visccoef,eta)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho_in,T_in
+      ! From Caudwell et al., Int. J. Thermophysics (25) 5, 2004
+      REAL_T rho,T,eta,visccoef
+      REAL_T rmin,rmax
+      REAL_T T2,V0,V,VV,VV2,eta_star
+
+      rho=rho_in
+      T=T_in
+
+      if (T.le.zero) then
+       print *,"VISC_dodecane: temperature zero or negative ",T
+       stop
+      endif
+      T = max(T,298.15)
+      T = min(T,473.15)
+
+      T2 = T*T
+       ! molar core volume
+      V0 = 191.54e-6-0.441338e-6*T+8.98744e-10*T2-6.7792e-13*T2*T 
+
+      if (rho.le.zero) then
+       print *,"VISC_dodecane: density zero or negative ",rho
+       stop
+      endif
+      rmin = 0.6089 ! at 0.1 MPa, T = 473.15
+      rmax = 0.8091 ! at 161.33 MPa, T = 298.15
+      rho = min(rho,rmax)
+      rho = max(rho,rmin)
+
+      V  = 0.17034e-3/rho ! in m3/mol
+      VV = V/V0
+      VV2 = VV*VV
+      eta_star = 1/(0.321621-0.4803715*VV+0.222206*VV2-2.964626e-2*VV2*VV)
+      eta = 1.9720e-8*V**(-0.666667)*T**0.5*eta_star  ! in g/cm-s
+
+      if (eta.le.zero) then
+       print *,"VISC_dodecane: negative or zero viscosity ", eta,&
+        "  from ",rho,T
+       stop
+      endif
+
+      eta = min(eta,0.03677)
+      eta = max(eta,0.00218)
+
+      if (OLD_DODECANE.eq.1) then
+       eta=visccoef
+      endif
+ 
+      return
+      end subroutine VISC_dodecane
+
+
+        ! CONTAINER ROUTINE FOR MEHDI VAHAB, MITSUHIRO OHTA, and
+        ! MARCO ARIENTI
+      REAL_T function get_user_viscconst(im,density,temperature)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im,nmat,ibase,stage
+      REAL_T density,temperature,mu
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+
+      if (temperature.le.zero) then
+       print *,"temperature invalid"
+       stop
+      endif
+      if (density.le.zero) then
+       print *,"density invalid in get_user_viscconst"
+       stop
+      endif
+
+      if ((fort_viscconst(im).lt.zero).or. &
+          (fort_prerecalesce_viscconst(im).lt.zero)) then
+       print *,"fortran viscconst invalid"
+       stop
+      endif
+
+      get_user_viscconst=fort_viscconst(im)
+
+      if (recalesce_material(im).eq.0) then
+       get_user_viscconst=fort_viscconst(im)
+      else if ((recalesce_material(im).eq.1).or. &
+               (recalesce_material(im).eq.2)) then
+       ibase=(im-1)*recalesce_num_state
+       stage=NINT(recalesce_state_old(ibase+1))
+         ! stage=-1 (init)
+         ! stage=0 (cooling)
+         ! stage=1 (nucleation)
+         ! stage=2 (recalesce in progress)
+         ! stage=3 (recalesce finished)
+         ! stage=4 (frost)
+         ! stage=5 (regular freezing starts)
+       if (stage.lt.3) then
+        get_user_viscconst=fort_prerecalesce_viscconst(im)
+       else if ((stage.ge.3).and.(stage.le.5)) then
+        get_user_viscconst=fort_viscconst(im)
+       else
+        print *,"stage invalid"
+        stop
+       endif
+      else
+       print *,"recalesce_material invalid"
+       stop
+      endif
+
+      if (fort_viscosity_state_model(im).eq.0) then
+       ! do nothing
+      else if (fort_viscosity_state_model(im).eq.1) then
+       call VISC_dodecane(density,temperature,fort_viscconst(im),mu)
+       get_user_viscconst=mu
+      else if (fort_viscosity_state_model(im).eq.2) then
+       print *,"viscosity_state_model(im)=2 is for Mitsuhiro."
+       stop
+      else
+       print *,"fort_viscosity_state_model invalid"
+       stop
+      endif
+
+      return
+      end function get_user_viscconst
+
+        ! CONTAINER ROUTINE FOR MEHDI VAHAB
+      REAL_T function get_user_heatviscconst(im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im,nmat,ibase,stage
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+      if ((fort_heatviscconst(im).lt.zero).or. &
+          (fort_prerecalesce_heatviscconst(im).lt.zero)) then
+       print *,"fortran heatviscconst invalid"
+       stop
+      endif
+      get_user_heatviscconst=fort_heatviscconst(im)
+      if (recalesce_material(im).eq.0) then
+       get_user_heatviscconst=fort_heatviscconst(im)
+      else if ((recalesce_material(im).eq.1).or. &
+               (recalesce_material(im).eq.2)) then
+       ibase=(im-1)*recalesce_num_state
+       stage=NINT(recalesce_state_old(ibase+1))
+         ! stage=-1 (init)
+         ! stage=0 (cooling)
+         ! stage=1 (nucleation)
+         ! stage=2 (recalesce in progress)
+         ! stage=3 (recalesce finished)
+         ! stage=4 (frost)
+         ! stage=5 (regular freezing starts)
+       if (stage.lt.3) then
+        get_user_heatviscconst=fort_prerecalesce_heatviscconst(im)
+       else if ((stage.ge.3).and.(stage.le.5)) then
+        get_user_heatviscconst=fort_heatviscconst(im)
+       else
+        print *,"stage invalid"
+        stop
+       endif
+      else
+       print *,"recalesce_material invalid"
+       stop
+      endif
+
+      return
+      end function get_user_heatviscconst
+
+
+        ! CONTAINER ROUTINE FOR MEHDI VAHAB
+      REAL_T function get_user_stiffCP(im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im,nmat,ibase,stage
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+      if ((fort_stiffCP(im).lt.zero).or. &
+          (fort_prerecalesce_stiffCP(im).lt.zero)) then
+       print *,"fortran stiffCP invalid"
+       stop
+      endif
+      get_user_stiffCP=fort_stiffCP(im)
+      if (recalesce_material(im).eq.0) then
+       get_user_stiffCP=fort_stiffCP(im)
+      else if ((recalesce_material(im).eq.1).or. &
+               (recalesce_material(im).eq.2)) then
+       ibase=(im-1)*recalesce_num_state
+       stage=NINT(recalesce_state_old(ibase+1))
+         ! stage=-1 (init)
+         ! stage=0 (cooling)
+         ! stage=1 (nucleation)
+         ! stage=2 (recalesce in progress)
+         ! stage=3 (recalesce finished)
+         ! stage=4 (frost)
+         ! stage=5 (regular freezing starts)
+       if (stage.lt.3) then
+        get_user_stiffCP=fort_prerecalesce_stiffCP(im)
+       else if ((stage.ge.3).and.(stage.le.5)) then
+        get_user_stiffCP=fort_stiffCP(im)
+       else
+        print *,"stage invalid"
+        stop
+       endif
+      else
+       print *,"recalesce_material invalid"
+       stop
+      endif
+
+      return
+      end function get_user_stiffCP
+
+      subroutine get_user_tension(xpos,time, &
+        tension,new_tension, &
+        temperature, &
+        nmat,nten,caller_id)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: caller_id 
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T nten_test
+      REAL_T, intent(in) :: temperature(nmat)
+      REAL_T, intent(in) :: tension(nten)
+      REAL_T, intent(out) :: new_tension(nten)
+      REAL_T avgtemp
+      INTEGER_T iten,im,im_opp,ibase,stage
+
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid get_user_tension nten nten test", &
+         nten,nten_test
+       print *,"nmat=",nmat
+       print *,"caller_id=",caller_id
+       stop
+      endif
+
+       ! fort_tension
+       ! fort_prefreeze_tension
+      do iten=1,nten
+       new_tension(iten)=tension(iten)
+       if (fort_tension_min(iten).lt.zero) then
+        print *,"fort_tension_min invalid"
+        stop
+       endif
+       if (fort_tension_slope(iten).ne.zero) then
+        if (fort_tension_T0(iten).le.zero) then
+         print *,"T0 invalid"
+         stop
+        endif
+         ! im<im_opp
+        call get_inverse_iten(im,im_opp,iten,nmat)
+        if ((temperature(im).le.zero).or. &
+            (temperature(im_opp).le.zero)) then
+         print *,"temperature must be positive"
+         stop
+        endif
+        avgtemp=half*(temperature(im)+temperature(im_opp))
+        new_tension(iten)=new_tension(iten)+fort_tension_slope(iten)* &
+         (avgtemp-fort_tension_T0(iten))
+        if (new_tension(iten).lt.fort_tension_min(iten)) then
+         new_tension(iten)=fort_tension_min(iten)
+        endif
+        if (new_tension(iten).lt.zero) then
+         print *,"new_tension invalid"
+         stop
+        endif
+       endif
+      enddo ! iten
+      do im=1,nmat
+       if (recalesce_material(im).eq.0) then
+        ! do nothing
+       else if ((recalesce_material(im).eq.1).or. &
+                (recalesce_material(im).eq.2)) then
+        ibase=(im-1)*recalesce_num_state
+        stage=NINT(recalesce_state_old(ibase+1))
+         ! stage=-1 (init)
+         ! stage=0 (cooling)
+         ! stage=1 (nucleation)
+         ! stage=2 (recalesce in progress)
+         ! stage=3 (recalesce finished)
+         ! stage=4 (frost)
+         ! stage=5 (regular freezing starts)
+        if (stage.lt.5) then
+         do iten=1,nten
+          new_tension(iten)=fort_prefreeze_tension(iten)
+         enddo
+        else if ((stage.eq.5).or.(stage.eq.6)) then
+         ! do nothing
+        else
+         print *,"stage invalid"
+         stop
+        endif
+       else
+        print *,"recalesce_material invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
+
+      return
+      end subroutine get_user_tension
+
+
+      subroutine TEMPERATURE_default(rho,temperature,internal_energy, &
+        imattype,im)
+
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype
+      INTEGER_T, intent(in) :: im
+      INTEGER_T :: nmat
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(out) :: temperature
+      REAL_T, intent(in) :: internal_energy
+      REAL_T cv
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid70"
+       stop
+      endif
+!      cv=4.1855D+7
+      cv=get_user_stiffCP(im)
+      if (cv.le.zero) then
+       print *,"cv invalid in temperature default"
+       stop
+      endif
+      if (imattype.eq.999) then
+       if (is_rigid(nmat,im).eq.0) then
+        print *,"is_rigid invalid"
+        stop
+       endif
+!       temperature=fort_tempconst(im)
+       temperature=internal_energy/cv
+      else if (imattype.eq.0) then
+       temperature=internal_energy/cv
+      else
+       print *,"imattype invalid TEMPERATURE_default"
+       stop
+      endif
+
+      return
+      end subroutine TEMPERATURE_default
+
+
+      subroutine INTERNAL_default(rho,temperature,internal_energy, &
+        imattype,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: temperature
+      REAL_T, intent(out) :: internal_energy
+      REAL_T cv
+
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid in internal_default"
+       stop
+      endif
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"T invalid"
+       stop
+      endif
+
+!      cv=4.1855D+7
+      cv=get_user_stiffCP(im)
+      if (cv.le.zero) then
+       print *,"cv invalid in internal default"
+       stop
+      endif
+      if (imattype.eq.999) then
+       internal_energy=cv*temperature
+      else if (imattype.eq.0) then
+       internal_energy=cv*temperature
+      else
+       print *,"imattype invalid in internal default"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_default
 
 end module global_utility_module
 

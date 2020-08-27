@@ -26,8 +26,6 @@ module flexible_plate_impact_module
 implicit none 
 
 REAL_T :: DEF_VAPOR_GAMMA
-REAL_T :: DEF_VAPOR_CP
-REAL_T :: DEF_VAPOR_CV
 
 contains
 
@@ -36,8 +34,6 @@ subroutine INIT_flexible_plate_impact_MODULE()
 IMPLICIT NONE
 
   DEF_VAPOR_GAMMA =  1.666666667D0
-  DEF_VAPOR_CV = 6.490D3 ! [J∕(kg·K)]
-  DEF_VAPOR_CP =  DEF_VAPOR_CV * DEF_VAPOR_GAMMA ! [J∕(kg·K)]
 
 return
 end subroutine INIT_flexible_plate_impact_MODULE
@@ -259,39 +255,33 @@ subroutine SOUNDSQR_flexible_plate_impact(rho,internal_energy,soundsqr, &
  return
 end subroutine SOUNDSQR_flexible_plate_impact
 
-subroutine INTERNAL_flexible_plate_impact(rho,temperature,local_internal_energy, &
+subroutine INTERNAL_flexible_plate_impact(rho,temperature, &
+  local_internal_energy, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- if ((imattype.eq.0).or. &
-     (imattype.eq.24)) then 
-  local_internal_energy=DEF_VAPOR_CV*temperature
- else
-  print *,"imattype invalid INTERNAL_flexible_plate_impact"
-  stop
- endif
+ call INTERNAL_default(rho,temperature,local_internal_energy, &
+        imattype,im)
 
  return
 end subroutine INTERNAL_flexible_plate_impact
 
 subroutine TEMPERATURE_flexible_plate_impact(rho,temperature,internal_energy, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- if (imattype.eq.24) then 
-  temperature=internal_energy/DEF_VAPOR_CV
- else
-  print *,"imattype invalid TEMPERATURE_flexible_plate_impact"
-  stop
- endif
+ call TEMPERATURE_default(rho,temperature,internal_energy, &
+        imattype,im)
 
  return
 end subroutine TEMPERATURE_flexible_plate_impact

@@ -1084,6 +1084,7 @@ stop
                      LS1,im_source,im_dest, &
                      den, &
                      heatcoeff)
+      use global_utility_module
       IMPLICIT NONE
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: im_source

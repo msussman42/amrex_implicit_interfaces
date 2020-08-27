@@ -64,6 +64,8 @@ implicit none
 
 #include "probdataf95.H"
 
+      INTEGER_T, PARAMETER :: OLD_DODECANE=1
+
       INTEGER_T, PARAMETER :: DEBUG_DYNAMIC_CONTACT_ANGLE=1
 
       REAL_T, PARAMETER :: GNBC_RADIUS=2.0d0
