@@ -33223,6 +33223,7 @@ end subroutine initialize2d
        use CAV2Dstep_module
        use ZEYU_droplet_impact_module
        use ICE_ON_SUBSTRATE_module
+       use SIMPLE_PALMORE_DESJARDINS_module
        use MITSUHIRO_MELTING_module
        use CRYOGENIC_TANK1_module
        use flexible_plate_impact_module
@@ -33332,11 +33333,21 @@ end subroutine initialize2d
        num_materials=ccnum_materials
 
 ! USER DEFINED (used by "is_in_probtype_list")
-       probtype_list_size=4
+! IN ORDER TO ADD A NEW TEST PROBLEM:
+! 1. increment probtype_list_size by 1.
+! 2. set used_probtypes( <new value for probtype_list_size> ) = new_probtype
+! 3. a) link template subroutine names to new module names 
+!       (see probtype.eq.2002 below for an example)
+!    b) add appropriate "use" command to the beginning of this routine. 
+! 4. create new module file (e.g. by copying an existing module file)
+! 5. update Make.package accordingly (2 places)
+! 6. create inputs file
+       probtype_list_size=5
        used_probtypes(1)=2000 ! flexible_plate_impact
        used_probtypes(2)=421  ! CRYOGENIC_TANK1
        used_probtypes(3)=414  ! MITSUHIRO_MELTING
        used_probtypes(4)=2001 ! ICE_ON_SUBSTRATE
+       used_probtypes(5)=2002 ! 1D TEST FROM PALMORE and Desjardins
 
        if (probtype.eq.421) then
         SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
@@ -33383,6 +33394,22 @@ end subroutine initialize2d
         SUB_PRES_BC=>ICE_ON_SUBSTRATE_PRES_BC
         SUB_STATE_BC=>ICE_ON_SUBSTRATE_STATE_BC
         SUB_HEATSOURCE=>ICE_ON_SUBSTRATE_HEATSOURCE
+       else if (probtype.eq.2002) then
+        SUB_INIT_MODULE=>INIT_SIMPLE_PALMORE_DESJARDINS_MODULE
+        SUB_LS=>SIMPLE_PALMORE_DESJARDINS_LS
+        SUB_VEL=>SIMPLE_PALMORE_DESJARDINS_VEL
+        SUB_EOS=>EOS_SIMPLE_PALMORE_DESJARDINS
+        SUB_SOUNDSQR=>SOUNDSQR_SIMPLE_PALMORE_DESJARDINS
+        SUB_INTERNAL=>INTERNAL_SIMPLE_PALMORE_DESJARDINS
+        SUB_TEMPERATURE=>TEMPERATURE_SIMPLE_PALMORE_DESJARDINS
+        SUB_PRES=>SIMPLE_PALMORE_DESJARDINS_PRES
+        SUB_STATE=>SIMPLE_PALMORE_DESJARDINS_STATE
+        SUB_LS_BC=>SIMPLE_PALMORE_DESJARDINS_LS_BC
+        SUB_VEL_BC=>SIMPLE_PALMORE_DESJARDINS_VEL_BC
+        SUB_PRES_BC=>SIMPLE_PALMORE_DESJARDINS_PRES_BC
+        SUB_STATE_BC=>SIMPLE_PALMORE_DESJARDINS_STATE_BC
+        SUB_HEATSOURCE=>SIMPLE_PALMORE_DESJARDINS_HEATSOURCE
+        SUB_SUMINT=>SIMPLE_PALMORE_DESJARDINS_SUMINT ! compare with analytical
        else if (probtype.eq.2000) then
         SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
         SUB_LS=>flexible_plate_impact_LS

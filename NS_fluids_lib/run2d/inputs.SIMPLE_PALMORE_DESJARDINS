@@ -1,0 +1,188 @@
+max_step  = 200000    # maximum timestep
+#max_step  = 2    # maximum timestep
+
+stop_time = 10  
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => XYZ, 1 => RZ
+geometry.prob_lo   =  0.0 0.0   
+geometry.prob_hi=1.0 0.25   # CODY
+ns.slice_dir=1
+ns.xslice=0.0 0.0
+ns.num_materials_vel=1
+ns.EILE_flag=-1
+ns.truncate_thickness=2.0
+ns.face_flag=1
+ns.diffusionface_flag=1  # 0=LS face diffcoeff 1=VOF for face diffcoeff
+ns.elasticface_flag=1  # 0=LS face elastic coeff 1=VOF for face elastic coeff
+ns.temperatureface_flag=0 # 0=LS face diffcoeff 1=VOF for face diffcoeff
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+
+ns.minimum_relative_error=1.0e-22
+
+ns.gmres_precond_iter_base=4
+ns.initial_project_cycles=5   # initial jacobi iterations
+ns.initial_cg_cycles=10
+ns.solvability_projection=0 # 0 since one must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0e+6
+ns.num_materials=2 # 1: liquid 2: air 
+ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
+ns.species_evaporation_density=0.001 # g/cm^3  CODY
+ns.post_init_pressure_solve=1 
+ns.MOFITERMAX=15
+ns.MOF_TURN_OFF_LS=0
+ns.MOF_DEBUG_RECON=0
+ns.continuous_mof=2 # 0=MOF 2=CMOF 
+ns.mof_error_ordering=0
+# water,air,ice,substrate
+ns.mof_ordering=0 0 
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0 # 1=check initial residual  2=check all the residuals
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
+
+amr.n_cell=128 32
+amr.max_level = 0
+# water, gas, ice, substrate
+# -1=> always adapt  0=> never adapt
+ns.radius_cutoff=0 0 0 0 
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+ns.ns_tiling=false
+amr.blocking_factor = 8 8 8 8   # block factor in grid generation
+amr.check_int       = 100
+#amr.check_int       = 10000  # static freezing test 10 
+amr.check_file      = chk     # root name of checkpoint file
+# blow up: ~ 84000 steps
+amr.plot_int        = 100 # was 100  (plot_int=1 for testing)
+#amr.plot_int        = 1000 # static freezing test 10
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 1024
+amr.file_name_digits=7
+#amr.restart         = chk0119700
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.01 
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-8
+ns.gravity        = 0.0   # cgs
+ns.use_lsa=0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# 1=water 2=gas  3=ice  4=substrate 
+# 12,13,14   23,24  3,4 
+ns.conservative_tension_force=0
+ns.tension=72.8  # CODY  
+ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K)
+#12 then reverse 21 
+ns.latent_heat = 2.26e+10 0.0  # CODY
+# 0=distribute to the destination material (def)
+# 1=distribute to the source material.
+ns.distribute_from_target = 0 0 
+#evaporation: 
+ns.freezing_model=6 0
+ns.mass_fraction_id=1 0 
+ns.saturation_temp = 373.15 0.0  # CODY
+ns.temperature_primitive_variable=1 1 1 1
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=0   
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=263  # not used
+ns.advbot=0.0  # initial falling (downward) speed of liquid drop if axis_dir=1
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.material_type=0 0 
+# CODY k_water, k_gas
+ns.heatviscconst=58000.0 2400.0 
+ns.heatviscconst_interface=0.0 
+# (rho Y)_t + div(rho u Y) = div (rho D grad Y)
+# D is here:
+ns.speciesviscconst=0.0 0.282 
+# 1=water 2=gas  
+ns.speciesconst=1.0 0.0 
+ns.viscconst=0.0 0.0 # CODY
+ns.elastic_viscosity=0.0 0.0 
+ns.viscoelastic_model=0 0 0 0
+ns.added_weight=1.0 1.0 
+ns.elastic_time=0.0 0.0 
+ns.denconst=1.0 0.001 # CODY
+ns.molar_mass=1.0 1.0 # CODY  (liquid, ambient)
+ns.species_molar_mass=1.0 # CODY (vapor)
+ns.FSI_flag=0 0 
+ns.recalesce_flag=0 0 
+ns.solidheat_flag=0  
+# 1=water 2=gas  3=ice  4=substrate 
+ns.tempconst=273.0 273.0 
+ns.initial_temperature=273.0 273.0 
+ns.xblob=0.0  # initial location of interface CODY
+ns.yblob=0.0
+ns.zblob=0.0
+ns.radblob=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=2002
+ns.ncomp_sum_int_user=2
+
+#ns.mem_debug = 1
+ns.v = 1
+ns.output_drop_distribution=1
+#ns.show_mem=1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+# boundary conditions 
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=3
+#ns.lo_bc          = 3 3 5  # XYZ
+#ns.hi_bc          = 3 3 2  # XYZ
+#ns.species_lo_bc  = 3 3 5  # XYZ
+#ns.species_hi_bc  = 3 3 2  # XYZ
+ns.lo_bc          = 1 3  
+ns.hi_bc          = 2 3  
+ns.species_lo_bc  = 1 3
+ns.species_hi_bc  = 1 3  
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

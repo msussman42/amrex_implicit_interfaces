@@ -20,8 +20,8 @@ print *,"dimension bust"
 stop
 #endif
 
-! probtype==2001 (see run2d/inputs.ICE_ON_SUBSTRATE)
-module ICE_ON_SUBSTRATE_module
+! probtype==2002 (see run2d/inputs.SIMPLE_PALMORE_DESJARDINS)
+module SIMPLE_PALMORE_DESJARDINS_module
 
 implicit none                   
 
@@ -30,51 +30,18 @@ REAL_T :: DEF_VAPOR_GAMMA
 contains
 
   ! do any initial preparation needed
-subroutine INIT_ICE_ON_SUBSTRATE_MODULE()
+subroutine INIT_SIMPLE_PALMORE_DESJARDINS_MODULE()
 IMPLICIT NONE
 
   DEF_VAPOR_GAMMA =  1.666666667D0
 
 return
-end subroutine INIT_ICE_ON_SUBSTRATE_MODULE
+end subroutine INIT_SIMPLE_PALMORE_DESJARDINS_MODULE
 
-! Phi>0 in the solid
-subroutine BOTTOM_substrateLS(x,Phi) 
-use probcommon_module
-implicit none
-REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
-REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
-
-REAL_T substrate_height
-
-if (abs(zblob2-yblob2).le.1.0D-14) then
- substrate_height=zblob2  ! substrate thickness
-else
- print *,"zblob2 or yblob2 invalid"
- stop
-endif
-
-if (abs(x(SDIM)).le.1.0D+20) then
- Phi=substrate_height-x(SDIM)
-else
- print *,"x(SDIM) invalid"
- stop
-endif
-
-end subroutine BOTTOM_substrateLS
-
-! ice + water thickness = radblob
-! water thickness = radblob3  usually radblob3 << radlob (initial water
-! is "seed" for starting the melting process)
-!   ---------
-!   | water |
-!   ---------
-!   | ice   |
-!-------------------
-!   substrate
-
- ! fluids tessellate the domain, solids are immersed. 
-subroutine ICE_ON_SUBSTRATE_LS(x,t,LS,nmat)
+! gas on the left (material 2)
+! liquid on the right (material 1)
+! xblob=initial interface location
+subroutine SIMPLE_PALMORE_DESJARDINS_LS(x,t,LS,nmat)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -83,8 +50,6 @@ INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
-REAL_T :: ice_vertical
-REAL_T :: substrate_height
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -93,91 +58,21 @@ REAL_T :: substrate_height
    stop
   endif
 
-if (abs(zblob2-yblob2).le.1.0D-14) then
- substrate_height=zblob2  ! substrate thickness
-else
- print *,"zblob2 or yblob2 invalid"
- stop
-endif
+if ((num_materials.eq.2).and.(probtype.eq.2002)) then
 
-if ((num_materials.eq.4).and.(probtype.eq.2001)) then
+ LS(1)=x(1)-xblob
+ LS(2)=-LS(1)
 
- if (SDIM.eq.2) then
-  ice_vertical=yblob
- else if (SDIM.eq.3) then
-  ice_vertical=zblob
- else
-  print *,"dimension bust"
-  stop
- endif
- if (abs(substrate_height-(ice_vertical-half*radblob)).gt.VOFTOL) then
-  print *,"bottom of original water+ice block must coincide w/substrate"
-  print *,"sdim= ",SDIM
-  print *,"yblob=",yblob
-  print *,"zblob=",zblob
-  print *,"ice_vertical=",ice_vertical
-  print *,"substrate_height=",substrate_height
-  print *,"radblob=",radblob
-  stop
- endif
-
-  ! water thickness=radblob3
-  !dist<0 inside the square
-  !water above the ice
- if (SDIM.eq.2) then
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-     substrate_height+radblob-radblob3,substrate_height+radblob,LS(1))
-  LS(1)=-LS(1) ! water
-  !ice (is below water)
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-    -substrate_height-radblob,substrate_height+radblob-radblob3,LS(3))
-  LS(3)=-LS(3)
-
-  !air; dist<0 inside the square
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-    -substrate_height-radblob,substrate_height+radblob,LS(2))
-
- else if (SDIM.eq.3) then
-
-  !dist<0 inside the square
-  !water above the ice
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     substrate_height+radblob-radblob3,substrate_height+radblob, &
-     x(1),x(2),x(SDIM),LS(1))
-  LS(1)=-LS(1)
-  !ice
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     -substrate_height-radblob,substrate_height+radblob-radblob3, &
-     x(1),x(2),x(SDIM),LS(3))
-  LS(3)=-LS(3)
-
-  !air; dist<0 inside the square
-  !air everywhere not ice or water.
-  ! important: fluids tessellate domain, solids (i.e. substrate)
-  ! are embedded.
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     -substrate_height-radblob,substrate_height+radblob, &
-     x(1),x(2),x(SDIM),LS(2))  ! air
-
- else
-  print *,"dimension bust"
-  stop
- endif
-
- call BOTTOM_substrateLS(x,LS(4))
 else
  print *,"num_materials or probtype invalid"
  stop
 endif
 
 return
-end subroutine ICE_ON_SUBSTRATE_LS
+end subroutine SIMPLE_PALMORE_DESJARDINS_LS
 
 ! initial velocity is zero
-subroutine ICE_ON_SUBSTRATE_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
+subroutine SIMPLE_PALMORE_DESJARDINS_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
@@ -219,13 +114,13 @@ do dir=1,SDIM
 enddo
 
 return 
-end subroutine ICE_ON_SUBSTRATE_VEL
+end subroutine SIMPLE_PALMORE_DESJARDINS_VEL
 
 
 ! These next routines only used for compressible materials.
 !***********************************************
 ! compressible material functions for (ns.material_type = 24)
-subroutine EOS_ICE_ON_SUBSTRATE(rho,internal_energy,pressure, &
+subroutine EOS_SIMPLE_PALMORE_DESJARDINS(rho,internal_energy,pressure, &
   imattype,im)
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
@@ -236,14 +131,14 @@ subroutine EOS_ICE_ON_SUBSTRATE(rho,internal_energy,pressure, &
  if (imattype.eq.24) then
   pressure=rho*(DEF_VAPOR_GAMMA-1.0D0)*internal_energy
  else
-  print *,"imattype invalid EOS_ICE_ON_SUBSTRATE"
+  print *,"imattype invalid EOS_SIMPLE_PALMORE_DESJARDINS"
   stop
  endif
 
  return
-end subroutine EOS_ICE_ON_SUBSTRATE
+end subroutine EOS_SIMPLE_PALMORE_DESJARDINS
 
-subroutine SOUNDSQR_ICE_ON_SUBSTRATE(rho,internal_energy,soundsqr, &
+subroutine SOUNDSQR_SIMPLE_PALMORE_DESJARDINS(rho,internal_energy,soundsqr, &
   imattype,im)
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
@@ -253,18 +148,18 @@ subroutine SOUNDSQR_ICE_ON_SUBSTRATE(rho,internal_energy,soundsqr, &
  REAL_T pressure
 
  if (imattype.eq.24) then
-  call EOS_ICE_ON_SUBSTRATE(rho,internal_energy,pressure,imattype,im)
+  call EOS_SIMPLE_PALMORE_DESJARDINS(rho,internal_energy,pressure,imattype,im)
   soundsqr=DEF_VAPOR_GAMMA*pressure/rho
  else
-  print *,"imattype invalid SOUNDSQR_ICE_ON_SUBSTRATE"
+  print *,"imattype invalid SOUNDSQR_SIMPLE_PALMORE_DESJARDINS"
   stop
  endif
 
  return
-end subroutine SOUNDSQR_ICE_ON_SUBSTRATE
+end subroutine SOUNDSQR_SIMPLE_PALMORE_DESJARDINS
 
 
-subroutine INTERNAL_ICE_ON_SUBSTRATE(rho,temperature,local_internal_energy, &
+subroutine INTERNAL_SIMPLE_PALMORE_DESJARDINS(rho,temperature,local_internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
@@ -277,9 +172,9 @@ subroutine INTERNAL_ICE_ON_SUBSTRATE(rho,temperature,local_internal_energy, &
         imattype,im)
 
  return
-end subroutine INTERNAL_ICE_ON_SUBSTRATE
+end subroutine INTERNAL_SIMPLE_PALMORE_DESJARDINS
 
-subroutine TEMPERATURE_ICE_ON_SUBSTRATE(rho,temperature,internal_energy, &
+subroutine TEMPERATURE_SIMPLE_PALMORE_DESJARDINS(rho,temperature,internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
@@ -292,13 +187,13 @@ subroutine TEMPERATURE_ICE_ON_SUBSTRATE(rho,temperature,internal_energy, &
         imattype,im)
 
  return
-end subroutine TEMPERATURE_ICE_ON_SUBSTRATE
+end subroutine TEMPERATURE_SIMPLE_PALMORE_DESJARDINS
 
 
 ! this routine used if pressure boundary conditions are prescribed,
 ! since only top wall is "outflow" (outflow in quotes since ice shrinks when
 ! melting), and flow is incompressible, ok to make the top wall pressure zero.
-subroutine ICE_ON_SUBSTRATE_PRES(x,t,LS,PRES,nmat)
+subroutine SIMPLE_PALMORE_DESJARDINS_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
@@ -317,11 +212,11 @@ endif
 PRES=zero
 
 return 
-end subroutine ICE_ON_SUBSTRATE_PRES
+end subroutine SIMPLE_PALMORE_DESJARDINS_PRES
 
 
 
-subroutine ICE_ON_SUBSTRATE_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
+subroutine SIMPLE_PALMORE_DESJARDINS_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -347,9 +242,9 @@ else
  print *,"nstate_mat invalid"
  stop
 endif
-if ((num_materials.eq.4).and. &
-    (num_state_material.eq.2).and. & ! density, temperature
-    (probtype.eq.2001)) then
+if ((num_materials.eq.2).and. &
+    (num_state_material.eq.3).and. & ! density, temperature, species
+    (probtype.eq.2002)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+1)=fort_denconst(im) ! density prescribed in the inputs file.
@@ -361,12 +256,15 @@ if ((num_materials.eq.4).and. &
    print *,"t invalid"
    stop
   endif
+   ! CODY: PUT ANALYTICAL TEMPERATURE HERE.  t,x(1),x(2)
+   ! ibase+2 is the temperature component for the "im" material
+  STATE(ibase+2)=zero  ! CODY (initial interface position is xblob)
    ! always assume Dirichlet boundary condition at zlo for temperature.
-  call outside_temperature(t,x(1),x(2),x(SDIM),STATE(ibase+2),im,bcflag)
 
-   ! initial species in inputs?
+   ! num_species_var=1 ? CONFIRM CODY PLEASE (sanity check)
+   ! PUT ANALYTICAL SOLUTION TO MASS FRACTION HERE
   do n=1,num_species_var
-   STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
+   STATE(ibase+2+n)=zero
   enddo
  enddo ! im=1..num_materials
 else
@@ -375,10 +273,10 @@ else
 endif
  
 return
-end subroutine ICE_ON_SUBSTRATE_STATE
+end subroutine SIMPLE_PALMORE_DESJARDINS_STATE
 
  ! dir=1..sdim  side=1..2
-subroutine ICE_ON_SUBSTRATE_LS_BC(xwall,xghost,t,LS, &
+subroutine SIMPLE_PALMORE_DESJARDINS_LS_BC(xwall,xghost,t,LS, &
    LS_in,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -400,18 +298,18 @@ else
 endif
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
- call ICE_ON_SUBSTRATE_LS(xghost,t,LS,nmat)
+ call SIMPLE_PALMORE_DESJARDINS_LS(xghost,t,LS,nmat)
 else
  print *,"dir or side invalid"
  stop
 endif
 
 return
-end subroutine ICE_ON_SUBSTRATE_LS_BC
+end subroutine SIMPLE_PALMORE_DESJARDINS_LS_BC
 
 
  ! dir=1..sdim  side=1..2 veldir=1..sdim
-subroutine ICE_ON_SUBSTRATE_VEL_BC(xwall,xghost,t,LS, &
+subroutine SIMPLE_PALMORE_DESJARDINS_VEL_BC(xwall,xghost,t,LS, &
    VEL,VEL_in,veldir,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -439,7 +337,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
- call ICE_ON_SUBSTRATE_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ call SIMPLE_PALMORE_DESJARDINS_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
  VEL=local_VEL(veldir)
 
 else
@@ -448,10 +346,10 @@ else
 endif
 
 return
-end subroutine ICE_ON_SUBSTRATE_VEL_BC
+end subroutine SIMPLE_PALMORE_DESJARDINS_VEL_BC
 
  ! dir=1..sdim  side=1..2
-subroutine ICE_ON_SUBSTRATE_PRES_BC(xwall,xghost,t,LS, &
+subroutine SIMPLE_PALMORE_DESJARDINS_PRES_BC(xwall,xghost,t,LS, &
    PRES,PRES_in,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -475,7 +373,7 @@ endif
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- call ICE_ON_SUBSTRATE_PRES(xghost,t,LS,PRES,nmat)
+ call SIMPLE_PALMORE_DESJARDINS_PRES(xghost,t,LS,PRES,nmat)
 
 else
  print *,"dir or side invalid"
@@ -483,10 +381,10 @@ else
 endif
 
 return
-end subroutine ICE_ON_SUBSTRATE_PRES_BC
+end subroutine SIMPLE_PALMORE_DESJARDINS_PRES_BC
 
  ! dir=1..sdim  side=1..2
-subroutine ICE_ON_SUBSTRATE_STATE_BC(xwall,xghost,t,LS, &
+subroutine SIMPLE_PALMORE_DESJARDINS_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -518,7 +416,7 @@ if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
- call ICE_ON_SUBSTRATE_STATE(xghost,t,LS,local_STATE,local_bcflag, &
+ call SIMPLE_PALMORE_DESJARDINS_STATE(xghost,t,LS,local_STATE,local_bcflag, &
          nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
@@ -536,21 +434,9 @@ else
 endif
 
 return
-end subroutine ICE_ON_SUBSTRATE_STATE_BC
+end subroutine SIMPLE_PALMORE_DESJARDINS_STATE_BC
 
-! MITSUHIRO: THIS ROUTINE MUST BE CUSTOMIZED.
-! water=material 1
-! gas=material 2
-! ice=material 3
-! substrate=material 4
-! if (VFRAC(3)>1/2) then
-!  set MITSUHIRO_CUSTOM_TEMPERATURE accordingly
-!  note: xsten(0,1),xsten(0,2),xsten(0,SDIM) is the coordinate at which a
-!  heat source might be prescribed.
-!  x(1)=xsten(0,1)
-!  x(2)=xsten(0,2)
-!  x(SDIM)=xsten(0,SDIM)
-subroutine ICE_ON_SUBSTRATE_HEATSOURCE(im,VFRAC,time,x, &
+subroutine SIMPLE_PALMORE_DESJARDINS_HEATSOURCE(im,VFRAC,time,x, &
      xsten,nhalf,temp, &
      heat_source,den,CV,dt,nmat)
 use probcommon_module
@@ -568,7 +454,6 @@ REAL_T, intent(in) :: den(nmat)
 REAL_T, intent(in) :: CV(nmat)
 REAL_T, intent(in) :: dt
 REAL_T, intent(out) :: heat_source
-REAL_T :: MITSUHIRO_CUSTOM_TEMPERATURE
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -578,19 +463,9 @@ else
 endif
  
  ! set a hot temperature in the liquid
-if ((num_materials.eq.4).and.(probtype.eq.2001)) then
+if ((num_materials.eq.2).and.(probtype.eq.2002)) then
 
  heat_source=zero
- if (VFRAC(1).ge.half) then ! in the liquid
-  MITSUHIRO_CUSTOM_TEMPERATURE=fort_tempconst(1)
-  heat_source=(MITSUHIRO_CUSTOM_TEMPERATURE-temp(1))* &
-               den(1)*CV(1)/dt
- else if (VFRAC(1).le.half) then
-  ! do nothing
- else
-  print *,"VFRAC(1) invalid"
-  stop
- endif 
 
 else
  print *,"num_materials or probtype invalid"
@@ -598,6 +473,61 @@ else
 endif
 
 return
-end subroutine ICE_ON_SUBSTRATE_HEATSOURCE
+end subroutine SIMPLE_PALMORE_DESJARDINS_HEATSOURCE
 
-end module ICE_ON_SUBSTRATE_module
+! This routine is called from FORT_SUMMASS
+subroutine SIMPLE_PALMORE_DESJARDINS_SUMINT(GRID_DATA_IN,increment_out,nsum)
+use probcommon_module_types
+use probcommon_module
+
+INTEGER_T, intent(in) :: nsum
+type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
+REAL_T, intent(out) :: increment_out(nsum)
+INTEGER_T :: i,j,k
+INTEGER_T :: dir
+INTEGER_T :: im_gas
+INTEGER_T :: tcomp
+REAL_T :: xlocal(SDIM)
+REAL_T :: xGAMMA_analytical
+REAL_T :: LS_analytical
+REAL_T :: LS_compute
+REAL_T :: TEMPERATURE_analytical
+REAL_T :: TEMPERATURE_compute
+
+i=GRID_DATA_IN%igrid
+j=GRID_DATA_IN%jgrid
+k=GRID_DATA_IN%kgrid
+
+if (nsum.eq.2) then
+ do dir=1,SDIM
+  xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
+ enddo
+   ! see supercooled_exact_sol.F90
+ xGAMMA_analytical=zero  ! CODY PLEASE UPDATE
+ LS_analytical=xlocal(1)-xGAMMA_analytical
+ LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),1)
+ if (abs(LS_analytical).lt.two*GRID_DATA_IN%dx(1)) then
+  increment_out(1)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)
+ else
+  increment_out(1)=zero
+ endif
+ if (LS_compute.lt.zero) then
+  TEMPERATURE_analytical=zero  ! CODY ?
+  im_gas=2
+  tcomp=(im_gas-1)*num_state_material+2
+  TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
+  increment_out(2)=GRID_DATA_IN%volgrid* &
+          abs(TEMPERATURE_compute-TEMPERATURE_analytical)
+ else
+  increment_out(2)=zero
+ endif
+else
+ print *,"nsum invalid"
+ stop
+endif
+
+end subroutine SIMPLE_PALMORE_DESJARDINS_SUMINT
+
+
+
+end module SIMPLE_PALMORE_DESJARDINS_module
