@@ -200,7 +200,7 @@ ns.heatviscconst=0.0 0.0 0.0
 #material 1 is water
 #material 2 is gas
 #material 3 is substrate
-ns.elastic_viscosity=0.0 0.0 10000.0
+ns.elastic_viscosity=0.0 0.0 100000.0
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.viscoelastic_model=0 0 2
 ns.viscconst=8.9e-3 0.000181 1.0 # ZEYU
