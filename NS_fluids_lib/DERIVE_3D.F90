@@ -808,20 +808,31 @@ stop
            stop
           endif
 
+           ! A^{n+1}=(I-dt grad U)^T A^{adv} (I - dt grad U) =
+           !  W^T A^{adv} W; a similarity transformation, in which
+           !  W is non-singular, preserves the eigenvalues of A^{adv}.
+           !  initially A is the identity matrix.
+           ! For elastic materials, Q=grad X + (grad X)^{T}
+           ! and sigma_ij= lambda delta_ij trace(grad X) +
+           !               mu Q_ij
+           ! lambda=Lame's first parameter.
+           ! for elastic materials, Q does not need to be SPD.
           traceA=zero
-          do ii=1,3
-           traceA=traceA+Q(ii,ii)+one
-           if (Q(ii,ii)+one.le.zero) then
-            print *,"WARNING: A violates pos. def"
-            print *,"ii,Q(ii,ii)= ",ii,Q(ii,ii)
-            print *,"level,finest_level ",level,finest_level
-            print *,"im_parm,ngrow,i,j,k = ",im_parm,ngrow,i,j,k
-            print *,"dt= ",dt
-           endif
-          enddo
 
           if ((viscoelastic_model.eq.0).or. &
               (viscoelastic_model.eq.1)) then
+
+           do ii=1,3
+            traceA=traceA+Q(ii,ii)+one
+            if (Q(ii,ii)+one.le.zero) then
+             print *,"WARNING: A violates pos. def"
+             print *,"ii,Q(ii,ii)= ",ii,Q(ii,ii)
+             print *,"level,finest_level ",level,finest_level
+             print *,"im_parm,ngrow,i,j,k = ",im_parm,ngrow,i,j,k
+             print *,"dt= ",dt
+            endif
+           enddo
+
             ! elastic_time*(1-Tr(A)/L^2)
            call get_mod_elastic_time(elastic_time,traceA, &
             polymer_factor,modtime)

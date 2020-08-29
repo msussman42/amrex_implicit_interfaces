@@ -9455,6 +9455,10 @@ void NavierStokes::tensor_advection_update() {
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
 
+     int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+     MultiFab* xdisplace_mf=getStateTensor(1,scomp_xdisplace,AMREX_SPACEDIM,
+       cur_time_slab);
+
      MultiFab* velmf=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
    
      MultiFab* tendata_mf=new MultiFab(grids,dmap,20,ngrow_zero,
@@ -9560,6 +9564,7 @@ void NavierStokes::tensor_advection_update() {
       FArrayBox& velfab=(*velmf)[mfi];
       FArrayBox& tensor_new_fab=Tensor_new[mfi];
       FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
+      FArrayBox& xdisplace_mf_fab=(*xdisplace_mf)[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
 
       Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
@@ -9589,6 +9594,9 @@ void NavierStokes::tensor_advection_update() {
        tensor_source_mf_fab.dataPtr(),
        ARLIM(tensor_source_mf_fab.loVect()),
        ARLIM(tensor_source_mf_fab.hiVect()),
+       xdisplace_mf_fab.dataPtr(),
+       ARLIM(xdisplace_mf_fab.loVect()),
+       ARLIM(xdisplace_mf_fab.hiVect()),
        tilelo,tilehi,
        fablo,fabhi,
        &bfact, 
@@ -9658,6 +9666,7 @@ void NavierStokes::tensor_advection_update() {
       
      delete tendata_mf;
      delete tensor_source_mf;
+     delete xdisplace_mf;
      delete velmf;
     } else
      amrex::Error("partid could not be found: tensor_advection_update");
@@ -9675,7 +9684,7 @@ void NavierStokes::tensor_advection_update() {
   } else
    amrex::Error("ns_is_rigid invalid");
 
- } // im
+ } // im=0..nmat-1
 
 
 }   // subroutine tensor_advection_update

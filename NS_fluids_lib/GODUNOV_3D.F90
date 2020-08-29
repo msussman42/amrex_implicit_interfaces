@@ -10750,7 +10750,7 @@ stop
       end subroutine FORT_BUILD_MOMENT
 
 
-
+        ! called form tensor_advecton_update() in NavierStokes.cpp
         ! vel is the advective velocity
       subroutine FORT_UPDATETENSOR( &
        level, &
@@ -10763,6 +10763,7 @@ stop
        vel,DIMS(vel), &
        tnew,DIMS(tnew), &
        told,DIMS(told), &
+       xdisplace,DIMS(xdisplace), &
        tilelo, tilehi,  &
        fablo, fabhi, &
        bfact,  &
@@ -10784,6 +10785,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(tnew)
       INTEGER_T, intent(in) :: DIMDEC(told)
+      INTEGER_T, intent(in) :: DIMDEC(xdisplace)
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
@@ -10796,6 +10798,7 @@ stop
       REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
       REAL_T, intent(out) :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
       REAL_T, intent(in) :: told(DIMV(told),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in) :: xdisplace(DIMV(xdisplace),SDIM)
 
       INTEGER_T :: i,j,k,n
       REAL_T dt,elastic_time
@@ -10865,6 +10868,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(vel),1,-1,61)
       call checkbound(fablo,fabhi,DIMS(tnew),0,-1,62)
       call checkbound(fablo,fabhi,DIMS(told),0,-1,63)
+      call checkbound(fablo,fabhi,DIMS(xdisplace),1,-1,63)
 
       if ((transposegradu.ne.0).and.(transposegradu.ne.1)) then
        print *,"transposegradu invalid"
@@ -10877,6 +10881,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
+      FIX ME USE xdisplace
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
         ! tendata has: |grad U|, D, grad U
