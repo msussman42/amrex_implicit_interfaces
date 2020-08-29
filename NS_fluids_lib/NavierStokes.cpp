@@ -9582,7 +9582,8 @@ void NavierStokes::tensor_advection_update() {
       FORT_UPDATETENSOR(
        &level,
        &finest_level,
-       &nmat,&im,&ncomp_visc,
+       &nmat,&im,
+       &ncomp_visc,
        voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
        viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
        tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
