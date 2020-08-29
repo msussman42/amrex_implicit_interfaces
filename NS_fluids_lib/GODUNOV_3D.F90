@@ -10826,6 +10826,20 @@ stop
       INTEGER_T vofcomp
       REAL_T vfrac
       REAL_T growthrate,rr,uu
+
+      REAL_T xdisp_local(SDIM)
+      REAL_T vfrac_left
+      REAL_T xdisp_left
+      REAL_T dx_left
+      REAL_T dXdx_left
+      REAL_T xdisp_center
+      REAL_T vfrac_right
+      REAL_T xdisp_right
+      REAL_T dx_right
+      REAL_T dXdx_right
+      REAL_T dXdx(SDIM,SDIM)  ! dir_x,dir_space
+      REAL_T hoop_12,hoop_22  ! 2=theta coordinate
+
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
@@ -10949,6 +10963,9 @@ stop
         if (viscoelastic_model.eq.2) then ! elastic material
 
          do dir_x=1,SDIM
+
+          xdisp_local(dir_x)=xdisplace(D_DECL(i,j,k),dir_x)
+
           do dir_space=1,SDIM
            ii=0
            jj=0
@@ -10965,7 +10982,7 @@ stop
            endif
            vfrac_left=vof(D_DECL(i-ii,j-jj,k-kk),vofcomp)
            xdisp_left=xdisplace(D_DECL(i-ii,j-jj,k-kk),dir_x)
-           xdisp_center=xdisplace(D_DECL(i,j,k),dir_x)
+           xdisp_center=xdisp_local(dir_x)
            vfrac_right=vof(D_DECL(i+ii,j+jj,k+kk),vofcomp)
            xdisp_right=xdisplace(D_DECL(i+ii,j+jj,k+kk),dir_x)
            dx_left=xsten(0,dir_space)-xsten(-2,dir_space)
@@ -10988,9 +11005,107 @@ stop
             stop
            endif
           enddo ! dir_space=1..sdim
+
          enddo ! dir_x=1..sdim
 
+! grad u=| u_r  u_t/r-v/r  u_z  |
+!        | v_r  v_t/r+u/r  v_z  |
+!        | w_r  w_t/r      w_z  |
+! in RZ:  T33 gets u/r=x_displace/r
+! in RTZ: T12=u_t/r - v/r
+!         T22=v_t/r + u/r
+! later:
+! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
+!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
+!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
+
+
+         hoop_12=0.0d0
+         hoop_22=0.0d0
+         if (SDIM.eq.2) then
+          if (levelrz.eq.0) then
+           ! do nothing
+          else if (levelrz.eq.1) then
+           if (xsten(0,1).gt.zero) then
+            hoop_22=xdisp_local(1)/xsten(0,1)  ! xdisplace/r
+           else 
+            print *,"xsten(0,1) invalid"
+            stop
+           endif
+          else if (levelrz.eq.3) then
+           if (xsten(0,1).gt.zero) then
+            hoop_12=-xdisp_local(2)/xsten(0,1)  ! -ydisplace/r
+            hoop_22=xdisp_local(1)/xsten(0,1)  ! xdisplace/r
+            do ii=1,SDIM
+             dXdx(ii,2)=dXdx(ii,2)/xsten(0,1)
+            enddo
+              ! 2=theta coordinate
+            dXdx(1,2)=dXdx(1,2)+hoop_12
+            dXdx(2,2)=dXdx(2,2)+hoop_22
+           else 
+            print *,"xsten(0,1) invalid"
+            stop
+           endif
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+         else if (SDIM.eq.3) then
+          if (levelrz.eq.0) then
+           ! do nothing
+          else if (levelrz.eq.3) then
+           if (xsten(0,1).gt.zero) then
+            hoop_12=-xdisp_local(2)/xsten(0,1)  ! -ydisplace/r
+            hoop_22=xdisp_local(1)/xsten(0,1)  ! xdisplace/r
+            do ii=1,SDIM
+             dXdx(ii,2)=dXdx(ii,2)/xsten(0,1)
+            enddo
+            dXdx(1,2)=dXdx(1,2)+hoop_12
+            dXdx(2,2)=dXdx(2,2)+hoop_22
+           else 
+            print *,"xsten(0,1) invalid"
+            stop
+           endif
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+         else
+          print *,"dimension bust"
+          stop
+         endif
+
+         do ii=1,3 
+         do jj=1,3 
+          Q(ii,jj)=zero
+         enddo
+         enddo
+
+         do ii=1,SDIM 
+         do jj=1,SDIM
+          Q(ii,jj)=dXdx(ii,jj)+dXdx(jj,ii)
+         enddo
+         enddo
             
+         if (SDIM.eq.3) then
+          ! do nothing
+         else if (SDIM.eq.2) then
+          if (levelrz.eq.0) then
+           Q(3,3)=zero  ! 3=theta coordinate
+          else if (levelrz.eq.1) then
+           Q(3,3)=two*hoop_22  ! in R-Z, this is the T-coordinate  
+                               ! " dXdx(3,3)+dXdx(3,3) "
+          else if (levelrz.eq.3) then
+           Q(3,3)=zero ! in R-theta, this is the z-coordinate
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+         else
+          print *,"dimension bust"
+          stop
+         endif
+
         else if ((viscoelastic_model.eq.0).or. &
                  (viscoelastic_model.eq.1)) then
 
@@ -11010,6 +11125,7 @@ stop
           if (Aadvect(ii,ii).lt.zero) then
            Aadvect(ii,ii)=zero
            print *,"WARNING Q^advect+I no longer positive definite"
+           print *,"viscoelastic_model=",viscoelastic_model
           endif
           Smult(ii,ii)=Smult(ii,ii)+one
          enddo  ! ii
@@ -11109,6 +11225,7 @@ stop
                ! do nothing
               else if (Q(ii,jj).le.zero) then
                print *,"Q(ii,jj)<=0"
+               print *,"viscoelastic_model=",viscoelastic_model
                stop
               else
                print *,"Q(ii,jj) bust"
@@ -11136,6 +11253,7 @@ stop
           if (Q(ii,ii).lt.zero) then
            Q(ii,ii)=zero
            print *,"WARNING Q+I no longer positive definite"
+           print *,"viscoelastic_model=",viscoelastic_model
            do iii=1,3
            do jjj=1,3
             print *,"iii,jjj,Q,Aadvect,Smult ",iii,jjj,Q(iii,jjj), &
@@ -28503,8 +28621,11 @@ stop
         if (levelrz.eq.0) then
          TNEWfab(D_DECL(i,j,k),ibase)=zero
         else if (levelrz.eq.1) then
+          ! T33 (theta coordinate)
+          ! dX/dx + dX/dx
          TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22
         else if (levelrz.eq.3) then
+          ! T33 (z coordinate)
          TNEWfab(D_DECL(i,j,k),ibase)=zero
         else
          print *,"levelrz invalid"
