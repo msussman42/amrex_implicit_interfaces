@@ -18669,6 +18669,7 @@ stop
       INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
       INTEGER_T, allocatable, dimension(:) :: sort_data_id
       REAL_T, allocatable, dimension(:) :: sort_data_time
+      REAL_T, allocatable, dimension(:) :: sort_data_LS
       INTEGER_T sub_iter
       INTEGER_T cell_iter
       INTEGER_T isub_test
@@ -18679,6 +18680,7 @@ stop
       INTEGER_T ibubble
       INTEGER_T temp_id
       REAL_T temp_time
+      REAL_T temp_LS
 
       if (particle_nsubdivide(im_PLS_cpp+1).ge.1) then
        dist_sub_cutoff=dx(1)/particle_nsubdivide(im_PLS_cpp+1)
@@ -18844,6 +18846,7 @@ stop
          if (local_count.ge.1) then
 
           if (local_count.gt.particle_max_per_nsubdivide(im_PLS_CPP+1)) then
+           allocate(sort_data_LS(local_count))
            allocate(sort_data_time(local_count))
            allocate(sort_data_id(local_count))
            sub_iter=0
@@ -18859,6 +18862,8 @@ stop
               sort_data_id(sub_iter)=current_link                     
               sort_data_time(sub_iter)= &
                  particles(current_link)%extra_state(2*SDIM+4) 
+              sort_data_LS(sub_iter)= &
+                 particles(current_link)%extra_state(SDIM+1) 
              endif
             endif
            enddo
@@ -18876,6 +18881,9 @@ stop
                temp_time=sort_data_time(ibubble)
                sort_data_time(ibubble)=sort_data_time(ibubble+1)
                sort_data_time(ibubble+1)=temp_time
+               temp_LS=sort_data_LS(ibubble)
+               sort_data_LS(ibubble)=sort_data_LS(ibubble+1)
+               sort_data_LS(ibubble+1)=temp_LS
                bubble_change=1
               endif
              enddo ! ibubble=1..local_count-bubble_iter-1
@@ -18883,13 +18891,28 @@ stop
             enddo ! bubble_change==1 and bubble_iter<local_count
             do bubble_iter=particle_max_per_nsubdivide(im_PLS_CPP+1)+1, &
                            local_count
-             particle_delete_flag(sort_data_id(bubble_iter))=1
-            enddo
+             if (sort_data_time(bubble_iter).eq.zero) then
+              ! do nothing
+             else if (sort_data_time(bubble_iter).gt.zero) then
+              if (sort_data_LS(bubble_iter).eq.zero) then
+               ! do nothing
+              else if (sort_data_LS(bubble_iter).ne.zero) then
+               particle_delete_flag(sort_data_id(bubble_iter))=1
+              else
+               print *,"sort_data_LS invalid"
+               stop
+              endif
+             else
+              print *,"sort_data_time(bubble_iter) invalid"
+              stop
+             endif
+            enddo ! bubble_iter
            else
             print *,"sub_iter invalid"
             stop
            endif    
            deallocate(sort_data_time)
+           deallocate(sort_data_LS)
            deallocate(sort_data_id)
           endif ! local_count > particle_max_per_nsubdivide
 
