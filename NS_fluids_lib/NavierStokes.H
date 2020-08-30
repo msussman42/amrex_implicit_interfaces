@@ -1486,7 +1486,7 @@ protected:
      // particleLS_flag[im]   im=0...num_materials-1
     static Vector<int> particleLS_flag;  
     static Vector<int> particle_nsubdivide;  
-    static Vector<int> particle_max_nsubdivide;  
+    static Vector<int> particle_max_per_nsubdivide;  
 
     static int NS_ncomp_particles;
 

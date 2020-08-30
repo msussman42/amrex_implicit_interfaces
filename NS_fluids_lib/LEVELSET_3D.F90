@@ -17222,6 +17222,7 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
+           ! xfoot,dist,vel,den,T,insert time
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -17425,7 +17426,7 @@ stop
         do dir=1,SDIM
          xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
         enddo
-        LSpart=accum_PARM%particles(interior_ID)%closest_dist
+        LSpart=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
         call containing_cell(accum_PARM%bfact, &
          accum_PARM%dx, &
          accum_PARM%xlo, &
@@ -18020,7 +18021,7 @@ stop
         endif
        enddo
        if (interior_ok.eq.1) then
-        LSpart=accum_PARM%particles(interior_ID)%closest_dist
+        LSpart=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
 
         i=cell_index(1)
         j=cell_index(2)
@@ -18117,7 +18118,7 @@ stop
           print *,"LSpart_trial or LSpart invalid"
           stop
          endif
-         particles(interior_ID)%closest_dist=LSpart_trial
+         particles(interior_ID)%extra_state(SDIM+1)=LSpart_trial
         else
          print *,"LSpart invalid"
          stop
@@ -18472,9 +18473,9 @@ stop
       do while (current_link.ge.1)
        do dir=1,SDIM
         xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
-        xfoot(dir)=accum_PARM%particles(current_link)%pos_foot(dir)
+        xfoot(dir)=accum_PARM%particles(current_link)%extra_state(dir)
        enddo 
-       LS=accum_PARM%particles(current_link)%closest_dist
+       LS=accum_PARM%particles(current_link)%extra_state(SDIM+1)
        ipart_flag=1
        call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag,accum_PARM%dx)
        call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag,accum_PARM%dx)
@@ -18569,6 +18570,7 @@ stop
         isweep, &
         append_flag, &
         particle_nsubdivide, &
+        particle_max_per_nsubdivide, &
         particleLS_flag, &
         im_PLS_cpp, &
         nmat, &
@@ -18576,6 +18578,7 @@ stop
         fablo,fabhi,bfact, &
         level, &
         finest_level, &
+        cur_time_slab, &
         xlo,dx, &
         particles, & ! a list of particles in the elastic structure
         Np, & !  Np = number of particles
@@ -18583,6 +18586,7 @@ stop
         new_Pdata_size, &
         Np_append, & ! number of particles to add
         particle_link_data, &
+        particle_delete_flag, & ! 1=> delete
         cell_particle_count, &
         DIMS(cell_particle_count), &
         xdisplacefab,DIMS(xdisplacefab), &
@@ -18609,7 +18613,9 @@ stop
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: particle_nsubdivide(nmat)
+      INTEGER_T, intent(in) :: particle_max_per_nsubdivide(nmat)
       INTEGER_T, intent(in) :: particleLS_flag(nmat)
+      REAL_T, intent(in)    :: cur_time_slab
       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
       type(particle_t), intent(inout), target :: particles(Np)
@@ -18620,6 +18626,7 @@ stop
        ! child link 1, parent link 1,
        ! child link 2, parent link 2, ...
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
+      INTEGER_T, intent(inout) :: particle_delete_flag(Np) ! 1=>delete
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
       INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
@@ -18646,6 +18653,7 @@ stop
       INTEGER_T subhi(3) 
       INTEGER_T, allocatable :: sub_counter(:,:,:)
       INTEGER_T cell_count_check
+      INTEGER_T cell_count_hold
       INTEGER_T current_link
       INTEGER_T local_count
       INTEGER_T mod_flag
@@ -18658,6 +18666,19 @@ stop
       REAL_T :: xpart(SDIM)
       REAL_T :: xsub(SDIM)
       REAL_T :: xsub_I(SDIM)
+      INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
+      INTEGER_T, allocatable, dimension(:) :: sort_data_id
+      REAL_T, allocatable, dimension(:) :: sort_data_time
+      INTEGER_T sub_iter
+      INTEGER_T cell_iter
+      INTEGER_T isub_test
+      INTEGER_T jsub_test
+      INTEGER_T ksub_test
+      INTEGER_T bubble_change
+      INTEGER_T bubble_iter
+      INTEGER_T ibubble
+      INTEGER_T temp_id
+      REAL_T temp_time
 
       if (particle_nsubdivide(im_PLS_cpp+1).ge.1) then
        dist_sub_cutoff=dx(1)/particle_nsubdivide(im_PLS_cpp+1)
@@ -18669,6 +18690,13 @@ stop
       call checkbound(fablo,fabhi,DIMS(xdisplacefab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(cell_particle_count),0,-1,2872)
+
+      if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
+       ! do nothing
+      else
+       print *,"single_particle_size invalid"
+       stop
+      endif
 
       if ((new_Pdata_size/single_particle_size)* &
           single_particle_size.eq.new_Pdata_size) then
@@ -18764,6 +18792,7 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
        do isub=sublo(1),subhi(1)
        do jsub=sublo(2),subhi(2)
        do ksub=sublo(3),subhi(3)
@@ -18772,6 +18801,11 @@ stop
        enddo
        enddo
        cell_count_check=0
+       cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
+
+        ! isub,jsub,ksub,link
+       allocate(sub_particle_data(cell_count_hold,SDIM+1))
+
        current_link=cell_particle_count(D_DECL(i,j,k),2)
        do while (current_link.ge.1)
         do dir=1,SDIM
@@ -18786,6 +18820,12 @@ stop
         if (sub_found.eq.1) then
          sub_counter(isub,jsub,ksub)=sub_counter(isub,jsub,ksub)+1
          cell_count_check=cell_count_check+1
+         sub_particle_data(cell_count_check,1)=isub
+         sub_particle_data(cell_count_check,2)=jsub
+         if (SDIM.eq.3) then
+          sub_particle_data(cell_count_check,SDIM)=ksub
+         endif
+         sub_particle_data(cell_count_check,SDIM+1)=current_link
         else
          print *,"sub_box not found"
          stop
@@ -18794,8 +18834,7 @@ stop
         current_link=particle_link_data(ibase+1)
        enddo ! while (current_link.ge.1)
 
-       if (cell_count_check.eq. &
-           cell_particle_count(D_DECL(i,j,k),1)) then
+       if (cell_count_check.eq.cell_count_hold) then
         do isub=sublo(1),subhi(1)
         do jsub=sublo(2),subhi(2)
         do ksub=sublo(3),subhi(3)
@@ -18803,8 +18842,59 @@ stop
          ! always increment Np_append_test
          local_count=sub_counter(isub,jsub,ksub)
          if (local_count.ge.1) then
-          ! do nothing
+
+          if (local_count.gt.particle_max_per_nsubdivide(im_PLS_CPP+1)) then
+           allocate(sort_data_time(local_count))
+           allocate(sort_data_id(local_count))
+           sub_iter=0
+           do cell_iter=1,cell_count_hold
+            isub_test=sub_particle_data(cell_iter,1)
+            jsub_test=sub_particle_data(cell_iter,2)
+            ksub_test=sub_particle_data(cell_iter,SDIM)
+            current_link=sub_particle_data(cell_iter,SDIM+1)
+            if ((isub_test.eq.isub).and. &
+                (jsub_test.eq.jsub)) then
+             if ((SDIM.eq.2).or.(ksub_test.eq.ksub)) then
+              sub_iter=sub_iter+1
+              sort_data_id(sub_iter)=current_link                     
+              sort_data_time(sub_iter)= &
+                 particles(current_link)%extra_state(2*SDIM+4) 
+             endif
+            endif
+           enddo
+           if (sub_iter.eq.local_count) then
+            bubble_change=1
+            bubble_iter=0
+            do while ((bubble_change.eq.1).and. &
+                      (bubble_iter.lt.local_count))
+             do ibubble=1,local_count-bubble_iter-1
+              if (sort_data_time(ibubble).gt. &
+                  sort_data_time(ibubble+1)) then
+               temp_id=sort_data_id(ibubble)
+               sort_data_id(ibubble)=sort_data_id(ibubble+1)
+               sort_data_id(ibubble+1)=temp_id
+               temp_time=sort_data_time(ibubble)
+               sort_data_time(ibubble)=sort_data_time(ibubble+1)
+               sort_data_time(ibubble+1)=temp_time
+               bubble_change=1
+              endif
+             enddo ! ibubble=1..local_count-bubble_iter-1
+             bubble_iter=bubble_iter+1
+            enddo ! bubble_change==1 and bubble_iter<local_count
+            do bubble_iter=particle_max_per_nsubdivide(im_PLS_CPP+1)+1, &
+                           local_count
+             particle_delete_flag(sort_data_id(bubble_iter))=1
+            enddo
+           else
+            print *,"sub_iter invalid"
+            stop
+           endif    
+           deallocate(sort_data_time)
+           deallocate(sort_data_id)
+          endif ! local_count > particle_max_per_nsubdivide
+
          else if (local_count.eq.0) then
+
           call sub_box_cell_center( &
             accum_PARM, &
             i,j,k, &
@@ -18831,8 +18921,12 @@ stop
            do dir=1,SDIM
             new_particles(ibase+dir)=xsub(dir)
             new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
+            new_particles(ibase+2*SDIM+1+dir)=zero  ! stub for velocity
            enddo
            new_particles(ibase+2*SDIM+1)=dist_sub
+           new_particles(ibase+3*SDIM+2)=one  ! stub for density
+           new_particles(ibase+3*SDIM+3)=zero ! stub for temperature
+           new_particles(ibase+SDIM+N_EXTRA_REAL)=cur_time_slab
           else
            print *,"isweep invalid"
            stop
@@ -18878,7 +18972,11 @@ stop
             do dir=1,SDIM
              new_particles(ibase+dir)=xsub_I(dir)
              new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
+             new_particles(ibase+2*SDIM+1+dir)=zero  ! stub for velocity
             enddo
+            new_particles(ibase+3*SDIM+2)=one  ! stub for density
+            new_particles(ibase+3*SDIM+3)=zero ! stub for temperature
+            new_particles(ibase+SDIM+N_EXTRA_REAL)=cur_time_slab
             if (mod_flag.eq.0) then ! xCP did not have to be projected.
              new_particles(ibase+2*SDIM+1)=zero
             else if (mod_flag.eq.1) then ! xCP had to be projected.
@@ -18908,9 +19006,12 @@ stop
         print *,"cell_count_check invalid"
         stop
        endif
+
+       deallocate(sub_particle_data)
+
       enddo 
       enddo 
-      enddo 
+      enddo  ! i,j,k
 
       if (isweep.eq.0) then
        Np_append=Np_append_test

@@ -299,7 +299,7 @@ Vector<int> NavierStokes::truncate_volume_fractions;
 
 // default=1
 Vector<int> NavierStokes::particle_nsubdivide; 
-Vector<int> NavierStokes::particle_max_nsubdivide; 
+Vector<int> NavierStokes::particle_max_per_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
 int NavierStokes::NS_ncomp_particles=0;
 
@@ -3629,13 +3629,13 @@ NavierStokes::read_params ()
 
     truncate_volume_fractions.resize(nmat);
     particle_nsubdivide.resize(nmat);
-    particle_max_nsubdivide.resize(nmat);
+    particle_max_per_nsubdivide.resize(nmat);
     particleLS_flag.resize(nmat);
 
     for (int i=0;i<nmat;i++) {
 
      particle_nsubdivide[i]=1;
-     particle_max_nsubdivide[i]=1;
+     particle_max_per_nsubdivide[i]=3;
      particleLS_flag[i]=0;
 
      if ((FSI_flag[i]==0)|| // tessellating
@@ -3653,13 +3653,11 @@ NavierStokes::read_params ()
       truncate_volume_fractions[i]=0;
      else
       amrex::Error("FSI_flag invalid");
-    }
+    }  // i=0..nmat-1
 
     pp.queryarr("particle_nsubdivide",particle_nsubdivide,0,nmat);
-    for (int i=0;i<nmat;i++) {
-     particle_max_nsubdivide[i]=particle_nsubdivide[i];
-    }
-    pp.queryarr("particle_max_nsubdivide",particle_max_nsubdivide,0,nmat);
+    pp.queryarr("particle_max_per_nsubdivide",
+	    particle_max_per_nsubdivide,0,nmat);
 
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
 
@@ -3677,6 +3675,9 @@ NavierStokes::read_params ()
      if ((particle_nsubdivide[i]<1)||
          (particle_nsubdivide[i]>6))
       amrex::Error("particle_nsubdivide invalid");
+     if ((particle_max_per_nsubdivide[i]<2)||
+         (particle_max_per_nsubdivide[i]>10))
+      amrex::Error("particle_max_per_nsubdivide invalid");
      if ((particleLS_flag[i]<0)||
          (particleLS_flag[i]>1))
       amrex::Error("particleLS_flag invalid");
@@ -3930,6 +3931,8 @@ NavierStokes::read_params ()
 
       std::cout << "particle_nsubdivide i= " << i << ' ' <<
         particle_nsubdivide[i] << '\n';
+      std::cout << "particle_max_per_nsubdivide i= " << i << ' ' <<
+        particle_max_per_nsubdivide[i] << '\n';
       std::cout << "particleLS_flag i= " << i << ' ' <<
         particleLS_flag[i] << '\n';
 
@@ -19394,6 +19397,8 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
     Vector< Real > new_particle_data;
     new_particle_data.resize(single_particle_size);
 
+      // this is an object with a pointer to both AoS and
+      // SoA data.
     auto& particles = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
 
@@ -19407,6 +19412,12 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
     particle_link_data.resize(Np*(1+AMREX_SPACEDIM));
     for (int i_link=0;i_link<Np*(1+AMREX_SPACEDIM);i_link++)
      particle_link_data[i_link]=0;
+
+      // 1 if particle should be deleted.
+    Vector< int > particle_delete_flag; 
+    particle_delete_flag.resize(Np);
+    for (int i_delete=0;i_delete<Np;i_delete++)
+     particle_delete_flag[i_delete]=0;
 
     int Np_append=0;  // number of particles to append
 
@@ -19431,6 +19442,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
        &isweep,
        &append_flag,
        particle_nsubdivide.dataPtr(),
+       particle_max_per_nsubdivide.dataPtr(),
        particleLS_flag.dataPtr(),
        &im_PLS,
        &nmat,
@@ -19438,6 +19450,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
        fablo,fabhi,&bfact,
        &level,
        &finest_level,
+       &cur_time_slab,
        xlo,dx,
        particles_AoS.data(), // existing particles
        Np,  // pass by value
@@ -19445,6 +19458,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
        &new_Pdata_size,
        &Np_append,  // Np_append number of new particles to add.
        particle_link_data.dataPtr(),
+       particle_delete_flag.dataPtr(),
        cell_particle_count.dataPtr(),
        ARLIM(cell_particle_count.loVect()),
        ARLIM(cell_particle_count.hiVect()),
@@ -19465,6 +19479,37 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
      std::cout << "gridno " << gridno << " Np_append " <<
        Np_append << '\n';
     }
+
+    int Np_delete=0;
+    for (int i_delete=0;i_delete<Np;i_delete++) {
+     if (particle_delete_flag[i_delete]==1) {
+      Np_delete++;
+     } else if (particle_delete_flag[i_delete]==0) {
+      // do nothing
+     } else
+      amrex::Error("particle_delete_flag[i_delete] invalid");
+    }
+    if (Np_delete<=Np) {
+     // do nothing
+    } else
+     amrex::Error("Np_delete invalid");
+
+     // mirrorPC will only contain AoS data.  In the future,
+     // SoA data will have to be managed too.
+    Vector< My_ParticleContainer::ParticleType > mirrorPC_AoS;
+    int Np_mirror_AoS=Np-Np_delete+Np_append;
+    mirrorPC_AoS.resize(Np_mirror_AoS);
+    int i_mirror=0;
+    for (int i_delete=0;i_delete<Np;i_delete++) {
+     if (particle_delete_flag[i_delete]==1) {
+      // do nothing
+     } else if (particle_delete_flag[i_delete]==0) {
+      mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
+      i_mirror++;
+     } else
+      amrex::Error("particle_delete_flag[i_delete] invalid");
+    }
+
     for (int i_append=0;i_append<Np_append;i_append++) {
 
      My_ParticleContainer::ParticleType p;
@@ -19480,8 +19525,16 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
      for (int dir=0;dir<N_EXTRA_REAL;dir++) {
       p.rdata(dir) = new_particle_data[ibase+AMREX_SPACEDIM+dir];
      }
-     particles.push_back(p);
+     mirrorPC_AoS[i_mirror]=p;
+     i_mirror++;
     } // i_append=0..Np_append-1
+    if (i_mirror==Np_mirror_AoS) {
+     particles.resize(0);
+     for (int i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
+      particles.push_back(mirrorPC_AoS[i_mirror]);
+     }
+    } else
+     amrex::Error("i_mirror <> Np_mirror_AoS");
 
     if (ipart<NS_ncomp_particles) {
      // do nothing

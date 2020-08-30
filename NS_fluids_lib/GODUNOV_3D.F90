@@ -28177,10 +28177,10 @@ stop
        if (accum_PARM%Npart.ge.0) then
         do dir=1,SDIM
          xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-         xpartfoot(dir)=accum_PARM%particles(interior_ID)%pos_foot(dir)
+         xpartfoot(dir)=accum_PARM%particles(interior_ID)%extra_state(dir)
          xdisp(dir)=xpart(dir)-xpartfoot(dir)
         enddo
-        local_dist=accum_PARM%particles(interior_ID)%closest_dist
+        local_dist=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
 
         call containing_cell(accum_PARM%bfact, &
           accum_PARM%dx, &
