@@ -23,10 +23,10 @@
 #include <StateDescriptor.H>
 #include <Amr.H>
 
-// x,y,z is not extra; (x0,y0,z0,r) is extra. (r can be
+// x,y,z is not extra; (x0,y0,z0,r,insert time) is extra. (r can be
 // a distance, or a radius)
 // Structure of Array components can be added real time.
-#define N_EXTRA_REAL (AMREX_SPACEDIM+1)
+#define N_EXTRA_REAL (AMREX_SPACEDIM+2)
 
 namespace amrex {
 
