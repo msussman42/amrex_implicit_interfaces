@@ -299,6 +299,7 @@ Vector<int> NavierStokes::truncate_volume_fractions;
 
 // default=1
 Vector<int> NavierStokes::particle_nsubdivide; 
+Vector<int> NavierStokes::particle_max_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
 int NavierStokes::NS_ncomp_particles=0;
 
@@ -3628,11 +3629,13 @@ NavierStokes::read_params ()
 
     truncate_volume_fractions.resize(nmat);
     particle_nsubdivide.resize(nmat);
+    particle_max_nsubdivide.resize(nmat);
     particleLS_flag.resize(nmat);
 
     for (int i=0;i<nmat;i++) {
 
      particle_nsubdivide[i]=1;
+     particle_max_nsubdivide[i]=1;
      particleLS_flag[i]=0;
 
      if ((FSI_flag[i]==0)|| // tessellating
@@ -3653,6 +3656,11 @@ NavierStokes::read_params ()
     }
 
     pp.queryarr("particle_nsubdivide",particle_nsubdivide,0,nmat);
+    for (int i=0;i<nmat;i++) {
+     particle_max_nsubdivide[i]=particle_nsubdivide[i];
+    }
+    pp.queryarr("particle_max_nsubdivide",particle_max_nsubdivide,0,nmat);
+
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
 
     NS_ncomp_particles=0;

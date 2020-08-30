@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
+#include "N_EXTRA_REAL.H"
 #include "LEVEL_F.H"
 
 #define nsum 64
@@ -17219,13 +17220,9 @@ stop
 
        implicit none
 
-         ! ParticleContainer<N_EXTRA_REAL,0,0,0>
-         ! where N_EXTRA_REAL=AMREX_SPACEDIM+2
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-         real(amrex_particle_real) :: pos_foot(SDIM)
-         real(amrex_particle_real) :: closest_dist
-         real(amrex_particle_real) :: insert_time
+         real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
        end type particle_t

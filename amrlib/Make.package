@@ -6,6 +6,7 @@ CEXE_sources += Amr.cpp AmrLevel.cpp Cluster.cpp \
 CEXE_headers += Amr.H AmrLevel.H \
                 Cluster.H  \
                 LevelBld.H Interpolater.H StateData.H \
+                N_EXTRA_REAL.H \
                 StateDescriptor.H AMReX_TagBox.H FillPatchUtil.H 
 
 CEXE_headers += AMReX_AmrParGDB.H AMReX_AmrParticles.H
