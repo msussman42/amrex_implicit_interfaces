@@ -530,8 +530,6 @@ INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
-REAL_T :: ice_vertical
-REAL_T :: substrate_height
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -540,85 +538,284 @@ REAL_T :: substrate_height
    stop
   endif
 
-if (abs(zblob2-yblob2).le.1.0D-14) then
- substrate_height=zblob2  ! substrate thickness
-else
- print *,"zblob2 or yblob2 invalid"
- stop
-endif
+  if (probtype.eq.55) then
 
-if ((num_materials.eq.4).and.(probtype.eq.2001)) then
+   ! drop on slope problem (2d or 3d)
+   ! radblob4 is used as a "switch" in order to specify static
+   ! solution at t=0.
+   ! radblob5 is switch for drop hitting ellipse problem.
+   if (axis_dir.eq.3) then
 
- if (SDIM.eq.2) then
-  ice_vertical=yblob
- else if (SDIM.eq.3) then
-  ice_vertical=zblob
- else
-  print *,"dimension bust"
-  stop
- endif
- if (abs(substrate_height-(ice_vertical-half*radblob)).gt.VOFTOL) then
-  print *,"bottom of original water+ice block must coincide w/substrate"
-  print *,"sdim= ",SDIM
-  print *,"yblob=",yblob
-  print *,"zblob=",zblob
-  print *,"ice_vertical=",ice_vertical
-  print *,"substrate_height=",substrate_height
-  print *,"radblob=",radblob
-  stop
- endif
+    if (SDIM.eq.2) then
+     LS(1)=z-(zblob+radblob*cos(two*Pi*x/xblob))
+    else if (SDIM.eq.3) then
+     LS(1)=z-(zblob+radblob*cos(two*Pi*x/xblob)*cos(two*Pi*y/yblob))
+    else
+     print *,"dimension bust"
+     stop
+    endif
+    LS(2)=-LS(1)
 
-  ! water thickness=radblob3
-  !dist<0 inside the square
-  !water above the ice
- if (SDIM.eq.2) then
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-     substrate_height+radblob-radblob3,substrate_height+radblob,LS(1))
-  LS(1)=-LS(1) ! water
-  !ice (is below water)
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-    -substrate_height-radblob,substrate_height+radblob-radblob3,LS(3))
-  LS(3)=-LS(3)
+   else if (axis_dir.eq.5) then
 
-  !air; dist<0 inside the square
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-    -substrate_height-radblob,substrate_height+radblob,LS(2))
+     ! in: materialdistbatch (initial angle=static angle)
+     ! maxtall==two*radblob => no ice in this call.
+    call drop_slope_dist(x,y,z,initial_time,nmat, &
+      two*radblob,dist_ice,dist_liquid)
 
- else if (SDIM.eq.3) then
+    dist_gas=-dist_liquid
+    LS(1)=dist_liquid
+    LS(2)=dist_gas
 
-  !dist<0 inside the square
-  !water above the ice
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     substrate_height+radblob-radblob3,substrate_height+radblob, &
-     x(1),x(2),x(SDIM),LS(1))
-  LS(1)=-LS(1)
-  !ice
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     -substrate_height-radblob,substrate_height+radblob-radblob3, &
-     x(1),x(2),x(SDIM),LS(3))
-  LS(3)=-LS(3)
+    ! in materialdistbatch:
+    ! nucleate boiling 2D or 3D
+    ! Sato and Niceno problem
+   else if ((axis_dir.eq.6).or. &
+            (axis_dir.eq.7)) then 
+    if (n_sites.gt.0) then
+     if (nucleation_init_time.eq.zero) then
+      call nucleation_sites(xsten,nhalf,dx,bfact,dist_liquid,pos_sites)
+     else if (nucleation_init_time.gt.zero) then
+      dist_liquid=9999.0
+     else
+      print *,"nucleation_init_time invalid"
+      stop
+     endif
+    else if (n_sites.eq.0) then
+     ! do nothing
+    else
+     print *,"n_sites invalid [4]",n_sites,nucleation_init_time
+     stop
+    endif
 
-  !air; dist<0 inside the square
-  !air everywhere not ice or water.
-  ! important: fluids tessellate domain, solids (i.e. substrate)
-  ! are embedded.
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     -substrate_height-radblob,substrate_height+radblob, &
-     x(1),x(2),x(SDIM),LS(2))  ! air
+    dist_gas=-dist_liquid
+    LS(1)=dist_liquid
+    LS(2)=dist_gas
+     ! thickness of initial gas layer at outflow
+    if (radblob10.gt.zero) then
+     if ((nmat.eq.4).and.(im_solid_materialdist.eq.nmat)) then
+      if (gravity_dir.eq.1) then
+       if (radblob10.lt.problenx) then 
+        LS(3)=x-(probhix-radblob10)
+       else
+        print *,"radblob10 invalid"
+        stop
+       endif
+      else if (gravity_dir.eq.2) then
+       if (radblob10.lt.probleny) then 
+        LS(3)=y-(probhiy-radblob10)
+       else
+        print *,"radblob10 invalid"
+        stop
+       endif
+      else if ((gravity_dir.eq.3).and.(SDIM.eq.3)) then
+       if (radblob10.lt.problenz) then 
+        LS(3)=z-(probhiz-radblob10)
+       else
+        print *,"radblob10 invalid"
+        stop
+       endif
+      else
+       print *,"gravity_dir invalid"
+       stop
+      endif
+      if (LS(3).lt.zero) then
+       LS(1)=min(LS(1),-LS(3))
+      else if (LS(3).ge.zero) then
+       if ((LS(2).lt.zero).and.(LS(1).gt.zero)) then
+        LS(1)=-LS(3)
+       else 
+        print *,"LS(2) or LS(1) invalid"
+        stop
+       endif
+      else
+       print *,"LS(3) invalid"
+       stop
+      endif
+     else
+      print *,"nmat or im_solid_materialdist invalid"
+      print *,"nmat=",nmat
+      print *,"im_solid_materialdist=",im_solid_materialdist
+      stop
+     endif
+    else if (radblob10.eq.zero) then
+     ! do nothing
+    else
+     print *,"radblob10 invalid"
+     stop
+    endif
 
- else
-  print *,"dimension bust"
-  stop
- endif
+   else if ((axis_dir.eq.0).or. &
+            (axis_dir.eq.1)) then
 
- call BOTTOM_substrateLS(x,LS(4))
-else
- print *,"num_materials or probtype invalid"
- stop
-endif
+    if ((radblob6.gt.zero).and.(radblob7.gt.zero)) then
+     print *,"cannot have both radblob6 and radblob7 positive"
+     stop
+    endif
+
+    if (radblob3.gt.zero) then
+      ! negative on the inside of the square
+     call squaredist(x,y,xblob-radblob,xblob+radblob,yblob, &
+      yblob+radblob3,dist_liquid)
+     dist_liquid=-dist_liquid
+    else if (radblob3.eq.zero) then
+     if (SDIM.eq.2) then
+      dist_liquid=radblob-sqrt((x-xblob)**2+(y-yblob)**2)
+     else
+      dist_liquid=radblob-sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)
+     endif
+     if (radblob5.gt.zero) then
+      if (SDIM.eq.2) then
+       dist_liq2=radblob5-sqrt((x-xblob5)**2+(y-yblob5)**2)
+      else
+       dist_liq2=radblob5-sqrt((x-xblob5)**2+(y-yblob5)**2+(z-zblob5)**2)
+      endif
+
+      if (dist_liq2.gt.dist_liquid) then
+       dist_liquid=dist_liq2
+      endif
+     endif 
+    else
+     print *,"radblob3 invalid"
+     stop
+    endif
+
+    if (radblob4.eq.zero) then
+     ! do nothing
+    else if (radblob4.eq.one) then
+     if ((radblob6.ne.zero).or.(radblob7.ne.zero).or. &
+         (radblob5.ne.zero)) then
+      print *,"conflicting parameters probtype=",probtype
+      stop
+     endif
+     if ((abs(z-y).gt.VOFTOL).and.(SDIM.eq.2)) then
+      print *,"z<>y prior to drop_slope_dist"
+      stop
+     endif
+     ! in: materialdistbatch (initial angle=static angle)
+     call drop_slope_dist(x,y,z,initial_time,nmat, &
+      two*radblob,dist_ice,dist_liquid)
+    else
+     print *,"radblob4 invalid radblob4=",radblob4
+     stop
+    endif
+
+    if (radblob6.gt.zero) then
+     if (SDIM.eq.2) then
+      dist_liq2=radblob6-sqrt((x-xblob6)**2+(y-yblob6)**2)
+     else if (SDIM.eq.3) then
+      dist_liq2=radblob6-sqrt((x-xblob6)**2+(y-yblob6)**2+(z-zblob6)**2)
+     endif
+     if (dist_liq2.gt.dist_liquid) then
+      dist_liquid=dist_liq2
+     endif
+    endif
+
+    dist_gas=-dist_liquid
+    LS(1)=dist_liquid
+    LS(2)=dist_gas
+   else
+    print *,"axis_dir invalid probtype=55 materialdistbatch"
+    stop
+   endif
+
+   if (axis_dir.eq.0) then
+
+    if (radblob7.gt.zero) then ! drop collision?
+     if (nmat.lt.3) then
+      print *,"nmat invalid"
+      stop
+     endif
+     if (radblob6.gt.zero) then
+      print *,"cannot have both radblob6 and radblob7 positive"
+      stop
+     endif
+
+     LS(3)=radblob7-sqrt( (x-xblob7)**2+(y-yblob7)**2 )  ! pos. in drop
+     dist_gas=-dist_liquid
+     if (dist_gas.gt.-LS(3)) then
+      dist_gas=-LS(3)
+     endif
+     LS(1)=dist_liquid
+     LS(2)=dist_gas
+
+    endif  ! radblob7>0
+    !ICE MEHDI
+   else if (axis_dir.eq.1) then  ! drop falling on substrate
+    if (nmat.lt.3) then
+     print *,"nmat invalid"
+     stop
+    endif
+ 
+    ! positive in the "ice" or "substrate"
+    ! materialdistbatch
+    call ice_substrate_distance(x,y,z,distsolid)
+
+    if (nmat.eq.4) then
+     if (im_solid_materialdist.ne.nmat) then
+      print *,"expecting im_solid_materialdist=nmat"
+      stop
+     endif
+    else if (nmat.eq.3) then
+     if (im_solid_materialdist.ne.0) then
+      print *,"expecting im_solid_materialdist=0"
+      stop
+     endif
+    else
+     print *,"nmat invalid"
+     stop
+    endif
+
+    LS(nmat)=distsolid
+    if (is_rigid(nmat,nmat).ne.1) then
+     print *,"expecting last material to be rigid"
+     stop
+    endif
+    dist_gas=-dist_liquid
+    LS(1)=dist_liquid
+    LS(2)=dist_gas
+
+    ! ICE MEHDI: compare with freezing singularity paper
+   else if (axis_dir.eq.5) then
+    if (nmat.ne.4) then
+     print *,"nmat invalid"
+     stop
+    endif
+    if (im_solid_materialdist.ne.4) then
+     print *,"expecting im_solid_materialdist=4"
+     stop
+    endif
+    ! material 3: ice
+    ! material 1: water
+    ! in: materialdist_batch (initial angle=static angle)
+    call drop_slope_dist(x,y,z,initial_time,nmat,radblob3, &
+      dist_ice,dist_liquid)
+    if (is_rigid(nmat,3).ne.0) then
+     print *,"expecting material 3 to be ice"
+     stop
+    endif
+    LS(1)=dist_liquid
+    LS(3)=dist_ice
+    if (LS(2).gt.-distsolid) then
+     LS(2)=-distsolid
+    endif
+    if ((LS(3).le.zero).and.(distsolid.ge.zero)) then
+     LS(3)=distsolid
+    endif
+
+   else if ((axis_dir.eq.6).or. &  ! incompressible boiling
+            (axis_dir.eq.7)) then  ! compressible boiling
+    ! do nothing (inputs.boiling) (boiling sites)
+    !  (or Sato and Niceno problem)
+    !  (or Tryggvason problem)
+   else
+    print *,"axis_dir invalid for drop falling on ice"
+    stop
+   endif
+  else
+   print *,"expecting probtype.eq.55"
+   stop
+  endif
 
 return
 end subroutine GENERAL_PHASE_CHANGE_LS

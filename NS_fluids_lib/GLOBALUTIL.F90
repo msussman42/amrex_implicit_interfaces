@@ -10239,6 +10239,115 @@ contains
       return
       end subroutine EOS_tait_ADIABATIC_rhohydro
 
+        ! ice behaves like rigid solid where dist>0
+      subroutine ice_substrate_distance(x,y,z,dist)
+      IMPLICIT NONE
+      
+      REAL_T, intent(in) :: x,y,z
+      REAL_T, intent(out) :: dist
+      INTEGER_T nmat
+      REAL_T aspect,yprime,zprime,aspect2
+
+      if (SDIM.eq.2) then
+       if (abs(y-z).gt.VOFTOL) then
+        print *,"y=z in 2d expected"
+        stop
+       endif
+      endif
+
+      nmat=num_materials
+
+      aspect=tan(radblob2)
+      if (SDIM.eq.2) then
+        yprime=aspect*(x-xblob2)+yblob2
+        dist=y-yprime  ! vertical distance
+      else if (SDIM.eq.3) then
+        aspect2=tan(radblob3)
+        zprime=aspect*(x-xblob2)+aspect2*(y-yblob2)+zblob2
+        dist=z-zprime  ! vertical distance
+      else
+        print *,"dimension bust"
+        stop
+      endif
+      dist=-dist
+
+      end subroutine ice_substrate_distance
+
+        ! Sato and Niceno or Tryggvason
+        ! (probtype.eq.55) and ((axis_dir.eq.6).or.(axis_dir.eq.7))
+      subroutine nucleation_sites(xsten,nhalf,dx,bfact,dist,nucleate_pos)
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: bfact,nhalf
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T x,y,z
+      REAL_T, intent(out) :: dist
+      INTEGER_T icomp
+      REAL_T distarr(n_sites)
+      REAL_T, intent(in) :: nucleate_pos(4*n_sites)
+      REAL_T hugedist
+      REAL_T xx(SDIM)
+      REAL_T rr
+      REAL_T dxmax
+      INTEGER_T dir
+ 
+      if (n_sites.lt.1) then
+       print *,"n_sites invalid"
+       stop
+      endif
+ 
+      if (nhalf.lt.1) then
+       print *,"nhalf invalid nucleation sites"
+       stop
+      endif 
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif 
+      call get_dxmax(dx,bfact,dxmax)
+
+      hugedist=99999.0
+
+      x=xsten(0,1)
+      y=xsten(0,2)
+      z=xsten(0,SDIM)
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.VOFTOL) then
+        print *,"expecting z=y"
+        stop
+       endif
+      endif
+
+      dist=hugedist
+
+      do icomp=1,n_sites
+       distarr(icomp)=hugedist
+       rr=nucleate_pos(4*(icomp-1)+4)
+       if (rr.gt.zero) then
+        xx(1)=x-nucleate_pos(4*(icomp-1)+1)
+        xx(2)=y-nucleate_pos(4*(icomp-1)+2)
+        if (SDIM.eq.3) then
+         xx(SDIM)=z-nucleate_pos(4*(icomp-1)+3)
+        endif
+        rr=max(rr,two*dxmax)
+        distarr(icomp)=zero
+        do dir=1,SDIM
+         distarr(icomp)=distarr(icomp)+xx(dir)**2
+        enddo
+        distarr(icomp)=sqrt(distarr(icomp))-rr
+        
+        dist=min(dist,distarr(icomp))
+       else
+        print *,"rr invalid"
+        stop
+       endif 
+      enddo ! icomp
+    
+      return
+      end subroutine nucleation_sites
+
 
 end module global_utility_module
 

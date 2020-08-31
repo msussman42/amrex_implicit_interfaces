@@ -2211,41 +2211,6 @@ end subroutine nozzle2d
       return
       end subroutine barbelldist
 
-
-        ! ice behaves like rigid solid where dist>0
-      subroutine ice_substrate_distance(x,y,z,dist)
-      use global_utility_module
-      IMPLICIT NONE
-      
-      REAL_T x,y,z,dist
-      INTEGER_T nmat
-      REAL_T aspect,yprime,zprime,aspect2
-
-      if (SDIM.eq.2) then
-       if (abs(y-z).gt.VOFTOL) then
-        print *,"y=z in 2d expected"
-        stop
-       endif
-      endif
-
-      nmat=num_materials
-
-      aspect=tan(radblob2)
-      if (SDIM.eq.2) then
-        yprime=aspect*(x-xblob2)+yblob2
-        dist=y-yprime  ! vertical distance
-      else if (SDIM.eq.3) then
-        aspect2=tan(radblob3)
-        zprime=aspect*(x-xblob2)+aspect2*(y-yblob2)+zblob2
-        dist=z-zprime  ! vertical distance
-      else
-        print *,"dimension bust"
-        stop
-      endif
-      dist=-dist
-
-      end subroutine ice_substrate_distance
-
       subroutine jetting_plate_dist(x,y,z,dist)
       use global_utility_module
       IMPLICIT NONE
