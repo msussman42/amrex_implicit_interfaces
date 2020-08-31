@@ -866,9 +866,6 @@ return
 end subroutine GENERAL_PHASE_CHANGE_VEL
 
 
-! These next routines only used for compressible materials.
-!***********************************************
-! compressible material functions for (ns.material_type = 24)
 subroutine EOS_GENERAL_PHASE_CHANGE(rho,internal_energy,pressure, &
   imattype,im)
  IMPLICIT NONE
@@ -877,12 +874,7 @@ subroutine EOS_GENERAL_PHASE_CHANGE(rho,internal_energy,pressure, &
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- if (imattype.eq.24) then
-  pressure=rho*(DEF_VAPOR_GAMMA-1.0D0)*internal_energy
- else
-  print *,"imattype invalid EOS_GENERAL_PHASE_CHANGE"
-  stop
- endif
+ call EOS_material_CORE(rho,internal_energy,pressure,imattype,im)
 
  return
 end subroutine EOS_GENERAL_PHASE_CHANGE
@@ -896,19 +888,15 @@ subroutine SOUNDSQR_GENERAL_PHASE_CHANGE(rho,internal_energy,soundsqr, &
  REAL_T, intent(out) :: soundsqr
  REAL_T pressure
 
- if (imattype.eq.24) then
-  call EOS_GENERAL_PHASE_CHANGE(rho,internal_energy,pressure,imattype,im)
-  soundsqr=DEF_VAPOR_GAMMA*pressure/rho
- else
-  print *,"imattype invalid SOUNDSQR_GENERAL_PHASE_CHANGE"
-  stop
- endif
+ call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
+   imattype,im)
 
  return
 end subroutine SOUNDSQR_GENERAL_PHASE_CHANGE
 
 
-subroutine INTERNAL_GENERAL_PHASE_CHANGE(rho,temperature,local_internal_energy, &
+subroutine INTERNAL_GENERAL_PHASE_CHANGE(rho,temperature, &
+  local_internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
@@ -917,8 +905,8 @@ subroutine INTERNAL_GENERAL_PHASE_CHANGE(rho,temperature,local_internal_energy, 
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- call INTERNAL_default(rho,temperature,local_internal_energy, &
-        imattype,im)
+ call INTERNAL_material_CORE(rho,temperature,local_internal_energy, &
+   imattype,im)
 
  return
 end subroutine INTERNAL_GENERAL_PHASE_CHANGE
@@ -932,8 +920,8 @@ subroutine TEMPERATURE_GENERAL_PHASE_CHANGE(rho,temperature,internal_energy, &
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- call TEMPERATURE_default(rho,temperature,internal_energy, &
-        imattype,im)
+ call TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
+     imattype,im)
 
  return
 end subroutine TEMPERATURE_GENERAL_PHASE_CHANGE
