@@ -14721,5 +14721,16 @@ contains
       end subroutine TEMPERATURE_material_CORE
 
 
+      subroutine general_hydrostatic_pressure(pres)
+      IMPLICIT NONE
+
+      REAL_T pres
+
+
+      pres=1.0D+6
+
+      return
+      end subroutine general_hydrostatic_pressure
+
 end module global_utility_module
 

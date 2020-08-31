@@ -232,12 +232,7 @@ subroutine EOS_MITSUHIRO_MELTING(rho,internal_energy,pressure, &
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- if (imattype.eq.24) then
-  pressure=rho*(DEF_VAPOR_GAMMA-1.0D0)*internal_energy
- else
-  print *,"imattype invalid EOS_MITSUHIRO_MELTING"
-  stop
- endif
+ call EOS_material_CORE(rho,internal_energy,pressure,imattype,im)
 
  return
 end subroutine EOS_MITSUHIRO_MELTING
@@ -251,13 +246,8 @@ subroutine SOUNDSQR_MITSUHIRO_MELTING(rho,internal_energy,soundsqr, &
  REAL_T, intent(out) :: soundsqr
  REAL_T pressure
 
- if (imattype.eq.24) then
-  call EOS_MITSUHIRO_MELTING(rho,internal_energy,pressure,imattype,im)
-  soundsqr=DEF_VAPOR_GAMMA*pressure/rho
- else
-  print *,"imattype invalid SOUNDSQR_MITSUHIRO_MELTING"
-  stop
- endif
+ call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
+   imattype,im)
 
  return
 end subroutine SOUNDSQR_MITSUHIRO_MELTING
@@ -271,8 +261,8 @@ subroutine INTERNAL_MITSUHIRO_MELTING(rho,temperature,local_internal_energy, &
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- call INTERNAL_default(rho,temperature,local_internal_energy, &
-        imattype,im)
+ call INTERNAL_material_CORE(rho,temperature,local_internal_energy, &
+   imattype,im)
 
  return
 end subroutine INTERNAL_MITSUHIRO_MELTING
@@ -286,8 +276,8 @@ subroutine TEMPERATURE_MITSUHIRO_MELTING(rho,temperature,internal_energy, &
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- call TEMPERATURE_default(rho,temperature,internal_energy, &
-        imattype,im)
+ call TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
+     imattype,im)
 
  return
 end subroutine TEMPERATURE_MITSUHIRO_MELTING

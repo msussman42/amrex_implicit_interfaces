@@ -1059,11 +1059,18 @@ INTEGER_T, intent(in) :: veldir,dir,side
 REAL_T, intent(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
+REAL_T temp
 
 if (nmat.eq.num_materials) then
  ! do nothing
 else
  print *,"nmat invalid"
+ stop
+endif
+if (probtype.eq.55) then
+ ! do nothing
+else
+ print *,"expecting probtype==55"
  stop
 endif
 velsolid_flag=0
@@ -1072,6 +1079,25 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
  call GENERAL_PHASE_CHANGE_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+
+ if ((veldir.eq.1).and.(dir.eq.1).and.(SDIM.eq.2)) then
+  if ((yblob10.gt.zero).and.(axis_dir.eq.6)) then
+   if((y.ge.yblob2).and.(y.le.yblob10)) then
+    temp = y-yblob2
+    local_VEL(1)=x_vel*(1.5d0*temp/yblob10 - half*(temp/yblob10)**3)
+   end if
+  end if
+ else if ((veldir.eq.2).and.(dir.eq.2).and.(side.eq.2).and.(SDIM.eq.2)) then
+  if (axis_dir.eq.7) then
+   for_dt=0
+   call acoustic_pulse_bc(time,local_VEL(veldir),xsten,nhalf,for_dt)
+  endif
+ else if ((veldir.eq.3).and.(dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then
+  if (axis_dir.eq.7) then
+   for_dt=0
+   call acoustic_pulse_bc(time,local_VEL(veldir),xsten,nhalf,for_dt)
+  endif
+ endif
  VEL=local_VEL(veldir)
 
 else
@@ -1108,6 +1134,23 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
  call GENERAL_PHASE_CHANGE_PRES(xghost,t,LS,PRES,nmat)
+ if (probtype.eq.55) then
+
+  base_pres=zero
+  if (fort_material_type(2).ne.0) then
+   call general_hydrostatic_pressure(base_pres)
+   PRES=base_pres
+   if (fort_material_type(1).eq.13) then 
+    call GENERAL_PHASE_CHANGE_hydro_pressure_density(xpos,rhohydro,PRES)
+   else if (axis_dir.eq.6) then
+    PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
+   endif
+  endif
+
+ else
+  print *,"expecting probtype.eq.55"
+  stop
+ endif
 
 else
  print *,"dir or side invalid"

@@ -4706,19 +4706,6 @@ end subroutine dynamic_contact_angle
       return
       end subroutine default_hydrostatic_pressure_density
 
-      subroutine general_hydrostatic_pressure(pres)
-      IMPLICIT NONE
-
-      REAL_T pres
-
-
-      pres=1.0D+6
-
-      return
-      end subroutine general_hydrostatic_pressure
-
-
-
 ! err is initialized already with the slope error
 ! pres_in comes from the pressure computed from the compressible
 ! projection method, not the equation of state.
@@ -20076,16 +20063,6 @@ END SUBROUTINE Adist
              stop
             else if (probtype.eq.110) then
              call get_bump_velocity(xsten,nhalf,dx,bfact,velcell(veldir),time)  ! xvel,xlo 
-            else if (probtype.eq.55) then ! xvel,xlo,velbc_override 2d
-             ! vel=solidvel in solid
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat)
-             ! Velocity boundary layer
-             if ((yblob10.gt.zero).and.(axis_dir.eq.6)) then
-              if((y.ge.yblob2).and.(y.le.yblob10)) then
-               temp = y-yblob2
-               velcell(1)=x_vel*(1.5d0*temp/yblob10 - half*(temp/yblob10)**3)
-              end if
-             end if
             else if (probtype.eq.59) then ! xvel,xlo,velbc_override 2d
              ! vel=solidvel in solid
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat)
@@ -20100,8 +20077,7 @@ END SUBROUTINE Adist
 
            else if (SDIM.eq.3) then
 
-            if ((probtype.eq.55).or. &
-                (probtype.eq.59).or. &
+            if ((probtype.eq.59).or. &
                 (probtype.eq.710)) then ! xvel,xlo,velbc_override 3d
                ! vel=solvel in sol
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat) 
@@ -20369,8 +20345,7 @@ END SUBROUTINE Adist
             ! ylo, yvel
             if (probtype.eq.532) then
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-            else if ((probtype.eq.55).or. &
-                     (probtype.eq.59).or. &
+            else if ((probtype.eq.59).or. &
                      (probtype.eq.710)) then
                ! vel=solvel in sol
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat) 
@@ -20586,16 +20561,6 @@ END SUBROUTINE Adist
              velcell(veldir)=vinletgas*(y/yblob-one) 
             else if (probtype.eq.58) then
              velcell(veldir)=zero
-            else if (probtype.eq.55) then ! xvel,xhi,velbc_override 2d
-             ! vel=solidvel in solid
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat)
-             ! Velocity boundary layer
-             if ((yblob10.gt.zero).and.(axis_dir.eq.6)) then
-              if((y.ge.yblob2).and.(y.le.yblob10)) then
-               temp = y-yblob2
-               velcell(1)=x_vel*(1.5d0*temp/yblob10 - half*(temp/yblob10)**3)
-              end if
-             end if
             else if (probtype.eq.59) then ! xvel,xhi,velbc_override 2d
              ! vel=solidvel in solid
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat)
@@ -20839,10 +20804,6 @@ END SUBROUTINE Adist
               stop
              endif
 
-             ! yhi,vely,2D
-            else if ((probtype.eq.55).and.(axis_dir.eq.7)) then
-             for_dt=0
-             call acoustic_pulse_bc(time,velcell(veldir),xsten,nhalf,for_dt)
             endif
 
            else if (SDIM.eq.3) then
@@ -20982,10 +20943,6 @@ END SUBROUTINE Adist
             velcell(veldir)=yblob9+(x-problox)*(yblob10-yblob9)/ &
                (probhix-problox)
 
-            ! zhi,velz,3D
-           else if ((probtype.eq.55).and.(axis_dir.eq.7)) then
-            for_dt=0
-            call acoustic_pulse_bc(time,velcell(veldir),xsten,nhalf,for_dt)
            else if (probtype.eq.29) then
             call deform3dww(velcell(veldir),x,y,z,time,dx)
            else if (probtype.eq.28) then
@@ -21394,9 +21351,6 @@ END SUBROUTINE Adist
           base_pres=outflow_pressure
         else if (probtype.eq.539) then  ! sup injector
          call general_hydrostatic_pressure(base_pres)
-        else if ((probtype.eq.55).and. &
-                 (fort_material_type(2).ne.0)) then
-         call general_hydrostatic_pressure(base_pres)
         else if ((probtype.eq.530).and. &  ! impinging jets
                  (axis_dir.eq.1).and. &
                  (fort_material_type(2).gt.0).and. &
@@ -21460,9 +21414,6 @@ END SUBROUTINE Adist
           else if (probtype.eq.539) then  ! supnozzle xlo - presBDRYCOND
            ADV=inflow_pressure ! inlet side is all gas
 
-           ! nucleate boiling xlo 2d  (presBDRYCOND)
-          else if ((probtype.eq.55).and.(axis_dir.eq.6)) then
-           ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           else if (probtype.eq.710) then
            ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           endif
@@ -21550,9 +21501,6 @@ END SUBROUTINE Adist
           else if (probtype.eq.539) then  ! supnozzle xhi - presBDRYCOND
            ADV=outflow_pressure
 
-           ! nucleate boiling xhi 2d
-          else if ((probtype.eq.55).and.(axis_dir.eq.6)) then 
-           ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           else if (probtype.eq.710) then
            ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           endif
@@ -21719,9 +21667,6 @@ END SUBROUTINE Adist
             stop
            endif
 
-           ! nucleate boiling yhi 2D
-          else if ((probtype.eq.55).and.(axis_dir.eq.6)) then 
-           ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           else if (probtype.eq.710) then
            ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           endif
