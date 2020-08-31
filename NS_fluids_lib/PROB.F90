@@ -1945,10 +1945,13 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T dir,dir2
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: time
+      REAL_T, intent(inout) :: uu
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T dir2
       INTEGER_T side
-      REAL_T uu,time,utest,uscale
-      REAL_T dx(SDIM)
+      REAL_T utest,uscale
       REAL_T xsten_dummy(-1:1,SDIM)
       INTEGER_T for_dt
       INTEGER_T nhalf
@@ -1960,109 +1963,106 @@ stop
        stop
       endif
 
-      if (dir.eq.adv_dir-1) then
-       if (probtype.eq.32) then ! flow past cylinder
-        uu=max(abs(uu),abs(adv_vel))
-        uu=max(abs(uu),abs(advbot))
+      if (is_in_probtype_list().eq.1) then
+
+       call SUB_CFL_HELPER(time,dir,uu,dx)
+
+      else
+
+       if (dir.eq.adv_dir-1) then
+        if (probtype.eq.32) then ! flow past cylinder
+         uu=max(abs(uu),abs(adv_vel))
+         uu=max(abs(uu),abs(advbot))
+        endif
+        if (probtype.eq.41) then ! pipe flow
+         uu=max(abs(uu),abs(adv_vel))
+         uu=max(abs(uu),abs(advbot))
+         uu=max(abs(uu),abs(vinletgas))
+        endif
        endif
-       if (probtype.eq.41) then ! pipe flow
-        uu=max(abs(uu),abs(adv_vel))
-        uu=max(abs(uu),abs(advbot))
-        uu=max(abs(uu),abs(vinletgas))
+       if (probtype.eq.1) then
+        if ((axis_dir.eq.150).or.(axis_dir.eq.151)) then
+         call shockdrop_maxvelocity(utest,axis_dir)
+         uu=max(abs(uu),abs(utest))
+        endif
        endif
-      endif
-      if (probtype.eq.1) then
-       if ((axis_dir.eq.150).or.(axis_dir.eq.151)) then
-        call shockdrop_maxvelocity(utest,axis_dir)
-        uu=max(abs(uu),abs(utest))
-       endif
-      endif
        
-      if (dir.eq.0) then
-       if ((probtype.eq.1).and.(axis_dir.eq.15)) then
+       if (dir.eq.0) then
+        if ((probtype.eq.1).and.(axis_dir.eq.15)) then
          ! u = U t
          ! U(t+k)k=h 
          ! k^2+k t = h/U
          ! k=(-t+sqrt(t^2+4h/U))/2=(2h/U)/(t+sqrt(t^2+4h/U))
          ! h/k=(t+sqrt(t^2+4h/U))U/2
-        uscale=abs(adv_vel)/two
-        if (time.lt.two) then
-         utest=(time+sqrt(time**2+four*dx(1)/uscale))
-         utest=utest*uscale/two
-        else
-         utest=abs(adv_vel)
+         uscale=abs(adv_vel)/two
+         if (time.lt.two) then
+          utest=(time+sqrt(time**2+four*dx(1)/uscale))
+          utest=utest*uscale/two
+         else
+          utest=abs(adv_vel)
+         endif
+         uu=max(abs(uu),utest)
+        else if ((probtype.eq.1).and.(axis_dir.lt.150).and. &
+                 (axis_dir.ge.0)) then
+         uu=max(abs(uu),abs(vinletgas))
+         if (SDIM.eq.2) then
+          uu=max(abs(uu),abs(adv_vel))
+         endif
         endif
-        uu=max(abs(uu),utest)
-       else if ((probtype.eq.1).and.(axis_dir.lt.150).and. &
-                (axis_dir.ge.0)) then
-        uu=max(abs(uu),abs(vinletgas))
-        if (SDIM.eq.2) then
-         uu=max(abs(uu),abs(adv_vel))
+        if (probtype.eq.5700) then
+         uu=max(abs(uu),abs(vinletgas))
         endif
-       endif
-       if (probtype.eq.5700) then
-        uu=max(abs(uu),abs(vinletgas))
-       endif
-      else if (dir.eq.1) then
+       else if (dir.eq.1) then
  
          ! advbot is inflow vel at base 
-       if (SDIM.eq.2) then
-        if ((probtype.eq.531).or. &
-            (probtype.eq.538).or. &  ! inputs.injA
+        if (SDIM.eq.2) then
+         if ((probtype.eq.531).or. &
+             (probtype.eq.538).or. &  ! inputs.injA
+             (probtype.eq.53).or. &
+             (probtype.eq.541)) then
+          uu=max(abs(uu),abs(advbot))
+         endif
+        endif
+        if (probtype.eq.5700) then
+         uu=max(abs(uu),abs(advbot))
+        endif
+        if (probtype.eq.5700) then
+         uu=max(abs(uu),abs(vinletgas))
+        endif
+
+       else if ((dir.eq.2).and.(SDIM.eq.3)) then
+        if (probtype.eq.36) then
+         uu=max(abs(uu),abs(yblob9))
+         uu=max(abs(uu),abs(yblob10))
+        endif
+         ! advbot is inflow vel at base  
+        if ((probtype.eq.537).or. &
+            (probtype.eq.538).or. &
             (probtype.eq.53).or. &
             (probtype.eq.541)) then
          uu=max(abs(uu),abs(advbot))
         endif
+       else
+        print *,"dir invalid check user defined velbc"
+        stop
        endif
-       if (probtype.eq.5700) then
-        uu=max(abs(uu),abs(advbot))
-       endif
-       if (probtype.eq.5700) then
-        uu=max(abs(uu),abs(vinletgas))
-       endif
-
-      else if ((dir.eq.2).and.(SDIM.eq.3)) then
-       if (probtype.eq.36) then
-        uu=max(abs(uu),abs(yblob9))
-        uu=max(abs(uu),abs(yblob10))
-       endif
-         ! advbot is inflow vel at base  
-       if ((probtype.eq.537).or. &
-           (probtype.eq.538).or. &
-           (probtype.eq.53).or. &
-           (probtype.eq.541)) then
-        uu=max(abs(uu),abs(advbot))
-       endif
-      else
-       print *,"dir invalid check user defined velbc"
-       stop
-      endif
 
        ! vinletgas is a prescribed boiling rate
-      if (probtype.eq.801) then
-       uu=max(abs(uu),abs(vinletgas)*fort_denconst(1)/fort_denconst(2))
-      endif
+       if (probtype.eq.801) then
+        uu=max(abs(uu),abs(vinletgas)*fort_denconst(1)/fort_denconst(2))
+       endif
 
-      if (probtype.eq.31) then
-       uu=max(abs(uu),abs(adv_vel))
-      endif
+       if (probtype.eq.31) then
+        uu=max(abs(uu),abs(adv_vel))
+       endif
 
-      if ((probtype.eq.701).and.(axis_dir.eq.2)) then
-       uu=max(abs(uu),abs(adv_vel))
-       uu=max(abs(uu),yblob*two*Pi)
-      endif 
-      if (probtype.eq.201) then
-       uu=max(abs(uu),abs(advbot))
-      endif 
-      if ((probtype.eq.55).and.(axis_dir.eq.7)) then
-       do dir2=1,SDIM
-       do side=-nhalf,nhalf
-        xsten_dummy(side,dir2)=dx(dir2)*half*side
-       enddo
-       enddo
-       for_dt=1
-       call acoustic_pulse_bc(time,utest,xsten_dummy,nhalf,for_dt)
-       uu=max(abs(uu),abs(utest))
+       if ((probtype.eq.701).and.(axis_dir.eq.2)) then
+        uu=max(abs(uu),abs(adv_vel))
+        uu=max(abs(uu),yblob*two*Pi)
+       endif 
+       if (probtype.eq.201) then
+        uu=max(abs(uu),abs(advbot))
+       endif 
       endif
 
       return
@@ -4426,38 +4426,33 @@ end subroutine dynamic_contact_angle
         xpos,rho,pres)
       IMPLICIT NONE
 
-      REAL_T xpos(SDIM)
-      REAL_T rho,pres
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(in) :: rho
+      REAL_T pres
 
 
        ! first material obeys TAIT EOS
       if (fort_material_type(1).eq.13) then
 
-       if ((probtype.eq.36).or. &   ! bubble in liquid
-           (probtype.eq.601).or. &  ! cooling disk
-           (probtype.eq.602)) then  ! Rayleigh-Taylor
-        if ((probtype.eq.36).and. &
-            (axis_dir.eq.10)) then
-         print *,"cannot use hydrostatic pressure for heat pipe experiment"
-         print *,"modify: tait_hydrostatic_pressure_density for microgravity"
-         stop
-        endif
-        call tait_hydrostatic_pressure_density(xpos,rho,pres)
-       else if (probtype.eq.55) then
-        if ((axis_dir.ge.0).and.(axis_dir.le.5)) then
-         ! do nothing (compressible drop)
-        else if (axis_dir.eq.6) then
-         print *,"axis_dir==6 is for incompressible nucleate boiling"
-         stop
-        else if (axis_dir.eq.7) then
+       if (is_in_probtype_list().eq.1) then
+        call SUB_hydro_pressure_density(xpos,rho,pres)
+       else
+
+        if ((probtype.eq.36).or. &   ! bubble in liquid
+            (probtype.eq.601).or. &  ! cooling disk
+            (probtype.eq.602)) then  ! Rayleigh-Taylor
+         if ((probtype.eq.36).and. &
+             (axis_dir.eq.10)) then
+          print *,"cannot use hydrostatic pressure for heat pipe experiment"
+          print *,"modify: tait_hydrostatic_pressure_density for microgravity"
+          stop
+         endif
          call tait_hydrostatic_pressure_density(xpos,rho,pres)
         else
-         print *,"axis_dir invalid"
+         print *,"expecting probtype=36,601, or 602"
          stop
         endif
-       else
-        print *,"expecting probtype=36,601, 55, or 602"
-        stop
+
        endif
 
       else
@@ -4477,34 +4472,39 @@ end subroutine dynamic_contact_angle
         xpos,rho,pres)
       IMPLICIT NONE
 
-      REAL_T xpos(SDIM)
-      REAL_T rho,pres
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(out) :: rho
+      REAL_T, intent(out) :: pres
       REAL_T denfree,zfree
       REAL_T den_top,z_top
       REAL_T z_at_depth
-      
 
+      if (is_in_probtype_list().eq.1) then
+
+       call SUB_hydro_pressure_density(xpos,rho,pres)
+
+      else
 
        ! in tait_hydrostatic_pressure_density
-      if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
+       if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
         rho=one
         call EOS_tait_ADIABATIC(rho,pres)
        ! JICF nozzle+pressure bc
-      else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
+       else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
         rho=one
         call EOS_tait_ADIABATIC(rho,pres)
         ! JICF
-      else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
+       else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
         rho=fort_denconst(1)
         call EOS_tait_ADIABATIC_rho(rho,pres)
        ! impinging jets
-      else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
-               (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
-       rho=fort_denconst(1)
-       call EOS_tait_ADIABATIC_rho(rho,pres)
+       else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
+                (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
+        rho=fort_denconst(1)
+        call EOS_tait_ADIABATIC_rho(rho,pres)
 
         ! in: tait_hydrostatic_pressure_density
-      else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
+       else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
 
         if (probloy.ne.zero) then
          print *,"probloy must be 0 for bubble jetting problem"
@@ -4524,37 +4524,7 @@ end subroutine dynamic_contact_angle
         endif
         call EOS_tait_ADIABATIC(rho,pres)
 
-       ! boiling in compressible liquid
-      else if ((probtype.eq.55).and.(axis_dir.eq.7)) then
-
-        if (SDIM.eq.2) then
-         z_at_depth=probloy
-         z_top=probhiy
-        else if (SDIM.eq.3) then
-         z_at_depth=probloz
-         z_top=probhiz
-        else
-         print *,"dimension bust tait_hydrostatic_pressure_density"
-         stop
-        endif
-
-        if (z_at_depth.ne.zero) then
-         print *,"z_at_depth must be 0 for compressible boiling problem"
-         stop
-        endif
-
-        den_top=fort_denconst(1)
-
-        if (xpos(SDIM).gt.z_top) then
-         rho=den_top ! atmos pressure at top of domain
-        else
-         rho= &
-           ((density_at_depth-den_top)/ &
-            (z_at_depth-z_top))*(xpos(SDIM)-z_top)+den_top
-        endif
-        call EOS_tait_ADIABATIC_rhohydro(rho,pres)
-
-      else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
+       else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
 
         if (probloy.ne.zero) then
          print *,"probloy must be 0 for cavitation problem"
@@ -4585,7 +4555,7 @@ end subroutine dynamic_contact_angle
         endif
         call EOS_tait_ADIABATIC(rho,pres)
 
-      else if (fort_material_type(1).eq.13) then
+       else if (fort_material_type(1).eq.13) then
 
         denfree=fort_denconst(1)
         if (SDIM.eq.2) then
@@ -4610,11 +4580,12 @@ end subroutine dynamic_contact_angle
             (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
         endif
         call EOS_tait_ADIABATIC_rhohydro(rho,pres)
-      else
+       else
         print *,"probtype invalid tait_hydrostatic_pressure_density"
         stop
-      endif
+       endif
 
+      endif
 
       return
       end subroutine tait_hydrostatic_pressure_density
@@ -6356,41 +6327,6 @@ end subroutine dynamic_contact_angle
 
       return
       end subroutine EOS_tait_rhohydro
-
-
-      subroutine EOS_tait_ADIABATIC_rhohydro(rho,pressure)
-      IMPLICIT NONE
-
-      REAL_T rho,pressure
-      REAL_T A,B,rhobar,pcav
-
-
-      A=A_TAIT   ! dyne/cm^2
-      B=B_TAIT  ! dyne/cm^2
-      rhobar=fort_denconst(1) ! g/cm^3
-
-      if (rhobar.lt.0.001) then
-       print *,"rhobar invalid in eos tait adiabatic rhohydro"
-       stop
-      endif
-
-      pcav=PCAV_TAIT
-
-      if (rho.le.zero) then
-       print *,"rho invalid"
-       stop
-      endif
-
-      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
-
-      if (pressure.lt.pcav) then
-       pressure=pcav
-      endif
-      
-
-      return
-      end subroutine EOS_tait_ADIABATIC_rhohydro
-
 
 
       subroutine SOUNDSQR_tait_rhohydro(rho,internal_energy,soundsqr)
@@ -24784,67 +24720,6 @@ END SUBROUTINE Adist
       return
       end subroutine SEM_MAC_TO_CELL
 
-       ! this is velocity boundary condition at the top of the domain.  
-      subroutine acoustic_pulse_bc(time,vel_pulse,xsten,nhalf,for_dt)
-      IMPLICIT NONE
-
-      INTEGER_T for_dt
-      REAL_T time
-      REAL_T vel_pulse
-      INTEGER_T nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T x,y,z
-
-      x=xsten(0,1)
-      y=xsten(0,2)
-      z=xsten(0,SDIM)
-
-      if ((time.ge.zero).and.(time.le.1.0e+20)) then
-       ! do nothing
-      else
-       print *,"time invalid"
-       stop
-      endif
-
-      if (abs(x)+abs(y)+abs(z).le.1.0e+20) then
-       ! do nothing
-      else
-       print *,"x,y, or z invalid"
-       stop
-      endif
-      if ((for_dt.eq.0).or.(for_dt.eq.1)) then
-       ! do nothing
-      else
-       print *,"for_dt invalid"
-       stop
-      endif
-
-      if ((probtype.eq.55).and.(axis_dir.eq.7)) then
-
-       vel_pulse=zero
-       
-       if (1.eq.1) then 
-
-        if (for_dt.eq.1) then
-         vel_pulse=200.0
-        else if (for_dt.eq.0) then 
-         if ((time.ge.5.0e-8).and.(time.le.5.0e-7)) then
-          vel_pulse=-200.0
-         endif
-        else
-         print *,"for_dt invalid"
-         stop
-        endif
-
-       endif
-
-      else
-       print *,"unexpected probtype and axis_dir"
-       stop
-      endif
-
-      return
-      end subroutine acoustic_pulse_bc 
 
        ! 1<=dir<=sdim  1<=side<=2
        ! 1<=veldir<=sdim
@@ -33222,6 +33097,7 @@ end subroutine initialize2d
        use TSPRAY_module
        use CAV2Dstep_module
        use ZEYU_droplet_impact_module
+       use GENERAL_PHASE_CHANGE_module
        use ICE_ON_SUBSTRATE_module
        use SIMPLE_PALMORE_DESJARDINS_module
        use MITSUHIRO_MELTING_module
@@ -33342,12 +33218,13 @@ end subroutine initialize2d
 ! 4. create new module file (e.g. by copying an existing module file)
 ! 5. update Make.package accordingly (2 places)
 ! 6. create inputs file
-       probtype_list_size=5
+       probtype_list_size=6
        used_probtypes(1)=2000 ! flexible_plate_impact
        used_probtypes(2)=421  ! CRYOGENIC_TANK1
        used_probtypes(3)=414  ! MITSUHIRO_MELTING
        used_probtypes(4)=2001 ! ICE_ON_SUBSTRATE
        used_probtypes(5)=2002 ! 1D TEST FROM PALMORE and Desjardins
+       used_probtypes(6)=55   ! GENERAL_PHASE_CHANGE
 
        if (probtype.eq.421) then
         SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
@@ -33425,6 +33302,23 @@ end subroutine initialize2d
         SUB_PRES_BC=>flexible_plate_impact_PRES_BC
         SUB_STATE_BC=>flexible_plate_impact_STATE_BC
         SUB_HEATSOURCE=>flexible_plate_impact_HEATSOURCE
+       else if (probtype.eq.55) then
+        SUB_INIT_MODULE=>INIT_GENERAL_PHASE_CHANGE_MODULE
+        SUB_LS=>GENERAL_PHASE_CHANGE_LS
+        SUB_VEL=>GENERAL_PHASE_CHANGE_VEL
+        SUB_EOS=>EOS_GENERAL_PHASE_CHANGE
+        SUB_SOUNDSQR=>SOUNDSQR_GENERAL_PHASE_CHANGE
+        SUB_INTERNAL=>INTERNAL_GENERAL_PHASE_CHANGE
+        SUB_TEMPERATURE=>TEMPERATURE_GENERAL_PHASE_CHANGE
+        SUB_PRES=>GENERAL_PHASE_CHANGE_PRES
+        SUB_STATE=>GENERAL_PHASE_CHANGE_STATE
+        SUB_LS_BC=>GENERAL_PHASE_CHANGE_LS_BC
+        SUB_VEL_BC=>GENERAL_PHASE_CHANGE_VEL_BC
+        SUB_PRES_BC=>GENERAL_PHASE_CHANGE_PRES_BC
+        SUB_STATE_BC=>GENERAL_PHASE_CHANGE_STATE_BC
+        SUB_HEATSOURCE=>GENERAL_PHASE_CHANGE_HEATSOURCE
+        SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
+        SUB_hydro_pressure_density=>GENERAL_PHASE_CHANGE_hydro_pressure_density
        else
         ! assign default stub routines here.
         SUB_INIT_MODULE=>NULL()

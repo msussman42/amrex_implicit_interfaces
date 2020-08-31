@@ -10205,5 +10205,40 @@ contains
       return
       end subroutine INTERNAL_default
 
+
+      subroutine EOS_tait_ADIABATIC_rhohydro(rho,pressure)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(out) :: pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait adiabatic rhohydro"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+
+      return
+      end subroutine EOS_tait_ADIABATIC_rhohydro
+
+
 end module global_utility_module
 

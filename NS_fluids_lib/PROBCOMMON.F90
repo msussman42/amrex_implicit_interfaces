@@ -242,6 +242,21 @@ implicit none
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
 
+      subroutine TEMPLATE_hydro_pressure_density( &
+                        xpos,rho,pres)
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(out) :: rho
+      REAL_T, intent(out) :: pres
+      end subroutine TEMPLATE_hydro_pressure_density
+
+      subroutine TEMPLATE_CFL_HELPER(time,dir,uu,dx)
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: time
+      REAL_T, intent(inout) :: uu
+      REAL_T, intent(in) :: dx(SDIM)
+      end subroutine TEMPLATE_CFL_HELPER
+
+
       subroutine TEMPLATE_SUMINT(GRID_DATA_IN,increment_out,nsum)
       use probcommon_module_types
 
@@ -397,6 +412,9 @@ implicit none
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
+      PROCEDURE(TEMPLATE_hydro_pressure_density), POINTER :: &
+              SUB_hydro_pressure_density
+      PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
