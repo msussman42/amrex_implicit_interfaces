@@ -39,6 +39,243 @@ return
 end subroutine INIT_GENERAL_PHASE_CHANGE_MODULE
 
 
+  ! in 2D, "y" is ignored
+  ! distance>0 in the drop
+  ! if maxtall<radnew-vert then the distance
+  ! to the ice part of the droplet is returned in dist
+  ! and the distance to the remaining liquid part *above* the ice
+  ! is returned in dist_truncate.
+  ! this routine is called if probtype=55, axis_dir=0,1, or 5
+subroutine drop_slope_dist(x,y,z,time,nmat, &
+   maxtall,dist,dist_truncate)
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x,y,z,time
+REAL_T, intent(out) :: dist,dist_truncate
+REAL_T, intent(in) :: maxtall
+INTEGER_T im,im_opp,im_3,iten_13,iten_23,imloop
+INTEGER_T iten
+REAL_T cos_angle,sin_angle
+REAL_T term1,Vtarget,radnew,vert,test_angle
+REAL_T xprime,yprime,zprime,rprime,rtop,rbot
+REAL_T xcheck,ycheck,zcheck
+INTEGER_T nten
+REAL_T xvec(SDIM)
+REAL_T marangoni_temp(nmat)
+INTEGER_T im_solid_substrate
+REAL_T, allocatable, dimension(:) :: user_tension
+
+if (probtype.eq.55) then
+
+ im_solid_substrate=im_solid_primary()
+
+ xvec(1)=x
+ xvec(2)=y
+ if (SDIM.eq.3) then
+  xvec(SDIM)=z
+ endif
+
+ if (nmat.ne.num_materials) then
+  print *,"nmat invalid"
+  stop
+ endif
+ nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+ allocate(user_tension(nten))
+
+ if (SDIM.eq.2) then
+  if (abs(y-z).gt.VOFTOL) then
+   print *,"y=z in 2d expected: drop_slope_dist"
+   print *,"x,y,z= ",x,y,z
+   stop
+  endif
+ endif
+ if (maxtall.le.zero) then
+  print *,"maxtall invalid"
+  stop
+ endif
+
+  ! in: drop_slope_dist 
+ if ((axis_dir.eq.0).or. &
+     (axis_dir.eq.5)) then
+
+  xcheck=xblob-xblob2
+  ycheck=yblob-yblob2
+  zcheck=zero
+  if (SDIM.eq.3) then
+   zcheck=zblob-zblob2
+  endif
+
+  if ((num_materials.ge.3).and. &
+      (im_solid_substrate.ge.3).and. &
+      (abs(xcheck).lt.1.0E-7).and. &
+      (abs(ycheck).lt.1.0E-7).and. &
+      (abs(zcheck).lt.1.0E-7)) then
+   im=1
+   im_opp=2
+   im_3=im_solid_substrate
+   call get_iten(im,im_opp,iten,num_materials)
+   do imloop=1,nmat
+    marangoni_temp(imloop)=293.0
+   enddo
+   call get_user_tension(xvec,time, &
+     fort_tension,user_tension, &
+     marangoni_temp, &
+     nmat,nten,1)
+     ! find angle between materials "im" and "im_3"
+   call get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
+    user_tension,nten,cos_angle,sin_angle)
+
+    ! angles other than 0 or pi are supported:
+    ! 0 < angle < pi
+   if (abs(cos_angle).lt.one-1.0E-2) then 
+
+    if (((SDIM.eq.3).and.(levelrz.eq.0)).or. &
+        ((SDIM.eq.2).and.(levelrz.eq.1))) then
+     term1=two/three-cos_angle+(cos_angle**3)/three
+     if (term1.le.zero) then
+      print *,"term1 invalid"
+      stop
+     endif
+         
+     Vtarget=half*(four/three)*Pi*(radblob**3)
+     radnew=(Vtarget/(Pi*term1))**(one/three)
+     vert=-radnew*cos_angle
+    else if ((SDIM.eq.2).and.(levelrz.eq.0)) then
+     test_angle=acos(abs(cos_angle))  ! 0<test_angle<=pi/2
+     if (cos_angle.ge.zero) then
+      term1=test_angle-half*sin(two*test_angle)
+     else
+      term1=Pi-test_angle+half*sin(two*test_angle)
+     endif
+     if (term1.le.zero) then
+      print *,"term1 invalid"
+      stop
+     endif
+     Vtarget=half*Pi*(radblob**2)
+     radnew=sqrt(Vtarget/term1)
+     vert=-radnew*cos_angle
+    else
+     print *,"dimension bust"
+     stop
+    endif
+      ! rotate clockwise
+      ! and shift "center" of inclined plane to origin
+      ! need to modify if rotate about y-z plane.
+    if (SDIM.eq.2) then
+     xprime=(x-xblob2)*cos(radblob2)+(z-yblob2)*sin(radblob2)
+     zprime=-(x-xblob2)*sin(radblob2)+(z-yblob2)*cos(radblob2)
+     rprime=abs(xprime)
+    else if (SDIM.eq.3) then
+     xprime=(x-xblob2)*cos(radblob2)+(z-zblob2)*sin(radblob2)
+     yprime=y-yblob2
+     zprime=-(x-xblob2)*sin(radblob2)+(z-zblob2)*cos(radblob2)
+     rprime=sqrt(xprime**2+yprime**2)
+    else
+     print *,"dimension bust"
+     stop
+    endif
+
+     ! dist>0 in the liquid drop
+    dist=radnew-sqrt(rprime**2+(zprime-vert)**2)
+    dist_truncate=dist
+
+     ! find distance to ice part of this droplet; also
+     ! find distance to remaining liquid part above the ice.
+    if (maxtall-vert.lt.radnew) then
+     rtop=sqrt(radnew**2-(maxtall-vert)**2)
+     rbot=sqrt(radnew**2-vert**2)
+
+      ! outside drop, and above the ice.
+     if ((dist.le.zero).and.(zprime.ge.maxtall)) then
+      dist_truncate=dist
+
+      ! inside the original drop.
+     else if ((zprime.le.maxtall).and.(rprime.le.rtop)) then
+      dist_truncate=zprime-maxtall
+
+      ! outside the original drop, off to side of ice.
+     else if ((zprime.le.maxtall).and.(rprime.ge.rtop)) then
+      dist_truncate=-sqrt((rprime-rtop)**2+(zprime-maxtall)**2)
+     else if (dist.ge.zero) then
+      if (dist.lt.zprime-maxtall) then
+       dist_truncate=dist
+      else
+       dist_truncate=zprime-maxtall
+      endif 
+     else
+      print *,"dist invalid drop_slope_dist"
+      stop
+     endif
+
+     if ((dist.lt.zero).and.(zprime.gt.vert+radnew)) then
+      dist=maxtall-zprime
+     else if ((dist.ge.zero).and.(zprime.ge.maxtall)) then
+      dist=maxtall-zprime
+     else if ((dist.ge.zero).and.(zprime.le.maxtall).and. &
+              (zprime.ge.half*maxtall)) then
+      if (dist.lt.maxtall-zprime) then
+       ! do nothing
+      else
+       dist=maxtall-zprime
+      endif
+     else if ((dist.ge.zero).and.(zprime.le.half*maxtall).and. &
+              (zprime.ge.zero)) then
+      if (dist.lt.zprime) then
+       ! do nothing
+      else
+       dist=zprime
+      endif
+     else if ((dist.ge.zero).and.(zprime.le.zero)) then
+      dist=zprime
+     else if ((dist.lt.zero).and.(zprime.lt.vert-radnew)) then
+      dist=zprime
+     else if ((dist.lt.zero).and.(zprime.ge.maxtall)) then
+      dist=-sqrt((rprime-rtop)**2+(zprime-maxtall)**2)
+     else if ((dist.lt.zero).and.(zprime.ge.zero)) then
+      ! do nothing
+     else if ((dist.lt.zero).and.(zprime.le.zero)) then
+      dist=-sqrt((rprime-rbot)**2+zprime**2)
+     else
+      print *,"dist or zprime invalid"
+      stop
+     endif 
+    endif !  maxtall-vert<radnew
+     
+   else
+    print *,"contact angle too close to 0 or pi for drop on slope"
+    print *,"probtype=",probtype
+    print *,"radblob=",radblob
+    print *,"radblob2=",radblob2
+    print *,"radblob4=",radblob4
+    print *,"radblob5=",radblob5
+    print *,"radblob6=",radblob6
+    print *,"radblob7=",radblob7
+    stop
+   endif
+
+  else
+   print *,"parameter conflict for probtype=55"
+   stop
+  endif
+
+ else
+  print *,"axis_dir incorrect   probtype,axis_dir=",probtype,axis_dir
+  stop
+ endif
+
+ deallocate(user_tension)
+
+else
+ print *,"probtype invalid in drop_slope_dist"
+ stop
+endif
+
+return
+end subroutine drop_slope_dist
+
+
  ! this is velocity boundary condition at the top of the domain.  
 subroutine acoustic_pulse_bc(time,vel_pulse,xsten,nhalf,for_dt)
 IMPLICIT NONE
