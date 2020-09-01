@@ -4325,7 +4325,9 @@ end subroutine dynamic_contact_angle
       REAL_T gravity_normalized
       REAL_T dt,rho,pres,liquid_temp
       INTEGER_T imat
+      INTEGER_T from_boundary_hydrostatic
 
+      from_boundary_hydrostatic=0
 
       if (for_hydro.ne.1) then
        print *,"for_hydro invalid"
@@ -4346,11 +4348,13 @@ end subroutine dynamic_contact_angle
 
        ! in: general_hydrostatic_pressure_density
       if ((probtype.eq.42).and.(SDIM.eq.2)) then ! bubble jetting
-       call tait_hydrostatic_pressure_density(xpos,rho,pres)
+       call tait_hydrostatic_pressure_density(xpos,rho,pres, &
+               from_boundary_hydrostatic)
       else if ((probtype.eq.46).and.(SDIM.eq.2)) then ! cavitation
 
        if ((axis_dir.ge.0).and.(axis_dir.le.10)) then
-        call tait_hydrostatic_pressure_density(xpos,rho,pres)
+        call tait_hydrostatic_pressure_density(xpos,rho,pres, &
+                from_boundary_hydrostatic)
        else if (axis_dir.eq.20) then ! no gravity for this test problem
         rho=one
         pres=zero
@@ -4361,7 +4365,8 @@ end subroutine dynamic_contact_angle
 
        ! rising bubble, compressible nucleate boiling
       else if (fort_material_type(1).eq.13) then 
-       call tait_hydrostatic_pressure_density(xpos,rho,pres)
+       call tait_hydrostatic_pressure_density(xpos,rho,pres, &
+               from_boundary_hydrostatic)
       else if (fort_material_type(1).eq.0) then
 
        if (override_density.eq.0) then
@@ -4427,15 +4432,18 @@ end subroutine dynamic_contact_angle
       IMPLICIT NONE
 
       REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(in) :: rho
-      REAL_T pres
+      REAL_T, intent(inout) :: rho
+      REAL_T, intent(inout) :: pres
+      INTEGER_T from_boundary_hydrostatic
 
+      from_boundary_hydrostatic=1
 
        ! first material obeys TAIT EOS
       if (fort_material_type(1).eq.13) then
 
        if (is_in_probtype_list().eq.1) then
-        call SUB_hydro_pressure_density(xpos,rho,pres)
+        call SUB_hydro_pressure_density(xpos,rho,pres, &
+                from_boundary_hydrostatic)
        else
 
         if ((probtype.eq.36).or. &   ! bubble in liquid
@@ -4447,7 +4455,8 @@ end subroutine dynamic_contact_angle
           print *,"modify: tait_hydrostatic_pressure_density for microgravity"
           stop
          endif
-         call tait_hydrostatic_pressure_density(xpos,rho,pres)
+         call tait_hydrostatic_pressure_density(xpos,rho,pres, &
+                 from_boundary_hydrostatic)
         else
          print *,"expecting probtype=36,601, or 602"
          stop
@@ -4469,19 +4478,21 @@ end subroutine dynamic_contact_angle
        ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
        ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
       subroutine tait_hydrostatic_pressure_density( &
-        xpos,rho,pres)
+        xpos,rho,pres,from_boundary_hydrostatic)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(out) :: rho
-      REAL_T, intent(out) :: pres
+      REAL_T, intent(inout) :: rho
+      REAL_T, intent(inout) :: pres
+      INTEGER_T, intent(in) :: from_boundary_hydrostatic
       REAL_T denfree,zfree
       REAL_T den_top,z_top
       REAL_T z_at_depth
 
       if (is_in_probtype_list().eq.1) then
 
-       call SUB_hydro_pressure_density(xpos,rho,pres)
+       call SUB_hydro_pressure_density(xpos,rho,pres, &
+               from_boundary_hydrostatic)
 
       else
 
@@ -4740,6 +4751,9 @@ end subroutine dynamic_contact_angle
       REAL_T temp_variation
       REAL_T pres_variation
       INTEGER_T dir,side,ii,jj,kk
+      INTEGER_T from_boundary_hydrostatic
+
+      from_boundary_hydrostatic=0
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -4867,7 +4881,8 @@ end subroutine dynamic_contact_angle
         endif
 
         if (imattype.eq.1) then  ! tait EOS
-         call tait_hydrostatic_pressure_density(xpos,atmos_den,atmos_pres)
+         call tait_hydrostatic_pressure_density(xpos,atmos_den,atmos_pres, &
+                 from_boundary_hydrostatic)
         else if ((imattype.ge.2).and. &
                  (imattype.le.fort_max_num_eos)) then
          call general_hydrostatic_pressure(atmos_pres)
@@ -21160,6 +21175,9 @@ END SUBROUTINE Adist
       REAL_T gravity_dz
       INTEGER_T local_dir
       REAL_T local_LS(num_materials)
+      INTEGER_T from_boundary_hydrostatic
+
+      from_boundary_hydrostatic=0
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid presBDRYCOND"
@@ -21441,15 +21459,19 @@ END SUBROUTINE Adist
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! xhi
            ADV=-fort_denconst(1)*abs(gravity)*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then
-           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                   from_boundary_hydrostatic)
           else if (probtype.eq.42) then ! bubble jetting 2D
-           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                   from_boundary_hydrostatic)
             ! in presBDRYCOND: 2d, xhi
           else if (probtype.eq.46) then ! cavitation 2D
            if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                    from_boundary_hydrostatic)
            else if (axis_dir.eq.10) then
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                    from_boundary_hydrostatic)
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else
@@ -21516,14 +21538,18 @@ END SUBROUTINE Adist
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! ylo
            ADV=-fort_denconst(1)*abs(gravity)*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then
-           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                   from_boundary_hydrostatic)
           else if (probtype.eq.42) then ! bubble jetting 2D
-           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                   from_boundary_hydrostatic)
           else if (probtype.eq.46) then ! cavitation ylo 2D
            if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                    from_boundary_hydrostatic)
            else if (axis_dir.eq.10) then
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                    from_boundary_hydrostatic)
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else
@@ -21611,7 +21637,8 @@ END SUBROUTINE Adist
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then
            ADV=-fort_denconst(1)*abs(gravity)*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! yhi
-           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                   from_boundary_hydrostatic)
            ! yhi, presBDRYCOND, 2D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (y.le.waterdepth) then
@@ -21620,12 +21647,15 @@ END SUBROUTINE Adist
             ADV=-fort_denconst(2)*abs(gravity)*(y-waterdepth)
            endif
           else if (probtype.eq.42) then ! bubble jetting 2D
-           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                   from_boundary_hydrostatic)
           else if (probtype.eq.46) then ! cavitation yhi 2D
            if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                    from_boundary_hydrostatic)
            else if (axis_dir.eq.10) then
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV)
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                    from_boundary_hydrostatic)
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else
@@ -27926,6 +27956,7 @@ end subroutine initialize2d
        use TSPRAY_module
        use CAV2Dstep_module
        use ZEYU_droplet_impact_module
+       use STUB_module
        use GENERAL_PHASE_CHANGE_module
        use ICE_ON_SUBSTRATE_module
        use SIMPLE_PALMORE_DESJARDINS_module
@@ -28055,6 +28086,27 @@ end subroutine initialize2d
        used_probtypes(5)=2002 ! 1D TEST FROM PALMORE and Desjardins
        used_probtypes(6)=55   ! GENERAL_PHASE_CHANGE
 
+       SUB_INIT_MODULE=>INIT_STUB_MODULE
+       SUB_LS=>STUB_LS
+       SUB_VEL=>STUB_VEL
+       SUB_EOS=>EOS_STUB
+       SUB_SOUNDSQR=>SOUNDSQR_STUB
+       SUB_INTERNAL=>INTERNAL_STUB
+       SUB_TEMPERATURE=>TEMPERATURE_STUB
+       SUB_PRES=>STUB_PRES
+       SUB_STATE=>STUB_STATE
+       SUB_LS_BC=>STUB_LS_BC
+       SUB_VEL_BC=>STUB_VEL_BC
+       SUB_PRES_BC=>STUB_PRES_BC
+       SUB_STATE_BC=>STUB_STATE_BC
+       SUB_HEATSOURCE=>STUB_HEATSOURCE
+       SUB_EB_heat_source=>STUB_EB_heat_source
+       SUB_microcell_heat_coeff=>STUB_microcell_heat_coeff
+       SUB_velfreestream=>STUB_velfreestream
+       SUB_nucleation=>STUB_nucleation
+       SUB_CFL_HELPER=>STUB_CFL_HELPER
+       SUB_hydro_pressure_density=>STUB_hydro_pressure_density
+
        if (probtype.eq.421) then
         SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
         SUB_LS=>CRYOGENIC_TANK1_LS
@@ -28153,7 +28205,8 @@ end subroutine initialize2d
         SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
         SUB_hydro_pressure_density=>GENERAL_PHASE_CHANGE_hydro_pressure_density
        else
-        ! assign default stub routines here.
+        ! assign null routines here that would cause the program to abort
+        ! if called.
         SUB_INIT_MODULE=>NULL()
         SUB_LS=>NULL()
         SUB_VEL=>NULL()
@@ -28168,6 +28221,12 @@ end subroutine initialize2d
         SUB_PRES_BC=>NULL()
         SUB_STATE_BC=>NULL()
         SUB_HEATSOURCE=>NULL()
+        SUB_EB_heat_source=>NULL()
+        SUB_microcell_heat_coeff=>NULL()
+        SUB_velfreestream=>NULL()
+        SUB_nucleation=>NULL()
+        SUB_CFL_HELPER=>NULL()
+        SUB_hydro_pressure_density=>NULL()
        endif
 
        global_pressure_scale=one
@@ -33432,6 +33491,9 @@ end subroutine initialize2d
        INTEGER_T local_ibase
        INTEGER_T tessellate
        INTEGER_T bcflag
+       INTEGER_T from_boundary_hydrostatic
+
+       from_boundary_hydrostatic=0
 
        tessellate=0
 
@@ -33873,7 +33935,7 @@ end subroutine initialize2d
               (SDIM.eq.2)) then
            if (im.eq.1) then
             call tait_hydrostatic_pressure_density(xpos, &
-             rhohydro,preshydro)
+             rhohydro,preshydro,from_boundary_hydrostatic)
             scalc(ibase+1)=rhohydro
            else if (im.eq.2) then
             e_jwl=4.2814D+10
@@ -34146,7 +34208,7 @@ end subroutine initialize2d
            if (im.eq.1) then
 
             call tait_hydrostatic_pressure_density(xpos, &
-             rhohydro,preshydro)
+             rhohydro,preshydro,from_boundary_hydrostatic)
             scalc(ibase+1)=rhohydro
 
            endif  ! im=1
@@ -34157,7 +34219,8 @@ end subroutine initialize2d
           if ((probtype.eq.42).and.(axis_dir.eq.1)) then
            if (im.eq.1) then
 
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro)
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+                    from_boundary_hydrostatic)
             scalc(ibase+1)=rhohydro
    
            else if (im.eq.2) then
@@ -34184,7 +34247,8 @@ end subroutine initialize2d
            if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
             if (im.eq.1) then ! water
 
-             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro)
+             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+                     from_boundary_hydrostatic)
              scalc(ibase+1)=rhohydro
 
             else if (im.eq.2) then ! jwl
@@ -34211,7 +34275,8 @@ end subroutine initialize2d
             endif
            else if (axis_dir.eq.10) then
             if (im.eq.1) then ! water
-             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro)
+             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+                     from_boundary_hydrostatic)
              scalc(ibase+1)=rhohydro
             endif
            else if (axis_dir.eq.20) then

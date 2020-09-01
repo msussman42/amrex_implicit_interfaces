@@ -1230,49 +1230,6 @@ module global_utility_module
 
 implicit none
 
-      type nucleation_parm_type_input
-       INTEGER_T :: tid
-       INTEGER_T :: local_freezing_model
-       REAL_T :: LL
-       INTEGER_T :: i,j,k
-       INTEGER_T :: im_source
-       INTEGER_T :: im_dest
-       REAL_T :: dxmaxLS
-       INTEGER_T :: bfact
-       INTEGER_T :: level
-       INTEGER_T :: finest_level
-       REAL_T, pointer :: dx(:)
-       REAL_T, pointer :: xlo(:)
-       INTEGER_T :: nmat
-       INTEGER_T :: nten
-       INTEGER_T :: nstate
-       INTEGER_T, pointer :: fablo(:)
-       INTEGER_T, pointer :: fabhi(:)
-       INTEGER_T :: DIMDEC(EOS)
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
-       INTEGER_T :: DIMDEC(LSnew)
-       INTEGER_T :: DIMDEC(Snew)
-       INTEGER_T :: DIMDEC(pres)
-       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
-       INTEGER_T :: DIMDEC(pres_eos)
-       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres_eos
-       INTEGER_T :: custom_nucleation_model
-       INTEGER_T :: do_the_nucleate
-       INTEGER_T :: nucleate_pos_size
-       REAL_T, pointer :: nucleate_pos(:)
-       REAL_T, pointer :: nucleation_temp(:)
-       REAL_T, pointer :: nucleation_pressure(:)
-       REAL_T, pointer :: nucleation_pmg(:)
-       REAL_T, pointer :: nucleation_mach(:)
-       REAL_T, pointer :: cavitation_pressure(:)
-       REAL_T, pointer :: cavitation_vapor_density(:)
-       REAL_T, pointer :: cavitation_tension(:)
-       REAL_T :: local_TSAT
-       REAL_T :: prev_time
-       REAL_T :: cur_time
-       REAL_T :: dt
-      end type nucleation_parm_type_input
-
       type nucleation_parm_type_inout
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSnew
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: Snew
@@ -10207,6 +10164,7 @@ contains
 
 
       subroutine EOS_tait_ADIABATIC_rhohydro(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: rho
@@ -10241,6 +10199,7 @@ contains
 
         ! ice behaves like rigid solid where dist>0
       subroutine ice_substrate_distance(x,y,z,dist)
+      use probcommon_module
       IMPLICIT NONE
       
       REAL_T, intent(in) :: x,y,z
@@ -10276,6 +10235,7 @@ contains
         ! Sato and Niceno or Tryggvason
         ! (probtype.eq.55) and ((axis_dir.eq.6).or.(axis_dir.eq.7))
       subroutine nucleation_sites(xsten,nhalf,dx,bfact,dist,nucleate_pos)
+      use probcommon_module
 
       IMPLICIT NONE
 
@@ -10350,6 +10310,7 @@ contains
 
 
       subroutine get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T A,B,GAMMA,R1,R2,RHOI
@@ -10387,6 +10348,7 @@ contains
 
 
       subroutine INTERNAL_jwl(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -10407,6 +10369,7 @@ contains
       end subroutine INTERNAL_jwl
 
       subroutine TEMPERATURE_jwl(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -10427,6 +10390,7 @@ contains
       end subroutine
 
       subroutine ENTROPY_jwl(rho,internal_energy,entropy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure,entropy,press_adiabat
@@ -10443,6 +10407,7 @@ contains
       end subroutine ENTROPY_jwl
 
       subroutine INTERNAL_ENTROPY_jwl(rho,entropy,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,entropy,internal_energy
@@ -10475,6 +10440,7 @@ contains
  
 ! e=(E/rho) - (1/2) (u^2 + v^2)
       subroutine EOS_NAjwl(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -10507,6 +10473,7 @@ contains
 ! initial sound speed is:
 ! C=7.8039D+10-5.484D+12 e^(-4.94)-0.09375D+12 e^(-1.21)=
       subroutine SOUNDSQR_NAjwl(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -10549,6 +10516,7 @@ contains
 
 ! e=(E/rho) - (1/2) (u^2 + v^2)
       subroutine EOS_jwlADIABAT(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -10589,6 +10557,7 @@ contains
       end subroutine
 
       subroutine SOUNDSQR_jwlADIABAT(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -10640,6 +10609,7 @@ contains
 ! table: c_1, c_2, c_3, m, n
 ! rho  g/cm^3=rho/1000 kg/cm^3=rho 10^6/10^3  kg/m^3 = 1000 rho kg/m^3
       subroutine EOS_peng_robinson(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -10732,6 +10702,7 @@ contains
 
 ! c^2 = dp/drho + p dp/de / rho^2
       subroutine SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr,pressure
@@ -10765,6 +10736,7 @@ contains
       end subroutine SOUNDSQR_peng_robinson
 
       subroutine INTERNAL_peng_robinson(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -10784,6 +10756,7 @@ contains
       end subroutine INTERNAL_peng_robinson
 
       subroutine TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -10823,6 +10796,7 @@ contains
 ! b)
 ! another modification: P=P(rho,e)-P(rho0,e0)+P0
       subroutine EOS_tillotson(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure,strain
@@ -10897,6 +10871,7 @@ contains
 
 ! c^2 = dp/drho + p dp/de / rho^2
       subroutine SOUNDSQR_tillotson(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr,pressure
@@ -10937,6 +10912,7 @@ contains
 
 
       subroutine INTERNAL_tillotson(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -10954,6 +10930,7 @@ contains
 
 
       subroutine TEMPERATURE_tillotson(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -10974,6 +10951,7 @@ contains
 ! nozzles, Schmidt et al, Atomization and Sprays, vol 9, 255-276 (1999)
 ! units must be CGS
       subroutine EOS_cav_nozzle(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -11049,6 +11027,7 @@ contains
 
 
       subroutine SOUNDSQR_cav_nozzle(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -11099,6 +11078,7 @@ contains
       end subroutine SOUNDSQR_cav_nozzle
 
       subroutine INTERNAL_cav_nozzle(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11116,6 +11096,7 @@ contains
 
 
       subroutine TEMPERATURE_cav_nozzle(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11133,6 +11114,7 @@ contains
 
 
       subroutine INTERNAL_tait(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11153,6 +11135,7 @@ contains
 
 
       subroutine INTERNAL_tait_vacuum(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11173,6 +11156,7 @@ contains
 
 
       subroutine TEMPERATURE_tait(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11193,6 +11177,7 @@ contains
 
 
       subroutine TEMPERATURE_tait_vacuum(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11213,6 +11198,7 @@ contains
 
 
       subroutine EOS_tait(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -11244,6 +11230,7 @@ contains
       end subroutine EOS_tait
 
       subroutine EOS_tait_ADIABATIC(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,pressure
@@ -11272,6 +11259,7 @@ contains
 
 
       subroutine EOS_tait_vacuum(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,pressure
@@ -11302,6 +11290,7 @@ contains
 
 
       subroutine SOUNDSQR_tait(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -11342,6 +11331,7 @@ contains
 
 
       subroutine SOUNDSQR_tait_vacuum(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -11384,6 +11374,7 @@ contains
 
 
       subroutine DeDT_dodecane(rho_in,T_in,DeDT)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,rho_in,T,T_in,DeDT
@@ -11443,6 +11434,7 @@ contains
 
 
       subroutine INTERNAL_dodecane(rho_in,T_in,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho_in,T_in
@@ -11499,6 +11491,7 @@ contains
 
 
       subroutine TEMPERATURE_dodecane(rho_in,T,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho_in
@@ -11580,6 +11573,7 @@ contains
 
 
       subroutine EOS_dodecane(rho_in,internal_energy,T,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho_in
@@ -11629,6 +11623,7 @@ contains
       end subroutine EOS_dodecane
 
       subroutine EOS_dodecane_ADIABATIC(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
       
       REAL_T rho,pressure
@@ -11655,6 +11650,7 @@ contains
 
 
       subroutine SOUNDSQR_dodecane(rho_in,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho_in
@@ -11723,6 +11719,7 @@ contains
 
 
       subroutine INTERNAL_tait_rho(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11743,6 +11740,7 @@ contains
       end subroutine INTERNAL_tait_rho
 
       subroutine TEMPERATURE_tait_rho(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11763,6 +11761,7 @@ contains
       end subroutine TEMPERATURE_tait_rho
 
       subroutine EOS_tait_rho(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -11800,6 +11799,7 @@ contains
 
 
       subroutine EOS_tait_ADIABATIC_rho(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,pressure
@@ -11835,6 +11835,7 @@ contains
 
 
       subroutine SOUNDSQR_tait_rho(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -11882,6 +11883,7 @@ contains
 
 
       subroutine INTERNAL_tait_rhohydro(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11902,6 +11904,7 @@ contains
       end subroutine INTERNAL_tait_rhohydro
 
       subroutine TEMPERATURE_tait_rhohydro(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -11922,6 +11925,7 @@ contains
       end subroutine TEMPERATURE_tait_rhohydro
 
       subroutine EOS_tait_rhohydro(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -11960,6 +11964,7 @@ contains
 
 
       subroutine SOUNDSQR_tait_rhohydro(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -12008,6 +12013,7 @@ contains
 
 
       subroutine INTERNAL_tait_rho3(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -12028,6 +12034,7 @@ contains
       end subroutine INTERNAL_tait_rho3
 
       subroutine TEMPERATURE_tait_rho3(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -12048,6 +12055,7 @@ contains
       end subroutine TEMPERATURE_tait_rho3
 
       subroutine EOS_tait_rho3(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -12091,6 +12099,7 @@ contains
 
 
       subroutine EOS_tait_ADIABATIC_rho3(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,pressure
@@ -12131,6 +12140,7 @@ contains
 
 
       subroutine SOUNDSQR_tait_rho3(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -12185,6 +12195,7 @@ contains
 
 
       subroutine INTERNAL_tait_rho2(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -12205,6 +12216,7 @@ contains
       end subroutine INTERNAL_tait_rho2
 
       subroutine TEMPERATURE_tait_rho2(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -12225,6 +12237,7 @@ contains
       end subroutine TEMPERATURE_tait_rho2
 
       subroutine EOS_tait_rho2(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -12268,6 +12281,7 @@ contains
 
 
       subroutine EOS_tait_ADIABATIC_rho2(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,pressure
@@ -12308,6 +12322,7 @@ contains
 
 
       subroutine SOUNDSQR_tait_rho2(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -12360,6 +12375,7 @@ contains
 
 
       subroutine INTERNAL_koren_rho2(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -12380,6 +12396,7 @@ contains
       end subroutine
 
       subroutine TEMPERATURE_koren_rho2(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -12400,6 +12417,7 @@ contains
       end subroutine
 
       subroutine EOS_koren_rho2(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -12455,6 +12473,7 @@ contains
 
 
       subroutine EOS_koren_ADIABATIC_rho2(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,pressure
@@ -12496,6 +12515,7 @@ contains
 
 
       subroutine SOUNDSQR_koren_rho2(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -12548,6 +12568,7 @@ contains
 
 
       subroutine INTERNAL_koren_rho1(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -12568,6 +12589,7 @@ contains
       end subroutine
 
       subroutine TEMPERATURE_koren_rho1(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,cv
@@ -12588,6 +12610,7 @@ contains
       end subroutine
 
       subroutine EOS_koren_rho1(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure
@@ -12643,6 +12666,7 @@ contains
 
 
       subroutine EOS_koren_ADIABATIC_rho1(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,pressure
@@ -12684,6 +12708,7 @@ contains
 
 
       subroutine SOUNDSQR_koren_rho1(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,soundsqr
@@ -12745,6 +12770,7 @@ contains
        ! to 1 for (a) inputs.shockturbulence, (b) Gary Sod test problem
        ! inputs.sod, (c) inputs.strong, (d) inputs.mach4
       subroutine simple_air_parms(R,cp,cv,gamma_constant,omega)
+      use probcommon_module
       IMPLICIT NONE
       REAL_T R,cp,cv,gamma_constant,omega
 
@@ -12761,6 +12787,7 @@ contains
 
 
       subroutine air_parms(R,cp,cv,gamma_constant,omega)
+      use probcommon_module
       IMPLICIT NONE
       REAL_T R,cp,cv,gamma_constant,omega
 
@@ -12775,6 +12802,7 @@ contains
 
 
       subroutine EOS_air_rho2(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure,omega
@@ -12825,6 +12853,7 @@ contains
 
 
       subroutine EOS_air_rho2_ADIABAT(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,gamma_constant,pressure
@@ -12872,6 +12901,7 @@ contains
 
 
       subroutine ENTROPY_air_rho2(rho,internal_energy,entropy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure,entropy,press_adiabat
@@ -12888,6 +12918,7 @@ contains
       end subroutine ENTROPY_air_rho2
 
       subroutine INTERNAL_ENTROPY_air_rho2(rho,entropy,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,entropy,internal_energy
@@ -12917,6 +12948,7 @@ contains
 
 
       subroutine SOUNDSQR_air_rho2(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure,omega
@@ -12966,6 +12998,7 @@ contains
 
 
       subroutine INTERNAL_air_rho2(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -12999,6 +13032,7 @@ contains
 
 
       subroutine TEMPERATURE_air_rho2(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13047,6 +13081,7 @@ contains
 
 
       subroutine EOS_air(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13084,6 +13119,7 @@ contains
 
 
       subroutine EOS_simple_air(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13114,6 +13150,7 @@ contains
 
 
       subroutine EOS_air_ADIABAT(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,gamma_constant,pressure
@@ -13147,6 +13184,7 @@ contains
       end subroutine EOS_air_ADIABAT
 
       subroutine get_rhocav(rho)
+      use probcommon_module
       IMPLICIT NONE
        
       REAL_T rho
@@ -13162,6 +13200,7 @@ contains
       end subroutine get_rhocav
 
       subroutine EOS_vacuum(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,gamma_constant,pressure
@@ -13195,6 +13234,7 @@ contains
 
 
       subroutine ENTROPY_air(rho,internal_energy,entropy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure,entropy,press_adiabat
@@ -13211,6 +13251,7 @@ contains
       end subroutine ENTROPY_air
 
       subroutine INTERNAL_ENTROPY_air(rho,entropy,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,entropy,internal_energy
@@ -13242,6 +13283,7 @@ contains
          ! He+28 percent air
 
       subroutine EOS_Marquina(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13283,6 +13325,7 @@ contains
 
 
       subroutine SOUNDSQR_air(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13315,6 +13358,7 @@ contains
 
 
       subroutine SOUNDSQR_simple_air(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13350,6 +13394,7 @@ contains
          ! He+28 percent air
 
       subroutine SOUNDSQR_Marquina(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13386,6 +13431,7 @@ contains
 
 
       subroutine INTERNAL_air(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13419,6 +13465,7 @@ contains
 
 
       subroutine INTERNAL_simple_air(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13451,6 +13498,7 @@ contains
        ! He+28 percent air
 
       subroutine INTERNAL_Marquina(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13486,6 +13534,7 @@ contains
 
 
       subroutine TEMPERATURE_air(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13517,6 +13566,7 @@ contains
 
 
       subroutine TEMPERATURE_simple_air(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13550,6 +13600,7 @@ contains
         ! He+28 percent air
 
       subroutine TEMPERATURE_Marquina(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13592,6 +13643,7 @@ contains
 !
 
       subroutine SOUNDSQR_airADIABAT(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13632,6 +13684,7 @@ contains
 
 
       subroutine SOUNDSQR_vacuum(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13673,6 +13726,7 @@ contains
 
  
       subroutine INTERNAL_airADIABAT(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13704,6 +13758,7 @@ contains
 
 
       subroutine INTERNAL_vacuum(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13734,6 +13789,7 @@ contains
       end subroutine INTERNAL_vacuum
 
       subroutine TEMPERATURE_airADIABAT(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13765,6 +13821,7 @@ contains
 
 
       subroutine TEMPERATURE_vacuum(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -13815,6 +13872,7 @@ contains
 ! gamma=cp/cv=0.664/0.607=1.09
 
       subroutine SF6_parms(R,cp,cv,gamma_constant,omega)
+      use probcommon_module
       IMPLICIT NONE
       REAL_T R,cp,cv,gamma_constant,omega
 
@@ -13828,6 +13886,7 @@ contains
       end subroutine SF6_parms
 
       subroutine EOS_SF6(rho,internal_energy,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -13858,6 +13917,7 @@ contains
 
 
       subroutine EOS_SF6_ADIABAT(rho,pressure)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,gamma_constant,pressure
@@ -13885,6 +13945,7 @@ contains
       end subroutine EOS_SF6_ADIABAT
 
       subroutine ENTROPY_SF6(rho,internal_energy,entropy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,pressure,entropy,press_adiabat
@@ -13901,6 +13962,7 @@ contains
       end subroutine ENTROPY_SF6
 
       subroutine INTERNAL_ENTROPY_SF6(rho,entropy,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,entropy,internal_energy
@@ -13927,6 +13989,7 @@ contains
       end subroutine INTERNAL_ENTROPY_SF6
 
       subroutine TEMPERATURE_ENTROPY_SF6(rho,entropy,temperature)
+      use probcommon_module
       IMPLICIT NONE
       
       REAL_T R,cp,cv,gamma_constant,omega 
@@ -13952,6 +14015,7 @@ contains
       end subroutine TEMPERATURE_ENTROPY_SF6
 
       subroutine ENTROPY_TEMPERATURE_SF6(rho,temperature,entropy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T R,cp,cv,gamma_constant,omega 
@@ -13984,6 +14048,7 @@ contains
 !   (gamma-1)e+(gamma-1) e (gamma-1)=(p/rho)(1+(gamma-1))=gamma p/rho
 ! 
       subroutine SOUNDSQR_SF6(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure
@@ -14016,6 +14081,7 @@ contains
 
 
       subroutine INTERNAL_SF6(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -14047,6 +14113,7 @@ contains
 
 
       subroutine TEMPERATURE_SF6(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -14078,7 +14145,7 @@ contains
 
 
       subroutine EOS_stiffened(rho,internal_energy,pressure,im)
-      use global_utility_module
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T im
@@ -14132,7 +14199,7 @@ contains
       end subroutine
 
       subroutine SOUNDSQR_stiffened(rho,internal_energy,soundsqr,im)
-      use global_utility_module
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T im
@@ -14191,7 +14258,7 @@ contains
 
 
       subroutine INTERNAL_stiffened(rho,temperature,internal_energy,im)
-      use global_utility_module
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T im
@@ -14245,7 +14312,7 @@ contains
 
       subroutine TEMPERATURE_stiffened(rho,temperature, &
         internal_energy,im)
-      use global_utility_module
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T im
@@ -14308,6 +14375,7 @@ contains
 !   (gamma-1)e+(gamma-1) e (gamma-1)=(p/rho)(1+(gamma-1))=gamma p/rho
 ! 
       subroutine SOUNDSQR_SF6ADIABAT(rho,internal_energy,soundsqr)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,internal_energy,gamma_constant,pressure,omega
@@ -14341,6 +14409,7 @@ contains
 
 
       subroutine INTERNAL_SF6ADIABAT(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -14372,6 +14441,7 @@ contains
 
 
       subroutine TEMPERATURE_SF6ADIABAT(rho,temperature,internal_energy)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T rho,temperature,internal_energy,gamma_constant
@@ -14404,6 +14474,7 @@ contains
 
       subroutine EOS_material_CORE(rho,internal_energy,pressure, &
         imattype,im)
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -14483,7 +14554,7 @@ contains
         ! sound squared=c^2(density=rho,internal_energy)
       subroutine SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
         imattype,im)
-      use global_utility_module
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -14559,6 +14630,7 @@ contains
         ! internal energy = e(temperature,density=rho)
       subroutine INTERNAL_material_CORE(rho,temperature,internal_energy, &
         imattype,im)
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -14636,9 +14708,9 @@ contains
       end subroutine INTERNAL_material_CORE
 
 
-      subroutine TEMPERATURE_material_CORE(rho,temperature,internal_energy_in, &
+      subroutine TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
         imattype,im)
-      use global_utility_module
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -14722,6 +14794,7 @@ contains
 
 
       subroutine general_hydrostatic_pressure(pres)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T pres
@@ -14734,6 +14807,7 @@ contains
 
 
       subroutine rampvel(time,vel)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: time
@@ -14767,6 +14841,7 @@ contains
       end subroutine rampvel
 
       subroutine default_rampvel(time,xx_vel,yy_vel,zz_vel)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: time
@@ -14820,6 +14895,242 @@ contains
 
       return
       end subroutine default_rampvel
+
+  ! in 2D, "y" is ignored
+  ! distance>0 in the drop
+  ! if maxtall<radnew-vert then the distance
+  ! to the ice part of the droplet is returned in dist
+  ! and the distance to the remaining liquid part *above* the ice
+  ! is returned in dist_truncate.
+  ! this routine is called if probtype=55, axis_dir=0,1, or 5
+subroutine drop_slope_dist(x,y,z,time,nmat, &
+   maxtall,dist,dist_truncate)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x,y,z,time
+REAL_T, intent(out) :: dist,dist_truncate
+REAL_T, intent(in) :: maxtall
+INTEGER_T im,im_opp,im_3,iten_13,iten_23,imloop
+INTEGER_T iten
+REAL_T cos_angle,sin_angle
+REAL_T term1,Vtarget,radnew,vert,test_angle
+REAL_T xprime,yprime,zprime,rprime,rtop,rbot
+REAL_T xcheck,ycheck,zcheck
+INTEGER_T nten
+REAL_T xvec(SDIM)
+REAL_T marangoni_temp(nmat)
+INTEGER_T im_solid_substrate
+REAL_T, allocatable, dimension(:) :: user_tension
+
+if (probtype.eq.55) then
+
+ im_solid_substrate=im_solid_primary()
+
+ xvec(1)=x
+ xvec(2)=y
+ if (SDIM.eq.3) then
+  xvec(SDIM)=z
+ endif
+
+ if (nmat.ne.num_materials) then
+  print *,"nmat invalid"
+  stop
+ endif
+ nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+ allocate(user_tension(nten))
+
+ if (SDIM.eq.2) then
+  if (abs(y-z).gt.VOFTOL) then
+   print *,"y=z in 2d expected: drop_slope_dist"
+   print *,"x,y,z= ",x,y,z
+   stop
+  endif
+ endif
+ if (maxtall.le.zero) then
+  print *,"maxtall invalid"
+  stop
+ endif
+
+  ! in: drop_slope_dist 
+ if ((axis_dir.eq.0).or. &
+     (axis_dir.eq.5)) then
+
+  xcheck=xblob-xblob2
+  ycheck=yblob-yblob2
+  zcheck=zero
+  if (SDIM.eq.3) then
+   zcheck=zblob-zblob2
+  endif
+
+  if ((num_materials.ge.3).and. &
+      (im_solid_substrate.ge.3).and. &
+      (abs(xcheck).lt.1.0E-7).and. &
+      (abs(ycheck).lt.1.0E-7).and. &
+      (abs(zcheck).lt.1.0E-7)) then
+   im=1
+   im_opp=2
+   im_3=im_solid_substrate
+   call get_iten(im,im_opp,iten,num_materials)
+   do imloop=1,nmat
+    marangoni_temp(imloop)=293.0
+   enddo
+   call get_user_tension(xvec,time, &
+     fort_tension,user_tension, &
+     marangoni_temp, &
+     nmat,nten,1)
+     ! find angle between materials "im" and "im_3"
+   call get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
+    user_tension,nten,cos_angle,sin_angle)
+
+    ! angles other than 0 or pi are supported:
+    ! 0 < angle < pi
+   if (abs(cos_angle).lt.one-1.0E-2) then 
+
+    if (((SDIM.eq.3).and.(levelrz.eq.0)).or. &
+        ((SDIM.eq.2).and.(levelrz.eq.1))) then
+     term1=two/three-cos_angle+(cos_angle**3)/three
+     if (term1.le.zero) then
+      print *,"term1 invalid"
+      stop
+     endif
+         
+     Vtarget=half*(four/three)*Pi*(radblob**3)
+     radnew=(Vtarget/(Pi*term1))**(one/three)
+     vert=-radnew*cos_angle
+    else if ((SDIM.eq.2).and.(levelrz.eq.0)) then
+     test_angle=acos(abs(cos_angle))  ! 0<test_angle<=pi/2
+     if (cos_angle.ge.zero) then
+      term1=test_angle-half*sin(two*test_angle)
+     else
+      term1=Pi-test_angle+half*sin(two*test_angle)
+     endif
+     if (term1.le.zero) then
+      print *,"term1 invalid"
+      stop
+     endif
+     Vtarget=half*Pi*(radblob**2)
+     radnew=sqrt(Vtarget/term1)
+     vert=-radnew*cos_angle
+    else
+     print *,"dimension bust"
+     stop
+    endif
+      ! rotate clockwise
+      ! and shift "center" of inclined plane to origin
+      ! need to modify if rotate about y-z plane.
+    if (SDIM.eq.2) then
+     xprime=(x-xblob2)*cos(radblob2)+(z-yblob2)*sin(radblob2)
+     zprime=-(x-xblob2)*sin(radblob2)+(z-yblob2)*cos(radblob2)
+     rprime=abs(xprime)
+    else if (SDIM.eq.3) then
+     xprime=(x-xblob2)*cos(radblob2)+(z-zblob2)*sin(radblob2)
+     yprime=y-yblob2
+     zprime=-(x-xblob2)*sin(radblob2)+(z-zblob2)*cos(radblob2)
+     rprime=sqrt(xprime**2+yprime**2)
+    else
+     print *,"dimension bust"
+     stop
+    endif
+
+     ! dist>0 in the liquid drop
+    dist=radnew-sqrt(rprime**2+(zprime-vert)**2)
+    dist_truncate=dist
+
+     ! find distance to ice part of this droplet; also
+     ! find distance to remaining liquid part above the ice.
+    if (maxtall-vert.lt.radnew) then
+     rtop=sqrt(radnew**2-(maxtall-vert)**2)
+     rbot=sqrt(radnew**2-vert**2)
+
+      ! outside drop, and above the ice.
+     if ((dist.le.zero).and.(zprime.ge.maxtall)) then
+      dist_truncate=dist
+
+      ! inside the original drop.
+     else if ((zprime.le.maxtall).and.(rprime.le.rtop)) then
+      dist_truncate=zprime-maxtall
+
+      ! outside the original drop, off to side of ice.
+     else if ((zprime.le.maxtall).and.(rprime.ge.rtop)) then
+      dist_truncate=-sqrt((rprime-rtop)**2+(zprime-maxtall)**2)
+     else if (dist.ge.zero) then
+      if (dist.lt.zprime-maxtall) then
+       dist_truncate=dist
+      else
+       dist_truncate=zprime-maxtall
+      endif 
+     else
+      print *,"dist invalid drop_slope_dist"
+      stop
+     endif
+
+     if ((dist.lt.zero).and.(zprime.gt.vert+radnew)) then
+      dist=maxtall-zprime
+     else if ((dist.ge.zero).and.(zprime.ge.maxtall)) then
+      dist=maxtall-zprime
+     else if ((dist.ge.zero).and.(zprime.le.maxtall).and. &
+              (zprime.ge.half*maxtall)) then
+      if (dist.lt.maxtall-zprime) then
+       ! do nothing
+      else
+       dist=maxtall-zprime
+      endif
+     else if ((dist.ge.zero).and.(zprime.le.half*maxtall).and. &
+              (zprime.ge.zero)) then
+      if (dist.lt.zprime) then
+       ! do nothing
+      else
+       dist=zprime
+      endif
+     else if ((dist.ge.zero).and.(zprime.le.zero)) then
+      dist=zprime
+     else if ((dist.lt.zero).and.(zprime.lt.vert-radnew)) then
+      dist=zprime
+     else if ((dist.lt.zero).and.(zprime.ge.maxtall)) then
+      dist=-sqrt((rprime-rtop)**2+(zprime-maxtall)**2)
+     else if ((dist.lt.zero).and.(zprime.ge.zero)) then
+      ! do nothing
+     else if ((dist.lt.zero).and.(zprime.le.zero)) then
+      dist=-sqrt((rprime-rbot)**2+zprime**2)
+     else
+      print *,"dist or zprime invalid"
+      stop
+     endif 
+    endif !  maxtall-vert<radnew
+     
+   else
+    print *,"contact angle too close to 0 or pi for drop on slope"
+    print *,"probtype=",probtype
+    print *,"radblob=",radblob
+    print *,"radblob2=",radblob2
+    print *,"radblob4=",radblob4
+    print *,"radblob5=",radblob5
+    print *,"radblob6=",radblob6
+    print *,"radblob7=",radblob7
+    stop
+   endif
+
+  else
+   print *,"parameter conflict for probtype=55"
+   stop
+  endif
+
+ else
+  print *,"axis_dir incorrect   probtype,axis_dir=",probtype,axis_dir
+  stop
+ endif
+
+ deallocate(user_tension)
+
+else
+ print *,"probtype invalid in drop_slope_dist"
+ stop
+endif
+
+return
+end subroutine drop_slope_dist
 
 end module global_utility_module
 

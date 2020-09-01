@@ -39,257 +39,14 @@ return
 end subroutine INIT_GENERAL_PHASE_CHANGE_MODULE
 
 
-  ! in 2D, "y" is ignored
-  ! distance>0 in the drop
-  ! if maxtall<radnew-vert then the distance
-  ! to the ice part of the droplet is returned in dist
-  ! and the distance to the remaining liquid part *above* the ice
-  ! is returned in dist_truncate.
-  ! this routine is called if probtype=55, axis_dir=0,1, or 5
-subroutine drop_slope_dist(x,y,z,time,nmat, &
-   maxtall,dist,dist_truncate)
-use global_utility_module
-IMPLICIT NONE
-
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x,y,z,time
-REAL_T, intent(out) :: dist,dist_truncate
-REAL_T, intent(in) :: maxtall
-INTEGER_T im,im_opp,im_3,iten_13,iten_23,imloop
-INTEGER_T iten
-REAL_T cos_angle,sin_angle
-REAL_T term1,Vtarget,radnew,vert,test_angle
-REAL_T xprime,yprime,zprime,rprime,rtop,rbot
-REAL_T xcheck,ycheck,zcheck
-INTEGER_T nten
-REAL_T xvec(SDIM)
-REAL_T marangoni_temp(nmat)
-INTEGER_T im_solid_substrate
-REAL_T, allocatable, dimension(:) :: user_tension
-
-if (probtype.eq.55) then
-
- im_solid_substrate=im_solid_primary()
-
- xvec(1)=x
- xvec(2)=y
- if (SDIM.eq.3) then
-  xvec(SDIM)=z
- endif
-
- if (nmat.ne.num_materials) then
-  print *,"nmat invalid"
-  stop
- endif
- nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
- allocate(user_tension(nten))
-
- if (SDIM.eq.2) then
-  if (abs(y-z).gt.VOFTOL) then
-   print *,"y=z in 2d expected: drop_slope_dist"
-   print *,"x,y,z= ",x,y,z
-   stop
-  endif
- endif
- if (maxtall.le.zero) then
-  print *,"maxtall invalid"
-  stop
- endif
-
-  ! in: drop_slope_dist 
- if ((axis_dir.eq.0).or. &
-     (axis_dir.eq.5)) then
-
-  xcheck=xblob-xblob2
-  ycheck=yblob-yblob2
-  zcheck=zero
-  if (SDIM.eq.3) then
-   zcheck=zblob-zblob2
-  endif
-
-  if ((num_materials.ge.3).and. &
-      (im_solid_substrate.ge.3).and. &
-      (abs(xcheck).lt.1.0E-7).and. &
-      (abs(ycheck).lt.1.0E-7).and. &
-      (abs(zcheck).lt.1.0E-7)) then
-   im=1
-   im_opp=2
-   im_3=im_solid_substrate
-   call get_iten(im,im_opp,iten,num_materials)
-   do imloop=1,nmat
-    marangoni_temp(imloop)=293.0
-   enddo
-   call get_user_tension(xvec,time, &
-     fort_tension,user_tension, &
-     marangoni_temp, &
-     nmat,nten,1)
-     ! find angle between materials "im" and "im_3"
-   call get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
-    user_tension,nten,cos_angle,sin_angle)
-
-    ! angles other than 0 or pi are supported:
-    ! 0 < angle < pi
-   if (abs(cos_angle).lt.one-1.0E-2) then 
-
-    if (((SDIM.eq.3).and.(levelrz.eq.0)).or. &
-        ((SDIM.eq.2).and.(levelrz.eq.1))) then
-     term1=two/three-cos_angle+(cos_angle**3)/three
-     if (term1.le.zero) then
-      print *,"term1 invalid"
-      stop
-     endif
-         
-     Vtarget=half*(four/three)*Pi*(radblob**3)
-     radnew=(Vtarget/(Pi*term1))**(one/three)
-     vert=-radnew*cos_angle
-    else if ((SDIM.eq.2).and.(levelrz.eq.0)) then
-     test_angle=acos(abs(cos_angle))  ! 0<test_angle<=pi/2
-     if (cos_angle.ge.zero) then
-      term1=test_angle-half*sin(two*test_angle)
-     else
-      term1=Pi-test_angle+half*sin(two*test_angle)
-     endif
-     if (term1.le.zero) then
-      print *,"term1 invalid"
-      stop
-     endif
-     Vtarget=half*Pi*(radblob**2)
-     radnew=sqrt(Vtarget/term1)
-     vert=-radnew*cos_angle
-    else
-     print *,"dimension bust"
-     stop
-    endif
-      ! rotate clockwise
-      ! and shift "center" of inclined plane to origin
-      ! need to modify if rotate about y-z plane.
-    if (SDIM.eq.2) then
-     xprime=(x-xblob2)*cos(radblob2)+(z-yblob2)*sin(radblob2)
-     zprime=-(x-xblob2)*sin(radblob2)+(z-yblob2)*cos(radblob2)
-     rprime=abs(xprime)
-    else if (SDIM.eq.3) then
-     xprime=(x-xblob2)*cos(radblob2)+(z-zblob2)*sin(radblob2)
-     yprime=y-yblob2
-     zprime=-(x-xblob2)*sin(radblob2)+(z-zblob2)*cos(radblob2)
-     rprime=sqrt(xprime**2+yprime**2)
-    else
-     print *,"dimension bust"
-     stop
-    endif
-
-     ! dist>0 in the liquid drop
-    dist=radnew-sqrt(rprime**2+(zprime-vert)**2)
-    dist_truncate=dist
-
-     ! find distance to ice part of this droplet; also
-     ! find distance to remaining liquid part above the ice.
-    if (maxtall-vert.lt.radnew) then
-     rtop=sqrt(radnew**2-(maxtall-vert)**2)
-     rbot=sqrt(radnew**2-vert**2)
-
-      ! outside drop, and above the ice.
-     if ((dist.le.zero).and.(zprime.ge.maxtall)) then
-      dist_truncate=dist
-
-      ! inside the original drop.
-     else if ((zprime.le.maxtall).and.(rprime.le.rtop)) then
-      dist_truncate=zprime-maxtall
-
-      ! outside the original drop, off to side of ice.
-     else if ((zprime.le.maxtall).and.(rprime.ge.rtop)) then
-      dist_truncate=-sqrt((rprime-rtop)**2+(zprime-maxtall)**2)
-     else if (dist.ge.zero) then
-      if (dist.lt.zprime-maxtall) then
-       dist_truncate=dist
-      else
-       dist_truncate=zprime-maxtall
-      endif 
-     else
-      print *,"dist invalid drop_slope_dist"
-      stop
-     endif
-
-     if ((dist.lt.zero).and.(zprime.gt.vert+radnew)) then
-      dist=maxtall-zprime
-     else if ((dist.ge.zero).and.(zprime.ge.maxtall)) then
-      dist=maxtall-zprime
-     else if ((dist.ge.zero).and.(zprime.le.maxtall).and. &
-              (zprime.ge.half*maxtall)) then
-      if (dist.lt.maxtall-zprime) then
-       ! do nothing
-      else
-       dist=maxtall-zprime
-      endif
-     else if ((dist.ge.zero).and.(zprime.le.half*maxtall).and. &
-              (zprime.ge.zero)) then
-      if (dist.lt.zprime) then
-       ! do nothing
-      else
-       dist=zprime
-      endif
-     else if ((dist.ge.zero).and.(zprime.le.zero)) then
-      dist=zprime
-     else if ((dist.lt.zero).and.(zprime.lt.vert-radnew)) then
-      dist=zprime
-     else if ((dist.lt.zero).and.(zprime.ge.maxtall)) then
-      dist=-sqrt((rprime-rtop)**2+(zprime-maxtall)**2)
-     else if ((dist.lt.zero).and.(zprime.ge.zero)) then
-      ! do nothing
-     else if ((dist.lt.zero).and.(zprime.le.zero)) then
-      dist=-sqrt((rprime-rbot)**2+zprime**2)
-     else
-      print *,"dist or zprime invalid"
-      stop
-     endif 
-    endif !  maxtall-vert<radnew
-     
-   else
-    print *,"contact angle too close to 0 or pi for drop on slope"
-    print *,"probtype=",probtype
-    print *,"radblob=",radblob
-    print *,"radblob2=",radblob2
-    print *,"radblob4=",radblob4
-    print *,"radblob5=",radblob5
-    print *,"radblob6=",radblob6
-    print *,"radblob7=",radblob7
-    stop
-   endif
-
-  else
-   print *,"parameter conflict for probtype=55"
-   stop
-  endif
-
- else
-  print *,"axis_dir incorrect   probtype,axis_dir=",probtype,axis_dir
-  stop
- endif
-
- deallocate(user_tension)
-
-else
- print *,"probtype invalid in drop_slope_dist"
- stop
-endif
-
-return
-end subroutine drop_slope_dist
-
-
  ! this is velocity boundary condition at the top of the domain.  
-subroutine acoustic_pulse_bc(time,vel_pulse,xsten,nhalf,for_dt)
+subroutine acoustic_pulse_bc(time,vel_pulse,x_vec,for_dt)
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: for_dt
 REAL_T, intent(in) :: time
 REAL_T, intent(out) :: vel_pulse
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T x,y,z
-
-x=xsten(0,1)
-y=xsten(0,2)
-z=xsten(0,SDIM)
+REAL_T, intent(in) :: x_vec(SDIM)
 
 if ((time.ge.zero).and.(time.le.1.0e+20)) then
  ! do nothing
@@ -298,7 +55,7 @@ else
  stop
 endif
 
-if (abs(x)+abs(y)+abs(z).le.1.0e+20) then
+if (abs(x_vec(1))+abs(x_vec(2))+abs(x_vec(SDIM)).le.1.0e+20) then
  ! do nothing
 else
  print *,"x,y, or z invalid"
@@ -351,79 +108,105 @@ end subroutine acoustic_pulse_bc
  ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
  ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
 subroutine GENERAL_PHASE_CHANGE_hydro_pressure_density( &
-  xpos,rho,pres)
+  xpos,rho,pres,from_boundary_hydrostatic)
 IMPLICIT NONE
 
 REAL_T, intent(in) :: xpos(SDIM)
-REAL_T, intent(out) :: rho
-REAL_T, intent(out) :: pres
+REAL_T, intent(inout) :: rho
+REAL_T, intent(inout) :: pres
+INTEGER_T, intent(in) :: from_boundary_hydrostatic
 REAL_T denfree,zfree
 REAL_T den_top,z_top
 REAL_T z_at_depth
+INTEGER_T continue_to_hydrostatic_part
 
  if (probtype.eq.55) then
-  if ((axis_dir.ge.0).and.(axis_dir.le.5)) then
-   ! do nothing (compressible drop) ??
-   FIX ME (boundary_hydrostatic)
+
+  continue_to_hydrostatic_part=1
+
+  if (from_boundary_hydrostatic.eq.1) then
+   if ((axis_dir.ge.0).and.(axis_dir.le.5)) then
+    continue_to_hydrostatic_part=0  ! compressible drop
+   else if (axis_dir.eq.6) then
+    print *,"axis_dir==6 is for incompressible nucleate boiling"
+    stop
+   else if (axis_dir.eq.7) then
+    continue_to_hydrostatic_part=1
+   else
+    print *,"axis_dir invalid"
+    stop
+   endif
+  else if (from_boundary_hydrostatic.eq.0) then
+   continue_to_hydrostatic_part=1
+  else
+   print *,"from_boundary_hydrostatic invalid"
+   stop
   endif
 
-  if (axis_dir.eq.7) then
+  if (continue_to_hydrostatic_part.eq.1) then
 
-   if (SDIM.eq.2) then
-    z_at_depth=probloy
-    z_top=probhiy
-   else if (SDIM.eq.3) then
-    z_at_depth=probloz
-    z_top=probhiz
+   if (axis_dir.eq.7) then ! compressible boiling
+
+    if (SDIM.eq.2) then
+     z_at_depth=probloy
+     z_top=probhiy
+    else if (SDIM.eq.3) then
+     z_at_depth=probloz
+     z_top=probhiz
+    else
+     print *,"dimension bust GENERAL_PHASE_CHANGE_hydro_pressure_density"
+     stop
+    endif
+
+    if (z_at_depth.ne.zero) then
+     print *,"z_at_depth must be 0 for compressible boiling problem"
+     stop
+    endif
+
+    den_top=fort_denconst(1)
+
+    if (xpos(SDIM).gt.z_top) then
+     rho=den_top ! atmos pressure at top of domain
+    else
+     rho= &
+      ((density_at_depth-den_top)/ &
+       (z_at_depth-z_top))*(xpos(SDIM)-z_top)+den_top
+    endif
+    call EOS_tait_ADIABATIC_rhohydro(rho,pres)
+
+   else if (fort_material_type(1).eq.13) then
+
+    denfree=fort_denconst(1)
+    if (SDIM.eq.2) then
+     zfree=probhiy
+     z_at_depth=probloy
+    else if (SDIM.eq.3) then
+     zfree=probhiz
+     z_at_depth=probloz
+    else
+     print *,"dimension bust"
+     stop
+    endif
+
+    ! density_at_depth is found so that
+    ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
+    !
+    if (xpos(SDIM).gt.zfree) then
+     rho=denfree
+    else
+     rho= &
+      ((density_at_depth-denfree)/ &
+       (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+    endif
+    call EOS_tait_ADIABATIC_rhohydro(rho,pres)
    else
-    print *,"dimension bust GENERAL_PHASE_CHANGE_hydro_pressure_density"
+    print *,"axis_dir invalid GENERAL_PHASE_CHANGE_hydro_pressure_density"
     stop
    endif
-
-   if (z_at_depth.ne.zero) then
-    print *,"z_at_depth must be 0 for compressible boiling problem"
-    stop
-   endif
-
-   den_top=fort_denconst(1)
-
-   if (xpos(SDIM).gt.z_top) then
-    rho=den_top ! atmos pressure at top of domain
-   else
-    rho= &
-     ((density_at_depth-den_top)/ &
-      (z_at_depth-z_top))*(xpos(SDIM)-z_top)+den_top
-   endif
-   call EOS_tait_ADIABATIC_rhohydro(rho,pres)
-
-
-  else if (fort_material_type(1).eq.13) then
-
-   denfree=fort_denconst(1)
-   if (SDIM.eq.2) then
-    zfree=probhiy
-    z_at_depth=probloy
-   else if (SDIM.eq.3) then
-    zfree=probhiz
-    z_at_depth=probloz
-   else
-    print *,"dimension bust"
-    stop
-   endif
-
-   ! density_at_depth is found so that
-   ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
-   !
-   if (xpos(SDIM).gt.zfree) then
-    rho=denfree
-   else
-    rho= &
-     ((density_at_depth-denfree)/ &
-      (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-   endif
-   call EOS_tait_ADIABATIC_rhohydro(rho,pres)
+  else if (continue_to_hydrostatic_part.eq.0) then
+   ! do nothing
   else
-   print *,"axis_dir invalid GENERAL_PHASE_CHANGE_hydro_pressure_density"
+   print *,"continue_to_hydrostatic_part invalid"
    stop
   endif
  else
@@ -443,11 +226,9 @@ REAL_T, intent(in) :: dx(SDIM)
 INTEGER_T dir2
 INTEGER_T side
 REAL_T utest,uscale
-REAL_T xsten_dummy(-1:1,SDIM)
+REAL_T xvec_dummy(SDIM)
 INTEGER_T for_dt
-INTEGER_T nhalf
 
-nhalf=1
 
 if ((dir.lt.0).or.(dir.ge.SDIM)) then
  print *,"dir invalid"
@@ -468,12 +249,10 @@ endif
 if (probtype.eq.55) then
  if (axis_dir.eq.7) then
   do dir2=1,SDIM
-  do side=-nhalf,nhalf
-   xsten_dummy(side,dir2)=dx(dir2)*half*side
-  enddo
+   xvec_dummy(dir2)=zero
   enddo
   for_dt=1
-  call acoustic_pulse_bc(time,utest,xsten_dummy,nhalf,for_dt)
+  call acoustic_pulse_bc(time,utest,xvec_dummy,for_dt)
   uu=max(abs(uu),abs(utest))
  endif
 else
@@ -895,6 +674,7 @@ REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
 REAL_T :: temp
+REAL_T :: xmid,zmid
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -1269,6 +1049,7 @@ REAL_T, intent(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 REAL_T temp
+INTEGER_T for_dt
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1289,22 +1070,28 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
 
  call GENERAL_PHASE_CHANGE_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
 
+ if (adv_dir.eq.veldir) then
+  call rampvel(t,local_VEL(veldir))  ! default is adv_vel
+ else
+  local_VEL(veldir) = zero
+ endif
+
  if ((veldir.eq.1).and.(dir.eq.1).and.(SDIM.eq.2)) then
   if ((yblob10.gt.zero).and.(axis_dir.eq.6)) then
-   if((y.ge.yblob2).and.(y.le.yblob10)) then
-    temp = y-yblob2
-    local_VEL(1)=x_vel*(1.5d0*temp/yblob10 - half*(temp/yblob10)**3)
+   if((xghost(2).ge.yblob2).and.(xghost(2).le.yblob10)) then
+    temp = xghost(2)-yblob2
+    local_VEL(1)=local_VEL(1)*(1.5d0*temp/yblob10 - half*(temp/yblob10)**3)
    end if
   end if
  else if ((veldir.eq.2).and.(dir.eq.2).and.(side.eq.2).and.(SDIM.eq.2)) then
-  if (axis_dir.eq.7) then
+  if (axis_dir.eq.7) then ! compressible
    for_dt=0
-   call acoustic_pulse_bc(time,local_VEL(veldir),xsten,nhalf,for_dt)
+   call acoustic_pulse_bc(t,local_VEL(veldir),xghost,for_dt)
   endif
  else if ((veldir.eq.3).and.(dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then
-  if (axis_dir.eq.7) then
+  if (axis_dir.eq.7) then ! compressible
    for_dt=0
-   call acoustic_pulse_bc(time,local_VEL(veldir),xsten,nhalf,for_dt)
+   call acoustic_pulse_bc(time,local_VEL(veldir),xghost,for_dt)
   endif
  endif
  VEL=local_VEL(veldir)
@@ -1332,6 +1119,9 @@ REAL_T, intent(inout) :: PRES
 REAL_T, intent(in) :: PRES_in
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
+REAL_T base_pres
+REAL_T gravity_dz
+REAL_T rhohydro
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1342,6 +1132,16 @@ endif
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
+ if (gravity_dir.eq.1) then
+  gravity_dz=xghost(1)-probhix
+ else if (gravity_dir.eq.2) then
+  gravity_dz=xghost(2)-probhiy
+ else if ((gravity_dir.eq.3).and.(SDIM.eq.3)) then
+  gravity_dz=xghost(SDIM)-probhiz
+ else
+  print *,"gravity_dir invalid"
+  stop
+ endif
  call GENERAL_PHASE_CHANGE_PRES(xghost,t,LS,PRES,nmat)
  if (probtype.eq.55) then
 
@@ -1350,7 +1150,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
    call general_hydrostatic_pressure(base_pres)
    PRES=base_pres
    if (fort_material_type(1).eq.13) then 
-    call GENERAL_PHASE_CHANGE_hydro_pressure_density(xpos,rhohydro,PRES)
+    call GENERAL_PHASE_CHANGE_hydro_pressure_density(xghost,rhohydro,PRES)
    else if (axis_dir.eq.6) then
     PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
    endif
@@ -1426,7 +1226,7 @@ if ((istate.ge.1).and. &
    else if (istate.eq.2) then
     ! bcflag=1 (calling from denBC - boundary conditions
     ! for density, temperature and species variables)
-    call outside_temperature(time,x,y,z,STATE,im,1) 
+    call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
     STATE_merge=STATE
    else
     print *,"istate invalid"
@@ -1458,14 +1258,14 @@ if ((istate.ge.1).and. &
       ! freezing singularity or nucleate boiling problem: ylo
    else if ((prescribe_temperature_outflow.eq.3).and. &
             ((axis_dir.eq.5).or. &
-             (axis_dir.eq.6).or. &
-             (axis_dir.eq.7))) then
+             (axis_dir.eq.6).or. &  ! incompressible boiling
+             (axis_dir.eq.7))) then ! compressible boiling
 
     if (istate.eq.1) then
      ! do nothing (density)
     else if (istate.eq.2) then
      ! bcflag=1 (calling from denBC)
-     call outside_temperature(time,x,y,z,STATE,im,1) 
+     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
      STATE_merge=STATE
     else
      print *,"istate invalid"
@@ -1479,7 +1279,7 @@ if ((istate.ge.1).and. &
     ! do nothing
    else if (istate.eq.2) then
     ! bcflag=1 (calling from denBC)
-    call outside_temperature(time,x,y,z,STATE,im,1) 
+    call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
     STATE_merge=STATE
    else
     print *,"istate invalid"
@@ -1510,13 +1310,13 @@ if ((istate.ge.1).and. &
    else if ((prescribe_temperature_outflow.eq.3).and. &
             ((axis_dir.eq.5).or. &
              (axis_dir.eq.6).or. &
-             (axis_dir.eq.7))) then
+             (axis_dir.eq.7))) then ! compressible boiling
 
     if (istate.eq.1) then
      ! do nothing (density)
     else if (istate.eq.2) then
       ! bcflag=1 (calling from denBC)
-     call outside_temperature(time,x,y,z,STATE,im,1) 
+     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
      STATE_merge=STATE
     else
      print *,"istate invalid"
@@ -1575,26 +1375,6 @@ else
  stop
 endif
  
- ! set a hot temperature in the liquid
-if ((num_materials.eq.4).and.(probtype.eq.2001)) then
-
- heat_source=zero
- if (VFRAC(1).ge.half) then ! in the liquid
-  MITSUHIRO_CUSTOM_TEMPERATURE=fort_tempconst(1)
-  heat_source=(MITSUHIRO_CUSTOM_TEMPERATURE-temp(1))* &
-               den(1)*CV(1)/dt
- else if (VFRAC(1).le.half) then
-  ! do nothing
- else
-  print *,"VFRAC(1) invalid"
-  stop
- endif 
-
-else
- print *,"num_materials or probtype invalid"
- stop
-endif
-
 return
 end subroutine GENERAL_PHASE_CHANGE_HEATSOURCE
 
@@ -1607,6 +1387,7 @@ end subroutine GENERAL_PHASE_CHANGE_HEATSOURCE
  ! heat_side=1,2
 subroutine GENERAL_PHASE_CHANGE_EB_heat_source(time,dt,xsten,nhalf, &
       heat_flux,heat_dir,heat_side)
+use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nhalf
@@ -1651,6 +1432,7 @@ end subroutine GENERAL_PHASE_CHANGE_EB_heat_source
   ! only called at faces with an adjoining solid cell and
   ! an adjoining fluid cell.
 subroutine GENERAL_PHASE_CHANGE_microcell_heat_coeff(heatcoeff,dx,veldir)
+use probcommon_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: dx(SDIM)
@@ -1662,7 +1444,7 @@ if (probtype.eq.55) then
  if ((veldir.ge.0).and.(veldir.lt.SDIM)) then
   ! boiling: Sato and Niceno  or Tryggvason and Lu
   if ((axis_dir.eq.6).or. &
-      (axis_dir.eq.7)) then
+      (axis_dir.eq.7)) then ! compressible boiling
    if (zblob3.eq.zero) then  ! Dirichlet at z=zlo
     ! do nothing
    else if (zblob3.gt.dx(veldir+1)) then ! TSAT dirichlet
@@ -1691,6 +1473,8 @@ return
 end subroutine GENERAL_PHASE_CHANGE_microcell_heat_coeff
 
 subroutine GENERAL_PHASE_CHANGE_velfreestream(problen,local_buffer)
+use probcommon_module
+IMPLICIT NONE
 REAL_T, intent(inout) :: local_buffer(2*SDIM)
 REAL_T, intent(in)    :: problen(SDIM)
 REAL_T :: buf
@@ -1737,6 +1521,9 @@ end subroutine GENERAL_PHASE_CHANGE_velfreestream
 
 
 subroutine GENERAL_PHASE_CHANGE_nucleation(nucleate_in,xsten,nhalf,make_seed)
+use probcommon_module_types
+use probcommon_module
+IMPLICIT NONE
 INTEGER_T, intent(in) :: nhalf
 REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
 INTEGER_T, intent(inout) :: make_seed
