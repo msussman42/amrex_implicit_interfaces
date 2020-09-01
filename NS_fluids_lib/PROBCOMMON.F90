@@ -43,6 +43,49 @@ module probcommon_module_types
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: vel
       end type user_defined_sum_int_type
 
+      type nucleation_parm_type_input
+       INTEGER_T :: tid
+       INTEGER_T :: local_freezing_model
+       REAL_T :: LL
+       INTEGER_T :: i,j,k
+       INTEGER_T :: im_source
+       INTEGER_T :: im_dest
+       REAL_T :: dxmaxLS
+       INTEGER_T :: bfact
+       INTEGER_T :: level
+       INTEGER_T :: finest_level
+       REAL_T, pointer :: dx(:)
+       REAL_T, pointer :: xlo(:)
+       INTEGER_T :: nmat
+       INTEGER_T :: nten
+       INTEGER_T :: nstate
+       INTEGER_T, pointer :: fablo(:)
+       INTEGER_T, pointer :: fabhi(:)
+       INTEGER_T :: DIMDEC(EOS)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
+       INTEGER_T :: DIMDEC(LSnew)
+       INTEGER_T :: DIMDEC(Snew)
+       INTEGER_T :: DIMDEC(pres)
+       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
+       INTEGER_T :: DIMDEC(pres_eos)
+       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres_eos
+       INTEGER_T :: custom_nucleation_model
+       INTEGER_T :: do_the_nucleate
+       INTEGER_T :: nucleate_pos_size
+       REAL_T, pointer :: nucleate_pos(:)
+       REAL_T, pointer :: nucleation_temp(:)
+       REAL_T, pointer :: nucleation_pressure(:)
+       REAL_T, pointer :: nucleation_pmg(:)
+       REAL_T, pointer :: nucleation_mach(:)
+       REAL_T, pointer :: cavitation_pressure(:)
+       REAL_T, pointer :: cavitation_vapor_density(:)
+       REAL_T, pointer :: cavitation_tension(:)
+       REAL_T :: local_TSAT
+       REAL_T :: prev_time
+       REAL_T :: cur_time
+       REAL_T :: dt
+      end type nucleation_parm_type_input
+
      contains
 
 end module probcommon_module_types
@@ -243,10 +286,11 @@ implicit none
       end subroutine TEMPLATE_INIT_MODULE
 
       subroutine TEMPLATE_hydro_pressure_density( &
-                        xpos,rho,pres)
+                        xpos,rho,pres,from_boundary_hydrostatic)
       REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(out) :: rho
-      REAL_T, intent(out) :: pres
+      REAL_T, intent(inout) :: rho
+      REAL_T, intent(inout) :: pres
+      INTEGER_T, intent(in) :: from_boundary_hydrostatic
       end subroutine TEMPLATE_hydro_pressure_density
 
       subroutine TEMPLATE_CFL_HELPER(time,dir,uu,dx)
@@ -426,6 +470,7 @@ implicit none
       end subroutine TEMPLATE_velfreestream
 
       subroutine TEMPLATE_nucleation(nucleate_in,xsten,nhalf,make_seed)
+      use probcommon_module_types
       INTEGER_T, intent(in) :: nhalf
       REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
       INTEGER_T, intent(inout) :: make_seed
