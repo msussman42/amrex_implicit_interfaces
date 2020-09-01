@@ -1,0 +1,31 @@
+#!/bin/bash
+
+ctags -R --c++-kinds=+p --fields=+iaS --extra=+q --exclude=NS_fluids_lib/tmp_build_dir . 
+
+#  -R
+# recursive
+
+#  --c++-kinds=+p 
+# When parsing a C++ member function definition
+# (e.g. "className::function"), ctags cannot determine whether the scope
+# specifier is a class name or a namespace specifier and always lists it
+# as a class name in the scope portion of the extension fields. Also, if
+# a C++ function is defined outside of the class declaration (the usual
+# case), the access specification (i.e. public, protected, or private)
+# and implementation information (e.g. virtual, pure virtual) contained
+# in the function declaration are not known when the tag is generated
+# for the function definition. It will, however be available for
+# prototypes (e.g --c++-kinds=+p).
+
+#  --fields=+iaS 
+# a   Access (or export) of class members
+# i   Inheritance information
+# S   Signature of routine (e.g. prototype or parameter list)
+
+#  --extra=+q option:
+# ctags by default only generates tags for the separate
+# identifiers found in the source files. If you specify the --extra=+q
+# option, then ctags will also generate a second, class-qualified tag
+# for each class member (data and function/method) in the form
+# class::member for C++, and in the form class.method for Eiffel and
+# Java.
