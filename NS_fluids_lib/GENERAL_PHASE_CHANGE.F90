@@ -1526,4 +1526,60 @@ endif
 return
 end subroutine GENERAL_PHASE_CHANGE_velfreestream
 
+
+subroutine GENERAL_PHASE_CHANGE_nucleation(nucleate_in,xsten,nhalf,make_seed)
+INTEGER_T, intent(in) :: nhalf
+REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
+INTEGER_T, intent(inout) :: make_seed
+type(nucleation_parm_type_input), intent(in) :: nucleate_in
+REAL_T :: LL
+REAL_T :: dist
+
+LL=nucleate_in%LL
+
+if (probtype.eq.55) then
+
+ if ((axis_dir.eq.6).or. &  ! incompressible
+     (axis_dir.eq.7)) then ! compressible
+
+  if ((nucleate_in%im_source.ne.1).or. &
+      (nucleate_in%im_dest.ne.2)) then
+   print *,"im_source or im_dest invalid"
+   stop
+  endif
+  if (LL.gt.zero) then
+   ! do nothing
+  else
+   print *,"expecting latent heat to be positive"
+   stop
+  endif
+  if ((nucleate_in%do_the_nucleate.eq.1).and. &
+      (n_sites.gt.0)) then
+   call nucleation_sites(xsten,nhalf, &
+          nucleate_in%dx, &
+          nucleate_in%bfact, &
+          dist, &
+          nucleate_in%nucleate_pos)
+   if (dist.le.zero) then
+    make_seed=1
+   endif
+  else if ((nucleate_in%do_the_nucleate.eq.0).or. &
+           (n_sites.eq.0)) then
+   ! do nothing
+  else
+   print *,"do_the_nucleate or n_sites invalid"
+   stop
+  endif
+
+ endif ! axis_dir.eq.6 or 7
+
+else
+ print *,"expecting probtype==55"
+ stop
+endif
+
+return
+end subroutine GENERAL_PHASE_CHANGE_nucleation
+
+
 end module GENERAL_PHASE_CHANGE_module

@@ -24812,38 +24812,12 @@ end subroutine RatePhaseChange
 
        if (local_freezing_model.eq.0) then
 
-        if ((probtype.eq.55).and. &
-            ((axis_dir.eq.6).or. &  ! incompressible
-             (axis_dir.eq.7))) then ! compressible
-         if ((nucleate_in%im_source.ne.1).or. &
-             (nucleate_in%im_dest.ne.2)) then
-          print *,"im_source or im_dest invalid"
-          stop
-         endif
-         if (LL.gt.zero) then
-          ! do nothing
-         else
-          print *,"expecting latent heat to be positive"
-          stop
-         endif
-         if ((nucleate_in%do_the_nucleate.eq.1).and. &
-             (n_sites.gt.0)) then
-          call nucleation_sites(xsten,nhalf, &
-                 nucleate_in%dx, &
-                 nucleate_in%bfact, &
-                 dist, &
-                 nucleate_in%nucleate_pos)
-          if (dist.le.zero) then
-           make_seed=1
-          endif
-         else if ((nucleate_in%do_the_nucleate.eq.0).or. &
-                  (n_sites.eq.0)) then
-          ! do nothing
-         else
-          print *,"do_the_nucleate or n_sites invalid"
-          stop
-         endif
-        endif ! probtype==55, axis_dir=6,7
+        if (is_in_probtype_list().eq.1) then
+         call SUB_nucleation(nucleate_in,xsten,nhalf,make_seed)
+        else
+         ! do nothing
+        endif
+        
        else if (local_freezing_model.eq.7) then ! cavitation
         prev_time=nucleate_in%prev_time
         cur_time=nucleate_in%cur_time
@@ -28207,6 +28181,7 @@ end subroutine initialize2d
         SUB_EB_heat_source=>GENERAL_PHASE_CHANGE_EB_heat_source
         SUB_microcell_heat_coeff=>GENERAL_PHASE_CHANGE_microcell_heat_coeff
         SUB_velfreestream=>GENERAL_PHASE_CHANGE_velfreestream
+        SUB_nucleation=>GENERAL_PHASE_CHANGE_nucleation
         SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
         SUB_hydro_pressure_density=>GENERAL_PHASE_CHANGE_hydro_pressure_density
        else

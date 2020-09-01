@@ -425,6 +425,13 @@ implicit none
       REAL_T, intent(in)    :: problen(SDIM)
       end subroutine TEMPLATE_velfreestream
 
+      subroutine TEMPLATE_nucleation(nucleate_in,xsten,nhalf,make_seed)
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
+      INTEGER_T, intent(inout) :: make_seed
+      type(nucleation_parm_type_input), intent(in) :: nucleate_in
+      end subroutine TEMPLATE_nucleation
+
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
@@ -447,6 +454,7 @@ implicit none
       PROCEDURE(TEMPLATE_HEATSOURCE), POINTER :: SUB_HEATSOURCE
       PROCEDURE(TEMPLATE_EB_heat_source), POINTER :: SUB_EB_heat_source
       PROCEDURE(TEMPLATE_velfreestream), POINTER :: SUB_velfreestream
+      PROCEDURE(TEMPLATE_nucleation), POINTER :: SUB_nucleation
 
 contains
 
