@@ -3024,51 +3024,6 @@ end subroutine nozzle2d
        ! now make dist<0 in the substrate.
        dist=-dist
 
-! soliddist: dist>0 in fluid 2d or 3d
-      else if (probtype.eq.55) then 
-
-       if ((axis_dir.eq.0).or. &
-           (axis_dir.eq.5).or. &  ! freezing
-           (axis_dir.eq.6).or. &  ! boiling (incomp)
-           (axis_dir.eq.7).or. &  ! boiling (comp)
-           (axis_dir.eq.1)) then
-
-        if ((radblob5.gt.zero).and. &
-            (axis_dir.eq.0)) then ! ellipse
- 
-! Professor Yongsheng Lian was here: 
-         if (SDIM.eq.2) then
-          dist=sqrt((x-xblob2)*(x-xblob2)/(radblob3**2)+ &
-               (y-yblob2)*(y-yblob2)/(radblob4**2))-radblob5
-         else
-          dist=sqrt((x-xblob2)*(x-xblob2)/(radblob3**2)+ &
-               (y-yblob2)*(y-yblob2)/(radblob4**2)+ &
-               (z-zblob2)*(z-zblob2)/(radblob9**2))-radblob5
-         endif
-
-        else if ((axis_dir.eq.1).and.(nmat.eq.3)) then
-         ! do nothing: solid replaced by ice.
-
-         ! axis_dir=6: boiling sites
-         ! axis_dir=1: falling drop on substrate and then freezing.
-        else if ((radblob5.eq.zero).or. &
-                 (axis_dir.eq.5).or. &
-                 (axis_dir.eq.6).or. &
-                 ((axis_dir.eq.1).and. &
-                  (nmat.eq.4))) then
-
-           ! dist>0 in the substrate
-         call ice_substrate_distance(x,y,z,dist)
-           ! now make dist<0 in the substrate.
-         dist=-dist
-
-        endif
-
-       else 
-        print *,"axis_dir invalid"
-        stop
-       endif
-
       else if ((probtype.eq.54).and.(SDIM.eq.3)) then
        zmin=zblob
        zmax=zblob+half*zblob

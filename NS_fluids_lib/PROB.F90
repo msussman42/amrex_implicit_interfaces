@@ -6793,38 +6793,6 @@ END SUBROUTINE Adist
       return
       end subroutine get_pipe_velocity
 
-      subroutine rampvel(time,vel)
-      IMPLICIT NONE
-
-      REAL_T time,vel,tcutoff
-
-
-      if ((SDIM.eq.2).and. &
-          ((probtype.eq.63).or. &
-           (probtype.eq.64))) then
-       tcutoff=1.0
-       if (time.gt.tcutoff) then
-        vel=adv_vel
-       else
-        vel=time*adv_vel/tcutoff
-       endif
-      else if ((SDIM.eq.3).and.(probtype.eq.9)) then
-       tcutoff=zero
-       if ((time.gt.tcutoff).or.(tcutoff.eq.zero)) then
-        vel=adv_vel
-       else if (tcutoff.gt.zero) then
-        vel=time*adv_vel/tcutoff
-       else
-        print *,"tcutoff invalid"
-        stop
-       endif
-      else
-       vel=adv_vel
-      endif
-
-      return
-      end subroutine rampvel
-
 
 ! time is in microseconds, LL is in microns,PTERM is in atmospheres
 ! 1atm=1.013x10^6 dyne/cm^2
@@ -33926,31 +33894,6 @@ end subroutine initialize2d
            endif ! im=1
           endif
 
-           ! initial temperature for boiling or freezing
-          if (probtype.eq.55) then
-            ! nucleate boiling: Sato and Niceno or Tryggvason
-           if ((axis_dir.eq.6).or. &  ! incompressible
-               (axis_dir.eq.7)) then  ! compressible
-            ! water phase
-            if (im.eq.1) then
-             ! bcflag=0 (calling from FORT_INITDATA)
-             call outside_temperature(time,x,y,z,water_temp,im,0)
-             scalc(ibase+2)=water_temp  
-            endif ! im=1
-           else if (axis_dir.eq.5) then ! freezing drop on substrate
-            if (nmat.lt.4) then
-             print *,"nmat too small for freezing drop on substrate"
-             stop
-            endif
-            ! ice  or substrate (initial temperature)
-            if ((im.eq.3).or.(im.eq.4)) then
-             ! bcflag=0 (calling from FORT_INITDATA)
-             call outside_temperature(time,x,y,z,water_temp,im,0)
-             scalc(ibase+2)=water_temp  
-            endif
-           endif
-          endif ! probtype=55 
-
            ! initial temperature for melting ice block on a substrate.
           if (probtype.eq.59) then
 
@@ -35103,52 +35046,7 @@ end subroutine initialize2d
        stop
       endif
 
-      xx_vel=zero 
-      yy_vel=zero 
-      zz_vel=zero 
-
-       ! in: INITVELOCITY
-      if ((probtype.eq.26).and.(axis_dir.eq.11)) then
-       ! do nothing 
-      else if (adv_dir.eq.1) then  ! init velocity
-        if (SDIM.eq.2) then
-         call rampvel(time,xx_vel)
-        else if (SDIM.eq.3) then
-         xx_vel = adv_vel
-          ! initboat
-         if (probtype.eq.9) then
-          call rampvel(time,xx_vel)
-         endif
-        else
-         print *,"dimension bust"
-         stop
-        endif
-        yy_vel=zero
-        zz_vel=zero
-      else if (adv_dir .eq. 2) then
-        xx_vel = zero
-        yy_vel = adv_vel
-        zz_vel=zero
-      else if ((adv_dir.eq.3).and.(SDIM.eq.3)) then
-        xx_vel = zero
-        yy_vel = zero
-        zz_vel = adv_vel
-      else if ((adv_dir.eq.3).and.(SDIM.eq.2)) then
-        xx_vel = adv_vel
-        yy_vel = adv_vel
-        zz_vel = zero
-      else if ((adv_dir.eq.4).and.(SDIM.eq.3)) then
-        xx_vel = adv_vel
-        yy_vel = adv_vel
-        zz_vel = adv_vel
-      else if (probtype.eq.40) then
-       ! do nothing
-      else if (probtype.eq.530) then
-       ! do nothing
-      else
-        print *,"adv_dir invalid: ",adv_dir
-        stop
-      endif
+      call default_rampvel(time,xx_vel,yy_vel,zz_vel)
 
       if (adv_vel.ne.zero) then
         print *,"adv_dir,adv_vel ",adv_dir,adv_vel
@@ -35626,152 +35524,20 @@ end subroutine initialize2d
           y_vel=velcell(2)
           z_vel=velcell(SDIM)
 
-         else if (probtype.eq.710) then
+        else if (probtype.eq.710) then
            x_vel=zero
            y_vel=zero
            z_vel=zero
 
           ! in "initvelocity":
           ! melting ice block on substrate.
-         else if (probtype.eq.59) then
+        else if (probtype.eq.59) then
           x_vel=zero
           y_vel=zero
           z_vel=zero
-
-          ! in "initvelocity":
-          ! drop on slope 2d or 3d
-          ! if advbot<>0, then we have liquid sphere falling onto ramp
-          ! if axis_dir=1 then we have liquid sphere falling onto ice.
-          ! liquid is material 1, gas is material 2, solid/ice is material 3
-        else if (probtype.eq.55) then
-
-         if (axis_dir.eq.5) then
-          x_vel=zero
-          y_vel=zero
-          z_vel=zero
-         ! axis_dir=6,7 is boiling (e.g. Sato and Niceno)
-         else if ((axis_dir.eq.6).or. & ! incompressible
-                  (axis_dir.eq.7)) then ! compressible
-          if (yblob10.gt.zero) then
-           if((y.ge.yblob2).and.(y.le.yblob10)) then
-            ! Distance from substrate
-            temp = y-yblob2
-            x_vel=x_vel*(1.5d0*temp/yblob10 -0.5*(temp/yblob10)**3)
-           end if
-          else if (yblob10.eq.zero) then
-           x_vel=zero
-          else
-           print *,"yblob10 invalid"
-           stop
-          end if
-          y_vel=zero
-          z_vel=zero
-
-         else if ((axis_dir.eq.0).or. &
-                  (axis_dir.eq.1)) then
-          x_vel=zero
-          y_vel=zero
-          z_vel=zero
-
-           if (advbot.ne.zero) then
-            if ((radblob6.ne.zero).or.(radblob7.ne.zero)) then
-             print *,"parameters conflict"
-             stop
-            endif
-            if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
-             print *,"abs(z-y) bust"
-             stop
-            endif 
-            call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-            if (vfracbatch(1).gt.zero) then
-             if (SDIM.eq.2) then
-              y_vel=-abs(advbot)
-             else if (SDIM.eq.3) then
-              z_vel=-abs(advbot)
-             else
-              print *,"dimension bust"
-              stop
-             endif
-            endif
-           endif ! advbot <> 0
-
-           if (radblob5.gt.zero) then  ! impact droplet on ellipse
-            if (adv_dir.eq.1) then
-             x_vel=adv_vel
-            else if (adv_dir.eq.2) then
-             y_vel=adv_vel
-            else if ((adv_dir.eq.3).and.(SDIM.eq.3)) then
-             z_vel=adv_vel
-            else
-             print *,"adv_vel invalid"
-             stop
-            endif 
-           else if (radblob5.lt.zero) then
-            print *,"radblob5 invalid"
-            stop
-           endif
-           if ((radblob6.gt.zero).or.(radblob7.gt.zero)) then
-            if ((radblob6.gt.zero).and.(radblob7.gt.zero)) then
-             print *,"cannot have both radblob6 and radblob7 positive"
-             stop
-            endif
-            if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
-             print *,"abs(z-y) bust"
-             stop
-            endif 
-            call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-            if (radblob6.gt.zero) then
-             if (vfracbatch(1).gt.zero) then
-              if (levelrz.eq.1) then
-               zmid=half*(yblob6+yblob)
-               if (y.lt.zmid) then
-                y_vel=abs(advbot)
-               else
-                y_vel=-abs(vinletgas)
-               endif
-              else if (levelrz.eq.0) then
-               xmid=half*(xblob6+xblob)
-               if (x.lt.xmid) then
-                x_vel=abs(advbot)
-               else
-                x_vel=-abs(vinletgas)
-               endif
-              else
-               print *,"levelrz invalid init velocity"
-               stop
-              endif
-             endif  ! liquid
-            else if (radblob7.gt.zero) then
-             if (vfracbatch(1).gt.zero) then
-              if (levelrz.eq.1) then
-               y_vel=abs(advbot)
-              else if (levelrz.eq.0) then
-               x_vel=abs(advbot)
-              else
-               print *,"levelrz invalid init velocity 2"
-               stop
-              endif
-             else if (vfracbatch(3).gt.zero) then
-              if (levelrz.eq.1) then
-               y_vel=-abs(vinletgas)
-              else if (levelrz.eq.0) then
-               x_vel=-abs(vinletgas)
-              else
-               print *,"levelrz invalid probtype 55"
-               stop
-              endif
-             endif
-            else
-             print *,"bust"
-             stop
-            endif
-           endif ! drop collision (radblob6 or radblob7 > 0)
-          else
-           print *,"axis_dir invalid"
-           stop
-          endif
 
         else if (probtype.eq.201) then ! stratified bubble (initvelocity)
+
          if (advbot.eq.zero) then
           ! do nothing
          else
