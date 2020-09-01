@@ -420,6 +420,11 @@ implicit none
       INTEGER_T, intent(out) :: heat_side
       end subroutine TEMPLATE_EB_heat_source
 
+      subroutine TEMPLATE_velfreestream(problen,local_buffer)
+      REAL_T, intent(inout) :: local_buffer(2*SDIM)
+      REAL_T, intent(in)    :: problen(SDIM)
+      end subroutine TEMPLATE_velfreestream
+
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
@@ -441,6 +446,7 @@ implicit none
       PROCEDURE(TEMPLATE_STATE_BC), POINTER :: SUB_STATE_BC
       PROCEDURE(TEMPLATE_HEATSOURCE), POINTER :: SUB_HEATSOURCE
       PROCEDURE(TEMPLATE_EB_heat_source), POINTER :: SUB_EB_heat_source
+      PROCEDURE(TEMPLATE_velfreestream), POINTER :: SUB_velfreestream
 
 contains
 

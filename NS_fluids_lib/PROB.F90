@@ -24352,43 +24352,6 @@ END SUBROUTINE Adist
       return
       end subroutine
 
-        ! only called at faces with an adjoining solid cell and
-        ! an adjoining fluid cell.
-      subroutine microcell_heat_model(heatcoeff,dx,veldir)
-      IMPLICIT NONE
-
-      REAL_T dx(SDIM)
-      INTEGER_T veldir
-      REAL_T heatcoeff
-
-      if ((veldir.ge.0).and.(veldir.lt.SDIM)) then
-        ! boiling: Sato and Niceno  or Tryggvason and Lu
-       if ((probtype.eq.55).and. &
-           ((axis_dir.eq.6).or. &
-            (axis_dir.eq.7))) then
-        if (zblob3.eq.zero) then  ! Dirichlet at z=zlo
-         ! do nothing
-        else if (zblob3.gt.dx(veldir+1)) then ! TSAT dirichlet
-         heatcoeff=heatcoeff*dx(veldir+1)/zblob3
-        else if (zblob3.gt.zero) then
-         ! do nothing
-        else if (zblob3.lt.zero) then
-         ! do nothing - heat source is specified at solid cells
-         ! that adjoin fluid cells. (Sato and Niceno)
-        else
-         print *,"zblob3 invalid"
-         stop
-        endif
-       endif
-      else
-       print *,"veldir invalid"
-       stop
-      endif
-
-      return
-      end subroutine microcell_heat_model
-
-
 
          ! stage=-1 (init)
          ! stage=0 (cooling)
@@ -25998,39 +25961,14 @@ end subroutine RatePhaseChange
 
       buf=problen(1)/128.0
 
-      if (probtype.eq.201) then
-       if (SDIM.eq.3) then
-        dirbc=2
-        side=1 
-        ibuf=(side-1)*SDIM+dirbc
-        if (local_buffer(ibuf).eq.zero) then
-         local_buffer(ibuf)=buf
-        endif
-        side=2
-        ibuf=(side-1)*SDIM+dirbc
-        if (local_buffer(ibuf).eq.zero) then
-         local_buffer(ibuf)=buf
-        endif
-       endif ! sdim==3
-       dirbc=1
-       side=1
-       ibuf=(side-1)*SDIM+dirbc
-       if (local_buffer(ibuf).eq.zero) then
-        local_buffer(ibuf)=buf
-       endif
-       side=2
-       ibuf=(side-1)*SDIM+dirbc
-       if (local_buffer(ibuf).eq.zero) then
-        local_buffer(ibuf)=buf
-       endif
-      else if ((probtype.eq.55).and. &
-               (axis_dir.eq.0)) then
-       buf=problen(1)/32.0
+      if (is_in_probtype_list().eq.1) then
 
+       call SUB_velfreestream(problen,local_buffer)
+
+      else if (probtype.eq.201) then
        if (SDIM.eq.3) then
         dirbc=2
         side=1 
-        buf=(probhi(1)-problo(1))/128.0
         ibuf=(side-1)*SDIM+dirbc
         if (local_buffer(ibuf).eq.zero) then
          local_buffer(ibuf)=buf
@@ -26190,8 +26128,6 @@ end subroutine RatePhaseChange
 
       return
       end subroutine vel_freestream
-
-
 
 subroutine initialvel(N1parm,N2parm,vel_lr,     &
  vel_lz,vel_gr, vel_gz, r1,r2,W1bar,W2bar,Re,We,RGASRWATER)
@@ -28269,6 +28205,8 @@ end subroutine initialize2d
         SUB_STATE_BC=>GENERAL_PHASE_CHANGE_STATE_BC
         SUB_HEATSOURCE=>GENERAL_PHASE_CHANGE_HEATSOURCE
         SUB_EB_heat_source=>GENERAL_PHASE_CHANGE_EB_heat_source
+        SUB_microcell_heat_coeff=>GENERAL_PHASE_CHANGE_microcell_heat_coeff
+        SUB_velfreestream=>GENERAL_PHASE_CHANGE_velfreestream
         SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
         SUB_hydro_pressure_density=>GENERAL_PHASE_CHANGE_hydro_pressure_density
        else

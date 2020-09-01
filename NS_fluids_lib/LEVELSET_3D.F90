@@ -7363,7 +7363,7 @@ stop
            endif  
           else if (solidheat_flag.eq.1) then
            ! dirichlet temperature bc
-           call microcell_heat_model(faceheat_local,dx,veldir)
+           call SUB_microcell_heat_coeff(faceheat_local,dx,veldir)
            do imspec=1,num_species_var
             facespecies_local(imspec)=zero
            enddo

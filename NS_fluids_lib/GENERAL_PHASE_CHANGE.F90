@@ -1439,5 +1439,91 @@ endif
 return
 end subroutine GENERAL_PHASE_CHANGE_EB_heat_source
 
+  ! only called at faces with an adjoining solid cell and
+  ! an adjoining fluid cell.
+subroutine GENERAL_PHASE_CHANGE_microcell_heat_coeff(heatcoeff,dx,veldir)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, intent(in) :: veldir
+REAL_T, intent(inout) :: heatcoeff
+
+if (probtype.eq.55) then
+
+ if ((veldir.ge.0).and.(veldir.lt.SDIM)) then
+  ! boiling: Sato and Niceno  or Tryggvason and Lu
+  if ((axis_dir.eq.6).or. &
+      (axis_dir.eq.7)) then
+   if (zblob3.eq.zero) then  ! Dirichlet at z=zlo
+    ! do nothing
+   else if (zblob3.gt.dx(veldir+1)) then ! TSAT dirichlet
+    heatcoeff=heatcoeff*dx(veldir+1)/zblob3
+   else if (zblob3.gt.zero) then
+    ! do nothing
+   else if (zblob3.lt.zero) then
+    ! do nothing - heat source is specified at solid cells
+    ! that adjoin fluid cells. (Sato and Niceno)
+   else
+    print *,"zblob3 invalid"
+    stop
+   endif
+  endif
+ else
+  print *,"veldir invalid"
+  stop
+ endif
+
+else
+ print *,"expecting probtype==55"
+ stop
+endif
+
+return
+end subroutine GENERAL_PHASE_CHANGE_microcell_heat_coeff
+
+subroutine GENERAL_PHASE_CHANGE_velfreestream(problen,local_buffer)
+REAL_T, intent(inout) :: local_buffer(2*SDIM)
+REAL_T, intent(in)    :: problen(SDIM)
+REAL_T :: buf
+INTEGER_T :: ibuf
+INTEGER_T :: dirbc,side
+
+if (probtype.eq.55) then
+ if (axis_dir.eq.0) then
+  buf=problen(1)/32.0
+
+  if (SDIM.eq.3) then
+   dirbc=2
+   side=1 
+   buf=problen(1)/128.0
+   ibuf=(side-1)*SDIM+dirbc
+   if (local_buffer(ibuf).eq.zero) then
+    local_buffer(ibuf)=buf
+   endif
+   side=2
+   ibuf=(side-1)*SDIM+dirbc
+   if (local_buffer(ibuf).eq.zero) then
+    local_buffer(ibuf)=buf
+   endif
+  endif ! sdim==3
+  dirbc=1
+  side=1
+  ibuf=(side-1)*SDIM+dirbc
+  if (local_buffer(ibuf).eq.zero) then
+   local_buffer(ibuf)=buf
+  endif
+  side=2
+  ibuf=(side-1)*SDIM+dirbc
+  if (local_buffer(ibuf).eq.zero) then
+   local_buffer(ibuf)=buf
+  endif
+ endif ! axis_dir.eq.0
+else
+ print *,"expecting probtype==55"
+ stop
+endif
+
+return
+end subroutine GENERAL_PHASE_CHANGE_velfreestream
 
 end module GENERAL_PHASE_CHANGE_module
