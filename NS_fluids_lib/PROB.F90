@@ -12429,8 +12429,6 @@ END SUBROUTINE Adist
         endif
         dist=radblob-sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 )
 
-! (old version: probtype.eq.55 and axis_dir=4 => dist=zblob2-z)
-
        else if (probtype.eq.4) then
         dist=sqrt((x-(xblob+0.5))**2+(y-yblob)**2+(z-zblob)**2 )-radblob
         dist1=sqrt((x-(xblob-0.5))**2+(y-yblob)**2+(z-(zblob+2.3))**2)- &
@@ -22198,8 +22196,7 @@ END SUBROUTINE Adist
           if (SDIM.eq.2) then
 
             ! xlo states (freezing singularity problem, boiling problem)
-           if ((probtype.eq.55).or. &
-               (probtype.eq.59).or. &
+           if ((probtype.eq.59).or. &
                (probtype.eq.710)) then
 
             if (istate.eq.1) then
@@ -22296,8 +22293,7 @@ END SUBROUTINE Adist
           if (SDIM.eq.2) then
 
             ! xhi states (freezing singularity problem, boiling problem)
-           if ((probtype.eq.55).or. &
-               (probtype.eq.59).or. &
+           if ((probtype.eq.59).or. &
                (probtype.eq.710)) then
 
             if (istate.eq.1) then
@@ -22364,29 +22360,8 @@ END SUBROUTINE Adist
 
           if (SDIM.eq.2) then
 
-            ! prescribe_temperature_outflow=3 =>
-            !  Dirichlet for inflow, outflow, wall; ylo states
-           if ((prescribe_temperature_outflow.eq.3).and. &
-               (probtype.eq.55).and. &
-               (axis_dir.eq.1)) then
-
-            if (num_materials.lt.3) then
-             print *,"num_materials invalid probtype=55"
-             stop
-            endif
-   
-             ! ylo
-            if (istate.eq.1) then
-             ! do nothing (density)
-            else if (istate.eq.2) then
-             ADV=fort_tempconst(3)  ! ice temperature for bottom of substrate.
-            else
-             print *,"istate invalid"
-             stop
-            endif
-
             ! cavity boil: ylo 2D
-           else if (probtype.eq.710) then
+           if (probtype.eq.710) then
 
             if (istate.eq.1) then
              ! do nothing (density)
@@ -22398,23 +22373,6 @@ END SUBROUTINE Adist
              stop
             endif
 
-            ! freezing singularity or nucleate boiling problem: ylo
-           else if ((prescribe_temperature_outflow.eq.3).and. &
-                    (probtype.eq.55).and. &
-                    ((axis_dir.eq.5).or. &
-                     (axis_dir.eq.6).or. &
-                     (axis_dir.eq.7))) then
-
-            if (istate.eq.1) then
-             ! do nothing (density)
-            else if (istate.eq.2) then
-             ! bcflag=1 (calling from denBC)
-             call outside_temperature(time,x,y,z,ADV,im,1) 
-            else
-             print *,"istate invalid"
-             stop
-            endif
-         
             ! melting ice block on substrate (subroutine denBC) 
             ! ylo
             ! prescribe_temperature_outflow:
@@ -22518,8 +22476,7 @@ END SUBROUTINE Adist
 
             ! in: subroutine denBC
             ! yhi states 2d (freezing singularity problem, boiling)
-           if ((probtype.eq.55).or. &
-               (probtype.eq.59).or. &
+           if ((probtype.eq.59).or. &
                (probtype.eq.710)) then
 
             if (istate.eq.1) then
@@ -22598,43 +22555,6 @@ END SUBROUTINE Adist
            stop
           endif
           ADV=ADVwall
-
-            ! prescribe_temperature_outflow=3 =>
-            !  Dirichlet for inflow, outflow, wall; zlo
-          if ((prescribe_temperature_outflow.eq.3).and. &
-              (probtype.eq.55).and. &
-              (axis_dir.eq.1)) then
-            
-           if (num_materials.lt.3) then
-            print *,"num_materials invalid probtype=55"
-            stop
-           endif
-  
-           if (istate.eq.1) then
-            ! do nothing (density)
-           else if (istate.eq.2) then
-            ADV=fort_tempconst(3)  ! ice temperature at zlo
-           else
-            print *,"istate invalid"
-            stop
-           endif
-
-           ! freezing singularity or nucleate boiling problem: zlo
-          else if ((prescribe_temperature_outflow.eq.3).and. &
-                   (probtype.eq.55).and. &
-                   ((axis_dir.eq.5).or. &
-                    (axis_dir.eq.6).or. &
-                    (axis_dir.eq.7))) then
-
-           if (istate.eq.1) then
-            ! do nothing (density)
-           else if (istate.eq.2) then
-             ! bcflag=1 (calling from denBC)
-            call outside_temperature(time,x,y,z,ADV,im,1) 
-           else
-            print *,"istate invalid"
-            stop
-           endif
 
            ! melting ice block: zlo
           else if ((prescribe_temperature_outflow.eq.3).and. &
@@ -24431,49 +24351,6 @@ END SUBROUTINE Adist
     
       return
       end subroutine
-
-       ! MEHDI VAHAB HEAT SOURCE
-       ! called from: GODUNOV_3D.F90, 
-       !  HEATSOURCE_FACE when center cell is a solid
-       ! and the opposite cell is a fluid cell.
-       ! heat_dir=1,2,3
-       ! heat_side=1,2
-      subroutine get_internal_heat_source(time,dt,xsten,nhalf, &
-                      heat_flux,heat_dir,heat_side)
-      IMPLICIT NONE
- 
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(out) :: heat_flux
-      INTEGER_T, intent(out) :: heat_dir
-      INTEGER_T, intent(out) :: heat_side
- 
-      if (time.lt.zero) then
-       print *,"time invalid"
-       stop
-      endif
-      if (dt.le.zero) then
-       print *,"dt invalid"
-       stop
-      endif
-
-      heat_flux=zero
-      heat_dir=0
-      heat_side=0
- 
-       ! Sato and Niceno
-      if ((probtype.eq.55).and. &
-          (axis_dir.eq.6).and. &
-          (zblob3.lt.zero)) then
-       heat_flux=abs(zblob3)
-       heat_dir=SDIM
-       heat_side=2
-      endif
-
-      return
-      end subroutine get_internal_heat_source
 
         ! only called at faces with an adjoining solid cell and
         ! an adjoining fluid cell.
@@ -28391,6 +28268,7 @@ end subroutine initialize2d
         SUB_PRES_BC=>GENERAL_PHASE_CHANGE_PRES_BC
         SUB_STATE_BC=>GENERAL_PHASE_CHANGE_STATE_BC
         SUB_HEATSOURCE=>GENERAL_PHASE_CHANGE_HEATSOURCE
+        SUB_EB_heat_source=>GENERAL_PHASE_CHANGE_EB_heat_source
         SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
         SUB_hydro_pressure_density=>GENERAL_PHASE_CHANGE_hydro_pressure_density
        else

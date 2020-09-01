@@ -14925,8 +14925,10 @@ stop
        ! MEHDI VAHAB HEAT SOURCE
        ! heat_dir=1,2,3
        ! heat_side=1,2
-       call get_internal_heat_source(time,dt,xsten,nhalf, &
+       if (is_in_probtype_list().eq.1) then
+        call SUB_EB_heat_source(time,dt,xsten,nhalf, &
                heat_flux,heat_dir,heat_side)
+       endif
 
        if (heat_flux.gt.zero) then
  

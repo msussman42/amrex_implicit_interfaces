@@ -409,6 +409,17 @@ implicit none
       REAL_T, intent(out) :: heat_source
       end subroutine TEMPLATE_HEATSOURCE
 
+      subroutine TEMPLATE_EB_heat_source(time,dt,xsten,nhalf, &
+        heat_flux,heat_dir,heat_side)
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(out) :: heat_flux
+      INTEGER_T, intent(out) :: heat_dir
+      INTEGER_T, intent(out) :: heat_side
+      end subroutine TEMPLATE_EB_heat_source
+
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
@@ -429,6 +440,7 @@ implicit none
       PROCEDURE(TEMPLATE_PRES_BC), POINTER :: SUB_PRES_BC
       PROCEDURE(TEMPLATE_STATE_BC), POINTER :: SUB_STATE_BC
       PROCEDURE(TEMPLATE_HEATSOURCE), POINTER :: SUB_HEATSOURCE
+      PROCEDURE(TEMPLATE_EB_heat_source), POINTER :: SUB_EB_heat_source
 
 contains
 

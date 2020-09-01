@@ -1205,6 +1205,120 @@ if ((istate.ge.1).and. &
  enddo
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
+
+ if (probtype.eq.55) then
+
+  STATE=STATE_in
+  STATE_merge=STATE
+
+  if ((dir.eq.1).and.(SDIM.eq.2)) then
+   if (istate.eq.1) then
+    ! do nothing (density)
+   else if (istate.eq.2) then
+    ! bcflag=1 (calling from denBC - boundary conditions
+    ! for density, temperature and species variables)
+    call outside_temperature(time,x,y,z,STATE,im,1) 
+    STATE_merge=STATE
+   else
+    print *,"istate invalid"
+    stop
+   endif
+  else if ((dir.eq.2).and.(side.eq.1).and.(SDIM.eq.2)) then
+
+   ! prescribe_temperature_outflow=3 =>
+   !  Dirichlet for inflow, outflow, wall; ylo states
+   if ((prescribe_temperature_outflow.eq.3).and. &
+       (axis_dir.eq.1)) then
+
+    if (num_materials.lt.3) then
+     print *,"num_materials invalid probtype=55"
+     stop
+    endif
+   
+     ! ylo
+    if (istate.eq.1) then
+     ! do nothing (density)
+    else if (istate.eq.2) then
+     STATE=fort_tempconst(3)  ! ice temperature for bottom of substrate.
+     STATE_merge=STATE
+    else
+     print *,"istate invalid"
+     stop
+    endif
+
+      ! freezing singularity or nucleate boiling problem: ylo
+   else if ((prescribe_temperature_outflow.eq.3).and. &
+            ((axis_dir.eq.5).or. &
+             (axis_dir.eq.6).or. &
+             (axis_dir.eq.7))) then
+
+    if (istate.eq.1) then
+     ! do nothing (density)
+    else if (istate.eq.2) then
+     ! bcflag=1 (calling from denBC)
+     call outside_temperature(time,x,y,z,STATE,im,1) 
+     STATE_merge=STATE
+    else
+     print *,"istate invalid"
+     stop
+    endif
+
+   endif
+  else if ((dir.eq.2).and.(side.eq.2).and.(SDIM.eq.2)) then
+
+   if (istate.eq.1) then
+    ! do nothing
+   else if (istate.eq.2) then
+    ! bcflag=1 (calling from denBC)
+    call outside_temperature(time,x,y,z,STATE,im,1) 
+    STATE_merge=STATE
+   else
+    print *,"istate invalid"
+    stop
+   endif
+
+  else if ((dir.eq.3).and.(side.eq.1).and.(SDIM.eq.3)) then
+
+   if ((prescribe_temperature_outflow.eq.3).and. &
+       (axis_dir.eq.1)) then
+     
+    if (num_materials.lt.3) then
+     print *,"num_materials invalid probtype=55"
+     stop
+    endif
+  
+    if (istate.eq.1) then
+     ! do nothing (density)
+    else if (istate.eq.2) then
+     STATE=fort_tempconst(3)  ! ice temperature at zlo
+     STATE_merge=STATE
+    else
+     print *,"istate invalid"
+     stop
+    endif
+
+    ! freezing singularity or nucleate boiling problem: zlo
+   else if ((prescribe_temperature_outflow.eq.3).and. &
+            ((axis_dir.eq.5).or. &
+             (axis_dir.eq.6).or. &
+             (axis_dir.eq.7))) then
+
+    if (istate.eq.1) then
+     ! do nothing (density)
+    else if (istate.eq.2) then
+      ! bcflag=1 (calling from denBC)
+     call outside_temperature(time,x,y,z,STATE,im,1) 
+     STATE_merge=STATE
+    else
+     print *,"istate invalid"
+     stop
+    endif
+   endif
+  endif
+ else
+  print *,"expecting probtype ==55"
+  stop
+ endif
 else
  print *,"istate invalid"
  stop
@@ -1274,5 +1388,56 @@ endif
 
 return
 end subroutine GENERAL_PHASE_CHANGE_HEATSOURCE
+
+
+ ! MEHDI VAHAB HEAT SOURCE
+ ! called from: GODUNOV_3D.F90, 
+ !  HEATSOURCE_FACE when center cell is a solid
+ ! and the opposite cell is a fluid cell.
+ ! heat_dir=1,2,3
+ ! heat_side=1,2
+subroutine GENERAL_PHASE_CHANGE_EB_heat_source(time,dt,xsten,nhalf, &
+      heat_flux,heat_dir,heat_side)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nhalf
+REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
+REAL_T, intent(in) :: time
+REAL_T, intent(in) :: dt
+REAL_T, intent(out) :: heat_flux
+INTEGER_T, intent(out) :: heat_dir
+INTEGER_T, intent(out) :: heat_side
+
+if (time.lt.zero) then
+ print *,"time invalid"
+ stop
+endif
+if (dt.le.zero) then
+ print *,"dt invalid"
+ stop
+endif
+
+if (probtype.eq.55) then
+
+ heat_flux=zero
+ heat_dir=0
+ heat_side=0
+
+ ! Sato and Niceno
+ if ((axis_dir.eq.6).and. &
+     (zblob3.lt.zero)) then
+  heat_flux=abs(zblob3)
+  heat_dir=SDIM
+  heat_side=2
+ endif
+
+else
+ print *,"expecting probtype==55"
+ stop
+endif
+
+return
+end subroutine GENERAL_PHASE_CHANGE_EB_heat_source
+
 
 end module GENERAL_PHASE_CHANGE_module
