@@ -484,31 +484,85 @@ endif
 return
 end subroutine GENERAL_PHASE_CHANGE_CFL_HELPER
 
-
-! Phi>0 in the solid
-subroutine BOTTOM_substrateLS(x,Phi) 
+! dist>0 in the fluid
+subroutine GENERAL_soliddist(x,dist,im) 
 use probcommon_module
 implicit none
 REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
-REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
+INTEGER_T, intent(in) :: im
+REAL_T, intent(out) :: dist
 
-REAL_T substrate_height
-
-if (abs(zblob2-yblob2).le.1.0D-14) then
- substrate_height=zblob2  ! substrate thickness
-else
- print *,"zblob2 or yblob2 invalid"
+nmat=num_materials
+if (nmat.lt.1) then
+ print *,"nmat invalid in soliddist"
  stop
 endif
 
-if (abs(x(SDIM)).le.1.0D+20) then
- Phi=substrate_height-x(SDIM)
-else
- print *,"x(SDIM) invalid"
+if ((im.lt.1).or.(im.gt.nmat)) then
+ print *,"im invalid11"
  stop
 endif
 
-end subroutine BOTTOM_substrateLS
+if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
+ ! do nothing
+else
+ print *,"FSI_flag(im) invalid"
+ stop
+endif
+
+dist=99999.0
+
+! soliddist: dist>0 in fluid 2d or 3d
+if (probtype.eq.55) then 
+
+ if ((axis_dir.eq.0).or. &
+     (axis_dir.eq.5).or. &  ! freezing
+     (axis_dir.eq.6).or. &  ! boiling (incomp)
+     (axis_dir.eq.7).or. &  ! boiling (comp)
+     (axis_dir.eq.1)) then
+
+  if ((radblob5.gt.zero).and. &
+      (axis_dir.eq.0)) then ! ellipse
+ 
+! Professor Yongsheng Lian was here: 
+   if (SDIM.eq.2) then
+    dist=sqrt((x(1)-xblob2)*(x(1)-xblob2)/(radblob3**2)+ &
+        (x(2)-yblob2)*(x(2)-yblob2)/(radblob4**2))-radblob5
+   else
+    dist=sqrt((x(1)-xblob2)*(x(1)-xblob2)/(radblob3**2)+ &
+        (x(2)-yblob2)*(x(2)-yblob2)/(radblob4**2)+ &
+        (x(SDIM)-zblob2)*(x(SDIM)-zblob2)/(radblob9**2))-radblob5
+   endif
+
+  else if ((axis_dir.eq.1).and.(nmat.eq.3)) then
+   ! do nothing: solid replaced by ice.
+
+   ! axis_dir=6: boiling sites
+   ! axis_dir=1: falling drop on substrate and then freezing.
+  else if ((radblob5.eq.zero).or. &
+           (axis_dir.eq.5).or. &
+           (axis_dir.eq.6).or. &
+           ((axis_dir.eq.1).and. &
+            (nmat.eq.4))) then
+
+    ! dist>0 in the substrate
+   call ice_substrate_distance(x(1),x(2),x(SDIM),dist)
+    ! now make dist<0 in the substrate.
+   dist=-dist
+
+  endif
+
+ else 
+  print *,"axis_dir invalid"
+  stop
+ endif
+
+else
+ print *,"expecting probtype.eq.55"
+ stop
+endif
+
+end subroutine GENERAL_soliddist
 
 ! ice + water thickness = radblob
 ! water thickness = radblob3  usually radblob3 << radlob (initial water
@@ -539,6 +593,13 @@ REAL_T, intent(out) :: LS(nmat)
   endif
 
   if (probtype.eq.55) then
+
+   do im=1,nmat
+    if (FSI_flag(im).eq.1) then
+     call GENERAL_soliddist(x,LS(im),nmat)  ! returns LS<0 in solid
+     LS(im)=-LS(im)   ! now LS>0 in solid
+    endif
+   enddo
 
    ! drop on slope problem (2d or 3d)
    ! radblob4 is used as a "switch" in order to specify static
@@ -833,6 +894,7 @@ REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
+REAL_T :: temp
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -861,6 +923,132 @@ enddo
 do dir=1,SDIM
  VEL(dir)=zero
 enddo
+
+! in "initvelocity":
+! drop on slope 2d or 3d
+! if advbot<>0, then we have liquid sphere falling onto ramp
+! if axis_dir=1 then we have liquid sphere falling onto ice.
+! liquid is material 1, gas is material 2, solid/ice is material 3
+if (probtype.eq.55) then
+
+ do dir=1,SDIM
+  VEL(dir)=zero
+ enddo
+
+ call default_rampvel(t,VEL(1),VEL(2),VEL(SDIM))
+
+ if (axis_dir.eq.5) then
+  do dir=1,SDIM
+   VEL(dir)=zero
+  enddo
+  ! axis_dir=6,7 is boiling (e.g. Sato and Niceno)
+ else if ((axis_dir.eq.6).or. & ! incompressible
+          (axis_dir.eq.7)) then ! compressible
+  if (yblob10.gt.zero) then
+   if((x(2).ge.yblob2).and.(x(2).le.yblob10)) then
+    ! Distance from substrate
+    temp = x(2)-yblob2
+    VEL(1)=VEL(1)*(1.5d0*temp/yblob10 -0.5*(temp/yblob10)**3)
+   end if
+  else if (yblob10.eq.zero) then
+   VEL(1)=zero
+  else
+   print *,"yblob10 invalid"
+   stop
+  end if
+  VEL(2)=zero
+  VEL(SDIM)=zero
+
+ else if ((axis_dir.eq.0).or. &
+          (axis_dir.eq.1)) then
+  do dir=1,SDIM
+   VEL(dir)=zero
+  enddo
+
+  if (advbot.ne.zero) then
+   if ((radblob6.ne.zero).or.(radblob7.ne.zero)) then
+    print *,"parameters conflict"
+    stop
+   endif
+   if (LS(1).gt.-dx(1)) then
+    VEL(SDIM)=-abs(advbot)
+   endif
+  endif ! advbot <> 0
+
+  if (radblob5.gt.zero) then  ! impact droplet on ellipse
+   if (adv_dir.eq.1) then
+    VEL(1)=adv_vel
+   else if (adv_dir.eq.2) then
+    VEL(2)=adv_vel
+   else if ((adv_dir.eq.3).and.(SDIM.eq.3)) then
+    VEL(SDIM)=adv_vel
+   else
+    print *,"adv_vel invalid"
+    stop
+   endif 
+  else if (radblob5.lt.zero) then
+   print *,"radblob5 invalid"
+   stop
+  endif
+  if ((radblob6.gt.zero).or.(radblob7.gt.zero)) then
+   if ((radblob6.gt.zero).and.(radblob7.gt.zero)) then
+    print *,"cannot have both radblob6 and radblob7 positive"
+    stop
+   endif
+   if (radblob6.gt.zero) then
+    if (LS(1).gt.-dx(1)) then
+     if (levelrz.eq.1) then
+      zmid=half*(yblob6+yblob)
+      if (x(2).lt.zmid) then
+       VEL(2)=abs(advbot)
+      else
+       VEL(2)=-abs(vinletgas)
+      endif
+     else if (levelrz.eq.0) then
+      xmid=half*(xblob6+xblob)
+      if (x(1).lt.xmid) then
+       VEL(1)=abs(advbot)
+      else
+       VEL(1)=-abs(vinletgas)
+      endif
+     else
+      print *,"levelrz invalid init velocity"
+      stop
+     endif
+    endif  ! liquid
+   else if (radblob7.gt.zero) then
+    if (LS(1).gt.-dx(1)) then
+     if (levelrz.eq.1) then
+      VEL(2)=abs(advbot)
+     else if (levelrz.eq.0) then
+      VEL(1)=abs(advbot)
+     else
+      print *,"levelrz invalid init velocity 2"
+      stop
+     endif
+    else if (LS(3).gt.-dx(1)) then
+     if (levelrz.eq.1) then
+      VEL(2)=-abs(vinletgas)
+     else if (levelrz.eq.0) then
+      VEL(1)=-abs(vinletgas)
+     else
+      print *,"levelrz invalid probtype 55"
+      stop
+     endif
+    endif
+   else
+    print *,"bust"
+    stop
+   endif
+  endif ! drop collision (radblob6 or radblob7 > 0)
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
+else
+ print *,"expecting probtype==55"
+ stop
+endif
 
 return 
 end subroutine GENERAL_PHASE_CHANGE_VEL
@@ -966,6 +1154,7 @@ REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
+REAL_T water_temp
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -979,9 +1168,7 @@ else
  print *,"nstate_mat invalid"
  stop
 endif
-if ((num_materials.eq.4).and. &
-    (num_state_material.eq.2).and. & ! density, temperature
-    (probtype.eq.2001)) then
+if (probtype.eq.55) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+1)=fort_denconst(im) ! density prescribed in the inputs file.
@@ -993,13 +1180,35 @@ if ((num_materials.eq.4).and. &
    print *,"t invalid"
    stop
   endif
-   ! always assume Dirichlet boundary condition at zlo for temperature.
-  call outside_temperature(t,x(1),x(2),x(SDIM),STATE(ibase+2),im,bcflag)
 
    ! initial species in inputs?
   do n=1,num_species_var
    STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
+
+   ! initial temperature for boiling or freezing
+   ! nucleate boiling: Sato and Niceno or Tryggvason
+  if ((axis_dir.eq.6).or. &  ! incompressible
+      (axis_dir.eq.7)) then  ! compressible
+   ! water phase
+   if (im.eq.1) then
+    ! bcflag=0 (calling from FORT_INITDATA)
+    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
+    STATE(ibase+2)=water_temp  
+   endif ! im=1
+  else if (axis_dir.eq.5) then ! freezing drop on substrate
+   if (nmat.lt.4) then
+    print *,"nmat too small for freezing drop on substrate"
+    stop
+   endif
+   ! ice  or substrate (initial temperature)
+   if ((im.eq.3).or.(im.eq.4)) then
+    ! bcflag=0 (calling from FORT_INITDATA)
+    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
+    STATE(ibase+2)=water_temp  
+   endif
+  endif
+
  enddo ! im=1..num_materials
 else
  print *,"num_materials,num_state_material, or probtype invalid"

@@ -14732,5 +14732,94 @@ contains
       return
       end subroutine general_hydrostatic_pressure
 
+
+      subroutine rampvel(time,vel)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: vel
+      REAL_T :: tcutoff
+
+      if ((SDIM.eq.2).and. &
+          ((probtype.eq.63).or. &
+           (probtype.eq.64))) then
+       tcutoff=1.0
+       if (time.gt.tcutoff) then
+        vel=adv_vel
+       else
+        vel=time*adv_vel/tcutoff
+       endif
+      else if ((SDIM.eq.3).and.(probtype.eq.9)) then
+       tcutoff=zero
+       if ((time.gt.tcutoff).or.(tcutoff.eq.zero)) then
+        vel=adv_vel
+       else if (tcutoff.gt.zero) then
+        vel=time*adv_vel/tcutoff
+       else
+        print *,"tcutoff invalid"
+        stop
+       endif
+      else
+       vel=adv_vel
+      endif
+
+      return
+      end subroutine rampvel
+
+      subroutine default_rampvel(time,xx_vel,yy_vel,zz_vel)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: xx_vel,yy_vel,zz_vel
+
+      xx_vel=zero 
+      yy_vel=zero 
+      zz_vel=zero 
+
+      if ((probtype.eq.26).and.(axis_dir.eq.11)) then
+       ! do nothing 
+      else if (adv_dir.eq.1) then  ! init velocity
+        if (SDIM.eq.2) then
+         call rampvel(time,xx_vel)
+        else if (SDIM.eq.3) then
+         xx_vel = adv_vel
+          ! initboat
+         if (probtype.eq.9) then
+          call rampvel(time,xx_vel)
+         endif
+        else
+         print *,"dimension bust"
+         stop
+        endif
+        yy_vel=zero
+        zz_vel=zero
+      else if (adv_dir .eq. 2) then
+        xx_vel = zero
+        yy_vel = adv_vel
+        zz_vel=zero
+      else if ((adv_dir.eq.3).and.(SDIM.eq.3)) then
+        xx_vel = zero
+        yy_vel = zero
+        zz_vel = adv_vel
+      else if ((adv_dir.eq.3).and.(SDIM.eq.2)) then
+        xx_vel = adv_vel
+        yy_vel = adv_vel
+        zz_vel = zero
+      else if ((adv_dir.eq.4).and.(SDIM.eq.3)) then
+        xx_vel = adv_vel
+        yy_vel = adv_vel
+        zz_vel = adv_vel
+      else if (probtype.eq.40) then
+       ! do nothing
+      else if (probtype.eq.530) then
+       ! do nothing
+      else
+        print *,"adv_dir invalid: ",adv_dir
+        stop
+      endif
+
+      return
+      end subroutine default_rampvel
+
 end module global_utility_module
 
