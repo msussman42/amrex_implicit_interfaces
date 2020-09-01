@@ -33047,25 +33047,28 @@ end subroutine initialize2d
          k_source=get_user_heatviscconst(im_source) ! W/(m Kelvin)
 
           ! in: init_initdata
-         if (probtype.eq.801) then
+         if ((im_source.ge.1).and.(im_source.le.nmat).and. &
+             (im_dest.ge.1).and.(im_dest.le.nmat)) then
           T_extreme=fort_tempconst(im_source)
-         else if ((probtype.eq.55).or. &
-                  (probtype.eq.59).or. &
-                  (probtype.eq.710)) then
-          if (im_solid_initdata.eq.0) then
-           T_extreme=fort_tempconst(im_source)
+          if (fort_tempconst(im_dest).gt.T_extreme) then
+           T_extreme=fort_tempconst(im_dest)
+          endif
+          if ((im_solid_initdata.ge.1).and. &
+              (im_solid_initdata.le.nmat)) then
+           if (fort_tempconst(im_solid_initdata).gt.T_extreme) then
+            T_extreme=fort_tempconst(im_solid_initdata)
+           endif
+          else if (im_solid_initdata.eq.0) then
+           ! do nothing
           else
-           T_extreme=fort_tempconst(im_solid_initdata)
+           print *,"im_solid_initdata invalid"
+           stop
           endif
          else
-          if (im_solid_initdata.eq.0) then
-           T_extreme=fort_tempconst(im_source)
-          else
-           T_extreme=fort_tempconst(im_solid_initdata)
-          endif
+          print *,"im_source or im_dest invalid"
+          stop
          endif
-
-
+ 
          TDIFF=abs(T_extreme-TSAT)
 
          rho_source=fort_denconst(im_source) ! kg/m^3 
