@@ -1,8 +1,11 @@
 #!/bin/bash
 
-ctags -e -R --c++-kinds=+p --fields=+iaS --extra=+q .
+ctags -R --c++-kinds=+p --fields=+iaS --extra=+q --exclude=NS_fluids_lib/tmp_build_dir . 
 
-# - The --c++-kinds=+p option:
+#  -R
+# recursive
+
+#  --c++-kinds=+p 
 # When parsing a C++ member function definition
 # (e.g. "className::function"), ctags cannot determine whether the scope
 # specifier is a class name or a namespace specifier and always lists it
@@ -14,13 +17,13 @@ ctags -e -R --c++-kinds=+p --fields=+iaS --extra=+q .
 # for the function definition. It will, however be available for
 # prototypes (e.g --c++-kinds=+p).
 
-# - The --fields=+iaS option:
-#  a   Access (or export) of class members
-#  i   Inheritance information
-#  S   Signature of routine (e.g. prototype or parameter list)
+#  --fields=+iaS 
+# a   Access (or export) of class members
+# i   Inheritance information
+# S   Signature of routine (e.g. prototype or parameter list)
 
-# - The --extra=+q option:
-# Because, by default, ctags only generates tags for the separate
+#  --extra=+q option:
+# ctags by default only generates tags for the separate
 # identifiers found in the source files. If you specify the --extra=+q
 # option, then ctags will also generate a second, class-qualified tag
 # for each class member (data and function/method) in the form
