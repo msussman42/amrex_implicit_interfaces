@@ -111,7 +111,6 @@ end subroutine acoustic_pulse_bc
 subroutine GENERAL_PHASE_CHANGE_hydro_pressure_density( &
   xpos,rho,pres,from_boundary_hydrostatic)
 use probcommon_module
-use global_utility_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: xpos(SDIM)

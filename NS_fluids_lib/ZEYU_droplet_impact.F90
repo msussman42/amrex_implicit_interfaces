@@ -67,7 +67,6 @@ IMPLICIT NONE
 
 REAL_T x(SDIM)
 REAL_T t
-INTEGER_T im
 REAL_T LS(num_materials)
 
 if ((num_materials.eq.3).and.(probtype.eq.413)) then
