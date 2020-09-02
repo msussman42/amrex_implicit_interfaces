@@ -46,15 +46,6 @@ REAL_T, intent(in) :: time
 REAL_T, intent(inout) :: uu
 REAL_T, intent(in) :: dx(SDIM)
 
-INTEGER_T dir2
-INTEGER_T side
-REAL_T utest,uscale
-REAL_T xsten_dummy(-1:1,SDIM)
-INTEGER_T for_dt
-INTEGER_T nhalf
-
-nhalf=1
-
 if ((dir.lt.0).or.(dir.ge.SDIM)) then
  print *,"dir invalid"
  stop
@@ -112,7 +103,6 @@ REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
-REAL_T :: temp
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -151,6 +141,7 @@ end subroutine STUB_VEL
 
 subroutine EOS_STUB(rho,internal_energy,pressure, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
@@ -164,12 +155,12 @@ end subroutine EOS_STUB
 
 subroutine SOUNDSQR_STUB(rho,internal_energy,soundsqr, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
- REAL_T pressure
 
  call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
    imattype,im)
@@ -318,7 +309,6 @@ INTEGER_T, intent(in) :: veldir,dir,side
 REAL_T, intent(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
-REAL_T temp
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -543,6 +533,23 @@ type(nucleation_parm_type_input), intent(in) :: nucleate_in
 
 return
 end subroutine STUB_nucleation
+
+
+
+subroutine STUB_hydro_pressure_density( &
+  xpos,rho,pres,from_boundary_hydrostatic)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: xpos(SDIM)
+REAL_T, intent(inout) :: rho
+REAL_T, intent(inout) :: pres
+INTEGER_T, intent(in) :: from_boundary_hydrostatic
+
+
+return
+end subroutine STUB_hydro_pressure_density
+
 
 
 end module STUB_module

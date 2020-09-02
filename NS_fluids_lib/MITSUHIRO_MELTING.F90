@@ -226,6 +226,7 @@ end subroutine MITSUHIRO_MELTING_VEL
 ! compressible material functions for (ns.material_type = 24)
 subroutine EOS_MITSUHIRO_MELTING(rho,internal_energy,pressure, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
@@ -239,12 +240,12 @@ end subroutine EOS_MITSUHIRO_MELTING
 
 subroutine SOUNDSQR_MITSUHIRO_MELTING(rho,internal_energy,soundsqr, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
- REAL_T pressure
 
  call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
    imattype,im)

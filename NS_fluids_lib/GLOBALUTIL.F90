@@ -10234,15 +10234,12 @@ contains
 
         ! Sato and Niceno or Tryggvason
         ! (probtype.eq.55) and ((axis_dir.eq.6).or.(axis_dir.eq.7))
-      subroutine nucleation_sites(xsten,nhalf,dx,bfact,dist,nucleate_pos)
+      subroutine nucleation_sites(x_point,dist,nucleate_pos)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: bfact,nhalf
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T x,y,z
+      REAL_T, intent(in) :: x_point(SDIM)
       REAL_T, intent(out) :: dist
       INTEGER_T icomp
       REAL_T distarr(n_sites)
@@ -10250,7 +10247,6 @@ contains
       REAL_T hugedist
       REAL_T xx(SDIM)
       REAL_T rr
-      REAL_T dxmax
       INTEGER_T dir
  
       if (n_sites.lt.1) then
@@ -10258,27 +10254,7 @@ contains
        stop
       endif
  
-      if (nhalf.lt.1) then
-       print *,"nhalf invalid nucleation sites"
-       stop
-      endif 
-      if (bfact.lt.1) then
-       print *,"bfact invalid200"
-       stop
-      endif 
-      call get_dxmax(dx,bfact,dxmax)
-
       hugedist=99999.0
-
-      x=xsten(0,1)
-      y=xsten(0,2)
-      z=xsten(0,SDIM)
-      if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
-        print *,"expecting z=y"
-        stop
-       endif
-      endif
 
       dist=hugedist
 
@@ -10286,12 +10262,9 @@ contains
        distarr(icomp)=hugedist
        rr=nucleate_pos(4*(icomp-1)+4)
        if (rr.gt.zero) then
-        xx(1)=x-nucleate_pos(4*(icomp-1)+1)
-        xx(2)=y-nucleate_pos(4*(icomp-1)+2)
-        if (SDIM.eq.3) then
-         xx(SDIM)=z-nucleate_pos(4*(icomp-1)+3)
-        endif
-        rr=max(rr,two*dxmax)
+        do dir=1,SDIM
+         xx(dir)=x_point(dir)-nucleate_pos(4*(icomp-1)+dir)
+        enddo
         distarr(icomp)=zero
         do dir=1,SDIM
          distarr(icomp)=distarr(icomp)+xx(dir)**2
@@ -10303,7 +10276,7 @@ contains
         print *,"rr invalid"
         stop
        endif 
-      enddo ! icomp
+      enddo ! icomp=1..n_sites
     
       return
       end subroutine nucleation_sites
@@ -12800,6 +12773,134 @@ contains
       return
       end subroutine air_parms
 
+       ! density_at_depth previously initialized by:
+       ! init_density_at_depth() 
+       ! called from: FORT_DENCOR, general_hydrostatic_pressure_density,
+       ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
+       ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
+      subroutine tait_hydrostatic_pressure_density( &
+        xpos,rho,pres,from_boundary_hydrostatic)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(inout) :: rho
+      REAL_T, intent(inout) :: pres
+      INTEGER_T, intent(in) :: from_boundary_hydrostatic
+      REAL_T denfree,zfree
+      REAL_T z_at_depth
+
+      if (is_in_probtype_list().eq.1) then
+
+       call SUB_hydro_pressure_density(xpos,rho,pres, &
+               from_boundary_hydrostatic)
+
+      else
+
+       ! in tait_hydrostatic_pressure_density
+       if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
+        rho=one
+        call EOS_tait_ADIABATIC(rho,pres)
+       ! JICF nozzle+pressure bc
+       else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
+        rho=one
+        call EOS_tait_ADIABATIC(rho,pres)
+        ! JICF
+       else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
+        rho=fort_denconst(1)
+        call EOS_tait_ADIABATIC_rho(rho,pres)
+       ! impinging jets
+       else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
+                (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
+        rho=fort_denconst(1)
+        call EOS_tait_ADIABATIC_rho(rho,pres)
+
+        ! in: tait_hydrostatic_pressure_density
+       else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
+
+        if (probloy.ne.zero) then
+         print *,"probloy must be 0 for bubble jetting problem"
+         stop
+        endif
+        ! yblob is distance from domain bottom of charge
+        ! zblob is depth of charge
+        denfree=one
+        zfree=zblob+yblob  ! relative to computational grid
+        z_at_depth=yblob
+        if (xpos(SDIM).gt.zfree) then
+         rho=denfree
+        else
+         rho= &
+           ((density_at_depth-denfree)/ &
+            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+        endif
+        call EOS_tait_ADIABATIC(rho,pres)
+
+       else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
+
+        if (probloy.ne.zero) then
+         print *,"probloy must be 0 for cavitation problem"
+         stop
+        endif
+        ! yblob is distance from domain bottom of charge/sphere
+        ! zblob is depth of charge (for jwl problem)
+        denfree=one
+        if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+         zfree=zblob+yblob  ! relative to computational grid
+         z_at_depth=yblob
+        else if (axis_dir.eq.10) then
+         zfree=zblob
+         z_at_depth=zero
+        else if (axis_dir.eq.20) then
+         print *,"there is no gravity for the CODY ESTEBE created test problem"
+         stop
+        else
+         print *,"axis_dir out of range"
+         stop
+        endif
+        if (xpos(SDIM).gt.zfree) then
+         rho=denfree
+        else
+         rho= &
+           ((density_at_depth-denfree)/ &
+            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+        endif
+        call EOS_tait_ADIABATIC(rho,pres)
+
+       else if (fort_material_type(1).eq.13) then
+
+        denfree=fort_denconst(1)
+        if (SDIM.eq.2) then
+         zfree=probhiy
+         z_at_depth=probloy
+        else if (SDIM.eq.3) then
+         zfree=probhiz
+         z_at_depth=probloz
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+         ! density_at_depth is found so that
+         ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
+         !
+        if (xpos(SDIM).gt.zfree) then
+         rho=denfree
+        else
+         rho= &
+           ((density_at_depth-denfree)/ &
+            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+        endif
+        call EOS_tait_ADIABATIC_rhohydro(rho,pres)
+       else
+        print *,"probtype invalid tait_hydrostatic_pressure_density"
+        stop
+       endif
+
+      endif
+
+      return
+      end subroutine tait_hydrostatic_pressure_density
 
       subroutine EOS_air_rho2(rho,internal_energy,pressure)
       use probcommon_module
@@ -12808,6 +12909,9 @@ contains
       REAL_T rho,internal_energy,gamma_constant,pressure,omega
       REAL_T cp,cv,R,pressure_adjust,preshydro,rhohydro
       REAL_T xpos(SDIM)
+      INTEGER_T from_boundary_hydrostatic
+
+      from_boundary_hydrostatic=0
 
       call air_parms(R,cp,cv,gamma_constant,omega) 
       if (rho.le.zero) then
@@ -12839,7 +12943,8 @@ contains
         print *,"dimension bust"
         stop
        endif
-       call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro)
+       call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+               from_boundary_hydrostatic)
       else
        preshydro=1.0D+6
       endif
@@ -12860,6 +12965,9 @@ contains
       REAL_T cp,cv,R,rhohydro,omega
       REAL_T RHOI,PI
       REAL_T xpos(SDIM)
+      INTEGER_T from_boundary_hydrostatic
+
+      from_boundary_hydrostatic=0
 
       RHOI=fort_denconst(2)
       call general_hydrostatic_pressure(PI)
@@ -12891,7 +12999,8 @@ contains
         print *,"dimension bust"
         stop
        endif
-       call tait_hydrostatic_pressure_density(xpos,rhohydro,PI)
+       call tait_hydrostatic_pressure_density(xpos,rhohydro,PI, &
+               from_boundary_hydrostatic)
       endif
 
       pressure=PI*((rho/RHOI)**gamma_constant)
@@ -12955,6 +13064,9 @@ contains
       REAL_T soundsqr
       REAL_T cp,cv,R,pressure_adjust,preshydro,rhohydro
       REAL_T xpos(SDIM)
+      INTEGER_T from_boundary_hydrostatic
+
+      from_boundary_hydrostatic=0
 
       call air_parms(R,cp,cv,gamma_constant,omega)
     
@@ -12985,7 +13097,8 @@ contains
         print *,"dimension bust"
         stop
        endif
-       call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro)
+       call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+               from_boundary_hydrostatic)
       else
        preshydro=1.0D+6
       endif
@@ -14895,6 +15008,140 @@ contains
 
       return
       end subroutine default_rampvel
+
+      ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
+      ! theta_{ik}=0 => material i wets material k.
+      ! im is material "i"  ("fluid" material)
+      ! im_opp is material "j"
+      ! im_3 is material "k"
+      ! iten_13 corresponds to "ik"
+      ! iten_23 corresponds to "jk"
+      ! if nmat=4, 12 13 14 23 24 34
+
+      subroutine get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
+       user_tension,nten,cos_angle,sin_angle)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im,im_opp,im_3,iten_13,iten_23,nten,nten_test
+      INTEGER_T iten
+      INTEGER_T nmat
+      REAL_T user_tension(nten)
+      REAL_T cos_angle,sin_angle
+
+
+      nmat=num_materials
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten: get_CL_iten nten nten_test ",nten,nten_test
+       stop
+      endif
+
+      if ((im.lt.1).or.(im.gt.num_materials).or. &
+          (im_opp.lt.1).or.(im_opp.gt.num_materials).or. &
+          (im_3.lt.1).or.(im_3.gt.num_materials).or. &
+          (im.eq.im_opp).or.(im.eq.im_3).or. &
+          (im_opp.eq.im_3)) then
+       print *,"im mismatch"
+       print *,"im=",im
+       print *,"im_opp=",im_opp
+       print *,"im_3=",im_3
+       stop
+      endif
+
+      if (nmat.le.2) then
+       print *,"nmat too small for CL treatment"
+       stop
+       ! 12 13 23
+      else if (nmat.eq.3) then
+       if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
+        iten_13=2
+        iten_23=3
+       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.1)) then
+        iten_13=1
+        iten_23=2
+       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.2)) then
+        iten_13=1
+        iten_23=3
+       else
+        print *,"combination of im,im_opp,im_3 invalid nmat=",nmat
+        print *,"im=",im
+        print *,"im_opp=",im_opp
+        print *,"im_3=",im_3
+        stop
+       endif
+       ! 12 13 14 23 24 34
+      else if (nmat.eq.4) then
+       if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
+        iten_13=2
+        iten_23=4
+       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.1)) then
+        iten_13=1
+        iten_23=2
+       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.2)) then
+        iten_13=1
+        iten_23=4
+       else if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.4)) then
+        iten_13=3
+        iten_23=5
+       else if ((im.eq.2).and.(im_opp.eq.4).and.(im_3.eq.1)) then
+        iten_13=1
+        iten_23=3
+       else if ((im.eq.1).and.(im_opp.eq.4).and.(im_3.eq.2)) then
+        iten_13=1
+        iten_23=5
+       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.4)) then
+        iten_13=5
+        iten_23=6
+       else if ((im.eq.2).and.(im_opp.eq.4).and.(im_3.eq.3)) then
+        iten_13=4
+        iten_23=6
+       else if ((im.eq.3).and.(im_opp.eq.4).and.(im_3.eq.2)) then
+        iten_13=4
+        iten_23=5
+       else if ((im.eq.3).and.(im_opp.eq.4).and.(im_3.eq.1)) then
+        iten_13=2
+        iten_23=3
+        ! 12 13 14 23 24 34
+       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.4)) then
+        iten_13=3
+        iten_23=6
+       else if ((im.eq.1).and.(im_opp.eq.4).and.(im_3.eq.3)) then
+        iten_13=2
+        iten_23=6
+       else
+        print *,"combination of im,im_opp,im_3 invalid nmat=",nmat
+        print *,"im=",im
+        print *,"im_opp=",im_opp
+        print *,"im_3=",im_3
+        stop
+       endif
+      else
+       print *,"combination not supported"
+       stop
+      endif
+
+      call get_iten(im,im_opp,iten,nmat)
+
+      if (user_tension(iten).eq.zero) then  ! default extrapolation
+       cos_angle=zero
+      else if (user_tension(iten).gt.zero) then
+       cos_angle=(user_tension(iten_23)-user_tension(iten_13))/ &
+                 user_tension(iten)
+      else
+       print *,"user_tension(iten) invalid"
+       stop
+      endif
+
+      if (cos_angle.gt.one) then 
+       cos_angle=one
+      else if (cos_angle.lt.-one) then
+       cos_angle=-one
+      endif
+      sin_angle=sqrt(one-cos_angle**2)
+
+      return
+      end subroutine get_CL_iten
 
   ! in 2D, "y" is ignored
   ! distance>0 in the drop

@@ -10203,6 +10203,16 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
  const Real* dx = geom.CellSize();
 
+ Real dxmax=0.0;
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (dx[dir]>0.0) {
+   if (dxmax<dx[dir])
+    dxmax=dx[dir];
+  } else
+   amrex::Error("dx[dir] must be positive");
+ } // dir=0..sdim-1
+
+
   // in: level_phase_change_rate()
  getStateDen_localMF(DEN_RECON_MF,normal_probe_size+3,cur_time_slab);
 
@@ -10280,17 +10290,50 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   } else
    amrex::Error("nucleation_init_time invalid");
  
-  if (nucleation_period==0.0) {
+  if (nucleation_period==0.0) { // just nucleate the bubble(s) once
    if (first_time_nucleate==1) {
     do_the_nucleate=1;
-    for (int dir=0;dir<4*n_sites;dir++)
-     nucleate_pos[dir]=pos_sites[dir]; 
-   }
-  } else if (nucleation_period>0.0) {
+    int pos_comp=0;
+    for (int i_site=0;i_site<n_sites;i_site++) {
+     for (int dir=0;dir<3;dir++) {
+      nucleate_pos[pos_comp]=pos_sites[pos_comp]; 
+      pos_comp++;
+     }
+     double rr=pos_sites[pos_comp];
+     if (rr>0.0) {
+      if (rr<2.0*dxmax)
+       rr=2.0*dxmax;
+     } else
+      amrex::Error("rr must be positive");
+     nucleate_pos[pos_comp]=rr;
+     pos_comp++;
+    } // i_site=0..n_sites-1
+   } else if (first_time_nucleate==0) {
+    // do nothing
+   } else
+    amrex::Error("first_time_nucleate invalid");
+
+  } else if (nucleation_period>0.0) { // positions random t>t_nucleate_init
+
    if (first_time_nucleate==1) {
+
     do_the_nucleate=1;
-    for (int dir=0;dir<4*n_sites;dir++)
-     nucleate_pos[dir]=pos_sites[dir]; 
+    int pos_comp=0;
+    for (int i_site=0;i_site<n_sites;i_site++) {
+     for (int dir=0;dir<3;dir++) {
+      nucleate_pos[pos_comp]=pos_sites[pos_comp]; 
+      pos_comp++;
+     }
+     double rr=pos_sites[pos_comp];
+     if (rr>0.0) {
+      if (rr<2.0*dxmax)
+       rr=2.0*dxmax;
+     } else
+      amrex::Error("rr must be positive");
+     nucleate_pos[pos_comp]=rr;
+     pos_comp++;
+    } // i_site=0..n_sites-1
+
    } else if ((first_time_nucleate==0)&&
               (prev_time_slab>nucleation_init_time)) {
   
@@ -10322,6 +10365,11 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
       for (int nc=0;nc<n_sites;nc++) {
 
        double rr=pos_sites[nc*4+3];  // radius
+       if (rr>0.0) {
+        if (rr<2.0*dxmax)
+         rr=2.0*dxmax;
+       } else
+        amrex::Error("rr must be positive");
 
        Vector<Real> xnucleate(AMREX_SPACEDIM);
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
@@ -10339,7 +10387,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
          xnucleate[dir]=problo[dir]+save_random*(probhi[dir]-problo[dir]);
          if ((rz_flag==1)&&(dir==0)) {
           xnucleate[dir]=0.0;
-         } else if (dir==AMREX_SPACEDIM-1) {
+         } else if (dir==AMREX_SPACEDIM-1) {  // vertical coordinate
           xnucleate[dir]=pos_sites[nc*4+dir];
          } else {       
           if (xnucleate[dir]-rr<problo[dir])
@@ -10366,10 +10414,11 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     } else
      amrex::Error("level invalid nucleate_bubbles 2");
 
-   } else if (prev_time_slab<=nucleation_init_time) {
+   } else if ((first_time_nucleate==0)&&
+              (prev_time_slab<=nucleation_init_time)) {
     // do nothing
    } else
-    amrex::Error("prev_time_slab invalid");
+    amrex::Error("first_time_nucleate or prev_time_slab invalid");
   } else 
    amrex::Error("nucleation_period invalid");
  } else
@@ -19530,7 +19579,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
     } // i_append=0..Np_append-1
     if (i_mirror==Np_mirror_AoS) {
      particles.resize(0);
-     for (int i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
+     for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
       particles.push_back(mirrorPC_AoS[i_mirror]);
      }
     } else
