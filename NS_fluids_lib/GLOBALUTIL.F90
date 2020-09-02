@@ -10163,40 +10163,6 @@ contains
       end subroutine INTERNAL_default
 
 
-      subroutine EOS_tait_ADIABATIC_rhohydro(rho,pressure)
-      use probcommon_module
-      IMPLICIT NONE
-
-      REAL_T, intent(in) :: rho
-      REAL_T, intent(out) :: pressure
-      REAL_T A,B,rhobar,pcav
-
-
-      A=A_TAIT   ! dyne/cm^2
-      B=B_TAIT  ! dyne/cm^2
-      rhobar=fort_denconst(1) ! g/cm^3
-
-      if (rhobar.lt.0.001) then
-       print *,"rhobar invalid in eos tait adiabatic rhohydro"
-       stop
-      endif
-
-      pcav=PCAV_TAIT
-
-      if (rho.le.zero) then
-       print *,"rho invalid"
-       stop
-      endif
-
-      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
-
-      if (pressure.lt.pcav) then
-       pressure=pcav
-      endif
-
-      return
-      end subroutine EOS_tait_ADIABATIC_rhohydro
-
         ! ice behaves like rigid solid where dist>0
       subroutine ice_substrate_distance(x,y,z,dist)
       use probcommon_module
@@ -11201,35 +11167,6 @@ contains
 
       return
       end subroutine EOS_tait
-
-      subroutine EOS_tait_ADIABATIC(rho,pressure)
-      use probcommon_module
-      IMPLICIT NONE
-
-      REAL_T rho,pressure
-      REAL_T A,B,rhobar,GAMMA,pcav
-
-      A=A_TAIT   ! dyne/cm^2
-      B=B_TAIT  ! dyne/cm^2
-      rhobar=RHOBAR_TAIT ! g/cm^3
-      GAMMA=GAMMA_TAIT
-      pcav=PCAV_TAIT 
-
-      if (rho.le.zero) then
-       print *,"rho invalid"
-       stop
-      endif
-
-      pressure=B*( (rho/rhobar)**GAMMA - one ) + A
-
-      if (pressure.lt.pcav) then
-       pressure=pcav
-      endif
-      
-
-      return
-      end subroutine EOS_tait_ADIABATIC
-
 
       subroutine EOS_tait_vacuum(rho,pressure)
       use probcommon_module
