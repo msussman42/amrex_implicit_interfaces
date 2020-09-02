@@ -477,6 +477,12 @@ implicit none
       type(nucleation_parm_type_input), intent(in) :: nucleate_in
       end subroutine TEMPLATE_nucleation
 
+      subroutine TEMPLATE_microcell_heat_coeff(heatcoeff,dx,veldir)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: veldir
+      REAL_T, intent(inout) :: heatcoeff
+      end subroutine TEMPLATE_microcell_heat_coeff
+
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
@@ -500,6 +506,8 @@ implicit none
       PROCEDURE(TEMPLATE_EB_heat_source), POINTER :: SUB_EB_heat_source
       PROCEDURE(TEMPLATE_velfreestream), POINTER :: SUB_velfreestream
       PROCEDURE(TEMPLATE_nucleation), POINTER :: SUB_nucleation
+      PROCEDURE(TEMPLATE_microcell_heat_coeff), POINTER :: &
+              SUB_microcell_heat_coeff
 
 contains
 

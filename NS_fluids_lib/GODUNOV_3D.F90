@@ -13580,6 +13580,7 @@ stop
       REAL_T density_of_TZ
       INTEGER_T ispec,im_spec
       REAL_T massfrac
+      INTEGER_T from_boundary_hydrostatic
 
       nhalf=3
 
@@ -13663,7 +13664,9 @@ stop
 
            if ((im.eq.1).and.  &
                (fort_material_type(im).eq.13)) then
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro)
+            from_boundary_hydrostatic=0
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+                    from_boundary_hydrostatic)
            else
               ! only takes into account fort_drhodz
             call default_hydrostatic_pressure_density( &

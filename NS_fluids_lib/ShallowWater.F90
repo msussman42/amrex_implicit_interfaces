@@ -21,6 +21,7 @@ stop
 #endif
 
       module shallowwater_module
+      use global_utility_module
       use probf90_module
 
       contains

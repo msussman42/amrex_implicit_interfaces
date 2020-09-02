@@ -1941,6 +1941,7 @@ stop
 
 
       subroutine check_user_defined_velbc(time,dir,uu,dx)
+      use global_utility_module
       use shockdrop
 
       IMPLICIT NONE
@@ -1949,11 +1950,7 @@ stop
       REAL_T, intent(in) :: time
       REAL_T, intent(inout) :: uu
       REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T dir2
-      INTEGER_T side
       REAL_T utest,uscale
-      REAL_T xsten_dummy(-1:1,SDIM)
-      INTEGER_T for_dt
       INTEGER_T nhalf
 
       nhalf=1
@@ -4196,6 +4193,7 @@ end subroutine dynamic_contact_angle
    
        ! called from FORT_OVERRIDE 
       subroutine init_density_at_depth()
+      use global_utility_module
       IMPLICIT NONE
 
       REAL_T depth,pgrad,a,b,c,tol
@@ -4315,6 +4313,7 @@ end subroutine dynamic_contact_angle
         angular_velocity, &
         dt,rho,pres, &
         for_hydro,liquid_temp)
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T for_hydro 
@@ -4429,6 +4428,7 @@ end subroutine dynamic_contact_angle
 
       subroutine boundary_hydrostatic( &
         xpos,rho,pres)
+      use global_utility_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: xpos(SDIM)
@@ -4472,141 +4472,13 @@ end subroutine dynamic_contact_angle
       return
       end subroutine boundary_hydrostatic
 
-       ! density_at_depth previously initialized by:
-       ! init_density_at_depth() 
-       ! called from: FORT_DENCOR, general_hydrostatic_pressure_density,
-       ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
-       ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
-      subroutine tait_hydrostatic_pressure_density( &
-        xpos,rho,pres,from_boundary_hydrostatic)
-      IMPLICIT NONE
-
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(inout) :: rho
-      REAL_T, intent(inout) :: pres
-      INTEGER_T, intent(in) :: from_boundary_hydrostatic
-      REAL_T denfree,zfree
-      REAL_T den_top,z_top
-      REAL_T z_at_depth
-
-      if (is_in_probtype_list().eq.1) then
-
-       call SUB_hydro_pressure_density(xpos,rho,pres, &
-               from_boundary_hydrostatic)
-
-      else
-
-       ! in tait_hydrostatic_pressure_density
-       if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
-        rho=one
-        call EOS_tait_ADIABATIC(rho,pres)
-       ! JICF nozzle+pressure bc
-       else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
-        rho=one
-        call EOS_tait_ADIABATIC(rho,pres)
-        ! JICF
-       else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
-        rho=fort_denconst(1)
-        call EOS_tait_ADIABATIC_rho(rho,pres)
-       ! impinging jets
-       else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
-                (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
-        rho=fort_denconst(1)
-        call EOS_tait_ADIABATIC_rho(rho,pres)
-
-        ! in: tait_hydrostatic_pressure_density
-       else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
-
-        if (probloy.ne.zero) then
-         print *,"probloy must be 0 for bubble jetting problem"
-         stop
-        endif
-        ! yblob is distance from domain bottom of charge
-        ! zblob is depth of charge
-        denfree=one
-        zfree=zblob+yblob  ! relative to computational grid
-        z_at_depth=yblob
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC(rho,pres)
-
-       else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
-
-        if (probloy.ne.zero) then
-         print *,"probloy must be 0 for cavitation problem"
-         stop
-        endif
-        ! yblob is distance from domain bottom of charge/sphere
-        ! zblob is depth of charge (for jwl problem)
-        denfree=one
-        if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-         zfree=zblob+yblob  ! relative to computational grid
-         z_at_depth=yblob
-        else if (axis_dir.eq.10) then
-         zfree=zblob
-         z_at_depth=zero
-        else if (axis_dir.eq.20) then
-         print *,"there is no gravity for the CODY ESTEBE created test problem"
-         stop
-        else
-         print *,"axis_dir out of range"
-         stop
-        endif
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC(rho,pres)
-
-       else if (fort_material_type(1).eq.13) then
-
-        denfree=fort_denconst(1)
-        if (SDIM.eq.2) then
-         zfree=probhiy
-         z_at_depth=probloy
-        else if (SDIM.eq.3) then
-         zfree=probhiz
-         z_at_depth=probloz
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-         ! density_at_depth is found so that
-         ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
-         !
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC_rhohydro(rho,pres)
-       else
-        print *,"probtype invalid tait_hydrostatic_pressure_density"
-        stop
-       endif
-
-      endif
-
-      return
-      end subroutine tait_hydrostatic_pressure_density
-  
        ! only called if override_density=1 or override_density=2
        ! only takes into account fort_drhodz.
       subroutine default_hydrostatic_pressure_density( &
         xpos,rho,pres,liquid_temp, &
         gravity_normalized, &
         imat,override_density)
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T imat,nmat,override_density
@@ -4733,6 +4605,7 @@ end subroutine dynamic_contact_angle
        vorterr, &
        pressure_cutoff, &
        temperature_cutoff)
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T imattype,pressure_error_flag,nhalf,bfact
@@ -5033,8 +4906,11 @@ end subroutine dynamic_contact_angle
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,internal_energy,pressure,internal_energy_in,T
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T :: internal_energy
+      REAL_T, intent(out) :: pressure
+      REAL_T, intent(in) :: internal_energy_in
 
 
       internal_energy=internal_energy_in*global_pressure_scale
@@ -5066,8 +4942,10 @@ end subroutine dynamic_contact_angle
       subroutine DeDT_material(rho,temperature,DeDT,imattype,im)
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,temperature,DeDT,DT,T2,e1,e2
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho,temperature
+      REAL_T, intent(out) :: DeDT
+      REAL_T :: DT,T2,e1,e2
 
 
       if ((rho.le.zero).or.(temperature.le.zero)) then
@@ -5115,9 +4993,11 @@ end subroutine dynamic_contact_angle
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,internal_energy,soundsqr
-      REAL_T internal_energy_in
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T :: internal_energy
+      REAL_T, intent(out) :: soundsqr
+      REAL_T, intent(in) :: internal_energy_in
 
 
       internal_energy=internal_energy_in*global_pressure_scale
@@ -5150,8 +5030,9 @@ end subroutine dynamic_contact_angle
         imattype,im)
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,internal_energy
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(out) :: internal_energy
  
 
       if (rho.le.zero) then
@@ -5212,8 +5093,10 @@ end subroutine dynamic_contact_angle
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,entropy,internal_energy
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: entropy
+      REAL_T, intent(out) :: internal_energy
 
 
       if (rho.le.zero) then
@@ -5287,10 +5170,14 @@ end subroutine dynamic_contact_angle
 
       subroutine TEMPERATURE_ENTROPY_material(rho,entropy,temperature, &
         imattype,im)
+      use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,entropy,internal_energy,temperature
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: entropy
+      REAL_T :: internal_energy
+      REAL_T, intent(out) :: temperature
 
 
       if (rho.le.zero) then
@@ -5363,8 +5250,11 @@ end subroutine dynamic_contact_angle
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,entropy,internal_energy,internal_energy_in
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(out) :: entropy
+      REAL_T :: internal_energy
+      REAL_T, intent(in) :: internal_energy_in
 
 
       internal_energy=internal_energy_in*global_pressure_scale
@@ -5446,10 +5336,14 @@ end subroutine dynamic_contact_angle
 
       subroutine ENTROPY_TEMPERATURE_material(rho,entropy,temperature_in, &
         imattype,im)
+      use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T imattype,im
-      REAL_T rho,entropy,internal_energy,temperature_in
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(out) :: entropy
+      REAL_T :: internal_energy
+      REAL_T, intent(in) :: temperature_in
 
       if (imattype.eq.4) then
        call ENTROPY_TEMPERATURE_SF6(rho,temperature_in,entropy)
@@ -7476,140 +7370,6 @@ END SUBROUTINE Adist
 
       return
       end subroutine get_ternary
-
-      ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
-      ! theta_{ik}=0 => material i wets material k.
-      ! im is material "i"  ("fluid" material)
-      ! im_opp is material "j"
-      ! im_3 is material "k"
-      ! iten_13 corresponds to "ik"
-      ! iten_23 corresponds to "jk"
-      ! if nmat=4, 12 13 14 23 24 34
-
-      subroutine get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
-       user_tension,nten,cos_angle,sin_angle)
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T im,im_opp,im_3,iten_13,iten_23,nten,nten_test
-      INTEGER_T iten
-      INTEGER_T nmat
-      REAL_T user_tension(nten)
-      REAL_T cos_angle,sin_angle
-
-
-      nmat=num_materials
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
-      if (nten_test.ne.nten) then
-       print *,"nten: get_CL_iten nten nten_test ",nten,nten_test
-       stop
-      endif
-
-      if ((im.lt.1).or.(im.gt.num_materials).or. &
-          (im_opp.lt.1).or.(im_opp.gt.num_materials).or. &
-          (im_3.lt.1).or.(im_3.gt.num_materials).or. &
-          (im.eq.im_opp).or.(im.eq.im_3).or. &
-          (im_opp.eq.im_3)) then
-       print *,"im mismatch"
-       print *,"im=",im
-       print *,"im_opp=",im_opp
-       print *,"im_3=",im_3
-       stop
-      endif
-
-      if (nmat.le.2) then
-       print *,"nmat too small for CL treatment"
-       stop
-       ! 12 13 23
-      else if (nmat.eq.3) then
-       if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
-        iten_13=2
-        iten_23=3
-       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.1)) then
-        iten_13=1
-        iten_23=2
-       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.2)) then
-        iten_13=1
-        iten_23=3
-       else
-        print *,"combination of im,im_opp,im_3 invalid nmat=",nmat
-        print *,"im=",im
-        print *,"im_opp=",im_opp
-        print *,"im_3=",im_3
-        stop
-       endif
-       ! 12 13 14 23 24 34
-      else if (nmat.eq.4) then
-       if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
-        iten_13=2
-        iten_23=4
-       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.1)) then
-        iten_13=1
-        iten_23=2
-       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.2)) then
-        iten_13=1
-        iten_23=4
-       else if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.4)) then
-        iten_13=3
-        iten_23=5
-       else if ((im.eq.2).and.(im_opp.eq.4).and.(im_3.eq.1)) then
-        iten_13=1
-        iten_23=3
-       else if ((im.eq.1).and.(im_opp.eq.4).and.(im_3.eq.2)) then
-        iten_13=1
-        iten_23=5
-       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.4)) then
-        iten_13=5
-        iten_23=6
-       else if ((im.eq.2).and.(im_opp.eq.4).and.(im_3.eq.3)) then
-        iten_13=4
-        iten_23=6
-       else if ((im.eq.3).and.(im_opp.eq.4).and.(im_3.eq.2)) then
-        iten_13=4
-        iten_23=5
-       else if ((im.eq.3).and.(im_opp.eq.4).and.(im_3.eq.1)) then
-        iten_13=2
-        iten_23=3
-        ! 12 13 14 23 24 34
-       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.4)) then
-        iten_13=3
-        iten_23=6
-       else if ((im.eq.1).and.(im_opp.eq.4).and.(im_3.eq.3)) then
-        iten_13=2
-        iten_23=6
-       else
-        print *,"combination of im,im_opp,im_3 invalid nmat=",nmat
-        print *,"im=",im
-        print *,"im_opp=",im_opp
-        print *,"im_3=",im_3
-        stop
-       endif
-      else
-       print *,"combination not supported"
-       stop
-      endif
-
-      call get_iten(im,im_opp,iten,nmat)
-
-      if (user_tension(iten).eq.zero) then  ! default extrapolation
-       cos_angle=zero
-      else if (user_tension(iten).gt.zero) then
-       cos_angle=(user_tension(iten_23)-user_tension(iten_13))/ &
-                 user_tension(iten)
-      else
-       print *,"user_tension(iten) invalid"
-       stop
-      endif
-
-      if (cos_angle.gt.one) then 
-       cos_angle=one
-      else if (cos_angle.lt.-one) then
-       cos_angle=-one
-      endif
-      sin_angle=sqrt(one-cos_angle**2)
-
-      return
-      end subroutine get_CL_iten
 
 
 
@@ -10243,7 +10003,7 @@ END SUBROUTINE Adist
       REAL_T distcircle
       REAL_T distleft,distright
       REAL_T raddist,distfilament,distfilm
-      REAL_T distsolid,dist_liquid,dist_ice,dist_gas,dist_liq2
+      REAL_T distsolid
       REAL_T drat,veltop,velbot,ytop,ybot
       INTEGER_T im_solid_materialdist
       REAL_T initial_time
@@ -19861,8 +19621,6 @@ END SUBROUTINE Adist
       INTEGER_T dir2
       INTEGER_T nmat
       REAL_T velx_rain,vely_rain
-      REAL_T temp
-      INTEGER_T for_dt
       REAL_T xvec(SDIM)
       INTEGER_T local_dir
       REAL_T xwall
@@ -22555,8 +22313,8 @@ END SUBROUTINE Adist
           ADV=ADVwall
 
            ! melting ice block: zlo
-          else if ((prescribe_temperature_outflow.eq.3).and. &
-                   (probtype.eq.59)) then
+          if ((prescribe_temperature_outflow.eq.3).and. &
+              (probtype.eq.59)) then
 
            if (istate.eq.1) then
             ! do nothing (density)
@@ -24703,7 +24461,6 @@ end subroutine RatePhaseChange
       INTEGER_T nmat
       INTEGER_T nstate_test
       REAL_T VOFTOL_NUCLEATE
-      REAL_T dist
       INTEGER_T i,j,k
       INTEGER_T denbase
       INTEGER_T mofbase
@@ -25893,6 +25650,7 @@ end subroutine RatePhaseChange
        presbc_array, &
        outflow_velocity_buffer_size, & !(1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
        problo,probhi)
+      use global_utility_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
@@ -35029,7 +34787,6 @@ end subroutine initialize2d
       REAL_T velcell(SDIM)
       REAL_T cenbc(num_materials,SDIM)
       REAL_T vfracbatch(num_materials)
-      REAL_T xmid,zmid
       INTEGER_T nmat,nten
       REAL_T drat
       REAL_T temp,dens,ccnt

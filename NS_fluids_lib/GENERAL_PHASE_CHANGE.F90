@@ -41,6 +41,7 @@ end subroutine INIT_GENERAL_PHASE_CHANGE_MODULE
 
  ! this is velocity boundary condition at the top of the domain.  
 subroutine acoustic_pulse_bc(time,vel_pulse,x_vec,for_dt)
+use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: for_dt
@@ -109,6 +110,8 @@ end subroutine acoustic_pulse_bc
  ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
 subroutine GENERAL_PHASE_CHANGE_hydro_pressure_density( &
   xpos,rho,pres,from_boundary_hydrostatic)
+use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: xpos(SDIM)
@@ -218,14 +221,15 @@ return
 end subroutine GENERAL_PHASE_CHANGE_hydro_pressure_density
 
 subroutine GENERAL_PHASE_CHANGE_CFL_HELPER(time,dir,uu,dx)
+use probcommon_module
+implicit none
 INTEGER_T, intent(in) :: dir
 REAL_T, intent(in) :: time
 REAL_T, intent(inout) :: uu
 REAL_T, intent(in) :: dx(SDIM)
 
 INTEGER_T dir2
-INTEGER_T side
-REAL_T utest,uscale
+REAL_T utest
 REAL_T xvec_dummy(SDIM)
 INTEGER_T for_dt
 
@@ -266,10 +270,12 @@ end subroutine GENERAL_PHASE_CHANGE_CFL_HELPER
 ! dist>0 in the fluid
 subroutine GENERAL_soliddist(x,dist,im) 
 use probcommon_module
+use global_utility_module
 implicit none
 REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
 INTEGER_T, intent(in) :: im
 REAL_T, intent(out) :: dist
+INTEGER_T :: nmat
 
 nmat=num_materials
 if (nmat.lt.1) then
@@ -363,6 +369,10 @@ INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
+REAL_T :: dist_gas,dist_liquid,dist_ice,dist_liq2,distsolid
+INTEGER_T :: im
+INTEGER_T :: im_solid_materialdist
+REAL_T :: initial_time
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -370,6 +380,9 @@ REAL_T, intent(out) :: LS(nmat)
    print *,"nmat invalid"
    stop
   endif
+
+  im_solid_materialdist=im_solid_primary()
+  initial_time=zero
 
   if (probtype.eq.55) then
 
@@ -387,9 +400,9 @@ REAL_T, intent(out) :: LS(nmat)
    if (axis_dir.eq.3) then
 
     if (SDIM.eq.2) then
-     LS(1)=z-(zblob+radblob*cos(two*Pi*x/xblob))
+     LS(1)=x(SDIM)-(zblob+radblob*cos(two*Pi*x(1)/xblob))
     else if (SDIM.eq.3) then
-     LS(1)=z-(zblob+radblob*cos(two*Pi*x/xblob)*cos(two*Pi*y/yblob))
+     LS(1)=x(SDIM)-(zblob+radblob*cos(two*Pi*x(1)/xblob)*cos(two*Pi*x(2)/yblob))
     else
      print *,"dimension bust"
      stop
@@ -400,7 +413,7 @@ REAL_T, intent(out) :: LS(nmat)
 
      ! in: materialdistbatch (initial angle=static angle)
      ! maxtall==two*radblob => no ice in this call.
-    call drop_slope_dist(x,y,z,initial_time,nmat, &
+    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
       two*radblob,dist_ice,dist_liquid)
 
     dist_gas=-dist_liquid
@@ -414,7 +427,7 @@ REAL_T, intent(out) :: LS(nmat)
             (axis_dir.eq.7)) then 
     if (n_sites.gt.0) then
      if (nucleation_init_time.eq.zero) then
-      call nucleation_sites(xsten,nhalf,dx,bfact,dist_liquid,pos_sites)
+      call nucleation_sites(x,dist_liquid,pos_sites)
      else if (nucleation_init_time.gt.zero) then
       dist_liquid=9999.0
      else
@@ -436,21 +449,21 @@ REAL_T, intent(out) :: LS(nmat)
      if ((nmat.eq.4).and.(im_solid_materialdist.eq.nmat)) then
       if (gravity_dir.eq.1) then
        if (radblob10.lt.problenx) then 
-        LS(3)=x-(probhix-radblob10)
+        LS(3)=x(1)-(probhix-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
       else if (gravity_dir.eq.2) then
        if (radblob10.lt.probleny) then 
-        LS(3)=y-(probhiy-radblob10)
+        LS(3)=x(2)-(probhiy-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
       else if ((gravity_dir.eq.3).and.(SDIM.eq.3)) then
        if (radblob10.lt.problenz) then 
-        LS(3)=z-(probhiz-radblob10)
+        LS(3)=x(SDIM)-(probhiz-radblob10)
        else
         print *,"radblob10 invalid"
         stop
@@ -495,20 +508,22 @@ REAL_T, intent(out) :: LS(nmat)
 
     if (radblob3.gt.zero) then
       ! negative on the inside of the square
-     call squaredist(x,y,xblob-radblob,xblob+radblob,yblob, &
+     call squaredist(x(1),x(2),xblob-radblob,xblob+radblob,yblob, &
       yblob+radblob3,dist_liquid)
      dist_liquid=-dist_liquid
     else if (radblob3.eq.zero) then
      if (SDIM.eq.2) then
-      dist_liquid=radblob-sqrt((x-xblob)**2+(y-yblob)**2)
+      dist_liquid=radblob-sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
      else
-      dist_liquid=radblob-sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)
+      dist_liquid=radblob- &
+          sqrt((x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)
      endif
      if (radblob5.gt.zero) then
       if (SDIM.eq.2) then
-       dist_liq2=radblob5-sqrt((x-xblob5)**2+(y-yblob5)**2)
+       dist_liq2=radblob5-sqrt((x(1)-xblob5)**2+(x(2)-yblob5)**2)
       else
-       dist_liq2=radblob5-sqrt((x-xblob5)**2+(y-yblob5)**2+(z-zblob5)**2)
+       dist_liq2=radblob5- &
+         sqrt((x(1)-xblob5)**2+(x(2)-yblob5)**2+(x(SDIM)-zblob5)**2)
       endif
 
       if (dist_liq2.gt.dist_liquid) then
@@ -528,12 +543,8 @@ REAL_T, intent(out) :: LS(nmat)
       print *,"conflicting parameters probtype=",probtype
       stop
      endif
-     if ((abs(z-y).gt.VOFTOL).and.(SDIM.eq.2)) then
-      print *,"z<>y prior to drop_slope_dist"
-      stop
-     endif
      ! in: materialdistbatch (initial angle=static angle)
-     call drop_slope_dist(x,y,z,initial_time,nmat, &
+     call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
       two*radblob,dist_ice,dist_liquid)
     else
      print *,"radblob4 invalid radblob4=",radblob4
@@ -542,9 +553,10 @@ REAL_T, intent(out) :: LS(nmat)
 
     if (radblob6.gt.zero) then
      if (SDIM.eq.2) then
-      dist_liq2=radblob6-sqrt((x-xblob6)**2+(y-yblob6)**2)
+      dist_liq2=radblob6-sqrt((x(1)-xblob6)**2+(x(2)-yblob6)**2)
      else if (SDIM.eq.3) then
-      dist_liq2=radblob6-sqrt((x-xblob6)**2+(y-yblob6)**2+(z-zblob6)**2)
+      dist_liq2=radblob6- &
+           sqrt((x(1)-xblob6)**2+(x(2)-yblob6)**2+(x(SDIM)-zblob6)**2)
      endif
      if (dist_liq2.gt.dist_liquid) then
       dist_liquid=dist_liq2
@@ -571,7 +583,7 @@ REAL_T, intent(out) :: LS(nmat)
       stop
      endif
 
-     LS(3)=radblob7-sqrt( (x-xblob7)**2+(y-yblob7)**2 )  ! pos. in drop
+     LS(3)=radblob7-sqrt( (x(1)-xblob7)**2+(x(2)-yblob7)**2 )  ! pos. in drop
      dist_gas=-dist_liquid
      if (dist_gas.gt.-LS(3)) then
       dist_gas=-LS(3)
@@ -589,7 +601,7 @@ REAL_T, intent(out) :: LS(nmat)
  
     ! positive in the "ice" or "substrate"
     ! materialdistbatch
-    call ice_substrate_distance(x,y,z,distsolid)
+    call ice_substrate_distance(x(1),x(2),x(SDIM),distsolid)
 
     if (nmat.eq.4) then
      if (im_solid_materialdist.ne.nmat) then
@@ -628,7 +640,7 @@ REAL_T, intent(out) :: LS(nmat)
     ! material 3: ice
     ! material 1: water
     ! in: materialdist_batch (initial angle=static angle)
-    call drop_slope_dist(x,y,z,initial_time,nmat,radblob3, &
+    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat,radblob3, &
       dist_ice,dist_liquid)
     if (is_rigid(nmat,3).ne.0) then
      print *,"expecting material 3 to be ice"
@@ -663,6 +675,7 @@ end subroutine GENERAL_PHASE_CHANGE_LS
 ! initial velocity is zero
 subroutine GENERAL_PHASE_CHANGE_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nmat
@@ -836,6 +849,7 @@ end subroutine GENERAL_PHASE_CHANGE_VEL
 
 subroutine EOS_GENERAL_PHASE_CHANGE(rho,internal_energy,pressure, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
@@ -849,12 +863,12 @@ end subroutine EOS_GENERAL_PHASE_CHANGE
 
 subroutine SOUNDSQR_GENERAL_PHASE_CHANGE(rho,internal_energy,soundsqr, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
- REAL_T pressure
 
  call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
    imattype,im)
@@ -1035,6 +1049,7 @@ end subroutine GENERAL_PHASE_CHANGE_LS_BC
 subroutine GENERAL_PHASE_CHANGE_VEL_BC(xwall,xghost,t,LS, &
    VEL,VEL_in,veldir,dir,side,dx,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nmat
@@ -1091,7 +1106,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
  else if ((veldir.eq.3).and.(dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then
   if (axis_dir.eq.7) then ! compressible
    for_dt=0
-   call acoustic_pulse_bc(time,local_VEL(veldir),xghost,for_dt)
+   call acoustic_pulse_bc(t,local_VEL(veldir),xghost,for_dt)
   endif
  endif
  VEL=local_VEL(veldir)
@@ -1108,6 +1123,7 @@ end subroutine GENERAL_PHASE_CHANGE_VEL_BC
 subroutine GENERAL_PHASE_CHANGE_PRES_BC(xwall,xghost,t,LS, &
    PRES,PRES_in,dir,side,dx,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nmat
@@ -1122,6 +1138,7 @@ REAL_T, intent(in) :: dx(SDIM)
 REAL_T base_pres
 REAL_T gravity_dz
 REAL_T rhohydro
+INTEGER_T :: from_boundary_hydrostatic
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1129,6 +1146,9 @@ else
  print *,"nmat invalid"
  stop
 endif
+
+from_boundary_hydrostatic=0
+
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
@@ -1150,7 +1170,8 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
    call general_hydrostatic_pressure(base_pres)
    PRES=base_pres
    if (fort_material_type(1).eq.13) then 
-    call GENERAL_PHASE_CHANGE_hydro_pressure_density(xghost,rhohydro,PRES)
+    call GENERAL_PHASE_CHANGE_hydro_pressure_density(xghost,rhohydro,PRES, &
+      from_boundary_hydrostatic)
    else if (axis_dir.eq.6) then
     PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
    endif
@@ -1173,6 +1194,7 @@ end subroutine GENERAL_PHASE_CHANGE_PRES_BC
 subroutine GENERAL_PHASE_CHANGE_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nmat
@@ -1366,7 +1388,6 @@ REAL_T, intent(in) :: den(nmat)
 REAL_T, intent(in) :: CV(nmat)
 REAL_T, intent(in) :: dt
 REAL_T, intent(out) :: heat_source
-REAL_T :: MITSUHIRO_CUSTOM_TEMPERATURE
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1523,6 +1544,7 @@ end subroutine GENERAL_PHASE_CHANGE_velfreestream
 subroutine GENERAL_PHASE_CHANGE_nucleation(nucleate_in,xsten,nhalf,make_seed)
 use probcommon_module_types
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 INTEGER_T, intent(in) :: nhalf
 REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
@@ -1530,6 +1552,8 @@ INTEGER_T, intent(inout) :: make_seed
 type(nucleation_parm_type_input), intent(in) :: nucleate_in
 REAL_T :: LL
 REAL_T :: dist
+REAL_T :: x_point(SDIM)
+INTEGER_T :: dir
 
 LL=nucleate_in%LL
 
@@ -1549,11 +1573,13 @@ if (probtype.eq.55) then
    print *,"expecting latent heat to be positive"
    stop
   endif
+  do dir=1,SDIM
+   x_point(dir)=xsten(0,dir)
+  enddo
   if ((nucleate_in%do_the_nucleate.eq.1).and. &
       (n_sites.gt.0)) then
-   call nucleation_sites(xsten,nhalf, &
-          nucleate_in%dx, &
-          nucleate_in%bfact, &
+   call nucleation_sites( &
+          x_point, &
           dist, &
           nucleate_in%nucleate_pos)
    if (dist.le.zero) then
