@@ -1600,6 +1600,17 @@ stop
 
             ! now we update nrm_fluid by finding the triple point
             ! and measuring nrm_fluid just above the solid.
+            ! LS_crossing is the levelset function at the point in 
+            ! between the ghost point and the image point at which
+            ! LS_crossing(im_solid)=0
+            ! NOTE: LS_IMAGE(im_fluid) > 0
+            !      x  image point in the fluid , LS(im_fluid)>0 here
+            !   --------   substrate interface
+            !      x  ghost point in the substrate, LS(im_fluid) expected to
+            !      be positive here too since the level set function is
+            !      extrapolated into the substrate normal to the substrate.
+            ! This routine is only called if LS_IMAGE(im_solid) <0 and
+            ! LS_GHOST(im_solid)>0.
            if ((GNBC_RADIUS.ge.one).and. &
                (GNBC_RADIUS.le.three)) then
             do dir=1,SDIM
@@ -1613,7 +1624,7 @@ stop
              endif
             enddo ! dir=1..sdim
 
-            call  interp_from_fluid( &
+            call interp_from_fluid( &
              LOW, &
              xprobe, &
              im_secondary_image, &
