@@ -1733,7 +1733,9 @@ contains
          stop
         endif
           ! thermal layer thickness
-        if (yblob3.le.zero) then
+        if (yblob3.gt.zero) then
+         ! do nothing
+        else
          print *,"yblob3 invalid"
          stop
         endif
@@ -10200,6 +10202,7 @@ contains
 
         ! Sato and Niceno or Tryggvason
         ! (probtype.eq.55) and ((axis_dir.eq.6).or.(axis_dir.eq.7))
+        ! negative if x_point in a bubble.
       subroutine nucleation_sites(x_point,dist,nucleate_pos)
       use probcommon_module
 

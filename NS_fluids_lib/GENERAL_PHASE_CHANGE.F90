@@ -125,7 +125,10 @@ INTEGER_T continue_to_hydrostatic_part
  if (probtype.eq.55) then
 
   continue_to_hydrostatic_part=1
-
+   
+   ! this will never happen since boundary_hydrostatic is called
+   ! from presBDRYCOND, but the code never reaches this point since
+   ! SUB_PRES_BC is called at the very beginning of presBDRYCOND.
   if (from_boundary_hydrostatic.eq.1) then
    if ((axis_dir.ge.0).and.(axis_dir.le.5)) then
     continue_to_hydrostatic_part=0  ! compressible drop
@@ -160,7 +163,9 @@ INTEGER_T continue_to_hydrostatic_part
      stop
     endif
 
-    if (z_at_depth.ne.zero) then
+    if (z_at_depth.eq.zero) then
+     ! do nothing
+    else
      print *,"z_at_depth must be 0 for compressible boiling problem"
      stop
     endif
@@ -200,6 +205,7 @@ INTEGER_T continue_to_hydrostatic_part
       ((density_at_depth-denfree)/ &
        (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
     endif
+     ! in: PROBCOMMON.F90
     call EOS_tait_ADIABATIC_rhohydro(rho,pres)
    else
     print *,"axis_dir invalid GENERAL_PHASE_CHANGE_hydro_pressure_density"
@@ -426,6 +432,7 @@ REAL_T :: initial_time
             (axis_dir.eq.7)) then 
     if (n_sites.gt.0) then
      if (nucleation_init_time.eq.zero) then
+       ! in: GLOBALUTIL.F90; negative if x in a bubble.
       call nucleation_sites(x,dist_liquid,pos_sites)
      else if (nucleation_init_time.gt.zero) then
       dist_liquid=9999.0
@@ -448,21 +455,21 @@ REAL_T :: initial_time
      if ((nmat.eq.4).and.(im_solid_materialdist.eq.nmat)) then
       if (gravity_dir.eq.1) then
        if (radblob10.lt.problenx) then 
-        LS(3)=x(1)-(probhix-radblob10)
+        LS(3)=x(gravity_dir)-(probhix-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
       else if (gravity_dir.eq.2) then
        if (radblob10.lt.probleny) then 
-        LS(3)=x(2)-(probhiy-radblob10)
+        LS(3)=x(gravity_dir)-(probhiy-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
       else if ((gravity_dir.eq.3).and.(SDIM.eq.3)) then
        if (radblob10.lt.problenz) then 
-        LS(3)=x(SDIM)-(probhiz-radblob10)
+        LS(3)=x(gravity_dir)-(probhiz-radblob10)
        else
         print *,"radblob10 invalid"
         stop
@@ -727,6 +734,7 @@ if (probtype.eq.55) then
   VEL(dir)=zero
  enddo
 
+  ! in: GLOBALUTIL.F90
  call default_rampvel(t,VEL(1),VEL(2),VEL(SDIM))
 
  if (axis_dir.eq.5) then
@@ -908,8 +916,10 @@ subroutine TEMPERATURE_GENERAL_PHASE_CHANGE(rho,temperature,internal_energy, &
 end subroutine TEMPERATURE_GENERAL_PHASE_CHANGE
 
 
-! this routine used if pressure boundary conditions are prescribed,
-! since only top wall is "outflow" (outflow in quotes since ice shrinks when
+! this routine used as a default when
+! pressure boundary conditions are prescribed.
+! For the case when only top wall is 
+! "outflow" (outflow in quotes since ice shrinks when
 ! melting), and flow is incompressible, ok to make the top wall pressure zero.
 subroutine GENERAL_PHASE_CHANGE_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
