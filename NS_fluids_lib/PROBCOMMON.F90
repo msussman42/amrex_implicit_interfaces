@@ -530,7 +530,9 @@ contains
 
       pcav=PCAV_TAIT
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"rho invalid"
        stop
       endif

@@ -4426,6 +4426,7 @@ end subroutine dynamic_contact_angle
       return
       end subroutine general_hydrostatic_pressure_density
 
+       ! called from presBDRYCOND when material_type(1)==13 TAIT EOS
       subroutine boundary_hydrostatic( &
         xpos,rho,pres)
       use global_utility_module

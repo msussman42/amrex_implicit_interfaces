@@ -9,7 +9,9 @@ stop_time = 1.0
 
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0
-geometry.prob_hi   =  10.0e-3 10.0e-3 20.0e-3   # MKS
+#geometry.prob_hi   =  10.0e-3 10.0e-3 20.0e-3   # MKS  SLOW
+#geometry.prob_hi   =  4.0e-3 4.0e-3 4.0e-3   # MKS  FAST
+geometry.prob_hi   =  4.0e-3 4.0e-3 4.0e-3   # MKS  FAST
 ns.EILE_flag=-1
 ns.continuous_mof=2 # CLSVOF in 2 material cells, and MOF in >2 mat cells.
 ns.MOFITERMAX=10
@@ -47,13 +49,17 @@ amr.plotfile_on_restart=1
 ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 ns.visual_tessellate_vfrac=1
 
-amr.n_cell    = 16 16 32
-amr.max_level =  2
+#amr.n_cell    = 16 16 32 #SLOW
+#amr.max_level =  2
+#amr.n_cell    = 24 24 24 #FAST
+#amr.max_level =  0
+amr.n_cell    = 24 24 24 # FAST
+amr.max_level =  0
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16 16
 #amr.max_level =  0
 # 0- 1 level 1- 2 levels  2- 3 levels
-amr.n_error_buf     = 2 2 2 2 2 2 2  # number of buffer cells in error est
+amr.n_error_buf     = 4 4 4 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 amr.blocking_factor = 8 8 8 8 8 8 8    # block factor in grid generation
@@ -121,7 +127,9 @@ ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # if nucleation_period==0.0, only nucleate one bubble, 
 # if nucleation_period>0.0, periodically nucleate bubbles.
 #ns.nucleation_period=0.05
-ns.nucleation_period=0.002
+ns.nucleation_period=0.002  # t>0, randomly select bubble x,y coord.
+ns.nucleation_init_time=0.0  #have bubbles nucleated at t=0
+
 ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.1     # hardwire dt
@@ -131,7 +139,7 @@ ns.viscosity_state_model=0 0 0 0
 # 6 instead of 5 signals nucleate boiling
 ns.axis_dir=6
 ns.xblob3=0.0  # unused
-# see subroutine outside_temperature in PROB.F90
+# see subroutine outside_temperature in GLOBALUTIL.F90
 ns.yblob3=7.189e-4  # initial thermal layer (meters)
 # see subroutine get_internal_heat_source in PROB.F90
 # see subroutine microcell_heat_model in PROB.F90
@@ -221,8 +229,10 @@ ns.temperature_source_cen=5.0e-3 5.0e-3 1.5625e-4
 ns.temperature_source_rad=6.0e-3 5.0e-3 1.5625e-4
 # force tagging in the heater region
 ns.nblocks=1
-ns.xblocks=5.0e-3
-ns.yblocks=5.0e-3
+#ns.xblocks=5.0e-3  #SLOW
+#ns.yblocks=5.0e-3  #SLOW
+ns.xblocks=2.0e-3  #FAST
+ns.yblocks=2.0e-3  #FAST
 ns.zblocks=1.5625e-4
 ns.rxblocks=0.006
 ns.ryblocks=5.0e-3
@@ -239,11 +249,13 @@ ns.initial_temperature_diffuse_duration=0.0
 ns.tempcutoff=373.0 373.0 373.0 373.0
 ns.tempcutoffmax=380.0 380.0 380.0 380.0
 #(xblob,yblob)=center of vapor bubble
-ns.xblob=5.0e-3  
+#ns.xblob=5.0e-3 #SLOW 
+#ns.yblob=5.0e-3 #SLOW 
+ns.xblob=2.0e-3 #FAST
+ns.yblob=2.0e-3 #FAST
 #JULY 17: WARNING: results are sensitive to the initial contact angle;
 # if initial angle far from static condition, then bubble can
 # prematurely lift off.
-ns.yblob=5.0e-3  
 ns.zblob=8.178362829e-4
 ns.radblob=0.3e-3  # radius of nucleated seed.
 #ns.max_contact_line_size=0.005 0.0 0.0
@@ -252,7 +264,8 @@ ns.radblob=0.3e-3  # radius of nucleated seed.
 # ns.gravity_dir)
 #ns.radblob10=1.0e-3 
 # NOV 2018 3 materials, no gas layer at outflow
-ns.radblob10=10.0e-3
+#ns.radblob10=10.0e-3  #SLOW
+ns.radblob10=1.0e-3  #FAST
 # NOV 2018 use outflow_velocity_buffer_size
 # (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)   3D
 # (1,1),(2,1),(1,2),(2,2)   2D
@@ -263,12 +276,15 @@ ns.outflow_velocity_buffer_size=0.0 0.0 0.0 0.0 0.0 0.0
 # if initial angle far from static condition, then bubble can
 # prematurely lift off.
 ns.n_sites=1
-ns.pos_sites=5.0e-3 5.0e-3 8.178362829e-4 0.3e-3 
+#ns.pos_sites=5.0e-3 5.0e-3 8.178362829e-4 0.3e-3  #SLOW
+ns.pos_sites=2.0e-3 2.0e-3 8.178362829e-4 0.3e-3  #FAST
 
 # x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
-ns.xblob2=5.0e-3 
+#ns.xblob2=5.0e-3  #SLOW
+#ns.yblob2=5.0e-3  #SLOW
+ns.xblob2=2.0e-3  #FAST
+ns.yblob2=2.0e-3  #FAST
 ns.zblob2=6.25e-4 # 2 * dxcoarsest=4 * 5.0e-3/64=5.0e-3/16=3.125e-4
-ns.yblob2=5.0e-3
 ns.radblob2=0.0 # zero degrees incline (radians)
 ns.radblob3=0.0
 ns.denfact=1.0
