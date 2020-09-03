@@ -32,13 +32,13 @@ REAL_T :: TANK1_HEIGHT
 REAL_T :: TANK1_THICKNESS      
 ! Location of liquid-gas interface in respect to z=0
 REAL_T :: TANK1_LIQUID_HEIGHT  
-! Initial vapor pressure
-REAL_T :: TANK1_INITIAL_VAPOR_PRESSURE
+! Initial gas pressure
+REAL_T :: TANK1_INITIAL_GAS_PRESSURE
 
-! Vapor thermodygamma =c_p/c_v
-REAL_T :: TANK1_VAPOR_GAMMA
-REAL_T :: TANK1_VAPOR_CP
-REAL_T :: TANK1_VAPOR_CV
+! Gas thermody gamma =c_p/c_v
+REAL_T :: TANK1_GAS_GAMMA
+REAL_T :: TANK1_GAS_CP
+REAL_T :: TANK1_GAS_CV
 contains
 
  ! do any initial preparation needed
@@ -50,10 +50,15 @@ contains
   TANK1_THICKNESS = radblob
   TANK1_LIQUID_HEIGHT = zblob
 
-  TANK1_VAPOR_GAMMA =  1.666666667D0
-  TANK1_VAPOR_CV = 6.490D3 ! [J∕(kg·K)]
-  TANK1_VAPOR_CP =  TANK1_VAPOR_CV * TANK1_VAPOR_GAMMA ! [J∕(kg·K)]
-  TANK1_INITIAL_VAPOR_PRESSURE = fort_denconst(2)*(TANK1_VAPOR_GAMMA-one)*fort_tempconst(2)
+  ! Ambient gas => Helium at partial pressure ~ (20K, 0.1 MPa)
+  ! [LeachmanETAL2017 p.30]
+  ! C_v = 5412.2 J/(kg K)
+  ! C_p = 3117.2 J/(kg K)
+  
+  TANK1_GAS_GAMMA =  1.6826D0
+  TANK1_GAS_CV = 3.1168D3 ! [J∕(kg·K)]
+  TANK1_GAS_CP =  TANK1_GAS_CV * TANK1_GAS_GAMMA ! [J∕(kg·K)]
+  TANK1_INITIAL_GAS_PRESSURE = fort_denconst(2)*(TANK1_GAS_GAMMA-one)*fort_tempconst(2)
   
   return
  end subroutine INIT_CRYOGENIC_TANK1_MODULE
@@ -239,19 +244,37 @@ end function DIST_FINITE_CYLINDER
 
 !***********************************************
 ! compressible material functions for (ns.material_type = 24)
+! U = C_{v,specific} T
+! [U] = J/kg= J/(kg K)  K
+! R_spc = C_{p,scp}-C_{v,scp}
+! gamma = C_{p,scp}/C_{v,scp}
+!
+! p = rho R_spc T 
+!   = rho R_spc x U/C_{v,spc}
+!   = rho (C_{p,scp}-C_{v,scp})/C_{v,spc} U
+!   = rhp (gamma-1) U
+!
+! a = sqrt(gamma R_sp T) = sqrt(gamma p/rho)
+
 subroutine EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- if (imattype.eq.24) then
-  pressure=rho*(TANK1_VAPOR_GAMMA-1.0D0)*internal_energy
+ if (im.eq.2) then
+  if (imattype.eq.24) then
+   pressure=rho*(TANK1_GAS_GAMMA-1.0D0)*internal_energy
+  else
+   print *,"imattype= ",imattype
+   print *,"imattype invalid"
+   stop
+  endif
  else
-  print *,"imattype invalid"
-  stop
+  call EOS_material_CORE(rho,internal_energy,pressure,imattype,im)
  endif
 
  return
@@ -259,6 +282,7 @@ end subroutine EOS_CRYOGENIC_TANK1
 
 subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
@@ -266,12 +290,18 @@ subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr, &
  REAL_T, intent(out) :: soundsqr
  REAL_T pressure
 
- if (imattype.eq.24) then
-  call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure,imattype,im)
-  soundsqr=TANK1_VAPOR_GAMMA*pressure/rho
+ if (im.eq.2) then
+  if (imattype.eq.24) then
+   call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure,imattype,im)
+   soundsqr=TANK1_GAS_GAMMA*pressure/rho
+  else
+   print *,"imattype= ",imattype
+   print *,"imattype invalid"
+   stop
+  endif
  else
-  print *,"imattype invalid"
-  stop
+  call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
+   imattype,im)
  endif
 
  return
@@ -279,17 +309,24 @@ end subroutine SOUNDSQR_CRYOGENIC_TANK1
 
 subroutine INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- if (imattype.eq.24) then 
-  local_internal_energy=TANK1_VAPOR_CV*temperature
+ if (im.eq.2) then
+  if (imattype.eq.24) then 
+   local_internal_energy=TANK1_GAS_CV*temperature
+  else
+   print *,"imattype= ",imattype
+   print *,"imattype invalid"
+   stop
+  endif
  else
-  print *,"imattype invalid"
-  stop
+  call INTERNAL_material_CORE(rho,temperature,local_internal_energy, &
+   imattype,im)
  endif
 
  return
@@ -297,17 +334,24 @@ end subroutine INTERNAL_CRYOGENIC_TANK1
 
 subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy, &
   imattype,im)
+ use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- if (imattype.eq.24) then 
-  temperature=internal_energy/TANK1_VAPOR_CV
+ if (im.eq.2) then
+  if (imattype.eq.24) then 
+   temperature=internal_energy/TANK1_GAS_CV
+  else
+   print *,"imattype= ",imattype
+   print *,"imattype invalid"
+   stop
+  endif
  else
-  print *,"imattype invalid"
-  stop
+  call TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
+     imattype,im)
  endif
 
  return
@@ -333,7 +377,7 @@ else
  stop
 endif
 
-PRES=TANK1_INITIAL_VAPOR_PRESSURE 
+PRES=TANK1_INITIAL_GAS_PRESSURE 
 
 return 
 end subroutine CRYOGENIC_TANK1_PRES
@@ -621,7 +665,7 @@ if ((num_materials.eq.3).and.(probtype.eq.421)) then
  if (im.eq.1) then
   ! do nothing (liquid)
  else if (im.eq.2) then
-  ! do nothing (vapor)
+  ! do nothing (gas)
  else if (im.eq.3) then
   ! right side of domain
   heat_source=zero

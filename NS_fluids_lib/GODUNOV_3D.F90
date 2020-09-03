@@ -618,10 +618,11 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T im,nmat,for_hydro
-      INTEGER_T override_density(nmat)
-      REAL_T voldepart,voltarget,voltotal_depart
-      REAL_T massdepart,density
+      INTEGER_T, intent(in) :: im,nmat,for_hydro
+      INTEGER_T, intent(in) :: override_density(nmat)
+      REAL_T, intent(in) :: voldepart,voltarget,voltotal_depart
+      REAL_T, intent(in) :: massdepart
+      REAL_T, intent(out) :: density
      
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -655,6 +656,9 @@ stop
 
        if (fort_material_type(im).eq.0) then
 
+         ! for evaporation into an incompressible ambient gas,
+         ! the user must set:
+         ! ns.override_density(im_gas)=1 in the inputs.
         if (for_hydro.eq.0) then
 
          if ((override_density(im).eq.0).or. &

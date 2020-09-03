@@ -6651,13 +6651,13 @@ stop
       do im=1,nten
 
        if ((freezing_model(im).lt.0).or. &
-           (freezing_model(im).gt.5)) then
-        print *,"freezing_model invalid"
+           (freezing_model(im).gt.7)) then
+        print *,"freezing_model invalid fort_init_physics_vars"
         stop
        endif
        if ((freezing_model(im+nten).lt.0).or. &
-           (freezing_model(im+nten).gt.5)) then
-        print *,"freezing_model invalid"
+           (freezing_model(im+nten).gt.7)) then
+        print *,"freezing_model invalid fort_init_physics_vars 2"
         stop
        endif
 
@@ -7363,7 +7363,9 @@ stop
            endif  
           else if (solidheat_flag.eq.1) then
            ! dirichlet temperature bc
-           call SUB_microcell_heat_coeff(faceheat_local,dx,veldir)
+           if (is_in_probtype_list().eq.1) then
+            call SUB_microcell_heat_coeff(faceheat_local,dx,veldir)
+           endif
            do imspec=1,num_species_var
             facespecies_local(imspec)=zero
            enddo

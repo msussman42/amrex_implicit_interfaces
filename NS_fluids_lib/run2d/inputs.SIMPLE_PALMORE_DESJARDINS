@@ -133,7 +133,14 @@ ns.elastic_viscosity=0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.added_weight=1.0 1.0 
 ns.elastic_time=0.0 0.0 
+# 0.001 is the ambient gas density.
+# The computer program stores the mixture density=
+#   rho_vapor Y + rho_ambient (1-Y)
+#   mixture density equation is rho_t + div(rho u) = 0
+#   mass fraction equation is:
+#   (rho Y)_t + div(rho u Y)=div(rho D grad Y)
 ns.denconst=1.0 0.001 # CODY
+ns.override_density=0 1  # for incompressible ambient gas, override_density=1
 ns.molar_mass=1.0 1.0 # CODY  (liquid, ambient)
 ns.species_molar_mass=1.0 # CODY (vapor)
 ns.FSI_flag=0 0 

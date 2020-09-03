@@ -496,6 +496,8 @@ if (dt.le.zero) then
  stop
 endif
 
+heat_flux=zero
+
 return
 end subroutine STUB_EB_heat_source
 
@@ -530,6 +532,7 @@ REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
 INTEGER_T, intent(inout) :: make_seed
 type(nucleation_parm_type_input), intent(in) :: nucleate_in
 
+make_seed=0
 
 return
 end subroutine STUB_nucleation
@@ -546,6 +549,7 @@ REAL_T, intent(inout) :: rho
 REAL_T, intent(inout) :: pres
 INTEGER_T, intent(in) :: from_boundary_hydrostatic
 
+pres=zero
 
 return
 end subroutine STUB_hydro_pressure_density
