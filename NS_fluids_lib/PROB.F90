@@ -5404,7 +5404,8 @@ end subroutine dynamic_contact_angle
 
 
 
-      subroutine ENTROPY_TEMPERATURE_material(rho,entropy,temperature_in, &
+      subroutine ENTROPY_TEMPERATURE_material(rho,massfrac_parm, &
+        entropy,temperature_in, &
         imattype,im)
       use global_utility_module
       IMPLICIT NONE
@@ -5414,13 +5415,16 @@ end subroutine dynamic_contact_angle
       REAL_T, intent(out) :: entropy
       REAL_T :: internal_energy
       REAL_T, intent(in) :: temperature_in
+      REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
 
       if (imattype.eq.4) then
        call ENTROPY_TEMPERATURE_SF6(rho,temperature_in,entropy)
       else
-       call INTERNAL_material(rho,temperature_in,internal_energy, &
-        imattype,im)
-       call ENTROPY_material(rho,entropy,internal_energy, &
+       call INTERNAL_material(rho,massfrac_parm, &
+         temperature_in,internal_energy, &
+         imattype,im)
+       call ENTROPY_material(rho,massfrac_parm, &
+        entropy,internal_energy, &
         imattype,im)
       endif
 
@@ -18000,6 +18004,7 @@ END SUBROUTINE Adist
       REAL_T xflux_R
       INTEGER_T local_incomp
       REAL_T local_div_val
+      REAL_T :: massfrac_parm(num_species_var+1)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -19555,11 +19560,18 @@ END SUBROUTINE Adist
                ! ibase+2 = T
                Eforce=-dt*divdest(D_DECL(ic,jc,kc),velcomp)/dencell
 
-               call INTERNAL_material(dencell,TEMPERATURE,internal_e, &
+               call init_massfrac_parm(dencell,massfrac_parm,maskSEM)
+               do ispec=1,num_species_var
+                massfrac_parm(ispec)= &
+                 dendest(D_DECL(ic,jc,kc),ibase+2+ispec)
+               enddo
+               call INTERNAL_material(dencell,massfrac_parm, &
+                 TEMPERATURE,internal_e, &
                  imattype,maskSEM)
                internal_e=internal_e+Eforce
                if (internal_e.gt.zero) then
-                call TEMPERATURE_material(dencell,T_new, &
+                call TEMPERATURE_material(dencell,massfrac_parm, &
+                  T_new, &
                   internal_e,imattype,maskSEM)
                 if (T_new.gt.zero) then
                  dendest(D_DECL(ic,jc,kc),ibase+2)=T_new
@@ -21745,6 +21757,7 @@ END SUBROUTINE Adist
       INTEGER_T local_dir
       REAL_T local_LS(num_materials)
       INTEGER_T try_merge
+      REAL_T :: massfrac_parm(num_species_var+1)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid denbc"
@@ -22249,7 +22262,9 @@ END SUBROUTINE Adist
             ! below Benard convection
            else if (probtype.eq.603) then
             water_temp=radblob2+fort_tempconst(1)
-            call INTERNAL_material(fort_denconst(1),water_temp, &
+            call init_massfrac_parm(fort_denconst(1),massfrac_parm,1)
+            call INTERNAL_material(fort_denconst(1),massfrac_parm, &
+             water_temp, &
              fort_energyconst(1),fort_material_type(1),1)
             if (fort_energyconst(1).gt.zero) then
              ! do nothing
@@ -22333,7 +22348,9 @@ END SUBROUTINE Adist
            ! Benard convection yhi
            else if (probtype.eq.603) then
             water_temp=fort_tempconst(1)
-            call INTERNAL_material(fort_denconst(1),water_temp, &
+            call init_massfrac_parm(fort_denconst(1),massfrac_parm,1)
+            call INTERNAL_material(fort_denconst(1),massfrac_parm, &
+             water_temp, &
              fort_energyconst(1),fort_material_type(1),1)
             if (fort_energyconst(1).gt.zero) then
              ! do nothing
@@ -22433,7 +22450,9 @@ END SUBROUTINE Adist
            ! above probtype=530 or 538
           else if (probtype.eq.603) then ! Benard convection zlo denBC
            water_temp=radblob2+fort_tempconst(1)
-           call INTERNAL_material(fort_denconst(1),water_temp, &
+           call init_massfrac_parm(fort_denconst(1),massfrac_parm,1)
+           call INTERNAL_material(fort_denconst(1),massfrac_parm, &
+            water_temp, &
             fort_energyconst(1),fort_material_type(1),1)
            if (fort_energyconst(1).gt.zero) then
             ! do nothing
@@ -22479,7 +22498,9 @@ END SUBROUTINE Adist
            ! Benard convection zhi
           else if (probtype.eq.603) then
            water_temp=fort_tempconst(1)
-           call INTERNAL_material(fort_denconst(1),water_temp, &
+           call init_massfrac_parm(fort_denconst(1),massfrac_parm,1)
+           call INTERNAL_material(fort_denconst(1),massfrac_parm,  &
+            water_temp, &
             fort_energyconst(1),fort_material_type(1),1)
            if (fort_energyconst(1).gt.zero) then
             ! do nothing
@@ -27892,6 +27913,7 @@ end subroutine initialize2d
        INTEGER_T im,iten
        INTEGER_T nten
        INTEGER_T level,bfactmax
+       REAL_T :: massfrac_parm(ccnum_species_var+1)
 
        probtype=ccprobtype
        num_materials=ccnum_materials
@@ -28625,9 +28647,12 @@ end subroutine initialize2d
 
         ! this loop occurs after user defined initialization.
        do im=1,num_materials
-        call INTERNAL_material(fort_denconst(im),fort_tempconst(im), &
+        call init_massfrac_parm(fort_denconst(im),massfrac_parm,im)
+        call INTERNAL_material(fort_denconst(im),massfrac_parm, &
+            fort_tempconst(im), &
             fort_energyconst(im),fort_material_type(im),im)
-        call INTERNAL_material(fort_denconst(im),fort_tempcutoff(im), &
+        call INTERNAL_material(fort_denconst(im),massfrac_parm, &
+            fort_tempcutoff(im), &
             fort_energycutoff(im),fort_material_type(im),im)
        enddo
 
