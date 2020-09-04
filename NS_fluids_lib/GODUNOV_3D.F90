@@ -8751,6 +8751,7 @@ stop
       INTEGER_T imattype
       REAL_T heat_source_total,vfrac_total
       REAL_T DeDT_local(nmat)
+      REAL_T mass_frac_parm(num_species_var+1)
 
       nhalf=3
 
@@ -8826,17 +8827,33 @@ stop
          print *,"VFRAC invalid"
          stop
         endif 
-        if (den_local(im).le.zero) then
+        if (den_local(im).gt.zero) then
+         ! do nothing
+        else
          print *,"den_local must be positive"
          stop
         endif
-        if (T_local(im).le.zero) then
+        if (T_local(im).gt.zero) then
+         ! do nothing
+        else
          print *,"T_local must be positive"
          stop
         endif
+        call init_massfrac_parm(den_local(im),massfrac_parm,im)
+        do ispec=1,num_species_var
+         massfrac_parm(ispec)=Tnew(D_DECL(i,j,k),dencomp+1+ispec)
+         if (massfrac_parm(ispec).ge.zero) then
+          ! do nothing
+         else
+          print *,"massfrac_parm(ispec) invalid"
+          stop
+         endif
+        enddo
+
         imattype=fort_material_type(im) 
           ! in otherwords, find c_v for material im
-        call DeDT_material(den_local(im),T_local(im), &
+        call DeDT_material(den_local(im),massfrac_parm, &
+         T_local(im), &
          DeDT_local(im),imattype,im)
        enddo ! im=1..nmat
 
@@ -11870,6 +11887,8 @@ stop
       REAL_T temperature_left,temperature_right
       REAL_T density_left,density_right
       REAL_T internal_energy_left,internal_energy_right
+      REAL_T massfrac_parm_left(num_species_var+1)
+      REAL_T massfrac_parm_right(num_species_var+1)
       REAL_T gradh
       INTEGER_T nten_test
       REAL_T weymouth_factor,weymouth_cfl
@@ -12714,15 +12733,26 @@ stop
 
        if (is_rigid(nmat,im_primaryL).eq.0) then
         ibase=(im_primaryL-1)*num_state_material
-        density_left=den(D_DECL(i-ii,j-jj,k-kk),ibase+1)
+        density_left= &
+          den(D_DECL(i-ii,j-jj,k-kk),ibase+1)
 
         if (material_type(im_primaryL).gt.0) then
 
+         call init_massfrac_parm(density_left,massfrac_parm_left,im_primaryL)
+         do ispec=1,num_species_var
+          massfrac_parm_left(ispec)= &
+            den(D_DECL(i-ii,j-jj,k-kk),ibase+2+ispec)
+         enddo
+
          temperature_left=den(D_DECL(i-ii,j-jj,k-kk),ibase+2)
-         call INTERNAL_material(density_left,temperature_left, &
-          internal_energy_left,material_type(im_primaryL),im_primaryL)
-         call SOUNDSQR_material(density_left,internal_energy_left, &
-          cleft_diag,material_type(im_primaryL),im_primaryL)
+         call INTERNAL_material(density_left,massfrac_parm_left, &
+          temperature_left, &
+          internal_energy_left, &
+          material_type(im_primaryL),im_primaryL)
+         call SOUNDSQR_material(density_left,massfrac_parm_left, &
+          internal_energy_left, &
+          cleft_diag, &
+          material_type(im_primaryL),im_primaryL)
 
          if ((shock_timestep(im_primaryL).eq.1).or. &
              ((shock_timestep(im_primaryL).eq.0).and.(time.eq.zero))) then
@@ -12747,11 +12777,21 @@ stop
 
         if (material_type(im_primaryR).gt.0) then
 
+         call init_massfrac_parm(density_right,massfrac_parm_right,im_primaryR)
+         do ispec=1,num_species_var
+          massfrac_parm_right(ispec)= &
+            den(D_DECL(i,j,k),ibase+2+ispec)
+         enddo
+
          temperature_right=den(D_DECL(i,j,k),ibase+2)
-         call INTERNAL_material(density_right,temperature_right, &
-          internal_energy_right,material_type(im_primaryR),im_primaryR)
-         call SOUNDSQR_material(density_right,internal_energy_right, &
-          cright_diag,material_type(im_primaryR),im_primaryR)
+         call INTERNAL_material(density_right,massfrac_parm_right, &
+          temperature_right, &
+          internal_energy_right, &
+          material_type(im_primaryR),im_primaryR)
+         call SOUNDSQR_material(density_right,massfrac_parm_right, &
+          internal_energy_right, &
+          cright_diag, &
+          material_type(im_primaryR),im_primaryR)
 
          if ((shock_timestep(im_primaryR).eq.1).or. &
              ((shock_timestep(im_primaryR).eq.0).and.(time.eq.zero))) then

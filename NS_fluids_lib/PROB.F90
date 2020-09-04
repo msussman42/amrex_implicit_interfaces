@@ -656,12 +656,12 @@ stop
       use global_utility_module
       IMPLICIT NONE
  
-      INTEGER_T tessellate
-      INTEGER_T nmat
-      REAL_T vel(num_materials_vel*(SDIM+1))
-      REAL_T den(nmat*num_state_material)
-      REAL_T vof(nmat)
-      REAL_T mach(num_materials_vel)
+      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: vel(num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) :: den(nmat*num_state_material)
+      REAL_T, intent(in) :: vof(nmat)
+      REAL_T, intent(out) :: mach(num_materials_vel)
       INTEGER_T dir
       REAL_T UMACH_local
       REAL_T test_vel
@@ -670,6 +670,8 @@ stop
       REAL_T temp_local
       REAL_T energy_local
       INTEGER_T im_primary,im
+      INTEGER_T ispec
+      REAL_T :: massfrac_parm(num_species_var+1)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -719,11 +721,19 @@ stop
                 (fort_material_type(im_primary).le.fort_max_num_eos)) then
         den_local=den((im_primary-1)*num_state_material+1)
         temp_local=den((im_primary-1)*num_state_material+2)
-        call INTERNAL_material(den_local, &
+
+        call init_massfrac_parm(den_local,massfrac_parm,im_primary)
+        do ispec=1,num_species_var
+         massfrac_parm(ispec)=den((im_primary-1)*num_state_material+2+ispec)
+        enddo
+
+        call INTERNAL_material(den_local,massfrac_parm, &
          temp_local,energy_local, &
          fort_material_type(im_primary),im_primary)
-        call SOUNDSQR_material(den_local,energy_local, &
-         USOUND_local,fort_material_type(im_primary),im_primary)
+        call SOUNDSQR_material(den_local,massfrac_parm, &
+         energy_local, &
+         USOUND_local, &
+         fort_material_type(im_primary),im_primary)
         USOUND_local=sqrt(USOUND_local)
         if (USOUND_local.le.zero) then
          print *,"USOUND_local invalid"
@@ -4963,11 +4973,13 @@ end subroutine dynamic_contact_angle
 
         ! returns De/DT / scale 
         ! T=(e/scale)*scale/cv
-      subroutine DeDT_material(rho,temperature,DeDT,imattype,im)
+      subroutine DeDT_material(rho,massfrac_parm, &
+        temperature,DeDT,imattype,im)
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho,temperature
+      REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
       REAL_T, intent(out) :: DeDT
       REAL_T :: DT,T2,e1,e2
 
@@ -4991,10 +5003,12 @@ end subroutine dynamic_contact_angle
       else if ((imattype.eq.999).or. &
                (imattype.eq.0).or. &
                ((imattype.ge.1).and.(imattype.le.fort_max_num_eos))) then
-       call INTERNAL_material(rho,temperature,e1,imattype,im)
+       call INTERNAL_material(rho,massfrac_parm, &
+         temperature,e1,imattype,im)
        DT=temperature*1.0E-6
        T2=temperature+DT
-       call INTERNAL_material(rho,T2,e2,imattype,im)
+       call INTERNAL_material(rho,massfrac_parm, &
+         T2,e2,imattype,im)
        DeDT=(e2-e1)/DT
        if (DeDT.le.zero) then
         print *,"e must be increasing function of T"
@@ -5014,34 +5028,51 @@ end subroutine dynamic_contact_angle
         ! total energy per unit mass? = (1/2)u dot u  + e
         ! returns c^2(e*scale)/scale
         ! sound squared=c^2(density=rho,internal_energy)
-      subroutine SOUNDSQR_material(rho,internal_energy_in,soundsqr, &
+      subroutine SOUNDSQR_material(rho,massfrac_parm, &
+        internal_energy_in,soundsqr, &
         imattype,im)
       use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
       REAL_T :: internal_energy
       REAL_T, intent(out) :: soundsqr
       REAL_T, intent(in) :: internal_energy_in
+      INTEGER_T :: ispec
 
 
       internal_energy=internal_energy_in*global_pressure_scale
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       ! do nothing
+      else
        print *,"e invalid"
        stop
       endif
+      do ispec=1,num_species_var
+       if (massfrac_parm(ispec).ge.zero) then
+        ! do nothing
+       else
+        print *,"massfrac_parm invalid"
+        stop
+       endif
+      enddo
 
       if (is_in_probtype_list().eq.1) then
-       call SUB_SOUNDSQR(rho,internal_energy,soundsqr, &
+       call SUB_SOUNDSQR(rho,massfrac_parm, &
+         internal_energy,soundsqr, &
          imattype,im)
       else 
-       call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
+       call SOUNDSQR_material_CORE(rho,massfrac_parm, &
+         internal_energy,soundsqr, &
          imattype,im)
       endif
 
@@ -5059,9 +5090,12 @@ end subroutine dynamic_contact_angle
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
       REAL_T, intent(out) :: internal_energy
+      REAL_T :: massfrac_parm(num_species_var+1)
  
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"rho invalid"
        stop
       endif
@@ -5069,9 +5103,11 @@ end subroutine dynamic_contact_angle
        print *,"im invalid69"
        stop
       endif
+      call init_massfrac_parm(rho,massfrac_parm,im)
 
         ! returns e/scale
-      call INTERNAL_material(rho,fort_tempcutoff(im), &
+      call INTERNAL_material(rho,massfrac_parm, &
+       fort_tempcutoff(im), &
        internal_energy,imattype,im)
 
       return
@@ -5079,30 +5115,38 @@ end subroutine dynamic_contact_angle
 
         ! returns e/scale
         ! internal energy = e(temperature,density=rho)
-      subroutine INTERNAL_material(rho,temperature,internal_energy, &
+      subroutine INTERNAL_material(rho,massfrac_parm, &
+        temperature,internal_energy, &
         imattype,im)
       use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho,temperature
+      REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
       REAL_T, intent(out) :: internal_energy
       REAL_T local_internal_energy  ! this is an output
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (temperature.le.zero) then
+      if (temperature.gt.zero) then
+       ! do nothing
+      else
        print *,"T invalid"
        stop
       endif
 
       if (is_in_probtype_list().eq.1) then
-       call SUB_INTERNAL(rho,temperature,local_internal_energy, &
+       call SUB_INTERNAL(rho,massfrac_parm, &
+         temperature,local_internal_energy, &
          imattype,im)
       else 
-       call INTERNAL_material_CORE(rho,temperature,local_internal_energy, &
+       call INTERNAL_material_CORE(rho,massfrac_parm, &
+        temperature,local_internal_energy, &
         imattype,im)
       endif
 
