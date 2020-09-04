@@ -328,40 +328,40 @@ implicit none
 
       subroutine TEMPLATE_EOS(rho,massfrac_var, &
         internal_energy,pressure, &
-        imattype,im)
-      INTEGER_T, intent(in) :: imattype,im
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
       REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
       REAL_T, intent(in) :: internal_energy
       REAL_T, intent(out) :: pressure
       end subroutine TEMPLATE_EOS
 
       subroutine TEMPLATE_SOUNDSQR(rho,massfrac_var, &
         internal_energy,soundsqr, &
-        imattype,im)
-      INTEGER_T, intent(in) :: imattype,im
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
       REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
       REAL_T, intent(in) :: internal_energy
       REAL_T, intent(out) :: soundsqr
       end subroutine TEMPLATE_SOUNDSQR
 
       subroutine TEMPLATE_INTERNAL(rho,massfrac_var, &
         temperature,local_internal_energy, &
-        imattype,im)
-      INTEGER_T, intent(in) :: imattype,im
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
       REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
       REAL_T, intent(in) :: temperature 
       REAL_T, intent(out) :: local_internal_energy
       end subroutine TEMPLATE_INTERNAL
 
       subroutine TEMPLATE_TEMPERATURE(rho,massfrac_var, &
         temperature,internal_energy, &
-        imattype,im)
-      INTEGER_T, intent(in) :: imattype,im
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
       REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
       REAL_T, intent(out) :: temperature 
       REAL_T, intent(in) :: internal_energy
       end subroutine TEMPLATE_TEMPERATURE

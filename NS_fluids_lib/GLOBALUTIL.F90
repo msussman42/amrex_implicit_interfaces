@@ -14524,14 +14524,40 @@ contains
       return
       end subroutine TEMPERATURE_SF6ADIABAT
 
+      subroutine init_massfrac_parm(den,massfrac_parm,im)
+      use probcommon_module
+      IMPLICIT NONE
 
-      subroutine EOS_material_CORE(rho,internal_energy,pressure, &
+      REAL_T, intent(in) :: den
+      REAL_T, intent(out) :: massfrac_parm(num_species_var+1)
+      INTEGER_T, intent(in) :: im
+      INTEGER_T :: ispec,var_comp
+
+      if (num_species_var.eq.0) then
+       massfrac_parm(1)=den
+      else if (num_species_var.ge.1) then
+       do ispec=1,num_species_var
+        var_comp=(ispec-1)*num_materials+im
+        massfrac_parm(ispec)=fort_speciesconst(var_comp)
+       enddo
+      else
+       print *,"num_species_var invalid"
+       stop
+      endif
+
+      return
+      end subroutine init_massfrac_parm
+
+
+      subroutine EOS_material_CORE(rho,massfrac_var, &
+        internal_energy,pressure, &
         imattype,im)
       use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho,internal_energy
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
       REAL_T, intent(inout) :: pressure
       REAL_T :: T
 
@@ -14605,13 +14631,15 @@ contains
         ! total energy per unit mass? = (1/2)u dot u  + e
         ! returns c^2(e*scale)/scale
         ! sound squared=c^2(density=rho,internal_energy)
-      subroutine SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
+      subroutine SOUNDSQR_material_CORE(rho,massfrac_var, &
+        internal_energy,soundsqr, &
         imattype,im)
       use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho,internal_energy
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
       REAL_T, intent(out) :: soundsqr
 
 
@@ -14681,13 +14709,15 @@ contains
 
         ! returns e/scale
         ! internal energy = e(temperature,density=rho)
-      subroutine INTERNAL_material_CORE(rho,temperature,internal_energy, &
+      subroutine INTERNAL_material_CORE(rho,massfrac_var, &
+        temperature,internal_energy, &
         imattype,im)
       use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho,temperature
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
       REAL_T, intent(out) :: internal_energy
       REAL_T local_internal_energy
 
@@ -14761,13 +14791,15 @@ contains
       end subroutine INTERNAL_material_CORE
 
 
-      subroutine TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
+      subroutine TEMPERATURE_material_CORE(rho,massfrac_var, &
+        temperature,internal_energy, &
         imattype,im)
       use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho,internal_energy
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
       REAL_T, intent(out) :: temperature
 
       if ((im.lt.1).or.(im.gt.num_materials)) then

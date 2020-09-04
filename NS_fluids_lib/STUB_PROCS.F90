@@ -141,12 +141,12 @@ end subroutine STUB_VEL
 
 subroutine EOS_STUB(rho,massfrac_var, &
   internal_energy,pressure, &
-  imattype,im)
+  imattype,im,num_species_var_in)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
  REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
@@ -158,12 +158,12 @@ end subroutine EOS_STUB
 
 subroutine SOUNDSQR_STUB(rho,massfrac_var, &
   internal_energy,soundsqr, &
-  imattype,im)
+  imattype,im,num_species_var_in)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
  REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
 
@@ -178,12 +178,12 @@ end subroutine SOUNDSQR_STUB
 subroutine INTERNAL_STUB(rho,massfrac_var, &
   temperature, &
   local_internal_energy, &
-  imattype,im)
+  imattype,im,num_species_var_in)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
  REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
@@ -196,12 +196,12 @@ end subroutine INTERNAL_STUB
 
 subroutine TEMPERATURE_STUB(rho,massfrac_var, &
   temperature,internal_energy, &
-  imattype,im)
+  imattype,im,num_species_var_in)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
  REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 

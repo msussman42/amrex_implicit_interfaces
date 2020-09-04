@@ -258,12 +258,12 @@ end function DIST_FINITE_CYLINDER
 
 subroutine EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
   internal_energy,pressure, &
-  imattype,im)
+  imattype,im,num_species_var_in)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
  REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
@@ -285,19 +285,20 @@ end subroutine EOS_CRYOGENIC_TANK1
 
 subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,massfrac_var, &
   internal_energy,soundsqr, &
-  imattype,im)
+  imattype,im,num_species_var_in)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
  REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
  REAL_T pressure
 
  if (im.eq.2) then
   if (imattype.eq.24) then
-   call EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure,imattype,im)
+   call EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
+     internal_energy,pressure,imattype,im,num_species_var_in)
    soundsqr=TANK1_GAS_GAMMA*pressure/rho
   else
    print *,"imattype= ",imattype
@@ -315,12 +316,12 @@ end subroutine SOUNDSQR_CRYOGENIC_TANK1
 
 subroutine INTERNAL_CRYOGENIC_TANK1(rho,massfrac_var, &
   temperature,local_internal_energy, &
-  imattype,im)
+  imattype,im,num_species_var_in)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
  REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
@@ -343,12 +344,12 @@ end subroutine INTERNAL_CRYOGENIC_TANK1
 
 subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,massfrac_var, &
   temperature,internal_energy, &
-  imattype,im)
+  imattype,im,num_species_var_in)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
  REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
