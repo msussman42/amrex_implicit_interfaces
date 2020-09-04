@@ -12045,7 +12045,7 @@ END SUBROUTINE SIMP
       REAL_T pres(DIMV(pres),num_materials_vel)
       REAL_T recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T levelpc(DIMV(levelpc),nmat*(1+SDIM))
-      REAL_T den(DIMV(den),nden) ! den,temp
+      REAL_T den(DIMV(den),nden) ! den,temp,Y
       INTEGER_T i,j,k
       INTEGER_T im
       INTEGER_T im_primary
@@ -12054,6 +12054,8 @@ END SUBROUTINE SIMP
       REAL_T LS(nmat)
       REAL_T vfrac(nmat)
       INTEGER_T vofcomp
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
 
       if (bfact.lt.1) then
        print *,"bfact invalid162"
@@ -12117,24 +12119,35 @@ END SUBROUTINE SIMP
             (fort_material_type(im_primary).le.fort_max_num_eos)) then
 
          rho=den(D_DECL(i,j,k),ibase+1)
-         if (rho.le.zero) then
+         if (rho.gt.zero) then
+          ! do nothing
+         else
           print *,"density has gone nonpos"
           stop
          endif
          TEMP=den(D_DECL(i,j,k),ibase+2)
-         if (TEMP.le.zero) then
+         if (TEMP.gt.zero) then
+          ! do nothing
+         else
           print *,"TEMP has gone nonpos"
           stop
          endif
+         call init_massfrac_parm(rho,massfrac_parm,im_primary)
+         do ispec=1,num_species_var
+          massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+2+ispec)
+         enddo
          ! returns energy/scale
-         call INTERNAL_material(rho,TEMP, &
+         call INTERNAL_material(rho,massfrac_parm,TEMP, &
           internal_energy,fort_material_type(im_primary),im_primary)
-         if (internal_energy.le.zero) then
+         if (internal_energy.gt.zero) then
+          ! do nothing
+         else
           print *,"internal_energy has gone nonpos"
           stop
          endif
          ! p(energy*scale)/scale
-         call EOS_material(rho,internal_energy, &
+         call EOS_material(rho,massfrac_parm, &
+          internal_energy, &
           pres(D_DECL(i,j,k),1), &
           fort_material_type(im_primary),im_primary)
         else if (fort_material_type(im_primary).eq.0) then
@@ -12450,6 +12463,8 @@ END SUBROUTINE SIMP
       REAL_T cutoff
       REAL_T rmaskcov
       INTEGER_T local_mask
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
 
       if (bfact.ge.1) then
        ! do nothing
@@ -12648,16 +12663,24 @@ END SUBROUTINE SIMP
 
            rho(im)=den(D_DECL(i,j,k),ibase+1)  ! regular density
    
-           if (rho(im).le.zero) then
+           if (rho(im).gt.zero) then
+            ! do nothing
+           else
             print *,"cannot have non-pos density"
             stop
            endif
 
             ! temperature after diffusion
            temperature=den(D_DECL(i,j,k),ibase+2) 
+
+           call init_massfrac_parm(rho(im),massfrac_parm,im)
+           do ispec=1,num_species_var
+            massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+2+ispec)
+           enddo
           
             ! returns e/scale 
-           call INTERNAL_material(rho(im),temperature, &
+           call INTERNAL_material(rho(im),massfrac_parm, &
+             temperature, &
              internal_energy,fort_material_type(im),im)
           
             ! compressible material ? 
@@ -12666,10 +12689,12 @@ END SUBROUTINE SIMP
                (vfrac(im).gt.zero)) then
 
               ! returns p(e*scale)/scale
-            call EOS_material(rho(im),internal_energy, &
+            call EOS_material(rho(im),massfrac_parm, &
+               internal_energy, &
                pres(im),fort_material_type(im),im)
               ! returns c^2(e*scale)/scale
-            call SOUNDSQR_material(rho(im),internal_energy, &
+            call SOUNDSQR_material(rho(im),massfrac_parm, &
+               internal_energy, &
                soundsqr,fort_material_type(im),im)
             if (soundsqr.gt.zero) then
              ! do nothing

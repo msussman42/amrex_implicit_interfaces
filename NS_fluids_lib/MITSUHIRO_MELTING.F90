@@ -224,60 +224,72 @@ end subroutine MITSUHIRO_MELTING_VEL
 ! These next routines only used for compressible materials.
 !***********************************************
 ! compressible material functions for (ns.material_type = 24)
-subroutine EOS_MITSUHIRO_MELTING(rho,internal_energy,pressure, &
+subroutine EOS_MITSUHIRO_MELTING(rho,massfrac_var, &
+  internal_energy,pressure, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- call EOS_material_CORE(rho,internal_energy,pressure,imattype,im)
+ call EOS_material_CORE(rho,massfrac_var, &
+         internal_energy,pressure,imattype,im)
 
  return
 end subroutine EOS_MITSUHIRO_MELTING
 
-subroutine SOUNDSQR_MITSUHIRO_MELTING(rho,internal_energy,soundsqr, &
+subroutine SOUNDSQR_MITSUHIRO_MELTING(rho,massfrac_var, &
+  internal_energy,soundsqr, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
 
- call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
+ call SOUNDSQR_material_CORE(rho,massfrac_var, &
+   internal_energy,soundsqr, &
    imattype,im)
 
  return
 end subroutine SOUNDSQR_MITSUHIRO_MELTING
 
-subroutine INTERNAL_MITSUHIRO_MELTING(rho,temperature,local_internal_energy, &
+subroutine INTERNAL_MITSUHIRO_MELTING(rho,massfrac_var, &
+  temperature,local_internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- call INTERNAL_material_CORE(rho,temperature,local_internal_energy, &
+ call INTERNAL_material_CORE(rho,massfrac_var, &
+   temperature,local_internal_energy, &
    imattype,im)
 
  return
 end subroutine INTERNAL_MITSUHIRO_MELTING
 
-subroutine TEMPERATURE_MITSUHIRO_MELTING(rho,temperature,internal_energy, &
+subroutine TEMPERATURE_MITSUHIRO_MELTING(rho,massfrac_var, &
+  temperature,internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- call TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
+ call TEMPERATURE_material_CORE(rho,massfrac_var, &
+     temperature,internal_energy, &
      imattype,im)
 
  return
