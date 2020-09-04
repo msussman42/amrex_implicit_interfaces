@@ -3356,6 +3356,8 @@ END SUBROUTINE SIMP
       REAL_T local_data
       INTEGER_T caller_id
       INTEGER_T current_index
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
 
       caller_id=3
 
@@ -4244,7 +4246,12 @@ END SUBROUTINE SIMP
 
          denslice=dennd((im_crit-1)*num_state_material+1)
          tempslice=dennd((im_crit-1)*num_state_material+2)
-         call INTERNAL_material(denslice,tempslice,eslice, &
+         call init_massfrac_parm(denslice,massfrac_parm,im_crit)
+         do ispec=1,num_species_var
+          massfrac_parm(ispec)=dennd((im_crit-1)*num_state_material+2+ispec)
+         enddo
+         call INTERNAL_material(denslice,massfrac_parm, &
+           tempslice,eslice, &
            fort_material_type(im_crit),im_crit)
          KEslice=denslice*eslice
 
@@ -9721,6 +9728,9 @@ END SUBROUTINE SIMP
 
        REAL_T LS_LOCAL(nmat)
 
+       REAL_T massfrac_parm(num_species_var+1)
+       INTEGER_T ispec
+
        type(user_defined_sum_int_type) :: GRID_DATA_PARM
        REAL_T local_user_out(ncomp_sum_int_user)
 
@@ -10084,7 +10094,13 @@ END SUBROUTINE SIMP
 
           idest=energy_sum_comp+im
 
-          call INTERNAL_material(dencore,Tcore,ecore, &
+          call init_massfrac_parm(dencore,massfrac_parm,im)
+          do ispec=1,num_species_var
+           massfrac_parm(ispec)= &
+               den(D_DECL(i,j,k),(im-1)*num_state_material+2+ispec)
+          enddo
+          call INTERNAL_material(dencore,massfrac_parm, &
+            Tcore,ecore, &
             fort_material_type(im),im)
 
           totalE=dencore*(KECELL+ecore)*volgrid*mofdata_tess(vofcomp)

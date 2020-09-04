@@ -9808,6 +9808,9 @@ stop
 
       REAL_T local_div_val
 
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
+
       REAL_T, dimension(:,:), allocatable :: comparepface
       REAL_T, dimension(:,:), allocatable :: comparevelface
       REAL_T, dimension(:,:), allocatable :: comparestate
@@ -11469,17 +11472,33 @@ stop
              rho=dendest(D_DECL(i,j,k),ibase+1)
              TEMPERATURE=dendest(D_DECL(i,j,k),ibase+2)
 
-             if (rho.le.zero) then
+             if (rho.gt.zero) then
+              ! do nothing
+             else
               print *,"density underflow"
               print *,"i,j,k,im,rho ",i,j,k,im,rho
               stop
              endif
-             if (TEMPERATURE.le.zero) then
+             if (TEMPERATURE.gt.zero) then
+              ! do nothing
+             else
               print *,"temperature underflow"
               stop
              endif
+             call init_massfrac_parm(rho,massfrac_parm,im)
+             do ispec=1,num_species_var
+              massfrac_parm(ispec)= &
+                dendest(D_DECL(i,j,k),ibase+2+ispec)
+              if (massfrac_parm(ispec).ge.zero) then
+               ! do nothing
+              else
+               print *,"massfrac_parm invalid"
+               stop
+              endif
+             enddo ! ispec=1..num_species_var
 
-             call INTERNAL_material(rho,TEMPERATURE,internal_e, &
+             call INTERNAL_material(rho,massfrac_parm, &
+               TEMPERATURE,internal_e, &
                imattype,im)
 
              if (temperature_primitive_variable(im).eq.0) then
@@ -11494,7 +11513,8 @@ stop
              if (internal_e.le.zero) then
               NEW_TEMPERATURE=TEMPERATURE
              else
-              call TEMPERATURE_material(rho,NEW_TEMPERATURE, &
+              call TEMPERATURE_material(rho,massfrac_parm, &
+               NEW_TEMPERATURE, &
                internal_e,imattype,im)
              endif
 
@@ -12099,6 +12119,8 @@ stop
       INTEGER_T local_mask
       INTEGER_T vofcomp,dencomp
       REAL_T vof,KE,rho,TEMPERATURE,internal_e
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -12207,27 +12229,46 @@ stop
              (im-1)*num_state_material+1
             rho=state(D_DECL(i,j,k),dencomp)
             TEMPERATURE=state(D_DECL(i,j,k),dencomp+1)
-            if (rho.le.zero) then
+            if (rho.gt.zero) then
+             ! do nothing
+            else
              print *,"density underflow"
              print *,"i,j,k,im,rho ",i,j,k,im,rho
              stop
             endif
              ! the first part is always to add the old kinetic energy.
-            if (TEMPERATURE.le.zero) then
+            if (TEMPERATURE.gt.zero) then
+             ! do nothing
+            else
              print *,"temperature underflow"
              stop
             endif
             imattype=fort_material_type(im)
             if ((imattype.gt.0).and. &
                 (imattype.le.fort_max_num_eos)) then
-             call INTERNAL_material(rho,TEMPERATURE,internal_e, &
+
+             call init_massfrac_parm(rho,massfrac_parm,im)
+             do ispec=1,num_species_var
+              massfrac_parm(ispec)= &
+                state(D_DECL(i,j,k),dencomp+1+ispec)
+              if (massfrac_parm(ispec).ge.zero) then
+               ! do nothing
+              else
+               print *,"massfrac_parm invalid"
+               stop
+              endif
+             enddo ! ispec=1..num_species_var
+
+             call INTERNAL_material(rho,massfrac_parm, &
+               TEMPERATURE,internal_e, &
                imattype,im)
              internal_e=internal_e+beta*KE
              if (internal_e.le.zero) then
               print *,"internal_e.le.zero in INC_TEMP"
               stop
              endif
-             call TEMPERATURE_material(rho,TEMPERATURE, &
+             call TEMPERATURE_material(rho,massfrac_parm, &
+               TEMPERATURE, &
                internal_e,imattype,im)
              state(D_DECL(i,j,k),dencomp+1)=TEMPERATURE
             else

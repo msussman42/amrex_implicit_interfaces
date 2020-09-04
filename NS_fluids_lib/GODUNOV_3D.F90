@@ -2774,6 +2774,7 @@ stop
       INTEGER_T igridlo(3),igridhi(3)
       REAL_T dencore(nmat)
       REAL_T KE,vel1D,local_temperature,local_internal
+      REAL_T :: massfrac_parm(num_species_var+1)
 
       if (nc_den.ne.num_state_material*nmat) then
        print *,"nc_den invalid"
@@ -2905,7 +2906,9 @@ stop
          stop
         endif
 
-        if (dencore(im).le.zero) then
+        if (dencore(im).gt.zero) then
+         ! do nothing
+        else
          print *,"density must be positive build_conserve"
          print *,"im,dencore(im) ",im,dencore(im)
          print *,"im,fort_denconst(im) ",im,fort_denconst(im)
@@ -2931,8 +2934,20 @@ stop
            conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
             dencore(im)*local_temperature
           else if (temperature_primitive_variable(im).eq.0) then ! conservative
+
+           call init_massfrac_parm(dencore(im),massfrac_parm,im)
+           do ispecies=1,num_species_var
+            massfrac_parm(ispecies)=den(D_DECL(i,j,k),tempcomp+ispecies)
+            if (massfrac_parm(ispecies).ge.zero) then
+             ! do nothing
+            else
+             print *,"massfrac_parm(ispecies) invalid"
+             stop
+            endif
+           enddo
+
             ! den * (u dot u/2 + cv T)
-           call INTERNAL_material(dencore(im), &
+           call INTERNAL_material(dencore(im),massfrac_parm, &
             local_temperature,local_internal, &
             fort_material_type(im),im)
            conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
@@ -19689,6 +19704,35 @@ stop
             ! do nothing, density updated above
             istate=istate+1
            else if (istate.eq.2) then 
+
+            do ispecies=1,num_species_var
+             speccomp_data=(im-1)*num_state_material+num_state_base+ &
+               ispecies
+             if (no_material_flag.eq.1) then ! no material (im)
+              snew_hold(dencomp+speccomp_data)=zero
+             else if (no_material_flag.eq.0) then
+              if (is_rigid(nmat,im).eq.1) then ! mass fraction=0 in solids.
+               snew_hold(dencomp+speccomp_data)=zero
+              else if (is_rigid(nmat,im).eq.0) then
+               massdepart=veldata(iden_base+dencomp_data)
+               if (massdepart.gt.zero) then
+                snew_hold(dencomp+speccomp_data)= &
+                 veldata(iden_base+speccomp_data)/massdepart
+               else
+                print *,"massdepart invalid"
+                stop
+               endif 
+              else
+               print *,"is_rigid invalid"
+               stop
+              endif
+             else 
+              print *,"no_material_flag invalid"
+              stop
+             endif
+
+            enddo ! ispecies=1..num_species_var
+
             tempcomp_data=(im-1)*num_state_material+istate
 
             if (no_material_flag.eq.1) then
@@ -19792,39 +19836,8 @@ stop
              stop
             endif
 
-            istate=istate+1
-           else if ((istate.eq.num_state_base+1).and. &
-                     (num_species_var.gt.0)) then
-            do ispecies=1,num_species_var
-             speccomp_data=(im-1)*num_state_material+num_state_base+ &
-               ispecies
-             if (no_material_flag.eq.1) then ! no material (im)
-              snew_hold(dencomp+speccomp_data)=zero
-             else if (no_material_flag.eq.0) then
-              if (is_rigid(nmat,im).eq.1) then ! mass fraction=0 in solids.
-               snew_hold(dencomp+speccomp_data)=zero
-              else if (is_rigid(nmat,im).eq.0) then
-               massdepart=veldata(iden_base+dencomp_data)
-               if (massdepart.gt.zero) then
-                snew_hold(dencomp+speccomp_data)= &
-                 veldata(iden_base+speccomp_data)/massdepart
-               else
-                print *,"massdepart invalid"
-                stop
-               endif 
-              else
-               print *,"is_rigid invalid"
-               stop
-              endif
-             else 
-              print *,"no_material_flag invalid"
-              stop
-             endif
-
-             istate=istate+1
-            enddo ! ispecies=1..num_species_var
-
-           else 
+            istate=istate+1+num_species_var
+           else
             print *,"istate invalid"
             stop
            endif
