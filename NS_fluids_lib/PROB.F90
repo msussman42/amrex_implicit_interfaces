@@ -5238,13 +5238,15 @@ end subroutine dynamic_contact_angle
 
 
 
-      subroutine TEMPERATURE_ENTROPY_material(rho,entropy,temperature, &
+      subroutine TEMPERATURE_ENTROPY_material(rho,massfrac_parm, &
+        entropy,temperature, &
         imattype,im)
       use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
       REAL_T, intent(in) :: entropy
       REAL_T :: internal_energy
       REAL_T, intent(out) :: temperature
@@ -5264,7 +5266,8 @@ end subroutine dynamic_contact_angle
       else
        call INTERNAL_ENTROPY_material(rho,entropy,internal_energy, &
         imattype,im)
-       call TEMPERATURE_material(rho,temperature,internal_energy, &
+       call TEMPERATURE_material(rho,massfrac_parm, &
+        temperature,internal_energy, &
         imattype,im)
       endif
 
@@ -5274,15 +5277,18 @@ end subroutine dynamic_contact_angle
 
        ! extracts temperature from density and internal energy
        ! returns T(e*scale)
-      subroutine TEMPERATURE_material(rho,temperature,internal_energy_in, &
+      subroutine TEMPERATURE_material(rho,massfrac_parm, &
+        temperature,internal_energy_in, &
         imattype,im)
       use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho,internal_energy_in
+      REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
       REAL_T internal_energy
       REAL_T, intent(out) :: temperature
+      INTEGER_T :: ispec
 
       internal_energy=internal_energy_in*global_pressure_scale
 
@@ -5290,21 +5296,35 @@ end subroutine dynamic_contact_angle
        print *,"im invalid71"
        stop
       endif
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       ! do nothing
+      else
        print *,"internal energy invalid in temperature material"
        print *,"rho,energy,imat ",rho,internal_energy,imattype 
        stop
       endif
+      do ispec=1,num_species_var
+       if (massfrac_parm(ispec).ge.zero) then
+        ! do nothing
+       else
+        print *,"massfrac_parm(ispec) invalid"
+        stop
+       endif
+      enddo
 
       if (is_in_probtype_list().eq.1) then
-       call SUB_TEMPERATURE(rho,temperature,internal_energy, &
+       call SUB_TEMPERATURE(rho,massfrac_parm, &
+         temperature,internal_energy, &
          imattype,im)
       else 
-       call TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
+       call TEMPERATURE_material_CORE(rho,massfrac_parm, &
+        temperature,internal_energy, &
         imattype,im)
       endif
 
@@ -33794,7 +33814,9 @@ end subroutine initialize2d
            else if (im.eq.2) then
             e_jwl=4.2814D+10
             den_jwl=1.63D0
-            call TEMPERATURE_material(den_jwl,temp_jwl,e_jwl, &
+            call init_massfrac_parm(den_jwl,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl,massfrac_parm, &
+             temp_jwl,e_jwl, &
              fort_material_type(im),im)
             scalc(ibase+1)=den_jwl
             scalc(ibase+2)=temp_jwl
@@ -33883,7 +33905,9 @@ end subroutine initialize2d
              stop
             endif
             e_jwl=p_jwl/((shockdrop_gamma-one)*den_jwl)
-            call TEMPERATURE_material(den_jwl,temp_jwl,e_jwl, &
+            call init_massfrac_parm(den_jwl,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl,massfrac_parm, &
+             temp_jwl,e_jwl, &
              fort_material_type(im),im)
             scalc(ibase+1)=den_jwl
             scalc(ibase+2)=temp_jwl
@@ -33964,9 +33988,13 @@ end subroutine initialize2d
                (axis_dir.eq.3)) then
             e_jwl_left=p_jwl_left/((gamma_jwl-one)*den_jwl_left)
             e_jwl_right=p_jwl_right/((gamma_jwl-one)*den_jwl_right)
-            call TEMPERATURE_material(den_jwl_left,temp_jwl_left,e_jwl_left, &
+            call init_massfrac_parm(den_jwl_left,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl_left,massfrac_parm, &
+             temp_jwl_left,e_jwl_left, &
              fort_material_type(im),im)
-            call TEMPERATURE_material(den_jwl_right,temp_jwl_right, &
+            call init_massfrac_parm(den_jwl_right,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl_right,massfrac_parm, &
+             temp_jwl_right, &
              e_jwl_right,fort_material_type(im),im)
            else if (axis_dir.eq.4) then
             temp_jwl_left=fort_initial_temperature(1)
@@ -34080,7 +34108,9 @@ end subroutine initialize2d
            else if (im.eq.2) then
             e_jwl=4.2945D+10
             den_jwl=1.63D0
-            call TEMPERATURE_material(den_jwl,temp_jwl,e_jwl, &
+            call init_massfrac_parm(den_jwl,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl,massfrac_parm, &
+             temp_jwl,e_jwl, &
              fort_material_type(im),im)
 
             scalc(ibase+1)=den_jwl     ! density
@@ -34108,7 +34138,9 @@ end subroutine initialize2d
             else if (im.eq.2) then ! jwl
              e_jwl=4.2945D+10
              den_jwl=1.63D0
-             call TEMPERATURE_material(den_jwl,temp_jwl,e_jwl, &
+             call init_massfrac_parm(den_jwl,massfrac_parm,im)
+             call TEMPERATURE_material(den_jwl,massfrac_parm, &
+              temp_jwl,e_jwl, &
               fort_material_type(im),im)
 
              scalc(ibase+1)=den_jwl     ! density
