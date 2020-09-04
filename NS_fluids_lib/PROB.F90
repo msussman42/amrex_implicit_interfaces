@@ -4844,6 +4844,7 @@ end subroutine dynamic_contact_angle
       end subroutine
       
       subroutine debug_EOS(im)
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T im
@@ -4959,7 +4960,7 @@ end subroutine dynamic_contact_angle
       if (is_in_probtype_list().eq.1) then
        call SUB_EOS(rho,massfrac_parm, &
          internal_energy,pressure, &
-         imattype,im)
+         imattype,im,num_species_var)
       else 
        call EOS_material_CORE(rho,massfrac_parm, &
                internal_energy,pressure,imattype,im)
@@ -5069,7 +5070,7 @@ end subroutine dynamic_contact_angle
       if (is_in_probtype_list().eq.1) then
        call SUB_SOUNDSQR(rho,massfrac_parm, &
          internal_energy,soundsqr, &
-         imattype,im)
+         imattype,im,num_species_var)
       else 
        call SOUNDSQR_material_CORE(rho,massfrac_parm, &
          internal_energy,soundsqr, &
@@ -5085,6 +5086,7 @@ end subroutine dynamic_contact_angle
         ! returns e/scale
       subroutine INTERNAL_material_cutoff(rho,internal_energy, &
         imattype,im)
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
@@ -5143,7 +5145,7 @@ end subroutine dynamic_contact_angle
       if (is_in_probtype_list().eq.1) then
        call SUB_INTERNAL(rho,massfrac_parm, &
          temperature,local_internal_energy, &
-         imattype,im)
+         imattype,im,num_species_var)
       else 
        call INTERNAL_material_CORE(rho,massfrac_parm, &
         temperature,local_internal_energy, &
@@ -5321,7 +5323,7 @@ end subroutine dynamic_contact_angle
       if (is_in_probtype_list().eq.1) then
        call SUB_TEMPERATURE(rho,massfrac_parm, &
          temperature,internal_energy, &
-         imattype,im)
+         imattype,im,num_species_var)
       else 
        call TEMPERATURE_material_CORE(rho,massfrac_parm, &
         temperature,internal_energy, &
@@ -5335,13 +5337,15 @@ end subroutine dynamic_contact_angle
 
        ! extracts entropy from density and internal energy
        ! returns E(e*scale)
-      subroutine ENTROPY_material(rho,entropy,internal_energy_in, &
+      subroutine ENTROPY_material(rho,massfrac_parm, &
+        entropy,internal_energy_in, &
         imattype,im)
       use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
       REAL_T, intent(out) :: entropy
       REAL_T :: internal_energy
       REAL_T, intent(in) :: internal_energy_in
@@ -18024,6 +18028,7 @@ END SUBROUTINE Adist
       REAL_T xflux_R
       INTEGER_T local_incomp
       REAL_T local_div_val
+      INTEGER_T ispec
       REAL_T :: massfrac_parm(num_species_var+1)
 
       if (nmat.ne.num_materials) then
@@ -27996,10 +28001,6 @@ end subroutine initialize2d
         SUB_INIT_MODULE=>INIT_MITSUHIRO_MELTING_MODULE
         SUB_LS=>MITSUHIRO_MELTING_LS
         SUB_VEL=>MITSUHIRO_MELTING_VEL
-        SUB_EOS=>EOS_MITSUHIRO_MELTING
-        SUB_SOUNDSQR=>SOUNDSQR_MITSUHIRO_MELTING
-        SUB_INTERNAL=>INTERNAL_MITSUHIRO_MELTING
-        SUB_TEMPERATURE=>TEMPERATURE_MITSUHIRO_MELTING
         SUB_PRES=>MITSUHIRO_MELTING_PRES
         SUB_STATE=>MITSUHIRO_MELTING_STATE
         SUB_LS_BC=>MITSUHIRO_MELTING_LS_BC
@@ -28011,10 +28012,6 @@ end subroutine initialize2d
         SUB_INIT_MODULE=>INIT_ICE_ON_SUBSTRATE_MODULE
         SUB_LS=>ICE_ON_SUBSTRATE_LS
         SUB_VEL=>ICE_ON_SUBSTRATE_VEL
-        SUB_EOS=>EOS_ICE_ON_SUBSTRATE
-        SUB_SOUNDSQR=>SOUNDSQR_ICE_ON_SUBSTRATE
-        SUB_INTERNAL=>INTERNAL_ICE_ON_SUBSTRATE
-        SUB_TEMPERATURE=>TEMPERATURE_ICE_ON_SUBSTRATE
         SUB_PRES=>ICE_ON_SUBSTRATE_PRES
         SUB_STATE=>ICE_ON_SUBSTRATE_STATE
         SUB_LS_BC=>ICE_ON_SUBSTRATE_LS_BC
@@ -28026,10 +28023,6 @@ end subroutine initialize2d
         SUB_INIT_MODULE=>INIT_SIMPLE_PALMORE_DESJARDINS_MODULE
         SUB_LS=>SIMPLE_PALMORE_DESJARDINS_LS
         SUB_VEL=>SIMPLE_PALMORE_DESJARDINS_VEL
-        SUB_EOS=>EOS_SIMPLE_PALMORE_DESJARDINS
-        SUB_SOUNDSQR=>SOUNDSQR_SIMPLE_PALMORE_DESJARDINS
-        SUB_INTERNAL=>INTERNAL_SIMPLE_PALMORE_DESJARDINS
-        SUB_TEMPERATURE=>TEMPERATURE_SIMPLE_PALMORE_DESJARDINS
         SUB_PRES=>SIMPLE_PALMORE_DESJARDINS_PRES
         SUB_STATE=>SIMPLE_PALMORE_DESJARDINS_STATE
         SUB_LS_BC=>SIMPLE_PALMORE_DESJARDINS_LS_BC
@@ -28042,10 +28035,6 @@ end subroutine initialize2d
         SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
         SUB_LS=>flexible_plate_impact_LS
         SUB_VEL=>flexible_plate_impact_VEL
-        SUB_EOS=>EOS_flexible_plate_impact
-        SUB_SOUNDSQR=>SOUNDSQR_flexible_plate_impact
-        SUB_INTERNAL=>INTERNAL_flexible_plate_impact
-        SUB_TEMPERATURE=>TEMPERATURE_flexible_plate_impact
         SUB_PRES=>flexible_plate_impact_PRES
         SUB_STATE=>flexible_plate_impact_STATE
         SUB_LS_BC=>flexible_plate_impact_LS_BC
@@ -28057,10 +28046,6 @@ end subroutine initialize2d
         SUB_INIT_MODULE=>INIT_GENERAL_PHASE_CHANGE_MODULE
         SUB_LS=>GENERAL_PHASE_CHANGE_LS
         SUB_VEL=>GENERAL_PHASE_CHANGE_VEL
-        SUB_EOS=>EOS_GENERAL_PHASE_CHANGE
-        SUB_SOUNDSQR=>SOUNDSQR_GENERAL_PHASE_CHANGE
-        SUB_INTERNAL=>INTERNAL_GENERAL_PHASE_CHANGE
-        SUB_TEMPERATURE=>TEMPERATURE_GENERAL_PHASE_CHANGE
         SUB_PRES=>GENERAL_PHASE_CHANGE_PRES
         SUB_STATE=>GENERAL_PHASE_CHANGE_STATE
         SUB_LS_BC=>GENERAL_PHASE_CHANGE_LS_BC

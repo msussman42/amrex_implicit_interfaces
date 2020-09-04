@@ -1378,7 +1378,8 @@ stop
        REAL_T :: cross_denom
        REAL_T :: cross_factor
        REAL_T :: xcrossing(SDIM)
-       REAL_T :: xprobe(SDIM)
+       REAL_T :: xprobe_crossing(SDIM)
+       REAL_T :: xprobe_triple(SDIM)
        REAL_T :: xtriple(SDIM)
        INTEGER_T :: debug_slip_velocity_enforcement
 
@@ -1501,6 +1502,8 @@ stop
           endif
           if ((cross_factor.ge.zero).and. &
               (cross_factor.le.one)) then
+              ! xcrossing is where the solid interface passes inbetween
+              ! the ghost (solid) point and the fluid (image) point.
            do dir=1,SDIM
             xcrossing(dir)=cross_factor*xstenFD(0,dir)+ &
                     (one-cross_factor)*xstenSD(0,dir)
@@ -1611,13 +1614,28 @@ stop
             !      extrapolated into the substrate normal to the substrate.
             ! This routine is only called if LS_IMAGE(im_solid) <0 and
             ! LS_GHOST(im_solid)>0.
+            ! xprobe_crossing is another point on the substrate:
+            !
+            !                       n_im_fluid_project
+            !    xprobe_crossing     <----         x image  im_fluid
+            !   ----x------------------------------x---------- crossing
+            !                                      x ghost  im_fluid
+            !  if LS_{im_fluid}(xprobe_crossing) *
+            !     LS_{im_fluid}(xcrossing) < 0 =>
+            !  a triple points exists in between.
+            !  if LS_{im_fluid}(xcrossing) * LS_{im_fluid}(xghost) < 0 =>
+            !  the triple point is already in the immediate vicinity, no
+            !  need to search for it.
            if ((GNBC_RADIUS.ge.one).and. &
                (GNBC_RADIUS.le.three)) then
             do dir=1,SDIM
              if (LS_crossing(im_fluid).gt.zero) then
-              xprobe(dir)=xcrossing(dir)-GNBC_RADIUS*dxmin*nCL(dir)
+              xprobe_crossing(dir)=xcrossing(dir)-GNBC_RADIUS*dxmin*nCL(dir)
+
+              ! no need to search for triple point, already 2 fluids and
+              ! 1 substrate exists at this point.
              else if (LS_crossing(im_fluid).le.zero) then
-              xprobe(dir)=xcrossing(dir)
+              xprobe_crossing(dir)=xcrossing(dir)
              else
               print *,"LS_crossing(im_fluid) invalid"
               stop
@@ -1626,7 +1644,7 @@ stop
 
             call interp_from_fluid( &
              LOW, &
-             xprobe, &
+             xprobe_crossing, &
              im_secondary_image, &
              thermal_interp, &
              im_fluid, &
@@ -1654,7 +1672,7 @@ stop
              if ((cross_factor.ge.zero).and. &
                  (cross_factor.le.one)) then
               do dir=1,SDIM
-               xtriple(dir)=cross_factor*xprobe(dir)+ &
+               xtriple(dir)=cross_factor*xprobe_crossing(dir)+ &
                   (one-cross_factor)*xcrossing(dir)
               enddo
               do im=1,LOW%nmat*(1+SDIM)
@@ -1666,12 +1684,12 @@ stop
               nrm_solid(3)=zero
               do dir=1,SDIM
                nrm_solid(dir)=LS_triple(LOW%nmat+(im_solid-1)*SDIM+dir)
-               xprobe(dir)=xtriple(dir)-dxmin*nrm_solid(dir)
+               xprobe_triple(dir)=xtriple(dir)-dxmin*nrm_solid(dir)
               enddo
               
               call interp_from_fluid( &
                LOW, &
-               xprobe, &
+               xprobe_triple, &
                im_secondary_image, &
                thermal_interp, &
                im_fluid, &
@@ -1777,7 +1795,7 @@ stop
                endif
                call get_iten(im_fluid1,im_fluid2,iten,LOW%nmat)
                 ! in: subroutine getGhostVel
-               call get_user_tension(xprobe,LOW%time, &
+               call get_user_tension(xprobe_triple,LOW%time, &
                  fort_tension,user_tension, &
                  thermal_interp,LOW%nmat,LOW%nten,6)
                ! cos_angle and sin_angle correspond to the angle in im_fluid1
@@ -8766,7 +8784,8 @@ stop
       INTEGER_T imattype
       REAL_T heat_source_total,vfrac_total
       REAL_T DeDT_local(nmat)
-      REAL_T mass_frac_parm(num_species_var+1)
+      INTEGER_T ispec
+      REAL_T massfrac_parm(num_species_var+1)
 
       nhalf=3
 
@@ -17577,6 +17596,8 @@ stop
       REAL_T local_cor(nmat)
       REAL_T Fmin,Fmax,Ftest
 
+      REAL_T massfrac_parm(num_species_var+1)
+
       INTEGER_T caller_id
     
 ! VFRAC_SPLIT code starts here
@@ -19807,7 +19828,23 @@ stop
                ETcore=veldata(iden_base+tempcomp_data)/massdepart
                local_internal=ETcore-KE
                if (local_internal.gt.zero) then
-                call TEMPERATURE_material(dencore(im), &
+
+                call init_massfrac_parm(dencore(im),massfrac_parm,im)
+                do ispecies=1,num_species_var
+                 speccomp_data=(im-1)*num_state_material+num_state_base+ &
+                    ispecies
+                  !dencomp=num_materials_vel * (SDIM+1)
+                 massfrac_parm(ispecies)= &
+                    snew_hold(dencomp+speccomp_data)
+                 if (massfrac_parm(ispecies).ge.zero) then
+                  ! do nothing
+                 else
+                  print *,"massfrac_parm(ispecies) invalid"
+                  stop
+                 endif
+                enddo ! ispecies=1..num_species_var
+
+                call TEMPERATURE_material(dencore(im),massfrac_parm, &
                  ETcore,local_internal,fort_material_type(im),im) 
                else
                 ETcore=fort_tempcutoff(im)
@@ -20401,6 +20438,8 @@ stop
       INTEGER_T n_tet_in_intersect
       INTEGER_T n_tet_index
       INTEGER_T shapeflag
+
+      REAL_T massfrac_parm(num_species_var+1)
     
 ! VFRAC_UNSPLIT code starts here
 
@@ -22580,6 +22619,34 @@ stop
              ! do nothing, density updated above
              istate=istate+1
             else if (istate.eq.2) then 
+
+             do ispecies=1,num_species_var
+              speccomp_data=(u_im-1)*num_state_material+num_state_base+ &
+                ispecies
+              if (no_material_flag.eq.1) then ! no material (u_im)
+               snew_hold(dencomp+speccomp_data)=zero
+              else if (no_material_flag.eq.0) then
+               if (is_rigid(nmat,u_im).eq.1) then ! mass fraction=0 in solids.
+                snew_hold(dencomp+speccomp_data)=zero
+               else if (is_rigid(nmat,u_im).eq.0) then
+                massdepart=veldata(iden_base+dencomp_data)
+                if (massdepart.gt.zero) then
+                 snew_hold(dencomp+speccomp_data)= &
+                  veldata(iden_base+speccomp_data)/massdepart
+                else
+                 print *,"massdepart invalid"
+                 stop
+                endif 
+               else
+                print *,"is_rigid invalid"
+                stop
+               endif
+              else 
+               print *,"no_material_flag invalid"
+               stop
+              endif
+             enddo ! ispecies=1..num_species_var
+
              tempcomp_data=(u_im-1)*num_state_material+istate
 
              if (no_material_flag.eq.1) then
@@ -22655,7 +22722,23 @@ stop
                 ETcore=veldata(iden_base+tempcomp_data)/massdepart
                 local_internal=ETcore-KE
                 if (local_internal.gt.zero) then
-                 call TEMPERATURE_material(dencore(u_im), &
+
+                 call init_massfrac_parm(dencore(u_im),massfrac_parm,u_im)
+                 do ispecies=1,num_species_var
+                  speccomp_data=(u_im-1)*num_state_material+num_state_base+ &
+                    ispecies
+                  !dencomp=num_materials_vel * (SDIM+1)
+                  massfrac_parm(ispecies)= &
+                    snew_hold(dencomp+speccomp_data)
+                  if (massfrac_parm(ispecies).ge.zero) then
+                   ! do nothing
+                  else
+                   print *,"massfrac_parm(ispecies) invalid"
+                   stop
+                  endif
+                 enddo ! ispecies=1..num_species_var
+
+                 call TEMPERATURE_material(dencore(u_im),massfrac_parm, &
                   ETcore,local_internal,fort_material_type(u_im),u_im) 
                 else
                  ETcore=fort_tempcutoff(u_im)
@@ -22684,37 +22767,7 @@ stop
               stop
              endif
 
-             istate=istate+1
-            else if ((istate.eq.num_state_base+1).and. &
-                      (num_species_var.gt.0)) then
-             do ispecies=1,num_species_var
-              speccomp_data=(u_im-1)*num_state_material+num_state_base+ &
-                ispecies
-              if (no_material_flag.eq.1) then ! no material (u_im)
-               snew_hold(dencomp+speccomp_data)=zero
-              else if (no_material_flag.eq.0) then
-               if (is_rigid(nmat,u_im).eq.1) then ! mass fraction=0 in solids.
-                snew_hold(dencomp+speccomp_data)=zero
-               else if (is_rigid(nmat,u_im).eq.0) then
-                massdepart=veldata(iden_base+dencomp_data)
-                if (massdepart.gt.zero) then
-                 snew_hold(dencomp+speccomp_data)= &
-                  veldata(iden_base+speccomp_data)/massdepart
-                else
-                 print *,"massdepart invalid"
-                 stop
-                endif 
-               else
-                print *,"is_rigid invalid"
-                stop
-               endif
-              else 
-               print *,"no_material_flag invalid"
-               stop
-              endif
-
-              istate=istate+1
-             enddo ! ispecies=1..num_species_var
+             istate=istate+1+num_species_var
 
             else 
              print *,"istate invalid"
