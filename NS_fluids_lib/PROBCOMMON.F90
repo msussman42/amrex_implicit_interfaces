@@ -326,34 +326,42 @@ implicit none
       INTEGER_T, intent(in) :: velsolid_flag
       end subroutine TEMPLATE_VEL
 
-      subroutine TEMPLATE_EOS(rho,internal_energy,pressure, &
+      subroutine TEMPLATE_EOS(rho,massfrac_var, &
+        internal_energy,pressure, &
         imattype,im)
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
       REAL_T, intent(in) :: internal_energy
       REAL_T, intent(out) :: pressure
       end subroutine TEMPLATE_EOS
 
-      subroutine TEMPLATE_SOUNDSQR(rho,internal_energy,soundsqr, &
+      subroutine TEMPLATE_SOUNDSQR(rho,massfrac_var, &
+        internal_energy,soundsqr, &
         imattype,im)
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
       REAL_T, intent(in) :: internal_energy
       REAL_T, intent(out) :: soundsqr
       end subroutine TEMPLATE_SOUNDSQR
 
-      subroutine TEMPLATE_INTERNAL(rho,temperature,local_internal_energy, &
+      subroutine TEMPLATE_INTERNAL(rho,massfrac_var, &
+        temperature,local_internal_energy, &
         imattype,im)
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
       REAL_T, intent(in) :: temperature 
       REAL_T, intent(out) :: local_internal_energy
       end subroutine TEMPLATE_INTERNAL
 
-      subroutine TEMPLATE_TEMPERATURE(rho,temperature,internal_energy, &
+      subroutine TEMPLATE_TEMPERATURE(rho,massfrac_var, &
+        temperature,internal_energy, &
         imattype,im)
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
       REAL_T, intent(out) :: temperature 
       REAL_T, intent(in) :: internal_energy
       end subroutine TEMPLATE_TEMPERATURE

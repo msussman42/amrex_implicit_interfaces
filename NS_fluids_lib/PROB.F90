@@ -4845,9 +4845,11 @@ end subroutine dynamic_contact_angle
       REAL_T internal_energy
       REAL_T pressure
       REAL_T soundsqr
+      REAL_T massfrac_parm(num_species_var+1)
       character*2 im_str
       character*4 filename4
       character*5 filename5
+
 
       verbose_EOS=0
       mat_type=fort_material_type(im)
@@ -4877,10 +4879,14 @@ end subroutine dynamic_contact_angle
 
         do iden=0,nden
          den=denlo+iden*(denhi-denlo)/nden
-         call INTERNAL_material(den,temperature,internal_energy, &
+         call init_massfrac_parm(den,massfrac_parm,im)
+         call INTERNAL_material(den,massfrac_parm, &
+          temperature,internal_energy, &
           mat_type,im)
-         call EOS_material(den,internal_energy,pressure,mat_type,im)
-         call SOUNDSQR_material(den,internal_energy,soundsqr,mat_type,im)
+         call EOS_material(den,massfrac_parm, &
+          internal_energy,pressure,mat_type,im)
+         call SOUNDSQR_material(den,massfrac_parm, &
+          internal_energy,soundsqr,mat_type,im)
          write (11,*) den,pressure
          write (12,*) den,soundsqr
         enddo ! iden=0..nden
@@ -4902,34 +4908,51 @@ end subroutine dynamic_contact_angle
 
         ! returns p(e*scale)/scale
         ! pressure=p(density=rho,internal_energy)
-      subroutine EOS_material(rho,internal_energy_in,pressure, &
+      subroutine EOS_material(rho,massfrac_parm, &
+        internal_energy_in,pressure, &
         imattype,im)
       use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: imattype,im
       REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
       REAL_T :: internal_energy
       REAL_T, intent(out) :: pressure
       REAL_T, intent(in) :: internal_energy_in
+      INTEGER_T :: ispec
 
 
       internal_energy=internal_energy_in*global_pressure_scale
 
-      if (rho.le.zero) then
+      do ispec=1,num_species_var
+       if (massfrac_parm(ispec).ge.zero) then
+        ! do nothing
+       else
+        print *,"massfrac_parm invalid"
+        stop
+       endif
+      enddo ! ispec
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       ! do nothing
+      else
        print *,"e invalid"
        stop
       endif
 
       if (is_in_probtype_list().eq.1) then
-       call SUB_EOS(rho,internal_energy,pressure, &
+       call SUB_EOS(rho,massfrac_parm, &
+         internal_energy,pressure, &
          imattype,im)
       else 
-       call EOS_material_CORE(rho,internal_energy,pressure,imattype,im)
+       call EOS_material_CORE(rho,massfrac_parm, &
+               internal_energy,pressure,imattype,im)
       endif
 
       pressure=pressure/global_pressure_scale
@@ -4949,7 +4972,9 @@ end subroutine dynamic_contact_angle
       REAL_T :: DT,T2,e1,e2
 
 
-      if ((rho.le.zero).or.(temperature.le.zero)) then
+      if ((rho.gt.zero).and.(temperature.gt.zero)) then
+       ! do nothing
+      else
        print *,"rho or temperature invalid in DeDT_material"
        print *,"rho=",rho
        print *,"temperature=",temperature
@@ -33247,6 +33272,7 @@ end subroutine initialize2d
        REAL_T ls_intercept(nmat)
        INTEGER_T doubly_flag
        REAL_T local_state(nmat*num_state_material)
+       REAL_T massfrac_parm(num_species_var+1)
        INTEGER_T local_ibase
        INTEGER_T tessellate
        INTEGER_T bcflag
@@ -34022,9 +34048,12 @@ end subroutine initialize2d
              call general_hydrostatic_pressure(p_hyd)
              den_jwl=fort_denconst(im)
              temp_jwl=fort_initial_temperature(im)
-             call INTERNAL_material(den_jwl,temp_jwl,e_jwl, &
+             call init_massfrac_parm(den_jwl,massfrac_parm,im)
+             call INTERNAL_material(den_jwl,massfrac_parm, &
+              temp_jwl,e_jwl, &
               fort_material_type(im),im)
-             call EOS_material(den_jwl,e_jwl,p_jwl, &
+             call EOS_material(den_jwl,massfrac_parm, &
+              e_jwl,p_jwl, &
               fort_material_type(im),im)
              temp_jwl=temp_jwl*p_hyd/p_jwl
         
@@ -34063,9 +34092,12 @@ end subroutine initialize2d
              ! do nothing
             else if (imattype.gt.0) then
 
-             call INTERNAL_material(denroom,temproom,e_room, &
+             call init_massfrac_parm(denroom,massfrac_parm,im)
+             call INTERNAL_material(denroom,massfrac_parm, &
+              temproom,e_room, &
               imattype,im)
-             call EOS_material(denroom,e_room,p_room,imattype,im)
+             call EOS_material(denroom,massfrac_parm, &
+               e_room,p_room,imattype,im)
              call general_hydrostatic_pressure(p_hyd)
              temproom=temproom*p_hyd/p_room
              e_room=e_room*p_hyd/p_room

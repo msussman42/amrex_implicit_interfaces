@@ -256,12 +256,14 @@ end function DIST_FINITE_CYLINDER
 !
 ! a = sqrt(gamma R_sp T) = sqrt(gamma p/rho)
 
-subroutine EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure, &
+subroutine EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
+  internal_energy,pressure, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
@@ -274,18 +276,21 @@ subroutine EOS_CRYOGENIC_TANK1(rho,internal_energy,pressure, &
    stop
   endif
  else
-  call EOS_material_CORE(rho,internal_energy,pressure,imattype,im)
+  call EOS_material_CORE(rho,massfrac_var, &
+         internal_energy,pressure,imattype,im)
  endif
 
  return
 end subroutine EOS_CRYOGENIC_TANK1
 
-subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr, &
+subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,massfrac_var, &
+  internal_energy,soundsqr, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
  REAL_T pressure
@@ -300,19 +305,22 @@ subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,internal_energy,soundsqr, &
    stop
   endif
  else
-  call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
+  call SOUNDSQR_material_CORE(rho,massfrac_var, &
+   internal_energy,soundsqr, &
    imattype,im)
  endif
 
  return
 end subroutine SOUNDSQR_CRYOGENIC_TANK1
 
-subroutine INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy, &
+subroutine INTERNAL_CRYOGENIC_TANK1(rho,massfrac_var, &
+  temperature,local_internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
@@ -325,19 +333,22 @@ subroutine INTERNAL_CRYOGENIC_TANK1(rho,temperature,local_internal_energy, &
    stop
   endif
  else
-  call INTERNAL_material_CORE(rho,temperature,local_internal_energy, &
+  call INTERNAL_material_CORE(rho,massfrac_var, &
+   temperature,local_internal_energy, &
    imattype,im)
  endif
 
  return
 end subroutine INTERNAL_CRYOGENIC_TANK1
 
-subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy, &
+subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,massfrac_var, &
+  temperature,internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
@@ -350,7 +361,8 @@ subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,temperature,internal_energy, &
    stop
   endif
  else
-  call TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
+  call TEMPERATURE_material_CORE(rho,massfrac_var, &
+     temperature,internal_energy, &
      imattype,im)
  endif
 

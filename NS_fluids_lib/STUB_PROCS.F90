@@ -139,62 +139,74 @@ return
 end subroutine STUB_VEL
 
 
-subroutine EOS_STUB(rho,internal_energy,pressure, &
+subroutine EOS_STUB(rho,massfrac_var, &
+  internal_energy,pressure, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- call EOS_material_CORE(rho,internal_energy,pressure,imattype,im)
+ call EOS_material_CORE(rho,massfrac_var, &
+         internal_energy,pressure,imattype,im)
 
  return
 end subroutine EOS_STUB
 
-subroutine SOUNDSQR_STUB(rho,internal_energy,soundsqr, &
+subroutine SOUNDSQR_STUB(rho,massfrac_var, &
+  internal_energy,soundsqr, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
 
- call SOUNDSQR_material_CORE(rho,internal_energy,soundsqr, &
+ call SOUNDSQR_material_CORE(rho,massfrac_var, &
+   internal_energy,soundsqr, &
    imattype,im)
 
  return
 end subroutine SOUNDSQR_STUB
 
 
-subroutine INTERNAL_STUB(rho,temperature, &
+subroutine INTERNAL_STUB(rho,massfrac_var, &
+  temperature, &
   local_internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- call INTERNAL_material_CORE(rho,temperature,local_internal_energy, &
+ call INTERNAL_material_CORE(rho,massfrac_var, &
+   temperature,local_internal_energy, &
    imattype,im)
 
  return
 end subroutine INTERNAL_STUB
 
-subroutine TEMPERATURE_STUB(rho,temperature,internal_energy, &
+subroutine TEMPERATURE_STUB(rho,massfrac_var, &
+  temperature,internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im
  REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var+1)
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- call TEMPERATURE_material_CORE(rho,temperature,internal_energy, &
+ call TEMPERATURE_material_CORE(rho,massfrac_var, &
+     temperature,internal_energy, &
      imattype,im)
 
  return
