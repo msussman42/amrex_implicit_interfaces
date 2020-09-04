@@ -6483,6 +6483,8 @@ stop
       INTEGER_T partid_solid
       INTEGER_T partid_prescribed
       INTEGER_T im_prescribed_primary
+      INTEGER_T ispec
+      REAL_T massfrac_parm(num_species_var+1)
 
 ! INIT_PHYSICS_VARS code starts here:
 
@@ -8508,7 +8510,9 @@ stop
 
          imattype=fort_material_type(im)
          TEMPERATURE=denstate(D_DECL(i,j,k),tempcomp)
-         if (TEMPERATURE.le.zero) then
+         if (TEMPERATURE.gt.zero) then
+          ! do nothing
+         else
           print *,"PHYSICS_VAR: temperature must be positive"
           print *,"num_materials ",num_materials
           print *,"num_state_material ",num_state_material
@@ -8518,8 +8522,20 @@ stop
           print *,"den,TEMPERATURE ",den,TEMPERATURE
           stop
          endif
+         call init_massfrac_parm(den,massfrac_parm,im)
+         do ispec=1,num_species_var
+          massfrac_parm(ispec)=denstate(D_DECL(i,j,k),tempcomp+ispec)
+          if (massfrac_parm(ispec).ge.zero) then
+           ! do nothing
+          else
+           print *,"massfrac_parm(ispec) invalid"
+           stop
+          endif
+         enddo
+
           ! DeDT = cv
-         call DeDT_material(den,TEMPERATURE,DeDT,imattype,im)
+         call DeDT_material(den,massfrac_parm, &
+           TEMPERATURE,DeDT,imattype,im)
          if (DeDT.le.zero) then
           print *,"DeDT must be positive"
           stop
