@@ -30,7 +30,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
 ns.num_materials=2 # 1: liquid 2: air 
 ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
-ns.species_evaporation_density=0.001 # g/cm^3  CODY ~ rho_gas = 1kg/m^3 (0.001 g/cm^3)
+ns.species_evaporation_density=0.001 #g/cm^3 CODY:rho_gas=1kg/m^3(0.001 g/cm^3)
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0
@@ -95,10 +95,13 @@ ns.use_lsa=0
 # 1=water 2=gas  3=ice  4=substrate 
 # 12,13,14   23,24  3,4 
 ns.conservative_tension_force=0
-ns.tension=10.0  # CODY ~ sigma_liquid=0.01 N/m  (10 g/s^2)
+# make this 0.0 g/s^2 instead of 10.0 g/s^2 since the exact solution does not
+# depend on this.
+ns.tension=0.0  # CODY ~ sigma_liquid=0.01 N/m  (10 g/s^2)
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
-ns.latent_heat = 1.0e+10 0.0  # CODY ~ specific latent heat of boiling (1x10^6)J/kg = (1x10^10)cm^2/s^2
+ns.latent_heat = 1.0e+10 0.0 #CODY:specific latent heat of boiling 
+# (1x10^6)J/kg = (1x10^10)cm^2/s^2
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
 ns.distribute_from_target = 0 0 
@@ -121,17 +124,25 @@ ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_type=0 0 
 # CODY k_water, k_gas
-ns.heatviscconst=1000.0 10000.0 # CODY ~ k_liquid = 10^-1 W/(m*K), k_gas = 10^-2 W/(m*K) = 10^4 g*cm/(s^3*K)
+ns.heatviscconst=10000.0 1000.0 #CODY:k_liquid=10^-1 W/(m*K),
+#W/(m K)=J/(s m K)=
+#10^7 erg/(s m K)=10^5 erg/(s cm K)
+#1erg=1 g cm^2/s^2
+#1joule=1 kg m^2/s^2
+#1 W/(m K)=J/(m s K)=kg m^2/(m s^3 K)=kg m/(s^3 K)=10^5 g cm/(s^3 K)
+#k_gas = 10^-2 W/(m*K) = 10^3 g*cm/(s^3*K)
 ns.heatviscconst_interface=0.0 
 # (rho Y)_t + div(rho u Y) = div (rho D grad Y)
 # D is here:
 ns.speciesviscconst=0.0 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
+# D=0.1  lambda=k/(rho Cp)=1000/(0.001 * 1.0D+7) = 0.1
 # 1=water 2=gas  
-ns.speciesconst=1.0 0.0 
+ns.speciesconst=1.0 1.0  # case 1 film boiling
+#ns.speciesconst=0.221022 0.2  # case 2 general vaporization
 ns.viscconst=0.0 0.0 # CODY ~ (not used, must be zero)
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
-ns.added_weight=1.0 1.0 
+ns.added_weight=1.0 1.0  # default
 ns.elastic_time=0.0 0.0 
 # 0.001 is the ambient gas density.
 # The computer program stores the mixture density=
@@ -146,10 +157,12 @@ ns.species_molar_mass=18.0 # CODY (vapor) ~ W_V=W_A=0.018 kg/mol
 ns.FSI_flag=0 0 
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
-# 1=water 2=gas  3=ice  4=substrate 
-ns.tempconst=273.15 273.15 #CODY ~ T_inf
-ns.initial_temperature=273.0 273.0 
-ns.xblob=0.002  # initial location of interface CODY ~ 0.02*L=2x10^-5m=0.002cm
+# 1=water 2=gas   
+ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
+#ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
+#0.02cm
+ns.xblob2=0.02 #CODY this is physical location corresponding to x=0
+ns.xblob=0.02  #CODY
 ns.yblob=0.0
 ns.zblob=0.0
 ns.radblob=0.0
