@@ -259,6 +259,7 @@ end function DIST_FINITE_CYLINDER
 subroutine EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
   internal_energy,pressure, &
   imattype,im,num_species_var_in)
+ use probcommon_module
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im,num_species_var_in
@@ -267,17 +268,22 @@ subroutine EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- if (im.eq.2) then
-  if (imattype.eq.24) then
-   pressure=rho*(TANK1_GAS_GAMMA-1.0D0)*internal_energy
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if (imattype.eq.24) then
+    pressure=rho*(TANK1_GAS_GAMMA-1.0D0)*internal_energy
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid"
+    stop
+   endif
   else
-   print *,"imattype= ",imattype
-   print *,"imattype invalid"
-   stop
+   call EOS_material_CORE(rho,massfrac_var, &
+         internal_energy,pressure,imattype,im)
   endif
  else
-  call EOS_material_CORE(rho,massfrac_var, &
-         internal_energy,pressure,imattype,im)
+  print *,"num_species_var_in invalid"
+  stop
  endif
 
  return
@@ -286,6 +292,7 @@ end subroutine EOS_CRYOGENIC_TANK1
 subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,massfrac_var, &
   internal_energy,soundsqr, &
   imattype,im,num_species_var_in)
+ use probcommon_module
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im,num_species_var_in
@@ -295,20 +302,25 @@ subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,massfrac_var, &
  REAL_T, intent(out) :: soundsqr
  REAL_T pressure
 
- if (im.eq.2) then
-  if (imattype.eq.24) then
-   call EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if (imattype.eq.24) then
+    call EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
      internal_energy,pressure,imattype,im,num_species_var_in)
-   soundsqr=TANK1_GAS_GAMMA*pressure/rho
+    soundsqr=TANK1_GAS_GAMMA*pressure/rho
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid"
+    stop
+   endif
   else
-   print *,"imattype= ",imattype
-   print *,"imattype invalid"
-   stop
+   call SOUNDSQR_material_CORE(rho,massfrac_var, &
+    internal_energy,soundsqr, &
+    imattype,im)
   endif
  else
-  call SOUNDSQR_material_CORE(rho,massfrac_var, &
-   internal_energy,soundsqr, &
-   imattype,im)
+  print *,"num_species_var_in invalid"
+  stop
  endif
 
  return
@@ -317,6 +329,7 @@ end subroutine SOUNDSQR_CRYOGENIC_TANK1
 subroutine INTERNAL_CRYOGENIC_TANK1(rho,massfrac_var, &
   temperature,local_internal_energy, &
   imattype,im,num_species_var_in)
+ use probcommon_module
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im,num_species_var_in
@@ -325,18 +338,23 @@ subroutine INTERNAL_CRYOGENIC_TANK1(rho,massfrac_var, &
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- if (im.eq.2) then
-  if (imattype.eq.24) then 
-   local_internal_energy=TANK1_GAS_CV*temperature
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if (imattype.eq.24) then 
+    local_internal_energy=TANK1_GAS_CV*temperature
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid"
+    stop
+   endif
   else
-   print *,"imattype= ",imattype
-   print *,"imattype invalid"
-   stop
+   call INTERNAL_material_CORE(rho,massfrac_var, &
+    temperature,local_internal_energy, &
+    imattype,im)
   endif
  else
-  call INTERNAL_material_CORE(rho,massfrac_var, &
-   temperature,local_internal_energy, &
-   imattype,im)
+  print *,"num_species_var_in invalid"
+  stop
  endif
 
  return
@@ -345,6 +363,7 @@ end subroutine INTERNAL_CRYOGENIC_TANK1
 subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,massfrac_var, &
   temperature,internal_energy, &
   imattype,im,num_species_var_in)
+ use probcommon_module
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im,num_species_var_in
@@ -353,18 +372,23 @@ subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,massfrac_var, &
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- if (im.eq.2) then
-  if (imattype.eq.24) then 
-   temperature=internal_energy/TANK1_GAS_CV
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if (imattype.eq.24) then 
+    temperature=internal_energy/TANK1_GAS_CV
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid"
+    stop
+   endif
   else
-   print *,"imattype= ",imattype
-   print *,"imattype invalid"
-   stop
-  endif
- else
-  call TEMPERATURE_material_CORE(rho,massfrac_var, &
+   call TEMPERATURE_material_CORE(rho,massfrac_var, &
      temperature,internal_energy, &
      imattype,im)
+  endif
+ else
+  print *,"num_species_var_in invalid"
+  stop
  endif
 
  return
