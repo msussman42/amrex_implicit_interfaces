@@ -259,6 +259,8 @@ namespace amrex{
        Real* prerecalesce_stiffCP,
        Real* speciesconst,
        Real* speciesviscconst,
+       Real* latent_heat,
+       Real* saturation_temp,
        Real* tension,
        Real* tension_slope,
        Real* tension_T0,

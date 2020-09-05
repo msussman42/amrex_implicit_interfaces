@@ -32,45 +32,48 @@
       REAL_T problenx,probleny,problenz
       INTEGER_T fort_is_periodic(3)
       REAL_T fort_stop_time
-      REAL_T fort_energyconst(100)
-      REAL_T fort_energycutoff(100)
-      REAL_T fort_drhodt(100)
-      REAL_T fort_drhodz(100)
-      REAL_T fort_tempconst(100)
-      REAL_T fort_initial_temperature(100)
-      REAL_T fort_tempcutoff(100)
-      REAL_T fort_tempcutoffmax(100)
-      REAL_T fort_denconst(100)
-      REAL_T fort_density_floor(100)
-      REAL_T fort_density_ceiling(100)
-      REAL_T fort_cavdenconst(100)
-      REAL_T fort_viscconst(100)
-      REAL_T fort_viscconst_eddy(100)
-      INTEGER_T fort_viscosity_state_model(100)
-      REAL_T fort_heatviscconst(100)
+      REAL_T fort_energyconst(MAX_NUM_MATERIALS)
+      REAL_T fort_energycutoff(MAX_NUM_MATERIALS)
+      REAL_T fort_drhodt(MAX_NUM_MATERIALS)
+      REAL_T fort_drhodz(MAX_NUM_MATERIALS)
+      REAL_T fort_tempconst(MAX_NUM_MATERIALS)
+      REAL_T fort_initial_temperature(MAX_NUM_MATERIALS)
+      REAL_T fort_tempcutoff(MAX_NUM_MATERIALS)
+      REAL_T fort_tempcutoffmax(MAX_NUM_MATERIALS)
+      REAL_T fort_denconst(MAX_NUM_MATERIALS)
+      REAL_T fort_density_floor(MAX_NUM_MATERIALS)
+      REAL_T fort_density_ceiling(MAX_NUM_MATERIALS)
+      REAL_T fort_cavdenconst(MAX_NUM_MATERIALS)
+      REAL_T fort_viscconst(MAX_NUM_MATERIALS)
+      REAL_T fort_viscconst_eddy(MAX_NUM_MATERIALS)
+      INTEGER_T fort_viscosity_state_model(MAX_NUM_MATERIALS)
+      REAL_T fort_heatviscconst(MAX_NUM_MATERIALS)
 
-      REAL_T fort_prerecalesce_heatviscconst(100)
-      REAL_T fort_prerecalesce_viscconst(100)
-      REAL_T fort_prerecalesce_stiffCP(100)
+      REAL_T fort_prerecalesce_heatviscconst(MAX_NUM_MATERIALS)
+      REAL_T fort_prerecalesce_viscconst(MAX_NUM_MATERIALS)
+      REAL_T fort_prerecalesce_stiffCP(MAX_NUM_MATERIALS)
       
-      REAL_T fort_speciesconst(1000)
-      REAL_T fort_speciesviscconst(1000)
-      REAL_T fort_tension(1000)
-      REAL_T fort_tension_slope(1000)
-      REAL_T fort_tension_T0(1000)
-      REAL_T fort_tension_min(1000)
-      REAL_T fort_prefreeze_tension(1000)
+      REAL_T fort_speciesconst(MAX_NUM_SPECIES*MAX_NUM_MATERIALS)
+      REAL_T fort_speciesviscconst(MAX_NUM_SPECIES*MAX_NUM_MATERIALS)
+      REAL_T fort_tension(MAX_NUM_INTERFACES)
+      REAL_T fort_tension_slope(MAX_NUM_INTERFACES)
+      REAL_T fort_tension_T0(MAX_NUM_INTERFACES)
+      REAL_T fort_tension_min(MAX_NUM_INTERFACES)
+      REAL_T fort_prefreeze_tension(MAX_NUM_INTERFACES)
 
-      REAL_T fort_alpha(1000)
-      REAL_T fort_beta(1000)
-      REAL_T fort_expansion_factor(1000)
-      REAL_T fort_time_radblob(1000)
-      REAL_T fort_stefan_number(1000)
-      REAL_T fort_jacob_number(1000)
+      REAL_T fort_latent_heat(2*MAX_NUM_INTERFACES)
+      REAL_T fort_saturation_temp(2*MAX_NUM_INTERFACES)
 
-      REAL_T fort_stiffPINF(100)
-      REAL_T fort_stiffCP(100)
-      REAL_T fort_stiffGAMMA(100)
+      REAL_T fort_alpha(2*MAX_NUM_INTERFACES)
+      REAL_T fort_beta(2*MAX_NUM_INTERFACES)
+      REAL_T fort_expansion_factor(2*MAX_NUM_INTERFACES)
+      REAL_T fort_time_radblob(2*MAX_NUM_INTERFACES)
+      REAL_T fort_stefan_number(2*MAX_NUM_INTERFACES)
+      REAL_T fort_jacob_number(2*MAX_NUM_INTERFACES)
+
+      REAL_T fort_stiffPINF(MAX_NUM_MATERIALS)
+      REAL_T fort_stiffCP(MAX_NUM_MATERIALS)
+      REAL_T fort_stiffGAMMA(MAX_NUM_MATERIALS)
 
       REAL_T FORT_MUSHY_THICK  ! default==2.0
       REAL_T density_at_depth
@@ -80,8 +83,8 @@
 
       INTEGER_T num_species_var
       INTEGER_T num_materials_viscoelastic
-      INTEGER_T fort_im_elastic_map(100)
-      REAL_T fort_elastic_viscosity(100)
+      INTEGER_T fort_im_elastic_map(MAX_NUM_MATERIALS)
+      REAL_T fort_elastic_viscosity(MAX_NUM_MATERIALS)
       INTEGER_T num_state_material
       INTEGER_T num_state_base
       INTEGER_T ngeom_raw
@@ -95,8 +98,8 @@
       INTEGER_T levelrz
       INTEGER_T prescribe_temperature_outflow
       INTEGER_T invert_solid_levelset
-      INTEGER_T FSI_flag(100)
-      INTEGER_T fort_material_type(100)
+      INTEGER_T FSI_flag(MAX_NUM_MATERIALS)
+      INTEGER_T fort_material_type(MAX_NUM_MATERIALS)
       INTEGER_T fort_ZEYU_DCA_SELECT
       INTEGER_T gravity_dir,invert_gravity
       INTEGER_T pres_homflag
