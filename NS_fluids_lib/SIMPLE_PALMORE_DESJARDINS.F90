@@ -26,6 +26,7 @@ module SIMPLE_PALMORE_DESJARDINS_module
 implicit none                   
 
 REAL_T :: DEF_VAPOR_GAMMA
+REAL_T :: l_verification
 
 contains
 
@@ -34,6 +35,7 @@ subroutine INIT_SIMPLE_PALMORE_DESJARDINS_MODULE()
 IMPLICIT NONE
 
   DEF_VAPOR_GAMMA =  1.666666667D0
+  call SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l_verification)
 
 return
 end subroutine INIT_SIMPLE_PALMORE_DESJARDINS_MODULE
@@ -142,6 +144,77 @@ return
 end subroutine SIMPLE_PALMORE_DESJARDINS_PRES
 
 
+subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f) 
+ use probcommon_module
+ IMPLICIT NONE
+ 
+ REAL_T, intent(in) :: l !diffusion layer value
+ REAL_T, intent(out) :: f
+ 
+ REAL_T :: T_inf, T_gamma, L_V, C_pG, erf_result
+ INTEGER_T :: JINT
+ 
+ T_inf = fort_tempconst(2)
+! T_gamma = fort_saturation_temp(1)
+! L_V = fort_latent_heat(1)
+! C_pG = stiffCP(2)
+
+ JINT=0 ! JINT=2 => exp(l^2)erf(l) but xneg<l<xmax
+ call calerf(l,erf_result,JINT)
+ 
+ f = l*EXP(l**2)*erf_result - C_pG*(T_inf-T_gamma)/(sqrt(Pi)*L_V)
+
+end subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer
+
+subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l)
+ !bisection method to find the diffusion layer value
+ IMPLICIT NONE
+ 
+ REAL_T, intent(out) :: l
+ REAL_T :: a, b, c, fa, fc
+ INTEGER_T :: iter
+ 
+ !endpoints
+ a = 0.0d0
+ b = 5.0d0
+
+ iter = 1
+ do while (iter.LT.100)
+  c = (a+b)/2.0d0
+  call SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(c,fc)
+  iter = iter + 1
+  call SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(a,fa)
+  if (fc*fa .GE. zero ) then
+   a = c
+  else
+   b = c
+  endif
+ enddo
+ l=c
+end subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer
+
+subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC(T_inf, T_gamma, l, &
+  lambda, x, x_0, t, TorY) 
+ !returns either temperature or mass frac
+ ! for mass_frac: T_inf = Y_inf, T_gamma = Y_gamma, l_Y = l, lambda = D
+ IMPLICIT NONE
+ 
+ REAL_T, intent(in) :: T_inf, T_gamma, l, lambda, x, x_0, t
+ REAL_T, intent(out) :: TorY
+ INTEGER_T :: JINT
+ REAL_T erf_result_x 
+ REAL_T erf_result_l 
+ REAL_T arg_x
+
+ JINT=0 ! JINT=2 => exp(l^2)erf(l) but xneg<l<xmax
+ call calerf(l,erf_result_l,JINT)
+ arg_x=(x-x_0)/(2.0d0*SQRT(lambda*t))
+ call calerf(arg_x,erf_result_x,JINT)
+
+ call calerf(l,erf_result_l,JINT)
+ TorY = T_inf +(T_gamma-T_inf)*erf_result_x/erf_result_l
+ 
+end subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC
 
 subroutine SIMPLE_PALMORE_DESJARDINS_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
