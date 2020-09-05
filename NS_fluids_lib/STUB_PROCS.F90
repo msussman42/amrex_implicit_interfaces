@@ -142,6 +142,7 @@ end subroutine STUB_VEL
 subroutine EOS_STUB(rho,massfrac_var, &
   internal_energy,pressure, &
   imattype,im,num_species_var_in)
+ use probcommon_module
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im,num_species_var_in
@@ -150,8 +151,13 @@ subroutine EOS_STUB(rho,massfrac_var, &
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
 
- call EOS_material_CORE(rho,massfrac_var, &
+ if (num_species_var_in.eq.num_species_var) then
+  call EOS_material_CORE(rho,massfrac_var, &
          internal_energy,pressure,imattype,im)
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
 
  return
 end subroutine EOS_STUB
@@ -159,6 +165,7 @@ end subroutine EOS_STUB
 subroutine SOUNDSQR_STUB(rho,massfrac_var, &
   internal_energy,soundsqr, &
   imattype,im,num_species_var_in)
+ use probcommon_module
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im,num_species_var_in
@@ -167,9 +174,14 @@ subroutine SOUNDSQR_STUB(rho,massfrac_var, &
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: soundsqr
 
- call SOUNDSQR_material_CORE(rho,massfrac_var, &
+ if (num_species_var_in.eq.num_species_var) then
+  call SOUNDSQR_material_CORE(rho,massfrac_var, &
    internal_energy,soundsqr, &
    imattype,im)
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
 
  return
 end subroutine SOUNDSQR_STUB
@@ -179,6 +191,7 @@ subroutine INTERNAL_STUB(rho,massfrac_var, &
   temperature, &
   local_internal_energy, &
   imattype,im,num_species_var_in)
+ use probcommon_module
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im,num_species_var_in
@@ -187,9 +200,14 @@ subroutine INTERNAL_STUB(rho,massfrac_var, &
  REAL_T, intent(in) :: temperature 
  REAL_T, intent(out) :: local_internal_energy
 
- call INTERNAL_material_CORE(rho,massfrac_var, &
+ if (num_species_var_in.eq.num_species_var) then
+  call INTERNAL_material_CORE(rho,massfrac_var, &
    temperature,local_internal_energy, &
    imattype,im)
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
 
  return
 end subroutine INTERNAL_STUB
@@ -197,6 +215,7 @@ end subroutine INTERNAL_STUB
 subroutine TEMPERATURE_STUB(rho,massfrac_var, &
   temperature,internal_energy, &
   imattype,im,num_species_var_in)
+ use probcommon_module
  use global_utility_module
  IMPLICIT NONE
  INTEGER_T, intent(in) :: imattype,im,num_species_var_in
@@ -205,9 +224,14 @@ subroutine TEMPERATURE_STUB(rho,massfrac_var, &
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
 
- call TEMPERATURE_material_CORE(rho,massfrac_var, &
+ if (num_species_var_in.eq.num_species_var) then
+  call TEMPERATURE_material_CORE(rho,massfrac_var, &
      temperature,internal_energy, &
      imattype,im)
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
 
  return
 end subroutine TEMPERATURE_STUB
