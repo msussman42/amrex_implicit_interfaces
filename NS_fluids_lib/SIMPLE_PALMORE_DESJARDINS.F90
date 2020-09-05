@@ -62,8 +62,8 @@ REAL_T, intent(out) :: LS(nmat)
 
 if ((num_materials.eq.2).and.(probtype.eq.2002)) then
 
- LS(1)=x(1)-xblob
- LS(2)=-LS(1)
+ LS(1)=x(1)-xblob  ! liquid
+ LS(2)=-LS(1)      ! gas
 
 else
  print *,"num_materials or probtype invalid"
@@ -147,22 +147,39 @@ end subroutine SIMPLE_PALMORE_DESJARDINS_PRES
 subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f) 
  use probcommon_module
  IMPLICIT NONE
- 
+
  REAL_T, intent(in) :: l !diffusion layer value
  REAL_T, intent(out) :: f
  
- REAL_T :: T_inf, T_gamma, L_V, C_pG, erf_result
+ REAL_T :: T_inf, T_gamma, L_V, C_pG, erf_result, T_sat
+ REAL_T :: k_G, den_G, D_G
+ REAL_T :: lambda
  INTEGER_T :: JINT
  
  T_inf = fort_tempconst(2)
- T_gamma = fort_saturation_temp(1)
+ T_gamma = fort_tempconst(1)
+ T_sat = fort_saturation_temp(1)
  L_V = fort_latent_heat(1)
  C_pG = fort_stiffCP(2)
+ k_G = fort_heatviscconst(2)
+ den_G = fort_denconst(2)
+ D_G = fort_speciesviscconst(2)
+ lambda=k_G/(den_G*C_pG)
 
+   ! required that D_G=lambda
+ if ((T_inf.gt.T_gamma).and. &
+     (T_gamma.le.T_sat).and. &
+     (l.ge.zero).and. &
+     (abs(lambda-D_G).lt.1.0D-8)) then
+  ! do nothing
+ else
+  print *,"T_inf, T_gamma, T_sat, l, or D_G invalid"
+  stop
+ endif
  JINT=0 ! JINT=2 => exp(l^2)erf(l) but xneg<l<xmax
  call calerf(l,erf_result,JINT)
- 
- f = l*EXP(l**2)*erf_result - C_pG*(T_inf-T_gamma)/(sqrt(Pi)*L_V)
+
+ f=l*EXP(l**2)*erf_result - C_pG*(T_inf-T_gamma)/(sqrt(Pi)*L_V)
 
 end subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer
 
@@ -193,26 +210,118 @@ subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l)
  l=c
 end subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer
 
-subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC(T_inf, T_gamma, l, &
-  lambda, x, x_0, t, TorY) 
+! lambda=k/(rho C_p)
+! xblob is the interface at the start of the computation.
+! xblob2 is the physical position corresponding to x_compute=0
+! x_0 is zero  
+! xblob2>x_0
+! xblob+xblob2 is the physical location of the interface at t_compute=0
+subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+  x, t, use_T, TorY) 
+ use probcommon_module
  !returns either temperature or mass frac
  ! for mass_frac: T_inf = Y_inf, T_gamma = Y_gamma, l_Y = l, lambda = D
  IMPLICIT NONE
  
- REAL_T, intent(in) :: T_inf, T_gamma, l, lambda, x, x_0, t
+ REAL_T, intent(in) :: x, t
+ INTEGER_T, intent(in) :: use_T
+ REAL_T :: T_inf, T_gamma, T_sat, lambda, x_0
+ REAL_T :: k_G, den_G, D_G
+ REAL_T :: L_V,C_pG,TY_eqn
  REAL_T, intent(out) :: TorY
  INTEGER_T :: JINT
  REAL_T erf_result_x 
  REAL_T erf_result_l 
  REAL_T arg_x
+ REAL_T x_gamma_physical
+ REAL_T x_gamma_domain
+ REAL_T t_physical_init
+ REAL_T Y_gamma
+ REAL_T Y_inf
 
- JINT=0 ! JINT=2 => exp(l^2)erf(l) but xneg<l<xmax
- call calerf(l,erf_result_l,JINT)
- arg_x=(x-x_0)/(2.0d0*SQRT(lambda*t))
- call calerf(arg_x,erf_result_x,JINT)
+ T_inf = fort_tempconst(2)
+ T_gamma = fort_tempconst(1)
+ T_sat = fort_saturation_temp(1)
+ L_V = fort_latent_heat(1)
+ C_pG = fort_stiffCP(2)
+ k_G = fort_heatviscconst(2)
+ den_G = fort_denconst(2)
+ D_G = fort_speciesviscconst(2)
+ Y_gamma=fort_speciesconst(1)  
+ Y_inf=fort_speciesconst(2)
 
- call calerf(l,erf_result_l,JINT)
- TorY = T_inf +(T_gamma-T_inf)*erf_result_x/erf_result_l
+ if ((xblob2.gt.zero).and. &
+     (k_G.gt.zero).and. &
+     (den_G.gt.zero).and. &
+     (C_pG.gt.zero)) then
+  ! do nothing
+ else
+  print *,"xblob2, k_G, den_G, or C_pG invalid"
+  stop
+ endif
+ lambda=k_G/(den_G*C_pG)
+
+ TY_eqn=(Y_gamma-1.0d0)*C_pG*(T_gamma-T_inf) - &
+        (Y_gamma-Y_inf)
+
+   ! required that D_G=lambda
+ if ((T_inf.gt.T_gamma).and. &
+     (Y_gamma.ge.Y_inf).and. &
+     (T_gamma.le.T_sat).and. &
+     (l_verification.ge.zero).and. &
+     (abs(lambda-D_G).lt.1.0D-8).and. &
+     (abs(TY_eqn).lt.1.0D-8)) then
+  ! do nothing
+ else
+  print *,"T_inf, T_sat, T_gamma, l, D_G, or TY_eqn invalid"
+  stop
+ endif
+
+  ! xgamma=x0+ 2 l sqrt(lambda t)
+  ! (xgamma-x0)/(2l) = sqrt(lambda t)
+  ! [(xgamma-x0)/(2l)]^2 = lambda t
+  ! t=[(xgamma-x0)/(2l)]^2/lambda
+
+ t_physical_init=((xblob+xblob2)/(2.0d0*l_verification))**2/lambda
+ x_gamma_physical=2.0d0*l_verification*sqrt(lambda*(t_physical_init+t))
+
+ x_gamma_domain=x_gamma_physical-xblob2
+
+ if (x_gamma_physical.gt.xblob+xblob2-1.0D-8) then
+  ! do nothing
+ else
+  print *,"x_gamma_physical invalid"
+  stop
+ endif
+
+ JINT=0 ! JINT=0 => erf(l)  JINT=2 => exp(l^2)erf(l) but xneg<l<xmax
+ call calerf(l_verification,erf_result_l,JINT)
+
+ if (x.gt.x_gamma_domain) then
+  if (use_T.eq.1) then
+   TorY=T_gamma
+  else if (use_T.eq.0) then
+   TorY=Y_gamma
+  else
+   print *,"use_T invalid"
+   stop
+  endif
+ else if (x.le.x_gamma_domain) then
+  arg_x=(x+xblob2)/(2.0d0*SQRT(lambda*(t_physical_init+t)))
+  call calerf(arg_x,erf_result_x,JINT)
+
+  if (use_T.eq.1) then
+   TorY = T_inf +(T_gamma-T_inf)*erf_result_x/erf_result_l
+  else if (use_T.eq.0) then
+   TorY = Y_inf +(Y_gamma-Y_inf)*erf_result_x/erf_result_l
+  else
+   print *,"use_T invalid"
+   stop
+  endif
+ else
+  print *,"x is corrupt"
+  stop
+ endif
  
 end subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC
 

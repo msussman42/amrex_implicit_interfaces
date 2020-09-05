@@ -794,7 +794,7 @@ Real NavierStokes::denconst_min=0.0;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
-Vector<Real> NavierStokes::added_weight;
+Vector<Real> NavierStokes::added_weight; // def=1.0
 
 Vector<Real> NavierStokes::stiffPINF;
 Vector<Real> NavierStokes::prerecalesce_stiffCP;  // def=4.1855E+7
