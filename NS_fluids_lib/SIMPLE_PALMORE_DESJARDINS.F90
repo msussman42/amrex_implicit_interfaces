@@ -155,9 +155,9 @@ subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f)
  INTEGER_T :: JINT
  
  T_inf = fort_tempconst(2)
-! T_gamma = fort_saturation_temp(1)
-! L_V = fort_latent_heat(1)
-! C_pG = stiffCP(2)
+ T_gamma = fort_saturation_temp(1)
+ L_V = fort_latent_heat(1)
+ C_pG = fort_stiffCP(2)
 
  JINT=0 ! JINT=2 => exp(l^2)erf(l) but xneg<l<xmax
  call calerf(l,erf_result,JINT)

@@ -1537,6 +1537,18 @@ void fortran_parameters() {
  pp.queryarr("tension_T0",tension_T0temp,0,nten);
  pp.queryarr("tension_min",tension_mintemp,0,nten);
 
+ Vector<Real> latent_heat_temp(2*nten);
+ Vector<Real> saturation_temp_temp(2*nten);
+ for (int i=0;i<nten;i++) { 
+  saturation_temp_temp[i]=0.0;
+  saturation_temp_temp[i+nten]=0.0;
+  latent_heat_temp[i]=0.0;
+  latent_heat_temp[i+nten]=0.0;
+ }
+ pp.queryarr("latent_heat",latent_heat_temp,0,2*nten);
+ pp.queryarr("saturation_temp",saturation_temp_temp,0,2*nten);
+
+
  for (int im=0;im<nten;im++)
   prefreeze_tensiontemp[im]=tensiontemp[im];
  pp.queryarr("prefreeze_tension",prefreeze_tensiontemp,0,nten);
@@ -1717,6 +1729,8 @@ void fortran_parameters() {
   prerecalesce_stiffCP_temp.dataPtr(),
   speciesconst_temp.dataPtr(),
   speciesviscconst_temp.dataPtr(),
+  latent_heat_temp.dataPtr(),
+  saturation_temp_temp.dataPtr(),
   tensiontemp.dataPtr(),
   tension_slopetemp.dataPtr(),
   tension_T0temp.dataPtr(),

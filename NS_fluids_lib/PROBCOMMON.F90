@@ -105,6 +105,12 @@ implicit none
 ! fort_density_floor and fort_density_ceiling added: January 8, 2019
 ! fort_ZEYU_DCA_SELECT added: January 20, 2020
 
+
+      INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
+       !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      INTEGER_T, PARAMETER :: MAX_NUM_INTERFACES=55
+      INTEGER_T, PARAMETER :: MAX_NUM_SPECIES=10
+
 #include "probdataf95.H"
 
       INTEGER_T, PARAMETER :: OLD_DODECANE=1

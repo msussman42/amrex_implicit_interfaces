@@ -27806,6 +27806,8 @@ end subroutine initialize2d
          ccprerecalesce_stiffCP, &
          ccspeciesconst, &
          ccspeciesviscconst, &
+         cclatent_heat, &
+         ccsaturation_temp, &
          cctension, &
          cctension_slope, &
          cctension_T0, &
@@ -27921,6 +27923,8 @@ end subroutine initialize2d
        REAL_T ccprerecalesce_stiffCP(ccnum_materials)
        REAL_T ccspeciesconst((ccnum_species_var+1)*ccnum_materials)
        REAL_T ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
+       REAL_T cclatent_heat(2*ccnten)
+       REAL_T ccsaturation_temp(2*ccnten)
        REAL_T cctension(ccnten)
        REAL_T cctension_slope(ccnten)
        REAL_T cctension_T0(ccnten)
@@ -27942,6 +27946,12 @@ end subroutine initialize2d
 
        probtype=ccprobtype
        num_materials=ccnum_materials
+       if (num_materials.lt.MAX_NUM_MATERIALS) then
+        ! do nothing
+       else
+        print *,"increase MAX_NUM_MATERIALS; aborting"
+        stop
+       endif
 
 ! USER DEFINED (used by "is_in_probtype_list")
 ! IN ORDER TO ADD A NEW TEST PROBLEM:
@@ -28325,6 +28335,13 @@ end subroutine initialize2d
        endif
 
        num_species_var=ccnum_species_var
+       if (num_species_var.lt.MAX_NUM_SPECIES) then
+        ! do nothing
+       else
+        print *,"num_species_var too large, increase MAX_NUM_SPECIES"
+        stop
+       endif
+
        num_materials_viscoelastic=ccnum_materials_viscoelastic
        fort_max_num_materials=ccfortran_max_num_materials
        num_materials_vel=ccnum_materials_vel
@@ -28456,12 +28473,18 @@ end subroutine initialize2d
         print *,"ccnten=",ccnten
         stop
        endif
-       if (nten.gt.999) then
-        print *,"too many surface tension coefficients, increase max"
+       if (nten.ge.MAX_NUM_INTERFACES) then
+        print *,"too many surface tension coefficients, increase "
+        print *,"MAX_NUM_INTERFACES"
         print *,"nten= ",nten
         stop
        endif
        do iten=1,nten
+        fort_latent_heat(iten)=cclatent_heat(iten)
+        fort_latent_heat(nten+iten)=cclatent_heat(nten+iten)
+        fort_saturation_temp(iten)=ccsaturation_temp(iten)
+        fort_saturation_temp(nten+iten)=ccsaturation_temp(nten+iten)
+
         fort_tension(iten)=cctension(iten)
         fort_tension_slope(iten)=cctension_slope(iten)
         fort_tension_T0(iten)=cctension_T0(iten)

@@ -37,8 +37,6 @@ module geometry_intersect_module
 
 implicit none
 
-INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=20
-
 INTEGER_T, PARAMETER :: INTERCEPT_MAXITER=100
 INTEGER_T, PARAMETER :: INTERCEPT_MAXITER_NEWTON=25
 
@@ -5809,6 +5807,7 @@ end subroutine volume_sanity_check
        xsten_box,nhalf_box,mofdata, &
        xtetlist,nlist_alloc,nlist,nmax,nmat,sdim)
 
+      use probcommon_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -6050,6 +6049,7 @@ end subroutine volume_sanity_check
        mofdata, &
        xtetlist, &
        nlist_alloc,nlist,nmax,nmat,use_super_cell,sdim)
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nlist_alloc
@@ -6194,6 +6194,7 @@ end subroutine volume_sanity_check
         xtetlist, &
         nlist_alloc,nlist,nmax,nmat,sdim)
 
+      use probcommon_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -7991,6 +7992,7 @@ end subroutine volume_sanity_check
         volumedark,centroiddark, &
         area,areacentroid,volall,cenall,nmat,sdim)
 
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: sdim
@@ -8239,6 +8241,7 @@ module MOF_routines_module
 contains
 
       subroutine get_order_algorithm(order_algorithm_out,nmat)
+      use probcommon_module
       use geometry_intersect_module
 
       IMPLICIT NONE
@@ -8294,6 +8297,7 @@ contains
        ! order_algorithm=0 => try different combinations and
        ! choose combination with smallest MOF error
       subroutine set_order_algorithm(order_algorithm_in,nmat)
+      use probcommon_module
       use geometry_intersect_module
 
       IMPLICIT NONE
@@ -20163,6 +20167,7 @@ contains
       end subroutine multi_get_volumePOINT
 
       subroutine get_primary_material(LS,nmat,im_primary)
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
@@ -20472,6 +20477,7 @@ contains
       end subroutine check_full_cell_vfrac
 
       subroutine get_secondary_material(LS,nmat,im_primary,im_secondary)
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
@@ -20523,6 +20529,7 @@ contains
 
       subroutine get_tertiary_material(LS,nmat, &
              im_primary,im_secondary,im_tertiary)
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
@@ -20616,6 +20623,7 @@ contains
       subroutine sort_volume_fraction( &
        vfrac_data,FSI_exclude,sorted_list,nmat)
 
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
 
@@ -20744,6 +20752,7 @@ end module MOF_routines_module
       stop
 #endif
 
+      use probcommon_module
       use geometry_intersect_module
       use MOF_routines_module
 
