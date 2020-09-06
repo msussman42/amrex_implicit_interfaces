@@ -3414,7 +3414,7 @@ stop
 
       REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
       REAL_T, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
-      REAL_T, intent(out) :: TSATFAB(DIMV(TSATFAB),2*nten)
+      REAL_T, intent(out) :: TSATFAB(DIMV(TSATFAB),ntsat)
       REAL_T, intent(in) :: LSold(DIMV(LSold),nmat*(1+SDIM))
       REAL_T, intent(out) :: LSnew(DIMV(LSnew),nmat)
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
@@ -3674,6 +3674,10 @@ stop
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
       endif
+       ! For Tsatfab: 1st nten components are the status, then next 2*nten
+       ! components go:
+       ! T_gamma_1,Y_gamma_1,
+       ! T_gamma_2,Y_gamma_2, ....
       if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
        ! do nothing
       else
@@ -6905,7 +6909,7 @@ stop
                    dx,xlo, &
                    ngrow_make_distance, & ! ngrow_tsat
                    fablo,fabhi, &
-                   Tsatfab,DIMS(Tsatfab), &
+                   Tsatfab,DIMS(Tsatfab), & ! not used since use_tsatfab==0
                    local_Tsat(ireverse), &
                    iten+ireverse*nten, &
                    saturation_temp, &
@@ -7045,7 +7049,8 @@ stop
                   !iprobe=2 dest
                   call probe_interpolation( &
                    PROBE_PARMS, &
-                   TSAT_predict,Y_predict, &
+                   TSAT_predict, &
+                   Y_predict, &
                    T_probe,Y_probe, &
                    den_I_interp, &
                    den_probe, &
@@ -7452,7 +7457,8 @@ stop
 
                         call probe_interpolation( &
                          PROBE_PARMS, &
-                         TSAT_predict,Y_interface_min, &
+                         TSAT_predict, &
+                         Y_interface_min, &
                          T_probe,Y_probe, &
                          den_I_interp, &
                          den_probe, &
@@ -7888,6 +7894,8 @@ stop
               if (local_Tsat(ireverse).gt.zero) then
                Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+1)= &
                 local_Tsat(ireverse)
+                ! this should be Y_predict?
+                ! FIX ME
                Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+2)= &
                 one  ! default mass fraction=1 (saturated)
               else
