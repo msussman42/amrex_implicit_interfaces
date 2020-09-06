@@ -10976,8 +10976,9 @@ NavierStokes::level_phase_change_rate_extend() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // burnvelfab=BURNING_VELOCITY_MF is cell centered.
-    // sets the burning velocity flag from 0 to 2 if
+    // burnvelfab=BURNING_VELOCITY_MF or 
+    // burnvelfab=SATURATION_TEMP_MF is cell centered.
+    // sets the burning velocity/saturation temp flag from 0 to 2 if
     // foot of characteristic within range.
     // in: MASS_TRANSFER_3D.F90
    FORT_EXTEND_BURNING_VEL( 
@@ -11023,7 +11024,7 @@ NavierStokes::level_phase_change_rate_extend() {
      scomp,ncomp,interior_only);
   }
 
- } // velflag=0,1
+ } // velflag=0,1 (velflag==0: interface temp/massfrac;velflag==1: burnvel
 
 } // subroutine level_phase_change_rate_extend
 

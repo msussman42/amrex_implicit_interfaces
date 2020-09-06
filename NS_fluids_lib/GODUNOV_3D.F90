@@ -14323,6 +14323,7 @@ stop
                    (local_freezing_model.eq.6)) then
 
                 if (project_option.eq.2) then
+                   ! default TSAT
                  TSAT=saturation_temp(iten+ireverse*nten)
                  if (TSAT.gt.zero) then
                   tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
