@@ -15351,5 +15351,138 @@ endif
 return
 end subroutine drop_slope_dist
 
+subroutine volfrac_from_massfrac(X,Y,WA,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: Y,WA,WV
+REAL_T, intent(out) :: X
+
+if ((Y.ge.zero).and.(Y.le.one)) then
+ if ((WA.gt.zero).and.(WV.gt.zero)) then
+  X=WA*Y/(WV*(one-Y)+WA*Y)
+ else
+  print *,"WA or WV invalid"
+  stop
+ endif
+else
+ print *,"Y invalid in volfrac_from_massfrac"
+ stop
+endif
+
+return
+end subroutine volfrac_from_massfrac
+
+subroutine X_from_Tgamma(X,Tgamma,TSAT, &
+  L,R,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: Tgamma,TSAT,L,R,WV
+REAL_T, intent(out) :: X
+
+if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
+ if (R.gt.zero) then
+  if (L.ne.zero) then
+   if (WV.gt.zero) then
+    X=exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
+   else
+    print *,"WV invalid in X_from_Tgamma"
+    stop
+   endif
+  else
+   print *,"L invalid in X_from_Tgamma"
+   stop
+  endif
+ else
+  print *,"R invalid in X_from_Tgamma"
+  stop
+ endif
+else
+ print *,"Tgamma or TSAT invalid in X_from_Tgamma"
+ stop
+endif
+
+return
+end subroutine X_from_Tgamma
+
+subroutine Tgamma_from_TSAT(Tgamma,TSAT, &
+  X,L,R,WV,Tgamma_min,Tgamma_max)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: TSAT,X,L,R,WV,Tgamma_min,Tgamma_max
+REAL_T, intent(out) :: Tgamma
+
+if ((X.ge.zero).and.(X.le.one)) then
+ if (TSAT.gt.zero) then
+
+   ! X=exp(-(L WV/R)(1/Tgamma - 1/Tsat) )
+  if (X.eq.zero) then
+   if (L.gt.zero) then
+    Tgamma=Tgamma_min
+   else if (L.lt.zero) then
+    Tgamma=Tgamma_max
+   else
+    print *,"L invalid in Tgamma_from_TSAT"
+    stop
+   endif
+  else if (X.eq.one) then
+   Tgamma=TSAT
+  else if ((X.gt.zero).and.(X.lt.one)) then
+   Tgamma=-log(X)*R/(L*WV)
+   Tgamma=Tgamma+one/TSAT
+   if (Tgamma.gt.zero) then
+    Tgamma=one/Tgamma
+   else if (Tgamma.le.zero) then
+    Tgamma=Tgamma_min
+   else
+    print *,"Tgamma invalid in Tgamma_from_TSAT"
+    stop
+   endif
+  else
+   print *,"X invalid in Tgamma_from_TSAT"
+   stop
+  endif
+  if (Tgamma.lt.Tgamma_min) then
+   Tgamma=Tgamma_min
+  endif
+  if (Tgamma.gt.Tgamma_max) then
+   Tgamma=Tgamma_max
+  endif
+
+ else
+  print *,"TSAT invalid in Tgamma_from_TSAT"
+  stop
+ endif
+else
+ print *,"X invalid in Tgamma_from_TSAT"
+ stop
+endif
+ 
+return
+end subroutine Tgamma_from_TSAT
+
+
+subroutine massfrac_from_volfrac(X,Y,WA,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: X,WA,WV
+REAL_T, intent(out) :: Y
+
+if ((X.ge.zero).and.(X.le.one)) then
+ if ((WA.gt.zero).and.(WV.gt.zero)) then
+  Y=WV*X/(WA*(one-X)+WV*X)
+ else
+  print *,"WA or WV invalid"
+  stop
+ endif
+else
+ print *,"X invalid in massfrac_from_volfrac"
+ stop
+endif
+
+return
+end subroutine massfrac_from_volfrac
+
+
+
 end module global_utility_module
 
