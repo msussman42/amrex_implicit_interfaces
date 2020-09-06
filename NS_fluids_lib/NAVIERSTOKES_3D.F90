@@ -9872,6 +9872,7 @@ END SUBROUTINE SIMP
        call checkbound(fablo,fabhi,DIMS(vel),1,-1,413) 
 
        GRID_DATA_PARM%ncomp_sum_int_user=ncomp_sum_int_user
+       GRID_DATA_PARM%time=time
        GRID_DATA_PARM%problo=>problo
        GRID_DATA_PARM%probhi=>probhi
        GRID_DATA_PARM%nhalf=nhalf
