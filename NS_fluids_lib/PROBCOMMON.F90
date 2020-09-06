@@ -36,6 +36,7 @@ module probcommon_module_types
        REAL_T, pointer :: xlo(:)
        REAL_T, pointer :: dx(:)
        REAL_T, pointer :: xsten(:,:)
+       REAL_T :: time
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: cellten
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes

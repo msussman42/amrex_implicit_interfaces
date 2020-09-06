@@ -146,6 +146,7 @@ end subroutine SIMPLE_PALMORE_DESJARDINS_PRES
 
 subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f) 
  use probcommon_module
+ use global_utility_module
  IMPLICIT NONE
 
  REAL_T, intent(in) :: l !diffusion layer value
@@ -153,6 +154,10 @@ subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f)
  
  REAL_T :: T_inf, T_gamma, L_V, C_pG, erf_result, T_sat
  REAL_T :: k_G, den_G, D_G
+ REAL_T :: Y_gamma,Y_G,WV,WA,R,X_gamma,Y_gamma_test,X_gamma_test
+ REAL_T :: T_gamma_min
+ REAL_T :: T_gamma_max
+ REAL_T :: T_gamma_test
  REAL_T :: lambda
  INTEGER_T :: JINT
  
@@ -164,12 +169,48 @@ subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f)
  k_G = fort_heatviscconst(2)
  den_G = fort_denconst(2)
  D_G = fort_speciesviscconst(2)
+ Y_gamma=fort_speciesconst(1)
+ Y_G=fort_speciesconst(2)
+ WV=fort_species_molar_mass(1)
+ WA=fort_molar_mass(2)
+ R=R_Palmore_Desjardins
+ call volfrac_from_massfrac(X_gamma,Y_gamma,WA,WV)
+ call massfrac_from_volfrac(X_gamma,Y_gamma_test,WA,WV)
+ if (abs(Y_gamma-Y_gamma_test).le.1.0D-8) then
+  ! do nothing
+ else
+  print *,"Y_gamma_test invalid"
+  stop
+ endif
+
+ T_gamma_min=0.0d0
+ T_gamma_max=1.0D+20
+
+ call Tgamma_from_TSAT(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
+   T_gamma_min,T_gamma_max)
+ if (abs(T_gamma-T_gamma_test).le.1.0D-8) then
+  ! do nothing
+ else
+  print *,"T_gamma_test invalid"
+  stop
+ endif
+
+ call X_from_Tgamma(X_gamma_test,T_gamma,T_sat,L_V,R,WV) 
+ if (abs(X_gamma-X_gamma_test).le.1.0D-8) then
+  ! do nothing
+ else
+  print *,"X_gamma_test invalid"
+  stop
+ endif
+
  lambda=k_G/(den_G*C_pG)
 
    ! required that D_G=lambda
  if ((T_inf.gt.T_gamma).and. &
      (T_gamma.le.T_sat).and. &
      (l.ge.zero).and. &
+     (Y_G.ge.zero).and. &
+     (Y_G.le.one).and. &
      (abs(lambda-D_G).lt.1.0D-8)) then
   ! do nothing
  else
@@ -206,7 +247,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l)
   else
    b = c
   endif
- enddo
+ enddo ! iter.LT.100
  l=c
 end subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer
 
@@ -217,7 +258,8 @@ end subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer
 ! xblob2>x_0
 ! xblob+xblob2 is the physical location of the interface at t_compute=0
 subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
-  x, t, use_T, TorY) 
+  x, t, use_T, TorY, LS_exact) 
+ use global_utility_module
  use probcommon_module
  !returns either temperature or mass frac
  ! for mass_frac: T_inf = Y_inf, T_gamma = Y_gamma, l_Y = l, lambda = D
@@ -228,7 +270,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  REAL_T :: T_inf, T_gamma, T_sat, lambda
  REAL_T :: k_G, den_G, D_G
  REAL_T :: L_V,C_pG,TY_eqn
- REAL_T, intent(out) :: TorY
+ REAL_T, intent(out) :: TorY,LS_exact
  INTEGER_T :: JINT
  REAL_T erf_result_x 
  REAL_T erf_result_l 
@@ -236,8 +278,15 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  REAL_T x_gamma_physical
  REAL_T x_gamma_domain
  REAL_T t_physical_init
+ REAL_T X_gamma_test
+ REAL_T Y_gamma_test
+ REAL_T X_gamma
  REAL_T Y_gamma
  REAL_T Y_inf
+ REAL_T WV,WA,R
+ REAL_T :: T_gamma_min
+ REAL_T :: T_gamma_max
+ REAL_T :: T_gamma_test
 
  T_inf = fort_tempconst(2)
  T_gamma = fort_tempconst(1)
@@ -250,13 +299,46 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  Y_gamma=fort_speciesconst(1)  
  Y_inf=fort_speciesconst(2)
 
+ WV=fort_species_molar_mass(1)
+ WA=fort_molar_mass(2)
+ R=R_Palmore_Desjardins
+ call volfrac_from_massfrac(X_gamma,Y_gamma,WA,WV)
+ call massfrac_from_volfrac(X_gamma,Y_gamma_test,WA,WV)
+ if (abs(Y_gamma-Y_gamma_test).le.1.0D-8) then
+  ! do nothing
+ else
+  print *,"Y_gamma_test invalid"
+  stop
+ endif
+
+ T_gamma_min=0.0d0
+ T_gamma_max=1.0D+20
+
+ call Tgamma_from_TSAT(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
+   T_gamma_min,T_gamma_max)
+ if (abs(T_gamma-T_gamma_test).le.1.0D-8) then
+  ! do nothing
+ else
+  print *,"T_gamma_test invalid"
+  stop
+ endif
+
+ call X_from_Tgamma(X_gamma_test,T_gamma,T_sat,L_V,R,WV) 
+ if (abs(X_gamma-X_gamma_test).le.1.0D-8) then
+  ! do nothing
+ else
+  print *,"X_gamma_test invalid"
+  stop
+ endif
+
  if ((xblob2.gt.zero).and. &
      (k_G.gt.zero).and. &
      (den_G.gt.zero).and. &
-     (C_pG.gt.zero)) then
+     (C_pG.gt.zero).and. &
+     (t.ge.zero)) then
   ! do nothing
  else
-  print *,"xblob2, k_G, den_G, or C_pG invalid"
+  print *,"xblob2, k_G, den_G, C_pG, or t invalid"
   stop
  endif
  lambda=k_G/(den_G*C_pG)
@@ -286,6 +368,8 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  x_gamma_physical=2.0d0*l_verification*sqrt(lambda*(t_physical_init+t))
 
  x_gamma_domain=x_gamma_physical-xblob2
+
+ LS_exact=x-x_gamma_domain
 
  if (x_gamma_physical.gt.xblob+xblob2-1.0D-8) then
   ! do nothing
@@ -337,7 +421,8 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase,n
+INTEGER_T im,ibase,use_T
+REAL_T LS_exact
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -365,16 +450,14 @@ if ((num_materials.eq.2).and. &
    print *,"t invalid"
    stop
   endif
-   ! CODY: PUT ANALYTICAL TEMPERATURE HERE.  t,x(1),x(2)
-   ! ibase+2 is the temperature component for the "im" material
-  STATE(ibase+2)=zero  ! CODY (initial interface position is xblob)
-   ! always assume Dirichlet boundary condition at zlo for temperature.
 
-   ! num_species_var=1 ? CONFIRM CODY PLEASE (sanity check)
-   ! PUT ANALYTICAL SOLUTION TO MASS FRACTION HERE
-  do n=1,num_species_var
-   STATE(ibase+2+n)=zero
-  enddo
+  use_T=1
+  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+   x(1),t,use_T,STATE(ibase+2),LS_exact)
+  use_T=0
+  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+   x(1),t,use_T,STATE(ibase+3),LS_exact)
+
  enddo ! im=1..num_materials
 else
  print *,"num_materials,num_state_material, or probtype invalid"
@@ -596,8 +679,8 @@ INTEGER_T :: i,j,k
 INTEGER_T :: dir
 INTEGER_T :: im_gas
 INTEGER_T :: tcomp
+INTEGER_T :: use_T
 REAL_T :: xlocal(SDIM)
-REAL_T :: xGAMMA_analytical
 REAL_T :: LS_analytical
 REAL_T :: LS_compute
 REAL_T :: TEMPERATURE_analytical
@@ -611,9 +694,11 @@ if (nsum.eq.2) then
  do dir=1,SDIM
   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
  enddo
-   ! see supercooled_exact_sol.F90
- xGAMMA_analytical=zero  ! CODY PLEASE UPDATE
- LS_analytical=xlocal(1)-xGAMMA_analytical
+ use_T=1
+ call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+   xlocal(1),GRID_DATA_IN%time,use_T,TEMPERATURE_analytical, &
+   LS_analytical)
+ 
  LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),1)
  if (abs(LS_analytical).lt.two*GRID_DATA_IN%dx(1)) then
   increment_out(1)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)
@@ -621,7 +706,6 @@ if (nsum.eq.2) then
   increment_out(1)=zero
  endif
  if (LS_compute.lt.zero) then
-  TEMPERATURE_analytical=zero  ! CODY ?
   im_gas=2
   tcomp=(im_gas-1)*num_state_material+2
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
