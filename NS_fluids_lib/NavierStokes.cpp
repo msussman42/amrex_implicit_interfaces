@@ -1548,6 +1548,17 @@ void fortran_parameters() {
  pp.queryarr("latent_heat",latent_heat_temp,0,2*nten);
  pp.queryarr("saturation_temp",saturation_temp_temp,0,2*nten);
 
+ Vector<Real> molar_mass_temp(nmat);
+ Vector<Real> species_molar_mass_temp(num_species_var+1);
+ for (int im=0;im<nmat;im++) {
+  molar_mass_temp[im]=1.0;
+ }
+ for (int im=0;im<num_species_var+1;im++) {
+  species_molar_mass_temp[im]=1.0;
+ }
+ pp.queryarr("species_molar_mass",
+   species_molar_mass_temp,0,num_species_var);
+ pp.queryarr("molar_mass",molar_mass_temp,0,nmat);
 
  for (int im=0;im<nten;im++)
   prefreeze_tensiontemp[im]=tensiontemp[im];
@@ -1731,6 +1742,8 @@ void fortran_parameters() {
   speciesviscconst_temp.dataPtr(),
   latent_heat_temp.dataPtr(),
   saturation_temp_temp.dataPtr(),
+  molar_mass_temp.dataPtr(),
+  species_molar_mass_temp.dataPtr(),
   tensiontemp.dataPtr(),
   tension_slopetemp.dataPtr(),
   tension_T0temp.dataPtr(),

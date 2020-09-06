@@ -261,6 +261,8 @@ namespace amrex{
        Real* speciesviscconst,
        Real* latent_heat,
        Real* saturation_temp,
+       Real* molar_mass,
+       Real* species_molar_mass,
        Real* tension,
        Real* tension_slope,
        Real* tension_T0,
