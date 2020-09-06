@@ -225,7 +225,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  
  REAL_T, intent(in) :: x, t
  INTEGER_T, intent(in) :: use_T
- REAL_T :: T_inf, T_gamma, T_sat, lambda, x_0
+ REAL_T :: T_inf, T_gamma, T_sat, lambda
  REAL_T :: k_G, den_G, D_G
  REAL_T :: L_V,C_pG,TY_eqn
  REAL_T, intent(out) :: TorY

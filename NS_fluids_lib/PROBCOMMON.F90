@@ -104,6 +104,7 @@ implicit none
 ! nucleation_init_time added: May 5, 2018
 ! fort_density_floor and fort_density_ceiling added: January 8, 2019
 ! fort_ZEYU_DCA_SELECT added: January 20, 2020
+! fort_molar_mass added: September 5, 2020.
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10

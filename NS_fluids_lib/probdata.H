@@ -64,6 +64,9 @@
       REAL_T fort_latent_heat(2*MAX_NUM_INTERFACES)
       REAL_T fort_saturation_temp(2*MAX_NUM_INTERFACES)
 
+      REAL_T fort_molar_mass(MAX_NUM_MATERIALS)
+      REAL_T fort_species_molar_mass(MAX_NUM_SPECIES)
+
       REAL_T fort_alpha(2*MAX_NUM_INTERFACES)
       REAL_T fort_beta(2*MAX_NUM_INTERFACES)
       REAL_T fort_expansion_factor(2*MAX_NUM_INTERFACES)

@@ -27808,6 +27808,8 @@ end subroutine initialize2d
          ccspeciesviscconst, &
          cclatent_heat, &
          ccsaturation_temp, &
+         ccmolar_mass, &
+         ccspecies_molar_mass, &
          cctension, &
          cctension_slope, &
          cctension_T0, &
@@ -27925,6 +27927,8 @@ end subroutine initialize2d
        REAL_T ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
        REAL_T cclatent_heat(2*ccnten)
        REAL_T ccsaturation_temp(2*ccnten)
+       REAL_T ccmolar_mass(ccnum_materials)
+       REAL_T ccspecies_molar_mass(ccnum_species_var+1)
        REAL_T cctension(ccnten)
        REAL_T cctension_slope(ccnten)
        REAL_T cctension_T0(ccnten)
@@ -28490,6 +28494,13 @@ end subroutine initialize2d
         fort_tension_T0(iten)=cctension_T0(iten)
         fort_tension_min(iten)=cctension_min(iten)
         fort_prefreeze_tension(iten)=ccprefreeze_tension(iten)
+       enddo
+
+       do im=1,num_materials
+        fort_molar_mass(im)=ccmolar_mass(im)
+       enddo
+       do im=1,num_species_var
+        fort_species_molar_mass(im)=ccspecies_molar_mass(im)
        enddo
 
        if (ioproc.eq.1) then
