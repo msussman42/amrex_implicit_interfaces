@@ -12291,6 +12291,19 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  Vector<int> scomp;
  Vector<int> ncomp;
  int ncomp_check;
+
+ int project_option_thermal=2;
+ get_mm_scomp_solver(
+   num_materials_combine,
+   project_option_thermal,
+   state_index,
+   scomp,ncomp,ncomp_check);
+
+ if ((ncomp_check!=nmat)||(state_index!=State_Type))
+  amrex::Error("(ncomp_check!=nmat)||(state_index!=State_Type)");
+
+ MultiFab* T_list_mf=getState_list(1,scomp,ncomp,cur_time_slab);
+
  get_mm_scomp_solver(
    num_materials_combine,
    project_option,
@@ -12300,7 +12313,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  if ((ncomp_check!=nmat)||(state_index!=State_Type))
   amrex::Error("(ncomp_check!=nmat)||(state_index!=State_Type)");
 
- MultiFab* thermal_list_mf=getState_list(1,scomp,ncomp,cur_time_slab);
+ MultiFab* TorY_list_mf=getState_list(1,scomp,ncomp,cur_time_slab);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -12326,7 +12339,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    FArrayBox& statefab=(*state_var_mf)[mfi];
 
    FArrayBox& lsfab=(*LSmf)[mfi];
-   FArrayBox& thermalfab=(*thermal_list_mf)[mfi];
+   FArrayBox& T_fab=(*T_list_mf)[mfi];
+   FArrayBox& TorY_fab=(*TorY_list_mf)[mfi];
 
    FArrayBox& snewfab=S_new[mfi];
    FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  // 1/(rho cv)
@@ -12413,8 +12427,10 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     zfacemm.dataPtr(),ARLIM(zfacemm.loVect()),ARLIM(zfacemm.hiVect()),
     sweptfab.dataPtr(),ARLIM(sweptfab.loVect()),ARLIM(sweptfab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    thermalfab.dataPtr(),
-    ARLIM(thermalfab.loVect()),ARLIM(thermalfab.hiVect()),
+    T_fab.dataPtr(),
+    ARLIM(T_fab.loVect()),ARLIM(T_fab.hiVect()),
+    TorY_fab.dataPtr(),
+    ARLIM(TorY_fab.loVect()),ARLIM(TorY_fab.hiVect()),
     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
     DeDTfab.dataPtr(),ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
     denfab.dataPtr(),
@@ -12433,7 +12449,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  delete state_var_mf;
  delete LSmf;
- delete thermal_list_mf;
+ delete T_list_mf;
+ delete TorY_list_mf;
  
 }  // stefan_solver_init
 

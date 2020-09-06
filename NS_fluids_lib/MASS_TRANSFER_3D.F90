@@ -7877,10 +7877,13 @@ stop
               if (local_Tsat(ireverse).gt.zero) then
                Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+1)= &
                 local_Tsat(ireverse)
-                ! this should be Y_predict?
-                ! FIX ME
-               Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+2)= &
-                one  ! default mass fraction=1 (saturated)
+               if ((Y_predict.ge.zero).and.(Y_predict.le.one)) then
+                Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+2)= &
+                  Y_predict  ! default mass fraction=1 (saturated)
+               else
+                print *,"Y_predict invalid"
+                stop
+               endif
               else
                print *,"local_Tsat(ireverse) should be positive"
                stop

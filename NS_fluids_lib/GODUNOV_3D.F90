@@ -13858,6 +13858,11 @@ stop
        ! adjust_temperature==1  modify temperature (Snew and coeff)
        ! adjust_temperature==0  modify coefficient (coeff)
        ! adjust_temperature==-1 modify heatx,heaty,heatz
+       ! if project_option==2:
+       !  heatxyz correspond to thermal diffusivity
+       ! else if project_option>=100:
+       !  heatxyz correspond to rho D
+       !
       subroutine FORT_STEFANSOLVER( &
        project_option, & ! 2=thermal diffusion or 100...100+num_species_var-1
        solidheat_flag, & ! 0=diffuse in solid 1=dirichlet 2=Neumann
@@ -13891,7 +13896,8 @@ stop
        zfacemm,DIMS(zfacemm), &
        swept,DIMS(swept), &
        LS,DIMS(LS),  &
-       thermal,DIMS(thermal),  &
+       T_fab,DIMS(T_fab),  &
+       TorY_fab,DIMS(TorY_fab),  &
        Snew,DIMS(Snew), & 
        DeDT,DIMS(DeDT), &
        den,DIMS(den), &
@@ -13947,7 +13953,8 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(zfacemm)
       INTEGER_T, intent(in) :: DIMDEC(swept)
       INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(thermal)
+      INTEGER_T, intent(in) :: DIMDEC(T_fab)
+      INTEGER_T, intent(in) :: DIMDEC(TorY_fab)
       INTEGER_T, intent(in) :: DIMDEC(Snew)
       INTEGER_T, intent(in) :: DIMDEC(DeDT)
       INTEGER_T, intent(in) :: DIMDEC(den)
@@ -13967,7 +13974,8 @@ stop
       REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
       REAL_T, intent(in) :: swept(DIMV(swept))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
-      REAL_T, intent(in) :: thermal(DIMV(thermal),nmat)
+      REAL_T, intent(in) :: T_fab(DIMV(T_fab),nmat)
+      REAL_T, intent(in) :: TorY_fab(DIMV(TorY_fab),nmat)
       REAL_T, intent(out) :: Snew(DIMV(Snew),nstate)
       REAL_T, intent(in) :: DeDT(DIMV(DeDT),nmat+1)  ! 1/(rho cv) (cv=DeDT)
       ! 1/den (i.e. den actually stores 1/den)
@@ -14016,12 +14024,16 @@ stop
       REAL_T TGRAD_MAX,TGRAD_test,T_test
       REAL_T LL
       REAL_T TSAT
+      REAL_T TSAT_BC
       INTEGER_T TSAT_STATUS
       INTEGER_T tsat_comp
       INTEGER_T ngrow_tsat
-      REAL_T TMIN(nmat)
-      REAL_T TMAX(nmat)
-      INTEGER_T TSTATUS(nmat)
+      REAL_T T_MIN(nmat)
+      REAL_T T_MAX(nmat)
+      REAL_T TorY_MIN(nmat)
+      REAL_T TorY_MAX(nmat)
+      INTEGER_T T_STATUS(nmat)
+      INTEGER_T TorY_STATUS(nmat)
 
       INTEGER_T nten_test
       REAL_T over_den,over_cv
@@ -14163,7 +14175,8 @@ stop
       call checkbound(fablo,fabhi,DIMS(swept),0,-1,234)
 
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,1226)
-      call checkbound(fablo,fabhi,DIMS(thermal),1,-1,1226)
+      call checkbound(fablo,fabhi,DIMS(T_fab),1,-1,1226)
+      call checkbound(fablo,fabhi,DIMS(TorY_fab),1,-1,1226)
       call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1227)
       call checkbound(fablo,fabhi,DIMS(DeDT),1,-1,1228) ! 1/(density * cv)
       call checkbound(fablo,fabhi,DIMS(den),1,-1,1229)  ! 1/(density)
@@ -14207,9 +14220,12 @@ stop
        if (LS_center(im_primary).ge.zero) then
 
         do im=1,nmat
-         TMIN(im)=zero
-         TMAX(im)=zero
-         TSTATUS(im)=0
+         T_MIN(im)=zero
+         T_MAX(im)=zero
+         TorY_MIN(im)=zero
+         TorY_MAX(im)=zero
+         T_STATUS(im)=0
+         TorY_STATUS(im)=0
         enddo ! im=1..nmat
 
         do i1=-1,1 
@@ -14225,7 +14241,7 @@ stop
            im_side_primary=im
           endif
          enddo
-         T_test=thermal(D_DECL(i+i1,j+j1,k+k1),im_side_primary)
+         T_test=T_fab(D_DECL(i+i1,j+j1,k+k1),im_side_primary)
          if (T_test.ge.T_or_Y_min) then
           ! do nothing
          else
@@ -14236,31 +14252,65 @@ stop
           print *,"im_side_primary ",im_side_primary
           print *,"im_primary ",im_primary
           do im=1,nmat
-           print *,"im,thermal ",im, &
-            thermal(D_DECL(i+i1,j+j1,k+k1),im) 
+           print *,"im,T_fab ",im, &
+            T_fab(D_DECL(i+i1,j+j1,k+k1),im) 
           enddo
           print *,"T_test.le.zero STEFANSOLVER"
           stop
          endif
-         if (TSTATUS(im_side_primary).eq.0) then
-          TMIN(im_side_primary)=T_test
-          TMAX(im_side_primary)=T_test
-         else if (TSTATUS(im_side_primary).eq.1) then
-          if (T_test.gt.TMAX(im_side_primary)) then
-           TMAX(im_side_primary)=T_test
+         if (T_STATUS(im_side_primary).eq.0) then
+          T_MIN(im_side_primary)=T_test
+          T_MAX(im_side_primary)=T_test
+         else if (T_STATUS(im_side_primary).eq.1) then
+          if (T_test.gt.T_MAX(im_side_primary)) then
+           T_MAX(im_side_primary)=T_test
           endif
-          if (T_test.lt.TMIN(im_side_primary)) then
-           TMIN(im_side_primary)=T_test
+          if (T_test.lt.T_MIN(im_side_primary)) then
+           T_MIN(im_side_primary)=T_test
           endif
          else
-          print *,"TSTATUS(im_side_primary) invalid"
+          print *,"T_STATUS(im_side_primary) invalid"
           stop
          endif
-         TSTATUS(im_side_primary)=1
+         T_STATUS(im_side_primary)=1
+
+         T_test=TorY_fab(D_DECL(i+i1,j+j1,k+k1),im_side_primary)
+         if (T_test.ge.T_or_Y_min) then
+          ! do nothing
+         else
+          print *,"T_test= ",T_test
+          print *,"adjust_temperature=",adjust_temperature
+          print *,"i,j,k ",i,j,k
+          print *,"i1,j1,k1 ",i1,j1,k1
+          print *,"im_side_primary ",im_side_primary
+          print *,"im_primary ",im_primary
+          do im=1,nmat
+           print *,"im,TorY_fab ",im, &
+            TorY_fab(D_DECL(i+i1,j+j1,k+k1),im) 
+          enddo
+          print *,"T_test.le.zero STEFANSOLVER"
+          stop
+         endif
+         if (TorY_STATUS(im_side_primary).eq.0) then
+          TorY_MIN(im_side_primary)=T_test
+          TorY_MAX(im_side_primary)=T_test
+         else if (TorY_STATUS(im_side_primary).eq.1) then
+          if (T_test.gt.TorY_MAX(im_side_primary)) then
+           TorY_MAX(im_side_primary)=T_test
+          endif
+          if (T_test.lt.TorY_MIN(im_side_primary)) then
+           TorY_MIN(im_side_primary)=T_test
+          endif
+         else
+          print *,"TorY_STATUS(im_side_primary) invalid"
+          stop
+         endif
+         TorY_STATUS(im_side_primary)=1
+
         enddo
         enddo
         enddo ! i1,j1,k1
- 
+
         do im=1,nmat-1
          do im_opp=im+1,nmat
           do ireverse=0,1
@@ -14325,9 +14375,11 @@ stop
                 if (project_option.eq.2) then
                    ! default TSAT
                  TSAT=saturation_temp(iten+ireverse*nten)
+                 TSAT_BC=TSAT
                  if (TSAT.gt.zero) then
                   tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
                   TSAT=TSATFAB(D_DECL(i,j,k),tsat_comp)
+                  TSAT_BC=TSAT
                   if (TSAT.gt.zero) then
                    ! do nothing
                   else
@@ -14340,12 +14392,27 @@ stop
                  endif
                 else if ((project_option.ge.100).and. &
                          (project_option.lt.100+num_species_var)) then
-                 tsat_comp=nten+(iten-1)*ncomp_per_tsat+2
-                 TSAT=TSATFAB(D_DECL(i,j,k),tsat_comp)
-                 if (TSAT.ge.zero) then
-                  ! do nothing
+                 TSAT=saturation_temp(iten+ireverse*nten)
+                 TSAT_BC=one
+                 if (TSAT.gt.zero) then
+                  tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+                  TSAT=TSATFAB(D_DECL(i,j,k),tsat_comp)
+                  tsat_comp=nten+(iten-1)*ncomp_per_tsat+2
+                  TSAT_BC=TSATFAB(D_DECL(i,j,k),tsat_comp)
+                  if (TSAT.gt.zero) then
+                   ! do nothing
+                  else
+                   print *,"TSAT must be positive22"
+                   stop
+                  endif
+                  if ((TSAT_BC.ge.zero).and.(TSAT_BC.le.one)) then
+                   ! do nothing
+                  else
+                   print *,"TSAT_BC (aka Y) must be >= 0 and <=1"
+                   stop
+                  endif
                  else
-                  print *,"TSAT (aka Y) must be >= 0"
+                  print *,"saturation temperature must be positive33"
                   stop
                  endif
                 else
@@ -14402,12 +14469,12 @@ stop
                   im_crit=im_primary
 
                    ! im_primary is found in the stencil
-                  if (TSTATUS(im_crit).eq.1) then
+                  if (TorY_STATUS(im_crit).eq.1) then
 
                    if (LL.lt.zero) then ! freezing or condensation
-                    TGRAD_test=TSAT-TMIN(im_crit)
+                    TGRAD_test=TSAT-T_MIN(im_crit)
                    else if (LL.gt.zero) then  ! melting or boiling
-                    TGRAD_test=TMAX(im_crit)-TSAT
+                    TGRAD_test=T_MAX(im_crit)-TSAT
                    else
                     print *,"LL invalid"
                     stop
@@ -14460,10 +14527,10 @@ stop
                     stop
                    endif
 
-                  else if (TSTATUS(im_crit).eq.0) then
+                  else if (TorY_STATUS(im_crit).eq.0) then
                    ! do nothing
                   else
-                   print *,"TSTATUS(im_crit) invalid"
+                   print *,"TorY_STATUS(im_crit) invalid"
                    stop
                   endif
 
@@ -14585,7 +14652,17 @@ stop
          LL=latent_heat(iten+ireverse*nten)
          local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-         TSAT=saturation_temp(iten+ireverse*nten)
+
+         if (project_option.eq.2) then
+          TSAT_BC=saturation_temp(iten+ireverse*nten)
+         else if ((project_option.ge.100).and. &
+                  (project_option.lt.100+num_species_var)) then
+          TSAT_BC=one
+         else
+          print *,"project_option invalid"
+          stop
+         endif
+
 
          if (num_materials_scalar_solve.eq.1) then
 
@@ -14746,7 +14823,7 @@ stop
                ngrow_tsat, &
                fablo,fabhi, &
                TSATFAB,DIMS(TSATFAB), &
-               TSAT)
+               TSAT_BC)  ! TSAT_BC here is an output
 
               hx=abs(xsten(0,dir)-xsten(2*side,dir))
               if ((levelrz.eq.3).and.(dir.eq.2)) then
@@ -14754,7 +14831,7 @@ stop
               endif
               side_coeff=aface*heatcoeff/(theta*hx)
               delta_coeff=delta_coeff+side_coeff
-              coeff_TSAT=coeff_TSAT+TSAT*side_coeff
+              coeff_TSAT=coeff_TSAT+TSAT_BC*side_coeff
              endif ! LS1 * LS2 <=0
 
             else if (at_interface.eq.0) then
@@ -14786,7 +14863,7 @@ stop
    
             if (adjust_temperature.eq.1) then
 
-             T_test=thermal(D_DECL(i,j,k),im_crit)
+             T_test=TorY_fab(D_DECL(i,j,k),im_crit)
              if (T_test.ge.T_or_Y_min) then
               ! do nothing
              else
