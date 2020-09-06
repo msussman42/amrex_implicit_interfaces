@@ -28498,9 +28498,21 @@ end subroutine initialize2d
 
        do im=1,num_materials
         fort_molar_mass(im)=ccmolar_mass(im)
+        if (fort_molar_mass(im).gt.zero) then
+         ! do nothing
+        else
+         print *,"fort_molar_mass invalid"
+         stop
+        endif
        enddo
        do im=1,num_species_var
         fort_species_molar_mass(im)=ccspecies_molar_mass(im)
+        if (fort_species_molar_mass(im).gt.zero) then
+         ! do nothing
+        else
+         print *,"fort_species_molar_mass invalid"
+         stop
+        endif
        enddo
 
        if (ioproc.eq.1) then
@@ -28510,6 +28522,7 @@ end subroutine initialize2d
         enddo 
         do im=1,num_materials
          print *,"im,mat type ",im,fort_material_type(im)
+         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)
          print *,"im,drhodt ",im,fort_drhodt(im)
          print *,"im,drhodz ",im,fort_drhodz(im)
          print *,"im,temp ",im,fort_tempconst(im)
@@ -28540,6 +28553,9 @@ end subroutine initialize2d
         do im=1,num_species_var*num_materials
          print *,"im,species ",im,fort_speciesconst(im)
          print *,"im,speciesvisc ",im,fort_speciesviscconst(im)
+        enddo
+        do im=1,num_species_var
+         print *,"im,fort_species_molar_mass ",im,fort_species_molar_mass(im)
         enddo
 
         do iten=1,nten

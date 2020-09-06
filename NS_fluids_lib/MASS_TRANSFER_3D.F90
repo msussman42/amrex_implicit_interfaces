@@ -2849,6 +2849,7 @@ stop
       subroutine TSAT_MASS_FRAC_association( &
        TSAT_Y_PARMS, &
        Y_I,T_I)
+      use global_utility_module
       IMPLICIT NONE
 
       type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
@@ -2865,8 +2866,8 @@ stop
           (YI_min.le.one).and. &
           (Y_I.le.one)) then
 
-       WA=TSAT_Y_PARMS%molar_mass_ambient
-       WV=TSAT_Y_PARMS%molar_mass_vapor
+       WA=TSAT_Y_PARMS%molar_mass_ambient ! comes from molar_mass(im_dest)
+       WV=TSAT_Y_PARMS%molar_mass_vapor   ! comes from species_molar_mass
        R=TSAT_Y_PARMS%universal_gas_constant_R
        LL=TSAT_Y_PARMS%PROBE_PARMS%LL
 
@@ -2874,47 +2875,24 @@ stop
 
         TSAT_base=TSAT_Y_PARMS%TSAT_base
         if ((WA.gt.zero).and.(WV.gt.zero).and.(R.gt.zero)) then
-         X_I=WA*Y_I/(WV*(one-Y_I)+WA*Y_I)
+
+         call volfrac_from_massfrac(X_I,Y_I,WA,WV)
+
          if ((X_I.ge.zero).and.(X_I.le.one)) then
           if (TSAT_base.gt.zero) then
-           if (X_I.eq.zero) then
-            if (LL.gt.zero) then
-             T_I=TSAT_Y_PARMS%TI_min
-            else if (LL.lt.zero) then
-             T_I=TSAT_Y_PARMS%TI_max
-            else
-             print *,"LL invalid"
-             stop
-            endif
-           else if (X_I.eq.one) then
-            T_I=TSAT_base
-           else if ((X_I.gt.zero).and.(X_I.lt.one)) then
-            T_I=-log(X_I)*R/(LL*WV)
-            T_I=T_I+one/TSAT_base
-            if (T_I.gt.zero) then
-             T_I=one/T_I
-            else if (T_I.le.zero) then
-             T_I=TSAT_Y_PARMS%TI_min
-            else
-             print *,"T_I invalid"
-             stop
-            endif
-           else
-            print *,"X_I invalid"
-            stop
-           endif
-           if (T_I.lt.TSAT_Y_PARMS%TI_min) then
-            T_I=TSAT_Y_PARMS%TI_min
-           endif
-           if (T_I.gt.TSAT_Y_PARMS%TI_max) then
-            T_I=TSAT_Y_PARMS%TI_max
-           endif
+
+           call Tgamma_from_TSAT(T_I,TSAT_base, &
+            X_I,LL,R,WV, &
+            TSAT_Y_PARMS%TI_min, &
+            TSAT_Y_PARMS%TI_max)
+        
            if ((T_I.gt.zero).and.(T_I.le.1.0D+20)) then
             ! do nothing
            else
             print *,"T_I invalid"
             stop
            endif
+
           else
            print *,"TSAT_base invalid"
            stop
@@ -3006,6 +2984,7 @@ stop
       subroutine TSAT_MASS_FRAC_YMIN( &
        TSAT_Y_PARMS, &
        Y_I_MIN)
+      use global_utility_module
       IMPLICIT NONE
 
       type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
@@ -3036,9 +3015,13 @@ stop
           if (LL.gt.zero) then
            Y_I_MIN=YI_min_old
           else if (LL.lt.zero) then
-           X_I_MIN=exp(-(LL*WV/R)*(one/T_I_MAX - one/TSAT_base))
+
+           call X_from_Tgamma(X_I_MIN,T_I_MAX,TSAT_base,LL,R,WV)
+
            if ((X_I_MIN.gt.zero).and.(X_I_MIN.le.one)) then
-            Y_I_MIN=X_I_MIN*WV/(X_I_MIN*WV+(one-X_I_MIN)*WA)
+
+            call massfrac_from_volfrac(X_I_MIN,Y_I_MIN,WA,WV)
+
             if (Y_I_MIN.lt.YI_min_old) then
              Y_I_MIN=YI_min_old
             endif

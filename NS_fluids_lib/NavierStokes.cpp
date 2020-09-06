@@ -1556,9 +1556,10 @@ void fortran_parameters() {
  for (int im=0;im<num_species_var+1;im++) {
   species_molar_mass_temp[im]=1.0;
  }
+ pp.queryarr("molar_mass",molar_mass_temp,0,nmat);
+
  pp.queryarr("species_molar_mass",
    species_molar_mass_temp,0,num_species_var);
- pp.queryarr("molar_mass",molar_mass_temp,0,nmat);
 
  for (int im=0;im<nten;im++)
   prefreeze_tensiontemp[im]=tensiontemp[im];
