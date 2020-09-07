@@ -4483,123 +4483,6 @@ end subroutine dynamic_contact_angle
       return
       end subroutine boundary_hydrostatic
 
-       ! only called if override_density=1 or override_density=2
-       ! only takes into account fort_drhodz.
-      subroutine default_hydrostatic_pressure_density( &
-        xpos,rho,pres,liquid_temp, &
-        gravity_normalized, &
-        imat,override_density)
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T imat,nmat,override_density
-      REAL_T xpos(SDIM)
-      REAL_T rho,pres
-      REAL_T gravity_normalized
-      REAL_T liquid_temp
-      REAL_T denfree,zfree,z_at_depth
-      REAL_T energy_free,csqr,max_depth,DrhoDz
-
-
-      nmat=num_materials
-      if ((imat.lt.1).or.(imat.gt.nmat)) then
-       print *,"imat invalid"
-       stop
-      endif
-
-      if ((override_density.ne.1).and. &
-          (override_density.ne.2)) then
-       print *,"override_density invalid"
-       stop
-      endif
-      if (liquid_temp.lt.zero) then
-       print *,"liquid_temp cannot be negative"
-       stop
-      endif
-
-       ! in default_hydrostatic_pressure_density
-      denfree=fort_denconst(imat)
-      energy_free=fort_energyconst(imat)
-      if (energy_free.gt.zero) then
-       ! do nothing
-      else
-       print *,"energy_free invalid in default_hydrostatic_pressure_density"
-       print *,"imat,energy_free= ",imat,energy_free
-       stop
-      endif
-
-      if (SDIM.eq.2) then
-       zfree=probhiy
-       z_at_depth=probloy
-      else if (SDIM.eq.3) then
-       zfree=probhiz
-       z_at_depth=probloz
-      else
-       print *,"sdim invalid"
-       stop
-      endif
-
-! let z be depth
-! rho=rho0 + Az
-! p=c^2 rho
-! grad p/rho+g=0
-! p_z=-(rho0+Az)g
-! p=-rho0 g z - Az^2 g/2 +C
-! at z=0, p=c^2 rho0=C
-! at z=L,
-! -rho0 g L - A L^2 g/2 + c^2 rho0=c^2(rho0+A L)
-! A( -L^2 g/2 - c^2 L)=rho0 g L
-! A=rho0 g/(-L g/2 -c^2)=rho0/(c^2/|g|-L/2)
-
-      call SOUNDSQR_tait(denfree,energy_free,csqr)
-      max_depth=zfree-z_at_depth
-
-      if (fort_drhodz(imat).eq.-one) then
-       DrhoDz=denfree/(csqr/abs(gravity)-half*max_depth)
-      else if (fort_drhodz(imat).ge.zero) then
-       DrhoDz=fort_drhodz(imat)
-      else
-       print *,"fort_drhodz invalid"
-       stop
-      endif
-
-      if (DrhoDz.lt.zero) then
-       print *,"DrhoDz invalid"
-       stop
-      endif
-
-      if (xpos(SDIM).gt.zfree) then
-       rho=denfree
-      else
-       rho=denfree+DrhoDz*(zfree-xpos(SDIM))
-      endif
-
-       ! rho=rho(T,Y,z)
-      if (override_density.eq.1) then
-
-       if ((DrhoDz.eq.zero).and. &
-           (gravity_normalized.ne.zero)) then
-        pres=-gravity_normalized*rho*xpos(SDIM)
-       else if (DrhoDz.ne.zero) then
-        pres=csqr*rho
-       else
-        print *,"both DrhoDz and gravity_normalized cannot be 0"
-        stop
-       endif
-
-       ! temperature dependent buoyancy force term
-      else if (override_density.eq.2) then
-
-       pres=-gravity_normalized*rho*xpos(SDIM)
-
-      else
-       print *,"override_density invalid"
-       stop
-      endif
-
-      return
-      end subroutine default_hydrostatic_pressure_density
-
 ! err is initialized already with the slope error
 ! pres_in comes from the pressure computed from the compressible
 ! projection method, not the equation of state.
@@ -24799,7 +24682,7 @@ end subroutine RatePhaseChange
                 (local_freezing_model.eq.6)) then !Palmore/Desjardins
         ! do nothing
        else
-        print *,"local_freezing_model invalid"
+        print *,"local_freezing_model invalid 10"
         stop
        endif
 
@@ -25058,7 +24941,7 @@ end subroutine RatePhaseChange
           (local_freezing_model.le.7)) then
        ! do nothing
       else
-       print *,"local_freezing_model invalid"
+       print *,"local_freezing_model invalid 11"
        stop
       endif
       if ((local_freezing_model.eq.2).and. &
@@ -25290,7 +25173,7 @@ end subroutine RatePhaseChange
          print *,"cavitation model in development"
          stop
         else
-         print *,"local_freezing_model invalid"
+         print *,"local_freezing_model invalid 12"
          stop
         endif
 
@@ -25618,7 +25501,7 @@ end subroutine RatePhaseChange
         endif
 
        else
-        print *,"local_freezing_model invalid"
+        print *,"local_freezing_model invalid 13"
         stop
        endif
 

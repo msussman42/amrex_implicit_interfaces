@@ -14457,7 +14457,7 @@ stop
                  else if (local_freezing_model.eq.6) then !Palmore/Desjardins
                   ! do nothing
                  else
-                  print *,"local_freezing_model invalid"
+                  print *,"local_freezing_model invalid 15"
                   stop
                  endif
 
@@ -14478,6 +14478,10 @@ stop
                    else
                     print *,"LL invalid"
                     stop
+                   endif
+
+                   if (DEBUG_EVAPORATION.eq.1) then
+                    print *,"TGRAD_test=",TGRAD_TEST
                    endif
 
                     ! local_freezing_model=0 (sharp interface stefan model)
@@ -14523,8 +14527,11 @@ stop
                    else if ((local_freezing_model.eq.5).and. &
                             (TGRAD_test.le.zero)) then
                     ! do nothing
+                   else if ((local_freezing_model.eq.6).and. &
+                            (TGRAD_test.le.zero)) then
+                    ! do nothing
                    else
-                    print *,"local_freezing_model invalid"
+                    print *,"local_freezing_model invalid 16"
                     stop
                    endif
 
@@ -16513,7 +16520,7 @@ stop
       distribute_from_targ=distribute_from_target(indexEXP+1)
       if ((local_freezing_model.lt.0).or. &
           (local_freezing_model.gt.7)) then
-       print *,"local_freezing_model invalid"
+       print *,"local_freezing_model invalid 17"
        stop
       endif
       if ((distribute_from_targ.lt.0).or.(distribute_from_targ.gt.1)) then

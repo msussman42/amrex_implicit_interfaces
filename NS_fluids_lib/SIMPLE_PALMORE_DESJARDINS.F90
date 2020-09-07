@@ -687,6 +687,7 @@ REAL_T :: TEMPERATURE_analytical
 REAL_T :: Y_analytical
 REAL_T :: TEMPERATURE_compute
 REAL_T :: Y_compute
+REAL_T :: interface_thick_rad
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
@@ -704,10 +705,13 @@ if (nsum.eq.3) then
  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    xlocal(1),GRID_DATA_IN%time,use_T,Y_analytical, &
    LS_analytical)
+
+ interface_thick_rad=two*GRID_DATA_IN%dx(1)
  
  LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),1)
- if (abs(LS_analytical).lt.two*GRID_DATA_IN%dx(1)) then
-  increment_out(1)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)
+ if (abs(LS_analytical).lt.interface_thick_rad) then
+  increment_out(1)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
+    (two*interface_thick_rad)
  else
   increment_out(1)=zero
  endif
