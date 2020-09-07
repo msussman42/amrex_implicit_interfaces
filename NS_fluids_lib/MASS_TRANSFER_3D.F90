@@ -7219,7 +7219,7 @@ stop
                    else if (local_freezing_model.eq.0) then ! stefan cond
                     ! do nothing
                    else
-                    print *,"local_freezing_model invalid"
+                    print *,"local_freezing_model invalid 14"
                     stop
                    endif 
 
