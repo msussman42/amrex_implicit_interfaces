@@ -684,19 +684,25 @@ REAL_T :: xlocal(SDIM)
 REAL_T :: LS_analytical
 REAL_T :: LS_compute
 REAL_T :: TEMPERATURE_analytical
+REAL_T :: Y_analytical
 REAL_T :: TEMPERATURE_compute
+REAL_T :: Y_compute
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.eq.2) then
+if (nsum.eq.3) then
  do dir=1,SDIM
   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
  enddo
  use_T=1
  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    xlocal(1),GRID_DATA_IN%time,use_T,TEMPERATURE_analytical, &
+   LS_analytical)
+ use_T=0
+ call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+   xlocal(1),GRID_DATA_IN%time,use_T,Y_analytical, &
    LS_analytical)
  
  LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),1)
@@ -711,8 +717,12 @@ if (nsum.eq.2) then
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
   increment_out(2)=GRID_DATA_IN%volgrid* &
           abs(TEMPERATURE_compute-TEMPERATURE_analytical)
+  Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
+  increment_out(3)=GRID_DATA_IN%volgrid* &
+          abs(Y_compute-Y_analytical)
  else
   increment_out(2)=zero
+  increment_out(3)=zero
  endif
 else
  print *,"nsum invalid"
