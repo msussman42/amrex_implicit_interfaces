@@ -229,12 +229,20 @@ subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l)
  IMPLICIT NONE
  
  REAL_T, intent(out) :: l
- REAL_T :: a, b, c, fa, fc
+ REAL_T :: a, b, c, fa, fb, fc
  INTEGER_T :: iter
  
  !endpoints
  a = 0.0d0
  b = 5.0d0
+ call SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(a,fa)
+ call SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(b,fb)
+ if (fa*fb.le.0.0d0) then
+  ! do nothing
+ else
+  print *,"a,b is not a bracketing interval"
+  stop
+ endif
 
  iter = 1
  do while (iter.LT.100)
@@ -244,8 +252,11 @@ subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l)
   call SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(a,fa)
   if (fc*fa .GE. zero ) then
    a = c
-  else
+  else if (fc*fa.LE.zero) then
    b = c
+  else
+   print *,"bracketing interval property has been lost"
+   stop
   endif
  enddo ! iter.LT.100
  l=c

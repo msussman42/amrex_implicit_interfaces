@@ -1,7 +1,7 @@
 max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
-stop_time = 10  
+stop_time = 4.0  # case 1
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -55,7 +55,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
-amr.n_cell=128 16
+amr.n_cell=64 8
 amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
@@ -70,7 +70,7 @@ amr.check_int       = 100
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 100 # was 100  (plot_int=1 for testing)
+amr.plot_int        = 1 # was 100  (plot_int=1 for testing)
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -110,7 +110,9 @@ ns.freezing_model=6 0
 ns.mass_fraction_id=1 0 
 ns.saturation_temp = 373.15 0.0  # CODY ~ T_gamma = 373.15 K
 ns.temperature_primitive_variable=1 1 1 1
-#ns.fixed_dt	  = 0.01     # hardwire dt
+# coarse grid: 64x8 xhi=0.1 dx_coarse=0.1/64=0.0016
+# case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.08
+ns.fixed_dt	  = 0.01     # case 1
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   
