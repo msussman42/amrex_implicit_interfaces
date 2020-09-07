@@ -14481,6 +14481,19 @@ stop
                    endif
 
                    if (DEBUG_EVAPORATION.eq.1) then
+                    print *,"DEBUG_EVAPORATION STATEMENT 1"
+                    print *,"i,j,k,x,y,z ",i,j,k, &
+                        xsten(0,1),xsten(0,2),xsten(0,SDIM)
+                    print *,"im,im_opp,ireverse ",im,im_opp,ireverse
+                    print *,"im_source,im_dest ",im_source,im_dest
+                    print *,"LL ",LL
+                    print *,"project_option=",project_option
+                    print *,"Tgamma,TorYgamma_BC ",Tgamma,TorYgamma_BC
+                    print *,"im_crit=",im_crit
+                    print *,"T_MIN(im_crit) ",T_MIN(im_crit)
+                    print *,"T_MAX(im_crit) ",T_MAX(im_crit)
+                    print *,"TorY_MIN(im_crit) ",TorY_MIN(im_crit)
+                    print *,"TorY_MAX(im_crit) ",TorY_MAX(im_crit)
                     print *,"TGRAD_test=",TGRAD_TEST
                    endif
 
@@ -14754,7 +14767,7 @@ stop
             if (at_interface.eq.1) then
 
               ! cannot do tiling here.
-             if (adjust_temperature.eq.-1) then
+             if (adjust_temperature.eq.-1) then ! modify heatx,heaty,heatz
 
               if (dir.eq.1) then
                heatx(D_DECL(iface,jface,kface))=zero
@@ -14767,8 +14780,8 @@ stop
                stop
               endif
              
-             else if ((adjust_temperature.eq.0).or. &
-                      (adjust_temperature.eq.1)) then
+             else if ((adjust_temperature.eq.0).or. & ! modify coeff
+                      (adjust_temperature.eq.1)) then ! modify Snew and coeff
               ! do nothing
              else
               print *,"adjust_temperature invalid"
@@ -14840,6 +14853,14 @@ stop
               side_coeff=aface*heatcoeff/(theta*hx)
               delta_coeff=delta_coeff+side_coeff
               coeff_Tgamma=coeff_Tgamma+TorYgamma_BC*side_coeff
+
+              if (DEBUG_EVAPORATION.eq.1) then
+               print *,"DEBUG_EVAPORATION STATEMENT 2"
+               print *,"project_option,i,j,k,dir,side ", &
+                       project_option,i,j,k,dir,side
+               print *,"im_source,im_dest,TorYgamma_BC ", &
+                       im_source,im_dest,TorYgamma_BC
+              endif
              endif ! LS1 * LS2 <=0
 
             else if (at_interface.eq.0) then
@@ -14852,10 +14873,10 @@ stop
            enddo ! side=-1,1,2
           enddo ! dir=1..sdim
        
-          if (adjust_temperature.eq.-1) then
+          if (adjust_temperature.eq.-1) then ! modify heatxyz
            ! do nothing
-          else if ((adjust_temperature.eq.0).or. &
-                   (adjust_temperature.eq.1)) then
+          else if ((adjust_temperature.eq.0).or. & ! modify coeff
+                   (adjust_temperature.eq.1)) then ! modify Snew and coeff
  
            if (delta_coeff.gt.zero) then
 
@@ -14895,7 +14916,7 @@ stop
                stop
               endif
               Snew(D_DECL(i,j,k),tcomp)=T_adjust
-             enddo
+             enddo  ! im_adjust=1..nmat
 
              coeff(D_DECL(i,j,k),1)=T_adjust
 

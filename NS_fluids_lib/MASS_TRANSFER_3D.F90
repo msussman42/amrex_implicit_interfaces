@@ -7706,9 +7706,12 @@ stop
                   endif
 
                   if (at_interface.eq.1) then
-                   if (1.eq.0) then
+                   if (DEBUG_EVAPORATION.eq.1) then
+                    print *,"DEBUG_EVAPORATION STATEMENT 3"
                     print *,"i,j,k,TSAT_iter,TSAT_iter_max,TSAT_ERR ", &
                      i,j,k,TSAT_iter,TSAT_iter_max,TSAT_ERR
+                    print *,"TSAT_correct ",TSAT_correct
+                    print *,"Y_predict ",Y_predict
                    endif
                   endif
 
