@@ -95,8 +95,6 @@
       INTEGER_T num_materials
       INTEGER_T num_materials_vel
       INTEGER_T num_materials_scalar_solve
-      INTEGER_T fort_max_num_materials
-      INTEGER_T fort_max_num_eos
       INTEGER_T probtype, adv_dir, axis_dir
       INTEGER_T levelrz
       INTEGER_T prescribe_temperature_outflow

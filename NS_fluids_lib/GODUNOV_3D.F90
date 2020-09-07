@@ -652,7 +652,7 @@ stop
           (is_rigid(nmat,im).eq.1)) then
        density=fort_denconst(im)
       else if ((fort_material_type(im).ge.0).and. &
-               (fort_material_type(im).le.fort_max_num_eos)) then
+               (fort_material_type(im).le.MAX_NUM_EOS)) then
 
        if (fort_material_type(im).eq.0) then
 
@@ -10046,7 +10046,7 @@ stop
          else if (imattype.eq.0) then
           ! do nothing
          else if ((imattype.gt.0).and. &
-                  (imattype.le.fort_max_num_eos)) then
+                  (imattype.le.MAX_NUM_EOS)) then
           ok_to_update(icomp)=1 ! density (I-scheme)
          else
           print *,"imattype invalid fort_sdc_time_quad"
@@ -17787,7 +17787,7 @@ stop
        else if (fort_material_type(im).eq.999) then
         ! do nothing
        else if ((fort_material_type(im).ge.1).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
         all_incomp=0
        else
         print *,"fort_material_type invalid"
@@ -19886,7 +19886,7 @@ stop
               snew_hold(dencomp+tempcomp_data)=ETcore
              else if (is_rigid(nmat,im).eq.0) then
               if ((fort_material_type(im).ge.0).and. &
-                  (fort_material_type(im).le.fort_max_num_eos)) then
+                  (fort_material_type(im).le.MAX_NUM_EOS)) then
                ! do nothing
               else
                print *,"fort_material_type invalid"
@@ -20636,7 +20636,7 @@ stop
        else if (fort_material_type(u_im).eq.999) then
         ! do nothing
        else if ((fort_material_type(u_im).ge.1).and. &
-                (fort_material_type(u_im).le.fort_max_num_eos)) then
+                (fort_material_type(u_im).le.MAX_NUM_EOS)) then
         all_incomp=0
        else
         print *,"fort_material_type invalid"
@@ -22779,7 +22779,7 @@ stop
                snew_hold(dencomp+tempcomp_data)=ETcore
               else if (is_rigid(nmat,u_im).eq.0) then
                if ((fort_material_type(u_im).ge.0).and. &
-                   (fort_material_type(u_im).le.fort_max_num_eos)) then
+                   (fort_material_type(u_im).le.MAX_NUM_EOS)) then
                 ! do nothing
                else
                 print *,"fort_material_type invalid"

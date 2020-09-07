@@ -718,7 +718,7 @@ stop
        if (fort_material_type(im_primary).eq.0) then
         USOUND_local=1.0D+20  ! these materials do not compress
        else if ((fort_material_type(im_primary).ge.1).and. &
-                (fort_material_type(im_primary).le.fort_max_num_eos)) then
+                (fort_material_type(im_primary).le.MAX_NUM_EOS)) then
         den_local=den((im_primary-1)*num_state_material+1)
         temp_local=den((im_primary-1)*num_state_material+2)
 
@@ -4753,7 +4753,7 @@ end subroutine dynamic_contact_angle
         print *,"pressure cutoff should be 0 for incomp materials"
         stop
        else if ((imattype.ge.1).and. &
-                (imattype.le.fort_max_num_eos)) then
+                (imattype.le.MAX_NUM_EOS)) then
 
          ! pressure comes from the compressible projection method, not
          ! the equation of state.
@@ -4768,7 +4768,7 @@ end subroutine dynamic_contact_angle
          call tait_hydrostatic_pressure_density(xpos,atmos_den,atmos_pres, &
                  from_boundary_hydrostatic)
         else if ((imattype.ge.2).and. &
-                 (imattype.le.fort_max_num_eos)) then
+                 (imattype.le.MAX_NUM_EOS)) then
          call general_hydrostatic_pressure(atmos_pres)
         else 
          print *,"imattype invalid EOS_error_ind"
@@ -4833,7 +4833,7 @@ end subroutine dynamic_contact_angle
        flag=1
       else if (imattype.eq.20) then  ! EOS_tait_vacuum
        flag=1
-      else if ((imattype.gt.0).and.(imattype.le.fort_max_num_eos)) then
+      else if ((imattype.gt.0).and.(imattype.le.MAX_NUM_EOS)) then
        flag=0
       else
        print *,"material type invalid"
@@ -4864,7 +4864,7 @@ end subroutine dynamic_contact_angle
 
       verbose_EOS=0
       mat_type=fort_material_type(im)
-      if ((mat_type.gt.0).and.(mat_type.le.fort_max_num_eos)) then
+      if ((mat_type.gt.0).and.(mat_type.le.MAX_NUM_EOS)) then
        if (verbose_EOS.eq.1) then
         temperature=fort_tempconst(im)
         print *,"EOS and C2 files when temperature=",temperature
@@ -5003,7 +5003,7 @@ end subroutine dynamic_contact_angle
        call DeDT_dodecane(rho,temperature,DeDT)
       else if ((imattype.eq.999).or. &
                (imattype.eq.0).or. &
-               ((imattype.ge.1).and.(imattype.le.fort_max_num_eos))) then
+               ((imattype.ge.1).and.(imattype.le.MAX_NUM_EOS))) then
        call INTERNAL_material(rho,massfrac_parm, &
          temperature,e1,imattype,im)
        DT=temperature*1.0E-6
@@ -18123,7 +18123,7 @@ END SUBROUTINE Adist
         endif
         local_incomp=1
        else if ((fort_material_type(maskSEM).gt.0).and. &
-                (fort_material_type(maskSEM).le.fort_max_num_eos).and. &
+                (fort_material_type(maskSEM).le.MAX_NUM_EOS).and. &
                 (is_rigid(nmat,maskSEM).eq.0).and. &
                 (fort_material_type(maskSEM).ne.999).and. &
                 (is_FSI_rigid(nmat,maskSEM).eq.0).and. &
@@ -19287,7 +19287,7 @@ END SUBROUTINE Adist
              else if (imattype.eq.0) then
               ! do nothing
              else if ((imattype.gt.0).and. &
-                      (imattype.le.fort_max_num_eos)) then
+                      (imattype.le.MAX_NUM_EOS)) then
               dendest(D_DECL(ic,jc,kc),ibase+1)=den_new
              else
               print *,"imattype invalid SEM_MAC_TO_CELL"
@@ -27776,8 +27776,6 @@ end subroutine initialize2d
          ccnum_state_base, &
          ccngeom_raw, &
          ccngeom_recon, &
-         ccfortran_max_num_materials, &
-         ccfort_max_num_eos, &
          ccnum_materials, &
          ccnum_materials_vel, &
          ccnum_materials_scalar_solve, &
@@ -27896,8 +27894,6 @@ end subroutine initialize2d
        INTEGER_T ccnum_state_base
        INTEGER_T ccngeom_raw
        INTEGER_T ccngeom_recon
-       INTEGER_T ccfortran_max_num_materials
-       INTEGER_T ccfort_max_num_eos
        INTEGER_T ccnum_materials_vel
        INTEGER_T ccnum_materials_scalar_solve
 
@@ -28304,8 +28300,6 @@ end subroutine initialize2d
        outflow_pressure=ccoutflow_pressure
        period_time=ccperiod_time
 
-       fort_max_num_eos=ccfort_max_num_eos
-
        do im=1,num_materials
 
         fort_material_type(im)=ccmaterial_type(im)
@@ -28320,7 +28314,7 @@ end subroutine initialize2d
           stop
          endif
         else if ((fort_material_type(im).gt.0).and. &
-                 (fort_material_type(im).le.fort_max_num_eos)) then
+                 (fort_material_type(im).le.MAX_NUM_EOS)) then
          ! do nothing
         else
          print *,"fort_material_type invalid"
@@ -28347,7 +28341,6 @@ end subroutine initialize2d
        endif
 
        num_materials_viscoelastic=ccnum_materials_viscoelastic
-       fort_max_num_materials=ccfortran_max_num_materials
        num_materials_vel=ccnum_materials_vel
        num_materials_scalar_solve=ccnum_materials_scalar_solve
 
@@ -28367,9 +28360,8 @@ end subroutine initialize2d
        if ((num_species_var.lt.0).or. &
            (num_materials_viscoelastic.lt.0).or. &
            (num_materials_viscoelastic.gt.num_materials).or. &
-           (fort_max_num_materials.ne.MAX_NUM_MATERIALS).or. &
            (num_materials.lt.1).or. &
-           (num_materials.gt.fort_max_num_materials).or. &
+           (num_materials.gt.MAX_NUM_MATERIALS).or. &
            (num_materials.gt.100).or. &
            (num_materials_vel.ne.1).or. &
            ((num_materials_scalar_solve.ne.1).and. &
@@ -28399,12 +28391,12 @@ end subroutine initialize2d
         print *,"bfact_time_order ",bfact_time_order
 
         print *,"fort material parameters"
-        print *,"numspec,num_mat_visc,max_num_materials,num_materials ", &
+        print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS,num_materials ", &
          num_species_var,num_materials_viscoelastic, &
-         fort_max_num_materials,num_materials
+         MAX_NUM_MATERIALS,num_materials
         print *,"num_materials_vel ",num_materials_vel
         print *,"num_materials_scalar_solve ",num_materials_scalar_solve
-        print *,"fort_max_num_eos ",fort_max_num_eos
+        print *,"MAX_NUM_EOS ",MAX_NUM_EOS
         print *,"ngeom_raw ",ngeom_raw
         print *,"ngeom_recon ",ngeom_recon
         print *,"fort: num_state_material ",num_state_material
@@ -28812,7 +28804,7 @@ end subroutine initialize2d
         else if (fort_material_type(im).eq.999) then
          ! do nothing
         else if ((fort_material_type(im).gt.0).and. &
-                 (fort_material_type(im).le.fort_max_num_eos)) then
+                 (fort_material_type(im).le.MAX_NUM_EOS)) then
          call debug_EOS(im)
         else
          print *,"fort_material_type invalid"

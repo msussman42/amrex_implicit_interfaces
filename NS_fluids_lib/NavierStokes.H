@@ -12,13 +12,6 @@ namespace {
 
 namespace amrex{
 
-#define MAX_NUM_MATERIALS 20
-#define MAX_NUM_SPECIES 20
-#define MAX_NUM_EOS 24
-
-// (1/2) ( (n-1)^2 + n-1 )
-#define MAX_NUM_TENSION 190
-
 // assume 3d for face declarations.
 
 #define OFF_DIAG_CHECK_MF 0  // nsolveMM components

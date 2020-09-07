@@ -1357,7 +1357,7 @@ void fortran_parameters() {
  int ngeom_recon=NUM_MOF_VAR;
 
  pp.get("num_materials",num_materials);
- if ((num_materials<2)||(num_materials>MAX_NUM_MATERIALS))
+ if ((num_materials<2)||(num_materials>999))
   amrex::Error("num materials invalid");
 
  int nmat=num_materials;
@@ -1386,8 +1386,6 @@ void fortran_parameters() {
  if ((MOF_DEBUG_RECON!=0)&&(MOF_DEBUG_RECON!=1)&&
      (MOF_DEBUG_RECON!=2))
   amrex::Error("mof debug recon invalid in navierstokes");
-
- int fortran_max_num_materials=MAX_NUM_MATERIALS;
 
  pp.get("num_species_var",num_species_var);
  if (num_species_var<0)
@@ -1586,7 +1584,7 @@ void fortran_parameters() {
     amrex::Error("FSI_flag_temp invalid");
 
   } else if ((material_type_temp[im]>0)&& 
-             (material_type_temp[im]<=MAX_NUM_EOS)) {
+             (material_type_temp[im]<999)) {
 
    if ((FSI_flag_temp[im]!=0)&&   // tessallating
        (FSI_flag_temp[im]!=7))    // fluid, tessellating
@@ -1672,8 +1670,6 @@ void fortran_parameters() {
  } else
   amrex::Error("n_sites invalid");
 
- int cpp_max_num_eos=MAX_NUM_EOS;
-
  FORT_OVERRIDE(
   &ns_max_level,
   ns_space_blocking_factor.dataPtr(),
@@ -1703,16 +1699,17 @@ void fortran_parameters() {
   &probtype,&adv_dir,&adv_vel,
   &axis_dir,&rgasinlet,
   &vinletgas,&twall,&advbot, 
-  &inflow_pressure,&outflow_pressure,
+  &inflow_pressure,
+  &outflow_pressure,
   &period_time,
-  &problox,&probloy,&probloz,&probhix,&probhiy,&probhiz,
+  &problox,&probloy,&probloz,
+  &probhix,&probhiy,&probhiz,
   &num_species_var,
   &num_materials_viscoelastic,
   &num_state_material,
   &num_state_base,
-  &ngeom_raw,&ngeom_recon,
-  &fortran_max_num_materials,
-  &cpp_max_num_eos,
+  &ngeom_raw,
+  &ngeom_recon,
   &nmat,
   &num_materials_vel,
   &num_materials_scalar_solve,
@@ -1908,7 +1905,7 @@ NavierStokes::read_params ()
     num_materials_vel=1;
     num_materials_scalar_solve=1;
     pp.get("num_materials",num_materials);
-    if ((num_materials<2)||(num_materials>MAX_NUM_MATERIALS))
+    if ((num_materials<2)||(num_materials>999))
      amrex::Error("num materials invalid");
 
     int nmat=num_materials;
@@ -2498,7 +2495,7 @@ NavierStokes::read_params ()
       if (ns_is_rigid(i)!=1)
        amrex::Error("ns_is_rigid invalid");
      } else if ((material_type[i]>0)&&
-                (material_type[i]<=MAX_NUM_EOS)) {
+                (material_type[i]<999)) {
       if (ns_is_rigid(i)!=0)
        amrex::Error("ns_is_rigid invalid");
      } else
@@ -2569,7 +2566,7 @@ NavierStokes::read_params ()
     num_species_var=0;
 
     pp.get("num_species_var",num_species_var);
-    if ((num_species_var<0)||(num_species_var>MAX_NUM_SPECIES))
+    if ((num_species_var<0)||(num_species_var>999))
      amrex::Error("num species var invalid");
 
     massface_index=facespecies_index+num_species_var;
@@ -2591,8 +2588,6 @@ NavierStokes::read_params ()
     if ((MOF_DEBUG_RECON!=0)&&(MOF_DEBUG_RECON!=1)&&
         (MOF_DEBUG_RECON!=2))
      amrex::Error("mof debug recon invalid in navierstokes");
-
-    int fortran_max_num_materials=MAX_NUM_MATERIALS;
 
     num_state_base=SpeciesVar;  // den,Temperature
     num_state_material=SpeciesVar;  // den,Temperature
@@ -3114,7 +3109,7 @@ NavierStokes::read_params ()
       if (ns_is_rigid(im)!=0)
        amrex::Error("ns_is_rigid invalid");
      } else if ((material_type[im]>0)&& 
-                (material_type[im]<=MAX_NUM_EOS)) {
+                (material_type[im]<999)) {
       if (ns_is_rigid(im)!=0)
        amrex::Error("ns_is_rigid invalid");
      } else {
@@ -3316,7 +3311,7 @@ NavierStokes::read_params ()
           (CTML_FSI_matC(i)==0)&&
           (visc_coef*viscconst[i]==0)&& 
           (material_type[i]>=1)&&
-          (material_type[i]<=MAX_NUM_EOS)) {
+          (material_type[i]<999)) {
        amrex::Error("make temperature_primitive_variable=1 for inv gases");
       }
      } else {
@@ -4192,8 +4187,6 @@ NavierStokes::read_params ()
      std::cout << "num_materials_vel " << num_materials_vel << '\n';
      std::cout << "num_materials_scalar_solve " << 
       num_materials_scalar_solve << '\n';
-     std::cout << "fortran_max_num_materials " << 
-       fortran_max_num_materials << '\n';
      std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
      std::cout << "MOF_DEBUG_RECON= " << MOF_DEBUG_RECON << '\n';
      std::cout << "MOF_TURN_OFF_LS= " << MOF_TURN_OFF_LS << '\n';
@@ -4716,12 +4709,12 @@ int NavierStokes::some_materials_compressible() {
  int comp_flag=0;
  int nmat=num_materials;
  for (int im=0;im<nmat;im++) {
-  int imat=material_type[im];
-  if (imat==999) {
+  int imat_type=material_type[im];
+  if (imat_type==999) {
     // do nothing
-  } else if (imat==0) {
+  } else if (imat_type==0) {
     // do nothing
-  } else if ((imat>=1)&&(imat<=MAX_NUM_EOS)) {
+  } else if ((imat_type>=1)&&(imat_type<999)) {
    comp_flag=1;
   } else
    amrex::Error("material type invalid");
