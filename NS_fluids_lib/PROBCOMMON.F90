@@ -135,7 +135,8 @@ implicit none
          ! CP=1.007D+7 Specific heat at constant pressure cgs ergs/(Kelvin g)
          ! GAMMA=CP/CV=1.39861
       REAL_T, PARAMETER :: R_AIR_PARMS=0.287D+7  ! ergs/(Kelvin g)
-      REAL_T, PARAMETER :: R_Palmore_Desjardins=0.287D+7  ! ergs/(Kelvin g)
+        ! ergs/(Kelvin mol)
+      REAL_T, PARAMETER :: R_Palmore_Desjardins=8.31446261815324D+7  
       REAL_T, PARAMETER :: CV_AIR_PARMS=0.72D+7  ! ergs/(Kelvin g)
       REAL_T, PARAMETER :: PCAV_TAIT=220.2726D0  ! cgs dyne/cm^2
       REAL_T, PARAMETER :: PCAV_TAIT_VACUUM=220.2726D0  ! dyne/cm^2

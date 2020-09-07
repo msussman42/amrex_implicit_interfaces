@@ -1677,7 +1677,8 @@ stop
       if ((Tsat.ge.zero).and.(Tsat.le.1.0D+99)) then
        ! do nothing
       else
-       print *,"Tsat out of range"
+       print *,"Tsat out of range 1"
+       print *,"Tsat= ",Tsat
        stop
       endif
 
@@ -1863,7 +1864,8 @@ stop
       if ((Tsat.ge.zero).and.(Tsat.le.1.0D+99)) then
        ! do nothing
       else
-       print *,"Tsat out of range"
+       print *,"Tsat out of range 2"
+       print *,"Tsat=",Tsat
        stop
       endif
 
