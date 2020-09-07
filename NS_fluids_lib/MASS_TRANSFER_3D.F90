@@ -2040,6 +2040,20 @@ stop
       REAL_T LSPROBE(num_materials)
       REAL_T F_tess(num_materials)
 
+      if ((Y_I.ge.zero).and.(Y_I.le.one)) then
+       ! do nothing
+      else
+       print *,"Y_I out of range"
+       print *,"Y_I= ",Y_I
+       stop
+      endif
+      if ((T_I.ge.zero).and.(T_I.le.1.0D+99)) then
+       ! do nothing
+      else
+       print *,"T_I out of range"
+       print *,"T_I= ",T_I
+       stop
+      endif
        ! 0=cannot do least squares interp or supermesh interp.
        ! 1=can do least squares interp
        ! 2=can do supermesh interp.
@@ -2669,6 +2683,7 @@ stop
         else if ((Y_I.ge.YI_min).and.(Y_I.lt.one)) then
          T_I_iter_max=5
          T_I_iter=0
+         T_I=T_Y_PARMS%TSAT_base
          T_I_old=T_I
          T_I_new=T_I
          T_I_converge=0

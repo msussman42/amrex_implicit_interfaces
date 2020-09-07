@@ -7,7 +7,7 @@ stop_time = 4.0  # case 1
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => XYZ, 1 => RZ
 geometry.prob_lo   =  0.0 0.0   
-geometry.prob_hi=0.1 0.0125   # CODY~ domain is 1mm in length (0.1 cm)
+geometry.prob_hi=0.1 0.025   # CODY~ domain is 1mm in length (0.1 cm)
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.num_materials_vel=1
@@ -55,7 +55,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
-amr.n_cell=64 8
+amr.n_cell=32 8  # convergence 32x8 coarsest
 amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
@@ -70,7 +70,7 @@ amr.check_int       = 100
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 1 # was 100  (plot_int=1 for testing)
+amr.plot_int        = 10 # was 100  (plot_int=1 for testing)
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -100,7 +100,7 @@ ns.conservative_tension_force=0
 ns.tension=0.0  # CODY ~ sigma_liquid=0.01 N/m  (10 g/s^2)
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
-ns.latent_heat = 1.0e+10 0.0 #CODY:specific latent heat of boiling 
+ns.latent_heat = 1.0e+10 0.0 #CODY:specific latent heat of boiling J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
@@ -110,9 +110,10 @@ ns.freezing_model=6 0
 ns.mass_fraction_id=1 0 
 ns.saturation_temp = 373.15 0.0  # CODY ~ T_gamma = 373.15 K
 ns.temperature_primitive_variable=1 1 1 1
-# coarse grid: 64x8 xhi=0.1 dx_coarse=0.1/64=0.0016
-# case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.08
-ns.fixed_dt	  = 0.01     # case 1
+# convergence
+# coarse grid: 32x8 xhi=0.1 dx_coarse=0.1/32=0.0032
+# case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.16 coarsest
+#ns.fixed_dt	  = 0.016     # case 1 0.016 is coarsest
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   
@@ -139,8 +140,8 @@ ns.heatviscconst_interface=0.0
 ns.speciesviscconst=0.0 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # D=0.1  lambda=k/(rho Cp)=1000/(0.001 * 1.0D+7) = 0.1
 # 1=water 2=gas  
-ns.speciesconst=1.0 1.0  # case 1 film boiling
-#ns.speciesconst=0.221022 0.2  # case 2 general vaporization
+#ns.speciesconst=1.0 1.0  # case 1 film boiling
+ns.speciesconst=0.221022 0.2  # case 2 general vaporization
 ns.viscconst=0.0 0.0 # CODY ~ (not used, must be zero)
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
@@ -160,8 +161,8 @@ ns.FSI_flag=0 0
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
 # 1=water 2=gas   
-ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
-#ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
+#ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
+ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #0.02cm
 ns.xblob2=0.02 #CODY this is physical location corresponding to x=0
 ns.xblob=0.02  #CODY
