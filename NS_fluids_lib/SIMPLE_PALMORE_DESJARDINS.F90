@@ -188,18 +188,29 @@ subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f)
 
  call Tgamma_from_TSAT(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
    T_gamma_min,T_gamma_max)
- if (abs(T_gamma-T_gamma_test).le.1.0D-8) then
+ if (abs(T_gamma-T_gamma_test).le.0.5d0) then
   ! do nothing
  else
-  print *,"T_gamma_test invalid"
+  print *,"T_gamma_test invalid1"
+  print *,"T_gamma= ",T_gamma
+  print *,"T_gamma_test= ",T_gamma_test
+  print *,"T_sat= ",T_sat
+  print *,"X_gamma= ",X_gamma
+  print *,"L_V= ",L_V
+  print *,"R= ",R
+  print *,"WV= ",WV
+  print *,"T_gamma_min ",T_gamma_min
+  print *,"T_gamma_max ",T_gamma_max
   stop
  endif
 
  call X_from_Tgamma(X_gamma_test,T_gamma,T_sat,L_V,R,WV) 
- if (abs(X_gamma-X_gamma_test).le.1.0D-8) then
+ if (abs(X_gamma-X_gamma_test).le.0.001d0) then
   ! do nothing
  else
-  print *,"X_gamma_test invalid"
+  print *,"X_gamma_test invalid 2"
+  print *,"X_gamma= ",X_gamma
+  print *,"X_gamma_test= ",X_gamma_test
   stop
  endif
 
@@ -215,6 +226,13 @@ subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f)
   ! do nothing
  else
   print *,"T_inf, T_gamma, T_sat, l, or D_G invalid"
+  print *,"T_inf=",T_inf
+  print *,"T_gamma=",T_gamma
+  print *,"T_sat=",T_sat
+  print *,"l=",l
+  print *,"Y_G=",Y_G
+  print *,"lambda=",lambda
+  print *,"D_G=",D_G
   stop
  endif
  JINT=0 ! JINT=2 => exp(l^2)erf(l) but xneg<l<xmax
@@ -280,7 +298,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  INTEGER_T, intent(in) :: use_T
  REAL_T :: T_inf, T_gamma, T_sat, lambda
  REAL_T :: k_G, den_G, D_G
- REAL_T :: L_V,C_pG,TY_eqn
+ REAL_T :: L_V,C_pG
  REAL_T, intent(out) :: TorY,LS_exact
  INTEGER_T :: JINT
  REAL_T erf_result_x 
@@ -327,18 +345,22 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
 
  call Tgamma_from_TSAT(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
    T_gamma_min,T_gamma_max)
- if (abs(T_gamma-T_gamma_test).le.1.0D-8) then
+ if (abs(T_gamma-T_gamma_test).le.0.5d0) then
   ! do nothing
  else
-  print *,"T_gamma_test invalid"
+  print *,"T_gamma_test invalid2"
+  print *,"T_gamma= ",T_gamma
+  print *,"T_gamma_test= ",T_gamma_test
   stop
  endif
 
  call X_from_Tgamma(X_gamma_test,T_gamma,T_sat,L_V,R,WV) 
- if (abs(X_gamma-X_gamma_test).le.1.0D-8) then
+ if (abs(X_gamma-X_gamma_test).le.0.001d0) then
   ! do nothing
  else
-  print *,"X_gamma_test invalid"
+  print *,"X_gamma_test invalid 1"
+  print *,"X_gamma= ",X_gamma
+  print *,"X_gamma_test= ",X_gamma_test
   stop
  endif
 
@@ -354,8 +376,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  endif
  lambda=k_G/(den_G*C_pG)
 
- TY_eqn=(Y_gamma-1.0d0)*C_pG*(T_gamma-T_inf) - &
-        (Y_gamma-Y_inf)
+ T_gamma_test=T_inf+(L_V/C_pG)*(Y_gamma-Y_inf)/(Y_gamma-1.0d0)
 
    ! required that D_G=lambda
  if ((T_inf.gt.T_gamma).and. &
@@ -363,10 +384,19 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
      (T_gamma.le.T_sat).and. &
      (l_verification.ge.zero).and. &
      (abs(lambda-D_G).lt.1.0D-8).and. &
-     (abs(TY_eqn).lt.1.0D-8)) then
+     (abs(T_gamma_test-T_gamma).lt.1.0D-3)) then
   ! do nothing
  else
   print *,"T_inf, T_sat, T_gamma, l, D_G, or TY_eqn invalid"
+  print *,"T_inf=",T_inf
+  print *,"T_gamma=",T_gamma
+  print *,"T_sat=",T_sat
+  print *,"l_verification=",l_verification
+  print *,"Y_gamma=",Y_gamma
+  print *,"Y_inf=",Y_inf
+  print *,"lambda=",lambda
+  print *,"D_G=",D_G
+  print *,"T_gamma_test=",T_gamma_test
   stop
  endif
 
@@ -462,9 +492,11 @@ if ((num_materials.eq.2).and. &
    stop
   endif
 
+   ! TEMPERATURE
   use_T=1
   call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    x(1),t,use_T,STATE(ibase+2),LS_exact)
+   ! MASS FRACTION
   use_T=0
   call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    x(1),t,use_T,STATE(ibase+3),LS_exact)

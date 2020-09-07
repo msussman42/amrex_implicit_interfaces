@@ -15564,6 +15564,25 @@ if ((X.ge.zero).and.(X.le.one)) then
     print *,"Tgamma invalid in Tgamma_from_TSAT"
     stop
    endif
+   if (L.gt.zero) then
+    if (Tgamma.le.TSAT) then
+     ! do nothing
+    else
+     print *,"expecting Tgamma<=TSAT"
+     stop
+    endif
+   else if (L.lt.zero) then
+    if (Tgamma.ge.TSAT) then
+     ! do nothing
+    else
+     print *,"expecting Tgamma>=TSAT"
+     stop
+    endif
+   else
+    print *,"L invalid"
+    stop
+   endif
+
   else
    print *,"X invalid in Tgamma_from_TSAT"
    stop
