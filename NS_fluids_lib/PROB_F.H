@@ -229,8 +229,6 @@ namespace amrex{
        int* num_state_base, 
        int* ngeom_raw,
        int* ngeom_recon,
-       int* fortran_max_num_materials,
-       int* cpp_max_num_eos,
        int* num_materials,
        int* num_materials_vel,
        int* num_materials_scalar_solve,

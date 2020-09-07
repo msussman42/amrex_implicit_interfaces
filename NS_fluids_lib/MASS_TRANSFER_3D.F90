@@ -2122,7 +2122,7 @@ stop
 
        mtype=fort_material_type(im_target_probe(iprobe))
        if ((mtype.ge.0).and. &
-           (mtype.le.fort_max_num_eos)) then
+           (mtype.le.MAX_NUM_EOS)) then
         call interpfabFWEIGHT( &
          PROBE_PARMS%bfact, &
          PROBE_PARMS%level, &
@@ -4675,7 +4675,7 @@ stop
               mtype=fort_material_type(im_probe)
               if (mtype.eq.0) then
                density_new(iprobe)=unsplit_density(im_probe) 
-              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
+              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
                density_new(iprobe)=unsplit_density(im_probe) 
               else
                print *,"mtype invalid"
@@ -4705,7 +4705,7 @@ stop
               mtype=fort_material_type(im_probe)
               if (mtype.eq.0) then
                density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
-              else if ((mtype.ge.1).and.(mtype.le.fort_max_num_eos)) then
+              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
                density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
               else
                print *,"mtype invalid"
@@ -4848,7 +4848,7 @@ stop
                 print *,"abs(gas_den_ratio-one) invalid"
                 stop
                endif
-              else if (((mtype.ge.1).and.(mtype.le.fort_max_num_eos)).or. &
+              else if (((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)).or. &
                        (abs(ambient_den-vapor_den).le.1.0D-3*vapor_den)) then
                mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
                 dF)/temp_new_vfrac
@@ -4871,7 +4871,7 @@ stop
                if (mtype.eq.0) then
                 density_mix_new(1)=density_old(1)
                else if ((mtype.ge.1).and. &
-                        (mtype.le.fort_max_num_eos)) then
+                        (mtype.le.MAX_NUM_EOS)) then
                 density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
                  condensed_den*dF)/temp_new_vfrac
                 if (density_mix_new(1).gt.zero) then
@@ -4910,7 +4910,7 @@ stop
                if (mtype.eq.0) then
                 density_mix_new(2)=density_old(2)
                else if ((mtype.ge.1).and. &
-                        (mtype.le.fort_max_num_eos)) then
+                        (mtype.le.MAX_NUM_EOS)) then
                 density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
                  condensed_den*dF)/temp_new_vfrac
                else

@@ -106,12 +106,14 @@ implicit none
 ! fort_density_floor and fort_density_ceiling added: January 8, 2019
 ! fort_ZEYU_DCA_SELECT added: January 20, 2020
 ! fort_molar_mass added: September 5, 2020.
+! fort_max_num_materials and fort_max_num_eos deleted: September 6, 2020.
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
       INTEGER_T, PARAMETER :: MAX_NUM_INTERFACES=55
       INTEGER_T, PARAMETER :: MAX_NUM_SPECIES=10
+      INTEGER_T, PARAMETER :: MAX_NUM_EOS=24
 
 #include "probdataf95.H"
 

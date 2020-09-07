@@ -6696,7 +6696,7 @@ stop
        else if (fort_material_type(im).eq.999) then
         ! do nothing
        else if ((fort_material_type(im).gt.0).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
         ! do nothing
        else 
         print *,"material_type invalid"
@@ -8778,7 +8778,7 @@ stop
          stop
         endif
        else if ((fort_material_type(im).gt.0).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
         ! do nothing
        else 
         print *,"material_type invalid"
@@ -9101,7 +9101,7 @@ stop
          stop
         endif
        else if ((fort_material_type(im).gt.0).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
         ! do nothing
        else 
         print *,"material_type invalid"
@@ -9119,7 +9119,7 @@ stop
        else if (fort_material_type(im).eq.999) then
         ! do nothing
        else if ((fort_material_type(im).ge.1).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
         all_incomp=0
        else
         print *,"fort_material_type invalid"
@@ -9247,7 +9247,7 @@ stop
              (fort_material_type(im_primary).eq.999)) then
           local_mask=1
          else if ((fort_material_type(im_primary).gt.0).and. &
-                  (fort_material_type(im_primary).le.fort_max_num_eos)) then
+                  (fort_material_type(im_primary).le.MAX_NUM_EOS)) then
           ! do nothing 
          else 
           print *,"material_type invalid"
@@ -9419,7 +9419,7 @@ stop
        else if (fort_material_type(im).eq.999) then
         ! do nothing
        else if ((fort_material_type(im).gt.0).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
         ! do nothing
        else 
         print *,"material_type invalid"
@@ -9920,7 +9920,7 @@ stop
        if (imattype.eq.999) then
         ! do nothing
        else if ((imattype.ge.0).and. &
-                (imattype.le.fort_max_num_eos)) then
+                (imattype.le.MAX_NUM_EOS)) then
         ! do nothing
        else
         print *,"imattype invalid fort_mac_to_cell"
@@ -10388,7 +10388,7 @@ stop
        else if (fort_material_type(im).eq.999) then
         ! do nothing
        else if ((fort_material_type(im).ge.1).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
         all_incomp=0
        else
         print *,"fort_material_type invalid"
@@ -11031,7 +11031,7 @@ stop
            else if (imattype.eq.0) then
             use_face_pres_cen=2 ! no div(up)
            else if ((imattype.ge.1).and. &
-                    (imattype.le.fort_max_num_eos)) then
+                    (imattype.le.MAX_NUM_EOS)) then
             ! do nothing
            else
             print *,"imattype or FSI_flag invalid"
@@ -12140,7 +12140,7 @@ stop
        if (imattype.eq.999) then
         ! do nothing
        else if ((imattype.ge.0).and. &
-                (imattype.le.fort_max_num_eos)) then
+                (imattype.le.MAX_NUM_EOS)) then
         ! do nothing
        else
         print *,"imattype invalid fort_inc_temp"
@@ -12245,7 +12245,7 @@ stop
             endif
             imattype=fort_material_type(im)
             if ((imattype.gt.0).and. &
-                (imattype.le.fort_max_num_eos)) then
+                (imattype.le.MAX_NUM_EOS)) then
 
              call init_massfrac_parm(rho,massfrac_parm,im)
              do ispec=1,num_species_var
@@ -13068,7 +13068,7 @@ stop
        else if (fort_material_type(im).eq.999) then
         ! do nothing
        else if ((fort_material_type(im).ge.1).and. &
-                (fort_material_type(im).le.fort_max_num_eos)) then
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
         all_incomp=0
        else
         print *,"fort_material_type invalid"
@@ -14720,7 +14720,7 @@ stop
               else if (imattype.eq.999) then ! rigid material
                ok_to_HO_interp=0
               else if ((imattype.gt.0).and. &
-                       (imattype.le.fort_max_num_eos)) then
+                       (imattype.le.MAX_NUM_EOS)) then
                ! do nothing
               else
                print *,"imattype invalid cell_to_mac"
@@ -16061,7 +16061,7 @@ stop
                 state_stencil(istate)=fort_denconst(im)
                 ! compressible
                else if ((fort_material_type(im).gt.0).and. &
-                        (fort_material_type(im).le.fort_max_num_eos)) then 
+                        (fort_material_type(im).le.MAX_NUM_EOS)) then 
                 state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),dencomp)
                else
                 print *,"fort_material_type invalid"

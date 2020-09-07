@@ -469,7 +469,7 @@ NavierStokes::variableSetUp ()
 
     int null_ncomp_particles=0; 
 
-    if ((nmat<1)||(nmat>MAX_NUM_MATERIALS)) {
+    if ((nmat<1)||(nmat>999)) {
      std::cout << "nmat= " << nmat << '\n';
      amrex::Error("nmat invalid in ns setup variable setup");
     }

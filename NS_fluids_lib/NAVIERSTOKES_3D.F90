@@ -12133,7 +12133,7 @@ END SUBROUTINE SIMP
 
         ! compressible material
         if ((fort_material_type(im_primary).gt.0).and. &
-            (fort_material_type(im_primary).le.fort_max_num_eos)) then
+            (fort_material_type(im_primary).le.MAX_NUM_EOS)) then
 
          rho=den(D_DECL(i,j,k),ibase+1)
          if (rho.gt.zero) then
@@ -12702,7 +12702,7 @@ END SUBROUTINE SIMP
           
             ! compressible material ? 
            if ((fort_material_type(im).ge.1).and. &
-               (fort_material_type(im).le.fort_max_num_eos).and. &
+               (fort_material_type(im).le.MAX_NUM_EOS).and. &
                (vfrac(im).gt.zero)) then
 
               ! returns p(e*scale)/scale
@@ -12904,7 +12904,7 @@ END SUBROUTINE SIMP
 
             ! im_weight is a compressible material
            if ((fort_material_type(im_weight).ge.1).and. &
-               (fort_material_type(im_weight).le.fort_max_num_eos)) then
+               (fort_material_type(im_weight).le.MAX_NUM_EOS)) then
 
             if (rho(im_weight).le.zero) then
              print *,"rho(im_weight) invalid"
