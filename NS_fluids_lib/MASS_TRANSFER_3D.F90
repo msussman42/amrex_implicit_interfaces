@@ -3327,7 +3327,7 @@ stop
        deltaVOF,DIMS(deltaVOF), &
        nodevel,DIMS(nodevel), &
        JUMPFAB,DIMS(JUMPFAB), &
-       TSATFAB,DIMS(TSATFAB), &
+       TgammaFAB,DIMS(TgammaFAB), &
        LSold,DIMS(LSold), &
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon), &
@@ -3380,7 +3380,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(deltaVOF)
       INTEGER_T, intent(in) :: DIMDEC(nodevel)
       INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
-      INTEGER_T, intent(in) :: DIMDEC(TSATFAB)
+      INTEGER_T, intent(in) :: DIMDEC(TgammaFAB)
       INTEGER_T, intent(in) :: DIMDEC(LSold)
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
       INTEGER_T, intent(in) :: DIMDEC(recon)
@@ -3397,7 +3397,7 @@ stop
 
       REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
       REAL_T, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
-      REAL_T, intent(out) :: TSATFAB(DIMV(TSATFAB),ntsat)
+      REAL_T, intent(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
       REAL_T, intent(in) :: LSold(DIMV(LSold),nmat*(1+SDIM))
       REAL_T, intent(out) :: LSnew(DIMV(LSnew),nmat)
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
@@ -3435,7 +3435,8 @@ stop
       REAL_T EBVOFTOL
       REAL_T SWEPTFACTOR
       REAL_T LL
-      REAL_T Tsat_default
+      REAL_T Tgamma_default
+      REAL_T Ygamma_default
       INTEGER_T Tsat_flag
       REAL_T energy_source
 #if (STANDALONE==0)
@@ -3549,6 +3550,7 @@ stop
       INTEGER_T dencomp_probe
       INTEGER_T tcomp_probe
       INTEGER_T mfrac_comp_probe
+      INTEGER_T ispec_probe
       REAL_T temp_mix_new(2)
       REAL_T density_mix_new(2)
       REAL_T mass_frac_new(2)
@@ -3812,7 +3814,7 @@ stop
       call checkbound(fablo,fabhi, &
        DIMS(JUMPFAB),ngrow_expansion,-1,1256)
       call checkbound(fablo,fabhi, &
-       DIMS(TSATFAB),ngrow_expansion,-1,1256)
+       DIMS(TgammaFAB),ngrow_expansion,-1,1256)
       call checkbound(fablo,fabhi, &
        DIMS(LSold),normal_probe_size+3,-1,1257)
       call checkbound(fablo,fabhi, &
@@ -4420,8 +4422,10 @@ stop
             stop
            endif
 
-           Tsat_default=saturation_temp(iten+ireverse*nten)
-           Tsat_flag=NINT(TSATFAB(D_DECL(i,j,k),iten))
+           Tgamma_default=saturation_temp(iten+ireverse*nten)
+           Ygamma_default=one
+
+           Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
            if (ireverse.eq.0) then
              ! do nothing
            else if (ireverse.eq.1) then
@@ -4430,10 +4434,25 @@ stop
              print *,"ireverse invalid"
              stop
            endif
+
+           LL=latent_heat(iten+ireverse*nten)
+           local_freezing_model=freezing_model(iten+ireverse*nten)
+           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
+           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
             
            if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
-             Tsat_default=TSATFAB(D_DECL(i,j,k), &
+             Tgamma_default=TgammaFAB(D_DECL(i,j,k), &
               nten+(iten-1)*ncomp_per_tsat+1)
+             if ((mass_frac_id.ge.1).and. &
+                 (mass_frac_id.le.num_species_var)) then
+              Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
+               nten+(iten-1)*ncomp_per_tsat+2)
+             else if (mass_frac_id.eq.0) then
+              Ygamma_default=one
+             else
+              print *,"mass_frac_id invalid"
+              stop
+             endif
            else if ((Tsat_flag.eq.-1).or. &
                     (Tsat_flag.eq.-2)) then
              ! do nothing
@@ -4443,11 +4462,6 @@ stop
              print *,"Tsat_flag invalid"
              stop
            endif
-
-           LL=latent_heat(iten+ireverse*nten)
-           local_freezing_model=freezing_model(iten+ireverse*nten)
-           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
            do u_imaterial=1,nmat
 
@@ -4494,9 +4508,9 @@ stop
              enddo
             else if (tempvfrac.eq.zero) then
              unsplit_density(u_imaterial)=fort_denconst(u_imaterial)
-             unsplit_temperature(u_imaterial)=Tsat_default
+             unsplit_temperature(u_imaterial)=Tgamma_default
              do ispec=1,num_species_var
-              unsplit_species((ispec-1)*nmat+u_imaterial)=zero
+              unsplit_species((ispec-1)*nmat+u_imaterial)=Ygamma_default
              enddo
             else
              print *,"tempvfrac bust3 tempvfrac=",tempvfrac
@@ -4648,8 +4662,10 @@ stop
              if ((mass_frac_id.ge.1).and. &
                  (mass_frac_id.le.num_species_var)) then
               mfrac_comp_probe=tcomp_probe+mass_frac_id
+              ispec_probe=(mass_frac_id-1)*nmat+im_probe
              else if (mass_frac_id.eq.0) then
               mfrac_comp_probe=0
+              ispec_probe=0
              else
               print *,"mass_frac_id invalid"
               stop
@@ -4678,8 +4694,8 @@ stop
              else if ((newvfrac(im_probe).le.EBVOFTOL).and. &
                       (newvfrac(im_probe).ge.-EBVOFTOL)) then
               density_new(iprobe)=fort_denconst(im_probe)
-              temperature_new(iprobe)=Tsat_default
-              species_new(iprobe)=one
+              temperature_new(iprobe)=Tgamma_default
+              species_new(iprobe)=Ygamma_default
              else
               print *,"newvfrac invalid"
               stop
@@ -4707,8 +4723,8 @@ stop
              else if ((oldvfrac(im_probe).le.EBVOFTOL).and. &
                       (oldvfrac(im_probe).ge.-EBVOFTOL)) then
               density_old(iprobe)=fort_denconst(im_probe)
-              temperature_old(iprobe)=Tsat_default
-              species_old(iprobe)=one
+              temperature_old(iprobe)=Tgamma_default
+              species_old(iprobe)=Ygamma_default
              else
               print *,"oldvfrac invalid"
               stop
@@ -4883,7 +4899,7 @@ stop
               print *,"expecting im_source==im_condensed"
               stop
              endif
-             mass_frac_new(1)=one
+             mass_frac_new(1)=Ygamma_default
 
             else if (LL.lt.zero) then ! condensation
 
@@ -4936,7 +4952,7 @@ stop
               print *,"temp_new_vfrac invalid"
               stop
              endif
-             mass_frac_new(2)=one
+             mass_frac_new(2)=Ygamma_default
             else
              print *,"LL invalid"
              stop
@@ -5069,8 +5085,15 @@ stop
             stop
            endif
 
-           Tsat_default=saturation_temp(iten+ireverse*nten)
-           Tsat_flag=NINT(TSATFAB(D_DECL(i,j,k),iten))
+           LL=latent_heat(iten+ireverse*nten)
+           local_freezing_model=freezing_model(iten+ireverse*nten)
+           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
+           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
+
+           Tgamma_default=saturation_temp(iten+ireverse*nten)
+           Ygamma_default=one
+
+           Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
            if (ireverse.eq.0) then
              ! do nothing
            else if (ireverse.eq.1) then
@@ -5081,8 +5104,20 @@ stop
            endif
             
            if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
-             Tsat_default=TSATFAB(D_DECL(i,j,k), &
+
+             Tgamma_default=TgammaFAB(D_DECL(i,j,k), &
               nten+(iten-1)*ncomp_per_tsat+1)
+             if ((mass_frac_id.ge.1).and. &
+                 (mass_frac_id.le.num_species_var)) then
+              Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
+               nten+(iten-1)*ncomp_per_tsat+2)
+             else if (mass_frac_id.eq.0) then
+              Ygamma_default=one
+             else
+              print *,"mass_frac_id invalid"
+              stop
+             endif
+
            else if ((Tsat_flag.eq.-1).or. &
                     (Tsat_flag.eq.-2)) then
              ! do nothing
@@ -5092,11 +5127,6 @@ stop
              print *,"Tsat_flag invalid"
              stop
            endif
-
-           LL=latent_heat(iten+ireverse*nten)
-           local_freezing_model=freezing_model(iten+ireverse*nten)
-           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
            if ((local_freezing_model.lt.0).or. &
                (local_freezing_model.gt.7)) then
@@ -5498,7 +5528,8 @@ stop
           stop
          endif
 
-         ! set vapor mass fraction to 1 in the corresponding liquid material.
+         ! set vapor mass fraction to Ygamma where possible 
+         ! in the corresponding liquid material.
          do im=1,nmat-1
           do im_opp=im+1,nmat
 
@@ -5557,8 +5588,33 @@ stop
                speccomp_mod=num_materials_vel*(SDIM+1)+ &
                  (im_condensed-1)*num_state_material+num_state_base+ &
                  mass_frac_id
+           
+               Ygamma_default=one
 
-               snew(D_DECL(i,j,k),speccomp_mod)=one
+               Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
+               if (ireverse.eq.0) then
+                ! do nothing
+               else if (ireverse.eq.1) then
+                Tsat_flag=-Tsat_flag
+               else
+                print *,"ireverse invalid"
+                stop
+               endif
+            
+               if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
+                Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
+                  nten+(iten-1)*ncomp_per_tsat+2)
+               else if ((Tsat_flag.eq.-1).or. &
+                        (Tsat_flag.eq.-2)) then
+                ! do nothing
+               else if (Tsat_flag.eq.0) then
+                ! do nothing
+               else
+                print *,"Tsat_flag invalid"
+                stop
+               endif
+
+               snew(D_DECL(i,j,k),speccomp_mod)=Ygamma_default
 
               else
                print *,"mass_frac_id invalid"
