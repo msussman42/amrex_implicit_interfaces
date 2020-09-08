@@ -2841,7 +2841,7 @@ stop
              (dxprobe_target(2).gt.zero)) then
           
           mdotY_top=den_G*(Y_gamma-Y_probe(iprobe_vapor))/ &
-                  dxprobe(iprobe_vapor)
+                  dxprobe_target(iprobe_vapor)
           mdotY_bot=one-Y_gamma
           if (mdotY_bot.eq.zero) then
            mdotY=zero
@@ -2946,8 +2946,8 @@ stop
              (dxprobe_target(2).gt.zero)) then
          
           Ygamma_top=mdotT+den_G*Y_probe(iprobe_vapor)/ &
-                 dxprobe(iprobe_vapor)
-          Ygamma_bot=mdotT+den_G/dxprobe(iprobe_vapor)
+                 dxprobe_target(iprobe_vapor)
+          Ygamma_bot=mdotT+den_G/dxprobe_target(iprobe_vapor)
           if (Ygamma_top.le.zero) then
            Y_gamma=zero
           else if (Ygamma_bot.gt.zero) then
@@ -3018,6 +3018,7 @@ stop
       REAL_T T_gamma_ERR,T_gamma_INIT_ERR
       REAL_T YI_min
       REAL_T wt(2)
+      INTEGER_T iprobe
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -3188,6 +3189,7 @@ stop
       REAL_T den_G,MDOT_Y,T_I_coef,TAVG
       REAL_T YI_min
       REAL_T wt(2)
+      INTEGER_T iprobe
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -3302,6 +3304,7 @@ stop
       REAL_T YI_min
       REAL_T wt(2)
       REAL_T T_gamma_first
+      INTEGER_T iprobe
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -6706,6 +6709,7 @@ stop
 
       REAL_T VEL_predict,VEL_correct
       REAL_T Y_predict
+      REAL_T X_predict
       REAL_T TSAT_predict,TSAT_correct
       REAL_T TSAT_ERR,TSAT_INIT_ERR
       INTEGER_T TSAT_iter,TSAT_converge,TSAT_iter_max
@@ -6725,9 +6729,9 @@ stop
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
       type(nucleation_parm_type_input) :: nucleation_PARMS_in
       type(nucleation_parm_type_inout) :: nucleation_PARMS_inout
-      REAL_T DTDY,DTDY_MDOT,DTDY_TSAT
-      REAL_T T_I_MDOT,T_I_TSAT,TDIFF_FN
       INTEGER_T iprobe,im_probe,microlayer_substrate_probe
+      REAL_T mdotT,mdotY,mdotY_bot,mdotY_top
+      INTEGER_T updateY_flag
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -7876,7 +7880,7 @@ stop
                     if ((molar_mass_ambient.gt.zero).and. &
                         (molar_mass_vapor.gt.zero).and. &
                         (R_Palmore_Desjardins.gt.zero).and. &
-                        (TSAY_Y_PARMS%den_G.gt.zero)) then
+                        (TSAT_Y_PARMS%den_G.gt.zero)) then
 
                      if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
                          (Y_probe(iprobe_vapor).le.one)) then
@@ -7917,12 +7921,13 @@ stop
                         LL(ireverse), &
                         R_Palmore_Desjardins, &
                         molar_mass_vapor, & ! WV
-                        Tgamma_min,Tgamma_max) 
+                        TI_min,TI_max) 
 
                        ! decreases T_gamma * L until mdot_T >=0
                       call project_Tgamma_probe(TSAT_Y_PARMS, &
                              TSAT_correct,Y_predict)
                       call X_from_Tgamma(X_predict,TSAT_correct, &
+                       local_Tsat(ireverse), &
                        LL(ireverse),R_Palmore_Desjardins, &
                        molar_mass_vapor) ! WV
                       call massfrac_from_volfrac(X_predict,Y_predict, &
@@ -7939,7 +7944,7 @@ stop
                         LL(ireverse), &
                         R_Palmore_Desjardins, &
                         molar_mass_vapor, & ! WV
-                        Tgamma_min,Tgamma_max) 
+                        TI_min,TI_max) 
                      
                        ! rhoG * (Ygamma-Yprobe)/(dxprobe*(1-Ygamma))
                       call mdot_from_Y_probe(TSAT_Y_PARMS, &
@@ -8003,12 +8008,13 @@ stop
                          LL(ireverse), &
                          R_Palmore_Desjardins, &
                          molar_mass_vapor, & ! WV
-                         Tgamma_min,Tgamma_max) 
+                         TI_min,TI_max) 
                        else if (updateY_flag.eq.0) then
-                         ! projects T to Tgamma_min<=T<=TSAT
+                         ! projects T to TI_min<=T<=TSAT
                         call Tgamma_update(TSAT_Y_PARMS, &
                             Y_predict,TSAT_correct,mdotY)
                         call X_from_Tgamma(X_predict,TSAT_correct, &
+                         local_Tsat(ireverse), &
                          LL(ireverse),R_Palmore_Desjardins, &
                          molar_mass_vapor) ! WV
                         call massfrac_from_volfrac(X_predict,Y_predict, &
