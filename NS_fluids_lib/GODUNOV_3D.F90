@@ -12953,7 +12953,7 @@ stop
            dthold=dxmin/ugrav 
            dt_min=min(dt_min,dthold)
           else
-           print *,"ugrav invalid"
+           print *,"ugrav invalid 1"
            stop
           endif
          else if (denjump.eq.zero) then
@@ -12972,7 +12972,7 @@ stop
             dthold=dxmin/ugrav 
             dt_min=min(dt_min,dthold)
            else
-            print *,"ugrav invalid"
+            print *,"ugrav invalid 2"
             stop
            endif
           else if (denmax_gravity.eq.zero) then

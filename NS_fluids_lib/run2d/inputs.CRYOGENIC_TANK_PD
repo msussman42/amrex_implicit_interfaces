@@ -48,21 +48,22 @@ ns.temperature_primitive_variable = 1 1 1
 
 # Values simplified for debugging
 ns.xblob            = 4.0   # outer tank radius (4.21 m in DaigleETAL2012)
-ns.yblob            = 32.0  # outer tank height (29.54 m in DaigleETAL2012)
-ns.zblob            = 16.0  # initial interface location (29.54/2 m in DaigleETAL2012)
+ns.yblob            = 16.0  # outer tank height (29.54 m in DaigleETAL2012)
+ns.zblob            = 8.0  # initial interface location (29.54/2 m in DaigleETAL2012)
 ns.radblob          = 0.5 # wall thickness (0.1 m in DaigleETAL2012)
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
 # ----------------------------------------------------------
 # (4 x 32) m => (32 x 256) cell => 1/8 m/cell
+# (4 x 16) m => (32 x 128) cell => 1/8 m/cell
 # 0 => cart, 1 => RZ
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0 0.0 
-geometry.prob_hi    = 4.0 32.0
+geometry.prob_hi    = 4.0 16.0
 geometry.is_periodic= 0 0
 
-amr.n_cell          = 32 256 
+amr.n_cell          = 32 128 
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
@@ -113,7 +114,9 @@ amr.file_name_digits= 7
 # ----------------------------------------------------------
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
-ns.gravity          =-9.8
+ns.gravity          = 9.8
+ns.gravity_dir      = 2
+ns.invert_gravity   = 1
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
 ns.vinletgas        = 0.0
@@ -141,54 +144,62 @@ ns.visc_coef        = 1.0
 # [5] H2_properties_2.pdf
 
 # Universal gas constant R = 8.3145 [J/(Mol.K)]
-# LHe @0.2 MPa => T_evap=23 K
+# LHe @0.2 MPa => T_evap~20 K
 
 # Aluminum properties:
 
 # Molar mass [kg/mol]
 # [1] p.57
-ns.molar_mass = 2.01E-03 4.00E-03 0.0 #4.00E-03 is the ambient molar mass
-ns.species_molar_mass=2.01E-03 #2.01E-03 is the vapor molar mass 
+# H2 => 2.01E-03
+# He => 4.00E-03
+# Al => 26.98E-03 
+ns.molar_mass = 2.01E-03 4.00E-03 26.98E-03 
+ns.species_molar_mass=2.01E-03 
 
 # Density [kg/m^3]
+# NOTE: THIS VALUES ARE FOR PURE MATERIALS DENSITIES
+#       THE MIXED GAS DENSITY IS EVALUATED IN CRYOGENIC_TANK1_STATE(...) 
 # Liquid => # [1] p.62
-# LH2  -> rho_liquid @ (T=T_evap, P=0.2MPa) = 67.712 (kg/m^3)  ([1] p.62)
+# LH2  -> rho_liquid @ (T=20, P=0.2MPa) = 71.409 (kg/m^3)  ([1] p.62)
 #
-# For vapor, assuming 0.2E6 Pa initial total pressure
+# For gas/vapor, assuming 0.2E6 Pa initial total pressure
 # 0.1E6 Pa partial pressure of hydrogen vapor
 # 0.1E6 Pa partial pressure of gasous 
-# rho_0_GH  = (p_0 M_H)/(R * T_0)=(0.1E+06*2.01E-03)/(8.3145*23)=1.051
-# rho_0_GHe = (p_0 M_He)/(R * T_0)=(0.1E+06*4.00E-03)/(8.3145*23)=2.091
-# GHe -> rho_gas @ (T=T_evap, P=0.1Mpa)
-#
-# Al -> [3] 
-ns.denconst= 71.409 2.091 2700.0
+# rho_0_GH2 = (p_0 M_H2)/(R * T_0)=(0.1E+06*2.01E-03)/(8.3145*21)=1.1511730797
+# rho_0_GHe = (p_0 M_He)/(R * T_0)=(0.1E+06*4.00E-03)/(8.3145*21)=2.290891701
+# rho_0_mix = rho_0_GHe + rho_0_GH2 = 3.4420647807
+# rho_0_GH2/rho_mix = 0.3344425957
+# Al -> [3]
+# 
+ns.denconst= 71.409 2.290891701 2700.0
+ns.speciesconst= 1.0 0.3344425957 0.0
 
 # 1. input to the Schrage velocity model: Temperature, gas mixture density,
 #    mass fraction, liquid density
 # 2. input to the expansion model: Delta F * (liquid density/vapor density)
 #    It is assume that Y_{Interface}=1.
 # It is picked as the density of the saturated vapor
-# @ (23 K, 0.2 MPa) ([1] p. 61)
-ns.species_evaporation_density=2.5334
+# @ (20 K, 0.2 MPa) => 1.2059 [1] p. 61)
+ns.species_evaporation_density=1.2059
 
 # Specific heat capacity [J/(kg.K)]
 # Are these c_p values used for compressible material calculations?
 # LH2 => C_p_liquid @ (T=T_evap, P=0.2MPa) = 11421.0 ([1] p.62)
 # GHe=> C_p_gas    @ (T=T_evap, P=0.1MPa) =  5244.2 ([1] p.30)
+# GHe=> Ideal gas with c_{v,spc}=3116.8 & c_{p,spc}=R_spc+c_{v,spc}=5195.425
 # Aluminum => ([3] p.73) @ 25K
-ns.stiffCP=11421.0 5244.2 17
+ns.stiffCP=11421.0 5195.425 17
 
 # Thermal conductivity [W/(m.K)]
-# LH2 => @ 22K => 0.122 [5] p. III-I-1.1
+# LH2 => @ 20K => 0.118 [5] p. III-I-1.1
 # GHe => @ 22.05K, 1atm => 0.0277 [4] p.II-G-2.2
 # Aluminum => @ 20K [3] p.201
-ns.heatviscconst=0.118 0.0166 1480
+ns.heatviscconst=0.118 0.0277 1480
 
 # Dynamic viscosity [Pa.s]
-# LH2 => @ 22K => 118.7 micropise [5] p.III-L-3.2
+# LH2 => @ 22K => 139.2 micropise [5] p.III-L-3.2
 # GHe =>@ 20K => 35.0 micropise [4] p.II-J-2.2
-ns.viscconst=11.8e-6 3.5e-6 1 
+ns.viscconst=13.92e-6 3.5e-6 1 
 
 # Initial temeparture [K]
 ns.tempconst=19.0 21.0 21.0
