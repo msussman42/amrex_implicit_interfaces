@@ -2840,7 +2840,8 @@ stop
          if ((dxprobe_target(1).gt.zero).and. &
              (dxprobe_target(2).gt.zero)) then
           
-          mdotY_top=den_G*(Y_gamma-Y_probe)/dxprobe(iprobe_vapor)
+          mdotY_top=den_G*(Y_gamma-Y_probe(iprobe_vapor))/ &
+                  dxprobe(iprobe_vapor)
           mdotY_bot=one-Y_gamma
           if (mdotY_bot.eq.zero) then
            mdotY=zero
@@ -2870,6 +2871,118 @@ stop
       endif
 
       end subroutine mdot_from_Y_probe
+
+
+
+      subroutine Ygamma_update( &
+       TSAT_Y_PARMS, &
+       Y_gamma,T_gamma, &
+       mdotT)
+      IMPLICIT NONE
+
+      type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
+      REAL_T, intent(inout) :: Y_gamma
+      REAL_T, intent(in) :: T_gamma
+      REAL_T, intent(in) :: mdotT
+      REAL_T D_MASS
+      REAL_T T_probe(2)
+      REAL_T Y_probe(2)
+      REAL_T den_I_interp(2)
+      REAL_T den_probe(2)
+      REAL_T T_I_interp(2)
+      REAL_T Y_I_interp(2)
+      REAL_T pres_I_interp(2)
+      REAL_T vfrac_I(2)
+      REAL_T T_probe_raw(2)
+      REAL_T dxprobe_target(2)
+      INTEGER_T interp_valid_flag(2)
+      INTEGER_T at_interface
+      REAL_T LL
+      INTEGER_T iprobe_vapor
+      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T YI_min
+      REAL_T Ygamma_top,Ygamma_bot
+
+      YI_min=TSAT_Y_PARMS%YI_min
+
+      if ((Y_gamma.ge.YI_min).and. &
+          (YI_min.ge.zero).and. &
+          (YI_min.le.one).and. &
+          (Y_gamma.le.one)) then
+
+       D_MASS=TSAT_Y_PARMS%D_MASS
+       den_G=TSAT_Y_PARMS%den_G
+       if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
+
+        !iprobe=1 source
+        !iprobe=2 dest
+        call probe_interpolation( &
+         TSAT_Y_PARMS%PROBE_PARMS, &
+         T_gamma,Y_gamma, &
+         T_probe,Y_probe, &
+         den_I_interp, &
+         den_probe, &
+         T_I_interp,Y_I_interp, &
+         pres_I_interp, &
+         vfrac_I, &
+         T_probe_raw, &
+         dxprobe_target, &
+         interp_valid_flag, &
+         at_interface)
+
+        if (at_interface.eq.1) then
+
+         LL=TSAT_Y_PARMS%PROBE_PARMS%LL
+         if (LL.gt.zero) then
+          iprobe_vapor=2 ! dest (evaporation)
+         else if (LL.lt.zero) then
+          iprobe_vapor=1 ! source (condensation)
+         else
+          print *,"LL invalid"
+          stop
+         endif
+
+         if ((dxprobe_target(1).gt.zero).and. &
+             (dxprobe_target(2).gt.zero)) then
+         
+          Ygamma_top=mdotT+den_G*Y_probe(iprobe_vapor)/ &
+                 dxprobe(iprobe_vapor)
+          Ygamma_bot=mdotT+den_G/dxprobe(iprobe_vapor)
+          if (Ygamma_top.le.zero) then
+           Y_gamma=zero
+          else if (Ygamma_bot.gt.zero) then
+           Y_gamma=Ygamma_top/Ygamma_bot
+           if ((Y_gamma.ge.zero).and. &
+               (Y_gamma.le.one)) then
+            ! do nothing
+           else
+            print *,"Y_gamma invalid"
+            stop
+           endif
+          else
+           print *,"Ygamma_bot invalid"
+           stop
+          endif
+
+         else
+          print *,"dxprobe_target invalid"
+          stop
+         endif
+        else
+         print *,"at_interface invalid"
+         stop
+        endif
+
+       else
+        print *,"D_MASS or den_G invalid"
+        stop
+       endif
+      else
+       print *,"Y_gamma or YI_min invalid"
+       stop
+      endif
+
+      end subroutine Ygamma_update
 
 
 
@@ -2958,15 +3071,21 @@ stop
             do iprobe=1,2
              wt(iprobe)=TSAT_Y_PARMS%thermal_k(iprobe)/ &
                     (abs(LL)*dxprobe_target(iprobe))
-             if (wt(iprobe).gt.zero) then
+             if (wt(iprobe).ge.zero) then
               ! do nothing
              else
               print *,"wt(iprobe) invalid"
               stop
              endif
             enddo
-            T_gamma_crit=(wt(1)*T_probe(1)+wt(2)*T_probe(2))/ &
+            if (wt(1)+wt(2).gt.zero) then
+             T_gamma_crit=(wt(1)*T_probe(1)+wt(2)*T_probe(2))/ &
                     (wt(1)+wt(2))
+            else
+             print *,"wt(1)+wt(2) must be positive"
+             stop
+            endif
+
             if (T_gamma_crit.gt.zero) then
              if (LL.gt.zero) then
               if (T_gamma_old.le.T_gamma_crit) then
@@ -3038,6 +3157,245 @@ stop
       endif
 
       end subroutine project_Tgamma_probe
+
+
+
+      subroutine mdot_from_T_probe( &
+       TSAT_Y_PARMS, &
+       T_gamma,Y_gamma, &
+       mdotT)
+      IMPLICIT NONE
+
+      type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
+      REAL_T, intent(in) :: T_gamma
+      REAL_T, intent(in) :: Y_gamma
+      REAL_T, intent(out) :: mdotT
+      REAL_T D_MASS
+      REAL_T T_probe(2)
+      REAL_T Y_probe(2)
+      REAL_T den_I_interp(2)
+      REAL_T den_probe(2)
+      REAL_T T_I_interp(2)
+      REAL_T Y_I_interp(2)
+      REAL_T pres_I_interp(2)
+      REAL_T vfrac_I(2)
+      REAL_T T_probe_raw(2)
+      REAL_T dxprobe_target(2)
+      INTEGER_T interp_valid_flag(2)
+      INTEGER_T at_interface
+      REAL_T LL
+      INTEGER_T iprobe_vapor
+      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T YI_min
+      REAL_T wt(2)
+
+      YI_min=TSAT_Y_PARMS%YI_min
+
+      if ((Y_gamma.ge.YI_min).and. &
+          (YI_min.ge.zero).and. &
+          (YI_min.le.one).and. &
+          (Y_gamma.le.one)) then
+
+       D_MASS=TSAT_Y_PARMS%D_MASS
+       den_G=TSAT_Y_PARMS%den_G
+       if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
+
+        !iprobe=1 source
+        !iprobe=2 dest
+        call probe_interpolation( &
+         TSAT_Y_PARMS%PROBE_PARMS, &
+         T_gamma,Y_gamma, &
+         T_probe,Y_probe, &
+         den_I_interp, &
+         den_probe, &
+         T_I_interp,Y_I_interp, &
+         pres_I_interp, &
+         vfrac_I, &
+         T_probe_raw, &
+         dxprobe_target, &
+         interp_valid_flag, &
+         at_interface)
+
+        if (at_interface.eq.1) then
+
+         LL=TSAT_Y_PARMS%PROBE_PARMS%LL
+         if (LL.gt.zero) then
+          iprobe_vapor=2 ! dest (evaporation)
+         else if (LL.lt.zero) then
+          iprobe_vapor=1 ! source (condensation)
+         else
+          print *,"LL invalid"
+          stop
+         endif
+
+         if ((dxprobe_target(1).gt.zero).and. &
+             (dxprobe_target(2).gt.zero)) then
+        
+          do iprobe=1,2
+           wt(iprobe)=TSAT_Y_PARMS%thermal_k(iprobe)/ &
+                  (abs(LL)*dxprobe_target(iprobe))
+           if (wt(iprobe).ge.zero) then
+            ! do nothing
+           else
+            print *,"wt(iprobe) invalid"
+            stop
+           endif
+          enddo ! iprobe=1,2
+
+          mdotT=wt(1)*(T_probe(1)-T_gamma)+ &
+                wt(2)*(T_probe(2)-T_gamma)
+          if (LL.gt.zero) then
+           ! do nothing
+          else if (LL.lt.zero) then
+           mdotT=-mdotT
+          else
+           print *,"LL invalid"
+           stop
+          endif 
+
+         else
+          print *,"dxprobe_target invalid"
+          stop
+         endif
+        else
+         print *,"at_interface invalid"
+         stop
+        endif
+
+       else
+        print *,"D_MASS or den_G invalid"
+        stop
+       endif
+      else
+       print *,"Y_gamma or YI_min invalid"
+       stop
+      endif
+
+      end subroutine mdot_from_T_probe
+
+      subroutine Tgamma_update( &
+       TSAT_Y_PARMS, &
+       Y_gamma,T_gamma, &
+       mdotY)
+      IMPLICIT NONE
+
+      type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
+      REAL_T, intent(out) :: T_gamma
+      REAL_T, intent(in) :: Y_gamma
+      REAL_T, intent(in) :: mdotY
+      REAL_T D_MASS
+      REAL_T T_probe(2)
+      REAL_T Y_probe(2)
+      REAL_T den_I_interp(2)
+      REAL_T den_probe(2)
+      REAL_T T_I_interp(2)
+      REAL_T Y_I_interp(2)
+      REAL_T pres_I_interp(2)
+      REAL_T vfrac_I(2)
+      REAL_T T_probe_raw(2)
+      REAL_T dxprobe_target(2)
+      INTEGER_T interp_valid_flag(2)
+      INTEGER_T at_interface
+      REAL_T LL
+      INTEGER_T iprobe_vapor
+      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T YI_min
+      REAL_T wt(2)
+      REAL_T T_gamma_first
+
+      YI_min=TSAT_Y_PARMS%YI_min
+
+      if ((Y_gamma.ge.YI_min).and. &
+          (YI_min.ge.zero).and. &
+          (YI_min.le.one).and. &
+          (Y_gamma.le.one)) then
+
+       D_MASS=TSAT_Y_PARMS%D_MASS
+       den_G=TSAT_Y_PARMS%den_G
+       if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
+
+        !iprobe=1 source
+        !iprobe=2 dest
+        call probe_interpolation( &
+         TSAT_Y_PARMS%PROBE_PARMS, &
+         T_gamma,Y_gamma, &
+         T_probe,Y_probe, &
+         den_I_interp, &
+         den_probe, &
+         T_I_interp,Y_I_interp, &
+         pres_I_interp, &
+         vfrac_I, &
+         T_probe_raw, &
+         dxprobe_target, &
+         interp_valid_flag, &
+         at_interface)
+
+        if (at_interface.eq.1) then
+
+         LL=TSAT_Y_PARMS%PROBE_PARMS%LL
+         if (LL.gt.zero) then
+          iprobe_vapor=2 ! dest (evaporation)
+         else if (LL.lt.zero) then
+          iprobe_vapor=1 ! source (condensation)
+         else
+          print *,"LL invalid"
+          stop
+         endif
+
+         if ((dxprobe_target(1).gt.zero).and. &
+             (dxprobe_target(2).gt.zero)) then
+        
+          do iprobe=1,2
+           wt(iprobe)=TSAT_Y_PARMS%thermal_k(iprobe)/ &
+                  (abs(LL)*dxprobe_target(iprobe))
+           if (wt(iprobe).ge.zero) then
+            ! do nothing
+           else
+            print *,"wt(iprobe) invalid"
+            stop
+           endif
+          enddo ! iprobe=1,2
+
+          if (wt(1)+wt(2).gt.zero) then
+           ! do nothing
+          else
+           print *,"wt(1)+wt(2) must be positive"
+           stop
+          endif
+          T_gamma_first=(wt(1)*T_probe(1)+wt(2)*T_probe(2))/ &
+                  (wt(1)+wt(2))
+
+          if (LL.gt.zero) then
+           T_gamma=T_gamma_first-mdotY/(wt(1)+wt(2))
+          else if (LL.lt.zero) then
+           T_gamma=T_gamma_first+mdotY/(wt(1)+wt(2))
+          else
+           print *,"LL invalid"
+           stop
+          endif 
+
+         else
+          print *,"dxprobe_target invalid"
+          stop
+         endif
+        else
+         print *,"at_interface invalid"
+         stop
+        endif
+
+       else
+        print *,"D_MASS or den_G invalid"
+        stop
+       endif
+      else
+       print *,"Y_gamma or YI_min invalid"
+       stop
+      endif
+
+      end subroutine Tgamma_update
+
+
+
 
 
       subroutine TSAT_MASS_FRAC_YMIN( &
@@ -6365,7 +6723,6 @@ stop
       INTEGER_T interp_valid_flag(2) ! iprobe=1 source iprobe=2 dest
       type(probe_parm_type), target :: PROBE_PARMS
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
-      type(T_Y_MDOT_parm_type) :: T_Y_PARMS
       type(nucleation_parm_type_input) :: nucleation_PARMS_in
       type(nucleation_parm_type_inout) :: nucleation_PARMS_inout
       REAL_T DTDY,DTDY_MDOT,DTDY_TSAT
@@ -7525,11 +7882,11 @@ stop
                          (Y_probe(iprobe_vapor).le.one)) then
                       Y_interface_min=one
                       Y_predict=one
-                      TSAT_predict=local_Tsat(ireverse)
+                      TSAT_correct=local_Tsat(ireverse)
                      else if (TSAT_Y_PARMS%D_MASS.eq.zero) then
                       Y_interface_min=one
                       Y_predict=one
-                      TSAT_predict=local_Tsat(ireverse)
+                      TSAT_correct=local_Tsat(ireverse)
                      else if ((Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
                               (Y_probe(iprobe_vapor).ge.zero).and. &
                               (TSAT_Y_PARMS%D_MASS.gt.zero)) then
@@ -7551,10 +7908,10 @@ stop
 
                         ! increases Y_predict until mdot_Y>=0
                       call project_Ygamma_probe(TSAT_Y_PARMS, &
-                              Y_predict,TSAT_predict)
+                              Y_predict,TSAT_correct)
                       call volfrac_from_massfrac(X_predict,Y_predict, &
                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                      call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                      call Tgamma_from_TSAT_and_X(TSAT_correct, &
                         local_Tsat(ireverse), &
                         X_predict, &
                         LL(ireverse), &
@@ -7564,8 +7921,8 @@ stop
 
                        ! decreases T_gamma * L until mdot_T >=0
                       call project_Tgamma_probe(TSAT_Y_PARMS, &
-                             TSAT_predict,Y_predict)
-                      call X_from_Tgamma(X_predict,TSAT_predict, &
+                             TSAT_correct,Y_predict)
+                      call X_from_Tgamma(X_predict,TSAT_correct, &
                        LL(ireverse),R_Palmore_Desjardins, &
                        molar_mass_vapor) ! WV
                       call massfrac_from_volfrac(X_predict,Y_predict, &
@@ -7573,10 +7930,10 @@ stop
 
                         ! increases Y_predict until mdot_Y>=0
                       call project_Ygamma_probe(TSAT_Y_PARMS, &
-                              Y_predict,TSAT_predict)
+                              Y_predict,TSAT_correct)
                       call volfrac_from_massfrac(X_predict,Y_predict, &
                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                      call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                      call Tgamma_from_TSAT_and_X(TSAT_correct, &
                         local_Tsat(ireverse), &
                         X_predict, &
                         LL(ireverse), &
@@ -7586,13 +7943,13 @@ stop
                      
                        ! rhoG * (Ygamma-Yprobe)/(dxprobe*(1-Ygamma))
                       call mdot_from_Y_probe(TSAT_Y_PARMS, &
-                          Y_predict,TSAT_predict,  &
+                          Y_predict,TSAT_correct,  &
                           mdotY_top,mdotY_bot,mdotY)
 
-                       ! ( (Tgamma-Tprobe_1)k_1/dx_1 + 
-                       !   (Tgamma-Tprobe_2)k_2/dx_2 )/L
+                       ! ( (-Tgamma+Tprobe_1)k_1/dx_1 + 
+                       !   (-Tgamma+Tprobe_2)k_2/dx_2 )/L
                       call mdot_from_T_probe(TSAT_Y_PARMS, &
-                         TSAT_predict,Y_predict, &
+                         TSAT_correct,Y_predict, &
                          mdotT)
 
                       if (mdotY_bot.lt.zero) then
@@ -7636,10 +7993,11 @@ stop
                        endif
                        if (updateY_flag.eq.1) then
                          ! projects Y to 0<=Y<=1 when done.
-                        call Ygamma_update(Y_predict,TSAT_predict)
+                        call Ygamma_update(TSAT_Y_PARMS, &
+                           Y_predict,TSAT_correct,mdotT)
                         call volfrac_from_massfrac(X_predict,Y_predict, &
                          molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                        call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                        call Tgamma_from_TSAT_and_X(TSAT_correct, &
                          local_Tsat(ireverse), &
                          X_predict, &
                          LL(ireverse), &
@@ -7648,8 +8006,9 @@ stop
                          Tgamma_min,Tgamma_max) 
                        else if (updateY_flag.eq.0) then
                          ! projects T to Tgamma_min<=T<=TSAT
-                        call Tgamma_update(Y_predict,TSAT_predict)
-                        call X_from_Tgamma(X_predict,TSAT_predict, &
+                        call Tgamma_update(TSAT_Y_PARMS, &
+                            Y_predict,TSAT_correct,mdotY)
+                        call X_from_Tgamma(X_predict,TSAT_correct, &
                          LL(ireverse),R_Palmore_Desjardins, &
                          molar_mass_vapor) ! WV
                         call massfrac_from_volfrac(X_predict,Y_predict, &
@@ -7664,162 +8023,6 @@ stop
                        stop
                       endif
                      
-                       
-                       
-
-
-
-                       !Y_probe<=Y_interface<=1
-                      if (TSAT_iter.eq.0) then
-                       YMIN_converge=0
-                       Y_interface_min=zero
-                       YMIN_iter=0
-                       do while (YMIN_converge.eq.0)
-
-                        call probe_interpolation( &
-                         PROBE_PARMS, &
-                         TSAT_predict, &
-                         Y_interface_min, &
-                         T_probe,Y_probe, &
-                         den_I_interp, &
-                         den_probe, &
-                         T_I_interp,Y_I_interp, &
-                         pres_I_interp, &
-                         vfrac_I, &
-                         T_probe_raw, &
-                         dxprobe_target, &
-                         interp_valid_flag, &
-                         at_interface)
-
-                        YMIN_ERR=abs(Y_probe(iprobe_vapor)-Y_interface_min)
-                        Y_interface_min=Y_probe(iprobe_vapor)
-                        if (YMIN_iter.eq.0) then
-                         YMIN_INIT_ERR=YMIN_ERR
-                        endif
-                        YMIN_converge=0
-                        if (YMIN_ERR.eq.zero) then
-                         YMIN_converge=1
-                        endif
-                        YMIN_iter=YMIN_iter+1
-                        if (YMIN_iter.gt.YMIN_iter_max) then
-                         YMIN_converge=1
-                        endif
-                        if ((Y_interface_min.ge.one-Y_TOLERANCE).and. &
-                            (Y_interface_min.le.one)) then
-                         YMIN_converge=1
-                         Y_interface_min=one
-                        else if ((Y_interface_min.ge.zero).and. &
-                                 (Y_interface_min.le.one)) then
-                         ! do nothing
-                        else
-                         print *,"Y_probe invalid"
-                         stop
-                        endif
-                        if (YMIN_iter.gt.1) then
-                         if (YMIN_err.lt.(0.001d0)*YMIN_INIT_ERR) then
-                          YMIN_converge=1
-                         endif
-                        endif
-                       enddo ! do while (YMIN_converge.eq.0)
-
-                       if ((Y_interface_min.ge.one-Y_TOLERANCE).and. &
-                           (Y_interface_min.le.one)) then
-                        Y_interface_min=one
-                       else if ((Y_interface_min.le. &
-                                 one-Y_TOLERANCE).and. &
-                                (Y_interface_min.ge.zero)) then
-                         ! type(TSAT_MASS_FRAC_parm_type)
-                        TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
-                        TSAT_Y_PARMS%YI_min=Y_interface_min
-                        TSAT_Y_PARMS%TI_min=TI_min
-                        TSAT_Y_PARMS%TI_max=TI_max
-                        TSAT_Y_PARMS%universal_gas_constant_R= &
-                                R_Palmore_Desjardins
-                        TSAT_Y_PARMS%molar_mass_ambient=molar_mass_ambient
-                        TSAT_Y_PARMS%molar_mass_vapor=molar_mass_vapor
-                        TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
-
-                        call TSAT_MASS_FRAC_YMIN( &
-                                TSAT_Y_PARMS,Y_interface_min)
-
-                        TSAT_Y_PARMS%YI_min=Y_interface_min
-
-                         ! type(T_Y_MDOT_parm_type)
-                        T_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
-                        T_Y_PARMS%TSAT_base=local_Tsat(ireverse)
-                        T_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
-                        T_Y_PARMS%YI_min=Y_interface_min
-                        T_Y_PARMS%TI_min=TI_min
-                        T_Y_PARMS%TI_max=TI_max
-
-                         ! initial starting guess
-                        Y_predict=half*(Y_interface_min+one)
-                       else
-                        print *,"Y_probe invalid"
-                        stop
-                       endif
-                      else if (TSAT_iter.ge.1) then
-                       ! do nothing
-                      else
-                       print *,"TSAT_iter invalid"
-                       stop
-                      endif
-
-                      if ((Y_predict.ge.one-Y_TOLERANCE).and. &
-                          (Y_predict.le.one)) then
-                       ! do nothing
-                      else if ((Y_predict.ge.Y_interface_min).and. &
-                               (Y_predict.le. &
-                                Y_interface_min+Y_TOLERANCE)) then
-                       ! do nothing
-                      else if ((Y_predict.le. &
-                                one-Y_TOLERANCE).and. &
-                               (Y_predict.ge. &
-                                Y_interface_min+Y_TOLERANCE)) then
-
-                       call T_Y_MDOT_DERIVATIVE(T_Y_PARMS, &
-                         Y_predict,DTDY_MDOT)
-                       call TSAT_MASS_FRAC_DERIVATIVE(TSAT_Y_PARMS, &
-                         Y_predict,DTDY_TSAT)
-                       call TSAT_MASS_FRAC_association(TSAT_Y_PARMS, &
-                         Y_predict,T_I_TSAT)
-                       call T_Y_MDOT_associate(T_Y_PARMS, &
-                         Y_predict,T_I_MDOT)
-
-                       TSAT_correct=half*(T_I_MDOT+T_I_TSAT)
-
-                       if (DTDY_TSAT.eq.DTDY_MDOT) then
-                        ! do nothing
-                       else if (DTDY_TSAT.ne.DTDY_MDOT) then
-                        DTDY=DTDY_TSAT-DTDY_MDOT
-                        call TSAT_MASS_FRAC_association(TSAT_Y_PARMS, &
-                         Y_predict,T_I_TSAT)
-                        call T_Y_MDOT_associate(T_Y_PARMS, &
-                         Y_predict,T_I_MDOT)
-                        TDIFF_FN=T_I_TSAT-T_I_MDOT
-                        Y_predict=Y_predict-TDIFF_FN/DTDY
-                        if (Y_predict.ge.one-Y_TOLERANCE) then
-                         Y_predict=one-Y_TOLERANCE
-                        else if (Y_predict.le.Y_interface_min+Y_TOLERANCE) then
-                         Y_predict=Y_interface_min+Y_TOLERANCE
-                        else if ((Y_predict.ge. &
-                                  Y_interface_min+Y_TOLERANCE).and.  &
-                                 (Y_predict.le.one-Y_TOLERANCE) ) then
-                         ! do nothing
-                        else
-                         print *,"Y_predict invalid"
-                         stop
-                        endif
-                       else
-                        print *,"DTDY_TSAT or DTDY_MDOT invalid"
-                        stop
-                       endif 
-
-                      else
-                       print *,"Y_probe invalid"
-                       stop
-                      endif
-
                      else
                       print *,"Y_probe invalid"
                       stop
