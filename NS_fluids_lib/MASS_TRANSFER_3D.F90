@@ -7459,9 +7459,9 @@ stop
                               (Y_probe(iprobe_vapor).ge.zero)) then
 
                         ! increases Y_predict until mdot_Y>=0
-                      call project_Y_gamma(Y_predict)
+                      call project_Ygamma_probe(Y_predict,TSAT_predict)
                       call volfrac_from_massfrac(X_predict,Y_predict, &
-                       WA,WV)
+                       molar_mass_ambient,molar_mass_vapor) ! WA,WV
                       call Tgamma_from_TSAT_and_X(TSAT_predict, &
                         local_Tsat(ireverse), &
                         X_predict, &
@@ -7469,8 +7469,107 @@ stop
                         R_Palmore_Desjardins, &
                         molar_mass_vapor, & ! WV
                         Tgamma_min,Tgamma_max) 
+
                        ! decreases T_gamma * L until mdot_T >=0
-                      call project_T_gamma(TSAT_predict)
+                      call project_Tgamma(TSAT_predict,Y_predict)
+                      call X_from_Tgamma(X_predict,TSAT_predict, &
+                       LL(ireverse),R_Palmore_Desjardins, &
+                       molar_mass_vapor) ! WV
+                      call massfrac_from_volfrac(X_predict,Y_predict, &
+                       molar_mass_ambient,molar_mass_vapor) ! WA,WV
+
+                        ! increases Y_predict until mdot_Y>=0
+                      call project_Ygamma_probe(Y_predict,TSAT_predict)
+                      call volfrac_from_massfrac(X_predict,Y_predict, &
+                       molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                      call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                        local_Tsat(ireverse), &
+                        X_predict, &
+                        LL(ireverse), &
+                        R_Palmore_Desjardins, &
+                        molar_mass_vapor, & ! WV
+                        Tgamma_min,Tgamma_max) 
+                     
+                       ! rhoG * (Ygamma-Yprobe)/(dxprobe*(1-Ygamma))
+                      call mdot_from_Y_probe(Y_predict,TSAT_predict,  &
+                          mdotY_top,mdotY_bot,mdotY)
+
+                       ! ( (Tgamma-Tprobe_1)k_1/dx_1 + 
+                       !   (Tgamma-Tprobe_2)k_2/dx_2 )/L
+                      call mdot_from_T_probe(TSAT_predict,Y_predict, &
+                         mdotT)
+
+                      if (mdotY_bot.lt.zero) then
+                       print *,"mdotY_bot invalid"
+                       stop
+                      else if (mdotY_top.lt.zero) then
+                       print *,"mdotY_top invalid"
+                       stop
+                      else if ((mdotY_top.eq.zero).and.  &
+                               (mdotY_bot.eq.zero)) then
+                       ! do nothing; fully saturated
+                      else if ((mdotY_top.ge.zero).and. &
+                               (mdotY_bot.ge.zero)) then
+                       updateY_flag=0
+                       if ((mdotY_top.gt.zero).and. &
+                           (mdotY_bot.eq.zero)) then
+                        updateY_flag=1
+                       else if ((mdotY_top.gt.zero).and. &
+                                (mdotY_bot.gt.zero)) then
+                        if (mdotT.lt.mdotY) then
+                         updateY_flag=0
+                        else if (mdotT.ge.mdotY) then
+                         updateY_flag=1
+                        else
+                         print *,"mdotT or mdotY invalid"
+                         stop
+                        endif
+                       else if ((mdotY_top.eq.zero).and. &
+                                (mdotY_bot.gt.zero)) then
+                        if (mdotT.lt.mdotY) then
+                         updateY_flag=0
+                        else if (mdotT.ge.mdotY) then
+                         updateY_flag=1
+                        else
+                         print *,"mdotT or mdotY invalid"
+                         stop
+                        endif
+                       else
+                        print *,"mdotY_top or mdotY_bot invalid"
+                        stop
+                       endif
+                       if (updateY_flag.eq.1) then
+                         ! projects Y to 0<=Y<=1 when done.
+                        call Ygamma_update(Y_predict,TSAT_predict)
+                        call volfrac_from_massfrac(X_predict,Y_predict, &
+                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                        call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                         local_Tsat(ireverse), &
+                         X_predict, &
+                         LL(ireverse), &
+                         R_Palmore_Desjardins, &
+                         molar_mass_vapor, & ! WV
+                         Tgamma_min,Tgamma_max) 
+                       else if (updateY_flag.eq.0) then
+                         ! projects T to Tgamma_min<=T<=TSAT
+                        call Tgamma_update(Y_predict,TSAT_predict)
+                        call X_from_Tgamma(X_predict,TSAT_predict, &
+                         LL(ireverse),R_Palmore_Desjardins, &
+                         molar_mass_vapor) ! WV
+                        call massfrac_from_volfrac(X_predict,Y_predict, &
+                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                       else
+                        print *,"updateY_flag invalid"
+                        stop
+                       endif
+
+                      else
+                       print *,"mdotY_top or mdotY_bot invalid"
+                       stop
+                      endif
+                     
+                       
+                       
 
 
 
