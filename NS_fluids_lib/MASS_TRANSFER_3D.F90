@@ -6328,6 +6328,7 @@ stop
       type(nucleation_parm_type_inout) :: nucleation_PARMS_inout
       REAL_T DTDY,DTDY_MDOT,DTDY_TSAT
       REAL_T T_I_MDOT,T_I_TSAT,TDIFF_FN
+      INTEGER_T iprobe,im_probe,microlayer_substrate_probe
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -7243,137 +7244,89 @@ stop
                    source_perim_factor=one
                    dest_perim_factor=one
 
-                   if ((max_contact_line_size(im_source).gt.zero).and. &
-                       (microlayer_size(im_source).gt.zero).and. &
-                       (macrolayer_size(im_source).gt.zero).and. &
-                       (microlayer_substrate_source.ge.1).and. &
-                       (microlayer_substrate_source.le.nmat)) then
-                    icolor=NINT(colorfab(D_DECL(i,j,k)))
-                    if ((icolor.gt.color_count).or.(icolor.le.0)) then
-                     print *,"icolor invalid in RATEMASSCHANGE icolor=",icolor
-                     print *,"i,j,k ",i,j,k
-                     stop
-                    endif
-                    base_type=NINT(typefab(D_DECL(i,j,k)))
-                    if ((base_type.lt.1).or.(base_type.gt.nmat)) then
-                     print *,"base_type invalid"
-                     stop
-                    endif
-                    ! blob_matrix,blob_RHS,blob_velocity,
-                    ! blob_integral_momentum,blob_energy,
-                    ! blob_mass_for_velocity, (3 comp)
-                    ! volume, 
-                    ! centroid_integral, centroid_actual, 
-                    ! perim, perim_mat
-                    ic=(icolor-1)*num_elements_blobclass+ &
-                     3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-                     2*(2*SDIM)+1+ &
-                     3+1+2*SDIM+1+nmat
+                   do iprobe=1,2
 
-                    im2=microlayer_substrate_source
-                    if ((im2.ge.1).and.(im2.le.nmat)) then
-                     if (base_type.eq.im_source) then
-                      im1=im_dest
-                     else if (base_type.eq.im_dest) then
-                      im1=im_source
-                     else
-                      print *,"base_type invalid"
-                      stop
-                     endif
-                     ic=ic+(im1-1)*nmat+im2
-                     contact_line_perim=blob_array(ic)
-                    else 
-                     print *,"im2 invalid"
-                     stop
-                    endif
-
-                    if ((contact_line_perim.ge.zero).and. &
-                        (contact_line_perim.le. &
-                         max_contact_line_size(im_source))) then
-                     ! do nothing
-                    else if (contact_line_perim.gt. &
-                             max_contact_line_size(im_source)) then
-                     source_perim_factor= &
-                       max_contact_line_size(im_source)/contact_line_perim
+                    if (iprobe.eq.1) then
+                     im_probe=im_source
+                     microlayer_substrate_probe=microlayer_substrate_source
+                    else if (iprobe.eq.2) then
+                     im_probe=im_dest
+                     microlayer_substrate_probe=microlayer_substrate_dest
                     else
-                     print *,"contact_line_perim invalid"
+                     print *,"iprobe invalid"
                      stop
                     endif
-                   else if ((max_contact_line_size(im_source).eq.zero).or. &
-                            (microlayer_size(im_source).eq.zero).or. &
-                            (macrolayer_size(im_source).eq.zero).or. &
-                            (microlayer_substrate_source.eq.0)) then
-                    ! do nothing
-                   else
-                    print *,"microlayer parameters invalid"
-                    stop
-                   endif
-
-                   if ((max_contact_line_size(im_dest).gt.zero).and. &
-                       (microlayer_size(im_dest).gt.zero).and. &
-                       (macrolayer_size(im_dest).gt.zero).and. &
-                       (microlayer_substrate_dest.ge.1).and. &
-                       (microlayer_substrate_dest.le.nmat)) then
-                    icolor=NINT(colorfab(D_DECL(i,j,k)))
-                    if ((icolor.gt.color_count).or.(icolor.le.0)) then
-                     print *,"icolor invalid in RATEMASSCHANGE icolor=",icolor
-                     print *,"i,j,k ",i,j,k
-                     stop
-                    endif
-                    base_type=NINT(typefab(D_DECL(i,j,k)))
-                    if ((base_type.lt.1).or.(base_type.gt.nmat)) then
-                     print *,"base_type invalid"
-                     stop
-                    endif
-                    ! blob_matrix,blob_RHS,blob_velocity,
-                    ! blob_integral_momentum,blob_energy,
-                    ! blob_mass_for_velocity, (3 comp)
-                    ! volume, 
-                    ! centroid_integral, centroid_actual, 
-                    ! perim, perim_mat
-                    ic=(icolor-1)*num_elements_blobclass+ &
-                     3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-                     2*(2*SDIM)+1+ &
-                     3+1+2*SDIM+1+nmat
-
-                    im2=microlayer_substrate_dest
-                    if ((im2.ge.1).and.(im2.le.nmat)) then
-                     if (base_type.eq.im_source) then
-                      im1=im_dest
-                     else if (base_type.eq.im_dest) then
-                      im1=im_source
-                     else
+ 
+                    if ((local_freezing_model.eq.0).and. &
+                        (max_contact_line_size(im_probe).gt.zero).and. &
+                        (microlayer_size(im_probe).gt.zero).and. &
+                        (macrolayer_size(im_probe).gt.zero).and. &
+                        (microlayer_substrate_probe.ge.1).and. &
+                        (microlayer_substrate_probe.le.nmat)) then
+                     icolor=NINT(colorfab(D_DECL(i,j,k)))
+                     if ((icolor.gt.color_count).or.(icolor.le.0)) then
+                      print *,"icolor invalid in RATEMASSCHANGE icolor=",icolor
+                      print *,"i,j,k ",i,j,k
+                      stop
+                     endif
+                     base_type=NINT(typefab(D_DECL(i,j,k)))
+                     if ((base_type.lt.1).or.(base_type.gt.nmat)) then
                       print *,"base_type invalid"
                       stop
                      endif
-                     ic=ic+(im1-1)*nmat+im2
-                     contact_line_perim=blob_array(ic)
-                    else 
-                     print *,"im2 invalid"
-                     stop
-                    endif
+                     ! blob_matrix,blob_RHS,blob_velocity,
+                     ! blob_integral_momentum,blob_energy,
+                     ! blob_mass_for_velocity, (3 comp)
+                     ! volume, 
+                     ! centroid_integral, centroid_actual, 
+                     ! perim, perim_mat
+                     ic=(icolor-1)*num_elements_blobclass+ &
+                      3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
+                      2*(2*SDIM)+1+ &
+                      3+1+2*SDIM+1+nmat
 
-                    if ((contact_line_perim.ge.zero).and. &
-                        (contact_line_perim.le. &
-                         max_contact_line_size(im_dest))) then
+                     im2=microlayer_substrate_probe
+                     if ((im2.ge.1).and.(im2.le.nmat)) then
+                      if (base_type.eq.im_source) then
+                       im1=im_dest
+                      else if (base_type.eq.im_dest) then
+                       im1=im_source
+                      else
+                       print *,"base_type invalid"
+                       stop
+                      endif
+                      ic=ic+(im1-1)*nmat+im2
+                      contact_line_perim=blob_array(ic)
+                     else 
+                      print *,"im2 invalid"
+                      stop
+                     endif
+
+                     if ((contact_line_perim.ge.zero).and. &
+                         (contact_line_perim.le. &
+                          max_contact_line_size(im_probe))) then
                       ! do nothing
-                    else if (contact_line_perim.gt. &
-                             max_contact_line_size(im_dest)) then
-                     dest_perim_factor= &
-                       max_contact_line_size(im_dest)/contact_line_perim
+                     else if (contact_line_perim.gt. &
+                              max_contact_line_size(im_probe)) then
+                      source_perim_factor= &
+                       max_contact_line_size(im_probe)/contact_line_perim
+                     else
+                      print *,"contact_line_perim invalid"
+                      stop
+                     endif
+                    else if ((local_freezing_model.gt.0).or. &
+                             (max_contact_line_size(im_probe).eq.zero).or. &
+                             (microlayer_size(im_probe).eq.zero).or. &
+                             (macrolayer_size(im_probe).eq.zero).or. &
+                             (microlayer_substrate_probe.eq.0)) then
+                     ! do nothing
                     else
-                     print *,"contact_line_perim invalid"
+                     print *,"microlayer parameters invalid"
                      stop
                     endif
-                   else if ((max_contact_line_size(im_dest).eq.zero).or. &
-                            (microlayer_size(im_dest).eq.zero).or. &
-                            (macrolayer_size(im_dest).eq.zero).or. &
-                            (microlayer_substrate_dest.eq.0)) then
-                    ! do nothing
-                   else
-                    print *,"microlayer parameters invalid"
-                    stop
-                   endif
+       
+                   enddo ! iprobe=1,2
+
 
                     ! V dt * L * L = volume of material change of phase
                     ! rho_src * V dt L^2 = rho_dst * (V+Vexpand) * dt L^2
@@ -7504,6 +7457,23 @@ stop
                       Y_predict=one
                      else if ((Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
                               (Y_probe(iprobe_vapor).ge.zero)) then
+
+                        ! increases Y_predict until mdot_Y>=0
+                      call project_Y_gamma(Y_predict)
+                      call volfrac_from_massfrac(X_predict,Y_predict, &
+                       WA,WV)
+                      call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                        local_Tsat(ireverse), &
+                        X_predict, &
+                        LL(ireverse), &
+                        R_Palmore_Desjardins, &
+                        molar_mass_vapor, & ! WV
+                        Tgamma_min,Tgamma_max) 
+                       ! decreases T_gamma * L until mdot_T >=0
+                      call project_T_gamma(TSAT_predict)
+
+
+
                        !Y_probe<=Y_interface<=1
                       if (TSAT_iter.eq.0) then
                        YMIN_converge=0

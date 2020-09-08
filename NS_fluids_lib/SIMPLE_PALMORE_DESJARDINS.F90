@@ -186,7 +186,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f)
  T_gamma_min=0.0d0
  T_gamma_max=1.0D+20
 
- call Tgamma_from_TSAT(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
+ call Tgamma_from_TSAT_and_X(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
    T_gamma_min,T_gamma_max)
  if (abs(T_gamma-T_gamma_test).le.0.5d0) then
   ! do nothing
@@ -343,7 +343,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  T_gamma_min=0.0d0
  T_gamma_max=1.0D+20
 
- call Tgamma_from_TSAT(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
+ call Tgamma_from_TSAT_and_X(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
    T_gamma_min,T_gamma_max)
  if (abs(T_gamma-T_gamma_test).le.0.5d0) then
   ! do nothing

@@ -15531,7 +15531,7 @@ endif
 return
 end subroutine X_from_Tgamma
 
-subroutine Tgamma_from_TSAT(Tgamma,TSAT, &
+subroutine Tgamma_from_TSAT_and_X(Tgamma,TSAT, &
   X,L,R,WV,Tgamma_min,Tgamma_max)
 IMPLICIT NONE
 
@@ -15548,7 +15548,7 @@ if ((X.ge.zero).and.(X.le.one)) then
    else if (L.lt.zero) then
     Tgamma=Tgamma_max
    else
-    print *,"L invalid in Tgamma_from_TSAT"
+    print *,"L invalid in Tgamma_from_TSAT_and_X"
     stop
    endif
   else if (X.eq.one) then
@@ -15561,7 +15561,7 @@ if ((X.ge.zero).and.(X.le.one)) then
    else if (Tgamma.le.zero) then
     Tgamma=Tgamma_min
    else
-    print *,"Tgamma invalid in Tgamma_from_TSAT"
+    print *,"Tgamma invalid in Tgamma_from_TSAT_and_X"
     stop
    endif
    if (L.gt.zero) then
@@ -15584,7 +15584,7 @@ if ((X.ge.zero).and.(X.le.one)) then
    endif
 
   else
-   print *,"X invalid in Tgamma_from_TSAT"
+   print *,"X invalid in Tgamma_from_TSAT_and_X"
    stop
   endif
   if (Tgamma.lt.Tgamma_min) then
@@ -15595,16 +15595,16 @@ if ((X.ge.zero).and.(X.le.one)) then
   endif
 
  else
-  print *,"TSAT invalid in Tgamma_from_TSAT"
+  print *,"TSAT invalid in Tgamma_from_TSAT_and_X"
   stop
  endif
 else
- print *,"X invalid in Tgamma_from_TSAT"
+ print *,"X invalid in Tgamma_from_TSAT_and_X"
  stop
 endif
  
 return
-end subroutine Tgamma_from_TSAT
+end subroutine Tgamma_from_TSAT_and_X
 
 
 subroutine massfrac_from_volfrac(X,Y,WA,WV)
