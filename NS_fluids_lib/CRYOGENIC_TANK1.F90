@@ -329,7 +329,7 @@ subroutine EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
   if (im.eq.2) then
    if (imattype.eq.24) then
     ! p_mix = rho_mix (gamme_mix-1) U_mix
-    pressure=rho * (GAMMA_MIX(massfrac_var(1)-one)) * internal_energy
+    pressure=rho * (GAMMA_MIX(massfrac_var(1))-one) * internal_energy
    else
     print *,"imattype= ",imattype
     print *,"imattype invalid"
@@ -446,7 +446,7 @@ subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,massfrac_var, &
     if (denom.gt.zero) then
      temperature=internal_energy/denom
     else
-     print *,"denom invalid"
+     print *,"denom invalid 1"
      stop
     endif
    else
@@ -510,7 +510,7 @@ REAL_T function GAMMA_MIX(X_V)
   GAMMA_MIX = &
    (X_V * TANK1_VAPOR_CP + (one-X_V)*TANK1_GAS_CP) / denom
  else
-  print *,"denom invalid"
+  print *,"denom invalid 2"
   stop
  endif
 
@@ -867,7 +867,7 @@ if ((num_materials.eq.3).and.(probtype.eq.421)) then
     if (denom.gt.zero) then
      flux_magnitude=flux_magnitude*xsten(1,1)/denom
     else
-     print *,"denom invalid"
+     print *,"denom invalid 3"
      stop
     endif
    else if (levelrz.eq.0) then
