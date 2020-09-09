@@ -2641,7 +2641,7 @@ stop
       REAL_T, intent(inout) :: Y_gamma
       REAL_T, intent(in) :: T_gamma
       REAL_T D_MASS
-      INTEGER_T Y_gamma_iter_max,Y_gamma_iter,Y_gamma_converge
+      INTEGER_T Y_gamma_iter,Y_gamma_converge
       REAL_T Y_gamma_old
       REAL_T Y_gamma_new
       REAL_T T_probe(2)
@@ -2673,7 +2673,6 @@ stop
        den_G=TSAT_Y_PARMS%den_G
        if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
 
-        Y_gamma_iter_max=5
         Y_gamma_iter=0
         Y_gamma_old=Y_gamma
         Y_gamma_new=Y_gamma
@@ -2751,11 +2750,11 @@ stop
 
           ! Y_gamma_iter starts at 0
           Y_gamma_iter=Y_gamma_iter+1
-          if (Y_gamma_iter.gt.Y_gamma_iter_max) then
+          if (Y_gamma_iter.gt.EVAPORATION_iter_max) then
            Y_gamma_converge=1
           endif
           if (Y_gamma_iter.gt.1) then
-           if (Y_gamma_err.lt.(0.001d0)*Y_gamma_INIT_ERR) then
+           if (Y_gamma_err.lt.EVAPORATION_TOL*Y_gamma_INIT_ERR) then
             Y_gamma_converge=1
            endif
           endif
@@ -2843,8 +2842,18 @@ stop
 
          if ((dxprobe_target(1).gt.zero).and. &
              (dxprobe_target(2).gt.zero)) then
-          
-          mdotY_top=den_G*(Y_gamma-Y_probe(iprobe_vapor))/ &
+         
+          mdotY_top=Y_gamma-Y_probe(iprobe_vapor)
+
+          if (mdotY_top.ge.zero) then
+           ! do nothing
+          else if (mdotY_top.ge.-1.0D-3) then
+           mdotY_top=zero
+          else
+           print *,"mdotY_top invalid"
+           stop
+          endif
+          mdotY_top=den_G*mdotY_top/ &
                   dxprobe_target(iprobe_vapor)
           if (mdoty_top.ge.zero) then
            mdotY_bot=one-Y_gamma
@@ -2858,6 +2867,14 @@ stop
            endif
           else
            print *,"expecting Y_gamma>=Y_probe"
+           print *,"mdotY_top= ",mdotY_top
+           print *,"den_G= ",den_G
+           print *,"D_mass= ",D_mass
+           print *,"Y_gamma= ",Y_gamma
+           print *,"iprobe_vapor=",iprobe_vapor
+           print *,"Y_probe(iprobe_vapor)=",Y_probe(iprobe_vapor)
+           print *,"dxprobe_target(iprobe_vapor)=", &
+                   dxprobe_target(iprobe_vapor)
            stop
           endif
 
@@ -3005,7 +3022,7 @@ stop
       REAL_T, intent(inout) :: T_gamma
       REAL_T, intent(in) :: Y_gamma
       REAL_T D_MASS
-      INTEGER_T T_gamma_iter_max,T_gamma_iter,T_gamma_converge
+      INTEGER_T T_gamma_iter,T_gamma_converge
       REAL_T T_gamma_old
       REAL_T T_gamma_new
       REAL_T T_gamma_crit
@@ -3040,7 +3057,6 @@ stop
        den_G=TSAT_Y_PARMS%den_G
        if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
 
-        T_gamma_iter_max=5
         T_gamma_iter=0
         T_gamma_old=T_gamma
         T_gamma_new=T_gamma
@@ -3146,11 +3162,11 @@ stop
 
           ! T_gamma_iter starts at 0
           T_gamma_iter=T_gamma_iter+1
-          if (T_gamma_iter.gt.T_gamma_iter_max) then
+          if (T_gamma_iter.gt.EVAPORATION_iter_max) then
            T_gamma_converge=1
           endif
           if (T_gamma_iter.gt.1) then
-           if (T_gamma_err.lt.(0.001d0)*T_gamma_INIT_ERR) then
+           if (T_gamma_err.lt.EVAPORATION_TOL*T_gamma_INIT_ERR) then
             T_gamma_converge=1
            endif
           endif
@@ -6727,7 +6743,7 @@ stop
       REAL_T X_predict
       REAL_T TSAT_predict,TSAT_correct
       REAL_T TSAT_ERR,TSAT_INIT_ERR
-      INTEGER_T TSAT_iter,TSAT_converge,TSAT_iter_max
+      INTEGER_T TSAT_iter,TSAT_converge
       REAL_T :: Y_interface_min
       REAL_T :: TI_min
       REAL_T :: TI_max
@@ -7481,7 +7497,6 @@ stop
                  VEL_correct=zero
 
                  TSAT_iter=0
-                 TSAT_iter_max=5
                  TSAT_converge=0
 
                  PROBE_PARMS%dxprobe_source=>dxprobe_source
@@ -8082,11 +8097,11 @@ stop
                   endif
                    ! TSAT_iter starts at 0
                   TSAT_iter=TSAT_iter+1
-                  if (TSAT_iter.gt.TSAT_iter_max) then
+                  if (TSAT_iter.gt.EVAPORATION_iter_max) then
                     TSAT_converge=1
                   endif
                   if (TSAT_iter.gt.1) then
-                    if (TSAT_err.lt.(0.001d0)*TSAT_INIT_ERR) then
+                    if (TSAT_err.lt.EVAPORATION_TOL*TSAT_INIT_ERR) then
                      TSAT_converge=1
                     endif
                   endif
@@ -8097,8 +8112,8 @@ stop
                   if (at_interface.eq.1) then
                    if (DEBUG_EVAPORATION.eq.1) then
                     print *,"DEBUG_EVAPORATION STATEMENT 3"
-                    print *,"i,j,k,TSAT_iter,TSAT_iter_max,TSAT_ERR ", &
-                     i,j,k,TSAT_iter,TSAT_iter_max,TSAT_ERR
+                    print *,"i,j,k,TSAT_iter,TSAT_ERR ", &
+                     i,j,k,TSAT_iter,TSAT_ERR
                     print *,"TSAT_correct ",TSAT_correct
                     print *,"Y_predict ",Y_predict
                    endif
