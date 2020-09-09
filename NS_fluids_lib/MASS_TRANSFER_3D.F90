@@ -2658,7 +2658,7 @@ stop
       INTEGER_T at_interface
       REAL_T LL
       INTEGER_T iprobe_vapor
-      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T den_G
       REAL_T Y_gamma_ERR,Y_gamma_INIT_ERR
       REAL_T YI_min
 
@@ -2711,7 +2711,8 @@ stop
            if ((dxprobe_target(1).gt.zero).and. &
                (dxprobe_target(2).gt.zero)) then
             
-            if (Y_probe(iprobe_vapor).ge.TSAT_Y_PARMS%YI_min) then 
+            if ((Y_probe(iprobe_vapor).ge.zero).and. &
+                (Y_probe(iprobe_vapor).le.one)) then 
              if (Y_gamma_old.ge.Y_probe(iprobe_vapor)) then
               Y_gamma_new=Y_gamma_old
              else if (Y_gamma_old.le.Y_probe(iprobe_vapor)) then
@@ -2719,6 +2720,9 @@ stop
              else
               print *,"Y_probe invalid"
               stop
+             endif
+             if (Y_gamma_new.lt.TSAT_Y_PARMS%YI_min) then
+              Y_gamma_new=TSAT_Y_PARMS%YI_min
              endif
             else
              print *,"Y_probe underflow"
@@ -2795,7 +2799,7 @@ stop
       INTEGER_T at_interface
       REAL_T LL
       INTEGER_T iprobe_vapor
-      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T den_G
       REAL_T YI_min
 
       YI_min=TSAT_Y_PARMS%YI_min
@@ -2842,13 +2846,18 @@ stop
           
           mdotY_top=den_G*(Y_gamma-Y_probe(iprobe_vapor))/ &
                   dxprobe_target(iprobe_vapor)
-          mdotY_bot=one-Y_gamma
-          if (mdotY_bot.eq.zero) then
-           mdotY=zero
-          else if (mdotY_bot.gt.zero) then
-           mdotY=mdotY_top/mdotY_bot
+          if (mdoty_top.ge.zero) then
+           mdotY_bot=one-Y_gamma
+           if (mdotY_bot.eq.zero) then
+            mdotY=zero
+           else if (mdotY_bot.gt.zero) then
+            mdotY=mdotY_top/mdotY_bot
+           else
+            print *,"mdotY_bot invalid"
+            stop
+           endif
           else
-           print *,"mdotY_bot invalid"
+           print *,"expecting Y_gamma>=Y_probe"
            stop
           endif
 
@@ -2899,7 +2908,7 @@ stop
       INTEGER_T at_interface
       REAL_T LL
       INTEGER_T iprobe_vapor
-      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T den_G
       REAL_T YI_min
       REAL_T Ygamma_top,Ygamma_bot
 
@@ -3014,7 +3023,7 @@ stop
       INTEGER_T at_interface
       REAL_T LL
       INTEGER_T iprobe_vapor
-      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T den_G
       REAL_T T_gamma_ERR,T_gamma_INIT_ERR
       REAL_T YI_min
       REAL_T wt(2)
@@ -3186,7 +3195,7 @@ stop
       INTEGER_T at_interface
       REAL_T LL
       INTEGER_T iprobe_vapor
-      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T den_G
       REAL_T YI_min
       REAL_T wt(2)
       INTEGER_T iprobe
@@ -3244,8 +3253,13 @@ stop
            endif
           enddo ! iprobe=1,2
 
-          mdotT=wt(1)*(T_probe(1)-T_gamma)+ &
-                wt(2)*(T_probe(2)-T_gamma)
+          if (wt(1)+wt(2).gt.zero) then
+           mdotT=wt(1)*(T_probe(1)-T_gamma)+ &
+                 wt(2)*(T_probe(2)-T_gamma)
+          else
+           print *,"expecting wt(1)+wt(2) to be positive"
+           stop
+          endif
           if (LL.gt.zero) then
            ! do nothing
           else if (LL.lt.zero) then
@@ -3300,7 +3314,7 @@ stop
       INTEGER_T at_interface
       REAL_T LL
       INTEGER_T iprobe_vapor
-      REAL_T den_G,MDOT_Y,T_I_coef,TAVG
+      REAL_T den_G
       REAL_T YI_min
       REAL_T wt(2)
       REAL_T T_gamma_first
@@ -3436,6 +3450,7 @@ stop
            Y_I_MIN=YI_min_old
           else if (LL.lt.zero) then
 
+             ! X=exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
            call X_from_Tgamma(X_I_MIN,T_I_MAX,TSAT_base,LL,R,WV)
 
            if ((X_I_MIN.gt.zero).and.(X_I_MIN.le.one)) then
@@ -6713,17 +6728,12 @@ stop
       REAL_T TSAT_predict,TSAT_correct
       REAL_T TSAT_ERR,TSAT_INIT_ERR
       INTEGER_T TSAT_iter,TSAT_converge,TSAT_iter_max
-      INTEGER_T YMIN_converge
       REAL_T :: Y_interface_min
       REAL_T :: TI_min
       REAL_T :: TI_max
-      INTEGER_T YMIN_iter
-      INTEGER_T YMIN_iter_max
       REAL_T FicksLawD(2)  ! iprobe=1 source iprobe=2 dest 
       REAL_T molar_mass_ambient
       REAL_T molar_mass_vapor
-      REAL_T YMIN_ERR
-      REAL_T YMIN_INIT_ERR
       INTEGER_T interp_valid_flag(2) ! iprobe=1 source iprobe=2 dest
       type(probe_parm_type), target :: PROBE_PARMS
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
@@ -7472,7 +7482,6 @@ stop
 
                  TSAT_iter=0
                  TSAT_iter_max=5
-                 YMIN_iter_max=5
                  TSAT_converge=0
 
                  PROBE_PARMS%dxprobe_source=>dxprobe_source

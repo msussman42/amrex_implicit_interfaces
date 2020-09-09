@@ -602,7 +602,16 @@ if ((num_materials.eq.3).and. &
    ! rho_mix = rho_g + rho_v
    ! Y = rho_v / (rho_v + rho_g)
    ! rho_mix = rho_g/(1-Y) 
-   STATE(ibase+1)=fort_denconst(2)/(one-fort_speciesconst(1))
+   ! fort_speciesconst:
+   ! species 1: 1...nmat
+   ! species 2: nmat+1 ... 2 nmat
+   ! species 3: 2 nmat+1 ... 3 nmat
+   if (one-fort_speciesconst(2).gt.zero) then
+    STATE(ibase+1)=fort_denconst(2)/(one-fort_speciesconst(2))
+   else
+    print *,"fort_speciesconst(2) invalid"
+    stop
+   endif
   endif
 
   do n=1,num_species_var
