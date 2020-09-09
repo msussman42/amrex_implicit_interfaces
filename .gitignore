@@ -4,6 +4,8 @@
 NS_fluids_lib/tmp_build_dir
 NS_fluids_lib/test
 NS_fluids_lib/amr*
+NS_fluids_lib/run2d/test*
+NS_fluids_lib/run3d/test*
 TAGS
 tags
 *~
