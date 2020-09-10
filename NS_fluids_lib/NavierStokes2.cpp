@@ -1632,7 +1632,16 @@ void NavierStokes::apply_cell_pressure_gradient(
     xlo,dx,
     &spectral_loop,
     &ncfluxreg,
+     // semfluxfab(i,j,k)  (as an array4)
+     //   semfluxfab.loVect(1)<=i<=semfluxfab.hiVect(1)
+     //   semfluxfab.loVect(2)<=j<=semfluxfab.hiVect(2)
+     //   semfluxfab.loVect(3)<=k<=semfluxfab.hiVect(3)
     semfluxfab.dataPtr(),
+     //ARLIM(x) is a macro
+     //the compiler expands this macro as:
+     //x(1),(2),x(3)
+     //here (in 3 dimensions),
+     //semfluxfab.loVect(1),semfluxfab.loVect(2),semfluxfab.loVect(3)
     ARLIM(semfluxfab.loVect()),ARLIM(semfluxfab.hiVect()),
     maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
