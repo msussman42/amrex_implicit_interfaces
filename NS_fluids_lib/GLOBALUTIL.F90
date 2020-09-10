@@ -15525,6 +15525,8 @@ if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
  endif
 else
  print *,"Tgamma or TSAT invalid in X_from_Tgamma"
+ print *,"Tgamma= ",Tgamma
+ print *,"TSAT= ",TSAT
  stop
 endif
 
