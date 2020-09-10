@@ -179,8 +179,6 @@ stop
         REAL_T :: LS_virtual(num_materials)
         INTEGER_T im_local
         INTEGER_T im_primary_sub_stencil
-        REAL_T local_dist_solid
-        REAL_T WT
         REAL_T shortest_dist_to_fluid
         REAL_T dist_stencil_to_bulk
         REAL_T :: LS_interp_low_order(num_materials)
@@ -272,45 +270,39 @@ stop
             do im_local=1,CP%nmat
              LS_interp_low_order(im_local)=LS_virtual(im_local)
             enddo
-           else if (dist_stencil_to_bulk.lt. &
-                    shortest_dist_to_fluid) then
-            shortest_dist_to_fluid=dist_stencil_to_bulk
-            do im_local=1,CP%nmat
-             LS_interp_low_order(im_local)=LS_virtual(im_local)
-            enddo
-           else if (dist_stencil_to_bulk.ge. &
-                    shortest_dist_to_fluid) then
-            ! do nothing
+           else if (shortest_dist_to_fluid.ge.zero) then
+            if (dist_stencil_to_bulk.lt. &
+                shortest_dist_to_fluid) then
+             shortest_dist_to_fluid=dist_stencil_to_bulk
+             do im_local=1,CP%nmat
+              LS_interp_low_order(im_local)=LS_virtual(im_local)
+             enddo
+            else if (dist_stencil_to_bulk.ge. &
+                     shortest_dist_to_fluid) then
+             ! do nothing
+            else
+             print *,"dist_stencil_bulk invalid"
+             stop
+            endif
            else
-            print *,"dist_stencil_bulk invalid"
+            print *,"shortest_dist_to_fluid invalid"
             stop
            endif
 
-           local_dist_solid=LS_virtual(CP%im_solid_max)
-           if (local_dist_solid.gt.zero) then
-            local_dist_solid=zero
-           endif
-           WT=one/(local_dist_solid**2+0.01d0*(CP%dxmaxLS**2))
-
           else if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.1) then
 
-           local_dist_solid=10.0d0*CP%dxmaxLS
-           WT=one/(local_dist_solid**2+0.01d0*(CP%dxmaxLS**2))
+           ! do nothing
  
           else
            print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
            stop 
           endif
           
-          if (WT.gt.zero) then 
-           ZEYU_DAT%ZEYU_WT(i2,j2,k2)=WT
-           do im_local=1,CP%nmat
-            ZEYU_DAT%ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
-           enddo
-          else 
-           print *,"WT bust"
-           stop
-          endif
+          ZEYU_DAT%ZEYU_WT(i2,j2,k2)=one
+          do im_local=1,CP%nmat
+           ZEYU_DAT%ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
+          enddo
+
          enddo 
          enddo 
          enddo  !i2,j2,k2=LSstenlo ... LSstenhi
