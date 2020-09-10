@@ -57,7 +57,7 @@ stop
 
         contains
 
-        subroutine cell_xCP(cell_CP_parm,xCP)
+        subroutine cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
         use global_utility_module
         use global_distance_module
         use probf90_module
@@ -66,6 +66,7 @@ stop
         IMPLICIT NONE
         type(cell_CP_parm_type), intent(in) :: cell_CP_parm
         REAL_T, intent(out) :: xCP(SDIM)
+        REAL_T, intent(out) :: xSOLID_BULK(SDIM)
         INTEGER_T :: nhalf
         REAL_T :: xsten(-3:3,SDIM)
         INTEGER_T :: dir
@@ -116,7 +117,8 @@ stop
 
           mag=zero
           do dir=1,SDIM
-           xCP(dir)=xsten(0,dir)-LS_cell*nslope_cell(dir)
+           xSOLID_BULK(dir)=xsten(0,dir)
+           xCP(dir)=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
            mag=mag+nslope_cell(dir)**2
           enddo
           mag=sqrt(mag)
@@ -146,6 +148,7 @@ stop
          ZEYU_DAT, &
          cell_CP_parm, &
          xCP, &
+         xSOLID_BULK, &
          cell_index, &
          LS_interp, &
          im_solid, &
@@ -161,6 +164,7 @@ stop
         type(cell_CP_parm_type), intent(in) :: cell_CP_parm
         type(prealloc_type), intent(out) :: ZEYU_DAT
         REAL_T, intent(in) :: xCP(SDIM)
+        REAL_T, intent(in) :: xSOLID_BULK(SDIM)
         INTEGER_T, intent(in) :: cell_index(SDIM)
         REAL_T, intent(out) :: LS_interp(num_materials)
         INTEGER_T, intent(in) :: im_solid 
@@ -177,6 +181,10 @@ stop
         INTEGER_T im_primary_sub_stencil
         REAL_T local_dist_solid
         REAL_T WT
+        REAL_T shortest_dist_to_fluid
+        REAL_T dist_stencil_to_bulk
+        REAL_T :: LS_interp_low_order(num_materials)
+
         INTEGER_T LSstenlo(3)
         INTEGER_T LSstenhi(3)
 
@@ -202,6 +210,8 @@ stop
           LSstenhi(dir)=1
          enddo ! dir=1..sdim
 
+         shortest_dist_to_fluid=-one
+
          do i2=LSstenlo(1),LSstenhi(1)
          do j2=LSstenlo(2),LSstenhi(2)
          do k2=LSstenlo(3),LSstenhi(3)
@@ -214,13 +224,24 @@ stop
            isten,jsten,ksten, &
            CP%level,nhalf)
 
+          dist_stencil_to_bulk=zero
+
           do dir=1,SDIM
            ZEYU_DAT%ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
+           dist_stencil_to_bulk=dist_stencil_to_bulk+ &
+                   (xsten(0,dir)-xSOLID_BULK(dir))**2
           enddo
+          dist_stencil_to_bulk=sqrt(dist_stencil_to_bulk)
 
           do im_local=1,CP%nmat
            LS_virtual(im_local)=CP%LS(D_DECL(isten,jsten,ksten),im_local)
+          enddo
 
+          ! the fluid cells closest to the substrate, but not
+          ! in the substrate, have the most weight.
+          call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
+
+          do im_local=1,CP%nmat
            if (is_rigid(CP%nmat,im_local).eq.0) then
             if (LS_virtual(im_local).ge.zero) then
              if (im1_stencil.eq.0) then
@@ -244,11 +265,26 @@ stop
            endif
           enddo ! im_local=1..nmat
 
-          ! the fluid cells closest to the substrate, but not
-          ! in the substrate, have the most weight.
-          call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
-
           if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.0) then
+
+           if (shortest_dist_to_fluid.eq.-one) then
+            shortest_dist_to_fluid=dist_stencil_to_bulk
+            do im_local=1,CP%nmat
+             LS_interp_low_order(im_local)=LS_virtual(im_local)
+            enddo
+           else if (dist_stencil_to_bulk.lt. &
+                    shortest_dist_to_fluid) then
+            shortest_dist_to_fluid=dist_stencil_to_bulk
+            do im_local=1,CP%nmat
+             LS_interp_low_order(im_local)=LS_virtual(im_local)
+            enddo
+           else if (dist_stencil_to_bulk.ge. &
+                    shortest_dist_to_fluid) then
+            ! do nothing
+           else
+            print *,"dist_stencil_bulk invalid"
+            stop
+           endif
 
            local_dist_solid=LS_virtual(CP%im_solid_max)
            if (local_dist_solid.gt.zero) then
@@ -278,16 +314,31 @@ stop
          enddo 
          enddo 
          enddo  !i2,j2,k2=LSstenlo ... LSstenhi
-         
-         call level_set_extrapolation( &
-          ZEYU_DAT%ZEYU_XPOS, &
-          ZEYU_DAT%ZEYU_LS, &
-          ZEYU_DAT%ZEYU_WT, &
-          CP%local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
-          LS_interp, &
-          CP%least_sqr_radius, &
-          CP%least_sqrZ, &
-          CP%nmat,SDIM)
+        
+         if (shortest_dist_to_fluid.ge.zero) then
+
+          do im_local=1,CP%nmat
+           LS_interp(im_local)=LS_interp_low_order(im_local)
+          enddo
+           !no fluid cells in stencil
+         else if (shortest_dist_to_fluid.eq.-one) then 
+                 !no fluid cells in stencil
+
+          call level_set_extrapolation( &
+           ZEYU_DAT%ZEYU_XPOS, &
+           ZEYU_DAT%ZEYU_LS, &
+           ZEYU_DAT%ZEYU_WT, &
+           CP%local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
+           LS_interp, &
+           CP%least_sqr_radius, &
+           CP%least_sqrZ, &
+           CP%nmat,SDIM)
+
+         else
+          print *,"shortest_dist_to_fluid invalid"
+          stop
+         endif
+
         else
          print *,"CP%ngrow_LS invalid"
          stop
@@ -15750,6 +15801,7 @@ stop
       type(prealloc_type) :: ZEYU_DAT
       INTEGER_T cell_index(3)
       REAL_T xCP(SDIM)
+      REAL_T xSOLID_BULK(SDIM)
       REAL_T local_XPOS(SDIM)
 
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -16358,7 +16410,10 @@ stop
          if ((sum_vfrac_solid_new.ge.half).or. &
              (max_solid_LS.ge.zero)) then 
 
-          num_LS_extrap=num_LS_extrap+1
+           ! number of cells in the solid region
+           ! corrected with an extrapolated value from 
+           ! the fluid region.
+          num_LS_extrap=num_LS_extrap+1 
 
           if ((im_solid_max.lt.1).or. &
               (im_solid_max.gt.nmat).or. &
@@ -16470,7 +16525,7 @@ stop
             cell_CP_parm%i=i+i1
             cell_CP_parm%j=j+j1
             cell_CP_parm%k=k+k1
-            call cell_xCP(cell_CP_parm,xCP)
+            call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
 
             call containing_cell(bfact, &
               dx, &
@@ -16488,6 +16543,7 @@ stop
              ZEYU_DAT, &
              cell_CP_parm, &
              xCP, &
+             xSOLID_BULK, &
              cell_index, &
              LS_virtual_new, & 
              im_solid_max, &
