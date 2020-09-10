@@ -12424,7 +12424,7 @@ stop
        vel,DIMS(vel), &
        pres,DIMS(pres), & ! holds U_old(dir) if operation_flag==11
        den,DIMS(den), &
-       mgoni,DIMS(mgoni), &
+       mgoni,DIMS(mgoni), &!DIMS(dat)=datxlo,datxhi,datylo,datyhi,datzlo,datzhi
        colorfab,DIMS(colorfab), &
        typefab,DIMS(typefab), &
        tilelo,tilehi, &
@@ -12543,6 +12543,16 @@ stop
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat*(1+SDIM))
       REAL_T, intent(in) :: solfab(DIMV(solfab),nparts_def*SDIM)
+       ! DIMV is a macro: 
+       ! DIMV(dat)=datxlo:datxhi,datylo:datyhi,datzlo,datzhi
+       ! Sussman thinks that if semflux is declared within a structure
+       ! (a.k.a. "fortran type variable"), then only this declaration
+       ! is possible:
+       ! REAL_T, pointer :: semflux(:,:,:,:)
+       ! (or maybe "C_pointer"))
+       ! Within the fortran subroutine, if an array variable is declared
+       ! with no bounds, or perhaps declared as a one dimensional array,
+       ! one can use the "Bounds Remapping" feature of Fortran 2003.
       REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
       REAL_T, intent(inout) :: xcut(DIMV(xcut),1)
       REAL_T, intent(inout) :: xface(DIMV(xface),ncphys) ! xflux for advection
