@@ -93,6 +93,7 @@ stop
        REAL_T :: TI_max
        REAL_T :: D_MASS
        REAL_T :: den_G
+       INTEGER_T :: iprobe_vapor
        REAL_T, pointer :: thermal_k(:)
       end type TSAT_MASS_FRAC_parm_type
 
@@ -2657,10 +2658,10 @@ stop
       INTEGER_T interp_valid_flag(2)
       INTEGER_T at_interface
       REAL_T LL
-      INTEGER_T iprobe_vapor
       REAL_T den_G
       REAL_T Y_gamma_ERR,Y_gamma_INIT_ERR
       REAL_T YI_min
+      INTEGER_T iprobe_vapor
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -2698,14 +2699,16 @@ stop
           if (at_interface.eq.1) then
 
            LL=TSAT_Y_PARMS%PROBE_PARMS%LL
+
            if (LL.gt.zero) then
-            iprobe_vapor=2 ! dest (evaporation)
+            ! do nothing (evaporation)
            else if (LL.lt.zero) then
-            iprobe_vapor=1 ! source (condensation)
+            ! do nothing (condensation)
            else
             print *,"LL invalid"
             stop
            endif
+           iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
 
            if ((dxprobe_target(1).gt.zero).and. &
                (dxprobe_target(2).gt.zero)) then
@@ -2832,13 +2835,14 @@ stop
 
          LL=TSAT_Y_PARMS%PROBE_PARMS%LL
          if (LL.gt.zero) then
-          iprobe_vapor=2 ! dest (evaporation)
+          ! do nothing (evaporation)
          else if (LL.lt.zero) then
-          iprobe_vapor=1 ! source (condensation)
+          ! do nothing (condensation)
          else
           print *,"LL invalid"
           stop
          endif
+         iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
 
          if ((dxprobe_target(1).gt.zero).and. &
              (dxprobe_target(2).gt.zero)) then
@@ -2960,13 +2964,14 @@ stop
 
          LL=TSAT_Y_PARMS%PROBE_PARMS%LL
          if (LL.gt.zero) then
-          iprobe_vapor=2 ! dest (evaporation)
+          ! do nothing (evaporation)
          else if (LL.lt.zero) then
-          iprobe_vapor=1 ! source (condensation)
+          ! do nothing (condensation)
          else
           print *,"LL invalid"
           stop
          endif
+         iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
 
          if ((dxprobe_target(1).gt.zero).and. &
              (dxprobe_target(2).gt.zero)) then
@@ -3083,13 +3088,14 @@ stop
 
            LL=TSAT_Y_PARMS%PROBE_PARMS%LL
            if (LL.gt.zero) then
-            iprobe_vapor=2 ! dest (evaporation)
+            ! do nothing (evaporation)
            else if (LL.lt.zero) then
-            iprobe_vapor=1 ! source (condensation)
+            ! do nothing (condensation)
            else
             print *,"LL invalid"
             stop
            endif
+           iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
 
            if ((dxprobe_target(1).gt.zero).and. &
                (dxprobe_target(2).gt.zero)) then
@@ -3247,13 +3253,14 @@ stop
 
          LL=TSAT_Y_PARMS%PROBE_PARMS%LL
          if (LL.gt.zero) then
-          iprobe_vapor=2 ! dest (evaporation)
+          ! do nothing (evaporation)
          else if (LL.lt.zero) then
-          iprobe_vapor=1 ! source (condensation)
+          ! do nothing (condensation)
          else
           print *,"LL invalid"
           stop
          endif
+         iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
 
          if ((dxprobe_target(1).gt.zero).and. &
              (dxprobe_target(2).gt.zero)) then
@@ -3367,13 +3374,14 @@ stop
 
          LL=TSAT_Y_PARMS%PROBE_PARMS%LL
          if (LL.gt.zero) then
-          iprobe_vapor=2 ! dest (evaporation)
+          ! do nothing (evaporation)
          else if (LL.lt.zero) then
-          iprobe_vapor=1 ! source (condensation)
+          ! do nothing (condensation)
          else
           print *,"LL invalid"
           stop
          endif
+         iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
 
          if ((dxprobe_target(1).gt.zero).and. &
              (dxprobe_target(2).gt.zero)) then
@@ -3398,14 +3406,46 @@ stop
           T_gamma_first=(wt(1)*T_probe(1)+wt(2)*T_probe(2))/ &
                   (wt(1)+wt(2))
 
-          if (LL.gt.zero) then
-           T_gamma=T_gamma_first-mdotY/(wt(1)+wt(2))
-          else if (LL.lt.zero) then
-           T_gamma=T_gamma_first+mdotY/(wt(1)+wt(2))
+          if (T_gamma_first.gt.zero) then
+           if (LL.gt.zero) then
+            T_gamma=T_gamma_first-mdotY/(wt(1)+wt(2))
+            if (T_gamma.le.TSAT_Y_PARMS%TI_min) then
+             T_gamma=TSAT_Y_PARMS%TI_min
+            else if (T_gamma.ge.TSAT_Y_PARMS%TSAT_base) then
+             T_gamma=TSAT_Y_PARMS%TSAT_base
+            else if ((T_gamma.ge.TSAT_Y_PARMS%TI_min).and. &
+                     (T_gamma.le.TSAT_Y_PARMS%TSAT_base)) then
+             ! do nothing
+            else
+             print *,"T_gamma became corrupt"
+             stop
+            endif
+           else if (LL.lt.zero) then
+            T_gamma=T_gamma_first+mdotY/(wt(1)+wt(2))
+            if (T_gamma.ge.TSAT_Y_PARMS%TI_max) then
+             T_gamma=TSAT_Y_PARMS%TI_max
+            else if (T_gamma.le.TSAT_Y_PARMS%TSAT_base) then
+             T_gamma=TSAT_Y_PARMS%TSAT_base
+            else if ((T_gamma.le.TSAT_Y_PARMS%TI_max).and. &
+                     (T_gamma.ge.TSAT_Y_PARMS%TSAT_base)) then
+             ! do nothing
+            else
+             print *,"T_gamma became corrupt"
+             stop
+            endif
+           else
+            print *,"LL invalid"
+            stop
+           endif 
           else
-           print *,"LL invalid"
-           stop
-          endif 
+           T_gamma=T_I_interp(iprobe_vapor)
+           if (T_gamma.gt.zero) then
+            ! do nothing
+           else
+            print *,"T_I_interp out of range"
+            stop
+           endif
+          endif
 
          else
           print *,"dxprobe_target invalid"
@@ -7900,6 +7940,7 @@ stop
                     TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
                     TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
                     TSAT_Y_PARMS%thermal_k=>thermal_k
+                    TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
 
                     if ((molar_mass_ambient.gt.zero).and. &
                         (molar_mass_vapor.gt.zero).and. &

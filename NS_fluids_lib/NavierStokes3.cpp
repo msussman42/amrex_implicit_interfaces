@@ -2955,6 +2955,20 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.level_phase_change_rate_extend();
        }
 
+        //MEHDI
+       if (1==0) {
+	int caller_id=1;
+         //TY_GAMMA<stuff>.plt (visit can open binary tecplot files)
+        writeSanityCheckData(
+         "TY_GAMMA",
+         "SATURATION_TEMP_MF: flag12,T_GAMMA12,Y_GAMMA12, ...",
+         caller_id,
+         localMF[SATURATION_TEMP_MF]->nComp(), 
+         SATURATION_TEMP_MF,
+         -1,  // State_Type==-1 
+         -1); // data_dir==-1 (cell centered)
+       }
+
        // 1..nmat             dF
        // nmat+1 .. 2 nmat    den_new F_new - den_old F_old  source
        //                     den_new F_new - den_old F_old  target 

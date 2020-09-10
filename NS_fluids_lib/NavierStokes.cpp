@@ -10652,6 +10652,15 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     if (burnvelfab.nComp()!=nburning)
      amrex::Error("burnvelfab.nComp() incorrect");
 
+     // ntsat=nten*(ncomp_per_tsat+1)
+     // e.g. for interface 12,
+     //  component 1=0 if T_gamma,Y_gamma not defined
+     //             =1 if T_gamma,Y_gamma defined in RATEMASSCHANGE
+     //             =2 if T_gamma,Y_gamma defined after extrapolation
+     //             =-1 or -2 for condensation case.
+     //  component 2=T_gamma
+     //  component 3=Y_gamma
+     //  repeats ....
     FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
     if (Tsatfab.nComp()!=ntsat)
      amrex::Error("Tsatfab.nComp()!=ntsat");
