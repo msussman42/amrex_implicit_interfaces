@@ -1300,8 +1300,6 @@ stop
        
        implicit none
        
-       !in: nrm_solid, delta_r, LScenter or x_projection, dx, x_image, 
-       !ximage_stencil, ufluid_stencil
        type(law_of_wall_parm_type), intent(in) :: LOW
        INTEGER_T, intent(in) :: law_of_the_wall
        INTEGER_T, intent(in) :: data_dir
@@ -1327,12 +1325,14 @@ stop
        REAL_T :: density_fluid
        INTEGER_T :: dir
        REAL_T :: nrm_sanity
+       REAL_T :: nrm_sanity_crossing
        REAL_T :: dxmin
        REAL_T :: predict_deriv_utan
        REAL_T :: max_deriv_utan
        REAL_T :: critical_length
        REAL_T :: uimage_mag
        INTEGER_T :: im
+       INTEGER_T :: im_fluid_crossing
        INTEGER_T :: im_primary_image
        INTEGER_T :: im_secondary_image
        INTEGER_T :: im_fluid1,im_fluid2
@@ -1346,12 +1346,18 @@ stop
        REAL_T :: costhetaACT
        REAL_T :: dist_to_CL
        REAL_T :: nf_dot_ns
+       REAL_T :: nf_crossing_dot_ns
        REAL_T :: nf_dot_nCL_perp
+       REAL_T :: nf_crossing_dot_nCL_perp
        REAL_T, dimension(3) :: nCL
+       REAL_T, dimension(3) :: nCL_crossing
        REAL_T, dimension(3) :: nCL_raster
        REAL_T, dimension(3) :: nCL_perp
+       REAL_T, dimension(3) :: nCL_perp_crossing
        REAL_T, dimension(3) :: nCL_perp2
+       REAL_T, dimension(3) :: nCL_perp2_crossing
        REAL_T, dimension(3) :: nf_prj
+       REAL_T, dimension(3) :: nf_prj_crossing
        REAL_T :: ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma
        REAL_T :: ZEYU_thet_s,ZEYU_lambda,ZEYU_l_macro, ZEYU_l_micro
        REAL_T :: ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent
@@ -1374,6 +1380,7 @@ stop
        REAL_T :: LS_triple(num_materials*(1+SDIM))
        REAL_T :: nrm_solid(3)
        REAL_T :: nrm_fluid(3)
+       REAL_T :: nrm_fluid_crossing(3)
        REAL_T, allocatable, dimension(:) :: user_tension
        REAL_T :: cross_denom
        REAL_T :: cross_factor
@@ -1489,7 +1496,7 @@ stop
        im_primary_image=im_fluid
 
        if (LS_solid(im_solid).ge.zero) then
-        if (LS_fluid(im_fluid).ge.zero) then
+        if (LS_fluid(im_fluid).ge.zero) then ! im_fluid dominates the fluids
          if (LS_fluid(im_solid).le.zero) then
           cross_denom=LS_solid(im_solid)-LS_fluid(im_solid)
           if (cross_denom.gt.zero) then
@@ -1508,21 +1515,54 @@ stop
             xcrossing(dir)=cross_factor*xstenFD(0,dir)+ &
                     (one-cross_factor)*xstenSD(0,dir)
            enddo
+           im_fluid_crossing=-1
            do im=1,LOW%nmat*(1+SDIM)
             LS_crossing(im)=cross_factor*LS_fluid(im)+ &
                      (one-cross_factor)*LS_solid(im)
-           enddo
+            if (is_rigid(LOW%nmat,im).eq.1) then
+             ! do nothing
+            else if (is_rigid(LOW%nmat,im).eq.0) then
+             if (im_fluid_crossing.eq.-1) then
+              im_fluid_crossing=im
+             else if ((im_fluid_crossing.ge.1).and. &
+                      (im_fluid_crossing.le.LOW%nmat)) then
+              if (LS_crossing(im_fluid_crossing).le.LS_crossing(im)) then
+               im_fluid_crossing=im
+              endif
+             else
+              print *,"im_fluid_crossing invalid"
+              stop
+             endif
+            else 
+             print *,"is_rigid invalid"
+             stop
+            endif
+           enddo ! im=1..nmat
            call normalize_LS_normals(LOW%nmat,LS_crossing)
 
+           if ((im_fluid_crossing.ge.1).and. &
+               (im_fluid_crossing.le.LOW%nmat)) then
+            ! do nothing
+           else
+            print *,"im_fluid_crossing invalid"
+            stop
+           endif
+
            nf_dot_ns=zero
+           nf_crossing_dot_ns=zero
            nrm_fluid(3)=zero
+           nrm_fluid_crossing(3)=zero
            nrm_solid(3)=zero
            do dir=1,SDIM
              ! points into im_fluid material
             nrm_fluid(dir)=LS_crossing(LOW%nmat+(im_fluid-1)*SDIM+dir)
+            nrm_fluid_crossing(dir)= &
+                LS_crossing(LOW%nmat+(im_fluid_crossing-1)*SDIM+dir)
              ! points into im_solid material
             nrm_solid(dir)=LS_crossing(LOW%nmat+(im_solid-1)*SDIM+dir)
             nf_dot_ns=nf_dot_ns+nrm_fluid(dir)*nrm_solid(dir)
+            nf_crossing_dot_ns=nf_crossing_dot_ns+ &
+                  nrm_fluid_crossing(dir)*nrm_solid(dir)
            enddo ! dir=1..sdim
 
               !    \
@@ -1534,11 +1574,17 @@ stop
               ! since nrm_solid has been projected away from nrm_fluid
               ! nCL_perp points out of the screen.
            nrm_sanity=zero
+           nrm_sanity_crossing=zero
            do dir=1,3
             nCL(dir)=nrm_fluid(dir)-nf_dot_ns*nrm_solid(dir)
             nrm_sanity=nrm_sanity+nCL(dir)**2
+            nCL_crossing(dir)=nrm_fluid_crossing(dir)- &
+                    nf_crossing_dot_ns*nrm_solid(dir)
+            nrm_sanity_crossing=nrm_sanity_crossing+nCL_crossing(dir)**2
            enddo 
            nrm_sanity=sqrt(nrm_sanity)
+           nrm_sanity_crossing=sqrt(nrm_sanity_crossing)
+
            if (nrm_sanity.gt.zero) then
             do dir=1,3
              nCL(dir)=nCL(dir)/nrm_sanity
@@ -1550,16 +1596,32 @@ stop
             stop
            endif
 
+           if (nrm_sanity_crossing.gt.zero) then
+            do dir=1,3
+             nCL_crossing(dir)=nCL_crossing(dir)/nrm_sanity_crossing
+            enddo
+           else if (nrm_sanity_crossing.eq.zero) then
+            ! do nothing
+           else
+            print *,"nrm_sanity_crossing invalid"
+            stop
+           endif
+
            ! nCL_perp is tangent to the contact line in the substrate plane.
            ! nCL is normal to the contact line in the substrate plane
            ! nrm_solid is normal to the substrate
            call crossprod(nCL,nrm_solid,nCL_perp)
+           call crossprod(nCL_crossing,nrm_solid,nCL_perp_crossing)
 
            nrm_sanity=zero
+           nrm_sanity_crossing=zero
            do dir=1,3
             nrm_sanity=nrm_sanity+nCL_perp(dir)**2
+            nrm_sanity_crossing=nrm_sanity_crossing+nCL_perp_crossing(dir)**2
            enddo 
            nrm_sanity=sqrt(nrm_sanity)
+           nrm_sanity_crossing=sqrt(nrm_sanity_crossing)
+
            if (nrm_sanity.gt.zero) then
             do dir=1,3
              nCL_perp(dir)=nCL_perp(dir)/nrm_sanity
@@ -1571,9 +1633,27 @@ stop
             stop
            endif
 
+           if (nrm_sanity_crossing.gt.zero) then
+            do dir=1,3
+             nCL_perp_crossing(dir)=nCL_perp_crossing(dir)/nrm_sanity_crossing
+            enddo
+           else if (nrm_sanity_crossing.eq.zero) then
+            ! do nothing
+           else
+            print *,"nrm_sanity_crossing invalid"
+            stop
+           endif
+
            nf_dot_nCL_perp=zero
+           nf_crossing_dot_nCL_perp=zero
            do dir=1,3
+
             nf_dot_nCL_perp=nf_dot_nCL_perp+nrm_fluid(dir)*nCL_perp(dir)
+
+            nf_crossing_dot_nCL_perp= &
+               nf_crossing_dot_nCL_perp+ &
+               nrm_fluid_crossing(dir)*nCL_perp_crossing(dir)
+
            enddo
            ! nCL_perp is tangent to the contact line in the substrate plane.
            ! nrm_fluid points into im_fluid material.
@@ -1583,11 +1663,19 @@ stop
            ! is the normal point into im_primary
            ! "im_primary_image"
            nrm_sanity=zero
+           nrm_sanity_crossing=zero
            do dir=1,3
             nf_prj(dir)=nrm_fluid(dir)-nf_dot_nCL_perp*nCL_perp(dir)
             nrm_sanity=nrm_sanity+nf_prj(dir)**2
+
+            nf_prj_crossing(dir)=nrm_fluid_crossing(dir)- &
+                 nf_crossing_dot_nCL_perp*nCL_perp_crossing(dir)
+            nrm_sanity_crossing=nrm_sanity_crossing+nf_prj_crossing(dir)**2
            enddo
+
            nrm_sanity=sqrt(nrm_sanity)
+           nrm_sanity_crossing=sqrt(nrm_sanity_crossing)
+
            if (nrm_sanity.gt.zero) then
             do dir=1,3
              nf_prj(dir)=nf_prj(dir)/nrm_sanity
@@ -1598,8 +1686,23 @@ stop
             print *,"nrm_sanity invalid"
             stop
            endif
+
+           if (nrm_sanity_crossing.gt.zero) then
+            do dir=1,3
+             nf_prj_crossing(dir)=nf_prj_crossing(dir)/nrm_sanity_crossing
+            enddo
+           else if (nrm_sanity_crossing.eq.zero) then
+            ! do nothing
+           else
+            print *,"nrm_sanity_crossing invalid"
+            stop
+           endif
+
+
+
            ! nCL_perp2 will also be tangent to the contact line.
            call crossprod(nrm_solid,nf_prj,nCL_perp2)
+           call crossprod(nrm_solid,nf_prj_crossing,nCL_perp2_crossing)
 
             ! now we update nrm_fluid by finding the triple point
             ! and measuring nrm_fluid just above the solid.
