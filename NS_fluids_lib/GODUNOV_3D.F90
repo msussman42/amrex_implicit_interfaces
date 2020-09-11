@@ -138,6 +138,7 @@ stop
       REAL_T, pointer :: x_image_raster(:)
       REAL_T, pointer :: x_projection_raster(:)
       REAL_T, pointer :: dx(:)
+      REAL_T :: dxmin
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
@@ -1190,7 +1191,6 @@ stop
        istenhi(dir)=cell_index(dir)+1
       enddo ! dir=1..sdim
 
-      im_secondary_image=0
       total_WT=zero
       do im=1,LOW%nmat*(1+SDIM)
        LS_interp(im)=zero
@@ -1229,8 +1229,15 @@ stop
         if (is_rigid(LOW%nmat,im_primary_sten).eq.1) then
          ! do nothing
         else if (is_rigid(LOW%nmat,im_primary_sten).eq.0) then
-         if (im_secondary_image.eq.0) then
-          im_secondary_image=im_primary_sten
+         if (abs(LS_sten(im_fluid)).le.LOW%dxmin*GNBC_RADIUS) then
+          if (im_secondary_image.eq.0) then
+           im_secondary_image=im_primary_sten
+          endif
+         else if (abs(LS_sten(im_fluid)).ge.LOW%dxmin*GNBC_RADIUS) then
+          ! do nothing
+         else
+          print *,"LS_sten became corrupt"
+          stop
          endif
         else
          print *,"is_rigid(LOW%nmat,im_primary_sten) invalid"
@@ -1326,7 +1333,6 @@ stop
        INTEGER_T :: dir
        REAL_T :: nrm_sanity
        REAL_T :: nrm_sanity_crossing
-       REAL_T :: dxmin
        REAL_T :: predict_deriv_utan
        REAL_T :: max_deriv_utan
        REAL_T :: critical_length
@@ -1373,7 +1379,9 @@ stop
        REAL_T :: xstenFD(-3:3,SDIM)
        REAL_T :: xstenSD(-3:3,SDIM)
        REAL_T :: thermal_interp(num_materials)
-       REAL_T :: LS_interp(num_materials*(1+SDIM))
+       REAL_T :: LSPLUS_interp(num_materials*(1+SDIM))
+       REAL_T :: LSMINUS_interp(num_materials*(1+SDIM))
+       REAL_T :: LSTRIPLE_interp(num_materials*(1+SDIM))
        REAL_T :: LS_fluid(num_materials*(1+SDIM))
        REAL_T :: LS_solid(num_materials*(1+SDIM))
        REAL_T :: LS_crossing(num_materials*(1+SDIM))
@@ -1384,8 +1392,12 @@ stop
        REAL_T, allocatable, dimension(:) :: user_tension
        REAL_T :: cross_denom
        REAL_T :: cross_factor
+       REAL_T :: cross_factorMINUS
+       REAL_T :: cross_factorPLUS
+       INTEGER_T :: cross_factor_flag
        REAL_T :: xcrossing(SDIM)
-       REAL_T :: xprobe_crossing(SDIM)
+       REAL_T :: xprobeMINUS_crossing(SDIM)
+       REAL_T :: xprobePLUS_crossing(SDIM)
        REAL_T :: xprobe_triple(SDIM)
        REAL_T :: xtriple(SDIM)
        INTEGER_T :: debug_slip_velocity_enforcement
@@ -1458,17 +1470,10 @@ stop
         stop
        endif
 
-       dxmin=LOW%dx(1)
-       if (LOW%dx(2).lt.dxmin) then
-        dxmin=LOW%dx(2)
-       endif
-       if (LOW%dx(SDIM).lt.dxmin) then
-        dxmin=LOW%dx(SDIM)
-       endif
-       if (dxmin.gt.zero) then
+       if (LOW%dxmin.gt.zero) then
         ! do nothing
        else
-        print *,"dxmin invalid"
+        print *,"LOW%dxmin invalid"
         stop
        endif
 
@@ -1732,62 +1737,140 @@ stop
            if ((GNBC_RADIUS.ge.one).and. &
                (GNBC_RADIUS.le.three)) then
             do dir=1,SDIM
-             if (LS_crossing(im_fluid).gt.zero) then
-              xprobe_crossing(dir)=xcrossing(dir)-GNBC_RADIUS*dxmin*nCL(dir)
-
-              ! no need to search for triple point, already 2 fluids and
-              ! 1 substrate exists at this point.
-             else if (LS_crossing(im_fluid).le.zero) then
-              xprobe_crossing(dir)=xcrossing(dir)
-             else
-              print *,"LS_crossing(im_fluid) invalid"
-              stop
-             endif
+             xprobeMINUS_crossing(dir)=xcrossing(dir)- &
+               GNBC_RADIUS*LOW%dxmin*nCL_crossing(dir)
+             xprobePLUS_crossing(dir)=xcrossing(dir)+ &
+               GNBC_RADIUS*LOW%dxmin*nCL_crossing(dir)
             enddo ! dir=1..sdim
+
+            im_secondary_image=0
 
             call interp_from_fluid( &
              LOW, &
-             xprobe_crossing, &
+             xprobeMINUS_crossing, &
              im_secondary_image, &
              thermal_interp, &
              im_fluid, &
              im_solid, &
-             LS_interp)
+             LSMINUS_interp)
 
-            call normalize_LS_normals(LOW%nmat,LS_interp)
+            call normalize_LS_normals(LOW%nmat,LSMINUS_interp)
 
-            if ((LS_interp(im_fluid).le.zero).or. &
-                (LS_crossing(im_fluid).le.zero)) then
-             if (LS_crossing(im_fluid).le.zero) then
-              cross_factor=zero
-             else if (LS_crossing(im_fluid).gt.zero) then
-              cross_denom=LS_crossing(im_fluid)-LS_interp(im_fluid)
-              if (cross_denom.gt.zero) then
-               cross_factor=LS_crossing(im_fluid)/cross_denom
-              else
-               print *,"cross_denom invalid"
-               stop
-              endif
-             else 
-              print *,"LS_crossing(im_fluid) invalid"
+            call interp_from_fluid( &
+             LOW, &
+             xprobePLUS_crossing, &
+             im_secondary_image, &
+             thermal_interp, &
+             im_fluid, &
+             im_solid, &
+             LSPLUS_interp)
+
+            call normalize_LS_normals(LOW%nmat,LSPLUS_interp)
+
+            cross_factorMINUS=-one
+            cross_factorPLUS=-one
+
+            if (LSMINUS_interp(im_fluid_crossing)* &
+                LS_crossing(im_fluid_crossing).le.zero) then
+             cross_denom=LS_crossing(im_fluid_crossing)- &
+                         LSMINUS_interp(im_fluid_crossing)
+             if (cross_denom.gt.zero) then
+              cross_factorMINUS=LS_crossing(im_fluid_crossing)/cross_denom
+             else if (cross_denom.ne.zero) then
+              cross_factorMINUS=half
+             else
+              print *,"cross_denom invalid"
               stop
              endif
-             if ((cross_factor.ge.zero).and. &
-                 (cross_factor.le.one)) then
+            endif
+
+            if (LSPLUS_interp(im_fluid_crossing)* &
+                LS_crossing(im_fluid_crossing).le.zero) then
+             cross_denom=LS_crossing(im_fluid_crossing)- &
+                         LSPLUS_interp(im_fluid_crossing)
+             if (cross_denom.gt.zero) then
+              cross_factorPLUS=LS_crossing(im_fluid_crossing)/cross_denom
+             else if (cross_denom.ne.zero) then
+              cross_factorPLUS=half
+             else
+              print *,"cross_denom invalid"
+              stop
+             endif
+            endif
+
+            if ((cross_factorPLUS.eq.-one).and. &
+                (cross_factorMINUS.eq.-one)) then
+             cross_factor_flag=0
+            else if ((cross_factorPLUS.eq.-one).and. &
+                     (cross_factorMINUS.ge.zero)) then
+             cross_factor_flag=-1
+            else if ((cross_factorMINUS.eq.-one).and. &
+                     (cross_factorPLUS.ge.zero)) then
+             cross_factor_flag=1
+            else if ((cross_factorMINUS.ge.zero).and. &
+                     (cross_factorPLUS.ge.zero)) then
+             if (cross_factorPLUS.le.cross_factorMINUS) then
+              cross_factor_flag=1
+             else if (cross_factorPLUS.ge.cross_factorMINUS) then
+              cross_factor_flag=-1
+             else
+              print *,"cross_factor bust"
+              stop
+             endif
+            else
+             print *,"cross_factor bust"
+             stop
+            endif
+           
+            if (cross_factor_flag.eq.1) then 
+
+             if ((cross_factorPLUS.ge.zero).and. &
+                 (cross_factorPLUS.le.one)) then
               do dir=1,SDIM
-               xtriple(dir)=cross_factor*xprobe_crossing(dir)+ &
-                  (one-cross_factor)*xcrossing(dir)
+               xtriple(dir)=cross_factorPLUS*xprobePLUS_crossing(dir)+ &
+                  (one-cross_factorPLUS)*xcrossing(dir)
               enddo
               do im=1,LOW%nmat*(1+SDIM)
-               LS_triple(im)=cross_factor*LS_interp(im)+ &
-                   (one-cross_factor)*LS_crossing(im)
+               LS_triple(im)=cross_factorPLUS*LSPLUS_interp(im)+ &
+                   (one-cross_factorPLUS)*LS_crossing(im)
               enddo
+             else
+              print *,"cross_factorPLUS bust"
+              stop
+             endif
+             
+            else if (cross_factor_flag.eq.-1) then 
+
+             if ((cross_factorMINUS.ge.zero).and. &
+                 (cross_factorMINUS.le.one)) then
+              do dir=1,SDIM
+               xtriple(dir)=cross_factorMINUS*xprobeMINUS_crossing(dir)+ &
+                  (one-cross_factorMINUS)*xcrossing(dir)
+              enddo
+              do im=1,LOW%nmat*(1+SDIM)
+               LS_triple(im)=cross_factorMINUS*LSMINUS_interp(im)+ &
+                   (one-cross_factorMINUS)*LS_crossing(im)
+              enddo
+             else
+              print *,"cross_factorMINUS bust"
+              stop
+             endif
+
+            else if (cross_factor_flag.eq.0) then
+             ! do nothing
+            else
+             print *,"cross_factor_flag invalid"
+             stop
+            endif
+
+            if ((cross_factor_flag.eq.1).or. &
+                (cross_factor_flag.eq.-1)) then
               call normalize_LS_normals(LOW%nmat,LS_triple)
 
               nrm_solid(3)=zero
               do dir=1,SDIM
                nrm_solid(dir)=LS_triple(LOW%nmat+(im_solid-1)*SDIM+dir)
-               xprobe_triple(dir)=xtriple(dir)-dxmin*nrm_solid(dir)
+               xprobe_triple(dir)=xtriple(dir)-LOW%dxmin*nrm_solid(dir)
               enddo
               
               call interp_from_fluid( &
@@ -1797,12 +1880,12 @@ stop
                thermal_interp, &
                im_fluid, &
                im_solid, &
-               LS_interp)
+               LSTRIPLE_interp)
 
-              call normalize_LS_normals(LOW%nmat,LS_interp)
+              call normalize_LS_normals(LOW%nmat,LSTRIPLE_interp)
               nrm_fluid(3)=zero
               do dir=1,SDIM
-               nrm_fluid(dir)=LS_interp(LOW%nmat+(im_fluid-1)*SDIM+dir)
+               nrm_fluid(dir)=LSTRIPLE_interp(LOW%nmat+(im_fluid-1)*SDIM+dir)
               enddo
 
               nf_dot_ns=zero
@@ -1948,15 +2031,10 @@ stop
                print *,"near_contact_line invalid"
                stop
               endif
-             else
-              print *,"cross_factor invalid"
-              stop
-             endif
-            else if ((LS_interp(im_fluid).gt.zero).and. &
-                     (LS_crossing(im_fluid).gt.zero)) then
-             ! do nothing
+            else if (cross_factor_flag.eq.0) then
+              ! do nothing
             else
-             print *,"LS_interp(im_fluid) or LS_crossing(im_fluid) bad"
+             print *,"cross_factor_flag invalid"
              stop
             endif
            else
@@ -2056,7 +2134,7 @@ stop
         critical_length=((4.91D0)**2)*viscosity_molecular/ &
               (density_fluid*uimage_tngt_mag)
        else if (uimage_tngt_mag.eq.zero) then
-        critical_length=dxmin*1.0D+10
+        critical_length=LOW%dxmin*1.0D+10
        else
         print *,"uimage_tngt_mag invalid"
         stop
@@ -2082,7 +2160,7 @@ stop
 
        if (law_of_the_wall.eq.1) then ! turbulence modeling here.
 
-        if (critical_length.lt.dxmin) then
+        if (critical_length.lt.LOW%dxmin) then
 
          if (viscosity_eddy.gt.zero) then
           !obtain wall shear stress tau_w
@@ -2119,7 +2197,7 @@ stop
           stop
          endif
 
-        else if (critical_length.ge.dxmin) then
+        else if (critical_length.ge.LOW%dxmin) then
           ! ghost velocity lives *on* the rasterized interface.
          ughost_tngt = zero
         else
@@ -2148,10 +2226,10 @@ stop
           ZEYU_imodel=1 ! GNBC
           ZEYU_ifgnbc=1 ! GNBC
           ZEYU_lambda=8.0D-7  ! slip length
-          ZEYU_lambda=dxmin  ! slip length
-          ZEYU_l_macro=dxmin
+          ZEYU_lambda=LOW%dxmin  ! slip length
+          ZEYU_l_macro=LOW%dxmin
           ZEYU_l_micro=1.0D-9
-          ZEYU_dgrid=dxmin 
+          ZEYU_dgrid=LOW%dxmin 
           ZEYU_d_closest=abs(dist_to_CL)
 
           if (fort_denconst(im_fluid1).ge. &
@@ -15622,6 +15700,14 @@ stop
       law_of_wall_parm%state=>state
       law_of_wall_parm%ufluid=>ufluid
       law_of_wall_parm%usolid=>usolid
+
+      law_of_wall_parm%dxmin=dx(1)
+      if (dx(2).lt.law_of_wall_parm%dxmin) then
+       law_of_wall_parm%dxmin=dx(2)
+      endif
+      if (dx(SDIM).lt.law_of_wall_parm%dxmin) then
+       law_of_wall_parm%dxmin=dx(SDIM)
+      endif
        
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,data_dir) 
 
