@@ -7088,6 +7088,99 @@ contains
       return
       end subroutine get_longdir
 
+      subroutine bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
+        xtarget,WT)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten_center(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: stencil_offset(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      REAL_T, intent(out) :: WT
+      INTEGER_T :: WT_ok
+      INTEGER_T :: dir
+      REAL_T :: denom
+      REAL_T theta(SDIM)
+
+      if (nhalf.ge.3) then
+       ! do nothing
+      else
+       print *,"nhalf invalid"
+       stop
+      endif
+
+      WT_ok=1
+      do dir=1,SDIM
+       theta(dir)=zero
+       if (xtarget(dir).le.xsten_center(0,dir)) then
+        if ((stencil_offset(dir).eq.0).or. &
+            (stencil_offset(dir).eq.-1)) then
+         denom=xsten_center(0,dir)-xsten_center(-1,dir)
+         if (denom.gt.zero) then
+          theta(dir)=(xsten_center(0,dir)-xtarget(dir))/denom
+         else
+          print *,"denom invalid"
+          stop
+         endif
+        else if (stencil_offset(dir).eq.1) then
+         WT_ok=0
+        else
+         print *,"stencil_offset(dir) invalid"
+         stop
+        endif
+       else if (xtarget(dir).ge.xsten_center(0,dir)) then
+        if ((stencil_offset(dir).eq.0).or. &
+            (stencil_offset(dir).eq.1)) then
+         denom=xsten_center(0,dir)-xsten_center(1,dir)
+         if (denom.lt.zero) then
+          theta(dir)=(xsten_center(0,dir)-xtarget(dir))/denom
+         else
+          print *,"denom invalid"
+          stop
+         endif
+        else if (stencil_offset(dir).eq.-1) then
+         WT_ok=0
+        else
+         print *,"stencil_offset(dir) invalid"
+         stop
+        endif
+       else
+        print *,"xtarget or xsten_center invalid"
+        stop
+       endif
+       if (theta(dir).gt.one) then
+        theta(dir)=one
+       else if ((theta(dir).ge.zero).and. &
+                (theta(dir).le.one)) then
+        ! do nothing
+       else
+        print *,"theta(dir) invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+      if (WT_ok.eq.0) then
+       WT=zero
+      else if (WT_ok.eq.1) then
+       WT=one
+       do dir=1,SDIM
+        if (stencil_offset(dir).eq.0) then
+         WT=WT*(one-theta(dir))
+        else if ((stencil_offset(dir).eq.1).or. &
+                 (stencil_offset(dir).eq.-1)) then
+         WT=WT*theta(dir)
+        else
+         print *,"stencil_offset(dir) invalid"
+         stop
+        endif
+       enddo !dir=1..sdim
+      else
+       print *,"WT_ok invalid"
+       stop
+      endif
+     
+      return
+      end subroutine bilinear_interp_WT 
+
       subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
                       ncomp,data_interp,caller_id)
       use probcommon_module
