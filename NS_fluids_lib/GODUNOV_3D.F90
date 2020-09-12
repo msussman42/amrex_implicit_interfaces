@@ -1156,10 +1156,12 @@ stop
       REAL_T, intent(out) :: LS_interp(num_materials*(1+SDIM))
 
       REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: xsten_center(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T im
       INTEGER_T dir
       INTEGER_T cell_index(SDIM)
+      INTEGER_T stencil_offset(SDIM)
       INTEGER_T istenlo(3)
       INTEGER_T istenhi(3)
       REAL_T WT,total_WT
@@ -1199,25 +1201,34 @@ stop
        thermal_interp(im)=zero
       enddo
 
+      isten=cell_index(1)
+      jsten=cell_index(2)
+      ksten=cell_index(SDIM)
+
+      call gridsten_level(xsten_center,isten,jsten,ksten,LOW%level,nhalf)
+
       do isten=istenlo(1),istenhi(1)
       do jsten=istenlo(2),istenhi(2)
       do ksten=istenlo(3),istenhi(3)
 
        call gridsten_level(xsten,isten,jsten,ksten,LOW%level,nhalf)
-
-       do im=1,LOW%nmat*(1+SDIM)
-        LS_sten(im)=LOW%LSCP(D_DECL(isten,jsten,ksten),im)
-       enddo
-       WT=0.01d0*(LOW%dx(1)**2)
-       do dir=1,SDIM
-        WT=WT+(xsten(0,dir)-x_fluid(dir))**2
-       enddo
-       if (WT.gt.zero) then
-        WT=one/WT
+       stencil_offset(1)=isten-cell_index(1)
+       stencil_offset(2)=jsten-cell_index(2)
+       if (SDIM.eq.3) then
+        stencil_offset(SDIM)=ksten-cell_index(SDIM)
+       endif
+       call bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
+        x_fluid,WT)
+       if ((WT.ge.zero).and.(WT.le.one)) then
+        ! do nothing
        else
         print *,"WT invalid"
         stop
        endif
+ 
+       do im=1,LOW%nmat*(1+SDIM)
+        LS_sten(im)=LOW%LSCP(D_DECL(isten,jsten,ksten),im)
+       enddo
 
        call get_primary_material(LS_sten,LOW%nmat,im_primary_sten)
        if (im_primary_sten.eq.im_fluid) then
