@@ -1710,7 +1710,6 @@ stop
            endif
 
 
-
            ! nCL_perp2 will also be tangent to the contact line.
            call crossprod(nrm_solid,nf_prj,nCL_perp2)
            call crossprod(nrm_solid,nf_prj_crossing,nCL_perp2_crossing)
@@ -1780,7 +1779,7 @@ stop
                 LS_crossing(im_fluid_crossing).le.zero) then
              cross_denom=LS_crossing(im_fluid_crossing)- &
                          LSMINUS_interp(im_fluid_crossing)
-             if (cross_denom.gt.zero) then
+             if (cross_denom.ne.zero) then
               cross_factorMINUS=LS_crossing(im_fluid_crossing)/cross_denom
              else if (cross_denom.eq.zero) then
               cross_factorMINUS=half
@@ -1794,7 +1793,7 @@ stop
                 LS_crossing(im_fluid_crossing).le.zero) then
              cross_denom=LS_crossing(im_fluid_crossing)- &
                          LSPLUS_interp(im_fluid_crossing)
-             if (cross_denom.gt.zero) then
+             if (cross_denom.ne.zero) then
               cross_factorPLUS=LS_crossing(im_fluid_crossing)/cross_denom
              else if (cross_denom.eq.zero) then
               cross_factorPLUS=half
