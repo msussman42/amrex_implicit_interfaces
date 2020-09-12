@@ -1560,12 +1560,14 @@ stop
            nrm_solid(3)=zero
            do dir=1,SDIM
              ! points into im_fluid material
-            nrm_fluid(dir)=LS_crossing(LOW%nmat+(im_fluid-1)*SDIM+dir)
+            nrm_fluid(dir)= &
+                LS_crossing(LOW%nmat+(im_fluid-1)*SDIM+dir)
             nrm_fluid_crossing(dir)= &
                 LS_crossing(LOW%nmat+(im_fluid_crossing-1)*SDIM+dir)
              ! points into im_solid material
             nrm_solid(dir)=LS_crossing(LOW%nmat+(im_solid-1)*SDIM+dir)
-            nf_dot_ns=nf_dot_ns+nrm_fluid(dir)*nrm_solid(dir)
+            nf_dot_ns=nf_dot_ns+ &
+                  nrm_fluid(dir)*nrm_solid(dir)
             nf_crossing_dot_ns=nf_crossing_dot_ns+ &
                   nrm_fluid_crossing(dir)*nrm_solid(dir)
            enddo ! dir=1..sdim
@@ -1581,7 +1583,8 @@ stop
            nrm_sanity=zero
            nrm_sanity_crossing=zero
            do dir=1,3
-            nCL(dir)=nrm_fluid(dir)-nf_dot_ns*nrm_solid(dir)
+            nCL(dir)=nrm_fluid(dir)- &
+                    nf_dot_ns*nrm_solid(dir)
             nrm_sanity=nrm_sanity+nCL(dir)**2
             nCL_crossing(dir)=nrm_fluid_crossing(dir)- &
                     nf_crossing_dot_ns*nrm_solid(dir)
@@ -1653,7 +1656,9 @@ stop
            nf_crossing_dot_nCL_perp=zero
            do dir=1,3
 
-            nf_dot_nCL_perp=nf_dot_nCL_perp+nrm_fluid(dir)*nCL_perp(dir)
+            nf_dot_nCL_perp= &
+               nf_dot_nCL_perp+ &
+               nrm_fluid(dir)*nCL_perp(dir)
 
             nf_crossing_dot_nCL_perp= &
                nf_crossing_dot_nCL_perp+ &
@@ -1670,7 +1675,8 @@ stop
            nrm_sanity=zero
            nrm_sanity_crossing=zero
            do dir=1,3
-            nf_prj(dir)=nrm_fluid(dir)-nf_dot_nCL_perp*nCL_perp(dir)
+            nf_prj(dir)=nrm_fluid(dir)- &
+                 nf_dot_nCL_perp*nCL_perp(dir)
             nrm_sanity=nrm_sanity+nf_prj(dir)**2
 
             nf_prj_crossing(dir)=nrm_fluid_crossing(dir)- &
@@ -1776,7 +1782,7 @@ stop
                          LSMINUS_interp(im_fluid_crossing)
              if (cross_denom.gt.zero) then
               cross_factorMINUS=LS_crossing(im_fluid_crossing)/cross_denom
-             else if (cross_denom.ne.zero) then
+             else if (cross_denom.eq.zero) then
               cross_factorMINUS=half
              else
               print *,"cross_denom invalid"
@@ -1790,7 +1796,7 @@ stop
                          LSPLUS_interp(im_fluid_crossing)
              if (cross_denom.gt.zero) then
               cross_factorPLUS=LS_crossing(im_fluid_crossing)/cross_denom
-             else if (cross_denom.ne.zero) then
+             else if (cross_denom.eq.zero) then
               cross_factorPLUS=half
              else
               print *,"cross_denom invalid"
