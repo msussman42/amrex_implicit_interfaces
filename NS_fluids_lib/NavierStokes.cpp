@@ -12458,7 +12458,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
 // MEHDI VAHAB HEAT SOURCE
 // T^new=T^* += dt A Q/(rho cv V) 
-// called from NavierStokes::allocate_project_variables
+// called from NavierStokes::allocate_project_variables when project_option==2
 void
 NavierStokes::heat_source_term_flux_source() {
  

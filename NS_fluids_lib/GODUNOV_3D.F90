@@ -1531,10 +1531,14 @@ stop
             xcrossing(dir)=cross_factor*xstenFD(0,dir)+ &
                     (one-cross_factor)*xstenSD(0,dir)
            enddo
-           im_fluid_crossing=-1
+
            do im=1,LOW%nmat*(1+SDIM)
             LS_crossing(im)=cross_factor*LS_fluid(im)+ &
                      (one-cross_factor)*LS_solid(im)
+           enddo ! im=1..nmat*(1+SDIM)
+
+           im_fluid_crossing=-1
+           do im=1,LOW%nmat
             if (is_rigid(LOW%nmat,im).eq.1) then
              ! do nothing
             else if (is_rigid(LOW%nmat,im).eq.0) then
@@ -1554,6 +1558,7 @@ stop
              stop
             endif
            enddo ! im=1..nmat
+
            call normalize_LS_normals(LOW%nmat,LS_crossing)
 
            if ((im_fluid_crossing.ge.1).and. &
@@ -15334,6 +15339,8 @@ stop
        if (is_in_probtype_list().eq.1) then
         call SUB_EB_heat_source(time,dt,xsten,nhalf, &
                heat_flux,heat_dir,heat_side)
+       else
+        heat_flux=zero
        endif
 
        if (heat_flux.gt.zero) then

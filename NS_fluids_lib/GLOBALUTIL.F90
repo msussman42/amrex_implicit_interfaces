@@ -8142,7 +8142,7 @@ contains
       INTEGER_T nmat,im
 
       if ((im.lt.1).or.(im.gt.nmat)) then
-       print *,"im invalid17: im=",im
+       print *,"im invalid17 in is_lag_part: im=",im
        print *,"nmat=",nmat
        stop
       endif
@@ -8150,7 +8150,7 @@ contains
        print *,"nmat invalid is_lag_part"
        print *,"nmat=",nmat
        print *,"num_materials=",num_materials
-       stop
+       error stop
       endif
 
       if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
@@ -8178,11 +8178,16 @@ contains
 
       INTEGER_T is_rigid
       INTEGER_T nmat,im
+      INTEGER_T dummy_input
 
       if ((im.lt.1).or.(im.gt.nmat)) then
-       print *,"im invalid17: im=",im
+       print *,"im invalid17 in is_rigid: im=",im
        print *,"nmat=",nmat
-       stop
+! By pressing <CTRL C> during this read statement, the
+! gdb debugger will produce a stacktrace.
+!       print *,"type 0 then <enter> to exit the program"
+!       read(*,*) dummy_input
+       error stop
       endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid is_rigid"

@@ -7,7 +7,8 @@ stop_time = 4.0  # case 1
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => XYZ, 1 => RZ
 geometry.prob_lo   =  0.0 0.0   
-geometry.prob_hi=0.1 0.025   # CODY~ domain is 1mm in length (0.1 cm)
+# make square domain so that solver converges quickly.
+geometry.prob_hi=0.1 0.1   # CODY~ domain is 1mm in length (0.1 cm)
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.num_materials_vel=1
@@ -55,7 +56,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
-amr.n_cell=32 8  # convergence 32x8 coarsest
+amr.n_cell=16 16 # convergence 16x16 coarsest
 amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
@@ -161,8 +162,8 @@ ns.FSI_flag=0 0
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
 # 1=water 2=gas   
-#ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
-ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
+ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
+#ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #0.02cm
 ns.xblob2=0.02 #CODY this is physical location corresponding to x=0
 ns.xblob=0.02  #CODY
