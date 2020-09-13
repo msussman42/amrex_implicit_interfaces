@@ -52,6 +52,9 @@ INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
+REAL_T :: TEMPERATURE_analytical
+REAL_T :: LS_analytical
+INTEGER_T :: use_T
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -62,7 +65,12 @@ REAL_T, intent(out) :: LS(nmat)
 
 if ((num_materials.eq.2).and.(probtype.eq.2002)) then
 
- LS(1)=x(1)-xblob  ! liquid
+ use_T=1
+ call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+   x(1),t,use_T,TEMPERATURE_analytical, &
+   LS_analytical)
+
+ LS(1)=LS_analytical  ! liquid
  LS(2)=-LS(1)      ! gas
 
 else
@@ -757,7 +765,7 @@ i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.eq.4) then
+if (nsum.eq.3) then
  do dir=1,SDIM
   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
  enddo
@@ -797,7 +805,10 @@ if (nsum.eq.4) then
  endif
  if ((VOF_analytical.ge.zero).and. &
      (VOF_analytical.le.one)) then
-  increment_out(1)=GRID_DATA_IN%volgrid*abs(VOF_compute-VOF_analytical)
+   ! measure symmetric difference error instead
+  if (1.eq.0) then
+   increment_out(1)=GRID_DATA_IN%volgrid*abs(VOF_compute-VOF_analytical)
+  endif
  else
   print *,"VOF_analytical invalid"
   stop
@@ -805,23 +816,23 @@ if (nsum.eq.4) then
   
  LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),1)
  if (abs(LS_analytical).lt.interface_thick_rad) then
-  increment_out(2)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
+  increment_out(1)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
     (two*interface_thick_rad)
  else
-  increment_out(2)=zero
+  increment_out(1)=zero
  endif
  if (LS_compute.lt.zero) then
   im_gas=2
   tcomp=(im_gas-1)*num_state_material+2
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
-  increment_out(3)=GRID_DATA_IN%volgrid* &
+  increment_out(2)=GRID_DATA_IN%volgrid* &
           abs(TEMPERATURE_compute-TEMPERATURE_analytical)
   Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
-  increment_out(4)=GRID_DATA_IN%volgrid* &
+  increment_out(3)=GRID_DATA_IN%volgrid* &
           abs(Y_compute-Y_analytical)
  else
+  increment_out(2)=zero
   increment_out(3)=zero
-  increment_out(4)=zero
  endif
 else
  print *,"nsum invalid"

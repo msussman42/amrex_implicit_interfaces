@@ -176,7 +176,7 @@ ns.radblob=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=2002
-ns.ncomp_sum_int_user=4 # volume fraction, level set,T,Y errors
+ns.ncomp_sum_int_user=3 # level set,T,Y errors
 
 #ns.mem_debug = 1
 ns.v = 1
