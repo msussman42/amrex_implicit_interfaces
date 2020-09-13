@@ -742,6 +742,9 @@ INTEGER_T :: im_gas
 INTEGER_T :: tcomp
 INTEGER_T :: use_T
 REAL_T :: xlocal(SDIM)
+REAL_T :: VOF_analytical
+REAL_T :: VOF_compute
+REAL_T :: x_analytical,x_left,x_right
 REAL_T :: LS_analytical
 REAL_T :: LS_compute
 REAL_T :: TEMPERATURE_analytical
@@ -754,10 +757,13 @@ i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.eq.3) then
+if (nsum.eq.4) then
  do dir=1,SDIM
   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
  enddo
+ x_left=GRID_DATA_IN%xsten(-1,1)
+ x_right=GRID_DATA_IN%xsten(1,1)
+
  use_T=1
  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    xlocal(1),GRID_DATA_IN%time,use_T,TEMPERATURE_analytical, &
@@ -767,30 +773,59 @@ if (nsum.eq.3) then
    xlocal(1),GRID_DATA_IN%time,use_T,Y_analytical, &
    LS_analytical)
 
+ x_analytical=xlocal(1)-LS_analytical
+
  interface_thick_rad=two*GRID_DATA_IN%dx(1)
- 
+
+  ! slopes: 1..nmat*ngeom_recon
+ VOF_compute=GRID_DATA_IN%slopes(D_DECL(i,j,k),1)
+ if (x_right.gt.x_left) then
+  if (x_analytical.le.x_left) then
+   VOF_analytical=one
+  else if (x_analytical.ge.x_right) then
+   VOF_analytical=zero
+  else if ((x_analytical.ge.x_left).and. &
+           (x_analytical.le.x_right)) then
+   VOF_analytical=(x_analytical-x_left)/(x_right-x_left)
+  else
+   print *,"x_analytical invalid"
+   stop
+  endif
+ else
+  print *,"x_right or x_left invalid"
+  stop
+ endif
+ if ((VOF_analytical.ge.zero).and. &
+     (VOF_analytical.le.one)) then
+  increment_out(1)=GRID_DATA_IN%volgrid*abs(VOF_compute-VOF_analytical)
+ else
+  print *,"VOF_analytical invalid"
+  stop
+ endif
+  
  LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),1)
  if (abs(LS_analytical).lt.interface_thick_rad) then
-  increment_out(1)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
+  increment_out(2)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
     (two*interface_thick_rad)
  else
-  increment_out(1)=zero
+  increment_out(2)=zero
  endif
  if (LS_compute.lt.zero) then
   im_gas=2
   tcomp=(im_gas-1)*num_state_material+2
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
-  increment_out(2)=GRID_DATA_IN%volgrid* &
+  increment_out(3)=GRID_DATA_IN%volgrid* &
           abs(TEMPERATURE_compute-TEMPERATURE_analytical)
   Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
-  increment_out(3)=GRID_DATA_IN%volgrid* &
+  increment_out(4)=GRID_DATA_IN%volgrid* &
           abs(Y_compute-Y_analytical)
  else
-  increment_out(2)=zero
   increment_out(3)=zero
+  increment_out(4)=zero
  endif
 else
  print *,"nsum invalid"
+ print *,"nsum ",nsum
  stop
 endif
 

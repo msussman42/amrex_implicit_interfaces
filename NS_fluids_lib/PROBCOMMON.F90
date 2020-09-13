@@ -39,6 +39,7 @@ module probcommon_module_types
        REAL_T :: time
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: cellten
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
+        ! 1..nmat*ngeom_recon
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: den
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: vel
