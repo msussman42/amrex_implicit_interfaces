@@ -7875,7 +7875,7 @@ END SUBROUTINE Adist
       if (adapt_nozzle_flag.eq.1) then
 
        im=1
-       call materialdist(xsten,nhalf,dx,bfact,dist,im)
+       call materialdist(xsten,nhalf,dx,bfact,dist,im,time)
        if ((FSI_flag(im).eq.0).or. & ! fluid
            (FSI_flag(im).eq.7)) then ! fluid from CAD
         ! do nothing
@@ -7902,7 +7902,7 @@ END SUBROUTINE Adist
          ! do nothing
         else if ((FSI_flag(im).eq.0).or. &
                  (FSI_flag(im).eq.7)) then  ! impinging jet case probably
-         call materialdist(xsten,nhalf,dx,bfact,dist3,im)
+         call materialdist(xsten,nhalf,dx,bfact,dist3,im,time)
          if (abs(dist3).le.two*dxmin) then
           inear=2
          endif
@@ -8179,21 +8179,32 @@ END SUBROUTINE Adist
 
 
         ! called from get_symmetric_error
-       subroutine exactdist(xsten,nhalf,bfact,dx,dist,imaterial,time)
+       subroutine exactdist( &
+         xsten, &
+         nhalf, &
+         bfact, &
+         dx, &
+         dist, &
+         imaterial, &
+         time)
        use global_utility_module
 
        IMPLICIT NONE
 
-       INTEGER_T nhalf,bfact,isten
-       REAL_T xsten(-nhalf:nhalf,SDIM)
+       INTEGER_T, intent(in) :: nhalf,bfact
+       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(out) :: dist
+       INTEGER_T, intent(in) :: imaterial
+       REAL_T, intent(in) :: time
        REAL_T xsten_star(-1:1,SDIM)
        INTEGER_T nhalf_star,dir
-       REAL_T dx(SDIM)
-       REAL_T x,y,z,dist,time
+       REAL_T x,y,z
        REAL_T xstar,ystar,zstar
-       INTEGER_T imaterial,nmat,nten
+       INTEGER_T nmat,nten
        REAL_T distsolid,distgas,dist_liquid,dist_ice
        INTEGER_T im_solid_exactdist
+       INTEGER_T isten
 
        im_solid_exactdist=im_solid_primary()
 
@@ -8221,9 +8232,11 @@ END SUBROUTINE Adist
          stop
         endif
        endif
+
        xstar=x
        ystar=y
        zstar=z
+
        if ((probtype.eq.28).and.(adv_vel.ne.zero)) then
         if (SDIM.eq.2) then
          if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
@@ -8281,6 +8294,8 @@ END SUBROUTINE Adist
          stop
         endif
        endif 
+
+
        do isten=-1,1
         dir=1
         xsten_star(isten,dir)=xsten(isten,dir)+xstar-xsten(0,dir)
@@ -8291,79 +8306,92 @@ END SUBROUTINE Adist
          xsten_star(isten,dir)=xsten(isten,dir)+zstar-xsten(0,dir)
         endif
        enddo ! isten
-       call materialdist(xsten_star,nhalf_star,dx,bfact,dist,imaterial)
+       call materialdist(xsten_star,nhalf_star,dx,bfact,dist,imaterial,time)
 
         ! drop on slope (exactdist)
-       if ((probtype.eq.55).and.(SDIM.eq.2)) then
-        if ((num_materials.eq.3).and. &
-            (im_solid_exactdist.eq.3).and. &
-            (axis_dir.eq.0).and. &
-            (radblob3.eq.zero).and. &
-            (radblob5.eq.zero).and. &
-            (radblob6.eq.zero).and. &
-            (radblob7.eq.zero).and. &
-            (abs(xblob-xblob2).lt.1.0E-7).and. &
-            (abs(yblob-yblob2).lt.1.0E-7)) then
+       if (probtype.eq.55) then
+     
+        if (SDIM.eq.2) then
 
-         if ((imaterial.eq.1).or.(imaterial.eq.2)) then
+         if ((num_materials.eq.3).and. &
+             (im_solid_exactdist.eq.3).and. &
+             (axis_dir.eq.0).and. &
+             (radblob3.eq.zero).and. &
+             (radblob5.eq.zero).and. &
+             (radblob6.eq.zero).and. &
+             (radblob7.eq.zero).and. &
+             (abs(xblob-xblob2).lt.1.0E-7).and. &
+             (abs(yblob-yblob2).lt.1.0E-7)) then
+
+          if ((imaterial.eq.1).or.(imaterial.eq.2)) then
            ! distsolid>0 in solid
-          call materialdist(xsten_star,nhalf_star,dx,bfact,distsolid,3)
+           call materialdist(xsten_star,nhalf_star,dx,bfact,distsolid,3,time)
            ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
-          call drop_slope_dist(xstar,ystar,zstar, &
-           time,nmat,two*radblob,dist_ice,dist_liquid)
-          distgas=-dist_liquid
+           call drop_slope_dist(xstar,ystar,zstar, &
+            time,nmat,two*radblob,dist_ice,dist_liquid)
+           distgas=-dist_liquid
 
-          if (imaterial.eq.1) then
-           dist=dist_liquid
-          else if (imaterial.eq.2) then
-           dist=distgas
-          else
-           print *,"imaterial invalid in exactdist"
-           print *,"imaterial= ",imaterial
-           stop
-          endif
-         endif  ! imaterial=1,2
+           if (imaterial.eq.1) then
+            dist=dist_liquid
+           else if (imaterial.eq.2) then
+            dist=distgas
+           else
+            print *,"imaterial invalid in exactdist"
+            print *,"imaterial= ",imaterial
+            stop
+           endif
+          endif  ! imaterial=1,2
 
-         ! drop falling on ice (exactdist)
-        else if ((num_materials.eq.3).and.(axis_dir.eq.1)) then
-         ! do nothing (should not come here)
-        else if ((num_materials.eq.4).and.(axis_dir.eq.1)) then
-         ! do nothing (should not come here)
-        endif  ! drop on slope problem
+          ! drop falling on ice (exactdist)
+         else if ((num_materials.eq.3).and.(axis_dir.eq.1)) then
+          ! do nothing (should not come here)
+         else if ((num_materials.eq.4).and.(axis_dir.eq.1)) then
+          ! do nothing (should not come here)
+         endif  ! drop on slope problem
 
-        ! drop on slope
-       else if ((probtype.eq.55).and.(SDIM.eq.3)) then
-        if ((num_materials.eq.3).and. &
-            (im_solid_exactdist.eq.3).and. &
-            (axis_dir.eq.0).and. &
-            (radblob5.eq.zero).and. &
-            (radblob6.eq.zero).and. &
-            (radblob7.eq.zero).and. &
-            (abs(xblob-xblob2).lt.1.0E-7).and. &
-            (abs(yblob-yblob2).lt.1.0E-7).and. &
-            (abs(zblob-zblob2).lt.1.0E-7)) then
+        else if (SDIM.eq.3) then
 
-         if ((imaterial.eq.1).or.(imaterial.eq.2)) then
+         if ((num_materials.eq.3).and. &
+             (im_solid_exactdist.eq.3).and. &
+             (axis_dir.eq.0).and. &
+             (radblob5.eq.zero).and. &
+             (radblob6.eq.zero).and. &
+             (radblob7.eq.zero).and. &
+             (abs(xblob-xblob2).lt.1.0E-7).and. &
+             (abs(yblob-yblob2).lt.1.0E-7).and. &
+             (abs(zblob-zblob2).lt.1.0E-7)) then
+
+          if ((imaterial.eq.1).or.(imaterial.eq.2)) then
            ! distsolid>0 in solid
-          call materialdist(xsten_star,nhalf_star,dx,bfact,distsolid,3)
+           call materialdist(xsten_star,nhalf_star,dx,bfact,distsolid,3,time)
            ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
-          call drop_slope_dist(xstar,ystar,zstar, &
-           time,nmat,two*radblob,dist_ice,dist_liquid)
-          distgas=-dist_liquid
+           call drop_slope_dist(xstar,ystar,zstar, &
+            time,nmat,two*radblob,dist_ice,dist_liquid)
+           distgas=-dist_liquid
 
-          if (imaterial.eq.1) then
-           dist=dist_liquid
-          else if (imaterial.eq.2) then
-           dist=distgas
-          else
-           print *,"imaterial invalid"
-           stop
-          endif
-         endif  ! imaterial=1,2
+           if (imaterial.eq.1) then
+            dist=dist_liquid
+           else if (imaterial.eq.2) then
+            dist=distgas
+           else
+            print *,"imaterial invalid"
+            stop
+           endif
+          endif  ! imaterial=1,2
 
-        endif  ! drop on slope problem
+         endif  ! drop on slope problem
 
-       endif ! probtype=55
+        else
+         print *,"dimension bust for probtype==55 case"
+         stop
+        endif
+
+       else if (probtype.ne.55) then
+        ! do nothing
+       else
+        print *,"probtype bust"
+        stop
+       endif 
 
        return
        end subroutine exactdist
@@ -9420,13 +9448,15 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
 
-      INTEGER_T nmat,nten,bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T :: nten
+      INTEGER_T, intent(in) :: bfact,nhalf
+      REAL_T,  intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
       INTEGER_T nhalf2
-      REAL_T dx(SDIM)
-      REAL_T cenbc(nmat,SDIM)
-      REAL_T vfrac(nmat)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(out) :: cenbc(nmat,SDIM)
+      REAL_T, intent(out) :: vfrac(nmat)
       INTEGER_T im
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
@@ -9437,6 +9467,9 @@ END SUBROUTINE Adist
       REAL_T facearea(nmat)
       REAL_T EBVOFTOL
       INTEGER_T im_solid_microfluidic
+      REAL_T initial_time
+
+      initial_time=zero
 
       nhalf2=1
 
@@ -9510,7 +9543,7 @@ END SUBROUTINE Adist
 
         call materialdist_batch( &
          xsten2,nhalf2,dx,bfact, &
-         distbatch,nmat)
+         distbatch,nmat,initial_time)
         do im=1,nmat
          lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
         enddo
@@ -9953,7 +9986,7 @@ END SUBROUTINE Adist
 
         ! imaterial = 1..nmat
         ! liquid,gas,alt,solid
-      subroutine materialdist_batch(xsten,nhalf,dx,bfact,dist,nmat)
+      subroutine materialdist_batch(xsten,nhalf,dx,bfact,dist,nmat,time)
       use global_utility_module
       use global_distance_module
       use hydrateReactor_module
@@ -9972,6 +10005,7 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
 
+      REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: nhalf
       REAL_T, intent(in) :: dx(SDIM) 
@@ -9987,12 +10021,10 @@ END SUBROUTINE Adist
       REAL_T distsolid
       REAL_T drat,veltop,velbot,ytop,ybot
       INTEGER_T im_solid_materialdist
-      REAL_T initial_time
       INTEGER_T dir
       REAL_T x_in(SDIM)
       REAL_T maxdx
 
-      initial_time=zero
 
       im_solid_materialdist=im_solid_primary()
 
@@ -10009,15 +10041,15 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if ((initial_time.ge.zero).and.(initial_time.le.1.0D+20)) then
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
-      else if (initial_time.ge.1.0D+20) then
-       print *,"WARNING initial_time.ge.1.0D+20 in materialdistbatch"
-      else if (initial_time.lt.zero) then
-       print *,"initial_time invalid in materialdistbatch"
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in materialdistbatch"
+      else if (time.lt.zero) then
+       print *,"time invalid in materialdistbatch"
        stop
       else
-       print *,"initial_time bust in materialdistbatch"
+       print *,"time bust in materialdistbatch"
        stop
       endif
 
@@ -10043,7 +10075,7 @@ END SUBROUTINE Adist
       do imaterial=1,nmat
        if (is_rigid(nmat,imaterial).eq.1) then
          ! pos in solid, calling from materialdist_batch
-        call materialdistsolid(x,y,z,dist(imaterial),initial_time,imaterial)  
+        call materialdistsolid(x,y,z,dist(imaterial),time,imaterial)  
         if (dist(imaterial).gt.distsolid) then
          distsolid=dist(imaterial)
         endif
@@ -10071,27 +10103,27 @@ END SUBROUTINE Adist
       endif
 
       if (is_in_probtype_list().eq.1) then
-       call SUB_LS(x_in,initial_time,dist,num_materials)
+       call SUB_LS(x_in,time,dist,num_materials)
       else if (probtype.eq.411) then
-       call CAV3D_LS(x_in,initial_time,dist)
+       call CAV3D_LS(x_in,time,dist)
       else if (probtype.eq.401) then
-       call HELIX_LS(x_in,initial_time,dist)
+       call HELIX_LS(x_in,time,dist)
       else if (probtype.eq.402) then
-       call TSPRAY_LS(x_in,initial_time,dist)
+       call TSPRAY_LS(x_in,time,dist)
       else if (probtype.eq.412) then ! step
-       call CAV2Dstep_LS(x_in,initial_time,dist)
+       call CAV2Dstep_LS(x_in,time,dist)
       else if (probtype.eq.413) then ! zeyu
-       call ZEYU_droplet_impact_LS(x_in,initial_time,dist)
+       call ZEYU_droplet_impact_LS(x_in,time,dist)
       else if (probtype.eq.533) then
-       call rigid_FSI_LS(x_in,initial_time,dist)
+       call rigid_FSI_LS(x_in,time,dist)
       else if (probtype.eq.534) then
-       call sinking_FSI_LS(x_in,initial_time,dist)
+       call sinking_FSI_LS(x_in,time,dist)
       else if (probtype.eq.311) then ! user defined problem
-       call USERDEF_LS(x_in,initial_time,dist)
+       call USERDEF_LS(x_in,time,dist)
       else if (probtype.eq.222) then ! cone3d
-       call CONE3D_LS(x_in,initial_time,dist)
+       call CONE3D_LS(x_in,time,dist)
       else if (probtype.eq.915) then ! wavy channel
-       call WAVY_INIT_LS(x_in,initial_time,dist)
+       call WAVY_INIT_LS(x_in,time,dist)
 
        ! HYDRATE (materialdist_batch)
       else if (probtype.eq.199) then
@@ -10099,9 +10131,9 @@ END SUBROUTINE Adist
         print *,"nmat invalid for hydrate problem"
         stop
        endif
-       call INIT_LS_WATER(x,y,z,initial_time,dist(1))
-       call INIT_LS_GAS(x,y,z,initial_time,dist(2))
-       call INIT_LS_HYDRATE(x,y,z,initial_time,dist(3))
+       call INIT_LS_WATER(x,y,z,time,dist(1))
+       call INIT_LS_GAS(x,y,z,time,dist(2))
+       call INIT_LS_HYDRATE(x,y,z,time,dist(3))
        do imaterial=1,3
         if (is_rigid(nmat,imaterial).ne.0) then
          print *,"all hydrate problem materials should be fluids"
@@ -10120,9 +10152,9 @@ END SUBROUTINE Adist
 
        ! melting (materialdist_batch) (initial level set functions)
       else if (probtype.eq.299) then
-       call INIT_LS_LIQUID_MELT(x,y,z,initial_time,dist(1))
-       call INIT_LS_GAS_MELT(x,y,z,initial_time,dist(2))
-       call INIT_LS_SOLID_MELT(x,y,z,initial_time,dist(3))
+       call INIT_LS_LIQUID_MELT(x,y,z,time,dist(1))
+       call INIT_LS_GAS_MELT(x,y,z,time,dist(2))
+       call INIT_LS_SOLID_MELT(x,y,z,time,dist(3))
        do imaterial=1,3
         if (is_rigid(nmat,imaterial).ne.0) then
          print *,"all additive manufacturing materials should be fluids"
@@ -10160,9 +10192,9 @@ END SUBROUTINE Adist
        endif
 
       else if (probtype.eq.301) then
-       call INIT_LS_LIQUID_AM(x,y,z,initial_time,dist(1))
-       call INIT_LS_GAS_AM(x,y,z,initial_time,dist(2))
-       call INIT_LS_SOLID_AM(x,y,z,initial_time,dist(3))
+       call INIT_LS_LIQUID_AM(x,y,z,time,dist(1))
+       call INIT_LS_GAS_AM(x,y,z,time,dist(2))
+       call INIT_LS_SOLID_AM(x,y,z,time,dist(3))
        do imaterial=1,3
         if (is_rigid(nmat,imaterial).ne.0) then
          print *,"all additive manufacturing materials should be fluids"
@@ -10609,14 +10641,16 @@ END SUBROUTINE Adist
 
         ! imaterial = 1,2,3,4
         ! liquid,gas,alt,solid
-      subroutine materialdist(xsten,nhalf,dx,bfact,dist,imaterial)
+      subroutine materialdist(xsten,nhalf,dx,bfact,dist,imaterial,time)
       IMPLICIT NONE
 
-      INTEGER_T bfact,nhalf
-      REAL_T dx(SDIM)
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T dist
-      INTEGER_T imaterial,nmat
+      INTEGER_T, intent(in) :: bfact,nhalf
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(out) :: dist
+      INTEGER_T, intent(in) :: imaterial
+      REAL_T, intent(in) :: time
+      INTEGER_T :: nmat
       REAL_T, dimension(:), allocatable :: distbatch
 
       if (bfact.lt.1) then
@@ -10631,7 +10665,7 @@ END SUBROUTINE Adist
        stop
       endif
 
-      call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat)
+      call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
       dist=distbatch(imaterial)
 
       deallocate(distbatch)
@@ -10684,13 +10718,13 @@ END SUBROUTINE Adist
       use geometry_intersect_module
       IMPLICIT NONE
 
-      INTEGER_T nmat,bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: nmat,bfact,nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
 
-      REAL_T dx(SDIM)
-      REAL_T cenbc(nmat,SDIM)
-      REAL_T vfrac(nmat)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(out) :: cenbc(nmat,SDIM)
+      REAL_T, intent(out) :: vfrac(nmat)
       INTEGER_T im
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
@@ -10768,12 +10802,13 @@ END SUBROUTINE Adist
       use geometry_intersect_module
       IMPLICIT NONE
 
-      INTEGER_T nmat,bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: nmat,bfact,nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
-      REAL_T dx(SDIM)
-      REAL_T cenbc(nmat,SDIM)
-      REAL_T vfrac(nmat)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(out) :: cenbc(nmat,SDIM)
+      REAL_T, intent(out) :: vfrac(nmat)
+      REAL_T :: initial_time
       INTEGER_T im
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
@@ -10785,6 +10820,8 @@ END SUBROUTINE Adist
       REAL_T EBVOFTOL
       INTEGER_T nhalf2
       REAL_T LS_center
+
+      initial_time=zero
 
       nhalf2=1
       if (bfact.lt.1) then
@@ -10828,7 +10865,7 @@ END SUBROUTINE Adist
 
        call materialdist_batch( &
         xsten2,nhalf2,dx,bfact, &
-        distbatch,nmat)
+        distbatch,nmat,initial_time)
        do im=1,nmat
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
@@ -14021,7 +14058,7 @@ END SUBROUTINE Adist
        ! curvature sanity check (line in 2D, plane in 3D)
       else if ((probtype.eq.36).and.(axis_dir.eq.210)) then
 
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
        call check_lsbc_extrap(LS,LSWALL,nmat)
 
       else if (probtype.eq.199) then  ! in grouplsBC
@@ -14052,16 +14089,16 @@ END SUBROUTINE Adist
       else if ((probtype.eq.299).or. &
                (probtype.eq.301)) then !melting (boundary condition LS)
 
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
        call check_lsbc_extrap(LS,LSWALL,nmat)
 
       else if (probtype.eq.209) then  ! River
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
        call check_lsbc_extrap(LS,LSWALL,nmat)
 
        ! marangoni (heat pipe) problem
       else if ((probtype.eq.36).and.(axis_dir.eq.10)) then
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else
 
@@ -14109,20 +14146,20 @@ END SUBROUTINE Adist
           call check_lsbc_extrap(LS,LSWALL,nmat)
           ! xlo 2d - grouplsBC
          else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.802) then ! xlo: dissolution grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  !  xlo: dir=1 side=1 grouplsBC 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5700) then ! xlo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then  ! xlo, groupLSBC, 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.41) then ! xlo, groupLSBC, 2d
           call inletpipedist(x,y,z,nmat,LS)
@@ -14131,10 +14168,10 @@ END SUBROUTINE Adist
           call get_jet_dist(x,y,z,nmat,LS)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.539) then ! xlo, sup injector - grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.202) then ! xlo, liquidlens - grouplsbc
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          endif
 
@@ -14159,7 +14196,7 @@ END SUBROUTINE Adist
           call inletpipedist(x,y,z,nmat,LS)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5700) then ! xlo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
 
            ! airblast
@@ -14168,13 +14205,13 @@ END SUBROUTINE Adist
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! xlo dir=1 side=1 grouplsBC 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5501) then  ! xlo, grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then  ! xlo, grouplsBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          endif
 
@@ -14199,45 +14236,45 @@ END SUBROUTINE Adist
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! dir=1 side=2 (xhi) grouplsBC 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then  ! xhi, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.532) then ! xhi
           call get_jet_dist(x,y,z,nmat,LS)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.539) then ! xhi, sup injector
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.41) then  ! xhi
           call inletpipedist(x,y,z,nmat,LS)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.202) then ! xhi, liquidlens, grouplsbc
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.25).and.(axis_dir.gt.0)) then ! xhi, bubble frm.
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          endif
 
          else if (SDIM.eq.3) then
 
          if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! xhi dir=1 side=2 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5501) then  ! xhi grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then  ! xhi grouplsBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          endif
 
@@ -14256,14 +14293,14 @@ END SUBROUTINE Adist
 
           !ylo 2D bubble formation
          if ((probtype.eq.25).and.(axis_dir.gt.0)) then 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
           ! ylo 2D grouplsBC
          else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5700) then  ! ylo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.41) then ! ylo
           call inletpipedist(x,y,z,nmat,LS)
@@ -14283,18 +14320,18 @@ END SUBROUTINE Adist
          else if ((probtype.eq.538).or. &
                   (probtype.eq.539).or. &
                   (probtype.eq.541)) then
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
           ! 540 Rieber problem
          else if (probtype.eq.540) then !dir=2 side=1,2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then !ylo dir=2 side=1,2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then ! ylo, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.bubbleInPackedColumn) then ! ylo grouplsBC
           call yloLS_pack(x,y,z,nmat,LS,adv_vel,time,bigdist)
@@ -14304,17 +14341,17 @@ END SUBROUTINE Adist
          else if (SDIM.eq.3) then
 
          if (probtype.eq.5700) then  ! ylo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! ylo dir=2 side=1 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5501) then  ! ylo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then  ! ylo, groupLSBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.532) then  ! impinge from side, ylo
           call get_jet_dist(x,y,z,nmat,LS)
@@ -14342,7 +14379,7 @@ END SUBROUTINE Adist
           enddo
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5700) then ! yhi 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.14).or.(probtype.eq.16).or. &
                ((probtype.eq.25).and.(axis_dir.eq.0)) ) then
@@ -14362,13 +14399,13 @@ END SUBROUTINE Adist
           call inletpipedist(x,y,z,nmat,LS)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.540) then  ! Rieber problem y=yhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.539) then ! yhi, sup injector
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.701) then ! yhi, groupLSBC, 2D
           if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
@@ -14385,17 +14422,17 @@ END SUBROUTINE Adist
          else if (SDIM.eq.3) then
 
          if (probtype.eq.5700) then ! yhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5501) then  ! yhi grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! yhi dir=2 side=2 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.532) then  ! impinge from side, yhi
           call get_jet_dist(x,y,z,nmat,LS)
@@ -14418,7 +14455,7 @@ END SUBROUTINE Adist
          if ((probtype.eq.538).or. &
              (probtype.eq.541)) then  ! zlo, diesel injector
 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          
          else if ((probtype.eq.53).or.(probtype.eq.531).or. &  ! zlo 3D
@@ -14429,17 +14466,17 @@ END SUBROUTINE Adist
 
           ! 540 Rieber problem
          else if (probtype.eq.540) then  ! dir=3 side=1
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! zlo dir=3 side=1 groupLSBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5501) then  ! zlo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then  ! zlo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5700) then  ! microfluidics zlo
           do im=1,nmat
@@ -14467,10 +14504,10 @@ END SUBROUTINE Adist
           enddo
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.540) then  ! Rieber problem z=zhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.9) then  ! zhi, groupLSBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
           call check_lsbc_extrap(LS,LSWALL,nmat)
          else if (probtype.eq.5700) then  ! microfluidics zhi
           do im=1,nmat
@@ -34265,7 +34302,7 @@ end subroutine initialize2d
 
         endif ! if (probtype.eq.user_def_probtype) then ... else ... endif
 
-        call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat)
+        call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
         do im=1,nmat
          if (is_rigid(nmat,im).eq.1) then
           if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
@@ -34287,7 +34324,7 @@ end subroutine initialize2d
 
          ! in: FORT_INITDATA
         call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata,nmat, &
-         0,max_levelstack,materialdist_batch)
+         0,max_levelstack,materialdist_batch,time)
         call extract_vof_cen_batch(fluiddata,vofdark,voflight, &
          cendark,cenlight,nmat)
 
@@ -34390,7 +34427,7 @@ end subroutine initialize2d
            xsten2(isten,dir)=xsten(isten+2*k1,dir)
           endif
          enddo ! isten
-         call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,nmat)
+         call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,nmat,time)
          do im=1,nmat
           if (is_rigid(nmat,im).eq.1) then
            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
@@ -35333,7 +35370,7 @@ end subroutine initialize2d
 
          ! HYDRATE  (in initvelocity)
         else if (probtype.eq.199) then
-         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat)
+         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
          if (distbatch(1).ge.zero) then
           call INIT_STATE_WATER(x,y,z,time,velcell,temp,dens,ccnt)
          else if (distbatch(2).ge.zero) then
