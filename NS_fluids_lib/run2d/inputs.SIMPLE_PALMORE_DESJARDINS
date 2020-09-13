@@ -2,6 +2,7 @@ max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
 stop_time = 4.0  # case 1
+stop_time = 0.04  # case 2
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -110,11 +111,14 @@ ns.distribute_from_target = 1 0
 ns.freezing_model=6 0
 ns.mass_fraction_id=1 0 
 ns.saturation_temp = 373.15 0.0  # CODY ~ T_gamma = 373.15 K
+ns.saturation_temp_min = 200.0 0.0  
 ns.temperature_primitive_variable=1 1 1 1
 # convergence
 # coarse grid: 16x16 xhi=0.1 dx_coarse=0.1/16=1/160
-# case 1: velocity 0<t<0.1 is about u=0.02 
-ns.fixed_dt	  = 0.02     # case 1 0.02 is coarsest
+# case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.3125 
+# case 2: velocity 0<t<0.01 is about u=1.3 dx/u=0.005
+#ns.fixed_dt	  = 0.02     # case 1 0.02 is coarsest
+ns.fixed_dt	  = 0.0005   # case 2 0.0005 is coarsest
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   
@@ -141,8 +145,8 @@ ns.heatviscconst_interface=0.0
 ns.speciesviscconst=0.0 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # D=0.1  lambda=k/(rho Cp)=1000/(0.001 * 1.0D+7) = 0.1
 # 1=water 2=gas  
-ns.speciesconst=1.0 1.0  # case 1 film boiling
-#ns.speciesconst=0.221022 0.2  # case 2 general vaporization
+#ns.speciesconst=1.0 1.0  # case 1 film boiling
+ns.speciesconst=0.221022 0.2  # case 2 general vaporization
 ns.viscconst=0.0 0.0 # CODY ~ (not used, must be zero)
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
@@ -162,8 +166,8 @@ ns.FSI_flag=0 0
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
 # 1=water 2=gas   
-ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
-#ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
+#ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
+ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #0.02cm
 ns.xblob2=0.025 #CODY this is physical location corresponding to x=0
 # make sure xblob corresponds to a grid cell boundary for convergence

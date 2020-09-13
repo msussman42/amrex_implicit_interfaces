@@ -794,7 +794,7 @@ if (nsum.eq.3) then
    VOF_analytical=zero
   else if ((x_analytical.ge.x_left).and. &
            (x_analytical.le.x_right)) then
-   VOF_analytical=(x_analytical-x_left)/(x_right-x_left)
+   VOF_analytical=(x_right-x_analytical)/(x_right-x_left)
   else
    print *,"x_analytical invalid"
    stop
