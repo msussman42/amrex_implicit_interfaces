@@ -376,7 +376,20 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  endif
  lambda=k_G/(den_G*C_pG)
 
- T_gamma_test=T_inf+(L_V/C_pG)*(Y_gamma-Y_inf)/(Y_gamma-1.0d0)
+ if (Y_gamma.eq.1.0d0) then
+  if (Y_inf.eq.1.0d0) then
+   T_gamma_test=T_sat
+  else
+   print *,"Y_inf invalid"
+   stop
+  endif
+ else if ((Y_gamma.ge.0.0d0).and. &
+          (Y_gamma.lt.1.0d0)) then
+  T_gamma_test=T_inf+(L_V/C_pG)*(Y_gamma-Y_inf)/(Y_gamma-1.0d0)
+ else
+  print *,"Y_gamma invalid"
+  stop
+ endif
 
    ! required that D_G=lambda
  if ((T_inf.gt.T_gamma).and. &
@@ -500,6 +513,11 @@ if ((num_materials.eq.2).and. &
   use_T=0
   call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    x(1),t,use_T,STATE(ibase+3),LS_exact)
+
+  if (im.eq.1) then ! water
+   state(ibase+2)=fort_tempconst(im)
+   state(ibase+3)=fort_speciesconst(im)
+  endif
 
  enddo ! im=1..num_materials
 else

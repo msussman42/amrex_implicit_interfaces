@@ -28,7 +28,7 @@ ns.initial_project_cycles=5   # initial jacobi iterations
 ns.initial_cg_cycles=10
 ns.solvability_projection=0 # 0 since one must allow for expansion
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-ns.projection_pressure_scale=1.0e+6
+ns.projection_pressure_scale=1.0
 ns.num_materials=2 # 1: liquid 2: air 
 ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
 ns.species_evaporation_density=0.001 #g/cm^3 CODY:rho_gas=1kg/m^3(0.001 g/cm^3)
@@ -48,7 +48,7 @@ cg.verbose = 0 # 1=check initial residual  2=check all the residuals
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
-mg.bot_atol = 1.0e-12
+mg.bot_atol = 1.0e-14
 mg.rtol_b = -0.01
 Lp.v = 0
 
@@ -71,7 +71,7 @@ amr.check_int       = 100
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 10 # was 100  (plot_int=1 for testing)
+amr.plot_int        = 40 # was 100  (plot_int=1 for testing)
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -83,13 +83,13 @@ amr.file_name_digits=7
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-10
+mac.mac_abs_tol    = 1.0e-12
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
-mac.visc_abs_tol   = 1.0e-8
+mac.visc_abs_tol   = 1.0e-12
 ns.gravity        = 0.0   # cgs
 ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -112,9 +112,9 @@ ns.mass_fraction_id=1 0
 ns.saturation_temp = 373.15 0.0  # CODY ~ T_gamma = 373.15 K
 ns.temperature_primitive_variable=1 1 1 1
 # convergence
-# coarse grid: 32x8 xhi=0.1 dx_coarse=0.1/32=0.0032
-# case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.16 coarsest
-#ns.fixed_dt	  = 0.016     # case 1 0.016 is coarsest
+# coarse grid: 16x16 xhi=0.1 dx_coarse=0.1/16=1/160
+# case 1: velocity 0<t<0.1 is about u=0.02 
+ns.fixed_dt	  = 0.02     # case 1 0.02 is coarsest
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   
@@ -141,8 +141,8 @@ ns.heatviscconst_interface=0.0
 ns.speciesviscconst=0.0 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # D=0.1  lambda=k/(rho Cp)=1000/(0.001 * 1.0D+7) = 0.1
 # 1=water 2=gas  
-#ns.speciesconst=1.0 1.0  # case 1 film boiling
-ns.speciesconst=0.221022 0.2  # case 2 general vaporization
+ns.speciesconst=1.0 1.0  # case 1 film boiling
+#ns.speciesconst=0.221022 0.2  # case 2 general vaporization
 ns.viscconst=0.0 0.0 # CODY ~ (not used, must be zero)
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
@@ -165,8 +165,11 @@ ns.solidheat_flag=0
 ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
 #ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #0.02cm
-ns.xblob2=0.02 #CODY this is physical location corresponding to x=0
-ns.xblob=0.02  #CODY
+ns.xblob2=0.025 #CODY this is physical location corresponding to x=0
+# make sure xblob corresponds to a grid cell boundary for convergence
+# study.
+# 0.1/4=0.025
+ns.xblob=0.025  
 ns.yblob=0.0
 ns.zblob=0.0
 ns.radblob=0.0

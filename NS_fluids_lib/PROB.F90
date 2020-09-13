@@ -33414,6 +33414,12 @@ end subroutine initialize2d
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
+           if (scalc(ibase+num_state_base+n).ge.zero) then
+            ! do nothing
+           else
+            print *,"mass fraction cannot be negative"
+            stop
+           endif
           enddo
 
           if (scalc(ibase+1).gt.zero) then
