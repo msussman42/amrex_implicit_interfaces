@@ -23473,13 +23473,11 @@ stop
 
       REAL_T test_density
       REAL_T test_temp
-      REAL_T test_spec
       REAL_T LS_source,LS_dest
 
       REAL_T LL
       INTEGER_T local_freezing_model
       INTEGER_T distribute_from_targ
-      REAL_T TSAT
       REAL_T TSAT_master
       REAL_T TDIFF
       REAL_T TDIFF_master

@@ -4029,6 +4029,7 @@ stop
       REAL_T condensed_den
       REAL_T local_cv_or_cp
       INTEGER_T speccomp_mod
+      INTEGER_T default_comp
       INTEGER_T ncomp_per_tsat
       INTEGER_T ispec
       INTEGER_T iprobe
@@ -5173,7 +5174,7 @@ stop
                stop
               endif
               temperature_new(iprobe)=unsplit_temperature(im_probe)
-              if (mfrac_comp_probe.eq.0) then
+              if (mfrac_comp_probe.eq.0) then ! no species vars
                species_new(iprobe)=one
               else if (mfrac_comp_probe.gt.0) then
                species_new(iprobe)= &
@@ -5203,7 +5204,7 @@ stop
                stop
               endif
               temperature_old(iprobe)=EOS(D_DECL(i,j,k),tcomp_probe)
-              if (mfrac_comp_probe.eq.0) then
+              if (mfrac_comp_probe.eq.0) then ! no species var
                species_old(iprobe)=one
               else if (mfrac_comp_probe.gt.0) then
                species_old(iprobe)=EOS(D_DECL(i,j,k),mfrac_comp_probe)
@@ -6037,90 +6038,98 @@ stop
             if ((is_rigid(nmat,im).eq.1).or. &
                 (is_rigid(nmat,im_opp).eq.1)) then
              ! do nothing
-            else if (LL.ne.zero) then
-             if (ireverse.eq.0) then
-              im_source=im
-              im_dest=im_opp
-             else if (ireverse.eq.1) then
-              im_source=im_opp
-              im_dest=im
-             else
-              print *,"ireverse invalid"
-              stop
-             endif
-             local_freezing_model=freezing_model(iten+ireverse*nten)
-             mass_frac_id=mass_fraction_id(iten+ireverse*nten)
+            else if ((is_rigid(nmat,im).eq.0).and. &
+                     (is_rigid(nmat,im_opp).eq.0)) then
 
-             if (local_freezing_model.eq.0) then ! standard Stefan model
-              ! do nothing
-             else if (local_freezing_model.eq.1) then ! source term
-              ! do nothing
-             else if (local_freezing_model.eq.2) then !hydrate
-              ! do nothing
-             else if (local_freezing_model.eq.3) then !wildfire
-              ! do nothing
-             else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
-                      (local_freezing_model.eq.5).or. & ! Stefan evap/cond model
-                      (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
-                      (local_freezing_model.eq.7)) then ! Cavitation
+             if (LL.ne.zero) then
+              if (ireverse.eq.0) then
+               im_source=im
+               im_dest=im_opp
+              else if (ireverse.eq.1) then
+               im_source=im_opp
+               im_dest=im
+              else
+               print *,"ireverse invalid"
+               stop
+              endif
+              local_freezing_model=freezing_model(iten+ireverse*nten)
+              mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
-              if ((mass_frac_id.ge.1).and. &
-                  (mass_frac_id.le.num_species_var)) then
+              if (local_freezing_model.eq.0) then ! standard Stefan model
+               ! do nothing
+              else if (local_freezing_model.eq.1) then ! source term
+               ! do nothing
+              else if (local_freezing_model.eq.2) then !hydrate
+               ! do nothing
+              else if (local_freezing_model.eq.3) then !wildfire
+               ! do nothing
+              else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
+                       (local_freezing_model.eq.5).or. & ! Stefan model
+                       (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
+                       (local_freezing_model.eq.7)) then ! Cavitation
 
-               if (LL.gt.zero) then ! evaporation
-                im_condensed=im_source
-               else if (LL.lt.zero) then ! condensation
-                im_condensed=im_dest
-               else
-                print *,"LL invalid"
-                stop
-               endif
+               if ((mass_frac_id.ge.1).and. &
+                   (mass_frac_id.le.num_species_var)) then
+
+                if (LL.gt.zero) then ! evaporation
+                 im_condensed=im_source
+                else if (LL.lt.zero) then ! condensation
+                 im_condensed=im_dest
+                else
+                 print *,"LL invalid"
+                 stop
+                endif
                        
-               speccomp_mod=num_materials_vel*(SDIM+1)+ &
+                speccomp_mod=num_materials_vel*(SDIM+1)+ &
                  (im_condensed-1)*num_state_material+num_state_base+ &
                  mass_frac_id
-           
-               Ygamma_default=one
+          
+                default_comp=(mass_frac_id-1)*nmat+im_condensed 
+                Ygamma_default=fort_speciesconst(default_comp)
 
-               Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
-               if (ireverse.eq.0) then
-                ! do nothing
-               else if (ireverse.eq.1) then
-                Tsat_flag=-Tsat_flag
-               else
-                print *,"ireverse invalid"
-                stop
-               endif
+                Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
+                if (ireverse.eq.0) then
+                 ! do nothing
+                else if (ireverse.eq.1) then
+                 Tsat_flag=-Tsat_flag
+                else
+                 print *,"ireverse invalid"
+                 stop
+                endif
             
-               if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
-                Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
-                  nten+(iten-1)*ncomp_per_tsat+2)
-               else if ((Tsat_flag.eq.-1).or. &
-                        (Tsat_flag.eq.-2)) then
-                ! do nothing
-               else if (Tsat_flag.eq.0) then
-                ! do nothing
+                if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
+                 Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
+                   nten+(iten-1)*ncomp_per_tsat+2)
+                else if ((Tsat_flag.eq.-1).or. &
+                         (Tsat_flag.eq.-2)) then
+                 ! do nothing
+                else if (Tsat_flag.eq.0) then
+                 ! do nothing
+                else
+                 print *,"Tsat_flag invalid"
+                 stop
+                endif
+
+                snew(D_DECL(i,j,k),speccomp_mod)=Ygamma_default
+
                else
-                print *,"Tsat_flag invalid"
+                print *,"mass_frac_id invalid"
                 stop
                endif
-
-               snew(D_DECL(i,j,k),speccomp_mod)=Ygamma_default
 
               else
-               print *,"mass_frac_id invalid"
+               print *,"local_freezing_model invalid 1"
                stop
               endif
 
+             else if (LL.eq.zero) then
+              ! do nothing
              else
-              print *,"local_freezing_model invalid 1"
+              print *,"LL invalid"
               stop
              endif
-
-            else if (LL.eq.zero) then
-             ! do nothing
             else
-             print *,"LL invalid"
+             print *,"is_rigid invalid"
              stop
             endif
            enddo ! ireverse=0,1
