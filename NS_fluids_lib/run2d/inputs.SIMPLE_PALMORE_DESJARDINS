@@ -142,7 +142,7 @@ ns.heatviscconst=10000.0 1000.0 #CODY:k_liquid=10^-1 W/(m*K),
 ns.heatviscconst_interface=0.0 
 # (rho Y)_t + div(rho u Y) = div (rho D grad Y)
 # D is here:
-ns.speciesviscconst=0.0 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
+ns.speciesviscconst=0.1 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # D=0.1  lambda=k/(rho Cp)=1000/(0.001 * 1.0D+7) = 0.1
 # 1=water 2=gas  
 #ns.speciesconst=1.0 1.0  # case 1 film boiling
