@@ -23485,6 +23485,7 @@ stop
       REAL_T TDIFF_master
       REAL_T T_out(1)
       REAL_T Tcenter(nmat)
+      REAL_T thermal_state(nmat)
 
       REAL_T xtarget(SDIM)
       REAL_T xI(SDIM)
@@ -23510,6 +23511,11 @@ stop
       REAL_T LSCRIT_solid
       REAL_T LSTEST
       INTEGER_T ncomp_per_tsat
+      INTEGER_T Tgamma_STATUS
+      INTEGER_T ispec
+      REAL_T Tgamma
+      REAL_T TorYgamma_BC
+      INTEGER_T tsat_comp
 
       DATA_FLOOR=zero
 
@@ -24095,7 +24101,9 @@ stop
              dencomp=num_materials_vel*(SDIM+1)+ &
               (im_crit-1)*num_state_material+1
              Tcenter(im_crit)=cellfab(D_DECL(i,j,k),scomp(im_crit)+1)
-             if (Tcenter(im_crit).le.zero) then
+             if (Tcenter(im_crit).ge.zero) then
+              ! do nothing
+             else
               print *,"Tcenter(im_crit) invalid"
               stop
              endif
@@ -24189,7 +24197,7 @@ stop
                       else if (local_freezing_model.eq.6) then 
                        ispec=mass_fraction_id(iten+ireverse*nten)
                        if (ispec.eq.project_option-100+1) then
-                               ! do nothing
+                        ! do nothing
                        else if ((ispec.ge.1).and. &
                                 (ispec.le.num_species_var)) then
                         Tgamma_STATUS=0
@@ -24348,7 +24356,7 @@ stop
 
               if (hflag.eq.0) then
 
-               if (test_temp.gt.zero) then
+               if (test_temp.ge.zero) then
                 ! do nothing
                else
                 print *,"project_option ",project_option
@@ -24494,153 +24502,89 @@ stop
                     ((combine_flag.eq.1).or. &   ! GFM->FVM
                      (combine_flag.eq.2))) then ! combine if F==0
 
-            if (project_option.eq.2) then ! thermal conduction
+            if (nsolve.ne.1) then
+             print *,"nsolve invalid"
+             stop
+            endif
+            if (num_materials_combine.ne.nmat) then
+             print *,"num_materials_combine invalid"
+             stop
+            endif
 
-             if (nsolve.ne.1) then
-              print *,"nsolve invalid"
+            velsum(1)=zero
+            weight_sum=zero
+
+            do im_crit=1,nmat
+
+             weight_sum=weight_sum+cell_mfrac(im_crit)
+
+             if (combine_idx.eq.-1) then
+              cellcomp=scomp(im_crit)+1
+             else if (combine_idx.ge.0) then
+              cellcomp=im_crit
+             else
+              print *,"combine_idx invalid"
               stop
              endif
-             if (num_materials_combine.ne.nmat) then
-              print *,"num_materials_combine invalid"
-              stop
-             endif
 
-             velsum(1)=zero
-             weight_sum=zero
-
-             do im_crit=1,nmat
-
-              weight_sum=weight_sum+cell_mfrac(im_crit)
-
-              if (combine_idx.eq.-1) then
-               cellcomp=scomp(im_crit)+1
-              else if (combine_idx.ge.0) then
-               cellcomp=im_crit
-              else
-               print *,"combine_idx invalid"
-               stop
-              endif
-
-              test_temp=cellfab(D_DECL(i,j,k),cellcomp)
-              if (hflag.eq.0) then
-               if (test_temp.gt.zero) then
-                ! do nothing
-               else
-                print *,"test_temp must be positive: combinevel"
-                print *,"test_temp=",test_temp
-                print *,"im_crit=",im_crit
-                print *,"cellcomp=",cellcomp
-                stop
-               endif
-              else if (hflag.eq.1) then
+             test_temp=cellfab(D_DECL(i,j,k),cellcomp)
+             if (hflag.eq.0) then
+              if (test_temp.ge.zero) then
                ! do nothing
               else
-               print *,"hflag invalid3 hflag=",hflag
-               stop
-              endif
-
-              velsum(1)=velsum(1)+cell_mfrac(im_crit)*test_temp
-
-             enddo ! im_crit
-
-             if (weight_sum.gt.zero) then
-              velsum(1)=velsum(1)/weight_sum
-             else
-              print *,"weight_sum invalid 1"
-              stop
-             endif 
-
-             if (hflag.eq.0) then
-              if (velsum(1).le.zero) then
-               print *,"velsum must be positive: combinevel"
+               print *,"test_temp must be positive: combinevel"
+               print *,"test_temp=",test_temp
+               print *,"im_crit=",im_crit
+               print *,"cellcomp=",cellcomp
                stop
               endif
              else if (hflag.eq.1) then
               ! do nothing
              else
-              print *,"hflag invalid4 hflag=",hflag
+              print *,"hflag invalid3 hflag=",hflag
               stop
              endif
 
-             if (combine_idx.eq.-1) then
-              cellcomp=scomp(im)+1
-             else if (combine_idx.ge.0) then
-              cellcomp=im
-             else
-              print *,"combine_idx invalid"
-              stop
-             endif
+             velsum(1)=velsum(1)+cell_mfrac(im_crit)*test_temp
 
-             if (combine_flag.eq.1) then
-              newcell(D_DECL(i,j,k),im)=velsum(1)
-             else if (combine_flag.eq.2) then
-              cellfab(D_DECL(i,j,k),cellcomp)=velsum(1)
-             else
-              print *,"combine_flag invalid"
-              stop
-             endif
+            enddo ! im_crit
 
-              ! species
-            else if ((project_option.ge.100).and. &  
-                     (project_option.le.100+num_species_var-1)) then
-          
-             if (nsolve.ne.1) then
-              print *,"nsolve invalid"
-              stop
-             endif
-             if (num_materials_combine.ne.nmat) then
-              print *,"num_materials_combine invalid"
-              stop
-             endif
-
-             velsum(1)=zero
-             weight_sum=zero
-
-             do im_crit=1,nmat
-
-              weight_sum=weight_sum+cell_mfrac(im_crit)
-
-              if (combine_idx.eq.-1) then
-               cellcomp=scomp(im_crit)+1
-              else if (combine_idx.ge.0) then
-               cellcomp=im_crit
-              else
-               print *,"combine_idx invalid"
-               stop
-              endif
-
-              test_spec=cellfab(D_DECL(i,j,k),cellcomp)
-              velsum(1)=velsum(1)+cell_mfrac(im_crit)*test_spec
-
-             enddo ! im_crit
-
-             if (weight_sum.gt.zero) then
-              velsum(1)=velsum(1)/weight_sum
-             else
-              print *,"weight_sum invalid 2"
-              stop
-             endif 
-
-             if (combine_idx.eq.-1) then
-              cellcomp=scomp(im)+1
-             else if (combine_idx.ge.0) then
-              cellcomp=im
-             else
-              print *,"combine_idx invalid"
-              stop
-             endif
-
-             if (combine_flag.eq.1) then
-              newcell(D_DECL(i,j,k),im)=velsum(1)
-             else if (combine_flag.eq.2) then
-              cellfab(D_DECL(i,j,k),cellcomp)=velsum(1)
-             else
-              print *,"combine_flag invalid"
-              stop
-             endif
-
+            if (weight_sum.gt.zero) then
+             velsum(1)=velsum(1)/weight_sum
             else
-             print *,"project_option invalid"
+             print *,"weight_sum invalid 1"
+             stop
+            endif 
+
+            if (hflag.eq.0) then
+             if (velsum(1).ge.zero) then
+              ! do nothing
+             else
+              print *,"velsum must be nonneg: combinevel"
+              stop
+             endif
+            else if (hflag.eq.1) then
+             ! do nothing
+            else
+             print *,"hflag invalid4 hflag=",hflag
+             stop
+            endif
+
+            if (combine_idx.eq.-1) then
+             cellcomp=scomp(im)+1
+            else if (combine_idx.ge.0) then
+             cellcomp=im
+            else
+             print *,"combine_idx invalid"
+             stop
+            endif
+
+            if (combine_flag.eq.1) then
+             newcell(D_DECL(i,j,k),im)=velsum(1)
+            else if (combine_flag.eq.2) then
+             cellfab(D_DECL(i,j,k),cellcomp)=velsum(1)
+            else
+             print *,"combine_flag invalid"
              stop
             endif
 
