@@ -2961,7 +2961,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          //TY_GAMMA<stuff>.plt (visit can open binary tecplot files)
         writeSanityCheckData(
          "TY_GAMMA",
-         "SATURATION_TEMP_MF: flag12,T_GAMMA12,Y_GAMMA12, ...",
+         "SATURATION_TEMP_MF: flag12,flag13,flag23,T_GAMMA12,Y_GAMMA12, ...",
          caller_id,
          localMF[SATURATION_TEMP_MF]->nComp(), 
          SATURATION_TEMP_MF,
