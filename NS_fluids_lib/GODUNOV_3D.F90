@@ -23327,6 +23327,8 @@ stop
        bfact, &
        level, &
        finest_level, &
+       ntsat, &
+       TgammaFAB,DIMS(TgammaFAB), &
        maskcov,DIMS(maskcov), &
        solxfab,DIMS(solxfab), &
        solyfab,DIMS(solyfab), &
@@ -23336,7 +23338,7 @@ stop
        vof,DIMS(vof), &
        cellfab,DIMS(cellfab), &
        newcell,DIMS(newcell), &
-       state,DIMS(state), &
+       state,DIMS(state), &  !Snew
        velbc, &
        listbc, &
        xlo,dx, &
@@ -23379,7 +23381,9 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: ntsat
 
+      INTEGER_T, intent(in) :: DIMDEC(TgammaFAB)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(solxfab)
       INTEGER_T, intent(in) :: DIMDEC(solyfab)
@@ -23399,6 +23403,7 @@ stop
 
       REAL_T, intent(in) :: cur_time
 
+      REAL_T, intent(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
       REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM)
       REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM)
@@ -23408,7 +23413,7 @@ stop
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, intent(inout) :: cellfab(DIMV(cellfab),ncomp_cell)
       REAL_T, intent(out) :: newcell(DIMV(newcell),nsolveMM)
-      REAL_T, intent(in) :: state(DIMV(state),nstate_main)
+      REAL_T, intent(in) :: state(DIMV(state),nstate_main) !Snew
 
       REAL_T DATA_FLOOR
  
@@ -23502,6 +23507,7 @@ stop
       REAL_T LSCRIT_solid_plus
       REAL_T LSCRIT_solid
       REAL_T LSTEST
+      INTEGER_T ncomp_per_tsat
 
       DATA_FLOOR=zero
 
@@ -23540,6 +23546,14 @@ stop
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
        print *,"nten invalid combinevel nten, nten_test ",nten,nten_test
+       stop
+      endif
+
+      ncomp_per_tsat=2
+      if (ntsat.eq.nten*(ncomp_per_tsat+1)) then
+       ! do nothing
+      else
+       print *,"nstat invalid"
        stop
       endif
 
@@ -23668,6 +23682,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(cellfab),1,-1,1273)
       call checkbound(fablo,fabhi,DIMS(newcell),0,-1,1273)
       call checkbound(fablo,fabhi,DIMS(state),1,-1,1273)
+      call checkbound(fablo,fabhi,DIMS(TgammaFAB),1,-1,234)
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
@@ -24070,7 +24085,238 @@ stop
             tsat_flag=0
             im_source_master=0
             im_dest_master=0
-            TSAT_master=273.0
+            TSAT_master=273.0d0
+
+             ! check for Tgamma or Ygamma boundary condition.
+
+            do im_crit=1,nmat
+             dencomp=num_materials_vel*(SDIM+1)+ &
+              (im_crit-1)*num_state_material+1
+             Tcenter(im_crit)=cellfab(D_DECL(i,j,k),scomp(im_crit)+1)
+             if (Tcenter(im_crit).le.zero) then
+              print *,"Tcenter(im_crit) invalid"
+              stop
+             endif
+             if (project_option.eq.2) then
+              thermal_state(im_crit)=Tcenter(im_crit)
+             else if ((project_option.ge.100).and. & ! species
+                      (project_option.le.100+num_species_var-1)) then
+              thermal_state(im_crit)= &
+                 state(D_DECL(i,j,k),dencomp+1)
+             else
+              print *,"project_option invalid"
+              stop
+             endif
+
+            enddo ! im_crit=1..nmat
+
+            do ireverse=0,1
+             do im_opp=1,nmat
+              if (im_opp.ne.im) then
+               call get_iten(im,im_opp,iten,nmat)
+               LL=latent_heat(iten+ireverse*nten)
+
+               if (LL.ne.zero) then
+
+                if (((ireverse.eq.0).and.(im.lt.im_opp)).or. &
+                    ((ireverse.eq.1).and.(im.gt.im_opp))) then
+                 im_source=im
+                 im_dest=im_opp
+                else if (((ireverse.eq.0).and.(im.gt.im_opp)).or. &
+                         ((ireverse.eq.1).and.(im.lt.im_opp))) then
+                 im_source=im_opp
+                 im_dest=im
+                else
+                 print *,"ireverse invalid"
+                 stop
+                endif
+
+                call check_recalesce_status(im_source,start_freezing)
+
+                if (start_freezing.eq.1) then
+                 local_freezing_model=freezing_model(iten+ireverse*nten)
+                 distribute_from_targ= &
+                       distribute_from_target(iten+ireverse*nten)
+                 if ((distribute_from_targ.lt.0).or. &
+                     (distribute_from_targ.gt.1)) then
+                  print *,"distribute_from_targ invalid"
+                  stop
+                 endif
+                 if ((local_freezing_model.eq.0).or. &
+                     (local_freezing_model.eq.5).or. &
+                     (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+
+                  if ((im_primary.eq.im).or.(im_primary.eq.im_opp)) then
+
+                   call get_secondary_material(cell_LS,nmat, &
+                     im_primary,im_secondary)
+
+                   if (im_primary.eq.im_secondary) then
+                    print *,"cannot have im_primary.eq.im_secondary"
+                    stop
+                   endif
+
+                   if ((im_secondary.eq.im).or. &
+                       (im_secondary.eq.im_opp)) then
+
+                    if ((cell_vfrac(im).ge.VOFTOL).and. &
+                        (cell_vfrac(im_opp).ge.VOFTOL)) then
+
+                     Tgamma_STATUS=NINT(TgammaFAB(D_DECL(i,j,k),iten))
+                     if (ireverse.eq.0) then
+                      ! do nothing
+                     else if (ireverse.eq.1) then
+                      Tgamma_STATUS=-Tgamma_STATUS
+                     else
+                      print *,"ireverse invalid"
+                      stop
+                     endif
+
+                     if (project_option.eq.2) then
+                      ! do nothing
+                     else if ((project_option.ge.100).and. &
+                              (project_option.lt.100+num_species_var)) then
+                      if ((local_freezing_model.eq.0).or. &
+                          (local_freezing_model.eq.5)) then
+                       Tgamma_STATUS=0
+                       ! Palmore/Desjardins
+                      else if (local_freezing_model.eq.6) then 
+                       ispec=mass_fraction_id(iten+ireverse*nten)
+                       if (ispec.eq.project_option-100+1) then
+                               ! do nothing
+                       else if ((ispec.ge.1).and. &
+                                (ispec.le.num_species_var)) then
+                        Tgamma_STATUS=0
+                       else
+                        print *,"ispec invalid"
+                        stop
+                       endif
+                      else
+                       print *,"local_freezing_model invalid"
+                       stop
+                      endif
+                     else
+                      print *,"project_option invalid"
+                      stop
+                     endif
+                     if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
+
+                      if (project_option.eq.2) then
+                       ! default Tgamma
+                       Tgamma=saturation_temp(iten+ireverse*nten)
+                       TorYgamma_BC=Tgamma
+                       if (Tgamma.gt.zero) then
+                        tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+                        Tgamma=TgammaFAB(D_DECL(i,j,k),tsat_comp)
+                        TorYgamma_BC=Tgamma
+                        if (Tgamma.gt.zero) then
+                         ! do nothing
+                        else
+                         print *,"Tgamma must be positive1"
+                         stop
+                        endif
+                       else
+                        print *,"saturation temperature must be positive2"
+                        stop
+                       endif
+                      else if ((project_option.ge.100).and. &
+                               (project_option.lt.100+num_species_var)) then
+                       Tgamma=saturation_temp(iten+ireverse*nten)
+                       TorYgamma_BC=one
+                       if (Tgamma.gt.zero) then
+                        tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+                        Tgamma=TgammaFAB(D_DECL(i,j,k),tsat_comp)
+                        tsat_comp=nten+(iten-1)*ncomp_per_tsat+2
+                        TorYgamma_BC=TgammaFAB(D_DECL(i,j,k),tsat_comp)
+                        if (Tgamma.gt.zero) then
+                         ! do nothing
+                        else
+                         print *,"Tgamma must be positive22"
+                         stop
+                        endif
+                        if ((TorYgamma_BC.ge.zero).and. &
+                            (TorYgamma_BC.le.one)) then
+                         ! do nothing
+                        else
+                         print *,"TorYgamma_BC (aka Y) must be >= 0 and <=1"
+                         stop
+                        endif
+                       else
+                        print *,"saturation temperature must be positive33"
+                        stop
+                       endif
+                      else
+                       print *,"project_option invalid"
+                       stop
+                      endif
+
+                      if (LL.lt.zero) then ! freezing
+                       TDIFF=max(Tgamma-thermal_state(im), &
+                                 Tgamma-thermal_state(im_opp))
+                      else if (LL.gt.zero) then ! melting
+                       TDIFF=max(thermal_state(im)-Tgamma, &
+                                 thermal_state(im_opp)-Tgamma)
+                      else
+                       print *,"LL invalid"
+                       stop
+                      endif
+                      if (tsat_flag.eq.0) then
+                       tsat_flag=1
+                       TSAT_master=TorYgamma_BC
+                       TDIFF_master=TDIFF
+                       im_source_master=im_source
+                       im_dest_master=im_dest
+                      else if (tsat_flag.eq.1) then
+                       if (TDIFF.gt.TDIFF_master) then
+                        TSAT_master=TorYgamma_BC
+                        TDIFF_master=TDIFF
+                        im_source_master=im_source
+                        im_dest_master=im_dest
+                       endif
+                      else
+                       print *,"tsat_flag invalid"
+                       stop
+                      endif 
+                     else if ((abs(cell_vfrac(im)).le.VOFTOL).or. &
+                              (abs(cell_vfrac(im_opp)).le.VOFTOL)) then
+                      ! do nothing
+                     else
+                      print *,"cell_vfrac invalid"
+                      stop
+                     endif
+                    endif ! im_secondary==im or im_opp
+                   endif ! im_primary=im or im_opp
+
+                  else if ((local_freezing_model.eq.1).or. &
+                           (local_freezing_model.eq.2).or. &
+                           (local_freezing_model.eq.4).or. & !Tanasawa/Schrage
+                           (local_freezing_model.eq.7)) then ! cavitation
+                   ! do nothing
+                  else 
+                   print *,"local_freezing_model not supported"
+                   stop
+                  endif
+                 else if (start_freezing.eq.0) then
+                  ! do nothing
+                 else
+                  print *,"start_freezing invalid"
+                  stop
+                 endif
+                else if (LL.eq.zero) then
+                 ! do nothing
+                else
+                 print *,"LL invalid"
+                 stop
+                endif
+               else if (im_opp.eq.im) then
+                ! do nothing
+               else
+                print *,"im_opp invalid"
+                stop
+               endif
+
+              enddo ! im_opp
+             enddo ! ireverse
 
             if (project_option.eq.2) then ! thermal conduction
 

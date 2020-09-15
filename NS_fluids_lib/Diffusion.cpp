@@ -874,14 +874,28 @@ void NavierStokes::combine_state_variable(
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
  }
 
+ int ncomp_per_tsat=2;
+ int ntsat=nten*(ncomp_per_tsat+1);
+
+
  MultiFab* LEVEL_COMBINE;
+
+ MultiFab* STATE_INTERFACE;
 
  if ((combine_flag==0)||  // FVM -> GFM
      (combine_flag==1)) { // GFM -> FVM
+
   resize_levelsetLO(2,LEVELPC_MF);
   LEVEL_COMBINE=localMF[LEVELPC_MF];
+  STATE_INTERFACE=localMF[SATURATION_TEMP_MF];
   debug_ngrow(LEVELPC_MF,2,830);
+  debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,830);
+  if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
+   amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
+
  } else if (combine_flag==2) { // combine if vfrac<VOFTOL
+
+  STATE_INTERFACE=&LS_new; // placeholder
   if (update_flux==0) {
    LEVEL_COMBINE=&LS_new;
   } else if (update_flux==1) {
@@ -890,6 +904,7 @@ void NavierStokes::combine_state_variable(
    debug_ngrow(LEVELPC_MF,2,830);
   } else
    amrex::Error("update_flux invalid");
+
  } else
   amrex::Error("combine_flag invalid");
   
@@ -947,7 +962,9 @@ void NavierStokes::combine_state_variable(
 
  if (update_flux==1) {
 
-  if (combine_flag!=2)
+  if (combine_flag==2) {
+   // do nothing
+  } else
    amrex::Error("combine_flag invalid");
 
   if (project_option==0) { // mac velocity
@@ -1138,6 +1155,26 @@ void NavierStokes::combine_state_variable(
    FArrayBox& newcell=(*new_combined)[mfi];
    FArrayBox& statefab=S_new[mfi];
 
+   // ntsat=nten*(ncomp_per_tsat+1)
+   // e.g. for interface 12,
+   //  component 1=0 if T_gamma,Y_gamma not defined
+   //             =1 if T_gamma,Y_gamma defined in RATEMASSCHANGE
+   //             =2 if T_gamma,Y_gamma defined after extrapolation
+   //             =-1 or -2 for condensation case.
+   //  component 2=T_gamma
+   //  component 3=Y_gamma
+   //  repeats ....
+   FArrayBox& Tsatfab=(*STATE_INTERFACE)[mfi];
+
+   if ((combine_flag==0)||
+       (combine_flag==1)) {
+    if (Tsatfab.nComp()!=ntsat)
+     amrex::Error("Tsatfab.nComp()!=ntsat");
+   } else if (combine_flag==2) {
+    // do nothing
+   } else
+    amrex::Error("combine_flag invalid");
+
    FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
    FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
@@ -1184,6 +1221,9 @@ void NavierStokes::combine_state_variable(
     &bfact,
     &level,
     &finest_level,
+    &ntsat,
+    Tsatfab.dataPtr(),
+    ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     solxfab.dataPtr(),
