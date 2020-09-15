@@ -123,6 +123,8 @@ extern "C"
     Real* latent_heat,
     int* use_exact_temperature,
     Real* reaction_rate,
+    Real* hardwire_Y_gamma,
+    Real* hardwire_T_gamma,
     Real* saturation_temp,
     Real* saturation_temp_curv,
     Real* saturation_temp_vel,

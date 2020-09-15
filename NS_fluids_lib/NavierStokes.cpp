@@ -627,6 +627,8 @@ Vector<Real> NavierStokes::outflow_velocity_buffer_size;
 
 Vector<Real> NavierStokes::cap_wave_speed;
 
+Vector<Real> NavierStokes::hardwire_Y_gamma;
+Vector<Real> NavierStokes::hardwire_T_gamma;
 Vector<Real> NavierStokes::saturation_temp;
 Vector<Real> NavierStokes::saturation_temp_curv;
 Vector<Real> NavierStokes::saturation_temp_vel;
@@ -2715,6 +2717,8 @@ NavierStokes::read_params ()
  
      // in: read_params
 
+    hardwire_Y_gamma.resize(2*nten);
+    hardwire_T_gamma.resize(2*nten);
     saturation_temp.resize(2*nten);
     saturation_temp_curv.resize(2*nten);
     saturation_temp_vel.resize(2*nten);
@@ -2762,6 +2766,10 @@ NavierStokes::read_params ()
     }
 
     for (int i=0;i<nten;i++) { 
+     hardwire_Y_gamma[i]=0.0;
+     hardwire_Y_gamma[i+nten]=0.0;
+     hardwire_T_gamma[i]=0.0;
+     hardwire_T_gamma[i+nten]=0.0;
      saturation_temp[i]=0.0;
      saturation_temp[i+nten]=0.0;
      saturation_temp_curv[i]=0.0;
@@ -3026,6 +3034,8 @@ NavierStokes::read_params ()
     pp.queryarr("recalesce_model_parameters",recalesce_model_parameters,
        0,3*nmat);
 
+    pp.queryarr("hardwire_Y_gamma",hardwire_Y_gamma,0,2*nten);
+    pp.queryarr("hardwire_T_gamma",hardwire_T_gamma,0,2*nten);
     pp.queryarr("saturation_temp",saturation_temp,0,2*nten);
     pp.queryarr("saturation_temp_curv",saturation_temp_curv,0,2*nten);
     pp.queryarr("saturation_temp_vel",saturation_temp_vel,0,2*nten);
@@ -4086,6 +4096,16 @@ NavierStokes::read_params ()
      }
  
      for (int i=0;i<nten;i++) {
+      std::cout << "hardwire_T_gamma i=" << i << "  " << 
+       hardwire_T_gamma[i] << '\n';
+      std::cout << "hardwire_T_gamma i+nten=" << i+nten << "  " << 
+       hardwire_T_gamma[i+nten] << '\n';
+
+      std::cout << "hardwire_Y_gamma i=" << i << "  " << 
+       hardwire_Y_gamma[i] << '\n';
+      std::cout << "hardwire_Y_gamma i+nten=" << i+nten << "  " << 
+       hardwire_Y_gamma[i+nten] << '\n';
+
       std::cout << "saturation_temp i=" << i << "  " << 
        saturation_temp[i] << '\n';
       std::cout << "saturation_temp i+nten=" << i+nten << "  " << 
@@ -10711,6 +10731,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
+     hardwire_Y_gamma.dataPtr(),
+     hardwire_T_gamma.dataPtr(),
      saturation_temp.dataPtr(),
      saturation_temp_curv.dataPtr(),
      saturation_temp_vel.dataPtr(),
@@ -10793,6 +10815,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
+     hardwire_Y_gamma.dataPtr(),
+     hardwire_T_gamma.dataPtr(),
      saturation_temp.dataPtr(),
      saturation_temp_curv.dataPtr(),
      saturation_temp_vel.dataPtr(),
