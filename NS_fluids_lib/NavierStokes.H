@@ -1628,6 +1628,10 @@ protected:
       // 1-2 means "material 1 is converted into material 2"
       // 1-2 1-3 1-4 2-3 2-4 3-4
       // 2-1 3-1 4-1 3-2 4-2 4-3
+      // if hardwire_Y_gamma and hardwire_T_gamma greater than zero
+      // then use these values at the interface changing phase.
+    static Vector<Real> hardwire_Y_gamma; 
+    static Vector<Real> hardwire_T_gamma; 
     static Vector<Real> saturation_temp; 
     static Vector<Real> saturation_temp_curv; 
     static Vector<Real> saturation_temp_vel; 
