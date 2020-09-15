@@ -146,7 +146,7 @@ ns.speciesviscconst=0.0 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # D=0.1  lambda=k/(rho Cp)=1000/(0.001 * 1.0D+7) = 0.1
 # 1=water 2=gas  
 #ns.speciesconst=1.0 1.0  # case 1 film boiling
-ns.speciesconst=0.221022 0.2  # case 2 general vaporization
+ns.speciesconst=0.22132139799031397 0.20030719855787860 # case 2 
 ns.viscconst=0.0 0.0 # CODY ~ (not used, must be zero)
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
