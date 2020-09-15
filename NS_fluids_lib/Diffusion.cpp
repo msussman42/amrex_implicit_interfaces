@@ -1196,6 +1196,7 @@ void NavierStokes::combine_state_variable(
     &tid_current,
     &hflag,
     &num_materials_combine,
+    mass_fraction_id.dataPtr(),
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),

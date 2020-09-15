@@ -1143,6 +1143,7 @@ extern "C"
      int* tid,
      int* hflag,
      int* num_materials_combine,
+     int* mass_fraction_id,
      Real* latent_heat,
      int* freezing_model,
      int* distribute_from_target,

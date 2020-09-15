@@ -23302,6 +23302,7 @@ stop
        tid, &
        hflag, &
        num_materials_combine, &
+       mass_fraction_id, &
        latent_heat, &
        freezing_model, &
        distribute_from_target, &
@@ -23360,6 +23361,7 @@ stop
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: hflag
+      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
@@ -24113,6 +24115,7 @@ stop
             do ireverse=0,1
              do im_opp=1,nmat
               if (im_opp.ne.im) then
+
                call get_iten(im,im_opp,iten,nmat)
                LL=latent_heat(iten+ireverse*nten)
 
@@ -24134,6 +24137,7 @@ stop
                 call check_recalesce_status(im_source,start_freezing)
 
                 if (start_freezing.eq.1) then
+
                  local_freezing_model=freezing_model(iten+ireverse*nten)
                  distribute_from_targ= &
                        distribute_from_target(iten+ireverse*nten)
@@ -24142,6 +24146,7 @@ stop
                   print *,"distribute_from_targ invalid"
                   stop
                  endif
+
                  if ((local_freezing_model.eq.0).or. &
                      (local_freezing_model.eq.5).or. &
                      (local_freezing_model.eq.6)) then ! Palmore/Desjardins
@@ -24176,10 +24181,11 @@ stop
                       ! do nothing
                      else if ((project_option.ge.100).and. &
                               (project_option.lt.100+num_species_var)) then
-                      if ((local_freezing_model.eq.0).or. &
-                          (local_freezing_model.eq.5)) then
+                      if ((local_freezing_model.eq.0).or. & !saturated
+                          (local_freezing_model.eq.5)) then !saturated
                        Tgamma_STATUS=0
-                       ! Palmore/Desjardins
+
+                       ! Palmore/Desjardins, partial mass fraction
                       else if (local_freezing_model.eq.6) then 
                        ispec=mass_fraction_id(iten+ireverse*nten)
                        if (ispec.eq.project_option-100+1) then
@@ -24199,6 +24205,7 @@ stop
                       print *,"project_option invalid"
                       stop
                      endif
+
                      if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
 
                       if (project_option.eq.2) then
@@ -24277,182 +24284,57 @@ stop
                        print *,"tsat_flag invalid"
                        stop
                       endif 
-                     else if ((abs(cell_vfrac(im)).le.VOFTOL).or. &
-                              (abs(cell_vfrac(im_opp)).le.VOFTOL)) then
+
+                     else if (Tgamma_STATUS.eq.0) then
                       ! do nothing
                      else
-                      print *,"cell_vfrac invalid"
+                      print *,"Tgamma_STATUS invalid"
                       stop
                      endif
-                    endif ! im_secondary==im or im_opp
-                   endif ! im_primary=im or im_opp
 
-                  else if ((local_freezing_model.eq.1).or. &
-                           (local_freezing_model.eq.2).or. &
-                           (local_freezing_model.eq.4).or. & !Tanasawa/Schrage
-                           (local_freezing_model.eq.7)) then ! cavitation
-                   ! do nothing
-                  else 
-                   print *,"local_freezing_model not supported"
-                   stop
-                  endif
-                 else if (start_freezing.eq.0) then
-                  ! do nothing
-                 else
-                  print *,"start_freezing invalid"
-                  stop
-                 endif
-                else if (LL.eq.zero) then
-                 ! do nothing
-                else
-                 print *,"LL invalid"
-                 stop
-                endif
-               else if (im_opp.eq.im) then
-                ! do nothing
-               else
-                print *,"im_opp invalid"
-                stop
-               endif
-
-              enddo ! im_opp
-             enddo ! ireverse
-
-            if (project_option.eq.2) then ! thermal conduction
-
-             do im_crit=1,nmat
-              Tcenter(im_crit)=cellfab(D_DECL(i,j,k),scomp(im_crit)+1)
-              if (Tcenter(im_crit).le.zero) then
-               print *,"Tcenter(im_crit) invalid"
-               stop
-              endif
-             enddo ! im_crit
-
-             do ireverse=0,1
-              do im_opp=1,nmat
-               if (im_opp.ne.im) then
-                call get_iten(im,im_opp,iten,nmat)
-                LL=latent_heat(iten+ireverse*nten)
-
-                if (LL.ne.zero) then
-
-                 if (((ireverse.eq.0).and.(im.lt.im_opp)).or. &
-                     ((ireverse.eq.1).and.(im.gt.im_opp))) then
-                  im_source=im
-                  im_dest=im_opp
-                 else if (((ireverse.eq.0).and.(im.gt.im_opp)).or. &
-                          ((ireverse.eq.1).and.(im.lt.im_opp))) then
-                  im_source=im_opp
-                  im_dest=im
-                 else
-                  print *,"ireverse invalid"
-                  stop
-                 endif
-
-                 call check_recalesce_status(im_source,start_freezing)
-
-                 if (start_freezing.eq.1) then
-                  local_freezing_model=freezing_model(iten+ireverse*nten)
-                  distribute_from_targ= &
-                          distribute_from_target(iten+ireverse*nten)
-                  if ((distribute_from_targ.lt.0).or. &
-                      (distribute_from_targ.gt.1)) then
-                   print *,"distribute_from_targ invalid"
-                   stop
-                  endif
-                  if ((local_freezing_model.eq.0).or. &
-                      (local_freezing_model.eq.5).or. &
-                      (local_freezing_model.eq.6)) then ! Palmore/Desjardins
-
-                   if ((im_primary.eq.im).or.(im_primary.eq.im_opp)) then
-
-                    call get_secondary_material(cell_LS,nmat, &
-                     im_primary,im_secondary)
-
-                    if (im_primary.eq.im_secondary) then
-                     print *,"cannot have im_primary.eq.im_secondary"
+                    else if ((abs(cell_vfrac(im)).le.VOFTOL).or. &
+                             (abs(cell_vfrac(im_opp)).le.VOFTOL)) then
+                     ! do nothing
+                    else
+                     print *,"cell_vfrac invalid"
                      stop
                     endif
+                   endif ! im_secondary==im or im_opp
+                  endif ! im_primary=im or im_opp
 
-                    if ((im_secondary.eq.im).or. &
-                        (im_secondary.eq.im_opp)) then
-
-                     if ((cell_vfrac(im).ge.VOFTOL).and. &
-                         (cell_vfrac(im_opp).ge.VOFTOL)) then
-                      TSAT=saturation_temp(iten+ireverse*nten)
-                      if (LL.lt.zero) then ! freezing
-                       TDIFF=max(TSAT-Tcenter(im),TSAT-Tcenter(im_opp))
-                      else if (LL.gt.zero) then ! melting
-                       TDIFF=max(Tcenter(im)-TSAT,Tcenter(im_opp)-TSAT)
-                      else
-                       print *,"LL invalid"
-                       stop
-                      endif
-                      if (tsat_flag.eq.0) then
-                       tsat_flag=1
-                       TSAT_master=TSAT
-                       TDIFF_master=TDIFF
-                       im_source_master=im_source
-                       im_dest_master=im_dest
-                      else if (tsat_flag.eq.1) then
-                       if (TDIFF.gt.TDIFF_master) then
-                        TSAT_master=TSAT
-                        TDIFF_master=TDIFF
-                        im_source_master=im_source
-                        im_dest_master=im_dest
-                       endif
-                      else
-                       print *,"tsat_flag invalid"
-                       stop
-                      endif 
-                     else if ((abs(cell_vfrac(im)).le.VOFTOL).or. &
-                              (abs(cell_vfrac(im_opp)).le.VOFTOL)) then
-                      ! do nothing
-                     else
-                      print *,"cell_vfrac invalid"
-                      stop
-                     endif
-                    endif ! im_secondary==im or im_opp
-                   endif ! im_primary=im or im_opp
-
-                  else if ((local_freezing_model.eq.1).or. &
-                           (local_freezing_model.eq.2).or. &
-                           (local_freezing_model.eq.4).or. & !Tanasawa/Schrage
-                           (local_freezing_model.eq.7)) then ! cavitation
-                   ! do nothing
-                  else 
-                   print *,"local_freezing_model not supported"
-                   stop
-                  endif
-                 else if (start_freezing.eq.0) then
+                 else if ((local_freezing_model.eq.1).or. &
+                          (local_freezing_model.eq.2).or. &
+                          (local_freezing_model.eq.4).or. & !Tanasawa/Schrage
+                          (local_freezing_model.eq.7)) then ! cavitation
                   ! do nothing
-                 else
-                  print *,"start_freezing invalid"
+                 else 
+                  print *,"local_freezing_model not supported"
                   stop
                  endif
-                else if (LL.eq.zero) then
+
+                else if (start_freezing.eq.0) then
                  ! do nothing
                 else
-                 print *,"LL invalid"
+                 print *,"start_freezing invalid"
                  stop
                 endif
-               else if (im_opp.eq.im) then
+
+               else if (LL.eq.zero) then
                 ! do nothing
                else
-                print *,"im_opp invalid"
+                print *,"LL invalid"
                 stop
                endif
 
-              enddo ! im_opp
-             enddo ! ireverse
-
-            else if ((project_option.ge.100).and. &
-                     (project_option.le.100+num_species_var-1)) then
-             ! do nothing
-            else
-             print *,"project_option invalid"
-             stop
-            endif
+              else if (im_opp.eq.im) then
+               ! do nothing
+              else
+               print *,"im_opp invalid"
+               stop
+              endif
+         
+             enddo ! im_opp
+            enddo ! ireverse
 
              ! combine_flag==0 or 1.
             do i1=-1,1
@@ -24460,10 +24342,16 @@ stop
             do k1=k1lo,k1hi
              test_temp=cellfab(D_DECL(i+i1,j+j1,k+k1),scomp(im)+1)
 
-             if (project_option.eq.2) then ! combine temperature
+             if ((project_option.eq.2).or. & ! thermal combine
+                 ((project_option.ge.100).and. &
+                  (project_option.le.100+num_species_var-1))) then
 
               if (hflag.eq.0) then
-               if (test_temp.le.zero) then
+
+               if (test_temp.gt.zero) then
+                ! do nothing
+               else
+                print *,"project_option ",project_option
                 print *,"test_temp invalid test_temp=",test_temp
                 print *,"combine_flag=",combine_flag
                 print *,"level,finest_level ",level,finest_level
@@ -24495,6 +24383,7 @@ stop
                  
                 stop
                endif
+
               else if (hflag.eq.1) then
                ! do nothing
               else
@@ -24502,9 +24391,6 @@ stop
                stop
               endif
 
-             else if ((project_option.ge.100).and. &
-                      (project_option.le.100+num_species_var-1)) then
-              ! do nothing
              else
               print *,"project_option invalid"
               stop
