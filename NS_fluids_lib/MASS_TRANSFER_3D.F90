@@ -7210,6 +7210,7 @@ stop
              local_Tanasawa_or_Schrage=Tanasawa_or_Schrage(iten+ireverse*nten)
 
              ispec=mass_fraction_id(iten+ireverse*nten)
+             molar_mass_vapor=species_molar_mass(ispec)
 
              vapor_den=one
 
@@ -7610,6 +7611,45 @@ stop
                  PROBE_PARMS%dencomp_dest=>dencomp_dest
                  PROBE_PARMS%xI=>xI
 
+#if (STANDALONE==0)
+                 thermal_k(1)=get_user_heatviscconst(im_source)
+                 thermal_k(2)=get_user_heatviscconst(im_dest)
+#elif (STANDALONE==1)
+                 thermal_k(1)=fort_heatviscconst(im_source)
+                 thermal_k(2)=fort_heatviscconst(im_dest)
+#else
+                 print *,"bust compiling ratemasschange"
+                 stop
+#endif
+
+                 if (LL(ireverse).gt.zero) then ! evaporation
+                  iprobe_vapor=2  ! destination
+                  molar_mass_ambient=molar_mass(im_dest)
+                 else if (LL(ireverse).lt.zero) then ! condensation
+                  iprobe_vapor=1  ! source
+                  molar_mass_ambient=molar_mass(im_source)
+                 else
+                  print *,"LL invalid"
+                  stop
+                 endif
+
+                 TI_min=saturation_temp_min(iten+ireverse*nten)
+                 TI_max=saturation_temp_max(iten+ireverse*nten)
+                 if (LL(ireverse).gt.zero) then ! evaporation
+                  TI_max=local_Tsat(ireverse)
+                 else if (LL(ireverse).lt.zero) then ! condensation
+                  TI_min=local_Tsat(ireverse)
+                 else
+                  print *,"LL(ireverse) invalid"
+                  stop
+                 endif
+                 if (TI_max.ge.TI_min) then
+                  ! do nothing
+                 else
+                  print *,"TI_max or TI_min invalid"
+                  stop
+                 endif
+
 !    local_freezing_model=4  Tanasawa or Schrage
 !    local_freezing_model=5  fully saturated evaporation?
 !    local_freezing_model=6  Palmore/Desjardins
@@ -7634,6 +7674,84 @@ stop
                    interp_valid_flag, &
                    at_interface)
 
+                  if (TSAT_iter.eq.0) then
+                   fully_saturated=0
+
+                   T_gamma_a=TSAT_predict
+                   T_gamma_b=TSAT_predict
+                   Y_gamma_a=Y_predict
+                   Y_gamma_b=Y_predict
+
+                   if (at_interface.eq.1) then
+                    if (hardwire_flag(ireverse).eq.0) then
+                     if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
+                         (Y_probe(iprobe_vapor).le.one).and. &
+                         (Y_predict.eq.one)) then
+                      fully_saturated=1
+                     else if ((Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
+                              (Y_probe(iprobe_vapor).ge.zero).and. &
+                              (Y_predict.eq.one)) then
+                      ! do nothing
+                     else
+                      print *,"mass fraction bust"
+                      stop
+                     endif
+                    else if (hardwire_flag(ireverse).eq.1) then
+                     if (Y_predict.eq.one) then
+                      fully_saturated=1
+                     else if ((Y_predict.ge.zero).and. &
+                              (Y_predict.lt.one)) then
+                      ! do nothing
+                     else
+                      print *,"Y_predict invalid"
+                      stop
+                     endif
+
+                     if (fully_saturated.eq.1) then
+                      ! do nothing
+                     else if (fully_saturated.eq.0) then
+                      if (LL(ireverse).gt.zero) then ! evaporation
+                       T_gamma_a=TI_min
+                       call X_from_Tgamma(X_gamma_a,T_gamma_a, &
+                         local_Tsat(ireverse), &
+                         LL(ireverse),R_Palmore_Desjardins, &
+                         molar_mass_vapor) ! WV
+                       call massfrac_from_volfrac(X_gamma_a,Y_gamma_a, &
+                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                      else if (LL(ireverse).lt.zero) then ! condensation
+                       T_gamma_b=TI_max
+                       call X_from_Tgamma(X_gamma_b,T_gamma_b, &
+                         local_Tsat(ireverse), &
+                         LL(ireverse),R_Palmore_Desjardins, &
+                         molar_mass_vapor) ! WV
+                       call massfrac_from_volfrac(X_gamma_b,Y_gamma_b, &
+                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                      else
+                       print *,"LL(ireverse) invalid"
+                       stop
+                      endif
+                     else
+                      print *,"fully_saturated invalid"
+                      stop
+                     endif
+
+                    else
+                     print *,"hardwire_flag(ireverse) invalid"
+                     stop
+                    endif
+                   else if (at_interface.eq.0) then
+                    ! do nothing
+                   else
+                    print *,"at_interface invalid"
+                    stop
+                   endif
+                  else if (TSAT_iter.gt.0) then
+                   ! do nothing
+                  else
+                   print *,"TSAT_iter invalid"
+                   stop
+                  endif
+
                   den_I_interp_SAT(1)=den_I_interp(1) ! iprobe=1 source
                   den_I_interp_SAT(2)=den_I_interp(2) ! iprobe=2 dest
 
@@ -7642,17 +7760,6 @@ stop
 
                   if (at_interface.eq.1) then
                       
-#if (STANDALONE==0)
-                   thermal_k(1)=get_user_heatviscconst(im_source)
-                   thermal_k(2)=get_user_heatviscconst(im_dest)
-#elif (STANDALONE==1)
-                   thermal_k(1)=fort_heatviscconst(im_source)
-                   thermal_k(2)=fort_heatviscconst(im_dest)
-#else
-                   print *,"bust compiling ratemasschange"
-                   stop
-#endif
-
                    microlayer_substrate_source=0
                    microlayer_substrate_dest=0
 
@@ -7952,29 +8059,6 @@ stop
 
                     if (hardwire_flag(ireverse).eq.0) then
 
-                     molar_mass_vapor=species_molar_mass(ispec)
-                     if (LL(ireverse).gt.zero) then ! evaporation
-                      iprobe_vapor=2  ! destination
-                      molar_mass_ambient=molar_mass(im_dest)
-                     else if (LL(ireverse).lt.zero) then ! condensation
-                      iprobe_vapor=1  ! source
-                      molar_mass_ambient=molar_mass(im_source)
-                     else
-                      print *,"LL invalid"
-                      stop
-                     endif
-
-                     TI_min=saturation_temp_min(iten+ireverse*nten)
-                     TI_max=saturation_temp_max(iten+ireverse*nten)
-                     if (LL(ireverse).gt.zero) then ! evaporation
-                      TI_max=local_Tsat(ireverse)
-                     else if (LL(ireverse).lt.zero) then ! condensation
-                      TI_min=local_Tsat(ireverse)
-                     else
-                      print *,"LL(ireverse) invalid"
-                      stop
-                     endif
-
                      Y_interface_min=zero
 
                       ! type(TSAT_MASS_FRAC_parm_type)
@@ -8009,6 +8093,31 @@ stop
                       else if ((Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
                                (Y_probe(iprobe_vapor).ge.zero).and. &
                                (TSAT_Y_PARMS%D_MASS.gt.zero)) then
+
+                       if (fully_saturated.eq.0) then
+                        T_gamma_c=half*(T_gamma_a+T_gamma_b)
+                        call X_from_Tgamma(X_gamma_c,T_gamma_c, &
+                         local_Tsat(ireverse), &
+                         LL(ireverse),R_Palmore_Desjardins, &
+                         molar_mass_vapor) ! WV
+                        call massfrac_from_volfrac(X_gamma_c,Y_gamma_c, &
+                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
+
+                        call mdot_diff_func(TSAT_Y_PARMS, &
+                           Y_gamma_a,T_gamma_a,mdot_diff_a)
+                        call mdot_diff_func(TSAT_Y_PARMS, &
+                           Y_gamma_b,T_gamma_b,mdot_diff_b)
+                        call mdot_diff_func(TSAT_Y_PARMS, &
+                           Y_gamma_c,T_gamma_c,mdot_diff_c)
+
+
+
+
+                       else 
+                        print *,"expecting fully_saturated==0"
+                        stop
+                       endif
+
 
                          ! for condensation, there is a minimum Y_gamma
                        call TSAT_MASS_FRAC_YMIN( &

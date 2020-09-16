@@ -15631,6 +15631,46 @@ endif
 return
 end subroutine X_from_Tgamma
 
+subroutine XMIN_from_TSAT(X,TSAT, &
+  L,R,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: TSAT,L,R,WV
+REAL_T, intent(out) :: X
+
+if (TSAT.gt.zero) then
+ if (R.gt.zero) then
+  if (L.ne.zero) then
+   if (WV.gt.zero) then
+    if (L.gt.zero) then
+     X=zero
+    else if (L.lt.zero) then
+     X=exp((L*WV/R)/TSAT)
+    else
+     print *,"L invalid in XMIN_from_TSAT1"
+     stop
+    endif
+   else
+    print *,"WV invalid in XMIN_from_TSAT"
+    stop
+   endif
+  else
+   print *,"L invalid in XMIN_from_TSAT2"
+   stop
+  endif
+ else
+  print *,"R invalid in XMIN_from_TSAT"
+  stop
+ endif
+else
+ print *,"TSAT invalid in XMIN_from_TSAT"
+ print *,"TSAT= ",TSAT
+ stop
+endif
+
+return
+end subroutine XMIN_from_TSAT
+
 subroutine Tgamma_from_TSAT_and_X(Tgamma,TSAT, &
   X,L,R,WV,Tgamma_min,Tgamma_max)
 IMPLICIT NONE
