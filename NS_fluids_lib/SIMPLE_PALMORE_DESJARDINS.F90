@@ -32,10 +32,33 @@ contains
 
   ! do any initial preparation needed
 subroutine INIT_SIMPLE_PALMORE_DESJARDINS_MODULE()
+use probcommon_module
 IMPLICIT NONE
+REAL_T dummy_x,dummy_t,dummy_TorY,dummy_LS
+REAL_T t_physical_init
+INTEGER_T use_T
+REAL_T C_pG,k_G,den_G,lambda
 
   DEF_VAPOR_GAMMA =  1.666666667D0
   call SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l_verification)
+
+  use_t=1
+  dummy_x=zero
+  dummy_t=zero
+  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+   dummy_x,dummy_t,use_T,dummy_TorY, &
+   dummy_LS,t_physical_init)
+
+  C_pG = fort_stiffCP(2)
+  k_G = fort_heatviscconst(2)
+  den_G = fort_denconst(2)
+  lambda=k_G/(den_G*C_pG)
+
+  print *,"expected interface location is: 2 l sqrt(lambda*(tphys+t))-xblob2"
+  print *,"l=",l_verification
+  print *,"lambda=",lambda
+  print *,"tphys=",t_physical_init
+  print *,"xblob2=",xblob2
 
 return
 end subroutine INIT_SIMPLE_PALMORE_DESJARDINS_MODULE
@@ -54,6 +77,7 @@ REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
 REAL_T :: TEMPERATURE_analytical
 REAL_T :: LS_analytical
+REAL_T :: t_physical_init
 INTEGER_T :: use_T
 
   if (nmat.eq.num_materials) then
@@ -68,7 +92,7 @@ if ((num_materials.eq.2).and.(probtype.eq.2002)) then
  use_T=1
  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    x(1),t,use_T,TEMPERATURE_analytical, &
-   LS_analytical)
+   LS_analytical,t_physical_init)
 
  LS(1)=LS_analytical  ! liquid
  LS(2)=-LS(1)      ! gas
@@ -300,7 +324,7 @@ end subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer
 ! xblob2>x_0
 ! xblob+xblob2 is the physical location of the interface at t_compute=0
 subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
-  x, t, use_T, TorY, LS_exact) 
+  x, t, use_T, TorY, LS_exact,t_physical_init) 
  use global_utility_module
  use probcommon_module
  !returns either temperature or mass frac
@@ -313,13 +337,13 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  REAL_T :: k_G, den_G, D_G
  REAL_T :: L_V,C_pG
  REAL_T, intent(out) :: TorY,LS_exact
+ REAL_T, intent(out) :: t_physical_init
  INTEGER_T :: JINT
  REAL_T erf_result_x 
  REAL_T erf_result_l 
  REAL_T arg_x
  REAL_T x_gamma_physical
  REAL_T x_gamma_domain
- REAL_T t_physical_init
  REAL_T X_gamma_test
  REAL_T Y_gamma_test
  REAL_T X_gamma
@@ -500,6 +524,7 @@ REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,use_T
 REAL_T LS_exact
+REAL_T t_physical_init
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -531,11 +556,11 @@ if ((num_materials.eq.2).and. &
    ! TEMPERATURE
   use_T=1
   call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
-   x(1),t,use_T,STATE(ibase+2),LS_exact)
+   x(1),t,use_T,STATE(ibase+2),LS_exact,t_physical_init)
    ! MASS FRACTION
   use_T=0
   call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
-   x(1),t,use_T,STATE(ibase+3),LS_exact)
+   x(1),t,use_T,STATE(ibase+3),LS_exact,t_physical_init)
 
   if (im.eq.1) then ! water
    state(ibase+2)=fort_tempconst(im)
@@ -775,6 +800,7 @@ REAL_T :: Y_analytical
 REAL_T :: TEMPERATURE_compute
 REAL_T :: Y_compute
 REAL_T :: interface_thick_rad
+REAL_T :: t_physical_init
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
@@ -790,11 +816,11 @@ if (nsum.eq.3) then
  use_T=1
  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    xlocal(1),GRID_DATA_IN%time,use_T,TEMPERATURE_analytical, &
-   LS_analytical)
+   LS_analytical,t_physical_init)
  use_T=0
  call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    xlocal(1),GRID_DATA_IN%time,use_T,Y_analytical, &
-   LS_analytical)
+   LS_analytical,t_physical_init)
 
  x_analytical=xlocal(1)-LS_analytical
 
