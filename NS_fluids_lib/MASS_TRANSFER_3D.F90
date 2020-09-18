@@ -3376,6 +3376,7 @@ stop
       REAL_T new_centroid(nmat,SDIM)
       REAL_T EBVOFTOL
       REAL_T SWEPTFACTOR
+      INTEGER_T SWEPTFACTOR_centroid
       REAL_T LL
       REAL_T Tgamma_default
       REAL_T Ygamma_default
@@ -3507,6 +3508,8 @@ stop
       REAL_T ambient_den
       REAL_T gas_den_ratio
       REAL_T delta_mass_local
+      REAL_T xPOINT(SDIM)
+      INTEGER_T im_old_crit
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4945,11 +4948,37 @@ stop
             enddo ! u_im=1..nmat
              ! now we check if new_centroid(im_dest,dir) is in the
              ! old dest material.
-      subroutine multi_get_volumePOINT( &
-       tessellate, &
-       bfact,dx,xsten0,nhalf0, &
-       mofdata,xgrid, &
-       im_crit,nmat,sdim)
+            SWEPTFACTOR_centroid=0
+            if ((newvfrac(im_dest).gt.zero).and. &
+                (newvfrac(im_dest).le.one+EBVOFTOL)) then
+
+             tessellate=1
+             do dir=1,SDIM
+              xPOINT(dir)=new_centroid(im_dest,dir)
+             enddo
+             call multi_get_volumePOINT( &
+               tessellate, &
+               bfact,dx, &
+               u_xsten_updatecell,nhalf0, &  ! absolute coordinate system
+               mofdata, &
+               xPOINT, & ! absolute coordinate system
+               im_old_crit,nmat,SDIM)
+
+             if (im_old_crit.eq.im_dest) then
+              ! do nothing
+             else if ((im_old_crit.ge.1).and. &
+                      (im_old_crit.le.nmat).and. &
+                      (im_old_crit.ne.im_dest)) then
+              SWEPTFACTOR_centroid=1
+             else
+              print *,"im_old_crit invalid"
+              stop
+             endif 
+
+            else
+             print *,"expecting newvfrac(im_dest)>0 since dF>0"
+             stop
+            endif
 
 
 
