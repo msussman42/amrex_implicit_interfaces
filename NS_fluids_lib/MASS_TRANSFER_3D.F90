@@ -4587,6 +4587,16 @@ stop
            DVOF(im_dest)=DVOF(im_dest)+dF
            deltaVOF(D_DECL(i,j,k),im_dest)=dF
 
+            ! 1. the MAC and cell velocity field should be extrapolated
+            !    from the old destination material side into the cells/faces
+            !    that were swept by the interface.
+            ! 2. the destination temperature and species should be set 
+            !    to the interface values at destination centroids which were
+            !    swept by the interface.
+            ! 3. the source and destination temperature and species should 
+            !    be recalculated in non-swept partial cells.  They should 
+            !    be interpolated from the old supermesh grid to the new
+            !    taking into consideration the interface boundary condition.
            if (dF.gt.EBVOFTOL) then
 
             do iprobe=1,2
@@ -4900,6 +4910,43 @@ stop
              print *,"LL invalid"
              stop
             endif
+
+             ! dF>EBVOFTOL in this section, so now let's see
+             ! if the cell center has been swept and also the
+             ! destination centroid.
+            SWEPTFACTOR=zero
+            if ((oldvfrac(im_dest).lt.half).and. &
+                (newvfrac(im_dest).gt.half)) then
+             SWEPTFACTOR=(newvfrac(im_dest)-half)/dF
+            else if ((oldvfrac(im_dest).ge.half).or. &
+                     (newvfrac(im_dest).le.half)) then
+             ! do nothing
+            else
+             print *,"oldvfrac or newvfrac invalid"
+             stop
+            endif
+             ! new_centroid(im_dest,dir) (absolute coord)
+            do u_im=1,nmat
+             vofcomp_recon=(u_im-1)*ngeom_recon+1
+             mofdata(vofcomp_recon)= &
+                recon(D_DECL(i,j,k),vofcomp_recon) 
+             do udir=1,SDIM 
+              mofdata(vofcomp_recon+udir)= &
+               recon(D_DECL(i,j,k),vofcomp_recon+udir)
+             enddo
+             mofdata(vofcomp_recon+SDIM+1)= &
+              recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1) !ord
+             mofdata(vofcomp_recon+2*SDIM+2)= & 
+              recon(D_DECL(i,j,k),vofcomp_recon+2*SDIM+2)  ! intercept
+             do udir=1,SDIM
+              mofdata(vofcomp_recon+SDIM+1+udir)= &
+               recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) 
+             enddo ! udir
+            enddo ! u_im=1..nmat
+             ! now we check if new_centroid(im_dest,dir) is in the
+             ! old dest material.
+
+
 
             do iprobe=1,2
 
