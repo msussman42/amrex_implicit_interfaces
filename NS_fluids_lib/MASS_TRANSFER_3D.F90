@@ -4929,22 +4929,27 @@ stop
             do u_im=1,nmat
              vofcomp_recon=(u_im-1)*ngeom_recon+1
              mofdata(vofcomp_recon)= &
-                recon(D_DECL(i,j,k),vofcomp_recon) 
+                recon(D_DECL(i,j,k),vofcomp_recon)  !vfrac
              do udir=1,SDIM 
               mofdata(vofcomp_recon+udir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon+udir)
+               recon(D_DECL(i,j,k),vofcomp_recon+udir) ! centroid
              enddo
              mofdata(vofcomp_recon+SDIM+1)= &
               recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1) !ord
              mofdata(vofcomp_recon+2*SDIM+2)= & 
-              recon(D_DECL(i,j,k),vofcomp_recon+2*SDIM+2)  ! intercept
+              recon(D_DECL(i,j,k),vofcomp_recon+2*SDIM+2)  !intercept
              do udir=1,SDIM
               mofdata(vofcomp_recon+SDIM+1+udir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) 
+               recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
              enddo ! udir
             enddo ! u_im=1..nmat
              ! now we check if new_centroid(im_dest,dir) is in the
              ! old dest material.
+      subroutine multi_get_volumePOINT( &
+       tessellate, &
+       bfact,dx,xsten0,nhalf0, &
+       mofdata,xgrid, &
+       im_crit,nmat,sdim)
 
 
 
