@@ -19928,8 +19928,10 @@ contains
 ! in: MOF_routines_module
       subroutine multi_get_volumePOINT( &
        tessellate, &
-       bfact,dx,xsten0,nhalf0, &
-       mofdata,xgrid, &
+       bfact,dx, &
+       xsten0,nhalf0, & ! absolute coordinate system.
+       mofdata, &
+       xgrid, &  ! absolute coordinate system.
        im_crit,nmat,sdim)
 
       use probcommon_module
@@ -20019,6 +20021,7 @@ contains
              slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
             enddo
             intercept=mofdatavalid(vofcomp+2*sdim+2)
+             ! in: GLOBALUTIL.F90
             call distfunc(bfact,dx,xsten0,nhalf0, &
              intercept,slopes,xgrid,ls,sdim)
             if (ls.ge.zero) then
