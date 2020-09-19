@@ -3401,7 +3401,7 @@ stop
       REAL_T unsplit_temperature(nmat)
       REAL_T unsplit_species(nmat*(num_species_var+1))
       REAL_T unsplit_lsnew(nmat)
-      REAL_T oldLS_point(nmat)
+      REAL_T oldLS_point(nmat*(1+SDIM))
       REAL_T dxmax,dxmaxLS
       INTEGER_T recon_ncomp
       INTEGER_T scomp
@@ -3510,6 +3510,11 @@ stop
       REAL_T delta_mass_local
       REAL_T xPOINT(SDIM)
       INTEGER_T im_old_crit
+
+      REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T LS_sten(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T TY_sten(D_DECL(-1:1,-1:1,-1:1))
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4479,8 +4484,12 @@ stop
              new_centroid(u_imaterial,dir)= &
                unsplit_snew(vofcomp_raw+dir)+cengrid(dir)
             enddo
-            oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
            enddo ! u_imaterial=1,nmat
+
+           do u_imaterial=1,nmat*(1+SDIM)
+            oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
+           enddo
+           call normalize_LS_normals(nmat,oldLS_point)
 
            vofcomp_raw=(im_dest-1)*ngeom_raw+1
            vofcomp_recon=(im_source-1)*ngeom_recon+1
@@ -4980,7 +4989,27 @@ stop
              stop
             endif
 
+            interp_to_new_supermesh=1
 
+            if (oldLS_point(im_dest).ge.zero) then
+             do dir=1,SDIM
+              old_nrm(dir)=oldLS_point(nmat+(im_source-1)*SDIM+dir)
+              old_xI(dir)=u_xsten_updatecell(0,dir)- &
+                oldLS_point(im_source)*old_nrm(dir)
+             enddo
+            else if (oldLS_point(im_source).ge.zero) then
+             do dir=1,SDIM
+              old_nrm(dir)=oldLS_point(nmat+(im_dest-1)*SDIM+dir)
+              old_xI(dir)=u_xsten_updatecell(0,dir)- &
+                oldLS_point(im_dest)*old_nrm(dir)
+             enddo
+            else if ((oldLS_point(im_dest).le.zero).and. &
+                     (oldLS_point(im_source).le.zero)) then
+             interp_to_new_supermesh=0
+            else
+             print *,"oldLS_point(im_dest) or oldLS_point(im_source) invalid"
+             stop
+            endif
 
             do iprobe=1,2
 
@@ -5063,6 +5092,32 @@ stop
              else if (SWEPTFACTOR_centroid.eq.0) then
               ! here we interpolate from old supermesh to new, making
               ! sure to take into account Tgamma_default and Ygamma_default
+              if (interp_to_new_supermesh.eq.1) then
+            call center_centroid_interchange( &
+             DATA_FLOOR, &
+             nsolve, &
+             combine_flag,  & ! 0=>centroid -> center   1=>center->centroid
+             tsat_flag, &
+             bfact, &
+             level, &
+             finest_level, &
+             dx,xlo, &
+             xsten,nhalf, &
+             T_sten, &
+             XC_sten, &
+             xI, &
+             xtarget, &
+             VF_sten, &
+             LS_sten, &
+             TSAT_master, &
+             T_out)
+
+              else if (interp_to_new_supermesh.eq.0) then
+               ! do nothing
+              else
+               print *,"interp_to_new_supermesh invalid"
+               stop
+              endif
 
              else
               print *,"SWEPTFACTOR_centroid invalid"
