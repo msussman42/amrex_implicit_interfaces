@@ -4592,10 +4592,10 @@ stop
 
             ! 1. the MAC and cell velocity field should be extrapolated
             !    from the old destination material side into the cells/faces
-            !    that were swept by the interface.
+            !    that were swept by the interface. (SWEPTFACTOR>0.0)
             ! 2. the destination temperature and species should be set 
             !    to the interface values at destination centroids which were
-            !    swept by the interface.
+            !    swept by the interface. (SWEPTFACTOR_centroid==1)
             ! 3. the source and destination temperature and species should 
             !    be recalculated in non-swept partial cells.  They should 
             !    be interpolated from the old supermesh grid to the new
@@ -5049,6 +5049,26 @@ stop
 
              snew(D_DECL(i,j,k),base_index+dencomp_probe)= &
                      density_mix_new(iprobe)
+
+             if (SWEPTFACTOR_centroid.eq.1) then
+              if (iprobe.eq.2) then ! destination
+               temp_mix_new(iprobe)=Tgamma_default
+               mass_frac_new(iprobe)=Ygamma_default
+              else if (iprobe.eq.1) then ! source
+               ! do nothing
+              else
+               print *,"iprobe invalid"
+               stop
+              endif
+             else if (SWEPTFACTOR_centroid.eq.0) then
+              ! here we interpolate from old supermesh to new, making
+              ! sure to take into account Tgamma_default and Ygamma_default
+
+             else
+              print *,"SWEPTFACTOR_centroid invalid"
+              stop
+             endif
+
              snew(D_DECL(i,j,k),base_index+tcomp_probe)= &
                      temp_mix_new(iprobe)
              if (mfrac_comp_probe.eq.0) then
