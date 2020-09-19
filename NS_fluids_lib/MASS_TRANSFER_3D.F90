@@ -525,6 +525,7 @@ stop
          wt_local=VOFTOL
         else if (own_flag.eq.1) then
           ! if normal probe is target: xtarget = xprobe
+          ! if new supermesh centroid is target: xtarget = x_new_centroid
           ! if centroid to center: xtarget = xcenter
           ! if center to centroid: xtarget = xcentroid
          dist=VOFTOL
@@ -3287,12 +3288,15 @@ stop
 #if (STANDALONE==0)
       use hydrateReactor_module
 #endif
+      use mass_transfer_module
 
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: isweep,tid
       INTEGER_T, intent(in) :: solvability_projection
-      INTEGER_T, intent(in) :: level,finest_level,ngrow_expansion
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: ngrow_expansion
       INTEGER_T, intent(in) :: normal_probe_size
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
@@ -3370,6 +3374,7 @@ stop
       REAL_T den_dF(2)
       REAL_T jump_strength
       REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten_ofs(-3:3,SDIM)
 
       REAL_T volgrid
       REAL_T cengrid(SDIM)
@@ -3391,6 +3396,8 @@ stop
       INTEGER_T tcomp_wt
       INTEGER_T vofcomp_raw
       INTEGER_T vofcomp_recon
+      INTEGER_T vofcomp_raw_dest
+      INTEGER_T vofcomp_recon_source
       INTEGER_T local_freezing_model
       INTEGER_T mass_frac_id
       INTEGER_T distribute_from_targ
@@ -3465,9 +3472,11 @@ stop
       INTEGER_T shapeflag
       INTEGER_T tessellate
       REAL_T volcell
+      REAL_T volcell_ofs
       REAL_T tempvfrac
       REAL_T temp_new_vfrac
       REAL_T cencell(SDIM)
+      REAL_T cencell_ofs(SDIM)
       REAL_T tempcen(SDIM)
       INTEGER_T do_unsplit_advection
       INTEGER_T interface_near(2*nten)
@@ -3510,11 +3519,19 @@ stop
       REAL_T delta_mass_local
       REAL_T xPOINT(SDIM)
       INTEGER_T im_old_crit
+      REAL_T DATA_FLOOR
+      INTEGER_T combine_flag
+      INTEGER_T nsolve_interp
+      REAL_T xtarget_interp(SDIM)
+      REAL_T old_xI(SDIM)
+      REAL_T old_nrm(SDIM)
+      INTEGER_T interp_to_new_supermesh
 
       REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T LS_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T TY_sten(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T temperature_sten(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4491,21 +4508,21 @@ stop
            enddo
            call normalize_LS_normals(nmat,oldLS_point)
 
-           vofcomp_raw=(im_dest-1)*ngeom_raw+1
-           vofcomp_recon=(im_source-1)*ngeom_recon+1
+           vofcomp_raw_dest=(im_dest-1)*ngeom_raw+1
+           vofcomp_recon_source=(im_source-1)*ngeom_recon+1
 
            do dir=1,SDIM
             if ((newvfrac(im_dest).gt.zero).and. &
                 (newvfrac(im_dest).le.one)) then
              new_centroid(im_dest,dir)= &
-               unsplit_snew(vofcomp_raw+dir)+cengrid(dir)
+               unsplit_snew(vofcomp_raw_dest+dir)+cengrid(dir)
 
              ! all the source material can be converted into
              ! destination material.
             else if ((newvfrac(im_dest).eq.zero).and. &
                      (oldvfrac(im_source).gt.zero)) then
              new_centroid(im_dest,dir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon+dir)+cengrid(dir)
+               recon(D_DECL(i,j,k),vofcomp_recon_source+dir)+cengrid(dir)
             else if ((newvfrac(im_dest).eq.zero).and. &
                      (abs(oldvfrac(im_source)).le.VOFTOL)) then
              new_centroid(im_dest,dir)=cengrid(dir)
@@ -5021,6 +5038,7 @@ stop
               print *,"iprobe invalid"
               stop
              endif
+             vofcomp_recon=(im_probe-1)*ngeom_recon+1
 
              dencomp_probe=(im_probe-1)*num_state_material+1
              tcomp_probe=dencomp_probe+1
@@ -5079,38 +5097,110 @@ stop
              snew(D_DECL(i,j,k),base_index+dencomp_probe)= &
                      density_mix_new(iprobe)
 
-             if (SWEPTFACTOR_centroid.eq.1) then
-              if (iprobe.eq.2) then ! destination
-               temp_mix_new(iprobe)=Tgamma_default
-               mass_frac_new(iprobe)=Ygamma_default
-              else if (iprobe.eq.1) then ! source
-               ! do nothing
-              else
-               print *,"iprobe invalid"
-               stop
-              endif
-             else if (SWEPTFACTOR_centroid.eq.0) then
+             if ((SWEPTFACTOR_centroid.eq.1).and. &
+                 (iprobe.eq.2)) then ! destination
+              temp_mix_new(iprobe)=Tgamma_default
+              mass_frac_new(iprobe)=Ygamma_default
+             else if ((SWEPTFACTOR_centroid.eq.0).or. &
+                      (iprobe.eq.1)) then ! source
               ! here we interpolate from old supermesh to new, making
               ! sure to take into account Tgamma_default and Ygamma_default
               if (interp_to_new_supermesh.eq.1) then
-            call center_centroid_interchange( &
-             DATA_FLOOR, &
-             nsolve, &
-             combine_flag,  & ! 0=>centroid -> center   1=>center->centroid
-             tsat_flag, &
-             bfact, &
-             level, &
-             finest_level, &
-             dx,xlo, &
-             xsten,nhalf, &
-             T_sten, &
-             XC_sten, &
-             xI, &
-             xtarget, &
-             VF_sten, &
-             LS_sten, &
-             TSAT_master, &
-             T_out)
+
+               do i1=-1,1
+               do j1=-1,1
+               do k1=klosten,khisten
+                call gridsten_level(xsten_ofs,i+i1,j+j1,k+k1,level,nhalf)
+                call Box_volumeFAST(bfact,dx,xsten_ofs,nhalf, &
+                 volcell_ofs,cencell_ofs,SDIM)
+                do dir=1,SDIM
+                 XC_sten(D_DECL(i1,j1,k1),dir)= &
+                  recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon+dir)+ &
+                  cencell_ofs(dir)
+                enddo
+                VF_sten(D_DECL(i1,j1,k1))= &
+                 recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon)
+                LS_sten(D_DECL(i1,j1,k1))= &
+                 LSold(D_DECL(i+i1,j+j1,k+k1),im_probe)
+                temperature_sten(D_DECL(i1,j1,k1))= &
+                 EOS(D_DECL(i+i1,j+j1,k+k1),tcomp_probe)
+                temperature_sten(D_DECL(i1,j1,k1))= &
+                 EOS(D_DECL(i+i1,j+j1,k+k1),tcomp_probe)
+                if (mfrac_comp_probe.eq.0) then
+                 massfrac_sten(D_DECL(i1,j1,k1))=Ygamma_default
+                else 
+                 massfrac_sten(D_DECL(i1,j1,k1))= &
+                  EOS(D_DECL(i+i1,j+j1,k+k1),mfrac_comp_probe)
+                endif
+               enddo
+               enddo
+               enddo ! i1,j1,k1
+
+               if ((oldvfrac(im_probe).le.VOFTOL).and. &
+                   (oldvfrac(im_probe).ge.-VOFTOL)) then
+                temp_mix_new(iprobe)=Tgamma_default
+                mass_frac_new(iprobe)=Ygamma_default
+               else if ((oldvfrac(im_probe).ge.VOFTOL).and. &
+                        (oldvfrac(im_probe).le.one+VOFTOL)) then
+
+                DATA_FLOOR=zero
+                combine_flag=0
+                nsolve_interp=1
+                do dir=1,SDIM
+                 xtarget_interp(dir)=new_centroid(im_probe,dir)
+                enddo
+
+                call center_centroid_interchange( &
+                 DATA_FLOOR, &
+                 nsolve_interp, &
+                 combine_flag, & !0=>centroid -> center   1=>center->centroid
+                 interp_to_new_supermesh, &
+                 bfact, &
+                 level, &
+                 finest_level, &
+                 dx,xlo, &
+                 u_xsten_updatecell,nhalf, &
+                 temperature_sten, &
+                 XC_sten, &
+                 old_xI, &
+                 xtarget_interp, &
+                 VF_sten, &
+                 LS_sten, &
+                 Tgamma_default, &
+                 temp_mix_new(iprobe))
+
+                if (1.eq.0) then
+                 print *,"correcting mass fraction"
+                 print *,"i,j,k ",i,j,k
+                 print *,"iprobe=",iprobe
+                 print *,"im_probe=",im_probe
+                 print *,"oldvfrac(im_probe) ",oldvfrac(im_probe)
+                 print *,"newvfrac(im_probe) ",newvfrac(im_probe)
+                endif
+
+                call center_centroid_interchange( &
+                 DATA_FLOOR, &
+                 nsolve_interp, &
+                 combine_flag, & !0=>centroid -> center   1=>center->centroid
+                 interp_to_new_supermesh, &
+                 bfact, &
+                 level, &
+                 finest_level, &
+                 dx,xlo, &
+                 u_xsten_updatecell,nhalf, &
+                 massfrac_sten, &
+                 XC_sten, &
+                 old_xI, &
+                 xtarget_interp, &
+                 VF_sten, &
+                 LS_sten, &
+                 Ygamma_default, &
+                 mass_frac_new(iprobe))
+
+               else
+                print *,"oldvfrac(im_probe) invalid"
+                stop
+               endif
 
               else if (interp_to_new_supermesh.eq.0) then
                ! do nothing
