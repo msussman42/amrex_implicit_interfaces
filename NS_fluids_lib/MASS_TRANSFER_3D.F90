@@ -4312,9 +4312,9 @@ stop
                call multi_get_volume_grid( &
                  tessellate, &
                  bfact,dx, &
-                 u_xsten_departmap,nhalf0, &
+                 u_xsten_departmap,nhalf0, & ! nhalf0=1
                  mofdata, &
-                 u_xsten_updatecell,nhalf, &
+                 u_xsten_updatecell,nhalf, & ! nhalf=3
                  xmaptri, &
                  multi_volume,multi_cen,multi_area, &
                  geom_xtetlist_uncapt(1,1,1,tid+1),  &
@@ -4985,7 +4985,7 @@ stop
              call multi_get_volumePOINT( &
                tessellate, &
                bfact,dx, &
-               u_xsten_updatecell,nhalf0, &  ! absolute coordinate system
+               u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                mofdata, &
                xPOINT, & ! absolute coordinate system
                im_old_crit,nmat,SDIM)
@@ -4996,6 +4996,29 @@ stop
                       (im_old_crit.le.nmat).and. &
                       (im_old_crit.ne.im_dest)) then
               SWEPTFACTOR_centroid=1
+
+              if (1.eq.0) then
+               print *,"setting SWEPTFACTOR_centroid=1"
+               print *,"im_dest= ",im_dest
+               print *,"xPOINT= ",xPOINT(1),xPOINT(2),xPOINT(SDIM)
+               print *,"xPOINT(1)-xsten(0,1)= ", &
+                       xPOINT(1)-u_xsten_updatecell(0,1)
+               print *,"oldvfrac(im_dest)=",oldvfrac(im_dest)
+               print *,"newvfrac(im_dest)=",newvfrac(im_dest)
+               print *,"im_old_crit=",im_old_crit
+               print *,"i,j,k ",i,j,k
+               print *,"u_xsten_updatecell xlo ",u_xsten_updatecell(-1,1)
+               print *,"u_xsten_updatecell xhi ",u_xsten_updatecell(1,1)
+               print *,"u_xsten_updatecell ",u_xsten_updatecell(0,1), &
+                       u_xsten_updatecell(0,2), &
+                       u_xsten_updatecell(0,SDIM)
+               do u_im=1,nmat
+                do udir=1,ngeom_recon
+                 print *,"im,mofcomp,mofdata ",u_im,udir, &
+                         mofdata((u_im-1)*ngeom_recon+udir)
+                enddo
+               enddo
+              endif
              else
               print *,"im_old_crit invalid"
               stop

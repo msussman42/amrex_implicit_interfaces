@@ -2922,12 +2922,16 @@ contains
         phi0,nn,x,dist,sdim_parm)
       IMPLICIT NONE
 
-      INTEGER_T sdim_parm,dir,bfact,nhalf0
-      REAL_T dx(SDIM)
-      REAL_T phi0,dist
-      REAL_T nn(sdim_parm)
-      REAL_T xsten0(-nhalf0:nhalf0,sdim_parm)
-      REAL_T x(sdim_parm)
+      INTEGER_T, intent(in) :: sdim_parm
+      INTEGER_T :: dir
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: nhalf0
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: phi0
+      REAL_T, intent(out) :: dist
+      REAL_T, intent(in) :: nn(sdim_parm)
+      REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim_parm)
+      REAL_T, intent(in) :: x(sdim_parm)
  
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"

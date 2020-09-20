@@ -20021,7 +20021,7 @@ contains
              slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
             enddo
             intercept=mofdatavalid(vofcomp+2*sdim+2)
-             ! in: GLOBALUTIL.F90
+            ! in: GLOBALUTIL.F90  dist=intercept+n dot (xgrid-xsten0(0))
             call distfunc(bfact,dx,xsten0,nhalf0, &
              intercept,slopes,xgrid,ls,sdim)
             if (ls.ge.zero) then
