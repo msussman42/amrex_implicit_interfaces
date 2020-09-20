@@ -2735,7 +2735,7 @@ stop
           stop
          endif
         else
-         print *,"at_interface invalid"
+         print *,"at_interface invalid in mdot_from_Y_probe ",at_interface
          stop
         endif
 
@@ -2856,7 +2856,7 @@ stop
           stop
          endif
         else
-         print *,"at_interface invalid"
+         print *,"at_interface invalid in mdot_from_T_probe ",at_interface
          stop
         endif
 
@@ -6266,6 +6266,7 @@ stop
        microlayer_size, &
        macrolayer_size, &
        max_contact_line_size, &
+       R_Palmore_Desjardins, &
        latent_heat, &
        use_exact_temperature, &
        reaction_rate, &
@@ -6354,6 +6355,7 @@ stop
       REAL_T, intent(in) :: microlayer_size(nmat)
       REAL_T, intent(in) :: macrolayer_size(nmat)
       REAL_T, intent(in) :: max_contact_line_size(nmat)
+      REAL_T, intent(in) :: R_Palmore_Desjardins
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: use_exact_temperature(2*nten)
       REAL_T, intent(in) :: reaction_rate(2*nten)
@@ -7491,7 +7493,8 @@ stop
                    else if (at_interface.eq.0) then
                     ! do nothing
                    else
-                    print *,"at_interface invalid"
+                    print *,"at_interface invalid FORT_RATEMASSCHANGE"
+                    print *,"at_interface=",at_interface
                     stop
                    endif
 
@@ -7938,7 +7941,8 @@ stop
                   else if (at_interface.eq.0) then
 
                   else
-                   print *,"at_interface invalid"
+                   print *,"at_interface invalid FORT_RATEMASSCHANGE (2) "
+                   print *,"at_interface=",at_interface
                    stop
                   endif
 
@@ -8097,7 +8101,8 @@ stop
                  else if (at_interface.eq.0) then
                   ! do nothing
                  else
-                  print *,"at_interface invalid"
+                  print *,"at_interface invalid in FORT_RATEMASSCHANGE (3)"
+                  print *,"at_interface=",at_interface
                   stop
                  endif
 

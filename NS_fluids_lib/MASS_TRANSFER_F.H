@@ -120,6 +120,7 @@ extern "C"
     Real* microlayer_size,
     Real* macrolayer_size,
     Real* max_contact_line_size,
+    Real* R_Palmore_Desjardins,
     Real* latent_heat,
     int* use_exact_temperature,
     Real* reaction_rate,

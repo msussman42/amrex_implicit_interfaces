@@ -687,6 +687,10 @@ Real NavierStokes::perturbation_eps_vel=0.0;
 // latent_heat<0 if condensation or solidification
 // latent_heat>0 if boiling or melting
 Vector<Real> NavierStokes::latent_heat;
+
+//ergs/(mol kelvin)
+Real NavierStokes::R_Palmore_Desjardins=8.31446261815324e+7;
+
 Vector<Real> NavierStokes::reaction_rate;
 // 0=T_interface=TSAT-epsC K -epsV V ambient air is 100 percent
 //   saturated.
@@ -3093,6 +3097,8 @@ NavierStokes::read_params ()
     pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*nten);
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
 
+    pp.query("R_Palmore_Desjardins",R_Palmore_Desjardins);
+
     for (int im=0;im<nmat;im++) {
 
      if ((override_density[im]!=0)&&
@@ -4097,7 +4103,9 @@ NavierStokes::read_params ()
       std::cout << "i= " << i << " outflow_velocity_buffer_size= " <<
        outflow_velocity_buffer_size[i] << '\n';
      }
- 
+
+     std::cout << "R_Palmore_Desjardins " << R_Palmore_Desjardins << '\n';
+
      for (int i=0;i<nten;i++) {
       std::cout << "hardwire_T_gamma i=" << i << "  " << 
        hardwire_T_gamma[i] << '\n';
@@ -10748,6 +10756,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      microlayer_size.dataPtr(),
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
+     &R_Palmore_Desjardins,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
@@ -10832,6 +10841,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      microlayer_size.dataPtr(),
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
+     &R_Palmore_Desjardins,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),

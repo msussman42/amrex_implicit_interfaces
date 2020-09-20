@@ -15078,7 +15078,9 @@ stop
             else if (at_interface.eq.0) then
              ! do nothing
             else
-             print *,"at_interface invalid"
+             print *,"at_interface invalid in FORT_STEFANSOLVER"
+             print *,"project_option=",project_option
+             print *,"solidheat_flag=",solidheat_flag
              stop
             endif
 

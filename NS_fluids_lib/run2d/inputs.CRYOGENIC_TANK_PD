@@ -50,7 +50,7 @@ ns.temperature_primitive_variable = 1 1 1
 # Values simplified for debugging
 ns.xblob            = 4.0   # outer tank radius (4.21 m in DaigleETAL2012)
 ns.yblob            = 16.0  # outer tank height (29.54 m in DaigleETAL2012)
-ns.zblob            = 8.0  # initial interface location (29.54/2 m in DaigleETAL2012)
+ns.zblob            = 8.05  # initial interface location (29.54/2 m in DaigleETAL2012)
 ns.radblob          = 0.5 # wall thickness (0.1 m in DaigleETAL2012)
 
 # ----------------------------------------------------------
@@ -93,12 +93,12 @@ ns.shock_timestep=2 2 2
 # -------- Input/output (IO) -------------------------------
 # ----------------------------------------------------------
 # output file -2=> tecplot -1=> plot files (visit or paraview)
-ns.visual_option    =-1  
+ns.visual_option    =-2  
 
 amr.check_int       = 1000    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-amr.plot_int        = 1       # number of timesteps between plot files
+amr.plot_int        = 1      # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.sum_interval     = 10      # timesteps between computing mass 
@@ -218,6 +218,7 @@ ns.tempconst=19.0 21.0 21.0
 # LH2 @ 20 k => ~ 2 dyn/cm = 2e-3 N/m
 # 90 degree contact angle => same sigmas
 ns.tension=2.0E-03 2.0E-03 2.0E-03
+#ns.tension=0.0 0.0 0.0
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -241,7 +242,8 @@ ns.Tanasawa_or_Schrage= 0 0 0 0 0 0
 
 # saturation temperature 
 ns.saturation_temp=20.0 0.0 0.0 0.0 0.0 0.0
-ns.saturation_temp_min=1.0e-10 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp_min=1.0E+01 0.0 0.0 0.0 0.0 0.0
+ns.R_Palmore_Desjardins=8.31446261815324  #J/(mol Kelvin)
 
 # ----------------------------------------------------------
 # -------- Initial and boundary conditions (IC/BC) ---------
