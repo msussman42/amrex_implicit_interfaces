@@ -2705,11 +2705,11 @@ stop
              (dxprobe_target(2).gt.zero)) then
          
           mdotY_top=Y_gamma-Y_probe(iprobe_vapor)
-          mdotY_top=den_G*mdotY_top/ &
+          mdotY_top=den_G*D_MASS*mdotY_top/ &
                   dxprobe_target(iprobe_vapor)
           mdotY_bot=one-Y_gamma
-          if (mdotY_bot.le.zero) then
-           print *,"fully saturated case not handled here"
+          if (mdotY_bot.lt.zero) then
+           print *,"Y_gamma cannot exceed 1"
            print *,"mdotY_top= ",mdotY_top
            print *,"mdotY_bot= ",mdotY_bot
            print *,"den_G= ",den_G
@@ -2720,6 +2720,8 @@ stop
            print *,"dxprobe_target(iprobe_vapor)=", &
                    dxprobe_target(iprobe_vapor)
            stop
+          else if (mdotY_bot.eq.zero) then
+           mdotY=zero
           else if ((mdotY_bot.gt.zero).and. &
                    (mdotY_bot.le.one)) then
            mdotY=mdotY_top/mdotY_bot
@@ -6539,6 +6541,8 @@ stop
       REAL_T Y_gamma_a_init,Y_gamma_b_init
       REAL_T mdot_diff_a,mdot_diff_b,mdot_diff_c
       INTEGER_T fully_saturated
+      REAL_T mdotT_debug
+      REAL_T mdotY_top_debug,mdotY_bot_debug,mdotY_debug
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -7807,24 +7811,23 @@ stop
 
                    if (local_freezing_model.eq.6) then ! Palmore/Desjardins
 
+                     ! type(TSAT_MASS_FRAC_parm_type)
+                    Y_interface_min=zero
+                    TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
+                    TSAT_Y_PARMS%YI_min=Y_interface_min
+                    TSAT_Y_PARMS%TI_min=TI_min
+                    TSAT_Y_PARMS%TI_max=TI_max
+                    TSAT_Y_PARMS%universal_gas_constant_R= &
+                            R_Palmore_Desjardins
+                    TSAT_Y_PARMS%molar_mass_ambient=molar_mass_ambient
+                    TSAT_Y_PARMS%molar_mass_vapor=molar_mass_vapor
+                    TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
+                    TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
+                    TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
+                    TSAT_Y_PARMS%thermal_k=>thermal_k
+                    TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
+
                     if (hardwire_flag(ireverse).eq.0) then
-
-                     Y_interface_min=zero
-
-                      ! type(TSAT_MASS_FRAC_parm_type)
-                     TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
-                     TSAT_Y_PARMS%YI_min=Y_interface_min
-                     TSAT_Y_PARMS%TI_min=TI_min
-                     TSAT_Y_PARMS%TI_max=TI_max
-                     TSAT_Y_PARMS%universal_gas_constant_R= &
-                             R_Palmore_Desjardins
-                     TSAT_Y_PARMS%molar_mass_ambient=molar_mass_ambient
-                     TSAT_Y_PARMS%molar_mass_vapor=molar_mass_vapor
-                     TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
-                     TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
-                     TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
-                     TSAT_Y_PARMS%thermal_k=>thermal_k
-                     TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
 
                      if ((molar_mass_ambient.gt.zero).and. &
                          (molar_mass_vapor.gt.zero).and. &
@@ -7958,6 +7961,32 @@ stop
 
                   if (TSAT_iter.eq.0) then
                     TSAT_INIT_ERR=TSAT_ERR
+                  endif
+
+                  call mdot_from_T_probe( &
+                    TSAT_Y_PARMS, &
+                    TSAT_correct,Y_predict, &
+                    mdotT_debug)
+
+                  call mdot_from_Y_probe( &
+                    TSAT_Y_PARMS, &
+                    Y_predict,TSAT_correct, &
+                    mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
+
+                  if (1.eq.0) then
+                   if (j.eq.8) then
+                    print *,"PD DEBUG prev_time,dt ",prev_time,dt
+                    print *,"i,j,k,x ",i,j,k,xsten(0,1),xsten(0,2), &
+                      xsten(0,SDIM)
+                    print *,"TSAT_iter,TSAT_correct,TSAT_predict ", &
+                     TSAT_iter,TSAT_correct,TSAT_predict
+                    print *,"Y_predict ",Y_predict
+                    print *,"VEL_correct ",VEL_correct
+                    print *,"mdotT_debug ",mdotT_debug
+                    print *,"mdotY_debug ",mdotY_debug
+                    print *,"mdotY_top_debug ",mdotY_top_debug
+                    print *,"mdotY_bot_debug ",mdotY_bot_debug
+                   endif
                   endif
 
                   TSAT_converge=0
