@@ -6535,6 +6535,8 @@ stop
       REAL_T x_gamma_a,x_gamma_b,x_gamma_c
       REAL_T Y_gamma_a,Y_gamma_b,Y_gamma_c
       REAL_T T_gamma_a,T_gamma_b,T_gamma_c
+      REAL_T T_gamma_a_init,T_gamma_b_init
+      REAL_T Y_gamma_a_init,Y_gamma_b_init
       REAL_T mdot_diff_a,mdot_diff_b,mdot_diff_c
       INTEGER_T fully_saturated
 
@@ -7488,6 +7490,11 @@ stop
                     print *,"at_interface invalid"
                     stop
                    endif
+
+                   T_gamma_a_init=T_gamma_a
+                   T_gamma_b_init=T_gamma_b
+                   Y_gamma_a_init=Y_gamma_a
+                   Y_gamma_b_init=Y_gamma_b
                   else if (TSAT_iter.gt.0) then
                    ! do nothing
                   else
@@ -7866,12 +7873,30 @@ stop
                          endif
                         else
                          print *,"bracketing interval lost"
+                         print *,"T_gamma init: a,b ", &
+                            T_gamma_a_init,T_gamma_b_init
+                         print *,"Y_gamma init: a,b ", &
+                            Y_gamma_a_init,Y_gamma_b_init
                          print *,"T_gamma a,b,c ", &
                             T_gamma_a,T_gamma_b,T_gamma_c
                          print *,"Y_gamma a,b,c ", &
                             Y_gamma_a,Y_gamma_b,Y_gamma_c
                          print *,"mdot_diff a,b,c ", &
                             mdot_diff_a,mdot_diff_b,mdot_diff_c
+                         print *,"TSAT_iter=",TSAT_iter
+                         print *,"Y_interface_min ",Y_interface_min
+                         print *,"TI_min ",TI_min
+                         print *,"TI_max ",TI_max
+                         print *,"molar_mass_ambient ",molar_mass_ambient
+                         print *,"molar_mass_vapor ",molar_mass_vapor
+                         print *,"iprobe_vapor = ",iprobe_vapor
+                         print *,"FicksLawD(iprobe_vapor) ", &
+                                 FicksLawD(iprobe_vapor)
+                         print *,"den_I_interp_sat ", &
+                                 den_I_interp_SAT(iprobe_vapor)
+                         print *," LL(ireverse) ",LL(ireverse)
+                         print *," local_Tsat(ireverse) ",local_Tsat(ireverse)
+                         print *,"im_source,im_dest ",im_source,im_dest
                          stop
                         endif
 
