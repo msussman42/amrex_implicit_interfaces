@@ -1682,6 +1682,9 @@ protected:
       // latent_heat<0 if condensation or solidification
       // latent_heat>0 if boiling or melting
     static Vector<Real> latent_heat; 
+
+    static Real R_Palmore_Desjardins;
+
     static Vector<Real> reaction_rate; 
      // freezing_model:
      // 0=sharp interface model (TSAT dirichlet BC)
