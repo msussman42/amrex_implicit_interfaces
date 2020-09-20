@@ -9,7 +9,8 @@
 # ----------------------------------------------------------
 # -------- Problem setup -----------------------------------
 # ----------------------------------------------------------
-max_step=99999999
+max_step=200
+#max_step=99999999
 stop_time=1.0e+20
 
 ns.probtype         = 421
@@ -67,7 +68,7 @@ amr.n_cell          = 32 128
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 1024
+amr.max_grid_size   = 32
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4  # number of buffer cells in error est 
@@ -97,7 +98,7 @@ ns.visual_option    =-1
 amr.check_int       = 1000    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-amr.plot_int        = 100     # number of timesteps between plot files
+amr.plot_int        = 1       # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.sum_interval     = 10      # timesteps between computing mass 
@@ -106,7 +107,7 @@ amr.grid_log        = grdlog  # name of grid logging file
 
 amr.file_name_digits= 7
 
-#ns.v=1
+ns.v=0
 #amr.restart        = chk00400 # Name of the restart checkpoint file
 #amr.trace   	    = 1
 #ns.show_mem        = 1
@@ -214,7 +215,9 @@ ns.viscconst=13.92e-6 3.5e-6 1
 ns.tempconst=19.0 21.0 21.0
 
 # Surface tension [N/m]
-ns.tension=0.0 0.0 0.0
+# LH2 @ 20 k => ~ 2 dyn/cm = 2e-3 N/m
+# 90 degree contact angle => same sigmas
+ns.tension=2.0E-03 2.0E-03 2.0E-03
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -229,7 +232,7 @@ ns.tension=0.0 0.0 0.0
 ns.latent_heat=4.3518E+05 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
-ns.distribute_from_target= 0 0 0 0 0 0
+ns.distribute_from_target= 1 0 0 0 0 0
 
 # PD model (evaporation only) (Palmore and Desjardins)
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
@@ -238,7 +241,7 @@ ns.Tanasawa_or_Schrage= 0 0 0 0 0 0
 
 # saturation temperature 
 ns.saturation_temp=20.0 0.0 0.0 0.0 0.0 0.0
-ns.saturation_temp_min=1.0 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp_min=1.0e-10 0.0 0.0 0.0 0.0 0.0
 
 # ----------------------------------------------------------
 # -------- Initial and boundary conditions (IC/BC) ---------
@@ -337,4 +340,3 @@ RunStats.statvar = godunov_box level_project sync_project
 #        default is whatever precision code is compiled with.
 #fab.precision = FLOAT     # output in FLOAT or DOUBLE
 fab.precision = DOUBLE    # output in FLOAT or DOUBLE
-

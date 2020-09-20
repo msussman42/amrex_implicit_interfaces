@@ -796,6 +796,7 @@ Real NavierStokes::denconst_min=0.0;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
+int NavierStokes::cancel_advection=0;
 Vector<Real> NavierStokes::added_weight; // def=1.0
 
 Vector<Real> NavierStokes::stiffPINF;
@@ -2871,6 +2872,7 @@ NavierStokes::read_params ()
     pp.queryarr("denconst_gravity",denconst_gravity,0,nmat);
 
     pp.query("stokes_flow",stokes_flow);
+    pp.query("cancel_advection",cancel_advection);
 
     added_weight.resize(nmat);
     for (int i=0;i<nmat;i++) 
@@ -4036,6 +4038,7 @@ NavierStokes::read_params ()
      }
 
      std::cout << "stokes_flow= " << stokes_flow << '\n';
+     std::cout << "cancel_advection= " << cancel_advection << '\n';
 
      std::cout << "is_phasechange= " << is_phasechange << '\n';
 
@@ -10193,8 +10196,25 @@ NavierStokes::prepare_displacement(int mac_grow,int unsplit_displacement) {
 
   delete temp_mac_velocity;
 
+  if (cancel_advection==0) {
+   // do nothing
+  } else if (cancel_advection==1) {
+   localMF[MAC_VELOCITY_MF+normdir]->setVal(0.0);
+  } else {
+   amrex::Error("cancel_advection invalid");
+  }
+
   localMF[MAC_VELOCITY_MF+normdir]->FillBoundary(geom.periodicity());
  } // normdir=0..sdim-1
+
+ if (cancel_advection==0) {
+  // do nothing
+ } else if (cancel_advection==1) {
+  localMF[CELL_VELOCITY_MF]->setVal(0.0);
+ } else {
+  amrex::Error("cancel_advection invalid");
+ }
+
  localMF[CELL_VELOCITY_MF]->FillBoundary(geom.periodicity());
 
 }  // prepare_displacement

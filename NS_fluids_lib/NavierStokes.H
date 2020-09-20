@@ -1948,6 +1948,7 @@ protected:
     static Real denconst_min;
     static Vector<Real> denconst_gravity; // def=1.0
     static int stokes_flow;  // def=0
+    static int cancel_advection;  // def=0
     static Vector<Real> denconst_interface;
     static Vector<Real> added_weight;
 
