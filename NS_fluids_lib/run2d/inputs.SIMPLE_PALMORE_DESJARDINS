@@ -3,6 +3,7 @@ max_step  = 200000    # maximum timestep
 
 stop_time = 4.0  # case 1
 stop_time = 0.16  # case 2
+stop_time = 0.04  # case 2 short time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -120,6 +121,7 @@ ns.temperature_primitive_variable=1 1 1 1
 # case 2: velocity 0<t<0.01 is about u=0.3 dx/u=0.05
 #ns.fixed_dt	  = 0.02     # case 1 0.02 is coarsest
 ns.fixed_dt	  = 0.002    # case 2 0.002 is coarsest
+ns.fixed_dt	  = 0.0005    # case 2 short time
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   
@@ -148,7 +150,7 @@ ns.speciesviscconst=0.1 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # 1=water 2=gas  
 #ns.speciesconst=1.0 1.0  # case 1 film boiling
 ns.speciesconst=0.22132139799031397 0.20030719855787860 # case 2 
-#ns.hardwire_Y_gamma=0.22132139799031397 0.0
+ns.hardwire_Y_gamma=0.22132139799031397 0.0
 ns.viscconst=0.0 0.0 # CODY ~ (not used, must be zero)
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
@@ -170,7 +172,7 @@ ns.solidheat_flag=0
 # 1=water 2=gas   
 #ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
 ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
-#ns.hardwire_T_gamma=296.163 0.0
+ns.hardwire_T_gamma=296.163 0.0
 #ns.cancel_advection=1
 #0.02cm
 ns.xblob2=0.025 #CODY this is physical location corresponding to x=0
