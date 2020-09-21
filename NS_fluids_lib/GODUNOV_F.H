@@ -8,6 +8,7 @@
 #    define FORT_STEFANSOLVER stefansolver
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
+#    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_INITJUMPTERM initjumpterm
 #    define FORT_INIT_ICEMASK init_icemask
 #    define FORT_RENORM_MDOT renorm_mdot
@@ -54,6 +55,7 @@
 #    define FORT_STEFANSOLVER STEFANSOLVER
 #    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
+#    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
 #    define FORT_INITJUMPTERM INITJUMPTERM
 #    define FORT_INIT_ICEMASK INIT_ICEMASK
 #    define FORT_RENORM_MDOT RENORM_MDOT
@@ -100,6 +102,7 @@
 #    define FORT_STEFANSOLVER stefansolver
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
+#    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_INITJUMPTERM initjumpterm
 #    define FORT_INIT_ICEMASK init_icemask
 #    define FORT_RENORM_MDOT renorm_mdot
@@ -145,6 +148,7 @@
 #    define FORT_STEFANSOLVER stefansolver_
 #    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
+#    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
 #    define FORT_INITJUMPTERM initjumpterm_
 #    define FORT_INIT_ICEMASK init_icemask_
 #    define FORT_RENORM_MDOT renorm_mdot_
@@ -744,6 +748,27 @@ extern "C"
     AMREX_ARLIM_P(history_datlo),AMREX_ARLIM_P(history_dathi),
     int* nhistory,
     Real* visc_coef);
+
+
+
+   void FORT_ASSIMILATE_STATEDATA(
+    int* data_dir,
+    int* law_of_the_wall,
+    int* im_solid_map,
+    int* level,
+    int* finest_level,
+    int* nstate,
+    int* nmat,
+    int* nparts,
+    int* nparts_ghost,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* dt,
+    Real* time,
+    Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
+    Real* ughost,AMREX_ARLIM_P(ughostlo),AMREX_ARLIM_P(ughosthi));
 
 
    void FORT_STEFANSOLVER(
