@@ -7938,8 +7938,21 @@ stop
                     stop
                    endif
 
-                  else if (at_interface.eq.0) then
+                   call mdot_from_T_probe( &
+                    TSAT_Y_PARMS, &
+                    TSAT_correct,Y_predict, &
+                    mdotT_debug)
 
+                   call mdot_from_Y_probe( &
+                    TSAT_Y_PARMS, &
+                    Y_predict,TSAT_correct, &
+                    mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
+
+                  else if (at_interface.eq.0) then
+                   mdotT_debug=zero
+                   mdotY_top_debug=zero
+                   mdotY_bot_debug=zero
+                   mdotY_debug=zero
                   else
                    print *,"at_interface invalid FORT_RATEMASSCHANGE (2) "
                    print *,"at_interface=",at_interface
@@ -7966,16 +7979,6 @@ stop
                   if (TSAT_iter.eq.0) then
                     TSAT_INIT_ERR=TSAT_ERR
                   endif
-
-                  call mdot_from_T_probe( &
-                    TSAT_Y_PARMS, &
-                    TSAT_correct,Y_predict, &
-                    mdotT_debug)
-
-                  call mdot_from_Y_probe( &
-                    TSAT_Y_PARMS, &
-                    Y_predict,TSAT_correct, &
-                    mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
 
                   if (1.eq.0) then
                    if (j.eq.8) then
