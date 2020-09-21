@@ -58,6 +58,7 @@ module probcommon_module_types
        INTEGER_T :: finest_level
        REAL_T, pointer :: dx(:)
        REAL_T, pointer :: xlo(:)
+       REAL_T, pointer :: xsten(:,:)
        INTEGER_T :: nmat
        INTEGER_T :: nten
        INTEGER_T :: nstate
@@ -87,6 +88,29 @@ module probcommon_module_types
        REAL_T :: cur_time
        REAL_T :: dt
       end type nucleation_parm_type_input
+
+      type assimilate_parm_type
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: nparts_ghost
+      INTEGER_T :: nparts
+      INTEGER_T, pointer :: im_solid_map(:)
+      INTEGER_T :: nstate
+      INTEGER_T :: nhalf
+      INTEGER_T :: nmat
+      REAL_T :: time
+      REAL_T :: dt
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xsten(:,:)
+      REAL_T :: dxmin
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughost
+      end type assimilate_parm_type
+
 
      contains
 

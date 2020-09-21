@@ -15963,6 +15963,178 @@ stop
       return
       end subroutine FORT_WALLFUNCTION
 
+
+      subroutine FORT_ASSIMILATE_STATEDATA( &
+       data_dir, &
+       law_of_the_wall, &
+       im_solid_map, &
+       level, &
+       finest_level, &
+       nstate, &
+       nmat, &
+       nparts, &
+       nparts_ghost, &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       xlo,dx, &
+       dt, &
+       time, &
+       state,DIMS(state), &
+       ughost,DIMS(ughost))
+      use probf90_module
+      use global_utility_module
+      use MOF_routines_module
+      use godunov_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: data_dir
+      INTEGER_T, intent(in) :: law_of_the_wall
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nstate
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_ghost
+      INTEGER_T, intent(in), target :: im_solid_map(nparts_ghost)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in), target :: xlo(SDIM)
+      REAL_T, intent(in), target :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: DIMDEC(state)
+      INTEGER_T, intent(in) :: DIMDEC(ughost)
+
+      REAL_T, intent(inout), target :: state(DIMV(state),nstate)
+      REAL_T, intent(in), target :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
+      INTEGER_T i,j,k
+      REAL_T, target :: xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T nstate_test
+      type(assimilate_parm_type) :: assimilate_parm
+
+
+      nhalf=3
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in ratemasschange"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      nstate_test=num_materials_vel*(SDIM+1)+ &
+        nmat*(num_state_material+ngeom_raw)+1
+      if (nstate.ne.nstate_test) then
+       print *,"nstate invalid"
+       stop
+      endif
+      if ((nparts.ge.0).and.(nparts.le.nmat)) then 
+       ! do nothing
+      else
+       print *,"nparts invalid FORT_ASSIMILATE_STATEDATA"
+       stop
+      endif
+      if ((nparts_ghost.ge.1).and. &
+          (nparts_ghost.le.nmat).and. &
+          (nparts_ghost.ge.nparts)) then 
+       ! do nothing
+      else
+       print *,"nparts_ghost invalid FORT_WALLFUNCTION"
+       stop
+      endif
+
+      if ((nparts_ghost.eq.nparts).or.(nparts_ghost.eq.1)) then
+       ! do nothing
+      else
+       print *,"nparts_ghost invalid"
+       stop
+      endif
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif 
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid"
+       stop
+      endif 
+      if ((law_of_the_wall.eq.0).or. &
+          (law_of_the_wall.eq.1).or. &
+          (law_of_the_wall.eq.2)) then
+       ! do nothing
+      else
+       print *,"law_of_the_wall invalid"
+       stop
+      endif
+      if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
+       ! do nothing
+      else
+       print *,"data_dir invalid"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(state),1,-1,1253)
+      call checkbound(fablo,fabhi,DIMS(ughost),0,data_dir,1255)
+
+      assimilate_parm%time=time
+      assimilate_parm%dt=dt
+      assimilate_parm%nhalf=nhalf
+      assimilate_parm%nmat=nmat
+      assimilate_parm%nparts=nparts
+      assimilate_parm%nparts_ghost=nparts_ghost
+      assimilate_parm%im_solid_map=>im_solid_map
+      assimilate_parm%level=level
+      assimilate_parm%finest_level=finest_level
+      assimilate_parm%bfact=bfact
+      assimilate_parm%dx=>dx
+      assimilate_parm%xlo=>xlo
+      assimilate_parm%fablo=>fablo
+      assimilate_parm%fabhi=>fabhi
+      assimilate_parm%state=>state
+      assimilate_parm%ughost=>ughost
+
+      assimilate_parm%dxmin=dx(1)
+      if (dx(2).lt.assimilate_parm%dxmin) then
+       assimilate_parm%dxmin=dx(2)
+      endif
+      if (dx(SDIM).lt.assimilate_parm%dxmin) then
+       assimilate_parm%dxmin=dx(SDIM)
+      endif
+       
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       assimilate_parm%x_sten=>x_sten
+
+      enddo ! k
+      enddo ! j
+      enddo ! i
+
+      return
+      end subroutine FORT_ASSIMILATE_STATEDATA
+
+
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x nmat
         ! icemask_index component initialized to 1 in "init_physics_vars"

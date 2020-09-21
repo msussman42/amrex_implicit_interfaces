@@ -5563,6 +5563,8 @@ void NavierStokes::assimilate_state_data() {
   amrex::Error("nparts invalid");
  }
 
+ init_boundary();
+
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
@@ -5579,7 +5581,7 @@ void NavierStokes::assimilate_state_data() {
 
  const Real* dx = geom.CellSize();
 
- for (data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
 	
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -5614,6 +5616,7 @@ void NavierStokes::assimilate_state_data() {
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
+     &nstate,
      &nmat,
      &nparts,
      &nparts_ghost,
