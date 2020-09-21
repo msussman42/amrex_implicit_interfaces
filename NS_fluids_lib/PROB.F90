@@ -27962,6 +27962,7 @@ end subroutine initialize2d
         SUB_STATE_BC=>SIMPLE_PALMORE_DESJARDINS_STATE_BC
         SUB_HEATSOURCE=>SIMPLE_PALMORE_DESJARDINS_HEATSOURCE
         SUB_SUMINT=>SIMPLE_PALMORE_DESJARDINS_SUMINT ! compare with analytical
+        SUB_ASSIMILATE=>SIMPLE_PALMORE_DESJARDINS_ASSIMILATE
        else if (probtype.eq.2000) then
         SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
         SUB_LS=>flexible_plate_impact_LS

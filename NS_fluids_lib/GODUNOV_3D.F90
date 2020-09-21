@@ -15980,6 +15980,7 @@ stop
        dt, &
        time, &
        state,DIMS(state), &
+       statemac,DIMS(statemac), &
        ughost,DIMS(ughost))
       use probf90_module
       use global_utility_module
@@ -16005,9 +16006,11 @@ stop
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: DIMDEC(state)
+      INTEGER_T, intent(in) :: DIMDEC(statemac)
       INTEGER_T, intent(in) :: DIMDEC(ughost)
 
       REAL_T, intent(inout), target :: state(DIMV(state),nstate)
+      REAL_T, intent(inout), target :: statemac(DIMV(statemac))
       REAL_T, intent(in), target :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
       INTEGER_T i,j,k
       REAL_T, target :: xsten(-3:3,SDIM)
@@ -16015,7 +16018,6 @@ stop
       INTEGER_T nstate_test
       type(assimilate_parm_type) :: assimilate_parm
       type(assimilate_out_parm_type) :: assimilate_out_parm
-
 
       nhalf=3
 
@@ -16091,6 +16093,7 @@ stop
       endif
 
       call checkbound(fablo,fabhi,DIMS(state),1,-1,1253)
+      call checkbound(fablo,fabhi,DIMS(statemac),0,data_dir,1253)
       call checkbound(fablo,fabhi,DIMS(ughost),0,data_dir,1255)
 
       assimilate_parm%time=time
@@ -16118,19 +16121,53 @@ stop
       endif
        
       assimilate_out_parm%state=>state
+      assimilate_out_parm%statemac=>statemac
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      if (data_dir.eq.0) then
+
+       cell_flag=1
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        assimilate_parm%xsten=>xsten
+        if (is_in_probtype_list().eq.1) then
+         call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
+          i,j,k,cell_flag,data_dir)
+        else
+         ! do nothing
+        endif
+
+       enddo ! k
+       enddo ! j
+       enddo ! i
+
+      else if ((data_dir.ge.1).and.(data_dir.le.SDIM-1)) then
+       ! do nothing
+      else
+       print *,"data_dir invalid"
+       stop
+      endif
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,data_dir) 
+
+      cell_flag=0
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridsten_level(xsten,i,j,k,level,nhalf)
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,data_dir+1)
 
        assimilate_parm%xsten=>xsten
        if (is_in_probtype_list().eq.1) then
         call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
-         i,j,k)
+          i,j,k,cell_flag,data_dir)
        else
         ! do nothing
        endif
@@ -16138,6 +16175,7 @@ stop
       enddo ! k
       enddo ! j
       enddo ! i
+
 
       return
       end subroutine FORT_ASSIMILATE_STATEDATA

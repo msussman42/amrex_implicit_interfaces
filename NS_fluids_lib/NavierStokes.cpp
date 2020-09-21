@@ -5582,6 +5582,8 @@ void NavierStokes::assimilate_state_data() {
  const Real* dx = geom.CellSize();
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+
+  MultiFab& Smac_new = get_new_data(Umac_Type+data_dir,slab_step+1);
 	
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -5606,6 +5608,7 @@ void NavierStokes::assimilate_state_data() {
 
    FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
    FArrayBox& snewfab=S_new[mfi]; 
+   FArrayBox& smacnewfab=Smac_new[mfi]; 
 
    int tid_current=ns_thread();
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
@@ -5625,7 +5628,10 @@ void NavierStokes::assimilate_state_data() {
      xlo,dx,
      &dt_slab,
      &cur_time_slab,
-     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+     snewfab.dataPtr(),
+     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+     smacnewfab.dataPtr(),
+     ARLIM(smacnewfab.loVect()),ARLIM(smacnewfab.hiVect()),
      ghostsolidvelfab.dataPtr(),
      ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()) );
   } // mfi

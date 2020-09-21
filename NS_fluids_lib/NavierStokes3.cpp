@@ -11546,22 +11546,6 @@ void NavierStokes::veldiffuseALL() {
  } else
   amrex::Error("CTML_FSI_flagC() invalid");
 
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.assimilate_state_data();
- }
-
- // diffuse_register+=(unew-register_mark)
- // umacnew+=INTERP_TO_MAC(unew-register_mark)
- INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
-
- avgDownALL(State_Type,0,
-  num_materials_vel*(AMREX_SPACEDIM+1),1);
- avgDownALL(State_Type,dencomp,nden,1);
-
-  // register_mark=unew
- SET_STOKES_MARK(REGISTER_MARK_MF);
-
  override_enable_spectral(save_enable_spectral);
 
   // force at time = cur_time_slab
@@ -11877,6 +11861,11 @@ void NavierStokes::veldiffuseALL() {
    // do nothing
  } else
   amrex::Error("include_viscous_heating invalid");
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.assimilate_state_data();
+ }
 
  avgDownALL(State_Type,0,
    num_materials_vel*(AMREX_SPACEDIM+1),1);

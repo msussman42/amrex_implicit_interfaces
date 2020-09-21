@@ -88,6 +88,7 @@ module probcommon_module_types
        REAL_T :: dt
       end type nucleation_parm_type_input
 
+
       type assimilate_parm_type
       INTEGER_T :: level
       INTEGER_T :: finest_level
@@ -111,6 +112,7 @@ module probcommon_module_types
 
       type assimilate_out_parm_type
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: statemac
       end type assimilate_out_parm_type
 
      contains
@@ -531,11 +533,11 @@ implicit none
       end subroutine TEMPLATE_microcell_heat_coeff
 
       subroutine TEMPLATE_ASSIMILATE(assimilate_in,assimilate_out, &
-         i,j,k)
+         i,j,k,cell_flag,data_dir)
       use probcommon_module_types
       type(assimilate_parm_type), intent(in) :: assimilate_in
       type(assimilate_out_parm_type), intent(inout) :: assimilate_out
-      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: i,j,k,cell_flag,data_dir
       end subroutine TEMPLATE_ASSIMILATE
 
       END INTERFACE

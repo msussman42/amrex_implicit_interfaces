@@ -768,6 +768,8 @@ extern "C"
     Real* dt,
     Real* time,
     Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
+    Real* statemac,
+    AMREX_ARLIM_P(statemaclo),AMREX_ARLIM_P(statemachi), 
     Real* ughost,AMREX_ARLIM_P(ughostlo),AMREX_ARLIM_P(ughosthi));
 
 

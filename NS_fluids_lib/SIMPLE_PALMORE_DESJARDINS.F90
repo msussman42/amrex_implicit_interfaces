@@ -579,6 +579,100 @@ endif
 return
 end subroutine SIMPLE_PALMORE_DESJARDINS_STATE
 
+
+
+subroutine SIMPLE_PALMORE_DESJARDINS_ASSIMILATE( &
+     assimilate_in,assimilate_out, &
+     i,j,k,cell_flag,data_dir)
+use probcommon_module
+IMPLICIT NONE
+
+type(assimilate_parm_type), intent(in) :: assimilate_in
+type(assimilate_out_parm_type), intent(inout) :: assimilate_out
+INTEGER_T, intent(in) :: i,j,k,cell_flag,data_dir
+
+INTEGER_T :: nmat,nstate,nstate_test
+REAL_T :: x_exact,xcrit,tcrit
+INTEGER_T :: use_T
+INTEGER_T :: dir
+INTEGER_T :: im
+INTEGER_T :: ibase
+REAL_T local_temp,local_massfrac,LS_exact,t_physical_init
+
+nmat=assimilate_in%nmat
+nstate=assimilate_in%nstate
+
+nstate_test=(SDIM+1)+nmat*(num_state_material+ngeom_raw)+1
+if (nstate.eq.nstate_test) then
+ ! do nothing
+else
+ print *,"nstate invalid"
+ stop
+endif
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if ((num_materials.eq.2).and. &
+    (num_state_material.eq.3).and. & ! density, temperature, species
+    (probtype.eq.2002)) then
+ x_exact=probhix/8.0d0
+ xcrit=assimilate_in%xsten(0,1)
+ tcrit=assimilate_in%time  ! cur_time_slab
+ if (xcrit.le.x_exact) then
+  if (cell_flag.eq.0) then ! MAC GRID
+   if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
+    assimilate_out%smacnew(D_DECL(i,j,k))=0.0d0
+   else 
+    print *,"data_dir invalid"
+    stop
+   endif
+  else if (cell_flag.eq.1) then
+   if (data_dir.eq.0) then
+    ! TEMPERATURE
+    use_T=1
+    call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+      xcrit,tcrit,use_T,local_temp,LS_exact,t_physical_init)
+     ! MASS FRACTION
+    use_T=0
+    call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
+      xcrit,tcrit,use_T,local_massfrac,LS_exact,t_physical_init)
+    do dir=1,SDIM
+     assimilate_out%snew(D_DECL(i,j,k),dir)=0.0d0
+    enddo
+
+    do im=1,num_materials
+     ibase=SDIM+1+(im-1)*num_state_material
+     assimilate_out%snew(D_DECL(i,j,k),ibase+2)=local_temp
+     assimilate_out%snew(D_DECL(i,j,k),ibase+3)=local_massfrac
+    enddo
+   else
+    print *,"data_dir invalid"
+    stop
+   endif
+  else 
+   print *,"cell_flag invalid"
+   stop
+  endif
+ else if (xcrit.ge.x_exact) then
+  ! do nothing
+ else
+  print *,"xcrit invalid"
+  stop
+ endif
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+ 
+return
+end subroutine SIMPLE_PALMORE_DESJARDINS_ASSIMILATE
+
+
+
  ! dir=1..sdim  side=1..2
 subroutine SIMPLE_PALMORE_DESJARDINS_LS_BC(xwall,xghost,t,LS, &
    LS_in,dir,side,dx,nmat)
