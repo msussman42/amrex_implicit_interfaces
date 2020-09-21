@@ -2002,7 +2002,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   std::cout << "TIME= "<<upper_slab_time<<
    " RECOMMEND denconst_ratio= " << denconst_ratio << '\n';
   std::cout << "TIME= "<<upper_slab_time<<
-   " RECOMMEND ns.mac_abs_tol= " << recommend_tol << '\n';
+   " RECOMMEND mac.mac_abs_tol= " << recommend_tol << '\n';
   std::cout << "TIME= "<<upper_slab_time<<
    " RECOMMEND mg.bot_atol= " << recommend_bot_tol << '\n';
 
@@ -2019,7 +2019,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   std::cout << "TIME= "<<upper_slab_time<<
    " RECOMMEND viscconst_ratio= " << viscconst_ratio << '\n';
   std::cout << "TIME= "<<upper_slab_time<<
-   " RECOMMEND ns.visc_abs_tol= " << recommend_tol << '\n';
+   " RECOMMEND mac.visc_abs_tol= " << recommend_tol << '\n';
   std::cout << "TIME= "<<upper_slab_time<<
    " RECOMMEND mg.visc_bot_atol= " << recommend_bot_tol << '\n';
 
@@ -2035,7 +2035,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   std::cout << "TIME= "<<upper_slab_time<<
    " RECOMMEND heatviscconst_ratio= " << heatviscconst_ratio << '\n';
   std::cout << "TIME= "<<upper_slab_time<<
-   " RECOMMEND ns.thermal_abs_tol= " << recommend_tol << '\n';
+   " RECOMMEND mac.thermal_abs_tol= " << recommend_tol << '\n';
   std::cout << "TIME= "<<upper_slab_time<<
    " RECOMMEND mg.thermal_bot_atol= " << recommend_bot_tol << '\n';
 
