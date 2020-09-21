@@ -5568,8 +5568,10 @@ void NavierStokes::assimilate_state_data() {
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
- if (nstate!=S_new.nComp())
-  amrex::Error("nstate invalid");
+ if (nstate!=S_new.nComp()) {
+  std::cout << "nstate= " << nstate << '\n';
+  amrex::Error("nstate invalid in cpp assimilate");
+ }
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
