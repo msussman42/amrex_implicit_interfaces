@@ -58,7 +58,6 @@ module probcommon_module_types
        INTEGER_T :: finest_level
        REAL_T, pointer :: dx(:)
        REAL_T, pointer :: xlo(:)
-       REAL_T, pointer :: xsten(:,:)
        INTEGER_T :: nmat
        INTEGER_T :: nten
        INTEGER_T :: nstate
@@ -107,10 +106,12 @@ module probcommon_module_types
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
-      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughost
       end type assimilate_parm_type
 
+      type assimilate_out_parm_type
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
+      end type assimilate_out_parm_type
 
      contains
 
@@ -529,6 +530,14 @@ implicit none
       REAL_T, intent(inout) :: heatcoeff
       end subroutine TEMPLATE_microcell_heat_coeff
 
+      subroutine TEMPLATE_ASSIMILATE(assimilate_in,assimilate_out, &
+         i,j,k)
+      use probcommon_module_types
+      type(assimilate_parm_type), intent(in) :: assimilate_in
+      type(assimilate_out_parm_type), intent(inout) :: assimilate_out
+      INTEGER_T, intent(in) :: i,j,k
+      end subroutine TEMPLATE_ASSIMILATE
+
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
@@ -554,6 +563,7 @@ implicit none
       PROCEDURE(TEMPLATE_nucleation), POINTER :: SUB_nucleation
       PROCEDURE(TEMPLATE_microcell_heat_coeff), POINTER :: &
               SUB_microcell_heat_coeff
+      PROCEDURE(TEMPLATE_ASSIMILATE), POINTER :: SUB_ASSIMILATE
 
 contains
 

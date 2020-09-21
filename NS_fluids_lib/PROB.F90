@@ -27911,6 +27911,7 @@ end subroutine initialize2d
        SUB_nucleation=>STUB_nucleation
        SUB_CFL_HELPER=>STUB_CFL_HELPER
        SUB_hydro_pressure_density=>STUB_hydro_pressure_density
+       SUB_ASSIMILATE=>STUB_ASSIMILATE
 
        if (probtype.eq.421) then
         SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
