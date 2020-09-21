@@ -41,6 +41,7 @@ F90EXE_headers += \
   ICE_ON_SUBSTRATE.F90 \
   MITSUHIRO_MELTING.F90 \
   CRYOGENIC_TANK1.F90 \
+  CRYOGENIC_TANK2.F90 \
   flexible_plate_impact.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \
@@ -75,6 +76,7 @@ F90EXE_sources += \
   ICE_ON_SUBSTRATE.F90 \
   MITSUHIRO_MELTING.F90 \
   CRYOGENIC_TANK1.F90 \
+  CRYOGENIC_TANK2.F90 \
   flexible_plate_impact.F90 \
   rigid_FSI.F90 \
   sinking_particle.F90 \

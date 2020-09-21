@@ -3,7 +3,7 @@ max_step  = 200000    # maximum timestep
 
 stop_time = 4.0  # case 1
 stop_time = 0.16  # case 2
-stop_time = 0.04  # case 2 short time
+#stop_time = 0.04  # case 2 short time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -121,7 +121,7 @@ ns.temperature_primitive_variable=1 1 1 1
 # case 2: velocity 0<t<0.01 is about u=0.3 dx/u=0.05
 #ns.fixed_dt	  = 0.02     # case 1 0.02 is coarsest
 ns.fixed_dt	  = 0.002    # case 2 0.002 is coarsest
-ns.fixed_dt	  = 0.0005    # case 2 short time
+#ns.fixed_dt	  = 0.0005    # case 2 short time
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   
