@@ -16014,6 +16014,7 @@ stop
       INTEGER_T nhalf
       INTEGER_T nstate_test
       type(assimilate_parm_type) :: assimilate_parm
+      type(assimilate_out_parm_type) :: assimilate_out_parm
 
 
       nhalf=3
@@ -16106,7 +16107,6 @@ stop
       assimilate_parm%xlo=>xlo
       assimilate_parm%fablo=>fablo
       assimilate_parm%fabhi=>fabhi
-      assimilate_parm%state=>state
       assimilate_parm%ughost=>ughost
 
       assimilate_parm%dxmin=dx(1)
@@ -16117,6 +16117,8 @@ stop
        assimilate_parm%dxmin=dx(SDIM)
       endif
        
+      assimilate_out_parm%state=>state
+
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
       do i=growlo(1),growhi(1)
@@ -16125,7 +16127,13 @@ stop
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       assimilate_parm%x_sten=>x_sten
+       assimilate_parm%xsten=>xsten
+       if (is_in_probtype_list().eq.1) then
+        call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
+         i,j,k)
+       else
+        ! do nothing
+       endif
 
       enddo ! k
       enddo ! j
