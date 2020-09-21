@@ -27758,6 +27758,7 @@ end subroutine initialize2d
        use SIMPLE_PALMORE_DESJARDINS_module
        use MITSUHIRO_MELTING_module
        use CRYOGENIC_TANK1_module
+       use CRYOGENIC_TANK2_module
        use flexible_plate_impact_module
        use CONE3D_module
        use WAVY_Channel_module
@@ -27883,13 +27884,14 @@ end subroutine initialize2d
 ! 4. create new module file (e.g. by copying an existing module file)
 ! 5. update Make.package accordingly (2 places)
 ! 6. create inputs file
-       probtype_list_size=6
+       probtype_list_size=7
        used_probtypes(1)=2000 ! flexible_plate_impact
        used_probtypes(2)=421  ! CRYOGENIC_TANK1
        used_probtypes(3)=414  ! MITSUHIRO_MELTING
        used_probtypes(4)=2001 ! ICE_ON_SUBSTRATE
        used_probtypes(5)=2002 ! 1D TEST FROM PALMORE and Desjardins
        used_probtypes(6)=55   ! GENERAL_PHASE_CHANGE
+       used_probtypes(7)=422  ! CRYOGENIC_TANK2
 
        SUB_INIT_MODULE=>INIT_STUB_MODULE
        SUB_LS=>STUB_LS
@@ -27928,6 +27930,23 @@ end subroutine initialize2d
         SUB_PRES_BC=>CRYOGENIC_TANK1_PRES_BC
         SUB_STATE_BC=>CRYOGENIC_TANK1_STATE_BC
         SUB_HEATSOURCE=>CRYOGENIC_TANK1_HEATSOURCE
+
+       else if (probtype.eq.422) then
+        SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK2_MODULE
+        SUB_LS=>CRYOGENIC_TANK2_LS
+        SUB_VEL=>CRYOGENIC_TANK2_VEL
+        SUB_EOS=>EOS_CRYOGENIC_TANK2
+        SUB_SOUNDSQR=>SOUNDSQR_CRYOGENIC_TANK2
+        SUB_INTERNAL=>INTERNAL_CRYOGENIC_TANK2
+        SUB_TEMPERATURE=>TEMPERATURE_CRYOGENIC_TANK2
+        SUB_PRES=>CRYOGENIC_TANK2_PRES
+        SUB_STATE=>CRYOGENIC_TANK2_STATE
+        SUB_LS_BC=>CRYOGENIC_TANK2_LS_BC
+        SUB_VEL_BC=>CRYOGENIC_TANK2_VEL_BC
+        SUB_PRES_BC=>CRYOGENIC_TANK2_PRES_BC
+        SUB_STATE_BC=>CRYOGENIC_TANK2_STATE_BC
+        SUB_HEATSOURCE=>CRYOGENIC_TANK2_HEATSOURCE
+
        else if (probtype.eq.414) then
         SUB_INIT_MODULE=>INIT_MITSUHIRO_MELTING_MODULE
         SUB_LS=>MITSUHIRO_MELTING_LS
