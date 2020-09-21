@@ -607,6 +607,8 @@ if (nstate.eq.nstate_test) then
  ! do nothing
 else
  print *,"nstate invalid"
+ print *,"nstate=",nstate
+ print *,"nstate_test=",nstate_test
  stop
 endif
 
@@ -625,7 +627,7 @@ if ((num_materials.eq.2).and. &
  if (xcrit.le.x_exact) then
   if (cell_flag.eq.0) then ! MAC GRID
    if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
-    assimilate_out%smacnew(D_DECL(i,j,k))=0.0d0
+    assimilate_out%statemac(D_DECL(i,j,k))=0.0d0
    else 
     print *,"data_dir invalid"
     stop
@@ -641,13 +643,13 @@ if ((num_materials.eq.2).and. &
     call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
       xcrit,tcrit,use_T,local_massfrac,LS_exact,t_physical_init)
     do dir=1,SDIM
-     assimilate_out%snew(D_DECL(i,j,k),dir)=0.0d0
+     assimilate_out%state(D_DECL(i,j,k),dir)=0.0d0
     enddo
 
     do im=1,num_materials
      ibase=SDIM+1+(im-1)*num_state_material
-     assimilate_out%snew(D_DECL(i,j,k),ibase+2)=local_temp
-     assimilate_out%snew(D_DECL(i,j,k),ibase+3)=local_massfrac
+     assimilate_out%state(D_DECL(i,j,k),ibase+2)=local_temp
+     assimilate_out%state(D_DECL(i,j,k),ibase+3)=local_massfrac
     enddo
    else
     print *,"data_dir invalid"

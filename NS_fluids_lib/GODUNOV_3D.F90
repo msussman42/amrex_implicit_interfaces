@@ -16018,6 +16018,7 @@ stop
       INTEGER_T nstate_test
       type(assimilate_parm_type) :: assimilate_parm
       type(assimilate_out_parm_type) :: assimilate_out_parm
+      INTEGER_T cell_flag
 
       nhalf=3
 
@@ -16040,7 +16041,9 @@ stop
       nstate_test=num_materials_vel*(SDIM+1)+ &
         nmat*(num_state_material+ngeom_raw)+1
       if (nstate.ne.nstate_test) then
-       print *,"nstate invalid"
+       print *,"nstate invalid in GODUNOV_3D.F90 "
+       print *,"nstate=",nstate
+       print *,"nstate_test=",nstate_test
        stop
       endif
       if ((nparts.ge.0).and.(nparts.le.nmat)) then 
@@ -16099,6 +16102,7 @@ stop
       assimilate_parm%time=time
       assimilate_parm%dt=dt
       assimilate_parm%nhalf=nhalf
+      assimilate_parm%nstate=nstate
       assimilate_parm%nmat=nmat
       assimilate_parm%nparts=nparts
       assimilate_parm%nparts_ghost=nparts_ghost
