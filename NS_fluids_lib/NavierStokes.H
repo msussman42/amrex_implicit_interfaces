@@ -1349,6 +1349,8 @@ void apply_pressure_grad(
     void init_FSI_GHOST_MAC_MF_ALL(int caller_id);
     void init_FSI_GHOST_MAC_MF(int dealloc_history);
 
+    void assimilate_state_data();
+
     void resize_FSI_MF();
 
     void FSI_make_distance(Real time,Real dt);
