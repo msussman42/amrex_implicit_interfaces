@@ -5544,6 +5544,97 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 } // end subroutine init_FSI_GHOST_MAC_MF
 
 
+
+void NavierStokes::assimilate_state_data() {
+
+ int finest_level=parent->finestLevel();
+ int nmat=num_materials;
+ int nparts=im_solid_map.size();
+ bool use_tiling=ns_tiling;
+
+ int nparts_ghost=nparts;
+ int ghost_state_type=Solid_State_Type;
+ if (nparts==0) {
+  nparts_ghost=1;
+  ghost_state_type=State_Type;
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
+  // do nothing
+ } else {
+  amrex::Error("nparts invalid");
+ }
+
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+  nmat*(num_state_material+ngeom_raw)+1;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
+
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("ngrow_distance invalid");
+
+ const Real* dx = geom.CellSize();
+
+ for (data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+	
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
+   FArrayBox& snewfab=S_new[mfi]; 
+
+   int tid_current=ns_thread();
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   FORT_ASSIMILATE_STATEDATA( 
+     &data_dir,
+     &law_of_the_wall,
+     im_solid_map.dataPtr(),
+     &level,
+     &finest_level,
+     &nmat,
+     &nparts,
+     &nparts_ghost,
+     tilelo,tilehi,
+     fablo,fabhi,&bfact,
+     xlo,dx,
+     &dt_slab,
+     &cur_time_slab,
+     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+     ghostsolidvelfab.dataPtr(),
+     ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()) );
+  } // mfi
+} // omp
+  ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
+                          //ParallelDescriptor::ReduceRealSum
+		          //thread_class::reconcile_d_numPts(caller_id)
+
+ } // data_dir=0..sdim-1
+
+} // end subroutine assimilate_state_data()
+
 // get rid of the ghost cells
 void NavierStokes::resize_FSI_MF() {
 
