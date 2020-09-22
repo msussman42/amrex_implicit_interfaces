@@ -624,10 +624,13 @@ if ((num_materials.eq.2).and. &
  x_exact=probhix/8.0d0
  xcrit=assimilate_in%xsten(0,1)
  tcrit=assimilate_in%time  ! cur_time_slab
- if (xcrit.le.x_exact) then
+ if ((xcrit.le.x_exact).or. &
+     (xcrit.ge.probhix-x_exact)) then
   if (cell_flag.eq.0) then ! MAC GRID
    if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
-    assimilate_out%statemac(D_DECL(i,j,k))=0.0d0
+    if (xcrit.le.x_exact) then
+     assimilate_out%statemac(D_DECL(i,j,k))=0.0d0
+    endif
    else 
     print *,"data_dir invalid"
     stop
@@ -642,9 +645,11 @@ if ((num_materials.eq.2).and. &
     use_T=0
     call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
       xcrit,tcrit,use_T,local_massfrac,LS_exact,t_physical_init)
-    do dir=1,SDIM
-     assimilate_out%state(D_DECL(i,j,k),dir)=0.0d0
-    enddo
+    if (xcrit.le.x_exact) then
+     do dir=1,SDIM
+      assimilate_out%state(D_DECL(i,j,k),dir)=0.0d0
+     enddo
+    endif
 
     do im=1,num_materials
      ibase=SDIM+1+(im-1)*num_state_material
@@ -659,7 +664,8 @@ if ((num_materials.eq.2).and. &
    print *,"cell_flag invalid"
    stop
   endif
- else if (xcrit.ge.x_exact) then
+ else if ((xcrit.ge.x_exact).and. &
+          (xcrit.le.probhix-x_exact)) then
   ! do nothing
  else
   print *,"xcrit invalid"
