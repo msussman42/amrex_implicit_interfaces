@@ -104,6 +104,24 @@ contains
   if ((num_materials.eq.3).and.(probtype.eq.422)) then
    ! liquid
    LS(1)=TANK2_LIQUID_HEIGHT-x(2)
+
+   if (radblob2.eq.zero) then
+    ! do nothing
+   else if (radblob2.gt.zero) then
+    if (SDIM.eq.2) then
+     LS(1)=sqrt((x(1)-xblob2)**2+(x(2)-yblob2)**2)-radblob2
+    else if (SDIM.eq.3) then 
+     LS(1)=sqrt((x(1)-xblob2)**2+(x(2)-yblob2)**2+ &
+                (x(SDIM)-zblob2)**2)-radblob2
+    else
+     print *,"dimension bust"
+     stop
+    endif
+   else
+    print *,"radblob2 invalid"
+    stop
+   endif 
+
    LS(2)=-LS(1)
 
    ! Solid
