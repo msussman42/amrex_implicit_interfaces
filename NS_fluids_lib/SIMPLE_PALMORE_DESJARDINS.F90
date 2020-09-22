@@ -885,7 +885,7 @@ type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
 REAL_T, intent(out) :: increment_out(nsum)
 INTEGER_T :: i,j,k
 INTEGER_T :: dir
-INTEGER_T :: im_gas
+INTEGER_T :: im_crit
 INTEGER_T :: tcomp
 INTEGER_T :: use_T
 REAL_T :: xlocal(SDIM)
@@ -905,7 +905,7 @@ i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.eq.3) then
+if (nsum.eq.6) then
  do dir=1,SDIM
   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
  enddo
@@ -945,10 +945,8 @@ if (nsum.eq.3) then
  endif
  if ((VOF_analytical.ge.zero).and. &
      (VOF_analytical.le.one)) then
-   ! measure symmetric difference error instead
-  if (1.eq.0) then
-   increment_out(1)=GRID_DATA_IN%volgrid*abs(VOF_compute-VOF_analytical)
-  endif
+  ! symmetric difference error is measured too in FORT_SUMMASS.
+  increment_out(1)=GRID_DATA_IN%volgrid*abs(VOF_compute-VOF_analytical)
  else
   print *,"VOF_analytical invalid"
   stop
@@ -956,23 +954,39 @@ if (nsum.eq.3) then
   
  LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),1)
  if (abs(LS_analytical).lt.interface_thick_rad) then
-  increment_out(1)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
+  increment_out(2)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
     (two*interface_thick_rad)
  else
-  increment_out(1)=zero
+  increment_out(2)=zero
  endif
- if (LS_compute.lt.zero) then
-  im_gas=2
-  tcomp=(im_gas-1)*num_state_material+2
+ increment_out(3)=zero
+ increment_out(4)=zero
+ increment_out(5)=zero
+ increment_out(6)=zero
+ if (VOF_analytical.le.VOFTOL) then
+  im_crit=2
+  tcomp=(im_crit-1)*num_state_material+2
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
-  increment_out(2)=GRID_DATA_IN%volgrid* &
+  increment_out(3)=GRID_DATA_IN%volgrid* &
           abs(TEMPERATURE_compute-TEMPERATURE_analytical)
   Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
-  increment_out(3)=GRID_DATA_IN%volgrid* &
+  increment_out(4)=GRID_DATA_IN%volgrid* &
           abs(Y_compute-Y_analytical)
+ else if (VOF_analytical.ge.one-VOFTOL) then
+  im_crit=1
+  tcomp=(im_crit-1)*num_state_material+2
+  TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
+  increment_out(5)=GRID_DATA_IN%volgrid* &
+          abs(TEMPERATURE_compute-TEMPERATURE_analytical)
+  Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
+  increment_out(6)=GRID_DATA_IN%volgrid* &
+          abs(Y_compute-Y_analytical)
+ else if ((VOF_analytical.ge.VOFTOL).and. &
+          (VOF_analytical.le.one-VOFTOL)) then
+  ! do nothing
  else
-  increment_out(2)=zero
-  increment_out(3)=zero
+  print *,"VOF_analytical invalid"
+  stop
  endif
 else
  print *,"nsum invalid"
