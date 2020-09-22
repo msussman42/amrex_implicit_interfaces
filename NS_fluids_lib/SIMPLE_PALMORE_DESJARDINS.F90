@@ -651,11 +651,13 @@ if ((num_materials.eq.2).and. &
      enddo
     endif
 
-    do im=1,num_materials
-     ibase=SDIM+1+(im-1)*num_state_material
-     assimilate_out%state(D_DECL(i,j,k),ibase+2)=local_temp
-     assimilate_out%state(D_DECL(i,j,k),ibase+3)=local_massfrac
-    enddo
+    if (xcrit.le.x_exact) then
+     do im=1,num_materials
+      ibase=SDIM+1+(im-1)*num_state_material
+      assimilate_out%state(D_DECL(i,j,k),ibase+2)=local_temp
+      assimilate_out%state(D_DECL(i,j,k),ibase+3)=local_massfrac
+     enddo
+    endif
    else
     print *,"data_dir invalid"
     stop
