@@ -5149,8 +5149,6 @@ stop
                  LSold(D_DECL(i+i1,j+j1,k+k1),im_probe)
                 temperature_sten(D_DECL(i1,j1,k1))= &
                  EOS(D_DECL(i+i1,j+j1,k+k1),tcomp_probe)
-                temperature_sten(D_DECL(i1,j1,k1))= &
-                 EOS(D_DECL(i+i1,j+j1,k+k1),tcomp_probe)
                 if (mfrac_comp_probe.eq.0) then
                  massfrac_sten(D_DECL(i1,j1,k1))=Ygamma_default
                 else 

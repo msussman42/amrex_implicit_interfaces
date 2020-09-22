@@ -118,8 +118,8 @@ ns.temperature_primitive_variable=1 1 1 1
 # coarse grid: 16x16 xhi=0.1 dx_coarse=0.1/16=1/160
 # case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.3125 
 # case 2: velocity 0<t<1.28 is about u=0.05 dx/u=0.125
-#ns.fixed_dt	  = 0.02     # case 1 0.02 is coarsest
-ns.fixed_dt	  = 0.016    # case 2 0.016 is coarsest
+#ns.fixed_dt	  = 0.08     # case 1 0.08 is coarsest
+ns.fixed_dt	  = 0.032    # case 2 0.032 is coarsest
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   
