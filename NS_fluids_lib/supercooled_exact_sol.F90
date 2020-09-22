@@ -221,6 +221,7 @@ subroutine solidification_front_speed_driver(t, speed)
     endif
    else
     print *,"supercooled_thermal_diff invalid"
+    print *,"supercooled_thermal_diff=",supercooled_thermal_diff
     stop
    endif
   else
@@ -249,6 +250,7 @@ subroutine solidification_front_radius_driver(t, R)
     endif
    else
     print *,"supercooled_thermal_diff invalid"
+    print *,"supercooled_thermal_diff(2)=",supercooled_thermal_diff
     stop
    endif
   else
@@ -286,6 +288,9 @@ subroutine solidification_front_time_driver(t, R)
   if (supercooled_lm.gt.0.0d0) then
    if (supercooled_thermal_diff.gt.0.0d0) then
     t=(R/(2.0d0*supercooled_lm))**2/supercooled_thermal_diff
+   else if (supercooled_thermal_diff.eq.0.0d0) then
+    print *,"supercooled_thermal_diff cannot be 0.0"
+    stop
    else
     print *,"supercooled_thermal_diff invalid"
     stop
