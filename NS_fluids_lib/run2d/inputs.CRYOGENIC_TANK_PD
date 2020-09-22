@@ -52,6 +52,10 @@ ns.xblob            = 4.0   # outer tank radius (4.21 m in DaigleETAL2012)
 ns.yblob            = 16.0  # outer tank height (29.54 m in DaigleETAL2012)
 ns.zblob            = 8.05  # initial interface location (29.54/2 m in DaigleETAL2012)
 ns.radblob          = 0.5 # wall thickness (0.1 m in DaigleETAL2012)
+ns.xblob2=0.0
+ns.yblob2=8.0
+ns.zblob2=8.0
+ns.radblob2=2.5
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
