@@ -2363,8 +2363,10 @@ stop
        print *,"over L invalid"
        stop
       endif
-      if (elastic_time.lt.zero) then
-       print *,"elastic_time invalid"
+      if (elastic_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"elastic_time invalid  elastic_time=",elastic_time
        stop
       endif
       if (traceA.lt.zero) then
