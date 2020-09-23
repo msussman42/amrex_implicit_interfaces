@@ -12050,7 +12050,7 @@ stop
       REAL_T, intent(in) :: cfl
       INTEGER_T, intent(in) :: EILE_flag
       INTEGER_T, intent(in) :: nmat,nten
-      INTEGER_T, intent(in) :: elastic_time(nmat)
+      REAL_T, intent(in) :: elastic_time(nmat)
       INTEGER_T, intent(in) :: shock_timestep(nmat)
       INTEGER_T, intent(in) :: material_type(nmat)
       INTEGER_T, intent(in) :: microlayer_substrate(nmat)
@@ -12682,6 +12682,8 @@ stop
             endif
            else
             print *,"elastic_time invalid"
+            print *,"im= ",im
+            print *,"elastic_time(im)=",elastic_time(im)
             stop
            endif
           else

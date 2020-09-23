@@ -3509,6 +3509,7 @@ NavierStokes::read_params ()
     ppcg.query("cg.abec_use_bicgstab", cg_abec_use_bicgstab);
 
     ppmac.query( "mac_abs_tol",mac_abs_tol);
+      // mac.visc_abs_tol (not ns.visc_abs_tol)
     ppmac.query( "visc_abs_tol",visc_abs_tol);
     thermal_abs_tol=visc_abs_tol;
     ppmac.query( "thermal_abs_tol",thermal_abs_tol);
