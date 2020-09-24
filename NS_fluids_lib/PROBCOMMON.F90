@@ -232,6 +232,7 @@ implicit none
       REAL_T, PARAMETER :: MLSVOFTOL=1.0D-14
        ! used for checking if centroid in box.
       REAL_T, PARAMETER :: CENTOL=1.0D-13
+      REAL_T, PARAMETER :: EVAP_BISECTION_TOL=1.0D-12
        ! Default: INTERCEPT_TOL=1.0D-12
       REAL_T, PARAMETER :: INTERCEPT_TOL=1.0D-12
       REAL_T, PARAMETER :: FRAC_PAIR_TOL=1.0D-12
