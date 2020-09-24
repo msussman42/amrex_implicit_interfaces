@@ -6639,6 +6639,13 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 //
 void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "begin subroutine prescribe_solid_geometry() level= " <<
+     level << '\n';
+   std::fflush(NULL);
+  }
+ }
  bool use_tiling=ns_tiling;
 
  if (num_state_base!=2)
@@ -6685,7 +6692,12 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  } else
   amrex::Error("nparts invalid");
 
- int num_LS_extrap=0;
+ Vector<int> num_LS_extrap;
+ num_LS_extrap.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  num_LS_extrap[tid]=0;
+ }
+
  int num_LS_extrap_iter=1;
 
  if (renormalize_only==1) {
@@ -6698,11 +6710,13 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  for (int LS_extrap_iter=0;LS_extrap_iter<num_LS_extrap_iter; 
       LS_extrap_iter++) {
 
-  if ((num_LS_extrap==0)&&(LS_extrap_iter>=1)) {
+  if ((num_LS_extrap[0]==0)&&(LS_extrap_iter>=1)) {
 	  // do nothing
-  } else if ((num_LS_extrap>=1)||(LS_extrap_iter==0)) {
+  } else if ((num_LS_extrap[0]>=1)||(LS_extrap_iter==0)) {
 
-   num_LS_extrap=0;
+   for (int tid=0;tid<thread_class::nthreads;tid++) {
+    num_LS_extrap[tid]=0;
+   }
 
    MultiFab* veldata=getState(1,0,
      num_materials_vel*(AMREX_SPACEDIM+1),time); 
@@ -6812,7 +6826,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       im_solid_map_ptr,
       &renormalize_only, 
       &solidheat_flag,
-      &num_LS_extrap,
+      &num_LS_extrap[tid_current],
       &num_LS_extrap_iter,
       &LS_extrap_iter,
       &ngrow_distance);
@@ -6820,6 +6834,11 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
    }  // mfi
 } // omp
    ns_reconcile_d_num(154);
+
+   for (int tid=1;tid<thread_class::nthreads;tid++) {
+    num_LS_extrap[0]+=num_LS_extrap[tid];
+   } // tid
+   ParallelDescriptor::ReduceIntSum(num_LS_extrap[0]);
 
    delete veldata;
    delete mofdata;
@@ -6831,6 +6850,13 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
  } // LS_extrap_iter=0..num_LS_extrap_iter-1
 
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "end subroutine prescribe_solid_geometry() level= " <<
+     level << '\n';
+   std::fflush(NULL);
+  }
+ }
 
 }  // end subroutine prescribe_solid_geometry()
 
