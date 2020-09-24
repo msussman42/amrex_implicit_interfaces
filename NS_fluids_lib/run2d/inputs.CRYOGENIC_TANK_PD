@@ -107,7 +107,7 @@ ns.visual_option    =-2
 amr.check_int       = 1000    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-amr.plot_int        = 200      # number of timesteps between plot files
+amr.plot_int        = 200     # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.sum_interval     = 10      # timesteps between computing mass 
@@ -264,13 +264,12 @@ ns.R_Palmore_Desjardins=8.31446261815324  #J/(mol Kelvin)
 # 1=dirichlet at inflow and outflow
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
-ns.prescribe_temperature_outflow=3
+ns.prescribe_temperature_outflow=0
 
 ns.lo_bc          = 3 5
 ns.hi_bc          = 5 5
-# this part happens if prescribe_temperature_outflow=0
-ns.temperature_lo_bc = 3 1
-ns.temperature_hi_bc = 1 1
+ns.temperature_lo_bc = 3 3
+ns.temperature_hi_bc = 3 3
 
 
 # 0=use LS (since GFM must be used at interfaces changing phase)
@@ -281,8 +280,17 @@ ns.temperatureface_flag=0
 # 0=diffuse in solid 1=dirichlet 2=neumann
 ns.solidheat_flag   =0
 
+#new version coming shortly:
+#
 # No heat flux source now [Paper -> 10 kW heat source at the walls]
-ns.xblob3           = 0.0 # -q dot n=Watts/m^2
+# 1e4 / (2*(pi*r^2)+h*2*pi*r) = 19.894 W/m^2 (for r=4 and h=16)
+# xblob3 => tank side
+# yblob3 => tank top
+# zblob3 => tank bottom
+ns.xblob3           = 200000000.0 # -q dot n=Watts/m^2
+ns.xblob3           = 20.0 # -q dot n=Watts/m^2
+ns.yblob3           = 20.0 # -q dot n=Watts/m^2
+ns.zblob3           = 19.894 # -q dot n=Watts/m^2
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
