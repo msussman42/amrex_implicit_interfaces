@@ -7427,7 +7427,7 @@ stop
                      else if ((Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
                               (Y_probe(iprobe_vapor).ge.zero).and. &
                               (Y_predict.eq.one)) then
-                      Y_predict=one-Y_TOLERANCE
+                      Y_predict=one-EVAP_BISECTION_TOL
                       call volfrac_from_massfrac(X_predict,Y_predict, &
                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
                       call Tgamma_from_TSAT_and_X(TSAT_predict, &
