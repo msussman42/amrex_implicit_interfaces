@@ -1,0 +1,199 @@
+version 2.0.5 (6 February 2018)
+	- Use set_array_print_style(x) to set behaviour of <<Array;
+	available are x=PRINT_STYLE_[PLAIN|CSV|CURLY|MATLAB]
+	- Fix use of _mm_undefined_ps intrinsic: only use on GCC>=4.9.1
+	and Clang if appropriate built-in is present; can't guarantee its
+	presence with other compilers
+	- Fix writing of active scalar expressions to a stream
+	- Added missing fmin/fmax(Expr,Scalar)
+
+version 2.0.4 (8 January 2018)
+	- Packet.h copes with undefined _mm_undefined_ps in GCC<4.9.1
+	- Fix Packet.h in case SSE2 not enabled
+	- ADEPT_FAST preprocessor variable enables
+	ADEPT_NO_DIMENSION_CHECKING, ADEPT_NO_ALIAS_CHECKING and
+	ADEPT_STACK_THREAD_UNSAFE
+	- Divide by scalar now only converts to multiply by (1.0/scalar)
+	if scalar is of floating-point type; this fixes indexing with
+	"end/2"
+	- Fix bug in Packet.h (found by valgrind) to ensure new[] followed
+	by delete[] and posix_memalign followed by free
+	- Increase initial stack size from 1000 to 1024^2
+	- Fixed two bugs in IndexedArray.h that broke indexing a matrix
+	with Matrix(int,intVector)
+	- Allocated memory in non-OpenMP jacobian_forward is now freed
+
+version 2.0.3 (28 October 2017)
+	- Replaced template class "cast" with "expr_cast" to avoid clash
+	with Expression's non-template member function; this enables
+	compilation with Visual C++.
+	- Added adept::have_matrix_multiplication() and
+	adept::have_linear_algebra() to test for BLAS and LAPACK
+	(respectively) at run-time
+
+version 2.0.2 (21 October 2017)
+	- Fixed standards-compliance problem with use of Expression in
+	Curiously Recurring Template Pattern, by removing any "static
+	const" members that referred to the derived class.  This enabled
+	the same code to work with g++, clang++ and the Intel compiler icc.
+
+version 2.0.1 (18 October 2017)
+	- Basic passive complex arrays work, tested with
+	test/test_complex_arrays
+	- Added ADEPT_NO_DIMENSION_CHECKING option
+	- Vectorized sqrt, unary-, unary+, max and min
+	- Removed the option to vectorize with Packet representing a
+	*pair* of SSE2/AVX packed vector; now a Packet can only represent
+	a single packed vector. This simplifies maintenance of Packet.h,
+	and the pair option offered no performance advantage anyway.
+	- Vectorized reduce operations sum, product etc.
+	- Many fixes to enable compilation with clang++
+	- Fixed FixedArray::operator[] for rank>1
+
+version 2.0 (September 2017)
+	- Finalized version for release
+	- PDF documentation is no longer installed, so that Git users are
+	not obliged to have pdflatex
+
+version 1.9.11 (30 September 2017)
+	- Fixed get_gradient member function of Array and FixedArray
+	- Added test_array_derivatives test program
+	- Fixed indexing of FixedArrays of rank>1
+	- Fixed IndexedArray applied to FixedArrays (before had reference
+	to temporary dimension object
+	- Test and benchmarking programs now work with single precision
+	- Stack functions accept Index passed by value rather than
+	reference, so that "static const int" passed from FixedArray does
+	not need to be explicitly instantiated
+	- Active::add_derivative_dependence and
+	append_derivative_dependence no longer only accept arguments of
+	type "Real"
+	- ADEPT_STORAGE_THREAD_SAFE option to protect Storage reference
+	counter in multi-threaded environment (C++11 only)
+	- Added Array::soft_link() as another means to get thread safety
+	- Added test program test_thread_safe_arrays
+	- Added adept_reference latex file to doc directory
+	- Added "dimensions" function for creating ExpressionSize objects
+
+version 1.9.10 (25 September 2017)
+	- Added link syntax A >>= B
+	- Added assignment and initialization from initializer_lists for
+	Array and FixedArray classes
+	- Implemented Fortran-like "count" reduction function
+	- Bug fix sending active expression to a stream with "<<"
+	- Added "spread<dim>(array,n)" to match Fortran spread(array,dim,n)
+	- Added outer_product(x,y)
+	- Fixed adept_source.h for non-Unix systems
+	- Moved mathematical functions from global to adept namespace
+	- Fixed pausable recording and added test_adept_active_pausable
+	- Removed unsafe ADEPT_COPY_CONSTRUCTOR_ONLY_ON_RETURN_FROM_FUNCTION
+	- C++98 and C++11 correctly take cmath functions from :: and std::
+	respectively
+	- "make check" now runs test script test/run_tests.sh
+	- inv and solve now take general expression arguments
+	- Enabled indexed arrays to be assigned to an initializer list
+	- BLAS now optional (without it matrix multiplication causes
+	run-time exception)
+	- Added test_derivatives to test quality of derivatives for all
+	mathematical functions
+	- Enabled SpecialMatrix and IndexedArray to be assigned to an
+	active scalar expression
+	- Added fmax and fmin functions (even if C++11 not used)
+	- Added atan2 support
+	- C++11 on non-Mac platforms uses thread_local keyword instead of
+	C++98 compiler extensions
+	- Matrix multiplication on active special matrices implemented by
+	copying them to a dense Array<2,Real,true>. Very inefficient, but
+	it works.
+	- Matrix multiplication on inactive triangular and "square"
+	matrices now works by converting to them to a dense Array<2,Real,false>.
+	- Added alias detection in IndexedArray
+	- Alias detection in IndexedArray and SpecialMatrix can be
+	deactivated with ADEPT_NO_ALIAS_CHECKING
+	- Added "eval" function to evaluate an expression that might be
+	subject to aliasing
+
+version 1.9.9 (August 2017)
+	- Put on GitHub as rjhogan/Adept-2
+	- Added Expression::next_value_contiguous for faster inner loops
+	in the case that all expressions have a contiguous and increasing
+	inner dimension
+	- Preliminary vectorization via Packet class and
+	Expression::next_packet
+	- Vectorized forward Jacobian calculation using packets
+	- Split Expression.h into also UnaryOperation.h and BinaryOperation.h
+	- Fixed bug in matmul.h that causes failure if matrix in
+	matrix-vector multiplication is strided in both dimensions
+	- Added move semantics if C++11 enabled
+
+version 1.9.8 (April 2016):
+	- Completed FixedArray.h and tested for active arguments
+	- Added array_shortcuts for FixedArrays: (a)VectorX, (a)MatrixXX
+	- Added array_shortcuts for Arrays: (a)ArrayXD (for X = 3 to 7)
+	- interp permits general Expression arguments
+
+version 1.9.7 (April 2016):
+	- Nearly completed FixedArray.h
+
+version 1.9.6 (March 2016):
+	- Started FixedArray.h
+
+version 1.9.5 (March 2016):
+	- Fixed add_derivative_dependence and append_derivative_dependence
+	when applied to elements of arrays
+	- Added ADEPT_BOUNDS_CHECKING capability, and fixed IndexedArray
+	to work with this
+	- Now call BLAS and LAPACK (Fortran) routines, rather than C-BLAS
+	and LAPACKE functions
+	- Added matrix multiplication benchmark program
+	- Added IndexedArray for dimensions up to 7
+	- Added Array::data() and Array::const_data() for direct access
+	- Added Array::subset(); slightly more concise than using "range"
+
+version 1.9.4 (January 2016):
+	- Completed changes to documentation in doc directory
+	- Added control/inquiry of settings, e.g. set_max_blas_threads()
+	and configuration()
+
+version 1.9.3 (December 2015):
+	- Added "max" and "min" as binary operators (note that "maxval"
+	and "minval" are reduction operators as in Fortran)
+
+version 1.9.2 (December 2015):
+	- Added ActiveConstReference type for active constant references
+
+version 1.9.1 (November 2015):
+	- New matmul.h/matmul.cpp - not yet complete
+
+version 1.9.0 (November 2015):
+	- SUBSTANTIAL REWRITE TO INCORPORATE ARRAY FUNCTIONALITY
+
+version 1.1 (June 2015):
+	- Added ./configure script using autotools
+	- Added support for additional mathematical functions: asinh,
+	acosh, atanh, expm1, log1p, cbrt, erf, erfc, exp2, log2
+	- Changed license from GNU General Public License to Apache
+	License, Version 2.0
+	- Jacobian calculation uses OpenMP parallelization
+	- Removed multiscatter example code
+	- New benchmarking program in benchmark/ that compares to other
+	automatic differentiation tools if available
+	- Fixed bug so that gaps in the gradient list now merge properly
+	- Provided capability to compile code without an external library,
+	to facilitate porting to Windows
+	- Added programs in test/ demonstrating checkpointing,
+	thread-safety and compiling without an external library
+
+version 1.0 (September 2013):
+	- Very many internal changes and added features
+	- Detailed documentation in the doc/ directory
+	- Removed the LIFO requirement on the order with which aReal
+	objects ought to be created and destroyed
+	- For users of version 0.9, the main change to the interface is
+	that the Stack::start() member function is no longer supported;
+	rather you should call the Stack::new_recording() member function
+	*after* the independent variables have been initialized but
+	*before* any mathematical operations are performed using them
+
+version 0.9:
+	- First public release

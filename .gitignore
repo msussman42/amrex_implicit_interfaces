@@ -1,9 +1,7 @@
 *.tar.gz
 *.tar
 *.dsp
-BLAS
 autodiff/*.tar.gz
-autodiff/adept-2.0.5
 autodiff/examples/*.o
 autodiff/examples/test_AD
 NS_fluids_lib/tmp_build_dir

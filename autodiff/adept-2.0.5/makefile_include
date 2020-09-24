@@ -1,0 +1,19 @@
+# Template for configure to create makefile_include, which is included
+# by test/Makefile and benchmark/Makefile
+
+AR = ar
+CC = gcc
+CFLAGS = -g -O2
+CPP = gcc -E
+CPPFLAGS = 
+CXX = g++
+CXXCPP = g++ -E
+CXXFLAGS = -g -O2 -fopenmp
+DEFS = -DHAVE_CONFIG_H
+LD = /usr/bin/ld -m elf_x86_64
+LDFLAGS =  -fopenmp
+LIBOBJS = 
+LIBS =   
+SHELL = /bin/bash
+LIBTOOL = $(SHELL) $(top_builddir)/libtool
+USE_GSL = no
