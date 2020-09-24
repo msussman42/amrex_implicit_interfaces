@@ -126,7 +126,7 @@ ns.v=0
 # ----------------------------------------------------------
 ns.gravity          = 9.8
 ns.gravity_dir      = 2
-ns.invert_gravity   = 1
+ns.invert_gravity   = 0
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
 ns.vinletgas        = 0.0
