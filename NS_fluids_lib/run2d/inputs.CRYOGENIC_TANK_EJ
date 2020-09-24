@@ -237,13 +237,13 @@ ns.tempconst=21.0 21.0 21.0
 # 1=dirichlet at inflow and outflow
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
-ns.prescribe_temperature_outflow=3
+ns.prescribe_temperature_outflow=0
 
 ns.lo_bc          = 3 5
 ns.hi_bc          = 5 5
 # this part happens if prescribe_temperature_outflow=0
-ns.temperature_lo_bc = 3 1
-ns.temperature_hi_bc = 1 1
+ns.temperature_lo_bc = 3 3
+ns.temperature_hi_bc = 3 3
 
 
 # 0=use LS (since GFM must be used at interfaces changing phase)
@@ -259,8 +259,8 @@ ns.solidheat_flag   =0
 # xblob3 => tank side
 # yblob3 => tank top
 # zblob3 => tank bottom
-ns.xblob3           = 0.0 # -q dot n=Watts/m^2
-ns.yblob3           = 0.0 # -q dot n=Watts/m^2
+ns.xblob3           = 20.0 # -q dot n=Watts/m^2
+ns.yblob3           = 20.0 # -q dot n=Watts/m^2
 ns.zblob3           = 19.894 # -q dot n=Watts/m^2
 
 # ----------------------------------------------------------
