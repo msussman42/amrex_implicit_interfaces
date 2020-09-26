@@ -1,3 +1,4 @@
+! in .vmrc file in home dir: set tabstop=1, set shiftwidth=1, set expandtab
 #undef  BL_LANG_CC
 #ifndef BL_LANG_FORT
 #define BL_LANG_FORT
@@ -17395,6 +17396,7 @@ stop
        end type accum_parm_type_count
 
        type grid_parm_type
+        INTEGER_T :: im_PLS
         INTEGER_T, pointer :: fablo(:)
         INTEGER_T, pointer :: fabhi(:)
         INTEGER_T, pointer :: tilelo(:)
@@ -17407,6 +17409,7 @@ stop
         REAL_T, pointer :: umac(D_DECL(:,:,:))
         REAL_T, pointer :: vmac(D_DECL(:,:,:))
         REAL_T, pointer :: wmac(D_DECL(:,:,:))
+        REAL_T, pointer :: lsfab(D_DECL(:,:,:),:)
         INTEGER_T, pointer :: velbc(:,:,:)
         INTEGER_T, pointer :: dombc(:,:)
         INTEGER_T, pointer :: domlo(:)
@@ -19184,6 +19187,10 @@ stop
       REAL_T, intent(out) :: u(SDIM)
 
       INTEGER_T i,j,k
+      INTEGER_T ii,jj,kk
+      INTEGER_T ileft,jleft,kleft
+      INTEGER_T iright,jright,kright
+      REAL_T LS_left,LS_right
       INTEGER_T imac,jmac,kmac
       INTEGER_T isten,jsten,ksten
       INTEGER_T dir,dir_inner
@@ -19197,7 +19204,10 @@ stop
       REAL_T dx_inner
       REAL_T wt_dist(SDIM)
       REAL_T local_data
+      REAL_T local_mass
+      REAL_T mass_interp(1)
       REAL_T, dimension(D_DECL(2,2,2),1) :: data_stencil
+      REAL_T, dimension(D_DECL(2,2,2),1) :: data_mass_stencil
       INTEGER_T ncomp_interp
 
       nhalf=3      
@@ -19208,6 +19218,16 @@ stop
          xpart, &
          cell_index)
 
+      do dir=1,SDIM
+       if (cell_index(dir).lt.grid_PARM%fablo(dir)) then
+        cell_index(dir)=grid_PARM%fablo(dir)
+       else if (cell_index(dir).gt.grid_PARM%fabhi(dir)) then
+        cell_index(dir)=grid_PARM%fabhi(dir)
+       else
+        ! do nothing
+       endif
+      enddo
+
       i=cell_index(1)
       j=cell_index(2)
       k=cell_index(SDIM)
@@ -19215,6 +19235,20 @@ stop
       call gridsten_level(xsten,i,j,k,grid_PARM%level,nhalf)
 
       do dir=1,SDIM
+
+       ii=0
+       jj=0
+       kk=0
+       if (dir.eq.1) then
+        ii=1
+       else if (dir.eq.2) then
+        jj=1
+       else if ((dir.eq.3).and.(SDIM.eq.3)) then
+        kk=1
+       else
+        print *,"dir invalid"
+        stop
+       endif
 
        imaclo(3)=0
        imachi(3)=0
@@ -19258,6 +19292,24 @@ stop
        do imac=imaclo(1),imachi(1)
        do jmac=imaclo(2),imachi(2)
        do kmac=imaclo(3),imachi(3)
+
+        ileft=imac-ii
+        jleft=jmac-jj
+        kleft=kmac-kk
+        iright=imac
+        jright=jmac
+        kright=kmac
+        LS_left=grid_PARM%lsfab(D_DECL(ileft,jleft,kleft),grid_PARM%im_PLS)
+        LS_right=grid_PARM%lsfab(D_DECL(iright,jright,kright),grid_PARM%im_PLS)
+        if ((LS_left.ge.zero).and.(LS_right.ge.zero)) then
+         local_mass=one
+        else if ((LS_left.lt.zero).or.(LS_right.lt.zero)) then
+         local_mass=1.0D-3
+        else
+         print *,"loca_mass invalid"
+         stop
+        endif
+
         isten=imac-imaclo(1)+1
         jsten=jmac-imaclo(2)+1
         ksten=kmac-imaclo(3)+1
@@ -19272,7 +19324,8 @@ stop
          stop
         endif
 
-        data_stencil(D_DECL(isten,jsten,ksten),1)=local_data
+        data_stencil(D_DECL(isten,jsten,ksten),1)=local_mass*local_data
+        data_mass_stencil(D_DECL(isten,jsten,ksten),1)=local_mass
        enddo ! kmac
        enddo ! jmac
        enddo ! imac
@@ -19280,6 +19333,16 @@ stop
        ncomp_interp=1
        call bilinear_interp_stencil(data_stencil, &
          wt_dist,ncomp_interp,u(dir),dir)  ! caller_id=dir
+       ncomp_interp=1
+       call bilinear_interp_stencil(data_mass_stencil, &
+         wt_dist,ncomp_interp,mass_interp,dir)  ! caller_id=dir
+
+       if (mass_interp(1).gt.zero) then
+        u(dir)=u(dir)/mass_interp(1)
+       else 
+        print *,"mass_interp invalid"
+        stop
+       endif
 
       enddo ! dir=1..sdim
 
@@ -19447,7 +19510,7 @@ stop
       REAL_T, intent(in), target :: vmac(DIMV(vmac)) 
       REAL_T, intent(in), target :: wmac(DIMV(wmac)) 
 
-      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
       INTEGER_T, intent(in), target :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: denbc_in(SDIM,2)
       INTEGER_T, intent(in), target :: dombc(SDIM,2)
@@ -19468,6 +19531,13 @@ stop
       type(grid_parm_type) grid_PARM
       INTEGER_T num_RK_stages
 
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+
       problo_arr(1)=problox
       problo_arr(2)=probloy
       problo_arr(3)=probloz
@@ -19475,6 +19545,15 @@ stop
       probhi_arr(1)=probhix
       probhi_arr(2)=probhiy
       probhi_arr(3)=probhiz
+
+      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
+       ! do nothing
+      else
+       print *,"im_PLS_cpp invalid"
+       stop
+      endif
+
+      grid_PARM%im_PLS=im_PLS_cpp+1
 
       grid_PARM%fablo=>fablo
       grid_PARM%fabhi=>fabhi
@@ -19485,6 +19564,7 @@ stop
       grid_PARM%finest_level=finest_level
       grid_PARM%dx=>dx
       grid_PARM%xlo=>xlo
+      grid_PARM%lsfab=>lsfab
       grid_PARM%umac=>umac
       grid_PARM%vmac=>vmac
       grid_PARM%wmac=>wmac
@@ -19496,7 +19576,12 @@ stop
       grid_PARM%problo=>problo_arr
       grid_PARM%probhi=>probhi_arr
 
-      num_RK_stages=4
+      call checkbound(fablo,fabhi,DIMS(lsfab),2,-1,2871)
+      call checkbound(fablo,fabhi,DIMS(umac),2,0,2871)
+      call checkbound(fablo,fabhi,DIMS(vmac),2,1,2871)
+      call checkbound(fablo,fabhi,DIMS(wmac),2,SDIM-1,2871)
+
+      num_RK_stages=2
       
       do interior_ID=1,Np
        !4th-RK
