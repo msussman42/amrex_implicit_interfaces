@@ -7084,15 +7084,16 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
   for (int m=0;m<2*AMREX_SPACEDIM;m++)
    dombc[m]=b_rec[m];
 
-  MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
+   // level set function(s) prior to CLSMOF advection.
+  MultiFab* LSmf=getStateDist(2,cur_time_slab,7);  
   if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
    amrex::Error("LSmf invalid ncomp");
-  if (LSmf->nGrow()!=1)
-   amrex::Error("LSmf->nGrow()!=1");
+  if (LSmf->nGrow()!=2)
+   amrex::Error("LSmf->nGrow()!=2");
 
   MultiFab* mac_velocity[AMREX_SPACEDIM];
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   mac_velocity[dir]=getStateMAC(1,dir,0,nsolveMM_FACE,vel_time_slab);
+   mac_velocity[dir]=getStateMAC(2,dir,0,nsolveMM_FACE,vel_time_slab);
   }
 
   if (thread_class::nthreads<1)
