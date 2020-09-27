@@ -19468,7 +19468,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  for (int isweep=0;isweep<=1;isweep++) {
 
   int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
-  getStateTensor_localMF(VISCOTEN_MF,1,scomp_xdisplace,AMREX_SPACEDIM,
+  getStateTensor_localMF(VISCOTEN_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
    cur_time_slab);
 
   if (thread_class::nthreads<1)
@@ -19527,6 +19527,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
    fort_assimilate_tensor_from_particles( 
+     &im_elastic, // 0..nmat-1
      &isweep,
      &tid_current,
      tilelo,tilehi,

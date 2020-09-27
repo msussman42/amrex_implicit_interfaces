@@ -28806,6 +28806,9 @@ stop
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
         REAL_T, pointer :: XDISP_fab(D_DECL(:,:,:),:)
+        INTEGER_T :: nmat
+        INTEGER_T :: im_PLS
+        REAL_T, pointer :: LS(D_DECL(:,:,:),:)
        end type accum_parm_type
 
       contains
@@ -28863,70 +28866,42 @@ stop
       INTEGER_T idx(3)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
-      INTEGER_T ig,jg,kg
       REAL_T xsten(-3:3,SDIM)
       REAL_T tmp,w_p
       REAL_T xc(SDIM)
       INTEGER_T ibase
       REAL_T local_dist
       INTEGER_T npart_local
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
       INTEGER_T ii,jj
       REAL_T basis_fn(SDIM+1)
 
-       ! Prior to this routine being called, "matrixfab" is initialized with
-       ! all zeroes.  After sweeping through all the particles, 
-       ! matrixfab(i,j,k,1..10) will contain the least squares matrix A^T A
-       ! (10 components since A^T A is a 4x4 symmetric matrix) and
-       ! matrixfab(i,j,k,11..14) will contain the right hand side A^T b.
-       ! For cell (i,j,k),
-       ! (A^T A)_11 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * 1
-       ! (A^T A)_12 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * 1 * (xp-xijk)
-       ! (A^T A)_13 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * 1 * (yp-yijk)
-       ! (A^T A)_14 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * 1 * (zp-zijk)
-       ! (A^T A)_22 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * (xp-xijk) * (xp-xijk)
-       ! ....
-       ! \OmegaStencil_{i,j,k}=Union_{i'=i-1}^{i+1} 
-       !                       Union_{j'=j-1}^{j+1}
-       !                       Union_{k'=k-1}^{k+1}  Omega_{i',j',k'}
-       ! where \Omega_{i,j,k}=( (x,y,z) | x_{i}-dx/2 <=x<= x_{i}+dx/2
-       !                                  y_{i}-dy/2 <=y<= y_{i}+dy/2
-       !                                  z_{i}-dz/2 <=x<= z_{i}+dz/2
-       ! \Omega_{i,j,k} is a cell within the tile.   The tile domain is
-       ! Union_{i'=tilelo(1) ...tilehi(1)}
-       ! Union_{j'=tilelo(2) ...tilehi(2)}
-       ! Union_{k'=tilelo(3) ...tilehi(3)} Omega_{i',j',k'}
+      type(interp_from_grid_parm_type) :: data_in
+      type(interp_from_grid_out_parm_type) :: data_out
+
+      data_in%level=accum_PARM%level
+      data_in%finest_level=accum_PARM%finest_level
+      data_in%bfact=accum_PARM%bfact
+      data_in%nmat=accum_PARM%nmat
+      data_in%im_PLS=accum_PARM%im_PLS
+      data_in%dx=accum_PARM%dx
+      data_in%xlo=accum_PARM%xlo
+      data_in%fablo=accum_PARM%fablo
+      data_in%fabhi=accum_PARM%fabhi
+      data_in%ngrowfab=2
+      data_in%state=accum_PARM%XDISP_fab
+      data_in%LS=accum_PARM%LS
 
       nhalf=3
 
       eps=accum_PARM%dx(1)/10.0d0
 
-      do dir=1,3
-       growlo(dir)=0
-       growhi(dir)=0
-      enddo
-
-      if (accum_PARM%Npart.eq.-1) then
-       call growntilebox(accum_PARM%tilelo,accum_PARM%tilehi, &
-        accum_PARM%fablo,accum_PARM%fabhi, &
-        growlo,growhi,1)
-       npart_local=1
-      else if (accum_PARM%Npart.ge.0) then
+      if (accum_PARM%Npart.ge.0) then
        npart_local=accum_PARM%Npart
       else
        print *,"accum_PARM%Npart invalid"
        stop
       endif
 
-      do ig=growlo(1),growhi(1)
-      do jg=growlo(2),growhi(2)
-      do kg=growlo(3),growhi(3)
       do interior_ID=1,npart_local
 
        if (accum_PARM%Npart.ge.0) then
@@ -28943,18 +28918,6 @@ stop
           accum_PARM%fablo, &
           xpart, &
           cell_index)
-       else if (accum_PARM%Npart.eq.-1) then
-        call gridsten_level(xsten,ig,jg,kg,accum_PARM%level,nhalf)
-        do dir=1,SDIM
-         xpart(dir)=xsten(0,dir)
-         xdisp(dir)=accum_PARM%XDISP_fab(D_DECL(ig,jg,kg),dir)
-        enddo
-        cell_index(1)=ig
-        cell_index(2)=jg
-        if (SDIM.eq.3) then
-         cell_index(SDIM)=kg
-        endif
-        local_dist=-one
        else
         print *,"accum_PARM%Npart invalid"
         stop
@@ -29075,14 +29038,12 @@ stop
        enddo ! idx(1),idx(2),idx(3): while idx(3)<=subhi(3)
 
       enddo ! do interior_ID=1,accum_PARM%Npart
-      enddo ! kg
-      enddo ! jg
-      enddo ! ig
 
       return
       end subroutine traverse_particles
 
       subroutine fort_assimilate_tensor_from_particles( &
+        im_PLS_cpp, & ! 0..nmat-1
         isweep, &
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
@@ -29116,6 +29077,7 @@ stop
       use probcommon_module
       implicit none
 
+      INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncomp_tensor
@@ -29174,6 +29136,19 @@ stop
 
       nhalf=3
 
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
+       ! do nothing
+      else
+       print *,"im_PLS_cpp invalid"
+       stop
+      endif
+
        ! 6 in 3D, 4 in 2D
       if (ncomp_tensor.eq.2*SDIM) then
        ! do nothing
@@ -29181,13 +29156,13 @@ stop
        print *,"ncomp_tensor invalid"
        stop
       endif
-      if (matrix_points.eq.10) then
+      if (matrix_points.eq.1) then
        ! do nothing
       else
        print *,"matrix_points invalid"
        stop
       endif
-      if (RHS_points.eq.4) then
+      if (RHS_points.eq.1) then
        ! do nothing
       else
        print *,"RHS_points invalid"
@@ -29200,11 +29175,11 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(LS),0,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(LS),2,-1,1271)
       call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
       call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(XDNEWfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(XDISP_fab),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(XDISP_fab),2,-1,1271)
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -29219,83 +29194,53 @@ stop
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
       accum_PARM%XDISP_fab=>XDISP_fab
-
-      accum_PARM%particles=>particles
-      accum_PARM%Npart=Np
-
-      call traverse_particles(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         ncomp_accumulate)
-
-      accum_PARM%particles=>nbr_particles
-      accum_PARM%Npart=Nn
-
-      call traverse_particles(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         ncomp_accumulate)
-
-      accum_PARM%Npart=-1
-      call traverse_particles(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         ncomp_accumulate)
+      accum_PARM%nmat=nmat
+      accum_PARM%im_PLS=im_PLS_cpp+1
+      accum_PARM%LS=>LS
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      n=SDIM+1
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-       ibase=1
-       do ii=1,n
-       do jj=ii,n
-        A(ii,jj)=matrixfab(D_DECL(i,j,k),ibase)
-        A(jj,ii)=A(ii,jj)
-        ibase=ibase+1
+      if (isweep.eq.0) then
+
+       accum_PARM%particles=>particles
+       accum_PARM%Npart=Np
+
+       call traverse_particles(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+       accum_PARM%particles=>nbr_particles
+       accum_PARM%Npart=Nn
+
+       call traverse_particles(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         ncomp_accumulate)
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
+        do dir=1,SDIM
+         B_matrix=matrixfab(D_DECL(i,j,k),1+dir) ! sum w*(X_cell(xp)-X_cell_p)
+         XDISP_local=XDISP_fab(D_DECL(i,j,k),dir)
+         if (A_matrix.eq.zero) then
+          XDNEWFAB(D_DECL(i,j,k),dir)=XDISP_local
+         else if (A_matrix.gt.zero) then
+          lambda=B_matrix/A_matrix
+          XDNEWFAB(D_DECL(i,j,k),dir)=XDISP_local-lambda
+         else
+          print *,"A_matrix invalid"
+          stop
+         endif
+        enddo ! dir=1..SDIM
        enddo
        enddo
-       if (SDIM.eq.2) then
-        if (ibase-1.eq.6) then
-         ! do nothing
-        else
-         print *,"ibase invalid (4) ibase=",ibase
-         stop
-        endif
-       else if (SDIM.eq.3) then
-        if (ibase-1.eq.10) then
-         ! do nothing
-        else
-         print *,"ibase invalid(5) ibase=",ibase
-         stop
-        endif
-       else
-        print *,"dimension bust"
-        stop
-       endif
+       enddo
 
-       ibase=11
-       do dir=1,SDIM
-        do ii=1,n
-         b(ii)=matrixfab(D_DECL(i,j,k),ibase+ii-1)
-        enddo
-        ibase=ibase+RHS_points
-      
-        caller_id=4 
-        call least_squares_QR(A,xlocal,b,n,n,caller_id)
-        do jj=1,n
-         xLS(jj,dir)=xlocal(jj)
-        enddo
-       enddo  ! dir=1..sdim
-
-       if (ibase-1.eq.matrix_points+SDIM*RHS_points) then
-        ! do nothing
-       else
-        print *,"ibase invalid (6) ibase=",ibase
-        stop
-       endif
+      else if (isweep.eq.1) then
 
 ! grad u=| u_r  u_t/r-v/r  u_z  |
 !        | v_r  v_t/r+u/r  v_z  |
@@ -29307,6 +29252,11 @@ stop
 ! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
 !         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
 !         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do ii=1,SDIM ! velocity component u,v,w
        do jj=1,SDIM ! direction x,y,z
@@ -29419,39 +29369,7 @@ stop
       enddo
       enddo
       enddo
-        ! Prior to this routine being called, "matrixfab" is initialized with
-        ! all zeroes.
-        ! find index (i,j,k) in which xpart lives.
-        ! for all neighbors of (i,j,k), within the tilelo,tilehi borders,
-        ! increment the least squares matrix components stored in
-        ! matrixfab(D_DECL(i+ii,j+jj,k+kk),ncomp_accumulate)
-        ! a weight is calculated from xpart and xcen(i+ii,j+jj,k+kk) which
-        ! is the coordinate of the cell center of cell (i+ii,j+jj,k+kk).
-        ! assume that x_i=xlo(1)+dx(1)*(i-fablo(1)+0.5d0)
-        ! i_contain=NINT((xpart-xlo(1))/dx(1)+fablo(1)-0.5d0)
-        !   TILE CONTAINING PARTICLES: 
-        !    ---------------------
-        !    |   .   .    .      |
-        !    |   .        .      |
-        !    |   .   .    .      |
-        !    |       .    .      |
-        !    |   .   .    .      |
-        !    |   .   .    .      |
-        !    ---------------------
-        ! faster to traverse all the particles, and for each particle
-        ! increment the corresponding 3x3x3 stencil of cells rather than
-        ! traverse all the cells in the tile, and for each cell, traverse
-        ! all the particles in the tile.
-        ! COST OF FORMER: NP * 27 + NCELLS (solving the least square system)
-        ! COST OF LATTER: NCELLS * NP + NCELLS ( "                  "  )
-        ! If the number of cells in the tile is >> 27, then better to traverse
-        ! the particles.
-        ! at t0=0.0 phi_0
-        ! (a) find narrow band and extended narrow band, store in Particle
-        !     container
-        ! (b) for RK_stage=1..max_RK_stage
-        !     (i) phi^{RK_stage+1} =f(phi^{RK_stage=0...RK_stage})
-        ! 
+
       end subroutine fort_assimilate_tensor_from_particles
 
 
