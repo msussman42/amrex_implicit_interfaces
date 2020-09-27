@@ -18990,6 +18990,9 @@ stop
            if (sub_iter.eq.local_count) then
             bubble_change=1
             bubble_iter=0
+             ! sort from oldest particle to youngest.
+             ! i.e. particle with smallest "add time" is at the top of
+             ! the list.
             do while ((bubble_change.eq.1).and. &
                       (bubble_iter.lt.local_count))
              do ibubble=1,local_count-bubble_iter-1
@@ -19011,9 +19014,12 @@ stop
             enddo ! bubble_change==1 and bubble_iter<local_count
             do bubble_iter=particle_max_per_nsubdivide(im_PLS_CPP+1)+1, &
                            local_count
+              ! never delete particles that were present from the
+              ! very beginning of the simulation.
              if (sort_data_time(bubble_iter).eq.zero) then
               ! do nothing
              else if (sort_data_time(bubble_iter).gt.zero) then
+               ! never delete interface particles.
               if (sort_data_LS(bubble_iter).eq.zero) then
                ! do nothing
               else if (sort_data_LS(bubble_iter).ne.zero) then
