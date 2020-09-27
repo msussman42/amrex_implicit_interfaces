@@ -115,6 +115,25 @@ module probcommon_module_types
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: statemac
       end type assimilate_out_parm_type
 
+      type interp_from_grid_parm_type
+      INTEGER_T :: scomp
+      INTEGER_T :: ncomp
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      REAL_T, pointer :: xtarget(:)
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      INTEGER_T :: ngrowfab 
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state 
+      end type interp_from_grid_parm_type
+
+      type interp_from_grid_out_parm_type
+      REAL_T, pointer :: data_interp(:)
+      end type interp_from_grid_out_parm_type
+
      contains
 
 end module probcommon_module_types

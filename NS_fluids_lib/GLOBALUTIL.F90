@@ -7185,6 +7185,121 @@ contains
       return
       end subroutine bilinear_interp_WT 
 
+      subroutine interp_from_grid_util(data_in,data_out)
+      use probcommon_module
+      IMPLICIT NONE
+ 
+      type(interp_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: xsten_center(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T dir
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T stencil_offset(SDIM)
+      INTEGER_T istenlo(3)
+      INTEGER_T istenhi(3)
+      REAL_T WT,total_WT
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T im
+      REAL_T, allocatable, dimension(:) :: local_data
+      
+      if (data_in%ncomp.ge.1) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+      if (data_in%scomp.ge.1) then
+       ! do nothing
+      else
+       print *,"scomp invalid"
+       stop
+      endif
+
+      allocate(local_data(data_in%ncomp))
+
+      nhalf=3
+
+      call containing_cell( &
+        data_in%bfact, &
+        data_in%dx, &
+        data_in%xlo, &
+        data_in%fablo, &
+        data_in%xtarget, &
+        cell_index)
+
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       if (cell_index(dir)-1.lt.data_in%fablo(dir)-data_in%ngrowfab) then
+        cell_index(dir)=data_in%fablo(dir)-data_in%ngrowfab+1
+       endif
+       if (cell_index(dir)+1.gt.data_in%fabhi(dir)+data_in%ngrowfab) then
+        cell_index(dir)=data_in%fabhi(dir)+data_in%ngrowfab-1
+       endif
+       istenlo(dir)=cell_index(dir)-1
+       istenhi(dir)=cell_index(dir)+1
+      enddo ! dir=1..sdim
+
+      total_WT=zero
+      do im=1,data_in%ncomp
+       data_out%data_interp(im)=zero
+      enddo 
+
+      isten=cell_index(1)
+      jsten=cell_index(2)
+      ksten=cell_index(SDIM)
+
+      call gridsten_level(xsten_center,isten,jsten,ksten,data_in%level,nhalf)
+
+      do isten=istenlo(1),istenhi(1)
+      do jsten=istenlo(2),istenhi(2)
+      do ksten=istenlo(3),istenhi(3)
+
+       call gridsten_level(xsten,isten,jsten,ksten,data_in%level,nhalf)
+       stencil_offset(1)=isten-cell_index(1)
+       stencil_offset(2)=jsten-cell_index(2)
+       if (SDIM.eq.3) then
+        stencil_offset(SDIM)=ksten-cell_index(SDIM)
+       endif
+       call bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
+        data_in%xtarget,WT)
+       if ((WT.ge.zero).and.(WT.le.one)) then
+        ! do nothing
+       else
+        print *,"WT invalid"
+        stop
+       endif
+ 
+       do im=1,data_in%ncomp
+        local_data(im)=data_in%state(D_DECL(isten,jsten,ksten), &
+          data_in%scomp+im-1)
+        data_out%data_interp(im)=data_out%data_interp(im)+WT*local_data(im)
+       enddo
+
+       total_WT=total_WT+WT
+
+      enddo ! ksten
+      enddo ! jsten
+      enddo ! isten
+
+      if (total_WT.gt.zero) then
+
+       do im=1,data_in%ncomp
+        data_out%data_interp(im)=data_out%data_interp(im)/total_WT
+       enddo
+
+      else
+       print *,"total_WT invalid"
+       stop
+      endif
+
+      deallocate(local_data)
+
+      return
+      end subroutine interp_from_grid_util
+
       subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
                       ncomp,data_interp,caller_id)
       use probcommon_module
