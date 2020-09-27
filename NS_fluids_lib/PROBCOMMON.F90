@@ -121,6 +121,8 @@ module probcommon_module_types
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
+      INTEGER_T :: nmat
+      INTEGER_T :: im_PLS  ! =0 if not weighted
       REAL_T, pointer :: xtarget(:)
       REAL_T, pointer :: dx(:)
       REAL_T, pointer :: xlo(:)
@@ -128,6 +130,7 @@ module probcommon_module_types
       INTEGER_T, pointer :: fabhi(:)
       INTEGER_T :: ngrowfab 
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state 
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
       end type interp_from_grid_parm_type
 
       type interp_from_grid_out_parm_type

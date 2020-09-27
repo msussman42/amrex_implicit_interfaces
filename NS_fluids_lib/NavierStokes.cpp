@@ -19364,6 +19364,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  NavierStokes& ns_level0=getLevel(0);
 
+ int nmat=num_materials;
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if (level==finest_level) {
@@ -19371,7 +19372,11 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  } else
   amrex::Error("expecting level==finest_level");
 
- int nmat=num_materials;
+ resize_levelsetLO(2,LEVELPC_MF);
+ debug_ngrow(LEVELPC_MF,2,8);
+ if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
+
  if ((im_elastic>=0)&&(im_elastic<nmat)) {
   // do nothing
  } else
@@ -19386,8 +19391,6 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  int ipart=0;
  for (int im_local=0;im_local<im_elastic;im_local++) {
-  // 1. bulk particles
-  // 2. interface particles
   if (particleLS_flag[im_local]==1) {
    ipart++; 
   } else if (particleLS_flag[im_local]==0) {
@@ -19426,8 +19429,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  } else
   amrex::Error("ns_is_rigid invalid");
 
- int matrix_points=10;  // 4x4 - (3+2+1) =10
- int RHS_points=4;
+ int matrix_points=1;  // sum_{xp in Omega_cell} W(xp,x_cell,LS)
+ int RHS_points=1;     // sum_{xp in Omega_cell} (X_cell(xp)-X_cell_p)*W
  int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
  MultiFab* accumulate_mf=new MultiFab(grids,dmap,ncomp_accumulate,0,
 	  MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
@@ -19462,19 +19465,21 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  } else 
   amrex::Error("VISCOTEN_MF should not be allocated");
 
- int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
- getStateTensor_localMF(VISCOTEN_MF,1,scomp_xdisplace,AMREX_SPACEDIM,
+ for (int isweep=0;isweep<=1;isweep++) {
+
+  int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+  getStateTensor_localMF(VISCOTEN_MF,1,scomp_xdisplace,AMREX_SPACEDIM,
    cur_time_slab);
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
     // std::cout << tilegrid << '\n';
@@ -19509,6 +19514,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
    FArrayBox& matrixfab=(*accumulate_mf)[mfi];
    FArrayBox& TNEWfab=Tensor_new[mfi];
    FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
+   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -19521,6 +19527,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
    fort_assimilate_tensor_from_particles( 
+     &isweep,
      &tid_current,
      tilelo,tilehi,
      fablo,fabhi,
@@ -19536,6 +19543,9 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      &matrix_points,
      &RHS_points,
      &ncomp_accumulate,
+     &nmat,
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      TNEWfab.dataPtr(scomp_tensor),
      ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
      TNEWfab.dataPtr(scomp_xdisplace),
@@ -19544,15 +19554,16 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()),
      matrixfab.dataPtr(),
      ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
- } // mfi
+  } // mfi
 } // omp
- ns_reconcile_d_num(81);
+  ns_reconcile_d_num(81);
+
+  delete_localMF(VISCOTEN_MF,1);
+ } // isweep=0,1
 
  localPC.clearNeighbors();
 
  delete accumulate_mf;
-
- delete_localMF(VISCOTEN_MF,1);
 
 } // end subroutine accumulate_PC_info
 
