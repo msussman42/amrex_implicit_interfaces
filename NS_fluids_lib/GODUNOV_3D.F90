@@ -29083,6 +29083,7 @@ stop
       end subroutine traverse_particles
 
       subroutine fort_assimilate_tensor_from_particles( &
+        isweep, &
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
@@ -29097,6 +29098,9 @@ stop
         matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
         RHS_points, &    ! least squares in 3D: 4
         ncomp_accumulate, & ! matrix_points+sdim * RHS_points
+        nmat, &
+        LS, &
+        DIMS(LS), &
         TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
         DIMS(TNEWfab), &
         XDNEWfab, &       
@@ -29112,6 +29116,8 @@ stop
       use probcommon_module
       implicit none
 
+      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
@@ -29125,6 +29131,7 @@ stop
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in), target :: xlo(SDIM)
       REAL_T, intent(in), target :: dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(LS) 
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
       INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
       INTEGER_T, intent(in) :: DIMDEC(XDNEWfab) 
@@ -29132,6 +29139,9 @@ stop
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
+      REAL_T, intent(in) :: LS( &  
+        DIMV(LS), &
+        nmat*(1+SDIM))
       REAL_T, intent(inout) :: TNEWfab( &  ! Q assimilated from particles/cells
         DIMV(TNEWfab), &
         ncomp_tensor)
@@ -29190,6 +29200,7 @@ stop
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(LS),0,-1,1271)
       call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
       call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(XDNEWfab),1,-1,1271)

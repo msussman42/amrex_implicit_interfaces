@@ -1433,6 +1433,7 @@ extern "C"
 
 
    void fort_assimilate_tensor_from_particles(
+     int* isweep,
      int* tid,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
@@ -1450,6 +1451,10 @@ extern "C"
      int* matrix_points,
      int* RHS_points,
      int* ncomp_accumulate,
+     int* nmat,
+     Real* LS,
+     AMREX_ARLIM_P(LSlo),
+     AMREX_ARLIM_P(LShi),
      Real* TNEWfab,
      AMREX_ARLIM_P(TNEWfablo),
      AMREX_ARLIM_P(TNEWfabhi),
