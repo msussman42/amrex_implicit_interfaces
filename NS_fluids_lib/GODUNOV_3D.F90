@@ -28805,10 +28805,8 @@ stop
         REAL_T, pointer :: xlo(:)
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
-        REAL_T, pointer :: XDISP_fab(D_DECL(:,:,:),:)
         INTEGER_T :: nmat
         INTEGER_T :: im_PLS
-        REAL_T, pointer :: LS(D_DECL(:,:,:),:)
        end type accum_parm_type
 
       contains
@@ -28817,13 +28815,26 @@ stop
        accum_PARM, &
        matrixfab, &
        DIMS(matrixfab), &
+       LS, &
+       DIMS(LS), &
+       XDISP_fab, &
+       DIMS(XDISP_fab), &
        ncomp_accumulate)
 
+      use probcommon_module
       use global_utility_module
 
       INTEGER_T, intent(in) :: ncomp_accumulate
       type(accum_parm_type), intent(in) :: accum_PARM
+      INTEGER_T, intent(in) :: DIMDEC(LS) 
+      INTEGER_T, intent(in) :: DIMDEC(XDISP_fab) 
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      REAL_T, target, intent(in) :: LS( &
+        DIMV(LS), &
+        num_materials*(1+SDIM))
+      REAL_T, target, intent(in) :: XDISP_fab( &
+        DIMV(XDISP_fab), &
+        SDIM)
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
@@ -28836,21 +28847,32 @@ stop
       REAL_T xpartfoot(SDIM)
       REAL_T xdisp(SDIM)
       INTEGER_T cell_index(SDIM)
-      INTEGER_T sublo(3)
-      INTEGER_T subhi(3)
-      INTEGER_T idx(3)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
       REAL_T xsten(-3:3,SDIM)
       REAL_T tmp,w_p
       REAL_T xc(SDIM)
-      INTEGER_T ibase
       REAL_T local_dist
       INTEGER_T npart_local
       REAL_T, target :: cell_data_interp(SDIM)
+      REAL_T, target :: dx_local(SDIM)
+      REAL_T, target :: xlo_local(SDIM)
+      INTEGER_T, target :: fablo_local(SDIM)
+      INTEGER_T, target :: fabhi_local(SDIM)
 
       type(interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
+
+      do dir=1,SDIM
+       dx_local(dir)=accum_PARM%dx(dir)
+       xlo_local(dir)=accum_PARM%xlo(dir)
+       fablo_local(dir)=accum_PARM%fablo(dir)
+       fabhi_local(dir)=accum_PARM%fabhi(dir)
+      enddo
+
+      call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
+      call checkbound(fablo_local,fabhi_local,DIMS(matrixfab),0,-1,1271)
+      call checkbound(fablo_local,fabhi_local,DIMS(XDISP_fab),2,-1,1271)
 
       data_out%data_interp=>cell_data_interp
 
@@ -28859,13 +28881,15 @@ stop
       data_in%bfact=accum_PARM%bfact
       data_in%nmat=accum_PARM%nmat
       data_in%im_PLS=accum_PARM%im_PLS
-      data_in%dx=accum_PARM%dx
-      data_in%xlo=accum_PARM%xlo
+      data_in%dx=>dx_local
+      data_in%xlo=>xlo_local
       data_in%fablo=accum_PARM%fablo
       data_in%fabhi=accum_PARM%fabhi
       data_in%ngrowfab=2
-      data_in%state=accum_PARM%XDISP_fab
-      data_in%LS=accum_PARM%LS
+
+      data_in%state=>XDISP_fab
+      data_in%LS=>LS
+
       data_in%ncomp=SDIM
       data_in%scomp=1
 
@@ -28911,7 +28935,7 @@ stop
         if (interior_ok.eq.1) then
          i=cell_index(1)
          j=cell_index(2)
-         k=cell_index(3)
+         k=cell_index(SDIM)
          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
          tmp=0.0d0
          do dir=1,SDIM
@@ -29026,7 +29050,7 @@ stop
       REAL_T, intent(inout) :: XDNEWfab( &  
         DIMV(XDNEWfab), &
         SDIM)
-      REAL_T, intent(in), target :: XDISP_fab( &
+      REAL_T, intent(in) :: XDISP_fab( &
         DIMV(XDISP_fab), &
         SDIM)
       type(particle_t), intent(in), target :: particles(Np)
@@ -29037,18 +29061,23 @@ stop
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T i,j,k
-      INTEGER_T n
       INTEGER_T dir
       INTEGER_T ibase
       INTEGER_T ii,jj
+      INTEGER_T iii,jjj,kkk
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
-      REAL_T xlocal(SDIM+1)
+      REAL_T A_matrix,B_matrix
+      REAL_T dxminus,dxplus
+      REAL_T grad_cen,grad_plus,grad_minus
+      REAL_T LS_plus,LS_minus
+      REAL_T lambda
       REAL_T gradu(SDIM,SDIM)
       REAL_T DISP_TEN(SDIM,SDIM)
       REAL_T hoop_12,hoop_22
-      INTEGER_T caller_id
+      REAL_T xdisplace_local,ydisplace_local
+      REAL_T XDISP_local
 
       nhalf=3
 
@@ -29109,10 +29138,8 @@ stop
       accum_PARM%ncomp_accumulate=ncomp_accumulate
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
-      accum_PARM%XDISP_fab=>XDISP_fab
       accum_PARM%nmat=nmat
       accum_PARM%im_PLS=im_PLS_cpp+1
-      accum_PARM%LS=>LS
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -29121,17 +29148,27 @@ stop
        accum_PARM%particles=>particles
        accum_PARM%Npart=Np
 
-       call traverse_particles(accum_PARM, &
+       call traverse_particles( &
+         accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
+         LS, &
+         DIMS(LS), &
+         XDISP_fab, &
+         DIMS(XDISP_fab), &
          ncomp_accumulate)
 
        accum_PARM%particles=>nbr_particles
        accum_PARM%Npart=Nn
 
-       call traverse_particles(accum_PARM, &
+       call traverse_particles( &
+         accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
+         LS, &
+         DIMS(LS), &
+         XDISP_fab, &
+         DIMS(XDISP_fab), &
          ncomp_accumulate)
 
        do i=growlo(1),growhi(1)
