@@ -28813,31 +28813,6 @@ stop
 
       contains
 
-      subroutine update_matrix_displace( &
-                      mat_data, &
-                      w_p, &
-                      basis_fn, &
-                      ii,jj) 
-      IMPLICIT NONE
-
-      REAL_T, intent(inout) :: mat_data
-      REAL_T, intent(in)    :: w_p
-      INTEGER_T, intent(in) :: ii,jj
-      REAL_T, intent(in) :: basis_fn(SDIM+1)
-
-      if ((mat_data.ge.zero).or.(mat_data.le.zero)) then
-       mat_data=mat_data+w_p*basis_fn(ii)*basis_fn(jj)
-       if ((mat_data.ge.zero).or.(mat_data.le.zero)) then
-        ! do nothing
-       else
-        print *,"mat_data bust"
-        stop
-       endif
-      endif
-
-      return
-      end subroutine update_matrix_displace
-
       subroutine traverse_particles( &
        accum_PARM, &
        matrixfab, &
@@ -28857,7 +28832,7 @@ stop
       REAL_T :: eps
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
-      REAL_T xpart(SDIM)
+      REAL_T, target :: xpart(SDIM)
       REAL_T xpartfoot(SDIM)
       REAL_T xdisp(SDIM)
       INTEGER_T cell_index(SDIM)
@@ -28872,11 +28847,12 @@ stop
       INTEGER_T ibase
       REAL_T local_dist
       INTEGER_T npart_local
-      INTEGER_T ii,jj
-      REAL_T basis_fn(SDIM+1)
+      REAL_T, target :: cell_data_interp(SDIM)
 
       type(interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
+
+      data_out%data_interp=>cell_data_interp
 
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
@@ -28890,6 +28866,8 @@ stop
       data_in%ngrowfab=2
       data_in%state=accum_PARM%XDISP_fab
       data_in%LS=accum_PARM%LS
+      data_in%ncomp=SDIM
+      data_in%scomp=1
 
       nhalf=3
 
@@ -28912,38 +28890,28 @@ stop
         enddo
         local_dist=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
 
+        data_in%xtarget=>xpart
+        call interp_from_grid_util(data_in,data_out)
+
         call containing_cell(accum_PARM%bfact, &
           accum_PARM%dx, &
           accum_PARM%xlo, &
           accum_PARM%fablo, &
           xpart, &
           cell_index)
-       else
-        print *,"accum_PARM%Npart invalid"
-        stop
-       endif
 
-       sublo(3)=0
-       subhi(3)=0
-       do dir=1,SDIM
-        sublo(dir)=cell_index(dir)-1
-        subhi(dir)=cell_index(dir)+1
-       enddo
-       idx(1)=sublo(1)
-       idx(2)=sublo(2)
-       idx(3)=sublo(3)
-       do while (idx(3).le.subhi(3))
         interior_ok=1
         do dir=1,SDIM
-         if ((idx(dir).lt.accum_PARM%tilelo(dir)).or. &
-             (idx(dir).gt.accum_PARM%tilehi(dir))) then
+         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
+             (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
           interior_ok=0
          endif
         enddo
+
         if (interior_ok.eq.1) then
-         i=idx(1)
-         j=idx(2)
-         k=idx(3)
+         i=cell_index(1)
+         j=cell_index(2)
+         k=cell_index(3)
          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
          tmp=0.0d0
          do dir=1,SDIM
@@ -28961,63 +28929,16 @@ stop
           stop
          endif
 
-         basis_fn(1)=1.0d0
-         do dir=1,SDIM
-          basis_fn(dir+1)=xpart(dir)-xc(dir)
-         enddo
-
-         ibase=1
-         do ii=1,SDIM+1
-         do jj=ii,SDIM+1
-          call update_matrix_displace( &
-            matrixfab(D_DECL(i,j,k),ibase), &
-            w_p, &
-            basis_fn, &
-            ii,jj)
-
-          ibase=ibase+1
-         enddo
-         enddo
-
-         if (SDIM.eq.3) then
-          if (ibase.eq.11) then
-           ! do nothing
-          else
-           print *,"ibase invalid (1) ibase=",ibase
-           stop
-          endif
-         else if (SDIM.eq.2) then
-          if (ibase.eq.7) then
-           ! do nothing
-          else
-           print *,"ibase invalid (2) ibase=",ibase
-           stop
-          endif
-         else
-          print *,"dimension bust"
-          stop
-         endif
-
-         ibase=11
-         do dir=1,SDIM
-          do ii=1,SDIM+1
-           matrixfab(D_DECL(i,j,k),ibase)= &  ! AT b
-            matrixfab(D_DECL(i,j,k),ibase)+w_p*basis_fn(ii)*xdisp(dir)
-           ibase=ibase+1
+         if (w_p.gt.zero) then
+          matrixfab(D_DECL(i,j,k),1)= &
+           matrixfab(D_DECL(i,j,k),1)+w_p
+          do dir=1,SDIM
+           matrixfab(D_DECL(i,j,k),1+dir)= &
+            matrixfab(D_DECL(i,j,k),1+dir)+ &
+            w_p*(data_out%data_interp(dir)-xdisp(dir))
           enddo
-          if (SDIM.eq.2) then
-           matrixfab(D_DECL(i,j,k),ibase)= & 
-              matrixfab(D_DECL(i,j,k),ibase-1) 
-           ibase=ibase+1
-          endif
-         enddo ! dir=1..sdim
-
-         if (ibase.eq. &
-             accum_PARM%matrix_points+accum_PARM%RHS_points*SDIM+1) then
-          ! do nothing
          else
-          print *,"ibase invalid (3)"
-          print *,"ibase=",ibase
+          print *,"w_p invalid"
           stop
          endif
         else if (interior_ok.eq.0) then
@@ -29026,16 +28947,11 @@ stop
          print *,"interior_ok invalid"
          stop
         endif
-        idx(1)=idx(1)+1
-        if (idx(1).gt.subhi(1)) then
-         idx(1)=sublo(1)
-         idx(2)=idx(2)+1
-         if (idx(2).gt.subhi(2)) then
-          idx(2)=sublo(2)
-          idx(3)=idx(3)+1
-         endif
-        endif
-       enddo ! idx(1),idx(2),idx(3): while idx(3)<=subhi(3)
+
+       else
+        print *,"accum_PARM%Npart invalid"
+        stop
+       endif
 
       enddo ! do interior_ID=1,accum_PARM%Npart
 
