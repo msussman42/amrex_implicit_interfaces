@@ -18089,6 +18089,8 @@ stop
       end subroutine fort_assimilate_lvlset_from_particles
 
       subroutine count_particles( &
+       LS_local, &
+       DIMS(LS_local), &
        accum_PARM, &
        cell_particle_count, &
        particles, &
@@ -18107,9 +18109,13 @@ stop
        ! child link 2, parent link 2, ...
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
 
+      INTEGER_T, intent(in) :: DIMDEC(LS_local)
+      REAL_T, target, intent(in) :: &
+              LS_local(DIMDEC(LS_local),num_materials)
+
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
-      REAL_T xpart(SDIM)
+      REAL_T, target :: xpart(SDIM)
       INTEGER_T cell_index(SDIM)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
@@ -18120,6 +18126,30 @@ stop
       INTEGER_T :: ibase
       INTEGER_T :: ibase_new
       INTEGER_T :: i_parent,j_parent,k_parent
+      type(interp_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      REAL_T, target, dimension(1) :: data_interp_local
+
+      REAL_T, target :: dx_local(SDIM)
+
+      local_ngrow=1
+
+      data_out%data_interp=>data_interp_local
+      data_in%scomp=accum_PARM%im_PLS_cpp+1
+      data_in%ncomp=1
+      data_in%level=accum_PARM%level
+      data_in%finest_level=accum_PARM%finest_level
+      data_in%bfact=accum_PARM%bfact
+      data_in%nmat=num_materials
+      data_in%im_PLS=0 ! no weighting
+      data_in%ngrowfab=local_ngrow
+      data_in%dx=>dx_local
+      data_in%xlo=>xlo_local
+      data_in%fablo=>fablo_local
+      data_in%fabhi=>fabhi_local
+      data_in%state=>LS_local
+      data_in%LS=>LS_local
+
 
       do interior_ID=1,accum_PARM%Npart
 
@@ -18203,8 +18233,9 @@ stop
          stop
         endif
 
-        local_ngrow=1
-        call interpfab( &
+        if (1.eq.0) then
+          ! this is least squares interpolation
+         call interpfab( &
           accum_PARM%bfact, &
           accum_PARM%level, &
           accum_PARM%finest_level, &
@@ -18218,6 +18249,15 @@ stop
           accum_PARM%LS, &
           DIMS(accum_PARM%LS), &
           LSpart_trial)
+        else if (1.eq.1) then
+         data_in%xtarget=>xpart
+          ! bilinear interpolation
+         call interp_from_grid_util(data_in,data_out)
+         LSpart_trial=data_out%data_interp(1)
+        else
+         print *,"must select a form of interpolation"
+         stop
+        endif
 
         if (LSpart.eq.zero) then
          LSpart_trial=zero
@@ -18866,9 +18906,11 @@ stop
        if (append_flag.eq.1) then
         cell_particle_count_ptr=>cell_particle_count
         call count_particles( &
+         lsfab, &
+         DIMS(lsfab), &
          accum_PARM, &
          cell_particle_count_ptr, &
-         particles, &  ! output since levelset value is modified.
+         particles, &  ! output since levelset value is overwritten w/Eul
          particle_link_data, &
          Np)
        else if (append_flag.eq.0) then
