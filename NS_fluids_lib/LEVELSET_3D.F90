@@ -17449,16 +17449,23 @@ stop
        accum_PARM, &
        matrixfab, &
        DIMS(matrixfab), &
+       LS, &
+       DIMS(LS), &
        ncomp_accumulate)
 
+      use probcommon_module
       use global_utility_module
 
       INTEGER_T, intent(in) :: ncomp_accumulate
       type(accum_parm_type_LS), intent(in) :: accum_PARM
+      INTEGER_T, intent(in) :: DIMDEC(LS) 
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
+      REAL_T, target, intent(in) :: LS( &
+        DIMV(LS), &
+        num_materials*(1+SDIM))
 
       INTEGER_T :: nhalf
       REAL_T :: eps
@@ -17483,33 +17490,22 @@ stop
       REAL_T basis_fn(SDIM+1)
       INTEGER_T ii,jj
 
-       ! Prior to this routine being called, "matrixfab" is initialized with
-       ! all zeroes.  After sweeping through all the particles, 
-       ! matrixfab(i,j,k,1..10) will contain the least squares matrix A^T A
-       ! (10 components since A^T A is a 4x4 symmetric matrix) and
-       ! matrixfab(i,j,k,11..14) will contain the right hand side A^T b.
-       ! For cell (i,j,k),
-       ! (A^T A)_11 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * 1
-       ! (A^T A)_12 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * 1 * (xp-xijk)
-       ! (A^T A)_13 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * 1 * (yp-yijk)
-       ! (A^T A)_14 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * 1 * (zp-zijk)
-       ! (A^T A)_22 = sum_{vec{x}_p in OmegaStencil_{i,j,k}} 
-       !    w_p * (xp-xijk) * (xp-xijk)
-       ! ....
-       ! \OmegaStencil_{i,j,k}=Union_{i'=i-1}^{i+1} 
-       !                       Union_{j'=j-1}^{j+1}
-       !                       Union_{k'=k-1}^{k+1}  Omega_{i',j',k'}
-       ! where \Omega_{i,j,k}=( (x,y,z) | x_{i}-dx/2 <=x<= x_{i}+dx/2
-       !                                  y_{i}-dy/2 <=y<= y_{i}+dy/2
-       !                                  z_{i}-dz/2 <=x<= z_{i}+dz/2
-       ! \Omega_{i,j,k} is a cell within the tile.   The tile domain is
-       ! Union_{i'=tilelo(1) ...tilehi(1)}
-       ! Union_{j'=tilelo(2) ...tilehi(2)}
-       ! Union_{k'=tilelo(3) ...tilehi(3)} Omega_{i',j',k'}
+      REAL_T, target :: dx_local(SDIM)
+      REAL_T, target :: xlo_local(SDIM)
+      INTEGER_T, target :: fablo_local(SDIM)
+      INTEGER_T, target :: fabhi_local(SDIM)
+
+      type(interp_from_grid_parm_type) :: data_in
+      type(interp_from_grid_out_parm_type) :: data_out
+
+      do dir=1,SDIM
+       dx_local(dir)=accum_PARM%dx(dir)
+       xlo_local(dir)=accum_PARM%xlo(dir)
+       fablo_local(dir)=accum_PARM%fablo(dir)
+       fabhi_local(dir)=accum_PARM%fabhi(dir)
+      enddo
+
+      call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
 
       nhalf=3
 
@@ -17834,29 +17830,29 @@ stop
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(vofnew),1,-1,1271)
 
-      if (matrix_points.eq.10) then
+      if (matrix_points.eq.1) then
        ! do nothing
       else
        print *,"matrix_points invalid"
        stop
       endif
-      if (RHS_points.eq.4) then
+      if (RHS_points.eq.1) then
        ! do nothing
       else
        print *,"RHS_points invalid"
        stop
       endif
-       ! for assimilating elastic stress, ncomp=matrix_points+ 
-       !   sdim*RHS_points
-       ! level set function= phi_0 + n dot (x-x0) = LS(x)  (LINEAR)
-       ! cost function=sum_3x3x3_stencil 
-       !          w_ii,jj,kk  (phi_{i+ii,j+jj,k+kk}-LS(x_{i+ii,j+jj,k+kk}))^2
-       !    + sum_particles_interface_in_3x3x3_stencil
-       !          w_p (0-LS(x_particle_interface))^2
+
       if (ncomp_accumulate.eq.(matrix_points+RHS_points)) then
        ! do nothing
       else
        print *,"ncomp_accumulate invalid"
+       stop
+      endif
+      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
+       ! do nothing
+      else
+       print *,"im_PLS_cpp invalid"
        stop
       endif
 
@@ -17874,6 +17870,7 @@ stop
       accum_PARM%xlo=>xlo
 
       accum_PARM%im_PLS_cpp=im_PLS_cpp
+
       call copy_dimdec( &
         DIMS(accum_PARM%LS), &
         DIMS(LS))
@@ -17885,6 +17882,8 @@ stop
       call traverse_particlesLS(accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
+         LS, &
+         DIMS(LS), &
          ncomp_accumulate)
 
       accum_PARM%particles=>nbr_particles
@@ -17893,14 +17892,10 @@ stop
       call traverse_particlesLS(accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
+         LS, &
+         DIMS(LS), &
          ncomp_accumulate)
 
-      accum_PARM%Npart=-1
-
-      call traverse_particlesLS(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         ncomp_accumulate)
 
       istenlo(3)=0
       istenhi(3)=0
