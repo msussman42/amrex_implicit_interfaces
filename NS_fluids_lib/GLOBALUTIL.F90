@@ -7217,6 +7217,20 @@ contains
        print *,"scomp invalid"
        stop
       endif
+      if (data_in%interp_foot_flag.eq.0) then
+       ! do nothing
+      else if (data_in%interp_foot_flag.eq.1) then
+       if (data_in%ncomp.eq.SDIM) then
+        ! do nothing
+       else
+        print *,"ncomp or interp_foot_flag invalid"
+        stop
+       endif
+      else
+       print *,"interp_foot_flag invalid"
+       stop
+      endif
+       
       if (data_in%nmat.eq.num_materials) then
        ! do nothing
       else
@@ -7303,6 +7317,16 @@ contains
        do im=1,data_in%ncomp
         local_data(im)=data_in%state(D_DECL(isten,jsten,ksten), &
           data_in%scomp+im-1)
+        if (data_in%interp_foot_flag.eq.0) then
+         ! do nothing
+        else if (data_in%interp_foot_flag.eq.1) then
+          ! xdisplace=x-xfoot    xfoot=x-xdisplace
+         local_data(im)=xsten(0,im)-local_data(im)
+        else
+         print *,"interp_foot_flag invalid"
+         stop
+        endif
+
         data_out%data_interp(im)=data_out%data_interp(im)+WT*local_data(im)
        enddo
 
