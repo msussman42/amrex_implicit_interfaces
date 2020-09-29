@@ -78,8 +78,8 @@ contains
   ! [LeachmanETAL2017 p.30]
   ! C_v,sp = 3116.8 J/(kg K)
 
-  TANK1_GAS_CV = 3.1168D3 ! [J∕(kg·K)]
-
+!  TANK1_GAS_CV = 3.1168D3 ! [J∕(kg·K)]
+  TANK1_GAS_CV=fort_stiffCV(2)
 
   TANK1_GAS_CP = TANK1_R_UNIV/fort_molar_mass(2) + TANK1_GAS_CV ! [J∕(kg·K)]
   TANK1_GAS_GAMMA = TANK1_GAS_CP / TANK1_GAS_CV

@@ -17041,12 +17041,24 @@ stop
         VDOT=expan(D_DECL(i,j,k),indexEXP+1)
         if (expect_mdot_sign.eq.one) then
          if (VDOT.lt.zero) then
+          print *,"expecting VDOT>=0"
           print *,"sign+ VDOT invalid i,j,k,vdot ",i,j,k,VDOT
+          stop
+         else if (VDOT.ge.zero) then
+          ! do nothing
+         else
+          print *,"VDOT bust"
           stop
          endif
         else if (expect_mdot_sign.eq.-one) then
          if (VDOT.gt.zero) then
+          print *,"expecting VDOT<=0"
           print *,"sign- VDOT invalid i,j,k,vdot ",i,j,k,VDOT
+          stop
+         else if (VDOT.le.zero) then
+          ! do nothing
+         else
+          print *,"VDOT bust"
           stop
          endif
         else

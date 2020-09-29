@@ -1959,7 +1959,9 @@ protected:
 
     static Vector<Real> stiffPINF;
     static Vector<Real> prerecalesce_stiffCP; // def=4.1855E+7
+    static Vector<Real> prerecalesce_stiffCV; // def=4.1855E+7
     static Vector<Real> stiffCP; // def=4.1855E+7
+    static Vector<Real> stiffCV; // def=4.1855E+7
     static Vector<Real> stiffGAMMA;
 
     static int constant_viscosity;

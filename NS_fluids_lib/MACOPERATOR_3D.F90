@@ -12,6 +12,8 @@
 
 #include "MACOPERATOR_F.H"
 
+#define DEBUG_THERMAL_WEIGHT 0
+
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
 #elif (AMREX_SPACEDIM==2)
@@ -307,6 +309,15 @@ stop
            stop
           endif
          enddo ! im_vel=1,num_materials_scalar_solve
+
+         if (DEBUG_THERMAL_WEIGHT.eq.1) then
+          if ((j.eq.32).or.(j.eq.96)) then
+           if (i.ge.25) then
+            print *,"i,j,local_cterm,rigid_mask ", &
+                    i,j,local_cterm(1),rigid_mask
+           endif
+          endif
+         endif
 
         else if (project_option.eq.3) then ! viscosity
 

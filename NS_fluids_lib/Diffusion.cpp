@@ -887,11 +887,18 @@ void NavierStokes::combine_state_variable(
 
   resize_levelsetLO(2,LEVELPC_MF);
   LEVEL_COMBINE=localMF[LEVELPC_MF];
-  STATE_INTERFACE=localMF[SATURATION_TEMP_MF];
+
+  if (is_phasechange==1) {
+   STATE_INTERFACE=localMF[SATURATION_TEMP_MF];
+   debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,830);
+   if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
+    amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
+  } else if (is_phasechange==0) {
+   STATE_INTERFACE=&LS_new;  // placeholder
+  } else
+   amrex::Error("is_phasechange invalid");
+
   debug_ngrow(LEVELPC_MF,2,830);
-  debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,830);
-  if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
-   amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
 
  } else if (combine_flag==2) { // combine if vfrac<VOFTOL
 
@@ -1168,8 +1175,13 @@ void NavierStokes::combine_state_variable(
 
    if ((combine_flag==0)||
        (combine_flag==1)) {
-    if (Tsatfab.nComp()!=ntsat)
-     amrex::Error("Tsatfab.nComp()!=ntsat");
+    if (is_phasechange==1) {
+     if (Tsatfab.nComp()!=ntsat)
+      amrex::Error("Tsatfab.nComp()!=ntsat");
+    } else if (is_phasechange==0) {
+     // do nothing
+    } else
+     amrex::Error("is_phasechange invalid");
    } else if (combine_flag==2) {
     // do nothing
    } else

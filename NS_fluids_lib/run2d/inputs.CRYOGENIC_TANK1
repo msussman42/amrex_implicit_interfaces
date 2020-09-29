@@ -141,7 +141,8 @@ ns.denconst= 71.409 2.42454875632709 2700
 # Specific heat capacity [J/(kg.K)]
 # Are these c_p values used for compressible material calculations?
 # Aluminum [3] @ 25K
-ns.stiffCP=9450 6490 17
+ns.stiffCP=9450 3.1168e+3 17
+ns.stiffCV=9450 3.1168e+3 17 #CV used in CRYOGENIC_TANK1 to get CP
 
 # Thermal conductivity [W/(m.K)]
 # k of Al @ 20K from VenturaPerfetti2014

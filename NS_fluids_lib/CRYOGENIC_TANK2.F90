@@ -59,13 +59,14 @@ contains
   ! to have ideal mixture gas as well =>
   ! Only C_p or C_v can be picked from table and the other one
   ! calculated from equation above.
-  ! Here we pick C_{p,spc} from input file.
-  ! C_{v,spc} = C_{p,spc} - R_spc
+  ! Here we pick C_{v,spc} from input file.
+  ! C_{p,spc} = C_{v,spc} + R_spc
 
   TANK2_R_UNIV = 8.31446261815324D0
 
-  TANK2_GAS_CP = fort_stiffCP(2) ![J∕(kg·K)]
-  TANK2_GAS_CV = TANK2_GAS_CP - TANK2_R_UNIV/fort_molar_mass(2)  ! [J∕(kg·K)]
+  TANK2_GAS_CV = fort_stiffCV(2) ![J/(kg K)]
+!  TANK2_GAS_CP = fort_stiffCP(2) ![J∕(kg·K)]
+  TANK2_GAS_CP = TANK2_GAS_CV + TANK2_R_UNIV/fort_molar_mass(2)  ! [J∕(kg·K)]
   TANK2_GAS_GAMMA = TANK2_GAS_CP / TANK2_GAS_CV
 
   ! Initial pressure based on the given density and pressure
@@ -312,7 +313,7 @@ subroutine EOS_CRYOGENIC_TANK2(rho,massfrac_var, &
     pressure=rho * (TANK2_GAS_GAMMA-one) * internal_energy
    else
     print *,"imattype= ",imattype
-    print *,"imattype invalid"
+    print *,"imattype invalid EOS_CRYOGENIC_TANK2"
     stop
    endif
   else
@@ -354,7 +355,7 @@ subroutine SOUNDSQR_CRYOGENIC_TANK2(rho,massfrac_var, &
     endif
    else
     print *,"imattype= ",imattype
-    print *,"imattype invalid"
+    print *,"imattype invalid SOUNDSQR CRYOGENIC TANK2"
     stop
    endif
   else
@@ -384,12 +385,12 @@ subroutine INTERNAL_CRYOGENIC_TANK2(rho,massfrac_var, &
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
-   if (imattype.eq.24) then 
+   if ((imattype.eq.24).or.(imattype.eq.0)) then 
     ! U_mix = C_{v,spc} T
     local_internal_energy=TANK2_GAS_CV*temperature
    else
     print *,"imattype= ",imattype
-    print *,"imattype invalid"
+    print *,"imattype invalid INTERNAL CRYOGENIC TANK2"
     stop
    endif
   else
@@ -420,7 +421,7 @@ subroutine TEMPERATURE_CRYOGENIC_TANK2(rho,massfrac_var, &
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
-   if (imattype.eq.24) then 
+   if ((imattype.eq.24).or.(imattype.eq.0)) then 
     ! T = U / C_{v,spc}
     if (TANK2_GAS_CV.gt.zero) then
      temperature=internal_energy/TANK2_GAS_CV
@@ -430,7 +431,7 @@ subroutine TEMPERATURE_CRYOGENIC_TANK2(rho,massfrac_var, &
     endif
    else
     print *,"imattype= ",imattype
-    print *,"imattype invalid"
+    print *,"imattype invalid TEMPERATURE_CRYOGENIC_TANK2"
     stop
    endif
   else
