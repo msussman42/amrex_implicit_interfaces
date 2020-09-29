@@ -28915,6 +28915,7 @@ stop
         local_dist=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
 
         data_in%xtarget=>xpart
+        data_in%interp_foot_flag=0
         call interp_from_grid_util(data_in,data_out)
 
         call containing_cell(accum_PARM%bfact, &

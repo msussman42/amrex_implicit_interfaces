@@ -18262,6 +18262,7 @@ stop
         else if (1.eq.1) then
          data_in%xtarget=>xpart
           ! bilinear interpolation
+         data_in%interp_foot_flag=0
          call interp_from_grid_util(data_in,data_out)
          LSpart_trial=data_out%data_interp(1)
         else
@@ -18915,12 +18916,15 @@ stop
       if (isweep.eq.0) then
        if (append_flag.eq.1) then
         cell_particle_count_ptr=>cell_particle_count
+         ! particles is INTENT(inout) for this routine since the
+         ! since the levelset value is overwritten with the
+         ! bilinear interpolant of the Eulerian data.
         call count_particles( &
          lsfab, &
          DIMS(lsfab), &
          accum_PARM, &
          cell_particle_count_ptr, &
-         particles, &  ! output since levelset value is overwritten w/Eul
+         particles, &  
          particle_link_data, &
          Np)
        else if (append_flag.eq.0) then

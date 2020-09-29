@@ -122,6 +122,7 @@ module probcommon_module_types
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
       INTEGER_T :: nmat
+      INTEGER_T :: interp_foot_flag ! =1 => xdisp=x-xfoot  xfoot=x-xdisp
       INTEGER_T :: im_PLS  ! =0 if not weighted
       REAL_T, pointer :: xtarget(:)
       REAL_T, pointer :: dx(:)
