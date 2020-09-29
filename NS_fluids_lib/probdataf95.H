@@ -52,6 +52,7 @@
       REAL_T fort_prerecalesce_heatviscconst(MAX_NUM_MATERIALS)
       REAL_T fort_prerecalesce_viscconst(MAX_NUM_MATERIALS)
       REAL_T fort_prerecalesce_stiffCP(MAX_NUM_MATERIALS)
+      REAL_T fort_prerecalesce_stiffCV(MAX_NUM_MATERIALS)
       
       REAL_T fort_speciesconst(MAX_NUM_SPECIES*MAX_NUM_MATERIALS)
       REAL_T fort_speciesviscconst(MAX_NUM_SPECIES*MAX_NUM_MATERIALS)
@@ -76,6 +77,7 @@
 
       REAL_T fort_stiffPINF(MAX_NUM_MATERIALS)
       REAL_T fort_stiffCP(MAX_NUM_MATERIALS)
+      REAL_T fort_stiffCV(MAX_NUM_MATERIALS)
       REAL_T fort_stiffGAMMA(MAX_NUM_MATERIALS)
 
       REAL_T FORT_MUSHY_THICK  ! default==2.0

@@ -182,6 +182,7 @@ ns.denconst= 71.409 2.30234615946324 2700.0
 # GH2 => Ideal gas with c_{v,spc}=6585.5 ([1] p.62) & c_{p,spc}=R_spc+c_{v,spc}=10723.0485662454
 # Aluminum => ([3] p.73) @ 25K
 ns.stiffCP=11421.0 10723.0485662454 17
+ns.stiffCV=11421.0 6586.49654129 17 #CV used in CRYOGENIC_TANK2 to get CP
 
 # Thermal conductivity [W/(m.K)]
 # LH2 => @ 20K => 0.118 [5] p. III-I-1.1

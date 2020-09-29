@@ -18,6 +18,8 @@
 #define VISCINVTOL (1.0D-8)
 #define CURVWT (1.0D-3)
 
+#define DEBUG_THERMAL_COEFF 0
+
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
 #elif (AMREX_SPACEDIM==2)
@@ -15498,6 +15500,16 @@ stop
             else
              print *,"num_materials_face invalid"
              stop
+            endif
+
+            if (DEBUG_THERMAL_COEFF.eq.1) then
+             if ((j.eq.32).or.(j.eq.96)) then
+              if (i.ge.25) then
+               if (project_option.eq.2) then
+                print *,"i,j,dir,HEATCOEFF ",i,j,dir,local_wt(veldir)
+               endif
+              endif
+             endif
             endif
 
             if (dir.eq.0) then

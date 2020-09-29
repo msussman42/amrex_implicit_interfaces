@@ -805,7 +805,9 @@ Vector<Real> NavierStokes::added_weight; // def=1.0
 
 Vector<Real> NavierStokes::stiffPINF;
 Vector<Real> NavierStokes::prerecalesce_stiffCP;  // def=4.1855E+7
+Vector<Real> NavierStokes::prerecalesce_stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffCP;  // def=4.1855E+7
+Vector<Real> NavierStokes::stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffGAMMA;
 
 int NavierStokes::constant_viscosity=0;
@@ -1425,6 +1427,7 @@ void fortran_parameters() {
 
  Vector<Real> stiffPINFtemp(nmat);
  Vector<Real> stiffCPtemp(nmat);
+ Vector<Real> stiffCVtemp(nmat);
  Vector<Real> stiffGAMMAtemp(nmat);
 
  Vector<Real> DrhoDTtemp(nmat);
@@ -1451,6 +1454,7 @@ void fortran_parameters() {
 
   stiffPINFtemp[im]=0.0;
   stiffCPtemp[im]=4.1855e+7;
+  stiffCVtemp[im]=4.1855e+7;
   stiffGAMMAtemp[im]=0.0;
 
   DrhoDTtemp[im]=0.0;
@@ -1480,11 +1484,18 @@ void fortran_parameters() {
  pp.queryarr("stiffPINF",stiffPINFtemp,0,nmat);
 
  pp.queryarr("stiffCP",stiffCPtemp,0,nmat);
+ for (int im=0;im<nmat;im++)
+  stiffCVtemp[im]=stiffCPtemp[im];
+ pp.queryarr("stiffCV",stiffCVtemp,0,nmat);
 
  Vector<Real> prerecalesce_stiffCP_temp(nmat);
  for (int im=0;im<nmat;im++)
   prerecalesce_stiffCP_temp[im]=stiffCPtemp[im];
  pp.queryarr("precalesce_stiffCP",prerecalesce_stiffCP_temp,0,nmat);
+ Vector<Real> prerecalesce_stiffCV_temp(nmat);
+ for (int im=0;im<nmat;im++)
+  prerecalesce_stiffCV_temp[im]=stiffCVtemp[im];
+ pp.queryarr("precalesce_stiffCV",prerecalesce_stiffCV_temp,0,nmat);
 
  pp.queryarr("stiffGAMMA",stiffGAMMAtemp,0,nmat);
 
@@ -1730,6 +1741,7 @@ void fortran_parameters() {
   tempcutoffmaxtemp.dataPtr(),
   stiffPINFtemp.dataPtr(),
   stiffCPtemp.dataPtr(),
+  stiffCVtemp.dataPtr(),
   stiffGAMMAtemp.dataPtr(),
   denconst_temp.dataPtr(),
   den_floor_temp.dataPtr(),
@@ -1743,6 +1755,7 @@ void fortran_parameters() {
   prerecalesce_heatviscconst_temp.dataPtr(),
   prerecalesce_viscconst_temp.dataPtr(),
   prerecalesce_stiffCP_temp.dataPtr(),
+  prerecalesce_stiffCV_temp.dataPtr(),
   speciesconst_temp.dataPtr(),
   speciesviscconst_temp.dataPtr(),
   latent_heat_temp.dataPtr(),
@@ -2628,6 +2641,7 @@ NavierStokes::read_params ()
 
     stiffPINF.resize(nmat);
     stiffCP.resize(nmat);
+    stiffCV.resize(nmat);
     stiffGAMMA.resize(nmat);
 
     DrhoDT.resize(nmat);
@@ -2751,6 +2765,7 @@ NavierStokes::read_params ()
     cap_wave_speed.resize(nten);
 
     prerecalesce_stiffCP.resize(nmat);
+    prerecalesce_stiffCV.resize(nmat);
     prerecalesce_viscconst.resize(nmat);
     prerecalesce_heatviscconst.resize(nmat);
 
@@ -2892,6 +2907,7 @@ NavierStokes::read_params ()
 
      stiffPINF[i]=0.0;
      stiffCP[i]=4.1855e+7;
+     stiffCV[i]=4.1855e+7;
      stiffGAMMA[i]=0.0;
 
      tempcutoff[i]=1.0e-8;
@@ -2907,6 +2923,10 @@ NavierStokes::read_params ()
 
     pp.queryarr("stiffPINF",stiffPINF,0,nmat);
     pp.queryarr("stiffCP",stiffCP,0,nmat);
+    for (int i=0;i<nmat;i++)
+     stiffCV[i]=stiffCP[i];
+
+    pp.queryarr("stiffCV",stiffCV,0,nmat);
     pp.queryarr("stiffGAMMA",stiffGAMMA,0,nmat);
 
     pp.query("angular_velocity",angular_velocity);
@@ -3004,12 +3024,14 @@ NavierStokes::read_params ()
 
     for (int i=0;i<nmat;i++) {
      prerecalesce_stiffCP[i]=stiffCP[i];
+     prerecalesce_stiffCV[i]=stiffCV[i];
      prerecalesce_viscconst[i]=viscconst[i];
      prerecalesce_heatviscconst[i]=heatviscconst[i];
     }
     pp.queryarr("prerecalesce_viscconst",prerecalesce_viscconst,0,nmat);
     pp.queryarr("prerecalesce_heatviscconst",prerecalesce_heatviscconst,0,nmat);
     pp.queryarr("prerecalesce_stiffCP",prerecalesce_stiffCP,0,nmat);
+    pp.queryarr("prerecalesce_stiffCV",prerecalesce_stiffCV,0,nmat);
 
     pp.query("conservative_tension_force",conservative_tension_force);
     pp.query("conservative_div_uu",conservative_div_uu);
@@ -3999,6 +4021,7 @@ NavierStokes::read_params ()
         temperature_error_cutoff[i] << '\n';
       std::cout << "stiffPINF i=" << i << " " << stiffPINF[i] << '\n';
       std::cout << "stiffCP i=" << i << " " << stiffCP[i] << '\n';
+      std::cout << "stiffCV i=" << i << " " << stiffCV[i] << '\n';
       std::cout << "stiffGAMMA i=" << i << " " << stiffGAMMA[i] << '\n';
       std::cout << "added_weight i=" << i << " " << added_weight[i] << '\n';
       std::cout << "denconst_gravity i=" << i << " " << 
@@ -4035,6 +4058,8 @@ NavierStokes::read_params ()
          prerecalesce_heatviscconst[i] << '\n';
       std::cout << "prerecalesce_stiffCP i=" << i << "  " << 
          prerecalesce_stiffCP[i] << '\n';
+      std::cout << "prerecalesce_stiffCV i=" << i << "  " << 
+         prerecalesce_stiffCV[i] << '\n';
      }  // i=0,..,nmat
 
      for (int i=0;i<num_species_var*nmat;i++) {

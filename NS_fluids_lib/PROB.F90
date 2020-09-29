@@ -27711,6 +27711,7 @@ end subroutine initialize2d
          cctempcutoffmax, &
          ccstiffPINF, &
          ccstiffCP, &
+         ccstiffCV, &
          ccstiffGAMMA, &
          ccdenconst, &
          ccden_floor, &
@@ -27724,6 +27725,7 @@ end subroutine initialize2d
          ccprerecalesce_heatviscconst, &
          ccprerecalesce_viscconst, &
          ccprerecalesce_stiffCP, &
+         ccprerecalesce_stiffCV, &
          ccspeciesconst, &
          ccspeciesviscconst, &
          cclatent_heat, &
@@ -27829,6 +27831,7 @@ end subroutine initialize2d
        REAL_T cctempcutoffmax(ccnum_materials)
        REAL_T ccstiffPINF(ccnum_materials)
        REAL_T ccstiffCP(ccnum_materials)
+       REAL_T ccstiffCV(ccnum_materials)
        REAL_T ccstiffGAMMA(ccnum_materials)
        REAL_T ccdenconst(ccnum_materials)
        REAL_T ccden_floor(ccnum_materials)
@@ -27842,6 +27845,7 @@ end subroutine initialize2d
        REAL_T ccprerecalesce_heatviscconst(ccnum_materials)
        REAL_T ccprerecalesce_viscconst(ccnum_materials)
        REAL_T ccprerecalesce_stiffCP(ccnum_materials)
+       REAL_T ccprerecalesce_stiffCV(ccnum_materials)
        REAL_T ccspeciesconst((ccnum_species_var+1)*ccnum_materials)
        REAL_T ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
        REAL_T cclatent_heat(2*ccnten)
@@ -28367,6 +28371,7 @@ end subroutine initialize2d
         fort_tempcutoffmax(im)=cctempcutoffmax(im) ! default 1.0D+99
         fort_stiffPINF(im)=ccstiffPINF(im)
         fort_stiffCP(im)=ccstiffCP(im)
+        fort_stiffCV(im)=ccstiffCV(im)
         fort_stiffGAMMA(im)=ccstiffGAMMA(im)
         fort_denconst(im)=ccdenconst(im)
         fort_density_floor(im)=ccden_floor(im)
@@ -28381,6 +28386,7 @@ end subroutine initialize2d
         fort_prerecalesce_heatviscconst(im)=ccprerecalesce_heatviscconst(im)
         fort_prerecalesce_viscconst(im)=ccprerecalesce_viscconst(im)
         fort_prerecalesce_stiffCP(im)=ccprerecalesce_stiffCP(im)
+        fort_prerecalesce_stiffCV(im)=ccprerecalesce_stiffCV(im)
 
         fort_im_elastic_map(im)=-1
 
@@ -28466,6 +28472,7 @@ end subroutine initialize2d
          print *,"im,tempcutoffmax ",im,fort_tempcutoffmax(im)
          print *,"im,stiffPINF ",im,fort_stiffPINF(im)
          print *,"im,stiffCP ",im,fort_stiffCP(im)
+         print *,"im,stiffCV ",im,fort_stiffCV(im)
          print *,"im,stiffGAMMA ",im,fort_stiffGAMMA(im)
          print *,"im,den ",im,fort_denconst(im)
          print *,"im,den_floor ",im,fort_density_floor(im)
@@ -28484,6 +28491,8 @@ end subroutine initialize2d
           fort_prerecalesce_viscconst(im)
          print *,"im,prerecalesce_cp ",im, &
           fort_prerecalesce_stiffCP(im)
+         print *,"im,prerecalesce_cv ",im, &
+          fort_prerecalesce_stiffCV(im)
         enddo ! im
         do im=1,num_species_var*num_materials
          print *,"im,species ",im,fort_speciesconst(im)
