@@ -18111,7 +18111,7 @@ stop
 
       INTEGER_T, intent(in) :: DIMDEC(LS_local)
       REAL_T, target, intent(in) :: &
-              LS_local(DIMDEC(LS_local),num_materials)
+              LS_local(DIMV(LS_local),num_materials)
 
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
@@ -18126,13 +18126,23 @@ stop
       INTEGER_T :: ibase
       INTEGER_T :: ibase_new
       INTEGER_T :: i_parent,j_parent,k_parent
-      type(interp_from_grid_parm_type), intent(in) :: data_in 
-      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      type(interp_from_grid_parm_type) :: data_in 
+      type(interp_from_grid_out_parm_type) :: data_out
       REAL_T, target, dimension(1) :: data_interp_local
 
       REAL_T, target :: dx_local(SDIM)
+      REAL_T, target :: xlo_local(SDIM)
+      INTEGER_T, target :: fablo_local(SDIM)
+      INTEGER_T, target :: fabhi_local(SDIM)
 
       local_ngrow=1
+
+      do dir=1,SDIM
+       dx_local(dir)=accum_PARM%dx(dir)
+       xlo_local(dir)=accum_PARM%xlo(dir)
+       fablo_local(dir)=accum_PARM%fablo(dir)
+       fabhi_local(dir)=accum_PARM%fabhi(dir)
+      enddo
 
       data_out%data_interp=>data_interp_local
       data_in%scomp=accum_PARM%im_PLS_cpp+1
