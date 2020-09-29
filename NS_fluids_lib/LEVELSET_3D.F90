@@ -18160,6 +18160,8 @@ stop
       data_in%state=>LS_local
       data_in%LS=>LS_local
 
+      call checkbound(fablo_local,fabhi_local,DIMS(LS_local), &
+         local_ngrow,-1,2872)
 
       do interior_ID=1,accum_PARM%Npart
 
@@ -18261,8 +18263,8 @@ stop
           LSpart_trial)
         else if (1.eq.1) then
          data_in%xtarget=>xpart
-          ! bilinear interpolation
          data_in%interp_foot_flag=0
+          ! bilinear interpolation
          call interp_from_grid_util(data_in,data_out)
          LSpart_trial=data_out%data_interp(1)
         else
@@ -18465,124 +18467,12 @@ stop
 
       end subroutine project_to_cell
 
-      subroutine accum_LS(A_LS,b_LS,xdata,xtarget, &
-                   LS,ipart_flag,dx)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: ipart_flag
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xdata(SDIM)
-      REAL_T, intent(in) :: xtarget(SDIM)
-      REAL_T, intent(in) :: LS
-      REAL_T, intent(inout) :: A_LS(SDIM+1,SDIM+1),b_LS(SDIM+1)
-      REAL_T :: eps,tmp,w_p
-      INTEGER_T :: dir
-      INTEGER_T :: ii,jj
-      REAL_T :: base_1,base_2
-
-      eps=dx(1)/10.0d0
-
-      tmp=0.0d0
-      do dir=1,SDIM
-       tmp=tmp+(xdata(dir)-xtarget(dir))**2
-      enddo
-      tmp=sqrt(tmp)
-
-      w_p=1.0d0/(eps+tmp)
-
-      do ii=1,SDIM+1
-
-       if (ii.eq.1) then
-        base_1=one
-       else if ((ii.ge.2).and.(ii.le.SDIM+1)) then
-        base_1=xdata(ii-1)-xtarget(ii-1)
-       else
-        print *,"ii invalid"
-        stop
-       endif
-
-       do jj=1,SDIM+1
-
-        if (jj.eq.1) then
-         base_2=one
-        else if ((jj.ge.2).and.(jj.le.SDIM+1)) then
-         base_2=xdata(jj-1)-xtarget(jj-1)
-        else
-         print *,"jj invalid"
-         stop
-        endif
-
-        A_LS(ii,jj)=A_LS(ii,jj)+w_p*base_1*base_2
-
-       enddo ! jj=1..sdim+1
-
-       b_LS(ii)=b_LS(ii)+w_p*LS*base_1
-      enddo ! ii=1..sdim+1
-
-      end subroutine accum_LS
-
-
-      subroutine accum_X(A_X,b_X,xdata,xtarget, &
-                   xfoot,ipart_flag,dx)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: ipart_flag
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xdata(SDIM)
-      REAL_T, intent(in) :: xtarget(SDIM)
-      REAL_T, intent(in) :: xfoot(SDIM)
-      REAL_T, intent(inout) :: A_X(SDIM+1,SDIM+1),b_X(SDIM,SDIM+1)
-      REAL_T :: eps,tmp,w_p
-      INTEGER_T :: dir
-      INTEGER_T :: ii,jj
-      REAL_T :: base_1,base_2
-
-      eps=dx(1)/10.0d0
-
-      tmp=0.0d0
-      do dir=1,SDIM
-       tmp=tmp+(xdata(dir)-xtarget(dir))**2
-      enddo
-      tmp=sqrt(tmp)
-
-      w_p=1.0d0/(eps+tmp)
-
-      do ii=1,SDIM+1
-
-       if (ii.eq.1) then
-        base_1=one
-       else if ((ii.ge.2).and.(ii.le.SDIM+1)) then
-        base_1=xdata(ii-1)-xtarget(ii-1)
-       else
-        print *,"ii invalid"
-        stop
-       endif
-
-       do jj=1,SDIM+1
-
-        if (jj.eq.1) then
-         base_2=one
-        else if ((jj.ge.2).and.(jj.le.SDIM+1)) then
-         base_2=xdata(jj-1)-xtarget(jj-1)
-        else
-         print *,"jj invalid"
-         stop
-        endif
-
-        A_X(ii,jj)=A_X(ii,jj)+w_p*base_1*base_2
-
-       enddo ! jj=1..sdim+1
-
-       do dir=1,SDIM
-        b_X(dir,ii)=b_X(dir,ii)+w_p*xfoot(dir)*base_1
-       enddo
-
-      enddo ! ii=1..sdim+1
-
-      end subroutine accum_X
-
 
       subroutine interp_eul_lag_dist( &
+         lsfab, &
+         DIMS(lsfab), &
+         xdisplacefab, &
+         DIMS(xdisplacefab), &
          accum_PARM, &
          i,j,k, &
          xtarget, &
@@ -18591,55 +18481,92 @@ stop
          dist_interp, &
          grad_dist_interp, &
          x_foot_interp)  ! x_foot_interp=xtarget if append_flag==0
+      use probcommon_module
       use global_utility_module
-      use ZEYU_LS_extrapolation, only : least_squares_QR
 
       IMPLICIT NONE
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: i,j,k
-      REAL_T, intent(in) :: xtarget(SDIM)
+      REAL_T, target, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: Np
       INTEGER_T, intent(in) :: particle_link_data(Np*(1+SDIM))
       REAL_T, intent(out) :: dist_interp
       REAL_T, intent(out) :: grad_dist_interp(SDIM)
       REAL_T, intent(out) :: x_foot_interp(SDIM)
+      REAL_T :: x_foot_interp_local(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      REAL_T, intent(in), target ::  &
+        xdisplacefab(DIMV(xdisplacefab),SDIM) 
+      REAL_T, intent(in), target ::  &
+        lsfab(DIMV(lsfab),num_materials*(SDIM+1)) 
 
       INTEGER_T :: nhalf
       INTEGER_T :: dir
-      INTEGER_T :: dir_inner
-      INTEGER_T :: ii,jj,kk
-      INTEGER_T :: n
       REAL_T :: xsten(-3:3,SDIM)
-      REAL_T A_LS(SDIM+1,SDIM+1),b_LS(SDIM+1)
-      REAL_T A_X(SDIM+1,SDIM+1),b_X(SDIM,SDIM+1)
-      REAL_T b_local(SDIM+1)
+      REAL_T A_LS,b_LS
+      REAL_T A_X,b_X(SDIM)
       INTEGER_T :: current_link
-      REAL_T :: xpart(SDIM)
+      REAL_T, target :: xpart(SDIM)
       REAL_T :: xfoot(SDIM)
       REAL_T :: LS
-      INTEGER_T :: ipart_flag
       INTEGER_T :: ibase
-      INTEGER_T :: istenlo(3),istenhi(3)
-      REAL_T :: mag
-      REAL_T :: xlocal(SDIM+1)
-      INTEGER_T :: caller_id
+
+      REAL_T tmp,eps
+      REAL_T w_p,wt_LS
+
+      type(interp_from_grid_parm_type) :: data_in 
+      type(interp_from_grid_out_parm_type) :: data_out
+      REAL_T, target, dimension(num_materials*(SDIM+1)) :: data_interp_local
+      REAL_T :: local_LS_interp(num_materials*(SDIM+1))
+
+      REAL_T, target :: dx_local(SDIM)
+      REAL_T, target :: xlo_local(SDIM)
+      INTEGER_T, target :: fablo_local(SDIM)
+      INTEGER_T, target :: fabhi_local(SDIM)
+
+      eps=dx_local(1)/10.0d0
 
       nhalf=3
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
 
-      do ii=1,SDIM+1
-      do jj=1,SDIM+1
-       A_LS(ii,jj)=zero
-       A_X(ii,jj)=zero
+      do dir=1,SDIM
+       dx_local(dir)=accum_PARM%dx(dir)
+       xlo_local(dir)=accum_PARM%xlo(dir)
+       fablo_local(dir)=accum_PARM%fablo(dir)
+       fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
+      call checkbound(fablo_local,fabhi_local,DIMS(xdisplacefab),1,-1,2872)
+      call checkbound(fablo_local,fabhi_local,DIMS(lsfab),1,-1,2872)
+
+      data_out%data_interp=>data_interp_local
+      data_in%scomp=1  ! placeholder
+      data_in%ncomp=1  ! placeholder
+      data_in%level=accum_PARM%level
+      data_in%finest_level=accum_PARM%finest_level
+      data_in%bfact=accum_PARM%bfact
+      data_in%nmat=num_materials
+      data_in%im_PLS=0 ! placeholder
+      data_in%ngrowfab=1
+      data_in%dx=>dx_local
+      data_in%xlo=>xlo_local
+      data_in%fablo=>fablo_local
+      data_in%fabhi=>fabhi_local
+      data_in%state=>xdisplacefab  ! placeholder
+      data_in%LS=>lsfab  ! placeholder
+
+       ! data(xtarget)=interp_data(xtarget)-lambda
+       ! lambda=
+       !  sum_p w_p(interp_data(xp)-particle_data_p)/
+       !  sum_P w_p
+      A_LS=zero
+      A_X=zero
+      b_LS=zero
+      do dir=1,SDIM
+       b_X(dir)=zero
       enddo
-      do ii=1,SDIM+1
-       b_LS(ii)=zero
-       do dir=1,SDIM
-        b_X(dir,ii)=zero
-       enddo
-      enddo
+
       current_link=accum_PARM%cell_particle_count(D_DECL(i,j,k),2)
       do while (current_link.ge.1)
        do dir=1,SDIM
@@ -18647,90 +18574,134 @@ stop
         xfoot(dir)=accum_PARM%particles(current_link)%extra_state(dir)
        enddo 
        LS=accum_PARM%particles(current_link)%extra_state(SDIM+1)
-       ipart_flag=1
-       call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag,accum_PARM%dx)
-       call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag,accum_PARM%dx)
+
+       data_in%xtarget=>xpart
+       data_in%interp_foot_flag=1
+       data_in%scomp=1
+       data_in%ncomp=SDIM
+       data_in%im_PLS=accum_PARM%im_PLS_cpp+1
+       data_in%state=>xdisplacefab  
+       data_in%LS=>lsfab  
+
+       if (accum_PARM%append_flag.eq.0) then
+        do dir=1,SDIM
+         x_foot_interp_local(dir)=xpart(dir)
+        enddo
+       else if (accum_PARM%append_flag.eq.1) then
+        ! bilinear interpolation
+        call interp_from_grid_util(data_in,data_out)
+        do dir=1,SDIM
+         x_foot_interp_local(dir)=data_out%data_interp(dir)
+        enddo
+       else 
+        print *,"accum_PARM%append_flag invalid" 
+        stop
+       endif
+
+       tmp=0.0d0
+       do dir=1,SDIM
+        tmp=tmp+(xpart(dir)-xtarget(dir))**2
+       enddo
+       tmp=sqrt(tmp)
+
+       w_p=1.0d0/(eps+tmp)
+ 
+       if (LS.ge.zero) then
+        wt_LS=one
+       else if (LS.lt.zero) then
+        wt_LS=1.0D-3
+       else
+        print *,"LS invalid"
+        stop
+       endif
+
+       A_X=A_X+w_p*wt_LS
+       do dir=1,SDIM
+        b_X(dir)=b_X(dir)+w_p*wt_LS*(x_foot_interp_local(dir)-xfoot(dir))
+       enddo
+
+       data_in%xtarget=>xpart
+       data_in%interp_foot_flag=0
+       data_in%scomp=1
+       data_in%ncomp=num_materials*(1+SDIM)
+       data_in%im_PLS=0
+       data_in%state=>lsfab  
+       data_in%LS=>lsfab  
+
+       call interp_from_grid_util(data_in,data_out)
+       do dir=1,num_materials*(1+SDIM)
+        local_LS_interp(dir)=data_out%data_interp(dir)
+       enddo
+
+       A_LS=A_LS+w_p
+       b_LS=b_LS+w_p*(local_LS_interp(accum_PARM%im_PLS_cpp+1)-LS)
 
        ibase=(current_link-1)*(1+SDIM)
        current_link=particle_link_data(ibase+1)
       enddo ! while (current_link.ge.1)
 
-      istenlo(3)=0
-      istenhi(3)=0
-      do dir=1,SDIM
-       istenlo(dir)=-1
-       istenhi(dir)=1
-      enddo
-      do ii=i+istenlo(1),i+istenhi(1)
-      do jj=j+istenlo(2),j+istenhi(2)
-      do kk=k+istenlo(3),k+istenhi(3)
-       call gridsten_level(xsten,ii,jj,kk,accum_PARM%level,nhalf)
-       do dir=1,SDIM
-        xpart(dir)=xsten(0,dir)
-       enddo 
-       LS=accum_PARM%LS(D_DECL(ii,jj,kk),accum_PARM%im_PLS_cpp+1)
-       ipart_flag=0
-       call accum_LS(A_LS,b_LS,xpart,xtarget,LS,ipart_flag,accum_PARM%dx)
-      enddo
-      enddo
-      enddo
-      istenlo(3)=0
-      istenhi(3)=0
-      do dir=1,SDIM
-       istenlo(dir)=-1
-       istenhi(dir)=1
-      enddo
+      data_in%xtarget=>xtarget
+      data_in%interp_foot_flag=1
+      data_in%scomp=1
+      data_in%ncomp=SDIM
+      data_in%im_PLS=accum_PARM%im_PLS_cpp+1
+      data_in%state=>xdisplacefab  
+      data_in%LS=>lsfab  
 
-      do ii=i+istenlo(1),i+istenhi(1)
-      do jj=j+istenlo(2),j+istenhi(2)
-      do kk=k+istenlo(3),k+istenhi(3)
-       call gridsten_level(xsten,ii,jj,kk,accum_PARM%level,nhalf)
+      if (accum_PARM%append_flag.eq.0) then
        do dir=1,SDIM
-        xpart(dir)=xsten(0,dir)
-         ! xdisplace=x - xfoot
-         ! xfoot=x-displace
-        xfoot(dir)=xpart(dir)-accum_PARM%xdisplacefab(D_DECL(ii,jj,kk),dir)
-       enddo 
-       ipart_flag=0
-       call accum_X(A_X,b_X,xpart,xtarget,xfoot,ipart_flag,accum_PARM%dx)
-      enddo
-      enddo
-      enddo
-      n=SDIM+1
-      caller_id=2
-      call least_squares_QR(A_LS,xlocal,b_LS,n,n,caller_id)
-      dist_interp=xlocal(1)
-      mag=zero
-      do dir=1,SDIM
-       grad_dist_interp(dir)=xlocal(1+dir)
-       mag=mag+grad_dist_interp(dir)**2
-      enddo
-      mag=sqrt(mag)
-      if (mag.gt.zero) then
-       do dir=1,SDIM
-        grad_dist_interp(dir)=grad_dist_interp(dir)/mag
-       enddo
-      else if (mag.eq.zero) then
-       ! do nothing
-      else
-       print *,"mag invalid"
-       stop
-      endif
-      do dir=1,SDIM
-       do dir_inner=1,SDIM+1
-        b_local(dir_inner)=b_X(dir,dir_inner)
-       enddo 
-       caller_id=3
-       call least_squares_QR(A_X,xlocal,b_local,n,n,caller_id)
-       if (accum_PARM%append_flag.eq.0) then
         x_foot_interp(dir)=xtarget(dir)
-       else if (accum_PARM%append_flag.eq.1) then
-        x_foot_interp(dir)=xlocal(1)
+       enddo
+      else if (accum_PARM%append_flag.eq.1) then
+       ! bilinear interpolation
+       call interp_from_grid_util(data_in,data_out)
+       do dir=1,SDIM
+        x_foot_interp(dir)=data_out%data_interp(dir)
+       enddo
+
+       if (A_X.gt.zero) then
+        do dir=1,SDIM
+         x_foot_interp(dir)=x_foot_interp(dir)-b_X(dir)/A_X
+        enddo
+       else if (A_X.eq.zero) then
+        ! do nothing
        else
-        print *,"accum_PARM%append_flag invalid"
+        print *,"A_X invalid"
         stop
        endif
-      enddo ! dir=1..sdim
+
+      else 
+       print *,"accum_PARM%append_flag invalid" 
+       stop
+      endif
+
+      data_in%xtarget=>xtarget
+      data_in%interp_foot_flag=0
+      data_in%scomp=1
+      data_in%ncomp=num_materials*(1+SDIM)
+      data_in%im_PLS=0
+      data_in%state=>lsfab  
+      data_in%LS=>lsfab  
+
+      call interp_from_grid_util(data_in,data_out)
+      do dir=1,num_materials*(1+SDIM)
+       local_LS_interp(dir)=data_out%data_interp(dir)
+      enddo
+      call normalize_LS_normals(num_materials,local_LS_interp)
+      do dir=1,SDIM
+       grad_dist_interp(dir)= &
+        local_LS_interp(num_materials+accum_PARM%im_PLS_cpp*SDIM+dir)
+      enddo
+
+      dist_interp=local_LS_interp(accum_PARM%im_PLS_cpp+1)
+      if (A_LS.gt.zero) then
+       dist_interp=dist_interp-b_LS/A_LS
+      else if (A_LS.eq.zero) then
+       ! do nothing
+      else
+       print *,"A_LS invalid"
+       stop
+      endif
 
       end subroutine interp_eul_lag_dist
 
@@ -19108,6 +19079,10 @@ stop
 
             ! add bulk particles
           call interp_eul_lag_dist( &
+            lsfab, &
+            DIMS(lsfab), &
+            xdisplacefab, &
+            DIMS(xdisplacefab), &
             accum_PARM, &
             i,j,k, &
             xsub, &
@@ -19159,6 +19134,10 @@ stop
 
             ! add interface particles
            call interp_eul_lag_dist( &
+            lsfab, &
+            DIMS(lsfab), &
+            xdisplacefab, &
+            DIMS(xdisplacefab), &
             accum_PARM, &
             i,j,k, &
             xsub_I, &
