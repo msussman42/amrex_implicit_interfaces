@@ -29013,7 +29013,6 @@ stop
         DIMS(matrixfab)) &
       bind(c,name='fort_assimilate_tensor_from_particles')
 
-      use ZEYU_LS_extrapolation, only : least_squares_QR
       use global_utility_module
       use probcommon_module
       implicit none

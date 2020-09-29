@@ -6908,8 +6908,8 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
 
- int matrix_points=10;  // 4x4 - (3+2+1) =10
- int RHS_points=4;
+ int matrix_points=1;  // sum_{xp in Omega_cell} W(xp,x_cell,LS)
+ int RHS_points=1;     // sum_{xp in Omega_cell} (LS_cell(xp)-LS_cell_p)*W
  int ncomp_accumulate=(matrix_points+RHS_points);
  MultiFab* accumulate_mf=new MultiFab(grids,dmap,ncomp_accumulate,0,
     MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
