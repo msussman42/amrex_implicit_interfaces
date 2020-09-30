@@ -17604,6 +17604,7 @@ stop
       subroutine fort_assimilate_lvlset_from_particles( &
         tid, &  ! thread id
         im_PLS_cpp, &
+        isweep, &
         level, &          ! 0<=level<=finest_level
         finest_level, &
         solid_time, &
@@ -17637,12 +17638,12 @@ stop
       use probf90_module
       use geometry_intersect_module
       use MOF_routines_module
-      use ZEYU_LS_extrapolation, only : least_squares_QR
 
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: im_PLS_cpp
+      INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: ngrow_distance
 
       INTEGER_T, intent(in) :: level,finest_level
@@ -17691,17 +17692,13 @@ stop
       INTEGER_T gridlo(3)
       INTEGER_T gridhi(3)
       INTEGER_T i,j,k
-      INTEGER_T n
+      INTEGER_T ii,jj,kk
       INTEGER_T dir
       INTEGER_T im
-      INTEGER_T ibase
-      INTEGER_T ii,jj,kk
       REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten_local(-3:3,SDIM)
       INTEGER_T nhalf
-      REAL_T A(SDIM+1,SDIM+1), b(SDIM+1), xlocal(SDIM+1)
+      REAL_T A_matrix, B_matrix, LS_local, lambda
       REAL_T LS_temp(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T LS_local
       REAL_T F_local
       REAL_T LSfacearea
       REAL_T LScentroid(SDIM)
@@ -17713,9 +17710,15 @@ stop
       REAL_T F_old
       REAL_T F_sum_complement
       REAL_T F_sum_complement_new
-      INTEGER_T caller_id
 
       nhalf=3
+
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
 
       call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1271)
@@ -17773,26 +17776,7 @@ stop
         DIMS(LS))
       accum_PARM%LS=>LS  ! accum_PARM%LS is pointer, LS is target
 
-      accum_PARM%particles=>particles
-      accum_PARM%Npart=Np
-
-      call traverse_particlesLS(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         LS, &
-         DIMS(LS), &
-         ncomp_accumulate)
-
-      accum_PARM%particles=>nbr_particles
-      accum_PARM%Npart=Nn
-
-      call traverse_particlesLS(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         LS, &
-         DIMS(LS), &
-         ncomp_accumulate)
-
+      call growntilebox(tilelo,tilehi,fablo,fabhi,gridlo,gridhi,0) 
 
       istenlo(3)=0
       istenhi(3)=0
@@ -17801,183 +17785,174 @@ stop
        istenhi(dir)=1
       enddo
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,gridlo,gridhi,0) 
+      if (isweep.eq.0) then
 
-      n=SDIM+1
-      do i=gridlo(1),gridhi(1)
-      do j=gridlo(2),gridhi(2)
-      do k=gridlo(3),gridhi(3)
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-       ibase=1
-       do ii=1,n
-       do jj=ii,n
-        A(ii,jj)=matrixfab(D_DECL(i,j,k),ibase)
-        A(jj,ii)=A(ii,jj)
-        ibase=ibase+1
-       enddo
-       enddo
-       if (SDIM.eq.2) then
-        if (ibase-1.eq.6) then
-         ! do nothing
+       accum_PARM%particles=>particles
+       accum_PARM%Npart=Np
+
+       call traverse_particlesLS(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         LS, &
+         DIMS(LS), &
+         ncomp_accumulate)
+
+       accum_PARM%particles=>nbr_particles
+       accum_PARM%Npart=Nn
+
+       call traverse_particlesLS(accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         LS, &
+         DIMS(LS), &
+         ncomp_accumulate)
+
+       do i=gridlo(1),gridhi(1)
+       do j=gridlo(2),gridhi(2)
+       do k=gridlo(3),gridhi(3)
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
+        B_matrix=matrixfab(D_DECL(i,j,k),2) ! sum w*(LS_cell(xp)-LS_cell_p)
+        LS_local=LS(D_DECL(i,j,k),im_PLS_cpp+1)
+
+        if (A_matrix.eq.zero) then
+         lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=LS_local
+        else if (A_matrix.gt.zero) then
+         lambda=B_matrix/A_matrix
+         lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=LS_local-lambda
         else
-         print *,"ibase invalid (13) ibase=",ibase
+         print *,"A_matrix invalid"
          stop
         endif
-       else if (SDIM.eq.3) then
-        if (ibase-1.eq.10) then
-         ! do nothing
-        else
-         print *,"ibase invalid (14) ibase=",ibase
-         stop
-        endif
-       else
-        print *,"dimension bust"
-        stop
-       endif
 
-       ibase=11
-       do ii=1,n
-        b(ii)=matrixfab(D_DECL(i,j,k),ibase+ii-1)
        enddo
-       ibase=ibase+RHS_points
-      
-       caller_id=1 
-       call least_squares_QR(A,xlocal,b,n,n,caller_id)
+       enddo
+       enddo
 
-       if (ibase-1.eq.matrix_points+RHS_points) then
-        ! do nothing
-       else
-        print *,"ibase invalid (15) ibase=",ibase 
-        stop
-       endif
+      else if (isweep.eq.1) then
 
-       lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=xlocal(1)
+       do i=gridlo(1),gridhi(1)
+       do j=gridlo(2),gridhi(2)
+       do k=gridlo(3),gridhi(3)
+        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       do ii=istenlo(1),istenhi(1)
-       do jj=istenlo(2),istenhi(2)
-       do kk=istenlo(3),istenhi(3)
-        call gridsten_level(xsten_local,i+ii,j+jj,k+kk,level,nhalf)
-        LS_local=xlocal(1)
-        do dir=1,SDIM
-         LS_local=LS_local+(xsten_local(0,dir)-xsten(0,dir))*xlocal(1+dir)
+        do ii=istenlo(1),istenhi(1)
+        do jj=istenlo(2),istenhi(2)
+        do kk=istenlo(3),istenhi(3)
+         LS_local=LS(D_DECL(i+ii,j+jj,k+kk),im_PLS_cpp+1)
+         LS_temp(D_DECL(ii,jj,kk))=LS_local
         enddo
-        LS_temp(D_DECL(ii,jj,kk))=LS_local
-       enddo
-       enddo
-       enddo
-       call getvolume(bfact,dx,xsten,nhalf, &
+        enddo
+        enddo
+        call getvolume(bfact,dx,xsten,nhalf, &
          LS_temp,F_local,LSfacearea, &
          LScentroid,LSareacentroid,VOFTOL,SDIM)
-       call CISBOX(xsten,nhalf, &
+        call CISBOX(xsten,nhalf, &
          xlo,dx,i,j,k, &
          bfact,level, &
          volcell,cencell,SDIM)   
-       if (is_rigid(nmat,im_PLS_cpp+1).eq.0) then
-        vofcomp=im_PLS_cpp*ngeom_raw+1
-        F_old=vofnew(D_DECL(i,j,k),vofcomp)
-        F_sum_complement=zero
-        do im=1,nmat
-         if (im.ne.im_PLS_cpp+1) then
-          if (is_rigid(nmat,im).eq.0) then
-           vofcomp_local=(im-1)*ngeom_raw+1
-           F_sum_complement= &
-            F_sum_complement+vofnew(D_DECL(i,j,k),vofcomp_local)
-          else if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid(nmat,im_PLS_cpp+1).eq.0) then
+         vofcomp=im_PLS_cpp*ngeom_raw+1
+         F_old=vofnew(D_DECL(i,j,k),vofcomp)
+         F_sum_complement=zero
+         do im=1,nmat
+          if (im.ne.im_PLS_cpp+1) then
+           if (is_rigid(nmat,im).eq.0) then
+            vofcomp_local=(im-1)*ngeom_raw+1
+            F_sum_complement= &
+             F_sum_complement+vofnew(D_DECL(i,j,k),vofcomp_local)
+           else if (is_rigid(nmat,im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid(nmat,im) invalid"
+            stop
+           endif
+          endif
+         enddo !im=1..nmat
+
+         if (F_local.ge.F_old) then 
+          if (F_sum_complement.gt.zero) then
+
+           F_sum_complement_new=F_sum_complement+F_old-F_local
+
+           vofnew(D_DECL(i,j,k),vofcomp)=F_local
+           do dir=1,SDIM
+            vofnew(D_DECL(i,j,k),vofcomp+dir)=LScentroid(dir)-cencell(dir)
+           enddo
+          
+           do im=1,nmat
+            if (im.ne.im_PLS_cpp+1) then
+             if (is_rigid(nmat,im).eq.0) then
+              vofcomp_local=(im-1)*ngeom_raw+1
+              vofnew(D_DECL(i,j,k),vofcomp_local)= &
+               F_sum_complement_new* &
+               vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
+             else if (is_rigid(nmat,im).eq.1) then
+              ! do nothing
+             else
+              print *,"is_rigid(nmat,im) invalid"
+              stop
+             endif
+            endif
+           enddo !im=1..nmat
+          else if (F_sum_complement.eq.zero) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"F_sum_complement invalid"
            stop
           endif
-         endif
-        enddo !im=1..nmat
-         
-
-        if (F_local.ge.F_old) then 
-         if (F_sum_complement.gt.zero) then
-
-          F_sum_complement_new=F_sum_complement+F_old-F_local
-
-          vofnew(D_DECL(i,j,k),vofcomp)=F_local
-          do dir=1,SDIM
-           vofnew(D_DECL(i,j,k),vofcomp+dir)=LScentroid(dir)-cencell(dir)
-          enddo
-          
-          do im=1,nmat
-           if (im.ne.im_PLS_cpp+1) then
-            if (is_rigid(nmat,im).eq.0) then
-             vofcomp_local=(im-1)*ngeom_raw+1
-             vofnew(D_DECL(i,j,k),vofcomp_local)= &
-              F_sum_complement_new* &
-              vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
-            else if (is_rigid(nmat,im).eq.1) then
-             ! do nothing
-            else
-             print *,"is_rigid(nmat,im) invalid"
-             stop
+         else if (F_local.le.F_old) then
+          ! sum_complement_new=sum_complement_old+F_old-F_local
+          ! if F_old=1 and F_local=0 then new sum complement=0+1-0=1
+          if ((F_sum_complement.eq.zero).or. &
+              (F_old.ge.one-VOFTOL)) then
+           ! do nothing since we do not know which material replaces im_PLS_cpp
+          else if ((F_sum_complement.gt.zero).and. &
+                   (F_old.le.one-VOFTOL)) then
+           F_sum_complement_new=F_sum_complement+F_old-F_local
+           
+           vofnew(D_DECL(i,j,k),vofcomp)=F_local
+           do dir=1,SDIM
+            vofnew(D_DECL(i,j,k),vofcomp+dir)=LScentroid(dir)-cencell(dir)
+           enddo
+           
+           do im=1,nmat
+            if (im.ne.im_PLS_cpp+1) then
+             if (is_rigid(nmat,im).eq.0) then
+              vofcomp_local=(im-1)*ngeom_raw+1
+              vofnew(D_DECL(i,j,k),vofcomp_local)= &
+               F_sum_complement_new* &
+               vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
+             else if (is_rigid(nmat,im).eq.1) then
+              ! do nothing
+             else
+              print *,"is_rigid(nmat,im) invalid"
+              stop
+             endif
             endif
-           endif
-          enddo !im=1..nmat
-         else if (F_sum_complement.eq.zero) then
-          ! do nothing
+           enddo !im=1..nmat
+          else
+           print *,"F_sum_complement or F_old invalid"
+           stop
+          endif
          else
-          print *,"F_sum_complement invalid"
-          stop
-         endif
-        else if (F_local.le.F_old) then
-         ! sum_complement_new=sum_complement_old+F_old-F_local
-         ! if F_old=1 and F_local=0 then new sum complement=0+1-0=1
-         if ((F_sum_complement.eq.zero).or. &
-             (F_old.ge.one-VOFTOL)) then
-          ! do nothing since we do not know which material replaces im_PLS_cpp
-         else if ((F_sum_complement.gt.zero).and. &
-                  (F_old.le.one-VOFTOL)) then
-          F_sum_complement_new=F_sum_complement+F_old-F_local
-          
-          vofnew(D_DECL(i,j,k),vofcomp)=F_local
-          do dir=1,SDIM
-           vofnew(D_DECL(i,j,k),vofcomp+dir)=LScentroid(dir)-cencell(dir)
-          enddo
-          
-          do im=1,nmat
-           if (im.ne.im_PLS_cpp+1) then
-            if (is_rigid(nmat,im).eq.0) then
-             vofcomp_local=(im-1)*ngeom_raw+1
-             vofnew(D_DECL(i,j,k),vofcomp_local)= &
-              F_sum_complement_new* &
-              vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
-            else if (is_rigid(nmat,im).eq.1) then
-             ! do nothing
-            else
-             print *,"is_rigid(nmat,im) invalid"
-             stop
-            endif
-           endif
-          enddo !im=1..nmat
-         else
-          print *,"F_sum_complement or F_old invalid"
+          print *,"F_old or F_local invalid"
           stop
          endif
         else
-         print *,"F_old or F_local invalid"
+         print *,"expecting is_rigid(nmat,im_PLS_cpp+1)==0"
          stop
         endif
-       else
-        print *,"expecting is_rigid(nmat,im_PLS_cpp+1)==0"
-        stop
-       endif
 
-      enddo
-      enddo
-      enddo
+       enddo
+       enddo
+       enddo
 
-        ! find index (i,j,k) in which xpart lives.
-        ! for all neighbors of (i,j,k), within the tilelo,tilehi borders,
-        ! increment the least squares matrix components stored in
-        ! matrixfab(D_DECL(i+ii,j+jj,k+kk),ncomp_accumulate)
-        ! a weight is calculated from xpart and xcen(i+ii,j+jj,k+kk) which
-        ! is the coordinate of the cell center of cell (i+ii,j+jj,k+kk).
-        ! assume that x_i=xlo(1)+dx(1)*(i-fablo(1)+0.5d0)
-        ! i_contain=NINT((xpart-xlo(1))/dx(1)+fablo(1)-0.5d0)
+      else 
+       print *,"isweep invalid"
+       stop
+      endif
+
       end subroutine fort_assimilate_lvlset_from_particles
 
       subroutine count_particles( &

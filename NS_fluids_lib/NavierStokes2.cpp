@@ -6865,6 +6865,9 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
  
  bool use_tiling=ns_tiling;
 
+ if (std::abs(time-cur_time_slab)>1.0e-8)
+  amrex::Error("do PLS_correct at the new time");
+
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -6893,7 +6896,6 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
    num_materials_vel*(AMREX_SPACEDIM+1),time); 
  MultiFab* mofdata=getState(1,scomp_mofvars,nmat*ngeom_raw,time);
  MultiFab* dendata=getStateDen(1,time);
- MultiFab* lsdata=getStateDist(ngrow_distance,time,18);
 
  if (veldata->nComp()!=num_materials_vel*(AMREX_SPACEDIM+1))
   amrex::Error("veldata incorrect ncomp");
@@ -6901,10 +6903,6 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
   amrex::Error("dendata incorrect ncomp");
  if (mofdata->nComp()!=nmat*ngeom_raw)
   amrex::Error("mofdata incorrect ncomp");
- if (lsdata->nComp()!=nmat*(1+AMREX_SPACEDIM))
-  amrex::Error("lsdata incorrect ncomp");
- if (lsdata->nGrow()!=ngrow_distance)
-  amrex::Error("lsdata->nGrow()!=ngrow_distance");
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
 
@@ -6933,15 +6931,23 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
  localPC.copyParticles(localPC_no_nbr,local_copy_flag);
  localPC.fillNeighbors();
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+ for (int isweep=0;isweep<=1;isweep++) {
+
+  MultiFab* lsdata=getStateDist(ngrow_distance,time,18);
+  if (lsdata->nGrow()!=ngrow_distance)
+   amrex::Error("lsdata->nGrow()!=ngrow_distance");
+  if (lsdata->nComp()!=nmat*(1+AMREX_SPACEDIM))
+   amrex::Error("lsdata incorrect ncomp");
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -6985,6 +6991,7 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
    fort_assimilate_lvlset_from_particles(
      &tid_current,
      &im_PLS,
+     &isweep,
      &level,
      &finest_level,
      &time,
@@ -7020,9 +7027,11 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
      matrixfab.dataPtr(),
      ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
 
- }  // mfi
+  }  // mfi
 } // omp
- ns_reconcile_d_num(154);
+  ns_reconcile_d_num(154);
+  delete lsdata;
+ } // isweep=0,1
 
  localPC.clearNeighbors();
 
@@ -7030,7 +7039,6 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
  delete veldata;
  delete mofdata;
  delete dendata;
- delete lsdata;
 
 
 }  // end subroutine PLS_correct()
