@@ -155,8 +155,7 @@ stop
          cell_index, &
          LS_interp, &
          im_solid, &
-         im1_stencil, &
-         im2_stencil)
+         im_fluid_critical)
         use global_utility_module
         use global_distance_module
         use probf90_module
@@ -171,8 +170,7 @@ stop
         INTEGER_T, intent(in) :: cell_index(SDIM)
         REAL_T, intent(out) :: LS_interp(num_materials)
         INTEGER_T, intent(in) :: im_solid 
-        INTEGER_T, intent(inout) :: im1_stencil
-        INTEGER_T, intent(inout) :: im2_stencil
+        INTEGER_T, intent(out) :: im_fluid_critical
         INTEGER_T :: nhalf
         REAL_T :: xsten(-3:3,SDIM)
         INTEGER_T :: dir
@@ -212,6 +210,7 @@ stop
          enddo ! dir=1..sdim
 
          shortest_dist_to_fluid=-one
+         im_fluid_critical=0
 
          do i2=LSstenlo(1),LSstenhi(1)
          do j2=LSstenlo(2),LSstenhi(2)
@@ -227,6 +226,7 @@ stop
 
           dist_stencil_to_bulk=zero
 
+           ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
           do dir=1,SDIM
            ZEYU_DAT%ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
            dist_stencil_to_bulk=dist_stencil_to_bulk+ &
@@ -242,33 +242,10 @@ stop
           ! in the substrate, have the most weight.
           call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
 
-          do im_local=1,CP%nmat
-           if (is_rigid(CP%nmat,im_local).eq.0) then
-            if (LS_virtual(im_local).ge.zero) then
-             if (im1_stencil.eq.0) then
-              im1_stencil=im_local
-             else if (im1_stencil.eq.im_local) then
-              ! do nothing
-             else if (im2_stencil.eq.0) then
-              im2_stencil=im_local
-             endif
-            else if (LS_virtual(im_local).le.zero) then
-             ! do nothing
-            else
-             print *,"LS_virtual invalid"
-             stop
-            endif
-           else if (is_rigid(CP%nmat,im_local).eq.1) then 
-            ! do nothing
-           else
-            print *,"is_rigid(CP%nmat,im_local) invalid"
-            stop
-           endif
-          enddo ! im_local=1..nmat
-
           if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.0) then
 
            if (shortest_dist_to_fluid.eq.-one) then
+            im_fluid_critical=im_primary_sub_stencil
             shortest_dist_to_fluid=dist_stencil_to_bulk
             do im_local=1,CP%nmat
              LS_interp_low_order(im_local)=LS_virtual(im_local)
@@ -276,6 +253,7 @@ stop
            else if (shortest_dist_to_fluid.ge.zero) then
             if (dist_stencil_to_bulk.lt. &
                 shortest_dist_to_fluid) then
+             im_fluid_critical=im_primary_sub_stencil
              shortest_dist_to_fluid=dist_stencil_to_bulk
              do im_local=1,CP%nmat
               LS_interp_low_order(im_local)=LS_virtual(im_local)
@@ -15795,6 +15773,7 @@ stop
       INTEGER_T center_stencil_wetting_im
       INTEGER_T im1_substencil
       INTEGER_T im2_substencil
+      INTEGER_T im_fluid_critical
       INTEGER_T im_local
       INTEGER_T continuous_mof_parm
       REAL_T user_tension(nten)
@@ -16196,6 +16175,10 @@ stop
          print *,"LS_extrap_iter invalid"
          stop
         endif
+
+        ! --------------------------------------------------------- 
+        ! end: fluid state variable extrapolation into empty cells.
+        ! ----------------------------------------------------------
       
         do dir=1,nmat*ngeom_recon
          mofnew(dir)=zero
@@ -16529,6 +16512,9 @@ stop
            center_stencil_im_only=0
            center_stencil_wetting_im=0
 
+           im1_substencil=0
+           im2_substencil=0
+
             ! inner loop is needed since the volume fraction
             ! at (i,j,k) depends on the levelset function values
             ! in the (i+i1,j+j1,k+k1) node stencil.
@@ -16540,6 +16526,7 @@ stop
             cell_CP_parm%i=i+i1
             cell_CP_parm%j=j+j1
             cell_CP_parm%k=k+k1
+             ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
             call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
 
             call containing_cell(bfact, &
@@ -16549,11 +16536,9 @@ stop
               xCP, &
               cell_index)
 
-            im1_substencil=0
-            im2_substencil=0
-
-             ! im1_substencil and im2_substencil are initialized
-             ! for fluid materials in which LS_XCP_stencil>=0.0.
+             ! im1_substencil or im2_substencil is initialized
+             ! for the fluid material in which LS_XCP_stencil>=0.0 and
+             ! |XCP_stencil-xSOLID_BULK| is a minimum.
             call interp_fluid_LS( &
              ZEYU_DAT, &
              cell_CP_parm, &
@@ -16562,8 +16547,7 @@ stop
              cell_index, &
              LS_virtual_new, & 
              im_solid_max, &
-             im1_substencil, &
-             im2_substencil)
+             im_fluid_critical) !primary fluid material closest to xSOLID_BULK
 
             if ((i1.eq.0).and. &
                 (j1.eq.0).and. &
@@ -16596,78 +16580,33 @@ stop
               LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
              enddo
 
-              ! im1_substencil and im2_substencil are initialized
-              ! for fluid materials in which LS_XCP_stencil>=0.0.
-             if (at_center.eq.0) then
+             if (im_fluid_critical.eq.0) then
               ! do nothing
-             else if (at_center.eq.1) then
-              if (im1_substencil.eq.0) then
-               print *,"all materials disappeared"
-               stop
-              else if ((im1_substencil.ge.1).and. &
-                       (im1_substencil.le.nmat)) then
-               if (im2_substencil.eq.0) then
-                 !fluid: center_stencil_im_only owns the whole cell
-                center_stencil_im_only=im1_substencil 
-               else if ((im2_substencil.ge.1).and. &
-                        (im2_substencil.le.nmat)) then
-                if (im1_substencil.lt.im2_substencil) then
-                 im=im1_substencil
-                 im_opp=im2_substencil
-                else if (im1_substencil.gt.im2_substencil) then
-                 im=im2_substencil
-                 im_opp=im1_substencil
-                else
-                 print *,"im1_substencil or im2_substencil invalid"
-                 stop
-                endif
-                call get_iten(im,im_opp,iten,nmat)
-                do im_local=1,nmat
-                 dencomp=(im_local-1)*num_state_material+1
-                 local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
-                enddo
-                 ! coordinate of (i,j,k)
-                do dir=1,SDIM
-                 local_XPOS(dir)=xsten(0,dir)
-                enddo
-                call get_user_tension( &
-                 local_XPOS, &
-                 time, &
-                 fort_tension,user_tension, &
-                 local_temperature, &
-                 nmat,nten,2)
-                ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
-                ! theta_{ik}=0 => material i wets material k.
-                ! im is material "i"  ("fluid" material)
-                ! im_opp is material "j"
-                call get_CL_iten(im,im_opp,im_solid_max, &
-                 iten_13,iten_23, &
-                 user_tension,nten,cos_angle,sin_angle)
-                if ((sin_angle.eq.zero).and.(cos_angle.eq.one)) then
-                 center_stencil_wetting_im=im
-                else if ((sin_angle.eq.zero).and.(cos_angle.eq.-one)) then 
-                 center_stencil_wetting_im=im_opp
-                else if ((sin_angle.ge.zero).and. &
-                         (sin_angle.le.one).and. &
-                         (cos_angle.ge.-one).and. &
-                         (cos_angle.le.one)) then
+             else if ((im_fluid_critical.ge.1).and. &
+                      (im_fluid_critical.le.nmat)) then
+              if (is_rigid(nmat,im_fluid_critical).eq.0) then
+               if (im1_substencil.eq.0) then
+                im1_substencil=im_fluid_critical
+               else if ((im1_substencil.ge.1).and. &
+                        (im1_substencil.le.nmat)) then
+                if (im_fluid_critical.eq.im1_substencil) then
                  ! do nothing
                 else
-                 print *,"sin_angle or cos_angle invalid"
-                 stop
+                 im2_substencil=im_fluid_critical
                 endif
                else
-                print *,"im2_substencil invalid"
+                print *,"im1_substencil invalid"
                 stop
                endif
               else
-               print *,"im1_substencil invalid"
+               print *,"is_rigid(nmat,im_fluid_critical) invalid"
                stop
               endif
              else
-              print *,"at_center invalid"
+              print *,"im_fluid_critical invalid"
               stop
              endif
+
             else
              print *,"is_rigid(nmat,im_primary_stencil) or at_center invalid"
              stop
@@ -16676,6 +16615,71 @@ stop
            enddo
            enddo
            enddo ! i1,j1,k1=LSstenlo ... LSstenhi
+
+
+           if (im1_substencil.eq.0) then
+            print *,"all materials disappeared"
+            stop
+           else if ((im1_substencil.ge.1).and. &
+                    (im1_substencil.le.nmat)) then
+            if (im2_substencil.eq.0) then
+             !fluid: center_stencil_im_only owns the whole cell
+             center_stencil_im_only=im1_substencil 
+            else if ((im2_substencil.ge.1).and. &
+                     (im2_substencil.le.nmat)) then
+             if (im1_substencil.lt.im2_substencil) then
+              im=im1_substencil
+              im_opp=im2_substencil
+             else if (im1_substencil.gt.im2_substencil) then
+              im=im2_substencil
+              im_opp=im1_substencil
+             else
+              print *,"im1_substencil or im2_substencil invalid"
+              stop
+             endif
+             call get_iten(im,im_opp,iten,nmat)
+             do im_local=1,nmat
+              dencomp=(im_local-1)*num_state_material+1
+              local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
+             enddo
+              ! coordinate of (i,j,k)
+             do dir=1,SDIM
+              local_XPOS(dir)=xsten(0,dir)
+             enddo
+             call get_user_tension( &
+              local_XPOS, &
+              time, &
+              fort_tension,user_tension, &
+              local_temperature, &
+              nmat,nten,2)
+             ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
+             ! theta_{ik}=0 => material i wets material k.
+             ! im is material "i"  ("fluid" material)
+             ! im_opp is material "j"
+             call get_CL_iten(im,im_opp,im_solid_max, &
+              iten_13,iten_23, &
+              user_tension,nten,cos_angle,sin_angle)
+             if ((sin_angle.eq.zero).and.(cos_angle.eq.one)) then
+              center_stencil_wetting_im=im
+             else if ((sin_angle.eq.zero).and.(cos_angle.eq.-one)) then 
+              center_stencil_wetting_im=im_opp
+             else if ((sin_angle.ge.zero).and. &
+                      (sin_angle.le.one).and. &
+                      (cos_angle.ge.-one).and. &
+                      (cos_angle.le.one)) then
+              ! do nothing
+             else
+              print *,"sin_angle or cos_angle invalid"
+              stop
+             endif
+            else
+             print *,"im2_substencil invalid"
+             stop
+            endif
+           else
+            print *,"im1_substencil invalid"
+            stop
+           endif
 
             ! default radius: extrap_radius=1 cell
             ! make the extension fluid level set tessellating
