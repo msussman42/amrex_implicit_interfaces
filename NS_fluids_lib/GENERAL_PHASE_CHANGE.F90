@@ -1551,4 +1551,60 @@ return
 end subroutine GENERAL_PHASE_CHANGE_nucleation
 
 
+! This routine is called from FORT_SUMMASS
+! MITSUHIRO: modify this routine to get the Nusselt number
+subroutine GENERAL_PHASE_CHANGE_SUMINT(GRID_DATA_IN,increment_out,nsum)
+use probcommon_module_types
+use probcommon_module
+
+INTEGER_T, intent(in) :: nsum
+type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
+REAL_T, intent(out) :: increment_out(nsum)
+INTEGER_T :: i,j,k,dir,im
+REAL_T :: xlocal(SDIM)
+REAL_T :: cell_dim(SDIM)
+INTEGER_T :: temperature_component
+REAL_T temperature_plus
+REAL_T temperature_minus
+REAL_T zplus,zminus,heat_flux,area_face
+
+i=GRID_DATA_IN%igrid
+j=GRID_DATA_IN%jgrid
+k=GRID_DATA_IN%kgrid
+
+if (nsum.eq.1) then
+ increment_out(1)=zero
+ do dir=1,SDIM
+  xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
+  cell_dim(dir)=GRID_DATA_IN%xsten(1,dir)-GRID_DATA_IN%xsten(-1,dir)
+ enddo
+  ! find the heat flux next to a horizontal hot plate
+ do im=1,num_materials
+  temperature_component=(im-1)*num_state_material+2
+  if ((GRID_DATA_IN%lsfab(D_DECL(i,j,k),im).gt.zero).and.(im.ne.3)) then
+   if (GRID_DATA_IN%lsfab(D_DECL(i,j,k-1),3).gt.zero) then
+    if (SDIM.eq.3) then
+     temperature_plus=GRID_DATA_IN%den(D_DECL(i,j,k+1),temperature_component)
+     temperature_minus=GRID_DATA_IN%den(D_DECL(i,j,k-1),temperature_component)
+     zplus=GRID_DATA_IN%xsten(2,SDIM)
+     zminus=GRID_DATA_IN%xsten(-2,SDIM)
+     heat_flux=fort_heatviscconst(im)*(temperature_plus-temperature_minus)/ &
+            (zplus-zminus)
+     area_face=cell_dim(1)*cell_dim(2)
+!     increment_out(1)=GRID_DATA_IN%volgrid*heat_flux
+     increment_out(1)=area_face*heat_flux
+    endif
+   endif
+  endif
+ enddo ! im=1..num_materials
+else if (nsum.eq.0) then
+ ! do nothing
+else
+ print *,"nsum invalid"
+ print *,"nsum ",nsum
+ stop
+endif
+
+end subroutine GENERAL_PHASE_CHANGE_SUMINT
+
 end module GENERAL_PHASE_CHANGE_module
