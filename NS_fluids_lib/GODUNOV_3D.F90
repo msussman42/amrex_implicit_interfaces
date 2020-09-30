@@ -28866,6 +28866,7 @@ stop
       REAL_T xc(SDIM)
       REAL_T local_dist
       INTEGER_T npart_local
+
       REAL_T, target :: cell_data_interp(SDIM)
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -28908,6 +28909,12 @@ stop
       nhalf=3
 
       eps=accum_PARM%dx(1)/10.0d0
+      if (eps.gt.zero) then
+       ! do nothing
+      else
+       print *,"eps invalid"
+       stop
+      endif
 
       if (accum_PARM%Npart.ge.0) then
        npart_local=accum_PARM%Npart
