@@ -27920,6 +27920,7 @@ end subroutine initialize2d
        SUB_CFL_HELPER=>STUB_CFL_HELPER
        SUB_hydro_pressure_density=>STUB_hydro_pressure_density
        SUB_ASSIMILATE=>STUB_ASSIMILATE
+       SUB_SUMINT=>STUB_SUMINT
 
        if (probtype.eq.421) then
         SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
@@ -28015,6 +28016,7 @@ end subroutine initialize2d
         SUB_velfreestream=>GENERAL_PHASE_CHANGE_velfreestream
         SUB_nucleation=>GENERAL_PHASE_CHANGE_nucleation
         SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
+        SUB_SUMINT=>GENERAL_PHASE_CHANGE_SUMINT ! Nusseltt number
         SUB_hydro_pressure_density=>GENERAL_PHASE_CHANGE_hydro_pressure_density
        else
         ! assign null routines here that would cause the program to abort

@@ -370,6 +370,9 @@ ns.radblob3=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
+# make this equal to 1 for example, in order to output the 
+# Nusselt number.
+ns.ncomp_sum_int_user=0 # user defined number of integrated quantities
 
 #ns.mem_debug = 1
 #ns.v = 1

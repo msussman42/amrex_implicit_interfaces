@@ -602,4 +602,21 @@ INTEGER_T, intent(in) :: i,j,k,cell_flag,data_dir
 return
 end subroutine STUB_ASSIMILATE
 
+
+subroutine STUB_SUMINT(GRID_DATA_IN,increment_out,nsum)
+use probcommon_module_types
+use probcommon_module
+
+INTEGER_T, intent(in) :: nsum
+type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
+REAL_T, intent(out) :: increment_out(nsum)
+INTEGER_T :: i,j,k
+
+i=GRID_DATA_IN%igrid
+j=GRID_DATA_IN%jgrid
+k=GRID_DATA_IN%kgrid
+
+end subroutine STUB_SUMINT
+
+
 end module STUB_module
