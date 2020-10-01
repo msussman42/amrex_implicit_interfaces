@@ -7204,7 +7204,29 @@ contains
       INTEGER_T isten,jsten,ksten
       INTEGER_T im
       REAL_T, allocatable, dimension(:) :: local_data
-      
+     
+      if ((data_in%level.ge.0).and. &
+          (data_in%level.le.data_in%finest_level).and. &
+          (data_in%bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"level, finest_level or bfact invalid"
+       stop
+      endif
+      do dir=1,SDIM
+       if (data_in%dx(dir).gt.zero) then
+        ! do nothing
+       else
+        print *,"data_in%dx invalid"
+        stop
+       endif
+       if (data_in%fablo(dir).ge.0) then
+        ! do nothing
+       else
+        print *,"data_in%fablo invalid"
+        stop
+       endif
+      enddo 
       if (data_in%ncomp.ge.1) then
        ! do nothing
       else
@@ -7215,6 +7237,12 @@ contains
        ! do nothing
       else
        print *,"scomp invalid"
+       stop
+      endif
+      if (data_in%nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"data_in%nmat invalid"
        stop
       endif
       if (data_in%interp_foot_flag.eq.0) then
@@ -7317,18 +7345,27 @@ contains
        do im=1,data_in%ncomp
         local_data(im)=data_in%state(D_DECL(isten,jsten,ksten), &
           data_in%scomp+im-1)
-        if (data_in%interp_foot_flag.eq.0) then
-         ! do nothing
-        else if (data_in%interp_foot_flag.eq.1) then
-          ! xdisplace=x-xfoot    xfoot=x-xdisplace
-         local_data(im)=xsten(0,im)-local_data(im)
+        if ((local_data(im).ge.-1.0D-30).and. &
+            (local_data(im).le.1.0D+30)) then
+
+         if (data_in%interp_foot_flag.eq.0) then
+          ! do nothing
+         else if (data_in%interp_foot_flag.eq.1) then
+           ! xdisplace=x-xfoot    xfoot=x-xdisplace
+          local_data(im)=xsten(0,im)-local_data(im)
+         else
+          print *,"interp_foot_flag invalid"
+          stop
+         endif
+
+         data_out%data_interp(im)=data_out%data_interp(im)+WT*local_data(im)
+
         else
-         print *,"interp_foot_flag invalid"
+         print *,"local_data(im) overflow"
          stop
         endif
 
-        data_out%data_interp(im)=data_out%data_interp(im)+WT*local_data(im)
-       enddo
+       enddo ! im=1..data_in%ncomp
 
        total_WT=total_WT+WT
 

@@ -17444,6 +17444,7 @@ stop
        accum_PARM, &
        matrixfab, &
        DIMS(matrixfab), &
+       ngrow_distance, &
        LS, &
        DIMS(LS), &
        ncomp_accumulate)
@@ -17452,6 +17453,7 @@ stop
       use global_utility_module
 
       INTEGER_T, intent(in) :: ncomp_accumulate
+      INTEGER_T, intent(in) :: ngrow_distance
       type(accum_parm_type_LS), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: DIMDEC(LS) 
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
@@ -17485,6 +17487,13 @@ stop
       type(interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
 
+      if (ngrow_distance.eq.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid"
+       stop
+      endif
+
       do dir=1,SDIM
        dx_local(dir)=accum_PARM%dx(dir)
        xlo_local(dir)=accum_PARM%xlo(dir)
@@ -17492,7 +17501,7 @@ stop
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
 
-      call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
+      call checkbound(fablo_local,fabhi_local,DIMS(LS),ngrow_distance,-1,1271)
       call checkbound(fablo_local,fabhi_local,DIMS(matrixfab),0,-1,1271)
 
       data_out%data_interp=>cell_data_interp
@@ -17727,6 +17736,12 @@ stop
        print *,"nmat invalid"
        stop
       endif
+      if (ngrow_distance.eq.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid"
+       stop
+      endif
 
       call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1271)
@@ -17735,7 +17750,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(vel),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(den),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(mofdata),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(LS),ngrow_distance,-1,1271)
       call checkbound(fablo,fabhi,DIMS(vofnew),1,-1,1271)
 
       if (matrix_points.eq.1) then
@@ -17801,6 +17816,7 @@ stop
        call traverse_particlesLS(accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
+         ngrow_distance, &
          LS, &
          DIMS(LS), &
          ncomp_accumulate)
@@ -17811,6 +17827,7 @@ stop
        call traverse_particlesLS(accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
+         ngrow_distance, &
          LS, &
          DIMS(LS), &
          ncomp_accumulate)
