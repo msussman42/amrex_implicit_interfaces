@@ -18085,7 +18085,7 @@ stop
 
         previous_link=cell_particle_count(D_DECL(i,j,k),2)
         if (previous_link.eq.0) then
-         ! do nothing
+         ! do nothing; no particles attached to cell (i,j,k)
         else if ((previous_link.ge.1).and. &
                  (previous_link.le.Np)) then
          ibase=(previous_link-1)*(SDIM+1)
@@ -18131,7 +18131,15 @@ stop
          endif
 
         else if (ok_to_add_link.eq.0) then
-         ! do nothing
+         print *,"ok_to_add_link==0"
+         print *,"the parent of a particle added to (i,j,k) should"
+         print *,"always be (i,j,k)"
+         print *,"i,j,k ",i,j,k
+         print *,"i_parent,j_parent,k_parent ", &
+           i_parent,j_parent,k_parent
+         print *,"previous_link,interior_ID ", &
+            previous_link,interior_ID 
+         stop
         else
          print *,"ok_to_add_link invalid"
          stop
@@ -18418,6 +18426,8 @@ stop
       INTEGER_T, target :: fablo_local(SDIM)
       INTEGER_T, target :: fabhi_local(SDIM)
 
+      INTEGER_T :: test_count,test_cell_particle_count
+
       eps=dx_local(1)/10.0d0
 
       nhalf=3
@@ -18459,8 +18469,14 @@ stop
        b_X(dir)=zero
       enddo
 
+      test_cell_particle_count= &
+        accum_PARM%cell_particle_count(D_DECL(i,j,k),1)
+
+      test_count=0
+
       current_link=accum_PARM%cell_particle_count(D_DECL(i,j,k),2)
-      do while (current_link.ge.1)
+
+      do while ((current_link.ge.1).and.(current_link.le.Np))
        do dir=1,SDIM
         xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
         xfoot(dir)=accum_PARM%particles(current_link)%extra_state(dir)
@@ -18530,7 +18546,22 @@ stop
 
        ibase=(current_link-1)*(1+SDIM)
        current_link=particle_link_data(ibase+1)
-      enddo ! while (current_link.ge.1)
+
+       test_count=test_count+1
+      enddo ! while (current_link.ge.1).and.(current_link<=Np)
+
+      if (current_link.eq.0) then
+       ! do nothing
+      else
+       print *,"current_link invalid"
+       stop
+      endif
+      if (test_count.eq.test_cell_particle_count) then
+       ! do nothing
+      else
+       print *,"test_cell_particle_count invalid"
+       stop
+      endif
 
       data_in%xtarget=>xtarget
       data_in%interp_foot_flag=1
