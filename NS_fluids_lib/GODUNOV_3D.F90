@@ -29002,6 +29002,8 @@ stop
       return
       end subroutine traverse_particles
 
+       ! called from NavierStokes.cpp:
+       !  NavierStokes::accumulate_PC_info(int im_elastic)
       subroutine fort_assimilate_tensor_from_particles( &
         im_PLS_cpp, & ! 0..nmat-1
         isweep, &
