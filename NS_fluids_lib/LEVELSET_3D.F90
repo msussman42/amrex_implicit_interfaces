@@ -18628,7 +18628,8 @@ stop
 
       end subroutine interp_eul_lag_dist
 
-
+       ! called from NavierStokes.cpp:
+       !  NavierStokes::init_particle_container
       subroutine fort_init_particle_container( &
         tid, &
         single_particle_size, &
@@ -18696,8 +18697,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
       INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
-    
-        ! positive, negative, 0, positive link, negative link, 0 link
+   
+       ! first component: number of particles in the cell
+       ! second component: link to the local particle container: 1..Np 
       INTEGER_T, intent(inout), target :: cell_particle_count( &
               DIMV(cell_particle_count), &
               2) 
@@ -18811,7 +18813,7 @@ stop
        if (append_flag.eq.1) then
         cell_particle_count_ptr=>cell_particle_count
          ! particles is INTENT(inout) for this routine since the
-         ! since the levelset value is overwritten with the
+         ! levelset value is overwritten with the
          ! bilinear interpolant of the Eulerian data.
         call count_particles( &
          lsfab, &
@@ -18878,6 +18880,7 @@ stop
         ! isub,jsub,ksub,link
        allocate(sub_particle_data(cell_count_hold,SDIM+1))
 
+         ! ADD SANITY CHECK HERE
        current_link=cell_particle_count(D_DECL(i,j,k),2)
        do while (current_link.ge.1)
         do dir=1,SDIM
