@@ -34,27 +34,35 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 	}
 	return Hreturn;
 }
-
+// to express the data assimilation problem precisely:
+// find min J(q(u),u) under the constraint that
+//          N(q(u),u)=0   q(u)=state variables u=control
 // this cost function will be:
-//  q_t + (a q)_x =0   0<t<T   0<x<1  (*)
+//  N(q(u),u):   q_t + (a q)_x =0   0<t<T   0<x<1  (*)
 //  control variables:
 //  q(0,x)=uinit(x)
 //  q(t,0)=uleft(x)  if a(t,0)>0
 //  q(t,1)=uright(x) if a(t,1)<0
-//  J[uinit,uleft,uright]=integral_{x=0 to 1} 
-//    w1(x)(q(T,x)-qobservation(T,x))^2 +
-//    w2(x)(uinit(x)-uback_init(x))^2 +
-//    w3(x)(uleft(x)-uback_left(x))^2 +
-//    w4(x)(uright(x)-uback_right(x))^2 
+//  J[uinit,uleft,uright]=integral_{x=0 to 1} integral_{t=0..T}
+//    wq(t,x)(q(t,x)-qobservation(t,x))^2 +
+//    wbackground(t,x)(ucontrol(t,x)-uback(t,x))^2
 //
-//    q(T,x) solves the linear conservation law equation (*)
+//    q(t,x) solves the linear conservation law equation (*)
 //  
 //  OUR APPROACH IN THIS EXAMPLE IS CALLED "discretize then differentiate"
 //  referring to the review article by Giles and Pierce.
 //  This is in contrast to "differentiate then discretize."
 adept::adouble cost_function(adept::adouble uinit[Nnodes],
 		adept::adouble uleft[Nsteps],
-		adept::adouble uright[Nsteps]) {
+		adept::adouble uright[Nsteps],
+		adept::adouble ubackground_init[Nnodes],
+		adept::adouble ubackground_left[Nnodes],
+		adept::adouble ubackground_right[Nnodes],
+		adept::adouble q_observation[Nnodes],
+		adept::adouble w_final[Nnodes],
+		adept::adouble w_left[Nsteps],
+		adept::adouble w_right[Nsteps],
+		adept::adouble w_init[Nnodes]) {
 
  adept::adouble eps=1.0e-10;
  adept::adouble vn[Nnodes]; // no AD: "double vn[Nnodes]"
@@ -119,7 +127,15 @@ adept::adouble cost_function(adept::adouble uinit[Nnodes],
 	 }
  }
 
- adept::adouble y=x[0]*x[0] + x[1]*x[1];
+ adept::adouble y=0.0;
+ for (int i=0;i<=Ncells;i++) {
+	 y=y+w_final[i]*std::pow(q_observation[i]-vnp1[i],2)*h+
+             w_init[i]*std::pow(u_init[i]-ubackground_init[i],2)*h;
+ }
+ for (int i=0;i<Nsteps;i++) { 
+	 y=y+w_left[i]*std::pow(uleft[i]-ubackground_left[i],2)*k+
+             w_right[i]*std::pow(uright[i]-ubackground_right[i],2)*k;
+ }
  return y;
 
 }
