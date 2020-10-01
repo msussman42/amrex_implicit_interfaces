@@ -227,6 +227,10 @@ stop
           dist_stencil_to_bulk=zero
 
            ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
+           ! xSOLID_BULK usually in the solid, but it might be
+           ! in the fluid, at most 1 cell away from a solid cell.
+           ! NOTE: the output from this routine is ignored if xSOLID_BULK
+           ! in a fluid cell.
           do dir=1,SDIM
            ZEYU_DAT%ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
            dist_stencil_to_bulk=dist_stencil_to_bulk+ &
