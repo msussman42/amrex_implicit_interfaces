@@ -19492,8 +19492,56 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   getStateTensor_localMF(VISCOTEN_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
    cur_time_slab);
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
 
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
 
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& TNEWfab=Tensor_new[mfi];
+   FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
+   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+ 
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   fort_assimilate_tensor_from_xdisplace( 
+     &im_elastic, // 0..nmat-1
+     &tid_current,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &level,
+     &finest_level,
+     xlo,dx,
+     &ncomp_tensor,
+     &nmat,
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+     TNEWfab.dataPtr(scomp_tensor),
+     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
+     XDISP_fab.dataPtr(),
+     ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()));
+  } // mfi
+} // omp
+  ns_reconcile_d_num(81);
 
   delete_localMF(VISCOTEN_MF,1);
 
@@ -19608,8 +19656,11 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   } // isweep=0,1
 
   localPC.clearNeighbors();
+
  } else {
+
   amrex::Error("particleLS_flag[im_elastic] invalid");
+
  }
 
  delete accumulate_mf;
