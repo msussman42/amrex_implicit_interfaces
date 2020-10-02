@@ -7345,7 +7345,7 @@ contains
        do im=1,data_in%ncomp
         local_data(im)=data_in%state(D_DECL(isten,jsten,ksten), &
           data_in%scomp+im-1)
-        if ((local_data(im).ge.-1.0D-30).and. &
+        if ((local_data(im).ge.-1.0D+30).and. &
             (local_data(im).le.1.0D+30)) then
 
          if (data_in%interp_foot_flag.eq.0) then
@@ -7362,6 +7362,7 @@ contains
 
         else
          print *,"local_data(im) overflow"
+         print *,"im,local_data(im) ",im,local_data(im)
          stop
         endif
 

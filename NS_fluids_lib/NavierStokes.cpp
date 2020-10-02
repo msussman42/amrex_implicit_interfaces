@@ -3740,7 +3740,7 @@ NavierStokes::read_params ()
          (particle_nsubdivide[i]>6))
       amrex::Error("particle_nsubdivide invalid");
      if ((particle_max_per_nsubdivide[i]<2)||
-         (particle_max_per_nsubdivide[i]>10))
+         (particle_max_per_nsubdivide[i]>100))
       amrex::Error("particle_max_per_nsubdivide invalid");
      if ((particleLS_flag[i]<0)||
          (particleLS_flag[i]>1))
