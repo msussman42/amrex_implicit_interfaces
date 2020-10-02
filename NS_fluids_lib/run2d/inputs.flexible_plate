@@ -61,6 +61,7 @@ amr.n_cell=64 64 # ZEYU Production run effective fine grid resolution 512^2
 amr.max_level=0 # ZEYU
 ns.particleLS_flag=0 0 1
 ns.particle_nsubdivide=1 1 1
+ns.particle_max_per_nsubdivide=100 100 100
 ns.radius_cutoff=0 0 -1
 ns.truncate_thickness=2.0
 

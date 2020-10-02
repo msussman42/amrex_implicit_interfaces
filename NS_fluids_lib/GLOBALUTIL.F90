@@ -15805,6 +15805,10 @@ endif
 return
 end subroutine volfrac_from_massfrac
 
+!TODO:
+!XV=(PSAT_REF/PMIX)e^(-(L WV/R)(1/T_GAMMA-1/T_SAT_REF)
+!PMIX=(gamma_MIX(YPROBE)-1)rho_MIX CV_MIX(YPROBE) TPROBE
+! new parameters: YPROBE,TPROBE,RHO_PROBE in the gas.
 subroutine X_from_Tgamma(X,Tgamma,TSAT, &
   L,R,WV)
 IMPLICIT NONE
@@ -15879,6 +15883,10 @@ endif
 return
 end subroutine XMIN_from_TSAT
 
+!TODO:
+!XV=(PSAT_REF/PMIX)e^(-(L WV/R)(1/T_GAMMA-1/T_SAT_REF)
+!PMIX=(gamma_MIX(YPROBE)-1)rho_MIX CV_MIX(YPROBE) TPROBE
+! new parameters: YPROBE,TPROBE,RHO_PROBE in the gas.
 subroutine Tgamma_from_TSAT_and_X(Tgamma,TSAT, &
   X,L,R,WV,Tgamma_min,Tgamma_max)
 IMPLICIT NONE
