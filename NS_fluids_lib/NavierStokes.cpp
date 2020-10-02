@@ -19418,20 +19418,22 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  const Real* dx = geom.CellSize();
 
  int ipart=0;
- for (int im_local=0;im_local<im_elastic;im_local++) {
-  if (particleLS_flag[im_local]==1) {
-   ipart++; 
-  } else if (particleLS_flag[im_local]==0) {
-   // do nothing
-  } else
-   amrex::Error("particleLS_flag invalid");
- } // im_local=0..im_elastic-1
-
  if (particleLS_flag[im_elastic]==1) {
+  for (int im_local=0;im_local<im_elastic;im_local++) {
+   if (particleLS_flag[im_local]==1) {
+    ipart++; 
+   } else if (particleLS_flag[im_local]==0) {
+    // do nothing
+   } else
+    amrex::Error("particleLS_flag invalid");
+  } // im_local=0..im_elastic-1
+
   if (NS_ncomp_particles>=ipart+1) {
    // do nothing
   } else
    amrex::Error("NS_ncomp_particles invalid");
+ } else if (particleLS_flag[im_elastic]==0) {
+  // do nothing
  } else
   amrex::Error("particleLS_flag[im_elastic] invalid");
 
@@ -19464,12 +19466,6 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 	  MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
  accumulate_mf->setVal(0.0);
 
-  // All the particles should live on level==0.
-  // particle levelset==0.0 for interface particles.
-
- AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
-
  const Vector<Geometry>& ns_geom=parent->Geom();
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
  const Vector<BoxArray>& ns_ba=parent->boxArray();
@@ -19479,48 +19475,71 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  for (int ilev=0;ilev<rr.size();ilev++)
   rr[ilev]=2;
  int nnbr=1;
- NeighborParticleContainer<N_EXTRA_REAL,0> 
-   localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
-  // the two PC have same hierarchy, no need to call Redistribute after the
-  // copy.
- bool local_copy_flag=true; 
- localPC.copyParticles(localPC_no_nbr,local_copy_flag);
 
- localPC.fillNeighbors();
+ bool local_copy_flag=true; 
 
  if (localMF_grow[VISCOTEN_MF]==-1) {
   // do nothing
  } else 
   amrex::Error("VISCOTEN_MF should not be allocated");
 
- for (int isweep=0;isweep<=1;isweep++) {
+ int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
 
-  int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+ int ncomp_tensor=NUM_TENSOR_TYPE;
+
+ if (particleLS_flag[im_elastic]==0) {
+
   getStateTensor_localMF(VISCOTEN_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
    cur_time_slab);
 
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
+
+
+
+  delete_localMF(VISCOTEN_MF,1);
+
+ } else if (particleLS_flag[im_elastic]==1) {
+
+  // All the particles should live on level==0.
+  // particle levelset==0.0 for interface particles.
+
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+
+  NeighborParticleContainer<N_EXTRA_REAL,0> 
+   localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
+  // the two PC have same hierarchy, no need to call Redistribute after the
+  // copy.
+  localPC.copyParticles(localPC_no_nbr,local_copy_flag);
+
+  localPC.fillNeighbors();
+
+  for (int isweep=0;isweep<=1;isweep++) {
+
+   getStateTensor_localMF(VISCOTEN_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
+    cur_time_slab);
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-    // std::cout << tilegrid << '\n';
-    // std::cout << gridno << '\n';
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
+   for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+     // std::cout << tilegrid << '\n';
+     // std::cout << gridno << '\n';
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    int bfact=parent->Space_blockingFactor(level);
 
-   const Real* xlo = grid_loc[gridno].lo();
+    const Real* xlo = grid_loc[gridno].lo();
 
     // particles is of type "ParticleTileType::AoS"
     // see AMReX_ArrayOfStructs.H
@@ -19528,33 +19547,31 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     //  amrex::ParticleTile<SDIM,0,0,0>
     //
 
-   auto& particles = localPC.GetParticles(level)
+    auto& particles = localPC.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-   auto& particles_AoS = particles.GetArrayOfStructs();
+    auto& particles_AoS = particles.GetArrayOfStructs();
 
-   int Np=particles_AoS.size();
+    int Np=particles_AoS.size();
 
-    // ParticleVector&
-   auto& neighbors_local = 
+     // ParticleVector&
+    auto& neighbors_local = 
 	localPC.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
-   int Nn=neighbors_local.size();
+    int Nn=neighbors_local.size();
 
-   FArrayBox& matrixfab=(*accumulate_mf)[mfi];
-   FArrayBox& TNEWfab=Tensor_new[mfi];
-   FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
-   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   int ncomp_tensor=NUM_TENSOR_TYPE;
+    FArrayBox& matrixfab=(*accumulate_mf)[mfi];
+    FArrayBox& TNEWfab=Tensor_new[mfi];
+    FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
+    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+ 
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: GODUNOV_3D.F90
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
-   fort_assimilate_tensor_from_particles( 
+    fort_assimilate_tensor_from_particles( 
      &im_elastic, // 0..nmat-1
      &isweep,
      &tid_current,
@@ -19583,14 +19600,17 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()),
      matrixfab.dataPtr(),
      ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
-  } // mfi
+   } // mfi
 } // omp
-  ns_reconcile_d_num(81);
+   ns_reconcile_d_num(81);
 
-  delete_localMF(VISCOTEN_MF,1);
- } // isweep=0,1
+   delete_localMF(VISCOTEN_MF,1);
+  } // isweep=0,1
 
- localPC.clearNeighbors();
+  localPC.clearNeighbors();
+ } else {
+  amrex::Error("particleLS_flag[im_elastic] invalid");
+ }
 
  delete accumulate_mf;
 
