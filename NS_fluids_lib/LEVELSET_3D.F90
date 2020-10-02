@@ -18880,7 +18880,6 @@ stop
         ! isub,jsub,ksub,link
        allocate(sub_particle_data(cell_count_hold,SDIM+1))
 
-         ! ADD SANITY CHECK HERE
        current_link=cell_particle_count(D_DECL(i,j,k),2)
        do while (current_link.ge.1)
         do dir=1,SDIM
@@ -18910,12 +18909,19 @@ stop
        enddo ! while (current_link.ge.1)
 
        if (cell_count_check.eq.cell_count_hold) then
+
+        cell_count_check=0
+
         do isub=sublo(1),subhi(1)
         do jsub=sublo(2),subhi(2)
         do ksub=sublo(3),subhi(3)
          ! increment Np_append if isweep == 0
          ! always increment Np_append_test
          local_count=sub_counter(isub,jsub,ksub)
+
+         cell_count_check=cell_count_check+local_count
+
+           ! check if particles need to be deleted
          if (local_count.ge.1) then
 
           if (local_count.gt.particle_max_per_nsubdivide(im_PLS_CPP+1)) then
@@ -18930,16 +18936,23 @@ stop
             current_link=sub_particle_data(cell_iter,SDIM+1)
             if ((isub_test.eq.isub).and. &
                 (jsub_test.eq.jsub)) then
-             if ((SDIM.eq.2).or.(ksub_test.eq.ksub)) then
+             if ((SDIM.eq.2).or. &
+                 ((SDIM.eq.3).and.(ksub_test.eq.ksub))) then
               sub_iter=sub_iter+1
               sort_data_id(sub_iter)=current_link                     
               sort_data_time(sub_iter)= &
                  particles(current_link)%extra_state(2*SDIM+4) 
               sort_data_LS(sub_iter)= &
                  particles(current_link)%extra_state(SDIM+1) 
+             else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
+              ! do nothing
+             else
+              print *,"dimension or ksub bust"
+              stop
              endif
             endif
-           enddo
+           enddo ! cell_iter=1..cell_count_hold
+
            if (sub_iter.eq.local_count) then
             bubble_change=1
             bubble_iter=0
@@ -18993,7 +19006,14 @@ stop
            deallocate(sort_data_time)
            deallocate(sort_data_LS)
            deallocate(sort_data_id)
-          endif ! local_count > particle_max_per_nsubdivide
+          else if ((local_count.ge.1).and. &
+                   (local_count.le. &
+                    particle_max_per_nsubdivide(im_PLS_CPP+1))) then
+           ! do nothing
+          else
+           print *,"local_count bust"
+           stop
+          endif 
 
          else if (local_count.eq.0) then
 
@@ -19109,9 +19129,17 @@ stop
           print *,"local_count invalid"
           stop
          endif
-        enddo
-        enddo
-        enddo
+        enddo ! ksub
+        enddo ! jsub
+        enddo ! isub
+
+        if (cell_count_check.eq.cell_count_hold) then
+         ! do nothing
+        else
+         print *,"cell_count_check invalid"
+         stop
+        endif
+
        else
         print *,"cell_count_check invalid"
         stop

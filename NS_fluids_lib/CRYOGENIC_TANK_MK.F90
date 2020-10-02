@@ -1,0 +1,832 @@
+#undef BL_LANG_CC
+#ifndef BL_LANG_FORT
+#define BL_LANG_FORT
+#endif
+
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+
+#include "AMReX_ArrayLim.H"
+
+
+#if (AMREX_SPACEDIM==3)
+#define SDIM 3
+#elif (AMREX_SPACEDIM==2)
+#define SDIM 2
+#else
+print *,"dimension bust"
+stop
+#endif
+
+! probtype==422 (see run2d/inputs.CRYOGENIC_TANK_MK)
+module CRYOGENIC_TANK_MK_module
+
+implicit none                   
+! Tank outter radius
+REAL_T :: TANK_MK_RADIUS         
+! Tank outher height
+REAL_T :: TANK_MK_HEIGHT         
+! Tank wall thickness
+REAL_T :: TANK_MK_THICKNESS      
+! Location of liquid-gas interface in respect to z=0
+REAL_T :: TANK_MK_LIQUID_HEIGHT  
+
+! Initial mixture pressure
+REAL_T :: TANK_MK_INITIAL_PRESSURE
+! Universal gas constant [J/(mol K)]
+REAL_T :: TANK_MK_R_UNIV
+
+REAL_T :: TANK_MK_GAS_GAMMA
+REAL_T :: TANK_MK_GAS_CP
+REAL_T :: TANK_MK_GAS_CV
+
+contains
+
+ ! do any initial preparation needed
+ subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
+  use probcommon_module
+  implicit none
+  TANK_MK_RADIUS = xblob
+  TANK_MK_HEIGHT = yblob
+  TANK_MK_THICKNESS = radblob
+  TANK_MK_LIQUID_HEIGHT = zblob
+
+
+  ! ASSUMING IDEA GAS => The gas heat cpacities should satisfy this
+  ! R_spc = C_{p,spc}-C_{v,spc}
+  ! to have ideal mixture gas as well =>
+  ! Only C_p or C_v can be picked from table and the other one
+  ! calculated from equation above.
+  ! Here we pick C_{v,spc} from input file.
+  ! C_{p,spc} = C_{v,spc} + R_spc
+
+  TANK_MK_R_UNIV = 8.31446261815324D0
+
+  TANK_MK_GAS_CV = fort_stiffCV(2) ![J/(kg K)]
+!  TANK_MK_GAS_CP = fort_stiffCP(2) ![J∕(kg·K)]
+  TANK_MK_GAS_CP = TANK_MK_GAS_CV + TANK_MK_R_UNIV/fort_molar_mass(2)  ! [J∕(kg·K)]
+  TANK_MK_GAS_GAMMA = TANK_MK_GAS_CP / TANK_MK_GAS_CV
+
+  ! Initial pressure based on the given density and pressure
+  ! P = rho R_sp T = rho (gamma-1) U
+  TANK_MK_INITIAL_PRESSURE = &
+   fort_denconst(2)*(TANK_MK_GAS_GAMMA-one)*&
+   fort_initial_temperature(2)*TANK_MK_GAS_CV 
+  
+  return
+ end subroutine INIT_CRYOGENIC_TANK_MK_MODULE
+
+
+ ! fluids tessellate the domain, solids are immersed. 
+ ! fluid interfaces are extended into solids.
+ ! material 1 is liquid
+ ! material 2 is gas
+ ! material 3 is solid
+
+ subroutine CRYOGENIC_TANK_MK_LS(x,t,LS,nmat)
+  use probcommon_module
+  IMPLICIT NONE
+
+  INTEGER_T, intent(in) :: nmat
+  REAL_T, intent(in) :: x(SDIM)
+  REAL_T, intent(in) :: t
+  REAL_T, intent(out) :: LS(nmat)
+  REAL_T ls_o,ls_i
+
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
+
+  if ((num_materials.eq.3).and.(probtype.eq.422)) then
+   ! liquid
+   LS(1)=TANK_MK_LIQUID_HEIGHT-x(2)
+
+   if (radblob2.eq.zero) then
+    ! do nothing
+   else if (radblob2.gt.zero) then
+    if (SDIM.eq.2) then
+     LS(1)=sqrt((x(1)-xblob2)**2+(x(2)-yblob2)**2)-radblob2
+    else if (SDIM.eq.3) then 
+     LS(1)=sqrt((x(1)-xblob2)**2+(x(2)-yblob2)**2+ &
+                (x(SDIM)-zblob2)**2)-radblob2
+    else
+     print *,"dimension bust"
+     stop
+    endif
+   else
+    print *,"radblob2 invalid"
+    stop
+   endif 
+
+   LS(2)=-LS(1)
+
+   ! Solid
+   ls_o = DIST_FINITE_CYLINDER(x,TANK_MK_RADIUS,zero,TANK_MK_HEIGHT)
+   ls_i = DIST_FINITE_CYLINDER(x,TANK_MK_RADIUS-TANK_MK_THICKNESS,&
+    TANK_MK_THICKNESS,TANK_MK_HEIGHT-TANK_MK_THICKNESS)
+   if((ls_o.ge.zero).and.(ls_i.ge.zero)) then
+    ! outside of tank
+    LS(3) = -min(ls_o,ls_i)
+   else if((ls_o.le.zero).and.(ls_i.le.zero)) then
+    ! inside of tank cavity
+    LS(3) = -min(-ls_o,-ls_i)
+   else if((ls_o.lt.zero).and.(ls_i.gt.zero)) then
+    ! inside of tank wall
+    LS(3) = min(-ls_o,ls_i)
+   else
+    print *,"tank level set calculation failed!"
+    stop
+   endif
+  else
+   print *,"num_materials ", num_materials
+   print *,"probtype ", probtype
+   print *,"num_materials or probtype invalid"
+   stop
+  endif
+  ! print*,"X= ",x," LS= ", LS
+  return
+ end subroutine CRYOGENIC_TANK_MK_LS
+
+ ! if SOLID VELOCITY requested everywhere (including outside of the solid),
+ ! then velsolid==1
+ subroutine CRYOGENIC_TANK_MK_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
+  use probcommon_module
+  IMPLICIT NONE
+
+  INTEGER_T, intent(in) :: nmat
+  REAL_T, intent(in) :: x(SDIM)
+  REAL_T, intent(in) :: t
+  REAL_T, intent(in) :: dx(SDIM)
+  REAL_T, intent(in) :: LS(nmat)
+  REAL_T, intent(out) :: VEL(SDIM)
+  INTEGER_T, intent(in) :: velsolid_flag
+  INTEGER_T dir
+
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
+
+  if ((velsolid_flag.eq.0).or. &
+   (velsolid_flag.eq.1)) then
+   ! do nothing
+  else 
+   print *,"velsolid_flag invalid"
+   stop
+  endif
+
+  if((t.eq.zero).or.(velsolid_flag.eq.0)) then
+   do dir=1,SDIM
+    VEL(dir)=zero
+   enddo
+  else
+   ! do nothing
+  endif
+
+  return 
+ end subroutine CRYOGENIC_TANK_MK_VEL
+
+REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
+ ! Returns the signed distance function to the cylinder
+ ! surfaces (including top and bottom)
+ ! The axis of cylinder is along SDIM=2 direction
+ ! Cylinder radus is R_cyl
+ ! Bottom and top faces are at H_bot and H_top
+ ! Inside the cylinder < 0
+ ! Outside the cylinder > 0
+ implicit none
+
+ REAL_T, intent(in), dimension(SDIM) :: P
+ REAL_T, intent(in) :: R_cyl
+ REAL_T, intent(in) :: H_bot
+ REAL_T, intent(in) :: H_top
+ 
+ REAL_T x,y,z,r
+ REAL_T dist_cyl, dist_end
+ 
+ x=P(1)
+ y=P(2)
+ if (SDIM.eq.2) then
+  z=zero
+ else if(SDIM.eq.3) then
+  z=P(SDIM)
+ else
+  print *,"dimension bust at DIST_FINITE_CYLINDER"
+ endif
+
+ r = sqrt(x**2+z**2)
+ if((H_bot.le.y).and.(y.le.H_top)) then
+  ! between top and bottom
+  if(r.ge.R_cyl) then
+   ! outside
+   DIST_FINITE_CYLINDER = r-R_cyl
+  else if (r.lt.R_cyl) then
+   ! inside
+   dist_cyl = R_cyl-r
+   dist_end = min(H_top-y,y-H_bot)
+   DIST_FINITE_CYLINDER = -min(dist_cyl,dist_end)
+  else
+   print *,"r=",r
+   print *,"invalid r value at DIST_FINITE_CYLINDER (1)"
+   stop
+  endif
+
+ else if (y.gt.H_top) then
+  ! higher than top
+  if(r.le.R_cyl) then
+   ! inside infinite cylinder
+   DIST_FINITE_CYLINDER = y-H_top
+  else if (r.gt.R_cyl) then
+   ! outside infinite cylinder
+   ! distance to the edge of the top
+   DIST_FINITE_CYLINDER = &
+    sqrt((r-R_cyl)**2 + (y-H_top)**2)
+  else
+   print *,"r=",r
+   print *,"invalid r value at DIST_FINITE_CYLINDER (2)"
+   stop
+  endif
+
+ else if (y.lt.H_bot) then
+  ! lower than bottom
+  if(r.le.R_cyl) then
+   ! inside infinite cylinder
+   DIST_FINITE_CYLINDER = H_bot-y
+  else if (r.gt.R_cyl) then
+   ! outside infinite cylinder
+   ! distance to the edge of the bottom
+   DIST_FINITE_CYLINDER = &
+    sqrt((r-R_cyl)**2 + (H_bot-y)**2)
+  else
+   print *,"r=",r
+   print *,"invalid r value at DIST_FINITE_CYLINDER (3)"
+   stop
+  endif
+ else
+  print *,"invalid y value at DIST_FINITE_CYLINDER"
+  stop
+ endif
+end function DIST_FINITE_CYLINDER
+
+!***********************************************
+! compressible material functions for (ns.material_type = 24)
+! C_spc => Specific heat capacity [J(kg K)]
+! C_m   =>    Moalr heat capacity [J(mol K)]
+!
+! U = C_{v,spc} T
+! [U] = J/kg= J/(kg K)  K
+! R_spc = C_{p,scp}-C_{v,scp}
+! R_unv = C_{p,m} - C_{v,m} 
+! gamma = C_{p,scp}/C_{v,scp}
+!
+! p = rho R_spc T 
+!   = rho R_spc x U/C_{v,spc}
+!   = rho (C_{p,scp}-C_{v,scp})/C_{v,spc} U
+!   = rhp (gamma-1) U
+!
+! a = sqrt(gamma R_sp T) = sqrt(gamma p/rho)
+!
+
+subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
+  internal_energy,pressure, &
+  imattype,im,num_species_var_in)
+ use probcommon_module
+ use global_utility_module
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, intent(in) :: internal_energy
+ REAL_T, intent(out) :: pressure
+
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if (imattype.eq.24) then
+    ! p = rho (gamme-1) U
+    pressure=rho * (TANK_MK_GAS_GAMMA-one) * internal_energy
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid EOS_CRYOGENIC_TANK_MK"
+    stop
+   endif
+  else
+   call EOS_material_CORE(rho,massfrac_var, &
+         internal_energy,pressure,imattype,im)
+  endif
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
+
+ return
+end subroutine EOS_CRYOGENIC_TANK_MK
+
+subroutine SOUNDSQR_CRYOGENIC_TANK_MK(rho,massfrac_var, &
+  internal_energy,soundsqr, &
+  imattype,im,num_species_var_in)
+ use probcommon_module
+ use global_utility_module
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, intent(in) :: internal_energy
+ REAL_T, intent(out) :: soundsqr
+ REAL_T pressure
+
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if (imattype.eq.24) then
+     ! a = sqrt(gamma R_sp T) = sqrt(gamma p/rho)
+    call EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
+     internal_energy,pressure,imattype,im,num_species_var_in)
+    if (rho.gt.zero) then
+     soundsqr=TANK_MK_GAS_GAMMA*pressure/rho
+    else
+     print *,"rho invalid"
+     stop
+    endif
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid SOUNDSQR CRYOGENIC TANK_MK"
+    stop
+   endif
+  else
+   call SOUNDSQR_material_CORE(rho,massfrac_var, &
+    internal_energy,soundsqr, &
+    imattype,im)
+  endif
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
+
+ return
+end subroutine SOUNDSQR_CRYOGENIC_TANK_MK
+
+subroutine INTERNAL_CRYOGENIC_TANK_MK(rho,massfrac_var, &
+  temperature,local_internal_energy, &
+  imattype,im,num_species_var_in)
+ use probcommon_module
+ use global_utility_module
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, intent(in) :: temperature 
+ REAL_T, intent(out) :: local_internal_energy
+
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if ((imattype.eq.24).or.(imattype.eq.0)) then 
+    ! U_mix = C_{v,spc} T
+    local_internal_energy=TANK_MK_GAS_CV*temperature
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid INTERNAL CRYOGENIC TANK_MK"
+    stop
+   endif
+  else
+   call INTERNAL_material_CORE(rho,massfrac_var, &
+    temperature,local_internal_energy, &
+    imattype,im)
+  endif
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
+
+ return
+end subroutine INTERNAL_CRYOGENIC_TANK_MK
+
+subroutine TEMPERATURE_CRYOGENIC_TANK_MK(rho,massfrac_var, &
+  temperature,internal_energy, &
+  imattype,im,num_species_var_in)
+ use probcommon_module
+ use global_utility_module
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+ REAL_T, intent(in) :: rho
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, intent(out) :: temperature 
+ REAL_T, intent(in) :: internal_energy
+ REAL_T :: denom
+
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if ((imattype.eq.24).or.(imattype.eq.0)) then 
+    ! T = U / C_{v,spc}
+    if (TANK_MK_GAS_CV.gt.zero) then
+     temperature=internal_energy/TANK_MK_GAS_CV
+    else
+     print *,"denom invalid 1"
+     stop
+    endif
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid TEMPERATURE_CRYOGENIC_TANK_MK"
+    stop
+   endif
+  else
+   call TEMPERATURE_material_CORE(rho,massfrac_var, &
+     temperature,internal_energy, &
+     imattype,im)
+  endif
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
+
+ return
+end subroutine TEMPERATURE_CRYOGENIC_TANK_MK
+
+!***********************************************
+! called by the boundary condition routine
+! might be called at initialization, so put a placeholder pressure here.
+subroutine CRYOGENIC_TANK_MK_PRES(x,t,LS,PRES,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: PRES
+
+if (num_materials.eq.nmat) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+!PRES=TANK_MK_INITIAL_GAS_PRESSURE 
+
+ if (x(2).ge.TANK_MK_LIQUID_HEIGHT) then
+  PRES=TANK_MK_INITIAL_PRESSURE
+ elseif (x(2).lt.TANK_MK_LIQUID_HEIGHT) then
+  PRES=TANK_MK_INITIAL_PRESSURE +&
+    fort_denconst(1)*(TANK_MK_LIQUID_HEIGHT-x(2))*(abs(gravity))
+ else
+  print *,"x(2) is invalid in CRYOGENIC_TANK_MK_PRES!"
+  stop
+ endif
+
+return 
+end subroutine CRYOGENIC_TANK_MK_PRES
+
+
+subroutine CRYOGENIC_TANK_MK_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, intent(in) :: nmat
+INTEGER_T, intent(in) :: nstate_mat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T im,ibase,n
+
+ ! num_state_material=2 (default)  density and temperature
+ ! num_state_material>2 if scalar (species) variables added.
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+if (nstate_mat.eq.num_state_material) then
+ ! do nothing
+else
+ print *,"nstate_mat invalid"
+ stop
+endif
+
+if ((num_materials.eq.3).and. &
+    (num_state_material.ge.2).and. &
+    (probtype.eq.422)) then
+ do im=1,num_materials
+  ibase=(im-1)*num_state_material
+  STATE(ibase+1)=fort_denconst(im)
+  if (t.eq.zero) then
+   STATE(ibase+2)=fort_initial_temperature(im)
+  else if (t.gt.zero) then
+   STATE(ibase+2)=fort_tempconst(im)
+  else
+   print *,"t invalid"
+   stop
+  endif
+
+  do n=1,num_species_var
+   STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
+  enddo
+ enddo ! im=1..num_materials
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+ 
+return
+end subroutine CRYOGENIC_TANK_MK_STATE
+
+ ! dir=1..sdim  side=1..2
+subroutine CRYOGENIC_TANK_MK_LS_BC(xwall,xghost,t,LS, &
+   LS_in,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(inout) :: LS(nmat)
+REAL_T, intent(in) :: LS_in(nmat)
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
+    (side.ge.1).and.(side.le.2)) then
+ call CRYOGENIC_TANK_MK_LS(xghost,t,LS,nmat)
+else
+ print *,"dir or side invalid"
+ stop
+endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_LS_BC
+
+
+ ! dir=1..sdim  side=1..2 veldir=1..sdim
+subroutine CRYOGENIC_TANK_MK_VEL_BC(xwall,xghost,t,LS, &
+   VEL,VEL_in,veldir,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(inout) :: VEL
+REAL_T, intent(in) :: VEL_in
+INTEGER_T, intent(in) :: veldir,dir,side
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T local_VEL(SDIM)
+INTEGER_T velsolid_flag
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+velsolid_flag=0
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
+    (side.ge.1).and.(side.le.2).and. &
+    (veldir.ge.1).and.(veldir.le.SDIM)) then
+
+ call CRYOGENIC_TANK_MK_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ VEL=local_VEL(veldir)
+
+else
+ print *,"dir,side, or veldir invalid"
+ stop
+endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_VEL_BC
+
+ ! dir=1..sdim  side=1..2
+subroutine CRYOGENIC_TANK_MK_PRES_BC(xwall,xghost,t,LS, &
+   PRES,PRES_in,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(inout) :: PRES
+REAL_T, intent(in) :: PRES_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
+    (side.ge.1).and.(side.le.2)) then
+
+ call CRYOGENIC_TANK_MK_PRES(xghost,t,LS,PRES,nmat)
+
+else
+ print *,"dir or side invalid"
+ stop
+endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_PRES_BC
+
+ ! dir=1..sdim  side=1..2
+subroutine CRYOGENIC_TANK_MK_STATE_BC(xwall,xghost,t,LS, &
+   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T local_STATE(nmat*num_state_material)
+REAL_T, intent(inout) :: STATE
+REAL_T, intent(inout) :: STATE_merge
+REAL_T, intent(in) :: STATE_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, intent(in) :: istate,im
+INTEGER_T ibase,im_crit,im_loop
+INTEGER_T local_bcflag
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+local_bcflag=1
+
+if ((istate.ge.1).and. &
+    (istate.le.num_state_material).and. &
+    (im.ge.1).and. &
+    (im.le.num_materials)) then
+ call CRYOGENIC_TANK_MK_STATE(xghost,t,LS,local_STATE, &
+         local_bcflag,nmat,num_state_material)
+ ibase=(im-1)*num_state_material
+ STATE=local_STATE(ibase+istate)
+ im_crit=1
+ do im_loop=2,num_materials
+  if (LS(im_loop).gt.LS(im_crit)) then
+   im_crit=im_loop
+  endif
+ enddo
+ ibase=(im_crit-1)*num_state_material
+ STATE_merge=local_STATE(ibase+istate)
+else
+ print *,"istate invalid"
+ stop
+endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_STATE_BC
+
+! suppose inhomogeneous flux condition: -k grad T = q
+! 1. T_t - div k grad T = 0
+! 3. T_t - (1/V) sum (A_{i} (k grad T)_i dot n_i) =0  n_i=outward facing normal
+! 4. at the right wall:
+!     (k grad T)_{right} = -q_{right}
+! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
+!      (1/V)A_{right} (-q_{right} dot n_right)
+!
+! xblob3 \equiv -q dot n
+subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
+     im,VFRAC, &
+     time, &
+     x, &
+     xsten, & ! xsten(-nhalf:nhalf,SDIM)
+     nhalf, &
+     temp, &
+     heat_source,den,CV,dt, &
+     nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+INTEGER_T, intent(in) :: im
+REAL_T, intent(in) :: VFRAC(nmat)
+REAL_T, intent(in) :: time
+INTEGER_T, intent(in) :: nhalf
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, intent(in) :: temp(nmat)
+REAL_T, intent(in) :: den(nmat)
+REAL_T, intent(in) :: CV(nmat)
+REAL_T, intent(in) :: dt
+REAL_T, intent(out) :: heat_source
+
+INTEGER_T dir
+REAL_T local_dx(SDIM)
+REAL_T flux_magnitude
+REAL_T denom
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+do dir=1,SDIM
+ local_dx(dir)=xsten(1,dir)-xsten(-1,dir)
+ if (local_dx(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"local_dx invalid"
+  stop
+ endif
+enddo
+
+if ((num_materials.eq.3).and.(probtype.eq.422)) then
+ heat_source=zero
+ if (im.eq.1) then
+  ! do nothing (liquid)
+ else if (im.eq.2) then
+  ! do nothing (gas)
+ else if (im.eq.3) then
+  ! right side of domain
+  heat_source=zero
+  if ((xsten(0,1).lt.TANK_MK_RADIUS).and. &
+      (xsten(2,1).gt.TANK_MK_RADIUS)) then
+      ! area=2 pi rf dz
+      ! vol =2 pi rc dr dz
+      ! area/vol=rf/(rc dr)
+   flux_magnitude=xblob3
+   if (levelrz.eq.1) then
+    denom=xsten(0,1)*local_dx(1)
+    if (denom.gt.zero) then
+     flux_magnitude=flux_magnitude*xsten(1,1)/denom
+    else
+     print *,"denom invalid 3"
+     stop
+    endif
+   else if (levelrz.eq.0) then
+    flux_magnitude=flux_magnitude/local_dx(1)
+   else
+    print *,"levelrz invalid"
+    stop
+   endif
+   heat_source=heat_source+flux_magnitude
+
+   if (1.eq.0) then
+    print *,"right trigger x,heat_source ",xsten(0,1),xsten(0,2),heat_source
+   endif
+  endif
+
+  if ((xsten(0,SDIM).lt.TANK_MK_HEIGHT).and. &
+      (xsten(2,SDIM).gt.TANK_MK_HEIGHT)) then
+      ! area=2 pi rc dr
+      ! vol =2 pi rc dr dz
+      ! area/vol=1/(dz)
+   flux_magnitude=xblob3/local_dx(SDIM)
+   heat_source=heat_source+flux_magnitude
+  endif
+
+  if ((xsten(0,SDIM).gt.zero).and. &
+      (xsten(-2,SDIM).lt.zero)) then
+      ! area=2 pi rc dr
+      ! vol =2 pi rc dr dz
+      ! area/vol=1/(dz)
+   flux_magnitude=xblob3/local_dx(SDIM)
+   heat_source=heat_source+flux_magnitude
+  endif
+
+ else
+  print *,"im invalid in CRYOGENIC_TANK_MK_HEATSOURCE"
+  stop
+ endif
+else
+ print *,"num_materials ", num_materials
+ print *,"probtype ", probtype
+ print *,"num_materials or probtype invalid"
+ stop
+endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_HEATSOURCE
+
+end module CRYOGENIC_TANK_MK_module
