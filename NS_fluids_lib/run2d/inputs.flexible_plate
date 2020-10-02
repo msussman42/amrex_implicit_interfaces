@@ -1,6 +1,7 @@
 max_step  =  99999   # maximum timestep ZEYU
 #stop_time =  0.05  # maximum problem time Yongsheng
-stop_time=0.02 # ZEYU 60 ms
+#stop_time=0.02 # ZEYU 60 ms
+stop_time=10.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -100,6 +101,7 @@ amr.blocking_factor = 8 8 4       # block factor in grid generation
 amr.check_int       = 50 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10      # ZEYU
+#amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
@@ -207,6 +209,7 @@ ns.viscoelastic_model=0 0 2
 ns.viscconst=8.9e-3 0.000181 1.0 # ZEYU
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=0.997 0.00125 1.0 #ZEYU
+ns.added_weight=1.0 1.0 1000.0
 # if pressure_error_cutoff=0.0 then pressure is not used as an AMR
 # criteria, otherwise if pressure_error_flag==0, then check the
 # magnitude of pressure, if pressure_error_flag==1, then check the

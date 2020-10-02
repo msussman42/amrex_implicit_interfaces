@@ -801,6 +801,9 @@ Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
+
+// passed to MAC_TO_CELL, CELL_TO_MAC, 
+//  VFRAC_SPLIT, VFRAC_UNSPLIT
 Vector<Real> NavierStokes::added_weight; // def=1.0
 
 Vector<Real> NavierStokes::stiffPINF;
