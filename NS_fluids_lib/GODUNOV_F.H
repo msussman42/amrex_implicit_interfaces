@@ -1469,6 +1469,28 @@ extern "C"
      AMREX_ARLIM_P(matrixfablo),
      AMREX_ARLIM_P(matrixfabhi));
 
+
+   void fort_assimilate_tensor_from_xdisplace(
+     int* im_PLS_cpp,
+     int* tid,
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,
+     int* bfact,
+     int* level,
+     int* finest_level,
+     const Real* xlo,const Real* dx,
+     int* ncomp_tensor,
+     int* nmat,
+     Real* LS,
+     AMREX_ARLIM_P(LSlo),
+     AMREX_ARLIM_P(LShi),
+     Real* TNEWfab,
+     AMREX_ARLIM_P(TNEWfablo),
+     AMREX_ARLIM_P(TNEWfabhi),
+     Real* XDISP_fab,
+     AMREX_ARLIM_P(XDISP_fablo),
+     AMREX_ARLIM_P(XDISP_fabhi));
+
 }
 
 }/* namespace amrex */
