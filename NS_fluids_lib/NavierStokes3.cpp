@@ -917,12 +917,15 @@ void NavierStokes::tensor_advection_updateALL() {
   delete_array(FACETENSOR_MF);
 
   for (int im=0;im<nmat;im++) {
-   if (particleLS_flag[im]==1) { // bulk and interface particles
+   if ((particleLS_flag[im]==1)||
+       (particleLS_flag[im]==0)) { 
     if (ns_is_rigid(im)==0) {
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
       if (viscoelastic_model[im]==2) {
-	  // particles only stored on the finest level.
+	  // particles only appear on the finest level.
+          // The flexible substrate is wholly contained on
+          // the finest level.
        NavierStokes& ns_finest=getLevel(finest_level);
        ns_finest.accumulate_PC_info(im);
       } else if ((viscoelastic_model[im]==1)||
@@ -939,8 +942,6 @@ void NavierStokes::tensor_advection_updateALL() {
      // do nothing
     } else
      amrex::Error("ns_is_rigid(im) invalid");
-   } else if (particleLS_flag[im]==0) {
-    // do nothing
    } else
     amrex::Error("particleLS_flag[im] invalid");
 
