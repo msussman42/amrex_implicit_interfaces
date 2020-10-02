@@ -1674,6 +1674,7 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T height_function_flag
       INTEGER_T nten_in,stefan_flag
       INTEGER_T NCELL,state_ncomp,nsteps
       INTEGER_T fablo(SDIM)
@@ -1693,6 +1694,7 @@ stop
       INTEGER_T DIMDEC(LSnew)
       INTEGER_T DIMDEC(LS_slopes_FD)
       INTEGER_T DIMDEC(VOFnew)
+      INTEGER_T DIMDEC(VOF_HT)
       INTEGER_T DIMDEC(Snew)
       INTEGER_T DIMDEC(EOS)
       INTEGER_T DIMDEC(recon)
@@ -1716,6 +1718,7 @@ stop
       REAL_T, dimension(:,:,:), allocatable :: LSnew
       REAL_T, dimension(:,:,:), allocatable :: LS_slopes_FD
       REAL_T, dimension(:,:,:), allocatable :: VOFnew
+      REAL_T, dimension(:,:,:), allocatable :: VOF_HT
       REAL_T, dimension(:,:,:), allocatable :: Snew
       REAL_T, dimension(:,:,:), allocatable :: EOS
       REAL_T, dimension(:,:,:), allocatable :: recon
@@ -2091,6 +2094,7 @@ stop
        call set_dimdec(DIMS(recon),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(pres),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(FD_NRM_ND),fablo,fabhi,ngrow_distance+1)
+       call set_dimdec(DIMS(VOF_HT),fablo,fabhi,ngrow_distance+1)
        call set_dimdec(DIMS(FD_CURV_CELL),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(jump_strength),fablo,fabhi,ngrow_expansion)
        call set_dimdec(DIMS(swept),fablo,fabhi,0)
@@ -2114,6 +2118,7 @@ stop
        allocate(LSnew(DIMV(LSnew),nmat*(SDIM+1)))
        allocate(LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM))
        allocate(VOFnew(DIMV(VOFnew),nmat*ngeom_raw))
+       allocate(VOF_HT(DIMV(VOF_HT),nmat))
        allocate(Snew(DIMV(Snew),nstate))
        allocate(EOS(DIMV(EOS),nden))
        allocate(recon(DIMV(recon),nmat*ngeom_recon)) ! F,X,order,SL,I x nmat
@@ -2250,6 +2255,9 @@ stop
           scomp=nmat+nten*SDIM+(im-1)*ngeom_recon+dir
           VOFnew(i,j,dcomp)=UOLD(i,j,scomp)
          enddo
+         scomp=nmat+nten*SDIM+(im-1)*ngeom_recon+1
+         dcomp=im
+         VOF_HT(i,j,dcomp)=UOLD(i,j,scomp)
         enddo
         do im=1,nmat
          scomp=(im-1)*2
@@ -2367,10 +2375,13 @@ stop
          nten, &
          n_normal, &
          ngrow_dest)
- 
+
+       height_function_flag=0 
        call FORT_NODE_TO_CELL( &
          level, &
          finest_level, &
+         height_function_flag, &
+         VOF_HT,DIMS(VOF_HT),  & ! ngrow==ngrow_distance
          LS,DIMS(LS),  & ! ngrow==ngrow_distance
          FD_NRM_ND,DIMS(FD_NRM_ND),  & ! ngrow==ngrow_distance+1
          FD_CURV_CELL,DIMS(FD_CURV_CELL),  & ! ngrow==ngrow_distance
@@ -3496,6 +3507,7 @@ stop
        deallocate(LS)
        deallocate(LSnew)
        deallocate(LS_slopes_FD)
+       deallocate(VOF_HT)
        deallocate(VOFnew)
        deallocate(Snew)
        deallocate(EOS)
