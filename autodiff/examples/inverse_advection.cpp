@@ -109,12 +109,16 @@ adept::adouble cost_function(adept::adouble uinit[Nnodes],
 
 	  // at i=0, if a>0, then vnp1=boundary value
 	  //         if a<0, then vnp1=vn-(k/h)(fluxes[0]-a[0]*vn[0])
+	  // left_flux is a numerical flux assumed to be located at
+	  // x=-h/2
          adept::adouble left_flux=a[0]*vn[0];
 	 adept::adouble numerical_vnp1_left=vn[0]-(k/h)*(fluxes[0]-left_flux);
 	 adept::adouble bc_vnp1_left=uleft[ntime+1];
 	 vnp1[0]=H_nodes_array[0]*bc_vnp1_left+
 		 (1.0-H_nodes_array[0])*numerical_vnp1_left;
 
+	  // right_flux is a numerical flux assumed to be located at
+	  // x=1+h/2
          adept::adouble right_flux=a[Ncells]*vn[Ncells];
 	 adept::adouble numerical_vnp1_right= 
 		 vn[Ncells]-(k/h)*(right_flux-fluxes[Ncells-1]);

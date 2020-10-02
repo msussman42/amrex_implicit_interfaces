@@ -17513,8 +17513,8 @@ stop
       data_in%im_PLS=0
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
-      data_in%fablo=accum_PARM%fablo
-      data_in%fabhi=accum_PARM%fabhi
+      data_in%fablo=>fablo_local
+      data_in%fabhi=>fabhi_local
       data_in%ngrowfab=1
 
       data_in%state=>LS
