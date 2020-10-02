@@ -691,6 +691,9 @@ stop
       subroutine FORT_NODE_TO_CELL( &
        level, &
        finest_level, &
+       height_function_flag, &  ! 1=> use height function 0 => use FD
+       F_new, &  !F_new(i,j,k,im)  im=1..nmat
+       DIMS(F_new), &
        LS_new, &
        DIMS(LS_new), &
        LS_NRM_FD, &
@@ -712,13 +715,16 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: height_function_flag
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: n_normal
       INTEGER_T, intent(in) :: ngrow_nrm
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
+      INTEGER_T, intent(in) :: DIMDEC(F_new)
       INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
       INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
+      REAL_T, intent(in) :: F_new(DIMV(F_new),nmat)
       REAL_T, intent(in) :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
       REAL_T, intent(in) :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
        ! first nmat+nten components are curvature
@@ -787,6 +793,7 @@ stop
        stop
       endif
       
+      call checkbound(fablo,fabhi,DIMS(F_new),ngrow_nrm+1,-1,2875)
       call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_nrm+1,-1,2875)
       call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_nrm+1,-1,2876)
       call checkbound(fablo,fabhi,DIMS(CURV_CELL),ngrow_nrm,-1,2877)

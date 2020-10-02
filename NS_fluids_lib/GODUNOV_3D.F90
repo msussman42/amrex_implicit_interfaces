@@ -15980,10 +15980,11 @@ stop
        fablo,fabhi,bfact, &
        xlo,dx, &
        dt, &
-       time, &
+       time, & ! cur_time
+       LS_state,DIMS(LS_state), &
        state,DIMS(state), &
        statemac,DIMS(statemac), &
-       ughost,DIMS(ughost))
+       ughost,DIMS(ughost))  ! stores the slip velocity
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -16007,14 +16008,20 @@ stop
       REAL_T, intent(in), target :: dx(SDIM)
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: DIMDEC(LS_state)
       INTEGER_T, intent(in) :: DIMDEC(state)
       INTEGER_T, intent(in) :: DIMDEC(statemac)
       INTEGER_T, intent(in) :: DIMDEC(ughost)
 
+      REAL_T, intent(inout), target :: LS_state(DIMV(LS_state), &
+           nmat*(1+SDIM))
       REAL_T, intent(inout), target :: state(DIMV(state),nstate)
       REAL_T, intent(inout), target :: statemac(DIMV(statemac))
       REAL_T, intent(in), target :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
       INTEGER_T i,j,k
+      INTEGER_T im
+      INTEGER_T im_primary
+      REAL_T :: LS_local(nmat)
       REAL_T, target :: xsten(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T nstate_test
@@ -16097,6 +16104,7 @@ stop
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(LS_state),1,-1,1253)
       call checkbound(fablo,fabhi,DIMS(state),1,-1,1253)
       call checkbound(fablo,fabhi,DIMS(statemac),0,data_dir,1253)
       call checkbound(fablo,fabhi,DIMS(ughost),0,data_dir,1255)
@@ -16149,6 +16157,34 @@ stop
          ! do nothing
         endif
 
+         ! check if a fluid cell neighbors a solid cell
+        if (law_of_the_wall.eq.2) then !GNBC
+         do im=1,nmat
+          LS_local(im)=LS_state(D_DECL(i,j,k),im)
+         enddo
+          ! first checks the rigid materials for a positive LS; if none
+          ! exist, then the subroutine checks the fluid materials.
+         call get_primary_material(LS_local,nmat,im_primary) 
+         if (is_rigid(nmat,im_primary).eq.0) then
+          ! check all neighbors in "star stencil" for solid cells.
+          ! for each solid cell, update the present cell center velocity
+          ! with a weighted average of the slip velocity and the present
+          ! velocity.
+         else if (is_rigid(nmat,im_primary).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid(nmat,im_primary) invalid"
+          stop
+         endif
+
+        else if (law_of_the_wall.eq.1) then ! high Reynolds number condition
+         ! do nothing
+        else if (law_of_the_wall.eq.0) then
+         ! do nothing
+        else
+         print *,"law_of_the_wall invalid"
+         stop
+        endif
        enddo ! k
        enddo ! j
        enddo ! i

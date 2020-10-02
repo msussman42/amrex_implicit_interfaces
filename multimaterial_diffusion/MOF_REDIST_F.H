@@ -82,6 +82,8 @@ namespace amrex{
      void FORT_NODE_TO_CELL(
        int* level,
        int* finest_level,
+       int* height_function_flag,
+       Real* F_new,AMREX_ARLIM_P(F_new_lo),AMREX_ARLIM_P(F_new_hi),
        Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
        Real* lsnrmFD,AMREX_ARLIM_P(lsnrmFDlo),AMREX_ARLIM_P(lsnrmFDhi),
        Real* curvcell,AMREX_ARLIM_P(curvcelllo),AMREX_ARLIM_P(curvcellhi),

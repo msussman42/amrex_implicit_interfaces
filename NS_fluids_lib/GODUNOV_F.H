@@ -767,6 +767,8 @@ extern "C"
     const Real* xlo,const Real* dx,
     Real* dt,
     Real* time,
+    Real* LS_state,
+    AMREX_ARLIM_P(LS_statelo),AMREX_ARLIM_P(LS_statehi), 
     Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
     Real* statemac,
     AMREX_ARLIM_P(statemaclo),AMREX_ARLIM_P(statemachi), 

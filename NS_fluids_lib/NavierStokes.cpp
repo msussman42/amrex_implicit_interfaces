@@ -5595,6 +5595,13 @@ void NavierStokes::assimilate_state_data() {
  init_boundary();
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+
+ if (LS_new.nComp()==nmat*(1+AMREX_SPACEDIM)) {
+  // do nothing
+ } else
+  amrex::Error("L_new.nComp() invalid");
+
  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp()) {
@@ -5639,6 +5646,7 @@ void NavierStokes::assimilate_state_data() {
 
    FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
    FArrayBox& snewfab=S_new[mfi]; 
+   FArrayBox& lsnewfab=LS_new[mfi]; 
    FArrayBox& smacnewfab=Smac_new[mfi]; 
 
    int tid_current=ns_thread();
@@ -5659,6 +5667,8 @@ void NavierStokes::assimilate_state_data() {
      xlo,dx,
      &dt_slab,
      &cur_time_slab,
+     lsnewfab.dataPtr(),
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      snewfab.dataPtr(),
      ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
      smacnewfab.dataPtr(),
@@ -10756,9 +10766,13 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     // the normals fab has ngrow_dest+1 ghost cells
     //    growntileboxNODE(ngrow_dest)
     // the curvature fab should have ngrow_dest ghost cells.
+   int height_function_flag=0;
    FORT_NODE_TO_CELL( 
     &level,
     &finest_level,
+    &height_function_flag,
+    lsfab.dataPtr(),
+    ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     nrmFDfab.dataPtr(),
