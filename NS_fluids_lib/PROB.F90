@@ -139,8 +139,7 @@ stop
        nmat+nmat+ & ! vfrac,ls
        nmat*plot_sdim+ & ! ls slope
        nmat*num_state_material+ & ! den 
-       num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-       SDIM+ &
+       num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)+ &
        nmat+ & ! visc
        5*nmat  ! trace vars and vorticity
 
@@ -561,14 +560,47 @@ stop
        endif
       enddo ! partid=1..num_materials_viscoelastic 
 
-      Varname='XDISPLACE'
-      call dumpstring(Varname)
-      Varname='YDISPLACE'
-      call dumpstring(Varname)
-      if (SDIM.eq.3) then
-       Varname='ZDISPLACE'
-       call dumpstring(Varname)
-      endif
+      do partid=1,num_materials_viscoelastic
+       im=fort_im_elastic_map(partid)+1
+       if ((im.ge.1).and.(im.le.nmat)) then
+        write(matstr,'(I2)') im
+        do i=1,2
+         if (matstr(i:i).eq.' ') then
+          matstr(i:i)='0'
+         endif
+        enddo
+        ih=1
+        Varname='XDISPLACE'
+        ih=ih+9
+        do i=1,2
+         Varname(ih:ih)=matstr(i:i)
+         ih=ih+1
+        enddo
+        call dumpstring(Varname)
+        ih=1
+        Varname='YDISPLACE'
+        ih=ih+9
+        do i=1,2
+         Varname(ih:ih)=matstr(i:i)
+         ih=ih+1
+        enddo
+        call dumpstring(Varname)
+
+        if (SDIM.eq.3) then
+         ih=1
+         Varname='ZDISPLACE'
+         ih=ih+9
+         do i=1,2
+          Varname(ih:ih)=matstr(i:i)
+          ih=ih+1
+         enddo
+         call dumpstring(Varname)
+        endif
+       else
+        print *,"im invalid60"
+        stop
+       endif
+      enddo ! partid=1..num_materials_viscoelastic 
 
        ! viscosity
       do im=1,nmat
@@ -32173,7 +32205,7 @@ end subroutine initialize2d
        INTEGER_T icomplo,icomphi
        INTEGER_T nhalf
        REAL_T xsten(-3:3,SDIM)
-       INTEGER_T dir_xdisplace
+       INTEGER_T dir_xdisplace,im,ipart
 
        nhalf=3
        if (bfact.lt.1) then
@@ -32192,29 +32224,38 @@ end subroutine initialize2d
        endif
         ! c++ index
        icomplo=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
-       icomphi=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM
+       icomphi=num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)
        if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
         print *,"scomp out of range in xdisplace fill"
         stop
        endif
-       dir_xdisplace=scomp-icomplo+1
+       ipart=(scomp-icomplo)/SDIM+1
+       if ((ipart.lt.1).or. &
+           (ipart.gt.num_materials_viscoelastic)) then
+        print *,"ipart out of range"
+        stop
+       endif
+       im=fort_im_elastic_map(ipart)+1
+       if ((im.ge.1).and.(im.le.num_materials)) then
 
-       call filcc(bfact, &
+        dir_xdisplace=scomp-(ipart-1)*SDIM-icomplo+1
+
+        call filcc(bfact, &
          u,DIMS(u), &
          domlo,domhi,bc)
 
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
+        fablo(1)=ARG_L1(u)
+        fablo(2)=ARG_L2(u)
 #if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
+        fablo(SDIM)=ARG_L3(u)
 #endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
+        fabhi(1)=ARG_H1(u)
+        fabhi(2)=ARG_H2(u)
 #if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
+        fabhi(SDIM)=ARG_H3(u)
 #endif
 
-       do dir2=1,SDIM
+        do dir2=1,SDIM
          if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
           print *,"domlo not divisible by bfact"
           stop
@@ -32223,10 +32264,10 @@ end subroutine initialize2d
           print *,"domhi+1 not divisible by bfact"
           stop
          endif
-       enddo  ! dir2
+        enddo  ! dir2
 
-       do dir2=1,SDIM
-       do side=1,2
+        do dir2=1,SDIM
+        do side=1,2
 
          borderlo(3)=0
          borderhi(3)=0
@@ -32273,8 +32314,12 @@ end subroutine initialize2d
           enddo
           enddo
          endif            
-       enddo ! side
-       enddo ! dir2
+        enddo ! side
+        enddo ! dir2
+       else
+        print *,"im out of range in XDISPLACEFILL"
+        stop
+       endif
 
        return
        end subroutine FORT_XDISPLACEFILL
