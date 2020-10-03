@@ -712,7 +712,7 @@ NavierStokes::variableSetUp ()
     if (num_materials_viscoelastic!=im_elastic_map.size())
      amrex::Error("num_materials_viscoelastic!=im_elastic_map.size()");
 
-    if ((num_materials_viscoelastic>=0)&&
+    if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
 
 	// XDISPLACE appended 
@@ -876,6 +876,8 @@ NavierStokes::variableSetUp ()
 
      } // partid=0..nparts-1
 
+    } else if (num_materials_viscoelastic==0) {
+     // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
