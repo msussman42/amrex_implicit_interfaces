@@ -654,6 +654,7 @@ extern "C"
    void FORT_EXTRAPTENSOR(
     int* level,
     int* finest_level,
+    int* ncomp_extrap,
     int* nmat,
     int* im,
     int* ngrow_extrap,

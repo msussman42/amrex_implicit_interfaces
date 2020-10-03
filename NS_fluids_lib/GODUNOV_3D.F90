@@ -11782,9 +11782,11 @@ stop
       end subroutine FORT_FIX_HOOP_TENSOR
 
 
+        ! called from: NavierStokes::tensor_extrapolate() in NavierStokes.cpp
       subroutine FORT_EXTRAPTENSOR( &
        level, &
        finest_level, &
+       ncomp_extrap, &
        nmat,im, & 
        ngrow_extrap, &
        vof,DIMS(vof), &
@@ -11798,25 +11800,26 @@ stop
       IMPLICIT NONE
 
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nmat
-      INTEGER_T im
-      INTEGER_T ngrow_extrap
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: ncomp_extrap
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: im
+      INTEGER_T, intent(in) :: ngrow_extrap
       INTEGER_T i,j,k
       INTEGER_T dir
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(tnew)
-      INTEGER_T DIMDEC(told)
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(tnew)
+      INTEGER_T, intent(in) :: DIMDEC(told)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      REAL_T dx(SDIM),xlo(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
-      REAL_T told(DIMV(told),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(out) :: tnew(DIMV(tnew),ncomp_extrap)
+      REAL_T, intent(in) :: told(DIMV(told),ncomp_extrap)
 
       INTEGER_T ii,jj
       INTEGER_T i1,j1,k1
@@ -11827,6 +11830,7 @@ stop
       REAL_T total_weight
       REAL_T Qsum(3,3)
       REAL_T Q(3,3)
+      INTEGER_T index_ptr(3,3)
       REAL_T dist
       REAL_T xsten(-1:1,SDIM)
       REAL_T xsten_stencil(-1:1,SDIM)
@@ -11834,6 +11838,13 @@ stop
 
       nhalf=1
 
+      if ((ncomp_extrap.eq.FORT_NUM_TENSOR_TYPE).or. &
+          (ncomp_extrap.eq.SDIM)) then
+       ! do nothing
+      else
+       print *,"ncomp_extrap invalid"
+       stop
+      endif
       if (bfact.lt.1) then
        print *,"bfact invalid62"
        stop
@@ -11898,19 +11909,55 @@ stop
          do ii=1,3
          do jj=1,3
           Q(ii,jj)=zero
+          index_ptr(ii,jj)=0
          enddo
          enddo
-         Q(1,1)=told(D_DECL(i+i1,j+j1,k+k1),1)
-         Q(1,2)=told(D_DECL(i+i1,j+j1,k+k1),2)
-         Q(2,2)=told(D_DECL(i+i1,j+j1,k+k1),3)
-         Q(3,3)=told(D_DECL(i+i1,j+j1,k+k1),4)
-#if (AMREX_SPACEDIM==3)
-         Q(1,3)=told(D_DECL(i+i1,j+j1,k+k1),5)
-         Q(2,3)=told(D_DECL(i+i1,j+j1,k+k1),6)
-#endif
-         Q(2,1)=Q(1,2)
-         Q(3,1)=Q(1,3)
-         Q(3,2)=Q(2,3)
+         if (ncomp_extrap.eq.FORT_NUM_TENSOR_TYPE) then
+          index_ptr(1,1)=1
+          index_ptr(1,2)=2
+          index_ptr(2,2)=3
+          index_ptr(3,3)=4
+          if (SDIM.eq.2) then
+           index_ptr(1,3)=0
+           index_ptr(2,3)=0
+          else if (SDIM.eq.3) then
+           index_ptr(1,3)=5
+           index_ptr(2,3)=6
+          else
+           print *,"dimension bust"
+           stop
+          endif
+          index_ptr(2,1)=index_ptr(1,2)
+          index_ptr(3,1)=index_ptr(1,3)
+          index_ptr(3,2)=index_ptr(2,3)
+         else if (ncomp_extrap.eq.SDIM) then
+          index_ptr(1,1)=1
+          index_ptr(1,2)=2
+          if (SDIM.eq.2) then
+           index_ptr(1,3)=0
+          else if (SDIM.eq.3) then
+           index_ptr(1,3)=3
+          else
+           print *,"dimension bust"
+           stop
+          endif
+         else
+          print *,"ncomp_extrap invalid"
+          stop
+         endif
+         do ii=1,3
+         do jj=1,3
+          if (index_ptr(ii,jj).eq.0) then
+           ! do nothing
+          else if ((index_ptr(ii,jj).ge.1).and. &
+                   (index_ptr(ii,jj).le.ncomp_extrap)) then
+           Q(ii,jj)=told(D_DECL(i+i1,j+j1,k+k1),index_ptr(ii,jj))
+          else
+           print *,"index_ptr(ii,jj) invalid"
+           stop
+          endif
+         enddo
+         enddo
 
          vfracstencil=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
          if (vfracstencil.le.half) then
@@ -11955,14 +12002,19 @@ stop
         enddo 
         enddo
 
-        tnew(D_DECL(i,j,k),1)=Q(1,1)
-        tnew(D_DECL(i,j,k),2)=Q(1,2)
-        tnew(D_DECL(i,j,k),3)=Q(2,2)
-        tnew(D_DECL(i,j,k),4)=Q(3,3)
-#if (AMREX_SPACEDIM==3)
-        tnew(D_DECL(i,j,k),5)=Q(1,3)
-        tnew(D_DECL(i,j,k),6)=Q(2,3)
-#endif
+        do ii=1,3
+        do jj=1,3
+         if (index_ptr(ii,jj).eq.0) then
+          ! do nothing
+         else if ((index_ptr(ii,jj).ge.1).and. &
+                  (index_ptr(ii,jj).le.ncomp_extrap)) then
+          tnew(D_DECL(i,j,k),index_ptr(ii,jj))=Q(ii,jj)
+         else
+          print *,"index_ptr(ii,jj) invalid"
+          stop
+         endif
+        enddo
+        enddo
        else if ((vfrac.ge.half).and.(vfrac.le.one+VOFTOL)) then
         ! do nothing
        else
