@@ -385,7 +385,7 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
      &sem_interp_LOW_PARM);
   } // im=0..nmat-1
 
-  for (int imvel=0;imvel<ncomp;imvel++) {
+  for (int imvel=0;imvel<ncomp_vel_pres;imvel++) {
    desc_lst.resetMapper(State_Type,imvel,&sem_interp_LOW_PARM);
   }
  } else
