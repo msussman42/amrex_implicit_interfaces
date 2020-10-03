@@ -1,5 +1,5 @@
 // tensor, num_materials_viscoelastic, Tensor_Type, im_elastic_map,
-// Tensor_new
+// Tensor_new, getStateTensor
 //#include <winstd.H>
 
 #include <algorithm>
@@ -3475,7 +3475,8 @@ NavierStokes::read_params ()
       std::cout << "Carreau_mu_inf=" << Carreau_mu_inf[i] << '\n';
      } // io processor
 
-     if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+     if ((num_materials_viscoelastic>=1)&&
+         (num_materials_viscoelastic<=nmat)) {
 
       if (visc_coef<=0.0)
        amrex::Error("cannot have no viscosity if viscoelastic");
@@ -9659,7 +9660,8 @@ void NavierStokes::tensor_advection_update() {
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
 
-     int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+     int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE+
+	     partid*SDIM;
      MultiFab* xdisplace_mf=getStateTensor(1,scomp_xdisplace,AMREX_SPACEDIM,
        cur_time_slab);
 
@@ -21025,14 +21027,18 @@ MultiFab* NavierStokes::getStateTensor (
 
   // nparts x NUM_TENSOR_TYPE
  int nparts=im_elastic_map.size();
+ int scomp_bias=scomp-nparts*NUM_TENSOR_TYPE;
+
  if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
- if ((ncomp==nparts*NUM_TENSOR_TYPE+AMREX_SPACEDIM)&&
+ if ((ncomp==nparts*(NUM_TENSOR_TYPE+AMREX_SPACEDIM))&&
      (scomp==0)) {
   // do nothing
  } else if ((ncomp==AMREX_SPACEDIM)&&
-            (scomp==nparts*NUM_TENSOR_TYPE)) {
-  // do nothing
+            (scomp_bias%AMREX_SPACEDIM==0)) {
+  int partid=scomp_bias/AMREX_SPACEDIM;
+  if ((partid<0)||(partid>=nparts))
+   amrex::Error("partid invalid");
  } else if (ncomp%NUM_TENSOR_TYPE==0) {
   int partid=scomp/NUM_TENSOR_TYPE;
   if ((partid<0)||(partid>=nparts))

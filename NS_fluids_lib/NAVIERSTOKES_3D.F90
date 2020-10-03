@@ -930,7 +930,7 @@ stop
          enddo
           ! den,configuration tensor,visc,trace
          do ivar_gb=1,nmat*num_state_material+ &
-              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM+ &
+              num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)+ &
               nmat+5*nmat
           index3d=index3d+1
           index2d=index2d+1
@@ -3389,7 +3389,7 @@ END SUBROUTINE SIMP
        stop
       endif
       if (elastic_ncomp.ne. &
-          num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
+          num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)) then
        print *,"elastic_ncomp invalid 1"
        stop
       endif
