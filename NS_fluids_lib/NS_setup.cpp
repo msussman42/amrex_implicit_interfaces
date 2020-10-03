@@ -344,12 +344,18 @@ set_pressure_bc (BCRec&       bc,
 void
 NavierStokes::override_enable_spectral(int enable_spectral_in) {
 
+  // TODO: if num_materials_vel==nmat, then
+  //  have Super_State_Type, Super_Umac_Type,
+  //  Super_Vmac_Type, Super_Wmac_Type, and
+  //  Super_DIV_Type to hold
+  //  the velocity, pressure, and divergence defined on the 
+  //  supermesh.
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
 
  int nmat=num_materials;
- int scomp_states=num_materials_vel*(AMREX_SPACEDIM+1);
- int ncomp=(AMREX_SPACEDIM+1)*num_materials_vel;
+ int scomp_states=AMREX_SPACEDIM+1;
+ int ncomp_vel_pres=AMREX_SPACEDIM+1;
 
  enable_spectral=enable_spectral_in;
 
@@ -364,7 +370,7 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
      &sem_interp_HIGH_PARM);
   } // im=0..nmat-1
 
-  for (int imvel=0;imvel<ncomp;imvel++) {
+  for (int imvel=0;imvel<ncomp_vel_pres;imvel++) {
    desc_lst.resetMapper(State_Type,imvel,&sem_interp_HIGH_PARM);
   }
 
@@ -474,9 +480,15 @@ NavierStokes::variableSetUp ()
      amrex::Error("nmat invalid in ns setup variable setup");
     }
 
-     // velocity, pressure, state x nmat, ngeom_raw x nmat, error ind
+  // TODO: if num_materials_vel==nmat, then
+  //  have Super_State_Type, Super_Umac_Type,
+  //  Super_Vmac_Type, Super_Wmac_Type, and
+  //  Super_DIV_Type to hold
+  //  the velocity, pressure, and divergence defined on the 
+  //  supermesh.
+  // velocity, pressure, state x nmat, ngeom_raw x nmat, error ind
 
-    int nc=num_materials_vel*(AMREX_SPACEDIM+1)+
+    int nc=(AMREX_SPACEDIM+1)+
      nmat*(ngeom_raw+num_state_material)+1;
 
     BCRec bc;
@@ -507,6 +519,12 @@ NavierStokes::variableSetUp ()
     }
 
 // Umac_Type  -------------------------------------------
+  // TODO: if num_materials_vel==nmat, then
+  //  have Super_State_Type, Super_Umac_Type,
+  //  Super_Vmac_Type, Super_Wmac_Type, and
+  //  Super_DIV_Type to hold
+  //  the velocity, pressure, and divergence defined on the 
+  //  supermesh.
 
     if (num_materials_vel!=1)
      amrex::Error("num_materials_vel invalid");
@@ -574,7 +592,7 @@ NavierStokes::variableSetUp ()
 // DIV -------------------------------------------
 
     desc_lst.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,num_materials_vel,&sem_interp_DEFAULT,null_ncomp_particles);
+     1,1,&sem_interp_DEFAULT,null_ncomp_particles);
 
     desc_lstGHOST.addDescriptor(DIV_Type,IndexType::TheCellType(),
      1,1,&sem_interp_DEFAULT,null_ncomp_particles);
@@ -699,7 +717,7 @@ NavierStokes::variableSetUp ()
 
 	// XDISPLACE appended 
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
-      1,num_materials_viscoelastic*NUM_TENSOR_TYPE+BL_SPACEDIM,
+      1,num_materials_viscoelastic*(NUM_TENSOR_TYPE+BL_SPACEDIM),
       &pc_interp,
       null_ncomp_particles);
 
@@ -806,41 +824,57 @@ NavierStokes::variableSetUp ()
 
      } // partid=0..nparts-1
 
-     Vector<std::string> MOFxdisplace_names_tensor;
-     MOFxdisplace_names_tensor.resize(AMREX_SPACEDIM);
+     for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
-     Vector<BCRec> MOFxdisplace_bcs_tensor;
-     MOFxdisplace_bcs_tensor.resize(AMREX_SPACEDIM);
+      int im_part=im_elastic_map[partid];
+      if ((im_part<0)||(im_part>=nmat))
+       amrex::Error("im_part invalid");
 
-     int dir_local=0;
-     std::string xdisplace_str="XDISPLACE";
-     MOFxdisplace_names_tensor[dir_local]=xdisplace_str;
-     set_x_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+      std::stringstream im_string_stream(std::stringstream::in |
+       std::stringstream::out);
+      im_string_stream << im_part+1;
+      std::string im_string=im_string_stream.str();
 
-     dir_local++;
-     std::string ydisplace_str="YDISPLACE";
-     MOFxdisplace_names_tensor[dir_local]=ydisplace_str;
-     set_y_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+      Vector<std::string> MOFxdisplace_names_tensor;
+      MOFxdisplace_names_tensor.resize(AMREX_SPACEDIM);
+
+      Vector<BCRec> MOFxdisplace_bcs_tensor;
+      MOFxdisplace_bcs_tensor.resize(AMREX_SPACEDIM);
+
+      int dir_local=0;
+      std::string xdisplace_str="XDISPLACE";
+      xdisplace_str+=im_string;
+      MOFxdisplace_names_tensor[dir_local]=xdisplace_str;
+      set_x_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+
+      dir_local++;
+      std::string ydisplace_str="YDISPLACE";
+      ydisplace_str+=im_string;
+      MOFxdisplace_names_tensor[dir_local]=ydisplace_str;
+      set_y_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
 
 #if (AMREX_SPACEDIM == 3)
-     if (AMREX_SPACEDIM==3) {
-      dir_local++;
-      std::string zdisplace_str="ZDISPLACE";
-      MOFxdisplace_names_tensor[dir_local]=zdisplace_str;
-      set_z_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
-     }
+      if (AMREX_SPACEDIM==3) {
+       dir_local++;
+       std::string zdisplace_str="ZDISPLACE";
+       zdisplace_str+=im_string;
+       MOFxdisplace_names_tensor[dir_local]=zdisplace_str;
+       set_z_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+      }
 #endif
 
-     StateDescriptor::BndryFunc 
-      MOFxdisplace_fill_class_tensor(FORT_XDISPLACEFILL,
+      StateDescriptor::BndryFunc 
+       MOFxdisplace_fill_class_tensor(FORT_XDISPLACEFILL,
         FORT_GROUP_TENSORFILL);
 
-     desc_lst.setComponent(Tensor_Type,
-        num_materials_viscoelastic*NUM_TENSOR_TYPE,
+      desc_lst.setComponent(Tensor_Type,
+        num_materials_viscoelastic*NUM_TENSOR_TYPE+partid*AMREX_SPACEDIM,
         MOFxdisplace_names_tensor,
         MOFxdisplace_bcs_tensor,
         MOFxdisplace_fill_class_tensor,
         &pc_interp);
+
+     } // partid=0..nparts-1
 
     } else
      amrex::Error("num_materials_viscoelastic invalid");
@@ -1355,9 +1389,15 @@ NavierStokes::variableSetUp ()
     if (num_materials_vel!=1)
      amrex::Error("num_materials_vel!=1");
 
+  // TODO: if num_materials_vel==nmat, then
+  //  have Super_State_Type, Super_Umac_Type,
+  //  Super_Vmac_Type, Super_Wmac_Type, and
+  //  Super_DIV_Type to hold
+  //  the velocity, pressure, and divergence defined on the 
+  //  supermesh.
     set_pressure_bc(bc,phys_bc_pres);
     std::string pres_str="pressure"; 
-    desc_lst.setComponent(State_Type,num_materials_vel*AMREX_SPACEDIM,
+    desc_lst.setComponent(State_Type,AMREX_SPACEDIM,
       pres_str,bc,FORT_PRESSUREFILL,&sem_interp_DEFAULT);
 
     Vector<std::string> MOFstate_names;
@@ -1433,7 +1473,7 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc MOFstate_fill_class(FORT_STATEFILL,
        FORT_GROUP_STATEFILL);
 
-    int scomp_states=num_materials_vel*(AMREX_SPACEDIM+1);
+    int scomp_states=(AMREX_SPACEDIM+1);
 
     desc_lst.setComponent(State_Type,
      scomp_states,
