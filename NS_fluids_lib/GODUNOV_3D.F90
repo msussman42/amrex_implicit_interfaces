@@ -17939,7 +17939,8 @@ stop
        time, &
        passive_veltime, &
        vofflux, &
-       DIMS(vofflux), &  !voffluxlox,voffluxloy,voffluxloz,voffluxhix,voffluxhiy,voffluxhiz
+       DIMS(vofflux), &  !voffluxlox,voffluxloy,voffluxloz,
+                         !voffluxhix,voffluxhiy,voffluxhiz
        LS,DIMS(LS), &  ! original data
        den,DIMS(den), &
        tensor,DIMS(tensor), &
@@ -18039,7 +18040,8 @@ stop
       INTEGER_T bfact_f
       INTEGER_T override_density(nmat)
       REAL_T dt,time
-      INTEGER_T DIMDEC(vofflux) ! voffluxlox,voffluxloy,voffluxloz,voffluxhix,voffluxhiy,voffluxhiz
+      INTEGER_T DIMDEC(vofflux) !voffluxlox,voffluxloy,voffluxloz, 
+                                !voffluxhix,voffluxhiy,voffluxhiz
        ! original data
       INTEGER_T DIMDEC(LS)
       INTEGER_T DIMDEC(den)
@@ -18075,7 +18077,9 @@ stop
       INTEGER_T DIMDEC(ymassside) 
       INTEGER_T DIMDEC(zmassside) 
 
-      REAL_T vofflux(DIMV(vofflux),nmat) !  voffluxlox:voffluxhix,voffluxloy:voffluxhiy,voffluxloz:voffluxhiz
+      REAL_T vofflux(DIMV(vofflux),nmat) !voffluxlox:voffluxhix,
+                                         !voffluxloy:voffluxhiy,
+                                         !voffluxloz:voffluxhiz
        ! FABS
        ! original data
       REAL_T LS(DIMV(LS),nmat)
@@ -18501,8 +18505,8 @@ stop
        stop
       endif
 
-        ! SANITY CHECKS TO MAKE SURE THAT input FABs have the expected number of
-        ! ghost cells.
+       ! SANITY CHECKS TO MAKE SURE THAT input FABs have the expected number of
+       ! ghost cells.
       call checkbound(fablo,fabhi,DIMS(vofflux),0,normdir,136)
        ! original data
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,136)
@@ -19545,6 +19549,13 @@ stop
                          (imap.le.num_materials_viscoelastic))
                 imap=imap+1
                enddo
+                ! FIX ME
+                !  + multi_volume_grid(im) * donate_data
+                ! then later on,
+                !  tennew_hold(statecomp_data)=
+                !    veldata(itensor_base+statecomp_data)/
+                !    veldata(imof_base+vofcomp)
+                ! (becomes volmat_depart(im))
                if (imap.le.num_materials_viscoelastic) then
                 do istate=1,FORT_NUM_TENSOR_TYPE
                  statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
