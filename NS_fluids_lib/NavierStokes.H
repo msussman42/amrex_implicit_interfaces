@@ -1859,7 +1859,7 @@ protected:
     static int use_supermesh; //def=0
     static int ncomp_sum_int_user; //def=0
 
-     // this is set according to elastic_viscosity
+     // this is set according to store_elastic_data
     static int num_materials_viscoelastic;
 
      // den,denA,E,T,P,species,configuration tensor
@@ -1890,6 +1890,7 @@ protected:
     static Vector<int> viscosity_state_model; // def=0
     static Vector<int> les_model;
     static Vector<int> temperature_primitive_variable; // def=0
+    static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
     static Vector<Real> polymer_factor;
 

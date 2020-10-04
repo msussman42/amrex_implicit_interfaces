@@ -1501,11 +1501,6 @@ stop
         print *,"ntenvisco invalid1"
         stop
        endif
-      else if (num_materials_viscoelastic.eq.0) then
-       if (nmat*num_state_material.ne.ntenvisco) then 
-        print *,"ntenvisco invalid2"
-        stop
-       endif
       else
        print *,"num_materials_viscoelastic invalid"
        stop

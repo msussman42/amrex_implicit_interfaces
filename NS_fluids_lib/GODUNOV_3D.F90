@@ -18431,10 +18431,10 @@ stop
        stop
       endif
 
-      if ((num_materials_viscoelastic.ge.0).and. &
+      if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.nmat)) then
-       if (ntensor.ne.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-           SDIM) then
+       if (ntensor.ne.num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+ &
+           SDIM)) then
         print *,"ntensor invalid"
         stop
        endif
@@ -18681,7 +18681,7 @@ stop
 
       itensor_base=iden_base+nmat*num_state_material
       imof_base=itensor_base+ &
-           num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM
+           num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)
       iLS_base=imof_base+nmat*ngeom_raw
       iFtarget_base=iLS_base+nmat
       iden_mom_base=iFtarget_base+nmat
@@ -19543,7 +19543,7 @@ stop
              if ((num_materials_viscoelastic.ge.1).and. &
                  (num_materials_viscoelastic.le.nmat)) then
 
-              if (fort_elastic_viscosity(im).gt.zero) then
+              if (fort_store_elastic_data(im).eq.1) then
                imap=1
                do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
                          (imap.le.num_materials_viscoelastic))
@@ -19569,15 +19569,13 @@ stop
                 print *,"imap invalid"
                 stop
                endif
-              else if (fort_elastic_viscosity(im).eq.zero) then
+              else if (fort_store_elastic_data(im).eq.0) then
                ! do nothing
               else
-               print *,"fort_elastic_viscosity(im) invalid"
+               print *,"fort_store_elastic_data(im) invalid"
                stop
               endif
 
-             else if (num_materials_viscoelastic.eq.0) then
-              ! do nothing
              else
               print *,"num_materials_viscoelastic invalid"
               stop
@@ -20550,7 +20548,7 @@ stop
           if ((num_materials_viscoelastic.ge.1).and. &
               (num_materials_viscoelastic.le.nmat)) then
 
-           if (fort_elastic_viscosity(im).gt.zero) then
+           if (fort_store_elastic_data(im).eq.1) then
             imap=1
             do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
                       (imap.le.num_materials_viscoelastic))
@@ -20581,15 +20579,13 @@ stop
              print *,"imap invalid"
              stop
             endif
-           else if (fort_elastic_viscosity(im).eq.zero) then
+           else if (fort_store_elastic_data(im).eq.0) then
             ! do nothing
            else
-            print *,"fort_elastic_viscosity(im) invalid"
+            print *,"fort_store_elastic_data(im) invalid"
             stop
            endif
 
-          else if (num_materials_viscoelastic.eq.0) then
-           ! do nothing
           else
            print *,"num_materials_viscoelastic invalid"
            stop
@@ -20655,7 +20651,7 @@ stop
           if ((num_materials_viscoelastic.ge.1).and. &
               (num_materials_viscoelastic.le.nmat)) then
 
-           if (fort_elastic_viscosity(im).gt.zero) then
+           if (fort_store_elastic_data(im).eq.1) then
             imap=1
             do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
                       (imap.le.num_materials_viscoelastic))
@@ -20671,15 +20667,13 @@ stop
              print *,"imap invalid"
              stop
             endif
-           else if (fort_elastic_viscosity(im).eq.zero) then
+           else if (fort_store_elastic_data(im).eq.0) then
             ! do nothing
            else
-            print *,"fort_elastic_viscosity(im) invalid"
+            print *,"fort_store_elastic_data(im) invalid"
             stop
            endif
 
-          else if (num_materials_viscoelastic.eq.0) then
-           ! do nothing
           else
            print *,"num_materials_viscoelastic invalid"
            stop
@@ -21287,10 +21281,10 @@ stop
        stop
       endif
 
-      if ((num_materials_viscoelastic.ge.0).and. &
+      if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.nmat)) then
-       if (ntensor.ne.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-               SDIM) then
+       if (ntensor.ne.num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+ &
+               SDIM)) then
         print *,"ntensor invalid"
         stop
        endif
@@ -21463,8 +21457,8 @@ stop
       cutoff=DXMAXLS
 
       itensor_base=iden_base+nmat*num_state_material
-      imof_base=itensor_base+num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-              SDIM
+      imof_base=itensor_base+ &
+         num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)
       iLS_base=imof_base+nmat*ngeom_raw
       iFtarget_base=iLS_base+nmat
       iden_mom_base=iFtarget_base+nmat
@@ -22922,7 +22916,7 @@ stop
                if ((num_materials_viscoelastic.ge.1).and. &
                    (num_materials_viscoelastic.le.nmat)) then
 
-                if (fort_elastic_viscosity(u_im).gt.zero) then
+                if (fort_store_elastic_data(u_im).eq.1) then
                  imap=1
                  do while ((fort_im_elastic_map(imap)+1.ne.u_im).and. &
                            (imap.le.num_materials_viscoelastic))
@@ -22942,15 +22936,13 @@ stop
                   print *,"imap invalid"
                   stop
                  endif
-                else if (fort_elastic_viscosity(u_im).eq.zero) then
+                else if (fort_store_elastic_data(u_im).eq.0) then
                  ! do nothing
                 else
-                 print *,"fort_elastic_viscosity(u_im) invalid"
+                 print *,"fort_store_elastic_data(u_im) invalid"
                  stop
                 endif
 
-               else if (num_materials_viscoelastic.eq.0) then
-                ! do nothing
                else
                 print *,"num_materials_viscoelastic invalid"
                 stop
@@ -23445,7 +23437,7 @@ stop
            if ((num_materials_viscoelastic.ge.1).and. &
                (num_materials_viscoelastic.le.nmat)) then
 
-            if (fort_elastic_viscosity(u_im).gt.zero) then
+            if (fort_store_elastic_data(u_im).eq.1) then
              imap=1
              do while ((fort_im_elastic_map(imap)+1.ne.u_im).and. &
                        (imap.le.num_materials_viscoelastic))
@@ -23474,15 +23466,13 @@ stop
               print *,"imap invalid"
               stop
              endif
-            else if (fort_elastic_viscosity(u_im).eq.zero) then
+            else if (fort_store_elastic_data(u_im).eq.0) then
              ! do nothing
             else
-             print *,"fort_elastic_viscosity(u_im) invalid"
+             print *,"fort_store_elastic_data(u_im) invalid"
              stop
             endif
 
-           else if (num_materials_viscoelastic.eq.0) then
-            ! do nothing
            else
             print *,"num_materials_viscoelastic invalid"
             stop
@@ -23547,7 +23537,7 @@ stop
            if ((num_materials_viscoelastic.ge.1).and. &
                (num_materials_viscoelastic.le.nmat)) then
 
-            if (fort_elastic_viscosity(u_im).gt.zero) then
+            if (fort_store_elastic_data(u_im).eq.1) then
              imap=1
              do while ((fort_im_elastic_map(imap)+1.ne.u_im).and. &
                        (imap.le.num_materials_viscoelastic))
@@ -23563,15 +23553,13 @@ stop
               print *,"imap invalid"
               stop
              endif
-            else if (fort_elastic_viscosity(u_im).eq.zero) then
+            else if (fort_store_elastic_data(u_im).eq.0) then
              ! do nothing
             else
              print *,"fort_elastic_viscosity(u_im) invalid"
              stop
             endif
 
-           else if (num_materials_viscoelastic.eq.0) then
-            ! do nothing
            else
             print *,"num_materials_viscoelastic invalid"
             stop
