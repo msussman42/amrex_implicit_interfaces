@@ -19481,6 +19481,7 @@ stop
                conserve(D_DECL(idonate,jdonate,kdonate),veldir)
                ! density has a piecewise constant reconstruction in mixed
                ! cells.   In pure cells, velocity slope is (rho u)_x/rho_i
+               ! massdepart_mom is a density in the departure region.
               donate_slope= &
                momslope(D_DECL(idonate,jdonate,kdonate),veldir)
               mom2(veldir)=multi_volume_grid(im)*massdepart_mom* &
@@ -19557,14 +19558,27 @@ stop
                 !    veldata(imof_base+vofcomp)
                 ! (becomes volmat_depart(im))
                if (imap.le.num_materials_viscoelastic) then
+
                 do istate=1,FORT_NUM_TENSOR_TYPE
                  statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
                  donate_data= &
                   tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
                  veldata(itensor_base+statecomp_data)= &
                   veldata(itensor_base+statecomp_data)+ &
-                  massdepart_mom*donate_data 
-                enddo !istate
+                  multi_volume_grid(im)*donate_data 
+                enddo !istate=1..FORT_NUM_TENSOR_TYPE
+
+                do istate=1,SDIM
+                 statecomp_data= &
+                     num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+                     (imap-1)*SDIM+istate
+                 donate_data= &
+                  tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
+                 veldata(itensor_base+statecomp_data)= &
+                  veldata(itensor_base+statecomp_data)+ &
+                  multi_volume_grid(im)*donate_data 
+                enddo !istate=1..sdim
+
                else 
                 print *,"imap invalid"
                 stop
@@ -19581,23 +19595,6 @@ stop
               stop
              endif
 
-             if (im.eq.nmat) then
-              do istate=1,SDIM
-               statecomp_data= &
-                    num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
-               donate_data= &
-                 tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
-               veldata(itensor_base+statecomp_data)= &
-                  veldata(itensor_base+statecomp_data)+ &
-                  LS_voltotal_depart*donate_data 
-              enddo !istate=1..SDIM
-             else if ((im.ge.1).and.(im.lt.nmat)) then
-              ! do nothing
-             else
-              print *,"im invalid"
-              stop
-             endif
- 
              ! level set function for im material.
              donate_data=LS(D_DECL(idonate,jdonate,kdonate),im) 
              veldata(iLS_base+im)=veldata(iLS_base+im)+ &
@@ -20555,17 +20552,17 @@ stop
              imap=imap+1
             enddo
             if (imap.le.num_materials_viscoelastic) then
+
              do istate=1,FORT_NUM_TENSOR_TYPE
               statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
               if (no_material_flag.eq.1) then
                tennew_hold(statecomp_data)=zero
               else if (no_material_flag.eq.0) then
-               massdepart_mom=veldata(iden_mom_base+im)
-               if (massdepart_mom.gt.zero) then
+               if (volmat_depart(im).gt.zero) then
                 tennew_hold(statecomp_data)= &
-                 veldata(itensor_base+statecomp_data)/massdepart_mom
+                 veldata(itensor_base+statecomp_data)/volmat_depart(im)
                else
-                print *,"massdepart_mom invalid"
+                print *,"volmat_depart(im) invalid"
                 stop
                endif 
               else
@@ -20574,6 +20571,32 @@ stop
               endif
  
              enddo !istate=1..FORT_NUM_TENSOR_TYPE
+
+             do istate=1,SDIM
+              statecomp_data= &
+                num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+                     (imap-1)*SDIM+istate
+              if (no_material_flag.eq.1) then
+               tennew_hold(statecomp_data)=zero
+              else if (no_material_flag.eq.0) then
+               if (volmat_depart(im).gt.zero) then
+                tennew_hold(statecomp_data)= &
+                 veldata(itensor_base+statecomp_data)/volmat_depart(im)
+                if (istate.eq.normdir+1) then
+                 tennew_hold(statecomp_data)= &
+                   tennew_hold(statecomp_data)+ &
+                   dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
+                endif
+               else
+                print *,"volmat_depart(im) invalid"
+                stop
+               endif 
+              else
+               print *,"no_material_flag invalid"
+               stop
+              endif
+ 
+             enddo !istate=1..SDIM
 
             else 
              print *,"imap invalid"
@@ -20593,21 +20616,10 @@ stop
 
          enddo  ! im=1..nmat
 
-         do istate=1,SDIM
-          statecomp_data= &
-            num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
-          tennew_hold(statecomp_data)= &
-            veldata(itensor_base+statecomp_data)/voltotal_depart
-          if (istate.eq.normdir+1) then
-           tennew_hold(statecomp_data)= &
-              tennew_hold(statecomp_data)+ &
-              dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
-          endif
-         enddo !istate=1..sdim
-
 
           ! velocity and pressure
-         do istate=1,num_materials_vel*(SDIM+1)
+          ! TODO: if num_materials_vel>1, add Super_Mesh_State_Type
+         do istate=1,(SDIM+1)
           snew(D_DECL(icrse,jcrse,kcrse),istate)=snew_hold(istate)
          enddo
 
@@ -20663,6 +20675,14 @@ stop
               tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
                tennew_hold(statecomp_data)
              enddo !istate=1..FORT_NUM_TENSOR_TYPE
+             do istate=1,SDIM
+              statecomp_data= &
+                num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+                     (imap-1)*SDIM+istate
+              tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+               tennew_hold(statecomp_data)
+             enddo !istate=1..SDIM
+
             else 
              print *,"imap invalid"
              stop
@@ -20680,13 +20700,6 @@ stop
           endif
 
          enddo ! im=1..nmat
-
-         do istate=1,SDIM
-          statecomp_data= &
-               num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
-          tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
-              tennew_hold(statecomp_data)
-         enddo !istate=1..sdim
 
          do im=1,nmat
           if (is_rigid(nmat,im).eq.0) then
@@ -22930,8 +22943,21 @@ stop
                            statecomp_data)
                    veldata(itensor_base+statecomp_data)= &
                     veldata(itensor_base+statecomp_data)+ &
-                    massdepart_mom*donate_data 
+                    multi_volume_depart(u_im)*donate_data 
                   enddo !istate=1..FORT_NUM_TENSOR_TYPE
+
+                  do istate=1,SDIM
+                   statecomp_data= &
+                     num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+                     (imap-1)*SDIM+istate
+                   donate_data= &
+                    tensor(D_DECL(idonate_CELL,jdonate_CELL,kdonate_CELL), &
+                     statecomp_data)
+                   veldata(itensor_base+statecomp_data)= &
+                    veldata(itensor_base+statecomp_data)+ &
+                    multi_volume_depart(u_im)*donate_data 
+                  enddo !istate=1..sdim
+
                  else 
                   print *,"imap invalid"
                   stop
@@ -22948,26 +22974,6 @@ stop
                 stop
                endif
   
-               if (u_im.eq.nmat) then
-
-                do istate=1,SDIM
-                 statecomp_data= &
-                    num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
-                 donate_data= &
-                   tensor(D_DECL(idonate_CELL,jdonate_CELL,kdonate_CELL), &
-                          statecomp_data)
-                 veldata(itensor_base+statecomp_data)= &
-                   veldata(itensor_base+statecomp_data)+ &
-                   LS_voltotal_depart*donate_data 
-                enddo !istate=1..SDIM
-
-               else if ((u_im.ge.1).and.(u_im.lt.nmat)) then
-                ! do nothing
-               else
-                print *,"u_im invalid"
-                stop
-               endif
-
                ! level set function for u_im material.
                donate_data= &
                  LS(D_DECL(idonate_CELL,jdonate_CELL,kdonate_CELL),u_im) 
@@ -23444,17 +23450,17 @@ stop
               imap=imap+1
              enddo
              if (imap.le.num_materials_viscoelastic) then
+
               do istate=1,FORT_NUM_TENSOR_TYPE
                statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
                if (no_material_flag.eq.1) then
                 tennew_hold(statecomp_data)=zero
                else if (no_material_flag.eq.0) then
-                massdepart_mom=veldata(iden_mom_base+u_im)
-                if (massdepart_mom.gt.zero) then
+                if (volmat_depart(u_im).gt.zero) then
                  tennew_hold(statecomp_data)= &
-                  veldata(itensor_base+statecomp_data)/massdepart_mom
+                  veldata(itensor_base+statecomp_data)/volmat_depart(u_im)
                 else
-                 print *,"massdepart_mom invalid"
+                 print *,"volmat_depart(u_im) invalid"
                  stop
                 endif 
                else
@@ -23462,6 +23468,30 @@ stop
                 stop
                endif
               enddo !istate=1..FORT_NUM_TENSOR_TYPE
+
+              do istate=1,SDIM
+               statecomp_data= &
+                num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+                     (imap-1)*SDIM+istate
+               if (no_material_flag.eq.1) then
+                tennew_hold(statecomp_data)=zero
+               else if (no_material_flag.eq.0) then
+                if (volmat_depart(u_im).gt.zero) then
+                 tennew_hold(statecomp_data)= &
+                  veldata(itensor_base+statecomp_data)/volmat_depart(u_im)
+                 tennew_hold(statecomp_data)= &
+                   tennew_hold(statecomp_data)+ &
+                   dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
+                else
+                 print *,"volmat_depart(u_im) invalid"
+                 stop
+                endif 
+               else
+                print *,"no_material_flag invalid"
+                stop
+               endif
+              enddo !istate=1..SDIM
+
              else 
               print *,"imap invalid"
               stop
@@ -23481,19 +23511,10 @@ stop
           enddo  ! u_im=1..nmat
 
 
-          do istate=1,SDIM
-           statecomp_data= &
-            num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
-           tennew_hold(statecomp_data)= &
-            veldata(itensor_base+statecomp_data)/voltotal_depart
-           tennew_hold(statecomp_data)= &
-             tennew_hold(statecomp_data)+ &
-             dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
-          enddo !istate=1..sdim
-
-
           ! velocity and pressure
-          do istate=1,num_materials_vel*(SDIM+1)
+          ! TODO: if num_materials_vel>1, then have separate data
+          !       structure.
+          do istate=1,(SDIM+1)
            snew(D_DECL(icrse,jcrse,kcrse),istate)=snew_hold(istate)
           enddo
 
@@ -23544,11 +23565,20 @@ stop
               imap=imap+1
              enddo
              if (imap.le.num_materials_viscoelastic) then
+
               do istate=1,FORT_NUM_TENSOR_TYPE
                statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
                tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
                 tennew_hold(statecomp_data)
-              enddo !istate
+              enddo !istate=1..FORT_NUM_TENSOR_TYPE
+              do istate=1,SDIM
+               statecomp_data= &
+                num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+                     (imap-1)*SDIM+istate
+               tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+                tennew_hold(statecomp_data)
+              enddo !istate=1..SDIM
+
              else 
               print *,"imap invalid"
               stop
@@ -23566,14 +23596,6 @@ stop
            endif
 
           enddo ! u_im=1..nmat
-
-          do istate=1,SDIM
-           statecomp_data= &
-               num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
-           tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
-              tennew_hold(statecomp_data)
-          enddo !istate=1..sdim
-
 
           do u_im=1,nmat
            if (is_rigid(nmat,u_im).eq.0) then
