@@ -8135,8 +8135,11 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  // 3. relaxation time - 1..nmat
  // the viscous and viscoelastic forces should both be multiplied by
  // visc_coef.  
- if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
-  amrex::Error("cell_visc_material ncomp invalid");
+ if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat) {
+  std::cout << "ncomp= " <<
+   localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
+  amrex::Error("cell_visc_material ncomp invalid(1)");
+ }
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow)
   amrex::Error("cell_visc_material ngrow invalid");
 
@@ -8308,10 +8311,16 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  // 3. relaxation time - 1..nmat
  // the viscous and viscoelastic forces should both be multiplied by
  // visc_coef.  
- if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
-  amrex::Error("cell_visc_material ncomp invalid");
- if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow)
-  amrex::Error("cell_visc_material ngrow invalid");
+ if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat) {
+  std::cout << "ncomp= " <<
+   localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
+  amrex::Error("cell_visc_material ncomp invalid(2)");
+ }
+ if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow) {
+  std::cout << "ngrow= " <<
+   localMF[CELL_VISC_MATERIAL_MF]->nGrow() << " nmat= " << nmat << '\n';
+  amrex::Error("cell_visc_material ngrow invalid(2)");
+ }
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
@@ -8331,8 +8340,11 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
     amrex::Error("localMF[VISCOTEN_MF] invalid");
 
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
-   if (ncomp_visc!=3*nmat)
-    amrex::Error("cell_visc_material ncomp invalid");
+   if (ncomp_visc!=3*nmat) {
+    std::cout << "ncomp= " <<
+     localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
+    amrex::Error("cell_visc_material ncomp invalid (3)");
+   }
 
    resize_levelsetLO(2,LEVELPC_MF);
    debug_ngrow(LEVELPC_MF,2,5);
@@ -8388,7 +8400,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-    if (viscfab.nComp()<nmat)
+    if (viscfab.nComp()!=3*nmat)
      amrex::Error("viscfab.nComp() invalid");
 
     FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
@@ -8473,8 +8485,11 @@ void NavierStokes::make_viscoelastic_force(int im) {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
- if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
-  amrex::Error("cell_visc_material ncomp invalid");
+ if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat) {
+  std::cout << "ncomp= " <<
+   localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
+  amrex::Error("cell_visc_material ncomp invalid(4)");
+ }
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow)
   amrex::Error("cell_visc_material ngrow invalid");
 
@@ -8491,7 +8506,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
   if (store_elastic_data[im]==1) {
 
    debug_ngrow(VISCOTEN_MF,1,5);
-    // CELL_VISC_MATERIAL init in getStateVISC_ALL which
+    // CELL_VISC_MATERIAL init in getStateVISC_ALL (NavierStokes2.cpp) which
     // calls getStateVISC which calls:
     //  FORT_GETSHEAR,FORT_DERVISCOSITY, and
     //  FORT_DERTURBVISC
@@ -8504,8 +8519,11 @@ void NavierStokes::make_viscoelastic_force(int im) {
     //  etaS=viscconst-elastic_viscosity
     //  etaP=etaP0=elastic_viscosity
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
-   if (ncomp_visc!=3*nmat)
-    amrex::Error("cell_visc_material ncomp invalid");
+   if (ncomp_visc!=3*nmat) {
+    std::cout << "ncomp= " <<
+     localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
+    amrex::Error("cell_visc_material ncomp invalid(5)");
+   }
 
    resize_levelsetLO(2,LEVELPC_MF);
    debug_ngrow(LEVELPC_MF,2,5);
@@ -8550,7 +8568,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
 
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-    if (viscfab.nComp()<nmat)
+    if (viscfab.nComp()!=3*nmat)
      amrex::Error("viscfab.nComp() invalid");
 
     FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
@@ -9715,8 +9733,11 @@ void NavierStokes::tensor_advection_update() {
      int scomp_tensor=partid*NUM_TENSOR_TYPE;
 
      int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
-     if (ncomp_visc!=3*nmat)
-      amrex::Error("cell_visc_material ncomp invalid");
+     if (ncomp_visc!=3*nmat) {
+      std::cout << "ncomp= " <<
+       localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
+      amrex::Error("cell_visc_material ncomp invalid(6)");
+     }
 
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
@@ -9762,7 +9783,7 @@ void NavierStokes::tensor_advection_update() {
 
       FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
       FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-      if (viscfab.nComp()<nmat)
+      if (viscfab.nComp()!=3*nmat)
        amrex::Error("viscfab.nComp() invalid");
 
       FArrayBox& velfab=(*velmf)[mfi];
@@ -17245,7 +17266,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
  getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
- if (localMF[CELL_VISC_MATERIAL_MF]->nComp()<nmat)
+ if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat)
   amrex::Error("viscmf invalid ncomp");
 
  getStateDIV_ALL(MACDIV_MF,1);

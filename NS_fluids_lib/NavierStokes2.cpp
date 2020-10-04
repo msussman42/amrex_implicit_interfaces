@@ -9679,14 +9679,10 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
- int ncomp_visc=nmat;
+ int ncomp_visc=3*nmat;
 
  Vector<int> shear_thinning_fluid(nmat);
 
- int allocate_vel=0;
- int allocate_eosdata=0;
- int allocate_tensor=0;
- 
  for (int im=0;im<nmat;im++) {
 
   shear_thinning_fluid[im]=0;
@@ -9701,7 +9697,7 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
     shear_thinning_fluid[im]=1;
 
    if (shear_thinning_fluid[im]==1) {
-    allocate_vel=1;
+    // do nothing
    } else if (shear_thinning_fluid[im]==0) {
     // do nothing
    } else
@@ -9710,21 +9706,20 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
    if (viscosity_state_model[im]==0) {
     // do nothing
    } else if (viscosity_state_model[im]>0) { // viscosity depends on T
-    allocate_eosdata=1;
+    // do nothing
    } else
     amrex::Error("viscosity_state_model invalid");
 
    if (les_model[im]==0) {
     // do nothing
    } else if (les_model[im]==1) {
-    allocate_vel=1;
-    allocate_eosdata=1;
+    // do nothing
    } else
     amrex::Error("les_model invalid");
 
    if ((elastic_time[im]>0.0)&&
        (elastic_viscosity[im]>0.0)) {
-    allocate_tensor=1;
+    // do nothing
    } else if ((elastic_time[im]==0.0)||
               (elastic_viscosity[im]==0.0)) {
     if (viscoelastic_model[im]!=0)
@@ -9737,48 +9732,23 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 
  } // im=0..nmat-1
 
- if ((allocate_vel==1)||
-     (allocate_tensor==1)) {
-  ncomp_visc=3*nmat;
- } else if ((allocate_vel==0)&&
-            (allocate_tensor==0)) {
-  // do nothing
- } else
-  amrex::Error("parameter bust");
-
  MultiFab* vel;
  MultiFab* EOSdata;
  MultiFab* tensor;
 
  new_localMF(idx,ncomp_visc,ngrow,-1); // sets values to 0.0
 
- if (allocate_vel==1) {
-  vel=getState(ngrow+1,0,num_materials_vel*AMREX_SPACEDIM,cur_time_slab);
- } else if (allocate_vel==0) {
-  vel=localMF[idx];
- } else
-  amrex::Error("allocate_vel invalid");
+   // TODO: define Super_Mesh_State_Type of num_materials_vel>1
+ vel=getState(ngrow+1,0,AMREX_SPACEDIM,cur_time_slab);
 
- if (allocate_eosdata==1) {
-  EOSdata=getStateDen(ngrow,cur_time_slab);
- } else if (allocate_eosdata==0) {
-  EOSdata=localMF[idx];
- } else
-  amrex::Error("allocate_eosdata invalid");
+ EOSdata=getStateDen(ngrow,cur_time_slab);
 
- if (allocate_tensor==1) {
-
-  if ((num_materials_viscoelastic>=1)&&
-      (num_materials_viscoelastic<=nmat)) {
-   tensor=getStateTensor(ngrow,0,
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  tensor=getStateTensor(ngrow,0,
      num_materials_viscoelastic*NUM_TENSOR_TYPE,cur_time_slab);
-  } else 
-   amrex::Error("num_materials_viscoelastic invalid");
-
- } else if (allocate_tensor==0) {
-  tensor=localMF[idx];
- } else
-  amrex::Error("allocate_tensor invalid");
+ } else 
+  amrex::Error("num_materials_viscoelastic invalid");
 
  for (int im=0;im<nmat;im++) {
 
@@ -9786,17 +9756,11 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 
   MultiFab* gammadot_mf=new MultiFab(grids,dmap,1,ngrow,
 	MFInfo().SetTag("gammadot_mf"),FArrayBoxFactory());
+  gammadot_mf->setVal(0.0);
 
   int scomp_tensor=0;
 
-  if ((elastic_time[im]>0.0)&&
-      (elastic_viscosity[im]>0.0)) {
-
-   if (ns_is_rigid(im)!=0)
-    amrex::Error("ns_is_rigid(im)!=0");
-
-   if (allocate_tensor!=1)
-    amrex::Error("allocate_tensor!=1");
+  if (store_elastic_data[im]==1) {
 
    int partid=0;
    while ((im_elastic_map[partid]!=im)&&
@@ -9808,14 +9772,13 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
    } else
     amrex::Error("partid could not be found: getStateVISC");
      
-  } else if ((elastic_time[im]==0.0)||
-             (elastic_viscosity[im]==0.0)) {
+  } else if (store_elastic_data[im]==0) {
 
    if (viscoelastic_model[im]!=0)
     amrex::Error("viscoelastic_model[im]!=0");
 
   } else
-   amrex::Error("elastic_time/elastic_viscosity getStateVISC");
+   amrex::Error("store_elastic_data invalid getStateVISC");
 
   if (ns_is_rigid(im)==1) {
    // no need to call getshear
@@ -10062,26 +10025,9 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
   delete gammadot_mf;
  } // im=0..nmat-1
 
- if (allocate_vel==1) {
-  delete vel;
- } else if (allocate_vel==0) {
-   // do nothing
- } else
-  amrex::Error("allocate_vel invalid");
-  
- if (allocate_eosdata==1) {
-  delete EOSdata;
- } else if (allocate_eosdata==0) {
-  // do nothing
- } else
-  amrex::Error("allocate_eosdata invalid");
-
- if (allocate_tensor==1) {
-  delete tensor;
- } else if (allocate_tensor==0) {
-  // do nothing
- } else
-  amrex::Error("allocate_tensor invalid");
+ delete vel;
+ delete EOSdata;
+ delete tensor;
 
 }  // subroutine getStateVISC
 
@@ -10156,7 +10102,7 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,ngrow,9);
  int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
- if (ncomp_visc<nmat)
+ if (ncomp_visc!=3*nmat)
   amrex::Error("visc_data invalid ncomp");
 
  int ncomp_den=den_data->nComp();
