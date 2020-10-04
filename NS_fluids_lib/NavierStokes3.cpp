@@ -906,6 +906,7 @@ void NavierStokes::tensor_advection_updateALL() {
   init_gradu_tensorALL(HOLD_VELOCITY_DATA_MF,do_alloc,
     CELLTENSOR_MF,FACETENSOR_MF,simple_AMR_BC_flag_viscosity);
 
+   // in: NavierStokes.cpp
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.tensor_advection_update();
@@ -918,22 +919,24 @@ void NavierStokes::tensor_advection_updateALL() {
    if ((particleLS_flag[im]==1)||
        (particleLS_flag[im]==0)) { 
     if (ns_is_rigid(im)==0) {
-     if ((elastic_time[im]>0.0)&&
-         (elastic_viscosity[im]>0.0)) {
-      if (viscoelastic_model[im]==2) {
+     if ((elastic_time[im]>=0.0)&&
+         (elastic_viscosity[im]>=0.0)) {
+      if (store_elastic_data[im]==1) {
+       if (viscoelastic_model[im]==2) {
 	  // particles only appear on the finest level.
           // The flexible substrate is wholly contained on
           // the finest level.
-       NavierStokes& ns_finest=getLevel(finest_level);
-       ns_finest.accumulate_PC_info(im);
-      } else if ((viscoelastic_model[im]==1)||
-		 (viscoelastic_model[im]==0)) {
+        NavierStokes& ns_finest=getLevel(finest_level);
+        ns_finest.accumulate_PC_info(im);
+       } else if ((viscoelastic_model[im]==1)||
+  		  (viscoelastic_model[im]==0)) {
+        // do nothing
+       } else
+        amrex::Error("viscoelastic_model[im] invalid");
+      } else if (store_elastic_data[im]==0) {
        // do nothing
       } else
-       amrex::Error("viscoelastic_model[im] invalid");
-     } else if ((elastic_time[im]==0.0)||
-                (elastic_viscosity[im]==0.0)) {
-      // do nothing
+       amrex::Error("store_elastic_data invalid");
      } else
       amrex::Error("elastic_time or elastic_viscosity invalid");
     } else if (ns_is_rigid(im)==1) {
