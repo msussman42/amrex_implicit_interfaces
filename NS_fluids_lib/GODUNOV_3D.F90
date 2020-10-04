@@ -17998,133 +17998,133 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nprocessed
-      INTEGER_T tid
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T, intent(in) :: nprocessed
+      INTEGER_T, intent(in) :: tid
 
-      INTEGER_T iden_base
-      INTEGER_T nc_conserve
-      INTEGER_T nrefine_vof
-      INTEGER_T ngrow,ngrow_mac_old
-      INTEGER_T solidheat_flag
-      INTEGER_T nten
-      INTEGER_T make_interface_incomp
-      REAL_T latent_heat(2*nten)
-      INTEGER_T freezing_model(2*nten)
-      INTEGER_T distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: iden_base
+      INTEGER_T, intent(in) :: nc_conserve
+      INTEGER_T, intent(in) :: nrefine_vof
+      INTEGER_T, intent(in) :: ngrow,ngrow_mac_old
+      INTEGER_T, intent(in) :: solidheat_flag
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: make_interface_incomp
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
 
-      INTEGER_T dencomp,mofcomp,errcomp
-      INTEGER_T face_flag
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      INTEGER_T dombc(SDIM,2)
-      INTEGER_T EILE_flag
-      INTEGER_T VOF_reflux
-      REAL_T passive_veltime
-      INTEGER_T dir_counter
+      INTEGER_T, intent(in) :: dencomp,mofcomp,errcomp
+      INTEGER_T, intent(in) :: face_flag
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      INTEGER_T, intent(in) :: dombc(SDIM,2)
+      INTEGER_T, intent(in) :: EILE_flag
+      INTEGER_T, intent(in) :: VOF_reflux
+      REAL_T, intent(in) :: passive_veltime
+      INTEGER_T, intent(in) :: dir_counter
       INTEGER_T, intent(in) :: normdir
-      INTEGER_T verbose
-      INTEGER_T force_check
-      INTEGER_T gridno,ngrid
-      INTEGER_T level,finest_level
-      INTEGER_T recon_ncomp
-      INTEGER_T den_recon_ncomp
-      INTEGER_T ncomp_state
-      INTEGER_T ntensor
-      INTEGER_T nc_bucket
-      INTEGER_T nc_bucket_test
-      INTEGER_T map_forward
-      INTEGER_T nmat
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T bfact_f
-      INTEGER_T override_density(nmat)
-      REAL_T dt,time
-      INTEGER_T DIMDEC(vofflux) !voffluxlox,voffluxloy,voffluxloz, 
+      INTEGER_T, intent(in) :: verbose
+      INTEGER_T, intent(in) :: force_check
+      INTEGER_T, intent(in) :: gridno,ngrid
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: recon_ncomp
+      INTEGER_T, intent(in) :: den_recon_ncomp
+      INTEGER_T, intent(in) :: ncomp_state
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: nc_bucket
+      INTEGER_T :: nc_bucket_test
+      INTEGER_T, intent(in) :: map_forward
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: bfact_f
+      INTEGER_T, intent(in) :: override_density(nmat)
+      REAL_T, intent(in) :: dt,time
+      INTEGER_T, intent(in) :: DIMDEC(vofflux) !voffluxlox,voffluxloy,voffluxloz, 
                                 !voffluxhix,voffluxhiy,voffluxhiz
        ! original data
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(tensor)
-      INTEGER_T DIMDEC(velfab)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(tensor)
+      INTEGER_T, intent(in) :: DIMDEC(velfab)
        ! slope data
-      INTEGER_T DIMDEC(PLICSLP)
+      INTEGER_T, intent(in) :: DIMDEC(PLICSLP)
        ! new data
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(tennew)
-      INTEGER_T DIMDEC(LSnew)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(tennew)
+      INTEGER_T, intent(in) :: DIMDEC(LSnew)
        ! other vars
-      INTEGER_T DIMDEC(ucell)
-      INTEGER_T DIMDEC(vofls0)
-      INTEGER_T DIMDEC(conscor)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(unode)
+      INTEGER_T, intent(in) :: DIMDEC(ucell)
+      INTEGER_T, intent(in) :: DIMDEC(vofls0)
+      INTEGER_T, intent(in) :: DIMDEC(conscor)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+      INTEGER_T, intent(in) :: DIMDEC(unode)
        ! local variables
-      INTEGER_T DIMDEC(conserve)
-      INTEGER_T DIMDEC(xvel)
-      INTEGER_T DIMDEC(yvel)
-      INTEGER_T DIMDEC(zvel)
-      INTEGER_T DIMDEC(xvelslp)
-      INTEGER_T DIMDEC(yvelslp)
-      INTEGER_T DIMDEC(zvelslp)
-      INTEGER_T DIMDEC(momslope)
+      INTEGER_T, intent(in) :: DIMDEC(conserve)
+      INTEGER_T, intent(in) :: DIMDEC(xvel)
+      INTEGER_T, intent(in) :: DIMDEC(yvel)
+      INTEGER_T, intent(in) :: DIMDEC(zvel)
+      INTEGER_T, intent(in) :: DIMDEC(xvelslp)
+      INTEGER_T, intent(in) :: DIMDEC(yvelslp)
+      INTEGER_T, intent(in) :: DIMDEC(zvelslp)
+      INTEGER_T, intent(in) :: DIMDEC(momslope)
 
-      INTEGER_T DIMDEC(xmomside) 
-      INTEGER_T DIMDEC(ymomside) 
-      INTEGER_T DIMDEC(zmomside) 
-      INTEGER_T DIMDEC(xmassside) 
-      INTEGER_T DIMDEC(ymassside) 
-      INTEGER_T DIMDEC(zmassside) 
+      INTEGER_T, intent(in) :: DIMDEC(xmomside) 
+      INTEGER_T, intent(in) :: DIMDEC(ymomside) 
+      INTEGER_T, intent(in) :: DIMDEC(zmomside) 
+      INTEGER_T, intent(in) :: DIMDEC(xmassside) 
+      INTEGER_T, intent(in) :: DIMDEC(ymassside) 
+      INTEGER_T, intent(in) :: DIMDEC(zmassside) 
 
-      REAL_T vofflux(DIMV(vofflux),nmat) !voffluxlox:voffluxhix,
+      REAL_T, intent(in) :: vofflux(DIMV(vofflux),nmat) !voffluxlox:voffluxhix,
                                          !voffluxloy:voffluxhiy,
                                          !voffluxloz:voffluxhiz
        ! FABS
        ! original data
-      REAL_T LS(DIMV(LS),nmat)
-      REAL_T den(DIMV(den),den_recon_ncomp)
-      REAL_T tensor(DIMV(tensor),ntensor)
-      REAL_T velfab(DIMV(velfab),num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat)
+      REAL_T, intent(in) :: den(DIMV(den),den_recon_ncomp)
+      REAL_T, intent(in) :: tensor(DIMV(tensor),ntensor)
+      REAL_T, intent(in) :: velfab(DIMV(velfab),num_materials_vel*(SDIM+1))
        ! slope data
-      REAL_T PLICSLP(DIMV(PLICSLP),recon_ncomp)
+      REAL_T, intent(in) :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
        ! new data
-      REAL_T snew(DIMV(snew),ncomp_state)
-      REAL_T tennew(DIMV(tennew),ntensor)
-      REAL_T LSnew(DIMV(LSnew),nmat)
+      REAL_T, intent(inout) :: snew(DIMV(snew),ncomp_state)
+      REAL_T, intent(inout) :: tennew(DIMV(tennew),ntensor)
+      REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat)
        ! other vars
-      REAL_T ucell(DIMV(ucell),num_materials_vel*SDIM)
-      REAL_T vofls0(DIMV(vofls0),2*nmat)
-      REAL_T conscor(DIMV(conscor),nmat)
-      REAL_T mask(DIMV(mask))
-      REAL_T masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
-      REAL_T unode(DIMV(unode),SDIM+1)
+      REAL_T, intent(in) :: ucell(DIMV(ucell),num_materials_vel*SDIM)
+      REAL_T, intent(in) :: vofls0(DIMV(vofls0),2*nmat)
+      REAL_T, intent(in) :: conscor(DIMV(conscor),nmat)
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
+      REAL_T, intent(in) :: unode(DIMV(unode),SDIM+1)
        ! local variables
-      REAL_T conserve(DIMV(conserve),nc_conserve)
-      REAL_T xvel(DIMV(xvel)) 
-      REAL_T yvel(DIMV(yvel))  
-      REAL_T zvel(DIMV(zvel))  
-      REAL_T xvelslp(DIMV(xvelslp),1+nmat)  ! xvelslope,xcen
-      REAL_T yvelslp(DIMV(yvelslp),1+nmat)  
-      REAL_T zvelslp(DIMV(zvelslp),1+nmat)  
-      REAL_T momslope(DIMV(momslope),nc_conserve)
+      REAL_T, intent(in) :: conserve(DIMV(conserve),nc_conserve)
+      REAL_T, intent(in) :: xvel(DIMV(xvel)) 
+      REAL_T, intent(in) :: yvel(DIMV(yvel))  
+      REAL_T, intent(in) :: zvel(DIMV(zvel))  
+      REAL_T, intent(in) :: xvelslp(DIMV(xvelslp),1+nmat)  ! xvelslope,xcen
+      REAL_T, intent(in) :: yvelslp(DIMV(yvelslp),1+nmat)  
+      REAL_T, intent(in) :: zvelslp(DIMV(zvelslp),1+nmat)  
+      REAL_T, intent(in) :: momslope(DIMV(momslope),nc_conserve)
 
-      REAL_T xmomside(DIMV(xmomside),2)
-      REAL_T ymomside(DIMV(ymomside),2)
-      REAL_T zmomside(DIMV(zmomside),2)
+      REAL_T, intent(in) :: xmomside(DIMV(xmomside),2)
+      REAL_T, intent(in) :: ymomside(DIMV(ymomside),2)
+      REAL_T, intent(in) :: zmomside(DIMV(zmomside),2)
 
-      REAL_T xmassside(DIMV(xmassside),2)
-      REAL_T ymassside(DIMV(ymassside),2)
-      REAL_T zmassside(DIMV(zmassside),2)
+      REAL_T, intent(in) :: xmassside(DIMV(xmassside),2)
+      REAL_T, intent(in) :: ymassside(DIMV(ymassside),2)
+      REAL_T, intent(in) :: zmassside(DIMV(zmassside),2)
     
-      INTEGER_T temperature_primitive_variable(nmat) 
-      REAL_T density_floor(nmat)
-      REAL_T density_ceiling(nmat)
-      REAL_T added_weight(nmat)
+      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
+      REAL_T, intent(in) :: density_floor(nmat)
+      REAL_T, intent(in) :: density_ceiling(nmat)
+      REAL_T, intent(in) :: added_weight(nmat)
 
-      INTEGER_T velbc(SDIM,2)
+      INTEGER_T, intent(in) :: velbc(SDIM,2)
 
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T ibucket
       REAL_T xsten_crse(-1:1,SDIM)
@@ -19550,13 +19550,7 @@ stop
                          (imap.le.num_materials_viscoelastic))
                 imap=imap+1
                enddo
-                ! FIX ME
-                !  + multi_volume_grid(im) * donate_data
-                ! then later on,
-                !  tennew_hold(statecomp_data)=
-                !    veldata(itensor_base+statecomp_data)/
-                !    veldata(imof_base+vofcomp)
-                ! (becomes volmat_depart(im))
+
                if (imap.le.num_materials_viscoelastic) then
 
                 do istate=1,FORT_NUM_TENSOR_TYPE
@@ -20848,120 +20842,120 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T unsplit_flag
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nprocessed
-      INTEGER_T tid
+      INTEGER_T, intent(in) :: unsplit_flag
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T, intent(in) :: nprocessed
+      INTEGER_T, intent(in) :: tid
 
-      INTEGER_T iden_base
-      INTEGER_T nc_conserve
-      INTEGER_T nrefine_vof
-      INTEGER_T ngrow,ngrow_mac_old
-      INTEGER_T solidheat_flag
-      INTEGER_T nten
-      INTEGER_T make_interface_incomp
-      REAL_T latent_heat(2*nten)
-      INTEGER_T freezing_model(2*nten)
-      INTEGER_T distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: iden_base
+      INTEGER_T, intent(in) :: nc_conserve
+      INTEGER_T, intent(in) :: nrefine_vof
+      INTEGER_T, intent(in) :: ngrow,ngrow_mac_old
+      INTEGER_T, intent(in) :: solidheat_flag
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: make_interface_incomp
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
 
-      INTEGER_T dencomp,mofcomp,errcomp
-      INTEGER_T face_flag
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      INTEGER_T dombc(SDIM,2)
-      REAL_T passive_veltime
-      INTEGER_T verbose
-      INTEGER_T force_check
-      INTEGER_T gridno,ngrid
-      INTEGER_T level,finest_level
-      INTEGER_T recon_ncomp
-      INTEGER_T den_recon_ncomp
-      INTEGER_T ncomp_state
-      INTEGER_T ntensor
-      INTEGER_T nc_bucket
-      INTEGER_T nc_bucket_test
-      INTEGER_T nmat
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T bfact_f
-      INTEGER_T override_density(nmat)
-      REAL_T dt,time
+      INTEGER_T, intent(in) :: dencomp,mofcomp,errcomp
+      INTEGER_T, intent(in) :: face_flag
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      INTEGER_T, intent(in) :: dombc(SDIM,2)
+      REAL_T, intent(in) :: passive_veltime
+      INTEGER_T, intent(in) :: verbose
+      INTEGER_T, intent(in) :: force_check
+      INTEGER_T, intent(in) :: gridno,ngrid
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: recon_ncomp
+      INTEGER_T, intent(in) :: den_recon_ncomp
+      INTEGER_T, intent(in) :: ncomp_state
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: nc_bucket
+      INTEGER_T, intent(in) :: nc_bucket_test
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: bfact_f
+      INTEGER_T, intent(in) :: override_density(nmat)
+      REAL_T, intent(in) :: dt,time
        ! original data
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(tensor)
-      INTEGER_T DIMDEC(velfab)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(tensor)
+      INTEGER_T, intent(in) :: DIMDEC(velfab)
        ! slope data
-      INTEGER_T DIMDEC(PLICSLP)
+      INTEGER_T, intent(in) :: DIMDEC(PLICSLP)
        ! new data
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(tennew)
-      INTEGER_T DIMDEC(LSnew)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(tennew)
+      INTEGER_T, intent(in) :: DIMDEC(LSnew)
        ! other vars
-      INTEGER_T DIMDEC(ucell)
-      INTEGER_T DIMDEC(vofls0)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(maskunsplit)
-      INTEGER_T DIMDEC(unode)
-      INTEGER_T DIMDEC(vnode)
-      INTEGER_T DIMDEC(wnode)
+      INTEGER_T, intent(in) :: DIMDEC(ucell)
+      INTEGER_T, intent(in) :: DIMDEC(vofls0)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+      INTEGER_T, intent(in) :: DIMDEC(maskunsplit)
+      INTEGER_T, intent(in) :: DIMDEC(unode)
+      INTEGER_T, intent(in) :: DIMDEC(vnode)
+      INTEGER_T, intent(in) :: DIMDEC(wnode)
        ! local variables
-      INTEGER_T DIMDEC(conserve)
-      INTEGER_T DIMDEC(xvel)
-      INTEGER_T DIMDEC(yvel)
-      INTEGER_T DIMDEC(zvel)
+      INTEGER_T, intent(in) :: DIMDEC(conserve)
+      INTEGER_T, intent(in) :: DIMDEC(xvel)
+      INTEGER_T, intent(in) :: DIMDEC(yvel)
+      INTEGER_T, intent(in) :: DIMDEC(zvel)
 
-      INTEGER_T DIMDEC(xmomside) 
-      INTEGER_T DIMDEC(ymomside) 
-      INTEGER_T DIMDEC(zmomside) 
-      INTEGER_T DIMDEC(xmassside) 
-      INTEGER_T DIMDEC(ymassside) 
-      INTEGER_T DIMDEC(zmassside) 
+      INTEGER_T, intent(in) :: DIMDEC(xmomside) 
+      INTEGER_T, intent(in) :: DIMDEC(ymomside) 
+      INTEGER_T, intent(in) :: DIMDEC(zmomside) 
+      INTEGER_T, intent(in) :: DIMDEC(xmassside) 
+      INTEGER_T, intent(in) :: DIMDEC(ymassside) 
+      INTEGER_T, intent(in) :: DIMDEC(zmassside) 
 
        ! FABS
        ! original data
-      REAL_T LS(DIMV(LS),nmat)
-      REAL_T den(DIMV(den),den_recon_ncomp)
-      REAL_T tensor(DIMV(tensor),ntensor)
-      REAL_T velfab(DIMV(velfab),num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat)
+      REAL_T, intent(in) :: den(DIMV(den),den_recon_ncomp)
+      REAL_T, intent(in) :: tensor(DIMV(tensor),ntensor)
+      REAL_T, intent(in) :: velfab(DIMV(velfab),num_materials_vel*(SDIM+1))
        ! slope data
-      REAL_T PLICSLP(DIMV(PLICSLP),recon_ncomp)
+      REAL_T, intent(in) :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
        ! new data
-      REAL_T snew(DIMV(snew),ncomp_state)
-      REAL_T tennew(DIMV(tennew),ntensor)
-      REAL_T LSnew(DIMV(LSnew),nmat)
+      REAL_T, intent(inout) :: snew(DIMV(snew),ncomp_state)
+      REAL_T, intent(inout) :: tennew(DIMV(tennew),ntensor)
+      REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat)
        ! other vars
-      REAL_T ucell(DIMV(ucell),num_materials_vel*SDIM)
-      REAL_T vofls0(DIMV(vofls0),2*nmat)
-      REAL_T mask(DIMV(mask))
-      REAL_T masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
-      REAL_T maskunsplit(DIMV(maskunsplit))
-      REAL_T unode(DIMV(unode),AMREX_SPACEDIM+1)
-      REAL_T vnode(DIMV(vnode),AMREX_SPACEDIM+1)
-      REAL_T wnode(DIMV(wnode),AMREX_SPACEDIM+1)
+      REAL_T, intent(in) :: ucell(DIMV(ucell),num_materials_vel*SDIM)
+      REAL_T, intent(in) :: vofls0(DIMV(vofls0),2*nmat)
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
+      REAL_T, intent(in) :: maskunsplit(DIMV(maskunsplit))
+      REAL_T, intent(in) :: unode(DIMV(unode),AMREX_SPACEDIM+1)
+      REAL_T, intent(in) :: vnode(DIMV(vnode),AMREX_SPACEDIM+1)
+      REAL_T, intent(in) :: wnode(DIMV(wnode),AMREX_SPACEDIM+1)
        ! local variables
-      REAL_T conserve(DIMV(conserve),nc_conserve)
-      REAL_T xvel(DIMV(xvel)) 
-      REAL_T yvel(DIMV(yvel))  
-      REAL_T zvel(DIMV(zvel))  
+      REAL_T, intent(in) :: conserve(DIMV(conserve),nc_conserve)
+      REAL_T, intent(in) :: xvel(DIMV(xvel)) 
+      REAL_T, intent(in) :: yvel(DIMV(yvel))  
+      REAL_T, intent(in) :: zvel(DIMV(zvel))  
 
-      REAL_T xmomside(DIMV(xmomside),2)
-      REAL_T ymomside(DIMV(ymomside),2)
-      REAL_T zmomside(DIMV(zmomside),2)
+      REAL_T, intent(in) :: xmomside(DIMV(xmomside),2)
+      REAL_T, intent(in) :: ymomside(DIMV(ymomside),2)
+      REAL_T, intent(in) :: zmomside(DIMV(zmomside),2)
 
-      REAL_T xmassside(DIMV(xmassside),2)
-      REAL_T ymassside(DIMV(ymassside),2)
-      REAL_T zmassside(DIMV(zmassside),2)
+      REAL_T, intent(in) :: xmassside(DIMV(xmassside),2)
+      REAL_T, intent(in) :: ymassside(DIMV(ymassside),2)
+      REAL_T, intent(in) :: zmassside(DIMV(zmassside),2)
     
-      INTEGER_T temperature_primitive_variable(nmat) 
-      REAL_T density_floor(nmat)
-      REAL_T density_ceiling(nmat)
-      REAL_T added_weight(nmat)
+      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
+      REAL_T, intent(in) :: density_floor(nmat)
+      REAL_T, intent(in) :: density_ceiling(nmat)
+      REAL_T, intent(in) :: added_weight(nmat)
 
-      INTEGER_T velbc(SDIM,2)
+      INTEGER_T, intent(in) :: velbc(SDIM,2)
 
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T ibucket
       INTEGER_T udir
