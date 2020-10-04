@@ -17999,7 +17999,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T, intent(in) :: nprocessed
+      INTEGER_T, intent(inout) :: nprocessed
       INTEGER_T, intent(in) :: tid
 
       INTEGER_T, intent(in) :: iden_base
@@ -18023,7 +18023,7 @@ stop
       INTEGER_T, intent(in) :: dir_counter
       INTEGER_T, intent(in) :: normdir
       INTEGER_T, intent(in) :: verbose
-      INTEGER_T, intent(in) :: force_check
+      INTEGER_T :: force_check
       INTEGER_T, intent(in) :: gridno,ngrid
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: recon_ncomp
@@ -18077,9 +18077,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(ymassside) 
       INTEGER_T, intent(in) :: DIMDEC(zmassside) 
 
-      REAL_T, intent(in) :: vofflux(DIMV(vofflux),nmat) !voffluxlox:voffluxhix,
-                                         !voffluxloy:voffluxhiy,
-                                         !voffluxloz:voffluxhiz
+       !voffluxlox:voffluxhix,
+       !voffluxloy:voffluxhiy,
+       !voffluxloz:voffluxhiz
+      REAL_T, intent(inout) :: vofflux(DIMV(vofflux),nmat) 
+
        ! FABS
        ! original data
       REAL_T, intent(in) :: LS(DIMV(LS),nmat)
@@ -18095,7 +18097,7 @@ stop
        ! other vars
       REAL_T, intent(in) :: ucell(DIMV(ucell),num_materials_vel*SDIM)
       REAL_T, intent(in) :: vofls0(DIMV(vofls0),2*nmat)
-      REAL_T, intent(in) :: conscor(DIMV(conscor),nmat)
+      REAL_T, intent(inout) :: conscor(DIMV(conscor),nmat)
       REAL_T, intent(in) :: mask(DIMV(mask))
       REAL_T, intent(in) :: masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
       REAL_T, intent(in) :: unode(DIMV(unode),SDIM+1)
@@ -18109,13 +18111,13 @@ stop
       REAL_T, intent(in) :: zvelslp(DIMV(zvelslp),1+nmat)  
       REAL_T, intent(in) :: momslope(DIMV(momslope),nc_conserve)
 
-      REAL_T, intent(in) :: xmomside(DIMV(xmomside),2)
-      REAL_T, intent(in) :: ymomside(DIMV(ymomside),2)
-      REAL_T, intent(in) :: zmomside(DIMV(zmomside),2)
+      REAL_T, intent(inout) :: xmomside(DIMV(xmomside),2)
+      REAL_T, intent(inout) :: ymomside(DIMV(ymomside),2)
+      REAL_T, intent(inout) :: zmomside(DIMV(zmomside),2)
 
-      REAL_T, intent(in) :: xmassside(DIMV(xmassside),2)
-      REAL_T, intent(in) :: ymassside(DIMV(ymassside),2)
-      REAL_T, intent(in) :: zmassside(DIMV(zmassside),2)
+      REAL_T, intent(inout) :: xmassside(DIMV(xmassside),2)
+      REAL_T, intent(inout) :: ymassside(DIMV(ymassside),2)
+      REAL_T, intent(inout) :: zmassside(DIMV(zmassside),2)
     
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
       REAL_T, intent(in) :: density_floor(nmat)
@@ -20844,7 +20846,7 @@ stop
 
       INTEGER_T, intent(in) :: unsplit_flag
       INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T, intent(in) :: nprocessed
+      INTEGER_T, intent(inout) :: nprocessed
       INTEGER_T, intent(in) :: tid
 
       INTEGER_T, intent(in) :: iden_base
@@ -20864,7 +20866,7 @@ stop
       INTEGER_T, intent(in) :: dombc(SDIM,2)
       REAL_T, intent(in) :: passive_veltime
       INTEGER_T, intent(in) :: verbose
-      INTEGER_T, intent(in) :: force_check
+      INTEGER_T :: force_check
       INTEGER_T, intent(in) :: gridno,ngrid
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: recon_ncomp
@@ -20872,7 +20874,7 @@ stop
       INTEGER_T, intent(in) :: ncomp_state
       INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: nc_bucket
-      INTEGER_T, intent(in) :: nc_bucket_test
+      INTEGER_T :: nc_bucket_test
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -20940,13 +20942,13 @@ stop
       REAL_T, intent(in) :: yvel(DIMV(yvel))  
       REAL_T, intent(in) :: zvel(DIMV(zvel))  
 
-      REAL_T, intent(in) :: xmomside(DIMV(xmomside),2)
-      REAL_T, intent(in) :: ymomside(DIMV(ymomside),2)
-      REAL_T, intent(in) :: zmomside(DIMV(zmomside),2)
+      REAL_T, intent(inout) :: xmomside(DIMV(xmomside),2)
+      REAL_T, intent(inout) :: ymomside(DIMV(ymomside),2)
+      REAL_T, intent(inout) :: zmomside(DIMV(zmomside),2)
 
-      REAL_T, intent(in) :: xmassside(DIMV(xmassside),2)
-      REAL_T, intent(in) :: ymassside(DIMV(ymassside),2)
-      REAL_T, intent(in) :: zmassside(DIMV(zmassside),2)
+      REAL_T, intent(inout) :: xmassside(DIMV(xmassside),2)
+      REAL_T, intent(inout) :: ymassside(DIMV(ymassside),2)
+      REAL_T, intent(inout) :: zmassside(DIMV(zmassside),2)
     
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
       REAL_T, intent(in) :: density_floor(nmat)
