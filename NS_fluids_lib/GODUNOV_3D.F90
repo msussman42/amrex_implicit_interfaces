@@ -2387,8 +2387,6 @@ stop
  
       end subroutine getGhostVel
 
-      end module godunov_module
-
       subroutine local_tensor_from_xdisplace( &
         LS_or_VOF_flag, & ! =0 => LS   =1 => VOF
         im_elastic, & ! 1..nmat
@@ -2670,6 +2668,9 @@ stop
       enddo
 
       end subroutine local_tensor_from_xdisplace
+
+
+      end module godunov_module
 
 
       ! enable_spectral:
@@ -11328,6 +11329,7 @@ stop
        transposegradu)
       use probcommon_module
       use global_utility_module
+      use godunov_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: level
@@ -11364,7 +11366,6 @@ stop
       INTEGER_T irz
       INTEGER_T ii,jj,kk
       INTEGER_T iii,jjj
-      INTEGER_T dir_x,dir_space
       REAL_T rsign 
       REAL_T visctensor(3,3)
       REAL_T gradu(3,3)
@@ -11379,21 +11380,11 @@ stop
       REAL_T vfrac
       REAL_T growthrate,rr,uu
 
-      REAL_T xdisp_local(SDIM)
-      REAL_T vfrac_left
-      REAL_T xdisp_left
-      REAL_T dx_left
-      REAL_T dXdx_left
-      REAL_T xdisp_center
-      REAL_T vfrac_right
-      REAL_T xdisp_right
-      REAL_T dx_right
-      REAL_T dXdx_right
-      REAL_T dXdx(SDIM,SDIM)  ! dir_x,dir_space
-      REAL_T hoop_12,hoop_22  ! 2=theta coordinate
-
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
+
+      INTEGER_T LS_or_VOF_flag
+      INTEGER_T im_elastic
 
       nhalf=3
 
@@ -11445,6 +11436,38 @@ stop
        stop
       endif
 
+      if (viscoelastic_model.eq.2) then ! elastic material
+
+       LS_or_VOF_flag=1
+       im_elastic=im_critical+1
+       call local_tensor_from_xdisplace( &
+        LS_or_VOF_flag, &
+        im_elastic, &
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        level, &          ! 0<=level<=finest_level
+        finest_level, &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        FORT_NUM_TENSOR_TYPE, & !ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        nmat, &
+        vof, & ! LS placeholder
+        DIMS(vof), & ! LS placeholder
+        vof, &  
+        DIMS(vof), &
+        tnew, &       ! FAB that holds elastic tensor, Q, when complete
+        DIMS(tnew), &
+        xdisplace, &      
+        DIMS(xdisplace)) 
+
+      else if ((viscoelastic_model.eq.0).or. &
+               (viscoelastic_model.eq.1)) then
+       ! do nothing
+      else
+       print *,"viscoelastic_model invalid"
+       stop
+      endif
+
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
       do i=growlo(1),growhi(1)
@@ -11482,6 +11505,7 @@ stop
          Q(ii,jj)=zero
        enddo
        enddo
+
        Q(1,1)=told(D_DECL(i,j,k),1)
        Q(1,2)=told(D_DECL(i,j,k),2)
        Q(2,2)=told(D_DECL(i,j,k),3)
@@ -11505,158 +11529,33 @@ stop
        endif
 
        if (abs(vfrac).le.VOFTOL) then
+
         do ii=1,3
         do jj=1,3
          Q(ii,jj)=zero
         enddo
         enddo
+
        else if ((vfrac.gt.zero).and.(vfrac.le.one+VOFTOL)) then
 
         if (viscoelastic_model.eq.2) then ! elastic material
-
-         do dir_x=1,SDIM
-
-          xdisp_local(dir_x)=xdisplace(D_DECL(i,j,k),dir_x)
-
-          do dir_space=1,SDIM
-           ii=0
-           jj=0
-           kk=0
-           if (dir_space.eq.1) then
-            ii=1
-           else if (dir_space.eq.2) then
-            jj=1
-           else if ((dir_space.eq.3).and.(SDIM.eq.3)) then
-            kk=1
-           else
-            print *,"dir_space invalid"
-            stop
-           endif
-           vfrac_left=vof(D_DECL(i-ii,j-jj,k-kk),vofcomp)
-           xdisp_left=xdisplace(D_DECL(i-ii,j-jj,k-kk),dir_x)
-           xdisp_center=xdisp_local(dir_x)
-           vfrac_right=vof(D_DECL(i+ii,j+jj,k+kk),vofcomp)
-           xdisp_right=xdisplace(D_DECL(i+ii,j+jj,k+kk),dir_x)
-           dx_left=xsten(0,dir_space)-xsten(-2,dir_space)
-           dx_right=xsten(2,dir_space)-xsten(0,dir_space)
-           if ((dx_left.gt.zero).and.(dx_right.gt.zero)) then
-            dXdx_left=(xdisp_center-xdisp_left)/dx_left
-            dXdx_right=(xdisp_right-xdisp_center)/dx_right
-            if (abs(vfrac_right-vfrac_left).le.VOFTOL) then
-             dXdx(dir_x,dir_space)=half*(dXdx_left+dXdx_right)
-            else if (vfrac_right.ge.vfrac_left) then
-             dXdx(dir_x,dir_space)=dXdx_right
-            else if (vfrac_left.ge.vfrac_right) then
-             dXdx(dir_x,dir_space)=dXdx_left
-            else
-             print *,"vfrac_left or vfrac_right invalid"
-             stop
-            endif
-           else
-            print *,"dx_left or dx_right invalid"
-            stop
-           endif
-          enddo ! dir_space=1..sdim
-
-         enddo ! dir_x=1..sdim
-
-! grad u=| u_r  u_t/r-v/r  u_z  |
-!        | v_r  v_t/r+u/r  v_z  |
-!        | w_r  w_t/r      w_z  |
-! in RZ:  T33 gets u/r=x_displace/r
-! in RTZ: T12=u_t/r - v/r
-!         T22=v_t/r + u/r
-! later:
-! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
-!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
-!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
-
-
-         hoop_12=0.0d0
-         hoop_22=0.0d0
-         if (SDIM.eq.2) then
-          if (levelrz.eq.0) then
-           ! do nothing
-          else if (levelrz.eq.1) then
-           if (xsten(0,1).gt.zero) then
-            hoop_22=xdisp_local(1)/xsten(0,1)  ! xdisplace/r
-           else 
-            print *,"xsten(0,1) invalid"
-            stop
-           endif
-          else if (levelrz.eq.3) then
-           if (xsten(0,1).gt.zero) then
-            hoop_12=-xdisp_local(2)/xsten(0,1)  ! -ydisplace/r
-            hoop_22=xdisp_local(1)/xsten(0,1)  ! xdisplace/r
-            do ii=1,SDIM
-             dXdx(ii,2)=dXdx(ii,2)/xsten(0,1)
-            enddo
-              ! 2=theta coordinate
-            dXdx(1,2)=dXdx(1,2)+hoop_12
-            dXdx(2,2)=dXdx(2,2)+hoop_22
-           else 
-            print *,"xsten(0,1) invalid"
-            stop
-           endif
-          else
-           print *,"levelrz invalid"
-           stop
-          endif
-         else if (SDIM.eq.3) then
-          if (levelrz.eq.0) then
-           ! do nothing
-          else if (levelrz.eq.3) then
-           if (xsten(0,1).gt.zero) then
-            hoop_12=-xdisp_local(2)/xsten(0,1)  ! -ydisplace/r
-            hoop_22=xdisp_local(1)/xsten(0,1)  ! xdisplace/r
-            do ii=1,SDIM
-             dXdx(ii,2)=dXdx(ii,2)/xsten(0,1)
-            enddo
-            dXdx(1,2)=dXdx(1,2)+hoop_12
-            dXdx(2,2)=dXdx(2,2)+hoop_22
-           else 
-            print *,"xsten(0,1) invalid"
-            stop
-           endif
-          else
-           print *,"levelrz invalid"
-           stop
-          endif
-         else
-          print *,"dimension bust"
-          stop
-         endif
 
          do ii=1,3 
          do jj=1,3 
           Q(ii,jj)=zero
          enddo
          enddo
-
-         do ii=1,SDIM 
-         do jj=1,SDIM
-          Q(ii,jj)=dXdx(ii,jj)+dXdx(jj,ii)
-         enddo
-         enddo
-            
-         if (SDIM.eq.3) then
-          ! do nothing
-         else if (SDIM.eq.2) then
-          if (levelrz.eq.0) then
-           Q(3,3)=zero  ! 3=theta coordinate
-          else if (levelrz.eq.1) then
-           Q(3,3)=two*hoop_22  ! in R-Z, this is the T-coordinate  
-                               ! " dXdx(3,3)+dXdx(3,3) "
-          else if (levelrz.eq.3) then
-           Q(3,3)=zero ! in R-theta, this is the z-coordinate
-          else
-           print *,"levelrz invalid"
-           stop
-          endif
-         else
-          print *,"dimension bust"
-          stop
-         endif
+         Q(1,1)=tnew(D_DECL(i,j,k),1)
+         Q(1,2)=tnew(D_DECL(i,j,k),2)
+         Q(2,2)=tnew(D_DECL(i,j,k),3)
+         Q(3,3)=tnew(D_DECL(i,j,k),4)
+#if (AMREX_SPACEDIM==3)
+         Q(1,3)=tnew(D_DECL(i,j,k),5)
+         Q(2,3)=tnew(D_DECL(i,j,k),6)
+#endif
+         Q(2,1)=Q(1,2)
+         Q(3,1)=Q(1,3)
+         Q(3,2)=Q(2,3)
 
         else if ((viscoelastic_model.eq.0).or. &
                  (viscoelastic_model.eq.1)) then
@@ -29424,6 +29323,7 @@ stop
 
       use global_utility_module
       use probcommon_module
+      use godunov_module
       implicit none
 
       INTEGER_T, intent(in) :: im_PLS_cpp
@@ -29471,22 +29371,14 @@ stop
       INTEGER_T growhi(3)
       INTEGER_T i,j,k
       INTEGER_T dir
-      INTEGER_T ibase
-      INTEGER_T ii,jj
-      INTEGER_T iii,jjj,kkk
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
       REAL_T A_matrix,B_matrix
-      REAL_T dxminus,dxplus
-      REAL_T grad_cen,grad_plus,grad_minus
-      REAL_T LS_plus,LS_minus
       REAL_T lambda
-      REAL_T gradu(SDIM,SDIM)
-      REAL_T DISP_TEN(SDIM,SDIM)
-      REAL_T hoop_12,hoop_22
-      REAL_T xdisplace_local,ydisplace_local
       REAL_T XDISP_local
+      INTEGER_T LS_or_VOF_flag
+      INTEGER_T im_elastic
 
       nhalf=3
 
@@ -29616,161 +29508,28 @@ stop
 !         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
 !         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
-        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        do ii=1,SDIM ! velocity component u,v,w
-        do jj=1,SDIM ! direction x,y,z
-
-         iii=0
-         jjj=0
-         kkk=0
-         if (jj.eq.1) then
-          iii=1
-         else if (jj.eq.2) then
-          jjj=1
-         else if ((jj.eq.3).and.(SDIM.eq.3)) then
-          kkk=1
-         else
-          print *,"jj invalid"
-          stop
-         endif 
-         dxplus=xsten(2,jj)-xsten(0,jj)
-         dxminus=xsten(0,jj)-xsten(-2,jj)
-         if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
-          grad_plus=(XDISP_fab(D_DECL(i+iii,j+jjj,k+kkk),ii)- &
-                     XDISP_fab(D_DECL(i,j,k),ii))/dxplus
-          grad_minus=(XDISP_fab(D_DECL(i,j,k),ii)- &
-                      XDISP_fab(D_DECL(i-iii,j-jjj,k-kkk),ii))/dxminus
-          LS_plus=LS(D_DECL(i+iii,j+jjj,k+kkk),im_PLS_cpp+1)
-          LS_minus=LS(D_DECL(i-iii,j-jjj,k-kkk),im_PLS_cpp+1)
-          if ((LS_plus.ge.zero).and.(LS_minus.ge.zero)) then
-           grad_cen=half*(grad_plus+grad_minus)
-          else if ((LS_plus.lt.zero).and.(LS_minus.lt.zero)) then
-           grad_cen=half*(grad_plus+grad_minus)
-          else if ((LS_plus.ge.zero).and.(LS_minus.lt.zero)) then
-           grad_cen=grad_plus
-          else if ((LS_plus.lt.zero).and.(LS_minus.ge.zero)) then
-           grad_cen=grad_minus
-          else
-           print *,"LS_plus or LS_minus invalid"
-           stop
-          endif
-
-          gradu(ii,jj)=grad_cen
-         else
-          print *,"dxplus or dxminus invalid"
-          stop
-         endif
-        enddo
-        enddo
-        hoop_12=0.0d0
-        hoop_22=0.0d0
-        xdisplace_local=XDISP_fab(D_DECL(i,j,k),1)
-        ydisplace_local=XDISP_fab(D_DECL(i,j,k),2)
-        if (SDIM.eq.2) then
-         if (levelrz.eq.0) then
-          ! do nothing
-         else if (levelrz.eq.1) then
-          if (xsten(0,1).gt.zero) then
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else if (levelrz.eq.3) then
-          if (xsten(0,1).gt.zero) then
-           hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-           do ii=1,SDIM
-            gradu(ii,2)=gradu(ii,2)/xsten(0,1)
-           enddo
-           gradu(1,2)=gradu(1,2)+hoop_12
-           gradu(2,2)=gradu(2,2)+hoop_22
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-        else if (SDIM.eq.3) then
-         if (levelrz.eq.0) then
-          ! do nothing
-         else if (levelrz.eq.3) then
-          if (xsten(0,1).gt.zero) then
-           hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-           do ii=1,SDIM
-            gradu(ii,2)=gradu(ii,2)/xsten(0,1)
-           enddo
-           gradu(1,2)=gradu(1,2)+hoop_12
-           gradu(2,2)=gradu(2,2)+hoop_22
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-        else
-         print *,"dimension bust"
-         stop
-        endif
-        do ii=1,SDIM 
-        do jj=1,SDIM
-         DISP_TEN(ii,jj)=gradu(ii,jj)+gradu(jj,ii)
-        enddo
-        enddo
-        ibase=1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,1)
-        ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,2)
-        ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,2)
-
-        ibase=ibase+1
-        if (SDIM.eq.3) then
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(SDIM,SDIM)
-        else if (SDIM.eq.2) then
-         if (levelrz.eq.0) then
-          TNEWfab(D_DECL(i,j,k),ibase)=zero
-         else if (levelrz.eq.1) then
-           ! T33 (theta coordinate)
-           ! dX/dx + dX/dx
-          TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22
-         else if (levelrz.eq.3) then
-           ! T33 (z coordinate)
-          TNEWfab(D_DECL(i,j,k),ibase)=zero
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-        else
-         print *,"dimension bust"
-         stop
-        endif
-                     
-        if (SDIM.eq.3) then                
-         ibase=ibase+1
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,SDIM)
-         ibase=ibase+1
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,SDIM)
-        endif
-        if (ibase.eq.2*SDIM) then
-         ! do nothing
-        else
-         print *,"ibase invalid (7) ibase=",ibase
-         stop
-        endif
-
-       enddo
-       enddo
-       enddo
+       LS_or_VOF_flag=0
+       im_elastic=im_PLS_cpp+1
+       call local_tensor_from_xdisplace( &
+        LS_or_VOF_flag, &
+        im_elastic, &
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        level, &          ! 0<=level<=finest_level
+        finest_level, &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        nmat, &
+        LS, &
+        DIMS(LS), &
+        LS, &  ! VOF placeholder
+        DIMS(LS), & ! VOF placeholder
+        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
+        DIMS(TNEWfab), &
+        XDISP_fab, &      
+        DIMS(XDISP_fab)) 
 
       else 
        print *,"isweep invalid"
@@ -29803,6 +29562,7 @@ stop
 
       use global_utility_module
       use probcommon_module
+      use godunov_module
       implicit none
 
       INTEGER_T, intent(in) :: im_PLS_cpp
@@ -29829,24 +29589,8 @@ stop
         DIMV(XDISP_fab), &
         SDIM)
 
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      INTEGER_T i,j,k
-      INTEGER_T ibase
-      INTEGER_T ii,jj
-      INTEGER_T iii,jjj,kkk
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-
-      REAL_T dxminus,dxplus
-      REAL_T grad_cen,grad_plus,grad_minus
-      REAL_T LS_plus,LS_minus
-      REAL_T gradu(SDIM,SDIM)
-      REAL_T DISP_TEN(SDIM,SDIM)
-      REAL_T hoop_12,hoop_22
-      REAL_T xdisplace_local,ydisplace_local
-
-      nhalf=3
+      INTEGER_T LS_or_VOF_flag
+      INTEGER_T im_elastic
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -29874,174 +29618,27 @@ stop
       call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(XDISP_fab),2,-1,1271)
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-
-! grad u=| u_r  u_t/r-v/r  u_z  |
-!        | v_r  v_t/r+u/r  v_z  |
-!        | w_r  w_t/r      w_z  |
-! in RZ:  T33 gets u/r=x_displace/r
-! in RTZ: T12=u_t/r - v/r
-!         T22=v_t/r + u/r
-! later:
-! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
-!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
-!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-
-        do ii=1,SDIM ! velocity component u,v,w
-        do jj=1,SDIM ! direction x,y,z
-
-         iii=0
-         jjj=0
-         kkk=0
-         if (jj.eq.1) then
-          iii=1
-         else if (jj.eq.2) then
-          jjj=1
-         else if ((jj.eq.3).and.(SDIM.eq.3)) then
-          kkk=1
-         else
-          print *,"jj invalid"
-          stop
-         endif 
-         dxplus=xsten(2,jj)-xsten(0,jj)
-         dxminus=xsten(0,jj)-xsten(-2,jj)
-         if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
-          grad_plus=(XDISP_fab(D_DECL(i+iii,j+jjj,k+kkk),ii)- &
-                     XDISP_fab(D_DECL(i,j,k),ii))/dxplus
-          grad_minus=(XDISP_fab(D_DECL(i,j,k),ii)- &
-                      XDISP_fab(D_DECL(i-iii,j-jjj,k-kkk),ii))/dxminus
-          LS_plus=LS(D_DECL(i+iii,j+jjj,k+kkk),im_PLS_cpp+1)
-          LS_minus=LS(D_DECL(i-iii,j-jjj,k-kkk),im_PLS_cpp+1)
-          if ((LS_plus.ge.zero).and.(LS_minus.ge.zero)) then
-           grad_cen=half*(grad_plus+grad_minus)
-          else if ((LS_plus.lt.zero).and.(LS_minus.lt.zero)) then
-           grad_cen=half*(grad_plus+grad_minus)
-          else if ((LS_plus.ge.zero).and.(LS_minus.lt.zero)) then
-           grad_cen=grad_plus
-          else if ((LS_plus.lt.zero).and.(LS_minus.ge.zero)) then
-           grad_cen=grad_minus
-          else
-           print *,"LS_plus or LS_minus invalid"
-           stop
-          endif
-
-          gradu(ii,jj)=grad_cen
-         else
-          print *,"dxplus or dxminus invalid"
-          stop
-         endif
-        enddo
-        enddo
-        hoop_12=0.0d0
-        hoop_22=0.0d0
-        xdisplace_local=XDISP_fab(D_DECL(i,j,k),1)
-        ydisplace_local=XDISP_fab(D_DECL(i,j,k),2)
-        if (SDIM.eq.2) then
-         if (levelrz.eq.0) then
-          ! do nothing
-         else if (levelrz.eq.1) then
-          if (xsten(0,1).gt.zero) then
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else if (levelrz.eq.3) then
-          if (xsten(0,1).gt.zero) then
-           hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-           do ii=1,SDIM
-            gradu(ii,2)=gradu(ii,2)/xsten(0,1)
-           enddo
-           gradu(1,2)=gradu(1,2)+hoop_12
-           gradu(2,2)=gradu(2,2)+hoop_22
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-        else if (SDIM.eq.3) then
-         if (levelrz.eq.0) then
-          ! do nothing
-         else if (levelrz.eq.3) then
-          if (xsten(0,1).gt.zero) then
-           hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-           do ii=1,SDIM
-            gradu(ii,2)=gradu(ii,2)/xsten(0,1)
-           enddo
-           gradu(1,2)=gradu(1,2)+hoop_12
-           gradu(2,2)=gradu(2,2)+hoop_22
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-        else
-         print *,"dimension bust"
-         stop
-        endif
-        do ii=1,SDIM 
-        do jj=1,SDIM
-         DISP_TEN(ii,jj)=gradu(ii,jj)+gradu(jj,ii)
-        enddo
-        enddo
-        ibase=1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,1)
-        ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,2)
-        ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,2)
-
-        ibase=ibase+1
-        if (SDIM.eq.3) then
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(SDIM,SDIM)
-        else if (SDIM.eq.2) then
-         if (levelrz.eq.0) then
-          TNEWfab(D_DECL(i,j,k),ibase)=zero
-         else if (levelrz.eq.1) then
-           ! T33 (theta coordinate)
-           ! dX/dx + dX/dx
-          TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22
-         else if (levelrz.eq.3) then
-           ! T33 (z coordinate)
-          TNEWfab(D_DECL(i,j,k),ibase)=zero
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-        else
-         print *,"dimension bust"
-         stop
-        endif
-                     
-        if (SDIM.eq.3) then                
-         ibase=ibase+1
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,SDIM)
-         ibase=ibase+1
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,SDIM)
-        endif
-        if (ibase.eq.2*SDIM) then
-         ! do nothing
-        else
-         print *,"ibase invalid (7) ibase=",ibase
-         stop
-        endif
-
-      enddo
-      enddo
-      enddo
+      LS_or_VOF_flag=0
+      im_elastic=im_PLS_cpp+1
+      call local_tensor_from_xdisplace( &
+        LS_or_VOF_flag, &
+        im_elastic, &
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        level, &          ! 0<=level<=finest_level
+        finest_level, &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        nmat, &
+        LS, &
+        DIMS(LS), &
+        LS, &  ! VOF placeholder
+        DIMS(LS), & ! VOF placeholder
+        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
+        DIMS(TNEWfab), &
+        XDISP_fab, &      
+        DIMS(XDISP_fab)) 
 
       end subroutine fort_assimilate_tensor_from_xdisplace
 
