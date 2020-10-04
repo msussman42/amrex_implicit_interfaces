@@ -7307,11 +7307,11 @@ NavierStokes::initData () {
 
  int nparts_tensor=im_elastic_map.size();
 
- if ((nparts_tensor>=0)&&(nparts_tensor<=nmat)) {  
+ if ((nparts_tensor>=1)&&(nparts_tensor<=nmat)) {  
   MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
-  if (Tensor_new.nComp()!=nparts_tensor*NUM_TENSOR_TYPE+AMREX_SPACEDIM)
-   amrex::Error("Tensor_new.nComp()!=nparts_tensor*NUM_TENSOR_TYPE");
-  Tensor_new.setVal(0.0,0,nparts_tensor*NUM_TENSOR_TYPE+AMREX_SPACEDIM,1);
+  if (Tensor_new.nComp()!=nparts_tensor*(NUM_TENSOR_TYPE+AMREX_SPACEDIM))
+   amrex::Error("Tensor_new.nComp()!=nparts_tensor*(NUM_TENSOR_TYPE+SDIM)");
+  Tensor_new.setVal(0.0,0,nparts_tensor*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),1);
  } else 
   amrex::Error("nparts_tensor invalid");
 
@@ -7593,7 +7593,7 @@ void NavierStokes::init_boundary() {
    delete velmf;
   } else if (k==Tensor_Type) {
    int nparts=im_elastic_map.size();
-   if ((nparts<0)||(nparts>nmat))
+   if ((nparts<=0)||(nparts>nmat))
     amrex::Error("nparts invalid");
    if (nparts!=num_materials_viscoelastic)
     amrex::Error("nparts!=num_materials_viscoelastic");
