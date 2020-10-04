@@ -27753,6 +27753,7 @@ end subroutine initialize2d
          ccviscconst_eddy, &
          ccviscosity_state_model, &
          ccelastic_viscosity, &
+         ccstore_elastic_data, &
          ccheatviscconst, &
          ccprerecalesce_heatviscconst, &
          ccprerecalesce_viscconst, &
@@ -27873,6 +27874,7 @@ end subroutine initialize2d
        REAL_T ccviscconst_eddy(ccnum_materials)
        INTEGER_T ccviscosity_state_model(ccnum_materials)
        REAL_T ccelastic_viscosity(ccnum_materials)
+       REAL_T ccstore_elastic_data(ccnum_materials)
        REAL_T ccheatviscconst(ccnum_materials)
        REAL_T ccprerecalesce_heatviscconst(ccnum_materials)
        REAL_T ccprerecalesce_viscconst(ccnum_materials)
@@ -28419,6 +28421,7 @@ end subroutine initialize2d
         fort_viscosity_state_model(im)= &
           ccviscosity_state_model(im)
         fort_elastic_viscosity(im)=ccelastic_viscosity(im)
+        fort_store_elastic_data(im)=ccstore_elastic_data(im)
         fort_heatviscconst(im)=ccheatviscconst(im)
         fort_prerecalesce_heatviscconst(im)=ccprerecalesce_heatviscconst(im)
         fort_prerecalesce_viscconst(im)=ccprerecalesce_viscconst(im)
@@ -28431,13 +28434,13 @@ end subroutine initialize2d
 
        nelastic=0
        do im=1,num_materials
-        if (fort_elastic_viscosity(im).eq.zero) then
+        if (fort_store_elastic_data(im).eq.0) then
          ! do nothing
-        else if (fort_elastic_viscosity(im).gt.zero) then
+        else if (fort_store_elastic_data(im).eq.1) then
          nelastic=nelastic+1
          fort_im_elastic_map(nelastic)=im-1
         else
-         print *,"fort_elastic_viscosity(im) invalid"
+         print *,"fort_store_elastic_data(im) invalid"
          stop
         endif
        enddo ! im=1..num_materials
@@ -28520,6 +28523,7 @@ end subroutine initialize2d
          print *,"im,viscosity_state_model ",im, &
           fort_viscosity_state_model(im)
          print *,"im,fort_elastic_viscosity ",im,fort_elastic_viscosity(im)
+         print *,"im,fort_store_elastic_data ",im,fort_store_elastic_data(im)
          print *,"im,fort_im_elastic_map ",im,fort_im_elastic_map(im)
          print *,"im,heatvisc ",im,fort_heatviscconst(im)
          print *,"im,prerecalesce_heatvisc ",im, &

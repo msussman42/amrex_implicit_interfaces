@@ -876,8 +876,6 @@ NavierStokes::variableSetUp ()
 
      } // partid=0..nparts-1
 
-    } else if (num_materials_viscoelastic==0) {
-     // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 

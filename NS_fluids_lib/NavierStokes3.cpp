@@ -619,8 +619,6 @@ void NavierStokes::nonlinear_advection() {
       NavierStokes& ns_level=getLevel(ilev);
       ns_level.tensor_extrapolate();
      }
-    } else if (num_materials_viscoelastic==0) {
-     // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
@@ -957,8 +955,6 @@ void NavierStokes::tensor_advection_updateALL() {
   }
   avgDownALL_TENSOR();
 
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -11175,10 +11171,10 @@ void NavierStokes::diffusion_heatingALL(
 void NavierStokes::avgDownALL_TENSOR() {
 
  int nmat=num_materials;
- if ((num_materials_viscoelastic>=0)&&
+ if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
   avgDownALL(Tensor_Type,0,
-    num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM,0);
+    num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),0);
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -11519,8 +11515,6 @@ void NavierStokes::veldiffuseALL() {
    // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF);
 
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -11832,8 +11826,6 @@ void NavierStokes::veldiffuseALL() {
      amrex::Error("ns_is_rigid invalid");
    } // im=0..nmat-1
 
-  } else if (num_materials_viscoelastic==0) {
-    // do nothing
   } else {
    amrex::Error("num_materials_viscoelastic invalid");
   }

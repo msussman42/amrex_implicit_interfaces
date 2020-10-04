@@ -252,6 +252,7 @@ namespace amrex{
        Real* viscconst_eddy,
        int*  viscosity_state_model,
        Real* elastic_viscosity,
+       int* store_elastic_data,
        Real* heatviscconst,
        Real* prerecalesce_heatviscconst,
        Real* prerecalesce_viscconst,
