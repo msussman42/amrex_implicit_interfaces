@@ -15801,6 +15801,7 @@ stop
       REAL_T xCP(SDIM)
       REAL_T xSOLID_BULK(SDIM)
       REAL_T local_XPOS(SDIM)
+      REAL_T local_mag
 
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.eq.nten) then
@@ -16519,6 +16520,8 @@ stop
            im1_substencil=0
            im2_substencil=0
 
+           cell_CP_parm%im_solid_max=im_solid_max
+
             ! inner loop is needed since the volume fraction
             ! at (i,j,k) depends on the levelset function values
             ! in the (i+i1,j+j1,k+k1) node stencil.
@@ -16526,7 +16529,6 @@ stop
            do j1=LSstenlo(2),LSstenhi(2)
            do k1=LSstenlo(3),LSstenhi(3)
 
-            cell_CP_parm%im_solid_max=im_solid_max
             cell_CP_parm%i=i+i1
             cell_CP_parm%j=j+j1
             cell_CP_parm%k=k+k1
@@ -16622,8 +16624,29 @@ stop
 
 
            if (im1_substencil.eq.0) then
-            print *,"all materials disappeared"
-            stop
+
+            if (abs(LS_solid_new(im_solid_max)).le.dxmaxLS) then
+             print *,"all materials disappeared"
+             cell_CP_parm%i=i
+             cell_CP_parm%j=j
+             cell_CP_parm%k=k
+              ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
+             call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
+             local_mag=zero
+             do dir=1,SDIM
+              print *,"dir,xCP,xSOLID_BULK ",dir,xCP(dir),xSOLID_BULK(dir)
+              local_mag=local_mag+(xCP(dir)-xSOLID_BULK(dir))**2
+             enddo
+             local_mag=sqrt(local_mag)
+             print *,"LS_solid_new(im_solid_max) ",LS_solid_new(im_solid_max)
+             print *,"dx,local_mag ",dx(1),local_mag
+             stop
+            else if (abs(LS_solid_new(im_solid_max)).ge.dxmaxLS) then
+             ! do nothing
+            else
+             print *,"LS_solid_new(im_solid_max) invalid"
+             stop
+            endif
            else if ((im1_substencil.ge.1).and. &
                     (im1_substencil.le.nmat)) then
             if (im2_substencil.eq.0) then

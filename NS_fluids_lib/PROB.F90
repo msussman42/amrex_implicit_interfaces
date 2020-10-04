@@ -27874,7 +27874,7 @@ end subroutine initialize2d
        REAL_T ccviscconst_eddy(ccnum_materials)
        INTEGER_T ccviscosity_state_model(ccnum_materials)
        REAL_T ccelastic_viscosity(ccnum_materials)
-       REAL_T ccstore_elastic_data(ccnum_materials)
+       INTEGER_T ccstore_elastic_data(ccnum_materials)
        REAL_T ccheatviscconst(ccnum_materials)
        REAL_T ccprerecalesce_heatviscconst(ccnum_materials)
        REAL_T ccprerecalesce_viscconst(ccnum_materials)
@@ -28447,6 +28447,12 @@ end subroutine initialize2d
 
        if (nelastic.ne.num_materials_viscoelastic) then
         print *,"nelastic.ne.num_materials_viscoelastic"
+        print *,"nelastic ",nelastic
+        print *,"num_materials_viscoelastic ",num_materials_viscoelastic
+        do im=1,num_materials
+         print *,"im,fort_store_elastic_data(im) ",im, &
+                 fort_store_elastic_data(im)
+        enddo
         stop
        endif
 
@@ -32606,7 +32612,8 @@ end subroutine initialize2d
         level, &
         u,DIMS(u), &
         domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
+        xlo,time,bc, &
+        scomp,ncomp,bfact)
 
        use probf90_module
        use global_utility_module
@@ -32626,7 +32633,8 @@ end subroutine initialize2d
        INTEGER_T borderlo(3)
        INTEGER_T borderhi(3)
        INTEGER_T IWALL(3)
-       INTEGER_T ipart,im,icomp_tensor,icomp_xd,icomp_total,istate
+       INTEGER_T ipart,im,istate
+       INTEGER_T icomp_tensor,icomp_xd,icomp_total
        INTEGER_T nhalf
        REAL_T xsten(-3:3,SDIM)
 
@@ -32721,8 +32729,8 @@ end subroutine initialize2d
           icomp_total=icomp_total+1
           icomp_tensor=icomp_tensor+1
 
-          if ((icomp_tensor.ge.scomp+1).and. &
-              (icomp_tensor.le.scomp+ncomp).and. &
+          if ((icomp_tensor.ge.1).and. &
+              (icomp_tensor.le.ncomp).and. &
               (icomp_tensor.le. &
                num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE)) then
 
@@ -32735,7 +32743,7 @@ end subroutine initialize2d
             borderhi(dir3)=fabhi(dir3)
            enddo
            ext_dir_flag=0
-           if (bc(dir2,side,icomp_tensor-scomp).eq.EXT_DIR) then
+           if (bc(dir2,side,icomp_tensor).eq.EXT_DIR) then
             if (side.eq.1) then
              if (fablo(dir2).lt.domlo(dir2)) then
               ext_dir_flag=1
@@ -32766,8 +32774,8 @@ end subroutine initialize2d
              IWALL(dir2)=inside_index
 
              call tensorBC(time,dir2,side, &
-              u(D_DECL(i,j,k),icomp_tensor-scomp), &
-              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_tensor-scomp), &
+              u(D_DECL(i,j,k),icomp_tensor), &
+              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_tensor), &
               xsten,nhalf,dx,bfact,ipart,im)
             enddo
             enddo
@@ -32814,7 +32822,7 @@ end subroutine initialize2d
             borderhi(dir3)=fabhi(dir3)
            enddo
            ext_dir_flag=0
-           if (bc(dir2,side,icomp_total-scomp).eq.EXT_DIR) then
+           if (bc(dir2,side,icomp_total).eq.EXT_DIR) then
             if (side.eq.1) then
              if (fablo(dir2).lt.domlo(dir2)) then
               ext_dir_flag=1
@@ -32845,8 +32853,8 @@ end subroutine initialize2d
              IWALL(dir2)=inside_index
 
              call tensorBC(time,dir2,side, &
-              u(D_DECL(i,j,k),icomp_total-scomp), &
-              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_total-scomp), &
+              u(D_DECL(i,j,k),icomp_total), &
+              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_total), &
               xsten,nhalf,dx,bfact,ipart,im)
             enddo
             enddo
