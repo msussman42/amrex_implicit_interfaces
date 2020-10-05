@@ -646,7 +646,7 @@ stop
       endif
 
 
-      if ((ncompvisc.ne.nmat).and.(ncompvisc.ne.3*nmat)) then
+      if (ncompvisc.ne.3*nmat) then
        print *,"ncompvisc invalid"
        stop
       endif
