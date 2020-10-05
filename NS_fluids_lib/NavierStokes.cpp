@@ -8580,6 +8580,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     // in: GODUNOV_3D.F90
     FORT_TENSORFORCE(
      &elasticface_flag,
      &massface_index,
