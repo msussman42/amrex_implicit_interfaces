@@ -5,7 +5,7 @@ stop_time=10.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-geometry.coord_sys      = 0        # 0 => cart, 1 => RZ ZEYU
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ ZEYU
 geometry.prob_lo   =  0.0 0.0  # ZEYU
 #geometry.prob_hi   =  0.8 0.8  # Yongsheng
 # Figure 15, JCP 2013, 252-271  Kensuke
@@ -46,7 +46,7 @@ ns.advection_order=2 2 1
 # 2 = CMOF (continuous moment of fluid)
 # 3 = CLSVOF in 2 material cells and MOF in >2 material cells.
 # 4 = CLSVOF in 2 material cells and CMOF in >2 material cells.
-ns.continuous_mof=0
+ns.continuous_mof=2
 ns.FD_curv_interp=1
 # 0=Sussman and Puckett algorithm 
 # 1=EILE (default), -1=Weymouth Yue
@@ -207,7 +207,7 @@ ns.heatviscconst=0.0 0.0 0.0
 #material 1 is water
 #material 2 is gas
 #material 3 is substrate
-ns.elastic_viscosity=0.0 0.0 1000000000.0
+ns.elastic_viscosity=0.0 0.0 100000.0
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.viscoelastic_model=0 0 2
 ns.viscconst=8.9e-3 0.000181 1.0 # ZEYU

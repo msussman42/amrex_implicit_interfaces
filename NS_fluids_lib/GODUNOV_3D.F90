@@ -18277,11 +18277,13 @@ stop
       REAL_T, intent(inout) :: tennew(DIMV(tennew),ntensor)
       REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat)
        ! other vars
+       ! displacement
       REAL_T, intent(in) :: ucell(DIMV(ucell),num_materials_vel*SDIM)
       REAL_T, intent(in) :: vofls0(DIMV(vofls0),2*nmat)
       REAL_T, intent(inout) :: conscor(DIMV(conscor),nmat)
       REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
+      ! =1 int. =1 fine-fine in domain =0 o.t.
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr)) 
       REAL_T, intent(in) :: unode(DIMV(unode),SDIM+1)
        ! local variables
       REAL_T, intent(in) :: conserve(DIMV(conserve),nc_conserve)
@@ -20761,9 +20763,10 @@ stop
                 tennew_hold(statecomp_data)= &
                  veldata(itensor_base+statecomp_data)/volmat_depart(im)
                 if (istate.eq.normdir+1) then
+                     ! ucell is already the local displacement
                  tennew_hold(statecomp_data)= &
                    tennew_hold(statecomp_data)+ &
-                   dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
+                   ucell(D_DECL(icrse,jcrse,kcrse),istate)
                 endif
                else
                 print *,"volmat_depart(im) invalid"
@@ -21110,10 +21113,12 @@ stop
       REAL_T, intent(inout) :: tennew(DIMV(tennew),ntensor)
       REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat)
        ! other vars
+       ! displacement
       REAL_T, intent(in) :: ucell(DIMV(ucell),num_materials_vel*SDIM)
       REAL_T, intent(in) :: vofls0(DIMV(vofls0),2*nmat)
       REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr)) ! =1 int. =1 fine-fine in domain =0 o.t.
+      ! =1 int. =1 fine-fine in domain =0 o.t.
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr)) 
       REAL_T, intent(in) :: maskunsplit(DIMV(maskunsplit))
       REAL_T, intent(in) :: unode(DIMV(unode),AMREX_SPACEDIM+1)
       REAL_T, intent(in) :: vnode(DIMV(vnode),AMREX_SPACEDIM+1)
@@ -23657,9 +23662,10 @@ stop
                 if (volmat_depart(u_im).gt.zero) then
                  tennew_hold(statecomp_data)= &
                   veldata(itensor_base+statecomp_data)/volmat_depart(u_im)
+                  ! ucell is already the local displacement
                  tennew_hold(statecomp_data)= &
                    tennew_hold(statecomp_data)+ &
-                   dt*ucell(D_DECL(icrse,jcrse,kcrse),istate)
+                   ucell(D_DECL(icrse,jcrse,kcrse),istate)
                 else
                  print *,"volmat_depart(u_im) invalid"
                  stop
