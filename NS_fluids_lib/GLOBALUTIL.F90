@@ -15806,45 +15806,51 @@ endif
 return
 end subroutine volfrac_from_massfrac
 
-! Tsat corresponds to Tgamma
-! Psat corresponds to Pgamma
-subroutine Psat_Clausius_Clapyron(Psat,Pboil,Tsat,Tboil,L,R,WV)
+! TODO: 1. inverse CC equation
+!       2. MDOTY equation (either PD or Kassemi)
+!       3. X from PSAT,Pgamma,Tgamma,TSAT,WV,WA,Tprobe,Yprobe?
+! When comparing with Dodd and Ferrante and others:
+! TSAT corresponds to TBOIL
+! PSAT corresponds to PBOIL
+! Tgamma corresponds to Tsat
+! Pgamma corresponds to Psat
+subroutine Pgamma_Clausius_Clapyron(Pgamma,PSAT,Tgamma,TSAT,L,R,WV)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: Pboil,Tsat,Tboil,L,R,WV
-REAL_T, intent(out) :: Psat
+REAL_T, intent(in) :: PSAT,Tgamma,TSAT,L,R,WV
+REAL_T, intent(out) :: Pgamma
 
-if ((Tsat.gt.zero).and.(Tboil.gt.zero)) then
- if (Pboil.gt.zero) then
+if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
+ if (PSAT.gt.zero) then
   if (R.gt.zero) then
    if (L.ne.zero) then
     if (WV.gt.zero) then
-     Psat=Pboil*exp(-(L*WV/R)*(one/Tsat-one/Tboil))
+     Pgamma=PSAT*exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
     else
-     print *,"WV invalid in Psat_Clausius_Clapyron"
+     print *,"WV invalid in Pgamma_Clausius_Clapyron"
      stop
     endif
    else
-    print *,"L invalid in Psat_Clausius_Clapyron"
+    print *,"L invalid in Pgamma_Clausius_Clapyron"
     stop
    endif
   else
-   print *,"R invalid in Psat_Clausius_Clapyron"
+   print *,"R invalid in Pgamma_Clausius_Clapyron"
    stop
   endif
  else
-  print *,"Pboil invalid in Psat_Clausius_Clapyron"
+  print *,"PSAT invalid in Pgamma_Clausius_Clapyron"
   stop
  endif
 else
- print *,"Tsat or Tboil invalid in Psat_Clausius_Clapyron"
- print *,"Tsat= ",Tsat
- print *,"Tboil= ",Tboil
+ print *,"Tgamma or TSAT invalid in Pgamma_Clausius_Clapyron"
+ print *,"Tgamma= ",Tgamma
+ print *,"TSAT= ",TSAT
  stop
 endif
 
 return
-end subroutine Psat_Clausius_Clapyron
+end subroutine Pgamma_Clausius_Clapyron
 
 !TODO:
 !XV=(PSAT_REF/PMIX)e^(-(L WV/R)(1/T_GAMMA-1/T_SAT_REF)
