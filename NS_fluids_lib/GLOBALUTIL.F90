@@ -15806,6 +15806,46 @@ endif
 return
 end subroutine volfrac_from_massfrac
 
+! Tsat corresponds to Tgamma
+! Psat corresponds to Pgamma
+subroutine Psat_Clausius_Clapyron(Psat,Pboil,Tsat,Tboil,L,R,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: Pboil,Tsat,Tboil,L,R,WV
+REAL_T, intent(out) :: Psat
+
+if ((Tsat.gt.zero).and.(Tboil.gt.zero)) then
+ if (Pboil.gt.zero) then
+  if (R.gt.zero) then
+   if (L.ne.zero) then
+    if (WV.gt.zero) then
+     Psat=Pboil*exp(-(L*WV/R)*(one/Tsat-one/Tboil))
+    else
+     print *,"WV invalid in Psat_Clausius_Clapyron"
+     stop
+    endif
+   else
+    print *,"L invalid in Psat_Clausius_Clapyron"
+    stop
+   endif
+  else
+   print *,"R invalid in Psat_Clausius_Clapyron"
+   stop
+  endif
+ else
+  print *,"Pboil invalid in Psat_Clausius_Clapyron"
+  stop
+ endif
+else
+ print *,"Tsat or Tboil invalid in Psat_Clausius_Clapyron"
+ print *,"Tsat= ",Tsat
+ print *,"Tboil= ",Tboil
+ stop
+endif
+
+return
+end subroutine Psat_Clausius_Clapyron
+
 !TODO:
 !XV=(PSAT_REF/PMIX)e^(-(L WV/R)(1/T_GAMMA-1/T_SAT_REF)
 !PMIX=(gamma_MIX(YPROBE)-1)rho_MIX CV_MIX(YPROBE) TPROBE
@@ -15884,6 +15924,12 @@ endif
 return
 end subroutine XMIN_from_TSAT
 
+! Dodd and Ferrante:
+! (30) psat/pboil=exp((-L WV/R)(1/Tsat - 1/Tboil))
+! Dodd and Ferrante after nondimensionalization by pboil:
+! (33) Ysat=psat WV/(psat WV + (1-psat)WA)
+! in otherwords,
+! Ysat=X WV/(X WV + (1-X)WA) where X=psat/pboil
 !TODO:
 !XV=(PSAT_REF/PMIX)e^(-(L WV/R)(1/T_GAMMA-1/T_SAT_REF)
 !PMIX=(gamma_MIX(YPROBE)-1)rho_MIX CV_MIX(YPROBE) TPROBE
