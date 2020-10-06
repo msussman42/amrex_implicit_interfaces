@@ -15809,6 +15809,8 @@ end subroutine volfrac_from_massfrac
 ! TODO: 1. inverse CC equation
 !       2. MDOTY equation (either PD or Kassemi)
 !       3. X from PSAT,Pgamma,Tgamma,TSAT,WV,WA,Tprobe,Yprobe?
+!       4. For now, X=Pgamma/PSAT and focus on validating the
+!          results found in Kassemi et al.
 ! When comparing with Dodd and Ferrante and others:
 ! TSAT corresponds to TBOIL
 ! PSAT corresponds to PBOIL
