@@ -1645,6 +1645,7 @@ protected:
     static Vector<Real> nucleation_temp; 
     static Real nucleation_period; 
     static Real nucleation_init_time; //def 0.0
+    static int pos_sites_random_flag; //default=1
     static int n_sites;
     static Vector<Real> pos_sites;
 

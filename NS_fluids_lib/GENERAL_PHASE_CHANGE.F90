@@ -1572,8 +1572,9 @@ i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.eq.1) then
+if (nsum.eq.2) then
  increment_out(1)=zero
+ increment_out(2)=zero
  do dir=1,SDIM
   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
   cell_dim(dir)=GRID_DATA_IN%xsten(1,dir)-GRID_DATA_IN%xsten(-1,dir)
@@ -1581,7 +1582,10 @@ if (nsum.eq.1) then
   ! find the heat flux next to a horizontal hot plate
  do im=1,num_materials
   temperature_component=(im-1)*num_state_material+2
-  if ((GRID_DATA_IN%lsfab(D_DECL(i,j,k),im).gt.zero).and.(im.ne.3)) then
+  if ((GRID_DATA_IN%lsfab(D_DECL(i,j,k),im).gt.zero).and. &
+      (im.ne.3).and. &
+      (im.ne.2).and. &
+      (im.eq.1)) then
    if (GRID_DATA_IN%lsfab(D_DECL(i,j,k-1),3).gt.zero) then
     if (SDIM.eq.3) then
      temperature_plus=GRID_DATA_IN%den(D_DECL(i,j,k+1),temperature_component)
@@ -1593,6 +1597,12 @@ if (nsum.eq.1) then
      area_face=cell_dim(1)*cell_dim(2)
 !     increment_out(1)=GRID_DATA_IN%volgrid*heat_flux
      increment_out(1)=area_face*heat_flux
+     increment_out(2)=area_face
+! in the "run.out" file (./amr2d ... inputs... >& run.out &
+! ... TIME= ....  user_comp (1..ncomp_sum_int_user) 1  <total heat flux value>
+! ... TIME= ....  user_comp (1..ncomp_sum_int_user) 2  <total area>
+! in the inputs file (probtype==55), 
+! ns.ncomp_sum_int_user=2
     endif
    endif
   endif

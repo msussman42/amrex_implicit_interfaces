@@ -681,6 +681,7 @@ Vector<Real> NavierStokes::nucleation_temp;
 Real NavierStokes::nucleation_period=0.0;
 Real NavierStokes::nucleation_init_time=0.0;
 int NavierStokes::n_sites=0;
+int NavierStokes::pos_sites_random_flag=1;
 Vector<Real> NavierStokes::pos_sites;
 
 int NavierStokes::perturbation_on_restart=0;
@@ -1719,6 +1720,12 @@ void fortran_parameters() {
  
  if (n_sites>0) {
   temp_pos_sites.resize(4*n_sites);
+    // these positions are used only for the initial creation of bubbles;
+    // at later times, when bubbles are nucleated, the position is random.
+    // The code that sets the bubble positions and times is in 
+    // NavierStokes::level_phase_change_rate (NavierStokes.cpp)
+    // search "MITSUHIRO BUBBLE POSITIONS" for exact places where bubble 
+    // positions are set.
   pp.getarr("pos_sites",temp_pos_sites,0,4*n_sites);
  } else if (n_sites==0) {
   // do nothing
@@ -2392,6 +2399,8 @@ NavierStokes::read_params ()
     } else
      amrex::Error("n_sites invalid");
    
+    pp.query("pos_sites_random_flag",pos_sites_random_flag);
+
     pp.get("denfact",denfact);
     pp.get("velfact",velfact);
     pp.get("xblob",xblob);
@@ -4170,6 +4179,7 @@ NavierStokes::read_params ()
        std::cout << "i, pos_sites= " << i << ' ' << pos_sites[i] << '\n';
       }
      }
+     std::cout << "pos_sites_random_flag= " << pos_sites_random_flag << '\n';
     
      for (int i=0;i<nmat;i++) {
       std::cout << "microlayer_substrate i=" << i << "  " << 
@@ -10608,6 +10618,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     int pos_comp=0;
     for (int i_site=0;i_site<n_sites;i_site++) {
      for (int dir=0;dir<3;dir++) {
+	 // MITSUHIRO BUBBLE POSITIONS and RADII
       nucleate_pos[pos_comp]=pos_sites[pos_comp]; 
       pos_comp++;
      }
@@ -10617,6 +10628,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
        rr=2.0*dxmax;
      } else
       amrex::Error("rr must be positive");
+	 // MITSUHIRO BUBBLE POSITIONS and RADII
      nucleate_pos[pos_comp]=rr;
      pos_comp++;
     } // i_site=0..n_sites-1
@@ -10633,6 +10645,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     int pos_comp=0;
     for (int i_site=0;i_site<n_sites;i_site++) {
      for (int dir=0;dir<3;dir++) {
+	 // MITSUHIRO BUBBLE POSITIONS and RADII
       nucleate_pos[pos_comp]=pos_sites[pos_comp]; 
       pos_comp++;
      }
@@ -10642,6 +10655,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
        rr=2.0*dxmax;
      } else
       amrex::Error("rr must be positive");
+	 // MITSUHIRO BUBBLE POSITIONS and RADII
      nucleate_pos[pos_comp]=rr;
      pos_comp++;
     } // i_site=0..n_sites-1
@@ -10697,22 +10711,32 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
          }
          
          xnucleate[dir]=problo[dir]+save_random*(probhi[dir]-problo[dir]);
-         if ((rz_flag==1)&&(dir==0)) {
-          xnucleate[dir]=0.0;
-         } else if (dir==AMREX_SPACEDIM-1) {  // vertical coordinate
+	 if (pos_sites_random_flag==0) {
+
           xnucleate[dir]=pos_sites[nc*4+dir];
-         } else {       
-          if (xnucleate[dir]-rr<problo[dir])
-           xnucleate[dir]=problo[dir]+rr;
-          if (xnucleate[dir]+rr>probhi[dir])
-           xnucleate[dir]=probhi[dir]-rr;
-         }
+
+	 } else if (pos_sites_random_flag==1) {
+
+	  if ((rz_flag==1)&&(dir==0)) {
+           xnucleate[dir]=0.0;
+          } else if (dir==AMREX_SPACEDIM-1) {  // vertical coordinate
+           xnucleate[dir]=pos_sites[nc*4+dir];
+          } else {       
+           if (xnucleate[dir]-rr<problo[dir])
+            xnucleate[dir]=problo[dir]+rr;
+           if (xnucleate[dir]+rr>probhi[dir])
+            xnucleate[dir]=probhi[dir]-rr;
+          }
+	 } else
+          amrex::Error("pos_sites_random_flag invalid");
         } // dir
        } // io proc?
 
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
         ParallelDescriptor::ReduceRealMax(xnucleate[dir]);
 
+	 // MITSUHIRO BUBBLE POSITIONS and RADII
+	 // (THIS IS THE RANDOM CASE)
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
         nucleate_pos[nc*4+dir]=xnucleate[dir];
        nucleate_pos[nc*4+3]=rr;  // radius
