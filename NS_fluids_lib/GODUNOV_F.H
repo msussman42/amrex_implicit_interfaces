@@ -753,7 +753,6 @@ extern "C"
 
 
    void FORT_ASSIMILATE_STATEDATA(
-    int* data_dir,
     int* law_of_the_wall,
     int* im_solid_map,
     int* level,
@@ -771,9 +770,15 @@ extern "C"
     Real* LS_state,
     AMREX_ARLIM_P(LS_statelo),AMREX_ARLIM_P(LS_statehi), 
     Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
-    Real* statemac,
-    AMREX_ARLIM_P(statemaclo),AMREX_ARLIM_P(statemachi), 
-    Real* ughost,AMREX_ARLIM_P(ughostlo),AMREX_ARLIM_P(ughosthi));
+    Real* macx,
+    AMREX_ARLIM_P(macxlo),AMREX_ARLIM_P(macxhi), 
+    Real* macy,
+    AMREX_ARLIM_P(macylo),AMREX_ARLIM_P(macyhi), 
+    Real* macz,
+    AMREX_ARLIM_P(maczlo),AMREX_ARLIM_P(maczhi), 
+    Real* ughostx,AMREX_ARLIM_P(ughostxlo),AMREX_ARLIM_P(ughostxhi), 
+    Real* ughosty,AMREX_ARLIM_P(ughostylo),AMREX_ARLIM_P(ughostyhi), 
+    Real* ughostz,AMREX_ARLIM_P(ughostzlo),AMREX_ARLIM_P(ughostzhi) );
 
 
    void FORT_STEFANSOLVER(

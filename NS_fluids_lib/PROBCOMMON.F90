@@ -111,12 +111,16 @@ module probcommon_module_types
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
-      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughost
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughostx
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughosty
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughostz
       end type assimilate_parm_type
 
       type assimilate_out_parm_type
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
-      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: statemac
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macx
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macy
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macz
       end type assimilate_out_parm_type
 
       type interp_from_grid_parm_type
@@ -563,11 +567,11 @@ implicit none
       end subroutine TEMPLATE_microcell_heat_coeff
 
       subroutine TEMPLATE_ASSIMILATE(assimilate_in,assimilate_out, &
-         i,j,k,cell_flag,data_dir)
+         i,j,k,cell_flag)
       use probcommon_module_types
       type(assimilate_parm_type), intent(in) :: assimilate_in
       type(assimilate_out_parm_type), intent(inout) :: assimilate_out
-      INTEGER_T, intent(in) :: i,j,k,cell_flag,data_dir
+      INTEGER_T, intent(in) :: i,j,k,cell_flag
       end subroutine TEMPLATE_ASSIMILATE
 
       END INTERFACE
