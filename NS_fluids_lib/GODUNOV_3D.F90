@@ -16199,9 +16199,8 @@ stop
       return
       end subroutine FORT_WALLFUNCTION
 
-
+        ! called from NavierStokes.cpp
       subroutine FORT_ASSIMILATE_STATEDATA( &
-       data_dir, &
        law_of_the_wall, &
        im_solid_map, &
        level, &
@@ -16217,8 +16216,12 @@ stop
        time, & ! cur_time
        LS_state,DIMS(LS_state), &
        state,DIMS(state), &
-       statemac,DIMS(statemac), &
-       ughost,DIMS(ughost))  ! stores the slip velocity
+       macx,DIMS(macx), &
+       macy,DIMS(macy), &
+       macz,DIMS(macz), &
+       ughostx,DIMS(ughostx), &  ! stores the slip velocity
+       ughosty,DIMS(ughosty), &  
+       ughostz,DIMS(ughostz))
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -16226,7 +16229,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: law_of_the_wall
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nstate
@@ -16244,14 +16246,22 @@ stop
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: DIMDEC(LS_state)
       INTEGER_T, intent(in) :: DIMDEC(state)
-      INTEGER_T, intent(in) :: DIMDEC(statemac)
-      INTEGER_T, intent(in) :: DIMDEC(ughost)
+      INTEGER_T, intent(in) :: DIMDEC(macx)
+      INTEGER_T, intent(in) :: DIMDEC(macy)
+      INTEGER_T, intent(in) :: DIMDEC(macz)
+      INTEGER_T, intent(in) :: DIMDEC(ughostx)
+      INTEGER_T, intent(in) :: DIMDEC(ughosty)
+      INTEGER_T, intent(in) :: DIMDEC(ughostz)
 
       REAL_T, intent(inout), target :: LS_state(DIMV(LS_state), &
            nmat*(1+SDIM))
       REAL_T, intent(inout), target :: state(DIMV(state),nstate)
-      REAL_T, intent(inout), target :: statemac(DIMV(statemac))
-      REAL_T, intent(in), target :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
+      REAL_T, intent(inout), target :: macx(DIMV(macx))
+      REAL_T, intent(inout), target :: macy(DIMV(macy))
+      REAL_T, intent(inout), target :: macz(DIMV(macz))
+      REAL_T, intent(in), target :: ughostx(DIMV(ughostx),nparts_ghost*SDIM) 
+      REAL_T, intent(in), target :: ughosty(DIMV(ughosty),nparts_ghost*SDIM) 
+      REAL_T, intent(in), target :: ughostz(DIMV(ughostz),nparts_ghost*SDIM) 
       INTEGER_T i,j,k
       INTEGER_T im
       INTEGER_T im_primary
@@ -16331,17 +16341,15 @@ stop
        print *,"law_of_the_wall invalid"
        stop
       endif
-      if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
-       ! do nothing
-      else
-       print *,"data_dir invalid"
-       stop
-      endif
 
       call checkbound(fablo,fabhi,DIMS(LS_state),1,-1,1253)
       call checkbound(fablo,fabhi,DIMS(state),1,-1,1253)
-      call checkbound(fablo,fabhi,DIMS(statemac),0,data_dir,1253)
-      call checkbound(fablo,fabhi,DIMS(ughost),0,data_dir,1255)
+      call checkbound(fablo,fabhi,DIMS(macx),0,0,1253)
+      call checkbound(fablo,fabhi,DIMS(macy),0,1,1253)
+      call checkbound(fablo,fabhi,DIMS(macz),0,SDIM-1,1253)
+      call checkbound(fablo,fabhi,DIMS(ughostx),0,0,1255)
+      call checkbound(fablo,fabhi,DIMS(ughosty),0,1,1255)
+      call checkbound(fablo,fabhi,DIMS(ughostz),0,SDIM-1,1255)
 
       assimilate_parm%time=time
       assimilate_parm%dt=dt
@@ -16358,7 +16366,9 @@ stop
       assimilate_parm%xlo=>xlo
       assimilate_parm%fablo=>fablo
       assimilate_parm%fabhi=>fabhi
-      assimilate_parm%ughost=>ughost
+      assimilate_parm%ughostx=>ughostx
+      assimilate_parm%ughosty=>ughosty
+      assimilate_parm%ughostz=>ughostz
 
       assimilate_parm%dxmin=dx(1)
       if (dx(2).lt.assimilate_parm%dxmin) then
@@ -16369,30 +16379,30 @@ stop
       endif
        
       assimilate_out_parm%state=>state
-      assimilate_out_parm%statemac=>statemac
+      assimilate_out_parm%macx=>macx
+      assimilate_out_parm%macy=>macy
+      assimilate_out_parm%macz=>macz
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      if (data_dir.eq.0) then
+      cell_flag=-1
 
-       cell_flag=1
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-
-        assimilate_parm%xsten=>xsten
-        if (is_in_probtype_list().eq.1) then
-         call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
-          i,j,k,cell_flag,data_dir)
-        else
-         ! do nothing
-        endif
+       assimilate_parm%xsten=>xsten
+       if (is_in_probtype_list().eq.1) then
+        call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
+         i,j,k,cell_flag)
+       else
+        ! do nothing
+       endif
 
          ! check if a fluid cell neighbors a solid cell
-        if (law_of_the_wall.eq.2) then !GNBC
+       if (law_of_the_wall.eq.2) then !GNBC
          do im=1,nmat
           LS_local(im)=LS_state(D_DECL(i,j,k),im)
          enddo
@@ -16404,6 +16414,71 @@ stop
           ! for each solid cell, update the present cell center velocity
           ! with a weighted average of the slip velocity and the present
           ! velocity.
+          dircrit=0
+          sidecrit=0
+          LS_fluid_crit=1.0D+10
+
+          do dir=1,SDIM
+           ii=0
+           jj=0
+           kk=0
+           if (dir.eq.1) then
+            ii=1
+           else if (dir.eq.2) then
+            jj=1
+           else if (dir.eq.SDIM) then
+            kk=1
+           else
+            print *,"dir invalid"
+            stop
+           endif
+           do im=1,nmat
+            LS_left(im)=LS_state(D_DECL(i-ii,j-jj,k-kk),im)
+            LS_right(im)=LS_state(D_DECL(i+ii,j+jj,k+kk),im)
+           enddo
+           call get_primary_material(LS_left,nmat,im_primary_left) 
+           call get_primary_material(LS_right,nmat,im_primary_right) 
+           side=0
+           if ((is_rigid(nmat,im_primary_left).eq.0).and. &
+               (is_rigid(nmat,im_primary_right).eq.0)) then
+            ! do nothing
+           else if ((is_rigid(nmat,im_primary_left).eq.0) then
+            side=1
+            local_LS=LS_right(im_primary)
+            im_solid=im_primary_right
+           else if ((is_rigid(nmat,im_primary_right).eq.0) then
+            side=-1
+            local_LS=LS_left(im_primary)
+            im_solid=im_primary_left
+           else if (LS_left(im_primary).lt. &
+                    LS_right(im_primary)) then
+            side=-1
+            local_LS=LS_left(im_primary)
+            im_solid=im_primary_left
+           else
+            side=1
+            local_LS=LS_right(im_primary)
+            im_solid=im_primary_right
+           endif
+           if (side.ne.0) then
+                  if (sidecrit.eq.0) then
+                          sidecrit=side
+                          dircrit=dir
+                          LS_fluid_critical=local_LS
+                  else if (local_LS.lt.LS_fluid_critical) then
+                          sidecrit=side
+                          dircrit=dir
+                          LS_fluid_critical=local_LS
+                  endif
+           endif
+          enddo ! dir=1..sdim
+           partid=0
+           do im=1,im_solid
+            if (is_rigid(nmat,im).eq.1) then
+             partid=partid+1
+            endif
+           do dir=1,SDIM
+
          else if (is_rigid(nmat,im_primary).eq.1) then
           ! do nothing
          else
@@ -16423,34 +16498,30 @@ stop
        enddo ! j
        enddo ! i
 
-      else if ((data_dir.ge.1).and.(data_dir.le.SDIM-1)) then
-       ! do nothing
-      else
-       print *,"data_dir invalid"
-       stop
-      endif
 
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,data_dir) 
+      do cell_flag=0,SDIM-1
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+             growlo,growhi,0,cell_flag) 
 
-      cell_flag=0
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,cell_flag+1)
 
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,data_dir+1)
+        assimilate_parm%xsten=>xsten
+        if (is_in_probtype_list().eq.1) then
+         call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
+          i,j,k,cell_flag)
+        else
+         ! do nothing
+        endif
 
-       assimilate_parm%xsten=>xsten
-       if (is_in_probtype_list().eq.1) then
-        call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
-          i,j,k,cell_flag,data_dir)
-       else
-        ! do nothing
-       endif
+       enddo ! k
+       enddo ! j
+       enddo ! i
 
-      enddo ! k
-      enddo ! j
-      enddo ! i
+      enddo ! cell_flag=0...sdim-1
 
 
       return

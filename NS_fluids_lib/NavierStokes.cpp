@@ -5694,19 +5694,19 @@ void NavierStokes::assimilate_state_data() {
 
  const Real* dx = geom.CellSize();
 
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-
-  MultiFab& Smac_new = get_new_data(Umac_Type+data_dir,slab_step+1);
+ MultiFab& Smac_new_x = get_new_data(Umac_Type,slab_step+1);
+ MultiFab& Smac_new_y = get_new_data(Umac_Type+1,slab_step+1);
+ MultiFab& Smac_new_z = get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
 	
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -5719,16 +5719,19 @@ void NavierStokes::assimilate_state_data() {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
+   FArrayBox& solidvelx=(*localMF[FSI_GHOST_MAC_MF])[mfi]; 
+   FArrayBox& solidvely=(*localMF[FSI_GHOST_MAC_MF+1])[mfi]; 
+   FArrayBox& solidvelz=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi]; 
    FArrayBox& snewfab=S_new[mfi]; 
    FArrayBox& lsnewfab=LS_new[mfi]; 
-   FArrayBox& smacnewfab=Smac_new[mfi]; 
+   FArrayBox& macnewx=Smac_new_x[mfi]; 
+   FArrayBox& macnewy=Smac_new_y[mfi]; 
+   FArrayBox& macnewz=Smac_new_z[mfi]; 
 
    int tid_current=ns_thread();
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    FORT_ASSIMILATE_STATEDATA( 
-     &data_dir,
      &law_of_the_wall,
      im_solid_map.dataPtr(),
      &level,
@@ -5746,10 +5749,18 @@ void NavierStokes::assimilate_state_data() {
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      snewfab.dataPtr(),
      ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-     smacnewfab.dataPtr(),
-     ARLIM(smacnewfab.loVect()),ARLIM(smacnewfab.hiVect()),
-     ghostsolidvelfab.dataPtr(),
-     ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()) );
+     macnewx.dataPtr(),
+     ARLIM(macnewx.loVect()),ARLIM(macnewx.hiVect()),
+     macnewy.dataPtr(),
+     ARLIM(macnewy.loVect()),ARLIM(macnewy.hiVect()),
+     macnewz.dataPtr(),
+     ARLIM(macnewz.loVect()),ARLIM(macnewz.hiVect()),
+     solidvelx.dataPtr(),
+     ARLIM(solidvelx.loVect()),ARLIM(solidvelx.hiVect()),
+     solidvely.dataPtr(),
+     ARLIM(solidvely.loVect()),ARLIM(solidvely.hiVect()),
+     solidvelz.dataPtr(),
+     ARLIM(solidvelz.loVect()),ARLIM(solidvelz.hiVect()) );
   } // mfi
 } // omp
   ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),

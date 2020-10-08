@@ -583,13 +583,13 @@ end subroutine SIMPLE_PALMORE_DESJARDINS_STATE
 
 subroutine SIMPLE_PALMORE_DESJARDINS_ASSIMILATE( &
      assimilate_in,assimilate_out, &
-     i,j,k,cell_flag,data_dir)
+     i,j,k,cell_flag)
 use probcommon_module
 IMPLICIT NONE
 
 type(assimilate_parm_type), intent(in) :: assimilate_in
 type(assimilate_out_parm_type), intent(inout) :: assimilate_out
-INTEGER_T, intent(in) :: i,j,k,cell_flag,data_dir
+INTEGER_T, intent(in) :: i,j,k,cell_flag
 
 INTEGER_T :: nmat,nstate,nstate_test
 REAL_T :: x_exact,xcrit,tcrit
@@ -626,17 +626,19 @@ if ((num_materials.eq.2).and. &
  tcrit=assimilate_in%time  ! cur_time_slab
  if ((xcrit.le.x_exact).or. &
      (xcrit.ge.probhix-x_exact)) then
-  if (cell_flag.eq.0) then ! MAC GRID
-   if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
-    if (xcrit.le.x_exact) then
-     assimilate_out%statemac(D_DECL(i,j,k))=0.0d0
-    endif
-   else 
-    print *,"data_dir invalid"
-    stop
+  if (cell_flag.eq.0) then ! MAC GRID X
+   if (xcrit.le.x_exact) then
+    assimilate_out%macx(D_DECL(i,j,k))=0.0d0
    endif
-  else if (cell_flag.eq.1) then
-   if (data_dir.eq.0) then
+  else if (cell_flag.eq.1) then ! MAC GRID Y
+   if (xcrit.le.x_exact) then
+    assimilate_out%macy(D_DECL(i,j,k))=0.0d0
+   endif
+  else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then ! MAC GRID Z
+   if (xcrit.le.x_exact) then
+    assimilate_out%macz(D_DECL(i,j,k))=0.0d0
+   endif
+  else if (cell_flag.eq.-1) then
     ! TEMPERATURE
     use_T=1
     call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
@@ -658,10 +660,6 @@ if ((num_materials.eq.2).and. &
       assimilate_out%state(D_DECL(i,j,k),ibase+3)=local_massfrac
      enddo
     endif
-   else
-    print *,"data_dir invalid"
-    stop
-   endif
   else 
    print *,"cell_flag invalid"
    stop

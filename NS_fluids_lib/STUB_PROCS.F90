@@ -591,13 +591,13 @@ return
 end subroutine STUB_hydro_pressure_density
 
 subroutine STUB_ASSIMILATE( &
-  assimilate_in,assimilate_out,i,j,k,cell_flag,data_dir)
+  assimilate_in,assimilate_out,i,j,k,cell_flag)
 use probcommon_module
 IMPLICIT NONE
 
 type(assimilate_parm_type), intent(in) :: assimilate_in
 type(assimilate_out_parm_type), intent(inout) :: assimilate_out
-INTEGER_T, intent(in) :: i,j,k,cell_flag,data_dir
+INTEGER_T, intent(in) :: i,j,k,cell_flag
 
 return
 end subroutine STUB_ASSIMILATE
