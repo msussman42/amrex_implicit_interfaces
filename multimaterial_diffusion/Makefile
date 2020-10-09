@@ -1,4 +1,5 @@
 test_debug:
+	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DAMREX_SPACEDIM=2 -I. -DBL_FORT_USE_UNDERSCORE  -g heightfunctioncurvature.F90 -c -o heightfunctioncurvature.o
 	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DAMREX_SPACEDIM=2 -I. -DBL_FORT_USE_UNDERSCORE  -g tetrahedron_keast_rule.F90 -c -o tetrahedron_keast_rule.o
 	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DAMREX_SPACEDIM=2 -I. -DBL_FORT_USE_UNDERSCORE  -g triangle_fekete_rule.F90 -c -o triangle_fekete_rule.o  
 	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DAMREX_SPACEDIM=2 -I. -DBL_FORT_USE_UNDERSCORE  -g PROBCOMMON.F90 -c -o PROBCOMMON.o  
@@ -23,7 +24,7 @@ test_debug:
 	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DAMREX_SPACEDIM=2 -I. -DBL_FORT_USE_UNDERSCORE  -g SOLIDFLUID.F90 -c -o SOLIDFLUID.o 
 	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DAMREX_SPACEDIM=2 -I. -DBL_FORT_USE_UNDERSCORE  -g MOVE_INTERFACE_3D.F90 -c -o MOVE_INTERFACE_3D.o 
 	gfortran -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv -fimplicit-none -fno-second-underscore -DBL_SPACEDIM=2 -DAMREX_SPACEDIM=2 -I. -DBL_FORT_USE_UNDERSCORE  -g main.F90 -c -o main.o 
-	gfortran  -o test_debug tetrahedron_keast_rule.o triangle_fekete_rule.o PROBCOMMON.o PROBMAIN.o GLOBALUTIL.o TECPLOTUTIL.o supercooled_exact_sol.o variable_temperature_drop.o mof2d_analytic_centroid.o mof3d_analytic_centroid.o MOF.o STACKVOLUME.o BICGSTAB_Yang_MULTI.o vof_cisl.o TSAT_UTIL.o vfrac_pair.o multimat_FVM.o MOF_REDIST_3D.o PLIC_3D.o sci_clsvof.o SOLIDFLUID.o MASS_TRANSFER_3D.o MOVE_INTERFACE_3D.o main.o
+	gfortran  -o test_debug heightfunctioncurvature.o tetrahedron_keast_rule.o triangle_fekete_rule.o PROBCOMMON.o PROBMAIN.o GLOBALUTIL.o TECPLOTUTIL.o supercooled_exact_sol.o variable_temperature_drop.o mof2d_analytic_centroid.o mof3d_analytic_centroid.o MOF.o STACKVOLUME.o BICGSTAB_Yang_MULTI.o vof_cisl.o TSAT_UTIL.o vfrac_pair.o multimat_FVM.o MOF_REDIST_3D.o PLIC_3D.o sci_clsvof.o SOLIDFLUID.o MASS_TRANSFER_3D.o MOVE_INTERFACE_3D.o main.o
 
 run:
 	./test_debug
