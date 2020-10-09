@@ -16200,6 +16200,9 @@ stop
       end subroutine FORT_WALLFUNCTION
 
         ! called from NavierStokes.cpp
+        ! put ns.wall_slip_weight=0.5 for example in the inputs file.
+        ! ns.wall_slip_weight=0.0 => do not strengthen the slip BC
+        ! ns.wall_slip_weight=1.0 => strongest imposition of slip BC
       subroutine FORT_ASSIMILATE_STATEDATA( &
        law_of_the_wall, &
        wall_slip_weight, &
