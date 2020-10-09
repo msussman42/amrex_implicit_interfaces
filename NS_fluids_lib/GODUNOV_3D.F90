@@ -16272,6 +16272,7 @@ stop
       type(assimilate_parm_type) :: assimilate_parm
       type(assimilate_out_parm_type) :: assimilate_out_parm
       INTEGER_T cell_flag
+      REAL_T weight_correct
 
       nhalf=3
 
@@ -16387,6 +16388,8 @@ stop
 
       cell_flag=-1
 
+      weight_correct=half
+
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
@@ -16500,8 +16503,8 @@ stop
          else if (wtsum.gt.zero) then
           do veldir=1,SDIM
            state(D_DECL(i,j,k),veldir)= &
-                  half*state(D_DECL(i,j,k),veldir)+ &
-                  half*velsum(veldir)/wtsum
+                  (one-weight_correct)*state(D_DECL(i,j,k),veldir)+ &
+                  weight_correct*velsum(veldir)/wtsum
           enddo
          else
           print *,"wtsum invalid"
@@ -16680,18 +16683,41 @@ stop
           if (wtsum.eq.zero) then
            ! do nothing
           else if (wtsum.gt.zero) then
-                  FIX ME HERE state MAC X
            do veldir=1,SDIM
-            state(D_DECL(i,j,k),veldir)= &
-                   half*state(D_DECL(i,j,k),veldir)+ &
-                   half*velsum(veldir)/wtsum
+            if (cell_flag+1.eq.veldir) then
+             if (veldir.eq.1) then
+              macx(D_DECL(i,j,k))= &
+                   (one-weight_correct)*macx(D_DECL(i,j,k))+ &
+                   weight_correct*velsum(veldir)/wtsum
+             else if (veldir.eq.2) then
+              macy(D_DECL(i,j,k))= &
+                   (one-weight_correct)*macy(D_DECL(i,j,k))+ &
+                   weight_correct*velsum(veldir)/wtsum
+             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+              macz(D_DECL(i,j,k))= &
+                   (one-weight_correct)*macz(D_DECL(i,j,k))+ &
+                   weight_correct*velsum(veldir)/wtsum
+             else
+              print *,"veldir invalid"
+              stop
+             endif
            enddo
           else
            print *,"wtsum invalid"
            stop
           endif 
-
-
+         else if (is_rigid(nmat,im_stencil).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid(nmat,im_stencil) (right) invalid"
+          stop
+         endif
+        else if (is_rigid(nmat,im_stencil).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid(nmat,im_stencil) (left) invalid"
+         stop
+        endif
 
        enddo ! k
        enddo ! j

@@ -232,6 +232,7 @@ int main() {
 
  // future: use Wolfe condition
  // future: use Fletcher Reeve's method (a.k.a. nonlinear CG)
+ // future: use Gauss-Newton method
  // If the discretized constraint equation is a linear equation, then
  // the cost function will be convex which implies that an
  // optimal solution exists, AND, so long as the learnining rate
