@@ -887,6 +887,7 @@ Real NavierStokes::bottom_bottom_tol_factor=0.01;
 //   for conventional contact line dynamics, 
 //   modify "get_use_DCA" in PROB.F90.
 int NavierStokes::law_of_the_wall=0;
+Real NavierStokes::wall_slip_weight=0.0;
 int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 
 // 0 fluid, tessellating (default)
@@ -2457,6 +2458,13 @@ NavierStokes::read_params ()
      amrex::Error("law_of_the_wall invalid");
     }
 
+    pp.query("wall_slip_weight",wall_slip_weight);
+    if ((wall_slip_weight>=0.0)&&
+        (wall_slip_weight<=1.0)) {
+     // do nothing
+    } else {
+     amrex::Error("wall_slip_weight invalid");
+    }
 
     pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
     if ((ZEYU_DCA_SELECT==-1)||
@@ -2638,6 +2646,7 @@ NavierStokes::read_params ()
 
      std::cout << "invert_solid_levelset " << invert_solid_levelset << '\n';
      std::cout << "law_of_the_wall " << law_of_the_wall << '\n';
+     std::cout << "wall_slip_weight " << wall_slip_weight << '\n';
      std::cout << "ZEYU_DCA_SELECT " << ZEYU_DCA_SELECT << '\n';
      std::cout << "adapt_quad_depth= " << adapt_quad_depth << '\n';
     }
@@ -5730,9 +5739,11 @@ void NavierStokes::assimilate_state_data() {
 
    int tid_current=ns_thread();
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
+ 
+    // in: GODUNOV_3D.F90
    FORT_ASSIMILATE_STATEDATA( 
      &law_of_the_wall,
+     &wall_slip_weight,
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
@@ -5761,13 +5772,11 @@ void NavierStokes::assimilate_state_data() {
      ARLIM(solidvely.loVect()),ARLIM(solidvely.hiVect()),
      solidvelz.dataPtr(),
      ARLIM(solidvelz.loVect()),ARLIM(solidvelz.hiVect()) );
-  } // mfi
+ } // mfi
 } // omp
-  ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
-                          //ParallelDescriptor::ReduceRealSum
-		          //thread_class::reconcile_d_numPts(caller_id)
-
- } // data_dir=0..sdim-1
+ ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
+                         //ParallelDescriptor::ReduceRealSum
+      	                 //thread_class::reconcile_d_numPts(caller_id)
 
 } // end subroutine assimilate_state_data()
 
