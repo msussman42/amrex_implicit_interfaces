@@ -17642,6 +17642,7 @@ stop
 
        ! called from NavierStokes::PLS_correct (NavierStokes2.cpp)
       subroutine fort_assimilate_lvlset_from_particles( &
+        particles_weight, &
         tid, &  ! thread id
         im_PLS_cpp, &
         isweep, &
@@ -17695,6 +17696,8 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: bfact
 
+      REAL_T, intent(in) :: particles_weight(nmat)
+
       INTEGER_T, intent(in) :: DIMDEC(vofnew)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(mofdata)
@@ -17739,7 +17742,6 @@ stop
       INTEGER_T nhalf
       REAL_T A_matrix, B_matrix, LS_local, lambda
       REAL_T LS_temp(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T F_local
       REAL_T LSfacearea
       REAL_T LScentroid(SDIM)
       REAL_T LSareacentroid(SDIM)
@@ -17750,6 +17752,10 @@ stop
       REAL_T F_old
       REAL_T F_sum_complement
       REAL_T F_sum_complement_new
+      REAL_T local_wt
+      REAL_T F_local
+      REAL_T X_local(SDIM)
+      REAL_T X_old(SDIM)
 
       nhalf=3
 
@@ -17866,8 +17872,15 @@ stop
         if (A_matrix.eq.zero) then
          lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=LS_local
         else if (A_matrix.gt.zero) then
-         lambda=B_matrix/A_matrix
-         lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=LS_local-lambda
+         local_wt=particles_weight(im_PLS_cpp+1)
+         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+          lambda=B_matrix/A_matrix
+          lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=(one-local_wt)*LS_local+ &
+            local_wt*(LS_local-lambda)
+         else
+          print *,"local_wt invalid"
+          stop
+         endif
         else
          print *,"A_matrix invalid"
          stop
@@ -17892,99 +17905,125 @@ stop
         enddo
         enddo
         enddo
+
         call getvolume(bfact,dx,xsten,nhalf, &
          LS_temp,F_local,LSfacearea, &
          LScentroid,LSareacentroid,VOFTOL,SDIM)
+
         call CISBOX(xsten,nhalf, &
          xlo,dx,i,j,k, &
          bfact,level, &
          volcell,cencell,SDIM)   
         if (is_rigid(nmat,im_PLS_cpp+1).eq.0) then
+
          vofcomp=im_PLS_cpp*ngeom_raw+1
          F_old=vofnew(D_DECL(i,j,k),vofcomp)
-         F_sum_complement=zero
-         do im=1,nmat
-          if (im.ne.im_PLS_cpp+1) then
-           if (is_rigid(nmat,im).eq.0) then
-            vofcomp_local=(im-1)*ngeom_raw+1
-            F_sum_complement= &
-             F_sum_complement+vofnew(D_DECL(i,j,k),vofcomp_local)
-           else if (is_rigid(nmat,im).eq.1) then
-            ! do nothing
-           else
-            print *,"is_rigid(nmat,im) invalid"
-            stop
-           endif
-          endif
-         enddo !im=1..nmat
+         do dir=1,SDIM
+          X_old(dir)=vofnew(D_DECL(i,j,k),vofcomp+dir)
+          X_local(dir)=LScentroid(dir)-cencell(dir)
+         enddo
 
-         if (F_local.ge.F_old) then 
-          if (F_sum_complement.gt.zero) then
+         if ((F_old.ge.-VOFTOL).and.(F_old.le.one+VOFTOL)) then
 
-           F_sum_complement_new=F_sum_complement+F_old-F_local
-
-           vofnew(D_DECL(i,j,k),vofcomp)=F_local
+          local_wt=particles_weight(im_PLS_cpp+1)
+          if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+           F_local=(one-local_wt)*F_old+local_wt*F_local
            do dir=1,SDIM
-            vofnew(D_DECL(i,j,k),vofcomp+dir)=LScentroid(dir)-cencell(dir)
+            X_local(dir)=(one-local_wt)*X_old(dir)+local_wt*X_local(dir)
            enddo
-          
-           do im=1,nmat
-            if (im.ne.im_PLS_cpp+1) then
-             if (is_rigid(nmat,im).eq.0) then
-              vofcomp_local=(im-1)*ngeom_raw+1
-              vofnew(D_DECL(i,j,k),vofcomp_local)= &
-               F_sum_complement_new* &
-               vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
-             else if (is_rigid(nmat,im).eq.1) then
-              ! do nothing
-             else
-              print *,"is_rigid(nmat,im) invalid"
-              stop
-             endif
-            endif
-           enddo !im=1..nmat
-          else if (F_sum_complement.eq.zero) then
-           ! do nothing
           else
-           print *,"F_sum_complement invalid"
+           print *,"local_wt invalid"
            stop
           endif
-         else if (F_local.le.F_old) then
-          ! sum_complement_new=sum_complement_old+F_old-F_local
-          ! if F_old=1 and F_local=0 then new sum complement=0+1-0=1
-          if ((F_sum_complement.eq.zero).or. &
-              (F_old.ge.one-VOFTOL)) then
-           ! do nothing since we do not know which material replaces im_PLS_cpp
-          else if ((F_sum_complement.gt.zero).and. &
-                   (F_old.le.one-VOFTOL)) then
-           F_sum_complement_new=F_sum_complement+F_old-F_local
-           
-           vofnew(D_DECL(i,j,k),vofcomp)=F_local
-           do dir=1,SDIM
-            vofnew(D_DECL(i,j,k),vofcomp+dir)=LScentroid(dir)-cencell(dir)
-           enddo
-           
-           do im=1,nmat
-            if (im.ne.im_PLS_cpp+1) then
-             if (is_rigid(nmat,im).eq.0) then
-              vofcomp_local=(im-1)*ngeom_raw+1
-              vofnew(D_DECL(i,j,k),vofcomp_local)= &
-               F_sum_complement_new* &
-               vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
-             else if (is_rigid(nmat,im).eq.1) then
-              ! do nothing
-             else
-              print *,"is_rigid(nmat,im) invalid"
-              stop
-             endif
+ 
+          F_sum_complement=zero
+          do im=1,nmat
+           if (im.ne.im_PLS_cpp+1) then
+            if (is_rigid(nmat,im).eq.0) then
+             vofcomp_local=(im-1)*ngeom_raw+1
+             F_sum_complement= &
+              F_sum_complement+vofnew(D_DECL(i,j,k),vofcomp_local)
+            else if (is_rigid(nmat,im).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid(nmat,im) invalid"
+             stop
             endif
-           enddo !im=1..nmat
+           endif
+          enddo !im=1..nmat
+
+          if (F_local.ge.F_old) then 
+           if (F_sum_complement.gt.zero) then
+
+            F_sum_complement_new=F_sum_complement+F_old-F_local
+
+            vofnew(D_DECL(i,j,k),vofcomp)=F_local
+            do dir=1,SDIM
+             vofnew(D_DECL(i,j,k),vofcomp+dir)=X_local(dir)
+            enddo
+          
+            do im=1,nmat
+             if (im.ne.im_PLS_cpp+1) then
+              if (is_rigid(nmat,im).eq.0) then
+               vofcomp_local=(im-1)*ngeom_raw+1
+               vofnew(D_DECL(i,j,k),vofcomp_local)= &
+                F_sum_complement_new* &
+                 vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
+              else if (is_rigid(nmat,im).eq.1) then
+               ! do nothing
+              else
+               print *,"is_rigid(nmat,im) invalid"
+               stop
+              endif
+             endif
+            enddo !im=1..nmat
+           else if (F_sum_complement.eq.zero) then
+            ! do nothing
+           else
+            print *,"F_sum_complement invalid"
+            stop
+           endif
+          else if (F_local.le.F_old) then
+           ! sum_complement_new=sum_complement_old+F_old-F_local
+           ! if F_old=1 and F_local=0 then new sum complement=0+1-0=1
+           if ((F_sum_complement.eq.zero).or. &
+               (F_old.ge.one-VOFTOL)) then
+            ! do nothing since we do not know 
+            ! which material replaces im_PLS_cpp
+           else if ((F_sum_complement.gt.zero).and. &
+                    (F_old.le.one-VOFTOL)) then
+            F_sum_complement_new=F_sum_complement+F_old-F_local
+           
+            vofnew(D_DECL(i,j,k),vofcomp)=F_local
+            do dir=1,SDIM
+             vofnew(D_DECL(i,j,k),vofcomp+dir)=X_local(dir)
+            enddo
+           
+            do im=1,nmat
+             if (im.ne.im_PLS_cpp+1) then
+              if (is_rigid(nmat,im).eq.0) then
+               vofcomp_local=(im-1)*ngeom_raw+1
+               vofnew(D_DECL(i,j,k),vofcomp_local)= &
+                F_sum_complement_new* &
+                vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
+              else if (is_rigid(nmat,im).eq.1) then
+               ! do nothing
+              else
+               print *,"is_rigid(nmat,im) invalid"
+               stop
+              endif
+             endif
+            enddo !im=1..nmat
+           else
+            print *,"F_sum_complement or F_old invalid"
+            stop
+           endif
           else
-           print *,"F_sum_complement or F_old invalid"
+           print *,"F_old or F_local invalid"
            stop
           endif
          else
-          print *,"F_old or F_local invalid"
+          print *,"F_old invalid"
           stop
          endif
         else
