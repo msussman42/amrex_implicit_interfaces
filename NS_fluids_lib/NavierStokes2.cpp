@@ -6989,6 +6989,7 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
 
     // in: LEVELSET_3D.F90
    fort_assimilate_lvlset_from_particles(
+     particles_weight.dataPtr(),
      &tid_current,
      &im_PLS,
      &isweep,
