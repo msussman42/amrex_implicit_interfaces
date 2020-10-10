@@ -1480,6 +1480,7 @@ protected:
      // =1 hybridize with particles on the interface and interior
      // particleLS_flag[im]   im=0...num_materials-1
     static Vector<int> particleLS_flag;  
+    static Vector<Real> particles_weight; //=0.0 particles have no effect  
     static Vector<int> particle_nsubdivide;  
     static Vector<int> particle_max_per_nsubdivide;  
 

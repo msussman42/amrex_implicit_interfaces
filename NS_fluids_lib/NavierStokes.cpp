@@ -304,6 +304,7 @@ Vector<int> NavierStokes::truncate_volume_fractions;
 Vector<int> NavierStokes::particle_nsubdivide; 
 Vector<int> NavierStokes::particle_max_per_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
+Vector<Real> NavierStokes::particles_weight; 
 int NavierStokes::NS_ncomp_particles=0;
 
 Real NavierStokes::truncate_thickness=2.0;  
@@ -2530,13 +2531,16 @@ NavierStokes::read_params ()
     elastic_viscosity.resize(nmat);
     store_elastic_data.resize(nmat);
     particleLS_flag.resize(nmat);
+    particles_weight.resize(nmat);
     for (int im=0;im<nmat;im++) {
      elastic_viscosity[im]=0.0;
      store_elastic_data[im]=0;
      particleLS_flag[im]=0;
+     particles_weight[im]=0.0;
     }
     pp.queryarr("elastic_viscosity",elastic_viscosity,0,nmat);
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
+    pp.queryarr("particles_weight",particles_weight,0,nmat);
 
     for (int im=0;im<nmat;im++) {
      if (elastic_viscosity[im]>0.0) {
@@ -4085,6 +4089,8 @@ NavierStokes::read_params ()
         particle_max_per_nsubdivide[i] << '\n';
       std::cout << "particleLS_flag i= " << i << ' ' <<
         particleLS_flag[i] << '\n';
+      std::cout << "particles_weight i= " << i << ' ' <<
+        particles_weight[i] << '\n';
 
       std::cout << "NS_ncomp_particles= " << NS_ncomp_particles << '\n';
 
@@ -19775,6 +19781,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
     fort_assimilate_tensor_from_particles( 
+     particles_weight.dataPtr(),
      &im_elastic, // 0..nmat-1
      &isweep,
      &tid_current,
@@ -19977,6 +19984,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
      // 2. for each small sub-box, add a particles at the sub-box center
      //    and add a particle "x-phi grad phi/|grad phi|"
      fort_init_particle_container( 
+       particles_weight.dataPtr(),
        &tid_current,
        &single_particle_size,
        &isweep,

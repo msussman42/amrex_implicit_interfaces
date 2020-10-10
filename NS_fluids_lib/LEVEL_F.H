@@ -765,6 +765,7 @@ namespace amrex{
 
 
      void fort_init_particle_container(
+        Real* particles_weight,
         int* tid,
         int* single_particle_size,
         int* isweep,

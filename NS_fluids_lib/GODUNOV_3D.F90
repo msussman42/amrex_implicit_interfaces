@@ -29597,6 +29597,7 @@ stop
        ! called from NavierStokes.cpp:
        !  NavierStokes::accumulate_PC_info(int im_elastic)
       subroutine fort_assimilate_tensor_from_particles( &
+        particles_weight, &
         im_PLS_cpp, & ! 0..nmat-1
         isweep, &
         tid, &  ! thread id
@@ -29634,6 +29635,7 @@ stop
       INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: particles_weight(nmat)
       INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
@@ -29684,6 +29686,7 @@ stop
       REAL_T XDISP_local
       INTEGER_T LS_or_VOF_flag
       INTEGER_T im_elastic
+      REAL_T local_wt
 
       nhalf=3
 
@@ -29790,7 +29793,14 @@ stop
           XDNEWFAB(D_DECL(i,j,k),dir)=XDISP_local
          else if (A_matrix.gt.zero) then
           lambda=B_matrix/A_matrix
-          XDNEWFAB(D_DECL(i,j,k),dir)=XDISP_local-lambda
+          local_wt=particles_weight(im_PLS_cpp+1)
+          if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+           XDNEWFAB(D_DECL(i,j,k),dir)= &
+            (one-local_wt)*XDISP_local+local_wt*(XDISP_local-lambda)
+          else
+           print *,"local_wt invalid"
+           stop
+          endif
          else
           print *,"A_matrix invalid"
           stop
@@ -29814,7 +29824,7 @@ stop
 !         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
 
 
-       LS_or_VOF_flag=0
+       LS_or_VOF_flag=0 ! =0 => use LS for upwinding near interfaces
        im_elastic=im_PLS_cpp+1
        call local_tensor_from_xdisplace( &
         LS_or_VOF_flag, &
@@ -29923,7 +29933,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(XDISP_fab),2,-1,1271)
 
-      LS_or_VOF_flag=0
+      LS_or_VOF_flag=0  ! use LS for upwinding at interfaces
       im_elastic=im_PLS_cpp+1
       call local_tensor_from_xdisplace( &
         LS_or_VOF_flag, &
