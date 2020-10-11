@@ -13881,6 +13881,11 @@ END SUBROUTINE SIMP
        do dir=1,SDIM
         write(12,'(E25.16)',ADVANCE="NO") xrefT(dir)
        enddo
+        ! displacement
+       do dir=1,SDIM
+        write(12,'(E25.16)',ADVANCE="NO") &
+           xref(dir)-particles(ipart_counter)%extra_state(dir)
+       enddo
        do dir=1,N_EXTRA_REAL
         if (dir.lt.N_EXTRA_REAL) then
          write(12,'(E25.16)',ADVANCE="NO") &
@@ -13932,7 +13937,7 @@ END SUBROUTINE SIMP
 
       INTEGER_T i
       INTEGER_T ilev,igrid,ipass
-      REAL_T xref(SDIM+N_EXTRA_REAL)
+      REAL_T xref(SDIM+SDIM+N_EXTRA_REAL)
       INTEGER_T nparticles,Part_nparticles
       INTEGER_T alloc_flag
       INTEGER_T sysret
@@ -13998,11 +14003,13 @@ END SUBROUTINE SIMP
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
          write(12,'(A25)',ADVANCE="NO") 'VARIABLES = "X", "Y", "Z"'
+         write(12,'(A24)',ADVANCE="NO") ',"xdisp","ydisp","zdisp"'
          write(12,'(A34)',ADVANCE="NO") ',"x0","y0","z0","DIST","u","v","w"'
          write(12,*) ',"den","T","time add" ' 
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
          write(12,'(A20)',ADVANCE="NO") 'VARIABLES = "X", "Y"'
+         write(12,'(A16)',ADVANCE="NO") ',"xdisp","ydisp"'
          write(12,'(A25)',ADVANCE="NO") ',"x0","y0","DIST","u","v"'
          write(12,*) ',"den","T","time add" ' 
         else
@@ -14049,8 +14056,8 @@ END SUBROUTINE SIMP
          else if (ipass.eq.1) then
 
           do i=1,Part_nparticles
-           read(5,*) (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL)
-           write(12,*) (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL)
+           read(5,*) (xref(istruct),istruct=1,SDIM+SDIM+N_EXTRA_REAL)
+           write(12,*) (xref(istruct),istruct=1,SDIM+SDIM+N_EXTRA_REAL)
           enddo
 
          else
