@@ -1,0 +1,5 @@
+#!/bin/bash
+#tec360
+# TECPLOT ON A MAC:
+/Applications/Tecplot\ 360\ EX\ 2019\ R1/Tecplot\ 360\ EX\ 2019\ R1.app/Contents/MacOS/Tecplot\ 360\ EX\ 2019\ R1
+#/Applications/Tecplot ..../Tecplot ...app/Contents/MacOS/Tecplot ....

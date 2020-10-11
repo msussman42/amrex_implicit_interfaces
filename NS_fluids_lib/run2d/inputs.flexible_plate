@@ -60,8 +60,8 @@ ns.MOFITERMAX=15
 amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=0 # ZEYU
-ns.particleLS_flag=0 0 0
-ns.particles_weight=0 0 1.0
+ns.particleLS_flag=0 0 1
+ns.particles_weight=0 0 0.0 # 0.0=>particles have no weight   0<=wt<=1
 ns.particle_nsubdivide=1 1 1
 ns.particle_max_per_nsubdivide=100 100 100
 ns.radius_cutoff=0 0 -1
@@ -101,7 +101,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 8 8 4       # block factor in grid generation
 amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 200      # ZEYU
+amr.plot_int        = 10      # 200 for production runs
 #amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
