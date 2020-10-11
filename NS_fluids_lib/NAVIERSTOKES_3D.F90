@@ -13859,6 +13859,14 @@ END SUBROUTINE SIMP
       write(cenfilename23,'(A15,A3,A5)') cennamestr15,levstr,gridstr
       print *,"cenfilename23 ",cenfilename23
 
+       !x,y,z is not extra; (x0,y0,z0,r,u,v,w,den,T,insert time) is extra.
+      if (N_EXTRA_REAL.eq.2*SDIM+4) then
+       ! do nothing
+      else
+       print *,"N_EXTRA_REAL invalid"
+       stop
+      endif
+
       open(unit=12,file=cenfilename23)
       write(12,*) Np
 
@@ -13870,14 +13878,17 @@ END SUBROUTINE SIMP
        if (visual_RT_transform.eq.1) then
         call RT_transform(xref,xrefT)
        endif
-       if (SDIM.eq.3) then
-        write(12,*) xrefT(1),xrefT(2),xrefT(SDIM)
-       else if (SDIM.eq.2) then
-        write(12,*) xrefT(1),xrefT(2)
-       else
-        print *,"dimension bust"
-        stop
-       endif
+       do dir=1,SDIM
+        write(12,'(E25.16)',ADVANCE="NO") xrefT(dir)
+       enddo
+       do dir=1,N_EXTRA_REAL
+        if (dir.lt.N_EXTRA_REAL) then
+         write(12,'(E25.16)',ADVANCE="NO") &
+          particles(ipart_counter)%extra_state(dir)
+        else
+         write(12,'(E25.16)') particles(ipart_counter)%extra_state(dir)
+        endif
+       enddo ! dir=1..N_EXTRA_REAL
       enddo ! ipart_counter=1,Np
 
       close(12)
@@ -13921,10 +13932,11 @@ END SUBROUTINE SIMP
 
       INTEGER_T i
       INTEGER_T ilev,igrid,ipass
-      REAL_T xref(SDIM)
+      REAL_T xref(SDIM+N_EXTRA_REAL)
       INTEGER_T nparticles,Part_nparticles
       INTEGER_T alloc_flag
       INTEGER_T sysret
+      INTEGER_T istruct
 
       alloc_flag=0
 
@@ -13975,12 +13987,24 @@ END SUBROUTINE SIMP
         print *,"newcenfilename21 ",newcenfilename21
         open(unit=12,file=newcenfilename21)
 
+         !x,y,z is not extra; (x0,y0,z0,r,u,v,w,den,T,insert time) is extra.
+        if (N_EXTRA_REAL.eq.2*SDIM+4) then
+         ! do nothing
+        else
+         print *,"N_EXTRA_REAL invalid"
+         stop
+        endif
+
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
-         write(12,*) 'VARIABLES = "X", "Y", "Z" '
+         write(12,'(A25)',ADVANCE="NO") 'VARIABLES = "X", "Y", "Z"'
+         write(12,'(A34)',ADVANCE="NO") ',"x0","y0","z0","DIST","u","v","w"'
+         write(12,*) ',"den","T","time add" ' 
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
-         write(12,*) 'VARIABLES = "X", "Y" '
+         write(12,'(A20)',ADVANCE="NO") 'VARIABLES = "X", "Y"'
+         write(12,'(A25)',ADVANCE="NO") ',"x0","y0","DIST","u","v"'
+         write(12,*) ',"den","T","time add" ' 
         else
          print *,"dimension bust"
          stop
@@ -13992,7 +14016,6 @@ END SUBROUTINE SIMP
          strandid=(nsteps/plotint)+1
         endif
 
-!       write(12,'(A19,I14,A26,D25.16,A10,I10)') & 
         write(12,'(A19,I14,A26,E25.16,A10,I10)') & 
           'ZONE F="POINT", I= ', nparticles,  &
           ', J=1, K=1, SOLUTIONTIME= ',time,' STRANDID=',strandid
@@ -14026,16 +14049,8 @@ END SUBROUTINE SIMP
          else if (ipass.eq.1) then
 
           do i=1,Part_nparticles
-           if (SDIM.eq.3) then
-            read(5,*) xref(1),xref(2),xref(SDIM)
-            write(12,*) xref(1),xref(2),xref(SDIM)
-           else if (SDIM.eq.2) then
-            read(5,*) xref(1),xref(2)
-            write(12,*) xref(1),xref(2)
-           else
-            print *,"dimension bust"
-            stop
-           endif
+           read(5,*) (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL)
+           write(12,*) (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL)
           enddo
 
          else
