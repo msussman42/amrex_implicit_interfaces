@@ -2,11 +2,11 @@ CXX	=g++
 CXXFLAGS=-g
 
 # Normal object files to be created
-OBJECTS = inverse_advection.o
+OBJECTS = closest_point.o
 # Object files created with no automatic differentiation
 #NO_AD_OBJECTS = test.o
 # Program name
-PROGRAM = inverse_advection
+PROGRAM = closest_point
 # Include-file location
 INCLUDES = -I/usr/local/include -I../adept-2.0.5/include
 # Library location and name, plus the math library

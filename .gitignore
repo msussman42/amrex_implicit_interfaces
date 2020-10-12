@@ -5,6 +5,7 @@ autodiff/*.tar.gz
 autodiff/examples/*.o
 autodiff/examples/test_AD
 autodiff/examples/inverse_advection
+autodiff/examples/closest_point
 NS_fluids_lib/tmp_build_dir
 NS_fluids_lib/test
 NS_fluids_lib/amr*
