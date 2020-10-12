@@ -7,6 +7,18 @@
 // 6. cd examples
 // 7. create a program (e.g. closest_point.cpp) and make sure
 //    to include <adept_source.h> and <adept.h>
+// THIS CODE IS AN EXAMPLE USING AUTOMATIC DIFFERENTIATION FOR MINIMIZING THE FUNCTION
+//   1. J(x)=(x-x0)^2 + (f(x)-y0)^2  using the fixed point method (also known as the steepest 
+//      descent method)
+//   2. x_closest=argmin_x J(x)  is the same problem as:
+//      solve J'(x_closest)=0 if J''(x)>0 at the critical point and J is a convex function.
+//   3. J'(x)=0  is equivalent to the fixed point problem:
+//      x=x - r J'(x)   r= learning rate
+//   4. Is g(x)=x-r J'(x) a contraction mapping?
+//      g'(x)=1-r J''(x)  we had assumed in (item 2) just above that J''>0 (convex function) which
+//      means for "r" sufficiently small, |g'(x)|<1. (prove this rigorously +2)
+//
+//   5. fixed point method is: xnp1 = xn - r J'(xn) 
 #include <iostream>
 #include <fstream>
 #include <math.h>
@@ -62,6 +74,9 @@ int main() {
  double dy_dx;
  x_val=3.0;
 
+  // f(3)=3*3+5=14
+  // J(3)=(2-3)^2+(14-1)^2=1+169=170
+  // J'(x)=2(x0-x)+2(f(x)-y0)f'(x)=-2(2-3)+2(14-1)3=2+13(6)=80
  double y=algorithm_and_gradient(x_val,dy_dx);
  std::cout << "x_val= " << x_val << '\n';
  std::cout << "y= " << y << '\n';
