@@ -85,6 +85,8 @@ stop
       type TSAT_MASS_FRAC_parm_type
        type(probe_parm_type), pointer :: PROBE_PARMS
        INTEGER_T :: Tanasawa_or_Schrage_or_Kassemi
+       REAL_T :: accommodation_coefficient
+       REAL_T :: reference_pressure
        REAL_T :: universal_gas_constant_R
        REAL_T :: molar_mass_ambient   
        REAL_T :: molar_mass_vapor
@@ -2638,6 +2640,7 @@ stop
        TSAT_Y_PARMS, &
        Y_gamma,T_gamma, &
        mdotY_top,mdotY_bot,mdotY)
+      use global_utility_module
       IMPLICIT NONE
 
       type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
@@ -2662,6 +2665,12 @@ stop
       REAL_T den_G
       REAL_T YI_min
       INTEGER_T Kassemi_flag
+      REAL_T Pgamma
+      REAL_T density_probe,Tvapor_probe,internal_energy,Pvapor_probe
+      INTEGER_T im_probe
+      INTEGER_T imattype
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -2743,8 +2752,46 @@ stop
 
          else if (Kassemi_flag.eq.3) then
 
-!          call MDOT_Kassemi(sigma,MolarMassFluid,R,Pgamma,Pvapor_probe, &
-!             Tgamma,Tvapor_probe,mdotY)
+          call Pgamma_Clausius_Clapyron(Pgamma, &
+           TSAT_Y_PARMS%reference_pressure, &
+           T_gamma, &
+           TSAT_Y_PARMS%TSAT_base, &
+           LL, &
+           TSAT_Y_PARMS%universal_gas_constant_R, &
+           TSAT_Y_PARMS%molar_mass_vapor)
+
+          density_probe=den_I_interp(iprobe_vapor)
+          Tvapor_probe=T_probe(iprobe_vapor)
+
+          if (LL.gt.zero) then 
+           im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_dest
+          else if (LL.lt.zero) then
+           im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_source
+          else
+           print *,"LL invalid"
+           stop
+          endif
+
+          call init_massfrac_parm(density_probe,massfrac_parm,im_probe)
+          do ispec=1,num_species_var
+           massfrac_parm(ispec)=Y_gamma
+          enddo
+
+          imattype=fort_material_type(im_probe)
+          call INTERNAL_material(density_probe,massfrac_parm, &
+            Tvapor_probe,internal_energy,imattype,im_probe)
+          call EOS_material(density_probe,massfrac_parm,internal_energy, &
+            Pvapor_probe,imattype,im_probe)
+
+          call MDOT_Kassemi( &
+             TSAT_Y_PARMS%accommodation_coefficient, &
+             TSAT_Y_PARMS%molar_mass_vapor, &
+             TSAT_Y_PARMS%universal_gas_constant_R, &
+             Pgamma, &
+             Pvapor_probe, &
+             T_gamma, &
+             Tvapor_probe, &
+             mdotY)
           mdotY_top=mdotY
           mdotY_bot=one
 
@@ -6290,6 +6337,8 @@ stop
        reaction_rate, &
        hardwire_Y_gamma, &
        hardwire_T_gamma, &
+       accommodation_coefficient, &
+       reference_pressure, &
        saturation_temp, &
        saturation_temp_curv, &
        saturation_temp_vel, &
@@ -6380,6 +6429,8 @@ stop
       REAL_T :: K_f(0:1)
       REAL_T, intent(in) :: hardwire_Y_gamma(2*nten)
       REAL_T, intent(in) :: hardwire_T_gamma(2*nten)
+      REAL_T, intent(in) :: accommodation_coefficient(2*nten)
+      REAL_T, intent(in) :: reference_pressure(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       REAL_T, intent(in) :: saturation_temp_curv(2*nten)
       REAL_T, intent(in) :: saturation_temp_vel(2*nten)
@@ -7859,6 +7910,10 @@ stop
                     TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
                     TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= &
                            local_Tanasawa_or_Schrage_or_Kassemi
+                    TSAT_Y_PARMS%accommodation_coefficient= &
+                          accommodation_coefficient(iten+ireverse*nten) 
+                    TSAT_Y_PARMS%reference_pressure= &
+                          reference_pressure(iten+ireverse*nten) 
                     TSAT_Y_PARMS%YI_min=Y_interface_min
                     TSAT_Y_PARMS%TI_min=TI_min
                     TSAT_Y_PARMS%TI_max=TI_max

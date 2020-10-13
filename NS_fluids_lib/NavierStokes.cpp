@@ -636,6 +636,9 @@ Vector<Real> NavierStokes::cap_wave_speed;
 
 Vector<Real> NavierStokes::hardwire_Y_gamma;
 Vector<Real> NavierStokes::hardwire_T_gamma;
+// "p_boil" in Dodd and Ferrante
+Vector<Real> NavierStokes::reference_pressure;
+Vector<Real> NavierStokes::accommodation_coefficient;
 Vector<Real> NavierStokes::saturation_temp;
 Vector<Real> NavierStokes::saturation_temp_curv;
 Vector<Real> NavierStokes::saturation_temp_vel;
@@ -1869,7 +1872,7 @@ void fortran_parameters() {
     mof_ordering_local[im] << '\n';
   }
  }
-}  // subroutine fortran_parameters()
+}  // end subroutine fortran_parameters()
 
 
 
@@ -2846,6 +2849,8 @@ NavierStokes::read_params ()
 
     hardwire_Y_gamma.resize(2*nten);
     hardwire_T_gamma.resize(2*nten);
+    accommodation_coefficient.resize(2*nten);
+    reference_pressure.resize(2*nten);
     saturation_temp.resize(2*nten);
     saturation_temp_curv.resize(2*nten);
     saturation_temp_vel.resize(2*nten);
@@ -2898,6 +2903,10 @@ NavierStokes::read_params ()
      hardwire_Y_gamma[i+nten]=0.0;
      hardwire_T_gamma[i]=0.0;
      hardwire_T_gamma[i+nten]=0.0;
+     accommodation_coefficient[i]=0.0;
+     accommodation_coefficient[i+nten]=0.0;
+     reference_pressure[i]=0.0;
+     reference_pressure[i+nten]=0.0;
      saturation_temp[i]=0.0;
      saturation_temp[i+nten]=0.0;
      saturation_temp_curv[i]=0.0;
@@ -3172,6 +3181,9 @@ NavierStokes::read_params ()
 
     pp.queryarr("hardwire_Y_gamma",hardwire_Y_gamma,0,2*nten);
     pp.queryarr("hardwire_T_gamma",hardwire_T_gamma,0,2*nten);
+    pp.queryarr("accommodation_coefficient",
+		 accommodation_coefficient,0,2*nten);
+    pp.queryarr("reference_pressure",reference_pressure,0,2*nten);
     pp.queryarr("saturation_temp",saturation_temp,0,2*nten);
     pp.queryarr("saturation_temp_curv",saturation_temp_curv,0,2*nten);
     pp.queryarr("saturation_temp_vel",saturation_temp_vel,0,2*nten);
@@ -4245,6 +4257,16 @@ NavierStokes::read_params ()
        hardwire_Y_gamma[i] << '\n';
       std::cout << "hardwire_Y_gamma i+nten=" << i+nten << "  " << 
        hardwire_Y_gamma[i+nten] << '\n';
+
+      std::cout << "accommodation_coefficient i=" << i << "  " << 
+       accommodation_coefficient[i] << '\n';
+      std::cout << "accommodation_coefficient i+nten=" << i+nten << "  " << 
+       accommodation_coefficient[i+nten] << '\n';
+
+      std::cout << "reference_pressure i=" << i << "  " << 
+       reference_pressure[i] << '\n';
+      std::cout << "reference_pressure i+nten=" << i+nten << "  " << 
+       reference_pressure[i+nten] << '\n';
 
       std::cout << "saturation_temp i=" << i << "  " << 
        saturation_temp[i] << '\n';
@@ -11070,6 +11092,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      reaction_rate.dataPtr(),
      hardwire_Y_gamma.dataPtr(),
      hardwire_T_gamma.dataPtr(),
+     accommodation_coefficient.dataPtr(),
+     reference_pressure.dataPtr(),
      saturation_temp.dataPtr(),
      saturation_temp_curv.dataPtr(),
      saturation_temp_vel.dataPtr(),
@@ -11155,6 +11179,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      reaction_rate.dataPtr(),
      hardwire_Y_gamma.dataPtr(),
      hardwire_T_gamma.dataPtr(),
+     accommodation_coefficient.dataPtr(),
+     reference_pressure.dataPtr(),
      saturation_temp.dataPtr(),
      saturation_temp_curv.dataPtr(),
      saturation_temp_vel.dataPtr(),

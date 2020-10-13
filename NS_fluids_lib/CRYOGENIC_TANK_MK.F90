@@ -20,18 +20,33 @@ print *,"dimension bust"
 stop
 #endif
 
-! probtype==422 (see run2d/inputs.CRYOGENIC_TANK_MK)
+! probtype==423 (see run2d/inputs.CRYOGENIC_TANK_MK)
 module CRYOGENIC_TANK_MK_module
 
-implicit none                   
-! Tank outter radius
-REAL_T :: TANK_MK_RADIUS         
-! Tank outher height
-REAL_T :: TANK_MK_HEIGHT         
-! Tank wall thickness
-REAL_T :: TANK_MK_THICKNESS      
-! Location of liquid-gas interface in respect to z=0
-REAL_T :: TANK_MK_LIQUID_HEIGHT  
+implicit none
+!! MIDLLE OF THE TANK IS AT Z=0 
+! Tank inner radius
+REAL_T :: TANK_MK_RADIUS
+! Tank inner height (inner wall height)
+REAL_T :: TANK_MK_HEIGHT
+! Location of liquid-gas interface in respect to
+! middle of tank at z=0
+REAL_T :: TANK_MK_LIQUID_HEIGHT
+! Tank speherical end radius
+REAL_T :: TANK_MK_END_RADIUS
+! Tank speherical end curvature center (0,C_z)
+REAL_T :: TANK_MK_END_CENTER
+! Heater flux
+REAL_T :: TANK_MK_HEATER_FLUX
+! Heater location in dim=2 direction
+REAL_T :: TANK_MK_HEATER_LOW
+REAL_T :: TANK_MK_HEATER_HIGH
+
+! Flat or spherical interface
+REAL_T :: TANK_MK_INTERFACE_RADIUS
+REAL_T :: TANK_MK_BUBBLE_X
+REAL_T :: TANK_MK_BUBBLE_Y
+REAL_T :: TANK_MK_BUBBLE_Z
 
 ! Initial mixture pressure
 REAL_T :: TANK_MK_INITIAL_PRESSURE
@@ -48,11 +63,22 @@ contains
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module
   implicit none
-  TANK_MK_RADIUS = xblob
-  TANK_MK_HEIGHT = yblob
-  TANK_MK_THICKNESS = radblob
-  TANK_MK_LIQUID_HEIGHT = zblob
+  TANK_MK_RADIUS           = xblob
+  TANK_MK_HEIGHT           = yblob
+  TANK_MK_LIQUID_HEIGHT    = zblob
 
+  TANK_MK_INTERFACE_RADIUS = radblob2
+  TANK_MK_BUBBLE_X         = xblob2
+  TANK_MK_BUBBLE_Y         = yblob2
+  TANK_MK_BUBBLE_Y         = zblob2
+
+  TANK_MK_HEATER_FLUX      = xblob3
+  TANK_MK_HEATER_LOW       = yblob3
+  TANK_MK_HEATER_HIGH      = zblob3
+
+  TANK_MK_END_RADIUS       = xblob4
+  TANK_MK_END_CENTER       = yblob4
+  
 
   ! ASSUMING IDEA GAS => The gas heat cpacities should satisfy this
   ! R_spc = C_{p,spc}-C_{v,spc}
@@ -93,7 +119,6 @@ contains
   REAL_T, intent(in) :: x(SDIM)
   REAL_T, intent(in) :: t
   REAL_T, intent(out) :: LS(nmat)
-  REAL_T ls_o,ls_i
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -102,18 +127,20 @@ contains
    stop
   endif
 
-  if ((num_materials.eq.3).and.(probtype.eq.422)) then
+  if ((num_materials.eq.3).and.(probtype.eq.423)) then
    ! liquid
-   LS(1)=TANK_MK_LIQUID_HEIGHT-x(2)
-
-   if (radblob2.eq.zero) then
-    ! do nothing
-   else if (radblob2.gt.zero) then
+   if (TANK_MK_INTERFACE_RADIUS.eq.zero) then
+    LS(1)=TANK_MK_LIQUID_HEIGHT-x(2)
+   else if (TANK_MK_INTERFACE_RADIUS.gt.zero) then
     if (SDIM.eq.2) then
-     LS(1)=sqrt((x(1)-xblob2)**2+(x(2)-yblob2)**2)-radblob2
+     LS(1)=sqrt((x(1)-TANK_MK_BUBBLE_X)**2+&
+                (x(2)-TANK_MK_BUBBLE_Y)**2)&
+               -TANK_MK_INTERFACE_RADIUS
     else if (SDIM.eq.3) then 
-     LS(1)=sqrt((x(1)-xblob2)**2+(x(2)-yblob2)**2+ &
-                (x(SDIM)-zblob2)**2)-radblob2
+     LS(1)=sqrt((x(1)-TANK_MK_BUBBLE_X)**2+&
+                (x(2)-TANK_MK_BUBBLE_Y)**2+&
+                (x(SDIM)-TANK_MK_BUBBLE_Z)**2)&
+               -TANK_MK_INTERFACE_RADIUS
     else
      print *,"dimension bust"
      stop
@@ -122,26 +149,9 @@ contains
     print *,"radblob2 invalid"
     stop
    endif 
-
    LS(2)=-LS(1)
-
    ! Solid
-   ls_o = DIST_FINITE_CYLINDER(x,TANK_MK_RADIUS,zero,TANK_MK_HEIGHT)
-   ls_i = DIST_FINITE_CYLINDER(x,TANK_MK_RADIUS-TANK_MK_THICKNESS,&
-    TANK_MK_THICKNESS,TANK_MK_HEIGHT-TANK_MK_THICKNESS)
-   if((ls_o.ge.zero).and.(ls_i.ge.zero)) then
-    ! outside of tank
-    LS(3) = -min(ls_o,ls_i)
-   else if((ls_o.le.zero).and.(ls_i.le.zero)) then
-    ! inside of tank cavity
-    LS(3) = -min(-ls_o,-ls_i)
-   else if((ls_o.lt.zero).and.(ls_i.gt.zero)) then
-    ! inside of tank wall
-    LS(3) = min(-ls_o,ls_i)
-   else
-    print *,"tank level set calculation failed!"
-    stop
-   endif
+   LS(3)=SOLID_TOP_HALF_DIST(x)
   else
    print *,"num_materials ", num_materials
    print *,"probtype ", probtype
@@ -193,87 +203,87 @@ contains
   return 
  end subroutine CRYOGENIC_TANK_MK_VEL
 
-REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
- ! Returns the signed distance function to the cylinder
- ! surfaces (including top and bottom)
- ! The axis of cylinder is along SDIM=2 direction
- ! Cylinder radus is R_cyl
- ! Bottom and top faces are at H_bot and H_top
- ! Inside the cylinder < 0
- ! Outside the cylinder > 0
+REAL_T function SOLID_TOP_HALF_DIST(P)
+ ! Returns the signed distance function to the
+ ! cylinderical tank with spherical ends.
+ ! The tank is symmetrical to x(dim=2)=0;
+ ! The axis of cylinder is along dim=2 direction
+ ! Inside the tank < 0
+ ! Outside the tank > 0
  implicit none
 
  REAL_T, intent(in), dimension(SDIM) :: P
- REAL_T, intent(in) :: R_cyl
- REAL_T, intent(in) :: H_bot
- REAL_T, intent(in) :: H_top
+ REAL_T R,Z,FRZ,D1,D2
  
- REAL_T x,y,z,r
- REAL_T dist_cyl, dist_end
- 
- x=P(1)
- y=P(2)
  if (SDIM.eq.2) then
-  z=zero
- else if(SDIM.eq.3) then
-  z=P(SDIM)
- else
-  print *,"dimension bust at DIST_FINITE_CYLINDER"
- endif
-
- r = sqrt(x**2+z**2)
- if((H_bot.le.y).and.(y.le.H_top)) then
-  ! between top and bottom
-  if(r.ge.R_cyl) then
-   ! outside
-   DIST_FINITE_CYLINDER = r-R_cyl
-  else if (r.lt.R_cyl) then
-   ! inside
-   dist_cyl = R_cyl-r
-   dist_end = min(H_top-y,y-H_bot)
-   DIST_FINITE_CYLINDER = -min(dist_cyl,dist_end)
+  R=abs(P(1))
+  Z=abs(P(2))
+ elseif (SDIM.eq.3) then
+  R=abs(sqrt(P(1)**2+P(SDIM)**2))
+  Z=abs(P(2))
   else
-   print *,"r=",r
-   print *,"invalid r value at DIST_FINITE_CYLINDER (1)"
-   stop
-  endif
-
- else if (y.gt.H_top) then
-  ! higher than top
-  if(r.le.R_cyl) then
-   ! inside infinite cylinder
-   DIST_FINITE_CYLINDER = y-H_top
-  else if (r.gt.R_cyl) then
-   ! outside infinite cylinder
-   ! distance to the edge of the top
-   DIST_FINITE_CYLINDER = &
-    sqrt((r-R_cyl)**2 + (y-H_top)**2)
-  else
-   print *,"r=",r
-   print *,"invalid r value at DIST_FINITE_CYLINDER (2)"
-   stop
-  endif
-
- else if (y.lt.H_bot) then
-  ! lower than bottom
-  if(r.le.R_cyl) then
-   ! inside infinite cylinder
-   DIST_FINITE_CYLINDER = H_bot-y
-  else if (r.gt.R_cyl) then
-   ! outside infinite cylinder
-   ! distance to the edge of the bottom
-   DIST_FINITE_CYLINDER = &
-    sqrt((r-R_cyl)**2 + (H_bot-y)**2)
-  else
-   print *,"r=",r
-   print *,"invalid r value at DIST_FINITE_CYLINDER (3)"
-   stop
-  endif
- else
-  print *,"invalid y value at DIST_FINITE_CYLINDER"
+  print *,"Dimension bust at DIST_FINITE_CYLINDER"
   stop
  endif
-end function DIST_FINITE_CYLINDER
+ 
+ ! Equation of the line passing through (0,TANK_MK_END_CENTER) and
+ ! (TANK_MK_RADIUS,TANK_MK_HEIGHT/2)
+ FRZ=R*(TANK_MK_END_CENTER-TANK_MK_HEIGHT/2)/TANK_MK_RADIUS &
+     + Z - TANK_MK_END_CENTER
+
+ if (FRZ.le.zero) then
+  ! Below line
+  if (R.le.TANK_MK_RADIUS) then
+   ! In the tank
+   D1 = TANK_MK_RADIUS - R
+   D2 = sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+   SOLID_TOP_HALF_DIST = -min(D1,D2)
+  elseif (R.gt.TANK_MK_RADIUS) then
+   ! Out of the tank
+   if(Z.le.TANK_MK_HEIGHT/2) then
+    ! Below the cap base line
+    SOLID_TOP_HALF_DIST = R - TANK_MK_RADIUS
+   elseif (Z.gt.TANK_MK_HEIGHT/2) then
+    ! Above the cap baseline
+    SOLID_TOP_HALF_DIST = &
+     sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+   else
+    print *,"Z invalid!"
+    stop
+   endif ! Z
+  else
+   print *,"Z invalid!"
+   stop
+  endif ! R
+ elseif (FRZ.gt.zero) then
+  ! Above line
+  ! Distance to curvature center
+  D2 = sqrt(R**2 + (Z-TANK_MK_END_CENTER)**2)
+  if (D2.le.TANK_MK_END_RADIUS) then
+   ! Inside tank
+   if (Z.le.TANK_MK_HEIGHT/2) then
+    ! Below the cap baseline
+    D1 = TANK_MK_RADIUS - R
+   elseif (Z.gt.TANK_MK_HEIGHT/2) then
+    ! Above the cap baseline
+    D1 = sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+   else
+    print *,"Z invalid!"
+    stop
+   endif ! Z
+   SOLID_TOP_HALF_DIST = -min(TANK_MK_END_RADIUS-D2,D1)
+  elseif (D2.gt.TANK_MK_END_RADIUS) then
+   SOLID_TOP_HALF_DIST = D2-TANK_MK_END_RADIUS
+  else
+   print *,"Distance to curvature center invalid!"
+   stop
+  end if ! D2
+  
+ else
+  print *,"Line equation invalid!"
+ end if ! FRZ
+
+end function SOLID_TOP_HALF_DIST
 
 !***********************************************
 ! compressible material functions for (ns.material_type = 24)
@@ -283,7 +293,7 @@ end function DIST_FINITE_CYLINDER
 ! U = C_{v,spc} T
 ! [U] = J/kg= J/(kg K)  K
 ! R_spc = C_{p,scp}-C_{v,scp}
-! R_unv = C_{p,m} - C_{v,m} 
+! R_unv = C_{p,m} - C_{v,m}
 ! gamma = C_{p,scp}/C_{v,scp}
 !
 ! p = rho R_spc T 
@@ -417,7 +427,6 @@ subroutine TEMPERATURE_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
- REAL_T :: denom
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -515,7 +524,7 @@ endif
 
 if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
-    (probtype.eq.422)) then
+    (probtype.eq.423)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+1)=fort_denconst(im)
@@ -713,7 +722,7 @@ end subroutine CRYOGENIC_TANK_MK_STATE_BC
 ! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
 !      (1/V)A_{right} (-q_{right} dot n_right)
 !
-! xblob3 \equiv -q dot n
+! TANK_MK_HETAER_FLUX \equiv -q dot n
 subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
      im,VFRAC, &
      time, &
@@ -761,7 +770,7 @@ do dir=1,SDIM
  endif
 enddo
 
-if ((num_materials.eq.3).and.(probtype.eq.422)) then
+if ((num_materials.eq.3).and.(probtype.eq.423)) then
  heat_source=zero
  if (im.eq.1) then
   ! do nothing (liquid)
@@ -770,12 +779,14 @@ if ((num_materials.eq.3).and.(probtype.eq.422)) then
  else if (im.eq.3) then
   ! right side of domain
   heat_source=zero
-  if ((xsten(0,1).lt.TANK_MK_RADIUS).and. &
-      (xsten(2,1).gt.TANK_MK_RADIUS)) then
+  if ((abs(xsten(0,1)).lt.TANK_MK_RADIUS).and.&
+      (abs(xsten(2,1)).gt.TANK_MK_RADIUS).and.&
+      (xsten(0,2).gt.TANK_MK_HEATER_LOW).and.&
+      (xsten(0,2).lt.TANK_MK_HEATER_HIGH)) then
       ! area=2 pi rf dz
       ! vol =2 pi rc dr dz
       ! area/vol=rf/(rc dr)
-   flux_magnitude=xblob3
+   flux_magnitude=TANK_MK_HEATER_FLUX
    if (levelrz.eq.1) then
     denom=xsten(0,1)*local_dx(1)
     if (denom.gt.zero) then
@@ -797,23 +808,23 @@ if ((num_materials.eq.3).and.(probtype.eq.422)) then
    endif
   endif
 
-  if ((xsten(0,SDIM).lt.TANK_MK_HEIGHT).and. &
-      (xsten(2,SDIM).gt.TANK_MK_HEIGHT)) then
-      ! area=2 pi rc dr
-      ! vol =2 pi rc dr dz
-      ! area/vol=1/(dz)
-   flux_magnitude=xblob3/local_dx(SDIM)
-   heat_source=heat_source+flux_magnitude
-  endif
+  ! if ((xsten(0,SDIM).lt.TANK_MK_HEIGHT).and. &
+  !     (xsten(2,SDIM).gt.TANK_MK_HEIGHT)) then
+  !     ! area=2 pi rc dr
+  !     ! vol =2 pi rc dr dz
+  !     ! area/vol=1/(dz)
+  !  flux_magnitude=TANK_MK_HETAER_FLUX/local_dx(SDIM)
+  !  heat_source=heat_source+flux_magnitude
+  ! endif
 
-  if ((xsten(0,SDIM).gt.zero).and. &
-      (xsten(-2,SDIM).lt.zero)) then
-      ! area=2 pi rc dr
-      ! vol =2 pi rc dr dz
-      ! area/vol=1/(dz)
-   flux_magnitude=xblob3/local_dx(SDIM)
-   heat_source=heat_source+flux_magnitude
-  endif
+  ! if ((xsten(0,SDIM).gt.zero).and. &
+  !     (xsten(-2,SDIM).lt.zero)) then
+  !     ! area=2 pi rc dr
+  !     ! vol =2 pi rc dr dz
+  !     ! area/vol=1/(dz)
+  !  flux_magnitude=TANK_MK_HETAER_FLUX/local_dx(SDIM)
+  !  heat_source=heat_source+flux_magnitude
+  ! endif
 
  else
   print *,"im invalid in CRYOGENIC_TANK_MK_HEATSOURCE"

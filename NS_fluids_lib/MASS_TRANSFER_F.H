@@ -126,6 +126,8 @@ extern "C"
     Real* reaction_rate,
     Real* hardwire_Y_gamma,
     Real* hardwire_T_gamma,
+    Real* accommodation_coefficient,
+    Real* reference_pressure,
     Real* saturation_temp,
     Real* saturation_temp_curv,
     Real* saturation_temp_vel,
