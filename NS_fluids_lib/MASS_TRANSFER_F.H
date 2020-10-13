@@ -132,7 +132,7 @@ extern "C"
     Real* saturation_temp_min,
     Real* saturation_temp_max,
     int* freezing_model,
-    int* Tanasawa_or_Schrage,
+    int* Tanasawa_or_Schrage_or_Kassemi,
     int* distribute_from_target,
     int* mass_fraction_id,
     Real* species_evaporation_density,

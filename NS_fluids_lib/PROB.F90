@@ -24900,7 +24900,8 @@ end subroutine RatePhaseChange
        molar_mass, &
        species_molar_mass, &
        local_freezing_model, &
-       local_Tanasawa_or_Schrage, & ! 1=Tanasawa  2=Schrage
+         ! 1=Tanasawa  2=Schrage 3=Kassemi
+       local_Tanasawa_or_Schrage_or_Kassemi, & 
        species_evaporation_density, &
        distribute_from_target, &
        vel, &
@@ -24941,7 +24942,8 @@ end subroutine RatePhaseChange
       INTEGER_T, intent(in) :: for_estdt
       REAL_T, intent(in) :: xI(SDIM)
       INTEGER_T, intent(in) :: local_freezing_model
-      INTEGER_T, intent(in) :: local_Tanasawa_or_Schrage !1=Tanasawa 2=Schrage
+!1=Tanasawa 2=Schrage 3=Kassemi
+      INTEGER_T, intent(in) :: local_Tanasawa_or_Schrage_or_Kassemi
        ! MEHDI EVAPORATION
       INTEGER_T, intent(in) :: ispec ! 0 if no species  1..num_species_var
        ! MEHDI EVAPORATION
@@ -25314,7 +25316,7 @@ end subroutine RatePhaseChange
           stop
          endif
           !EVAPORATION
-         if (local_Tanasawa_or_Schrage.eq.1) then ! Tanasawa
+         if (local_Tanasawa_or_Schrage_or_Kassemi.eq.1) then ! Tanasawa
 
           if ((Tsrc_INT.gt.Tsat).and.(Tdst_INT.gt.Tsat)) then
            velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
@@ -25336,7 +25338,8 @@ end subroutine RatePhaseChange
 
           endif
 
-         else if (local_Tanasawa_or_Schrage.eq.2) then !approximate schrage
+           !approximate schrage
+         else if (local_Tanasawa_or_Schrage_or_Kassemi.eq.2) then 
           ! MEHDI EVAPORATION
 
           ! gamma: Accomodation coefficient
@@ -25489,7 +25492,7 @@ end subroutine RatePhaseChange
           endif
 
          else
-          print *,"local_Tanasawa_or_Schrage invalid"
+          print *,"local_Tanasawa_or_Schrage_or_Kassemi invalid"
           stop
          endif
         else if (LL.lt.zero) then ! condensation
@@ -25497,7 +25500,7 @@ end subroutine RatePhaseChange
           print *,"distribute_from_target invalid"
           stop
          endif
-         if (local_Tanasawa_or_Schrage.eq.1) then ! Tanasawa
+         if (local_Tanasawa_or_Schrage_or_Kassemi.eq.1) then ! Tanasawa
 
           if ((Tsrc_INT.lt.Tsat).and.(Tdst_INT.lt.Tsat)) then
            velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
@@ -25517,10 +25520,10 @@ end subroutine RatePhaseChange
            endif
           endif
 
-         else if (local_Tanasawa_or_Schrage.eq.2) then !schrage
+         else if (local_Tanasawa_or_Schrage_or_Kassemi.eq.2) then !schrage
           ! MEHDI EVAPORATION (CONDENSATION)
          else
-          print *,"local_Tanasawa_or_Schrage invalid"
+          print *,"local_Tanasawa_or_Schrage_or_Kassemi invalid"
           stop
          endif
 
@@ -27688,6 +27691,7 @@ end subroutine initialize2d
          ccbfact_space_order, &
          ccbfact_time_order, &
          ccprescribe_temperature_outflow, &
+         ccsolidheat_flag, &
          rz_flag, &
          ccFSI_flag, &
          ccZEYU_DCA_SELECT, &
@@ -27803,98 +27807,101 @@ end subroutine initialize2d
 
        IMPLICIT NONE
 
-       INTEGER_T ccmax_level
-       INTEGER_T ccbfact_space_order(0:ccmax_level)
-       INTEGER_T ccbfact_time_order
-       INTEGER_T ccnum_materials
+       INTEGER_T, intent(in) :: ccmax_level
+       INTEGER_T, intent(in) :: ccbfact_space_order(0:ccmax_level)
+       INTEGER_T, intent(in) :: ccbfact_time_order
+       INTEGER_T, intent(in) :: ccnum_materials
 
-       INTEGER_T ccnten
-       REAL_T ccMUSHY_THICK
-       REAL_T ccgravity
-       INTEGER_T ccgravity_dir
-       INTEGER_T ccinvert_gravity
-       INTEGER_T ccFSI_flag(ccnum_materials)
-       INTEGER_T ccZEYU_DCA_SELECT
-       INTEGER_T ccinvert_solid_levelset
-       INTEGER_T ccprescribe_temperature_outflow
-       INTEGER_T rz_flag,ioproc
-       INTEGER_T ccprobtype,ccadv_dir,ccaxis_dir
+       INTEGER_T, intent(in) :: ccnten
+       REAL_T, intent(in) :: ccMUSHY_THICK
+       REAL_T, intent(in) :: ccgravity
+       INTEGER_T, intent(in) :: ccgravity_dir
+       INTEGER_T, intent(in) :: ccinvert_gravity
+       INTEGER_T, intent(in) :: ccFSI_flag(ccnum_materials)
+       INTEGER_T, intent(in) :: ccZEYU_DCA_SELECT
+       INTEGER_T, intent(in) :: ccinvert_solid_levelset
+       INTEGER_T, intent(in) :: ccprescribe_temperature_outflow
+       INTEGER_T, intent(in) :: ccsolidheat_flag
+       INTEGER_T, intent(in) :: rz_flag,ioproc
+       INTEGER_T, intent(in) :: ccprobtype,ccadv_dir,ccaxis_dir
 
-       REAL_T ccdenfact,ccvelfact
-       REAL_T ccxblob,ccyblob,cczblob,ccradblob
-       REAL_T ccxblob2,ccyblob2,cczblob2,ccradblob2
-       REAL_T ccxblob3,ccyblob3,cczblob3,ccradblob3
-       REAL_T ccxblob4,ccyblob4,cczblob4,ccradblob4
-       REAL_T ccxblob5,ccyblob5,cczblob5,ccradblob5
-       REAL_T ccxblob6,ccyblob6,cczblob6,ccradblob6
-       REAL_T ccxblob7,ccyblob7,cczblob7,ccradblob7
-       REAL_T ccxblob8,ccyblob8,cczblob8,ccradblob8
-       REAL_T ccxblob9,ccyblob9,cczblob9,ccradblob9
-       REAL_T ccxblob10,ccyblob10,cczblob10,ccradblob10
-       REAL_T ccxactive,ccyactive,cczactive
-       REAL_T ccractivex,ccractivey,ccractivez
-       REAL_T ccadv_vel,ccrgasinlet
-       REAL_T ccvinletgas,cctwall
-       REAL_T ccadvbot
-       REAL_T ccinflow_pressure
-       REAL_T ccoutflow_pressure
-       REAL_T ccperiod_time
-       REAL_T ccproblox,ccprobloy,ccprobloz
-       REAL_T ccprobhix,ccprobhiy,ccprobhiz
-       REAL_T ccstop_time
+       REAL_T, intent(in) :: ccdenfact,ccvelfact
+       REAL_T, intent(in) :: ccxblob,ccyblob,cczblob,ccradblob
+       REAL_T, intent(in) :: ccxblob2,ccyblob2,cczblob2,ccradblob2
+       REAL_T, intent(in) :: ccxblob3,ccyblob3,cczblob3,ccradblob3
+       REAL_T, intent(in) :: ccxblob4,ccyblob4,cczblob4,ccradblob4
+       REAL_T, intent(in) :: ccxblob5,ccyblob5,cczblob5,ccradblob5
+       REAL_T, intent(in) :: ccxblob6,ccyblob6,cczblob6,ccradblob6
+       REAL_T, intent(in) :: ccxblob7,ccyblob7,cczblob7,ccradblob7
+       REAL_T, intent(in) :: ccxblob8,ccyblob8,cczblob8,ccradblob8
+       REAL_T, intent(in) :: ccxblob9,ccyblob9,cczblob9,ccradblob9
+       REAL_T, intent(in) :: ccxblob10,ccyblob10,cczblob10,ccradblob10
+       REAL_T, intent(in) :: ccxactive,ccyactive,cczactive
+       REAL_T, intent(in) :: ccractivex,ccractivey,ccractivez
+       REAL_T, intent(in) :: ccadv_vel,ccrgasinlet
+       REAL_T, intent(in) :: ccvinletgas,cctwall
+       REAL_T, intent(in) :: ccadvbot
+       REAL_T, intent(in) :: ccinflow_pressure
+       REAL_T, intent(in) :: ccoutflow_pressure
+       REAL_T, intent(in) :: ccperiod_time
+       REAL_T, intent(in) :: ccproblox,ccprobloy,ccprobloz
+       REAL_T, intent(in) :: ccprobhix,ccprobhiy,ccprobhiz
+       REAL_T, intent(in) :: ccstop_time
 
-       INTEGER_T ccnum_species_var
+       INTEGER_T, intent(in) :: ccnum_species_var
 
-       INTEGER_T ccnum_materials_viscoelastic
-       INTEGER_T nelastic
+       INTEGER_T, intent(in) :: ccnum_materials_viscoelastic
+       INTEGER_T :: nelastic
 
-       INTEGER_T ccnum_state_material
-       INTEGER_T ccnum_state_base
-       INTEGER_T ccngeom_raw
-       INTEGER_T ccngeom_recon
-       INTEGER_T ccnum_materials_vel
-       INTEGER_T ccnum_materials_scalar_solve
+       INTEGER_T, intent(in) :: ccnum_state_material
+       INTEGER_T, intent(in) :: ccnum_state_base
+       INTEGER_T, intent(in) :: ccngeom_raw
+       INTEGER_T, intent(in) :: ccngeom_recon
+       INTEGER_T, intent(in) :: ccnum_materials_vel
+       INTEGER_T, intent(in) :: ccnum_materials_scalar_solve
 
-       INTEGER_T ccmaterial_type(ccnum_materials)
-       REAL_T ccdrhodt(ccnum_materials)
-       REAL_T ccdrhodz(ccnum_materials)
-       REAL_T cctempconst(ccnum_materials)
-       REAL_T ccinitial_temperature(ccnum_materials)
-       REAL_T cctempcutoff(ccnum_materials)
-       REAL_T cctempcutoffmax(ccnum_materials)
-       REAL_T ccstiffPINF(ccnum_materials)
-       REAL_T ccstiffCP(ccnum_materials)
-       REAL_T ccstiffCV(ccnum_materials)
-       REAL_T ccstiffGAMMA(ccnum_materials)
-       REAL_T ccdenconst(ccnum_materials)
-       REAL_T ccden_floor(ccnum_materials)
-       REAL_T ccden_ceiling(ccnum_materials)
-       REAL_T cccavdenconst(ccnum_materials)
-       REAL_T ccviscconst(ccnum_materials)
-       REAL_T ccviscconst_eddy(ccnum_materials)
-       INTEGER_T ccviscosity_state_model(ccnum_materials)
-       REAL_T ccelastic_viscosity(ccnum_materials)
-       INTEGER_T ccstore_elastic_data(ccnum_materials)
-       REAL_T ccheatviscconst(ccnum_materials)
-       REAL_T ccprerecalesce_heatviscconst(ccnum_materials)
-       REAL_T ccprerecalesce_viscconst(ccnum_materials)
-       REAL_T ccprerecalesce_stiffCP(ccnum_materials)
-       REAL_T ccprerecalesce_stiffCV(ccnum_materials)
-       REAL_T ccspeciesconst((ccnum_species_var+1)*ccnum_materials)
-       REAL_T ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
-       REAL_T cclatent_heat(2*ccnten)
-       REAL_T ccsaturation_temp(2*ccnten)
-       REAL_T ccmolar_mass(ccnum_materials)
-       REAL_T ccspecies_molar_mass(ccnum_species_var+1)
-       REAL_T cctension(ccnten)
-       REAL_T cctension_slope(ccnten)
-       REAL_T cctension_T0(ccnten)
-       REAL_T cctension_min(ccnten)
-       REAL_T ccprefreeze_tension(ccnten)
+       INTEGER_T, intent(in) :: ccmaterial_type(ccnum_materials)
+       REAL_T, intent(in) :: ccdrhodt(ccnum_materials)
+       REAL_T, intent(in) :: ccdrhodz(ccnum_materials)
+       REAL_T, intent(in) :: cctempconst(ccnum_materials)
+       REAL_T, intent(in) :: ccinitial_temperature(ccnum_materials)
+       REAL_T, intent(in) :: cctempcutoff(ccnum_materials)
+       REAL_T, intent(in) :: cctempcutoffmax(ccnum_materials)
+       REAL_T, intent(in) :: ccstiffPINF(ccnum_materials)
+       REAL_T, intent(in) :: ccstiffCP(ccnum_materials)
+       REAL_T, intent(in) :: ccstiffCV(ccnum_materials)
+       REAL_T, intent(in) :: ccstiffGAMMA(ccnum_materials)
+       REAL_T, intent(in) :: ccdenconst(ccnum_materials)
+       REAL_T, intent(in) :: ccden_floor(ccnum_materials)
+       REAL_T, intent(in) :: ccden_ceiling(ccnum_materials)
+       REAL_T, intent(in) :: cccavdenconst(ccnum_materials)
+       REAL_T, intent(in) :: ccviscconst(ccnum_materials)
+       REAL_T, intent(in) :: ccviscconst_eddy(ccnum_materials)
+       INTEGER_T, intent(in) :: ccviscosity_state_model(ccnum_materials)
+       REAL_T, intent(in) :: ccelastic_viscosity(ccnum_materials)
+       INTEGER_T, intent(in) :: ccstore_elastic_data(ccnum_materials)
+       REAL_T, intent(in) :: ccheatviscconst(ccnum_materials)
+       REAL_T, intent(in) :: ccprerecalesce_heatviscconst(ccnum_materials)
+       REAL_T, intent(in) :: ccprerecalesce_viscconst(ccnum_materials)
+       REAL_T, intent(in) :: ccprerecalesce_stiffCP(ccnum_materials)
+       REAL_T, intent(in) :: ccprerecalesce_stiffCV(ccnum_materials)
+       REAL_T, intent(in) :: &
+         ccspeciesconst((ccnum_species_var+1)*ccnum_materials)
+       REAL_T, intent(in) :: &
+         ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
+       REAL_T, intent(in) :: cclatent_heat(2*ccnten)
+       REAL_T, intent(in) :: ccsaturation_temp(2*ccnten)
+       REAL_T, intent(in) :: ccmolar_mass(ccnum_materials)
+       REAL_T, intent(in) :: ccspecies_molar_mass(ccnum_species_var+1)
+       REAL_T, intent(in) :: cctension(ccnten)
+       REAL_T, intent(in) :: cctension_slope(ccnten)
+       REAL_T, intent(in) :: cctension_T0(ccnten)
+       REAL_T, intent(in) :: cctension_min(ccnten)
+       REAL_T, intent(in) :: ccprefreeze_tension(ccnten)
 
-       INTEGER_T ccn_sites
-       REAL_T ccnucleation_init_time
-       REAL_T ccpos_sites(400)
+       INTEGER_T, intent(in) :: ccn_sites
+       REAL_T, intent(in) :: ccnucleation_init_time
+       REAL_T, intent(in) :: ccpos_sites(400)
 
        character*12 namestr1
        character*13 namestr2
@@ -28147,6 +28154,8 @@ end subroutine initialize2d
 
        prescribe_temperature_outflow= &
          ccprescribe_temperature_outflow
+
+       fort_solidheat_flag=ccsolidheat_flag
 
        levelrz=rz_flag
        denfact=ccdenfact
@@ -28715,6 +28724,8 @@ end subroutine initialize2d
        if (ioproc.eq.1) then
         print *,"prescribe_temperature_outflow (fortran)= ", &
          prescribe_temperature_outflow
+        print *,"fort_solidheat_flag (fortran)= ", &
+          fort_solidheat_flag
         print *,"density_at_depth ",density_at_depth
 
         print *,"fort: problox,y,z,hix,y,z ",problox,probloy,probloz, &
@@ -28736,6 +28747,8 @@ end subroutine initialize2d
             (vel_homflag.lt.0).or.(vel_homflag.gt.1).or. &
             (temp_homflag.lt.0).or.(temp_homflag.gt.1).or. &
             (species_homflag.lt.0).or.(species_homflag.gt.1).or. &
+            (fort_solidheat_flag.lt.0).or. &
+            (fort_solidheat_flag.gt.2).or. &
             (prescribe_temperature_outflow.lt.0).or. &
             (prescribe_temperature_outflow.gt.3)) then
          print *,"parameters invalid"

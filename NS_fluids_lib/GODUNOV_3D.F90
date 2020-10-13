@@ -12225,7 +12225,7 @@ stop
         latent_heat, &
         reaction_rate, &
         freezing_model, &
-        Tanasawa_or_Schrage, &
+        Tanasawa_or_Schrage_or_Kassemi, &
         distribute_from_target, &
         saturation_temp, &
         mass_fraction_id, &
@@ -12295,7 +12295,7 @@ stop
       REAL_T, intent(in) :: reaction_rate(2*nten)
       REAL_T :: K_f
       INTEGER_T, intent(in) :: freezing_model(2*nten)
-      INTEGER_T, intent(in) :: Tanasawa_or_Schrage(2*nten)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
@@ -12384,7 +12384,7 @@ stop
       REAL_T uleft,uright
       REAL_T C_w0,PHYDWATER,Cmethane_in_hydrate
       INTEGER_T local_freezing_model
-      INTEGER_T local_Tanasawa_or_Schrage
+      INTEGER_T local_Tanasawa_or_Schrage_or_Kassemi
       INTEGER_T distribute_from_targ
       INTEGER_T vofcompsrc,vofcompdst
       REAL_T TSAT,Tsrcalt,Tdstalt
@@ -12960,8 +12960,8 @@ stop
          LL=latent_heat(iten+ireverse*nten)
          K_f=reaction_rate(iten+ireverse*nten)
          local_freezing_model=freezing_model(iten+ireverse*nten)
-         local_Tanasawa_or_Schrage= &
-                 Tanasawa_or_Schrage(iten+ireverse*nten)
+         local_Tanasawa_or_Schrage_or_Kassemi= &
+           Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
          TSAT=saturation_temp(iten+ireverse*nten)
 
@@ -13134,7 +13134,7 @@ stop
               molar_mass, &
               species_molar_mass, &
               local_freezing_model, &
-              local_Tanasawa_or_Schrage, &
+              local_Tanasawa_or_Schrage_or_Kassemi, &
               vapor_den, &
               distribute_from_targ, &
               USTEFAN_hold, &

@@ -159,7 +159,7 @@ ns.distribute_from_target= 0 0 0 0 0 0
 # Schrage model (evaporation only)
 ns.mass_fraction_id =   1 0 0 0 0 0
 ns.freezing_model=      6 0 0 0 0 0
-ns.Tanasawa_or_Schrage= 1 0 0 0 0 0
+ns.Tanasawa_or_Schrage_or_Kassemi= 1 0 0 0 0 0
 
 # saturation temperature will not be used, but need placeholder.
 ns.saturation_temp=373.15 0.0 0.0 0.0 0.0 0.0

@@ -677,7 +677,7 @@ extern "C"
       Real* latent_heat,
       Real* reaction_rate,
       int* freezing_model,
-      int* Tanasawa_or_Schrage,
+      int* Tanasawa_or_Schrage_or_Kassemi,
       int* distribute_from_target,
       Real* saturation_temp,
       int* mass_fraction_id,

@@ -218,7 +218,7 @@ ns.distribute_from_target= 1 0 0 0 0 0
 
 # EJ model (boiling only) 
 ns.freezing_model=      0 0 0 0 0 0
-ns.Tanasawa_or_Schrage= 0 0 0 0 0 0
+ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 0 0 0 0
 
 # saturation temperature 
 ns.saturation_temp=21.0 0.0 0.0 0.0 0.0 0.0

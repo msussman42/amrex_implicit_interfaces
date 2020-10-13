@@ -248,7 +248,7 @@ ns.distribute_from_target= 1 0 0 0 0 0
 # PD model (evaporation only) (Palmore and Desjardins)
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
 ns.freezing_model=      6 0 0 0 0 0
-ns.Tanasawa_or_Schrage= 0 0 0 0 0 0
+ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 0 0 0 0
 
 # saturation temperature 
 ns.saturation_temp=20.0 0.0 0.0 0.0 0.0 0.0

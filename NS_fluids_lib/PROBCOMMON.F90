@@ -168,6 +168,7 @@ implicit none
 ! fort_max_num_materials and fort_max_num_eos deleted: September 6, 2020.
 ! fort_stiffCV added September 29.
 ! fort_store_elastic_data added October 3.
+! fort_solidheat_flag added October 13.
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
