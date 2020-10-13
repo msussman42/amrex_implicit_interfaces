@@ -725,7 +725,7 @@ Vector<Real> NavierStokes::reaction_rate;
 //   ->  4  0  0  4  0  0
 //   mass_fraction_id
 //   ->  1  0  0  1  0  0
-//   Tanasawa_or_Schrage
+//   Tanasawa_or_Schrage_or_Kassemi
 //   ->  2  0  0  2  0  0
 //   speciesviscconst
 //   ->  0.0 D 0.0
@@ -747,7 +747,8 @@ Vector<Real> NavierStokes::reaction_rate;
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
 // 7=cavitation
 Vector<int> NavierStokes::freezing_model;
-Vector<int> NavierStokes::Tanasawa_or_Schrage; //1=Tanasawa  2=Schrage
+//1=Tanasawa  2=Schrage 3=Kassemi
+Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
 //ispec=mass_fraction_id[0..2 nten-1]=1..num_species_var
 Vector<int> NavierStokes::mass_fraction_id; 
 //link diffused material to non-diff. (array 1..num_species_var)
@@ -1691,6 +1692,13 @@ void fortran_parameters() {
      (prescribe_temperature_outflow>3))
   amrex::Error("prescribe_temperature_outflow invalid (fortran_parameters)");
 
+  // 0=diffuse in solid 1=dirichlet 2=neumann
+ int solidheat_flag=0;
+ pp.query("solidheat_flag",solidheat_flag);
+ if ((solidheat_flag<0)||
+     (solidheat_flag>2))
+  amrex::Error("solidheat_flag invalid (fortran_parameters)");
+
  Real MUSHY_THICK=2.0;
  pp.query("MUSHY_THICK",MUSHY_THICK);
 
@@ -1739,6 +1747,7 @@ void fortran_parameters() {
   ns_space_blocking_factor.dataPtr(),
   &time_blocking_factor,
   &prescribe_temperature_outflow,
+  &solidheat_flag,
   &rz_flag,
   FSI_flag_temp.dataPtr(),
   &ZEYU_DCA_SELECT_temp,
@@ -2849,7 +2858,7 @@ NavierStokes::read_params ()
     latent_heat.resize(2*nten);
     reaction_rate.resize(2*nten);
     freezing_model.resize(2*nten);
-    Tanasawa_or_Schrage.resize(2*nten);
+    Tanasawa_or_Schrage_or_Kassemi.resize(2*nten);
     mass_fraction_id.resize(2*nten);
     distribute_from_target.resize(2*nten);
     tension.resize(nten);
@@ -2913,8 +2922,8 @@ NavierStokes::read_params ()
      reaction_rate[i+nten]=0.0;
      freezing_model[i]=0;
      freezing_model[i+nten]=0;
-     Tanasawa_or_Schrage[i]=0;
-     Tanasawa_or_Schrage[i+nten]=0;
+     Tanasawa_or_Schrage_or_Kassemi[i]=0;
+     Tanasawa_or_Schrage_or_Kassemi[i+nten]=0;
      mass_fraction_id[i]=0;
      mass_fraction_id[i+nten]=0;
      distribute_from_target[i]=0;
@@ -3214,7 +3223,8 @@ NavierStokes::read_params ()
     pp.queryarr("latent_heat",latent_heat,0,2*nten);
     pp.queryarr("reaction_rate",reaction_rate,0,2*nten);
     pp.queryarr("freezing_model",freezing_model,0,2*nten);
-    pp.queryarr("Tanasawa_or_Schrage",Tanasawa_or_Schrage,0,2*nten);
+    pp.queryarr("Tanasawa_or_Schrage_or_Kassemi",
+      Tanasawa_or_Schrage_or_Kassemi,0,2*nten);
     pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*nten);
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
 
@@ -4290,10 +4300,11 @@ NavierStokes::read_params ()
        freezing_model[i] << '\n';
       std::cout << "freezing_model i+nten=" << i+nten << "  " << 
        freezing_model[i+nten] << '\n';
-      std::cout << "Tanasawa_or_Schrage i=" << i << "  " << 
-       Tanasawa_or_Schrage[i] << '\n';
-      std::cout << "Tanasawa_or_Schrage i+nten=" << i+nten << "  " << 
-       Tanasawa_or_Schrage[i+nten] << '\n';
+      std::cout << "Tanasawa_or_Schrage_or_Kassemi i=" << i << "  " << 
+       Tanasawa_or_Schrage_or_Kassemi[i] << '\n';
+      std::cout << "Tanasawa_or_Schrage_or_Kassemi i+nten=" << 
+       i+nten << "  " << 
+       Tanasawa_or_Schrage_or_Kassemi[i+nten] << '\n';
       std::cout << "mass_fraction_id i=" << i << "  " << 
        mass_fraction_id[i] << '\n';
       std::cout << "mass_fraction_id i+nten=" << i+nten << "  " << 
@@ -11065,7 +11076,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      saturation_temp_min.dataPtr(),
      saturation_temp_max.dataPtr(),
      freezing_model.dataPtr(),
-     Tanasawa_or_Schrage.dataPtr(),
+     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
      distribute_from_target.dataPtr(),
      mass_fraction_id.dataPtr(),
      species_evaporation_density.dataPtr(),
@@ -11150,7 +11161,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      saturation_temp_min.dataPtr(),
      saturation_temp_max.dataPtr(),
      freezing_model.dataPtr(),
-     Tanasawa_or_Schrage.dataPtr(),
+     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
      distribute_from_target.dataPtr(),
      mass_fraction_id.dataPtr(),
      species_evaporation_density.dataPtr(),
@@ -18402,7 +18413,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     latent_heat.dataPtr(),
     reaction_rate.dataPtr(),
     freezing_model.dataPtr(),
-    Tanasawa_or_Schrage.dataPtr(),
+    Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
     distribute_from_target.dataPtr(),
     saturation_temp.dataPtr(),
     mass_fraction_id.dataPtr(),

@@ -15806,6 +15806,40 @@ endif
 return
 end subroutine volfrac_from_massfrac
 
+! Kassemi, Kartuzova, Hylton
+! Cryogenics 89(2018) 1-15, equation (6)
+subroutine MDOT_Kassemi(sigma,MolarMassFluid,R,Pgamma,Pvapor_probe, &
+  Tgamma,Tvapor_probe,MDOT)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: sigma
+REAL_T, intent(in) :: MolarMassFluid
+REAL_T, intent(in) :: R
+REAL_T, intent(in) :: Pgamma
+REAL_T, intent(in) :: Pvapor_probe
+REAL_T, intent(in) :: Tgamma
+REAL_T, intent(in) :: Tvapor_probe
+REAL_T, intent(out) :: MDOT
+
+if ((sigma.ge.zero).and.(sigma.lt.two).and. &
+    (MolarMassFluid.gt.zero).and. &
+    (R.gt.zero).and. &
+    (Pgamma.gt.zero).and. &
+    (Pvapor_probe.gt.zero).and. &
+    (Tgamma.gt.zero).and. &
+    (Tvapor_probe.gt.zero)) then
+ MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
+   sqrt(MolarMassFluid/(2.0d0*Pi*R))* &
+   (Pgamma/sqrt(Tgamma)-Pvapor_probe/sqrt(Tvapor_probe))
+
+else
+ print *,"parameter problems in MDOT_Kassemi"
+ stop
+endif
+
+return
+end subroutine MDOT_Kassemi
+ 
 ! TODO: 1. inverse CC equation
 !       2. MDOTY equation (either PD or Kassemi)
 !       3. X from PSAT,Pgamma,Tgamma,TSAT,WV,WA,Tprobe,Yprobe?

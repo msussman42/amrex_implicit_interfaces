@@ -175,6 +175,7 @@ namespace amrex{
        const int* bfact_space_order,
        const int* bfact_time_order,
        const int* prescribe_temperature_outflow,
+       const int* solidheat_flag,
        const int* rz_flag,
        const int* FSI_flag,
        const int* ZEYU_DCA_SELECT,

@@ -1594,13 +1594,22 @@ if (nsum.eq.2) then
      if (GRID_DATA_IN%lsfab(D_DECL(i,j,k),im).gt.zero) then
       if (GRID_DATA_IN%lsfab(D_DECL(i,j,k-1),im_solid).gt.zero) then
        if (SDIM.eq.3) then
-! see solidheat_flag
         temperature_plus= &
           GRID_DATA_IN%den(D_DECL(i,j,k+1),temperature_component)
         temperature_minus= &
           GRID_DATA_IN%den(D_DECL(i,j,k-1),temperature_component)
+         ! fort_solidheat_flag:0=diffuse in solid 1=dirichlet 2=neumann
         zplus=GRID_DATA_IN%xsten(2,SDIM)
-        zminus=GRID_DATA_IN%xsten(-2,SDIM)
+        if ((fort_solidheat_flag.eq.0).or. &
+            (fort_solidheat_flag.eq.2)) then
+         zminus=GRID_DATA_IN%xsten(-2,SDIM)
+        else if (fort_solidheat_flag.eq.1) then
+         zminus=GRID_DATA_IN%xsten(-1,SDIM)
+        else
+         print *,"fort_solidheat_flag invalid"
+         stop
+        endif
+
         heat_flux=fort_heatviscconst(im)*(temperature_plus-temperature_minus)/ &
             (zplus-zminus)
         area_face=cell_dim(1)*cell_dim(2)

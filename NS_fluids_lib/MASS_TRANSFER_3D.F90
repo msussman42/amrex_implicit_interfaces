@@ -6276,7 +6276,7 @@ stop
        saturation_temp_min, &
        saturation_temp_max, &
        freezing_model, &
-       Tanasawa_or_Schrage, &
+       Tanasawa_or_Schrage_or_Kassemi, &
        distribute_from_target, &
        mass_fraction_id, &
        species_evaporation_density, &
@@ -6366,7 +6366,7 @@ stop
       REAL_T, intent(in) :: saturation_temp_min(2*nten)
       REAL_T, intent(in) :: saturation_temp_max(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
-      INTEGER_T, intent(in) :: Tanasawa_or_Schrage(2*nten)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: molar_mass(nmat)
@@ -6481,7 +6481,7 @@ stop
       REAL_T LS_pos
       REAL_T C_w0
       INTEGER_T, target :: local_freezing_model
-      INTEGER_T local_Tanasawa_or_Schrage
+      INTEGER_T local_Tanasawa_or_Schrage_or_Kassemi
       INTEGER_T distribute_from_targ
       INTEGER_T at_interface
       INTEGER_T vofcomp_source,vofcomp_dest
@@ -6936,7 +6936,8 @@ stop
              K_f(ireverse)=reaction_rate(iten+ireverse*nten)
 
              local_freezing_model=freezing_model(iten+ireverse*nten)
-             local_Tanasawa_or_Schrage=Tanasawa_or_Schrage(iten+ireverse*nten)
+             local_Tanasawa_or_Schrage_or_Kassemi= &
+               Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten)
 
              ispec=mass_fraction_id(iten+ireverse*nten)
              if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
@@ -7731,7 +7732,7 @@ stop
                      molar_mass, &
                      species_molar_mass, &
                      local_freezing_model, &
-                     local_Tanasawa_or_Schrage, &
+                     local_Tanasawa_or_Schrage_or_Kassemi, &
                      vapor_den, &
                      distribute_from_targ, &
                      VEL_correct, & ! vel

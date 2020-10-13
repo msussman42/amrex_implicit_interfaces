@@ -1705,7 +1705,8 @@ protected:
      // 1-2 1-3 1-4 2-3 2-4 3-4
      // 2-1 3-1 4-1 3-2 4-2 4-3
     static Vector<int> freezing_model;
-    static Vector<int> Tanasawa_or_Schrage; // 1=Tanasawa  2=Schrage
+     // 1=Tanasawa  2=Schrage  3=Kassemi
+    static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
      // index: 1..2*nten
      // value: 1..num_species_var
     static Vector<int> mass_fraction_id; 
