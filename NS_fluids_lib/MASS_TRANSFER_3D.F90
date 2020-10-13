@@ -84,6 +84,7 @@ stop
 
       type TSAT_MASS_FRAC_parm_type
        type(probe_parm_type), pointer :: PROBE_PARMS
+       INTEGER_T :: Tanasawa_or_Schrage_or_Kassemi
        REAL_T :: universal_gas_constant_R
        REAL_T :: molar_mass_ambient   
        REAL_T :: molar_mass_vapor
@@ -2660,6 +2661,7 @@ stop
       INTEGER_T iprobe_vapor
       REAL_T den_G
       REAL_T YI_min
+      INTEGER_T Kassemi_flag
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -2668,81 +2670,99 @@ stop
           (YI_min.le.one).and. &
           (Y_gamma.le.one)) then
 
-       D_MASS=TSAT_Y_PARMS%D_MASS
-       den_G=TSAT_Y_PARMS%den_G
-       if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
+       !iprobe=1 source
+       !iprobe=2 dest
+       call probe_interpolation( &
+        TSAT_Y_PARMS%PROBE_PARMS, &
+        T_gamma,Y_gamma, &
+        T_probe,Y_probe, &
+        den_I_interp, &
+        den_probe, &
+        T_I_interp,Y_I_interp, &
+        pres_I_interp, &
+        vfrac_I, &
+        T_probe_raw, &
+        dxprobe_target, &
+        interp_valid_flag, &
+        at_interface)
 
-        !iprobe=1 source
-        !iprobe=2 dest
-        call probe_interpolation( &
-         TSAT_Y_PARMS%PROBE_PARMS, &
-         T_gamma,Y_gamma, &
-         T_probe,Y_probe, &
-         den_I_interp, &
-         den_probe, &
-         T_I_interp,Y_I_interp, &
-         pres_I_interp, &
-         vfrac_I, &
-         T_probe_raw, &
-         dxprobe_target, &
-         interp_valid_flag, &
-         at_interface)
+       if (at_interface.eq.1) then
 
-        if (at_interface.eq.1) then
+        LL=TSAT_Y_PARMS%PROBE_PARMS%LL
+        if (LL.gt.zero) then
+         ! do nothing (evaporation)
+        else if (LL.lt.zero) then
+         ! do nothing (condensation)
+        else
+         print *,"LL invalid"
+         stop
+        endif
 
-         LL=TSAT_Y_PARMS%PROBE_PARMS%LL
-         if (LL.gt.zero) then
-          ! do nothing (evaporation)
-         else if (LL.lt.zero) then
-          ! do nothing (condensation)
-         else
-          print *,"LL invalid"
-          stop
-         endif
-         iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
+        iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
 
-         if ((dxprobe_target(1).gt.zero).and. &
-             (dxprobe_target(2).gt.zero)) then
-         
-          mdotY_top=Y_gamma-Y_probe(iprobe_vapor)
-          mdotY_top=den_G*D_MASS*mdotY_top/ &
+        if ((dxprobe_target(1).gt.zero).and. &
+            (dxprobe_target(2).gt.zero)) then
+
+         Kassemi_flag=TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi
+
+         if (Kassemi_flag.eq.0) then
+
+          D_MASS=TSAT_Y_PARMS%D_MASS
+          den_G=TSAT_Y_PARMS%den_G
+          if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
+
+           mdotY_top=Y_gamma-Y_probe(iprobe_vapor)
+           mdotY_top=den_G*D_MASS*mdotY_top/ &
                   dxprobe_target(iprobe_vapor)
-          mdotY_bot=one-Y_gamma
-          if (mdotY_bot.lt.zero) then
-           print *,"Y_gamma cannot exceed 1"
-           print *,"mdotY_top= ",mdotY_top
-           print *,"mdotY_bot= ",mdotY_bot
-           print *,"den_G= ",den_G
-           print *,"D_mass= ",D_mass
-           print *,"Y_gamma= ",Y_gamma
-           print *,"iprobe_vapor=",iprobe_vapor
-           print *,"Y_probe(iprobe_vapor)=",Y_probe(iprobe_vapor)
-           print *,"dxprobe_target(iprobe_vapor)=", &
+           mdotY_bot=one-Y_gamma
+           if (mdotY_bot.lt.zero) then
+            print *,"Y_gamma cannot exceed 1"
+            print *,"mdotY_top= ",mdotY_top
+            print *,"mdotY_bot= ",mdotY_bot
+            print *,"den_G= ",den_G
+            print *,"D_mass= ",D_mass
+            print *,"Y_gamma= ",Y_gamma
+            print *,"iprobe_vapor=",iprobe_vapor
+            print *,"Y_probe(iprobe_vapor)=",Y_probe(iprobe_vapor)
+            print *,"dxprobe_target(iprobe_vapor)=", &
                    dxprobe_target(iprobe_vapor)
-           stop
-          else if (mdotY_bot.eq.zero) then
-           mdotY=zero
-          else if ((mdotY_bot.gt.zero).and. &
-                   (mdotY_bot.le.one)) then
-           mdotY=mdotY_top/mdotY_bot
+            stop
+           else if (mdotY_bot.eq.zero) then
+            mdotY=zero
+           else if ((mdotY_bot.gt.zero).and. &
+                    (mdotY_bot.le.one)) then
+            mdotY=mdotY_top/mdotY_bot
+           else
+            print *,"mdotY_bot invalid"
+            stop
+           endif
           else
-           print *,"mdotY_bot invalid"
+           print *,"D_MASS or den_G invalid"
            stop
           endif
 
+         else if (Kassemi_flag.eq.3) then
+
+!          call MDOT_Kassemi(sigma,MolarMassFluid,R,Pgamma,Pvapor_probe, &
+!             Tgamma,Tvapor_probe,mdotY)
+          mdotY_top=mdotY
+          mdotY_bot=one
+
          else
-          print *,"dxprobe_target invalid"
+          print *,"Kassemi_flag invalid"
           stop
          endif
+
         else
-         print *,"at_interface invalid in mdot_from_Y_probe ",at_interface
+         print *,"dxprobe_target invalid"
          stop
         endif
 
        else
-        print *,"D_MASS or den_G invalid"
+        print *,"at_interface invalid in mdot_from_Y_probe ",at_interface
         stop
        endif
+
       else
        print *,"Y_gamma or YI_min invalid"
        stop
@@ -7421,9 +7441,17 @@ stop
 
                    if (at_interface.eq.1) then
                     if (hardwire_flag(ireverse).eq.0) then
-                     if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
-                         (Y_probe(iprobe_vapor).le.one).and. &
-                         (Y_predict.eq.one)) then
+                     if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
+                      fully_saturated=2
+                      Y_predict=one
+                      X_predict=one
+                      T_gamma_a=TSAT_predict
+                      T_gamma_b=TSAT_predict
+                      Y_gamma_a=Y_predict
+                      Y_gamma_b=Y_predict
+                     else if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
+                              (Y_probe(iprobe_vapor).le.one).and. &
+                              (Y_predict.eq.one)) then
                       fully_saturated=1
                      else if ((Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
                               (Y_probe(iprobe_vapor).ge.zero).and. &
@@ -7447,6 +7475,19 @@ stop
 
                      if (fully_saturated.eq.1) then
                       ! do nothing
+                     else if (fully_saturated.eq.2) then
+                      if (LL(ireverse).gt.zero) then ! evaporation
+                       T_gamma_a=TI_min
+                       X_gamma_a=one
+                       Y_gamma_a=one
+                      else if (LL(ireverse).lt.zero) then ! condensation
+                       T_gamma_b=TI_max
+                       X_gamma_b=one
+                       Y_gamma_b=one
+                      else
+                       print *,"LL(ireverse) invalid"
+                       stop
+                      endif
                      else if (fully_saturated.eq.0) then
                       if (LL(ireverse).gt.zero) then ! evaporation
                        T_gamma_a=TI_min
@@ -7816,6 +7857,8 @@ stop
                      ! type(TSAT_MASS_FRAC_parm_type)
                     Y_interface_min=zero
                     TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
+                    TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= &
+                           local_Tanasawa_or_Schrage_or_Kassemi
                     TSAT_Y_PARMS%YI_min=Y_interface_min
                     TSAT_Y_PARMS%TI_min=TI_min
                     TSAT_Y_PARMS%TI_max=TI_max
@@ -7831,10 +7874,65 @@ stop
 
                     if (hardwire_flag(ireverse).eq.0) then
 
-                     if ((molar_mass_ambient.gt.zero).and. &
-                         (molar_mass_vapor.gt.zero).and. &
-                         (R_Palmore_Desjardins.gt.zero).and. &
-                         (TSAT_Y_PARMS%den_G.gt.zero)) then
+                     if (fully_saturated.eq.2) then
+
+                      T_gamma_c=half*(T_gamma_a+T_gamma_b)
+                      X_gamma_c=one
+                      Y_gamma_c=one
+
+                      call mdot_diff_func(TSAT_Y_PARMS, &
+                         Y_gamma_a,T_gamma_a,mdot_diff_a)
+                      call mdot_diff_func(TSAT_Y_PARMS, &
+                         Y_gamma_b,T_gamma_b,mdot_diff_b)
+                      call mdot_diff_func(TSAT_Y_PARMS, &
+                         Y_gamma_c,T_gamma_c,mdot_diff_c)
+
+                      if (mdot_diff_a*mdot_diff_b.le.zero) then
+                       if (mdot_diff_a*mdot_diff_c.gt.zero) then
+                        T_gamma_a=T_gamma_c
+                       else if (mdot_diff_a*mdot_diff_c.le.zero) then
+                        T_gamma_b=T_gamma_c
+                       else
+                        print *,"mdot_diff_a or mdot_diff_c invalid"
+                        stop
+                       endif
+                      else
+                       print *,"bracketing interval lost Kassemi model"
+                       print *,"T_gamma init: a,b ", &
+                          T_gamma_a_init,T_gamma_b_init
+                       print *,"Y_gamma init: a,b ", &
+                          Y_gamma_a_init,Y_gamma_b_init
+                       print *,"T_gamma a,b,c ", &
+                          T_gamma_a,T_gamma_b,T_gamma_c
+                       print *,"Y_gamma a,b,c ", &
+                          Y_gamma_a,Y_gamma_b,Y_gamma_c
+                       print *,"mdot_diff a,b,c ", &
+                          mdot_diff_a,mdot_diff_b,mdot_diff_c
+                       print *,"TSAT_iter=",TSAT_iter
+                       print *,"Y_interface_min ",Y_interface_min
+                       print *,"TI_min ",TI_min
+                       print *,"TI_max ",TI_max
+                       print *,"molar_mass_ambient ",molar_mass_ambient
+                       print *,"molar_mass_vapor ",molar_mass_vapor
+                       print *,"iprobe_vapor = ",iprobe_vapor
+                       print *,"FicksLawD(iprobe_vapor) ", &
+                               FicksLawD(iprobe_vapor)
+                       print *,"den_I_interp_sat ", &
+                               den_I_interp_SAT(iprobe_vapor)
+                       print *," LL(ireverse) ",LL(ireverse)
+                       print *," local_Tsat(ireverse) ",local_Tsat(ireverse)
+                       print *,"im_source,im_dest ",im_source,im_dest
+                       stop
+                      endif
+
+                      TSAT_correct=T_gamma_c
+                      Y_predict=Y_gamma_c
+
+                     else if ((molar_mass_ambient.gt.zero).and. &
+                              (molar_mass_vapor.gt.zero).and. &
+                              (R_Palmore_Desjardins.gt.zero).and. &
+                              (TSAT_Y_PARMS%den_G.gt.zero).and. &
+                              (fully_saturated.eq.0)) then
 
                       if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
                           (Y_probe(iprobe_vapor).le.one)) then
@@ -7919,7 +8017,7 @@ stop
                       endif
 
                      else
-                      print *,"molar masses, den_G, or R invalid"
+                      print *,"molar masses, den_G, fully_saturated, or R bad"
                       stop
                      endif
 
