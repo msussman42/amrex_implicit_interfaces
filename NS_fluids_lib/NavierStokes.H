@@ -1637,6 +1637,9 @@ protected:
     static Vector<Real> hardwire_Y_gamma; 
     static Vector<Real> hardwire_T_gamma; 
     static Vector<Real> saturation_temp; 
+     // "p_boil" in Dodd and Ferrante
+    static Vector<Real> reference_pressure; 
+    static Vector<Real> accommodation_coefficient; 
     static Vector<Real> saturation_temp_curv; 
     static Vector<Real> saturation_temp_vel; 
     static Vector<Real> saturation_temp_min;  //aka T_I_min
