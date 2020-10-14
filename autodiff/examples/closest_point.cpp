@@ -45,8 +45,8 @@ adept::adouble fx_curve(adept::adouble x) {
 adept::adouble cost_function(adept::adouble x) {
 
  adept::adouble f_val=fx_curve(x);
- adept::adouble y=(x0-x)*(x0-x)+(f_val-y0)*(f_val-y0);
- return y;
+ adept::adouble J=(x0-x)*(x0-x)+(f_val-y0)*(f_val-y0);
+ return J;
 
 }
 
@@ -54,18 +54,18 @@ adept::adouble cost_function(adept::adouble x) {
 // derivatives? extra credit +2 ???
 double algorithm_and_gradient(
   const double x_val,
-  double& dy_dx) {
+  double& J_prime_of_x) {
 
  adept::Stack stack;
  using adept::adouble;
  adouble x = x_val;
  stack.new_recording();  // records the tape
- adouble y = cost_function(x);
- y.set_gradient(1.0);
+ adouble J = cost_function(x);
+ J.set_gradient(1.0);
  stack.compute_adjoint();  // applies the chain rule: dJ/dx=dJ/dxn *
                            // dxn/dxn-1  * dxn-1/dxn-2  * ...  * dx1/dx
- dy_dx = x.get_gradient();
- return y.value();
+ J_prime_of_x = x.get_gradient();  // J'(x)
+ return J.value();
 }
 
 int main() {
@@ -77,10 +77,22 @@ int main() {
   // f(3)=3*3+5=14
   // J(3)=(2-3)^2+(14-1)^2=1+169=170
   // J'(x)=2(x0-x)+2(f(x)-y0)f'(x)=-2(2-3)+2(14-1)3=2+13(6)=80
+  // J'(-1)=0.0
  double y=algorithm_and_gradient(x_val,dy_dx);
  std::cout << "x_val= " << x_val << '\n';
  std::cout << "y= " << y << '\n';
  std::cout << "dy_dx= " << dy_dx << '\n';
+
+ double learning_rate=0.01;
+
+ for (int i=0;i<100;i++) {
+	 double dJdx;
+	 double J_of_X=algorithm_and_gradient(x_val,dJdx);
+	 x_val=x_val-learning_rate * dJdx;
+	 std::cout << "i= " << i << " x= " << x_val <<
+		 " J_of_X= " << J_of_X << " dJdx " <<
+		 dJdx << '\n';
+ }
 
 
 }
