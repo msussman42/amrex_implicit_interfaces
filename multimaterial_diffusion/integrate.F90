@@ -21,18 +21,45 @@ IMPLICIT NONE
 contains
 
 subroutine integrate_one_step(Ts,tm,deltat_in,sdim_in,N_CURRENT, &
- nx_in,ny_in,mofdata_FAB_in,T,local_state_ncomp, &
+ plot_int, &
+ nx_in,ny_in,mofdata_FAB_in,T_STATE,local_state_ncomp, &
  local_operator_internal,local_operator_external,local_linear_exact, &
  probtype_in,ngeom_recon_in, &
  h_in, &
- VFRAC_MOF_in,nmat_in,alpha_in, &
+ VFRAC_MOF_in,nmat_in, &
  mofdata_FAB_in, &
  M_CURRENT,M_MAX_TIME_STEP,fixed_dt_main,dx_in, &
  local_nten,stefan_flag,xCC,yCC)
 IMPLICIT NONE
 
 real(kind=8), intent(in), dimension(:) :: Ts
-INTEGER, intent(in) ::  tim
+INTEGER, intent(in) ::  tm
+INTEGER, intent(in) ::  nx_in,ny_in
+INTEGER, intent(in) ::  plot_int
+INTEGER, intent(in) ::  N_CURRENT
+INTEGER, intent(in) ::  sdim_in
+REAL(kind=8), intent(in) :: deltat_in
+! -1:N,-1:N,nmat*ngeom_recon
+real(kind=8),dimension(:,:,:),intent(in) :: mofdata_FAB_in
+! -1:N,-1:N,nmat
+real(kind=8),dimension(:,:,:),intent(in) :: T_STATE
+integer, intent(in) :: local_state_ncomp
+integer, intent(in) :: local_operator_internal
+integer, intent(in) :: local_operator_external
+integer, intent(in) :: local_linear_exact
+integer, intent(in) :: probtype_in
+INTEGER, intent(in) :: ngeom_recon_in
+REAL(KIND=8), intent(in) :: h_in
+REAL(KIND=8), intent(in) :: fixed_dt_main
+real(kind=8), dimension(:,:,:), intent(in) :: VFRAC_MOF_in
+INTEGER, intent(in) :: nmat_in
+INTEGER, intent(in) :: M_CURRENT
+INTEGER, intent(in) :: M_MAX_TIME_STEP
+real(kind=8), intent(in) :: dx_in(sdim_in)
+integer, intent(in) :: local_nten
+INTEGER, intent(in) :: stefan_flag ! VARIABLE TSAT
+!real(kind=8),dimension(-1:N) :: xCC,yCC       
+real(kind=8),dimension(:), intent(in) :: xCC,yCC       ! cell centers
 
 current_time_in=Ts(tm) ! t^{n} (Ts(i)=(i-1) * deltat)
 nsteps=tm-1 ! NSTEPS
@@ -80,8 +107,8 @@ do j=loy_in-1,hiy_in+1
   VFRAC_MOF_in(i,j,im)=mofdata_FAB_in(i,j,vofcomp)
  enddo ! im=1..nmat_in
  do im=1,local_state_ncomp
-  UNEW_in(i,j,im)=T(i,j,im)
-  UOLD_in(i,j,im)=T(i,j,im)
+  UNEW_in(i,j,im)=T_STATE(i,j,im)
+  UOLD_in(i,j,im)=T_STATE(i,j,im)
  enddo
 enddo
 enddo 
@@ -346,7 +373,7 @@ do im=1,nmat_in
  do i= 0,N_CURRENT-1
   do j= 0,N_CURRENT-1
    vofcomp=nmat_in+local_nten*sdim_in+(im-1)*ngeom_recon_in+1
-   sumvf=T(i,j,vofcomp)
+   sumvf=T_STATE(i,j,vofcomp)
    voltotal=voltotal+sumvf*h_in*h_in
   enddo
  enddo
@@ -432,7 +459,7 @@ elseif(probtype_in.eq.16)then
 
   isum=0
   do i=ilo_fluxtest,ihi_fluxtest-1
-   flxtot1=flxtot1+(T(i,j_fluxtest,2)-T(i,j_fluxtest-1,2))/dx_in(2)
+   flxtot1=flxtot1+(T_STATE(i,j_fluxtest,2)-T_STATE(i,j_fluxtest-1,2))/dx_in(2)
    isum=isum+1
   enddo
   flxtot1=flxtot1/real(isum,8)
@@ -448,7 +475,7 @@ elseif(probtype_in.eq.16)then
 
   isum=0
   do i=ilo_fluxtest,ihi_fluxtest-1
-   flxtot2=flxtot2+(T(i,j_fluxtest,3)-T(i,j_fluxtest-1,3))/dx_in(2)
+   flxtot2=flxtot2+(T_STATE(i,j_fluxtest,3)-T_STATE(i,j_fluxtest-1,3))/dx_in(2)
    isum=isum+1
   enddo
   flxtot2=flxtot2/real(isum,8)
@@ -511,12 +538,12 @@ if ((probtype_in.eq.400).or. &
  do j= 0,N_CURRENT-1
   do im=1,nmat_in
    vofcomp=nmat_in+local_nten*sdim_in+(im-1)*ngeom_recon_in+1
-   sumvf=T(i,j,vofcomp)
+   sumvf=T_STATE(i,j,vofcomp)
    if ((sumvf.ge.VOFTOL_REDIST).and. &
        (sumvf.le.1.0d0-VOFTOL_REDIST)) then
     do im_opp=im+1,nmat_in
      vofcomp2=nmat_in+local_nten*sdim_in+(im_opp-1)*ngeom_recon_in+1
-     sumvf2=T(i,j,vofcomp2)
+     sumvf2=T_STATE(i,j,vofcomp2)
      if ((sumvf2.ge.VOFTOL_REDIST).and. &
          (sumvf2.le.1.0d0-VOFTOL_REDIST)) then
       call get_iten(im,im_opp,iten,nmat_in)
@@ -528,8 +555,8 @@ if ((probtype_in.eq.400).or. &
         if (probtype.eq.403) then !dendrite
          TSAT=tsatfab(i,j,local_nten+1)
         endif
-        test_vel=fort_heatviscconst(im)*abs(T(i,j,im)-TSAT)/LL+ &
-                 fort_heatviscconst(im_opp)*abs(T(i,j,im_opp)-TSAT)/LL
+        test_vel=fort_heatviscconst(im)*abs(T_STATE(i,j,im)-TSAT)/LL+ &
+                 fort_heatviscconst(im_opp)*abs(T_STATE(i,j,im_opp)-TSAT)/LL
         test_vel=test_vel*4.0d0/dx_in(1)
         if (test_vel.gt.max_front_vel) then
          max_front_vel=test_vel
