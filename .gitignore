@@ -3,6 +3,8 @@
 *.dsp
 autodiff/*.tar.gz
 autodiff/examples/*.o
+autodiff/examples/*.ex
+autodiff/examples/tmp_build_dir
 autodiff/examples/test_AD
 autodiff/examples/inverse_advection
 autodiff/examples/closest_point
