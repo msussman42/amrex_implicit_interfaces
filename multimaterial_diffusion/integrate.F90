@@ -20,8 +20,19 @@ IMPLICIT NONE
 
 contains
 
-subroutine integrate_one_step()
+subroutine integrate_one_step(Ts,tm,deltat_in,sdim_in,N_CURRENT, &
+ nx_in,ny_in,mofdata_FAB_in,T,local_state_ncomp, &
+ local_operator_internal,local_operator_external,local_linear_exact, &
+ probtype_in,ngeom_recon_in, &
+ h_in, &
+ VFRAC_MOF_in,nmat_in,alpha_in, &
+ mofdata_FAB_in, &
+ M_CURRENT,M_MAX_TIME_STEP,fixed_dt_main,dx_in, &
+ local_nten,stefan_flag,xCC,yCC)
 IMPLICIT NONE
+
+real(kind=8), intent(in), dimension(:) :: Ts
+INTEGER, intent(in) ::  tim
 
 current_time_in=Ts(tm) ! t^{n} (Ts(i)=(i-1) * deltat)
 nsteps=tm-1 ! NSTEPS
