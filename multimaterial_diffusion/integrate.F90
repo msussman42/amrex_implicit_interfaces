@@ -20,29 +20,44 @@ IMPLICIT NONE
 
 contains
 
-subroutine integrate_one_step(Ts,tm,deltat_in,sdim_in,N_CURRENT, &
+subroutine integrate_one_step( &
+ y_fluxtest1, &
+ y_fluxtest2, &
+ TSTOP, &
+ TDIFF_in, &
+ subcycling_step, &
+ rstefan, &
+ M_START,max_front_vel, &
+ iter,iter_average, &
+ isink, &
+ flxavg1,flxavg2, &
+ finished_flag,Ts,tm, &
+ deltat_in,deltat_polar, &
+ sdim_in,N_CURRENT, &
  plot_int, &
- nx_in,ny_in,mofdata_FAB_in,T_STATE,local_state_ncomp, &
+ mofdata_FAB_in,T_STATE,local_state_ncomp, &
  local_operator_internal,local_operator_external,local_linear_exact, &
  probtype_in,ngeom_recon_in, &
  h_in, &
- VFRAC_MOF_in,nmat_in, &
- mofdata_FAB_in, &
+ nmat_in, &
+ T_new, &
  M_CURRENT,M_MAX_TIME_STEP,fixed_dt_main,dx_in, &
  local_nten,stefan_flag,xCC,yCC)
 IMPLICIT NONE
 
-real(kind=8), intent(in), dimension(:) :: Ts
-INTEGER, intent(in) ::  tm
-INTEGER, intent(in) ::  nx_in,ny_in
+real(kind=8), intent(inout), dimension(:) :: Ts
+INTEGER, intent(inout) ::  tm
+INTEGER ::  nx_in,ny_in
 INTEGER, intent(in) ::  plot_int
 INTEGER, intent(in) ::  N_CURRENT
 INTEGER, intent(in) ::  sdim_in
-REAL(kind=8), intent(in) :: deltat_in
+REAL(kind=8), intent(in) :: TDIFF_in
+REAL(kind=8), intent(inout) :: deltat_in
+REAL(kind=8), intent(in) :: TSTOP
 ! -1:N,-1:N,nmat*ngeom_recon
-real(kind=8),dimension(:,:,:),intent(in) :: mofdata_FAB_in
+real(kind=8),dimension(:,:,:),intent(inout) :: mofdata_FAB_in
 ! -1:N,-1:N,nmat
-real(kind=8),dimension(:,:,:),intent(in) :: T_STATE
+real(kind=8),dimension(:,:,:),intent(inout) :: T_STATE
 integer, intent(in) :: local_state_ncomp
 integer, intent(in) :: local_operator_internal
 integer, intent(in) :: local_operator_external
@@ -51,22 +66,74 @@ integer, intent(in) :: probtype_in
 INTEGER, intent(in) :: ngeom_recon_in
 REAL(KIND=8), intent(in) :: h_in
 REAL(KIND=8), intent(in) :: fixed_dt_main
-real(kind=8), dimension(:,:,:), intent(in) :: VFRAC_MOF_in
+real(kind=8), dimension(:,:,:), allocatable :: VFRAC_MOF_in
 INTEGER, intent(in) :: nmat_in
 INTEGER, intent(in) :: M_CURRENT
 INTEGER, intent(in) :: M_MAX_TIME_STEP
 real(kind=8), intent(in) :: dx_in(sdim_in)
+real(kind=8), intent(inout) :: rstefan
 integer, intent(in) :: local_nten
-INTEGER, intent(in) :: stefan_flag ! VARIABLE TSAT
+INTEGER, intent(in) :: subcycling_step
+INTEGER, intent(inout) :: stefan_flag ! VARIABLE TSAT
 !real(kind=8),dimension(-1:N) :: xCC,yCC       
 real(kind=8),dimension(:), intent(in) :: xCC,yCC       ! cell centers
+real(kind=8),dimension(:,:,:), intent(inout) :: T_new
+
+real(kind=8), dimension(:,:,:), allocatable :: UNEW_in
+real(kind=8), dimension(:,:,:), allocatable :: UOLD_in
+real(kind=8), dimension(:,:,:), allocatable :: beta_in
+REAL(kind=8), intent(in) :: deltat_polar
+integer, intent(inout) :: finished_flag
+real(kind=8), intent(inout) :: flxavg1,flxavg2
+integer, intent(in) :: isink
+integer, intent(in) :: M_START
+integer, intent(inout) :: iter
+real(kind=8), intent(inout) :: iter_average
+real(kind=8), intent(inout) :: max_front_vel
+real(kind=8), intent(inout) :: y_fluxtest1
+real(kind=8), intent(inout) :: y_fluxtest2
+integer lox_in,loy_in,hix_in,hiy_in
+REAL(kind=8) :: bicgstab_tol_in
+REAL(kind=8) :: current_time_in
+real(kind=8) :: eff_radius
+real(kind=8) :: T_FIELD
+real(kind=8) :: expect_radius
+real(kind=8) :: flxtot1,flxtot2
+real(kind=8) :: test_vel
+REAL(KIND=8) :: time_n,time_np1
+real(kind=8) :: TSAT
+real(kind=8) :: xgrid,ygrid
+real(kind=8) :: xcen,ycen
+real(kind=8) :: xlo_fluxtest,xhi_fluxtest
+integer hflag
+integer i,j
+integer imof
+integer im,im1,im_opp
+integer iten
+integer ireverse
+integer icen,jcen
+integer j_fluxtest,ilo_fluxtest,ihi_fluxtest,isum
+integer vofcomp
+integer vofcomp2
+real(kind=8) :: LL
+real(kind=8) :: voltotal
+real(kind=8) :: local_Pi
+integer nsteps
+integer total_nsteps_parm
+INTEGER :: precond_type_in
+integer scomp
+real(kind=8) :: stefan_time
+real(kind=8) :: sum_alpha
+real(kind=8) :: sumvf,sumvf2
+REAL(kind=8) :: alpha_in(100)
+
+local_Pi=4.0d0*atan(1.0d0)
 
 current_time_in=Ts(tm) ! t^{n} (Ts(i)=(i-1) * deltat)
 nsteps=tm-1 ! NSTEPS
 
 print *,"STEP (>=1), TIME, DT ",tm,current_time_in,deltat_in
 
-ngeom_recon_in=2*sdim_in+3
 nx_in=N_CURRENT
 ny_in=N_CURRENT
 bicgstab_tol_in=1.0D-10
@@ -84,6 +151,13 @@ allocate(UOLD_in(lox_in-1:hix_in+1,loy_in-1:hiy_in+1,local_state_ncomp))
 allocate(beta_in(lox_in-1:hix_in+1,loy_in-1:hiy_in+1,nmat_in)) 
 allocate(VFRAC_MOF_in(lox_in-1:hix_in+1,loy_in-1:hiy_in+1, &
    nmat_in)) 
+
+if (ngeom_recon_in.eq.2*sdim_in+3) then
+ ! do nothing
+else
+ print *,"ngeom_recon_in invalid"
+ stop
+endif
 
 do i=lox_in-1,hix_in+1
 do j=loy_in-1,hiy_in+1
@@ -366,7 +440,7 @@ endif
 
 deallocate(UNEW_in) 
 
-T = T_new
+T_STATE = T_new
 
 do im=1,nmat_in
  voltotal=0.0d0
