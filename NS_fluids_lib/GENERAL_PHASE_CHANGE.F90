@@ -1553,6 +1553,7 @@ end subroutine GENERAL_PHASE_CHANGE_nucleation
 
 ! This routine is called from FORT_SUMMASS
 ! MITSUHIRO: modify this routine to get the Nusselt number
+! set ns.ncomp_sum_int_user=4
 subroutine GENERAL_PHASE_CHANGE_SUMINT(GRID_DATA_IN,increment_out,nsum)
 use probcommon_module_types
 use probcommon_module
@@ -1574,12 +1575,19 @@ i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.eq.2) then
- increment_out(1)=zero
- increment_out(2)=zero
+if (nsum.eq.4) then
+ do dir=1,nsum
+  increment_out(dir)=zero
+ enddo
  do dir=1,SDIM
   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
   cell_dim(dir)=GRID_DATA_IN%xsten(1,dir)-GRID_DATA_IN%xsten(-1,dir)
+  if (cell_dim(dir).gt.zero) then
+   ! do nothing
+  else
+   print *,"cell_dim(dir) invalid"
+   stop
+  endif
  enddo
  if (num_materials.ge.3) then
 
@@ -1590,8 +1598,9 @@ if (nsum.eq.2) then
    ! find the heat flux next to a horizontal hot plate
    do im=1,num_materials
     temperature_component=(im-1)*num_state_material+2
-    if (im.eq.1) then
-     if (GRID_DATA_IN%lsfab(D_DECL(i,j,k),im).gt.zero) then
+    if ((im.eq.1).or.(im.eq.2)) then ! liquid or gas
+     if ((GRID_DATA_IN%lsfab(D_DECL(i,j,k),im).gt.zero).and. &
+         (GRID_DATA_IN%lsfab(D_DECL(i,j,k),im_solid).le.zero)) then
       if (GRID_DATA_IN%lsfab(D_DECL(i,j,k-1),im_solid).gt.zero) then
        if (SDIM.eq.3) then
         temperature_plus= &
@@ -1614,13 +1623,24 @@ if (nsum.eq.2) then
             (zplus-zminus)
         area_face=cell_dim(1)*cell_dim(2)
 !       increment_out(1)=GRID_DATA_IN%volgrid*heat_flux
-        increment_out(1)=area_face*heat_flux
-        increment_out(2)=area_face
+        if (im.eq.1) then ! liquid
+         increment_out(1)=-area_face*heat_flux
+         increment_out(2)=area_face
+         increment_out(3)=-area_face*heat_flux
+         increment_out(4)=area_face
+        else if (im.eq.2) then
+         increment_out(3)=-area_face*heat_flux
+         increment_out(4)=area_face
+        else
+         print *,"im invalid"
+         stop
+        endif
 ! in the "run.out" file (./amr2d ... inputs... >& run.out &
 ! ... TIME= ....  user_comp (1..ncomp_sum_int_user) 1  <total heat flux value>
 ! ... TIME= ....  user_comp (1..ncomp_sum_int_user) 2  <total area>
+! ....
 ! in the inputs file (probtype==55), 
-! ns.ncomp_sum_int_user=2
+! ns.ncomp_sum_int_user=4
        endif
       endif
      endif
