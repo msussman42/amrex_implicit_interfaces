@@ -134,7 +134,7 @@ REAL(kind=8) :: deltat_in
 REAL(kind=8) :: deltat_polar
 INTEGER      :: subcycling_step
 
-INTEGER                    :: i,j,tm
+INTEGER                    :: i,j
 REAL(KIND=8)               :: h_in
 !REAL(KIND=8),dimension(-1:N+1) :: XLINE,YLINE 
 REAL(KIND=8),dimension(:), allocatable :: XLINE,YLINE ! nodes
@@ -217,7 +217,6 @@ real(kind=8),dimension(:,:,:),allocatable :: fine_data
 integer :: im_measure
 integer :: constant_K_test
 integer :: iter
-integer :: finished_flag
 real(kind=8) :: iter_average
 
 integer :: sci_max_level
@@ -1624,36 +1623,30 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 ! BEGIN TIME LOOP - ABOVE INITIALIZATION
 !                   BELOW INTEGRATION IN TIME
 
- tm=1
- finished_flag=0
- do while (finished_flag.eq.0)
-
-  call integrate_one_step( &
-    y_fluxtest1, &
-    y_fluxtest2, &
-    TSTOP, &
-    TDIFF_in, &
-    subcycling_step, &
-    rstefan, &
-    M_START,max_front_vel, &
-    iter,iter_average, &
-    isink, &
-    flxavg1,flxavg2, &
-    finished_flag, &
-    Ts,tm, &
-    deltat_in,deltat_polar, &
-    sdim_in,N_CURRENT, &
-    plot_int,mofdata_FAB_in,T, &
-    local_state_ncomp, &
-    local_operator_internal,local_operator_external,local_linear_exact, &
-    probtype_in,ngeom_recon_in, &
-    h_in, &
-    nmat_in, &
-    T_new, &
-    M_CURRENT,M_MAX_TIME_STEP,fixed_dt_main,dx_in, &
-    local_nten,stefan_flag,xCC,yCC)
-
- enddo ! do while (finished_flag.eq.0)
+ call integrate_steps( &
+  nx_in,ny_in,lox_in,loy_in,hix_in,hiy_in, &
+  y_fluxtest1, &
+  y_fluxtest2, &
+  TSTOP, &
+  TDIFF_in, &
+  subcycling_step, &
+  rstefan, &
+  M_START,max_front_vel, &
+  iter,iter_average, &
+  isink, &
+  flxavg1,flxavg2, &
+  Ts, &
+  deltat_in,deltat_polar, &
+  sdim_in,N_CURRENT, &
+  plot_int,mofdata_FAB_in,T, &
+  local_state_ncomp, &
+  local_operator_internal,local_operator_external,local_linear_exact, &
+  probtype_in,ngeom_recon_in, &
+  h_in, &
+  nmat_in, &
+  T_new, &
+  M_CURRENT,M_MAX_TIME_STEP,fixed_dt_main,dx_in, &
+  local_nten,stefan_flag,xCC,yCC)
 
  iter_average=iter_average/real(M_CURRENT,8)
 

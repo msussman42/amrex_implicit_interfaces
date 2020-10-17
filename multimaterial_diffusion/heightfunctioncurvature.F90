@@ -9,7 +9,7 @@ integer                          ,intent(in)  :: nmat
 real(kind=8), dimension(nmat,-3:3,-3:3), intent(in) :: vf_in
 real(kind=8)                      ,intent(in)  :: delta_x
 !real(kind=8)                     ,intent(in)  :: phi_center  ! signed distant function in the center cell
-integer                                       :: i,j,imat
+integer            :: i,imat
 real(kind=8)       :: FL1,F1,FR1,FL2,F2,FR2
 real(kind=8)       :: diff1,diff2
 real(kind=8)       :: hprime,hdoubleprime
