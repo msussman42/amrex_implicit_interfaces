@@ -4,7 +4,8 @@
 
 CEXE_sources += main.cpp NS_setup.cpp NSBld.cpp 
 
-FEXE_headers += MACOPERATOR_F.H probdata.H probdataf95.H PROB_F.H
+FEXE_headers += MACOPERATOR_F.H probdata.H probdataf95.H PROB_F.H 
+FEXE_headers += PROB_CPP_PARMS_F.H 
 
 CEXE_sources += \
        NavierStokes.cpp NavierStokes2.cpp \
@@ -16,6 +17,7 @@ CEXE_sources += Zeyu_Matrix_Functions.cpp
 CEXE_headers += Zeyu_Matrix_Functions.H 
 
 F90EXE_headers += \
+  heightfunctioncurvature.F90 \
   level_set_extrapolation.F90 \
   specfun.F90 \
   tetrahedron_keast_rule.F90 \
@@ -51,6 +53,7 @@ F90EXE_headers += \
   supercooled_exact_sol.F90 
  
 F90EXE_sources += \
+  heightfunctioncurvature.F90 \
   level_set_extrapolation.F90 \
   specfun.F90 \
   tetrahedron_keast_rule.F90 \
@@ -99,8 +102,10 @@ endif
 F90EXE_headers += sci_clsvof.F90 
 F90EXE_sources += sci_clsvof.F90
 
+F90EXE_sources += PROB_CPP_PARMS.F90 
 F90EXE_sources += PROB.F90 
 F90EXE_headers += probdata.H probdataf95.H PROB_F.H 
+F90EXE_headers += PROB_CPP_PARMS_F.H 
 
 FEXE_headers += \
   ShallowWater_F.H \

@@ -16314,5 +16314,697 @@ internal_energy=local_internal_energy/global_pressure_scale
 return
 end subroutine INTERNAL_material
 
+
+ ! called from FORT_OVERRIDE 
+subroutine init_density_at_depth()
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T depth,pgrad,a,b,c,tol
+REAL_T surface_den,depth_den
+REAL_T surface_pressure,depth_pressure
+
+
+density_at_depth=one
+
+ ! water density where the charge is initially located.
+if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
+ density_at_depth=1.00039080D0
+  ! cavitation
+else if ((probtype.eq.46).and.(SDIM.eq.2)) then 
+ if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+  density_at_depth=1.00008343D0
+ else if (axis_dir.eq.10) then
+  density_at_depth=1.0000423520369408D0 ! 10.22 meters
+ else if (axis_dir.eq.20) then
+  ! do nothing
+ else
+  print *,"axis_dir out of range"
+  stop
+ endif
+else if (fort_material_type(1).eq.13) then
+
+ if (abs(gravity).eq.zero) then
+  print *,"gravity invalid"
+  stop
+ endif
+
+ if (1.eq.0) then
+  print *,"abs(gravity)= ",abs(gravity)
+  print *,"denconst(1)= ",fort_denconst(1)
+ endif
+
+ surface_den=fort_denconst(1)  ! density at top of domain
+ depth_den=surface_den
+
+ if (SDIM.eq.2) then
+  depth=probhiy-probloy
+ else if (SDIM.eq.3) then
+  depth=probhiz-probloz
+ else
+  print *,"dimension bust"
+  stop
+ endif
+ 
+!       print *,"depth= ",depth
+
+ if (depth.le.zero) then
+  print *,"depth invalid"
+  stop
+ endif
+ if (surface_den.le.zero) then
+  print *,"surface den invalid"
+  stop
+ endif
+ call EOS_tait_ADIABATIC_rhohydro(surface_den,surface_pressure)
+ call EOS_tait_ADIABATIC_rhohydro(depth_den,depth_pressure)
+ pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
+ do while (pgrad.le.abs(gravity))
+  depth_den=two*depth_den
+  call EOS_tait_ADIABATIC_rhohydro(depth_den,depth_pressure)
+  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
+  if (1.eq.0) then
+   print *,"depth_den,pgrad ",depth_den,pgrad
+  endif
+ enddo ! while (pgrad.le.abs(gravity))
+ a=surface_den
+ b=depth_den
+ c=half*(surface_den+depth_den)
+ call EOS_tait_ADIABATIC_rhohydro(c,depth_pressure)
+ pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
+ tol=abs(gravity)*1.0D-3
+ do while (abs(pgrad-abs(gravity)).gt.tol)
+  if (1.eq.0) then
+   print *,"a,b,c ",a,b,c
+   print *,"pgrad ",pgrad
+  endif
+  if (pgrad.gt.abs(gravity)) then
+   b=c
+   c=half*(a+b)
+  else if (pgrad.lt.abs(gravity)) then
+   a=c
+   c=half*(a+b)
+  else
+   print *,"pgrad bust"
+   stop
+  endif
+  call EOS_tait_ADIABATIC_rhohydro(c,depth_pressure)
+  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
+ enddo
+ density_at_depth=c
+endif  ! material_type(1)=13
+
+return
+end subroutine init_density_at_depth
+
+
+subroutine get_left_velocityIOWA(t,u_left)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T k1,k2
+REAL_T t,u_left
+
+if (probtype.ne.110) then
+ print *,"probtype invalid get left velocity"
+ stop
+endif
+if (inflow_count.le.0) then
+ print *,"inflow_count invalid"
+ stop
+endif
+
+do while ((inflow_time(last_inflow_index).gt.t).and. &
+          (last_inflow_index.gt.1)) 
+ last_inflow_index=last_inflow_index-1
+enddo
+do while ((inflow_time(last_inflow_index).lt.t).and. &
+          (last_inflow_index.lt.inflow_count))
+ last_inflow_index=last_inflow_index+1
+enddo
+if (t.le.inflow_time(1)) then
+ u_left=inflow_velocity(1)
+else if (t.ge.inflow_time(inflow_count)) then
+ u_left=inflow_velocity(inflow_count)
+else 
+
+ if (t.le.inflow_time(last_inflow_index)) then
+  k1=last_inflow_index-1
+ else
+  k1=last_inflow_index
+ endif
+ k2=k1+1
+ u_left=inflow_velocity(k1)+ &
+  ( (inflow_velocity(k2)-inflow_velocity(k1))/ &
+    (inflow_time(k2)-inflow_time(k1)) )*(t-inflow_time(k1))
+endif
+u_left=u_left*100.0  ! convert to cm/s
+
+return
+end subroutine get_left_velocityIOWA
+
+
+subroutine get_right_velocityIOWA(t,u_right)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T k1,k2
+REAL_T t,u_right
+
+if (probtype.ne.110) then
+ print *,"probtype invalid get_right_velocity"
+ stop
+endif
+if (outflow_count.le.0) then
+ print *,"outflow_count invalid"
+ stop
+endif
+
+do while ((outflow_time(last_outflow_index).gt.t).and. &
+          (last_outflow_index.gt.1)) 
+ last_outflow_index=last_outflow_index-1
+enddo
+do while ((outflow_time(last_outflow_index).lt.t).and. &
+          (last_outflow_index.lt.outflow_count))
+ last_outflow_index=last_outflow_index+1
+enddo
+if (t.le.outflow_time(1)) then
+ u_right=outflow_velocity(1)
+else if (t.ge.outflow_time(outflow_count)) then
+ u_right=outflow_velocity(outflow_count)
+else 
+
+ if (t.le.outflow_time(last_outflow_index)) then
+  k1=last_outflow_index-1
+ else
+  k1=last_outflow_index
+ endif
+ k2=k1+1
+ u_right=outflow_velocity(k1)+ &
+  ( (outflow_velocity(k2)-outflow_velocity(k1))/ &
+    (outflow_time(k2)-outflow_time(k1)) )*(t-outflow_time(k1))
+endif
+u_right=u_right*100.0  ! convert to cm/s
+
+return
+end subroutine get_right_velocityIOWA
+
+
+subroutine get_left_elevationIOWA(t,elevation_left)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T k1,k2
+REAL_T t,elevation_left
+
+if (probtype.ne.110) then
+ print *,"probtype invalid get_left_elevation"
+ stop
+endif
+if (inflow_count.le.0) then
+ print *,"inflow_count invalid"
+ stop
+endif
+
+do while ((inflow_time(last_inflow_index).gt.t).and. &
+          (last_inflow_index.gt.1)) 
+ last_inflow_index=last_inflow_index-1
+enddo
+do while ((inflow_time(last_inflow_index).lt.t).and. &
+          (last_inflow_index.lt.inflow_count))
+ last_inflow_index=last_inflow_index+1
+enddo
+if (t.le.inflow_time(1)) then
+ elevation_left=inflow_elevation(1)
+else if (t.ge.inflow_time(inflow_count)) then
+ elevation_left=inflow_elevation(inflow_count)
+else 
+
+ if (t.le.inflow_time(last_inflow_index)) then
+  k1=last_inflow_index-1
+ else
+  k1=last_inflow_index
+ endif
+ k2=k1+1
+ elevation_left=inflow_elevation(k1)+ &
+  ( (inflow_elevation(k2)-inflow_elevation(k1))/ &
+    (inflow_time(k2)-inflow_time(k1)) )*(t-inflow_time(k1))
+endif
+elevation_left=elevation_left*100.0  ! convert to cm
+
+return
+end subroutine get_left_elevationIOWA
+
+
+subroutine get_right_elevationIOWA(t,elevation_right)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T k1,k2
+REAL_T t,elevation_right
+
+if (probtype.ne.110) then
+ print *,"probtype invalid get_right_elevation"
+ stop
+endif
+if (outflow_count.le.0) then
+ print *,"outflow_count invalid"
+ stop
+endif
+
+do while ((outflow_time(last_outflow_index).gt.t).and. &
+          (last_outflow_index.gt.1)) 
+ last_outflow_index=last_outflow_index-1
+enddo
+do while ((outflow_time(last_outflow_index).lt.t).and. &
+          (last_outflow_index.lt.outflow_count))
+ last_outflow_index=last_outflow_index+1
+enddo
+if (t.le.outflow_time(1)) then
+ elevation_right=outflow_elevation(1)
+else if (t.ge.outflow_time(outflow_count)) then
+ elevation_right=outflow_elevation(outflow_count)
+else 
+
+ if (t.le.outflow_time(last_outflow_index)) then
+  k1=last_outflow_index-1
+ else
+  k1=last_outflow_index
+ endif
+ k2=k1+1
+ elevation_right=outflow_elevation(k1)+ &
+  ( (outflow_elevation(k2)-outflow_elevation(k1))/ &
+    (outflow_time(k2)-outflow_time(k1)) )*(t-outflow_time(k1))
+endif
+elevation_right=elevation_right*100.0  ! convert to cm
+
+return
+end subroutine get_right_elevationIOWA
+
+
+subroutine get_bottom_elevation(x,elevation)
+use probcommon_module
+IMPLICIT NONE
+
+real*8 x,elevation
+real*8 h,l
+
+ ! inlet x/H=-52 outlet x/H=44
+ ! inlet x=-52H=594.36 cm  outlet x=44H=502.92 cm
+ ! zhi=5H=57.15 cm
+ ! (x/l)=(x/(2.5 h))=2/5 (x/h)
+ ! at inlet, (x/l)=-52 * 2/5 = -20.8
+ ! at outlet, (x/l)=44 * 2/5 = 17.6
+ ! 0<z/h<5
+ ! dx_min=0.3mm  dz_min=0.2mm ?
+ ! -1<x/l<1
+h=11.43  ! h=H  maximum bump height in centimeters
+l=2.5*h
+if (abs(x/l).le.1.0) then
+ elevation=h*(1.0-2.0*((x/l)**2)+(x/l)**4)
+else if (x/l.lt.0.0) then
+ elevation=0.0
+else if (x/l.gt.0.0) then
+ elevation=0.0
+else
+ print *,"bust"
+ stop
+endif
+
+return
+end subroutine get_bottom_elevation
+
+subroutine local_shallow_water_elevation(time,x,dist)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T time,x,dist
+REAL_T xright,xleft,shallow_tstop
+REAL_T thetax,thetat,tgrid,xgrid
+REAL_T delta_t_grid,delta_x_grid
+REAL_T new_time
+INTEGER_T igrid,jgrid
+
+xleft=-594.36
+xright=502.92
+shallow_tstop=15.0
+new_time=time+SHALLOW_TIME
+
+delta_t_grid=shallow_tstop/SHALLOW_M
+delta_x_grid=(xright-xleft)/SHALLOW_N
+
+  !  NINT->round to nearest whole number
+
+if (new_time.ge.shallow_tstop) then
+ igrid=SHALLOW_M-1
+else if (new_time.le.zero) then
+ igrid=0
+else
+ igrid=NINT(new_time/delta_t_grid)-2
+ if (igrid.lt.0) then
+  igrid=0
+ endif
+ tgrid=igrid*delta_t_grid
+ do while ((tgrid.lt.new_time).and.(igrid.lt.SHALLOW_M))
+  igrid=igrid+1
+  tgrid=igrid*delta_t_grid
+ enddo
+ igrid=igrid-1
+endif
+
+if (x.le.xleft) then
+ jgrid=0
+else if (x.ge.xright) then
+ jgrid=SHALLOW_N-1
+else
+ jgrid=NINT((x-xleft)/delta_x_grid)-2
+ if (jgrid.lt.0) then
+  jgrid=0
+ endif
+ xgrid=xleft+jgrid*delta_x_grid
+ do while ((xgrid.lt.x).and.(jgrid.lt.SHALLOW_N))
+  jgrid=jgrid+1
+  xgrid=xleft+jgrid*delta_x_grid
+ enddo
+ jgrid=jgrid-1
+endif
+
+xgrid=xleft+jgrid*delta_x_grid
+tgrid=igrid*delta_t_grid
+if (x.le.xgrid) then
+ thetax=zero
+else if (x.ge.xgrid+delta_x_grid) then
+ thetax=one
+else
+ thetax=(x-xgrid)/delta_x_grid
+endif
+
+if (new_time.le.tgrid) then
+ thetat=zero
+else if (new_time.ge.tgrid+delta_t_grid) then
+ thetat=one
+else
+ thetat=(new_time-tgrid)/delta_t_grid
+endif
+
+dist= &
+ (one-thetax)*(one-thetat)*shallow_water_data(igrid,jgrid,1)+ &
+ (thetax)*(one-thetat)*shallow_water_data(igrid,jgrid+1,1)+ &
+ (thetax)*(thetat)*shallow_water_data(igrid+1,jgrid+1,1)+ &
+ (one-thetax)*(thetat)*shallow_water_data(igrid+1,jgrid,1)
+
+return
+end subroutine local_shallow_water_elevation
+
+subroutine local_shallow_water_velocity(time,x,vel)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T time,x,vel
+REAL_T xright,xleft,shallow_tstop
+REAL_T thetax,thetat,tgrid,xgrid
+REAL_T delta_t_grid,delta_x_grid
+REAL_T new_time
+INTEGER_T igrid,jgrid
+
+xleft=-594.36
+xright=502.92
+shallow_tstop=15.0
+new_time=time+SHALLOW_TIME
+
+delta_t_grid=shallow_tstop/SHALLOW_M
+delta_x_grid=(xright-xleft)/SHALLOW_N
+
+  !  NINT->round to nearest whole number
+
+if (new_time.ge.shallow_tstop) then
+ igrid=SHALLOW_M-1
+else if (new_time.le.zero) then
+ igrid=0
+else
+ igrid=NINT(new_time/delta_t_grid)-2
+ if (igrid.lt.0) then
+  igrid=0
+ endif
+ tgrid=igrid*delta_t_grid
+ do while ((tgrid.lt.new_time).and.(igrid.lt.SHALLOW_M))
+  igrid=igrid+1
+  tgrid=igrid*delta_t_grid
+ enddo
+ igrid=igrid-1
+endif
+
+if (x.le.xleft) then
+ jgrid=0
+else if (x.ge.xright) then
+ jgrid=SHALLOW_N-1
+else
+ jgrid=NINT((x-xleft)/delta_x_grid)-2
+ if (jgrid.lt.0) then
+  jgrid=0
+ endif
+ xgrid=xleft+jgrid*delta_x_grid
+ do while ((xgrid.lt.x).and.(jgrid.lt.SHALLOW_N))
+  jgrid=jgrid+1
+  xgrid=xleft+jgrid*delta_x_grid
+ enddo
+ jgrid=jgrid-1
+endif
+
+xgrid=xleft+jgrid*delta_x_grid
+tgrid=igrid*delta_t_grid
+if (x.le.xgrid) then
+ thetax=zero
+else if (x.ge.xgrid+delta_x_grid) then
+ thetax=one
+else
+ thetax=(x-xgrid)/delta_x_grid
+endif
+
+if (new_time.le.tgrid) then
+ thetat=zero
+else if (new_time.ge.tgrid+delta_t_grid) then
+ thetat=one
+else
+ thetat=(new_time-tgrid)/delta_t_grid
+endif
+
+vel= &
+ (one-thetax)*(one-thetat)*shallow_water_data(igrid,jgrid,2)+ &
+ (thetax)*(one-thetat)*shallow_water_data(igrid,jgrid+1,2)+ &
+ (thetax)*(thetat)*shallow_water_data(igrid+1,jgrid+1,2)+ &
+ (one-thetax)*(thetat)*shallow_water_data(igrid+1,jgrid,2)
+
+return
+end subroutine local_shallow_water_velocity
+
+
+
+
+subroutine doit(problo,probhi,ncell,dx,tstop)
+use probcommon_module
+IMPLICIT NONE
+
+real*8 problo,probhi,dx,tstop
+integer ncell
+real*8 SSold(-1:ncell)
+real*8 SS(-1:ncell)
+real*8 QQold(-1:ncell)
+real*8 QQ(-1:ncell)
+real*8 DD(-1:ncell)  ! bottom topography
+real*8 xx(-1:ncell)
+real*8 SSflux(0:ncell)
+real*8 QQflux(0:ncell)
+real*8 start_elevation
+integer skip,nstep,i
+real*8 local_gravity,time
+real*8 elevation_right,elevation_left,u_right,u_left
+real*8 maxu,maxc,den,mom,uu,cc,dt,lambda
+real*8 denleft,denright,momleft,momright,pleft,pright
+real*8 minz
+integer icrit
+
+integer igrid,jgrid  ! t index x index
+REAL_T delta_t_grid,delta_x_grid,t_grid,x_grid
+REAL_T thetax,thetat
+integer hitgrid,last_index
+
+delta_t_grid=tstop/SHALLOW_M
+delta_x_grid=(probhi-problo)/SHALLOW_N
+
+skip=2000
+
+local_gravity=980.0
+start_elevation=22.862
+
+time=0.0
+nstep=0
+
+do i=-1,ncell
+ xx(i)=problo+(i+0.5)*dx
+ call get_bottom_elevation(xx(i),DD(i))
+ QQ(i)=0.0
+ SS(i)=start_elevation-DD(i)
+enddo
+
+do while (time.le.tstop-1.0D-10) 
+
+ call get_right_elevationIOWA(time,elevation_right)
+ call get_left_elevationIOWA(time,elevation_left)
+ call get_right_velocityIOWA(time,u_right)
+ call get_left_velocityIOWA(time,u_left)
+ SS(-1)=elevation_left
+ SS(ncell)=elevation_right
+ QQ(-1)=elevation_left*u_left
+ QQ(ncell)=elevation_right*u_right
+
+ do i=-1,ncell
+  SSold(i)=SS(i)
+  QQold(i)=QQ(i)
+ enddo
+
+ maxu=0.0
+ maxc=0.0 
+ do i=0,ncell-1
+  den=SS(i)
+  mom=QQ(i)
+  if (den.le.0.0) then
+   print *,"density must be positive (subroutine doit shallow_water)"
+   print *,"i,den ",i,den
+   stop
+  endif
+  cc=sqrt(local_gravity*den)
+  if (cc.gt.maxc) then
+   maxc=cc
+  endif
+  uu=abs(mom/den)
+  if (uu.gt.maxu) then
+   maxu=abs(uu)
+  endif
+ enddo
+ if (maxu+maxc.le.0.0) then
+  print *,"must have acoustic waves"
+  stop
+ endif
+ dt=0.8*dx/(maxu+maxc)
+ if (time+dt.ge.tstop) then
+  dt=tstop-time
+ endif
+ lambda=dt/dx
+
+ do i=0,ncell
+  denleft=SS(i-1)
+  denright=SS(i)
+  momleft=QQ(i-1)
+  momright=QQ(i)
+  pleft=0.5*local_gravity*(denleft**2)
+  pright=0.5*local_gravity*(denright**2)
+  SSflux(i)=0.5*(momleft+momright)-0.5*(denright-denleft)/lambda
+  if (denright.le.0.0) then
+   print *,"hydraulic section must be positive"
+   stop
+  endif
+  if (denleft.le.0.0) then
+   print *,"hydraulic section must be positive"
+   stop
+  endif
+  QQflux(i)=0.5*(momleft**2/denleft+momright**2/denright+ &
+    pleft+pright)-0.5*(momright-momleft)/lambda
+ enddo
+ do i=0,ncell-1
+  SS(i)=SS(i)-lambda*(SSflux(i+1)-SSflux(i))
+  QQ(i)=QQ(i)-lambda*(QQflux(i+1)-QQflux(i))- &
+    lambda*SS(i)*local_gravity*0.5*(DD(i+1)-DD(i-1))
+ enddo
+
+ hitgrid=0
+ do igrid=0,SHALLOW_M
+  t_grid=igrid*delta_t_grid
+  if (hitgrid.eq.0) then
+   if ((time.le.t_grid).and.(time+dt.ge.t_grid)) then
+    hitgrid=1
+    last_index=-1
+    do jgrid=0,SHALLOW_N
+     x_grid=problo+jgrid*delta_x_grid
+     do while (xx(last_index).le.x_grid)
+      last_index=last_index+1
+     enddo
+     last_index=last_index-1
+     if (t_grid.le.time) then
+      thetat=zero
+     else if (t_grid.ge.time+dt) then
+      thetat=one
+     else 
+      thetat=(t_grid-time)/dt
+     endif
+     if (x_grid.le.xx(last_index)) then
+      thetax=zero
+     else if (x_grid.ge.xx(last_index+1)) then
+      thetax=one
+     else
+      thetax=(x_grid-xx(last_index))/dx
+     endif
+     shallow_water_data(igrid,jgrid,1)= &
+       (one-thetax)*(one-thetat)* &
+          (DD(last_index)+SSold(last_index))+ &
+       (one-thetax)*thetat* &
+          (DD(last_index)+SS(last_index))+ &
+       (one-thetat)*thetax* &
+          (DD(last_index+1)+SSold(last_index+1))+ &
+       thetat*thetax* &
+         (SS(last_index+1)+DD(last_index+1))
+     shallow_water_data(igrid,jgrid,2)= &
+       (one-thetax)*(one-thetat)* &
+       QQold(last_index)/SSold(last_index)+ &
+       (one-thetax)*thetat* &
+       QQ(last_index)/SS(last_index)+ &
+       (one-thetat)*thetax* &
+       QQold(last_index+1)/SSold(last_index+1)+ &
+       thetat*thetax* &
+       QQ(last_index+1)/SS(last_index+1)
+    enddo  ! jgrid
+   endif ! time<t_grid<time+dt
+  endif ! hitgrid=0
+ enddo ! igrid
+
+ time=time+dt
+ nstep=nstep+1
+
+ if (nstep-skip*(nstep/skip).eq.0) then
+  print *,"time=",time
+  print *,"dt=",dt
+  icrit=0
+  minz=SS(0)+DD(0)
+  do i=0,ncell-1
+   if (SS(i)+DD(i).lt.minz) then
+    minz=SS(i)+DD(i)
+    icrit=i
+   endif
+  enddo
+  print *,"icrit,x,minz ",icrit,xx(icrit),minz
+ endif
+enddo ! while time<tstop
+
+return
+end subroutine doit
+
+subroutine shallow_water_solve()
+use probcommon_module
+IMPLICIT NONE
+
+real*8 problo,probhi,tstop,dx
+integer ncell
+
+problo=-594.36
+probhi=502.92
+
+ ! 0.1 mm  (0.2mm in Fred Stern's paper)
+ ! 100000
+ncell=5000
+dx=(probhi-problo)/ncell
+tstop=15.0
+
+call doit(problo,probhi,ncell,dx,tstop)
+
+return
+end subroutine shallow_water_solve
+
+
 end module global_utility_module
 

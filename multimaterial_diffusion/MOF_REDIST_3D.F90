@@ -763,7 +763,7 @@ stop
       REAL_T kappa(nmat)
       REAL_T F_local
       INTEGER_T curv_valid
-      real(kind=8), dimension(nmat,-3:3,-3:3) :: vf_curv
+      REAL_T, dimension(nmat,-3:3,-3:3) :: vf_curv
 
       nhalf=3 
 
@@ -836,8 +836,6 @@ stop
        stop
       endif
 
-
-
       k1hi=0
       if (SDIM.eq.2) then
        k1hi=0
@@ -905,7 +903,7 @@ stop
           print *,"im invalid 112"
           stop
          endif
-         
+        
          do dir=1,SDIM
           local_curv(dir)=zero
          enddo
@@ -1033,7 +1031,13 @@ stop
               (j+j1.ge.fablo(2))) then
            F_local=F_new(i+i1,j+j1,1)
           else
+#if (STANDALONE==1)
            F_local=one
+#else
+           print *,"only use height function in prototype code"
+           stop
+#endif
+
           endif
           vf_curv(1,i1,j1)=F_local
           vf_curv(2,i1,j1)=one-F_local
@@ -1065,7 +1069,7 @@ stop
       enddo
       enddo
       enddo  !i,j,k 
-  
+
       return
       end subroutine FORT_NODE_TO_CELL
 
