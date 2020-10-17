@@ -46,8 +46,9 @@ subroutine integrate_steps( &
  local_nten,stefan_flag,xCC,yCC)
 IMPLICIT NONE
 
-real(kind=8), intent(inout), dimension(:) :: Ts
-INTEGER ::  tm
+INTEGER, intent(in) :: M_MAX_TIME_STEP
+real(kind=8), intent(inout), dimension(1:M_MAX_TIME_STEP+1) :: Ts
+INTEGER :: tm
 INTEGER, intent(inout) ::  nx_in,ny_in
 INTEGER, intent(in) ::  plot_int
 INTEGER, intent(in) ::  N_CURRENT
@@ -72,15 +73,15 @@ REAL(KIND=8), intent(in) :: h_in
 REAL(KIND=8), intent(in) :: fixed_dt_main
 real(kind=8), dimension(:,:,:), allocatable :: VFRAC_MOF_in
 INTEGER, intent(in) :: M_CURRENT
-INTEGER, intent(in) :: M_MAX_TIME_STEP
 real(kind=8), intent(in) :: dx_in(sdim_in)
 real(kind=8), intent(inout) :: rstefan
 integer, intent(in) :: local_nten
 INTEGER, intent(in) :: subcycling_step
 INTEGER, intent(inout) :: stefan_flag ! VARIABLE TSAT
 !real(kind=8),dimension(-1:N) :: xCC,yCC       
-real(kind=8),dimension(:), intent(in) :: xCC,yCC       ! cell centers
-real(kind=8),dimension(:,:,:), intent(inout) :: T_new
+real(kind=8),dimension(-1:N_CURRENT), intent(in) :: xCC,yCC       ! cell centers
+real(kind=8),dimension(-1:N_CURRENT,-1:N_CURRENT,local_state_ncomp), &
+  intent(inout) :: T_new
 
 real(kind=8), dimension(:,:,:), allocatable :: UNEW_in
 real(kind=8), dimension(:,:,:), allocatable :: UOLD_in
@@ -129,6 +130,25 @@ real(kind=8) :: stefan_time
 real(kind=8) :: sum_alpha
 real(kind=8) :: sumvf,sumvf2
 REAL(kind=8) :: alpha_in(100)
+
+integer local_state_ncomp_test
+
+! temperature, velocity, interface reconstruction, level set
+local_state_ncomp_test=nmat_in+local_nten*sdim_in+ &
+    ngeom_recon_in*nmat_in+nmat_in*(sdim_in+1)
+if (local_state_ncomp_test.eq.local_state_ncomp) then
+ ! do nothing
+else
+ print *,"local_state_ncomp_test invalid"
+ stop
+endif
+
+if (M_MAX_TIME_STEP.ge.M_CURRENT) then
+ ! do nothing
+else
+ print *,"M_MAX_TIME_STEP or M_CURRENT invalid"
+ stop
+endif
 
 local_Pi=4.0d0*atan(1.0d0)
 
@@ -447,7 +467,13 @@ do while (finished_flag.eq.0)
 
  deallocate(UNEW_in) 
 
- T_STATE = T_new
+ do i= -1,N_CURRENT
+ do j= -1,N_CURRENT
+ do im=1,local_state_ncomp
+  T_STATE(i,j,im) = T_new(i,j,im)
+ enddo
+ enddo
+ enddo
 
  do im=1,nmat_in
   voltotal=0.0d0
