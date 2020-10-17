@@ -711,6 +711,7 @@ stop
       use global_utility_module
       use probcommon_module
       use MOF_routines_module
+      use height_method_module
 
       IMPLICIT NONE
 
@@ -759,7 +760,10 @@ stop
       REAL_T total_curv
       INTEGER_T local_status
       REAL_T local_LS(nmat)
-
+      REAL_T kappa(nmat)
+      REAL_T F_local
+      INTEGER_T curv_valid
+      REAL_T, dimension(nmat,-3:3,-3:3) :: vf_curv
 
       nhalf=3 
 
@@ -853,166 +857,214 @@ stop
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       do im=1,nmat+nten
+       if (height_function_flag.eq.0) then
 
-        do im_local=1,nmat
-         local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
-        enddo
-        call get_primary_material(local_LS,nmat,im_primary)
-        call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+        do im=1,nmat+nten
 
-        local_status=1
-        if ((im.ge.1).and.(im.le.nmat)) then
-         if ((im.ne.im_primary).and. &
-             (im.ne.im_secondary)) then
-          local_status=0
-         endif
-         if (is_rigid(nmat,im).eq.1) then
-          ! do nothing
-         else if (is_rigid(nmat,im).eq.0) then
-          if (is_rigid(nmat,im_primary).eq.0) then
-           ! do nothing
-          else if (is_rigid(nmat,im_primary).eq.1) then
+         do im_local=1,nmat
+          local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
+         enddo
+         call get_primary_material(local_LS,nmat,im_primary)
+         call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+
+         local_status=1
+         if ((im.ge.1).and.(im.le.nmat)) then
+          if ((im.ne.im_primary).and. &
+              (im.ne.im_secondary)) then
            local_status=0
+          endif
+          if (is_rigid(nmat,im).eq.1) then
+           ! do nothing
+          else if (is_rigid(nmat,im).eq.0) then
+           if (is_rigid(nmat,im_primary).eq.0) then
+            ! do nothing
+           else if (is_rigid(nmat,im_primary).eq.1) then
+            local_status=0
+           else
+            print *,"is_rigid(nmat,im_primary) invalid"
+            stop
+           endif
           else
-           print *,"is_rigid(nmat,im_primary) invalid"
+           print *,"is_rigid(nmat,im) invalid"
            stop
+          endif
+         else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
+          iten=im-nmat
+          call get_inverse_iten(im1,im2,iten,nmat)
+          if ((im1.ne.im_primary).and. &
+              (im1.ne.im_secondary)) then
+           local_status=0
+          endif
+          if ((im2.ne.im_primary).and. &
+              (im2.ne.im_secondary)) then
+           local_status=0
           endif
          else
-          print *,"is_rigid(nmat,im) invalid"
+          print *,"im invalid 112"
           stop
          endif
-        else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
-         iten=im-nmat
-         call get_inverse_iten(im1,im2,iten,nmat)
-         if ((im1.ne.im_primary).and. &
-             (im1.ne.im_secondary)) then
-          local_status=0
-         endif
-         if ((im2.ne.im_primary).and. &
-             (im2.ne.im_secondary)) then
-          local_status=0
-         endif
-        else
-         print *,"im invalid 112"
-         stop
-        endif
         
-        do dir=1,SDIM
-         local_curv(dir)=zero
-        enddo
+         do dir=1,SDIM
+          local_curv(dir)=zero
+         enddo
 
-        ibase=(im-1)*(SDIM+1)
+         ibase=(im-1)*(SDIM+1)
 
-        do dir=1,SDIM
-         do i1=0,1
-         do j1=0,1
-         do k1=0,k1hi
-          local_normal(dir)=LS_NRM_FD(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
-          local_mag=LS_NRM_FD(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
-          if (local_mag.gt.zero) then
-           ! do nothing
-          else if (local_mag.eq.zero) then
-           local_status=0
+         do dir=1,SDIM
+          do i1=0,1
+          do j1=0,1
+          do k1=0,k1hi
+           local_normal(dir)=LS_NRM_FD(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
+           local_mag=LS_NRM_FD(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
+           if (local_mag.gt.zero) then
+            ! do nothing
+           else if (local_mag.eq.zero) then
+            local_status=0
+           else
+            print *,"local_mag invalid"
+            stop
+           endif
+
+           sign_nm=one
+           if (((dir.eq.1).and.(i1.eq.0)).or. &
+               ((dir.eq.2).and.(j1.eq.0)).or. &
+               ((dir.eq.3).and.(SDIM.eq.3).and.(k1.eq.0))) then
+            sign_nm=-one
+           endif
+           RR=one
+           if (levelrz.eq.0) then
+            ! do nothing
+           else if (levelrz.eq.1) then
+            if (dir.eq.1) then
+             RR=xsten(2*i1-1,dir)
+             if (RR.lt.zero) then
+              RR=zero
+             endif
+            endif
+           else if (levelrz.eq.3) then
+            if (dir.eq.1) then
+             RR=xsten(2*i1-1,dir)
+             if (RR.lt.zero) then
+              RR=zero
+             endif
+            endif
+           else
+            print *,"dir invalid"
+            stop
+           endif
+
+           local_curv(dir)=local_curv(dir)+sign_nm*RR*local_normal(dir)
+          enddo !  k1
+          enddo !  j1
+          enddo !  i1
+          xplus=xsten(1,dir)
+          xminus=xsten(-1,dir)
+          xmiddle=xsten(0,dir)
+          if ((xplus.gt.xminus).and. &
+              (xplus.gt.xmiddle).and. &
+              (xmiddle.gt.xminus)) then
+           local_curv(dir)=local_curv(dir)/(denom_factor*(xplus-xminus))
           else
-           print *,"local_mag invalid"
+           print *,"xplus or xminus invalid"
            stop
-          endif
-
-          sign_nm=one
-          if (((dir.eq.1).and.(i1.eq.0)).or. &
-              ((dir.eq.2).and.(j1.eq.0)).or. &
-              ((dir.eq.3).and.(SDIM.eq.3).and.(k1.eq.0))) then
-           sign_nm=-one
           endif
           RR=one
           if (levelrz.eq.0) then
-           ! do nothing
+           RR=one
           else if (levelrz.eq.1) then
+           RR=one
            if (dir.eq.1) then
-            RR=xsten(2*i1-1,dir)
-            if (RR.lt.zero) then
-             RR=zero
+            if (xmiddle.le.zero) then
+             local_curv(dir)=zero
+            else if (xmiddle.gt.zero) then
+             RR=xmiddle
+            else
+             print *,"xmiddle invalid"
+             stop
             endif
            endif
           else if (levelrz.eq.3) then
+           RR=one
            if (dir.eq.1) then
-            RR=xsten(2*i1-1,dir)
-            if (RR.lt.zero) then
-             RR=zero
+            if (xmiddle.le.zero) then
+             local_curv(dir)=zero
+            else if (xmiddle.gt.zero) then
+             RR=xmiddle
+            else
+             print *,"xmiddle invalid"
+             stop
             endif
            endif
+           if (dir.eq.2) then ! theta direction
+            if (xsten(0,1).le.zero) then
+             local_curv(dir)=zero
+            else if (xsten(0,1).gt.zero) then
+             RR=xsten(0,1)
+            else
+             print *,"xsten(0,1) invalid"
+             stop
+            endif
+           endif 
           else
-           print *,"dir invalid"
+           print *,"levelrz invalid"
            stop
           endif
+          local_curv(dir)=local_curv(dir)/RR
+         enddo ! dir=1..sdim 
 
-          local_curv(dir)=local_curv(dir)+sign_nm*RR*local_normal(dir)
-         enddo !  k1
-         enddo !  j1
-         enddo !  i1
-         xplus=xsten(1,dir)
-         xminus=xsten(-1,dir)
-         xmiddle=xsten(0,dir)
-         if ((xplus.gt.xminus).and. &
-             (xplus.gt.xmiddle).and. &
-             (xmiddle.gt.xminus)) then
-          local_curv(dir)=local_curv(dir)/(denom_factor*(xplus-xminus))
-         else
-          print *,"xplus or xminus invalid"
-          stop
-         endif
-         RR=one
-         if (levelrz.eq.0) then
-          RR=one
-         else if (levelrz.eq.1) then
-          RR=one
-          if (dir.eq.1) then
-           if (xmiddle.le.zero) then
-            local_curv(dir)=zero
-           else if (xmiddle.gt.zero) then
-            RR=xmiddle
-           else
-            print *,"xmiddle invalid"
-            stop
-           endif
-          endif
-         else if (levelrz.eq.3) then
-          RR=one
-          if (dir.eq.1) then
-           if (xmiddle.le.zero) then
-            local_curv(dir)=zero
-           else if (xmiddle.gt.zero) then
-            RR=xmiddle
-           else
-            print *,"xmiddle invalid"
-            stop
-           endif
-          endif
-          if (dir.eq.2) then ! theta direction
-           if (xsten(0,1).le.zero) then
-            local_curv(dir)=zero
-           else if (xsten(0,1).gt.zero) then
-            RR=xsten(0,1)
-           else
-            print *,"xsten(0,1) invalid"
-            stop
-           endif
-          endif 
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-         local_curv(dir)=local_curv(dir)/RR
-        enddo ! dir=1..sdim 
+         total_curv=zero
+         do dir=1,SDIM
+          total_curv=total_curv+local_curv(dir)
+         enddo
+         CURV_CELL(D_DECL(i,j,k),im)=total_curv
+         CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=local_status
+        enddo ! im=1..nmat+nten
 
-        total_curv=zero
-        do dir=1,SDIM
-         total_curv=total_curv+local_curv(dir)
-        enddo
-        CURV_CELL(D_DECL(i,j,k),im)=total_curv
-        CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=local_status
-       enddo ! im=1..nmat+nten
+       else if (height_function_flag.eq.1) then
+
+        if (nmat.eq.2) then
+         do i1=-3,3
+         do j1=-3,3
+          if ((i+i1.ge.fablo(1)).and. &
+              (i+i1.le.fabhi(1)).and. &
+              (j+j1.le.fabhi(2)).and. &
+              (j+j1.ge.fablo(2))) then
+           F_local=F_new(i+i1,j+j1,1)
+          else
+#if (STANDALONE==1)
+           F_local=one
+#else
+           print *,"only use height function in prototype code"
+           stop
+#endif
+
+          endif
+          vf_curv(1,i1,j1)=F_local
+          vf_curv(2,i1,j1)=one-F_local
+         enddo
+         enddo
+         call get_curvature_heightf(nmat,vf_curv,dx(1),kappa)
+         do im=1,nmat+1
+          CURV_CELL(D_DECL(i,j,k),im)=kappa(im)
+         enddo
+         if (abs(LS_new(D_DECL(i,j,k),1)).le.dx(1)) then
+          curv_valid=1
+         else
+          curv_valid=0
+         endif
+          ! status=1 good status=0 bad
+         do im=1,nmat+1
+          CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=curv_valid
+         enddo
+        else
+         print *,"only two materials in 2d supported"
+         stop
+        endif
+
+       else
+        print *,"height_function_flag invalid"
+        stop
+       endif
 
       enddo
       enddo

@@ -40,19 +40,244 @@ IMPLICIT NONE
 ! 19 = annulus cvg test
 ! 20 = hypocycloid with 6 materials
 !
-! page 94 of Alexiades, Solomon 1993 for *steady state* stefan model:
-!  exact solution in fixed frame of reference:
-!  y_I=Vt   u_I = 0
-!  uMELT=0  y-Vt > 0
-!  uSOLID=V (y-Vt)   y-Vt < 0
-!  note that: uSOLID_yy =0  uSOLID(Vt)=0  uSOLID(Vt-DY)=-V DY
-!          d uSOLID / dy = V
-!  let y1=y-Vt  t1=t
-!  drop the "1" subscript:
-!  y_I=0   u_I=0
-!  uMELT=0  y>0
-!  uSOLID=V y   y<0
-!  uSOLID_yy=0  uSOLID(0)=0  uSOLID(-DY)= -V DY
+
+! July 5, 2019 Infinity norm for LSexact( x_face_centroid ), probtype=4
+!  512  9.3E-7  (areaface: 1.1E-7, dir,side=1,2 i,j=346,439)
+!  256  3.83E-6  (areaface: 1.0E-8, dir,side=1,2 i,j=114,26)
+!  128  1.46E-5  (areaface: 1.0E-8, dir,side=1,2 i,j=114,26)
+!  64   5.96E-5  (areaface: 2.9E-6, dir,side=1,2 i,j=21,8)
+!
+! July 10, 2019 Infinity norm for LSexact( x_face_centroid ), probtype=16
+! 256   3.0E-5 (areaface: 3.0E-6)
+! 128   1.1E-4 (areaface: 1.4E-5)
+!  64   4.4E-4 (areaface: 7.5E-5)
+! YANG LIU MODIFY TABLE
+! probtype==13 (pentafoil), dirichlet bc, ERRTOL=0.999999D0, thick (0.2d0),
+! TSTOP=1.25E-2, operator_ext=1 operator_int=3 linear exact=1,
+!       L1      L2      LINF    L1_grd  L2_grd   LINF_grd Linf_Igrd L1_Igrd
+!32(1)  8.7E-5  9.7E-5  3.5E-4   6.5E-4  1.1E-3   5.6E-3    0.48    8.0E-2
+!64(4)  2.3E-5  2.4E-5  4.4E-5   1.5E-4  2.1E-4   8.4E-4    0.57    6.7E-2
+!128(16) 5.9E-6 6.0E-6  2.2E-5   3.8E-5  6.3E-5   1.1E-3    0.54    4.0E-2
+!256(64) 1.4E-6 1.5E-6  4.5E-6   1.0E-5  1.9E-5   4.3E-4    0.62    4.0E-2
+!
+! YANG LIU MODIFY TABLE
+! probtype==13 (pentafoil), dirichlet bc, ERRTOL=0.01D0, thin (0.05d0),
+! TSTOP=1.25E-2, operator_ext=1 operator_int=3 linear exact=1,
+! note: no stencil available for getting interface flux.
+!       L1      L2      LINF    L1_grd  L2_grd   LINF_grd 
+! 32(1) 3.6E-4 5.9E-4  2.4E-3   2.4E-2 3.6E-2    1.5E-1   
+! 64(2) 1.6E-4 2.2E-4  6.0E-4   1.5E-2 2.3E-2    8.7E-2   
+!128(4) 1.5E-5 2.2E-5  1.1E-4   2.3E-3 4.5E-3    3.1E-2
+!256(8) 1.6E-6 1.7E-6  9.8E-6   1.7E-4 3.0E-4    3.5E-3  
+!
+! YANG LIU MODIFY TABLE
+! probtype==13 (pentafoil), neumann bc, ERRTOL=0.999999D0, thick (0.2d0),
+! TSTOP=1.25E-2, operator_ext=1 operator_int=3 linear exact=1
+! timesteps refined by factor of 2
+! (OTHERWISE SIMULATIONS WILL TAKE A LONG TIME)
+! 32(1), 64(2), 128(4), 256(8), 512(16)
+!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
+!32/64   2.7E-3  3.0E-3  5.2E-3 3.7E-2     3.7E-2  3.9E-2              
+!64/128  1.7E-3  1.9E-3  3.0E-3 1.8E-2     1.8E-2  2.6E-2              
+!128/256 9.5E-4  1.1E-3  1.7E-3 9.3E-3     1.0E-2  1.6E-2              
+!256/512 5.1E-4  5.6E-4  8.8E-4 4.9E-3     5.4E-3  9.2E-3              
+!
+! YANG LIU MODIFY TABLE
+! probtype==16 (multiscale), error for material 2, kratio=1000:1, 
+! material 2 is smooth.  filament thickness=0.02
+! TSTOP=2.0,  
+! timesteps refined by factor of 2.  16(4) 32(8), 64(16), 128(32), 256(64)
+! SIMPLE (smooth):
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16/32  0.03125    1.2E-1   1.2E-1   1.2E-1  1.3E-2     1.5E-2  2.5E-2
+!32/64  0.015625   3.1E-1   3.1E-1   3.1E-1  2.2E-2     2.2E-2  2.7E-2
+!64/128 0.0078125  1.9E-1   1.9E-1   1.9E-1  1.3E-2     1.3E-2  1.8E-2
+!128/256 3.90625E-3 8.0E-2  8.0E-2   8.1E-2  5.2E-3     5.3E-3  9.3E-3
+!average flux:(16) -0.131 (32) -0.155 (64) -0.177 (128) -0.192 (256) -0.197
+!
+! YANG LIU MODIFY TABLE
+! SIMPLE (material 2 has corners):
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16/32  0.03125      STENCIL NOT AVAILABLE FOR GRADIENT ERROR
+!32/64  0.015625   3.7E-1   3.7E-1   3.8E-1  1.3E-2     1.3E-2  1.3E-2
+!64/128 0.0078125  2.4E-1   2.4E-1   2.4E-1  6.4E-3     6.8E-3  1.3E-2
+!128/256 3.90625E-3 1.3E-1  1.3E-1   1.3E-1  3.7E-3     4.0E-3  9.2E-3
+!average flux:(16) -0.121 (32) -0.156 (64) -0.177 (128) -0.187 (256) -0.191
+!
+! YANG LIU MODIFY TABLE
+! DS:
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16/32  0.03125    2.1E-1   2.1E-1   2.2E-1  2.1E-2     2.3E-2  3.4E-2
+!32/64  0.015625   3.3E-1   3.3E-1   3.3E-1  2.5E-2     2.5E-2  3.0E-2
+!64/128 0.0078125  2.0E-1   2.0E-1   2.0E-1  1.4E-2     1.4E-2  2.0E-2
+!128/256 3.90625E-3 1.2E-1  1.2E-1   1.2E-1  7.7E-3     7.8E-3  2.1E-2
+!average flux:(16) -0.131 (32) -0.148 (64) -0.172 (128) -0.186 (256) -0.195
+!
+! YANG LIU MODIFY TABLE
+! OP:
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16/32  0.03125    4.6E-3   4.7E-3   5.5E-3  4.3E-3     4.7E-3  7.8E-3
+!32/64  0.015625   1.3E-1   1.3E-1   1.3E-1  9.6E-3     9.6E-3  1.3E-2
+!64/128 0.0078125  1.2E-1   1.2E-1   1.2E-1  7.9E-3     8.1E-3  1.3E-2
+!128/256 3.90625E-3 6.2E-2  6.2E-2   6.2E-2  3.9E-3     4.0E-3  7.1E-3
+!average flux:(16) -0.137 (32) -0.173 (64) -0.185 (128) -0.194 (256)-0.199
+!
+!
+! YANG LIU MODIFY TABLE
+! FUTURE WORK: LINEAR EXACT METHOD WHEN K=constant
+! AMR free test: does the error decrease without refining the Eulerian grid?
+!  i.e. does adding extra materials cause the error to go down?
+! kratio=1
+! SIMPLE (smooth):
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16     0.0625     4.7E-2  5.6E-2   1.0E-1  2.5E-1     3.3E-1  5.5E-1
+!32     0.03125    3.2E-2  4.0E-2   8.6E-2  1.7E-1     2.3E-1  4.2E-1
+!64     0.015625   1.7E-2  2.1E-2   4.7E-2  8.7E-2     1.1E-1  2.7E-1
+!128    0.0078125  7.9E-3  9.8E-3   2.3E-2  4.1E-2     5.4E-2  2.5E-1
+!256    0.00390625 4.0E-3  4.9E-3   1.1E-2  2.1E-2     2.8E-2  2.2E-1
+!average flux:(16) -9.06 (32) -9.31 (64) -9.46 (128) -9.54 (256) 9.58
+!
+! kratio=1
+! SIMPLE (corner):
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16     0.0625     6.9E-2  7.5E-2   1.0E-1  4.8E-1     7.7E-1  3.3
+!32     0.03125    5.2E-2  5.5E-2   9.4E-2  3.5E-1     6.1E-1  3.4
+!64     0.015625   2.3E-2  2.5E-2   5.0E-2  1.8E-1     3.8E-1  3.5
+!128    0.0078125  1.2E-2  1.2E-2   2.5E-2  1.0E-1     2.9E-1  3.4
+!256    0.00390625 5.8E-3  6.2E-3   1.3E-2  5.6E-2     2.0E-1  3.7
+!average flux:(16) -8.95 (32) -9.73 (64) -9.90 (128) -9.99 (256) -10.03
+
+!
+! YANG: DO NOT ADD THIS DATA
+! DS:
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16     0.0625     5.0E-2  6.0E-2   1.1E-1  2.8E-1     3.8E-1  6.4E-1
+!32     0.03125    4.7E-2  5.9E-2   1.5E-1  3.2E-1     4.1E-1  1.1
+!64     0.015625   2.1E-2  2.6E-2   6.6E-2  1.2E-1     1.5E-1  4.9E-1
+!128    0.0078125  1.1E-2  1.4E-2   4.8E-2  7.0E-3     1.2E-1  2.3
+!256    0.00390625 5.7E-3  6.9E-3   2.0E-2  3.3E-2     5.5E-2  9.3E-1
+!average flux:(16) -9.00 (32) -9.10 (64) -9.42 (128)-9.51  (256) -9.56
+!
+! YANG: DO NOT ADD THIS DATA
+! OP:
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16     0.0625     4.0E-2  4.9E-2   1.1E-1  2.5E-1     3.5E-1  5.5E-1
+!32     0.03125    2.5E-2  3.1E-2   7.0E-2  1.5E-1     2.0E-1  3.7E-1
+!64     0.015625   1.4E-2  1.7E-2   4.3E-2  7.8E-2     1.0E-1  2.1E-1
+!128    0.0078125  6.9E-3  8.7E-3   2.2E-2  3.9E-2     5.1E-2  1.6E-1
+!256    0.00390625 3.5E-3  4.4E-3   1.1E-2  2.0E-2     2.6E-2  1.5E-1
+!average flux:(16) -9.01 (32) -9.36 (64) -9.48 (128) -9.55 (256) -9.58
+!
+! YANG: DO NOT ADD THIS DATA
+! "LE":
+!            dx    L1         L2      Linf   L1 grad    L2 grad Linf grad  
+!16     0.0625     1.9E-1  1.9E-1   2.4E-1  2.4E-1     3.1E-1  5.6E-1
+!32     0.03125    7.7E-2  8.2E-2   1.6E-1  2.1E-1     2.7E-1  9.8E-1
+!64     0.015625   3.3E-3  3.9E-3   9.5E-3  2.3E-2     4.2E-2  4.5E-1
+!128    0.0078125  3.2E-4  4.5E-4   3.6E-3  6.3E-3     1.6E-2  2.7E-1
+!256    0.00390625 1.9E-4  2.6E-4   1.6E-3  3.6E-3     8.9E-3  2.1E-1
+!average flux:(16) -9.06 (32) -9.34 (64) -9.59 (128) -9.61 (256) -9.61
+!
+! YANG LIU CHECK TABLE IF AGREEMENT
+! probtype==15 (hypocycloid 2 mat), 2000 markers
+! ERRTOL=0.999999D0, 
+! TSTOP=1.25E-2, operator_ext=1 operator_int=1 linear exact=0,
+! timesteps refined by factor of 2.  32(1), 64(2), 128(4), 256(8), 512(16)
+!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
+!32/64   1.4E-1  2.1E-1  5.5E-1 2.7        3.7     8.8              
+!64/128  1.1E-1  1.6E-1  4.1E-1 3.0        3.9     7.7              
+!128/256 7.2E-2  9.7E-2  2.1E-1 1.8        2.2     4.3              
+!256/512 4.0E-2  5.3E-2  1.1E-1 1.0        1.2     2.5
+!
+! YANG LIU CHECK TABLE IF AGREEMENT
+! probtype==15 (hypocycloid 2 mat), 4000 markers
+! ERRTOL=0.999999D0, 
+! TSTOP=1.25E-2, operator_ext=1 operator_int=1 linear exact=1,
+! timesteps refined by factor of 2.  32(1), 64(2), 128(4), 256(8), 512(16)
+!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
+!32/64   1.4E-1  2.1E-1  5.5E-1 2.7        3.7     8.8              
+!64/128  1.1E-1  1.6E-1  4.1E-1 3.0        3.9     7.8              
+!128/256 7.2E-2  9.7E-2  2.1E-1 1.8        2.2     4.3              
+!256/512 4.0E-2  5.3E-2  1.1E-1 1.0        1.2     2.6
+!
+! YANG LIU CHECK TABLE IF AGREEMENT
+! probtype==20 (hypocycloid 6 mat), 2000 markers,type 3
+! ERRTOL=0.999999D0, 
+! TSTOP=1.25E-2, operator_ext=1 operator_int=1 linear exact=0,
+! timesteps refined by factor of 2.  32(1), 64(2), 128(4), 256(8), 512(16)
+!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
+!32/64   4.3E-1  4.3E-1  5.5E-1 3.1        3.2      4.2             
+!64/128  2.7E-1  2.7E-1  3.1E-1 1.2        1.4      2.3
+!128/256 1.5E-1  1.5E-1  1.8E-1 0.79       0.89     1.8              
+!256/512 7.9E-2  8.1E-2  1.0E-1 5.2E-1     5.9E-1   1.4              
+!
+! YANG LIU CHECK TABLE IF AGREEMENT
+! probtype==20 (hypocycloid 6 mat), 2000 markers,type 2
+! ERRTOL=0.999999D0, 
+! TSTOP=1.25E-2, operator_ext=1 operator_int=1 linear exact=0,
+! timesteps refined by factor of 2.  32(1), 64(2), 128(4), 256(8), 512(16)
+!        L1         L2   Linf   L1 grad    L2 grad Linf grad  
+!32/64   1.9E-1  2.5E-1  5.5E-1 5.7        6.0      8.8             
+!64/128  1.3E-1  1.8E-1  4.1E-1 4.2        4.9      7.8
+!128/256 8.1E-2  1.0E-1  2.1E-1 2.2        2.5      4.3              
+!256/512 4.5E-2  5.6E-2  1.1E-1 1.1        1.3      2.5              
+!
+! probtype==1, dirichlet bc, ERRTOL=0.999999D0, thick, TSTOP=1.25E-2
+! operator_ext=1 operator_int=3 linear exact=1
+!        L1         L2   Linf   L1 grad    L2 grad Linf grad  Linf flux
+! 32(1)  2.6E-3 2.9E-3 5.5E-3   1.6E-2     2.1E-2   6.6E-2    1.2E-1
+! 64(4)  7.1E-4 8.2E-4 1.7E-3   5.7E-3     7.3E-3   2.8E-2    4.8E-2 
+!128(16) 1.7E-4 2.0E-4 4.2E-4   1.6E-3     2.1E-3   8.7E-3    2.4E-2
+!256(64) 4.3E-5 5.1E-5 1.1E-4   4.2E-4     5.5E-4   2.7E-3    1.3E-2 
+!
+! probtype==1, dirichlet bc, ERRTOL=0.01D0, thin, TSTOP=1.25E-2
+! operator_ext=1 operator_int=3 linear exact=1
+!        L1         L2   Linf   L1 grad    L2 grad Linf grad 
+! 32(1) 4.2E-4  6.9E-4   1.8E-3  3.8E-2    1.0E-1  5.4E-1
+! 64(2) 5.4E-4  7.1E-4   1.9E-3  6.5E-2    1.0E-1  4.5E-1
+!128(4) 1.8E-4  2.5E-4   6.6E-4  3.6E-2    5.4E-2  1.9E-1
+!256(8) 3.0E-6  3.6E-6   7.5E-6  4.7E-4    8.0E-4  3.6E-3
+!
+! probtype==1, dirichlet bc, ERRTOL=0.01D0, thin, TSTOP=1.25E-2
+! operator_ext=1 operator_int=1 linear exact=0
+!        L1         L2   Linf   L1 grad    L2 grad Linf grad 
+! 32(1) 1.1E-3  1.4E-3   3.3E-3  7.6E-2    1.3E-1  5.6E-1
+! 64(2) 4.4E-4  6.3E-4   1.7E-3  6.2E-2    9.5E-2  4.0E-1
+!128(4) 2.0E-4  3.1E-4   1.2E-3  4.2E-2    6.0E-2  2.1E-1
+!256(8) 8.6E-5  1.3E-4   6.2E-4  3.3E-2    5.4E-2  3.3E-1
+!
+!
+! probtype==1, thin
+! ERRTOL=0.01D0, 2*radeps=0.01, Neumann, T=1.25E-2, linear exact
+!        dx          L1      L2   Linf   L1 grad  L2 grad Linf grad 
+! 32   1 0.03125    1.1E-2  1.3E-2 2.5E-2  2.5E-1  3.9E-1   1.2
+! 64   2 0.015625   1.0E-2  1.3E-2 2.7E-2  2.7E-1  3.4E-1   9.7E-1
+! 128  4 0.0078125  8.4E-3  1.0E-2 2.4E-2  1.4E-1  1.9E-1   5.9E-1
+! 256  8 0.00390625 1.3E-3  1.5E-3 2.1E-3  4.3E-3  5.8E-3   5.5E-2
+!
+! probtype==1
+! ERRTOL=0.999999, thick, Neumann, T=1.25E-2
+! T=1.25E-2    L1      L2     LINF    L1_grd  L2_grd   LINF_grd
+! 32   1 step  9.6E-3  1.1E-2 1.6E-2  2.5E-2  3.2E-2   8.4E-2
+! 64   4 step  2.6E-3  2.9E-3 4.4E-3  6.8E-3  8.8E-3   2.7E-2
+! 128 16 step  6.7E-4  7.5E-4 1.1E-3  1.8E-3  2.3E-3   1.1E-2
+! 256 64 step  1.7E-4  1.9E-4 2.8E-4  4.5E-4  5.8E-4   3.1E-3
+!
+! YANG LIU MODIFY TABLE (MAKE GRAPH TOO!)
+! probtype=19, ERRTOL=0.999999D0, polar solver: 128x256, tstop=0.004
+! T=0.004        L1      L2     LINF    L1_grd  L2_grd   LINF_grd Linf_int_grd
+! 32   1 step  6.9E-2  8.0E-2  1.5E-1   4.7E-1   6.2E-1 2.1       2.7
+! 64   4 step  2.1E-2  2.4E-2  4.9E-2   1.8E-1   2.4E-1 7.5E-1    8.3E-1
+! 128 16 step  5.3E-3  6.4E-3  1.4E-2   5.2E-2   6.8E-2 2.2E-1    2.5E-1
+! 256 64 step  1.3E-3  1.6E-3  3.5E-3   1.4E-2   1.8E-2 6.1E-2    7.4E-2
+!
+! YANG LIU MODIFY TABLE 
+! probtype=19, ERRTOL=0.999999D0, polar solver: 256x512, tstop=0.004
+! T=0.004        L1      L2     LINF    L1_grd  L2_grd   LINF_grd Linf_int_grd
+! 32   1 step  6.9E-2  8.0E-2  1.5E-1   4.7E-1   6.2E-1 2.1       2.7
+! 64   4 step  2.1E-2  2.4E-2  5.0E-2   1.8E-1   2.4E-1 7.5E-1    8.4E-1
+! 128 16 step  5.3E-3  6.4E-3  1.3E-2   5.2E-2   6.8E-2 2.2E-1    2.6E-1
+! 256 64 step  1.3E-3  1.6E-3  3.4E-3   1.4E-2   1.8E-2 6.0E-2    8.4E-2
 !
 ! 0=flat interface  
 ! 1=annulus  
@@ -127,21 +352,17 @@ integer,parameter          :: sdim_in = 2
 
 INTEGER :: nmax
 INTEGER :: nmat_in
-INTEGER :: precond_type_in
 INTEGER :: dir
 INTEGER :: side
 REAL(kind=8) :: xcen,ycen
 REAL(kind=8) :: xcen_vec(2)
-REAL(kind=8) :: time_init,xgrid,ygrid
+REAL(kind=8) :: time_init
 REAL(kind=8) :: deltat_in
 REAL(kind=8) :: deltat_polar
 INTEGER      :: subcycling_step
-REAL(kind=8) :: bicgstab_tol_in
-REAL(kind=8) :: current_time_in
 
-INTEGER                    :: i,j,tm
+INTEGER                    :: i,j
 REAL(KIND=8)               :: h_in
-REAL(KIND=8)               :: time_n,time_np1
 !REAL(KIND=8),dimension(-1:N+1) :: XLINE,YLINE 
 REAL(KIND=8),dimension(:), allocatable :: XLINE,YLINE ! nodes
 !real(kind=8),dimension(-1:N) :: xCC,yCC       
@@ -155,11 +376,9 @@ real(kind=8)               :: dx_coarse
 TYPE(POLYGON),dimension(:,:), allocatable :: CELL_FAB
 real(kind=8),external      :: exact_temperature
 real(kind=8)               :: max_front_vel
-real(kind=8)               :: test_vel
 real(kind=8)               :: lmSt
 real(kind=8)               :: rstefan
 real(kind=8)               :: T_FIELD
-real(kind=8)               :: stefan_time
 real(kind=8)               :: local_vof
 
 real(kind=8)                :: xsten_cache(-1:1)
@@ -167,10 +386,7 @@ integer                     :: nhalf
 integer                     :: imof
 integer                     :: im
 integer                     :: im1
-integer                     :: im_opp
-real(kind=8)                :: sumT,sumvf,sumvf2,voltotal,local_Pi
-real(kind=8)                :: eff_radius
-real(kind=8)                :: expect_radius
+real(kind=8)                :: sumT,sumvf,local_Pi
 real(kind=8)                :: test_radblob
 
 !---------------------------------------------------
@@ -188,28 +404,17 @@ real(kind=8) :: problo_arr(2)
 
 integer local_state_ncomp
 integer nx_in,ny_in,lox_in,loy_in,hix_in,hiy_in
-integer hflag
 integer vofcomp
-integer vofcomp2
 integer scomp
-integer nsteps
-integer total_nsteps_parm
 integer inode
 real(kind=8) :: cc(2)
 real(kind=8) :: dtemp1,dtemp2
-real(kind=8) :: sum_alpha
 real(kind=8) :: flxavg1,flxavg2
-real(kind=8) :: flxtot1,flxtot2
-real(kind=8) :: xlo_fluxtest,xhi_fluxtest
 real(kind=8) :: y_fluxtest1
 real(kind=8) :: y_fluxtest2
-real(kind=8) :: LL
-real(kind=8) :: TSAT
-
-integer j_fluxtest,ilo_fluxtest,ihi_fluxtest,isum
-integer icen,jcen
 
 integer ireverse,isink
+
 
 ! -1:N,-1:N,nmat
 real(kind=8),dimension(:,:,:),allocatable :: vf
@@ -1577,6 +1782,14 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  print *,"PROCESSING FOR RELATIVE ERRORS N_CURRENT, im_measure= ", &
    N_CURRENT,im_measure
+
+ nx_in=N_CURRENT
+ ny_in=N_CURRENT
+
+ lox_in=0
+ loy_in=0
+ hix_in=nx_in-1
+ hiy_in=ny_in-1
 
  allocate(fine_data(lox_in-1:hix_in+1,loy_in-1:hiy_in+1,2))
  do i=lox_in-1,hix_in+1
