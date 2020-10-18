@@ -14,6 +14,8 @@
 using namespace std;
 using namespace amrex;
 using namespace adept;
+using My_adept_FAB=BaseFab< adept::adouble >;
+using My_adept_MFAB=FabArray< My_adept_FAB >;
 
 // This article seemed to have good success with smoothing the
 // Heaviside function upwinding advection terms:
@@ -55,84 +57,157 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 //  referring to the review article by Giles and Pierce.
 //  This is in contrast to "differentiate then discretize."
 //
-/*
+
 adept::adouble cost_function(
-	 vector< vector< adept::adouble > > uinput) {
+	 vector< My_adept_MFAB* > uinput,
+	 const Real* dx,
+	 Real dt,
+	 const Geometry& geom) {
+
+ int nsteps=uinput.size()-1;
 
  adept::adouble local_pi=4.0*atan(1.0);
  adept::adouble eps=1.0e-10;
- vector< vector< adept::adouble > > v;  // approximate solution
- vector< vector< adept::adouble > > a;
- vector< vector< adept::adouble > > ubackground;
- vector< vector< adept::adouble > > wt_background;
- vector< vector< adept::adouble > > q_observation;
- vector< vector< adept::adouble > > wt_observation;
 
- adept::adouble h=(xhi-xlo)/Ncells;
- adept::adouble k=stop_time/Nsteps;
+ vector< My_adept_MFAB* > v;  // approximate solution
+ vector< My_adept_MFAB* > a;
+ vector< My_adept_MFAB* > ubackground;
+ vector< My_adept_MFAB* > wt_background;
+ vector< My_adept_MFAB* > q_observation;
+ vector< My_adept_MFAB* > wt_observation;
 
-  // AMReX has "Array4" designed for GPU, OMP, MPI
-  // Can one declare Array4< adept::adouble > u  ???
- ubackground.resize(Nsteps+1);
- wt_background.resize(Nsteps+1);
- q_observation.resize(Nsteps+1);
- wt_observation.resize(Nsteps+1);
- for (int ntime=0;ntime<=Nsteps;ntime++) {
-	 adept::adouble local_t=ntime*k;
+ v.resize(nsteps+1);
+ a.resize(nsteps+1);
+ ubackground.resize(nsteps+1);
+ wt_background.resize(nsteps+1);
+ q_observation.resize(nsteps+1);
+ wt_observation.resize(nsteps+1);
 
-	 ubackground[ntime].resize(Nnodes);
-	 wt_background[ntime].resize(Nnodes);
-	 q_observation[ntime].resize(Nnodes);
-	 wt_observation[ntime].resize(Nnodes);
-         for (int i=0;i<=Ncells;i++) {
-	  adept::adouble local_x=xlo+h*i;
+ int ntime=0;
+ BoxArray ba_node=uinput[ntime]->boxArray();
+ DistributionMapping dm=uinput[ntime]->DistributionMap();
+ int Ncomp=uinput[ntime]->nComp();
+ int Nghost=uinput[ntime]->nGrow();
 
-          ubackground[ntime][i]=0.0;
-          wt_background[ntime][i]=0.0;
-	  if (ntime==0) {
-           wt_background[ntime][i]=1.0;
-	  }
-	  if (i==0) {
-           wt_background[ntime][i]=1.0;
-          }
-	  if (i==Ncells) {
-           wt_background[ntime][i]=1.0;
-          }
-          wt_observation[ntime][i]=0.0;
-          q_observation[ntime][i]=0.0;
-	  if (ntime==Nsteps) {
-           q_observation[ntime][i]=sin(2.0*local_pi*local_x);
-	  }
-	 }
- }
+ adept::adouble xlo=geom.ProbLo(0);
+ adept::adouble xhi=geom.probHi(1);;
 
- v.resize(Nsteps+1);
- for (int ntime=0;ntime<=Nsteps;ntime++) {
-	 v[ntime].resize(Nnodes);
-         for (int i=0;i<=Ncells;i++) {
-		 v[ntime][i]=uinput[ntime][i];
- 	 }
- }
- a.resize(Nsteps+1);
- for (int ntime=0;ntime<=Nsteps;ntime++) {
-	 a[ntime].resize(Nnodes);
-         for (int i=0;i<=Ncells;i++) {
-		 a[ntime][i]=1.0;
- 	 }
- }
+ adept::adouble stop_time=dt*nsteps;
+
+ for (ntime=0;ntime<=nsteps;ntime++) {
+  adept::adouble local_t=ntime*dt;
+
+  v[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  a[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  ubackground[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  wt_background[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  q_observation[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  wt_observation[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+
+  My_adept_MFAB* uinput_frame=uinput[ntime];
+
+  My_adept_MFAB* v_frame=v[ntime];
+  My_adept_MFAB* a_frame=a[ntime];
+  My_adept_MFAB* ubackground_frame=ubackground[ntime];
+  My_adept_MFAB* wt_background_frame=wt_background[ntime];
+  My_adept_MFAB* q_observation_frame=q_observation[ntime];
+  My_adept_MFAB* wt_observation_frame=wt_observation[ntime];
+
+  for (MFIter mfi(*v_frame,false); mfi.isValid(); ++mfi) {
+   const int gridno = mfi.index();
+   My_adept_FAB& uinput_fab=(*uinput_frame)[gridno];
+
+   My_adept_FAB& v_fab=(*v_frame)[gridno];
+   My_adept_FAB& a_fab=(*a_frame)[gridno];
+   My_adept_FAB& ubackground_fab=(*ubackground_frame)[gridno];
+   My_adept_FAB& wt_background_fab=(*wt_background_frame)[gridno];
+   My_adept_FAB& q_observation_fab=(*q_observation_frame)[gridno];
+   My_adept_FAB& wt_observation_fab=(*wt_observation_frame)[gridno];
+
+   Array4< adept::adouble > const& uinput_array=uinput_fab.array();
+
+   Array4< adept::adouble > const& v_array=v_fab.array();
+   Array4< adept::adouble > const& a_array=a_fab.array();
+   Array4< adept::adouble > const& ubackground_array=
+	   ubackground_fab.array();
+   Array4< adept::adouble > const& wt_background_array=
+	   wt_background_fab.array();
+   Array4< adept::adouble > const& q_observation_array=
+	   q_observation_fab.array();
+   Array4< adept::adouble > const& wt_observation_array=
+	   wt_observation_fab.array();
+
+   Dim3 lo = lbound(v_array);
+   Dim3 hi = ubound(v_array);
+
+   for (int k = lo.z; k <= hi.z; ++k) {
+   for (int j = lo.y; j <= hi.y; ++j) {
+   for (int i = lo.x; i <= hi.x; ++i) {
+
+    adept::adouble local_x=xlo+dx[0]*i;
+
+    ubackground_array(i,j,k)=0.0;
+    wt_background_array(i,j,k)=0.0;
+    if (ntime==0) {
+     wt_background_array(i,j,k)=1.0;
+    }
+    if (i==0) {
+     wt_background_array(i,j,k)=1.0;
+    }
+    if (i==hi.x) {
+     wt_background_array(i,j,k)=1.0;
+    }
+    wt_observation_array(i,j,k)=0.0;
+    q_observation_array(i,j,k)=0.0;
+    if (ntime==nsteps) {
+     q_observation_array(i,j,k)=sin(2.0*local_pi*local_x);
+    }
+    v_array(i,j,k)=uinput_array(i,j,k);
+    a_array(i,j,k)=1.0;
+   } // i
+   } // j
+   } // k
+  } // mfi
+ } // ntime
 
 
  adept::adouble y=0.0;
 
- for (int ntime=0;ntime<Nsteps;ntime++) {
-	 adept::adouble fluxes[Nnodes];
-	 adept::adouble H_nodes_array[Nnodes];
-	 adept::adouble H_flux_array[Ncells];
-	 adept::adouble a_flux_array[Ncells];
+ for (ntime=0;ntime<nsteps;ntime++) {
 
-	 for (int i=0;i<=Ncells;i++) {
-	  // H_smooth is a differentiable Heaviside function
-          H_nodes_array[i]=H_smooth(a[ntime][i],eps); 
+  My_adept_MFAB* a_frame=a[ntime];
+
+  My_adept_MFAB* fluxes=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  My_adept_MFAB* H_fluxes=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  My_adept_MFAB* a_fluxes=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  My_adept_MFAB* H_nodes=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+
+  for (MFIter mfi(*fluxes,false); mfi.isValid(); ++mfi) {
+
+   const int gridno = mfi.index();
+
+   My_adept_FAB& a_fab=(*a_frame)[gridno];
+
+   My_adept_FAB& fluxes_fab=(*fluxes)[gridno];
+   My_adept_FAB& H_fluxes_fab=(*H_fluxes)[gridno];
+   My_adept_FAB& H_nodes_fab=(*H_nodes)[gridno];
+   My_adept_FAB& a_fluxes_fab=(*a_fluxes)[gridno];
+
+   Array4< adept::adouble > const& a_array=a_fab.array();
+
+   Array4< adept::adouble > const& fluxes_array=fluxes_fab.array();
+   Array4< adept::adouble > const& H_fluxes_array=H_fluxes_fab.array();
+   Array4< adept::adouble > const& H_nodes_array=H_nodes_fab.array();
+   Array4< adept::adouble > const& a_fluxes_array=a_fluxes_fab.array();
+
+   Dim3 lo = lbound(v_array);
+   Dim3 hi = ubound(v_array);
+
+   for (int k = lo.z; k <= hi.z; ++k) {
+   for (int j = lo.y; j <= hi.y; ++j) {
+   for (int i = lo.x; i <= hi.x; ++i) {
+    // H_smooth is a differentiable Heaviside function
+    H_nodes_array(i,j,k)=H_smooth(a_array(i,j,k),eps); 
 	 }
 	  // nodes: x_i=i*h  i=0...Ncells
 	  // flux locations: x_{i+1/2}=(i+1/2)h  i=0..Ncells-1
@@ -183,27 +258,30 @@ adept::adouble cost_function(
 	   	  (q_observation[ntime+1][i]-v[ntime+1][i])*
 	   	  (q_observation[ntime+1][i]-v[ntime+1][i]);
 	 }
- }
+	 delete fluxes;
+	 delete H_fluxes;
+	 delete a_fluxes;
+	 delete H_nodes;
+ } //ntime
 
  return y;
 
 }
 
-*/
+
 
 Real algorithm_and_gradient(
  vector< MultiFab* > x,	// control
- vector< MultiFab* > dJdx,
+ vector< MultiFab* > dJdx, // gradient
  const Real* dx,
- Real dt) { // gradient
+ Real dt,
+ const Geometry& geom) { 
 
  int nsteps=x.size()-1;
 
  adept::Stack stack;
  using adept::adouble;
 
- using My_adept_FAB=BaseFab< adept::adouble >;
- using My_adept_MFAB=FabArray< My_adept_FAB >;
  vector< My_adept_MFAB* > adept_x;  
 
  adept_x.resize(nsteps+1);
@@ -238,9 +316,9 @@ Real algorithm_and_gradient(
   } // mfi
  } // ntime
 
-/*
+
  stack.new_recording();  // records the tape
- y = cost_function(adept_x);
+ y = cost_function(adept_x,dx,dt,geom);
  y.set_gradient(1.0);
  stack.compute_adjoint();
  for (int ntime=0;ntime<=Nsteps;ntime++) {
@@ -248,7 +326,7 @@ Real algorithm_and_gradient(
 		 dJdx[ntime][i]=adept_x[ntime][i].get_gradient();
 	 }
  }
-*/
+
  return y.value();
 }
 
@@ -389,7 +467,7 @@ int main(int argc,char* argv[]) {
  
    Real y=algorithm_and_gradient(
              x,dJdx,
-	     dx,dt);
+	     dx,dt,geom);
  
    for (int ntime=0;ntime<=nsteps;ntime++) {
     MultiFab* cur_frame=x[ntime];
