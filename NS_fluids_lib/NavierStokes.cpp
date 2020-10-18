@@ -315,6 +315,7 @@ Real NavierStokes::change_max_init = 1.1;
 Real NavierStokes::fixed_dt     = 0.0;
 Real NavierStokes::fixed_dt_init = 0.0;
 Real NavierStokes::min_velocity_for_dt = 1.0e-12;
+Real NavierStokes::min_stefan_velocity_for_dt = 1.0e-12;
 Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::MUSHY_THICK  = 2.0;
@@ -2309,6 +2310,10 @@ NavierStokes::read_params ()
     pp.query("min_velocity_for_dt",min_velocity_for_dt);
     if (min_velocity_for_dt<0.0)
      amrex::Error("min_velocity_for_dt invalid");
+
+    pp.query("min_stefan_velocity_for_dt",min_stefan_velocity_for_dt);
+    if (min_stefan_velocity_for_dt<0.0)
+     amrex::Error("min_stefan_velocity_for_dt invalid");
 
     pp.query("fixed_dt_velocity",fixed_dt_velocity);
     pp.query("sum_interval",sum_interval);
@@ -4449,6 +4454,8 @@ NavierStokes::read_params ()
      std::cout << "fixed_dt_init=" << fixed_dt_init << '\n';
      std::cout << "fixed_dt_velocity=" << fixed_dt_velocity << '\n';
      std::cout << "min_velocity_for_dt=" << min_velocity_for_dt << '\n';
+     std::cout << "min_stefan_velocity_for_dt=" << 
+        min_stefan_velocity_for_dt << '\n';
      std::cout << "dt_max=" << dt_max << '\n';
      std::cout << "minimum_relative_error=" << minimum_relative_error << '\n';
      std::cout << "diffusion_minimum_relative_error=" << 
@@ -11712,7 +11719,9 @@ NavierStokes::level_phase_change_convert(int isweep) {
     tilelo,tilehi,
     fablo,fabhi,
     &bfact, 
-    vofbc.dataPtr(),xlo,dx,
+    &min_stefan_velocity_for_dt,
+    vofbc.dataPtr(),
+    xlo,dx,
     &dt_slab,
     delta_mass_local[tid_current].dataPtr(),
     DVOF_local[tid_update].dataPtr(),
@@ -18457,6 +18466,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     tilelo,tilehi,
     fablo,fabhi,
     &bfact,
+    &min_stefan_velocity_for_dt,
     local_cap_wave_speed[tid_current].dataPtr(),
     local_vel_max[tid_current].dataPtr(),
     local_vel_max_estdt[tid_current].dataPtr(),

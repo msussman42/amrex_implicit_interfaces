@@ -12242,6 +12242,7 @@ stop
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
+        min_stefan_velocity_for_dt, &
         cap_wave_speed, &
         u_max, &
         u_max_estdt, &
@@ -12341,6 +12342,8 @@ stop
       REAL_T, intent(in) :: den(DIMV(den),num_state_material*nmat)  
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw)
       REAL_T, intent(in) :: dist(DIMV(dist),nmat)
+      REAL_T, intent(in) :: min_stefan_velocity_for_dt
+      REAL_T, intent(inout) :: cap_wave_speed(nten)
       REAL_T hx,hxmac
       REAL_T dthold
       INTEGER_T ii,jj,kk
@@ -12391,7 +12394,6 @@ stop
       REAL_T uleftcell,urightcell,udiffcell,umaxcell
       REAL_T velsum
       REAL_T RR
-      REAL_T cap_wave_speed(nten)
       REAL_T level_cap_wave_speed(nten)
       REAL_T ksource,kdest,alpha,beta,dt_heat
       INTEGER_T for_estdt
@@ -13202,6 +13204,20 @@ stop
         ! collide.
         ! also, the factor of 4 should guarantee that a swept cell is not
         ! full at the end of CONVERTMATERIAL.
+       if (min_stefan_velocity_for_dt.ge.zero) then
+        if (USTEFAN.lt.min_stefan_velocity_for_dt) then
+         USTEFAN=min_stefan_velocity_for_dt
+        else if (USTEFAN.ge.min_stefan_velocity_for_dt) then
+         ! do nothing
+        else
+         print *,"USTEFAN bust"
+         stop
+        endif
+       else
+        print *,"min_stefan_velocity_for_dt invalid"
+        stop
+       endif
+
        uu=abs(uu)+four*USTEFAN
        uu_estdt=abs(uu_estdt)+four*USTEFAN
 
