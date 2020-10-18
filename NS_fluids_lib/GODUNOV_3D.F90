@@ -13198,10 +13198,12 @@ stop
         stop 
        endif
 
-        ! factor of 2 in order to guarantee that characteristics do not
+        ! factor of 4 in order to guarantee that characteristics do not
         ! collide.
-       uu=abs(uu)+two*USTEFAN
-       uu_estdt=abs(uu_estdt)+two*USTEFAN
+        ! also, the factor of 4 should guarantee that a swept cell is not
+        ! full at the end of CONVERTMATERIAL.
+       uu=abs(uu)+four*USTEFAN
+       uu_estdt=abs(uu_estdt)+four*USTEFAN
 
        if (is_rigid(nmat,im_primaryL).eq.0) then
         ibase=(im_primaryL-1)*num_state_material

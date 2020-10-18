@@ -2751,7 +2751,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        } 
 
        // generates SLOPE_RECON_MF
-       update_flag=0;
+       update_flag=0; // do not update the error indicator
        int init_vof_ls_prev_time=0;
         // Fluids tessellate; solids overlay.
        VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
