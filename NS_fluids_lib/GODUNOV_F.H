@@ -694,6 +694,7 @@ extern "C"
       const int* tilelo, const int* tilehi,
       const int* fablo, const int* fabhi,
       int* bfact,
+      Real* min_stefan_velocity_for_dt,
       Real* cap_wave_speed,
       Real* u_max,
       Real* u_max_estdt,

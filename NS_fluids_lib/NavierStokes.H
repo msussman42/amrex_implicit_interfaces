@@ -1510,6 +1510,8 @@ protected:
     static Real fixed_dt;      // set > 0 to specify dt
     static Real fixed_dt_init; // set > 0 to specify dt
     static Real min_velocity_for_dt; // dt<dx/min_velocity_for_dt
+     //uu_stefan=max(uu_stefan,min_stefan_velocity_for_dt) 
+    static Real min_stefan_velocity_for_dt; 
     static Real fixed_dt_velocity; // set > 0 to specify u for dt=dx/u
     static Real dt_max;        // maximum dt allowed
     static int  sum_interval;  // number of timesteps for conservation stats

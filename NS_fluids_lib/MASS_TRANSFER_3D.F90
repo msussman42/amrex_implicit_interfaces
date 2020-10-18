@@ -3330,6 +3330,7 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
+       min_stefan_velocity_for_dt, &
        vofbc, &
        xlo,dx, &
        dt, &
@@ -3384,6 +3385,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: min_stefan_velocity_for_dt
       INTEGER_T, intent(in) :: vofbc(SDIM,2)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
@@ -3659,6 +3661,12 @@ stop
       endif
       if (bfact.lt.1) then
        print *,"bfact too small"
+       stop
+      endif
+      if (min_stefan_velocity_for_dt.ge.zero) then
+       ! do nothing
+      else
+       print *,"min_stefan_velocity_for_dt invalid"
        stop
       endif
 
