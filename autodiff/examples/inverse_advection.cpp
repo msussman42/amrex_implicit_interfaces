@@ -26,16 +26,11 @@ using My_adept_MFAB=FabArray< My_adept_FAB >;
 
 adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 
-	double local_pi=4.0*atan(1.0);
+//	double local_pi=4.0*atan(1.0);
 
 	adept::adouble Hreturn;
-	if (x<=-eps) {
-		Hreturn=0.0;
-	} else if (x>=eps) {
-		Hreturn=1.0;
-	} else {
-		Hreturn=0.5*(x/eps+sin(local_pi*x/eps)/local_pi+1.0);
-	}
+         // "Logistic function"
+        Hreturn=1.0/(1.0+exp(-x/eps));
 	return Hreturn;
 }
 // to express the data assimilation problem precisely:
@@ -67,7 +62,10 @@ adept::adouble cost_function(
  int nsteps=uinput.size()-1;
 
  adept::adouble local_pi=4.0*atan(1.0);
- adept::adouble eps=1.0e-10;
+
+// recommended eps from MF De Pando, D Sipp, PJ Schmid
+// Journal of Computational Physics 231 (23), 7739-7755
+ adept::adouble eps=sqrt(1.0e-15);
 
  vector< My_adept_MFAB* > v;  // approximate solution
  vector< My_adept_MFAB* > a;

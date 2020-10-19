@@ -5,7 +5,7 @@
 #include <AMReX_BCRec.H>
 #include <AMReX_REAL.H>
 
-#define DEBUG_INTERPOLATER 1
+#define DEBUG_INTERPOLATER 0
 
 namespace amrex {
 
