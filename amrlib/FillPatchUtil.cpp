@@ -26,8 +26,24 @@ namespace amrex
     {
      BL_PROFILE("FillPatchSingleLevel");
 
-     BL_ASSERT(scomp+ncomp <= smf.nComp());
-     BL_ASSERT(dcomp+ncomp <= mf.nComp());
+     if (scomp+ncomp <= smf.nComp()) {
+      // do nothing
+     } else {
+      std::cout << "scomp or ncomp invalid scomp=" <<
+       scomp << " ncomp= " << ncomp << "smf.nComp()= " <<
+       smf.nComp() << '\n';
+      amrex::Error("scomp+ncomp <= smf.nComp() failed");
+     }
+
+     if (dcomp+ncomp <= mf.nComp()) {
+      // do nothing
+     } else {
+      std::cout << "dcomp or ncomp invalid dcomp=" <<
+       dcomp << " ncomp= " << ncomp << "mf.nComp()= " <<
+       mf.nComp() << '\n';
+      amrex::Error("dcomp+ncomp <= mf.nComp() failed");
+     }
+ 
      if (scompBC_map.size()!=ncomp)
       amrex::Error("scompBC_map has invalid size");
 
@@ -121,6 +137,15 @@ void FillPatchTwoLevels (
  } else
   amrex::Error("do_the_interp invalid");
 
+ if (DEBUG_INTERPOLATER==1) {
+  std::fflush(NULL);
+  std::cout << "FillPatchTwoLevels(1) PROC= " << 
+     amrex::ParallelDescriptor::MyProc() << '\n';
+  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
+   " ncomp=" << ncomp << " levelc= " << levelc <<
+   " levelf= " << levelf << " do_the_interp= " << do_the_interp << '\n';
+ }
+
  if (do_the_interp==1) {
 
   const InterpolaterBoxCoarsener& coarsener = 
@@ -170,16 +195,16 @@ void FillPatchTwoLevels (
    for (int i=0;i<ncomp;i++)
     local_bcs[i]=global_bcs[scompBC_map[i]]; 
     
-   bool cc = fpc.ba_crse_patch.ixType().cellCentered();
-   if ((cc!=true)&&(cc!=false))
-    amrex::Error("cc bust");
+   bool cellcen = fpc.ba_crse_patch.ixType().cellCentered();
+   if ((cellcen!=true)&&(cellcen!=false))
+    amrex::Error("cellcen bust");
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
    thread_class::init_d_numPts(mf_crse_patch.boxArray().d_numPts());
 
 #ifdef _OPENMP
-#pragma omp parallel if (cc)
+#pragma omp parallel if (cellcen)
 #endif
 {
    for (MFIter mfi(mf_crse_patch,false); mfi.isValid(); ++mfi) {
@@ -216,7 +241,7 @@ void FillPatchTwoLevels (
   	       cgeom,
   	       fgeom,
   	       bcr,
-                 levelc,levelf,bfactc,bfactf);
+               levelc,levelf,bfactc,bfactf);
    } // mfi
 } // omp
    thread_class::sync_tile_d_numPts();
@@ -232,6 +257,15 @@ void FillPatchTwoLevels (
  } else
   amrex::Error("do_the_interp invalid");
 
+ if (DEBUG_INTERPOLATER==1) {
+  std::fflush(NULL);
+  std::cout << "FillPatchTwoLevels(2) PROC= " << 
+     amrex::ParallelDescriptor::MyProc() << '\n';
+  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
+   " ncomp=" << ncomp << " levelc= " << levelc <<
+   " levelf= " << levelf << '\n';
+ }
+
  FillPatchSingleLevel(
    levelf,
    mf,  //mf already init with coarse data in regions not covered by fmf
@@ -245,6 +279,14 @@ void FillPatchTwoLevels (
    scompBC_map,
    bfactf);
 
+ if (DEBUG_INTERPOLATER==1) {
+  std::fflush(NULL);
+  std::cout << "FillPatchTwoLevels(3) PROC= " << 
+     amrex::ParallelDescriptor::MyProc() << '\n';
+  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
+   " ncomp=" << ncomp << " levelc= " << levelc <<
+   " levelf= " << levelf << '\n';
+ }
 }  //FillPatchTwoLevels
 
 }  // namespace amrex
