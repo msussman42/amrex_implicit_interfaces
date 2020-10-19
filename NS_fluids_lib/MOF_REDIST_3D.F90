@@ -1022,6 +1022,14 @@ stop
 
        else if (height_function_flag.eq.1) then
 
+        if (SDIM.eq.2) then
+         ! do nothing
+        else
+         print *,"this is 2d code only for now"
+         stop
+        endif
+        k1=0
+
         if (nmat.eq.2) then
          do i1=-3,3
          do j1=-3,3
@@ -1029,7 +1037,7 @@ stop
               (i+i1.le.fabhi(1)).and. &
               (j+j1.le.fabhi(2)).and. &
               (j+j1.ge.fablo(2))) then
-           F_local=F_new(i+i1,j+j1,1)
+           F_local=F_new(D_DECL(i+i1,j+j1,k+k1),1)
           else
 #if (STANDALONE==1)
            F_local=one
