@@ -47,6 +47,8 @@ namespace amrex
      if (scompBC_map.size()!=ncomp)
       amrex::Error("scompBC_map has invalid size");
 
+      // put debug statements before and after this command.
+      // put a Barrier statement before and after.
       // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
      mf.ParallelCopy(smf, scomp, dcomp, ncomp, IntVect{0}, 
         mf.nGrowVect(), geom.periodicity());
