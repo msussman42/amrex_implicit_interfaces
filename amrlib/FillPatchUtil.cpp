@@ -71,11 +71,18 @@ void FillPatchSingleLevel (
   amrex::Error("debug_fillpatch invalid");
  }
 
-  // put debug statements before and after this command.
-  // put a Barrier statement before and after.
+  // Ranks which do not own any destination data will not wait for the
+  // other ranks in the ParallelCopy command. 
+  // Barrier statements are inserted here just in case the
+  // asynchronous feature of the ParallelCopy command might lead
+  // to problems in future operations.
+ ParallelDescriptor::Barrier();
+
   // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
  mf.ParallelCopy(smf, scomp, dcomp, ncomp, IntVect{0}, 
     mf.nGrowVect(), geom.periodicity());
+
+ ParallelDescriptor::Barrier();
 
  if (debug_fillpatch==1) {
   std::fflush(NULL);
