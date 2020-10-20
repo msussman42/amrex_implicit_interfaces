@@ -11,61 +11,88 @@
 namespace amrex
 {
 
-    void FillPatchSingleLevel (
-      int level,
-      MultiFab& mf, 
-      Real time, 
-      const MultiFab& smf, 
-      int scomp, 
-      int dcomp, 
-      int ncomp,
-      const Geometry& geom, 
-      PhysBCFunctBaseSUSSMAN& physbcf,
-      Vector<int> scompBC_map,
-      int bfact)
-    {
-     BL_PROFILE("FillPatchSingleLevel");
+void FillPatchSingleLevel (
+  int level,
+  MultiFab& mf, 
+  Real time, 
+  const MultiFab& smf, 
+  int scomp, 
+  int dcomp, 
+  int ncomp,
+  const Geometry& geom, 
+  PhysBCFunctBaseSUSSMAN& physbcf,
+  Vector<int> scompBC_map,
+  int bfact)
+{
+ BL_PROFILE("FillPatchSingleLevel");
 
-     if (scomp+ncomp <= smf.nComp()) {
-      // do nothing
-     } else {
-      std::cout << "scomp or ncomp invalid scomp=" <<
-       scomp << " ncomp= " << ncomp << "smf.nComp()= " <<
-       smf.nComp() << '\n';
-      amrex::Error("scomp+ncomp <= smf.nComp() failed");
-     }
+ if (scomp+ncomp <= smf.nComp()) {
+  // do nothing
+ } else {
+  std::cout << "scomp or ncomp invalid scomp=" <<
+   scomp << " ncomp= " << ncomp << "smf.nComp()= " <<
+   smf.nComp() << '\n';
+  amrex::Error("scomp+ncomp <= smf.nComp() failed");
+ }
 
-     if (dcomp+ncomp <= mf.nComp()) {
-      // do nothing
-     } else {
-      std::cout << "dcomp or ncomp invalid dcomp=" <<
-       dcomp << " ncomp= " << ncomp << "mf.nComp()= " <<
-       mf.nComp() << '\n';
-      amrex::Error("dcomp+ncomp <= mf.nComp() failed");
-     }
- 
-     if (scompBC_map.size()!=ncomp)
-      amrex::Error("scompBC_map has invalid size");
+ if (dcomp+ncomp <= mf.nComp()) {
+  // do nothing
+ } else {
+  std::cout << "dcomp or ncomp invalid dcomp=" <<
+   dcomp << " ncomp= " << ncomp << "mf.nComp()= " <<
+   mf.nComp() << '\n';
+  amrex::Error("dcomp+ncomp <= mf.nComp() failed");
+ }
 
-      // put debug statements before and after this command.
-      // put a Barrier statement before and after.
-      // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
-     mf.ParallelCopy(smf, scomp, dcomp, ncomp, IntVect{0}, 
-        mf.nGrowVect(), geom.periodicity());
+ if (scompBC_map.size()!=ncomp)
+  amrex::Error("scompBC_map has invalid size");
 
-     if (1==0) {
-      std::cout << "scomp=" << scomp << " dcomp= " << dcomp << " ncomp= " <<
-       ncomp << '\n';
-      for (int n=0;n<ncomp;n++) {
-       Real smf_norm=smf.norm1(scomp+n,0);
-       Real mf_norm=mf.norm1(dcomp+n,0);
-       std::cout << "n= " << n << " BCmap(n)= " << scompBC_map[n] <<
-        " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
-      }
-     }
+ if (DEBUG_INTERPOLATER==1) {
+  std::fflush(NULL);
+  std::cout << "FillPatchSingleLevel(1) PROC= " << 
+   amrex::ParallelDescriptor::MyProc() << '\n';
+  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << " ncomp= " <<
+   ncomp << '\n';
+  std::cout << "smf.boxArray() " << smf.boxArray() << '\n';
+  std::cout << "smf.DistributionMap() " << smf.DistributionMap() << '\n';
+  std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
+  std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+  for (int n=0;n<ncomp;n++) {
+   Real smf_norm=smf.norm1(scomp+n,0);
+   Real mf_norm=mf.norm1(dcomp+n,0);
+   std::cout << "n= " << n << " BCmap(n)= " << scompBC_map[n] <<
+    " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
+  }
+  std::fflush(NULL);
+ }
 
-     physbcf.FillBoundary(level,mf,time,dcomp,scompBC_map,ncomp,bfact);
-    }
+  // put debug statements before and after this command.
+  // put a Barrier statement before and after.
+  // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
+ mf.ParallelCopy(smf, scomp, dcomp, ncomp, IntVect{0}, 
+    mf.nGrowVect(), geom.periodicity());
+
+ if (DEBUG_INTERPOLATER==1) {
+  std::fflush(NULL);
+  std::cout << "FillPatchSingleLevel(2) PROC= " << 
+   amrex::ParallelDescriptor::MyProc() << '\n';
+  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << " ncomp= " <<
+   ncomp << '\n';
+  std::cout << "smf.boxArray() " << smf.boxArray() << '\n';
+  std::cout << "smf.DistributionMap() " << smf.DistributionMap() << '\n';
+  std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
+  std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+  for (int n=0;n<ncomp;n++) {
+   Real smf_norm=smf.norm1(scomp+n,0);
+   Real mf_norm=mf.norm1(dcomp+n,0);
+   std::cout << "n= " << n << " BCmap(n)= " << scompBC_map[n] <<
+    " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
+  }
+  std::fflush(NULL);
+ }
+
+ physbcf.FillBoundary(level,mf,time,dcomp,scompBC_map,ncomp,bfact);
+}
 
 
 void FillPatchTwoLevels (
@@ -146,6 +173,13 @@ void FillPatchTwoLevels (
   std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
    " ncomp=" << ncomp << " levelc= " << levelc <<
    " levelf= " << levelf << " do_the_interp= " << do_the_interp << '\n';
+  std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
+  std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+  std::cout << "fmf.boxArray() " << fmf.boxArray() << '\n';
+  std::cout << "fmf.DistributionMap() " << fmf.DistributionMap() << '\n';
+  std::cout << "cmf.boxArray() " << cmf.boxArray() << '\n';
+  std::cout << "cmf.DistributionMap() " << cmf.DistributionMap() << '\n';
+  std::fflush(NULL);
  }
 
  if (do_the_interp==1) {
@@ -266,6 +300,7 @@ void FillPatchTwoLevels (
   std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
    " ncomp=" << ncomp << " levelc= " << levelc <<
    " levelf= " << levelf << '\n';
+  std::fflush(NULL);
  }
 
  FillPatchSingleLevel(
@@ -288,6 +323,7 @@ void FillPatchTwoLevels (
   std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
    " ncomp=" << ncomp << " levelc= " << levelc <<
    " levelf= " << levelf << '\n';
+  std::fflush(NULL);
  }
 }  //FillPatchTwoLevels
 
