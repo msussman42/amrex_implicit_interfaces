@@ -7826,6 +7826,7 @@ NavierStokes::init(
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
  is_first_step_after_regrid = 1;
 
+ debug_fillpatch=0;
 }  // subroutine init(old)
 
 
