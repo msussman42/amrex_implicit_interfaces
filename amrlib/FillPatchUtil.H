@@ -21,7 +21,8 @@ namespace amrex
       const Geometry& geom, 
       PhysBCFunctBaseSUSSMAN& physbcf,
       Vector<int> scompBC_map,
-      int bfact);
+      int bfact, 
+      int debug_fillpatch);
 
     void FillPatchTwoLevels (
       MultiFab& mf, 
@@ -34,7 +35,8 @@ namespace amrex
       Interpolater* mapper, const Vector<BCRec>& bcs,
       Vector<int> scompBC_map,
       int levelc,int levelf,
-      int bfactc,int bfactf);
+      int bfactc,int bfactf, 
+      int debug_fillpatch);
 
 } // namespace amrex
 

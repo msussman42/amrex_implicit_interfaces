@@ -11925,7 +11925,8 @@ void NavierStokes::PCINTERP_fill_borders(int idx_MF,int ngrow,
     index,
     scomp,
     scompBC_map,
-    ncomp);   
+    ncomp,
+    debug_fillpatch);   
 
 } //PCINTERP_fill_borders
 
@@ -11954,7 +11955,8 @@ void NavierStokes::PCINTERP_fill_coarse_patch(int idx_MF,
     index,
     scomp,
     scompBC_map,
-    ncomp);   
+    ncomp,
+    debug_fillpatch);   
 
 } //PCINTERP_fill_coarse_patch
 

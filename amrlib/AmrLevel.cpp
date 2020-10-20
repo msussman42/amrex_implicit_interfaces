@@ -273,7 +273,8 @@ AmrLevel::FillPatch (AmrLevel & old,
                      Real      time,
                      int       index,
                      int       scomp,
-                     int       ncomp)
+                     int       ncomp,
+		     int debug_fillpatch)
 {
  BL_PROFILE("AmrLevel::FillPatch()");
 
@@ -350,7 +351,8 @@ AmrLevel::FillPatch (AmrLevel & old,
     fgeom,
     fbc,
     local_scompBC_map,
-    bfact_fine);
+    bfact_fine,
+    debug_fillpatch);
   } else if (level>0) {
 
    AmrLevel&               clev    = parent->getLevel(level-1);
@@ -392,7 +394,8 @@ AmrLevel::FillPatch (AmrLevel & old,
     desc.getBCs(),  // global_bcs
     local_scompBC_map,
     level-1,level,
-    bfact_coarse,bfact_fine);  
+    bfact_coarse,bfact_fine,
+    debug_fillpatch);  
      
   } else 
    amrex::Error("level invalid");
@@ -412,7 +415,8 @@ AmrLevel::FillCoarsePatchGHOST (
                            int       index,
                            int       scomp, //cmf: scomp..scomp+ncomp-1
                            Vector<int> scompBC_map, // 0..ncomp-1
-                           int       ncomp)
+                           int       ncomp,
+			   int debug_fillpatch)
 {
  BL_PROFILE("AmrLevel::FillCoarsePatchGHOST()");
 
@@ -520,7 +524,8 @@ AmrLevel::FillCoarsePatchGHOST (
     cgeom,
     physbc_coarse,
     local_scompBC_map,
-    bfact_coarse);
+    bfact_coarse, 
+    debug_fillpatch);
 
   Vector< BCRec > local_bcs;
   const Vector< BCRec> & global_bcs=descGHOST.getBCs();
@@ -593,7 +598,8 @@ AmrLevel::InterpBordersGHOST (
                      int       index,
                      int       scomp, // source comp wrt mf
                      Vector<int> scompBC_map,
-                     int       ncomp)
+                     int       ncomp,
+		     int debug_fillpatch)
 {
  BL_PROFILE("AmrLevel::InterpBordersGHOST()");
 
@@ -674,7 +680,8 @@ AmrLevel::InterpBordersGHOST (
     fgeom,
     fbc,
     local_scompBC_map,
-    bfact_fine);
+    bfact_fine,
+    debug_fillpatch);
   } else if (level>0) {
 
    AmrLevel&               clev    = parent->getLevel(level-1);
@@ -699,7 +706,8 @@ AmrLevel::InterpBordersGHOST (
     descGHOST.getBCs(), // global_bcs
     local_scompBC_map,
     level-1,level,
-    bfact_coarse,bfact_fine);  
+    bfact_coarse,bfact_fine,
+    debug_fillpatch);  
      
   } else 
    amrex::Error("level invalid");
@@ -722,7 +730,8 @@ AmrLevel::InterpBorders (
                      int       index,
                      int       scomp,
                      Vector<int> scompBC_map,
-                     int       ncomp)
+                     int       ncomp,
+		     int debug_fillpatch)
 {
  BL_PROFILE("AmrLevel::InterpBorders()");
 
@@ -803,7 +812,8 @@ AmrLevel::InterpBorders (
     fgeom,
     fbc,
     local_scompBC_map,
-    bfact_fine);
+    bfact_fine,
+    debug_fillpatch);
   } else if (level>0) {
 
    AmrLevel&               clev    = parent->getLevel(level-1);
@@ -828,7 +838,8 @@ AmrLevel::InterpBorders (
     desc.getBCs(), // global_bcs
     local_scompBC_map,
     level-1,level,
-    bfact_coarse,bfact_fine);  
+    bfact_coarse,bfact_fine,
+    debug_fillpatch);  
      
   } else 
    amrex::Error("level invalid");
@@ -848,7 +859,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
                            Real      time,
                            int       index,
                            int       scomp, // scompBC_map[i]=scomp+i
-                           int       ncomp)
+                           int       ncomp,
+			   int debug_fillpatch)
 {
  BL_PROFILE("AmrLevel::FillCoarsePatch()");
 
@@ -927,7 +939,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
     cgeom,
     physbc_coarse,
     local_scompBC_map,
-    bfact_coarse);
+    bfact_coarse,
+    debug_fillpatch);
 
   Vector< BCRec > local_bcs;
   const Vector< BCRec> & global_bcs=desc.getBCs();

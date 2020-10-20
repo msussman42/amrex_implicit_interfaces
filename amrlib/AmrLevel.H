@@ -198,7 +198,8 @@ public:
                     Real      time,
                     int       index,
                     int       scomp,
-                    int       ncomp);
+                    int       ncomp,
+		    int debug_fillpatch);
 
     void InterpBordersGHOST (
                     MultiFab& cmf,
@@ -207,7 +208,8 @@ public:
                     int       index,
                     int       scomp,
                     Vector<int> scompBC_map,
-                    int       ncomp);
+                    int       ncomp,
+		    int debug_fillpatch);
 
     void FillCoarsePatchGHOST (
                     MultiFab& cmf,
@@ -216,7 +218,8 @@ public:
                     int       index,
                     int       scomp,
                     Vector<int> scompBC_map,
-                    int       ncomp);
+                    int       ncomp,
+		    int debug_fillpatch);
 
     void InterpBorders (
                     MultiFab& cmf,
@@ -225,14 +228,16 @@ public:
                     int       index,
                     int       scomp,
                     Vector<int> scompBC_map,
-                    int       ncomp);
+                    int       ncomp,
+		    int debug_fillpatch);
 
     void FillCoarsePatch (MultiFab& mf,
                           int       dcomp,
                           Real      time,
                           int       index,
                           int       scomp,
-                          int       ncomp);
+                          int       ncomp,
+			  int debug_fillpatch);
 
 
     //

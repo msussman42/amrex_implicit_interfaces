@@ -5,8 +5,6 @@
 #include <AMReX_BCRec.H>
 #include <AMReX_REAL.H>
 
-#define DEBUG_INTERPOLATER 1
-
 namespace amrex {
 
 class Geometry;
