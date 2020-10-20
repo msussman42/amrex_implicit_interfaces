@@ -13526,6 +13526,29 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     // people who have run the code, and published papers:
+     // 1. UTRC -> Marios Soteriou and ?, Marco
+     // 2. Sandia Livermore -> Marco and Everett (what would Marco 
+     //    recommend for improving performance)
+     // 3. Mitsuhiro
+     // 4. Yongsheng
+     // 5. Zhouteng Ye?
+     // 6. Zeyu Huang?
+     // 7. Yaohong Wang?
+     // 8. Researcher from Columbia univ, NY
+     // 9. Pierre Trontin 
+     // 10. Puckett???? -Viral droplets floating in the air.
+     // (surrogate model, optimization, data assimilation)
+     // (artificial intelligence and multiphase flow turbulence modeling,
+     // run fine grid simulation in order to produce training data fluxes for
+     // coarse grid sub-scale model)
+     // ideas to improve the performance of the existing code:
+     // 1. pass structures between fortran and c++
+     // 2. compiler directives to the sanity checks. (checkbound)
+     // 3. canonical test problems that automatically get run (and do not
+     //    take long) in order to make sure the code is not broken after 
+     //    changes.
+     // 4. HD5
      // in SEM_scalar_advection
      // advect: rho u, rho, temperature (non conservatively)
      // FORT_CELL_TO_MAC in LEVELSET_3D.F90

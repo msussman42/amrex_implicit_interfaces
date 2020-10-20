@@ -1,0 +1,241 @@
+# TODO list:
+# 1. 
+# verify: boussinesq approximation simulation 1 fluid is space-time spectrally
+# accurate. u_t + u dot grad u = -grad p + f(theta)*g
+# theta_t + u dot grad theta = div grad theta
+# 2. evaporating droplet in shear flow
+# 3. nucleate boiling and film boiling with cross flowing air.
+#    (have different cavity geometries)
+#    thermal sprays
+#    diesel: law of the wall, GNBC ?, evaporation (application diesel droplet)
+#    (multicomponent droplets evaporating)
+#    cryogenic regime evaporating droplets.
+max_step  = 200000    # maximum timestep
+#max_step  = 2    # maximum timestep
+
+stop_time = 4.0  # case 1
+stop_time = 1.28  # case 2
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => XYZ, 1 => RZ
+geometry.prob_lo   =  0.0 0.0   
+# make square domain so that solver converges quickly.
+# 0.0012 cm upper prediction diameter of sneeze drop
+geometry.prob_hi=0.0025 0.0025  # cm   
+ns.slice_dir=1
+ns.xslice=0.0 0.0
+ns.num_materials_vel=1
+ns.EILE_flag=-1
+ns.truncate_thickness=2.0
+ns.face_flag=1
+ns.diffusionface_flag=1  # 0=LS face diffcoeff 1=VOF for face diffcoeff
+ns.elasticface_flag=1  # 0=LS face elastic coeff 1=VOF for face elastic coeff
+ns.temperatureface_flag=0 # 0=LS face diffcoeff 1=VOF for face diffcoeff
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+
+ns.minimum_relative_error=1.0e-22
+ns.diffusion_minimum_relative_error=1.0e-22
+
+ns.gmres_precond_iter_base=4
+ns.initial_project_cycles=5   # initial jacobi iterations
+ns.initial_cg_cycles=10
+ns.solvability_projection=0 # 0 since one must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0
+ns.num_materials=2 # 1: liquid 2: air 
+ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
+ns.species_evaporation_density=0.001 #g/cm^3 CODY:rho_gas=1kg/m^3(0.001 g/cm^3)
+ns.post_init_pressure_solve=1 
+ns.MOFITERMAX=15
+ns.MOF_TURN_OFF_LS=0
+ns.MOF_DEBUG_RECON=0
+ns.continuous_mof=2 # 0=MOF 2=CMOF 
+ns.mof_error_ordering=0
+# water,air,ice,substrate
+ns.mof_ordering=0 0 
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0 # 1=check initial residual  2=check all the residuals
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-15
+mg.rtol_b = -0.01
+Lp.v = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
+
+amr.n_cell=32 32 # convergence 32 x 32 coarsest
+amr.max_level = 0
+# water, gas, ice, substrate
+# -1=> always adapt  0=> never adapt
+ns.radius_cutoff=0 0 0 0 
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+ns.ns_tiling=false
+amr.blocking_factor = 8 8 8 8   # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1   # this is the SEM space order
+amr.time_blocking_factor=1 # SEM time order
+ns.enable_spectral=0  # enable_spectral=0 or 1
+ns.viscous_enable_spectral=0 # set this to be the same as enable_spectral
+amr.check_int       = 100
+#amr.check_int       = 10000  # static freezing test 10 
+amr.check_file      = chk     # root name of checkpoint file
+# blow up: ~ 84000 steps
+amr.plot_int        = 40 # was 100  (plot_int=1 for testing)
+#amr.plot_int        = 1000 # static freezing test 10
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 1024
+amr.file_name_digits=7
+#amr.restart         = chk0119700
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-13
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.01 
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-13
+ns.gravity        = 0.0   # cgs
+ns.use_lsa=0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# 1=water 2=gas  3=ice  4=substrate 
+# 12,13,14   23,24  3,4 
+ns.conservative_tension_force=0
+# in the future: impurities in the air effect this.
+ns.tension=72.8  # CODY ~ sigma_liquid=0.01 N/m  (10 g/s^2)
+ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
+#12 then reverse 21 
+#heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
+ns.latent_heat = 2.26e+10 0.0  #2.26E+6 J/kg
+# (1x10^6)J/kg = (1x10^10)cm^2/s^2
+# 0=distribute to the destination material (def)
+# 1=distribute to the source material.
+ns.distribute_from_target = 1 0 
+#evaporation: 
+ns.freezing_model=6 0
+ns.mass_fraction_id=1 0 
+ns.saturation_temp = 373.15 0.0  # CODY ~ T_gamma = 373.15 K
+ns.saturation_temp_min = 287.0 0.0  
+ns.temperature_primitive_variable=1 1 1 1
+# convergence
+# coarse grid: 16x16 xhi=0.1 dx_coarse=0.1/16=1/160
+# case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.3125 
+# case 2: velocity 0<t<1.28 is about u=0.05 dx/u=0.125
+#ns.fixed_dt	  = 0.08     # case 1 0.08 is coarsest
+#ns.fixed_dt	  = 0.032    # case 2 0.032 is coarsest
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=0   # 0 for drop 1 for flat surface
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=257.0  # cm/s equivalent to 5 knots
+ns.twall=263  # not used
+ns.advbot=0.0 
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.material_type=0 0 
+# CODY k_water, k_gas
+ns.heatviscconst=0.6e+5 0.024e+5 #CODY:k_liquid=10^-1 W/(m*K),
+#W/(m K)=J/(s m K)=
+#10^7 erg/(s m K)=10^5 erg/(s cm K)
+#1erg=1 g cm^2/s^2
+#1joule=1 kg m^2/s^2
+#1 W/(m K)=J/(m s K)=kg m^2/(m s^3 K)=kg m/(s^3 K)=10^5 g cm/(s^3 K)
+#k_gas = 10^-2 W/(m*K) = 10^3 g*cm/(s^3*K)
+ns.heatviscconst_interface=0.0 
+# (rho Y)_t + div(rho u Y) = div (rho D grad Y)
+# D is here:
+ns.speciesviscconst=0.1 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
+# D=0.1  lambda=k/(rho Cp)=1000/(0.001 * 1.0D+7) = 0.1
+# 1=water 2=gas  
+#ns.speciesconst=1.0 1.0  # case 1 film boiling
+#4.24 percent when dew point is 30 degrees celcius
+#https://www.tis-gdv.de/tis_e/misc/klima-htm/
+ns.speciesconst=0.0121 0.0121  #initial vapor mass fraction in atmosphere
+#ns.hardwire_Y_gamma=0.22132139799031397 0.0
+#1.0016 milli pascals * s = 1.002 E-3 pa * s
+#18.1 micro pascals * s  = 1.81E-5 pa * s  kg m/s^2 / m^2 = kg/(m s^2)=
+#1000/100 g/(cm s^2)
+ns.viscconst=0.010016 0.0018 # dynamic viscosity mu  (kinematic is mu/rho)CGS
+ns.elastic_viscosity=0.0 0.0 
+ns.viscoelastic_model=0 0 0 0
+ns.added_weight=1.0 1.0  # default
+ns.elastic_time=0.0 0.0 
+# 0.001 is the ambient gas density.
+# The computer program stores the mixture density=
+#   rho_vapor Y + rho_ambient (1-Y)
+#   mixture density equation is rho_t + div(rho u) = 0
+#   mass fraction equation is:
+#   (rho Y)_t + div(rho u Y)=div(rho D grad Y)
+ns.denconst=1.0 0.001 # CODY (density liquid, density gas) ~ rho_l = 1000 kg/m^3, rho_g - 1 kg/m^3
+ns.override_density=0 1  # for incompressible ambient gas, override_density=1
+ns.molar_mass=18.02 28.9 # CODY  (liquid, ambient) 
+ns.species_molar_mass=18.0 # CODY (vapor) ~ W_V=W_A=0.018 kg/mol 
+ns.FSI_flag=0 0 
+ns.recalesce_flag=0 0 
+ns.solidheat_flag=0  
+# 1=water 2=gas   
+#ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
+#drop=98.6 degrees F   air=70 degrees F
+ns.tempconst=310.0 294.0 #CODY: case 2, T_inf for gas, T_gamma for liq.
+#ns.hardwire_T_gamma=296.163 0.0
+#ns.cancel_advection=1
+ns.xblob=0.00125
+ns.yblob=0.00125
+ns.zblob=0.00125
+ns.radblob=0.0006
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=424
+ns.ncomp_sum_int_user=0 # vof,level set,Tgas,Ygas,Tliq,Yliq errors
+
+#ns.mem_debug = 1
+ns.v = 1
+ns.output_drop_distribution=1
+#ns.show_mem=1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+# boundary conditions 
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=0
+#ns.lo_bc          = 3 3 5  # XYZ
+#ns.hi_bc          = 3 3 2  # XYZ
+#ns.species_lo_bc  = 3 3 5  # XYZ
+#ns.species_hi_bc  = 3 3 2  # XYZ
+ns.lo_bc          = 0 3  
+ns.hi_bc          = 0 3  
+ns.species_lo_bc  = 0 3
+ns.species_hi_bc  = 0 3  
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

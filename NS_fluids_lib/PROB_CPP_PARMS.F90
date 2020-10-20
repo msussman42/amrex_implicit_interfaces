@@ -134,6 +134,7 @@ stop
       use MITSUHIRO_MELTING_module
       use CRYOGENIC_TANK1_module
       use CRYOGENIC_TANK2_module
+      use CRYOGENIC_TANK_MK_module
       use flexible_plate_impact_module
       use CONE3D_module
       use WAVY_Channel_module
@@ -266,7 +267,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=8
+      probtype_list_size=9
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -275,6 +276,7 @@ stop
       used_probtypes(6)=55   ! GENERAL_PHASE_CHANGE
       used_probtypes(7)=422  ! CRYOGENIC_TANK2
       used_probtypes(8)=423  ! CRYOGENIC_TANK_MK
+      used_probtypes(9)=424  ! DROP_IN_SHEAR
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_LS=>STUB_LS
@@ -332,7 +334,22 @@ stop
        SUB_HEATSOURCE=>CRYOGENIC_TANK2_HEATSOURCE
       
       else if (probtype.eq.423) then
-       ! CRYOGENIC_TANK_MK
+
+       SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK_MK_MODULE
+       SUB_LS=>CRYOGENIC_TANK_MK_LS
+       SUB_VEL=>CRYOGENIC_TANK_MK_VEL
+       SUB_EOS=>EOS_CRYOGENIC_TANK_MK
+       SUB_SOUNDSQR=>SOUNDSQR_CRYOGENIC_TANK_MK
+       SUB_INTERNAL=>INTERNAL_CRYOGENIC_TANK_MK
+       SUB_TEMPERATURE=>TEMPERATURE_CRYOGENIC_TANK_MK
+       SUB_PRES=>CRYOGENIC_TANK_MK_PRES
+       SUB_STATE=>CRYOGENIC_TANK_MK_STATE
+       SUB_LS_BC=>CRYOGENIC_TANK_MK_LS_BC
+       SUB_VEL_BC=>CRYOGENIC_TANK_MK_VEL_BC
+       SUB_PRES_BC=>CRYOGENIC_TANK_MK_PRES_BC
+       SUB_STATE_BC=>CRYOGENIC_TANK_MK_STATE_BC
+       SUB_HEATSOURCE=>CRYOGENIC_TANK_MK_HEATSOURCE
+
       else if (probtype.eq.414) then
        SUB_INIT_MODULE=>INIT_MITSUHIRO_MELTING_MODULE
        SUB_LS=>MITSUHIRO_MELTING_LS

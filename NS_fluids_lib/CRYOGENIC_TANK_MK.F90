@@ -714,13 +714,27 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_STATE_BC
 
+
+! MEHDI VAHAB HEAT SOURCE
+! T^new=T^* + dt * (tildeQ)/(rho cv)    
+! dt=seconds  rho=kg/m^3   cv=Joules/(kg K)
+! second * J/(m^3 s)  * (m^3/kg)  *  (K kg/J) = degrees Kelvin
+! tildeQ units: J/(m^3 s)
+! Q = k grad T = W/(m K) K/m = W/m^2= J/(m^2 s)
+! tildeQ=Q * area/volume
+! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
+! in FORT_HEATSOURCE:
+! T_local(im)=T_local(im)+ &
+!   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..nmat
+!
 ! suppose inhomogeneous flux condition: -k grad T = q
 ! 1. T_t - div k grad T = 0
 ! 3. T_t - (1/V) sum (A_{i} (k grad T)_i dot n_i) =0  n_i=outward facing normal
 ! 4. at the right wall:
 !     (k grad T)_{right} = -q_{right}
 ! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
-!      (1/V)A_{right} (-q_{right} dot n_right)
+!      (1/V)A_{right} (-q_{right} dot n_right)  => tildeQ corresponds
+! to q * A/V
 !
 ! TANK_MK_HETAER_FLUX \equiv -q dot n
 subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
@@ -730,7 +744,8 @@ subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
      xsten, & ! xsten(-nhalf:nhalf,SDIM)
      nhalf, &
      temp, &
-     heat_source,den,CV,dt, &
+     heat_source, &  ! unit of tildeQ not Q.
+     den,CV,dt, &
      nmat)
 use probcommon_module
 IMPLICIT NONE

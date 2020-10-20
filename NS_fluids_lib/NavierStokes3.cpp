@@ -11248,7 +11248,8 @@ void NavierStokes::veldiffuseALL() {
 
   // MEHDI VAHAB HEAT SOURCE
   // NavierStokes.cpp: void NavierStokes::make_heat_source()
-  // make_heat_source calls GODUNOV_3D.F90::FORT_HEATSOURCE
+  // make_heat_source calls GODUNOV_3D.F90::FORT_HEATSOURCE which
+  // calls PROB.F90::get_local_heat_source
   // if not supermesh algorithm, then the same temperature 
   // increment is added to all of the materials.
   ns_level.make_heat_source();  // updates S_new
