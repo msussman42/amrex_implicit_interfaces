@@ -3342,6 +3342,9 @@ stop
        JUMPFAB,DIMS(JUMPFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
        LSold,DIMS(LSold), &
+         ! in FORT_RATEMASSCHANGE
+         ! LSnew=LSold - dt USTEFAN dot n, USTEFAN=|U|n  
+         ! LSnew=LSold - dt * |U|
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon), &
        snew,DIMS(snew), &
@@ -3492,6 +3495,8 @@ stop
       REAL_T temperature_mat(nmat)
       REAL_T species_mat(nmat*(num_species_var+1))
       REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata_new(nmat*ngeom_recon)
+      REAL_T multi_centroidA(nmat,SDIM)
       REAL_T volmat(nmat)
       REAL_T lsmat(nmat)
       REAL_T lsdata(nmat)
@@ -3588,7 +3593,9 @@ stop
       REAL_T ambient_den
       REAL_T gas_den_ratio
       REAL_T delta_mass_local
-      REAL_T xPOINT(SDIM)
+      REAL_T xPOINT_supermesh(SDIM)
+      REAL_T xPOINT_GFM(SDIM)
+      REAL_T xstar(SDIM)
       INTEGER_T im_old_crit
       REAL_T DATA_FLOOR
       INTEGER_T combine_flag
@@ -3603,6 +3610,14 @@ stop
       REAL_T LS_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T temperature_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
+
+      INTEGER_T supermesh_flag
+      INTEGER_T continuous_mof_parm
+      INTEGER_T use_ls_data
+      INTEGER_T mof_verbose
+      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+
+      supermesh_flag=0
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -5020,6 +5035,32 @@ stop
              ! dF>EBVOFTOL in this section, so now let's see
              ! if the cell center has been swept and also the
              ! destination centroid.
+             ! for GFM, if a cell center is not occupied by the
+             ! destination material at tn but is occupied at tnp1, then
+             ! (theta^{n+1} - theta_{I})/(tnp1 - tswept) = L(theta^{n+1}
+             ! tswept is the crossing time.
+             ! Suppose 1D and GFM:
+             !  at t=tn      F=Fn
+             !  at t=tswept  F=1/2
+             !  at t=tnp1    F=Fnp1
+             !  F(t)=(Fnp1 - Fn)/(tnp1-tn)  * (t-tnp1) + Fnp1
+             !  1/2 = dF/(tnp1-tn)   * (tswept-tnp1)  + Fnp1
+             !  dF/(tnp1-tn)  * (tswept-tnp1) = Fnp1-1/2
+             !  SWEPTFACTOR=(tswept-tnp1)/(tnp1-tn)  = (Fnp1-1/2)/dF
+             !  new approach (motivated by supermesh):
+             !  1. given an estimate of phase change velocity "USTEFAN",
+             !     dt is chosen such that USTEFAN * dt <= dx/4
+             !     This assures that a swept cell will NOT be full at tnp1.
+             !  2. Strategy is this: 
+             !     a) we have the signed distance function at tn.
+             !     b) let x^* be either (i) cell center if GFM, or (ii)
+             !        cell centroid at tnp1 of the destination material.
+             !     c) if phi(tn,x^*)<0 then:
+             !         (i) find MOF reconstruction and determine if
+             !             phi^reconstruct(tnp1,x^*)>0
+             !             if yes, then 
+             !             SWEPTFACTOR=1-(phi_np1/(phi_np1-phi_n)     
+
             SWEPTFACTOR=zero
             if ((oldvfrac(im_dest).lt.half).and. &
                 (newvfrac(im_dest).gt.half)) then
@@ -5031,24 +5072,81 @@ stop
              print *,"oldvfrac or newvfrac invalid"
              stop
             endif
-             ! new_centroid(im_dest,dir) (absolute coord)
+
+             ! => new_centroid(im_dest,dir) (absolute coord)
             do u_im=1,nmat
              vofcomp_recon=(u_im-1)*ngeom_recon+1
              mofdata(vofcomp_recon)= &
                 recon(D_DECL(i,j,k),vofcomp_recon)  !vfrac
+
+             mofdata_new(vofcomp_recon)=newvfrac(u_im)
+
              do udir=1,SDIM 
               mofdata(vofcomp_recon+udir)= &
                recon(D_DECL(i,j,k),vofcomp_recon+udir) ! centroid
+
+              mofdata_new(vofcomp_recon+udir)= &
+                new_centroid(u_im,dir)-cengrid(dir)
              enddo
              mofdata(vofcomp_recon+SDIM+1)= &
               recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1) !ord
+
+             mofdata_new(vofcomp_recon+SDIM+1)=0  ! placeholder order
+
              mofdata(vofcomp_recon+2*SDIM+2)= & 
               recon(D_DECL(i,j,k),vofcomp_recon+2*SDIM+2)  !intercept
+
+             mofdata_new(vofcomp_recon+2*SDIM+2)=zero  ! placeholder intercept
+
              do udir=1,SDIM
               mofdata(vofcomp_recon+SDIM+1+udir)= &
                recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
+
+              mofdata_new(vofcomp_recon+SDIM+1+udir)=zero ! placeholder slope
              enddo ! udir
             enddo ! u_im=1..nmat
+
+            mof_verbose=0
+            use_ls_data=0
+            continuous_mof_parm=0
+
+            call multimaterial_MOF( &
+             bfact,dx,u_xsten_updatecell,nhalf, &
+             mof_verbose, &
+             use_ls_data, &
+             LS_stencil, &
+             geom_xtetlist(1,1,1,tid+1), &
+             geom_xtetlist_old(1,1,1,tid+1), &
+             nmax, &
+             nmax, &
+             mofdata_new, &
+             multi_centroidA, &
+             continuous_mof_parm, &
+             nmat,SDIM,2)
+
+            do dir=1,SDIM
+             xPOINT_supermesh(dir)=new_centroid(im_dest,dir)
+            enddo
+            do dir=1,SDIM
+             xPOINT_GFM(dir)=u_xsten_updatecell(0,dir)
+            enddo
+
+            if (supermesh_flag.eq.1) then
+             do dir=1,SDIM
+              xstar(dir)=xPOINT_supermesh(dir)
+             enddo
+            else if (supermesh_flag.eq.0) then
+             do dir=1,SDIM
+              xstar(dir)=xPOINT_GFM(dir)
+             enddo
+            else
+             print *,"super_mesh invalid"
+             stop
+            endif
+
+!            call interp_from_grid_util(data_interp_in,data_out)
+
+        
              ! now we check if new_centroid(im_dest,dir) is in the
              ! old dest material.
             SWEPTFACTOR_centroid=0
@@ -5056,15 +5154,12 @@ stop
                 (newvfrac(im_dest).le.one+EBVOFTOL)) then
 
              tessellate=1
-             do dir=1,SDIM
-              xPOINT(dir)=new_centroid(im_dest,dir)
-             enddo
              call multi_get_volumePOINT( &
                tessellate, &
                bfact,dx, &
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                mofdata, &
-               xPOINT, & ! absolute coordinate system
+               xPOINT_supermesh, & ! absolute coordinate system
                im_old_crit,nmat,SDIM)
 
              if (im_old_crit.eq.im_dest) then
@@ -5077,9 +5172,10 @@ stop
               if (1.eq.0) then
                print *,"setting SWEPTFACTOR_centroid=1"
                print *,"im_dest= ",im_dest
-               print *,"xPOINT= ",xPOINT(1),xPOINT(2),xPOINT(SDIM)
-               print *,"xPOINT(1)-xsten(0,1)= ", &
-                       xPOINT(1)-u_xsten_updatecell(0,1)
+               print *,"xPOINT_supermesh= ", &
+                 xPOINT_supermesh(1),xPOINT_supermesh(2),xPOINT_supermesh(SDIM)
+               print *,"xPOINT_supermesh(1)-xsten(0,1)= ", &
+                       xPOINT_supermesh(1)-u_xsten_updatecell(0,1)
                print *,"oldvfrac(im_dest)=",oldvfrac(im_dest)
                print *,"newvfrac(im_dest)=",newvfrac(im_dest)
                print *,"im_old_crit=",im_old_crit
