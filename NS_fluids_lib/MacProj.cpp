@@ -1537,7 +1537,8 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
    state_index,
    0,  // scomp=0
    scompBC_map,
-   nsolveMM);
+   nsolveMM,
+   debug_fillpatch);
 
 }  // subroutine applyBC_LEVEL
 
@@ -1636,7 +1637,8 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
     state_index,
     0,  // scomp=0
     scompBC_map,
-    nsolveMM);
+    nsolveMM,
+    debug_fillpatch);
   interpScalarMAC(ns_coarse.localMF[idx_phi],
                   localMF[idx_phi],nsolve,project_option);
  }

@@ -1528,6 +1528,7 @@ protected:
     static int        show_mem;
     static int        show_timings;
     static int        verbose;
+    static int        debug_fillpatch; // default=0
     static int        check_nan;
     static int        fab_verbose; // 1=curv 2=error heat 3=both
     static int        output_drop_distribution;

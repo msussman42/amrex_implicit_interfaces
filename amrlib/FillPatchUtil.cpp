@@ -22,8 +22,9 @@ void FillPatchSingleLevel (
   const Geometry& geom, 
   PhysBCFunctBaseSUSSMAN& physbcf,
   Vector<int> scompBC_map,
-  int bfact)
-{
+  int bfact,
+  int debug_fillpatch) {
+
  BL_PROFILE("FillPatchSingleLevel");
 
  if (scomp+ncomp <= smf.nComp()) {
@@ -47,7 +48,7 @@ void FillPatchSingleLevel (
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
 
- if (DEBUG_INTERPOLATER==1) {
+ if (debug_fillpatch==1) {
   std::fflush(NULL);
   std::cout << "FillPatchSingleLevel(1) PROC= " << 
    amrex::ParallelDescriptor::MyProc() << '\n';
@@ -64,6 +65,10 @@ void FillPatchSingleLevel (
     " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
   }
   std::fflush(NULL);
+ } else if (debug_fillpatch==0) {
+  // do nothing
+ } else {
+  amrex::Error("debug_fillpatch invalid");
  }
 
   // put debug statements before and after this command.
@@ -72,7 +77,7 @@ void FillPatchSingleLevel (
  mf.ParallelCopy(smf, scomp, dcomp, ncomp, IntVect{0}, 
     mf.nGrowVect(), geom.periodicity());
 
- if (DEBUG_INTERPOLATER==1) {
+ if (debug_fillpatch==1) {
   std::fflush(NULL);
   std::cout << "FillPatchSingleLevel(2) PROC= " << 
    amrex::ParallelDescriptor::MyProc() << '\n';
@@ -89,6 +94,10 @@ void FillPatchSingleLevel (
     " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
   }
   std::fflush(NULL);
+ } else if (debug_fillpatch==0) {
+  // do nothing
+ } else {
+  amrex::Error("debug_fillpatch invalid");
  }
 
  physbcf.FillBoundary(level,mf,time,dcomp,scompBC_map,ncomp,bfact);
@@ -111,7 +120,8 @@ void FillPatchTwoLevels (
  const Vector<BCRec>& global_bcs,
  Vector<int> scompBC_map,
  int levelc,int levelf,
- int bfactc,int bfactf) {
+ int bfactc,int bfactf,
+ int debug_fillpatch) {
 
  BL_PROFILE("FillPatchTwoLevels");
 
@@ -166,7 +176,7 @@ void FillPatchTwoLevels (
  } else
   amrex::Error("do_the_interp invalid");
 
- if (DEBUG_INTERPOLATER==1) {
+ if (debug_fillpatch==1) {
   std::fflush(NULL);
   std::cout << "FillPatchTwoLevels(1) PROC= " << 
      amrex::ParallelDescriptor::MyProc() << '\n';
@@ -180,6 +190,10 @@ void FillPatchTwoLevels (
   std::cout << "cmf.boxArray() " << cmf.boxArray() << '\n';
   std::cout << "cmf.DistributionMap() " << cmf.DistributionMap() << '\n';
   std::fflush(NULL);
+ } else if (debug_fillpatch==0) {
+  // do nothing
+ } else {
+  amrex::Error("debug_fillpatch invalid");
  }
 
  if (do_the_interp==1) {
@@ -224,7 +238,8 @@ void FillPatchTwoLevels (
     cgeom, 
     cbc,
     scompBC_map,
-    bfactc);
+    bfactc,
+    debug_fillpatch);
 
    Vector< BCRec > local_bcs;
    local_bcs.resize(ncomp);
@@ -293,7 +308,7 @@ void FillPatchTwoLevels (
  } else
   amrex::Error("do_the_interp invalid");
 
- if (DEBUG_INTERPOLATER==1) {
+ if (debug_fillpatch==1) {
   std::fflush(NULL);
   std::cout << "FillPatchTwoLevels(2) PROC= " << 
      amrex::ParallelDescriptor::MyProc() << '\n';
@@ -301,6 +316,10 @@ void FillPatchTwoLevels (
    " ncomp=" << ncomp << " levelc= " << levelc <<
    " levelf= " << levelf << '\n';
   std::fflush(NULL);
+ } else if (debug_fillpatch==0) {
+  // do nothing
+ } else {
+  amrex::Error("debug_fillpatch invalid");
  }
 
  FillPatchSingleLevel(
@@ -314,9 +333,10 @@ void FillPatchTwoLevels (
    fgeom, 
    fbc,
    scompBC_map,
-   bfactf);
+   bfactf,
+   debug_fillpatch);
 
- if (DEBUG_INTERPOLATER==1) {
+ if (debug_fillpatch==1) {
   std::fflush(NULL);
   std::cout << "FillPatchTwoLevels(3) PROC= " << 
      amrex::ParallelDescriptor::MyProc() << '\n';
@@ -324,6 +344,10 @@ void FillPatchTwoLevels (
    " ncomp=" << ncomp << " levelc= " << levelc <<
    " levelf= " << levelf << '\n';
   std::fflush(NULL);
+ } else if (debug_fillpatch==0) {
+  // do nothing
+ } else {
+  amrex::Error("debug_fillpatch invalid");
  }
 }  //FillPatchTwoLevels
 

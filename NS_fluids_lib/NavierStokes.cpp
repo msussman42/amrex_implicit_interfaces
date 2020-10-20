@@ -220,6 +220,7 @@ int NavierStokes::advect_iter=0;
 int  NavierStokes::show_mem = 0;
 int  NavierStokes::show_timings = 1;
 int  NavierStokes::verbose      = 0;
+int  NavierStokes::debug_fillpatch = 0;
 int  NavierStokes::check_nan    = 0;
 // 1=curv 2=error heat 3=both
 int  NavierStokes::fab_verbose  = 0;
@@ -6580,7 +6581,8 @@ void NavierStokes::ns_header_msg_level(
       MFInfo().SetTag("S_new_coarse"),FArrayBoxFactory());
      int dcomp=0;
      int scomp=0;
-     FillCoarsePatch(*S_new_coarse,dcomp,time,State_Type,scomp,AMREX_SPACEDIM);
+     FillCoarsePatch(*S_new_coarse,dcomp,time,State_Type,
+		     scomp,AMREX_SPACEDIM,debug_fillpatch);
 
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
@@ -6605,7 +6607,7 @@ void NavierStokes::ns_header_msg_level(
      }
 
      FillCoarsePatch(*Solid_new_coarse,dcomp,time,Solid_State_Type,scomp,
-        nparts*AMREX_SPACEDIM);
+        nparts*AMREX_SPACEDIM,debug_fillpatch);
 
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
@@ -6621,7 +6623,7 @@ void NavierStokes::ns_header_msg_level(
      dcomp=0;
      scomp=0;
      FillCoarsePatch(*LS_new_coarse,dcomp,time,LS_Type,scomp,
-        nmat*(AMREX_SPACEDIM+1));
+        nmat*(AMREX_SPACEDIM+1),debug_fillpatch);
 
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
@@ -6682,7 +6684,7 @@ void NavierStokes::ns_header_msg_level(
         int scomp_thermal=dencomp+im_part*num_state_material+1;
         //ncomp==1
         FillCoarsePatch(*new_coarse_thermal,dcomp,time,State_Type,
-         scomp_thermal,1);
+         scomp_thermal,1,debug_fillpatch);
 
          //ngrow==0
         if (solidheat_flag==0) {  // diffuse in solid
@@ -7787,7 +7789,8 @@ NavierStokes::init(
    FillPatch(old,S_new,scomp_part[part_iter],
       upper_slab_time,k,
       scomp_part[part_iter],
-      ncomp_part[part_iter]);
+      ncomp_part[part_iter],
+      debug_fillpatch);
   }
  }  // k=0..nstate-1
 
@@ -7913,7 +7916,7 @@ NavierStokes::init (const BoxArray& ba_in,
 
   for (int part_iter=0;part_iter<numparts;part_iter++) { 
    FillCoarsePatch(S_new,scomp_part[part_iter],upper_slab_time,k,
-     scomp_part[part_iter],ncomp_part[part_iter]);
+     scomp_part[part_iter],ncomp_part[part_iter],debug_fillpatch);
   }
  } // k=0..nstate-1
 
@@ -21190,7 +21193,7 @@ MultiFab* NavierStokes::getState (
  MultiFab* mf = new MultiFab(state[State_Type].boxArray(),dmap,ncomp,
    ngrow,MFInfo().SetTag("mf getState"),FArrayBoxFactory());
 
- FillPatch(*this,*mf,0,time,State_Type,scomp,ncomp);
+ FillPatch(*this,*mf,0,time,State_Type,scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -21225,7 +21228,7 @@ MultiFab* NavierStokes::getStateSolid (
  MultiFab* mf = new MultiFab(state[Solid_State_Type].boxArray(),dmap,ncomp,
    ngrow,MFInfo().SetTag("mf getStateSolid"),FArrayBoxFactory());
 
- FillPatch(*this,*mf,0,time,Solid_State_Type,scomp,ncomp);
+ FillPatch(*this,*mf,0,time,Solid_State_Type,scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -21282,7 +21285,7 @@ MultiFab* NavierStokes::getStateTensor (
  MultiFab* mf = new MultiFab(state[Tensor_Type].boxArray(),dmap,ncomp,
    ngrow,MFInfo().SetTag("mf getStateTensor"),FArrayBoxFactory());
 
- FillPatch(*this,*mf,0,time,Tensor_Type,scomp,ncomp);
+ FillPatch(*this,*mf,0,time,Tensor_Type,scomp,ncomp, debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -21312,7 +21315,7 @@ MultiFab* NavierStokes::getStateDist (int ngrow,Real time,int caller_id) {
    ngrow,MFInfo().SetTag("mf getStateDist"),FArrayBoxFactory());
 
   // scomp=0
- FillPatch(*this,*mf,0,time,LS_Type,0,nmat*(AMREX_SPACEDIM+1));
+ FillPatch(*this,*mf,0,time,LS_Type,0,nmat*(AMREX_SPACEDIM+1),debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -21347,7 +21350,7 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
  MultiFab* mf = new MultiFab(state[DIV_Type].boxArray(),dmap,ncomp,
    ngrow,MFInfo().SetTag("mf getStateDIV_DATA"),FArrayBoxFactory());
 
- FillPatch(*this,*mf,0,time,DIV_Type,scomp,ncomp);
+ FillPatch(*this,*mf,0,time,DIV_Type,scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -21604,7 +21607,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
   int dcomp=0;
   int scomp=0;
   FillCoarsePatch(*dist_coarse_mf,dcomp,cur_time_slab,LS_Type,scomp,
-        nmat*(AMREX_SPACEDIM+1));
+        nmat*(AMREX_SPACEDIM+1),debug_fillpatch);
 
   // idx,scomp,ncomp,index,scompBC_map
   // FillCoarsePatchGHOST is ultimately called.
@@ -22827,7 +22830,7 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,
  MultiFab* mf = new MultiFab(state[Umac_Type+dir].boxArray(),dmap,ncomp,
    ngrow,MFInfo().SetTag("mf getStateMAC"),FArrayBoxFactory());
 
- FillPatch(*this,*mf,0,time,Umac_Type+dir,scomp,ncomp);
+ FillPatch(*this,*mf,0,time,Umac_Type+dir,scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
