@@ -18539,8 +18539,9 @@ stop
       INTEGER_T, intent(in) :: bfact_f
       INTEGER_T, intent(in) :: override_density(nmat)
       REAL_T, intent(in) :: dt,time
-      INTEGER_T, intent(in) :: DIMDEC(vofflux) !voffluxlox,voffluxloy,voffluxloz, 
-                                !voffluxhix,voffluxhiy,voffluxhiz
+       !voffluxlox,voffluxloy,voffluxloz, 
+       !voffluxhix,voffluxhiy,voffluxhiz
+      INTEGER_T, intent(in) :: DIMDEC(vofflux) 
        ! original data
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(den)

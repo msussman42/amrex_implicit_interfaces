@@ -3850,18 +3850,22 @@ end subroutine dynamic_contact_angle
         gravity_normalized, &
         gravity_dir_parm, &
         angular_velocity, &
-        dt,rho,pres, &
+        dt, &
+        rho_hydrostatic,pres_hydrostatic, &
         for_hydro,liquid_temp)
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T for_hydro 
-      INTEGER_T override_density 
-      INTEGER_T gravity_dir_parm
-      REAL_T angular_velocity
-      REAL_T xpos(SDIM)
-      REAL_T gravity_normalized
-      REAL_T dt,rho,pres,liquid_temp
+      INTEGER_T, intent(in) :: for_hydro 
+      INTEGER_T, intent(in) :: override_density 
+      INTEGER_T, intent(in) :: gravity_dir_parm
+      REAL_T, intent(in) :: angular_velocity
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(in) :: gravity_normalized
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(out) :: rho_hydrostatic
+      REAL_T, intent(out) :: pres_hydrostatic
+      REAL_T, intent(in) :: liquid_temp
       INTEGER_T imat
       INTEGER_T from_boundary_hydrostatic
 
@@ -3883,19 +3887,29 @@ end subroutine dynamic_contact_angle
       endif
 
       imat=1
+      if (fort_denconst(imat).ge.fort_denconst(2)) then
+       ! do nothing
+      else
+       print *,"expecting material 1 to be liquid"
+       print *,"expecting denconst(1)>=denconst(2)"
+       print *,"in general_hydrostatic_pressure_density"
+       stop
+      endif
 
        ! in: general_hydrostatic_pressure_density
       if ((probtype.eq.42).and.(SDIM.eq.2)) then ! bubble jetting
-       call tait_hydrostatic_pressure_density(xpos,rho,pres, &
+       call tait_hydrostatic_pressure_density(xpos, &
+               rho_hydrostatic,pres_hydrostatic, &
                from_boundary_hydrostatic)
       else if ((probtype.eq.46).and.(SDIM.eq.2)) then ! cavitation
 
        if ((axis_dir.ge.0).and.(axis_dir.le.10)) then
-        call tait_hydrostatic_pressure_density(xpos,rho,pres, &
+        call tait_hydrostatic_pressure_density(xpos, &
+                rho_hydrostatic,pres_hydrostatic, &
                 from_boundary_hydrostatic)
        else if (axis_dir.eq.20) then ! no gravity for this test problem
-        rho=one
-        pres=zero
+        rho_hydrostatic=one
+        pres_hydrostatic=zero
        else
         print *,"axis_dir invalid"
         stop
@@ -3903,32 +3917,37 @@ end subroutine dynamic_contact_angle
 
        ! rising bubble, compressible nucleate boiling
       else if (fort_material_type(1).eq.13) then 
-       call tait_hydrostatic_pressure_density(xpos,rho,pres, &
+       call tait_hydrostatic_pressure_density(xpos, &
+               rho_hydrostatic,pres_hydrostatic, &
                from_boundary_hydrostatic)
       else if (fort_material_type(1).eq.0) then
 
+        ! the force is grad p^hydrostatic/rho^hydrostatic
        if (override_density.eq.0) then
-        rho=one
-        pres=-gravity_normalized*rho*xpos(gravity_dir_parm)
+        rho_hydrostatic=fort_denconst(imat)
+        pres_hydrostatic= &
+              -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
        else if (override_density.eq.1) then
 
-         ! rho=rho(T,Y,z)
+         ! rho_hydrostatic=rho_hydrostatic(T,Y,z)
         call default_hydrostatic_pressure_density(xpos, &
-         rho,pres,liquid_temp, &
+         rho_hydrostatic,pres_hydrostatic,liquid_temp, &
          gravity_normalized, &
          imat,override_density)
        else if (override_density.eq.2) then
         ! temperature dependence handled in DIFFUSION_3D.F90
-        rho=fort_denconst(imat) 
-        pres=-gravity_normalized*rho*xpos(gravity_dir_parm)
+        rho_hydrostatic=fort_denconst(imat) 
+        pres_hydrostatic= &
+             -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
        else
         print *,"override_density invalid"
         stop
        endif
 
       else if (fort_material_type(1).gt.0) then
-       rho=one
-       pres=-gravity_normalized*rho*xpos(gravity_dir_parm)
+       rho_hydrostatic=fort_denconst(imat)
+       pres_hydrostatic= &
+             -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
       else
        print *,"fort_material_type invalid"
        stop
@@ -3941,7 +3960,8 @@ end subroutine dynamic_contact_angle
 
         ! temperature dependence handled in DIFFUSION_3D.F90
       if (levelrz.eq.0) then
-       pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2)
+       pres_hydrostatic=pres_hydrostatic+ &
+            half*rho_hydrostatic*(angular_velocity**2)*(xpos(1)**2)
       else if (levelrz.eq.1) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
@@ -3953,14 +3973,15 @@ end subroutine dynamic_contact_angle
        endif
         ! temperature dependence handled in DIFFUSION_3D.F90
       else if (levelrz.eq.3) then
-       pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2)
+       pres_hydrostatic=pres_hydrostatic+ &
+           half*rho_hydrostatic*(angular_velocity**2)*(xpos(1)**2)
       else
        print *,"levelrz invalid general hydrostatic pressure density"
        stop
       endif
  
         ! dt multiplied by velocity scale.
-      pres=pres*dt/global_pressure_scale
+      pres_hydrostatic=pres_hydrostatic*dt/global_pressure_scale
 
       return
       end subroutine general_hydrostatic_pressure_density
