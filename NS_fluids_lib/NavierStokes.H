@@ -1902,6 +1902,7 @@ protected:
     static Vector<int> temperature_primitive_variable; // def=0
     static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
+    static Vector<Real> lame_coefficient; // elastic parameter
     static Vector<Real> polymer_factor;
 
     static int adv_dir;

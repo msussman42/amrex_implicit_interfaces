@@ -169,6 +169,7 @@ implicit none
 ! fort_stiffCV added September 29.
 ! fort_store_elastic_data added October 3.
 ! fort_solidheat_flag added October 13.
+! fort_lame_coefficient added October 21.
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
