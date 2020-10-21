@@ -2387,6 +2387,24 @@ stop
  
       end subroutine getGhostVel
 
+        ! u_t + u dot grad u = -grad p/density + div tau
+        ! div u = 0
+        ! phi_t + u dot grad phi=0   
+        ! phi(t,x) > 0 in the deformable solid
+        ! phi(t,x) < 0 in the fluid
+        ! density=density_fluid * (1-H(phi)) + 
+        !         density_solid * H(phi)
+        ! H(phi)=1  if phi>0
+        !       =0  if phi<0
+        ! tau=tau_fluid * (1-H) + tau_solid * H
+        ! tau_fluid=2 * mu (grad u + (grad u)^T)/2  mu=dynamic viscosity
+        ! tau_solid=
+        ! F=deformation gradient=I + grad XD 
+        ! note: Michael Lai and David Rubin "intro to continuum mech"
+        ! "u equiv XD"  "v equiv u"
+        ! C=F^T F right Cauchy Green Tensor
+        ! B=F F^T left Cauchy Green Tensor
+        ! I1=tr(C),I2=(1/2)Tr(C)^2−tr(C^2),and I3=det(C)
       subroutine local_tensor_from_xdisplace( &
         LS_or_VOF_flag, & ! =0 => LS   =1 => VOF
         im_elastic, & ! 1..nmat
@@ -2443,7 +2461,7 @@ stop
       INTEGER_T growhi(3)
       INTEGER_T i,j,k
       INTEGER_T ibase
-      INTEGER_T dir_x,dir_space
+      INTEGER_T dir_x,dir_space,dir_inner
       INTEGER_T iii,jjj,kkk
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
@@ -2453,9 +2471,14 @@ stop
       REAL_T LS_plus,LS_minus
       REAL_T gradu(SDIM,SDIM)
       REAL_T DISP_TEN(SDIM,SDIM)
+      REAL_T F(SDIM,SDIM)
+      REAL_T C(SDIM,SDIM)
+      REAL_T B(SDIM,SDIM)
+      REAL_T E(SDIM,SDIM)
       REAL_T hoop_12,hoop_22
       REAL_T xdisplace_local,ydisplace_local
       INTEGER_T vofcomp
+      REAL_T Identity_comp,trace_E,bulk_modulus,lame_coefficient
 
       nhalf=3
 
@@ -2615,12 +2638,79 @@ stop
          print *,"dimension bust"
          stop
         endif
+         ! gradu(i,j)=partial XD_{i}/partial x_j
         do dir_x=1,SDIM 
         do dir_space=1,SDIM
-         DISP_TEN(dir_x,dir_space)=gradu(dir_x,dir_space)+ &
+         if (dir_x.eq.dir_space) then
+          Identity_comp=one
+         else
+          Identity_comp=zero
+         endif
+         F(dir_x,dir_space)=gradu(dir_x,dir_space)+Identity_comp
+         C(dir_x,dir_space)=zero
+         B(dir_x,dir_space)=zero
+        enddo
+        enddo
+         ! C=F^T F = right cauchy green tensor
+         ! E=(1/2)*(C-I)  Green Lagrange strain tensor
+        do dir_x=1,SDIM 
+        do dir_space=1,SDIM
+         do dir_inner=1,SDIM
+          C(dir_x,dir_space)=C(dir_x,dir_space)+ &
+                  F(dir_inner,dir_x)*F(dir_inner,dir_space)
+          B(dir_x,dir_space)=B(dir_x,dir_space)+ &
+                  F(dir_x,dir_inner)*F(dir_space,dir_inner)
+         enddo
+        enddo
+        enddo
+        do dir_x=1,SDIM 
+        do dir_space=1,SDIM
+         if (abs(C(dir_x,dir_space)-B(dir_space,dir_x)).le.VOFTOL) then
+          ! do nothing
+         else
+          print *,"expecting C^T=B"
+          stop
+         endif 
+        enddo
+        enddo
+        trace_E=zero
+        do dir_x=1,SDIM 
+        do dir_space=1,SDIM
+         if (dir_x.eq.dir_space) then
+          Identity_comp=one
+         else
+          Identity_comp=zero
+         endif
+         E(dir_x,dir_space)=half*(C(dir_x,dir_space)-Identity_comp)
+         trace_E=trace_E+Identity_comp*E(dir_x,dir_space)
+        enddo
+        enddo 
+         ! Sigma=2 mu_s E + lambda Tr(E) I
+         ! structure force is div Sigma=div mu_s (Sigma/mu_s)
+         ! Richter, JCP, 2013
+         ! MKS: mu_s=1E+4   lambda=4E+4  density_struct=1E+3
+         ! bulk modulus units:
+         ! steel 160 giga Pa=160 * 1E+9  N/m^2
+         ! N/m^2=kg m/s^2 / m^2 = kg /(m s^2) = 1000/100 g/(cm s^2)
+        do dir_x=1,SDIM 
+        do dir_space=1,SDIM
+         if (dir_x.eq.dir_space) then
+          Identity_comp=one
+         else
+          Identity_comp=zero
+         endif
+         if (1.eq.0) then
+          DISP_TEN(dir_x,dir_space)=gradu(dir_x,dir_space)+ &
             gradu(dir_space,dir_x)
+         else if (1.eq.1) then
+          bulk_modulus=fort_elastic_viscosity(im_elastic)
+          lame_coefficient=fort_lame_coefficient(im_elastic)
+          DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
+                  lame_coefficient*trace_E*Identity_comp)/bulk_modulus
+         endif
         enddo
         enddo
+
         ibase=1
         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,1)
         ibase=ibase+1
@@ -29954,6 +30044,19 @@ stop
 
       LS_or_VOF_flag=0  ! use LS for upwinding at interfaces
       im_elastic=im_PLS_cpp+1
+       ! e.g. (grad XD + (grad XD)^{T})/2
+       ! XD=X(x0,t) - x0  => displacement
+       ! XD_{t} + u dot grad XD = u   u=velocity
+       ! if XD approximated on an Eulerian mesh, then "reversibility property"
+       ! is lost. 
+       ! if XD approximated on a Lagrangian mesh, then "synchronous coupling
+       ! property" is lost.
+       ! Strategy: hybrid Eulerian, Lagrangian method for FSI
+       ! prior hybrid approaches: "material point method"
+       ! methods by J. Teran (UCLA), others ....
+       ! note: Henshaw has already proven that classical asynchronous coupling
+       ! results in a method that is unconditionally unstable.
+       ! in: GODUNOV_3D.F90
       call local_tensor_from_xdisplace( &
         LS_or_VOF_flag, &
         im_elastic, &

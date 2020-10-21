@@ -91,6 +91,7 @@ stop
         ccviscconst_eddy, &
         ccviscosity_state_model, &
         ccelastic_viscosity, &
+        cclame_coefficient, &
         ccstore_elastic_data, &
         ccheatviscconst, &
         ccprerecalesce_heatviscconst, &
@@ -214,6 +215,7 @@ stop
       REAL_T, intent(in) :: ccviscconst_eddy(ccnum_materials)
       INTEGER_T, intent(in) :: ccviscosity_state_model(ccnum_materials)
       REAL_T, intent(in) :: ccelastic_viscosity(ccnum_materials)
+      REAL_T, intent(in) :: cclame_coefficient(ccnum_materials)
       INTEGER_T, intent(in) :: ccstore_elastic_data(ccnum_materials)
       REAL_T, intent(in) :: ccheatviscconst(ccnum_materials)
       REAL_T, intent(in) :: ccprerecalesce_heatviscconst(ccnum_materials)
@@ -782,6 +784,7 @@ stop
        fort_viscosity_state_model(im)= &
          ccviscosity_state_model(im)
        fort_elastic_viscosity(im)=ccelastic_viscosity(im)
+       fort_lame_coefficient(im)=cclame_coefficient(im)
        fort_store_elastic_data(im)=ccstore_elastic_data(im)
        fort_heatviscconst(im)=ccheatviscconst(im)
        fort_prerecalesce_heatviscconst(im)=ccprerecalesce_heatviscconst(im)
@@ -890,6 +893,7 @@ stop
         print *,"im,viscosity_state_model ",im, &
          fort_viscosity_state_model(im)
         print *,"im,fort_elastic_viscosity ",im,fort_elastic_viscosity(im)
+        print *,"im,fort_lame_coefficient ",im,fort_lame_coefficient(im)
         print *,"im,fort_store_elastic_data ",im,fort_store_elastic_data(im)
         print *,"im,fort_im_elastic_map ",im,fort_im_elastic_map(im)
         print *,"im,heatvisc ",im,fort_heatviscconst(im)

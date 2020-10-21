@@ -539,6 +539,7 @@ Vector<int> NavierStokes::temperature_primitive_variable;
 
 Vector<int> NavierStokes::store_elastic_data; // def=0
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
+Vector<Real> NavierStokes::lame_coefficient; // def=0
 
 Vector<Real> NavierStokes::Carreau_alpha; // def=1
 Vector<Real> NavierStokes::Carreau_beta; // def=0
@@ -1424,17 +1425,21 @@ void fortran_parameters() {
  num_state_material+=num_species_var;
 
  Vector<Real> elastic_viscosity_temp;
+ Vector<Real> lame_coefficient_temp;
  Vector<int> store_elastic_data_temp;
  Vector<int> particleLS_flag_temp;
  elastic_viscosity_temp.resize(nmat);
+ lame_coefficient_temp.resize(nmat);
  store_elastic_data_temp.resize(nmat);
  particleLS_flag_temp.resize(nmat);
  for (int im=0;im<nmat;im++) {
   elastic_viscosity_temp[im]=0.0;
+  lame_coefficient_temp[im]=0.0;
   store_elastic_data_temp[im]=0;
   particleLS_flag_temp[im]=0;
  }
  pp.queryarr("elastic_viscosity",elastic_viscosity_temp,0,nmat);
+ pp.queryarr("lame_coefficient",lame_coefficient_temp,0,nmat);
  pp.queryarr("particleLS_flag",particleLS_flag_temp,0,nmat);
 
  for (int im=0;im<nmat;im++) {
@@ -1812,6 +1817,7 @@ void fortran_parameters() {
   viscconst_eddy_temp.dataPtr(),
   viscosity_state_model_temp.dataPtr(),
   elastic_viscosity_temp.dataPtr(),
+  lame_coefficient_temp.dataPtr(),
   store_elastic_data_temp.dataPtr(),
   heatviscconst_temp.dataPtr(),
   prerecalesce_heatviscconst_temp.dataPtr(),
@@ -2548,16 +2554,19 @@ NavierStokes::read_params ()
      amrex::Error("nparts!=im_solid_map.size()");
 
     elastic_viscosity.resize(nmat);
+    lame_coefficient.resize(nmat);
     store_elastic_data.resize(nmat);
     particleLS_flag.resize(nmat);
     particles_weight.resize(nmat);
     for (int im=0;im<nmat;im++) {
      elastic_viscosity[im]=0.0;
+     lame_coefficient[im]=0.0;
      store_elastic_data[im]=0;
      particleLS_flag[im]=0;
      particles_weight[im]=0.0;
     }
     pp.queryarr("elastic_viscosity",elastic_viscosity,0,nmat);
+    pp.queryarr("lame_coefficient",lame_coefficient,0,nmat);
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
     pp.queryarr("particles_weight",particles_weight,0,nmat);
 
