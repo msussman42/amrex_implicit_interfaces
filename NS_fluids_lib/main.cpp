@@ -38,13 +38,23 @@ main (int   argc,
     amrex::Initialize(argc,argv);  // mpi initialization.
     std::fflush(NULL);
     amrex::ParallelDescriptor::Barrier();
-    std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 10/21/20, 0:20am on proc " << 
+
+    for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+     amrex::ParallelDescriptor::Barrier();
+     if (amrex::ParallelDescriptor::MyProc()==pid) {
+      std::fflush(NULL);
+      std::cout << 
+	"Multimaterial SUPERMESH/SPECTRAL, 10/21/20, 8:50am on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
-    std::cout << "PROC= " << amrex::ParallelDescriptor::MyProc() << 
+      std::cout << "NProcs()= " << 
+        amrex::ParallelDescriptor::NProcs() << '\n';
+      std::cout << "PROC= " << amrex::ParallelDescriptor::MyProc() << 
 	    " thread_class::nthreads= " << 
 	    thread_class::nthreads << '\n';
-    std::fflush(NULL);
+      std::fflush(NULL);
+     }
+    }  // pid=0..NProcs-1
+
     amrex::ParallelDescriptor::Barrier();
     if (amrex::ParallelDescriptor::IOProcessor())
      std::cout << "after the barrier on IO processor " << 
