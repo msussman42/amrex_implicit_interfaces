@@ -49,22 +49,34 @@ void FillPatchSingleLevel (
   amrex::Error("scompBC_map has invalid size");
 
  if (debug_fillpatch==1) {
+
+  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+   amrex::ParallelDescriptor::Barrier();
+   if (amrex::ParallelDescriptor::MyProc()==pid) {
+    std::fflush(NULL);
+    std::cout << "FillPatchSingleLevel(1) PROC= " << 
+     amrex::ParallelDescriptor::MyProc() << '\n';
+    std::cout << "scomp=" << scomp << " dcomp= " << dcomp << " ncomp= " <<
+     ncomp << '\n';
+    std::cout << "smf.boxArray() " << smf.boxArray() << '\n';
+    std::cout << "smf.DistributionMap() " << smf.DistributionMap() << '\n';
+    std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
+    std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+    std::fflush(NULL);
+   }
+  }  // pid=0..NProcs-1
+
   std::fflush(NULL);
-  std::cout << "FillPatchSingleLevel(1) PROC= " << 
-   amrex::ParallelDescriptor::MyProc() << '\n';
-  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << " ncomp= " <<
-   ncomp << '\n';
-  std::cout << "smf.boxArray() " << smf.boxArray() << '\n';
-  std::cout << "smf.DistributionMap() " << smf.DistributionMap() << '\n';
-  std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
-  std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
   for (int n=0;n<ncomp;n++) {
    Real smf_norm=smf.norm1(scomp+n,0);
    Real mf_norm=mf.norm1(dcomp+n,0);
-   std::cout << "n= " << n << " BCmap(n)= " << scompBC_map[n] <<
-    " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "n= " << n << " BCmap(n)= " << scompBC_map[n] <<
+     " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
+   }
   }
   std::fflush(NULL);
+
  } else if (debug_fillpatch==0) {
   // do nothing
  } else {
@@ -85,20 +97,29 @@ void FillPatchSingleLevel (
  ParallelDescriptor::Barrier();
 
  if (debug_fillpatch==1) {
+  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+   amrex::ParallelDescriptor::Barrier();
+   if (amrex::ParallelDescriptor::MyProc()==pid) {
+    std::fflush(NULL);
+    std::cout << "FillPatchSingleLevel(2) PROC= " << 
+     amrex::ParallelDescriptor::MyProc() << '\n';
+    std::cout << "scomp=" << scomp << " dcomp= " << dcomp << " ncomp= " <<
+     ncomp << '\n';
+    std::cout << "smf.boxArray() " << smf.boxArray() << '\n';
+    std::cout << "smf.DistributionMap() " << smf.DistributionMap() << '\n';
+    std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
+    std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+    std::fflush(NULL);
+   }
+  } // pid=0..NProcs-1
   std::fflush(NULL);
-  std::cout << "FillPatchSingleLevel(2) PROC= " << 
-   amrex::ParallelDescriptor::MyProc() << '\n';
-  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << " ncomp= " <<
-   ncomp << '\n';
-  std::cout << "smf.boxArray() " << smf.boxArray() << '\n';
-  std::cout << "smf.DistributionMap() " << smf.DistributionMap() << '\n';
-  std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
-  std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
   for (int n=0;n<ncomp;n++) {
    Real smf_norm=smf.norm1(scomp+n,0);
    Real mf_norm=mf.norm1(dcomp+n,0);
-   std::cout << "n= " << n << " BCmap(n)= " << scompBC_map[n] <<
-    " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "n= " << n << " BCmap(n)= " << scompBC_map[n] <<
+     " smf_norm= " << smf_norm << " mf_norm= " << mf_norm << '\n';
+   }
   }
   std::fflush(NULL);
  } else if (debug_fillpatch==0) {
@@ -184,19 +205,24 @@ void FillPatchTwoLevels (
   amrex::Error("do_the_interp invalid");
 
  if (debug_fillpatch==1) {
-  std::fflush(NULL);
-  std::cout << "FillPatchTwoLevels(1) PROC= " << 
+  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+   amrex::ParallelDescriptor::Barrier();
+   if (amrex::ParallelDescriptor::MyProc()==pid) {
+    std::fflush(NULL);
+    std::cout << "FillPatchTwoLevels(1) PROC= " << 
      amrex::ParallelDescriptor::MyProc() << '\n';
-  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
-   " ncomp=" << ncomp << " levelc= " << levelc <<
-   " levelf= " << levelf << " do_the_interp= " << do_the_interp << '\n';
-  std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
-  std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
-  std::cout << "fmf.boxArray() " << fmf.boxArray() << '\n';
-  std::cout << "fmf.DistributionMap() " << fmf.DistributionMap() << '\n';
-  std::cout << "cmf.boxArray() " << cmf.boxArray() << '\n';
-  std::cout << "cmf.DistributionMap() " << cmf.DistributionMap() << '\n';
-  std::fflush(NULL);
+    std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
+     " ncomp=" << ncomp << " levelc= " << levelc <<
+     " levelf= " << levelf << " do_the_interp= " << do_the_interp << '\n';
+    std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
+    std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+    std::cout << "fmf.boxArray() " << fmf.boxArray() << '\n';
+    std::cout << "fmf.DistributionMap() " << fmf.DistributionMap() << '\n';
+    std::cout << "cmf.boxArray() " << cmf.boxArray() << '\n';
+    std::cout << "cmf.DistributionMap() " << cmf.DistributionMap() << '\n';
+    std::fflush(NULL);
+   }
+  }  // pid=0..NProcs-1
  } else if (debug_fillpatch==0) {
   // do nothing
  } else {
@@ -316,13 +342,18 @@ void FillPatchTwoLevels (
   amrex::Error("do_the_interp invalid");
 
  if (debug_fillpatch==1) {
-  std::fflush(NULL);
-  std::cout << "FillPatchTwoLevels(2) PROC= " << 
+  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+   amrex::ParallelDescriptor::Barrier();
+   if (amrex::ParallelDescriptor::MyProc()==pid) {
+    std::fflush(NULL);
+    std::cout << "FillPatchTwoLevels(2) PROC= " << 
      amrex::ParallelDescriptor::MyProc() << '\n';
-  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
-   " ncomp=" << ncomp << " levelc= " << levelc <<
-   " levelf= " << levelf << '\n';
-  std::fflush(NULL);
+    std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
+     " ncomp=" << ncomp << " levelc= " << levelc <<
+     " levelf= " << levelf << '\n';
+    std::fflush(NULL);
+   }
+  }  // pid=0..NProcs()-1
  } else if (debug_fillpatch==0) {
   // do nothing
  } else {
@@ -344,13 +375,18 @@ void FillPatchTwoLevels (
    debug_fillpatch);
 
  if (debug_fillpatch==1) {
-  std::fflush(NULL);
-  std::cout << "FillPatchTwoLevels(3) PROC= " << 
+  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+   amrex::ParallelDescriptor::Barrier();
+   if (amrex::ParallelDescriptor::MyProc()==pid) {
+    std::fflush(NULL);
+    std::cout << "FillPatchTwoLevels(3) PROC= " << 
      amrex::ParallelDescriptor::MyProc() << '\n';
-  std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
-   " ncomp=" << ncomp << " levelc= " << levelc <<
-   " levelf= " << levelf << '\n';
-  std::fflush(NULL);
+    std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
+     " ncomp=" << ncomp << " levelc= " << levelc <<
+     " levelf= " << levelf << '\n';
+    std::fflush(NULL);
+   }
+  } // pid=0..NProcs()-1
  } else if (debug_fillpatch==0) {
   // do nothing
  } else {
