@@ -5139,7 +5139,7 @@ END SUBROUTINE Adist
          nslope(dir)=nslope(dir)/mag
         enddo
        else
-        print *,"mag invalid"
+        print *,"mag invalid find_LS_stencil_slope"
         stop
        endif
 

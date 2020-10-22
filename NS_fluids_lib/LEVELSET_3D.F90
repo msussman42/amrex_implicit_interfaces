@@ -1484,7 +1484,7 @@ stop
        else if (mag.gt.zero) then
         ! do nothing
        else
-        print *,"mag invalid"
+        print *,"mag invalid LEVELSET_3D.F90 1487"
         stop
        endif  
 
@@ -1548,7 +1548,7 @@ stop
          nfluid(dir2)=nfluid_def1(dir2)
         enddo
        else
-        print *,"mag invalid"
+        print *,"mag invalid LEVELSET_3D.F90 1551"
         stop
        endif 
        do dir2=1,SDIM
@@ -1567,7 +1567,7 @@ stop
          nfluid(dir2)=nfluid_def2(dir2)
         enddo
        else
-        print *,"mag invalid"
+        print *,"mag invalid LEVELSET_3D.F90 1570"
         stop
        endif 
        do dir2=1,SDIM
@@ -2105,7 +2105,7 @@ stop
        else if (mag.gt.zero) then
         ! do nothing
        else
-        print *,"mag invalid"
+        print *,"mag invalid LEVELSET_3D.F90 2108"
         stop
        endif
        call prepare_normal(n_node2LS,RR,mag)
@@ -2116,7 +2116,7 @@ stop
        else if (mag.gt.zero) then
         ! do nothing
        else
-        print *,"mag invalid"
+        print *,"mag invalid LEVELSET_3D.F90 2119"
         stop
        endif
        
@@ -19557,7 +19557,7 @@ stop
       else if (mag.le.max_travel) then
        ! do nothing
       else
-       print *,"mag invalid"
+       print *,"mag invalid check_cfl_BC"
        stop
       endif
 
