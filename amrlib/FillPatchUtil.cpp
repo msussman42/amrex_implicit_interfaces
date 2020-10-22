@@ -62,6 +62,10 @@ void FillPatchSingleLevel (
     std::cout << "smf.DistributionMap() " << smf.DistributionMap() << '\n';
     std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
     std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+    Periodicity my_period=geom.periodicity();
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+     std::cout << "dir=" << dir << " my_period.isPeriodic(dir) " << 
+       my_period.isPeriodic(dir) << '\n';
     std::fflush(NULL);
    }
   }  // pid=0..NProcs-1
@@ -109,6 +113,10 @@ void FillPatchSingleLevel (
     std::cout << "smf.DistributionMap() " << smf.DistributionMap() << '\n';
     std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
     std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+    Periodicity my_period=geom.periodicity();
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+     std::cout << "dir=" << dir << " my_period.isPeriodic(dir) " << 
+       my_period.isPeriodic(dir) << '\n';
     std::fflush(NULL);
    }
   } // pid=0..NProcs-1

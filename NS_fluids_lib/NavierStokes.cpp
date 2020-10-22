@@ -17326,6 +17326,56 @@ void NavierStokes::writeInterfaceReconstruction() {
 
 }  // writeInterfaceReconstruction
 
+void NavierStokes::debug_ParallelCopy() {
+
+ ParallelDescriptor::Barrier();
+ int s_nghost=0;
+ int d_nghost=0;
+ int scomp=0;
+ int dcomp=0;
+ int ncomp=1;
+ int src_ncomp=1;
+ int dest_ncomp=1;
+ int src_ngrow=0;
+ int dest_ngrow=0;
+ BoxArray src_box_array;
+ BoxArray dest_box_array;
+ DistributionMapping src_dmap;
+ DistributionMapping dest_dmap;
+ Vector<int> src_pmap;
+ Vector<int> dest_pmap;
+//int readFrom (std::istream& is);
+//std::ostream& writeOn (std::ostream&) const;
+//ofstream myfile; (or ifstream)
+//myfile.open("example.txt");
+//myfile.close();
+ std::cout << "READING FROM PCOPY_DATA\n";
+ std::ifstream is;
+ is.open("PCOPY_DATA");
+ src_box_array.readFrom(is);
+ dest_box_array.readFrom(is);
+ src_pmap.resize(src_box_array.size());
+ dest_pmap.resize(src_box_array.size());
+ src_dmap.define(src_pmap);
+ dest_dmap.define(dest_pmap);
+ MultiFab* src_mf=new MultiFab(src_box_array,src_dmap,src_ncomp,src_ngrow, 
+    MFInfo().SetTag("src_mf"),FArrayBoxFactory());
+ MultiFab* dest_mf=new MultiFab(dest_box_array,dest_dmap,dest_ncomp,dest_ngrow, 
+    MFInfo().SetTag("dest_mf"),FArrayBoxFactory());
+ IntVect vec_period(AMREX_SPACEDIM);
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+  vec_period[dir]=0;
+ Periodicity my_periodicity(vec_period);
+ src_mf->setVal(1.0);
+ dest_mf->setVal(1.0);
+ ParallelDescriptor::Barrier();
+     // scomp,dcomp,ncomp,s_nghost,d_nghost
+ dest_mf->ParallelCopy(*src_mf,scomp,dcomp,ncomp,s_nghost,d_nghost,
+   my_periodicity);
+ ParallelDescriptor::Barrier();
+ amrex::Error("debug_ParallelCopy() completed");
+
+} // end subroutine debug_ParallelCopy()
 
 // VOF_Recon_ALL called before this routine is called.
 // init_FSI_GHOST_MAC_MF() called for all relevant 
