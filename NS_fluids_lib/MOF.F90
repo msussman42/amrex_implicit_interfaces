@@ -12682,6 +12682,10 @@ contains
 !     in which "subroutine find_cut_geom_slope_CLSVOF" returns a normal
 !     (lsnormal) given ls_mof.
 !
+! COMMENTS ON THE order:
+! if the material is non-deforming, then its' order is always 1.
+! if just one fluid material occupies a cell, then the order for that
+! fluid is 1, and all other orders are 0.
 
       subroutine multimaterial_MOF( &
         bfact,dx,xsten0,nhalf0, &

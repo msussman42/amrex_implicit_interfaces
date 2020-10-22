@@ -2889,8 +2889,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.new_localMF(JUMP_STRENGTH_MF,2*nten,ngrow_expansion,-1); 
         ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,2*nten,ngrow_expansion);
 
+        ns_level.new_localMF(MOFDATA_NEW_MF,nmat*ngeom_recon,0,-1); 
+        ns_level.setVal_localMF(MOFDATA_NEW_MF,0.0,0,nmat*ngeom_recon,0);
        } // ilev=level ... finest_level
 
+       debug_ngrow(MOFDATA_NEW_MF,0,30);
        debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,30);
        debug_ngrow(SWEPT_CROSSING_MF,0,31);
        debug_ngrow(BURNING_VELOCITY_MF,ngrow_make_distance,31);
@@ -3211,6 +3214,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        phase_change_redistributeALL();
 
        delete_array(JUMP_STRENGTH_MF);
+       delete_array(MOFDATA_NEW_MF);
    
       } else if (mass_transfer_active==0) {
        // do nothing

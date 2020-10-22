@@ -11490,6 +11490,11 @@ NavierStokes::level_phase_change_convert(int isweep) {
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,28); 
 
+ if (localMF[MOFDATA_NEW_MF]->nGrow()!=0)
+  amrex::Error("MOFDATA_NEW invalid ngrow level_phase_change_conv");
+ if (localMF[MOFDATA_NEW_MF]->nComp()!=nmat*ngeom_recon)
+  amrex::Error("localMF[MOFDATA_NEW_MF]->nComp() invalid");
+
  if (localMF[JUMP_STRENGTH_MF]->nGrow()!=ngrow_expansion)
   amrex::Error("jump strength invalid ngrow level_phase_change_conv");
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten)
@@ -11687,6 +11692,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
 
    FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
+   FArrayBox& MOFnewfab=(*localMF[MOFDATA_NEW_MF])[mfi];
 
    FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
    if (Tsatfab.nComp()!=ntsat)
@@ -11744,6 +11750,8 @@ NavierStokes::level_phase_change_convert(int isweep) {
     ARLIM(deltafab.loVect()),ARLIM(deltafab.hiVect()),
     nodevelfab.dataPtr(),
     ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
+    MOFnewfab.dataPtr(),
+    ARLIM(MOFnewfab.loVect()),ARLIM(MOFnewfab.hiVect()),
     JUMPfab.dataPtr(),
     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
     Tsatfab.dataPtr(),

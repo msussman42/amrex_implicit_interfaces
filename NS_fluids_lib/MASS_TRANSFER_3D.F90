@@ -3339,6 +3339,7 @@ stop
        maskcov,DIMS(maskcov), &
        deltaVOF,DIMS(deltaVOF), &
        nodevel,DIMS(nodevel), &
+       MOFnewFAB,DIMS(MOFnewFAB), &
        JUMPFAB,DIMS(JUMPFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
        LSold,DIMS(LSold), &
@@ -3385,13 +3386,13 @@ stop
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in),target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: min_stefan_velocity_for_dt
       INTEGER_T, intent(in) :: vofbc(SDIM,2)
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in),target :: xlo(SDIM)
+      REAL_T, intent(in),target :: dx(SDIM)
       REAL_T, intent(in) :: dt
       REAL_T, intent(inout) :: delta_mass(2*nmat)
       REAL_T, intent(inout) :: DVOF(nmat)
@@ -3399,6 +3400,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(deltaVOF)
       INTEGER_T, intent(in) :: DIMDEC(nodevel)
+      INTEGER_T, intent(in) :: DIMDEC(MOFnewFAB)
       INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
       INTEGER_T, intent(in) :: DIMDEC(TgammaFAB)
       INTEGER_T, intent(in) :: DIMDEC(LSold)
@@ -3416,9 +3418,10 @@ stop
       REAL_T, intent(inout) :: deltaVOF(DIMV(deltaVOF),3*nmat)
 
       REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
+      REAL_T, intent(inout) :: MOFnewFAB(DIMV(MOFnewFAB),nmat*ngeom_recon)
       REAL_T, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
       REAL_T, intent(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
-      REAL_T, intent(in) :: LSold(DIMV(LSold),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: LSold(DIMV(LSold),nmat*(1+SDIM))
       REAL_T, intent(out) :: LSnew(DIMV(LSnew),nmat)
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: snew(DIMV(snew),nstate)
@@ -3455,6 +3458,7 @@ stop
       REAL_T new_centroid(nmat,SDIM)
       REAL_T EBVOFTOL
       REAL_T SWEPTFACTOR
+      REAL_T SWEPTFACTOR_GFM
       INTEGER_T SWEPTFACTOR_centroid
       REAL_T LL
       REAL_T Tgamma_default
@@ -3595,8 +3599,9 @@ stop
       REAL_T delta_mass_local
       REAL_T xPOINT_supermesh(SDIM)
       REAL_T xPOINT_GFM(SDIM)
-      REAL_T xstar(SDIM)
+      REAL_T, target :: xstar(SDIM)
       INTEGER_T im_old_crit
+      INTEGER_T im_new_crit
       REAL_T DATA_FLOOR
       INTEGER_T combine_flag
       INTEGER_T nsolve_interp
@@ -3616,6 +3621,15 @@ stop
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      type(interp_from_grid_parm_type) :: data_in 
+      type(interp_from_grid_out_parm_type) :: data_out
+      REAL_T, target :: cell_data_interp(nmat*(1+SDIM)) !LS1..LSn,slopes ...
+      INTEGER_T order_probe(2)
+      REAL_T nslope_probe(SDIM,2)
+      REAL_T intercept_probe(2)
+      REAL_T nslope_dest(SDIM)
+      REAL_T intercept_dest
+      REAL_T LS_dest_old,LS_dest_new
 
       supermesh_flag=0
 
@@ -3872,6 +3886,8 @@ stop
        DIMS(deltaVOF),0,-1,1256)
 
       call checkbound(fablo,fabhi, &
+       DIMS(MOFnewFAB),0,-1,1256)
+      call checkbound(fablo,fabhi, &
        DIMS(JUMPFAB),ngrow_expansion,-1,1256)
       call checkbound(fablo,fabhi, &
        DIMS(TgammaFAB),ngrow_expansion,-1,1256)
@@ -3914,6 +3930,8 @@ stop
         enddo
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
+        call gridsten_level(u_xsten_updatecell,i,j,k,level,nhalf)
+
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
           volgrid,cengrid,SDIM)
 
@@ -4131,8 +4149,6 @@ stop
 
            symmetry_flag=0 
            call get_ntetbox(ntetbox,symmetry_flag,SDIM)
-
-           call gridsten_level(u_xsten_updatecell,i,j,k,level,nhalf)
 
            absolute_voltotal=zero
            voltotal=zero
@@ -5061,13 +5077,15 @@ stop
              !             if yes, then 
              !             SWEPTFACTOR=1-(phi_np1/(phi_np1-phi_n)     
 
-            SWEPTFACTOR=zero
+             ! this is just an isweep=0 placeholder; this variable
+             ! will never be used.
+            SWEPTFACTOR_GFM=one
             if ((oldvfrac(im_dest).lt.half).and. &
                 (newvfrac(im_dest).gt.half)) then
-             SWEPTFACTOR=(newvfrac(im_dest)-half)/dF
+             SWEPTFACTOR_GFM=(newvfrac(im_dest)-half)/dF
             else if ((oldvfrac(im_dest).ge.half).or. &
                      (newvfrac(im_dest).le.half)) then
-             ! do nothing
+             SWEPTFACTOR_GFM=one
             else
              print *,"oldvfrac or newvfrac invalid"
              stop
@@ -5110,6 +5128,7 @@ stop
             use_ls_data=0
             continuous_mof_parm=0
 
+             ! LS=n dot (x-x0)+intercept
             call multimaterial_MOF( &
              bfact,dx,u_xsten_updatecell,nhalf, &
              mof_verbose, &
@@ -5124,31 +5143,24 @@ stop
              continuous_mof_parm, &
              nmat,SDIM,2)
 
+             !isweep==0 so we save mofdata_new for isweep=1
+            do u_im=1,nmat*ngeom_recon
+             MOFnewFAB(D_DECL(i,j,k),u_im)=mofdata_new(u_im)
+            enddo
+
+             ! xPOINT_supermesh is needed in order to determine
+             ! whether to interpolate old temperature and mass fraction
+             ! data from the old supermesh to the new supermesh.
             do dir=1,SDIM
              xPOINT_supermesh(dir)=new_centroid(im_dest,dir)
             enddo
-            do dir=1,SDIM
-             xPOINT_GFM(dir)=u_xsten_updatecell(0,dir)
-            enddo
 
-            if (supermesh_flag.eq.1) then
-             do dir=1,SDIM
-              xstar(dir)=xPOINT_supermesh(dir)
-             enddo
-            else if (supermesh_flag.eq.0) then
-             do dir=1,SDIM
-              xstar(dir)=xPOINT_GFM(dir)
-             enddo
-            else
-             print *,"super_mesh invalid"
-             stop
-            endif
-
-!            call interp_from_grid_util(data_interp_in,data_out)
-
-        
              ! now we check if new_centroid(im_dest,dir) is in the
              ! old dest material.
+             ! If new_centroid(im_dest) in the old dest material, then
+             ! the cell centroid HAS NOT been swept and the temperature
+             ! at this point needs to be interpolated from the t=tn
+             ! im_dest supermesh.
             SWEPTFACTOR_centroid=0
             if ((newvfrac(im_dest).gt.zero).and. &
                 (newvfrac(im_dest).le.one+EBVOFTOL)) then
@@ -5456,6 +5468,9 @@ stop
             stop
            endif 
 
+           ! above, CISL unsplit advection and update source and destination
+           ! centroids.  Source and destination volume fractions are corrected
+           ! below.
           else if (isweep.eq.1) then
 
            iten=iten_crit
@@ -5728,15 +5743,167 @@ stop
               !t-tn=dt(1/2 - Fn)/dF
               !tnp1-t=-dt(1/2-Fn)/dF+dt=
               !dt(dF-1/2+Fn)/dF=dt(Fnp1-1/2)/dF
-             if ((oldvfrac(im_dest).lt.half).and. &
-                 (newvfrac(im_dest).gt.half)) then
+
+             do u_im=1,nmat*ngeom_recon
+              mofdata_new(u_im)=MOFnewFAB(D_DECL(i,j,k),u_im)
+              mofdata(u_im)=recon(D_DECL(i,j,k),u_im)  
+             enddo
+
+             vofcomp_recon=(im_dest-1)*ngeom_recon+1
+             do dir=1,SDIM
+              xPOINT_supermesh(dir)=mofdata_new(vofcomp_recon+dir)+ &
+                     cengrid(dir)
+             enddo
+             do dir=1,SDIM
+              xPOINT_GFM(dir)=u_xsten_updatecell(0,dir)
+             enddo
+
+             if (supermesh_flag.eq.1) then
+              do dir=1,SDIM
+               xstar(dir)=xPOINT_supermesh(dir)
+              enddo
+             else if (supermesh_flag.eq.0) then
+              do dir=1,SDIM
+               xstar(dir)=xPOINT_GFM(dir)
+              enddo
+             else
+              print *,"super_mesh invalid"
+              stop
+             endif
+
+             data_out%data_interp=>cell_data_interp
+
+             data_in%level=level
+             data_in%finest_level=finest_level
+             data_in%bfact=bfact
+             data_in%nmat=nmat
+             data_in%im_PLS=0 !0=> do not weight using LS
+             data_in%dx=>dx
+             data_in%xlo=>xlo
+             data_in%fablo=>fablo
+             data_in%fabhi=>fabhi
+             data_in%ngrowfab=normal_probe_size+3
+
+             data_in%state=>LSold
+             data_in%LS=>LSold
+
+             data_in%ncomp=nmat*(1+SDIM)
+             data_in%scomp=1
+
+             data_in%xtarget=>xstar
+             data_in%interp_foot_flag=0 !=1 if interp xfoot from xdisp data
+
+             call interp_from_grid_util(data_in,data_out)
+
+             tessellate=1
+             call multi_get_volumePOINT( &
+              tessellate, &
+              bfact,dx, &
+              u_xsten_updatecell,nhalf, &  ! absolute coordinate system
+              mofdata, &
+              xstar, & ! absolute coordinate system
+              im_old_crit,nmat,SDIM)
+
+             tessellate=1
+             call multi_get_volumePOINT( &
+               tessellate, &
+               bfact,dx, &
+               u_xsten_updatecell,nhalf, &  ! absolute coordinate system
+               mofdata_new, &
+               xstar, & ! absolute coordinate system
+               im_new_crit,nmat,SDIM)
+
+             if ((newvfrac(im_dest).gt.zero).and. &
+                 (newvfrac(im_dest).le.one+EBVOFTOL)) then
+
+              if (im_new_crit.eq.im_dest) then
+               ! determine slope and intercept of the interface separating
+               ! the source material from the destination.
+
+               do iprobe=1,2
+
+                if (iprobe.eq.1) then ! source
+                 im_probe=im_source
+                else if (iprobe.eq.2) then ! dest
+                 im_probe=im_dest
+                else
+                 print *,"iprobe invalid"
+                 stop
+                endif
+                vofcomp_recon=(im_probe-1)*ngeom_recon+1
+
+                order_probe(iprobe)=NINT(mofdata_new(vofcomp_recon+SDIM+1))
+                do udir=1,SDIM 
+                 nslope_probe(udir,iprobe)= &
+                   recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
+                enddo
+                intercept_probe(iprobe)= &
+                  mofdata_new(vofcomp_recon+2*SDIM+2)
+
+               enddo ! iprobe=1,2
+
+              else if ((im_new_crit.ge.1).and.(im_new_crit.le.nmat)) then
+               ! nothing is swept
+              else
+               print *,"im_new_crit invalid"
+               stop
+              endif
+
+             else
+              print *,"expecting newvfrac(im_dest)>0 since dF>0"
+              stop
+             endif
+
+             if ((im_new_crit.eq.im_dest).and. &
+                 (im_old_crit.eq.im_source)) then
+
+              if ((order_probe(1).eq.0).and. &
+                  (order_probe(2).eq.0)) then
+               SWEPTFACTOR=one ! default
+              else if (order_probe(1).eq.0) then
+               do udir=1,SDIM 
+                nslope_dest(udir)=nslope_probe(udir,2)
+               enddo
+               intercept_dest=intercept_probe(2)
+              else if (order_probe(2).eq.0) then
+               do udir=1,SDIM 
+                nslope_dest(udir)=-nslope_probe(udir,1)
+               enddo
+               intercept_dest=-intercept_probe(1)
+              else if (order_probe(1).lt.order_probe(2)) then
+               do udir=1,SDIM 
+                nslope_dest(udir)=-nslope_probe(udir,1)
+               enddo
+               intercept_dest=-intercept_probe(1)
+              else
+               do udir=1,SDIM 
+                nslope_dest(udir)=nslope_probe(udir,2)
+               enddo
+               intercept_dest=intercept_probe(2)
+              endif
+
+              LS_dest_old=cell_data_interp(im_dest)
+              LS_dest_new=intercept_dest 
+              do udir=1,SDIM 
+               LS_dest_new=LS_dest_new+nslope_dest(udir)* &
+                       (xstar(udir)-u_xsten_updatecell(0,udir))
+              enddo
+
               if ((dF.gt.zero).and.(dF.le.one+VOFTOL)) then
                ! do nothing
               else
                print *,"dF invalid"
                stop
               endif
-              SWEPTFACTOR=(newvfrac(im_dest)-half)/dF
+
+              if ((LS_dest_old.eq.zero).and.(LS_dest_new.eq.zero)) then
+               SWEPTFACTOR=one
+              else if (LS_dest_new-LS_dest_old.gt.zero) then
+               SWEPTFACTOR=one-LS_dest_new/ &
+                       (LS_dest_new-LS_dest_old)
+              else
+               SWEPTFACTOR=one
+              endif
               if (SWEPTFACTOR.le.LSTOL) then
                SWEPTFACTOR=LSTOL
               endif
