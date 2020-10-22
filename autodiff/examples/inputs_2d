@@ -14,7 +14,7 @@
 stop_time=1.0
 nsteps = 128
 plot_int = 10
-xlo=0.0
-xhi=1.0
-n_cell = 64
-max_grid_size = 2048
+xlo=0.0 0.0
+xhi=1.0 1.0
+n_cell = 64 1
+max_grid_size = 2048 2048

@@ -17,6 +17,8 @@ using namespace adept;
 using My_adept_FAB=BaseFab< adept::adouble >;
 using My_adept_MFAB=FabArray< My_adept_FAB >;
 
+// Tracking deformable objects with unscented Kalman filtering 
+// and geometric active contours
 // This article seemed to have good success with smoothing the
 // Heaviside function upwinding advection terms:
 // Efficient evaluation of the direct and adjoint 
@@ -57,7 +59,9 @@ adept::adouble cost_function(
 	 vector< My_adept_MFAB* > uinput,
 	 const Real* dx,
 	 Real dt,
-	 const Geometry& geom) {
+	 const Geometry& geom,
+	 int plot_int,
+	 int steepest_descent_iter) {
 
  int nsteps=uinput.size()-1;
 
@@ -170,6 +174,37 @@ adept::adouble cost_function(
 
 
  adept::adouble y=0.0;
+
+ double time=0.0;
+ ntime = 0;
+ const std::string& pltfile1 = amrex::Concatenate("plt",ntime,5);
+ const std::string& pltfile = 
+	 amrex::Concatenate(pltfile1,steepest_descent_iter,5);
+ MultiFab* data_plot_mf=new MultiFab(ba_node,dm,Ncomp,Nghost);
+ My_adept_MFAB* v_frame_plot=v[ntime];
+ for (MFIter mfi(*data_plot_mf,false); mfi.isValid(); ++mfi) {
+   const int gridno = mfi.index();
+   My_adept_FAB& v_fab=(*v_frame_plot)[gridno]; // type: adouble
+   FArrayBox& plot_fab=(*data_plot_mf)[gridno]; // type: double
+   Array4< adept::adouble > const& v_array=v_fab.array(); // type: adouble
+   Array4< Real > const& plot_array=plot_fab.array(); // type: double
+   Dim3 lo = lbound(v_array);
+   Dim3 hi = ubound(v_array);
+   for (int k = lo.z; k <= hi.z; ++k) {
+   for (int j = lo.y; j <= hi.y; ++j) {
+   for (int i = lo.x; i <= hi.x; ++i) {
+    plot_array(i,j,k)=v_array(i,j,k).value();
+   }
+   }
+   }
+ }
+
+ std::cout << "plotting " << pltfile << '\n';
+ std::cout << " max= " << data_plot_mf->max(0) << '\n';
+ std::cout << " min= " << data_plot_mf->min(0) << '\n';
+ WriteSingleLevelPlotfile(pltfile, *data_plot_mf, {"data_plot_mf"}, 
+		 geom, time, 0);
+ delete data_plot_mf;
 
  for (ntime=0;ntime<nsteps;ntime++) {
 
@@ -332,7 +367,9 @@ Real algorithm_and_gradient(
  vector< MultiFab* > dJdx, // gradient
  const Real* dx,
  Real dt,
- const Geometry& geom) { 
+ const Geometry& geom,
+ int plot_int,
+ int steepest_descent_iter) { 
 
  int nsteps=x.size()-1;
 
@@ -374,7 +411,7 @@ Real algorithm_and_gradient(
  } // ntime
 
  stack.new_recording();  // records the tape
- y = cost_function(adept_x,dx,dt,geom);
+ y = cost_function(adept_x,dx,dt,geom,plot_int,steepest_descent_iter);
  y.set_gradient(1.0);
  stack.compute_adjoint();
  for (int ntime=0;ntime<=nsteps;ntime++) {
@@ -414,9 +451,15 @@ int main(int argc,char* argv[]) {
  Real strt_time = amrex::second();
 
  // AMREX_SPACEDIM: number of dimensions
- int n_cell, max_grid_size, nsteps, plot_int;
- Real xlo=0.0;
- Real xhi=1.0;
+ int n_cell[AMREX_SPACEDIM];
+ int max_grid_size[AMREX_SPACEDIM];
+ int nsteps, plot_int;
+ Real xlo[AMREX_SPACEDIM];
+ Real xhi[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+	 xlo[dir]=0.0;
+	 xhi[dir]=1.0;
+ }
  Real stop_time=1.0;
 
  // DEFAULT: NONE PERIODIC 
@@ -431,10 +474,11 @@ int main(int argc,char* argv[]) {
   // We need to get n_cell from the inputs file - this is the 
   // number of cells on each side of 
   //   a square (or cubic) domain.
-  pp.get("n_cell",n_cell);
+  pp.get("n_cell",n_cell[0]);
+  n_cell[1]=1;
 
   // The domain is broken into boxes of size max_grid_size
-  pp.get("max_grid_size",max_grid_size);
+  pp.get("max_grid_size",max_grid_size[0]);
 
   // Default plot_int to -1, allow us to set it to 
   // something else in the inputs file
@@ -447,8 +491,10 @@ int main(int argc,char* argv[]) {
   nsteps = 10;
   pp.query("nsteps",nsteps);
 
-  pp.get("xlo",xlo);
-  pp.get("xhi",xhi);
+  pp.get("xlo",xlo[0]);
+  pp.get("xhi",xhi[0]);
+  xlo[1]=xlo[0];
+  xhi[1]=xhi[0];
   pp.get("stop_time",stop_time);
  }
 
@@ -458,23 +504,30 @@ int main(int argc,char* argv[]) {
  Geometry geom;
  {
   IntVect dom_lo(AMREX_D_DECL(       0,        0,        0));
-  IntVect dom_hi(AMREX_D_DECL(n_cell-1, n_cell-1, n_cell-1));
+  IntVect dom_hi(AMREX_D_DECL(n_cell[0]-1, n_cell[1]-1, n_cell[2]-1));
   Box domain(dom_lo, dom_hi);
 
   // Initialize the boxarray "ba" from the single box "bx"
   ba.define(domain);
   // Break up boxarray "ba" into chunks no larger than 
   // "max_grid_size" along a direction
-  ba.maxSize(max_grid_size);
+  ba.maxSize(max_grid_size[0]);
 
-  RealBox real_box({AMREX_D_DECL(xlo,xlo,xlo)},
-                   {AMREX_D_DECL(xhi,xhi,xhi)});
+  RealBox real_box({AMREX_D_DECL(xlo[0],xlo[1],xlo[2])},
+                   {AMREX_D_DECL(xhi[0],xhi[1],xhi[2])});
 
   // This defines a Geometry object
   geom.define(domain,&real_box,CoordSys::cartesian,is_periodic.data());
  }
+
+  // for the sake of expediancy,
+  // finite difference method in the x-direction, and just
+  // 1 cell in the y direction.  So,
+  // IndexType::NODE in the x-direction
+  // IndexType::CELL in the y-direction
+  // TheUMACType
  BoxArray ba_node(ba);
- IndexType node_type=IndexType::NODE;
+ IndexType node_type=IndexType::TheUMACType();
  ba_node.convert(node_type);
 
  // Nghost = number of ghost cells for each array 
@@ -542,7 +595,7 @@ int main(int argc,char* argv[]) {
  
    Real y=algorithm_and_gradient(
              x,dJdx,
-	     dx,dt,geom);
+	     dx,dt,geom,plot_int,iter);
  
    for (int ntime=0;ntime<=nsteps;ntime++) {
     MultiFab* cur_frame=x[ntime];
