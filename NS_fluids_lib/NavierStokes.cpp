@@ -13570,6 +13570,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      //    material regions, Particle Container particles, grids,
      //    slice data easily accessible.  Plot on the fly, different
      //    box types.
+     // 6. https://pyamg.saclay.inria.fr/vizir4.html
      //
      // in: SEM_scalar_advection
      // advect: rho u, rho, temperature (non conservatively)
