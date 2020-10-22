@@ -2100,7 +2100,7 @@ contains
        else if (mag.eq.zero) then
         newphi=phi
        else
-        print *,"mag invalid"
+        print *,"mag invalid in get_physical_dist"
         stop
        endif
       else
@@ -2713,7 +2713,7 @@ contains
           mag=mag+n(dir)*nsave(dir)
          enddo
          if (abs(mag).gt.one+VOFTOL) then
-          print *,"mag invalid"
+          print *,"mag invalid in derive_dist"
           stop
          endif
          if (abs(mag).gt.zero) then

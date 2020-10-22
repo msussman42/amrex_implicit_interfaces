@@ -181,7 +181,7 @@ contains
    stop
   endif
  else
-  print *,"mag invalid"
+  print *,"mag invalid CAV3D_ORDER_NODES"
   stop
  endif
 

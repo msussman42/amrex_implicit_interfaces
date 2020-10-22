@@ -3659,7 +3659,7 @@ end subroutine intersection_volume_and_map
       else if (mag.eq.zero) then
        ! do nothing
       else
-       print *,"mag invalid"
+       print *,"mag invalid in surface_area"
        stop
       endif
 
@@ -13117,7 +13117,7 @@ contains
           enddo 
 
          else
-          print *,"mag invalid"
+          print *,"mag invalid MOF.F90 13120"
           stop
          endif
 
@@ -14255,7 +14255,7 @@ contains
        else if (mag.eq.zero) then
         ! do not modify the slope or intercept
        else
-        print *,"mag invalid"
+        print *,"mag invalid in project_slopes_to_face"
         stop
        endif
 
