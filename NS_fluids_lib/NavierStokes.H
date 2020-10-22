@@ -535,6 +535,8 @@ public:
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,int slab_step_in);
 
+    void debug_ParallelCopy();
+
     void writeInterfaceReconstruction();
     void writeTECPLOT_File(int do_plot,int do_slice);
     void tecplot_debug(FArrayBox& fabdata,
