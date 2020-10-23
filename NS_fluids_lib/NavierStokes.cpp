@@ -17350,22 +17350,55 @@ void NavierStokes::debug_ParallelCopy() {
 //ofstream myfile; (or ifstream)
 //myfile.open("example.txt");
 //myfile.close();
- std::cout << "READING FROM PCOPY_DATA\n";
- std::ifstream is;
- is.open("PCOPY_DATA");
- src_box_array.readFrom(is);
- dest_box_array.readFrom(is);
+ std::cout << "READING FROM PCOPY_DATA_SRC\n";
+ std::ifstream is_src;
+ is_src.open("PCOPY_DATA_SRC");
+ src_box_array.readFrom(is_src);
+
+ std::cout << "READING FROM PCOPY_DATA_DEST\n";
+ std::ifstream is_dest;
+ is_dest.open("PCOPY_DATA_DEST");
+ dest_box_array.readFrom(is_dest);
+
+ std::cout << "src_box_array= " << src_box_array << '\n';
+ std::cout << "dest_box_array= " << dest_box_array << '\n';
+
  src_pmap.resize(src_box_array.size());
  dest_pmap.resize(src_box_array.size());
+ for (int i=0;i<src_pmap.size();i++) {
+  src_pmap[i]=0;  
+ }
+ if (1==0) {
+  src_pmap[0]=3;
+  src_pmap[1]=1;
+  src_pmap[2]=2;
+  src_pmap[3]=0;
+ }
+ for (int i=0;i<dest_pmap.size();i++) {
+  dest_pmap[i]=0;
+ }
+ if (1==0) {
+  dest_pmap[0]=1;
+  dest_pmap[1]=1;
+ }
  src_dmap.define(src_pmap);
  dest_dmap.define(dest_pmap);
+ 
+ std::cout << "src_dmap= " << src_dmap << '\n';
+ std::cout << "dest_dmap= " << dest_dmap << '\n';
+
  MultiFab* src_mf=new MultiFab(src_box_array,src_dmap,src_ncomp,src_ngrow, 
     MFInfo().SetTag("src_mf"),FArrayBoxFactory());
  MultiFab* dest_mf=new MultiFab(dest_box_array,dest_dmap,dest_ncomp,dest_ngrow, 
     MFInfo().SetTag("dest_mf"),FArrayBoxFactory());
  IntVect vec_period(AMREX_SPACEDIM);
+
+  // vec_period[dir]=domain.length(dir) * is_periodic[dir]
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   vec_period[dir]=0;
+
+ std::cout << "vec_period= " << vec_period << '\n';
+
  Periodicity my_periodicity(vec_period);
  src_mf->setVal(1.0);
  dest_mf->setVal(1.0);
