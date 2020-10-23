@@ -13308,8 +13308,8 @@ stop
         stop
        endif
 
-       uu=abs(uu)+four*USTEFAN
-       uu_estdt=abs(uu_estdt)+four*USTEFAN
+       uu=abs(uu)+two*USTEFAN
+       uu_estdt=abs(uu_estdt)+two*USTEFAN
 
        if (is_rigid(nmat,im_primaryL).eq.0) then
         ibase=(im_primaryL-1)*num_state_material
