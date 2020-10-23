@@ -5174,11 +5174,15 @@ stop
                xPOINT_supermesh, & ! absolute coordinate system
                im_old_crit,nmat,SDIM)
 
-             if (im_old_crit.eq.im_dest) then
+              ! im_old_crit=material at t=tn that occupies the new 
+              ! centroid location
+             if ((im_old_crit.eq.im_dest).or. &
+                 (oldvfrac(im_dest).ge.half)) then
               ! do nothing
              else if ((im_old_crit.ge.1).and. &
                       (im_old_crit.le.nmat).and. &
-                      (im_old_crit.ne.im_dest)) then
+                      (im_old_crit.ne.im_dest).and. &
+                      (oldvfrac(im_dest).le.half)) then
               SWEPTFACTOR_centroid=1
 
               if (1.eq.0) then
@@ -5795,6 +5799,8 @@ stop
 
              call interp_from_grid_util(data_in,data_out)
 
+             LS_dest_old=cell_data_interp(im_dest)
+
              tessellate=1
              call multi_get_volumePOINT( &
               tessellate, &
@@ -5816,7 +5822,9 @@ stop
              if ((newvfrac(im_dest).gt.zero).and. &
                  (newvfrac(im_dest).le.one+EBVOFTOL)) then
 
-              if (im_new_crit.eq.im_dest) then
+               ! im_new_crit "owns" xstar
+              if ((im_new_crit.eq.im_dest).or. &
+                  (newvfrac(im_dest).ge.half)) then
                ! determine slope and intercept of the interface separating
                ! the source material from the destination.
 
@@ -5842,36 +5850,6 @@ stop
 
                enddo ! iprobe=1,2
 
-              else if ((im_new_crit.ge.1).and.(im_new_crit.le.nmat)) then
-               ! nothing is swept
-              else
-               print *,"im_new_crit invalid"
-               stop
-              endif
-
-             else
-              print *,"expecting newvfrac(im_dest)>0 since dF>0"
-              stop
-             endif
-
-             if ((dF.gt.zero).and.(dF.le.one+VOFTOL)) then
-              ! do nothing
-             else
-              print *,"dF invalid"
-              stop
-             endif
-
-             if ((im_new_crit.eq.im_dest).and. &
-                 (im_old_crit.eq.im_source)) then
-
-                 ! if order_probe(1) or (2) == 0 => no slope found
-                 ! in the reconstruction of im_source or im_dest
-                 ! materials.
-              if ((order_probe(1).eq.0).and. &!order in slope recon of im_source
-                  (order_probe(2).eq.0)) then !order in slope recon of im_dest
-               SWEPTFACTOR=one ! default
-              else if ((order_probe(1).gt.0).or. &
-                       (order_probe(2).gt.0)) then
                if (order_probe(1).eq.0) then
                 do udir=1,SDIM 
                  nslope_dest(udir)=nslope_probe(udir,2)
@@ -5897,12 +5875,84 @@ stop
                 stop
                endif
 
-               LS_dest_old=cell_data_interp(im_dest)
                LS_dest_new=intercept_dest 
                do udir=1,SDIM 
                 LS_dest_new=LS_dest_new+nslope_dest(udir)* &
                        (xstar(udir)-u_xsten_updatecell(0,udir))
                enddo
+
+              else if ((im_new_crit.ge.1).and. &
+                       (im_new_crit.le.nmat).and. &
+                       (im_new_crit.ne.im_dest).and. &
+                       (newvfrac(im_dest).le.half)) then
+               ! nothing is swept
+              else
+               print *,"im_new_crit invalid"
+               stop
+              endif
+
+             else
+              print *,"expecting newvfrac(im_dest)>0 since dF>0"
+              stop
+             endif
+
+             if ((dF.gt.zero).and.(dF.le.one+VOFTOL)) then
+              ! do nothing
+             else
+              print *,"dF invalid"
+              stop
+             endif
+
+             if (((im_new_crit.eq.im_dest).or. &
+                  (newvfrac(im_dest).ge.half)).and. &
+                 ((im_old_crit.eq.im_source).or. &
+                  (oldvfrac(im_source).ge.half))) then
+
+                 ! if order_probe(1) or (2) == 0 => no slope found
+                 ! in the reconstruction of im_source or im_dest
+                 ! materials.
+              if (newvfrac(im_dest).ge.one-VOFTOL) then
+               SWEPTFACTOR=one
+               !(1) order in slope recon of im_source
+               !(2) order in slope recon of im_dest
+              else if (oldvfrac(im_source).ge.one-VOFTOL) then
+               if (supermesh_flag.eq.0) then
+                SWEPTFACTOR=zero
+               else if (supermesh_flag.eq.1) then
+
+                if (((order_probe(2).ge.1).and. &
+                     (order_probe(2).le.nmat)).or. &
+                    ((order_probe(1).ge.1).and. &
+                     (order_probe(1).le.nmat))) then
+
+                 if ((LS_dest_old.eq.zero).and.(LS_dest_new.eq.zero)) then
+                  SWEPTFACTOR=one
+                 else if (LS_dest_new-LS_dest_old.gt.zero) then
+                  SWEPTFACTOR=one-LS_dest_new/ &
+                       (LS_dest_new-LS_dest_old)
+                 else
+                  SWEPTFACTOR=one
+                 endif
+
+                else
+                 print *,"im_dest material disappeared at tnp1"
+                 stop
+                endif
+
+               else
+                print *,"supermesh_flag invalid"
+                stop
+               endif
+
+               if (SWEPTFACTOR.le.LSTOL) then
+                SWEPTFACTOR=LSTOL
+               endif
+
+              else if ((order_probe(1).eq.0).and. &
+                       (order_probe(2).eq.0)) then 
+               SWEPTFACTOR=one ! default
+              else if ((order_probe(1).gt.0).or. &
+                       (order_probe(2).gt.0)) then
 
                if ((LS_dest_old.eq.zero).and.(LS_dest_new.eq.zero)) then
                 SWEPTFACTOR=one
@@ -5934,8 +5984,10 @@ stop
               endif
               swept(D_DECL(i,j,k))=SWEPTFACTOR
 
-             else if ((im_new_crit.ne.im_dest).or. &
-                      (im_old_crit.ne.im_source)) then
+             else if (((im_new_crit.ne.im_dest).and. &
+                       (newvfrac(im_dest).le.half)).or. &
+                      ((im_old_crit.ne.im_source).and. &
+                       (oldvfrac(im_source).le.half))) then
               ! do nothing
              else
               print *,"im_new_crit, im_old_crit"
