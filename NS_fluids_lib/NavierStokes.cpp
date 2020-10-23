@@ -187,6 +187,8 @@ namespace amrex{
 #define DEFAULT_MOFITERMAX 15
 
 #define debug_PC 1
+
+#define PCOPY_DEBUG 0
 //
 // Static objects.
 //
@@ -7260,6 +7262,10 @@ NavierStokes::initData () {
    std::cout << "dir mfiter_tile_size " << dir << ' ' <<
      FabArrayBase::mfiter_tile_size[dir] << '\n';
   }
+ }
+
+ if (PCOPY_DEBUG==1) {
+  debug_ParallelCopy();
  }
 
  SDC_setup();
@@ -17364,7 +17370,7 @@ void NavierStokes::debug_ParallelCopy() {
  std::cout << "dest_box_array= " << dest_box_array << '\n';
 
  src_pmap.resize(src_box_array.size());
- dest_pmap.resize(src_box_array.size());
+ dest_pmap.resize(dest_box_array.size());
  for (int i=0;i<src_pmap.size();i++) {
   src_pmap[i]=0;  
  }
