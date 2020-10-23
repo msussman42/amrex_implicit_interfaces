@@ -96,10 +96,18 @@ BARef::define (std::istream& is, int& ndims)
     //
     // TODO -- completely remove the fiction of a hash value.
     //
+
+    int SUSSMAN_DEBUG=0;
+
     BL_ASSERT(m_abox.size() == 0);
     int           maxbox;
     unsigned long tmphash;
     is.ignore(bl_ignore_max, '(') >> maxbox >> tmphash;
+
+    if (SUSSMAN_DEBUG==1) {
+     std::cout << "maxbox= " << maxbox << '\n';
+    }
+
     resize(maxbox);
     auto pos = is.tellg();
     {
@@ -129,8 +137,14 @@ BARef::define (std::istream& is, int& ndims)
         }
     }
     is.seekg(pos, std::ios_base::beg);
-    for (Vector<Box>::iterator it = m_abox.begin(), End = m_abox.end(); it != End; ++it)
+    for (Vector<Box>::iterator it = m_abox.begin(), End = m_abox.end(); 
+         it != End; ++it) {
         is >> *it;
+        if (SUSSMAN_DEBUG==1) {
+         Box local_box(*it);
+         std::cout << "local_box= " << local_box << '\n';
+        }
+    }
     is.ignore(bl_ignore_max, ')');
     if (is.fail())
         amrex::Error("BoxArray::define(istream&) failed");
