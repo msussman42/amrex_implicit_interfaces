@@ -188,7 +188,7 @@ namespace amrex{
 
 #define debug_PC 1
 
-#define PCOPY_DEBUG 0
+#define PCOPY_DEBUG 1
 //
 // Static objects.
 //
@@ -17374,7 +17374,7 @@ void NavierStokes::debug_ParallelCopy() {
  for (int i=0;i<src_pmap.size();i++) {
   src_pmap[i]=0;  
  }
- if (1==0) {
+ if (amrex::ParallelDescriptor::NProcs()==4) {
   src_pmap[0]=3;
   src_pmap[1]=1;
   src_pmap[2]=2;
@@ -17383,7 +17383,7 @@ void NavierStokes::debug_ParallelCopy() {
  for (int i=0;i<dest_pmap.size();i++) {
   dest_pmap[i]=0;
  }
- if (1==0) {
+ if (amrex::ParallelDescriptor::NProcs()==4) {
   dest_pmap[0]=1;
   dest_pmap[1]=1;
  }
