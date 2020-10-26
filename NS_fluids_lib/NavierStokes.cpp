@@ -188,7 +188,7 @@ namespace amrex{
 
 #define debug_PC 1
 
-#define PCOPY_DEBUG 1
+#define PCOPY_DEBUG 0
 //
 // Static objects.
 //
