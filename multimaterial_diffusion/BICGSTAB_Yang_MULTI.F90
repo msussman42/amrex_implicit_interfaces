@@ -788,6 +788,7 @@
       end subroutine get_filament_source_local
  
       subroutine INIT_GLOBALS( &
+        allocate_flag, &
         nsteps, &
         local_state_ncomp, &
         local_operator_internal, &
@@ -802,6 +803,7 @@
         mofdata_FAB_in, current_time_in)
       IMPLICIT NONE
 
+      integer, intent(in) :: allocate_flag
       integer, intent(in) :: nsteps
       integer, intent(in) :: local_operator_internal
       integer, intent(in) :: local_operator_external
@@ -913,32 +915,39 @@
        alpha(im)=alpha_in(im)
       enddo
 
-      allocate(beta(lox-1:hix+1,loy-1:hiy+1,nmat)) 
-      allocate(UNEW(lox-1:hix+1,loy-1:hiy+1,state_ncomp)) 
-      allocate(UOLD(lox-1:hix+1,loy-1:hiy+1,state_ncomp)) 
-      allocate(VFRAC_MOF(lox-1:hix+1,loy-1:hiy+1,nmat)) 
-      allocate(G(lox-1:hix+1,loy-1:hiy+1,nmat)) 
-      allocate(DIAG_FIELD(lox-1:hix+1,loy-1:hiy+1,nmat)) 
+      if (allocate_flag.eq.1) then
+       allocate(beta(lox-1:hix+1,loy-1:hiy+1,nmat)) 
+       allocate(UNEW(lox-1:hix+1,loy-1:hiy+1,state_ncomp)) 
+       allocate(UOLD(lox-1:hix+1,loy-1:hiy+1,state_ncomp)) 
+       allocate(VFRAC_MOF(lox-1:hix+1,loy-1:hiy+1,nmat)) 
+       allocate(G(lox-1:hix+1,loy-1:hiy+1,nmat)) 
+       allocate(DIAG_FIELD(lox-1:hix+1,loy-1:hiy+1,nmat)) 
 
-      allocate(mofdata_FAB(lox-1:hix+1,loy-1:hiy+1, &
+       allocate(mofdata_FAB(lox-1:hix+1,loy-1:hiy+1, &
         ngeom_reconCG*nmat))
 
-      allocate(xsten_FAB(lox-1:hix+1,loy-1:hiy+1,-3:3,sdim))
-      allocate(int_face_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,nmat))
-      allocate(int_centroid_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,nmat,sdim))
-      allocate(int_face_normal_FAB(lox-1:hix+1,loy-1:hiy+1, &
+       allocate(xsten_FAB(lox-1:hix+1,loy-1:hiy+1,-3:3,sdim))
+       allocate(int_face_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,nmat))
+       allocate(int_centroid_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,nmat,sdim))
+       allocate(int_face_normal_FAB(lox-1:hix+1,loy-1:hiy+1, &
         nmat,nmat,sdim))
-      allocate(dist_to_int_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,nmat))
-      allocate(xclosest_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,nmat,sdim))
-      allocate(ext_face_FAB(lox-1:hix+1,loy-1:hiy+1,nmat+1,sdim,2))
-      allocate(multi_cen_cell_FAB(lox-1:hix+1,loy-1:hiy+1, &
+       allocate(dist_to_int_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,nmat))
+       allocate(xclosest_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,nmat,sdim))
+       allocate(ext_face_FAB(lox-1:hix+1,loy-1:hiy+1,nmat+1,sdim,2))
+       allocate(multi_cen_cell_FAB(lox-1:hix+1,loy-1:hiy+1, &
         sdim,nmat,sdim,2))
-      allocate(frac_pair_cell_FAB(lox-1:hix+1,loy-1:hiy+1, &
+       allocate(frac_pair_cell_FAB(lox-1:hix+1,loy-1:hiy+1, &
         nmat,nmat,sdim,2))
-      allocate(gap_alarm_FAB(lox-1:hix+1,loy-1:hiy+1))
-      allocate(x_pair_cell_FAB(lox-1:hix+1,loy-1:hiy+1, &
+       allocate(gap_alarm_FAB(lox-1:hix+1,loy-1:hiy+1))
+       allocate(x_pair_cell_FAB(lox-1:hix+1,loy-1:hiy+1, &
         nmat,nmat,sdim,sdim,2))
-      allocate(centroid_mult_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,sdim))
+       allocate(centroid_mult_FAB(lox-1:hix+1,loy-1:hiy+1,nmat,sdim))
+      else if (allocate_flag.eq.0) then
+       ! do nothing
+      else
+       print *,"allocate_flag invalid"
+       stop
+      endif
 
       do i=lox-1,hix+1
       do j=loy-1,hiy+1
