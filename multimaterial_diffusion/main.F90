@@ -466,9 +466,9 @@ print *,"constant_K_test= ",constant_K_test
 ! fixed_dt<0
 ! example: 64x64 M_START=10
 ! example: 32x32 M_START=5 
-N_START=64
-N_FINISH=64
-M_START=10
+N_START=128 
+N_FINISH=128
+M_START=20
 M_FACTOR=2
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle

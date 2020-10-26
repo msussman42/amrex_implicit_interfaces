@@ -2952,16 +2952,29 @@ stop
       REAL_T, intent(out) :: mdot_diff
       REAL_T mdotT
       REAL_T mdotY_top,mdotY_bot,mdotY
+      INTEGER_T Kassemi_flag
 
-
-      if (Y_gamma.eq.one) then
-       print *,"expecting Y_gamma lt one in mdot_diff_func"
-       print *,"Y_gamma= ",Y_gamma
-       stop
-      else if ((Y_gamma.ge.zero).and.(Y_gamma.lt.one)) then
-       ! do nothing
+      Kassemi_flag=TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi
+      if (Kassemi_flag.eq.0) then
+       if (Y_gamma.eq.one) then
+        print *,"expecting Y_gamma lt one in mdot_diff_func"
+        print *,"Y_gamma= ",Y_gamma
+        stop
+       else if ((Y_gamma.ge.zero).and.(Y_gamma.lt.one)) then
+        ! do nothing
+       else
+        print *,"Y_gamma invalid: ",Y_gamma
+        stop
+       endif
+      else if (Kassemi_flag.eq.3) then
+       if (Y_gamma.eq.one) then
+        ! do nothing
+       else
+        print *,"expecting Y_gamma==1 for Kassemi model"
+        stop
+       endif
       else
-       print *,"Y_gamma invalid: ",Y_gamma
+       print *,"Kassemi_flag invalid in mdot diff fn"
        stop
       endif
 
@@ -5925,13 +5938,19 @@ stop
                     ((order_probe(1).ge.1).and. &
                      (order_probe(1).le.nmat))) then
 
-                 if ((LS_dest_old.eq.zero).and.(LS_dest_new.eq.zero)) then
+                 if ((LS_dest_old.eq.zero).and.(LS_dest_new.gt.zero)) then
+                  SWEPTFACTOR=one
+                 else if ((LS_dest_old.lt.zero).and.(LS_dest_new.eq.zero)) then
+                  SWEPTFACTOR=LSTOL
+                 else if ((LS_dest_old.ge.zero).or. &
+                          (LS_dest_new.le.zero)) then
                   SWEPTFACTOR=one
                  else if (LS_dest_new-LS_dest_old.gt.zero) then
-                  SWEPTFACTOR=one-LS_dest_new/ &
+                  SWEPTFACTOR=-LS_dest_old/ &
                        (LS_dest_new-LS_dest_old)
                  else
-                  SWEPTFACTOR=one
+                  print *,"LS_dest_new or LS_dest_old invalid"
+                  stop
                  endif
 
                 else
@@ -5954,13 +5973,19 @@ stop
               else if ((order_probe(1).gt.0).or. &
                        (order_probe(2).gt.0)) then
 
-               if ((LS_dest_old.eq.zero).and.(LS_dest_new.eq.zero)) then
+               if ((LS_dest_old.eq.zero).and.(LS_dest_new.gt.zero)) then
+                SWEPTFACTOR=one
+               else if ((LS_dest_old.lt.zero).and.(LS_dest_new.eq.zero)) then
+                SWEPTFACTOR=LSTOL
+               else if ((LS_dest_old.ge.zero).or. &
+                        (LS_dest_new.le.zero)) then
                 SWEPTFACTOR=one
                else if (LS_dest_new-LS_dest_old.gt.zero) then
-                SWEPTFACTOR=one-LS_dest_new/ &
+                SWEPTFACTOR=-LS_dest_old/ &
                        (LS_dest_new-LS_dest_old)
                else
-                SWEPTFACTOR=one
+                print *,"LS_dest_new or LS_dest_old invalid"
+                stop
                endif
                if (SWEPTFACTOR.le.LSTOL) then
                 SWEPTFACTOR=LSTOL

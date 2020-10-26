@@ -11,7 +11,7 @@ USE LegendreNodes
 USE global_utility_module 
 USE MOF_pair_module ! vfrac_pair.F90
 USE mmat_FVM  ! multimat_FVM.F90
-USE bicgstab_module
+USE bicgstab_module ! BICGSTAB_Yang_MULTI.F90
 USE supercooled_exact_sol
 USE variable_temperature_drop
 USE tsat_module
@@ -132,6 +132,7 @@ real(kind=8) :: sumvf,sumvf2
 REAL(kind=8) :: alpha_in(100)
 
 integer local_state_ncomp_test
+integer allocate_flag
 
 ! temperature, velocity, interface reconstruction, level set
 local_state_ncomp_test=nmat_in+local_nten*sdim_in+ &
@@ -214,8 +215,11 @@ do while (finished_flag.eq.0)
  enddo
  enddo 
 
+  ! UOLD=UOLD_in  UNEW=UNEW_in
   ! in: BICGSTAB_Yang_MULTI.F90
+ allocate_flag=1
  call INIT_GLOBALS( &
+  allocate_flag, &
   nsteps, & ! NSTEPS
   local_state_ncomp, &
   local_operator_internal, &
@@ -248,14 +252,40 @@ do while (finished_flag.eq.0)
 
  endif
 
-
-   ! VARIABLE TSAT
- if (probtype_in.eq.403) then ! initialize correct Tsat_fab
-  stefan_flag=0
-  call update_interface(UOLD,UNEW,N_CURRENT,local_state_ncomp, &
+  ! in: MOVE_INTERFACE_3D.F90
+  ! interface updated here: 
+  ! input: UOLD
+  ! output: UNEW  (has reconstructed interface)
+ call update_interface(UOLD,UNEW,N_CURRENT,local_state_ncomp, &
    dx_in,time_n,deltat_in,nsteps,local_nten,stefan_flag)
-  stefan_flag=1
- endif
+
+  ! hflag==0
+ call set_boundary(UNEW,0,local_state_ncomp)
+
+ do i=lox_in-1,hix_in+1
+ do j=loy_in-1,hiy_in+1
+  do im=1,local_state_ncomp
+   UNEW_in(i,j,im)=UNEW(i,j,im)
+   UOLD_in(i,j,im)=UNEW(i,j,im)
+   UOLD(i,j,im)=UOLD_in(i,j,im)
+  enddo
+ enddo
+ enddo
+
+ do i= -1,N_CURRENT
+  do j= -1,N_CURRENT
+   do imof=1,ngeom_recon_in*nmat_in
+    scomp=nmat_in+local_nten*sdim_in+imof
+    mofdata_FAB_in(i,j,imof)=UNEW_in(i,j,scomp)
+    mofdata_FAB(i,j,imof)=UNEW_in(i,j,scomp)
+   enddo
+   do im=1,nmat_in
+    vofcomp=ngeom_recon_in*(im-1)+1
+    VFRAC_MOF_in(i,j,im)=mofdata_FAB_in(i,j,vofcomp)
+    VFRAC_MOF(i,j,im)=mofdata_FAB_in(i,j,vofcomp)
+   enddo
+  enddo
+ enddo
 
   ! Dirichlet BC use t^n+1 data
   ! polar solver called before bicgstab is called.
@@ -272,6 +302,24 @@ do while (finished_flag.eq.0)
   enddo
  endif
 
+  ! UOLD=UOLD_in  UNEW=UNEW_in
+  ! in: BICGSTAB_Yang_MULTI.F90
+ allocate_flag=0
+ call INIT_GLOBALS( &
+  allocate_flag, &
+  nsteps, & ! NSTEPS
+  local_state_ncomp, &
+  local_operator_internal, &
+  local_operator_external, &
+  local_linear_exact, &
+  probtype_in, &
+  sdim_in,ngeom_recon_in, &
+  nx_in,ny_in,lox_in,loy_in,hix_in,hiy_in, &
+  UNEW_in,UOLD_in, &
+  beta_in,h_in,precond_type_in,bicgstab_tol_in, &
+  VFRAC_MOF_in,nmat_in,alpha_in,deltat_in, &
+  mofdata_FAB_in,current_time_in)
+
  call bicgstab(UNEW_in,hflag,iter)
 
  iter_average=iter_average+iter
@@ -283,7 +331,7 @@ do while (finished_flag.eq.0)
   do im=1,local_state_ncomp
    UNEW(i,j,im)=UNEW_in(i,j,im)
    UOLD_in(i,j,im)=UNEW_in(i,j,im)
-   UOLD(i,j,im)=UOLD_in(i,j,im)
+   UOLD(i,j,im)=UOLD_in(i,j,im) !UOLD declared in bicgstab_module:INIT_GLOBALS
   enddo
  enddo
  enddo
@@ -328,12 +376,6 @@ do while (finished_flag.eq.0)
   print *,"probtype_in invalid"
   stop
  endif 
-
-  ! interface updated here: 
-  ! input: UOLD
-  ! output: UNEW
- call update_interface(UOLD,UNEW,N_CURRENT,local_state_ncomp, &
-   dx_in,time_n,deltat_in,nsteps,local_nten,stefan_flag)
 
  do i= -1,N_CURRENT
  do j= -1,N_CURRENT
@@ -439,6 +481,7 @@ do while (finished_flag.eq.0)
          total_nsteps_parm, &
          fixed_dt_main)
 
+  ! deallocates UNEW, UOLD, VFRAC_MOF, mofdata_FAB
  call DEALLOCATE_GLOBALS()
 
  deallocate(UOLD_in) 

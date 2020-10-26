@@ -31,7 +31,7 @@ REAL_T :: TANK_MK_RADIUS
 REAL_T :: TANK_MK_HEIGHT
 ! Location of liquid-gas interface in respect to
 ! middle of tank at z=0
-REAL_T :: TANK_MK_LIQUID_HEIGHT
+REAL_T :: TANK_MK_INTERFACE_LOCATION
 ! Tank speherical end radius
 REAL_T :: TANK_MK_END_RADIUS
 ! Tank speherical end curvature center (0,C_z)
@@ -63,9 +63,9 @@ contains
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module
   implicit none
-  TANK_MK_RADIUS           = xblob
-  TANK_MK_HEIGHT           = yblob
-  TANK_MK_LIQUID_HEIGHT    = zblob
+  TANK_MK_RADIUS             = xblob
+  TANK_MK_HEIGHT             = yblob
+  TANK_MK_INTERFACE_LOCATION = zblob
 
   TANK_MK_INTERFACE_RADIUS = radblob2
   TANK_MK_BUBBLE_X         = xblob2
@@ -130,7 +130,7 @@ contains
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
    ! liquid
    if (TANK_MK_INTERFACE_RADIUS.eq.zero) then
-    LS(1)=TANK_MK_LIQUID_HEIGHT-x(2)
+    LS(1)=TANK_MK_INTERFACE_LOCATION-x(2)
    else if (TANK_MK_INTERFACE_RADIUS.gt.zero) then
     if (SDIM.eq.2) then
      LS(1)=sqrt((x(1)-TANK_MK_BUBBLE_X)**2+&
@@ -206,7 +206,7 @@ contains
 REAL_T function SOLID_TOP_HALF_DIST(P)
  ! Returns the signed distance function to the
  ! cylinderical tank with spherical ends.
- ! The tank is symmetrical to x(dim=2)=0;
+ ! The tank is symmetrical to x_2=0;
  ! The axis of cylinder is along dim=2 direction
  ! Inside the tank < 0
  ! Outside the tank > 0
@@ -226,7 +226,9 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
   stop
  endif
  
- ! Equation of the line passing through (0,TANK_MK_END_CENTER) and
+ ! Equation of the line passing through
+ ! (0,TANK_MK_END_CENTER)
+ !          and
  ! (TANK_MK_RADIUS,TANK_MK_HEIGHT/2)
  FRZ=R*(TANK_MK_END_CENTER-TANK_MK_HEIGHT/2)/TANK_MK_RADIUS &
      + Z - TANK_MK_END_CENTER
@@ -478,11 +480,11 @@ endif
 
 !PRES=TANK_MK_INITIAL_GAS_PRESSURE 
 
- if (x(2).ge.TANK_MK_LIQUID_HEIGHT) then
+ if (x(2).ge.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE
- elseif (x(2).lt.TANK_MK_LIQUID_HEIGHT) then
+ elseif (x(2).lt.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE +&
-    fort_denconst(1)*(TANK_MK_LIQUID_HEIGHT-x(2))*(abs(gravity))
+    fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(2))*(abs(gravity))
  else
   print *,"x(2) is invalid in CRYOGENIC_TANK_MK_PRES!"
   stop
@@ -714,7 +716,15 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_STATE_BC
 
-
+! suppose inhomogeneous flux condition: -k grad T = q
+! 1. T_t - div k grad T = 0
+! 3. T_t - (1/V) sum (A_{i} (k grad T)_i dot n_i) =0  n_i=outward facing normal
+! 4. at the right wall:
+!     (k grad T)_{right} = -q_{right}
+! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
+!      (1/V)A_{right} (-q_{right} dot n_right)
+!
+! TANK_MK_HETAER_FLUX \equiv -q dot n
 ! MEHDI VAHAB HEAT SOURCE
 ! T^new=T^* + dt * (tildeQ)/(rho cv)    
 ! dt=seconds  rho=kg/m^3   cv=Joules/(kg K)
@@ -726,17 +736,9 @@ end subroutine CRYOGENIC_TANK_MK_STATE_BC
 ! in FORT_HEATSOURCE:
 ! T_local(im)=T_local(im)+ &
 !   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..nmat
-!
-! suppose inhomogeneous flux condition: -k grad T = q
-! 1. T_t - div k grad T = 0
-! 3. T_t - (1/V) sum (A_{i} (k grad T)_i dot n_i) =0  n_i=outward facing normal
-! 4. at the right wall:
-!     (k grad T)_{right} = -q_{right}
-! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
 !      (1/V)A_{right} (-q_{right} dot n_right)  => tildeQ corresponds
 ! to q * A/V
-!
-! TANK_MK_HETAER_FLUX \equiv -q dot n
+
 subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
      im,VFRAC, &
      time, &
@@ -744,7 +746,7 @@ subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
      xsten, & ! xsten(-nhalf:nhalf,SDIM)
      nhalf, &
      temp, &
-     heat_source, &  ! unit of tildeQ not Q.
+     heat_source, & ! unit of tildeQ not Q
      den,CV,dt, &
      nmat)
 use probcommon_module
@@ -788,11 +790,8 @@ enddo
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
  heat_source=zero
  if (im.eq.1) then
-  ! do nothing (liquid)
- else if (im.eq.2) then
-  ! do nothing (gas)
- else if (im.eq.3) then
-  ! right side of domain
+  ! in liquid, the heater band is wetting
+    ! right side of domain
   heat_source=zero
   if ((abs(xsten(0,1)).lt.TANK_MK_RADIUS).and.&
       (abs(xsten(2,1)).gt.TANK_MK_RADIUS).and.&
@@ -801,6 +800,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
       ! area=2 pi rf dz
       ! vol =2 pi rc dr dz
       ! area/vol=rf/(rc dr)
+   ! input file value in J/(s.m^2) (flux into the face)
+   ! Tansforming to J/(s.m^3) (flux into the control volume)
    flux_magnitude=TANK_MK_HEATER_FLUX
    if (levelrz.eq.1) then
     denom=xsten(0,1)*local_dx(1)
@@ -840,7 +841,10 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   !  flux_magnitude=TANK_MK_HETAER_FLUX/local_dx(SDIM)
   !  heat_source=heat_source+flux_magnitude
   ! endif
-
+ else if (im.eq.2) then
+  ! do nothing (gas)
+ else if (im.eq.3) then
+  ! do nothing (solid)
  else
   print *,"im invalid in CRYOGENIC_TANK_MK_HEATSOURCE"
   stop
