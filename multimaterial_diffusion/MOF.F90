@@ -37,8 +37,6 @@ module geometry_intersect_module
 
 implicit none
 
-INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=20
-
 INTEGER_T, PARAMETER :: INTERCEPT_MAXITER=100
 INTEGER_T, PARAMETER :: INTERCEPT_MAXITER_NEWTON=25
 
@@ -3661,7 +3659,7 @@ end subroutine intersection_volume_and_map
       else if (mag.eq.zero) then
        ! do nothing
       else
-       print *,"mag invalid"
+       print *,"mag invalid in surface_area"
        stop
       endif
 
@@ -5809,6 +5807,7 @@ end subroutine volume_sanity_check
        xsten_box,nhalf_box,mofdata, &
        xtetlist,nlist_alloc,nlist,nmax,nmat,sdim)
 
+      use probcommon_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -6050,6 +6049,7 @@ end subroutine volume_sanity_check
        mofdata, &
        xtetlist, &
        nlist_alloc,nlist,nmax,nmat,use_super_cell,sdim)
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nlist_alloc
@@ -6194,6 +6194,7 @@ end subroutine volume_sanity_check
         xtetlist, &
         nlist_alloc,nlist,nmax,nmat,sdim)
 
+      use probcommon_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -7991,6 +7992,7 @@ end subroutine volume_sanity_check
         volumedark,centroiddark, &
         area,areacentroid,volall,cenall,nmat,sdim)
 
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: sdim
@@ -8239,6 +8241,7 @@ module MOF_routines_module
 contains
 
       subroutine get_order_algorithm(order_algorithm_out,nmat)
+      use probcommon_module
       use geometry_intersect_module
 
       IMPLICIT NONE
@@ -8294,6 +8297,7 @@ contains
        ! order_algorithm=0 => try different combinations and
        ! choose combination with smallest MOF error
       subroutine set_order_algorithm(order_algorithm_in,nmat)
+      use probcommon_module
       use geometry_intersect_module
 
       IMPLICIT NONE
@@ -12678,6 +12682,10 @@ contains
 !     in which "subroutine find_cut_geom_slope_CLSVOF" returns a normal
 !     (lsnormal) given ls_mof.
 !
+! COMMENTS ON THE order:
+! if the material is non-deforming, then its' order is always 1.
+! if just one fluid material occupies a cell, then the order for that
+! fluid is 1, and all other orders are 0.
 
       subroutine multimaterial_MOF( &
         bfact,dx,xsten0,nhalf0, &
@@ -13109,7 +13117,7 @@ contains
           enddo 
 
          else
-          print *,"mag invalid"
+          print *,"mag invalid MOF.F90 13120"
           stop
          endif
 
@@ -13945,13 +13953,13 @@ contains
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
 
-       if ((mofdata(vofcomp).ge.-0.1).and. &
+       if ((mofdata(vofcomp).ge.-0.1d0).and. &
            (mofdata(vofcomp).le.VOFTOL)) then
         mofdata(vofcomp)=zero
         do dir=1,sdim
          mofdata(vofcomp+dir)=zero
         enddo
-       else if ((mofdata(vofcomp).le.1.1).and. &
+       else if ((mofdata(vofcomp).le.1.1d0).and. &
                 (mofdata(vofcomp).ge.one-VOFTOL)) then
         mofdata(vofcomp)=one
         do dir=1,sdim
@@ -14247,7 +14255,7 @@ contains
        else if (mag.eq.zero) then
         ! do not modify the slope or intercept
        else
-        print *,"mag invalid"
+        print *,"mag invalid in project_slopes_to_face"
         stop
        endif
 
@@ -19924,8 +19932,10 @@ contains
 ! in: MOF_routines_module
       subroutine multi_get_volumePOINT( &
        tessellate, &
-       bfact,dx,xsten0,nhalf0, &
-       mofdata,xgrid, &
+       bfact,dx, &
+       xsten0,nhalf0, & ! absolute coordinate system.
+       mofdata, &
+       xgrid, &  ! absolute coordinate system.
        im_crit,nmat,sdim)
 
       use probcommon_module
@@ -20015,6 +20025,7 @@ contains
              slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
             enddo
             intercept=mofdatavalid(vofcomp+2*sdim+2)
+            ! in: GLOBALUTIL.F90  dist=intercept+n dot (xgrid-xsten0(0))
             call distfunc(bfact,dx,xsten0,nhalf0, &
              intercept,slopes,xgrid,ls,sdim)
             if (ls.ge.zero) then
@@ -20163,6 +20174,7 @@ contains
       end subroutine multi_get_volumePOINT
 
       subroutine get_primary_material(LS,nmat,im_primary)
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
@@ -20472,6 +20484,7 @@ contains
       end subroutine check_full_cell_vfrac
 
       subroutine get_secondary_material(LS,nmat,im_primary,im_secondary)
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
@@ -20523,6 +20536,7 @@ contains
 
       subroutine get_tertiary_material(LS,nmat, &
              im_primary,im_secondary,im_tertiary)
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
@@ -20616,6 +20630,7 @@ contains
       subroutine sort_volume_fraction( &
        vfrac_data,FSI_exclude,sorted_list,nmat)
 
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
 
@@ -20744,6 +20759,7 @@ end module MOF_routines_module
       stop
 #endif
 
+      use probcommon_module
       use geometry_intersect_module
       use MOF_routines_module
 

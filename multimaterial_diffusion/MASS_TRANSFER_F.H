@@ -56,6 +56,7 @@ extern "C"
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
+    Real* min_stefan_velocity_for_dt,
     int* vofbc,
     const Real* xlo,const Real* dx,
     Real* dt,
@@ -64,6 +65,7 @@ extern "C"
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
     Real* deltaVOF,AMREX_ARLIM_P(deltaVOFlo),AMREX_ARLIM_P(deltaVOFhi), 
     Real* nodevel,AMREX_ARLIM_P(nodevello),AMREX_ARLIM_P(nodevelhi), 
+    Real* mofnewfab,AMREX_ARLIM_P(mofnewfablo),AMREX_ARLIM_P(mofnewfabhi),
     Real* jumpfab,AMREX_ARLIM_P(jumpfablo),AMREX_ARLIM_P(jumpfabhi),
     Real* tsatfab,AMREX_ARLIM_P(tsatfablo),AMREX_ARLIM_P(tsatfabhi),
     Real* LSold,AMREX_ARLIM_P(LSoldlo),AMREX_ARLIM_P(LSoldhi),
@@ -89,6 +91,8 @@ extern "C"
      int* level,int* finest_level);
 
    void FORT_RATEMASSCHANGE(
+    int* tid,
+    int* nucleation_flag,
     int* stefan_flag,
     int* level,
     int* finest_level,
@@ -118,21 +122,27 @@ extern "C"
     Real* microlayer_size,
     Real* macrolayer_size,
     Real* max_contact_line_size,
+    Real* R_Palmore_Desjardins,
     Real* latent_heat,
     int* use_exact_temperature,
     Real* reaction_rate,
+    Real* hardwire_Y_gamma,
+    Real* hardwire_T_gamma,
+    Real* accommodation_coefficient,
+    Real* reference_pressure,
     Real* saturation_temp,
     Real* saturation_temp_curv,
     Real* saturation_temp_vel,
     Real* saturation_temp_min,
     Real* saturation_temp_max,
     int* freezing_model,
-    int* Tanasawa_or_Schrage,
+    int* Tanasawa_or_Schrage_or_Kassemi,
     int* distribute_from_target,
     int* mass_fraction_id,
     Real* species_evaporation_density,
     Real* molar_mass,
     Real* species_molar_mass,
+    int* use_supermesh,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -158,7 +168,9 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
     Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
     Real* pres_eos,AMREX_ARLIM_P(pres_eoslo),AMREX_ARLIM_P(pres_eoshi),
-    Real* curvfab,AMREX_ARLIM_P(curvfablo),AMREX_ARLIM_P(curvfabhi) ); 
+    Real* curvfab,
+    AMREX_ARLIM_P(curvfablo),
+    AMREX_ARLIM_P(curvfabhi) ); 
 
 
    void FORT_EXTEND_BURNING_VEL(

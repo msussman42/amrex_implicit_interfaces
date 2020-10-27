@@ -19,7 +19,7 @@ stop
 
 
 
-      MODULE LagrangeInterpolationPolynomial
+      module LagrangeInterpolationPolynomial
       IMPLICIT NONE
 
       CONTAINS
@@ -243,9 +243,9 @@ stop
       END SUBROUTINE  PolyDerivativeMatrix!LIDerivativeMatrixNodes
 
 
-      END MODULE LagrangeInterpolationPolynomial
+      end module LagrangeInterpolationPolynomial
 
-       MODULE LegendreNodes
+       module LegendreNodes
        IMPLICIT NONE
    
 !___________________________________________________________________
@@ -1223,12 +1223,17 @@ CONTAINS
 
       end subroutine sanity_check 
  
-      END MODULE LegendreNodes
+      end module LegendreNodes
 
 
 module global_utility_module
 
 implicit none
+
+      type nucleation_parm_type_inout
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSnew
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: Snew
+      end type nucleation_parm_type_inout
 
 REAL_T :: MOF_PI=zero
 
@@ -1552,7 +1557,8 @@ contains
 
        ! block of ice melting on substrate
       if ((probtype.eq.59).or. & ! called from PROB.F90
-          (probtype.eq.414)) then! called from MITSUHIRO_MELTING.F90 
+          (probtype.eq.414).or. &
+          (probtype.eq.2001)) then! called from MITSUHIRO_MELTING.F90 
 
        if (SDIM.eq.2) then
         substrate_height=yblob2
@@ -1727,7 +1733,9 @@ contains
          stop
         endif
           ! thermal layer thickness
-        if (yblob3.le.zero) then
+        if (yblob3.gt.zero) then
+         ! do nothing
+        else
          print *,"yblob3 invalid"
          stop
         endif
@@ -1809,7 +1817,8 @@ contains
        endif
 
       else
-       print *,"expecting probtype=55, 59, or 710 in outside_temperature"
+       print *,"expecting probtype=55, 59, 414, 2001, or 710 "
+       print *,"in outside_temperature"
        stop
       endif
  
@@ -2091,7 +2100,7 @@ contains
        else if (mag.eq.zero) then
         newphi=phi
        else
-        print *,"mag invalid"
+        print *,"mag invalid in get_physical_dist"
         stop
        endif
       else
@@ -2148,7 +2157,7 @@ contains
       subroutine normalize_vector(vin)
       IMPLICIT NONE
 
-      REAL_T vin(SDIM)
+      REAL_T, intent(inout) :: vin(SDIM)
       INTEGER_T dir
       REAL_T mag
 
@@ -2161,15 +2170,38 @@ contains
        do dir=1,SDIM
         vin(dir)=vin(dir)/mag
        enddo
-      else
+      else if (mag.eq.zero) then
        do dir=1,SDIM
         vin(dir)=zero
        enddo
+      else
+       print *,"mag bust"
+       stop
       endif
 
       return 
       end subroutine normalize_vector
 
+      subroutine normalize_LS_normals(nmat,LS)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(inout) :: LS(nmat*(1+SDIM))
+      INTEGER_T :: im,dir
+      REAL_T :: local_normal(SDIM)
+
+      do im=1,nmat
+       do dir=1,SDIM
+        local_normal(dir)=LS(nmat+(im-1)*SDIM+dir)
+       enddo
+       call normalize_vector(local_normal)
+       do dir=1,SDIM
+        LS(nmat+(im-1)*SDIM+dir)=local_normal(dir)
+       enddo
+      enddo ! im=1..nmat
+
+      return 
+      end subroutine normalize_LS_normals
 
       subroutine crossprod2d(a,b,c)
       IMPLICIT NONE
@@ -2186,7 +2218,8 @@ contains
       subroutine crossprod(a,b,c)
       IMPLICIT NONE
 
-      REAL_T a(3),b(3),c(3)
+      REAL_T, intent(in) :: a(3),b(3)
+      REAL_T, intent(out) :: c(3)
 
       c(1)=a(2)*b(3)-a(3)*b(2)
       c(2)=-(a(1)*b(3)-b(1)*a(3))
@@ -2680,7 +2713,7 @@ contains
           mag=mag+n(dir)*nsave(dir)
          enddo
          if (abs(mag).gt.one+VOFTOL) then
-          print *,"mag invalid"
+          print *,"mag invalid in derive_dist"
           stop
          endif
          if (abs(mag).gt.zero) then
@@ -2889,12 +2922,16 @@ contains
         phi0,nn,x,dist,sdim_parm)
       IMPLICIT NONE
 
-      INTEGER_T sdim_parm,dir,bfact,nhalf0
-      REAL_T dx(SDIM)
-      REAL_T phi0,dist
-      REAL_T nn(sdim_parm)
-      REAL_T xsten0(-nhalf0:nhalf0,sdim_parm)
-      REAL_T x(sdim_parm)
+      INTEGER_T, intent(in) :: sdim_parm
+      INTEGER_T :: dir
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: nhalf0
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: phi0
+      REAL_T, intent(out) :: dist
+      REAL_T, intent(in) :: nn(sdim_parm)
+      REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim_parm)
+      REAL_T, intent(in) :: x(sdim_parm)
  
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
@@ -7055,11 +7092,310 @@ contains
       return
       end subroutine get_longdir
 
+      subroutine bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
+        xtarget,WT)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten_center(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: stencil_offset(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      REAL_T, intent(out) :: WT
+      INTEGER_T :: WT_ok
+      INTEGER_T :: dir
+      REAL_T :: denom
+      REAL_T theta(SDIM)
+
+      if (nhalf.ge.3) then
+       ! do nothing
+      else
+       print *,"nhalf invalid"
+       stop
+      endif
+
+      WT_ok=1
+      do dir=1,SDIM
+       theta(dir)=zero
+       if (xtarget(dir).le.xsten_center(0,dir)) then
+        if ((stencil_offset(dir).eq.0).or. &
+            (stencil_offset(dir).eq.-1)) then
+         denom=xsten_center(0,dir)-xsten_center(-1,dir)
+         if (denom.gt.zero) then
+          theta(dir)=(xsten_center(0,dir)-xtarget(dir))/denom
+         else
+          print *,"denom invalid"
+          stop
+         endif
+        else if (stencil_offset(dir).eq.1) then
+         WT_ok=0
+        else
+         print *,"stencil_offset(dir) invalid"
+         stop
+        endif
+       else if (xtarget(dir).ge.xsten_center(0,dir)) then
+        if ((stencil_offset(dir).eq.0).or. &
+            (stencil_offset(dir).eq.1)) then
+         denom=xsten_center(0,dir)-xsten_center(1,dir)
+         if (denom.lt.zero) then
+          theta(dir)=(xsten_center(0,dir)-xtarget(dir))/denom
+         else
+          print *,"denom invalid"
+          stop
+         endif
+        else if (stencil_offset(dir).eq.-1) then
+         WT_ok=0
+        else
+         print *,"stencil_offset(dir) invalid"
+         stop
+        endif
+       else
+        print *,"xtarget or xsten_center invalid"
+        stop
+       endif
+       if (theta(dir).gt.one) then
+        theta(dir)=one
+       else if ((theta(dir).ge.zero).and. &
+                (theta(dir).le.one)) then
+        ! do nothing
+       else
+        print *,"theta(dir) invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+      if (WT_ok.eq.0) then
+       WT=zero
+      else if (WT_ok.eq.1) then
+       WT=one
+       do dir=1,SDIM
+        if (stencil_offset(dir).eq.0) then
+         WT=WT*(one-theta(dir))
+        else if ((stencil_offset(dir).eq.1).or. &
+                 (stencil_offset(dir).eq.-1)) then
+         WT=WT*theta(dir)
+        else
+         print *,"stencil_offset(dir) invalid"
+         stop
+        endif
+       enddo !dir=1..sdim
+      else
+       print *,"WT_ok invalid"
+       stop
+      endif
+     
+      return
+      end subroutine bilinear_interp_WT 
+
+      subroutine interp_from_grid_util(data_in,data_out)
+      use probcommon_module
+      IMPLICIT NONE
+ 
+      type(interp_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: xsten_center(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T dir
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T stencil_offset(SDIM)
+      INTEGER_T istenlo(3)
+      INTEGER_T istenhi(3)
+      REAL_T WT,total_WT,WT_LS
+      REAL_T LS_local
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T im
+      REAL_T, allocatable, dimension(:) :: local_data
+     
+      if ((data_in%level.ge.0).and. &
+          (data_in%level.le.data_in%finest_level).and. &
+          (data_in%bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"level, finest_level or bfact invalid"
+       stop
+      endif
+      do dir=1,SDIM
+       if (data_in%dx(dir).gt.zero) then
+        ! do nothing
+       else
+        print *,"data_in%dx invalid"
+        stop
+       endif
+       if (data_in%fablo(dir).ge.0) then
+        ! do nothing
+       else
+        print *,"data_in%fablo invalid"
+        stop
+       endif
+      enddo 
+      if (data_in%ncomp.ge.1) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+      if (data_in%scomp.ge.1) then
+       ! do nothing
+      else
+       print *,"scomp invalid"
+       stop
+      endif
+      if (data_in%nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"data_in%nmat invalid"
+       stop
+      endif
+      if (data_in%interp_foot_flag.eq.0) then
+       ! do nothing
+      else if (data_in%interp_foot_flag.eq.1) then
+       if (data_in%ncomp.eq.SDIM) then
+        ! do nothing
+       else
+        print *,"ncomp or interp_foot_flag invalid"
+        stop
+       endif
+      else
+       print *,"interp_foot_flag invalid"
+       stop
+      endif
+       
+      if (data_in%nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+
+      allocate(local_data(data_in%ncomp))
+
+      nhalf=3
+
+      call containing_cell( &
+        data_in%bfact, &
+        data_in%dx, &
+        data_in%xlo, &
+        data_in%fablo, &
+        data_in%xtarget, &
+        cell_index)
+
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       if (cell_index(dir)-1.lt.data_in%fablo(dir)-data_in%ngrowfab) then
+        cell_index(dir)=data_in%fablo(dir)-data_in%ngrowfab+1
+       endif
+       if (cell_index(dir)+1.gt.data_in%fabhi(dir)+data_in%ngrowfab) then
+        cell_index(dir)=data_in%fabhi(dir)+data_in%ngrowfab-1
+       endif
+       istenlo(dir)=cell_index(dir)-1
+       istenhi(dir)=cell_index(dir)+1
+      enddo ! dir=1..sdim
+
+      total_WT=zero
+      do im=1,data_in%ncomp
+       data_out%data_interp(im)=zero
+      enddo 
+
+      isten=cell_index(1)
+      jsten=cell_index(2)
+      ksten=cell_index(SDIM)
+
+      call gridsten_level(xsten_center,isten,jsten,ksten,data_in%level,nhalf)
+
+      do isten=istenlo(1),istenhi(1)
+      do jsten=istenlo(2),istenhi(2)
+      do ksten=istenlo(3),istenhi(3)
+
+       call gridsten_level(xsten,isten,jsten,ksten,data_in%level,nhalf)
+       stencil_offset(1)=isten-cell_index(1)
+       stencil_offset(2)=jsten-cell_index(2)
+       if (SDIM.eq.3) then
+        stencil_offset(SDIM)=ksten-cell_index(SDIM)
+       endif
+       call bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
+        data_in%xtarget,WT)
+       if ((WT.ge.zero).and.(WT.le.one)) then
+        ! do nothing
+       else
+        print *,"WT invalid"
+        stop
+       endif
+       WT_LS=one
+       if (data_in%im_PLS.eq.0) then
+        ! do nothing
+       else if ((data_in%im_PLS.ge.1).and. &
+                (data_in%im_PLS.le.data_in%nmat)) then
+        LS_local=data_in%LS(D_DECL(isten,jsten,ksten), &
+                data_in%im_PLS)
+        if (LS_local.ge.zero) then
+         ! do nothing
+        else if (LS_local.lt.zero) then
+         WT_LS=1.0D-3
+        else
+         print *,"LS_local invalid"
+         stop
+        endif
+       else
+        print *,"data_in%im_PLS invalid"
+        stop
+       endif
+
+       WT=WT*WT_LS
+
+       do im=1,data_in%ncomp
+        local_data(im)=data_in%state(D_DECL(isten,jsten,ksten), &
+          data_in%scomp+im-1)
+        if ((local_data(im).ge.-1.0D+30).and. &
+            (local_data(im).le.1.0D+30)) then
+
+         if (data_in%interp_foot_flag.eq.0) then
+          ! do nothing
+         else if (data_in%interp_foot_flag.eq.1) then
+           ! xdisplace=x-xfoot    xfoot=x-xdisplace
+          local_data(im)=xsten(0,im)-local_data(im)
+         else
+          print *,"interp_foot_flag invalid"
+          stop
+         endif
+
+         data_out%data_interp(im)=data_out%data_interp(im)+WT*local_data(im)
+
+        else
+         print *,"local_data(im) overflow"
+         print *,"im,local_data(im) ",im,local_data(im)
+         stop
+        endif
+
+       enddo ! im=1..data_in%ncomp
+
+       total_WT=total_WT+WT
+
+      enddo ! ksten
+      enddo ! jsten
+      enddo ! isten
+
+      if (total_WT.gt.zero) then
+
+       do im=1,data_in%ncomp
+        data_out%data_interp(im)=data_out%data_interp(im)/total_WT
+       enddo
+
+      else
+       print *,"total_WT invalid"
+       stop
+      endif
+
+      deallocate(local_data)
+
+      return
+      end subroutine interp_from_grid_util
+
       subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
-                      ncomp,data_interp)
+                      ncomp,data_interp,caller_id)
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: ncomp
       REAL_T, dimension(D_DECL(2,2,2),ncomp), intent(in) :: data_stencil
       REAL_T, intent(in) :: wt_dist(SDIM)
@@ -7073,6 +7409,9 @@ contains
         ! do nothing
        else
         print *,"wt_dist out of range"
+        print *,"dir,wt_dist ",dir,wt_dist(dir)
+        print *,"caller_id= ",caller_id
+        print *,"ncomp= ",ncomp
         stop
        endif
       enddo ! dir=1..sdim
@@ -8012,7 +8351,7 @@ contains
       INTEGER_T nmat,im
 
       if ((im.lt.1).or.(im.gt.nmat)) then
-       print *,"im invalid17: im=",im
+       print *,"im invalid17 in is_lag_part: im=",im
        print *,"nmat=",nmat
        stop
       endif
@@ -8020,7 +8359,7 @@ contains
        print *,"nmat invalid is_lag_part"
        print *,"nmat=",nmat
        print *,"num_materials=",num_materials
-       stop
+       error stop
       endif
 
       if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
@@ -8048,11 +8387,16 @@ contains
 
       INTEGER_T is_rigid
       INTEGER_T nmat,im
+      INTEGER_T dummy_input
 
       if ((im.lt.1).or.(im.gt.nmat)) then
-       print *,"im invalid17: im=",im
+       print *,"im invalid17 in is_rigid: im=",im
        print *,"nmat=",nmat
-       stop
+! By pressing <CTRL C> during this read statement, the
+! gdb debugger will produce a stacktrace.
+!       print *,"type 0 then <enter> to exit the program"
+!       read(*,*) dummy_input
+       error stop
       endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid is_rigid"
@@ -8337,6 +8681,25 @@ contains
 
       return
       end function rigid_count
+
+      function is_in_probtype_list()
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T is_in_probtype_list
+      INTEGER_T iprob
+
+      is_in_probtype_list=0
+      iprob=probtype_list_size
+      do while ((is_in_probtype_list.eq.0).and.(iprob.ge.1))
+       if (used_probtypes(iprob).eq.probtype) then
+        is_in_probtype_list=1
+       endif
+       iprob=iprob-1
+      enddo
+
+      return
+      end function is_in_probtype_list
 
       function im_solid_primary()
       use probcommon_module
@@ -8908,6 +9271,15 @@ contains
       REAL_T, intent(in) :: denvapor
       REAL_T, intent(inout) :: den_ambient
 
+       ! input: denvapor = vapor density
+       !        den_ambient = ambient density
+       ! output: den_ambient = total density
+       !   (  denvapor * F =den_total * Y  ) * den_ambient +
+       !   (  den_ambient (1-F) = den_total * (1-Y) ) * denvapor
+       !   denvapor * den_ambient = 
+       !     den_total (Y * den_ambient + (1-Y) * denvapor)
+       !   den_total=denvapor * den_ambient/ 
+       !     (Y * den_ambient + (1-Y) * denvapor)
       if ((massfrac.ge.zero).and.(massfrac.le.one)) then
        if (denvapor.gt.zero) then
         if (den_ambient.gt.zero) then
@@ -9592,6 +9964,7046 @@ contains
       return
       end subroutine zones_revolve_sanity
 
+
+       ! normal is contact line normal pointing towards "im" material
+       ! (material 0 liquid)
+       ! vel_n is velocity in normal direction.
+       ! cos_thetae is the cosine of the static angle inbetween
+       ! material 0 and material 2 (the solid material)
+       ! cos_thetad is the output cosine of the dynamic angle.
+       ! vis is viscosity of material 0 (liquid)
+       ! imodel=0 static imodel=1 Jiang   imodel=2 Kistler
+      subroutine DCA_select_model(normal,vel_n,cos_thetae,vis, &
+        user_tension_scalar, &
+        cos_thetad,imodel)
+      implicit none
+
+      INTEGER_T imodel
+      REAL_T normal(SDIM)
+      REAL_T vel_n
+      REAL_T cos_thetae  
+      REAL_T cos_thetad  
+      REAL_T vis 
+      REAL_T user_tension_scalar
+      REAL_T capillary,f_Hoff_inver,temp,temp1 
+
+      complex(kind=8) :: temp2
+
+      if (user_tension_scalar.le.zero) then
+       print *,"user_tension_scalar should be positive"
+       stop
+      endif
+
+      f_Hoff_inver = 0.0276
+      capillary = vel_n*vis/user_tension_scalar
+
+      if (imodel.eq.0) then
+       cos_thetad=cos_thetae
+      else if (imodel.eq.1) then ! Jiang's model
+       temp2 = cmplx(capillary,0.0)
+       temp2 = temp2**0.702
+       temp = real(temp2)
+       temp = tanh(4.96*temp)
+       temp = temp*(1.0+cos_thetae)
+       temp = cos_thetae-temp
+       if (temp.gt.1.0) temp = 1.0  
+       if (temp.lt.-1.0) temp = -1.0  
+       cos_thetad=temp
+      else if (imodel.eq.2) then ! Kistler's model
+       temp2 = cmplx(capillary+f_Hoff_inver,0.0)
+       temp2 = temp2**0.99
+       temp = real(temp2)
+       temp1 = temp
+       temp = 1.0+1.31*temp
+       temp = temp1/temp
+       temp2 = cmplx(temp,0.0)
+       temp2 = temp2*0.706
+       temp = real(temp2)
+       temp = 1.0-2.0*tanh(5.16*temp)
+       if (temp.gt.1.0) temp = 1.0  
+       if (temp.lt.-1.0) temp = -1.0  
+       cos_thetad=temp
+      else
+       print*, 'dynamic contact angle model type not valid'
+       stop
+      end if
+
+      return
+      end subroutine DCA_select_model
+
+
+
+       ! Dynamic Contact Angle
+      subroutine get_use_DCA(use_DCA)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T use_DCA
+      INTEGER_T im_solid_DCA
+
+      im_solid_DCA=im_solid_primary()
+
+      if ((probtype.eq.5501).and.(SDIM.eq.3)) then
+       if (im_solid_DCA.ne.3) then
+        print *,"im_solid_DCA invalid"
+        stop
+       endif
+       use_DCA=NINT(xblob10)
+      else
+       use_DCA=-1
+       if (fort_ZEYU_DCA_SELECT.eq.-1) then
+        ! do nothing
+       else if ((fort_ZEYU_DCA_SELECT.ge.1).and. &
+                (fort_ZEYU_DCA_SELECT.le.8)) then
+        use_DCA=fort_ZEYU_DCA_SELECT+100
+       else
+        print *,"fort_ZEYU_DCA_SELECT invalid"
+        stop
+       endif 
+      endif
+
+      return
+      end subroutine get_use_DCA
+
+      subroutine VISC_dodecane(rho_in,T_in,visccoef,eta)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho_in,T_in
+      ! From Caudwell et al., Int. J. Thermophysics (25) 5, 2004
+      REAL_T rho,T,eta,visccoef
+      REAL_T rmin,rmax
+      REAL_T T2,V0,V,VV,VV2,eta_star
+
+      rho=rho_in
+      T=T_in
+
+      if (T.le.zero) then
+       print *,"VISC_dodecane: temperature zero or negative ",T
+       stop
+      endif
+      T = max(T,298.15)
+      T = min(T,473.15)
+
+      T2 = T*T
+       ! molar core volume
+      V0 = 191.54e-6-0.441338e-6*T+8.98744e-10*T2-6.7792e-13*T2*T 
+
+      if (rho.le.zero) then
+       print *,"VISC_dodecane: density zero or negative ",rho
+       stop
+      endif
+      rmin = 0.6089 ! at 0.1 MPa, T = 473.15
+      rmax = 0.8091 ! at 161.33 MPa, T = 298.15
+      rho = min(rho,rmax)
+      rho = max(rho,rmin)
+
+      V  = 0.17034e-3/rho ! in m3/mol
+      VV = V/V0
+      VV2 = VV*VV
+      eta_star = 1/(0.321621-0.4803715*VV+0.222206*VV2-2.964626e-2*VV2*VV)
+      eta = 1.9720e-8*V**(-0.666667)*T**0.5*eta_star  ! in g/cm-s
+
+      if (eta.le.zero) then
+       print *,"VISC_dodecane: negative or zero viscosity ", eta,&
+        "  from ",rho,T
+       stop
+      endif
+
+      eta = min(eta,0.03677)
+      eta = max(eta,0.00218)
+
+      if (OLD_DODECANE.eq.1) then
+       eta=visccoef
+      endif
+ 
+      return
+      end subroutine VISC_dodecane
+
+
+        ! CONTAINER ROUTINE FOR MEHDI VAHAB, MITSUHIRO OHTA, and
+        ! MARCO ARIENTI
+      REAL_T function get_user_viscconst(im,density,temperature)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im,nmat,ibase,stage
+      REAL_T density,temperature,mu
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+
+      if (temperature.le.zero) then
+       print *,"temperature invalid"
+       stop
+      endif
+      if (density.le.zero) then
+       print *,"density invalid in get_user_viscconst"
+       stop
+      endif
+
+      if ((fort_viscconst(im).lt.zero).or. &
+          (fort_prerecalesce_viscconst(im).lt.zero)) then
+       print *,"fortran viscconst invalid"
+       stop
+      endif
+
+      get_user_viscconst=fort_viscconst(im)
+
+      if (recalesce_material(im).eq.0) then
+       get_user_viscconst=fort_viscconst(im)
+      else if ((recalesce_material(im).eq.1).or. &
+               (recalesce_material(im).eq.2)) then
+       ibase=(im-1)*recalesce_num_state
+       stage=NINT(recalesce_state_old(ibase+1))
+         ! stage=-1 (init)
+         ! stage=0 (cooling)
+         ! stage=1 (nucleation)
+         ! stage=2 (recalesce in progress)
+         ! stage=3 (recalesce finished)
+         ! stage=4 (frost)
+         ! stage=5 (regular freezing starts)
+       if (stage.lt.3) then
+        get_user_viscconst=fort_prerecalesce_viscconst(im)
+       else if ((stage.ge.3).and.(stage.le.5)) then
+        get_user_viscconst=fort_viscconst(im)
+       else
+        print *,"stage invalid"
+        stop
+       endif
+      else
+       print *,"recalesce_material invalid"
+       stop
+      endif
+
+      if (fort_viscosity_state_model(im).eq.0) then
+       ! do nothing
+      else if (fort_viscosity_state_model(im).eq.1) then
+       call VISC_dodecane(density,temperature,fort_viscconst(im),mu)
+       get_user_viscconst=mu
+      else if (fort_viscosity_state_model(im).eq.2) then
+       print *,"viscosity_state_model(im)=2 is for Mitsuhiro."
+       stop
+      else
+       print *,"fort_viscosity_state_model invalid"
+       stop
+      endif
+
+      return
+      end function get_user_viscconst
+
+        ! CONTAINER ROUTINE FOR MEHDI VAHAB
+      REAL_T function get_user_heatviscconst(im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im,nmat,ibase,stage
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+      if ((fort_heatviscconst(im).lt.zero).or. &
+          (fort_prerecalesce_heatviscconst(im).lt.zero)) then
+       print *,"fortran heatviscconst invalid"
+       stop
+      endif
+      get_user_heatviscconst=fort_heatviscconst(im)
+      if (recalesce_material(im).eq.0) then
+       get_user_heatviscconst=fort_heatviscconst(im)
+      else if ((recalesce_material(im).eq.1).or. &
+               (recalesce_material(im).eq.2)) then
+       ibase=(im-1)*recalesce_num_state
+       stage=NINT(recalesce_state_old(ibase+1))
+         ! stage=-1 (init)
+         ! stage=0 (cooling)
+         ! stage=1 (nucleation)
+         ! stage=2 (recalesce in progress)
+         ! stage=3 (recalesce finished)
+         ! stage=4 (frost)
+         ! stage=5 (regular freezing starts)
+       if (stage.lt.3) then
+        get_user_heatviscconst=fort_prerecalesce_heatviscconst(im)
+       else if ((stage.ge.3).and.(stage.le.5)) then
+        get_user_heatviscconst=fort_heatviscconst(im)
+       else
+        print *,"stage invalid"
+        stop
+       endif
+      else
+       print *,"recalesce_material invalid"
+       stop
+      endif
+
+      return
+      end function get_user_heatviscconst
+
+
+        ! CONTAINER ROUTINE FOR MEHDI VAHAB
+      REAL_T function get_user_stiffCP(im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im,nmat,ibase,stage
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+      if ((fort_stiffCP(im).lt.zero).or. &
+          (fort_prerecalesce_stiffCP(im).lt.zero)) then
+       print *,"fortran stiffCP invalid"
+       stop
+      endif
+      get_user_stiffCP=fort_stiffCP(im)
+      if (recalesce_material(im).eq.0) then
+       get_user_stiffCP=fort_stiffCP(im)
+      else if ((recalesce_material(im).eq.1).or. &
+               (recalesce_material(im).eq.2)) then
+       ibase=(im-1)*recalesce_num_state
+       stage=NINT(recalesce_state_old(ibase+1))
+         ! stage=-1 (init)
+         ! stage=0 (cooling)
+         ! stage=1 (nucleation)
+         ! stage=2 (recalesce in progress)
+         ! stage=3 (recalesce finished)
+         ! stage=4 (frost)
+         ! stage=5 (regular freezing starts)
+       if (stage.lt.3) then
+        get_user_stiffCP=fort_prerecalesce_stiffCP(im)
+       else if ((stage.ge.3).and.(stage.le.5)) then
+        get_user_stiffCP=fort_stiffCP(im)
+       else
+        print *,"stage invalid"
+        stop
+       endif
+      else
+       print *,"recalesce_material invalid"
+       stop
+      endif
+
+      return
+      end function get_user_stiffCP
+
+      subroutine get_user_tension(xpos,time, &
+        tension,new_tension, &
+        temperature, &
+        nmat,nten,caller_id)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: caller_id 
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T nten_test
+      REAL_T, intent(in) :: temperature(nmat)
+      REAL_T, intent(in) :: tension(nten)
+      REAL_T, intent(out) :: new_tension(nten)
+      REAL_T avgtemp
+      INTEGER_T iten,im,im_opp,ibase,stage
+
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid get_user_tension nten nten test", &
+         nten,nten_test
+       print *,"nmat=",nmat
+       print *,"caller_id=",caller_id
+       stop
+      endif
+
+       ! fort_tension
+       ! fort_prefreeze_tension
+      do iten=1,nten
+       new_tension(iten)=tension(iten)
+       if (fort_tension_min(iten).lt.zero) then
+        print *,"fort_tension_min invalid"
+        stop
+       endif
+       if (fort_tension_slope(iten).ne.zero) then
+        if (fort_tension_T0(iten).le.zero) then
+         print *,"T0 invalid"
+         stop
+        endif
+         ! im<im_opp
+        call get_inverse_iten(im,im_opp,iten,nmat)
+        if ((temperature(im).le.zero).or. &
+            (temperature(im_opp).le.zero)) then
+         print *,"temperature must be positive"
+         stop
+        endif
+        avgtemp=half*(temperature(im)+temperature(im_opp))
+        new_tension(iten)=new_tension(iten)+fort_tension_slope(iten)* &
+         (avgtemp-fort_tension_T0(iten))
+        if (new_tension(iten).lt.fort_tension_min(iten)) then
+         new_tension(iten)=fort_tension_min(iten)
+        endif
+        if (new_tension(iten).lt.zero) then
+         print *,"new_tension invalid"
+         stop
+        endif
+       endif
+      enddo ! iten
+      do im=1,nmat
+       if (recalesce_material(im).eq.0) then
+        ! do nothing
+       else if ((recalesce_material(im).eq.1).or. &
+                (recalesce_material(im).eq.2)) then
+        ibase=(im-1)*recalesce_num_state
+        stage=NINT(recalesce_state_old(ibase+1))
+         ! stage=-1 (init)
+         ! stage=0 (cooling)
+         ! stage=1 (nucleation)
+         ! stage=2 (recalesce in progress)
+         ! stage=3 (recalesce finished)
+         ! stage=4 (frost)
+         ! stage=5 (regular freezing starts)
+        if (stage.lt.5) then
+         do iten=1,nten
+          new_tension(iten)=fort_prefreeze_tension(iten)
+         enddo
+        else if ((stage.eq.5).or.(stage.eq.6)) then
+         ! do nothing
+        else
+         print *,"stage invalid"
+         stop
+        endif
+       else
+        print *,"recalesce_material invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
+
+      return
+      end subroutine get_user_tension
+
+
+      subroutine TEMPERATURE_default(rho,temperature,internal_energy, &
+        imattype,im)
+
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype
+      INTEGER_T, intent(in) :: im
+      INTEGER_T :: nmat
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(out) :: temperature
+      REAL_T, intent(in) :: internal_energy
+      REAL_T cv
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid70"
+       stop
+      endif
+!      cv=4.1855D+7
+      cv=get_user_stiffCP(im)
+      if (cv.le.zero) then
+       print *,"cv invalid in temperature default"
+       stop
+      endif
+      if (imattype.eq.999) then
+       if (is_rigid(nmat,im).eq.0) then
+        print *,"is_rigid invalid"
+        stop
+       endif
+!       temperature=fort_tempconst(im)
+       temperature=internal_energy/cv
+      else if (imattype.eq.0) then
+       temperature=internal_energy/cv
+      else
+       print *,"imattype invalid TEMPERATURE_default"
+       stop
+      endif
+
+      return
+      end subroutine TEMPERATURE_default
+
+
+      subroutine INTERNAL_default(rho,temperature,internal_energy, &
+        imattype,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: temperature
+      REAL_T, intent(out) :: internal_energy
+      REAL_T cv
+
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid in internal_default"
+       stop
+      endif
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"T invalid"
+       stop
+      endif
+
+!      cv=4.1855D+7
+      cv=get_user_stiffCP(im)
+      if (cv.le.zero) then
+       print *,"cv invalid in internal default"
+       stop
+      endif
+      if (imattype.eq.999) then
+       internal_energy=cv*temperature
+      else if (imattype.eq.0) then
+       internal_energy=cv*temperature
+      else
+       print *,"imattype invalid in internal default"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_default
+
+
+        ! ice behaves like rigid solid where dist>0
+      subroutine ice_substrate_distance(x,y,z,dist)
+      use probcommon_module
+      IMPLICIT NONE
+      
+      REAL_T, intent(in) :: x,y,z
+      REAL_T, intent(out) :: dist
+      INTEGER_T nmat
+      REAL_T aspect,yprime,zprime,aspect2
+
+      if (SDIM.eq.2) then
+       if (abs(y-z).gt.VOFTOL) then
+        print *,"y=z in 2d expected"
+        stop
+       endif
+      endif
+
+      nmat=num_materials
+
+      aspect=tan(radblob2)
+      if (SDIM.eq.2) then
+        yprime=aspect*(x-xblob2)+yblob2
+        dist=y-yprime  ! vertical distance
+      else if (SDIM.eq.3) then
+        aspect2=tan(radblob3)
+        zprime=aspect*(x-xblob2)+aspect2*(y-yblob2)+zblob2
+        dist=z-zprime  ! vertical distance
+      else
+        print *,"dimension bust"
+        stop
+      endif
+      dist=-dist
+
+      end subroutine ice_substrate_distance
+
+        ! Sato and Niceno or Tryggvason
+        ! (probtype.eq.55) and ((axis_dir.eq.6).or.(axis_dir.eq.7))
+        ! negative if x_point in a bubble.
+      subroutine nucleation_sites(x_point,dist,nucleate_pos)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: x_point(SDIM)
+      REAL_T, intent(out) :: dist
+      INTEGER_T icomp
+      REAL_T distarr(n_sites)
+      REAL_T, intent(in) :: nucleate_pos(4*n_sites)
+      REAL_T hugedist
+      REAL_T xx(SDIM)
+      REAL_T rr
+      INTEGER_T dir
+ 
+      if (n_sites.lt.1) then
+       print *,"n_sites invalid"
+       stop
+      endif
+ 
+      hugedist=99999.0
+
+      dist=hugedist
+
+      do icomp=1,n_sites
+       distarr(icomp)=hugedist
+       rr=nucleate_pos(4*(icomp-1)+4)
+       if (rr.gt.zero) then
+        do dir=1,SDIM
+         xx(dir)=x_point(dir)-nucleate_pos(4*(icomp-1)+dir)
+        enddo
+        distarr(icomp)=zero
+        do dir=1,SDIM
+         distarr(icomp)=distarr(icomp)+xx(dir)**2
+        enddo
+        distarr(icomp)=sqrt(distarr(icomp))-rr
+        
+        dist=min(dist,distarr(icomp))
+       else
+        print *,"rr invalid"
+        stop
+       endif 
+      enddo ! icomp=1..n_sites
+    
+      return
+      end subroutine nucleation_sites
+
+
+      subroutine get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T A,B,GAMMA,R1,R2,RHOI
+
+
+      if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
+       A=5.484D+12
+       B=0.09375D+12
+       R1=4.94D0
+       R2=1.21D0
+       GAMMA=1.28D0
+       RHOI=1.63D0
+      else if (probtype.eq.42) then  ! bubble jetting
+       A=3.712D+12
+       B=0.03231D+12
+       R1=4.15D0
+       R2=0.95D0
+       GAMMA=1.3D0
+       RHOI=1.63D0
+      else if (probtype.eq.46) then ! cavitation
+       A=3.712D+12
+       B=0.03231D+12
+       R1=4.15D0
+       R2=0.95D0
+       GAMMA=1.3D0
+       RHOI=1.63D0
+      else
+       print *,"probtype not supported for the jwl material"
+       stop
+      endif
+
+      return
+      end subroutine get_jwl_constants
+
+
+
+      subroutine INTERNAL_jwl(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+
+      cv=4.1855D+7
+      internal_energy=cv*temperature
+
+      return
+      end subroutine INTERNAL_jwl
+
+      subroutine TEMPERATURE_jwl(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine
+
+      subroutine ENTROPY_jwl(rho,internal_energy,entropy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure,entropy,press_adiabat
+
+      call EOS_NAjwl(rho,internal_energy,pressure)
+      call EOS_jwlADIABAT(rho,internal_energy,press_adiabat)
+      if (press_adiabat.le.zero) then
+       print *,"press_adiabat invalid"
+       stop
+      endif
+      entropy=pressure/press_adiabat
+
+      return
+      end subroutine ENTROPY_jwl
+
+      subroutine INTERNAL_ENTROPY_jwl(rho,entropy,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,entropy,internal_energy
+      REAL_T A,B,R1,R2,GAMMA,RHOI,OMEGA,pressure_part,press_adiabat
+
+      call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+      OMEGA=GAMMA-one
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (entropy.le.zero) then
+       print *,"entropy invalid"
+       stop
+      endif
+      pressure_part= &
+        A*(one-OMEGA*rho/(R1*RHOI))*exp(-R1*RHOI/rho)+ &
+        B*(one-OMEGA*rho/(R2*RHOI))*exp(-R2*RHOI/rho)
+      call EOS_jwlADIABAT(rho,internal_energy,press_adiabat)
+      internal_energy=(press_adiabat*entropy-pressure_part)/ &
+        (OMEGA*rho)
+      if (internal_energy.le.zero) then
+       print *,"internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_ENTROPY_jwl
+
+ 
+! e=(E/rho) - (1/2) (u^2 + v^2)
+      subroutine EOS_NAjwl(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,R1,R2,GAMMA,RHOI,OMEGA
+
+      call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+      OMEGA=GAMMA-one
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+      pressure= &
+        A*(one-OMEGA*rho/(R1*RHOI))*exp(-R1*RHOI/rho)+ &
+        B*(one-OMEGA*rho/(R2*RHOI))*exp(-R2*RHOI/rho)+ &
+        OMEGA*rho*internal_energy
+
+      if (pressure.le.zero) then
+       print *,"vacuum error in NA JWL"
+       stop
+      endif
+
+      return
+      end subroutine
+
+! initial sound speed is:
+! C=7.8039D+10-5.484D+12 e^(-4.94)-0.09375D+12 e^(-1.21)=
+      subroutine SOUNDSQR_NAjwl(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,R1,R2,GAMMA,RHOI,OMEGA
+      REAL_T pressure,dp_de,dp_drho
+
+      call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+      OMEGA=GAMMA-one
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      call EOS_NAjwl(rho,internal_energy,pressure)
+      dp_de=OMEGA*rho
+      dp_drho= &
+        A*(one-OMEGA*rho/(R1*RHOI))*exp(-R1*RHOI/rho)* &
+        R1*RHOI/(rho**2)- &
+        (A*OMEGA/(R1*RHOI))*exp(-R1*RHOI/rho)+ &
+        B*(one-OMEGA*rho/(R2*RHOI))*exp(-R2*RHOI/rho)* &
+        R2*RHOI/(rho**2)- &
+        B*(OMEGA/(R2*RHOI))*exp(-R2*RHOI/rho)+ &
+        OMEGA*internal_energy
+    
+      soundsqr=(pressure*dp_de)/(rho**2)+dp_drho
+ 
+      if (soundsqr.le.zero) then
+       print *,"cannot have 0 sound speed"
+       stop
+      endif
+
+      return
+      end subroutine
+
+
+! e=(E/rho) - (1/2) (u^2 + v^2)
+      subroutine EOS_jwlADIABAT(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,R1,R2,GAMMA,RI,PI,RHOI,C,OMEGA
+
+      call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+      if (RHOI.le.zero) then
+       print *,"RHOI invalid"
+       stop
+      endif
+
+      OMEGA=GAMMA-one
+      RI=16.0D0        ! cm
+      PI=7.8039D+10  ! dyne/cm^2
+      C=PI-OMEGA*(A*exp(-R1)/R1+B*exp(-R2)/R2)
+      if (C.le.zero) then
+       print *,"c invalid"
+       stop
+      endif
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+      pressure=(OMEGA*rho/RHOI)*( &
+       A*exp(-R1*RHOI/rho)/R1+ &
+       B*exp(-R2*RHOI/rho)/R2   )+ &
+       C*( (RHOI/rho)**(-GAMMA) )
+      if (pressure.le.zero) then
+       print *,"vacuum error"
+       stop
+      endif
+
+      return
+      end subroutine
+
+      subroutine SOUNDSQR_jwlADIABAT(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,R1,R2,GAMMA,RI,PI,RHOI,C,OMEGA
+
+      call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+      if (RHOI.le.zero) then
+       print *,"RHOI invalid"
+       stop
+      endif
+
+      OMEGA=GAMMA-one
+      RI=16.0D0        ! cm
+      PI=7.8039D+10  ! dyne/cm^2
+      C=PI-OMEGA*(A*exp(-R1)/R1+B*exp(-R2)/R2)
+      if (C.le.zero) then
+       print *,"c invalid"
+       stop
+      endif
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+      soundsqr=(OMEGA/RHOI)*(  &
+       A*exp(-R1*RHOI/rho)/R1+ &
+       B*exp(-R2*RHOI/rho)/R2)
+      soundsqr=soundsqr+ &
+       (OMEGA*rho/RHOI)*( &
+       A*(RHOI/(rho**2))*exp(-R1*RHOI/rho)+ &
+       B*(RHOI/(rho**2))*exp(-R2*RHOI/rho)   )+ &
+       (GAMMA*C/RHOI)*( (rho/RHOI)**(GAMMA-one) )
+
+      if (soundsqr.le.zero) then
+       print *,"cannot have 0 sound speed"
+       stop
+      endif
+
+      return
+      end subroutine SOUNDSQR_jwlADIABAT
+
+! PR without shift:
+! https://en.wikipedia.org/wiki/Equation_of_state
+! PR with shift:
+! Monnery et al, Ind. Eng. Chem. Res. 1998, volume 37, 1663-1672
+! table: c_1, c_2, c_3, m, n
+! rho  g/cm^3=rho/1000 kg/cm^3=rho 10^6/10^3  kg/m^3 = 1000 rho kg/m^3
+      subroutine EOS_peng_robinson(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T temperature
+      REAL_T R_pr,water_molar_mass,rhoMKS,rho_molar
+      REAL_T Vm,water_critical_temperature,water_critical_pressure
+      REAL_T water_critical_molar_volume,a,b,Tr,kappa,alpha
+      REAL_T water_acentric_factor
+      REAL_T water_c1,water_c2,water_c3,water_m,water_n
+      REAL_T Monnery_c4
+      REAL_T Vm_shift,adjusted_Vm
+
+      if ((rho.gt.zero).and. &
+          (internal_energy.gt.zero)) then
+
+       call TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
+       R_pr=8.3144621 ! J/(mol K)  (ideal gas constant)
+       water_c1=-0.19963 ! m^3/kmol
+       water_c2=2.03032
+       water_c3=0.38268
+       Monnery_c4=1.0  ! m^3/kmol
+       water_m=0.91132
+       water_n=-2.285D-1
+       water_molar_mass=18.01528 ! g/mol
+       rhoMKS=1000.0*rho  ! kg/m^3
+       rho_molar=rhoMKS/(0.001*water_molar_mass)  ! mol/m^3
+        ! if rho=1g/cm^3 then rhoMKS=1000 kg/m^3 , rho_molar=1D+6/18 mol/m^3
+        !  Vm=18E-6 m^3/mole 
+       Vm=one/rho_molar     ! m^3/mole
+
+       water_critical_temperature=647.0  ! degrees Kelvin
+       water_critical_pressure=22.064D+6 ! Pascals=N/m^2
+        ! 55.9 cm^3/mol=55.9E-6 m^3/mole=5.59E-5 m^3/mole
+       water_critical_molar_volume=5.59D-5 ! m^3/mole
+        ! units: J^2/(mol^2 N/m^2)=J^2 m^2/(mol^2 N)
+        !  =(kg^2 m^4/s^4)m^2/(mol^2 kg m/s^2)=
+        !   kg m^5/(mol^2 s^2)
+        ! note: units of a/Vm^2=kg m^5/(mol^2 s^2)/(m^6/mole^2)=
+        !  kg/(m s^2)=(kg m/s^2)(1/m^2)=N/m^2 
+       a=0.45724*(R_pr**2)*(water_critical_temperature**2)/ &
+             water_critical_pressure
+       b=0.07780*R_pr*water_critical_temperature/water_critical_pressure
+       Tr=temperature/water_critical_temperature
+       water_acentric_factor=0.344
+       kappa=0.37464+1.54226*water_acentric_factor- &
+             0.26992*(water_acentric_factor**2)
+!      alpha=(one+kappa*(one-sqrt(Tr)))**2 ! original Peng Robinson model.
+        ! this is from Monnery et al
+       alpha=(one+water_m*(one-sqrt(Tr))-water_n*((one-sqrt(Tr))**2))**2 
+
+       Vm_shift=water_c1+(Monnery_c4/(sqrt(two*Pi)*water_c2))* &
+            exp(-half*( ((Tr-water_c3)/water_c2)**2 )) !m^3/kmol
+       Vm_shift=Vm_shift/1000.0  ! m^3/mol
+       adjusted_Vm=Vm-Vm_shift
+
+       if (adjusted_Vm.gt.b) then
+        ! N/m^2
+        pressure=R_pr*temperature/(adjusted_Vm-b)- &
+          a*alpha/(adjusted_Vm**2+two*b*adjusted_Vm-(b**2))
+        if (pressure.le.zero) then
+         print *,"pressure must be positive"
+         print *,"rho,temperature ",rho,temperature
+         print *,"Vm= ",Vm
+         print *,"Vm offset = ",Vm_shift
+         print *,"adjusted_Vm=",adjusted_Vm
+         print *,"a=",a
+         print *,"b=",b
+         print *,"alpha=",alpha
+         print *,"part1=",R_pr*temperature/(adjusted_Vm-b)
+         print *,"part2=",a*alpha/(adjusted_Vm**2+two*b*adjusted_Vm-(b**2))
+         stop
+        endif
+       else 
+        print *,"adjusted_Vm-b must be positive"
+        print *,"rho,temperature ",rho,temperature
+        stop
+       endif
+
+        ! N/m^2 = kg m/s^2 / m^2 = kg/(m s^2)=1000 g/(100 cm s^2)=
+        ! 10 g/(cm s^2)=10 dyne/cm^2
+       pressure=pressure*ten
+
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine EOS_peng_robinson
+
+! c^2 = dp/drho + p dp/de / rho^2
+      subroutine SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr,pressure
+      REAL_T eps,drho,de,rho_plus,rho_minus,p_plus,p_minus
+      REAL_T e_plus,e_minus,dp_drho,dp_de
+
+      if ((rho.gt.zero).and. &
+          (internal_energy.gt.zero)) then
+
+       call EOS_peng_robinson(rho,internal_energy,pressure)
+       eps=1.0D-6
+       drho=eps*rho
+       de=eps*internal_energy
+       rho_plus=rho+half*drho
+       rho_minus=rho-half*drho
+       call EOS_peng_robinson(rho_plus,internal_energy,p_plus)
+       call EOS_peng_robinson(rho_minus,internal_energy,p_minus)
+       dp_drho=(p_plus-p_minus)/drho
+       e_plus=internal_energy+half*de
+       e_minus=internal_energy-half*de
+       call EOS_peng_robinson(rho,e_plus,p_plus)
+       call EOS_peng_robinson(rho,e_minus,p_minus)
+       dp_de=(p_plus-p_minus)/de
+       soundsqr=dp_drho+pressure*dp_de/(rho**2)
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine SOUNDSQR_peng_robinson
+
+      subroutine INTERNAL_peng_robinson(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=cv*temperature
+
+      return
+      end subroutine INTERNAL_peng_robinson
+
+      subroutine TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_peng_robinson
+
+! A. Brundage, ``Implementation of Tillotson Equation of State for 
+! Hypervelocity Impact of Metals, Geologic Materials, and Liquids.''
+! Procedia Engineering 58 (2013) 461-470
+! material_type=22
+! NOTE: the internal energy that is input to this routine is e=cv T
+! but the internal energy as a function of temperature for the Tillotson
+! model has to be defined such that P=P0 when rho=rho0.
+! a) 
+! one possible modification to the Tillotson EOS (but the sound speed is
+! way too small):
+! e'=e+alpha
+! P0=(a +  b/(e0'/E0 + 1))rho0 e0' + A mu + B mu^2
+! e0'=cv T0 + alpha
+! assume mu=0
+! P0=(a+b/(e0'/E0 + 1))rho0 e0'
+! P0(e0'/E0 + 1) = a rho0 e0' (e0'/E0 + 1) + b rho0 e0'
+! let x=e0'
+! (a rho0/E0) x^2 + (b rho0 + a rho0 - P0/E0)x - P0 = 0
+! b)
+! another modification: P=P(rho,e)-P(rho0,e0)+P0
+      subroutine EOS_tillotson(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure,strain
+      REAL_T rho0,eta,E_ratio,denom,a_term,b_term,beta_term,alpha_term
+      REAL_T pressure1,pressure3
+      REAL_T e0,E_tillotson,T0_tillotson
+      REAL_T E_offset,P_offset
+      REAL_T E0_ratio,denom0,a0_term,b0_term
+
+      rho0=fort_denconst(1)
+      T0_tillotson=fort_tempconst(1)
+      strain=zero
+
+      if ((rho.gt.zero).and. &
+          (internal_energy.gt.zero).and. &
+          (rho0.gt.zero).and. &
+          (rho0.gt.rho_IV_tillotson).and. &
+          (T0_tillotson.gt.zero).and. &
+          (E0_tillotson.gt.zero).and. &
+          (E_CV_tillotson.gt.E_IV_tillotson)) then
+
+       call INTERNAL_tillotson(rho0,T0_tillotson,e0)
+
+       eta=rho/rho0
+       E_tillotson=internal_energy
+       E_offset=E_tillotson
+       E_ratio=E_tillotson/E0_tillotson
+       denom=one+E_ratio/(eta**2)
+
+       E0_ratio=e0/E0_tillotson
+       denom0=one+E0_ratio
+       a0_term=a_hydro_tillotson*rho0*e0
+       b0_term=b_hydro_tillotson*rho0*e0
+
+       P_offset=P0_tillotson-(a0_term+b0_term/denom0)
+
+       a_term=a_hydro_tillotson*rho*E_offset
+       b_term=b_hydro_tillotson*rho*E_offset
+       beta_term=exp(beta_tillotson*(one-one/eta))
+       alpha_term=exp(-alpha_tillotson*((one-one/eta)**2))
+
+       pressure1=a_term+b_term/denom+A_strain_tillotson*strain+ &
+         B_strain_tillotson*(strain**2)+P_offset
+
+       pressure3=a_term+(b_term/denom+ &
+        A_strain_tillotson*strain*beta_term)*alpha_term+P_offset
+
+       if ((rho.ge.rho0).or. &
+           ((rho.ge.rho_IV_tillotson).and. &
+            (E_tillotson.le.E_IV_tillotson))) then
+        pressure=pressure1
+       else if ((rho.le.rho0).and. &
+                (E_tillotson.ge.E_CV_tillotson)) then
+        pressure=pressure3
+       else if ((rho.ge.rho_IV_tillotson).and. &
+                (rho.le.rho0).and. &
+                (E_tillotson.ge.E_IV_tillotson).and. &
+                (E_tillotson.le.E_CV_tillotson)) then
+        pressure=((E_tillotson-E_IV_tillotson)*pressure3+ &
+                  (E_CV_tillotson-E_tillotson)*pressure1)/ &
+                 (E_CV_tillotson-E_IV_tillotson)
+       else
+        pressure=a_term+b_term/denom+A_strain_tillotson*strain+P_offset
+       endif
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine EOS_tillotson
+
+! c^2 = dp/drho + p dp/de / rho^2
+      subroutine SOUNDSQR_tillotson(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr,pressure
+      REAL_T rho0,eps,drho,de,rho_plus,rho_minus,p_plus,p_minus
+      REAL_T e_plus,e_minus,dp_drho,dp_de
+
+      rho0=fort_denconst(1)
+
+      if ((rho.gt.zero).and. &
+          (internal_energy.gt.zero).and. &
+          (rho0.gt.zero).and. &
+          (rho0.gt.rho_IV_tillotson).and. &
+          (E0_tillotson.gt.zero).and. &
+          (E_CV_tillotson.gt.E_IV_tillotson)) then
+
+       call EOS_tillotson(rho,internal_energy,pressure)
+       eps=1.0D-6
+       drho=eps*rho
+       de=eps*internal_energy
+       rho_plus=rho+half*drho
+       rho_minus=rho-half*drho
+       call EOS_tillotson(rho_plus,internal_energy,p_plus)
+       call EOS_tillotson(rho_minus,internal_energy,p_minus)
+       dp_drho=(p_plus-p_minus)/drho
+       e_plus=internal_energy+half*de
+       e_minus=internal_energy-half*de
+       call EOS_tillotson(rho,e_plus,p_plus)
+       call EOS_tillotson(rho,e_minus,p_minus)
+       dp_de=(p_plus-p_minus)/de
+       soundsqr=dp_drho+pressure*dp_de/(rho**2)
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine SOUNDSQR_tillotson
+
+
+      subroutine INTERNAL_tillotson(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if ((rho.gt.zero).and.(temperature.gt.zero)) then
+       cv=4.1855D+7
+       internal_energy=cv*temperature
+      else
+       print *,"rho or temperature invalid"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_tillotson
+
+
+      subroutine TEMPERATURE_tillotson(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if ((rho.gt.zero).and.(internal_energy.gt.zero)) then
+       cv=4.1855D+7
+       temperature=internal_energy/cv
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine TEMPERATURE_tillotson
+
+
+! A fully compressible, two-dimensional model of small, high-speed, cavitating
+! nozzles, Schmidt et al, Atomization and Sprays, vol 9, 255-276 (1999)
+! units must be CGS
+      subroutine EOS_cav_nozzle(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T rho_g,rho_l,soundsqr_g,soundsqr_l,alpha,pgl,numer,denom
+
+      rho_g=fort_cavdenconst(1)
+      rho_l=fort_denconst(1)
+
+      if ((rho.gt.zero).and.(internal_energy.gt.zero)) then
+       if ((rho_l.gt.zero).and.(rho_g.gt.zero)) then
+        call SOUNDSQR_tait(rho_l,internal_energy,soundsqr_l)
+        call SOUNDSQR_air(rho_g,internal_energy,soundsqr_g)
+
+        if ((rho_l.gt.rho_g).and. &
+            (soundsqr_l.gt.soundsqr_g).and. &
+            (soundsqr_l.gt.zero).and. &
+            (soundsqr_g.gt.zero)) then
+
+          ! if rho=rho_l then alpha=0, numer=rho_g * rho_l*soundsqr_g
+          !  denom=rho_l * rho_g *soundsqr_g
+          !  pressure=PCAV_TAIT
+          ! if rho=rho_g then alpha=1, numer=rho_g*rho_g*soundsqr_g
+          !  denom=rho_l*rho_l*soundsqr_l
+          !  pressure=PCAV_TAIT+pgl*log(numer/denom) 
+         if (rho.ge.rho_l) then
+          alpha=zero
+         else if (rho.le.rho_g) then
+          alpha=one
+         else
+          alpha=(rho-rho_l)/(rho_g-rho_l)
+         endif
+         pgl=rho_g*soundsqr_g*rho_l*soundsqr_l*(rho_g-rho_l)/ &
+                 (soundsqr_g*(rho_g**2)-soundsqr_l*(rho_l**2))
+         if (pgl.gt.zero) then
+          numer=rho_g*soundsqr_g*(alpha*rho_g+(one-alpha)*rho_l)
+          denom=rho_l*(alpha*rho_l*soundsqr_l+(one-alpha)* &
+                  rho_g*soundsqr_g)
+          if ((denom.gt.zero).and.(numer.gt.zero)) then
+           pressure=PCAV_TAIT+pgl*log(numer/denom)
+           if (rho.ge.rho_l) then
+            pressure=pressure+soundsqr_l*(rho-rho_l)
+           else if (rho.le.rho_g) then
+            pressure=pressure+soundsqr_g*(rho-rho_g)
+           else if ((rho.ge.rho_g).and.(rho.le.rho_l)) then
+            ! do nothing (pressure already set)
+           else
+            print *,"rho invalid"
+            stop
+           endif  
+          else
+           print *,"denom or numer invalid"
+           stop
+          endif
+         else
+          print *,"pgl invalid"
+          stop
+         endif
+        else
+         print *,"rho or soundsqr invalid"
+         stop
+        endif
+       else
+        print *,"rho invalid"
+        stop
+       endif
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine EOS_cav_nozzle
+
+
+      subroutine SOUNDSQR_cav_nozzle(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T rho_g,rho_l,soundsqr_g,soundsqr_l,alpha,rhomix,inv_soundsqr_mix
+
+      rho_g=fort_cavdenconst(1)
+      rho_l=fort_denconst(1)
+
+      if ((rho.gt.zero).and.(internal_energy.gt.zero)) then
+       if ((rho_l.gt.zero).and.(rho_g.gt.zero)) then
+        call SOUNDSQR_tait(rho_l,internal_energy,soundsqr_l)
+        call SOUNDSQR_air(rho_g,internal_energy,soundsqr_g)
+
+        if ((rho_l.gt.rho_g).and. &
+            (soundsqr_l.gt.soundsqr_g).and. &
+            (soundsqr_l.gt.zero).and. &
+            (soundsqr_g.gt.zero)) then
+         if (rho.ge.rho_l) then
+          alpha=zero
+         else if (rho.le.rho_g) then
+          alpha=one
+         else
+          alpha=(rho-rho_l)/(rho_g-rho_l)
+         endif
+         rhomix=alpha*rho_g+(one-alpha)*rho_l
+         inv_soundsqr_mix=alpha/(rho_g*soundsqr_g)+ &
+            (one-alpha)/(rho_l*soundsqr_l)
+         if ((rhomix.gt.zero).and.(inv_soundsqr_mix.gt.zero)) then 
+          soundsqr=one/(rhomix*inv_soundsqr_mix)
+         else
+          print *,"rhomix or inv_soundsqr invalid"
+          stop
+         endif
+        else
+         print *,"rho or soundsqr invalid"
+         stop
+        endif
+       else
+        print *,"rho invalid"
+        stop
+       endif
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine SOUNDSQR_cav_nozzle
+
+      subroutine INTERNAL_cav_nozzle(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if ((rho.gt.zero).and.(temperature.gt.zero)) then
+       cv=4.1855D+7
+       internal_energy=cv*temperature
+      else
+       print *,"rho or temperature invalid"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_cav_nozzle
+
+
+      subroutine TEMPERATURE_cav_nozzle(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if ((rho.gt.zero).and.(internal_energy.gt.zero)) then
+       cv=4.1855D+7
+       temperature=internal_energy/cv
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine TEMPERATURE_cav_nozzle
+
+
+      subroutine INTERNAL_tait(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=cv*temperature
+
+      return
+      end subroutine INTERNAL_tait
+
+
+      subroutine INTERNAL_tait_vacuum(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=cv*temperature
+
+      return
+      end subroutine INTERNAL_tait_vacuum
+
+
+      subroutine TEMPERATURE_tait(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_tait
+
+
+      subroutine TEMPERATURE_tait_vacuum(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_tait_vacuum
+
+
+      subroutine EOS_tait(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,rhobar,GAMMA,pcav
+
+      A=A_TAIT
+      B=B_TAIT
+      rhobar=RHOBAR_TAIT ! see PROBCOMMON.F90 for definition
+      GAMMA=GAMMA_TAIT
+      pcav=PCAV_TAIT
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine EOS_tait
+
+      subroutine EOS_tait_vacuum(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,pressure
+      REAL_T A,B,rhobar,GAMMA,pcav
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=RHOBAR_TAIT ! g/cm^3
+      GAMMA=GAMMA_TAIT
+      pcav=PCAV_TAIT_VACUUM 
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine EOS_tait_vacuum
+
+
+
+
+      subroutine SOUNDSQR_tait(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,rhobar,pcav,rhocav,pressure
+      REAL_T rho_sound
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=RHOBAR_TAIT ! g/cm^3
+      pcav=PCAV_TAIT
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+      
+      if (rhocav.le.zero) then
+       print *,"rhocav invalid"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_TAIT*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_TAIT-one) )
+
+      return
+      end subroutine SOUNDSQR_tait
+
+
+
+      subroutine SOUNDSQR_tait_vacuum(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,rhobar,pcav,rhocav,pressure
+      REAL_T rho_sound
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=RHOBAR_TAIT ! g/cm^3
+      pcav=PCAV_TAIT_VACUUM
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+      
+      if (rhocav.le.zero) then
+       print *,"rhocav invalid SOUNDSQR_tait_vacuum"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_TAIT*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_TAIT-one) )
+
+      return
+      end subroutine SOUNDSQR_tait_vacuum
+
+
+! begin dodecane routines (material type=15)
+
+
+      subroutine DeDT_dodecane(rho_in,T_in,DeDT)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,rho_in,T,T_in,DeDT
+      REAL_T cv,Tc
+      REAL_T A,B,rho0,rmax,rmin,P0,pressure
+      REAL_T cd,cc,cb,ca,T2,T3
+
+      rho=rho_in
+      T=T_in
+
+      P0 = 1D+6    ! dyne/cm^2 reference pressure (0.1 MPa)
+      A = 0.08998
+      rmin = 0.500 ! at 0.1 MPa, T = 433
+      rmax = 0.850 ! at 400 MPa, T = 298
+      Tc = 658.2  ! critical temperature
+      cv = 2.116D+7 ! for dodecane at 106 MPa and 363 K
+
+      if (rho.le.1e-6) then
+       print *,"DeDT_dodecane: density negative or near zero ",rho
+       !stop
+       rho = rmin
+      endif
+      if (T.le.zero) then
+       print *,"DeDT_dodecane: temperature <= 0"
+       stop
+      else if (T.lt.200.) then
+!      print *,"DeDT_dodecane: temperature < 250 K: ",T,rho
+       T = 200.
+      else if (T.gt.Tc) then
+!      print *,"DeDT_dodecane: temperature above critical: ",T,rho
+       T = Tc
+      endif
+      rho = min(rho,rmax)
+      rho = max(rho,rmin)
+
+      T2 = T*T
+      T3 = T2*T
+      rho0 = 0.9291654-0.5174730e-3*T-3.338672e-7*T2
+      B=(345.1-1.1458*T+0.9837e-3*T2)*1e7
+      pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
+      pressure=max(pressure,0.01*P0)
+
+      cd=2.273845+7.701613e-20*pressure*(pressure-1e6);
+      cc=-2.279889e-3-3.654273e-13*(pressure-1e6);
+      cb=6.106366e-06;
+      ca=-3.266302e-09;
+
+      DeDT=(4.*ca*T3+3.*cb*T2+2.*cc*T+cd)*1e7 ! in erg/cm3
+
+      if(DeDT.le.zero) then
+       print *,"DeDT_dodecane: negative derivative: ",DeDT
+       DeDT = cv
+      endif
+
+      return
+      end subroutine DeDT_dodecane
+
+
+      subroutine INTERNAL_dodecane(rho_in,T_in,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho_in,T_in
+      REAL_T rho,T,internal_energy,cv,Tc
+      REAL_T A,B,rho0,rmax,rmin,P0,pressure
+      REAL_T ce,cd,cc,cb,ca,T2,T3,T4
+
+      rho=rho_in
+      T=T_in
+
+      P0 = 1D+6    ! dyne/cm^2 reference pressure (0.1 MPa)
+      A = 0.08998
+      rmin = 0.500 ! at 0.1 MPa, T = 433
+      rmax = 0.850 ! at 400 MPa, T = 298
+      Tc = 658.2  ! critical temperature
+      cv = 2.116D+7 ! for dodecane at 106 MPa and 363 K
+
+      if (rho.le.1e-6) then
+       print *,"INTERNAL_dodecane: density negative or near zero ",rho
+       !stop
+       rho = rmin
+      endif
+      if (T.le.zero) then
+       print *,"INTERNAL_dodecane: temperature <= 0",T
+       T = 250.
+!      stop
+      endif
+      rho = min(rho,rmax)
+      rho = max(rho,rmin)
+
+      T2 = T*T
+      T3 = T2*T
+      T4 = T3*T
+      rho0 = 0.9291654-0.5174730e-3*T-3.338672e-7*T2
+      B=(345.1-1.1458*T+0.9837e-3*T2)*1e7
+      pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
+      pressure=max(pressure,0.0001*P0)
+
+      ce=19.94245;
+      cd=2.273845+7.701613e-20*pressure*(pressure-1e6);
+      cc=-2.279889e-3-3.654273e-13*(pressure-1e6);
+      cb=6.106366e-06;
+      ca=-3.266302e-09;
+
+      internal_energy=(ca*T4+cb*T3+cc*T2+cd*T+ce)*1e7 ! in erg/cm3
+
+      if (OLD_DODECANE.eq.1) then
+       cv=2.116D+7 ! for dodecane at 106 MPa and 363 K
+       internal_energy=T*cv
+      endif
+
+      return
+      end subroutine INTERNAL_dodecane
+
+
+      subroutine TEMPERATURE_dodecane(rho_in,T,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho_in
+      REAL_T rho,T,internal_energy,cv
+      REAL_T T0,T1,Tc,ie1,ie0,dT,dedT,rmin,rmax
+      INTEGER iter
+
+      rho=rho_in
+
+      Tc = 658.2  ! critical temperature
+      cv = 2.116D+7 ! at 106 MPa and 363 K
+      rmin = 0.500 ! at 0.1 MPa, T = 433
+      rmax = 0.850 ! at 400 MPa, T = 298
+
+      if (rho.le.1e-6) then
+       print *,"TEMPERATURE_dodecane: density negative or near zero ",rho
+       !stop
+       rho = rmin
+      endif
+      rho = min(rho,rmax)
+      rho = max(rho,rmin)
+
+      ! internal energy can actually be < 0, but this value was
+      ! originally translated
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+
+      iter = 1
+      T0 = min(internal_energy/cv,Tc-50.) ! first guess
+      T0 = max(T0,250.)
+      call INTERNAL_dodecane(rho,T0,ie0)
+
+      do while (abs(ie0/internal_energy-1.).gt.1e-4) 
+
+       T1 = T0+2.
+       call INTERNAL_dodecane(rho,T1,ie1)
+       if (abs(ie1-ie0).lt.1e-6) then
+        print *,"TEMPERATURE_dodecane: internal energies too close"
+        stop
+       endif
+
+       dedT = 0.5*(ie1-ie0) ! T1-T0 = 2K
+       dT = (ie0-internal_energy)/dedT
+       dT = sign(min(abs(dT),10.),dT)
+       T0 = T0-dT
+       call INTERNAL_dodecane(rho,T0,ie0)
+
+       if (iter.gt.50) then
+        print *,"TEMPERATURE_dodecane: temperature not converged",&
+         rho,T0,internal_energy,dT
+        goto 10
+       endif
+       iter=iter+1
+      enddo
+
+  10  T = T0
+
+      if (T.gt.Tc) then
+!      print *,"TEMPERATURE_dodecane: temperature above critical: ",T,&
+!       rho,internal_energy/cv
+       T = Tc
+      else if (T.lt.200.) then
+       print *,"TEMPERATURE_dodecane: temperature < 200 K: ",T,&
+        rho,internal_energy/cv
+       T = 200.
+      endif
+
+!     call INTERNAL_dodecane(rho,T,internal_energy)
+
+      if (OLD_DODECANE.eq.1) then
+       cv=2.116D+7 ! for dodecane at 106 MPa and 363 K
+       T=internal_energy/cv
+      endif
+
+      return
+      end subroutine TEMPERATURE_dodecane
+
+
+      subroutine EOS_dodecane(rho_in,internal_energy,T,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho_in
+      REAL_T rho,internal_energy,T,pressure
+      REAL_T A,B,rho0,rmax,rmin,P0,pcav,cv,Tc,Tred
+
+      rho=rho_in
+
+      P0 = 1D+6    ! dyne/cm^2 reference pressure (0.1 MPa)
+      A = 0.08998
+      rmin = 0.500 ! at 0.1 MPa, T = 433
+      rmax = 0.850 ! at 400 MPa, T = 298
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      rho = min(rho,rmax)
+      rho = max(rho,rmin)
+
+      call TEMPERATURE_dodecane(rho,T,internal_energy)
+
+      rho0 = 0.9291654-0.5174730e-3*T-3.338672e-7*T*T
+      B=(345.1-1.1458*T+0.9837e-3*T*T)*1e7
+      pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
+      pressure=max(pressure,0.00001*P0)
+      pressure=min(pressure,1.8e9)  ! VIP limiter
+
+      if (OLD_DODECANE.eq.1) then
+       pcav=PCAV_TAIT
+       cv=2.116D+7 ! for dodecane at 106 MPa and 363 K
+       P0 = 1D+6    ! dyne/cm^2 reference pressure
+       rho0= 0.6973 ! dodecane at 0.1 MPa and 363 K
+       A = 0.0881
+       B = 5.657D+8 ! dyne/cm^2 at 363 K
+       Tc = 658.6
+       T = internal_energy/cv
+       rho0 = 0.9291654-0.5174730*1e-3*T-3.338672*1E-7*T*T
+       Tred = T/Tc
+       pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
+       if (pressure.lt.pcav) then
+        pressure=pcav
+       endif
+      endif
+
+      return
+      end subroutine EOS_dodecane
+
+      subroutine EOS_dodecane_ADIABATIC(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+      
+      REAL_T rho,pressure
+      REAL_T A,B,rhobar,pcav
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=RHOBAR_TAIT ! g/cm^3
+      pcav=PCAV_TAIT
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+      
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+      return
+      end subroutine EOS_dodecane_ADIABATIC
+
+
+      subroutine SOUNDSQR_dodecane(rho_in,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho_in
+      REAL_T rmin,rmax
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T c,c0,D,E,pressure,T,T0p5,T1p5,T3p0
+      REAL_T A,B,rhobar,pcav,rhocav,rho_sound
+
+      rho=rho_in
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      rmin = 0.500 ! at 0.1 MPa, T = 433
+      rmax = 0.850 ! at 400 MPa, T = 298
+      rho = min(rho,rmax)
+      rho = max(rho,rmin)
+
+      call EOS_dodecane(rho,internal_energy,T,pressure)
+
+      T0p5 = T**0.5
+      T1p5 = T0p5*T
+      T3p0 = T1p5*T1p5
+      ! sound speed at atmospheric conditions - cm/s
+      c0 = (4094-183.21*T0p5+0.07974*T1p5-2.348e-6*T3p0)*100.
+      if (c0.le.zero) then
+       print *,"invalid sound speed at temperature ",T,": c0 =",c0,rho,T,pressure
+       c0 = 2.25e10
+!      stop
+      endif
+      ! sound speed at pressure 
+     !D = 0.005208-5.1495e-4*T-5.55e-14*T*pressure; ! pressure needed in MPa
+      D = 0.1652083+2.5e-3*T-5.85e-13*T*pressure; ! modified correlation
+      E = (-56.91+7.3674e-5*T*T+0.02260*T+463.5*exp(-0.001687*T))*1e7 !  convert from dyne/cm^2 to MPa
+      c=c0/(1-D*log((E+pressure)/(E+1D6))); ! already in cm/s
+      soundsqr=c*c
+
+      if (OLD_DODECANE.eq.1) then
+       A=A_TAIT   ! dyne/cm^2
+       B=B_TAIT  ! dyne/cm^2
+       rhobar=RHOBAR_TAIT ! g/cm^3
+       pcav=PCAV_TAIT
+       rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
+       pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+       if (rhocav.le.zero) then
+        print *,"rhocav invalid"
+        stop
+       endif
+
+       if (pressure.lt.pcav) then
+        rho_sound=rhocav
+       else
+        rho_sound=rho
+       endif
+       soundsqr=(GAMMA_TAIT*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_TAIT-one) )
+      endif
+
+      return
+      end subroutine SOUNDSQR_dodecane
+
+
+! end dodecane routines (material type=15)
+
+
+
+      subroutine INTERNAL_tait_rho(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=temperature*cv
+
+      return
+      end subroutine INTERNAL_tait_rho
+
+      subroutine TEMPERATURE_tait_rho(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_tait_rho
+
+      subroutine EOS_tait_rho(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+
+      return
+      end subroutine EOS_tait_rho
+
+
+      subroutine EOS_tait_ADIABATIC_rho(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait adiabatic rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine EOS_tait_ADIABATIC_rho
+
+
+
+      subroutine SOUNDSQR_tait_rho(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,rhobar,pcav,rhocav,pressure
+      REAL_T rho_sound
+
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in soundsqr tait rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+      
+      if (rhocav.le.zero) then
+       print *,"rhocav invalid"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_TAIT*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_TAIT-one) )
+
+      return
+      end subroutine SOUNDSQR_tait_rho
+
+
+
+      subroutine INTERNAL_tait_rhohydro(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=temperature*cv
+
+      return
+      end subroutine INTERNAL_tait_rhohydro
+
+      subroutine TEMPERATURE_tait_rhohydro(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_tait_rhohydro
+
+      subroutine EOS_tait_rhohydro(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine EOS_tait_rhohydro
+
+
+      subroutine SOUNDSQR_tait_rhohydro(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,rhobar,pcav,rhocav,pressure
+      REAL_T rho_sound
+
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in soundsqr tait rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+      
+      if (rhocav.le.zero) then
+       print *,"rhocav invalid"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_TAIT*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_TAIT-one) )
+
+      return
+      end subroutine SOUNDSQR_tait_rhohydro
+
+
+
+
+      subroutine INTERNAL_tait_rho3(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=temperature*cv
+
+      return
+      end subroutine INTERNAL_tait_rho3
+
+      subroutine TEMPERATURE_tait_rho3(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_tait_rho3
+
+      subroutine EOS_tait_rho3(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      if (num_materials.lt.3) then
+       print *,"num materials must be at least 3"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(3) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine EOS_tait_rho3
+
+
+      subroutine EOS_tait_ADIABATIC_rho3(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      if (num_materials.lt.3) then
+       print *,"num materials must be at least 3"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(3) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait adiabatic rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine EOS_tait_ADIABATIC_rho3
+
+
+
+      subroutine SOUNDSQR_tait_rho3(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,rhobar,pcav,rhocav,pressure
+      REAL_T rho_sound
+
+
+      if (num_materials.lt.3) then
+       print *,"num materials must be at least 3"
+       stop
+      endif
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(3) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in soundsqr tait rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT  ! dyne/cm^2
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+      
+      if (rhocav.le.zero) then
+       print *,"rhocav invalid"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_TAIT*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_TAIT-one) )
+
+      return
+      end subroutine SOUNDSQR_tait_rho3
+
+
+! --------------- NEW EOS STUFF 10,11,12 --------------------
+
+
+      subroutine INTERNAL_tait_rho2(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=temperature*cv
+
+      return
+      end subroutine INTERNAL_tait_rho2
+
+      subroutine TEMPERATURE_tait_rho2(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_tait_rho2
+
+      subroutine EOS_tait_rho2(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(2) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT  ! dyne/cm^2
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine EOS_tait_rho2
+
+
+      subroutine EOS_tait_ADIABATIC_rho2(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(2) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait adiabatic rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT  ! dyne/cm^2
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine EOS_tait_ADIABATIC_rho2
+
+
+
+      subroutine SOUNDSQR_tait_rho2(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,rhobar,pcav,rhocav,pressure
+      REAL_T rho_sound
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(2) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in soundsqr tait rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT  ! dyne/cm^2
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+      
+      if (rhocav.le.zero) then
+       print *,"rhocav invalid"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_TAIT*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_TAIT-one) )
+
+      return
+      end subroutine SOUNDSQR_tait_rho2
+
+
+
+      subroutine INTERNAL_koren_rho2(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=temperature*cv
+
+      return
+      end subroutine
+
+      subroutine TEMPERATURE_koren_rho2(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine
+
+      subroutine EOS_koren_rho2(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,rhobar,pcav,GAMMA_KOREN
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+! Koren:
+! p=(rho/rhoref)^gamma (1+B)pref -B pref
+!  = (1+B)pref ( (rho/rhoref)^gamma - 1 ) + pref
+! So: A -> pref
+!     B -> (1+B)pref
+
+      A=1.0
+      B=1.0 
+      rhobar=fort_denconst(2) ! g/cm^3
+
+      if (rhobar.lt.0.0001) then
+       print *,"rhobar invalid in eos koren rho2"
+       stop
+      endif
+
+      GAMMA_KOREN=1.4
+      pcav=0.001  ! dyne/cm^2
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+! Koren:
+! p=(rho/rhoref)^gamma (1+B)pref -B pref
+!  = (1+B)pref ( (rho/rhoref)^gamma - 1 ) + pref
+! So: A -> pref
+!     B -> (1+B)pref
+
+      pressure=B*( (rho/rhobar)**GAMMA_KOREN - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine
+
+
+      subroutine EOS_koren_ADIABATIC_rho2(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,pressure
+      REAL_T A,B,rhobar,GAMMA_KOREN,pcav
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+
+      A=1.0
+      B=1.0
+      rhobar=fort_denconst(2) ! g/cm^3
+
+      if (rhobar.lt.0.0001) then
+       print *,"rhobar invalid in eos koren adiabatic rho"
+       stop
+      endif
+
+      GAMMA_KOREN=1.4
+      pcav=0.001
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_KOREN - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine
+
+
+
+      subroutine SOUNDSQR_koren_rho2(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,rhobar,GAMMA_KOREN,pcav,rhocav,pressure
+      REAL_T rho_sound
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      A=1.0
+      B=1.0
+      rhobar=fort_denconst(2) ! g/cm^3
+
+      if (rhobar.lt.0.0001) then
+       print *,"rhobar invalid in soundsqr koren rho"
+       stop
+      endif
+
+      GAMMA_KOREN=1.4
+      pcav=0.001
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_KOREN) )
+      pressure=B*( (rho/rhobar)**GAMMA_KOREN - one ) + A
+      
+      if (rhocav.le.zero) then
+       print *,"rhocav invalid"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_KOREN*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_KOREN-one) )
+
+      return
+      end subroutine
+
+
+      subroutine INTERNAL_koren_rho1(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=temperature*cv
+
+      return
+      end subroutine
+
+      subroutine TEMPERATURE_koren_rho1(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,cv
+
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine
+
+      subroutine EOS_koren_rho1(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure
+      REAL_T A,B,rhobar,GAMMA_KOREN,pcav
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+! Koren:
+! p=(rho/rhoref)^gamma (1+B)pref -B pref
+!  = (1+B)pref ( (rho/rhoref)^gamma - 1 ) + pref
+! So: A -> pref
+!     B -> (1+B)pref
+
+      A=1.0
+      B=3001.0
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos koren rho"
+       stop
+      endif
+
+      GAMMA_KOREN=7.0
+      pcav=0.001  ! dyne/cm^2
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+! Koren:
+! p=(rho/rhoref)^gamma (1+B)pref -B pref
+!  = (1+B)pref ( (rho/rhoref)^gamma - 1 ) + pref
+! So: A -> pref
+!     B -> (1+B)pref
+
+      pressure=B*( (rho/rhobar)**GAMMA_KOREN - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine
+
+
+      subroutine EOS_koren_ADIABATIC_rho1(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,pressure
+      REAL_T A,B,rhobar,GAMMA_KOREN,pcav
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+
+      A=1.0
+      B=3001.0
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos koren adiabatic rho"
+       stop
+      endif
+
+      GAMMA_KOREN=7.0
+      pcav=0.001
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_KOREN - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+      
+
+      return
+      end subroutine
+
+
+
+      subroutine SOUNDSQR_koren_rho1(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,soundsqr
+      REAL_T A,B,rhobar,GAMMA_KOREN,pcav,rhocav,pressure
+      REAL_T rho_sound
+
+
+      if (num_materials.lt.2) then
+       print *,"num materials must be at least 2"
+       stop
+      endif
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      A=1.0
+      B=3001.0
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in soundsqr koren rho"
+       stop
+      endif
+
+      GAMMA_KOREN=7.0
+      pcav=0.001
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_KOREN) )
+      pressure=B*( (rho/rhobar)**GAMMA_KOREN - one ) + A
+      
+      if (rhocav.le.zero) then
+       print *,"rhocav invalid"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_KOREN*B/rhobar)*( (rho_sound/rhobar)**(GAMMA_KOREN-one) )
+
+      return
+      end subroutine SOUNDSQR_koren_rho1
+
+
+
+! -------------------- END OF EOS 10,11,12 ----------------
+
+
+       ! BENCHMARK TESTS ONLY REPORT ENERGY, PRESSURE, DENSITY, and VELOCITY,
+       ! THESE tests are inviscid and have zero thermal diffusion,
+       ! therefore not important what cp or cv are so just set them
+       ! to 1 for (a) inputs.shockturbulence, (b) Gary Sod test problem
+       ! inputs.sod, (c) inputs.strong, (d) inputs.mach4
+      subroutine simple_air_parms(R,cp,cv,gamma_constant,omega)
+      use probcommon_module
+      IMPLICIT NONE
+      REAL_T R,cp,cv,gamma_constant,omega
+
+      cv=one
+      gamma_constant=GAMMA_SIMPLE_PARMS
+      cp=gamma_constant*cv
+      R=cp-cv
+      omega=gamma_constant-one
+
+      return
+      end subroutine simple_air_parms
+
+
+      subroutine air_parms(R,cp,cv,gamma_constant,omega)
+      use probcommon_module
+      IMPLICIT NONE
+      REAL_T, intent(out) :: R,cp,cv,gamma_constant,omega
+
+      R=R_AIR_PARMS  ! ergs/(Kelvin g)
+      cv=CV_AIR_PARMS ! ergs/(Kelvin g)
+      cp=cv+R  ! ergs/(Kelvin g)
+      gamma_constant=cp/cv
+      omega=gamma_constant-one
+
+      return
+      end subroutine air_parms
+
+       ! density_at_depth previously initialized by:
+       ! init_density_at_depth() 
+       ! called from: FORT_DENCOR, general_hydrostatic_pressure_density,
+       ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
+       ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
+      subroutine tait_hydrostatic_pressure_density( &
+        xpos,rho,pres,from_boundary_hydrostatic)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(inout) :: rho
+      REAL_T, intent(inout) :: pres
+      INTEGER_T, intent(in) :: from_boundary_hydrostatic
+      REAL_T denfree,zfree
+      REAL_T z_at_depth
+
+      if (is_in_probtype_list().eq.1) then
+
+       call SUB_hydro_pressure_density(xpos,rho,pres, &
+               from_boundary_hydrostatic)
+
+      else
+
+       ! in tait_hydrostatic_pressure_density
+       if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
+        rho=one
+        call EOS_tait_ADIABATIC(rho,pres)
+       ! JICF nozzle+pressure bc
+       else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
+        rho=one
+        call EOS_tait_ADIABATIC(rho,pres)
+        ! JICF
+       else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
+        rho=fort_denconst(1)
+        call EOS_tait_ADIABATIC_rho(rho,pres)
+       ! impinging jets
+       else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
+                (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
+        rho=fort_denconst(1)
+        call EOS_tait_ADIABATIC_rho(rho,pres)
+
+        ! in: tait_hydrostatic_pressure_density
+       else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
+
+        if (probloy.ne.zero) then
+         print *,"probloy must be 0 for bubble jetting problem"
+         stop
+        endif
+        ! yblob is distance from domain bottom of charge
+        ! zblob is depth of charge
+        denfree=one
+        zfree=zblob+yblob  ! relative to computational grid
+        z_at_depth=yblob
+        if (xpos(SDIM).gt.zfree) then
+         rho=denfree
+        else
+         rho= &
+           ((density_at_depth-denfree)/ &
+            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+        endif
+        call EOS_tait_ADIABATIC(rho,pres)
+
+       else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
+
+        if (probloy.ne.zero) then
+         print *,"probloy must be 0 for cavitation problem"
+         stop
+        endif
+        ! yblob is distance from domain bottom of charge/sphere
+        ! zblob is depth of charge (for jwl problem)
+        denfree=one
+        if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+         zfree=zblob+yblob  ! relative to computational grid
+         z_at_depth=yblob
+        else if (axis_dir.eq.10) then
+         zfree=zblob
+         z_at_depth=zero
+        else if (axis_dir.eq.20) then
+         print *,"there is no gravity for the CODY ESTEBE created test problem"
+         stop
+        else
+         print *,"axis_dir out of range"
+         stop
+        endif
+        if (xpos(SDIM).gt.zfree) then
+         rho=denfree
+        else
+         rho= &
+           ((density_at_depth-denfree)/ &
+            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+        endif
+        call EOS_tait_ADIABATIC(rho,pres)
+
+       else if (fort_material_type(1).eq.13) then
+
+        denfree=fort_denconst(1)
+        if (SDIM.eq.2) then
+         zfree=probhiy
+         z_at_depth=probloy
+        else if (SDIM.eq.3) then
+         zfree=probhiz
+         z_at_depth=probloz
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+         ! density_at_depth is found so that
+         ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
+         !
+        if (xpos(SDIM).gt.zfree) then
+         rho=denfree
+        else
+         rho= &
+           ((density_at_depth-denfree)/ &
+            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+        endif
+        call EOS_tait_ADIABATIC_rhohydro(rho,pres)
+       else
+        print *,"probtype invalid tait_hydrostatic_pressure_density"
+        stop
+       endif
+
+      endif
+
+      return
+      end subroutine tait_hydrostatic_pressure_density
+
+
+       ! only called if override_density=1 or override_density=2
+       ! only takes into account fort_drhodz.
+      subroutine default_hydrostatic_pressure_density( &
+        xpos,rho,pres,liquid_temp, &
+        gravity_normalized, &
+        imat,override_density)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imat,override_density
+      INTEGER_T nmat
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(inout) :: rho,pres
+      REAL_T, intent(in) :: gravity_normalized
+      REAL_T, intent(in) :: liquid_temp
+      REAL_T denfree,zfree,z_at_depth
+      REAL_T energy_free,csqr,max_depth,DrhoDz
+
+
+      nmat=num_materials
+      if ((imat.lt.1).or.(imat.gt.nmat)) then
+       print *,"imat invalid"
+       stop
+      endif
+
+      if ((override_density.ne.1).and. &
+          (override_density.ne.2)) then
+       print *,"override_density invalid"
+       stop
+      endif
+      if (liquid_temp.ge.zero) then
+       ! do nothing
+      else
+       print *,"liquid_temp cannot be negative"
+       stop
+      endif
+
+       ! in default_hydrostatic_pressure_density
+      denfree=fort_denconst(imat)
+      energy_free=fort_energyconst(imat)
+      if (energy_free.gt.zero) then
+       ! do nothing
+      else
+       print *,"energy_free invalid in default_hydrostatic_pressure_density"
+       print *,"imat,energy_free= ",imat,energy_free
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       zfree=probhiy
+       z_at_depth=probloy
+      else if (SDIM.eq.3) then
+       zfree=probhiz
+       z_at_depth=probloz
+      else
+       print *,"sdim invalid"
+       stop
+      endif
+
+! let z be depth
+! rho=rho0 + Az
+! p=c^2 rho
+! grad p/rho+g=0
+! p_z=-(rho0+Az)g
+! p=-rho0 g z - Az^2 g/2 +C
+! at z=0, p=c^2 rho0=C
+! at z=L,
+! -rho0 g L - A L^2 g/2 + c^2 rho0=c^2(rho0+A L)
+! A( -L^2 g/2 - c^2 L)=rho0 g L
+! A=rho0 g/(-L g/2 -c^2)=rho0/(c^2/|g|-L/2)
+
+      call SOUNDSQR_tait(denfree,energy_free,csqr)
+      max_depth=zfree-z_at_depth
+
+      if (fort_drhodz(imat).eq.-one) then
+       DrhoDz=denfree/(csqr/abs(gravity)-half*max_depth)
+      else if (fort_drhodz(imat).ge.zero) then
+       DrhoDz=fort_drhodz(imat)
+      else
+       print *,"fort_drhodz invalid"
+       stop
+      endif
+
+      if (DrhoDz.ge.zero) then
+       ! do nothing
+      else
+       print *,"DrhoDz invalid"
+       stop
+      endif
+
+      if (xpos(SDIM).gt.zfree) then
+       rho=denfree
+      else if (xpos(SDIM).le.zfree) then
+       rho=denfree+DrhoDz*(zfree-xpos(SDIM))
+      else
+       print *,"xpos(SDIM) became corrupt"
+       stop
+      endif
+
+       ! rho=rho(T,Y,z)
+      if (override_density.eq.1) then
+
+       if ((DrhoDz.eq.zero).and.(gravity_normalized.eq.zero)) then
+        rho=fort_denconst(1)
+        pres=zero
+       else if ((DrhoDz.eq.zero).and. &
+                (gravity_normalized.ne.zero)) then
+        pres=-gravity_normalized*rho*xpos(SDIM)
+       else if (DrhoDz.ne.zero) then
+        pres=csqr*rho
+       else
+        print *,"DrhoDz and/or gravity_normalized invalid"
+        stop
+       endif
+
+       ! temperature dependent buoyancy force term
+      else if (override_density.eq.2) then
+
+       pres=-gravity_normalized*rho*xpos(SDIM)
+
+      else
+       print *,"override_density invalid"
+       stop
+      endif
+
+      return
+      end subroutine default_hydrostatic_pressure_density
+
+      subroutine EOS_air_rho2(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure,omega
+      REAL_T cp,cv,R,pressure_adjust,preshydro,rhohydro
+      REAL_T xpos(SDIM)
+      INTEGER_T from_boundary_hydrostatic
+
+      from_boundary_hydrostatic=0
+
+      call air_parms(R,cp,cv,gamma_constant,omega) 
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be negative"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure_adjust=omega*fort_denconst(2)* &
+         cv*fort_tempconst(2)
+
+       ! first material uses "EOS_tait_rhohydro" ?
+      if (fort_material_type(1).eq.13) then
+       if (SDIM.eq.2) then
+        xpos(SDIM)=yblob
+       else if (SDIM.eq.3) then
+        xpos(SDIM)=zblob
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+               from_boundary_hydrostatic)
+      else
+       preshydro=1.0D+6
+      endif
+      pressure_adjust=preshydro/pressure_adjust
+
+      pressure=omega*rho*internal_energy*pressure_adjust
+
+      return
+      end subroutine EOS_air_rho2
+
+
+
+      subroutine EOS_air_rho2_ADIABAT(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,gamma_constant,pressure
+      REAL_T cp,cv,R,rhohydro,omega
+      REAL_T RHOI,PI
+      REAL_T xpos(SDIM)
+      INTEGER_T from_boundary_hydrostatic
+
+      from_boundary_hydrostatic=0
+
+      RHOI=fort_denconst(2)
+      call general_hydrostatic_pressure(PI)
+    
+      call air_parms(R,cp,cv,gamma_constant,omega)
+      if (RHOI.le.zero) then
+       print *,"RHOI invalid"
+       stop
+      endif
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      gamma_constant=cp/cv
+      if (fort_material_type(1).eq.13) then
+       if (SDIM.eq.2) then
+        xpos(SDIM)=yblob
+       else if (SDIM.eq.3) then
+        xpos(SDIM)=zblob
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       call tait_hydrostatic_pressure_density(xpos,rhohydro,PI, &
+               from_boundary_hydrostatic)
+      endif
+
+      pressure=PI*((rho/RHOI)**gamma_constant)
+
+      return
+      end subroutine EOS_air_rho2_ADIABAT
+
+
+      subroutine ENTROPY_air_rho2(rho,internal_energy,entropy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure,entropy,press_adiabat
+
+      call EOS_air_rho2(rho,internal_energy,pressure)
+      call EOS_air_rho2_ADIABAT(rho,press_adiabat)
+      if (press_adiabat.le.zero) then
+       print *,"press_adiabat invalid"
+       stop
+      endif
+      entropy=pressure/press_adiabat
+
+      return
+      end subroutine ENTROPY_air_rho2
+
+      subroutine INTERNAL_ENTROPY_air_rho2(rho,entropy,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,entropy,internal_energy
+      REAL_T press_adiabat,unit_internal_energy,unit_press
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (entropy.le.zero) then
+       print *,"entropy invalid"
+       stop
+      endif
+      call EOS_air_rho2_ADIABAT(rho,press_adiabat)
+      unit_internal_energy=one
+      call EOS_air_rho2(rho,unit_internal_energy,unit_press)
+      internal_energy=press_adiabat*entropy/unit_press
+      if (internal_energy.le.zero) then
+       print *,"internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_ENTROPY_air_rho2
+
+
+
+
+      subroutine SOUNDSQR_air_rho2(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure,omega
+      REAL_T soundsqr
+      REAL_T cp,cv,R,pressure_adjust,preshydro,rhohydro
+      REAL_T xpos(SDIM)
+      INTEGER_T from_boundary_hydrostatic
+
+      from_boundary_hydrostatic=0
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure_adjust=omega*fort_denconst(2)* &
+         cv*fort_tempconst(2)
+      if (fort_material_type(1).eq.13) then
+       if (SDIM.eq.2) then
+        xpos(SDIM)=yblob
+       else if (SDIM.eq.3) then
+        xpos(SDIM)=zblob
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+               from_boundary_hydrostatic)
+      else
+       preshydro=1.0D+6
+      endif
+      pressure_adjust=preshydro/pressure_adjust
+      pressure=omega*rho*internal_energy*pressure_adjust
+      soundsqr=gamma_constant*pressure/rho
+
+      return
+      end subroutine SOUNDSQR_air_rho2
+
+
+      subroutine INTERNAL_air_rho2(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0 in internal_air_rho2"
+       print *,temperature, rho, R, cp, cv
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      internal_energy=cv*temperature
+
+      return
+      end subroutine
+
+
+
+      subroutine TEMPERATURE_air_rho2(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_air_rho2
+
+
+
+! e=c_v T
+! gamma=cp/cv
+! p=(cp/cv-1)rho e=(cp-cv)rho e/cv=(cp-cv)rho T  R=cp-cv
+! 1 erg=1 dyne cm=1 g cm^2/s^2 = 10^{-7} Joules
+! 1 J/(g K)=10^7 erg/(g K)
+! p has units dyne/cm^2=g (cm/s^2)/cm^2=g/(s^2 cm)
+! T has units of Kelvin
+! cp,cv have units erg/(g K)= (cm^2/s^2)/K
+! (cp-cv) rho T units=( (cm^2/s^2)/K ) (g/cm^3) K=g/(cm s^2)
+!
+! for air, R=287.0 m^2/(s^2 K)=0.287D+7 cm^2/(s^2 K)
+! cv=0.72D+7 cm^2/(s^2 K)
+!
+! for SF6, R=56.92 m^2/(s^2 K)=0.05692D+7 cm^2/(s^2 K)
+
+
+      subroutine EOS_air(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+        ! e=cv T
+        ! rho=g/(cm^3)
+        ! internal_energy has units ergs/g
+        ! pressure has units of g/(cm^3)  ergs/g =ergs/cm^3
+        ! 1erg=1 g cm^2/s^2
+        ! erg/cm^3=(g cm^2/s^2)/cm^3 = g/(s^2 cm)
+        ! pressure also described as dyne/cm^2 = (g cm/s^2)/cm^2=g/(cm s^2) 
+      pressure=omega*rho*internal_energy  ! omega=gamma-1
+
+      return
+      end subroutine EOS_air
+
+
+      subroutine EOS_simple_air(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T cp,cv,R,omega
+
+      call simple_air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=omega*rho*internal_energy
+
+      return
+      end subroutine EOS_simple_air
+
+
+      subroutine EOS_air_ADIABAT(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,gamma_constant,pressure
+      REAL_T cp,cv,R,RHOI,PI,omega
+
+      RHOI=fort_denconst(2)
+        ! PI=1.0D+6
+      call general_hydrostatic_pressure(PI)
+        ! gamma=1.399
+      call air_parms(R,cp,cv,gamma_constant,omega)
+
+      if (RHOI.le.zero) then
+       print *,"RHOI invalid"
+       stop
+      endif
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=PI*(rho/RHOI)**gamma_constant
+
+      return
+      end subroutine EOS_air_ADIABAT
+
+      subroutine get_rhocav(rho)
+      use probcommon_module
+      IMPLICIT NONE
+       
+      REAL_T rho
+      REAL_T term1,term2
+
+        ! p=B((rho/rho0)^gamma - 1 ) + A
+        ! rho=rho0(((p-A)/B+1)^(1/gamma))
+      term1=(PCAV_TAIT-A_TAIT)/B_TAIT+one
+      term2=term1**(one/GAMMA_TAIT)
+      rho=RHOBAR_TAIT*term2
+
+      return
+      end subroutine get_rhocav
+
+      subroutine EOS_vacuum(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,gamma_constant,pressure
+      REAL_T cp,cv,R,RHOI,PI,omega
+
+      call get_rhocav(RHOI)
+      PI=PCAV_TAIT
+      call air_parms(R,cp,cv,gamma_constant,omega)
+
+      if (RHOI.le.zero) then
+       print *,"RHOI invalid"
+       stop
+      endif
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=PI*(rho/RHOI)**gamma_constant
+
+      return
+      end subroutine EOS_vacuum
+
+
+
+      subroutine ENTROPY_air(rho,internal_energy,entropy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure,entropy,press_adiabat
+
+      call EOS_air(rho,internal_energy,pressure)
+      call EOS_air_ADIABAT(rho,press_adiabat)
+      if (press_adiabat.le.zero) then
+       print *,"press_adiabat invalid"
+       stop
+      endif
+      entropy=pressure/press_adiabat
+
+      return
+      end subroutine ENTROPY_air
+
+      subroutine INTERNAL_ENTROPY_air(rho,entropy,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,entropy,internal_energy
+      REAL_T press_adiabat,unit_internal_energy,unit_press
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (entropy.le.zero) then
+       print *,"entropy invalid"
+       stop
+      endif
+      call EOS_air_ADIABAT(rho,press_adiabat)
+      unit_internal_energy=one
+      call EOS_air(rho,unit_internal_energy,unit_press)
+      internal_energy=press_adiabat*entropy/unit_press
+      if (internal_energy.le.zero) then
+       print *,"internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_ENTROPY_air
+
+
+
+
+         ! He+28 percent air
+
+      subroutine EOS_Marquina(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T cp,cv,R
+
+    
+      R=1.578D+7  
+      cv=2.44D+7  
+
+      cp=cv+R 
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      gamma_constant=cp/cv
+      pressure=(gamma_constant-one)*rho*internal_energy
+
+      return
+      end subroutine
+
+! e=(E/rho) - (1/2) (u^2 + v^2)
+! c^2=dp/drho + (p/rho^2) dp/de
+! p=(gamma-1)rho e
+! c^2=(gamma-1)e+((gamma-1)rho e/rho^2)(gamma-1)rho=
+!   (gamma-1)e+(gamma-1) e (gamma-1)=(p/rho)(1+(gamma-1))=gamma p/rho
+!
+
+
+      subroutine SOUNDSQR_air(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T soundsqr
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=omega*rho*internal_energy
+      soundsqr=gamma_constant*pressure/rho
+
+      return
+      end subroutine
+
+
+      subroutine SOUNDSQR_simple_air(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T soundsqr
+      REAL_T cp,cv,R,omega
+
+      call simple_air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=omega*rho*internal_energy
+      soundsqr=gamma_constant*pressure/rho
+
+      return
+      end subroutine
+
+
+ 
+         ! He+28 percent air
+
+      subroutine SOUNDSQR_Marquina(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T soundsqr
+      REAL_T cp,cv,R
+
+    
+      R=1.578D+7  
+      cv=2.44D+7  
+
+      cp=cv+R 
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      gamma_constant=cp/cv
+      pressure=(gamma_constant-one)*rho*internal_energy
+      soundsqr=gamma_constant*pressure/rho
+
+      return
+      end subroutine
+
+
+      subroutine INTERNAL_air(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+        ! cv has units of ergs/(Kelvin g)
+        ! internal energy has units of ergs/g
+      internal_energy=cv*temperature
+
+      return
+      end subroutine INTERNAL_air
+
+
+      subroutine INTERNAL_simple_air(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call simple_air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      internal_energy=cv*temperature
+
+      return
+      end subroutine
+
+       ! He+28 percent air
+
+      subroutine INTERNAL_Marquina(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R
+
+    
+      R=1.578D+7  
+      cv=2.44D+7  
+
+      cp=cv+R 
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      gamma_constant=cp/cv
+
+      internal_energy=cv*temperature
+
+      return
+      end subroutine
+
+
+      subroutine TEMPERATURE_air(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+    
+      call air_parms(R,cp,cv,gamma_constant,omega)
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      temperature=internal_energy/cv
+
+      return
+      end subroutine
+
+
+      subroutine TEMPERATURE_simple_air(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+    
+      call simple_air_parms(R,cp,cv,gamma_constant,omega)
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      temperature=internal_energy/cv
+
+      return
+      end subroutine
+
+
+        ! He+28 percent air
+
+      subroutine TEMPERATURE_Marquina(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R
+
+    
+      R=1.578D+7  
+      cv=2.44D+7  
+
+      cp=cv+R 
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      gamma_constant=cp/cv
+
+      temperature=internal_energy/cv
+
+      return
+      end subroutine
+
+
+! e=(E/rho) - (1/2) (u^2 + v^2)
+! c^2=dp/drho + (p/rho^2) dp/de
+! p=(gamma-1)rho e
+! c^2=(gamma-1)e+((gamma-1)rho e/rho^2)(gamma-1)rho=
+!   (gamma-1)e+(gamma-1) e (gamma-1)=(p/rho)(1+(gamma-1))=gamma p/rho
+!
+
+      subroutine SOUNDSQR_airADIABAT(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T soundsqr
+      REAL_T cp,cv,R,phyd,rho0,omega
+
+
+      phyd=1.0D+6 
+      rho0=fort_denconst(2)
+
+      if (rho0.le.zero) then
+       print *,"rho0 negative"
+       stop
+      endif
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=phyd*((rho/rho0)**gamma_constant)
+      soundsqr=gamma_constant*pressure/rho
+
+      return
+      end subroutine SOUNDSQR_airADIABAT
+
+
+      subroutine SOUNDSQR_vacuum(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T soundsqr
+      REAL_T cp,cv,R,phyd,rho0,omega
+
+
+      phyd=PCAV_TAIT
+      call get_rhocav(rho0)
+
+      if (rho0.le.zero) then
+       print *,"rho0 negative"
+       stop
+      endif
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=phyd*((rho/rho0)**gamma_constant)
+      soundsqr=gamma_constant*pressure/rho
+
+      return
+      end subroutine SOUNDSQR_vacuum
+
+
+ 
+      subroutine INTERNAL_airADIABAT(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      internal_energy=cv*temperature
+
+      return
+      end subroutine INTERNAL_airADIABAT
+
+
+      subroutine INTERNAL_vacuum(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      internal_energy=cv*temperature
+
+      return
+      end subroutine INTERNAL_vacuum
+
+      subroutine TEMPERATURE_airADIABAT(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_airADIABAT
+
+
+      subroutine TEMPERATURE_vacuum(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_vacuum
+
+! e=c_v T
+! gamma=cp/cv
+! p=(cp/cv-1)rho e=(cp-cv)rho e/cv=(cp-cv)rho T  R=cp-cv
+! 1 erg=1 dyne cm=1 g cm^2/s^2 = 10^{-7} Joules
+! 1 J/(g K)=10^7 erg/(g K)
+! p has units dyne/cm^2=g (cm/s^2)/cm^2=g/(s^2 cm)
+! T has units of Kelvin
+! cp,cv have units erg/(g K)= (cm^2/s^2)/K
+! (cp-cv) rho T units=( (cm^2/s^2)/K ) (g/cm^3) K=g/(cm s^2)
+!
+! for air, R=287.0 m^2/(s^2 K)=0.287D+7 cm^2/(s^2 K)
+! cv=0.72D+7 cm^2/(s^2 K)
+!
+! for SF6, R=56.92 m^2/(s^2 K)=0.05692D+7 cm^2/(s^2 K)
+! cp=0.097 kJ/(mol K)=0.097 1000/146.05 J/(g K)=
+! 0.097 1000/146.05 10^7  erg/(g K)=0.664D+7 cm^2/(s^2 K)
+! R=cp-cv
+! cv=cp-R=(0.664-0.05692)=0.607D+7 cm^2/(s^2 K)
+! gamma=cp/cv=0.664/0.607=1.09
+
+      subroutine SF6_parms(R,cp,cv,gamma_constant,omega)
+      use probcommon_module
+      IMPLICIT NONE
+      REAL_T R,cp,cv,gamma_constant,omega
+
+      R=0.05692D+7
+      cp=0.664D+7
+      cv=0.607D+7
+      gamma_constant=cp/cv
+      omega=gamma_constant-one
+
+      return
+      end subroutine SF6_parms
+
+      subroutine EOS_SF6(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T cp,cv,R,omega
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+       
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=omega*rho*internal_energy
+
+      return
+      end subroutine EOS_SF6
+
+
+      subroutine EOS_SF6_ADIABAT(rho,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,gamma_constant,pressure
+      REAL_T cp,cv,R,RHOI,PI,omega
+
+      RHOI=fort_denconst(2)
+      call general_hydrostatic_pressure(PI)
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+       
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=PI*(rho/RHOI)**gamma_constant
+
+      return
+      end subroutine EOS_SF6_ADIABAT
+
+      subroutine ENTROPY_SF6(rho,internal_energy,entropy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,pressure,entropy,press_adiabat
+
+      call EOS_SF6(rho,internal_energy,pressure)
+      call EOS_SF6_ADIABAT(rho,press_adiabat)
+      if (press_adiabat.le.zero) then
+       print *,"press_adiabat invalid"
+       stop
+      endif
+      entropy=pressure/press_adiabat
+
+      return
+      end subroutine ENTROPY_SF6
+
+      subroutine INTERNAL_ENTROPY_SF6(rho,entropy,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,entropy,internal_energy
+      REAL_T press_adiabat,unit_internal_energy,unit_press
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (entropy.le.zero) then
+       print *,"entropy invalid"
+       stop
+      endif
+      call EOS_SF6_ADIABAT(rho,press_adiabat)
+      unit_internal_energy=one
+      call EOS_SF6(rho,unit_internal_energy,unit_press)
+      internal_energy=press_adiabat*entropy/unit_press
+      if (internal_energy.le.zero) then
+       print *,"internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_ENTROPY_SF6
+
+      subroutine TEMPERATURE_ENTROPY_SF6(rho,entropy,temperature)
+      use probcommon_module
+      IMPLICIT NONE
+      
+      REAL_T R,cp,cv,gamma_constant,omega 
+      REAL_T rho,entropy,temperature,RHOI
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+      RHOI=fort_denconst(2)
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (entropy.le.zero) then
+       print *,"entropy invalid"
+       stop     
+      endif    
+      temperature=entropy*((rho/RHOI)**omega)
+      if (temperature.le.zero) then
+       print *,"temperature invalid"
+       stop
+      endif
+               
+      return   
+      end subroutine TEMPERATURE_ENTROPY_SF6
+
+      subroutine ENTROPY_TEMPERATURE_SF6(rho,temperature,entropy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T R,cp,cv,gamma_constant,omega 
+      REAL_T rho,temperature,entropy,RHOI
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+      RHOI=fort_denconst(2)
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature invalid"
+       stop     
+      endif    
+      entropy=temperature/((rho/RHOI)**omega)
+      if (entropy.le.zero) then
+       print *,"entropy invalid"
+       stop
+      endif
+
+      return
+      end subroutine ENTROPY_TEMPERATURE_SF6
+
+
+! e=(E/rho) - (1/2) (u^2 + v^2)
+! c^2=dp/drho + (p/rho^2) dp/de
+! p=(gamma-1)rho e
+! c^2=(gamma-1)e+((gamma-1)rho e/rho^2)(gamma-1)rho=
+!   (gamma-1)e+(gamma-1) e (gamma-1)=(p/rho)(1+(gamma-1))=gamma p/rho
+! 
+      subroutine SOUNDSQR_SF6(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T soundsqr
+      REAL_T cp,cv,R,omega
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      pressure=omega*rho*internal_energy
+      soundsqr=gamma_constant*pressure/rho
+
+      return
+      end subroutine
+
+
+      subroutine INTERNAL_SF6(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      internal_energy=cv*temperature
+
+      return
+      end subroutine
+
+
+      subroutine TEMPERATURE_SF6(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      temperature=internal_energy/cv
+
+      return
+      end subroutine
+
+
+      subroutine EOS_stiffened(rho,internal_energy,pressure,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T cp,cv,PP
+
+      if (im.lt.1) then
+       print *,"im invalid65"
+       stop
+      endif
+      cp=get_user_stiffCP(im)
+      if (cp.le.zero) then
+       print *,"cp invalid"
+       stop
+      endif
+      gamma_constant=fort_stiffGAMMA(im)
+      if (gamma_constant.le.zero) then
+       print *,"gamma_constant invalid"
+       stop
+      endif
+      cv=cp/gamma_constant
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      PP=fort_stiffPINF(im)
+      if (PP.lt.zero) then
+       print *,"fort_stiff PINF invalid"
+       stop
+      endif
+      pressure=(gamma_constant-one)*rho*internal_energy- &
+       gamma_constant*PP
+      if (pressure.lt.VOFTOL) then
+       pressure=VOFTOL
+      endif
+
+      return
+      end subroutine
+
+      subroutine SOUNDSQR_stiffened(rho,internal_energy,soundsqr,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im
+      REAL_T rho,internal_energy,gamma_constant,pressure
+      REAL_T soundsqr
+      REAL_T cp,cv,PP
+
+      if (im.lt.1) then
+       print *,"im invalid66"
+       stop
+      endif
+      cp=get_user_stiffCP(im)
+      if (cp.le.zero) then
+       print *,"cp invalid"
+       stop
+      endif
+      gamma_constant=fort_stiffGAMMA(im)
+      if (gamma_constant.le.zero) then
+       print *,"gamma_constant invalid"
+       stop
+      endif
+      cv=cp/gamma_constant
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      PP=fort_stiffPINF(im)
+      if (PP.lt.zero) then
+       print *,"fort_stiff PINF invalid"
+       stop
+      endif
+
+      pressure=(gamma_constant-one)*rho*internal_energy- &
+       gamma_constant*PP
+      if (pressure.lt.VOFTOL) then
+       pressure=VOFTOL
+      endif
+
+      soundsqr=gamma_constant*(pressure+PP)/rho
+
+      return
+      end subroutine
+
+
+      subroutine INTERNAL_stiffened(rho,temperature,internal_energy,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,PP
+
+      if (im.lt.1) then
+       print *,"im invalid67"
+       stop
+      endif
+      cp=get_user_stiffCP(im)
+      if (cp.le.zero) then
+       print *,"cp invalid"
+       stop
+      endif
+      gamma_constant=fort_stiffGAMMA(im)
+      if (gamma_constant.le.zero) then
+       print *,"gamma_constant invalid"
+       stop
+      endif
+      cv=cp/gamma_constant
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      PP=fort_stiffPINF(im)
+      if (PP.lt.zero) then
+       print *,"fort_stiff PINF invalid"
+       stop
+      endif
+
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0"
+       stop
+      endif
+
+      internal_energy=cv*temperature+PP/rho
+
+      return
+      end subroutine INTERNAL_stiffened
+
+
+      subroutine TEMPERATURE_stiffened(rho,temperature, &
+        internal_energy,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,PP
+
+      if (im.lt.1) then
+       print *,"im invalid68"
+       stop
+      endif
+      cp=get_user_stiffCP(im)
+      if (cp.le.zero) then
+       print *,"cp invalid"
+       stop
+      endif
+      gamma_constant=fort_stiffGAMMA(im)
+      if (gamma_constant.le.zero) then
+       print *,"gamma_constant invalid"
+       stop
+      endif
+      cv=cp/gamma_constant
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      PP=fort_stiffPINF(im)
+      if (PP.lt.zero) then
+       print *,"fort_stiff PINF invalid"
+       stop
+      endif
+
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+
+      temperature=(internal_energy-PP/rho)/cv
+      if (temperature.lt.VOFTOL) then
+       temperature=VOFTOL
+      endif
+
+      return
+      end subroutine TEMPERATURE_stiffened
+
+
+
+! e=(E/rho) - (1/2) (u^2 + v^2)
+! c^2=dp/drho + (p/rho^2) dp/de
+! p=(gamma-1)rho e
+! c^2=(gamma-1)e+((gamma-1)rho e/rho^2)(gamma-1)rho=
+!   (gamma-1)e+(gamma-1) e (gamma-1)=(p/rho)(1+(gamma-1))=gamma p/rho
+! 
+      subroutine SOUNDSQR_SF6ADIABAT(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,internal_energy,gamma_constant,pressure,omega
+      REAL_T soundsqr
+      REAL_T cp,cv,R
+
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+      call EOS_SF6_ADIABAT(rho,pressure)
+      soundsqr=gamma_constant*pressure/rho
+
+      return
+      end subroutine SOUNDSQR_SF6ADIABAT
+
+
+      subroutine INTERNAL_SF6ADIABAT(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"temperature cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      internal_energy=cv*temperature
+
+      return
+      end subroutine
+
+
+      subroutine TEMPERATURE_SF6ADIABAT(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T rho,temperature,internal_energy,gamma_constant
+      REAL_T cp,cv,R,omega
+
+      call SF6_parms(R,cp,cv,gamma_constant,omega)
+    
+      if (rho.le.zero) then
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy cannot be <=0"
+       stop
+      endif
+      if (cv.le.zero) then
+       print *,"cv error"
+       stop
+      endif
+      if (cp.le.zero) then
+       print *,"cp error"
+       stop
+      endif
+
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_SF6ADIABAT
+
+      subroutine init_massfrac_parm(den,massfrac_parm,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: den
+      REAL_T, intent(out) :: massfrac_parm(num_species_var+1)
+      INTEGER_T, intent(in) :: im
+      INTEGER_T :: ispec,var_comp
+
+      if (num_species_var.eq.0) then
+       massfrac_parm(1)=den
+      else if (num_species_var.ge.1) then
+       do ispec=1,num_species_var
+        var_comp=(ispec-1)*num_materials+im
+        massfrac_parm(ispec)=fort_speciesconst(var_comp)
+       enddo
+      else
+       print *,"num_species_var invalid"
+       stop
+      endif
+
+      return
+      end subroutine init_massfrac_parm
+
+
+      subroutine EOS_material_CORE(rho,massfrac_var, &
+        internal_energy,pressure, &
+        imattype,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho,internal_energy
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(inout) :: pressure
+      REAL_T :: T
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      if (imattype.eq.1) then
+       call EOS_tait(rho,internal_energy,pressure)
+      else if (imattype.eq.2) then
+       call EOS_jwlADIABAT(rho,internal_energy,pressure)
+      else if (imattype.eq.3) then
+       call EOS_NAjwl(rho,internal_energy,pressure)
+      else if (imattype.eq.4) then
+       call EOS_SF6(rho,internal_energy,pressure)
+      else if (imattype.eq.5) then
+       call EOS_air(rho,internal_energy,pressure)
+      else if (imattype.eq.14) then
+       call EOS_air_rho2(rho,internal_energy,pressure)
+      else if (imattype.eq.6) then
+       call EOS_Marquina(rho,internal_energy,pressure)
+      else if (imattype.eq.7) then
+       call EOS_tait_rho(rho,internal_energy,pressure)
+      else if (imattype.eq.13) then
+       call EOS_tait_rhohydro(rho,internal_energy,pressure)
+      else if (imattype.eq.8) then
+       call EOS_air_ADIABAT(rho,pressure)
+      else if (imattype.eq.9) then
+       call EOS_tait_rho3(rho,internal_energy,pressure)
+      else if (imattype.eq.10) then
+       call EOS_tait_rho2(rho,internal_energy,pressure)
+      else if (imattype.eq.11) then
+       call EOS_koren_rho1(rho,internal_energy,pressure)
+      else if (imattype.eq.12) then
+       call EOS_koren_rho2(rho,internal_energy,pressure)
+      else if (imattype.eq.15) then
+       call EOS_dodecane(rho,internal_energy,T,pressure)
+      else if (imattype.eq.16) then
+       call EOS_SF6_ADIABAT(rho,pressure)
+      else if (imattype.eq.17) then
+       call EOS_stiffened(rho,internal_energy,pressure,im)
+      else if (imattype.eq.18) then
+       call EOS_simple_air(rho,internal_energy,pressure)
+      else if (imattype.eq.19) then
+       call EOS_vacuum(rho,pressure)
+      else if (imattype.eq.20) then
+       call EOS_tait_vacuum(rho,pressure)
+      else if (imattype.eq.21) then
+       call EOS_cav_nozzle(rho,internal_energy,pressure)
+      else if (imattype.eq.22) then
+       call EOS_tillotson(rho,internal_energy,pressure)
+      else if (imattype.eq.23) then
+       call EOS_peng_robinson(rho,internal_energy,pressure)
+      else
+       print *,"imattype invalid EOS_material_CORE"
+       stop
+      endif
+
+      return
+      end subroutine EOS_material_CORE
+
+
+        ! in general for gas: e=cv T
+        !                     p=(gamma-1)rho e=(gamma-1)rho cv T
+        !                      =(cp-cv) rho T=rho R T
+        ! total energy per unit mass? = (1/2)u dot u  + e
+        ! returns c^2(e*scale)/scale
+        ! sound squared=c^2(density=rho,internal_energy)
+      subroutine SOUNDSQR_material_CORE(rho,massfrac_var, &
+        internal_energy,soundsqr, &
+        imattype,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho,internal_energy
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(out) :: soundsqr
+
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"e invalid"
+       stop
+      endif
+
+      if (imattype.eq.1) then
+       call SOUNDSQR_tait(rho,internal_energy,soundsqr)
+      else if (imattype.eq.2) then
+       call SOUNDSQR_jwlADIABAT(rho,internal_energy,soundsqr)
+      else if (imattype.eq.3) then
+       call SOUNDSQR_NAjwl(rho,internal_energy,soundsqr)
+      else if (imattype.eq.4) then
+       call SOUNDSQR_SF6(rho,internal_energy,soundsqr)
+      else if (imattype.eq.5) then
+       call SOUNDSQR_air(rho,internal_energy,soundsqr)
+      else if (imattype.eq.14) then
+       call SOUNDSQR_air_rho2(rho,internal_energy,soundsqr)
+      else if (imattype.eq.6) then
+       call SOUNDSQR_Marquina(rho,internal_energy,soundsqr)
+      else if (imattype.eq.7) then
+       call SOUNDSQR_tait_rho(rho,internal_energy,soundsqr)
+      else if (imattype.eq.13) then
+       call SOUNDSQR_tait_rhohydro(rho,internal_energy,soundsqr)
+      else if (imattype.eq.8) then
+       call SOUNDSQR_airADIABAT(rho,internal_energy,soundsqr)
+      else if (imattype.eq.9) then
+       call SOUNDSQR_tait_rho3(rho,internal_energy,soundsqr)
+      else if (imattype.eq.10) then
+       call SOUNDSQR_tait_rho2(rho,internal_energy,soundsqr)
+      else if (imattype.eq.11) then
+       call SOUNDSQR_koren_rho1(rho,internal_energy,soundsqr)
+      else if (imattype.eq.12) then
+       call SOUNDSQR_koren_rho2(rho,internal_energy,soundsqr)
+      else if (imattype.eq.15) then
+       call SOUNDSQR_dodecane(rho,internal_energy,soundsqr)
+      else if (imattype.eq.16) then
+       call SOUNDSQR_SF6ADIABAT(rho,internal_energy,soundsqr)
+      else if (imattype.eq.17) then
+       call SOUNDSQR_stiffened(rho,internal_energy,soundsqr,im)
+      else if (imattype.eq.18) then
+       call SOUNDSQR_simple_air(rho,internal_energy,soundsqr)
+      else if (imattype.eq.19) then
+       call SOUNDSQR_vacuum(rho,internal_energy,soundsqr)
+      else if (imattype.eq.20) then
+       call SOUNDSQR_tait_vacuum(rho,internal_energy,soundsqr)
+      else if (imattype.eq.21) then
+       call SOUNDSQR_cav_nozzle(rho,internal_energy,soundsqr)
+      else if (imattype.eq.22) then
+       call SOUNDSQR_tillotson(rho,internal_energy,soundsqr)
+      else if (imattype.eq.23) then
+       call SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
+      else
+       print *,"imattype invalid SOUNDSQR_material_CORE"
+       stop
+      endif
+
+      return
+      end subroutine SOUNDSQR_material_CORE
+
+
+        ! returns e/scale
+        ! internal energy = e(temperature,density=rho)
+      subroutine INTERNAL_material_CORE(rho,massfrac_var, &
+        temperature,internal_energy, &
+        imattype,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho,temperature
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(out) :: internal_energy
+      REAL_T local_internal_energy
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (temperature.le.zero) then
+       print *,"T invalid"
+       stop
+      endif
+
+      if (imattype.eq.999) then
+       call INTERNAL_default(rho,temperature,local_internal_energy,imattype,im)
+      else if (imattype.eq.0) then
+       call INTERNAL_default(rho,temperature,local_internal_energy,imattype,im)
+      else if (imattype.eq.1) then
+       call INTERNAL_tait(rho,temperature,local_internal_energy)
+      else if (imattype.eq.2) then
+       call INTERNAL_jwl(rho,temperature,local_internal_energy)
+      else if (imattype.eq.3) then
+       call INTERNAL_jwl(rho,temperature,local_internal_energy)
+      else if (imattype.eq.4) then
+       call INTERNAL_SF6(rho,temperature,local_internal_energy)
+      else if (imattype.eq.5) then
+       call INTERNAL_air(rho,temperature,local_internal_energy)
+      else if (imattype.eq.14) then
+       call INTERNAL_air_rho2(rho,temperature,local_internal_energy)
+      else if (imattype.eq.6) then
+       call INTERNAL_Marquina(rho,temperature,local_internal_energy)
+      else if (imattype.eq.7) then
+       call INTERNAL_tait_rho(rho,temperature,local_internal_energy)
+      else if (imattype.eq.13) then
+       call INTERNAL_tait_rhohydro(rho,temperature,local_internal_energy)
+      else if (imattype.eq.8) then
+       call INTERNAL_airADIABAT(rho,temperature,local_internal_energy)
+      else if (imattype.eq.9) then
+       call INTERNAL_tait_rho3(rho,temperature,local_internal_energy)
+      else if (imattype.eq.10) then
+       call INTERNAL_tait_rho2(rho,temperature,local_internal_energy)
+      else if (imattype.eq.11) then
+       call INTERNAL_koren_rho1(rho,temperature,local_internal_energy)
+      else if (imattype.eq.12) then
+       call INTERNAL_koren_rho2(rho,temperature,local_internal_energy)
+      else if (imattype.eq.15) then
+       call INTERNAL_dodecane(rho,temperature,local_internal_energy)
+      else if (imattype.eq.16) then
+       call INTERNAL_SF6ADIABAT(rho,temperature,local_internal_energy)
+      else if (imattype.eq.17) then
+       call INTERNAL_stiffened(rho,temperature,local_internal_energy,im)
+      else if (imattype.eq.18) then
+       call INTERNAL_simple_air(rho,temperature,local_internal_energy)
+      else if (imattype.eq.19) then
+       call INTERNAL_vacuum(rho,temperature,local_internal_energy)
+      else if (imattype.eq.20) then
+       call INTERNAL_tait_vacuum(rho,temperature,local_internal_energy)
+      else if (imattype.eq.21) then
+       call INTERNAL_cav_nozzle(rho,temperature,local_internal_energy)
+      else if (imattype.eq.22) then
+       call INTERNAL_tillotson(rho,temperature,local_internal_energy)
+      else if (imattype.eq.23) then
+       call INTERNAL_peng_robinson(rho,temperature,local_internal_energy)
+      else
+       print *,"imattype invalid INTERNAL_material_CORE"
+       stop
+      endif
+
+      internal_energy=local_internal_energy
+
+      return
+      end subroutine INTERNAL_material_CORE
+
+
+      subroutine TEMPERATURE_material_CORE(rho,massfrac_var, &
+        temperature,internal_energy, &
+        imattype,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: rho,internal_energy
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(out) :: temperature
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid71"
+       stop
+      endif
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.le.zero) then
+       print *,"internal energy invalid in temperature material_CORE"
+       print *,"rho,energy,imat ",rho,internal_energy,imattype 
+       stop
+      endif
+
+      if (imattype.eq.999) then 
+       call TEMPERATURE_default(rho,temperature,internal_energy, &
+         imattype,im)
+      else if (imattype.eq.0) then
+       call TEMPERATURE_default(rho,temperature,internal_energy, &
+         imattype,im)
+      else if (imattype.eq.1) then
+       call TEMPERATURE_tait(rho,temperature,internal_energy)
+      else if (imattype.eq.2) then
+       call TEMPERATURE_jwl(rho,temperature,internal_energy)
+      else if (imattype.eq.3) then
+       call TEMPERATURE_jwl(rho,temperature,internal_energy)
+      else if (imattype.eq.4) then
+       call TEMPERATURE_SF6(rho,temperature,internal_energy)
+      else if (imattype.eq.5) then
+       call TEMPERATURE_air(rho,temperature,internal_energy)
+      else if (imattype.eq.14) then
+       call TEMPERATURE_air_rho2(rho,temperature,internal_energy)
+      else if (imattype.eq.6) then
+       call TEMPERATURE_Marquina(rho,temperature,internal_energy)
+      else if (imattype.eq.7) then
+       call TEMPERATURE_tait_rho(rho,temperature,internal_energy)
+      else if (imattype.eq.13) then
+       call TEMPERATURE_tait_rhohydro(rho,temperature,internal_energy)
+      else if (imattype.eq.8) then
+       call TEMPERATURE_airADIABAT(rho,temperature,internal_energy)
+      else if (imattype.eq.9) then
+       call TEMPERATURE_tait_rho3(rho,temperature,internal_energy)
+      else if (imattype.eq.10) then
+       call TEMPERATURE_tait_rho2(rho,temperature,internal_energy)
+      else if (imattype.eq.11) then
+       call TEMPERATURE_koren_rho1(rho,temperature,internal_energy)
+      else if (imattype.eq.12) then
+       call TEMPERATURE_koren_rho2(rho,temperature,internal_energy)
+      else if (imattype.eq.15) then
+       call TEMPERATURE_dodecane(rho,temperature,internal_energy)
+      else if (imattype.eq.16) then
+       call TEMPERATURE_SF6ADIABAT(rho,temperature,internal_energy)
+      else if (imattype.eq.17) then
+       call TEMPERATURE_stiffened(rho,temperature,internal_energy,im)
+      else if (imattype.eq.18) then
+       call TEMPERATURE_simple_air(rho,temperature,internal_energy)
+      else if (imattype.eq.19) then
+       call TEMPERATURE_vacuum(rho,temperature,internal_energy)
+      else if (imattype.eq.20) then
+       call TEMPERATURE_tait_vacuum(rho,temperature,internal_energy)
+      else if (imattype.eq.21) then
+       call TEMPERATURE_cav_nozzle(rho,temperature,internal_energy)
+      else if (imattype.eq.22) then
+       call TEMPERATURE_tillotson(rho,temperature,internal_energy)
+      else if (imattype.eq.23) then
+       call TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
+      else
+       print *,"imattype invalid TEMPERATURE_material_CORE"
+       print *,"imattype= ",imattype
+       stop
+      endif
+
+      return
+      end subroutine TEMPERATURE_material_CORE
+
+
+      subroutine general_hydrostatic_pressure(pres)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T pres
+
+
+      pres=1.0D+6
+
+      return
+      end subroutine general_hydrostatic_pressure
+
+
+      subroutine rampvel(time,vel)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: vel
+      REAL_T :: tcutoff
+
+      if ((SDIM.eq.2).and. &
+          ((probtype.eq.63).or. &
+           (probtype.eq.64))) then
+       tcutoff=1.0
+       if (time.gt.tcutoff) then
+        vel=adv_vel
+       else
+        vel=time*adv_vel/tcutoff
+       endif
+      else if ((SDIM.eq.3).and.(probtype.eq.9)) then
+       tcutoff=zero
+       if ((time.gt.tcutoff).or.(tcutoff.eq.zero)) then
+        vel=adv_vel
+       else if (tcutoff.gt.zero) then
+        vel=time*adv_vel/tcutoff
+       else
+        print *,"tcutoff invalid"
+        stop
+       endif
+      else
+       vel=adv_vel
+      endif
+
+      return
+      end subroutine rampvel
+
+      subroutine default_rampvel(time,xx_vel,yy_vel,zz_vel)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: xx_vel,yy_vel,zz_vel
+
+      xx_vel=zero 
+      yy_vel=zero 
+      zz_vel=zero 
+
+      if ((probtype.eq.26).and.(axis_dir.eq.11)) then
+       ! do nothing 
+      else if (adv_dir.eq.1) then  ! init velocity
+        if (SDIM.eq.2) then
+         call rampvel(time,xx_vel)
+        else if (SDIM.eq.3) then
+         xx_vel = adv_vel
+          ! initboat
+         if (probtype.eq.9) then
+          call rampvel(time,xx_vel)
+         endif
+        else
+         print *,"dimension bust"
+         stop
+        endif
+        yy_vel=zero
+        zz_vel=zero
+      else if (adv_dir .eq. 2) then
+        xx_vel = zero
+        yy_vel = adv_vel
+        zz_vel=zero
+      else if ((adv_dir.eq.3).and.(SDIM.eq.3)) then
+        xx_vel = zero
+        yy_vel = zero
+        zz_vel = adv_vel
+      else if ((adv_dir.eq.3).and.(SDIM.eq.2)) then
+        xx_vel = adv_vel
+        yy_vel = adv_vel
+        zz_vel = zero
+      else if ((adv_dir.eq.4).and.(SDIM.eq.3)) then
+        xx_vel = adv_vel
+        yy_vel = adv_vel
+        zz_vel = adv_vel
+      else if (probtype.eq.40) then
+       ! do nothing
+      else if (probtype.eq.530) then
+       ! do nothing
+      else
+        print *,"adv_dir invalid: ",adv_dir
+        stop
+      endif
+
+      return
+      end subroutine default_rampvel
+
+      ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
+      ! theta_{ik}=0 => material i wets material k.
+      ! im is material "i"  ("fluid" material)
+      ! im_opp is material "j"
+      ! im_3 is material "k"
+      ! iten_13 corresponds to "ik"
+      ! iten_23 corresponds to "jk"
+      ! if nmat=4, 12 13 14 23 24 34
+
+      subroutine get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
+       user_tension,nten,cos_angle,sin_angle)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im,im_opp,im_3,iten_13,iten_23,nten,nten_test
+      INTEGER_T iten
+      INTEGER_T nmat
+      REAL_T user_tension(nten)
+      REAL_T cos_angle,sin_angle
+
+
+      nmat=num_materials
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten: get_CL_iten nten nten_test ",nten,nten_test
+       stop
+      endif
+
+      if ((im.lt.1).or.(im.gt.num_materials).or. &
+          (im_opp.lt.1).or.(im_opp.gt.num_materials).or. &
+          (im_3.lt.1).or.(im_3.gt.num_materials).or. &
+          (im.eq.im_opp).or.(im.eq.im_3).or. &
+          (im_opp.eq.im_3)) then
+       print *,"im mismatch"
+       print *,"im=",im
+       print *,"im_opp=",im_opp
+       print *,"im_3=",im_3
+       stop
+      endif
+
+      if (nmat.le.2) then
+       print *,"nmat too small for CL treatment"
+       stop
+       ! 12 13 23
+      else if (nmat.eq.3) then
+       if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
+        iten_13=2
+        iten_23=3
+       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.1)) then
+        iten_13=1
+        iten_23=2
+       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.2)) then
+        iten_13=1
+        iten_23=3
+       else
+        print *,"combination of im,im_opp,im_3 invalid nmat=",nmat
+        print *,"im=",im
+        print *,"im_opp=",im_opp
+        print *,"im_3=",im_3
+        stop
+       endif
+       ! 12 13 14 23 24 34
+      else if (nmat.eq.4) then
+       if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
+        iten_13=2
+        iten_23=4
+       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.1)) then
+        iten_13=1
+        iten_23=2
+       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.2)) then
+        iten_13=1
+        iten_23=4
+       else if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.4)) then
+        iten_13=3
+        iten_23=5
+       else if ((im.eq.2).and.(im_opp.eq.4).and.(im_3.eq.1)) then
+        iten_13=1
+        iten_23=3
+       else if ((im.eq.1).and.(im_opp.eq.4).and.(im_3.eq.2)) then
+        iten_13=1
+        iten_23=5
+       else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.4)) then
+        iten_13=5
+        iten_23=6
+       else if ((im.eq.2).and.(im_opp.eq.4).and.(im_3.eq.3)) then
+        iten_13=4
+        iten_23=6
+       else if ((im.eq.3).and.(im_opp.eq.4).and.(im_3.eq.2)) then
+        iten_13=4
+        iten_23=5
+       else if ((im.eq.3).and.(im_opp.eq.4).and.(im_3.eq.1)) then
+        iten_13=2
+        iten_23=3
+        ! 12 13 14 23 24 34
+       else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.4)) then
+        iten_13=3
+        iten_23=6
+       else if ((im.eq.1).and.(im_opp.eq.4).and.(im_3.eq.3)) then
+        iten_13=2
+        iten_23=6
+       else
+        print *,"combination of im,im_opp,im_3 invalid nmat=",nmat
+        print *,"im=",im
+        print *,"im_opp=",im_opp
+        print *,"im_3=",im_3
+        stop
+       endif
+      else
+       print *,"combination not supported"
+       stop
+      endif
+
+      call get_iten(im,im_opp,iten,nmat)
+
+      if (user_tension(iten).eq.zero) then  ! default extrapolation
+       cos_angle=zero
+      else if (user_tension(iten).gt.zero) then
+       cos_angle=(user_tension(iten_23)-user_tension(iten_13))/ &
+                 user_tension(iten)
+      else
+       print *,"user_tension(iten) invalid"
+       stop
+      endif
+
+      if (cos_angle.gt.one) then 
+       cos_angle=one
+      else if (cos_angle.lt.-one) then
+       cos_angle=-one
+      endif
+      sin_angle=sqrt(one-cos_angle**2)
+
+      return
+      end subroutine get_CL_iten
+
+  ! in 2D, "y" is ignored
+  ! distance>0 in the drop
+  ! if maxtall<radnew-vert then the distance
+  ! to the ice part of the droplet is returned in dist
+  ! and the distance to the remaining liquid part *above* the ice
+  ! is returned in dist_truncate.
+  ! this routine is called if probtype=55, axis_dir=0,1, or 5
+subroutine drop_slope_dist(x,y,z,time,nmat, &
+   maxtall,dist,dist_truncate)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x,y,z,time
+REAL_T, intent(out) :: dist,dist_truncate
+REAL_T, intent(in) :: maxtall
+INTEGER_T im,im_opp,im_3,iten_13,iten_23,imloop
+INTEGER_T iten
+REAL_T cos_angle,sin_angle
+REAL_T term1,Vtarget,radnew,vert,test_angle
+REAL_T xprime,yprime,zprime,rprime,rtop,rbot
+REAL_T xcheck,ycheck,zcheck
+INTEGER_T nten
+REAL_T xvec(SDIM)
+REAL_T marangoni_temp(nmat)
+INTEGER_T im_solid_substrate
+REAL_T, allocatable, dimension(:) :: user_tension
+
+if (probtype.eq.55) then
+
+ im_solid_substrate=im_solid_primary()
+
+ xvec(1)=x
+ xvec(2)=y
+ if (SDIM.eq.3) then
+  xvec(SDIM)=z
+ endif
+
+ if (nmat.ne.num_materials) then
+  print *,"nmat invalid"
+  stop
+ endif
+ nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+ allocate(user_tension(nten))
+
+ if (SDIM.eq.2) then
+  if (abs(y-z).gt.VOFTOL) then
+   print *,"y=z in 2d expected: drop_slope_dist"
+   print *,"x,y,z= ",x,y,z
+   stop
+  endif
+ endif
+ if (maxtall.le.zero) then
+  print *,"maxtall invalid"
+  stop
+ endif
+
+  ! in: drop_slope_dist 
+ if ((axis_dir.eq.0).or. &
+     (axis_dir.eq.5)) then
+
+  xcheck=xblob-xblob2
+  ycheck=yblob-yblob2
+  zcheck=zero
+  if (SDIM.eq.3) then
+   zcheck=zblob-zblob2
+  endif
+
+  if ((num_materials.ge.3).and. &
+      (im_solid_substrate.ge.3).and. &
+      (abs(xcheck).lt.1.0E-7).and. &
+      (abs(ycheck).lt.1.0E-7).and. &
+      (abs(zcheck).lt.1.0E-7)) then
+   im=1
+   im_opp=2
+   im_3=im_solid_substrate
+   call get_iten(im,im_opp,iten,num_materials)
+   do imloop=1,nmat
+    marangoni_temp(imloop)=293.0
+   enddo
+   call get_user_tension(xvec,time, &
+     fort_tension,user_tension, &
+     marangoni_temp, &
+     nmat,nten,1)
+     ! find angle between materials "im" and "im_3"
+   call get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
+    user_tension,nten,cos_angle,sin_angle)
+
+    ! angles other than 0 or pi are supported:
+    ! 0 < angle < pi
+   if (abs(cos_angle).lt.one-1.0E-2) then 
+
+    if (((SDIM.eq.3).and.(levelrz.eq.0)).or. &
+        ((SDIM.eq.2).and.(levelrz.eq.1))) then
+     term1=two/three-cos_angle+(cos_angle**3)/three
+     if (term1.le.zero) then
+      print *,"term1 invalid"
+      stop
+     endif
+         
+     Vtarget=half*(four/three)*Pi*(radblob**3)
+     radnew=(Vtarget/(Pi*term1))**(one/three)
+     vert=-radnew*cos_angle
+    else if ((SDIM.eq.2).and.(levelrz.eq.0)) then
+     test_angle=acos(abs(cos_angle))  ! 0<test_angle<=pi/2
+     if (cos_angle.ge.zero) then
+      term1=test_angle-half*sin(two*test_angle)
+     else
+      term1=Pi-test_angle+half*sin(two*test_angle)
+     endif
+     if (term1.le.zero) then
+      print *,"term1 invalid"
+      stop
+     endif
+     Vtarget=half*Pi*(radblob**2)
+     radnew=sqrt(Vtarget/term1)
+     vert=-radnew*cos_angle
+    else
+     print *,"dimension bust"
+     stop
+    endif
+      ! rotate clockwise
+      ! and shift "center" of inclined plane to origin
+      ! need to modify if rotate about y-z plane.
+    if (SDIM.eq.2) then
+     xprime=(x-xblob2)*cos(radblob2)+(z-yblob2)*sin(radblob2)
+     zprime=-(x-xblob2)*sin(radblob2)+(z-yblob2)*cos(radblob2)
+     rprime=abs(xprime)
+    else if (SDIM.eq.3) then
+     xprime=(x-xblob2)*cos(radblob2)+(z-zblob2)*sin(radblob2)
+     yprime=y-yblob2
+     zprime=-(x-xblob2)*sin(radblob2)+(z-zblob2)*cos(radblob2)
+     rprime=sqrt(xprime**2+yprime**2)
+    else
+     print *,"dimension bust"
+     stop
+    endif
+
+     ! dist>0 in the liquid drop
+    dist=radnew-sqrt(rprime**2+(zprime-vert)**2)
+    dist_truncate=dist
+
+     ! find distance to ice part of this droplet; also
+     ! find distance to remaining liquid part above the ice.
+    if (maxtall-vert.lt.radnew) then
+     rtop=sqrt(radnew**2-(maxtall-vert)**2)
+     rbot=sqrt(radnew**2-vert**2)
+
+      ! outside drop, and above the ice.
+     if ((dist.le.zero).and.(zprime.ge.maxtall)) then
+      dist_truncate=dist
+
+      ! inside the original drop.
+     else if ((zprime.le.maxtall).and.(rprime.le.rtop)) then
+      dist_truncate=zprime-maxtall
+
+      ! outside the original drop, off to side of ice.
+     else if ((zprime.le.maxtall).and.(rprime.ge.rtop)) then
+      dist_truncate=-sqrt((rprime-rtop)**2+(zprime-maxtall)**2)
+     else if (dist.ge.zero) then
+      if (dist.lt.zprime-maxtall) then
+       dist_truncate=dist
+      else
+       dist_truncate=zprime-maxtall
+      endif 
+     else
+      print *,"dist invalid drop_slope_dist"
+      stop
+     endif
+
+     if ((dist.lt.zero).and.(zprime.gt.vert+radnew)) then
+      dist=maxtall-zprime
+     else if ((dist.ge.zero).and.(zprime.ge.maxtall)) then
+      dist=maxtall-zprime
+     else if ((dist.ge.zero).and.(zprime.le.maxtall).and. &
+              (zprime.ge.half*maxtall)) then
+      if (dist.lt.maxtall-zprime) then
+       ! do nothing
+      else
+       dist=maxtall-zprime
+      endif
+     else if ((dist.ge.zero).and.(zprime.le.half*maxtall).and. &
+              (zprime.ge.zero)) then
+      if (dist.lt.zprime) then
+       ! do nothing
+      else
+       dist=zprime
+      endif
+     else if ((dist.ge.zero).and.(zprime.le.zero)) then
+      dist=zprime
+     else if ((dist.lt.zero).and.(zprime.lt.vert-radnew)) then
+      dist=zprime
+     else if ((dist.lt.zero).and.(zprime.ge.maxtall)) then
+      dist=-sqrt((rprime-rtop)**2+(zprime-maxtall)**2)
+     else if ((dist.lt.zero).and.(zprime.ge.zero)) then
+      ! do nothing
+     else if ((dist.lt.zero).and.(zprime.le.zero)) then
+      dist=-sqrt((rprime-rbot)**2+zprime**2)
+     else
+      print *,"dist or zprime invalid"
+      stop
+     endif 
+    endif !  maxtall-vert<radnew
+     
+   else
+    print *,"contact angle too close to 0 or pi for drop on slope"
+    print *,"probtype=",probtype
+    print *,"radblob=",radblob
+    print *,"radblob2=",radblob2
+    print *,"radblob4=",radblob4
+    print *,"radblob5=",radblob5
+    print *,"radblob6=",radblob6
+    print *,"radblob7=",radblob7
+    stop
+   endif
+
+  else
+   print *,"parameter conflict for probtype=55"
+   stop
+  endif
+
+ else
+  print *,"axis_dir incorrect   probtype,axis_dir=",probtype,axis_dir
+  stop
+ endif
+
+ deallocate(user_tension)
+
+else
+ print *,"probtype invalid in drop_slope_dist"
+ stop
+endif
+
+return
+end subroutine drop_slope_dist
+
+subroutine volfrac_from_massfrac(X,Y,WA,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: Y,WA,WV
+REAL_T, intent(out) :: X
+
+if ((Y.ge.zero).and.(Y.le.one)) then
+ if ((WA.gt.zero).and.(WV.gt.zero)) then
+  X=WA*Y/(WV*(one-Y)+WA*Y)
+ else
+  print *,"WA or WV invalid"
+  stop
+ endif
+else
+ print *,"Y invalid in volfrac_from_massfrac"
+ stop
+endif
+
+return
+end subroutine volfrac_from_massfrac
+
+! Kassemi, Kartuzova, Hylton
+! Cryogenics 89(2018) 1-15, equation (6)
+subroutine MDOT_Kassemi(sigma,MolarMassFluid,R,Pgamma,Pvapor_probe, &
+  Tgamma,Tvapor_probe,MDOT)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: sigma
+REAL_T, intent(in) :: MolarMassFluid
+REAL_T, intent(in) :: R
+REAL_T, intent(in) :: Pgamma
+REAL_T, intent(in) :: Pvapor_probe
+REAL_T, intent(in) :: Tgamma
+REAL_T, intent(in) :: Tvapor_probe
+REAL_T, intent(out) :: MDOT
+
+if ((sigma.ge.zero).and.(sigma.lt.two).and. &
+    (MolarMassFluid.gt.zero).and. &
+    (R.gt.zero).and. &
+    (Pgamma.gt.zero).and. &
+    (Pvapor_probe.gt.zero).and. &
+    (Tgamma.gt.zero).and. &
+    (Tvapor_probe.gt.zero)) then
+ MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
+   sqrt(MolarMassFluid/(2.0d0*Pi*R))* &
+   (Pgamma/sqrt(Tgamma)-Pvapor_probe/sqrt(Tvapor_probe))
+
+else
+ print *,"parameter problems in MDOT_Kassemi"
+ stop
+endif
+
+return
+end subroutine MDOT_Kassemi
+ 
+! TODO: 1. inverse CC equation
+!       2. MDOTY equation (either PD or Kassemi)
+!       3. X from PSAT,Pgamma,Tgamma,TSAT,WV,WA,Tprobe,Yprobe?
+!       4. For now, X=Pgamma/PSAT and focus on validating the
+!          results found in Kassemi et al.
+! When comparing with Dodd and Ferrante and others:
+! TSAT corresponds to TBOIL
+! PSAT corresponds to PBOIL
+! Tgamma corresponds to Tsat
+! Pgamma corresponds to Psat
+subroutine Pgamma_Clausius_Clapyron(Pgamma,PSAT,Tgamma,TSAT,L,R,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: PSAT,Tgamma,TSAT,L,R,WV
+REAL_T, intent(out) :: Pgamma
+
+if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
+ if (PSAT.gt.zero) then
+  if (R.gt.zero) then
+   if (L.ne.zero) then
+    if (WV.gt.zero) then
+     Pgamma=PSAT*exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
+    else
+     print *,"WV invalid in Pgamma_Clausius_Clapyron"
+     stop
+    endif
+   else
+    print *,"L invalid in Pgamma_Clausius_Clapyron"
+    stop
+   endif
+  else
+   print *,"R invalid in Pgamma_Clausius_Clapyron"
+   stop
+  endif
+ else
+  print *,"PSAT invalid in Pgamma_Clausius_Clapyron"
+  stop
+ endif
+else
+ print *,"Tgamma or TSAT invalid in Pgamma_Clausius_Clapyron"
+ print *,"Tgamma= ",Tgamma
+ print *,"TSAT= ",TSAT
+ stop
+endif
+
+return
+end subroutine Pgamma_Clausius_Clapyron
+
+!TODO:
+!XV=(PSAT_REF/PMIX)e^(-(L WV/R)(1/T_GAMMA-1/T_SAT_REF)
+!PMIX=(gamma_MIX(YPROBE)-1)rho_MIX CV_MIX(YPROBE) TPROBE
+! new parameters: YPROBE,TPROBE,RHO_PROBE in the gas.
+subroutine X_from_Tgamma(X,Tgamma,TSAT, &
+  L,R,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: Tgamma,TSAT,L,R,WV
+REAL_T, intent(out) :: X
+
+if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
+ if (R.gt.zero) then
+  if (L.ne.zero) then
+   if (WV.gt.zero) then
+    X=exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
+   else
+    print *,"WV invalid in X_from_Tgamma"
+    stop
+   endif
+  else
+   print *,"L invalid in X_from_Tgamma"
+   stop
+  endif
+ else
+  print *,"R invalid in X_from_Tgamma"
+  stop
+ endif
+else
+ print *,"Tgamma or TSAT invalid in X_from_Tgamma"
+ print *,"Tgamma= ",Tgamma
+ print *,"TSAT= ",TSAT
+ stop
+endif
+
+return
+end subroutine X_from_Tgamma
+
+subroutine XMIN_from_TSAT(X,TSAT, &
+  L,R,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: TSAT,L,R,WV
+REAL_T, intent(out) :: X
+
+if (TSAT.gt.zero) then
+ if (R.gt.zero) then
+  if (L.ne.zero) then
+   if (WV.gt.zero) then
+    if (L.gt.zero) then
+     X=zero
+    else if (L.lt.zero) then
+     X=exp((L*WV/R)/TSAT)
+    else
+     print *,"L invalid in XMIN_from_TSAT1"
+     stop
+    endif
+   else
+    print *,"WV invalid in XMIN_from_TSAT"
+    stop
+   endif
+  else
+   print *,"L invalid in XMIN_from_TSAT2"
+   stop
+  endif
+ else
+  print *,"R invalid in XMIN_from_TSAT"
+  stop
+ endif
+else
+ print *,"TSAT invalid in XMIN_from_TSAT"
+ print *,"TSAT= ",TSAT
+ stop
+endif
+
+return
+end subroutine XMIN_from_TSAT
+
+! Dodd and Ferrante:
+! (30) psat/pboil=exp((-L WV/R)(1/Tsat - 1/Tboil))
+! Dodd and Ferrante after nondimensionalization by pboil:
+! (33) Ysat=psat WV/(psat WV + (1-psat)WA)
+! in otherwords,
+! Ysat=X WV/(X WV + (1-X)WA) where X=psat/pboil
+!TODO:
+!XV=(PSAT_REF/PMIX)e^(-(L WV/R)(1/T_GAMMA-1/T_SAT_REF)
+!PMIX=(gamma_MIX(YPROBE)-1)rho_MIX CV_MIX(YPROBE) TPROBE
+! new parameters: YPROBE,TPROBE,RHO_PROBE in the gas.
+subroutine Tgamma_from_TSAT_and_X(Tgamma,TSAT, &
+  X,L,R,WV,Tgamma_min,Tgamma_max)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: TSAT,X,L,R,WV,Tgamma_min,Tgamma_max
+REAL_T, intent(out) :: Tgamma
+
+if ((X.ge.zero).and.(X.le.one)) then
+ if (TSAT.gt.zero) then
+
+   ! X=exp(-(L WV/R)(1/Tgamma - 1/Tsat) )
+  if (X.eq.zero) then
+   if (L.gt.zero) then
+    Tgamma=Tgamma_min
+   else if (L.lt.zero) then
+    Tgamma=Tgamma_max
+   else
+    print *,"L invalid in Tgamma_from_TSAT_and_X"
+    stop
+   endif
+  else if (X.eq.one) then
+   Tgamma=TSAT
+  else if ((X.gt.zero).and.(X.lt.one)) then
+   Tgamma=-log(X)*R/(L*WV)
+   Tgamma=Tgamma+one/TSAT
+   if (Tgamma.gt.zero) then
+    Tgamma=one/Tgamma
+   else if (Tgamma.le.zero) then
+    Tgamma=Tgamma_min
+   else
+    print *,"Tgamma invalid in Tgamma_from_TSAT_and_X"
+    stop
+   endif
+   if (L.gt.zero) then
+    if (Tgamma.le.TSAT) then
+     ! do nothing
+    else
+     print *,"expecting Tgamma<=TSAT"
+     stop
+    endif
+   else if (L.lt.zero) then
+    if (Tgamma.ge.TSAT) then
+     ! do nothing
+    else
+     print *,"expecting Tgamma>=TSAT"
+     stop
+    endif
+   else
+    print *,"L invalid"
+    stop
+   endif
+
+  else
+   print *,"X invalid in Tgamma_from_TSAT_and_X"
+   stop
+  endif
+  if (Tgamma.lt.Tgamma_min) then
+   Tgamma=Tgamma_min
+  endif
+  if (Tgamma.gt.Tgamma_max) then
+   Tgamma=Tgamma_max
+  endif
+
+ else
+  print *,"TSAT invalid in Tgamma_from_TSAT_and_X"
+  stop
+ endif
+else
+ print *,"X invalid in Tgamma_from_TSAT_and_X"
+ stop
+endif
+ 
+return
+end subroutine Tgamma_from_TSAT_and_X
+
+
+subroutine massfrac_from_volfrac(X,Y,WA,WV)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: X,WA,WV
+REAL_T, intent(out) :: Y
+
+if ((X.ge.zero).and.(X.le.one)) then
+ if ((WA.gt.zero).and.(WV.gt.zero)) then
+  Y=WV*X/(WA*(one-X)+WV*X)
+ else
+  print *,"WA or WV invalid"
+  stop
+ endif
+else
+ print *,"X invalid in massfrac_from_volfrac"
+ stop
+endif
+
+return
+end subroutine massfrac_from_volfrac
+
+  ! returns p(e*scale)/scale
+  ! pressure=p(density=rho,internal_energy)
+subroutine EOS_material(rho,massfrac_parm, &
+  internal_energy_in,pressure, &
+  imattype,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: imattype,im
+REAL_T, intent(in) :: rho
+REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
+REAL_T :: internal_energy
+REAL_T, intent(out) :: pressure
+REAL_T, intent(in) :: internal_energy_in
+INTEGER_T :: ispec
+
+
+internal_energy=internal_energy_in*global_pressure_scale
+
+do ispec=1,num_species_var
+ if (massfrac_parm(ispec).ge.zero) then
+  ! do nothing
+ else
+  print *,"massfrac_parm invalid"
+  stop
+ endif
+enddo ! ispec
+if (rho.gt.zero) then
+ ! do nothing
+else
+ print *,"rho invalid"
+ stop
+endif
+if (internal_energy.gt.zero) then
+ ! do nothing
+else
+ print *,"e invalid"
+ stop
+endif
+
+if (is_in_probtype_list().eq.1) then
+ call SUB_EOS(rho,massfrac_parm, &
+   internal_energy,pressure, &
+   imattype,im,num_species_var)
+else 
+ call EOS_material_CORE(rho,massfrac_parm, &
+         internal_energy,pressure,imattype,im)
+endif
+
+pressure=pressure/global_pressure_scale
+
+return
+end subroutine EOS_material
+
+
+  ! returns De/DT / scale 
+  ! T=(e/scale)*scale/cv
+subroutine DeDT_material(rho,massfrac_parm, &
+  temperature,DeDT,imattype,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: imattype,im
+REAL_T, intent(in) :: rho,temperature
+REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
+REAL_T, intent(out) :: DeDT
+REAL_T :: DT,T2,e1,e2
+
+
+if ((rho.gt.zero).and.(temperature.gt.zero)) then
+ ! do nothing
+else
+ print *,"rho or temperature invalid in DeDT_material"
+ print *,"rho=",rho
+ print *,"temperature=",temperature
+ print *,"im=",im
+ print *,"imattype=",imattype
+ stop
+endif
+
+if (imattype.eq.18) then ! simple_air
+ DeDT=one 
+else if ((imattype.eq.15).and.(probtype.eq.541).and. &
+    (OLD_DODECANE.eq.0)) then
+ call DeDT_dodecane(rho,temperature,DeDT)
+else if ((imattype.eq.999).or. &
+         (imattype.eq.0).or. &
+         ((imattype.ge.1).and.(imattype.le.MAX_NUM_EOS))) then
+ call INTERNAL_material(rho,massfrac_parm, &
+   temperature,e1,imattype,im)
+ DT=temperature*1.0E-6
+ T2=temperature+DT
+ call INTERNAL_material(rho,massfrac_parm, &
+   T2,e2,imattype,im)
+ DeDT=(e2-e1)/DT
+ if (DeDT.le.zero) then
+  print *,"e must be increasing function of T"
+  stop
+ endif
+else
+ print *,"imattype invalid DE_dt__material"
+ stop
+endif
+
+return
+end subroutine DeDT_material
+
+  ! in general for gas: e=cv T
+  !                     p=(gamma-1)rho e=(gamma-1)rho cv T
+  !                      =(cp-cv) rho T=rho R T
+  ! total energy per unit mass? = (1/2)u dot u  + e
+  ! returns c^2(e*scale)/scale
+  ! sound squared=c^2(density=rho,internal_energy)
+subroutine SOUNDSQR_material(rho,massfrac_parm, &
+  internal_energy_in,soundsqr, &
+  imattype,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: imattype,im
+REAL_T, intent(in) :: rho
+REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
+REAL_T :: internal_energy
+REAL_T, intent(out) :: soundsqr
+REAL_T, intent(in) :: internal_energy_in
+INTEGER_T :: ispec
+
+
+internal_energy=internal_energy_in*global_pressure_scale
+
+if (rho.gt.zero) then
+ ! do nothing
+else
+ print *,"rho invalid"
+ stop
+endif
+if (internal_energy.gt.zero) then
+ ! do nothing
+else
+ print *,"e invalid"
+ stop
+endif
+do ispec=1,num_species_var
+ if (massfrac_parm(ispec).ge.zero) then
+  ! do nothing
+ else
+  print *,"massfrac_parm invalid"
+  stop
+ endif
+enddo
+
+if (is_in_probtype_list().eq.1) then
+ call SUB_SOUNDSQR(rho,massfrac_parm, &
+   internal_energy,soundsqr, &
+   imattype,im,num_species_var)
+else 
+ call SOUNDSQR_material_CORE(rho,massfrac_parm, &
+   internal_energy,soundsqr, &
+   imattype,im)
+endif
+
+soundsqr=soundsqr/global_pressure_scale
+
+return
+end subroutine SOUNDSQR_material
+
+
+  ! returns e/scale
+subroutine INTERNAL_material_cutoff(rho,internal_energy, &
+  imattype,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: imattype,im
+REAL_T, intent(in) :: rho
+REAL_T, intent(out) :: internal_energy
+REAL_T :: massfrac_parm(num_species_var+1)
+
+
+if (rho.gt.zero) then
+ ! do nothing
+else
+ print *,"rho invalid"
+ stop
+endif
+if ((im.lt.1).or.(im.gt.num_materials)) then
+ print *,"im invalid69"
+ stop
+endif
+call init_massfrac_parm(rho,massfrac_parm,im)
+
+  ! returns e/scale
+call INTERNAL_material(rho,massfrac_parm, &
+ fort_tempcutoff(im), &
+ internal_energy,imattype,im)
+
+return
+end subroutine INTERNAL_material_cutoff
+
+  ! returns e/scale
+  ! internal energy = e(temperature,density=rho)
+subroutine INTERNAL_material(rho,massfrac_parm, &
+  temperature,internal_energy, &
+  imattype,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: imattype,im
+REAL_T, intent(in) :: rho,temperature
+REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
+REAL_T, intent(out) :: internal_energy
+REAL_T local_internal_energy  ! this is an output
+
+if (rho.gt.zero) then
+ ! do nothing
+else
+ print *,"rho invalid"
+ stop
+endif
+if (temperature.gt.zero) then
+ ! do nothing
+else
+ print *,"T invalid"
+ stop
+endif
+
+if (is_in_probtype_list().eq.1) then
+ call SUB_INTERNAL(rho,massfrac_parm, &
+   temperature,local_internal_energy, &
+   imattype,im,num_species_var)
+else 
+ call INTERNAL_material_CORE(rho,massfrac_parm, &
+  temperature,local_internal_energy, &
+  imattype,im)
+endif
+
+internal_energy=local_internal_energy/global_pressure_scale
+
+return
+end subroutine INTERNAL_material
+
+
+ ! called from FORT_OVERRIDE 
+subroutine init_density_at_depth()
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T depth,pgrad,a,b,c,tol
+REAL_T surface_den,depth_den
+REAL_T surface_pressure,depth_pressure
+
+
+density_at_depth=one
+
+ ! water density where the charge is initially located.
+if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
+ density_at_depth=1.00039080D0
+  ! cavitation
+else if ((probtype.eq.46).and.(SDIM.eq.2)) then 
+ if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+  density_at_depth=1.00008343D0
+ else if (axis_dir.eq.10) then
+  density_at_depth=1.0000423520369408D0 ! 10.22 meters
+ else if (axis_dir.eq.20) then
+  ! do nothing
+ else
+  print *,"axis_dir out of range"
+  stop
+ endif
+else if (fort_material_type(1).eq.13) then
+
+ if (abs(gravity).eq.zero) then
+  print *,"gravity invalid"
+  stop
+ endif
+
+ if (1.eq.0) then
+  print *,"abs(gravity)= ",abs(gravity)
+  print *,"denconst(1)= ",fort_denconst(1)
+ endif
+
+ surface_den=fort_denconst(1)  ! density at top of domain
+ depth_den=surface_den
+
+ if (SDIM.eq.2) then
+  depth=probhiy-probloy
+ else if (SDIM.eq.3) then
+  depth=probhiz-probloz
+ else
+  print *,"dimension bust"
+  stop
+ endif
+ 
+!       print *,"depth= ",depth
+
+ if (depth.le.zero) then
+  print *,"depth invalid"
+  stop
+ endif
+ if (surface_den.le.zero) then
+  print *,"surface den invalid"
+  stop
+ endif
+ call EOS_tait_ADIABATIC_rhohydro(surface_den,surface_pressure)
+ call EOS_tait_ADIABATIC_rhohydro(depth_den,depth_pressure)
+ pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
+ do while (pgrad.le.abs(gravity))
+  depth_den=two*depth_den
+  call EOS_tait_ADIABATIC_rhohydro(depth_den,depth_pressure)
+  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
+  if (1.eq.0) then
+   print *,"depth_den,pgrad ",depth_den,pgrad
+  endif
+ enddo ! while (pgrad.le.abs(gravity))
+ a=surface_den
+ b=depth_den
+ c=half*(surface_den+depth_den)
+ call EOS_tait_ADIABATIC_rhohydro(c,depth_pressure)
+ pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
+ tol=abs(gravity)*1.0D-3
+ do while (abs(pgrad-abs(gravity)).gt.tol)
+  if (1.eq.0) then
+   print *,"a,b,c ",a,b,c
+   print *,"pgrad ",pgrad
+  endif
+  if (pgrad.gt.abs(gravity)) then
+   b=c
+   c=half*(a+b)
+  else if (pgrad.lt.abs(gravity)) then
+   a=c
+   c=half*(a+b)
+  else
+   print *,"pgrad bust"
+   stop
+  endif
+  call EOS_tait_ADIABATIC_rhohydro(c,depth_pressure)
+  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
+ enddo
+ density_at_depth=c
+endif  ! material_type(1)=13
+
+return
+end subroutine init_density_at_depth
+
+
+subroutine get_left_velocityIOWA(t,u_left)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T k1,k2
+REAL_T t,u_left
+
+if (probtype.ne.110) then
+ print *,"probtype invalid get left velocity"
+ stop
+endif
+if (inflow_count.le.0) then
+ print *,"inflow_count invalid"
+ stop
+endif
+
+do while ((inflow_time(last_inflow_index).gt.t).and. &
+          (last_inflow_index.gt.1)) 
+ last_inflow_index=last_inflow_index-1
+enddo
+do while ((inflow_time(last_inflow_index).lt.t).and. &
+          (last_inflow_index.lt.inflow_count))
+ last_inflow_index=last_inflow_index+1
+enddo
+if (t.le.inflow_time(1)) then
+ u_left=inflow_velocity(1)
+else if (t.ge.inflow_time(inflow_count)) then
+ u_left=inflow_velocity(inflow_count)
+else 
+
+ if (t.le.inflow_time(last_inflow_index)) then
+  k1=last_inflow_index-1
+ else
+  k1=last_inflow_index
+ endif
+ k2=k1+1
+ u_left=inflow_velocity(k1)+ &
+  ( (inflow_velocity(k2)-inflow_velocity(k1))/ &
+    (inflow_time(k2)-inflow_time(k1)) )*(t-inflow_time(k1))
+endif
+u_left=u_left*100.0  ! convert to cm/s
+
+return
+end subroutine get_left_velocityIOWA
+
+
+subroutine get_right_velocityIOWA(t,u_right)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T k1,k2
+REAL_T t,u_right
+
+if (probtype.ne.110) then
+ print *,"probtype invalid get_right_velocity"
+ stop
+endif
+if (outflow_count.le.0) then
+ print *,"outflow_count invalid"
+ stop
+endif
+
+do while ((outflow_time(last_outflow_index).gt.t).and. &
+          (last_outflow_index.gt.1)) 
+ last_outflow_index=last_outflow_index-1
+enddo
+do while ((outflow_time(last_outflow_index).lt.t).and. &
+          (last_outflow_index.lt.outflow_count))
+ last_outflow_index=last_outflow_index+1
+enddo
+if (t.le.outflow_time(1)) then
+ u_right=outflow_velocity(1)
+else if (t.ge.outflow_time(outflow_count)) then
+ u_right=outflow_velocity(outflow_count)
+else 
+
+ if (t.le.outflow_time(last_outflow_index)) then
+  k1=last_outflow_index-1
+ else
+  k1=last_outflow_index
+ endif
+ k2=k1+1
+ u_right=outflow_velocity(k1)+ &
+  ( (outflow_velocity(k2)-outflow_velocity(k1))/ &
+    (outflow_time(k2)-outflow_time(k1)) )*(t-outflow_time(k1))
+endif
+u_right=u_right*100.0  ! convert to cm/s
+
+return
+end subroutine get_right_velocityIOWA
+
+
+subroutine get_left_elevationIOWA(t,elevation_left)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T k1,k2
+REAL_T t,elevation_left
+
+if (probtype.ne.110) then
+ print *,"probtype invalid get_left_elevation"
+ stop
+endif
+if (inflow_count.le.0) then
+ print *,"inflow_count invalid"
+ stop
+endif
+
+do while ((inflow_time(last_inflow_index).gt.t).and. &
+          (last_inflow_index.gt.1)) 
+ last_inflow_index=last_inflow_index-1
+enddo
+do while ((inflow_time(last_inflow_index).lt.t).and. &
+          (last_inflow_index.lt.inflow_count))
+ last_inflow_index=last_inflow_index+1
+enddo
+if (t.le.inflow_time(1)) then
+ elevation_left=inflow_elevation(1)
+else if (t.ge.inflow_time(inflow_count)) then
+ elevation_left=inflow_elevation(inflow_count)
+else 
+
+ if (t.le.inflow_time(last_inflow_index)) then
+  k1=last_inflow_index-1
+ else
+  k1=last_inflow_index
+ endif
+ k2=k1+1
+ elevation_left=inflow_elevation(k1)+ &
+  ( (inflow_elevation(k2)-inflow_elevation(k1))/ &
+    (inflow_time(k2)-inflow_time(k1)) )*(t-inflow_time(k1))
+endif
+elevation_left=elevation_left*100.0  ! convert to cm
+
+return
+end subroutine get_left_elevationIOWA
+
+
+subroutine get_right_elevationIOWA(t,elevation_right)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T k1,k2
+REAL_T t,elevation_right
+
+if (probtype.ne.110) then
+ print *,"probtype invalid get_right_elevation"
+ stop
+endif
+if (outflow_count.le.0) then
+ print *,"outflow_count invalid"
+ stop
+endif
+
+do while ((outflow_time(last_outflow_index).gt.t).and. &
+          (last_outflow_index.gt.1)) 
+ last_outflow_index=last_outflow_index-1
+enddo
+do while ((outflow_time(last_outflow_index).lt.t).and. &
+          (last_outflow_index.lt.outflow_count))
+ last_outflow_index=last_outflow_index+1
+enddo
+if (t.le.outflow_time(1)) then
+ elevation_right=outflow_elevation(1)
+else if (t.ge.outflow_time(outflow_count)) then
+ elevation_right=outflow_elevation(outflow_count)
+else 
+
+ if (t.le.outflow_time(last_outflow_index)) then
+  k1=last_outflow_index-1
+ else
+  k1=last_outflow_index
+ endif
+ k2=k1+1
+ elevation_right=outflow_elevation(k1)+ &
+  ( (outflow_elevation(k2)-outflow_elevation(k1))/ &
+    (outflow_time(k2)-outflow_time(k1)) )*(t-outflow_time(k1))
+endif
+elevation_right=elevation_right*100.0  ! convert to cm
+
+return
+end subroutine get_right_elevationIOWA
+
+
+subroutine get_bottom_elevation(x,elevation)
+use probcommon_module
+IMPLICIT NONE
+
+real*8 x,elevation
+real*8 h,l
+
+ ! inlet x/H=-52 outlet x/H=44
+ ! inlet x=-52H=594.36 cm  outlet x=44H=502.92 cm
+ ! zhi=5H=57.15 cm
+ ! (x/l)=(x/(2.5 h))=2/5 (x/h)
+ ! at inlet, (x/l)=-52 * 2/5 = -20.8
+ ! at outlet, (x/l)=44 * 2/5 = 17.6
+ ! 0<z/h<5
+ ! dx_min=0.3mm  dz_min=0.2mm ?
+ ! -1<x/l<1
+h=11.43  ! h=H  maximum bump height in centimeters
+l=2.5*h
+if (abs(x/l).le.1.0) then
+ elevation=h*(1.0-2.0*((x/l)**2)+(x/l)**4)
+else if (x/l.lt.0.0) then
+ elevation=0.0
+else if (x/l.gt.0.0) then
+ elevation=0.0
+else
+ print *,"bust"
+ stop
+endif
+
+return
+end subroutine get_bottom_elevation
+
+subroutine local_shallow_water_elevation(time,x,dist)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T time,x,dist
+REAL_T xright,xleft,shallow_tstop
+REAL_T thetax,thetat,tgrid,xgrid
+REAL_T delta_t_grid,delta_x_grid
+REAL_T new_time
+INTEGER_T igrid,jgrid
+
+xleft=-594.36
+xright=502.92
+shallow_tstop=15.0
+new_time=time+SHALLOW_TIME
+
+delta_t_grid=shallow_tstop/SHALLOW_M
+delta_x_grid=(xright-xleft)/SHALLOW_N
+
+  !  NINT->round to nearest whole number
+
+if (new_time.ge.shallow_tstop) then
+ igrid=SHALLOW_M-1
+else if (new_time.le.zero) then
+ igrid=0
+else
+ igrid=NINT(new_time/delta_t_grid)-2
+ if (igrid.lt.0) then
+  igrid=0
+ endif
+ tgrid=igrid*delta_t_grid
+ do while ((tgrid.lt.new_time).and.(igrid.lt.SHALLOW_M))
+  igrid=igrid+1
+  tgrid=igrid*delta_t_grid
+ enddo
+ igrid=igrid-1
+endif
+
+if (x.le.xleft) then
+ jgrid=0
+else if (x.ge.xright) then
+ jgrid=SHALLOW_N-1
+else
+ jgrid=NINT((x-xleft)/delta_x_grid)-2
+ if (jgrid.lt.0) then
+  jgrid=0
+ endif
+ xgrid=xleft+jgrid*delta_x_grid
+ do while ((xgrid.lt.x).and.(jgrid.lt.SHALLOW_N))
+  jgrid=jgrid+1
+  xgrid=xleft+jgrid*delta_x_grid
+ enddo
+ jgrid=jgrid-1
+endif
+
+xgrid=xleft+jgrid*delta_x_grid
+tgrid=igrid*delta_t_grid
+if (x.le.xgrid) then
+ thetax=zero
+else if (x.ge.xgrid+delta_x_grid) then
+ thetax=one
+else
+ thetax=(x-xgrid)/delta_x_grid
+endif
+
+if (new_time.le.tgrid) then
+ thetat=zero
+else if (new_time.ge.tgrid+delta_t_grid) then
+ thetat=one
+else
+ thetat=(new_time-tgrid)/delta_t_grid
+endif
+
+dist= &
+ (one-thetax)*(one-thetat)*shallow_water_data(igrid,jgrid,1)+ &
+ (thetax)*(one-thetat)*shallow_water_data(igrid,jgrid+1,1)+ &
+ (thetax)*(thetat)*shallow_water_data(igrid+1,jgrid+1,1)+ &
+ (one-thetax)*(thetat)*shallow_water_data(igrid+1,jgrid,1)
+
+return
+end subroutine local_shallow_water_elevation
+
+subroutine local_shallow_water_velocity(time,x,vel)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T time,x,vel
+REAL_T xright,xleft,shallow_tstop
+REAL_T thetax,thetat,tgrid,xgrid
+REAL_T delta_t_grid,delta_x_grid
+REAL_T new_time
+INTEGER_T igrid,jgrid
+
+xleft=-594.36
+xright=502.92
+shallow_tstop=15.0
+new_time=time+SHALLOW_TIME
+
+delta_t_grid=shallow_tstop/SHALLOW_M
+delta_x_grid=(xright-xleft)/SHALLOW_N
+
+  !  NINT->round to nearest whole number
+
+if (new_time.ge.shallow_tstop) then
+ igrid=SHALLOW_M-1
+else if (new_time.le.zero) then
+ igrid=0
+else
+ igrid=NINT(new_time/delta_t_grid)-2
+ if (igrid.lt.0) then
+  igrid=0
+ endif
+ tgrid=igrid*delta_t_grid
+ do while ((tgrid.lt.new_time).and.(igrid.lt.SHALLOW_M))
+  igrid=igrid+1
+  tgrid=igrid*delta_t_grid
+ enddo
+ igrid=igrid-1
+endif
+
+if (x.le.xleft) then
+ jgrid=0
+else if (x.ge.xright) then
+ jgrid=SHALLOW_N-1
+else
+ jgrid=NINT((x-xleft)/delta_x_grid)-2
+ if (jgrid.lt.0) then
+  jgrid=0
+ endif
+ xgrid=xleft+jgrid*delta_x_grid
+ do while ((xgrid.lt.x).and.(jgrid.lt.SHALLOW_N))
+  jgrid=jgrid+1
+  xgrid=xleft+jgrid*delta_x_grid
+ enddo
+ jgrid=jgrid-1
+endif
+
+xgrid=xleft+jgrid*delta_x_grid
+tgrid=igrid*delta_t_grid
+if (x.le.xgrid) then
+ thetax=zero
+else if (x.ge.xgrid+delta_x_grid) then
+ thetax=one
+else
+ thetax=(x-xgrid)/delta_x_grid
+endif
+
+if (new_time.le.tgrid) then
+ thetat=zero
+else if (new_time.ge.tgrid+delta_t_grid) then
+ thetat=one
+else
+ thetat=(new_time-tgrid)/delta_t_grid
+endif
+
+vel= &
+ (one-thetax)*(one-thetat)*shallow_water_data(igrid,jgrid,2)+ &
+ (thetax)*(one-thetat)*shallow_water_data(igrid,jgrid+1,2)+ &
+ (thetax)*(thetat)*shallow_water_data(igrid+1,jgrid+1,2)+ &
+ (one-thetax)*(thetat)*shallow_water_data(igrid+1,jgrid,2)
+
+return
+end subroutine local_shallow_water_velocity
+
+
+
+
+subroutine doit(problo,probhi,ncell,dx,tstop)
+use probcommon_module
+IMPLICIT NONE
+
+real*8 problo,probhi,dx,tstop
+integer ncell
+real*8 SSold(-1:ncell)
+real*8 SS(-1:ncell)
+real*8 QQold(-1:ncell)
+real*8 QQ(-1:ncell)
+real*8 DD(-1:ncell)  ! bottom topography
+real*8 xx(-1:ncell)
+real*8 SSflux(0:ncell)
+real*8 QQflux(0:ncell)
+real*8 start_elevation
+integer skip,nstep,i
+real*8 local_gravity,time
+real*8 elevation_right,elevation_left,u_right,u_left
+real*8 maxu,maxc,den,mom,uu,cc,dt,lambda
+real*8 denleft,denright,momleft,momright,pleft,pright
+real*8 minz
+integer icrit
+
+integer igrid,jgrid  ! t index x index
+REAL_T delta_t_grid,delta_x_grid,t_grid,x_grid
+REAL_T thetax,thetat
+integer hitgrid,last_index
+
+delta_t_grid=tstop/SHALLOW_M
+delta_x_grid=(probhi-problo)/SHALLOW_N
+
+skip=2000
+
+local_gravity=980.0
+start_elevation=22.862
+
+time=0.0
+nstep=0
+
+do i=-1,ncell
+ xx(i)=problo+(i+0.5)*dx
+ call get_bottom_elevation(xx(i),DD(i))
+ QQ(i)=0.0
+ SS(i)=start_elevation-DD(i)
+enddo
+
+do while (time.le.tstop-1.0D-10) 
+
+ call get_right_elevationIOWA(time,elevation_right)
+ call get_left_elevationIOWA(time,elevation_left)
+ call get_right_velocityIOWA(time,u_right)
+ call get_left_velocityIOWA(time,u_left)
+ SS(-1)=elevation_left
+ SS(ncell)=elevation_right
+ QQ(-1)=elevation_left*u_left
+ QQ(ncell)=elevation_right*u_right
+
+ do i=-1,ncell
+  SSold(i)=SS(i)
+  QQold(i)=QQ(i)
+ enddo
+
+ maxu=0.0
+ maxc=0.0 
+ do i=0,ncell-1
+  den=SS(i)
+  mom=QQ(i)
+  if (den.le.0.0) then
+   print *,"density must be positive (subroutine doit shallow_water)"
+   print *,"i,den ",i,den
+   stop
+  endif
+  cc=sqrt(local_gravity*den)
+  if (cc.gt.maxc) then
+   maxc=cc
+  endif
+  uu=abs(mom/den)
+  if (uu.gt.maxu) then
+   maxu=abs(uu)
+  endif
+ enddo
+ if (maxu+maxc.le.0.0) then
+  print *,"must have acoustic waves"
+  stop
+ endif
+ dt=0.8*dx/(maxu+maxc)
+ if (time+dt.ge.tstop) then
+  dt=tstop-time
+ endif
+ lambda=dt/dx
+
+ do i=0,ncell
+  denleft=SS(i-1)
+  denright=SS(i)
+  momleft=QQ(i-1)
+  momright=QQ(i)
+  pleft=0.5*local_gravity*(denleft**2)
+  pright=0.5*local_gravity*(denright**2)
+  SSflux(i)=0.5*(momleft+momright)-0.5*(denright-denleft)/lambda
+  if (denright.le.0.0) then
+   print *,"hydraulic section must be positive"
+   stop
+  endif
+  if (denleft.le.0.0) then
+   print *,"hydraulic section must be positive"
+   stop
+  endif
+  QQflux(i)=0.5*(momleft**2/denleft+momright**2/denright+ &
+    pleft+pright)-0.5*(momright-momleft)/lambda
+ enddo
+ do i=0,ncell-1
+  SS(i)=SS(i)-lambda*(SSflux(i+1)-SSflux(i))
+  QQ(i)=QQ(i)-lambda*(QQflux(i+1)-QQflux(i))- &
+    lambda*SS(i)*local_gravity*0.5*(DD(i+1)-DD(i-1))
+ enddo
+
+ hitgrid=0
+ do igrid=0,SHALLOW_M
+  t_grid=igrid*delta_t_grid
+  if (hitgrid.eq.0) then
+   if ((time.le.t_grid).and.(time+dt.ge.t_grid)) then
+    hitgrid=1
+    last_index=-1
+    do jgrid=0,SHALLOW_N
+     x_grid=problo+jgrid*delta_x_grid
+     do while (xx(last_index).le.x_grid)
+      last_index=last_index+1
+     enddo
+     last_index=last_index-1
+     if (t_grid.le.time) then
+      thetat=zero
+     else if (t_grid.ge.time+dt) then
+      thetat=one
+     else 
+      thetat=(t_grid-time)/dt
+     endif
+     if (x_grid.le.xx(last_index)) then
+      thetax=zero
+     else if (x_grid.ge.xx(last_index+1)) then
+      thetax=one
+     else
+      thetax=(x_grid-xx(last_index))/dx
+     endif
+     shallow_water_data(igrid,jgrid,1)= &
+       (one-thetax)*(one-thetat)* &
+          (DD(last_index)+SSold(last_index))+ &
+       (one-thetax)*thetat* &
+          (DD(last_index)+SS(last_index))+ &
+       (one-thetat)*thetax* &
+          (DD(last_index+1)+SSold(last_index+1))+ &
+       thetat*thetax* &
+         (SS(last_index+1)+DD(last_index+1))
+     shallow_water_data(igrid,jgrid,2)= &
+       (one-thetax)*(one-thetat)* &
+       QQold(last_index)/SSold(last_index)+ &
+       (one-thetax)*thetat* &
+       QQ(last_index)/SS(last_index)+ &
+       (one-thetat)*thetax* &
+       QQold(last_index+1)/SSold(last_index+1)+ &
+       thetat*thetax* &
+       QQ(last_index+1)/SS(last_index+1)
+    enddo  ! jgrid
+   endif ! time<t_grid<time+dt
+  endif ! hitgrid=0
+ enddo ! igrid
+
+ time=time+dt
+ nstep=nstep+1
+
+ if (nstep-skip*(nstep/skip).eq.0) then
+  print *,"time=",time
+  print *,"dt=",dt
+  icrit=0
+  minz=SS(0)+DD(0)
+  do i=0,ncell-1
+   if (SS(i)+DD(i).lt.minz) then
+    minz=SS(i)+DD(i)
+    icrit=i
+   endif
+  enddo
+  print *,"icrit,x,minz ",icrit,xx(icrit),minz
+ endif
+enddo ! while time<tstop
+
+return
+end subroutine doit
+
+subroutine shallow_water_solve()
+use probcommon_module
+IMPLICIT NONE
+
+real*8 problo,probhi,tstop,dx
+integer ncell
+
+problo=-594.36
+probhi=502.92
+
+ ! 0.1 mm  (0.2mm in Fred Stern's paper)
+ ! 100000
+ncell=5000
+dx=(probhi-problo)/ncell
+tstop=15.0
+
+call doit(problo,probhi,ncell,dx,tstop)
+
+return
+end subroutine shallow_water_solve
 
 
 end module global_utility_module

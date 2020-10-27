@@ -2111,9 +2111,10 @@ endif
 
 end subroutine dist_concentric
 
-subroutine LS_sub(xsten,nhalf,dx,bfact,dist,nmat)
+subroutine LS_sub(xsten,nhalf,dx,bfact,dist,nmat,time)
 INTEGER_T, intent(in) :: bfact
 INTEGER_T, intent(in) :: nhalf
+REAL_T, intent(in) :: time
 REAL_T, intent(in) :: dx(2)
 REAL_T, intent(in) :: xsten(-nhalf:nhalf,2)
 INTEGER_T, intent(in) :: nmat
@@ -3088,6 +3089,7 @@ real(kind=8)                       :: cendark(nmat_in,2)
 real(kind=8)                       :: cenlight(nmat_in,2)
 real(kind=8)                       :: xsten(-3:3,2)
 real(kind=8)                       :: vf(-1:N,-1:N,nmat_in)
+real(kind=8)                       :: time_placeholder
 integer                            :: stack_max_level
 integer                            :: current_level
 integer                            :: bfact
@@ -3128,8 +3130,9 @@ integer                            :: iloc,nhalf
       enddo
      enddo 
      bfact=1
+     time_placeholder=0.0
      call stackvolume_batch(xsten,nhalf,dx,bfact, &
-       voldata,nmat_in,current_level,stack_max_level,LS_sub)
+       voldata,nmat_in,current_level,stack_max_level,LS_sub,time_placeholder)
       ! centroid relative to the center (or centroid?) of the cell
      call extract_vof_cen_batch(voldata,vofdark,voflight, &
        cendark,cenlight,nmat_in)

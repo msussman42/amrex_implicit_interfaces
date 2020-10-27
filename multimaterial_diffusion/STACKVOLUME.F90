@@ -19,12 +19,13 @@ stop
       IMPLICIT NONE
 
       abstract interface
-        subroutine sub_interface(xsten,nhalf,dx,bfact,dist,nmat)
+        subroutine sub_interface(xsten,nhalf,dx,bfact,dist,nmat,time)
         INTEGER_T, intent(in) :: bfact
         INTEGER_T, intent(in) :: nhalf
         REAL_T, intent(in) :: dx(SDIM) 
         REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
         INTEGER_T, intent(in) :: nmat
+        REAL_T, intent(in) :: time
         REAL_T, intent(out) :: dist(nmat)
         end subroutine
       end interface
@@ -98,7 +99,7 @@ stop
       ! voldark,volall,cendark,cenall
       ! called from: stackvolume_batch
       subroutine get_volume_data_batch(xsten,nhalf,dxin,bfact, &
-        voldata,nmat,cutflag,LS_sub)
+        voldata,nmat,cutflag,LS_sub,time)
 
       use MOF_routines_module
       use geometry_intersect_module
@@ -109,6 +110,7 @@ stop
 
       procedure(sub_interface) :: LS_sub
 
+      REAL_T, intent(in) :: time
       INTEGER_T nmat,nten,bfact,nhalf
       REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T dxin(SDIM)
@@ -187,7 +189,7 @@ stop
        enddo ! isten
       
         ! in: get_volume_data_batch
-       call LS_sub(xsten2,nhalf2,dxin,bfact,distbatch,nmat)
+       call LS_sub(xsten2,nhalf2,dxin,bfact,distbatch,nmat,time)
        do imaterial=1,nmat
         ltest(D_DECL(i1+2,j1+2,k1+2),imaterial)= &
          distbatch(imaterial)
@@ -248,7 +250,7 @@ stop
 ! voldark,vollight,volall,cendark,cenlight,cenall
 ! called from FORT_INITDATA
       recursive subroutine stackvolume_batch(xsten,nhalf,dxin,bfact, &
-        voldata,nmat,level,stack_max_level,LS_sub)
+        voldata,nmat,level,stack_max_level,LS_sub,time)
       use probcommon_module
       IMPLICIT NONE
 
@@ -261,6 +263,7 @@ stop
       REAL_T, intent(inout) :: voldata(nmat,2*SDIM+2)
       INTEGER_T, intent(inout) :: stack_max_level
       INTEGER_T, intent(in) :: level
+      REAL_T, intent(in) :: time
 
       INTEGER_T i1,j1,k1,k1lo,k1hi,dir,cutflag,im,isten
       REAL_T dxsten_fine(SDIM)
@@ -318,7 +321,7 @@ stop
 
        ! in: stackvolume_batch
       call get_volume_data_batch(xsten,nhalf,dxin,bfact, &
-        localdata,nmat,cutflag,LS_sub)
+        localdata,nmat,cutflag,LS_sub,time)
 
       if ((level.eq.stack_max_level).or.(cutflag.eq.0)) then
        do im=1,nmat
@@ -361,7 +364,7 @@ stop
 
         call stackvolume_batch( &
          xsten_fine,nhalf,dxin_fine,bfact, &
-         voldata,nmat,level+1,stack_max_level,LS_sub)
+         voldata,nmat,level+1,stack_max_level,LS_sub,time)
        enddo 
        enddo 
        enddo

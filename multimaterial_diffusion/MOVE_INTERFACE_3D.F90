@@ -2396,6 +2396,8 @@ stop
        if (1.eq.1) then 
         ! burnvel flag==1 if valid rate of phase change.
         call FORT_RATEMASSCHANGE( &
+         tid, &  ! NEW
+         nucleation_flag, & ! NEW
          stefan_flag, & ! do not update LSnew if stefan_flag==0
          level, &
          finest_level, &
@@ -2425,21 +2427,27 @@ stop
          microlayer_size, &
          macrolayer_size, &
          max_contact_line_size, &
+         R_Palmore_Desjardins, & ! NEW
          latent_heat, &
          use_exact_temperature, &
          reaction_rate, &
+         hardwire_Y_gamma, & !NEW
+         hardwire_T_gamma, & !NEW
+         accommodation_coefficient, & !NEW
+         reference_pressure, & !NEW
          saturation_temp, &
          saturation_temp_curv, &
          saturation_temp_vel, &
          saturation_temp_min, &
          saturation_temp_max, &
          freezing_model, &
-         Tanasawa_or_Schrage, &
+         Tanasawa_or_Schrage_or_Kassemi, & !NEW(CHANGED)
          distribute_from_target, &
          mass_fraction_id, &
          species_evaporation_density, &
          molar_mass, &
          species_molar_mass, &
+         use_supermesh, &  ! NEW(pass this to CONVERTMATERIAL too)
          fablo,fabhi, &
          fablo,fabhi,bfact, &
          xlo,dx, &
