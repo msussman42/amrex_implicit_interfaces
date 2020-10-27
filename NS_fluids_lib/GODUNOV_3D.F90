@@ -16312,6 +16312,7 @@ stop
         ! ns.wall_slip_weight=0.0 => do not strengthen the slip BC
         ! ns.wall_slip_weight=1.0 => strongest imposition of slip BC
       subroutine FORT_ASSIMILATE_STATEDATA( &
+       isweep, &
        law_of_the_wall, &
        wall_slip_weight, &
        im_solid_map, &
@@ -16341,6 +16342,7 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: law_of_the_wall
       REAL_T, intent(in) :: wall_slip_weight
       INTEGER_T, intent(in) :: level,finest_level
@@ -16526,161 +16528,13 @@ stop
        stop
       endif
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       assimilate_parm%xsten=>xsten
-       if (is_in_probtype_list().eq.1) then
-        call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
-         i,j,k,cell_flag)
-       else
-        ! do nothing
-       endif
-
-         ! check if a fluid cell neighbors a solid cell
-       do im=1,nmat
-        LS_local(im)=LS_state(D_DECL(i,j,k),im)
-       enddo
-        ! first checks the rigid materials for a positive LS; if none
-        ! exist, then the subroutine checks the fluid materials.
-       call get_primary_material(LS_local,nmat,im_primary) 
-
-       if (is_rigid(nmat,im_primary).eq.0) then
-        ! check all neighbors in "star stencil" for solid cells.
-        ! for each solid cell, update the present cell center velocity
-        ! with a weighted average of the slip velocity and the present
-        ! velocity.
-        do veldir=1,SDIM
-         velsum(veldir)=zero
-        enddo
-        wtsum=zero
-
-        do dir=1,SDIM
-         ii=0
-         jj=0
-         kk=0
-         if (dir.eq.1) then
-          ii=1
-         else if (dir.eq.2) then
-          jj=1
-         else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          kk=1
-         else
-          print *,"dir invalid"
-          stop
-         endif
-         do side=1,2
-          if (side.eq.1) then
-           iface=i
-           jface=j
-           kface=k
-           icell=i-ii
-           jcell=j-jj
-           kcell=k-kk
-          else if (side.eq.2) then
-           iface=i+ii
-           jface=j+jj
-           kface=k+kk
-           icell=i+ii
-           jcell=j+jj
-           kcell=k+kk
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-          do im=1,nmat
-           LS_stencil(im)=LS_state(D_DECL(icell,jcell,kcell),im)
-          enddo
-          call get_primary_material(LS_stencil,nmat,im_stencil) 
-          if (is_rigid(nmat,im_stencil).eq.0) then
-           ! do nothing
-          else if (is_rigid(nmat,im_stencil).eq.1) then
-           partid=1
-           do while ((im_solid_map(partid)+1.ne.im_stencil).and. &
-                     (partid.lt.nparts_ghost))
-            partid=partid+1
-           enddo
-           if (im_solid_map(partid)+1.eq.im_stencil) then
-            do veldir=1,SDIM
-             if (dir.eq.1) then
-              velface=ughostx(D_DECL(iface,jface,kface), &
-                      (partid-1)*SDIM+veldir)
-             else if (dir.eq.2) then
-              velface=ughosty(D_DECL(iface,jface,kface), &
-                      (partid-1)*SDIM+veldir)
-             else if ((dir.eq.3).and.(SDIM.eq.3)) then
-              velface=ughostz(D_DECL(iface,jface,kface), &
-                      (partid-1)*SDIM+veldir)
-             else
-              print *,"dir invalid"
-              stop
-             endif
-
-             velsum(veldir)=velsum(veldir)+velface
-            enddo ! veldir=1..sdim
-            wtsum=wtsum+one
-           else
-            print *,"im_solid_map(partid) invalid"
-            stop
-           endif
-          else
-           print *,"is_rigid(nmat,im_stencil) invalid"
-           stop
-          endif 
-         enddo ! side=1,2
-        enddo ! dir=1..SDIM
-        if (wtsum.eq.zero) then
-         ! do nothing
-        else if (wtsum.gt.zero) then
-         do veldir=1,SDIM
-          state(D_DECL(i,j,k),veldir)= &
-                 (one-wall_slip_weight)*state(D_DECL(i,j,k),veldir)+ &
-                 wall_slip_weight*velsum(veldir)/wtsum
-         enddo
-        else
-         print *,"wtsum invalid"
-         stop
-        endif 
-
-       else if (is_rigid(nmat,im_primary).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid(nmat,im_primary) invalid"
-        stop
-       endif
-
-      enddo ! k
-      enddo ! j
-      enddo ! i
-
-
-      do cell_flag=0,SDIM-1
-
-       ii=0
-       jj=0
-       kk=0
-       if (cell_flag.eq.0) then
-        ii=1
-       else if (cell_flag.eq.1) then
-        jj=1
-       else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then
-        kk=1
-       else
-        print *,"cell_flag invalid"
-        stop
-       endif
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-             growlo,growhi,0,cell_flag) 
+      if (isweep.eq.0) then
 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,cell_flag+1)
+        call gridsten_level(xsten,i,j,k,level,nhalf)
 
         assimilate_parm%xsten=>xsten
         if (is_in_probtype_list().eq.1) then
@@ -16690,166 +16544,116 @@ stop
          ! do nothing
         endif
 
-        ileft=i-ii
-        jleft=j-jj
-        kleft=k-kk
-        iright=i
-        jright=j
-        kright=k
+         ! check if a fluid cell neighbors a solid cell
         do im=1,nmat
-         LS_stencil(im)=LS_state(D_DECL(ileft,jleft,kleft),im)
+         LS_local(im)=LS_state(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(LS_stencil,nmat,im_stencil) 
-        if (is_rigid(nmat,im_stencil).eq.0) then
-         do im=1,nmat
-          LS_stencil(im)=LS_state(D_DECL(iright,jright,kright),im)
+        ! first checks the rigid materials for a positive LS; if none
+        ! exist, then the subroutine checks the fluid materials.
+        call get_primary_material(LS_local,nmat,im_primary) 
+
+        if (is_rigid(nmat,im_primary).eq.0) then
+         ! check all neighbors in "star stencil" for solid cells.
+         ! for each solid cell, update the present cell center velocity
+         ! with a weighted average of the slip velocity and the present
+         ! velocity.
+         do veldir=1,SDIM
+          velsum(veldir)=zero
          enddo
-         call get_primary_material(LS_stencil,nmat,im_stencil) 
-         if (is_rigid(nmat,im_stencil).eq.0) then
-          do veldir=1,SDIM
-           velsum(veldir)=zero
-          enddo
-          wtsum=zero
-          do dirtan=1,SDIM
-           if (dirtan.ne.cell_flag+1) then
-            do side_nbr=1,2
-             if (side_nbr.eq.1) then
-              i_nbr=ileft
-              j_nbr=jleft
-              k_nbr=kleft
-             else if (side_nbr.eq.2) then
-              i_nbr=iright
-              j_nbr=jright
-              k_nbr=kright
-             else
-              print *,"side_nbr invalid"
-              stop
-             endif
-             iii=0
-             jjj=0
-             kkk=0
-             if (dirtan.eq.1) then
-              iii=1
-             else if (dirtan.eq.2) then
-              jjj=1
-             else if ((dirtan.eq.3).and.(SDIM.eq.3)) then
-              kkk=1
-             else
-              print *,"dirtan invalid"
-              stop
-             endif
-            
-             do side=1,2
-              if (side.eq.1) then
-               iface=i_nbr
-               jface=j_nbr
-               kface=k_nbr
-               icell=i_nbr-iii
-               jcell=j_nbr-jjj
-               kcell=k_nbr-kkk
-              else if (side.eq.2) then
-               iface=i_nbr+iii
-               jface=j_nbr+jjj
-               kface=k_nbr+kkk
-               icell=i_nbr+iii
-               jcell=j_nbr+jjj
-               kcell=k_nbr+kkk
+         wtsum=zero
+
+         do dir=1,SDIM
+          ii=0
+          jj=0
+          kk=0
+          if (dir.eq.1) then
+           ii=1
+          else if (dir.eq.2) then
+           jj=1
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           kk=1
+          else
+           print *,"dir invalid"
+           stop
+          endif
+          do side=1,2
+           if (side.eq.1) then
+            iface=i
+            jface=j
+            kface=k
+            icell=i-ii
+            jcell=j-jj
+            kcell=k-kk
+           else if (side.eq.2) then
+            iface=i+ii
+            jface=j+jj
+            kface=k+kk
+            icell=i+ii
+            jcell=j+jj
+            kcell=k+kk
+           else
+            print *,"side invalid"
+            stop
+           endif
+
+           do im=1,nmat
+            LS_stencil(im)=LS_state(D_DECL(icell,jcell,kcell),im)
+           enddo
+           call get_primary_material(LS_stencil,nmat,im_stencil) 
+           if (is_rigid(nmat,im_stencil).eq.0) then
+            ! do nothing
+           else if (is_rigid(nmat,im_stencil).eq.1) then
+            partid=1
+            do while ((im_solid_map(partid)+1.ne.im_stencil).and. &
+                      (partid.lt.nparts_ghost))
+             partid=partid+1
+            enddo
+            if (im_solid_map(partid)+1.eq.im_stencil) then
+             do veldir=1,SDIM
+              if (dir.eq.1) then
+               velface=ughostx(D_DECL(iface,jface,kface), &
+                       (partid-1)*SDIM+veldir)
+              else if (dir.eq.2) then
+               velface=ughosty(D_DECL(iface,jface,kface), &
+                       (partid-1)*SDIM+veldir)
+              else if ((dir.eq.3).and.(SDIM.eq.3)) then
+               velface=ughostz(D_DECL(iface,jface,kface), &
+                       (partid-1)*SDIM+veldir)
               else
-               print *,"side invalid"
+               print *,"dir invalid"
                stop
               endif
 
-              do im=1,nmat
-               LS_stencil(im)=LS_state(D_DECL(icell,jcell,kcell),im)
-              enddo
-              call get_primary_material(LS_stencil,nmat,im_stencil) 
-              if (is_rigid(nmat,im_stencil).eq.0) then
-               ! do nothing
-              else if (is_rigid(nmat,im_stencil).eq.1) then
-               partid=1
-               do while ((im_solid_map(partid)+1.ne.im_stencil).and. &
-                         (partid.lt.nparts_ghost))
-                partid=partid+1
-               enddo
-               if (im_solid_map(partid)+1.eq.im_stencil) then
-                do veldir=1,SDIM
-                 if (dirtan.eq.1) then
-                  velface=ughostx(D_DECL(iface,jface,kface), &
-                        (partid-1)*SDIM+veldir)
-                 else if (dirtan.eq.2) then
-                  velface=ughosty(D_DECL(iface,jface,kface), &
-                        (partid-1)*SDIM+veldir)
-                 else if ((dirtan.eq.3).and.(SDIM.eq.3)) then
-                  velface=ughostz(D_DECL(iface,jface,kface), &
-                        (partid-1)*SDIM+veldir)
-                 else
-                  print *,"dirtan invalid"
-                  stop
-                 endif
-
-                 velsum(veldir)=velsum(veldir)+velface
-                enddo ! veldir=1..sdim
-                wtsum=wtsum+one
-               else
-                print *,"im_solid_map(partid) invalid"
-                stop
-               endif
-              else
-               print *,"is_rigid(nmat,im_stencil) invalid"
-               stop
-              endif 
-             enddo ! side=1,2
-            enddo ! side_nbr=1..2
-           else if (dirtan.eq.cell_flag+1) then
-            ! do nothing
-           else
-            print *,"dirtan invalid"
-            stop
-           endif
-          enddo ! dirtan=1..SDIM
-          if (wtsum.eq.zero) then
-           ! do nothing
-          else if (wtsum.gt.zero) then
-           do veldir=1,SDIM
-            if (cell_flag+1.eq.veldir) then
-             if (veldir.eq.1) then
-              macx(D_DECL(i,j,k))= &
-                   (one-wall_slip_weight)*macx(D_DECL(i,j,k))+ &
-                   wall_slip_weight*velsum(veldir)/wtsum
-             else if (veldir.eq.2) then
-              macy(D_DECL(i,j,k))= &
-                   (one-wall_slip_weight)*macy(D_DECL(i,j,k))+ &
-                   wall_slip_weight*velsum(veldir)/wtsum
-             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-              macz(D_DECL(i,j,k))= &
-                   (one-wall_slip_weight)*macz(D_DECL(i,j,k))+ &
-                   wall_slip_weight*velsum(veldir)/wtsum
-             else
-              print *,"veldir invalid"
-              stop
-             endif
-            else if ((cell_flag+1.ge.1).and. &
-                     (cell_flag+1.le.SDIM)) then
-             ! do nothing
+              velsum(veldir)=velsum(veldir)+velface
+             enddo ! veldir=1..sdim
+             wtsum=wtsum+one
             else
-             print *,"cell_flag invalid"
+             print *,"im_solid_map(partid) invalid"
              stop
             endif
-           enddo ! veldir=1..sdim
-          else
-           print *,"wtsum invalid"
-           stop
-          endif 
-         else if (is_rigid(nmat,im_stencil).eq.1) then
+           else
+            print *,"is_rigid(nmat,im_stencil) invalid"
+            stop
+           endif 
+          enddo ! side=1,2
+         enddo ! dir=1..SDIM
+         if (wtsum.eq.zero) then
           ! do nothing
+         else if (wtsum.gt.zero) then
+          do veldir=1,SDIM
+           state(D_DECL(i,j,k),veldir)= &
+                  (one-wall_slip_weight)*state(D_DECL(i,j,k),veldir)+ &
+                  wall_slip_weight*velsum(veldir)/wtsum
+          enddo
          else
-          print *,"is_rigid(nmat,im_stencil) (right) invalid"
+          print *,"wtsum invalid"
           stop
-         endif
-        else if (is_rigid(nmat,im_stencil).eq.1) then
+         endif 
+
+        else if (is_rigid(nmat,im_primary).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid(nmat,im_stencil) (left) invalid"
+         print *,"is_rigid(nmat,im_primary) invalid"
          stop
         endif
 
@@ -16857,7 +16661,207 @@ stop
        enddo ! j
        enddo ! i
 
-      enddo ! cell_flag=0...sdim-1
+      else if (isweep.eq.1) then
+
+       do cell_flag=0,SDIM-1
+
+        ii=0
+        jj=0
+        kk=0
+        if (cell_flag.eq.0) then
+         ii=1
+        else if (cell_flag.eq.1) then
+         jj=1
+        else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then
+         kk=1
+        else
+         print *,"cell_flag invalid"
+         stop
+        endif
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+             growlo,growhi,0,cell_flag) 
+
+        do i=growlo(1),growhi(1)
+        do j=growlo(2),growhi(2)
+        do k=growlo(3),growhi(3)
+
+         call gridstenMAC_level(xsten,i,j,k,level,nhalf,cell_flag+1)
+
+         assimilate_parm%xsten=>xsten
+         if (is_in_probtype_list().eq.1) then
+          call SUB_ASSIMILATE(assimilate_parm,assimilate_out_parm, &
+           i,j,k,cell_flag)
+         else
+          ! do nothing
+         endif
+
+          ! check that both adjoining cells are fluid cells
+         ileft=i-ii
+         jleft=j-jj
+         kleft=k-kk
+         iright=i
+         jright=j
+         kright=k
+         do im=1,nmat
+          LS_stencil(im)=LS_state(D_DECL(ileft,jleft,kleft),im)
+         enddo
+         call get_primary_material(LS_stencil,nmat,im_stencil) 
+         if (is_rigid(nmat,im_stencil).eq.0) then
+          do im=1,nmat
+           LS_stencil(im)=LS_state(D_DECL(iright,jright,kright),im)
+          enddo
+          call get_primary_material(LS_stencil,nmat,im_stencil) 
+          if (is_rigid(nmat,im_stencil).eq.0) then
+           ! check if any neighbor solid faces oriented perpendicular to the
+           ! given face.
+           !   side_nbr=1   side_nbr=2
+           !     --------------------
+           !     |    s?   |  s?    |
+           !     |         |        |
+           !     --------------------
+           !     |    f   f|f  f    |
+           !     |        f|f       |
+           !     --------------------
+           !     |    s?   |  s?    |
+           !     |         |        |
+           !     --------------------
+           ! loop through the "s?" cells, wtsum will contain the count
+           wtsum=zero
+           do dirtan=1,SDIM
+            if (dirtan.ne.cell_flag+1) then
+             do side_nbr=1,2
+              if (side_nbr.eq.1) then
+               i_nbr=ileft
+               j_nbr=jleft
+               k_nbr=kleft
+              else if (side_nbr.eq.2) then
+               i_nbr=iright
+               j_nbr=jright
+               k_nbr=kright
+              else
+               print *,"side_nbr invalid"
+               stop
+              endif
+              iii=0
+              jjj=0
+              kkk=0
+              if (dirtan.eq.1) then
+               iii=1
+              else if (dirtan.eq.2) then
+               jjj=1
+              else if ((dirtan.eq.3).and.(SDIM.eq.3)) then
+               kkk=1
+              else
+               print *,"dirtan invalid"
+               stop
+              endif
+            
+              do side=1,2
+               if (side.eq.1) then
+                icell=i_nbr-iii
+                jcell=j_nbr-jjj
+                kcell=k_nbr-kkk
+               else if (side.eq.2) then
+                icell=i_nbr+iii
+                jcell=j_nbr+jjj
+                kcell=k_nbr+kkk
+               else
+                print *,"side invalid"
+                stop
+               endif
+
+               do im=1,nmat
+                LS_stencil(im)=LS_state(D_DECL(icell,jcell,kcell),im)
+               enddo
+               call get_primary_material(LS_stencil,nmat,im_stencil) 
+               if (is_rigid(nmat,im_stencil).eq.0) then
+                ! do nothing
+               else if (is_rigid(nmat,im_stencil).eq.1) then
+                partid=1
+                do while ((im_solid_map(partid)+1.ne.im_stencil).and. &
+                          (partid.lt.nparts_ghost))
+                 partid=partid+1
+                enddo
+                if (im_solid_map(partid)+1.eq.im_stencil) then
+                 wtsum=wtsum+one
+                else
+                 print *,"im_solid_map(partid) invalid"
+                 stop
+                endif
+               else
+                print *,"is_rigid(nmat,im_stencil) invalid"
+                stop
+               endif 
+              enddo ! side=1,2
+             enddo ! side_nbr=1..2
+            else if (dirtan.eq.cell_flag+1) then
+             ! do nothing
+            else
+             print *,"dirtan invalid"
+             stop
+            endif
+           enddo ! dirtan=1..SDIM
+           if (wtsum.eq.zero) then
+            ! do nothing
+           else if (wtsum.gt.zero) then
+            do veldir=1,SDIM
+
+             velsum(veldir)= &
+                half*(state(D_DECL(ileft,jleft,kleft),veldir)+ &
+                      state(D_DECL(iright,jright,kright),veldir))
+
+             if (cell_flag+1.eq.veldir) then
+              if (veldir.eq.1) then
+               macx(D_DECL(i,j,k))= &
+                   (one-wall_slip_weight)*macx(D_DECL(i,j,k))+ &
+                   wall_slip_weight*velsum(veldir)
+              else if (veldir.eq.2) then
+               macy(D_DECL(i,j,k))= &
+                   (one-wall_slip_weight)*macy(D_DECL(i,j,k))+ &
+                   wall_slip_weight*velsum(veldir)
+              else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+               macz(D_DECL(i,j,k))= &
+                   (one-wall_slip_weight)*macz(D_DECL(i,j,k))+ &
+                   wall_slip_weight*velsum(veldir)
+              else
+               print *,"veldir invalid"
+               stop
+              endif
+             else if ((cell_flag+1.ge.1).and. &
+                      (cell_flag+1.le.SDIM)) then
+              ! do nothing
+             else
+              print *,"cell_flag invalid"
+              stop
+             endif
+            enddo ! veldir=1..sdim
+           else
+            print *,"wtsum invalid"
+            stop
+           endif 
+          else if (is_rigid(nmat,im_stencil).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid(nmat,im_stencil) (right) invalid"
+           stop
+          endif
+         else if (is_rigid(nmat,im_stencil).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid(nmat,im_stencil) (left) invalid"
+          stop
+         endif
+
+        enddo ! k
+        enddo ! j
+        enddo ! i
+
+       enddo ! cell_flag=0...sdim-1
+
+      else
+       print *,"isweep invalid"
+       stop
+      endif
 
 
       return

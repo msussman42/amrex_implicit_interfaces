@@ -2265,9 +2265,17 @@ stop
          Y_probe(iprobe), &
          PROBE_PARMS%debugrate)
 
-        if ((Y_probe(iprobe).lt.zero).or. &
-            (Y_probe(iprobe).gt.one)) then
-         print *,"Y_probe out of bounds"
+        if ((Y_probe(iprobe).ge.-VOFTOL).and. &
+            (Y_probe(iprobe).le.zero)) then
+         Y_probe(iprobe)=zero
+        else if ((Y_probe(iprobe).ge.zero).and. &
+                 (Y_probe(iprobe).le.one)) then
+         ! do nothing
+        else if ((Y_probe(iprobe).ge.one).and. &
+                 (Y_probe(iprobe).le.one+VOFTOL)) then
+         Y_probe(iprobe)=one
+        else
+         print *,"Y_probe out of bounds probe_interpolation"
          print *,"Y_probe ",Y_probe(iprobe)
          stop
         endif
@@ -2450,11 +2458,18 @@ stop
            dummy_VOF_pos_probe_counter, &
            PROBE_PARMS%use_supermesh)
 
-          if ((Y_probe(iprobe).ge.zero).and. &
-              (Y_probe(iprobe).le.one)) then
+
+          if ((Y_probe(iprobe).ge.-VOFTOL).and. &
+              (Y_probe(iprobe).le.zero)) then
+           Y_probe(iprobe)=zero
+          else if ((Y_probe(iprobe).ge.zero).and. &
+                   (Y_probe(iprobe).le.one)) then
            ! do nothing
+          else if ((Y_probe(iprobe).ge.one).and. &
+                   (Y_probe(iprobe).le.one+VOFTOL)) then
+           Y_probe(iprobe)=one
           else
-           print *,"Y_probe out of bounds"
+           print *,"Y_probe out of bounds probe_interpolation (filament probe)"
            print *,"Y_probe ",Y_probe(iprobe)
            stop
           endif

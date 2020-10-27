@@ -754,6 +754,7 @@ extern "C"
 
 
    void FORT_ASSIMILATE_STATEDATA(
+    int* isweep,
     int* law_of_the_wall,
     Real* wall_slip_weight,
     int* im_solid_map,
