@@ -5765,7 +5765,7 @@ void NavierStokes::assimilate_state_data() {
  MultiFab& Smac_new_z = get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
 
  for (int isweep=0;isweep<2;isweep++) {
-  init_boundary();
+  init_boundary(); // init ghost cells on the given level.
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
