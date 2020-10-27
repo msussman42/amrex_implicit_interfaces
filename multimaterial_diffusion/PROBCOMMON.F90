@@ -3,6 +3,8 @@
 
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_ArrayLim.H"
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
@@ -13,7 +15,143 @@ print *,"dimension bust"
 stop
 #endif
 
+
+module probcommon_module_types
+
+      type user_defined_sum_int_type
+       INTEGER_T ncomp_sum_int_user
+       REAL_T, pointer :: problo(:)      
+       REAL_T, pointer :: probhi(:) 
+       INTEGER_T :: igrid,jgrid,kgrid
+       REAL_T :: volgrid
+       INTEGER_T :: nhalf
+       INTEGER_T :: nmat
+       INTEGER_T :: bfact
+       INTEGER_T :: ntensorMM
+       INTEGER_T :: den_ncomp
+       INTEGER_T, pointer :: tilelo(:)
+       INTEGER_T, pointer :: tilehi(:)
+       INTEGER_T, pointer :: fablo(:)
+       INTEGER_T, pointer :: fabhi(:)
+       REAL_T, pointer :: xlo(:)
+       REAL_T, pointer :: dx(:)
+       REAL_T, pointer :: xsten(:,:)
+       REAL_T :: time
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: cellten
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
+        ! 1..nmat*ngeom_recon
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes
+        ! num_materials * num_state_type
+        ! density1,temperature1,species1_1,...,species_N_1
+        ! density2,temperature2,species1_2,...,species_N_2
+        ! density3,temperature3,species1_3,...,species_N_3
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: den
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: vel
+      end type user_defined_sum_int_type
+
+      type nucleation_parm_type_input
+       INTEGER_T :: tid
+       INTEGER_T :: local_freezing_model
+       REAL_T :: LL
+       INTEGER_T :: i,j,k
+       INTEGER_T :: im_source
+       INTEGER_T :: im_dest
+       REAL_T :: dxmaxLS
+       INTEGER_T :: bfact
+       INTEGER_T :: level
+       INTEGER_T :: finest_level
+       REAL_T, pointer :: dx(:)
+       REAL_T, pointer :: xlo(:)
+       INTEGER_T :: nmat
+       INTEGER_T :: nten
+       INTEGER_T :: nstate
+       INTEGER_T, pointer :: fablo(:)
+       INTEGER_T, pointer :: fabhi(:)
+       INTEGER_T :: DIMDEC(EOS)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
+       INTEGER_T :: DIMDEC(LSnew)
+       INTEGER_T :: DIMDEC(Snew)
+       INTEGER_T :: DIMDEC(pres)
+       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
+       INTEGER_T :: DIMDEC(pres_eos)
+       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres_eos
+       INTEGER_T :: custom_nucleation_model
+       INTEGER_T :: do_the_nucleate
+       INTEGER_T :: nucleate_pos_size
+       REAL_T, pointer :: nucleate_pos(:)
+       REAL_T, pointer :: nucleation_temp(:)
+       REAL_T, pointer :: nucleation_pressure(:)
+       REAL_T, pointer :: nucleation_pmg(:)
+       REAL_T, pointer :: nucleation_mach(:)
+       REAL_T, pointer :: cavitation_pressure(:)
+       REAL_T, pointer :: cavitation_vapor_density(:)
+       REAL_T, pointer :: cavitation_tension(:)
+       REAL_T :: local_TSAT
+       REAL_T :: prev_time
+       REAL_T :: cur_time
+       REAL_T :: dt
+      end type nucleation_parm_type_input
+
+
+      type assimilate_parm_type
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: nparts_ghost
+      INTEGER_T :: nparts
+      INTEGER_T, pointer :: im_solid_map(:)
+      INTEGER_T :: nstate
+      INTEGER_T :: nhalf
+      INTEGER_T :: nmat
+      REAL_T :: time
+      REAL_T :: dt
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xsten(:,:)
+      REAL_T :: dxmin
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughostx
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughosty
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ughostz
+      end type assimilate_parm_type
+
+      type assimilate_out_parm_type
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macx
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macy
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macz
+      end type assimilate_out_parm_type
+
+      type interp_from_grid_parm_type
+      INTEGER_T :: scomp
+      INTEGER_T :: ncomp
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: nmat
+      INTEGER_T :: interp_foot_flag ! =1 => xdisp=x-xfoot  xfoot=x-xdisp
+      INTEGER_T :: im_PLS  ! =0 if not weighted
+      REAL_T, pointer :: xtarget(:)
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      INTEGER_T :: ngrowfab 
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state 
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
+      end type interp_from_grid_parm_type
+
+      type interp_from_grid_out_parm_type
+      REAL_T, pointer :: data_interp(:)
+      end type interp_from_grid_out_parm_type
+
+     contains
+
+end module probcommon_module_types
+
 module probcommon_module
+use probcommon_module_types
 
 implicit none
 
@@ -26,8 +164,31 @@ implicit none
 ! nucleation_init_time added: May 5, 2018
 ! fort_density_floor and fort_density_ceiling added: January 8, 2019
 ! fort_ZEYU_DCA_SELECT added: January 20, 2020
+! fort_molar_mass added: September 5, 2020.
+! fort_max_num_materials and fort_max_num_eos deleted: September 6, 2020.
+! fort_stiffCV added September 29.
+! fort_store_elastic_data added October 3.
+! fort_solidheat_flag added October 13.
+! fort_lame_coefficient added October 21.
+
+
+      INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
+       !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      INTEGER_T, PARAMETER :: MAX_NUM_INTERFACES=55
+      INTEGER_T, PARAMETER :: MAX_NUM_SPECIES=10
+      INTEGER_T, PARAMETER :: MAX_NUM_EOS=24
 
 #include "probdataf95.H"
+
+      INTEGER_T, PARAMETER :: DEBUG_EVAPORATION=0
+      INTEGER_T, PARAMETER :: EVAPORATION_iter_max=50
+      REAL_T, PARAMETER :: EVAPORATION_TOL=1.0D-10
+
+      INTEGER_T, PARAMETER :: OLD_DODECANE=1
+
+      INTEGER_T, PARAMETER :: DEBUG_DYNAMIC_CONTACT_ANGLE=1
+
+      REAL_T, PARAMETER :: GNBC_RADIUS=2.0d0
 
       INTEGER_T, PARAMETER :: ngrow_make_distance=3
 
@@ -39,7 +200,6 @@ implicit none
          ! CP=1.007D+7 Specific heat at constant pressure cgs ergs/(Kelvin g)
          ! GAMMA=CP/CV=1.39861
       REAL_T, PARAMETER :: R_AIR_PARMS=0.287D+7  ! ergs/(Kelvin g)
-      REAL_T, PARAMETER :: R_Palmore_Desjardins=0.287D+7  ! ergs/(Kelvin g)
       REAL_T, PARAMETER :: CV_AIR_PARMS=0.72D+7  ! ergs/(Kelvin g)
       REAL_T, PARAMETER :: PCAV_TAIT=220.2726D0  ! cgs dyne/cm^2
       REAL_T, PARAMETER :: PCAV_TAIT_VACUUM=220.2726D0  ! dyne/cm^2
@@ -74,7 +234,7 @@ implicit none
       REAL_T, PARAMETER :: alpha_tillotson=10.0 
       REAL_T, PARAMETER :: beta_tillotson=5.0 
 
-      REAL_T, PARAMETER :: TEMPERATURE_FLOOR=0.0D0  ! default: 1.0D-20
+      REAL_T, PARAMETER :: TEMPERATURE_FLOOR=1.0D-20  ! default: 1.0D-20
       INTEGER_T, PARAMETER :: visual_RT_transform=1
 
       INTEGER_T, PARAMETER :: bubbleInPackedColumn=1001
@@ -107,6 +267,7 @@ implicit none
       REAL_T, PARAMETER :: MLSVOFTOL=1.0D-14
        ! used for checking if centroid in box.
       REAL_T, PARAMETER :: CENTOL=1.0D-13
+      REAL_T, PARAMETER :: EVAP_BISECTION_TOL=1.0D-12
        ! Default: INTERCEPT_TOL=1.0D-12
       REAL_T, PARAMETER :: INTERCEPT_TOL=1.0D-12
       REAL_T, PARAMETER :: FRAC_PAIR_TOL=1.0D-12
@@ -193,7 +354,318 @@ implicit none
        ! level
       INTEGER_T, allocatable, dimension(:) :: level_container_allocated
 
+      INTEGER_T :: used_probtypes(1000)
+      INTEGER_T :: probtype_list_size
+
+      ABSTRACT INTERFACE
+
+      subroutine TEMPLATE_INIT_MODULE()
+      end subroutine TEMPLATE_INIT_MODULE
+
+      subroutine TEMPLATE_hydro_pressure_density( &
+                        xpos,rho,pres,from_boundary_hydrostatic)
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(inout) :: rho
+      REAL_T, intent(inout) :: pres
+      INTEGER_T, intent(in) :: from_boundary_hydrostatic
+      end subroutine TEMPLATE_hydro_pressure_density
+
+      subroutine TEMPLATE_CFL_HELPER(time,dir,uu,dx)
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: time
+      REAL_T, intent(inout) :: uu
+      REAL_T, intent(in) :: dx(SDIM)
+      end subroutine TEMPLATE_CFL_HELPER
+
+
+      subroutine TEMPLATE_SUMINT(GRID_DATA_IN,increment_out,nsum)
+      use probcommon_module_types
+
+      INTEGER_T, intent(in) :: nsum
+      type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
+      REAL_T, intent(out) :: increment_out(nsum)
+      end subroutine TEMPLATE_SUMINT
+      
+      subroutine TEMPLATE_LS(x,t,LS,nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(out) :: LS(nmat)
+      end subroutine TEMPLATE_LS
+
+      subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(out) :: VEL(SDIM)
+      INTEGER_T, intent(in) :: velsolid_flag
+      end subroutine TEMPLATE_VEL
+
+      subroutine TEMPLATE_EOS(rho,massfrac_var, &
+        internal_energy,pressure, &
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, intent(in) :: internal_energy
+      REAL_T, intent(out) :: pressure
+      end subroutine TEMPLATE_EOS
+
+      subroutine TEMPLATE_SOUNDSQR(rho,massfrac_var, &
+        internal_energy,soundsqr, &
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, intent(in) :: internal_energy
+      REAL_T, intent(out) :: soundsqr
+      end subroutine TEMPLATE_SOUNDSQR
+
+      subroutine TEMPLATE_INTERNAL(rho,massfrac_var, &
+        temperature,local_internal_energy, &
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, intent(in) :: temperature 
+      REAL_T, intent(out) :: local_internal_energy
+      end subroutine TEMPLATE_INTERNAL
+
+      subroutine TEMPLATE_TEMPERATURE(rho,massfrac_var, &
+        temperature,internal_energy, &
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, intent(out) :: temperature 
+      REAL_T, intent(in) :: internal_energy
+      end subroutine TEMPLATE_TEMPERATURE
+
+      subroutine TEMPLATE_PRES(x,t,LS,PRES,nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(out) :: PRES
+      end subroutine TEMPLATE_PRES
+
+      subroutine TEMPLATE_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
+      INTEGER_T, intent(in) :: bcflag
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nstate_mat
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+      end subroutine TEMPLATE_STATE
+
+      subroutine TEMPLATE_LS_BC(xwall,xghost,t,LS, &
+       LS_in,dir,side,dx,nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xwall
+      REAL_T, intent(in) :: xghost(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(inout) :: LS(nmat)
+      REAL_T, intent(in) :: LS_in(nmat)
+      INTEGER_T, intent(in) :: dir,side
+      REAL_T, intent(in) :: dx(SDIM)
+      end subroutine TEMPLATE_LS_BC
+
+      subroutine TEMPLATE_VEL_BC(xwall,xghost,t,LS, &
+        VEL,VEL_in,veldir,dir,side,dx,nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xwall
+      REAL_T, intent(in) :: xghost(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(inout) :: VEL
+      REAL_T, intent(in) :: VEL_in
+      INTEGER_T, intent(in) :: veldir,dir,side
+      REAL_T, intent(in) :: dx(SDIM)
+      end subroutine TEMPLATE_VEL_BC
+
+      subroutine TEMPLATE_PRES_BC(xwall,xghost,t,LS, &
+        PRES,PRES_in,dir,side,dx,nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xwall
+      REAL_T, intent(in) :: xghost(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(inout) :: PRES
+      REAL_T, intent(in) :: PRES_in
+      INTEGER_T, intent(in) :: dir,side
+      REAL_T, intent(in) :: dx(SDIM)
+      end subroutine TEMPLATE_PRES_BC
+
+      subroutine TEMPLATE_STATE_BC(xwall,xghost,t,LS, &
+       STATE,STATE_merge,STATE_in,im,istate,dir,side,dx, &
+       nmat)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xwall
+      REAL_T, intent(in) :: xghost(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(inout) :: STATE
+      REAL_T, intent(inout) :: STATE_merge
+      REAL_T, intent(in) :: STATE_in
+      INTEGER_T, intent(in) :: dir,side
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: istate,im
+      end subroutine TEMPLATE_STATE_BC
+
+      subroutine TEMPLATE_HEATSOURCE( &
+        im,VFRAC, &
+        time, &
+        x, &
+        xsten, & ! xsten(-nhalf:nhalf,SDIM)
+        nhalf, &
+        temp, &
+        heat_source,den,CV,dt, &
+        nmat)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(in) :: VFRAC(nmat)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: temp(nmat)
+      REAL_T, intent(in) :: den(nmat)
+      REAL_T, intent(in) :: CV(nmat)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(out) :: heat_source
+      end subroutine TEMPLATE_HEATSOURCE
+
+      subroutine TEMPLATE_EB_heat_source(time,dt,xsten,nhalf, &
+        heat_flux,heat_dir,heat_side)
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(out) :: heat_flux
+      INTEGER_T, intent(out) :: heat_dir
+      INTEGER_T, intent(out) :: heat_side
+      end subroutine TEMPLATE_EB_heat_source
+
+      subroutine TEMPLATE_velfreestream(problen,local_buffer)
+      REAL_T, intent(inout) :: local_buffer(2*SDIM)
+      REAL_T, intent(in)    :: problen(SDIM)
+      end subroutine TEMPLATE_velfreestream
+
+      subroutine TEMPLATE_nucleation(nucleate_in,xsten,nhalf,make_seed)
+      use probcommon_module_types
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
+      INTEGER_T, intent(inout) :: make_seed
+      type(nucleation_parm_type_input), intent(in) :: nucleate_in
+      end subroutine TEMPLATE_nucleation
+
+      subroutine TEMPLATE_microcell_heat_coeff(heatcoeff,dx,veldir)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: veldir
+      REAL_T, intent(inout) :: heatcoeff
+      end subroutine TEMPLATE_microcell_heat_coeff
+
+      subroutine TEMPLATE_ASSIMILATE(assimilate_in,assimilate_out, &
+         i,j,k,cell_flag)
+      use probcommon_module_types
+      type(assimilate_parm_type), intent(in) :: assimilate_in
+      type(assimilate_out_parm_type), intent(inout) :: assimilate_out
+      INTEGER_T, intent(in) :: i,j,k,cell_flag
+      end subroutine TEMPLATE_ASSIMILATE
+
+      END INTERFACE
+
+      PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
+      PROCEDURE(TEMPLATE_hydro_pressure_density), POINTER :: &
+              SUB_hydro_pressure_density
+      PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
+      PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
+      PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
+      PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
+      PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
+      PROCEDURE(TEMPLATE_SOUNDSQR), POINTER :: SUB_SOUNDSQR
+      PROCEDURE(TEMPLATE_INTERNAL), POINTER :: SUB_INTERNAL
+      PROCEDURE(TEMPLATE_TEMPERATURE), POINTER :: SUB_TEMPERATURE
+      PROCEDURE(TEMPLATE_PRES), POINTER :: SUB_PRES
+      PROCEDURE(TEMPLATE_STATE), POINTER :: SUB_STATE
+      PROCEDURE(TEMPLATE_LS_BC), POINTER :: SUB_LS_BC
+      PROCEDURE(TEMPLATE_VEL_BC), POINTER :: SUB_VEL_BC
+      PROCEDURE(TEMPLATE_PRES_BC), POINTER :: SUB_PRES_BC
+      PROCEDURE(TEMPLATE_STATE_BC), POINTER :: SUB_STATE_BC
+      PROCEDURE(TEMPLATE_HEATSOURCE), POINTER :: SUB_HEATSOURCE
+      PROCEDURE(TEMPLATE_EB_heat_source), POINTER :: SUB_EB_heat_source
+      PROCEDURE(TEMPLATE_velfreestream), POINTER :: SUB_velfreestream
+      PROCEDURE(TEMPLATE_nucleation), POINTER :: SUB_nucleation
+      PROCEDURE(TEMPLATE_microcell_heat_coeff), POINTER :: &
+              SUB_microcell_heat_coeff
+      PROCEDURE(TEMPLATE_ASSIMILATE), POINTER :: SUB_ASSIMILATE
+
 contains
+
+      subroutine EOS_tait_ADIABATIC_rhohydro(rho,pressure)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: rho
+      REAL_T, intent(out) :: pressure
+      REAL_T A,B,rhobar,pcav
+
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.lt.0.001) then
+       print *,"rhobar invalid in eos tait adiabatic rhohydro"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+
+      if (rho.gt.zero) then
+       ! do nothing
+      else
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+
+      return
+      end subroutine EOS_tait_ADIABATIC_rhohydro
+
+
+      subroutine EOS_tait_ADIABATIC(rho,pressure)
+      IMPLICIT NONE
+
+      REAL_T rho,pressure
+      REAL_T A,B,rhobar,GAMMA,pcav
+
+      A=A_TAIT   ! dyne/cm^2
+      B=B_TAIT  ! dyne/cm^2
+      rhobar=RHOBAR_TAIT ! g/cm^3
+      GAMMA=GAMMA_TAIT
+      pcav=PCAV_TAIT 
+
+      if (rho.le.zero) then
+       print *,"rho invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+
+      return
+      end subroutine EOS_tait_ADIABATIC
 
 end module probcommon_module
 

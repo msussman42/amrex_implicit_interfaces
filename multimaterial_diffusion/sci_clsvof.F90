@@ -8156,6 +8156,7 @@ end subroutine CLSVOF_FILLCONTAINER
 ! mask=11 velocity is init from fine lev, sign is init from coarse level
 
 ! vel=temp=force=0 if no interfaces in cell's neighborhood
+! called from: SOLIDFLUID.F90
 subroutine CLSVOF_InitBox(  &
   iter, &
   sdim_AMR, &
@@ -8572,6 +8573,7 @@ IMPLICIT NONE
      ! normal points from solid to fluid
      ! phi=n dot (x-xnot)
      ! phi>0 in the fluid
+     ! this is the element normal (in contrast to the node normal)
      call scinormalBIG(ielem,normal,part_id,time)
 
      if (debug_all.eq.1) then
@@ -8585,6 +8587,8 @@ IMPLICIT NONE
 
       ! for each node in the element, this routine calls:
       ! get_target_from_foot
+      ! minnode and maxnode are needed in order to find the
+      ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
      call get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode)
       ! sanity check
      do dir=1,3
@@ -8611,6 +8615,7 @@ IMPLICIT NONE
       stop
      endif
     
+      ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
      call find_grid_bounding_box( &
        part_id, &
        null_intersection, &
@@ -8655,6 +8660,7 @@ IMPLICIT NONE
 
       used_for_trial=0
 
+       ! LOOP through bounding box of the element.
        ! this code is thread safe
        ! gridlo,gridhi restricted to growlo3D and growhi3D 
       do i=gridlo(1),gridhi(1)
@@ -8734,6 +8740,7 @@ IMPLICIT NONE
            unsigned_mindist, &
            xx,inplane,part_id,time,dxBB)
           ! check distance to the nodes of a triangular element.
+          ! normal_closest is the element normal.
           call checkinpointBIG(xclosest,normal_closest, &
            inode,ielem, &
            unsigned_mindist, &

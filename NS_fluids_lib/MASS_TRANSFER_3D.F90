@@ -5630,7 +5630,7 @@ stop
 #if (STANDALONE==0)
             thermal_k(iprobe)=get_user_heatviscconst(im_probe)
 #elif (STANDALONE==1)
-            thermal_k(iprobe)=fort_heatvisconst(im_probe)
+            thermal_k(iprobe)=fort_heatviscconst(im_probe)
 #else
             print *,"bust compiling convertmaterial"
             stop
@@ -6980,8 +6980,8 @@ stop
       INTEGER_T interp_valid_flag(2) ! iprobe=1 source iprobe=2 dest
       type(probe_parm_type), target :: PROBE_PARMS
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
-      type(nucleation_parm_type_input) :: nucleation_PARMS_in
-      type(nucleation_parm_type_inout) :: nucleation_PARMS_inout
+      type(nucleation_parm_type_input) :: create_in
+      type(nucleation_parm_type_inout) :: create_inout
       INTEGER_T iprobe,im_probe,microlayer_substrate_probe
       REAL_T x_gamma_a,x_gamma_b,x_gamma_c
       REAL_T Y_gamma_a,Y_gamma_b,Y_gamma_c
@@ -7256,52 +7256,52 @@ stop
       enddo
         ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
       call copy_dimdec( &
-        DIMS(nucleation_PARMS_in%EOS), &
+        DIMS(create_in%EOS), &
         DIMS(EOS))
       call copy_dimdec( &
-        DIMS(nucleation_PARMS_in%pres), &
+        DIMS(create_in%pres), &
         DIMS(pres))
       call copy_dimdec( &
-        DIMS(nucleation_PARMS_in%pres_eos), &
+        DIMS(create_in%pres_eos), &
         DIMS(pres_eos))
       call copy_dimdec( &
-        DIMS(nucleation_PARMS_in%Snew), &
+        DIMS(create_in%Snew), &
         DIMS(Snew))
       call copy_dimdec( &
-        DIMS(nucleation_PARMS_in%LSnew), &
+        DIMS(create_in%LSnew), &
         DIMS(Snew))
-      nucleation_PARMS_in%EOS=>EOS
-      nucleation_PARMS_in%pres=>pres
-      nucleation_PARMS_in%pres_eos=>pres_eos
-      nucleation_PARMS_inout%Snew=>Snew
-      nucleation_PARMS_inout%LSnew=>LSnew
+      create_in%EOS=>EOS
+      create_in%pres=>pres
+      create_in%pres_eos=>pres_eos
+      create_inout%Snew=>Snew
+      create_inout%LSnew=>LSnew
 
-      nucleation_PARMS_in%tid=tid
-      nucleation_PARMS_in%dxmaxLS=dxmaxLS
-      nucleation_PARMS_in%bfact=bfact
-      nucleation_PARMS_in%level=level
-      nucleation_PARMS_in%finest_level=finest_level
-      nucleation_PARMS_in%dx=>dx
-      nucleation_PARMS_in%xlo=>xlo
-      nucleation_PARMS_in%nmat=nmat
-      nucleation_PARMS_in%nten=nten
-      nucleation_PARMS_in%nstate=nstate
-      nucleation_PARMS_in%fablo=>fablo
-      nucleation_PARMS_in%fabhi=>fabhi
-      nucleation_PARMS_in%custom_nucleation_model=custom_nucleation_model
-      nucleation_PARMS_in%do_the_nucleate=do_the_nucleate
-      nucleation_PARMS_in%nucleate_pos_size=nucleate_pos_size
-      nucleation_PARMS_in%nucleate_pos=>nucleate_pos
-      nucleation_PARMS_in%nucleation_temp=>nucleation_temp
-      nucleation_PARMS_in%nucleation_pressure=>nucleation_pressure
-      nucleation_PARMS_in%nucleation_pmg=>nucleation_pmg
-      nucleation_PARMS_in%nucleation_mach=>nucleation_mach
-      nucleation_PARMS_in%cavitation_pressure=>cavitation_pressure
-      nucleation_PARMS_in%cavitation_vapor_density=>cavitation_vapor_density
-      nucleation_PARMS_in%cavitation_tension=>cavitation_tension
-      nucleation_PARMS_in%prev_time=prev_time
-      nucleation_PARMS_in%cur_time=cur_time
-      nucleation_PARMS_in%dt=dt
+      create_in%tid=tid
+      create_in%dxmaxLS=dxmaxLS
+      create_in%bfact=bfact
+      create_in%level=level
+      create_in%finest_level=finest_level
+      create_in%dx=>dx
+      create_in%xlo=>xlo
+      create_in%nmat=nmat
+      create_in%nten=nten
+      create_in%nstate=nstate
+      create_in%fablo=>fablo
+      create_in%fabhi=>fabhi
+      create_in%custom_nucleation_model=custom_nucleation_model
+      create_in%do_the_nucleate=do_the_nucleate
+      create_in%nucleate_pos_size=nucleate_pos_size
+      create_in%nucleate_pos=>nucleate_pos
+      create_in%nucleation_temp=>nucleation_temp
+      create_in%nucleation_pressure=>nucleation_pressure
+      create_in%nucleation_pmg=>nucleation_pmg
+      create_in%nucleation_mach=>nucleation_mach
+      create_in%cavitation_pressure=>cavitation_pressure
+      create_in%cavitation_vapor_density=>cavitation_vapor_density
+      create_in%cavitation_tension=>cavitation_tension
+      create_in%prev_time=prev_time
+      create_in%cur_time=cur_time
+      create_in%dt=dt
 
         ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
       call copy_dimdec( &
@@ -7344,9 +7344,9 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       nucleation_PARMS_in%i=i
-       nucleation_PARMS_in%j=j
-       nucleation_PARMS_in%k=k
+       create_in%i=i
+       create_in%j=j
+       create_in%k=k
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -8968,13 +8968,13 @@ stop
               else if ((is_rigid(nmat,im).eq.0).and. &
                        (is_rigid(nmat,im_opp).eq.0)) then
                if (im_primary.eq.im_source) then
-                nucleation_PARMS_in%LL=LL(ireverse)
-                nucleation_PARMS_in%local_freezing_model=local_freezing_model
-                nucleation_PARMS_in%local_TSAT=local_Tsat(ireverse)
-                nucleation_PARMS_in%im_source=im_source
-                nucleation_PARMS_in%im_dest=im_dest
+                create_in%LL=LL(ireverse)
+                create_in%local_freezing_model=local_freezing_model
+                create_in%local_TSAT=local_Tsat(ireverse)
+                create_in%im_source=im_source
+                create_in%im_dest=im_dest
                 call get_vel_phasechange_NUCLEATE( &
-                 nucleation_PARMS_in,nucleation_PARMS_inout)
+                 create_in,create_inout)
                else if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
                 ! do nothing
                else
