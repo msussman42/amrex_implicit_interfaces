@@ -5735,8 +5735,6 @@ void NavierStokes::assimilate_state_data() {
   amrex::Error("nparts invalid");
  }
 
- init_boundary();
-
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
 
@@ -5765,16 +5763,19 @@ void NavierStokes::assimilate_state_data() {
  MultiFab& Smac_new_x = get_new_data(Umac_Type,slab_step+1);
  MultiFab& Smac_new_y = get_new_data(Umac_Type+1,slab_step+1);
  MultiFab& Smac_new_z = get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
-	
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+ for (int isweep=0;isweep<2;isweep++) {
+  init_boundary();
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -5798,9 +5799,12 @@ void NavierStokes::assimilate_state_data() {
 
    int tid_current=ns_thread();
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
- 
+
+    // isweep==0 => update cell data
+    // isweep==1 => update MAC data 
     // in: GODUNOV_3D.F90
    FORT_ASSIMILATE_STATEDATA( 
+     &isweep,
      &law_of_the_wall,
      &wall_slip_weight,
      im_solid_map.dataPtr(),
@@ -5831,11 +5835,12 @@ void NavierStokes::assimilate_state_data() {
      ARLIM(solidvely.loVect()),ARLIM(solidvely.hiVect()),
      solidvelz.dataPtr(),
      ARLIM(solidvelz.loVect()),ARLIM(solidvelz.hiVect()) );
- } // mfi
+  } // mfi
 } // omp
- ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
-                         //ParallelDescriptor::ReduceRealSum
-      	                 //thread_class::reconcile_d_numPts(caller_id)
+  ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
+                          //ParallelDescriptor::ReduceRealSum
+        	          //thread_class::reconcile_d_numPts(caller_id)
+ } // isweep=0..1
 
 } // end subroutine assimilate_state_data()
 
@@ -17333,6 +17338,11 @@ void NavierStokes::writeInterfaceReconstruction() {
 
 }  // writeInterfaceReconstruction
 
+// in the future, FillPatchUtil should check if 
+// new fine grid data gets initialized properly by 
+// placing 1's everywhere except the data that needs to be 
+// filled.
+// 
 void NavierStokes::debug_ParallelCopy() {
 
  ParallelDescriptor::Barrier();
