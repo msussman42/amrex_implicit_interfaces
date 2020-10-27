@@ -65,6 +65,8 @@ namespace amrex{
 
 #define FACE_VAR_MF 42
 
+#define dt_gradp_over_rho_cell_MF 45
+
 // I-scheme, conduction, viscosity, div(up), grad p
 #define stableF_MF 46
 #define stableF_GP_MF 47
@@ -122,6 +124,9 @@ namespace amrex{
 #define PEDGE_MF 103
 #define POTENTIAL_EDGE_MF 106
 #define FACE_WEIGHT_MF 109
+
+#define dt_gradp_over_rho_face_MF 112
+
 #define POTENTIAL_FORCE_EDGE_MF 115
 
 #define POTENTIAL_FORCE_CELL_MF 118
@@ -614,6 +619,9 @@ public:
 		    int project_option);
 
     void prepare_viscous_solver();
+
+    void alloc_gradp_over_rho(int alloc_flag);
+
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
     void exit_viscous_solver();
