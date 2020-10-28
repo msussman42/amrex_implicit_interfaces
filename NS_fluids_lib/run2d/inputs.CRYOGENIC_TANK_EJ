@@ -32,6 +32,7 @@ ns.material_type    = 0 24 999
 # if make_interface_incomp==2:
 # density equation is rhot_t+div(rho u)=0 in the incompressible zone.
 ns.make_interface_incomp=1
+ns.face_flag=1
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)

@@ -14807,9 +14807,9 @@ NavierStokes::split_scalar_advection() {
 	MFInfo().SetTag("mask_unsplit"),FArrayBoxFactory());
   mask_unsplit->setVal(1.0);
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -15611,9 +15611,9 @@ NavierStokes::unsplit_scalar_advection() {
   // do nothing
  } else if (face_flag==1) {
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel

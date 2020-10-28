@@ -1,11 +1,5 @@
-# Based on the sorage tank setup in
-# DaigleETAL2012 - Temperature Stratification in a Cryogenic Fuel Tank
-# Using Palmore-Desjardins model
-# Aluminum cylinderical tank
-# Liquid hydrogen in bottom half
-# Gaseous helium + vapor hydrogen in top half
-# Heat flux or Drichlet BC on tank outher surface
-
+# For more information check
+# NASA_CRYOGENICS_GITHUB => references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
 # ----------------------------------------------------------
 # -------- Problem setup -----------------------------------
 # ----------------------------------------------------------
@@ -13,12 +7,12 @@
 max_step=99999999
 stop_time=1.0e+20
 
-ns.probtype         = 421
+ns.probtype         = 423
 ns.axis_dir         = 0
 
-# 1=liquid hydrogen 2=gaseous (ambient) helium  3=Aluminum solid wall
+# 1=liquid 2=gas(placeholder) 3=solid wall
 ns.num_materials    = 3
-# gaseous (vapor) hydrogen
+# vapor
 ns.num_species_var  = 1
 
 # Material type:
@@ -26,13 +20,19 @@ ns.num_species_var  = 1
 # 24 => compressible 
 # ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
-#
 ns.material_type    = 0 24 999
+
 # if make_interface_incomp==1:
 # density equation is Drho/Dt=0 in the incompressible zone.
 # if make_interface_incomp==2:
 # density equation is rhot_t+div(rho u)=0 in the incompressible zone.
 ns.make_interface_incomp=1
+# for k=0...num_divu_outer_sweeps-1
+#  S_t + u^{n+1,(k)} dot grad S=0
+#  rho^{n+1}(u* - u_adv)/dt = div (2 mu D^*) - dt grad p^{n+1,(k)}
+#  div (1/rho) grad p^{n+1,(k+1)}=rho c^2 (p^{n+1,(k+1)}-p^adv)/dt
+# endfor
+ns.num_divu_outer_sweeps=2
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
@@ -47,32 +47,32 @@ solvability_projection = 0  # Compressible gas
 #   (rho T)_{t} + div (rho u T) = 0  (energy advection)
 ns.temperature_primitive_variable = 1 1 1
 
-# Values simplified for debugging
-ns.xblob            = 4.0   # outer tank radius (4.21 m in DaigleETAL2012)
-ns.yblob            = 16.0  # outer tank height (29.54 m in DaigleETAL2012)
-ns.zblob            = 8.05  # initial interface location (29.54/2 m in DaigleETAL2012)
-ns.radblob          = 0.5 # wall thickness (0.1 m in DaigleETAL2012)
-ns.xblob2=0.0
-ns.yblob2=8.0
-ns.zblob2=8.0
-ns.radblob2=2.5
+# Coordinate origin is at the center of the tank
+ns.xblob            = 0.1016 # Tank cavity radius
+ns.yblob            = 0.4064 # Height of Cylindrical part 
+ns.zblob            = 0.0    # Interface location 
+ns.radblob          = 0.0    # Not used
+
+ns.xblob4 	    = 0.2159 # End cap radius
+ns.yblob4	    = 0.0127 # X_2 of spherical cap center 
+
+ns.zblob3	    = -0.1429 # X_2 of heater top 
+ns.yblob3	    = -0.1683 # X_2 of heater bottom
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
 # ----------------------------------------------------------
-# (4 x 32) m => (32 x 256) cell => 1/8 m/cell
-# (4 x 16) m => (32 x 128) cell => 1/8 m/cell
 # 0 => cart, 1 => RZ
 geometry.coord_sys  = 1
-geometry.prob_lo    = 0.0 0.0 
-geometry.prob_hi    = 4.0 16.0
+geometry.prob_lo    = 0.0   -0.254
+geometry.prob_hi    = 0.1286 0.254
 geometry.is_periodic= 0 0
 
-amr.n_cell          = 32 128 
+amr.n_cell          = 16 64 
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 32
+amr.max_grid_size   = 16
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4  # number of buffer cells in error est 
@@ -88,11 +88,6 @@ ns.init_shrink      = 1.0      # scale back initial timestep
 ns.change_max       = 1.1      
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
-#TODO:
-# 1. try ns.shock_timestep=2 1 2
-# 2. (a) project density and velocity in gas to be spatially uniform.
-#    (b) EOS, SOUNDSQR, etc depend on averaged density, temperature
-#
 #0=only at t=0 1=always account for sound speed 2=ignore
 ns.shock_timestep=2 1 2 
 
@@ -102,15 +97,15 @@ ns.shock_timestep=2 1 2
 # -------- Input/output (IO) -------------------------------
 # ----------------------------------------------------------
 # output file -2=> tecplot -1=> plot files (visit or paraview)
-ns.visual_option    =-2  
+ns.visual_option    =-2
 
 amr.check_int       = 1000    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-amr.plot_int        = 200     # number of timesteps between plot files
+amr.plot_int        = 10      # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
-ns.sum_interval     = 10      # timesteps between computing mass 
+ns.sum_interval     = 100     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -141,94 +136,50 @@ ns.visc_coef        = 1.0
 # -------- Material properties -----------------------------
 # ----------------------------------------------------------
 # 3 materials
-# 1=liquid hydrogen 2=gaseous helium  3=solid aluminium
+# 1=liquid HFE7000  2=gaseous HFE7000  3=solid acrylic
+# 1 species variable => equal to 1 everywhere
 
 # Assuming saturation condition initially
 
-# Refernces for material properties are on the project github repo
-# NASA_CRYOGENICS_MICROGRAVITY/references/Material_properties/
-# [1] LeachmanETAL2017 - Thermodynamic Properties of Cryogenic Fluids
-# [2] https://en.wikipedia.org/wiki/Aluminium
-# [3] VenturaPerfetti2014 - Thermal Properties of Solids at Room and Cryogenic Temperatures
-# [4] He_properties.pdf => https://www.bnl.gov/magnets/Staff/Gupta/cryogenic-data-handbook/Section2.pdf
-# [5] H2_properties_2.pdf
-
-# Universal gas constant R = 8.3145 [J/(Mol.K)]
-# LHe @0.2 MPa => T_evap~20 K
-
-# Aluminum properties:
+# Universal gas constant R = 8.31446261815324 [J/(Mol.K)]
 
 # Molar mass [kg/mol]
-# [1] p.57
-# H2 => 2.01E-03
-# He => 4.00E-03
-# Al => 26.98E-03 
-ns.molar_mass = 2.01E-03 4.00E-03 26.98E-03 
-ns.species_molar_mass=2.01E-03 
+# Acrylic ??? (Not used)
+ns.molar_mass = 0.2 0.2 1 
+ns.species_molar_mass=0.2 
 
 # Density [kg/m^3]
-# NOTE: THIS VALUES ARE FOR PURE MATERIALS DENSITIES
-#       THE MIXED GAS DENSITY IS EVALUATED IN CRYOGENIC_TANK1_STATE(...) 
-# Liquid => # [1] p.62
-# LH2  -> rho_liquid @ (T=20, P=0.2MPa) = 71.409 (kg/m^3)  ([1] p.62)
-#
-# For gas/vapor, assuming 0.2E6 Pa initial total pressure
-# 0.1E6 Pa partial pressure of hydrogen vapor
-# 0.1E6 Pa partial pressure of gasous 
-# rho_0_GH2 = (p_0 M_H2)/(R * T_0)=(0.1E+06*2.01E-03)/(8.3145*21)=1.1511730797
-# rho_0_GHe = (p_0 M_He)/(R * T_0)=(0.1E+06*4.00E-03)/(8.3145*21)=2.290891701
-# rho_0_mix = rho_0_GHe + rho_0_GH2 = 3.4420647807
-# rho_0_GH2/rho_mix = 0.3344425957
-# Al -> [3]
-# 
-ns.denconst= 71.409 2.290891701 2700.0
-ns.speciesconst= 1.0 0.3344425957 1.0
+ns.denconst= 1400 5.3421449445 1190
+ns.speciesconst= 1.0 1.0 1.0 
 
 # Diffusion coefficient [m^2/s]
-# Evaluated based on the diffusion coefficient formulation for gases 
-# using Chapman–Enskog theory:
-# D = A T^1.5 (1/M_1+1/M_2)/(p sigma_12^2 Omega)
-# See (https://en.wikipedia.org/wiki/Mass_diffusivity#Gases) for details
-#
-# ns.speciesviscconst = 0.0 0.0 0.0
-ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
+# Not used ???
+# liquid, vapor, solid
+ns.speciesviscconst = 0.0 1E-07 0.0
 
 # 1. input to the Schrage velocity model: Temperature, gas mixture density,
 #    mass fraction, liquid density
 # 2. input to the expansion model: Delta F * (liquid density/vapor density)
 #    It is assume that Y_{Interface}=1.
-# It is picked as the density of the saturated vapor
-# @ (20 K, 0.2 MPa) => 1.2059 [1] p. 61)
-ns.species_evaporation_density=1.2059
+# Not used ???
+ns.species_evaporation_density=1.0
 
 # Specific heat capacity [J/(kg.K)]
-# Are these c_p values used for compressible material calculations?
-# LH2 => C_p_liquid @ (T=T_evap, P=0.2MPa) = 11421.0 ([1] p.62)
-# GHe=> C_p_gas    @ (T=T_evap, P=0.1MPa) =  5244.2 ([1] p.30)
-# GHe=> Ideal gas with c_{v,spc}=3116.8 & c_{p,spc}=R_spc+c_{v,spc}=5195.425
-# Aluminum => ([3] p.73) @ 25K
-ns.stiffCP=11421.0 3.1168e+3 17
-ns.stiffCV=11421.0 3.1168e+3 17 #CV used in CRYOGENIC_TANK1 to get CP
+ns.stiffCP=1300 2400.0          1500
+ns.stiffCV=1300 2358.4276869092 1500  #CV used in CRYOGENIC_TANK_MK to calc CP
 
 # Thermal conductivity [W/(m.K)]
-# LH2 => @ 20K => 0.118 [5] p. III-I-1.1
-# GHe => @ 22.05K, 1atm => 0.0277 [4] p.II-G-2.2
-# Aluminum => @ 20K [3] p.201
-ns.heatviscconst=0.118 0.0277 1480
+ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]
-# LH2 => @ 22K => 139.2 micropise [5] p.III-L-3.2
-# GHe =>@ 20K => 35.0 micropise [4] p.II-J-2.2
-ns.viscconst=13.92e-6 3.5e-6 1 
+ns.viscconst=4.48E-04 1.00E-06 1.0
 
 # Initial temeparture [K]
-ns.tempconst=19.0 21.0 21.0
+ns.tempconst=295.41 295.41 295.41
 
 # Surface tension [N/m]
-# LH2 @ 20 k => ~ 2 dyn/cm = 2e-3 N/m
-# 90 degree contact angle => same sigmas
-ns.tension=2.0E-03 2.0E-03 2.0E-03
-#ns.tension=0.0 0.0 0.0
+ns.tension=0.0 0.0 0.0
+#ns.tension=2.0E-03 2.0E-03 2.0E-03
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -239,21 +190,24 @@ ns.tension=2.0E-03 2.0E-03 2.0E-03
 # 12 13 23 21 31 32
 # 12 liquid->vapor (boiling)
 # 21 vapor->liquid (condensation)
-# LH2 -> GH2 [5] p.III-G-1.1  => 208.92 cal/(g mol) = 208.92 x 4.1868 J /2.01e-4 kg
-ns.latent_heat=4.3518E+05 0.0 0.0 0.0 0.0 0.0
+ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
 ns.distribute_from_target= 1 0 0 0 0 0
 
-# PD model (evaporation only) (Palmore and Desjardins)
+# MK model (evaporation only) 
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
 ns.freezing_model=      6 0 0 0 0 0
-ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 0 0 0 0
+ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 
-# saturation temperature 
-ns.saturation_temp=20.0 0.0 0.0 0.0 0.0 0.0
-ns.saturation_temp_min=1.0E+01 0.0 0.0 0.0 0.0 0.0
-ns.R_Palmore_Desjardins=8.31446261815324  #J/(mol Kelvin)
+# The phase-change saturation temperature and pressure are calculated
+# from Clausius–Clapeyron relation. The "reference" temprature and
+# pressure are given below.
+ns.saturation_temp=307 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp_min=273 0.0 0.0 0.0 0.0 0.0
+ns.reference_pressure=101325 0.0 0.0 0.0 0.0 0.0
+ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
+ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
 
 # ----------------------------------------------------------
 # -------- Initial and boundary conditions (IC/BC) ---------
@@ -267,8 +221,8 @@ ns.R_Palmore_Desjardins=8.31446261815324  #J/(mol Kelvin)
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=0
 
-ns.lo_bc          = 3 5
-ns.hi_bc          = 5 5
+ns.lo_bc          = 3 3
+ns.hi_bc          = 3 3
 ns.temperature_lo_bc = 3 3
 ns.temperature_hi_bc = 3 3
 
@@ -282,17 +236,8 @@ ns.face_flag=1
 # 0=diffuse in solid 1=dirichlet 2=neumann
 ns.solidheat_flag   =0
 
-#new version coming shortly:
-#
-# No heat flux source now [Paper -> 10 kW heat source at the walls]
-# 1e4 / (2*(pi*r^2)+h*2*pi*r) = 19.894 W/m^2 (for r=4 and h=16)
-# xblob3 => tank side
-# yblob3 => tank top
-# zblob3 => tank bottom
-ns.xblob3           = 200000000.0 # -q dot n=Watts/m^2
-ns.xblob3           = 20.0 # -q dot n=Watts/m^2
-ns.yblob3           = 20.0 # -q dot n=Watts/m^2
-ns.zblob3           = 19.894 # -q dot n=Watts/m^2
+# Heat flux from band heater [W/m^2]
+ns.xblob3 = 61.6726637934 # -q dot n
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------

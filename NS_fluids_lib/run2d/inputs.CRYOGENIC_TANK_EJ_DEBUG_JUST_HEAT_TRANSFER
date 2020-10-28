@@ -251,6 +251,7 @@ ns.temperature_hi_bc = 1 1
 # 0=use LS (since GFM must be used at interfaces changing phase)
 # 1=use VOF
 ns.temperatureface_flag=0
+ns.face_flag=1
 
 # Embedded boundary BC
 # 0=diffuse in solid 1=dirichlet 2=neumann
