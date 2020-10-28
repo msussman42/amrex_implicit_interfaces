@@ -7070,6 +7070,13 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
   amrex::Error("num_materials_vel invalid");
  int nsolveMM_FACE=num_materials_vel;
 
+ if (divu_outer_sweeps==0)
+  vel_time_slab=prev_time_slab;
+ else if (divu_outer_sweeps>0)
+  vel_time_slab=cur_time_slab;
+ else
+  amrex::Error("divu_outer_sweeps invalid");
+
  if (NS_ncomp_particles>0) {
 
   if ((im_PLS>=0)&&(im_PLS<nmat)) {
