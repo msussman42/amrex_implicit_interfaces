@@ -170,6 +170,7 @@ implicit none
 ! fort_store_elastic_data added October 3.
 ! fort_solidheat_flag added October 13.
 ! fort_lame_coefficient added October 21.
+! fort_shear_modulus added October 28.
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10

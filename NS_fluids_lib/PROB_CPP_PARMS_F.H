@@ -104,6 +104,7 @@ namespace amrex{
        int*  viscosity_state_model,
        Real* elastic_viscosity,
        Real* lame_coefficient,
+       Real* shear_modulus,
        int* store_elastic_data,
        Real* heatviscconst,
        Real* prerecalesce_heatviscconst,
