@@ -27,6 +27,7 @@ ns.material_type    = 0 24 999
 # if make_interface_incomp==2:
 # density equation is rhot_t+div(rho u)=0 in the incompressible zone.
 ns.make_interface_incomp=1
+ns.num_divu_outer_sweeps=2
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
@@ -96,7 +97,7 @@ ns.visual_option    =-2
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-amr.plot_int        = 1       # number of timesteps between plot files
+amr.plot_int        = 10      # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.sum_interval     = 100     # timesteps between computing mass 
@@ -144,7 +145,7 @@ ns.species_molar_mass=0.2
 
 # Density [kg/m^3]
 ns.denconst= 1400 5.3421449445 1190
-ns.speciesconst= 1.0 1.0 0.0 # ???
+ns.speciesconst= 1.0 1.0 1.0 
 
 # Diffusion coefficient [m^2/s]
 # Not used ???
@@ -224,6 +225,7 @@ ns.temperature_hi_bc = 3 3
 # 0=use LS (since GFM must be used at interfaces changing phase)
 # 1=use VOF
 ns.temperatureface_flag=0
+ns.face_flag=1
 
 # Embedded boundary BC
 # 0=diffuse in solid 1=dirichlet 2=neumann

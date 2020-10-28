@@ -2428,6 +2428,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     ns_level.alloc_gradp_over_rho(alloc_flag);
    }
 
+    // ns.num_divu_outer_sweeps
    for (divu_outer_sweeps=0;
         ((divu_outer_sweeps<local_num_divu_outer_sweeps)&&
          (advance_status==1));
@@ -11320,9 +11321,16 @@ void NavierStokes::veldiffuseALL() {
   ns_level.debug_ngrow(VOLUME_MF,1,872);
  }
 
-  // 1. substract dt_gradp_over_rho
+  // in: veldiffuseALL
+  // 1. substract dt_gradp_over_rho:
+  //   viscosity: (1) (u^* - u^advect) = dt div 2\mu D/rho - dt grad p/rho
+  //              u^advect <-- u^advect - dt grad p/rho then 
+  //              solve 
+  //              (u^* - u^advect) = dt div 2\mu D/rho which is then equivalent
+  //              to (1)
   // 2. getState: ADVECT_REGISTER_MF, ADVECT_REGISTER_FACE_MF, allocate
   //  scratch variables (including CONSERVE_FLUXES_MF)
+  //
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   int alloc_flag=3;
@@ -11894,13 +11902,29 @@ void NavierStokes::veldiffuseALL() {
    num_materials_vel*(AMREX_SPACEDIM+1),1);
  avgDownALL(State_Type,dencomp,nden,1);
 
-  // 1. add dt_gradp_over_rho
-  // 2. save resulting velocity, ustar, to dt_gradp_over_rho
+  // 1. add dt_gradp_over_rho:  u^* <-- u^* + dt grad p/rho
+  // 2. save resulting velocity, u^*, to dt_gradp_over_rho
+  //    dt_gradp_over_rho <-- u^*
   // 3. delete scratch variables (including CONSERVE_FLUXES_MF)
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   int alloc_flag=4;
   ns_level.alloc_gradp_over_rho(alloc_flag);
+    //    dt_gradp_over_rho <-- u^*
+    //    after the projection: dt_gradp_over_rho <--- u^*-u^{n+1}
+    //    note: in Jemison, Sussman, Arient:
+    //    for k=0...num_divu_outer_sweeps-1
+    //     S_t + u^{n+1,(k)} =0
+    //     u^* = u^advect + dt div (2 mu D)^*/rho
+    //     u^{n+1}=u^* - dt grad p^{n+1,(k)}/rho
+    //    end
+    //    NOW,
+    //    for k=0...num_divu_outer_sweeps-1
+    //     S_t + u^{n+1,(k)} =0
+    //     u^* = u^advect + dt div (2 mu D)^*/rho - dt (grad p/rho)^{n+1,(k)}
+    //     u^* = u^* + dt (grad p/rho)^{n+1,(k)}
+    //     u^{n+1}=u^* - dt grad p^{n+1,(k+1)}/rho
+    //    end
   alloc_flag=2;
   ns_level.alloc_gradp_over_rho(alloc_flag);
 

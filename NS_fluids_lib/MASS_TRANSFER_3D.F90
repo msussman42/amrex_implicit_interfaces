@@ -3658,6 +3658,7 @@ stop
       REAL_T nslope_dest(SDIM)
       REAL_T intercept_dest
       REAL_T LS_dest_old,LS_dest_new
+      REAL_T mass_frac_limit
 
       supermesh_flag=0
 
@@ -6276,6 +6277,38 @@ stop
                 endif
 
                 snew(D_DECL(i,j,k),speccomp_mod)=Ygamma_default
+
+                 ! for compressible flows, due to round off error, the
+                 ! mass fraction might go out of bounds [0,1] ?
+                do iprobe=1,2
+
+                 if (iprobe.eq.1) then ! source
+                  im_probe=im_source
+                 else if (iprobe.eq.2) then ! dest
+                  im_probe=im_dest
+                 else
+                  print *,"iprobe invalid"
+                  stop
+                 endif
+                 speccomp_mod=num_materials_vel*(SDIM+1)+ &
+                  (im_probe-1)*num_state_material+num_state_base+ &
+                  mass_frac_id
+                 mass_frac_limit=snew(D_DECL(i,j,k),speccomp_mod)
+                 if ((mass_frac_limit.ge.-VOFTOL).and. &
+                     (mass_frac_limit.le.zero)) then
+                  mass_frac_limit=zero
+                 else if ((mass_frac_limit.ge.zero).and. &
+                          (mass_frac_limit.le.one)) then
+                  ! do nothing
+                 else if ((mass_frac_limit.ge.one).and. &
+                          (mass_frac_limit.le.one+VOFTOL)) then
+                  mass_frac_limit=one
+                 else
+                  print *,"mass_frac_limit invalid"
+                  stop
+                 endif
+                 snew(D_DECL(i,j,k),speccomp_mod)=mass_frac_limit
+                enddo ! iprobe=1,2
 
                else
                 print *,"mass_frac_id invalid"
