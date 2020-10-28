@@ -2471,6 +2471,7 @@ stop
       REAL_T LS_plus,LS_minus
       REAL_T gradu(SDIM,SDIM)
       REAL_T DISP_TEN(SDIM,SDIM)
+      REAL_T strain_displacement(SDIM,SDIM)
       REAL_T F(SDIM,SDIM)
       REAL_T C(SDIM,SDIM)
       REAL_T B(SDIM,SDIM)
@@ -2646,9 +2647,14 @@ stop
          else
           Identity_comp=zero
          endif
+
          F(dir_x,dir_space)=gradu(dir_x,dir_space)+Identity_comp
          C(dir_x,dir_space)=zero
          B(dir_x,dir_space)=zero
+          ! look for ``linear elasticity'' on wikipedia
+         strain_displacement(dir_x,dir_space)=half* &
+            (gradu(dir_x,dir_space)+gradu(dir_space,dir_x))
+
         enddo
         enddo
          ! C=F^T F = right cauchy green tensor
@@ -2700,13 +2706,18 @@ stop
           Identity_comp=zero
          endif
          if (1.eq.0) then
-          DISP_TEN(dir_x,dir_space)=gradu(dir_x,dir_space)+ &
-            gradu(dir_space,dir_x)
+                 ! only valid for small deformations
+          DISP_TEN(dir_x,dir_space)=two*strain_displacement(dir_x,dir_space)
          else if (1.eq.1) then
           bulk_modulus=fort_elastic_viscosity(im_elastic)
           lame_coefficient=fort_lame_coefficient(im_elastic)
-          DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
+          if (bulk_modulus.gt.zero) then
+           DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
                   lame_coefficient*trace_E*Identity_comp)/bulk_modulus
+          else
+           print *,"bulk_modulus invalid"
+           stop
+          endif
          endif
         enddo
         enddo
@@ -16315,6 +16326,7 @@ stop
        isweep, &
        law_of_the_wall, &
        wall_slip_weight, &
+       damping_coefficient, &
        im_solid_map, &
        level, &
        finest_level, &
@@ -16350,6 +16362,7 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_ghost
+      REAL_T, intent(in) :: damping_coefficient(nmat)
       INTEGER_T, intent(in), target :: im_solid_map(nparts_ghost)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -16388,8 +16401,13 @@ stop
       INTEGER_T im
       INTEGER_T im_primary
       INTEGER_T im_stencil
+      INTEGER_T im_stencil_left
+      INTEGER_T im_stencil_right
+      REAL_T :: local_damping
       REAL_T :: LS_local(nmat)
       REAL_T :: LS_stencil(nmat)
+      REAL_T :: LS_LEFT(nmat)
+      REAL_T :: LS_RIGHT(nmat)
       REAL_T, target :: xsten(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T nstate_test
@@ -16657,6 +16675,20 @@ stop
          stop
         endif
 
+         ! cell centered velocity
+        if (damping_coefficient(im_primary).gt.zero) then
+         ! v_t = -mu v =>  v^{n+1} - v^{n} = -mu dt v^{n+1}
+         ! v^{n+1}=v^{n}/(1+mu dt)
+         do veldir=1,SDIM
+          state(D_DECL(i,j,k),veldir)=state(D_DECL(i,j,k),veldir)/ &
+                  (one+damping_coefficient(im_primary)*dt)
+         enddo
+        else if (damping_coefficient(im_primary).eq.zero) then
+         ! do nothing
+        else
+         print *,"damping_coefficient(im_primary) invalid"
+         stop
+        endif
        enddo ! k
        enddo ! j
        enddo ! i
@@ -16703,15 +16735,16 @@ stop
          jright=j
          kright=k
          do im=1,nmat
-          LS_stencil(im)=LS_state(D_DECL(ileft,jleft,kleft),im)
+          LS_LEFT(im)=LS_state(D_DECL(ileft,jleft,kleft),im)
          enddo
-         call get_primary_material(LS_stencil,nmat,im_stencil) 
-         if (is_rigid(nmat,im_stencil).eq.0) then
-          do im=1,nmat
-           LS_stencil(im)=LS_state(D_DECL(iright,jright,kright),im)
-          enddo
-          call get_primary_material(LS_stencil,nmat,im_stencil) 
-          if (is_rigid(nmat,im_stencil).eq.0) then
+         call get_primary_material(LS_LEFT,nmat,im_stencil_left)
+         do im=1,nmat
+          LS_RIGHT(im)=LS_state(D_DECL(iright,jright,kright),im_stencil_right)
+         enddo
+         call get_primary_material(LS_RIGHT,nmat,im_stencil_right)
+
+         if (is_rigid(nmat,im_stencil_left).eq.0) then
+          if (is_rigid(nmat,im_stencil_right).eq.0) then
            ! check if any neighbor solid faces oriented perpendicular to the
            ! given face.
            !   side_nbr=1   side_nbr=2
@@ -16839,16 +16872,39 @@ stop
             print *,"wtsum invalid"
             stop
            endif 
-          else if (is_rigid(nmat,im_stencil).eq.1) then
+          else if (is_rigid(nmat,im_stencil_right).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im_stencil) (right) invalid"
+           print *,"is_rigid(nmat,im_stencil_right) (right) invalid"
            stop
           endif
-         else if (is_rigid(nmat,im_stencil).eq.1) then
+         else if (is_rigid(nmat,im_stencil_left).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im_stencil) (left) invalid"
+          print *,"is_rigid(nmat,im_stencil_left) (left) invalid"
+          stop
+         endif
+         do im=1,nmat
+          LS_stencil(im)=half*(LS_LEFT(im)+LS_RIGHT(im))
+         enddo
+         call get_primary_material(LS_stencil,nmat,im_stencil)
+
+         local_damping=damping_coefficient(im_stencil)
+         if (local_damping.gt.zero) then
+          if (cell_flag.eq.0) then
+           macx(D_DECL(i,j,k))=macx(D_DECL(i,j,k))/(one+dt*local_damping)
+          else if (cell_flag.eq.1) then
+           macy(D_DECL(i,j,k))=macy(D_DECL(i,j,k))/(one+dt*local_damping)
+          else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then
+           macz(D_DECL(i,j,k))=macz(D_DECL(i,j,k))/(one+dt*local_damping)
+          else
+           print *,"cell_flag invalid"
+           stop
+          endif
+         else if (local_damping.eq.zero) then
+          ! do nothing
+         else
+          print *,"local_damping invalid"
           stop
          endif
 
@@ -29709,6 +29765,10 @@ stop
 
        ! called from NavierStokes.cpp:
        !  NavierStokes::accumulate_PC_info(int im_elastic)
+       ! 1. isweep==0: gets displacement data from particle data 
+       !    and Eulerian data.
+       ! 2. isweep==1: calculates the elastic stress tensor from 
+       !    u=X(t,x0)-x0
       subroutine fort_assimilate_tensor_from_particles( &
         particles_weight, &
         im_PLS_cpp, & ! 0..nmat-1
