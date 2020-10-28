@@ -12355,7 +12355,8 @@ void NavierStokes::prepare_advect_vars(Real time) {
 
 } // end subroutine prepare_advect_vars(Real time)
 
-
+// FUTURE: do the same treatment for advection:
+//  variable: dt div (-pI + tau)/rho = unp1-u^advect = dt_non_advect_force
 void NavierStokes::alloc_gradp_over_rho(int alloc_flag) {
 
  if (num_materials_vel!=1)
