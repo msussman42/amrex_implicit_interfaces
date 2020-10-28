@@ -6304,7 +6304,8 @@ stop
                           (mass_frac_limit.le.one+VOFTOL)) then
                   mass_frac_limit=one
                  else
-                  print *,"mass_frac_limit invalid"
+                  print *,"mass_frac_limit invalid: ",mass_frac_limit
+                  print *,"is advection_order=1? "
                   stop
                  endif
                  snew(D_DECL(i,j,k),speccomp_mod)=mass_frac_limit
