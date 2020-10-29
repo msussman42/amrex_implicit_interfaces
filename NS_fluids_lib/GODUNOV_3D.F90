@@ -16739,7 +16739,7 @@ stop
          enddo
          call get_primary_material(LS_LEFT,nmat,im_stencil_left)
          do im=1,nmat
-          LS_RIGHT(im)=LS_state(D_DECL(iright,jright,kright),im_stencil_right)
+          LS_RIGHT(im)=LS_state(D_DECL(iright,jright,kright),im)
          enddo
          call get_primary_material(LS_RIGHT,nmat,im_stencil_right)
 
