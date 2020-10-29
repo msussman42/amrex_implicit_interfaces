@@ -3347,6 +3347,7 @@ stop
        nden, &
        nstate, &
        ntsat, &
+       supermesh_flag, &
        density_floor_expansion, &
        density_ceiling_expansion, &
        latent_heat, &
@@ -3405,6 +3406,7 @@ stop
       INTEGER_T, intent(in) :: nden
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: ntsat
+      INTEGER_T, intent(in) :: supermesh_flag
       REAL_T, intent(in) :: density_floor_expansion(nmat)
       REAL_T, intent(in) :: density_ceiling_expansion(nmat)
       REAL_T, intent(in) :: latent_heat(2*nten)
@@ -3644,7 +3646,6 @@ stop
       REAL_T temperature_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
-      INTEGER_T supermesh_flag
       INTEGER_T continuous_mof_parm
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
@@ -3660,7 +3661,6 @@ stop
       REAL_T LS_dest_old,LS_dest_new
       REAL_T mass_frac_limit
 
-      supermesh_flag=0
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -5800,7 +5800,7 @@ stop
                xstar(udir)=xPOINT_GFM(udir)
               enddo
              else
-              print *,"super_mesh invalid"
+              print *,"supermesh_flag invalid"
               stop
              endif
 

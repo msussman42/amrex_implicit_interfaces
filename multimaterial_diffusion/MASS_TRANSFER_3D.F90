@@ -3347,6 +3347,7 @@ stop
        nden, &
        nstate, &
        ntsat, &
+       supermesh_flag, &
        density_floor_expansion, &
        density_ceiling_expansion, &
        latent_heat, &
@@ -3405,6 +3406,7 @@ stop
       INTEGER_T, intent(in) :: nden
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: ntsat
+      INTEGER_T, intent(in) :: supermesh_flag
       REAL_T, intent(in) :: density_floor_expansion(nmat)
       REAL_T, intent(in) :: density_ceiling_expansion(nmat)
       REAL_T, intent(in) :: latent_heat(2*nten)
@@ -3644,7 +3646,6 @@ stop
       REAL_T temperature_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
-      INTEGER_T supermesh_flag
       INTEGER_T continuous_mof_parm
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
@@ -3658,8 +3659,8 @@ stop
       REAL_T nslope_dest(SDIM)
       REAL_T intercept_dest
       REAL_T LS_dest_old,LS_dest_new
+      REAL_T mass_frac_limit
 
-      supermesh_flag=0
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -5799,7 +5800,7 @@ stop
                xstar(udir)=xPOINT_GFM(udir)
               enddo
              else
-              print *,"super_mesh invalid"
+              print *,"supermesh_flag invalid"
               stop
              endif
 
@@ -6276,6 +6277,39 @@ stop
                 endif
 
                 snew(D_DECL(i,j,k),speccomp_mod)=Ygamma_default
+
+                 ! for compressible flows, due to round off error, the
+                 ! mass fraction might go out of bounds [0,1] ?
+                do iprobe=1,2
+
+                 if (iprobe.eq.1) then ! source
+                  im_probe=im_source
+                 else if (iprobe.eq.2) then ! dest
+                  im_probe=im_dest
+                 else
+                  print *,"iprobe invalid"
+                  stop
+                 endif
+                 speccomp_mod=num_materials_vel*(SDIM+1)+ &
+                  (im_probe-1)*num_state_material+num_state_base+ &
+                  mass_frac_id
+                 mass_frac_limit=snew(D_DECL(i,j,k),speccomp_mod)
+                 if ((mass_frac_limit.ge.-VOFTOL).and. &
+                     (mass_frac_limit.le.zero)) then
+                  mass_frac_limit=zero
+                 else if ((mass_frac_limit.ge.zero).and. &
+                          (mass_frac_limit.le.one)) then
+                  ! do nothing
+                 else if ((mass_frac_limit.ge.one).and. &
+                          (mass_frac_limit.le.one+VOFTOL)) then
+                  mass_frac_limit=one
+                 else
+                  print *,"mass_frac_limit invalid: ",mass_frac_limit
+                  print *,"is advection_order=1? "
+                  stop
+                 endif
+                 snew(D_DECL(i,j,k),speccomp_mod)=mass_frac_limit
+                enddo ! iprobe=1,2
 
                else
                 print *,"mass_frac_id invalid"

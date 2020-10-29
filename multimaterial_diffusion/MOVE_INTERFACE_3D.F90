@@ -1675,7 +1675,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T height_function_flag
-      INTEGER_T nten_in,stefan_flag
+      INTEGER_T, intent(in) :: nten_in,stefan_flag
       INTEGER_T NCELL,state_ncomp,nsteps
       INTEGER_T fablo(SDIM)
       INTEGER_T fabhi(SDIM)
@@ -1698,6 +1698,7 @@ stop
       INTEGER_T DIMDEC(Snew)
       INTEGER_T DIMDEC(EOS)
       INTEGER_T DIMDEC(recon)
+      INTEGER_T DIMDEC(MOFnew)
       INTEGER_T DIMDEC(pres)
       INTEGER_T DIMDEC(FD_NRM_ND)
       INTEGER_T DIMDEC(FD_CURV_CELL)
@@ -1722,6 +1723,7 @@ stop
       REAL_T, dimension(:,:,:), allocatable :: Snew
       REAL_T, dimension(:,:,:), allocatable :: EOS
       REAL_T, dimension(:,:,:), allocatable :: recon
+      REAL_T, dimension(:,:,:), allocatable :: MOFnew
       REAL_T, dimension(:,:), allocatable :: pres
         ! (nmat+nten)*(sdim+1), ngrow_distance
       REAL_T, dimension(:,:,:), allocatable :: FD_NRM_ND
@@ -1825,7 +1827,7 @@ stop
       REAL_T microlayer_temperature_substrate(num_materials)
       INTEGER_T distribute_from_target(2*nten_in)
       INTEGER_T mass_fraction_id(2*nten_in)
-      INTEGER_T Tanasawa_or_Schrage(2*nten_in)
+      INTEGER_T Tanasawa_or_Schrage_or_Kassemi(2*nten_in)
       REAL_T saturation_temp_min(2*nten_in)
       REAL_T saturation_temp_max(2*nten_in)
       REAL_T species_evaporation_density(num_materials)
@@ -1878,6 +1880,15 @@ stop
       REAL_T :: cavitation_tension(num_materials)
 
       INTEGER_T debug_plot_dir,interior_only,diagnostic_output
+      INTEGER_T use_supermesh
+      INTEGER_T nucleation_flag
+      REAL_T R_Palmore_desjardins
+      REAL_T hardwire_Y_gamma(2*nten_in)
+      REAL_T hardwire_T_gamma(2*nten_in)
+      REAL_T accommodation_coefficient(2*nten_in)
+      REAL_T reference_pressure(2*nten_in)
+      REAL_T min_stefan_velocity_for_dt
+
 
        ! VERIFICATION
       diagnostic_output=0
@@ -1889,6 +1900,20 @@ stop
        cavitation_vapor_density(im)=1.0d0
        cavitation_pressure(im)=1.0d0
       enddo
+
+      use_supermesh=1
+
+      tid=0
+      tid_data=0
+      nucleation_flag=0
+      R_Palmore_desjardins=1.0d0  ! placeholder
+      do im=1,2*nten
+       hardwire_Y_gamma(im)=0.0d0
+       hardwire_T_gamma(im)=0.0d0
+       accommodation_coefficient(im)=0.0d0
+       reference_pressure(im)=0.0d0
+      enddo
+      min_stefan_velocity_for_dt=0.0d0
 
       do im=1,2*nten_in
        nucleation_mach(im)=zero
@@ -2064,7 +2089,7 @@ stop
        do iten=1,2*nten
         distribute_from_target(iten)=0
         mass_fraction_id(iten)=0
-        Tanasawa_or_Schrage(iten)=0
+        Tanasawa_or_Schrage_or_Kassemi(iten)=0
         saturation_temp_min(iten)=0.0d0
         saturation_temp_max(iten)=1.0d+20
        enddo
@@ -2092,6 +2117,7 @@ stop
        call set_dimdec(DIMS(Snew),fablo,fabhi,1)
        call set_dimdec(DIMS(EOS),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(recon),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(MOFnew),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(pres),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(FD_NRM_ND),fablo,fabhi,ngrow_distance+1)
        call set_dimdec(DIMS(VOF_HT),fablo,fabhi,ngrow_distance+1)
@@ -2122,6 +2148,7 @@ stop
        allocate(Snew(DIMV(Snew),nstate))
        allocate(EOS(DIMV(EOS),nden))
        allocate(recon(DIMV(recon),nmat*ngeom_recon)) ! F,X,order,SL,I x nmat
+       allocate(MOFnew(DIMV(MOFnew),nmat*ngeom_recon)) ! F,X,order,SL,I x nmat
        allocate(pres(DIMV(pres)))
        allocate(FD_NRM_ND(DIMV(FD_NRM_ND),n_normal))
        allocate(FD_CURV_CELL(DIMV(FD_CURV_CELL),2*(nmat+nten)))
@@ -2134,6 +2161,7 @@ stop
        allocate(facepairY(DIMV(facepairY),npair))
        allocate(facetest(DIMV(facetest),nmat*SDIM))
        allocate(slopes(DIMV(slopes),nmat*ngeom_recon))
+       allocate(MOFnew(DIMV(MOFnew),nmat*ngeom_recon))
 
        do im=1,nmat
         DVOF(im)=0.0d0
@@ -2267,6 +2295,7 @@ stop
         do im=1,nmat*ngeom_recon
          scomp=nmat+nten*SDIM
          recon(i,j,im)=UOLD(i,j,scomp+im)
+         MOFnew(i,j,im)=UOLD(i,j,scomp+im)
         enddo
        enddo
        enddo
@@ -2276,6 +2305,10 @@ stop
         nmat,ngrow)
        call set_boundary_recon( &
         recon,DIMS(recon), &
+        fablo,fabhi, &
+        nmat,ngrow)
+       call set_boundary_recon( &
+        MOFnew,DIMS(MOFnew), &
         fablo,fabhi, &
         nmat,ngrow)
        call set_boundary_EOS( &
@@ -2752,8 +2785,6 @@ stop
          stop
         endif
 
-        tid=0
-        tid_data=0
         solvability_projection=0
 
         if (stefan_flag.eq.1) then
@@ -2783,6 +2814,7 @@ stop
          nden, &
          nstate, &
          ntsat, &
+         use_supermesh, &
          fort_density_floor, &
          fort_density_ceiling, &
          latent_heat, &
@@ -2794,6 +2826,7 @@ stop
          fablo,fabhi, &
          fablo,fabhi, &
          bfact,  &
+         min_stefan_velocity_for_dt, &
          vofbc, &
          xlo,dx, &
          dt, &
@@ -2802,6 +2835,8 @@ stop
          maskcov,DIMS(maskcov), &
          deltaVOF,DIMS(deltaVOF), &
          nodevel,DIMS(nodevel), &
+         MOFnew, &
+         DIMS(MOFnew), &
          jump_strength, &
          DIMS(jump_strength), &
          tsatfab,DIMS(tsatfab), &
