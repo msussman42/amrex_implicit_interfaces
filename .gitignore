@@ -4,6 +4,7 @@
 autodiff/*.tar.gz
 autodiff/examples/*.o
 autodiff/examples/*.ex
+autodiff/examples/make.out
 autodiff/examples/plt*
 autodiff/examples/Backtrace*
 autodiff/examples/tmp_build_dir

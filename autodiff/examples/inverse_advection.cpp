@@ -55,6 +55,94 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 //  This is in contrast to "differentiate then discretize."
 //
 
+void plot_adept_data(std::string plt_name_string,
+	int ntime,int steepest_descent_iter,
+	const Geometry& geom,
+	My_adept_MFAB* data_to_plot,double time) {
+
+ const std::string& pltfile1 = amrex::Concatenate(plt_name_string,ntime,5);
+ const std::string& pltfile = 
+	 amrex::Concatenate(pltfile1,steepest_descent_iter,5);
+ BoxArray ba_node=data_to_plot->boxArray();
+ DistributionMapping dm=data_to_plot->DistributionMap();
+ int Ncomp=data_to_plot->nComp();
+ int Nghost=data_to_plot->nGrow();
+ MultiFab* data_plot_mf=new MultiFab(ba_node,dm,Ncomp,Nghost);
+ BoxArray ba_cell(ba_node);
+ ba_cell.convert({D_DECL(0,0,0)});
+ MultiFab* data_plot_cell_mf=new MultiFab(ba_cell,dm,Ncomp,Nghost+1);
+
+ for (MFIter mfi(*data_plot_mf,false); mfi.isValid(); ++mfi) {
+   const int gridno = mfi.index();
+   My_adept_FAB& v_fab=(*data_to_plot)[gridno]; // type: adouble
+   FArrayBox& plot_fab=(*data_plot_mf)[gridno]; // type: double
+   FArrayBox& plot_cell_fab=(*data_plot_cell_mf)[gridno]; // type: double
+
+   Array4< adept::adouble > const& v_array=v_fab.array(); // type: adouble
+
+   Array4< Real > const& plot_array=plot_fab.array(); // type: double
+   Array4< Real > const& plot_cell_array=plot_cell_fab.array(); //type:double
+   Dim3 lo = lbound(v_array);
+   Dim3 hi = ubound(v_array);
+   for (int k = lo.z; k <= hi.z; ++k) {
+   for (int j = lo.y; j <= hi.y; ++j) {
+   for (int i = lo.x; i <= hi.x; ++i) {
+    plot_array(i,j,k)=v_array(i,j,k).value();
+   }
+   }
+   }
+   Dim3 loc = lbound(plot_cell_array);
+   Dim3 hic = ubound(plot_cell_array);
+   for (int k = loc.z; k <= hic.z; ++k) {
+   for (int j = loc.y; j <= hic.y; ++j) {
+   for (int i = loc.x; i <= hic.x; ++i) {
+    int ind=i;
+    if (ind<lo.x)
+     ind=lo.x;
+    if (ind+1>hi.x)
+     ind=hi.x-1;
+    int jnd=0;
+    int knd=0;
+    if (1==0) {
+     plot_cell_array(i,j,k)=(plot_array(ind,jnd,knd)+
+		    plot_array(ind+1,jnd,knd)+
+		    plot_array(ind,jnd+1,knd)+
+		    plot_array(ind+1,jnd+1,knd))/4.0;
+    } else {
+     if (i<lo.x) {
+      plot_cell_array(i,j,k)=1.5*plot_array(lo.x,jnd,knd)-
+		    0.5*plot_array(lo.x+1,jnd,knd);
+     } else if (i==hi.x) {
+      plot_cell_array(i,j,k)=1.5*plot_array(hi.x,jnd,knd)-
+		    0.5*plot_array(hi.x-1,jnd,knd);
+     } else {
+
+      plot_cell_array(i,j,k)=(plot_array(ind,jnd,knd)+
+		    plot_array(ind+1,jnd,knd))/2.0;
+     }
+     if (1==0) {
+      std::cout << "i= " << i << " j= " << j << " k= " << k << " data= " <<
+	     plot_cell_array(i,j,k) << '\n';
+     }
+    }
+
+   }
+   }
+   }
+ }
+
+ std::cout << "plotting " << pltfile << '\n';
+ int nghost_cell=1;
+ bool local=false;
+ std::cout << " max= " << data_plot_cell_mf->max(0,nghost_cell,local) << '\n';
+ std::cout << " min= " << data_plot_cell_mf->min(0,nghost_cell,local) << '\n';
+ WriteSingleLevelPlotfile(pltfile, *data_plot_cell_mf, 
+		 {"data_plot_cell_mf"}, 
+		 geom, time, 0);
+ delete data_plot_mf;
+ delete data_plot_cell_mf;
+} // plot_adept_data
+
 adept::adouble cost_function(
 	 vector< My_adept_MFAB* > uinput,
 	 const Real* dx,
@@ -177,34 +265,9 @@ adept::adouble cost_function(
 
  double time=0.0;
  ntime = 0;
- const std::string& pltfile1 = amrex::Concatenate("plt",ntime,5);
- const std::string& pltfile = 
-	 amrex::Concatenate(pltfile1,steepest_descent_iter,5);
- MultiFab* data_plot_mf=new MultiFab(ba_node,dm,Ncomp,Nghost);
  My_adept_MFAB* v_frame_plot=v[ntime];
- for (MFIter mfi(*data_plot_mf,false); mfi.isValid(); ++mfi) {
-   const int gridno = mfi.index();
-   My_adept_FAB& v_fab=(*v_frame_plot)[gridno]; // type: adouble
-   FArrayBox& plot_fab=(*data_plot_mf)[gridno]; // type: double
-   Array4< adept::adouble > const& v_array=v_fab.array(); // type: adouble
-   Array4< Real > const& plot_array=plot_fab.array(); // type: double
-   Dim3 lo = lbound(v_array);
-   Dim3 hi = ubound(v_array);
-   for (int k = lo.z; k <= hi.z; ++k) {
-   for (int j = lo.y; j <= hi.y; ++j) {
-   for (int i = lo.x; i <= hi.x; ++i) {
-    plot_array(i,j,k)=v_array(i,j,k).value();
-   }
-   }
-   }
- }
-
- std::cout << "plotting " << pltfile << '\n';
- std::cout << " max= " << data_plot_mf->max(0) << '\n';
- std::cout << " min= " << data_plot_mf->min(0) << '\n';
- WriteSingleLevelPlotfile(pltfile, *data_plot_mf, {"data_plot_mf"}, 
-		 geom, time, 0);
- delete data_plot_mf;
+ plot_adept_data("plt",ntime,steepest_descent_iter,geom,v_frame_plot,
+		 time);
 
  for (ntime=0;ntime<nsteps;ntime++) {
 
@@ -332,6 +395,7 @@ adept::adouble cost_function(
     y=y+wtnp1_back_array(i,j,k)*dx[0]*
         (unp1_array(i,j,k)-unp1_back_array(i,j,k))*
         (unp1_array(i,j,k)-unp1_back_array(i,j,k));
+
     y=y+wtnp1_obs_array(i,j,k)*dx[0]*
         (qnp1_obs_array(i,j,k)-vnp1_array(i,j,k))*
         (qnp1_obs_array(i,j,k)-vnp1_array(i,j,k));
@@ -346,7 +410,13 @@ adept::adouble cost_function(
 
   } // mfi
 
- } //ntime
+  if (ntime==nsteps-1) {
+   plot_adept_data("plt_obs",ntime+1,steepest_descent_iter,geom,
+		 qnp1_obs_frame,
+		 time);
+  }
+
+ } //ntime=0..nsteps-1
 
  for (ntime=0;ntime<=nsteps;ntime++) {
   delete v[ntime];
