@@ -771,6 +771,11 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 //     V=mdot/rho_src
 // 1 - distribute to the source material
 //     V=mdot/rho_dst
+// for boiling and evaporation the preferred choice is V=mdot/rho_dst
+//  (distribute_from_target=1)
+// for freezing and melting, the preferred choice is 
+//   distribute_from_target=0 for freezing (mdot in the ice)
+//   distribute_from_target=1 for melting (mdot in the melt)
 Vector<int> NavierStokes::distribute_from_target;
 int NavierStokes::is_phasechange=0;
 int NavierStokes::normal_probe_size=1;
@@ -11756,6 +11761,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
     &nden,
     &nstate,
     &ntsat,
+    &use_supermesh,
     density_floor_expansion.dataPtr(),
     density_ceiling_expansion.dataPtr(),
     latent_heat.dataPtr(),

@@ -45,6 +45,7 @@ extern "C"
     int* nden,
     int* nstate,
     int* ntsat,
+    int* supermesh_flag,
     Real* density_floor_expansion,
     Real* density_ceiling_expansion,
     Real* latent_heat,
