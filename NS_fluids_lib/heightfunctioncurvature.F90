@@ -24,7 +24,7 @@ INTEGER_T :: i,imat
 REAL_T       :: FL1,F1,FR1,FL2,F2,FR2
 REAL_T       :: diff1,diff2
 REAL_T       :: hprime,hdoubleprime
-REAL_T       :: kappa(nmat)     ! curvature output
+REAL_T       :: kappa(nmat+1)     ! curvature output
 
 FL1=0.0d0
 F1=0.0d0
@@ -69,7 +69,7 @@ do imat=1,2
 
   kappa(imat)=hdoubleprime/((1.0d0+hprime**2.0d0))**1.5d0
 
-enddo
+enddo ! imat=1,2
 
 ! approximate the curvature of at the interface ( which has the same x or y coordinate with cell center) in the center cell 
 

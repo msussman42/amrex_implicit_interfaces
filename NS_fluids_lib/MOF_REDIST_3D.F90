@@ -760,10 +760,12 @@ stop
       REAL_T total_curv
       INTEGER_T local_status
       REAL_T local_LS(nmat)
-      REAL_T kappa(nmat)
+      REAL_T kappa(nmat+1)  !nmat+nten
       REAL_T F_local
       INTEGER_T curv_valid
       REAL_T, dimension(nmat,-3:3,-3:3) :: vf_curv
+      REAL_T expect_curv,local_curv_err,max_curv_err,total_curv_err
+      INTEGER_T total_curv_count
 
       nhalf=3 
 
@@ -850,6 +852,10 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_nrm)
+
+      total_curv_err=0.0d0
+      total_curv_count=0
+      max_curv_err=0.0d0
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -1020,7 +1026,8 @@ stop
          CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=local_status
         enddo ! im=1..nmat+nten
 
-       else if (height_function_flag.eq.1) then
+       else if ((height_function_flag.eq.1).or. &
+                (height_function_flag.eq.2)) then
 
         if (SDIM.eq.2) then
          ! do nothing
@@ -1052,6 +1059,27 @@ stop
          enddo
          enddo
          call get_curvature_heightf(nmat,vf_curv,dx(1),kappa)
+         kappa(nmat+1)=kappa(1)
+         if (height_function_flag.eq.2) then
+                 ! outside is material 1
+          if (abs(vf_curv(1,0,0)-0.5d0).lt.0.45d0) then
+           do im=1,nmat
+            if (im.eq.1) then
+             expect_curv=1.0/radblob10
+            else
+             expect_curv=-1.0/radblob10
+            endif
+            local_curv_err=abs(expect_curv-kappa(im))
+            total_curv_err=total_curv_err+local_curv_err
+            total_curv_count=total_curv_count+1
+            if (local_curv_err.gt.max_curv_err) then
+             max_curv_err=local_curv_err
+            endif
+            print *,"i,j,im,expect,actual ",i,j,im,expect_curv,kappa(im)
+           enddo
+          endif
+         endif
+
          do im=1,nmat+1
           CURV_CELL(D_DECL(i,j,k),im)=kappa(im)
          enddo
@@ -1077,6 +1105,13 @@ stop
       enddo
       enddo
       enddo  !i,j,k 
+      if (height_function_flag.eq.2) then
+       print *,"total_curv_count=",total_curv_count
+       print *,"total_curv_err=",(total_curv_err)/(total_curv_count+ &
+               1.0D-15)
+       print *,"max_curv_err=",max_curv_err
+       stop
+      endif
 
       return
       end subroutine FORT_NODE_TO_CELL
