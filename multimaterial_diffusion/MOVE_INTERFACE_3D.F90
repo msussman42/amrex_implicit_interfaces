@@ -1703,7 +1703,6 @@ stop
       INTEGER_T DIMDEC(FD_NRM_ND)
       INTEGER_T DIMDEC(FD_CURV_CELL)
       INTEGER_T DIMDEC(jump_strength)
-      INTEGER_T DIMDEC(swept)
       INTEGER_T DIMDEC(dist_touch)
       INTEGER_T DIMDEC(stencil)
       INTEGER_T DIMDEC(facefrac)
@@ -1731,8 +1730,6 @@ stop
       REAL_T, dimension(:,:,:), allocatable :: FD_CURV_CELL
         ! 2*nten, ngrow_expansion
       REAL_T, dimension(:,:,:), allocatable :: jump_strength 
-        ! ncomp=1, ngrow=0
-      REAL_T, dimension(:,:), allocatable :: swept
         ! ncomp=nmat, ngrow=0
       REAL_T, dimension(:,:,:), allocatable :: dist_touch
         ! ncomp=9, ngrow=ngrow_distance
@@ -1907,7 +1904,7 @@ stop
       tid_data=0
       nucleation_flag=0
       R_Palmore_desjardins=1.0d0  ! placeholder
-      do im=1,2*nten
+      do im=1,2*nten_in
        hardwire_Y_gamma(im)=0.0d0
        hardwire_T_gamma(im)=0.0d0
        accommodation_coefficient(im)=0.0d0
@@ -2123,7 +2120,6 @@ stop
        call set_dimdec(DIMS(VOF_HT),fablo,fabhi,ngrow_distance+1)
        call set_dimdec(DIMS(FD_CURV_CELL),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(jump_strength),fablo,fabhi,ngrow_expansion)
-       call set_dimdec(DIMS(swept),fablo,fabhi,0)
        call set_dimdec(DIMS(dist_touch),fablo,fabhi,0)
        call set_dimdec(DIMS(stencil),fablo,fabhi,ngrow_distance)
        call set_dimdec(DIMS(facefrac),fablo,fabhi,ngrow_distance)
@@ -2153,7 +2149,6 @@ stop
        allocate(FD_NRM_ND(DIMV(FD_NRM_ND),n_normal))
        allocate(FD_CURV_CELL(DIMV(FD_CURV_CELL),2*(nmat+nten)))
        allocate(jump_strength(DIMV(jump_strength),2*nten))
-       allocate(swept(DIMV(swept)))
        allocate(dist_touch(DIMV(dist_touch),nmat))
        allocate(stencil(DIMV(stencil),nstar))
        allocate(facefrac(DIMV(facefrac),nface))
@@ -2161,7 +2156,6 @@ stop
        allocate(facepairY(DIMV(facepairY),npair))
        allocate(facetest(DIMV(facetest),nmat*SDIM))
        allocate(slopes(DIMV(slopes),nmat*ngeom_recon))
-       allocate(MOFnew(DIMV(MOFnew),nmat*ngeom_recon))
 
        do im=1,nmat
         DVOF(im)=0.0d0
@@ -2194,7 +2188,9 @@ stop
        enddo
        do i=fablo(1),fabhi(1)
        do j=fablo(2),fabhi(2)
-        swept(i,j)=0.0d0
+        do im=1,nmat
+         swept(i,j,im)=1.0d0
+        enddo
        enddo
        enddo
        do i=fablo(1),fabhi(1)
@@ -3555,11 +3551,11 @@ stop
        deallocate(Snew)
        deallocate(EOS)
        deallocate(recon)
+       deallocate(MOFnew)
        deallocate(pres)
        deallocate(FD_NRM_ND)
        deallocate(FD_CURV_CELL)
        deallocate(jump_strength)
-       deallocate(swept)
        deallocate(dist_touch)
        deallocate(stencil)
        deallocate(facefrac)

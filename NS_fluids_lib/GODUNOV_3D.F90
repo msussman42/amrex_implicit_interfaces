@@ -14539,7 +14539,7 @@ stop
       REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
       REAL_T, intent(in) :: yfacemm(DIMV(yfacemm),nfacefrac) 
       REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
-      REAL_T, intent(in) :: swept(DIMV(swept))
+      REAL_T, intent(in) :: swept(DIMV(swept),nmat)
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T, intent(in) :: T_fab(DIMV(T_fab),nmat)
       REAL_T, intent(in) :: TorY_fab(DIMV(TorY_fab),nmat)
@@ -15191,7 +15191,7 @@ stop
         else if ((im_dest_crit.ge.1).and. &
                  (im_dest_crit.le.nmat)) then
 
-         SWEPTFACTOR=swept(D_DECL(i,j,k)) ! default: SWEPTFACTOR==1
+         SWEPTFACTOR=swept(D_DECL(i,j,k),im_dest_crit) !default:SWEPTFACTOR==1
          if ((SWEPTFACTOR.lt.LSTOL).or. &
              (SWEPTFACTOR.gt.one)) then
           print *,"SWEPTFACTOR INVALID"

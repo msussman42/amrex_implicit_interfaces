@@ -41,17 +41,25 @@ stop
       INTEGER_T :: fablo_tsat(SDIM) ! in init_tsatfab
       INTEGER_T :: fabhi_tsat(SDIM) ! in init_tsatfab
 
+        ! DIMDEC is a macro
+        ! burnvelxlo,burnvelxhi,burnvelylo,burnvelyhi in 2d
+        ! burnvelxlo,burnvelxhi,burnvelylo,burnvelyhi,
+        ! burnvelzlo,burnvelzhi   in 3d
       INTEGER_T DIMDEC(burnvel)
       INTEGER_T DIMDEC(tsatfab)
+      INTEGER_T DIMDEC(swept)
 
       REAL_T, dimension(:,:,:), allocatable :: burnvel
       REAL_T, dimension(:,:,:), allocatable :: tsatfab
+        ! ncomp=nmat, ngrow=0
+      REAL_T, dimension(:,:,:), allocatable :: swept
 
 contains
 
       subroutine delete_tsatfab()
 
       deallocate(tsatfab)
+      deallocate(swept)
 
       return
       end subroutine delete_tsatfab
@@ -62,6 +70,7 @@ contains
       IMPLICIT NONE
       INTEGER_T, intent(in) :: NCELL
       INTEGER_T nten,nmat,dir
+      INTEGER_T i,j,im
 
       level_tsat=0
       finest_level_tsat=0
@@ -115,6 +124,18 @@ contains
       call set_dimdec(DIMS(tsatfab),fablo_tsat,fabhi_tsat, &
         ngrow_tsat)
       allocate(tsatfab(DIMV(tsatfab),ntsat))
+      call set_dimdec(DIMS(swept),fablo_tsat,fabhi_tsat,0)
+      allocate(swept(DIMV(swept),nmat))
+      do i=0,NCELL-1
+      do j=0,NCELL-1
+       do im=1,ntsat
+        tsatfab(i,j,im)=0.0d0
+       enddo
+       do im=1,nmat
+        swept(i,j,im)=1.0d0
+       enddo
+      enddo
+      enddo
 
       return
       end subroutine init_tsatfab
