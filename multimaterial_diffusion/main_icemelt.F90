@@ -484,6 +484,7 @@ N_START=64
 N_FINISH=64
 M_START=64
 M_FACTOR=2
+height_function_flag_global=0
 
 if (probtype_in.eq.4) then
  fixed_dt_main=-1.0d0 ! dt=1.25D-4 N=64  M=10  TSTOP=1.25D-3

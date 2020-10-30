@@ -18,6 +18,7 @@ stop
 module probmain_module
 implicit none
 
+      INTEGER_T height_function_flag_global
       INTEGER_T, PARAMETER ::  DEBUG_LS_MOVE_INTERFACE = 0
       INTEGER_T global_nten
       INTEGER_T physbc(SDIM,2)

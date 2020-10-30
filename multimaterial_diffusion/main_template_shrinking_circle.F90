@@ -470,6 +470,7 @@ N_START=64
 N_FINISH=64
 M_START=10
 M_FACTOR=2
+height_function_flag_global=0
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
         ! time step hardwire for this test

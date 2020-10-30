@@ -1921,37 +1921,46 @@ subroutine dendrite_dist(imat,x,y,dist)
  c1 = 2.0d0
  c2 = 2.0d0
 
- if (x0.eq.c1) then
-  if ((y0-c2).ge.0.0d0) then
-   tt=Pi*0.5d0
-  else if ((y0-c2).le.0.0d0) then
-   tt=Pi*1.5d0
-  else
-   print *,"y0 or c2 bust"
-   stop
-  endif 
- else if (x0.ne.c1) then
-  tt = atan((y0-c2)/(x0-c1));  
-  if((x0-c1) .ge. 0.0d0 .and. (y0-c2) .ge. 0.0d0)then
-    ! do nothing
-  elseif((x0-c1) .le. 0.0d0 .and. (y0-c2) .gt. 0.0d0)then
-    tt = tt + Pi;
-  elseif((x0-c1) .lt. 0.0d0 .and. (y0-c2) .lt. 0.0d0)then
-    tt = tt +Pi;
-  else
-    tt = 2.0d0*Pi + tt;
-  endif
- else
-  print *,"x0 or c1 bust"
-  stop
- endif
+ if (axis_dir.eq.0) then
 
- if (1.eq.1) then
-  dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
-         (0.1d0 + 0.02d0*cos(4.0d0*tt))
+  if (x0.eq.c1) then
+   if ((y0-c2).ge.0.0d0) then
+    tt=Pi*0.5d0
+   else if ((y0-c2).le.0.0d0) then
+    tt=Pi*1.5d0
+   else
+    print *,"y0 or c2 bust"
+    stop
+   endif 
+  else if (x0.ne.c1) then
+   tt = atan((y0-c2)/(x0-c1));  
+   if((x0-c1) .ge. 0.0d0 .and. (y0-c2) .ge. 0.0d0)then
+     ! do nothing
+   elseif((x0-c1) .le. 0.0d0 .and. (y0-c2) .gt. 0.0d0)then
+     tt = tt + Pi;
+   elseif((x0-c1) .lt. 0.0d0 .and. (y0-c2) .lt. 0.0d0)then
+     tt = tt +Pi;
+   else
+     tt = 2.0d0*Pi + tt;
+   endif
+  else
+   print *,"x0 or c1 bust"
+   stop
+  endif
+
+  if (1.eq.1) then
+   dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
+          (radblob10 + 0.02d0*cos(4.0d0*tt))
+  else
+   dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
+          radblob10
+  endif
+
+ else if (axis_dir.eq.1) then ! circular seed
+  dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + radblob10
  else
-  dist1 = -sqrt((x0-c1)**2.0d0 + (y0-c2)**2.0d0) + &
-         1.0d0
+  print *,"axis_dir invalid"
+  stop
  endif
 
  if(imat .eq. 2)then  ! the solid/ice seed

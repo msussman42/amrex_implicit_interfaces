@@ -125,21 +125,17 @@ integer,parameter          :: sdim_in = 2
 
 INTEGER :: nmax
 INTEGER :: nmat_in
-INTEGER :: precond_type_in
 INTEGER :: dir
 INTEGER :: side
 REAL(kind=8) :: xcen,ycen
 REAL(kind=8) :: xcen_vec(2)
-REAL(kind=8) :: time_init,xgrid,ygrid
+REAL(kind=8) :: time_init
 REAL(kind=8) :: deltat_in
 REAL(kind=8) :: deltat_polar
 INTEGER      :: subcycling_step
-REAL(kind=8) :: bicgstab_tol_in
-REAL(kind=8) :: current_time_in
 
-INTEGER                    :: i,j,tm
+INTEGER                    :: i,j
 REAL(KIND=8)               :: h_in
-REAL(KIND=8)               :: time_n,time_np1
 !REAL(KIND=8),dimension(-1:N+1) :: XLINE,YLINE 
 REAL(KIND=8),dimension(:), allocatable :: XLINE,YLINE ! nodes
 !real(kind=8),dimension(-1:N) :: xCC,yCC       
@@ -153,11 +149,9 @@ real(kind=8)               :: dx_coarse
 TYPE(POLYGON),dimension(:,:), allocatable :: CELL_FAB
 real(kind=8),external      :: exact_temperature
 real(kind=8)               :: max_front_vel
-real(kind=8)               :: test_vel
 real(kind=8)               :: lmSt
 real(kind=8)               :: rstefan
 real(kind=8)               :: T_FIELD
-real(kind=8)               :: stefan_time
 real(kind=8)               :: local_vof
 
 real(kind=8)                :: xsten_cache(-1:1)
@@ -165,10 +159,7 @@ integer                     :: nhalf
 integer                     :: imof
 integer                     :: im
 integer                     :: im1
-integer                     :: im_opp
-real(kind=8)                :: sumT,sumvf,sumvf2,voltotal,local_Pi
-real(kind=8)                :: eff_radius
-real(kind=8)                :: expect_radius
+real(kind=8)                :: sumT,sumvf,local_Pi
 real(kind=8)                :: test_radblob
 
 !---------------------------------------------------
@@ -186,26 +177,15 @@ real(kind=8) :: problo_arr(2)
 
 integer local_state_ncomp
 integer nx_in,ny_in,lox_in,loy_in,hix_in,hiy_in
-integer hflag
 integer vofcomp
-integer vofcomp2
 integer scomp
-integer nsteps
-integer total_nsteps_parm
 integer inode
 real(kind=8) :: cc(2)
 real(kind=8) :: dtemp1,dtemp2
-real(kind=8) :: sum_alpha
 real(kind=8) :: flxavg1,flxavg2
-real(kind=8) :: flxtot1,flxtot2
-real(kind=8) :: xlo_fluxtest,xhi_fluxtest
 real(kind=8) :: y_fluxtest1
 real(kind=8) :: y_fluxtest2
-real(kind=8) :: LL
-real(kind=8) :: TSAT
 
-integer j_fluxtest,ilo_fluxtest,ihi_fluxtest,isum
-integer icen,jcen
 
 integer ireverse,isink
 
@@ -264,6 +244,12 @@ N_START=64
 N_FINISH=64
 M_START=1600
 M_FACTOR=2
+
+!axis_dir=0  ! standard dendrite problem with non-circular seed
+axis_dir=1  ! circular seed
+radblob10=1.0d0  ! 0.1d0 is from the earlier articles
+height_function_flag_global=2  ! =1 for height function
+                               ! =2 for sanity check
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
         ! time step hardwire for this test
@@ -362,7 +348,7 @@ problenz=probhiz-probloz
 sci_max_level=0
 fort_max_level=0
 fort_finest_level=0
-do im=1,100
+do im=1,MAX_NUM_MATERIALS
   FSI_flag(im)=0
 enddo
 

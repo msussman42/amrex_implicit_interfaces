@@ -2364,12 +2364,12 @@
 
       character*2 matstr
       character*6 stepstr
-      character*3 Mstr
+      character*5 Mstr
 
       character*7 newnamestr7
       character*11 newcennamestr11
-      character*20 newfilename20
-      character*24 newcenfilename24
+      character*22 newfilename22
+      character*26 newcenfilename26
 
       real(8), dimension(:,:), allocatable :: Node  ! dir,index
       integer(4), dimension(:,:), allocatable :: IntElem  ! 1 or 2, index
@@ -2415,11 +2415,11 @@
       endif
 
       if (fixed_dt_main.eq.0.0d0) then
-       write(Mstr,'(I3)') 0
+       write(Mstr,'(I5)') 0
       else
-       write(Mstr,'(I3)') total_nsteps
+       write(Mstr,'(I5)') total_nsteps
       endif
-      do i=1,3
+      do i=1,5
        if (Mstr(i:i).eq.' ') then
         Mstr(i:i)='0'
        endif
@@ -2444,10 +2444,10 @@
         stepstr(i:i)='0'
        endif
       enddo
-      write(newfilename20,'(A7,A6,A3,A4)') &
+      write(newfilename22,'(A7,A6,A5,A4)') &
         newnamestr7,stepstr,Mstr,'.tec'
-      print *,"newfilename20 ",newfilename20
-      open(unit=11,file=newfilename20)
+      print *,"newfilename22 ",newfilename22
+      open(unit=11,file=newfilename22)
 
       if (sdim.eq.3) then
        write(11,*) 'TITLE = "3D surface" '
@@ -2491,10 +2491,10 @@
          print *,"dimension bust"
          stop
         endif
-        write(newcenfilename24,'(A11,A6,A3,A4)') newcennamestr11, &
+        write(newcenfilename26,'(A11,A6,A5,A4)') newcennamestr11, &
           stepstr,Mstr,'.tec'
-        print *,"newcenfilename24 ",newcenfilename24
-        open(unit=12,file=newcenfilename24)
+        print *,"newcenfilename26 ",newcenfilename26
+        open(unit=12,file=newcenfilename26)
         if (sdim.eq.3) then
          write(12,*) 'TITLE = "3D moments" '
          write(12,*) 'VARIABLES = "X", "Y", "Z" '
@@ -2996,10 +2996,10 @@
 
       character*8 nodedatastr
       character*14 nodedatafile1
-      character*21 nodedatafile2
+      character*23 nodedatafile2
       character*7 cendatastr
       character*13 cendatafile1
-      character*20 cendatafile2
+      character*22 cendatafile2
       REAL*8, intent(in) ::  &
         local_UNEW(lox-1:hix+1,loy-1:hiy+1,state_ncomp)
       integer i,j
@@ -3011,7 +3011,7 @@
       REAL*8 xpoint,ypoint
       REAL*8, intent(in) :: out_time
       character*6 stepstr
-      character*3 Mstr
+      character*5 Mstr
       character*2 matstr
       integer iten
       integer ii,jj
@@ -3069,11 +3069,11 @@
         enddo
 
         if (fixed_dt_main.eq.0.0d0) then
-         write(Mstr,'(I3)') 0
+         write(Mstr,'(I5)') 0
         else
-         write(Mstr,'(I3)') total_nsteps
+         write(Mstr,'(I5)') total_nsteps
         endif
-        do i=1,3
+        do i=1,5
          if (Mstr(i:i).eq.' ') then
           Mstr(i:i)='0'
          endif
@@ -3087,7 +3087,7 @@
 
         write(nodedatastr,'(A8)') 'nodedata'
         write(nodedatafile1,'(A8,A6)') nodedatastr,stepstr
-        write(nodedatafile2,'(A14,A3,A4)') nodedatafile1,Mstr,'.tec'
+        write(nodedatafile2,'(A14,A5,A4)') nodedatafile1,Mstr,'.tec'
         print *,"nodedatafile2 ",nodedatafile2
         open(unit=11,file=nodedatafile2)
 
@@ -3261,7 +3261,7 @@
 
         write(cendatastr,'(A7)') 'cendata'
         write(cendatafile1,'(A7,A6)') cendatastr,stepstr
-        write(cendatafile2,'(A13,A3,A4)') cendatafile1,Mstr,'.tec'
+        write(cendatafile2,'(A13,A5,A4)') cendatafile1,Mstr,'.tec'
         print *,"cendatafile2 ",cendatafile2
         open(unit=11,file=cendatafile2)
 
