@@ -2405,7 +2405,7 @@ stop
          n_normal, &
          ngrow_dest)
 
-       height_function_flag=0 
+       height_function_flag=height_function_flag_global
        call FORT_NODE_TO_CELL( &
          level, &
          finest_level, &

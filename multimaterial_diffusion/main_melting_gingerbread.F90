@@ -228,6 +228,7 @@ N_FINISH=64
 ! VERIFICATION: M_START=50,100,200 corresponding to 64,128,256
 M_START=50
 M_FACTOR=2
+height_function_flag_global=0
 
 if (probtype_in.eq.4) then
  fixed_dt_main=-1.0d0 ! dt=1.25D-4 N=64  M=10  TSTOP=1.25D-3
