@@ -185,6 +185,7 @@
       REAL*8 dx_local(2)
       REAL*8 problo_local(2)
       REAL*8 probhi_local(2)
+      REAL*8 deltat_swept
       integer local_level
       integer ncomp_gap
 
@@ -718,10 +719,13 @@
          diag_local)
         vofcomp=(im_in-1)*ngeom_reconCG+1
         vf=mofdata_FAB(i,j,vofcomp)
+
+        deltat_swept=deltat*swept(i,j,im_in)
+
         if (vf.le.VOFTOL_local) then
-         diag_local=meshvol/deltat
+         diag_local=meshvol/deltat_swept
         else
-         diag_local=(vf*meshvol/deltat)+diag_local
+         diag_local=(vf*meshvol/deltat_swept)+diag_local
         endif
         if ((operator_internal.ge.1).and. &
             (operator_internal.le.3).and. &
@@ -840,6 +844,7 @@
       REAL*8 mofdata_FAB_in(lox_in-1:hix_in+1,loy_in-1:hiy_in+1, &
        ngeom_recon_in*nmat_in) 
       REAL*8 current_time_in,tn,GSRC
+      REAL*8 deltat_swept
 
       operator_internal=local_operator_internal
       operator_external=local_operator_external
@@ -992,8 +997,14 @@
          xsrc(dir)=centroid_mult_FAB(i,j,im,dir)
         enddo
 
+        deltat_swept=deltat
+        if ((i.ge.lox).and.(i.le.hix).and. &
+            (j.ge.loy).and.(j.le.hiy)) then
+         deltat_swept=deltat*swept(i,j,im)
+        endif
+
         if (abs(vf).le.VOFTOL_local) then
-         G(i,j,im)=(meshvol/deltat)*UOLD(i,j,im)
+         G(i,j,im)=(meshvol/deltat_swept)*UOLD(i,j,im)
         else if ((vf.ge.VOFTOL_local).and.(vf.le.1.0+VOFTOL_local)) then
          if (1.eq.0) then
           print *,"probtypeCG,im,sdim before source: ", &
@@ -1010,7 +1021,7 @@
           stop
          endif
           
-         G(i,j,im)=(meshvol/deltat)*UOLD(i,j,im)+meshvol*GSRC
+         G(i,j,im)=(meshvol/deltat_swept)*UOLD(i,j,im)+meshvol*GSRC
          if ((operator_internal.ge.1).and. &
              (operator_internal.le.3).and. &
              (operator_external.ge.1).and. &
@@ -1029,7 +1040,7 @@
          stop
         endif
  
-        DIAGCOEFF=meshvol/deltat
+        DIAGCOEFF=meshvol/deltat_swept
 
         if ((i.ge.lox).and.(i.le.hix).and. &
             (j.ge.loy).and.(j.le.hiy)) then
@@ -1485,6 +1496,7 @@
       REAL*8 dist_to_int_sten(-1:1,-1:1,nmat,nmat)
       REAL*8 xclosest_sten(-1:1,-1:1,nmat,nmat,sdim)
       REAL*8 div_tot
+      REAL*8 deltat_swept
       integer diag_coeff_flag
 
       diag_coeff_flag=0
@@ -1495,6 +1507,10 @@
 
       if ((operator_internal.eq.0).and. &
           (operator_external.eq.0)) then
+
+       print *,"this is not supermesh"
+       print *,"stopping"
+       stop
 
        do im=1,nmat
        do i=lox,hix
@@ -1600,6 +1616,7 @@
         enddo ! ii
 
         do im=1,nmat
+         deltat_swept=deltat*swept(i,j,im)
 
          call cell_div_cal_simple( &
            dist_concentric, &
@@ -1630,9 +1647,9 @@
 
          vf=VFRAC_MOF(i,j,im)
          if (vf.le.VOFTOL_local) then
-          AU(i,j,im)=(meshvol/deltat)*U(i,j,im)
+          AU(i,j,im)=(meshvol/deltat_swept)*U(i,j,im)
          else        
-          AU(i,j,im)=(meshvol/deltat)*vf*U(i,j,im)+div_tot 
+          AU(i,j,im)=(meshvol/deltat_swept)*vf*U(i,j,im)+div_tot 
          endif
 
         enddo ! im

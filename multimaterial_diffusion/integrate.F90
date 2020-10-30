@@ -213,7 +213,11 @@ do while (finished_flag.eq.0)
    UOLD_in(i,j,im)=T_STATE(i,j,im)
   enddo
  enddo
- enddo 
+ enddo
+
+ if (tm.eq.1) then
+  call init_tsatfab(N_CURRENT) ! VARIABLE TSAT, allocate swept too
+ endif
 
   ! UOLD=UOLD_in  UNEW=UNEW_in
   ! in: BICGSTAB_Yang_MULTI.F90
@@ -238,8 +242,6 @@ do while (finished_flag.eq.0)
 
  if (tm.eq.1) then
 
-  call init_tsatfab(N_CURRENT) ! VARIABLE TSAT
-
      ! output_solution declared in: BICGSTAB_Yang_MULTI.F90
   if (fixed_dt_main.eq.0.0d0) then
    total_nsteps_parm=M_MAX_TIME_STEP
@@ -256,6 +258,7 @@ do while (finished_flag.eq.0)
   ! interface updated here: 
   ! input: UOLD
   ! output: UNEW  (has reconstructed interface)
+  ! update swept and interface temperaure tsatfab
  call update_interface(UOLD,UNEW,N_CURRENT,local_state_ncomp, &
    dx_in,time_n,deltat_in,nsteps,local_nten,stefan_flag)
 
@@ -304,6 +307,7 @@ do while (finished_flag.eq.0)
 
   ! UOLD=UOLD_in  UNEW=UNEW_in
   ! in: BICGSTAB_Yang_MULTI.F90
+  ! uses tsatfab and swept
  allocate_flag=0
  call INIT_GLOBALS( &
   allocate_flag, &
@@ -320,6 +324,7 @@ do while (finished_flag.eq.0)
   VFRAC_MOF_in,nmat_in,alpha_in,deltat_in, &
   mofdata_FAB_in,current_time_in)
 
+  ! uses tsatfab and swept
  call bicgstab(UNEW_in,hflag,iter)
 
  iter_average=iter_average+iter

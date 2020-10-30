@@ -3456,7 +3456,7 @@ stop
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: snew(DIMV(snew),nstate)
       REAL_T, intent(in) :: EOS(DIMV(EOS),nden)
-      REAL_T, intent(out) :: swept(DIMV(swept))
+      REAL_T, intent(out) :: swept(DIMV(swept),nmat)
 
       INTEGER_T i,j,k,dir
       INTEGER_T i1,j1,k1
@@ -6023,7 +6023,7 @@ stop
                print *,"LSTOL ",LSTOL
                stop
               endif
-              swept(D_DECL(i,j,k))=SWEPTFACTOR
+              swept(D_DECL(i,j,k),im_dest)=SWEPTFACTOR
 
              else if (((im_new_crit.ne.im_dest).and. &
                        (newvfrac(im_dest).le.half)).or. &
@@ -9007,8 +9007,17 @@ stop
                 create_in%local_TSAT=local_Tsat(ireverse)
                 create_in%im_source=im_source
                 create_in%im_dest=im_dest
+#if (STANDALONE==0)
                 call get_vel_phasechange_NUCLEATE( &
                  create_in,create_inout)
+#elif (STANDALONE==1)
+                print *,"should not call get_vel_phasechange_NUCLEATE for"
+                print *,"stand alone version"
+                stop
+#else
+                print *,"bust compiling ratemasschange"
+                stop
+#endif
                else if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
                 ! do nothing
                else

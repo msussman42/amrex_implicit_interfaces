@@ -2917,7 +2917,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        zeroALL(ngrow_make_distance,nburning,BURNING_VELOCITY_MF);
        zeroALL(ngrow_expansion,2*nten,JUMP_STRENGTH_MF);
         //ngrow,ncomp,val,dest_mf
-       setVal_array(0,1,1.0,SWEPT_CROSSING_MF);
+       setVal_array(0,nmat,1.0,SWEPT_CROSSING_MF);
         // piecewise constant interpolation at coarse/fine borders.
         // fluid LS can be positive in the solid regions.
         // HOLD_LS_DATA_MF is deleted in phase_change_redistributeALL()
