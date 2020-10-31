@@ -784,11 +784,12 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 // if the source term is in the source, then interface velocity is
 //  u_dest+mdot/rho_dest (velocity at interface is u_dest)
 //
-// for boiling and evaporation, den_dst<den_src => 
-//   distribute_from_target=1
-// for freezing, den_dst<den_src =>
-//   distribute_from_target=1  but ok to use
-//   distribute_from_target=0  since densities are close.
+// for boiling and evaporation, den_dst<<den_src => 
+//   distribute_from_target=1 (pressure more accurate in the
+//   liquid regions, also less reliance on dt being uniform, the
+//   destination velocity has smaller magnitude.)
+// for freezing and melting den_dst ~ den_src =>
+//   distribute_from_target=0  ok. 
 
 Vector<int> NavierStokes::distribute_from_target;
 int NavierStokes::is_phasechange=0;
@@ -3288,7 +3289,85 @@ NavierStokes::read_params ()
     pp.queryarr("Tanasawa_or_Schrage_or_Kassemi",
       Tanasawa_or_Schrage_or_Kassemi,0,2*nten);
     pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*nten);
+
+    Vector<int> fixed_parm;
+    fixed_parm.resize(2*nten);
+
+    for (int iten=0;iten<nten;iten++) {
+     for (int ireverse=0;ireverse<2;ireverse++) {
+      int iten_local=ireverse*nten+iten;
+
+      fixed_parm[iten_local]=-1;
+
+      if (freezing_model[iten_local]>=0) {
+
+       if (latent_heat[iten_local]!=0.0) {
+        int im1=0;
+        int im2=0;
+        int im_source=0;
+        int im_dest=0;
+        get_inverse_iten_cpp(im1,im2,iten+1,nmat);
+        if (ireverse==0) {
+         im_source=im1;  
+         im_dest=im2;  
+        } else if (ireverse==1) {
+         im_source=im2;  
+         im_dest=im1;  
+        } else
+         amrex::Error("ireverse invalid");
+
+        Real den_source=denconst[im_source-1];
+        Real den_dest=denconst[im_dest-1];
+        if ((den_source>0.0)&&(den_dest>0.0)) {
+         if ((den_source/den_dest>=0.5)&&
+             (den_source/den_dest<=2.0)) {
+          distribute_from_target[iten_local]=0;
+         } else if (den_dest<den_source) {
+          distribute_from_target[iten_local]=1;
+          fixed_parm[iten_local]=1;
+         } else if (den_source<den_dest) {
+          distribute_from_target[iten_local]=0;
+          fixed_parm[iten_local]=0;
+         } else
+          amrex::Error("den_source or den_dest invalid");
+        } else
+         amrex::Error("den_source or den_dest invalid");
+       } else if (latent_heat[iten_local]==0) {
+        distribute_from_target[iten_local]=0;
+        fixed_parm[iten_local]=0;
+       } else
+        amrex::Error("latent_heat invalid");
+      } else
+       amrex::Error("freezing_model invalid");
+     } // ireverse
+    } // iten
+
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
+
+    for (int iten=0;iten<nten;iten++) {
+     for (int ireverse=0;ireverse<2;ireverse++) {
+      int iten_local=ireverse*nten+iten;
+
+      if ((distribute_from_target[iten_local]==0)||
+          (distribute_from_target[iten_local]==1)) {
+       if (fixed_parm[iten_local]==-1) {
+        // user can choose
+       } else if (fixed_parm[iten_local]==
+                  distribute_from_target[iten_local]) {
+        // do nothing
+       } else {
+        std::cout << "iten_local=" << iten_local << 
+         " expected value=" << fixed_parm[iten_local] << 
+         " entered value=" << distribute_from_target[iten_local] <<
+         '\n';
+        amrex::Error("distribute_from_target[iten_local] invalid");
+       }
+
+      } else
+       amrex::Error("distribute_from_target invalid");
+
+     } // ireverse
+    } // iten
 
     pp.query("R_Palmore_Desjardins",R_Palmore_Desjardins);
 

@@ -69,14 +69,14 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  1.0 2.0    # r/l_0  y/l_0
 geometry.prob_hi   =  5.0e-3 20.0e-3   # MKS
-ns.freezing_model=0 0 0 0 0 0
+ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 # distribute_from_target=0: mdot in dest material, 
 #   V=[k grad T dot n]/rho_source
 # distribute_from_target=1: mdot in source material, 
 #   V=[k grad T dot n]/rho_dest
-# FUTURE: default to the case in which one divides by the "non-condensed"
-# material.
-ns.distribute_from_target=0 0 0 0 0 0
+# liquid, vapor, gas, solid
+# 12,13,14
+ns.distribute_from_target=1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 ns.EILE_flag=-1
 #   continuous_mof=2 CMOF everywhere 
 #   continuous_mof=4 CLSVOF in 2 material cells, CMOF in >2 mat cells

@@ -2016,8 +2016,10 @@ void NavierStokes::get_iten_cpp(int im1,int im2,int& iten,int nmat) {
 
 void NavierStokes::get_inverse_iten_cpp(int& im1,int& im2,int iten,int nmat) {
 
- if (iten<1)
+ if (iten<1) {
+  std::cout << "iten= " << iten << '\n';
   amrex::Error("iten invalid in get_inverse_iten_cpp");
+ }
  if (nmat<1)
   amrex::Error("nmat invalid");
 
