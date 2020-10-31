@@ -5607,6 +5607,9 @@ stop
             dencomp_probe=(im_probe-1)*num_state_material+1
             tcomp_probe=dencomp_probe+1
 
+             ! iprobe==1: source
+             ! iprobe==2: dest
+             ! (rho F)^new - (rho F)^old
             den_dF(iprobe)= &
                  deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_dest)
 
@@ -5657,7 +5660,7 @@ stop
             else if (dF.ge.EBVOFTOL) then
              if ((den_dF(2).gt.zero).and. &
                  (den_dF(1).lt.zero)) then
-              denratio_factor=-den_dF(1)/den_dF(2)-one ! den_src/den_dst
+              denratio_factor=-den_dF(1)/den_dF(2)-one ! den_src/den_dst-1
              else if ((den_dF(2).eq.zero).or. &
                       (den_dF(1).eq.zero)) then
               ! do nothing
@@ -5691,7 +5694,7 @@ stop
             else if (dF.ge.EBVOFTOL) then
              if ((den_dF(2).gt.zero).and. &
                  (den_dF(1).lt.zero)) then
-              denratio_factor=one+den_dF(2)/den_dF(1) ! den_dst/den_src
+              denratio_factor=one+den_dF(2)/den_dF(1) ! 1-den_dst/den_src
              else if ((den_dF(2).eq.zero).or. &
                       (den_dF(1).eq.zero)) then
               ! do nothing
