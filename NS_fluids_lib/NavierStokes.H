@@ -1201,6 +1201,7 @@ void apply_pressure_grad(
     void zalesakVEL();
 
     static void get_iten_cpp(int im1,int im2,int& iten,int nmat);
+     // iten>=1  im1,im2>=1
     static void get_inverse_iten_cpp(int& im1,int& im2,int iten,int nmat);
 
     void increment_KE(Real beta);
@@ -1732,9 +1733,11 @@ protected:
      // value: 1..nmat
     static Vector<int> spec_material_id_LIQUID; 
     static Vector<int> spec_material_id_AMBIENT; 
-     // 0 - distribute to the destination material (default)
+     // 0 - distribute to the destination material 
+     //  (default for freezing and melting)
      //     V=mdot/rho_src
      // 1 - distribute to the source material
+     //  (default for boiling and evaporation)
      //     V=mdot/rho_dst
     static Vector<int> distribute_from_target;
     static int is_phasechange;
