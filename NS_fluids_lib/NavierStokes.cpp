@@ -767,15 +767,29 @@ Vector<int> NavierStokes::mass_fraction_id;
 //both input AND derived.
 Vector<int> NavierStokes::spec_material_id_LIQUID; 
 Vector<int> NavierStokes::spec_material_id_AMBIENT; 
-// 0 - distribute to the destination material (default)
-//     V=mdot/rho_src
+// 0 - distribute to the destination material 
+//     V=mdot/den_src
+//     source term= dF * Vcell/dt^2 * (-1+ den_src/den_dst)
+//
 // 1 - distribute to the source material
-//     V=mdot/rho_dst
-// for boiling and evaporation the preferred choice is V=mdot/rho_dst
-//  (distribute_from_target=1)
-// for freezing and melting, the preferred choice is 
-//   distribute_from_target=0 for freezing (mdot in the ice)
-//   distribute_from_target=1 for melting (mdot in the melt)
+//     V=mdot/den_dst
+//     source term= dF * Vcell/dt^2 * (1-den_dst/den_src)
+//
+// source term is independent of "distribute_from_target" since the
+// magnitude of the jump in velocity is always the same: mdot[1/rho].
+//
+// Palmore and Desjardins: u_Gamma=uL + mdot/rhoL=uG + mdot/rhoG
+// if the source term is in the destination, then interface velocity is
+//  u_source+mdot/rho_source  (velocity at interface is u_source)
+// if the source term is in the source, then interface velocity is
+//  u_dest+mdot/rho_dest (velocity at interface is u_dest)
+//
+// for boiling and evaporation, den_dst<den_src => 
+//   distribute_from_target=1
+// for freezing, den_dst<den_src =>
+//   distribute_from_target=1  but ok to use
+//   distribute_from_target=0  since densities are close.
+
 Vector<int> NavierStokes::distribute_from_target;
 int NavierStokes::is_phasechange=0;
 int NavierStokes::normal_probe_size=1;
