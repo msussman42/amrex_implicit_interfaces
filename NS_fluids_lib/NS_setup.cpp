@@ -1579,6 +1579,15 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  if (upper_slab_time<0.0)
   amrex::Error("times should be positive");
 
+ std::fflush(NULL);
+  // call FLUSH(6), unit=6 screen
+ FORT_FLUSH_FORTRAN();
+
+ ParallelDescriptor::Barrier();
+ std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
+
  if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Starting: sum_integrated_quantities\n";
    std::cout << "This routine takes a while.\n";
@@ -1588,7 +1597,13 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    std::cout << "upper_slab_time= " << upper_slab_time << '\n';
    std::cout << "adapt_quad_depth= " << adapt_quad_depth << '\n';
  }
+ std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
  ParallelDescriptor::Barrier();
+ std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
 
  if (level!=0)
   amrex::Error("level invalid in sum_integrated_quantities");
@@ -1804,6 +1819,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   FF[iz]=0.0;
  }
 
+ std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
+ ParallelDescriptor::Barrier();
+ std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
+
  for (int isweep=0;isweep<2;isweep++) {
    // VOF_Recon_ALL 
    // make_physics_varsALL
@@ -1843,6 +1866,13 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  MaxPressureVelocityALL(minpres,maxpres,maxvel);
 
  ParallelDescriptor::Barrier();
+ std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
+ ParallelDescriptor::Barrier();
+ std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
 
  Vector<blobclass> blobdata;
 
@@ -1861,8 +1891,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   amrex::Error("output_drop_distribution invalid");
 
  ParallelDescriptor::Barrier();
-
  std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
+ ParallelDescriptor::Barrier();
+
  if (ParallelDescriptor::IOProcessor()) {
 
   Real smallest_dx=fine_dx[0];
@@ -2482,10 +2515,19 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     thread_class::number_mfiter_loops << '\n';
 
  }  // io processor
+ ParallelDescriptor::Barrier();
  std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
  ParallelDescriptor::Barrier();
 
  delete_array(MASKCOEF_MF);
+
+ ParallelDescriptor::Barrier();
+ std::fflush(NULL);
+  // call FLUSH(6)
+ FORT_FLUSH_FORTRAN();
+ ParallelDescriptor::Barrier();
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) {

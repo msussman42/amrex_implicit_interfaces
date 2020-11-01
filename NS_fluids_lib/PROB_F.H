@@ -2,6 +2,7 @@
 #define _PROB_F_H_
 
 #ifdef BL_LANG_FORT
+#    define FORT_FLUSH_FORTRAN flush_fortran
 #    define FORT_SET_PERIODIC_VAR set_periodic_var
 #    define FORT_SETFORTSCALES setfortscales
 #    define FORT_FORCEVELOCITY forcevelocity
@@ -40,6 +41,7 @@
 #    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
+#    define FORT_FLUSH_FORTRAN FLUSH_FORTRAN
 #    define FORT_SET_PERIODIC_VAR SET_PERIODIC_VAR
 #    define FORT_SETFORTSCALES SETFORTSCALES
 #    define FORT_FORCEVELOCITY FORCEVELOCITY
@@ -79,6 +81,7 @@
 #    define FORT_GROUP_LS_HO_FILL GROUP_LS_HO_FILL
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
+#    define FORT_FLUSH_FORTRAN flush_fortran
 #    define FORT_SET_PERIODIC_VAR set_periodic_var
 #    define FORT_SETFORTSCALES setfortscales
 #    define FORT_FORCEVELOCITY forcevelocity
@@ -116,6 +119,7 @@
 #    define FORT_LS_HO_FILL ls_ho_fill
 #    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill
 #  else
+#    define FORT_FLUSH_FORTRAN flush_fortran_
 #    define FORT_SET_PERIODIC_VAR set_periodic_var_
 #    define FORT_SETFORTSCALES setfortscales_
 #    define FORT_FORCEVELOCITY forcevelocity_
@@ -160,6 +164,8 @@
 namespace amrex{
 
   extern "C" {
+     void FORT_FLUSH_FORTRAN();
+
      void FORT_SET_PERIODIC_VAR(int* periodic_flag);
 
      void FORT_SETFORTSCALES(Real* pressure_scale,

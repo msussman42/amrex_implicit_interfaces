@@ -3319,13 +3319,14 @@ NavierStokes::read_params ()
         Real den_source=denconst[im_source-1];
         Real den_dest=denconst[im_dest-1];
         if ((den_source>0.0)&&(den_dest>0.0)) {
-         if ((den_source/den_dest>=0.5)&&
-             (den_source/den_dest<=2.0)) {
+         if (den_source==den_dest) {
           distribute_from_target[iten_local]=0;
          } else if (den_dest<den_source) {
+            // s= n dot u_dest + mdot/rho_dest
           distribute_from_target[iten_local]=1;
           fixed_parm[iten_local]=1;
          } else if (den_source<den_dest) {
+            // s= n dot u_source + mdot/rho_source
           distribute_from_target[iten_local]=0;
           fixed_parm[iten_local]=0;
          } else
