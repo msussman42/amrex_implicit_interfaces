@@ -766,6 +766,7 @@ stop
       REAL_T, dimension(nmat,-3:3,-3:3) :: vf_curv
       REAL_T expect_curv,local_curv_err,max_curv_err,total_curv_err
       INTEGER_T total_curv_count
+      INTEGER_T verbose_flag
 
       nhalf=3 
 
@@ -1058,7 +1059,15 @@ stop
           vf_curv(2,i1,j1)=one-F_local
          enddo
          enddo
-         call get_curvature_heightf(nmat,vf_curv,dx(1),kappa)
+
+         verbose_flag=0
+         if (height_function_flag.eq.2) then
+          if (abs(vf_curv(1,0,0)-0.5d0).lt.0.45d0) then
+           verbose_flag=1
+          endif
+         endif
+
+         call get_curvature_heightf(nmat,vf_curv,dx(1),kappa,verbose_flag)
          kappa(nmat+1)=kappa(1)
          if (height_function_flag.eq.2) then
                  ! outside is material 1
@@ -1076,7 +1085,7 @@ stop
              max_curv_err=local_curv_err
             endif
             print *,"i,j,im,expect,actual ",i,j,im,expect_curv,kappa(im)
-           enddo
+           enddo ! im=1..nmat
           endif
          endif
 

@@ -234,21 +234,28 @@ constant_K_test=0
 print *,"im_measure= ",im_measure
 print *,"constant_K_test= ",constant_K_test
 
+! dendrite probtype_in.eq.403
 ! N space
 ! M time
 ! for dendrite growth test problem, time step is variable
 ! (fixed_dt_main==0.0)
 ! 64,128,256
 ! VERIFICATION: M_START=1600, 1600, 1600 corresponding to 64,128,256
-N_START=64
-N_FINISH=64
-M_START=1600
+!
+!For convergence study:
+! 32,64,128, radblob10=1.0, fixed_dt_main=-1.0,
+! M_START=32,64,128
+! saturation_temp_vel=0.0
+! saturation_temp_curv=0.002
+N_START=32
+N_FINISH=32
+M_START=32
 M_FACTOR=2
 
 !axis_dir=0  ! standard dendrite problem with non-circular seed
 axis_dir=1  ! circular seed
 radblob10=1.0d0  ! 0.1d0 is from the earlier articles
-height_function_flag_global=2  ! =1 for height function
+height_function_flag_global=1  ! =1 for height function
                                ! =2 for sanity check
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
@@ -996,9 +1003,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! extra factor of 2 is not included.   Recommended to compare
     ! with Chen et al since they observed less numerically induced 
     ! instability, than what observed by Juric and Tryggvason.
-   saturation_temp_curv(1)=0.002d0  ! 0.002 in Chen et al
+   saturation_temp_curv(1)=0.002d0  ! 0.002d0 in Chen et al
    saturation_temp_curv(2)=0.0d0 
-   saturation_temp_vel(1)=0.002d0   ! 0.002 in Chen et al
+   saturation_temp_vel(1)=0.0d0   ! 0.002d0 in Chen et al
    saturation_temp_vel(2)=0.0d0 
  
    fort_tempconst(1)=1.5d0  ! liquid (outside dendrite)
