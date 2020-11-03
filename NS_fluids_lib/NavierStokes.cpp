@@ -3,6 +3,9 @@
 // Tensor_new, increase num_materials_viscoelastic if elastic_viscosity>0
 // or particleLS_flag==1 (or make elastic_viscosity=max(elastic_visc,1.0e-20
 // if particleLS_flag==1).
+// nstate_SDC (c++ and fortran)
+// nfluxSEM (c++ and fortran)
+//
 //#include <winstd.H>
 
 #include <algorithm>
@@ -8178,9 +8181,10 @@ NavierStokes::SDC_setup_step() {
  if ((nmat<1)||(nmat>1000))
   amrex::Error("nmat out of range");
 
- nfluxSEM=AMREX_SPACEDIM+num_state_base;
-  // I-scheme,thermal conduction,viscosity,div(up),gp,-force
- nstate_SDC=nfluxSEM+1+AMREX_SPACEDIM+1+AMREX_SPACEDIM+AMREX_SPACEDIM;
+ nfluxSEM=AMREX_SPACEDIM+num_state_material;
+  // I-scheme,thermal and species conduction,viscosity,div(up),gp,-force
+ nstate_SDC=nfluxSEM+1+num_species_var+
+    AMREX_SPACEDIM+1+AMREX_SPACEDIM+AMREX_SPACEDIM;
 
  ns_time_order=parent->Time_blockingFactor();
 
@@ -9196,14 +9200,18 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
   FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
   int deltacomp=0;
   if (project_option==3) { // viscosity
-   deltacomp=slab_step*nstate_SDC+nfluxSEM+1;
+   deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var;
   } else if (project_option==4) { // -momentum force at t^n+1
-   deltacomp=slab_step*nstate_SDC+nfluxSEM+1+AMREX_SPACEDIM+1+AMREX_SPACEDIM;
+   deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var+ 
+      AMREX_SPACEDIM+1+AMREX_SPACEDIM;
   } else if (project_option==2) { // thermal conduction
    deltacomp=slab_step*nstate_SDC+nfluxSEM;
+  } else if ((project_option>=100)&& // species conduction
+             (project_option<=100+num_species_var-1)) {
+   deltacomp=slab_step*nstate_SDC+nfluxSEM+project_option-100+1;
   } else if (project_option==0) { // div up and gp 
      // advection, thermal conduction,viscosity,div(up),gp
-   deltacomp=slab_step*nstate_SDC+nfluxSEM+1+AMREX_SPACEDIM;
+   deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var+AMREX_SPACEDIM;
   } else
    amrex::Error("project_option invalid4");
 
@@ -9302,6 +9310,8 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
   } // dir=0..sdim-1
 
  } else if ((project_option==2)|| // thermal conduction
+            ((project_option>=100)&&
+             (project_option<=100+num_species_var-1))||
 	    (project_option==3)|| // viscosity
 	    (project_option==4)) { // -momentum force at t^n+1
 	 // do nothing
@@ -13421,8 +13431,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  blob_array.resize(1);
  int blob_array_size=blob_array.size();
 
- if (nfluxSEM!=AMREX_SPACEDIM+num_state_base)
-  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+num_state_base");
+ if (nfluxSEM!=AMREX_SPACEDIM+num_state_material)
+  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+num_state_material");
 
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing

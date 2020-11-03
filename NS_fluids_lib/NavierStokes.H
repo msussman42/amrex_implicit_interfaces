@@ -212,7 +212,9 @@ namespace amrex{
 
 #define CELL_VELOCITY_MF 200
 
-// nstate_SDC= nfluxSEM + 1 (thermal conduction) + sdim (viscosity) + 
+// nfluxSEM=sdim + num_state_material
+// nstate_SDC= nfluxSEM + 
+// 1 + num_species_var (thermal + species conduction) + sdim (viscosity) + 
 // 1 (div up) + sdim (grad p) + sdim (-momentum force at t^n+1)
 #define spectralF_MF 201
 #define spectralF_GP_MF 202
