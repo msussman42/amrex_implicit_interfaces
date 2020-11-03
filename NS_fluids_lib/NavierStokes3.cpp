@@ -11579,6 +11579,7 @@ void NavierStokes::veldiffuseALL() {
  } else
   amrex::Error("CTML_FSI_flagC() invalid");
 
+   // back to "enable_spectral" for momentum eqn
  override_enable_spectral(save_enable_spectral);
 
   // force at time = cur_time_slab
@@ -11703,6 +11704,8 @@ void NavierStokes::veldiffuseALL() {
 
 // --------------- end thermal diffusion -------------------
 
+
+
 // ---------------begin save stable thermal diffusion and viscous forces
 
  if ((ns_time_order>=2)&&
@@ -11746,6 +11749,8 @@ void NavierStokes::veldiffuseALL() {
    amrex::Error("viscous_enable_spectral invalid");
 
   delete_array(PRESPC2_MF);
+
+
    // LOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
    // calls: UPDATESEMFORCE in GODUNOV_3D.F90
   if ((viscous_enable_spectral==1)||   // SEM space and time
@@ -11757,6 +11762,7 @@ void NavierStokes::veldiffuseALL() {
   } else
    amrex::Error("viscous_enable_spectral invalid");
 
+   // enable spectral for momentum equation.
   override_enable_spectral(save_enable_spectral);
 
    // LOfab=NEG_MOM_FORCE_MF
@@ -11777,8 +11783,108 @@ void NavierStokes::veldiffuseALL() {
 // ---------------end save stable thermal diffusion and viscous forces
 
  for (int species_comp=0;species_comp<num_species_var;species_comp++) {
-  multiphase_project(100+species_comp); // species
- }
+
+  int project_option_species=100+species_comp;
+
+   // (rho Y)_{t} + div(rho u Y) =div (rho D) grad Y
+   // [rho_t + div(rho u)]Y+rho DY/DT=div(rho D) grad Y
+   // DY/DT=div (rho D) grad Y/rho
+   // UPDATESEMFORCE:
+   // HOFAB=-div rho D grad Y 
+   // Ynew=Ynew-(1/rho)(int (HOFAB)dt - dt (LOFAB))
+   // call to semdeltaforce with dcomp=slab_step*nstate_SDC+nfluxSEM+1+
+   // species_comp
+  if ((SDC_outer_sweeps>0)&&
+      (SDC_outer_sweeps<ns_time_order)&&
+      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
+
+   if (ns_time_order>=2) {
+
+    if ((viscous_enable_spectral==1)||   // SEM space and time
+        (viscous_enable_spectral==3)) {  // SEM time
+
+     for (int ilev=finest_level;ilev>=level;ilev--) {
+      NavierStokes& ns_level=getLevel(ilev);
+      // calls: SEMDELTAFORCE in GODUNOV_3D.F90
+      ns_level.make_SEM_delta_force(project_option_species);
+     }
+    } else if (viscous_enable_spectral==0) {
+     // do nothing
+    } else
+     amrex::Error("viscous_enable_spectral invalid");
+
+    avgDownALL(State_Type,dencomp,nden,1);
+   } else
+    amrex::Error("ns_time_order invalid");
+
+  } else if (SDC_outer_sweeps==0) {
+   // do nothing
+  } else if ((divu_outer_sweeps>=0)&&
+             (divu_outer_sweeps+1<num_divu_outer_sweeps)) {
+   // do nothing
+  } else 
+   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
+
+   // why average down the density here?
+  avgDownALL(State_Type,dencomp,nden,1);
+
+  multiphase_project(project_option_species); // species
+
+   // ---------------begin save stable species diffusion 
+
+  if ((ns_time_order>=2)&&
+      (ns_time_order<=32)&&
+      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
+
+   get_mm_scomp_solver(
+    num_materials_scalar_solve,
+    project_option_species,
+    state_index,
+    scomp,
+    ncomp,
+    ncomp_check);
+
+   if (ncomp_check!=nsolveMM_thermal)
+    amrex::Error("ncomp_check invalid");
+
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+     //localMF[PRESPC2_MF] will hold the latest species from the implicit
+     //backwards Euler system.
+     //ngrow=1
+    ns_level.getState_localMF_list(
+     PRESPC2_MF,  
+     1,
+     state_index,
+     scomp,
+     ncomp);
+   }
+   int update_spectralF=0;
+   int update_stableF=1;
+    // LOfab=-div(rho D grad Y)
+    // calls: UPDATESEMFORCE in GODUNOV_3D.F90
+   if ((viscous_enable_spectral==1)||  // SEM space and time
+       (viscous_enable_spectral==3)) { // SEM time
+    update_SEM_forcesALL(project_option_species,PRESPC2_MF,
+      update_spectralF,update_stableF);
+   } else if (viscous_enable_spectral==0) {
+    // do nothing
+   } else
+    amrex::Error("viscous_enable_spectral invalid");
+
+   delete_array(PRESPC2_MF);
+
+  } else if ((ns_time_order==1)||
+             ((divu_outer_sweeps>=0)&&
+              (divu_outer_sweeps+1<num_divu_outer_sweeps))) {
+   // do nothing
+  } else
+   amrex::Error("ns_time_order or divu_outer_sweeps invalid");
+
+  // ---------------end save stable species diffusion forces
+
+ } // species_comp=0..num_species_var-1
+
  avgDownALL(State_Type,dencomp,nden,1);
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
