@@ -17005,6 +17005,42 @@ call doit(problo,probhi,ncell,dx,tstop)
 return
 end subroutine shallow_water_solve
 
+! AUTHOR: Dr. Yang Liu November 2020
+subroutine smooth_init(center, r, Tsat, Tinf, x_in, Tout,delta)
+! center, r:   center and radius of the circle interface
+! Tsat:    saturation temp      Tinf: ambient temp
+! x_in: coordinate in
+! Tout: temperature out
+implicit none
+
+REAL_T,intent(in)  :: center(SDIM),x_in(SDIM)
+REAL_T,intent(in)  :: r
+REAL_T,intent(in)  :: Tinf,Tsat
+REAL_T             :: phi
+REAL_T,intent(in)  :: delta   ! size of smooth transition region
+REAL_T,intent(out) :: Tout
+INTEGER_T          :: i
+REAL_T  :: H_local
+REAL_T  :: phi_shift
+
+phi=zero
+do i=1,SDIM
+ phi=phi+(x_in(i)-center(i))**2.0d0
+enddo
+phi=sqrt(phi)-r
+
+! phi=0,  T=Tsat
+! phi=delta,  T=Tinf
+
+phi_shift=phi-half*delta
+H_local=hs(phi_shift,half*delta)
+
+Tout=Tinf*H_local+Tsat*(one-H_local)
+
+end subroutine smooth_init
+
+
+
 
 end module global_utility_module
 

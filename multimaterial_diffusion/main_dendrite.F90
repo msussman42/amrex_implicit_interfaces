@@ -217,10 +217,12 @@ integer :: im_measure
 integer :: constant_K_test
 integer :: iter
 real(kind=8) :: iter_average
+real(kind=8) :: local_center(2)
+real(kind=8) :: transition_region
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= June 5, 2020, 14:00pm"
+print *,"PROTOTYPE CODE DATE= November 3, 2020, 16:00pm"
 
 stefan_flag=1 ! VARIABLE TSAT
 
@@ -257,6 +259,7 @@ axis_dir=1  ! circular seed
 radblob10=1.0d0  ! 0.1d0 is from the earlier articles
 height_function_flag_global=1  ! =1 for height function
                                ! =2 for sanity check
+transition_region=0.25d0
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
         ! time step hardwire for this test
@@ -1501,7 +1504,17 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
      else if (probtype_in.eq.403) then
 
-      T_FIELD=fort_tempconst(im)
+      if (im.eq.2) then ! seed (inside)
+       T_FIELD=fort_tempconst(im)
+      else if (im.eq.1) then ! melt (outside)
+       local_center(1)=xblob_in
+       local_center(2)=yblob_in
+       call smooth_init(local_center,radblob10,fort_tempconst(2), &
+               fort_tempconst(1),xcen_vec,T_FIELD,transition_region)
+      else
+       print *,"im invalid"
+       stop
+      endif
       T(i,j,im)=T_FIELD
 
      else if (probtype_in.eq.5) then

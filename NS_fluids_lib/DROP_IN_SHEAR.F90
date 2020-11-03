@@ -47,10 +47,7 @@ REAL_T, intent(in) :: time
 REAL_T, intent(inout) :: uu
 REAL_T, intent(in) :: dx(SDIM)
 
-INTEGER_T dir2
 REAL_T utest
-REAL_T xvec_dummy(SDIM)
-INTEGER_T for_dt
 
 
 if ((dir.lt.0).or.(dir.ge.SDIM)) then
@@ -125,7 +122,6 @@ INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
-REAL_T :: dist_gas,dist_liquid,dist_ice,dist_liq2,distsolid
 INTEGER_T :: im
 INTEGER_T :: im_solid_materialdist
 REAL_T :: initial_time
@@ -140,6 +136,25 @@ REAL_T :: initial_time
   im_solid_materialdist=im_solid_primary()
   initial_time=zero
 
+   ! TODO (supermesh prototype code first)
+   !       (i) quadratic least squares for heat flux and mass fraction
+   !           flux
+   !       (ii) twin material for capturing thermal layer. 
+   ! for evaporation and boiling JCP paper:
+   ! AMR, MOF, Space-time spectral
+   ! 1. evaporating drop in shear
+   ! 2. forced convective boiling from heated cylinder/sphere
+   ! 3. i) planar boiling/evaporation front
+   !    ii) expansing vapor bubble in superheated liquid.
+   !    iii) nucleate boiling in either quiescent or flowing liquid.
+   !    iv) pool boiling in quiescent or flowing liquid 
+   ! 4. verification of space-time spectral accuracy for a problem
+   !    using the Boussinesq approximation. (no phase change)
+   ! for freezing and melting JCP paper?
+   ! 1. static freezing test
+   ! 2. ice cube melting on top of water on top of substrate.
+   ! 3. thermal spray - convective heat transfer melting and solidification.
+   ! 4. same as (3) for the evaporation and boiling JCP paper.
   if (probtype.eq.424) then
 
    do im=1,nmat
@@ -160,7 +175,10 @@ REAL_T :: initial_time
      stop
     endif
     LS(2)=-LS(1) ! ambient gas
-   else if (axis_dir.eq.1) then ! evaporating layer of liquid
+
+    ! above: drop in shear flow
+    ! below: gas flow over a flat liquid interface
+   else if (axis_dir.eq.1) then 
     LS(1)=radblob-x(SDIM)
     LS(2)=-LS(1) ! ambient gas
    else
@@ -190,8 +208,7 @@ REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
-REAL_T :: temp
-REAL_T :: xmid,zmid
+REAL_T :: vert_lo,vert_hi
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -238,10 +255,10 @@ if (probtype.eq.424) then
   stop
  endif 
  if (vert_hi-vert_lo.gt.zero) then
-         ! do nothing
+  ! do nothing
  else
-         print *,"vert_hi-vert_lo invalid"
-         stop
+  print *,"vert_hi-vert_lo invalid"
+  stop
  endif
 
  if (axis_dir.eq.0) then ! drop in shear
@@ -309,7 +326,6 @@ REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
-REAL_T water_temp
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -401,8 +417,6 @@ INTEGER_T, intent(in) :: veldir,dir,side
 REAL_T, intent(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
-REAL_T temp
-INTEGER_T for_dt
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -448,10 +462,6 @@ REAL_T, intent(inout) :: PRES
 REAL_T, intent(in) :: PRES_in
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
-REAL_T base_pres
-REAL_T gravity_dz
-REAL_T rhohydro
-INTEGER_T :: from_boundary_hydrostatic
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -462,10 +472,6 @@ endif
 
  call DROP_IN_SHEAR_PRES(xghost,t,LS,PRES,nmat)
 
-else
- print *,"dir or side invalid"
- stop
-endif
 
 return
 end subroutine DROP_IN_SHEAR_PRES_BC
@@ -624,9 +630,6 @@ use probcommon_module
 IMPLICIT NONE
 REAL_T, intent(inout) :: local_buffer(2*SDIM)
 REAL_T, intent(in)    :: problen(SDIM)
-REAL_T :: buf
-INTEGER_T :: ibuf
-INTEGER_T :: dirbc,side
 
 if (probtype.eq.424) then
  ! do nothing
@@ -649,9 +652,6 @@ REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
 INTEGER_T, intent(inout) :: make_seed
 type(nucleation_parm_type_input), intent(in) :: nucleate_in
 REAL_T :: LL
-REAL_T :: dist
-REAL_T :: x_point(SDIM)
-INTEGER_T :: dir
 
 LL=nucleate_in%LL
 
@@ -676,14 +676,7 @@ use global_utility_module
 INTEGER_T, intent(in) :: nsum
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
 REAL_T, intent(out) :: increment_out(nsum)
-INTEGER_T :: i,j,k,dir,im
-REAL_T :: xlocal(SDIM)
-REAL_T :: cell_dim(SDIM)
-INTEGER_T :: temperature_component
-REAL_T temperature_plus
-REAL_T temperature_minus
-REAL_T zplus,zminus,heat_flux,area_face
-INTEGER_T im_solid
+INTEGER_T :: i,j,k,dir
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
