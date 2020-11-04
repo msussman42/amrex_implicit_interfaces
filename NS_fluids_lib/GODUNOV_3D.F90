@@ -2479,7 +2479,8 @@ stop
       REAL_T hoop_12,hoop_22
       REAL_T xdisplace_local,ydisplace_local
       INTEGER_T vofcomp
-      REAL_T Identity_comp,trace_E,bulk_modulus,lame_coefficient
+      REAL_T Identity_comp,trace_E,trace_SD,bulk_modulus,lame_coefficient
+      INTEGER_T linear_elastic_model
 
       nhalf=3
 
@@ -2651,9 +2652,15 @@ stop
          F(dir_x,dir_space)=gradu(dir_x,dir_space)+Identity_comp
          C(dir_x,dir_space)=zero
          B(dir_x,dir_space)=zero
-          ! look for ``linear elasticity'' on wikipedia
+          ! look for ``linear elasticity'' on wikipedia (eij)
          strain_displacement(dir_x,dir_space)=half* &
             (gradu(dir_x,dir_space)+gradu(dir_space,dir_x))
+          ! isotropic
+          ! Cijkl=K dij dkl + mu(dik djl + dil djk -(2/3)dij dkl)
+          ! Cijkl ekl=K dij ekk + mu(dik djl ekl + dil djk ekl -
+          !  (2/3)dij dkl ekl )=
+          ! K dij ekk + mu(eij+eji-(2/3)dij ekk)=
+          ! K dij ekk + 2mu(eij-(1/3)dij ekk)
 
         enddo
         enddo
@@ -2680,6 +2687,7 @@ stop
         enddo
         enddo
         trace_E=zero
+        trace_SD=zero ! trace of the strain displacement
         do dir_x=1,SDIM 
         do dir_space=1,SDIM
          if (dir_x.eq.dir_space) then
@@ -2687,8 +2695,13 @@ stop
          else
           Identity_comp=zero
          endif
+          ! C=F^T F=right cauchy green tensor
+          ! strain_displacement=(1/2)(grad u + (grad u)^T) = eps_ij
+          ! E=(C-I)/2=( (grad u + I)^T(grad u +I) - I)/2=eps_ij +
+          !  grad u^T gradu/2
          E(dir_x,dir_space)=half*(C(dir_x,dir_space)-Identity_comp)
          trace_E=trace_E+Identity_comp*E(dir_x,dir_space)
+         trace_SD=trace_SD+Identity_comp*strain_displacement(dir_x,dir_space)
         enddo
         enddo 
          ! Sigma=2 mu_s E + lambda Tr(E) I
@@ -2705,19 +2718,28 @@ stop
          else
           Identity_comp=zero
          endif
-         if (1.eq.0) then
+
+         bulk_modulus=fort_elastic_viscosity(im_elastic)
+         lame_coefficient=fort_lame_coefficient(im_elastic)
+         linear_elastic_model=fort_linear_elastic_model(im_elastic)
+
+         if (bulk_modulus.gt.zero) then
+
+          if (linear_elastic_model.eq.1) then
                  ! only valid for small deformations
-          DISP_TEN(dir_x,dir_space)=two*strain_displacement(dir_x,dir_space)
-         else if (1.eq.1) then
-          bulk_modulus=fort_elastic_viscosity(im_elastic)
-          lame_coefficient=fort_lame_coefficient(im_elastic)
-          if (bulk_modulus.gt.zero) then
+           DISP_TEN(dir_x,dir_space)=( &
+               two*bulk_modulus*strain_displacement(dir_x,dir_space)+ &
+                  lame_coefficient*trace_SD*Identity_comp)/bulk_modulus
+          else if (linear_elastic_model.eq.0) then
            DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
                   lame_coefficient*trace_E*Identity_comp)/bulk_modulus
           else
-           print *,"bulk_modulus invalid"
+           print *,"linear_elastic_model invalid"
            stop
           endif
+         else 
+          print *,"bulk_modulus invalid ",bulk_modulus
+          stop
          endif
         enddo
         enddo
