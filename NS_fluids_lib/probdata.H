@@ -91,6 +91,7 @@
       INTEGER_T fort_im_elastic_map(MAX_NUM_MATERIALS)
       REAL_T fort_elastic_viscosity(MAX_NUM_MATERIALS)
       REAL_T fort_lame_coefficient(MAX_NUM_MATERIALS)
+      INTEGER_T fort_linear_elastic_model(MAX_NUM_MATERIALS)
       REAL_T fort_shear_modulus(MAX_NUM_MATERIALS)
       INTEGER_T fort_store_elastic_data(MAX_NUM_MATERIALS)
       INTEGER_T num_state_material

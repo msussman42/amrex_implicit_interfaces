@@ -12,7 +12,10 @@ geometry.prob_lo   =  0.0 0.0  # ZEYU
 # 2 * 0.3936864 = 0.7873728
 # dz_fine=0.3936864/128=0.003075675
 # DIAMETER OF DROP IS 2mm page 651, Pasandidah-Fard 1996, POF
-geometry.prob_hi   =  0.2 0.4  # ZEYU, cm
+# for drop hitting a flexible surface, assume:
+#   drop radius=1 mm
+#   flexible string=6 mm
+geometry.prob_hi   =  6.0e-3 6.0e-3 
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -37,6 +40,22 @@ mg.rtol_b = -0.01
 Lp.v = 1
 
 ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
+# reference: Bell (LBNL), Colella (LBNL), Glaz (1987)
+#            Colella (LBNL) and Woodward
+# u^{n+1,(0)}=u^n
+# (grad p/rho)^{n+1(0)}=0
+# for k=1...ns.num_divu_outer_sweeps
+#  u^advect^{n+1,(k)}=CISL_ADVECTION( u^{n+1}(k-1),u^n )
+#  u^*^{n+1,(k)}=u^advect^{n+1,(k)}+ 
+#                dt div (2 mu D)^*^{n+1,k} +
+#                dt div tau_flexible^{n+1,k-1} -
+#                dt (grad p/rho)^{n+1(k-1)}
+#  U^{n+1,(k)}=u^advect^{n+1,(k)}+ 
+#                dt div (2 mu D)^*^{n+1,k} +
+#                dt div tau_flexible^{n+1,k-1} -
+#                dt (grad p/rho)^{n+1(k)} 
+#      
+ns.num_divu_outer_sweeps=2
 ns.num_species_var=0
 # 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface

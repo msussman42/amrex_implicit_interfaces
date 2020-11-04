@@ -171,6 +171,7 @@ implicit none
 ! fort_solidheat_flag added October 13.
 ! fort_lame_coefficient added October 21.
 ! fort_shear_modulus added October 28.
+! fort_linear_elastic_model added November 4.
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
