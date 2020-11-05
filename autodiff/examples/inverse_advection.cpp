@@ -512,7 +512,33 @@ Real algorithm_and_gradient(
  return y.value();
 }
 
-
+// history:
+// Fortran was the language of choice for optimized simulation of fluid
+// mechanics.
+// Fortran is inconvenient for manipulating complex data structures.
+// elementary 2d arrays in c++
+// double* array2d=new double*[nrows];
+// for (int i=0;i<ncols;i++) {
+//  array2d[i]=new double[ncols];
+//
+// array2d[i][j]=...   0<=i<=nrows-1   0<=j<=ncols-1
+//
+// AMReX:  FarrayBox array2d(box);   box has dimensions of a 2d box.
+// Vector  (1d)
+// IntVect (Vector of integers)  Vector<int>
+// Box: IntVect Boxlo, IntVect Boxhi   
+// e.g. Boxlo(0)=0 Boxlo(1)=0
+//      Boxhi(0)=nrows-1  Boxhi(1)=ncols-1
+// BaseFab<double> = FArrayBox(Box box_in)   (array2d analogy)
+// BaseFab<int>
+// BaseFab<adept::adouble>
+// Fab = Fortran Array Box and stores rows and columns in an order consistent
+// with Fortran multidimensional arrays.
+// BaseFab<double> my_double_array(box_in,....)
+// FabArray<int>,
+// FabArray<double>,
+// FabArray<adept::adouble>
+// FabArray is an array of BaseFab's i.e. Vector<BaseFab<adept::adouble>>
 int main(int argc,char* argv[]) {
 
  amrex::Initialize(argc,argv);
