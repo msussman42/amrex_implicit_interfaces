@@ -821,10 +821,24 @@ thread_class::reconcile_d_numPts(int caller_id) {
  if (tile_d_numPts[0]==boxarray_d_numPts) {
   // do nothing
  } else {
-  std::cout << "tile_d_numPts[0]= " << tile_d_numPts[0] << '\n';
-  std::cout << "boxarray_d_numPts= " << boxarray_d_numPts << '\n';
-  std::cout << "number_mfiter_loops= " << number_mfiter_loops << '\n';
-  std::cout << "caller_id= " << caller_id << '\n';
+  amrex::ParallelDescriptor::Barrier();
+  std::fflush(NULL);
+  amrex::ParallelDescriptor::Barrier();
+  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+   amrex::ParallelDescriptor::Barrier();
+   if (amrex::ParallelDescriptor::MyProc()==pid) {
+    std::fflush(NULL);
+    std::cout << "on processor: " << pid << '\n';
+    std::cout << "tile_d_numPts[0]= " << tile_d_numPts[0] << '\n';
+    std::cout << "boxarray_d_numPts= " << boxarray_d_numPts << '\n';
+    std::cout << "number_mfiter_loops= " << number_mfiter_loops << '\n';
+    std::cout << "caller_id= " << caller_id << '\n';
+    std::fflush(NULL);
+   }
+  }  // pid=0..NProcs-1
+  amrex::ParallelDescriptor::Barrier();
+  std::fflush(NULL);
+  amrex::ParallelDescriptor::Barrier();
   amrex::Error("reconcile_d_numPts found tile sum <> boxarray sum\n");
  }
 
