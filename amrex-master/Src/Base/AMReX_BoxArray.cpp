@@ -1506,6 +1506,7 @@ BoxArray::getHashMap () const
             {
                 Box bx = m_ref->m_abox[i];
 		 // SUSSMAN: THIS IS NEW ADDED BY WEIQUN 11/5/2020
+		 // if length in any direction is 0, then growHi(idim,1)
                 bx.normalize();
                 maxext = amrex::max(maxext, bx.size());
                 boundingbox.minBox(bx);
