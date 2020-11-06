@@ -259,7 +259,9 @@ axis_dir=1  ! circular seed
 radblob10=1.0d0  ! 0.1d0 is from the earlier articles
 height_function_flag_global=1  ! =1 for height function
                                ! =2 for sanity check
-transition_region=0.25d0
+! set transition_region=0.0d0 for seed problem from Chen and Smereka
+! or Juric and Tryggvason.
+transition_region=0.25d0 ! initial circular seed (transition_region>0.0)
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
         ! time step hardwire for this test
@@ -988,13 +990,13 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! ST=-.5
     ! in dimensionless units:
     ! Twater=-0.5
-    ! Tsolid=-1.0
+    ! Tsolid=0.0
     ! Tsat=0.0
-    ! add 2.0:
-    ! Twater=1.5
+    ! add 1.0:
+    ! Twater=0.5
     ! Tsolid=1.0
-    ! Tsat=2.0
-   saturation_temp(1)=2.0 ! liquid -> solid
+    ! Tsat=1.0
+   saturation_temp(1)=1.0 ! liquid -> solid
    saturation_temp(2)=0.0
     ! phi_{12}=(phi_1 - phi_2)/2  < 0 in the dendrite
     ! phi_{12} > 0 in the liquid
@@ -1011,7 +1013,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    saturation_temp_vel(1)=0.0d0   ! 0.002d0 in Chen et al
    saturation_temp_vel(2)=0.0d0 
  
-   fort_tempconst(1)=1.5d0  ! liquid (outside dendrite)
+   fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)
    fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
 
     ! max_front_vel
@@ -1509,8 +1511,16 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       else if (im.eq.1) then ! melt (outside)
        local_center(1)=xblob_in
        local_center(2)=yblob_in
-       call smooth_init(local_center,radblob10,fort_tempconst(2), &
+       if (transition_region.gt.0.0d0) then
+         ! radblob10: radius of seed
+        call smooth_init(local_center,radblob10,fort_tempconst(2), &
                fort_tempconst(1),xcen_vec,T_FIELD,transition_region)
+       else if (transition_region.eq.0.0d0) then
+        T_FIELD=fort_tempconst(im)
+       else
+        print *,"transition_region invalid"
+        stop
+       endif
       else
        print *,"im invalid"
        stop
