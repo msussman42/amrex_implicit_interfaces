@@ -15,7 +15,8 @@ geometry.prob_lo   =  0.0 0.0  # ZEYU
 # for drop hitting a flexible surface, assume:
 #   drop radius=1 mm
 #   flexible string=6 mm
-geometry.prob_hi   =  6.0e-3 6.0e-3 
+# symmetric BC at r=0
+geometry.prob_hi   =  3.0e-3 6.0e-3 
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -80,7 +81,7 @@ amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=0 # ZEYU
 ns.particleLS_flag=0 0 1
-ns.particles_weight=0 0 0.0 # 0.0=>particles have no weight   0<=wt<=1
+ns.particles_weight=0 0 0.5 # 0.0=>particles have no weight   0<=wt<=1
 ns.particle_nsubdivide=1 1 1
 ns.particle_max_per_nsubdivide=100 100 100
 ns.radius_cutoff=0 0 -1
@@ -193,17 +194,17 @@ ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
 #ns.advbot=77.0 # Yongsheng
-ns.advbot=100.0 # ZEYU  cm/s
+ns.advbot=1.0 # m/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 # 0.0 0.4 Yongsheng
 # 0.0 0.1053027 Kensuke
 ns.xblob=0.0  # center of falling droplet ZEYU
-ns.yblob=0.25
-ns.zblob=0.25  # 0.15+0.1
+ns.yblob=2.5e-3
+ns.zblob=2.5e-3  # 1.5e-3+1.0e-3
 # 0.18 Yongsheng
 # 0.186/2=0.093 Kensuke
-ns.radblob=0.1 # ZEYU
+ns.radblob=1.0e-3 # ZEYU
 ns.xblob2=0.0
 ns.radblob2=1.0e+10  # plate extends the whole domain 
 # SUBSTRATE THICKNESS SHOULD BE A MULTIPLE OF dx_{coarsest}
@@ -215,8 +216,8 @@ ns.radblob2=1.0e+10  # plate extends the whole domain
 #ns.radblob4=0.025 
 ns.yblob2=0.0
 ns.zblob2=0.0
-ns.radblob3=0.15 
-ns.radblob4=0.15 
+ns.radblob3=1.5e-3
+ns.radblob4=1.5e-3
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=2000
@@ -228,11 +229,14 @@ ns.heatviscconst=0.0 0.0 0.0
 #material 2 is gas
 #material 3 is substrate
 ns.elastic_viscosity=0.0 0.0 100000.0
+ns.lame_coefficient=0.0 0.0 0.0
+ns.shear_modulus=0.0 0.0 0.0
+ns.linear_elastic_model=0 0 1
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.viscoelastic_model=0 0 2
 ns.viscconst=8.9e-3 0.000181 1.0 # ZEYU
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
-ns.denconst=0.997 0.00125 1.0 #ZEYU
+ns.denconst=997.0 1.25 1000.0 
 ns.added_weight=1.0 1.0 1000.0
 # if pressure_error_cutoff=0.0 then pressure is not used as an AMR
 # criteria, otherwise if pressure_error_flag==0, then check the
