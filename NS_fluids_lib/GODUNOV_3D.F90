@@ -2478,6 +2478,7 @@ stop
       REAL_T E(SDIM,SDIM)
       REAL_T hoop_12,hoop_22
       REAL_T xdisplace_local,ydisplace_local
+      REAL_T scale_factor
       INTEGER_T vofcomp
       REAL_T Identity_comp,trace_E,trace_SD,bulk_modulus,lame_coefficient
       INTEGER_T linear_elastic_model
@@ -2640,6 +2641,9 @@ stop
          print *,"dimension bust"
          stop
         endif
+
+        scale_factor=zero
+
          ! gradu(i,j)=partial XD_{i}/partial x_j
         do dir_x=1,SDIM 
         do dir_space=1,SDIM
@@ -2650,6 +2654,11 @@ stop
          endif
 
          F(dir_x,dir_space)=gradu(dir_x,dir_space)+Identity_comp
+
+         if (scale_factor.le.abs(F(dir_x,dir_space))) then
+          scale_factor=abs(F(dir_x,dir_space))
+         endif
+
          C(dir_x,dir_space)=zero
          B(dir_x,dir_space)=zero
           ! look for ``linear elasticity'' on wikipedia (eij)
@@ -2664,6 +2673,12 @@ stop
 
         enddo
         enddo
+
+        if (scale_factor.lt.one) then
+         scale_factor=one
+        endif
+        scale_factor=scale_factor*scale_factor
+
          ! C=F^T F = right cauchy green tensor
          ! E=(1/2)*(C-I)  Green Lagrange strain tensor
         do dir_x=1,SDIM 
@@ -2678,9 +2693,15 @@ stop
         enddo
         do dir_x=1,SDIM 
         do dir_space=1,SDIM
-         if (abs(C(dir_x,dir_space)-B(dir_space,dir_x)).le.VOFTOL) then
+         if (abs(C(dir_x,dir_space)-B(dir_space,dir_x)).le. &
+             1.0D-2*scale_factor) then
           ! do nothing
          else
+          print *,"scale_factor = ",scale_factor
+          print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+          print *,"dir_x,dir_space ",dir_x,dir_space
+          print *,"C(dir_x,dir_space)=",C(dir_x,dir_space)
+          print *,"B(dir_space,dir_x)=",B(dir_space,dir_x)
           print *,"expecting C^T=B"
           stop
          endif 

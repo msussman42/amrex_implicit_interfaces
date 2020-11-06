@@ -253,6 +253,8 @@ void FillPatchTwoLevels (
   } // i
 
     // find coarsen( mf_target intersect complement(fmf) within fdomain_g ).
+    // the valid region of fpc encompass the mf_target grow regions, but the
+    // boxes of fpc are disjoint.
   const FabArrayBase::FPinfo& fpc = 
    FabArrayBase::TheFPinfo(fmf, mf_target, 
       ngrow_vec, 
@@ -271,6 +273,8 @@ void FillPatchTwoLevels (
    MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_patch,ncomp,0,
 		  MFInfo().SetTag("mf_crse_patch"),
 		  *fpc.fact_crse_patch);
+
+   mf_crse_patch.setDomainBndry(std::numeric_limits<Real>::quiet_NaN(),cgeom);
    
     // This data will be interpolated next.       
    FillPatchSingleLevel(
@@ -331,11 +335,12 @@ void FillPatchTwoLevels (
     int dest_comp_bcr=0;
     amrex::setBC(dbx,fdomain,src_comp_bcs,dest_comp_bcr,ncomp,
      local_bcs,bcr);
-  	    
+  	   
+     // parameter "dfab" used to correspond to mf_target.
     mapper->interp(time,
                sfab, // source
                0,
-  	       dfab, //dest; the dest BoxArray is disjoint from the existing fine.
+  	       dfab, //dest; dest BoxArray is disjoint from the existing fine.
   	       0,    //was dcomp
   	       ncomp,
   	       dbx,
@@ -385,7 +390,7 @@ void FillPatchTwoLevels (
 
  FillPatchSingleLevel(
    levelf,
-   mf_target,  //mf_target already init with coarse data in regions not covered by fmf
+   mf_target,  //mf_target init with coarse data in regions not covered by fmf
    time, 
    fmf, 
    scomp, 
