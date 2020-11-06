@@ -22,7 +22,7 @@ EArena::EArena (std::size_t hunk_size, ArenaInfo info)
 EArena::~EArena ()
 {
     for (unsigned int i = 0, N = m_alloc.size(); i < N; i++) {
-        deallocate_system(m_alloc[i]);
+        deallocate_system(m_alloc[i].first, m_alloc[i].second);
     }
 }
 
@@ -42,7 +42,7 @@ EArena::alloc (std::size_t nbytes)
         const std::size_t N = nbytes < m_hunk ? m_hunk : nbytes;
         vp = allocate_system(N);
         m_used_size += N;
-        m_alloc.push_back(vp);
+        m_alloc.push_back({vp,N});
 
         if (nbytes < N) { // add leftover to free list
             void* block = static_cast<char*>(vp) + nbytes;
@@ -89,10 +89,10 @@ EArena::free (void* vp)
     AMREX_ASSERT(m_freelist.find(*bit) == m_freelist.end()); // assert not in free list
 
     auto pair_fitb = m_freelist.insert(*bit);
+    amrex::ignore_unused(pair_fitb);
     auto pair_mitb = m_mergelist.insert(*bit);
     m_free_size += bit->m_size;
     AMREX_ASSERT(pair_fitb.second == true && pair_mitb.second);
-    auto fit = pair_fitb.first;
     auto mit = pair_mitb.first;
 
     m_busylist.erase(bit);

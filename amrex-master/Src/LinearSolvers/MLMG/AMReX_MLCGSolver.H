@@ -2,11 +2,12 @@
 #ifndef AMREX_MLCGSOLVER_H_
 #define AMREX_MLCGSOLVER_H_
 
-#include <cmath>
-
 #include <AMReX_Vector.H>
 #include <AMReX_MultiFab.H>
 #include <AMReX_MLLinOp.H>
+
+#include <cmath>
+
 
 namespace amrex {
 
@@ -58,6 +59,8 @@ public:
                   Real            eps_rel,
                   Real            eps_abs);
 
+    int getNumIters () const noexcept { return iter; }
+
 private:
 
     MLMG* mlmg;
@@ -65,9 +68,10 @@ private:
     Type solver_type;
     const int amrlev;
     const int mglev;
-    int    verbose   = 0;
-    int    maxiter   = 100;
+    int verbose   = 0;
+    int maxiter   = 100;
     int nghost = 0;
+    int iter = -1;
 };
 
 }

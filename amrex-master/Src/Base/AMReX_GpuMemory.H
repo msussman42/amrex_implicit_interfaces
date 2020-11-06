@@ -22,7 +22,7 @@ struct Managed {
     
     void operator delete (void *ptr)
     {
-        The_Managed_Arena()->free(ptr);
+        if (ptr) The_Managed_Arena()->free(ptr);
     }
 
 #endif
@@ -39,13 +39,19 @@ struct Pinned {
     
     void operator delete (void *ptr)
     {
-        The_Pinned_Arena()->free(ptr);
+        if (ptr) The_Pinned_Arena()->free(ptr);
     }
     
 #endif
 };
 
-template <class T, typename = amrex::EnableIf_t<AMREX_IS_TRIVIALLY_COPYABLE(T)> >
+struct Deleter {
+    Arena* m_arena = nullptr;
+    Deleter (Arena* ar) noexcept : m_arena(ar) {}
+    void operator() (void* pt) const noexcept { m_arena->free(pt); }
+};
+
+template <class T, typename std::enable_if<AMREX_IS_TRIVIALLY_COPYABLE(T),int>::type = 0>
 struct DeviceScalar
 {
     DeviceScalar (DeviceScalar const&) = delete;
@@ -54,6 +60,14 @@ struct DeviceScalar
     void operator= (DeviceScalar &&) = delete;
 
 #ifdef AMREX_USE_GPU
+
+    DeviceScalar () {
+        if (Gpu::inLaunchRegion()) {
+            dp = (T*)(The_Device_Arena()->alloc(sizeof(T)));
+        } else {
+            dp = (T*)(std::malloc(sizeof(T)));
+        }
+    }
 
     explicit DeviceScalar (T init_val) {
         if (Gpu::inLaunchRegion()) {
@@ -91,6 +105,7 @@ private:
 #else
 
     DeviceScalar (T init_val) : d(init_val) {}
+    DeviceScalar () {}
     ~DeviceScalar () {}
 
     T* dataPtr () { return &d; }
@@ -113,6 +128,9 @@ struct SharedMemory
         return nullptr;
     }
 };
+
+#ifndef AMREX_USE_DPCPP
+// xxxxx DPCPP todo: extern __shared__
 
 template <>
 struct SharedMemory<double>
@@ -141,6 +159,16 @@ struct SharedMemory<long>
         AMREX_HIP_OR_CUDA(HIP_DYNAMIC_SHARED(long,amrex_sm_long);,
                           extern __shared__  long amrex_sm_long[];)
         return amrex_sm_long;
+    }
+};
+
+template <>
+struct SharedMemory<long long>
+{
+    AMREX_GPU_DEVICE long long* dataPtr () noexcept {
+        AMREX_HIP_OR_CUDA(HIP_DYNAMIC_SHARED(long long,amrex_sm_long_long);,
+                          extern __shared__  long long amrex_sm_long_long[];)
+        return amrex_sm_long_long;
     }
 };
 
@@ -185,6 +213,16 @@ struct SharedMemory<unsigned long>
 };
 
 template <>
+struct SharedMemory<unsigned long long>
+{
+    AMREX_GPU_DEVICE unsigned long long* dataPtr () noexcept {
+        AMREX_HIP_OR_CUDA(HIP_DYNAMIC_SHARED(unsigned long long,amrex_sm_ulonglong);,
+                          extern __shared__  unsigned long long amrex_sm_ulonglong[];)
+        return amrex_sm_ulonglong;
+    }
+};
+
+template <>
 struct SharedMemory<unsigned int>
 {
     AMREX_GPU_DEVICE unsigned int* dataPtr () noexcept {
@@ -223,6 +261,8 @@ struct SharedMemory<bool>
         return amrex_sm_bool;
     }
 };
+
+#endif
 
 #endif
 

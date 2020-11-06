@@ -46,10 +46,11 @@ public:
           m_dp(static_cast<PolyTerm*>(The_Device_Arena()->alloc(sizeof(PolyTerm)*m_size))),
           m_sp(m_dp,Gpu::Deleter(The_Device_Arena()))
     {
+#ifdef AMREX_USE_GPU
         Gpu::htod_memcpy(m_dp, m_polynomial.data(), m_size*sizeof(PolyTerm));
+#endif
     }
 
-    ~PolynomialIF () {}
 
     PolynomialIF (const PolynomialIF& rhs) = default;
     PolynomialIF (PolynomialIF&& rhs) = default;
@@ -59,7 +60,7 @@ public:
     AMREX_GPU_HOST_DEVICE inline
     Real operator() (AMREX_D_DECL(Real x, Real y, Real z)) const noexcept
     {
-#ifdef AMREX_DEVICE_COMPILE
+#if AMREX_DEVICE_COMPILE
         PolyTerm const* AMREX_RESTRICT pt = m_dp;
 #else
         PolyTerm const* AMREX_RESTRICT pt = m_polynomial.data();

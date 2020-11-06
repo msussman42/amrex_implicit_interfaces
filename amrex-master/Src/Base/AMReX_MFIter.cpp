@@ -2,6 +2,7 @@
 #include <AMReX_MFIter.H>
 #include <AMReX_FabArray.H>
 #include <AMReX_FArrayBox.H>
+#include <AMReX_OpenMP.H>
 
 namespace amrex {
 
@@ -13,6 +14,7 @@ MFIter::MFIter (const FabArrayBase& fabarray_,
     fabArray(fabarray_),
     tile_size((flags_ & Tiling) ? FabArrayBase::mfiter_tile_size : IntVect::TheZeroVector()),
     flags(flags_),
+    streams(Gpu::numGpuStreams()),
     dynamic(false),
     device_sync(true),
     index_map(nullptr),
@@ -30,6 +32,7 @@ MFIter::MFIter (const FabArrayBase& fabarray_,
     fabArray(fabarray_),
     tile_size((do_tiling_) ? FabArrayBase::mfiter_tile_size : IntVect::TheZeroVector()),
     flags(do_tiling_ ? Tiling : 0),
+    streams(Gpu::numGpuStreams()),
     dynamic(false),
     device_sync(true),
     index_map(nullptr),
@@ -48,6 +51,7 @@ MFIter::MFIter (const FabArrayBase& fabarray_,
     fabArray(fabarray_),
     tile_size(tilesize_),
     flags(flags_ | Tiling),
+    streams(Gpu::numGpuStreams()),
     dynamic(false),
     device_sync(true),
     index_map(nullptr),
@@ -61,12 +65,11 @@ MFIter::MFIter (const FabArrayBase& fabarray_,
 
 MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm, unsigned char flags_)
     :
-    m_fa(new FabArray<FArrayBox>(ba, dm, 1, 0,
-                                 MFInfo().SetAlloc(false),
-                                 FArrayBoxFactory())),
+    m_fa(new FabArrayBase(ba,dm,1,0)),
     fabArray(*m_fa),
     tile_size((flags_ & Tiling) ? FabArrayBase::mfiter_tile_size : IntVect::TheZeroVector()),
     flags(flags_),
+    streams(Gpu::numGpuStreams()),
     dynamic(false),
     device_sync(true),
     index_map(nullptr),
@@ -75,17 +78,22 @@ MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm, unsigned char
     local_tile_index_map(nullptr),
     num_local_tiles(nullptr)
 {
+#ifdef _OPENMP
+#pragma omp single
+#endif
+    {
+        m_fa->addThisBD();
+    }
     Initialize();
 }
 
 MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm, bool do_tiling_)
     :
-    m_fa(new FabArray<FArrayBox>(ba, dm, 1, 0,
-                                 MFInfo().SetAlloc(false),
-                                 FArrayBoxFactory())),
+    m_fa(new FabArrayBase(ba,dm,1,0)),
     fabArray(*m_fa),
     tile_size((do_tiling_) ? FabArrayBase::mfiter_tile_size : IntVect::TheZeroVector()),
     flags(do_tiling_ ? Tiling : 0),
+    streams(Gpu::numGpuStreams()),
     dynamic(false),
     device_sync(true),
     index_map(nullptr),
@@ -94,6 +102,12 @@ MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm, bool do_tilin
     local_tile_index_map(nullptr),
     num_local_tiles(nullptr)
 {
+#ifdef _OPENMP
+#pragma omp single
+#endif
+    {
+        m_fa->addThisBD();
+    }
     Initialize();
 }
 
@@ -101,12 +115,11 @@ MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm, bool do_tilin
 MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm,
                 const IntVect& tilesize_, unsigned char flags_)
     :
-    m_fa(new FabArray<FArrayBox>(ba, dm, 1, 0,
-                                 MFInfo().SetAlloc(false),
-                                 FArrayBoxFactory())),
+    m_fa(new FabArrayBase(ba,dm,1,0)),
     fabArray(*m_fa),
     tile_size(tilesize_),
     flags(flags_ | Tiling),
+    streams(Gpu::numGpuStreams()),
     dynamic(false),
     device_sync(true),
     index_map(nullptr),
@@ -115,23 +128,24 @@ MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm,
     local_tile_index_map(nullptr),
     num_local_tiles(nullptr)
 {
+#ifdef _OPENMP
+#pragma omp single
+#endif
+    {
+        m_fa->addThisBD();
+    }
     Initialize();
 }
 
 
 MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm, const MFItInfo& info)
     :
-    m_fa(new FabArray<FArrayBox>(ba, dm, 1, 0,
-                                 MFInfo().SetAlloc(false),
-                                 FArrayBoxFactory())),
+    m_fa(new FabArrayBase(ba, dm, 1, 0)),
     fabArray(*m_fa),
     tile_size(info.tilesize),
     flags(info.do_tiling ? Tiling : 0),
-#ifdef _OPENMP
-    dynamic(info.dynamic && (omp_get_num_threads() > 1)),
-#else
-    dynamic(false),
-#endif
+    streams(info.num_streams),
+    dynamic(info.dynamic && (OpenMP::get_num_threads() > 1)),
     device_sync(info.device_sync),
     index_map(nullptr),
     local_index_map(nullptr),
@@ -139,6 +153,12 @@ MFIter::MFIter (const BoxArray& ba, const DistributionMapping& dm, const MFItInf
     local_tile_index_map(nullptr),
     num_local_tiles(nullptr)
 {
+#ifdef _OPENMP
+#pragma omp single
+#endif
+    {
+        m_fa->addThisBD();
+    }
 #ifdef _OPENMP
     if (dynamic) {
 #pragma omp barrier
@@ -156,11 +176,8 @@ MFIter::MFIter (const FabArrayBase& fabarray_, const MFItInfo& info)
     fabArray(fabarray_),
     tile_size(info.tilesize),
     flags(info.do_tiling ? Tiling : 0),
-#ifdef _OPENMP
-    dynamic(info.dynamic && (omp_get_num_threads() > 1)),
-#else
-    dynamic(false),
-#endif
+    streams(info.num_streams),
+    dynamic(info.dynamic && (OpenMP::get_num_threads() > 1)),
     device_sync(info.device_sync),
     index_map(nullptr),
     local_index_map(nullptr),
@@ -192,11 +209,11 @@ MFIter::~MFIter ()
     if (device_sync) Gpu::synchronize();
 #endif
 
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_GPU_PRAGMA
     reduce();
 #endif
 
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_GPU_PRAGMA
     if (Gpu::inLaunchRegion()) {
         for (int i = 0; i < real_reduce_list.size(); ++i)
             for (int j = 0; j < real_reduce_list[i].size(); ++j)
@@ -207,10 +224,22 @@ MFIter::~MFIter ()
 #ifdef AMREX_USE_GPU
     AMREX_GPU_ERROR_CHECK();
     Gpu::Device::resetStreamIndex();
+    Gpu::resetNumCallbacks();
+    if (!OpenMP::in_parallel() && Gpu::inFuseRegion()) {
+        Gpu::LaunchFusedKernels();
+    }
 #endif
+
+    if (m_fa) {
+#ifdef _OPENMP
+#pragma omp barrier
+#pragma omp single
+#endif
+        m_fa->clearThisBD();
+    }
 }
 
-void 
+void
 MFIter::Initialize ()
 {
     if (flags & SkipInit) {
@@ -299,7 +328,13 @@ MFIter::Initialize ()
 	currentIndex = beginIndex;
 
 #ifdef AMREX_USE_GPU
-	Gpu::Device::setStreamIndex(currentIndex);
+	Gpu::Device::setStreamIndex((streams > 0) ? currentIndex%streams : -1);
+        Gpu::resetNumCallbacks();
+        if (!OpenMP::in_parallel()) {
+            if (index_map->size() >= Gpu::getFuseNumKernelsThreshold()) {
+                gpu_fsg.reset(new Gpu::FuseSafeGuard(true));
+            }
+        }
 #endif
 
 	typ = fabArray.boxArray().ixType();
@@ -353,12 +388,12 @@ Box
 MFIter::tilebox (const IntVect& nodal, const IntVect& ngrow) const noexcept
 {
     Box bx = tilebox(nodal);
-    const Box& vbx = validbox();
+    const Box& vccbx = amrex::enclosedCells(validbox());
     for (int d=0; d<AMREX_SPACEDIM; ++d) {
-	if (bx.smallEnd(d) == vbx.smallEnd(d)) {
+	if (bx.smallEnd(d) == vccbx.smallEnd(d)) {
 	    bx.growLo(d, ngrow[d]);
 	}
-	if (bx.bigEnd(d) >= vbx.bigEnd(d)) {
+	if (bx.bigEnd(d) >= vccbx.bigEnd(d)) {
 	    bx.growHi(d, ngrow[d]);
 	}
     }
@@ -387,25 +422,6 @@ MFIter::nodaltilebox (int dir) const noexcept
 	    if (bx.bigEnd(d) <= Big[d]) {
 		bx.growHi(d,-1);
 	    }
-	}
-    }
-    return bx;
-}
-
-// Note that a small negative ng is supported.
-Box 
-MFIter::growntilebox (int a_ng) const noexcept
-{
-    Box bx = tilebox();
-    IntVect ngv{a_ng};
-    if (a_ng < -100) ngv = fabArray.nGrowVect();
-    const Box& vbx = validbox();
-    for (int d=0; d<AMREX_SPACEDIM; ++d) {
-	if (bx.smallEnd(d) == vbx.smallEnd(d)) {
-	    bx.growLo(d, ngv[d]);
-	}
-	if (bx.bigEnd(d) == vbx.bigEnd(d)) {
-	    bx.growHi(d, ngv[d]);
 	}
     }
     return bx;
@@ -471,6 +487,25 @@ MFIter::growntileboxTENSOR (int datatype,int ng,int dir) const noexcept
  return bx;
 } // subroutine growntileboxTENSOR
 
+// Note that a small negative ng is supported.
+Box 
+MFIter::growntilebox (int a_ng) const noexcept
+{
+    Box bx = tilebox();
+    IntVect ngv{a_ng};
+    if (a_ng < -100) ngv = fabArray.nGrowVect();
+    const Box& vbx = validbox();
+    for (int d=0; d<AMREX_SPACEDIM; ++d) {
+	if (bx.smallEnd(d) == vbx.smallEnd(d)) {
+	    bx.growLo(d, ngv[d]);
+	}
+	if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+	    bx.growHi(d, ngv[d]);
+	}
+    }
+    return bx;
+}
+
 Box
 MFIter::growntilebox (const IntVect& ng) const noexcept
 {
@@ -499,17 +534,8 @@ Box
 MFIter::grownnodaltilebox (int dir, IntVect const& a_ng) const noexcept
 {
     BL_ASSERT(dir < AMREX_SPACEDIM);
-    Box bx = nodaltilebox(dir);
-    const Box& vbx = validbox();
-    for (int d=0; d<AMREX_SPACEDIM; ++d) {
-	if (bx.smallEnd(d) == vbx.smallEnd(d)) {
-	    bx.growLo(d, a_ng[d]);
-	}
-	if (bx.bigEnd(d) >= vbx.bigEnd(d)) {
-	    bx.growHi(d, a_ng[d]);
-	}
-    }
-    return bx;
+    if (dir < 0) return tilebox(IntVect::TheNodeVector(), a_ng);
+    return tilebox(IntVect::TheDimensionVector(dir), a_ng);
 }
 
 void
@@ -524,15 +550,8 @@ MFIter::operator++ () noexcept
     else
 #endif
     {
-#ifdef AMREX_USE_GPU
-#ifdef _OPENMP
-        int numOmpThreads = omp_get_num_threads();
-#else
-        int numOmpThreads = 1;
-#endif
-        
-        bool use_gpu = (numOmpThreads == 1) && Gpu::inLaunchRegion();
-        if (use_gpu) {
+#ifdef AMREX_USE_GPU_PRAGMA
+        if (Gpu::inLaunchRegion()) {
             if (!real_reduce_list.empty()) {
                 for (int i = 0; i < real_reduce_list[currentIndex].size(); ++i) {
                     Gpu::dtoh_memcpy_async(&real_reduce_list[currentIndex][i],
@@ -546,8 +565,8 @@ MFIter::operator++ () noexcept
         ++currentIndex;
 
 #ifdef AMREX_USE_GPU
-        if (use_gpu) {
-            Gpu::Device::setStreamIndex(currentIndex);
+        if (Gpu::inLaunchRegion()) {
+            Gpu::Device::setStreamIndex((streams > 0) ? currentIndex%streams : -1);
             AMREX_GPU_ERROR_CHECK();
 #ifdef AMREX_DEBUG
 //            Gpu::synchronize();
@@ -557,7 +576,7 @@ MFIter::operator++ () noexcept
     }
 }
 
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_GPU_PRAGMA
 Real*
 MFIter::add_reduce_value(Real* val, MFReducer r)
 {
@@ -619,7 +638,7 @@ MFIter::add_reduce_value(Real* val, MFReducer r)
 }
 #endif
 
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_GPU_PRAGMA
 // Reduce over the values in the list.
 void
 MFIter::reduce()
@@ -693,13 +712,8 @@ MFGhostIter::Initialize ()
     }
 #endif
 
-    int tid = 0;
-    int nthreads = 1;
-#ifdef _OPENMP
-    nthreads = omp_get_num_threads();
-    if (nthreads > 1)
-	tid = omp_get_thread_num();
-#endif
+    int tid = OpenMP::get_thread_num();
+    int nthreads = OpenMP::get_num_threads();
 
     int npes = nworkers*nthreads;
     int pid = rit*nthreads+tid;

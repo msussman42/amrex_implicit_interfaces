@@ -271,7 +271,7 @@ struct ImplicitIntegral
             Real dphi_max = 0.0;
             for (int dim = 0; dim < N; ++dim) {
                 if (free[dim]) {
-                    dphi_max += std::abs(phi.grad(dim));
+                    dphi_max += amrex::Math::abs(phi.grad(dim));
                 } else {
                     mid[dim] = xrange(psi[i].side(dim),dim);
                 }
@@ -370,22 +370,24 @@ struct ImplicitIntegral
         Real x_max = xrange.max(e0);
         roots[0] = x_min;
         int nroots = 1;
-        for (int i = 0; i < psiCount; ++i)
-        {
-            for (int dim = 0; dim < N; ++dim) {
-                if (!free[dim]) {
-                    x[dim] = xrange(psi[i].side(dim),dim);
+        if (phi.grad(e0) != Real(0.0)) {
+            for (int i = 0; i < psiCount; ++i)
+            {
+                for (int dim = 0; dim < N; ++dim) {
+                    if (!free[dim]) {
+                        x[dim] = xrange(psi[i].side(dim),dim);
+                    }
+                }
+                // x is now valid in all variables except e0
+                x[e0] = x_min;
+                Real phi_lo = phi(x);
+                Real xroot = x[e0] - phi_lo / phi.grad(e0);
+                if (xroot > x_min and xroot < x_max) {
+                    roots[nroots++] = xroot;
                 }
             }
-            // x is now valid in all variables except e0
-            x[e0] = x_min;
-            Real phi_lo = phi(x);
-            Real xroot = x[e0] - phi_lo / phi.grad(e0);
-            if (xroot > x_min and xroot < x_max) {
-                roots[nroots++] = xroot;
-            }
+            AMREX_ASSERT(nroots <= 3);
         }
-        AMREX_ASSERT(nroots <= 3);
         if (nroots == 3 and roots[1] > roots[2]) {
             detail::swap(roots[1],roots[2]);
         }
@@ -488,8 +490,8 @@ struct ImplicitIntegral
         {
             Real gmax = -1.;
             for (int dim = 0; dim < N; ++dim) {
-                if (free[dim] && std::abs(phi.grad(dim)) > gmax) {
-                    gmax = std::abs(phi.grad(dim));
+                if (free[dim] && amrex::Math::abs(phi.grad(dim)) > gmax) {
+                    gmax = amrex::Math::abs(phi.grad(dim));
                     e0 = dim;
                 }
             }

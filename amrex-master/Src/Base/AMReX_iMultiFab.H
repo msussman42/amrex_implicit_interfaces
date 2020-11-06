@@ -78,7 +78,7 @@ public:
     */
     iMultiFab (const iMultiFab& rhs, MakeType maketype, int scomp, int ncomp);
 
-    virtual ~iMultiFab () override = default;
+    virtual ~iMultiFab () override;
 
     iMultiFab (iMultiFab&& rhs) noexcept = default;
     iMultiFab& operator= (iMultiFab&& rhs) noexcept = default;
@@ -151,7 +151,7 @@ public:
     * \param nghost
     * \param local
     */
-    long sum (int comp, int nghost = 0, bool local = false) const;
+    Long sum (int comp, int nghost = 0, bool local = false) const;
 
     /**
     * \brief Adds the scalar value val to the value of each cell in the
@@ -512,8 +512,10 @@ public:
     static void Finalize ();
 };
 
+// ngrow = IntVect{0} is a special case that should not be used in normal cases,
+// because it may mark valid cells as non-owner and ghost cells as owners.
 std::unique_ptr<iMultiFab>
-OwnerMask (FabArrayBase const& mf, const Periodicity& period);
+OwnerMask (FabArrayBase const& mf, const Periodicity& period, const IntVect& ngrow=IntVect{0});
 
 }
 

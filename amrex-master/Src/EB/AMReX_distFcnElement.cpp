@@ -110,7 +110,7 @@ amrex::Real SplineDistFcnElement2d::cpside(amrex::RealVect pt,
   amrex::Real t;
   amrex::RealVect cp;
   amrex::Real dist;
-  amrex::Real x0, x1, y0, y1, Dx0, Dx1, Dy0, Dy1, tmin;
+  amrex::Real x0=0., x1=0., y0=0., y1=0., Dx0=0., Dx1=0., Dy0=0., Dy1=0., tmin=0.;
   int nsplines = Dx.size() - 1;
   for (int i=0; i<nsplines; ++i) {
     single_spline_cpdist(pt, control_points_x[i], control_points_x[i+1],
@@ -310,10 +310,11 @@ void SplineDistFcnElement2d::print_control_points() const {
 
 
 void SplineDistFcnElement2d::print_spline() const {
+#if 0
   int nsplines = Dx.size();
 
   amrex::Real dt = 0.01;
-  int nt = 1.0/dt;
+  int nt = static_cast<int>(1.0/dt);
   for (int i=0; i<nsplines-1; i++) {
     for (int j=0; j<nt; j++) {
       amrex::Real x = eval(j*dt, control_points_x[i],
@@ -323,7 +324,7 @@ void SplineDistFcnElement2d::print_spline() const {
 
     }
   }
-
+#endif
 }
 
 

@@ -18,7 +18,6 @@ public:
 
     LatheIF (F&& a_f) : m_f(std::move(a_f)) {}
     LatheIF (F const& a_f) : m_f(a_f) {}
-    ~LatheIF () {}
           
     LatheIF (const LatheIF& rhs) = default;
     LatheIF (LatheIF&& rhs) = default;
@@ -35,7 +34,7 @@ public:
 #endif
     }
 
-    template <class U=F, class = typename std::enable_if<IsGPUable<U>::value>::type>
+    template <class U=F, typename std::enable_if<IsGPUable<U>::value,int>::type = 0>
     AMREX_GPU_HOST_DEVICE inline
     Real operator() (AMREX_D_DECL(Real x, Real y, Real z)) const noexcept
     {

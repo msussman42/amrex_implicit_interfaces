@@ -37,7 +37,11 @@ public:
 
     static void pop () noexcept { m_instance.pop_back(); }
     static void clear () noexcept { m_instance.clear(); }
-    static const IndexSpace& top () { return *(m_instance.back()); }
+    static const IndexSpace& top () {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_instance.empty(),
+                                         "Have you forgot to call EB2::build? It's required even if the geometry is all regular.");
+        return *(m_instance.back());
+    }
     static bool empty () noexcept { return m_instance.empty(); }
     static int size () noexcept { return m_instance.size(); }
 
@@ -49,7 +53,8 @@ protected:
     static Vector<std::unique_ptr<IndexSpace> > m_instance;
 };
 
-const IndexSpace* TopIndexSpaceIfPresent() noexcept;
+const IndexSpace* TopIndexSpaceIfPresent () noexcept;
+inline const IndexSpace* TopIndexSpace () noexcept { return TopIndexSpaceIfPresent(); }
 
 template <typename G>
 class IndexSpaceImp
@@ -59,7 +64,8 @@ public:
 
     IndexSpaceImp (const G& gshop, const Geometry& geom,
                    int required_coarsening_level, int max_coarsening_level,
-                   int ngrow);
+                   int ngrow, bool build_coarse_level_by_coarsening,
+                   bool extend_domain_face);
 
     IndexSpaceImp (IndexSpaceImp<G> const&) = delete;
     IndexSpaceImp (IndexSpaceImp<G> &&) = delete;
@@ -87,23 +93,28 @@ private:
 
 #include <AMReX_EB2_IndexSpaceI.H>
 
+bool ExtendDomainFace ();
+
 template <typename G>
 void
 Build (const G& gshop, const Geometry& geom,
        int required_coarsening_level, int max_coarsening_level,
-       int ngrow = 4)
+       int ngrow = 4, bool build_coarse_level_by_coarsening = true,
+       bool extend_domain_face = ExtendDomainFace())
 {
     BL_PROFILE("EB2::Initialize()");
     IndexSpace::push(new IndexSpaceImp<G>(gshop, geom,
                                           required_coarsening_level,
                                           max_coarsening_level,
-                                          ngrow));
+                                          ngrow, build_coarse_level_by_coarsening,
+                                          extend_domain_face));
 }
 
 void Build (const Geometry& geom,
             int required_coarsening_level,
             int max_coarsening_level,
-            int ngrow = 4);
+            int ngrow = 4,
+            bool build_coarse_level_by_coarsening = true);
 
 int maxCoarseningLevel (const Geometry& geom);
 int maxCoarseningLevel (IndexSpace const* ebis, const Geometry& geom);

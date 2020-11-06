@@ -54,6 +54,10 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 //  referring to the review article by Giles and Pierce.
 //  This is in contrast to "differentiate then discretize."
 //
+// this sample code solves PDE constrained optimization, first pass:
+// PDE constraint is q_{t} + a q_{x}=0  (*)
+// inverse problem: find q_{0}(x) (initial conditions) and boundary conditions so that
+// the solution to (*) at time t=T is q(x,T)=q^{observation}(x)
 
 void plot_adept_data(std::string plt_name_string,
 	int ntime,int steepest_descent_iter,
@@ -174,10 +178,19 @@ adept::adouble cost_function(
  wt_obs.resize(nsteps+1);
 
  int ntime=0;
- BoxArray ba_node=uinput[ntime]->boxArray();
+ BoxArray ba=uinput[ntime]->boxArray();  // cell centered box(es)
+
+ BoxArray ba_flux_x(ba);
+ IndexType flux_x_type=IndexType::TheUMACType();
+ ba_flux_x.convert(flux_x_type);
+
  DistributionMapping dm=uinput[ntime]->DistributionMap();
  int Ncomp=uinput[ntime]->nComp();
  int Nghost=uinput[ntime]->nGrow();
+ int Nghost_array[3];
+ for (int i=0;i<3;i++) 
+  Nghost_array[i]=0;
+ Nghost_array[0]=Nghost;
 
  adept::adouble xlo=geom.ProbLo(0);
  adept::adouble xhi=geom.ProbHi(1);;
@@ -187,12 +200,12 @@ adept::adouble cost_function(
  for (ntime=0;ntime<=nsteps;ntime++) {
   adept::adouble local_t=ntime*dt;
 
-  v[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
-  a[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
-  uback[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
-  wt_back[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
-  q_obs[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
-  wt_obs[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  v[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
+  a[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
+  uback[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
+  wt_back[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
+  q_obs[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
+  wt_obs[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
 
   My_adept_MFAB* uinput_frame=uinput[ntime];
 
@@ -230,9 +243,9 @@ adept::adouble cost_function(
    Dim3 lo = lbound(v_array);
    Dim3 hi = ubound(v_array);
 
-   for (int k = lo.z; k <= hi.z; ++k) {
-   for (int j = lo.y; j <= hi.y; ++j) {
-   for (int i = lo.x; i <= hi.x; ++i) {
+   for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
+   for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
+   for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
 
     adept::adouble local_x=xlo+dx[0]*i;
 
@@ -241,10 +254,10 @@ adept::adouble cost_function(
     if (ntime==0) {
      wt_back_array(i,j,k)=1.0;
     }
-    if (i==0) {
+    if (i==-1) {
      wt_back_array(i,j,k)=1.0;
     }
-    if (i==hi.x) {
+    if (i==hi.x+1) {
      wt_back_array(i,j,k)=1.0;
     }
     wt_obs_array(i,j,k)=0.0;
@@ -281,12 +294,16 @@ adept::adouble cost_function(
   My_adept_MFAB* qnp1_obs_frame=q_obs[ntime+1];
   My_adept_MFAB* wtnp1_obs_frame=wt_obs[ntime+1];
 
-  My_adept_MFAB* fluxes=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
-  My_adept_MFAB* H_fluxes=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
-  My_adept_MFAB* a_fluxes=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
-  My_adept_MFAB* H_nodes=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+   // in 1 dimension the fluxes are at the nodes
+   // in higher dimensions, the fluxes are on the "MAC" grid.
+   // old: finite difference method, unknowns located at nodes.
+   // new: finite volume method, unknowns located at cell centers.
+  My_adept_MFAB* fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
+  My_adept_MFAB* H_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
+  My_adept_MFAB* a_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
+  My_adept_MFAB* H_cells=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
 
-  for (MFIter mfi(*fluxes,false); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*H_cells,false); mfi.isValid(); ++mfi) {
 
    const int gridno = mfi.index();
 
@@ -323,11 +340,11 @@ adept::adouble cost_function(
    Dim3 lo = lbound(v_array);
    Dim3 hi = ubound(v_array);
 
-   for (int k = lo.z; k <= hi.z; ++k) {
-   for (int j = lo.y; j <= hi.y; ++j) {
-   for (int i = lo.x; i <= hi.x; ++i) {
+   for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
+   for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
+   for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
     // H_smooth is a differentiable Heaviside function
-    H_nodes_array(i,j,k)=H_smooth(a_array(i,j,k),eps); 
+    H_cells_array(i,j,k)=H_smooth(a_array(i,j,k),eps); 
 	 
     // nodes: x_i=i*h  i=lo.x ... hi.x
     // flux locations: x_{i+1/2}=(i+1/2)h  i=lo.x ... hi.x-1
@@ -453,10 +470,14 @@ Real algorithm_and_gradient(
  adouble y;
 
  for (int ntime=0;ntime<=nsteps;ntime++) {
-  BoxArray ba_node=x[ntime]->boxArray();
+  BoxArray ba=x[ntime]->boxArray();
   DistributionMapping dm=x[ntime]->DistributionMap();
   int Ncomp=x[ntime]->nComp();
   int Nghost=x[ntime]->nGrow();
+  int Nghost_array[3];
+  for (int i=0;i<3;i++) 
+   Nghost_array[i]=0;
+  Nghost_array[0]=Nghost;
 
   adept_x[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
 
@@ -470,9 +491,9 @@ Real algorithm_and_gradient(
    Array4<Real> const& Real_array=Real_fab.array();
    Dim3 lo = lbound(adept_array);
    Dim3 hi = ubound(adept_array);
-   for (int k = lo.z; k <= hi.z; ++k) {
-   for (int j = lo.y; j <= hi.y; ++j) {
-   for (int i = lo.x; i <= hi.x; ++i) {
+   for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
+   for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
+   for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
     adept_array(i,j,k)=Real_array(i,j,k);
    } // i
    } // j
@@ -499,9 +520,9 @@ Real algorithm_and_gradient(
    Dim3 lo = lbound(x_array);
    Dim3 hi = ubound(x_array);
 
-   for (int k = lo.z; k <= hi.z; ++k) {
-   for (int j = lo.y; j <= hi.y; ++j) {
-   for (int i = lo.x; i <= hi.x; ++i) {
+   for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
+   for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
+   for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
     dJdx_array(i,j,k)=x_array(i,j,k).get_gradient();
    } // i
    } // j
@@ -619,15 +640,20 @@ int main(int argc,char* argv[]) {
   // for the sake of expediancy,
   // finite difference method in the x-direction, and just
   // 1 cell in the y direction.  So,
-  // IndexType::NODE in the x-direction
+  // IndexType::NODE in the x-direction  (old before November 5, 2020)
+  // IndexType::CELL in the x-direction  (new starting November 5, 2020)
   // IndexType::CELL in the y-direction
   // TheUMACType
- BoxArray ba_node(ba);
- IndexType node_type=IndexType::TheUMACType();
- ba_node.convert(node_type);
+// BoxArray ba_node(ba);
+// IndexType node_type=IndexType::TheUMACType();
+// ba_node.convert(node_type);
 
  // Nghost = number of ghost cells for each array 
- int Nghost = 0;
+ int Nghost = 1;
+ int Nghost_array[3];
+ for (int i=0;i<3;i++) 
+  Nghost_array[i]=0;
+ Nghost_array[0]=Nghost;
     
  // Ncomp = number of components for each array
  int Ncomp  = 1;
@@ -651,7 +677,7 @@ int main(int argc,char* argv[]) {
       WriteSingleLevelPlotfile(pltfile, phi_new, {"phi"}, geom, time, n);
     }
 */
-
+  
  vector< MultiFab* > x;  // control
  vector< MultiFab* > dJdx; 
  x.resize(nsteps+1);
@@ -662,8 +688,8 @@ int main(int argc,char* argv[]) {
 
 
  for (int ntime=0;ntime<=nsteps;ntime++) {
-	 x[ntime]=new MultiFab(ba_node,dm,Ncomp,Nghost);
-	 dJdx[ntime]=new MultiFab(ba_node,dm,Ncomp,Nghost);
+	 x[ntime]=new MultiFab(ba,dm,Ncomp,Nghost);
+	 dJdx[ntime]=new MultiFab(ba,dm,Ncomp,Nghost);
 
 	 x[ntime]->setVal(0.0);
 	 dJdx[ntime]->setVal(0.0);
@@ -688,7 +714,8 @@ int main(int argc,char* argv[]) {
 
  int max_iterations=100;
  for (int iter=0;iter<max_iterations;iter++) {
- 
+
+    // compute cost function and gradient of cost function 
    Real y=algorithm_and_gradient(
              x,dJdx,
 	     dx,dt,geom,plot_int,iter);
@@ -705,9 +732,9 @@ int main(int argc,char* argv[]) {
      Array4<Real> const& dJdx_array=dJdx_fab.array();
      Dim3 lo = lbound(x_array);
      Dim3 hi = ubound(x_array);
-     for (int k = lo.z; k <= hi.z; ++k) {
-     for (int j = lo.y; j <= hi.y; ++j) {
-     for (int i = lo.x; i <= hi.x; ++i) {
+     for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
+     for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
+     for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
       x_array(i,j,k)=x_array(i,j,k)-learning_rate*dJdx_array(i,j,k);
      } // i
      } // j

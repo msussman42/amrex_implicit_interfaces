@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <fstream>
 
-#ifdef __linux
+#ifdef __linux__
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/sysinfo.h>
@@ -78,15 +78,15 @@ MemProfiler::report (const std::string& prefix)
 void
 MemProfiler::report_ (const std::string& prefix, const std::string& memory_log_name) const
 {
-    std::vector<long> cur_min;
-    std::vector<long> hwm_min;
+    std::vector<Long> cur_min;
+    std::vector<Long> hwm_min;
     for (auto&& f: the_funcs) {
 	const MemInfo& minfo = f();
 	cur_min.push_back(minfo.current_bytes);
 	hwm_min.push_back(minfo.hwm_bytes);
     }
-    std::vector<long> cur_max = cur_min;
-    std::vector<long> hwm_max = hwm_min;
+    std::vector<Long> cur_max = cur_min;
+    std::vector<Long> hwm_max = hwm_min;
 
     std::vector<int>  num_builds_min;
     std::vector<int>  hwm_builds_min;
@@ -98,18 +98,18 @@ MemProfiler::report_ (const std::string& prefix, const std::string& memory_log_n
     std::vector<int>  num_builds_max = num_builds_min;
     std::vector<int>  hwm_builds_max = hwm_builds_min;
 
-#ifdef __linux
+#ifdef __linux__
     const int N = 9;
 #else
     const int N = 1;
 #endif
 
-    std::vector<long> mymin(N, 0L);
-    std::vector<long> mymax(N, 0L);
+    std::vector<Long> mymin(N, 0L);
+    std::vector<Long> mymax(N, 0L);
 
     mymin[0] = mymax[0] = std::accumulate(cur_min.begin(), cur_min.end(), 0L);
 
-#ifdef __linux
+#ifdef __linux__
     int ierr_proc_status = 0;
     const int ipstat = 1;
     const int npstat = 4;
@@ -118,7 +118,7 @@ MemProfiler::report_ (const std::string& prefix, const std::string& memory_log_n
 	std::string fname = "/proc/"+std::to_string(pid) + "/status";
 	std::ifstream ifs(fname.c_str());
 	std::string token, unit;
-	long n;
+	Long n;
 	int nfound = 0;
 	while (ifs >> token) {
 	    if (token == "VmPeak:") {
@@ -181,7 +181,7 @@ MemProfiler::report_ (const std::string& prefix, const std::string& memory_log_n
 	{
 	    std::ifstream ifs("/proc/meminfo");
 	    std::string token, unit;
-	    long cached;
+	    Long cached;
 	    while (ifs >> token) {
 		if (token == "Cached:") {
 		    ifs >> cached >> unit;
@@ -292,7 +292,7 @@ MemProfiler::report_ (const std::string& prefix, const std::string& memory_log_n
 	    }
 	}
 
-#ifdef __linux
+#ifdef __linux__
 	if (ierr_proc_status == 0) {
 	    memlog << "\n";
 	    memlog << " * " << std::setw(width_bytes) << std::left << "Proc VmPeak"
@@ -330,11 +330,11 @@ MemProfiler::report_ (const std::string& prefix, const std::string& memory_log_n
 std::ostream& 
 operator<< (std::ostream& os, const MemProfiler::Bytes& bytes)
 {
-    constexpr long G = 1024L*1024L*1024L;
-    constexpr long M = 1024L*1024L;
-    constexpr long K = 1024L;
+    constexpr Long G = 1024L*1024L*1024L;
+    constexpr Long M = 1024L*1024L;
+    constexpr Long K = 1024L;
 
-    long fac;
+    Long fac;
     std::string unit;
     if (bytes.mn >= 10L*G) {
 	fac  =  G; 

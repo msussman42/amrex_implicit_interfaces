@@ -159,7 +159,7 @@ include ./Make.package
 include $(MOF_HOME)/mglib/Make.package
 include $(MOF_HOME)/amrlib/Make.package
 
-include $(AMREX_HOME)/Src/Base_12_2019/Make.package
+include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 

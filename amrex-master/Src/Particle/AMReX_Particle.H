@@ -6,6 +6,7 @@
 #include <AMReX_REAL.H>
 #include <AMReX_FArrayBox.H>
 #include <AMReX_IntVect.H>
+#include <AMReX_RealVect.H>
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_Geometry.H>
@@ -14,94 +15,305 @@ namespace amrex {
 
 namespace
 {
-    std::string   aggregation_type   = "";
-    int           aggregation_buffer = 1;
-    constexpr int GhostParticleID    = std::numeric_limits<int>::max();
-    constexpr int VirtualParticleID  = std::numeric_limits<int>::max()-1;
-    constexpr int LastParticleID     = std::numeric_limits<int>::max()-2;
-    constexpr int DoSplitParticleID  = std::numeric_limits<int>::max()-3;
-    constexpr int NoSplitParticleID  = std::numeric_limits<int>::max()-4;
+    constexpr Long GhostParticleID    = 549755813887L; // 2**39-1
+    constexpr Long VirtualParticleID  = GhostParticleID-1;
+    constexpr Long LastParticleID     = GhostParticleID-2;
+    constexpr Long DoSplitParticleID  = GhostParticleID-3;
+    constexpr Long NoSplitParticleID  = GhostParticleID-4;
 }
+
+struct ParticleIDWrapper
+{
+    uint64_t& m_idata;
+
+    AMREX_GPU_HOST_DEVICE
+    ParticleIDWrapper (uint64_t& idata) noexcept
+        : m_idata(idata)
+    {}
+
+    AMREX_GPU_HOST_DEVICE
+    ParticleIDWrapper (const ParticleIDWrapper& rhs) = default;
+
+    AMREX_GPU_HOST_DEVICE
+    ParticleIDWrapper& operator= (const ParticleIDWrapper& pidw) noexcept
+    {
+        return this->operator=(Long(pidw));
+    }
+
+    AMREX_GPU_HOST_DEVICE
+    ParticleIDWrapper& operator= (const Long id) noexcept
+    {
+        // zero out the 40 leftmost bits, which store the sign and the abs of the id;
+        m_idata &= 0x00FFFFFF;
+
+        uint64_t val;
+        uint64_t sign = id >= 0;
+        if (sign)
+        {
+            // 2**39-1, the max value representible in this fashion
+            AMREX_ASSERT(id <= 549755813887L);
+            val = id;
+        }
+        else
+        {
+            // -2**39-1, the min value representible in this fashion
+            AMREX_ASSERT(id >= -549755813887L);
+            val = -id;
+        }
+
+        m_idata |= (sign << 63);  // put the sign in the leftmost bit
+        m_idata |= (val << 24);   // put the val in the next 39
+        return *this;
+    }
+
+    AMREX_GPU_HOST_DEVICE
+    operator Long () const noexcept
+    {
+        Long r = 0;
+
+        uint64_t sign = m_idata >> 63;  // extract leftmost sign bit
+        uint64_t val  = ((m_idata >> 24) & 0x7FFFFFFFFF);  // extract next 39 id bits
+
+        Long lval = static_cast<Long>(val);  // bc we take -
+        r = (sign) ? lval : -lval;
+        return r;
+    }
+};
+
+struct ParticleCPUWrapper
+{
+    uint64_t& m_idata;
+
+    AMREX_GPU_HOST_DEVICE
+    ParticleCPUWrapper (uint64_t& idata) noexcept
+        : m_idata(idata)
+    {}
+
+    AMREX_GPU_HOST_DEVICE
+    ParticleCPUWrapper (const ParticleCPUWrapper& rhs) = default;
+
+    AMREX_GPU_HOST_DEVICE
+    ParticleCPUWrapper& operator= (const ParticleCPUWrapper& pcpuw) noexcept
+    {
+        return this->operator=(int(pcpuw));
+    }
+
+    AMREX_GPU_HOST_DEVICE
+    ParticleCPUWrapper& operator= (const int cpu) noexcept
+    {
+        // zero out the first 24 bits, which are used to store the cpu number
+        m_idata &= (~ 0x00FFFFFF);
+
+        AMREX_ASSERT(cpu >= 0);
+        AMREX_ASSERT(cpu <= 16777215);  // 2**24-1, the max representable number
+
+        m_idata |= cpu;
+        return *this;
+    }
+
+    AMREX_GPU_HOST_DEVICE
+    operator int () const noexcept
+    {
+        return (m_idata & 0x00FFFFFF);
+    }
+};
+
+struct ConstParticleIDWrapper
+{
+    const uint64_t& m_idata;
+
+    AMREX_GPU_HOST_DEVICE
+    ConstParticleIDWrapper (const uint64_t& idata) noexcept
+        : m_idata(idata)
+    {}
+
+    AMREX_GPU_HOST_DEVICE
+    operator Long () const noexcept
+    {
+        Long r = 0;
+
+        uint64_t sign = m_idata >> 63;  // extract leftmost sign bit
+        uint64_t val  = ((m_idata >> 24) & 0x7FFFFFFFFF);  // extract next 39 id bits
+
+        Long lval = static_cast<Long>(val);  // bc we take -
+        r = (sign) ? lval : -lval;
+        return r;
+    }
+};
+
+struct ConstParticleCPUWrapper
+{
+    const uint64_t& m_idata;
+
+    AMREX_GPU_HOST_DEVICE
+    ConstParticleCPUWrapper (const uint64_t& idata) noexcept
+        : m_idata(idata)
+    {}
+
+    AMREX_GPU_HOST_DEVICE
+    operator int () const noexcept { return (m_idata & 0x00FFFFFF); }
+};
+
+
+template <typename T, int NReal, int NInt>
+struct ParticleBase
+{
+    T m_pos[AMREX_SPACEDIM];
+    T m_rdata[NReal];
+    uint64_t m_idcpu = 0;
+    int m_idata[NInt];
+};
+
+template <typename T, int NInt>
+struct ParticleBase<T,0,NInt>
+{
+    T m_pos[AMREX_SPACEDIM];
+    uint64_t m_idcpu = 0;
+    int m_idata[NInt];
+};
+
+template <typename T, int NReal>
+struct ParticleBase<T,NReal,0>
+{
+    T m_pos[AMREX_SPACEDIM];
+    T m_rdata[NReal];
+    uint64_t m_idcpu = 0;
+};
+
+template <typename T>
+struct ParticleBase<T,0,0>
+{
+    T m_pos[AMREX_SPACEDIM];
+    uint64_t m_idcpu = 0;
+};
+
 
 /** \brief The struct used to store particles.
  *
  * \tparam T_NReal The number of extra Real components
  * \tparam T_NInt The number of extra integer components
  */
-template<int T_NReal, int T_NInt=0>
+template <int T_NReal, int T_NInt=0>
 struct Particle
+    : ParticleBase<ParticleReal,T_NReal,T_NInt>
 {
     //! \brief number of extra Real components in the particle struct
     static constexpr int NReal = T_NReal;
+
     //! \brief number of extra integer components in the particle struct
     static constexpr int NInt = T_NInt;
 
-    //
     //! The floating point type used for the particles.
     using RealType = ParticleReal;
 
-    /**
-    * The real data. We always have SPACEDIM position coordinates,
-    * and optionally we have NReal additional real attributes.
-    */
-    union rm_t
+    static Long the_next_id;
+
+    AMREX_GPU_HOST_DEVICE ParticleCPUWrapper cpu () & { return ParticleCPUWrapper(this->m_idcpu); }
+    AMREX_GPU_HOST_DEVICE ParticleIDWrapper id () & { return ParticleIDWrapper(this->m_idcpu); }
+    AMREX_GPU_HOST_DEVICE ConstParticleCPUWrapper cpu () const & { return ConstParticleCPUWrapper(this->m_idcpu); }
+    AMREX_GPU_HOST_DEVICE ConstParticleIDWrapper id () const & { return ConstParticleIDWrapper(this->m_idcpu); }
+
+    AMREX_GPU_HOST_DEVICE RealVect pos () const & {return RealVect(AMREX_D_DECL(this->m_pos[0], this->m_pos[1], this->m_pos[2]));}
+
+    AMREX_GPU_HOST_DEVICE RealType& pos (int index) &
     {
-      RealType pos[AMREX_SPACEDIM];
-      RealType arr[AMREX_SPACEDIM+NReal];
-    };
+        AMREX_ASSERT(index < AMREX_SPACEDIM);
+        return this->m_pos[index];
+    }
 
-    /**
-    * The integer data. We always have id and cpu, and optionally we
-    * have NInt additional integer attributes.
-    */
-    union im_t
+    AMREX_GPU_HOST_DEVICE RealType  pos (int index) const &
     {
-      struct {int id; int cpu;};
-      int arr[2+NInt];
-    };
+        AMREX_ASSERT(index < AMREX_SPACEDIM);
+        return this->m_pos[index];
+    }
 
-    rm_t m_rdata;
-    im_t m_idata;
+    template <int U = T_NReal, typename std::enable_if<U != 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE RealType& rdata (int index) &
+    {
+        AMREX_ASSERT(index < NReal);
+        return this->m_rdata[index];
+    }
 
-    static int the_next_id;
+    template <int U = T_NReal, typename std::enable_if<U == 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE RealType& rdata (int /*index*/) &
+    {
+        AMREX_ALWAYS_ASSERT(false);
+        return this->pos(0);  // bc we must return something
+    }
 
-    AMREX_GPU_HOST_DEVICE int&  id()       & {return m_idata.id;}
-    AMREX_GPU_HOST_DEVICE int   id() const & {return m_idata.id;}
-    AMREX_GPU_HOST_DEVICE int& cpu()       & {return m_idata.cpu;}
-    AMREX_GPU_HOST_DEVICE int  cpu() const & {return m_idata.cpu;}
+    template <int U = T_NReal, typename std::enable_if<U != 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE RealType  rdata (int index) const &
+    {
+        AMREX_ASSERT(index < NReal);
+        return this->m_rdata[index];
+    }
 
-    AMREX_GPU_HOST_DEVICE RealType& pos(int index)       &
-	{
-		AMREX_ASSERT(index < AMREX_SPACEDIM);
-		return m_rdata.pos[index];
-	}
-    AMREX_GPU_HOST_DEVICE RealType  pos(int index) const &
-	{
-		AMREX_ASSERT(index < AMREX_SPACEDIM);
-		return m_rdata.pos[index];
-	}
+    template <int U = T_NReal, typename std::enable_if<U == 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE RealType  rdata (int /*index*/) const &
+    {
+        AMREX_ALWAYS_ASSERT(false);
+        return this->pos(0);  // because we must return something
+    }
 
-    AMREX_GPU_HOST_DEVICE RealType& rdata(int index)       &
-	{
-		AMREX_ASSERT(index < NReal);
-		return m_rdata.arr[AMREX_SPACEDIM + index];
-	}
-    AMREX_GPU_HOST_DEVICE RealType  rdata(int index) const &
-	{
-		AMREX_ASSERT(index < NReal);
-		return m_rdata.arr[AMREX_SPACEDIM + index];
-	}
+    template <int U = T_NReal, typename std::enable_if<U != 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE RealVect  rvec (AMREX_D_DECL(int indx, int indy, int indz)) const &
+    {
+        AMREX_ASSERT(AMREX_D_TERM(indx < NReal, and indy < NReal, and indz < NReal));
+        return RealVect(AMREX_D_DECL(this->m_rdata[indx],
+                                     this->m_rdata[indy],
+                                     this->m_rdata[indz]));
+    }
 
-    AMREX_GPU_HOST_DEVICE int& idata(int index)       &
-	{
-		AMREX_ASSERT(index < NInt);
-		return m_idata.arr[2 + index];
-	}
-    AMREX_GPU_HOST_DEVICE int  idata(int index) const &
-	{
-		AMREX_ASSERT(index < NInt);		
-		return m_idata.arr[2 + index];
-	}
+    template <int U = T_NReal, typename std::enable_if<U == 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE RealVect  rvec (AMREX_D_DECL(int /*indx*/, int /*indy*/, int /*indz*/)) const &
+    {
+        AMREX_ALWAYS_ASSERT(false);
+        return RealVect(AMREX_D_DECL(0.0, 0.0, 0.0)); // bc we must return something
+    }
+
+    template <int U = T_NReal, typename std::enable_if<U != 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE RealVect  rvec (const IntVect& indices) const &
+    {
+        AMREX_ASSERT(indices.max() < NReal);
+        return RealVect(AMREX_D_DECL(this->m_rdata[indices[0]],
+                                     this->m_rdata[indices[1]],
+                                     this->m_rdata[indices[2]]));
+    }
+
+    template <int U = T_NReal, typename std::enable_if<U == 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE RealVect  rvec (const IntVect& /*indices*/) const &
+    {
+        AMREX_ALWAYS_ASSERT(false);
+        return RealVect(AMREX_D_DECL(0.0, 0.0, 0.0)); // bc we must return something
+    }
+
+    template <int U = T_NInt, typename std::enable_if<U != 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE int& idata (int index) &
+    {
+        AMREX_ASSERT(index < NInt);
+        return this->m_idata[index];
+    }
+
+    template <int U = T_NInt, typename std::enable_if<U == 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE uint64_t& idata (int /*index*/) &
+    {
+        AMREX_ALWAYS_ASSERT(false);
+        return this->m_idcpu;  //bc we must return something
+    }
+
+    template <int U = T_NInt, typename std::enable_if<U != 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE int  idata (int index) const &
+    {
+        AMREX_ASSERT(index < NInt);
+        return this->m_idata[index];
+    }
+
+    template <int U = T_NInt, typename std::enable_if<U == 0, int>::type = 0>
+    AMREX_GPU_HOST_DEVICE int idata (int /*index*/) const &
+    {
+        AMREX_ALWAYS_ASSERT(false);
+        return this->m_idcpu;  //bc we must return something
+    }
 
     static Real InterpDoit (const FArrayBox& fab, const Real* fracs, const IntVect* cells, int comp);
 
@@ -117,8 +329,7 @@ struct Particle
 
     static int MaxReaders ();
 
-    static long MaxParticlesPerRead ();
-
+    static Long MaxParticlesPerRead ();
 
     /**
     * \brief Returns the next particle ID for this processor.
@@ -128,26 +339,23 @@ struct Particle
     * across all processors must be checkpointed and then restored on restart
     * so that we don't reuse particle IDs.
     */
-    static int NextID ();
-
+    static Long NextID ();
 
     /**
     * \brief This version can only be used inside omp critical.
     */
-    static int UnprotectedNextID ();
-
+    static Long UnprotectedNextID ();
 
     /**
     * \brief Reset on restart.
     *
     * \param nextid
     */
-    static void NextID (int nextid);
+    static void NextID (Long nextid);
 
     static void CIC_Fracs (const Real* frac, Real* fracs);
 
     static void CIC_Cells (const IntVect& hicell, IntVect* cells);
-
 
     /**
     * \brief Old, *-based CIC for use in Interp.
@@ -163,7 +371,6 @@ struct Particle
                                        const Real*                  dx,
                                        Real*                        fracs,
                                        IntVect*                     cells);
-
 
     /**
     * \brief Wraps the arbitrary dx function.
@@ -197,7 +404,7 @@ struct Particle
                                 Vector<Real>&                 fracs,
                                 Vector<IntVect>&              cells);
 };
-template <int NReal, int NInt> int Particle<NReal, NInt>::the_next_id = 1;
+template <int NReal, int NInt> Long Particle<NReal, NInt>::the_next_id = 1;
 
 template<int NReal, int NInt>
 inline
@@ -357,11 +564,13 @@ Particle<NReal, NInt>::CIC_Cells_Fracs_Basic (const Particle<NReal, NInt>& p,
     //
     // "cells" should be dimensioned: IntVect cells[AMREX_D_TERM(2,+2,+4)]
     //
-    const Real len[AMREX_SPACEDIM] = { AMREX_D_DECL((p.m_rdata.pos[0]-plo[0])/dx[0] + 0.5_rt,
-                                           (p.m_rdata.pos[1]-plo[1])/dx[1] + 0.5_rt,
-                                           (p.m_rdata.pos[2]-plo[2])/dx[2] + 0.5_rt) };
+    const Real len[AMREX_SPACEDIM] = { AMREX_D_DECL(static_cast<Real>((p.m_pos[0]-plo[0])/dx[0] + Real(0.5)),
+                                                    static_cast<Real>((p.m_pos[1]-plo[1])/dx[1] + Real(0.5)),
+                                                    static_cast<Real>((p.m_pos[2]-plo[2])/dx[2] + Real(0.5))) };
 
-    const IntVect cell(AMREX_D_DECL(floor(len[0]), floor(len[1]), floor(len[2])));
+    const IntVect cell(AMREX_D_DECL(static_cast<int>(amrex::Math::floor(len[0])),
+                                    static_cast<int>(amrex::Math::floor(len[1])),
+                                    static_cast<int>(amrex::Math::floor(len[2]))));
 
     const Real frac[AMREX_SPACEDIM] = { AMREX_D_DECL(len[0]-cell[0], len[1]-cell[1], len[2]-cell[2]) };
 
@@ -391,17 +600,20 @@ Particle<NReal, NInt>::CIC_Cells_Fracs (const Particle<NReal, NInt>& p,
     //
     // The first element in fracs and cells is the lowest corner, the last is the highest.
     //
-    const Real hilen[AMREX_SPACEDIM] = { AMREX_D_DECL((p.m_rdata.pos[0]-plo[0]+dx_part[0]/2)/dx_geom[0],
-                                             (p.m_rdata.pos[1]-plo[1]+dx_part[1]/2)/dx_geom[1],
-                                             (p.m_rdata.pos[2]-plo[2]+dx_part[2]/2)/dx_geom[2]) };
+    const Real hilen[AMREX_SPACEDIM] = { AMREX_D_DECL((p.m_pos[0]-plo[0]+dx_part[0]/2)/dx_geom[0],
+                                             (p.m_pos[1]-plo[1]+dx_part[1]/2)/dx_geom[1],
+                                             (p.m_pos[2]-plo[2]+dx_part[2]/2)/dx_geom[2]) };
 
-    const Real lolen[AMREX_SPACEDIM] = { AMREX_D_DECL((p.m_rdata.pos[0]-plo[0]-dx_part[0]/2)/dx_geom[0],
-                                             (p.m_rdata.pos[1]-plo[1]-dx_part[1]/2)/dx_geom[1],
-                                             (p.m_rdata.pos[2]-plo[2]-dx_part[2]/2)/dx_geom[2]) };
+    const Real lolen[AMREX_SPACEDIM] = { AMREX_D_DECL((p.m_pos[0]-plo[0]-dx_part[0]/2)/dx_geom[0],
+                                             (p.m_pos[1]-plo[1]-dx_part[1]/2)/dx_geom[1],
+                                             (p.m_pos[2]-plo[2]-dx_part[2]/2)/dx_geom[2]) };
 
-    const IntVect hicell(AMREX_D_DECL(floor(hilen[0]), floor(hilen[1]), floor(hilen[2])));
-
-    const IntVect locell(AMREX_D_DECL(floor(lolen[0]), floor(lolen[1]), floor(lolen[2])));
+    const IntVect hicell(AMREX_D_DECL(static_cast<int>(amrex::Math::floor(hilen[0])),
+                                      static_cast<int>(amrex::Math::floor(hilen[1])),
+                                      static_cast<int>(amrex::Math::floor(hilen[2]))));
+    const IntVect locell(AMREX_D_DECL(static_cast<int>(amrex::Math::floor(lolen[0])),
+                                      static_cast<int>(amrex::Math::floor(lolen[1])),
+                                      static_cast<int>(amrex::Math::floor(lolen[2]))));
 
     const Real cell_density = AMREX_D_TERM(dx_geom[0]/dx_part[0],*dx_geom[1]/dx_part[1],*dx_geom[2]/dx_part[2]);
 
@@ -416,34 +628,34 @@ Particle<NReal, NInt>::CIC_Cells_Fracs (const Particle<NReal, NInt>& p,
     for (int xi = locell[0]; xi <= hicell[0]; xi++)
     {
         cells[i][0] = xi;
-        fracs[i] = (std::min(hilen[0]-xi,1_rt)-std::max(lolen[0]-xi,0_rt))*cell_density;
+        fracs[i] = (std::min(hilen[0]-xi,Real(1.0))-std::max(lolen[0]-xi,Real(0.0)))*cell_density;
         i++;
     }
 #elif (AMREX_SPACEDIM == 2)
     for (int yi = locell[1]; yi <= hicell[1]; yi++)
     {
-        const Real yf = std::min(hilen[1]-yi,1_rt)-std::max(lolen[1]-yi,0_rt);
+        const Real yf = std::min(hilen[1]-yi,Real(1.0))-std::max(lolen[1]-yi,Real(0.0));
         for (int xi = locell[0]; xi <= hicell[0]; xi ++)
         {
             cells[i][0] = xi;
             cells[i][1] = yi;
-            fracs[i] = yf * (std::min(hilen[0]-xi,1_rt)-std::max(lolen[0]-xi,0_rt))*cell_density;
+            fracs[i] = yf * (std::min(hilen[0]-xi,Real(1.0))-std::max(lolen[0]-xi,Real(0.0)))*cell_density;
             i++;
         }
     }
 #elif (AMREX_SPACEDIM == 3)
     for (int zi = locell[2]; zi <= hicell[2]; zi++)
     {
-        const Real zf = std::min(hilen[2]-zi,1_rt)-std::max(lolen[2]-zi,0_rt);
+        const Real zf = std::min(hilen[2]-zi,Real(1.0))-std::max(lolen[2]-zi,Real(0.0));
         for (int yi = locell[1]; yi <= hicell[1]; yi++)
         {
-            const Real yf = std::min(hilen[1]-yi,1_rt)-std::max(lolen[1]-yi,0_rt);
+            const Real yf = std::min(hilen[1]-yi,Real(1.0))-std::max(lolen[1]-yi,Real(0.0));
             for (int xi = locell[0]; xi <= hicell[0]; xi++)
             {
                 cells[i][0] = xi;
                 cells[i][1] = yi;
                 cells[i][2] = zi;
-                fracs[i] = zf * yf * (std::min(hilen[0]-xi,1_rt)-std::max(lolen[0]-xi,0_rt)) * cell_density;
+                fracs[i] = zf * yf * (std::min(hilen[0]-xi,Real(1.0))-std::max(lolen[0]-xi,Real(0.0))) * cell_density;
                 i++;
             }
         }
@@ -483,7 +695,7 @@ Particle<NReal, NInt>::MaxReaders ()
 }
 
 template <int NReal, int NInt>
-long
+Long
 Particle<NReal, NInt>::MaxParticlesPerRead ()
 {
 
@@ -491,9 +703,9 @@ Particle<NReal, NInt>::MaxParticlesPerRead ()
     // This is the maximum particles that "each" reader will attempt to read
     // before doing a Redistribute().
     //
-    const long Max_Particles_Per_Read_def = 100000;
+    const Long Max_Particles_Per_Read_def = 100000;
 
-    static long Max_Particles_Per_Read;
+    static Long Max_Particles_Per_Read;
 
     static bool first = true;
 
@@ -544,17 +756,17 @@ Particle<NReal, NInt>::Version ()
 }
 
 template <int NReal, int NInt>
-int
+Long
 Particle<NReal, NInt>::NextID ()
 {
-    int next;
+    Long next;
 // we should be able to test on _OPENMP < 201107 for capture (version 3.1)
 // but we must work around a bug in gcc < 4.9
 #if defined(_OPENMP) && _OPENMP < 201307
 #pragma omp critical (amrex_particle_nextid)
 #elif defined(_OPENMP)
 #pragma omp atomic capture
-#endif    
+#endif
     next = the_next_id++;
 
     if (next > LastParticleID)
@@ -564,10 +776,10 @@ Particle<NReal, NInt>::NextID ()
 }
 
 template <int NReal, int NInt>
-int
+Long
 Particle<NReal, NInt>::UnprotectedNextID ()
 {
-    int next = the_next_id++;
+    Long next = the_next_id++;
     if (next > LastParticleID)
 	amrex::Abort("Particle<NReal, NInt>::NextID() -- too many particles");
     return next;
@@ -575,7 +787,7 @@ Particle<NReal, NInt>::UnprotectedNextID ()
 
 template <int NReal, int NInt>
 void
-Particle<NReal, NInt>::NextID (int nextid)
+Particle<NReal, NInt>::NextID (Long nextid)
 {
     the_next_id = nextid;
 }
@@ -672,14 +884,71 @@ template <int NReal, int NInt>
 std::ostream&
 operator<< (std::ostream& os, const Particle<NReal, NInt>& p)
 {
-    os << p.m_idata.id   << ' '
-       << p.m_idata.cpu  << ' ';
+    os << p.id()   << ' '
+       << p.cpu()  << ' ';
 
-    for (int i = 0; i < AMREX_SPACEDIM + NReal; i++)
-        os << p.m_rdata.arr[i] << ' ';
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
+        os << p.pos(i) << ' ';
 
-    for (int i = 2; i < 2 + NInt; i++)
-        os << p.m_idata.arr[i] << ' ';
+    for (int i = 0; i < NReal; i++)
+        os << p.rdata(i) << ' ';
+
+    for (int i = 2; i < NInt; i++)
+        os << p.idata(i) << ' ';
+
+    if (!os.good())
+        amrex::Error("operator<<(ostream&,Particle<NReal, NInt>&) failed");
+
+    return os;
+}
+
+template <int NReal>
+std::ostream&
+operator<< (std::ostream& os, const Particle<NReal, 0>& p)
+{
+    os << p.id()   << ' '
+       << p.cpu()  << ' ';
+
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
+        os << p.pos(i) << ' ';
+
+    for (int i = 0; i < NReal; i++)
+        os << p.rdata(i) << ' ';
+
+    if (!os.good())
+        amrex::Error("operator<<(ostream&,Particle<NReal, NInt>&) failed");
+
+    return os;
+}
+
+template <int NInt>
+std::ostream&
+operator<< (std::ostream& os, const Particle<0, NInt>& p)
+{
+    os << p.id()   << ' '
+       << p.cpu()  << ' ';
+
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
+        os << p.pos(i) << ' ';
+
+    for (int i = 2; i < NInt; i++)
+        os << p.idata(i) << ' ';
+
+    if (!os.good())
+        amrex::Error("operator<<(ostream&,Particle<NReal, NInt>&) failed");
+
+    return os;
+}
+
+template <int NReal=0, int NInt=0>
+std::ostream&
+operator<< (std::ostream& os, const Particle<0, 0>& p)
+{
+    os << p.id()   << ' '
+       << p.cpu()  << ' ';
+
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
+        os << p.pos(i) << ' ';
 
     if (!os.good())
         amrex::Error("operator<<(ostream&,Particle<NReal, NInt>&) failed");

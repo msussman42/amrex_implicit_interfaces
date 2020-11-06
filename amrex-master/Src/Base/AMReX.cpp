@@ -1,15 +1,4 @@
-#include <unistd.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <iomanip>
-#include <new>
-#include <stack>
-#include <limits>
-#include <vector>
-#include <algorithm>
-
+#include <AMReX_FileSystem.H>
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX.H>
 #include <AMReX_BaseFab.H>
@@ -17,10 +6,17 @@
 #include <AMReX_BLProfiler.H>
 #include <AMReX_BLFort.H>
 #include <AMReX_Utility.H>
+#include <AMReX_Random.H>
 #include <AMReX_Print.H>
 #include <AMReX_Arena.H>
-
+#include <AMReX_BLBackTrace.H>
+#include <AMReX_MemPool.H>
+#include <AMReX_Geometry.H>
 #include <AMReX_Gpu.H>
+
+#ifdef AMREX_USE_CUPTI
+#include <AMReX_CuptiTrace.H>
+#endif
 
 #include <AMReX_Machine.H>
 
@@ -33,6 +29,7 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_iMultiFab.H>
 #include <AMReX_VisMF.H>
+#include <AMReX_AsyncOut.H>
 #endif
 
 #ifdef BL_LAZY
@@ -47,13 +44,28 @@
 #include <omp.h>
 #endif
 
-#include <AMReX_BLBackTrace.H>
-#include <AMReX_MemPool.H>
+#if defined(__APPLE__)
+#include <xmmintrin.h>
+#endif
 
-#include <AMReX_Geometry.H>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <csignal>
+#include <cfenv>
+#include <iostream>
+#include <iomanip>
+#include <new>
+#include <stack>
+#include <limits>
+#include <vector>
+#include <algorithm>
 
 // SUSSMAN
 int thread_class::nthreads;
+double thread_class::number_mfiter_loops=0.0;
+std::vector<double> thread_class::tile_d_numPts;
+double thread_class::boxarray_d_numPts=0.0;
 
 namespace amrex {
 
@@ -67,6 +79,7 @@ namespace system
     int call_addr2line;
     int throw_exception;
     int regtest_reduction;
+    int abort_on_unused_inputs = 0;
     std::ostream* osout = &std::cout;
     std::ostream* oserr = &std::cerr;
     ErrorHandler error_handler = nullptr;
@@ -88,8 +101,13 @@ namespace {
     SignalHandler prev_handler_sigint;
     SignalHandler prev_handler_sigabrt;
     SignalHandler prev_handler_sigfpe;
+#if defined(__linux__)
     int           prev_fpe_excepts;
     int           curr_fpe_excepts;
+#elif defined(__APPLE__)
+    unsigned int  prev_fpe_mask;
+    unsigned int  curr_fpe_excepts;
+#endif
 }
 
 std::string amrex::Version ()
@@ -127,7 +145,8 @@ amrex::write_to_stderr_without_buffering (const char* str)
     {
 	std::ostringstream procall;
 	procall << ParallelDescriptor::MyProc() << "::";
-	const char *cprocall = procall.str().c_str();
+        auto tmp = procall.str();
+	const char *cprocall = tmp.c_str();
         const char * const end = " !!!\n";
 	fwrite(cprocall, strlen(cprocall), 1, stderr);
         fwrite(str, strlen(str), 1, stderr);
@@ -135,7 +154,7 @@ amrex::write_to_stderr_without_buffering (const char* str)
     }
 }
 
-static
+namespace {
 void
 write_lib_id(const char* msg)
 {
@@ -148,25 +167,6 @@ write_lib_id(const char* msg)
 	fwrite("::", 2, 1, stderr);
     }
 }
-
-void
-amrex::Error (const char* msg)
-{
-#ifdef AMREX_DEVICE_COMPILE
-#if !defined(__APPLE__)
-    if (msg) printf("%s\n", msg);
-#endif
-#else
-    if (system::error_handler) {
-        system::error_handler(msg);
-    } else if (system::throw_exception) {
-        throw RuntimeError(msg);
-    } else {
-        write_lib_id("Error");
-        write_to_stderr_without_buffering(msg);
-        ParallelDescriptor::Abort();
-    }
-#endif
 }
 
 void
@@ -176,14 +176,68 @@ amrex::Error (const std::string& msg)
 }
 
 void
-amrex::Abort (const char* msg)
+amrex::Abort (const std::string& msg)
 {
-#ifdef AMREX_DEVICE_COMPILE
-#if !defined(__APPLE__)
-    if (msg) printf("Abort %s\n", msg);
-    assert(0);
+    Abort(msg.c_str());
+}
+
+void
+amrex::Warning (const std::string& msg)
+{
+    Warning(msg.c_str());
+}
+
+void
+amrex::Error_host (const char * msg)
+{
+    if (system::error_handler) {
+        system::error_handler(msg);
+    } else if (system::throw_exception) {
+        throw RuntimeError(msg);
+    } else {
+        write_lib_id("Error");
+        write_to_stderr_without_buffering(msg);
+#ifdef _OPENMP
+#pragma omp critical (amrex_abort_omp_critical)
 #endif
-#else
+        ParallelDescriptor::Abort();
+    }
+}
+
+#if defined(AMREX_USE_GPU) && !defined(NDEBUG)
+#if AMREX_DEVICE_COMPILE
+AMREX_GPU_DEVICE
+void
+amrex::Error_device (const char * msg)
+{
+    if (msg) AMREX_DEVICE_PRINTF("Error %s\n", msg);
+    AMREX_DEVICE_ASSERT(0);
+}
+#endif
+#endif
+
+void
+amrex::Warning_host (const char * msg)
+{
+    if (msg) {
+	amrex::Print(Print::AllProcs,amrex::ErrorStream()) << msg << '!' << '\n';
+    }
+}
+
+#if defined(AMREX_USE_GPU) && !defined(NDEBUG)
+#if AMREX_DEVICE_COMPILE
+AMREX_GPU_DEVICE
+void
+amrex::Warning_device (const char * msg)
+{
+    if (msg) AMREX_DEVICE_PRINTF("Warning %s\n", msg);
+}
+#endif
+#endif
+
+void
+amrex::Abort_host (const char * msg)
+{
     if (system::error_handler) {
         system::error_handler(msg);
     } else if (system::throw_exception) {
@@ -196,55 +250,23 @@ amrex::Abort (const char* msg)
 #endif
        ParallelDescriptor::Abort();
    }
-#endif
 }
 
+#if defined(AMREX_USE_GPU) && !defined(NDEBUG)
+#if AMREX_DEVICE_COMPILE
+AMREX_GPU_DEVICE
 void
-amrex::Abort (const std::string& msg)
+amrex::Abort_device (const char * msg)
 {
-    Abort(msg.c_str());
+    if (msg) AMREX_DEVICE_PRINTF("Abort %s\n", msg);
+    AMREX_DEVICE_ASSERT(0);
 }
+#endif
+#endif
 
 void
-amrex::Warning (const char* msg)
+amrex::Assert_host (const char* EX, const char* file, int line, const char* msg)
 {
-#ifdef AMREX_DEVICE_COMPILE
-#if !defined(__APPLE__)
-    if (msg) printf("%s\n", msg);
-#endif
-#else
-    if (msg)
-    {
-	amrex::Print(Print::AllProcs,amrex::ErrorStream()) << msg << '!' << '\n';
-    }
-#endif
-}
-
-void
-amrex::Warning (const std::string& msg)
-{
-    Warning(msg.c_str());
-}
-
-void
-amrex::Assert (const char* EX,
-               const char* file,
-               int         line,
-               const char* msg)
-{
-#ifdef AMREX_DEVICE_COMPILE
-#if !defined(__APPLE__)
-    if (msg) {
-        printf("Assertion `%s' failed, file \"%s\", line %d, Msg: %s",
-               EX, file, line, msg);
-    } else {
-        printf("Assertion `%s' failed, file \"%s\", line %d",
-               EX, file, line);
-    }
-
-    assert(0);
-#endif
-#else
     const int N = 512;
 
     char buf[N];
@@ -272,10 +294,30 @@ amrex::Assert (const char* EX,
         throw RuntimeError(buf);
     } else {
        write_to_stderr_without_buffering(buf);
+#ifdef _OPENMP
+#pragma omp critical (amrex_abort_omp_critical)
+#endif
        ParallelDescriptor::Abort();
    }
-#endif
 }
+
+#if defined(AMREX_USE_GPU) && !defined(NDEBUG)
+#if AMREX_DEVICE_COMPILE
+AMREX_GPU_DEVICE
+void
+amrex::Assert_device (const char* EX, const char* file, int line, const char* msg)
+{
+    if (msg) {
+        AMREX_DEVICE_PRINTF("Assertion `%s' failed, file \"%s\", line %d, Msg: %s",
+                            EX, file, line, msg);
+    } else {
+        AMREX_DEVICE_PRINTF("Assertion `%s' failed, file \"%s\", line %d",
+                            EX, file, line);
+    }
+    AMREX_DEVICE_ASSERT(0);
+}
+#endif
+#endif
 
 namespace
 {
@@ -341,13 +383,7 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
     if (argc > 0)
     {
         if (argv[0][0] != '/') {
-            constexpr int bufSize = 1024;
-            char temp[bufSize];
-            char *rCheck = getcwd(temp, bufSize);
-            if(rCheck == 0) {
-                amrex::Abort("**** Error:  getcwd buffer too small.");
-            }
-            system::exename = temp;
+            system::exename = FileSystem::CurrentPath();
             system::exename += "/";
         }
         system::exename += argv[0];
@@ -359,15 +395,8 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
         }
     }
 
-#if defined(PERILLA_USE_UPCXX) || defined(AMREX_USE_UPCXX)
+#if defined(AMREX_USE_UPCXX)
     upcxx::init();
-#endif
-
-#ifdef BL_USE_MPI3
-    BL_MPI_REQUIRE( MPI_Win_create_dynamic(MPI_INFO_NULL, ParallelDescriptor::Communicator(),
-                                           &ParallelDescriptor::cp_win) );
-    BL_MPI_REQUIRE( MPI_Win_create_dynamic(MPI_INFO_NULL, ParallelDescriptor::Communicator(),
-                                           &ParallelDescriptor::fb_win) );
 #endif
 
     while ( ! The_Initialize_Function_Stack.empty())
@@ -393,13 +422,20 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
         }
         else if (argc > 1)
         {
-            if (strchr(argv[1],'='))
-            {
-                ParmParse::Initialize(argc-1,argv+1,0);
+            int ppargc = 1;
+            for (; ppargc < argc; ++ppargc) {
+                if (strcmp(argv[ppargc], "--") == 0) break;
             }
-            else
+            if (ppargc > 1)
             {
-                ParmParse::Initialize(argc-2,argv+2,argv[1]);
+                if (strchr(argv[1],'='))
+                {
+                    ParmParse::Initialize(ppargc-1,argv+1,0);
+                }
+                else
+                {
+                    ParmParse::Initialize(ppargc-2,argv+2,argv[1]);
+                }
             }
         }
     } else {
@@ -410,19 +446,27 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
         func_parm_parse();
     }
 
+    {
+        ParmParse pp("amrex");
+        pp.query("v", system::verbose);
+        pp.query("verbose", system::verbose);
+    }
+
 #ifdef AMREX_USE_GPU
     // Initialize after ParmParse so that we can read inputs.
     Gpu::Device::Initialize();
+#ifdef AMREX_USE_CUPTI
+    CuptiInitialize();
+#endif
 #endif
 
     {
-	ParmParse pp("amrex");
-	pp.query("v", system::verbose);
-	pp.query("verbose", system::verbose);
+        ParmParse pp("amrex");
         pp.query("regtest_reduction", system::regtest_reduction);
         pp.query("signal_handling", system::signal_handling);
         pp.query("throw_exception", system::throw_exception);
         pp.query("call_addr2line", system::call_addr2line);
+        pp.query("abort_on_unused_inputs", system::abort_on_unused_inputs);
 
         if (system::signal_handling)
         {
@@ -445,37 +489,49 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
             pp.query("fpe_trap_invalid", invalid);
             pp.query("fpe_trap_zero", divbyzero);
             pp.query("fpe_trap_overflow", overflow);
+
+#if defined(__linux__)
             curr_fpe_excepts = 0;
             if (invalid)   curr_fpe_excepts |= FE_INVALID;
             if (divbyzero) curr_fpe_excepts |= FE_DIVBYZERO;
             if (overflow)  curr_fpe_excepts |= FE_OVERFLOW;
-#if defined(__linux__) && !defined(__NEC__)
-#if !defined(__PGI) || (__PGIC__ >= 16)
+#if !defined(AMREX_USE_DPCPP) && (!defined(__PGI) || (__PGIC__ >= 16))
+            // xxxxx DPCPP todo: fpe trap
             prev_fpe_excepts = fegetexcept();
             if (curr_fpe_excepts != 0) {
                 feenableexcept(curr_fpe_excepts);  // trap floating point exceptions
                 prev_handler_sigfpe = signal(SIGFPE,  BLBackTrace::handler);
             }
 #endif
+
+#elif defined(__APPLE__)
+	    prev_fpe_mask = _MM_GET_EXCEPTION_MASK();
+	    curr_fpe_excepts = 0u;
+	    if (invalid)   curr_fpe_excepts |= _MM_MASK_INVALID;
+	    if (divbyzero) curr_fpe_excepts |= _MM_MASK_DIV_ZERO;
+	    if (overflow)  curr_fpe_excepts |= _MM_MASK_OVERFLOW;
+	    if (curr_fpe_excepts != 0u) {
+                _MM_SET_EXCEPTION_MASK(prev_fpe_mask & ~curr_fpe_excepts);
+                prev_handler_sigfpe = signal(SIGFPE,  BLBackTrace::handler);
+	    }
 #endif
         }
     }
 
     ParallelDescriptor::Initialize();
 
+    Arena::Initialize();
+    amrex_mempool_init();
+
+    // SUSSMAN
+    thread_class::Initialize();
+
     //
     // Initialize random seed after we're running in parallel.
     //
     amrex::InitRandom(ParallelDescriptor::MyProc()+1, ParallelDescriptor::NProcs());
 
-    Arena::Initialize();
-    amrex_mempool_init();
-
     // For thread safety, we should do these initializations here.
-
-    // SUSSMAN
-    thread_class::Initialize();
-
     BaseFab_Initialize();
     BoxArray::Initialize();
     DistributionMapping::Initialize();
@@ -485,28 +541,28 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
     MultiFab::Initialize();
     iMultiFab::Initialize();
     VisMF::Initialize();
+    AsyncOut::Initialize();
 #ifdef AMREX_USE_EB
     EB2::Initialize();
 #endif
     BL_PROFILE_INITPARAMS();
 #endif
     machine::Initialize();
-
-    if (double(std::numeric_limits<long>::max()) < 9.e18)
-    {
-        if (system::verbose) {
-            amrex::Print() << "!\n! WARNING: Maximum of long int, "
-                           << std::numeric_limits<long>::max() 
-                           << ", might be too small for big runs.\n!\n";
-        }
-    }
+#ifdef AMREX_USE_GPU
+    Gpu::Fuser::Initialize();
+#endif
 
     if (system::verbose > 0)
     {
 #ifdef BL_USE_MPI
+
         amrex::Print() << "MPI initialized with "
                        << ParallelDescriptor::NProcs()
                        << " MPI processes\n";
+
+        int provided = -1;
+        MPI_Query_thread(&provided);
+        amrex::Print() << "MPI initialized with thread support level " << provided << std::endl;
 #endif
         
 #ifdef _OPENMP
@@ -605,13 +661,17 @@ amrex::Finalize (amrex::AMReX* pamrex)
         if (prev_handler_sigint != SIG_ERR) signal(SIGINT, prev_handler_sigint);
         if (prev_handler_sigabrt != SIG_ERR) signal(SIGABRT, prev_handler_sigabrt);
         if (prev_handler_sigfpe != SIG_ERR) signal(SIGFPE, prev_handler_sigfpe);
-#if defined(__linux__) && !defined(__NEC__)
+#if defined(__linux__)
 #if !defined(__PGI) || (__PGIC__ >= 16)
         if (curr_fpe_excepts != 0) {
             fedisableexcept(curr_fpe_excepts);
             feenableexcept(prev_fpe_excepts);
         }
 #endif
+#elif defined(__APPLE__)
+	if (curr_fpe_excepts != 0u) {
+            _MM_SET_EXCEPTION_MASK(prev_fpe_mask);
+	}
 #endif
     }
 #endif
@@ -620,7 +680,7 @@ amrex::Finalize (amrex::AMReX* pamrex)
     Gpu::Device::Finalize();
 #endif
 
-#if defined(PERILLA_USE_UPCXX) || defined(AMREX_USE_UPCXX)
+#if defined(AMREX_USE_UPCXX)
     upcxx::finalize();
 #endif
 
@@ -715,6 +775,7 @@ AMReX::erase (AMReX* pamrex)
 }
 
 
+
 // SUSSMAN
 void 
 thread_class::Initialize() {
@@ -744,4 +805,48 @@ thread_class::Initialize() {
  if (nthreads<1)
   amrex::Error("nthreads invalid");
 
+ tile_d_numPts.resize(nthreads);
+ for (int tid_local=0;tid_local<nthreads;tid_local++)
+  tile_d_numPts[tid_local]=0.0;
+ number_mfiter_loops=0.0;
+
 } // end subroutine thread_class::Initialize
+
+// SUSSMAN
+void 
+thread_class::reconcile_d_numPts(int caller_id) {
+
+ number_mfiter_loops=number_mfiter_loops+1.0;
+
+ if (tile_d_numPts[0]==boxarray_d_numPts) {
+  // do nothing
+ } else {
+  std::cout << "tile_d_numPts[0]= " << tile_d_numPts[0] << '\n';
+  std::cout << "boxarray_d_numPts= " << boxarray_d_numPts << '\n';
+  std::cout << "number_mfiter_loops= " << number_mfiter_loops << '\n';
+  std::cout << "caller_id= " << caller_id << '\n';
+  amrex::Error("reconcile_d_numPts found tile sum <> boxarray sum\n");
+ }
+
+} // end subroutine thread_class::reconcile_d_numPts()
+
+// SUSSMAN
+void
+thread_class::init_d_numPts(double BA_d_numPts) {
+
+ for (int tid_local=0;tid_local<nthreads;tid_local++) {
+  tile_d_numPts[tid_local] = 0.0;
+ }
+ boxarray_d_numPts=BA_d_numPts;
+
+} // end subroutine thread_class::init_d_numPts
+
+// SUSSMAN
+void 
+thread_class::sync_tile_d_numPts() {
+
+ for (int tid_local=1;tid_local<nthreads;tid_local++) {
+  tile_d_numPts[0]+=tile_d_numPts[tid_local];
+ }
+
+} // end subroutine thread_class::sync_tile_d_numPts()

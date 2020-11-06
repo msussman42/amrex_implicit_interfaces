@@ -2,7 +2,6 @@
 #include <algorithm>
 
 #include <AMReX_AmrCore.H>
-#include <AMReX_ParmParse.H>
 #include <AMReX_Print.H>
 
 #ifdef AMREX_PARTICLES
@@ -15,28 +14,9 @@
 
 namespace amrex {
 
-namespace
-{
-    bool initialized = false;
-}
-
-void
-AmrCore::Initialize ()
-{
-    if (initialized) return;
-    initialized = true;
-}
-
-void
-AmrCore::Finalize ()
-{
-    initialized = false;
-}
-
 AmrCore::AmrCore ()
     : AmrMesh()
 {
-    Initialize();
     InitAmrCore();
 }
 
@@ -45,7 +25,6 @@ AmrCore::AmrCore (const RealBox* rb, int max_level_in,
                   Vector<IntVect> ref_ratios, const int* is_per)
     : AmrMesh(rb, max_level_in, n_cell_in, coord, std::move(ref_ratios), is_per)
 {
-    Initialize();
     InitAmrCore();
 }
 
@@ -55,22 +34,24 @@ AmrCore::AmrCore (const RealBox& rb, int max_level_in,
                   Array<int,AMREX_SPACEDIM> const& is_per)
     : AmrMesh(rb, max_level_in, n_cell_in, coord, ref_ratios, is_per)
 {
-    Initialize();
     InitAmrCore();
+}
+
+AmrCore::AmrCore (Geometry const& level_0_gome, AmrInfo const& amr_info)
+    : AmrMesh(level_0_gome,amr_info)
+{
+#ifdef AMREX_PARTICLES
+    m_gdb.reset(new AmrParGDB(this));
+#endif
 }
 
 AmrCore::~AmrCore ()
 {
-    Finalize();
 }
 
 void
 AmrCore::InitAmrCore ()
 {
-    verbose   = 0;
-    ParmParse pp("amr");
-    pp.query("v",verbose);
-
 #ifdef AMREX_PARTICLES
     m_gdb.reset(new AmrParGDB(this));
 #endif
@@ -93,24 +74,37 @@ AmrCore::regrid (int lbase, Real time, bool)
 
     BL_ASSERT(new_finest <= finest_level+1);
 
+    bool coarse_ba_changed = false;
     for (int lev = lbase+1; lev <= new_finest; ++lev)
     {
-	if (lev <= finest_level) // an old level
-	{
-	    if (new_grids[lev] != grids[lev]) // otherwise nothing
-	    {
-		DistributionMapping new_dmap(new_grids[lev]);
-		RemakeLevel(lev, time, new_grids[lev], new_dmap);
-		SetBoxArray(lev, new_grids[lev]);
-		SetDistributionMap(lev, new_dmap);
-	    }
+        if (lev <= finest_level) // an old level
+        {
+            bool ba_changed = (new_grids[lev] != grids[lev]);
+	    if (ba_changed or coarse_ba_changed) {
+                BoxArray level_grids = grids[lev];
+                DistributionMapping level_dmap = dmap[lev];
+                if (ba_changed) {
+                    level_grids = new_grids[lev];
+                    level_dmap = DistributionMapping(level_grids);
+                }
+                const auto old_num_setdm = num_setdm;
+                RemakeLevel(lev, time, level_grids, level_dmap);
+                SetBoxArray(lev, level_grids);
+                if (old_num_setdm == num_setdm) {
+                    SetDistributionMap(lev, level_dmap);
+                }
+            }
+            coarse_ba_changed = ba_changed;;
 	}
 	else  // a new level
 	{
-	    DistributionMapping new_dmap(new_grids[lev]);
-	    MakeNewLevelFromCoarse(lev, time, new_grids[lev], new_dmap);
-	    SetBoxArray(lev, new_grids[lev]);
-	    SetDistributionMap(lev, new_dmap);
+            DistributionMapping new_dmap(new_grids[lev]);
+            const auto old_num_setdm = num_setdm;
+            MakeNewLevelFromCoarse(lev, time, new_grids[lev], new_dmap);
+            SetBoxArray(lev, new_grids[lev]);
+            if (old_num_setdm == num_setdm) {
+                SetDistributionMap(lev, new_dmap);
+            }
 	}
     }
 
@@ -131,9 +125,9 @@ AmrCore::printGridSummary (std::ostream& os, int min_lev, int max_lev) const noe
     {
         const BoxArray&           bs      = boxArray(lev);
         int                       numgrid = bs.size();
-        long                      ncells  = bs.numPts();
+        Long                      ncells  = bs.numPts();
         double                    ntot    = Geom(lev).Domain().d_numPts();
-        Real                      frac    = 100.0_rt*(Real(ncells) / ntot);
+        Real                      frac    = Real(100.0)*(Real(ncells) / ntot);
 
         os << "  Level "
            << lev
@@ -147,8 +141,8 @@ AmrCore::printGridSummary (std::ostream& os, int min_lev, int max_lev) const noe
            << '\n';
 
 	if (numgrid > 1) {
-	    long vmin = std::numeric_limits<long>::max();
-	    long vmax = -1;
+	    Long vmin = std::numeric_limits<Long>::max();
+	    Long vmax = -1;
 	    int lmax = -1;
 	    int smin = std::numeric_limits<int>::max();
             int imax = std::numeric_limits<int>::lowest();
@@ -157,8 +151,8 @@ AmrCore::printGridSummary (std::ostream& os, int min_lev, int max_lev) const noe
 #pragma omp parallel
 #endif	    
 	    {
-		long vmin_this = std::numeric_limits<long>::max();
-		long vmax_this = -1;
+		Long vmin_this = std::numeric_limits<Long>::max();
+		Long vmax_this = -1;
 		int lmax_this = -1;
 		int smin_this = std::numeric_limits<int>::max();
                 int imax_this = std::numeric_limits<int>::lowest();
@@ -168,7 +162,7 @@ AmrCore::printGridSummary (std::ostream& os, int min_lev, int max_lev) const noe
 #endif	    	    
 		for (int k = 0; k < numgrid; k++) {
 		    const Box& bx = bs[k];
-		    long v = bx.volume();
+		    Long v = bx.volume();
 		    int ss = bx.shortside();
 		    int ls = bx.longside();
 		    if (v < vmin_this || (v == vmin_this && ss < smin_this)) {

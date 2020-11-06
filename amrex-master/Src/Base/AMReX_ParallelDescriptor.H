@@ -6,6 +6,7 @@
 #include <AMReX_BLBackTrace.H>
 #include <AMReX_BLProfiler.H>
 #include <AMReX_BLassert.H>
+#include <AMReX_INT.H>
 #include <AMReX_REAL.H>
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>
@@ -38,8 +39,12 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
+#include <csignal>
 
 namespace amrex {
+
+template <typename T> class LayoutData;
+
 //! Parallel frontend that abstracts functionalities needed to spawn processes and handle communication
 namespace ParallelDescriptor
 {
@@ -80,6 +85,21 @@ namespace ParallelDescriptor
 	MPI_Request        m_req;
 	mutable MPI_Status m_stat;
     };
+
+#ifdef BL_USE_MPI
+    void MPI_Error(const char* file, int line, const char* msg, int rc);
+
+#define BL_MPI_REQUIRE(x)						\
+do									\
+{									\
+  if ( int l_status_ = (x) )						\
+    {									\
+        amrex::ParallelDescriptor::MPI_Error(__FILE__,__LINE__,#x, l_status_); \
+    }									\
+}									\
+while ( false )
+#endif
+
     /**
     * \brief Perform any needed parallel initialization.  This MUST be the
     * first routine in this class called from within a program.
@@ -118,6 +138,7 @@ namespace ParallelDescriptor
 	MPI_Comm_rank(comm,&r);
 	return r;
 #else
+        amrex::ignore_unused(comm);
 	return 0;
 #endif
     }
@@ -189,11 +210,27 @@ namespace ParallelDescriptor
     inline int MinTag () noexcept { return m_MinTag; }
     inline int MaxTag () noexcept { return m_MaxTag; }
 
+    extern MPI_Comm m_comm;
+    inline MPI_Comm Communicator () noexcept { return m_comm; }
+
     //! return the number of MPI ranks local to the current Parallel Context
     inline int
     NProcs () noexcept
     {
         return ParallelContext::NProcsAll();
+    }
+
+    inline int
+    NProcs (MPI_Comm comm) noexcept
+    {
+#ifdef BL_USE_MPI
+        int s;
+        BL_MPI_REQUIRE(MPI_Comm_size(comm, &s));
+        return s;
+#else
+        amrex::ignore_unused(comm);
+        return 1;
+#endif
     }
     /**
     * \brief The MPI rank number of the I/O Processor (probably rank 0).
@@ -214,6 +251,19 @@ namespace ParallelDescriptor
     {
          return MyProc() == IOProcessorNumber();
     }
+
+    inline int
+    IOProcessorNumber (MPI_Comm comm) noexcept
+    {
+        return (comm == ParallelDescriptor::Communicator()) ? ioProcessor : 0;
+    }
+
+    inline bool
+    IOProcessor (MPI_Comm comm) noexcept
+    {
+        return MyProc(comm) == IOProcessorNumber(comm);
+    }
+
     //
     inline int
     TeamSize () noexcept
@@ -343,11 +393,11 @@ namespace ParallelDescriptor
 	    f(i);
 	}
     }
-    extern MPI_Comm m_comm;
-    inline MPI_Comm Communicator () noexcept { return m_comm; }
 
     void Barrier (const std::string& message = Unnamed);
     void Barrier (const MPI_Comm &comm, const std::string& message = Unnamed);
+    Message Abarrier ();
+    Message Abarrier (const MPI_Comm &comm);
 
     void Test (MPI_Request& request, int& flag, MPI_Status& status);
 
@@ -424,43 +474,40 @@ namespace ParallelDescriptor
     void ReduceIntMin (Vector<std::reference_wrapper<int> >&& rvar, int cpu);
 
     //! Long sum reduction.
-    void ReduceLongSum (long& rvar);
-    void ReduceLongSum (long* rvar, int cnt);
-    void ReduceLongSum (Vector<std::reference_wrapper<long> >&& rvar);
+    void ReduceLongSum (Long& rvar);
+    void ReduceLongSum (Long* rvar, int cnt);
+    void ReduceLongSum (Vector<std::reference_wrapper<Long> >&& rvar);
     //! Long sum reduction to specified cpu.
-    void ReduceLongSum (long& rvar, int cpu);
-    void ReduceLongSum (long* rvar, int cnt, int cpu);
-    void ReduceLongSum (Vector<std::reference_wrapper<long> >&& rvar, int cpu);
+    void ReduceLongSum (Long& rvar, int cpu);
+    void ReduceLongSum (Long* rvar, int cnt, int cpu);
+    void ReduceLongSum (Vector<std::reference_wrapper<Long> >&& rvar, int cpu);
 
     //! Long max reduction.
-    void ReduceLongMax (long& rvar);
-    void ReduceLongMax (long* rvar, int cnt);
-    void ReduceLongMax (Vector<std::reference_wrapper<long> >&& rvar);
+    void ReduceLongMax (Long& rvar);
+    void ReduceLongMax (Long* rvar, int cnt);
+    void ReduceLongMax (Vector<std::reference_wrapper<Long> >&& rvar);
     //! Long max reduction to specified cpu.
-    void ReduceLongMax (long& rvar, int cpu);
-    void ReduceLongMax (long* rvar, int cnt, int cpu);
-    void ReduceLongMax (Vector<std::reference_wrapper<long> >&& rvar, int cpu);
+    void ReduceLongMax (Long& rvar, int cpu);
+    void ReduceLongMax (Long* rvar, int cnt, int cpu);
+    void ReduceLongMax (Vector<std::reference_wrapper<Long> >&& rvar, int cpu);
 
     //! Long min reduction.
-    void ReduceLongMin (long& rvar);
-    void ReduceLongMin (long* rvar, int cnt);
-    void ReduceLongMin (Vector<std::reference_wrapper<long> >&& rvar);
+    void ReduceLongMin (Long& rvar);
+    void ReduceLongMin (Long* rvar, int cnt);
+    void ReduceLongMin (Vector<std::reference_wrapper<Long> >&& rvar);
     //! Long min reduction to specified cpu.
-    void ReduceLongMin (long& rvar, int cpu);
-    void ReduceLongMin (long* rvar, int cnt, int cpu);
-    void ReduceLongMin (Vector<std::reference_wrapper<long> >&& rvar, int cpu);
+    void ReduceLongMin (Long& rvar, int cpu);
+    void ReduceLongMin (Long* rvar, int cnt, int cpu);
+    void ReduceLongMin (Vector<std::reference_wrapper<Long> >&& rvar, int cpu);
 
     //! Long and-wise reduction.
-    void ReduceLongAnd (long& rvar);
-    void ReduceLongAnd (long* rvar, int cnt);
-    void ReduceLongAnd (Vector<std::reference_wrapper<long> >&& rvar);
+    void ReduceLongAnd (Long& rvar);
+    void ReduceLongAnd (Long* rvar, int cnt);
+    void ReduceLongAnd (Vector<std::reference_wrapper<Long> >&& rvar);
     //! Long and-wise reduction to specified cpu.
-    void ReduceLongAnd (long& rvar, int cpu);
-    void ReduceLongAnd (long* rvar, int cnt, int cpu);
-    void ReduceLongAnd (Vector<std::reference_wrapper<long> >&& rvar, int cpu);
-
-    // There are no color versions of reducion to specified cpu, because it could
-    // be confusing what cpu means.  Is it in the global or colored communicator?
+    void ReduceLongAnd (Long& rvar, int cpu);
+    void ReduceLongAnd (Long* rvar, int cnt, int cpu);
+    void ReduceLongAnd (Vector<std::reference_wrapper<Long> >&& rvar, int cpu);
 
     //! Parallel gather.
     void Gather (Real* sendbuf,
@@ -501,16 +548,16 @@ namespace ParallelDescriptor
     template <class T> void Gatherv (const T* send, int sc,
 				     T* recv, const std::vector<int>& rc, const std::vector<int>& disp,
 				     int root);
-    template <class T> void Gatherv (const T* send, long sc,
-				     T* recv, const std::vector<long>& rc, const std::vector<long>& disp,
-				     int root);
+
+    //! Gather LayoutData values to a vector on root
+    template <class T> void GatherLayoutDataToVector (const LayoutData<T>& sendbuf,
+                                                      Vector<T>& recvbuf,
+                                                      int root);
 
     void Wait     (MPI_Request& req, MPI_Status& status);
     void Waitall  (Vector<MPI_Request>& reqs, Vector<MPI_Status>& status);
     void Waitany  (Vector<MPI_Request>& reqs, int &index, MPI_Status& status);
     void Waitsome (Vector<MPI_Request>&, int&, Vector<int>&, Vector<MPI_Status>&);
-
-    void MPI_Error(const char* file, int line, const char* msg, int rc);
 
     void ReadAndBcastFile(const std::string &filename, Vector<char> &charBuf,
                           bool bExitOnError = true,
@@ -518,24 +565,27 @@ namespace ParallelDescriptor
     void IProbe(int src_pid, int tag, int &mflag, MPI_Status &status);
     void IProbe(int src_pid, int tag, MPI_Comm comm, int &mflag, MPI_Status &status);
 
+    /** Convert an MPI_THREAD_<X> level to string
+     *
+     * @param mtlev MPI_THREAD_<X> level
+     * @return string representation of the equivalent MPI macro name
+     */
+    std::string
+    mpi_level_to_string (int mtlev);
+
     // PMI = Process Management Interface, available on Crays. Provides API to
     // query topology of the job.
 #ifdef AMREX_PMI
     void PMI_Initialize();
     void PMI_PrintMeshcoords(const pmi_mesh_coord_t *pmi_mesh_coord);
 #endif
-}
-}
 
-#define BL_MPI_REQUIRE(x)						\
-do									\
-{									\
-  if ( int l_status_ = (x) )						\
-    {									\
-        amrex::ParallelDescriptor::MPI_Error(__FILE__,__LINE__,#x, l_status_); \
-    }									\
-}									\
-while ( false )
+#ifdef BL_USE_MPI
+    int select_comm_data_type (std::size_t nbytes);
+    std::size_t alignof_comm_data (std::size_t nbytes);
+#endif
+}
+}
 
 namespace amrex {
 
@@ -933,44 +983,83 @@ ParallelDescriptor::Gatherv (const T* send, int sc,
 
 template <class T>
 void
-ParallelDescriptor::Gatherv (const T* send, long sc,
-			     T* recv, const std::vector<long>& rc, const std::vector<long>& disp,
-			     int root)
+ParallelDescriptor::GatherLayoutDataToVector (const LayoutData<T>& sendbuf,
+                                              Vector<T>& recvbuf, int root)
 {
-    BL_PROFILE_T_S("ParallelDescriptor::Gatherv(Tlong)", T);
-    BL_COMM_PROFILE(BLProfiler::Gatherv,  BLProfiler::BeforeCall(), root, BLProfiler::NoTag());
-
-    int tag = ParallelDescriptor::SeqNum();
-
-    if (MyProc() == root) {
-	int nprocs = NProcs();
-	BL_ASSERT(rc.size() == nprocs);
-	BL_ASSERT(disp.size() == nprocs);
-
-	std::vector<MPI_Request> request;
-	for (int i = 0; i < nprocs; ++i) {
-	    T* buf = recv + disp[i];
-	    if (i == root) {
-		for (int k = 0; k < rc[i]; ++k) {
-		    *buf++ = send[k];
-		}
-	    } else {
-		MPI_Request req;
-		MPI_Irecv(buf, rc[i], ParallelDescriptor::Mpi_typemap<T>::type(), i,
-			  tag, Communicator(), &req);
-		request.push_back(req);
-	    }
-	}
-	if (request.size() > 0) {
-	    std::vector<MPI_Status> status(request.size());
-	    MPI_Waitall(request.size(), &request[0], &status[0]);
-	}
-    } else {
-	MPI_Send(const_cast<T*>(send), sc, ParallelDescriptor::Mpi_typemap<T>::type(), root, tag,
-		 Communicator());
+    BL_PROFILE_T_S("ParallelDescriptor::GatherLayoutData(Ti)", T);
+    
+    // Gather prelims
+    Vector<int> index_to_send = sendbuf.IndexArray();
+    Vector<T> T_to_send;
+    T_to_send.reserve(sendbuf.local_size());
+    
+    for (int i : sendbuf.IndexArray())
+    {
+        T_to_send.push_back(sendbuf[i]);
     }
 
-    BL_COMM_PROFILE(BLProfiler::Gatherv, std::accumulate(rc.begin(),rc.end(),0L)*sizeof(T), root, BLProfiler::NoTag());
+    int nprocs = ParallelContext::NProcsSub();
+    Vector<int> recvcount(nprocs, 0);
+    const Vector<int>& old_pmap = sendbuf.DistributionMap().ProcessorMap();
+    for (int i=0; i<old_pmap.size(); ++i)
+    {
+        ++recvcount[old_pmap[i]];
+    }
+
+    // Make a map from post-gather to pre-gather index
+    Vector<Vector<int>> new_ind_to_old_ind(nprocs);
+    for (int i=0; i<nprocs; ++i)
+    {
+        new_ind_to_old_ind[i].reserve(recvcount[i]);
+    }
+    for (int i=0; i<old_pmap.size(); ++i)
+    {
+        new_ind_to_old_ind[old_pmap[i]].push_back(i);
+    }
+    
+    // Flatten
+    Vector<int> new_index_to_old_index;
+    new_index_to_old_index.reserve(old_pmap.size());
+    for (const Vector<int>& v : new_ind_to_old_ind)
+    {
+        if (v.size()>0)
+        {
+            for (int el : v)
+            {
+                new_index_to_old_index.push_back(el);
+            }
+        }
+    }
+
+    Vector<int> disp(nprocs);
+    if (!disp.empty()) disp[0] = 0;
+    std::partial_sum(recvcount.begin(), recvcount.end()-1, disp.begin()+1);
+    Vector<T> new_index_to_T(sendbuf.size());
+
+    MPI_Gatherv(T_to_send.data(), T_to_send.size(),
+                ParallelDescriptor::Mpi_typemap<T>::type(),
+                new_index_to_T.data(), recvcount.data(), disp.data(),
+                ParallelDescriptor::Mpi_typemap<T>::type(),
+                root, ParallelContext::CommunicatorSub());
+
+    // Now work just on the root, which now has global information on the collected;
+    // LayoutData information; with new_index_to_old_index and new_index_to_T,
+    // sort the gathered vector in pre-gather index space
+    if (ParallelContext::MyProcSub() == root)
+    {
+        // Invert the map (new_index) --> (old_index)
+        Vector<int> old_index_to_new_index(sendbuf.size());
+        
+        for (int i=0; i<old_index_to_new_index.size(); ++i)
+        {
+            old_index_to_new_index[new_index_to_old_index[i]] = i;
+        }
+
+        for (int i=0; i<recvbuf.size(); ++i)
+        {
+                recvbuf[i] = new_index_to_T[old_index_to_new_index[i]];
+        }
+    }
 }
 
 template <class T, class T1>
@@ -1001,115 +1090,126 @@ namespace ParallelDescriptor
 {
 template <class T>
 Message
-Asend(const T* buf, size_t n, int dst_pid, int tag)
+Asend(const T* /*buf*/, size_t /*n*/, int /*dst_pid*/, int /*tag*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Asend(const T* buf, size_t n, int dst_pid, int tag, MPI_Comm comm)
+Asend(const T* /*buf*/, size_t /*n*/, int /*dst_pid*/, int /*tag*/, MPI_Comm /*comm*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Asend(const std::vector<T>& buf, int dst_pid, int tag)
+Asend(const std::vector<T>& /*buf*/, int /*dst_pid*/, int /*tag*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Send(const T* buf, size_t n, int dst_pid, int tag)
+Send(const T* /*buf*/, size_t /*n*/, int /*dst_pid*/, int /*tag*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Send(const T* buf, size_t n, int dst_pid, int tag, MPI_Comm comm)
+Send(const T* /*buf*/, size_t /*n*/, int /*dst_pid*/, int /*tag*/, MPI_Comm /*comm*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Send(const std::vector<T>& buf, int dst_pid, int tag)
+Send(const std::vector<T>& /*buf*/, int /*dst_pid*/, int /*tag*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Arecv(T* buf, size_t n, int src_pid, int tag)
+Arecv(T* /*buf*/, size_t /*n*/, int /*src_pid*/, int /*tag*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Arecv(T* buf, size_t n, int src_pid, int tag, MPI_Comm comm)
+Arecv(T* /*buf*/, size_t /*n*/, int /*src_pid*/, int /*tag*/, MPI_Comm /*comm*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Arecv(std::vector<T>& buf, int src_pid, int tag)
+Arecv(std::vector<T>& /*buf*/, int /*src_pid*/, int /*tag*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Recv(T* buf, size_t n, int src_pid, int tag)
+Recv(T* /*buf*/, size_t /*n*/, int /*src_pid*/, int /*tag*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Recv(T* buf, size_t n, int src_pid, int tag, MPI_Comm comm)
+Recv(T* /*buf*/, size_t /*n*/, int /*src_pid*/, int /*tag*/, MPI_Comm /*comm*/)
 {
     return Message();
 }
 
 template <class T>
 Message
-Recv(std::vector<T>& buf, int src_pid, int tag)
+Recv(std::vector<T>& /*buf*/, int /*src_pid*/, int /*tag*/)
 {
     return Message();
 }
 
 template <class T>
 void
-Bcast(T* t, size_t n, int root)
+Bcast(T* /*t*/, size_t /*n*/, int /*root*/)
 {}
 
 template <class T>
 void
-Bcast(T* t, size_t n, int root, const MPI_Comm &comm)
+Bcast(T* /*t*/, size_t /*n*/, int /*root*/, const MPI_Comm & /*comm*/)
 {}
 
 template <class T, class T1>
 void
-Gather(const T* t, size_t n, T1* t1, size_t n1, int root)
+Gather(const T* /*t*/, size_t /*n*/, T1* /*t1*/, size_t /*n1*/, int /*root*/)
 {}
 
 template <class T>
 std::vector<T>
-Gather(const T& t, int root)
+Gather(const T& t, int /*root*/)
 {
     std::vector<T> resl(1);
     resl[0] = t;
     return resl;
 }
 
+template <class T>
+void
+GatherLayoutDataToVector (const LayoutData<T>& sendbuf,
+                          Vector<T>& recvbuf, int /*root*/)
+{
+    for (int i=0; i<sendbuf.size(); ++i)
+    {
+        recvbuf[i] = sendbuf[i];
+    }
+}
+
 template <class T, class T1>
 void
-Scatter(T* t, size_t n, const T1* t1, size_t n1, int root)
+Scatter(T* /*t*/, size_t /*n*/, const T1* /*t1*/, size_t /*n1*/, int /*root*/)
 {}
 
 }

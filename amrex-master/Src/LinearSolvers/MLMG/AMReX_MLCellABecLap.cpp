@@ -81,6 +81,7 @@ MLCellABecLap::applyInhomogNeumannTerm (int amrlev, MultiFab& rhs) const
 
     const auto problo = m_geom[amrlev][mglev].ProbLoArray();
     const auto probhi = m_geom[amrlev][mglev].ProbHiArray();
+    amrex::ignore_unused(probhi);
     const Real dxi = m_geom[amrlev][mglev].InvCellSize(0);
     const Real dyi = (AMREX_SPACEDIM >= 2) ? m_geom[amrlev][mglev].InvCellSize(1) : 1.0;
     const Real dzi = (AMREX_SPACEDIM == 3) ? m_geom[amrlev][mglev].InvCellSize(2) : 1.0;
@@ -236,11 +237,14 @@ MLCellABecLap::makeHypre (Hypre::Interface hypre_interface) const
     const auto& factory = *(m_factory[0].back());
     MPI_Comm comm = BottomCommunicator();
 
-    auto hypre_solver = amrex::makeHypre(ba, dm, geom, comm, hypre_interface);
+    const int mglev = NMGLevels(0)-1;
+
+    auto om = getOversetMask(0, mglev);
+
+    auto hypre_solver = amrex::makeHypre(ba, dm, geom, comm, hypre_interface, om);
 
     hypre_solver->setScalars(getAScalar(), getBScalar());
 
-    const int mglev = NMGLevels(0)-1;
     auto ac = getACoeffs(0, mglev);
     if (ac)
     {

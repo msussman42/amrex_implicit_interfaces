@@ -7,17 +7,17 @@
 
 namespace amrex {
 
-#ifdef BL_USE_MPI    
+#ifdef AMREX_USE_MPI    
 
-    long CountSnds(const std::map<int, Vector<char> >& not_ours, Vector<long>& Snds);
+    Long CountSnds(const std::map<int, Vector<char> >& not_ours, Vector<Long>& Snds);
 
-    long doHandShake(const std::map<int, Vector<char> >& not_ours,
-                     Vector<long>& Snds, Vector<long>& Rcvs);
+    Long doHandShake(const std::map<int, Vector<char> >& not_ours,
+                     Vector<Long>& Snds, Vector<Long>& Rcvs);
 
-    long doHandShakeLocal(const std::map<int, Vector<char> >& not_ours,
-                          const Vector<int>& neighbor_procs, Vector<long>& Snds, Vector<long>& Rcvs);
+    Long doHandShakeLocal(const std::map<int, Vector<char> >& not_ours,
+                          const Vector<int>& neighbor_procs, Vector<Long>& Snds, Vector<Long>& Rcvs);
 
-#endif // BL_USE_MPI
+#endif // AMREX_USE_MPI
 
 }
 

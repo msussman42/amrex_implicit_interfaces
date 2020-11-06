@@ -204,6 +204,8 @@ BLProfStats::TimeRange RegionsProfStats::MakeRegionPlt(FArrayBox &rFab, int nore
                                      int width, int height,
 				     Vector<Vector<Box>> &regionBoxes)
 {
+  amrex::ignore_unused(noregionnumber);
+
 #if (BL_SPACEDIM != 2)
   cout << "**** Error:  RegionsProfStats::MakeRegionPlt only supported for 2D" << endl;
   return TimeRange(0, 0);
@@ -215,7 +217,7 @@ BLProfStats::TimeRange RegionsProfStats::MakeRegionPlt(FArrayBox &rFab, int nore
   Real notInRegionValue(-1.0);
   Box b(IntVect(0, 0), IntVect(xLength - 1, (yHeight * nRegions) - 1));
   rFab.resize(b, 1);
-  rFab.setVal(notInRegionValue);
+  rFab.setVal<RunOn::Host>(notInRegionValue);
 
   Vector<Real> rStartTime(nRegions, -1.0);
   regionBoxes.clear();
@@ -255,13 +257,13 @@ BLProfStats::TimeRange RegionsProfStats::MakeRegionPlt(FArrayBox &rFab, int nore
         } else {                             // stopping
           Real rtStart(rStartTime[rss.rssRNumber]), rtStop(rss.rssTime);
           rStartTime[rss.rssRNumber] = -1.0;
-          int xStart(xLength * rtStart / timeMax);
-          int xStop(xLength * rtStop / timeMax);
+          int xStart = int(xLength * rtStart / timeMax);
+          int xStop = int(xLength * rtStop / timeMax);
 	  xStop = std::min(xStop, xLength - 1);
           int yLo(rss.rssRNumber * yHeight), yHi(((rss.rssRNumber + 1) *  yHeight) - 1);
           Box rBox(IntVect(xStart, yLo), IntVect(xStop, yHi));
 	  regionBoxes[rss.rssRNumber].push_back(rBox);
-          rFab.setVal(rss.rssRNumber, rBox, 0);
+          rFab.setVal<RunOn::Host>(rss.rssRNumber, rBox, 0);
         }
       }
     }
@@ -505,7 +507,7 @@ bool RegionsProfStats::InitRegionTimeRanges(const Box &procBox) {
 
 
 // ----------------------------------------------------------------------
-bool RegionsProfStats::Include(const FuncStat &fs) {
+bool RegionsProfStats::Include(const FuncStat &/*fs*/) {
   std::set<int>::iterator it;
   bool binclude(bDefaultInclude);
   return binclude;
@@ -569,7 +571,7 @@ bool RegionsProfStats::AllCallTimesFAB(FArrayBox &actFab,
   if(bSameNCalls) {
     Box actBox(IntVect(0,0), IntVect(dataNProcs - 1, whichFuncNCalls - 1));
     actFab.resize(actBox, 1);
-    actFab.setVal(0.0);
+    actFab.setVal<RunOn::Host>(0.0);
     Real *dptr = actFab.dataPtr(0);
     int nX(actBox.length(XDIR)), nY(actBox.length(YDIR));
     for(int p(0); p < nX; ++p) {
@@ -660,7 +662,7 @@ void RegionsProfStats::CollectFuncStats(Vector<Vector<FuncStat> > &funcStats)
 
 
 // ----------------------------------------------------------------------
-void RegionsProfStats::WriteSummary(std::ostream &ios, bool bwriteavg,
+void RegionsProfStats::WriteSummary(std::ostream &ios, bool /*bwriteavg*/,
                                     int whichProc, bool graphTopPct)
 {
   if( ! ParallelDescriptor::IOProcessor()) {
@@ -1577,7 +1579,7 @@ void RegionsProfStats::ReadBlockNoOpen(DataBlock &dBlock, bool readRSS,
 
 
 // ----------------------------------------------------------------------
-bool RegionsProfStats::ReadBlock(DataBlock &dBlock, const int nmessages) {
+bool RegionsProfStats::ReadBlock(DataBlock &/*dBlock*/, const int /*nmessages*/) {
 amrex::Abort("not implemented yet.");
 return false;
 /*

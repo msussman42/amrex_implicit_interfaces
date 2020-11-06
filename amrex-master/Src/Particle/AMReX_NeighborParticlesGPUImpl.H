@@ -38,7 +38,7 @@ namespace detail
                 }
             }
         }
-        
+
         RemoveDuplicates(bl);
         return bl;
     }
@@ -48,9 +48,9 @@ template <int NStructReal, int NStructInt>
 void
 NeighborParticleContainer<NStructReal, NStructInt>::
 buildNeighborMask ()
-{    
+{
     BL_PROFILE("NeighborParticleContainer<NStructReal, NStructInt>::buildNeighborMask");
-    AMREX_ALWAYS_ASSERT(this->numLevels() == 1);    
+    AMREX_ALWAYS_ASSERT(this->numLevels() == 1);
     m_neighbor_mask_initialized = true;
     const int lev = 0;
     const Geometry& geom = this->Geom(lev);
@@ -73,24 +73,24 @@ buildNeighborMask ()
         {
             int grid = mfi.index();
 	    int num_codes = 0;
-       
+
             std::set<NeighborTask> neighbor_grids;
             for (auto pit=pshifts.cbegin(); pit!=pshifts.cend(); ++pit)
             {
                 const Box box = ba[mfi] + *pit;
-                
+
                 const bool first_only = false;
                 auto isecs = ba.intersections(box, first_only, m_num_neighbor_cells);
-                
+
                 for (auto& isec : isecs)
                 {
                     int nbor_grid = isec.first;
                     const Box isec_box = isec.second - *pit;
-                    if ( (grid == nbor_grid) and (*pit == IntVect(AMREX_D_DECL(0, 0, 0)))) continue; 
+                    if ( (grid == nbor_grid) and (*pit == IntVect(AMREX_D_DECL(0, 0, 0)))) continue;
                     neighbor_grids.insert(NeighborTask(nbor_grid, isec_box, *pit));
                 }
             }
-            
+
             BoxList isec_bl;
             std::vector<int> isec_grids;
             std::vector<IntVect> isec_pshifts;
@@ -101,21 +101,21 @@ buildNeighborMask ()
                 isec_pshifts.push_back(nbor_grid.periodic_shift);
             }
             BoxArray isec_ba(isec_bl);
-            
+
             Vector<Box> bl = detail::getBoundaryBoxes(
                 amrex::grow(ba[mfi], -m_num_neighbor_cells), m_num_neighbor_cells);
-            
+
             m_grid_map[grid].resize(bl.size());
 	    m_code_offsets[grid].push_back(0);
             for (int i = 0; i < static_cast<int>(bl.size()); ++i)
             {
                 const Box& box = bl[i];
-            
+
                 const int nGrow = 0;
                 const bool first_only = false;
                 auto isecs = isec_ba.intersections(box, first_only, nGrow);
-                
-                if (! isecs.empty() ) (*m_neighbor_mask_ptr)[mfi].setVal(i, box);
+
+                if (! isecs.empty() ) (*m_neighbor_mask_ptr)[mfi].setVal<RunOn::Host>(i, box);
 
                 for (auto& isec : isecs)
                 {
@@ -124,11 +124,12 @@ buildNeighborMask ()
                     code.periodic_shift = isec_pshifts[isec.first];
                     m_grid_map[grid][i].push_back(code);
 		    m_code_array[grid].push_back(code);
-                    neighbor_procs.push_back(dmap[code.grid_id]);
+                    const int global_rank = dmap[code.grid_id];
+                    neighbor_procs.push_back(ParallelContext::global_to_local_rank(global_rank));
 		    ++num_codes;
                 }
    	        m_code_offsets[grid].push_back(m_code_array[grid].size());
-            }        
+            }
 	}
         RemoveDuplicates(neighbor_procs);
     }
@@ -264,16 +265,20 @@ updateNeighborsGPU ()
     }
     else
     {
+        Gpu::Device::synchronize();
         pinned_snd_buffer.resize(snd_buffer.size());
-        cudaMemcpyAsync(pinned_snd_buffer.dataPtr(), snd_buffer.dataPtr(), snd_buffer.size(), cudaMemcpyDeviceToHost);        
+        Gpu::dtoh_memcpy_async(pinned_snd_buffer.dataPtr(), snd_buffer.dataPtr(), snd_buffer.size());
         neighbor_copy_plan.buildMPIFinish(this->BufferMap());
+        Gpu::Device::synchronize();
         communicateParticlesStart(*this, neighbor_copy_plan, pinned_snd_buffer, pinned_rcv_buffer);
         rcv_buffer.resize(pinned_rcv_buffer.size());
         unpackBuffer(*this, neighbor_copy_plan, snd_buffer, NeighborUnpackPolicy());
         communicateParticlesFinish(neighbor_copy_plan);
-        cudaMemcpyAsync(rcv_buffer.dataPtr(), pinned_rcv_buffer.dataPtr(), pinned_rcv_buffer.size(), cudaMemcpyHostToDevice);
+        Gpu::htod_memcpy_async(rcv_buffer.dataPtr(), pinned_rcv_buffer.dataPtr(), pinned_rcv_buffer.size());
         unpackRemotes(*this, neighbor_copy_plan, rcv_buffer, NeighborUnpackPolicy());
     }
+
+    Gpu::Device::synchronize();
 }
 
 template <int NStructReal, int NStructInt>
@@ -283,72 +288,15 @@ clearNeighborsGPU()
 {
     BL_PROFILE("NeighborParticleContainer<NStructReal, NStructInt>::clearNeighborsGPU");
 
-    AMREX_ALWAYS_ASSERT(this->numLevels() == 1);
-    const int lev = 0;
-
-    for(MFIter mfi = this->MakeMFIter(lev); mfi.isValid(); ++mfi)
+    this->reserveData();
+    this->resizeData();
+    for (int lev = 0; lev < this->numLevels(); ++lev)
     {
-        int src_grid = mfi.index();
-        int src_tile = mfi.LocalTileIndex();
-        AMREX_ASSERT(src_tile == 0);
-        auto index = std::make_pair(src_grid, src_tile);
-        auto& ptile = this->GetParticles(lev)[index];
-        ptile.setNumNeighbors(0);
-    }
-}
-
-template <int NStructReal, int NStructInt>
-template <class CheckPair>
-void 
-NeighborParticleContainer<NStructReal, NStructInt>::
-buildNeighborListGPU(CheckPair check_pair)
-{
-    BL_PROFILE("NeighborParticleContainer<NStructReal, NStructInt>::buildNeighborListGPU");
-
-    AMREX_ALWAYS_ASSERT(this->numLevels() == 1);
-
-    const int lev = 0;
-    const Geometry& geom = this->Geom(lev);
-    auto& plev  = this->GetParticles(lev);
-
-    for(MFIter mfi = this->MakeMFIter(lev); mfi.isValid(); ++mfi)
-    {
-        int gid = mfi.index();
-        int tid = mfi.LocalTileIndex();        
-        auto index = std::make_pair(gid, tid);
-
-        auto& ptile = plev[index];
-        auto& aos   = ptile.GetArrayOfStructs();
-
-        Box bx = mfi.tilebox();
-        bx.grow(m_num_neighbor_cells);
-
-        AMREX_ASSERT(numParticlesOutOfRange(*this, m_num_neighbor_cells) == 0);
-        
-        m_neighbor_list[index].build(aos(), bx, geom, check_pair);
-    }
-}
-
-template <int NStructReal, int NStructInt>
-void 
-NeighborParticleContainer<NStructReal, NStructInt>::
-printNeighborListGPU()
-{
-    BL_PROFILE("NeighborParticleContainer<NStructReal, NStructInt>::printNeighborListGPU");
-
-    AMREX_ALWAYS_ASSERT(this->numLevels() == 1);
-
-    const int lev = 0;
-    const Geometry& geom = this->Geom(lev);
-    auto& plev  = this->GetParticles(lev);
-
-    for(MFIter mfi = this->MakeMFIter(lev); mfi.isValid(); ++mfi)
-    {
-        int gid = mfi.index();
-        int tid = mfi.LocalTileIndex();
-        auto index = std::make_pair(gid, tid);
-
-        m_neighbor_list[index].print();
+        for(MFIter mfi = this->MakeMFIter(lev); mfi.isValid(); ++mfi)
+        {
+            auto& ptile = this->DefineAndReturnParticleTile(lev, mfi);
+            ptile.setNumNeighbors(0);
+        }
     }
 }
 

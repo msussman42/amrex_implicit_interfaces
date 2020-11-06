@@ -22,7 +22,7 @@
  *   1. Redistributions of source code must retain the above copyright notice,
  *      this list of conditions and the following disclaimer. Software changes,
  *      modifications, or derivative works, should be noted with comments and
- *      the author and organization’s name.
+ *      the author and organization's name.
  *
  *   2. Redistributions in binary form must reproduce the above copyright
  *      notice, this list of conditions and the following disclaimer in the
@@ -77,7 +77,7 @@ enum {
 #define DEBUG_CONDITION false
 
 // return comma or period depending on position in a list
-static inline char *separator(int i, int n)
+static inline char const *separator(int i, int n)
 {
   return i == (n - 1) ? "." : ", ";
 }

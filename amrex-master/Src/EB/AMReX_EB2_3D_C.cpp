@@ -5,7 +5,7 @@ namespace amrex { namespace EB2 {
 namespace {
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void set_eb_data (const int i, const int j, const int k,
-                  Array4<EBCellFlag> const& cell, Array4<Real> const& apx,
+                  Array4<Real> const& apx,
                   Array4<Real> const& apy, Array4<Real> const& apz,
                   Array4<Real const> const& fcx, Array4<Real const> const& fcy,
                   Array4<Real const> const& fcz, Array4<Real const> const& m2x,
@@ -36,7 +36,7 @@ void set_eb_data (const int i, const int j, const int k,
 
     Real dapx = axm - axp;
     Real dapy = aym - ayp;
-            Real dapz = azm - azp;
+    Real dapz = azm - azp;
     Real apnorm = std::sqrt(dapx*dapx+dapy*dapy+dapz*dapz);
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(apnorm != 0.0,
                                      "amrex::EB2:build_cells: apnorm==0");
@@ -135,8 +135,8 @@ void cut_face_2d (Real& areafrac, Real& centx, Real& centy,
     Real nx = (axm-axp) * (1./apnorm); // pointing to the wall
     Real ny = (aym-ayp) * (1./apnorm);
 
-    Real nxabs = std::abs(nx);
-    Real nyabs = std::abs(ny);
+    Real nxabs = amrex::Math::abs(nx);
+    Real nyabs = amrex::Math::abs(ny);
 
     if (nxabs < tiny or nyabs > 1.0-tiny) {
         areafrac = 0.5*(axm+axp);
@@ -235,6 +235,27 @@ void cut_face_2d (Real& areafrac, Real& centx, Real& centy,
             centy = amrex::min(amrex::max(centy,-0.5),0.5);
         }
     }
+}
+
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void set_covered (const int i, const int j, const int k,
+                  Array4<EBCellFlag> const& cell,
+                  Array4<Real> const& vfrac, Array4<Real> const& vcent,
+                  Array4<Real> const& barea, Array4<Real> const& bcent,
+                  Array4<Real> const& bnorm)
+{
+    vfrac(i,j,k) = 0.0;
+    vcent(i,j,k,0) = 0.0;
+    vcent(i,j,k,1) = 0.0;
+    vcent(i,j,k,2) = 0.0;
+    bcent(i,j,k,0) = -1.0;
+    bcent(i,j,k,1) = -1.0;
+    bcent(i,j,k,2) = -1.0;
+    bnorm(i,j,k,0) = 0.0;
+    bnorm(i,j,k,1) = 0.0;
+    bnorm(i,j,k,2) = 0.0;
+    barea(i,j,k) = 0.0;
+    cell(i,j,k).setCovered();
 }
 }
 
@@ -609,7 +630,8 @@ void build_cells (Box const& bx, Array4<EBCellFlag> const& cell,
                   Array4<Real> const& vfrac, Array4<Real> const& vcent,
                   Array4<Real> const& barea, Array4<Real> const& bcent,
                   Array4<Real> const& bnorm, Array4<EBCellFlag> const& ctmp,
-                  Real small_volfrac)
+                  Real small_volfrac, 
+                  Geometry const& geom, bool extend_domain_face)
 {
     const Box& bxg1 = amrex::grow(bx,1);
     AMREX_HOST_DEVICE_FOR_3D ( bxg1, i, j, k,
@@ -640,111 +662,171 @@ void build_cells (Box const& bx, Array4<EBCellFlag> const& cell,
             barea(i,j,k) = 0.0;            
         } else {
 
-            set_eb_data(i,j,k,cell,apx,apy,apz,
+            set_eb_data(i,j,k,apx,apy,apz,
                         fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
                         barea,bcent,bnorm);
 
             // remove small cells
             if (vfrac(i,j,k) < small_volfrac) {
-                vfrac(i,j,k) = 0.0;
-                vcent(i,j,k,0) = 0.0;
-                vcent(i,j,k,1) = 0.0;
-                vcent(i,j,k,2) = 0.0;
-                bcent(i,j,k,0) = -1.0;
-                bcent(i,j,k,1) = -1.0;
-                bcent(i,j,k,2) = -1.0;
-                bnorm(i,j,k,0) = 0.0;
-                bnorm(i,j,k,1) = 0.0;
-                bnorm(i,j,k,2) = 0.0;
-                barea(i,j,k) = 0.0;
-                cell(i,j,k).setCovered();
+                set_covered(i,j,k,cell,vfrac,vcent,barea,bcent,bnorm);
             }
         }
     });
 
-    // fix faces for small cells
-    const auto bxlo = amrex::lbound(bx);
-    const auto bxhi = amrex::ubound(bx);
-    AMREX_LAUNCH_HOST_DEVICE_LAMBDA ( bxg1, tbx,
+    // set cells in the extended region to covered if the
+    // corresponding cell on the domain face is covered
+    if(extend_domain_face) {
+
+       Box gdomain = geom.Domain();
+       for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+           if (geom.isPeriodic(idim)) {
+               gdomain.setSmall(idim, std::min(gdomain.smallEnd(idim), bxg1.smallEnd(idim)));
+               gdomain.setBig(idim, std::max(gdomain.bigEnd(idim), bxg1.bigEnd(idim)));
+           }
+       }
+
+       if (not gdomain.contains(bxg1)) {
+          AMREX_HOST_DEVICE_FOR_3D ( bxg1, i, j, k,
+          {
+              const auto & dlo = gdomain.loVect();
+              const auto & dhi = gdomain.hiVect();
+
+              // find the cell(ii,jj,kk) on the corr. domain face
+              // this would have already been set to correct value
+              bool in_extended_domain = false;
+              int ii = i;
+              int jj = j;
+              int kk = k;
+              if(i < dlo[0]) {
+                  in_extended_domain = true;
+                  ii = dlo[0];
+              }
+              else if(i > dhi[0]) {
+                  in_extended_domain = true;
+                  ii = dhi[0];
+              }
+
+              if(j < dlo[1]) {
+                  in_extended_domain = true;
+                  jj = dlo[1];
+              }
+              else if(j > dhi[1]) {
+                  in_extended_domain = true;
+                  jj = dhi[1];
+              }
+
+              if(k < dlo[2]) {
+                  in_extended_domain = true;
+                  kk = dlo[2];
+              }
+              else if(k > dhi[2]) {
+                  in_extended_domain = true;
+                  kk = dhi[2];
+              }
+
+              // set cell in extendable region to covered if necessary
+              if( in_extended_domain and (not cell(i,j,k).isCovered()) 
+                  and cell(ii,jj,kk).isCovered() ) 
+              {
+                  set_covered(i,j,k,cell,vfrac,vcent,barea,bcent,bnorm);
+              }
+          });
+       }
+    }
+
+    // fix faces for small cells whose vfrac has been set to zero
+#ifdef AMREX_USE_DPCPP
+    // xxxxx DPCPP todo: kernel parameter size
+    Vector<Array4<Real const> > htmp = {fcx,fcy,fcz,m2x,m2y,m2z};
+    std::unique_ptr<Gpu::AsyncArray<Array4<Real const> > > dtmp;
+    if (Gpu::inLaunchRegion()) dtmp.reset(new Gpu::AsyncArray<Array4<Real const> >(htmp.data(), 6));
+    Array4<Real const>* ptmp = (Gpu::inLaunchRegion()) ? dtmp->data() : htmp.data();
+#endif
+    const Box xbx = Box(bx).surroundingNodes(0).grow(1,1).grow(2,1);
+    AMREX_HOST_DEVICE_FOR_3D ( xbx, i, j, k,
     {
-        auto lo = amrex::max_lbound(tbx, Dim3{bxlo.x  ,bxlo.y-1,bxlo.z-1});
-        auto hi = amrex::min_ubound(tbx, Dim3{bxhi.x+1,bxhi.y+1,bxhi.z+1});
-        for (int k = lo.z; k <= hi.z; ++k) {
-        for (int j = lo.y; j <= hi.y; ++j) {
-        for (int i = lo.x; i <= hi.x; ++i)
-        {
-            if (vfrac(i-1,j,k) < small_volfrac or vfrac(i,j,k) < small_volfrac) {
-                fx(i,j,k) = Type::covered;
-                apx(i,j,k) = 0.0;
-                if (cell(i  ,j,k).isRegular())
-                {
-                    cell(i  ,j,k).setSingleValued();
-                    set_eb_data(i,j,k,cell,apx,apy,apz,
-                                fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
-                                barea,bcent,bnorm);
-                }
-                if (cell(i-1,j,k).isRegular())
-                {
-                    cell(i-1,j,k).setSingleValued();
-                    set_eb_data(i-1,j,k,cell,apx,apy,apz,
-                                fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
-                                barea,bcent,bnorm);
-                }
+        if (vfrac(i-1,j,k) == 0._rt or vfrac(i,j,k) == 0._rt) {
+            AMREX_DPCPP_ONLY(auto fcx = ptmp[0]);
+            AMREX_DPCPP_ONLY(auto fcy = ptmp[1]);
+            AMREX_DPCPP_ONLY(auto fcz = ptmp[2]);
+            AMREX_DPCPP_ONLY(auto m2x = ptmp[3]);
+            AMREX_DPCPP_ONLY(auto m2y = ptmp[4]);
+            AMREX_DPCPP_ONLY(auto m2z = ptmp[5]);
+            fx(i,j,k) = Type::covered;
+            apx(i,j,k) = 0.0;
+            if (not cell(i  ,j,k).isCovered())
+            {
+                cell(i  ,j,k).setSingleValued();
+                set_eb_data(i,j,k,apx,apy,apz,
+                            fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
+                            barea,bcent,bnorm);
             }
-        }}}
-
-        lo = amrex::max_lbound(tbx, Dim3{bxlo.x-1,bxlo.y  ,bxlo.z-1});
-        hi = amrex::min_ubound(tbx, Dim3{bxhi.x+1,bxhi.y+1,bxhi.z+1});
-        for (int k = lo.z; k <= hi.z; ++k) {
-        for (int j = lo.y; j <= hi.y; ++j) {
-        for (int i = lo.x; i <= hi.x; ++i)
-        {
-            if (vfrac(i,j-1,k) < small_volfrac or vfrac(i,j,k) < small_volfrac) {
-                fy(i,j,k) = Type::covered;
-                apy(i,j,k) = 0.0;
-                if (cell(i,j  ,k).isRegular())
-                {
-                    cell(i,j  ,k).setSingleValued();
-                    set_eb_data(i,j,k,cell,apx,apy,apz,
-                                fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
-                                barea,bcent,bnorm);
-                }
-                if (cell(i,j-1,k).isRegular())
-                {
-                    cell(i,j-1,k).setSingleValued();
-                    set_eb_data(i,j-1,k,cell,apx,apy,apz,
-                                fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
-                                barea,bcent,bnorm);
-                }
+            if (not cell(i-1,j,k).isCovered())
+            {
+                cell(i-1,j,k).setSingleValued();
+                set_eb_data(i-1,j,k,apx,apy,apz,
+                            fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
+                            barea,bcent,bnorm);
             }
-        }}}
-
-        lo = amrex::max_lbound(tbx, Dim3{bxlo.x-1,bxlo.y-1,bxlo.z  });
-        hi = amrex::min_ubound(tbx, Dim3{bxhi.x+1,bxhi.y+1,bxhi.z+1});
-        for (int k = lo.z; k <= hi.z; ++k) {
-        for (int j = lo.y; j <= hi.y; ++j) {
-        for (int i = lo.x; i <= hi.x; ++i)
-        {
-            if (vfrac(i,j,k-1) < small_volfrac or vfrac(i,j,k) < small_volfrac) {
-                fz(i,j,k) = Type::covered;
-                apz(i,j,k) = 0.0;
-
-                if (cell(i,j,k  ).isRegular())
-                {
-                    cell(i,j,k  ).setSingleValued();
-                    set_eb_data(i,j,k,cell,apx,apy,apz,
-                                fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
-                                barea,bcent,bnorm);
-                }
-                if (cell(i,j,k-1).isRegular())
-                {
-                    cell(i,j,k-1).setSingleValued();
-                    set_eb_data(i,j,k-1,cell,apx,apy,apz,
-                                fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
-                                barea,bcent,bnorm);
-                }
+        }
+    });
+    //
+    const Box ybx = Box(bx).surroundingNodes(1).grow(0,1).grow(2,1);
+    AMREX_HOST_DEVICE_FOR_3D ( ybx, i, j, k,
+    {
+        if (vfrac(i,j-1,k) == 0._rt or vfrac(i,j,k) == 0._rt) {
+            AMREX_DPCPP_ONLY(auto fcx = ptmp[0]);
+            AMREX_DPCPP_ONLY(auto fcy = ptmp[1]);
+            AMREX_DPCPP_ONLY(auto fcz = ptmp[2]);
+            AMREX_DPCPP_ONLY(auto m2x = ptmp[3]);
+            AMREX_DPCPP_ONLY(auto m2y = ptmp[4]);
+            AMREX_DPCPP_ONLY(auto m2z = ptmp[5]);
+            fy(i,j,k) = Type::covered;
+            apy(i,j,k) = 0.0;
+            if (not cell(i,j  ,k).isCovered())
+            {
+                cell(i,j  ,k).setSingleValued();
+                set_eb_data(i,j,k,apx,apy,apz,
+                            fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
+                            barea,bcent,bnorm);
             }
-        }}}
+            if (not cell(i,j-1,k).isCovered())
+            {
+                cell(i,j-1,k).setSingleValued();
+                set_eb_data(i,j-1,k,apx,apy,apz,
+                            fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
+                            barea,bcent,bnorm);
+            }
+        }
+    });
+    //
+    const Box zbx = Box(bx).surroundingNodes(2).grow(0,1).grow(1,1);
+    AMREX_HOST_DEVICE_FOR_3D ( zbx, i, j, k,
+    {
+        if (vfrac(i,j,k-1) == 0._rt or vfrac(i,j,k) == 0._rt) {
+            AMREX_DPCPP_ONLY(auto fcx = ptmp[0]);
+            AMREX_DPCPP_ONLY(auto fcy = ptmp[1]);
+            AMREX_DPCPP_ONLY(auto fcz = ptmp[2]);
+            AMREX_DPCPP_ONLY(auto m2x = ptmp[3]);
+            AMREX_DPCPP_ONLY(auto m2y = ptmp[4]);
+            AMREX_DPCPP_ONLY(auto m2z = ptmp[5]);
+            fz(i,j,k) = Type::covered;
+            apz(i,j,k) = 0.0;
+            if (not cell(i,j,k  ).isCovered())
+            {
+                cell(i,j,k  ).setSingleValued();
+                set_eb_data(i,j,k,apx,apy,apz,
+                            fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
+                            barea,bcent,bnorm);
+            }
+            if (not cell(i,j,k-1).isCovered())
+            {
+                cell(i,j,k-1).setSingleValued();
+                set_eb_data(i,j,k-1,apx,apy,apz,
+                            fcx,fcy,fcz,m2x,m2y,m2z,vfrac,vcent,
+                            barea,bcent,bnorm);
+            }
+        }
     });
 
     // Build neighbors.  By default all 26 neighbors are already set.

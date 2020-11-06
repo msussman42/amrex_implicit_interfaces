@@ -14,47 +14,88 @@ class MacProjector
 {
 public:
 
+    //
+    // Constructors
+    //
+    MacProjector (const Vector<Array<MultiFab*,AMREX_SPACEDIM> >& a_umac,
+                  MLMG::Location a_umac_loc,
+                  const Vector<Array<MultiFab const*,AMREX_SPACEDIM> >& a_beta,
+                  MLMG::Location a_beta_loc,
+                  MLMG::Location  a_phi_loc,
+                  const Vector<Geometry>& a_geom,
+                  const LPInfo& a_lpinfo,
+                  const Vector<MultiFab const*>& a_divu,
+                  MLMG::Location a_divu_loc,
+                  const Vector<iMultiFab const*>& a_overset_mask = {});
+
+    MacProjector (const Vector<Array<MultiFab*,AMREX_SPACEDIM> >& a_umac,
+                  MLMG::Location a_umac_loc,
+                  const Vector<Array<MultiFab const*,AMREX_SPACEDIM> >& a_beta,
+                  MLMG::Location a_beta_loc,
+                  MLMG::Location  a_phi_loc,
+                  const Vector<Geometry>& a_geom,
+                  const LPInfo& a_lpinfo,
+                  const Vector<MultiFab const*>& a_divu = {})
+     : MacProjector(a_umac, a_umac_loc, a_beta, a_beta_loc, a_phi_loc,
+                    a_geom, a_lpinfo, a_divu, MLMG::Location::CellCenter) {}
+
+#ifndef AMREX_USE_EB
     MacProjector (const Vector<Array<MultiFab*,AMREX_SPACEDIM> >& a_umac,
                   const Vector<Array<MultiFab const*,AMREX_SPACEDIM> >& a_beta,
                   const Vector<Geometry>& a_geom,
                   const LPInfo& a_lpinfo,
-                  const Vector<MultiFab const*>& a_divu = {});
+                  const Vector<MultiFab const*>& a_divu = {}) 
+     : MacProjector(a_umac, MLMG::Location::FaceCenter,
+                    a_beta, MLMG::Location::FaceCenter, MLMG::Location::CellCenter,
+                    a_geom, a_lpinfo, a_divu, MLMG::Location::CellCenter) {}
 
     MacProjector (const Vector<Array<MultiFab*,AMREX_SPACEDIM> >& a_umac,
                   const Vector<Array<MultiFab const*,AMREX_SPACEDIM> >& a_beta,
                   const Vector<Geometry>& a_geom,
                   const Vector<MultiFab const*>& a_divu = {})
-     : MacProjector(a_umac, a_beta, a_geom, LPInfo(), a_divu) {};
+     : MacProjector(a_umac, MLMG::Location::FaceCenter,
+                    a_beta, MLMG::Location::FaceCenter, MLMG::Location::CellCenter,
+                    a_geom, LPInfo(), a_divu, MLMG::Location::CellCenter) {}
+#endif
 
+    //
+    // Methods to set BCs and coarse/fine values
+    //
+    // These methods are wrappers of the linop methods of the same name
+    // However, use of these is preferred to make sure operations
+    // are performed in the correct order
+    //
     void setDomainBC (const Array<LinOpBCType,AMREX_SPACEDIM>& lobc,
                       const Array<LinOpBCType,AMREX_SPACEDIM>& hibc);
 
     void setLevelBC  (int amrlev, const MultiFab* levelbcdata);
 
-#ifndef AMREX_USE_EB
-    void project (const Vector<MultiFab*>& phi_in, Real reltol, Real atol)
-     { project(phi_in, reltol, atol, MLMG::Location::FaceCenter); }
-    void project (Real reltol, Real atol)
-     { project(reltol, atol, MLMG::Location::FaceCenter); }
-#endif
+    void setCoarseFineBC (const MultiFab* crse, int crse_ratio)
+        { m_linop->setCoarseFineBC(crse, crse_ratio);}
 
-    void project (const Vector<MultiFab*>& phi_in, Real reltol, Real atol, MLMG::Location);
-    void project (Real reltol, Real atol, MLMG::Location);
+    //
+    // Methods to perform projection
+    //
+    void project (const Vector<MultiFab*>& phi_in, Real reltol, Real atol);
+    void project (Real reltol, Real atol);
 
-    void setVerbose            (int  v) noexcept { m_verbose = v; }
-    void setCGVerbose          (int  v) noexcept { m_cg_verbose = v; }
-    void setBottomVerbose      (int  v) noexcept { m_cg_verbose = v; }
-    void setBottomTolerance    (Real t) noexcept { m_bottom_reltol = t; }
-    void setBottomToleranceAbs (Real t) noexcept { m_bottom_abstol = t; }
-    void setMaxIter (int v) noexcept { m_maxiter = v; }
-    void setCGMaxIter (int v) noexcept { m_cg_maxiter = v; }
+    //
+    // Setters and getters
+    //
+    void setVerbose            (int  v) noexcept 
+       { m_verbose = v;
+         m_mlmg->setVerbose(m_verbose); }
 
-    void setBottomSolver (MLMG::BottomSolver bottom_solver_type_in) noexcept
-     { bottom_solver_type = bottom_solver_type_in;}
-
+    // Methods to get underlying objects
+    // Use these to modify properties of MLMG and linear operator
     MLLinOp& getLinOp () noexcept { return *m_linop; }
+    MLMG&    getMLMG  () noexcept { return *m_mlmg;  }
 
 private:
+
+    void setOptions ();
+
+    void averageDownVelocity ();
 
     std::unique_ptr<MLABecLaplacian> m_abeclap;
 #ifdef AMREX_USE_EB
@@ -68,22 +109,21 @@ private:
     Vector<Array<MultiFab*,AMREX_SPACEDIM> > m_umac;
     Vector<MultiFab> m_rhs;
     Vector<MultiFab> m_phi;
+    Vector<MultiFab> m_divu;
     Vector<Array<MultiFab,AMREX_SPACEDIM> > m_fluxes;
 
     Vector<Geometry> m_geom;
 
     int m_verbose = 0;
-    int m_cg_verbose = 0;
-    int m_maxiter = 200;
-    int m_cg_maxiter = 200;
-    int m_max_coarsening_level = 100;
-
-    Real m_bottom_reltol = 1.e-4;
-    Real m_bottom_abstol = -1.0;
 
     bool m_needs_domain_bcs = true;
 
-    MLMG::BottomSolver bottom_solver_type = MLMG::BottomSolver::bicgstab;
+    // Location of umac -- face center vs face centroid
+    MLMG::Location m_umac_loc;
+
+    // Location of divu (RHS -- optional) -- cell center vs cell centroid
+    MLMG::Location m_divu_loc;
+
 };
 
 }

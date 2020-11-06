@@ -27,7 +27,6 @@ public:
           m_sin_angle(std::sin(angle)),
           m_dir(dir)
         {}
-    ~RotationIF () {}
 
     RotationIF (const RotationIF& rhs) = default;
     RotationIF (RotationIF&& rhs) = default;
@@ -43,7 +42,7 @@ public:
         return m_f({x, y});
     }
 
-    template <class U=F, class = typename std::enable_if<IsGPUable<U>::value>::type>
+    template <class U=F, typename std::enable_if<IsGPUable<U>::value,int>::type = 0>
     AMREX_GPU_HOST_DEVICE inline
     Real operator() (Real x, Real y) const noexcept
     {
@@ -77,7 +76,7 @@ public:
         }
     }
 
-    template <class U=F, class = typename std::enable_if<IsGPUable<U>::value>::type>
+    template <class U=F, typename std::enable_if<IsGPUable<U>::value,int>::type = 0>
     AMREX_GPU_HOST_DEVICE inline
     Real operator() (Real x, Real y, Real z) const noexcept
     {

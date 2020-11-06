@@ -12,9 +12,9 @@ inline
 void
 filcc_cell (const IntVect& iv, Array4<Real> const& q,
             const int dcomp, const int numcomp,
-            GeometryData const& geom, const Real time,
+            GeometryData const& geom, const Real /*time*/,
             const BCRec* bcr, const int bcomp,
-            const int orig_comp) noexcept
+            const int /*orig_comp*/) noexcept
 {
     const int i = iv[0];
     const int j = iv[1];
@@ -60,6 +60,11 @@ filcc_cell (const IntVect& iv, Array4<Real> const& q,
                 }
                 break;
             }
+            case (BCType::hoextrapcc):
+            {
+                q(i,j,0,n) = 2.*q(i+1,j,0,n) - q(i+2,j,0,n);
+                break;
+            }
             case (BCType::reflect_even):
             {
                 q(i,j,0,n) = q(2*ilo-i-1,j,0,n);
@@ -95,6 +100,11 @@ filcc_cell (const IntVect& iv, Array4<Real> const& q,
                 {
                     q(i,j,0,n) = 0.5*(3.*q(i-1,j,0,n) - q(i-2,j,0,n));
                 }
+                break;
+            }
+            case (BCType::hoextrapcc):
+            {
+                q(i,j,0,n) = 2.*q(i-1,j,0,n) - q(i-2,j,0,n);
                 break;
             }
             case (BCType::reflect_even):
@@ -135,6 +145,11 @@ filcc_cell (const IntVect& iv, Array4<Real> const& q,
                 }
                 break;
             }
+            case (BCType::hoextrapcc):
+            {
+                q(i,j,0,n) = 2.*q(i,j+1,0,n) - q(i,j+2,0,n);
+                break;
+            }
             case (BCType::reflect_even):
             {
                 q(i,j,0,n) = q(i,2*jlo-j-1,0,n);
@@ -170,6 +185,11 @@ filcc_cell (const IntVect& iv, Array4<Real> const& q,
                 {
                     q(i,j,0,n) = 0.5*(3.*q(i,j-1,0,n) - q(i,j-2,0,n));
                 }
+                break;
+            }
+            case (BCType::hoextrapcc):
+            {
+                q(i,j,0,n) = 2.*q(i,j-1,0,n) - q(i,j-2,0,n);
                 break;
             }
             case (BCType::reflect_even):

@@ -5,10 +5,8 @@
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_Particles.H>
 #include <AMReX_ParticleUtil.H>
-
-#ifdef AMREX_USE_CUDA
 #include <AMReX_NeighborList.H>
-#endif
+#include <AMReX_OpenMP.H>
 
 namespace amrex {
 
@@ -17,7 +15,6 @@ namespace amrex {
       int grid_id;
       IntVect periodic_shift;
   };
-
 
 ///
 /// This is a container for particles that undergo short-range interations.
@@ -145,13 +142,13 @@ private:
             amrex::Error("operator<<(ostream&, const InverseCopyTag&) failed");
         return os;
     }
-    
+
     struct NeighborCommTag {
 
         NeighborCommTag (int pid, int lid, int gid, int tid)
             : proc_id(pid), level_id(lid), grid_id(gid), tile_id(tid)
             {}
-        
+
         int proc_id;
         int level_id;
         int grid_id;
@@ -244,7 +241,7 @@ public:
     /// Build a Neighbor List for each tile
     ///
     template <class CheckPair>
-    void buildNeighborList (CheckPair check_pair, bool sort=false);
+    void buildNeighborList (CheckPair&& check_pair, bool sort=false);
 
     void printNeighborList ();
 
@@ -261,14 +258,11 @@ public:
         return neighbors[lev][std::make_pair(grid,tile)];
     }
 
-    IntVector& GetNeighborList (int lev, int grid, int tile)
+    void Redistribute (int lev_min=0, int lev_max=-1, int nGrow=0, int local=0)
     {
-        return neighbor_list[lev][std::make_pair(grid,tile)];
-    }
-
-    const IntVector& GetNeighborList (int lev, int grid, int tile) const
-    {
-        return neighbor_list[lev][std::make_pair(grid,tile)];
+        clearNeighbors();
+        ParticleContainer<NStructReal, NStructInt, 0, 0>::Redistribute(lev_min, lev_max,
+                                                                       nGrow, local);
     }
 
     void RedistributeLocal ()
@@ -281,35 +275,16 @@ public:
         this->Redistribute(lev_min, lev_max, nGrow, local);    
     }
 
-#ifdef AMREX_USE_CUDA
-
-    template <class CheckPair>
-    void buildNeighborListGPU (CheckPair check_pair);
-    
-    void printNeighborListGPU ();
-    
+#ifdef AMREX_USE_GPU
     void fillNeighborsGPU ();
-    
-    void updateNeighborsGPU ();
-    
-    void clearNeighborsGPU ();
-    
+    void updateNeighborsGPU ();    
+    void clearNeighborsGPU ();    
 #else 
-
-    template <class CheckPair>
-    void buildNeighborListCPU (CheckPair check_pair, bool sort);
-    
-    void printNeighborListCPU (const std::string& prefix);
-    
     void fillNeighborsCPU ();
-
     void sumNeighborsCPU (int real_start_comp, int real_num_comp,
-                          int int_start_comp, int int_num_comp);
-    
-    void updateNeighborsCPU (bool reuse_rcv_counts=true);
-    
-    void clearNeighborsCPU ();    
-
+                          int int_start_comp, int int_num_comp);    
+    void updateNeighborsCPU (bool reuse_rcv_counts=true);    
+    void clearNeighborsCPU ();
 #endif
 
     void setEnableInverse (bool flag)
@@ -351,7 +326,7 @@ protected:
     void sumNeighborsMPI (std::map<int, Vector<char> >& not_ours,
                           int real_start_comp, int real_num_comp,
                           int int_start_comp, int int_num_comp);
-    
+
     ///
     /// Perform handshake to figure out how many bytes each proc should receive
     ///
@@ -369,25 +344,25 @@ protected:
 
     IntVect computeRefFac (const int src_lev, const int lev);
 
-    amrex::Vector<std::map<PairIndex, amrex::Vector<InverseCopyTag> > > inverse_tags;
-    amrex::Vector<std::map<PairIndex, ParticleVector> > neighbors;
-    amrex::Vector<std::map<PairIndex, IntVector> >      neighbor_list;
+    Vector<std::map<PairIndex, Vector<InverseCopyTag> > > inverse_tags;
+    Vector<std::map<PairIndex, ParticleVector> > neighbors;
+    Vector<std::map<PairIndex, IntVector> >      neighbor_list;
     const size_t pdata_size = sizeof(ParticleType);
 
     static constexpr int num_mask_comps = 3;  //!< grid, tile, level
     size_t cdata_size;
     int m_num_neighbor_cells;
-    amrex::Vector<NeighborCommTag> local_neighbors;
-    amrex::Vector<std::unique_ptr<iMultiFab> > mask_ptr;
+    Vector<NeighborCommTag> local_neighbors;
+    Vector<std::unique_ptr<iMultiFab> > mask_ptr;
 
-    amrex::Vector<std::map<PairIndex, Vector<Vector<NeighborCopyTag> > > > buffer_tag_cache;
-    amrex::Vector<std::map<PairIndex, int> > local_neighbor_sizes;
+    Vector<std::map<PairIndex, Vector<Vector<NeighborCopyTag> > > > buffer_tag_cache;
+    Vector<std::map<PairIndex, int> > local_neighbor_sizes;
 
     //! each proc knows how many sends it will do, and how many bytes it will rcv
     //! from each other proc.
-    amrex::Vector<int> neighbor_procs;
-    amrex::Vector<long> rcvs;
-    long num_snds;
+    Vector<int> neighbor_procs;
+    Vector<Long> rcvs;
+    Long num_snds;
     std::map<int, Vector<char> > send_data;
 
     std::array<bool, AMREX_SPACEDIM + NStructReal> rc;
@@ -397,8 +372,8 @@ protected:
 
     static bool enable_inverse;
 
-#ifdef AMREX_USE_CUDA
-    
+#ifdef AMREX_USE_GPU
+
     struct NeighborTask {
         int grid_id;
         Box box;
@@ -421,14 +396,14 @@ protected:
             return false;
         }
     };
-        
+
     // These are used to keep track of which particles need to be ghosted to which grids
     bool m_neighbor_mask_initialized = false;
     std::unique_ptr<amrex::iMultiFab> m_neighbor_mask_ptr;
     std::map<int, std::vector<std::vector<NeighborCode> > > m_grid_map;
 
-    std::map<int, amrex::Gpu::ManagedVector<NeighborCode> > m_code_array;
-    std::map<int, amrex::Gpu::ManagedVector<int> > m_code_offsets;
+    std::map<int, amrex::Gpu::DeviceVector<NeighborCode> > m_code_array;
+    std::map<int, amrex::Gpu::DeviceVector<int> > m_code_offsets;
 
     ParticleCopyOp neighbor_copy_op;
     ParticleCopyPlan neighbor_copy_plan;
@@ -438,23 +413,23 @@ protected:
 
     Gpu::PinnedVector<char> pinned_snd_buffer;
     Gpu::PinnedVector<char> pinned_rcv_buffer;
-
-    std::map<std::pair<int, int>, amrex::NeighborList<ParticleType> > m_neighbor_list;
 #endif
 
-    bool hasNeighbors() const { return m_has_neighbors; };
-  
+    Vector<std::map<std::pair<int, int>, amrex::NeighborList<ParticleType> > > m_neighbor_list;
+
+    bool hasNeighbors() const { return m_has_neighbors; }
+
     bool m_has_neighbors = false;
 };
-    
+
 #include "AMReX_NeighborParticlesI.H"
-    
-#ifdef AMREX_USE_CUDA
+
+#ifdef AMREX_USE_GPU
 #include "AMReX_NeighborParticlesGPUImpl.H"
 #else
 #include "AMReX_NeighborParticlesCPUImpl.H"
 #endif
-    
+
 }
 
 #endif // _NEIGHBORPARTICLES_H_

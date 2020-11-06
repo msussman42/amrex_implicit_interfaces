@@ -1,7 +1,7 @@
 target_include_directories(amrex PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>)
 
 target_sources(amrex
-   PRIVATE 
+   PRIVATE
    AMReX_LevelBld.H
    AMReX_Amr.H
    AMReX_AmrLevel.H
@@ -14,8 +14,10 @@ target_sources(amrex
    AMReX_PROB_AMR_F.H
    AMReX_StateDescriptor.H
    AMReX_AuxBoundaryData.H
-   AMReX_Extrapolater.H
    AMReX_StateDescriptor.cpp
    AMReX_AuxBoundaryData.cpp
+   AMReX_Extrapolater.H
    AMReX_Extrapolater.cpp
-   AMReX_extrapolater_${DIM}d.f90 )
+   AMReX_extrapolater_K.H
+   AMReX_extrapolater_${AMReX_SPACEDIM}D_K.H
+   )
