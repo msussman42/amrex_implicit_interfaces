@@ -125,7 +125,7 @@ main (int   argc,
         std::cout << "TIME= " << amrptr->cumTime() << " PROC= " <<
           amrex::ParallelDescriptor::MyProc() << " sleepsec= " << sleepsec << '\n';
         std::fflush(NULL);
-	amrex::USleep(sleepsec);
+	amrex::Sleep(sleepsec);
         amrex::ParallelDescriptor::Barrier();
     }
     amrex::ParallelDescriptor::Barrier();
