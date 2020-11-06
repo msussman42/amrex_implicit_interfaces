@@ -525,13 +525,13 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    enddo
    if (1.eq.0) then
     physbc(2,1)=EXT_DIR
-    physbc_value(2,1)=1.5d0
+    physbc_value(2,1)=0.5d0
     physbc(2,2)=EXT_DIR
-    physbc_value(2,2)=1.5d0
+    physbc_value(2,2)=0.5d0
     physbc(1,1)=EXT_DIR
-    physbc_value(2,1)=1.5d0
+    physbc_value(2,1)=0.5d0
     physbc(1,2)=EXT_DIR
-    physbc_value(2,2)=1.5d0
+    physbc_value(2,2)=0.5d0
    endif
    if ((stefan_flag.eq.1).and. &
        (local_operator_internal.eq.3).and. &
@@ -1020,7 +1020,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    if ((abs(latent_heat_in).gt.0.0d0).and. &
        (fort_tempconst(1).gt.0.0d0).and. &
        (fort_tempconst(2).gt.0.0d0)) then
-    max_front_vel=4.0d0 * 1.0d0/dx_in(1)
+    max_front_vel=4.0d0 * 0.5d0/dx_in(1)
     if (max_front_vel.gt.0.0d0) then
      ! do nothing
     else
