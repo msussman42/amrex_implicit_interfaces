@@ -2486,7 +2486,7 @@ Amr::grid_places (int              lbase,
    amrex::Error("blocking_factor>=4 required => bf_lev>=2");
 
   amr_level[levc]->manual_tags_placement(tags, bf_lev);
-  tags.mapPeriodic(Geometry(pc_domain[levc]));
+  tags.mapPeriodicRemoveDuplicates(Geometry(pc_domain[levc]));
   tags.setVal(p_n_comp[levc],TagBox::CLEAR);
 
   Vector<IntVect> tagvec;
