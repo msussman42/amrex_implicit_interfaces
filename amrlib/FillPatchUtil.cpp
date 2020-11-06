@@ -141,7 +141,7 @@ void FillPatchSingleLevel (
 
 
 void FillPatchTwoLevels (
- MultiFab& mf,   // target
+ MultiFab& mf_target,   // target
  Real time,
  MultiFab& cmf,  // coarse
  MultiFab& fmf,  // fine
@@ -183,8 +183,8 @@ void FillPatchTwoLevels (
 
  IntVect ratio_vec(D_DECL(2,2,2));
 
- int ngrow = mf.nGrow();
- const IntVect& ngrow_vec=mf.nGrowVect();	   
+ int ngrow = mf_target.nGrow();
+ const IntVect& ngrow_vec=mf_target.nGrowVect();	   
  
  int do_the_interp=0;
 
@@ -196,11 +196,11 @@ void FillPatchTwoLevels (
   amrex::Error("ngrow invalid");
  }
  if (do_the_interp==0) {
-  if (mf.boxArray()!=fmf.boxArray()) {
+  if (mf_target.boxArray()!=fmf.boxArray()) {
    do_the_interp=1;
   }
   if (do_the_interp==0) {
-   if (mf.DistributionMap()!=fmf.DistributionMap()) {
+   if (mf_target.DistributionMap()!=fmf.DistributionMap()) {
     do_the_interp=1;
    }
   } else if (do_the_interp==1) {
@@ -222,8 +222,8 @@ void FillPatchTwoLevels (
     std::cout << "scomp=" << scomp << " dcomp= " << dcomp << 
      " ncomp=" << ncomp << " levelc= " << levelc <<
      " levelf= " << levelf << " do_the_interp= " << do_the_interp << '\n';
-    std::cout << "mf.boxArray() " << mf.boxArray() << '\n';
-    std::cout << "mf.DistributionMap() " << mf.DistributionMap() << '\n';
+    std::cout << "mf_target.boxArray() " << mf_target.boxArray() << '\n';
+    std::cout << "mf_target.DistributionMap() " << mf_target.DistributionMap() << '\n';
     std::cout << "fmf.boxArray() " << fmf.boxArray() << '\n';
     std::cout << "fmf.DistributionMap() " << fmf.DistributionMap() << '\n';
     std::cout << "cmf.boxArray() " << cmf.boxArray() << '\n';
@@ -243,7 +243,7 @@ void FillPatchTwoLevels (
     mapper->BoxCoarsener(bfactc,bfactf);
         
   Box fdomain = fgeom.Domain();
-  fdomain.convert(mf.boxArray().ixType());
+  fdomain.convert(mf_target.boxArray().ixType());
 
   Box fdomain_g(fdomain);
   for (int i = 0; i < AMREX_SPACEDIM; ++i) {
@@ -252,10 +252,14 @@ void FillPatchTwoLevels (
    }
   } // i
 
-    // find coarsen( mf intersect complement(fmf) within fdomain_g ).
+    // find coarsen( mf_target intersect complement(fmf) within fdomain_g ).
   const FabArrayBase::FPinfo& fpc = 
-   FabArrayBase::TheFPinfo(fmf, mf, fdomain_g, ngrow_vec, coarsener,
-    amrex::coarsen(fgeom.Domain(),ratio_vec),index_space);
+   FabArrayBase::TheFPinfo(fmf, mf_target, 
+      ngrow_vec, 
+      coarsener,
+      fgeom,
+      cgeom,
+      index_space);
 
   bool empty_flag=fpc.ba_crse_patch.empty();
 
@@ -264,9 +268,10 @@ void FillPatchTwoLevels (
           // fill the fine level target.
   } else if (empty_flag==false) {
 
-   MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_crse_patch,ncomp,0,
-     MFInfo().SetTag("mf_crse_patch"),FArrayBoxFactory());
-
+   MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_patch,ncomp,0,
+		  MFInfo().SetTag("mf_crse_patch"),
+		  *fpc.fact_crse_patch);
+   
     // This data will be interpolated next.       
    FillPatchSingleLevel(
     levelc,
@@ -282,6 +287,10 @@ void FillPatchTwoLevels (
     bfactc,
     debug_fillpatch);
 
+   MultiFab mf_fine_patch(fpc.ba_fine_patch,fpc.dm_patch,ncomp,0,
+		  MFInfo().SetTag("mf_fine_patch"),
+		  *fpc.fact_fine_patch);
+
    Vector< BCRec > local_bcs;
    local_bcs.resize(ncomp);
    for (int i=0;i<ncomp;i++)
@@ -293,13 +302,13 @@ void FillPatchTwoLevels (
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(mf_crse_patch.boxArray().d_numPts());
+   thread_class::init_d_numPts(mf_fine_patch.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel if (cellcen)
 #endif
 {
-   for (MFIter mfi(mf_crse_patch,false); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(mf_fine_patch,false); mfi.isValid(); ++mfi) {
     const Box& tilegrid=mfi.tilebox();
 
     int tid_current=0;
@@ -313,10 +322,10 @@ void FillPatchTwoLevels (
 
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    int li = mfi.LocalIndex();
-    int gi = fpc.dst_idxs[li];		
-    const Box& dbx = fpc.dst_boxes[li];
-  	    
+    FArrayBox& sfab=mf_crse_patch[mfi];
+    FArrayBox& dfab=mf_fine_patch[mfi];
+    const Box& dbx = dfab.box();
+
     Vector<BCRec> bcr(ncomp);
     int src_comp_bcs=0;
     int dest_comp_bcr=0;
@@ -324,10 +333,10 @@ void FillPatchTwoLevels (
      local_bcs,bcr);
   	    
     mapper->interp(time,
-               mf_crse_patch[mfi], // source
+               sfab, // source
                0,
-  	       mf[gi], //dest; does not overwrite existing fine.
-  	       dcomp,
+  	       dfab, //dest; the dest BoxArray is disjoint from the existing fine.
+  	       0,    //was dcomp
   	       ncomp,
   	       dbx,
   	       cgeom,
@@ -339,6 +348,12 @@ void FillPatchTwoLevels (
    thread_class::sync_tile_d_numPts();
    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
    thread_class::reconcile_d_numPts(22);
+
+   ParallelDescriptor::Barrier();
+    // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
+   mf_target.ParallelCopy(mf_fine_patch, 0, dcomp, ncomp, IntVect{0}, ngrow_vec,
+		   fgeom.periodicity());
+   ParallelDescriptor::Barrier();
 
   } else {
    amrex::Error("empty_flag invalid");
@@ -370,7 +385,7 @@ void FillPatchTwoLevels (
 
  FillPatchSingleLevel(
    levelf,
-   mf,  //mf already init with coarse data in regions not covered by fmf
+   mf_target,  //mf_target already init with coarse data in regions not covered by fmf
    time, 
    fmf, 
    scomp, 
