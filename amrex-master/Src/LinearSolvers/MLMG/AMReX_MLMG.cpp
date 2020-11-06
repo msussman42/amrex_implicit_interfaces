@@ -62,16 +62,23 @@ MLMG::solve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab const*>& a_rh
         bottom_solver = linop.getDefaultBottomSolver();
     }
 
-    if (bottom_solver == BottomSolver::hypre) {
+    if (bottom_solver == BottomSolver::hypre || bottom_solver == BottomSolver::petsc) {
         int mo = linop.getMaxOrder();
-        linop.setMaxOrder(std::min(3,mo));  // maxorder = 4 not supported
+        if (a_sol[0]->hasEBFabFactory()) {
+            linop.setMaxOrder(2);
+        } else {
+            linop.setMaxOrder(std::min(3,mo));  // maxorder = 4 not supported
+        }
     }
     
     bool is_nsolve = linop.m_parent;
 
     Real solve_start_time = amrex::second();
 
-    Real composite_norminf;
+    Real& composite_norminf = m_final_resnorm0;
+
+    m_niters_cg.clear();
+    m_iter_fine_resnorm0.clear();
 
     prepareForSolve(a_sol, a_rhs);
 
@@ -92,6 +99,9 @@ MLMG::solve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab const*>& a_rh
         }
     }
 
+    m_init_resnorm0 = resnorm0;
+    m_rhsnorm0 = rhsnorm0;
+
     Real max_norm;
     std::string norm_name;
     if (always_use_bnorm or rhsnorm0 >= resnorm0) {
@@ -101,7 +111,7 @@ MLMG::solve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab const*>& a_rh
         norm_name = "resid0";
         max_norm = resnorm0;
     }
-    const Real res_target = std::max(a_tol_abs, std::max(a_tol_rel,1.e-16)*max_norm);
+    const Real res_target = std::max(a_tol_abs, std::max(a_tol_rel,Real(1.e-16))*max_norm);
 
     if (!is_nsolve && resnorm0 <= res_target) {
         composite_norminf = resnorm0;
@@ -125,6 +135,7 @@ MLMG::solve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab const*>& a_rh
             if (is_nsolve) continue;
 
             Real fine_norminf = ResNormInf(finest_amr_lev);
+            m_iter_fine_resnorm0.push_back(fine_norminf);
             composite_norminf = fine_norminf;
             if (verbose >= 2) {
                 amrex::Print() << "MLMG: Iteration " << std::setw(3) << iter+1 << " Fine resid/"
@@ -157,8 +168,20 @@ MLMG::solve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab const*>& a_rh
                                    << composite_norminf/max_norm << "\n";
                 }
                 break;
+            } else {
+              if (composite_norminf > 1.e20*max_norm) 
+              {
+                  if (verbose > 0) {
+                      amrex::Print() << "MLMG: Failing to converge after " << iter+1 << " iterations."
+                                     << " resid, resid/" << norm_name << " = "
+                                     << composite_norminf << ", "
+                                     << composite_norminf/max_norm << "\n";
+                      amrex::Abort("MLMG failing so lets stop here");
+                  }
+              }
             }
         }
+
         if (!converged && do_fixed_number_of_iters == 0) {
             if (verbose > 0) {
                 amrex::Print() << "MLMG: Failed to converge after " << max_iters << " iterations."
@@ -224,7 +247,7 @@ void MLMG::oneIter (int iter)
     // coarsest amr level
     {
         // enforce solvability if appropriate
-        if (linop.isSingular(0))
+        if (linop.isSingular(0) && linop.getEnforceSingularSolvable())
         {
             makeSolvable(0,0,res[0][0]);
         }
@@ -371,7 +394,7 @@ MLMG::miniCycle (int amrlev)
 
 namespace {
 
-void make_str_helper (std::ostringstream & oss) { }
+void make_str_helper (std::ostringstream & /*oss*/) { }
 
 template <class T, class... Ts>
 void make_str_helper (std::ostringstream & oss, T x, Ts... xs) {
@@ -446,6 +469,7 @@ MLMG::mgVcycle (int amrlev, int mglev_top)
         {
             computeResOfCorrection(amrlev, mglev_bottom);
             Real norm = rescor[amrlev][mglev_bottom].norm0();
+            
             amrex::Print() << "AT LEVEL "  << amrlev << " " << mglev_bottom
                            << "   UP: Norm after  bottom " << norm << "\n";
         }
@@ -805,7 +829,6 @@ MLMG::addInterpCorrection (int alev, int mglev)
     const MultiFab& crse_cor = *cor[alev][mglev+1];
     MultiFab&       fine_cor = *cor[alev][mglev  ];
 
-    const int refratio = 2;
     MultiFab cfine;
     const MultiFab* cmf;
 
@@ -816,7 +839,9 @@ MLMG::addInterpCorrection (int alev, int mglev)
     else
     {
         BoxArray cba = fine_cor.boxArray();
-        cba.coarsen(refratio);
+        IntVect ratio = (alev > 0) ? IntVect(2) : linop.mg_coarsen_ratio_vec[mglev];
+
+        cba.coarsen(ratio);
         const int ng = 0;
         cfine.define(cba, fine_cor.DistributionMap(), ncomp, ng);
         cfine.ParallelCopy(crse_cor);
@@ -904,7 +929,7 @@ MLMG::actualBottomSolve ()
     {
         MultiFab* bottom_b = &b;
         MultiFab raii_b;
-        if (linop.isBottomSingular())
+        if (linop.isBottomSingular() && linop.getEnforceSingularSolvable())
         {
             raii_b.define(b.boxArray(), b.DistributionMap(), ncomp, b.nGrow(),
                           MFInfo(), *linop.Factory(amrlev,mglev));
@@ -979,6 +1004,7 @@ MLMG::bottomSolveWithCG (MultiFab& x, const MultiFab& b, MLCGSolver::Type type)
     if (ret != 0 && verbose > 1) {
         amrex::Print() << "MLMG: Bottom solve failed.\n";
     }
+    m_niters_cg.push_back(cg_solver.getNumIters());
     return ret;
 }
 
@@ -996,9 +1022,13 @@ MLMG::ResNormInf (int alev, bool local)
         pmf = scratch[alev].get();
         MultiFab::Copy(*pmf, res[alev][mglev], 0, 0, ncomp, 0);
         auto factory = dynamic_cast<EBFArrayBoxFactory const*>(linop.Factory(alev));
-        const MultiFab& vfrac = factory->getVolFrac();
-        for (int n=0; n < ncomp; ++n) {
-            MultiFab::Multiply(*pmf, vfrac, 0, n, 1, 0);
+        if (factory) {
+            const MultiFab& vfrac = factory->getVolFrac();
+            for (int n=0; n < ncomp; ++n) {
+                MultiFab::Multiply(*pmf, vfrac, 0, n, 1, 0);
+            }
+        } else {
+            amrex::Abort("MLMG::ResNormInf: not EB Factory");
         }
     }
 #endif
@@ -1045,9 +1075,13 @@ MLMG::MLRhsNormInf (bool local)
             pmf = scratch[alev].get();
             MultiFab::Copy(*pmf, rhs[alev], 0, 0, ncomp, 0);
             auto factory = dynamic_cast<EBFArrayBoxFactory const*>(linop.Factory(alev));
-            const MultiFab& vfrac = factory->getVolFrac();
-            for (int n=0; n < ncomp; ++n) {
-                MultiFab::Multiply(*pmf, vfrac, 0, n, 1, 0);
+            if (factory) {
+                const MultiFab& vfrac = factory->getVolFrac();
+                for (int n=0; n < ncomp; ++n) {
+                    MultiFab::Multiply(*pmf, vfrac, 0, n, 1, 0);
+                }
+            } else {
+                amrex::Abort("MLMG::MLRhsNormInf: not EB Factory");
             }
         }
 #endif
@@ -1108,18 +1142,18 @@ MLMG::prepareForSolve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab con
         linop_prepared = true;
     } else if (linop.needsUpdate()) {
         linop.update();
-    }
 
 #ifdef AMREX_USE_HYPRE
-    hypre_solver.reset();
-    hypre_bndry.reset();
-    hypre_node_solver.reset();
+        hypre_solver.reset();
+        hypre_bndry.reset();
+        hypre_node_solver.reset();
 #endif
 
 #ifdef AMREX_USE_PETSC
-    petsc_solver.reset(); 
-    petsc_bndry.reset(); 
+        petsc_solver.reset(); 
+        petsc_bndry.reset(); 
 #endif
+    }
 
     sol.resize(namrlevs);
     sol_raii.resize(namrlevs);
@@ -1158,6 +1192,7 @@ MLMG::prepareForSolve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab con
         linop.applyMetricTerm(alev, 0, rhs[alev]);
         linop.unimposeNeumannBC(alev, rhs[alev]);
         linop.applyInhomogNeumannTerm(alev, rhs[alev]);
+        linop.applyOverset(alev, rhs[alev]);
 
 #ifdef AMREX_USE_EB
         auto factory = dynamic_cast<EBFArrayBoxFactory const*>(linop.Factory(alev));
@@ -1175,7 +1210,7 @@ MLMG::prepareForSolve (const Vector<MultiFab*>& a_sol, const Vector<MultiFab con
     }
     
     // enforce solvability if appropriate
-    if (linop.isSingular(0))
+    if (linop.isSingular(0) && linop.getEnforceSingularSolvable())
     {
         computeVolInv();
         makeSolvable();
@@ -1326,8 +1361,9 @@ void
 MLMG::getFluxes (const Vector<Array<MultiFab*,AMREX_SPACEDIM> >& a_flux,
                  Location a_loc)
 {
-    if (!linop.isCellCentered())
+    if (!linop.isCellCentered()) {
        amrex::Abort("Calling wrong getFluxes for nodal solver");
+    }
 
     AMREX_ASSERT(sol.size() == a_flux.size());
     getFluxes(a_flux, sol, a_loc);
@@ -1340,8 +1376,9 @@ MLMG::getFluxes (const Vector<Array<MultiFab*,AMREX_SPACEDIM> >& a_flux,
 {
     BL_PROFILE("MLMG::getFluxes()");
 
-    if (!linop.isCellCentered())
+    if (!linop.isCellCentered()) {
        amrex::Abort("Calling wrong getFluxes for nodal solver");
+    }
 
     linop.getFluxes(a_flux, a_sol, a_loc);
 }
@@ -1354,7 +1391,7 @@ MLMG::getFluxes (const Vector<MultiFab*> & a_flux, Location a_loc)
 }
 
 void
-MLMG::getFluxes (const Vector<MultiFab*> & a_flux, const Vector<MultiFab*>& a_sol, Location a_loc)
+MLMG::getFluxes (const Vector<MultiFab*> & a_flux, const Vector<MultiFab*>& a_sol, Location /*a_loc*/)
 {
     AMREX_ASSERT(a_flux[0]->nComp() >= AMREX_SPACEDIM);
 
@@ -1387,6 +1424,31 @@ MLMG::getFluxes (const Vector<MultiFab*> & a_flux, const Vector<MultiFab*>& a_so
     } 
 }
 
+#ifdef AMREX_USE_EB
+void
+MLMG::getEBFluxes (const Vector<MultiFab*>& a_eb_flux)
+{
+    if (!linop.isCellCentered()) {
+       amrex::Abort("getEBFluxes is for cell-centered only");
+    }
+
+    AMREX_ASSERT(sol.size() == a_eb_flux.size());
+    getEBFluxes(a_eb_flux, sol);
+}
+
+void
+MLMG::getEBFluxes (const Vector<MultiFab*>& a_eb_flux, const Vector<MultiFab*>& a_sol)
+{
+    BL_PROFILE("MLMG::getEBFluxes()");
+
+    if (!linop.isCellCentered()) {
+       amrex::Abort("getEBFluxes is for cell-centered only");
+    }
+
+    linop.getEBFluxes(a_eb_flux, a_sol);
+}
+#endif
+
 void
 MLMG::compResidual (const Vector<MultiFab*>& a_res, const Vector<MultiFab*>& a_sol,
                     const Vector<MultiFab const*>& a_rhs)
@@ -1396,6 +1458,7 @@ MLMG::compResidual (const Vector<MultiFab*>& a_res, const Vector<MultiFab*>& a_s
     const int ncomp = linop.getNComp();
     int nghost = 0;
     if (cf_strategy == CFStrategy::ghostnodes) nghost = linop.getNGrow();
+    amrex::ignore_unused(nghost);
    
     sol.resize(namrlevs);
     sol_raii.resize(namrlevs);
@@ -1509,6 +1572,10 @@ MLMG::apply (const Vector<MultiFab*>& out, const Vector<MultiFab*>& a_in)
         linop_prepared = true;
     } else if (linop.needsUpdate()) {
         linop.update();
+    }
+
+    for (int alev = 0; alev < namrlevs; ++alev) {
+        linop.applyInhomogNeumannTerm(alev, rh[alev]);
     }
 
     const auto& amrrr = linop.AMRRefRatio();
@@ -1679,6 +1746,9 @@ MLMG::makeSolvable ()
     {
         AMREX_ASSERT_WITH_MESSAGE(ncomp==1, "ncomp > 1 not supported for singular nodal problem");
         Real offset = getNodalSum(0, 0, rhs[0]);
+        if (verbose >= 4) {
+            amrex::Print() << "MLMG: Subtracting " << offset << " from rhs\n";
+        }
         for (int alev = 0; alev < namrlevs; ++alev) {
             rhs[alev].plus(-offset, 0, 1);
         }
@@ -1712,6 +1782,13 @@ MLMG::makeSolvable (int amrlev, int mglev, MultiFab& mf)
 
         ParallelAllReduce::Sum(offset.data(), ncomp, ParallelContext::CommunicatorSub());
 
+        if (verbose >= 4) {
+            for (int c = 0; c < ncomp; ++c) {
+                amrex::Print() << "MLMG: Subtracting " << offset[c] 
+                               << " from mf component c = " << c << "\n";
+            }
+        }
+
         for (int c = 0; c < ncomp; ++c) {
             mf.plus(-offset[c], c, 1);
         }
@@ -1726,6 +1803,10 @@ MLMG::makeSolvable (int amrlev, int mglev, MultiFab& mf)
     {
         AMREX_ASSERT_WITH_MESSAGE(ncomp==1, "ncomp > 1 not supported for singular nodal problem");
         Real offset = getNodalSum(amrlev, mglev, mf);
+        if (verbose >= 4) {
+            amrex::Print() << "MLMG: Subtracting " << offset << " on level (" << amrlev << ", "
+                           << mglev << ")\n";
+        }
         mf.plus(-offset, 0, 1);
     }
 }
@@ -1738,7 +1819,7 @@ MLMG::getNodalSum (int amrlev, int mglev, MultiFab& mf) const
     const bool local = true;
     Real s1 = linop.xdoty(amrlev, mglev, mf, one, local);
     Real s2 = linop.xdoty(amrlev, mglev, one, one, local);
-    ParallelAllReduce::Sum<Real>({s1,s2}, linop.Communicator(amrlev,mglev));
+    ParallelAllReduce::Sum<Real>({s1,s2}, ParallelContext::CommunicatorSub());
     return s1/s2;
 }
 
@@ -1746,8 +1827,12 @@ void
 MLMG::bottomSolveWithHypre (MultiFab& x, const MultiFab& b)
 {
 #if !defined(AMREX_USE_HYPRE)
+    amrex::ignore_unused(x,b);
     amrex::Abort("bottomSolveWithHypre is called without building with Hypre");
 #else
+
+    const int amrlev = 0;
+    const int mglev  = linop.NMGLevels(amrlev) - 1;
 
     const int ncomp = linop.getNComp();
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ncomp == 1, "bottomSolveWithHypre doesn't work with ncomp > 1");
@@ -1757,11 +1842,21 @@ MLMG::bottomSolveWithHypre (MultiFab& x, const MultiFab& b)
         if (hypre_solver == nullptr)  // We should reuse the setup
         {
             hypre_solver = linop.makeHypre(hypre_interface);
-            hypre_solver->setVerbose(bottom_verbose);
 
-            const BoxArray& ba = linop.m_grids[0].back();
-            const DistributionMapping& dm = linop.m_dmap[0].back();
-            const Geometry& geom = linop.m_geom[0].back();
+            hypre_solver->setVerbose(bottom_verbose);
+            if (hypre_interface == amrex::Hypre::Interface::ij) {
+                hypre_solver->setHypreOptionsNamespace(hypre_options_namespace);
+            } else {
+                hypre_solver->setHypreOldDefault(hypre_old_default);
+                hypre_solver->setHypreRelaxType(hypre_relax_type);
+                hypre_solver->setHypreRelaxOrder(hypre_relax_order);
+                hypre_solver->setHypreNumSweeps(hypre_num_sweeps);
+                hypre_solver->setHypreStrongThreshold(hypre_strong_threshold);
+            }
+
+            const BoxArray& ba = linop.m_grids[amrlev].back();
+            const DistributionMapping& dm = linop.m_dmap[amrlev].back();
+            const Geometry& geom = linop.m_geom[amrlev].back();
 
             hypre_bndry.reset(new MLMGBndry(ba, dm, ncomp, geom));
             hypre_bndry->setHomogValues();
@@ -1773,17 +1868,30 @@ MLMG::bottomSolveWithHypre (MultiFab& x, const MultiFab& b)
             hypre_bndry->setLOBndryConds(linop.m_lobc, linop.m_hibc, -1, bclocation);
         }
 
-        hypre_solver->solve(x, b, bottom_reltol, -1., bottom_maxiter, *hypre_bndry, linop.getMaxOrder());
+        // IJ interface understands absolute tolerance API of hypre
+        amrex::Real hypre_abstol =
+            (hypre_interface == amrex::Hypre::Interface::ij)
+            ? bottom_abstol : -1.0;
+        hypre_solver->solve(
+            x, b, bottom_reltol, hypre_abstol, bottom_maxiter, *hypre_bndry,
+            linop.getMaxOrder());
     }
     else
     {
         if (hypre_node_solver == nullptr)
         {
             hypre_node_solver = linop.makeHypreNodeLap(bottom_verbose);
+            hypre_node_solver->setHypreOptionsNamespace(hypre_options_namespace);
         }
-        hypre_node_solver->solve(x, b, bottom_reltol, -1., bottom_maxiter);
+        hypre_node_solver->solve(x, b, bottom_reltol, bottom_abstol, bottom_maxiter);
     }
 
+    // For singular problems there may be a large constant added to all values of the solution
+    // For precision reasons we enforce that the average of the correction from hypre is 0
+    if (linop.isSingular(amrlev) && linop.getEnforceSingularSolvable())
+    {
+        makeSolvable(amrlev, mglev, x);
+    }
 #endif
 }
 
@@ -1791,6 +1899,7 @@ void
 MLMG::bottomSolveWithPETSc (MultiFab& x, const MultiFab& b)
 {
 #if !defined(AMREX_USE_PETSC)
+    amrex::ignore_unused(x,b);
     amrex::Abort("bottomSolveWithPETSc is called without building with PETSc");
 #else
 

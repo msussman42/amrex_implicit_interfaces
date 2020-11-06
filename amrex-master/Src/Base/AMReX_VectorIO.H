@@ -33,7 +33,7 @@ namespace amrex {
     //! IntDescriptor that describes the data format to use for writing. If no
     //! IntDescriptor is provided, the data will be written using the native
     //! format for your machine.
-    void writeLongData(const long* data, std::size_t size, std::ostream& os,
+    void writeLongData(const Long* data, std::size_t size, std::ostream& os,
                        const IntDescriptor& id = FPC::NativeLongDescriptor());
 
     //! Read int data from the istream. The arguments are a pointer to data buffer
@@ -41,7 +41,7 @@ namespace amrex {
     //! that describes the format of the data on disk. 
     //! The buffer is assumed to be large enough to store 'size' longs, and it is
     //! the user's reponsiblity to allocate this data.
-    void readLongData(long* data, std::size_t size, std::istream& is, const IntDescriptor& id);
+    void readLongData(Long* data, std::size_t size, std::istream& is, const IntDescriptor& id);
 
     //! Write Real data to the ostream. The arguments are a pointer to data
     //! to write, the size of the data buffer, the ostream, and an optional
@@ -81,7 +81,7 @@ namespace amrex {
     //! RealDescriptor is provided, the data will be written using the native
     //! format for your machine.
     void writeDoubleData(const double* data, std::size_t size, std::ostream& os,
-                         const RealDescriptor& rd = FPC::NativeRealDescriptor());
+                         const RealDescriptor& rd = FPC::Native64RealDescriptor());
 
     //! Read double data from the istream. The arguments are a pointer to data buffer
     //! to read into, the size of that buffer, the istream, and a RealDescriptor
@@ -91,6 +91,45 @@ namespace amrex {
     void readDoubleData(double* data, std::size_t size, std::istream& is,
                         const RealDescriptor& rd);
 
+    inline void writeData (int const* data, std::size_t size, std::ostream& os)
+    {
+        writeIntData(data, size, os);
+    }
+
+    inline void writeData (Long const* data, std::size_t size, std::ostream& os)
+    {
+        writeLongData(data, size, os);
+    }
+
+    inline void writeData (float const* data, std::size_t size, std::ostream& os)
+    {
+        writeFloatData(data, size, os);
+    }
+
+    inline void writeData (double const* data, std::size_t size, std::ostream& os)
+    {
+        writeDoubleData(data, size, os);
+    }
+
+    inline void readData (int * data, std::size_t size, std::istream& is)
+    {
+        readIntData(data, size, is, FPC::NativeIntDescriptor());
+    }
+
+    inline void readData (Long * data, std::size_t size, std::istream& is)
+    {
+        readLongData(data, size, is, FPC::NativeLongDescriptor());
+    }
+
+    inline void readData (float * data, std::size_t size, std::istream& is)
+    {
+        readFloatData(data, size, is, FPC::Native32RealDescriptor());
+    }
+
+    inline void readData (double * data, std::size_t size, std::istream& is)
+    {
+        readDoubleData(data, size, is, FPC::Native64RealDescriptor());
+    }
 }
 
 #endif 

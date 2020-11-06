@@ -94,20 +94,24 @@ class GShopLevel
     : public Level
 {
 public:
-    GShopLevel (IndexSpace const* is, G const& gshop, const Geometry& geom, int max_grid_size, int ngrow);
+    GShopLevel (IndexSpace const* is, G const& gshop, const Geometry& geom, int max_grid_size, int ngrow, bool extend_domain_face);
     GShopLevel (IndexSpace const* is, int ilev, int max_grid_size, int ngrow,
                 const Geometry& geom, GShopLevel<G>& fineLevel);
 };
 
 template <typename G>
 GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry& geom,
-                           int max_grid_size, int ngrow)
+                           int max_grid_size, int ngrow, bool extend_domain_face)
     : Level(is, geom)
 {
     if (std::is_same<typename G::FunctionType, AllRegularIF>::value) {
         m_allregular = true;
         m_ok = true;
         return;
+    }
+
+    if (amrex::Verbose() > 0 && extend_domain_face == false) {
+        amrex::Print() << "AMReX WARNING: extend_domain_face=false is not recommended!\n";
     }
 
     BL_PROFILE("EB2::GShopLevel()-fine");
@@ -121,7 +125,8 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
     // make sure ngrow is multiple of 16
     m_ngrow = IntVect{static_cast<int>(std::ceil(ngrow/16.)) * 16};
 
-    Box domain_grown = geom.Domain();
+    Box const& domain = geom.Domain();
+    Box domain_grown = domain;
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         if (geom.isPeriodic(idim)) {
             m_ngrow[idim] = 0;
@@ -130,9 +135,29 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
         }
     }
     domain_grown.grow(m_ngrow);
+    Box bounding_box = (extend_domain_face) ? domain : domain_grown;
+    bounding_box.surroundingNodes();
 
-    m_grids.define(domain_grown);
-    m_grids.maxSize(max_grid_size);
+    BoxList bl(domain);
+    bl.maxSize(max_grid_size);
+    if (m_ngrow != 0) {
+        const IntVect& domlo = domain.smallEnd();
+        const IntVect& domhi = domain.bigEnd();
+        for (auto& b : bl) {
+            for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+                if (m_ngrow[idim] != 0) {
+                    if (b.smallEnd(idim) == domlo[idim]) {
+                        b.growLo(idim,m_ngrow[idim]);
+                    }
+                    if (b.bigEnd(idim) == domhi[idim]) {
+                        b.growHi(idim,m_ngrow[idim]);
+                    }
+                }
+            }
+        }
+    }
+
+    m_grids.define(std::move(bl));
     m_dmap.define(m_grids);
 
     Vector<Box> cut_boxes;
@@ -142,7 +167,7 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
     {
         const Box& vbx = mfi.validbox();
         const Box& gbx = amrex::surroundingNodes(amrex::grow(vbx,1));
-        int box_type = gshop.getBoxType(gbx, geom, RunOn::Gpu);
+        int box_type = gshop.getBoxType(gbx & bounding_box, geom, RunOn::Gpu);
         if (box_type == gshop.allcovered) {
             covered_boxes.push_back(vbx);
         } else if (box_type == gshop.mixedcells) {
@@ -192,8 +217,13 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
     }
 
     const auto dx = geom.CellSizeArray();
-    const auto dxinv = geom.InvCellSizeArray();
     const auto problo = geom.ProbLoArray();
+
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+        if (!extend_domain_face || geom.isPeriodic(idim)) {
+            bounding_box.grow(idim,GFab::ng);
+        }
+    }
 
     RunOn gshop_run_on = (Gpu::inLaunchRegion() && gshop.isGPUable())
         ? RunOn::Gpu : RunOn::Cpu;
@@ -214,7 +244,7 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
             const Box& vbx = gfab.validbox();
 
             auto& levelset = gfab.getLevelSet();
-            gshop.fillFab(levelset, geom, gshop_run_on);
+            gshop.fillFab(levelset, geom, gshop_run_on, bounding_box);
 
             if (hybrid) levelset.prefetchToDevice();
 
@@ -265,7 +295,7 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
                 }
             }
 
-            gshop.getIntercept(intercept, edgetype, geom, gshop_run_on);
+            gshop.getIntercept(intercept, edgetype, geom, gshop_run_on, bounding_box);
 
             if (hybrid) {
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -295,7 +325,8 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
 
             build_cells(vbx, cfg, ftx, fty, ftz, apx, apy, apz,
                         fcx, fcy, fcz, xm2, ym2, zm2, vfr, ctr,
-                        bar, bct, bnm, cfgtmp, small_volfrac);
+                        bar, bct, bnm, cfgtmp, small_volfrac, 
+                        geom, extend_domain_face);
 
 #elif (AMREX_SPACEDIM == 2)
             for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -314,7 +345,7 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
                 }
             }
 
-            gshop.getIntercept(intercept, facetype, geom, gshop_run_on);
+            gshop.getIntercept(intercept, facetype, geom, gshop_run_on, bounding_box);
 
             if (hybrid) {
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -325,7 +356,8 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
 
             build_faces(vbx, cfg, ftx, fty, lst, xip, yip, apx, apy, fcx, fcy, dx, problo);
 
-            build_cells(vbx, cfg, ftx, fty, apx, apy, vfr, ctr, bar, bct, bnm, small_volfrac);
+            build_cells(vbx, cfg, ftx, fty, apx, apy, vfr, ctr, bar, bct, bnm, small_volfrac, 
+                        geom, extend_domain_face);
 #endif
         }
     }
@@ -337,7 +369,7 @@ GShopLevel<G>::GShopLevel (IndexSpace const* is, G const& gshop, const Geometry&
 
 
 template <typename G>
-GShopLevel<G>::GShopLevel (IndexSpace const* is, int ilev, int max_grid_size, int /*ngrow*/,
+GShopLevel<G>::GShopLevel (IndexSpace const* is, int /*ilev*/, int max_grid_size, int /*ngrow*/,
                            const Geometry& geom, GShopLevel<G>& fineLevel)
     : Level(is, geom)
 {

@@ -30,9 +30,11 @@ struct MFItInfo
     bool do_tiling;
     bool dynamic;
     bool device_sync;
+    int  num_streams;
     IntVect tilesize;
     MFItInfo () noexcept
-        : do_tiling(false), dynamic(false), device_sync(true), tilesize(IntVect::TheZeroVector()) {}
+        : do_tiling(false), dynamic(false), device_sync(true), num_streams(Gpu::numGpuStreams()),
+          tilesize(IntVect::TheZeroVector()) {}
     MFItInfo& EnableTiling (const IntVect& ts = FabArrayBase::mfiter_tile_size) noexcept {
         do_tiling = true;
         tilesize = ts;
@@ -48,6 +50,14 @@ struct MFItInfo
     }
     MFItInfo& SetDeviceSync (bool f) noexcept {
         device_sync = f;
+        return *this;
+    }
+    MFItInfo& SetNumStreams (int n) noexcept {
+        num_streams = n;
+        return *this;
+    }
+    MFItInfo& UseDefaultStream () noexcept {
+        num_streams = -1;
         return *this;
     }
 };
@@ -71,7 +81,7 @@ public:
 	SkipInit      = 0x08
     };
 
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_GPU_PRAGMA
     enum MFReducer { SUM = 0, MAX, MIN };
 #endif
 
@@ -120,11 +130,11 @@ public:
     //! Return the dir-nodal (or all nodal if dir<0) Box at the current index.
     Box nodaltilebox (int dir=-1) const noexcept;
 
-    //! Return the tile box at the current index grown to include ghost cells.
-    Box growntilebox (int ng=-1000000) const noexcept;
-
         // SUSSMAN
     Box growntileboxTENSOR (int datatype,int ng,int dir) const noexcept;
+
+    //! Return the tile box at the current index grown to include ghost cells.
+    Box growntilebox (int ng=-1000000) const noexcept;
 
     Box growntilebox (const IntVect& ng) const noexcept;
 
@@ -157,7 +167,7 @@ public:
     //! The the number of tiles in the current grid;
     int numLocalTiles() const noexcept {return num_local_tiles ? (*num_local_tiles)[currentIndex] : 1;}
 
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_GPU_PRAGMA
     //! Maintain a list of values to reduce.
     template<typename T>
     T* add_reduce_value(T* val, MFReducer r) { return val; }
@@ -183,7 +193,7 @@ public:
 
 protected:
 
-    std::unique_ptr<FabArray<FArrayBox> > m_fa;  //!< This must be the first memeber!
+    std::unique_ptr<FabArrayBase> m_fa;  //!< This must be the first memeber!
 
     const FabArrayBase& fabArray;
 
@@ -193,6 +203,7 @@ protected:
     int           currentIndex;
     int           beginIndex;
     int           endIndex;
+    int           streams;
     IndexType     typ;
 
     bool          dynamic;
@@ -204,7 +215,7 @@ protected:
     const Vector<int>* local_tile_index_map;
     const Vector<int>* num_local_tiles;
 
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_GPU_PRAGMA
     mutable Vector<Real*> real_reduce_val;
 
     mutable MFReducer reducer;
@@ -212,6 +223,10 @@ protected:
     mutable Vector<Vector<Real> > real_reduce_list;
 
     mutable Vector<Vector<Real*> > real_device_reduce_list;
+#endif
+
+#ifdef AMREX_USE_GPU
+    std::unique_ptr<Gpu::FuseSafeGuard> gpu_fsg;
 #endif
 
     static int nextDynamicIndex;
@@ -230,6 +245,13 @@ private:
     void Initialize ();
     FabArrayBase::TileArray lta;
 };
+
+//! Is it safe to have these two MultiFabs in the same MFiter?
+//! Ture means safe; false means maybe.
+inline bool isMFIterSafe (const FabArrayBase& x, const FabArrayBase& y) {
+    return x.DistributionMap() == y.DistributionMap()
+        && BoxArray::SameRefs(x.boxArray(), y.boxArray());
+}
 
 inline Arena* The_MFIter_Arena () noexcept { return The_Device_Arena(); }
 

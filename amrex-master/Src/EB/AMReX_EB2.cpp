@@ -18,11 +18,13 @@ namespace amrex { namespace EB2 {
 Vector<std::unique_ptr<IndexSpace> > IndexSpace::m_instance;
 
 int max_grid_size = 64;
+bool extend_domain_face = true;
 
 void Initialize ()
 {
     ParmParse pp("eb2");
     pp.query("max_grid_size", max_grid_size);
+    pp.query("extend_domain_face", extend_domain_face);
 
     amrex::ExecOnFinalize(Finalize);
 }
@@ -30,6 +32,11 @@ void Initialize ()
 void Finalize ()
 {
     IndexSpace::clear();
+}
+
+bool ExtendDomainFace ()
+{
+    return extend_domain_face;
 }
 
 void
@@ -65,7 +72,7 @@ const IndexSpace* TopIndexSpaceIfPresent() noexcept {
 
 void
 Build (const Geometry& geom, int required_coarsening_level,
-       int max_coarsening_level, int ngrow)
+       int max_coarsening_level, int ngrow, bool build_coarse_level_by_coarsening)
 {
     ParmParse pp("eb2");
     std::string geom_type;
@@ -76,7 +83,7 @@ Build (const Geometry& geom, int required_coarsening_level,
         EB2::AllRegularIF rif;
         EB2::GeometryShop<EB2::AllRegularIF> gshop(rif);
         EB2::Build(gshop, geom, required_coarsening_level,
-                   max_coarsening_level, ngrow);
+                   max_coarsening_level, ngrow, build_coarse_level_by_coarsening);
     }
     else if (geom_type == "box")
     {
@@ -93,7 +100,7 @@ Build (const Geometry& geom, int required_coarsening_level,
 
         EB2::GeometryShop<EB2::BoxIF> gshop(bf);
         EB2::Build(gshop, geom, required_coarsening_level,
-                   max_coarsening_level, ngrow);
+                   max_coarsening_level, ngrow, build_coarse_level_by_coarsening);
     }
     else if (geom_type == "cylinder")
     {
@@ -118,7 +125,7 @@ Build (const Geometry& geom, int required_coarsening_level,
 
         EB2::GeometryShop<EB2::CylinderIF> gshop(cf);
         EB2::Build(gshop, geom, required_coarsening_level,
-                   max_coarsening_level, ngrow);
+                   max_coarsening_level, ngrow, build_coarse_level_by_coarsening);
     }
     else if (geom_type == "plane")
     {
@@ -132,7 +139,7 @@ Build (const Geometry& geom, int required_coarsening_level,
 
         EB2::GeometryShop<EB2::PlaneIF> gshop(pf);
         EB2::Build(gshop, geom, required_coarsening_level,
-                   max_coarsening_level, ngrow);
+                   max_coarsening_level, ngrow, build_coarse_level_by_coarsening);
     }
     else if (geom_type == "sphere")
     {
@@ -149,7 +156,7 @@ Build (const Geometry& geom, int required_coarsening_level,
 
         EB2::GeometryShop<EB2::SphereIF> gshop(sf);
         EB2::Build(gshop, geom, required_coarsening_level,
-                   max_coarsening_level, ngrow);
+                   max_coarsening_level, ngrow, build_coarse_level_by_coarsening);
     }
     else if (geom_type == "torus")
     {
@@ -168,7 +175,7 @@ Build (const Geometry& geom, int required_coarsening_level,
 
         EB2::GeometryShop<EB2::TorusIF> gshop(sf);
         EB2::Build(gshop, geom, required_coarsening_level,
-                   max_coarsening_level, ngrow);
+                   max_coarsening_level, ngrow, build_coarse_level_by_coarsening);
     }
     else
     {

@@ -25,7 +25,6 @@ public:
         : m_f(a_f),
           m_g(a_g)
     {}
-    ~DifferenceIF () {}
 
     DifferenceIF (const DifferenceIF& rhs) = default;
     DifferenceIF (DifferenceIF&& rhs) = default;
@@ -40,8 +39,8 @@ public:
     }
 
     template <class U=F, class V=G,
-              class = typename std::enable_if<IsGPUable<U>::value &&
-                                              IsGPUable<V>::value>::type>
+              typename std::enable_if<IsGPUable<U>::value &&
+                                      IsGPUable<V>::value, int>::type = 0>
     AMREX_GPU_HOST_DEVICE inline
     Real operator() (AMREX_D_DECL(Real x, Real y, Real z)) const noexcept
     {

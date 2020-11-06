@@ -7,6 +7,12 @@
 
 namespace amrex {
 
+/**
+ * \brief Given a minimum required size of size bytes, this returns
+ * the next largest arena size that will align to align_requirement bytes
+ */
+std::size_t aligned_size (std::size_t align_requirement, std::size_t size);
+
 class Arena;
 
 Arena* The_Arena ();
@@ -17,6 +23,7 @@ Arena* The_Cpu_Arena ();
 
 struct ArenaInfo
 {
+    bool use_cpu_memory = false;
     bool device_use_managed_memory = true;
     bool device_set_readonly = false;
     bool device_set_preferred = false;
@@ -40,6 +47,14 @@ struct ArenaInfo
         device_use_hostalloc = true;
         device_use_managed_memory = false;
         return *this;
+    }
+    ArenaInfo& SetCpuMemory () noexcept {
+        use_cpu_memory = true;
+        device_use_managed_memory = false;
+        device_set_readonly = false;
+        device_set_preferred = false;
+        device_use_hostalloc = false;
+        return *this; 
     }
 };
 
@@ -74,8 +89,6 @@ public:
     static void PrintUsage ();
     static void Finalize ();
 
-protected:
-
 #if 0
     union Word
     {
@@ -84,15 +97,17 @@ protected:
         long double ld;
         void (*f) ();
     };
-    static const unsigned int align_size = sizeof(Word);
+    static const std::size_t align_size = sizeof(Word);
 #endif
 
-    static const unsigned int align_size = 16;
+    static const std::size_t align_size = 16;
+
+protected:
 
     ArenaInfo arena_info;
 
     void* allocate_system (std::size_t nbytes);
-    void deallocate_system (void* p);
+    void deallocate_system (void* p, std::size_t nbytes);
 };
 
 }

@@ -35,15 +35,29 @@ public:
                  const LPInfo& a_info,
                  const Vector<EBFArrayBoxFactory const*>& a_factory);
 
+    void setPhiOnCentroid ();
+
     void setScalars (Real a, Real b);
     void setACoeffs (int amrlev, const MultiFab& alpha);
-    void setBCoeffs (int amrlev, const Array<MultiFab const*,AMREX_SPACEDIM>& beta);
+    void setACoeffs (int amrlev, Real alpha);
+
+    void setBCoeffs (int amrlev, const Array<MultiFab const*,AMREX_SPACEDIM>& beta,
+                     Location a_beta_loc);
+    void setBCoeffs (int amrlev, const Array<MultiFab const*,AMREX_SPACEDIM>& beta)
+        {setBCoeffs (amrlev, beta, Location::FaceCenter);}
+                    
+    void setBCoeffs (int amrlev, Real beta);
+    void setBCoeffs (int amrlev, Vector<Real> const& beta);
 
     // Tells the solver that EB boundaries have Dirichlet bc's specified by "phi"
     void setEBDirichlet      (int amrlev, const MultiFab& phi, const MultiFab& beta);
+    void setEBDirichlet      (int amrlev, const MultiFab& phi, Real beta);
+    void setEBDirichlet      (int amrlev, const MultiFab& phi, Vector<Real> const& beta);
 
     // Tells the solver that EB boundaries have homogeneous Dirichlet bc's
     void setEBHomogDirichlet (int amrlev,                      const MultiFab& beta);
+    void setEBHomogDirichlet (int amrlev,                      Real beta);
+    void setEBHomogDirichlet (int amrlev,                      Vector<Real> const& beta);
 
     virtual bool needsUpdate () const override {
         return (m_needs_update || MLCellABecLap::needsUpdate());
@@ -80,7 +94,7 @@ public:
     virtual Array<MultiFab const*,AMREX_SPACEDIM> getBCoeffs (int amrlev, int mglev) const final override
         { return amrex::GetArrOfConstPtrs(m_b_coeffs[amrlev][mglev]); }
 
-    virtual std::unique_ptr<MLLinOp> makeNLinOp (int grid_size) const final override {
+    virtual std::unique_ptr<MLLinOp> makeNLinOp (int /*grid_size*/) const final override {
         amrex::Abort("MLABecLaplacian::makeNLinOp: Not implmented");
         return std::unique_ptr<MLLinOp>{};
     }
@@ -91,6 +105,9 @@ public:
 
     virtual void averageDownSolutionRHS (int camrlev, MultiFab& crse_sol, MultiFab& crse_rhs,
                                          const MultiFab& fine_sol, const MultiFab& fine_rhs) final override;
+
+    virtual void getEBFluxes (const Vector<MultiFab*>& a_flux,
+                              const Vector<MultiFab*>& a_sol) const override;
 
 #ifdef AMREX_USE_HYPRE
     virtual std::unique_ptr<Hypre> makeHypre (Hypre::Interface hypre_interface) const override;
@@ -103,6 +120,9 @@ public:
 protected:
 
     bool m_needs_update = true;
+
+    Location m_beta_loc; // Location of coefficients: face centers or face centroids
+    Location m_phi_loc;  // Location of solution variable: cell centers or cell centroids
 
     Real m_a_scalar = std::numeric_limits<Real>::quiet_NaN();
     Real m_b_scalar = std::numeric_limits<Real>::quiet_NaN();
@@ -122,7 +142,7 @@ protected:
     //
     bool isEBDirichlet   () const noexcept { return m_eb_phi[0] != nullptr; }
 
-    void averageDownCoeffsSameAmrLevel (Vector<MultiFab>& a,
+    void averageDownCoeffsSameAmrLevel (int amrlev, Vector<MultiFab>& a,
                                         Vector<Array<MultiFab,AMREX_SPACEDIM> >& b,
                                         const Vector<MultiFab*>& b_eb);
     void averageDownCoeffs ();

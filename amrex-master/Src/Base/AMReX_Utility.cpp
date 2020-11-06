@@ -1,26 +1,10 @@
-#include <cstdlib>
-#include <cstring>
-#include <cctype>
-#include <cmath>
-#include <cstdio>
-#include <ctime>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-#include <set>
-#include <random>
-
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <errno.h>
-
 #include <AMReX_BLFort.H>
 #include <AMReX_REAL.H>
 #include <AMReX.H>
 #include <AMReX_Utility.H>
 #include <AMReX_BLassert.H>
 #include <AMReX_BLProfiler.H>
-
+#include <AMReX_FileSystem.H>
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_BoxArray.H>
 #include <AMReX_Print.H>
@@ -29,19 +13,20 @@
 #include <omp.h>
 #endif
 
-#include <sys/types.h>
-#include <sys/times.h>
-#include <sys/time.h>
-#include <sys/param.h>
-#include <unistd.h>
-
-
-using std::ostringstream;
-
-
-namespace {
-    const char* path_sep_str = "/";
-}
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <ctime>
+#include <chrono>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <set>
+#include <random>
+#include <thread>
 
 //
 // Return true if argument is a non-zero length string of digits.
@@ -102,7 +87,7 @@ amrex::Tokenize (const std::string& instr,
     if (!((token = std::strtok(line, separators.c_str())) == 0))
     {
         ptr.push_back(token);
-        while (!((token = strtok(0, separators.c_str())) == 0))
+        while (!((token = std::strtok(0, separators.c_str())) == 0))
             ptr.push_back(token);
     }
 
@@ -112,7 +97,7 @@ amrex::Tokenize (const std::string& instr,
     {
         char* p = ptr[i];
 
-        while (strchr(separators.c_str(), *(p-1)) != 0)
+        while (std::strchr(separators.c_str(), *(p-1)) != 0)
             *--p = 0;
     }
 
@@ -139,6 +124,15 @@ amrex::toUpper (std::string s)
     return s;
 }
 
+std::string
+amrex::trim(std::string s, std::string const& space)
+{
+    const auto sbegin = s.find_first_not_of(space);
+    if (sbegin == std::string::npos) return std::string{};
+    const auto send = s.find_last_not_of(space);
+    s = s.substr(sbegin, send-sbegin+1);
+    return s;
+}
 
 std::string
 amrex::Concatenate (const std::string& root,
@@ -156,91 +150,7 @@ bool
 amrex::UtilCreateDirectory (const std::string& path,
 			    mode_t mode, bool verbose)
 {
-    bool retVal(false);
-    Vector<std::pair<std::string, int> > pathError;
-
-    if (path.length() == 0 || path == path_sep_str) {
-        return true;
-    }
-
-    errno = 0;
-
-    if(strchr(path.c_str(), *path_sep_str) == 0) {
-        //
-        // No slashes in the path.
-        //
-        errno = 0;
-        if(mkdir(path.c_str(), mode) < 0 && errno != EEXIST) {
-	  retVal = false;
-	} else {
-	  retVal = true;
-	}
-	pathError.push_back(std::make_pair(path, errno));
-    } else {
-        //
-        // Make copy of the directory pathname so we can write to it.
-        //
-        char *dir = new char[path.length() + 1];
-        (void) strcpy(dir, path.c_str());
-
-        char *slash = strchr(dir, *path_sep_str);
-
-        if(dir[0] == *path_sep_str) {  // full pathname.
-            do {
-                if(*(slash+1) == 0) {
-                    break;
-		}
-                if((slash = strchr(slash+1, *path_sep_str)) != 0) {
-                    *slash = 0;
-		}
-                errno = 0;
-                if(mkdir(dir, mode) < 0 && errno != EEXIST) {
-	          retVal = false;
-		} else {
-	          retVal = true;
-		}
-	        pathError.push_back(std::make_pair(dir, errno));
-                if(slash) {
-                  *slash = *path_sep_str;
-		}
-            } while(slash);
-
-        } else {  // relative pathname.
-
-            do {
-                *slash = 0;
-                errno = 0;
-                if(mkdir(dir, mode) < 0 && errno != EEXIST) {
-	          retVal = false;
-		} else {
-	          retVal = true;
-		}
-	        pathError.push_back(std::make_pair(dir, errno));
-                *slash = *path_sep_str;
-            } while((slash = strchr(slash+1, *path_sep_str)) != 0);
-
-            errno = 0;
-            if(mkdir(dir, mode) < 0 && errno != EEXIST) {
-	      retVal = false;
-	    } else {
-	      retVal = true;
-	    }
-	    pathError.push_back(std::make_pair(dir, errno));
-        }
-
-        delete [] dir;
-    }
-
-    if(retVal == false  || verbose == true) {
-      for(int i(0); i < pathError.size(); ++i) {
-          amrex::AllPrint()<< "amrex::UtilCreateDirectory:: path errno:  " 
-                           << pathError[i].first << " :: "
-                           << strerror(pathError[i].second)
-                           << std::endl;
-      }
-    }
-
-    return retVal;
+    return FileSystem::CreateDirectories(path, mode, verbose);
 }
 
 void
@@ -259,17 +169,10 @@ amrex::FileOpenFailed (const std::string& file)
     amrex::Error(msg.c_str());
 }
 
-void
-amrex::UnlinkFile (const std::string& file)
-{
-    unlink(file.c_str());
-}
-
 bool
 amrex::FileExists(const std::string &filename)
 {
-  struct stat statbuff;
-  return(::lstat(filename.c_str(), &statbuff) != -1);
+    return amrex::FileSystem::Exists(filename);
 }
 
 std::string
@@ -315,12 +218,7 @@ amrex::UtilCreateDirectoryDestructive(const std::string &path, bool callbarrier)
           amrex::Print() << "amrex::UtilCreateCleanDirectoryDestructive():  " << path
                          << " exists.  I am destroying it.  " << std::endl;
       }
-      char command[2000];
-      sprintf(command, "\\rm -rf %s", path.c_str());;
-      int retVal = std::system(command);
-      if (retVal == -1 || WEXITSTATUS(retVal) != 0) {
-          amrex::Error("Removing old directory failed.");
-      }
+      FileSystem::RemoveAll(path);
     }
     if( ! amrex::UtilCreateDirectory(path, 0755)) 
     {
@@ -359,262 +257,6 @@ amrex::OutOfMemory ()
     amrex::Error("Sorry, out of memory, bye ...");
 }
 
-namespace
-{
-    int nthreads;
-
-    amrex::Vector<std::mt19937> generators;
-
-#ifdef AMREX_USE_CUDA
-    /**
-    * \brief The random seed array is allocated with an extra buffer space to 
-    *        reduce the computational cost of dynamic memory allocation and 
-    *        random seed generation. 
-    */
-    __device__ curandState_t *glo_RandStates;
-    amrex::Gpu::DeviceVector<curandState_t> dev_RandStates_Seed;
-#endif
-
-}
-
-void
-amrex::InitRandom (unsigned long seed, int nprocs)
-{
-
-#ifdef _OPENMP
-    nthreads = omp_get_max_threads();
-#else
-    nthreads = 1;
-#endif
-    generators.resize(nthreads);
-
-#ifdef _OPENMP
-#pragma omp parallel
-    {
-        int tid = omp_get_thread_num();
-        unsigned long init_seed = seed + tid*nprocs;
-        generators[tid].seed(init_seed);
-    }
-#else
-    generators[0].seed(seed);
-#endif
-}
-
-void amrex::ResetRandomSeed(unsigned long seed)
-{
-    InitRandom(seed);
-}
-
-AMREX_GPU_HOST_DEVICE double
-amrex::RandomNormal (double mean, double stddev)
-{
-
-    double rand;
-
-#ifdef __CUDA_ARCH__
-
-    int blockId = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
-
-    int tid = blockId * (blockDim.x * blockDim.y * blockDim.z)
-              + (threadIdx.z * (blockDim.x * blockDim.y)) 
-              + (threadIdx.y * blockDim.x) + threadIdx.x ;
-
-    rand = stddev * curand_normal_double(&glo_RandStates[tid]) + mean; 
-
-#else
-
-#ifdef _OPENMP
-    int tid = omp_get_thread_num();
-#else
-    int tid = 0;
-#endif
-    std::normal_distribution<double> distribution(mean, stddev);
-    rand = distribution(generators[tid]);
-
-#endif
-
-    return rand;
-}
-
-AMREX_GPU_HOST_DEVICE double
-amrex::Random ()
-{
-    double rand;
-
-#ifdef __CUDA_ARCH__
-
-    int blockId = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
-
-    int tid = blockId * (blockDim.x * blockDim.y * blockDim.z)
-              + (threadIdx.z * (blockDim.x * blockDim.y)) 
-              + (threadIdx.y * blockDim.x) + threadIdx.x ;
-
-    rand = curand_uniform_double(&glo_RandStates[tid]); 
-
-
-#else
-
-#ifdef _OPENMP
-    int tid = omp_get_thread_num();
-#else
-    int tid = 0;
-#endif
-    std::uniform_real_distribution<double> distribution(0.0, 1.0);
-    rand = distribution(generators[tid]);
-
-#endif
-
-    return rand;
-}
-
-
-unsigned long
-amrex::Random_int(unsigned long n)
-{
-#ifdef _OPENMP
-    int tid = omp_get_thread_num();
-#else
-    int tid = 0;
-#endif
-    std::uniform_int_distribution<unsigned long> distribution(0, n-1);
-    return distribution(generators[tid]);
-}
-
-void
-amrex::SaveRandomState(std::ostream& os)
-{
-    for (int i = 0; i < nthreads; i++) {
-        os << generators[i] << "\n";
-    }
-}
-
-void
-amrex::RestoreRandomState(std::istream& is, int nthreads_old, int nstep_old)
-{
-    int N = std::min(nthreads, nthreads_old);
-    for (int i = 0; i < N; i++)
-        is >> generators[i];
-    if (nthreads > nthreads_old) {
-        const int NProcs = ParallelDescriptor::NProcs();
-        const int MyProc = ParallelDescriptor::MyProc();
-        for (int i = nthreads_old; i < nthreads; i++) {
-	    unsigned long seed = MyProc+1 + i*NProcs;
-	    if (ULONG_MAX/(unsigned long)(nstep_old+1) >static_cast<unsigned long>(nthreads*NProcs)) { // avoid overflow
-		seed += nstep_old*nthreads*NProcs;
-	    }
-
-            generators[i].seed(seed);
-        }
-    }
-}
-
-void
-amrex::UniqueRandomSubset (Vector<int> &uSet, int setSize, int poolSize,
-                           bool printSet)
-{
-  if(setSize > poolSize) {
-    amrex::Abort("**** Error in UniqueRandomSubset:  setSize > poolSize.");
-  }
-  std::set<int> copySet;
-  Vector<int> uSetTemp;
-  while(static_cast<int>(copySet.size()) < setSize) {
-    int r(amrex::Random_int(poolSize));
-    if(copySet.find(r) == copySet.end()) {
-      copySet.insert(r);
-      uSetTemp.push_back(r);
-    }
-  }
-  uSet = uSetTemp;
-  if(printSet) {
-    for(int i(0); i < uSet.size(); ++i) {
-        amrex::AllPrint() << "uSet[" << i << "]  = " << uSet[i] << std::endl;
-    }
-  }
-}
-
-
-void 
-amrex::InitRandSeedOnDevice (int N)
-{
-  ResizeRandomSeed(N);
-}
-
-void 
-amrex::CheckSeedArraySizeAndResize (int N)
-{
-#ifdef AMREX_USE_CUDA
-  if ( dev_RandStates_Seed.size() < N) {
-     ResizeRandomSeed(N);
-  }
-#endif
-}
-
-void 
-amrex::ResizeRandomSeed (int N)
-{
-
-#ifdef AMREX_USE_CUDA  
-
-  int Nbuffer = N * 2;
-
-  int PrevSize = dev_RandStates_Seed.size();
-
-  const int MyProc = amrex::ParallelDescriptor::MyProc();
-  int SizeDiff = Nbuffer - PrevSize;
-
-  dev_RandStates_Seed.resize(Nbuffer);
-  curandState_t *d_RS_Seed = dev_RandStates_Seed.dataPtr();
-  cudaMemcpyToSymbol(glo_RandStates,&d_RS_Seed,sizeof(curandState_t *));
-
-  AMREX_PARALLEL_FOR_1D (SizeDiff, idx,
-  {
-     unsigned long seed = MyProc*1234567UL + 12345UL ;
-     int seqstart = idx + 10 * idx ; 
-     int loc = idx + PrevSize;
-     curand_init(seed, seqstart, 0, &glo_RandStates[loc]);
-  }); 
-
-#endif
-
-}
-
-void 
-amrex::DeallocateRandomSeedDevArray()
-{
-#ifdef AMREX_USE_CUDA  
-  dev_RandStates_Seed.resize(0);
-  dev_RandStates_Seed.shrink_to_fit();
-#endif
-}
-
-
-
-void
-amrex::NItemsPerBin (int totalItems, Vector<int> &binCounts)
-{
-  if(binCounts.size() == 0) {
-    return;
-  }
-  bool verbose(false);
-  int countForAll(totalItems / binCounts.size());
-  int remainder(totalItems % binCounts.size());
-  if(verbose) {
-      amrex::Print() << "amrex::NItemsPerBin:  countForAll remainder = " << countForAll
-                     << "  " << remainder << std::endl;
-  }
-  for(int i(0); i < binCounts.size(); ++i) {
-    binCounts[i] = countForAll;
-  }
-  for(int i(0); i < remainder; ++i) {
-    ++binCounts[i];
-  }
-  for(int i(0); i < binCounts.size(); ++i) {
-    if(verbose) {
-        amrex::Print() << "amrex::NItemsPerBin::  binCounts[" << i << "] = " << binCounts[i] << std::endl;
-    }
-  }
-}
-
 // -------------------------------------------------------------------
 int amrex::CRRBetweenLevels(int fromlevel, int tolevel,
                             const Vector<int> &refratios)
@@ -628,29 +270,6 @@ int amrex::CRRBetweenLevels(int fromlevel, int tolevel,
   }
   return rr;
 }
-
-//
-// Fortran entry points for amrex::Random().
-//
-
-#ifndef AMREX_XSDK
-BL_FORT_PROC_DECL(BLUTILINITRAND,blutilinitrand)(const int* sd)
-{
-    unsigned long seed = *sd;
-    amrex::InitRandom(seed);
-}
-
-BL_FORT_PROC_DECL(BLINITRAND,blinitrand)(const int* sd)
-{
-    unsigned long seed = *sd;
-    amrex::InitRandom(seed);
-}
-
-BL_FORT_PROC_DECL(BLUTILRAND,blutilrand)(amrex::Real* rn)
-{
-    *rn = amrex::Random();
-}
-#endif
 
 //
 // Lower tail quantile for standard normal distribution function.
@@ -682,36 +301,36 @@ amrex::InvNormDist (double p)
     //
     static const double a[6] =
     {
-	-3.969683028665376e+01,
+        -3.969683028665376e+01,
         2.209460984245205e+02,
-	-2.759285104469687e+02,
+        -2.759285104469687e+02,
         1.383577518672690e+02,
-	-3.066479806614716e+01,
+        -3.066479806614716e+01,
         2.506628277459239e+00
     };
     static const double b[5] =
     {
-	-5.447609879822406e+01,
+        -5.447609879822406e+01,
         1.615858368580409e+02,
-	-1.556989798598866e+02,
+        -1.556989798598866e+02,
         6.680131188771972e+01,
-	-1.328068155288572e+01
+        -1.328068155288572e+01
     };
     static const double c[6] =
     {
-	-7.784894002430293e-03,
-	-3.223964580411365e-01,
-	-2.400758277161838e+00,
-	-2.549732539343734e+00,
+        -7.784894002430293e-03,
+        -3.223964580411365e-01,
+        -2.400758277161838e+00,
+        -2.549732539343734e+00,
         4.374664141464968e+00,
         2.938163982698783e+00
     };
     static const double d[4] =
     {
-	7.784695709041462e-03,
-	3.224671290700398e-01,
-	2.445134137142996e+00,
-	3.754408661907416e+00
+        7.784695709041462e-03,
+        3.224671290700398e-01,
+        2.445134137142996e+00,
+        3.754408661907416e+00
     };
 
     static const double lo = 0.02425;
@@ -753,22 +372,6 @@ amrex::InvNormDist (double p)
 
     return x;
 }
-
-#ifndef AMREX_XSDK
-BL_FORT_PROC_DECL(BLINVNORMDIST,blinvnormdist)(amrex::Real* result)
-{
-    //
-    // Convert from [0, 1) to (0,1)
-    // 
-    double val = 0.0;
-    while (val == 0.0) {
-        val = amrex::Random();
-    }
-
-    *result = amrex::InvNormDist(val);
-}
-#endif
-
 
 //
 //****************************************************************************80
@@ -922,21 +525,6 @@ amrex::InvNormDistBest (double p)
 
   return value;
 }
-
-#ifndef AMREX_XSDK
-BL_FORT_PROC_DECL(BLINVNORMDISTBEST,blinvnormdistbest)(amrex::Real* result)
-{
-    //
-    // Convert from [0, 1) to (0,1)
-    // 
-    double val = 0.0;
-    while (val == 0.0) {
-        val = amrex::Random();
-    }
-
-    *result = amrex::InvNormDistBest(val);
-}
-#endif
 
 //
 // Sugar for parsing IO
@@ -1298,7 +886,7 @@ amrex::Vector<std::string> amrex::UnSerializeStringArray(const Vector<char> &cha
 
 void amrex::BroadcastBool(bool &bBool, int myLocalId, int rootId, const MPI_Comm &localComm)
 {
-  int numBool;
+  int numBool = 0;
   if (myLocalId == rootId) {
     numBool = bBool;
   }
@@ -1341,9 +929,8 @@ void amrex::BroadcastStringArray(Vector<std::string> &bSA, int myLocalId, int ro
   }
 }
 
-void amrex::USleep(double sleepsec) {
-  constexpr unsigned int msps = 1000000;
-  usleep(sleepsec * msps);
+void amrex::Sleep(double sleepsec) {
+    std::this_thread::sleep_for(std::chrono::duration<double>(sleepsec));
 }
 
 
@@ -1368,15 +955,5 @@ extern "C" {
     void amrex_free (void* p)
     {
         std::free(p);
-    }
-
-    double amrex_random ()
-    {
-        return amrex::Random();
-    }
-
-    long amrex_random_int (long n)  // This is for Fortran, which doesn't have unsigned long.
-    {
-        return static_cast<long>(amrex::Random_int(static_cast<unsigned long>(n)));
     }
 }

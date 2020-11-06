@@ -7,7 +7,8 @@
 #include <AMReX_EBFabFactory.H>
 #endif
 
-#include <AMReX_HypreABec_F.H>
+#include <AMReX_Habec_K.H>
+
 #include <cmath>
 #include <numeric>
 #include <limits>
@@ -119,6 +120,7 @@ void
 PETScABecLap::solve (MultiFab& soln, const MultiFab& rhs, Real rel_tol, Real abs_tol, 
                      int max_iter, const BndryData& bndry, int max_bndry_order)
 {
+    Gpu::LaunchSafeGuard lsg(false); // xxxxx TODO: gpu
     BL_PROFILE("PETScABecLap::solve()");
 
     if (solver == nullptr || m_bndry != &bndry || m_maxorder != max_bndry_order)
@@ -165,9 +167,9 @@ PETScABecLap::prepareSolver ()
     const DistributionMapping& dm = acoefs.DistributionMap();
     
 #if defined(AMREX_DEBUG) || defined(AMREX_TESTING)
-    if (sizeof(PetscInt) < sizeof(long)) {
-        long ncells_grids = ba.numPts();
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ncells_grids < static_cast<long>(std::numeric_limits<PetscInt>::max()),
+    if (sizeof(PetscInt) < sizeof(Long)) {
+        Long ncells_grids = ba.numPts();
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ncells_grids < static_cast<Long>(std::numeric_limits<PetscInt>::max()),
                                          "PetscInt is too short");
     }
 #endif
@@ -198,7 +200,7 @@ PETScABecLap::prepareSolver ()
     {
         const Box& bx = mfi.validbox();
         BaseFab<PetscInt>& cid_fab = cell_id[mfi];
-        cid_fab.setVal(std::numeric_limits<PetscInt>::lowest());
+        cid_fab.setVal<RunOn::Host>(std::numeric_limits<PetscInt>::lowest());
 #ifdef AMREX_USE_EB
         auto fabtyp = (flags) ? (*flags)[mfi].getType(bx) : FabType::regular;
         if (fabtyp == FabType::covered)
@@ -207,25 +209,25 @@ PETScABecLap::prepareSolver ()
         }
         else if (fabtyp == FabType::singlevalued)
         {
-            amrex_hpeb_fill_cellid(BL_TO_FORTRAN_BOX(bx),
-                                   &ncells_grid[mfi],
-                                   BL_TO_FORTRAN_ANYD(cid_fab),
-                                   BL_TO_FORTRAN_ANYD((*flags)[mfi]));
+            amrex_hpeb_fill_cellid(bx,
+                                   ncells_grid[mfi],
+                                   cid_fab,
+                                   (*flags)[mfi]);
             ncells_proc += ncells_grid[mfi];
         }
         else
 #endif
         {
-            long npts = bx.numPts();
+            Long npts = bx.numPts();
             ncells_grid[mfi] = npts;
             ncells_proc += npts;
 
             ifab.resize(bx);
             PetscInt* p = ifab.dataPtr();
-            for (long i = 0; i < npts; ++i) {
+            for (Long i = 0; i < npts; ++i) {
                 *p++ = i;
             }
-            cid_fab.copy(ifab,bx);
+            cid_fab.copy<RunOn::Host>(ifab,bx);
         }
     }
     }
@@ -258,7 +260,7 @@ PETScABecLap::prepareSolver ()
 #endif
     for (MFIter mfi(cell_id,true); mfi.isValid(); ++mfi)
     {
-        cell_id[mfi].plus(offset[mfi], mfi.tilebox());
+        cell_id[mfi].plus<RunOn::Host>(offset[mfi], mfi.tilebox());
     }    
 
     cell_id.FillBoundary(geom.periodicity());
@@ -278,8 +280,6 @@ PETScABecLap::prepareSolver ()
     // A.SetValues
     const Real* dx = geom.CellSize();
     const int bho = (m_maxorder > 2) ? 1 : 0;
-    FArrayBox rfab;
-    BaseFab<PetscInt> ifab;
     FArrayBox foo(Box::TheUnitBox());
     const int is_eb_dirichlet = m_eb_b_coeffs != nullptr;
     for (MFIter mfi(acoefs); mfi.isValid(); ++mfi)
@@ -296,18 +296,15 @@ PETScABecLap::prepareSolver ()
             const PetscInt max_stencil_size = (fabtyp == FabType::regular) ?
                 regular_stencil_size : eb_stencil_size;
 
-            ifab.resize(bx,(max_stencil_size+1));
-            rfab.resize(bx,max_stencil_size);
-
             const PetscInt nrows = ncells_grid[mfi];
             cell_id_vec[mfi].resize(nrows);
-            PetscInt* rows = cell_id_vec[mfi].data();
-            PetscInt* ncols = ifab.dataPtr(0);
-            PetscInt* cols  = ifab.dataPtr(1);
-            Real*      mat   = rfab.dataPtr();
 
-            Array<int,AMREX_SPACEDIM*2> bctype;
-            Array<Real,AMREX_SPACEDIM*2> bcl;
+            Gpu::ManagedDeviceVector<PetscInt> ncolsg(nrows,0);
+            Gpu::ManagedDeviceVector<PetscInt> colsg(nrows*(AMREX_SPACEDIM*2+1),0);
+            Gpu::ManagedDeviceVector<Real> matg(nrows*(AMREX_SPACEDIM*2+1),0.0);
+
+            GpuArray<int,AMREX_SPACEDIM*2> bctype;
+            GpuArray<Real,AMREX_SPACEDIM*2> bcl;
             const Vector< Vector<BoundCond> > & bcs_i = m_bndry->bndryConds(mfi);
             const BndryData::RealTuple        & bcl_i = m_bndry->bndryLocs(mfi);
             for (OrientationIter oit; oit; oit++) {
@@ -318,47 +315,63 @@ PETScABecLap::prepareSolver ()
     
             if (fabtyp == FabType::regular)
             {
-                amrex_hpijmatrix(BL_TO_FORTRAN_BOX(bx),
-                                 &nrows, ncols, rows, cols, mat,
-                                 BL_TO_FORTRAN_ANYD(cell_id[mfi]),
-                                 &(offset[mfi]),
-                                 BL_TO_FORTRAN_ANYD(diaginv[mfi]),
-                                 BL_TO_FORTRAN_ANYD(acoefs[mfi]),
-                                 AMREX_D_DECL(BL_TO_FORTRAN_ANYD(bcoefs[0][mfi]),
-                                              BL_TO_FORTRAN_ANYD(bcoefs[1][mfi]),
-                                              BL_TO_FORTRAN_ANYD(bcoefs[2][mfi])),
-                                 &scalar_a, &scalar_b, dx,
-                                 bctype.data(), bcl.data(), &bho);
+                amrex_hpijmatrix(bx,
+                                 nrows, ncolsg.dataPtr(),
+                                 cell_id_vec[mfi].dataPtr(),
+                                 colsg.dataPtr(), matg.dataPtr(),
+                                 cell_id[mfi],
+                                 offset[mfi],
+                                 diaginv[mfi],
+                                 acoefs[mfi],
+                                 bcoefs[0][mfi],
+                                 bcoefs[1][mfi],
+#if (AMREX_SPACEDIM == 3)
+                                 bcoefs[2][mfi],
+#endif
+                                 scalar_a, scalar_b, dx,
+                                 bctype, bcl, bho, nullptr);
             }
 #ifdef AMREX_USE_EB
             else
             {
                 FArrayBox const& beb = (is_eb_dirichlet) ? (*m_eb_b_coeffs)[mfi] : foo;
-                
-                amrex_hpeb_ijmatrix(BL_TO_FORTRAN_BOX(bx),
-                                    &nrows, ncols, rows, cols, mat,
-                                    BL_TO_FORTRAN_ANYD(cell_id[mfi]),
-                                    &(offset[mfi]),
-                                    BL_TO_FORTRAN_ANYD(diaginv[mfi]),
-                                    BL_TO_FORTRAN_ANYD(acoefs[mfi]),
-                                    AMREX_D_DECL(BL_TO_FORTRAN_ANYD(bcoefs[0][mfi]),
-                                                 BL_TO_FORTRAN_ANYD(bcoefs[1][mfi]),
-                                                 BL_TO_FORTRAN_ANYD(bcoefs[2][mfi])),
-                                    BL_TO_FORTRAN_ANYD((*flags)[mfi]),
-                                    BL_TO_FORTRAN_ANYD((*vfrac)[mfi]),
-                                    AMREX_D_DECL(BL_TO_FORTRAN_ANYD((*area[0])[mfi]),
-                                                 BL_TO_FORTRAN_ANYD((*area[1])[mfi]),
-                                                 BL_TO_FORTRAN_ANYD((*area[2])[mfi])),
-                                    AMREX_D_DECL(BL_TO_FORTRAN_ANYD((*fcent[0])[mfi]),
-                                                 BL_TO_FORTRAN_ANYD((*fcent[1])[mfi]),
-                                                 BL_TO_FORTRAN_ANYD((*fcent[2])[mfi])),
-                                    BL_TO_FORTRAN_ANYD((*barea)[mfi]),
-                                    BL_TO_FORTRAN_ANYD((*bcent)[mfi]),
-                                    BL_TO_FORTRAN_ANYD(beb), &is_eb_dirichlet,
-                                    &scalar_a, &scalar_b, dx,
-                                    bctype.data(), bcl.data(), &bho);
+                int size_vec = std::pow(3,AMREX_SPACEDIM);
+                colsg.resize(nrows*size_vec);
+                matg.resize(nrows*size_vec);
+                amrex_hpeb_ijmatrix(bx,
+                                    nrows, ncolsg.dataPtr(),
+                                    cell_id_vec[mfi].dataPtr(),
+                                    colsg.dataPtr(), matg.dataPtr(),
+                                    cell_id[mfi],
+                                    offset[mfi], diaginv[mfi],
+                                    acoefs[mfi], bcoefs[0][mfi],
+                                    bcoefs[1][mfi],
+#if (AMREX_SPACEDIM == 3)
+                                    bcoefs[2][mfi],
+#endif
+                                    (*flags)[mfi],
+                                    (*vfrac)[mfi],
+                                    (*area[0])[mfi], (*area[1])[mfi],
+#if (AMREX_SPACEDIM == 3)
+                                    (*area[2])[mfi],
+#endif
+                                    (*fcent[0])[mfi], (*fcent[1])[mfi],
+#if (AMREX_SPACEDIM == 3)
+                                    (*fcent[2])[mfi],
+#endif
+                                    (*barea)[mfi],
+                                    (*bcent)[mfi],
+                                    beb, is_eb_dirichlet,
+                                    scalar_a, scalar_b, dx,
+                                    bctype, bcl, bho);
             }
 #endif
+
+            PetscInt* rows = cell_id_vec[mfi].data();
+            PetscInt* ncols = (PetscInt*) ncolsg.dataPtr();
+            PetscInt* cols = (PetscInt*) colsg.dataPtr();
+            Real* mat = (Real*) matg.dataPtr();
+
             //Load in by row! 
             int matid = 0; 
             for (int rit = 0; rit < nrows; ++rit)
@@ -419,8 +432,8 @@ PETScABecLap::loadVectors (MultiFab& soln, const MultiFab& rhs)
             // soln has been set to zero.
             VecSetValues(x, nrows, cell_id_vec[mfi].data(), soln[mfi].dataPtr(), INSERT_VALUES); 
             rhsfab.resize(bx);
-            rhsfab.copy(rhs[mfi],bx);
-            rhsfab.mult(diaginv[mfi]);
+            rhsfab.copy<RunOn::Host>(rhs[mfi],bx);
+            rhsfab.mult<RunOn::Host>(diaginv[mfi]);
 
             FArrayBox* bfab;
 #ifdef AMREX_USE_EB
@@ -428,10 +441,10 @@ PETScABecLap::loadVectors (MultiFab& soln, const MultiFab& rhs)
             {
                 bfab = &vecfab;
                 bfab->resize(bx);
-                amrex_hpeb_copy_to_vec(BL_TO_FORTRAN_BOX(bx),
-                                       BL_TO_FORTRAN_ANYD(rhsfab),
-                                       bfab->dataPtr(), &nrows,
-                                       BL_TO_FORTRAN_ANYD((*flags)[mfi])); // */
+                amrex_hpeb_copy_to_vec(bx,
+                                       rhsfab,
+                                       bfab->dataPtr(),
+                                       (*flags)[mfi]);
             }
             else
 #endif
@@ -485,15 +498,15 @@ PETScABecLap::getSolution (MultiFab& soln)
             VecGetValues(x, nrows, cell_id_vec[mfi].data(), xfab->dataPtr()); 
             if (fabtyp == FabType::regular && soln.nGrow() != 0)
             {
-                soln[mfi].copy(*xfab,bx);
+                soln[mfi].copy<RunOn::Host>(*xfab,bx);
             }
 #ifdef AMREX_USE_EB
             else if (fabtyp != FabType::regular)
             {
-                amrex_hpeb_copy_from_vec(BL_TO_FORTRAN_BOX(bx),
-                                         BL_TO_FORTRAN_ANYD(soln[mfi]),
-                                         xfab->dataPtr(), &nrows,
-                                         BL_TO_FORTRAN_ANYD((*flags)[mfi])); // */
+                amrex_hpeb_copy_from_vec(bx,
+                                         soln[mfi],
+                                         xfab->dataPtr(),
+                                         (*flags)[mfi]);
             }
 #endif
         }

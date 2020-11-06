@@ -24,6 +24,8 @@ InterpAddBox (MultiFabCopyDescriptor& fabCopyDesc,
 		      int                     num_comp,
 		      bool                    extrap)
 {
+    amrex::ignore_unused(extrap);
+
     const Real teps = (t2-t1)/1000.0;
 
     BL_ASSERT(extrap || ( (t>=t1-teps) && (t <= t2+teps) ) );
@@ -71,8 +73,6 @@ InterpAddBox (MultiFabCopyDescriptor& fabCopyDesc,
     }
 }
 
-#if !defined(BL_NO_FORT)
-
 void
 InterpFillFab (MultiFabCopyDescriptor& fabCopyDesc,
 		       const Vector<FillBoxId>& fillBoxIds,
@@ -87,6 +87,8 @@ InterpFillFab (MultiFabCopyDescriptor& fabCopyDesc,
 		       int                     num_comp,
 		       bool                    extrap)
 {
+    amrex::ignore_unused(extrap);
+
     const Real teps = (t2-t1)/1000.0;
 
     BL_ASSERT(extrap || ( (t>=t1-teps) && (t <= t2+teps) ) );
@@ -104,12 +106,13 @@ InterpFillFab (MultiFabCopyDescriptor& fabCopyDesc,
         BL_ASSERT(dest_comp + num_comp <= dest.nComp());
 
         FArrayBox dest1(dest.box(), dest.nComp());
-	dest1.setVal(std::numeric_limits<Real>::quiet_NaN());
+	dest1.setVal<RunOn::Host>(std::numeric_limits<Real>::quiet_NaN());
         FArrayBox dest2(dest.box(), dest.nComp());
-	dest2.setVal(std::numeric_limits<Real>::quiet_NaN());
+	dest2.setVal<RunOn::Host>(std::numeric_limits<Real>::quiet_NaN());
         fabCopyDesc.FillFab(faid1, fillBoxIds[0], dest1);
         fabCopyDesc.FillFab(faid2, fillBoxIds[1], dest2);
-        dest.linInterp(dest1,
+        dest.linInterp<RunOn::Host>
+                      (dest1,
                        src_comp,
                        dest2,
                        src_comp,
@@ -121,7 +124,5 @@ InterpFillFab (MultiFabCopyDescriptor& fabCopyDesc,
                        num_comp);
     }
 }
-
-#endif
 
 }

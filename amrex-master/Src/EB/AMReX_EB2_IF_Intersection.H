@@ -50,14 +50,12 @@ class IntersectionIF
 public:
     using GpuTuple<Fs...>::GpuTuple;
 
-    ~IntersectionIF () {}
-
     inline Real operator() (const RealArray& p) const noexcept
     {
         return op_impl(p, makeIndexSequence<sizeof...(Fs)>());
     }
 
-    template <class U=IntersectionIF<Fs...>, class = typename std::enable_if<IsGPUable<U>::value>::type>
+    template <class U=IntersectionIF<Fs...>, typename std::enable_if<IsGPUable<U>::value,int>::type = 0>
     AMREX_GPU_HOST_DEVICE inline
     Real operator() (AMREX_D_DECL(Real x, Real y, Real z)) const noexcept
     {

@@ -8,28 +8,8 @@
 
 namespace amrex {
 
-namespace
-{
-    bool initialized = false;
-}
-
-void
-AmrMesh::Initialize ()
-{
-    if (initialized) return;
-    initialized = true;
-}
-
-void
-AmrMesh::Finalize ()
-{
-    initialized = false;
-}
-
-
 AmrMesh::AmrMesh ()
 {
-    Initialize();
     Geometry::Setup();
     int max_level_in = -1;
     Vector<int> n_cell_in(AMREX_SPACEDIM, -1);
@@ -40,7 +20,6 @@ AmrMesh::AmrMesh (const RealBox* rb, int max_level_in,
                   const Vector<int>& n_cell_in, int coord,
                   Vector<IntVect> a_refrat, const int* is_per)
 {
-    Initialize();
     Geometry::Setup(rb,coord,is_per);
     InitAmrMesh(max_level_in,n_cell_in, std::move(a_refrat), rb, coord, is_per);
 }
@@ -50,14 +29,30 @@ AmrMesh::AmrMesh (const RealBox& rb, int max_level_in,
                   const Vector<IntVect>& a_refrat,
                   const Array<int,AMREX_SPACEDIM>& is_per)
 {
-    Initialize();
     Geometry::Setup(&rb,coord,is_per.data());
     InitAmrMesh(max_level_in,n_cell_in, a_refrat, &rb, coord, is_per.data());
 }
 
-AmrMesh::~AmrMesh ()
+AmrMesh::AmrMesh (Geometry const& level_0_geom, AmrInfo const& amr_info)
+    : AmrInfo(amr_info)
 {
-    Finalize();
+    int nlev = max_level + 1;
+    ref_ratio.resize      (nlev, amr_info.ref_ratio.back());
+    blocking_factor.resize(nlev, amr_info.blocking_factor.back());
+    max_grid_size.resize  (nlev, amr_info.max_grid_size.back());
+    n_error_buf.resize    (nlev, amr_info.n_error_buf.back());
+
+    dmap.resize(nlev);
+    grids.resize(nlev);
+    geom.reserve(nlev);
+    geom.push_back(level_0_geom);
+    for (int lev = 1; lev <= max_level; ++lev) {
+        geom.push_back(amrex::refine(geom[lev-1], ref_ratio[lev-1]));
+    }
+
+    finest_level = -1;
+
+    if (check_input) checkInput();
 }
 
 void
@@ -65,18 +60,6 @@ AmrMesh::InitAmrMesh (int max_level_in, const Vector<int>& n_cell_in,
                       Vector<IntVect> a_refrat, const RealBox* rb,
                       int coord, const int* is_per)
 {
-    verbose   = 0;
-    grid_eff  = 0.7;
-    n_proper  = 1;
-
-    use_fixed_coarse_grids = false;
-    use_fixed_upto_level   = 0;
-    refine_grid_layout     = true;
-    check_input            = true;
-
-    use_new_chop         = false;
-    iterate_on_new_grids = true;
-
     ParmParse pp("amr");
 
     pp.query("v",verbose);
@@ -390,12 +373,14 @@ AmrMesh::MaxRefRatio (int lev) const noexcept
 void
 AmrMesh::SetDistributionMap (int lev, const DistributionMapping& dmap_in) noexcept
 {
+    ++num_setdm;
     if (dmap[lev] != dmap_in) dmap[lev] = dmap_in;
 }
 
 void
 AmrMesh::SetBoxArray (int lev, const BoxArray& ba_in) noexcept
 {
+    ++num_setba;
     if (grids[lev] != ba_in) grids[lev] = ba_in;
 }
 
@@ -474,6 +459,7 @@ AmrMesh::MakeBaseGrids () const
     if (ba == grids[0]) {
         ba = grids[0];  // to avoid duplicates
     }
+    PostProcessBaseGrids(ba);
     return ba;
 }
 
@@ -517,17 +503,16 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
     Vector<BoxList> p_n(max_level);      // Proper nesting domain.
     Vector<BoxList> p_n_comp(max_level); // Complement proper nesting domain.
 
-    BoxList bl(grids[lbase]);
-    bl.simplify();
+    BoxList bl = grids[lbase].simplified_list();
     bl.coarsen(bf_lev[lbase]);
-    p_n_comp[lbase].complementIn(pc_domain[lbase],bl);
+    p_n_comp[lbase].parallelComplementIn(pc_domain[lbase],bl);
     p_n_comp[lbase].simplify();
     p_n_comp[lbase].accrete(n_proper);
     if (geom[lbase].isAnyPeriodic()) {
         ProjPeriodic(p_n_comp[lbase], pc_domain[lbase],
                      geom[lbase].isPeriodic());
     }
-    p_n[lbase].complementIn(pc_domain[lbase],p_n_comp[lbase]);
+    p_n[lbase].parallelComplementIn(pc_domain[lbase],p_n_comp[lbase]);
     p_n[lbase].simplify();
     bl.clear();
 
@@ -545,7 +530,7 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
 	    ProjPeriodic(p_n_comp[i], pc_domain[i], geom[i].isPeriodic());
 	}
 
-        p_n[i].complementIn(pc_domain[i],p_n_comp[i]);
+        p_n[i].parallelComplementIn(pc_domain[i],p_n_comp[i]);
         p_n[i].simplify();
     }
 
@@ -565,12 +550,12 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
 
         if (levf < new_finest)
         {
-            BoxArray ba_proj(new_grids[levf+1]);
+            BoxArray ba_proj = new_grids[levf+1].simplified();
 
             ba_proj.coarsen(ref_ratio[levf]);
             ba_proj.growcoarsen(n_proper, ref_ratio[levc]);
 
-            BoxArray levcBA = grids[levc];
+            BoxArray levcBA = grids[levc].simplified();
 
             while (!levcBA.contains(ba_proj))
             {
@@ -609,8 +594,7 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
             // Replace this by n_error_buf that may be anisotropic
             // int nerr = n_error_buf[levf];
 
-            BoxList bl_tagged(new_grids[levf+1]);
-            bl_tagged.simplify();
+            BoxList bl_tagged = new_grids[levf+1].simplified_list();
             bl_tagged.coarsen(ref_ratio[levf]);
             //
             // This grows the boxes by n_error_buf[levf][idir] if they touch the edge 
@@ -632,7 +616,7 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
             }
             Box mboxF = amrex::grow(bl_tagged.minimalBox(),1);
             BoxList blFcomp;
-            blFcomp.complementIn(mboxF,bl_tagged);
+            blFcomp.parallelComplementIn(mboxF,bl_tagged);
             blFcomp.simplify();
             bl_tagged.clear();
 
@@ -641,9 +625,8 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
                                                      n_error_buf[levf][2]/ref_ratio[levf][2]));
             blFcomp.accrete(iv);
             BoxList blF;
-            blF.complementIn(mboxF,blFcomp);
-            BoxArray baF(blF);
-            blF.clear();
+            blF.parallelComplementIn(mboxF,blFcomp);
+            BoxArray baF(std::move(blF));
             baF.grow(n_proper);
             //
             // We need to do this in case the error buffering at
@@ -697,10 +680,10 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
         //
         // Map tagged points through periodic boundaries, if any.
         //
-        tags.mapPeriodic(Geometry(pc_domain[levc],
-                                  Geom(levc).ProbDomain(),
-                                  Geom(levc).CoordInt(),
-                                  Geom(levc).isPeriodic()));
+        tags.mapPeriodicRemoveDuplicates(Geometry(pc_domain[levc],
+                                                  Geom(levc).ProbDomain(),
+                                                  Geom(levc).CoordInt(),
+                                                  Geom(levc).isPeriodic()));
         //
         // Remove cells outside proper nesting domain for this level.
         //
@@ -719,62 +702,68 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
             //
             if ( !(useFixedCoarseGrids() && levc<useFixedUpToLevel()) ) {
                 new_finest = std::max(new_finest,levf);
-	    }
-            //
-            // Construct initial cluster.
-            //
-            ClusterList clist(&tagvec[0], tagvec.size());
-            if (use_new_chop)
-            {
-               clist.new_chop(grid_eff);
-            } else {
-               clist.chop(grid_eff);
             }
-            BoxDomain bd;
-            bd.add(p_n[levc]);
-            clist.intersect(bd);
-            bd.clear();
-            //
-            // Efficient properly nested Clusters have been constructed
-            // now generate list of grids at level levf.
-            //
-            BoxList new_bx;
-            clist.boxList(new_bx);
-            new_bx.refine(bf_lev[levc]);
-            new_bx.simplify();
-            BL_ASSERT(new_bx.isDisjoint());
 
-	    if (new_bx.size()>0) {
-		if ( !(Geom(levc).Domain().contains(BoxArray(new_bx).minimalBox())) ) {
-		// Chop new grids outside domain, note that this is likely to result in
-		//  new grids that violate blocking_factor....see warning checking below
-		    new_bx = amrex::intersect(new_bx,Geom(levc).Domain());
-		}
-	    }
+            if (levf > useFixedUpToLevel()) {
+                BoxList new_bx;
+                if (ParallelDescriptor::IOProcessor()) {
+                    BL_PROFILE("AmrMesh-cluster");
+                    //
+                    // Construct initial cluster.
+                    //
+                    ClusterList clist(&tagvec[0], tagvec.size());
+                    if (use_new_chop) {
+                        clist.new_chop(grid_eff);
+                    } else {
+                        clist.chop(grid_eff);
+                    }
+                    BoxDomain bd;
+                    bd.add(p_n[levc]);
+                    clist.intersect(bd);
+                    bd.clear();
+                    //
+                    // Efficient properly nested Clusters have been constructed
+                    // now generate list of grids at level levf.
+                    //
+                    clist.boxList(new_bx);
+                    new_bx.refine(bf_lev[levc]);
+                    new_bx.simplify();
 
-            const IntVect& largest_grid_size = max_grid_size[levf] / ref_ratio[levc];
-            //
-            // Ensure new grid boxes are at most max_grid_size in index dirs.
-            //
-            new_bx.maxSize(largest_grid_size);
+                    if (new_bx.size()>0) {
+                        // Chop new grids outside domain
+                        new_bx.intersect(Geom(levc).Domain());
+                    }
+                }
+                new_bx.Bcast();  // Broadcast the new BoxList to other processes
 
-            //
-            // Refine up to levf.
-            //
-            new_bx.refine(ref_ratio[levc]);
-            BL_ASSERT(new_bx.isDisjoint());
+                //
+                // Refine up to levf.
+                //
+                new_bx.refine(ref_ratio[levc]);
+                BL_ASSERT(new_bx.isDisjoint());
 
-	    if (new_bx.size()>0) {
-		if ( !(Geom(levf).Domain().contains(BoxArray(new_bx).minimalBox())) ) {
-		    new_bx = amrex::intersect(new_bx,Geom(levf).Domain());
-		}
-	    }
-
-            if(levf > useFixedUpToLevel()) {
-              new_grids[levf].define(new_bx);
+                new_grids[levf] = BoxArray(std::move(new_bx), max_grid_size[levf]);
 	    }
         }
     }
+
+#ifdef AMREX_DEBUG
+    if (!useFixedCoarseGrids()) {
+        // check proper nesting
+        for (int lev = lbase+1; lev <= new_finest; ++lev) {
+            BoxArray const& cba = (lev == lbase+1) ? grids[lev-1] : new_grids[lev-1];
+            BoxArray const& fba = amrex::coarsen(new_grids[lev],ref_ratio[lev-1]);
+            IntVect np = bf_lev[lev-1] * n_proper;
+            Box const& cdomain = Geom(lev-1).Domain();
+            for (int i = 0, N = fba.size(); i < N; ++i) {
+                Box const& fb = amrex::grow(fba[i],np) & cdomain;
+                if (!cba.contains(fb,true)) {
+                    amrex::Abort("AmrMesh::MakeNewGrids: new grids not properly nested");
+                }
+            }
+        }
+    }
+#endif
 
     for (int lev = lbase+1; lev <= new_finest; ++lev) {
         if (new_grids[lev].empty())
@@ -802,11 +791,17 @@ AmrMesh::MakeNewGrids (Real time)
 
 	const BoxArray& ba = MakeBaseGrids();
 	DistributionMapping dm(ba);
+        const auto old_num_setdm = num_setdm;
+        const auto old_num_setba = num_setba;
 
 	MakeNewLevelFromScratch(0, time, ba, dm);
 
-	SetBoxArray(0, ba);
-	SetDistributionMap(0, dm);
+        if (old_num_setba == num_setba) {
+            SetBoxArray(0, ba);
+        }
+        if (old_num_setdm == num_setdm) {
+            SetDistributionMap(0, dm);
+        }
     }
 
     if (max_level > 0) // build fine levels
@@ -824,11 +819,14 @@ AmrMesh::MakeNewGrids (Real time)
 	    finest_level = new_finest;
 
 	    DistributionMapping dm(new_grids[new_finest]);
+            const auto old_num_setdm = num_setdm;
 
             MakeNewLevelFromScratch(new_finest, time, new_grids[finest_level], dm);
 
 	    SetBoxArray(new_finest, new_grids[new_finest]);
-	    SetDistributionMap(new_finest, dm);
+            if (old_num_setdm == num_setdm) {
+                SetDistributionMap(new_finest, dm);
+            }
 	}
 	while (finest_level < max_level);
 
@@ -852,11 +850,14 @@ AmrMesh::MakeNewGrids (Real time)
 		    if (new_grids[lev] != grids[lev]) {
 		        grids_the_same = false;
 		        DistributionMapping dm(new_grids[lev]);
+                        const auto old_num_setdm = num_setdm;
 
                         MakeNewLevelFromScratch(lev, time, new_grids[lev], dm);
 
 		        SetBoxArray(lev, new_grids[lev]);
-		        SetDistributionMap(lev, dm);
+                        if (old_num_setdm == num_setdm) {
+                            SetDistributionMap(lev, dm);
+                        }
 		    }
 	        }
 	        if (grids_the_same) break;
@@ -986,6 +987,22 @@ AmrMesh::checkInput ()
         }
     }
 
+    // Make sure TagBoxArray has no overlapped valid cells after coarsening by block_factor/ref_ratio
+    for (int i = 0; i < max_level; ++i) {
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+            int bf_lev = std::max(1,blocking_factor[i+1][idim]/ref_ratio[i][idim]);
+            int min_grid_size = std::min(blocking_factor[i][idim],max_grid_size[i][idim]);
+            if (min_grid_size % bf_lev != 0) {
+                amrex::Print() << "On level " << i << " in direction " << idim
+                               << " max_grid_size is " << max_grid_size[i][idim]
+                               << " blocking factor is " << blocking_factor[i][idim] << "\n"
+                               << "On level " << i+1 << " in direction " << idim
+                               << " blocking_factor is " << blocking_factor[i+1][idim] << std::endl;
+                amrex::Error("Coarse level blocking factor not a multiple of fine level blocking factor divided by ref ratio");
+            }
+        }
+    }
+
     if( ! (Geom(0).ProbDomain().volume() > 0.0) ) {
         amrex::Error("Amr::checkInput: bad physical problem size");
     }
@@ -1001,5 +1018,31 @@ AmrMesh::CountCells (int lev) noexcept
     return grids[lev].numPts();
 }
 
+std::ostream& operator<< (std::ostream& os, AmrMesh const& amr_mesh)
+{
+    os << "  verbose = " << amr_mesh.verbose << "\n";
+    os << "  max_level = " << amr_mesh.max_level << "\n";
+    os << "  ref_ratio =";
+    for (int lev = 0; lev < amr_mesh.max_level; ++lev) os << " " << amr_mesh.ref_ratio[lev];
+    os << "\n";
+    os << "  blocking_factor =";
+    for (int lev = 0; lev <= amr_mesh.max_level; ++lev) os << " " << amr_mesh.blocking_factor[lev];
+    os << "\n";
+    os << "  max_grid_size =";
+    for (int lev = 0; lev <= amr_mesh.max_level; ++lev) os << " " << amr_mesh.max_grid_size[lev];
+    os << "\n";
+    os << "  n_error_buf =";
+    for (int lev = 0; lev < amr_mesh.max_level; ++lev) os << " " << amr_mesh.n_error_buf[lev];
+    os << "\n";
+    os << "  grid_eff = " << amr_mesh.grid_eff << "\n";
+    os << "  n_proper = " << amr_mesh.n_proper << "\n";
+    os << "  use_fixed_upto_level = " << amr_mesh.use_fixed_upto_level << "\n";
+    os << "  use_fixed_coarse_grids = " << amr_mesh.use_fixed_coarse_grids << "\n";
+    os << "  refine_grid_layout = " << amr_mesh.refine_grid_layout << "\n";
+    os << "  check_input = " << amr_mesh.check_input  << "\n";
+    os << "  use_new_chop = " << amr_mesh.use_new_chop << "\n";
+    os << "  iterate_on_new_grids = " << amr_mesh.iterate_on_new_grids << "\n";
+    return os;
+}
 
 }

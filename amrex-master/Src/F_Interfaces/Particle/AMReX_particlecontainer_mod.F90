@@ -3,8 +3,8 @@ module amrex_particlecontainer_module
   use iso_c_binding
   use amrex_base_module
   use amrex_string_module
-  use amrex_fort_module, only: amrex_particle_real
-  
+  use amrex_fort_module, only: amrex_particle_real, amrex_long
+
   implicit none
 
   private
@@ -12,12 +12,14 @@ module amrex_particlecontainer_module
   ! public routines
   public :: amrex_particlecontainer_build, amrex_particlecontainer_destroy
   public :: amrex_get_next_particle_id, amrex_get_cpu
-  
+  public :: amrex_get_particle_id, amrex_set_particle_id
+  public :: amrex_get_particle_cpu, amrex_set_particle_cpu
+
   type, bind(C), public :: amrex_particle
      real(amrex_particle_real)    :: pos(AMREX_SPACEDIM) !< Position
      real(amrex_particle_real)    :: vel(AMREX_SPACEDIM) !< Particle velocity
-     integer(c_int)               :: id
-     integer(c_int)               :: cpu
+     integer(c_int), private      :: id
+     integer(c_int), private      :: cpu
   end type amrex_particle
 
   type, public :: amrex_particlecontainer
@@ -56,7 +58,7 @@ module amrex_particlecontainer_module
      subroutine amrex_fi_get_next_particle_id (id) bind(c)
        import
        implicit none
-       integer(c_int) id
+       integer(amrex_long) id
      end subroutine amrex_fi_get_next_particle_id
 
      subroutine amrex_fi_get_cpu (cpu) bind(c)
@@ -64,7 +66,35 @@ module amrex_particlecontainer_module
        implicit none
        integer(c_int) cpu
      end subroutine amrex_fi_get_cpu
-     
+
+     subroutine amrex_fi_get_particle_id (id, p) bind(c)
+       import
+       implicit none
+       integer(amrex_long) id
+       type(c_ptr),    value :: p
+     end subroutine amrex_fi_get_particle_id
+
+     subroutine amrex_fi_set_particle_id (id, p) bind(c)
+       import
+       implicit none
+       integer(amrex_long) id
+       type(c_ptr),    value :: p
+     end subroutine amrex_fi_set_particle_id
+
+     subroutine amrex_fi_get_particle_cpu (cpu, p) bind(c)
+       import
+       implicit none
+       integer(c_int) cpu
+       type(c_ptr),    value :: p
+     end subroutine amrex_fi_get_particle_cpu
+
+     subroutine amrex_fi_set_particle_cpu (cpu, p) bind(c)
+       import
+       implicit none
+       integer(c_int) cpu
+       type(c_ptr),    value :: p
+     end subroutine amrex_fi_set_particle_cpu
+
      subroutine amrex_fi_write_particles (pc, dirname, pname, is_checkpoint) bind(c)
        import
        implicit none
@@ -87,7 +117,7 @@ module amrex_particlecontainer_module
        integer(c_int), value :: lev
        type(c_ptr),    value :: pc, mfi
        type(c_ptr)           :: dp
-       integer(c_long)       :: np
+       integer(amrex_long)   :: np
      end subroutine amrex_fi_get_particles_mfi
 
      subroutine amrex_fi_add_particle_mfi(pc, lev, mfi, p) bind(c)
@@ -97,13 +127,13 @@ module amrex_particlecontainer_module
        type(c_ptr),    value :: pc, mfi
        type(c_ptr),    value :: p
      end subroutine amrex_fi_add_particle_mfi
-     
+
      subroutine amrex_fi_num_particles_mfi(pc, lev, mfi, np) bind(c)
        import
        implicit none
        integer(c_int), value :: lev
        type(c_ptr),    value :: pc, mfi
-       integer(c_long)       :: np
+       integer(amrex_long)   :: np
      end subroutine amrex_fi_num_particles_mfi
 
      subroutine amrex_fi_get_particles_i(pc, lev, grid, tile, dp, np) bind(c)
@@ -112,7 +142,7 @@ module amrex_particlecontainer_module
        integer(c_int), value :: lev, grid, tile
        type(c_ptr),    value :: pc
        type(c_ptr)           :: dp
-       integer(c_long)       :: np
+       integer(amrex_long)   :: np
      end subroutine amrex_fi_get_particles_i
 
      subroutine amrex_fi_add_particle_i(pc, lev, grid, tile, p) bind(c)
@@ -122,15 +152,15 @@ module amrex_particlecontainer_module
        type(c_ptr),    value :: pc
        type(c_ptr),    value :: p
      end subroutine amrex_fi_add_particle_i
-     
+
      subroutine amrex_fi_num_particles_i(pc, lev, grid, tile, np) bind(c)
        import
        implicit none
        integer(c_int), value :: lev, grid, tile
        type(c_ptr),    value :: pc
-       integer(c_long)       :: np
+       integer(amrex_long)   :: np
      end subroutine amrex_fi_num_particles_i
-     
+
   end interface
 
 contains
@@ -148,7 +178,7 @@ contains
   end subroutine amrex_particlecontainer_destroy
 
   function amrex_get_next_particle_id() result(id)
-    integer(c_int) :: id
+    integer(amrex_long) :: id
     call amrex_fi_get_next_particle_id(id)
   end function amrex_get_next_particle_id
 
@@ -157,8 +187,48 @@ contains
     call amrex_fi_get_cpu(cpu)
   end function amrex_get_cpu
 
+  subroutine amrex_get_particle_id (id, particle)
+    integer(amrex_long), intent(inout) :: id
+    type(amrex_particle), intent(in), target :: particle
+    type(amrex_particle), pointer :: ptr
+    type(c_ptr) :: dp
+    ptr => particle
+    dp = c_loc(ptr)
+    call amrex_fi_get_particle_id(id, dp)
+  end subroutine amrex_get_particle_id
+
+  subroutine amrex_set_particle_id (id, particle)
+    integer(amrex_long), intent(in) :: id
+    type(amrex_particle), intent(inout), target :: particle
+    type(amrex_particle), pointer :: ptr
+    type(c_ptr) :: dp
+    ptr => particle
+    dp = c_loc(ptr)
+    call amrex_fi_set_particle_id(id, dp)
+  end subroutine amrex_set_particle_id
+
+  subroutine amrex_get_particle_cpu (cpu, particle)
+    integer(c_int), intent(inout) :: cpu
+    type(amrex_particle), intent(in), target :: particle
+    type(amrex_particle), pointer :: ptr
+    type(c_ptr) :: dp
+    ptr => particle
+    dp = c_loc(ptr)
+    call amrex_fi_get_particle_cpu(cpu, dp)
+  end subroutine amrex_get_particle_cpu
+
+  subroutine amrex_set_particle_cpu (cpu, particle)
+    integer(c_int), intent(in) :: cpu
+    type(amrex_particle), intent(inout), target :: particle
+    type(amrex_particle), pointer :: ptr
+    type(c_ptr) :: dp
+    ptr => particle
+    dp = c_loc(ptr)
+    call amrex_fi_set_particle_cpu(cpu, dp)
+  end subroutine amrex_set_particle_cpu
+
   subroutine amrex_write_particles (this, dirname, pname, is_checkpoint)
-    class(amrex_particlecontainer), intent(inout) :: this    
+    class(amrex_particlecontainer), intent(inout) :: this
     character(len=*), intent(in) :: dirname
     character(len=*), intent(in) :: pname
     logical, intent(in)          :: is_checkpoint
@@ -169,13 +239,13 @@ contains
     else
        is_check_flag = 0
     end if
-    
+
     call amrex_fi_write_particles(this%p, amrex_string_f_to_c(dirname), &
          amrex_string_f_to_c(pname), is_check_flag)
   end subroutine amrex_write_particles
 
   subroutine amrex_particle_redistribute (this, lev_min,lev_max,nghost)
-    class(amrex_particlecontainer), intent(inout) :: this    
+    class(amrex_particlecontainer), intent(inout) :: this
     integer, optional, intent(in) :: lev_min, lev_max, nghost
     integer(c_int) :: default_min, default_max, default_ng
     default_min = 0
@@ -189,7 +259,7 @@ contains
   end subroutine amrex_particle_redistribute
 
   subroutine amrex_add_particle_mfi(this, lev, mfi, particle)
-    class(amrex_particlecontainer), intent(inout) :: this    
+    class(amrex_particlecontainer), intent(inout) :: this
     integer(c_int),       intent(in)           :: lev
     type(amrex_mfiter),   intent(in)           :: mfi
     type(amrex_particle), intent(in), target :: particle
@@ -199,14 +269,14 @@ contains
     dp = c_loc(ptr)
     call amrex_fi_add_particle_mfi(this%p, lev, mfi%p, dp)
   end subroutine amrex_add_particle_mfi
-  
+
   function amrex_get_particles_mfi(this, lev, mfi) result(particles)
     class(amrex_particlecontainer), intent(inout) :: this
     integer(c_int),     intent(in) :: lev
     type(amrex_mfiter), intent(in) :: mfi
     type(amrex_particle), pointer  :: particles(:)
     type(c_ptr)                    :: data
-    integer(c_long)                :: np
+    integer(amrex_long)            :: np
     call amrex_fi_get_particles_mfi(this%p, lev, mfi%p, data, np)
     call c_f_pointer(data, particles, [np])
   end function amrex_get_particles_mfi
@@ -215,12 +285,12 @@ contains
     class(amrex_particlecontainer), intent(inout) :: this
     integer(c_int), intent(in)     :: lev
     type(amrex_mfiter), intent(in) :: mfi
-    integer(c_long) :: np
+    integer(amrex_long) :: np
     call amrex_fi_num_particles_mfi(this%p, lev, mfi%p, np)
   end function amrex_num_particles_mfi
 
   subroutine amrex_add_particle_i(this, lev, grid, tile, particle)
-    class(amrex_particlecontainer), intent(inout) :: this    
+    class(amrex_particlecontainer), intent(inout) :: this
     integer(c_int),       intent(in)           :: lev, grid, tile
     type(amrex_particle), intent(in), target :: particle
     type(amrex_particle), pointer :: ptr
@@ -229,13 +299,13 @@ contains
     dp = c_loc(ptr)
     call amrex_fi_add_particle_i(this%p, lev, grid, tile, dp)
   end subroutine amrex_add_particle_i
-  
+
   function amrex_get_particles_i(this, lev, grid, tile) result(particles)
     class(amrex_particlecontainer), intent(inout) :: this
     integer(c_int),     intent(in) :: lev, grid, tile
     type(amrex_particle), pointer  :: particles(:)
     type(c_ptr)                    :: data
-    integer(c_long)                :: np
+    integer(amrex_long)            :: np
     call amrex_fi_get_particles_i(this%p, lev, grid, tile, data, np)
     call c_f_pointer(data, particles, [np])
   end function amrex_get_particles_i
@@ -243,9 +313,9 @@ contains
   function amrex_num_particles_i(this, lev, grid, tile) result(np)
     class(amrex_particlecontainer), intent(inout) :: this
     integer(c_int), intent(in)     :: lev, grid, tile
-    integer(c_long) :: np
+    integer(amrex_long) :: np
     call amrex_fi_num_particles_i(this%p, lev, grid, tile, np)
   end function amrex_num_particles_i
-  
+
 end module amrex_particlecontainer_module
 

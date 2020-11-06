@@ -4,13 +4,17 @@
 #include <AMReX_FArrayBox.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_Interpolater.H>
-#include <AMReX_INTERP_F.H>
 #include <AMReX_Interp_C.H>
+
+#ifndef BL_NO_FORT
+#include <AMReX_INTERP_F.H>
+#endif
 
 namespace amrex {
 
 //
-// PCInterp, NodeBilinear, and CellConservativeLinear are supported for all dimensions on cpu and gpu.
+// PCInterp, NodeBilinear, FaceLinear, and CellConservativeLinear are supported for all dimensions
+// on cpu and gpu.
 //
 // CellConsertiveProtected only works in 2D and 3D on cpu.
 //
@@ -26,12 +30,16 @@ namespace amrex {
 //
 PCInterp                  pc_interp;
 NodeBilinear              node_bilinear_interp;
-CellBilinear              cell_bilinear_interp;
-CellQuadratic             quadratic_interp;
+FaceLinear                face_linear_interp;
 CellConservativeLinear    lincc_interp;
 CellConservativeLinear    cell_cons_interp(0);
+
+#ifndef BL_NO_FORT
+CellBilinear              cell_bilinear_interp;
+CellQuadratic             quadratic_interp;
 CellConservativeProtected protected_interp;
 CellConservativeQuartic   quartic_interp;
+#endif
 
 Interpolater::~Interpolater () {}
 
@@ -124,17 +132,88 @@ NodeBilinear::interp (const FArrayBox&  crse,
     Array4<Real> const& finearr = fine.array();
     Array4<Real> const& slopearr = slopefab.array();
 
-    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (run_on_gpu, cslope_bx, tbx,
+    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (runon, cslope_bx, tbx,
     {
-        amrex::nodebilin_slopes(tbx, slopearr, crsearr, crse_comp, ncomp, ratio);
+        amrex::nodebilin_slopes<Real>(tbx, slopearr, crsearr, crse_comp, ncomp, ratio);
     });
 
-    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (run_on_gpu, fine_region, tbx,
+    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (runon, fine_region, tbx,
     {
-        amrex::nodebilin_interp(tbx, finearr, fine_comp, ncomp, slopearr, crsearr, crse_comp, ratio);
+        amrex::nodebilin_interp<Real>(tbx, finearr, fine_comp, ncomp, slopearr, crsearr, crse_comp, ratio);
     });
 }
 
+Box
+FaceLinear::CoarseBox (const Box& fine, int ratio)
+{
+    return CoarseBox(fine, IntVect(ratio));
+}
+
+Box
+FaceLinear::CoarseBox (const Box& fine, const IntVect& ratio)
+{
+    Box b = amrex::coarsen(fine,ratio);
+    for (int i = 0; i < AMREX_SPACEDIM; i++) {
+        if (b.type(i) == IndexType::NODE && b.length(i) < 2) {
+            // Don't want degenerate boxes in nodal direction.
+            b.growHi(i,1);
+        }
+    }
+    return b;
+}
+
+void
+FaceLinear::interp (const FArrayBox&  crse,
+                    int               crse_comp,
+                    FArrayBox&        fine,
+                    int               fine_comp,
+                    int               ncomp,
+                    const Box&        fine_region,
+                    const IntVect&    ratio,
+                    const Geometry& /*crse_geom */,
+                    const Geometry& /*fine_geom */,
+                    Vector<BCRec> const& /*bcr*/,
+                    int               /*actual_comp*/,
+                    int               /*actual_state*/,
+                    RunOn             runon)
+{
+    BL_PROFILE("FaceLinear::interp()");
+
+    AMREX_ASSERT(AMREX_D_TERM(fine_region.type(0),+fine_region.type(1),+fine_region.type(2)) == 1);
+
+    Array4<Real> const& fine_arr = fine.array(fine_comp);
+    Array4<Real const> const& crse_arr = crse.const_array(crse_comp);
+
+    if (fine_region.type(0) == IndexType::NODE)
+    {
+        AMREX_HOST_DEVICE_PARALLEL_FOR_4D_FLAG(runon,fine_region,ncomp,i,j,k,n,
+        {
+            face_linear_interp_x(i,j,k,n,fine_arr,crse_arr,ratio);
+        });
+    }
+#if (AMREX_SPACEDIM >= 2)
+    else if (fine_region.type(1) == IndexType::NODE)
+    {
+        AMREX_HOST_DEVICE_PARALLEL_FOR_4D_FLAG(runon,fine_region,ncomp,i,j,k,n,
+        {
+            face_linear_interp_y(i,j,k,n,fine_arr,crse_arr,ratio);
+        });
+    }
+#if (AMREX_SPACEDIM == 3)
+    else
+    {
+        AMREX_HOST_DEVICE_PARALLEL_FOR_4D_FLAG(runon,fine_region,ncomp,i,j,k,n,
+        {
+            face_linear_interp_z(i,j,k,n,fine_arr,crse_arr,ratio);
+        });
+    }
+#endif
+#endif
+}
+
+FaceLinear::~FaceLinear () {}
+
+#ifndef BL_NO_FORT
 CellBilinear::~CellBilinear () {}
 
 Box
@@ -180,7 +259,7 @@ CellBilinear::interp (const FArrayBox&  crse,
                       Vector<BCRec> const& /*bcr*/,
                       int               actual_comp,
                       int               actual_state,
-                      RunOn             runon)
+                      RunOn             /*runon*/)
 {
     BL_PROFILE("CellBilinear::interp()");
     //
@@ -215,6 +294,7 @@ CellBilinear::interp (const FArrayBox&  crse,
                    slope.dataPtr(),&num_slope,strip.dataPtr(),&strip_lo,&strip_hi,
                    &actual_comp,&actual_state);
 }
+#endif
 
 Vector<int>
 Interpolater::GetBCArray (const Vector<BCRec>& bcr)
@@ -312,12 +392,12 @@ CellConservativeLinear::interp (const FArrayBox& crse,
     Real const* voff = (run_on_gpu) ? async_voff.data() : vec_voff.data();
 
     if (do_linear_limiting) {
-        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG ( run_on_gpu, cslope_bx, tbx,
+        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG ( runon, cslope_bx, tbx,
         {
             amrex::cellconslin_slopes_linlim(tbx, ccarr, crsearr, crse_comp, ncomp, bcrp);
         });
 
-        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG ( run_on_gpu, fine_region, tbx,
+        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG ( runon, fine_region, tbx,
         {
             amrex::cellconslin_interp(tbx, finearr, fine_comp, ncomp, ccarr, crsearr, crse_comp,
                                       voff, ratio);
@@ -329,22 +409,22 @@ CellConservativeLinear::interp (const FArrayBox& crse,
         if (run_on_gpu) faeli = fafab.elixir();
         Array4<Real> const& faarr = fafab.array();
 
-        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (run_on_gpu, cslope_bx, tbx,
+        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (runon, cslope_bx, tbx,
         {
             amrex::cellconslin_slopes_mclim(tbx, ccarr, crsearr, crse_comp, ncomp, bcrp);
         });
 
-        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (run_on_gpu, fslope_bx, tbx,
+        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (runon, fslope_bx, tbx,
         {
             amrex::cellconslin_fine_alpha(tbx, faarr, ccarr, ncomp, voff, ratio);
         });
 
-        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (run_on_gpu, cslope_bx, tbx,
+        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (runon, cslope_bx, tbx,
         {
             amrex::cellconslin_slopes_mmlim(tbx, ccarr, faarr, ncomp, ratio);
         });
 
-        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (run_on_gpu, fine_region, tbx,
+        AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (runon, fine_region, tbx,
         {
             amrex::cellconslin_interp(tbx, finearr, fine_comp, ncomp, ccarr, crsearr, crse_comp,
                                       voff, ratio);
@@ -352,6 +432,7 @@ CellConservativeLinear::interp (const FArrayBox& crse,
     }
 }
 
+#ifndef BL_NO_FORT
 CellQuadratic::CellQuadratic (bool limit)
 {
     do_limited_slope = limit;
@@ -390,8 +471,13 @@ CellQuadratic::interp (const FArrayBox& crse,
                        Vector<BCRec> const&  bcr,
                        int              actual_comp,
                        int              actual_state,
-                       RunOn            runon)
+                       RunOn            /*runon*/)
 {
+#if (AMREX_SPACEDIM == 1)
+    amrex::ignore_unused(crse,crse_comp,fine,fine_comp,ncomp,fine_region,
+                         ratio,crse_geom,fine_geom,bcr,actual_comp,actual_state);
+    amrex::Abort("1D CellQuadratic::interp not supported");
+#else
     BL_PROFILE("CellQuadratic::interp()");
     BL_ASSERT(bcr.size() >= ncomp);
     //
@@ -462,8 +548,6 @@ CellQuadratic::interp (const FArrayBox& crse,
     Vector<int> bc     = GetBCArray(bcr);
     const int* ratioV = ratio.getVect();
 
-#if (AMREX_SPACEDIM > 1)
-
     amrex_cqinterp (fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
                    AMREX_ARLIM(fblo), AMREX_ARLIM(fbhi),
                    &ncomp,AMREX_D_DECL(&ratioV[0],&ratioV[1],&ratioV[2]),
@@ -478,6 +562,8 @@ CellQuadratic::interp (const FArrayBox& crse,
 
 #endif /*(AMREX_SPACEDIM > 1)*/
 }
+#endif
+
 
 PCInterp::~PCInterp () {}
 
@@ -515,13 +601,13 @@ PCInterp::interp (const FArrayBox& crse,
     Array4<Real const> const& crsearr = crse.const_array();
     Array4<Real> const& finearr = fine.array();;
 
-    bool run_on_gpu = (runon == RunOn::Gpu && Gpu::inLaunchRegion());
-    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG ( run_on_gpu, fine_region, tbx,
+    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG ( runon, fine_region, tbx,
     {
         amrex::pcinterp_interp(tbx,finearr,fine_comp,ncomp,crsearr,crse_comp,ratio);
     });
 }
 
+#ifndef BL_NO_FORT
 CellConservativeProtected::CellConservativeProtected () {}
 
 CellConservativeProtected::~CellConservativeProtected () {}
@@ -555,8 +641,8 @@ CellConservativeProtected::interp (const FArrayBox& crse,
                                    const Geometry&  crse_geom,
                                    const Geometry&  fine_geom,
                                    Vector<BCRec> const&  bcr,
-                                   int              actual_comp,
-                                   int              actual_state,
+                                   int              /*actual_comp*/,
+                                   int              /*actual_state*/,
                                    RunOn            runon)
 {
     BL_PROFILE("CellConservativeProtected::interp()");
@@ -594,12 +680,12 @@ CellConservativeProtected::interp (const FArrayBox& crse,
     AsyncArray<Real> async_voff(vec_voff.data(), (run_on_gpu) ? vec_voff.size() : 0);
     Real const* voff = (run_on_gpu) ? async_voff.data() : vec_voff.data();
 
-    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (run_on_gpu, cslope_bx, tbx,
+    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (runon, cslope_bx, tbx,
     {
         amrex::cellconslin_slopes_linlim(tbx, ccarr, crsearr, crse_comp, ncomp, bcrp);
     });
 
-    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (run_on_gpu, fine_region, tbx,
+    AMREX_LAUNCH_HOST_DEVICE_LAMBDA_FLAG (runon, fine_region, tbx,
     {
         amrex::cellconslin_interp(tbx, finearr, fine_comp, ncomp, ccarr, crsearr, crse_comp,
                                   voff, ratio);
@@ -619,8 +705,14 @@ CellConservativeProtected::protect (const FArrayBox& crse,
                                     const Geometry&  crse_geom,
                                     const Geometry&  fine_geom,
                                     Vector<BCRec>&   bcr,
-                                    RunOn            runon)
+                                    RunOn            /*runon*/)
 {
+#if (AMREX_SPACEDIM == 1)
+    amrex::ignore_unused(crse,crse_comp,fine,fine_comp,fine_state,
+                         state_comp,ncomp,fine_region,ratio,
+                         crse_geom,fine_geom,bcr);
+    amrex::Abort("1D CellConservativeProtected::protect not supported");
+#else
     BL_PROFILE("CellConservativeProtected::protect()");
     BL_ASSERT(bcr.size() >= ncomp);
 
@@ -684,8 +776,6 @@ CellConservativeProtected::protect (const FArrayBox& crse,
     Vector<int> bc     = GetBCArray(bcr);
     const int* ratioV = ratio.getVect();
 
-#if (AMREX_SPACEDIM > 1)
-
     amrex_protect_interp (fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
                          fblo, fbhi,
                          cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
@@ -700,10 +790,12 @@ CellConservativeProtected::protect (const FArrayBox& crse,
                          &ncomp,AMREX_D_DECL(&ratioV[0],&ratioV[1],&ratioV[2]),
                          bc.dataPtr());
 
-#endif /*(AMREX_SPACEDIM > 1)*/
+#endif /*(AMREX_SPACEDIM == 1)*/
 
 }
+#endif
 
+#ifndef BL_NO_FORT
 CellConservativeQuartic::~CellConservativeQuartic () {}
 
 Box
@@ -737,7 +829,7 @@ CellConservativeQuartic::interp (const FArrayBox&  crse,
 				 Vector<BCRec> const&   bcr,
 				 int               actual_comp,
 				 int               actual_state,
-                                 RunOn             runon)
+                                 RunOn             /*runon*/)
 {
     BL_PROFILE("CellConservativeQuartic::interp()");
     BL_ASSERT(bcr.size() >= ncomp);
@@ -803,5 +895,6 @@ CellConservativeQuartic::interp (const FArrayBox&  crse,
 		      AMREX_D_DECL(ftmp.dataPtr(), ctmp.dataPtr(), ctmp2.dataPtr()),
 		      bc.dataPtr(),&actual_comp,&actual_state);
 }
+#endif
 
 }

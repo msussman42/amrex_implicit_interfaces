@@ -33,7 +33,6 @@ void yafluxreg_fineadd (Box const& bx, Array4<Real> const& d, Array4<Real const>
                         Real dtdx, int nc, int dirside, Dim3 const& rr) noexcept
 {
     const auto lo = amrex::lbound(bx);
-    const auto hi = amrex::ubound(bx);
 
     switch (dirside) {
     case 0 :
@@ -43,10 +42,7 @@ void yafluxreg_fineadd (Box const& bx, Array4<Real> const& d, Array4<Real const>
             const int ii = (i+1)*rr.x;
             Real* AMREX_RESTRICT dp = &(d(i,0,0,n));
             Real tmp = -dtdx*f(ii,0,0,n);
-#ifdef _OPENMP
-#pragma omp atomic
-#endif
-            *dp += tmp;
+            HostDevice::Atomic::Add(dp, tmp);
         }
         break;
     }
@@ -57,10 +53,7 @@ void yafluxreg_fineadd (Box const& bx, Array4<Real> const& d, Array4<Real const>
             const int ii = i*rr.x;
             Real* AMREX_RESTRICT dp = &(d(i,0,0,n));
             Real tmp = dtdx*f(ii,0,0,n);
-#ifdef _OPENMP
-#pragma omp atomic
-#endif
-            *dp += tmp;
+            HostDevice::Atomic::Add(dp, tmp);
         }
     }
     }

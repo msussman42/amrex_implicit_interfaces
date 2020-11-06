@@ -463,6 +463,7 @@ FabArrayCopyDescriptor<FAB>::CollectData ()
     BL_PROFILE("FabArrayCopyDescriptor::CollectData()");
 
     const int MyProc = ParallelDescriptor::MyProc();
+    amrex::ignore_unused(MyProc);
 
     int Total_Rcvs_Size = 0;
     //
@@ -562,13 +563,13 @@ FabArrayCopyDescriptor<FAB>::CollectData ()
 
     // for meta-data
     Vector<int> md_sender, md_offset, md_icnts, md_bcnts;
-    int* md_recv_data;
+    int* md_recv_data = nullptr;
     Vector<int*> md_send_data;
     Vector<MPI_Request> md_recv_reqs, md_send_reqs;
 
     // for data
     Vector<int> data_sender, data_offset;
-    value_type* recv_data;
+    value_type* recv_data = nullptr;
     Vector<value_type*> send_data;
     Vector<MPI_Request> data_recv_reqs, data_send_reqs;
 
@@ -703,7 +704,7 @@ FabArrayCopyDescriptor<FAB>::CollectData ()
 
 	    for (int i = 0; i < numboxes; ++i)
 	    {
-		(*fabArrays[faid[i]])[fidx[i]].copyToMem(bxs[i],scomp[i],ncomp[i],dptr);
+		(*fabArrays[faid[i]])[fidx[i]].template copyToMem<RunOn::Host>(bxs[i],scomp[i],ncomp[i],dptr);
 		dptr += npts[i];
 	    }
 
@@ -762,7 +763,7 @@ FabArrayCopyDescriptor<FAB>::CollectData ()
 			BL_ASSERT(fcdp->localFabSource->dataPtr() != 0);
 			BL_ASSERT(fcdp->localFabSource->box() == tag.box);
 			const int Cnt = tag.box.numPts()*tag.nComp;
-			fcdp->localFabSource->copyFromMem(tag.box,0,tag.nComp,dptr);
+			fcdp->localFabSource->template copyFromMem<RunOn::Host>(tag.box,0,tag.nComp,dptr);
 			dptr += Cnt;
 			break;
 		    }
@@ -804,7 +805,8 @@ FabArrayCopyDescriptor<FAB>::FillFab (FabArrayId       faid,
 
         BL_ASSERT(fcdp->fillBoxId == fillboxid.Id());
 
-        destFab.copy(*fcdp->localFabSource,
+        destFab.template copy<RunOn::Host>
+                   (*fcdp->localFabSource,
                      fcdp->subBox,
                      fcdp->fillType == FillLocally ? fcdp->srcComp : 0,
                      fcdp->subBox,

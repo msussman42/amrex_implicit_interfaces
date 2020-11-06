@@ -51,6 +51,8 @@ makeCopyMemory (Array4<T> const& src, Array4<U> const& dst, int scomp, int ncomp
 #endif
 }
 
+// ======================================================================================
+
 template <typename T>
 struct CudaGraph
 {
@@ -75,11 +77,11 @@ struct CudaGraph
 
         if (graph_is_ready)
         {
-            AMREX_GPU_SAFE_CALL(cudaGraphExecDestroy(m_graph));
+            AMREX_CUDA_SAFE_CALL(cudaGraphExecDestroy(m_graph));
         }
     }
 
-    void resize(long num) {
+    void resize(Long num) {
         m_parms.resize(num);
         if (m_parms_d != nullptr)
         {
@@ -91,23 +93,14 @@ struct CudaGraph
         m_graph = graph;
         graph_is_ready = true;
     }
-    void setParams(int idx, T const& a_parm) {
-        m_parms[idx] = a_parm;
-    }
-    T* getDevicePtr (int idx) const {
-        return (m_parms_d + idx);
-    }
+    void setParams(int idx, T const& a_parm) { m_parms[idx] = a_parm; }
+
+    T* getHostPtr (int idx) { return (m_parms.data() + idx); }
+    T* getDevicePtr (int idx) const { return (m_parms_d + idx); }
     bool ready() const { return graph_is_ready; }
-    void executeGraph () const {
-        cudaMemcpy(m_parms_d, m_parms.data(), std::size_t(sizeof(T)*m_parms.size()),
-                   cudaMemcpyHostToDevice);
 
-        Gpu::Device::setStreamIndex(0);
-
-        cudaGraphLaunch(m_graph, amrex::Gpu::Device::cudaStream());
-
-        Gpu::Device::resetStreamIndex();
-        Gpu::Device::synchronize();
+    void executeGraph (bool synch = true) const {
+        Gpu::Device::executeGraph(m_graph, synch);
     }
 };
 

@@ -480,12 +480,16 @@ read_file (const char*                     fname,
             auto r = std::find_if(std::begin(line), std::end(line),
                                   [](int c) -> bool { return !std::isspace(c); });
             if (fortran_namelist) { // already inside fortran namelist
-                os_fortran << line << "\n";
+                // os_fortran << line << "\n";
+                // pgi and ibm do not like `\n`.  We strip comments for them too.
+                os_fortran << line.substr(0, line.find('!')) << " ";
                 if (r != std::end(line) && *r == '/') {
                     fortran_namelist = false; // end of Fortran namelist
                 }
             } else if (r != std::end(line) && *r == '&') {
-                os_fortran << line << "\n";
+                // os_fortran << line << "\n";
+                // pgi and ibm do not like `\n`.  We strip comments for them too.
+                os_fortran << line.substr(0, line.find('!')) << " ";
                 fortran_namelist = true;  // begin of Fortran namelist
             } else {
                 os_cxx << line << "\n";
@@ -589,6 +593,7 @@ bldTable (const char*&                    str,
 	    {
 		amrex::Abort("ParmParse::bldTable() defn with no list");
 	    }
+            AMREX_FALLTHROUGH;
 	case pEOF:
 	    addDefn(cur_name,cur_list,tab);
 	    return;
@@ -632,6 +637,7 @@ bldTable (const char*&                    str,
 	    //
 	    // Otherwise, fall through, this may be a string.
 	    //
+            AMREX_FALLTHROUGH;
 	case pValue:
 	    if ( cur_name.empty() )
 	    {
@@ -1074,6 +1080,20 @@ ParmParse::Initialize (int         argc,
     amrex::ExecOnFinalize(ParmParse::Finalize);
 }
 
+bool
+ParmParse::QueryUnusedInputs ()
+{
+    if ( ParallelDescriptor::IOProcessor() && unused_table_entries_q(g_table))
+    {
+      finalize_verbose = amrex::system::verbose;
+      if (finalize_verbose) amrex::OutStream() << "Unused ParmParse Variables:\n";
+      finalize_table("  [TOP]", g_table);
+      if (finalize_verbose) amrex::OutStream() << std::endl;
+      return true;
+    }
+    return false;
+}
+    
 void
 ParmParse::Finalize ()
 {
@@ -1083,9 +1103,10 @@ ParmParse::Finalize ()
       if (finalize_verbose) amrex::OutStream() << "Unused ParmParse Variables:\n";
       finalize_table("  [TOP]", g_table);
       if (finalize_verbose) amrex::OutStream() << std::endl;
-	//
-	// First loop through and delete all queried entries.
-	//
+      //
+      // First loop through and delete all queried entries.
+      //
+      if (amrex::system::abort_on_unused_inputs) amrex::Abort("ERROR: unused ParmParse variables.");
     }
     g_table.clear();
 
@@ -1337,8 +1358,92 @@ ParmParse::addarr (const char* name,
     saddarr(prefixedName(name),ptr);
 }
 
+// long long
+void
+ParmParse::getkth (const char* name,
+                   int         k,
+                   long long&  ptr,
+                   int         ival) const
+{
+    sgetval(m_table, prefixedName(name),ptr,ival,k);
+}
 
+void
+ParmParse::get (const char* name,
+                long long&  ptr,
+                int         ival) const
+{
+    sgetval(m_table, prefixedName(name),ptr,ival, LAST);
+}
 
+int
+ParmParse::querykth (const char* name,
+                     int         k,
+                     long long&  ptr,
+                     int         ival) const
+{
+    return squeryval(m_table, prefixedName(name),ptr,ival,k);
+}
+
+int
+ParmParse::query (const char* name,
+                  long long&   ptr,
+                  int         ival) const
+{
+    return squeryval(m_table, prefixedName(name),ptr,ival, LAST);
+}
+
+void
+ParmParse::add (const char* name,
+                const long long val)
+{
+    saddval(prefixedName(name),val);
+}
+
+void
+ParmParse::getktharr (const char* name,
+                      int         k,
+                      std::vector<long long>& ptr,
+                      int         start_ix,
+                      int         num_val) const
+{
+    sgetarr(m_table, prefixedName(name),ptr,start_ix,num_val,k);
+}
+
+void
+ParmParse::getarr (const char* name,
+                   std::vector<long long>& ptr,
+                   int         start_ix,
+                   int         num_val) const
+{
+    sgetarr(m_table, prefixedName(name),ptr,start_ix,num_val, LAST);
+}
+
+int
+ParmParse::queryktharr (const char* name,
+                        int         k,
+                        std::vector<long long>& ptr,
+                        int         start_ix,
+                        int         num_val) const
+{
+    return squeryarr(m_table, prefixedName(name),ptr,start_ix,num_val,k);
+}
+
+int
+ParmParse::queryarr (const char* name,
+                     std::vector<long long>& ptr,
+                     int         start_ix,
+                     int         num_val) const
+{
+    return squeryarr(m_table, prefixedName(name),ptr,start_ix,num_val, LAST);
+}
+
+void
+ParmParse::addarr (const char* name,
+                const std::vector<long long>&  ptr)
+{
+    saddarr(prefixedName(name),ptr);
+}
 
 // FLOAT
 void

@@ -35,9 +35,9 @@ HypreNodeLap::HypreNodeLap (const BoxArray& grids_, const DistributionMapping& d
     const BoxArray& nba = amrex::convert(grids,IntVect::TheNodeVector());
 
 #if defined(AMREX_DEBUG) || defined(AMREX_TESTING)
-    if (sizeof(Int) < sizeof(long)) {
-        long nnodes_grids = nba.numPts();
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(nnodes_grids < static_cast<long>(std::numeric_limits<Int>::max()),
+    if (sizeof(Int) < sizeof(Long)) {
+        Long nnodes_grids = nba.numPts();
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(nnodes_grids < static_cast<Long>(std::numeric_limits<Int>::max()),
                                          "You might need to configure Hypre with --enable-bigint");
     }
 #endif
@@ -170,20 +170,8 @@ HypreNodeLap::HypreNodeLap (const BoxArray& grids_, const DistributionMapping& d
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(node_id,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-    {
-        Int os = offset[mfi];
-        const Box& bx = mfi.growntilebox();
-        const auto& nid = node_id.array(mfi);
-        AMREX_FOR_3D(bx, i, j, k,
-        {
-            if (nid(i,j,k) >= 0) {
-                nid(i,j,k) += os;
-            } else {
-                nid(i,j,k) = -1;
-            }
-        });
-    }    
+
+    fill_node_id(offset);
 
     amrex::OverrideSync(node_id, *owner_mask, geom.periodicity());
     node_id.FillBoundary(geom.periodicity());
@@ -192,18 +180,13 @@ HypreNodeLap::HypreNodeLap (const BoxArray& grids_, const DistributionMapping& d
     Int ilower = proc_begin;
     Int iupper = proc_end-1;
 
-    //
-    HYPRE_IJMatrixCreate(comm, ilower, iupper, ilower, iupper, &A);
-    HYPRE_IJMatrixSetObjectType(A, HYPRE_PARCSR);
-    HYPRE_IJMatrixInitialize(A);
-    //
-    HYPRE_IJVectorCreate(comm, ilower, iupper, &b);
-    HYPRE_IJVectorSetObjectType(b, HYPRE_PARCSR);
-    //
-    HYPRE_IJVectorCreate(comm, ilower, iupper, &x);
-    HYPRE_IJVectorSetObjectType(x, HYPRE_PARCSR);
+    hypre_ij.reset(new HypreIJIface(comm, ilower, iupper, verbose));
+    hypre_ij->parse_inputs(options_namespace);
 
-    // A.SetValues() & A.assemble()
+    // Obtain non-owning references to the matrix, rhs, and solution data
+    A = hypre_ij->A();
+    b = hypre_ij->b();
+    x = hypre_ij->x();
 
     Vector<Int> ncols;
     Vector<Int> cols;
@@ -247,37 +230,10 @@ HypreNodeLap::HypreNodeLap (const BoxArray& grids_, const DistributionMapping& d
         }
     }
     HYPRE_IJMatrixAssemble(A);
-
-    // Create solver
-    HYPRE_BoomerAMGCreate(&solver);
-
-    HYPRE_BoomerAMGSetOldDefault(solver); // Falgout coarsening with modified classical interpolation
-//    HYPRE_BoomerAMGSetCoarsenType(solver, 6);
-//    HYPRE_BoomerAMGSetCycleType(solver, 1);
-    HYPRE_BoomerAMGSetRelaxType(solver, 6);   /* G-S/Jacobi hybrid relaxation */
-    HYPRE_BoomerAMGSetRelaxOrder(solver, 1);   /* uses C/F relaxation */
-    HYPRE_BoomerAMGSetNumSweeps(solver, 2);   /* Sweeeps on each level */
-//    HYPRE_BoomerAMGSetStrongThreshold(solver, 0.6); // default is 0.25
-
-    int logging = (verbose >= 2) ? 1 : 0;
-    HYPRE_BoomerAMGSetLogging(solver, logging);
-
-    HYPRE_ParCSRMatrix par_A = NULL;
-    HYPRE_IJMatrixGetObject(A, (void**)  &par_A);
-    HYPRE_BoomerAMGSetup(solver, par_A, NULL, NULL);
 }
 
 HypreNodeLap::~HypreNodeLap ()
-{
-    HYPRE_IJMatrixDestroy(A);
-    A = NULL;
-    HYPRE_IJVectorDestroy(b);
-    b = NULL;
-    HYPRE_IJVectorDestroy(x);
-    x = NULL;
-    HYPRE_BoomerAMGDestroy(solver);
-    solver = NULL;
-}
+{}
 
 void
 HypreNodeLap::solve (MultiFab& soln, const MultiFab& rhs,
@@ -293,45 +249,28 @@ HypreNodeLap::solve (MultiFab& soln, const MultiFab& rhs,
     HYPRE_IJVectorAssemble(x);
     HYPRE_IJVectorAssemble(b);
 
-    HYPRE_ParCSRMatrix par_A = NULL;
-    HYPRE_ParVector par_b = NULL;
-    HYPRE_ParVector par_x = NULL;
-    HYPRE_IJMatrixGetObject(A, (void**)  &par_A);
-    HYPRE_IJVectorGetObject(b, (void **) &par_b);
-    HYPRE_IJVectorGetObject(x, (void **) &par_x);
-
-    HYPRE_BoomerAMGSetMinIter(solver, 1);
-    HYPRE_BoomerAMGSetMaxIter(solver, max_iter);
-    HYPRE_BoomerAMGSetTol(solver, rel_tol);
-    if (abs_tol > 0.0)
-    {
-        Real bnorm = hypre_ParVectorInnerProd(par_b, par_b);
-        bnorm = std::sqrt(bnorm);
-
-        const BoxArray& grd = rhs.boxArray();
-        Real volume = grd.numPts();
-        Real rel_tol_new = (bnorm > 0.0) ? (abs_tol / bnorm * std::sqrt(volume)) : rel_tol;
-
-        if (rel_tol_new > rel_tol) {
-            HYPRE_BoomerAMGSetTol(solver, rel_tol_new);
-        }
-    }
-
-    HYPRE_BoomerAMGSolve(solver, par_A, par_b, par_x);
-
-    if (verbose >= 2)
-    {
-        HYPRE_Int num_iterations;
-        Real res;
-        HYPRE_BoomerAMGGetNumIterations(solver, &num_iterations);
-        HYPRE_BoomerAMGGetFinalRelativeResidualNorm(solver, &res);
-
-        amrex::Print() <<"\n" <<  num_iterations
-                       << " Hypre IJ BoomerAMG Iterations, Relative Residual "
-                       << res << std::endl;
-    }
+    hypre_ij->solve(rel_tol, abs_tol, max_iter);
 
     getSolution(soln);
+}
+
+void
+HypreNodeLap::fill_node_id (LayoutData<Int>& offset)
+{
+    for (MFIter mfi(node_id,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        Int os = offset[mfi];
+        const Box& bx = mfi.growntilebox();
+        const auto& nid = node_id.array(mfi);
+        AMREX_FOR_3D(bx, i, j, k,
+        {
+            if (nid(i,j,k) >= 0) {
+                nid(i,j,k) += os;
+            } else {
+                nid(i,j,k) = -1;
+            }
+        });
+    }
 }
 
 void

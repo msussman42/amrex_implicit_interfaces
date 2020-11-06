@@ -1,8 +1,7 @@
 
 #include <iostream>
+#include <limits>
 #include <algorithm>
-
-#include <unistd.h>
 
 #include <AMReX_RealBox.H>
 #include <AMReX_StateData.H>
@@ -16,7 +15,11 @@
 
 namespace amrex {
 
-static constexpr Real INVALID_TIME = -1.0e200;
+#ifdef AMREX_USE_FLOAT
+static constexpr Real INVALID_TIME = -1.0e30;
+#else
+static constexpr Real INVALID_TIME = -1.0e200; 
+#endif
 
 static constexpr int MFNEWDATA = 0;
 static constexpr int MFOLDDATA = 1;
@@ -27,9 +30,9 @@ std::map<std::string, Vector<char> > *StateData::faHeaderMap;
 
 StateData::StateData () 
     : desc(nullptr),
-      arena(nullptr),
       new_time{INVALID_TIME,INVALID_TIME},
-      old_time{INVALID_TIME,INVALID_TIME}
+      old_time{INVALID_TIME,INVALID_TIME},
+      arena(nullptr)
 {
 }
 
@@ -47,14 +50,14 @@ StateData::StateData (const Box&             p_domain,
 StateData::StateData (StateData&& rhs) noexcept
     : m_factory(std::move(rhs.m_factory)),
       desc(rhs.desc),
-      arena(rhs.arena),
       domain(rhs.domain),
       grids(std::move(rhs.grids)),
       dmap(std::move(rhs.dmap)),
       new_time(rhs.new_time),
       old_time(rhs.old_time),
       new_data(std::move(rhs.new_data)),
-      old_data(std::move(rhs.old_data))
+      old_data(std::move(rhs.old_data)),
+      arena(rhs.arena)
 {   
 }
 
@@ -460,7 +463,7 @@ StateData::FillBoundary (FArrayBox&     dest,
         const int sc  = src_comp+i;
         Real*     dat = dest.dataPtr(dc);
 
-        if (desc->master(sc))
+        if (desc->primary(sc))
         {
             const int groupsize = desc->groupsize(sc);
 
@@ -535,7 +538,7 @@ StateData::FillBoundary (Box const&      bx,
         const int dc  = dest_comp+i;
         const int sc  = src_comp+i;
 
-        if (desc->master(sc))
+        if (desc->primary(sc))
         {
             const int groupsize = desc->groupsize(sc);
 
@@ -820,13 +823,21 @@ StateData::checkPoint (const std::string& name,
     {
        BL_ASSERT(new_data);
        std::string mf_fullpath_new(fullpathname + NewSuffix);
-       VisMF::Write(*new_data,mf_fullpath_new,how);
+       if (AsyncOut::UseAsyncOut()) {
+           VisMF::AsyncWrite(*new_data,mf_fullpath_new);
+       } else {
+           VisMF::Write(*new_data,mf_fullpath_new,how);
+       }
 
        if (dump_old)
        {
            BL_ASSERT(old_data);
            std::string mf_fullpath_old(fullpathname + OldSuffix);
-           VisMF::Write(*old_data,mf_fullpath_old,how);
+           if (AsyncOut::UseAsyncOut()) {
+               VisMF::AsyncWrite(*old_data,mf_fullpath_old);
+           } else {
+               VisMF::Write(*old_data,mf_fullpath_old,how);
+           }
        }
     }
 }
@@ -853,9 +864,10 @@ StateDataPhysBCFunct::StateDataPhysBCFunct (StateData&sd, int sc, const Geometry
 { }
 
 void
-StateDataPhysBCFunct::FillBoundary (MultiFab& mf, int dest_comp, int num_comp, Real time, int /*bccomp*/)
+StateDataPhysBCFunct::operator() (MultiFab& mf, int dest_comp, int num_comp, IntVect const& /* */,
+                                  Real time, int /*bccomp*/)
 {
-    BL_PROFILE("StateDataPhysBCFunct::FillBoundary");
+    BL_PROFILE("StateDataPhysBCFunct::()");
 
     const Box&     domain      = statedata->getDomain();
     const int*     domainlo    = domain.loVect();
@@ -981,13 +993,13 @@ StateDataPhysBCFunct::FillBoundary (MultiFab& mf, int dest_comp, int num_comp, R
                             {
                                 tmp.resize(lo_slab,num_comp);
                                 const Box db = amrex::shift(lo_slab, dir, -domain.length(dir));
-                                tmp.copy(dest, db, dest_comp, lo_slab, 0, num_comp);
+                                tmp.copy<RunOn::Host>(dest, db, dest_comp, lo_slab, 0, num_comp);
                                 if (has_bndryfunc_fab) {
                                     statedata->FillBoundary(lo_slab, tmp, time, geom, 0, src_comp, num_comp);
                                 } else {
                                     statedata->FillBoundary(tmp, time, dx, prob_domain, 0, src_comp, num_comp);
                                 }
-                                dest.copy(tmp, lo_slab, 0, db, dest_comp, num_comp);
+                                dest.copy<RunOn::Host>(tmp, lo_slab, 0, db, dest_comp, num_comp);
                             }
 			}
 			
@@ -1047,13 +1059,13 @@ StateDataPhysBCFunct::FillBoundary (MultiFab& mf, int dest_comp, int num_comp, R
                             {
                                 tmp.resize(hi_slab,num_comp);
                                 const Box db = amrex::shift(hi_slab, dir, domain.length(dir));
-                                tmp.copy(dest, db, dest_comp, hi_slab, 0, num_comp);
+                                tmp.copy<RunOn::Host>(dest, db, dest_comp, hi_slab, 0, num_comp);
                                 if (has_bndryfunc_fab) {
                                     statedata->FillBoundary(hi_slab, tmp, time, geom, 0, src_comp, num_comp);
                                 } else {
                                     statedata->FillBoundary(tmp, time, dx, prob_domain, 0, src_comp, num_comp);
                                 }
-                                dest.copy(tmp, hi_slab, 0, db, dest_comp, num_comp);
+                                dest.copy<RunOn::Host>(tmp, hi_slab, 0, db, dest_comp, num_comp);
                             }
 			}
 		    }

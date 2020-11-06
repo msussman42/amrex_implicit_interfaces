@@ -184,10 +184,10 @@ void BLProfiler::Initialize() {
   CommStats::cftExclude.insert(AllCFTypes);  // temporarily
 
   CommStats::cftNames["InvalidCFT"]     = InvalidCFT;
-  CommStats::cftNames["AllReduceT"]     = AllReduceT; 
-  CommStats::cftNames["AllReduceR"]     = AllReduceR; 
-  CommStats::cftNames["AllReduceL"]     = AllReduceL; 
-  CommStats::cftNames["AllReduceI"]     = AllReduceI; 
+  CommStats::cftNames["AllReduceT"]     = AllReduceT;
+  CommStats::cftNames["AllReduceR"]     = AllReduceR;
+  CommStats::cftNames["AllReduceL"]     = AllReduceL;
+  CommStats::cftNames["AllReduceI"]     = AllReduceI;
   CommStats::cftNames["AsendTsii"]      = AsendTsii;
   CommStats::cftNames["AsendTsiiM"]     = AsendTsiiM;
   CommStats::cftNames["AsendvTii"]      = AsendvTii;
@@ -199,15 +199,15 @@ void BLProfiler::Initialize() {
   CommStats::cftNames["ArecvvTii"]      = ArecvvTii;
   CommStats::cftNames["RecvTsii"]       = RecvTsii;
   CommStats::cftNames["RecvvTii"]       = RecvvTii;
-  CommStats::cftNames["ReduceT"]        = ReduceT; 
-  CommStats::cftNames["ReduceR"]        = ReduceR; 
-  CommStats::cftNames["ReduceL"]        = ReduceL; 
-  CommStats::cftNames["ReduceI"]        = ReduceI; 
-  CommStats::cftNames["BCastTsi"]       = BCastTsi; 
-  CommStats::cftNames["GatherTsT1Si"]   = GatherTsT1Si; 
-  CommStats::cftNames["GatherTi"]       = GatherTi; 
-  CommStats::cftNames["GatherRiRi"]     = GatherRiRi; 
-  CommStats::cftNames["ScatterTsT1si"]  = ScatterTsT1si; 
+  CommStats::cftNames["ReduceT"]        = ReduceT;
+  CommStats::cftNames["ReduceR"]        = ReduceR;
+  CommStats::cftNames["ReduceL"]        = ReduceL;
+  CommStats::cftNames["ReduceI"]        = ReduceI;
+  CommStats::cftNames["BCastTsi"]       = BCastTsi;
+  CommStats::cftNames["GatherTsT1Si"]   = GatherTsT1Si;
+  CommStats::cftNames["GatherTi"]       = GatherTi;
+  CommStats::cftNames["GatherRiRi"]     = GatherRiRi;
+  CommStats::cftNames["ScatterTsT1si"]  = ScatterTsT1si;
   CommStats::cftNames["Barrier"]        = Barrier;
   CommStats::cftNames["Waitsome"]       = Waitsome;
   CommStats::cftNames["NameTag"]        = NameTag;
@@ -346,7 +346,7 @@ void BLProfiler::start() {
 }
 }
 
-  
+
 void BLProfiler::stop() {
 #ifdef _OPENMP
 #pragma omp master
@@ -478,7 +478,7 @@ void BLProfiler::Finalize(bool bFlushing, bool memCheck) {
     return;
   }
 
-  WriteBaseProfile(bFlushing); 
+  WriteBaseProfile(bFlushing);
 
   BL_PROFILE_REGION_STOP(noRegionName);
 
@@ -521,7 +521,8 @@ void BLProfiler::Finalize(bool bFlushing, bool memCheck) {
     }
     ParallelDescriptor::Barrier();
     // END SUSSMAN
-    
+
+
     bInitialized = false;
   }
 #endif
@@ -534,11 +535,13 @@ namespace BLProfilerUtils {
 void WriteHeader(std::ostream &ios, const int colWidth,
                  const Real maxlen, const bool bwriteavg)
 {
+  int maxlenI = int(maxlen);
+
   if(bwriteavg) {
-    ios << std::setfill('-') << std::setw(maxlen+4 + 7 * (colWidth+2))
+    ios << std::setfill('-') << std::setw(maxlenI+4 + 7 * (colWidth+2))
         << std::left << "Total times " << '\n';
     ios << std::right << std::setfill(' ');
-    ios << std::setw(maxlen + 2) << "Function Name"
+    ios << std::setw(maxlenI + 2) << "Function Name"
         << std::setw(colWidth + 2) << "NCalls"
         << std::setw(colWidth + 2) << "Min"
         << std::setw(colWidth + 2) << "Avg"
@@ -548,10 +551,10 @@ void WriteHeader(std::ostream &ios, const int colWidth,
         << std::setw(colWidth + 4) << "Percent %"
         << '\n';
   } else {
-    ios << std::setfill('-') << std::setw(maxlen+4 + 3 * (colWidth+2))
+    ios << std::setfill('-') << std::setw(maxlenI+4 + 3 * (colWidth+2))
         << std::left << "Total times " << '\n';
     ios << std::right << std::setfill(' ');
-    ios << std::setw(maxlen + 2) << "Function Name"
+    ios << std::setw(maxlenI + 2) << "Function Name"
         << std::setw(colWidth + 2) << "NCalls"
         << std::setw(colWidth + 2) << "Time"
         << std::setw(colWidth + 4) << "Percent %"
@@ -565,6 +568,7 @@ void WriteRow(std::ostream &ios, const std::string &fname,
 	      const int colWidth, const Real maxlen,
 	      const bool bwriteavg)
 {
+    int maxlenI = int(maxlen);
     int numPrec(4), pctPrec(2);
     Real stdDev(0.0), coeffVariation(0.0);
     if(pstats.variance > 0.0) {
@@ -576,7 +580,7 @@ void WriteRow(std::ostream &ios, const std::string &fname,
 
     if(bwriteavg) {
       ios << std::right;
-      ios << std::setw(maxlen + 2) << fname << "  "
+      ios << std::setw(maxlenI + 2) << fname << "  "
           << std::setw(colWidth) << pstats.nCalls << "  "
           << std::setprecision(numPrec) << std::fixed << std::setw(colWidth)
 	  << pstats.minTime << "  "
@@ -591,7 +595,7 @@ void WriteRow(std::ostream &ios, const std::string &fname,
           << std::setprecision(pctPrec) << std::fixed << std::setw(colWidth)
 	  << percent << " %" << '\n';
     } else {
-      ios << std::setw(maxlen + 2) << fname << "  "
+      ios << std::setw(maxlenI + 2) << fname << "  "
           << std::setw(colWidth) << pstats.nCalls << "  "
           << std::setprecision(numPrec) << std::fixed << std::setw(colWidth)
 	  << pstats.totalTime << "  "
@@ -791,7 +795,7 @@ void WriteStats(std::ostream &ios,
 }  // end namespace BLProfilerUtils
 
 void BLProfiler::WriteBaseProfile(bool bFlushing, bool memCheck) {   // ---- write basic profiling data
-
+  amrex::ignore_unused(memCheck);
   // --------------------------------------- gather global stats
   Real baseProfStart(amrex::second());  // time the timer
   const int nProcs(ParallelDescriptor::NProcs());
@@ -844,7 +848,7 @@ void BLProfiler::WriteBaseProfile(bool bFlushing, bool memCheck) {   // ---- wri
     // ---------------------------------- now collect global data onto the ioproc
     int maxlen(0);
     Vector<Real> gtimes(1);
-    Vector<long> ncalls(1);
+    Vector<Long> ncalls(1);
     if(ParallelDescriptor::IOProcessor()) {
       gtimes.resize(nProcs);
       ncalls.resize(nProcs);
@@ -866,7 +870,7 @@ void BLProfiler::WriteBaseProfile(bool bFlushing, bool memCheck) {   // ---- wri
         ParallelDescriptor::Gather(&pstats.nCalls, 1, ncalls.dataPtr(), 1, iopNum);
       }
       Real tsum(0.0), tmin(gtimes[0]), tmax(gtimes[0]), tavg(0.0), variance(0.0);
-      long ncsum(0);
+      Long ncsum(0);
       if(ParallelDescriptor::IOProcessor()) {
         for(int i(0); i < gtimes.size(); ++i) {
           tsum += gtimes[i];
@@ -906,7 +910,7 @@ void BLProfiler::WriteBaseProfile(bool bFlushing, bool memCheck) {   // ---- wri
     // ---- if we use an unordered_map for mProfStats, copy to a sorted container
     // ----
     ParallelDescriptor::Barrier();  // ---- wait for everyone (remove after adding filters)
-    Vector<long> nCallsOut(mProfStats.size(), 0);
+    Vector<Long> nCallsOut(mProfStats.size(), 0);
     Vector<Real> totalTimesOut(mProfStats.size(), 0.0);
     int count(0);
     for(std::map<std::string, ProfStats>::const_iterator phit = mProfStats.begin();
@@ -927,14 +931,14 @@ void BLProfiler::WriteBaseProfile(bool bFlushing, bool memCheck) {   // ---- wri
     const int nOutFiles = std::max(1, std::min(nProcs, nProfFiles));
     std::string phFilePrefix("bl_prof");
     std::string cFileName(cdir + '/' + phFilePrefix + "_D_");
-    long seekPos(0);
+    Long seekPos(0);
     bool setBuf(true);
     NFilesIter nfi(nOutFiles, cFileName, groupSets, setBuf);
     for( ; nfi.ReadyToWrite(); ++nfi) {
       seekPos = nfi.SeekPos();
       if(nCallsOut.size() > 0) {
         nfi.Stream().write((char *) nCallsOut.dataPtr(),
-        nCallsOut.size() * sizeof(long));
+        nCallsOut.size() * sizeof(Long));
       }
       if(totalTimesOut.size() > 0) {
         nfi.Stream().write((char *) totalTimesOut.dataPtr(),
@@ -943,7 +947,7 @@ void BLProfiler::WriteBaseProfile(bool bFlushing, bool memCheck) {   // ---- wri
     }
 
 
-    Vector<long> seekPosOut(1);
+    Vector<Long> seekPosOut(1);
     if(ParallelDescriptor::IOProcessor()) {
       seekPosOut.resize(nProcs, 0);
     }
@@ -1074,7 +1078,7 @@ void BLProfiler::WriteCallTrace(bool bFlushing, bool memCheck) {   // ---- write
     std::string longDFileNamePrefix(cdir + '/' + shortDFileNamePrefix);
     std::string longDFileName(NFilesIter::FileName(nOutFiles, longDFileNamePrefix, myProc, groupSets));
 
-    long baseSeekPos(-1);
+    Long baseSeekPos(-1);
 
     bool setBuf(true);
     bool appendFirstFile;
@@ -1133,7 +1137,7 @@ void BLProfiler::WriteCallTrace(bool bFlushing, bool memCheck) {   // ---- write
 	    amrex::Print(Print::AllProcs) << "**** Error:  baseSeekPos = " << baseSeekPos << "\n";
 	    break;
 	  }
-	  long spos(baseSeekPos + csStack.index * sizeof(CallStats));
+	  Long spos(baseSeekPos + csStack.index * sizeof(CallStats));
 	  callIndexPatch.push_back(CallStatsPatch(spos, vCallTrace[csStack.index], longDFileName));
 	  csStack.bFlushed = true;
 	  csStack.index    = callIndexPatch.size() - 1;
@@ -1183,8 +1187,9 @@ void BLProfiler::WriteCallTrace(bool bFlushing, bool memCheck) {   // ---- write
 
 
 
-void BLProfiler::WriteCommStats(bool bFlushing, bool memCheck) {
-
+void BLProfiler::WriteCommStats(bool bFlushing, bool memCheck)
+{
+  amrex::ignore_unused(bFlushing);
   Real wcsStart(amrex::second());
   bool bAllCFTypesExcluded(OnExcludeList(AllCFTypes));
   if( ! bAllCFTypesExcluded) {
@@ -1385,13 +1390,13 @@ void BLProfiler::WriteFortProfErrors() {
 
 
 bool BLProfiler::OnExcludeList(CommFuncType cft) {
-  // 
+  //
   // the idea for NoCFTypes is to allow local filtering/unfiltering
   // while preserving the users exclude list
   // possibly use a filter stack instead
   // might need caching if performance is a problem
   // what to do if both all and none are on the list?
-  // 
+  //
   if(CommStats::cftExclude.empty()) {  // nothing on the exclude list
     return false;
   }
@@ -1482,6 +1487,7 @@ void BLProfiler::AddAllReduce(const CommFuncType cft, const int size,
 void BLProfiler::AddWait(const CommFuncType cft, const MPI_Request &req,
 			 const MPI_Status &status, const bool beforecall)
 {
+  amrex::ignore_unused(req);
 #ifdef BL_USE_MPI
   if(OnExcludeList(cft)) {
     return;
@@ -1502,6 +1508,7 @@ void BLProfiler::AddWaitsome(const CommFuncType cft, const Vector<MPI_Request> &
                              const int completed, const Vector<MPI_Status> &status,
                              const bool beforecall)
 {
+  amrex::ignore_unused(reqs);
 #ifdef BL_USE_MPI
   if(OnExcludeList(cft)) {
     return;
@@ -1591,6 +1598,9 @@ namespace {
   }
 }
 
+
+#ifndef BL_NO_FORT
+
 BL_FORT_PROC_DECL(BL_PROFFORTFUNCSTART_CPP, bl_proffortfuncstart_cpp)
   (const int istr[], const int *NSTR)
 {
@@ -1663,36 +1673,41 @@ BL_FORT_PROC_DECL(BL_PROFFORTFUNCSTOP_CPP_INT, bl_proffortfuncstop_cpp_int)
 #endif
 }
 
+#endif
+
 }
+
+
 
 #else  // BL_PROFILING not defined
 
+#ifndef BL_NO_FORT
 namespace amrex {
 
 BL_FORT_PROC_DECL(BL_PROFFORTFUNCSTART_CPP,bl_proffortfuncstart_cpp)
   (
-   const int istr[], const int *NSTR
+   const int /*istr*/[], const int * /*NSTR*/
    )
 {
 }
 
 BL_FORT_PROC_DECL(BL_PROFFORTFUNCSTOP_CPP,bl_proffortfuncstop_cpp)
   (
-   const int istr[], const int *NSTR
+   const int /*istr*/[], const int * /*NSTR*/
    )
 {
 }
 
 BL_FORT_PROC_DECL(BL_PROFFORTFUNCSTART_CPP_INT,bl_proffortfuncstart_cpp_int)
   (
-   int i
+   int /*i*/
    )
 {
 }
 
 BL_FORT_PROC_DECL(BL_PROFFORTFUNCSTOP_CPP_INT,bl_proffortfuncstop_cpp_int)
   (
-   int i
+   int /*i*/
    )
 {
 }
@@ -1701,7 +1716,4 @@ BL_FORT_PROC_DECL(BL_PROFFORTFUNCSTOP_CPP_INT,bl_proffortfuncstop_cpp_int)
 
 #endif
 
-
-
-
-
+#endif

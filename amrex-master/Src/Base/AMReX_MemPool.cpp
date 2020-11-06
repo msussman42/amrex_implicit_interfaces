@@ -1,7 +1,3 @@
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 #include <iostream>
 #include <limits>
 #include <algorithm>
@@ -13,16 +9,13 @@
 #include <AMReX_CArena.H>
 #include <AMReX_MemPool.H>
 #include <AMReX_Vector.H>
+#include <AMReX_OpenMP.H>
 
 #ifdef AMREX_MEM_PROFILING
 #include <AMReX_MemProfiler.H>
 #endif
 
 #include <AMReX_ParmParse.H>
-
-#ifdef USE_PERILLA_PTHREADS
-#include <WorkerThread.H>
-#endif
 
 using namespace amrex;
 
@@ -48,26 +41,20 @@ void amrex_mempool_init ()
         ParmParse pp("fab");
 	pp.query("init_snan", init_snan);
 
-	int nthreads = 1;
-
-#ifdef _OPENMP
-	nthreads = omp_get_max_threads();
-#endif
-
-
-#ifdef USE_PERILLA_PTHREADS
-#ifdef _OPENMP
-	//Just in case Perilla thread spawns multiple OMP threads
-        nthreads *= perilla::nThreads();
-#else
-	nthreads = perilla::nThreads();
-#endif
-#endif
+	int nthreads = OpenMP::get_max_threads();
 
 	the_memory_pool.resize(nthreads);
 	for (int i=0; i<nthreads; ++i) {
-	    the_memory_pool[i].reset(new CArena);
+// xxxxx HIP FIX THIS - Default Arena w/o managed?
+// Default arena is currently Device on HIP where there is no managed option.
+// Need to adjust to CPU specifically in that case.
+#ifdef AMREX_USE_HIP
+            the_memory_pool[i].reset(new CArena(0, ArenaInfo().SetCpuMemory()));
+#else
+            the_memory_pool[i].reset(new CArena);
+#endif
 	}
+
 #ifdef _OPENMP
 #pragma omp parallel num_threads(nthreads)
 #endif
@@ -83,7 +70,7 @@ void amrex_mempool_init ()
 			 ([] () -> MemProfiler::MemInfo {
 			     int MB_min, MB_max, MB_tot;
 			     amrex_mempool_get_stats(MB_min, MB_max, MB_tot);
-			     long b = MB_tot * (1024L*1024L);
+			     Long b = MB_tot * (1024L*1024L);
 			     return {b, b};
 			 }));
 #endif
@@ -98,38 +85,13 @@ void amrex_mempool_finalize ()
 
 void* amrex_mempool_alloc (size_t nbytes)
 {
-  int tid=0;
-
-#ifdef _OPENMP
-  tid = omp_get_thread_num();
-#endif
-
-#ifdef USE_PERILLA_PTHREADS
-#ifdef _OPENMP
-  tid = perilla::tid()*omp_get_max_threads()+tid;
-#else
-  tid = perilla::tid();
-#endif
-#endif
+  int tid = OpenMP::get_thread_num();
   return the_memory_pool[tid]->alloc(nbytes);
 }
 
 void amrex_mempool_free (void* p) 
 {
-  int tid=0;
-
-#ifdef _OPENMP
-  tid = omp_get_thread_num();
-#endif
-
-#ifdef USE_PERILLA_PTHREADS
-#ifdef _OPENMP
-  tid = perilla::tid()*omp_get_max_threads()+tid;
-#else
-  tid = perilla::tid();
-#endif
-#endif
-
+  int tid = OpenMP::get_thread_num();
   the_memory_pool[tid]->free(p);
 }
 
@@ -156,14 +118,26 @@ void amrex_real_array_init (Real* p, size_t nelems)
 
 void amrex_array_init_snan (Real* p, size_t nelems)
 {
+#ifdef BL_USE_DOUBLE
+
 #ifdef UINT64_MAX
     const uint64_t snan = UINT64_C(0x7ff0000080000001);
-#else
-    static_assert(sizeof(double) == sizeof(long long), "MemPool: sizeof double != sizeof long long");
-    const long long snan = 0x7ff0000080000001LL;
-#endif
+    static_assert(sizeof(double) == sizeof(uint64_t), "MemPool: sizeof double != sizeof uint64_t");
     for (size_t i = 0; i < nelems; ++i) {
         std::memcpy(p++, &snan, sizeof(double));
     }
+#endif
+
+#else
+
+#ifdef UINT32_MAX
+    const uint32_t snan = UINT32_C(0x7fa00000);
+    static_assert(sizeof(float) == sizeof(uint32_t), "MemPool: sizeof float != sizeof uint32_t");
+    for (size_t i = 0; i < nelems; ++i) {
+        std::memcpy(p++, &snan, sizeof(float));
+    }
+#endif
+
+#endif
 }
 }

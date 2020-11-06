@@ -146,60 +146,6 @@ void amrex_avgdown_faces (Box const& bx, Array4<Real> const& crse,
 
 AMREX_GPU_HOST_DEVICE
 inline
-void amrex_avgdown_faces (Box const& bx, FArrayBox& crsefab, FArrayBox const& finefab,
-                          int ccomp, int fcomp, int ncomp, IntVect const& ratio, int idir) noexcept
-{
-    const auto len = length(bx);
-    const auto clo = lbound(bx);
-    const auto flo = refine(clo,ratio);
-    const auto crse = crsefab.view(clo,ccomp);
-    const auto fine = finefab.view(flo,fcomp);
-
-    const int facx = ratio[0];
-    const int facy = ratio[1];
-
-    switch (idir) {
-    case 0:
-    {
-        Real facInv = 1.0 / facy;
-        for (int n = 0; n < ncomp; ++n) {
-            for     (int j = 0; j < len.y; ++j) {
-                for (int i = 0; i < len.x; ++i) {
-                    int ii = i*facx;
-                    int jj = j*facy;
-                    Real c = 0.;
-                    for (int jref = 0; jref < facy; ++jref) {
-                        c += fine(ii,jj+jref,0,n);
-                    }
-                    crse(i,j,0,n) = c * facInv;
-                }
-            }
-        }
-        break;
-    }
-    case 1:
-    {
-        Real facInv = 1.0 / facx;
-        for (int n = 0; n < ncomp; ++n) {
-            for     (int j = 0; j < len.y; ++j) {
-                for (int i = 0; i < len.x; ++i) {
-                    int ii = i*facx;
-                    int jj = j*facy;
-                    Real c = 0.;
-                    for (int iref = 0; iref < facx; ++iref) {
-                        c += fine(ii+iref,jj,0,n);
-                    }
-                    crse(i,j,0,n) = c * facInv;
-                }
-            }
-        }
-        break;
-    }
-    }
-}
-
-AMREX_GPU_HOST_DEVICE
-inline
 void amrex_avgdown_edges (Box const& bx, Array4<Real> const& crse,
                           Array4<Real const> const& fine,
                           int ccomp, int fcomp, int ncomp,
@@ -250,60 +196,6 @@ void amrex_avgdown_edges (Box const& bx, Array4<Real> const& crse,
 
 AMREX_GPU_HOST_DEVICE
 inline
-void amrex_avgdown_edges (Box const& bx, FArrayBox& crsefab, FArrayBox const& finefab,
-                          int ccomp, int fcomp, int ncomp, IntVect const& ratio, int idir) noexcept
-{
-    const auto len = length(bx);
-    const auto clo = lbound(bx);
-    const auto flo = refine(clo,ratio);
-    const auto crse = crsefab.view(clo,ccomp);
-    const auto fine = finefab.view(flo,fcomp);
-
-    const int facx = ratio[0];
-    const int facy = ratio[1];
-
-    switch (idir) {
-    case 0:
-    {
-        Real facInv = 1.0 / facx;
-        for (int n = 0; n < ncomp; ++n) {
-            for     (int j = 0; j < len.y; ++j) {
-                for (int i = 0; i < len.x; ++i) {
-                    int ii = i*facx;
-                    int jj = j*facy;
-                    Real c = 0.;
-                    for (int iref = 0; iref < facx; ++iref) {
-                        c += fine(ii+iref,jj,0,n);
-                    }
-                    crse(i,j,0,n) = c * facInv;
-                }
-            }
-        }
-        break;
-    }
-    case 1:
-    {
-        Real facInv = 1.0 / facy;
-        for (int n = 0; n < ncomp; ++n) {
-            for     (int j = 0; j < len.y; ++j) {
-                for (int i = 0; i < len.x; ++i) {
-                    int ii = i*facx;
-                    int jj = j*facy;
-                    Real c = 0.;
-                    for (int jref = 0; jref < facx; ++jref) {
-                        c += fine(ii,jj+jref,0,n);
-                    }
-                    crse(i,j,0,n) = c * facInv;
-                }
-            }
-        }
-        break;
-    }
-    }
-}
-
-AMREX_GPU_HOST_DEVICE
-inline
 void amrex_avgdown (Box const& bx, Array4<Real> const& crse,
                     Array4<Real const> const& fine,
                     int ccomp, int fcomp, int ncomp,
@@ -330,42 +222,11 @@ void amrex_avgdown (Box const& bx, Array4<Real> const& crse,
     }
 }
 
+template <typename T>
 AMREX_GPU_HOST_DEVICE
 inline
-void amrex_avgdown (Box const& bx, FArrayBox& crsefab, FArrayBox const& finefab,
-                    int ccomp, int fcomp, int ncomp, IntVect const& ratio) noexcept
-{
-    const auto len = length(bx);
-    const auto clo = lbound(bx);
-    const auto flo = refine(clo,ratio);
-    const auto crse = crsefab.view(clo,ccomp);
-    const auto fine = finefab.view(flo,fcomp);
-
-    const int facx = ratio[0];
-    const int facy = ratio[1];
-    const Real volfrac = 1.0/static_cast<Real>(facx*facy);
-
-    for (int n = 0; n < ncomp; ++n) {
-        for     (int j = 0; j < len.y; ++j) {
-            for (int i = 0; i < len.x; ++i) {
-                int ii = i*facx;
-                int jj = j*facy;
-                Real c = 0.;
-                for     (int jref = 0; jref < facy; ++jref) {
-                    for (int iref = 0; iref < facx; ++iref) {
-                        c += fine(ii+iref,jj+jref,0,n);
-                    }
-                }
-                crse(i,j,0,n) = volfrac * c;
-            }
-        }
-    }
-}
-
-AMREX_GPU_HOST_DEVICE
-inline
-void amrex_avgdown_nodes (Box const& bx, Array4<Real> const& crse,
-                          Array4<Real const> const& fine,
+void amrex_avgdown_nodes (Box const& bx, Array4<T> const& crse,
+                          Array4<T const> const& fine,
                           int ccomp, int fcomp, int ncomp,
                           IntVect const& ratio) noexcept
 {
@@ -380,31 +241,6 @@ void amrex_avgdown_nodes (Box const& bx, Array4<Real> const& crse,
             AMREX_PRAGMA_SIMD
             for (int i = clo.x; i <= chi.x; ++i) {
                 crse(i,j,0,n+ccomp) = fine(i*facx,jj,0,n+fcomp);
-            }
-        }
-    }
-}
-
-AMREX_GPU_HOST_DEVICE
-inline
-void amrex_avgdown_nodes (Box const& bx, FArrayBox& crsefab, FArrayBox const& finefab,
-                          int ccomp, int fcomp, int ncomp, IntVect const& ratio) noexcept
-{
-    const auto len = length(bx);
-    const auto clo = lbound(bx);
-    const auto flo = refine(clo,ratio);
-    const auto crse = crsefab.view(clo,ccomp);
-    const auto fine = finefab.view(flo,fcomp);
-
-    const int facx = ratio[0];
-    const int facy = ratio[1];
-
-    for (int n = 0; n < ncomp; ++n) {
-        for     (int j = 0; j < len.y; ++j) {
-            int jj = j*facy;
-            AMREX_PRAGMA_SIMD
-            for (int i = 0; i < len.x; ++i) {
-                crse(i,j,0,n) = fine(i*facx,jj,0,n);
             }
         }
     }
@@ -452,11 +288,13 @@ void amrex_compute_divergence (Box const& bx, Array4<Real> const& divu,
     const Real dxi = dxinv[0];
     const Real dyi = dxinv[1];
 
-    for     (int j = lo.y; j <= hi.y; ++j) {
-        AMREX_PRAGMA_SIMD
-        for (int i = lo.x; i <= hi.x; ++i) {
-            divu(i,j,0) = dxi * (u(i+1,j,0)-u(i,j,0))
-                +         dyi * (v(i,j+1,0)-v(i,j,0));
+    for     (int n = 0; n < divu.ncomp; ++n) {
+        for     (int j = lo.y; j <= hi.y; ++j) {
+            AMREX_PRAGMA_SIMD
+                for (int i = lo.x; i <= hi.x; ++i) {
+                    divu(i,j,0,n) = dxi * (u(i+1,j,0,n)-u(i,j,0,n))
+                        +           dyi * (v(i,j+1,0,n)-v(i,j,0,n));
+                }
         }
     }
 }
@@ -478,6 +316,78 @@ void amrex_compute_gradient (Box const& bx, Array4<Real> const& grad,
         for (int i = lo.x; i <= hi.x; ++i) {
             grad(i,j,0,0) = dxi * (u(i+1,j,0)-u(i,j,0));
             grad(i,j,0,1) = dyi * (v(i,j+1,0)-v(i,j,0));
+        }
+    }
+}
+
+AMREX_GPU_HOST_DEVICE
+inline
+void amrex_compute_convective_difference (Box const& bx, Array4<amrex::Real> const& diff,
+                                          Array4<Real const> const& u_face,
+                                          Array4<Real const> const& v_face,
+                                          Array4<Real const> const& s_on_x_face,
+                                          Array4<Real const> const& s_on_y_face,
+                                          GpuArray<Real,AMREX_SPACEDIM> const& dxinv) noexcept
+{
+    const auto lo = lbound(bx);
+    const auto hi = ubound(bx);
+    const Real dxi = dxinv[0];
+    const Real dyi = dxinv[1];
+
+    for         (int n = 0; n <  diff.ncomp; ++n) {
+        for     (int j = lo.y; j <= hi.y; ++j) {
+            AMREX_PRAGMA_SIMD
+                for (int i = lo.x; i <= hi.x; ++i) {
+                    diff(i,j,n) = 0.5*dxi * (u_face(i+1,j,0,0)+u_face(i,j,0,0)) * 
+                                            (s_on_x_face(i+1,j,0,n)-s_on_x_face(i,j,0,n))
+                        +         0.5*dyi * (v_face(i,j+1,0,0)+v_face(i,j,0,0)) * 
+                                            (s_on_y_face(i,j+1,0,n)-s_on_y_face(i,j,0,n));
+                }
+        }
+    }
+}
+
+AMREX_GPU_HOST_DEVICE
+inline
+void amrex_compute_divergence_rz (Box const& bx, Array4<Real> const& divu,
+                                  Array4<Real const> const& u,
+                                  Array4<Real const> const& v,
+                                  Array4<Real const> const& ax,
+                                  Array4<Real const> const& ay,
+                                  Array4<Real const> const& vol) noexcept
+{
+    const auto lo = lbound(bx);
+    const auto hi = ubound(bx);
+
+    for     (int n = 0; n < divu.ncomp; ++n) {
+        for     (int j = lo.y; j <= hi.y; ++j) {
+            AMREX_PRAGMA_SIMD
+                for (int i = lo.x; i <= hi.x; ++i) {
+                    divu(i,j,0,n) = (ax(i+1,j,0,0)*u(i+1,j,0,n)-ax(i,j,0,0)*u(i,j,0,n))
+                        +           (ay(i,j+1,0,0)*v(i,j+1,0,n)-ay(i,j,0,0)*v(i,j,0,n));
+                    divu(i,j,0,n) /= vol(i,j,0,0);
+                }
+        }
+    }
+}
+
+AMREX_GPU_HOST_DEVICE
+inline
+void amrex_compute_gradient_rz (Box const& bx, Array4<Real> const& grad,
+                                Array4<Real const> const& u,
+                                Array4<Real const> const& v,
+                                Array4<Real const> const& ax,
+                                Array4<Real const> const& ay,
+                                Array4<Real const> const& vol) noexcept
+{
+    const auto lo = lbound(bx);
+    const auto hi = ubound(bx);
+
+    for     (int j = lo.y; j <= hi.y; ++j) {
+        AMREX_PRAGMA_SIMD
+        for (int i = lo.x; i <= hi.x; ++i) {
+            grad(i,j,0,0) = (ax(i+1,j,0,0)*u(i+1,j,0)-ax(i,j,0,0)*u(i,j,0))/vol(i,j,0,0);
+            grad(i,j,0,1) = (ay(i,j+1,0,0)*v(i,j+1,0)-ay(i,j,0,0)*v(i,j,0))/vol(i,j,0,0);
         }
     }
 }

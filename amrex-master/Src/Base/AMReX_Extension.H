@@ -7,6 +7,24 @@
 
 #ifdef __cplusplus
 
+
+#if defined(__INTEL_COMPILER)
+#define AMREX_CXX_INTEL
+#elif defined(_CRAYC)
+#define AMREX_CXX_CRAY
+#elif defined(__PGI)
+#define AMREX_CXX_PGI
+#elif defined(__NEC__)
+#define AMREX_CXX_NEC
+#elif defined(__ibmxl__)
+#define AMREX_CXX_IBM
+#elif defined(__clang__)
+#define AMREX_CXX_CLANG
+#elif defined(__GNUC__)
+#define AMREX_CXX_GCC
+#endif
+
+
 #ifdef _WIN32
 #define AMREX_RESTRICT __restrict
 #else
@@ -99,15 +117,44 @@
 #define AMREX_INLINE inline
 #endif
 
+// no inline
+#if defined(__GNUC__) || defined(__clang__) || defined(__CUDACC__) || defined(__HIP__) || defined(__SYCL_COMPILER_VERSION)
+#define AMREX_NO_INLINE __attribute__((noinline))
+#else
+#define AMREX_NO_INLINE
+#endif
 
 // __attribute__((weak))
 
-#ifdef AMREX_TYPECHECK
+#if defined(AMREX_TYPECHECK)
 #define AMREX_ATTRIBUTE_WEAK 
+#elif defined(_WIN32)
+#define AMREX_ATTRIBUTE_WEAK
 #else
 #define AMREX_ATTRIBUTE_WEAK __attribute__((weak))
+#endif
+
+#if defined(__cplusplus) && defined(_WIN32)
+#include <iso646.h>
+#endif
+
+#if (__cplusplus >= 201703L)
+#define AMREX_FALLTHROUGH [[fallthrough]]
+#elif defined(__clang__)
+#define AMREX_FALLTHROUGH [[clang::fallthrough]]
+#elif defined(__GNUC__) && (__GNUC__ >= 7) && !defined(__INTEL_COMPILER)
+#define AMREX_FALLTHROUGH [[gnu::fallthrough]]
+#else
+#define AMREX_FALLTHROUGH ((void)0)
 #endif
 
 #endif /* !BL_LANG_FORT */
 
 #endif
+
+/*
+ * DPCPP version strings
+ * beta08 #define __SYCL_COMPILER_VERSION 20200715
+ * beta09 #define __SYCL_COMPILER_VERSION 20200827
+ * beta10 #define __SYCL_COMPILER_VERSION 20201005
+*/

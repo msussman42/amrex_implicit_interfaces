@@ -5,15 +5,54 @@
 #include <AMReX_Box.H>
 #include <AMReX_Gpu.H>
 #include <AMReX_Print.H>
+#include <AMReX_Math.H>
 #include <AMReX_MFIter.H>
 #include <AMReX_ParGDB.H>
 #include <AMReX_ParticleTile.H>
+#include <AMReX_ParticleBufferMap.H>
 #include <AMReX_TypeTraits.H>
+#include <AMReX_Scan.H>
 
 #include <limits>
 
 namespace amrex
 {
+
+namespace particle_detail {
+
+template <typename F, typename P>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+auto call_f (F const& f, P const& p, amrex::RandomEngine const& engine) noexcept
+    -> decltype(f(P{},RandomEngine{}))
+{
+    return f(p,engine);
+}
+
+template <typename F, typename P>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+auto call_f (F const& f, P const& p, amrex::RandomEngine const&) noexcept
+    -> decltype(f(P{}))
+{
+    return f(p);
+}
+
+template <typename F, typename SrcData, typename N>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+auto call_f (F const& f, SrcData const& src, N i, amrex::RandomEngine const& engine) noexcept
+    -> decltype(f(SrcData{},N{},RandomEngine{}))
+{
+    return f(src,i,engine);
+}
+
+template <typename F, typename SrcData, typename N>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+auto call_f (F const& f, SrcData const& src, N i, amrex::RandomEngine const&) noexcept
+    -> decltype(f(SrcData{},N{}))
+{
+    return f(src,i);
+}
+
+}
 
 /**
  * \brief Returns the number of particles that are more than nGrow cells
@@ -40,10 +79,10 @@ numParticlesOutOfRange (Iterator const& pti, int nGrow)
     const auto domain = geom.Domain();
     const auto plo = geom.ProbLoArray();
     const auto dxi = geom.InvCellSizeArray();
-    
+
     Box box = pti.tilebox();
     box.grow(nGrow);
-        
+
     ReduceOps<ReduceOpSum> reduce_op;
     ReduceData<int> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
@@ -54,16 +93,16 @@ numParticlesOutOfRange (Iterator const& pti, int nGrow)
         const ParticleType& p = pstruct[i];
         if ((p.id() < 0)) return false;
         IntVect iv = IntVect(
-            AMREX_D_DECL(floor((p.pos(0)-plo[0])*dxi[0]),
-                         floor((p.pos(1)-plo[1])*dxi[1]),
-                         floor((p.pos(2)-plo[2])*dxi[2])));
+            AMREX_D_DECL(int(amrex::Math::floor((p.pos(0)-plo[0])*dxi[0])),
+                         int(amrex::Math::floor((p.pos(1)-plo[1])*dxi[1])),
+                         int(amrex::Math::floor((p.pos(2)-plo[2])*dxi[2]))));
         iv += domain.smallEnd();
         return !box.contains(iv);
     });
     int hv = amrex::get<0>(reduce_data.value());
     return hv;
 }
-    
+
 /**
  * \brief Returns the number of particles that are more than nGrow cells
  * from their assigned box.
@@ -75,7 +114,7 @@ numParticlesOutOfRange (Iterator const& pti, int nGrow)
  * \param pc the particle container to test
  * \param nGrow the number of grow cells allowed.
  *
- */    
+ */
 template <class PC, EnableIf_t<IsParticleContainer<PC>::value, int> foo = 0>
 int
 numParticlesOutOfRange (PC const& pc, int nGrow)
@@ -96,7 +135,7 @@ numParticlesOutOfRange (PC const& pc, int nGrow)
  * \param lev_max the maximum level to test
  * \param nGrow the number of grow cells allowed.
  *
- */        
+ */
 template <class PC, EnableIf_t<IsParticleContainer<PC>::value, int> foo = 0>
 int
 numParticlesOutOfRange (PC const& pc, int lev_min, int lev_max, int nGrow)
@@ -104,13 +143,9 @@ numParticlesOutOfRange (PC const& pc, int lev_min, int lev_max, int nGrow)
     BL_PROFILE("numParticlesOutOfRange()");
 
     using ParIter = typename PC::ParConstIterType;
-    using ParticleType = typename PC::ParticleType;
     int num_wrong = 0;
     for (int lev = lev_min; lev <= lev_max; ++lev)
     {
-        const auto plo = pc.Geom(lev).ProbLoArray();
-        const auto dxi = pc.Geom(lev).InvCellSizeArray();
-        const Box domain = pc.Geom(lev).Domain();
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion() and !system::regtest_reduction) reduction(+:num_wrong)
 #endif
@@ -119,13 +154,13 @@ numParticlesOutOfRange (PC const& pc, int lev_min, int lev_max, int nGrow)
             num_wrong += numParticlesOutOfRange(pti, nGrow);
         }
     }
-    ParallelDescriptor::ReduceIntSum(num_wrong);
+    ParallelAllReduce::Sum(num_wrong, ParallelContext::CommunicatorSub());
 
     return num_wrong;
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-int getTileIndex (const IntVect& iv, const Box& box, const bool a_do_tiling, 
+int getTileIndex (const IntVect& iv, const Box& box, const bool a_do_tiling,
 		  const IntVect& a_tile_size, Box& tbx)
 {
     if (a_do_tiling == false) {
@@ -172,6 +207,32 @@ int getTileIndex (const IntVect& iv, const Box& box, const bool a_do_tiling,
     }
 }
 
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+int numTilesInBox (const Box& box, const bool a_do_tiling, const IntVect& a_tile_size)
+{
+    if (a_do_tiling == false) {
+        return 1;
+    } else {
+        //
+        // This function must be consistent with FabArrayBase::buildTileArray function!!!
+        //
+        auto tiling_1d = [](int lo, int hi, int tilesize, int& ntile) {
+            int ncells = hi-lo+1;
+            ntile = amrex::max(ncells/tilesize, 1);
+        };
+
+        const IntVect& small = box.smallEnd();
+        const IntVect& big   = box.bigEnd();
+        IntVect ntiles;
+
+        AMREX_D_TERM(tiling_1d(small[0], big[0], a_tile_size[0], ntiles[0]);,
+		     tiling_1d(small[1], big[1], a_tile_size[1], ntiles[1]);,
+		     tiling_1d(small[2], big[2], a_tile_size[2], ntiles[2]););
+
+        return AMREX_D_TERM(ntiles[0], *=ntiles[1], *=ntiles[2]);
+    }
+}
+
 template <typename P>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 IntVect getParticleCell (P const& p,
@@ -180,9 +241,9 @@ IntVect getParticleCell (P const& p,
                          const Box& domain) noexcept
 {
     IntVect iv = IntVect(
-        AMREX_D_DECL(floor((p.pos(0)-plo[0])*dxi[0]),
-                     floor((p.pos(1)-plo[1])*dxi[1]),
-                     floor((p.pos(2)-plo[2])*dxi[2])));
+        AMREX_D_DECL(int(amrex::Math::floor((p.pos(0)-plo[0])*dxi[0])),
+                     int(amrex::Math::floor((p.pos(1)-plo[1])*dxi[1])),
+                     int(amrex::Math::floor((p.pos(2)-plo[2])*dxi[2]))));
     iv += domain.smallEnd();
     return iv;
 }
@@ -194,43 +255,155 @@ int getParticleGrid (P const& p, amrex::Array4<int> const& mask,
                      amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxi,
                      const Box& domain) noexcept
 {
-    if (p.id() < 0) return -1;    
+    if (p.id() < 0) return -1;
     IntVect iv = getParticleCell(p, plo, dxi, domain);
     return mask(iv);
 }
 
 template <typename P>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void enforcePeriodic (P& p,
+bool enforcePeriodic (P& p,
                       amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& plo,
                       amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& phi,
                       amrex::GpuArray<int,AMREX_SPACEDIM> const& is_per) noexcept
 {
-    // In rare cases, degenerate cases can be found, filter out with a tolerance
-#if !defined(__CUDACC__) || (__CUDACC_VER_MAJOR__ != 9) || (__CUDACC_VER_MINOR__ != 2)
-    static constexpr Real eps = std::numeric_limits<Real>::epsilon();
-#else
-    static constexpr Real eps = DBL_EPSILON;
-#endif
-
+    bool shifted = false;
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         if (not is_per[idim]) continue;
-        if (p.pos(idim) >= phi[idim]) { 
-            while (p.pos(idim) >= phi[idim]) { 
-                p.pos(idim) -= (phi[idim] - plo[idim]);
+        if (p.pos(idim) >= phi[idim]) {
+            while (p.pos(idim) >= phi[idim]) {
+                p.pos(idim) -= static_cast<ParticleReal>(phi[idim] - plo[idim]);
             }
-            if (p.pos(idim) < plo[idim]) p.pos(idim) = plo[idim]; // clamp to avoid precision issues;
-        } 
+            // clamp to avoid precision issues;
+            if (p.pos(idim) < plo[idim]) p.pos(idim) = static_cast<ParticleReal>(plo[idim]);
+            shifted = true;
+        }
         else if (p.pos(idim) < plo[idim]) {
             while (p.pos(idim) < plo[idim]) {
-                p.pos(idim) += (phi[idim] - plo[idim]); 
+                p.pos(idim) += static_cast<ParticleReal>(phi[idim] - plo[idim]);
             }
-            if (p.pos(idim) == phi[idim]) p.pos(idim) = plo[idim]; // clamp to avoid precision issues;
-            if (p.pos(idim) > phi[idim]) p.pos(idim) = phi[idim]-eps; // clamp to avoid precision issues;
+            // clamp to avoid precision issues;
+            if (p.pos(idim) == phi[idim]) p.pos(idim) = static_cast<ParticleReal>(plo[idim]);
+            if (p.pos(idim) > phi[idim]) p.pos(idim) = std::nextafter( (amrex::ParticleReal) phi[idim], (amrex::ParticleReal) plo[idim]);
+            shifted = true;
         }
+        AMREX_ASSERT( (p.pos(idim) >= plo[idim] ) and ( p.pos(idim) < phi[idim] ));
     }
+
+    return shifted;
 }
+
+#if defined(AMREX_USE_GPU)
+
+template <typename PTile, typename PLocator>
+int
+partitionParticlesByDest (PTile& ptile, const PLocator& ploc, const ParticleBufferMap& pmap,
+                          const Geometry& geom, int lev, int gid, int /*tid*/,
+                          int lev_min, int lev_max, int nGrow)
+{
+    const auto plo    = geom.ProbLoArray();
+    const auto phi    = geom.ProbHiArray();
+    const auto is_per = geom.isPeriodicArray();
+
+    auto& aos = ptile.GetArrayOfStructs();
+    const int np = aos.numParticles();
+
+    if (np == 0) return 0;
+
+    auto getPID = pmap.getPIDFunctor();
+    auto p_ptr = &(aos[0]);
+
+    int pid = ParallelContext::MyProcSub();
+    constexpr int chunk_size = 256*256*256;
+    int num_chunks = std::max(1, (np + (chunk_size - 1)) / chunk_size);
+
+    PTile ptile_tmp;
+    ptile_tmp.define(ptile.NumRuntimeRealComps(), ptile.NumRuntimeIntComps());
+    ptile_tmp.resize(std::min(np, chunk_size));
+
+    auto src_data = ptile.getParticleTileData();
+    auto dst_data = ptile_tmp.getParticleTileData();
+
+    int last_offset = 0;
+    for (int ichunk = 0; ichunk < num_chunks; ++ichunk)
+    {
+        int this_offset = ichunk*chunk_size;
+        int this_chunk_size = std::min(chunk_size, np - this_offset);
+
+        int num_stay;
+        {
+            auto particle_stays = [=] AMREX_GPU_DEVICE (int i) -> int
+            {
+                int assigned_grid;
+                int assigned_lev;
+
+                auto& p = p_ptr[i+this_offset];
+
+                if (p.id() < 0 )
+                {
+                    assigned_grid = -1;
+                    assigned_lev  = -1;
+                }
+                else
+                {
+                    enforcePeriodic(p, plo, phi, is_per);
+                    auto tup = ploc(p, lev_min, lev_max, nGrow);
+                    assigned_grid = amrex::get<0>(tup);
+                    assigned_lev  = amrex::get<1>(tup);
+                }
+
+                return ((assigned_grid == gid) && (assigned_lev == lev) && (getPID(lev, gid) == pid));
+            };
+
+            num_stay = Scan::PrefixSum<int> (this_chunk_size,
+                          [=] AMREX_GPU_DEVICE (int i) -> int
+                          {
+                              return particle_stays(i);
+                          },
+                          [=] AMREX_GPU_DEVICE (int i, int const& s)
+                          {
+                              if ( particle_stays(i) )
+                              {
+                                  copyParticle(dst_data, src_data, i + this_offset, s);
+                              }
+                              else
+                              {
+                                  copyParticle(dst_data, src_data, i + this_offset, this_chunk_size-1-(i-s));
+                              }
+                          },
+                          Scan::Type::exclusive);
+        }
+
+        if (num_chunks == 1)
+        {
+            ptile.swap(ptile_tmp);
+        }
+        else
+        {
+            AMREX_FOR_1D(this_chunk_size, i,
+                         {
+                             copyParticle(src_data, dst_data, i, i + this_offset);
+                         });
+        }
+
+        if ( ichunk > 0 )
+        {
+            int num_swap = std::min(this_offset - last_offset, num_stay);
+            AMREX_FOR_1D( num_swap, i,
+            {
+                swapParticle(src_data, src_data, last_offset + i,
+                             this_offset + num_stay - 1 - i);
+            });
+        }
+
+        last_offset += num_stay;
+    }
+
+    return last_offset;
+}
+
+#endif
 
 IntVect computeRefFac (const ParGDBBase* a_gdb, int src_lev, int lev);
 

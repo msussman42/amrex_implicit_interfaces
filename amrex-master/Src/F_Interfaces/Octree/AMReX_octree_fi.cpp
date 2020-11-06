@@ -26,7 +26,7 @@ extern "C" {
     {
         ParmParse pp("amr");
         int cnt = pp.countval("max_grid_size");
-        int max_grid_size;
+        int max_grid_size = 0;
         if (cnt == 0) {
             max_grid_size = 8;
             pp.add("max_grid_size", max_grid_size);
@@ -63,7 +63,8 @@ extern "C" {
         pp.addarr("ref_ratio", ref_ratio);
     }
 
-    void amrex_fi_build_octree_leaves (AmrCore* const amrcore, int* n, Vector<treenode>*& leaves)
+    void amrex_fi_build_octree_leaves (AmrCore* const amrcore, int* n, Vector<treenode>*& leaves,
+                                       int* level_offset)
     {
         leaves = new Vector<treenode>;
         const int finest_level = amrcore->finestLevel();
@@ -82,6 +83,8 @@ extern "C" {
 
         for (int lev = 0; lev <= finest_level; ++lev)
         {
+            level_offset[lev] = leaves->size();
+
             famrcore->octree_li_full_to_leaf[lev].clear();
             famrcore->octree_li_leaf_to_full[lev].clear();
 
@@ -147,13 +150,16 @@ extern "C" {
                         famrcore->octree_leaf_dmap[lev] = DistributionMapping(iproc);
                         update_dummy_mf = true;
                     }
-                    famrcore->octree_leaf_dummy_mf[lev].reset
-                        (new MultiFab(famrcore->octree_leaf_grids[lev],
-                                      famrcore->octree_leaf_dmap[lev],
-                                      1,0,MFInfo().SetAlloc(false)));
+                    if (update_dummy_mf) {
+                        famrcore->octree_leaf_dummy_mf[lev].reset
+                            (new MultiFab(famrcore->octree_leaf_grids[lev],
+                                          famrcore->octree_leaf_dmap[lev],
+                                          1,0,MFInfo().SetAlloc(false)));
+                    }
                 }
             }
         }
+        level_offset[finest_level+1] = leaves->size();
         *n = leaves->size();
     }
 

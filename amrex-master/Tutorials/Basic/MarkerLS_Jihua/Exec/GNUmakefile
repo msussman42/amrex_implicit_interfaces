@@ -2,7 +2,7 @@
 # If you set AMREX_HOME as an environment variable, this line will be ignored
 AMREX_HOME ?= ../../../../
 
-DEBUG     = FALSE
+DEBUG     = TRUE
 USE_MPI   = FALSE
 USE_OMP   = FALSE
 COMP      = gnu
@@ -15,7 +15,7 @@ VPATH_LOCATIONS  += ../Source
 INCLUDE_LOCATIONS += ../Source
 
 #include $(AMREX_HOME)/Src/Base/Make.package
-include $(AMREX_HOME)/Src/Base_12_2019/Make.package
+include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules

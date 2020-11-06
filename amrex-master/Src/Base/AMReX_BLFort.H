@@ -1,6 +1,7 @@
 #ifndef AMREX_BLFORT_H_
 #define AMREX_BLFORT_H_
 
+#include <AMReX_INT.H>
 #include <AMReX_ArrayLim.H>
 #include <AMReX_REAL.H>
 #include <AMReX_SPACE.H>
@@ -13,11 +14,11 @@
 #define AMREX_FORT_NAME(A,B) B
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define AMREX_FORT_NAME(A,B) B##_
-#else
+#elif !defined(BL_NO_FORT)
 #error "One of BL_FORT_USE_{UPPERCASE,LOWERCASE,UNDERSCORE} must be defined"
 #endif
 
-#ifdef __cplusplus
+#if defined(__cplusplus) && !defined(BL_NO_FORT)
 #define BL_FORT_PROC_DECL(A,B) extern "C" void AMREX_FORT_NAME(A,B)
 #else
 #define BL_FORT_PROC_DECL(A,B) void AMREX_FORT_NAME(A,B)
@@ -109,7 +110,7 @@
 
 // Define macros for doing reductions.
 
-#ifdef AMREX_USE_GPU
+#if defined(AMREX_USE_GPU) && defined(AMREX_USE_GPU_PRAGMA)
 #define AMREX_MFITER_REDUCE_SUM(var) mfi.add_reduce_value(var, amrex::MFIter::SUM)
 #define AMREX_MFITER_REDUCE_MIN(var) mfi.add_reduce_value(var, amrex::MFIter::MIN)
 #define AMREX_MFITER_REDUCE_MAX(var) mfi.add_reduce_value(var, amrex::MFIter::MAX)

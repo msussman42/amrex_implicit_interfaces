@@ -20,8 +20,8 @@ StateDescriptor::BndryFunc::clone () const
 StateDescriptor::BndryFunc::~BndryFunc () {}
 
 bool
-StateDescriptor::bf_thread_safety (const int* lo,const int* hi,
-				   const int* dom_lo, const int* dom_hi,
+StateDescriptor::bf_thread_safety (const int* /*lo*/,const int* /*hi*/,
+				   const int* /*dom_lo*/, const int* /*dom_hi*/,
 				   const int* bc, int ng)
 {
     bool thread_safe = true;
@@ -39,26 +39,26 @@ void
 StateDescriptor::BndryFunc::operator () (Real* data,const int* lo,const int* hi,
                                          const int* dom_lo, const int* dom_hi,
                                          const Real* dx, const Real* grd_lo,
-                                         const Real* time, const int* bc) const
+                                         const Real* time, const int* a_bc) const
 {
     BL_ASSERT(m_func != 0 || m_func3D != 0);
 
-    bool thread_safe = bf_thread_safety(lo, hi, dom_lo, dom_hi, bc, 1);
+    bool thread_safe = bf_thread_safety(lo, hi, dom_lo, dom_hi, a_bc, 1);
     if (thread_safe) {
       if (m_func != 0)
-	m_func(data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc);
+	m_func(data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,a_bc);
       else
 	m_func3D(data,AMREX_ARLIM_3D(lo),AMREX_ARLIM_3D(hi),AMREX_ARLIM_3D(dom_lo),AMREX_ARLIM_3D(dom_hi),
-                 AMREX_ZFILL(dx),AMREX_ZFILL(grd_lo),time,bc);
+                 AMREX_ZFILL(dx),AMREX_ZFILL(grd_lo),time,a_bc);
     } else {
 #ifdef _OPENMP
 #pragma omp critical (bndryfunc)
 #endif
       if (m_func != 0)
-	m_func(data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc);
+	m_func(data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,a_bc);
       else
 	m_func3D(data,AMREX_ARLIM_3D(lo),AMREX_ARLIM_3D(hi),AMREX_ARLIM_3D(dom_lo),AMREX_ARLIM_3D(dom_hi),
-                 AMREX_ZFILL(dx),AMREX_ZFILL(grd_lo),time,bc);
+                 AMREX_ZFILL(dx),AMREX_ZFILL(grd_lo),time,a_bc);
     }
 }
 
@@ -66,26 +66,26 @@ void
 StateDescriptor::BndryFunc::operator () (Real* data,const int* lo,const int* hi,
                                          const int* dom_lo, const int* dom_hi,
                                          const Real* dx, const Real* grd_lo,
-                                         const Real* time, const int* bc, int ng) const
+                                         const Real* time, const int* a_bc, int ng) const
 {
     BL_ASSERT(m_gfunc != 0 || m_gfunc3D != 0);
 
-    bool thread_safe = bf_thread_safety(lo, hi, dom_lo, dom_hi, bc, ng);
+    bool thread_safe = bf_thread_safety(lo, hi, dom_lo, dom_hi, a_bc, ng);
     if (thread_safe) {
         if (m_gfunc != 0)
-	  m_gfunc(data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc);
+	  m_gfunc(data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,a_bc);
 	else
 	  m_gfunc3D(data,AMREX_ARLIM_3D(lo),AMREX_ARLIM_3D(hi),AMREX_ARLIM_3D(dom_lo),AMREX_ARLIM_3D(dom_hi),
-                    AMREX_ZFILL(dx),AMREX_ZFILL(grd_lo),time,bc);
+                    AMREX_ZFILL(dx),AMREX_ZFILL(grd_lo),time,a_bc);
     } else {
 #ifdef _OPENMP
 #pragma omp critical (bndryfunc)
 #endif
         if (m_gfunc != 0)
-	  m_gfunc(data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc);
+	  m_gfunc(data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,a_bc);
 	else
 	  m_gfunc3D(data,AMREX_ARLIM_3D(lo),AMREX_ARLIM_3D(hi),AMREX_ARLIM_3D(dom_lo),AMREX_ARLIM_3D(dom_hi),
-                    AMREX_ZFILL(dx),AMREX_ZFILL(grd_lo),time,bc);
+                    AMREX_ZFILL(dx),AMREX_ZFILL(grd_lo),time,a_bc);
     }
 }
 
@@ -147,9 +147,9 @@ DescriptorList::setComponent (int                               indx,
 {
     for (int i = 0; i < nm.size(); i++)
     {
-        const bool master = (i == 0) ? true : false;
+        const bool is_primary = (i == 0) ? true : false;
 
-        desc[indx]->setComponent(comp+i,nm[i],bc[i],func,interp,master,nm.size());
+        desc[indx]->setComponent(comp+i,nm[i],bc[i],func,interp,is_primary,nm.size());
     }
 }
 
@@ -210,7 +210,7 @@ StateDescriptor::StateDescriptor (IndexType                   btyp,
     bc.resize(num_comp);
     bc_func.resize(num_comp);
     mapper_comp.resize(num_comp);
-    m_master.resize(num_comp);
+    m_primary.resize(num_comp);
     m_groupsize.resize(num_comp);
     max_map_start_comp.resize(num_comp);
     min_map_end_comp.resize(num_comp);
@@ -336,7 +336,7 @@ StateDescriptor::define (IndexType                   btyp,
     bc.resize(num_comp);
     bc_func.resize(num_comp);
     mapper_comp.resize(num_comp);
-    m_master.resize(num_comp);
+    m_primary.resize(num_comp);
     m_groupsize.resize(num_comp);
     max_map_start_comp.resize(num_comp);
     min_map_end_comp.resize(num_comp);
@@ -356,7 +356,7 @@ StateDescriptor::setComponent (int                               comp,
     names[comp]       = nm;
     bc[comp]          = bcr;
     mapper_comp[comp] = a_interp;
-    m_master[comp]    = false;
+    m_primary[comp]    = false;
     m_groupsize[comp] = 0;
 
     if (max_map_start_comp_>=0 && min_map_end_comp_>=0)
@@ -381,12 +381,12 @@ StateDescriptor::setComponent (int                               comp,
                                const BCRec&                      bcr,
                                const StateDescriptor::BndryFunc& func,
                                Interpolater*                     a_interp,
-                               bool                              a_master,
+                               bool                              a_primary,
                                int                               a_groupsize)
 {
     setComponent(comp,nm,bcr,func,a_interp,-1,-1);
 
-    m_master[comp]    = a_master;
+    m_primary[comp]    = a_primary;
     m_groupsize[comp] = a_groupsize;
 }
 
