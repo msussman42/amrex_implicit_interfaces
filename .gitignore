@@ -1,6 +1,8 @@
 *.tar.gz
 *.tar
 *.dsp
+amrex-master/Tutorials/Basic/MarkerLS_Jihua/Exec/Backtrace*
+amrex-master/Tutorials/Basic/MarkerLS_Jihua/Exec/plt*
 autodiff/*.tar.gz
 autodiff/examples/*.o
 autodiff/examples/*.ex
