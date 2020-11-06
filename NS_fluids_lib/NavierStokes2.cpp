@@ -6468,7 +6468,26 @@ void NavierStokes::metrics_data(int ngrow) {
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[VOLUME_MF]->boxArray().d_numPts());
+ ParallelDescriptor::Barrier();
+ const BoxArray mfBA=localMF[VOLUME_MF]->boxArray();
+ for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+  amrex::ParallelDescriptor::Barrier();
+  if (amrex::ParallelDescriptor::MyProc()==pid) {
+   std::fflush(NULL);
+   std::cout << mfBA << '\n';
+   std::cout << "NProcs()= " << 
+     amrex::ParallelDescriptor::NProcs() << '\n';
+   std::cout << "PROC= " << amrex::ParallelDescriptor::MyProc() << 
+     " thread_class::nthreads= " << 
+     thread_class::nthreads << '\n';
+   std::fflush(NULL);
+  }
+ }  // pid=0..NProcs-1
+ ParallelDescriptor::Barrier();
+ double local_d_numPts=mfBA.d_numPts_SUSSMAN();
+ ParallelDescriptor::Barrier();
+ thread_class::init_d_numPts(local_d_numPts);
+ ParallelDescriptor::Barrier();
 
 #ifdef _OPENMP
 #pragma omp parallel

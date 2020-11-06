@@ -422,6 +422,23 @@ BoxArray::numPts () const noexcept
     return result;
 }
 
+
+double
+BoxArray::d_numPts_SUSSMAN () const noexcept
+{
+    double result = 0;
+    const int N = size();
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+:result)
+#endif
+    for (int i = 0; i < N; ++i)
+    {
+        result += (*this)[i].d_numPts();
+    }
+    return result;
+}
+
+
 double
 BoxArray::d_numPts () const noexcept
 {
