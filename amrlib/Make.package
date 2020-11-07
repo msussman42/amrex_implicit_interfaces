@@ -1,10 +1,13 @@
 
-CEXE_sources += Amr.cpp AmrLevel.cpp Cluster.cpp \
+CEXE_sources += Amr.cpp AmrLevel.cpp \
+                AMReX_AmrMesh.cpp \
+                AMReX_Cluster.cpp \
                 Interpolater.cpp StateData.cpp \
                 StateDescriptor.cpp AMReX_TagBox.cpp FillPatchUtil.cpp
 
 CEXE_headers += Amr.H AmrLevel.H \
-                Cluster.H  \
+                AMReX_AmrMesh.H \
+                AMReX_Cluster.H  \
                 LevelBld.H Interpolater.H StateData.H \
                 N_EXTRA_REAL.H \
                 StateDescriptor.H AMReX_TagBox.H FillPatchUtil.H 
