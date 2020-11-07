@@ -2336,7 +2336,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   }
 
   int bfact_space=parent->Space_blockingFactor(ilev);
-  int bfact_grid=parent->blockingFactor(ilev);
+  int bfact_grid=parent->Old_blockingFactor(ilev);
   if ((bfact_space<1)||(bfact_space>64))
    amrex::Error("bfact_space out of range");
   if (bfact_grid<4)

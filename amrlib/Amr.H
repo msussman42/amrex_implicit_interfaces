@@ -55,6 +55,8 @@ public:
     // Set the timestep on each level.
     //
     void setDt(Real dt);
+    int Old_maxGridSize (int lev) const;
+    int Old_blockingFactor (int lev) const;
     int Space_blockingFactor (int lev) const;
     int Time_blockingFactor () const;
     int get_MAX_NUM_SLAB () const;
@@ -174,6 +176,9 @@ protected:
     void regrid (int  lbase,
                  Real time,
                  bool initial = false);
+
+    virtual void regrid_level_0_on_restart ();
+
     //
     // Define new grid locations (called from regrid) and put into new_grids.
     //
@@ -216,6 +221,10 @@ protected:
 
     std::unique_ptr<AmrParGDB> m_gdb;
 
+    std::string      regrid_grids_file;   
+    std::string      initial_grids_file; 
+    static Vector<BoxArray> initial_ba;
+    static Vector<BoxArray> regrid_ba;
 
     Real             cumtime;      // Physical time variable.
     Real             dt_AMR;     // Timestep 

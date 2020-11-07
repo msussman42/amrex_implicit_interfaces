@@ -186,6 +186,7 @@ public:
     virtual void errorEst (TagBoxArray& tb,
                            int          clearval,
                            int          tagval,
+			   Real         time,
 			   int          n_error_buf = 0,
                            int          ngrow = 0) = 0;
     //
@@ -275,7 +276,7 @@ public:
     // the list of tagged points.  Default implementation does nothing.
     //
     virtual void manual_tags_placement (TagBoxArray&    tags,
-                                        Vector<int>& bf_lev);
+             const Vector<IntVect>& bf_lev);
     const BoxArray& getAreaNotToTag() noexcept;
     //
     // Modify list of variables to be plotted
