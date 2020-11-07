@@ -441,7 +441,7 @@ public:
     //
     virtual void errorEst (TagBoxArray& tb,
       int clearval, int tagval, 
-      int n_error_buf=0,int ngrow=0);
+      Real time,int n_error_buf=0,int ngrow=0);
 
     void deallocate_potential_forceALL();
     void process_potential_forceALL();

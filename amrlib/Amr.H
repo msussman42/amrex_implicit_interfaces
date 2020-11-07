@@ -161,6 +161,13 @@ protected:
     // Define and initialize refined levels.
     //
     void bldFineLevels (Real start_time);
+
+    virtual void ErrorEst (int lev, TagBoxArray& tags, Real time, int ngrow);
+
+    virtual BoxArray GetAreaNotToTag (int lev) override;
+    virtual void ManualTagsPlacement (int lev, TagBoxArray& tags, const Vector<IntVect>& bf_lev) override;
+
+
     //
     // Rebuild grid hierarchy finer than lbase.
     //

@@ -1872,6 +1872,26 @@ Amr::defBaseLevel (Real strt_time)
     amr_level[0]->initData();
 } // subroutine defBaseLevel
 
+void
+Amr::ErrorEst (int lev, TagBoxArray& tags, Real time, int ngrow)
+{
+    amr_level[lev]->errorEst(tags,TagBox::CLEAR,TagBox::SET,time, 
+		    n_error_buf[lev][0], ngrow);
+}
+
+BoxArray
+Amr::GetAreaNotToTag (int lev)
+{
+    return BoxArray(amr_level[lev]->getAreaNotToTag());
+}
+
+void
+Amr::ManualTagsPlacement (int lev, TagBoxArray& tags, const Vector<IntVect>& bf_lev)
+{
+    amr_level[lev]->manual_tags_placement(tags, bf_lev);
+}
+
+
 // called from timeStep and bldFineLevels.
 // bldFineLevels is called from initialInit.
 //  (note: defBaseLevel is also called from initialInit)
@@ -2001,6 +2021,7 @@ Amr::regrid (int  lbase,
  }
 
  if (record_run_info && ParallelDescriptor::IOProcessor()) {
+  runlog << "REGRID: at level lbase = " << lbase << '\n';
   printGridInfo(runlog,start,finest_level);
  }
  if (record_grid_info && ParallelDescriptor::IOProcessor()) {
@@ -2119,257 +2140,98 @@ void
 Amr::grid_places (int              lbase,
                   Real time,
                   int&             new_finest,
-                  Vector<BoxArray>& new_grid_places)
+                  Vector<BoxArray>& new_grids)
 {
 
- BL_PROFILE("Amr::grid_places()");
+    BL_PROFILE("Amr::grid_places()");
 
- int ilev=0;
- int max_crse = std::min(finest_level,max_level-1);
+    const Real strttime = amrex::second();
 
- const double strttime = ParallelDescriptor::second();
-
- if (lbase == 0) {
-
-  new_grid_places[0] = MakeBaseGrids();
-
- } // lbase==0 
-
-  // blocking_factor[i] is the blocking factor for level i.
-  //  (why did I say level i+1 previously?)
-  // The proper nesting buffer of level i cells next to level i+1
-  // cells is bf_lev[i]*n_proper.
- Vector<int> bf_lev(max_level); 
- Vector<int> rr_lev(max_level);
- Vector<Box> pc_domain(max_level);  // Coarsened problem domain.
-
- // blocking_factor is a power of 2 and no smaller than 4.
- for (ilev = 0; ilev <= max_crse; ilev++) {
-   bf_lev[ilev] = blocking_factor[ilev]/2;
-   if (2*bf_lev[ilev]!=blocking_factor[ilev])
-    amrex::Error("2*bf_lev[ilev]!=blocking_factor[ilev]");
- }
-
- for (ilev = lbase; ilev < max_crse; ilev++) {
-   rr_lev[ilev] = (2*bf_lev[ilev])/bf_lev[ilev+1];
-   if (rr_lev[ilev]<2)
-    amrex::Error("rr_lev[ilev]<2");
- }
-
-  //2*bf_lev[ilev]==blocking_factor[ilev]
- for (ilev = lbase; ilev <= max_crse; ilev++) {
-  pc_domain[ilev] = amrex::coarsen(geom[ilev].Domain(),bf_lev[ilev]);
- }
-
- Vector<BoxList> p_n(max_level);      // Proper nesting domain.
- Vector<BoxList> p_n_comp(max_level); // Complement proper nesting domain.
-
- BoxList bl(amr_level[lbase]->boxArray());
- bl.simplify();
-  //2*bf_lev[i]==blocking_factor[i]
- bl.coarsen(bf_lev[lbase]);
- p_n_comp[lbase].complementIn(pc_domain[lbase],bl);
-
- p_n_comp[lbase].simplify();
-  // grow each box in p_n_comp[lbase] by n_proper
-  // proper nesting size: n_proper*bf_lev
- p_n_comp[lbase].accrete(n_proper);
- Amr::ProjPeriodic(p_n_comp[lbase], Geometry(pc_domain[lbase]));
- p_n[lbase].complementIn(pc_domain[lbase],p_n_comp[lbase]);
- p_n[lbase].simplify();
-
- if (lbase==0) {
-  if (p_n_comp[lbase].size()==0) {
-   // do nothing
-  } else
-   amrex::Error("p_n_comp[lbase].size() should be 0");
- } // lbase==0
-
- bl.clear();
-
- for (ilev = lbase+1; ilev <= max_crse; ilev++) {
-
-  p_n_comp[ilev] = p_n_comp[ilev-1];
-
-  p_n_comp[ilev].simplify();
-
-  p_n_comp[ilev].refine(rr_lev[ilev-1]);
-   // grow each box in p_n_comp[ilev] by n_proper
-  p_n_comp[ilev].accrete(n_proper);
-
-  Amr::ProjPeriodic(p_n_comp[ilev], Geometry(pc_domain[ilev]));
-
-  p_n[ilev].complementIn(pc_domain[ilev],p_n_comp[ilev]);
-  p_n[ilev].simplify();
-
-  if (lbase==0) {
-   if (p_n_comp[ilev].size()==0) {
-    // do nothing
-   } else
-    amrex::Error("p_n_comp[ilev].size() should be 0");
-  } // lbase==0
-
- } // ilev=lbase+1 ... max_crse
-
- new_finest = lbase;
-
- for (int levc = max_crse; levc >= lbase; levc--) {
-
-  int levf = levc+1;
-  int ngrow = 0;
-
-  if (levf < new_finest) {
-   BoxArray ba_proj(new_grid_places[levf+1]);
-
-   ba_proj.coarsen(2);
-   ba_proj.grow(n_proper);
-   ba_proj.coarsen(2);
-
-   BoxArray levcBA = amr_level[levc]->boxArray();
-
-   while (!levcBA.contains(ba_proj)) {
-    BoxArray tmp = levcBA;
-    tmp.grow(1);
-    levcBA = tmp;
-    ngrow++;
-   }
-  }  // levf<new_finest
-
-   // AMReX_TagBox.H: TagBoxArray (const BoxArray& bs,dm,int _ngrow=0)
-    // SUSSMAN
-  TagBoxArray tags(amr_level[levc]->boxArray(),
-		   amr_level[levc]->DistributionMap(),
-		   n_error_buf[levc]+ngrow);
-
-  amr_level[levc]->errorEst(tags,
-                           TagBox::CLEAR,TagBox::SET,
-                           n_error_buf[levc],ngrow);
-
-  if (levf < new_finest) {
-
-   int nerr = n_error_buf[levf];
-
-   BoxList bl_tagged(new_grid_places[levf+1]);
-   bl_tagged.simplify();
-   bl_tagged.coarsen(2);
-   for (BoxList::iterator blt = bl_tagged.begin(), End = bl_tagged.end();
-        blt != End;
-        ++blt) {
-    for (int idir = 0; idir < AMREX_SPACEDIM; idir++) {
-     if (blt->smallEnd(idir) == geom[levf].Domain().smallEnd(idir))
-      blt->growLo(idir,nerr);
-     if (blt->bigEnd(idir) == geom[levf].Domain().bigEnd(idir))
-      blt->growHi(idir,nerr);
+    if (lbase == 0)
+    {
+	new_grids[0] = MakeBaseGrids();
     }
-   } // blt
 
-   Box mboxF = amrex::grow(bl_tagged.minimalBox(),1);
-   BoxList blFcomp;
-   blFcomp.complementIn(mboxF,bl_tagged);
-   blFcomp.simplify();
-   bl_tagged.clear();
+    if ( time == 0. && !initial_grids_file.empty() && !use_fixed_coarse_grids)
+    {
+        new_finest = std::min(max_level,(finest_level+1));
+        new_finest = std::min<int>(new_finest,initial_ba.size());
 
-   int iv=nerr/2;
-    // Grow each Box in the BoxList by iv.
-   blFcomp.accrete(iv);
-   BoxList blF;
-   blF.complementIn(mboxF,blFcomp);
-   BoxArray baF(blF);
-   blF.clear();
-   baF.grow(n_proper);
-   for (int idir = 0; idir < AMREX_SPACEDIM; idir++) {
-    if (nerr > n_error_buf[levc]*2) 
-     baF.grow(idir,nerr-n_error_buf[levc]*2);
-   }
-
-   baF.coarsen(2);
-
-   tags.setVal(baF,TagBox::SET);
-  }  // levf < new_finest
-
-  int nbuf_all=n_error_buf[levc]+ngrow;
-  IntVect nbuf_vec(D_DECL(nbuf_all,nbuf_all,nbuf_all));
-
-  tags.buffer(nbuf_vec);
-
-  int bl_max = bf_lev[levc];
-  if (bl_max>=2) {
-   int bf_all=bf_lev[levc];
-   IntVect bf_vec(D_DECL(bf_all,bf_all,bf_all));
-   tags.coarsen(bf_vec); // guarantee proper nesting of n_proper*bf_lev
-  } else
-   amrex::Error("blocking_factor>=4 required => bf_lev>=2");
-
-  amr_level[levc]->manual_tags_placement(tags, bf_lev);
-  tags.mapPeriodicRemoveDuplicates(Geometry(pc_domain[levc]));
-  tags.setVal(p_n_comp[levc],TagBox::CLEAR);
-
-  Vector<IntVect> tagvec;
-  tags.collate(tagvec);
-  tags.clear();
-
-  if (tagvec.size() > 0) {
-   new_finest = std::max(new_finest,levf);
-   ClusterList clist(&tagvec[0],tagvec.size());
-   clist.chop(grid_eff);
-   BoxDomain bd;
-   bd.add(p_n[levc]);
-   clist.intersect(bd);
-   bd.clear();
-
-   BoxList new_bx;
-   clist.boxList(new_bx);
-   new_bx.refine(bf_lev[levc]);
-   new_bx.simplify();
-   BL_ASSERT(new_bx.isDisjoint());
-
-   int largest_grid_size;
-   largest_grid_size = max_grid_size[levf] / 2;
-   new_bx.maxSize(largest_grid_size);
-
-   new_bx.refine(2);
-   BL_ASSERT(new_bx.isDisjoint());
-   new_grid_places[levf].define(new_bx);
-  }  // tagvec.size()>0
- } // levc=max_crse ... lbase; levc--
-
- const int NProcs = ParallelDescriptor::NProcs();
-
- if ((NProcs > 1)&&(refine_grid_layout)) {
-
-  for (int cnt = 1; cnt <= 4; cnt *= 2) {
-
-   for (ilev = lbase; ilev <= new_finest; ilev++) {
-
-    const int ChunkSize = max_grid_size[ilev]/cnt;
-
-    IntVect chunk(D_DECL(ChunkSize,ChunkSize,ChunkSize));
-
-    for (int j = 0; j < AMREX_SPACEDIM; j++) {
-     chunk[j] /= 2;
-
-     if ((new_grid_places[ilev].size() < NProcs) && 
-         (chunk[j]%blocking_factor[ilev] == 0)) {
-      new_grid_places[ilev].maxSize(chunk);
-     }
+        for (int lev = 1; lev <= new_finest; lev++)
+        {
+            BoxList bl;
+            int ngrid = initial_ba[lev-1].size();
+            for (int i = 0; i < ngrid; i++)
+            {
+                Box bx(initial_ba[lev-1][i]);
+                if (lev > lbase)
+                    bl.push_back(bx);
+            }
+            if (lev > lbase)
+                new_grids[lev].define(bl);
+        }
+        return;
     }
-   } // ilev
-  } // cnt
- }
 
- if (verbose > 0) {
-  double stoptime = ParallelDescriptor::second() - strttime;
+    // Use grids in initial_grids_file as fixed coarse grids.
+    if ( ! initial_grids_file.empty() && use_fixed_coarse_grids)
+    {
+        new_finest = std::min(max_level,(finest_level+1));
+        new_finest = std::min<int>(new_finest,initial_ba.size());
 
-  ParallelDescriptor::ReduceRealMax(stoptime,
-        ParallelDescriptor::IOProcessorNumber());
+        for (int lev = lbase+1; lev <= new_finest; lev++)
+        {
+            BoxList bl;
+            int ngrid = initial_ba[lev-1].size();
+            for (int i = 0; i < ngrid; i++)
+            {
+                Box bx(initial_ba[lev-1][i]);
 
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "grid_places() time: " << stoptime << '\n';
-  }
- }  // verbose>0
+                if (lev > lbase)
+                    bl.push_back(bx);
 
- if (new_finest>finest_level+1)
-  amrex::Error("cannot create more than one new level at a time");
+            }
+            if (lev > lbase)
+                new_grids[lev].define(bl);
+            new_grids[lev].maxSize(max_grid_size[lev]);
+        }
+    }
+    else if ( !regrid_grids_file.empty() )     // Use grids in regrid_grids_file 
+    {
+        new_finest = std::min(max_level,(finest_level+1));
+        new_finest = std::min<int>(new_finest,regrid_ba.size());
+        for (int lev = 1; lev <= new_finest; lev++)
+        {
+            BoxList bl;
+            int ngrid = regrid_ba[lev-1].size();
+            for (int i = 0; i < ngrid; i++)
+            {
+                Box bx(regrid_ba[lev-1][i]);
+                if (lev > lbase)
+                    bl.push_back(bx);
+            }
+            if (lev > lbase)
+                new_grids[lev].define(bl);
+        }
+        return;
+    }
+
+    MakeNewGrids(lbase, time, new_finest, new_grids);
+
+    if (verbose > 0)
+    {
+        Real stoptime = amrex::second() - strttime;
+
+#ifdef BL_LAZY
+	Lazy::QueueReduction( [=] () mutable {
+#endif
+        ParallelDescriptor::ReduceRealMax(stoptime,ParallelDescriptor::IOProcessorNumber());
+	amrex::Print() << "grid_places() time: " << stoptime << " new finest: " << new_finest<< '\n';
+#ifdef BL_LAZY
+	});
+#endif
+    }
+
 
 }  // subroutine grid_places
 
@@ -2377,6 +2239,7 @@ Amr::grid_places (int              lbase,
 void
 Amr::bldFineLevels (Real strt_time)
 {
+ BL_PROFILE("Amr::bldFineLevels()");
  if (max_level<=0)
   amrex::Error("max_level invalid in bldFineLevels");
 

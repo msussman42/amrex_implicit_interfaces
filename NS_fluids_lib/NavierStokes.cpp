@@ -15897,7 +15897,7 @@ NavierStokes::unsplit_scalar_advection() {
 
 void
 NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
- int n_error_buf,int ngrow)
+ Real time,int n_error_buf,int ngrow)
 {
  
  const int max_level = parent->maxLevel();
