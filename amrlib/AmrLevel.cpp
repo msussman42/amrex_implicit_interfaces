@@ -182,10 +182,10 @@ AmrLevel::isStateVariable (const std::string& name,
     return false;
 }
 
-long
+Long
 AmrLevel::countCells () const
 {
-    long cnt = 0;
+    Long cnt = 0;
     for (int igrid = 0, N = grids.size(); igrid < N; igrid++)
     {
         cnt += grids[igrid].numPts();
