@@ -31,7 +31,7 @@
 
 #include <AMReX_AmrParGDB.H>
 
-#include <Cluster.H>
+#include <AMReX_Cluster.H>
 #include <LevelBld.H>
 #include <AmrLevel.H>
 #include <Amr.H>
@@ -169,14 +169,17 @@ Amr::getAmrLevels () noexcept
     return amr_level;
 }
 
-
-Amr::Amr () {
+// AmrMesh() does the following:
+// Geometry::Setup();
+//   Setup Geometry from ParmParse file.
+//    (might be needed for variableSetup or even getLevelBld)
+//   geom[i].define(index_domain)  i=0...max_level
+Amr::Amr () 
+  : AmrMesh() {
 
      // init default values for some parameters.
     Initialize();
-     // Geometry::Setup()
      // levelbld = getLevelBld();
-     // geom[i].define(index_domain)  i=0...max_level
      // ...
     InitAmr();
 
@@ -190,11 +193,6 @@ Amr::InitAmr () {
     AMR_volume_history.resize(1);
     AMR_volume_history[0]=0.0;
 
-    //
-    // Setup Geometry from ParmParse file.
-    // May be needed for variableSetup or even getLevelBld.
-    //
-    Geometry::Setup();
     //
     // Determine physics class.
     //
@@ -224,7 +222,6 @@ Amr::InitAmr () {
     plot_int               = -1;
     slice_int              = -1;
     n_proper               = 1;
-    max_level              = -1;
     last_plotfile          = 0;
     last_checkpoint        = 0;
     record_run_info        = false;
@@ -335,23 +332,12 @@ Amr::InitAmr () {
     // Restart or run from scratch?
     //
     pp.query("restart", restart_file);
-    //
-    // Read max_level and alloc memory for container objects.
-    //
-    pp.get("max_level", max_level);
     int nlev     = max_level+1;
-
-    geom.resize(nlev);
-    dmap.resize(nlev);
-    grids.resize(nlev);
 
     level_cells_advanced.resize(nlev);
     level_steps.resize(nlev);
     level_count.resize(nlev);
-    blocking_factor.resize(nlev);
     space_blocking_factor.resize(nlev);
-    max_grid_size.resize(nlev);
-    n_error_buf.resize(nlev);
     amr_level.resize(nlev);
     //
     // Set bogus values.
@@ -368,10 +354,7 @@ Amr::InitAmr () {
         level_cells_advanced[i] = 0.0;
         level_steps[i] = 0;
         level_count[i] = 0;
-        n_error_buf[i] = 1;
-        blocking_factor[i] = 2;
         space_blocking_factor[i] = 1;
-        max_grid_size[i] = (AMREX_SPACEDIM == 2) ? 128 : 32;
     }
 
     if (max_level > 0) 
@@ -423,62 +406,6 @@ Amr::InitAmr () {
       amrex::Error("slice_int should be less than or equal to plot_int");
     }
 
-    pp.query("n_proper",n_proper);
-    pp.query("grid_eff",grid_eff);
-    pp.queryarr("n_error_buf",n_error_buf,0,max_level);
-    //
-    // Read in max_grid_size.  Use defaults if not explicitly defined.
-    //
-    int cnt = pp.countval("max_grid_size");
-
-    if (cnt == 1)
-    {
-        //
-        // Set all values to the single available value.
-        //
-        int the_max_grid_size = 0;
-
-        pp.get("max_grid_size",the_max_grid_size);
-
-        for (i = 0; i <= max_level; i++)
-        {
-            max_grid_size[i] = the_max_grid_size;
-        }
-    }
-    else if (cnt > 1)
-    {
-        //
-        // Otherwise we expect a vector of max_grid_size values.
-        //
-        pp.getarr("max_grid_size",max_grid_size,0,max_level+1);
-    }
-    //
-    // Read in the blocking_factors.  Use defaults if not explicitly defined.
-    //
-    cnt = pp.countval("blocking_factor");
-
-    if (cnt == 1)
-    {
-        //
-        // Set all values to the single available value.
-        //
-        int the_blocking_factor = 0;
-
-        pp.get("blocking_factor",the_blocking_factor);
-
-        for (i = 0; i <= max_level; i++)
-        {
-            blocking_factor[i] = the_blocking_factor;
-        }
-    }
-    else if (cnt > 1)
-    {
-        //
-        // Otherwise we expect a vector of blocking factors.
-        //
-        pp.getarr("blocking_factor",blocking_factor,0,max_level+1);
-    }
-
     pp.queryarr("space_blocking_factor",space_blocking_factor);
     pp.query("time_blocking_factor",time_blocking_factor);
     pp.query("MAX_NUM_SLAB",MAX_NUM_SLAB);
@@ -521,21 +448,6 @@ Amr::InitAmr () {
        }
     }
     //
-    // Read computational domain and set geometry.
-    //
-    Vector<int> n_cell(AMREX_SPACEDIM);
-    pp.getarr("n_cell",n_cell,0,AMREX_SPACEDIM);
-    BL_ASSERT(n_cell.size() == AMREX_SPACEDIM);
-    IntVect lo(IntVect::TheZeroVector()), hi(n_cell);
-    hi -= IntVect::TheUnitVector();
-    Box index_domain(lo,hi);
-    for (i = 0; i <= max_level; i++)
-    {
-        geom[i].define(index_domain);
-        if (i < max_level)
-            index_domain.refine(2);
-    }
-    //
     // SUSSMAN:
     // Now check offset; CoordSys does not need it anymore though.
     //
@@ -562,47 +474,6 @@ Amr::InitAmr () {
     m_gdb.reset(new AmrParGDB(this));
 
 } // subroutine InitAmr
-
-int
-Amr::MaxRefRatio (int lev) const noexcept
-{
-    int maxval = 2;
-    return maxval;
-}
-
-void
-Amr::SetDistributionMap (int lev, const DistributionMapping& dmap_in) noexcept
-{
-    if (dmap[lev] != dmap_in) dmap[lev] = dmap_in;
-}
-
-void
-Amr::SetBoxArray (int lev, const BoxArray& ba_in) noexcept
-{
-    if (grids[lev] != ba_in) grids[lev] = ba_in;
-}
-
-
-void
-Amr::ClearDistributionMap (int lev) noexcept
-{
-    dmap[lev] = DistributionMapping();
-}
-
-void
-Amr::ClearBoxArray (int lev) noexcept
-{
-    grids[lev] = BoxArray();
-}
-
-bool
-Amr::LevelDefined (int lev) noexcept
-{
-    return lev <= max_level && 
-	    !grids[lev].empty() && 
-	    !dmap[lev].empty();
-}
-
 
 bool
 Amr::isStatePlotVar (const std::string& name)
@@ -894,7 +765,7 @@ Amr::writePlotFile (const std::string& root,
 
 
 void
-Amr::checkInput ()
+Amr::AMR_checkInput ()
 {
     FabArrayBase::Initialize();
 
@@ -1024,11 +895,13 @@ Amr::checkInput ()
 
     if (verbose > 0 && ParallelDescriptor::IOProcessor())
        std::cout << "Successfully read inputs file ... " << '\n';
-} // end subroutine checkInput ()
+} // end subroutine AMR_checkInput ()
 
 // called from main.cpp after having called:
 // Amr* amrptr = new Amr(); which calls
-// InitAmr() which calls
+// AmrMesh()
+// InitAmr() 
+//  they call,
 // geom[i].define(index_domain)  i=0...max_level and
 // m_gdb.reset(new AmrParGDB(this));
 void
@@ -1066,7 +939,7 @@ void
 Amr::initialInit (Real strt_time,
                   Real stop_time)
 {
- checkInput();
+ AMR_checkInput();
 
  finest_level = 0;
  FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
@@ -1262,7 +1135,7 @@ Amr::restart (const std::string& filename)
        if (regrid_on_restart and max_level > 0)
            level_count[0] = regrid_int[0];
 
-       checkInput();
+       AMR_checkInput();
        //
        // Read levels.
        //
@@ -1325,7 +1198,7 @@ Amr::restart (const std::string& filename)
        if (regrid_on_restart and max_level > 0)
            level_count[0] = regrid_int[0];
 
-       checkInput();
+       AMR_checkInput();
 
        //
        // Read levels.
@@ -2009,6 +1882,8 @@ Amr::regrid (int  lbase,
              bool initial)
 {
 
+ BL_PROFILE("Amr::regrid()");
+
  if (std::abs(time-cumtime)>1.0e-13)
   amrex::Error("time<>cumtime in regrid");
 
@@ -2023,16 +1898,17 @@ Amr::regrid (int  lbase,
   amrex::Error("cannot have lbase>max_coarsest");
 
  int new_finest;
- Vector<BoxArray> new_grids(max_level+1);
+ Vector<BoxArray> new_grid_places(max_level+1);
  Vector<DistributionMapping> new_dmap(max_level+1);
 
- grid_places(lbase,new_finest,new_grids);
+ grid_places(lbase,time,new_finest,new_grid_places);
+
  if (new_finest>finest_level+1)
   amrex::Error("cannot create more than one new level at a time");
 
  int regrid_level_zero=0;
  if (lbase==0) {
-  if (new_grids[0] != amr_level[0]->boxArray())
+  if (new_grid_places[0] != amr_level[0]->boxArray())
    regrid_level_zero=1;
  }
 
@@ -2049,8 +1925,8 @@ Amr::regrid (int  lbase,
 
  for (int lev = start, End = std::min(finest_level,new_finest); 
       lev <= End; lev++) {
-  if (new_grids[lev] == amr_level[lev]->boxArray()) {
-   new_grids[lev] = amr_level[lev]->boxArray();  // to avoid duplicates
+  if (new_grid_places[lev] == amr_level[lev]->boxArray()) {
+   new_grid_places[lev] = amr_level[lev]->boxArray();  // to avoid duplicates
    new_dmap[lev] = amr_level[lev]->DistributionMap();
   } else {
    // do nothing
@@ -2062,7 +1938,7 @@ Amr::regrid (int  lbase,
 
  for (int lev = start; lev <= new_finest; lev++) {
 
-  if (new_grids[lev].size()<1) {
+  if (new_grid_places[lev].size()<1) {
    std::cout << "initial= " << initial << '\n';
    std::cout << "start= " << start << '\n';
    std::cout << "lbase= " << lbase << '\n';
@@ -2074,11 +1950,11 @@ Amr::regrid (int  lbase,
   }
 
   if (new_dmap[lev].empty()) {
-   new_dmap[lev].define(new_grids[lev]);
+   new_dmap[lev].define(new_grid_places[lev]);
   }
 
   AmrLevel* a = (*levelbld)(*this,lev,geom[lev],
-    new_grids[lev],new_dmap[lev],cumtime);
+    new_grid_places[lev],new_dmap[lev],cumtime);
 
   if (initial) {
    //
@@ -2096,7 +1972,7 @@ Amr::regrid (int  lbase,
   } else if (amr_level[lev]) {
 
     // amr_level[lev-1] should already be init.
-   a->init(*amr_level[lev],new_grids[lev],new_dmap[lev]);
+   a->init(*amr_level[lev],new_grid_places[lev],new_dmap[lev]);
 
    amr_level[lev].reset(a);
 
@@ -2106,7 +1982,7 @@ Amr::regrid (int  lbase,
   } else {
 
    if (lev>0) {
-    a->init(new_grids[lev],new_dmap[lev]);
+    a->init(new_grid_places[lev],new_dmap[lev]);
     amr_level[lev].reset(a);
     this->SetBoxArray(lev, amr_level[lev]->boxArray());
     this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
@@ -2238,85 +2114,24 @@ Amr::printGridSummary (std::ostream& os,
     os << std::endl; // Make sure we flush!
 }
 
-void
-Amr::ProjPeriodic (BoxList&        blout,
-                   const Geometry& geom)
-{
-    //
-    // Add periodic translates to blout.
-    //
-    Box domain = geom.Domain();
-
-    BoxList blorig(blout);
-
-    int nist,njst,nkst;
-    int niend,njend,nkend;
-    nist = njst = nkst = 0;
-    niend = njend = nkend = 0;
-    D_TERM( nist , =njst , =nkst ) = -1;
-    D_TERM( niend , =njend , =nkend ) = +1;
-
-    int ri,rj,rk;
-    for (ri = nist; ri <= niend; ri++)
-    {
-        if (ri != 0 && !geom.isPeriodic(0))
-            continue;
-        if (ri != 0 && geom.isPeriodic(0))
-            blorig.shift(0,ri*domain.length(0));
-        for (rj = njst; rj <= njend; rj++)
-        {
-            if (rj != 0 && !geom.isPeriodic(1))
-                continue;
-            if (rj != 0 && geom.isPeriodic(1))
-                blorig.shift(1,rj*domain.length(1));
-            for (rk = nkst; rk <= nkend; rk++)
-            {
-                if (rk != 0 && !geom.isPeriodic(2))
-                    continue;
-                if (rk != 0 && geom.isPeriodic(2))
-                    blorig.shift(2,rk*domain.length(2));
-
-                BoxList tmp(blorig);
-                tmp.intersect(domain);
-                blout.catenate(tmp);
- 
-                if (rk != 0 && geom.isPeriodic(2))
-                    blorig.shift(2,-rk*domain.length(2));
-            }
-            if (rj != 0 && geom.isPeriodic(1))
-                blorig.shift(1,-rj*domain.length(1));
-        }
-        if (ri != 0 && geom.isPeriodic(0))
-            blorig.shift(0,-ri*domain.length(0));
-    }
-}
-
 // new_finest cannot be greater than finest_level+1
 void
 Amr::grid_places (int              lbase,
+                  Real time,
                   int&             new_finest,
-                  Vector<BoxArray>& new_grids)
+                  Vector<BoxArray>& new_grid_places)
 {
+
+ BL_PROFILE("Amr::grid_places()");
+
  int ilev=0;
  int max_crse = std::min(finest_level,max_level-1);
 
  const double strttime = ParallelDescriptor::second();
 
  if (lbase == 0) {
-  const Box& domain = geom[0].Domain();
-  IntVect d_length  = domain.size();
-  const int* d_len  = d_length.getVect();
 
-  for (int idir = 0; idir < AMREX_SPACEDIM; idir++)
-   if (d_len[idir]%2 != 0)
-    amrex::Error("grid_places: must have even number of cells");
-
-  BoxArray lev0(1);
-  lev0.set(0,amrex::coarsen(domain,2));
-  lev0.maxSize(max_grid_size[0]/2);
-  lev0.refine(2);
-
-  new_grids[0] = lev0;
+  new_grid_places[0] = MakeBaseGrids();
 
  } // lbase==0 
 
@@ -2404,7 +2219,7 @@ Amr::grid_places (int              lbase,
   int ngrow = 0;
 
   if (levf < new_finest) {
-   BoxArray ba_proj(new_grids[levf+1]);
+   BoxArray ba_proj(new_grid_places[levf+1]);
 
    ba_proj.coarsen(2);
    ba_proj.grow(n_proper);
@@ -2434,7 +2249,7 @@ Amr::grid_places (int              lbase,
 
    int nerr = n_error_buf[levf];
 
-   BoxList bl_tagged(new_grids[levf+1]);
+   BoxList bl_tagged(new_grid_places[levf+1]);
    bl_tagged.simplify();
    bl_tagged.coarsen(2);
    for (BoxList::iterator blt = bl_tagged.begin(), End = bl_tagged.end();
@@ -2514,7 +2329,7 @@ Amr::grid_places (int              lbase,
 
    new_bx.refine(2);
    BL_ASSERT(new_bx.isDisjoint());
-   new_grids[levf].define(new_bx);
+   new_grid_places[levf].define(new_bx);
   }  // tagvec.size()>0
  } // levc=max_crse ... lbase; levc--
 
@@ -2533,9 +2348,9 @@ Amr::grid_places (int              lbase,
     for (int j = 0; j < AMREX_SPACEDIM; j++) {
      chunk[j] /= 2;
 
-     if ((new_grids[ilev].size() < NProcs) && 
+     if ((new_grid_places[ilev].size() < NProcs) && 
          (chunk[j]%blocking_factor[ilev] == 0)) {
-      new_grids[ilev].maxSize(chunk);
+      new_grid_places[ilev].maxSize(chunk);
      }
     }
    } // ilev
@@ -2568,7 +2383,7 @@ Amr::bldFineLevels (Real strt_time)
  finest_level = 0;
  FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
 
- Vector<BoxArray> new_grids(max_level+1);
+ Vector<BoxArray> new_grid_places(max_level+1);
 
  int new_finest=0;
  int previous_new_finest=0;
@@ -2577,7 +2392,7 @@ Amr::bldFineLevels (Real strt_time)
 
  while (grid_places_done==0) {
 
-  grid_places(finest_level,new_finest,new_grids);
+  grid_places(finest_level,new_finest,new_grid_places);
 
   if (new_finest>finest_level) {
 
@@ -2587,30 +2402,30 @@ Amr::bldFineLevels (Real strt_time)
    finest_level = new_finest;
    FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
 
-   if (new_grids[new_finest].size()<1) {
+   if (new_grid_places[new_finest].size()<1) {
     std::cout << "IN bldFineLevels\n";
     std::cout << "finest_level= " << finest_level << '\n';
     std::cout << "new_finest= " << new_finest << '\n';
-    std::cout << "new_grids[0] \n";
-    std::cout << new_grids[0] << '\n';
-    amrex::Error("new_grids[new_finest] invalid");
+    std::cout << "new_grid_places[0] \n";
+    std::cout << new_grid_places[0] << '\n';
+    amrex::Error("new_grid_places[new_finest] invalid");
    }
 
     // SUSSMAN
    int nprocs=ParallelDescriptor::NProcs();
-   DistributionMapping new_dm(new_grids[new_finest],nprocs);
+   DistributionMapping new_dm(new_grid_places[new_finest],nprocs);
 
     // see the constructor in AmrLevel.cpp:
     // AmrLevel::AmrLevel ( ....  )
    AmrLevel* a_level = (*levelbld)(*this,
                          new_finest,
                          geom[new_finest],
-                         new_grids[new_finest],
+                         new_grid_places[new_finest],
                          new_dm,
                          strt_time);
 
    amr_level[new_finest].reset(a_level);
-   this->SetBoxArray(new_finest, new_grids[new_finest]);
+   this->SetBoxArray(new_finest, new_grid_places[new_finest]);
    this->SetDistributionMap(new_finest, new_dm);
 
    amr_level[new_finest]->initData();
@@ -2649,14 +2464,14 @@ Amr::bldFineLevels (Real strt_time)
 
  do {
    for (int i = 0; i <= finest_level; i++)
-    new_grids[i] = amr_level[i]->boxArray();
+    new_grid_places[i] = amr_level[i]->boxArray();
 
    regrid(0,strt_time,true);
 
    grids_the_same = true;
 
    for (int i = 0; i <= finest_level && grids_the_same; i++)
-    if (!(new_grids[i] == amr_level[i]->boxArray()))
+    if (!(new_grid_places[i] == amr_level[i]->boxArray()))
      grids_the_same = false;
 
    count++;

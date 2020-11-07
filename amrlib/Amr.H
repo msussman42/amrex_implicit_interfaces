@@ -12,6 +12,7 @@
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>
 #include <AMReX_BCRec.H>
+#include <AMReX_AmrMesh.H>
 
 namespace amrex {
 
@@ -31,6 +32,7 @@ class BoxDomain;
 //
 
 class Amr
+  : public AmrMesh
 {
 public:
     //
@@ -53,7 +55,6 @@ public:
     // Set the timestep on each level.
     //
     void setDt(Real dt);
-    int blockingFactor (int lev) const;
     int Space_blockingFactor (int lev) const;
     int Time_blockingFactor () const;
     int get_MAX_NUM_SLAB () const;
@@ -62,44 +63,8 @@ public:
     Vector<Real> AMR_volume_history;
     int AMR_volume_history_recorded;
 
-    int maxGridSize (int lev) const;
     Real cumTime () const;
     Real getDt();
-
-    const Vector<Geometry>& Geom () const noexcept { return geom; }
-    const Vector<DistributionMapping>& 
-	    DistributionMap () const noexcept { return dmap; }
-    const Vector<BoxArray>& boxArray () const noexcept { return grids; }
-
-    const Geometry& Geom (int lev) const noexcept { return geom[lev]; }
-    const DistributionMapping& DistributionMap (int lev) const noexcept
-      { return dmap[lev]; }
-    const BoxArray& boxArray (int lev) const noexcept { return grids[lev]; }
-
-    Vector<Geometry>& Geom () noexcept { return geom; }
-    Geometry& Geom (int lev) noexcept { return geom[lev]; }
-
-    void SetDistributionMap (int lev, 
-	const DistributionMapping& dmap_in) noexcept;
-    void SetBoxArray (int lev, const BoxArray& ba_in) noexcept;
-
-    void ClearDistributionMap (int lev) noexcept;
-    void ClearBoxArray (int lev) noexcept;
-
-    bool LevelDefined (int lev) noexcept;
-
-        //! Return the max level
-    int maxLevel () const noexcept { return max_level; }
-    //! Return the finest level
-    int finestLevel () const noexcept { return finest_level; }
-
-        //! Return the refinement ratio for level lev
-    IntVect refRatio (int lev) const noexcept { 
-	    IntVect ratio_vec(D_DECL(2,2,2));
-	    return ratio_vec; }
-
-        //! Return the maximum refinement ratio in any direction.
-    int MaxRefRatio (int lev) const noexcept;
 
     int levelSteps (int lev) const;
     int levelCount (int lev) const;
@@ -121,18 +86,6 @@ public:
     static void Initialize ();
     void InitAmr ();
     static void Finalize ();
-    //
-    // Number of buffer cells in error estimator.
-    //
-    int nErrorBuf (int lev) const;
-    //
-    // Minimum allowable grid efficiency.
-    //
-    Real gridEff () const;
-    //
-    // Number of cells to define proper nesting 
-    //
-    int nProper () const;
     //
     // was PArray of AmrLevels.
     // OLD: PArray<AmrLevel>& getAmrLevels ();
@@ -177,11 +130,6 @@ public:
 
 protected:
     //
-    // Used by grid_places().
-    //
-    static void ProjPeriodic (BoxList&        bd,
-                              const Geometry& geom);
-    //
     // Write the plot file to be used for visualization.
     //
     void writePlotFile (
@@ -196,7 +144,7 @@ protected:
     //
     // Check for valid input.
     //
-    void checkInput ();
+    void AMR_checkInput ();
     //
     // Write current state into a chk* file.
     //
@@ -223,6 +171,7 @@ protected:
     // Define new grid locations (called from regrid) and put into new_grids.
     //
     void grid_places (int              lbase,
+                      Real time,
                       int&             new_finest,
                       Vector<BoxArray>& new_grids);
     //
@@ -255,17 +204,11 @@ protected:
     Vector<Real> recalesce_state_old;
     Vector<Real> recalesce_state_new;
     
-    int              max_level;    // Maximum allowed level.
-    int              finest_level; // Current finest level.
-
     // OLD: PArray<AmrLevel> amr_level;    // Array of levels
     Vector<std::unique_ptr<AmrLevel> > amr_level;    //!< Vector of levels
 
     std::unique_ptr<AmrParGDB> m_gdb;
 
-    Vector<Geometry>  geom;         // Index extent of domain at all levels.
-    Vector<DistributionMapping> dmap;
-    Vector<BoxArray> grids;
 
     Real             cumtime;      // Physical time variable.
     Real             dt_AMR;     // Timestep 
@@ -274,15 +217,10 @@ protected:
     Vector<int>       level_count;
     bool             isPeriodic[BL_SPACEDIM];  // Domain periodic?
     Vector<int>       regrid_int;      // Interval between regridding.
-    Vector<int>       n_error_buf;     // Buffer cells around each tagged cell.
-    Vector<int>       blocking_factor; // Blocking factor (by level).
     Vector<int>       space_blocking_factor; 
     int              time_blocking_factor;
     int              slab_dt_type; 
     int              MAX_NUM_SLAB; 
-    Vector<int>       max_grid_size;   // Maximum allowable grid size (by level).
-    Real             grid_eff;        // Grid efficiency.
-    int              n_proper;        // # cells required for proper nesting.
     int              last_checkpoint; // Step number of previous checkpoint.
     int              check_int;       // How often checkpoint (# time steps).
     Real             check_per;       // How often checkpoint (units of time).
@@ -320,25 +258,11 @@ private:
 
 
 inline
-int
-Amr::blockingFactor (int lev) const
-{
-    return blocking_factor[lev];
-}
-
-inline
 int 
 Amr::Space_blockingFactor (int lev) const   
 {   
     return space_blocking_factor[lev];
 }  
-
-inline
-int
-Amr::maxGridSize (int lev) const
-{
-    return max_grid_size[lev];
-}
 
 inline
 Real
@@ -415,27 +339,6 @@ int
 Amr::regridInt (int lev) const
 {
     return regrid_int[lev];
-}
-
-inline
-int
-Amr::nErrorBuf (int lev) const
-{
-    return n_error_buf[lev];
-}
-
-inline
-Real
-Amr::gridEff () const
-{
-    return grid_eff;
-}
-
-inline
-int
-Amr::nProper () const
-{
-    return n_proper;
 }
 
 inline
