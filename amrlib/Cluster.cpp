@@ -13,7 +13,7 @@ enum CutStatus { HoleCut=0, SteepCut, BisectCut, InvalidCut };
 Cluster::Cluster () noexcept
 {}
 
-Cluster::Cluster (IntVect* a, long len) noexcept
+Cluster::Cluster (IntVect* a, Long len) noexcept
     :
     m_ar(a),
     m_len(len)
@@ -117,10 +117,10 @@ Cluster::distribute (ClusterList&     clst,
     }
 }
 
-long
+Long
 Cluster::numTag (const Box& b) const noexcept
 {
-    long cnt = 0;
+    Long cnt = 0;
     for (int i = 0; i < m_len; i++)
     {
         if (b.contains(m_ar[i]))
@@ -454,7 +454,7 @@ ClusterList::ClusterList ()
 {}
 
 ClusterList::ClusterList (IntVect* pts,
-                          long     len)
+                          Long     len)
 {
     lst.push_back(new Cluster(pts,len));
 }

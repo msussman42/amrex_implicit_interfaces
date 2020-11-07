@@ -178,7 +178,7 @@ public:
     //
     // Returns number of cells on level.
     //
-    long countCells () const;
+    Long countCells () const;
     //
     // Error estimation for regridding. This is a pure virtual
     // function and hence MUST be implemented by derived classes.

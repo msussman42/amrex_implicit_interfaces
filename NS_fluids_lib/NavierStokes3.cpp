@@ -3790,7 +3790,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
 
 void push_stack(Vector<int>& stackdata,
-  long int& stackptr,int& data) {
+  Long& stackptr,int& data) {
 
  if (stackptr==stackdata.size()-1) {
   std::cout << "stackptr, stackdata_size " << stackptr << ' ' <<
@@ -3803,7 +3803,7 @@ void push_stack(Vector<int>& stackdata,
 }
 
 void pop_stack(Vector<int>& stackdata,
-  long int& stackptr,int& data) {
+  Long& stackptr,int& data) {
 
  if (stackptr<0)
   amrex::Error("stack is empty");
@@ -3818,10 +3818,10 @@ void cross_check(Vector<int>& levelcolormap,
 
  if (grid_color.size()>stackdata.size())
   amrex::Error("stackdata too small");
- long int stackptr=-1;
+ Long stackptr=-1;
  
  for (int j=0;j<levelcolormap.size();j++) {
-  long int k=i*levelcolormap.size()+j;
+  Long k=i*levelcolormap.size()+j;
   if (grid_color[k]==true) 
    push_stack(stackdata,stackptr,j);
  }
@@ -3836,7 +3836,7 @@ void cross_check(Vector<int>& levelcolormap,
     amrex::Error("levelcolormap invalid");
 
    for (int jj=0;jj<levelcolormap.size();jj++) {
-    long int k=j*levelcolormap.size()+jj;
+    Long k=j*levelcolormap.size()+jj;
     if (grid_color[k]==true) 
      push_stack(stackdata,stackptr,jj);
    }
@@ -4326,7 +4326,7 @@ void NavierStokes::sync_colors(
   amrex::Error("cannot have Nside 0");
  }
 
- long int Nside2=Nside*Nside;
+ Long Nside2=Nside*Nside;
  Vector< std::vector<bool> > grid_color_array;
  grid_color_array.resize(thread_class::nthreads);
 
@@ -4338,14 +4338,14 @@ void NavierStokes::sync_colors(
  int tid=ns_thread();
 
  grid_color_array[tid].resize(Nside2);
- for (long int i=0;i<Nside2;i++)
+ for (Long i=0;i<Nside2;i++)
   grid_color_array[tid][i]=false;
   
    // set the diagonal of grid_color_array
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   long int i=max_colors_grid*igrid+icolor-1;
-   long int k=Nside*i+i;
+   Long i=max_colors_grid*igrid+icolor-1;
+   Long k=Nside*i+i;
    grid_color_array[tid][k]=true;
   } // icolor
  } // igrid
@@ -4429,7 +4429,7 @@ void NavierStokes::sync_colors(
          if (secondary_type==primary_type) {
           if ((icolor>Nside)||(jcolor>Nside))
            amrex::Error("icolor or jcolor invalid"); 
-          long int igrid=Nside*(icolor-1)+jcolor-1;
+          Long igrid=Nside*(icolor-1)+jcolor-1;
           grid_color_array[tid_current][igrid]=true;
           igrid=Nside*(jcolor-1)+icolor-1;
           grid_color_array[tid_current][igrid]=true;
@@ -4457,14 +4457,14 @@ void NavierStokes::sync_colors(
   // first reduce grid_color_array from the different threads
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   long int i_index=max_colors_grid*igrid+icolor-1;
+   Long i_index=max_colors_grid*igrid+icolor-1;
 
    for (int jgrid=0;jgrid<number_grids;jgrid++) {
     for (int jcolor=1;jcolor<=color_per_grid[jgrid];jcolor++) {
 
-     long int j_index=max_colors_grid*jgrid+jcolor-1;
+     Long j_index=max_colors_grid*jgrid+jcolor-1;
 
-     long int i=Nside*i_index+j_index;  
+     Long i=Nside*i_index+j_index;  
    
      for (int tid=0;tid<thread_class::nthreads;tid++) {
       int tempbit=grid_color_array[tid][i];
@@ -4482,14 +4482,14 @@ void NavierStokes::sync_colors(
 
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   long int i_index=max_colors_grid*igrid+icolor-1;
+   Long i_index=max_colors_grid*igrid+icolor-1;
 
    for (int jgrid=0;jgrid<number_grids;jgrid++) {
     for (int jcolor=1;jcolor<=color_per_grid[jgrid];jcolor++) {
 
-     long int j_index=max_colors_grid*jgrid+jcolor-1;
+     Long j_index=max_colors_grid*jgrid+jcolor-1;
 
-     long int i=Nside*i_index+j_index;  
+     Long i=Nside*i_index+j_index;  
    
      int tempbit=grid_color_array[0][i];
      if ((tempbit!=0)&&(tempbit!=1))
@@ -4532,7 +4532,7 @@ void NavierStokes::sync_colors(
    for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
     int i_index=max_colors_grid*igrid+icolor-1;
     if (levelcolormap[i_index]==0) {
-     long int k=i_index*Nside+i_index;
+     Long k=i_index*Nside+i_index;
      if (grid_color_array[0][k]==true) {
       total_colors++;
       levelcolormap[i_index]=total_colors;
@@ -4564,7 +4564,7 @@ void NavierStokes::sync_colors(
 
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   long int i_index=max_colors_grid*igrid+icolor-1;
+   Long i_index=max_colors_grid*igrid+icolor-1;
    ParallelDescriptor::ReduceIntMax(levelcolormap[i_index]);
   }
  }
@@ -4636,7 +4636,7 @@ void NavierStokes::sync_colors(
    if (colormax[level]>max_colors_level)
     max_colors_level=colormax[level];
    int arrsize=2*max_colors_level;
-   long int arrsize2=arrsize*arrsize;
+   Long arrsize2=arrsize*arrsize;
 
    Vector< Vector<int> > level_color_array;
    level_color_array.resize(thread_class::nthreads);
@@ -4648,14 +4648,14 @@ void NavierStokes::sync_colors(
 {
    int tid=ns_thread();
    level_color_array[tid].resize(arrsize2);
-   for (long int i=0;i<arrsize2;i++)
+   for (Long i=0;i<arrsize2;i++)
     level_color_array[tid][i]=0;  // false
 
      // set the diagonal of level_color
    for (int ilevel=0;ilevel<=1;ilevel++) {
     for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
-     long int i=max_colors_level*ilevel+icolor-1;
-     long int k=2*max_colors_level*i+i;
+     Long i=max_colors_level*ilevel+icolor-1;
+     Long k=2*max_colors_level*i+i;
      level_color_array[tid][k]=1;  // true
     }
    } // ilevel
@@ -4708,7 +4708,7 @@ void NavierStokes::sync_colors(
    delete fine_coarse_color;
 
    for (int tid=1;tid<thread_class::nthreads;tid++) {
-    for (long int i=0;i<arrsize2;i++) {
+    for (Long i=0;i<arrsize2;i++) {
      if (level_color_array[tid][i]>level_color_array[0][i])
       level_color_array[0][i]=level_color_array[tid][i];
     } // i
@@ -4716,7 +4716,7 @@ void NavierStokes::sync_colors(
 
    ParallelDescriptor::Barrier();
 
-   for (long int i=0;i<arrsize2;i++)
+   for (Long i=0;i<arrsize2;i++)
     ParallelDescriptor::ReduceIntMax(level_color_array[0][i]);
 
    Vector<int> domaincolormap;
@@ -4729,7 +4729,7 @@ void NavierStokes::sync_colors(
 
    std::vector<bool> level_color_bool;
    level_color_bool.resize(arrsize2);
-   for (long int k=0;k<level_color_bool.size();k++) {
+   for (Long k=0;k<level_color_bool.size();k++) {
     if (level_color_array[0][k]==0)
      level_color_bool[k]=false;
     else if (level_color_array[0][k]==1)
@@ -4740,7 +4740,7 @@ void NavierStokes::sync_colors(
 
    for (int i=0;i<domaincolormap.size();i++) {
     if (domaincolormap[i]==0) {
-     long int k=i*domaincolormap.size()+i;
+     Long k=i*domaincolormap.size()+i;
      if (level_color_bool[k]==true) {
       total_colors++;
       domaincolormap[i]=total_colors;

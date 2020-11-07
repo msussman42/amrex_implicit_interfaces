@@ -1918,7 +1918,7 @@ Amr::coarseTimeStep (Real stop_time)
 
       if (num_per_old != num_per_new)
 #else
-      long lorig=(long) cumtime/plot_per;
+      Long lorig=(Long) cumtime/plot_per;
       Real rorig=cumtime/plot_per;
       Real rR=(Real) lorig;
       rR=rorig-rR;
@@ -2175,7 +2175,7 @@ Amr::printGridInfo (std::ostream& os,
     {
         const BoxArray&           bs      = amr_level[lev]->boxArray();
         int                       numgrid = bs.size();
-        long                      ncells  = amr_level[lev]->countCells();
+        Long                      ncells  = amr_level[lev]->countCells();
         double                    ntot    = geom[lev].Domain().d_numPts();
         Real                      frac    = 100.0*(Real(ncells) / ntot);
         int dummy_slab_step=0;
@@ -2219,7 +2219,7 @@ Amr::printGridSummary (std::ostream& os,
     {
         const BoxArray&           bs      = amr_level[lev]->boxArray();
         int                       numgrid = bs.size();
-        long                      ncells  = amr_level[lev]->countCells();
+        Long                      ncells  = amr_level[lev]->countCells();
         double                    ntot    = geom[lev].Domain().d_numPts();
         Real                      frac    = 100.0*(Real(ncells) / ntot);
 
