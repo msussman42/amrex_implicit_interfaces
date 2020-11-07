@@ -7330,7 +7330,7 @@ void NavierStokes::post_restart() {
   Vector<int> bfact_grid_level(max_level+1);
   for (int ilev=0;ilev<=max_level;ilev++) {
    bfact_space_level[ilev]=parent->Space_blockingFactor(ilev);
-   bfact_grid_level[ilev]=parent->blockingFactor(ilev);
+   bfact_grid_level[ilev]=parent->Old_blockingFactor(ilev);
   }
   FORT_INITGRIDMAP(
     &max_level,
@@ -7386,7 +7386,7 @@ NavierStokes::initData () {
  Real strt_time=0.0;
 
  int bfact_space=parent->Space_blockingFactor(level);
- int bfact_grid=parent->blockingFactor(level);
+ int bfact_grid=parent->Old_blockingFactor(level);
 
  bool use_tiling=ns_tiling;
 
@@ -7440,7 +7440,7 @@ NavierStokes::initData () {
   Vector<int> bfact_grid_level(max_level+1);
   for (int ilev=0;ilev<=max_level;ilev++) {
    bfact_space_level[ilev]=parent->Space_blockingFactor(ilev);
-   bfact_grid_level[ilev]=parent->blockingFactor(ilev);
+   bfact_grid_level[ilev]=parent->Old_blockingFactor(ilev);
   }
   FORT_INITGRIDMAP(
    &max_level,
@@ -8983,7 +8983,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
   int bfact=parent->Space_blockingFactor(level);
-  int bfact_grid=parent->blockingFactor(level);
+  int bfact_grid=parent->Old_blockingFactor(level);
 
   const Real* xlo = grid_loc[gridno].lo();
 
@@ -10478,7 +10478,7 @@ void NavierStokes::check_grid_places() {
 
  int bfact_SEM_coarse=0;
  int bfact_SEM=parent->Space_blockingFactor(level);
- int bfact_grid=parent->blockingFactor(level);
+ int bfact_grid=parent->Old_blockingFactor(level);
  if (bfact_grid<4)
   amrex::Error("we must have blocking factor at least 4");
 
@@ -22942,7 +22942,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
     const int* fablo=fabgrid.loVect();
     const int* fabhi=fabgrid.hiVect();
     int bfact_space=parent->Space_blockingFactor(level);
-    int bfact_grid=parent->blockingFactor(level);
+    int bfact_grid=parent->Old_blockingFactor(level);
 
     const Real* xlo = grid_loc[gridno].lo();
 

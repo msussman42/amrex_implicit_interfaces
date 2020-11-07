@@ -18,7 +18,7 @@ DescriptorList AmrLevel::desc_lstGHOST;
 
 void
 AmrLevel::manual_tags_placement (TagBoxArray&    tags,
-                                 Vector<int>& bf_lev)
+             const Vector<IntVect>& bf_lev)
 {}
 
 const BoxArray& AmrLevel::getAreaNotToTag () noexcept

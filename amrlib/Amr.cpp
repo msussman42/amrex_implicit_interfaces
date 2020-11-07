@@ -51,6 +51,9 @@ namespace amrex {
 //
 std::list<std::string> Amr::state_plot_vars;
 bool                   Amr::first_plotfile;
+Vector<BoxArray>       Amr::initial_ba;
+Vector<BoxArray>       Amr::regrid_ba;
+
 
 namespace
 {
@@ -86,6 +89,33 @@ namespace
     int  AMR_num_materials;
 
 //}
+
+int
+Amr::Old_blockingFactor(int lev) const
+{
+ int local_blocking=blocking_factor[lev][0];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (blocking_factor[lev][dir]==local_blocking) {
+   // do nothing
+  } else
+   amrex::Error("expecting uniform blocking factor");
+ }
+ return local_blocking;
+}
+
+
+int
+Amr::Old_maxGridSize(int lev) const
+{
+ int local_max_grid_size=max_grid_size[lev][0];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (max_grid_size[lev][dir]==local_max_grid_size) {
+   // do nothing
+  } else
+   amrex::Error("expecting uniform max_grid_size");
+ }
+ return local_max_grid_size;
+}
 
 
 int 
@@ -140,6 +170,8 @@ void
 Amr::Finalize ()
 {
     Amr::state_plot_vars.clear();
+    Amr::regrid_ba.clear();
+    Amr::initial_ba.clear();
 
     initialized = false;
 }
@@ -451,6 +483,11 @@ Amr::InitAmr () {
     // SUSSMAN:
     // Now check offset; CoordSys does not need it anymore though.
     //
+    Vector<int> n_cell(AMREX_SPACEDIM);
+    pp.getarr("n_cell",n_cell,0,AMREX_SPACEDIM);
+    IntVect lo(IntVect::TheZeroVector()), hi(n_cell);
+    hi -= IntVect::TheUnitVector();
+
     Real offset[AMREX_SPACEDIM];
     for (i = 0; i < AMREX_SPACEDIM; i++)
     {
@@ -778,13 +815,13 @@ Amr::AMR_checkInput ()
     //    (this last check insures that there are at least 4 coarse 
     //     (level i) proper nesting cells next to a (level i+1) finer level)
     for (int i = 0; i <= max_level; i++) {
-        int k = blocking_factor[i];
+        int k = Old_blockingFactor(i);
 	if (i<max_level) {
          if (k<8) {
   	  std::cout << "must have at least 4 proper nesting cells" << '\n';
 	  amrex::Error("must have blocking_factor>=8 if lev<max_level");
 	 }
-	 if (k<blocking_factor[i+1])
+	 if (k<Old_blockingFactor(i+1))
 	  amrex::Error("blocking_factor[i]<blocking_factor[i+1]");
 	}
         if (k<4)
@@ -799,8 +836,8 @@ Amr::AMR_checkInput ()
     for (int i = 0; i <= max_level; i++) {
         int k = space_blocking_factor[i];
 
-        if (k>blocking_factor[i])
-         amrex::Error("space_blocking_factor too big");
+        if (k>Old_blockingFactor(i))
+         amrex::Error("space_blocking_factor[i]>Old_blockingFactor(i)");
 	if (i<max_level) {
 	 if (k<space_blocking_factor[i+1])
 	  amrex::Error("space_blocking_factor[i]<space_blocking_factor[i+1]");
@@ -809,9 +846,9 @@ Amr::AMR_checkInput ()
          // the number of coarse grid proper nesting cells for level i+1
          // is blocking_factor[i]/2
         if ((i>=0)&&(i<max_level)) {
-         if (blocking_factor[i]<k)
+         if (Old_blockingFactor(i)<k)
           amrex::Error("bfact_grid>=space_blocking_Factor required");
-         if (blocking_factor[i]<2*k)
+         if (Old_blockingFactor(i)<2*k)
           amrex::Error("bfact_grid>=2*space_blocking_Factor required");
         } else if (i==max_level) {
  	 // do nothing
@@ -826,7 +863,7 @@ Amr::AMR_checkInput ()
 
     for (int i = 0; i < max_level; i++) {
         int k = time_blocking_factor;
-        if (k>blocking_factor[0])
+        if (k>Old_blockingFactor(0))
          amrex::Error("time_blocking_factor too big");
         while ( k > 0 && (k%2 == 0) )
             k /= 2;
@@ -848,7 +885,7 @@ Amr::AMR_checkInput ()
     //
     for (i = 0; i < AMREX_SPACEDIM; i++) {
         int len = domain.length(i);
-        if (len%blocking_factor[0] != 0)
+        if (len%Old_blockingFactor(0) != 0)
             amrex::Error("domain size not divisible by blocking_factor");
     }
     for (i = 0; i < AMREX_SPACEDIM; i++) {
@@ -866,7 +903,7 @@ Amr::AMR_checkInput ()
     //
     for (i = 0; i < max_level; i++)
     {
-        if (max_grid_size[i]%2 != 0)
+        if (Old_maxGridSize(i)%2 != 0)
             amrex::Error("max_grid_size is not even");
     }
 
@@ -874,15 +911,15 @@ Amr::AMR_checkInput ()
     // Check that max_grid_size is a multiple of blocking_factor at every level.
     //
     for (i = 0; i < max_level; i++) {
-     if (max_grid_size[i]%blocking_factor[i] != 0)
+     if (Old_maxGridSize(i)%Old_blockingFactor(i) != 0)
       amrex::Error("max_grid_size not divisible by blocking_factor");
     }
     for (i = 0; i < max_level; i++) {
-     if (max_grid_size[i]%space_blocking_factor[i] != 0)
+     if (Old_maxGridSize(i)%space_blocking_factor[i] != 0)
       amrex::Error("max_grid_size not divisible by space_blocking_factor");
     }
     for (i = 0; i < max_level; i++) {
-     if (max_grid_size[i]%time_blocking_factor != 0)
+     if (Old_maxGridSize(i)%time_blocking_factor != 0)
       amrex::Error("max_grid_size not divisible by time_blocking_factor");
     }
 
@@ -1402,6 +1439,55 @@ Amr::checkPoint ()
     ParallelDescriptor::Barrier();
 }
 
+
+void
+Amr::regrid_level_0_on_restart()
+{
+    regrid_on_restart = 0;
+    //
+    // Coarsening before we split the grids ensures that each resulting
+    // grid will have an even number of cells in each direction.
+    //
+    BoxArray lev0(amrex::coarsen(Geom(0).Domain(),2));
+    //
+    // Now split up into list of grids within max_grid_size[0] limit.
+    //
+    lev0.maxSize(Old_maxGridSize(0)/2);
+    //
+    // Now refine these boxes back to level 0.
+    //
+    lev0.refine(2);
+    
+     //
+     // Construct skeleton of new level.
+     //
+    DistributionMapping dm(lev0);
+    AmrLevel* a = (*levelbld)(*this,0,Geom(0),lev0,dm,cumtime);
+	
+    a->init(*amr_level[0],lev0,dm);
+    amr_level[0].reset(a);
+	
+    this->SetBoxArray(0, amr_level[0]->boxArray());
+    this->SetDistributionMap(0, amr_level[0]->DistributionMap());
+
+    // calls CopyNewToOld 
+    // calls setTimeLevel(cumtime,dt_AMR) 
+    int initialInit_flag=0;
+    amr_level[0]->post_regrid(0,0,0,initialInit_flag,cumtime);
+	
+    if (ParallelDescriptor::IOProcessor()) {
+     if (verbose > 1) {
+      printGridInfo(amrex::OutStream(),0,finest_level);
+     } else if (verbose > 0) {
+      printGridSummary(amrex::OutStream(),0,finest_level);
+     }
+    }
+	
+    if (record_grid_info && ParallelDescriptor::IOProcessor())
+     printGridInfo(gridlog,0,finest_level);
+}
+
+
 void
 Amr::timeStep (Real time,
                Real stop_time)
@@ -1410,49 +1496,9 @@ Amr::timeStep (Real time,
  if (std::abs(time-cumtime)>1.0e-13)
   amrex::Error("time<>cumtime");
 
- if ((finest_level==0)&&(regrid_on_restart==1)) {
+ if ((max_level==0)&&(regrid_on_restart==1)) {
 
-  regrid_on_restart = 0;
-
-  const Box& domain = geom[0].Domain();
-  IntVect d_length  = domain.size();
-  const int* d_len  = d_length.getVect();
-
-  for (int idir = 0; idir < AMREX_SPACEDIM; idir++)
-   if (d_len[idir]%2 != 0)
-    amrex::Error("timeStep: must have even number of cells");
-
-  BoxArray lev0(1);
-  lev0.set(0,amrex::coarsen(domain,2));
-  lev0.maxSize(max_grid_size[0]/2);
-  lev0.refine(2);
-
-   // SUSSMAN
-  int nprocs=ParallelDescriptor::NProcs();
-  DistributionMapping dm(lev0,nprocs);
-
-  AmrLevel* a = (*levelbld)(*this,0,geom[0],lev0,dm,cumtime);
-
-   // calls setTimeLevel for level=0 using old level dt.
-   // dm is the DistributionMapping on the new level 0.
-   // lev0 is the BoxArray on the new level 0
-  a->init(*amr_level[0],lev0,dm);
-  amr_level[0].reset(a);
-  this->SetBoxArray(0, amr_level[0]->boxArray());
-  this->SetDistributionMap(0, amr_level[0]->DistributionMap());
-
-   // calls CopyNewToOld 
-   // calls setTimeLevel(cumtime,dt_AMR) 
-  int initialInit_flag=0;
-  amr_level[0]->post_regrid(0,0,0,initialInit_flag,cumtime);
-
-  if (ParallelDescriptor::IOProcessor()) {
-   if (verbose > 1) {
-    printGridInfo(std::cout,0,finest_level);
-   } else if (verbose > 0) {
-    printGridSummary(std::cout,0,finest_level);
-   }
-  }
+  regrid_level_0_on_restart();
 
   if (record_grid_info && ParallelDescriptor::IOProcessor())
    printGridInfo(gridlog,0,finest_level);
@@ -1844,7 +1890,7 @@ Amr::defBaseLevel (Real strt_time)
     } else
      amrex::Error("finest_level invalid");
 
-    const Box& domain = geom[0].Domain();
+    const Box& domain = Geom(0).Domain();
     IntVect d_length  = domain.size();
     const int* d_len  = d_length.getVect();
 
@@ -1852,10 +1898,7 @@ Amr::defBaseLevel (Real strt_time)
      if (d_len[idir]%2 != 0)
       amrex::Error("defBaseLevel: must have even number of cells");
 
-    BoxArray lev0(1);
-    lev0.set(0,amrex::coarsen(domain,2));
-    lev0.maxSize(max_grid_size[0]/2);
-    lev0.refine(2);
+    BoxArray lev0=MakeBaseGrids();
 
     this->SetBoxArray(0, lev0);
 
@@ -1867,7 +1910,7 @@ Amr::defBaseLevel (Real strt_time)
     //
     // Now build level 0 grids.
     //
-    amr_level[0].reset((*levelbld)(*this,0,geom[0],grids[0],dmap[0],strt_time));
+    amr_level[0].reset((*levelbld)(*this,0,Geom(0),grids[0],dmap[0],strt_time));
 
     amr_level[0]->initData();
 } // subroutine defBaseLevel
@@ -2193,7 +2236,7 @@ Amr::grid_places (int              lbase,
             }
             if (lev > lbase)
                 new_grids[lev].define(bl);
-            new_grids[lev].maxSize(max_grid_size[lev]);
+            new_grids[lev].maxSize(Old_maxGridSize(lev));
         }
     }
     else if ( !regrid_grids_file.empty() )     // Use grids in regrid_grids_file 
@@ -2255,7 +2298,7 @@ Amr::bldFineLevels (Real strt_time)
 
  while (grid_places_done==0) {
 
-  grid_places(finest_level,new_finest,new_grid_places);
+  grid_places(finest_level,strt_time,new_finest,new_grid_places);
 
   if (new_finest>finest_level) {
 
