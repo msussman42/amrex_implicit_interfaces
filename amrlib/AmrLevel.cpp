@@ -21,6 +21,12 @@ AmrLevel::manual_tags_placement (TagBoxArray&    tags,
                                  Vector<int>& bf_lev)
 {}
 
+const BoxArray& AmrLevel::getAreaNotToTag () noexcept
+{
+    return m_AreaNotToTag;
+}
+
+
 AmrLevel::AmrLevel () noexcept
 {
    parent = 0;

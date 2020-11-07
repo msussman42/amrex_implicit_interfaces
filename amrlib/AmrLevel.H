@@ -276,6 +276,7 @@ public:
     //
     virtual void manual_tags_placement (TagBoxArray&    tags,
                                         Vector<int>& bf_lev);
+    const BoxArray& getAreaNotToTag() noexcept;
     //
     // Modify list of variables to be plotted
     // 
@@ -310,6 +311,8 @@ protected:
     static DescriptorList desc_lst;   // List of state variables.
     static DescriptorList desc_lstGHOST; 
     Vector<StateData> state;           // Array of state data.
+
+    BoxArray m_AreaNotToTag;
 
 private:
     //
