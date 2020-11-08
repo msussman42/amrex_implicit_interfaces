@@ -114,8 +114,9 @@ INTEGER,PARAMETER          :: plot_int = 20
 ! probtype_in==4: TSTOP=1.25D-3
 ! probtype_in==400: TSTOP=0.5d0
 ! probtype_in==403: TSTOP=0.8d0 (Chen, Merriman, Osher, Smereka)
+! probtype_in==403: TSTOP=0.4d0 (smooth test)
 ! VERIFICATION TSTOP:
-real(kind=8),parameter     :: TSTOP = 0.8D0
+real(kind=8),parameter     :: TSTOP = 0.4D0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -247,7 +248,7 @@ print *,"constant_K_test= ",constant_K_test
 !For convergence study:
 ! 32,64,128, radblob10=1.0, fixed_dt_main=-1.0,
 ! M_START=32,64,128
-! saturation_temp_vel=0.0
+! saturation_temp_vel=0.002
 ! saturation_temp_curv=0.002
 N_START=32
 N_FINISH=32
@@ -1010,7 +1011,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! instability, than what observed by Juric and Tryggvason.
    saturation_temp_curv(1)=0.002d0  ! 0.002d0 in Chen et al
    saturation_temp_curv(2)=0.0d0 
-   saturation_temp_vel(1)=0.0d0   ! 0.002d0 in Chen et al
+   saturation_temp_vel(1)=0.002d0   ! 0.002d0 in Chen et al
    saturation_temp_vel(2)=0.0d0 
  
    fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)
