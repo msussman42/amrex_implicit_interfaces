@@ -588,7 +588,6 @@ public:
 
     //! Returns the total number of cells (in double type) contained in all boxes in the BoxArray.
     double d_numPts () const noexcept;
-    double d_numPts_SUSSMAN () const noexcept;
     /**
     * \brief Initialize the BoxArray from the supplied istream.
     * It is an error if the BoxArray has already been initialized.
