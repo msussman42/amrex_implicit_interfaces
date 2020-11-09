@@ -130,6 +130,7 @@ real(kind=8) :: stefan_time
 real(kind=8) :: sum_alpha
 real(kind=8) :: sumvf,sumvf2
 REAL(kind=8) :: alpha_in(100)
+real(kind=8) :: local_dist
 
 integer local_state_ncomp_test
 integer allocate_flag
@@ -412,8 +413,20 @@ do while (finished_flag.eq.0)
     ! do nothing
    else if (probtype_in.eq.402) then
     ! do nothing
-   else if (probtype_in.eq.403) then
-    ! do nothing
+   else if (probtype_in.eq.403) then ! dendrite
+
+    if (transition_region.gt.0.0d0) then
+     local_dist=sqrt((xcen-xblob)**2+(ycen-yblob)**2)
+     if (local_dist.ge.xblob-1.0d0/16.0d0) then
+      UNEW(i,j,im)=fort_tempconst(1)
+     endif
+    else if (transition_region.eq.0.0d0) then
+     ! do nothing
+    else
+     print *,"transition_region invalid"
+     stop
+    endif
+
    else if (probtype_in.eq.404) then
     ! do nothing
    else if (probtype_in.eq.5) then
