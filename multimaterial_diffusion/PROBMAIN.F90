@@ -18,6 +18,7 @@ stop
 module probmain_module
 implicit none
 
+      REAL_T :: transition_region
       INTEGER_T height_function_flag_global
       INTEGER_T, PARAMETER ::  DEBUG_LS_MOVE_INTERFACE = 0
       INTEGER_T global_nten

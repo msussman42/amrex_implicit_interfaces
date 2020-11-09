@@ -219,7 +219,6 @@ integer :: constant_K_test
 integer :: iter
 real(kind=8) :: iter_average
 real(kind=8) :: local_center(2)
-real(kind=8) :: transition_region
 
 integer :: sci_max_level
 
@@ -248,7 +247,7 @@ print *,"constant_K_test= ",constant_K_test
 !For convergence study:
 ! 32,64,128, radblob10=1.0, fixed_dt_main=-1.0,
 ! M_START=32,64,128
-! saturation_temp_vel=0.002
+! saturation_temp_vel=0.0
 ! saturation_temp_curv=0.002
 N_START=32
 N_FINISH=32
@@ -530,9 +529,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     physbc(2,2)=EXT_DIR
     physbc_value(2,2)=0.5d0
     physbc(1,1)=EXT_DIR
-    physbc_value(2,1)=0.5d0
+    physbc_value(1,1)=0.5d0
     physbc(1,2)=EXT_DIR
-    physbc_value(2,2)=0.5d0
+    physbc_value(1,2)=0.5d0
    endif
    if ((stefan_flag.eq.1).and. &
        (local_operator_internal.eq.3).and. &
@@ -1011,11 +1010,30 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! instability, than what observed by Juric and Tryggvason.
    saturation_temp_curv(1)=0.002d0  ! 0.002d0 in Chen et al
    saturation_temp_curv(2)=0.0d0 
-   saturation_temp_vel(1)=0.002d0   ! 0.002d0 in Chen et al
+   saturation_temp_vel(1)=0.0d0   ! 0.002d0 in Chen et al
    saturation_temp_vel(2)=0.0d0 
  
    fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)
    fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
+
+   if (transition_region.gt.0.0d0) then
+    fort_tempconst(1)=fort_tempconst(1)-saturation_temp_curv(1)/radblob10
+    fort_tempconst(2)=fort_tempconst(2)-saturation_temp_curv(1)/radblob10
+    
+    physbc(2,1)=EXT_DIR
+    physbc_value(2,1)=fort_tempconst(1)
+    physbc(2,2)=EXT_DIR
+    physbc_value(2,2)=fort_tempconst(1)
+    physbc(1,1)=EXT_DIR
+    physbc_value(1,1)=fort_tempconst(1)
+    physbc(1,2)=EXT_DIR
+    physbc_value(1,2)=fort_tempconst(1)
+   else if (transition_region.eq.0.0d0) then
+    ! do nothing
+   else
+    print *,"transition region invalid"
+    stop
+   endif
 
     ! max_front_vel
    if ((abs(latent_heat_in).gt.0.0d0).and. &
