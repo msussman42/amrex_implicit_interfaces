@@ -615,7 +615,7 @@
 
       VP_max_LS_error=0.0d0
 
-      if (1.eq.1) then
+      if (1.eq.0) then
        if (probtypeCG.eq.403) then
         iten=1
         do i=lox,hix
@@ -1544,7 +1544,7 @@
 
       call set_boundary(U,hflag,nmat)
 
-      if (1.eq.1) then
+      if (1.eq.0) then
        if (probtypeCG.eq.403) then
         iten=1
         do i=lox,hix

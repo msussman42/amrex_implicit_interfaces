@@ -219,6 +219,9 @@ do while (finished_flag.eq.0)
  if (tm.eq.1) then
   call init_tsatfab(N_CURRENT) ! VARIABLE TSAT, allocate swept too
  endif
+ if (probtype_in.eq.403) then ! dendrite
+  use_tsatfab=1
+ endif
 
   ! UOLD=UOLD_in  UNEW=UNEW_in
   ! in: BICGSTAB_Yang_MULTI.F90

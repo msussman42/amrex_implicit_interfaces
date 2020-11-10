@@ -898,7 +898,7 @@ contains
      stop
     endif
 
-    if (1.eq.1) then
+    if (1.eq.0) then
      if ((probtype.eq.403).and. &
          (im_source.eq.1).and. &
          (im_dest.eq.2).and. &
@@ -2846,7 +2846,7 @@ contains
                 stop
                endif
 
-               if (1.eq.1) then
+               if (1.eq.0) then
                 if (probtype.eq.403) then
                  if (local_hflag.eq.1) then
                   if ((Tdata(1).eq.zero).and. &
@@ -3017,7 +3017,7 @@ contains
                nmat, &
                global_nten,5)
 
-             if (1.eq.1) then
+             if (1.eq.0) then
               if (probtype.eq.403) then
                if (local_hflag.eq.0) then
                 print *,"NORMAL (ext_face) DIRICHLET: im_inside,im_outside ", &
@@ -3266,7 +3266,7 @@ contains
             nmat, &
             global_nten,6)
 
-          if (1.eq.1) then
+          if (1.eq.0) then
            if (probtype.eq.403) then
             if (local_hflag.eq.0) then
              print *,"NORMAL (int_face) DIRICHLET: im_inside,im_outside ", &
