@@ -107,6 +107,8 @@ contains
        stop
       endif
 
+      use_tsatfab=0
+
       do dir=1,SDIM
        fablo_tsat(dir)=0
        fabhi_tsat(dir)=NCELL-1
