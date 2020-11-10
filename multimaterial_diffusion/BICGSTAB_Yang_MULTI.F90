@@ -188,6 +188,9 @@
       REAL*8 deltat_swept
       integer local_level
       integer ncomp_gap
+      integer TSAT_FLAG
+      integer iten
+
 
       nhalf=3
 
@@ -612,6 +615,39 @@
 
       VP_max_LS_error=0.0d0
 
+      if (1.eq.1) then
+       if (probtypeCG.eq.403) then
+        iten=1
+        do i=lox,hix
+        do j=loy,hiy
+         if (ntsat.eq.3) then
+          TSAT_FLAG=NINT(tsatfab(i,j,iten))
+          if (TSAT_FLAG.eq.0) then
+           ! do nothing
+          else if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
+           print *,"i,j,TSAT_FLAG,T_GAMMA,Y_GAMMA ",i,j, &
+               tsatfab(i,j,iten), &
+               tsatfab(i,j,iten+1), &
+               tsatfab(i,j,iten+2)
+          else
+           print *,"TSAT_FLAG invalid TSAT_FLAG=",TSAT_FLAG
+           print *,"tsatfab(i,j,iten)= ",tsatfab(i,j,iten)
+           print *,"i,j,iten ",i,j,iten
+           stop
+          endif
+         else
+          print *,"ntsat invalid"
+          stop
+         endif
+        enddo
+        enddo
+       else
+        print *,"probtypeCG invalid"
+        stop
+       endif
+      endif
+
+
       do i=lox,hix
       do j=loy,hiy
 
@@ -691,7 +727,7 @@
        enddo
 
        do im_in=1,nmat
-         ! in: vfrac_pair.F90
+         ! routine in: vfrac_pair.F90
         call cell_div_cal_simple( &
          dist_concentric, &
          diag_coeff_flag, &
@@ -1499,12 +1535,47 @@
       REAL*8 div_tot
       REAL*8 deltat_swept
       integer diag_coeff_flag
+      integer TSAT_FLAG
+      integer iten
 
       diag_coeff_flag=0
 
       call MAKE_CONSISTENT(U,hflag)
 
       call set_boundary(U,hflag,nmat)
+
+      if (1.eq.1) then
+       if (probtypeCG.eq.403) then
+        iten=1
+        do i=lox,hix
+        do j=loy,hiy
+         if (ntsat.eq.3) then
+          TSAT_FLAG=NINT(tsatfab(i,j,iten))
+          if (TSAT_FLAG.eq.0) then
+           ! do nothing
+          else if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
+           print *,"i,j,FLAG,T_GAMMA,Y_GAMMA ",i,j, &
+               tsatfab(i,j,iten), &
+               tsatfab(i,j,iten+1), &
+               tsatfab(i,j,iten+2)
+          else
+           print *,"TSAT_FLAG invalid TSAT_FLAG=",TSAT_FLAG
+           print *,"tsatfab(i,j,iten)= ",tsatfab(i,j,iten)
+           print *,"i,j,iten ",i,j,iten
+           stop
+          endif
+         else
+          print *,"ntsat invalid"
+          stop
+         endif
+        enddo
+        enddo
+       else
+        print *,"probtypeCG invalid"
+        stop
+       endif
+      endif
+
 
       if ((operator_internal.eq.0).and. &
           (operator_external.eq.0)) then

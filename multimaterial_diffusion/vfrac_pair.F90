@@ -2744,6 +2744,7 @@ contains
                else if ((local_hflag.eq.0).and. &
                         (internal_multimaterial.ge.1).and. &
                         (internal_multimaterial.le.2*global_nten)) then
+                  ! in: MASS_TRANSFER_3D.F90
                 call get_interface_temperature( &
                   use_tsatfab, &
                   i_tsat,j_tsat,k_tsat, &
@@ -2858,6 +2859,8 @@ contains
                    stop
                   endif
                  else if (local_hflag.eq.0) then
+                  print *,"i_tsat,j_tsat,k_tsat ", &
+                     i_tsat,j_tsat,k_tsat
                   print *,"im_inside,im_outside ",im_inside,im_outside
                   print *,"dir_main,side ",dir_main,side
                   print *,"Tdata1-4 ",Tdata(1),Tdata(2),Tdata(3),Tdata(4)
@@ -3019,6 +3022,8 @@ contains
                if (local_hflag.eq.0) then
                 print *,"NORMAL (ext_face) DIRICHLET: im_inside,im_outside ", &
                   im_inside,im_outside
+                print *,"i_tsat,j_tsat,k_tsat ", &
+                   i_tsat,j_tsat,k_tsat
                 print *,"dir_main,side ",dir_main,side
                 print *,"rho_I ",rho_I
                else
@@ -3266,6 +3271,8 @@ contains
             if (local_hflag.eq.0) then
              print *,"NORMAL (int_face) DIRICHLET: im_inside,im_outside ", &
                   im_inside,im_outside
+             print *,"i_tsat,j_tsat,k_tsat ", &
+                i_tsat,j_tsat,k_tsat
              print *,"rho_I ",rho_I
             else
              print *,"local_hflag invalid"
