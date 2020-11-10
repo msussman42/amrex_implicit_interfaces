@@ -897,6 +897,19 @@ contains
 
      stop
     endif
+
+    if (1.eq.1) then
+     if ((probtype.eq.403).and. &
+         (im_source.eq.1).and. &
+         (im_dest.eq.2).and. &
+         (internal_multimaterial.eq.1)) then
+      ! do nothing
+     else
+      print *,"dendrite parameters invalid (1)"
+      stop
+     endif
+    endif
+          
   else
     print *,"im1 bust"
     stop
@@ -2832,6 +2845,33 @@ contains
                 stop
                endif
 
+               if (1.eq.1) then
+                if (probtype.eq.403) then
+                 if (local_hflag.eq.1) then
+                  if ((Tdata(1).eq.zero).and. &
+                      (Tdata(2).eq.zero).and. &
+                      (Tdata(3).eq.zero).and. &
+                      (Tdata(4).eq.zero)) then
+                   ! do nothing
+                  else
+                   print *,"expecting homogeneous Tdata"
+                   stop
+                  endif
+                 else if (local_hflag.eq.0) then
+                  print *,"im_inside,im_outside ",im_inside,im_outside
+                  print *,"dir_main,side ",dir_main,side
+                  print *,"Tdata1-4 ",Tdata(1),Tdata(2),Tdata(3),Tdata(4)
+                  print *,"nplus_valid=",nplus_valid
+                 else
+                  print *,"local_hflag invalid"
+                  stop
+                 endif 
+                else
+                 print *,"probtype invalid not 403"
+                 stop
+                endif
+               endif
+
                VP_areaface_current=facearea_minus
                VP_test_number_current=3
                call VP_sanity_check(xminusI,LS_sub,xsten)
@@ -2973,6 +3013,23 @@ contains
                time_div, &
                nmat, &
                global_nten,5)
+
+             if (1.eq.1) then
+              if (probtype.eq.403) then
+               if (local_hflag.eq.0) then
+                print *,"NORMAL (ext_face) DIRICHLET: im_inside,im_outside ", &
+                  im_inside,im_outside
+                print *,"dir_main,side ",dir_main,side
+                print *,"rho_I ",rho_I
+               else
+                print *,"local_hflag invalid"
+                stop
+               endif 
+              else
+               print *,"probtype invalid not 403"
+               stop
+              endif
+             endif
 
              grad=grad-rho_I
 
@@ -3203,6 +3260,22 @@ contains
             time_div, &
             nmat, &
             global_nten,6)
+
+          if (1.eq.1) then
+           if (probtype.eq.403) then
+            if (local_hflag.eq.0) then
+             print *,"NORMAL (int_face) DIRICHLET: im_inside,im_outside ", &
+                  im_inside,im_outside
+             print *,"rho_I ",rho_I
+            else
+             print *,"local_hflag invalid"
+             stop
+            endif 
+           else
+            print *,"probtype invalid not 403"
+            stop
+           endif
+          endif
 
           grad=grad-rho_I
          else
