@@ -170,6 +170,8 @@ implicit none
 ! fort_store_elastic_data added October 3.
 ! fort_solidheat_flag added October 13.
 ! fort_lame_coefficient added October 21.
+! fort_shear_modulus added October 28.
+! fort_linear_elastic_model added November 4.
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
@@ -248,7 +250,9 @@ implicit none
        ! Default: FACETOL_DVOL=1.0D-6 (prototype code)
        ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
       REAL_T, PARAMETER :: FACETOL_DVOL=1.0D-6
-      REAL_T, PARAMETER :: VOFTOL_REDIST=1.0D-3
+       ! Default: VOFTOL=1.0D-3
+       ! Default: VOFTOL=1.0D-10 (prototype code)
+      REAL_T, PARAMETER :: VOFTOL_REDIST=1.0D-10
       REAL_T, PARAMETER :: FACETOL_REDIST=1.0D-2
       REAL_T, PARAMETER :: FACETOL_SANITY=1.0D-3
        ! Default: LS_CURV_TOL=1.0D-2 

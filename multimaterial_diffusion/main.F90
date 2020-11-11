@@ -99,7 +99,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
 INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 2000
-INTEGER,PARAMETER          :: plot_int = 20
+INTEGER,PARAMETER          :: plot_int = 20 ! 20
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1
@@ -116,7 +116,7 @@ INTEGER,PARAMETER          :: plot_int = 20
 ! probtype_in==403: TSTOP=0.8d0 (Chen, Merriman, Osher, Smereka)
 ! probtype_in==403: TSTOP=0.4d0 (smooth test)
 ! VERIFICATION TSTOP:
-real(kind=8),parameter     :: TSTOP = 0.4D0
+real(kind=8),parameter     :: TSTOP = 0.8D0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -249,19 +249,21 @@ print *,"constant_K_test= ",constant_K_test
 ! M_START=32,64,128
 ! saturation_temp_vel=0.0
 ! saturation_temp_curv=0.002
-N_START=32
-N_FINISH=32
-M_START=32
+N_START=64
+N_FINISH=64
+M_START=1600
 M_FACTOR=2
 
-!axis_dir=0  ! standard dendrite problem with non-circular seed
-axis_dir=1  ! circular seed
-radblob10=1.0d0  ! 0.1d0 is from the earlier articles
+axis_dir=0 !standard dendrite problem non-circular seed probtype_in.eq.403
+!axis_dir=1 ! circular seed for probtype_in.eq.403
+!radblob10=1.0d0  ! 0.1d0 is from the earlier articles
+radblob10=0.1d0  ! 0.1d0 is from the earlier articles
 height_function_flag_global=1  ! =1 for height function
                                ! =2 for sanity check
 ! set transition_region=0.0d0 for seed problem from Chen and Smereka
 ! or Juric and Tryggvason.
-transition_region=0.25d0 ! initial circular seed (transition_region>0.0)
+!transition_region=0.25d0 ! initial circular seed (transition_region>0.0)
+transition_region=0.0d0 ! initial circular seed (transition_region>0.0)
 
 if (probtype_in.eq.4) then ! expanding or shrinking circle
         ! time step hardwire for this test
@@ -1010,7 +1012,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! instability, than what observed by Juric and Tryggvason.
    saturation_temp_curv(1)=0.002d0  ! 0.002d0 in Chen et al
    saturation_temp_curv(2)=0.0d0 
-   saturation_temp_vel(1)=0.0d0   ! 0.002d0 in Chen et al
+   saturation_temp_vel(1)=0.002d0   ! 0.002d0 in Chen et al
    saturation_temp_vel(2)=0.0d0 
  
    fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)

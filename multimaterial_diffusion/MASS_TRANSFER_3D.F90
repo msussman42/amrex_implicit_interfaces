@@ -1350,6 +1350,15 @@ stop
        endif
       else 
        print *,"TSAT_weight invalid"
+       print *,"VOFTOL=",VOFTOL
+       print *,"VOFTOL_REDIST=",VOFTOL_REDIST
+       print *,"i,j,k,ireverse,iten,nten,ntsat,bfact ", &
+               i,j,k,ireverse,iten,nten,ntsat,bfact
+       print *,"level,finest_level,dx ",level,finest_level, &
+               dx(1),dx(2),dx(SDIM)
+       print *,"xlo,xtarget,comp,ngrow ",xlo(1),xlo(2),xlo(SDIM), &
+               xtarget(1),xtarget(2),xtarget(SDIM)
+       print *,"TSAT_weight ",TSAT_weight
        stop
       endif
 
@@ -2066,6 +2075,7 @@ stop
       LS_INT_OWN_counter=0
       VOF_pos_probe_counter=0
 
+       ! tessellating volume fractions.
       call interpfabVFRAC_tess( &
        PROBE_PARMS%tid, &
        PROBE_PARMS%bfact, &
