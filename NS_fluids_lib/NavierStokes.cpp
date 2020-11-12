@@ -509,7 +509,53 @@ int  NavierStokes::NUM_STATE_TYPE=AMREX_SPACEDIM+5;
 // 1=velocity stored at faces
 int  NavierStokes::face_flag=0;
 
+// if interp_vel_increment_from_cell==0
+//  face velocity after advection=CISL advection of face velocities
+//     (not conservative for compressible flow, but "monotonic" if first order)
+// if interp_vel_increment_from_cell==1
+//  face velocity after advection=UMAC^n +
+//     I_{cell}^{MAC} (UCELL^advect - UCELL^n)
+//     (still not conservative for compressible flow, and not "monotonic",
+//      and very well can lead to checkerboard instability)
+// 
 int  NavierStokes::interp_vel_increment_from_cell=0;
+
+// Compressible algorithm for each time step:
+// k=0
+// V^{k,n+1}=UMAC^{n}
+// GP^{k,n+1+1/4}=0   -> -dt grad p/rho
+// DUP^{k,n+1+1/4}=0  -> -dt div( up ) /(rho cv) 
+// for k=0 to num_divu_outer_sweeps-1
+//   1. advection using V^{k,n+1} (conservative for density).
+//   2. U^*=U^advect + GP^{k,n+1+1/4}
+//   3. T^*=T^advect + DUP^{k,n+1+1/4}
+//   4. thermal diffusion and viscosity gives U^visc and T^visc
+//   5. U^**=U^visc - GP^{k,n+1+1/4}
+//   6. T^**=T^visc - DUP^{k,n+1+1/4}
+//   7. (p^{k+1,n+1+1/4}-p(rho^{n+1,k},e^visc^{n+1,k}))/(dt^2 rho c^2) =
+//        -div(U^**/dt - grad p^{k+1,n+1+1/4}/rho)
+//   8. initialize GP^{k+1,n+1+1/4}  and DUP^{k+1,n+1+1/4}
+//   9. update U^{n+1,(k+1)},T^{n+1,(k+1)}
+//   10. go back to (1)
+// NOTE: in step 7, p^{k+1,n+1+1/4} is an approximation to
+//   p(rho^{n+1}+rho',e^{n+1}+e')
+//    the increments rho' and e' have the form
+//     rho'= -dt rho div u     e'= - dt p div u
+//   p(rho^{n+1}+rho',e^{n+1}+e')=p(rho^{n+1},e^{n+1})+
+//     rho' dp/drho  + e' dp/de = p(rho^{n+1},e^{n+1}) - dtrho'= 
+//     -dt rho div u   c^2 rho div u
+//   If the advection terms and diffusion terms are ignored, and if
+//   one iterates until convergence, then the above algorithm
+//   reduces to the backwards Euler method for the wave equation.
+//    (p^{n+2}-2 p^{n+1} + p^{n})/(c^2 dt^2) = div grad p^{n+2}
+// If face_flag==0 (i.e. cell velocity advected conservatively and has
+//    monotonic property):
+//  Then if weight_interp_presgrad_increment_from_face==0.0 then
+//    UNEW^cell=I_{MAC}^{CELL} UNEW^MAC  (very dissipative)
+//  if weight_interp_presgrad_increment_from_face==1.0 then
+//    UNEW^CELL=UNEW^* - dt grad (I_CELL^MAC p) /rho
+//    (we know this leads to checkerboard instability)
+//
 Real NavierStokes::weight_interp_presgrad_increment_from_face=0.0; 
 
 int  NavierStokes::disable_advection=0;
@@ -13769,6 +13815,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &visc_coef, //beta
       &visc_coef,
       &face_flag,
+      &interp_vel_increment_from_cell,
       temperature_primitive_variable.dataPtr(),
       &local_enable_spectral,
       &fluxvel_index,
