@@ -2032,6 +2032,7 @@ protected:
     static int elasticface_flag; // 0=use LS 1=use VOF (def=1)
     static int temperatureface_flag; // 0=use LS 1=use VOF (def=1)
     static Vector<int> material_type; // 0 incomp   
+    static Vector<int> material_type_evap; // 0 incomp   
     static Real wait_time;
     static Real advbot;
     static Real inflow_pressure;
