@@ -334,6 +334,7 @@ subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(in) :: internal_energy
  REAL_T, intent(out) :: pressure
+ INTEGER_T :: dummy_input
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -343,7 +344,11 @@ subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
    else
     print *,"imattype= ",imattype
     print *,"imattype invalid EOS_CRYOGENIC_TANK_MK"
-    stop
+    print *,"By pressing <CTRL C> during this read statement, the"
+    print *,"gdb debugger will produce a stacktrace."
+    print *,"type 0 then <enter> to exit the program"
+    read *,dummy_input
+    error stop
    endif
   else
    call EOS_material_CORE(rho,massfrac_var, &
