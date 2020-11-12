@@ -3388,8 +3388,12 @@ NavierStokes::read_params ()
 
      if ((override_density[im]!=0)&&
          (override_density[im]!=1)&&
-         (override_density[im]!=2))
-      amrex::Error("override_density invalid");
+         (override_density[im]!=2)) {
+      std::cout << "nmat= " << nmat << '\n';
+      std::cout << "im=" << im << " override_density[im]= " <<
+	     override_density[im] << '\n';
+      amrex::Error("override_density invalid (1) ");
+     }
      if (DrhoDT[im]>0.0)
       amrex::Error("DrhoDT cannot be positive");
      if ((DrhoDz[im]!=-1.0)&&(DrhoDz[im]<0.0))
@@ -4087,8 +4091,12 @@ NavierStokes::read_params ()
        if ((override_density[im-1]==1)||
            (override_density[im-1]==2)) {
         // do nothing
-       } else
-        amrex::Error("override_density invalid");
+       } else {
+        std::cout << "nmat= " << nmat << '\n';
+        std::cout << "im-1=" << im-1 << " override_density[im-1]= " <<
+	     override_density[im-1] << '\n';
+        amrex::Error("override_density invalid (2)");
+       }
       } else if (material_type[im-1]==999) {
        // do nothing
       } else if (material_type[im-1]>=1) {

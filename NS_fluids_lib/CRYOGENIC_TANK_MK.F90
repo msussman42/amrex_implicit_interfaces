@@ -41,6 +41,7 @@ REAL_T :: TANK_MK_HEATER_FLUX
 ! Heater location in dim=2 direction
 REAL_T :: TANK_MK_HEATER_LOW
 REAL_T :: TANK_MK_HEATER_HIGH
+REAL_T :: TANK_MK_HEATER_R
 
 ! Flat or spherical interface
 REAL_T :: TANK_MK_INTERFACE_RADIUS
@@ -48,7 +49,7 @@ REAL_T :: TANK_MK_BUBBLE_X
 REAL_T :: TANK_MK_BUBBLE_Y
 REAL_T :: TANK_MK_BUBBLE_Z
 
-! Initial mixture pressure
+! Initial mixture pressure at the hight point of the tank
 REAL_T :: TANK_MK_INITIAL_PRESSURE
 ! Universal gas constant [J/(mol K)]
 REAL_T :: TANK_MK_R_UNIV
@@ -63,6 +64,9 @@ contains
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module
   implicit none
+  
+  
+  
   TANK_MK_RADIUS             = xblob
   TANK_MK_HEIGHT             = yblob
   TANK_MK_INTERFACE_LOCATION = zblob
@@ -75,9 +79,12 @@ contains
   TANK_MK_HEATER_FLUX      = xblob3
   TANK_MK_HEATER_LOW       = yblob3
   TANK_MK_HEATER_HIGH      = zblob3
+  TANK_MK_HEATER_R         = radblob3
 
   TANK_MK_END_RADIUS       = xblob4
   TANK_MK_END_CENTER       = yblob4
+
+  
   
 
   ! ASSUMING IDEA GAS => The gas heat cpacities should satisfy this
@@ -95,11 +102,21 @@ contains
   TANK_MK_GAS_CP = TANK_MK_GAS_CV + TANK_MK_R_UNIV/fort_molar_mass(2)  ! [J∕(kg·K)]
   TANK_MK_GAS_GAMMA = TANK_MK_GAS_CP / TANK_MK_GAS_CV
 
-  ! Initial pressure based on the given density and pressure
-  ! P = rho R_sp T = rho (gamma-1) U
-  TANK_MK_INITIAL_PRESSURE = &
-   fort_denconst(2)*(TANK_MK_GAS_GAMMA-one)*&
-   fort_initial_temperature(2)*TANK_MK_GAS_CV 
+  ! Initial pressure based on the given density and temeprature
+  ! at the highest point of the tank
+  if(fort_material_type(2).eq.0) then
+   ! incompressible
+   TANK_MK_INITIAL_PRESSURE = outflow_pressure
+  elseif(fort_material_type(2).eq.24) then
+   ! compressible
+   ! P = rho R_sp T = rho (gamma-1) U
+   TANK_MK_INITIAL_PRESSURE = &
+    fort_denconst(2)*(TANK_MK_GAS_GAMMA-one)*&
+    fort_initial_temperature(2)*TANK_MK_GAS_CV
+  else
+   print *,"material type invalid for pressure setup!"
+   stop
+  endif
   
   return
  end subroutine INIT_CRYOGENIC_TANK_MK_MODULE
@@ -478,17 +495,46 @@ else
  stop
 endif
 
-!PRES=TANK_MK_INITIAL_GAS_PRESSURE 
-
+!PRES=TANK_MK_INITIAL_GAS_PRESSURE
+if(fort_material_type(2).eq.0) then
+ ! incompressible gas
+ ! Flat open top x_2: TANK_MK_HEIGHT/two
+ ! Known pressure(P_1) at top (outflow_pressure)
+ ! P_2=P_1 + rho*g*(z_1-z_2)  [g>0]
  if (x(2).ge.TANK_MK_INTERFACE_LOCATION) then
-  PRES=TANK_MK_INITIAL_PRESSURE
+  PRES=TANK_MK_INITIAL_PRESSURE+&
+       fort_denconst(2)*(TANK_MK_HEIGHT/two-x(2))*(abs(gravity)) 
  elseif (x(2).lt.TANK_MK_INTERFACE_LOCATION) then
-  PRES=TANK_MK_INITIAL_PRESSURE +&
-    fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(2))*(abs(gravity))
+  PRES=TANK_MK_INITIAL_PRESSURE+&
+       fort_denconst(2)*(TANK_MK_HEIGHT/two-TANK_MK_INTERFACE_LOCATION)* &
+       (abs(gravity))+ &
+       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(2))*(abs(gravity))
  else
   print *,"x(2) is invalid in CRYOGENIC_TANK_MK_PRES!"
   stop
  endif
+elseif (fort_material_type(2).eq.24) then
+ ! compressible gas
+ ! Known pressure(P_1) at top (based on given density and temperature)
+ ! P_2=P_1 * exp(g*(z_1-z_2)/(R_sp*T_0))  [g>0]
+ if (x(2).ge.TANK_MK_INTERFACE_LOCATION) then
+  PRES=TANK_MK_INITIAL_PRESSURE*&
+       exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(2))*abs(gravity)/&
+           (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))
+ elseif (x(2).lt.TANK_MK_INTERFACE_LOCATION) then
+  PRES=TANK_MK_INITIAL_PRESSURE*&
+       exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-TANK_MK_INTERFACE_LOCATION)*&
+            abs(gravity)/&
+           (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))+&
+       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(2))*(abs(gravity))
+ else
+  print *,"x(2) is invalid in CRYOGENIC_TANK_MK_PRES!"
+  stop
+ endif
+else
+ print  *,"invalid material type in pressure setup!"
+ stop
+endif
 
 return 
 end subroutine CRYOGENIC_TANK_MK_PRES
@@ -506,6 +552,7 @@ REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
+REAL_T pressure
 
  ! num_state_material=2 (default)  density and temperature
  ! num_state_material>2 if scalar (species) variables added.
@@ -529,7 +576,25 @@ if ((num_materials.eq.3).and. &
     (probtype.eq.423)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
-  STATE(ibase+1)=fort_denconst(im)
+  ! density
+  if(im.eq.2) then
+   if(fort_material_type(2).eq.0) then
+    ! incompressible
+    STATE(ibase+1)=fort_denconst(im)
+   elseif(fort_material_type(2).eq.24) then
+    ! compressible
+    ! rho =P/(R_sp T)
+    call CRYOGENIC_TANK_MK_PRES(x,t,LS,pressure,nmat)
+    STATE(ibase+1) = pressure/&
+     (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2))
+   else
+    print *,"material type invalid for density setup!"
+    stop
+   endif ! mater_type
+  else
+   STATE(ibase+1)=fort_denconst(im)
+  endif
+  ! temperature
   if (t.eq.zero) then
    STATE(ibase+2)=fort_initial_temperature(im)
   else if (t.gt.zero) then
@@ -538,7 +603,7 @@ if ((num_materials.eq.3).and. &
    print *,"t invalid"
    stop
   endif
-
+  ! species
   do n=1,num_species_var
    STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
@@ -724,7 +789,7 @@ end subroutine CRYOGENIC_TANK_MK_STATE_BC
 ! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
 !      (1/V)A_{right} (-q_{right} dot n_right)
 !
-! TANK_MK_HETAER_FLUX \equiv -q dot n
+! TANK_MK_HEATER_FLUX \equiv -q dot n
 ! MEHDI VAHAB HEAT SOURCE
 ! T^new=T^* + dt * (tildeQ)/(rho cv)    
 ! dt=seconds  rho=kg/m^3   cv=Joules/(kg K)
@@ -793,15 +858,15 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   ! in liquid, the heater band is wetting
     ! right side of domain
   heat_source=zero
-  if ((abs(xsten(0,1)).lt.TANK_MK_RADIUS).and.&
-      (abs(xsten(2,1)).gt.TANK_MK_RADIUS).and.&
-      (xsten(0,2).gt.TANK_MK_HEATER_LOW).and.&
-      (xsten(0,2).lt.TANK_MK_HEATER_HIGH)) then
+  if ((abs(xsten(-1,1)).lt.TANK_MK_HEATER_R).and.&
+      (abs(xsten(1,1)).gt.TANK_MK_HEATER_R).and.&
+      (xsten(1,2).gt.TANK_MK_HEATER_LOW).and.&
+      (xsten(-1,2).lt.TANK_MK_HEATER_HIGH)) then
       ! area=2 pi rf dz
       ! vol =2 pi rc dr dz
       ! area/vol=rf/(rc dr)
    ! input file value in J/(s.m^2) (flux into the face)
-   ! Tansforming to J/(s.m^3) (flux into the control volume)
+   ! Transforming to J/(s.m^3) (flux into the control volume)
    flux_magnitude=TANK_MK_HEATER_FLUX
    if (levelrz.eq.1) then
     denom=xsten(0,1)*local_dx(1)
