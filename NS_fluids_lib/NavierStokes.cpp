@@ -938,6 +938,7 @@ int NavierStokes::elasticface_flag=1; // 0=use LS  1=use VOF
 int NavierStokes::temperatureface_flag=1; // 0=use LS  1=use VOF
 
 Vector<int> NavierStokes::material_type;
+Vector<int> NavierStokes::material_type_evap;
 
 Real NavierStokes::wait_time=0.0;
 Real NavierStokes::advbot=1.0;
@@ -2593,6 +2594,11 @@ NavierStokes::read_params ()
 
     material_type.resize(nmat);
     pp.getarr("material_type",material_type,0,nmat);
+    material_type_evap.resize(nmat);
+    for (int i=0;i<nmat;i++) {
+     material_type_evap[i]=material_type[i];
+    }
+    pp.queryarr("material_type_evap",material_type_evap,0,nmat);
  
     for (int i=0;i<nmat;i++) {
      FSI_flag[i]=0;
@@ -4157,6 +4163,8 @@ NavierStokes::read_params ()
            (override_density[im-1]==2)) {
         // do nothing
        } else {
+	std::cout << "need override_density==1 if mass fraction variable\n";
+	std::cout << "defined and incompressible material."
         std::cout << "nmat= " << nmat << '\n';
         std::cout << "im-1=" << im-1 << " override_density[im-1]= " <<
 	     override_density[im-1] << '\n';
@@ -4352,6 +4360,8 @@ NavierStokes::read_params ()
       std::cout << "shock_timestep i=" << i << " " << 
           shock_timestep[i] << '\n';
       std::cout << "material_type i=" << i << " " << material_type[i] << '\n';
+      std::cout << "material_type_evap i=" << i << " " << 
+	      material_type_evap[i] << '\n';
       std::cout << "pressure_error_cutoff i=" << i << " " << 
         pressure_error_cutoff[i] << '\n';
       std::cout << "vorterr i=" << i << " " << 
