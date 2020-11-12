@@ -14,7 +14,7 @@ max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
 stop_time = 4.0  # case 1
-stop_time = 1.28  # case 2
+stop_time = 750.0  # 750 seconds Borodulin et al Figure 8 row 3
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -129,7 +129,10 @@ ns.use_lsa=0
 # 12,13,14   23,24  3,4 
 ns.conservative_tension_force=0
 # in the future: impurities in the air effect this.
-ns.tension=72.8  # CODY ~ sigma_liquid=0.01 N/m  (10 g/s^2)
+# For comparison with Borodulin et al Figure 8, surface tension
+# should not make a difference since this coefficient is not in the
+# evaporation mdot model.
+ns.tension=1.0  # 72.8 cgs
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
 #heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
@@ -216,6 +219,7 @@ ns.tempconst=300.5 300.5 #CODY: case 2, T_inf for gas, T_gamma for liq.
 ns.xblob=0.0
 ns.yblob=0.1
 ns.zblob=0.1
+#Borodulin et al Figure 8, row 3
 ns.radblob=0.05
 ns.denfact=1.0
 ns.velfact=0.0
