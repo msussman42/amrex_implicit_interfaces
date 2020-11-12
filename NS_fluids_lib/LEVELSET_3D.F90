@@ -12400,6 +12400,7 @@ stop
        beta, &
        visc_coef, &
        face_flag, & 
+       interp_vel_increment_from_cell, &
        temperature_primitive_variable, &
        enable_spectral, &
        fluxvel_index, &  
@@ -12498,6 +12499,7 @@ stop
       INTEGER_T, intent(in) :: ncellfrac
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: face_flag 
+      INTEGER_T, intent(in) :: interp_vel_increment_from_cell
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: energyflag
@@ -12844,6 +12846,22 @@ stop
        stop
       endif
 
+      if ((face_flag.eq.0).or. &
+          (face_flag.eq.1)) then
+       ! do nothing
+      else
+       print *,"face_flag invalid"
+       stop
+      endif
+    
+      if ((interp_vel_increment_from_cell.eq.0).or. &
+          (interp_vel_increment_from_cell.eq.1)) then
+       ! do nothing
+      else
+       print *,"interp_vel_increment_from_cell invalid"
+       stop
+      endif
+ 
       if ((operation_flag.ge.0).and. &
           (operation_flag.le.11)) then
        ! do nothing
@@ -13716,19 +13734,23 @@ stop
                   print *,"beta invalid"
                   stop
                  endif
+                 ! FIX ME
                 else if (operation_flag.eq.10) then ! cell,MAC -> MAC
                  if (face_flag.ne.1) then
                   print *,"face_flag invalid"
                   stop
                  endif
-                 if (local_incomp.eq.1) then
+                 if ((local_incomp.eq.1).or. &
+                     (interp_vel_increment_from_cell.eq.0)) then
                   velcomp=1
                   velmaterial=local_vel(1)
-                 else if (local_incomp.eq.0) then
+                 else if ((local_incomp.eq.0).and. &
+                          (interp_vel_increment_from_cell.eq.1)) then
                   velcomp=dir+1
                   velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
                  else
-                  print *,"local_incomp invalid"
+                  print *,"local_incomp or "
+                  print *,"interp_vel_increment_from_cell invalid"
                   stop
                  endif
                 else if (operation_flag.eq.11) then ! cell diff,MAC -> MAC
@@ -13736,14 +13758,17 @@ stop
                   print *,"face_flag invalid"
                   stop
                  endif
-                 if (local_incomp.eq.1) then
+                 if ((local_incomp.eq.1).or. &
+                     (interp_vel_increment_from_cell.eq.0)) then
                   velcomp=1
                   velmaterial=local_vel(1)
-                 else if (local_incomp.eq.0) then
+                 else if ((local_incomp.eq.0).and. &
+                          (interp_vel_increment_from_cell.eq.1)) then
                   velcomp=dir+1
                   velmaterial=local_vel_old(1)+vel(D_DECL(ic,jc,kc),velcomp)
                  else
-                  print *,"local_incomp invalid"
+                  print *,"local_incomp or "
+                  print *,"interp_vel_increment_from_cell invalid"
                   stop
                  endif
                 else
