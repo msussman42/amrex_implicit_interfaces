@@ -4164,7 +4164,7 @@ NavierStokes::read_params ()
         // do nothing
        } else {
 	std::cout << "need override_density==1 if mass fraction variable\n";
-	std::cout << "defined and incompressible material."
+	std::cout << "defined and incompressible material.\n";
         std::cout << "nmat= " << nmat << '\n';
         std::cout << "im-1=" << im-1 << " override_density[im-1]= " <<
 	     override_density[im-1] << '\n';
@@ -11361,6 +11361,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      distribute_from_target.dataPtr(),
      mass_fraction_id.dataPtr(),
      species_evaporation_density.dataPtr(),
+     material_type_evap.dataPtr(),
      molar_mass.dataPtr(),
      species_molar_mass.dataPtr(),
      &use_supermesh,
@@ -11448,6 +11449,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      distribute_from_target.dataPtr(),
      mass_fraction_id.dataPtr(),
      species_evaporation_density.dataPtr(),
+     material_type_evap.dataPtr(),
      molar_mass.dataPtr(),
      species_molar_mass.dataPtr(),
      &use_supermesh,

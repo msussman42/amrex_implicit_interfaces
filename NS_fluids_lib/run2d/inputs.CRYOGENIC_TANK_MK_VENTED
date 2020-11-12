@@ -21,6 +21,7 @@ ns.num_species_var  = 1
 # ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
 ns.material_type    = 0 0 999
+ns.material_type_evap = 0 24 999
 
 #ns.truncate_volume_fractions = 0 0 1
 

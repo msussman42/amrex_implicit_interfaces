@@ -13734,25 +13734,29 @@ stop
                   print *,"beta invalid"
                   stop
                  endif
-                 ! FIX ME
+                 ! called from NavierStokes::increment_face_velocity
+                 ! interp_option==3
+                 ! this is an obsolete option.
                 else if (operation_flag.eq.10) then ! cell,MAC -> MAC
+                 print *,"this option is not used"
+                 stop
+
                  if (face_flag.ne.1) then
                   print *,"face_flag invalid"
                   stop
                  endif
-                 if ((local_incomp.eq.1).or. &
-                     (interp_vel_increment_from_cell.eq.0)) then
+                 if (local_incomp.eq.1) then
                   velcomp=1
                   velmaterial=local_vel(1)
-                 else if ((local_incomp.eq.0).and. &
-                          (interp_vel_increment_from_cell.eq.1)) then
+                 else if (local_incomp.eq.0) then
                   velcomp=dir+1
                   velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
                  else
                   print *,"local_incomp or "
                   print *,"interp_vel_increment_from_cell invalid"
                   stop
-                 endif
+                 endif 
+                 ! called after advection to update u^{advect,MAC}
                 else if (operation_flag.eq.11) then ! cell diff,MAC -> MAC
                  if (face_flag.ne.1) then
                   print *,"face_flag invalid"
@@ -13761,9 +13765,11 @@ stop
                  if ((local_incomp.eq.1).or. &
                      (interp_vel_increment_from_cell.eq.0)) then
                   velcomp=1
-                  velmaterial=local_vel(1)
+                  velmaterial=local_vel(1) ! UMAC^{ADVECT}
                  else if ((local_incomp.eq.0).and. &
                           (interp_vel_increment_from_cell.eq.1)) then
+                      ! UMAC^{ADVECT}=UMAC^n + 
+                      !   I_{CELL}^{MAC} (U_CELL^{ADVECT}-U_CELL^{n})
                   velcomp=dir+1
                   velmaterial=local_vel_old(1)+vel(D_DECL(ic,jc,kc),velcomp)
                  else

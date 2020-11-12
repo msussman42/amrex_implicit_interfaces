@@ -97,6 +97,7 @@ stop
        REAL_T :: D_MASS
        REAL_T :: den_G
        INTEGER_T :: iprobe_vapor
+       INTEGER_T, pointer :: material_type_evap(:)
        REAL_T, pointer :: thermal_k(:)
       end type TSAT_MASS_FRAC_parm_type
 
@@ -2802,7 +2803,7 @@ stop
            massfrac_parm(ispec)=Y_gamma
           enddo
 
-          imattype=fort_material_type(im_probe)
+          imattype=TSAT_Y_PARMS%material_type_evap(im_probe)
           call INTERNAL_material(density_probe,massfrac_parm, &
             Tvapor_probe,internal_energy,imattype,im_probe)
           call EOS_material(density_probe,massfrac_parm,internal_energy, &
@@ -6774,7 +6775,7 @@ stop
        distribute_from_target, &
        mass_fraction_id, &
        species_evaporation_density, &
-       FIX ME ADD material_type_evap here.
+       material_type_evap, &
        molar_mass, &
        species_molar_mass, &
        use_supermesh, &
@@ -6866,6 +6867,7 @@ stop
       INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
+      INTEGER_T, intent(in), target :: material_type_evap(nmat)
       REAL_T, intent(in) :: molar_mass(nmat)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
@@ -8352,6 +8354,7 @@ stop
                     TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
                     TSAT_Y_PARMS%thermal_k=>thermal_k
                     TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
+                    TSAT_Y_PARMS%material_type_evap=>material_type_evap
 
                     if (hardwire_flag(ireverse).eq.0) then
 
