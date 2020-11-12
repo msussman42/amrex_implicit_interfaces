@@ -509,6 +509,9 @@ int  NavierStokes::NUM_STATE_TYPE=AMREX_SPACEDIM+5;
 // 1=velocity stored at faces
 int  NavierStokes::face_flag=0;
 
+int  NavierStokes::interp_vel_increment_from_cell=0;
+Real NavierStokes::weight_interp_presgrad_increment_from_face=0.0; 
+
 int  NavierStokes::disable_advection=0;
 int  NavierStokes::disable_pressure_solve=0;
 
@@ -3532,6 +3535,22 @@ NavierStokes::read_params ()
     } else
      amrex::Error("face_flag invalid 1");
 
+    pp.query("interp_vel_increment_from_cell",
+       interp_vel_increment_from_cell);
+    if ((interp_vel_increment_from_cell==0)||
+        (interp_vel_increment_from_cell==1)) {
+     // do nothing
+    } else
+     amrex::Error("interp_vel_increment_from_cell invalid");
+
+    pp.query("weight_interp_presgrad_increment_from_face",
+       weight_interp_presgrad_increment_from_face);
+    if ((weight_interp_presgrad_increment_from_face>=0.0)&&
+        (weight_interp_presgrad_increment_from_face<=1.0)) {
+     // do nothing
+    } else
+     amrex::Error("weight_interp_presgrad_increment_from_face invalid");
+
     pp.query("disable_advection",disable_advection);
 
     if ((disable_advection==0)||(disable_advection==1)) {
@@ -4236,6 +4255,10 @@ NavierStokes::read_params ()
      std::cout << "temperatureface_flag= " << temperatureface_flag << '\n';
      std::cout << "truncate_thickness= " << truncate_thickness << '\n';
      std::cout << "face_flag= " << face_flag << '\n';
+     std::cout << "interp_vel_increment_from_cell= " << 
+       interp_vel_increment_from_cell << '\n';
+     std::cout << "weight_interp_presgrad_increment_from_face= " << 
+       weight_interp_presgrad_increment_from_face << '\n';
      std::cout << "disable_advection= " << disable_advection << '\n';
      std::cout << "disable_pressure_solve= " << disable_pressure_solve << '\n';
      std::cout << "nparts (im_solid_map.size())= " << 
@@ -4625,7 +4648,7 @@ NavierStokes::read_params ()
 
     if (some_materials_compressible()==1) {
      if (num_divu_outer_sweeps<2)
-      amrex::Warning("WARNING:divu_outer_sweeps>=2 for comp materials");
+      amrex::Error("num_divu_outer_sweeps>=2 for comp materials");
      if (face_flag==0) {
       if ((make_interface_incomp==0)||
           (make_interface_incomp==1)||
