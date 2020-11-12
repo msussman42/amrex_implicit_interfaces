@@ -7046,7 +7046,42 @@ stop
             stop
            endif 
           else
-           print *,"is_solid_face invalid 2 ",is_solid_face
+           print *,"in FORT_INIT_PHYSICS_VARS"
+           print *,"is_solid_face invalid(2) is_solid_face= ",is_solid_face
+           print *,"tid=",tid
+           print *,"isweep=",isweep
+           print *,"curv_index=",curv_index
+           print *,"pforce_index=",pforce_index
+           print *,"faceden_index=",faceden_index
+           print *,"facecut_index=",facecut_index
+           print *,"massface_index=",massface_index
+           print *,"vofface_index=",vofface_index
+           print *,"ncphys=",ncphys
+           print *,"solidheat_flag=",solidheat_flag
+           print *,"time=",time
+           print *,"project_option=",project_option
+           print *,"nten=",nten
+           print *,"nmat=",nmat
+           print *,"nparts=",nparts
+           print *,"nparts_def=",nparts_def
+           print *,"num_curv=",num_curv
+           print *,"level=",level
+           print *,"finest_level=",finest_level
+           do im=1,nmat
+            print *,"im,FSI_flag(im) ",im,FSI_flag(im)
+           enddo
+           print *,"is_solid_face ",is_solid_face
+           print *,"is_prescribed_face ",is_prescribed_face
+           print *,"partid_solid ",partid_solid
+           print *,"partid_prescribed ",partid_prescribed
+           print *,"im_solid_valid ",im_solid_valid
+           print *,"im_prescribed_valid ",im_prescribed_valid
+           print *,"im_solid ",im_solid
+           print *,"im_prescribed ",im_prescribed
+           print *,"predict_face_afrac_solid ",predict_face_afrac_solid
+           print *,"predict_face_afrac_prescribed ", &
+                   predict_face_afrac_prescribed
+
            stop
           endif
          else if (is_prescribed_face.eq.0) then
