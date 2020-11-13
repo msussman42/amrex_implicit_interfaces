@@ -558,6 +558,8 @@ int  NavierStokes::interp_vel_increment_from_cell=0;
 //
 Real NavierStokes::weight_interp_presgrad_increment_from_face=0.0; 
 
+Vector<Real> NavierStokes::compressible_dt_factor; 
+
 int  NavierStokes::disable_advection=0;
 int  NavierStokes::disable_pressure_solve=0;
 
@@ -3603,6 +3605,22 @@ NavierStokes::read_params ()
     } else
      amrex::Error("weight_interp_presgrad_increment_from_face invalid");
 
+    compressible_dt_factor.resize(nmat);
+    for (int i=0;i<nmat;i++) {
+     compressible_dt_factor[i]=1.0;
+    }
+
+    pp.queryarr("compressible_dt_factor",
+       compressible_dt_factor);
+
+    for (int i=0;i<nmat;i++) {
+     if ((compressible_dt_factor[i]>=1.0)&&
+         (compressible_dt_factor[i]<=1.0e+12)) {
+      // do nothing
+     } else
+      amrex::Error("compressible_dt_factor invalid");
+    }
+
     pp.query("disable_advection",disable_advection);
 
     if ((disable_advection==0)||(disable_advection==1)) {
@@ -4313,6 +4331,12 @@ NavierStokes::read_params ()
        interp_vel_increment_from_cell << '\n';
      std::cout << "weight_interp_presgrad_increment_from_face= " << 
        weight_interp_presgrad_increment_from_face << '\n';
+
+     for (int i=0;i<nmat;i++) {
+      std::cout << "i= " << i << " compressible_dt_factor= " <<
+        compressible_dt_factor[i] << '\n';
+     }
+
      std::cout << "disable_advection= " << disable_advection << '\n';
      std::cout << "disable_pressure_solve= " << disable_pressure_solve << '\n';
      std::cout << "nparts (im_solid_map.size())= " << 
