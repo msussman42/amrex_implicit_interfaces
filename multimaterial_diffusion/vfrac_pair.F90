@@ -2327,6 +2327,11 @@ contains
           enddo ! im2_face
           enddo ! im1_face
 
+           !   --------------
+           !   |     |.     |
+           !   |     |      |
+           !   |   . |      |
+           !   --------------
           if (operator_external.eq.1) then ! simple method
            len_total=abs(xoutside(dir_main)-xinside(dir_main))
            if (len_total.gt.zero) then
@@ -2345,6 +2350,19 @@ contains
                endif
               enddo
              else
+              print *,"gap_alarm cutoff is 0.1"
+
+              print *,"exterior flux"
+              print *,"len_inside=",len_inside
+              print *,"len_outside=",len_outside
+              print *,"len_total=",len_total
+              print *,"abs(len_inside+len_outside-len_total) ", &
+                 abs(len_inside+len_outside-len_total)
+              print *,"dir_main=",dir_main
+              print *,"xinside(dir_main)= ",xinside(dir_main)
+              print *,"xoutside(dir_main)= ",xoutside(dir_main)
+              print *,"xface(dir_main)= ",xface(dir_main)
+              print *,"VOFTOL=",VOFTOL
               print *,"len_inside,len_outside or len_total invalid"
               stop
              endif
