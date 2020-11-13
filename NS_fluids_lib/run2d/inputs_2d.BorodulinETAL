@@ -154,6 +154,7 @@ ns.temperature_primitive_variable=1 1 1 1
 # case 2: velocity 0<t<1.28 is about u=0.05 dx/u=0.125
 #ns.fixed_dt	  = 0.08     # case 1 0.08 is coarsest
 #ns.fixed_dt	  = 0.032    # case 2 0.032 is coarsest
+ns.fixed_dt	  = 0.01    
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   # 0 for drop 1 for flat surface
