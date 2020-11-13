@@ -558,6 +558,8 @@ int  NavierStokes::interp_vel_increment_from_cell=0;
 //
 Real NavierStokes::weight_interp_presgrad_increment_from_face=0.0; 
 
+// TODO: if fixed_dt>0.0, then automatically reduce the surface tension
+// coefficient, truncated displacement variables where necessary, etc.
 Vector<Real> NavierStokes::compressible_dt_factor; 
 
 int  NavierStokes::disable_advection=0;
