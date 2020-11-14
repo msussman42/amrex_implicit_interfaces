@@ -7207,7 +7207,7 @@ end subroutine volume_sanity_check
         stop
       endif
       do dir=1,sdim
-        centroid(dir)=centroid(dir)/volume
+       centroid(dir)=centroid(dir)/volume
       enddo
 
       return
@@ -12789,6 +12789,8 @@ contains
       INTEGER_T tessellate
       INTEGER_T is_rigid_local(nmat)
 
+      INTEGER_T nhalf_box
+
       INTEGER_T tid
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
@@ -12856,14 +12858,16 @@ contains
        stop
       endif
 
-      if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (continuous_mof.eq.5)) then
-       ! do nothing
+      if (continuous_mof.eq.2) then
+       nhalf_box=3
+      else if ((continuous_mof.eq.0).or. &
+               (continuous_mof.eq.5)) then
+       nhalf_box=1
       else
        print *,"continuous_mof invalid"
        stop
       endif
+
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
        print *,"nmat invalid multimaterial mof"
        print *,"nmat= ",nmat
@@ -12987,7 +12991,9 @@ contains
         ! if F<eps or F>1-eps, then moments and vfracs are truncated.
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
-      call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,sdim,6)
+      call make_vfrac_sum_ok_base( &
+        xsten0,nhalf0,nhalf_box,bfact,dx, &
+        tessellate,mofdata,nmat,sdim,6)
 
        ! clear flag for all nmat materials.
        ! vfrac,centroid,order,slope,intercept x nmat
@@ -13903,6 +13909,8 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine make_vfrac_sum_ok_base( &
+        xsten,nhalf,nhalf_box, &
+        bfact,dx,
         tessellate, &
         mofdata,nmat, &
         sdim,errorid)
@@ -13912,14 +13920,35 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tessellate,nmat,sdim,errorid
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: nhalf,nhalf_box
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
+      REAL_T, intent(in) :: dx(sdim)
+      INTEGER_T, intent(in) :: tessellate,nmat,errorid
       REAL_T, intent(inout) :: mofdata(nmat*ngeom_recon)
 
       INTEGER_T im,dir,vofcomp
       REAL_T voffluid,vofsolid,vofsolid_max
       INTEGER_T im_solid_max
       INTEGER_T is_rigid_local(nmat)
+      REAL_T volcell
+      REAL_T cencell(sdim)
 
+      if ((nhalf.ge.1).and. &
+          (nhalf_box.le.nhalf).and. &
+          ((nhalf_box.eq.1).or.(nhalf_box.eq.3))) then
+       ! do nothing
+      else
+       print *,"nhalf or nhalf_box invalid"
+       stop
+      endif
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid"
+       stop
+      endif
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
@@ -13949,6 +13978,15 @@ contains
       vofsolid=zero
       vofsolid_max=zero
       im_solid_max=0
+
+      if (nhalf_box.eq.1) then
+       call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,sdim)
+      else if (nhalf_box.eq.3) then
+       call Box_volume_super(bfact,dx,xsten,nhalf,volcell,cencell,sdim)
+      else
+       print *,"nhalf_box invalid"
+       stop
+      endif
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
@@ -14028,12 +14066,48 @@ contains
        endif
       enddo  ! im=1..nmat
 
+      do im=1,nmat
+       vofcomp=(im-1)*ngeom_recon+1
+       if ((mofdata(vofcomp).eq.zero).or. &
+           (mofdata(vofcomp).eq.one)) then
+        do dir=1,sdim
+         mofdata(vofcomp+dir)=zero
+        enddo
+       else if ((mofdata(vofcomp).gt.zero).and. &
+                (mofdata(vofcomp).lt.one)) then
+        do dir=1,sdim
+         if (mofdata(vofcomp+dir)+cencell(dir).le. &
+             xsten(-nhalf_box,dir)) then
+          mofdata(vofcomp+dir)=xsten(-nhalf_box,dir)-cencell(dir)+ &
+            CENTOL*dx(dir)
+         else if (mofdata(vofcomp+dir)+cencell(dir).ge. &
+                  xsten(nhalf_box,dir)) then
+          mofdata(vofcomp+dir)=xsten(nhalf_box,dir)-cencell(dir)- &
+            CENTOL*dx(dir)
+         else if ((mofdata(vofcomp+dir)+cencell(dir).gt. &
+                   xsten(-nhalf_box,dir)).and. &
+                  (mofdata(vofcomp+dir)+cencell(dir).lt. &
+                   xsten(nhalf_box,dir))) then
+          ! do nothing
+         else
+          print *,"mofdata(vofcomp+dir) invalid"
+          stop
+         endif
+        enddo !dir=1..sdim
+       else
+        print *,"mofdata(vofcomp) invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
+
       return
       end subroutine make_vfrac_sum_ok_base
 
 
 ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine make_vfrac_sum_ok_copy( &
+        xsten,nhalf,nhalf_box, &
+        bfact,dx,
         tessellate, &
         mofdata,mofdatavalid,nmat, &
         sdim,errorid)
@@ -14043,7 +14117,13 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tessellate,nmat,sdim,errorid
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: nhalf,nhalf_box
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
+      REAL_T, intent(in) :: dx(sdim)
+
+      INTEGER_T, intent(in) :: tessellate,nmat,errorid
       REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
       REAL_T, intent(out) :: mofdatavalid(nmat*ngeom_recon)
       INTEGER_T im
@@ -14051,6 +14131,21 @@ contains
       INTEGER_T vofcomp
       REAL_T voffluid,vofsolid,vof_test
       INTEGER_T is_rigid_local(nmat)
+
+      if ((nhalf.ge.1).and. &
+          (nhalf_box.le.nhalf).and. &
+          ((nhalf_box.eq.1).or.(nhalf_box.eq.3))) then
+       ! do nothing
+      else
+       print *,"nhalf or nhalf_box invalid"
+       stop
+      endif
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid"
+       stop
+      endif
 
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
@@ -14121,6 +14216,8 @@ contains
       endif
 
       call make_vfrac_sum_ok_base( &
+       xsten,nhalf,nhalf_box, &
+       bfact,dx, &
        tessellate,mofdatavalid,nmat, &
        sdim,errorid)
 
@@ -14354,6 +14451,9 @@ contains
       INTEGER_T tessellate_local
       INTEGER_T sanity_check
       INTEGER_T is_rigid_local(nmat)
+      INTEGER_T nhalf_box
+
+      nhalf_box=1
 
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
@@ -14412,7 +14512,10 @@ contains
 
        ! sum Frigid <=1
        ! sum Ffluid = 1
-      call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,sdim,1)
+      call make_vfrac_sum_ok_copy( &
+        xsten0,nhalf0,nhalf_box, &
+        bfact,dx, &
+        tessellate,mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -15547,8 +15650,11 @@ contains
 
       REAL_T nrecon(sdim)
       REAL_T intercept
+      INTEGER_T nhalf_box
 
       nhalf_thin=1
+
+      nhalf_box=1
 
       if (ngeom_recon.eq.2*sdim+3) then
        ! do nothing
@@ -15632,10 +15738,16 @@ contains
                                    xsten0_minus(1,dir_plus))
 
       tessellate=0  ! do not override "is_rigid"
-      call make_vfrac_sum_ok_copy(tessellate, &
+      call make_vfrac_sum_ok_copy( &
+        xsten0_plus,nhalf0,nhalf_box, &
+        bfact,dx, &
+        tessellate, &
         mofdata_plus,mofdatavalid_plus, &
         nmat,sdim,3000)
-      call make_vfrac_sum_ok_copy(tessellate, &
+      call make_vfrac_sum_ok_copy( &
+        xsten0_minus,nhalf0,nhalf_box, &
+        bfact,dx, &
+        tessellate, &
         mofdata_minus,mofdatavalid_minus, &
         nmat,sdim,3000)
 
@@ -16303,6 +16415,9 @@ contains
       INTEGER_T tessellate_local
       INTEGER_T sanity_check
       INTEGER_T is_rigid_local(nmat)
+      INTEGER_T nhalf_box
+
+      nhalf_box=1
 
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
@@ -16373,7 +16488,10 @@ contains
 
        ! sum Frigid <=1
        ! sum Ffluid = 1
-      call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,sdim,1)
+      call make_vfrac_sum_ok_copy( &
+       xsten0,nhalf0,nhalf_box, &
+       bfact,dx, &
+       tessellate,mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -17199,6 +17317,9 @@ contains
       INTEGER_T tessellate_local
       INTEGER_T sanity_check
       INTEGER_T is_rigid_local(nmat)
+      INTEGER_T nhalf_box
+
+      nhalf_box=1
 
       tessellate_local=0
 
@@ -17269,8 +17390,11 @@ contains
 
        ! sum Frigid <=1
        ! sum Ffluid = 1
-      call make_vfrac_sum_ok_copy(tessellate_local, &
-              mofdata,mofdatavalid,nmat,sdim,1)
+      call make_vfrac_sum_ok_copy( &
+        xsten0,nhalf0,nhalf_box, &
+        bfact,dx, &
+        tessellate_local, &
+        mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -18223,6 +18347,9 @@ contains
       INTEGER_T imcrit,im_solid
       INTEGER_T sanity_check
       INTEGER_T is_rigid_local(nmat)
+      INTEGER_T nhalf_box
+
+      nhalf_box=1
 
       tessellate=0
 
@@ -18276,7 +18403,10 @@ contains
  
        ! sum Frigid <=1
        ! sum Ffluid = 1
-      call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,sdim,1)
+      call make_vfrac_sum_ok_base( &
+       xsten0,nhalf0,nhalf_box, &
+       bfact,dx, &
+       tessellate,mofdata,nmat,sdim,1)
 
       fluid_vfrac_sum=zero
       solid_vfrac_sum=zero
@@ -19231,6 +19361,9 @@ contains
        INTEGER_T im,vofcomp,FSI_exclude,irank,testflag,dir
        INTEGER_T is_rigid_local(nmat)
        INTEGER_T tessellate
+       INTEGER_T nhalf_box
+
+       nhalf_box=1
 
        tessellate=0
 
@@ -19277,8 +19410,11 @@ contains
 
         ! sum F_fluid=1  
         ! sum F_solid<=1 
-       call make_vfrac_sum_ok_copy(tessellate, &
-               mofdata,mofdatavalid,nmat,sdim,3)
+       call make_vfrac_sum_ok_copy( &
+         xsten0,nhalf0,nhalf_box, &
+         bfact,dx, &
+         tessellate, &
+         mofdata,mofdatavalid,nmat,sdim,3)
 
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
@@ -19409,6 +19545,9 @@ contains
       REAL_T xgrid_minus2(sdim)
       INTEGER_T tessellate
       INTEGER_T is_rigid_local(nmat)
+      INTEGER_T nhalf_box
+
+      nhalf_box=1
 
       tessellate=0
 
@@ -19458,7 +19597,10 @@ contains
 
        ! sum F_fluid = 1
        ! sum F_solid <= 1
-      call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,sdim,30)
+      call make_vfrac_sum_ok_copy( &
+        xsten_recon,nhalf_recon,nhalf_box, &
+        bfact,dx, &
+        tessellate,mofdata,mofdatavalid,nmat,sdim,30)
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
@@ -19960,9 +20102,11 @@ contains
       REAL_T vfrac_data(nmat)
       INTEGER_T vfrac_checked(nmat)
       INTEGER_T is_rigid_local(nmat)
+      INTEGER_T nhalf_box
 
 #include "mofdata.H"
 
+      nhalf_box=1
 
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
@@ -19995,7 +20139,10 @@ contains
       endif
 
        ! sum voffluid=1 ,  sum vofsolid <= 1
-      call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,sdim,300)
+      call make_vfrac_sum_ok_copy( &
+        xsten0,nhalf0,nhalf_box, &
+        bfact,dx, &
+        tessellate,mofdata,mofdatavalid,nmat,sdim,300)
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
