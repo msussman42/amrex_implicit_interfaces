@@ -2474,6 +2474,7 @@ stop
          distribute_from_target, &
          mass_fraction_id, &
          species_evaporation_density, &
+         fort_material_type, &
          molar_mass, &
          species_molar_mass, &
          use_supermesh, &  ! NEW(pass this to CONVERTMATERIAL too)

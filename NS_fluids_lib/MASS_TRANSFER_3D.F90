@@ -3671,6 +3671,7 @@ stop
       REAL_T intercept_dest
       REAL_T LS_dest_old,LS_dest_new
       REAL_T mass_frac_limit
+      INTEGER_T nhalf_box
 
 
       if ((tid.lt.0).or. &
@@ -3685,6 +3686,7 @@ stop
        stop
       endif
 
+      nhalf_box=1
       nhalf=3
       nhalf0=1
 
@@ -6176,7 +6178,41 @@ stop
              snew(D_DECL(i,j,k), &
                  base_index+nmat*num_state_material+ &
                  (im_probe-1)*ngeom_raw+1)=newvfrac(im_probe)
+
             enddo ! iprobe=1,2
+
+            base_index=num_materials_vel*(SDIM+1)+ &
+             nmat*num_state_material
+
+            do u_im=1,nmat*ngeom_recon
+             mofdata(u_im)=zero
+            enddo
+
+            do u_im=1,nmat
+             vofcomp_recon=(u_im-1)*ngeom_recon+1
+             vofcomp_raw=(u_im-1)*ngeom_raw+1
+             do dir=0,SDIM
+              mofdata(vofcomp_recon+dir)= &
+                snew(D_DECL(i,j,k),base_index+vofcomp_raw+dir)
+             enddo
+            enddo ! u_im=1..nmat
+
+            ! sum of F_fluid=1
+            ! sum of F_rigid<=1
+            tessellate=0
+            call make_vfrac_sum_ok_base( &
+              u_xsten_updatecell,nhalf,nhalf_box, &
+              bfact,dx, &
+              tessellate,mofdata,nmat,SDIM,106)
+
+            do u_im=1,nmat
+             vofcomp_recon=(u_im-1)*ngeom_recon+1
+             vofcomp_raw=(u_im-1)*ngeom_raw+1
+             do dir=0,SDIM
+              snew(D_DECL(i,j,k),base_index+vofcomp_raw+dir)= &
+                 mofdata(vofcomp_recon+dir)
+             enddo
+            enddo ! u_im=1..nmat
 
             delta_mass(im_source)=delta_mass(im_source)+ &
              volgrid*(newvfrac(im_source)-oldvfrac(im_source))
