@@ -23605,6 +23605,9 @@ end subroutine RatePhaseChange
       REAL_T cen_dst(SDIM)
       REAL_T vfluid_sum
       REAL_T VOF_source,VOF_dest
+      INTEGER_T nhalf_box
+
+      nhalf_box=1
 
       nhalf=3
       nmax=POLYGON_LIST_MAX 
@@ -23810,7 +23813,11 @@ end subroutine RatePhaseChange
          enddo
         enddo  ! im_local=1..nmat
 
-        call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,204)
+        call make_vfrac_sum_ok_base( &
+          xsten,nhalf,nhalf_box, &
+          nucleate_in%bfact, &
+          nucleate_in%dx, &
+          tessellate,mofdata,nmat,SDIM,204)
 
         call multimaterial_MOF( &
          nucleate_in%bfact, &
@@ -28896,6 +28903,8 @@ end subroutine initialize2d
        INTEGER_T tessellate
 
        INTEGER_T nhalf
+       INTEGER_T nhalf_box
+
        REAL_T xsten(-3:3,SDIM)
        INTEGER_T tid,nmax
 #ifdef _OPENMP
@@ -28920,6 +28929,8 @@ end subroutine initialize2d
        tessellate=0
 
        nhalf=3
+       nhalf_box=1
+
        if (num_state_base.ne.2) then
         print *,"num_state_base invalid"
         stop
@@ -29075,7 +29086,10 @@ end subroutine initialize2d
 
           enddo  ! im
 
-          call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,204)
+          call make_vfrac_sum_ok_base( &
+            xsten,nhalf,nhalf_box, &
+            bfact,dx, &
+            tessellate,mofdata,nmat,SDIM,204)
 
           call multimaterial_MOF( &
            bfact,dx,xsten,nhalf, &
@@ -31345,6 +31359,9 @@ end subroutine initialize2d
        INTEGER_T tessellate
        INTEGER_T bcflag
        INTEGER_T from_boundary_hydrostatic
+       INTEGER_T nhalf_box
+
+       nhalf_box=1
 
        from_boundary_hydrostatic=0
 
@@ -32499,7 +32516,11 @@ end subroutine initialize2d
         enddo  ! im=1..nmat
 
         ! sum F_fluid=1  sum F_solid <= 1
-        call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,201)
+        call make_vfrac_sum_ok_base( &
+          xsten,nhalf,nhalf_box, &
+          bfact,dx, &
+          tessellate,mofdata,nmat,SDIM,201)
+
         do im=1,nmat
          vofcomp_recon=(im-1)*ngeom_recon+1
          voflist(im)=mofdata(vofcomp_recon)

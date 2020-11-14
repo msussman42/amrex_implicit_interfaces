@@ -2853,6 +2853,9 @@ stop
       REAL_T X1(SDIM)
       REAL_T X2(SDIM)
       REAL_T XSTRIP(SDIM)
+      INTEGER_T nhalf_box
+
+      nhalf_box=1
   
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -3071,7 +3074,10 @@ stop
         else if (im_crit.eq.0) then
 
          ! sum F_fluid=1  sum F_solid<=1
-         call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid, &
+         call make_vfrac_sum_ok_copy( &
+           xsten,nhalf,nhalf_box, &
+           bfact,dx, &
+           tessellate,mofdata,mofdatavalid, &
            nmat,SDIM,3000)
 
          shapeflag=0
