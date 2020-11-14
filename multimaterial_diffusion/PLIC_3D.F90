@@ -156,12 +156,15 @@ stop
       REAL_T voflist(nmat)
       REAL_T voflist_stencil(nmat)
       REAL_T voflist_test
-      INTEGER_T mof_verbose,use_ls_data,nhalfbox
+      INTEGER_T mof_verbose,use_ls_data,nhalfbox_sten
       REAL_T dxmaxLS
       INTEGER_T debugslope
       INTEGER_T tessellate
+      INTEGER_T nhalf_box
 
 #include "mofdata.H"
+
+      nhalf_box=1
 
       tessellate=0
 
@@ -172,7 +175,7 @@ stop
 
       debugslope=0
       nhalf=3
-      nhalfbox=1
+      nhalfbox_sten=1
 
       if (bfact.lt.1) then
        print *,"bfact invalid170"
@@ -323,7 +326,11 @@ stop
 
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
-       call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,6)
+       nhalf_box=1
+       call make_vfrac_sum_ok_base( &
+         xsten,nhalf,nhalf_box, &
+         bfact,dx, &
+         tessellate,mofdata,nmat,SDIM,6)
 
        do im=1,nmat
         vofcomprecon=(im-1)*ngeom_recon+1
@@ -470,7 +477,7 @@ stop
          do i1=-1,1
          do j1=-1,1
          do k1=klosten,khisten
-          call CISBOX(xstenbox,nhalfbox, &
+          call CISBOX(xstenbox,nhalfbox_sten, &
            xlo,dx,i+i1,j+j1,k+k1, &
            bfact,level, &
            volsten,censten,SDIM)
@@ -495,7 +502,10 @@ stop
 
            ! sum of F_fluid=1
            ! sum of F_rigid<=1
-          call make_vfrac_sum_ok_base(tessellate,mofsten,nmat,SDIM,6)
+          nhalf_box=1
+          call make_vfrac_sum_ok_base( &
+            xstenbox,nhalfbox_sten,nhalf_box, &
+            bfact,dx,tessellate,mofsten,nmat,SDIM,6)
 
           do im=1,nmat
            vofcomprecon=(im-1)*ngeom_recon+1
@@ -696,6 +706,8 @@ stop
 
       return
       end subroutine FORT_SLOPERECON
+
+
 
 #if (STANDALONE==1)
       end module plic_cpp_module

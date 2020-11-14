@@ -1168,6 +1168,9 @@ contains
     real(kind=8)                :: LS
 
     integer                     :: is_processed(nmat)
+    integer :: nhalf_box
+
+    nhalf_box=1
 
     tessellate=1
 
@@ -1242,7 +1245,10 @@ contains
      ! do nothing, there are no internal faces
     else if (vcenter(im_crit).gt.zero) then
      ! normalize the volume fractions so that the sum is 1.
-     call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid,nmat,SDIM,3001)
+     call make_vfrac_sum_ok_copy( &
+       xsten,nhalf,nhalf_box, &
+       bfact,dx, &
+       tessellate,mofdata,mofdatavalid,nmat,SDIM,3001)
 
      do im=1,nmat
       is_processed(im)=0

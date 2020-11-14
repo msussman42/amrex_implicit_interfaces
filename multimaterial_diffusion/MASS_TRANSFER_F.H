@@ -141,6 +141,7 @@ extern "C"
     int* distribute_from_target,
     int* mass_fraction_id,
     Real* species_evaporation_density,
+    int* material_type_evap, 
     Real* molar_mass,
     Real* species_molar_mass,
     int* use_supermesh,

@@ -97,6 +97,7 @@ stop
        REAL_T :: D_MASS
        REAL_T :: den_G
        INTEGER_T :: iprobe_vapor
+       INTEGER_T, pointer :: material_type_evap(:)
        REAL_T, pointer :: thermal_k(:)
       end type TSAT_MASS_FRAC_parm_type
 
@@ -2802,7 +2803,7 @@ stop
            massfrac_parm(ispec)=Y_gamma
           enddo
 
-          imattype=fort_material_type(im_probe)
+          imattype=TSAT_Y_PARMS%material_type_evap(im_probe)
           call INTERNAL_material(density_probe,massfrac_parm, &
             Tvapor_probe,internal_energy,imattype,im_probe)
           call EOS_material(density_probe,massfrac_parm,internal_energy, &
@@ -3670,6 +3671,7 @@ stop
       REAL_T intercept_dest
       REAL_T LS_dest_old,LS_dest_new
       REAL_T mass_frac_limit
+      INTEGER_T nhalf_box
 
 
       if ((tid.lt.0).or. &
@@ -3684,6 +3686,7 @@ stop
        stop
       endif
 
+      nhalf_box=1
       nhalf=3
       nhalf0=1
 
@@ -6175,7 +6178,41 @@ stop
              snew(D_DECL(i,j,k), &
                  base_index+nmat*num_state_material+ &
                  (im_probe-1)*ngeom_raw+1)=newvfrac(im_probe)
+
             enddo ! iprobe=1,2
+
+            base_index=num_materials_vel*(SDIM+1)+ &
+             nmat*num_state_material
+
+            do u_im=1,nmat*ngeom_recon
+             mofdata(u_im)=zero
+            enddo
+
+            do u_im=1,nmat
+             vofcomp_recon=(u_im-1)*ngeom_recon+1
+             vofcomp_raw=(u_im-1)*ngeom_raw+1
+             do dir=0,SDIM
+              mofdata(vofcomp_recon+dir)= &
+                snew(D_DECL(i,j,k),base_index+vofcomp_raw+dir)
+             enddo
+            enddo ! u_im=1..nmat
+
+            ! sum of F_fluid=1
+            ! sum of F_rigid<=1
+            tessellate=0
+            call make_vfrac_sum_ok_base( &
+              u_xsten_updatecell,nhalf,nhalf_box, &
+              bfact,dx, &
+              tessellate,mofdata,nmat,SDIM,106)
+
+            do u_im=1,nmat
+             vofcomp_recon=(u_im-1)*ngeom_recon+1
+             vofcomp_raw=(u_im-1)*ngeom_raw+1
+             do dir=0,SDIM
+              snew(D_DECL(i,j,k),base_index+vofcomp_raw+dir)= &
+                 mofdata(vofcomp_recon+dir)
+             enddo
+            enddo ! u_im=1..nmat
 
             delta_mass(im_source)=delta_mass(im_source)+ &
              volgrid*(newvfrac(im_source)-oldvfrac(im_source))
@@ -6774,6 +6811,7 @@ stop
        distribute_from_target, &
        mass_fraction_id, &
        species_evaporation_density, &
+       material_type_evap, &
        molar_mass, &
        species_molar_mass, &
        use_supermesh, &
@@ -6865,6 +6903,7 @@ stop
       INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
+      INTEGER_T, intent(in), target :: material_type_evap(nmat)
       REAL_T, intent(in) :: molar_mass(nmat)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
@@ -8351,6 +8390,7 @@ stop
                     TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
                     TSAT_Y_PARMS%thermal_k=>thermal_k
                     TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
+                    TSAT_Y_PARMS%material_type_evap=>material_type_evap
 
                     if (hardwire_flag(ireverse).eq.0) then
 
