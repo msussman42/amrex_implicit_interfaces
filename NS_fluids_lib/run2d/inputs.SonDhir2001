@@ -204,6 +204,7 @@ ns.override_density=0 0 0 0
 # OCT 2018 (4 materials)
 # 49.995 degrees contact angle (Liquid-vapor-solid)
 # 90 degrees contact angle (Liquid-gas-solid)
+# Make the angle smaller to induce faster pinch-off?
 ns.tension=58.8e-3 58.8e-3 58.8e-3 0.0 96.6e-3 58.8e-3 
 # NOV 2018 (3 materials)
 #ns.tension=58.8e-3 58.8e-3 96.6e-3

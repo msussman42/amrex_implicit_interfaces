@@ -15028,6 +15028,12 @@ END SUBROUTINE Adist
                     (operation_flag.eq.10).or. &!unew^MAC,CELL->MAC
                     (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
                     (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
+
+            if (operation_flag.eq.10) then
+             print *,"this option is not used"
+             stop
+            endif
+
             if (nc.eq.1) then
              if (scomp.eq.dir) then
               local_data_side(side)=vel(D_DECL(ic,jc,kc),scomp)
@@ -17762,7 +17768,7 @@ END SUBROUTINE Adist
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scomp+nc-1)
          else if (operation_flag.eq.6) then ! advection
           if ((nc.ge.1).and.(nc.le.SDIM)) then
-           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u umac or u
+           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u * umac or u
           else if (nc.eq.SDIM+1) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! rho 
           else if (nc.eq.SDIM+2) then
