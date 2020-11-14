@@ -13910,7 +13910,7 @@ contains
 ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine make_vfrac_sum_ok_base( &
         xsten,nhalf,nhalf_box, &
-        bfact,dx,
+        bfact,dx, &
         tessellate, &
         mofdata,nmat, &
         sdim,errorid)
@@ -14107,7 +14107,7 @@ contains
 ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine make_vfrac_sum_ok_copy( &
         xsten,nhalf,nhalf_box, &
-        bfact,dx,
+        bfact,dx, &
         tessellate, &
         mofdata,mofdatavalid,nmat, &
         sdim,errorid)

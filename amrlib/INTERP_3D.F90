@@ -166,6 +166,7 @@ stop
       INTEGER_T nhalfgrid
       INTEGER_T n_overlap
       INTEGER_T tessellate
+      INTEGER_T nhalf_box
 
       INTEGER_T tid
 #ifdef _OPENMP
@@ -182,6 +183,8 @@ stop
       endif 
 
       tessellate=0
+
+      nhalf_box=1
 
       nhalf=3
       nhalfgrid=1
@@ -255,7 +258,10 @@ stop
        call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
 
         ! sum F_fluid=1  sum F_solid <= 1
-       call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,304)
+       call make_vfrac_sum_ok_base( &
+         xsten,nhalf,nhalf_box, &
+         bfact_coarse,dxc, &
+         tessellate,mofdata,nmat,SDIM,304)
 
        call multimaterial_MOF( &
          bfact_coarse,dxc,xsten,nhalf, &
@@ -793,6 +799,8 @@ stop
       REAL_T multi_centroidA(nmat,SDIM)
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
 
+      INTEGER_T nhalf_box
+
       INTEGER_T tid
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
@@ -809,6 +817,8 @@ stop
 
       nhalf=3
       nhalfgrid=1
+
+      nhalf_box=1
 
       tessellate=0
 
@@ -1045,7 +1055,10 @@ stop
          domlo,bfact_fine,dxf,nhalf)
 
         ! sum F_fluid=1  sum F_solid<=1
-       call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,304)
+       call make_vfrac_sum_ok_base( &
+         xstenfine,nhalf,nhalf_box, &
+         bfact_fine,dxf, &
+         tessellate,mofdata,nmat,SDIM,304)
 
        call multimaterial_MOF( &
          bfact_fine,dxf,xstenfine,nhalf, &

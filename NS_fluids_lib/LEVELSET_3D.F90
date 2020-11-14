@@ -2665,6 +2665,7 @@ stop
       INTEGER_T iten
       INTEGER_T nten_test
       INTEGER_T is_processed(nten)
+      INTEGER_T nhalf_box
       INTEGER_T caller_id
  
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -2683,6 +2684,8 @@ stop
       endif
 
       nhalf=3
+
+      nhalf_box=1
  
       nmax=POLYGON_LIST_MAX ! in: CELLFACEINIT
 
@@ -2807,7 +2810,10 @@ stop
         else if (im_crit.eq.0) then
 
          ! sum F_fluid=1  sum F_solid<=1
-         call make_vfrac_sum_ok_copy(tessellate,mofdata,mofdatavalid, &
+         call make_vfrac_sum_ok_copy( &
+           xsten,nhalf,nhalf_box, &
+           bfact,dx, &
+           tessellate,mofdata,mofdatavalid, &
            nmat,SDIM,3)
 
          shapeflag=0
@@ -15868,6 +15874,9 @@ stop
       REAL_T xSOLID_BULK(SDIM)
       REAL_T local_XPOS(SDIM)
       REAL_T local_mag
+      INTEGER_T nhalf_box
+
+      nhalf_box=1
 
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.eq.nten) then
@@ -16948,7 +16957,10 @@ stop
             ! sum of F_fluid=1
             ! sum of F_rigid<=1
             tessellate=0
-            call make_vfrac_sum_ok_base(tessellate,local_mof,nmat,SDIM,6)
+            call make_vfrac_sum_ok_base( &
+              xsten,nhalf,nhalf_box, &
+              bfact,dx, &
+              tessellate,local_mof,nmat,SDIM,6)
             continuous_mof_parm=0
             mof_verbose=0
 
@@ -17093,7 +17105,10 @@ stop
 
           ! sum of F_fluid=1
           ! sum of F_rigid<=1
-         call make_vfrac_sum_ok_base(tessellate,mofnew,nmat,SDIM,12)
+         call make_vfrac_sum_ok_base( &
+           xsten,nhalf,nhalf_box, &
+           bfact,dx, &
+           tessellate,mofnew,nmat,SDIM,12)
 
          do im=1,nmat*(1+SDIM)
           lsnew(D_DECL(i,j,k),im)=ls_hold(im)
@@ -17107,7 +17122,10 @@ stop
           print *,"i,j,k ",i,j,k
          endif
 
-         call make_vfrac_sum_ok_base(tessellate,mofnew,nmat,SDIM,13)
+         call make_vfrac_sum_ok_base( &
+           xsten,nhalf,nhalf_box, &
+           bfact,dx, &
+           tessellate,mofnew,nmat,SDIM,13)
         else
          print *,"renormalize only invalid"
          stop
@@ -17202,8 +17220,11 @@ stop
       INTEGER_T mask_test
       INTEGER_T FSI_exclude
       INTEGER_T tessellate
+      INTEGER_T nhalf_box
 
       tessellate=0
+
+      nhalf_box=1
 
       nhalf=3
  
@@ -17371,8 +17392,13 @@ stop
           stop
          endif
         enddo ! im=1...nmat
+
          ! sum F_fluid=1  sum F_solid <=1
-        call make_vfrac_sum_ok_base(tessellate,mofdata,nmat,SDIM,14)
+        call make_vfrac_sum_ok_base( &
+          xsten,nhalf,nhalf_box, &
+          bfact,dx, &
+          tessellate,mofdata,nmat,SDIM,14)
+
         do im=1,nmat
          vofcompraw=(im-1)*ngeom_raw+1
          vofcomprecon=(im-1)*ngeom_recon+1
