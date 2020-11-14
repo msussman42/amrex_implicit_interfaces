@@ -1897,6 +1897,7 @@ protected:
      // 0=velocity stored at cells  
      // 1=velocity stored at faces
     static int face_flag;
+    static int ignore_div_up; // def=0
     static int interp_vel_increment_from_cell; //def=0
     static Real weight_interp_presgrad_increment_from_face; //def=0.0
     static Vector<Real> compressible_dt_factor;  //def=1.0

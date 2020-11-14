@@ -1315,9 +1315,9 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)||
-     (project_option==13)||
-     (project_option==10)) {
+     (project_option==11)|| //FSI_material_exists (2nd project)
+     (project_option==13)|| //FSI_material_exists (1st project)
+     (project_option==10)) {//sync project prior to advection
   // do nothing
  } else
   amrex::Error("project_option invalid20");
@@ -1429,13 +1429,15 @@ void NavierStokes::apply_cell_pressure_gradient(
 
   // old velocity before application of pressure gradient.
  MultiFab* ustar;
+
  MultiFab* divup;
- if ((energyflag==0)||
-     (energyflag==1)) {
+ if ((energyflag==0)|| //do not update the energy
+     (energyflag==1)) {//update the energy
   ustar=getState(1,0,num_materials_vel*AMREX_SPACEDIM,cur_time_slab);
   divup=new MultiFab(grids,dmap,nsolveMM,0,
    MFInfo().SetTag("divup"),FArrayBoxFactory());
- } else if (energyflag==2) {
+  //get grad p,div(up) instead of \pm dt grad p/rho, -dt div(up)/rho
+ } else if (energyflag==2) { 
   debug_ngrow(idx_gpcell,0,101);
   debug_ngrow(idx_divup,0,101);
   if (localMF[idx_gpcell]->nComp()!=AMREX_SPACEDIM*num_materials_vel)
@@ -1930,7 +1932,7 @@ void NavierStokes::apply_cell_pressure_gradient(
   save_to_macvel_state(idx_umac);
   delete divup; // div(up) is discarded.
   delete ustar;
- } else if (energyflag==2) { // div(up) for space-time
+ } else if (energyflag==2) { // (grad p)_CELL, div(up) for space-time
   // do nothing
  } else
   amrex::Error("energyflag invalid");

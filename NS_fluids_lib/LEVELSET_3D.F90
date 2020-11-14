@@ -13744,6 +13744,7 @@ stop
                  ! interp_option==3
                  ! this is an obsolete option.
                 else if (operation_flag.eq.10) then ! cell,MAC -> MAC
+
                  print *,"this option is not used"
                  stop
 

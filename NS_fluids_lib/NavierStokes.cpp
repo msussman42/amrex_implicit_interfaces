@@ -519,6 +519,7 @@ int  NavierStokes::face_flag=0;
 //      and very well can lead to checkerboard instability)
 // 
 int  NavierStokes::interp_vel_increment_from_cell=0;
+int  NavierStokes::ignore_div_up=0;
 
 // Compressible algorithm for each time step:
 // k=0
@@ -3599,6 +3600,13 @@ NavierStokes::read_params ()
     } else
      amrex::Error("interp_vel_increment_from_cell invalid");
 
+    pp.query("ignore_div_up",ignore_div_up);
+    if ((ignore_div_up==0)||
+        (ignore_div_up==1)) {
+     // do nothing
+    } else
+     amrex::Error("ignore_div_up invalid");
+
     pp.query("weight_interp_presgrad_increment_from_face",
        weight_interp_presgrad_increment_from_face);
     if ((weight_interp_presgrad_increment_from_face>=0.0)&&
@@ -4331,6 +4339,7 @@ NavierStokes::read_params ()
      std::cout << "face_flag= " << face_flag << '\n';
      std::cout << "interp_vel_increment_from_cell= " << 
        interp_vel_increment_from_cell << '\n';
+     std::cout << "ignore_div_up= " << ignore_div_up << '\n';
      std::cout << "weight_interp_presgrad_increment_from_face= " << 
        weight_interp_presgrad_increment_from_face << '\n';
 

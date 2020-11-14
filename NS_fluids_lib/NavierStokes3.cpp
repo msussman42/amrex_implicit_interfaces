@@ -10936,11 +10936,11 @@ void NavierStokes::multiphase_project(int project_option) {
    int idx_divup=-1;
    int update_energy=0;
    if ((project_option==0)||
-       (project_option==13)) {
+       (project_option==13)) { //FSI_material_exists(1st project)
     update_energy=1;
-   } else if ((project_option==1)||
-  	      (project_option==10)||
-	      (project_option==11)) {
+   } else if ((project_option==1)||   //initial project
+  	      (project_option==10)||  //sync project prior to advection
+	      (project_option==11)) { //FSI_material_exists(2nd project)
     // do nothing
    } else 
     amrex::Error("project_option invalid");
@@ -11130,7 +11130,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  std::fflush(NULL);
 
-}  // subroutine multiphase_project
+}  // end subroutine multiphase_project
 
 
 void NavierStokes::diffusion_heatingALL(
