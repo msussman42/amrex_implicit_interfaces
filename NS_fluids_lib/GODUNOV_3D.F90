@@ -20953,6 +20953,16 @@ stop
            print *,"local_incomp invalid"
            stop
           endif
+
+          if (temperature_primitive_variable(im).eq.1) then
+           vol_target_local=volmat_depart_cor(im)
+          else if (temperature_primitive_variable(im).eq.0) then
+           ! do nothing
+          else
+           print *,"temperature_primitive_variable(im) invalid"
+           stop
+          endif
+
           ! if is_rigid(im), density=fort_denconst(im)
           ! if incompressible,
           !   if override_density=0,2 then density=fort_denconst(im)
@@ -23859,6 +23869,16 @@ stop
             print *,"local_incomp invalid"
             stop
            endif
+
+           if (temperature_primitive_variable(u_im).eq.1) then
+            vol_target_local=volmat_depart(u_im)
+           else if (temperature_primitive_variable(u_im).eq.0) then
+            ! do nothing
+           else
+            print *,"temperature_primitive_variable(u_im) invalid"
+            stop
+           endif
+
            ! if is_rigid(im), density=fort_denconst(im)
            ! if incompressible,
            !   if override_density=0,2 then density=fort_denconst(im)

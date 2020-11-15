@@ -1920,7 +1920,10 @@ protected:
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
     static Vector<int> les_model;
-    static Vector<int> temperature_primitive_variable; // def=0
+     // def=0 if shock_timestep=1, 1 otherwise
+     // applies to both density and temperature.
+    static Vector<int> temperature_primitive_variable; 
+
     static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
     static Vector<Real> shear_modulus; // elastic parameter
