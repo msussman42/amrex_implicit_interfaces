@@ -551,13 +551,13 @@ int  NavierStokes::ignore_div_up=0;
 //    (p^{n+2}-2 p^{n+1} + p^{n})/(c^2 dt^2) = div grad p^{n+2}
 // If face_flag==0 (i.e. cell velocity advected conservatively and has
 //    monotonic property):
-//  Then if weight_interp_presgrad_increment_from_face==0.0 then
+//  Then if interp_presgrad_increment_from_face==0 then
 //    UNEW^cell=I_{MAC}^{CELL} UNEW^MAC  (very dissipative)
-//  if weight_interp_presgrad_increment_from_face==1.0 then
+//  if interp_presgrad_increment_from_face==1 then
 //    UNEW^CELL=UNEW^* - dt grad (I_CELL^MAC p) /rho
 //    (we know this leads to checkerboard instability)
 //
-Real NavierStokes::weight_interp_presgrad_increment_from_face=0.0; 
+int NavierStokes::interp_presgrad_increment_from_face=1; 
 
 // TODO: if fixed_dt>0.0, then automatically reduce the surface tension
 // coefficient, truncated displacement variables where necessary, etc.
@@ -3607,13 +3607,13 @@ NavierStokes::read_params ()
     } else
      amrex::Error("ignore_div_up invalid");
 
-    pp.query("weight_interp_presgrad_increment_from_face",
-       weight_interp_presgrad_increment_from_face);
-    if ((weight_interp_presgrad_increment_from_face>=0.0)&&
-        (weight_interp_presgrad_increment_from_face<=1.0)) {
+    pp.query("interp_presgrad_increment_from_face",
+       interp_presgrad_increment_from_face);
+    if ((interp_presgrad_increment_from_face==0)||
+        (interp_presgrad_increment_from_face==1)) {
      // do nothing
     } else
-     amrex::Error("weight_interp_presgrad_increment_from_face invalid");
+     amrex::Error("interp_presgrad_increment_from_face invalid");
 
     compressible_dt_factor.resize(nmat);
     for (int i=0;i<nmat;i++) {
@@ -4340,8 +4340,8 @@ NavierStokes::read_params ()
      std::cout << "interp_vel_increment_from_cell= " << 
        interp_vel_increment_from_cell << '\n';
      std::cout << "ignore_div_up= " << ignore_div_up << '\n';
-     std::cout << "weight_interp_presgrad_increment_from_face= " << 
-       weight_interp_presgrad_increment_from_face << '\n';
+     std::cout << "interp_presgrad_increment_from_face= " << 
+       interp_presgrad_increment_from_face << '\n';
 
      for (int i=0;i<nmat;i++) {
       std::cout << "i= " << i << " compressible_dt_factor= " <<
@@ -13873,6 +13873,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &curv_index,
       &conservative_tension_force,
       &conservative_div_uu,
+      &interp_presgrad_increment_from_face,
+      &ignore_div_up,
       &pforce_index,
       &faceden_index,
       &icemask_index,
@@ -14081,6 +14083,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &curv_index,
       &conservative_tension_force,
       &conservative_div_uu,
+      &interp_presgrad_increment_from_face,
+      &ignore_div_up,
       &pforce_index,
       &faceden_index,
       &icemask_index,
