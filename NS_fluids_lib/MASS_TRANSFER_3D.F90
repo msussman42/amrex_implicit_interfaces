@@ -2059,8 +2059,9 @@ stop
       if ((T_I.ge.zero).and.(T_I.le.1.0D+99)) then
        ! do nothing
       else
-       print *,"T_I out of range"
+       print *,"T_I out of range in probe_interpolation"
        print *,"T_I= ",T_I
+       print *,"Y_I= ",Y_I
        stop
       endif
        ! 0=cannot do least squares interp or supermesh interp.
@@ -7005,6 +7006,7 @@ stop
       REAL_T local_hardwire_Y(0:1)
       INTEGER_T hardwire_flag(0:1)  ! =0 do not hardwire  =1 hardwire
       REAL_T local_Tsat(0:1)
+      REAL_T delta_Tsat
       REAL_T local_Tsat_base(0:1)
       REAL_T vel_phasechange(0:1)
       REAL_T, target :: LL(0:1)
@@ -7751,6 +7753,15 @@ stop
                   stop
                  endif
 
+                 if (local_Tsat(ireverse).ge.zero) then
+                  ! do nothing
+                 else
+                  print *,"local_Tsat(ireverse) invalid: ", &
+                          local_Tsat(ireverse)
+                  print *,"ireverse=",ireverse
+                  stop
+                 endif
+
                  dxprobe_source=zero
                  do dir=1,SDIM
                   dxprobe_source=dxprobe_source+(xdst(dir)-xsrc(dir))**2
@@ -7835,9 +7846,23 @@ stop
                   !
                  if (hardwire_flag(ireverse).eq.0) then
 
-                  local_Tsat(ireverse)=local_Tsat(ireverse)- &
-                   saturation_temp_curv(iten+ireverse*nten)* &
-                   CURV_OUT_I
+                  delta_Tsat= &
+                    saturation_temp_curv(iten+ireverse*nten)*CURV_OUT_I
+
+                  if (delta_Tsat.le.zero) then
+                   local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
+                  else if (delta_Tsat.ge.zero) then
+                   if (local_Tsat(ireverse).eq.zero) then
+                    ! do nothing
+                   else if (delta_Tsat/local_Tsat(ireverse).ge.0.9d0) then
+                    local_Tsat(ireverse)=0.1d0*local_Tsat(ireverse)
+                   else 
+                    local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
+                   endif
+                  else
+                   print *,"delta_Tsat is NaN"
+                   stop
+                  endif
 
                   Y_predict=one
 
@@ -8599,9 +8624,26 @@ stop
                   endif
 
                   if (hardwire_flag(ireverse).eq.0) then
-                   TSAT_correct=TSAT_correct- &
+
+                   delta_Tsat= &
                      saturation_temp_vel(iten+ireverse*nten)* &
                      (VEL_correct-VEL_predict)
+
+                   if (delta_Tsat.le.zero) then
+                    TSAT_correct=TSAT_correct-delta_Tsat
+                   else if (delta_Tsat.ge.zero) then
+                    if (TSAT_correct.eq.zero) then
+                     ! do nothing
+                    else if (delta_Tsat/TSAT_correct.ge.0.9d0) then
+                     TSAT_correct=0.1d0*TSAT_correct
+                    else 
+                     TSAT_correct=TSAT_correct-delta_Tsat
+                    endif
+                   else
+                    print *,"delta_Tsat is NaN"
+                    stop
+                   endif
+
                   else if (hardwire_flag(ireverse).eq.1) then
                    TSAT_correct=local_hardwire_T(ireverse)
                   else
