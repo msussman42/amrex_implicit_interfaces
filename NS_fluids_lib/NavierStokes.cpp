@@ -583,6 +583,7 @@ Vector<int> NavierStokes::les_model; // def=0
 // temperature_primitive_variable defaults to 0 (conservative) for
 // inviscid compressible materials, and 1 (non conservative) for other
 // materials.
+// if shock_timestep<>1, temperature_primitive_variable=1
 // E=u dot u/2 + e
 // e=cv T (compressible)   cp T (incompressible)
 // 0=> conservative advection of temperature:
@@ -3661,6 +3662,11 @@ NavierStokes::read_params ()
       temperature_primitive_variable[i]=1;
      } else if (material_type[i]==999) {
       temperature_primitive_variable[i]=1;
+     } else if ((shock_timestep[i]==0)||
+                (shock_timestep[i]==2)) {
+      temperature_primitive_variable[i]=1;
+     } else if (shock_timestep[i]==1) {
+      // do nothing
      } else if (ns_is_rigid(i)==0) {
       // do nothing
      } else if (visc_coef*viscconst[i]==0.0) {
@@ -3701,6 +3707,11 @@ NavierStokes::read_params ()
        amrex::Error("make temperature_primitive_variable=1 for incomp fluids");
       } else if (material_type[i]==999) {
        amrex::Error("make temperature_primitive_variable=1 for solids");
+      } else if ((shock_timestep[i]==0)||
+                 (shock_timestep[i]==2)) {
+       std::cout << "make temperature_primitive_variable=1 if \n";
+       std::cout << "shock_timestep=0 or 2\n";
+       amrex::Error("make temperature_primitive_variable=1 if big dt");
       } else if (ns_is_rigid(i)==0) {
        // do nothing
       } else if (visc_coef*viscconst[i]==0.0) {
@@ -3717,8 +3728,9 @@ NavierStokes::read_params ()
           (CTML_FSI_matC(i)==0)&&
           (visc_coef*viscconst[i]==0)&& 
           (material_type[i]>=1)&&
-          (material_type[i]<999)) {
-       amrex::Error("make temperature_primitive_variable=1 for inv gases");
+          (material_type[i]<999)&&
+          (shock_timestep[i]==1)) {
+       amrex::Error("make temperature_primitive_variable=1 for shock capt.");
       }
      } else {
       amrex::Error("temperature_primitive_variable[i] invalid");
