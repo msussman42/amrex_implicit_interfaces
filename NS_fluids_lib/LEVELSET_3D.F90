@@ -9616,6 +9616,8 @@ stop
        curv_index, &
        conservative_tension_force, &
        conservative_div_uu, &
+       interp_presgrad_increment_from_face, &
+       ignore_div_up, &
        pforce_index, &
        faceden_index, &
        icemask_index, &
@@ -9714,6 +9716,8 @@ stop
       INTEGER_T, intent(in) :: curv_index
       INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: conservative_div_uu
+      INTEGER_T, intent(in) :: interp_presgrad_increment_from_face
+      INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index
       INTEGER_T, intent(in) :: icemask_index
@@ -9800,7 +9804,8 @@ stop
       REAL_T DXMAXLS,cutoff
       INTEGER_T all_incomp
       INTEGER_T local_primitive,local_incomp
-      REAL_T Eforce,Eforce_primitive,cell_pressure
+      REAL_T Eforce_conservative,Eforce_primitive
+      REAL_T cell_pressure
       REAL_T KE_diff
 
       INTEGER_T cell_is_ice
@@ -10028,6 +10033,21 @@ stop
        print *,"conservative_tension_force invalid"
        stop
       endif
+      if ((ignore_div_up.eq.0).or. &
+          (ignore_div_up.eq.1)) then
+       ! do nothing
+      else
+       print *,"ignore_div_up invalid"
+       stop
+      endif
+      if ((interp_presgrad_increment_from_face.eq.0).or. &
+          (interp_presgrad_increment_from_face.eq.1)) then
+       ! do nothing
+      else
+       print *,"interp_presgrad_increment_from_face invalid"
+       stop
+      endif
+
       if ((conservative_div_uu.eq.0).or. &
           (conservative_div_uu.eq.1).or. &
           (conservative_div_uu.eq.2)) then
@@ -10337,9 +10357,9 @@ stop
         print *,"homflag invalid"
         stop
        endif
-       if ((energyflag.ne.0).and. &
-           (energyflag.ne.1).and. &
-           (energyflag.ne.2)) then
+       if ((energyflag.ne.0).and. & ! grad p but not div(up) for upd. st.
+           (energyflag.ne.1).and. & ! grad p and div(up) for update state
+           (energyflag.ne.2)) then ! grad p, div(up) for space time
         print *,"energyflag invalid"
         stop
        endif
@@ -11076,6 +11096,11 @@ stop
 
         enddo  ! dir=0..sdim-1
 
+        ! use_face_pres.eq.one   ! div(up) ok, not gp
+        ! use_face_pres.eq.two   ! div(up) not ok, gp ok
+        ! use_face_pres.eq.three ! div(up) and gp ok
+        ! note: use_face_pres<=1 at faces if face_flag=1
+        ! note: use_face_pres<=3 at faces if face_flag=0
         ! in: FORT_MAC_TO_CELL
        else if (operation_flag.eq.3) then ! (grad p)_CELL, div(up)
 
@@ -11106,6 +11131,32 @@ stop
             print *,"imattype or FSI_flag invalid"
             stop
            endif
+
+           if (ignore_div_up.eq.1) then
+            use_face_pres_cen=2 ! no div(up)
+           else if (ignore_div_up.eq.0) then
+            ! do nothing
+           else
+            print *,"ignore_div_up invalid"
+            stop
+           endif
+           
+           if (interp_presgrad_increment_from_face.eq.1) then
+            ! do nothing
+           else if (interp_presgrad_increment_from_face.eq.0) then
+            if (use_face_pres_cen.eq.3) then
+             use_face_pres_cen=1
+            else if (use_face_pres_cen.eq.2) then
+             use_face_pres_cen=0
+            else
+             print *,"use_face_pres_cen invalid"
+             stop
+            endif
+           else
+            print *,"interp_presgrad_increment_from_face invalid"
+            stop
+           endif
+
           else
            print *,"is_rigid(nmat,im) invalid"
            stop
@@ -11177,7 +11228,7 @@ stop
      
 
         im_vel=1
-        Eforce=zero
+        Eforce_conservative=zero
         Eforce_primitive=zero
         cell_pressure=pold(D_DECL(i,j,k),im_vel)
         if (cell_pressure.lt.zero) then
@@ -11331,6 +11382,9 @@ stop
           endif
          enddo ! im=1..nmat
 
+           ! use_face_pres.eq.one   ! div(up) ok, not gp
+           ! use_face_pres.eq.two   ! div(up) not ok, gp ok
+           ! use_face_pres.eq.three ! div(up) and gp ok
          if (use_face_pres(1).eq.use_face_pres(2)) then
           use_face_pres_combine=use_face_pres(1)
          else if ((use_face_pres(1).eq.three).or. &
@@ -11455,14 +11509,15 @@ stop
           ! do nothing
          else if (energyflag.eq.1) then
           im_vel=1
-          Eforce=Eforce- &
-           dt*(aface(2)*uface(2,im_vel)*pres_face(2)- &
-               aface(1)*uface(1,im_vel)*pres_face(1))/ &
-              (dencell*VOLTERM)
+
           if (local_incomp.eq.0) then
            Eforce_primitive=Eforce_primitive- &
             dt*(aface(2)*uface(2,im_vel)- &
                 aface(1)*uface(1,im_vel))*cell_pressure/ &
+               (dencell*VOLTERM)
+           Eforce_conservative=Eforce_conservative- &
+            dt*(aface(2)*uface(2,im_vel)*pres_face(2)- &
+                aface(1)*uface(1,im_vel)*pres_face(1))/ &
                (dencell*VOLTERM)
           else if (local_incomp.eq.1) then
            ! do nothing
@@ -11472,13 +11527,13 @@ stop
           endif
          else if (energyflag.eq.2) then
           im_vel=1
-          Eforce=Eforce+ &
-           (aface(2)*uface(2,im_vel)*pres_face(2)- &
-            aface(1)*uface(1,im_vel)*pres_face(1))/VOLTERM
           if (local_incomp.eq.0) then
            Eforce_primitive=Eforce_primitive+ &
             (aface(2)*uface(2,im_vel)- &
              aface(1)*uface(1,im_vel))*cell_pressure/VOLTERM
+           Eforce_conservative=Eforce_conservative+ &
+            (aface(2)*uface(2,im_vel)*pres_face(2)- &
+             aface(1)*uface(1,im_vel)*pres_face(1))/VOLTERM
           else if (local_incomp.eq.1) then
            ! do nothing
           else
@@ -11504,7 +11559,7 @@ stop
          if ((use_face_pres_cen.eq.0).or. &
              (use_face_pres_cen.eq.2)) then
 
-          Eforce=zero
+          Eforce_conservative=zero
           Eforce_primitive=zero
           rhs(D_DECL(i,j,k),im_vel)=zero
 
@@ -11512,7 +11567,7 @@ stop
                   (use_face_pres_cen.eq.3)) then          
 
           if (local_primitive.eq.0) then
-           rhs(D_DECL(i,j,k),im_vel)=Eforce
+           rhs(D_DECL(i,j,k),im_vel)=Eforce_conservative
           else if (local_primitive.eq.1) then
            rhs(D_DECL(i,j,k),im_vel)=Eforce_primitive
           else
@@ -11570,8 +11625,26 @@ stop
                TEMPERATURE,internal_e, &
                imattype,im)
 
+              ! sanity checks
+             if (internal_e.gt.zero) then
+              call TEMPERATURE_material(rho,massfrac_parm, &
+               NEW_TEMPERATURE, &
+               internal_e,imattype,im)
+              if (abs(TEMPERATURE-NEW_TEMPERATURE).le. &
+                  1.0D-3*TEMPERATURE) then
+               ! do nothing 
+              else
+               print *,"T(rho,e) and e(rho,T) are not inverses"
+               stop
+              endif
+             else
+              print *,"internal_e must be positive"
+              stop
+             endif
+
+
              if (temperature_primitive_variable(im).eq.0) then
-              internal_e=internal_e+KE_diff+Eforce
+              internal_e=internal_e+KE_diff+Eforce_conservative
              else if (temperature_primitive_variable(im).eq.1) then
               internal_e=internal_e+Eforce_primitive
              else
@@ -11581,10 +11654,13 @@ stop
 
              if (internal_e.le.zero) then
               NEW_TEMPERATURE=TEMPERATURE
-             else
+             else if (internal_e.gt.zero) then
               call TEMPERATURE_material(rho,massfrac_parm, &
                NEW_TEMPERATURE, &
                internal_e,imattype,im)
+             else
+              print *,"internal_e bust"
+              stop
              endif
 
              if (NEW_TEMPERATURE.gt.zero) then
@@ -11596,9 +11672,9 @@ stop
             endif ! vfrac(im)>voftol
            enddo ! im=1..nmat
 
-          else if (energyflag.eq.2) then
+          else if (energyflag.eq.2) then ! for spectral method
            ! do nothing
-          else if (energyflag.eq.0) then
+          else if (energyflag.eq.0) then ! do not update temperature
            ! do nothing
           else
            print *,"energyflag invalid" 
@@ -12417,6 +12493,8 @@ stop
        curv_index, &
        conservative_tension_force, &
        conservative_div_uu, &
+       interp_presgrad_increment_from_face, &
+       ignore_div_up, &
        pforce_index, &
        faceden_index, &  
        icemask_index, &
@@ -12520,6 +12598,8 @@ stop
       INTEGER_T, intent(in) :: curv_index
       INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: conservative_div_uu
+      INTEGER_T, intent(in) :: interp_presgrad_increment_from_face
+      INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index 
       INTEGER_T, intent(in) :: icemask_index
@@ -12822,6 +12902,21 @@ stop
           (make_interface_incomp.ne.1).and. &
           (make_interface_incomp.ne.2)) then
        print *,"make_interface_incomp invalid"
+       stop
+      endif
+
+      if ((ignore_div_up.eq.0).or. &
+          (ignore_div_up.eq.1)) then
+       ! do nothing
+      else
+       print *,"ignore_div_up invalid"
+       stop
+      endif
+      if ((interp_presgrad_increment_from_face.eq.0).or. &
+          (interp_presgrad_increment_from_face.eq.1)) then
+       ! do nothing
+      else
+       print *,"interp_presgrad_increment_from_face invalid"
        stop
       endif
 
@@ -14202,7 +14297,8 @@ stop
            stop
           endif
 
-          if ((project_option.eq.1).or.(COARSE_FINE_VELAVG.eq.1)) then
+          if ((project_option.eq.1).or. &
+              (COARSE_FINE_VELAVG.eq.1)) then
             ! at least 1 side is covered
            if ((mask_covered(1).eq.0).or. &
                (mask_covered(2).eq.0)) then
