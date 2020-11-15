@@ -574,8 +574,11 @@ stop
         if (T_test.lt.TMIN) then
          TMIN=T_Test
         endif
-        if (abs(T_test).ge.1.0D+50) then
+        if (abs(T_test).lt.1.0D+50) then
+         ! do nothing
+        else
          print *,"T_test bust"
+         print *,"i,j,k,nc,T_test,TMIN,TMAX ",i,j,k,nc,T_test,TMIN,TMAX
          stop
         endif
 
@@ -7833,6 +7836,40 @@ stop
 
                  call get_primary_material(LSINT,nmat,imls_I)
 
+                 TI_min=saturation_temp_min(iten+ireverse*nten)
+                 TI_max=saturation_temp_max(iten+ireverse*nten)
+
+                 if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
+                     (local_freezing_model.eq.5).or. & !Stefan evap/cond
+                     (local_freezing_model.eq.6)) then !Palmore/Desjardins
+
+                  if (LL(ireverse).gt.zero) then ! evaporation
+                   TI_max=local_Tsat(ireverse)
+                  else if (LL(ireverse).lt.zero) then ! condensation
+                   TI_min=local_Tsat(ireverse)
+                  else
+                   print *,"LL(ireverse) invalid"
+                   stop
+                  endif
+
+                 else if ((local_freezing_model.eq.0).or. & ! Stefan model
+                          (local_freezing_model.eq.1).or. & ! source term
+                          (local_freezing_model.eq.2).or. & ! hydrate
+                          (local_freezing_model.eq.3).or. & ! wildfire
+                          (local_freezing_model.eq.7)) then ! cavitation
+                  ! do nothing
+                 else
+                  print *,"local_freezing_model invalid"
+                  stop
+                 endif
+                          
+                 if ((TI_max.ge.TI_min).and.(TI_min.ge.zero)) then
+                  ! do nothing
+                 else
+                  print *,"TI_max or TI_min invalid"
+                  stop
+                 endif
+
                   ! for T_INTERFACE= TSAT - eps1 K - eps2 V
                   ! 1. T_I^(0)=TSAT - eps1 K - eps2 ( 0 )
                   ! 2. n=0, V^{0}=0
@@ -7849,19 +7886,13 @@ stop
                   delta_Tsat= &
                     saturation_temp_curv(iten+ireverse*nten)*CURV_OUT_I
 
-                  if (delta_Tsat.le.zero) then
-                   local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
-                  else if (delta_Tsat.ge.zero) then
-                   if (local_Tsat(ireverse).eq.zero) then
-                    ! do nothing
-                   else if (delta_Tsat/local_Tsat(ireverse).ge.0.9d0) then
-                    local_Tsat(ireverse)=0.1d0*local_Tsat(ireverse)
-                   else 
-                    local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
-                   endif
-                  else
-                   print *,"delta_Tsat is NaN"
-                   stop
+                  local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
+
+                  if (local_Tsat(ireverse).lt.TI_min) then
+                   local_Tsat(ireverse)=TI_min
+                  endif
+                  if (local_Tsat(ireverse).gt.TI_max) then
+                   local_Tsat(ireverse)=TI_max
                   endif
 
                   Y_predict=one
@@ -7927,23 +7958,6 @@ stop
                   molar_mass_ambient=molar_mass(im_source)
                  else
                   print *,"LL invalid"
-                  stop
-                 endif
-
-                 TI_min=saturation_temp_min(iten+ireverse*nten)
-                 TI_max=saturation_temp_max(iten+ireverse*nten)
-                 if (LL(ireverse).gt.zero) then ! evaporation
-                  TI_max=local_Tsat(ireverse)
-                 else if (LL(ireverse).lt.zero) then ! condensation
-                  TI_min=local_Tsat(ireverse)
-                 else
-                  print *,"LL(ireverse) invalid"
-                  stop
-                 endif
-                 if (TI_max.ge.TI_min) then
-                  ! do nothing
-                 else
-                  print *,"TI_max or TI_min invalid"
                   stop
                  endif
 
@@ -8629,19 +8643,13 @@ stop
                      saturation_temp_vel(iten+ireverse*nten)* &
                      (VEL_correct-VEL_predict)
 
-                   if (delta_Tsat.le.zero) then
-                    TSAT_correct=TSAT_correct-delta_Tsat
-                   else if (delta_Tsat.ge.zero) then
-                    if (TSAT_correct.eq.zero) then
-                     ! do nothing
-                    else if (delta_Tsat/TSAT_correct.ge.0.9d0) then
-                     TSAT_correct=0.1d0*TSAT_correct
-                    else 
-                     TSAT_correct=TSAT_correct-delta_Tsat
-                    endif
-                   else
-                    print *,"delta_Tsat is NaN"
-                    stop
+                   TSAT_correct=TSAT_correct-delta_Tsat
+
+                   if (TSAT_correct.lt.TI_min) then
+                    TSAT_correct=TI_min
+                   endif
+                   if (TSAT_correct.gt.TI_max) then
+                    TSAT_correct=TI_max
                    endif
 
                   else if (hardwire_flag(ireverse).eq.1) then
