@@ -2090,6 +2090,13 @@ stop
         saturation_temp_min(iten)=0.0d0
         saturation_temp_max(iten)=1.0d+20
        enddo
+
+        ! dendrite
+       if (probtype.eq.403) then
+        saturation_temp_min(1)=0.25d0
+        saturation_temp_max(1)=4.0d0
+       endif
+
        do im=1,nmat
         species_evaporation_density(im)=1.0d0
        enddo
