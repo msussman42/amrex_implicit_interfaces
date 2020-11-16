@@ -22,8 +22,6 @@ ns.num_species_var  = 1
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
 ns.material_type    = 0 24 999
 
-# density equation is Drho/Dt=0 in the incompressible zone.
-# density equation is rhot_t+div(rho u)=0 in the incompressible zone.
 ns.num_divu_outer_sweeps=2
 
 # Solid defifnition for FSI
@@ -31,13 +29,6 @@ ns.num_divu_outer_sweeps=2
 ns.FSI_flag         = 0 0 1
 
 solvability_projection = 0  # Compressible gas
-
-# temperature_primitive_variable=0:
-#   (rho E)_{t} + div (rho u E) = 0  (energy advection)
-#   E=1/2  u dot u + e  e=e(T)
-# temperature_primitive_variable=1:
-#   (rho T)_{t} + div (rho u T) = 0  (energy advection)
-ns.temperature_primitive_variable = 1 1 1
 
 # Coordinate origin is at the center of the tank
 ns.xblob            = 0.1016 # Tank cavity radius
@@ -64,7 +55,7 @@ amr.n_cell          = 16 64
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 32
+amr.max_grid_size   = 64
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4  # number of buffer cells in error est 
@@ -81,7 +72,7 @@ ns.change_max       = 1.1
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
 #0=only at t=0 1=always account for sound speed 2=ignore
-ns.shock_timestep=2 1 2 
+ns.shock_timestep=2 2 2 
 
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
@@ -94,10 +85,10 @@ ns.visual_option    =-2
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-amr.plot_int        = 10      # number of timesteps between plot files
+amr.plot_int        = 100      # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
-ns.sum_interval     = 100     # timesteps between computing mass 
+ns.sum_interval     = 10     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -223,6 +214,17 @@ ns.temperature_hi_bc = 3 3
 # 1=use VOF
 ns.temperatureface_flag=0
 ns.face_flag=1
+ns.interp_vel_increment_from_cell=0
+ns.interp_presgrad_increment_from_face=1
+ns.compressible_dt_factor=2.0 2.0 2.0
+# temperature_primitive_variable=0:
+#   (rho E)_{t} + div (rho u E) = -div( up )  (energy advection)
+#   rho_t + div (rho u) =0
+#   E=1/2  u dot u + e  e=e(T)
+# temperature_primitive_variable=1:
+#   (rho T)_{t} + div (rho u T) = -p div u  (energy advection)
+#   rho_t + u dot grad rho = -rho div u
+ns.temperature_primitive_variable=1 1 1
 
 # Embedded boundary BC
 # 0=diffuse in solid 1=dirichlet 2=neumann

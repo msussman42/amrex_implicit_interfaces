@@ -3712,7 +3712,7 @@ NavierStokes::read_params ()
           (material_type[i]>=1)&&
           (material_type[i]<999)&&
           (shock_timestep[i]==1)) {
-       amrex::Error("make temperature_primitive_variable=1 for shock capt.");
+       amrex::Warning("make temperature_primitive_variable=0 for shock capt.");
       }
      } else {
       amrex::Error("temperature_primitive_variable[i] invalid");
