@@ -119,7 +119,7 @@ mac.mac_abs_tol    = 1.0e-13
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.01 
+ns.change_max     = 1.1 
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-13
 ns.gravity        = 0.0   # cgs
@@ -154,7 +154,7 @@ ns.temperature_primitive_variable=1 1 1 1
 # case 2: velocity 0<t<1.28 is about u=0.05 dx/u=0.125
 #ns.fixed_dt	  = 0.08     # case 1 0.08 is coarsest
 #ns.fixed_dt	  = 0.032    # case 2 0.032 is coarsest
-ns.fixed_dt	  = 0.01    
+#ns.fixed_dt	  = 0.01    
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   # 0 for drop 1 for flat surface
