@@ -12361,6 +12361,8 @@ stop
       subroutine FORT_ESTDT ( &
         nsolveMM_FACE, &
         enable_spectral, &
+        AMR_min_phase_change_rate, &
+        AMR_max_phase_change_rate, &
         elastic_time, &
         microlayer_substrate, &
         microlayer_angle, &
@@ -12429,6 +12431,8 @@ stop
       REAL_T, intent(in) :: cfl
       INTEGER_T, intent(in) :: EILE_flag
       INTEGER_T, intent(in) :: nmat,nten
+      REAL_T, intent(in) :: AMR_min_phase_change_rate(SDIM)
+      REAL_T, intent(in) :: AMR_max_phase_change_rate(SDIM)
       REAL_T, intent(in) :: elastic_time(nmat)
       INTEGER_T, intent(in) :: shock_timestep(nmat)
       INTEGER_T, intent(in) :: material_type(nmat)
@@ -13342,6 +13346,23 @@ stop
        else
         print *,"im_primaryL, or im_primaryR invalid"
         stop 
+       endif
+
+       if (time.eq.zero) then
+        ! do nothing
+       else if (time.gt.zero) then
+        USTEFAN=zero
+        do dir2=1,SDIM
+         if (USTEFAN.lt.abs(AMR_min_phase_change_rate(dir2))) then
+          USTEFAN=abs(AMR_min_phase_change_rate(dir2))
+         endif
+         if (USTEFAN.lt.abs(AMR_max_phase_change_rate(dir2))) then
+          USTEFAN=abs(AMR_max_phase_change_rate(dir2))
+         endif
+        enddo ! dir2=1..sdim
+       else
+        print *,"time invalid in ESTDT"
+        stop
        endif
 
         ! factor of 4 in order to guarantee that characteristics do not

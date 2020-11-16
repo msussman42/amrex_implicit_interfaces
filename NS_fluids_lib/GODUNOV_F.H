@@ -669,6 +669,8 @@ extern "C"
    void FORT_ESTDT(
       int* nsolveMM_FACE,
       int* enable_spectral,
+      Real* AMR_min_phase_change_rate,
+      Real* AMR_max_phase_change_rate,
       Real* elastic_time,
       int* microlayer_substrate,
       Real* microlayer_angle,
