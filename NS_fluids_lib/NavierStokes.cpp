@@ -11732,6 +11732,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
  int ncomp_per_burning=AMREX_SPACEDIM;
  int ncomp_per_tsat=2;
 
+  // first nten components are the status
  int nburning=nten*(ncomp_per_burning+1);
  int ntsat=nten*(ncomp_per_tsat+1);
 
@@ -11810,6 +11811,29 @@ NavierStokes::level_phase_change_convert(int isweep) {
 
 
  if (isweep==0) {
+
+  if (level==finest_level) {
+
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    parent->AMR_max_phase_change_rate[dir]=0.0;
+    parent->AMR_min_phase_change_rate[dir]=0.0;
+   }
+
+   for (int iten=0;iten<nten;iten++) {
+    int scomp=nten+iten*AMREX_SPACEDIM;
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     Real local_max=
+      localMF[BURNING_VELOCITY_MF]->max(scomp+dir); //def nghost=0
+     parent->AMR_max_phase_change_rate[dir]=
+       max(parent->AMR_max_phase_change_rate[dir],local_max);
+
+     Real local_min=
+      localMF[BURNING_VELOCITY_MF]->min(scomp+dir); //def nghost=0
+     parent->AMR_min_phase_change_rate[dir]=
+       min(parent->AMR_min_phase_change_rate[dir],local_min);
+    } //dir=0..sdim-1
+   } //iten=0..nten-1
+  }  // level==finest_level
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -18837,6 +18861,8 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
    FORT_ESTDT(
     &nsolveMM_FACE,
     &local_enable_spectral,
+    parent->AMR_min_phase_change_rate.dataPtr(),
+    parent->AMR_max_phase_change_rate.dataPtr(),
     elastic_time.dataPtr(),
     microlayer_substrate.dataPtr(),
     microlayer_angle.dataPtr(),

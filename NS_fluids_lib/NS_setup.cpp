@@ -2048,10 +2048,10 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     UMACH=std::abs(vel_max[dir]);
    std::cout << "TIME= "<<upper_slab_time<<" dir= " << dir <<
 	   " AMR_max_phase_change_rate=" <<
-	   AMR_max_phase_change_rate[dir] << '\n';
+	   parent->AMR_max_phase_change_rate[dir] << '\n';
    std::cout << "TIME= "<<upper_slab_time<<" dir= " << dir <<
 	   " AMR_min_phase_change_rate=" <<
-	   AMR_min_phase_change_rate[dir] << '\n';
+	   parent->AMR_min_phase_change_rate[dir] << '\n';
   } // dir=0..sdim-1
 
   Real vel_max_recommend=UMACH;
