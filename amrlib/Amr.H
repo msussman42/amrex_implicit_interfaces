@@ -62,6 +62,9 @@ public:
     int get_MAX_NUM_SLAB () const;
     int get_slab_dt_type () const;
 
+    Vector<Real> AMR_max_phase_change_rate;
+    Vector<Real> AMR_min_phase_change_rate;
+
     Vector<Real> AMR_volume_history;
     int AMR_volume_history_recorded;
 

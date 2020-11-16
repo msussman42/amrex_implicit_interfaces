@@ -2046,7 +2046,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
      " vel_max_estdt=" << vel_max_estdt[dir] << '\n';
    if (std::abs(vel_max[dir])>UMACH)
     UMACH=std::abs(vel_max[dir]);
-  }
+   std::cout << "TIME= "<<upper_slab_time<<" dir= " << dir <<
+	   " AMR_max_phase_change_rate=" <<
+	   AMR_max_phase_change_rate[dir] << '\n';
+   std::cout << "TIME= "<<upper_slab_time<<" dir= " << dir <<
+	   " AMR_min_phase_change_rate=" <<
+	   AMR_min_phase_change_rate[dir] << '\n';
+  } // dir=0..sdim-1
+
   Real vel_max_recommend=UMACH;
   vel_max_recommend=std::max(UMACH,vel_max_cap_wave);
 
