@@ -134,6 +134,7 @@ stop
       use GENERAL_PHASE_CHANGE_module
       use ICE_ON_SUBSTRATE_module
       use SIMPLE_PALMORE_DESJARDINS_module
+      use SIMPLE_KASSEMI_module
       use DROP_IN_SHEAR_module
       use MITSUHIRO_MELTING_module
       use CRYOGENIC_TANK1_module
@@ -274,7 +275,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=9
+      probtype_list_size=10
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -284,6 +285,7 @@ stop
       used_probtypes(7)=422  ! CRYOGENIC_TANK2
       used_probtypes(8)=423  ! CRYOGENIC_TANK_MK
       used_probtypes(9)=424  ! DROP_IN_SHEAR
+      used_probtypes(10)=2003 ! 1D TEST, Kassemi model for PD test 
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_LS=>STUB_LS
@@ -406,6 +408,25 @@ stop
        SUB_HEATSOURCE=>SIMPLE_PALMORE_DESJARDINS_HEATSOURCE
        SUB_SUMINT=>SIMPLE_PALMORE_DESJARDINS_SUMINT ! compare with analytical
        SUB_ASSIMILATE=>SIMPLE_PALMORE_DESJARDINS_ASSIMILATE
+      else if (probtype.eq.2003) then
+       SUB_INIT_MODULE=>INIT_SIMPLE_KASSEMI_MODULE
+       SUB_LS=>SIMPLE_KASSEMI_LS
+       SUB_VEL=>SIMPLE_KASSEMI_VEL
+       SUB_PRES=>SIMPLE_KASSEMI_PRES
+       SUB_STATE=>SIMPLE_KASSEMI_STATE
+       SUB_LS_BC=>SIMPLE_KASSEMI_LS_BC
+       SUB_VEL_BC=>SIMPLE_KASSEMI_VEL_BC
+
+       SUB_EOS=>EOS_KASSEMI_MK
+       SUB_SOUNDSQR=>SOUNDSQR_KASSEMI_MK
+       SUB_INTERNAL=>INTERNAL_KASSEMI_MK
+       SUB_TEMPERATURE=>TEMPERATURE_KASSEMI_MK
+
+       SUB_PRES_BC=>SIMPLE_KASSEMI_PRES_BC
+       SUB_STATE_BC=>SIMPLE_KASSEMI_STATE_BC
+       SUB_HEATSOURCE=>SIMPLE_KASSEMI_HEATSOURCE
+       SUB_SUMINT=>SIMPLE_KASSEMI_SUMINT ! compare with analytical
+       SUB_ASSIMILATE=>SIMPLE_KASSEMI_ASSIMILATE
       else if (probtype.eq.2000) then
        SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
        SUB_LS=>flexible_plate_impact_LS
