@@ -221,6 +221,13 @@ Amr::Amr ()
 void
 Amr::InitAmr () {
 
+    AMR_max_phase_change_rate.resize(AMREX_SPACEDIM);
+    AMR_min_phase_change_rate.resize(AMREX_SPACEDIM);
+    for (int j=0;j<AMREX_SPACEDIM;j++) {
+     AMR_max_phase_change_rate[j]=0.0;
+     AMR_min_phase_change_rate[j]=0.0;
+    }
+    
     AMR_volume_history_recorded=0;
     AMR_volume_history.resize(1);
     AMR_volume_history[0]=0.0;
@@ -1107,6 +1114,14 @@ Amr::restart (const std::string& filename)
     is >> num_materials;
     if (num_materials<=0)
      amrex::Error("num_materials invalid in restart");
+
+    AMR_max_phase_change_rate.resize(AMREX_SPACEDIM);
+    AMR_min_phase_change_rate.resize(AMREX_SPACEDIM);
+    for (int j=0;j<AMREX_SPACEDIM;j++) {
+     is >> AMR_max_phase_change_rate[j];
+     is >> AMR_min_phase_change_rate[j];
+    }
+
     is >> AMR_volume_history_recorded;
     AMR_volume_history.resize(num_materials);
     for (int j=0;j<num_materials;j++) {
@@ -1358,6 +1373,12 @@ Amr::checkPoint ()
         if (num_materials<=0)
          amrex::Error("num_materials invalid in checkpoint");
         HeaderFile << num_materials << '\n';
+
+        for (int j=0;j<AMREX_SPACEDIM;j++) {
+         HeaderFile << AMR_max_phase_change_rate[j] << '\n';
+         HeaderFile << AMR_min_phase_change_rate[j] << '\n';
+        }
+
         HeaderFile << AMR_volume_history_recorded << '\n';
         for (int j=0;j<num_materials;j++) {
          HeaderFile << AMR_volume_history[j] << '\n';
